@@ -11,10 +11,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * 考试管理控制器
- *
- * @since 4.0.0.42
- * @author CH
+* 考试管理控制器
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Slf4j
 @RestController
@@ -27,12 +27,12 @@ public class EduExamController {
     private final IEduExamService examService;
 
     /**
-     * 分页查询考试
-     *
-     * @param exam     查询条件
-     * @param page     页码
-     * @param pageSize 每页条数
-     * @return 分页结果
+    * 分页查询考试
+    *
+    * @param exam     查询条件
+    * @param page     页码
+    * @param pageSize 每页条数
+    * @return 分页结果
      */
     @Operation(summary = "分页查询考试")
     @GetMapping("/page")
@@ -43,10 +43,10 @@ public class EduExamController {
     }
 
     /**
-     * 获取考试详情
-     *
-     * @param id 考试标识
-     * @return 考试详情
+    * 获取考试详情
+    *
+    * @param id 考试标识
+    * @return 考试详情
      */
     @Operation(summary = "获取考试详情")
     @GetMapping("/{id}")
@@ -55,10 +55,10 @@ public class EduExamController {
     }
 
     /**
-     * 创建考试
-     *
-     * @param exam 考试信息
-     * @return 考试ID
+    * 创建考试
+    *
+    * @param exam 考试信息
+    * @return 考试ID
      */
     @Operation(summary = "创建考试")
     @PostMapping("/create")
@@ -67,10 +67,10 @@ public class EduExamController {
     }
 
     /**
-     * 更新考试
-     *
-     * @param exam 考试信息
-     * @return 是否成功
+    * 更新考试
+    *
+    * @param exam 考试信息
+    * @return 是否成功
      */
     @Operation(summary = "更新考试")
     @PutMapping("/update")
@@ -79,10 +79,10 @@ public class EduExamController {
     }
 
     /**
-     * 删除考试（逻辑删除）
-     *
-     * @param id 考试标识
-     * @return 是否成功
+    * 删除考试（逻辑删除）
+    *
+    * @param id 考试标识
+    * @return 是否成功
      */
     @Operation(summary = "删除考试")
     @DeleteMapping("/{id}")

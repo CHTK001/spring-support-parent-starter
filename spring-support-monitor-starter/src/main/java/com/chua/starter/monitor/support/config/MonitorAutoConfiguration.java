@@ -9,15 +9,15 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 /**
- * 监控模块自动配置
- * <p>
-   * 扫描所有 提供者、服务、调度器 组件，自动装配。
- * 开启事务管理和定时调度；注册时序存储配置属性
-   * （influxdb 写入器按 {@code monitor.influx.enabled} 条件装配）。
- * </p>
- *
- * @since 2026/8/4
- * @author CH
+* 监控模块自动配置
+* <p>
+* 扫描所有 提供者、服务、调度器 组件，自动装配。
+* 开启事务管理和定时调度；注册时序存储配置属性
+* （influxdb 写入器按 {@code monitor.influx.enabled} 条件装配）。
+* </p>
+*
+* @since 2026/8/4
+* @author CH
  */
 @AutoConfiguration
 @ComponentScan(basePackages = "com.chua.starter.monitor.support")
@@ -27,10 +27,10 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 public class MonitorAutoConfiguration {
 
     /**
-      * 监控模块的 服务信息 贡献者。
-     *
-     * @param properties Influx 配置
-     * @return ServiceInfoContributor
+    * 监控模块的 服务信息 贡献者。
+    *
+    * @param properties Influx 配置
+    * @return ServiceInfoContributor
      */
     @Bean
     public ServiceInfoContributor monitorServiceInfoContributor(MonitorInfluxProperties properties) {

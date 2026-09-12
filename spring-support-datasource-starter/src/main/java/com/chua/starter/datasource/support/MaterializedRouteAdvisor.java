@@ -15,16 +15,16 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 
 /**
- * 物理化注解切面。
- *
- * @since 2026/4/2
- * @author CH
+* 物理化注解切面。
+*
+* @since 2026/4/2
+* @author CH
  */
 public class MaterializedRouteAdvisor extends StaticMethodMatcherPointcutAdvisor {
 
     /**
-      * 创建 物化routeadvisor 实例
-     * @param properties 属性
+    * 创建 物化routeadvisor 实例
+    * @param properties 属性
      */
     public MaterializedRouteAdvisor(MaterializedRouteProperties properties) {
         this.setAdvice(new MethodInterceptor() {
@@ -58,11 +58,11 @@ public class MaterializedRouteAdvisor extends StaticMethodMatcherPointcutAdvisor
     }
 
     /**
-     * 解析Route
-     *
-     * @param method 方法
-     * @param targetClass Target类
-     * @return resolveRoute的结果
+    * 解析Route
+    *
+    * @param method 方法
+    * @param targetClass Target类
+    * @return resolveRoute的结果
      */
     private MaterializedRoute resolveRoute(Method method, Class<?> targetClass) {
         MaterializedRoute route = AnnotatedElementUtils.findMergedAnnotation(method, MaterializedRoute.class);

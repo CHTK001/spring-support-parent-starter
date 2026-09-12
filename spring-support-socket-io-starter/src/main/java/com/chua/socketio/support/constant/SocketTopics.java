@@ -1,14 +1,14 @@
 package com.chua.socketio.support.constant;
 
 /**
-   * 套接字.IO 主题常量
- * <p>
- * 命名格式: 项目:模块:功能
-   * 例如: 监控:Docker:拉手_进步, 系统:消息:push
- *
-   * @版本 1.0.0
- * @since 2024-12-04
- * @author CH
+* 套接字.IO 主题常量
+* <p>
+* 命名格式: 项目:模块:功能
+* 例如: 监控:Docker:拉手_进步, 系统:消息:push
+*
+* @版本 1.0.0
+* @since 2024-12-04
+* @author CH
  */
 public final class SocketTopics {
 
@@ -17,21 +17,21 @@ public final class SocketTopics {
         // 私有构造函数，防止实例化
     }
     /**
-      * 服务模块主题 (服务)
-     * 用于服务级别的通用功能
+    * 服务模块主题 (服务)
+    * 用于服务级别的通用功能
      */
     public static final class Service {
 
         /**
-         * 创建 服务 实例
-         *
-         * @return 服务的结果
+        * 创建 服务 实例
+        *
+        * @return 服务的结果
          */
         private Service() {
         }
 
         /**
-         * 消息相关
+        * 消息相关
          */
         public static final class Message {
             /** Push */
@@ -44,16 +44,16 @@ public final class SocketTopics {
             public static final String DELETE = "service:message:delete";
 
             /**
-             * 创建 消息 实例
-             *
-             * @return 消息的结果
+            * 创建 消息 实例
+            *
+            * @return 消息的结果
              */
             private Message() {
             }
         }
 
         /**
-         * 操作相关
+        * 操作相关
          */
         public static final class Operation {
             /** 开始 */
@@ -74,30 +74,30 @@ public final class SocketTopics {
             public static final String ERROR = "service:operation:error";
 
             /**
-             * 创建 Operation 实例
-             *
-             * @return Operation的结果
+            * 创建 Operation 实例
+            *
+            * @return Operation的结果
              */
             private Operation() {
             }
         }
     }
     /**
-      * 系统模块主题 (系统)
-     * 用于系统级别的通用功能
+    * 系统模块主题 (系统)
+    * 用于系统级别的通用功能
      */
     public static final class System {
 
         /**
-         * 创建 系统 实例
-         *
-         * @return 系统的结果
+        * 创建 系统 实例
+        *
+        * @return 系统的结果
          */
         private System() {
         }
 
         /**
-         * 消息相关
+        * 消息相关
          */
         public static final class Message {
             /** Push */
@@ -110,16 +110,16 @@ public final class SocketTopics {
             public static final String DELETE = "system:message:delete";
 
             /**
-             * 创建 消息 实例
-             *
-             * @return 消息的结果
+            * 创建 消息 实例
+            *
+            * @return 消息的结果
              */
             private Message() {
             }
         }
 
         /**
-         * 用户相关
+        * 用户相关
          */
         public static final class User {
             /** Online */
@@ -132,16 +132,16 @@ public final class SocketTopics {
             public static final String KICK = "system:user:kick";
 
             /**
-             * 创建 用户 实例
-             *
-             * @return 用户的结果
+            * 创建 用户 实例
+            *
+            * @return 用户的结果
              */
             private User() {
             }
         }
 
         /**
-         * 配置相关
+        * 配置相关
          */
         public static final class Config {
             /** 更新 */
@@ -150,16 +150,16 @@ public final class SocketTopics {
             public static final String VERSION = "system:config:version";
 
             /**
-             * 创建 配置 实例
-             *
-             * @return 配置的结果
+            * 创建 配置 实例
+            *
+            * @return 配置的结果
              */
             private Config() {
             }
         }
 
         /**
-         * 权限相关
+        * 权限相关
          */
         public static final class Auth {
             /** 令牌_expired */
@@ -168,9 +168,9 @@ public final class SocketTopics {
             public static final String PERMISSION_CHANGE = "system:auth:permission_change";
 
             /**
-             * 创建 认证 实例
-             *
-             * @return 认证的结果
+            * 创建 认证 实例
+            *
+            * @return 认证的结果
              */
             private Auth() {
             }

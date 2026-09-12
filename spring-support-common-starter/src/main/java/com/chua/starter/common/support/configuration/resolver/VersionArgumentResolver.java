@@ -1,21 +1,21 @@
 package com.chua.starter.common.support.configuration.resolver;
 
 /**
- * 版本参数解析器接口
- * <p>
- * 用于解析和提供API版本信息。
- * </p>
- *
- * @since 2024/8/26
-   * @版本 1.0.0
- * @author CH
+* 版本参数解析器接口
+* <p>
+* 用于解析和提供API版本信息。
+* </p>
+*
+* @since 2024/8/26
+* @版本 1.0.0
+* @author CH
  */
 public interface VersionArgumentResolver {
 
     /**
-     * 获取当前版本
-     *
-     * @return 版本字符串
+    * 获取当前版本
+    *
+    * @return 版本字符串
      */
     String version();
 }

@@ -27,19 +27,19 @@ import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 /**
- * RAG 配置控制器 —— 提供 RAG 配置页所需的下拉数据源。
- * <p>
- * 返回五类选项：
- * <ul>
- *   <li>embeddingModels — 向量模型（EmbeddingClient SPI 提供商 + deeplearning 向量模型）</li>
- *   <li>ocrModels — OCR 识别模型（deeplearning ModelRegistry 中文字识别类模型）</li>
- *   <li>llmModels — LLM 模型（ai_model 表，能力含 chat）</li>
- *   <li>vectorStorages — 向量数据库（VectorStorageProvider SPI）</li>
- *   <li>splitters — 文本切片策略（TextSplitterProvider SPI）</li>
- * </ul>
- *
- * @since 2026-08-05
- * @author CH
+* RAG 配置控制器 —— 提供 RAG 配置页所需的下拉数据源。
+* <p>
+* 返回五类选项：
+* <ul>
+*   <li>embeddingModels — 向量模型（EmbeddingClient SPI 提供商 + deeplearning 向量模型）</li>
+*   <li>ocrModels — OCR 识别模型（deeplearning ModelRegistry 中文字识别类模型）</li>
+*   <li>llmModels — LLM 模型（ai_model 表，能力含 chat）</li>
+*   <li>vectorStorages — 向量数据库（VectorStorageProvider SPI）</li>
+*   <li>splitters — 文本切片策略（TextSplitterProvider SPI）</li>
+* </ul>
+*
+* @since 2026-08-05
+* @author CH
  */
 @Slf4j
 @RestController
@@ -49,14 +49,14 @@ import java.util.stream.Collectors;
 public class AiRagSettingController {
 
     /**
-     * AI 模型服务
+    * AI 模型服务
      */
     private final AiModelService aiModelService;
 
     /**
-     * 获取 RAG 配置选项。
-     *
-     * @return 五类下拉数据源
+    * 获取 RAG 配置选项。
+    *
+    * @return 五类下拉数据源
      */
     @Permission("admin")
     @Operation(summary = "获取 RAG 配置选项", description = "向量模型、OCR 模型、LLM 模型、向量数据库、文本切片策略选项")
@@ -72,9 +72,9 @@ public class AiRagSettingController {
     }
 
     /**
-      * 向量模型列表：嵌入客户端 SPI 提供商 + deeplearning 向量模型。
-     *
-     * @return 模型名列表
+    * 向量模型列表：嵌入客户端 SPI 提供商 + deeplearning 向量模型。
+    *
+    * @return 模型名列表
      */
     private List<String> listEmbeddingModels() {
         TreeSet<String> names = new TreeSet<>();
@@ -112,9 +112,9 @@ public class AiRagSettingController {
     }
 
     /**
-      * OCR 模型列表：deeplearning 模型registry 中文字识别类模型。
-     *
-     * @return 模型名列表
+    * OCR 模型列表：deeplearning 模型registry 中文字识别类模型。
+    *
+    * @return 模型名列表
      */
     private List<String> listOcrModels() {
         TreeSet<String> names = new TreeSet<>();
@@ -137,9 +137,9 @@ public class AiRagSettingController {
     }
 
     /**
-      * LLM 模型列表：AI_模型 表，能力含 对话。
-     *
-     * @return 模型名列表
+    * LLM 模型列表：AI_模型 表，能力含 对话。
+    *
+    * @return 模型名列表
      */
     private List<String> listLlmModels() {
         try {
@@ -158,9 +158,9 @@ public class AiRagSettingController {
     }
 
     /**
-      * 向量数据库列表：向量storage提供者 SPI。
-     *
-     * @return 提供者名称列表
+    * 向量数据库列表：向量storage提供者 SPI。
+    *
+    * @return 提供者名称列表
      */
     private List<String> listVectorStorages() {
         try {
@@ -174,9 +174,9 @@ public class AiRagSettingController {
     }
 
     /**
-      * 文本切片策略列表：文本splitter提供者 SPI。
-     *
-     * @return 提供者名称列表
+    * 文本切片策略列表：文本splitter提供者 SPI。
+    *
+    * @return 提供者名称列表
      */
     private List<String> listSplitters() {
         try {

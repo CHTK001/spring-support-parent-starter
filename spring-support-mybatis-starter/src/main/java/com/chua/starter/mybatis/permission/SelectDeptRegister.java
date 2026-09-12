@@ -23,33 +23,33 @@ import java.util.List;
 import static com.chua.starter.mybatis.interceptor.MybatisPlusPermissionHandler.NO_DATA;
 
 /**
-   * 选择注入机构标识
- *
- * @author CH
- * @since 4.0.0
+* 选择注入机构标识
+*
+* @author CH
+* @since 4.0.0
  */
 public class SelectDeptRegister extends AbstractDeptRegister {
 
     /**
-      * 创建 选择dept注册 实例
-     * @param plainSelect plain选择
-     * @param where Expression
-     * @param user 当前用户
-     * @param dataPermission 数据过滤器类型enum
-     * @param scopeProperties mybatisplus数据scope属性
-     * @param where where
-     * @param user 用户
-     * @param dataPermission 数据权限
-     * @param scopeProperties scope属性
+    * 创建 选择dept注册 实例
+    * @param plainSelect plain选择
+    * @param where Expression
+    * @param user 当前用户
+    * @param dataPermission 数据过滤器类型enum
+    * @param scopeProperties mybatisplus数据scope属性
+    * @param where where
+    * @param user 用户
+    * @param dataPermission 数据权限
+    * @param scopeProperties scope属性
      */
     public SelectDeptRegister(PlainSelect plainSelect, Expression where, CurrentUser user, DataFilterTypeEnum dataPermission, MybatisPlusDataScopeProperties scopeProperties) {
         /**
-         * 父。
-         * @param plainSelect plain选择
-         * @param where where
-         * @param user 用户
-         * @param dataPermission 数据权限
-         * @param scopeProperties scope属性
+        * 父。
+        * @param plainSelect plain选择
+        * @param where where
+        * @param user 用户
+        * @param dataPermission 数据权限
+        * @param scopeProperties scope属性
          */
         super(plainSelect, where, user, dataPermission, scopeProperties);
     }
@@ -58,7 +58,7 @@ public class SelectDeptRegister extends AbstractDeptRegister {
     /** 注册 */
     public Expression register() {
         /**
-         * findtable是否包含deptid。
+        * findtable是否包含deptid。
          */
         findTableHasDeptId();
         if (null == hasDeptIdTableAlias) {
@@ -73,17 +73,17 @@ public class SelectDeptRegister extends AbstractDeptRegister {
             return NO_DATA;
         }
         /**
-         * 注册plain选择。
-         * @param findDeptTable( finddepttable(
+        * 注册plain选择。
+        * @param findDeptTable( finddepttable(
          */
         registerPlainSelect(findDeptTable());
         return where;
     }
 
     /**
-     * 查找部门表
-     *
-     * @return
+    * 查找部门表
+    *
+    * @return
      */
     private boolean findDeptTable() {
         FromItem fromItem = plainSelect.getFromItem();
@@ -111,8 +111,8 @@ public class SelectDeptRegister extends AbstractDeptRegister {
     }
 
     /**
-      * 注册plain选择
-     * @param hasDeptTable 是否包含depttable
+    * 注册plain选择
+    * @param hasDeptTable 是否包含depttable
      */
     private void registerPlainSelect(boolean hasDeptTable) {
         if (!hasDeptTable) {
@@ -131,7 +131,7 @@ public class SelectDeptRegister extends AbstractDeptRegister {
             }
         }
         /**
-         * 注册数据scope。
+        * 注册数据scope。
          */
         registerDataScope();
     }
@@ -139,14 +139,14 @@ public class SelectDeptRegister extends AbstractDeptRegister {
 
 
     /**
-      * 查找表是否有部门标识
+    * 查找表是否有部门标识
      */
     private void findTableHasDeptId() {
         if (findFromFrom()) {
             return;
         }
         /**
-          * 查找从连接。
+        * 查找从连接。
          */
         findFromJoin();
     }
@@ -175,9 +175,9 @@ public class SelectDeptRegister extends AbstractDeptRegister {
     }
 
     /**
-      * 查找表是否有部门标识
-     *
-     * @return
+    * 查找表是否有部门标识
+    *
+    * @return
      */
     private boolean findFromFrom() {
         FromItem fromItem = plainSelect.getFromItem();
@@ -197,12 +197,12 @@ public class SelectDeptRegister extends AbstractDeptRegister {
     }
 
     /**
-      * 查找表是否有部门标识
-     *
-     * @param tableInfo 表信息
-     * @return 是否有部门ID
-     * @param alias 别名
-     * @param table table
+    * 查找表是否有部门标识
+    *
+    * @param tableInfo 表信息
+    * @return 是否有部门ID
+    * @param alias 别名
+    * @param table table
      */
     private boolean findFromFrom(TableInfo tableInfo, String alias, Table table) {
         for (TableFieldInfo tableFieldInfo : tableInfo.getFieldList()) {

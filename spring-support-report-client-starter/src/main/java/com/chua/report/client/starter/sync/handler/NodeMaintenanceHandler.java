@@ -99,10 +99,10 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
     }
 
     /**
-     * 处理Backup
-     *
-     * @param data 数据
-     * @return 把手backup的结果
+    * 处理Backup
+    *
+    * @param data 数据
+    * @return 把手backup的结果
      */
     private Map<String, Object> handleBackup(Map<String, Object> data) {
         String action = MapUtils.getString(data, "action", "create");
@@ -117,10 +117,10 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
     }
 
     /**
-     * 创建Backup
-     *
-     * @param data 数据
-     * @return 创建backup的结果
+    * 创建Backup
+    *
+    * @param data 数据
+    * @return 创建backup的结果
      */
     private Map<String, Object> createBackup(Map<String, Object> data) {
         try {
@@ -161,9 +161,9 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
     }
 
     /**
-     * 列表backups
-     *
-     * @return 列表backups的结果
+    * 列表backups
+    *
+    * @return 列表backups的结果
      */
     private Map<String, Object> listBackups() {
         try {
@@ -174,8 +174,8 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
 
             List<Map<String, Object>> backups = new ArrayList<>();
             /**
-             * 尝试。
-             * @param Files.list(backupDir 文件.列表(backupdir
+            * 尝试。
+            * @param Files.list(backupDir 文件.列表(backupdir
              */
             try (var stream = Files.list(backupDir)) {
                 stream.filter(path -> path.toString().endsWith(".json"))
@@ -208,10 +208,10 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
     }
 
     /**
-     * 删除Backup
-     *
-     * @param data 数据
-     * @return 删除backup的结果
+    * 删除Backup
+    *
+    * @param data 数据
+    * @return 删除backup的结果
      */
     private Map<String, Object> deleteBackup(Map<String, Object> data) {
         try {
@@ -236,10 +236,10 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
     }
 
     /**
-     * 获取backup内容
-     *
-     * @param data 数据
-     * @return 获取backup内容的结果
+    * 获取backup内容
+    *
+    * @param data 数据
+    * @return 获取backup内容的结果
      */
     private Map<String, Object> getBackupContent(Map<String, Object> data) {
         try {
@@ -262,10 +262,10 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
     }
 
     /**
-     * 处理Upgrade
-     *
-     * @param data 数据
-     * @return 把手upgrade的结果
+    * 处理Upgrade
+    *
+    * @param data 数据
+    * @return 把手upgrade的结果
      */
     private Map<String, Object> handleUpgrade(Map<String, Object> data) {
         String action = MapUtils.getString(data, "action", "status");
@@ -281,10 +281,10 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
     }
 
     /**
-     * uploadupgrade包
-     *
-     * @param data 数据
-     * @return uploadupgrade包的结果
+    * uploadupgrade包
+    *
+    * @param data 数据
+    * @return uploadupgrade包的结果
      */
     private Map<String, Object> uploadUpgradePackage(Map<String, Object> data) {
         try {
@@ -315,9 +315,9 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
     }
 
     /**
-     * 列表upgrade包
-     *
-     * @return 列表upgrade包的结果
+    * 列表upgrade包
+    *
+    * @return 列表upgrade包的结果
      */
     private Map<String, Object> listUpgradePackages() {
         try {
@@ -328,8 +328,8 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
 
             List<Map<String, Object>> packages = new ArrayList<>();
             /**
-             * 尝试。
-             * @param Files.list(upgradeDir 文件.列表(upgradedir
+            * 尝试。
+            * @param Files.list(upgradeDir 文件.列表(upgradedir
              */
             try (var stream = Files.list(upgradeDir)) {
                 stream.filter(this::isSupportedUpgradePackage)
@@ -355,10 +355,10 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
     }
 
     /**
-     * 执行Upgrade
-     *
-     * @param data 数据
-     * @return 执行upgrade的结果
+    * 执行Upgrade
+    *
+    * @param data 数据
+    * @return 执行upgrade的结果
      */
     private Map<String, Object> executeUpgrade(Map<String, Object> data) {
         try {
@@ -423,10 +423,10 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
     }
 
     /**
-     * 回滚Upgrade
-     *
-     * @param data 数据
-     * @return rollbackUpgrade的结果
+    * 回滚Upgrade
+    *
+    * @param data 数据
+    * @return rollbackUpgrade的结果
      */
     private Map<String, Object> rollbackUpgrade(Map<String, Object> data) {
         try {
@@ -441,14 +441,14 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
             }
 
             /**
-              * restorerollbacksnapshot。
-             * @param snapshot snapshot
+            * restorerollbacksnapshot。
+            * @param snapshot snapshot
              */
             restoreRollbackSnapshot(snapshot);
             rollbackSnapshots.remove(rollbackId);
             /**
-             * 删除目录quietly。
-             * @param snapshot.rollbackDirectory( snapshot.rollback目录(
+            * 删除目录quietly。
+            * @param snapshot.rollbackDirectory( snapshot.rollback目录(
              */
             deleteDirectoryQuietly(snapshot.rollbackDirectory());
 
@@ -468,9 +468,9 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
     }
 
     /**
-     * 获取upgrade状态
-     *
-     * @return 获取upgrade状态的结果
+    * 获取upgrade状态
+    *
+    * @return 获取upgrade状态的结果
      */
     private Map<String, Object> getUpgradeStatus() {
         try {
@@ -494,10 +494,10 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
     }
 
     /**
-     * 处理Restore
-     *
-     * @param data 数据
-     * @return 把手restore的结果
+    * 处理Restore
+    *
+    * @param data 数据
+    * @return 把手restore的结果
      */
     private Map<String, Object> handleRestore(Map<String, Object> data) {
         String action = MapUtils.getString(data, "action", "preview");
@@ -510,10 +510,10 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
     }
 
     /**
-     * previewrestore
-     *
-     * @param data 数据
-     * @return previewRestore的结果
+    * previewrestore
+    *
+    * @param data 数据
+    * @return previewRestore的结果
      */
     private Map<String, Object> previewRestore(Map<String, Object> data) {
         try {
@@ -568,10 +568,10 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
     }
 
     /**
-     * 执行Restore
-     *
-     * @param data 数据
-     * @return 执行restore的结果
+    * 执行Restore
+    *
+    * @param data 数据
+    * @return 执行restore的结果
      */
     private Map<String, Object> executeRestore(Map<String, Object> data) {
         try {
@@ -614,13 +614,13 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
     }
 
     /**
-     * 执行jarupgrade
-     *
-     * @param upgradeFile upgrade文件
-     * @param currentArtifact 当前artifact
-     * @param applicationHome applicationHome
-     * @param packageType 包类型
-     * @return 执行jarupgrade的结果
+    * 执行jarupgrade
+    *
+    * @param upgradeFile upgrade文件
+    * @param currentArtifact 当前artifact
+    * @param applicationHome applicationHome
+    * @param packageType 包类型
+    * @return 执行jarupgrade的结果
      */
     private RollbackSnapshot executeJarUpgrade(Path upgradeFile, Path currentArtifact, Path applicationHome, PackageType packageType) throws IOException {
         String rollbackId = createRollbackId();
@@ -632,25 +632,25 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
 
         Files.copy(upgradeFile, currentArtifact, StandardCopyOption.REPLACE_EXISTING);
         /**
-          * rollbacksnapshot。
-         * @param rollbackId rollbackid
-         * @param packageType 包类型
-         * @param applicationHome applicationHome
-         * @param rollbackDir rollbackdir
-         * @param entries entries
-         * @return RollbackSnapshot的结果
+        * rollbacksnapshot。
+        * @param rollbackId rollbackid
+        * @param packageType 包类型
+        * @param applicationHome applicationHome
+        * @param rollbackDir rollbackdir
+        * @param entries entries
+        * @return RollbackSnapshot的结果
          */
         return new RollbackSnapshot(rollbackId, packageType, applicationHome, rollbackDir, entries);
     }
 
     /**
-       * 执行Arch Linux Linux Linuxupgrade
-     *
-     * @param upgradeFile upgrade文件
-     * @param applicationHome applicationHome
-     * @param currentArtifact 当前artifact
-     * @param packageType 包类型
-     * @return 执行Arch Linuxupgrade的结果
+    * 执行Arch Linux Linux Linuxupgrade
+    *
+    * @param upgradeFile upgrade文件
+    * @param applicationHome applicationHome
+    * @param currentArtifact 当前artifact
+    * @param packageType 包类型
+    * @return 执行Arch Linuxupgrade的结果
      */
     private RollbackSnapshot executeArchiveUpgrade(Path upgradeFile, Path applicationHome, Path currentArtifact, PackageType packageType) throws IOException {
         String rollbackId = createRollbackId();
@@ -672,28 +672,28 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
             }
             Files.write(target, entry.getValue());
             /**
-             * applyexecutable钻头。
-             * @param target Target
+            * applyexecutable钻头。
+            * @param target Target
              */
             applyExecutableBit(target);
         }
 
         /**
-          * rollbacksnapshot。
-         * @param rollbackId rollbackid
-         * @param packageType 包类型
-         * @param applicationHome applicationHome
-         * @param rollbackDir rollbackdir
-         * @param entries entries
-         * @return RollbackSnapshot的结果
+        * rollbacksnapshot。
+        * @param rollbackId rollbackid
+        * @param packageType 包类型
+        * @param applicationHome applicationHome
+        * @param rollbackDir rollbackdir
+        * @param entries entries
+        * @return RollbackSnapshot的结果
          */
         return new RollbackSnapshot(rollbackId, packageType, applicationHome, rollbackDir, entries);
     }
 
     /**
-     * Restore回滚Snapshot
-     *
-     * @param snapshot snapshot
+    * Restore回滚Snapshot
+    *
+    * @param snapshot snapshot
      */
     private void restoreRollbackSnapshot(RollbackSnapshot snapshot) throws IOException {
         List<RollbackEntry> entries = new ArrayList<>(snapshot.entries());
@@ -708,15 +708,15 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
                 }
                 Files.copy(Paths.get(entry.backupPath()), target, StandardCopyOption.REPLACE_EXISTING);
                 /**
-                 * applyexecutable钻头。
-                 * @param target Target
+                * applyexecutable钻头。
+                * @param target Target
                  */
                 applyExecutableBit(target);
             } else {
                 Files.deleteIfExists(target);
                 /**
-                 * cleanup空目录。
-                 * @param target.getParent( Target.获取父(
+                * cleanup空目录。
+                * @param target.getParent( Target.获取父(
                  */
                 cleanupEmptyDirectories(target.getParent(), snapshot.applicationHome());
             }
@@ -724,11 +724,11 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
     }
 
     /**
-     * 创建回滚Entry
-     *
-     * @param target Target
-     * @param backupPath backup路径
-     * @return 创建rollbackentry的结果
+    * 创建回滚Entry
+    *
+    * @param target Target
+    * @param backupPath backup路径
+    * @return 创建rollbackentry的结果
      */
     private RollbackEntry createRollbackEntry(Path target, Path backupPath) throws IOException {
         boolean existedBefore = Files.exists(target);
@@ -744,28 +744,28 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
         }
 
         /**
-          * rollbackentry。
-         * @param target.toString( Target.转为字符串(
-         * @return RollbackEntry的结果
+        * rollbackentry。
+        * @param target.toString( Target.转为字符串(
+        * @return RollbackEntry的结果
          */
         return new RollbackEntry(target.toString(), existedBefore, backupPathValue);
     }
 
     /**
-       * 读取Arch Linux Linux Linuxpayloads
-     *
-     * @param archiveFile Arch Linux Linux Linux文件
-     * @param applicationHome applicationHome
-     * @param packageType 包类型
-     * @return 读取Arch Linuxpayloads的结果
+    * 读取Arch Linux Linux Linuxpayloads
+    *
+    * @param archiveFile Arch Linux Linux Linux文件
+    * @param applicationHome applicationHome
+    * @param packageType 包类型
+    * @return 读取Arch Linuxpayloads的结果
      */
     private Map<Path, byte[]> readArchivePayloads(Path archiveFile, Path applicationHome, PackageType packageType) throws IOException {
         Map<String, byte[]> entries = new LinkedHashMap<>();
 
         if (packageType == PackageType.ZIP) {
             /**
-             * 尝试。
-             * @param Files.newInputStream(archiveFile 文件.新输入流(Arch Linux Linux文件
+            * 尝试。
+            * @param Files.newInputStream(archiveFile 文件.新输入流(Arch Linux Linux文件
              */
             try (InputStream inputStream = Files.newInputStream(archiveFile);
                  ZipInputStream zipInputStream = new ZipInputStream(inputStream, StandardCharsets.UTF_8)) {
@@ -779,8 +779,8 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
             }
         } else {
             /**
-             * 尝试。
-             * @param Files.newInputStream(archiveFile 文件.新输入流(Arch Linux Linux文件
+            * 尝试。
+            * @param Files.newInputStream(archiveFile 文件.新输入流(Arch Linux Linux文件
              */
             try (InputStream inputStream = Files.newInputStream(archiveFile);
                  GzipCompressorInputStream gzipInputStream = new GzipCompressorInputStream(inputStream);
@@ -803,13 +803,13 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
     }
 
     /**
-     * 构建upgrade结果
-     *
-     * @param snapshot snapshot
-     * @param fileName 文件名称
-     * @param currentArtifact 当前artifact
-     * @param autoRestart autorestart
-     * @return 构建upgrade结果的结果
+    * 构建upgrade结果
+    *
+    * @param snapshot snapshot
+    * @param fileName 文件名称
+    * @param currentArtifact 当前artifact
+    * @param autoRestart autorestart
+    * @return 构建upgrade结果的结果
      */
     private Map<String, Object> buildUpgradeResult(RollbackSnapshot snapshot, String fileName, Path currentArtifact, boolean autoRestart) {
         Map<String, Object> data = new LinkedHashMap<>();
@@ -825,36 +825,36 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
     }
 
     /**
-     * 获取backup目录
-     *
-     * @return 获取backup目录的结果
+    * 获取backup目录
+    *
+    * @return 获取backup目录的结果
      */
     private Path getBackupDirectory() {
         return getApplicationHomeDirectory().resolve(BACKUP_DIR);
     }
 
     /**
-     * 获取upgrade目录
-     *
-     * @return 获取upgrade目录的结果
+    * 获取upgrade目录
+    *
+    * @return 获取upgrade目录的结果
      */
     private Path getUpgradeDirectory() {
         return getApplicationHomeDirectory().resolve(UPGRADE_DIR);
     }
 
     /**
-     * 获取回滚目录
-     *
-     * @return 获取rollback目录的结果
+    * 获取回滚目录
+    *
+    * @return 获取rollback目录的结果
      */
     private Path getRollbackDirectory() {
         return getApplicationHomeDirectory().resolve(ROLLBACK_DIR);
     }
 
     /**
-     * 获取applicationHome目录
-     *
-     * @return 获取applicationHome目录的结果
+    * 获取applicationHome目录
+    *
+    * @return 获取applicationHome目录的结果
      */
     private Path getApplicationHomeDirectory() {
         String configuredHome = getEnvironmentProperty(MAINTENANCE_HOME_DIR);
@@ -867,9 +867,9 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
     }
 
     /**
-     * 获取当前artifact路径
-     *
-     * @return 获取当前artifact路径的结果
+    * 获取当前artifact路径
+    *
+    * @return 获取当前artifact路径的结果
      */
     private Path getCurrentArtifactPath() {
         String configuredArtifact = getEnvironmentProperty(MAINTENANCE_CURRENT_ARTIFACT);
@@ -882,10 +882,10 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
     }
 
     /**
-     * 获取环境财产
-     *
-     * @param key 钥匙
-     * @return 获取环境财产的结果
+    * 获取环境财产
+    *
+    * @param key 钥匙
+    * @return 获取环境财产的结果
      */
     private String getEnvironmentProperty(String key) {
         if (applicationContext == null) {
@@ -895,39 +895,39 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
     }
 
     /**
-     * 是否支持upgrade包
-     *
-     * @param path 路径
-     * @return 是否支持upgrade包的结果
+    * 是否支持upgrade包
+    *
+    * @param path 路径
+    * @return 是否支持upgrade包的结果
      */
     private boolean isSupportedUpgradePackage(Path path) {
         return PackageType.fromFileName(path.getFileName().toString()) != null;
     }
 
     /**
-       * normalizeArch Linux Linux Linuxentry名称
-     *
-     * @param entryName entry名称
-     * @return normalizeArch Linuxentry名称的结果
+    * normalizeArch Linux Linux Linuxentry名称
+    *
+    * @param entryName entry名称
+    * @return normalizeArch Linuxentry名称的结果
      */
     private String normalizeArchiveEntryName(String entryName) {
         return entryName.replace('\\', '/');
     }
 
     /**
-       * 解析Arch Linux Linux LinuxTarget
-     *
-     * @param applicationHome applicationHome
-     * @param entryName entry名称
-     * @return resolveArch LinuxTarget的结果
+    * 解析Arch Linux Linux LinuxTarget
+    *
+    * @param applicationHome applicationHome
+    * @param entryName entry名称
+    * @return resolveArch LinuxTarget的结果
      */
     private Path resolveArchiveTarget(Path applicationHome, String entryName) {
         Path target = applicationHome.resolve(entryName).normalize();
         if (!target.startsWith(applicationHome)) {
             /**
-             * illegal参数异常。
-             * @param entryName entry名称
-             * @return illegal参数异常的结果
+            * illegal参数异常。
+            * @param entryName entry名称
+            * @return illegal参数异常的结果
              */
             throw new IllegalArgumentException("非法压缩包路径: " + entryName);
         }
@@ -935,9 +935,9 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
     }
 
     /**
-     * 应用executable钻头
-     *
-     * @param target Target
+    * 应用executable钻头
+    *
+    * @param target Target
      */
     private void applyExecutableBit(Path target) {
         String fileName = target.getFileName() == null ? "" : target.getFileName().toString().toLowerCase(Locale.ROOT);
@@ -947,10 +947,10 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
     }
 
     /**
-     * cleanup空目录
-     *
-     * @param start 启动
-     * @param stopAt 停止at
+    * cleanup空目录
+    *
+    * @param start 启动
+    * @param stopAt 停止at
      */
     private void cleanupEmptyDirectories(Path start, Path stopAt) throws IOException {
         Path current = start;
@@ -960,8 +960,8 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
                 continue;
             }
             /**
-             * 尝试。
-             * @param Files.list(current 文件.列表(当前
+            * 尝试。
+            * @param Files.list(current 文件.列表(当前
              */
             try (var stream = Files.list(current)) {
                 if (stream.findAny().isPresent()) {
@@ -974,17 +974,17 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
     }
 
     /**
-     * 删除目录quietly
-     *
-     * @param directory 目录
+    * 删除目录quietly
+    *
+    * @param directory 目录
      */
     private void deleteDirectoryQuietly(Path directory) {
         if (directory == null || !Files.exists(directory)) {
             return;
         }
         /**
-         * 尝试。
-         * @param Files.walk(directory 文件.walk(目录
+        * 尝试。
+        * @param Files.walk(directory 文件.walk(目录
          */
         try (var stream = Files.walk(directory)) {
             stream.sorted(Comparator.reverseOrder()).forEach(path -> {
@@ -1000,9 +1000,9 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
     }
 
     /**
-      * 创建回滚标识
-     *
-     * @return 创建rollbackid的结果
+    * 创建回滚标识
+    *
+    * @return 创建rollbackid的结果
      */
     private String createRollbackId() {
         return DateTimeFormatter.ofPattern("yyyyMMddHHmmss").format(LocalDateTime.now())
@@ -1011,9 +1011,9 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
     }
 
     /**
-     * collect环境属性
-     *
-     * @return collect环境属性的结果
+    * collect环境属性
+    *
+    * @return collect环境属性的结果
      */
     private Map<String, Object> collectEnvironmentProperties() {
         Map<String, Object> properties = new LinkedHashMap<>();
@@ -1041,9 +1041,9 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
     }
 
     /**
-     * collect系统属性
-     *
-     * @return collect系统属性的结果
+    * collect系统属性
+    *
+    * @return collect系统属性的结果
      */
     private Map<String, Object> collectSystemProperties() {
         Map<String, Object> properties = new LinkedHashMap<>();
@@ -1056,10 +1056,10 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
     }
 
     /**
-     * 是否sensitive财产
-     *
-     * @param name 名称
-     * @return 是否sensitive财产的结果
+    * 是否sensitive财产
+    *
+    * @param name 名称
+    * @return 是否sensitive财产的结果
      */
     private boolean isSensitiveProperty(String name) {
         String lower = name.toLowerCase(Locale.ROOT);
@@ -1071,9 +1071,9 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
     }
 
     /**
-     * 获取application名称
-     *
-     * @return 获取application名称的结果
+    * 获取application名称
+    *
+    * @return 获取application名称的结果
      */
     private String getApplicationName() {
         if (applicationContext != null) {
@@ -1083,9 +1083,9 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
     }
 
     /**
-     * 获取application版本
-     *
-     * @return 获取application版本的结果
+    * 获取application版本
+    *
+    * @return 获取application版本的结果
      */
     private String getApplicationVersion() {
         if (applicationContext != null) {
@@ -1095,30 +1095,30 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
     }
 
     /**
-     * 包类型枚举。
-     *
-     * @author CH
-     * @since 4.0.0
+    * 包类型枚举。
+    *
+    * @author CH
+    * @since 4.0.0
      */
     private enum PackageType {
         /**
-         * JAR。
-         * @param "JAR" "JAR"
+        * JAR。
+        * @param "JAR" "JAR"
          */
         JAR("JAR"),
         /**
-         * 压缩。
-         * @param "ZIP" "压缩"
+        * 压缩。
+        * @param "ZIP" "压缩"
          */
         ZIP("ZIP"),
         /**
-         * 焦油gz。
-         * @param "TAR_GZ" "焦油_GZ"
+        * 焦油gz。
+        * @param "TAR_GZ" "焦油_GZ"
          */
         TAR_GZ("TAR_GZ"),
         /**
-         * TGZ。
-         * @param "TGZ" "TGZ"
+        * TGZ。
+        * @param "TGZ" "TGZ"
          */
         TGZ("TGZ");
 
@@ -1126,27 +1126,27 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
         private final String displayName;
 
         /**
-         * 包类型。
-         * @param displayName display名称
+        * 包类型。
+        * @param displayName display名称
          */
         PackageType(String displayName) {
             this.displayName = displayName;
         }
 
         /**
-         * display名称
-         *
-         * @return display名称的结果
+        * display名称
+        *
+        * @return display名称的结果
          */
         private String displayName() {
             return displayName;
         }
 
         /**
-         * 从文件名称
-         *
-         * @param fileName 文件名称
-         * @return 从文件名称的结果
+        * 从文件名称
+        *
+        * @param fileName 文件名称
+        * @return 从文件名称的结果
          */
         private static PackageType fromFileName(String fileName) {
             if (fileName == null) {
@@ -1170,15 +1170,15 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
     }
 
     /**
-     * 回滚Snapshot
-     * @param rollbackId rollbackid
-     * @param packageType 包类型
-     * @param applicationHome applicationHome
-     * @param rollbackDirectory rollback目录
-     * @param entries entries
-     * @param targetPath Target路径
-     * @param existedBefore existed之前
-     * @param backupPath backup路径
+    * 回滚Snapshot
+    * @param rollbackId rollbackid
+    * @param packageType 包类型
+    * @param applicationHome applicationHome
+    * @param rollbackDirectory rollback目录
+    * @param entries entries
+    * @param targetPath Target路径
+    * @param existedBefore existed之前
+    * @param backupPath backup路径
      */
     private record RollbackSnapshot(
             String rollbackId,
@@ -1190,12 +1190,12 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
     }
 
     /**
-     * 回滚Entry
-     *
-     * @param targetPath Target路径
-     * @param existedBefore existed之前
-     * @param backupPath backup路径
-     * @return RollbackEntry的结果
+    * 回滚Entry
+    *
+    * @param targetPath Target路径
+    * @param existedBefore existed之前
+    * @param backupPath backup路径
+    * @return RollbackEntry的结果
      */
     private record RollbackEntry(String targetPath, boolean existedBefore, String backupPath) {
     }

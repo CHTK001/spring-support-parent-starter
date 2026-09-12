@@ -14,9 +14,9 @@ import java.util.Collections;
 import java.util.Map;
 
 /**
- * 商户支付渠道公共能力
- * @author CH
- * @since 4.0.0
+* 商户支付渠道公共能力
+* @author CH
+* @since 4.0.0
  */
 @RequiredArgsConstructor
 public abstract class AbstractMerchantPaymentChannel {
@@ -32,10 +32,10 @@ public abstract class AbstractMerchantPaymentChannel {
     protected final ObjectMapper objectMapper;
 
     /**
-     * ext配置
-     *
-     * @param channel 通道
-     * @return ext配置的结果
+    * ext配置
+    *
+    * @param channel 通道
+    * @return ext配置的结果
      */
     protected Map<String, Object> extConfig(MerchantChannel channel) {
         if (!StringUtils.hasText(channel.getExtConfig())) {
@@ -46,21 +46,21 @@ public abstract class AbstractMerchantPaymentChannel {
             });
         } catch (Exception e) {
             /**
-             * 薪酬异常。
-             * @param "支付方式扩展配置格式错误" "支付方式扩展配置格式错误"
-             * @param e e
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param "支付方式扩展配置格式错误" "支付方式扩展配置格式错误"
+            * @param e e
+            * @return 薪酬异常的结果
              */
             throw new PaymentException("支付方式扩展配置格式错误", e);
         }
     }
 
     /**
-     * ext文本
-     *
-     * @param channel 通道
-     * @param key 钥匙
-     * @return ext文本的结果
+    * ext文本
+    *
+    * @param channel 通道
+    * @param key 钥匙
+    * @return ext文本的结果
      */
     protected String extText(MerchantChannel channel, String key) {
         Object value = extConfig(channel).get(key);
@@ -68,40 +68,40 @@ public abstract class AbstractMerchantPaymentChannel {
     }
 
     /**
-     * 提供者spi
-     *
-     * @param channel 通道
-     * @return 提供者spi的结果
+    * 提供者spi
+    *
+    * @param channel 通道
+    * @return 提供者spi的结果
      */
     protected String providerSpi(MerchantChannel channel) {
         return providerSpi(channel, DEFAULT_PROVIDER_SPI);
     }
 
     /**
-     * 提供者spi
-     *
-     * @param channel 通道
-     * @param fallback 降级
-     * @return 提供者spi的结果
+    * 提供者spi
+    *
+    * @param channel 通道
+    * @param fallback 降级
+    * @return 提供者spi的结果
      */
     protected String providerSpi(MerchantChannel channel, String fallback) {
         return firstNonBlank(
                 /**
-                 * ext文本。
-                 * @param channel 通道
-                 * @param EXT_PROVIDER_SPI ext提供者spi
+                * ext文本。
+                * @param channel 通道
+                * @param EXT_PROVIDER_SPI ext提供者spi
                  */
                 extText(channel, EXT_PROVIDER_SPI),
                 /**
-                 * ext文本。
-                 * @param channel 通道
-                 * @param "providerExtension" "提供者延伸"
+                * ext文本。
+                * @param channel 通道
+                * @param "providerExtension" "提供者延伸"
                  */
                 extText(channel, "providerExtension"),
                 /**
-                 * ext文本。
-                 * @param channel 通道
-                 * @param "spi" "spi"
+                * ext文本。
+                * @param channel 通道
+                * @param "spi" "spi"
                  */
                 extText(channel, "spi"),
                 channel != null && "EPAY".equalsIgnoreCase(channel.getChannelType()) ? "epay" : null,
@@ -109,10 +109,10 @@ public abstract class AbstractMerchantPaymentChannel {
     }
 
     /**
-     * decrypt价值观
-     *
-     * @param encryptedValue encrypted价值观
-     * @return decrypt价值观的结果
+    * decrypt价值观
+    *
+    * @param encryptedValue encrypted价值观
+    * @return decrypt价值观的结果
      */
     protected String decryptValue(String encryptedValue) {
         if (!StringUtils.hasText(encryptedValue)) {
@@ -126,10 +126,10 @@ public abstract class AbstractMerchantPaymentChannel {
     }
 
     /**
-     * yuan转为fen
-     *
-     * @param amount amount
-     * @return yuan转为fen的结果
+    * yuan转为fen
+    *
+    * @param amount amount
+    * @return yuan转为fen的结果
      */
     protected long yuanToFen(BigDecimal amount) {
         if (amount == null) {
@@ -141,10 +141,10 @@ public abstract class AbstractMerchantPaymentChannel {
     }
 
     /**
-     * fen转为yuan
-     *
-     * @param amount amount
-     * @return fen转为yuan的结果
+    * fen转为yuan
+    *
+    * @param amount amount
+    * @return fen转为yuan的结果
      */
     protected BigDecimal fenToYuan(Number amount) {
         if (amount == null) {
@@ -155,10 +155,10 @@ public abstract class AbstractMerchantPaymentChannel {
     }
 
     /**
-     * 第一个nonblank
-     *
-     * @param values 价值观
-     * @return 第一个nonblank的结果
+    * 第一个nonblank
+    *
+    * @param values 价值观
+    * @return 第一个nonblank的结果
      */
     protected String firstNonBlank(String... values) {
         for (String value : values) {
@@ -170,18 +170,18 @@ public abstract class AbstractMerchantPaymentChannel {
     }
 
     /**
-     * required文本
-     *
-     * @param value 价值观
-     * @param message 消息
-     * @return required文本的结果
+    * required文本
+    *
+    * @param value 价值观
+    * @param message 消息
+    * @return required文本的结果
      */
     protected String requiredText(String value, String message) {
         if (!StringUtils.hasText(value)) {
             /**
-             * 薪酬异常。
-             * @param message 消息
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param message 消息
+            * @return 薪酬异常的结果
              */
             throw new PaymentException(message);
         }
@@ -189,10 +189,10 @@ public abstract class AbstractMerchantPaymentChannel {
     }
 
     /**
-     * 转为json
-     *
-     * @param value 价值观
-     * @return 转为json的结果
+    * 转为json
+    *
+    * @param value 价值观
+    * @return 转为json的结果
      */
     protected String toJson(Object value) {
         try {

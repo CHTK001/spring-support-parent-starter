@@ -13,10 +13,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
-   * 将支付异步通知接口加入 o认证 客户端白名单的配置类。
- *
- * @author CH
- * @since 4.0.0.50
+* 将支付异步通知接口加入 o认证 客户端白名单的配置类。
+*
+* @author CH
+* @since 4.0.0.50
  */
 @Slf4j
 @Configuration(proxyBeanMethods = false)
@@ -30,10 +30,10 @@ public class PaymentOauthWhitelistConfiguration {
 
     @Bean
     /**
-     * 薪酬oauthwhitelistinitializer
-     *
-     * @param applicationContext application上下文
-     * @return 薪酬oauthwhitelistinitializer的结果
+    * 薪酬oauthwhitelistinitializer
+    *
+    * @param applicationContext application上下文
+    * @return 薪酬oauthwhitelistinitializer的结果
      */
     public SmartInitializingSingleton paymentOauthWhitelistInitializer(ApplicationContext applicationContext) {
         return () -> {

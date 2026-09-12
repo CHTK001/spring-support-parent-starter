@@ -16,10 +16,10 @@ import org.springframework.util.StringUtils;
 import java.util.Locale;
 
 /**
- * 钱包异步回调处理服务实现，根据渠道回调通知更新钱包订单状态及账户余额。
- *
- * @author CH
- * @since 4.0.0.50
+* 钱包异步回调处理服务实现，根据渠道回调通知更新钱包订单状态及账户余额。
+*
+* @author CH
+* @since 4.0.0.50
  */
 @Service
 @RequiredArgsConstructor
@@ -33,36 +33,36 @@ public class WalletNotifyServiceImpl implements WalletNotifyService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-     * 处理通知
-     * @param orderType 订单类型
-     * @param orderNo 订单no
-     * @param thirdPartyOrderNo thirdparty订单no
-     * @param status 状态
-     * @param payload payload
-     * @param reason ReasonMLmlml
-     * @param dto dto
+    * 处理通知
+    * @param orderType 订单类型
+    * @param orderNo 订单no
+    * @param thirdPartyOrderNo thirdparty订单no
+    * @param status 状态
+    * @param payload payload
+    * @param reason ReasonMLmlml
+    * @param dto dto
      */
     public void handleNotify(WalletNotifyDTO dto) {
         if (!StringUtils.hasText(dto.orderNo())) {
             /**
-             * 薪酬异常。
-             * @param "钱包回调缺少订单号" "钱包回调缺少订单号"
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param "钱包回调缺少订单号" "钱包回调缺少订单号"
+            * @return 薪酬异常的结果
              */
             throw new PaymentException("钱包回调缺少订单号");
         }
         WalletOrder walletOrder = walletOrderService.getByOrderNo(dto.orderNo());
         if (walletOrder == null) {
             /**
-             * 薪酬异常。
-             * @param dto.orderNo( dto.订单no(
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param dto.orderNo( dto.订单no(
+            * @return 薪酬异常的结果
              */
             throw new PaymentException("钱包订单不存在: " + dto.orderNo());
         }
         /**
-         * 校验订单类型。
-         * @param dto.orderType( dto.订单类型(
+        * 校验订单类型。
+        * @param dto.orderType( dto.订单类型(
          */
         validateOrderType(dto.orderType(), walletOrder);
 
@@ -76,11 +76,11 @@ public class WalletNotifyServiceImpl implements WalletNotifyService {
     }
 
     /**
-      * 处理成功
-     * @param walletOrder wallet订单
-     * @param thirdPartyOrderNo thirdparty订单no
-     * @param payload payload
-     * @param reason ReasonMLmlml
+    * 处理成功
+    * @param walletOrder wallet订单
+    * @param thirdPartyOrderNo thirdparty订单no
+    * @param payload payload
+    * @param reason ReasonMLmlml
      */
     private void handleSuccess(WalletOrder walletOrder,
                                String thirdPartyOrderNo,
@@ -88,9 +88,9 @@ public class WalletNotifyServiceImpl implements WalletNotifyService {
                                String reason) {
         if (!"SUCCESS".equalsIgnoreCase(walletOrder.getStatus())) {
             /**
-             * apply账户改变。
-             * @param walletOrder wallet订单
-             * @param reason ReasonMLmlml
+            * apply账户改变。
+            * @param walletOrder wallet订单
+            * @param reason ReasonMLmlml
              */
             applyAccountChange(walletOrder, reason);
         }
@@ -98,10 +98,10 @@ public class WalletNotifyServiceImpl implements WalletNotifyService {
     }
 
     /**
-     * 应用账户改变
-     *
-     * @param walletOrder wallet订单
-     * @param reason ReasonMLmlml
+    * 应用账户改变
+    *
+    * @param walletOrder wallet订单
+    * @param reason ReasonMLmlml
      */
     private void applyAccountChange(WalletOrder walletOrder, String reason) {
         String operator = firstNonBlank(walletOrder.getOperator(), "wallet-notify");
@@ -140,18 +140,18 @@ public class WalletNotifyServiceImpl implements WalletNotifyService {
             return;
         }
         /**
-         * 薪酬异常。
-         * @param walletOrder.getOrderType( walletorder.获取订单类型(
-         * @return 薪酬异常的结果
+        * 薪酬异常。
+        * @param walletOrder.getOrderType( walletorder.获取订单类型(
+        * @return 薪酬异常的结果
          */
         throw new PaymentException("不支持的钱包订单类型: " + walletOrder.getOrderType());
     }
 
     /**
-     * 校验订单类型
-     *
-     * @param orderType 订单类型
-     * @param walletOrder wallet订单
+    * 校验订单类型
+    *
+    * @param orderType 订单类型
+    * @param walletOrder wallet订单
      */
     private void validateOrderType(String orderType, WalletOrder walletOrder) {
         String normalizedOrderType = normalizeOrderType(orderType);
@@ -160,19 +160,19 @@ public class WalletNotifyServiceImpl implements WalletNotifyService {
         }
         if (!normalizedOrderType.equals(normalizeOrderType(walletOrder.getOrderType()))) {
             /**
-             * 薪酬异常。
-             * @param "钱包回调类型和订单类型不匹配" "钱包回调类型和订单类型不匹配"
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param "钱包回调类型和订单类型不匹配" "钱包回调类型和订单类型不匹配"
+            * @return 薪酬异常的结果
              */
             throw new PaymentException("钱包回调类型和订单类型不匹配");
         }
     }
 
     /**
-     * normalize订单类型
-     *
-     * @param orderType 订单类型
-     * @return normalize订单类型的结果
+    * normalize订单类型
+    *
+    * @param orderType 订单类型
+    * @return normalize订单类型的结果
      */
     private String normalizeOrderType(String orderType) {
         if (!StringUtils.hasText(orderType)) {
@@ -192,17 +192,17 @@ public class WalletNotifyServiceImpl implements WalletNotifyService {
     }
 
     /**
-     * normalize状态
-     *
-     * @param status 状态
-     * @return normalize状态的结果
+    * normalize状态
+    *
+    * @param status 状态
+    * @return normalize状态的结果
      */
     private String normalizeStatus(String status) {
         if (!StringUtils.hasText(status)) {
             /**
-             * 薪酬异常。
-             * @param "钱包回调缺少状态" "钱包回调缺少状态"
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param "钱包回调缺少状态" "钱包回调缺少状态"
+            * @return 薪酬异常的结果
              */
             throw new PaymentException("钱包回调缺少状态");
         }
@@ -220,11 +220,11 @@ public class WalletNotifyServiceImpl implements WalletNotifyService {
     }
 
     /**
-     * Matches
-     *
-     * @param value 价值观
-     * @param candidates candidates
-     * @return 匹配的结果
+    * Matches
+    *
+    * @param value 价值观
+    * @param candidates candidates
+    * @return 匹配的结果
      */
     private boolean matches(String value, String... candidates) {
         if (candidates == null) {
@@ -239,10 +239,10 @@ public class WalletNotifyServiceImpl implements WalletNotifyService {
     }
 
     /**
-     * 第一个nonblank
-     *
-     * @param values 价值观
-     * @return 第一个nonblank的结果
+    * 第一个nonblank
+    *
+    * @param values 价值观
+    * @return 第一个nonblank的结果
      */
     private String firstNonBlank(String... values) {
         if (values == null) {

@@ -18,28 +18,28 @@ import javax.sql.DataSource;
 import java.io.File;
 
 /**
-   * sqlite 嵌入式数据库自动配置。
- * <p>
- * 当 {@code plugin.sqlite.enable=true} 时，自动创建：
- * <ul>
- *   <li>{@link SqliteEngine} — 优先于注解初始化，在 Bean 容器中注入</li>
- *   <li>{@link DataSource} — HikariCP 包装的 SQLite 连接池</li>
- * </ul>
- * </p>
- * <p>
- * 使用示例：
- * <pre>{@code
- * # application.properties
- * plugin.sqlite.enable=true
- * plugin.sqlite.path=./data/app.sqlite
- * plugin.sqlite.init-sql=classpath:db/init/sqlite
- * plugin.sqlite.max-pool-size=5
- * }</pre>ize=5
- * }</pre>
- * </p>
- *
- * @author CH
- * @since 4.0.0.42
+* sqlite 嵌入式数据库自动配置。
+* <p>
+* 当 {@code plugin.sqlite.enable=true} 时，自动创建：
+* <ul>
+*   <li>{@link SqliteEngine} — 优先于注解初始化，在 Bean 容器中注入</li>
+*   <li>{@link DataSource} — HikariCP 包装的 SQLite 连接池</li>
+* </ul>
+* </p>
+* <p>
+* 使用示例：
+* <pre>{@code
+* # application.properties
+* plugin.sqlite.enable=true
+* plugin.sqlite.path=./data/app.sqlite
+* plugin.sqlite.init-sql=classpath:db/init/sqlite
+* plugin.sqlite.max-pool-size=5
+* }</pre>ize=5
+* }</pre>
+* </p>
+*
+* @author CH
+* @since 4.0.0.42
  */
 @Slf4j
 @Configuration
@@ -52,20 +52,20 @@ public class SqliteEngineAutoConfiguration {
     private final SqliteDataSourceProperties properties; // 属性
 
     /**
-     * sqliteengineauto配置。
-     * @param properties 属性
+    * sqliteengineauto配置。
+    * @param properties 属性
      */
     public SqliteEngineAutoConfiguration(SqliteDataSourceProperties properties) {
         this.properties = properties;
     }
 
     /**
-      * 注册 sqlite Engine Bean，优先于注解初始化加载。
-     * <p>
-     * 使用 {@code @Order(Ordered.LOWEST_PRECEDENCE)} 确保在所有依赖 Engine 的 Bean
-      * 之后初始化，但在需要 sqlite 作为默认数据源的场景下可优先于其他 Engine。
-     * </p>
-     * @return sqliteEngine的结果
+    * 注册 sqlite Engine Bean，优先于注解初始化加载。
+    * <p>
+    * 使用 {@code @Order(Ordered.LOWEST_PRECEDENCE)} 确保在所有依赖 Engine 的 Bean
+    * 之后初始化，但在需要 sqlite 作为默认数据源的场景下可优先于其他 Engine。
+    * </p>
+    * @return sqliteEngine的结果
      */
     @Bean
     @ConditionalOnMissingBean
@@ -78,8 +78,8 @@ public class SqliteEngineAutoConfiguration {
     }
 
     /**
-      * 注册 sqlite 数据源 Bean（供 Spring jdbctemplate / @Transactional 使用）。
-     * @return sqlite数据源的结果
+    * 注册 sqlite 数据源 Bean（供 Spring jdbctemplate / @Transactional 使用）。
+    * @return sqlite数据源的结果
      */
     @Bean
     @ConditionalOnMissingBean(DataSource.class)
@@ -99,9 +99,9 @@ public class SqliteEngineAutoConfiguration {
             return ds;
         } catch (Exception e) {
             /**
-             * runtime异常。
-             * @param e.getMessage( e.获取消息(
-             * @return runtime异常的结果
+            * runtime异常。
+            * @param e.getMessage( e.获取消息(
+            * @return runtime异常的结果
              */
             throw new RuntimeException("[sqlite] SQLite DataSource 创建失败: " + e.getMessage(), e);
         }

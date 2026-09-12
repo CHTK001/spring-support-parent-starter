@@ -33,13 +33,13 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * AI 对话聊天控制器。
- * <p>
- * 提供会话管理（创建/删除/查询）和基于 SSE 的流式聊天能力。
- * 继承 {@link BaseAiController} 以便统一使用基础服务能力。
- *
- * @author CH
- * @since 4.0.0
+* AI 对话聊天控制器。
+* <p>
+* 提供会话管理（创建/删除/查询）和基于 SSE 的流式聊天能力。
+* 继承 {@link BaseAiController} 以便统一使用基础服务能力。
+*
+* @author CH
+* @since 4.0.0
  */
 @Tag(name = "AI Chat Dialog Controller", description = "AI 对话聊天接口")
 @RestController
@@ -49,12 +49,12 @@ import java.util.Map;
 public class AIChatController extends BaseAiController {
 
     /**
-     * 压缩上下文拼接时的摘要最大长度
+    * 压缩上下文拼接时的摘要最大长度
      */
     private static final int SUMMARY_MAX_LENGTH = 4000;
 
     /**
-     * 压缩上下文总量上限
+    * 压缩上下文总量上限
      */
     private static final int COMPRESSED_CONTEXT_MAX_LENGTH = 16000;
 
@@ -70,11 +70,11 @@ public class AIChatController extends BaseAiController {
     // ==================== 会话管理 ====================
 
     /**
-     * 创建新会话。
-     * @param "新对话" "新对话"
-     * @return 创建dialog的结果
-     * @param "新对话" "新对话"
-     * @param "新对话" "新对话"
+    * 创建新会话。
+    * @param "新对话" "新对话"
+    * @return 创建dialog的结果
+    * @param "新对话" "新对话"
+    * @param "新对话" "新对话"
      */
     @Operation(summary = "创建会话", description = "创建新的对话会话")
     @Permission("admin")
@@ -89,9 +89,9 @@ public class AIChatController extends BaseAiController {
     }
 
     /**
-     * 删除指定会话。
-     * @param dialogId dialogid
-     * @return 删除dialog的结果
+    * 删除指定会话。
+    * @param dialogId dialogid
+    * @return 删除dialog的结果
      */
     @Operation(summary = "删除会话", description = "删除指定对话会话及其所有消息")
     @Permission("admin")
@@ -102,8 +102,8 @@ public class AIChatController extends BaseAiController {
     }
 
     /**
-     * 获取所有会话列表。
-     * @return 获取dialog的结果
+    * 获取所有会话列表。
+    * @return 获取dialog的结果
      */
     @Operation(summary = "获取会话列表", description = "获取所有对话会话列表")
     @Permission("admin")
@@ -114,9 +114,9 @@ public class AIChatController extends BaseAiController {
     }
 
     /**
-     * 获取指定会话的消息记录。
-     * @param dialogId dialogid
-     * @return 获取dialogrecord的结果
+    * 获取指定会话的消息记录。
+    * @param dialogId dialogid
+    * @return 获取dialogrecord的结果
      */
     @Operation(summary = "获取会话消息", description = "获取指定会话的所有消息记录")
     @Permission("admin")
@@ -129,10 +129,10 @@ public class AIChatController extends BaseAiController {
     // ==================== 聊天（SSE 流式） ====================
 
     /**
-     * 流式聊天接口。
-     * <p>
-     * 将用户消息保存到会话记录，调用 AI 门面服务进行流式推理，
-     * 并将 AI 回复也保存到消息记录。
+    * 流式聊天接口。
+    * <p>
+    * 将用户消息保存到会话记录，调用 AI 门面服务进行流式推理，
+    * 并将 AI 回复也保存到消息记录。
      */
     @Operation(summary = "AI 聊天", description = "向指定会话发送消息并获取 AI 流式回复（SSE）")
     @Permission("admin")
@@ -207,27 +207,27 @@ public class AIChatController extends BaseAiController {
             }
             // 回复完成后，将历史压缩为「摘要 + 最近 N 轮」写入上下文表
             /**
-             * compressand保存上下文。
-             * @param dialogId dialogid
+            * compressand保存上下文。
+            * @param dialogId dialogid
              */
             compressAndSaveContext(dialogId);
         });
     }
 
     /**
-     * 将历史消息压缩为摘要并写入会话压缩上下文表。
-     *
-     * <p>规则：会话累计达到 {@code chat_compress_trigger_rounds} 轮后才触发压缩，
-     * 保留最近 {@code chat_compress_retain_rounds} 轮原始对话，之前的历史压缩为摘要，
-     * 以「摘要 + 最近 N 轮原始对话」拼接后作为后续聊天上下文落库。</p>
-     *
-     * <p>阈值与保留轮数均可通过全局设置（runtime 分组）配置：
-     * <ul>
-     *   <li>{@code chat_compress_trigger_rounds} — 触发压缩的累计轮数，默认 100</li>
-     *   <li>{@code chat_compress_retain_rounds} — 压缩后保留的最近轮数，默认 6</li>
-     * </ul></p>
-     *
-     * @param dialogId 会话 标识
+    * 将历史消息压缩为摘要并写入会话压缩上下文表。
+    *
+    * <p>规则：会话累计达到 {@code chat_compress_trigger_rounds} 轮后才触发压缩，
+    * 保留最近 {@code chat_compress_retain_rounds} 轮原始对话，之前的历史压缩为摘要，
+    * 以「摘要 + 最近 N 轮原始对话」拼接后作为后续聊天上下文落库。</p>
+    *
+    * <p>阈值与保留轮数均可通过全局设置（runtime 分组）配置：
+    * <ul>
+    *   <li>{@code chat_compress_trigger_rounds} — 触发压缩的累计轮数，默认 100</li>
+    *   <li>{@code chat_compress_retain_rounds} — 压缩后保留的最近轮数，默认 6</li>
+    * </ul></p>
+    *
+    * @param dialogId 会话 标识
      */
     private void compressAndSaveContext(Long dialogId) {
         try {
@@ -293,11 +293,11 @@ public class AIChatController extends BaseAiController {
     }
 
     /**
-     * 从全局设置读取整数配置，解析失败或未配置时返回默认值。
-     *
-     * @param field        配置字段名（runtime 分组）
-     * @param defaultValue 默认值
-     * @return 配置值
+    * 从全局设置读取整数配置，解析失败或未配置时返回默认值。
+    *
+    * @param field        配置字段名（runtime 分组）
+    * @param defaultValue 默认值
+    * @return 配置值
      */
     private int parseIntSetting(String field, int defaultValue) {
         return sysAiGlobalSettingService.getValue("runtime", field)

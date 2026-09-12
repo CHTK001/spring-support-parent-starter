@@ -15,10 +15,10 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * 支付敏感字段加解密服务，支持多密钥兼容（新旧密钥均能解密历史数据）。
- *
- * @author CH
- * @since 4.0.0.50
+* 支付敏感字段加解密服务，支持多密钥兼容（新旧密钥均能解密历史数据）。
+*
+* @author CH
+* @since 4.0.0.50
  */
 @Component
 public class PaymentCipherService {
@@ -29,18 +29,18 @@ public class PaymentCipherService {
     private final Environment environment;
 
     /**
-      * 创建 薪酬cipher服务 实例
-     * @param environment 环境
+    * 创建 薪酬cipher服务 实例
+    * @param environment 环境
      */
     public PaymentCipherService(Environment environment) {
         this.environment = environment;
     }
 
     /**
-     * Encrypt
-     *
-     * @param plainText plain文本
-     * @return encrypt的结果
+    * Encrypt
+    *
+    * @param plainText plain文本
+    * @return encrypt的结果
      */
     public String encrypt(String plainText) {
         if (!StringUtils.hasText(plainText)) {
@@ -50,10 +50,10 @@ public class PaymentCipherService {
     }
 
     /**
-     * Decrypt
-     *
-     * @param encryptedText encrypted文本
-     * @return decrypt的结果
+    * Decrypt
+    *
+    * @param encryptedText encrypted文本
+    * @return decrypt的结果
      */
     public String decrypt(String encryptedText) {
         if (!StringUtils.hasText(encryptedText)) {
@@ -68,17 +68,17 @@ public class PaymentCipherService {
             }
         }
         /**
-         * 薪酬异常。
-         * @param 密钥配置" 密钥配置"
-         * @param lastException 最后一个异常
-         * @return 薪酬异常的结果
+        * 薪酬异常。
+        * @param 密钥配置" 密钥配置"
+        * @param lastException 最后一个异常
+        * @return 薪酬异常的结果
          */
         throw new PaymentException("解密失败，请检查 payment/encryption 或 plugin.payment.security 密钥配置", lastException);
     }
 
     /**
-     * candidate解密钥匙。
-     * @return candidate解密钥匙的结果
+    * candidate解密钥匙。
+    * @return candidate解密钥匙的结果
      */
     List<String> candidateDecryptionKeys() {
         Set<String> keys = new LinkedHashSet<>();
@@ -95,8 +95,8 @@ public class PaymentCipherService {
     }
 
     /**
-     * required加密钥匙。
-     * @return required加密钥匙的结果
+    * required加密钥匙。
+    * @return required加密钥匙的结果
      */
     String requiredEncryptionKey() {
         String key = configuredEncryptionKey();
@@ -104,9 +104,9 @@ public class PaymentCipherService {
     }
 
     /**
-     * configured加密钥匙
-     *
-     * @return configured加密钥匙的结果
+    * configured加密钥匙
+    *
+    * @return configured加密钥匙的结果
      */
     private String configuredEncryptionKey() {
         return property(
@@ -119,10 +119,10 @@ public class PaymentCipherService {
     }
 
     /**
-     * 财产
-     *
-     * @param keys 钥匙
-     * @return 财产的结果
+    * 财产
+    *
+    * @param keys 钥匙
+    * @return 财产的结果
      */
     private String property(String... keys) {
         for (String key : keys) {
@@ -135,10 +135,10 @@ public class PaymentCipherService {
     }
 
     /**
-     * 分割钥匙
-     *
-     * @param value 价值观
-     * @return 分割钥匙的结果
+    * 分割钥匙
+    *
+    * @param value 价值观
+    * @return 分割钥匙的结果
      */
     private List<String> splitKeys(String value) {
         if (!StringUtils.hasText(value)) {
@@ -154,12 +154,12 @@ public class PaymentCipherService {
     }
 
     /**
-     * 执行cipher
-     *
-     * @param value 价值观
-     * @param keyText 钥匙文本
-     * @param mode mode
-     * @return 执行cipher的结果
+    * 执行cipher
+    *
+    * @param value 价值观
+    * @param keyText 钥匙文本
+    * @param mode mode
+    * @return 执行cipher的结果
      */
     private String doCipher(String value, String keyText, int mode) {
         try {
@@ -172,35 +172,35 @@ public class PaymentCipherService {
             }
             byte[] decrypted = cipher.doFinal(Base64.getDecoder().decode(value));
             /**
-             * 字符串。
-             * @param decrypted decrypted
-             * @param StandardCharsets.UTF_8 标准字符集.utf8
-             * @return 字符串的结果
+            * 字符串。
+            * @param decrypted decrypted
+            * @param StandardCharsets.UTF_8 标准字符集.utf8
+            * @return 字符串的结果
              */
             return new String(decrypted, StandardCharsets.UTF_8);
         } catch (Exception e) {
             /**
-             * 薪酬异常。
-             * @param "解密失败" "解密失败"
-             * @param e e
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param "解密失败" "解密失败"
+            * @param e e
+            * @return 薪酬异常的结果
              */
             throw new PaymentException(mode == Cipher.ENCRYPT_MODE ? "加密失败" : "解密失败", e);
         }
     }
 
     /**
-     * normalize钥匙
-     *
-     * @param keyText 钥匙文本
-     * @return normalize钥匙的结果
+    * normalize钥匙
+    *
+    * @param keyText 钥匙文本
+    * @return normalize钥匙的结果
      */
     private byte[] normalizeKey(String keyText) {
         if (!StringUtils.hasText(keyText)) {
             /**
-             * 薪酬异常。
-             * @param "支付加密密钥不能为空" "支付加密密钥不能为空"
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param "支付加密密钥不能为空" "支付加密密钥不能为空"
+            * @return 薪酬异常的结果
              */
             throw new PaymentException("支付加密密钥不能为空");
         }

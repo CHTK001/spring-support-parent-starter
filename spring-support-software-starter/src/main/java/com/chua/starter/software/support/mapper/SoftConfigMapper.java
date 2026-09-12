@@ -8,20 +8,20 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 /**
-   * 软件配置表 映射器
- *
- * @since 2026/7/25
- * @author CH
+* 软件配置表 映射器
+*
+* @since 2026/7/25
+* @author CH
  */
 @Mapper
 public interface SoftConfigMapper extends BaseMapperX<SoftConfig> {
 
     /**
-     * 分页查询配置列表
-     *
-     * @param page 分页参数
-     * @param request 查询条件
-     * @return 分页结果
+    * 分页查询配置列表
+    *
+    * @param page 分页参数
+    * @param request 查询条件
+    * @return 分页结果
      */
     Page<SoftConfig> selectPageFor(
             @Param("page") Page<SoftConfig> page,

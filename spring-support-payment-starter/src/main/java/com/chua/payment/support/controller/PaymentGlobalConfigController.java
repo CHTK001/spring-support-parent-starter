@@ -17,9 +17,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 支付全局配置控制器
- * @author CH
- * @since 4.0.0
+* 支付全局配置控制器
+* @author CH
+* @since 4.0.0
  */
 @Tag(name = "支付全局配置", description = "支付回调、返回地址、默认自动刷新配置")
 @RestController
@@ -35,10 +35,10 @@ public class PaymentGlobalConfigController {
     @Operation(summary = "查询支付全局配置")
     @GetMapping
     /**
-     * 获取配置
-     *
-     * @param request 请求
-     * @return 获取配置的结果
+    * 获取配置
+    *
+    * @param request 请求
+    * @return 获取配置的结果
      */
     public Result<PaymentGlobalConfigVO> getConfig(HttpServletRequest request) {
         Result<PaymentGlobalConfigVO> denied = denyIfNecessary(request);
@@ -48,11 +48,11 @@ public class PaymentGlobalConfigController {
     @Operation(summary = "保存支付全局配置")
     @PutMapping
     /**
-     * 保存配置
-     *
-     * @param dto dto
-     * @param request 请求
-     * @return 保存配置的结果
+    * 保存配置
+    *
+    * @param dto dto
+    * @param request 请求
+    * @return 保存配置的结果
      */
     public Result<PaymentGlobalConfigVO> saveConfig(@RequestBody PaymentGlobalConfigDTO dto, HttpServletRequest request) {
         Result<PaymentGlobalConfigVO> denied = denyIfNecessary(request);
@@ -60,10 +60,10 @@ public class PaymentGlobalConfigController {
     }
 
     /**
-     * denyifnecessary
-     *
-     * @param request 请求
-     * @return denyIfNecessary的结果
+    * denyifnecessary
+    *
+    * @param request 请求
+    * @return denyIfNecessary的结果
      */
     private <T> Result<T> denyIfNecessary(HttpServletRequest request) {
         UserResume userResume = principalResolver.resolve(request);

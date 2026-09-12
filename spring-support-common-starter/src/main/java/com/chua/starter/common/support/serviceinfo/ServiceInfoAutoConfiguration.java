@@ -18,29 +18,29 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.Map;
 
 /**
- * 服务信息自动配置 (统一入口)。
- *
- * <p>这是 spring-support-common-starter 提供的统一服务体系, 任何业务 starter
- * 都通过 {@link ServiceInfoRegistry} 注册自己的端点和开关, 启动时统一呈现。</p>
- *
- * <h3>职责</h3>
- * <ol>
- *   <li>注册基础端点 (应用自身 / Swagger / Actuator 等)</li>
- *   <li>启动完成后输出美化日志 (使用 {@link AnsiStyle} 统一颜色) -
- *       唯一的 ANSI 渲染点, 业务模块不允许自行输出 ANSI 转义</li>
- *   <li>暴露 {@code GET /service-info} REST 端点 (可选认证)</li>
- * </ol>
- *
- * <h3>运行时序保证</h3>
- * <ul>
- *   <li>基础端点检测在 {@link org.springframework.boot.context.event.ApplicationReadyEvent}
-   * 阶段执行; 此时所有 启动 的 {@code @Bean ServiceInfoContributor} 都已注册。</li>
- *   <li>横幅渲染通过 {@link ServiceInfoBannerListener} 在 ready/failed 事件中触发,
- *       比业务 {@code CommandLineRunner} 更晚 (即使它们没有显式 {@code @Order})。</li>
- * </ul>
- *
- * @since 4.0.0.42
- * @author CH
+* 服务信息自动配置 (统一入口)。
+*
+* <p>这是 spring-support-common-starter 提供的统一服务体系, 任何业务 starter
+* 都通过 {@link ServiceInfoRegistry} 注册自己的端点和开关, 启动时统一呈现。</p>
+*
+* <h3>职责</h3>
+* <ol>
+*   <li>注册基础端点 (应用自身 / Swagger / Actuator 等)</li>
+*   <li>启动完成后输出美化日志 (使用 {@link AnsiStyle} 统一颜色) -
+*       唯一的 ANSI 渲染点, 业务模块不允许自行输出 ANSI 转义</li>
+*   <li>暴露 {@code GET /service-info} REST 端点 (可选认证)</li>
+* </ol>
+*
+* <h3>运行时序保证</h3>
+* <ul>
+*   <li>基础端点检测在 {@link org.springframework.boot.context.event.ApplicationReadyEvent}
+* 阶段执行; 此时所有 启动 的 {@code @Bean ServiceInfoContributor} 都已注册。</li>
+*   <li>横幅渲染通过 {@link ServiceInfoBannerListener} 在 ready/failed 事件中触发,
+*       比业务 {@code CommandLineRunner} 更晚 (即使它们没有显式 {@code @Order})。</li>
+* </ul>
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Slf4j
 @AutoConfiguration
@@ -52,14 +52,14 @@ public class ServiceInfoAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     /**
-     * 服务信息控制器
-     *
-     * @return 服务信息控制器的结果
+    * 服务信息控制器
+    *
+    * @return 服务信息控制器的结果
      */
     public ServiceInfoController serviceInfoController() {
         /**
-         * 服务信息控制器。
-         * @return 服务信息控制器的结果
+        * 服务信息控制器。
+        * @return 服务信息控制器的结果
          */
         return new ServiceInfoController();
     }
@@ -70,9 +70,9 @@ public class ServiceInfoAutoConfiguration {
     public ServiceInfoEndpointDetector serviceInfoEndpointDetector(
             Environment environment, ServiceInfoProperties properties) {
         /**
-         * 服务信息端点detector。
-         * @param environment 环境
-         * @return 服务信息端点detector的结果
+        * 服务信息端点detector。
+        * @param environment 环境
+        * @return 服务信息端点detector的结果
          */
         return new ServiceInfoEndpointDetector(environment)
                 .infrastructureEnabled(properties.isInfrastructure());
@@ -80,25 +80,25 @@ public class ServiceInfoAutoConfiguration {
 
     @Bean
     /**
-      * 服务信息banner监听器
-     * @param detector detector
-     * @param properties 属性
+    * 服务信息banner监听器
+    * @param detector detector
+    * @param properties 属性
      */
     public ServiceInfoBannerListener serviceInfoBannerListener(
             ServiceInfoEndpointDetector detector, ServiceInfoProperties properties) {
         /**
-         * 服务信息banner监听器。
-         * @param detector detector
-         * @param properties 属性
-         * @return 服务信息banner监听器的结果
+        * 服务信息banner监听器。
+        * @param detector detector
+        * @param properties 属性
+        * @return 服务信息banner监听器的结果
          */
         return new ServiceInfoBannerListener(detector, properties);
     }
 
     /**
-      * 注册 服务信息 认证过滤器 (可选)。
-     *
-     * <p>当 {@code plugin.service-info.auth.enable=true} 时注册, 否则不创建。</p>
+    * 注册 服务信息 认证过滤器 (可选)。
+    *
+    * <p>当 {@code plugin.service-info.auth.enable=true} 时注册, 否则不创建。</p>
      */
     @Bean
     @ConditionalOnProperty(name = "plugin.service-info.auth.enable", havingValue = "true")
@@ -116,21 +116,21 @@ public class ServiceInfoAutoConfiguration {
     }
 
     /**
-     * REST 端点: 返回所有注册到 {@link ServiceInfoRegistry} 的端点和开关信息。
-     *
-     * <p>注意: 此端点暴露应用内部信息 (包括路径、开关状态), 默认应仅内网访问;
-     * 公网访问请通过 {@code plugin.service-info.auth.enable=true} 启用认证。</p>
-     * @author CH
-     * @since 4.0.0
+    * REST 端点: 返回所有注册到 {@link ServiceInfoRegistry} 的端点和开关信息。
+    *
+    * <p>注意: 此端点暴露应用内部信息 (包括路径、开关状态), 默认应仅内网访问;
+    * 公网访问请通过 {@code plugin.service-info.auth.enable=true} 启用认证。</p>
+    * @author CH
+    * @since 4.0.0
      */
     @RestController
     @RequestMapping("/service-info")
     public static class ServiceInfoController {
         @GetMapping
         /**
-         * 信息
-         *
-         * @return 信息的结果
+        * 信息
+        *
+        * @return 信息的结果
          */
         public Map<String, Object> info() {
             return ServiceInfoRegistry.getInstance().getInfo();
@@ -138,14 +138,14 @@ public class ServiceInfoAutoConfiguration {
     }
 
     /**
-     * 启动信息横幅: 唯一允许输出 ANSI 转义的位置。
-     *
-     * <p>布局由 {@link ServiceInfoBanner} 负责 (纯文本拼装, 可独立验证);
-     * 颜色由 {@link AnsiStyle} 统一提供, 本类只负责落日志。</p>
-     *
-     * <p>由 {@link ServiceInfoBannerListener} 调用, package-private 静态方法,
-     * 避免业务 starter 误用。</p>
-     * @param registry registry
+    * 启动信息横幅: 唯一允许输出 ANSI 转义的位置。
+    *
+    * <p>布局由 {@link ServiceInfoBanner} 负责 (纯文本拼装, 可独立验证);
+    * 颜色由 {@link AnsiStyle} 统一提供, 本类只负责落日志。</p>
+    *
+    * <p>由 {@link ServiceInfoBannerListener} 调用, package-private 静态方法,
+    * 避免业务 starter 误用。</p>
+    * @param registry registry
      */
     static void printBanner(ServiceInfoRegistry registry) {
         String banner = ServiceInfoBanner.render(registry);

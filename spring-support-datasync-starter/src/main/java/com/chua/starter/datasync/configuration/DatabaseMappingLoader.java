@@ -13,14 +13,14 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
-   * 数据库映射加载器，启动时从数据库表加载 数据同步 映射配置。
- * <p>
- * 表结构由 {@code spring-support-datasource-starter} 自动执行
- * {@code db/init/V1.0.0__init_datasync_mapping.sql} 初始化，此类仅负责查询映射数据。
- * </p>
- *
- * @since 4.0.0.42
- * @author CH
+* 数据库映射加载器，启动时从数据库表加载 数据同步 映射配置。
+* <p>
+* 表结构由 {@code spring-support-datasource-starter} 自动执行
+* {@code db/init/V1.0.0__init_datasync_mapping.sql} 初始化，此类仅负责查询映射数据。
+* </p>
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Slf4j
 public class DatabaseMappingLoader implements InitializingBean {
@@ -33,10 +33,10 @@ public class DatabaseMappingLoader implements InitializingBean {
     private final DataSyncMappingManager mappingManager;
 
     /**
-      * 创建 databasemapping加载 实例
-     * @param dataSource 数据源
-     * @param properties 属性
-     * @param mappingManager mapping管理器
+    * 创建 databasemapping加载 实例
+    * @param dataSource 数据源
+    * @param properties 属性
+    * @param mappingManager mapping管理器
      */
     public DatabaseMappingLoader(DataSource dataSource,
                                  DatasyncProperties properties,
@@ -57,18 +57,18 @@ public class DatabaseMappingLoader implements InitializingBean {
         org.springframework.jdbc.core.JdbcTemplate jdbcTemplate =
                 new org.springframework.jdbc.core.JdbcTemplate(dataSource);
         /**
-         * 加载mappings。
-         * @param jdbcTemplate jdbctemplate
-         * @param config.getTablePrefix( 配置.获取table前缀(
+        * 加载mappings。
+        * @param jdbcTemplate jdbctemplate
+        * @param config.getTablePrefix( 配置.获取table前缀(
          */
         loadMappings(jdbcTemplate, config.getTablePrefix());
     }
 
     /**
-     * 加载Mappings
-     *
-     * @param jdbcTemplate jdbctemplate
-     * @param prefix 前缀
+    * 加载Mappings
+    *
+    * @param jdbcTemplate jdbctemplate
+    * @param prefix 前缀
      */
     private void loadMappings(org.springframework.jdbc.core.JdbcTemplate jdbcTemplate, String prefix) {
         String mappingTable = prefix + "mapping";
@@ -91,8 +91,8 @@ public class DatabaseMappingLoader implements InitializingBean {
                         (String) row.get("datasync_mapping_cron_type"),
                         (String) row.get("datasync_mapping_cron"),
                         /**
-                         * 解析参数。
-                         * @param (String (字符串
+                        * 解析参数。
+                        * @param (String (字符串
                          */
                         parseParams((String) row.get("datasync_mapping_params")),
                         trigger
@@ -106,22 +106,22 @@ public class DatabaseMappingLoader implements InitializingBean {
     }
 
     /**
-      * 加载字段mappings
-     * @param jdbcTemplate jdbctemplate
-     * @param prefix 前缀
-     * @param mappingId mappingid
-     * @param fieldTable 字段table
-     * @param mappingId mappingid
-     * @param e e
-     * @param mappingId mappingid
-     * @param e e
-     * @param paramsJson 参数json
-     * @param e e
-     * @param paramsJson 参数json
-     * @param e e
-     * @param sourceField 源字段
-     * @param targetField Target字段
-     * @param converter 转换器
+    * 加载字段mappings
+    * @param jdbcTemplate jdbctemplate
+    * @param prefix 前缀
+    * @param mappingId mappingid
+    * @param fieldTable 字段table
+    * @param mappingId mappingid
+    * @param e e
+    * @param mappingId mappingid
+    * @param e e
+    * @param paramsJson 参数json
+    * @param e e
+    * @param paramsJson 参数json
+    * @param e e
+    * @param sourceField 源字段
+    * @param targetField Target字段
+    * @param converter 转换器
      */
     private List<DataSyncFieldMapping> loadFieldMappings(
             org.springframework.jdbc.core.JdbcTemplate jdbcTemplate,
@@ -146,10 +146,10 @@ public class DatabaseMappingLoader implements InitializingBean {
 
     @SuppressWarnings("unchecked")
     /**
-     * 解析参数
-     *
-     * @param paramsJson 参数json
-     * @return 解析参数的结果
+    * 解析参数
+    *
+    * @param paramsJson 参数json
+    * @return 解析参数的结果
      */
     private Map<String, Object> parseParams(String paramsJson) {
         if (paramsJson == null || paramsJson.isEmpty()) {
@@ -164,10 +164,10 @@ public class DatabaseMappingLoader implements InitializingBean {
     }
 
     /**
-     * database数据同步字段mapping类。
-     *
-     * @author CH
-     * @since 4.0.0
+    * database数据同步字段mapping类。
+    *
+    * @author CH
+    * @since 4.0.0
      */
     private static class DatabaseDataSyncFieldMapping implements DataSyncFieldMapping {
         /** 来源字段 */
@@ -178,10 +178,10 @@ public class DatabaseMappingLoader implements InitializingBean {
         private final String converter;
 
         /**
-         * database数据同步字段mapping。
-         * @param sourceField 源字段
-         * @param targetField Target字段
-         * @param converter 转换器
+        * database数据同步字段mapping。
+        * @param sourceField 源字段
+        * @param targetField Target字段
+        * @param converter 转换器
          */
         DatabaseDataSyncFieldMapping(String sourceField, String targetField, String converter) {
             this.sourceField = sourceField;

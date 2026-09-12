@@ -15,25 +15,25 @@ import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 
 /**
-   * 本地 MySQL 数据库需求数据源提供方。
- *
- * <p>从另一台 MySQL 数据库（或本机）的 {@code sys_ai_requirement} 表中读取需求条目，
- * 写入本地库。适用于多实例同步、备份恢复等场景。</p>
- *
- * <h3>配置字段（JSON 存入 sys_ai_data_source.config）：</h3>
- * <pre>
- * {
- *   "host":     "127.0.0.1",
- *   "port":     3306,
- *   "database": "ai_test",
- *   "username": "root",
- *   "password": "root@",
- *   "table":    "sys_ai_requirement"
- * }
- * </pre>
- *
- * @since 4.0.0.42
- * @author CH
+* 本地 MySQL 数据库需求数据源提供方。
+*
+* <p>从另一台 MySQL 数据库（或本机）的 {@code sys_ai_requirement} 表中读取需求条目，
+* 写入本地库。适用于多实例同步、备份恢复等场景。</p>
+*
+* <h3>配置字段（JSON 存入 sys_ai_data_source.config）：</h3>
+* <pre>
+* {
+*   "host":     "127.0.0.1",
+*   "port":     3306,
+*   "database": "ai_test",
+*   "username": "root",
+*   "password": "root@",
+*   "table":    "sys_ai_requirement"
+* }
+* </pre>
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Slf4j
 @Component
@@ -52,9 +52,9 @@ public class LocalDbRequirementDataSource implements IRequirementDataSource {
     private static final String COUNT_SQL =
             """
             /**
-             * 数量。
-             * @param * *
-             * @return 数量的结果
+            * 数量。
+            * @param * *
+            * @return 数量的结果
              */
             SELECT COUNT(*) FROM `%s`
             """;
@@ -80,11 +80,11 @@ public class LocalDbRequirementDataSource implements IRequirementDataSource {
     }
 
     /**
-       * 从远程 MySQL 读取所有需求，返回条数（不实际写入本地）。
-       * 实际写入由调用方（sysairequirement存储.同步数据源）负责。
-     * @param config 配置
-     * @param lastSyncAt 最后一个同步at
-     * @return 同步的结果
+    * 从远程 MySQL 读取所有需求，返回条数（不实际写入本地）。
+    * 实际写入由调用方（sysairequirement存储.同步数据源）负责。
+    * @param config 配置
+    * @param lastSyncAt 最后一个同步at
+    * @return 同步的结果
      */
     @Override
     @SuppressWarnings("unchecked")
@@ -104,8 +104,8 @@ public class LocalDbRequirementDataSource implements IRequirementDataSource {
 
             int count = 0;
             /**
-             * 尝试。
-             * @param ds.getConnection( ds.获取connection(
+            * 尝试。
+            * @param ds.getConnection( ds.获取connection(
              */
             try (Connection conn = ds.getConnection();
                  PreparedStatement ps = conn.prepareStatement(sql);
@@ -124,10 +124,10 @@ public class LocalDbRequirementDataSource implements IRequirementDataSource {
     }
 
     /**
-      * 读取远程需求完整列表（供 存储 层直接写入）。
-     *
-     * @return 远程需求记录列表
-     * @param config 配置
+    * 读取远程需求完整列表（供 存储 层直接写入）。
+    *
+    * @return 远程需求记录列表
+    * @param config 配置
      */
     @SuppressWarnings("unchecked")
     public List<Map<String, Object>> fetchRemoteRequirements(Map<String, Object> config) {
@@ -145,8 +145,8 @@ public class LocalDbRequirementDataSource implements IRequirementDataSource {
 
             List<Map<String, Object>> result = new ArrayList<>();
             /**
-             * 尝试。
-             * @param ds.getConnection( ds.获取connection(
+            * 尝试。
+            * @param ds.getConnection( ds.获取connection(
              */
             try (Connection conn = ds.getConnection();
                  PreparedStatement ps = conn.prepareStatement(sql);
@@ -186,8 +186,8 @@ public class LocalDbRequirementDataSource implements IRequirementDataSource {
             return false;
         }
         /**
-         * 尝试。
-         * @param ds.getConnection( ds.获取connection(
+        * 尝试。
+        * @param ds.getConnection( ds.获取connection(
          */
         try (Connection conn = ds.getConnection()) {
             return conn.isValid(3);
@@ -200,9 +200,9 @@ public class LocalDbRequirementDataSource implements IRequirementDataSource {
     }
 
     /**
-     * 构建数据源。
-     * @param config 配置
-     * @return 构建数据源的结果
+    * 构建数据源。
+    * @param config 配置
+    * @return 构建数据源的结果
      */
     private HikariDataSource buildDataSource(Map<String, Object> config) {
         String host = getString(config, "host", "127.0.0.1");
@@ -228,9 +228,9 @@ public class LocalDbRequirementDataSource implements IRequirementDataSource {
             hc.setPoolName("local-ds-sync-" + database);
             hc.setAutoCommit(true);
             /**
-             * hikari数据源。
-             * @param hc hc
-             * @return hikari数据源的结果
+            * hikari数据源。
+            * @param hc hc
+            * @return hikari数据源的结果
              */
             return new HikariDataSource(hc);
         } catch (Exception e) {
@@ -240,10 +240,10 @@ public class LocalDbRequirementDataSource implements IRequirementDataSource {
     }
 
     /**
-     * 校验表名合法性，仅允许字母、数字、下划线，防 SQL 注入。
-     *
-     * @param raw 原始表名
-     * @return 校验通过的表名，非法时返回 空
+    * 校验表名合法性，仅允许字母、数字、下划线，防 SQL 注入。
+    *
+    * @param raw 原始表名
+    * @return 校验通过的表名，非法时返回 空
      */
     private String validateTableName(String raw) {
         if (raw == null || raw.isBlank()) {
@@ -256,10 +256,10 @@ public class LocalDbRequirementDataSource implements IRequirementDataSource {
     }
 
     /**
-     * 获取字符串。
-     * @param map 映射
-     * @param key 钥匙
-     * @return 获取字符串的结果
+    * 获取字符串。
+    * @param map 映射
+    * @param key 钥匙
+    * @return 获取字符串的结果
      */
     private String getString(Map<String, Object> map, String key) {
         Object v = map.get(key);
@@ -267,11 +267,11 @@ public class LocalDbRequirementDataSource implements IRequirementDataSource {
     }
 
     /**
-     * 获取字符串。
-     * @param map 映射
-     * @param key 钥匙
-     * @param defaultValue 默认价值观
-     * @return 获取字符串的结果
+    * 获取字符串。
+    * @param map 映射
+    * @param key 钥匙
+    * @param defaultValue 默认价值观
+    * @return 获取字符串的结果
      */
     private String getString(Map<String, Object> map, String key, String defaultValue) {
         Object v = map.get(key);
@@ -279,11 +279,11 @@ public class LocalDbRequirementDataSource implements IRequirementDataSource {
     }
 
     /**
-     * 获取int。
-     * @param map 映射
-     * @param key 钥匙
-     * @param defaultValue 默认价值观
-     * @return 获取int的结果
+    * 获取int。
+    * @param map 映射
+    * @param key 钥匙
+    * @param defaultValue 默认价值观
+    * @return 获取int的结果
      */
     private int getInt(Map<String, Object> map, String key, int defaultValue) {
         Object v = map.get(key);

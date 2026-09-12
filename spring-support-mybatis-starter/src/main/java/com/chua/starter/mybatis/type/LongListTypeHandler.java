@@ -14,11 +14,11 @@ import java.sql.SQLException;
 import java.util.List;
 
 /**
-   * 列表<Long> 的类型转换器实现类，对应数据库的 varchar 类型
- *
- * @author 芋道源码
- * @author CH
- * @since 4.0.0
+* 列表<Long> 的类型转换器实现类，对应数据库的 varchar 类型
+*
+* @author 芋道源码
+* @author CH
+* @since 4.0.0
  */
 @MappedJdbcTypes(JdbcType.VARCHAR)
 @MappedTypes(List.class)
@@ -56,10 +56,10 @@ public class LongListTypeHandler implements TypeHandler<List<Long>> {
     }
 
     /**
-     * 获取结果
-     *
-     * @param value 价值观
-     * @return 获取结果的结果
+    * 获取结果
+    *
+    * @param value 价值观
+    * @return 获取结果的结果
      */
     private List<Long> getResult(String value) {
         if (value == null) {

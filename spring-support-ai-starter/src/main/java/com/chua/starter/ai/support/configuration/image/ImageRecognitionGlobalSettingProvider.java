@@ -6,28 +6,28 @@ import com.chua.common.support.spi.annotations.Spi;
 import java.util.List;
 
 /**
- * 图片识别模块全局设置提供者 SPI。
- *
- * <p>定义 {@code image} 分组的全部配置项，由
- * {@link com.chua.starter.ai.support.configuration.client.GlobalSettingInitializer}
- * 启动时自动注册到 {@code sys_ai_global_setting} 表（仅首次）。</p>
- *
- * <p>图片识别管线：classify(图像分类) → detect(目标检测) → segment(图像分割) →
-   * captioning(图像描述)；辅助能力：深度(深度估计) / pedestrian(行人) / quality(图像质量)。</p>
- *
- * @since 4.0.0.42
- * @author CH
+* 图片识别模块全局设置提供者 SPI。
+*
+* <p>定义 {@code image} 分组的全部配置项，由
+* {@link com.chua.starter.ai.support.configuration.client.GlobalSettingInitializer}
+* 启动时自动注册到 {@code sys_ai_global_setting} 表（仅首次）。</p>
+*
+* <p>图片识别管线：classify(图像分类) → detect(目标检测) → segment(图像分割) →
+* captioning(图像描述)；辅助能力：深度(深度估计) / pedestrian(行人) / quality(图像质量)。</p>
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Spi("image")
 public class ImageRecognitionGlobalSettingProvider implements GlobalSettingProvider {
 
     /**
-     * 配置分组标识
+    * 配置分组标识
      */
     private static final String GROUP = "image";
 
     /**
-     * 分组显示名称
+    * 分组显示名称
      */
     private static final String GROUP_NAME = "图片识别";
 

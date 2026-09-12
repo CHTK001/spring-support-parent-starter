@@ -32,25 +32,25 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
-   * YOLO 训练引擎（类型=yolo, engine=Python-http）。
- *
- * <p>通过 Java 拉起本地 python 子进程，运行随模块打包的
- * {@code python/yolo_train_service.py}（Ultralytics YOLO 一次性 HTTP 训练服务），
- * Java 侧经 HTTP 下发超参并轮询进度，训练完成/失败后回收子进程。</p>
- *
- * <p>HTTP 协议（见 python 脚本）：</p>
- * <ul>
- *   <li>{@code POST /start}：{data, model, epochs, imgsz, device, project, name} → 起训练线程，返回 task=1；
-   * 数据 为 Java 侧定位到的 <b>数据.yaml 文件路径</b>（自动容忍 数据集/ 等子目录布局）</li>
- *   <li>{@code GET  /status}：{status: starting|running|done|failed, current_epoch, total_epochs, best_map, message, best_model}</li>
- * </ul>
- *
- * <p>python 可执行默认 {@code python}（win）/ {@code python3}，可经系统属性
- * {@code ai.training.yolo.python} 覆盖；脚本默认取自 classpath，可经
- * {@code ai.training.yolo.script} 指定外部路径。</p>
- *
- * @author CH
- * @since 4.0.0.42
+* YOLO 训练引擎（类型=yolo, engine=Python-http）。
+*
+* <p>通过 Java 拉起本地 python 子进程，运行随模块打包的
+* {@code python/yolo_train_service.py}（Ultralytics YOLO 一次性 HTTP 训练服务），
+* Java 侧经 HTTP 下发超参并轮询进度，训练完成/失败后回收子进程。</p>
+*
+* <p>HTTP 协议（见 python 脚本）：</p>
+* <ul>
+*   <li>{@code POST /start}：{data, model, epochs, imgsz, device, project, name} → 起训练线程，返回 task=1；
+* 数据 为 Java 侧定位到的 <b>数据.yaml 文件路径</b>（自动容忍 数据集/ 等子目录布局）</li>
+*   <li>{@code GET  /status}：{status: starting|running|done|failed, current_epoch, total_epochs, best_map, message, best_model}</li>
+* </ul>
+*
+* <p>python 可执行默认 {@code python}（win）/ {@code python3}，可经系统属性
+* {@code ai.training.yolo.python} 覆盖；脚本默认取自 classpath，可经
+* {@code ai.training.yolo.script} 指定外部路径。</p>
+*
+* @author CH
+* @since 4.0.0.42
  */
 @Slf4j
 public class YoloTrainProvider implements TrainProvider {
@@ -60,14 +60,14 @@ public class YoloTrainProvider implements TrainProvider {
     private static final long START_TIMEOUT_MS = 60_000; // 启动超时ms
 
     /**
-      * 数据.yaml 递归定位的最大目录深度（容忍 数据集/ 等一层子目录打包，
-     * 也允许再深一层；Ultralytics 官方导出一般不深于此）。
+    * 数据.yaml 递归定位的最大目录深度（容忍 数据集/ 等一层子目录打包，
+    * 也允许再深一层；Ultralytics 官方导出一般不深于此）。
      */
     static final int MAX_DATA_YAML_DEPTH = 3;
 
     /**
-      * JSON 编解码器（协议体 /启动 与 /状态 的字段值可能含逗号、冒号等特殊字符，
-      * 统一走标准 JSON 解析，避免手工 分割 解析错位）。
+    * JSON 编解码器（协议体 /启动 与 /状态 的字段值可能含逗号、冒号等特殊字符，
+    * 统一走标准 JSON 解析，避免手工 分割 解析错位）。
      */
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
@@ -90,9 +90,9 @@ public class YoloTrainProvider implements TrainProvider {
         Path dataYaml = locateDataYaml(Path.of(ctx.dataRootPath()));
         if (dataYaml == null) {
             /**
-             * illegal参数异常。
-             * @param buildMissingDataYamlMessage(Path.of(ctx.dataRootPath( 构建missing数据yamlmessage(路径.的(ctx.数据根路径(
-             * @return illegal参数异常的结果
+            * illegal参数异常。
+            * @param buildMissingDataYamlMessage(Path.of(ctx.dataRootPath( 构建missing数据yamlmessage(路径.的(ctx.数据根路径(
+            * @return illegal参数异常的结果
              */
             throw new IllegalArgumentException(buildMissingDataYamlMessage(Path.of(ctx.dataRootPath())));
         }
@@ -117,8 +117,8 @@ public class YoloTrainProvider implements TrainProvider {
             port = waitForReady(process);
         } catch (Exception e) {
             /**
-             * 销毁。
-             * @param process 处理
+            * 销毁。
+            * @param process 处理
              */
             destroy(process);
             throw e;
@@ -129,41 +129,41 @@ public class YoloTrainProvider implements TrainProvider {
                     .connectTimeout(Duration.ofSeconds(10))
                     .build();
             /**
-             * 启动培训假。
-             * @param client 客户端
-             * @param port 端口
-             * @param argument 参数
-             * @param dataYaml 数据yaml
-             * @param datasetDir 数据集dir
-             * @param ctx ctx
+            * 启动培训假。
+            * @param client 客户端
+            * @param port 端口
+            * @param argument 参数
+            * @param dataYaml 数据yaml
+            * @param datasetDir 数据集dir
+            * @param ctx ctx
              */
             startTraining(client, port, argument, dataYaml, datasetDir, ctx);
             return pollUntilDone(client, port, process, total, ctx, progress, listener, startMs);
         } finally {
             /**
-             * 销毁。
-             * @param process 处理
+            * 销毁。
+            * @param process 处理
              */
             destroy(process);
         }
     }
 
     /**
-      * 递归定位数据根目录下的 数据.yaml（Ultralytics 布局）。
-     *
-     * <p>容忍常见打包差异：data.yaml 可位于根目录，也可嵌套在 dataset/ 等子目录
-     * （深度上限 {@link #MAX_DATA_YAML_DEPTH}）。多个候选时取目录层级最浅的一个
-     * （通常即数据集真正入口）；未找到返回 {@code null}。</p>
-     *
-     * @param dataRoot 解压后的数据根目录
-     * @return data.yaml 绝对路径；未找到返回 空
-     * @throws IOException 目录不可读时抛出
+    * 递归定位数据根目录下的 数据.yaml（Ultralytics 布局）。
+    *
+    * <p>容忍常见打包差异：data.yaml 可位于根目录，也可嵌套在 dataset/ 等子目录
+    * （深度上限 {@link #MAX_DATA_YAML_DEPTH}）。多个候选时取目录层级最浅的一个
+    * （通常即数据集真正入口）；未找到返回 {@code null}。</p>
+    *
+    * @param dataRoot 解压后的数据根目录
+    * @return data.yaml 绝对路径；未找到返回 空
+    * @throws IOException 目录不可读时抛出
      */
     static Path locateDataYaml(Path dataRoot) throws IOException {
         List<Path> found;
         /**
-         * 尝试。
-         * @param MAX_DATA_YAML_DEPTH) 最大数据yaml深度
+        * 尝试。
+        * @param MAX_DATA_YAML_DEPTH) 最大数据yaml深度
          */
         try (Stream<Path> stream = Files.walk(dataRoot, MAX_DATA_YAML_DEPTH)) {
             found = stream
@@ -177,9 +177,9 @@ public class YoloTrainProvider implements TrainProvider {
     }
 
     /**
-      * 构造"未找到 数据.yaml"的可操作错误信息：附数据目录顶层实际内容，便于使用者定位打包问题。
-     * @param dataRoot 数据根
-     * @return 构建missing数据yaml消息的结果
+    * 构造"未找到 数据.yaml"的可操作错误信息：附数据目录顶层实际内容，便于使用者定位打包问题。
+    * @param dataRoot 数据根
+    * @return 构建missing数据yaml消息的结果
      */
     private static String buildMissingDataYamlMessage(Path dataRoot) {
         String listing;
@@ -194,14 +194,14 @@ public class YoloTrainProvider implements TrainProvider {
     }
 
     /**
-     * 列出数据目录顶层条目（目录带 / 后缀），供错误提示使用。
-     * @param dataRoot 数据根
-     * @return 列表top水平仪的结果
+    * 列出数据目录顶层条目（目录带 / 后缀），供错误提示使用。
+    * @param dataRoot 数据根
+    * @return 列表top水平仪的结果
      */
     private static String listTopLevel(Path dataRoot) throws IOException {
         /**
-         * 尝试。
-         * @param Files.list(dataRoot 文件.列表(数据根
+        * 尝试。
+        * @param Files.list(dataRoot 文件.列表(数据根
          */
         try (Stream<Path> stream = Files.list(dataRoot)) {
             return stream
@@ -212,8 +212,8 @@ public class YoloTrainProvider implements TrainProvider {
     }
 
     /**
-      * 解析 Python 可执行（系统属性优先，默认 win=Python / 其它=Python3）。
-     * @return resolvePython的结果
+    * 解析 Python 可执行（系统属性优先，默认 win=Python / 其它=Python3）。
+    * @return resolvePython的结果
      */
     private String resolvePython() {
         String cfg = System.getProperty("ai.training.yolo.python");
@@ -225,8 +225,8 @@ public class YoloTrainProvider implements TrainProvider {
     }
 
     /**
-      * 解析训练脚本：优先外部路径，否则从 类路径 资源落盘到临时目录。
-     * @return resolveScript的结果
+    * 解析训练脚本：优先外部路径，否则从 类路径 资源落盘到临时目录。
+    * @return resolveScript的结果
      */
     private Path resolveScript() throws IOException {
         String external = System.getProperty("ai.training.yolo.script");
@@ -235,15 +235,15 @@ public class YoloTrainProvider implements TrainProvider {
         }
         Path tmp = Files.createTempFile("yolo_train_service_", ".py");
         /**
-         * 尝试。
-         * @param YoloTrainProvider.class.getClassLoader( yolotrainprovider.类.获取类加载(
+        * 尝试。
+        * @param YoloTrainProvider.class.getClassLoader( yolotrainprovider.类.获取类加载(
          */
         try (InputStream in = YoloTrainProvider.class.getClassLoader().getResourceAsStream(CLASS_PATH_SCRIPT)) {
             if (in == null) {
                 /**
-                 * io异常。
-                 * @param CLASS_PATH_SCRIPT 类路径script
-                 * @return io异常的结果
+                * io异常。
+                * @param CLASS_PATH_SCRIPT 类路径script
+                * @return io异常的结果
                  */
                 throw new IOException("classpath 中未找到脚本资源: " + CLASS_PATH_SCRIPT);
             }
@@ -254,10 +254,10 @@ public class YoloTrainProvider implements TrainProvider {
     }
 
     /**
-     * spawn服务端。
-     * @param pythonCmd pythoncmd
-     * @param script script
-     * @return spawn服务端的结果
+    * spawn服务端。
+    * @param pythonCmd pythoncmd
+    * @param script script
+    * @return spawn服务端的结果
      */
     private Process spawnServer(String pythonCmd, Path script) throws IOException {
         ProcessBuilder pb = new ProcessBuilder(pythonCmd, script.toAbsolutePath().toString());
@@ -268,9 +268,9 @@ public class YoloTrainProvider implements TrainProvider {
     }
 
     /**
-       * 读取 Python stdout 首行 端口=xxx 完成端口协商。
-     * @param process 处理
-     * @return waitfor就绪的结果
+    * 读取 Python stdout 首行 端口=xxx 完成端口协商。
+    * @param process 处理
+    * @return waitfor就绪的结果
      */
     private int waitForReady(Process process) throws Exception {
         try (BufferedReader reader = new BufferedReader(
@@ -290,18 +290,18 @@ public class YoloTrainProvider implements TrainProvider {
                 }
                 if (line.startsWith("Traceback") || line.startsWith("ERROR") || line.startsWith("ModuleNotFoundError")) {
                     /**
-                     * illegal状态异常。
-                     * @param line 线
-                     * @return illegal状态异常的结果
+                    * illegal状态异常。
+                    * @param line 线
+                    * @return illegal状态异常的结果
                      */
                     throw new IllegalStateException("python 服务启动失败: " + line);
                 }
             }
         }
         /**
-         * illegal状态异常。
-         * @param 内就绪" 内就绪"
-         * @return illegal状态异常的结果
+        * illegal状态异常。
+        * @param 内就绪" 内就绪"
+        * @return illegal状态异常的结果
          */
         throw new IllegalStateException("python 训练服务未在 " + START_TIMEOUT_MS + "ms 内就绪");
     }
@@ -327,9 +327,9 @@ public class YoloTrainProvider implements TrainProvider {
         HttpResponse<String> resp = client.send(req, HttpResponse.BodyHandlers.ofString());
         if (resp.statusCode() != 200) {
             /**
-             * illegal状态异常。
-             * @param resp.statusCode( resp.状态编码(
-             * @return illegal状态异常的结果
+            * illegal状态异常。
+            * @param resp.statusCode( resp.状态编码(
+            * @return illegal状态异常的结果
              */
             throw new IllegalStateException("python 训练启动失败: HTTP " + resp.statusCode() + " " + resp.body());
         }
@@ -357,8 +357,8 @@ public class YoloTrainProvider implements TrainProvider {
                         listener.onFailed(progress, new IllegalStateException(msg));
                     }
                     /**
-                     * train结果。
-                     * @return train结果的结果
+                    * train结果。
+                    * @return train结果的结果
                      */
                     return new TrainResult().setSuccess(false).setErrorMessage(msg);
                 }
@@ -391,8 +391,8 @@ public class YoloTrainProvider implements TrainProvider {
                 long elapsed = System.currentTimeMillis() - startMs;
                 log.info("[YOLO] 训练完成: model={}, map={}, 耗时={}ms", bestModel, progress.getBestScore(), elapsed);
                 /**
-                 * train结果。
-                 * @return train结果的结果
+                * train结果。
+                * @return train结果的结果
                  */
                 return new TrainResult()
                         .setSuccess(true)
@@ -407,8 +407,8 @@ public class YoloTrainProvider implements TrainProvider {
                     listener.onFailed(progress, new RuntimeException(msg));
                 }
                 /**
-                 * train结果。
-                 * @return train结果的结果
+                * train结果。
+                * @return train结果的结果
                  */
                 return new TrainResult().setSuccess(false).setErrorMessage(msg);
             }
@@ -419,24 +419,24 @@ public class YoloTrainProvider implements TrainProvider {
             Thread.sleep(2000);
         }
         /**
-         * train结果。
-         * @return train结果的结果
+        * train结果。
+        * @return train结果的结果
          */
         return new TrainResult().setSuccess(false).setErrorMessage("训练超时(>=" + TRAIN_TIMEOUT_MIN + "min)");
     }
 
     /**
-      * 解析 /状态 响应体为 JSON 树（标准解析，字段值含逗号/冒号/引号均不串位）。
-     * @param body 主体
-     * @return 解析状态的结果
+    * 解析 /状态 响应体为 JSON 树（标准解析，字段值含逗号/冒号/引号均不串位）。
+    * @param body 主体
+    * @return 解析状态的结果
      */
     private JsonNode parseStatus(String body) throws Exception {
         return OBJECT_MAPPER.readTree(body);
     }
 
     /**
-     * 销毁。
-     * @param process 处理
+    * 销毁。
+    * @param process 处理
      */
     private void destroy(Process process) {
         if (process != null && process.isAlive()) {

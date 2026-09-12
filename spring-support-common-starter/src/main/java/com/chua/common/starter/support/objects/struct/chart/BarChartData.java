@@ -5,10 +5,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 柱状图数据
- *
- * @author CH
- * @since 4.0.0
+* 柱状图数据
+*
+* @author CH
+* @since 4.0.0
  */
 public class BarChartData implements Serializable {
     private static final long serialVersionUID = 1L; // 串行版本uid
@@ -22,32 +22,32 @@ public class BarChartData implements Serializable {
     private List<Number> values = new ArrayList<>();
 
     /**
-     * 获取分类。
-     * @return 获取分类的结果
+    * 获取分类。
+    * @return 获取分类的结果
      */
     public List<String> getCategories() {
         return categories;
     }
 
     /**
-     * 设置分类。
-     * @param categories 分类
+    * 设置分类。
+    * @param categories 分类
      */
     public void setCategories(List<String> categories) {
         this.categories = categories;
     }
 
     /**
-     * 获取价值观。
-     * @return 获取价值观的结果
+    * 获取价值观。
+    * @return 获取价值观的结果
      */
     public List<Number> getValues() {
         return values;
     }
 
     /**
-     * 设置价值观。
-     * @param values 价值观
+    * 设置价值观。
+    * @param values 价值观
      */
     public void setValues(List<Number> values) {
         this.values = values;

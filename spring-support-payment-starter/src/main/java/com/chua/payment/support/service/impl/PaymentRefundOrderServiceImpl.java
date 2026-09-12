@@ -27,10 +27,10 @@ import java.math.BigDecimal;
 import java.util.List;
 
 /**
- * 退款单服务实现，负责退款单的创建、状态更新、查询等操作。
- *
- * @author CH
- * @since 4.0.0.50
+* 退款单服务实现，负责退款单的创建、状态更新、查询等操作。
+*
+* @author CH
+* @since 4.0.0.50
  */
 @Service
 @RequiredArgsConstructor
@@ -46,30 +46,30 @@ public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService 
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-      * 创建退税订单
-     * @param order 订单
-     * @param refundNo 退税no
-     * @param refundAmount 退税amount
-     * @param reason ReasonMLmlml
-     * @param operator 操作符
-     * @param requestPayload 请求payload
-     * @param dto dto
-     * @return 创建退税订单的结果
+    * 创建退税订单
+    * @param order 订单
+    * @param refundNo 退税no
+    * @param refundAmount 退税amount
+    * @param reason ReasonMLmlml
+    * @param operator 操作符
+    * @param requestPayload 请求payload
+    * @param dto dto
+    * @return 创建退税订单的结果
      */
     public PaymentRefundOrder createRefundOrder(CreateRefundOrderDTO dto) {
         if (dto.order() == null || dto.order().getId() == null) {
             /**
-             * 薪酬异常。
-             * @param "退款订单不存在" "退款订单不存在"
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param "退款订单不存在" "退款订单不存在"
+            * @return 薪酬异常的结果
              */
             throw new PaymentException("退款订单不存在");
         }
         if (!StringUtils.hasText(dto.refundNo())) {
             /**
-             * 薪酬异常。
-             * @param "退款单号不能为空" "退款单号不能为空"
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param "退款单号不能为空" "退款单号不能为空"
+            * @return 薪酬异常的结果
              */
             throw new PaymentException("退款单号不能为空");
         }
@@ -97,9 +97,9 @@ public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService 
         PaymentRefundOrder entity = paymentRefundOrderMapper.selectById(id);
         if (entity == null) {
             /**
-             * 薪酬异常。
-             * @param "退款单不存在" "退款单不存在"
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param "退款单不存在" "退款单不存在"
+            * @return 薪酬异常的结果
              */
             throw new PaymentException("退款单不存在");
         }
@@ -138,9 +138,9 @@ public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService 
     public Page<RefundOrderVO> page(RefundOrderQueryRequest request) {
         if (request == null) {
             /**
-             * 薪酬异常。
-             * @param "查询参数不能为空" "查询参数不能为空"
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param "查询参数不能为空" "查询参数不能为空"
+            * @return 薪酬异常的结果
              */
             throw new PaymentException("查询参数不能为空");
         }
@@ -223,11 +223,11 @@ public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService 
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-      * mark处理
-     * @param refundNo 退税no
-     * @param thirdPartyRefundNo thirdparty退税no
-     * @param responsePayload 响应payload
-     * @param remark 评论
+    * mark处理
+    * @param refundNo 退税no
+    * @param thirdPartyRefundNo thirdparty退税no
+    * @param responsePayload 响应payload
+    * @param remark 评论
      */
     public PaymentRefundOrder markProcessing(String refundNo,
                                              String thirdPartyRefundNo,
@@ -251,15 +251,15 @@ public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService 
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-      * mark退税
-     * @param refundNo 退税no
-     * @param refundAmount 退税amount
-     * @param thirdPartyRefundNo thirdparty退税no
-     * @param responsePayload 响应payload
-     * @param operator 操作符
-     * @param remark 评论
-     * @param dto dto
-     * @return mark退税的结果
+    * mark退税
+    * @param refundNo 退税no
+    * @param refundAmount 退税amount
+    * @param thirdPartyRefundNo thirdparty退税no
+    * @param responsePayload 响应payload
+    * @param operator 操作符
+    * @param remark 评论
+    * @param dto dto
+    * @return mark退税的结果
      */
     public PaymentRefundOrder markRefunded(MarkRefundedDTO dto) {
         PaymentRefundOrder entity = requireRefundOrder(dto.refundNo());
@@ -287,11 +287,11 @@ public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService 
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-      * mark失败
-     * @param refundNo 退税no
-     * @param responsePayload 响应payload
-     * @param operator 操作符
-     * @param remark 评论
+    * mark失败
+    * @param refundNo 退税no
+    * @param responsePayload 响应payload
+    * @param operator 操作符
+    * @param remark 评论
      */
     public PaymentRefundOrder markFailed(String refundNo,
                                          String responsePayload,
@@ -313,18 +313,18 @@ public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService 
     }
 
     /**
-     * require退税订单
-     *
-     * @param refundNo 退税no
-     * @return require退税订单的结果
+    * require退税订单
+    *
+    * @param refundNo 退税no
+    * @return require退税订单的结果
      */
     private PaymentRefundOrder requireRefundOrder(String refundNo) {
         PaymentRefundOrder entity = getByRefundNo(refundNo);
         if (entity == null) {
             /**
-             * 薪酬异常。
-             * @param refundNo 退税no
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param refundNo 退税no
+            * @return 薪酬异常的结果
              */
             throw new PaymentException("退款单不存在: " + refundNo);
         }
@@ -332,10 +332,10 @@ public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService 
     }
 
     /**
-     * 转换转为vo
-     *
-     * @param entity 实体
-     * @return 转换转为vo的结果
+    * 转换转为vo
+    *
+    * @param entity 实体
+    * @return 转换转为vo的结果
      */
     private RefundOrderVO convertToVO(PaymentRefundOrder entity) {
         RefundOrderVO vo = new RefundOrderVO();

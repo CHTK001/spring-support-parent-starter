@@ -17,10 +17,10 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * 聚合服务运行状态服务实现类
- *
- * @since 2026-08-03
- * @author CH
+* 聚合服务运行状态服务实现类
+*
+* @since 2026-08-03
+* @author CH
  */
 @Slf4j
 @Service
@@ -28,14 +28,14 @@ import java.util.stream.Collectors;
 public class AiServiceStatusServiceImpl implements AiServiceStatusService {
 
     /**
-      * 服务状态 映射器
+    * 服务状态 映射器
      */
     private final AiServiceStatusMapper statusMapper;
 
     /**
-     * 查询所有服务运行状态，并实时计算运行时长。
-     *
-     * @return 服务状态 DTO 列表
+    * 查询所有服务运行状态，并实时计算运行时长。
+    *
+    * @return 服务状态 DTO 列表
      */
     @Override
     public List<AiServiceStatusDTO> list() {
@@ -48,9 +48,9 @@ public class AiServiceStatusServiceImpl implements AiServiceStatusService {
     }
 
     /**
-     * 启动指定服务，不存在则新建记录。
-     *
-     * @param serviceName 服务名称
+    * 启动指定服务，不存在则新建记录。
+    *
+    * @param serviceName 服务名称
      */
     @Override
     @Transactional
@@ -80,9 +80,9 @@ public class AiServiceStatusServiceImpl implements AiServiceStatusService {
     }
 
     /**
-     * 停止指定服务。
-     *
-     * @param serviceName 服务名称
+    * 停止指定服务。
+    *
+    * @param serviceName 服务名称
      */
     @Override
     @Transactional
@@ -95,8 +95,8 @@ public class AiServiceStatusServiceImpl implements AiServiceStatusService {
             return;
         }
         /**
-          * refreshuptime。
-         * @param exist exist
+        * refreshuptime。
+        * @param exist exist
          */
         refreshUptime(exist);
         LambdaUpdateWrapper<SysAiServiceStatus> wrapper = new LambdaUpdateWrapper<SysAiServiceStatus>()
@@ -109,10 +109,10 @@ public class AiServiceStatusServiceImpl implements AiServiceStatusService {
     }
 
     /**
-     * 刷新运行时长：按当前时间与启动时间差额计算。
-     *
-     * @param status 服务状态实体
-     * @return 刷新后的服务状态实体
+    * 刷新运行时长：按当前时间与启动时间差额计算。
+    *
+    * @param status 服务状态实体
+    * @return 刷新后的服务状态实体
      */
     private SysAiServiceStatus refreshUptime(SysAiServiceStatus status) {
         if (status.getStatusRunning() != null && status.getStatusRunning()
@@ -124,10 +124,10 @@ public class AiServiceStatusServiceImpl implements AiServiceStatusService {
     }
 
     /**
-     * 实体转 DTO。
-     *
-     * @param entity 服务状态实体
-     * @return 服务状态 DTO
+    * 实体转 DTO。
+    *
+    * @param entity 服务状态实体
+    * @return 服务状态 DTO
      */
     private AiServiceStatusDTO toDto(SysAiServiceStatus entity) {
         AiServiceStatusDTO dto = new AiServiceStatusDTO();

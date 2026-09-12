@@ -23,9 +23,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 钱包提现审批控制器（管理员端）
- * @author CH
- * @since 4.0.0
+* 钱包提现审批控制器（管理员端）
+* @author CH
+* @since 4.0.0
  */
 @RestController
 @RequestMapping("/wallet/withdraw-approval")
@@ -43,11 +43,11 @@ public class WalletWithdrawApprovalController {
 
     @GetMapping("/page")
     /**
-     * 分页
-     * @param request 请求
-     * @param pageNum pagenum
-     * @param pageSize page大小
-     * @param status 状态
+    * 分页
+    * @param request 请求
+    * @param pageNum pagenum
+    * @param pageSize page大小
+    * @param status 状态
      */
     public Result<PageResult<WalletWithdrawApproval>> page(HttpServletRequest request,
                                                             @RequestParam(defaultValue = "1") int pageNum,
@@ -64,11 +64,11 @@ public class WalletWithdrawApprovalController {
 
     @PostMapping("/{id}/approve")
     /**
-     * Approve
-     *
-     * @param id 标识
-     * @param request 请求
-     * @return approve的结果
+    * Approve
+    *
+    * @param id 标识
+    * @param request 请求
+    * @return approve的结果
      */
     public Result<String> approve(@PathVariable Long id, HttpServletRequest request) {
         Result<String> denied = denyIfNecessary(request);
@@ -106,10 +106,10 @@ public class WalletWithdrawApprovalController {
 
     @PostMapping("/{id}/reject")
     /**
-     * Reject
-     * @param id 标识
-     * @param reason ReasonMLML
-     * @param request 请求
+    * Reject
+    * @param id 标识
+    * @param reason ReasonMLML
+    * @param request 请求
      */
     public Result<String> reject(@PathVariable Long id,
                                  @RequestParam(required = false) String reason,
@@ -134,10 +134,10 @@ public class WalletWithdrawApprovalController {
     }
 
     /**
-     * 提现到账确认（厂商回调成功）
-     * @param orderNo 钱包订单号
-     * @param thirdPartyOrderNo 厂商订单号
-     * @param responsePayload 厂商响应报文
+    * 提现到账确认（厂商回调成功）
+    * @param orderNo 钱包订单号
+    * @param thirdPartyOrderNo 厂商订单号
+    * @param responsePayload 厂商响应报文
      */
     @PostMapping("/{orderNo}/withdrawal/success")
     public Result<String> withdrawalSuccess(@PathVariable String orderNo,
@@ -162,10 +162,10 @@ public class WalletWithdrawApprovalController {
     }
 
     /**
-     * 提现失败回调（厂商处理失败，审核通过但提现未到账）
-     * @param orderNo 钱包订单号
-     * @param responsePayload 厂商响应报文
-     * @param reason 失败原因
+    * 提现失败回调（厂商处理失败，审核通过但提现未到账）
+    * @param orderNo 钱包订单号
+    * @param responsePayload 厂商响应报文
+    * @param reason 失败原因
      */
     @PostMapping("/{orderNo}/withdrawal/fail")
     public Result<String> withdrawalFail(@PathVariable String orderNo,
@@ -187,10 +187,10 @@ public class WalletWithdrawApprovalController {
     }
 
     /**
-     * denyifnecessary
-     *
-     * @param request 请求
-     * @return denyIfNecessary的结果
+    * denyifnecessary
+    *
+    * @param request 请求
+    * @return denyIfNecessary的结果
      */
     private <T> Result<T> denyIfNecessary(HttpServletRequest request) {
         UserResume userResume = principalResolver.resolve(request);
@@ -204,10 +204,10 @@ public class WalletWithdrawApprovalController {
     }
 
     /**
-     * 解析操作符
-     *
-     * @param request 请求
-     * @return resolve操作符的结果
+    * 解析操作符
+    *
+    * @param request 请求
+    * @return resolve操作符的结果
      */
     private String resolveOperator(HttpServletRequest request) {
         UserResume userResume = principalResolver.resolve(request);

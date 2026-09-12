@@ -15,10 +15,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 /**
- * SSH 密钥库服务实现
- *
- * @author CH
- * @since 4.0.0.42
+* SSH 密钥库服务实现
+*
+* @author CH
+* @since 4.0.0.42
  */
 @Service
 @RequiredArgsConstructor
@@ -34,9 +34,9 @@ public class ServerKeyServiceImpl implements ServerKeyService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-     * 创建。
-     * @param key 钥匙
-     * @return 创建的结果
+    * 创建。
+    * @param key 钥匙
+    * @return 创建的结果
      */
     public ReturnResult<MsServerKey> create(MsServerKey key) {
         if (key.getMsServerKeyName() == null || key.getMsServerKeyName().isEmpty()) {
@@ -55,10 +55,10 @@ public class ServerKeyServiceImpl implements ServerKeyService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-     * 更新。
-     * @param id 标识
-     * @param key 钥匙
-     * @return 更新的结果
+    * 更新。
+    * @param id 标识
+    * @param key 钥匙
+    * @return 更新的结果
      */
     public ReturnResult<MsServerKey> update(Long id, MsServerKey key) {
         MsServerKey exists = keyMapper.selectById(id);
@@ -85,9 +85,9 @@ public class ServerKeyServiceImpl implements ServerKeyService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-     * 删除。
-     * @param id 标识
-     * @return 删除的结果
+    * 删除。
+    * @param id 标识
+    * @return 删除的结果
      */
     public ReturnResult<Void> delete(Long id) {
         Long refCount = identityMapper.selectCount(
@@ -108,10 +108,10 @@ public class ServerKeyServiceImpl implements ServerKeyService {
     }
 
     /**
-     * 脱敏：清除私钥与口令
-     *
-     * @param key 密钥
-     * @return 同一对象（已脱敏）
+    * 脱敏：清除私钥与口令
+    *
+    * @param key 密钥
+    * @return 同一对象（已脱敏）
      */
     private MsServerKey mask(MsServerKey key) {
         key.setMsServerKeyPrivateKey(null);

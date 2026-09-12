@@ -16,12 +16,12 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * 教育 AI 模块调试端点。
- *
- * <p>提供 AI 引擎健康检查、队列状态、阅卷任务统计等运维信息。</p>
- *
- * @since 4.0.0.42
- * @author CH
+* 教育 AI 模块调试端点。
+*
+* <p>提供 AI 引擎健康检查、队列状态、阅卷任务统计等运维信息。</p>
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Slf4j
 @RestController
@@ -36,8 +36,8 @@ public class EduAiDebugController {
     private final MessageTemplate messageTemplate;
 
     /**
-     * AI 健康检查。
-     * @return AI健康的结果
+    * AI 健康检查。
+    * @return AI健康的结果
      */
     @Operation(summary = "AI 模块健康检查")
     @GetMapping("/ai-health")
@@ -50,8 +50,8 @@ public class EduAiDebugController {
     }
 
     /**
-     * 队列连通性测试（echo）。
-     * @return 队列echo的结果
+    * 队列连通性测试（echo）。
+    * @return 队列echo的结果
      */
     @Operation(summary = "队列连通性测试")
     @GetMapping("/queue-echo")
@@ -66,8 +66,8 @@ public class EduAiDebugController {
     }
 
     /**
-     * 队列名称常量（供前端展示）。
-     * @return 队列名称的结果
+    * 队列名称常量（供前端展示）。
+    * @return 队列名称的结果
      */
     @Operation(summary = "队列名称")
     @GetMapping("/queue-name")

@@ -10,9 +10,9 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * 钱包订单
- * @author CH
- * @since 4.0.0
+* 钱包订单
+* @author CH
+* @since 4.0.0
  */
 @Data
 @TableName("pay_wallet_order")

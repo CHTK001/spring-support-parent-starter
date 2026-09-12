@@ -3,10 +3,10 @@ package com.chua.starter.datasource.materialized;
 import com.chua.common.support.data.materialized.MaterializedRouteDefinition;
 
 /**
- * 手动刷新上下文。
- *
- * @since 2026/4/2
- * @author CH
+* 手动刷新上下文。
+*
+* @since 2026/4/2
+* @author CH
  */
 public final class MaterializedRefreshContext {
 
@@ -18,18 +18,18 @@ public final class MaterializedRefreshContext {
     }
 
     /**
-     * 设置
-     *
-     * @param definition definition
+    * 设置
+    *
+    * @param definition definition
      */
     public static void set(MaterializedRouteDefinition definition) {
         HOLDER.set(definition);
     }
 
     /**
-     * 获取
-     *
-     * @return 获取的结果
+    * 获取
+    *
+    * @return 获取的结果
      */
     public static MaterializedRouteDefinition get() {
         return HOLDER.get();

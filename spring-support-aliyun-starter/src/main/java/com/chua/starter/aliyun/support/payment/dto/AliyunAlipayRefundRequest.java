@@ -5,9 +5,9 @@ import lombok.Data;
 import java.math.BigDecimal;
 
 /**
- * 支付宝退款请求
- * @author CH
- * @since 4.0.0
+* 支付宝退款请求
+* @author CH
+* @since 4.0.0
  */
 @Data
 public class AliyunAlipayRefundRequest {

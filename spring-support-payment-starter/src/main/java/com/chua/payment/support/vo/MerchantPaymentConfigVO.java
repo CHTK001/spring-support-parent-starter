@@ -5,9 +5,9 @@ import lombok.Data;
 import java.io.Serializable;
 
 /**
- * 商户支付规则 VO
- * @author CH
- * @since 4.0.0
+* 商户支付规则 VO
+* @author CH
+* @since 4.0.0
  */
 @Data
 public class MerchantPaymentConfigVO implements Serializable {

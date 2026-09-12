@@ -15,13 +15,13 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 
 /**
- * @author CH
- * @since 4.0.0
+* @author CH
+* @since 4.0.0
  */
 public class MethodPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor {
     /**
-      * 创建 方法pointcutadvisor 实例
-     * @param applicationContext application上下文
+    * 创建 方法pointcutadvisor 实例
+    * @param applicationContext application上下文
      */
     public MethodPointcutAdvisor(ApplicationContext applicationContext) {
         MultiDataSourceSettingProperties multiDataSourceSettingProperties = Binder.get(applicationContext.getEnvironment()).bindOrCreate(MultiDataSourceSettingProperties.PRE, MultiDataSourceSettingProperties.class);

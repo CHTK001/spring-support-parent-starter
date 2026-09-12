@@ -23,11 +23,11 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * 数据权限处理器
- * 处理查询语句的数据权限过滤
- *
- * @author CH
- * @since 4.0.0
+* 数据权限处理器
+* 处理查询语句的数据权限过滤
+*
+* @author CH
+* @since 4.0.0
  */
 public class MybatisPlusPermissionHandler implements SelectDataPermissionHandler {
     /** 日志 */
@@ -47,9 +47,9 @@ public class MybatisPlusPermissionHandler implements SelectDataPermissionHandler
     final MybatisPlusDataScopeProperties metaDataScopeProperties; // meta数据scope属性
 
     /**
-     * 构造函数
-     *
-     * @param metaDataScopeProperties 数据权限配置属性
+    * 构造函数
+    *
+    * @param metaDataScopeProperties 数据权限配置属性
      */
     public MybatisPlusPermissionHandler(MybatisPlusDataScopeProperties metaDataScopeProperties) {
         this.metaDataScopeProperties = metaDataScopeProperties;
@@ -57,12 +57,12 @@ public class MybatisPlusPermissionHandler implements SelectDataPermissionHandler
 
 
     /**
-     * 处理查询语句，应用数据权限过滤
-     *
-     * @param plainSelect      查询对象
-     * @param where           当前查询条件
-     * @param mappedStatementId 映射器 方法全限定名
-     * @param currentUser     当前登录用户
+    * 处理查询语句，应用数据权限过滤
+    *
+    * @param plainSelect      查询对象
+    * @param where           当前查询条件
+    * @param mappedStatementId 映射器 方法全限定名
+    * @param currentUser     当前登录用户
      */
     @Override
     public void processSelect(PlainSelect plainSelect, Expression where, String mappedStatementId, CurrentUser currentUser) {
@@ -86,12 +86,12 @@ public class MybatisPlusPermissionHandler implements SelectDataPermissionHandler
                     if (method.getName().equals(methodName) || (method.getName() + "_COUNT").equals(methodName)) {
                         DataFilterTypeEnum permission = dataScope.value() != null ? dataScope.value() : currentUser.getDataPermission();
                         /**
-                         * 数据scope过滤器。
-                         * @param plainSelect plain选择
-                         * @param currentUser 当前用户
-                         * @param metaDataScopeProperties meta数据scope属性
-                         * @param where where
-                         * @param permission 权限
+                        * 数据scope过滤器。
+                        * @param plainSelect plain选择
+                        * @param currentUser 当前用户
+                        * @param metaDataScopeProperties meta数据scope属性
+                        * @param where where
+                        * @param permission 权限
                          */
                         dataScopeFilter(plainSelect, currentUser, metaDataScopeProperties, where, permission);
                     }
@@ -100,12 +100,12 @@ public class MybatisPlusPermissionHandler implements SelectDataPermissionHandler
             }
  // 如果没有找到 数据scope 注解，使用用户默认权限
             /**
-             * 数据scope过滤器。
-             * @param plainSelect plain选择
-             * @param currentUser 当前用户
-             * @param metaDataScopeProperties meta数据scope属性
-             * @param where where
-             * @param currentUser.getDataPermission( 当前用户.获取数据权限(
+            * 数据scope过滤器。
+            * @param plainSelect plain选择
+            * @param currentUser 当前用户
+            * @param metaDataScopeProperties meta数据scope属性
+            * @param where where
+            * @param currentUser.getDataPermission( 当前用户.获取数据权限(
              */
             dataScopeFilter(plainSelect, currentUser, metaDataScopeProperties, where, currentUser.getDataPermission());
         } catch (Exception e) {
@@ -114,12 +114,12 @@ public class MybatisPlusPermissionHandler implements SelectDataPermissionHandler
     }
 
     /**
-     * 构建过滤条件
-     *
-     * @param plainSelect       查询对象
-     * @param user              当前登录用户
-     * @param where             当前查询条件
-     * @param dataPermission    数据权限
+    * 构建过滤条件
+    *
+    * @param plainSelect       查询对象
+    * @param user              当前登录用户
+    * @param where             当前查询条件
+    * @param dataPermission    数据权限
      */
     public void dataScopeFilter(PlainSelect plainSelect,
                                 CurrentUser user,

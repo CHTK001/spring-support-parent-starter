@@ -11,10 +11,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 /**
- * 交易流水服务实现，提供支付、退款、充值、转账等交易记录的分页查询。
- *
- * @author CH
- * @since 4.0.0.50
+* 交易流水服务实现，提供支付、退款、充值、转账等交易记录的分页查询。
+*
+* @author CH
+* @since 4.0.0.50
  */
 @Service
 @RequiredArgsConstructor
@@ -50,9 +50,9 @@ public class TransactionRecordServiceImpl implements TransactionRecordService {
     public Page<TransactionRecord> page(TransactionRecordQueryRequest request) {
         if (request == null) {
             /**
-             * illegal参数异常。
-             * @param "查询参数不能为空" "查询参数不能为空"
-             * @return illegal参数异常的结果
+            * illegal参数异常。
+            * @param "查询参数不能为空" "查询参数不能为空"
+            * @return illegal参数异常的结果
              */
             throw new IllegalArgumentException("查询参数不能为空");
         }

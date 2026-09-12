@@ -16,14 +16,14 @@ import org.slf4j.LoggerFactory;
 
 
 /**
- * Actuator认证过滤器
- * <p>
- * 用于对Actuator端点进行认证，防止未授权访问。
- * </p>
- *
-   * @版本 1.0.0
- * @since 2024/6/21
- * @author CH
+* Actuator认证过滤器
+* <p>
+* 用于对Actuator端点进行认证，防止未授权访问。
+* </p>
+*
+* @版本 1.0.0
+* @since 2024/6/21
+* @author CH
  */
 @WebFilter(filterName = "ActuatorAuthenticationFilter", urlPatterns = {"/actuator/**"})
 public class ActuatorAuthenticationFilter implements Filter  {
@@ -38,8 +38,8 @@ public class ActuatorAuthenticationFilter implements Filter  {
     private final ActuatorProperties actuatorProperties;
 
     /**
-      * 创建 actuator认证过滤器 实例
-     * @param actuatorProperties actuator属性
+    * 创建 actuator认证过滤器 实例
+    * @param actuatorProperties actuator属性
      */
     public ActuatorAuthenticationFilter(ActuatorProperties actuatorProperties) {
         this.actuatorProperties = actuatorProperties;
@@ -98,10 +98,10 @@ public class ActuatorAuthenticationFilter implements Filter  {
     }
 
     /**
-     * 检查IP是否在白名单中，支持精确匹配、通配符（192.168.1.*）和 CIDR（192.168.0.0/24）
-     *
-     * @param ip IP地址
-     * @return 是否在白名单中
+    * 检查IP是否在白名单中，支持精确匹配、通配符（192.168.1.*）和 CIDR（192.168.0.0/24）
+    *
+    * @param ip IP地址
+    * @return 是否在白名单中
      */
     private boolean isIpWhitelisted(String ip) {
         if (actuatorProperties.getIpWhitelist().isEmpty()) {
@@ -112,10 +112,10 @@ public class ActuatorAuthenticationFilter implements Filter  {
     }
 
     /**
-     * 检查路径是否在排除列表中
-     *
-     * @param path 请求路径
-     * @return 是否在排除列表中
+    * 检查路径是否在排除列表中
+    *
+    * @param path 请求路径
+    * @return 是否在排除列表中
      */
     private boolean isExcludedPath(String path) {
         if (actuatorProperties.getExcludePaths().isEmpty()) {
@@ -130,11 +130,11 @@ public class ActuatorAuthenticationFilter implements Filter  {
     }
 
     /**
-      * 生成基础认证头
-     *
-     * @param username 用户名
-     * @param password 密码
-     * @return Basic认证头字符串
+    * 生成基础认证头
+    *
+    * @param username 用户名
+    * @param password 密码
+    * @return Basic认证头字符串
      */
     public static String getKey(String username, String password) {
         String credentials = username + CommonConstant.SYMBOL_COLON + password;

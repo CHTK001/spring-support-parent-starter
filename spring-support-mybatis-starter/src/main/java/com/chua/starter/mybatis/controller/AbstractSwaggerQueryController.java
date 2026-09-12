@@ -15,19 +15,19 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import java.util.List;
 
 /**
- * 超类
- *
- * @author CH
- * @since 4.0.0
+* 超类
+*
+* @author CH
+* @since 4.0.0
  */
 public abstract class AbstractSwaggerQueryController<S extends IService<T>, T> extends AbstractSwaggerUpdateController<S, T>{
 
     /**
-     * 分页查询数据
-     *
-     * @param entity 结果
-     * @return 分页结果
-     * @param page page
+    * 分页查询数据
+    *
+    * @param entity 结果
+    * @return 分页结果
+    * @param page page
      */
     @ResponseBody
     @Operation(summary = "分页查询基础数据")
@@ -38,10 +38,10 @@ public abstract class AbstractSwaggerQueryController<S extends IService<T>, T> e
         return PageResultUtils.ok(tPage);
     }
     /**
-     * 查询基础数据
-     *
-     * @param entity 结果
-     * @return 分页结果
+    * 查询基础数据
+    *
+    * @param entity 结果
+    * @return 分页结果
      */
     @ResponseBody
     @Operation(summary = "查询基础数据")
@@ -50,9 +50,9 @@ public abstract class AbstractSwaggerQueryController<S extends IService<T>, T> e
         return ReturnResult.ok(getService().list(createWrapper(entity)));
     }
     /**
-     * 查询详细信息
-     * @param id 标识
-     * @return 结果
+    * 查询详细信息
+    * @param id 标识
+    * @return 结果
      */
     @Operation(summary = "查询详细信息")
     @GetMapping("get")
@@ -63,10 +63,10 @@ public abstract class AbstractSwaggerQueryController<S extends IService<T>, T> e
         return ReturnResult.ok(getService().getById(id));
     }
     /**
-     * 查询详细信息
-     *
-     * @param entity 实体
-     * @return 详细信息
+    * 查询详细信息
+    *
+    * @param entity 实体
+    * @return 详细信息
      */
 
     abstract public Wrapper<T> createWrapper(T entity);

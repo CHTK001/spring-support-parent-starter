@@ -5,9 +5,9 @@ import lombok.Data;
 import java.math.BigDecimal;
 
 /**
- * 提现结果
- * @author CH
- * @since 4.0.0
+* 提现结果
+* @author CH
+* @since 4.0.0
  */
 @Data
 public class WithdrawResult {

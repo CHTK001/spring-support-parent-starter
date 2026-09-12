@@ -11,10 +11,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
-   * 套接字 服务器信息获取接口
-   * 前端通过此接口获取所有在线 套接字 服务器地址列表
- * @author CH
- * @since 4.0.0
+* 套接字 服务器信息获取接口
+* 前端通过此接口获取所有在线 套接字 服务器地址列表
+* @author CH
+* @since 4.0.0
  */
 @Slf4j
 @RestController
@@ -24,17 +24,17 @@ public class SocketServerController {
     private final SocketServerRegistry registry; // registry
 
     /**
-     * 套接字服务端控制器。
-     * @param registry registry
+    * 套接字服务端控制器。
+    * @param registry registry
      */
     public SocketServerController(SocketServerRegistry registry) {
         this.registry = registry;
     }
 
     /**
-      * 获取所有在线 套接字 服务器地址列表
-     * 返回合并了 Redis 动态注册和数据库配置的服务器列表
-     * @return 获取online服务端的结果
+    * 获取所有在线 套接字 服务器地址列表
+    * 返回合并了 Redis 动态注册和数据库配置的服务器列表
+    * @return 获取online服务端的结果
      */
     @GetMapping("/servers")
     public List<SocketServerInfo> getOnlineServers() {
@@ -44,8 +44,8 @@ public class SocketServerController {
     }
 
     /**
-      * 获取统一格式的 套接字 地址列表（便于前端使用）
-     * @return 获取套接字地址的结果
+    * 获取统一格式的 套接字 地址列表（便于前端使用）
+    * @return 获取套接字地址的结果
      */
     @GetMapping("/addresses")
     public List<SocketAddressInfo> getSocketAddresses() {
@@ -73,10 +73,10 @@ public class SocketServerController {
     }
 
     /**
-     * 构建 套接字 URL（带 scheme 前缀）
-     *
-     * @param server 服务端
-     * @return 构建套接字url的结果
+    * 构建 套接字 URL（带 scheme 前缀）
+    *
+    * @param server 服务端
+    * @return 构建套接字url的结果
      */
     private String buildSocketUrl(SocketServerInfo server) {
         String protocol = server.getProtocol();
@@ -110,10 +110,10 @@ public class SocketServerController {
     }
 
     /**
-     * 套接字地址信息类。
-     *
-     * @author CH
-     * @since 4.0.0
+    * 套接字地址信息类。
+    *
+    * @author CH
+    * @since 4.0.0
      */
     public static class SocketAddressInfo {
         private String id; // 标识
@@ -127,144 +127,144 @@ public class SocketServerController {
         private String url; // url
 
         /**
-          * 获取标识。
-         * @return 获取id的结果
+        * 获取标识。
+        * @return 获取id的结果
          */
         public String getId() {
             return id;
         }
 
         /**
-          * 设置标识。
-         * @param id 标识
+        * 设置标识。
+        * @param id 标识
          */
         public void setId(String id) {
             this.id = id;
         }
 
         /**
-         * 获取协议。
-         * @return 获取协议的结果
+        * 获取协议。
+        * @return 获取协议的结果
          */
         public String getProtocol() {
             return protocol;
         }
 
         /**
-         * 设置协议。
-         * @param protocol 协议
+        * 设置协议。
+        * @param protocol 协议
          */
         public void setProtocol(String protocol) {
             this.protocol = protocol;
         }
 
         /**
-         * 获取主机。
-         * @return 获取主机的结果
+        * 获取主机。
+        * @return 获取主机的结果
          */
         public String getHost() {
             return host;
         }
 
         /**
-         * 设置主机。
-         * @param host 主机
+        * 设置主机。
+        * @param host 主机
          */
         public void setHost(String host) {
             this.host = host;
         }
 
         /**
-         * 获取端口。
-         * @return 获取端口的结果
+        * 获取端口。
+        * @return 获取端口的结果
          */
         public int getPort() {
             return port;
         }
 
         /**
-         * 设置端口。
-         * @param port 端口
+        * 设置端口。
+        * @param port 端口
          */
         public void setPort(int port) {
             this.port = port;
         }
 
         /**
-         * 获取路径。
-         * @return 获取路径的结果
+        * 获取路径。
+        * @return 获取路径的结果
          */
         public String getPath() {
             return path;
         }
 
         /**
-         * 设置路径。
-         * @param path 路径
+        * 设置路径。
+        * @param path 路径
          */
         public void setPath(String path) {
             this.path = path;
         }
 
         /**
-         * 获取上下文。
-         * @return 获取上下文的结果
+        * 获取上下文。
+        * @return 获取上下文的结果
          */
         public String getContext() {
             return context;
         }
 
         /**
-         * 设置上下文。
-         * @param context 上下文
+        * 设置上下文。
+        * @param context 上下文
          */
         public void setContext(String context) {
             this.context = context;
         }
 
         /**
-         * 是否enable。
-         * @return 是否enable的结果
+        * 是否enable。
+        * @return 是否enable的结果
          */
         public boolean isEnable() {
             return enable;
         }
 
         /**
-         * 设置enable。
-         * @param enable enable
+        * 设置enable。
+        * @param enable enable
          */
         public void setEnable(boolean enable) {
             this.enable = enable;
         }
 
         /**
-         * 获取名称。
-         * @return 获取名称的结果
+        * 获取名称。
+        * @return 获取名称的结果
          */
         public String getName() {
             return name;
         }
 
         /**
-         * 设置名称。
-         * @param name 名称
+        * 设置名称。
+        * @param name 名称
          */
         public void setName(String name) {
             this.name = name;
         }
 
         /**
-         * 获取url。
-         * @return 获取url的结果
+        * 获取url。
+        * @return 获取url的结果
          */
         public String getUrl() {
             return url;
         }
 
         /**
-         * 设置url。
-         * @param url url
+        * 设置url。
+        * @param url url
          */
         public void setUrl(String url) {
             this.url = url;

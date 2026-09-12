@@ -6,31 +6,31 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 import jakarta.servlet.http.HttpServletResponse;
 
 /**
- * 响应工具类
- *
- * @since 2023-04-01
- * @author CH
+* 响应工具类
+*
+* @since 2023-04-01
+* @author CH
  */
 public class ResponseUtils {
 
     /**
-     * 私有构造函数，防止实例化
+    * 私有构造函数，防止实例化
      */
     private ResponseUtils() {
     }
 
     /**
-      * 获取当前请求的httpservlet响应对象
-     * <p>通过Spring的RequestContextHolder获取当前线程绑定的请求属性，从而获取HttpServletResponse对象。</p>
-     * <p>使用示例：</p>
-     * <pre>
-     *     HttpServletResponse response = ResponseUtils.getResponse();
-     *     if (response != null) {
-     *         // 对response进行操作
-     *     }
-     * </pre>
-     *
-     * @return {@link httpservlet响应} 当前请求的响应对象，如果无法获取则返回空
+    * 获取当前请求的httpservlet响应对象
+    * <p>通过Spring的RequestContextHolder获取当前线程绑定的请求属性，从而获取HttpServletResponse对象。</p>
+    * <p>使用示例：</p>
+    * <pre>
+    *     HttpServletResponse response = ResponseUtils.getResponse();
+    *     if (response != null) {
+    *         // 对response进行操作
+    *     }
+    * </pre>
+    *
+    * @return {@link httpservlet响应} 当前请求的响应对象，如果无法获取则返回空
      */
     public static HttpServletResponse getResponse() {
         ServletRequestAttributes attributes = null;

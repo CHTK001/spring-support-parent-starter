@@ -3,9 +3,9 @@ package com.chua.payment.support.channel;
 import lombok.Data;
 
 /**
- * 订单创建结果
- * @author CH
- * @since 4.0.0
+* 订单创建结果
+* @author CH
+* @since 4.0.0
  */
 @Data
 public class OrderCreateResult {

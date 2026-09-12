@@ -20,9 +20,9 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 网络抓包接口
- * @author CH
- * @since 4.0.0
+* 网络抓包接口
+* @author CH
+* @since 4.0.0
  */
 @Tag(name = "网络抓包", description = "网卡抓包会话/数据包/统计")
 @RestController
@@ -32,8 +32,8 @@ public class TsharkCaptureController {
     private final TsharkCaptureService tsharkCaptureService; // tsharkcapture服务
 
     /**
-     * tsharkcapture控制器。
-     * @param tsharkCaptureService tsharkcapture服务
+    * tsharkcapture控制器。
+    * @param tsharkCaptureService tsharkcapture服务
      */
     public TsharkCaptureController(TsharkCaptureService tsharkCaptureService) {
         this.tsharkCaptureService = tsharkCaptureService;
@@ -42,8 +42,8 @@ public class TsharkCaptureController {
     @Operation(summary = "检查 tshark 可用性")
     @GetMapping("/check")
     /**
-     * 检查。
-     * @return 检查的结果
+    * 检查。
+    * @return 检查的结果
      */
     public ReturnResult<Boolean> check() {
         return this.tsharkCaptureService.checkTshark();
@@ -52,8 +52,8 @@ public class TsharkCaptureController {
     @Operation(summary = "列出可用网卡")
     @GetMapping("/interfaces")
     /**
-     * 接口。
-     * @return 接口的结果
+    * 接口。
+    * @return 接口的结果
      */
     public ReturnResult<List<String>> interfaces() {
         return this.tsharkCaptureService.listInterfaces();
@@ -62,9 +62,9 @@ public class TsharkCaptureController {
     @Operation(summary = "启动抓包会话")
     @PostMapping("/capture")
     /**
-     * 启动。
-     * @param body 主体
-     * @return 启动的结果
+    * 启动。
+    * @param body 主体
+    * @return 启动的结果
      */
     public ReturnResult<MsTsharkSession> start(@RequestBody Map<String, Object> body) {
         String name = str(body.get("name"));
@@ -78,9 +78,9 @@ public class TsharkCaptureController {
     @Operation(summary = "停止抓包会话")
     @PostMapping("/capture/{id}/stop")
     /**
-     * 停止。
-     * @param id 标识
-     * @return 停止的结果
+    * 停止。
+    * @param id 标识
+    * @return 停止的结果
      */
     public ReturnResult<Void> stop(@PathVariable Long id) {
         return this.tsharkCaptureService.stopCapture(id);
@@ -89,9 +89,9 @@ public class TsharkCaptureController {
     @Operation(summary = "删除抓包会话(含数据包)")
     @DeleteMapping("/sessions/{id}")
     /**
-     * 删除。
-     * @param id 标识
-     * @return 删除的结果
+    * 删除。
+    * @param id 标识
+    * @return 删除的结果
      */
     public ReturnResult<Void> delete(@PathVariable Long id) {
         return this.tsharkCaptureService.deleteSession(id);
@@ -100,9 +100,9 @@ public class TsharkCaptureController {
     @Operation(summary = "抓包会话分页列表")
     @GetMapping("/sessions")
     /**
-     * 会话。
-     * @param "1" "1"
-     * @return 会话的结果
+    * 会话。
+    * @param "1" "1"
+    * @return 会话的结果
      */
     public ReturnResult<IPage<MsTsharkSession>> sessions(@RequestParam(defaultValue = "1") int page,
                                                          @RequestParam(defaultValue = "10") int size) {
@@ -120,9 +120,9 @@ public class TsharkCaptureController {
     @Operation(summary = "数据包详情")
     @GetMapping("/packets/{id}")
     /**
-     * 数据包。
-     * @param id 标识
-     * @return 数据包的结果
+    * 数据包。
+    * @param id 标识
+    * @return 数据包的结果
      */
     public ReturnResult<MsTsharkPacket> packet(@PathVariable Long id) {
         return this.tsharkCaptureService.getPacket(id);
@@ -131,9 +131,9 @@ public class TsharkCaptureController {
     @Operation(summary = "协议分布统计")
     @GetMapping("/sessions/{id}/stats/protocol")
     /**
-     * 协议stats。
-     * @param id 标识
-     * @return 协议stats的结果
+    * 协议stats。
+    * @param id 标识
+    * @return 协议stats的结果
      */
     public ReturnResult<List<Map<String, Object>>> protocolStats(@PathVariable Long id) {
         return this.tsharkCaptureService.protocolStats(id);
@@ -147,18 +147,18 @@ public class TsharkCaptureController {
     }
 
     /**
-     * str。
-     * @param o o
-     * @return str的结果
+    * str。
+    * @param o o
+    * @return str的结果
      */
     private String str(Object o) {
         return o == null ? null : String.valueOf(o);
     }
 
     /**
-     * int的。
-     * @param o o
-     * @return int的的结果
+    * int的。
+    * @param o o
+    * @return int的的结果
      */
     private Integer intOf(Object o) {
         if (o == null) {

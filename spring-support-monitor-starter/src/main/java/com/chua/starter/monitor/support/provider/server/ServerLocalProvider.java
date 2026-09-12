@@ -28,39 +28,39 @@ import java.util.Map;
 import java.util.Set;
 
 /**
-   * 服务器本地采集 提供者
- * <p>
-   * 基于 utils-support-metrics-starter 直采本机 CPU/内存/磁盘/网络/负载等指标,
-   * macOS 下 NAT 库不支持, 通过配置项跳过。
- * </p>
- *
- * @since 2026/8/4
- * @author CH
+* 服务器本地采集 提供者
+* <p>
+* 基于 utils-support-metrics-starter 直采本机 CPU/内存/磁盘/网络/负载等指标,
+* macOS 下 NAT 库不支持, 通过配置项跳过。
+* </p>
+*
+* @since 2026/8/4
+* @author CH
  */
 @Slf4j
 @Component
 public class ServerLocalProvider implements MetricProvider {
 
     /**
-       * macOS 跳过配置项
+    * macOS 跳过配置项
      */
     private static final String CONFIG_KEY_SKIP_MACOS = "monitor.local.skip.macos";
 
     /**
-      * 指标服务 提供者(可能未启用)
+    * 指标服务 提供者(可能未启用)
      */
     private final ObjectProvider<MetricsService> metricsServiceProvider;
 
     /**
-      * 全局配置 服务
+    * 全局配置 服务
      */
     private final MonitorConfigService configService;
 
     /**
-     * 构造方法
-     *
-     * @param metricsServiceProvider 指标服务 提供者
-     * @param configService          全局配置 服务
+    * 构造方法
+    *
+    * @param metricsServiceProvider 指标服务 提供者
+    * @param configService          全局配置 服务
      */
     @Autowired
     public ServerLocalProvider(ObjectProvider<MetricsService> metricsServiceProvider,
@@ -89,10 +89,10 @@ public class ServerLocalProvider implements MetricProvider {
     }
 
     /**
-     * 同步执行本地采集
-     *
-     * @param context 采集上下文
-     * @return 采集结果
+    * 同步执行本地采集
+    *
+    * @param context 采集上下文
+    * @return 采集结果
      */
 
     private CollectResult doCollect(CollectContext context) {
@@ -120,39 +120,39 @@ public class ServerLocalProvider implements MetricProvider {
             }
 
             /**
-              * collectcpu。
-             * @param snapshot snapshot
-             * @param result 结果
+            * collectcpu。
+            * @param snapshot snapshot
+            * @param result 结果
              */
             collectCpu(snapshot, result);
             /**
-             * collect内存。
-             * @param snapshot snapshot
-             * @param result 结果
+            * collect内存。
+            * @param snapshot snapshot
+            * @param result 结果
              */
             collectMemory(snapshot, result);
             /**
-              * collectdisk。
-             * @param snapshot snapshot
-             * @param result 结果
+            * collectdisk。
+            * @param snapshot snapshot
+            * @param result 结果
              */
             collectDisk(snapshot, result);
             /**
-              * collectdiskio。
-             * @param snapshot snapshot
-             * @param result 结果
+            * collectdiskio。
+            * @param snapshot snapshot
+            * @param result 结果
              */
             collectDiskIo(snapshot, result);
             /**
-              * collectnetwork。
-             * @param snapshot snapshot
-             * @param result 结果
+            * collectnetwork。
+            * @param snapshot snapshot
+            * @param result 结果
              */
             collectNetwork(snapshot, result);
             /**
-             * collect系统加载。
-             * @param snapshot snapshot
-             * @param result 结果
+            * collect系统加载。
+            * @param snapshot snapshot
+            * @param result 结果
              */
             collectSystemLoad(snapshot, result);
 
@@ -165,10 +165,10 @@ public class ServerLocalProvider implements MetricProvider {
     }
 
     /**
-     * 采集 CPU
-     *
-     * @param snapshot 指标快照
-     * @param result   采集结果
+    * 采集 CPU
+    *
+    * @param snapshot 指标快照
+    * @param result   采集结果
      */
     private void collectCpu(MetricsSnapshot snapshot, CollectResult result) {
         List<CpuCore> cpuCores = snapshot.getCpuCores();
@@ -202,10 +202,10 @@ public class ServerLocalProvider implements MetricProvider {
     }
 
     /**
-     * 采集内存
-     *
-     * @param snapshot 指标快照
-     * @param result   采集结果
+    * 采集内存
+    *
+    * @param snapshot 指标快照
+    * @param result   采集结果
      */
     private void collectMemory(MetricsSnapshot snapshot, CollectResult result) {
         long total = snapshot.getSwapTotal();
@@ -238,10 +238,10 @@ public class ServerLocalProvider implements MetricProvider {
     }
 
     /**
-     * 采集磁盘
-     *
-     * @param snapshot 指标快照
-     * @param result   采集结果
+    * 采集磁盘
+    *
+    * @param snapshot 指标快照
+    * @param result   采集结果
      */
     private void collectDisk(MetricsSnapshot snapshot, CollectResult result) {
         List<DiskInfo> disks = snapshot.getDisks();
@@ -278,10 +278,10 @@ public class ServerLocalProvider implements MetricProvider {
     }
 
     /**
-     * 采集磁盘 IO(累计值, 由上层按差值计算速率)
-     *
-     * @param snapshot 指标快照
-     * @param result   采集结果
+    * 采集磁盘 IO(累计值, 由上层按差值计算速率)
+    *
+    * @param snapshot 指标快照
+    * @param result   采集结果
      */
     private void collectDiskIo(MetricsSnapshot snapshot, CollectResult result) {
         List<DiskIo> ioList = snapshot.getDiskIo();
@@ -311,10 +311,10 @@ public class ServerLocalProvider implements MetricProvider {
     }
 
     /**
-     * 采集网络(累计值)
-     *
-     * @param snapshot 指标快照
-     * @param result   采集结果
+    * 采集网络(累计值)
+    *
+    * @param snapshot 指标快照
+    * @param result   采集结果
      */
     private void collectNetwork(MetricsSnapshot snapshot, CollectResult result) {
         List<NetworkInterface> nets = snapshot.getNetworks();
@@ -344,10 +344,10 @@ public class ServerLocalProvider implements MetricProvider {
     }
 
     /**
-     * 采集系统负载
-     *
-     * @param snapshot 指标快照
-     * @param result   采集结果
+    * 采集系统负载
+    *
+    * @param snapshot 指标快照
+    * @param result   采集结果
      */
     private void collectSystemLoad(MetricsSnapshot snapshot, CollectResult result) {
         SystemLoad load = snapshot.getLoad();
@@ -387,9 +387,9 @@ public class ServerLocalProvider implements MetricProvider {
     }
 
     /**
-       * 检测是否为 macOS
-     *
-     * @return 是否
+    * 检测是否为 macOS
+    *
+    * @return 是否
      */
     private boolean isMacOs() {
         String os = System.getProperty("os.name");

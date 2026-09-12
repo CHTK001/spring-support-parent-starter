@@ -15,10 +15,10 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 同步客户端包装器。
- *
- * @since 2026/07/31
- * @author CH
+* 同步客户端包装器。
+*
+* @since 2026/07/31
+* @author CH
  */
 public class SyncClientWrapper implements com.chua.starter.sync.support.client.SyncClient {
 
@@ -33,16 +33,16 @@ public class SyncClientWrapper implements com.chua.starter.sync.support.client.S
     private com.chua.common.support.network.sync.SyncClient delegate;
 
     /**
-     * 客户端信息（连接后自动注册到服务端）
+    * 客户端信息（连接后自动注册到服务端）
      */
     private ClientInfo clientInfo;
 
     /**
-      * 创建 同步客户端包装器 实例
-     * @param syncProperties 同步属性
-     * @param environment 环境
-     * @param infoCustomizers 信息customizers
-     * @param customizers customizers
+    * 创建 同步客户端包装器 实例
+    * @param syncProperties 同步属性
+    * @param environment 环境
+    * @param infoCustomizers 信息customizers
+    * @param customizers customizers
      */
     public SyncClientWrapper(SyncProperties syncProperties,
                              Environment environment,
@@ -57,9 +57,9 @@ public class SyncClientWrapper implements com.chua.starter.sync.support.client.S
                     .getNewExtension(protocol, serverAddress);
             if (this.delegate == null) {
                 /**
-                 * illegal参数异常。
-                 * @param protocol 协议
-                 * @return illegal参数异常的结果
+                * illegal参数异常。
+                * @param protocol 协议
+                * @return illegal参数异常的结果
                  */
                 throw new IllegalArgumentException("Unsupported sync client protocol: " + protocol);
             }
@@ -75,19 +75,19 @@ public class SyncClientWrapper implements com.chua.starter.sync.support.client.S
             }
         } catch (Exception e) {
             /**
-             * illegal状态异常。
-             * @param 失败" 失败"
-             * @param e e
-             * @return illegal状态异常的结果
+            * illegal状态异常。
+            * @param 失败" 失败"
+            * @param e e
+            * @return illegal状态异常的结果
              */
             throw new IllegalStateException("创建 SyncClient 失败", e);
         }
     }
 
     /**
-     * 构建客户端信息
-     *
-     * @return 构建客户端信息的结果
+    * 构建客户端信息
+    *
+    * @return 构建客户端信息的结果
      */
     private ClientInfo buildClientInfo() {
         ClientInfo info = new ClientInfo();
@@ -115,18 +115,18 @@ public class SyncClientWrapper implements com.chua.starter.sync.support.client.S
         delegate.connect();
         if (syncProperties.getClient().isAutoRegister() && clientInfo != null) {
             /**
-             * 发送注册。
+            * 发送注册。
              */
             sendRegister();
         }
     }
 
     /**
-     * 向服务端发送客户端注册消息。
-     * <p>
-     * 服务端通过注册消息登记客户端信息（含租户等元数据），
-     * 以支持按租户定向推送。
-     * </p>
+    * 向服务端发送客户端注册消息。
+    * <p>
+    * 服务端通过注册消息登记客户端信息（含租户等元数据），
+    * 以支持按租户定向推送。
+    * </p>
      */
     private void sendRegister() {
         try {
@@ -137,8 +137,8 @@ public class SyncClientWrapper implements com.chua.starter.sync.support.client.S
             register.put("clientPort", clientInfo.getClientPort());
             register.put("clientMetadata", clientInfo.getClientMetadata());
             /**
-             * 发送。
-             * @param syncProperties.getClient( 同步属性.getclient(
+            * 发送。
+            * @param syncProperties.getClient( 同步属性.getclient(
              */
             send(syncProperties.getClient().getRegisterTopic(), register);
             log.info("[SyncClient] 已发送客户端注册: clientId={}", clientInfo.getClientId());
@@ -197,10 +197,10 @@ public class SyncClientWrapper implements com.chua.starter.sync.support.client.S
     }
 
     /**
-      * 将传输层收到的字符串消息解析为结构化对象（JSON -> 映射）。
-     *
-     * @param message 收到的消息
-     * @return 解析后的对象，无法解析时原样返回
+    * 将传输层收到的字符串消息解析为结构化对象（JSON -> 映射）。
+    *
+    * @param message 收到的消息
+    * @return 解析后的对象，无法解析时原样返回
      */
     private Object parseIfNeeded(Object message) {
         if (!(message instanceof String text) || text.isBlank()) {

@@ -11,10 +11,10 @@ import java.io.Serializable;
 import java.util.Map;
 
 /**
- * 需求数据源实体，持久化到 {@code sys_ai_data_source} 表。
- *
- * @since 4.0.0.42
- * @author CH
+* 需求数据源实体，持久化到 {@code sys_ai_data_source} 表。
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Data
 @TableName(value = "sys_ai_data_source", autoResultMap = true)
@@ -31,8 +31,8 @@ public class SysAiDataSource implements Serializable {
     private String name; // 名称
 
     /**
-     * 类型标识，对应 {@link com.chua.starter.ai.support.manage.store.datasource.IRequirementDataSource#type()}。
-     * 如 "lark"、"generic"。
+    * 类型标识，对应 {@link com.chua.starter.ai.support.manage.store.datasource.IRequirementDataSource#type()}。
+    * 如 "lark"、"generic"。
      */
     @TableField("sys_ai_data_source_type")
     private String type; // 类型

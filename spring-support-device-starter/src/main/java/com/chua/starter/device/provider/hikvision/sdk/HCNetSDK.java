@@ -11,14 +11,14 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
-   * 海康 hcnetsdk JNA 绑定（仅声明本模块使用到的函数与结构体）
- * <p>完整头文件见海康官方《设备网络SDK 编程指南》。</p>
- *
- * <p>使用方式：{@code HCNetSDK INSTANCE = Native.load("HCNetSDK", HCNetSDK.class)}，</p>
- * <p>运行环境需将 HCNetSDK.dll、HCCore.dll 等放入系统库路径或应用目录。</p>
- *
- * @since 4.0.0.42
- * @author CH
+* 海康 hcnetsdk JNA 绑定（仅声明本模块使用到的函数与结构体）
+* <p>完整头文件见海康官方《设备网络SDK 编程指南》。</p>
+*
+* <p>使用方式：{@code HCNetSDK INSTANCE = Native.load("HCNetSDK", HCNetSDK.class)}，</p>
+* <p>运行环境需将 HCNetSDK.dll、HCCore.dll 等放入系统库路径或应用目录。</p>
+*
+* @since 4.0.0.42
+* @author CH
  */
 public interface HCNetSDK extends Library {
 
@@ -57,194 +57,194 @@ public interface HCNetSDK extends Library {
     int NET_DVR_DEL_PRESET = 0x02; // NET_DVR_DEL_PRESET
 
     /**
-     * 初始化 SDK
-     *
-     * @return 是否成功
+    * 初始化 SDK
+    *
+    * @return 是否成功
      */
     boolean NET_DVR_Init();
 
     /**
-     * 清理 SDK 资源
-     *
-     * @return 是否成功
+    * 清理 SDK 资源
+    *
+    * @return 是否成功
      */
     boolean NET_DVR_Cleanup();
 
     /**
-     * 设备登录
-     *
-     * @param loginInfo 登录信息
-     * @param deviceInfo 设备信息（输出）
-     * @return 用户 标识，负数表示失败
+    * 设备登录
+    *
+    * @param loginInfo 登录信息
+    * @param deviceInfo 设备信息（输出）
+    * @return 用户 标识，负数表示失败
      */
     int NET_DVR_Login_V40(NET_DVR_USER_LOGIN_INFO loginInfo, NET_DVR_DEVICEINFO_V40 deviceInfo);
 
     /**
-     * 注销登录
-     *
-     * @param lUserID 用户 标识
-     * @return 是否成功
+    * 注销登录
+    *
+    * @param lUserID 用户 标识
+    * @return 是否成功
      */
     boolean NET_DVR_Logout(int lUserID);
 
     /**
-     * 获取最近一次错误码
-     *
-     * @return 错误码
+    * 获取最近一次错误码
+    *
+    * @return 错误码
      */
     int NET_DVR_GetLastError();
 
     /**
-     * 开始实时预览
-     *
-     * @param lUserID     用户 标识
-     * @param previewInfo 预览参数
-     * @param cbRealData  码流回调
-     * @param pUser       用户自定义数据
-     * @return 预览句柄，负数表示失败
+    * 开始实时预览
+    *
+    * @param lUserID     用户 标识
+    * @param previewInfo 预览参数
+    * @param cbRealData  码流回调
+    * @param pUser       用户自定义数据
+    * @return 预览句柄，负数表示失败
      */
     int NET_DVR_RealPlay_V40(int lUserID, NET_DVR_PREVIEWINFO previewInfo, RealDataCallBack cbRealData, Pointer pUser);
 
     /**
-     * 停止实时预览
-     *
-     * @param lRealHandle 预览句柄
-     * @return 是否成功
+    * 停止实时预览
+    *
+    * @param lRealHandle 预览句柄
+    * @return 是否成功
      */
     boolean NET_DVR_StopRealPlay(int lRealHandle);
 
     /**
-     * 云台控制（带速度）
-     *
-     * @param lUserID   用户 标识
-     * @param lChannel  通道号
-     * @param dwPTZCommand 云台指令
-     * @param dwStop    0 开始、1 停止
-     * @return 是否成功
+    * 云台控制（带速度）
+    *
+    * @param lUserID   用户 标识
+    * @param lChannel  通道号
+    * @param dwPTZCommand 云台指令
+    * @param dwStop    0 开始、1 停止
+    * @return 是否成功
      */
     boolean NET_DVR_PTZControlWithSpeed(int lUserID, int lChannel, int dwPTZCommand, byte dwStop);
 
     /**
-     * 预置位操作
-     *
-     * @param lUserID  用户 标识
-     * @param lChannel 通道号
-     * @param dwPTZPresetCmd 预置位命令
-     * @param dwPresetIndex  预置位号
-     * @param dwReserved     保留
-     * @return 是否成功
+    * 预置位操作
+    *
+    * @param lUserID  用户 标识
+    * @param lChannel 通道号
+    * @param dwPTZPresetCmd 预置位命令
+    * @param dwPresetIndex  预置位号
+    * @param dwReserved     保留
+    * @return 是否成功
      */
     boolean NET_DVR_PTZPreset_Other(int lUserID, int lChannel, int dwPTZPresetCmd, int dwPresetIndex, int dwReserved);
 
     /**
-     * 按时间回放
-     *
-     * @param lUserID     用户 标识
-     * @param playBackCond 回放条件
-     * @param pDownloadFileName 回放文件名
-     * @param cbStreamData 码流回调
-     * @param pUser       用户数据
-     * @return 回放句柄
+    * 按时间回放
+    *
+    * @param lUserID     用户 标识
+    * @param playBackCond 回放条件
+    * @param pDownloadFileName 回放文件名
+    * @param cbStreamData 码流回调
+    * @param pUser       用户数据
+    * @return 回放句柄
      */
     int NET_DVR_StartPlayBackByTime(int lUserID, NET_DVR_PLAYBACK_COND playBackCond, String pDownloadFileName,
                                     PlayBackDataCallBack cbStreamData, Pointer pUser);
 
     /**
-     * 停止回放
-     *
-     * @param lPlayHandle 回放句柄
-     * @return 是否成功
+    * 停止回放
+    *
+    * @param lPlayHandle 回放句柄
+    * @return 是否成功
      */
     boolean NET_DVR_StopPlayBack(int lPlayHandle);
 
     /**
-     * 设置报警消息回调
-     *
-     * @param cbMessageCallback 回调
-     * @param pUser            用户数据
-     * @return 是否成功
+    * 设置报警消息回调
+    *
+    * @param cbMessageCallback 回调
+    * @param pUser            用户数据
+    * @return 是否成功
      */
     boolean NET_DVR_SetDVRMessageCallBack(MessageCallback cbMessageCallback, Pointer pUser);
 
     /**
-     * 远程控制（门禁开门等）
-     *
-     * @param lUserID      用户 标识
-     * @param dwCommand    命令码
-     * @param lpInBuffer   输入缓冲
-     * @param dwInBufferSize 输入缓冲大小
-     * @param lpOutBuffer  输出缓冲
-     * @param dwOutBufferSize 输出缓冲大小
-     * @return 是否成功
+    * 远程控制（门禁开门等）
+    *
+    * @param lUserID      用户 标识
+    * @param dwCommand    命令码
+    * @param lpInBuffer   输入缓冲
+    * @param dwInBufferSize 输入缓冲大小
+    * @param lpOutBuffer  输出缓冲
+    * @param dwOutBufferSize 输出缓冲大小
+    * @return 是否成功
      */
     boolean NET_DVR_RemoteControl(int lUserID, int dwCommand, Pointer lpInBuffer, int dwInBufferSize,
                                   Pointer lpOutBuffer, int dwOutBufferSize);
 
     /**
-     * 实时码流回调
-     * @author CH
-     * @since 4.0.0
+    * 实时码流回调
+    * @author CH
+    * @since 4.0.0
      */
     interface RealDataCallBack extends Callback {
         /**
-         * 码流数据回调
-         *
-         * @param lRealHandle 预览句柄
-         * @param dwDataType  数据类型
-         * @param pBuffer     数据缓冲
-         * @param dwBufSize   数据长度
-         * @param pUser       用户数据
+        * 码流数据回调
+        *
+        * @param lRealHandle 预览句柄
+        * @param dwDataType  数据类型
+        * @param pBuffer     数据缓冲
+        * @param dwBufSize   数据长度
+        * @param pUser       用户数据
          */
         void invoke(int lRealHandle, int dwDataType, Pointer pBuffer, int dwBufSize, Pointer pUser);
     }
 
     /**
-     * 回放码流回调
-     * @author CH
-     * @since 4.0.0
+    * 回放码流回调
+    * @author CH
+    * @since 4.0.0
      */
     interface PlayBackDataCallBack extends Callback {
         /**
-         * 回放数据回调
-         *
-         * @param lPlayHandle 回放句柄
-         * @param dwDataType  数据类型
-         * @param pBuffer     数据缓冲
-         * @param dwBufSize   数据长度
-         * @param pUser       用户数据
+        * 回放数据回调
+        *
+        * @param lPlayHandle 回放句柄
+        * @param dwDataType  数据类型
+        * @param pBuffer     数据缓冲
+        * @param dwBufSize   数据长度
+        * @param pUser       用户数据
          */
         void invoke(int lPlayHandle, int dwDataType, Pointer pBuffer, int dwBufSize, Pointer pUser);
     }
 
     /**
-     * 报警消息回调
-     * @author CH
-     * @since 4.0.0
+    * 报警消息回调
+    * @author CH
+    * @since 4.0.0
      */
     interface MessageCallback extends Callback {
         /**
-         * 报警消息回调
-         *
-         * @param lCommand   命令类型
-         * @param pAlarmer   报警设备信息
-         * @param pAlarmInfo 报警信息
-         * @param dwBufLen   缓冲长度
-         * @param pUser      用户数据
-         * @return 是否成功
+        * 报警消息回调
+        *
+        * @param lCommand   命令类型
+        * @param pAlarmer   报警设备信息
+        * @param pAlarmInfo 报警信息
+        * @param dwBufLen   缓冲长度
+        * @param pUser      用户数据
+        * @return 是否成功
          */
         boolean invoke(int lCommand, NET_DVR_ALARMER pAlarmer, Pointer pAlarmInfo, int dwBufLen, Pointer pUser);
     }
 
     /**
-     * 登录信息结构体
+    * 登录信息结构体
      */
     @Structure.FieldOrder({"sDeviceAddress", "byUseTransport", "wPort", "sUserName", "sPassword",
             "dwLoginMode", "byHttps", "iProxyID", "byVerifyMode", "byReserved", "byReserved2"})
     /**
-     * netdvr用户login信息类。
-     *
-     * @author CH
-     * @since 4.0.0
+    * netdvr用户login信息类。
+    *
+    * @author CH
+    * @since 4.0.0
      */
     class NET_DVR_USER_LOGIN_INFO extends Structure {
 
@@ -293,12 +293,12 @@ public interface HCNetSDK extends Library {
         public byte[] byReserved2 = new byte[64];
 
         /**
-         * 设置连接信息
-         *
-         * @param ip       IP 地址
-         * @param port     端口
-         * @param username 用户名
-         * @param password 密码
+        * 设置连接信息
+        *
+        * @param ip       IP 地址
+        * @param port     端口
+        * @param username 用户名
+        * @param password 密码
          */
         public void setLoginInfo(String ip, int port, String username, String password) {
             byte[] ipBytes = ip.getBytes(java.nio.charset.StandardCharsets.US_ASCII);
@@ -320,7 +320,7 @@ public interface HCNetSDK extends Library {
     }
 
     /**
-     * 设备信息结构体
+    * 设备信息结构体
      */
     @Structure.FieldOrder({"sSerialNumber", "byAlarmInPortNum", "byAlarmOutPortNum", "byDiskNum", "byDVRType",
             "byChanNum", "byStartChan", "byAudioChanNum", "byIPChanNum", "byZeroChanNum", "byMainProto",
@@ -328,10 +328,10 @@ public interface HCNetSDK extends Library {
             "byMultiStreamProto", "byStartDChan", "byStartDTalkChan", "byHighDChanNum", "bySupport4",
             "bySupport5", "byIPChanInHighMax", "byReserved1"})
     /**
-     * NET_DVR_DEVICEINFO_V40类。
-     *
-     * @author CH
-     * @since 4.0.0
+    * NET_DVR_DEVICEINFO_V40类。
+    *
+    * @author CH
+    * @since 4.0.0
      */
     class NET_DVR_DEVICEINFO_V40 extends Structure {
 
@@ -446,15 +446,15 @@ public interface HCNetSDK extends Library {
     }
 
     /**
-     * 预览参数结构体
+    * 预览参数结构体
      */
     @Structure.FieldOrder({"lChannel", "dwStreamType", "dwLinkMode", "hPlayWnd", "bBlocked", "bPassbackRecord",
             "byPreviewMode", "byStreamID", "byProtoType", "byRes1", "byRes2", "dwDisplayBufNum", "byRes"})
     /**
-     * NET_DVR_PREVIEWINFO类。
-     *
-     * @author CH
-     * @since 4.0.0
+    * NET_DVR_PREVIEWINFO类。
+    *
+    * @author CH
+    * @since 4.0.0
      */
     class NET_DVR_PREVIEWINFO extends Structure {
 
@@ -511,12 +511,12 @@ public interface HCNetSDK extends Library {
         public byte[] byRes = new byte[216];
 
         /**
-         * 设置预览通道
-         *
-         * @param channel     通道号
-         * @param streamType  码流类型
-         * @param linkMode    连接方式
-         * @param bBlocked    是否阻塞
+        * 设置预览通道
+        *
+        * @param channel     通道号
+        * @param streamType  码流类型
+        * @param linkMode    连接方式
+        * @param bBlocked    是否阻塞
          */
         public void setPreviewChannel(int channel, int streamType, int linkMode, boolean bBlocked) {
             this.lChannel = channel;
@@ -534,15 +534,15 @@ public interface HCNetSDK extends Library {
     }
 
     /**
-     * 回放条件结构体
+    * 回放条件结构体
      */
     @Structure.FieldOrder({"byStreamType", "bByTime", "bNeedDecrypt", "byStreamID", "lChannel",
             "dwPos", "startTime", "stopTime"})
     /**
-     * NET_DVR_PLAYBACK_COND类。
-     *
-     * @author CH
-     * @since 4.0.0
+    * NET_DVR_PLAYBACK_COND类。
+    *
+    * @author CH
+    * @since 4.0.0
      */
     class NET_DVR_PLAYBACK_COND extends Structure {
 
@@ -585,15 +585,15 @@ public interface HCNetSDK extends Library {
     }
 
     /**
-     * 时间结构体
+    * 时间结构体
      */
     @Structure.FieldOrder({"byYear", "byMonth", "byDay", "byHour", "byMinute", "bySecond", "byRes", "byISO8601",
             "wMillisecond", "cTimeZoneID", "byRes1", "byRes2"})
     /**
-     * netdvr时间类。
-     *
-     * @author CH
-     * @since 4.0.0
+    * netdvr时间类。
+    *
+    * @author CH
+    * @since 4.0.0
      */
     class NET_DVR_TIME extends Structure {
 
@@ -646,7 +646,7 @@ public interface HCNetSDK extends Library {
         public byte byRes2;
 
         /**
-         * 设置为当前时间
+        * 设置为当前时间
          */
         public void setNow() {
             java.time.LocalDateTime now = java.time.LocalDateTime.now();
@@ -666,7 +666,7 @@ public interface HCNetSDK extends Library {
     }
 
     /**
-     * 报警设备信息结构体
+    * 报警设备信息结构体
      */
     @Structure.FieldOrder({"byUserIDValid", "bySerialValid", "byVersionValid", "byDeviceNameValid", "byMacAddrValid",
             "byLinkPortValid", "byDeviceIP", "bySocketIP", "wLinkPort", "sSerialNumber", "byAlarmInPortNum",
@@ -674,10 +674,10 @@ public interface HCNetSDK extends Library {
             "byIPChanNum", "byZeroChanNum", "byMainProto", "bySubProto", "bySupport", "wDevType", "sDeviceName",
             "byMacAddr", "byRes1", "sVersion", "byRes2"})
     /**
-     * netdvr报警器类。
-     *
-     * @author CH
-     * @since 4.0.0
+    * netdvr报警器类。
+    *
+    * @author CH
+    * @since 4.0.0
      */
     class NET_DVR_ALARMER extends Structure {
 

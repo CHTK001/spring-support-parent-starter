@@ -14,12 +14,12 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
-   * r套接字 会话实现
-   * 基于 Spring web套接字
- *
-   * @版本 1.0.0
- * @since 2024-12-04
- * @author CH
+* r套接字 会话实现
+* 基于 Spring web套接字
+*
+* @版本 1.0.0
+* @since 2024-12-04
+* @author CH
  */
 @Slf4j
 public class RSocketSessionImpl implements SocketSession {
@@ -37,8 +37,8 @@ public class RSocketSessionImpl implements SocketSession {
     private SocketUser user;
 
     /**
-      * 创建 r套接字会话impl 实例
-     * @param session 会话
+    * 创建 r套接字会话impl 实例
+    * @param session 会话
      */
     public RSocketSessionImpl(WebSocketSession session) {
         this.session = session;
@@ -83,10 +83,10 @@ public class RSocketSessionImpl implements SocketSession {
     @Override
     @SuppressWarnings("unchecked")
     /**
-     * 获取Attribute
-     *
-     * @param key 钥匙
-     * @return 获取attribute的结果
+    * 获取Attribute
+    *
+    * @param key 钥匙
+    * @return 获取attribute的结果
      */
     public <T> T getAttribute(String key) {
         return (T) attributes.get(key);
@@ -137,9 +137,9 @@ public class RSocketSessionImpl implements SocketSession {
     }
 
     /**
-     * 发送原始消息
-     *
-     * @param message 消息内容
+    * 发送原始消息
+    *
+    * @param message 消息内容
      */
     public void sendRaw(String message) {
         if (!session.isOpen()) {
@@ -155,19 +155,19 @@ public class RSocketSessionImpl implements SocketSession {
     @Override
     @SuppressWarnings("unchecked")
     /**
-     * 获取Connection
-     *
-     * @return 获取connection的结果
+    * 获取Connection
+    *
+    * @return 获取connection的结果
      */
     public <T> T getConnection() {
         return (T) session;
     }
 
     /**
-     * 创建消息
-     * @param event 事件
-     * @param data 数据
-     * @return 创建消息的结果
+    * 创建消息
+    * @param event 事件
+    * @param data 数据
+    * @return 创建消息的结果
      */
     private String createMessage(String event, Object data) {
         try {

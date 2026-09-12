@@ -16,14 +16,14 @@ import java.time.Duration;
 import java.util.List;
 
 /**
- * Spring RPC调用处理器
- * <p>
- * 处理RPC调用，支持拦截器、重试、熔断等功能。
- * 底层委托真实的 {@link RpcClient} 发起网络调用，避免旧实现的「本地 Bean + 反射直调」伪远程问题。
- * </p>
- *
- * @since 2025-03-20
- * @author CH
+* Spring RPC调用处理器
+* <p>
+* 处理RPC调用，支持拦截器、重试、熔断等功能。
+* 底层委托真实的 {@link RpcClient} 发起网络调用，避免旧实现的「本地 Bean + 反射直调」伪远程问题。
+* </p>
+*
+* @since 2025-03-20
+* @author CH
  */
 @Slf4j
 public class SpringRpcInvocationHandler<T> implements InvocationHandler {
@@ -44,11 +44,11 @@ public class SpringRpcInvocationHandler<T> implements InvocationHandler {
     private List<RpcInterceptor> interceptors;
 
     /**
-      * 创建 springrpcinvocation处理器 实例
-     * @param targetType Target类型
-     * @param rpcClient rpc客户端
-     * @param applicationContext application上下文
-     * @param consumerConfig consumer配置
+    * 创建 springrpcinvocation处理器 实例
+    * @param targetType Target类型
+    * @param rpcClient rpc客户端
+    * @param applicationContext application上下文
+    * @param consumerConfig consumer配置
      */
     public SpringRpcInvocationHandler(Class<T> targetType,
                                       RpcClient rpcClient,
@@ -105,9 +105,9 @@ public class SpringRpcInvocationHandler<T> implements InvocationHandler {
             circuitBreaker = circuitBreakerManager.getOrCreate(serviceName);
             if (!circuitBreaker.tryAcquire()) {
                 /**
-                 * runtime异常。
-                 * @param serviceName 服务名称
-                 * @return runtime异常的结果
+                * runtime异常。
+                * @param serviceName 服务名称
+                * @return runtime异常的结果
                  */
                 throw new RuntimeException("服务熔断中: " + serviceName);
             }
@@ -184,10 +184,10 @@ public class SpringRpcInvocationHandler<T> implements InvocationHandler {
     }
 
     /**
-     * 查找Spring Bean
-     *
-     * @deprecated 伪远程实现遗留方法，已由 {@link #rpcClient} 网络调用替代
-     * @return findBean的结果
+    * 查找Spring Bean
+    *
+    * @deprecated 伪远程实现遗留方法，已由 {@link #rpcClient} 网络调用替代
+    * @return findBean的结果
      */
     @Deprecated
     private T findBean() {
@@ -200,9 +200,9 @@ public class SpringRpcInvocationHandler<T> implements InvocationHandler {
     }
 
     /**
-     * 创建重试策略
-     * @param config 配置
-     * @return 创建重试policy的结果
+    * 创建重试策略
+    * @param config 配置
+    * @return 创建重试policy的结果
      */
     private RpcRetryPolicy createRetryPolicy(RpcConsumerConfig config) {
         RpcRetryPolicy policy = new RpcRetryPolicy();
@@ -225,11 +225,11 @@ public class SpringRpcInvocationHandler<T> implements InvocationHandler {
     }
 
     /**
-     * 读取布尔值
-     *
-     * @param config 配置
-     * @param methodName 方法名称
-     * @return 读取布尔值的结果
+    * 读取布尔值
+    *
+    * @param config 配置
+    * @param methodName 方法名称
+    * @return 读取布尔值的结果
      */
     private Boolean readBoolean(RpcConsumerConfig config, String methodName) {
         Object value = invokeOptionalGetter(config, methodName);
@@ -237,11 +237,11 @@ public class SpringRpcInvocationHandler<T> implements InvocationHandler {
     }
 
     /**
-     * 读取Integer
-     *
-     * @param config 配置
-     * @param methodName 方法名称
-     * @return 读取integer的结果
+    * 读取Integer
+    *
+    * @param config 配置
+    * @param methodName 方法名称
+    * @return 读取integer的结果
      */
     private Integer readInteger(RpcConsumerConfig config, String methodName) {
         Object value = invokeOptionalGetter(config, methodName);
@@ -249,11 +249,11 @@ public class SpringRpcInvocationHandler<T> implements InvocationHandler {
     }
 
     /**
-     * 调用期权getter
-     *
-     * @param config 配置
-     * @param methodName 方法名称
-     * @return invoke期权getter的结果
+    * 调用期权getter
+    *
+    * @param config 配置
+    * @param methodName 方法名称
+    * @return invoke期权getter的结果
      */
     private Object invokeOptionalGetter(RpcConsumerConfig config, String methodName) {
         if (config == null) {

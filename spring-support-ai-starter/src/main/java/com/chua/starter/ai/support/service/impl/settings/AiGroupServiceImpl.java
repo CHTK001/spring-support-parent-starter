@@ -19,10 +19,10 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * 模型分组服务实现类
- *
- * @since 2026-08-03
- * @author CH
+* 模型分组服务实现类
+*
+* @since 2026-08-03
+* @author CH
  */
 @Slf4j
 @Service
@@ -30,19 +30,19 @@ import java.util.stream.Collectors;
 public class AiGroupServiceImpl implements AiGroupService {
 
     /**
-     * 时间格式化器
+    * 时间格式化器
      */
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     /**
-      * 分组 映射器
+    * 分组 映射器
      */
     private final AiGroupMapper groupMapper;
 
     /**
-     * 查询所有分组。
-     *
-     * @return 分组 DTO 列表
+    * 查询所有分组。
+    *
+    * @return 分组 DTO 列表
      */
     @Override
     public List<AiGroupDTO> list() {
@@ -55,10 +55,10 @@ public class AiGroupServiceImpl implements AiGroupService {
     }
 
     /**
-     * 新建分组。
-     *
-     * @param group 分组 DTO
-     * @return 创建后的分组 DTO
+    * 新建分组。
+    *
+    * @param group 分组 DTO
+    * @return 创建后的分组 DTO
      */
     @Override
     @Transactional
@@ -79,11 +79,11 @@ public class AiGroupServiceImpl implements AiGroupService {
     }
 
     /**
-     * 更新分组。
-     *
-     * @param groupId 分组主键
-     * @param group   分组 DTO
-     * @return 更新后的分组 DTO
+    * 更新分组。
+    *
+    * @param groupId 分组主键
+    * @param group   分组 DTO
+    * @return 更新后的分组 DTO
      */
     @Override
     @Transactional
@@ -96,9 +96,9 @@ public class AiGroupServiceImpl implements AiGroupService {
     }
 
     /**
-     * 删除分组（逻辑删除）。
-     *
-     * @param groupId 分组主键
+    * 删除分组（逻辑删除）。
+    *
+    * @param groupId 分组主键
      */
     @Override
     @Transactional
@@ -108,10 +108,10 @@ public class AiGroupServiceImpl implements AiGroupService {
     }
 
     /**
-     * 实体转 DTO。
-     *
-     * @param entity 分组实体
-     * @return 分组 DTO
+    * 实体转 DTO。
+    *
+    * @param entity 分组实体
+    * @return 分组 DTO
      */
     private AiGroupDTO toDto(SysAiGroup entity) {
         if (entity == null) {
@@ -128,10 +128,10 @@ public class AiGroupServiceImpl implements AiGroupService {
     }
 
     /**
-     * DTO 转实体。
-     *
-     * @param dto 分组 DTO
-     * @return 分组实体
+    * DTO 转实体。
+    *
+    * @param dto 分组 DTO
+    * @return 分组实体
      */
     private SysAiGroup toEntity(AiGroupDTO dto) {
         SysAiGroup entity = new SysAiGroup();
@@ -143,20 +143,20 @@ public class AiGroupServiceImpl implements AiGroupService {
     }
 
     /**
-     * 解析 JSON 字符串列表。
-     *
-     * @param content JSON 数组字符串
-     * @return 字符串列表
+    * 解析 JSON 字符串列表。
+    *
+    * @param content JSON 数组字符串
+    * @return 字符串列表
      */
     private List<String> parseStringList(String content) {
         return Converter.convertIfListNecessary(content, String.class);
     }
 
     /**
-     * 解析 JSON Long 列表。
-     *
-     * @param content JSON 数组字符串
-     * @return Long 列表
+    * 解析 JSON Long 列表。
+    *
+    * @param content JSON 数组字符串
+    * @return Long 列表
      */
     private List<Long> parseLongList(String content) {
         return Converter.convertIfListNecessary(content, Long.class);

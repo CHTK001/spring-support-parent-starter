@@ -26,10 +26,10 @@ import org.springframework.util.StringUtils;
 
 import java.util.List;
 /**
- * 账户支付查询服务实现，提供用户维度的订单、交易流水、状态日志查询。
- *
- * @author CH
- * @since 4.0.0.50
+* 账户支付查询服务实现，提供用户维度的订单、交易流水、状态日志查询。
+*
+* @author CH
+* @since 4.0.0.50
  */
 
 @Service
@@ -51,9 +51,9 @@ public class AccountPaymentQueryServiceImpl implements AccountPaymentQueryServic
     public Page<OrderVO> listOrdersByUser(UserOrderQueryRequest request) {
         if (request == null) {
             /**
-             * 薪酬异常。
-             * @param "查询参数不能为空" "查询参数不能为空"
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param "查询参数不能为空" "查询参数不能为空"
+            * @return 薪酬异常的结果
              */
             throw new PaymentException("查询参数不能为空");
         }
@@ -73,9 +73,9 @@ public class AccountPaymentQueryServiceImpl implements AccountPaymentQueryServic
     /** 列表订单日志by用户 */
     public List<OrderStateLogVO> listOrderLogsByUser(Long userId, Long id) {
         /**
-         * require用户订单。
-         * @param userId 用户标识
-         * @param id 标识
+        * require用户订单。
+        * @param userId 用户标识
+        * @param id 标识
          */
         requireUserOrder(userId, id);
         return orderStateLogService.listByOrderId(id).stream().map(this::toLogVO).toList();
@@ -85,9 +85,9 @@ public class AccountPaymentQueryServiceImpl implements AccountPaymentQueryServic
     public Page<TransactionRecord> listTransactionsByUser(UserTransactionQueryRequest request) {
         if (request == null) {
             /**
-             * 薪酬异常。
-             * @param "查询参数不能为空" "查询参数不能为空"
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param "查询参数不能为空" "查询参数不能为空"
+            * @return 薪酬异常的结果
              */
             throw new PaymentException("查询参数不能为空");
         }
@@ -107,12 +107,12 @@ public class AccountPaymentQueryServiceImpl implements AccountPaymentQueryServic
     }
 
     /**
-      * 基础订单包装器
-     *
-     * @param userId 用户标识
-     * @param orderNo 订单no
-     * @param status 状态
-     * @return base订单包装器的结果
+    * 基础订单包装器
+    *
+    * @param userId 用户标识
+    * @param orderNo 订单no
+    * @param status 状态
+    * @return base订单包装器的结果
      */
     private LambdaQueryWrapper<PaymentOrder> baseOrderWrapper(Long userId, String orderNo, String status) {
         LambdaQueryWrapper<PaymentOrder> wrapper = new LambdaQueryWrapper<PaymentOrder>()
@@ -129,11 +129,11 @@ public class AccountPaymentQueryServiceImpl implements AccountPaymentQueryServic
     }
 
     /**
-     * require用户订单
-     *
-     * @param userId 用户标识
-     * @param id 标识
-     * @return require用户订单的结果
+    * require用户订单
+    *
+    * @param userId 用户标识
+    * @param id 标识
+    * @return require用户订单的结果
      */
     private PaymentOrder requireUserOrder(Long userId, Long id) {
         PaymentOrder order = paymentOrderMapper.selectOne(new LambdaQueryWrapper<PaymentOrder>()
@@ -143,9 +143,9 @@ public class AccountPaymentQueryServiceImpl implements AccountPaymentQueryServic
                 .last("limit 1"));
         if (order == null) {
             /**
-             * 薪酬异常。
-             * @param "订单不存在或无权访问" "订单不存在或无权访问"
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param "订单不存在或无权访问" "订单不存在或无权访问"
+            * @return 薪酬异常的结果
              */
             throw new PaymentException("订单不存在或无权访问");
         }
@@ -153,10 +153,10 @@ public class AccountPaymentQueryServiceImpl implements AccountPaymentQueryServic
     }
 
     /**
-     * 转为订单vo
-     *
-     * @param order 订单
-     * @return 转为订单vo的结果
+    * 转为订单vo
+    *
+    * @param order 订单
+    * @return 转为订单vo的结果
      */
     private OrderVO toOrderVO(PaymentOrder order) {
         OrderVO vo = new OrderVO();
@@ -170,10 +170,10 @@ public class AccountPaymentQueryServiceImpl implements AccountPaymentQueryServic
     }
 
     /**
-     * 转为记录日志VO
-     *
-     * @param log 日志
-     * @return 转为日志vo的结果
+    * 转为记录日志VO
+    *
+    * @param log 日志
+    * @return 转为日志vo的结果
      */
     private OrderStateLogVO toLogVO(OrderStateLog log) {
         OrderStateLogVO vo = new OrderStateLogVO();

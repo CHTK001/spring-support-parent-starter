@@ -3,10 +3,10 @@ package com.chua.payment.support.dto;
 import lombok.Data;
 
 /**
- * 支付宝配置DTO
- *
- * @since 2026-03-18
- * @author CH
+* 支付宝配置DTO
+*
+* @since 2026-03-18
+* @author CH
  */
 @Data
 public class AlipayConfigDTO {

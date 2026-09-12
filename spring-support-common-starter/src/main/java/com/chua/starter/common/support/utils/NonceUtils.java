@@ -15,22 +15,22 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Nonce 与签名验证工具类
- * <p>
-   * 前端算法：标志 = MD5(nonce + fingerprint + 时间戳 + 参数md5 + secret钥匙)
-   * 参数md5 = MD5(请求参数自然排序、排除 文件、钥匙=价值观& 拼接)
- * </p>
- * <p>
- * 防重放：x-nonce 仅可使用一次，已使用的 nonce 会被缓存并在有效期内拒绝
- * </p>
- *
- * @since 2025/01/15
- * @author CH
+* Nonce 与签名验证工具类
+* <p>
+* 前端算法：标志 = MD5(nonce + fingerprint + 时间戳 + 参数md5 + secret钥匙)
+* 参数md5 = MD5(请求参数自然排序、排除 文件、钥匙=价值观& 拼接)
+* </p>
+* <p>
+* 防重放：x-nonce 仅可使用一次，已使用的 nonce 会被缓存并在有效期内拒绝
+* </p>
+*
+* @since 2025/01/15
+* @author CH
  */
 public class NonceUtils {
 
     /**
-     * nonce工具。
+    * nonce工具。
      */
     private NonceUtils() {
     }
@@ -64,11 +64,11 @@ public class NonceUtils {
             .build();
 
     /**
-      * 解析并验证 Nonce（使用 x-时间戳 头）
-     *
-     * @param request 请求（需包含 x-nonce、x-标志、x-时间戳）
-     * @param maxAge  最大有效时间（毫秒）
-     * @return 验证结果
+    * 解析并验证 Nonce（使用 x-时间戳 头）
+    *
+    * @param request 请求（需包含 x-nonce、x-标志、x-时间戳）
+    * @param maxAge  最大有效时间（毫秒）
+    * @return 验证结果
      */
     public static NonceValidationResult validateNonce(HttpServletRequest request, long maxAge) {
         String nonceStr = request.getHeader("x-nonce");
@@ -76,12 +76,12 @@ public class NonceUtils {
         String timestampStr = request.getHeader("x-timestamp");
         if (!StringUtils.hasText(nonceStr) || !StringUtils.hasText(sign) || !StringUtils.hasText(timestampStr)) {
             /**
-             * nonce校验结果。
-             * @param false false
-             * @param 0 0
-             * @param "" ""
-             * @param "" ""
-             * @return nonce校验结果的结果
+            * nonce校验结果。
+            * @param false false
+            * @param 0 0
+            * @param "" ""
+            * @param "" ""
+            * @return nonce校验结果的结果
              */
             return new NonceValidationResult(false, 0, sign != null ? sign : "", nonceStr != null ? nonceStr : "");
         }
@@ -90,24 +90,24 @@ public class NonceUtils {
             if (nonceStr.length() < 32) {
                 log.warn("Nonce 长度不足: {}", nonceStr);
                 /**
-                 * nonce校验结果。
-                 * @param false false
-                 * @param 0 0
-                 * @param sign 标志
-                 * @param nonceStr noncestr
-                 * @return nonce校验结果的结果
+                * nonce校验结果。
+                * @param false false
+                * @param 0 0
+                * @param sign 标志
+                * @param nonceStr noncestr
+                * @return nonce校验结果的结果
                  */
                 return new NonceValidationResult(false, 0, sign, nonceStr);
             }
             if (!isValidSignFormat(sign)) {
                 log.warn("签名格式不正确: {}", sign);
                 /**
-                 * nonce校验结果。
-                 * @param false false
-                 * @param 0 0
-                 * @param sign 标志
-                 * @param nonceStr noncestr
-                 * @return nonce校验结果的结果
+                * nonce校验结果。
+                * @param false false
+                * @param 0 0
+                * @param sign 标志
+                * @param nonceStr noncestr
+                * @return nonce校验结果的结果
                  */
                 return new NonceValidationResult(false, 0, sign, nonceStr);
             }
@@ -115,64 +115,64 @@ public class NonceUtils {
             if (Math.abs(currentTime - timestamp) > maxAge) {
                 log.warn("Nonce 已过期 当前={}, 请求={}, 差距{}ms", currentTime, timestamp, Math.abs(currentTime - timestamp));
                 /**
-                 * nonce校验结果。
-                 * @param false false
-                 * @param timestamp 时间戳
-                 * @param sign 标志
-                 * @param nonceStr noncestr
-                 * @return nonce校验结果的结果
+                * nonce校验结果。
+                * @param false false
+                * @param timestamp 时间戳
+                * @param sign 标志
+                * @param nonceStr noncestr
+                * @return nonce校验结果的结果
                  */
                 return new NonceValidationResult(false, timestamp, sign, nonceStr);
             }
             /**
-             * nonce校验结果。
-             * @param true true
-             * @param timestamp 时间戳
-             * @param sign 标志
-             * @param nonceStr noncestr
-             * @return nonce校验结果的结果
+            * nonce校验结果。
+            * @param true true
+            * @param timestamp 时间戳
+            * @param sign 标志
+            * @param nonceStr noncestr
+            * @return nonce校验结果的结果
              */
             return new NonceValidationResult(true, timestamp, sign, nonceStr);
         } catch (Exception e) {
             log.error("解析 Nonce 异常 nonce={}, sign={}", nonceStr, sign, e);
             /**
-             * nonce校验结果。
-             * @param false false
-             * @param 0 0
-             * @param sign 标志
-             * @param nonceStr noncestr
-             * @return nonce校验结果的结果
+            * nonce校验结果。
+            * @param false false
+            * @param 0 0
+            * @param sign 标志
+            * @param nonceStr noncestr
+            * @return nonce校验结果的结果
              */
             return new NonceValidationResult(false, 0, sign, nonceStr);
         }
     }
 
     /**
-     * 解析并验证 Nonce（使用默认 5 分钟有效期）
-     * @param request 请求
-     * @return 校验nonce的结果
+    * 解析并验证 Nonce（使用默认 5 分钟有效期）
+    * @param request 请求
+    * @return 校验nonce的结果
      */
     public static NonceValidationResult validateNonce(HttpServletRequest request) {
         return validateNonce(request, DEFAULT_MAX_AGE_MS);
     }
 
     /**
-      * 解析并验证 Nonce（兼容旧 API，使用 noncestr 和 标志）
-     *
-     * @param nonceStr 前端传递的 nonce 字符串
-     * @param sign     前端传递的签名
-     * @param maxAge   最大有效时间（毫秒）
-     * @return 验证结果
+    * 解析并验证 Nonce（兼容旧 API，使用 noncestr 和 标志）
+    *
+    * @param nonceStr 前端传递的 nonce 字符串
+    * @param sign     前端传递的签名
+    * @param maxAge   最大有效时间（毫秒）
+    * @return 验证结果
      */
     public static NonceValidationResult validateNonce(String nonceStr, String sign, long maxAge) {
         if (!StringUtils.hasText(nonceStr) || !StringUtils.hasText(sign)) {
             /**
-             * nonce校验结果。
-             * @param false false
-             * @param 0 0
-             * @param sign 标志
-             * @param nonceStr noncestr
-             * @return nonce校验结果的结果
+            * nonce校验结果。
+            * @param false false
+            * @param 0 0
+            * @param sign 标志
+            * @param nonceStr noncestr
+            * @return nonce校验结果的结果
              */
             return new NonceValidationResult(false, 0, sign, nonceStr);
         }
@@ -180,90 +180,90 @@ public class NonceUtils {
             if (nonceStr.length() < 32) {
                 log.warn("Nonce 长度不足: {}", nonceStr);
                 /**
-                 * nonce校验结果。
-                 * @param false false
-                 * @param 0 0
-                 * @param sign 标志
-                 * @param nonceStr noncestr
-                 * @return nonce校验结果的结果
+                * nonce校验结果。
+                * @param false false
+                * @param 0 0
+                * @param sign 标志
+                * @param nonceStr noncestr
+                * @return nonce校验结果的结果
                  */
                 return new NonceValidationResult(false, 0, sign, nonceStr);
             }
             if (!isValidSignFormat(sign)) {
                 log.warn("签名格式不正确: {}", sign);
                 /**
-                 * nonce校验结果。
-                 * @param false false
-                 * @param 0 0
-                 * @param sign 标志
-                 * @param nonceStr noncestr
-                 * @return nonce校验结果的结果
+                * nonce校验结果。
+                * @param false false
+                * @param 0 0
+                * @param sign 标志
+                * @param nonceStr noncestr
+                * @return nonce校验结果的结果
                  */
                 return new NonceValidationResult(false, 0, sign, nonceStr);
             }
             long timestamp = extractTimestamp(nonceStr);
             if (timestamp <= 0) {
                 /**
-                 * nonce校验结果。
-                 * @param false false
-                 * @param 0 0
-                 * @param sign 标志
-                 * @param nonceStr noncestr
-                 * @return nonce校验结果的结果
+                * nonce校验结果。
+                * @param false false
+                * @param 0 0
+                * @param sign 标志
+                * @param nonceStr noncestr
+                * @return nonce校验结果的结果
                  */
                 return new NonceValidationResult(false, 0, sign, nonceStr);
             }
             long currentTime = System.currentTimeMillis();
             if (Math.abs(currentTime - timestamp) > maxAge) {
                 /**
-                 * nonce校验结果。
-                 * @param false false
-                 * @param timestamp 时间戳
-                 * @param sign 标志
-                 * @param nonceStr noncestr
-                 * @return nonce校验结果的结果
+                * nonce校验结果。
+                * @param false false
+                * @param timestamp 时间戳
+                * @param sign 标志
+                * @param nonceStr noncestr
+                * @return nonce校验结果的结果
                  */
                 return new NonceValidationResult(false, timestamp, sign, nonceStr);
             }
             /**
-             * nonce校验结果。
-             * @param true true
-             * @param timestamp 时间戳
-             * @param sign 标志
-             * @param nonceStr noncestr
-             * @return nonce校验结果的结果
+            * nonce校验结果。
+            * @param true true
+            * @param timestamp 时间戳
+            * @param sign 标志
+            * @param nonceStr noncestr
+            * @return nonce校验结果的结果
              */
             return new NonceValidationResult(true, timestamp, sign, nonceStr);
         } catch (Exception e) {
             log.error("解析 Nonce 异常 nonce={}, sign={}", nonceStr, sign, e);
             /**
-             * nonce校验结果。
-             * @param false false
-             * @param 0 0
-             * @param sign 标志
-             * @param nonceStr noncestr
-             * @return nonce校验结果的结果
+            * nonce校验结果。
+            * @param false false
+            * @param 0 0
+            * @param sign 标志
+            * @param nonceStr noncestr
+            * @return nonce校验结果的结果
              */
             return new NonceValidationResult(false, 0, sign, nonceStr);
         }
     }
 
     /**
-     * 解析并验证Nonce（使用默认5分钟有效期）
-     *
-     * @param nonceStr 前端传递的nonce字符串
-     * @param sign     前端传递的签名
-     * @return 验证结果
+    * 解析并验证Nonce（使用默认5分钟有效期）
+    *
+    * @param nonceStr 前端传递的nonce字符串
+    * @param sign     前端传递的签名
+    * @return 验证结果
      */
     public static NonceValidationResult validateNonce(String nonceStr, String sign) {
         return validateNonce(nonceStr, sign, 5 * 60 * 1000L); // 默认5分钟
     }
 
     /**
-     * 验证签名格式
-     *
-     * @param sign 签名
-     * @return 是否有效格式
+    * 验证签名格式
+    *
+    * @param sign 签名
+    * @return 是否有效格式
      */
     private static boolean isValidSignFormat(String sign) {
         // 简单验证签名格式（32位十六进制字符串）
@@ -271,10 +271,10 @@ public class NonceUtils {
     }
 
     /**
-     * 从nonce中提取时间戳（简化实现）
-     *
-     * @param nonceStr nonce字符串
-     * @return 时间戳
+    * 从nonce中提取时间戳（简化实现）
+    *
+    * @param nonceStr nonce字符串
+    * @return 时间戳
      */
     private static long extractTimestamp(String nonceStr) {
         try {
@@ -297,10 +297,10 @@ public class NonceUtils {
     }
 
     /**
-     * 判断请求是否携带完整签名头（有则后端尝试验证）
-     *
-     * @param request 请求
-     * @return 是否包含 x-nonce、x-标志、x-时间戳、x-req-fingerprint
+    * 判断请求是否携带完整签名头（有则后端尝试验证）
+    *
+    * @param request 请求
+    * @return 是否包含 x-nonce、x-标志、x-时间戳、x-req-fingerprint
      */
     public static boolean hasSignHeaders(HttpServletRequest request) {
         return StringUtils.hasText(request.getHeader("x-nonce"))
@@ -310,10 +310,10 @@ public class NonceUtils {
     }
 
     /**
-     * 判断 x-nonce 是否已被使用（防 XHR 重放）
-     *
-     * @param nonce x-nonce 值
-     * @return true 表示已使用（重放），false 表示未使用
+    * 判断 x-nonce 是否已被使用（防 XHR 重放）
+    *
+    * @param nonce x-nonce 值
+    * @return true 表示已使用（重放），false 表示未使用
      */
     public static boolean isNonceReplayed(String nonce) {
         if (!StringUtils.hasText(nonce)) {
@@ -323,10 +323,10 @@ public class NonceUtils {
     }
 
     /**
-     * 记录已使用的 nonce（验证通过后调用，用于防重放）
-     *
-     * @param nonce    x-nonce 值
-     * @param expireAt 过期时间戳（毫秒）
+    * 记录已使用的 nonce（验证通过后调用，用于防重放）
+    *
+    * @param nonce    x-nonce 值
+    * @param expireAt 过期时间戳（毫秒）
      */
     public static void recordNonce(String nonce, long expireAt) {
         if (StringUtils.hasText(nonce)) {
@@ -335,11 +335,11 @@ public class NonceUtils {
     }
 
     /**
-     * 完整校验 XHR 请求（时间戳 + x-nonce 防重放 + 签名）
-     * 通过后自动记录 nonce，防止重放
-     *
-     * @param request 请求
-     * @return true 校验通过，false 校验失败
+    * 完整校验 XHR 请求（时间戳 + x-nonce 防重放 + 签名）
+    * 通过后自动记录 nonce，防止重放
+    *
+    * @param request 请求
+    * @return true 校验通过，false 校验失败
      */
     public static boolean validateXhrRequest(HttpServletRequest request) {
         if (!hasSignHeaders(request)) {
@@ -359,21 +359,21 @@ public class NonceUtils {
             return false;
         }
         /**
-          * recordnonce。
-         * @param nonce nonce
-         * @param result.getTimestamp( 结果.获取时间戳(
+        * recordnonce。
+        * @param nonce nonce
+        * @param result.getTimestamp( 结果.获取时间戳(
          */
         recordNonce(nonce, result.getTimestamp() + DEFAULT_MAX_AGE_MS);
         return true;
     }
 
     /**
-      * 验证签名（仅当 是否包含标志头部 为 true 时调用）
-      * 算法：标志 = MD5(nonce + fingerprint + 时间戳 + 参数md5 + secret钥匙)
-     *
-     * @param request httpservlet请求
-     * @param sign    前端传递的签名
-     * @return 是否验证通过
+    * 验证签名（仅当 是否包含标志头部 为 true 时调用）
+    * 算法：标志 = MD5(nonce + fingerprint + 时间戳 + 参数md5 + secret钥匙)
+    *
+    * @param request httpservlet请求
+    * @param sign    前端传递的签名
+    * @return 是否验证通过
      */
     public static boolean verifySign(HttpServletRequest request, String sign) {
         if (!hasSignHeaders(request)) {
@@ -393,15 +393,15 @@ public class NonceUtils {
     }
 
     /**
-     * 生成签名（与前端算法一致）
-      * 参数md5 = MD5(请求参数自然排序、排除 文件、钥匙=价值观& 拼接)
-      * 标志 = MD5(nonce + fingerprint + 时间戳 + 参数md5 + secret钥匙)
-     *
-     * @param request    httpservlet请求
-     * @param nonce      x-nonce
-     * @param fingerprint x-req-fingerprint
-     * @param timestamp  时间戳
-     * @return 期望的签名
+    * 生成签名（与前端算法一致）
+    * 参数md5 = MD5(请求参数自然排序、排除 文件、钥匙=价值观& 拼接)
+    * 标志 = MD5(nonce + fingerprint + 时间戳 + 参数md5 + secret钥匙)
+    *
+    * @param request    httpservlet请求
+    * @param nonce      x-nonce
+    * @param fingerprint x-req-fingerprint
+    * @param timestamp  时间戳
+    * @return 期望的签名
      */
     public static String generateSign(HttpServletRequest request, String nonce, String fingerprint, long timestamp) {
         try {
@@ -420,9 +420,9 @@ public class NonceUtils {
     }
 
     /**
-      * 收集请求参数（排除 文件/文件，自然排序）
-     * @param request 请求
-     * @return collect参数的结果
+    * 收集请求参数（排除 文件/文件，自然排序）
+    * @param request 请求
+    * @return collect参数的结果
      */
     private static Map<String, String> collectParams(HttpServletRequest request) {
         Map<String, String> result = new TreeMap<>();
@@ -441,18 +441,18 @@ public class NonceUtils {
     }
 
     /**
-      * 设置签名密钥（与前端 secret钥匙 一致）
-     *
-     * @param key 密钥
+    * 设置签名密钥（与前端 secret钥匙 一致）
+    *
+    * @param key 密钥
      */
     public static void setSecretKey(String key) {
         secretKey = key;
     }
 
     /**
-     * 生成复杂的Nonce（与前端对应）
-     *
-     * @return 生成的nonce
+    * 生成复杂的Nonce（与前端对应）
+    *
+    * @return 生成的nonce
      */
     public static String generateNonce() {
         long timestamp = System.currentTimeMillis();
@@ -502,10 +502,10 @@ public class NonceUtils {
     }
 
     /**
-     * 生成指定长度的随机字符串
-     *
-     * @param length 长度
-     * @return 随机字符串
+    * 生成指定长度的随机字符串
+    *
+    * @param length 长度
+    * @return 随机字符串
      */
     private static String generateRandomString(int length) {
         byte[] randomBytes = new byte[length];
@@ -518,9 +518,9 @@ public class NonceUtils {
 
 
     /**
-     * Nonce验证结果
-     * @author CH
-     * @since 4.0.0
+    * Nonce验证结果
+    * @author CH
+    * @since 4.0.0
      */
     public static class NonceValidationResult {
         /** 是否有效 */
@@ -533,11 +533,11 @@ public class NonceUtils {
         private String nonce;
 
         /**
-         * nonce校验结果。
-         * @param valid valid
-         * @param timestamp 时间戳
-         * @param sign 标志
-         * @param nonce nonce
+        * nonce校验结果。
+        * @param valid valid
+        * @param timestamp 时间戳
+        * @param sign 标志
+        * @param nonce nonce
          */
         public NonceValidationResult(boolean valid, long timestamp, String sign, String nonce) {
             this.valid = valid;
@@ -548,32 +548,32 @@ public class NonceUtils {
 
         // Getters
         /**
-         * 是否valid。
-         * @return 是否valid的结果
+        * 是否valid。
+        * @return 是否valid的结果
          */
         public boolean isValid() {
             return valid;
         }
 
         /**
-         * 获取时间戳。
-         * @return 获取时间戳的结果
+        * 获取时间戳。
+        * @return 获取时间戳的结果
          */
         public long getTimestamp() {
             return timestamp;
         }
 
         /**
-         * 获取标志。
-         * @return 获取标志的结果
+        * 获取标志。
+        * @return 获取标志的结果
          */
         public String getSign() {
             return sign;
         }
 
         /**
-         * 获取nonce。
-         * @return 获取nonce的结果
+        * 获取nonce。
+        * @return 获取nonce的结果
          */
         public String getNonce() {
             return nonce;

@@ -11,9 +11,9 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * 退款单实体
- * @author CH
- * @since 4.0.0
+* 退款单实体
+* @author CH
+* @since 4.0.0
  */
 @Data
 @TableName("pay_refund_order")

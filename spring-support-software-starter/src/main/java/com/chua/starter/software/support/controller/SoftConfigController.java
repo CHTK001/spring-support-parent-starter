@@ -21,10 +21,10 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * 软件配置接口
- *
- * @since 2026/7/25
- * @author CH
+* 软件配置接口
+*
+* @since 2026/7/25
+* @author CH
  */
 @Tag(name = "软件配置接口")
 @RestController
@@ -49,12 +49,12 @@ public class SoftConfigController {
     @PostMapping("/save")
     @Permission(value = "sys:soft:config:add", role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
     /**
-     * 保存
-     *
-     * @param @Validated(AddGroup.class @校验(添加群体.类
-     * @return 保存的结果
-     * @param @Validated(AddGroup.class @校验(添加群体.类
-     * @param @Validated(AddGroup.class @Validated(AddGroup.class
+    * 保存
+    *
+    * @param @Validated(AddGroup.class @校验(添加群体.类
+    * @return 保存的结果
+    * @param @Validated(AddGroup.class @校验(添加群体.类
+    * @param @Validated(AddGroup.class @Validated(AddGroup.class
      */
     public ReturnResult<SoftConfig> save(@Validated(AddGroup.class) @RequestBody SoftConfig config, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
@@ -67,12 +67,12 @@ public class SoftConfigController {
     @PutMapping("/update")
     @Permission(value = "sys:soft:config:update", role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
     /**
-     * 更新
-     *
-     * @param @Validated(UpdateGroup.class @校验(更新群体.类
-     * @return 更新的结果
-     * @param @Validated(UpdateGroup.class @校验(更新群体.类
-     * @param @Validated(UpdateGroup.class @Validated(UpdateGroup.class
+    * 更新
+    *
+    * @param @Validated(UpdateGroup.class @校验(更新群体.类
+    * @return 更新的结果
+    * @param @Validated(UpdateGroup.class @校验(更新群体.类
+    * @param @Validated(UpdateGroup.class @Validated(UpdateGroup.class
      */
     public ReturnResult<SoftConfig> update(@Validated(UpdateGroup.class) @RequestBody SoftConfig config, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
@@ -85,10 +85,10 @@ public class SoftConfigController {
     @DeleteMapping("/delete")
     @Permission(value = "sys:soft:config:delete", role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
     /**
-     * 删除
-     *
-     * @param configId 配置标识
-     * @return 删除的结果
+    * 删除
+    *
+    * @param configId 配置标识
+    * @return 删除的结果
      */
     public ReturnResult<Boolean> delete(String configId) {
         return softConfigService.deleteConfig(configId);
@@ -98,10 +98,10 @@ public class SoftConfigController {
     @GetMapping("/list")
     @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
     /**
-     * 列表
-     *
-     * @param softwareId softwareid
-     * @return 列表的结果
+    * 列表
+    *
+    * @param softwareId softwareid
+    * @return 列表的结果
      */
     public ReturnResult<java.util.List<SoftConfig>> list(String softwareId) {
         return ReturnResult.ok(softConfigService.listBySoftwareId(softwareId));
@@ -111,10 +111,10 @@ public class SoftConfigController {
     @PostMapping("/batch")
     @Permission(value = "sys:soft:config:add", role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
     /**
-      * 批量保存
-     *
-     * @param configs 配置
-     * @return batch保存的结果
+    * 批量保存
+    *
+    * @param configs 配置
+    * @return batch保存的结果
      */
     public ReturnResult<Boolean> batchSave(@RequestBody java.util.List<SoftConfig> configs) {
         return softConfigService.batchSaveOrUpdate(configs);

@@ -39,15 +39,15 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 服务器主机服务实现
- * <p>
- * 主机台账的增删改查、连通性探测、身份绑定与凭据解析。
- * 凭据解析策略：指定身份优先；未指定时取优先级最高的绑定身份。
- * 解密失败、缺少绑定、密钥缺失均以业务错误返回，不抛裸异常。
- * </p>
- *
- * @author CH
- * @since 4.0.0.42
+* 服务器主机服务实现
+* <p>
+* 主机台账的增删改查、连通性探测、身份绑定与凭据解析。
+* 凭据解析策略：指定身份优先；未指定时取优先级最高的绑定身份。
+* 解密失败、缺少绑定、密钥缺失均以业务错误返回，不抛裸异常。
+* </p>
+*
+* @author CH
+* @since 4.0.0.42
  */
 @Slf4j
 @Service
@@ -157,8 +157,8 @@ public class ServerHostServiceImpl implements ServerHostService {
         hostMapper.insert(host);
         // 携带账号密码/PEM 时自动建身份并绑定，保证新增即可测连/远控
         /**
-         * auto创建identity。
-         * @param host 主机
+        * auto创建identity。
+        * @param host 主机
          */
         autoCreateIdentity(host);
         return ReturnResult.ok(hostMapper.selectById(host.getId()));
@@ -167,10 +167,10 @@ public class ServerHostServiceImpl implements ServerHostService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-     * 更新。
-     * @param id 标识
-     * @param host 主机
-     * @return 更新的结果
+    * 更新。
+    * @param id 标识
+    * @param host 主机
+    * @return 更新的结果
      */
     public ReturnResult<MsServerHost> update(Long id, MsServerHost host) {
         MsServerHost exists = hostMapper.selectById(id);
@@ -241,8 +241,8 @@ public class ServerHostServiceImpl implements ServerHostService {
         hostMapper.updateById(exists);
         // 携带账号密码/PEM 时自动创建/更新登录身份并绑定（编辑时亦可调整凭据）
         /**
-         * auto创建identity。
-         * @param exists exists
+        * auto创建identity。
+        * @param exists exists
          */
         autoCreateIdentity(exists);
         return ReturnResult.ok(hostMapper.selectById(id));
@@ -251,9 +251,9 @@ public class ServerHostServiceImpl implements ServerHostService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-     * 删除。
-     * @param id 标识
-     * @return 删除的结果
+    * 删除。
+    * @param id 标识
+    * @return 删除的结果
      */
     public ReturnResult<Void> delete(Long id) {
         // 先解除身份绑定再删除主机，避免遗留孤儿关联
@@ -294,10 +294,10 @@ public class ServerHostServiceImpl implements ServerHostService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-     * 更新状态。
-     * @param id 标识
-     * @param enabled 已启用
-     * @return 更新状态的结果
+    * 更新状态。
+    * @param id 标识
+    * @param enabled 已启用
+    * @return 更新状态的结果
      */
     public ReturnResult<Void> updateStatus(Long id, boolean enabled) {
         MsServerHost host = hostMapper.selectById(id);
@@ -336,15 +336,15 @@ public class ServerHostServiceImpl implements ServerHostService {
                 }
             }
             /**
-              * markonline。
-             * @param host.getId( 主机.获取标识(
+            * markonline。
+            * @param host.getId( 主机.获取标识(
              */
             markOnline(host.getId(), true);
             return ReturnResult.ok(banner, "测试成功");
         } catch (Exception e) {
             /**
-              * markonline。
-             * @param host.getId( 主机.获取标识(
+            * markonline。
+            * @param host.getId( 主机.获取标识(
              */
             markOnline(host.getId(), false);
             log.warn("[server] 连通性测试失败 hostId={} address={}: {}", id, host.getServerHostAddress(), e.getMessage());
@@ -359,11 +359,11 @@ public class ServerHostServiceImpl implements ServerHostService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-      * bindidentity。
-     * @param hostId 主机标识
-     * @param identityId identityid
-     * @param sort 排序
-     * @return bindIdentity的结果
+    * bindidentity。
+    * @param hostId 主机标识
+    * @param identityId identityid
+    * @param sort 排序
+    * @return bindIdentity的结果
      */
     public ReturnResult<Void> bindIdentity(Long hostId, Long identityId, Integer sort) {
         if (hostId == null || identityId == null) {
@@ -392,10 +392,10 @@ public class ServerHostServiceImpl implements ServerHostService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-      * unbindidentity。
-     * @param hostId 主机标识
-     * @param identityId identityid
-     * @return unbindIdentity的结果
+    * unbindidentity。
+    * @param hostId 主机标识
+    * @param identityId identityid
+    * @return unbindIdentity的结果
      */
     public ReturnResult<Void> unbindIdentity(Long hostId, Long identityId) {
         if (hostId == null || identityId == null) {
@@ -504,10 +504,10 @@ public class ServerHostServiceImpl implements ServerHostService {
     }
 
     /**
-     * 端口扫描结果列表序列化为 JSON 数组字符串
-     *
-     * @param ports 端口列表
-     * @return JSON 字符串
+    * 端口扫描结果列表序列化为 JSON 数组字符串
+    *
+    * @param ports 端口列表
+    * @return JSON 字符串
      */
     private String toPortsJson(List<NmapScanner.PortInfo> ports) {
         if (ports == null || ports.isEmpty()) {
@@ -540,83 +540,42 @@ public class ServerHostServiceImpl implements ServerHostService {
         if (!resolved.isOk()) {
             return ReturnResult.error(resolved.getMsg());
         }
-        // Windows 主机走 WinRM（PowerShell）采集，其余走 SSH（按系统类型选命令）
-        if ("WINDOWS".equalsIgnoreCase(host.getServerHostOsType())) {
-            return detectHardwareViaWinrm(host, resolved.getData());
+        // 按系统类型 SPI 路由到具体探测实现（Linux SSH / macOS SSH / Windows WinRM）
+        ReturnResult<MsServerHost> detected = detectByProvider(host, resolved.getData());
+        if (!detected.isOk()) {
+            return detected;
         }
-        SshClients.Handle handle = null;
-        try {
-            handle = connectionManager.borrow(host, resolved.getData());
-            boolean macos = "MACOS".equalsIgnoreCase(host.getServerHostOsType());
-            // 采集 CPU 核心（macOS 用 sysctl，Linux 用 nproc）
-            String cpu = execQuiet(handle, macos ? "sysctl -n hw.ncpu" : "nproc");
-            if (isNumeric(cpu)) {
-                host.setServerHostCpuCores(Integer.valueOf(cpu.trim()));
-            }
-            // 采集内存(MB)：macOS 用 sysctl hw.memsize 字节/1MB；Linux 用 free -m
-            String mem = execQuiet(handle, macos
-                    ? "echo $(( $(sysctl -n hw.memsize) / 1024 / 1024 ))"
-                    : "free -m | awk '/^Mem:/{print $2}'");
-            if (isNumeric(mem)) {
-                host.setServerHostMemoryMb(Long.valueOf(mem.trim()));
-            }
-            // 采集磁盘(GB, 根分区)：macOS df 无 % 前列，统一 df -k /
-            String disk = execQuiet(handle, "df -k / | awk 'NR==2{printf \"%.0f\", $2/1024/1024}'");
-            if (isNumeric(disk)) {
-                host.setServerHostDiskGb(Long.valueOf(disk.trim()));
-            }
-            // 采集系统版本：macOS 无 /etc/os-release，走 sw_vers / uname -sr
-            String os = execQuiet(handle, macos
-                    ? "sw_vers -productVersion 2>/dev/null"
-                    : "cat /etc/os-release 2>/dev/null | grep -m1 PRETTY_NAME | cut -d'=' -f2 | tr -d '\"'");
-            if (isBlank(os)) {
-                os = execQuiet(handle, "uname -sr");
-            }
-            if (!isBlank(os)) {
-                host.setServerHostOsVersion(os.trim());
-                // 从版本关键字推断系统类型
-                String lower = os.toLowerCase();
-                if (lower.contains("windows") || lower.contains("microsoft")) {
-                    host.setServerHostOsType("WINDOWS");
-                } else if (lower.contains("darwin") || lower.contains("mac")) {
-                    host.setServerHostOsType("MACOS");
-                } else {
-                    host.setServerHostOsType("LINUX");
-                }
-            }
-            // 采集架构
-            String arch = execQuiet(handle, "uname -m");
-            if (!isBlank(arch)) {
-                host.setServerHostOsArch(arch.trim());
-            }
-            // 采集内网 IP：macOS 无 hostname -I，用 ipconfig getifaddr；Linux 用 hostname -I
-            String ip = execQuiet(handle, macos
-                    ? "ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null"
-                    : "hostname -I 2>/dev/null | awk '{print $1}'");
-            if (!isBlank(ip)) {
-                host.setServerHostPrivateIp(ip.trim());
-            }
-            // 采集公网 IP（SSH 探测目标出口 IP，失败静默保持原值）
-            String publicIp = fetchPublicIp(host);
-            if (!isBlank(publicIp)) {
-                host.setServerHostPublicIp(publicIp);
-            }
-            hostMapper.updateById(host);
-            /**
-              * markonline。
-              * @param hostId 主机标识
-              * @param true true
-              */
-            markOnline(hostId, true);
-            return ReturnResult.ok(hostMapper.selectById(hostId), "硬件探测成功");
-        } catch (Exception e) {
-            log.warn("[server] 硬件探测失败 hostId={} address={}: {}", hostId, host.getServerHostAddress(), e.getMessage());
-            return ReturnResult.error("硬件探测失败: " + e.getMessage());
-        } finally {
-            if (handle != null) {
-                connectionManager.release(hostId);
-            }
+        MsServerHost latest = hostMapper.selectById(hostId);
+        if (latest == null) {
+            return ReturnResult.error("主机不存在: " + hostId);
         }
+        // 统一补采公网 IP（SSH 探测目标出口 IP，失败静默保持原值）
+        String publicIp = fetchPublicIp(latest);
+        if (StringUtils.isNotBlank(publicIp)) {
+            latest.setServerHostPublicIp(publicIp);
+        }
+        hostMapper.updateById(latest);
+        markOnline(hostId, true);
+        return ReturnResult.ok(hostMapper.selectById(hostId), "硬件探测成功");
+    }
+
+    /**
+    * 按系统类型 SPI 路由执行硬件探测，探测结果回写到传入主机对象
+    *
+    * @param host       目标主机，不能为 null
+    * @param credential 登录凭据，不能为 null
+    * @return 探测结果；探测成功返回包含已回写硬件字段的主机
+     */
+    private ReturnResult<MsServerHost> detectByProvider(MsServerHost host, SshCredential credential) {
+        String osType = host.getServerHostOsType();
+        var providerOpt = detectProviderRegistry.resolve(osType);
+        if (providerOpt.isEmpty()) {
+            log.warn("[detect] 未找到系统类型 {} 的探测实现，已跳过 hostId={}",
+                    osType, host.getId());
+            return ReturnResult.error("不支持的探测系统类型: " + osType);
+        }
+        HostDetectProvider provider = providerOpt.get();
+        return provider.detect(host, credential);
     }
 
     @Override
@@ -728,106 +687,7 @@ public class ServerHostServiceImpl implements ServerHostService {
         return true;
     }
 
-    /**
-     * 通过 WinRM（Windows Remote Management）采集 Windows 主机硬件信息
-     * <p>
-     * 使用 WinRM PowerShell 批量一行输出，避免逐命令多次握手。
-     * 窗口主机默认 WinRM 端口 5985(HTTP)/5986(HTTPS)，优先取 registry 中
-     * 已配置的 WinRM 端口（registry key: winrm.port），缺省 5985。
-     * </p>
-     *
-     * @param host     主机（必须已存在，systemType=WINDOWS）
-     * @param credential 解密后的登录凭据
-     * @return 更新后的主机（含硬件信息）
-     */
-    private ReturnResult<MsServerHost> detectHardwareViaWinrm(MsServerHost host, SshCredential credential) {
-        // WinRM 端口：优先 host 的"登录端口"，否则回退 5985（HTTP）
-        int winrmPort = host.getServerHostPort() != null && host.getServerHostPort() > 0
-                ? host.getServerHostPort() : 5985;
-        try (WinRmExecClient winrm = WinRmExecClient.builder()
-                .host(host.getServerHostAddress())
-                .port(winrmPort)
-                .username(credential.username())
-                .password(credential.password())
-                .build()) {
-            winrm.connect();
-            // 一次 PowerShell 输出所有硬件字段（以 | 分隔，避免多条命令）
-            String ps = "('CPU='+((Get-CimInstance Win32_Processor).NumberOfCores)) "
-                    + "+('|MEM='+[math]::Round((Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory/1MB)) "
-                    + "+('|DISK='+[math]::Round((Get-CimInstance Win32_LogicalDisk -Filter 'DriveType=3' | Measure-Object -Property Size -Sum).Sum/1GB)) "
-                    + "+('|OS='+(Get-CimInstance Win32_OperatingSystem).Caption) "
-                    + "+('|ARCH='+$env:PROCESSOR_ARCHITECTURE) "
-                    + "+('|IP='+((Get-NetIPAddress -AddressFamily IPv4 | Where-Object {$_.IPAddress -notlike '127.*'} | Select-Object -First 1).IPAddress))";
-            String output = winrm.exec().command(ps).executeAndGetOutput();
-            parseWinrmOutput(output, host);
-            hostMapper.updateById(host);
-            markOnline(host.getId(), true);
-            return ReturnResult.ok(hostMapper.selectById(host.getId()), "WinRM 硬件探测成功");
-        } catch (Exception e) {
-            log.warn("[server] WinRM 探测失败 hostId={} address={}: {}", host.getId(), host.getServerHostAddress(), e.getMessage());
-            return ReturnResult.error("WinRM 硬件探测失败: " + e.getMessage());
-        }
-    }
-
-    /**
-     * 解析 WinRM PowerShell 输出为硬件字段（| 分隔的 k=v 段）
-     *
-     * @param output 原始输出
-     * @param host   待回写的主机
-     */
-    private void parseWinrmOutput(String output, MsServerHost host) {
-        if (output == null || output.isBlank()) {
-            return;
-        }
-        for (String seg : output.split("\\|")) {
-            int eq = seg.indexOf('=');
-            if (eq <= 0) {
-                continue;
-            }
-            String key = seg.substring(0, eq).trim().toLowerCase();
-            String value = seg.substring(eq + 1).trim();
-            if (value.isEmpty()) {
-                continue;
-            }
-            try {
-                switch (key) {
-                    case "cpu" -> {
-                        int cores = Integer.parseInt(value);
-                        if (cores > 0) {
-                            host.setServerHostCpuCores(cores);
-                        }
-                    }
-                    case "mem" -> {
-                        long memMb = Long.parseLong(value);
-                        if (memMb > 0) {
-                            host.setServerHostMemoryMb(memMb);
-                        }
-                    }
-                    case "disk" -> {
-                        long diskGb = (long) Math.floor(Double.parseDouble(value));
-                        if (diskGb > 0) {
-                            host.setServerHostDiskGb(diskGb);
-                        }
-                    }
-                    case "os" -> host.setServerHostOsVersion(value);
-                    case "arch" -> host.setServerHostOsArch(value);
-                    case "ip" -> {
-                        if (value.contains(".") || value.contains(":")) {
-                            host.setServerHostPrivateIp(value);
-                        }
-                    }
-                    default -> { /* 忽略未知字段 */ }
-                }
-            } catch (NumberFormatException nfe) {
-                log.debug("[server] WinRM 字段解析失败 key={}: {}", key, value);
-            }
-        }
-        if (isBlank(host.getServerHostOsVersion())) {
-            host.setServerHostOsVersion("Windows");
-        }
-    }
-
-    /**
+/**
      * 采集目标主机出口公网 IP
      * <p>
       * 优先走 SSH（cURL ifconfig.me / ipinfo.io），SSH 不可用时回退到本机出口 IP 探测。
@@ -881,10 +741,10 @@ public class ServerHostServiceImpl implements ServerHostService {
     }
 
     /**
-      * 通过 HTTP 获取 获取文本响应
-     *
-     * @param url 地址
-     * @return 响应文本，失败返回空串
+    * 通过 HTTP 获取 获取文本响应
+    *
+    * @param url 地址
+    * @return 响应文本，失败返回空串
      */
     private String fetchViaHttp(String url) {
         try {
@@ -893,14 +753,14 @@ public class ServerHostServiceImpl implements ServerHostService {
             conn.setReadTimeout(5000);
             conn.setRequestMethod("GET");
             /**
-             * 尝试。
-             * @param conn.getInputStream( conn.获取输入流(
+            * 尝试。
+            * @param conn.getInputStream( conn.获取输入流(
              */
             try (var in = conn.getInputStream()) {
                 /**
-                 * 字符串。
-                 * @param in.readAllBytes( 入.读取全部bytes(
-                 * @return 字符串的结果
+                * 字符串。
+                * @param in.readAllBytes( 入.读取全部bytes(
+                * @return 字符串的结果
                  */
                 return new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8).trim();
             }
@@ -910,10 +770,10 @@ public class ServerHostServiceImpl implements ServerHostService {
     }
 
     /**
-      * 判断字符串是否为 ipv4
-     *
-     * @param value 字符串
-     * @return 是否为 IP
+    * 判断字符串是否为 ipv4
+    *
+    * @param value 字符串
+    * @return 是否为 IP
      */
     private boolean isIp(String value) {
         if (value == null) {
@@ -991,10 +851,10 @@ public class ServerHostServiceImpl implements ServerHostService {
     }
 
     /**
-     * 从 PEM 私钥内容推断密钥类型
-     *
-     * @param privateKey PEM 私钥
-     * @return RSA / ED25519 / ECDSA
+    * 从 PEM 私钥内容推断密钥类型
+    *
+    * @param privateKey PEM 私钥
+    * @return RSA / ED25519 / ECDSA
      */
     private String detectKeyType(String privateKey) {
         String t = privateKey == null ? "" : privateKey;
@@ -1008,11 +868,11 @@ public class ServerHostServiceImpl implements ServerHostService {
     }
 
     /**
-     * 静默执行命令并返回输出（失败返回空串）
-     *
-     * @param handle  SSH 句柄
-     * @param command 命令
-     * @return 标准输出，异常返回空串
+    * 静默执行命令并返回输出（失败返回空串）
+    *
+    * @param handle  SSH 句柄
+    * @param command 命令
+    * @return 标准输出，异常返回空串
      */
     private String execQuiet(SshClients.Handle handle, String command) {
         try {
@@ -1023,10 +883,10 @@ public class ServerHostServiceImpl implements ServerHostService {
     }
 
     /**
-     * 判断字符串是否为纯数字
-     *
-     * @param value 字符串
-     * @return 是否纯数字
+    * 判断字符串是否为纯数字
+    *
+    * @param value 字符串
+    * @return 是否纯数字
      */
     private boolean isNumeric(String value) {
         if (value == null) {
@@ -1045,10 +905,10 @@ public class ServerHostServiceImpl implements ServerHostService {
     }
 
     /**
-     * 回写主机在线状态与最近在线时间
-     *
-     * @param hostId 主机 标识
-     * @param online 是否在线
+    * 回写主机在线状态与最近在线时间
+    *
+    * @param hostId 主机 标识
+    * @param online 是否在线
      */
     private void markOnline(Long hostId, boolean online) {
         try {
@@ -1065,10 +925,10 @@ public class ServerHostServiceImpl implements ServerHostService {
     }
 
     /**
-     * 计算主机当前最大绑定优先级加一
-     *
-     * @param hostId 主机 标识
-     * @return 下一个优先级值
+    * 计算主机当前最大绑定优先级加一
+    *
+    * @param hostId 主机 标识
+    * @return 下一个优先级值
      */
     private int nextSort(Long hostId) {
         List<MsServerHostIdentity> relations = hostIdentityMapper.selectList(
@@ -1084,9 +944,9 @@ public class ServerHostServiceImpl implements ServerHostService {
     }
 
     /**
-     * 生成 32 位十六进制探针标识
-     *
-     * @return agentKey
+    * 生成 32 位十六进制探针标识
+    *
+    * @return agentKey
      */
     private String generateAgentKey() {
         byte[] bytes = new byte[AGENT_KEY_BYTES];
@@ -1095,10 +955,10 @@ public class ServerHostServiceImpl implements ServerHostService {
     }
 
     /**
-     * 空串判断
-     *
-     * @param value 待判断字符串
-     * @return 是否为空
+    * 空串判断
+    *
+    * @param value 待判断字符串
+    * @return 是否为空
      */
     private boolean isBlank(String value) {
         return value == null || value.isBlank();

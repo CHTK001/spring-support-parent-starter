@@ -17,38 +17,38 @@ import javax.sql.DataSource;
 import java.util.Map;
 
 /**
- * Seata 分布式事务自动配置
- * <p>
- * 当类路径下存在 Seata 的核心类时自动启用。
- * 为所有已注册的动态数据源自动包装 {@code DataSourceProxy}，
- * 以便 Seata AT 模式或 XA 模式能够拦截数据库操作。
- * </p>
- *
- * <p>
- * <b>前置条件：</b>用户需要在 pom.xml 中自行引入 Seata 依赖：
- * <pre>{@code
- * <dependency>
- *     <groupId>org.apache.seata</groupId>
- *     <artifactId>seata-spring-boot-starter</artifactId>
- *     <version>2.6.0</version>
- * </dependency>
- * }</pre>
- * </p>
- *
- * <p>
- * <b>配置：</b>
- * <pre>{@code
- * seata:
- *   enabled: true                    # 默认开启
- *   application-id: my-app
- *   tx-service-group: my_tx_group
- *   enable-auto-data-source-proxy: false  # 我们自行代理，避免冲突
- *   data-source-proxy-mode: AT       # AT 或 XA
- * }</pre>de: AT       # AT 或 XA
- * }</pre>
- * </p>
- *
- * @since 2026/07/14
+* Seata 分布式事务自动配置
+* <p>
+* 当类路径下存在 Seata 的核心类时自动启用。
+* 为所有已注册的动态数据源自动包装 {@code DataSourceProxy}，
+* 以便 Seata AT 模式或 XA 模式能够拦截数据库操作。
+* </p>
+*
+* <p>
+* <b>前置条件：</b>用户需要在 pom.xml 中自行引入 Seata 依赖：
+* <pre>{@code
+* <dependency>
+*     <groupId>org.apache.seata</groupId>
+*     <artifactId>seata-spring-boot-starter</artifactId>
+*     <version>2.6.0</version>
+* </dependency>
+* }</pre>
+* </p>
+*
+* <p>
+* <b>配置：</b>
+* <pre>{@code
+* seata:
+*   enabled: true                    # 默认开启
+*   application-id: my-app
+*   tx-service-group: my_tx_group
+*   enable-auto-data-source-proxy: false  # 我们自行代理，避免冲突
+*   data-source-proxy-mode: AT       # AT 或 XA
+* }</pre>de: AT       # AT 或 XA
+* }</pre>
+* </p>
+*
+* @since 2026/07/14
  */
 @Slf4j
 @Configuration(proxyBeanMethods = false)
@@ -59,53 +59,53 @@ import java.util.Map;
 })
 @ConditionalOnProperty(prefix = "seata", name = "enabled", havingValue = "true", matchIfMissing = true)
 /**
- * seataauto配置类。
- *
- * @author CH
- * @since 4.0.0
+* seataauto配置类。
+*
+* @author CH
+* @since 4.0.0
  */
 public class SeataAutoConfiguration {
 
     /**
-     * 创建 Seata 数据源代理的初始化器
-     * <p>
-     * 用于在 {@link DynamicDataSource} 注册完成后，
-     * 将其中每个实际的 {@link DataSource} 包装为 Seata 的
-     * {@code DataSourceProxy}，从而支持 AT 模式的分布式事务。
-     * </p>
-     *
-     * @return 数据源代理初始化器
+    * 创建 Seata 数据源代理的初始化器
+    * <p>
+    * 用于在 {@link DynamicDataSource} 注册完成后，
+    * 将其中每个实际的 {@link DataSource} 包装为 Seata 的
+    * {@code DataSourceProxy}，从而支持 AT 模式的分布式事务。
+    * </p>
+    *
+    * @return 数据源代理初始化器
      */
     @Bean
     @ConditionalOnMissingBean(name = "seataDataSourcePostProcessor")
     public SeataDataSourcePostProcessor seataDataSourcePostProcessor() {
         /**
-          * Seata数据源post处理器。
-         * @return seata数据源post处理器的结果
+        * Seata数据源post处理器。
+        * @return seata数据源post处理器的结果
          */
         return new SeataDataSourcePostProcessor();
     }
 
     /**
-     * Seata 数据源后处理器
-     * <p>
-     * 在 Spring 容器启动完成后，遍历所有已注册的动态数据源，
-     * 将其包装为 Seata {@code DataSourceProxy}。
-     * 使用反射创建以避免编译期对 Seata 的强制依赖。
-     * </p>
-     * @author CH
-     * @since 4.0.0
+    * Seata 数据源后处理器
+    * <p>
+    * 在 Spring 容器启动完成后，遍历所有已注册的动态数据源，
+    * 将其包装为 Seata {@code DataSourceProxy}。
+    * 使用反射创建以避免编译期对 Seata 的强制依赖。
+    * </p>
+    * @author CH
+    * @since 4.0.0
      */
     @Slf4j
     public static class SeataDataSourcePostProcessor {
 
         /**
-         * 初始化方法：包装所有动态数据源
-         * <p>
-         * 在 Spring 容器启动后自动执行，将每个已注册的动态数据源包装为
-         * Seata {@code DataSourceProxy}，支持 AT/XA 分布式事务模式。
-         * 使用反射避免编译期对 Seata 的强制依赖。
-         * </p>
+        * 初始化方法：包装所有动态数据源
+        * <p>
+        * 在 Spring 容器启动后自动执行，将每个已注册的动态数据源包装为
+        * Seata {@code DataSourceProxy}，支持 AT/XA 分布式事务模式。
+        * 使用反射避免编译期对 Seata 的强制依赖。
+        * </p>
          */
         @PostConstruct
         public void wrapDataSources() {
@@ -142,9 +142,9 @@ public class SeataAutoConfiguration {
         }
 
         /**
-          * 通过反射创建 Seata 数据源代理
-         * @param dataSource 数据源
-         * @return 创建数据源代理的结果
+        * 通过反射创建 Seata 数据源代理
+        * @param dataSource 数据源
+        * @return 创建数据源代理的结果
          */
         @SuppressWarnings("unchecked")
         private DataSource createDataSourceProxy(DataSource dataSource) throws Exception {
@@ -153,9 +153,9 @@ public class SeataAutoConfiguration {
         }
 
         /**
-         * 检查数据源是否已经被 Seata 代理
-         * @param dataSource 数据源
-         * @return 是否alreadyproxied的结果
+        * 检查数据源是否已经被 Seata 代理
+        * @param dataSource 数据源
+        * @return 是否alreadyproxied的结果
          */
         private boolean isAlreadyProxied(DataSource dataSource) {
             Class<?> proxyClass = ReflectUtils.forName("io.seata.rm.datasource.DataSourceProxy");

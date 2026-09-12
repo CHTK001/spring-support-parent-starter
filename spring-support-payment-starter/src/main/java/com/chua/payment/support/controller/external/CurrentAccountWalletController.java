@@ -41,10 +41,10 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * 当前用户钱包自助 API
- * <p>所有接口强检验当前用户身份，userId 从认证上下文获取，不允许客户端传入</p>
- * @author CH
- * @since 4.0.0
+* 当前用户钱包自助 API
+* <p>所有接口强检验当前用户身份，userId 从认证上下文获取，不允许客户端传入</p>
+* @author CH
+* @since 4.0.0
  */
 @RestController
 @RequestMapping("/account/wallet")
@@ -66,9 +66,9 @@ public class CurrentAccountWalletController {
 
     @GetMapping
     /**
-     * 获取Wallet
-     * @param request 请求
-     * @param merchantId merchantid
+    * 获取Wallet
+    * @param request 请求
+    * @param merchantId merchantid
      */
     public Result<WalletAccountVO> getWallet(HttpServletRequest request,
                                              @RequestParam Long merchantId) {
@@ -81,13 +81,13 @@ public class CurrentAccountWalletController {
 
     @GetMapping("/log/page")
     /**
-      * 列表日志
-     * @param request 请求
-     * @param pageNum pagenum
-     * @param pageSize page大小
-     * @param merchantId merchantid
-     * @param bizType biz类型
-     * @param bizNo bizno
+    * 列表日志
+    * @param request 请求
+    * @param pageNum pagenum
+    * @param pageSize page大小
+    * @param merchantId merchantid
+    * @param bizType biz类型
+    * @param bizNo bizno
      */
     public Result<PageResult<WalletAccountLog>> listLogs(HttpServletRequest request,
                                                          @RequestParam(defaultValue = "1") int pageNum,
@@ -105,13 +105,13 @@ public class CurrentAccountWalletController {
 
     @GetMapping("/order/page")
     /**
-      * 列表订单
-     * @param request 请求
-     * @param pageNum pagenum
-     * @param pageSize page大小
-     * @param merchantId merchantid
-     * @param orderType 订单类型
-     * @param status 状态
+    * 列表订单
+    * @param request 请求
+    * @param pageNum pagenum
+    * @param pageSize page大小
+    * @param merchantId merchantid
+    * @param orderType 订单类型
+    * @param status 状态
      */
     public Result<PageResult<WalletOrder>> listOrders(HttpServletRequest request,
                                                       @RequestParam(defaultValue = "1") int pageNum,
@@ -129,9 +129,9 @@ public class CurrentAccountWalletController {
 
     @PostMapping("/withdraw")
     /**
-     * Withdraw
-     * @param request 请求
-     * @param dto dto
+    * Withdraw
+    * @param request 请求
+    * @param dto dto
      */
     public Result<WalletWithdrawApproval> withdraw(HttpServletRequest request,
                                                     @RequestBody WalletWithdrawDTO dto) {
@@ -196,7 +196,7 @@ public class CurrentAccountWalletController {
     }
 
     /**
-     * 用户主动取消提现申请（仅 PENDING 状态可取消）
+    * 用户主动取消提现申请（仅 PENDING 状态可取消）
      */
     @PostMapping("/withdraw/{approvalId}/cancel")
     public Result<Void> cancelWithdraw(@PathVariable Long approvalId,
@@ -229,9 +229,9 @@ public class CurrentAccountWalletController {
 
     @PostMapping("/transfer")
     /**
-      * 调动
-     * @param request 请求
-     * @param dto dto
+    * 调动
+    * @param request 请求
+    * @param dto dto
      */
     public Result<Void> transfer(HttpServletRequest request,
                                  @RequestBody WalletTransferDTO dto) {

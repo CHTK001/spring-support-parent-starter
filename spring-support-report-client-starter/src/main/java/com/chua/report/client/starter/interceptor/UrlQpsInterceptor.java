@@ -7,14 +7,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 /**
- * URL QPS 统计拦截器
- * <p>
- * 拦截所有请求并记录统计数据
- * </p>
- *
-   * @版本 1.0.0
- * @since 2025/01/17
- * @author CH
+* URL QPS 统计拦截器
+* <p>
+* 拦截所有请求并记录统计数据
+* </p>
+*
+* @版本 1.0.0
+* @since 2025/01/17
+* @author CH
  */
 @Slf4j
 public class UrlQpsInterceptor implements HandlerInterceptor {
@@ -33,11 +33,11 @@ public class UrlQpsInterceptor implements HandlerInterceptor {
 
     @Override
     /**
-      * 之后完成
-     * @param request 请求
-     * @param response 响应
-     * @param handler 处理器
-     * @param ex ex
+    * 之后完成
+    * @param request 请求
+    * @param response 响应
+    * @param handler 处理器
+    * @param ex ex
      */
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response, 
                                  Object handler, Exception ex) {
@@ -66,10 +66,10 @@ public class UrlQpsInterceptor implements HandlerInterceptor {
     }
 
     /**
-     * 获取请求 URL（去除查询参数，处理路径变量）
-     *
-     * @param request HTTP 请求
-     * @return 处理后的 URL
+    * 获取请求 URL（去除查询参数，处理路径变量）
+    *
+    * @param request HTTP 请求
+    * @return 处理后的 URL
      */
     private String getRequestUrl(HttpServletRequest request) {
         String uri = request.getRequestURI();

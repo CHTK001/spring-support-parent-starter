@@ -6,10 +6,10 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 /**
- * 订单状态流转日志实体类
- *
- * @since 2026-03-18
- * @author CH
+* 订单状态流转日志实体类
+*
+* @since 2026-03-18
+* @author CH
  */
 @Data
 @TableName("pay_order_state_log")

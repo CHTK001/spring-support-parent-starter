@@ -13,13 +13,13 @@ import lombok.EqualsAndHashCode;
 import java.time.LocalDateTime;
 
 /**
-   * app钥匙 表，存储供应商接入凭证、次数限制与过期策略。
- *
- * <p>次数限制与过期时间二选一：{@link #appKeyMaxUse} 为次数上限，
- * {@link #appKeyExpireTime} 为过期时间，均为空表示不限。</p>
- *
- * @since 2026-08-03
- * @author CH
+* app钥匙 表，存储供应商接入凭证、次数限制与过期策略。
+*
+* <p>次数限制与过期时间二选一：{@link #appKeyMaxUse} 为次数上限，
+* {@link #appKeyExpireTime} 为过期时间，均为空表示不限。</p>
+*
+* @since 2026-08-03
+* @author CH
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -28,10 +28,10 @@ import java.time.LocalDateTime;
 public class SysAiAppKey extends SysBase {
 
     /**
-       * app钥匙 主键 标识
+    * app钥匙 主键 标识
      */
     /**
-       * app钥匙 主键 标识
+    * app钥匙 主键 标识
      */
     @TableId(value = "sys_ai_app_key_id", type = IdType.AUTO)
     @Schema(description = "AppKey 主键 ID")
@@ -39,10 +39,10 @@ public class SysAiAppKey extends SysBase {
     private Long appKeyId;
 
     /**
-      * app钥匙 名称
+    * app钥匙 名称
      */
     /**
-      * app钥匙 名称
+    * app钥匙 名称
      */
     @TableField("sys_ai_app_key_name")
     @Schema(description = "AppKey 名称")
@@ -50,10 +50,10 @@ public class SysAiAppKey extends SysBase {
     private String appKeyName;
 
     /**
-      * app钥匙 密钥值
+    * app钥匙 密钥值
      */
     /**
-      * app钥匙 密钥值
+    * app钥匙 密钥值
      */
     @TableField("sys_ai_app_key_value")
     @Schema(description = "AppKey 密钥值")
@@ -61,10 +61,10 @@ public class SysAiAppKey extends SysBase {
     private String appKeyValue;
 
     /**
-      * 关联供应商 标识
+    * 关联供应商 标识
      */
     /**
-      * 关联供应商 标识
+    * 关联供应商 标识
      */
     @TableField("sys_ai_app_key_provider_id")
     @Schema(description = "关联供应商 ID")
@@ -72,10 +72,10 @@ public class SysAiAppKey extends SysBase {
     private Long appKeyProviderId;
 
     /**
-     * 限定使用的模型（可空）
+    * 限定使用的模型（可空）
      */
     /**
-     * 限定使用的模型
+    * 限定使用的模型
      */
     @TableField("sys_ai_app_key_model")
     @Schema(description = "限定使用的模型")
@@ -83,10 +83,10 @@ public class SysAiAppKey extends SysBase {
     private String appKeyModel;
 
     /**
-      * 绑定分组 标识
+    * 绑定分组 标识
      */
     /**
-      * 绑定分组 标识
+    * 绑定分组 标识
      */
     @TableField("sys_ai_app_key_group_id")
     @Schema(description = "绑定分组 ID")
@@ -94,10 +94,10 @@ public class SysAiAppKey extends SysBase {
     private Long appKeyGroupId;
 
     /**
-     * 是否启用
+    * 是否启用
      */
     /**
-     * 是否启用
+    * 是否启用
      */
     @TableField("sys_ai_app_key_enabled")
     @Schema(description = "是否启用")
@@ -105,10 +105,10 @@ public class SysAiAppKey extends SysBase {
     private Boolean appKeyEnabled;
 
     /**
-     * 已使用次数
+    * 已使用次数
      */
     /**
-     * 已使用次数
+    * 已使用次数
      */
     @TableField("sys_ai_app_key_use_count")
     @Schema(description = "已使用次数")
@@ -116,10 +116,10 @@ public class SysAiAppKey extends SysBase {
     private Long appKeyUseCount;
 
     /**
-      * 次数上限（空 表示不限）
+    * 次数上限（空 表示不限）
      */
     /**
-     * 次数上限
+    * 次数上限
      */
     @TableField("sys_ai_app_key_max_use")
     @Schema(description = "次数上限")
@@ -127,10 +127,10 @@ public class SysAiAppKey extends SysBase {
     private Long appKeyMaxUse;
 
     /**
-      * 过期时间（空 表示不限）
+    * 过期时间（空 表示不限）
      */
     /**
-     * 过期时间
+    * 过期时间
      */
     @TableField("sys_ai_app_key_expire_datetime")
     @Schema(description = "过期时间")
@@ -138,10 +138,10 @@ public class SysAiAppKey extends SysBase {
     private LocalDateTime appKeyExpireTime;
 
     /**
-     * 逻辑删除标记
+    * 逻辑删除标记
      */
     /**
-     * 逻辑删除标记
+    * 逻辑删除标记
      */
     @TableField("sys_ai_app_key_delete")
     @TableLogic

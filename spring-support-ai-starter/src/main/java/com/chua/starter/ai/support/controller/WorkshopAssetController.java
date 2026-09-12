@@ -35,13 +35,13 @@ import java.util.concurrent.ConcurrentHashMap;
 import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
 
 /**
- * 创意工坊资产库 REST 控制器。
- *
- * <p>提供 /api/workshop/assets 和 /api/workshop/collections/* 接口，
- * 支持图片/视频上传、文本资产创建、元数据编辑、批量集合重命名。</p>
- *
- * @author CH
- * @since 4.0.0
+* 创意工坊资产库 REST 控制器。
+*
+* <p>提供 /api/workshop/assets 和 /api/workshop/collections/* 接口，
+* 支持图片/视频上传、文本资产创建、元数据编辑、批量集合重命名。</p>
+*
+* @author CH
+* @since 4.0.0
  */
 @Slf4j
 @RestController
@@ -88,9 +88,9 @@ public class WorkshopAssetController {
     @Operation(summary = "创建文本资产", description = "注册一个纯文本资产到资产库")
     @PostMapping("/assets")
     /**
-     * 创建文本asset。
-     * @param body 主体
-     * @return 创建文本asset的结果
+    * 创建文本asset。
+    * @param body 主体
+    * @return 创建文本asset的结果
      */
     public Map<String, Object> createTextAsset(@RequestBody Map<String, Object> body) {
         String title = (String) body.getOrDefault("title", "未命名文本");
@@ -124,10 +124,10 @@ public class WorkshopAssetController {
     @Operation(summary = "更新资产", description = "部分更新资产标题/集合/标签/in_library")
     @PatchMapping("/assets/{assetId}")
     /**
-      * patchasset。
-     * @param assetId assetid
-     * @param body 主体
-     * @return patchAsset的结果
+    * patchasset。
+    * @param assetId assetid
+    * @param body 主体
+    * @return patchAsset的结果
      */
     public Map<String, Object> patchAsset(@PathVariable String assetId, @RequestBody Map<String, Object> body) {
         String title = (String) body.get("title");
@@ -145,9 +145,9 @@ public class WorkshopAssetController {
     @Operation(summary = "删除资产", description = "删除资产记录及物理文件")
     @DeleteMapping("/assets/{assetId}")
     /**
-     * 删除asset。
-     * @param assetId assetid
-     * @return 删除asset的结果
+    * 删除asset。
+    * @param assetId assetid
+    * @return 删除asset的结果
      */
     public Map<String, Object> deleteAsset(@PathVariable String assetId) {
         assetService.deleteAsset(assetId);
@@ -161,8 +161,8 @@ public class WorkshopAssetController {
     @Operation(summary = "列出集合", description = "返回所有非空集合名称列表")
     @GetMapping("/collections")
     /**
-     * 列表集合。
-     * @return 列表集合的结果
+    * 列表集合。
+    * @return 列表集合的结果
      */
     public Map<String, Object> listCollections() {
         List<String> collections = assetService.listCollections();
@@ -177,9 +177,9 @@ public class WorkshopAssetController {
     @Operation(summary = "重命名集合", description = "批量更新使用指定集合的资产，返回更新行数")
     @PostMapping("/collections/rename")
     /**
-     * rename集合。
-     * @param body 主体
-     * @return rename集合的结果
+    * rename集合。
+    * @param body 主体
+    * @return rename集合的结果
      */
     public Map<String, Object> renameCollection(@RequestBody Map<String, String> body) {
         String from = body.get("from");
@@ -197,8 +197,8 @@ public class WorkshopAssetController {
     @Operation(summary = "列出画布", description = "返回画布列表，按 updated_at 倒序")
     @GetMapping("/canvases")
     /**
-     * 列表Canvas。
-     * @return 列表Canvas的结果
+    * 列表Canvas。
+    * @return 列表Canvas的结果
      */
     public Map<String, Object> listCanvases() {
         List<Map<String, Object>> items = new ArrayList<>(canvases.values());
@@ -212,9 +212,9 @@ public class WorkshopAssetController {
     @Operation(summary = "创建画布", description = "创建空白画布，返回其元数据")
     @PostMapping("/canvases")
     /**
-     * 创建Canvas。
-     * @param false false
-     * @return 创建Canvas的结果
+    * 创建Canvas。
+    * @param false false
+    * @return 创建Canvas的结果
      */
     public Map<String, Object> createCanvas(@RequestBody(required = false) Map<String, Object> body) {
         String id = com.chua.common.support.utils.IdUtils.uuidv7();
@@ -239,9 +239,9 @@ public class WorkshopAssetController {
     @Operation(summary = "获取画布详情", description = "返回画布元数据与完整文档")
     @GetMapping("/canvases/{canvasId}")
     /**
-     * 获取Canvas。
-     * @param canvasId Canvasid
-     * @return 获取Canvas的结果
+    * 获取Canvas。
+    * @param canvasId Canvasid
+    * @return 获取Canvas的结果
      */
     public Map<String, Object> getCanvas(@PathVariable String canvasId) {
         Map<String, Object> canvas = canvases.get(canvasId);
@@ -260,10 +260,10 @@ public class WorkshopAssetController {
     @Operation(summary = "保存画布文档", description = "原子写入画布文档，返回最新 updated_at")
     @PutMapping("/canvases/{canvasId}/doc")
     /**
-     * 放入Canvasdoc。
-     * @param canvasId Canvasid
-     * @param body 主体
-     * @return 放入Canvasdoc的结果
+    * 放入Canvasdoc。
+    * @param canvasId Canvasid
+    * @param body 主体
+    * @return 放入Canvasdoc的结果
      */
     public Map<String, Object> putCanvasDoc(@PathVariable String canvasId, @RequestBody Map<String, Object> body) {
         Map<String, Object> canvas = canvases.get(canvasId);
@@ -292,10 +292,10 @@ public class WorkshopAssetController {
     @Operation(summary = "重命名画布", description = "修改画布标题")
     @PatchMapping("/canvases/{canvasId}")
     /**
-     * patchCanvas。
-     * @param canvasId Canvasid
-     * @param body 主体
-     * @return patchCanvas的结果
+    * patchCanvas。
+    * @param canvasId Canvasid
+    * @param body 主体
+    * @return patchCanvas的结果
      */
     public Map<String, Object> patchCanvas(@PathVariable String canvasId, @RequestBody Map<String, Object> body) {
         Map<String, Object> canvas = canvases.get(canvasId);
@@ -315,9 +315,9 @@ public class WorkshopAssetController {
     @Operation(summary = "删除画布", description = "删除画布索引记录")
     @DeleteMapping("/canvases/{canvasId}")
     /**
-     * 删除Canvas。
-     * @param canvasId Canvasid
-     * @return 删除Canvas的结果
+    * 删除Canvas。
+    * @param canvasId Canvasid
+    * @return 删除Canvas的结果
      */
     public Map<String, Object> deleteCanvas(@PathVariable String canvasId) {
         canvases.remove(canvasId);
@@ -327,9 +327,9 @@ public class WorkshopAssetController {
     }
 
     /**
-     * Canvasmeta。
-     * @param canvas Canvas
-     * @return Canvasmeta的结果
+    * Canvasmeta。
+    * @param canvas Canvas
+    * @return Canvasmeta的结果
      */
     private Map<String, Object> canvasMeta(Map<String, Object> canvas) {
         Map<String, Object> meta = new LinkedHashMap<>();
@@ -386,9 +386,9 @@ public class WorkshopAssetController {
     }
 
     /**
-      * wrapasset。
-     * @param asset asset
-     * @return wrapAsset的结果
+    * wrapasset。
+    * @param asset asset
+    * @return wrapAsset的结果
      */
     private Map<String, Object> wrapAsset(Object asset) {
         Map<String, Object> result = new LinkedHashMap<>();
@@ -400,10 +400,10 @@ public class WorkshopAssetController {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper(); // 对象映射器
 
     /**
-      * 将实体转为前端 workshopasset 契约结构：
-      * 标签/origin 从 JSON 字符串解析为数组/对象，并补充 url / thumb_url 字段。
-     * @param a a
-     * @return 转为contract映射的结果
+    * 将实体转为前端 workshopasset 契约结构：
+    * 标签/origin 从 JSON 字符串解析为数组/对象，并补充 url / thumb_url 字段。
+    * @param a a
+    * @return 转为contract映射的结果
      */
     private Map<String, Object> toContractMap(WorkshopAsset a) {
         Map<String, Object> m = new LinkedHashMap<>();
@@ -428,10 +428,10 @@ public class WorkshopAssetController {
     }
 
     /**
-      * 解析 JSON 字符串为原生 列表/映射；空或解析失败回退到 降级。
-     * @param raw raw
-     * @param fallback 降级
-     * @return 解析json值的结果
+    * 解析 JSON 字符串为原生 列表/映射；空或解析失败回退到 降级。
+    * @param raw raw
+    * @param fallback 降级
+    * @return 解析json值的结果
      */
     private Object parseJsonValue(String raw, Object fallback) {
         if (raw == null || raw.isBlank()) {

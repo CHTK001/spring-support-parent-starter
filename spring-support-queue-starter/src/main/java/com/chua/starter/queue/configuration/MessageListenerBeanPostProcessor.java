@@ -24,13 +24,13 @@ import java.util.concurrent.ConcurrentHashMap;
 import static com.chua.starter.common.support.logger.ModuleLog.highlight;
 
 /**
- * 消息监听注解处理器
- * <p>
-   * 扫描 @队列监听器 注解并注册监听器
- * </p>
- *
- * @since 2025-12-25
- * @author CH
+* 消息监听注解处理器
+* <p>
+* 扫描 @队列监听器 注解并注册监听器
+* </p>
+*
+* @since 2025-12-25
+* @author CH
  */
 @Slf4j
 public class MessageListenerBeanPostProcessor implements BeanPostProcessor {
@@ -44,10 +44,10 @@ public class MessageListenerBeanPostProcessor implements BeanPostProcessor {
     private final Map<String, MessageTemplate> templateMap = new ConcurrentHashMap<>(); // template映射
 
     /**
-      * 创建 消息监听器Beanpost处理器 实例
-     * @param messageTemplates 消息templates
-     * @param queueProperties 队列属性
-     * @param eventPublisher 事件发布
+    * 创建 消息监听器Beanpost处理器 实例
+    * @param messageTemplates 消息templates
+    * @param queueProperties 队列属性
+    * @param eventPublisher 事件发布
      */
     public MessageListenerBeanPostProcessor(List<MessageTemplate> messageTemplates,
                                            QueueProperties queueProperties,
@@ -77,10 +77,10 @@ public class MessageListenerBeanPostProcessor implements BeanPostProcessor {
             QueueListener queueListener = method.getAnnotation(QueueListener.class);
             if (queueListener != null) {
                 /**
-                 * 注册监听器。
-                 * @param bean Bean
-                 * @param method 方法
-                 * @param queueListener 队列监听器
+                * 注册监听器。
+                * @param bean Bean
+                * @param method 方法
+                * @param queueListener 队列监听器
                  */
                 registerListener(bean, method, queueListener);
             }
@@ -88,10 +88,10 @@ public class MessageListenerBeanPostProcessor implements BeanPostProcessor {
             QueueEventListener queueEventListener = method.getAnnotation(QueueEventListener.class);
             if (queueEventListener != null) {
                 /**
-                 * 注册事件监听器。
-                 * @param bean Bean
-                 * @param method 方法
-                 * @param queueEventListener 队列事件监听器
+                * 注册事件监听器。
+                * @param bean Bean
+                * @param method 方法
+                * @param queueEventListener 队列事件监听器
                  */
                 registerEventListener(bean, method, queueEventListener);
             }
@@ -101,10 +101,10 @@ public class MessageListenerBeanPostProcessor implements BeanPostProcessor {
     }
 
     /**
-     * 注册消息监听器
-     * @param bean Bean
-     * @param method 方法
-     * @param queueListener 队列监听器
+    * 注册消息监听器
+    * @param bean Bean
+    * @param method 方法
+    * @param queueListener 队列监听器
      */
     private void registerListener(Object bean, Method method, QueueListener queueListener) {
         String destination = queueListener.value();
@@ -133,25 +133,25 @@ public class MessageListenerBeanPostProcessor implements BeanPostProcessor {
 
         log.info("[Queue] 注册消息监听器: {}.{} -> {} (类型: {}, autoAck: {}, concurrency: {})",
                 /**
-                 * highlight。
-                 * @param bean.getClass( Bean.获取类(
+                * highlight。
+                * @param bean.getClass( Bean.获取类(
                  */
                 highlight(bean.getClass().getSimpleName()), highlight(method.getName()), 
                 /**
-                 * highlight。
-                 * @param destination 目标
+                * highlight。
+                * @param destination 目标
                  */
                 highlight(destination), highlight(type), highlight(String.valueOf(autoAck)), 
                 highlight(String.valueOf(concurrency)));
     }
 
     /**
-     * 创建消息处理器
-     * @param bean Bean
-     * @param method 方法
-     * @param payloadType payload类型
-     * @param autoAck autoACK
-     * @return 创建处理器的结果
+    * 创建消息处理器
+    * @param bean Bean
+    * @param method 方法
+    * @param payloadType payload类型
+    * @param autoAck autoACK
+    * @return 创建处理器的结果
      */
     private MessageHandler createHandler(Object bean, Method method, Class<?> payloadType, boolean autoAck) {
         return (message, ack) -> {
@@ -189,12 +189,12 @@ public class MessageListenerBeanPostProcessor implements BeanPostProcessor {
     }
 
     /**
-     * 解析方法参数
-     * @param method 方法
-     * @param message 消息
-     * @param payloadType payload类型
-     * @param ack ACK
-     * @return resolve参数的结果
+    * 解析方法参数
+    * @param method 方法
+    * @param message 消息
+    * @param payloadType payload类型
+    * @param ack ACK
+    * @return resolve参数的结果
      */
     private Object[] resolveArguments(Method method, Message message, Class<?> payloadType, Acknowledgment ack) {
         Class<?>[] parameterTypes = method.getParameterTypes();
@@ -223,10 +223,10 @@ public class MessageListenerBeanPostProcessor implements BeanPostProcessor {
     }
 
     /**
-     * 注册事件监听器
-     * @param bean Bean
-     * @param method 方法
-     * @param queueEventListener 队列事件监听器
+    * 注册事件监听器
+    * @param bean Bean
+    * @param method 方法
+    * @param queueEventListener 队列事件监听器
      */
     private void registerEventListener(Object bean, Method method, QueueEventListener queueEventListener) {
         String destination = queueEventListener.value();
@@ -257,25 +257,25 @@ public class MessageListenerBeanPostProcessor implements BeanPostProcessor {
 
         log.info("[Queue] 注册事件监听器: {}.{} -> {} (类型: {}, 事件: {}, autoAck: {}, concurrency: {}, republish: {})",
             /**
-             * highlight。
-             * @param bean.getClass( Bean.获取类(
+            * highlight。
+            * @param bean.getClass( Bean.获取类(
              */
             highlight(bean.getClass().getSimpleName()), highlight(method.getName()),
             /**
-             * highlight。
-             * @param destination 目标
+            * highlight。
+            * @param destination 目标
              */
             highlight(destination), highlight(type), highlight(eventType.getSimpleName()),
             /**
-             * highlight。
-             * @param String.valueOf(autoAck 字符串.valueof(autoACK
+            * highlight。
+            * @param String.valueOf(autoAck 字符串.valueof(autoACK
              */
             highlight(String.valueOf(autoAck)), highlight(String.valueOf(concurrency)),
             highlight(String.valueOf(republish)));
     }
 
     /**
-     * 创建事件处理器
+    * 创建事件处理器
      */
     private MessageHandler createEventHandler(Object bean, Method method,
                                              Class<? extends ApplicationEvent> eventType,
@@ -319,7 +319,7 @@ public class MessageListenerBeanPostProcessor implements BeanPostProcessor {
     }
 
     /**
-     * 解析事件方法参数
+    * 解析事件方法参数
      */
     private Object[] resolveEventArguments(Method method, Message message,
                                           ApplicationEvent event, Acknowledgment ack) {

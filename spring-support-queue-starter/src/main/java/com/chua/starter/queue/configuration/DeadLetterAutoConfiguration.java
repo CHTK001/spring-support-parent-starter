@@ -13,13 +13,13 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * 死信队列自动配置
- * <p>
- * 独立于主队列的死信队列配置，使用 plugin.dead-letter 前缀。
- * </p>
- *
- * @since 2025-12-25
- * @author CH
+* 死信队列自动配置
+* <p>
+* 独立于主队列的死信队列配置，使用 plugin.dead-letter 前缀。
+* </p>
+*
+* @since 2025-12-25
+* @author CH
  */
 @Slf4j
 @Configuration
@@ -32,9 +32,9 @@ public class DeadLetterAutoConfiguration {
     private DeadLetterProperties deadLetterProperties;
 
     /**
-     * 死信队列消息模板
-     * @param false false
-     * @return deadLetterTemplate的结果
+    * 死信队列消息模板
+    * @param false false
+    * @return deadLetterTemplate的结果
      */
     @Bean(destroyMethod = "close")
     public DeadLetterTemplate deadLetterTemplate(@Autowired(required = false) MessageTemplate mainMessageTemplate) {
@@ -56,18 +56,18 @@ public class DeadLetterAutoConfiguration {
         log.info("[Queue] 创建死信队列模板, 类型: {}, 最大重试: {}",
                 deadLetterProperties.getType(), deadLetterProperties.getMaxRetries());
         /**
-          * deadlettertemplate。
-         * @param sourceTemplate 源template
-         * @param dlqStorage dlqstorage
-         * @param config 配置
-         * @return DeadLetterTemplate的结果
+        * deadlettertemplate。
+        * @param sourceTemplate 源template
+        * @param dlqStorage dlqstorage
+        * @param config 配置
+        * @return DeadLetterTemplate的结果
          */
         return new DeadLetterTemplate(sourceTemplate, dlqStorage, config);
     }
 
     /**
-     * 创建死信队列底层存储
-     * @return 创建dlqstorage的结果
+    * 创建死信队列底层存储
+    * @return 创建dlqstorage的结果
      */
     private MessageTemplate createDlqStorage() {
         String type = deadLetterProperties.getType();
@@ -76,9 +76,9 @@ public class DeadLetterAutoConfiguration {
                 QueueProperties.LocalConfig localConfig = new QueueProperties.LocalConfig();
                 localConfig.setDelayThreads(deadLetterProperties.getDelayThreads());
                 /**
-                 * 本地消息template。
-                 * @param localConfig 本地配置
-                 * @return 本地消息template的结果
+                * 本地消息template。
+                * @param localConfig 本地配置
+                * @return 本地消息template的结果
                  */
                 yield new LocalMessageTemplate(localConfig);
             }
@@ -87,9 +87,9 @@ public class DeadLetterAutoConfiguration {
                 QueueProperties.LocalConfig localConfig = new QueueProperties.LocalConfig();
                 localConfig.setDelayThreads(deadLetterProperties.getDelayThreads());
                 /**
-                 * 本地消息template。
-                 * @param localConfig 本地配置
-                 * @return 本地消息template的结果
+                * 本地消息template。
+                * @param localConfig 本地配置
+                * @return 本地消息template的结果
                  */
                 yield new LocalMessageTemplate(localConfig);
             }

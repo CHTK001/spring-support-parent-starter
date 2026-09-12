@@ -16,10 +16,10 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 /**
-   * 门禁控制 控制器
- *
- * @since 4.0.0.42
- * @author CH
+* 门禁控制 控制器
+*
+* @since 4.0.0.42
+* @author CH
  */
 @RestController
 @RequestMapping("/api/device/access")
@@ -27,20 +27,20 @@ import java.util.List;
 public class AccessController {
 
     /**
-     * 时间格式
+    * 时间格式
      */
     private static final DateTimeFormatter DTF = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     /**
-     * 设备会话管理器
+    * 设备会话管理器
      */
     private final DeviceSessionManager sessionManager;
 
     /**
-     * 远程开门
-     *
-     * @param deviceId 设备 标识
-     * @param doorId   门编号
+    * 远程开门
+    *
+    * @param deviceId 设备 标识
+    * @param doorId   门编号
      */
     @PostMapping("/unlock")
     public void unlock(@RequestParam String deviceId,
@@ -48,9 +48,9 @@ public class AccessController {
         DeviceSession session = sessionManager.getSession(deviceId);
         if (session == null || !session.isOnline()) {
             /**
-             * runtime异常。
-             * @param deviceId deviceid
-             * @return runtime异常的结果
+            * runtime异常。
+            * @param deviceId deviceid
+            * @return runtime异常的结果
              */
             throw new RuntimeException("设备不在线: " + deviceId);
         }
@@ -58,12 +58,12 @@ public class AccessController {
     }
 
     /**
-     * 查询门禁出入记录
-     *
-     * @param deviceId 设备 标识
-     * @param start    开始时间（yyyy-MM-dd HH:mm:ss）
-     * @param end      结束时间（yyyy-MM-dd HH:mm:ss）
-     * @return 出入记录列表
+    * 查询门禁出入记录
+    *
+    * @param deviceId 设备 标识
+    * @param start    开始时间（yyyy-MM-dd HH:mm:ss）
+    * @param end      结束时间（yyyy-MM-dd HH:mm:ss）
+    * @return 出入记录列表
      */
     @GetMapping("/records")
     public List<AccessRecord> queryAccessRecords(@RequestParam String deviceId,
@@ -72,9 +72,9 @@ public class AccessController {
         DeviceSession session = sessionManager.getSession(deviceId);
         if (session == null || !session.isOnline()) {
             /**
-             * runtime异常。
-             * @param deviceId deviceid
-             * @return runtime异常的结果
+            * runtime异常。
+            * @param deviceId deviceid
+            * @return runtime异常的结果
              */
             throw new RuntimeException("设备不在线: " + deviceId);
         }
@@ -82,11 +82,11 @@ public class AccessController {
     }
 
     /**
-     * 解析范围
-     *
-     * @param start 启动
-     * @param end 结束
-     * @return 解析范围的结果
+    * 解析范围
+    *
+    * @param start 启动
+    * @param end 结束
+    * @return 解析范围的结果
      */
     private TimeRange parseRange(String start, String end) {
         LocalDateTime s;
@@ -102,10 +102,10 @@ public class AccessController {
             e = LocalDateTime.now();
         }
         /**
-         * 时间范围。
-         * @param s s
-         * @param e e
-         * @return 时间范围的结果
+        * 时间范围。
+        * @param s s
+        * @param e e
+        * @return 时间范围的结果
          */
         return new TimeRange(s, e);
     }

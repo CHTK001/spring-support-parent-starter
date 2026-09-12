@@ -3,10 +3,10 @@ package com.chua.starter.eduai.model.vo;
 import lombok.Data;
 
 /**
- * 题目VO
- *
- * @since 4.0.0.42
- * @author CH
+* 题目VO
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Data
 public class QuestionVO {

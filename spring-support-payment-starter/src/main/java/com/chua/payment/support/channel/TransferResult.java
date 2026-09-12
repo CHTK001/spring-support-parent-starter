@@ -5,9 +5,9 @@ import lombok.Data;
 import java.math.BigDecimal;
 
 /**
- * 转账结果
- * @author CH
- * @since 4.0.0
+* 转账结果
+* @author CH
+* @since 4.0.0
  */
 @Data
 public class TransferResult {

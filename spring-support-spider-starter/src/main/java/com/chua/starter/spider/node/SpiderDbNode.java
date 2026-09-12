@@ -19,42 +19,42 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 数据库节点。
- *
- * <p>对数据源执行一条 SQL，支持查询（SELECT）与写入（INSERT/UPDATE/DELETE）两类：
- * 查询结果以 {@code List<Map<String,Object>>} 写入上下文属性；写入类 SQL 返回受影响行数。</p>
- *
- * <p>节点配置说明：</p>
- * <ul>
- *   <li>{@code sql} 待执行的 SQL 文本（必填），可使用 {@code ?} 占位符</li>
- *   <li>{@code params} 占位符取值来源，顺序对应 SQL 中 {@code ?} 的位置，
- *       每一项为上下文属性名（逗号分隔）</li>
- *   <li>{@code saveAs} 结果写入的上下文属性名（必填）</li>
- * </ul>
- *
- * @since 4.0.0.42
- * @author CH
+* 数据库节点。
+*
+* <p>对数据源执行一条 SQL，支持查询（SELECT）与写入（INSERT/UPDATE/DELETE）两类：
+* 查询结果以 {@code List<Map<String,Object>>} 写入上下文属性；写入类 SQL 返回受影响行数。</p>
+*
+* <p>节点配置说明：</p>
+* <ul>
+*   <li>{@code sql} 待执行的 SQL 文本（必填），可使用 {@code ?} 占位符</li>
+*   <li>{@code params} 占位符取值来源，顺序对应 SQL 中 {@code ?} 的位置，
+*       每一项为上下文属性名（逗号分隔）</li>
+*   <li>{@code saveAs} 结果写入的上下文属性名（必填）</li>
+* </ul>
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Slf4j
 @Component
 public class SpiderDbNode implements FlowNode {
 
     /**
-     * 查询类 SQL 关键字前缀
+    * 查询类 SQL 关键字前缀
      */
     private static final String SQL_SELECT = "select";
 
     /**
-     * 数据源
+    * 数据源
      */
     @Resource
     /** 数据来源 */
     private DataSource dataSource;
 
     /**
-     * 节点类型标识。
-     *
-     * @return 节点类型
+    * 节点类型标识。
+    *
+    * @return 节点类型
      */
     @Override
     public String type() {
@@ -62,9 +62,9 @@ public class SpiderDbNode implements FlowNode {
     }
 
     /**
-     * 节点配置表单元信息。
-     *
-     * @return 表单元信息列表
+    * 节点配置表单元信息。
+    *
+    * @return 表单元信息列表
      */
     @Override
     public List<FlowNodeField> configSchema() {
@@ -76,9 +76,9 @@ public class SpiderDbNode implements FlowNode {
     }
 
     /**
-     * 执行数据库节点。
-     *
-     * @param context 当前流程上下文
+    * 执行数据库节点。
+    *
+    * @param context 当前流程上下文
      */
     @Override
     public void execute(FlowContext context) {
@@ -87,17 +87,17 @@ public class SpiderDbNode implements FlowNode {
         String saveAs = props.getString("saveAs");
         if (sql == null || sql.trim().isEmpty()) {
             /**
-             * illegal参数异常。
-             * @param 参数" 参数"
-             * @return illegal参数异常的结果
+            * illegal参数异常。
+            * @param 参数" 参数"
+            * @return illegal参数异常的结果
              */
             throw new IllegalArgumentException("spider.db 节点缺少 sql 参数");
         }
         if (saveAs == null || saveAs.isEmpty()) {
             /**
-             * illegal参数异常。
-             * @param 参数" 参数"
-             * @return illegal参数异常的结果
+            * illegal参数异常。
+            * @param 参数" 参数"
+            * @return illegal参数异常的结果
              */
             throw new IllegalArgumentException("spider.db 节点缺少 saveAs 参数");
         }
@@ -105,10 +105,10 @@ public class SpiderDbNode implements FlowNode {
         String trimmed = sql.trim().toLowerCase();
         Object result = trimmed.startsWith(SQL_SELECT)
                 /**
-                 * 查询for列表。
-                 * @param sql SQL
-                 * @param params 参数
-                 * @return 查询for列表的结果
+                * 查询for列表。
+                * @param sql SQL
+                * @param params 参数
+                * @return 查询for列表的结果
                  */
                 ? queryForList(sql, params) : executeUpdate(sql, params);
         context.setAttribute(saveAs, result);
@@ -117,13 +117,13 @@ public class SpiderDbNode implements FlowNode {
     }
 
     /**
-     * 解析占位符参数值列表。
-     *
-     * <p>属性名为逗号分隔列表，特别地以 {@code current} 标识当前处理数据。</p>
-     *
-     * @param paramsText 属性名列表文本
-     * @param context    当前流程上下文
-     * @return 参数值列表
+    * 解析占位符参数值列表。
+    *
+    * <p>属性名为逗号分隔列表，特别地以 {@code current} 标识当前处理数据。</p>
+    *
+    * @param paramsText 属性名列表文本
+    * @param context    当前流程上下文
+    * @return 参数值列表
      */
     private List<Object> resolveParams(String paramsText, FlowContext context) {
         List<Object> result = new ArrayList<>();
@@ -142,79 +142,79 @@ public class SpiderDbNode implements FlowNode {
     }
 
     /**
-     * 执行查询 SQL 并返回结果行列表。
-     *
-     * @param sql    SQL 文本
-     * @param params 占位参数值
-     * @return 结果行列表（每行为列名到值的映射）
+    * 执行查询 SQL 并返回结果行列表。
+    *
+    * @param sql    SQL 文本
+    * @param params 占位参数值
+    * @return 结果行列表（每行为列名到值的映射）
      */
     private List<Map<String, Object>> queryForList(String sql, List<Object> params) {
         /**
-         * 尝试。
-         * @param dataSource.getConnection( 数据源.getconnection(
+        * 尝试。
+        * @param dataSource.getConnection( 数据源.getconnection(
          */
         try (Connection connection = dataSource.getConnection();
              PreparedStatement statement = connection.prepareStatement(sql)) {
             /**
-             * bind参数。
-             * @param statement 对账单
-             * @param params 参数
+            * bind参数。
+            * @param statement 对账单
+            * @param params 参数
              */
             bindParams(statement, params);
             /**
-             * 尝试。
-             * @param statement.executeQuery( 对账单.执行查询(
+            * 尝试。
+            * @param statement.executeQuery( 对账单.执行查询(
              */
             try (ResultSet resultSet = statement.executeQuery()) {
                 return toRows(resultSet);
             }
         } catch (Exception e) {
             /**
-             * illegal状态异常。
-             * @param e.getMessage( e.获取消息(
-             * @return illegal状态异常的结果
+            * illegal状态异常。
+            * @param e.getMessage( e.获取消息(
+            * @return illegal状态异常的结果
              */
             throw new IllegalStateException("spider.db 查询失败: " + e.getMessage(), e);
         }
     }
 
     /**
-     * 执行写入类 SQL 并返回受影响行数。
-     *
-     * @param sql    SQL 文本
-     * @param params 占位参数值
-     * @return 受影响行数
+    * 执行写入类 SQL 并返回受影响行数。
+    *
+    * @param sql    SQL 文本
+    * @param params 占位参数值
+    * @return 受影响行数
      */
     private int executeUpdate(String sql, List<Object> params) {
         /**
-         * 尝试。
-         * @param dataSource.getConnection( 数据源.getconnection(
+        * 尝试。
+        * @param dataSource.getConnection( 数据源.getconnection(
          */
         try (Connection connection = dataSource.getConnection();
              PreparedStatement statement = connection.prepareStatement(sql)) {
             /**
-             * bind参数。
-             * @param statement 对账单
-             * @param params 参数
+            * bind参数。
+            * @param statement 对账单
+            * @param params 参数
              */
             bindParams(statement, params);
             return statement.executeUpdate();
         } catch (Exception e) {
             /**
-             * illegal状态异常。
-             * @param e.getMessage( e.获取消息(
-             * @return illegal状态异常的结果
+            * illegal状态异常。
+            * @param e.getMessage( e.获取消息(
+            * @return illegal状态异常的结果
              */
             throw new IllegalStateException("spider.db 更新失败: " + e.getMessage(), e);
         }
     }
 
     /**
-     * 绑定占位参数。
-     *
-     * @param statement 预编译语句
-     * @param params    参数值列表
-     * @throws Exception 绑定异常
+    * 绑定占位参数。
+    *
+    * @param statement 预编译语句
+    * @param params    参数值列表
+    * @throws Exception 绑定异常
      */
     private void bindParams(PreparedStatement statement, List<Object> params) throws Exception {
         for (int i = 0; i < params.size(); i++) {
@@ -223,11 +223,11 @@ public class SpiderDbNode implements FlowNode {
     }
 
     /**
-     * 将结果集转换为行列表。
-     *
-     * @param resultSet 结果集
-     * @return 行列表
-     * @throws Exception 解析异常
+    * 将结果集转换为行列表。
+    *
+    * @param resultSet 结果集
+    * @return 行列表
+    * @throws Exception 解析异常
      */
     private List<Map<String, Object>> toRows(ResultSet resultSet) throws Exception {
         ResultSetMetaData metaData = resultSet.getMetaData();

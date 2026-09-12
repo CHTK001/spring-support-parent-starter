@@ -9,11 +9,11 @@ import org.springframework.core.type.filter.TypeFilter;
 import java.io.IOException;
 
 /**
- * 扫描排除筛选器
- *
-   * @版本 1.0.0
- * @since 2024/04/08
- * @author CH
+* 扫描排除筛选器
+*
+* @版本 1.0.0
+* @since 2024/04/08
+* @author CH
  */
 @Getter
 public class ScanExcludeFilter implements TypeFilter {

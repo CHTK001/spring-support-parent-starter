@@ -5,10 +5,10 @@ import com.p6spy.engine.spy.appender.MessageFormattingStrategy;
 import org.slf4j.MDC;
 
 /**
-   * MyBatis p6spy日志
- *
- * @since 2025/6/27 15:51
- * @author CH
+* MyBatis p6spy日志
+*
+* @since 2025/6/27 15:51
+* @author CH
  */
 public class MybatisP6SpyLogger implements MessageFormattingStrategy {
 

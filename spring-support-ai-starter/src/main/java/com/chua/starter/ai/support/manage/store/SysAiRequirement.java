@@ -11,10 +11,10 @@ import java.io.Serializable;
 import java.util.Map;
 
 /**
- * 需求条目实体，持久化到 {@code sys_ai_requirement} 表。
- *
- * @since 4.0.0.42
- * @author CH
+* 需求条目实体，持久化到 {@code sys_ai_requirement} 表。
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Data
 @TableName(value = "sys_ai_requirement", autoResultMap = true)

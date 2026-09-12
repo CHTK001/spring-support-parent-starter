@@ -18,109 +18,109 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * 设备指标上报器
- * <p>
- * 定时采集并上报系统指标（CPU、内存、磁盘、网卡等）
- * 支持配置要上报的指标类型
- * </p>
- * <ul>
- *   <li>CPU: 单独线程采集（因需停顿），缓存结果</li>
- *   <li>内存: 总大小、已使用大小、时间</li>
- *   <li>磁盘: 每个磁盘的名称、大小、用量、时间</li>
- *   <li>网卡: 每个网卡的名称、上行、下行、时间</li>
- * </ul>
- *
- * <p>采集能力通过 {@link OshiSystemMonitor} 统一封装，本类只负责调度与上报。</p>
- *
-   * @版本 1.0.0
- * @since 2024/12/05
- * @author CH
+* 设备指标上报器
+* <p>
+* 定时采集并上报系统指标（CPU、内存、磁盘、网卡等）
+* 支持配置要上报的指标类型
+* </p>
+* <ul>
+*   <li>CPU: 单独线程采集（因需停顿），缓存结果</li>
+*   <li>内存: 总大小、已使用大小、时间</li>
+*   <li>磁盘: 每个磁盘的名称、大小、用量、时间</li>
+*   <li>网卡: 每个网卡的名称、上行、下行、时间</li>
+* </ul>
+*
+* <p>采集能力通过 {@link OshiSystemMonitor} 统一封装，本类只负责调度与上报。</p>
+*
+* @版本 1.0.0
+* @since 2024/12/05
+* @author CH
  */
 @Slf4j
 public class DeviceMetricsReporter {
 
     /**
-     * 单例实例
+    * 单例实例
      */
     private static final DeviceMetricsReporter INSTANCE = new DeviceMetricsReporter();
 
     /**
-     * CPU 采样间隔（毫秒）
+    * CPU 采样间隔（毫秒）
      */
     private static final long CPU_SAMPLING_MILLIS = 1000L;
 
     /**
-     * 启动延迟（秒）— 设备信息上报
+    * 启动延迟（秒）— 设备信息上报
      */
     private static final long INITIAL_DELAY_DEVICE_INFO_SECONDS = 20L;
 
     /**
-     * 启动延迟（秒）— 指标上报
+    * 启动延迟（秒）— 指标上报
      */
     private static final long INITIAL_DELAY_METRICS_SECONDS = 10L;
 
     /**
-     * CPU 采集启动延迟（秒）
+    * CPU 采集启动延迟（秒）
      */
     private static final long INITIAL_DELAY_CPU_SECONDS = 5L;
 
     /**
-      * 同步客户端 实例
+    * 同步客户端 实例
      */
     @Setter
     /** 同步客户端 */
     private SyncClient syncClient;
 
     /**
-     * 应用名称
+    * 应用名称
      */
     @Setter
     /** APP名称 */
     private String appName;
 
     /**
-     * 主机地址
+    * 主机地址
      */
     @Setter
     /** 主机 */
     private String host;
 
     /**
-     * 主调度器
+    * 主调度器
      */
     private ScheduledExecutorService scheduler;
 
     /**
-     * CPU 采集线程（单独维护）
+    * CPU 采集线程（单独维护）
      */
     private ScheduledExecutorService cpuScheduler;
 
     /**
-     * 运行标志
+    * 运行标志
      */
     private volatile boolean running = false;
 
     /**
-     * 上报间隔（秒）
+    * 上报间隔（秒）
      */
     @Setter
     /** 间隔秒 */
     private long intervalSeconds = 30;
 
     /**
-     * 要上报的指标类型（默认全部）
+    * 要上报的指标类型（默认全部）
      */
     @Setter
     /** 是否启用指标 */
     private Set<MetricType> enabledMetrics = Set.of(MetricType.values());
 
     /**
-     * 系统信息采集器（OSHI 统一入口）
+    * 系统信息采集器（OSHI 统一入口）
      */
     private final OshiSystemMonitor monitor = new OshiSystemMonitor();
 
     /**
-     * CPU 使用率缓存（由单独线程更新）
+    * CPU 使用率缓存（由单独线程更新）
      */
     private final AtomicReference<Map<String, Object>> cpuCache = new AtomicReference<>(new HashMap<>());
 
@@ -129,16 +129,16 @@ public class DeviceMetricsReporter {
     }
 
     /**
-     * 获取单例实例
-     *
-     * @return 单例
+    * 获取单例实例
+    *
+    * @return 单例
      */
     public static DeviceMetricsReporter getInstance() {
         return INSTANCE;
     }
 
     /**
-     * 启动定时上报
+    * 启动定时上报
      */
     public synchronized void start() {
         if (running) {
@@ -187,7 +187,7 @@ public class DeviceMetricsReporter {
     }
 
     /**
-     * 停止上报
+    * 停止上报
      */
     public synchronized void stop() {
         if (!running) {
@@ -207,7 +207,7 @@ public class DeviceMetricsReporter {
     }
 
     /**
-     * CPU 采集（单独线程执行，因需停顿）
+    * CPU 采集（单独线程执行，因需停顿）
      */
     private void collectCpu() {
         try {
@@ -220,7 +220,7 @@ public class DeviceMetricsReporter {
     }
 
     /**
-     * 采集并上报指标
+    * 采集并上报指标
      */
     private void reportMetrics() {
         try {
@@ -244,7 +244,7 @@ public class DeviceMetricsReporter {
     }
 
     /**
-     * 上报设备基本信息
+    * 上报设备基本信息
      */
     private void reportDeviceInfo() {
         try {
@@ -257,9 +257,9 @@ public class DeviceMetricsReporter {
     }
 
     /**
-     * 采集设备基本信息（只在启动时上报一次）
-     *
-     * @return 设备信息
+    * 采集设备基本信息（只在启动时上报一次）
+    *
+    * @return 设备信息
      */
     private Map<String, Object> collectDeviceInfo() {
         Map<String, Object> info = new HashMap<>();
@@ -276,10 +276,10 @@ public class DeviceMetricsReporter {
     }
 
     /**
-     * 采集系统指标
-     *
-     * @param types 要采集的指标类型
-     * @return 指标数据
+    * 采集系统指标
+    *
+    * @param types 要采集的指标类型
+    * @return 指标数据
      */
     private Map<String, Object> collectMetrics(Set<MetricType> types) {
         Map<String, Object> metrics = new HashMap<>();

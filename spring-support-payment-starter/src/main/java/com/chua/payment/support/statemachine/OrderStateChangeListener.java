@@ -9,10 +9,10 @@ import org.springframework.statemachine.annotation.WithStateMachine;
 import org.springframework.stereotype.Component;
 
 /**
- * 订单状态转换监听器
- *
- * @since 2026-03-18
- * @author CH
+* 订单状态转换监听器
+*
+* @since 2026-03-18
+* @author CH
  */
 @Slf4j
 @Component
@@ -20,8 +20,8 @@ import org.springframework.stereotype.Component;
 public class OrderStateChangeListener {
 
     /**
-     * 待支付 → 支付中
-     * @param message 消息
+    * 待支付 → 支付中
+    * @param message 消息
      */
     @OnTransition(source = "PENDING", target = "PAYING")
     public void pendingToPaying(Message<OrderEvent> message) {
@@ -29,8 +29,8 @@ public class OrderStateChangeListener {
     }
 
     /**
-     * 支付中 → 支付成功
-     * @param message 消息
+    * 支付中 → 支付成功
+    * @param message 消息
      */
     @OnTransition(source = "PAYING", target = "PAID")
     public void payingToPaid(Message<OrderEvent> message) {
@@ -38,8 +38,8 @@ public class OrderStateChangeListener {
     }
 
     /**
-     * 支付中 → 支付失败
-     * @param message 消息
+    * 支付中 → 支付失败
+    * @param message 消息
      */
     @OnTransition(source = "PAYING", target = "FAILED")
     public void payingToFailed(Message<OrderEvent> message) {
@@ -47,8 +47,8 @@ public class OrderStateChangeListener {
     }
 
     /**
-     * 支付成功 → 已完成
-     * @param message 消息
+    * 支付成功 → 已完成
+    * @param message 消息
      */
     @OnTransition(source = "PAID", target = "COMPLETED")
     public void paidToCompleted(Message<OrderEvent> message) {
@@ -56,8 +56,8 @@ public class OrderStateChangeListener {
     }
 
     /**
-     * 支付成功/已完成 → 退款中
-     * @param message 消息
+    * 支付成功/已完成 → 退款中
+    * @param message 消息
      */
     @OnTransition(target = "REFUNDING")
     public void toRefunding(Message<OrderEvent> message) {
@@ -65,8 +65,8 @@ public class OrderStateChangeListener {
     }
 
     /**
-     * 退款中 → 已退款
-     * @param message 消息
+    * 退款中 → 已退款
+    * @param message 消息
      */
     @OnTransition(source = "REFUNDING", target = "REFUNDED")
     public void refundingToRefunded(Message<OrderEvent> message) {
@@ -74,8 +74,8 @@ public class OrderStateChangeListener {
     }
 
     /**
-     * 待支付 → 已取消
-     * @param message 消息
+    * 待支付 → 已取消
+    * @param message 消息
      */
     @OnTransition(source = "PENDING", target = "CANCELLED")
     public void pendingToCancelled(Message<OrderEvent> message) {
@@ -83,8 +83,8 @@ public class OrderStateChangeListener {
     }
 
     /**
-     * 待支付 → 支付超时
-     * @param message 消息
+    * 待支付 → 支付超时
+    * @param message 消息
      */
     @OnTransition(source = "PENDING", target = "TIMEOUT")
     public void pendingToTimeout(Message<OrderEvent> message) {

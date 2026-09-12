@@ -3,26 +3,26 @@ package com.chua.starter.queue.annotation;
 import java.lang.annotation.*;
 
 /**
- * 事件转队列注解
- * <p>
-   * 标注在Spring application事件类上，自动将该事件发送到指定的队列。
- * </p>
- *
- * <pre>
- * {@code
- * @EventToQueue("payment.order.created")
- * public class OrderCreatedEvent extends ApplicationEvent {
- *     // ...
- * }
- * }
- * </pre>t {
- *     // ...
- * }
- * }
- * </pre>
- *
- * @since 2025-03-20
- * @author CH
+* 事件转队列注解
+* <p>
+* 标注在Spring application事件类上，自动将该事件发送到指定的队列。
+* </p>
+*
+* <pre>
+* {@code
+* @EventToQueue("payment.order.created")
+* public class OrderCreatedEvent extends ApplicationEvent {
+*     // ...
+* }
+* }
+* </pre>t {
+*     // ...
+* }
+* }
+* </pre>
+*
+* @since 2025-03-20
+* @author CH
  */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
@@ -30,36 +30,36 @@ import java.lang.annotation.*;
 public @interface EventToQueue {
 
     /**
-      * 目标队列地址（topic/队列）
-     *
-     * @return 目标地址
+    * 目标队列地址（topic/队列）
+    *
+    * @return 目标地址
      */
     String value();
 
     /**
-     * 消息队列类型（用于区分不同的消息队列实现）
-     * <p>
-     * 如果不指定，将使用默认配置的消息队列
-     * </p>
-     *
-     * @return 消息队列类型
+    * 消息队列类型（用于区分不同的消息队列实现）
+    * <p>
+    * 如果不指定，将使用默认配置的消息队列
+    * </p>
+    *
+    * @return 消息队列类型
      */
     String type() default "";
 
     /**
-     * 是否异步发送
-     *
-     * @return 是否异步发送
+    * 是否异步发送
+    *
+    * @return 是否异步发送
      */
     boolean async() default true;
 
     /**
-      * 消息头（钥匙=价值观格式，多个用逗号分隔）
-     * <p>
-      * 例如: "priority=high,重试=3"
-     * </p>
-     *
-     * @return 消息头
+    * 消息头（钥匙=价值观格式，多个用逗号分隔）
+    * <p>
+    * 例如: "priority=high,重试=3"
+    * </p>
+    *
+    * @return 消息头
      */
     String[] headers() default {};
 }

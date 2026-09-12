@@ -13,14 +13,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
-   * 远控管理台后端接口真实测试（面向接口——mockmvc 驱动 HTTP 端点）。
- *
- * <p>覆盖：配置保存/回显（/api/remote/config）、被控端列表（/api/remote/agents）、
-   * 接入码保存/回显（/api/远程/access-编码）。测试为真实 Boot 集成，
-   * 持久化为文件（运行目录 远程-*.json——运行时数据）。</p>
- *
- * @author CH
- * @since 4.0.0.42
+* 远控管理台后端接口真实测试（面向接口——mockmvc 驱动 HTTP 端点）。
+*
+* <p>覆盖：配置保存/回显（/api/remote/config）、被控端列表（/api/remote/agents）、
+* 接入码保存/回显（/api/远程/access-编码）。测试为真实 Boot 集成，
+* 持久化为文件（运行目录 远程-*.json——运行时数据）。</p>
+*
+* @author CH
+* @since 4.0.0.42
  */
 @SpringBootTest
 @AutoConfigureMockMvc

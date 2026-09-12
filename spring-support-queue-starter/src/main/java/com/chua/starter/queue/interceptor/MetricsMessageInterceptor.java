@@ -8,13 +8,13 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * 性能监控拦截器
- * <p>
- * 统计消息发送和接收的性能指标
- * </p>
- *
- * @since 2025-03-20
- * @author CH
+* 性能监控拦截器
+* <p>
+* 统计消息发送和接收的性能指标
+* </p>
+*
+* @since 2025-03-20
+* @author CH
  */
 @Slf4j
 @Component
@@ -81,9 +81,9 @@ public class MetricsMessageInterceptor implements MessageInterceptor {
     }
 
     /**
-     * 获取发送计数
-     * @param destination 目标
-     * @return 获取发送数量的结果
+    * 获取发送计数
+    * @param destination 目标
+    * @return 获取发送数量的结果
      */
     public long getSendCount(String destination) {
         AtomicLong counter = sendCounters.get(destination);
@@ -91,9 +91,9 @@ public class MetricsMessageInterceptor implements MessageInterceptor {
     }
 
     /**
-     * 获取接收计数
-     * @param destination 目标
-     * @return 获取接收数量的结果
+    * 获取接收计数
+    * @param destination 目标
+    * @return 获取接收数量的结果
      */
     public long getReceiveCount(String destination) {
         AtomicLong counter = receiveCounters.get(destination);
@@ -101,9 +101,9 @@ public class MetricsMessageInterceptor implements MessageInterceptor {
     }
 
     /**
-     * 获取发送失败计数
-     * @param destination 目标
-     * @return 获取发送失败数量的结果
+    * 获取发送失败计数
+    * @param destination 目标
+    * @return 获取发送失败数量的结果
      */
     public long getSendFailureCount(String destination) {
         AtomicLong counter = sendFailureCounters.get(destination);
@@ -111,9 +111,9 @@ public class MetricsMessageInterceptor implements MessageInterceptor {
     }
 
     /**
-     * 获取接收失败计数
-     * @param destination 目标
-     * @return 获取接收失败数量的结果
+    * 获取接收失败计数
+    * @param destination 目标
+    * @return 获取接收失败数量的结果
      */
     public long getReceiveFailureCount(String destination) {
         AtomicLong counter = receiveFailureCounters.get(destination);
@@ -121,7 +121,7 @@ public class MetricsMessageInterceptor implements MessageInterceptor {
     }
 
     /**
-     * 重置统计
+    * 重置统计
      */
     public void reset() {
         sendCounters.clear();

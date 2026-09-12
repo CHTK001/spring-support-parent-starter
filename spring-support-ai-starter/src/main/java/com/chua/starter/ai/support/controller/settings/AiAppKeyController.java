@@ -21,12 +21,12 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
-   * app钥匙 控制器，提供 app钥匙 的增删改查与启停切换。
- *
- * <p>所有写接口均受 {@code @Permission("admin")} 保护，统一返回 {@link ReturnResult}。</p>
- *
- * @since 2026-08-03
- * @author CH
+* app钥匙 控制器，提供 app钥匙 的增删改查与启停切换。
+*
+* <p>所有写接口均受 {@code @Permission("admin")} 保护，统一返回 {@link ReturnResult}。</p>
+*
+* @since 2026-08-03
+* @author CH
  */
 @RestController
 @RequestMapping("/v2/app-keys")
@@ -35,14 +35,14 @@ import java.util.List;
 public class AiAppKeyController {
 
     /**
-      * app钥匙 服务
+    * app钥匙 服务
      */
     private final AiAppKeyService appKeyService;
 
     /**
-      * 查询所有 app钥匙。
-     *
-     * @return 操作结果
+    * 查询所有 app钥匙。
+    *
+    * @return 操作结果
      */
     @Permission("admin")
     @Operation(summary = "查询所有 AppKey")
@@ -52,10 +52,10 @@ public class AiAppKeyController {
     }
 
     /**
-      * 新建 app钥匙。
-     *
-     * @param appKey app钥匙 DTO
-     * @return 操作结果
+    * 新建 app钥匙。
+    *
+    * @param appKey app钥匙 DTO
+    * @return 操作结果
      */
     @Permission("admin")
     @Operation(summary = "新建 AppKey")
@@ -65,12 +65,12 @@ public class AiAppKeyController {
     }
 
     /**
-      * 更新 app钥匙。
-     *
-     * @param appKeyId app钥匙 主键
-     * @param appKey   app钥匙 DTO
-     * @return 操作结果
-     * @param ID" 标识"
+    * 更新 app钥匙。
+    *
+    * @param appKeyId app钥匙 主键
+    * @param appKey   app钥匙 DTO
+    * @return 操作结果
+    * @param ID" 标识"
      */
     @Permission("admin")
     @Operation(summary = "更新 AppKey")
@@ -81,13 +81,13 @@ public class AiAppKeyController {
     }
 
     /**
-      * 删除 app钥匙（逻辑删除）。
-     *
-     * @param appKeyId app钥匙 主键
-     * @return 操作结果
-     * @param ID" 标识"
-     * @param ID" 标识"
-     * @param ID" ID"
+    * 删除 app钥匙（逻辑删除）。
+    *
+    * @param appKeyId app钥匙 主键
+    * @return 操作结果
+    * @param ID" 标识"
+    * @param ID" 标识"
+    * @param ID" ID"
      */
     @Permission("admin")
     @Operation(summary = "删除 AppKey")
@@ -97,12 +97,12 @@ public class AiAppKeyController {
     }
 
     /**
-      * 切换 app钥匙 启用状态。
-     *
-     * @param appKeyId app钥匙 主键
-     * @param enabled  是否启用
-     * @return 操作结果
-     * @param ID" 标识"
+    * 切换 app钥匙 启用状态。
+    *
+    * @param appKeyId app钥匙 主键
+    * @param enabled  是否启用
+    * @return 操作结果
+    * @param ID" 标识"
      */
     @Permission("admin")
     @Operation(summary = "切换 AppKey 启用状态")

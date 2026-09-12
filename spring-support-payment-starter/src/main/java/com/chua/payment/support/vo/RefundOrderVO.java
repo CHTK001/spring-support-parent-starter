@@ -7,9 +7,9 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * 退款单视图对象
- * @author CH
- * @since 4.0.0
+* 退款单视图对象
+* @author CH
+* @since 4.0.0
  */
 @Data
 public class RefundOrderVO implements Serializable {

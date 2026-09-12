@@ -11,14 +11,14 @@ import java.util.List;
 import java.util.function.Consumer;
 
 /**
-   * 智能体 对话客户端 —— 将 智能体 运行时包装为 对话客户端。
- *
- * <p>用于将已注册的 Agent 实例暴露为可被对话链路调用的 ChatClient，
- * 注册到 {@link com.chua.starter.ai.support.registry.ChatClientRegistry} 后
- * 即可在模型管理页中选择使用。</p>
- *
- * @since 4.0.0.42
- * @author CH
+* 智能体 对话客户端 —— 将 智能体 运行时包装为 对话客户端。
+*
+* <p>用于将已注册的 Agent 实例暴露为可被对话链路调用的 ChatClient，
+* 注册到 {@link com.chua.starter.ai.support.registry.ChatClientRegistry} 后
+* 即可在模型管理页中选择使用。</p>
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Slf4j
 public class AgentChatClient implements ChatClient {
@@ -33,17 +33,17 @@ public class AgentChatClient implements ChatClient {
     private String model = DEFAULT_MODEL;
 
     /**
-      * 创建 智能体对话客户端 实例
-     *
-     * @param agent 智能体 运行时实例
+    * 创建 智能体对话客户端 实例
+    *
+    * @param agent 智能体 运行时实例
      */
     public AgentChatClient(Agent agent) {
         this.agent = agent;
     }
 
     /**
-      * 获取内部 智能体 实例
-     * @return 获取智能体的结果
+    * 获取内部 智能体 实例
+    * @return 获取智能体的结果
      */
     public Agent getAgent() {
         return agent;

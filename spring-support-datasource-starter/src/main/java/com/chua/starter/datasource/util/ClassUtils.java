@@ -14,16 +14,16 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 类加载器
- *
- * @since 2022-02-18
- * @author CH
+* 类加载器
+*
+* @since 2022-02-18
+* @author CH
  */
 @Slf4j
 public class ClassUtils {
 
     /**
-     * 类工具。
+    * 类工具。
      */
     private ClassUtils() {
     }
@@ -33,10 +33,10 @@ public class ClassUtils {
     private static final String[] EMPTY_STRING_ARRAY = new String[0];
 
     /**
-     * 实例化类
-     *
-     * @param s 类名
-     * @return 类
+    * 实例化类
+    *
+    * @param s 类名
+    * @return 类
      */
     public static Class<?> forName(String s) {
         try {
@@ -47,10 +47,10 @@ public class ClassUtils {
     }
 
     /**
-     * 字符串转类
-     *
-     * @param s 字符串
-     * @return 类
+    * 字符串转类
+    *
+    * @param s 字符串
+    * @return 类
      */
     public static Class<?> forNames(String... s) {
         for (String s1 : s) {
@@ -65,10 +65,10 @@ public class ClassUtils {
 
 
     /**
-     * 获取名称
-     *
-     * @param parameterTypes 类型
-     * @return 名称
+    * 获取名称
+    *
+    * @param parameterTypes 类型
+    * @return 名称
      */
     public static String[] toTypeName(Class<?>[] parameterTypes) {
         if (null == parameterTypes || parameterTypes.length == 0) {
@@ -84,10 +84,10 @@ public class ClassUtils {
     }
 
     /**
-     * 获取类的类加载器
-     *
-     * @param caller 类
-     * @return ClassLoader
+    * 获取类的类加载器
+    *
+    * @param caller 类
+    * @return ClassLoader
      */
     public static ClassLoader getCallerClassLoader(Class<?> caller) {
         Preconditions.checkNotNull(caller);
@@ -96,13 +96,13 @@ public class ClassUtils {
     }
 
     /**
-     * 获取泛型类型
-     * <p>1.先判断父类泛型</p>
-     * <p>2.判断接口泛型</p>
-     *
-     * @param value 类
-     * @return 泛型类型
-     * @param includes includes
+    * 获取泛型类型
+    * <p>1.先判断父类泛型</p>
+    * <p>2.判断接口泛型</p>
+    *
+    * @param value 类
+    * @return 泛型类型
+    * @param includes includes
      */
     public static Type[] getActualTypeArguments(final Class<?> value, final Class<?>... includes) {
         return ACTUAL.computeIfAbsent(value, it -> {
@@ -134,11 +134,11 @@ public class ClassUtils {
     }
 
     /**
-     * 是否包含类
-     *
-     * @param type     类
-     * @param includes 类集合
-     * @return 包含返回true
+    * 是否包含类
+    *
+    * @param type     类
+    * @param includes 类集合
+    * @return 包含返回true
      */
     protected static boolean container(Type type, Class<?>[] includes) {
         if (null == type || null == includes || includes.length == 0) {
@@ -160,11 +160,11 @@ public class ClassUtils {
     }
 
     /**
-     * @param name        类
-     * @param type        类型
-     * @param classLoader 类加载器
-     * @param <T>         类型
-     * @return 对象
+    * @param name        类
+    * @param type        类型
+    * @param classLoader 类加载器
+    * @param <T>         类型
+    * @return 对象
      */
     public static <T> T getObject(String name, Class<T> type, ClassLoader classLoader) {
         try {
@@ -175,10 +175,10 @@ public class ClassUtils {
     }
 
     /**
-     * @param name 类
-     * @param type 类型
-     * @param <T>  类型
-     * @return 对象
+    * @param name 类
+    * @param type 类型
+    * @param <T>  类型
+    * @return 对象
      */
     public static <T> T getObject(Class<?> name, Class<T> type) {
         if (null == name || !type.isAssignableFrom(name)) {
@@ -214,9 +214,9 @@ public class ClassUtils {
     }
 
     /**
-     * @param name 类
-     * @param <T>  类型
-     * @return 对象
+    * @param name 类
+    * @param <T>  类型
+    * @return 对象
      */
     public static <T> T getObject(String name) {
         if (Strings.isNullOrEmpty(name)) {
@@ -226,29 +226,29 @@ public class ClassUtils {
     }
 
     /**
-     * @param name 类
-     * @param <T>  类型
-     * @return 对象
+    * @param name 类
+    * @param <T>  类型
+    * @return 对象
      */
     public static <T> T getObject(Class<T> name) {
         return getObject(name, name);
     }
 
     /**
-     * @param name 类
-     * @param <T>  类型
-     * @return 对象
+    * @param name 类
+    * @param <T>  类型
+    * @return 对象
      */
     public static <T> T forObject(Class<T> name) {
         return getObject(name, name);
     }
 
     /**
-     * @param name          类
-     * @param type          类型
-     * @param defaultObject 默认值
-     * @param <T>           类型
-     * @return 对象
+    * @param name          类
+    * @param type          类型
+    * @param defaultObject 默认值
+    * @param <T>           类型
+    * @return 对象
      */
     public static <T> T forObject(String name, Class<T> type, T defaultObject) {
         Object object = getObject(name);

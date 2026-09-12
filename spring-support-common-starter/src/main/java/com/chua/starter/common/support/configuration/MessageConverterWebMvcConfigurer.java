@@ -45,10 +45,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * 跨域处理
- *
- * @author CH
- * @since 4.0.0
+* 跨域处理
+*
+* @author CH
+* @since 4.0.0
  */
 @SuppressWarnings({"removal", "deprecation"})
 @EnableConfigurationProperties({MessageConverterProperties.class})
@@ -56,9 +56,9 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
     /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(MessageConverterWebMvcConfigurer.class);
     /**
-     * 构造函数
-     *
-     * @param messageConverterProperties 消息转换器属性
+    * 构造函数
+    *
+    * @param messageConverterProperties 消息转换器属性
      */
     public MessageConverterWebMvcConfigurer(MessageConverterProperties messageConverterProperties) {
         this.messageConverterProperties = messageConverterProperties;
@@ -110,9 +110,9 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
 
     @Bean
     /**
-     * mdc处理器过滤
-     *
-     * @return mdc处理器过滤器的结果
+    * mdc处理器过滤
+    *
+    * @return mdc处理器过滤器的结果
      */
     public FilterRegistrationBean<MdcHandlerFilter> mdcHandlerFilter() {
         FilterRegistrationBean<MdcHandlerFilter> filterRegistrationBean = new FilterRegistrationBean<>();
@@ -123,9 +123,9 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
     }
 
     /**
-      * 消息转换器的 服务信息 贡献者。
-     *
-     * @return ServiceInfoContributor
+    * 消息转换器的 服务信息 贡献者。
+    *
+    * @return ServiceInfoContributor
      */
     @Bean
     public ServiceInfoContributor messageConverterServiceInfoContributor() {
@@ -304,10 +304,10 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
     }
 
     /**
-      * 延迟获取 api响应encode注册 Bean
-      * 使用 对象提供者 延迟获取，避免在初始化阶段获取导致循环依赖
-     *
-     * @return ApiResponseEncodeRegister 实例，如果不存在则返回 空
+    * 延迟获取 api响应encode注册 Bean
+    * 使用 对象提供者 延迟获取，避免在初始化阶段获取导致循环依赖
+    *
+    * @return ApiResponseEncodeRegister 实例，如果不存在则返回 空
      */
     private ApiResponseEncodeRegister getApiResponseEncodeRegister() {
         if (applicationContext == null) {

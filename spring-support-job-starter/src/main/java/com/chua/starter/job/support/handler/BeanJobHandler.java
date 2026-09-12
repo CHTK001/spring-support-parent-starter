@@ -7,56 +7,56 @@ import java.lang.reflect.Method;
 import com.chua.common.support.reflection.ReflectUtils;
 
 /**
- * 基于 Spring Bean + 反射的任务处理器。
- *
- * <p>{@link com.chua.starter.job.support.annotation.Job} 标注的方法
- * 由 {@link JobAnnotationScanner} 包装为本处理器并注册。</p>
- *
- * @since 4.0.0.42
- * @author CH
+* 基于 Spring Bean + 反射的任务处理器。
+*
+* <p>{@link com.chua.starter.job.support.annotation.Job} 标注的方法
+* 由 {@link JobAnnotationScanner} 包装为本处理器并注册。</p>
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Slf4j
 public class BeanJobHandler implements JobHandler {
 
     /**
-     * 处理器名称
+    * 处理器名称
      */
     private final String name;
 
     /**
-     * 任务描述
+    * 任务描述
      */
     private final String desc;
 
     /**
-      * 目标 Bean 实例
+    * 目标 Bean 实例
      */
     private final Object target;
 
     /**
-      * 执行 方法
+    * 执行 方法
      */
     private final Method method;
 
     /**
-      * 初始化 方法, 可为 空
+    * 初始化 方法, 可为 空
      */
     private final Method initMethod;
 
     /**
-      * 销毁 方法, 可为 空
+    * 销毁 方法, 可为 空
      */
     private final Method destroyMethod;
 
     /**
-     * 构造 Bean 任务处理器。
-     *
-     * @param name          处理器名称
-     * @param desc          任务描述
-     * @param target        目标 Bean
-     * @param method        执行 方法
-     * @param initMethod    初始化 方法, 允许为 空
-     * @param destroyMethod 销毁 方法, 允许为 空
+    * 构造 Bean 任务处理器。
+    *
+    * @param name          处理器名称
+    * @param desc          任务描述
+    * @param target        目标 Bean
+    * @param method        执行 方法
+    * @param initMethod    初始化 方法, 允许为 空
+    * @param destroyMethod 销毁 方法, 允许为 空
      */
     public BeanJobHandler(String name,
                           String desc,

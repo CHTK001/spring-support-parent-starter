@@ -16,65 +16,65 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiConsumer;
 
 /**
-   * 调度中心侧同步绑定器 (角色=调度器)。
- *
- * <p>持有仓库公共 {@link SyncServer}, 完成:</p>
- * <ul>
- *   <li>本地 {@code JobSyncBus} 的 {@link JobSyncTopics#TASK_COMMAND} 事件 → 通过 {@code syncServer.send}
-   * 路由到 <b>单个</b> 在线 执行器 (粘性轮询), 实现多 执行器 HA 去重, 避免每个执行器都触发任务</li>
- *   <li>subscribe {@link JobSyncTopics#TASK_LOG} → 写入 {@link JobLogSink} (默认 stdout)</li>
- *   <li>subscribe {@link JobSyncTopics#REGISTER} → 仅打日志</li>
- * </ul>
- *
- * @since 4.0.0.42
- * @author CH
+* 调度中心侧同步绑定器 (角色=调度器)。
+*
+* <p>持有仓库公共 {@link SyncServer}, 完成:</p>
+* <ul>
+*   <li>本地 {@code JobSyncBus} 的 {@link JobSyncTopics#TASK_COMMAND} 事件 → 通过 {@code syncServer.send}
+* 路由到 <b>单个</b> 在线 执行器 (粘性轮询), 实现多 执行器 HA 去重, 避免每个执行器都触发任务</li>
+*   <li>subscribe {@link JobSyncTopics#TASK_LOG} → 写入 {@link JobLogSink} (默认 stdout)</li>
+*   <li>subscribe {@link JobSyncTopics#REGISTER} → 仅打日志</li>
+* </ul>
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Slf4j
 @RequiredArgsConstructor
 public class SchedulerSyncBinder {
 
     /**
-      * 同步服务端 SPI 钥匙
+    * 同步服务端 SPI 钥匙
      */
     public static final String SPI_SYNC_SERVER = "sync.server";
 
     /**
-     * 调度服务端实例
+    * 调度服务端实例
      */
     private final SyncServer syncServer;
 
     /**
-     * 进程内事件总线
+    * 进程内事件总线
      */
     private final JobSyncBus bus;
 
     /**
-     * 日志落库实现
+    * 日志落库实现
      */
     private final JobLogSink logSink;
 
     /**
-     * 当前节点标识
+    * 当前节点标识
      */
     private final String nodeId;
 
     /**
-      * CMD 转发器 (持有, 用于注销)
+    * CMD 转发器 (持有, 用于注销)
      */
     private BiConsumer<String, Object> cmdForwarder;
 
     /**
-      * 日志 接收器
+    * 日志 接收器
      */
     private SyncMessageHandler logHandler;
 
     /**
-      * 粘性轮询计数, 累加后取模 客户端 数, 保证每个 due 任务落在同一 执行器 直到 客户端 列表变化。
+    * 粘性轮询计数, 累加后取模 客户端 数, 保证每个 due 任务落在同一 执行器 直到 客户端 列表变化。
      */
     private final AtomicLong stickyCounter = new AtomicLong(0L);
 
     /**
-     * 启动绑定。
+    * 启动绑定。
      */
     @PostConstruct
     public void start() {
@@ -162,7 +162,7 @@ public class SchedulerSyncBinder {
     }
 
     /**
-     * 关闭绑定。
+    * 关闭绑定。
      */
     @PreDestroy
     public void shutdown() {

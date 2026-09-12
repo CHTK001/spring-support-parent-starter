@@ -16,48 +16,48 @@ import java.lang.reflect.Method;
 import java.util.Map;
 
 /**
-   * 作业注解自动扫描器
- * <p>
-   * 自动扫描标注了 @作业 注解的方法，并将其注册为 xxl-作业 的任务处理器。
- * </p>
- *
- * <h3>使用场景：</h3>
- * <ul>
- *   <li>定时任务自动注册</li>
- *   <li>分布式任务调度</li>
- *   <li>替代 xxl-job 的 @XxlJob 注解</li>
- * </ul>
- *
- * <h3>使用示例：</h3>
- * <pre>
- * &#64;Component
- * public class MyJobHandler {
- *
- *     &#64;Job("demoJobHandler")
- *     public void demoJob() {
- *         // 任务执行逻辑
- *     }
- *
- *     &#64;Job(value = "initJobHandler", init = "initMethod", destroy = "destroyMethod")
- *     public void initJob() {
- *         // 任务执行逻辑
- *     }
- *
- *     public void initMethod() {
- *         // 初始化方法
- *     }
- *
- *     public void destroyMethod() {
- *         // 销毁方法
- *     }
- * }
- * </pre>
- *
-   * @版本 1.0.0
- * @since 2024/12/07
- * @see Job
- * @see JobHandlerFactory
- * @author CH
+* 作业注解自动扫描器
+* <p>
+* 自动扫描标注了 @作业 注解的方法，并将其注册为 xxl-作业 的任务处理器。
+* </p>
+*
+* <h3>使用场景：</h3>
+* <ul>
+*   <li>定时任务自动注册</li>
+*   <li>分布式任务调度</li>
+*   <li>替代 xxl-job 的 @XxlJob 注解</li>
+* </ul>
+*
+* <h3>使用示例：</h3>
+* <pre>
+* &#64;Component
+* public class MyJobHandler {
+*
+*     &#64;Job("demoJobHandler")
+*     public void demoJob() {
+*         // 任务执行逻辑
+*     }
+*
+*     &#64;Job(value = "initJobHandler", init = "initMethod", destroy = "destroyMethod")
+*     public void initJob() {
+*         // 任务执行逻辑
+*     }
+*
+*     public void initMethod() {
+*         // 初始化方法
+*     }
+*
+*     public void destroyMethod() {
+*         // 销毁方法
+*     }
+* }
+* </pre>
+*
+* @版本 1.0.0
+* @since 2024/12/07
+* @see Job
+* @see JobHandlerFactory
+* @author CH
  */
 @Slf4j
 @RequiredArgsConstructor
@@ -91,11 +91,11 @@ public class JobAnnotationScanner implements BeanPostProcessor {
             Method method = entry.getKey();
             Job job = entry.getValue();
             /**
-             * 注册作业处理器。
-             * @param bean Bean
-             * @param beanName Bean名称
-             * @param method 方法
-             * @param job 作业
+            * 注册作业处理器。
+            * @param bean Bean
+            * @param beanName Bean名称
+            * @param method 方法
+            * @param job 作业
              */
             registerJobHandler(bean, beanName, method, job);
         }
@@ -104,12 +104,12 @@ public class JobAnnotationScanner implements BeanPostProcessor {
     }
 
     /**
-      * 注册 作业 处理器
-     *
-     * @param bean     Bean 实例
-     * @param beanName Bean 名称
-     * @param method   方法
-     * @param job      作业 注解
+    * 注册 作业 处理器
+    *
+    * @param bean     Bean 实例
+    * @param beanName Bean 名称
+    * @param method   方法
+    * @param job      作业 注解
      */
     private void registerJobHandler(Object bean, String beanName, Method method, Job job) {
         String jobName = job.value();

@@ -17,13 +17,13 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * 远控短令牌签发接口
- *
- * <p>根据服务器信息（hostId + 身份）签发短令牌：目标机地址/端口/凭据由后端解密后
-   * 登记进 令牌 登记表（{@link RemoteTokenService}），接口响应只含随机 令牌 与
- * 会话 URL——服务器信息不出后端。</p>
- * @author CH
- * @since 4.0.0
+* 远控短令牌签发接口
+*
+* <p>根据服务器信息（hostId + 身份）签发短令牌：目标机地址/端口/凭据由后端解密后
+* 登记进 令牌 登记表（{@link RemoteTokenService}），接口响应只含随机 令牌 与
+* 会话 URL——服务器信息不出后端。</p>
+* @author CH
+* @since 4.0.0
  */
 @Slf4j
 @RestController
@@ -38,13 +38,13 @@ public class RemoteTokenController {
     private final RemoteTokenService remoteTokenService;
 
     /**
-     * 签发远控短令牌
-     *
-     * @param hostId     主机 标识，必填
-     * @param protocol   协议（rdp/vnc/ssh/telnet），默认 ssh
-     * @param identityId 登录身份 标识，可空（空时取主机默认凭据）
-     * @param targetPort 目标端口覆盖，可空（空=协议默认端口/主机配置端口）
-     * @return token + 会话 URL（未配置 web 前端时 url 为 空，前端走 WS 直连）
+    * 签发远控短令牌
+    *
+    * @param hostId     主机 标识，必填
+    * @param protocol   协议（rdp/vnc/ssh/telnet），默认 ssh
+    * @param identityId 登录身份 标识，可空（空时取主机默认凭据）
+    * @param targetPort 目标端口覆盖，可空（空=协议默认端口/主机配置端口）
+    * @return token + 会话 URL（未配置 web 前端时 url 为 空，前端走 WS 直连）
      */
     @GetMapping("/token")
     public ReturnResult<Map<String, Object>> issueToken(@RequestParam Long hostId,

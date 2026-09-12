@@ -6,10 +6,10 @@ import lombok.Data;
 import java.util.Map;
 
 /**
- * 服务管理 —— 服务器节点视图（实体 + 运行时状态）。
- *
- * @author CH
- * @since 4.0.0.42
+* 服务管理 —— 服务器节点视图（实体 + 运行时状态）。
+*
+* @author CH
+* @since 4.0.0.42
  */
 @Data
 @Schema(description = "服务管理-服务器节点视图")

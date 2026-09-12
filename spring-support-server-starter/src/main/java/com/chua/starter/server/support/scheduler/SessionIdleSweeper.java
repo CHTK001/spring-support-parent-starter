@@ -7,14 +7,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
- * 终端会话空闲清理任务
- * <p>
- * 由 {@link ServerTaskScheduler} 时间轮驱动，周期扫描 guacd 会话注册表，
- * 关闭超过空闲阈值的远控连接，防止浏览器异常断开后 guacd 侧资源长期占用。
- * </p>
- *
- * @author CH
- * @since 4.0.0.42
+* 终端会话空闲清理任务
+* <p>
+* 由 {@link ServerTaskScheduler} 时间轮驱动，周期扫描 guacd 会话注册表，
+* 关闭超过空闲阈值的远控连接，防止浏览器异常断开后 guacd 侧资源长期占用。
+* </p>
+*
+* @author CH
+* @since 4.0.0.42
  */
 @Slf4j
 @Component
@@ -28,7 +28,7 @@ public class SessionIdleSweeper {
     private final ServerProperties properties;
 
     /**
-     * 执行空闲扫描
+    * 执行空闲扫描
      */
     public void sweep() {
         int closed = sessionRegistry.sweepIdle(properties.getSessionIdleMinutes());

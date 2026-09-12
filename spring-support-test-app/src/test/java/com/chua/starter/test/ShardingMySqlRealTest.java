@@ -19,16 +19,16 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
-   * 真库分片探针：远程 Docker MySQL（172.16.0.40:3307 MySQL-shard）上验证 分库分表sphere 5.5.2
-   * 路由查询——判定 7 类候选修复实验后的 "Table 或 view '订单' 执行 not exist" 是 H2 特定问题
-   * 还是 分库分表sphere 5.5.2 核心问题（真库不可达时以明确原因跳过）。
- *
- * <p>接线：覆写 yaml 的 {@code spring.datasource.sharding.databases} 至真库两分片库
-   * （shard0/shard1——同实例两库，库级 MOD(标识,2) 分布），其余装配与 {@link ShardingRealTest}
-   * 一致（分库分表v5转换 autodiscover 需物理表在上下文启动前存在——种子放静态块）。</p>
- *
- * @author CH
- * @since 2026/09/07
+* 真库分片探针：远程 Docker MySQL（172.16.0.40:3307 MySQL-shard）上验证 分库分表sphere 5.5.2
+* 路由查询——判定 7 类候选修复实验后的 "Table 或 view '订单' 执行 not exist" 是 H2 特定问题
+* 还是 分库分表sphere 5.5.2 核心问题（真库不可达时以明确原因跳过）。
+*
+* <p>接线：覆写 yaml 的 {@code spring.datasource.sharding.databases} 至真库两分片库
+* （shard0/shard1——同实例两库，库级 MOD(标识,2) 分布），其余装配与 {@link ShardingRealTest}
+* 一致（分库分表v5转换 autodiscover 需物理表在上下文启动前存在——种子放静态块）。</p>
+*
+* @author CH
+* @since 2026/09/07
  */
 @SpringBootTest
 @TestPropertySource(properties = {
@@ -36,10 +36,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
         "spring.datasource.sharding.databases[1]=jdbc:mysql://root:root@172.16.0.40:3307/shard1"
 })
 /**
- * 分库分表mysqlreal测试类。
- *
- * @author CH
- * @since 4.0.0
+* 分库分表mysqlreal测试类。
+*
+* @author CH
+* @since 4.0.0
  */
 class ShardingMySqlRealTest {
 
@@ -52,29 +52,29 @@ class ShardingMySqlRealTest {
  // id=3 -> shard1.订单_3，id=4 -> shard0.订单_4。
     static {
         /**
-         * 参见shard。
-         * @param "shard0" "shard0"
-         * @param 2 2
-         * @param "order-2" "订单-2"
-         * @param 4 4
-         * @param "order-4" "订单-4"
+        * 参见shard。
+        * @param "shard0" "shard0"
+        * @param 2 2
+        * @param "order-2" "订单-2"
+        * @param 4 4
+        * @param "order-4" "订单-4"
          */
         seedShard("shard0", 2, "order-2", 4, "order-4");
         /**
-         * 参见shard。
-         * @param "shard1" "shard1"
-         * @param 1 1
-         * @param "order-1" "订单-1"
-         * @param 3 3
-         * @param "order-3" "订单-3"
+        * 参见shard。
+        * @param "shard1" "shard1"
+        * @param 1 1
+        * @param "order-1" "订单-1"
+        * @param 3 3
+        * @param "order-3" "订单-3"
          */
         seedShard("shard1", 1, "order-1", 3, "order-3");
     }
 
     /**
-     * 参见shard。
-     * @param db db
-     * @param pairs pairs
+    * 参见shard。
+    * @param db db
+    * @param pairs pairs
      */
     private static void seedShard(String db, Object... pairs) {
         try (Connection connection = DriverManager.getConnection(
@@ -104,10 +104,10 @@ class ShardingMySqlRealTest {
             }
         } catch (Exception e) {
             /**
-             * illegal状态异常。
-             * @param db db
-             * @param e e
-             * @return illegal状态异常的结果
+            * illegal状态异常。
+            * @param db db
+            * @param e e
+            * @return illegal状态异常的结果
              */
             throw new IllegalStateException("真库种子初始化失败: " + db, e);
         }
@@ -117,14 +117,14 @@ class ShardingMySqlRealTest {
     @Test
     void shardedEngineActivated() {
         /**
-         * 断言not空。
-         * @param shardingDataSource 分库分表数据源
-         * @param "分片引擎应已装配" "分片引擎应已装配"
+        * 断言not空。
+        * @param shardingDataSource 分库分表数据源
+        * @param "分片引擎应已装配" "分片引擎应已装配"
          */
         assertNotNull(shardingDataSource, "分片引擎应已装配");
         /**
-         * 断言true。
-         * @param shardingDataSource.getClass( 分库分表数据源.getclass(
+        * 断言true。
+        * @param shardingDataSource.getClass( 分库分表数据源.getclass(
          */
         assertTrue(shardingDataSource.getClass().getName().contains("ShardingSphere"),
                 "shardingDataSource 应为 ShardingSphere 数据源，实际: " + shardingDataSource.getClass().getName());
@@ -134,16 +134,16 @@ class ShardingMySqlRealTest {
     @Test
     void shardedAggregateQuery() {
         /**
-         * assume分库分表routable。
+        * assume分库分表routable。
          */
         assumeShardingRoutable();
         JdbcTemplate shardedJdbc = new JdbcTemplate(shardingDataSource);
         Integer count = shardedJdbc.queryForObject("select count(*) from orders", Integer.class);
         /**
-         * 断言equals。
-         * @param 4 4
-         * @param count 数量
-         * @param "分片聚合应统计两个真库分片的全部数据" "分片聚合应统计两个真库分片的全部数据"
+        * 断言equals。
+        * @param 4 4
+        * @param count 数量
+        * @param "分片聚合应统计两个真库分片的全部数据" "分片聚合应统计两个真库分片的全部数据"
          */
         assertEquals(4, count, "分片聚合应统计两个真库分片的全部数据");
     }
@@ -152,21 +152,21 @@ class ShardingMySqlRealTest {
     @Test
     void shardedPointQuery() {
         /**
-         * assume分库分表routable。
+        * assume分库分表routable。
          */
         assumeShardingRoutable();
         JdbcTemplate shardedJdbc = new JdbcTemplate(shardingDataSource);
         List<String> names = shardedJdbc.queryForList("select name from orders where id = 2", String.class);
         /**
-         * 断言equals。
-         * @param 1 1
-         * @param names.size( 名称.大小(
+        * 断言equals。
+        * @param 1 1
+        * @param names.size( 名称.大小(
          */
         assertEquals(1, names.size(), "按分片键查询应命中分片返回对应行");
         /**
-         * 断言equals。
-         * @param "order-2" "订单-2"
-         * @param names.get(0 名称.获取(0
+        * 断言equals。
+        * @param "order-2" "订单-2"
+        * @param names.get(0 名称.获取(0
          */
         assertEquals("order-2", names.get(0), "分片路由应返回正确数据");
     }

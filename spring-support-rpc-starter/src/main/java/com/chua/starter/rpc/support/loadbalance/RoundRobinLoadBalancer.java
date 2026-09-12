@@ -6,10 +6,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 轮询负载均衡策略（委托 {@link com.chua.common.support.lang.balance.LoadBalance} SPI 的 round 实现）
- *
- * @since 2025-03-20
- * @author CH
+* 轮询负载均衡策略（委托 {@link com.chua.common.support.lang.balance.LoadBalance} SPI 的 round 实现）
+*
+* @since 2025-03-20
+* @author CH
  */
 @Component
 public class RoundRobinLoadBalancer implements RpcLoadBalancer {

@@ -20,15 +20,15 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
-   * influxdb 时序存储实现
- * <p>
- * 由 {@code monitor.timeseries.engine=influxdb} 条件装配。
-   * 采集明细以行协议写入，测量 与 MySQL 明细表同名（语义对齐），
-   * 标签 包含 监控_标识；支持 mean 聚合曲线查询。
- * </p>
- *
- * @author CH
- * @since 4.0.0.42
+* influxdb 时序存储实现
+* <p>
+* 由 {@code monitor.timeseries.engine=influxdb} 条件装配。
+* 采集明细以行协议写入，测量 与 MySQL 明细表同名（语义对齐），
+* 标签 包含 监控_标识；支持 mean 聚合曲线查询。
+* </p>
+*
+* @author CH
+* @since 4.0.0.42
  */
 @Slf4j
 @Component
@@ -48,9 +48,9 @@ public class InfluxMetricTimeSeriesProvider implements MetricTimeSeriesProvider 
     private final MonitorTimeseriesProperties properties;
 
     /**
-     * 构造时初始化 SPI 引擎并注册数据源
-     *
-     * @param properties 时序存储配置
+    * 构造时初始化 SPI 引擎并注册数据源
+    *
+    * @param properties 时序存储配置
      */
     public InfluxMetricTimeSeriesProvider(MonitorTimeseriesProperties properties) {
         this.properties = properties;
@@ -91,10 +91,10 @@ public class InfluxMetricTimeSeriesProvider implements MetricTimeSeriesProvider 
                 : System.currentTimeMillis();
         for (MetricPoint point : result.getPoints()) {
             /**
-             * 写入point。
-             * @param monitorId 监控标识
-             * @param point point
-             * @param timestamp 时间戳
+            * 写入point。
+            * @param monitorId 监控标识
+            * @param point point
+            * @param timestamp 时间戳
              */
             writePoint(monitorId, point, timestamp);
         }
@@ -133,17 +133,17 @@ public class InfluxMetricTimeSeriesProvider implements MetricTimeSeriesProvider 
         }
         if (target == null || !target.matches("[a-zA-Z0-9_]+")) {
             /**
-             * illegal参数异常。
-             * @param target" Target"
-             * @return illegal参数异常的结果
+            * illegal参数异常。
+            * @param target" Target"
+            * @return illegal参数异常的结果
              */
             throw new IllegalArgumentException("非法 target");
         }
         if (window == null || !window.matches("\\d+[smhd]")) {
             /**
-             * illegal参数异常。
-             * @param window" 窗口"
-             * @return illegal参数异常的结果
+            * illegal参数异常。
+            * @param window" 窗口"
+            * @return illegal参数异常的结果
              */
             throw new IllegalArgumentException("非法 window");
         }
@@ -151,16 +151,16 @@ public class InfluxMetricTimeSeriesProvider implements MetricTimeSeriesProvider 
  // Target/窗口 已正则白名单化、监控标识 为 Long 强类型（influxql 非 JDBC，无注入面）
         String influxql = """
                 /**
-                 * mean。
-                 * @param value 价值观
-                 * @return mean的结果
+                * mean。
+                * @param value 价值观
+                * @return mean的结果
                  */
                 SELECT mean(value) AS value FROM "%s"
                 WHERE monitor_id='%s' AND time > now() - %sh
                 /**
-                 * 时间。
-                 * @param %s %s
-                 * @return 时间的结果
+                * 时间。
+                * @param %s %s
+                * @return 时间的结果
                  */
                 GROUP BY time(%s) fill(none)
                 """.formatted(target, monitorId, safeHours, window);
@@ -197,19 +197,19 @@ public class InfluxMetricTimeSeriesProvider implements MetricTimeSeriesProvider 
         } catch (Exception e) {
             log.warn("[monitor] series 查询失败 target={} monitor={}: {}", target, monitorId, e.getMessage());
             /**
-             * runtime异常。
-             * @param e.getMessage( e.获取消息(
-             * @return runtime异常的结果
+            * runtime异常。
+            * @param e.getMessage( e.获取消息(
+            * @return runtime异常的结果
              */
             throw new RuntimeException("查询失败: " + e.getMessage(), e);
         }
     }
 
     /**
-      * influxdb 时间字符串(RFC3339)转毫秒时间戳
-     *
-     * @param iso 时间串
-     * @return 毫秒
+    * influxdb 时间字符串(RFC3339)转毫秒时间戳
+    *
+    * @param iso 时间串
+    * @return 毫秒
      */
     private long toEpochMilli(String iso) {
         try {

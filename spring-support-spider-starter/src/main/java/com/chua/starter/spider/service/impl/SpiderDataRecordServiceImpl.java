@@ -6,10 +6,10 @@ import com.chua.starter.spider.service.SpiderDataRecordService;
 import org.springframework.stereotype.Service;
 
 /**
- * 采集数据记录服务实现。
- *
- * @since 4.0.0.42
- * @author CH
+* 采集数据记录服务实现。
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Service
 public class SpiderDataRecordServiceImpl

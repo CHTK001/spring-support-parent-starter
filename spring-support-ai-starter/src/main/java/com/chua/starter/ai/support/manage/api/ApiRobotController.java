@@ -25,13 +25,13 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 机器人（Robot）控制器，替代 nomicore 的 {@code /api/robots} 契约。
- *
- * <p>维护设备档案（{@code robot_id} 主键）与在线状态，关键状态变更推送
- * {@code robot.status} 事件。当前为进程内内存实现。</p>
- *
- * @since 4.0.0.42
- * @author CH
+* 机器人（Robot）控制器，替代 nomicore 的 {@code /api/robots} 契约。
+*
+* <p>维护设备档案（{@code robot_id} 主键）与在线状态，关键状态变更推送
+* {@code robot.status} 事件。当前为进程内内存实现。</p>
+*
+* @since 4.0.0.42
+* @author CH
  */
 @ApiReturnFormatIgnore
 @RestController
@@ -41,29 +41,29 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ApiRobotController {
 
     /**
-     * 主键生成与基础存储工具
+    * 主键生成与基础存储工具
      */
     private final SysAiConversationStore conversationStore;
 
     /**
-     * WS 事件推送服务
+    * WS 事件推送服务
      */
     private final ApiWebSocketPushService pushService;
 
     /**
-      * 设备档案：robot_标识 → 设备
+    * 设备档案：robot_标识 → 设备
      */
     private final Map<String, Map<String, Object>> robots = new ConcurrentHashMap<>();
 
     /**
-      * 设备状态快照：robot_标识 → 状态
+    * 设备状态快照：robot_标识 → 状态
      */
     private final Map<String, Map<String, Object>> robotStatus = new ConcurrentHashMap<>();
 
     @GetMapping
     /**
-     * 列表。
-     * @return 列表的结果
+    * 列表。
+    * @return 列表的结果
      */
     public ApiResult<Map<String, Object>> list() {
         Map<String, Object> payload = new LinkedHashMap<>();
@@ -73,19 +73,19 @@ public class ApiRobotController {
 
     @PostMapping("/claim")
     /**
-     * claim。
-     * @param body 主体
-     * @return claim的结果
+    * claim。
+    * @param body 主体
+    * @return claim的结果
      */
     public ApiResult<Map<String, Object>> claim(@RequestBody Map<String, Object> body) {
         String code = (String) body.get("code");
         String companionId = (String) body.get("companion_id");
         if (code == null || code.isBlank()) {
             /**
-             * api异常。
-             * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
-             * @param "设备码不能为空" "设备码不能为空"
-             * @return api异常的结果
+            * api异常。
+            * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
+            * @param "设备码不能为空" "设备码不能为空"
+            * @return api异常的结果
              */
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "设备码不能为空");
         }
@@ -100,10 +100,10 @@ public class ApiRobotController {
         robot.put("created_at", System.currentTimeMillis());
         robots.put(robotId, robot);
         /**
-         * 更新状态。
-         * @param robotId robotid
-         * @param companionId companionid
-         * @param "claimed" "claimed"
+        * 更新状态。
+        * @param robotId robotid
+        * @param companionId companionid
+        * @param "claimed" "claimed"
          */
         updateStatus(robotId, companionId, "claimed");
         return ApiResult.ok(robot);
@@ -120,9 +120,9 @@ public class ApiRobotController {
             Object companionId = body.get("companion_id");
             robot.put("companion_id", companionId);
             /**
-             * 更新状态。
-             * @param robotId robotid
-             * @param companionId.toString( companionid.转为字符串(
+            * 更新状态。
+            * @param robotId robotid
+            * @param companionId.toString( companionid.转为字符串(
              */
             updateStatus(robotId, companionId == null ? null : companionId.toString(), "updated");
         }
@@ -131,14 +131,14 @@ public class ApiRobotController {
 
     @DeleteMapping("/{robotId}")
     /**
-     * 移除。
-     * @param robotId robotid
-     * @return 移除的结果
+    * 移除。
+    * @param robotId robotid
+    * @return 移除的结果
      */
     public ApiResult<Void> remove(@PathVariable String robotId) {
         /**
-          * requirerobot。
-         * @param robotId robotid
+        * requirerobot。
+        * @param robotId robotid
          */
         requireRobot(robotId);
         robots.remove(robotId);
@@ -148,8 +148,8 @@ public class ApiRobotController {
 
     @GetMapping("/statuses")
     /**
-     * 状态。
-     * @return 状态的结果
+    * 状态。
+    * @return 状态的结果
      */
     public ApiResult<Map<String, Object>> statuses() {
         Map<String, Object> payload = new LinkedHashMap<>();
@@ -159,8 +159,8 @@ public class ApiRobotController {
 
     @GetMapping("/endpoints")
     /**
-     * 端点。
-     * @return 端点的结果
+    * 端点。
+    * @return 端点的结果
      */
     public ApiResult<Map<String, Object>> endpoints() {
         Map<String, Object> payload = new LinkedHashMap<>();
@@ -170,10 +170,10 @@ public class ApiRobotController {
     }
 
     /**
-     * 更新状态。
-     * @param robotId robotid
-     * @param companionId companionid
-     * @param phase phase
+    * 更新状态。
+    * @param robotId robotid
+    * @param companionId companionid
+    * @param phase phase
      */
     private void updateStatus(String robotId, String companionId, String phase) {
         Map<String, Object> status = robotStatus.computeIfAbsent(robotId, k -> new LinkedHashMap<>());
@@ -185,18 +185,18 @@ public class ApiRobotController {
     }
 
     /**
-      * requirerobot。
-     * @param robotId robotid
-     * @return requireRobot的结果
+    * requirerobot。
+    * @param robotId robotid
+    * @return requireRobot的结果
      */
     private Map<String, Object> requireRobot(String robotId) {
         Map<String, Object> robot = robots.get(robotId);
         if (robot == null) {
             /**
-             * api异常。
-             * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
-             * @param robotId robotid
-             * @return api异常的结果
+            * api异常。
+            * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
+            * @param robotId robotid
+            * @return api异常的结果
              */
             throw new ApiException(ApiErrorCode.NOT_FOUND, "设备不存在: " + robotId);
         }

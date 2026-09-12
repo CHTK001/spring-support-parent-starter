@@ -15,10 +15,10 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * 题目管理控制器
- *
- * @since 4.0.0.42
- * @author CH
+* 题目管理控制器
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Slf4j
 @RestController
@@ -31,10 +31,10 @@ public class EduQuestionController {
     private final IEduQuestionService questionService;
 
     /**
-     * 分页查询题目
-     *
-     * @param query 查询条件
-     * @return 分页结果
+    * 分页查询题目
+    *
+    * @param query 查询条件
+    * @return 分页结果
      */
     @Operation(summary = "分页查询题目")
     @GetMapping("/page")
@@ -44,10 +44,10 @@ public class EduQuestionController {
     }
 
     /**
-     * 获取题目详情
-     *
-     * @param id 题目标识
-     * @return 题目详情
+    * 获取题目详情
+    *
+    * @param id 题目标识
+    * @return 题目详情
      */
     @Operation(summary = "获取题目详情")
     @GetMapping("/{id}")
@@ -57,10 +57,10 @@ public class EduQuestionController {
     }
 
     /**
-     * 新增或更新题目
-     *
-     * @param dto 题目数据
-     * @return 题目ID
+    * 新增或更新题目
+    *
+    * @param dto 题目数据
+    * @return 题目ID
      */
     @Operation(summary = "新增或更新题目")
     @PostMapping("/save")
@@ -70,10 +70,10 @@ public class EduQuestionController {
     }
 
     /**
-     * 批量导入题目
-     *
-     * @param list 题目列表
-     * @return 导入数量
+    * 批量导入题目
+    *
+    * @param list 题目列表
+    * @return 导入数量
      */
     @Operation(summary = "批量导入题目")
     @PostMapping("/import")
@@ -83,10 +83,10 @@ public class EduQuestionController {
     }
 
     /**
-     * 删除题目（逻辑删除）
-     *
-     * @param id 题目标识
-     * @return 是否成功
+    * 删除题目（逻辑删除）
+    *
+    * @param id 题目标识
+    * @return 是否成功
      */
     @Operation(summary = "删除题目")
     @DeleteMapping("/{id}")

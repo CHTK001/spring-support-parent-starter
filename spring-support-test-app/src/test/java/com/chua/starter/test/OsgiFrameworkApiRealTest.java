@@ -46,23 +46,23 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
-   * osgi 真实测试（框架 API 盲区补齐）：复用与 {@link OsgiBeanSwitchRealTest} 相同的
- * Spring 上下文（Spring 测试缓存复用，不重复启动 Felix），对以下能力做真实验证：
- * <ul>
- *   <li>{@link BundleLifecycleListener} 生命周期事件（安装/启动/停止/卸载回调）</li>
- *   <li>{@link FelixBundleContext} 服务注册/注销/查询</li>
- *   <li>{@link OsgiBundle}（FelixOsgiBundle）服务注册/注销/查询</li>
- *   <li>{@link OsgiBeanDefinitionRegister} 命名查询 / close 后退避 / 只读断言</li>
- *   <li>框架状态查询（getBundle/getBundlesByState/getActiveBundles/getBundleCount/getFrameworkStats）</li>
- *   <li>{@link OsgiLauncherHolder} 全局单例生命周期</li>
- *   <li>autoStart 关闭、stop 不卸载、不存在 bundle 卸载、框架未激活 API</li>
- * </ul>
- *
- * <p>与 {@link OsgiBeanSwitchRealTest} 相同的 context 配置：
-   * Shell 关闭、独立存储目录、导出应用接口包。</p>
- *
- * @author CH
- * @since 2026/09/11
+* osgi 真实测试（框架 API 盲区补齐）：复用与 {@link OsgiBeanSwitchRealTest} 相同的
+* Spring 上下文（Spring 测试缓存复用，不重复启动 Felix），对以下能力做真实验证：
+* <ul>
+*   <li>{@link BundleLifecycleListener} 生命周期事件（安装/启动/停止/卸载回调）</li>
+*   <li>{@link FelixBundleContext} 服务注册/注销/查询</li>
+*   <li>{@link OsgiBundle}（FelixOsgiBundle）服务注册/注销/查询</li>
+*   <li>{@link OsgiBeanDefinitionRegister} 命名查询 / close 后退避 / 只读断言</li>
+*   <li>框架状态查询（getBundle/getBundlesByState/getActiveBundles/getBundleCount/getFrameworkStats）</li>
+*   <li>{@link OsgiLauncherHolder} 全局单例生命周期</li>
+*   <li>autoStart 关闭、stop 不卸载、不存在 bundle 卸载、框架未激活 API</li>
+* </ul>
+*
+* <p>与 {@link OsgiBeanSwitchRealTest} 相同的 context 配置：
+* Shell 关闭、独立存储目录、导出应用接口包。</p>
+*
+* @author CH
+* @since 2026/09/11
  */
 @SpringBootTest(properties = {
         "plugin.osgi.enabled=true",
@@ -71,10 +71,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
         "plugin.osgi.framework-properties[org.osgi.framework.system.packages.extra]=com.chua.starter.test.osgi"
 })
 /**
- * osgi框架apireal测试类。
- *
- * @author CH
- * @since 4.0.0
+* osgi框架apireal测试类。
+*
+* @author CH
+* @since 4.0.0
  */
 class OsgiFrameworkApiRealTest {
 
@@ -124,26 +124,26 @@ class OsgiFrameworkApiRealTest {
             File jar = buildBundleJar("ApiGreetV1", "api", "1.0.0");
             osgiLauncher.installBundle("file:" + jar.getAbsolutePath());
             /**
-             * 断言true。
-             * @param BUNDLE_SYMBOLIC_NAME) bundlesymbolic名称
+            * 断言true。
+            * @param BUNDLE_SYMBOLIC_NAME) bundlesymbolic名称
              */
             assertTrue(events.contains("installed:" + BUNDLE_SYMBOLIC_NAME), "安装应触发 onBundleInstalled，实际: " + events);
             /**
-             * 断言true。
-             * @param BUNDLE_SYMBOLIC_NAME) bundlesymbolic名称
+            * 断言true。
+            * @param BUNDLE_SYMBOLIC_NAME) bundlesymbolic名称
              */
             assertTrue(events.contains("started:" + BUNDLE_SYMBOLIC_NAME), "自动启动应触发 onBundleStarted，实际: " + events);
 
  // 卸载 → 停止 + uninstall → stopped + uninstalled
             osgiLauncher.uninstallBundle(BUNDLE_SYMBOLIC_NAME);
             /**
-             * 断言true。
-             * @param BUNDLE_SYMBOLIC_NAME) bundlesymbolic名称
+            * 断言true。
+            * @param BUNDLE_SYMBOLIC_NAME) bundlesymbolic名称
              */
             assertTrue(events.contains("stopped:" + BUNDLE_SYMBOLIC_NAME), "卸载前停止应触发 onBundleStopped，实际: " + events);
             /**
-             * 断言true。
-             * @param BUNDLE_SYMBOLIC_NAME) bundlesymbolic名称
+            * 断言true。
+            * @param BUNDLE_SYMBOLIC_NAME) bundlesymbolic名称
              */
             assertTrue(events.contains("uninstalled:" + BUNDLE_SYMBOLIC_NAME), "卸载应触发 onBundleUninstalled，实际: " + events);
         } finally {
@@ -159,8 +159,8 @@ class OsgiFrameworkApiRealTest {
         GreetService svc = name -> "ctx:" + name;
         ctx.registerService(GreetService.class, svc);
         /**
-         * 断言true。
-         * @param osgiLauncher.getServices(GreetService.class osgilauncher.获取服务(greet服务.类
+        * 断言true。
+        * @param osgiLauncher.getServices(GreetService.class osgilauncher.获取服务(greet服务.类
          */
         assertTrue(osgiLauncher.getServices(GreetService.class).stream()
                         .anyMatch(s -> "ctx:world".equals(s.greet("world"))),
@@ -169,8 +169,8 @@ class OsgiFrameworkApiRealTest {
         // 3) 注销后 ctx 服务应不在列表中
         ctx.unregisterService(GreetService.class, svc);
         /**
-         * 断言false。
-         * @param osgiLauncher.getServices(GreetService.class osgilauncher.获取服务(greet服务.类
+        * 断言false。
+        * @param osgiLauncher.getServices(GreetService.class osgilauncher.获取服务(greet服务.类
          */
         assertFalse(osgiLauncher.getServices(GreetService.class).stream()
                         .anyMatch(s -> "ctx:world".equals(s.greet("world"))),
@@ -184,9 +184,9 @@ class OsgiFrameworkApiRealTest {
         File jar = buildBundleJar("ApiGreetV2", "api2", "2.0.0");
         OsgiBundle bundle = osgiLauncher.installBundle("file:" + jar.getAbsolutePath());
         /**
-         * 断言equals。
-         * @param "ACTIVE" "活跃"
-         * @param bundle.getState( bundle.获取状态(
+        * 断言equals。
+        * @param "ACTIVE" "活跃"
+        * @param bundle.getState( bundle.获取状态(
          */
         assertEquals("ACTIVE", bundle.getState(), "bundle 应已自动启动为 ACTIVE");
 
@@ -194,8 +194,8 @@ class OsgiFrameworkApiRealTest {
         GreetService svc = name -> "bundle-registered:" + name;
         bundle.registerService(GreetService.class, svc);
         /**
-         * 断言true。
-         * @param osgiLauncher.getServices(GreetService.class osgilauncher.获取服务(greet服务.类
+        * 断言true。
+        * @param osgiLauncher.getServices(GreetService.class osgilauncher.获取服务(greet服务.类
          */
         assertTrue(osgiLauncher.getServices(GreetService.class).stream()
                         .anyMatch(s -> "bundle-registered:world".equals(s.greet("world"))),
@@ -204,8 +204,8 @@ class OsgiFrameworkApiRealTest {
         // 注销后应消失
         bundle.unregisterService(GreetService.class, svc);
         /**
-         * 断言false。
-         * @param osgiLauncher.getServices(GreetService.class osgilauncher.获取服务(greet服务.类
+        * 断言false。
+        * @param osgiLauncher.getServices(GreetService.class osgilauncher.获取服务(greet服务.类
          */
         assertFalse(osgiLauncher.getServices(GreetService.class).stream()
                         .anyMatch(s -> "bundle-registered:world".equals(s.greet("world"))),
@@ -217,13 +217,13 @@ class OsgiFrameworkApiRealTest {
     void beanDefinitionNameQueryAndReadonly() throws Exception {
         // 1) 只读断言：不支持手动注册/注销
         /**
-         * 断言false。
-         * @param osgiBeanDefinitionRegister.isWritable( osgibeandefinitionregister.iswritable(
+        * 断言false。
+        * @param osgiBeanDefinitionRegister.isWritable( osgibeandefinitionregister.iswritable(
          */
         assertFalse(osgiBeanDefinitionRegister.isWritable(), "OSGi 注册器应为只读");
         /**
-         * 断言false。
-         * @param osgiBeanDefinitionRegister.isSupport(null osgibeandefinitionregister.issupport(空
+        * 断言false。
+        * @param osgiBeanDefinitionRegister.isSupport(null osgibeandefinitionregister.issupport(空
          */
         assertFalse(osgiBeanDefinitionRegister.isSupport(null), "OSGi 注册器不应支持手动 BeanDefinition");
         assertThrows(UnsupportedOperationException.class, () -> osgiBeanDefinitionRegister.register(null),
@@ -236,28 +236,28 @@ class OsgiFrameworkApiRealTest {
         osgiLauncher.installBundle("file:" + jar.getAbsolutePath());
         Collection<BeanDefinition> defs = osgiBeanDefinitionRegister.getBeanDefinitionOfType(GREET_SERVICE_INTERFACE);
         /**
-         * 断言equals。
-         * @param 1 1
-         * @param defs.size( defs.大小(
+        * 断言equals。
+        * @param 1 1
+        * @param defs.size( defs.大小(
          */
         assertEquals(1, defs.size(), "应查询到 1 个 GreetService Bean");
         String name = defs.iterator().next().getName();
         BeanDefinition byName = osgiBeanDefinitionRegister.getBeanDefinition(name);
         /**
-         * 断言not空。
-         * @param byName by名称
-         * @param BeanDefinition" Beandefinition"
+        * 断言not空。
+        * @param byName by名称
+        * @param BeanDefinition" Beandefinition"
          */
         assertNotNull(byName, "按名称 " + name + " 应能查到 BeanDefinition");
         /**
-         * 断言equals。
-         * @param 类型应匹配" greet服务接口
-         * @param byName.getType( by名称.获取类型(
+        * 断言equals。
+        * @param 类型应匹配" greet服务接口
+        * @param byName.getType( by名称.获取类型(
          */
         assertEquals(GREET_SERVICE_INTERFACE, byName.getType(), "BeanDefinition 类型应匹配");
         /**
-         * 断言true。
-         * @param osgiBeanDefinitionRegister.containsBean(name osgibeandefinitionregister.containsbean(名称
+        * 断言true。
+        * @param osgiBeanDefinitionRegister.containsBean(name osgibeandefinitionregister.containsbean(名称
          */
         assertTrue(osgiBeanDefinitionRegister.containsBean(name), "containsBean 应为 true");
 
@@ -266,8 +266,8 @@ class OsgiFrameworkApiRealTest {
                 .filter(b -> BUNDLE_SYMBOLIC_NAME.equals(b.getSymbolicName()))
                 .forEach(OsgiBundle::uninstall);
         /**
-         * 断言空。
-         * @param osgiBeanDefinitionRegister.getBeanDefinition(name osgibeandefinitionregister.获取beandefinition(名称
+        * 断言空。
+        * @param osgiBeanDefinitionRegister.getBeanDefinition(name osgibeandefinitionregister.获取beandefinition(名称
          */
         assertNull(osgiBeanDefinitionRegister.getBeanDefinition(name), "卸载后命名查询应为 null");
     }
@@ -279,36 +279,36 @@ class OsgiFrameworkApiRealTest {
         isolated.setOsgiLauncher(osgiLauncher);
         isolated.initialize();
         /**
-         * 断言false。
-         * @param isolated.isClosed( isolated.是否关闭(
+        * 断言false。
+        * @param isolated.isClosed( isolated.是否关闭(
          */
         assertFalse(isolated.isClosed(), "初始化后不应关闭");
 
         File jar = buildBundleJar("ApiGreetV4", "api4", "4.0.0");
         osgiLauncher.installBundle("file:" + jar.getAbsolutePath());
         /**
-         * 断言equals。
-         * @param 1 1
-         * @param isolated.getBeanDefinitionOfType(GREET_SERVICE_INTERFACE isolated.获取beandefinition的类型(greet服务接口
+        * 断言equals。
+        * @param 1 1
+        * @param isolated.getBeanDefinitionOfType(GREET_SERVICE_INTERFACE isolated.获取beandefinition的类型(greet服务接口
          */
         assertEquals(1, isolated.getBeanDefinitionOfType(GREET_SERVICE_INTERFACE).size(),
                 "关闭前应能查询到 OSGi Bean");
 
         isolated.close();
         /**
-         * 断言true。
-         * @param isolated.isClosed( isolated.是否关闭(
+        * 断言true。
+        * @param isolated.isClosed( isolated.是否关闭(
          */
         assertTrue(isolated.isClosed(), "close 后应处于关闭状态");
         /**
-         * 断言true。
-         * @param isolated.getBeanDefinitionOfType(GREET_SERVICE_INTERFACE isolated.获取beandefinition的类型(greet服务接口
+        * 断言true。
+        * @param isolated.getBeanDefinitionOfType(GREET_SERVICE_INTERFACE isolated.获取beandefinition的类型(greet服务接口
          */
         assertTrue(isolated.getBeanDefinitionOfType(GREET_SERVICE_INTERFACE).isEmpty(),
                 "close 后查询应返回空");
         /**
-         * 断言false。
-         * @param ":1" ":1"
+        * 断言false。
+        * @param ":1" ":1"
          */
         assertFalse(isolated.containsBean(GREET_SERVICE_INTERFACE + ":1"), "close 后 containsBean 应为 false");
     }
@@ -318,8 +318,8 @@ class OsgiFrameworkApiRealTest {
     void frameworkStateQuery() throws Exception {
         long before = osgiLauncher.getBundleCount();
         /**
-         * 断言true。
-         * @param before 之前
+        * 断言true。
+        * @param before 之前
          */
         assertTrue(before > 0, "系统 bundle 存在，数量应 > 0，实际: " + before);
 
@@ -329,9 +329,9 @@ class OsgiFrameworkApiRealTest {
  // 获取bundle(symbolic名称)
         OsgiBundle byName = osgiLauncher.getBundle(BUNDLE_SYMBOLIC_NAME);
         /**
-         * 断言not空。
-         * @param byName by名称
-         * @param 应命中" 应命中"
+        * 断言not空。
+        * @param byName by名称
+        * @param 应命中" 应命中"
          */
         assertNotNull(byName, "getBundle 应命中");
 
@@ -344,39 +344,39 @@ class OsgiFrameworkApiRealTest {
 
  // 获取bundle数量
         /**
-         * 断言equals。
-         * @param 1 1
-         * @param osgiLauncher.getBundleCount( osgilauncher.获取bundle数量(
+        * 断言equals。
+        * @param 1 1
+        * @param osgiLauncher.getBundleCount( osgilauncher.获取bundle数量(
          */
         assertEquals(before + 1, osgiLauncher.getBundleCount(), "安装后 bundle 总数应 +1");
 
  // 获取框架stats
         Map<String, Object> stats = osgiLauncher.getFrameworkStats();
         /**
-         * 断言not空。
-         * @param stats stats
-         * @param null" 空"
+        * 断言not空。
+        * @param stats stats
+        * @param null" 空"
          */
         assertNotNull(stats, "框架统计不应为 null");
         /**
-         * 断言true。
-         * @param (boolean (布尔值
+        * 断言true。
+        * @param (boolean (布尔值
          */
         assertTrue((boolean) stats.get("active"), "框架应 active");
         /**
-         * 断言equals。
-         * @param 1 1
-         * @param ((Number ((数字
+        * 断言equals。
+        * @param 1 1
+        * @param ((Number ((数字
          */
         assertEquals(before + 1, ((Number) stats.get("totalBundles")).longValue(), "统计 totalBundles 应匹配");
         /**
-         * 断言not空。
-         * @param stats.get("bundleStates" stats.获取("bundle状态"
+        * 断言not空。
+        * @param stats.get("bundleStates" stats.获取("bundle状态"
          */
         assertNotNull(stats.get("bundleStates"), "统计应含 bundleStates 分布");
         /**
-         * 断言true。
-         * @param (boolean (布尔值
+        * 断言true。
+        * @param (boolean (布尔值
          */
         assertTrue((boolean) stats.get("active"), "统计 active 标志应为 true");
     }
@@ -387,21 +387,21 @@ class OsgiFrameworkApiRealTest {
         // Spring 装配的 launcher 启动时应已注册到 Holder
         OsgiLauncher holder = OsgiLauncherHolder.getInstance();
         /**
-         * 断言not空。
-         * @param holder holder
-         * @param 应持有启动器实例" 应持有启动器实例"
+        * 断言not空。
+        * @param holder holder
+        * @param 应持有启动器实例" 应持有启动器实例"
          */
         assertNotNull(holder, "Holder 应持有启动器实例");
         /**
-         * 断言equals。
-         * @param osgiLauncher osgilauncher
-         * @param holder holder
-         * @param 装配的一致" 装配的一致"
+        * 断言equals。
+        * @param osgiLauncher osgilauncher
+        * @param holder holder
+        * @param 装配的一致" 装配的一致"
          */
         assertEquals(osgiLauncher, holder, "Holder 实例应与 Spring 装配的一致");
         /**
-         * 断言true。
-         * @param OsgiLauncherHolder.isActive( osgilauncherholder.是否活跃(
+        * 断言true。
+        * @param OsgiLauncherHolder.isActive( osgilauncherholder.是否活跃(
          */
         assertTrue(OsgiLauncherHolder.isActive(), "Holder 应报告框架激活");
     }
@@ -414,26 +414,26 @@ class OsgiFrameworkApiRealTest {
             File jar = buildBundleJar("ApiGreetV6", "api6", "6.0.0");
             OsgiBundle bundle = osgiLauncher.installBundle("file:" + jar.getAbsolutePath());
             /**
-             * 断言false。
-             * @param "ACTIVE".equals(bundle.getState( "活跃".equals(bundle.获取状态(
+            * 断言false。
+            * @param "ACTIVE".equals(bundle.getState( "活跃".equals(bundle.获取状态(
              */
             assertFalse("ACTIVE".equals(bundle.getState()), "autoStart=false 时不应自动启动，实际: " + bundle.getState());
             /**
-             * 断言空。
-             * @param osgiLauncher.getService(GreetService.class osgilauncher.获取服务(greet服务.类
+            * 断言空。
+            * @param osgiLauncher.getService(GreetService.class osgilauncher.获取服务(greet服务.类
              */
             assertNull(osgiLauncher.getService(GreetService.class), "未启动时服务不应注册");
 
             bundle.start();
             /**
-             * 断言equals。
-             * @param "ACTIVE" "活跃"
-             * @param bundle.getState( bundle.获取状态(
+            * 断言equals。
+            * @param "ACTIVE" "活跃"
+            * @param bundle.getState( bundle.获取状态(
              */
             assertEquals("ACTIVE", bundle.getState(), "手动 start 后应为 ACTIVE");
             /**
-             * 断言not空。
-             * @param osgiLauncher.getService(GreetService.class osgilauncher.获取服务(greet服务.类
+            * 断言not空。
+            * @param osgiLauncher.getService(GreetService.class osgilauncher.获取服务(greet服务.类
              */
             assertNotNull(osgiLauncher.getService(GreetService.class), "手动 start 后服务应注册");
         } finally {
@@ -447,35 +447,35 @@ class OsgiFrameworkApiRealTest {
         File jar = buildBundleJar("ApiGreetV7", "api7", "7.0.0");
         OsgiBundle bundle = osgiLauncher.installBundle("file:" + jar.getAbsolutePath());
         /**
-         * 断言equals。
-         * @param "ACTIVE" "活跃"
-         * @param bundle.getState( bundle.获取状态(
+        * 断言equals。
+        * @param "ACTIVE" "活跃"
+        * @param bundle.getState( bundle.获取状态(
          */
         assertEquals("ACTIVE", bundle.getState(), "安装后应为 ACTIVE");
 
         bundle.stop();
         /**
-         * 断言equals。
-         * @param "RESOLVED" "RESOLVED"
-         * @param bundle.getState( bundle.获取状态(
+        * 断言equals。
+        * @param "RESOLVED" "RESOLVED"
+        * @param bundle.getState( bundle.获取状态(
          */
         assertEquals("RESOLVED", bundle.getState(), "stop 后应为 RESOLVED，实际: " + bundle.getState());
         /**
-         * 断言空。
-         * @param osgiLauncher.getService(GreetService.class osgilauncher.获取服务(greet服务.类
+        * 断言空。
+        * @param osgiLauncher.getService(GreetService.class osgilauncher.获取服务(greet服务.类
          */
         assertNull(osgiLauncher.getService(GreetService.class), "stop 后服务应注销");
 
         bundle.start();
         /**
-         * 断言equals。
-         * @param "ACTIVE" "活跃"
-         * @param bundle.getState( bundle.获取状态(
+        * 断言equals。
+        * @param "ACTIVE" "活跃"
+        * @param bundle.getState( bundle.获取状态(
          */
         assertEquals("ACTIVE", bundle.getState(), "重新 start 后应为 ACTIVE");
         /**
-         * 断言not空。
-         * @param osgiLauncher.getService(GreetService.class osgilauncher.获取服务(greet服务.类
+        * 断言not空。
+        * @param osgiLauncher.getService(GreetService.class osgilauncher.获取服务(greet服务.类
          */
         assertNotNull(osgiLauncher.getService(GreetService.class), "重新 start 后服务应恢复");
     }
@@ -492,23 +492,23 @@ class OsgiFrameworkApiRealTest {
     void inactiveLauncherBackoff() {
         FelixOsgiLauncher inactive = new FelixOsgiLauncher();
         /**
-         * 断言false。
-         * @param inactive.isActive( inactive.是否活跃(
+        * 断言false。
+        * @param inactive.isActive( inactive.是否活跃(
          */
         assertFalse(inactive.isActive(), "未启动的 launcher 应非激活");
         /**
-         * 断言true。
-         * @param inactive.getServices(GreetService.class inactive.获取服务(greet服务.类
+        * 断言true。
+        * @param inactive.getServices(GreetService.class inactive.获取服务(greet服务.类
          */
         assertTrue(inactive.getServices(GreetService.class).isEmpty(), "未激活时 getServices 应返回空");
         /**
-         * 断言true。
-         * @param inactive.getBundles( inactive.获取bundles(
+        * 断言true。
+        * @param inactive.getBundles( inactive.获取bundles(
          */
         assertTrue(inactive.getBundles().isEmpty(), "未激活时 getBundles 应返回空");
         /**
-         * 断言空。
-         * @param inactive.getService(GreetService.class inactive.获取服务(greet服务.类
+        * 断言空。
+        * @param inactive.getService(GreetService.class inactive.获取服务(greet服务.类
          */
         assertNull(inactive.getService(GreetService.class), "未激活时 getService 应返回 null");
         assertThrows(IllegalStateException.class, () -> inactive.installBundle("file:any.jar"),
@@ -520,13 +520,13 @@ class OsgiFrameworkApiRealTest {
     void objectContextAndLauncherConsistent() throws Exception {
         // 初始一致
         /**
-         * 断言空。
-         * @param objectContext.getBeanOfTypeSafely(GreetService.class 对象上下文.获取Bean的类型safely(greetservice.类
+        * 断言空。
+        * @param objectContext.getBeanOfTypeSafely(GreetService.class 对象上下文.获取Bean的类型safely(greetservice.类
          */
         assertNull(objectContext.getBeanOfTypeSafely(GreetService.class), "初始 ObjectContext 应查不到");
         /**
-         * 断言空。
-         * @param osgiLauncher.getService(GreetService.class osgilauncher.获取服务(greet服务.类
+        * 断言空。
+        * @param osgiLauncher.getService(GreetService.class osgilauncher.获取服务(greet服务.类
          */
         assertNull(osgiLauncher.getService(GreetService.class), "初始 osgiLauncher 应查不到");
 
@@ -535,20 +535,20 @@ class OsgiFrameworkApiRealTest {
         GreetService fromLauncher = osgiLauncher.getService(GreetService.class);
         GreetService fromContext = objectContext.getBeanOfTypeSafely(GreetService.class);
         /**
-         * 断言not空。
-         * @param fromLauncher 从launcher
-         * @param 应查到" 应查到"
+        * 断言not空。
+        * @param fromLauncher 从launcher
+        * @param 应查到" 应查到"
          */
         assertNotNull(fromLauncher, "osgiLauncher 应查到");
         /**
-         * 断言not空。
-         * @param fromContext 从上下文
-         * @param 应查到" 应查到"
+        * 断言not空。
+        * @param fromContext 从上下文
+        * @param 应查到" 应查到"
          */
         assertNotNull(fromContext, "ObjectContext 应查到");
         /**
-         * 断言equals。
-         * @param fromLauncher.greet("world" 从launcher.greet("world"
+        * 断言equals。
+        * @param fromLauncher.greet("world" 从launcher.greet("world"
          */
         assertEquals(fromLauncher.greet("world"), fromContext.greet("world"),
                 "ObjectContext 与 osgiLauncher 查询结果应一致");
@@ -556,23 +556,23 @@ class OsgiFrameworkApiRealTest {
  // 按名查询桥接：经 注册 查到 Beandefinition 的完整名称，再由 对象上下文 按名获取
         Collection<BeanDefinition> defs = osgiBeanDefinitionRegister.getBeanDefinitionOfType(GREET_SERVICE_INTERFACE);
         /**
-         * 断言equals。
-         * @param 1 1
-         * @param defs.size( defs.大小(
+        * 断言equals。
+        * @param 1 1
+        * @param defs.size( defs.大小(
          */
         assertEquals(1, defs.size(), "应查询到 1 个 GreetService Bean");
         String beanName = defs.iterator().next().getName();
         GreetService byName = objectContext.getBean(beanName, GreetService.class);
         /**
-         * 断言not空。
-         * @param byName by名称
-         * @param " "
+        * 断言not空。
+        * @param byName by名称
+        * @param " "
          */
         assertNotNull(byName, "ObjectContext 按名 (" + beanName + ") 应查到 GreetService");
         /**
-         * 断言equals。
-         * @param "api8:world" "api8:world"
-         * @param byName.greet("world" by名称.greet("world"
+        * 断言equals。
+        * @param "api8:world" "api8:world"
+        * @param byName.greet("world" by名称.greet("world"
          */
         assertEquals("api8:world", byName.greet("world"), "按名查询结果应与服务一致");
 
@@ -580,13 +580,13 @@ class OsgiFrameworkApiRealTest {
                 .filter(b -> BUNDLE_SYMBOLIC_NAME.equals(b.getSymbolicName()))
                 .forEach(OsgiBundle::uninstall);
         /**
-         * 断言空。
-         * @param objectContext.getBeanOfTypeSafely(GreetService.class 对象上下文.获取Bean的类型safely(greetservice.类
+        * 断言空。
+        * @param objectContext.getBeanOfTypeSafely(GreetService.class 对象上下文.获取Bean的类型safely(greetservice.类
          */
         assertNull(objectContext.getBeanOfTypeSafely(GreetService.class), "卸载后 ObjectContext 应查不到");
         /**
-         * 断言空。
-         * @param osgiLauncher.getService(GreetService.class osgilauncher.获取服务(greet服务.类
+        * 断言空。
+        * @param osgiLauncher.getService(GreetService.class osgilauncher.获取服务(greet服务.类
          */
         assertNull(osgiLauncher.getService(GreetService.class), "卸载后 osgiLauncher 应查不到");
     }
@@ -605,14 +605,14 @@ class OsgiFrameworkApiRealTest {
                     "org.osgi.framework.storage", "target/osgi-cache-stop-test",
                     "org.osgi.framework.storage.clean", "onFirstInit"));
             /**
-             * 断言true。
-             * @param isolated.isActive( isolated.是否活跃(
+            * 断言true。
+            * @param isolated.isActive( isolated.是否活跃(
              */
             assertTrue(isolated.isActive(), "独立框架应激活");
             /**
-             * 断言equals。
-             * @param isolated isolated
-             * @param com.chua.common.support.osgi.OsgiLauncherHolder.getInstance( com.chua.通用.支持.osgi.osgilauncherholder.获取instance(
+            * 断言equals。
+            * @param isolated isolated
+            * @param com.chua.common.support.osgi.OsgiLauncherHolder.getInstance( com.chua.通用.支持.osgi.osgilauncherholder.获取instance(
              */
             assertEquals(isolated, com.chua.common.support.osgi.OsgiLauncherHolder.getInstance(),
                     "框架启动后 Holder 应指向该 launcher");
@@ -624,13 +624,13 @@ class OsgiFrameworkApiRealTest {
 
             isolated.stop();
             /**
-             * 断言false。
-             * @param isolated.isActive( isolated.是否活跃(
+            * 断言false。
+            * @param isolated.isActive( isolated.是否活跃(
              */
             assertFalse(isolated.isActive(), "框架停止后应非激活");
             /**
-             * 断言空。
-             * @param com.chua.common.support.osgi.OsgiLauncherHolder.getInstance( com.chua.通用.支持.osgi.osgilauncherholder.获取instance(
+            * 断言空。
+            * @param com.chua.common.support.osgi.OsgiLauncherHolder.getInstance( com.chua.通用.支持.osgi.osgilauncherholder.获取instance(
              */
             assertNull(com.chua.common.support.osgi.OsgiLauncherHolder.getInstance(),
                     "框架停止后 Holder 应被清理为 null");
@@ -674,19 +674,19 @@ class OsgiFrameworkApiRealTest {
  // 重复安装相同 位置：osgi 规范本次幂等，返回同一 bundle，不新增副本
         OsgiBundle second = osgiLauncher.installBundle("file:" + jar.getAbsolutePath());
         /**
-         * 断言equals。
-         * @param first.getVersion( 第一个.获取版本(
+        * 断言equals。
+        * @param first.getVersion( 第一个.获取版本(
          */
         assertEquals(first.getVersion(), second.getVersion(), "重复安装应返回同版本 bundle");
         /**
-         * 断言equals。
-         * @param second.getState( second.获取状态(
+        * 断言equals。
+        * @param second.getState( second.获取状态(
          */
         assertEquals(second.getState(), first.getState(), "重复安装返回的 bundle 状态应一致");
         /**
-         * 断言equals。
-         * @param afterFirst 之后第一个
-         * @param osgiLauncher.getBundles( osgilauncher.获取bundles(
+        * 断言equals。
+        * @param afterFirst 之后第一个
+        * @param osgiLauncher.getBundles( osgilauncher.获取bundles(
          */
         assertEquals(afterFirst, osgiLauncher.getBundles().stream()
                         .filter(b -> BUNDLE_SYMBOLIC_NAME.equals(b.getSymbolicName()))
@@ -698,9 +698,9 @@ class OsgiFrameworkApiRealTest {
                 .filter(b -> BUNDLE_SYMBOLIC_NAME.equals(b.getSymbolicName()))
                 .forEach(OsgiBundle::uninstall);
         /**
-         * 断言equals。
-         * @param 0 0
-         * @param osgiLauncher.getBundles( osgilauncher.获取bundles(
+        * 断言equals。
+        * @param 0 0
+        * @param osgiLauncher.getBundles( osgilauncher.获取bundles(
          */
         assertEquals(0, osgiLauncher.getBundles().stream()
                         .filter(b -> BUNDLE_SYMBOLIC_NAME.equals(b.getSymbolicName()))
@@ -717,31 +717,31 @@ class OsgiFrameworkApiRealTest {
  // 名称 匹配路径：用 获取Beandefinition的类型 拿到的名字反查
         Collection<BeanDefinition> defs = osgiBeanDefinitionRegister.getBeanDefinitionOfType(GREET_SERVICE_INTERFACE);
         /**
-         * 断言equals。
-         * @param 1 1
-         * @param defs.size( defs.大小(
+        * 断言equals。
+        * @param 1 1
+        * @param defs.size( defs.大小(
          */
         assertEquals(1, defs.size(), "应查询到 1 个 GreetService Bean");
         String name = defs.iterator().next().getName();
         Collection<BeanDefinition> byNameAndType =
                 osgiBeanDefinitionRegister.getBeanDefinitionOfType(name, GREET_SERVICE_INTERFACE);
         /**
-         * 断言equals。
-         * @param 1 1
-         * @param byNameAndType.size( by名称andtype.大小(
+        * 断言equals。
+        * @param 1 1
+        * @param byNameAndType.size( by名称andtype.大小(
          */
         assertEquals(1, byNameAndType.size(), "双参查询（name 匹配）应命中 1 个");
         /**
-         * 断言equals。
-         * @param name 名称
-         * @param byNameAndType.iterator( by名称andtype.迭代器(
+        * 断言equals。
+        * @param name 名称
+        * @param byNameAndType.iterator( by名称andtype.迭代器(
          */
         assertEquals(name, byNameAndType.iterator().next().getName(), "双参查询返回的 BeanDefinition 名称应一致");
 
  // 名称 不匹配路径：返回空
         /**
-         * 断言true。
-         * @param GREET_SERVICE_INTERFACE).isEmpty() greet服务接口
+        * 断言true。
+        * @param GREET_SERVICE_INTERFACE).isEmpty() greet服务接口
          */
         assertTrue(osgiBeanDefinitionRegister.getBeanDefinitionOfType("not-exists", GREET_SERVICE_INTERFACE).isEmpty(),
                 "name 不匹配时双参查询应返回空");
@@ -750,12 +750,12 @@ class OsgiFrameworkApiRealTest {
     // ==================== 真实 bundle jar 生成 ====================
 
     /**
-     * 动态编译 bundle 实现类并打包为合法 osgi bundle jar
-     *
-     * @param className 类名称
-     * @param prefix 前缀
-     * @param version 版本
-     * @return 构建bundlejar的结果
+    * 动态编译 bundle 实现类并打包为合法 osgi bundle jar
+    *
+    * @param className 类名称
+    * @param prefix 前缀
+    * @param version 版本
+    * @return 构建bundlejar的结果
      */
     private static File buildBundleJar(String className, String prefix, String version) throws Exception {
         Path srcFile = Paths.get("target", "osgi-api-src", className + ".java");
@@ -765,8 +765,8 @@ class OsgiFrameworkApiRealTest {
         Path classOut = Paths.get("target", "osgi-api-classes", className);
         if (Files.exists(classOut)) {
             /**
-             * 尝试。
-             * @param Files.walk(classOut 文件.walk(类出
+            * 尝试。
+            * @param Files.walk(classOut 文件.walk(类出
              */
             try (var walk = Files.walk(classOut)) {
                 walk.sorted(Comparator.reverseOrder()).forEach(p -> {
@@ -774,9 +774,9 @@ class OsgiFrameworkApiRealTest {
                         Files.deleteIfExists(p);
                     } catch (java.io.IOException e) {
                         /**
-                         * uncheckedio异常。
-                         * @param e e
-                         * @return uncheckedio异常的结果
+                        * uncheckedio异常。
+                        * @param e e
+                        * @return uncheckedio异常的结果
                          */
                         throw new UncheckedIOException(e);
                     }
@@ -792,9 +792,9 @@ class OsgiFrameworkApiRealTest {
                 srcFile.toString());
         if (result != 0) {
             /**
-             * illegal状态异常。
-             * @param className 类名称
-             * @return illegal状态异常的结果
+            * illegal状态异常。
+            * @param className 类名称
+            * @return illegal状态异常的结果
              */
             throw new IllegalStateException("bundle 实现类编译失败: " + className);
         }
@@ -810,13 +810,13 @@ class OsgiFrameworkApiRealTest {
         attrs.putValue("Import-Package", "org.osgi.framework, com.chua.starter.test.osgi");
 
         /**
-         * 尝试。
-         * @param FileOutputStream(jarFile 文件输出流(jar文件
+        * 尝试。
+        * @param FileOutputStream(jarFile 文件输出流(jar文件
          */
         try (JarOutputStream jos = new JarOutputStream(new FileOutputStream(jarFile), manifest)) {
             /**
-             * 尝试。
-             * @param Files.walk(classOut 文件.walk(类出
+            * 尝试。
+            * @param Files.walk(classOut 文件.walk(类出
              */
             try (var walk = Files.walk(classOut)) {
                 for (Path p : walk.filter(Files::isRegularFile).toList()) {
@@ -833,11 +833,11 @@ class OsgiFrameworkApiRealTest {
     }
 
     /**
-     * bundle 实现类源码：实现应用侧接口 + bundleactivator，启动 时注册服务
-     *
-     * @param className 类名称
-     * @param prefix 前缀
-     * @return bundle源的结果
+    * bundle 实现类源码：实现应用侧接口 + bundleactivator，启动 时注册服务
+    *
+    * @param className 类名称
+    * @param prefix 前缀
+    * @return bundle源的结果
      */
     private static String bundleSource(String className, String prefix) {
         return "package " + BUNDLE_BASE_PACKAGE + ";\n"

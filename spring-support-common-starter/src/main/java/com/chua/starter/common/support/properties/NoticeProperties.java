@@ -5,14 +5,14 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 
 /**
- * 通知配置
- * @since 2024/8/7
- * @author CH
+* 通知配置
+* @since 2024/8/7
+* @author CH
  */
 @ConfigurationProperties(prefix = NoticeProperties.PRE, ignoreInvalidFields = true)
 public class NoticeProperties {
     /**
-     * 是否启用
+    * 是否启用
      */
     private boolean enable = false;
 
@@ -25,31 +25,31 @@ public class NoticeProperties {
 
     @Data
     /**
-     * Email类。
-     *
-     * @author CH
-     * @since 4.0.0
+    * Email类。
+    *
+    * @author CH
+    * @since 4.0.0
      */
     public static class Email {
         /**
-         * 发送者
+        * 发送者
          */
         private String from;
         /**
-         * 主机
+        * 主机
          */
         private String smtpHost = "smtp.qq.com";
         /**
-         * ssl smtp端口
+        * ssl smtp端口
          */
         private String sslSmtpPort = "465";
         /**
-         * 授权码
+        * 授权码
          */
         private String password;
 
         /**
-         * smtp端口
+        * smtp端口
          */
         private int smtpPort = 25;
     }

@@ -10,16 +10,16 @@ import org.springframework.context.annotation.Bean;
 import java.util.List;
 
 /**
-   * AI 协议服务器自动配置 — 打开AI 兼容协议接口。
- *
- * <p>当 {@code plugin.protocol.enable=true} 时，自动注册 AI 协议服务器过滤器，
-   * 提供 打开AI 兼容的 对话 Completions API（/v1/对话/completions）。
- *
- * <p>如果 {@code spring-support-ai-protocol-starter} 在 classpath 中，
-   * 则由该模块接管 AI 协议服务端 生命周期（本配置不生效）。
- *
- * @since 4.0.0.42
- * @author CH
+* AI 协议服务器自动配置 — 打开AI 兼容协议接口。
+*
+* <p>当 {@code plugin.protocol.enable=true} 时，自动注册 AI 协议服务器过滤器，
+* 提供 打开AI 兼容的 对话 Completions API（/v1/对话/completions）。
+*
+* <p>如果 {@code spring-support-ai-protocol-starter} 在 classpath 中，
+* 则由该模块接管 AI 协议服务端 生命周期（本配置不生效）。
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Slf4j
 @AutoConfiguration
@@ -27,9 +27,9 @@ import java.util.List;
 public class AiProtocolServerConfiguration {
 
     /**
-     * 收集所有 AI 协议服务器过滤器。
-     *
-     * @return 过滤器列表
+    * 收集所有 AI 协议服务器过滤器。
+    *
+    * @return 过滤器列表
      */
     @Bean("aiProtocolServerFilters")
     public List<AiProtocolServerFilter> aiProtocolServerFilters() {

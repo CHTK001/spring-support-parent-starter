@@ -8,10 +8,10 @@ import lombok.NoArgsConstructor;
 import java.io.Serializable;
 
 /**
-   * 套接字 消息传输包装体
- *
- * @since 2026-04-08
- * @author CH
+* 套接字 消息传输包装体
+*
+* @since 2026-04-08
+* @author CH
  */
 @Data
 @Builder
@@ -23,27 +23,27 @@ public class SocketMessageEnvelope implements Serializable {
     private static final long serialVersionUID = 1L;
 
     /**
-     * 传输数据
+    * 传输数据
      */
     private String data;
 
     /**
-     * 是否加密
+    * 是否加密
      */
     private boolean encrypted;
 
     /**
-     * 协议附加字段
+    * 协议附加字段
      */
     private String timestamp;
 
     /**
-     * 协议附加字段
+    * 协议附加字段
      */
     private String uuid;
 
     /**
-      * 数据 标识，便于前端快速过滤
+    * 数据 标识，便于前端快速过滤
      */
     private String dataId;
 }

@@ -18,14 +18,14 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 应用信息上报器
- * <p>
- * 定时上报Spring应用基本信息，服务端覆盖更新
- * </p>
- *
-   * @版本 1.0.0
- * @since 2024/12/05
- * @author CH
+* 应用信息上报器
+* <p>
+* 定时上报Spring应用基本信息，服务端覆盖更新
+* </p>
+*
+* @版本 1.0.0
+* @since 2024/12/05
+* @author CH
  */
 @Slf4j
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
@@ -79,16 +79,16 @@ public class AppRegisterReporter {
     private long startTime;
 
     /**
-     * 获取Instance
-     *
-     * @return 获取instance的结果
+    * 获取Instance
+    *
+    * @return 获取instance的结果
      */
     public static AppRegisterReporter getInstance() {
         return INSTANCE;
     }
 
     /**
-     * 启动定时上报
+    * 启动定时上报
      */
     public synchronized void start() {
         if (running) {
@@ -102,7 +102,7 @@ public class AppRegisterReporter {
 
         // 初始化网络信息
         /**
-         * 初始化network信息。
+        * 初始化network信息。
          */
         initNetworkInfo();
         this.startTime = System.currentTimeMillis();
@@ -121,7 +121,7 @@ public class AppRegisterReporter {
     }
 
     /**
-     * 停止上报
+    * 停止上报
      */
     public synchronized void stop() {
         if (!running) {
@@ -137,7 +137,7 @@ public class AppRegisterReporter {
     }
 
     /**
-     * 初始化网络信息
+    * 初始化网络信息
      */
     private void initNetworkInfo() {
         try {
@@ -152,7 +152,7 @@ public class AppRegisterReporter {
     }
 
     /**
-     * 上报应用信息
+    * 上报应用信息
      */
     private void report() {
         try {
@@ -165,8 +165,8 @@ public class AppRegisterReporter {
     }
 
     /**
-     * 采集应用信息
-     * @return collectapp信息的结果
+    * 采集应用信息
+    * @return collectapp信息的结果
      */
     private Map<String, Object> collectAppInfo() {
         Map<String, Object> info = new HashMap<>();

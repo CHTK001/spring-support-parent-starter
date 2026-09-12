@@ -10,22 +10,22 @@ import org.springframework.util.StringUtils;
 import java.util.Collection;
 
 /**
-   * 拓展 MyBatis Plus 查询包装器 类，主要增加如下功能：
- * <p>
-   * 1. 拼接条件的方法，增加 xxxifpresent 方法，用于判断值不存在的时候，不要拼接到条件中。
- *
- * @param <T> 数据类型
- * @author CH
- * @since 4.0.0
+* 拓展 MyBatis Plus 查询包装器 类，主要增加如下功能：
+* <p>
+* 1. 拼接条件的方法，增加 xxxifpresent 方法，用于判断值不存在的时候，不要拼接到条件中。
+*
+* @param <T> 数据类型
+* @author CH
+* @since 4.0.0
  */
 public class LambdaQueryWrapperX<T> extends LambdaQueryWrapper<T> {
 
     /**
-     * likeifpresent
-     *
-     * @param column column
-     * @param val val
-     * @return likeIfPresent的结果
+    * likeifpresent
+    *
+    * @param column column
+    * @param val val
+    * @return likeIfPresent的结果
      */
     public LambdaQueryWrapperX<T> likeIfPresent(SFunction<T, ?> column, String val) {
         if (StringUtils.hasText(val)) {
@@ -35,11 +35,11 @@ public class LambdaQueryWrapperX<T> extends LambdaQueryWrapper<T> {
     }
 
     /**
-     * 入ifpresent
-     *
-     * @param column column
-     * @param values 价值观
-     * @return 入ifpresent的结果
+    * 入ifpresent
+    *
+    * @param column column
+    * @param values 价值观
+    * @return 入ifpresent的结果
      */
     public LambdaQueryWrapperX<T> inIfPresent(SFunction<T, ?> column, Collection<?> values) {
         if (ObjectUtils.isAllNotEmpty(values) && !CollectionUtils.isEmpty(values)) {
@@ -49,11 +49,11 @@ public class LambdaQueryWrapperX<T> extends LambdaQueryWrapper<T> {
     }
 
     /**
-     * 入ifpresent
-     *
-     * @param column column
-     * @param values 价值观
-     * @return 入ifpresent的结果
+    * 入ifpresent
+    *
+    * @param column column
+    * @param values 价值观
+    * @return 入ifpresent的结果
      */
     public LambdaQueryWrapperX<T> inIfPresent(SFunction<T, ?> column, Object... values) {
         if (ObjectUtils.isAllNotEmpty(values) && !ArrayUtils.isEmpty(values)) {
@@ -63,11 +63,11 @@ public class LambdaQueryWrapperX<T> extends LambdaQueryWrapper<T> {
     }
 
     /**
-     * eqifpresent
-     *
-     * @param column column
-     * @param val val
-     * @return eqIfPresent的结果
+    * eqifpresent
+    *
+    * @param column column
+    * @param val val
+    * @return eqIfPresent的结果
      */
     public LambdaQueryWrapperX<T> eqIfPresent(SFunction<T, ?> column, Object val) {
         if (ObjectUtils.isNotEmpty(val)) {
@@ -77,11 +77,11 @@ public class LambdaQueryWrapperX<T> extends LambdaQueryWrapper<T> {
     }
 
     /**
-     * neifpresent
-     *
-     * @param column column
-     * @param val val
-     * @return neIfPresent的结果
+    * neifpresent
+    *
+    * @param column column
+    * @param val val
+    * @return neIfPresent的结果
      */
     public LambdaQueryWrapperX<T> neIfPresent(SFunction<T, ?> column, Object val) {
         if (ObjectUtils.isNotEmpty(val)) {
@@ -91,11 +91,11 @@ public class LambdaQueryWrapperX<T> extends LambdaQueryWrapper<T> {
     }
 
     /**
-     * gtifpresent
-     *
-     * @param column column
-     * @param val val
-     * @return gtIfPresent的结果
+    * gtifpresent
+    *
+    * @param column column
+    * @param val val
+    * @return gtIfPresent的结果
      */
     public LambdaQueryWrapperX<T> gtIfPresent(SFunction<T, ?> column, Object val) {
         if (val != null) {
@@ -105,11 +105,11 @@ public class LambdaQueryWrapperX<T> extends LambdaQueryWrapper<T> {
     }
 
     /**
-     * geifpresent
-     *
-     * @param column column
-     * @param val val
-     * @return geIfPresent的结果
+    * geifpresent
+    *
+    * @param column column
+    * @param val val
+    * @return geIfPresent的结果
      */
     public LambdaQueryWrapperX<T> geIfPresent(SFunction<T, ?> column, Object val) {
         if (val != null) {
@@ -119,11 +119,11 @@ public class LambdaQueryWrapperX<T> extends LambdaQueryWrapper<T> {
     }
 
     /**
-     * ltifpresent
-     *
-     * @param column column
-     * @param val val
-     * @return ltIfPresent的结果
+    * ltifpresent
+    *
+    * @param column column
+    * @param val val
+    * @return ltIfPresent的结果
      */
     public LambdaQueryWrapperX<T> ltIfPresent(SFunction<T, ?> column, Object val) {
         if (val != null) {
@@ -133,11 +133,11 @@ public class LambdaQueryWrapperX<T> extends LambdaQueryWrapper<T> {
     }
 
     /**
-     * leifpresent
-     *
-     * @param column column
-     * @param val val
-     * @return leIfPresent的结果
+    * leifpresent
+    *
+    * @param column column
+    * @param val val
+    * @return leIfPresent的结果
      */
     public LambdaQueryWrapperX<T> leIfPresent(SFunction<T, ?> column, Object val) {
         if (val != null) {
@@ -147,12 +147,12 @@ public class LambdaQueryWrapperX<T> extends LambdaQueryWrapper<T> {
     }
 
     /**
-     * betweenifpresent
-     *
-     * @param column column
-     * @param val1 val1
-     * @param val2 val2
-     * @return betweenIfPresent的结果
+    * betweenifpresent
+    *
+    * @param column column
+    * @param val1 val1
+    * @param val2 val2
+    * @return betweenIfPresent的结果
      */
     public LambdaQueryWrapperX<T> betweenIfPresent(SFunction<T, ?> column, Object val1, Object val2) {
         if (val1 != null && val2 != null) {
@@ -168,11 +168,11 @@ public class LambdaQueryWrapperX<T> extends LambdaQueryWrapper<T> {
     }
 
     /**
-     * betweenifpresent
-     *
-     * @param column column
-     * @param values 价值观
-     * @return betweenIfPresent的结果
+    * betweenifpresent
+    *
+    * @param column column
+    * @param values 价值观
+    * @return betweenIfPresent的结果
      */
     public LambdaQueryWrapperX<T> betweenIfPresent(SFunction<T, ?> column, Object[] values) {
         Object val1 = ArrayUtils.getIndex(values, 0);

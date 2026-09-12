@@ -24,10 +24,10 @@ import java.nio.charset.StandardCharsets;
 import lombok.extern.slf4j.Slf4j;
 
 /**
-   * HTML
- *
- * @since 2022/7/29 10:24
- * @author CH
+* HTML
+*
+* @since 2022/7/29 10:24
+* @author CH
  */
 @Slf4j
 public class HtmlAdviceResolver implements AdviceResolver {
@@ -51,12 +51,12 @@ public class HtmlAdviceResolver implements AdviceResolver {
     }
 
     /**
-      * HTML
-     *
-     * @param request        请求
-     * @param response       响应
-     * @param code           错误码
-     * @param authProperties 认证属性
+    * HTML
+    *
+    * @param request        请求
+    * @param response       响应
+    * @param code           错误码
+    * @param authProperties 认证属性
      */
     public void resolve(HttpServletRequest request, HttpServletResponse response, int code, AuthClientProperties authProperties) {
         String url1 = authProperties.getLoginPage();
@@ -91,16 +91,16 @@ public class HtmlAdviceResolver implements AdviceResolver {
             String url = address;
             if (Strings.isNullOrEmpty(url)) {
                 /**
-                 * 尝试。
-                 * @param response.getOutputStream( 响应.获取输出流(
+                * 尝试。
+                * @param response.getOutputStream( 响应.获取输出流(
                  */
                 try (OutputStream writer = response.getOutputStream()) {
                     writer.write(Xml.toXmlByte(Json.getJsonObject(Json.toJson(ReturnResult.error("未授权")))));
                 } catch (Exception e) {
                     /**
-                     * runtime异常。
-                     * @param e e
-                     * @return runtime异常的结果
+                    * runtime异常。
+                    * @param e e
+                    * @return runtime异常的结果
                      */
                     throw new RuntimeException(e);
                 }
@@ -116,10 +116,10 @@ public class HtmlAdviceResolver implements AdviceResolver {
     }
 
     /**
-     * 是否本地
-     *
-     * @param request 请求
-     * @return 是否本地
+    * 是否本地
+    *
+    * @param request 请求
+    * @return 是否本地
      */
     private boolean isLocalhost(HttpServletRequest request) {
         String ipAddress = RequestUtils.getIpAddress(request);

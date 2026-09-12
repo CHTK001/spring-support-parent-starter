@@ -20,10 +20,10 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * 设备服务实现
- *
- * @since 4.0.0.42
- * @author CH
+* 设备服务实现
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Slf4j
 @Service
@@ -31,22 +31,22 @@ import java.util.UUID;
 public class DeviceServiceImpl implements DeviceService {
 
     /**
-      * 设备信息 映射器
+    * 设备信息 映射器
      */
     private final DeviceInfoMapper deviceInfoMapper;
 
     /**
-      * 设备组织 映射器
+    * 设备组织 映射器
      */
     private final DeviceOrganizationMapper deviceOrganizationMapper;
 
     /**
-     * 设备会话管理器
+    * 设备会话管理器
      */
     private final DeviceSessionManager sessionManager;
 
     /**
-      * 所有可用的设备 提供者（由 SPI 自动注入）
+    * 所有可用的设备 提供者（由 SPI 自动注入）
      */
     private final List<DeviceProvider> providers;
 
@@ -157,9 +157,9 @@ public class DeviceServiceImpl implements DeviceService {
         DeviceInfo device = deviceInfoMapper.selectById(id);
         if (device == null) {
             /**
-             * runtime异常。
-             * @param id 标识
-             * @return runtime异常的结果
+            * runtime异常。
+            * @param id 标识
+            * @return runtime异常的结果
              */
             throw new RuntimeException("设备不存在: " + id);
         }
@@ -177,9 +177,9 @@ public class DeviceServiceImpl implements DeviceService {
         DeviceInfo device = deviceInfoMapper.selectById(id);
         if (device == null) {
             /**
-             * runtime异常。
-             * @param id 标识
-             * @return runtime异常的结果
+            * runtime异常。
+            * @param id 标识
+            * @return runtime异常的结果
              */
             throw new RuntimeException("设备不存在: " + id);
         }
@@ -199,9 +199,9 @@ public class DeviceServiceImpl implements DeviceService {
                 .orElse(null);
         if (session == null) {
             /**
-             * runtime异常。
-             * @param id 标识
-             * @return runtime异常的结果
+            * runtime异常。
+            * @param id 标识
+            * @return runtime异常的结果
              */
             throw new RuntimeException("设备重连失败，无可用 Provider: " + id);
         }
@@ -220,9 +220,9 @@ public class DeviceServiceImpl implements DeviceService {
         DeviceInfo device = deviceInfoMapper.selectById(id);
         if (device == null) {
             /**
-             * runtime异常。
-             * @param id 标识
-             * @return runtime异常的结果
+            * runtime异常。
+            * @param id 标识
+            * @return runtime异常的结果
              */
             throw new RuntimeException("设备不存在: " + id);
         }

@@ -8,11 +8,11 @@ import lombok.NoArgsConstructor;
 import java.io.Serializable;
 
 /**
- * 日志结果
- *
-   * @版本 1.0.0
- * @since 2024/03/11
- * @author CH
+* 日志结果
+*
+* @版本 1.0.0
+* @since 2024/03/11
+* @author CH
  */
 @Data
 @AllArgsConstructor
@@ -22,22 +22,22 @@ public class LogResult implements Serializable {
     private static final long serialVersionUID = 42L;
 
     /**
-     * 起始行号
+    * 起始行号
      */
     private int fromLineNum;
 
     /**
-     * 结束行号
+    * 结束行号
      */
     private int toLineNum;
 
     /**
-     * 日志内容
+    * 日志内容
      */
     private String logContent;
 
     /**
-     * 是否结束
+    * 是否结束
      */
     private boolean isEnd;
 }

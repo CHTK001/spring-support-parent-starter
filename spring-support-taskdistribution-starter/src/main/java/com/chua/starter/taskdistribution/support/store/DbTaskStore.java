@@ -20,42 +20,42 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 数据库任务存储实现。
- *
- * <p>基于 MyBatis-Plus 将任务持久化到数据库，支持应用重启后自动恢复。
-   * 表结构：{@code sys_task_store}（任务标识 / 任务类型 / 任务状态 / 任务json / 结果json）。</p>
- *
- * @since 4.0.0.42
- * @author CH
+* 数据库任务存储实现。
+*
+* <p>基于 MyBatis-Plus 将任务持久化到数据库，支持应用重启后自动恢复。
+* 表结构：{@code sys_task_store}（任务标识 / 任务类型 / 任务状态 / 任务json / 结果json）。</p>
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Slf4j
 public class DbTaskStore implements TaskStore {
 
     /**
-     * 内存缓存（减少数据库查询）
+    * 内存缓存（减少数据库查询）
      */
     private final Map<String, SysTaskStore> cache = new ConcurrentHashMap<>();
 
     /**
-      * 映射器
+    * 映射器
      */
     private final TaskStoreMapper mapper;
 
     /**
-     * 构造数据库任务存储。
-     *
-     * @param mapper MyBatis-Plus 映射器
+    * 构造数据库任务存储。
+    *
+    * @param mapper MyBatis-Plus 映射器
      */
     public DbTaskStore(TaskStoreMapper mapper) {
         this.mapper = mapper;
         /**
-         * 加载从db。
+        * 加载从db。
          */
         loadFromDb();
     }
 
     /**
-     * 启动时从数据库加载所有任务到缓存。
+    * 启动时从数据库加载所有任务到缓存。
      */
     private void loadFromDb() {
         try {
@@ -95,8 +95,8 @@ public class DbTaskStore implements TaskStore {
                 MDC.put(MdcDecorator.KEY_TRACE_ID, task.getTraceId());
             }
             /**
-             * upsert。
-             * @param entity 实体
+            * upsert。
+            * @param entity 实体
              */
             upsert(entity);
         } catch (Exception e) {
@@ -154,8 +154,8 @@ public class DbTaskStore implements TaskStore {
                 MDC.put(MdcDecorator.KEY_TASK_ID, result.getTaskId());
             }
             /**
-             * upsert。
-             * @param entity 实体
+            * upsert。
+            * @param entity 实体
              */
             upsert(entity);
         } catch (Exception e) {
@@ -166,9 +166,9 @@ public class DbTaskStore implements TaskStore {
     }
 
     /**
-       * 插入或更新（upsert 语义，基于 任务标识 同步保证原子性）。
-     *
-     * @param entity 实体
+    * 插入或更新（upsert 语义，基于 任务标识 同步保证原子性）。
+    *
+    * @param entity 实体
      */
     private void upsert(SysTaskStore entity) {
         synchronized (entity.getTaskId().intern()) {
@@ -188,9 +188,9 @@ public class DbTaskStore implements TaskStore {
     @Override
     @SuppressWarnings("unchecked")
     /**
-     * 获取任务。
-     * @param taskId 任务标识
-     * @return 获取任务的结果
+    * 获取任务。
+    * @param taskId 任务标识
+    * @return 获取任务的结果
      */
     public Task<?> getTask(String taskId) {
         SysTaskStore entity = cache.get(taskId);
@@ -231,9 +231,9 @@ public class DbTaskStore implements TaskStore {
     @Override
     @SuppressWarnings("unchecked")
     /**
-     * 获取结果。
-     * @param taskId 任务标识
-     * @return 获取结果的结果
+    * 获取结果。
+    * @param taskId 任务标识
+    * @return 获取结果的结果
      */
     public TaskResult<?> getResult(String taskId) {
         SysTaskStore entity = cache.get(taskId);

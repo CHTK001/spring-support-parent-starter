@@ -12,10 +12,10 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
- * 监控 Redis 时序指标
- *
- * @since 2026/8/4
- * @author CH
+* 监控 Redis 时序指标
+*
+* @since 2026/8/4
+* @author CH
  */
 @Data
 @EqualsAndHashCode(callSuper = false)
@@ -27,7 +27,7 @@ public class MsMonitorRedisMetric implements Serializable {
     private static final long serialVersionUID = 1L;
 
     /**
-     * 主键
+    * 主键
      */
     @TableId(value = "id", type = IdType.AUTO)
     @Schema(description = "主键", example = "1")
@@ -35,7 +35,7 @@ public class MsMonitorRedisMetric implements Serializable {
     private Long id;
 
     /**
-      * 监控主机 标识
+    * 监控主机 标识
      */
     @TableField("ms_monitor_redis_metric_monitor_id")
     @Schema(description = "监控主机 id", example = "1")
@@ -43,7 +43,7 @@ public class MsMonitorRedisMetric implements Serializable {
     private Long monitorId;
 
     /**
-     * 指标名
+    * 指标名
      */
     @TableField("ms_monitor_redis_metric_metric_name")
     @Schema(description = "指标名", example = "redis_connected_clients")
@@ -51,7 +51,7 @@ public class MsMonitorRedisMetric implements Serializable {
     private String metricName;
 
     /**
-     * 指标值
+    * 指标值
      */
     @TableField("ms_monitor_redis_metric_metric_value")
     @Schema(description = "指标值", example = "23.0")
@@ -59,7 +59,7 @@ public class MsMonitorRedisMetric implements Serializable {
     private Double metricValue;
 
     /**
-     * 标签 JSON
+    * 标签 JSON
      */
     @TableField("ms_monitor_redis_metric_metric_tags")
     @Schema(description = "标签 JSON", example = "{\"db\":0}")
@@ -67,7 +67,7 @@ public class MsMonitorRedisMetric implements Serializable {
     private String metricTags;
 
     /**
-     * 采集时间
+    * 采集时间
      */
     @TableField("ms_monitor_redis_metric_collect_time")
     @Schema(description = "采集时间", example = "2026-08-04T10:00:00")

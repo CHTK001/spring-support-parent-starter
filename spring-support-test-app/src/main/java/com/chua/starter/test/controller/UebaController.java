@@ -12,25 +12,25 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * UEBA 用户实体行为分析演示控制器。
- *
- * <p>接收 HTTP 访问日志模拟流量事件，调用 {@link UebaEngine} 返回综合风险等级与解释。</p>
- *
- * <p>请求示例：</p>
- * <pre>
- * POST /api/ueba/analyze
- * {
- *   "ip": "10.0.0.1",
- *   "path": "/index",
- *   "method": "GET",
- *   "statusCode": 200,
- *   "userAgent": "Mozilla/5.0",
- *   "responseTimeMs": 50
- * }
- * </pre>
- *
- * @author CH
- * @since 4.0.0.42
+* UEBA 用户实体行为分析演示控制器。
+*
+* <p>接收 HTTP 访问日志模拟流量事件，调用 {@link UebaEngine} 返回综合风险等级与解释。</p>
+*
+* <p>请求示例：</p>
+* <pre>
+* POST /api/ueba/analyze
+* {
+*   "ip": "10.0.0.1",
+*   "path": "/index",
+*   "method": "GET",
+*   "statusCode": 200,
+*   "userAgent": "Mozilla/5.0",
+*   "responseTimeMs": 50
+* }
+* </pre>
+*
+* @author CH
+* @since 4.0.0.42
  */
 @Slf4j
 @RestController
@@ -38,21 +38,21 @@ import java.util.Map;
 public class UebaController {
 
     /**
-     * UEBA 分析引擎（由 Spring 自动装配）。
+    * UEBA 分析引擎（由 Spring 自动装配）。
      */
     private final UebaEngine engine;
 
     /**
-     * 构造控制器。
-     *
-     * @param engine UEBA 分析引擎，不能为 空
+    * 构造控制器。
+    *
+    * @param engine UEBA 分析引擎，不能为 空
      */
     public UebaController(UebaEngine engine) {
         if (engine == null) {
             /**
-             * illegal参数异常。
-             * @param null" 空"
-             * @return illegal参数异常的结果
+            * illegal参数异常。
+            * @param null" 空"
+            * @return illegal参数异常的结果
              */
             throw new IllegalArgumentException("engine must not be null");
         }
@@ -60,10 +60,10 @@ public class UebaController {
     }
 
     /**
-     * 分析单条流量事件，返回综合风险评分。
-     *
-     * @param request 请求体，字段对应 traffic事件 关键字段
-     * @return 风险等级、分数与解释
+    * 分析单条流量事件，返回综合风险评分。
+    *
+    * @param request 请求体，字段对应 traffic事件 关键字段
+    * @return 风险等级、分数与解释
      */
     @PostMapping("/analyze")
     public Map<String, Object> analyze(@RequestBody Map<String, Object> request) {
@@ -105,9 +105,9 @@ public class UebaController {
     }
 
     /**
-      * 将 ipanomaly结果 转为 映射（JSON 友好）。
-     * @param obj obj
-     * @return 转为映射的结果
+    * 将 ipanomaly结果 转为 映射（JSON 友好）。
+    * @param obj obj
+    * @return 转为映射的结果
      */
     private Map<String, Object> toMap(Object obj) {
         if (obj == null) {
@@ -123,9 +123,9 @@ public class UebaController {
     }
 
     /**
-      * 将 行为配置文件 转为 映射。
-     * @param b b
-     * @return 行为转为映射的结果
+    * 将 行为配置文件 转为 映射。
+    * @param b b
+    * @return 行为转为映射的结果
      */
     private Map<String, Object> behaviorToMap(com.chua.ueba.support.dto.BehaviorProfile b) {
         if (b == null) {
@@ -143,10 +143,10 @@ public class UebaController {
     }
 
     /**
-     * 安全获取简单属性值。
-     * @param obj obj
-     * @param name 名称
-     * @return 获取prop的结果
+    * 安全获取简单属性值。
+    * @param obj obj
+    * @param name 名称
+    * @return 获取prop的结果
      */
     private static Object getProp(Object obj, String name) {
         try {
@@ -158,18 +158,18 @@ public class UebaController {
     }
 
     /**
-     * 转为字符串。
-     * @param v v
-     * @return 转为字符串的结果
+    * 转为字符串。
+    * @param v v
+    * @return 转为字符串的结果
      */
     private static String toString(Object v) {
         return v == null ? "" : String.valueOf(v);
     }
 
     /**
-     * 转为int。
-     * @param v v
-     * @return 转为int的结果
+    * 转为int。
+    * @param v v
+    * @return 转为int的结果
      */
     private static int toInt(Object v) {
         if (v == null) {
@@ -186,9 +186,9 @@ public class UebaController {
     }
 
     /**
-     * 转为long。
-     * @param v v
-     * @return 转为long的结果
+    * 转为long。
+    * @param v v
+    * @return 转为long的结果
      */
     private static long toLong(Object v) {
         if (v == null) {
@@ -205,9 +205,9 @@ public class UebaController {
     }
 
     /**
-     * capitalize。
-     * @param s s
-     * @return capitalize的结果
+    * capitalize。
+    * @param s s
+    * @return capitalize的结果
      */
     private static String capitalize(String s) {
         if (s == null || s.isEmpty()) {

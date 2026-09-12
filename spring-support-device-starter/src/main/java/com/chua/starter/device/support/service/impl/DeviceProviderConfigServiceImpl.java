@@ -17,11 +17,11 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 提供商配置服务实现
- * <p>每个厂商的默认离线检测时间及检测逻辑。</p>
- *
- * @since 4.0.0.42
- * @author CH
+* 提供商配置服务实现
+* <p>每个厂商的默认离线检测时间及检测逻辑。</p>
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Slf4j
 @Service
@@ -29,7 +29,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class DeviceProviderConfigServiceImpl implements DeviceProviderConfigService {
 
     /**
-     * 厂商默认离线检测阈值（秒）
+    * 厂商默认离线检测阈值（秒）
      */
     private static final Map<String, Integer> VENDOR_THRESHOLDS = new ConcurrentHashMap<>();
 
@@ -41,12 +41,12 @@ public class DeviceProviderConfigServiceImpl implements DeviceProviderConfigServ
     }
 
     /**
-      * 设备 映射器
+    * 设备 映射器
      */
     private final DeviceInfoMapper deviceInfoMapper;
 
     /**
-     * 设备会话管理器
+    * 设备会话管理器
      */
     private final DeviceSessionManager sessionManager;
 

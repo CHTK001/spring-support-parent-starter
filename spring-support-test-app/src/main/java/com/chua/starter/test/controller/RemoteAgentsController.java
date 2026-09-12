@@ -17,13 +17,13 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 被控端管理接口（远控管理台）。
- *
- * <p>被控端列表经 {@code GET /api/remote/agents} 读取、{@code POST} 保存，
-   * 持久化到本地文件 远程-智能体.json。</p>
- *
- * @author CH
- * @since 4.0.0.42
+* 被控端管理接口（远控管理台）。
+*
+* <p>被控端列表经 {@code GET /api/remote/agents} 读取、{@code POST} 保存，
+* 持久化到本地文件 远程-智能体.json。</p>
+*
+* @author CH
+* @since 4.0.0.42
  */
 @RestController
 @RequestMapping("/api/remote/agents")
@@ -35,9 +35,9 @@ public class RemoteAgentsController {
     private final ObjectMapper objectMapper = new ObjectMapper(); // 对象映射器
 
     /**
-     * 读取被控端列表。
-     *
-     * @return 被控端列表（无则空数组）
+    * 读取被控端列表。
+    *
+    * @return 被控端列表（无则空数组）
      */
     @GetMapping
     public List<Map<String, Object>> list() throws IOException {
@@ -48,10 +48,10 @@ public class RemoteAgentsController {
     }
 
     /**
-     * 保存被控端列表（持久化到本地文件）。
-     *
-     * @param agents 被控端列表
-     * @return 保存结果
+    * 保存被控端列表（持久化到本地文件）。
+    *
+    * @param agents 被控端列表
+    * @return 保存结果
      */
     @PostMapping
     public Map<String, Object> save(@RequestBody List<Map<String, Object>> agents) throws IOException {
@@ -62,9 +62,9 @@ public class RemoteAgentsController {
     }
 
     /**
-     * 默认种子数据（首次访问无文件时返回）
-     *
-     * @return 参见的结果
+    * 默认种子数据（首次访问无文件时返回）
+    *
+    * @return 参见的结果
      */
     private List<Map<String, Object>> seed() {
         List<Map<String, Object>> agents = new ArrayList<>();

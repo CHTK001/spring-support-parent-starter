@@ -3,97 +3,97 @@ package com.chua.starter.common.support.log;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * 日志配置属性
- *
-   * @版本 1.0.0
- * @since 2024/01/01
- * @author CH
+* 日志配置属性
+*
+* @版本 1.0.0
+* @since 2024/01/01
+* @author CH
  */
 @ConfigurationProperties(prefix = "plugin.log", ignoreInvalidFields = true)
 public class LogProperties {
 
     /**
-     * 日志开启
+    * 日志开启
      */
     private boolean enable = true;
 
     /**
-     * 开启接口日志
+    * 开启接口日志
      */
     private boolean openInterfaceLog = false;
 
     /**
-     * 慢请求阈值（毫秒），超过此值将打印 WARN 日志，默认 3000ms
+    * 慢请求阈值（毫秒），超过此值将打印 WARN 日志，默认 3000ms
      */
     private long slowRequestThresholdMs = 3000;
 
     /**
-     * 获取 enable
-     *
-     * @return enable
+    * 获取 enable
+    *
+    * @return enable
      */
     public boolean getEnable() {
         return enable;
     }
 
     /**
-     * 判断是否启用
-     *
-     * @return enable
+    * 判断是否启用
+    *
+    * @return enable
      */
     public boolean isEnable() {
         return enable;
     }
 
     /**
-     * 设置 enable
-     *
-     * @param enable enable
+    * 设置 enable
+    *
+    * @param enable enable
      */
     public void setEnable(boolean enable) {
         this.enable = enable;
     }
 
     /**
-      * 获取 打开接口日志
-     *
-     * @return openInterfaceLog
+    * 获取 打开接口日志
+    *
+    * @return openInterfaceLog
      */
     public boolean getOpenInterfaceLog() {
         return openInterfaceLog;
     }
 
     /**
-     * 判断是否开启接口日志
-     *
-     * @return openInterfaceLog
+    * 判断是否开启接口日志
+    *
+    * @return openInterfaceLog
      */
     public boolean isOpenInterfaceLog() {
         return openInterfaceLog;
     }
 
     /**
-      * 设置 打开接口日志
-     *
-     * @param openInterfaceLog 打开接口日志
+    * 设置 打开接口日志
+    *
+    * @param openInterfaceLog 打开接口日志
      */
     public void setOpenInterfaceLog(boolean openInterfaceLog) {
         this.openInterfaceLog = openInterfaceLog;
     }
 
     /**
-     * 获取慢请求阈值（毫秒）
-     *
-     * @return slowRequestThresholdMs
+    * 获取慢请求阈值（毫秒）
+    *
+    * @return slowRequestThresholdMs
      */
     public long getSlowRequestThresholdMs() {
         return slowRequestThresholdMs;
     }
 
     /**
-     * 设置慢请求阈值（毫秒）
-     *
-     * @param slowRequestThresholdMs 阈值
+    * 设置慢请求阈值（毫秒）
+    *
+    * @param slowRequestThresholdMs 阈值
      */
     public void setSlowRequestThresholdMs(long slowRequestThresholdMs) {
         this.slowRequestThresholdMs = slowRequestThresholdMs;

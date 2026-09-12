@@ -18,8 +18,8 @@ import java.util.Collection;
 import java.util.Map;
 
 /**
- * @author CH
- * @since 4.0.0
+* @author CH
+* @since 4.0.0
  */
 @Spi({"xml"})
 public class XmlMediaTypeHandler implements MediaTypeHandler {
@@ -27,14 +27,14 @@ public class XmlMediaTypeHandler implements MediaTypeHandler {
     /** asbytearray */
     public byte[] asByteArray(Object o) {
         /**
-         * 尝试。
-         * @param ByteArrayOutputStream( bytearray输出流(
+        * 尝试。
+        * @param ByteArrayOutputStream( bytearray输出流(
          */
         try (ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();) {
             /**
-             * 导出。
-             * @param byteArrayOutputStream bytearray输出流
-             * @param o o
+            * 导出。
+            * @param byteArrayOutputStream bytearray输出流
+            * @param o o
              */
             export(byteArrayOutputStream, o);
             return byteArrayOutputStream.toByteArray();
@@ -44,10 +44,10 @@ public class XmlMediaTypeHandler implements MediaTypeHandler {
     }
 
     /**
-     * 导出
-     *
-     * @param outputStream 输出流
-     * @param data 数据
+    * 导出
+    *
+    * @param outputStream 输出流
+    * @param data 数据
      */
     public void export(OutputStream outputStream, Object data) {
         StringBuilder stringBuilder = new StringBuilder();
@@ -63,10 +63,10 @@ public class XmlMediaTypeHandler implements MediaTypeHandler {
 
 
     /**
-     * Analysis
-     *
-     * @param data 数据
-     * @return analysis的结果
+    * Analysis
+    *
+    * @param data 数据
+    * @return analysis的结果
      */
     public StringBuilder analysis(Object data) {
         if (data instanceof Collection) {
@@ -81,10 +81,10 @@ public class XmlMediaTypeHandler implements MediaTypeHandler {
     }
 
     /**
-     * analysis对象
-     *
-     * @param data 数据
-     * @return analysis对象的结果
+    * analysis对象
+    *
+    * @param data 数据
+    * @return analysis对象的结果
      */
     public StringBuilder analysisObject(Object data) {
         StringBuilder buffer = new StringBuilder();
@@ -116,12 +116,12 @@ public class XmlMediaTypeHandler implements MediaTypeHandler {
     }
 
     /**
-     * Formatter
-     *
-     * @param value 价值观
-     * @param aClass a类
-     * @param field 字段
-     * @return formatter的结果
+    * Formatter
+    *
+    * @param value 价值观
+    * @param aClass a类
+    * @param field 字段
+    * @return formatter的结果
      */
     private Object formatter(Object value, Class<?> aClass, Field field) {
         if (null == value) {
@@ -132,10 +132,10 @@ public class XmlMediaTypeHandler implements MediaTypeHandler {
     }
 
     /**
-     * Analysis
-     *
-     * @param data 数据
-     * @return analysis的结果
+    * Analysis
+    *
+    * @param data 数据
+    * @return analysis的结果
      */
     public StringBuilder analysis(Map data) {
         StringBuilder buffer = new StringBuilder();
@@ -151,10 +151,10 @@ public class XmlMediaTypeHandler implements MediaTypeHandler {
     }
 
     /**
-     * Analysis
-     *
-     * @param data 数据
-     * @return analysis的结果
+    * Analysis
+    *
+    * @param data 数据
+    * @return analysis的结果
      */
     public StringBuilder analysis(Collection data) {
         StringBuilder buffer = new StringBuilder();

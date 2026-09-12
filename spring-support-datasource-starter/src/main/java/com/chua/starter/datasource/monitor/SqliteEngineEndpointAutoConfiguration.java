@@ -12,13 +12,13 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
-   * sqlite 引擎端点自动配置
- * <p>
-   * 仅在 {@link SqliteEngine} 可用、Actuator 端点注解存在且 sqlite 启用时注册。
- * </p>
- *
- * @author CH
- * @since 4.0.0.42
+* sqlite 引擎端点自动配置
+* <p>
+* 仅在 {@link SqliteEngine} 可用、Actuator 端点注解存在且 sqlite 启用时注册。
+* </p>
+*
+* @author CH
+* @since 4.0.0.42
  */
 @Configuration(proxyBeanMethods = false)
 @ConditionalOnClass(name = "com.chua.sqlite.support.engine.SqliteEngine")
@@ -27,18 +27,18 @@ import org.springframework.context.annotation.Configuration;
 public class SqliteEngineEndpointAutoConfiguration {
 
     /**
-      * 注册 sqlite 引擎 Actuator 端点。
-     * @param engine engine
-     * @return sqliteengine端点的结果
+    * 注册 sqlite 引擎 Actuator 端点。
+    * @param engine engine
+    * @return sqliteengine端点的结果
      */
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnClass(name = "org.springframework.boot.actuate.endpoint.annotation.Endpoint")
     public SqliteEngineEndpoint sqliteEngineEndpoint(SqliteEngine engine) {
         /**
-         * sqliteengine端点。
-         * @param engine engine
-         * @return sqliteengine端点的结果
+        * sqliteengine端点。
+        * @param engine engine
+        * @return sqliteengine端点的结果
          */
         return new SqliteEngineEndpoint(engine);
     }

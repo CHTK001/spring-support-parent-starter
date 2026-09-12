@@ -7,10 +7,10 @@ import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
 
 /**
-   * where校验是否存在机构标识
- *
- * @author CH
- * @since 4.0.0
+* where校验是否存在机构标识
+*
+* @author CH
+* @since 4.0.0
  */
 public class WhereDeptChecker {
     /** Where */
@@ -24,12 +24,12 @@ public class WhereDeptChecker {
     private Table currentTable;
 
     /**
-      * 创建 wheredept检查 实例
-     * @param where where
-     * @param tableAlias 字符串
-     * @param tableAlias 字符串
-     * @param tableAlias table别名
-     * @param columnName column名称
+    * 创建 wheredept检查 实例
+    * @param where where
+    * @param tableAlias 字符串
+    * @param tableAlias 字符串
+    * @param tableAlias table别名
+    * @param columnName column名称
      */
     public WhereDeptChecker(Expression where, String tableAlias, String columnName) {
         this.where = where;
@@ -38,9 +38,9 @@ public class WhereDeptChecker {
     }
 
     /**
-      * 是否包含部门标识
-     *
-     * @return 是否存在机构ID
+    * 是否包含部门标识
+    *
+    * @return 是否存在机构ID
      */
     public boolean check() {
         if (where == null) {
@@ -55,10 +55,10 @@ public class WhereDeptChecker {
     }
 
     /**
-      * 是否包含部门标识
-     *
-     * @param expression 表达式
-     * @return 是否存在机构ID
+    * 是否包含部门标识
+    *
+    * @param expression 表达式
+    * @return 是否存在机构ID
      */
     private boolean hasDeptId(BinaryExpression expression) {
         Expression leftExpression = expression.getLeftExpression();
@@ -70,10 +70,10 @@ public class WhereDeptChecker {
     }
 
     /**
-      * 是否包含部门标识
-     *
-     * @param leftExpression 表达式
-     * @return 是否存在机构ID
+    * 是否包含部门标识
+    *
+    * @param leftExpression 表达式
+    * @return 是否存在机构ID
      */
     private boolean hasDeptId(Expression leftExpression) {
         if (leftExpression instanceof Column column) {
@@ -89,9 +89,9 @@ public class WhereDeptChecker {
     }
 
     /**
-     * 获取当前表
-     *
-     * @return 当前表
+    * 获取当前表
+    *
+    * @return 当前表
      */
     public Table getCurrentTable() {
         return currentTable;

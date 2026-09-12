@@ -10,12 +10,12 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
-   * SSE 套接字 会话实现
-   * 封装 sseemitter 为统一的 套接字会话 接口
- *
-   * @版本 1.0.0
- * @since 2024-12-24
- * @author CH
+* SSE 套接字 会话实现
+* 封装 sseemitter 为统一的 套接字会话 接口
+*
+* @版本 1.0.0
+* @since 2024-12-24
+* @author CH
  */
 public class SseSocketSession implements SocketSession {
 
@@ -33,10 +33,10 @@ public class SseSocketSession implements SocketSession {
     private volatile boolean connected = true; // 连接
 
     /**
-      * 创建 sse套接字会话 实例
-     * @param id 标识
-     * @param emitter sseemitter
-     * @param emitter emitter
+    * 创建 sse套接字会话 实例
+    * @param id 标识
+    * @param emitter sseemitter
+    * @param emitter emitter
      */
     public SseSocketSession(String id, SseEmitter emitter) {
         this.id = id;
@@ -88,10 +88,10 @@ public class SseSocketSession implements SocketSession {
     @Override
     @SuppressWarnings("unchecked")
     /**
-     * 获取Attribute
-     *
-     * @param key 钥匙
-     * @return 获取attribute的结果
+    * 获取Attribute
+    *
+    * @param key 钥匙
+    * @return 获取attribute的结果
      */
     public <T> T getAttribute(String key) {
         return (T) attributes.get(key);
@@ -143,18 +143,18 @@ public class SseSocketSession implements SocketSession {
     @Override
     @SuppressWarnings("unchecked")
     /**
-     * 获取Connection
-     *
-     * @return 获取connection的结果
+    * 获取Connection
+    *
+    * @return 获取connection的结果
      */
     public <T> T getConnection() {
         return (T) emitter;
     }
 
     /**
-      * 获取 sseemitter
-     *
-     * @return SseEmitter
+    * 获取 sseemitter
+    *
+    * @return SseEmitter
      */
     public SseEmitter getEmitter() {
         return emitter;

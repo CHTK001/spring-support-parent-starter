@@ -24,12 +24,12 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 预设标签控制器。
- *
- * <p>提供预设标签（PresetTag）的 CRUD，支持 audience 和 scenario 两个维度。</p>
- *
- * @since 4.0.0.42
- * @author CH
+* 预设标签控制器。
+*
+* <p>提供预设标签（PresetTag）的 CRUD，支持 audience 和 scenario 两个维度。</p>
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Slf4j
 @ApiReturnFormatIgnore
@@ -41,14 +41,14 @@ public class ApiPresetTagController {
     private final SysAiConversationStore conversationStore; // conversation存储
 
     /**
-       * 内存标签存储：preset_标签_标识 -> 标签数据
+    * 内存标签存储：preset_标签_标识 -> 标签数据
      */
     private final Map<String, Map<String, Object>> tags = new ConcurrentHashMap<>();
 
     @GetMapping
     /**
-     * 列表。
-     * @return 列表的结果
+    * 列表。
+    * @return 列表的结果
      */
     public ApiResult<List<Map<String, Object>>> list() {
         return ApiResult.ok(new ArrayList<>(tags.values()));
@@ -56,9 +56,9 @@ public class ApiPresetTagController {
 
     @PostMapping
     /**
-     * 创建。
-     * @param body 主体
-     * @return 创建的结果
+    * 创建。
+    * @param body 主体
+    * @return 创建的结果
      */
     public ApiResult<Map<String, Object>> create(@RequestBody Map<String, Object> body) {
         String tagId = String.valueOf(body.getOrDefault("preset_tag_id", conversationStore.newId()));
@@ -76,10 +76,10 @@ public class ApiPresetTagController {
         Map<String, Object> tag = tags.get(tagId);
         if (tag == null) {
             /**
-             * api异常。
-             * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
-             * @param tagId 标签标识
-             * @return api异常的结果
+            * api异常。
+            * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
+            * @param tagId 标签标识
+            * @return api异常的结果
              */
             throw new ApiException(ApiErrorCode.NOT_FOUND, "预设标签不存在: " + tagId);
         }
@@ -93,18 +93,18 @@ public class ApiPresetTagController {
 
     @DeleteMapping("/{tagId}")
     /**
-     * 删除。
-     * @param tagId 标签标识
-     * @return 删除的结果
+    * 删除。
+    * @param tagId 标签标识
+    * @return 删除的结果
      */
     public ApiResult<Void> delete(@PathVariable String tagId) {
         Map<String, Object> removed = tags.remove(tagId);
         if (removed == null) {
             /**
-             * api异常。
-             * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
-             * @param tagId 标签标识
-             * @return api异常的结果
+            * api异常。
+            * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
+            * @param tagId 标签标识
+            * @return api异常的结果
              */
             throw new ApiException(ApiErrorCode.NOT_FOUND, "预设标签不存在: " + tagId);
         }

@@ -10,10 +10,10 @@ import org.springframework.http.MediaType;
 import java.io.OutputStream;
 
 /**
- * xml
- *
- * @since 2022/7/29 10:24
- * @author CH
+* xml
+*
+* @since 2022/7/29 10:24
+* @author CH
  */
 @Slf4j
 public class XmlAdviceResolver implements AdviceResolver {
@@ -29,8 +29,8 @@ public class XmlAdviceResolver implements AdviceResolver {
     /** 解析 */
     public Object resolve(HttpServletResponse response, Integer status, String message) {
         /**
-         * 尝试。
-         * @param response.getOutputStream( 响应.获取输出流(
+        * 尝试。
+        * @param response.getOutputStream( 响应.获取输出流(
          */
         try (OutputStream writer = response.getOutputStream()) {
             writer.write(Xml.toXmlByte(JsonObject.create().fluent("code", ResultCode.transferForHttpCodeStatus(status))));

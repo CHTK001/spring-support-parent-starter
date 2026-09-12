@@ -5,43 +5,43 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 /**
- * 登录信息
- *
- * @author CH
- * @since 4.0.0
+* 登录信息
+*
+* @author CH
+* @since 4.0.0
  */
 @Data
 @Schema(description = "登录信息")
 public class LoginData {
 
     /**
-     * 账号
+    * 账号
      */
     @Schema(description = "账号/微信code/微信openId")
     /** 用户名 */
     private String username;
 
     /**
-     * 密码
+    * 密码
      */
     @Schema(description = "密码(md5加密)/微信getphonenumber(code)")
     /** 密码 */
     private String password;
     /**
-     * 校验码
+    * 校验码
      */
     @Schema(description = "校验码; 由服务器决定是否必填")
     @RequestParamMapping(name = {"verifyCode", "verifyCodeKey"})
     /** 验证代码密钥 */
     private String verifyCodeKey;
     /**
-     * 校验码
+    * 校验码
      */
     @Schema(description = "校验码标识, 非必填")
     /** 验证代码ulid */
     private String verifyCodeUlid;
     /**
-     * 登录类型
+    * 登录类型
      */
     @Schema(description = "登录类型, 网页：WEB, 微信:WX, 后管: SYSTEM, 小程序: WX_MINI_APP, WX_MINI_APP_VISITOR等")
     /** Login类型 */
@@ -49,7 +49,7 @@ public class LoginData {
 
 
     /**
-     * 账号类型
+    * 账号类型
      */
     @Schema(description = "账号类型, 用于区分同一种登录方式")
     /** 账户类型 */
@@ -57,33 +57,33 @@ public class LoginData {
 
 
     /**
-      * 租户标识
+    * 租户标识
      */
     @Schema(description = "租户ID")
     /** tenantid */
     private String tenantId;
 
     /**
-     * 租户编码
+    * 租户编码
      */
     @Schema(description = "租户编码")
     /** Tenant代码 */
     private String tenantCode;
     /**
-     * 谷歌验证码
+    * 谷歌验证码
      */
  // @api模型财产(价值观 = "谷歌/其它验证码")
  // @模式(description = "谷歌/其它验证码")
  // 私募 字符串 totp编码;
     /**
-     * 登录凭证
+    * 登录凭证
      */
     @Schema(description = "登录凭证(加密数据)")
     /** wxencrypted数据 */
     private String wxEncryptedData;
 
     /**
-     * 登录凭证
+    * 登录凭证
      */
     @Schema(description = "登录凭证(Iv)")
     /** WXIV */
@@ -91,7 +91,7 @@ public class LoginData {
 
 
     /**
-     * 登录凭证
+    * 登录凭证
      */
     @Schema(description = "登录凭证(会话Key)")
     /** WX会话密钥 */

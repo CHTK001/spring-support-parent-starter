@@ -25,15 +25,15 @@ import java.util.Comparator;
 import java.util.List;
 
 /**
-   * rpc资源Bean
- * <p>
- * 通过注入的 {@link RpcClient}（按协议类型 SPI 创建）获得远程服务代理，
- * 不耦合任何具体协议实现。
- * </p>
- *
-   * @版本 1.0.0
- * @since 2024/04/07
- * @author CH
+* rpc资源Bean
+* <p>
+* 通过注入的 {@link RpcClient}（按协议类型 SPI 创建）获得远程服务代理，
+* 不耦合任何具体协议实现。
+* </p>
+*
+* @版本 1.0.0
+* @since 2024/04/07
+* @author CH
  */
 @Getter
 @Setter
@@ -66,9 +66,9 @@ public class RpcResourceBean<T> implements FactoryBean<T>, ApplicationContextAwa
     private RpcClient rpcClient;
 
     /**
-      * 获取 标识
-     *
-     * @return ID
+    * 获取 标识
+    *
+    * @return ID
      */
     public String getId() {
         return id;
@@ -79,9 +79,9 @@ public class RpcResourceBean<T> implements FactoryBean<T>, ApplicationContextAwa
     public T getObject() throws Exception {
         if (interfaceClass == null) {
             /**
-             * illegal状态异常。
-             * @param initialized" initialized"
-             * @return illegal状态异常的结果
+            * illegal状态异常。
+            * @param initialized" initialized"
+            * @return illegal状态异常的结果
              */
             throw new IllegalStateException("The interface class of ReferenceBean is not initialized");
         }
@@ -89,10 +89,10 @@ public class RpcResourceBean<T> implements FactoryBean<T>, ApplicationContextAwa
     }
 
     /**
-     * 将拦截器链（{@link RpcInterceptor}，如方法级指标统计）包装到远程调用代理外层。
-     *
-     * @param target 协议实现的远程代理对象
-     * @return 包装后的代理对象；无拦截器时返回原对象
+    * 将拦截器链（{@link RpcInterceptor}，如方法级指标统计）包装到远程调用代理外层。
+    *
+    * @param target 协议实现的远程代理对象
+    * @return 包装后的代理对象；无拦截器时返回原对象
      */
     private T intercept(T target) {
         List<RpcInterceptor> interceptors = applicationContext.getBeanProvider(RpcInterceptor.class)
@@ -105,14 +105,14 @@ public class RpcResourceBean<T> implements FactoryBean<T>, ApplicationContextAwa
     }
 
     /**
-     * 按拦截器链执行一次远程调用（前置 / 调用 / 后置 / 异常 / 完成）。
-     *
-     * @param target       远程代理对象
-     * @param method       调用方法
-     * @param args         调用参数
-     * @param interceptors 拦截器链（已按 订单 排序）
-     * @return 调用结果
-     * @throws Throwable 远程调用或业务异常
+    * 按拦截器链执行一次远程调用（前置 / 调用 / 后置 / 异常 / 完成）。
+    *
+    * @param target       远程代理对象
+    * @param method       调用方法
+    * @param args         调用参数
+    * @param interceptors 拦截器链（已按 订单 排序）
+    * @return 调用结果
+    * @throws Throwable 远程调用或业务异常
      */
     private Object invokeWithInterceptors(Object target, Method method, Object[] args,
                                           List<RpcInterceptor> interceptors) throws Throwable {
@@ -131,9 +131,9 @@ public class RpcResourceBean<T> implements FactoryBean<T>, ApplicationContextAwa
                     method.getReturnType(), method.getParameterTypes());
             if (handle == null) {
                 /**
-                 * illegal状态异常。
-                 * @param target.getClass( Target.获取类(
-                 * @return illegal状态异常的结果
+                * illegal状态异常。
+                * @param target.getClass( Target.获取类(
+                * @return illegal状态异常的结果
                  */
                 throw new IllegalStateException("No such RPC method: " + target.getClass().getName()
                         + "." + method.getName());
@@ -191,9 +191,9 @@ public class RpcResourceBean<T> implements FactoryBean<T>, ApplicationContextAwa
 
         if (getId() == null || getId().isEmpty()) {
             /**
-             * illegal状态异常。
-             * @param empty" 空"
-             * @return illegal状态异常的结果
+            * illegal状态异常。
+            * @param empty" 空"
+            * @return illegal状态异常的结果
              */
             throw new IllegalStateException("The id of ReferenceBean cannot be empty");
         }
@@ -202,9 +202,9 @@ public class RpcResourceBean<T> implements FactoryBean<T>, ApplicationContextAwa
         this.interfaceName = (String) beanDefinition.getAttribute(RpcAttribute.INTERFACE_NAME);
         if (this.interfaceClass == null) {
             /**
-             * illegal状态异常。
-             * @param initialized" initialized"
-             * @return illegal状态异常的结果
+            * illegal状态异常。
+            * @param initialized" initialized"
+            * @return illegal状态异常的结果
              */
             throw new IllegalStateException("The interface class of ReferenceBean is not initialized");
         }
@@ -217,9 +217,9 @@ public class RpcResourceBean<T> implements FactoryBean<T>, ApplicationContextAwa
     }
 
     /**
-     * 获取Bean工厂
-     *
-     * @return 获取Bean工厂的结果
+    * 获取Bean工厂
+    *
+    * @return 获取Bean工厂的结果
      */
     private ConfigurableListableBeanFactory getBeanFactory() {
         return (ConfigurableListableBeanFactory) applicationContext.getAutowireCapableBeanFactory();

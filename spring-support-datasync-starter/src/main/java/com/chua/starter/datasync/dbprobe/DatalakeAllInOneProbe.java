@@ -28,26 +28,26 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
-   * 数据湖 全链路探针：服务端 生命周期 + Pipeline CRUD + 4 Sink 写入 + Envelope 追踪。
- *
- * <p>验证项（12 项）：
- * <ol>
- *   <li>PipelineManager CRUD（save/get/delete/ids）</li>
- *   <li>PipelineEngine 执行（单 Sink）</li>
- *   <li>PipelineEngine 执行（多 Sink）</li>
- *   <li>LogSink 写入</li>
- *   <li>StatisticSink 写入</li>
- *   <li>RealTimeSink 写入</li>
- *   <li>JdbcSink 写入</li>
- *   <li>DataEnvelope trace 追踪</li>
- *   <li>DataEnvelope state 流转</li>
- *   <li>DataEnvelope isLog 判定</li>
- *   <li>SinkManager start/stop</li>
- *   <li>DatalakeServer start/stop 生命周期</li>
- * </ol>
- *
- * @author CH
- * @since 4.0.0.42
+* 数据湖 全链路探针：服务端 生命周期 + Pipeline CRUD + 4 Sink 写入 + Envelope 追踪。
+*
+* <p>验证项（12 项）：
+* <ol>
+*   <li>PipelineManager CRUD（save/get/delete/ids）</li>
+*   <li>PipelineEngine 执行（单 Sink）</li>
+*   <li>PipelineEngine 执行（多 Sink）</li>
+*   <li>LogSink 写入</li>
+*   <li>StatisticSink 写入</li>
+*   <li>RealTimeSink 写入</li>
+*   <li>JdbcSink 写入</li>
+*   <li>DataEnvelope trace 追踪</li>
+*   <li>DataEnvelope state 流转</li>
+*   <li>DataEnvelope isLog 判定</li>
+*   <li>SinkManager start/stop</li>
+*   <li>DatalakeServer start/stop 生命周期</li>
+* </ol>
+*
+* @author CH
+* @since 4.0.0.42
  */
 public final class DatalakeAllInOneProbe {
 
@@ -64,10 +64,10 @@ public final class DatalakeAllInOneProbe {
     private static final CopyOnWriteArrayList<String> WRITE_LOG = new CopyOnWriteArrayList<>();
 
     /**
-     * 入口。
-     *
-     * @param args 命令行参数
-     * @throws Exception 异常
+    * 入口。
+    *
+    * @param args 命令行参数
+    * @throws Exception 异常
      */
     public static void main(String[] args) throws Exception {
         Files.createDirectories(WORK_DIR);
@@ -240,10 +240,10 @@ public final class DatalakeAllInOneProbe {
     }
 
     /**
-     * 断言检查。
-     *
-     * @param name  检查项名称
-     * @param check 检查逻辑
+    * 断言检查。
+    *
+    * @param name  检查项名称
+    * @param check 检查逻辑
      */
     private static void check(String name, java.util.function.BooleanSupplier check) {
         try {

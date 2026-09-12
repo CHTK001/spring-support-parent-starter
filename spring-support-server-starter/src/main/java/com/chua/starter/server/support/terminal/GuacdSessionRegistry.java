@@ -14,15 +14,15 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * guacd 会话注册表
- * <p>
-   * 以 tunnelid 为键集中管理全部在线远控会话，提供注册、查找、
- * 主动关闭与空闲扫描能力。容器使用 {@link ConcurrentHashMap}
- * 保证多连接并发安全。
- * </p>
- *
- * @author CH
- * @since 4.0.0.42
+* guacd 会话注册表
+* <p>
+* 以 tunnelid 为键集中管理全部在线远控会话，提供注册、查找、
+* 主动关闭与空闲扫描能力。容器使用 {@link ConcurrentHashMap}
+* 保证多连接并发安全。
+* </p>
+*
+* @author CH
+* @since 4.0.0.42
  */
 @Slf4j
 @Component
@@ -35,9 +35,9 @@ public class GuacdSessionRegistry {
     private final Map<Long, String> sessionRecordIndex = new ConcurrentHashMap<>();
 
     /**
-     * 注册会话
-     *
-     * @param session 会话
+    * 注册会话
+    *
+    * @param session 会话
      */
     public void register(GuacdSession session) {
         sessions.put(session.getTunnelId(), session);
@@ -47,10 +47,10 @@ public class GuacdSessionRegistry {
     }
 
     /**
-      * 按 WS 会话 标识 查找会话
-     *
-     * @param wsSessionId 浏览器 WS 会话 标识
-     * @return 会话，不存在时返回 空
+    * 按 WS 会话 标识 查找会话
+    *
+    * @param wsSessionId 浏览器 WS 会话 标识
+    * @return 会话，不存在时返回 空
      */
     public GuacdSession findByWsSessionId(String wsSessionId) {
         for (GuacdSession session : sessions.values()) {
@@ -62,11 +62,11 @@ public class GuacdSessionRegistry {
     }
 
     /**
-      * 按审计记录 标识 强制关闭会话
-     *
-     * @param recordId 审计记录 标识
-     * @param reason   关闭原因
-     * @return true 表示存在会话并已触发关闭
+    * 按审计记录 标识 强制关闭会话
+    *
+    * @param recordId 审计记录 标识
+    * @param reason   关闭原因
+    * @return true 表示存在会话并已触发关闭
      */
     public boolean closeByRecordId(Long recordId, String reason) {
         String tunnelId = sessionRecordIndex.get(recordId);
@@ -79,22 +79,22 @@ public class GuacdSessionRegistry {
             return false;
         }
         /**
-         * 关闭。
-         * @param session 会话
-         * @param reason ReasonMLmlml
+        * 关闭。
+        * @param session 会话
+        * @param reason ReasonMLmlml
          */
         close(session, reason);
         return true;
     }
 
     /**
-     * 关闭指定会话并从注册表移除
-     * <p>
-      * 幂等：重复调用无副作用。关闭顺序：guacd 套接字 -> 浏览器 WS。
-     * </p>
-     *
-     * @param session 会话
-     * @param reason  关闭原因（写入审计）
+    * 关闭指定会话并从注册表移除
+    * <p>
+    * 幂等：重复调用无副作用。关闭顺序：guacd 套接字 -> 浏览器 WS。
+    * </p>
+    *
+    * @param session 会话
+    * @param reason  关闭原因（写入审计）
      */
     public void close(GuacdSession session, String reason) {
         if (!session.markClosed()) {
@@ -124,10 +124,10 @@ public class GuacdSessionRegistry {
     }
 
     /**
-     * 扫描并关闭空闲超时会话
-     *
-     * @param idleMinutes 最大空闲分钟数
-     * @return 本次关闭的会话数
+    * 扫描并关闭空闲超时会话
+    *
+    * @param idleMinutes 最大空闲分钟数
+    * @return 本次关闭的会话数
      */
     public int sweepIdle(int idleMinutes) {
         List<GuacdSession> idleSessions = new ArrayList<>();
@@ -139,9 +139,9 @@ public class GuacdSessionRegistry {
         }
         for (GuacdSession session : idleSessions) {
             /**
-             * 关闭。
-             * @param session 会话
-             * @param "空闲超时" "空闲超时"
+            * 关闭。
+            * @param session 会话
+            * @param "空闲超时" "空闲超时"
              */
             close(session, "空闲超时");
         }
@@ -149,28 +149,28 @@ public class GuacdSessionRegistry {
     }
 
     /**
-     * 当前在线会话列表快照
-     *
-     * @return 会话集合
+    * 当前在线会话列表快照
+    *
+    * @return 会话集合
      */
     public List<GuacdSession> snapshot() {
         return new ArrayList<>(sessions.values());
     }
 
     /**
-     * 当前在线会话数量
-     *
-     * @return 数量
+    * 当前在线会话数量
+    *
+    * @return 数量
      */
     public int size() {
         return sessions.size();
     }
 
     /**
-     * 判断 WS 会话是否仍属于某个活跃 guacd 会话
-     *
-     * @param wsSession WS 会话
-     * @return 是否活跃
+    * 判断 WS 会话是否仍属于某个活跃 guacd 会话
+    *
+    * @param wsSession WS 会话
+    * @return 是否活跃
      */
     public boolean isTracked(WebSocketSession wsSession) {
         return findByWsSessionId(wsSession.getId()) != null;

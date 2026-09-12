@@ -16,12 +16,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
-   * 灰度规则矩阵真实测试：覆盖 {@code @ApiGray} 除 用户 名单外的全部匹配维度
-   * （角色 角色 / ips IP / 头部 请求头 / rule spel / percentage 百分比），
- * 命中返回 {@code X-Gray-Hit: true} 响应头。
- *
- * @author CH
- * @since 2026/09/04
+* 灰度规则矩阵真实测试：覆盖 {@code @ApiGray} 除 用户 名单外的全部匹配维度
+* （角色 角色 / ips IP / 头部 请求头 / rule spel / percentage 百分比），
+* 命中返回 {@code X-Gray-Hit: true} 响应头。
+*
+* @author CH
+* @since 2026/09/04
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -32,10 +32,10 @@ class GrayRuleMatrixTest {
     private MockMvc mockMvc; // mockmvc
 
     /**
-     * 会话。
-     * @param username 用户名
-     * @param roles 角色
-     * @return 会话的结果
+    * 会话。
+    * @param username 用户名
+    * @param roles 角色
+    * @return 会话的结果
      */
     private static MockHttpSession session(String username, List<String> roles) {
         MockHttpSession session = new MockHttpSession();

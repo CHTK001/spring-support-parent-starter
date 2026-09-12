@@ -5,9 +5,9 @@ import lombok.Getter;
 import java.math.BigDecimal;
 
 /**
- * 订单创建事件
- * @author CH
- * @since 4.0.0
+* 订单创建事件
+* @author CH
+* @since 4.0.0
  */
 @Getter
 public class OrderCreatedEvent extends PaymentEvent {
@@ -28,26 +28,26 @@ public class OrderCreatedEvent extends PaymentEvent {
     private final String subject;
 
     /**
-      * 创建 订单创建事件 实例
-     * @param source 源
-     * @param tenantId tenantid
-     * @param merchantId merchantid
-     * @param orderId 订单标识
-     * @param orderNo 订单no
-     * @param userId 用户标识
-     * @param orderAmount 订单amount
-     * @param channelType 通道类型
-     * @param channelSubType 通道sub类型
-     * @param subject 主题
+    * 创建 订单创建事件 实例
+    * @param source 源
+    * @param tenantId tenantid
+    * @param merchantId merchantid
+    * @param orderId 订单标识
+    * @param orderNo 订单no
+    * @param userId 用户标识
+    * @param orderAmount 订单amount
+    * @param channelType 通道类型
+    * @param channelSubType 通道sub类型
+    * @param subject 主题
      */
     public OrderCreatedEvent(Object source, Long tenantId, Long merchantId, Long orderId, String orderNo,
                              Long userId, BigDecimal orderAmount, String channelType, String channelSubType, String subject) {
         /**
-         * 父。
-         * @param source 源
-         * @param "ORDER_CREATED" "订单_创建"
-         * @param tenantId tenantid
-         * @param merchantId merchantid
+        * 父。
+        * @param source 源
+        * @param "ORDER_CREATED" "订单_创建"
+        * @param tenantId tenantid
+        * @param merchantId merchantid
          */
         super(source, "ORDER_CREATED", tenantId, merchantId);
         this.orderId = orderId;

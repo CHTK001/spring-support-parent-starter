@@ -13,31 +13,31 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * 飞书多维表格（Lark Bitable）需求数据源提供方。
- *
- * <p>从飞书多维表格的一个 Sheet 中读取需求条目，按行写入本地 {@code sys_ai_requirement} 表。
- * 支持的配置字段：
- * <ul>
- *   <li>{@code app_id}         - 飞书应用 App ID</li>
- *   <li>{@code app_secret}    - 飞书应用 App Secret</li>
- *   <li>{@code table_id}      - 多维表格 Table ID</li>
- *   <li>{@code view_id}       - 视图 ID（可选，默认第一个视图）</li>
- *   <li>{@code fields}        - 列名映射数组（可选）</li>
- * </ul>
- * </p>
- *
- * <p>字段映射约定（可通过 config.fields 自定义）：
- * <ul>
- *   <li>{@code title}        → 需求标题（必填）</li>
- *   <li>{@code content}      → 需求内容（可选）</li>
- *   <li>{@code tag}          → 标签（可选，默认 "lark"）</li>
- *   <li>{@code status}       → 状态（可选，映射：未开始=pending / 进行中=in_progress / 已完成=done / 已取消=cancelled）</li>
- *   <li>{@code order_key}    → 执行次序（可选）</li>
- * </ul>
- * </p>
- *
- * @since 4.0.0.42
- * @author CH
+* 飞书多维表格（Lark Bitable）需求数据源提供方。
+*
+* <p>从飞书多维表格的一个 Sheet 中读取需求条目，按行写入本地 {@code sys_ai_requirement} 表。
+* 支持的配置字段：
+* <ul>
+*   <li>{@code app_id}         - 飞书应用 App ID</li>
+*   <li>{@code app_secret}    - 飞书应用 App Secret</li>
+*   <li>{@code table_id}      - 多维表格 Table ID</li>
+*   <li>{@code view_id}       - 视图 ID（可选，默认第一个视图）</li>
+*   <li>{@code fields}        - 列名映射数组（可选）</li>
+* </ul>
+* </p>
+*
+* <p>字段映射约定（可通过 config.fields 自定义）：
+* <ul>
+*   <li>{@code title}        → 需求标题（必填）</li>
+*   <li>{@code content}      → 需求内容（可选）</li>
+*   <li>{@code tag}          → 标签（可选，默认 "lark"）</li>
+*   <li>{@code status}       → 状态（可选，映射：未开始=pending / 进行中=in_progress / 已完成=done / 已取消=cancelled）</li>
+*   <li>{@code order_key}    → 执行次序（可选）</li>
+* </ul>
+* </p>
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Slf4j
 @Component
@@ -98,10 +98,10 @@ public class LarkRequirementDataSource implements IRequirementDataSource {
     }
 
     /**
-     * 测试与数据源的连接是否可用。
-     *
-     * @param config 数据源配置
-     * @return 连接成功返回 true
+    * 测试与数据源的连接是否可用。
+    *
+    * @param config 数据源配置
+    * @return 连接成功返回 true
      */
     @Override
     public boolean testConnection(Map<String, Object> config) {
@@ -123,9 +123,9 @@ public class LarkRequirementDataSource implements IRequirementDataSource {
     }
 
     /**
-      * 使用 app_标识 + app_secret 获取 tenant_access_令牌。
-     * @param config 配置
-     * @return 获取access令牌的结果
+    * 使用 app_标识 + app_secret 获取 tenant_access_令牌。
+    * @param config 配置
+    * @return 获取access令牌的结果
      */
     private String getAccessToken(Map<String, Object> config) {
         String appId = getString(config, "app_id");
@@ -164,11 +164,11 @@ public class LarkRequirementDataSource implements IRequirementDataSource {
     }
 
     /**
-     * 分页获取多维表格记录。
-     *
-     * @param accessToken 访问令牌
-     * @param tableId     多维表格 ID
-     * @return 记录列表
+    * 分页获取多维表格记录。
+    *
+    * @param accessToken 访问令牌
+    * @param tableId     多维表格 ID
+    * @return 记录列表
      */
     @SuppressWarnings("unchecked")
     private List<Map<String, Object>> fetchRecords(String accessToken, String tableId) {
@@ -239,24 +239,24 @@ public class LarkRequirementDataSource implements IRequirementDataSource {
         return String.valueOf(val);
     }
     /**
-     * extract字段映射。
-     * @param record record
-     * @return extract字段映射的结果
+    * extract字段映射。
+    * @param record record
+    * @return extract字段映射的结果
      */
     private Map<String, Object> extractFieldMap(Map<String, Object> record) {
         /**
-         * 映射状态。
-         * @param raw raw
-         * @return 映射状态的结果
-         * @param map 映射
-         * @param key 键
+        * 映射状态。
+        * @param raw raw
+        * @return 映射状态的结果
+        * @param map 映射
+        * @param key 键
          */
         Object fields = record.get("fields");
         return fields instanceof Map ? (Map<String, Object>) fields : new LinkedHashMap<>();
     /**
-     * 映射状态。
-     * @param raw raw
-     * @return 映射状态的结果
+    * 映射状态。
+    * @param raw raw
+    * @return 映射状态的结果
      */
     }
 
@@ -279,11 +279,11 @@ public class LarkRequirementDataSource implements IRequirementDataSource {
         Object v = map.get(key);
         return v != null ? v.toString() : null;
     /**
-     * 获取字符串。
-     * @param map 映射
-     * @param key 键
-     * @param defaultValue 默认值
-     * @return 获取字符串的结果
+    * 获取字符串。
+    * @param map 映射
+    * @param key 键
+    * @param defaultValue 默认值
+    * @return 获取字符串的结果
      */
     }
 
@@ -291,10 +291,10 @@ public class LarkRequirementDataSource implements IRequirementDataSource {
         Object v = map.get(key);
         return v != null ? v.toString() : defaultValue;
     /**
-      * escapejson。
-     * @param s s
-     * @return escapeJson的结果
-     * @param json json
+    * escapejson。
+    * @param s s
+    * @return escapeJson的结果
+    * @param json json
      */
     }
 

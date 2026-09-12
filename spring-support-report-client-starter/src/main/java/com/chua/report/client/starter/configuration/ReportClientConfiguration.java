@@ -36,13 +36,13 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.core.env.Environment;
 
 /**
- * 上报客户端配置
- * <p>
-   * 依赖 spring-支持-同步-启动 提供的 同步客户端
- * </p>
- *
- * @since 2024/12/05
- * @author CH
+* 上报客户端配置
+* <p>
+* 依赖 spring-支持-同步-启动 提供的 同步客户端
+* </p>
+*
+* @since 2024/12/05
+* @author CH
  */
 @Slf4j
 @AutoConfiguration
@@ -65,11 +65,11 @@ public class ReportClientConfiguration implements ApplicationContextAware {
     private ApplicationContext applicationContext;
 
     /**
-      * 创建 report客户端配置 实例
-     * @param syncClient 同步客户端
-     * @param environment 环境
-     * @param reportProperties report属性
-     * @param featureManagerProvider 特征管理器提供者
+    * 创建 report客户端配置 实例
+    * @param syncClient 同步客户端
+    * @param environment 环境
+    * @param reportProperties report属性
+    * @param featureManagerProvider 特征管理器提供者
      */
     public ReportClientConfiguration(SyncClient syncClient, Environment environment,
                                       ReportProperties reportProperties,
@@ -200,28 +200,28 @@ public class ReportClientConfiguration implements ApplicationContextAware {
     }
 
     /**
-      * 注册 作业 注解扫描器
-     * <p>
-      * 自动扫描 @作业 注解并注册为任务处理器
-     * </p>
-     *
-     * @return JobAnnotationScanner
+    * 注册 作业 注解扫描器
+    * <p>
+    * 自动扫描 @作业 注解并注册为任务处理器
+    * </p>
+    *
+    * @return JobAnnotationScanner
      */
     @Bean
     @ConditionalOnMissingBean
     public JobAnnotationScanner jobAnnotationScanner() {
         /**
-         * 作业注解scanner。
-         * @return 作业注解scanner的结果
+        * 作业注解scanner。
+        * @return 作业注解scanner的结果
          */
         return new JobAnnotationScanner();
     }
 
     @Bean
     /**
-     * report客户端服务信息contributor
-     *
-     * @return report客户端服务信息contributor的结果
+    * report客户端服务信息contributor
+    *
+    * @return report客户端服务信息contributor的结果
      */
     public ServiceInfoContributor reportClientServiceInfoContributor() {
         return registry -> {

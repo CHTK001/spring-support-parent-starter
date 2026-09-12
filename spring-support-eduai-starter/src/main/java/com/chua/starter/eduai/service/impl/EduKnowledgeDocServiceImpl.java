@@ -30,23 +30,23 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * 知识库文档服务实现
- *
- * @since 4.0.0.42
- * @author CH
+* 知识库文档服务实现
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Slf4j
 @Service
 public class EduKnowledgeDocServiceImpl extends ServiceImpl<EduKnowledgeDocMapper, EduKnowledgeDoc> implements IEduKnowledgeDocService {
 
     /**
-     * RAG 客户端管理器（可选注入，未引入 AI 模块时自动降级为直接入库）
+    * RAG 客户端管理器（可选注入，未引入 AI 模块时自动降级为直接入库）
      */
     private final ObjectProvider<RagClientManager> ragClientManagerProvider;
 
     /**
-      * 创建 edu知识doc服务impl 实例
-     * @param ragClientManagerProvider rag客户端管理器提供者
+    * 创建 edu知识doc服务impl 实例
+    * @param ragClientManagerProvider rag客户端管理器提供者
      */
     public EduKnowledgeDocServiceImpl(ObjectProvider<RagClientManager> ragClientManagerProvider) {
         this.ragClientManagerProvider = ragClientManagerProvider;
@@ -88,17 +88,17 @@ public class EduKnowledgeDocServiceImpl extends ServiceImpl<EduKnowledgeDocMappe
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-     * uploaddoc
-     *
-     * @param dto dto
-     * @return uploadDoc的结果
+    * uploaddoc
+    *
+    * @param dto dto
+    * @return uploadDoc的结果
      */
     public Long uploadDoc(KnowledgeDocUploadDTO dto) {
         if (!StringUtils.hasText(dto.getFilePath())) {
             /**
-             * 业务异常。
-             * @param "文件路径不能为空" "文件路径不能为空"
-             * @return 业务异常的结果
+            * 业务异常。
+            * @param "文件路径不能为空" "文件路径不能为空"
+            * @return 业务异常的结果
              */
             throw new BusinessException("文件路径不能为空");
         }
@@ -121,10 +121,10 @@ public class EduKnowledgeDocServiceImpl extends ServiceImpl<EduKnowledgeDocMappe
     }
 
     /**
-     * 调用 RAG 向量化服务对文档进行切片与向量存储。
-     *
-     * @param dto 上传文档信息
-     * @return 向量存储ID，未接入 RAG 或向量化失败时返回 空
+    * 调用 RAG 向量化服务对文档进行切片与向量存储。
+    *
+    * @param dto 上传文档信息
+    * @return 向量存储ID，未接入 RAG 或向量化失败时返回 空
      */
     private String vectorize(KnowledgeDocUploadDTO dto) {
         RagClientManager manager = ragClientManagerProvider.getIfAvailable();
@@ -155,10 +155,10 @@ public class EduKnowledgeDocServiceImpl extends ServiceImpl<EduKnowledgeDocMappe
     }
 
     /**
-     * 读取文件字节（支持本地路径与 http(s) URL）。
-     *
-     * @param path 文件路径或 URL
-     * @return 文件字节，读取失败返回 空
+    * 读取文件字节（支持本地路径与 http(s) URL）。
+    *
+    * @param path 文件路径或 URL
+    * @return 文件字节，读取失败返回 空
      */
     private byte[] readFile(String path) {
         if (!StringUtils.hasText(path)) {
@@ -168,8 +168,8 @@ public class EduKnowledgeDocServiceImpl extends ServiceImpl<EduKnowledgeDocMappe
             String lower = path.toLowerCase();
             if (lower.startsWith("http://") || lower.startsWith("https://")) {
                 /**
-                 * 尝试。
-                 * @param URI.create(path URI.创建(路径
+                * 尝试。
+                * @param URI.create(path URI.创建(路径
                  */
                 try (InputStream in = URI.create(path).toURL().openStream()) {
                     return in.readAllBytes();
@@ -212,18 +212,18 @@ public class EduKnowledgeDocServiceImpl extends ServiceImpl<EduKnowledgeDocMappe
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-     * 删除Doc
-     *
-     * @param id 标识
-     * @return 删除doc的结果
+    * 删除Doc
+    *
+    * @param id 标识
+    * @return 删除doc的结果
      */
     public boolean deleteDoc(Long id) {
         EduKnowledgeDoc exists = baseMapper.selectById(id);
         if (exists == null) {
             /**
-             * 业务异常。
-             * @param "文档不存在" "文档不存在"
-             * @return 业务异常的结果
+            * 业务异常。
+            * @param "文档不存在" "文档不存在"
+            * @return 业务异常的结果
              */
             throw new BusinessException("文档不存在");
         }
@@ -236,10 +236,10 @@ public class EduKnowledgeDocServiceImpl extends ServiceImpl<EduKnowledgeDocMappe
     }
 
     /**
-     * 实体转 VO
-     *
-     * @param entity 实体
-     * @return VO
+    * 实体转 VO
+    *
+    * @param entity 实体
+    * @return VO
      */
     private KnowledgeDocVO toVO(EduKnowledgeDoc entity) {
         KnowledgeDocVO vo = new KnowledgeDocVO();

@@ -3,36 +3,36 @@ package com.chua.starter.datasource.support.graph;
 import lombok.Data;
 
 /**
- * 数据库存储过程 / 函数元数据
- *
- * @since 2026/8/5
- * @author CH
+* 数据库存储过程 / 函数元数据
+*
+* @since 2026/8/5
+* @author CH
  */
 @Data
 public class ProcedureInfo {
 
     /**
-     * 名称
+    * 名称
      */
     private String name;
 
     /**
-     * 类型：PROCEDURE / FUNCTION
+    * 类型：PROCEDURE / FUNCTION
      */
     private String type;
 
     /**
-      * 所属 模式/Catalog
+    * 所属 模式/Catalog
      */
     private String schema;
 
     /**
-     * 简短备注
+    * 简短备注
      */
     private String remark;
 
     /**
-      * 关联的表名（如能从定义中识别，未知时为 空）
+    * 关联的表名（如能从定义中识别，未知时为 空）
      */
     private String tableName;
 }

@@ -34,22 +34,22 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * 告警引擎服务实现
- * <p>
- * 评估流程（参考 orion-visor 思想，结构自研）：
- * <ol>
- *   <li>规则全量缓存于内存（metricName -> 规则组），CRUD 后手动 reload；</li>
- *   <li>evaluate：目标限定规则优先于全局规则，命中即做阈值比较
- *       （GT/GE/EQ/LE/LT）；</li>
- *   <li>连续触发计数：内存计数器，未超限即清零，累计达到
-   * consecutive数量 才进入静默判定；</li>
- *   <li>静默期：Redis SETNX + TTL，静默窗口内不重复告警；</li>
- *   <li>真实触发：落事件表 + 遍历全部 NotifySender 渠道投递。</li>
- * </ol>
- * </p>
- *
- * @author CH
- * @since 4.0.0.42
+* 告警引擎服务实现
+* <p>
+* 评估流程（参考 orion-visor 思想，结构自研）：
+* <ol>
+*   <li>规则全量缓存于内存（metricName -> 规则组），CRUD 后手动 reload；</li>
+*   <li>evaluate：目标限定规则优先于全局规则，命中即做阈值比较
+*       （GT/GE/EQ/LE/LT）；</li>
+*   <li>连续触发计数：内存计数器，未超限即清零，累计达到
+* consecutive数量 才进入静默判定；</li>
+*   <li>静默期：Redis SETNX + TTL，静默窗口内不重复告警；</li>
+*   <li>真实触发：落事件表 + 遍历全部 NotifySender 渠道投递。</li>
+* </ol>
+* </p>
+*
+* @author CH
+* @since 4.0.0.42
  */
 @Slf4j
 @Service
@@ -90,9 +90,9 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
     private final Map<String, AtomicInteger> consecutiveCounter = new ConcurrentHashMap<>();
 
     /**
-      * Redis 不可用时的内存静默期降级表：silence钥匙 → 静默截止 轮次 毫秒。
-     * <p>独立部署(无 Redis)或 Redis 短暂不可用时, 以此表完成 SETNX+TTL 的等价语义,
-     * 保证告警事件仍能落库, 而非被异常吞掉导致一条告警都不记录。</p>
+    * Redis 不可用时的内存静默期降级表：silence钥匙 → 静默截止 轮次 毫秒。
+    * <p>独立部署(无 Redis)或 Redis 短暂不可用时, 以此表完成 SETNX+TTL 的等价语义,
+    * 保证告警事件仍能落库, 而非被异常吞掉导致一条告警都不记录。</p>
      */
     private final Map<String, Long> memorySilence = new ConcurrentHashMap<>();
 
@@ -100,12 +100,12 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
     private final MsMonitorAlarmMaintenanceWindowMapper maintenanceWindowMapper;
 
     /**
-     * 启动时加载规则缓存
+    * 启动时加载规则缓存
      */
     @PostConstruct
     public void init() {
         /**
-         * reload。
+        * reload。
          */
         reload();
     }
@@ -146,12 +146,12 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
             consecutiveCounter.remove(key);
             try {
                 /**
-                  * fireifnotsilent。
-                 * @param rule rule
-                 * @param monitorId 监控标识
-                 * @param monitorName 监控名称
-                 * @param metricName 指标名称
-                 * @param current 当前
+                * fireifnotsilent。
+                * @param rule rule
+                * @param monitorId 监控标识
+                * @param monitorName 监控名称
+                * @param metricName 指标名称
+                * @param current 当前
                  */
                 fireIfNotSilent(rule, monitorId, monitorName, metricName, current);
             } catch (Exception e) {
@@ -192,9 +192,9 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
     @Override
     @CacheEvict(cacheNames = {"monitor:alarm:policies", "monitor:alarm:rules"}, allEntries = true)
     /**
-     * 创建policy。
-     * @param policy policy
-     * @return 创建policy的结果
+    * 创建policy。
+    * @param policy policy
+    * @return 创建policy的结果
      */
     public ReturnResult<MsMonitorAlarmPolicy> createPolicy(MsMonitorAlarmPolicy policy) {
         if (policy == null || isBlank(policy.getMsMonitorAlarmPolicyName())) {
@@ -209,10 +209,10 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
     @Transactional(rollbackFor = Exception.class)
     @CacheEvict(cacheNames = {"monitor:alarm:policies", "monitor:alarm:rules"}, allEntries = true)
     /**
-     * 更新policy。
-     * @param id 标识
-     * @param policy policy
-     * @return 更新policy的结果
+    * 更新policy。
+    * @param id 标识
+    * @param policy policy
+    * @return 更新policy的结果
      */
     public ReturnResult<MsMonitorAlarmPolicy> updatePolicy(Long id, MsMonitorAlarmPolicy policy) {
         MsMonitorAlarmPolicy exists = policyMapper.selectById(id);
@@ -230,7 +230,7 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
         }
         policyMapper.updateById(exists);
         /**
-         * reload。
+        * reload。
          */
         reload();
         return ReturnResult.ok(exists);
@@ -240,16 +240,16 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
     @Transactional(rollbackFor = Exception.class)
     @CacheEvict(cacheNames = {"monitor:alarm:policies", "monitor:alarm:rules"}, allEntries = true)
     /**
-     * 删除policy。
-     * @param id 标识
-     * @return 删除policy的结果
+    * 删除policy。
+    * @param id 标识
+    * @return 删除policy的结果
      */
     public ReturnResult<Void> deletePolicy(Long id) {
         ruleMapper.delete(new LambdaQueryWrapper<MsMonitorAlarmRule>()
                 .eq(MsMonitorAlarmRule::getMsMonitorAlarmRulePolicyId, id));
         policyMapper.deleteById(id);
         /**
-         * reload。
+        * reload。
          */
         reload();
         return ReturnResult.success();
@@ -258,8 +258,8 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
     @Override
     @Cacheable(cacheNames = "monitor:alarm:policies", key = "'policies'")
     /**
-     * 列表policies。
-     * @return 列表policies的结果
+    * 列表policies。
+    * @return 列表policies的结果
      */
     public ReturnResult<List<MsMonitorAlarmPolicy>> listPolicies() {
         return ReturnResult.list(policyMapper.selectList(
@@ -271,9 +271,9 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
     @Override
     @CacheEvict(cacheNames = {"monitor:alarm:rules", "monitor:alarm:events"}, allEntries = true)
     /**
-     * 创建rule。
-     * @param rule rule
-     * @return 创建rule的结果
+    * 创建rule。
+    * @param rule rule
+    * @return 创建rule的结果
      */
     public ReturnResult<MsMonitorAlarmRule> createRule(MsMonitorAlarmRule rule) {
         var error = validateRule(rule);
@@ -285,7 +285,7 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
         rule.setMsMonitorAlarmRuleSilenceMinutes(rule.getMsMonitorAlarmRuleSilenceMinutes() == null ? 10 : rule.getMsMonitorAlarmRuleSilenceMinutes());
         ruleMapper.insert(rule);
         /**
-         * reload。
+        * reload。
          */
         reload();
         return ReturnResult.ok(rule);
@@ -294,10 +294,10 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
     @Override
     @CacheEvict(cacheNames = {"monitor:alarm:rules", "monitor:alarm:events"}, allEntries = true)
     /**
-     * 更新rule。
-     * @param id 标识
-     * @param rule rule
-     * @return 更新rule的结果
+    * 更新rule。
+    * @param id 标识
+    * @param rule rule
+    * @return 更新rule的结果
      */
     public ReturnResult<MsMonitorAlarmRule> updateRule(Long id, MsMonitorAlarmRule rule) {
         MsMonitorAlarmRule exists = ruleMapper.selectById(id);
@@ -327,7 +327,7 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
         }
         ruleMapper.updateById(exists);
         /**
-         * reload。
+        * reload。
          */
         reload();
         return ReturnResult.ok(exists);
@@ -336,14 +336,14 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
     @Override
     @CacheEvict(cacheNames = {"monitor:alarm:rules", "monitor:alarm:events"}, allEntries = true)
     /**
-     * 删除rule。
-     * @param id 标识
-     * @return 删除rule的结果
+    * 删除rule。
+    * @param id 标识
+    * @return 删除rule的结果
      */
     public ReturnResult<Void> deleteRule(Long id) {
         ruleMapper.deleteById(id);
         /**
-         * reload。
+        * reload。
          */
         reload();
         return ReturnResult.success();
@@ -352,9 +352,9 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
     @Override
     @Cacheable(cacheNames = "monitor:alarm:rules", key = "#policyId != null ? 'rules:' + #policyId : 'rules:all'")
     /**
-     * 列表rules。
-     * @param policyId policyid
-     * @return 列表rules的结果
+    * 列表rules。
+    * @param policyId policyid
+    * @return 列表rules的结果
      */
     public ReturnResult<List<MsMonitorAlarmRule>> listRules(Long policyId) {
         LambdaQueryWrapper<MsMonitorAlarmRule> wrapper = new LambdaQueryWrapper<>();
@@ -402,12 +402,12 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
     // ==================== 内部逻辑 ====================
 
     /**
-     * 获取静默期「锁」。优先走 Redis SETNX+TTL；Redis 不可用时降级为 JVM 内存表,
-     * 使独立(无 Redis)部署下告警事件仍能正常落库, 而不被 Redis 异常吞掉。
-     *
-     * @param silenceKey    静默键(rule:监控)
-     * @param silenceMinutes 静默分钟
-     * @return true=首次触发(放行); false=静默期内(跳过)或获取失败(保守跳过)
+    * 获取静默期「锁」。优先走 Redis SETNX+TTL；Redis 不可用时降级为 JVM 内存表,
+    * 使独立(无 Redis)部署下告警事件仍能正常落库, 而不被 Redis 异常吞掉。
+    *
+    * @param silenceKey    静默键(rule:监控)
+    * @param silenceMinutes 静默分钟
+    * @return true=首次触发(放行); false=静默期内(跳过)或获取失败(保守跳过)
      */
     private Boolean acquireSilence(String silenceKey, int silenceMinutes) {
         // 1) 优先 Redis：可用时返回其 SETNX 结果
@@ -434,13 +434,13 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
     }
 
     /**
-     * 通过静默期判定后真实触发告警
-     *
-     * @param rule        规则
-     * @param monitorId   目标 标识
-     * @param monitorName 目标名
-     * @param metricName  指标名
-     * @param value       实际值
+    * 通过静默期判定后真实触发告警
+    *
+    * @param rule        规则
+    * @param monitorId   目标 标识
+    * @param monitorName 目标名
+    * @param metricName  指标名
+    * @param value       实际值
      */
 private void fireIfNotSilent(MsMonitorAlarmRule rule, Long monitorId, String monitorName,
                              String metricName, BigDecimal value) {            // ---- 新增：维护窗口检查 ----
@@ -554,10 +554,10 @@ private void fireIfNotSilent(MsMonitorAlarmRule rule, Long monitorId, String mon
     }
 
     /**
-     * 构建触发时的规则配置快照（JSON，仅保留判定所需的核心配置）
-     *
-     * @param rule 规则
-     * @return 快照 JSON，异常时返回 空
+    * 构建触发时的规则配置快照（JSON，仅保留判定所需的核心配置）
+    *
+    * @param rule 规则
+    * @return 快照 JSON，异常时返回 空
      */
     private String buildRuleSnapshot(MsMonitorAlarmRule rule) {
         try {
@@ -579,10 +579,10 @@ private void fireIfNotSilent(MsMonitorAlarmRule rule, Long monitorId, String mon
     }
 
     /**
-     * 校验规则参数
-     *
-     * @param rule 规则
-     * @return 校验失败结果，合法返回 空
+    * 校验规则参数
+    *
+    * @param rule 规则
+    * @return 校验失败结果，合法返回 空
      */
     private ReturnResult<MsMonitorAlarmRule> validateRule(MsMonitorAlarmRule rule) {
         if (rule == null || isBlank(rule.getMsMonitorAlarmRuleMetricName())
@@ -600,11 +600,11 @@ private void fireIfNotSilent(MsMonitorAlarmRule rule, Long monitorId, String mon
     }
 
     /**
-     * 条件命中判断
-     *
-     * @param condition 条件串
-     * @param cmp       compare转为 结果
-     * @return 是否命中
+    * 条件命中判断
+    *
+    * @param condition 条件串
+    * @param cmp       compare转为 结果
+    * @return 是否命中
      */
     private boolean conditionHit(String condition, int cmp) {
         return switch (condition == null ? "" : condition) {
@@ -618,21 +618,21 @@ private void fireIfNotSilent(MsMonitorAlarmRule rule, Long monitorId, String mon
     }
 
     /**
-     * 连击计数键
-     *
-     * @param ruleId   规则 标识
-     * @param monitorId 目标 标识
-     * @return 键
+    * 连击计数键
+    *
+    * @param ruleId   规则 标识
+    * @param monitorId 目标 标识
+    * @return 键
      */
     private String counterKey(Long ruleId, Long monitorId) {
         return ruleId + ":" + monitorId;
     }
 
 /**
-     * 空串判断
-     *
-     * @param value 待判断字符串
-     * @return 是否为空
+* 空串判断
+*
+* @param value 待判断字符串
+* @return 是否为空
      */
     private boolean isBlank(String value) {
         return value == null || value.isBlank();

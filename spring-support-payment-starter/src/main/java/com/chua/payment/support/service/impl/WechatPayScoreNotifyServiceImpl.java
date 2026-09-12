@@ -19,10 +19,10 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 /**
- * 微信支付分回调服务实现，处理微信支付分异步通知并触发订单状态变更。
- *
- * @author CH
- * @since 4.0.0.50
+* 微信支付分回调服务实现，处理微信支付分异步通知并触发订单状态变更。
+*
+* @author CH
+* @since 4.0.0.50
  */
 @Service
 public class WechatPayScoreNotifyServiceImpl extends AbstractMerchantPaymentChannel implements WechatPayScoreNotifyService {
@@ -35,12 +35,12 @@ public class WechatPayScoreNotifyServiceImpl extends AbstractMerchantPaymentChan
     private final WechatPayScoreOrderService wechatPayScoreOrderService;
 
     /**
-      * 创建 wechat薪酬score通知服务impl 实例
-     * @param merchantChannelService merchant通道服务
-     * @param objectMapper 对象映射器
-     * @param merchantChannelMapper merchant通道映射器
-     * @param providerGatewayRegistry 提供者gatewayregistry
-     * @param wechatPayScoreOrderService wechat薪酬score订单服务
+    * 创建 wechat薪酬score通知服务impl 实例
+    * @param merchantChannelService merchant通道服务
+    * @param objectMapper 对象映射器
+    * @param merchantChannelMapper merchant通道映射器
+    * @param providerGatewayRegistry 提供者gatewayregistry
+    * @param wechatPayScoreOrderService wechat薪酬score订单服务
      */
     public WechatPayScoreNotifyServiceImpl(MerchantChannelService merchantChannelService,
                                            ObjectMapper objectMapper,
@@ -48,9 +48,9 @@ public class WechatPayScoreNotifyServiceImpl extends AbstractMerchantPaymentChan
                                            PaymentProviderGatewayRegistry providerGatewayRegistry,
                                            WechatPayScoreOrderService wechatPayScoreOrderService) {
         /**
-         * 父。
-         * @param merchantChannelService merchant通道服务
-         * @param objectMapper 对象映射器
+        * 父。
+        * @param merchantChannelService merchant通道服务
+        * @param objectMapper 对象映射器
          */
         super(merchantChannelService, objectMapper);
         this.merchantChannelMapper = merchantChannelMapper;
@@ -61,17 +61,17 @@ public class WechatPayScoreNotifyServiceImpl extends AbstractMerchantPaymentChan
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-     * 处理通知
-     * @param channelId 通道标识
-     * @param outOrderNo 出订单no
-     * @param serialNumber 串行数字
-     * @param timestamp 时间戳
-     * @param nonce nonce
-     * @param signature 签名
-     * @param signType 标志类型
-     * @param body 主体
-     * @param dto dto
-     * @return 把手通知的结果
+    * 处理通知
+    * @param channelId 通道标识
+    * @param outOrderNo 出订单no
+    * @param serialNumber 串行数字
+    * @param timestamp 时间戳
+    * @param nonce nonce
+    * @param signature 签名
+    * @param signType 标志类型
+    * @param body 主体
+    * @param dto dto
+    * @return 把手通知的结果
      */
     public TencentWechatPayScoreNotifyPayload handleNotify(WechatPayScoreNotifyDTO dto) {
         MerchantChannel channel = requireEnabledWechatChannel(dto.channelId());
@@ -79,9 +79,9 @@ public class WechatPayScoreNotifyServiceImpl extends AbstractMerchantPaymentChan
                 .parsePayScoreNotify(buildWechatProperties(channel), buildWechatNotifyRequest(dto.serialNumber(), dto.timestamp(), dto.nonce(), dto.signature(), dto.signType(), dto.body()));
         if (StringUtils.hasText(dto.outOrderNo()) && StringUtils.hasText(payload.getOutOrderNo()) && !dto.outOrderNo().equals(payload.getOutOrderNo())) {
             /**
-             * 薪酬异常。
-             * @param "微信支付分回调路径订单号和报文订单号不一致" "微信支付分回调路径订单号和报文订单号不一致"
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param "微信支付分回调路径订单号和报文订单号不一致" "微信支付分回调路径订单号和报文订单号不一致"
+            * @return 薪酬异常的结果
              */
             throw new PaymentException("微信支付分回调路径订单号和报文订单号不一致");
         }
@@ -90,34 +90,34 @@ public class WechatPayScoreNotifyServiceImpl extends AbstractMerchantPaymentChan
     }
 
     /**
-     * require已启用wechat通道
-     *
-     * @param channelId 通道标识
-     * @return require已启用wechat通道的结果
+    * require已启用wechat通道
+    *
+    * @param channelId 通道标识
+    * @return require已启用wechat通道的结果
      */
     private MerchantChannel requireEnabledWechatChannel(Long channelId) {
         MerchantChannel channel = merchantChannelMapper.selectById(channelId);
         if (channel == null) {
             /**
-             * 薪酬异常。
-             * @param "支付方式不存在" "支付方式不存在"
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param "支付方式不存在" "支付方式不存在"
+            * @return 薪酬异常的结果
              */
             throw new PaymentException("支付方式不存在");
         }
         if (!"WECHAT".equalsIgnoreCase(channel.getChannelType())) {
             /**
-             * 薪酬异常。
-             * @param "支付方式类型不匹配" "支付方式类型不匹配"
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param "支付方式类型不匹配" "支付方式类型不匹配"
+            * @return 薪酬异常的结果
              */
             throw new PaymentException("支付方式类型不匹配");
         }
         if (!Integer.valueOf(ChannelStatus.ENABLED.getCode()).equals(channel.getStatus())) {
             /**
-             * 薪酬异常。
-             * @param "支付方式未启用" "支付方式未启用"
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param "支付方式未启用" "支付方式未启用"
+            * @return 薪酬异常的结果
              */
             throw new PaymentException("支付方式未启用");
         }
@@ -125,13 +125,13 @@ public class WechatPayScoreNotifyServiceImpl extends AbstractMerchantPaymentChan
     }
 
     /**
-      * 构建Wechat通知请求
-     * @param serialNumber 串行数字
-     * @param timestamp 时间戳
-     * @param nonce nonce
-     * @param signature 签名
-     * @param signType 标志类型
-     * @param body 主体
+    * 构建Wechat通知请求
+    * @param serialNumber 串行数字
+    * @param timestamp 时间戳
+    * @param nonce nonce
+    * @param signature 签名
+    * @param signType 标志类型
+    * @param body 主体
      */
     private TencentWechatNotifyRequest buildWechatNotifyRequest(String serialNumber,
                                                                 String timestamp,
@@ -150,10 +150,10 @@ public class WechatPayScoreNotifyServiceImpl extends AbstractMerchantPaymentChan
     }
 
     /**
-     * 构建wechat属性
-     *
-     * @param channel 通道
-     * @return 构建wechat属性的结果
+    * 构建wechat属性
+    *
+    * @param channel 通道
+    * @return 构建wechat属性的结果
      */
     private TencentWechatPayProperties buildWechatProperties(MerchantChannel channel) {
         TencentWechatPayProperties properties = new TencentWechatPayProperties();

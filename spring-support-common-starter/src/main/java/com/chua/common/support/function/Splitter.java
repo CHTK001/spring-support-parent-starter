@@ -6,13 +6,13 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * 字符串拆分器
- * <p>
- * 用于将字符串按指定分隔符拆分为多个部分
- * </p>
- *
- * @author CH
- * @since 4.0.0
+* 字符串拆分器
+* <p>
+* 用于将字符串按指定分隔符拆分为多个部分
+* </p>
+*
+* @author CH
+* @since 4.0.0
  */
 public class Splitter {
 
@@ -24,32 +24,32 @@ public class Splitter {
     private boolean omitEmptyStrings;
 
     /**
-     * 构造拆分器
-     *
-     * @param separator 分隔符
+    * 构造拆分器
+    *
+    * @param separator 分隔符
      */
     public Splitter(String separator) {
         this.separator = separator;
     }
 
     /**
-     * 使用指定分隔符构造拆分器
-     *
-     * @param separator 分隔符
-     * @return Splitter 实例
+    * 使用指定分隔符构造拆分器
+    *
+    * @param separator 分隔符
+    * @return Splitter 实例
      */
     public static Splitter on(String separator) {
         /**
-         * Splitter。
-         * @param separator separator
+        * Splitter。
+        * @param separator separator
          */
         return new Splitter(separator);
     }
 
     /**
-     * 设置去除结果中的空白字符
-     *
-     * @return 当前 Splitter 实例
+    * 设置去除结果中的空白字符
+    *
+    * @return 当前 Splitter 实例
      */
     public Splitter trimResults() {
         this.trimResults = true;
@@ -57,9 +57,9 @@ public class Splitter {
     }
 
     /**
-     * 设置忽略空字符串
-     *
-     * @return 当前 Splitter 实例
+    * 设置忽略空字符串
+    *
+    * @return 当前 Splitter 实例
      */
     public Splitter omitEmptyStrings() {
         this.omitEmptyStrings = true;
@@ -67,10 +67,10 @@ public class Splitter {
     }
 
     /**
-     * 将字符串拆分为列表
-     *
-     * @param input 输入字符串
-     * @return 拆分后的列表
+    * 将字符串拆分为列表
+    *
+    * @param input 输入字符串
+    * @return 拆分后的列表
      */
     public List<String> splitToList(String input) {
         List<String> result = new ArrayList<>();
@@ -88,10 +88,10 @@ public class Splitter {
     }
 
     /**
-      * 将字符串拆分为 设置
-     *
-     * @param input 输入字符串
-     * @return 拆分后的 设置
+    * 将字符串拆分为 设置
+    *
+    * @param input 输入字符串
+    * @return 拆分后的 设置
      */
     public Set<String> splitToSet(String input) {
         return new HashSet<>(splitToList(input));

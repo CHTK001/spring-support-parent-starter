@@ -12,10 +12,10 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
- * 监控内存明细
- *
- * @since 2026/8/4
- * @author CH
+* 监控内存明细
+*
+* @since 2026/8/4
+* @author CH
  */
 @Data
 @EqualsAndHashCode(callSuper = false)
@@ -27,7 +27,7 @@ public class MsMonitorMetricMemory implements Serializable {
     private static final long serialVersionUID = 1L;
 
     /**
-     * 主键
+    * 主键
      */
     @TableId(value = "id", type = IdType.AUTO)
     @Schema(description = "主键", example = "1")
@@ -35,7 +35,7 @@ public class MsMonitorMetricMemory implements Serializable {
     private Long id;
 
     /**
-      * 监控主机 标识
+    * 监控主机 标识
      */
     @TableField("ms_monitor_metric_memory_monitor_id")
     @Schema(description = "监控主机 id", example = "1")
@@ -43,7 +43,7 @@ public class MsMonitorMetricMemory implements Serializable {
     private Long monitorId;
 
     /**
-     * 总内存(字节)
+    * 总内存(字节)
      */
     @TableField("ms_monitor_metric_memory_total_bytes")
     @Schema(description = "总内存(字节)", example = "17179869184")
@@ -51,7 +51,7 @@ public class MsMonitorMetricMemory implements Serializable {
     private Long totalBytes;
 
     /**
-     * 已用(字节)
+    * 已用(字节)
      */
     @TableField("ms_monitor_metric_memory_used_bytes")
     @Schema(description = "已用(字节)", example = "8589934592")
@@ -59,7 +59,7 @@ public class MsMonitorMetricMemory implements Serializable {
     private Long usedBytes;
 
     /**
-     * 空闲(字节)
+    * 空闲(字节)
      */
     @TableField("ms_monitor_metric_memory_free_bytes")
     @Schema(description = "空闲(字节)", example = "8589934592")
@@ -67,7 +67,7 @@ public class MsMonitorMetricMemory implements Serializable {
     private Long freeBytes;
 
     /**
-     * 使用率(0-100)
+    * 使用率(0-100)
      */
     @TableField("ms_monitor_metric_memory_usage_percent")
     @Schema(description = "使用率", example = "50.0")
@@ -75,7 +75,7 @@ public class MsMonitorMetricMemory implements Serializable {
     private Double usagePercent;
 
     /**
-     * 采集时间
+    * 采集时间
      */
     @TableField("ms_monitor_metric_memory_collect_time")
     @Schema(description = "采集时间", example = "2026-08-04T10:00:00")

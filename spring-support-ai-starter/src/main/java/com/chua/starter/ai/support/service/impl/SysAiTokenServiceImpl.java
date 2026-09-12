@@ -27,12 +27,12 @@ import java.util.List;
 import static com.chua.starter.common.support.constant.CacheConstant.REDIS_CACHE_ALWAYS;
 
 /**
- * AI 令牌服务实现。
- * <p>
-   * 负责 令牌 的 CRUD、校验、分组绑定、用量统计和限流控制。
- *
- * @author CH
- * @since 4.0.0
+* AI 令牌服务实现。
+* <p>
+* 负责 令牌 的 CRUD、校验、分组绑定、用量统计和限流控制。
+*
+* @author CH
+* @since 4.0.0
  */
 @Slf4j
 @Service
@@ -97,10 +97,10 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
     @Override
     @CacheEvict(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS, allEntries = true)
     /**
-     * 更新
-     *
-     * @param token 令牌
-     * @return 更新的结果
+    * 更新
+    *
+    * @param token 令牌
+    * @return 更新的结果
      */
     public boolean update(SysAiToken token) {
         return sysAiTokenMapper.updateById(token) > 0;
@@ -109,10 +109,10 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
     @Override
     @CacheEvict(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS, allEntries = true)
     /**
-     * 删除byid
-     *
-     * @param tokenId 令牌标识
-     * @return 删除byid的结果
+    * 删除byid
+    *
+    * @param tokenId 令牌标识
+    * @return 删除byid的结果
      */
     public boolean deleteById(Integer tokenId) {
         if (tokenId == null) {
@@ -172,12 +172,12 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
     @Override
     @Async("taskExecutor")
     /**
-     * recordusage
-     *
-     * @param tokenKey 令牌钥匙
-     * @param promptTokens 提示符令牌
-     * @param completionTokens 完成令牌
-     * @param cost cost
+    * recordusage
+    *
+    * @param tokenKey 令牌钥匙
+    * @param promptTokens 提示符令牌
+    * @param completionTokens 完成令牌
+    * @param cost cost
      */
     public void recordUsage(String tokenKey, int promptTokens, int completionTokens, BigDecimal cost) {
         SysAiToken token = findByTokenKey(tokenKey);
@@ -281,13 +281,13 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
     }
 
     /**
-      * 基于已加载的 令牌 实体检查限流，避免额外 DB 查询。
-     *
-     * <p>复用 {@link #listByGroupId(Integer)} 已加载的数据，直接检查限流计数器，
-      * 无需再按 令牌 钥匙 逐条查库。将原 N 次 DB 查询降为 1 次。</p>
-     *
-     * @param token 令牌 实体（需包含 rate限制/rate数量/rate窗口启动 字段）
-     * @return true 表示未触发限流，可以继续请求
+    * 基于已加载的 令牌 实体检查限流，避免额外 DB 查询。
+    *
+    * <p>复用 {@link #listByGroupId(Integer)} 已加载的数据，直接检查限流计数器，
+    * 无需再按 令牌 钥匙 逐条查库。将原 N 次 DB 查询降为 1 次。</p>
+    *
+    * @param token 令牌 实体（需包含 rate限制/rate数量/rate窗口启动 字段）
+    * @return true 表示未触发限流，可以继续请求
      */
     private boolean checkRateLimit(SysAiToken token) {
         Integer rateLimit = token.getRateLimit();
@@ -304,8 +304,8 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
             token.setRateCount(1);
             token.setRateWindowStart(now);
             /**
-             * persistrate限制。
-             * @param token 令牌
+            * persistrate限制。
+            * @param token 令牌
              */
             persistRateLimit(token);
             return true;
@@ -314,8 +314,8 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
             // 窗口内未超限，递增计数
             token.setRateCount(rateCount + 1);
             /**
-             * persistrate限制。
-             * @param token 令牌
+            * persistrate限制。
+            * @param token 令牌
              */
             persistRateLimit(token);
             return true;
@@ -325,13 +325,13 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
     }
 
     /**
-     * 持久化限流计数到数据库。
-     *
-     * <p>将内存中的 {@link SysAiToken#getSysAiTokenRateCount()} 和
-     * {@link SysAiToken#getSysAiTokenRateWindowStart()} 写回数据库，
-     * 确保限流状态在重启后仍可延续。</p>
-     *
-     * @param token 更新后的 令牌 实体
+    * 持久化限流计数到数据库。
+    *
+    * <p>将内存中的 {@link SysAiToken#getSysAiTokenRateCount()} 和
+    * {@link SysAiToken#getSysAiTokenRateWindowStart()} 写回数据库，
+    * 确保限流状态在重启后仍可延续。</p>
+    *
+    * @param token 更新后的 令牌 实体
      */
     private void persistRateLimit(SysAiToken token) {
         try {
@@ -346,9 +346,9 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
     }
 
     /**
-      * SHA-256 哈希，用于 令牌 安全存储。
-     * @param input 输入
-     * @return sha256的结果
+    * SHA-256 哈希，用于 令牌 安全存储。
+    * @param input 输入
+    * @return sha256的结果
      */
     private static String sha256(String input) {
         try {
@@ -361,10 +361,10 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
             return hex.toString();
         } catch (NoSuchAlgorithmException e) {
             /**
-             * runtime异常。
-             * @param available" 可用"
-             * @param e e
-             * @return runtime异常的结果
+            * runtime异常。
+            * @param available" 可用"
+            * @param e e
+            * @return runtime异常的结果
              */
             throw new RuntimeException("SHA-256 not available", e);
         }

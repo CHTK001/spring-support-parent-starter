@@ -24,10 +24,10 @@ import java.util.stream.Collectors;
 import static com.chua.starter.mybatis.interceptor.MybatisPlusPermissionHandler.NO_DATA;
 
 /**
-   * 注入机构标识
- *
- * @author CH
- * @since 4.0.0
+* 注入机构标识
+*
+* @author CH
+* @since 4.0.0
  */
 public abstract class AbstractDeptRegister implements DeptRegister {
     /** Plainselect */
@@ -56,12 +56,12 @@ public abstract class AbstractDeptRegister implements DeptRegister {
     protected Table deptTable;
 
     /**
-      * 创建 抽象dept注册 实例
-     * @param plainSelect plain选择
-     * @param where where
-     * @param user 用户
-     * @param dataPermission 数据权限
-     * @param scopeProperties scope属性
+    * 创建 抽象dept注册 实例
+    * @param plainSelect plain选择
+    * @param where where
+    * @param user 用户
+    * @param dataPermission 数据权限
+    * @param scopeProperties scope属性
      */
     public AbstractDeptRegister(PlainSelect plainSelect,
                                 Expression where,
@@ -80,9 +80,9 @@ public abstract class AbstractDeptRegister implements DeptRegister {
     }
 
     /**
-     * 注册数据scope
-     *
-     * @return 注册数据scope的结果
+    * 注册数据scope
+    *
+    * @return 注册数据scope的结果
      */
     protected Expression registerDataScope() {
         if (DataFilterTypeEnum.DEPT_SETS == dataPermission) {
@@ -180,9 +180,9 @@ public abstract class AbstractDeptRegister implements DeptRegister {
     }
 
     /**
-      * 创建入表达式
-     *
-     * @return
+    * 创建入表达式
+    *
+    * @return
      */
     private Expression createInExpression() {
         return new InExpression(

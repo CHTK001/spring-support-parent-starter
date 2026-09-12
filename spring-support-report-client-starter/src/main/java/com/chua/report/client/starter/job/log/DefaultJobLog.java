@@ -7,11 +7,11 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.Date;
 
 /**
- * 作业日志
- *
-   * @版本 1.0.0
- * @since 2024/03/11
- * @author CH
+* 作业日志
+*
+* @版本 1.0.0
+* @since 2024/03/11
+* @author CH
  */
 @Slf4j
 public class DefaultJobLog implements JobLog{
@@ -19,21 +19,21 @@ public class DefaultJobLog implements JobLog{
 
 
     /**
-     * 记录日志
-     *
-     * @param appendLogPattern 追加日志模式
-     * @return 日志的结果
+    * 记录日志
+    *
+    * @param appendLogPattern 追加日志模式
+    * @return 日志的结果
      */
     public static boolean log(String appendLogPattern) {
         StackTraceElement callInfo = new Throwable().getStackTrace()[1];
         return logDetail(callInfo, appendLogPattern);
     }
     /**
-     * 记录日志Detail
-     *
-     * @param callInfo call信息
-     * @param appendLog 追加日志
-     * @return 日志detail的结果
+    * 记录日志Detail
+    *
+    * @param callInfo call信息
+    * @param appendLog 追加日志
+    * @return 日志detail的结果
      */
     private static boolean logDetail(StackTraceElement callInfo, String appendLog) {
         JobContext xxlJobContext = JobContext.getXxlJobContext();

@@ -27,14 +27,14 @@ import java.util.regex.Matcher;
 import static com.chua.starter.common.support.constant.MdcConstant.TRACE_ID;
 
 /**
- * MyBatis 慢 SQL 检测拦截器。
- *
- * <p>拦截 Executor 的 query/update，统计耗时并在超过阈值时发布 {@link MybatisSlowSqlEvent}。</p>
- *
- * <p>注意：事件中是否携带 SQL/参数由 {@link MybatisSlowSqlProperties} 控制，避免敏感信息泄露。</p>
- *
- * @since 2026/4/27
- * @author CH
+* MyBatis 慢 SQL 检测拦截器。
+*
+* <p>拦截 Executor 的 query/update，统计耗时并在超过阈值时发布 {@link MybatisSlowSqlEvent}。</p>
+*
+* <p>注意：事件中是否携带 SQL/参数由 {@link MybatisSlowSqlProperties} 控制，避免敏感信息泄露。</p>
+*
+* @since 2026/4/27
+* @author CH
  */
 @Intercepts({
         @Signature(type = Executor.class, method = "update", args = {MappedStatement.class, Object.class}),
@@ -46,7 +46,7 @@ public class SlowSqlDetectInterceptor implements Interceptor {
     private static final Logger log = LoggerFactory.getLogger(SlowSqlDetectInterceptor.class);
 
     /**
-     * 日期格式化器（仅用于参数格式化）。
+    * 日期格式化器（仅用于参数格式化）。
      */
     private static final SimpleDateFormat FORMATTER = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
@@ -56,10 +56,10 @@ public class SlowSqlDetectInterceptor implements Interceptor {
     private final MybatisSlowSqlProperties properties;
 
     /**
-     * 构造慢 SQL 检测拦截器。
-     *
-     * @param eventPublisher Spring 事件发布器
-     * @param properties     慢 SQL 配置
+    * 构造慢 SQL 检测拦截器。
+    *
+    * @param eventPublisher Spring 事件发布器
+    * @param properties     慢 SQL 配置
      */
     public SlowSqlDetectInterceptor(ApplicationEventPublisher eventPublisher,
                                    MybatisSlowSqlProperties properties) {
@@ -90,10 +90,10 @@ public class SlowSqlDetectInterceptor implements Interceptor {
     }
 
     /**
-     * 发布slowsql事件。
-     * @param invocation invocation
-     * @param elapsedMs elapsedms
-     * @param error 错误
+    * 发布slowsql事件。
+    * @param invocation invocation
+    * @param elapsedMs elapsedms
+    * @param error 错误
      */
     private void publishSlowSqlEvent(Invocation invocation, long elapsedMs, Throwable error) {
         Object[] args = invocation.getArgs();
@@ -146,19 +146,19 @@ public class SlowSqlDetectInterceptor implements Interceptor {
     }
 
     /**
-      * resolveboundsql。
-     * @param ms ms
-     * @param args 参数
-     * @param parameter 参数
-     * @return resolveBoundSql的结果
+    * resolveboundsql。
+    * @param ms ms
+    * @param args 参数
+    * @param parameter 参数
+    * @return resolveBoundSql的结果
      */
     private BoundSql resolveBoundSql(MappedStatement ms, Object[] args, Object parameter) {
  // MyBatis 的 查询 重载中，boundsql 可能已在参数中传入
     /**
-     * sqlresolve结果类。
-     *
-     * @author CH
-     * @since 4.0.0
+    * sqlresolve结果类。
+    *
+    * @author CH
+    * @since 4.0.0
      */
         if (args.length >= 6 && args[5] instanceof BoundSql bs) {
             return bs;
@@ -170,12 +170,12 @@ public class SlowSqlDetectInterceptor implements Interceptor {
         /** SQL */
         private final String sql;
         /**
-         * 参数
-         *
+        * 参数
+        *
          /**
-          * sqlresolve结果。
-          * @param sql SQL
-          * @param parameters 参数
+        * sqlresolve结果。
+        * @param sql SQL
+        * @param parameters 参数
           */
          * @param obj obj
          * @return 获取参数值的结果
@@ -184,12 +184,12 @@ public class SlowSqlDetectInterceptor implements Interceptor {
          */
         private final List<String> parameters;
 /**
-   * resolvesql。
- * @param configuration 配置
- * @param boundSql boundsql
- * @return resolveSql的结果
- * @param obj obj
- * @param value 值
+* resolvesql。
+* @param configuration 配置
+* @param boundSql boundsql
+* @return resolveSql的结果
+* @param obj obj
+* @param value 值
  /**
    * sqlresolve结果。
    * @param sql sql
@@ -202,10 +202,10 @@ public class SlowSqlDetectInterceptor implements Interceptor {
             this.sql = sql;
             this.parameters = parameters;
         /**
-         * resolveSql。
-         * @param configuration 配置
-         * @param boundSql boundSql
-         * @return resolveSql的结果
+        * resolveSql。
+        * @param configuration 配置
+        * @param boundSql boundSql
+        * @return resolveSql的结果
          */
         }
     }

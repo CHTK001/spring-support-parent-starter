@@ -11,15 +11,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * tools
- *
- * @author CH
- * @since 4.0.0
+* tools
+*
+* @author CH
+* @since 4.0.0
  */
 public class SpringCompatUtils {
 
     /**
-     * 私有构造函数，防止实例化
+    * 私有构造函数，防止实例化
      */
     private SpringCompatUtils() {
     }
@@ -29,10 +29,10 @@ public class SpringCompatUtils {
         private static volatile Boolean factoryMethodMetadataEnabled = null; // 工厂方法metadata已启用
 
     /**
-     * 获取工厂方法申报类型
-     *
-     * @param annotatedBeanDefinition annotatedbeandefinition
-     * @return 获取工厂方法申报类型的结果
+    * 获取工厂方法申报类型
+    *
+    * @param annotatedBeanDefinition annotatedbeandefinition
+    * @return 获取工厂方法申报类型的结果
      */
     public static String getFactoryMethodReturnType(AnnotatedBeanDefinition annotatedBeanDefinition) {
         try {
@@ -57,10 +57,10 @@ public class SpringCompatUtils {
     }
 
     /**
-     * 获取工厂方法metadata
-     *
-     * @param annotatedBeanDefinition annotatedbeandefinition
-     * @return 获取工厂方法metadata的结果
+    * 获取工厂方法metadata
+    *
+    * @param annotatedBeanDefinition annotatedbeandefinition
+    * @return 获取工厂方法metadata的结果
      */
     public static MethodMetadata getFactoryMethodMetadata(AnnotatedBeanDefinition annotatedBeanDefinition) {
         if (isFactoryMethodMetadataEnabled()) {
@@ -76,17 +76,17 @@ public class SpringCompatUtils {
 
 
     /**
-      * 获取 the generic 类型 的 申报 类型 的 the 方法.
-     *
-     * <pre>
-     *  Source method:
-     *  ReferenceBean&lt;DemoService> demoService()
-     *
-     *  Result: DemoService.class
-     * </pre>
-     *
-     * @param factoryMethodMetadata
-     * @return
+    * 获取 the generic 类型 的 申报 类型 的 the 方法.
+    *
+    * <pre>
+    *  Source method:
+    *  ReferenceBean&lt;DemoService> demoService()
+    *
+    *  Result: DemoService.class
+    * </pre>
+    *
+    * @param factoryMethodMetadata
+    * @return
      */
     public static Class getGenericTypeOfReturnType(MethodMetadata factoryMethodMetadata) {
         if (factoryMethodMetadata instanceof StandardMethodMetadata) {
@@ -103,9 +103,9 @@ public class SpringCompatUtils {
     }
 
     /**
-     * 是否工厂方法metadata已启用
-     *
-     * @return 是否工厂方法metadata已启用的结果
+    * 是否工厂方法metadata已启用
+    *
+    * @return 是否工厂方法metadata已启用的结果
      */
     public static boolean isFactoryMethodMetadataEnabled() {
         if (factoryMethodMetadataEnabled == null) {

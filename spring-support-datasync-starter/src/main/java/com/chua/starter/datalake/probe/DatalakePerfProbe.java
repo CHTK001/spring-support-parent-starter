@@ -18,10 +18,10 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 /**
- * 数据湖perf探针类。
- *
- * @author CH
- * @since 4.0.0
+* 数据湖perf探针类。
+*
+* @author CH
+* @since 4.0.0
  */
 
 @Slf4j
@@ -30,8 +30,8 @@ public class DatalakePerfProbe {
     private static final Map<String, Object> RESULT = new LinkedHashMap<>(); // 结果
 
     /**
-     * main。
-     * @param args 参数
+    * main。
+    * @param args 参数
      */
     public static void main(String[] args) throws Exception {
         long globalStart = System.currentTimeMillis();
@@ -104,11 +104,11 @@ public class DatalakePerfProbe {
  // ── Sequential 吞吐量 ──────────────────────────────────────
 
     /**
-      * benchseq。
-     * @param engine engine
-     * @param pipeId 管道标识
-     * @param label 标签
-     * @param count 数量
+    * benchseq。
+    * @param engine engine
+    * @param pipeId 管道标识
+    * @param label 标签
+    * @param count 数量
      */
     private static void benchSeq(PipelineEngine engine, String pipeId, String label, int count) {
         long t0 = System.nanoTime();
@@ -126,11 +126,11 @@ public class DatalakePerfProbe {
  // ── 延迟 Distribution ───────────────────────────────────────
 
     /**
-     * bench延迟。
-     * @param engine engine
-     * @param pipeId 管道标识
-     * @param label 标签
-     * @param count 数量
+    * bench延迟。
+    * @param engine engine
+    * @param pipeId 管道标识
+    * @param label 标签
+    * @param count 数量
      */
     private static void benchLatency(PipelineEngine engine, String pipeId, String label, int count) {
         long[] lat = new long[count];
@@ -157,9 +157,9 @@ public class DatalakePerfProbe {
     // ── Engine Overhead vs Direct Sink ─────────────────────────────
 
     /**
-      * benchoverhead。
-     * @param pm pm
-     * @param reg reg
+    * benchoverhead。
+    * @param pm pm
+    * @param reg reg
      */
     private static void benchOverhead(PipelineManager pm, Map<String, DataSink> reg) {
         DataSink logSink = reg.get("log");
@@ -192,8 +192,8 @@ public class DatalakePerfProbe {
  // ── Webhook HTTP 吞吐量 ────────────────────────────────────
 
     /**
-      * benchwebhook。
-     * @param engine engine
+    * benchwebhook。
+    * @param engine engine
      */
     private static void benchWebhook(PipelineEngine engine) throws Exception {
         int[] counts = {5_000, 50_000, 100_000};
@@ -224,12 +224,12 @@ public class DatalakePerfProbe {
  // ── Multi-thread 并发 ────────────────────────────────────
 
     /**
-     * bench并发。
-     * @param engine engine
-     * @param pipeId 管道标识
-     * @param label 标签
-     * @param threads threads
-     * @param totalOps totalops
+    * bench并发。
+    * @param engine engine
+    * @param pipeId 管道标识
+    * @param label 标签
+    * @param threads threads
+    * @param totalOps totalops
      */
     private static void benchConcurrent(PipelineEngine engine, String pipeId, String label, int threads, int totalOps) throws InterruptedException {
         int perThread = totalOps / threads;
@@ -257,9 +257,9 @@ public class DatalakePerfProbe {
     // ── Multi-pipeline Scaling ─────────────────────────────────────
 
     /**
-      * benchmultipipeline。
-     * @param engine engine
-     * @param pm pm
+    * benchmultipipeline。
+    * @param engine engine
+    * @param pm pm
      */
     private static void benchMultiPipeline(PipelineEngine engine, PipelineManager pm) throws InterruptedException {
         int[] pipelineCounts = {1, 10, 50};
@@ -326,12 +326,12 @@ public class DatalakePerfProbe {
 
  // ── 助手 ────────────────────────────────────────────────────
     /**
-      * capturingsink类。
-     *
-     * @author CH
-     * @since 4.0.0
-     * @param n n
-     * @return fmt数量的结果
+    * capturingsink类。
+    *
+    * @author CH
+    * @since 4.0.0
+    * @param n n
+    * @return fmt数量的结果
      /**
       * 构建env。
       * @param pipeId 管道标识
@@ -364,17 +364,17 @@ public class DatalakePerfProbe {
         private final String type; // 类型
         private final AtomicInteger count = new AtomicInteger(0); // 数量
         /**
-          * capturingsink。
-         * @param type 类型
+        * capturingsink。
+        * @param type 类型
          */
         public CapturingSink(String type) { this.type = type; }
         /**
-         * reset。
+        * reset。
          */
         public void reset() { count.set(0); }
         /**
-         * 获取数量。
-         * @return 获取数量的结果
+        * 获取数量。
+        * @return 获取数量的结果
          */
         public int getCount() { return count.get(); }
         @Override public String type() { return type; }

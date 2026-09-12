@@ -12,10 +12,10 @@ import org.springframework.core.env.PropertiesPropertySource;
 import java.util.Properties;
 
 /**
- * datasource 默认环境配置
- *
- * @author CH
- * @since 4.0.0
+* datasource 默认环境配置
+*
+* @author CH
+* @since 4.0.0
  */
 public class DataSourceEnvironmentPostProcessor implements EnvironmentPostProcessor, Ordered {
     @Override

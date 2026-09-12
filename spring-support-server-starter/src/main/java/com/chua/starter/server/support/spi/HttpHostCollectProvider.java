@@ -10,15 +10,15 @@ import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
 /**
-   * HTTP 接口拉取采集 提供者（HTTP）
- * <p>
-   * 目标主机暴露采集 HTTP 端点（如 /智能体/指标 返回 JSON），
-   * 服务端定时 获取 拉取并回写。适合安装了轻量采集端但不开 SSH 的主机。
-   * 端点约定：{@code http://{address}:{端口}/智能体/指标}。
- * </p>
- *
- * @author CH
- * @since 4.0.0.42
+* HTTP 接口拉取采集 提供者（HTTP）
+* <p>
+* 目标主机暴露采集 HTTP 端点（如 /智能体/指标 返回 JSON），
+* 服务端定时 获取 拉取并回写。适合安装了轻量采集端但不开 SSH 的主机。
+* 端点约定：{@code http://{address}:{端口}/智能体/指标}。
+* </p>
+*
+* @author CH
+* @since 4.0.0.42
  */
 @Slf4j
 @Component
@@ -43,10 +43,10 @@ public class HttpHostCollectProvider implements HostCollectProvider {
     }
 
     /**
-     * 同步执行 HTTP 拉取
-     *
-     * @param context 上下文
-     * @return 结果
+    * 同步执行 HTTP 拉取
+    *
+    * @param context 上下文
+    * @return 结果
      */
     private CollectOutcome doCollect(HostCollectContext context) {
         MsServerHost host = context == null ? null : context.getHost();
@@ -70,16 +70,16 @@ public class HttpHostCollectProvider implements HostCollectProvider {
             }
             String body;
             /**
-             * 尝试。
-             * @param conn.getInputStream( conn.获取输入流(
+            * 尝试。
+            * @param conn.getInputStream( conn.获取输入流(
              */
             try (var in = conn.getInputStream()) {
                 body = new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
             }
             /**
-              * applypayload。
-             * @param host 主机
-             * @param body 主体
+            * applypayload。
+            * @param host 主机
+            * @param body 主体
              */
             applyPayload(host, body);
             hostMapper.updateById(host);
@@ -91,10 +91,10 @@ public class HttpHostCollectProvider implements HostCollectProvider {
     }
 
     /**
-     * 解析 JSON 负载并回写主机字段（容错：解析失败不阻断在线标记）
-     *
-     * @param host 主机
-     * @param body 响应体
+    * 解析 JSON 负载并回写主机字段（容错：解析失败不阻断在线标记）
+    *
+    * @param host 主机
+    * @param body 响应体
      */
     private void applyPayload(MsServerHost host, String body) {
         try {
