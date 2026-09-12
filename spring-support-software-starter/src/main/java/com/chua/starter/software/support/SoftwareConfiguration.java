@@ -21,7 +21,11 @@ import org.springframework.context.annotation.ComponentScan;
 public class SoftwareConfiguration {
 
     @Bean
-    /** SoftwareServiceInfoContributor */
+    /**
+     * software服务信息contributor
+     *
+     * @return software服务信息contributor的结果
+     */
     public ServiceInfoContributor softwareServiceInfoContributor() {
         return registry -> {
             registry.registerFlag("software", "软件管理", true, "软件管理模块");

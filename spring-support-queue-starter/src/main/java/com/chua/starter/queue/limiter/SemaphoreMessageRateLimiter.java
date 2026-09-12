@@ -21,12 +21,12 @@ import java.util.concurrent.TimeUnit;
 @Component
 public class SemaphoreMessageRateLimiter implements MessageRateLimiter {
 
-    private final ConcurrentHashMap<String, Semaphore> semaphores = new ConcurrentHashMap<>();
-    /** Default_permits */
+    private final ConcurrentHashMap<String, Semaphore> semaphores = new ConcurrentHashMap<>(); // semaphores
+    /** 默认_许可证 */
     private static final int DEFAULT_PERMITS = 100;
 
     @Override
-    /** Try获取 */
+    /** 尝试获取 */
     public boolean tryAcquire(Message message) {
         Semaphore semaphore = getSemaphore(message.getDestination());
         boolean acquired = semaphore.tryAcquire();
@@ -47,6 +47,12 @@ public class SemaphoreMessageRateLimiter implements MessageRateLimiter {
             semaphore.acquire();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+            /**
+             * runtime异常。
+             * @param "获取限流许可被中断" "获取限流许可被中断"
+             * @param e e
+             * @return runtime异常的结果
+             */
             throw new RuntimeException("获取限流许可被中断", e);
         }
     }
@@ -59,7 +65,7 @@ public class SemaphoreMessageRateLimiter implements MessageRateLimiter {
     }
 
     @Override
-    /** AvailablePermits */
+    /** 可用许可证 */
     public int availablePermits() {
         return semaphores.values().stream()
             .mapToInt(Semaphore::availablePermits)
@@ -74,6 +80,8 @@ public class SemaphoreMessageRateLimiter implements MessageRateLimiter {
 
     /**
      * 获取或创建信号量
+     * @param destination 目标
+     * @return 获取semaphore的结果
      */
     private Semaphore getSemaphore(String destination) {
         return semaphores.computeIfAbsent(destination, k -> new Semaphore(DEFAULT_PERMITS));
@@ -81,6 +89,8 @@ public class SemaphoreMessageRateLimiter implements MessageRateLimiter {
 
     /**
      * 设置目标队列的许可数
+     * @param destination 目标
+     * @param permits 许可证
      */
     public void setPermits(String destination, int permits) {
         semaphores.put(destination, new Semaphore(permits));

@@ -13,7 +13,7 @@ import java.util.List;
  * 启动时自动注册到 {@code sys_ai_global_setting} 表（仅首次）。</p>
  *
  * <p>图片识别管线：classify(图像分类) → detect(目标检测) → segment(图像分割) →
- * captioning(图像描述)；辅助能力：depth(深度估计) / pedestrian(行人) / quality(图像质量)。</p>
+   * captioning(图像描述)；辅助能力：深度(深度估计) / pedestrian(行人) / quality(图像质量)。</p>
  *
  * @since 4.0.0.42
  * @author CH
@@ -38,7 +38,7 @@ public class ImageRecognitionGlobalSettingProvider implements GlobalSettingProvi
     }
 
     @Override
-    /** 分组Name */
+    /** 分组名称 */
     public String groupName() {
         return GROUP_NAME;
     }

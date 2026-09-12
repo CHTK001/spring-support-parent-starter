@@ -6,7 +6,7 @@ import org.springframework.core.convert.converter.Converter;
 import java.time.LocalDate;
 
 /**
- * str -> LocalDate
+   * str -> 本地日期
  *
  * @since 2022/8/11 9:14
  * @author CH

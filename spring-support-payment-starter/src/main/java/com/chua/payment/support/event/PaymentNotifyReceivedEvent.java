@@ -5,13 +5,14 @@ import lombok.Getter;
 /**
  * 支付回调接收事件
  * @author CH
+ * @since 4.0.0
  */
 @Getter
 public class PaymentNotifyReceivedEvent extends PaymentEvent {
 
-    /** Notify日志ID */
+    /** 通知日志标识 */
     private final Long notifyLogId;
-    /** Notify类型 */
+    /** 通知类型 */
     private final String notifyType;
     /** 通道类型 */
     private final String channelType;
@@ -19,27 +20,34 @@ public class PaymentNotifyReceivedEvent extends PaymentEvent {
     private final String channelSubType;
     /** 排序NO */
     private final String orderNo;
-    /** RefundNO */
+    /** 退税no */
     private final String refundNo;
     /** Signverified */
     private final Boolean signVerified;
 
     /**
-     * 创建 PaymentNotifyReceivedEvent 实例
-     * @param source source
-     * @param tenantId tenantId
-     * @param merchantId merchantId
-     * @param notifyLogId notifyLogId
-     * @param notifyType notifyType
-     * @param channelType channelType
-     * @param channelSubType channelSubType
-     * @param orderNo orderNo
-     * @param refundNo refundNo
-     * @param signVerified signVerified
+      * 创建 薪酬通知接收事件 实例
+     * @param source 源
+     * @param tenantId tenantid
+     * @param merchantId merchantid
+     * @param notifyLogId 通知日志标识
+     * @param notifyType 通知类型
+     * @param channelType 通道类型
+     * @param channelSubType 通道sub类型
+     * @param orderNo 订单no
+     * @param refundNo 退税no
+     * @param signVerified 标志verified
      */
     public PaymentNotifyReceivedEvent(Object source, Long tenantId, Long merchantId, Long notifyLogId,
                                       String notifyType, String channelType, String channelSubType,
                                       String orderNo, String refundNo, Boolean signVerified) {
+        /**
+         * 父。
+         * @param source 源
+         * @param "PAYMENT_NOTIFY_RECEIVED" "payment通知received"
+         * @param tenantId tenantid
+         * @param merchantId merchantid
+         */
         super(source, "PAYMENT_NOTIFY_RECEIVED", tenantId, merchantId);
         this.notifyLogId = notifyLogId;
         this.notifyType = notifyType;

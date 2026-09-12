@@ -6,7 +6,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 /**
- * AI 会话压缩上下文 Mapper。
+   * AI 会话压缩上下文 映射器。
  *
  * @since 4.0.0.42
  * @author CH
@@ -15,10 +15,11 @@ import org.apache.ibatis.annotations.Param;
 public interface SysAiSessionCompressionMapper extends BaseMapper<SysAiSessionCompression> {
 
     /**
-     * 按会话 ID 查询压缩上下文。
+      * 按会话 标识 查询压缩上下文。
      *
-     * @param sessionId 会话 ID
+     * @param sessionId 会话 标识
      * @return 压缩上下文实体，不存在时返回 {@code null}
+     * @param @Param("sessionId" @参数("会话标识"
      */
     SysAiSessionCompression selectBySessionId(@Param("sessionId") Long sessionId);
 }

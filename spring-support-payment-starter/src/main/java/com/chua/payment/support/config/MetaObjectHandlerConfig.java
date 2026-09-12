@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDateTime;
 
 /**
- * MyBatis Plus 字段自动填充配置，自动维护 createdAt/updatedAt 时间戳。
+   * MyBatis Plus 字段自动填充配置，自动维护 创建at/更新at 时间戳。
  *
  * @author CH
  * @since 4.0.0.50

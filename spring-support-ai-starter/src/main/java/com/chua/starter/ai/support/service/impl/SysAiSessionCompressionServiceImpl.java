@@ -26,14 +26,14 @@ import java.time.LocalDateTime;
 public class SysAiSessionCompressionServiceImpl implements SysAiSessionCompressionService {
 
     /**
-     * 压缩上下文 Mapper
+      * 压缩上下文 映射器
      */
     private final SysAiSessionCompressionMapper compressionMapper;
 
     /**
-     * 按会话 ID 查询压缩上下文。
+      * 按会话 标识 查询压缩上下文。
      *
-     * @param sessionId 会话 ID
+     * @param sessionId 会话 标识
      * @return 压缩上下文实体，不存在时返回 {@code null}
      */
     @Override
@@ -75,7 +75,7 @@ public class SysAiSessionCompressionServiceImpl implements SysAiSessionCompressi
     /**
      * 删除会话的压缩上下文。
      *
-     * @param sessionId 会话 ID
+     * @param sessionId 会话 标识
      */
     @Override
     public void deleteBySessionId(Long sessionId) {

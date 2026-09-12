@@ -12,21 +12,22 @@ import java.time.LocalDateTime;
 /**
  * 钱包提现审批
  * @author CH
+ * @since 4.0.0
  */
 @Data
 @TableName("pay_wallet_withdraw_approval")
 public class WalletWithdrawApproval {
 
     @TableId(value = "pay_wallet_withdraw_approval_id", type = IdType.AUTO)
-    /** ID */
+    /** 标识 */
     private Long id;
 
     @TableField("pay_wallet_withdraw_approval_merchant_id")
-    /** MerchantID */
+    /** merchantid */
     private Long merchantId;
 
     @TableField("pay_wallet_withdraw_approval_user_id")
-    /** 用户ID */
+    /** 用户标识 */
     private Long userId;
 
     @TableField("pay_wallet_withdraw_approval_amount")
@@ -42,11 +43,11 @@ public class WalletWithdrawApproval {
     private String bankName;
 
     @TableField("pay_wallet_withdraw_approval_account_name")
-    /** Account名称 */
+    /** 账户名称 */
     private String accountName;
 
     @TableField("pay_wallet_withdraw_approval_withdraw_no")
-    /** WithdrawNO */
+    /** withdrawno */
     private String withdrawNo;
 
     @TableField("pay_wallet_withdraw_approval_status")
@@ -54,11 +55,11 @@ public class WalletWithdrawApproval {
     private String status;
 
     @TableField("pay_wallet_withdraw_approval_operator")
-    /** Operator */
+    /** 操作符 */
     private String operator;
 
     @TableField("pay_wallet_withdraw_approval_remark")
-    /** Remark */
+    /** 评论 */
     private String remark;
 
     @TableField("pay_wallet_withdraw_approval_approve_time")

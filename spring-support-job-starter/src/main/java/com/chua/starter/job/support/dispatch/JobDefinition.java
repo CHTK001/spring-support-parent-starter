@@ -16,7 +16,7 @@ public class JobDefinition {
     private String name;
 
     /**
-     * cron 表达式 (三选一; 优先级 cron > fixedDelay > fixedRate)
+      * cron 表达式 (三选一; 优先级 cron > fixed延迟 > fixedrate)
      */
     private String cron;
 
@@ -26,7 +26,7 @@ public class JobDefinition {
     private long fixedDelayMs;
 
     /**
-     * 固定频率, 单位毫秒 (以固定间隔触发, 不等前一次完成; 仅 cron 与 fixedDelay 均未配置时生效)
+      * 固定频率, 单位毫秒 (以固定间隔触发, 不等前一次完成; 仅 cron 与 fixed延迟 均未配置时生效)
      */
     private long fixedRateMs;
 
@@ -161,7 +161,7 @@ public class JobDefinition {
     }
 
     @Override
-    /** HashCode */
+    /** 哈希编码 */
     public int hashCode() {
         return Objects.hash(name);
     }

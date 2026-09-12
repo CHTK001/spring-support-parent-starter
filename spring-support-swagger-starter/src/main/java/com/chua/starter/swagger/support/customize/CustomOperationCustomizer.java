@@ -17,21 +17,21 @@ import java.util.Optional;
 
 /**
  * 操作定制器
- * 用于处理Knife4j的ApiOperationSupport和ApiSupport注解，支持作者和排序
+   * 用于处理刀4j的apioperation支持和api支持注解，支持作者和排序
  *
  * @since 2025/5/27 13:37
  * @author CH
  */
 public class CustomOperationCustomizer implements GlobalOperationCustomizer {
 
-    /** Knife4j属性 */
+    /** 刀4j属性 */
     private final Knife4jProperties knife4jProperties;
-    private final Map<String, String> defaultHeaders;
+    private final Map<String, String> defaultHeaders; // 默认头部
 
     /**
      * 构造函数
      *
-     * @param knife4jProperties Knife4j配置属性
+     * @param knife4jProperties 刀4j配置属性
      */
     public CustomOperationCustomizer(Knife4jProperties knife4jProperties) {
         this.knife4jProperties = knife4jProperties;
@@ -60,7 +60,7 @@ public class CustomOperationCustomizer implements GlobalOperationCustomizer {
                 operation.addExtension(ExtensionsConstants.EXTENSION_ORDER, operationSupport.order());
             }
         } else {
-            // 如果方法级别不存在，再找一次class级别的
+ // 如果方法级别不存在，再找一次类级别的
             ApiSupport apiSupport = AnnotationUtils.findAnnotation(handlerMethod.getBeanType(), ApiSupport.class);
             if (apiSupport != null) {
                 String author = ExtensionUtils.getAuthor(apiSupport);

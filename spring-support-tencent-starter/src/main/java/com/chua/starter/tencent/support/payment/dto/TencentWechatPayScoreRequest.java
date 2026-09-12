@@ -8,18 +8,19 @@ import java.util.Map;
 /**
  * 微信支付分服务订单请求
  * @author CH
+ * @since 4.0.0
  */
 @Data
 public class TencentWechatPayScoreRequest {
     /** APPID */
     private String appId;
-    /** 服务ID */
+    /** 服务标识 */
     private String serviceId;
-    /** OUT排序NO */
+    /** 出排序NO */
     private String outOrderNo;
-    /** OpenID */
+    /** 打开标识 */
     private String openId;
-    /** NotifyURL */
+    /** 通知url */
     private String notifyUrl;
     /** 服务introduction */
     private String serviceIntroduction;
@@ -27,18 +28,18 @@ public class TencentWechatPayScoreRequest {
     private String startTime;
     /** 结束时间 */
     private String endTime;
-    /** 总数amountFEN */
+    /** 总数amountfen */
     private Integer totalAmountFen;
-    /** Reason */
+    /** ReasonMLmlml */
     private String reason;
-    /** Finish类型 */
+    /** 饰面类型 */
     private String finishType;
     /** Need用户confirm */
     private Boolean needUserConfirm;
     /** Attach */
     private String attach;
-    private List<Map<String, Object>> postPayments;
-    private List<Map<String, Object>> postDiscounts;
-    private Map<String, Object> extraParams;
+    private List<Map<String, Object>> postPayments; // postpayments
+    private List<Map<String, Object>> postDiscounts; // postdiscounts
+    private Map<String, Object> extraParams; // extra参数
 }
 

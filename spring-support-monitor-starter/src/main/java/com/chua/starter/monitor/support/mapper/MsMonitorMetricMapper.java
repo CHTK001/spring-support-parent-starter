@@ -3,7 +3,7 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.chua.starter.monitor.support.entity.MsMonitorMetric;
 
 /**
- * 通用指标 Mapper
+   * 通用指标 映射器
  *
  * @since 2026/8/4
  * @author CH

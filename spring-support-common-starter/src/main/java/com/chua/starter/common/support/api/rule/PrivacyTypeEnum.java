@@ -4,6 +4,7 @@ package com.chua.starter.common.support.api.rule;
  * 隐私数据类型枚举
  *
  * @author CH
+ * @since 4.0.0
  */
 public enum PrivacyTypeEnum {
     /**

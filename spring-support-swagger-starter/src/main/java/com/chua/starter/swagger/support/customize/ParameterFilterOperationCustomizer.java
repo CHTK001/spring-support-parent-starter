@@ -22,7 +22,7 @@ import java.util.Optional;
 
 /**
  * 参数过滤操作定制器
- * 用于过滤隐藏参数、UserValue参数等
+   * 用于过滤隐藏参数、用户价值观参数等
  *
  * @since 2025/5/27 13:37
  * @author CH
@@ -30,12 +30,12 @@ import java.util.Optional;
 public class ParameterFilterOperationCustomizer implements GlobalOperationCustomizer {
 
     /**
-     * UserValue注解类（可选依赖）
+      * 用户价值观注解类（可选依赖）
      */
     private static final Class<?> USER_VALUE_CLASS = loadUserValueClass();
 
     /**
-     * 加载UserValue注解类
+      * 加载用户价值观注解类
      *
      * @return UserValue注解类，如果不存在则返回null
      */
@@ -48,14 +48,14 @@ public class ParameterFilterOperationCustomizer implements GlobalOperationCustom
         }
     }
 
-    /** Knife4j属性 */
+    /** 刀4j属性 */
     private final Knife4jProperties knife4jProperties;
-    private final Map<String, String> defaultHeaders;
+    private final Map<String, String> defaultHeaders; // 默认头部
 
     /**
      * 构造函数
      *
-     * @param knife4jProperties Knife4j配置属性
+     * @param knife4jProperties 刀4j配置属性
      */
     public ParameterFilterOperationCustomizer(Knife4jProperties knife4jProperties) {
         this.knife4jProperties = knife4jProperties;
@@ -73,6 +73,11 @@ public class ParameterFilterOperationCustomizer implements GlobalOperationCustom
     @Override
     public Operation customize(Operation operation, HandlerMethod handlerMethod) {
         if (operation.getParameters() != null) {
+            /**
+             * 过滤器方法。
+             * @param operation operation
+             * @param handlerMethod 处理器方法
+             */
             filterMethod(operation, handlerMethod);
         }
         return operation;
@@ -93,10 +98,20 @@ public class ParameterFilterOperationCustomizer implements GlobalOperationCustom
             if (shouldSkipParameter(methodParameter)) {
                 continue;
             }
+            /**
+             * 注册参数。
+             * @param filteredParameters 过滤器参数
+             * @param parameters 参数
+             * @param methodParameter 方法参数
+             */
             registerParameter(filteredParameters, parameters, methodParameter);
         }
         
         // 添加默认请求头
+        /**
+         * 添加默认头部。
+         * @param filteredParameters 过滤器参数
+         */
         addDefaultHeaders(filteredParameters);
         operation.setParameters(filteredParameters);
     }
@@ -108,31 +123,31 @@ public class ParameterFilterOperationCustomizer implements GlobalOperationCustom
      * @return 是否跳过
      */
     private boolean shouldSkipParameter(MethodParameter methodParameter) {
-        // 跳过UserValue注解的参数
+ // 跳过用户价值观注解的参数
         if (USER_VALUE_CLASS != null && methodParameter.hasParameterAnnotation(getUserValueAnnotationClass())) {
             return true;
         }
         
-        // 跳过HiddenParam注解的参数
+ // 跳过hidden参数注解的参数
         if (methodParameter.hasParameterAnnotation(HiddenParam.class)) {
             return true;
         }
         
-        // 跳过hidden=true的@Parameter注解
+ // 跳过hidden=true的@参数注解
         io.swagger.v3.oas.annotations.Parameter parameterAnnotation = 
                 methodParameter.getParameterAnnotation(io.swagger.v3.oas.annotations.Parameter.class);
         if (parameterAnnotation != null && parameterAnnotation.hidden()) {
             return true;
         }
         
-        // 跳过BindingResult参数
+ // 跳过binding结果参数
         return methodParameter.getParameterType().isAssignableFrom(BindingResult.class);
     }
 
     /**
-     * 获取 UserValue 注解类型
+      * 获取 用户价值观 注解类型
      *
-     * @return UserValue 注解 Class
+     * @return UserValue 注解 类
      */
     @SuppressWarnings("unchecked")
     private Class<? extends Annotation> getUserValueAnnotationClass() {
@@ -155,6 +170,12 @@ public class ParameterFilterOperationCustomizer implements GlobalOperationCustom
             return;
         }
         java.lang.reflect.Parameter parameter = methodParameter.getParameter();
+        /**
+         * 注册。
+         * @param resultList 结果列表
+         * @param parameters 参数
+         * @param parameter.getType( 参数.获取类型(
+         */
         register(resultList, parameters, parameter.getType());
     }
 
@@ -163,12 +184,19 @@ public class ParameterFilterOperationCustomizer implements GlobalOperationCustom
      *
      * @param resultList 结果列表
      * @param type 类型
+     * @param parameters 参数
      */
     private void register(List<Parameter> resultList, List<Parameter> parameters, Class<?> type) {
         ReflectionUtils.doWithFields(type, field -> {
             if (field.isAnnotationPresent(HiddenParam.class)) {
                 return;
             }
+            /**
+             * 注册参数。
+             * @param resultList 结果列表
+             * @param parameters 参数
+             * @param field 字段
+             */
             registerParameter(resultList, parameters, field);
         });
     }
@@ -178,6 +206,7 @@ public class ParameterFilterOperationCustomizer implements GlobalOperationCustom
      *
      * @param resultList 结果列表
      * @param field 字段
+     * @param parameters 参数
      */
     private void registerParameter(List<Parameter> resultList, List<Parameter> parameters, Field field) {
         if (!field.isAnnotationPresent(ParameterObject.class)) {
@@ -187,12 +216,19 @@ public class ParameterFilterOperationCustomizer implements GlobalOperationCustom
                     .ifPresent(resultList::add);
             return;
         }
+        /**
+         * 注册。
+         * @param resultList 结果列表
+         * @param parameters 参数
+         * @param field.getType( 字段.获取类型(
+         */
         register(resultList, parameters, field.getType());
     }
 
     /**
      * 添加默认请求头
      *
+     * @param parameters 参数
      */
     private void addDefaultHeaders(List<Parameter> parameters) {
         for (Map.Entry<String, String> entry : defaultHeaders.entrySet()) {

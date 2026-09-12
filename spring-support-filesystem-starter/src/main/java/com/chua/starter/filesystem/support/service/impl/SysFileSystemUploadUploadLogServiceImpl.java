@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * 文件系统上传 OSS 记录服务实现。
+   * 文件系统上传 对象存储 记录服务实现。
  *
  * @since 4.0.0.42
  * @author CH
@@ -23,7 +23,7 @@ public class SysFileSystemUploadUploadLogServiceImpl
         implements SysFileSystemUploadUploadLogService {
 
     /**
-     * 系统默认操作人 ID
+      * 系统默认操作人 标识
      */
     private static final int SYSTEM_USER_ID = 0;
 
@@ -34,7 +34,15 @@ public class SysFileSystemUploadUploadLogServiceImpl
 
     @Override
     @Transactional
-    /** Record */
+    /**
+     * Record
+     *
+     * @param uploadId uploadid
+     * @param success 成功
+     * @param message 消息
+     * @param retryCount 重试数量
+     * @return record的结果
+     */
     public boolean record(String uploadId, boolean success, String message, int retryCount) {
         SysFileSystemUploadUploadLog log = new SysFileSystemUploadUploadLog();
         LocalDateTime now = LocalDateTime.now();
@@ -57,7 +65,7 @@ public class SysFileSystemUploadUploadLogServiceImpl
     }
 
     @Override
-    /** ListByUploadId */
+    /** 列表byuploadid */
     public List<SysFileSystemUploadUploadLog> listByUploadId(String uploadId) {
         return list(new LambdaQueryWrapper<SysFileSystemUploadUploadLog>()
                 .eq(SysFileSystemUploadUploadLog::getFilesystemUploadUploadLogUploadId, uploadId)
@@ -66,7 +74,12 @@ public class SysFileSystemUploadUploadLogServiceImpl
 
     @Override
     @Transactional
-    /** 删除ByUploadId */
+    /**
+     * 删除byuploadid
+     *
+     * @param uploadId uploadid
+     * @return 删除byuploadid的结果
+     */
     public boolean deleteByUploadId(String uploadId) {
         return remove(new LambdaQueryWrapper<SysFileSystemUploadUploadLog>()
                 .eq(SysFileSystemUploadUploadLog::getFilesystemUploadUploadLogUploadId, uploadId));

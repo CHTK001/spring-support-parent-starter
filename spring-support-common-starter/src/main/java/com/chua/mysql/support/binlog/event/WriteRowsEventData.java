@@ -7,9 +7,10 @@ import java.util.List;
  * 写入行事件数据
  *
  * @author CH
+ * @since 4.0.0
  */
 public class WriteRowsEventData implements EventData {
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L; // 串行版本uid
 
     /** Rows */
     private final List<Serializable[]> rows;

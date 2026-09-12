@@ -4,6 +4,7 @@ package com.chua.starter.monitor.support.constants;
  * 监控模块常量定义
  *
  * @since 2026/8/4
+ * @author CH
  */
 public final class MonitorConstants {
 

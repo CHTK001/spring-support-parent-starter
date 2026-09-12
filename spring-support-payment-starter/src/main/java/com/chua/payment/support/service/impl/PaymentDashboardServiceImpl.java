@@ -34,36 +34,36 @@ import java.util.Objects;
 @Service
 public class PaymentDashboardServiceImpl implements PaymentDashboardService {
 
-    /** Paid_order_statuses */
+    /** Paid_订单_状态 */
     private static final List<String> PAID_ORDER_STATUSES = List.of("PAID", "COMPLETED", "REFUNDING", "REFUNDED");
-    /** Active_merchant_status */
+    /** 活跃_merchant_状态 */
     private static final int ACTIVE_MERCHANT_STATUS = 1;
-    /** Refunded_status */
+    /** 退税_状态 */
     private static final String REFUNDED_STATUS = "REFUNDED";
-    /** Success_status */
+    /** 成功_状态 */
     private static final String SUCCESS_STATUS = "SUCCESS";
 
     /** Merchantmapper */
     private final MerchantMapper merchantMapper;
-    /** Merchant通道mapper */
+    /** Merchant通道映射器 */
     private final MerchantChannelMapper merchantChannelMapper;
-    /** Payment排序mapper */
+    /** 薪酬排序映射器 */
     private final PaymentOrderMapper paymentOrderMapper;
-    /** Paymentrefund排序mapper */
+    /** Paymentrefund排序映射器 */
     private final PaymentRefundOrderMapper paymentRefundOrderMapper;
-    /** Paymentnotify日志mapper */
+    /** Paymentnotify日志映射器 */
     private final PaymentNotifyLogMapper paymentNotifyLogMapper;
     /** Transactionrecordmapper */
     private final TransactionRecordMapper transactionRecordMapper;
 
     /**
-     * 创建 PaymentDashboardServiceImpl 实例
-     * @param merchantMapper merchantMapper
-     * @param merchantChannelMapper merchantChannelMapper
-     * @param paymentOrderMapper paymentOrderMapper
-     * @param paymentRefundOrderMapper paymentRefundOrderMapper
-     * @param paymentNotifyLogMapper paymentNotifyLogMapper
-     * @param transactionRecordMapper transactionRecordMapper
+      * 创建 薪酬dashboard服务impl 实例
+     * @param merchantMapper merchant映射器
+     * @param merchantChannelMapper merchant通道映射器
+     * @param paymentOrderMapper 薪酬订单映射器
+     * @param paymentRefundOrderMapper 薪酬退税订单映射器
+     * @param paymentNotifyLogMapper 薪酬通知日志映射器
+     * @param transactionRecordMapper transactionrecord映射器
      */
     public PaymentDashboardServiceImpl(MerchantMapper merchantMapper,
                                        MerchantChannelMapper merchantChannelMapper,
@@ -97,15 +97,47 @@ public class PaymentDashboardServiceImpl implements PaymentDashboardService {
         summary.setStartTime(startTime);
         summary.setEndTime(endTime);
 
+        /**
+         * fillmerchant指标。
+         * @param summary summary
+         */
         fillMerchantMetrics(summary);
+        /**
+         * fill订单指标。
+         * @param summary summary
+         * @param startTime 启动时间
+         * @param endTime 结束时间
+         */
         fillOrderMetrics(summary, startTime, endTime);
+        /**
+         * fill退税指标。
+         * @param summary summary
+         * @param startTime 启动时间
+         * @param endTime 结束时间
+         */
         fillRefundMetrics(summary, startTime, endTime);
+        /**
+         * filltransaction指标。
+         * @param summary summary
+         * @param startTime 启动时间
+         * @param endTime 结束时间
+         */
         fillTransactionMetrics(summary, startTime, endTime);
+        /**
+         * fill通知指标。
+         * @param summary summary
+         * @param startTime 启动时间
+         * @param endTime 结束时间
+         */
         fillNotifyMetrics(summary, startTime, endTime);
         return summary;
     }
 
-    /** FillMerchantMetrics */
+    /**
+     * fillmerchant指标
+     *
+     * @param summary summary
+     */
     private void fillMerchantMetrics(PaymentDashboardSummaryVO summary) {
         summary.setMerchantTotal(merchantMapper.selectCount(new LambdaQueryWrapper<>()));
         summary.setActiveMerchantCount(merchantMapper.selectCount(new LambdaQueryWrapper<Merchant>()
@@ -117,7 +149,13 @@ public class PaymentDashboardServiceImpl implements PaymentDashboardService {
         summary.setConfiguredMerchantCount((long) configuredMerchantIds.size());
     }
 
-    /** FillOrderMetrics */
+    /**
+     * fill订单指标
+     *
+     * @param summary summary
+     * @param startTime 启动时间
+     * @param endTime 结束时间
+     */
     private void fillOrderMetrics(PaymentDashboardSummaryVO summary, LocalDateTime startTime, LocalDateTime endTime) {
         List<PaymentOrder> orders = paymentOrderMapper.selectList(new LambdaQueryWrapper<PaymentOrder>()
                 .in(PaymentOrder::getStatus, PAID_ORDER_STATUSES)
@@ -131,7 +169,13 @@ public class PaymentDashboardServiceImpl implements PaymentDashboardService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add));
     }
 
-    /** FillRefundMetrics */
+    /**
+     * fill退税指标
+     *
+     * @param summary summary
+     * @param startTime 启动时间
+     * @param endTime 结束时间
+     */
     private void fillRefundMetrics(PaymentDashboardSummaryVO summary, LocalDateTime startTime, LocalDateTime endTime) {
         List<PaymentRefundOrder> refunds = paymentRefundOrderMapper.selectList(new LambdaQueryWrapper<PaymentRefundOrder>()
                 .eq(PaymentRefundOrder::getStatus, REFUNDED_STATUS)
@@ -145,7 +189,13 @@ public class PaymentDashboardServiceImpl implements PaymentDashboardService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add));
     }
 
-    /** FillTransactionMetrics */
+    /**
+     * filltransaction指标
+     *
+     * @param summary summary
+     * @param startTime 启动时间
+     * @param endTime 结束时间
+     */
     private void fillTransactionMetrics(PaymentDashboardSummaryVO summary, LocalDateTime startTime, LocalDateTime endTime) {
         Long transactionCount = transactionRecordMapper.selectCount(new LambdaQueryWrapper<TransactionRecord>()
                 .ge(TransactionRecord::getCreatedAt, startTime)
@@ -153,7 +203,13 @@ public class PaymentDashboardServiceImpl implements PaymentDashboardService {
         summary.setTransactionCount(transactionCount);
     }
 
-    /** Fill通知Metrics */
+    /**
+     * Fill通知指标
+     *
+     * @param summary summary
+     * @param startTime 启动时间
+     * @param endTime 结束时间
+     */
     private void fillNotifyMetrics(PaymentDashboardSummaryVO summary, LocalDateTime startTime, LocalDateTime endTime) {
         List<PaymentNotifyLog> logs = paymentNotifyLogMapper.selectList(new LambdaQueryWrapper<PaymentNotifyLog>()
                 .ge(PaymentNotifyLog::getReceivedTime, startTime)
@@ -176,7 +232,12 @@ public class PaymentDashboardServiceImpl implements PaymentDashboardService {
         summary.setAverageProcessDurationMs(averageDurationMs);
     }
 
-    /** 处理DurationMs */
+    /**
+     * 处理持续时间ms
+     *
+     * @param item item
+     * @return 处理持续时间ms的结果
+     */
     private Long processDurationMs(PaymentNotifyLog item) {
         if (item.getReceivedTime() == null || item.getProcessedTime() == null) {
             return null;
@@ -184,7 +245,13 @@ public class PaymentDashboardServiceImpl implements PaymentDashboardService {
         return java.time.Duration.between(item.getReceivedTime(), item.getProcessedTime()).toMillis();
     }
 
-    /** FirstNonNull */
+    /**
+     * 第一个non空
+     *
+     * @param first 第一个
+     * @param second second
+     * @return 第一个non空的结果
+     */
     private BigDecimal firstNonNull(BigDecimal first, BigDecimal second) {
         if (first != null) {
             return first;

@@ -6,7 +6,7 @@ import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JavaType;
 
 /**
- * JacksonProblemHandler 接口定义了一个处理Jackson序列化和反序列化问题的策略。
+   * jacksonproblem处理器 接口定义了一个处理Jackson序列化和反序列化问题的策略。
  * 实现这个接口的类需要指定源类型和目标类型，并提供一个处理方法来转换或处理对象。
  * @since 2024/7/19
  * @author CH

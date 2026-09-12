@@ -42,12 +42,12 @@ public class GenerateTask {
     public static final String TYPE_VIDEO = "video";
 
     /**
-     * 任务唯一 ID
+      * 任务唯一 标识
      */
     private String taskId;
 
     /**
-     * 任务类型：image / video
+      * 任务类型：镜像 / 视频
      */
     private String type;
 
@@ -62,7 +62,7 @@ public class GenerateTask {
     private String model;
 
     /**
-     * 任务状态：PROCESSING / SUCCESS / FAILED
+      * 任务状态：处理 / 成功 / 失败
      */
     private String status;
 

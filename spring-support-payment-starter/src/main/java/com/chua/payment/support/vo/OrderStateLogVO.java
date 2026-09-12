@@ -8,30 +8,31 @@ import java.time.LocalDateTime;
 /**
  * 订单状态流转日志视图对象
  * @author CH
+ * @since 4.0.0
  */
 @Data
 public class OrderStateLogVO implements Serializable {
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L; // 串行版本uid
 
-    /** ID */
+    /** 标识 */
     private Long id;
 
-    /** 排序ID */
+    /** 排序标识 */
     private Long orderId;
 
-    /** From状态 */
+    /** 从状态 */
     private String fromState;
 
-    /** TO状态 */
+    /** 转为状态 */
     private String toState;
 
     /** 事件 */
     private String event;
 
-    /** Operator */
+    /** 操作符 */
     private String operator;
 
-    /** Remark */
+    /** 评论 */
     private String remark;
 
     /** 创建时间AT */

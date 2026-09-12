@@ -7,7 +7,7 @@ import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 /**
- * Knife4j Web MVC配置器
+   * 刀4j Web MVC配置器
  * 配置静态资源处理器、视图控制器和枚举属性插件
  *
  * @since 2024/8/7
@@ -40,20 +40,24 @@ public class Knife4jWebMvcConfigurer implements WebMvcConfigurer {
      */
     @Override
     public void addViewControllers(ViewControllerRegistry registry) {
-        // Knife4j 文档页面
+ // 刀4j 文档页面
         registry.addRedirectViewController("/doc", "/doc.html");
         // 新版文档页面
         registry.addRedirectViewController("/doc-v2", "/doc-v2.html");
     }
 
     /**
-     * 获取Knife4j枚举模型属性插件
+      * 获取刀4j枚举模型属性插件
      *
      * @return Knife4j枚举模型属性插件
      */
     @Bean
     @ConditionalOnClass(name = "io.swagger.v3.oas.models.media.Schema")
     public Knife4jEnumModelPropertyPlugin getKnife4jEnumModelPropertyPlugin() {
+        /**
+          * 刀4jenum模型财产plugin。
+         * @return knife4jenum模型财产plugin的结果
+         */
         return new Knife4jEnumModelPropertyPlugin();
     }
 }

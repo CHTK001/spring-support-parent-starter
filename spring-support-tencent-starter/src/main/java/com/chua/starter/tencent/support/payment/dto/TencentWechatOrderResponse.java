@@ -5,20 +5,21 @@ import lombok.Data;
 /**
  * 微信订单查询响应
  * @author CH
+ * @since 4.0.0
  */
 @Data
 public class TencentWechatOrderResponse {
-    /** Success */
+    /** 成功 */
     private boolean success;
-    /** TransactionID */
+    /** transactionid */
     private String transactionId;
-    /** 总数amountFEN */
+    /** 总数amountfen */
     private Long totalAmountFen;
-    /** Payer总数amountFEN */
+    /** 薪酬总数amountfen */
     private Long payerTotalAmountFen;
-    /** Trade状态 */
+    /** 贸易状态 */
     private String tradeState;
-    /** Trade状态desc */
+    /** 贸易状态desc */
     private String tradeStateDesc;
     /** RAW响应 */
     private String rawResponse;

@@ -28,11 +28,11 @@ import java.time.LocalDateTime;
 public class SpiderDefinition extends SysBase {
 
     /**
-     * 主键 ID（自增）
+      * 主键 标识（自增）
      */
     @TableId(type = IdType.AUTO)
     @Schema(description = "主键 ID")
-    /** ID */
+    /** 标识 */
     private Long id;
 
     /**
@@ -60,11 +60,11 @@ public class SpiderDefinition extends SysBase {
     private String description;
 
     /**
-     * 关联流程 ID（spider_flow.id）
+       * 关联流程 标识（蜘蛛_流.标识）
      */
     @TableField("flow_id")
     @Schema(description = "关联流程 ID")
-    /** FlowID */
+    /** 流标识 */
     private Long flowId;
 
     /**
@@ -84,7 +84,7 @@ public class SpiderDefinition extends SysBase {
     private String cronExpression;
 
     /**
-     * 执行类型（ONCE 一次 / SCHEDULE 定时），为空时按 cron 是否配置自动判定
+      * 执行类型（ONCE 一次 / 调度 定时），为空时按 cron 是否配置自动判定
      */
     @TableField("executor_type")
     @Schema(description = "执行类型（ONCE 一次 / SCHEDULE 定时）")
@@ -100,7 +100,7 @@ public class SpiderDefinition extends SysBase {
     private LocalDateTime lastRunAt;
 
     /**
-     * 上次执行状态（SUCCESS/FAIL/RUNNING）
+      * 上次执行状态（成功/失败/RUNNING）
      */
     @TableField("last_status")
     @Schema(description = "上次执行状态")
@@ -120,7 +120,7 @@ public class SpiderDefinition extends SysBase {
      */
     @TableField("entry_url")
     @Schema(description = "入口 URL")
-    /** EntryURL */
+    /** entryurl */
     private String entryUrl;
 
     /**
@@ -136,7 +136,7 @@ public class SpiderDefinition extends SysBase {
      */
     @TableField("collect_deep_url")
     @Schema(description = "是否深度采集")
-    /** CollectdeepURL */
+    /** collectdeepurl */
     private Integer collectDeepUrl;
 
     /**
@@ -168,7 +168,7 @@ public class SpiderDefinition extends SysBase {
      */
     @TableField("remark")
     @Schema(description = "备注")
-    /** Remark */
+    /** 评论 */
     private String remark;
 
     /**

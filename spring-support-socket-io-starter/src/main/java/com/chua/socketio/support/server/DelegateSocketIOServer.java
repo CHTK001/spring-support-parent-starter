@@ -9,9 +9,10 @@ import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
 
 /**
- * SocketIOServer
+   * 套接字io服务端
  *
  * @author CH
+ * @since 4.0.0
  */
 @Slf4j
 public class DelegateSocketIOServer extends SocketIOServer implements InitializingBean, DisposableBean {
@@ -20,10 +21,14 @@ public class DelegateSocketIOServer extends SocketIOServer implements Initializi
     private static final Logger log = LoggerFactory.getLogger(DelegateSocketIOServer.class);
 
     /**
-     * 创建 DelegateSocketIOServer 实例
-     * @param configuration configuration
+      * 创建 delegate套接字io服务端 实例
+     * @param configuration 配置
      */
     public DelegateSocketIOServer(Configuration configuration) {
+        /**
+         * 父。
+         * @param configuration 配置
+         */
         super(configuration);
     }
 
@@ -35,7 +40,7 @@ public class DelegateSocketIOServer extends SocketIOServer implements Initializi
     }
 
     @Override
-    /** AfterProperties设置 */
+    /** 之后属性设置 */
     public void afterPropertiesSet() throws Exception {
         Configuration configuration = getConfiguration();
         log.info(">>>> 正在启动 Socket.io服务器; {}:{}", configuration.getHostname(), configuration.getPort());

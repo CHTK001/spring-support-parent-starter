@@ -21,18 +21,18 @@ import java.time.LocalDateTime;
 public class SysAiUsage extends SysBase {
 
     /**
-     * 主键 ID
+      * 主键 标识
      */
     @TableId(type = IdType.AUTO)
-    private Long sysAiUsageId;
+    private Long sysAiUsageId; // sysaiusageid
 
     /**
-     * 分组：chat / image / video / colorize / vision / rag
+      * 分组：对话 / 镜像 / 视频 / colorize / vision / rag
      */
     private String sysAiUsageGroupName;
 
     /**
-     * 服务商：openai / zhipu / baidu 等
+      * 服务商：openai / zhipu / 百度云 等
      */
     private String sysAiUsageProvider;
 
@@ -42,22 +42,22 @@ public class SysAiUsage extends SysBase {
     private String sysAiUsageModel;
 
     /**
-     * 调用类型：sync / async
+       * 调用类型：同步 / 异步
      */
     private String sysAiUsageCallType;
 
     /**
-     * 输入 Token 数
+      * 输入 令牌 数
      */
     private Integer sysAiUsagePromptTokens;
 
     /**
-     * 输出 Token 数
+      * 输出 令牌 数
      */
     private Integer sysAiUsageCompletionTokens;
 
     /**
-     * 总 Token 数
+      * 总 令牌 数
      */
     private Integer sysAiUsageTotalTokens;
 
@@ -77,7 +77,7 @@ public class SysAiUsage extends SysBase {
     private Double sysAiUsageTotalCost;
 
     /**
-     * 请求 ID（关联调用日志）
+      * 请求 标识（关联调用日志）
      */
     private String sysAiUsageRequestId;
 
@@ -99,23 +99,23 @@ public class SysAiUsage extends SysBase {
     private String sysAiUsageIp;
     /** IP 物理地址（省/市，来自 IP 定位） */
     private String sysAiUsageLocation;
-    /** 请求类型: chat/completion/embedding */
+    /** 请求类型: 对话/完成/嵌入 */
     private String sysAiUsageType;
-    /** 计费模式: pay_as_you_go/subscription */
+    /** 计费模式: 薪酬_as_you_Go/subscription */
     private String sysAiUsageBillingMode;
-    /** 缓存读取 Token */
+    /** 缓存读取 令牌 */
     private Integer sysAiUsageCachedTokens;
     /** 缓存读取成本 */
     private Double sysAiUsageCachedCost;
-    /** 输入单价(每1M Token) */
+    /** 输入单价(每1M 令牌) */
     @com.baomidou.mybatisplus.annotation.TableField("sys_ai_usage_input_price_per_1m")
-    private Double sysAiUsageInputPricePer1M;
-    /** 输出单价(每1M Token) */
+    private Double sysAiUsageInputPricePer1M; // sysaiusage输入priceper1m
+    /** 输出单价(每1M 令牌) */
     @com.baomidou.mybatisplus.annotation.TableField("sys_ai_usage_output_price_per_1m")
-    private Double sysAiUsageOutputPricePer1M;
-    /** 缓存读取单价(每1M Token) */
+    private Double sysAiUsageOutputPricePer1M; // sysaiusage输出priceper1m
+    /** 缓存读取单价(每1M 令牌) */
     @com.baomidou.mybatisplus.annotation.TableField("sys_ai_usage_cache_read_price_per_1m")
-    private Double sysAiUsageCacheReadPricePer1M;
+    private Double sysAiUsageCacheReadPricePer1M; // sysaiusage缓存读取priceper1m
     /** 服务档位 */
     private String sysAiUsageServiceTier;
     /** 倍率 */
@@ -146,9 +146,9 @@ public class SysAiUsage extends SysBase {
     }
 
     /**
-     * 获取端点 URL，为空时返回默认值 "/v1/chat/completions"。
+      * 获取端点 URL，为空时返回默认值 "/v1/对话/completions"。
      *
-     * @return 端点 URL，null 时返回 "/v1/chat/completions"
+     * @return 端点 URL，空 时返回 "/v1/对话/completions"
      */
     public String getSysAiUsageEndpoint() {
         return sysAiUsageEndpoint == null ? "/v1/chat/completions" : sysAiUsageEndpoint;
@@ -157,7 +157,7 @@ public class SysAiUsage extends SysBase {
     /**
      * 获取请求 IP，为空时返回默认值 "127.0.0.1"。
      *
-     * @return 请求 IP，null 时返回 "127.0.0.1"
+     * @return 请求 IP，空 时返回 "127.0.0.1"
      */
     public String getSysAiUsageIp() {
         return sysAiUsageIp == null ? "127.0.0.1" : sysAiUsageIp;

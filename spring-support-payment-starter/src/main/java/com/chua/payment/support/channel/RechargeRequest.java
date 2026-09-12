@@ -7,22 +7,23 @@ import java.math.BigDecimal;
 /**
  * 充值请求
  * @author CH
+ * @since 4.0.0
  */
 @Data
 public class RechargeRequest {
-    /** RechargeNO */
+    /** rechargeno */
     private String rechargeNo;
-    /** NotifyURL */
+    /** 通知url */
     private String notifyUrl;
-    /** MerchantID */
+    /** merchantid */
     private Long merchantId;
-    /** 用户ID */
+    /** 用户标识 */
     private Long userId;
     /** Amount */
     private BigDecimal amount;
-    /** Operator */
+    /** 操作符 */
     private String operator;
-    /** Remark */
+    /** 评论 */
     private String remark;
 }
 

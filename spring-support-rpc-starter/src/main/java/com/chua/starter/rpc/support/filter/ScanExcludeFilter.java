@@ -11,7 +11,7 @@ import java.io.IOException;
 /**
  * 扫描排除筛选器
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024/04/08
  * @author CH
  */
@@ -22,7 +22,7 @@ public class ScanExcludeFilter implements TypeFilter {
     private int excludedCount;
 
     @Override
-    /** Match */
+    /** 匹配 */
     public boolean match(MetadataReader metadataReader, MetadataReaderFactory metadataReaderFactory) throws IOException {
         String className = metadataReader.getClassMetadata().getClassName();
         boolean excluded = ServicePackagesHolder.getInstance().isClassScanned(className);

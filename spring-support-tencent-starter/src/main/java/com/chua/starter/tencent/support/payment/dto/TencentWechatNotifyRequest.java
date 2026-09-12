@@ -5,10 +5,11 @@ import lombok.Data;
 /**
  * 微信支付回调请求
  * @author CH
+ * @since 4.0.0
  */
 @Data
 public class TencentWechatNotifyRequest {
-    /** Serial数字 */
+    /** 串行数字 */
     private String serialNumber;
     /** 时间戳 */
     private String timestamp;
@@ -16,7 +17,7 @@ public class TencentWechatNotifyRequest {
     private String nonce;
     /** 签名 */
     private String signature;
-    /** Sign类型 */
+    /** 标志类型 */
     private String signType;
     /** 请求体 */
     private String body;

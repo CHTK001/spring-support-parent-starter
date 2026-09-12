@@ -12,30 +12,30 @@ import java.util.UUID;
 /**
  * MDC处理过滤器
  * <p>
- * 在请求进入时设置traceId，请求结束时清理MDC上下文。
+   * 在请求进入时设置追踪标识，请求结束时清理MDC上下文。
  * </p>
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024/01/01
  * @author CH
  */
 public class MdcHandlerFilter implements Filter {
 
     @Override
-    /** Do过滤 */
+    /** 执行过滤 */
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
             throws IOException, ServletException {
         try {
             HttpServletRequest httpRequest = (HttpServletRequest) request;
             
-            // 设置traceId
+ // 设置追踪标识
             String traceId = httpRequest.getHeader(MdcConstant.X_TRACE_ID);
             if (traceId == null || traceId.isEmpty()) {
                 traceId = UUID.randomUUID().toString().replace("-", "");
             }
             MDC.put(MdcConstant.TRACE_ID, traceId);
             
-            // 设置用户ID，如果没有则设置为N/A
+ // 设置用户标识，如果没有则设置为N/A
             String userId = RequestUtils.getUserId();
             MDC.put(MdcConstant.USER_ID, (userId != null && !userId.isEmpty()) ? userId : "N/A");
             

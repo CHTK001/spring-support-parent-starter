@@ -24,11 +24,11 @@ public class GzipMessageConverter implements MessageConverter {
 
     /** 1KB */
     private static final int MIN_COMPRESS_SIZE = 1024;
-    /** Compressed_header */
+    /** Compressed_头部 */
     private static final String COMPRESSED_HEADER = "X-Compressed";
 
     @Override
-    /** 转换Before发送 */
+    /** 转换之前发送 */
     public Message convertBeforeSend(Message message) {
         byte[] payload = message.getPayload();
         if (payload == null || payload.length < MIN_COMPRESS_SIZE) {
@@ -37,6 +37,10 @@ public class GzipMessageConverter implements MessageConverter {
 
         try {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            /**
+             * 尝试。
+             * @param GZIPOutputStream(baos gzip输出流(baos
+             */
             try (GZIPOutputStream gzipOut = new GZIPOutputStream(baos)) {
                 gzipOut.write(payload);
             }
@@ -57,7 +61,7 @@ public class GzipMessageConverter implements MessageConverter {
     }
 
     @Override
-    /** 转换After接收 */
+    /** 转换之后接收 */
     public Message convertAfterReceive(Message message) {
         Object compressed = message.getHeaders().get(COMPRESSED_HEADER);
         if (!"gzip".equals(compressed)) {
@@ -69,6 +73,10 @@ public class GzipMessageConverter implements MessageConverter {
             ByteArrayInputStream bais = new ByteArrayInputStream(payload);
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
 
+            /**
+             * 尝试。
+             * @param GZIPInputStream(bais gzip输入流(bais
+             */
             try (GZIPInputStream gzipIn = new GZIPInputStream(bais)) {
                 byte[] buffer = new byte[4096];
                 int len;
@@ -91,14 +99,14 @@ public class GzipMessageConverter implements MessageConverter {
     }
 
     @Override
-    /** Supports */
+    /** 支持 */
     public boolean supports(Message message) {
         byte[] payload = message.getPayload();
         return payload != null && payload.length >= MIN_COMPRESS_SIZE;
     }
 
     @Override
-    /** 获取Order */
+    /** 获取订单 */
     public int getOrder() {
         return 100; // 较低优先级，在加密等操作之后
     }

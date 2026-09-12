@@ -19,22 +19,22 @@ import java.util.Map;
 public class MessageTraceContext {
 
     /**
-     * 追踪ID
+      * 追踪标识
      */
     private String traceId;
 
     /**
-     * 跨度ID
+      * 跨度标识
      */
     private String spanId;
 
     /**
-     * 父跨度ID
+      * 父跨度标识
      */
     private String parentSpanId;
 
     /**
-     * 消息ID
+      * 消息标识
      */
     private String messageId;
 
@@ -85,6 +85,8 @@ public class MessageTraceContext {
 
     /**
      * 添加标签
+     * @param key 钥匙
+     * @param value 价值观
      */
     public void addTag(String key, String value) {
         tags.put(key, value);
@@ -92,6 +94,7 @@ public class MessageTraceContext {
 
     /**
      * 计算处理耗时（毫秒）
+     * @return 获取处理持续时间的结果
      */
     public long getProcessDuration() {
         if (processStartTime == null || processEndTime == null) {
@@ -102,6 +105,7 @@ public class MessageTraceContext {
 
     /**
      * 计算总耗时（毫秒）
+     * @return 获取total持续时间的结果
      */
     public long getTotalDuration() {
         if (sendTime == null || processEndTime == null) {

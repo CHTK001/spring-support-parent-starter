@@ -31,6 +31,7 @@ import java.util.UUID;
  * 小程序钱包 API
  * <p>小程序使用 OAuth2 登录流程获取 Bearer Token，认证机制与 Web 一致</p>
  * @author CH
+ * @since 4.0.0
  */
 @RestController
 @RequestMapping("/mp/wallet")
@@ -47,8 +48,8 @@ public class MpWalletController {
     @GetMapping
     /**
      * 获取Wallet
-     * @param request request
-     * @param merchantId merchantId
+     * @param request 请求
+     * @param merchantId merchantid
      */
     public Result<WalletAccountVO> getWallet(HttpServletRequest request,
                                              @RequestParam Long merchantId) {
@@ -61,13 +62,13 @@ public class MpWalletController {
 
     @GetMapping("/log/page")
     /**
-     * 列表Logs
-     * @param request request
-     * @param pageNum pageNum
-     * @param pageSize pageSize
-     * @param merchantId merchantId
-     * @param bizType bizType
-     * @param bizNo bizNo
+      * 列表日志
+     * @param request 请求
+     * @param pageNum pagenum
+     * @param pageSize page大小
+     * @param merchantId merchantid
+     * @param bizType biz类型
+     * @param bizNo bizno
      */
     public Result<PageResult<WalletAccountLog>> listLogs(HttpServletRequest request,
                                                          @RequestParam(defaultValue = "1") int pageNum,
@@ -85,13 +86,13 @@ public class MpWalletController {
 
     @GetMapping("/order/page")
     /**
-     * 列表Orders
-     * @param request request
-     * @param pageNum pageNum
-     * @param pageSize pageSize
-     * @param merchantId merchantId
-     * @param orderType orderType
-     * @param status status
+      * 列表订单
+     * @param request 请求
+     * @param pageNum pagenum
+     * @param pageSize page大小
+     * @param merchantId merchantid
+     * @param orderType 订单类型
+     * @param status 状态
      */
     public Result<PageResult<WalletOrder>> listOrders(HttpServletRequest request,
                                                       @RequestParam(defaultValue = "1") int pageNum,
@@ -110,7 +111,7 @@ public class MpWalletController {
     @PostMapping("/withdraw")
     /**
      * Withdraw
-     * @param request request
+     * @param request 请求
      * @param dto dto
      */
     public Result<WalletOrder> withdraw(HttpServletRequest request,
@@ -154,8 +155,8 @@ public class MpWalletController {
 
     @PostMapping("/transfer")
     /**
-     * Transfer
-     * @param request request
+      * 调动
+     * @param request 请求
      * @param dto dto
      */
     public Result<Void> transfer(HttpServletRequest request,

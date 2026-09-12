@@ -15,6 +15,7 @@ import java.util.Objects;
 /**
  * 隐私序列化器
  * @author CH
+ * @since 4.0.0
  */
 public class PrivacySerializer extends JsonSerializer<String> implements ContextualSerializer {
 
@@ -82,8 +83,8 @@ public class PrivacySerializer extends JsonSerializer<String> implements Context
     /**
      * 序列化
      * @param origin origin
-     * @param jsonGenerator jsonGenerator
-     * @param serializerProvider serializerProvider
+     * @param jsonGenerator json生成器
+     * @param serializerProvider 序列化器提供者
      */
     public void serialize(final String origin, final JsonGenerator jsonGenerator,
                           final SerializerProvider serializerProvider) throws IOException {
@@ -120,6 +121,11 @@ public class PrivacySerializer extends JsonSerializer<String> implements Context
                     jsonGenerator.writeString(origin);
                     break;
                 default:
+                    /**
+                     * illegal参数异常。
+                     * @param privacyTypeEnum 隐私类型enum
+                     * @return illegal参数异常的结果
+                     */
                     throw new IllegalArgumentException("unknown privacy type enum " + privacyTypeEnum);
             }
             return;
@@ -138,6 +144,10 @@ public class PrivacySerializer extends JsonSerializer<String> implements Context
                     apiFieldPrivacyEncrypt = beanProperty.getContextAnnotation(ApiFieldPrivacyEncrypt.class);
                 }
                 if (apiFieldPrivacyEncrypt != null) {
+                    /**
+                     * 隐私序列化器。
+                     * @param apiFieldPrivacyEncrypt.type( api字段隐私encrypt.类型(
+                     */
                     return new PrivacySerializer(apiFieldPrivacyEncrypt.type(), apiFieldPrivacyEncrypt.prefixNoMaskLen(),
                             apiFieldPrivacyEncrypt.suffixNoMaskLen(), apiFieldPrivacyEncrypt.symbol());
                 }

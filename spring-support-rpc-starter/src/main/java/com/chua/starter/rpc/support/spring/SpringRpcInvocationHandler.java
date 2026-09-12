@@ -40,15 +40,15 @@ public class SpringRpcInvocationHandler<T> implements InvocationHandler {
     private final RpcRetryPolicy retryPolicy;
     /** Circuitbreaker管理器 */
     private RpcCircuitBreakerManager circuitBreakerManager;
-    /** Interceptors */
+    /** 拦截器 */
     private List<RpcInterceptor> interceptors;
 
     /**
-     * 创建 SpringRpcInvocationHandler 实例
-     * @param targetType targetType
-     * @param rpcClient rpcClient
-     * @param applicationContext applicationContext
-     * @param consumerConfig consumerConfig
+      * 创建 springrpcinvocation处理器 实例
+     * @param targetType Target类型
+     * @param rpcClient rpc客户端
+     * @param applicationContext application上下文
+     * @param consumerConfig consumer配置
      */
     public SpringRpcInvocationHandler(Class<T> targetType,
                                       RpcClient rpcClient,
@@ -81,7 +81,7 @@ public class SpringRpcInvocationHandler<T> implements InvocationHandler {
     @Override
     /** 调用 */
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-        // 处理Object方法
+ // 处理对象方法
         if (method.getDeclaringClass() == Object.class) {
             return ReflectUtils.invoke(this, method.getName(), method.getReturnType(), method.getParameterTypes(), args);
         }
@@ -104,6 +104,11 @@ public class SpringRpcInvocationHandler<T> implements InvocationHandler {
         if (circuitBreakerManager != null && Boolean.TRUE.equals(circuitBreakerEnabled)) {
             circuitBreaker = circuitBreakerManager.getOrCreate(serviceName);
             if (!circuitBreaker.tryAcquire()) {
+                /**
+                 * runtime异常。
+                 * @param serviceName 服务名称
+                 * @return runtime异常的结果
+                 */
                 throw new RuntimeException("服务熔断中: " + serviceName);
             }
         }
@@ -114,7 +119,7 @@ public class SpringRpcInvocationHandler<T> implements InvocationHandler {
 
         while (retryCount <= retryPolicy.getMaxRetries()) {
             try {
-                // 通过真实 RPC 客户端获取远程服务代理（网络调用），而非本地 bean 直调
+ // 通过真实 RPC 客户端获取远程服务代理（网络调用），而非本地 Bean 直调
                 T remote = rpcClient.get(targetType);
                 Object result = ReflectUtils.invoke(remote, method.getName(), method.getReturnType(), method.getParameterTypes(), args);
 
@@ -182,6 +187,7 @@ public class SpringRpcInvocationHandler<T> implements InvocationHandler {
      * 查找Spring Bean
      *
      * @deprecated 伪远程实现遗留方法，已由 {@link #rpcClient} 网络调用替代
+     * @return findBean的结果
      */
     @Deprecated
     private T findBean() {
@@ -195,6 +201,8 @@ public class SpringRpcInvocationHandler<T> implements InvocationHandler {
 
     /**
      * 创建重试策略
+     * @param config 配置
+     * @return 创建重试policy的结果
      */
     private RpcRetryPolicy createRetryPolicy(RpcConsumerConfig config) {
         RpcRetryPolicy policy = new RpcRetryPolicy();
@@ -216,19 +224,37 @@ public class SpringRpcInvocationHandler<T> implements InvocationHandler {
         return policy;
     }
 
-    /** 读取Boolean */
+    /**
+     * 读取布尔值
+     *
+     * @param config 配置
+     * @param methodName 方法名称
+     * @return 读取布尔值的结果
+     */
     private Boolean readBoolean(RpcConsumerConfig config, String methodName) {
         Object value = invokeOptionalGetter(config, methodName);
         return value instanceof Boolean bool ? bool : null;
     }
 
-    /** 读取Integer */
+    /**
+     * 读取Integer
+     *
+     * @param config 配置
+     * @param methodName 方法名称
+     * @return 读取integer的结果
+     */
     private Integer readInteger(RpcConsumerConfig config, String methodName) {
         Object value = invokeOptionalGetter(config, methodName);
         return value instanceof Integer integer ? integer : null;
     }
 
-    /** 调用OptionalGetter */
+    /**
+     * 调用期权getter
+     *
+     * @param config 配置
+     * @param methodName 方法名称
+     * @return invoke期权getter的结果
+     */
     private Object invokeOptionalGetter(RpcConsumerConfig config, String methodName) {
         if (config == null) {
             return null;

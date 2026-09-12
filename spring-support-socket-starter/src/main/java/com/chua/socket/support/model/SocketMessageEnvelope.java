@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 import java.io.Serializable;
 
 /**
- * Socket 消息传输包装体
+   * 套接字 消息传输包装体
  *
  * @since 2026-04-08
  * @author CH
@@ -19,7 +19,7 @@ import java.io.Serializable;
 @AllArgsConstructor
 public class SocketMessageEnvelope implements Serializable {
 
-    /** Serial版本UID */
+    /** 串行版本UID */
     private static final long serialVersionUID = 1L;
 
     /**
@@ -43,7 +43,7 @@ public class SocketMessageEnvelope implements Serializable {
     private String uuid;
 
     /**
-     * 数据 ID，便于前端快速过滤
+      * 数据 标识，便于前端快速过滤
      */
     private String dataId;
 }

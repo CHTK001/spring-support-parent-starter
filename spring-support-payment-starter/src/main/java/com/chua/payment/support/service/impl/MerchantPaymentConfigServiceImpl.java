@@ -23,13 +23,13 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class MerchantPaymentConfigServiceImpl implements MerchantPaymentConfigService {
 
-    /** 配置mapper */
+    /** 配置映射器 */
     private final MerchantPaymentConfigMapper configMapper;
-    /** 排序mapper */
+    /** 排序映射器 */
     private final PaymentOrderMapper orderMapper;
 
     @Override
-    /** 获取Config */
+    /** 获取配置 */
     public MerchantPaymentConfig getConfig(Long merchantId) {
         if (merchantId == null) {
             return getDefaultConfig();
@@ -42,9 +42,18 @@ public class MerchantPaymentConfigServiceImpl implements MerchantPaymentConfigSe
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    /** 保存Or更新 */
+    /**
+      * 保存或更新
+     *
+     * @param config 配置
+     */
     public void saveOrUpdate(MerchantPaymentConfig config) {
         if (config == null || config.getMerchantId() == null) {
+            /**
+             * 薪酬异常。
+             * @param "配置不能为空" "配置不能为空"
+             * @return 薪酬异常的结果
+             */
             throw new PaymentException("配置不能为空");
         }
         MerchantPaymentConfig existing = configMapper.selectOne(new LambdaQueryWrapper<MerchantPaymentConfig>()
@@ -62,7 +71,7 @@ public class MerchantPaymentConfigServiceImpl implements MerchantPaymentConfigSe
     }
 
     @Override
-    /** 校验是否可以创建Order */
+    /** 校验是否可以创建订单 */
     public void checkCanCreateOrder(Long merchantId, Long userId) {
         MerchantPaymentConfig config = getConfig(merchantId);
 
@@ -73,16 +82,26 @@ public class MerchantPaymentConfigServiceImpl implements MerchantPaymentConfigSe
                     .in(PaymentOrder::getStatus, "PENDING", "PAYING"));
 
             if (pendingCount >= config.getPendingOrderLimit()) {
+                /**
+                 * 薪酬异常。
+                 * @param "待支付订单数量已达上限，请先完成或取消现有订单" "待支付订单数量已达上限，请先完成或取消现有订单"
+                 * @return 薪酬异常的结果
+                 */
                 throw new PaymentException("待支付订单数量已达上限，请先完成或取消现有订单");
             }
         }
     }
 
     @Override
-    /** 校验是否可以PayOrder */
+    /** 校验是否可以薪酬订单 */
     public void checkCanPayOrder(Long orderId) {
         PaymentOrder order = orderMapper.selectById(orderId);
         if (order == null) {
+            /**
+             * 薪酬异常。
+             * @param "订单不存在" "订单不存在"
+             * @return 薪酬异常的结果
+             */
             throw new PaymentException("订单不存在");
         }
 
@@ -90,6 +109,11 @@ public class MerchantPaymentConfigServiceImpl implements MerchantPaymentConfigSe
 
         if (!Boolean.TRUE.equals(config.getOrderReusable())) {
             if ("PAYING".equals(order.getStatus()) || "PAID".equals(order.getStatus())) {
+                /**
+                 * 薪酬异常。
+                 * @param "该订单为一次性订单，不可重复支付" "该订单为一次性订单，不可重复支付"
+                 * @return 薪酬异常的结果
+                 */
                 throw new PaymentException("该订单为一次性订单，不可重复支付");
             }
         }
@@ -98,19 +122,28 @@ public class MerchantPaymentConfigServiceImpl implements MerchantPaymentConfigSe
             LocalDateTime baseTime = order.getCreatedAt() != null ? order.getCreatedAt() : LocalDateTime.now();
             LocalDateTime expireTime = baseTime.plusMinutes(config.getOrderTimeoutMinutes());
             if (LocalDateTime.now().isAfter(expireTime)) {
+                /**
+                 * 薪酬异常。
+                 * @param "订单已超时，无法继续支付" "订单已超时，无法继续支付"
+                 * @return 薪酬异常的结果
+                 */
                 throw new PaymentException("订单已超时，无法继续支付");
             }
         }
     }
 
     @Override
-    /** 获取OrderTimeoutMinutes */
+    /** 获取订单超时minutes */
     public Integer getOrderTimeoutMinutes(Long merchantId) {
         MerchantPaymentConfig config = getConfig(merchantId);
         return config.getOrderTimeoutMinutes();
     }
 
-    /** 获取DefaultConfig */
+    /**
+     * 获取默认配置
+     *
+     * @return 获取默认配置的结果
+     */
     private MerchantPaymentConfig getDefaultConfig() {
         MerchantPaymentConfig config = new MerchantPaymentConfig();
         config.setOrderReusable(true);

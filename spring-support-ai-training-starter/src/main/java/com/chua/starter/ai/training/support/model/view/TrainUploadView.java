@@ -15,15 +15,15 @@ import java.io.Serializable;
 @Builder
 public class TrainUploadView implements Serializable {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L; // 串行版本uid
 
     /**
-     * 训练任务 ID。
+      * 训练任务 标识。
      */
     private String taskId;
 
     /**
-     * 上传的 ZIP 原始文件名。
+      * 上传的 压缩 原始文件名。
      */
     private String fileName;
 

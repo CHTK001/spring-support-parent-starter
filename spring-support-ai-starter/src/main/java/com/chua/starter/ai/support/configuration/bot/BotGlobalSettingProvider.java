@@ -6,7 +6,7 @@ import com.chua.common.support.spi.annotations.Spi;
 import java.util.List;
 
 /**
- * 微信 Bot 模块全局设置提供者 SPI。
+   * 微信 机器人 模块全局设置提供者 SPI。
  *
  * <p>定义 {@code bot} 分组的全部配置项，由 {@link com.chua.starter.ai.support.configuration.client.GlobalSettingInitializer}
  * 启动时自动注册到 {@code sys_ai_global_setting} 表（仅首次）。调用层通过
@@ -52,7 +52,7 @@ public class BotGlobalSettingProvider implements GlobalSettingProvider {
     }
 
     /**
-     * Bot 模块全部配置项。
+      * 机器人 模块全部配置项。
      *
      * @return 配置项列表
      */

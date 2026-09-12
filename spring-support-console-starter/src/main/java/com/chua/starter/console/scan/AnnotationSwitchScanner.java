@@ -29,7 +29,7 @@ import java.util.stream.Collectors;
 @Slf4j
 public class AnnotationSwitchScanner {
 
-    private final RequestMappingHandlerMapping requestMappingHandlerMapping;
+    private final RequestMappingHandlerMapping requestMappingHandlerMapping; // 请求mapping处理器mapping
 
     public AnnotationSwitchScanner(
             @org.springframework.context.annotation.Lazy RequestMappingHandlerMapping requestMappingHandlerMapping) {
@@ -99,6 +99,11 @@ public class AnnotationSwitchScanner {
                 .build();
     }
 
+    /**
+     * sha256。
+     * @param input 输入
+     * @return sha256的结果
+     */
     private static String sha256(String input) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
@@ -109,6 +114,12 @@ public class AnnotationSwitchScanner {
             }
             return sb.toString();
         } catch (Exception e) {
+            /**
+             * illegal状态异常。
+             * @param "指纹计算失败" "指纹计算失败"
+             * @param e e
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("指纹计算失败", e);
         }
     }

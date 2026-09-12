@@ -6,7 +6,7 @@ import com.chua.starter.software.support.entity.SoftSource;
 import java.util.List;
 
 /**
- * 软件源接口 - SPI（Service Provider Interface）
+   * 软件源接口 - SPI（服务 提供者 接口）
  *
  * <p>定义软件源的标准操作能力，由具体源实现（如包管理器、第三方仓库、本地文件）实现该接口。</p>
  *

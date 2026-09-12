@@ -6,7 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 随机负载均衡策略（委托 {@link com.chua.common.support.lang.balance.LoadBalance} SPI 的 random 实现）
+   * 随机负载均衡策略（委托 {@link com.chua.common.support.lang.balance.LoadBalance} SPI 的 随机 实现）
  *
  * @since 2025-03-20
  * @author CH
@@ -26,7 +26,7 @@ public class RandomLoadBalancer implements RpcLoadBalancer {
     }
 
     @Override
-    /** 获取Name */
+    /** 获取名称 */
     public String getName() {
         return "random";
     }

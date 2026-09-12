@@ -4,10 +4,10 @@ import com.chua.common.support.config.center.ConfigCenter;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * ConfigCenter 持有者
+   * 配置center 持有者
  * <p>
- * 统一管理 ConfigCenter 实例，确保整个应用使用同一个实例。
- * 解决 EnvironmentPostProcessor 和 AutoConfiguration 创建不同实例的问题。
+   * 统一管理 配置center 实例，确保整个应用使用同一个实例。
+   * 解决 环境post处理器 和 auto配置 创建不同实例的问题。
  * </p>
  *
  * @since 2024/12/07
@@ -17,12 +17,12 @@ import lombok.extern.slf4j.Slf4j;
 public class ConfigCenterHolder {
 
     /**
-     * 全局 ConfigCenter 实例
+      * 全局 配置center 实例
      */
     private static volatile ConfigCenter instance;
 
     /**
-     * 设置 ConfigCenter 实例
+      * 设置 配置center 实例
      *
      * @param configCenter 配置中心实例
      */
@@ -39,9 +39,9 @@ public class ConfigCenterHolder {
     }
 
     /**
-     * 获取 ConfigCenter 实例
+      * 获取 配置center 实例
      *
-     * @return 配置中心实例，可能为 null
+     * @return 配置中心实例，可能为 空
      */
     public static ConfigCenter getInstance() {
         return instance;
@@ -66,7 +66,7 @@ public class ConfigCenterHolder {
     }
 
     /**
-     * 关闭 ConfigCenter
+      * 关闭 配置center
      */
     public static void shutdown() {
         if (instance != null) {

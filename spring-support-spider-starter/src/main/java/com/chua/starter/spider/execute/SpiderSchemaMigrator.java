@@ -87,7 +87,7 @@ public class SpiderSchemaMigrator implements ApplicationRunner {
      * @param table          表名
      * @param column         列名
      * @param definition     列定义（含类型与注释）
-     * @param afterColumn    AFTER 列，可空
+     * @param afterColumn    之后 列，可空
      */
     private void ensureColumn(JdbcTemplate jdbc, String table, String column,
                               String definition, String afterColumn) {

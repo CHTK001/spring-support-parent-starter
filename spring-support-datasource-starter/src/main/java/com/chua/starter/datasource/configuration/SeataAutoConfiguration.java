@@ -44,6 +44,7 @@ import java.util.Map;
  *   tx-service-group: my_tx_group
  *   enable-auto-data-source-proxy: false  # 我们自行代理，避免冲突
  *   data-source-proxy-mode: AT       # AT 或 XA
+ * }</pre>de: AT       # AT 或 XA
  * }</pre>
  * </p>
  *
@@ -57,6 +58,12 @@ import java.util.Map;
         "io.seata.rm.datasource.DataSourceProxy"
 })
 @ConditionalOnProperty(prefix = "seata", name = "enabled", havingValue = "true", matchIfMissing = true)
+/**
+ * seataauto配置类。
+ *
+ * @author CH
+ * @since 4.0.0
+ */
 public class SeataAutoConfiguration {
 
     /**
@@ -72,6 +79,10 @@ public class SeataAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean(name = "seataDataSourcePostProcessor")
     public SeataDataSourcePostProcessor seataDataSourcePostProcessor() {
+        /**
+          * Seata数据源post处理器。
+         * @return seata数据源post处理器的结果
+         */
         return new SeataDataSourcePostProcessor();
     }
 
@@ -82,6 +93,8 @@ public class SeataAutoConfiguration {
      * 将其包装为 Seata {@code DataSourceProxy}。
      * 使用反射创建以避免编译期对 Seata 的强制依赖。
      * </p>
+     * @author CH
+     * @since 4.0.0
      */
     @Slf4j
     public static class SeataDataSourcePostProcessor {
@@ -115,7 +128,7 @@ public class SeataAutoConfiguration {
                 }
 
                 try {
-                    // 使用反射创建 DataSourceProxy，避免编译期依赖
+ // 使用反射创建 数据源代理，避免编译期依赖
                     DataSource proxy = createDataSourceProxy(dataSource);
                     // 替换原数据源
                     DataSourceContextSupport.addDatasource(dsName, proxy);
@@ -129,7 +142,9 @@ public class SeataAutoConfiguration {
         }
 
         /**
-         * 通过反射创建 Seata DataSourceProxy
+          * 通过反射创建 Seata 数据源代理
+         * @param dataSource 数据源
+         * @return 创建数据源代理的结果
          */
         @SuppressWarnings("unchecked")
         private DataSource createDataSourceProxy(DataSource dataSource) throws Exception {
@@ -139,6 +154,8 @@ public class SeataAutoConfiguration {
 
         /**
          * 检查数据源是否已经被 Seata 代理
+         * @param dataSource 数据源
+         * @return 是否alreadyproxied的结果
          */
         private boolean isAlreadyProxied(DataSource dataSource) {
             Class<?> proxyClass = ReflectUtils.forName("io.seata.rm.datasource.DataSourceProxy");

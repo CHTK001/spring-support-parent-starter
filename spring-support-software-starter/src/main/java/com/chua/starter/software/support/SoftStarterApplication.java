@@ -18,7 +18,11 @@ import org.springframework.context.annotation.ComponentScan;
 @MapperScan("com.chua.starter.software.support.mapper")
 public class SoftStarterApplication {
 
-    /** Main */
+    /**
+     * Main
+     *
+     * @param args 参数
+     */
     public static void main(String[] args) {
         SpringApplication.run(SoftStarterApplication.class, args);
     }

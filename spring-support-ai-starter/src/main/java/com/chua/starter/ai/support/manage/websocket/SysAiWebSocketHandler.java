@@ -42,7 +42,7 @@ public class SysAiWebSocketHandler extends TextWebSocketHandler implements SubPr
 
     @Override
     public List<String> getSubProtocols() {
-        // 桌面模式使用 nomi-local-trust，Web 模式使用 chat，均需支持
+ // 桌面模式使用 nomi-本地-信任，Web 模式使用 对话，均需支持
         return List.of("nomi-local-trust", "chat");
     }
 
@@ -67,6 +67,9 @@ public class SysAiWebSocketHandler extends TextWebSocketHandler implements SubPr
     private ScheduledExecutorService heartbeatScheduler;
 
     @PostConstruct
+    /**
+     * 启动心跳。
+     */
     private void startHeartbeat() {
         heartbeatScheduler = Executors.newSingleThreadScheduledExecutor(r -> {
             Thread t = new Thread(r, "nomifun-ws-heartbeat");
@@ -79,6 +82,9 @@ public class SysAiWebSocketHandler extends TextWebSocketHandler implements SubPr
     }
 
     @PreDestroy
+    /**
+     * 停止心跳。
+     */
     private void stopHeartbeat() {
         if (heartbeatScheduler != null && !heartbeatScheduler.isShutdown()) {
             heartbeatScheduler.shutdownNow();
@@ -112,6 +118,11 @@ public class SysAiWebSocketHandler extends TextWebSocketHandler implements SubPr
                         "name", "subscribe.callback-" + cmd + id,
                         "data", result == null ? "" : result == null ? "" : result
                 );
+                /**
+                 * 发送safe。
+                 * @param session 会话
+                 * @param response 响应
+                 */
                 sendSafe(session, response);
             }
         } catch (Exception e) {
@@ -120,9 +131,9 @@ public class SysAiWebSocketHandler extends TextWebSocketHandler implements SubPr
     }
 
     /**
-     * 命令分发：当前为占位实现，后续按契约命令逐组接入自有 service。
+      * 命令分发：当前为占位实现，后续按契约命令逐组接入自有 服务。
      *
-     * @param cmd         命令名（去掉 subscribe- 前缀）
+     * @param cmd         命令名（去掉 订阅- 前缀）
      * @param requestData 请求数据
      * @return 响应数据
      */
@@ -140,7 +151,7 @@ public class SysAiWebSocketHandler extends TextWebSocketHandler implements SubPr
     /**
      * 向所有在线会话推送事件。
      *
-     * @param event 事件名（如 message.stream）
+     * @param event 事件名（如 消息.流）
      * @param data  事件数据
      */
     public void broadcast(String event, Object data) {
@@ -153,6 +164,11 @@ public class SysAiWebSocketHandler extends TextWebSocketHandler implements SubPr
         }
         TextMessage message = new TextMessage(text);
         for (WebSocketSession session : new ArrayList<>(sessions.values())) {
+            /**
+             * 发送safe。
+             * @param session 会话
+             * @param message 消息
+             */
             sendSafe(session, message);
         }
     }
@@ -170,6 +186,11 @@ public class SysAiWebSocketHandler extends TextWebSocketHandler implements SubPr
                 return;
             }
             for (WebSocketSession session : snapshot) {
+                /**
+                 * 发送safe。
+                 * @param session 会话
+                 * @param message 消息
+                 */
                 sendSafe(session, message);
             }
         } catch (Exception e) {
@@ -179,6 +200,8 @@ public class SysAiWebSocketHandler extends TextWebSocketHandler implements SubPr
 
     /**
      * 安全发送（会话关闭/异常时忽略）。
+     * @param session 会话
+     * @param payload payload
      */
     private void sendSafe(WebSocketSession session, Object payload) {
         if (session == null || !session.isOpen()) {

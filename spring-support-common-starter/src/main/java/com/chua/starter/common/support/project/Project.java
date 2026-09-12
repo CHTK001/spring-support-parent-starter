@@ -106,7 +106,7 @@ public class Project {
 
     /**
      * 创建 Project 实例
-     * @param String String
+     * @param metadata 字符串
      * @param metadata metadata
      */
     public Project(Map<String, String> metadata) {
@@ -126,7 +126,11 @@ public class Project {
     }
 
 
-    /** 设置Environment */
+    /**
+     * 设置环境
+     *
+     * @param environment 环境
+     */
     public void setEnvironment(Environment environment) {
         this.environment = environment;
         this.applicationName = environment.getProperty("spring.application.name");
@@ -152,7 +156,11 @@ public class Project {
 
     }
 
-    /** 获取Instance */
+    /**
+     * 获取Instance
+     *
+     * @return 获取instance的结果
+     */
     public static Project getInstance() {
         return INSTANCE;
     }
@@ -166,7 +174,11 @@ public class Project {
         return DigestUtils.md5(dataSourceDriver + netAddress.getAddress() + dataSourceUsername + dataSourcePassword);
     }
 
-    /** 获取Project */
+    /**
+     * 获取Project
+     *
+     * @return 获取project的结果
+     */
     public Map<String, String> getProject() {
         java.util.Map<String, String> project = new java.util.LinkedHashMap<>();
         project.put("applicationName", applicationName);
@@ -190,7 +202,7 @@ public class Project {
         return Collections.unmodifiableMap(project);
     }
     /**
-     * 获取 applicationName
+      * 获取 application名称
      *
      * @return applicationName
      */
@@ -199,16 +211,16 @@ public class Project {
     }
 
     /**
-     * 设置 applicationName
+      * 设置 application名称
      *
-     * @param applicationName applicationName
+     * @param applicationName application名称
      */
     public void setApplicationName(String applicationName) {
         this.applicationName = applicationName;
     }
 
     /**
-     * 获取 applicationPort
+      * 获取 application端口
      *
      * @return applicationPort
      */
@@ -217,16 +229,16 @@ public class Project {
     }
 
     /**
-     * 设置 applicationPort
+      * 设置 application端口
      *
-     * @param applicationPort applicationPort
+     * @param applicationPort application端口
      */
     public void setApplicationPort(Integer applicationPort) {
         this.applicationPort = applicationPort;
     }
 
     /**
-     * 获取 applicationHost
+      * 获取 application主机
      *
      * @return applicationHost
      */
@@ -235,16 +247,16 @@ public class Project {
     }
 
     /**
-     * 设置 applicationHost
+      * 设置 application主机
      *
-     * @param applicationHost applicationHost
+     * @param applicationHost application主机
      */
     public void setApplicationHost(String applicationHost) {
         this.applicationHost = applicationHost;
     }
 
     /**
-     * 获取 applicationActive
+      * 获取 application活跃
      *
      * @return applicationActive
      */
@@ -253,16 +265,16 @@ public class Project {
     }
 
     /**
-     * 设置 applicationActive
+      * 设置 application活跃
      *
-     * @param applicationActive applicationActive
+     * @param applicationActive application活跃
      */
     public void setApplicationActive(String applicationActive) {
         this.applicationActive = applicationActive;
     }
 
     /**
-     * 获取 applicationActiveInclude
+      * 获取 application活跃include
      *
      * @return applicationActiveInclude
      */
@@ -271,16 +283,16 @@ public class Project {
     }
 
     /**
-     * 设置 applicationActiveInclude
+      * 设置 application活跃include
      *
-     * @param applicationActiveInclude applicationActiveInclude
+     * @param applicationActiveInclude application活跃include
      */
     public void setApplicationActiveInclude(String applicationActiveInclude) {
         this.applicationActiveInclude = applicationActiveInclude;
     }
 
     /**
-     * 获取 contextPath
+      * 获取 上下文路径
      *
      * @return contextPath
      */
@@ -289,16 +301,16 @@ public class Project {
     }
 
     /**
-     * 设置 contextPath
+      * 设置 上下文路径
      *
-     * @param contextPath contextPath
+     * @param contextPath 上下文路径
      */
     public void setContextPath(String contextPath) {
         this.contextPath = contextPath;
     }
 
     /**
-     * 获取 endpointsUrl
+      * 获取 端点url
      *
      * @return endpointsUrl
      */
@@ -307,16 +319,16 @@ public class Project {
     }
 
     /**
-     * 设置 endpointsUrl
+      * 设置 端点url
      *
-     * @param endpointsUrl endpointsUrl
+     * @param endpointsUrl 端点url
      */
     public void setEndpointsUrl(String endpointsUrl) {
         this.endpointsUrl = endpointsUrl;
     }
 
     /**
-     * 获取 endpoints
+      * 获取 端点
      *
      * @return endpoints
      */
@@ -325,16 +337,16 @@ public class Project {
     }
 
     /**
-     * 设置 endpoints
+      * 设置 端点
      *
-     * @param endpoints endpoints
+     * @param endpoints 端点
      */
     public void setEndpoints(String endpoints) {
         this.endpoints = endpoints;
     }
 
     /**
-     * 获取 dataSourceUrl
+      * 获取 数据源url
      *
      * @return dataSourceUrl
      */
@@ -343,16 +355,16 @@ public class Project {
     }
 
     /**
-     * 设置 dataSourceUrl
+      * 设置 数据源url
      *
-     * @param dataSourceUrl dataSourceUrl
+     * @param dataSourceUrl 数据源url
      */
     public void setDataSourceUrl(String dataSourceUrl) {
         this.dataSourceUrl = dataSourceUrl;
     }
 
     /**
-     * 获取 dataSourceDriver
+      * 获取 数据源driver
      *
      * @return dataSourceDriver
      */
@@ -361,16 +373,16 @@ public class Project {
     }
 
     /**
-     * 设置 dataSourceDriver
+      * 设置 数据源driver
      *
-     * @param dataSourceDriver dataSourceDriver
+     * @param dataSourceDriver 数据源driver
      */
     public void setDataSourceDriver(String dataSourceDriver) {
         this.dataSourceDriver = dataSourceDriver;
     }
 
     /**
-     * 获取 dataSourceUsername
+      * 获取 数据源用户名
      *
      * @return dataSourceUsername
      */
@@ -379,16 +391,16 @@ public class Project {
     }
 
     /**
-     * 设置 dataSourceUsername
+      * 设置 数据源用户名
      *
-     * @param dataSourceUsername dataSourceUsername
+     * @param dataSourceUsername 数据源用户名
      */
     public void setDataSourceUsername(String dataSourceUsername) {
         this.dataSourceUsername = dataSourceUsername;
     }
 
     /**
-     * 获取 dataSourcePassword
+      * 获取 数据源密码
      *
      * @return dataSourcePassword
      */
@@ -397,16 +409,16 @@ public class Project {
     }
 
     /**
-     * 设置 dataSourcePassword
+      * 设置 数据源密码
      *
-     * @param dataSourcePassword dataSourcePassword
+     * @param dataSourcePassword 数据源密码
      */
     public void setDataSourcePassword(String dataSourcePassword) {
         this.dataSourcePassword = dataSourcePassword;
     }
 
     /**
-     * 获取 environment
+      * 获取 环境
      *
      * @return environment
      */
@@ -415,7 +427,7 @@ public class Project {
     }
 
     /**
-     * 获取 clientProtocolEndpointPort
+      * 获取 客户端协议端点端口
      *
      * @return clientProtocolEndpointPort
      */
@@ -424,16 +436,16 @@ public class Project {
     }
 
     /**
-     * 设置 clientProtocolEndpointPort
+      * 设置 客户端协议端点端口
      *
-     * @param clientProtocolEndpointPort clientProtocolEndpointPort
+     * @param clientProtocolEndpointPort 客户端协议端点端口
      */
     public void setClientProtocolEndpointPort(String clientProtocolEndpointPort) {
         this.clientProtocolEndpointPort = clientProtocolEndpointPort;
     }
 
     /**
-     * 获取 clientProtocolEndpointProtocol
+      * 获取 客户端协议端点协议
      *
      * @return clientProtocolEndpointProtocol
      */
@@ -442,15 +454,21 @@ public class Project {
     }
 
     /**
-     * 设置 clientProtocolEndpointProtocol
+      * 设置 客户端协议端点协议
      *
-     * @param clientProtocolEndpointProtocol clientProtocolEndpointProtocol
+     * @param clientProtocolEndpointProtocol 客户端协议端点协议
      */
     public void setClientProtocolEndpointProtocol(String clientProtocolEndpointProtocol) {
         this.clientProtocolEndpointProtocol = clientProtocolEndpointProtocol;
     }
 
-    /** AesEncrypt */
+    /**
+     * aesencrypt
+     *
+     * @param content 内容
+     * @param key 钥匙
+     * @return aesEncrypt的结果
+     */
     private static String aesEncrypt(String content, String key) {
         if (content == null) {
             return null;
@@ -460,11 +478,22 @@ public class Project {
             cipher.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(key.getBytes(java.nio.charset.StandardCharsets.UTF_8), "AES"));
             return Base64.getEncoder().encodeToString(cipher.doFinal(content.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
         } catch (Exception e) {
+            /**
+             * runtime异常。
+             * @param e e
+             * @return runtime异常的结果
+             */
             throw new RuntimeException(e);
         }
     }
 
-    /** AesDecrypt */
+    /**
+     * aesdecrypt
+     *
+     * @param content 内容
+     * @param key 钥匙
+     * @return aesDecrypt的结果
+     */
     private static String aesDecrypt(String content, String key) {
         if (content == null) {
             return null;
@@ -472,8 +501,18 @@ public class Project {
         try {
             Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
             cipher.init(Cipher.DECRYPT_MODE, new SecretKeySpec(key.getBytes(java.nio.charset.StandardCharsets.UTF_8), "AES"));
+            /**
+             * 字符串。
+             * @param cipher.doFinal(Base64.getDecoder( cipher.执行最终(基础64.获取解码器(
+             * @return 字符串的结果
+             */
             return new String(cipher.doFinal(Base64.getDecoder().decode(content)), java.nio.charset.StandardCharsets.UTF_8);
         } catch (Exception e) {
+            /**
+             * runtime异常。
+             * @param e e
+             * @return runtime异常的结果
+             */
             throw new RuntimeException(e);
         }
     }

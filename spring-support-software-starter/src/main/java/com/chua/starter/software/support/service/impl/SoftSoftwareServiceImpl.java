@@ -37,7 +37,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * 软件信息表 Service 实现
+   * 软件信息表 服务 实现
  *
  * @since 2026/7/25
  * @author CH
@@ -80,7 +80,7 @@ public class SoftSoftwareServiceImpl extends ServiceImpl<SoftSoftwareMapper, Sof
     }
 
     @Override
-    /** PageFor */
+    /** pagefor */
     public IPage<SoftSoftware> pageFor(Query<SoftSoftware> query, SoftwarePageRequest request, Collection<String> installedSoftwareIds) {
         Page<SoftSoftware> page = query.createPage();
         return baseMapper.selectPageFor(page, request, installedSoftwareIds);
@@ -102,6 +102,10 @@ public class SoftSoftwareServiceImpl extends ServiceImpl<SoftSoftwareMapper, Sof
         software.setSoftwareCreateTime(LocalDateTime.now());
         software.setSoftwareUpdateTime(LocalDateTime.now());
         baseMapper.insert(software);
+        /**
+          * 索引转为Elasticsearch。
+         * @param software software
+         */
         indexToElasticsearch(software);
         return ReturnResult.ok(software);
     }
@@ -118,6 +122,10 @@ public class SoftSoftwareServiceImpl extends ServiceImpl<SoftSoftwareMapper, Sof
         }
         software.setSoftwareUpdateTime(LocalDateTime.now());
         baseMapper.updateById(software);
+        /**
+          * 索引转为Elasticsearch。
+         * @param software software
+         */
         indexToElasticsearch(software);
         return ReturnResult.ok(software);
     }
@@ -132,24 +140,28 @@ public class SoftSoftwareServiceImpl extends ServiceImpl<SoftSoftwareMapper, Sof
         exist.setSoftwareStatus(1);
         exist.setSoftwareUpdateTime(LocalDateTime.now());
         baseMapper.updateById(exist);
+        /**
+          * 删除从Elasticsearch。
+         * @param softwareId softwareid
+         */
         deleteFromElasticsearch(softwareId);
         return ReturnResult.ok(true);
     }
 
     @Override
-    /** 获取ByCode */
+    /** 获取by编码 */
     public SoftSoftware getByCode(String code) {
         return baseMapper.selectOne(new LambdaQueryWrapper<SoftSoftware>().eq(SoftSoftware::getSoftwareCode, code));
     }
 
     @Override
-    /** ListBySourceId */
+    /** 列表by源标识 */
     public List<SoftSoftware> listBySourceId(String sourceId) {
         return baseMapper.selectList(new LambdaQueryWrapper<SoftSoftware>().eq(SoftSoftware::getSoftwareSourceId, sourceId));
     }
 
     @Override
-    /** SyncFromSource */
+    /** 同步从源 */
     public ReturnResult<Integer> syncFromSource(String sourceId) {
         SoftSource source = sourceService.getById(sourceId);
         if (source == null) {
@@ -183,42 +195,51 @@ public class SoftSoftwareServiceImpl extends ServiceImpl<SoftSoftwareMapper, Sof
     }
 
     @Override
-    /** IndexToElasticsearch */
+    /** 索引转为Elasticsearch */
     public void indexToElasticsearch(SoftSoftware software) {
         log.info("索引软件到ES: {}", software.getSoftwareName());
     }
 
     @Override
-    /** IndexBatchToElasticsearch */
+    /** 索引批量转为Elasticsearch */
     public void indexBatchToElasticsearch(List<SoftSoftware> softwareList) {
         if (CollectionUtils.isEmpty(softwareList)) {
             return;
         }
         for (SoftSoftware software : softwareList) {
+            /**
+              * 索引转为Elasticsearch。
+             * @param software software
+             */
             indexToElasticsearch(software);
         }
     }
 
     @Override
-    /** 删除FromElasticsearch */
+    /** 删除从Elasticsearch */
     public void deleteFromElasticsearch(String softwareId) {
         log.info("从ES删除软件: {}", softwareId);
     }
 
     @Override
-    /** 搜索FromElasticsearch */
+    /** 搜索从Elasticsearch */
     public List<SoftSoftware> searchFromElasticsearch(String keyword) {
         return searchFromElasticsearch(keyword, 0, 20);
     }
 
     @Override
-    /** 搜索FromElasticsearch */
+    /** 搜索从Elasticsearch */
     public List<SoftSoftware> searchFromElasticsearch(String keyword, int from, int size) {
         log.info("从ES搜索软件: keyword={}, from={}, size={}", keyword, from, size);
         return new ArrayList<>();
     }
 
-    /** 获取InstalledSoftwareIds */
+    /**
+     * 获取installedsoftware标识
+     *
+     * @param userId 用户标识
+     * @return 获取installedsoftware标识的结果
+     */
     public List<String> getInstalledSoftwareIds(String userId) {
         List<SoftInstallRecord> records = installRecordService.listInstalledByUserId(userId);
         if (CollectionUtils.isEmpty(records)) {

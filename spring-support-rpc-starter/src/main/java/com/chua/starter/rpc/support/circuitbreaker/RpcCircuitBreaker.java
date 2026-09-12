@@ -22,6 +22,8 @@ public class RpcCircuitBreaker {
 
     /**
      * 熔断器状态
+     * @author CH
+     * @since 4.0.0
      */
     public enum State {
         CLOSED,      // 关闭状态（正常）
@@ -70,8 +72,9 @@ public class RpcCircuitBreaker {
     private String serviceName;
 
     /**
-     * 创建 RpcCircuitBreaker 实例
-     * @param serviceName serviceName
+      * 创建 rpc熔断中断 实例
+     * @param serviceName 服务名称
+     * @return rpc熔断中断的结果
      */
     public RpcCircuitBreaker(String serviceName) {
         this.serviceName = serviceName;
@@ -98,7 +101,7 @@ public class RpcCircuitBreaker {
             return false;
         }
 
-        // HALF_OPEN状态，允许部分请求通过
+ // HALF_打开状态，允许部分请求通过
         return true;
     }
 
@@ -153,6 +156,7 @@ public class RpcCircuitBreaker {
 
     /**
      * 是否打开
+     * @return 是否打开的结果
      */
     public boolean isOpen() {
         return state == State.OPEN;
@@ -160,6 +164,7 @@ public class RpcCircuitBreaker {
 
     /**
      * 是否关闭
+     * @return 是否关闭的结果
      */
     public boolean isClosed() {
         return state == State.CLOSED;
@@ -167,6 +172,7 @@ public class RpcCircuitBreaker {
 
     /**
      * 是否半开
+     * @return 是否half打开的结果
      */
     public boolean isHalfOpen() {
         return state == State.HALF_OPEN;

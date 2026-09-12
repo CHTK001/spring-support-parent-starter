@@ -10,7 +10,7 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
- * 文件系统上传 OSS 记录表（审计）。
+   * 文件系统上传 对象存储 记录表（审计）。
  *
  * <p>每次上传尝试无论成败都写入一条记录，用于排查与追溯。</p>
  *
@@ -20,19 +20,19 @@ import java.time.LocalDateTime;
 @TableName(value = "filesystem_upload_upload_log")
 public class SysFileSystemUploadUploadLog extends SysBase implements Serializable {
 
-    /** Serial版本UID */
+    /** 串行版本UID */
     private static final long serialVersionUID = 1L;
 
     @TableId(value = "filesystem_upload_upload_log_id", type = IdType.AUTO)
-    /** Filesystem上传上传日志ID */
+    /** Filesystem上传上传日志标识 */
     private Long filesystemUploadUploadLogId;
 
-    /** 上传任务ID */
+    /** 上传任务标识 */
     @TableField("filesystem_upload_upload_log_upload_id")
-    /** Filesystem上传上传日志上传ID */
+    /** Filesystem上传上传日志上传标识 */
     private String filesystemUploadUploadLogUploadId;
 
-    /** 阶段标识: 2-上传OSS */
+    /** 阶段标识: 2-上传对象存储 */
     @TableField("filesystem_upload_upload_log_stage")
     /** Filesystem上传上传日志阶段 */
     private Integer filesystemUploadUploadLogStage;
@@ -62,61 +62,129 @@ public class SysFileSystemUploadUploadLog extends SysBase implements Serializabl
     /** Filesystem上传上传日志结束时间 */
     private LocalDateTime filesystemUploadUploadLogEndTime;
 
-    /** 创建 SysFileSystemUploadUploadLog 实例 */
+    /** 创建 sys文件系统uploadupload日志 实例 */
     public SysFileSystemUploadUploadLog() {}
 
-    /** 获取FilesystemUploadUpload记录日志Id */
+    /**
+      * 获取filesystemuploadupload记录日志标识
+     *
+     * @return 获取filesystemuploadupload日志id的结果
+     */
     public Long getFilesystemUploadUploadLogId() { return filesystemUploadUploadLogId; }
-    /** 设置FilesystemUploadUpload记录日志Id */
+    /**
+      * 设置filesystemuploadupload记录日志标识
+     *
+     * @param v v
+     */
     public void setFilesystemUploadUploadLogId(Long v) { this.filesystemUploadUploadLogId = v; }
 
-    /** 获取FilesystemUploadUpload记录日志UploadId */
+    /**
+     * 获取filesystemuploadupload记录日志uploadid
+     *
+     * @return 获取filesystemuploadupload日志uploadid的结果
+     */
     public String getFilesystemUploadUploadLogUploadId() { return filesystemUploadUploadLogUploadId; }
-    /** 设置FilesystemUploadUpload记录日志UploadId */
+    /**
+     * 设置filesystemuploadupload记录日志uploadid
+     *
+     * @param v v
+     */
     public void setFilesystemUploadUploadLogUploadId(String v) { this.filesystemUploadUploadLogUploadId = v; }
 
-    /** 获取FilesystemUploadUpload记录日志Stage */
+    /**
+     * 获取filesystemuploadupload记录日志Stage
+     *
+     * @return 获取filesystemuploadupload日志Stage的结果
+     */
     public Integer getFilesystemUploadUploadLogStage() { return filesystemUploadUploadLogStage; }
-    /** 设置FilesystemUploadUpload记录日志Stage */
+    /**
+     * 设置filesystemuploadupload记录日志Stage
+     *
+     * @param v v
+     */
     public void setFilesystemUploadUploadLogStage(Integer v) { this.filesystemUploadUploadLogStage = v; }
 
-    /** 获取FilesystemUploadUpload记录日志Status */
+    /**
+     * 获取filesystemuploadupload记录日志状态
+     *
+     * @return 获取filesystemuploadupload日志状态的结果
+     */
     public Integer getFilesystemUploadUploadLogStatus() { return filesystemUploadUploadLogStatus; }
-    /** 设置FilesystemUploadUpload记录日志Status */
+    /**
+     * 设置filesystemuploadupload记录日志状态
+     *
+     * @param v v
+     */
     public void setFilesystemUploadUploadLogStatus(Integer v) { this.filesystemUploadUploadLogStatus = v; }
 
-    /** 获取FilesystemUploadUpload记录日志Message */
+    /**
+     * 获取filesystemuploadupload记录日志消息
+     *
+     * @return 获取filesystemuploadupload日志消息的结果
+     */
     public String getFilesystemUploadUploadLogMessage() { return filesystemUploadUploadLogMessage; }
-    /** 设置FilesystemUploadUpload记录日志Message */
+    /**
+     * 设置filesystemuploadupload记录日志消息
+     *
+     * @param v v
+     */
     public void setFilesystemUploadUploadLogMessage(String v) { this.filesystemUploadUploadLogMessage = v; }
 
-    /** 获取FilesystemUploadUpload记录日志Retry计算数量 */
+    /**
+     * 获取filesystemuploadupload记录日志重试计算数量
+     *
+     * @return 获取filesystemuploadupload日志重试数量的结果
+     */
     public Integer getFilesystemUploadUploadLogRetryCount() { return filesystemUploadUploadLogRetryCount; }
-    /** 设置FilesystemUploadUpload记录日志Retry计算数量 */
+    /**
+     * 设置filesystemuploadupload记录日志重试计算数量
+     *
+     * @param v v
+     */
     public void setFilesystemUploadUploadLogRetryCount(Integer v) { this.filesystemUploadUploadLogRetryCount = v; }
 
-    /** 获取FilesystemUploadUpload记录日志开始Time */
+    /**
+     * 获取filesystemuploadupload记录日志开始时间
+     *
+     * @return 获取filesystemuploadupload日志启动时间的结果
+     */
     public LocalDateTime getFilesystemUploadUploadLogStartTime() { return filesystemUploadUploadLogStartTime; }
-    /** 设置FilesystemUploadUpload记录日志开始Time */
+    /**
+     * 设置filesystemuploadupload记录日志开始时间
+     *
+     * @param v v
+     */
     public void setFilesystemUploadUploadLogStartTime(LocalDateTime v) { this.filesystemUploadUploadLogStartTime = v; }
 
-    /** 获取FilesystemUploadUpload记录日志EndTime */
+    /**
+     * 获取filesystemuploadupload记录日志结束时间
+     *
+     * @return 获取filesystemuploadupload日志结束时间的结果
+     */
     public LocalDateTime getFilesystemUploadUploadLogEndTime() { return filesystemUploadUploadLogEndTime; }
-    /** 设置FilesystemUploadUpload记录日志EndTime */
+    /**
+     * 设置filesystemuploadupload记录日志结束时间
+     *
+     * @param v v
+     */
     public void setFilesystemUploadUploadLogEndTime(LocalDateTime v) { this.filesystemUploadUploadLogEndTime = v; }
 
     /**
      * 上传结果状态常量。
+     * @author CH
+     * @since 4.0.0
      */
     public static class Result {
-        /** Success */
+        /** 成功 */
         public static final int SUCCESS = 1;
-        /** Failed */
+        /** 失败 */
         public static final int FAILED = 0;
     }
 
     /**
      * 阶段标识常量。
+     * @author CH
+     * @since 4.0.0
      */
     public static class Stage {
         /** 上传 */

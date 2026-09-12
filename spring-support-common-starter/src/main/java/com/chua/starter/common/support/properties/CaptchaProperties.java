@@ -9,6 +9,7 @@ import java.awt.*;
  * 校验码
  *
  * @author CH
+ * @since 4.0.0
  */
 @ConfigurationProperties(prefix = CaptchaProperties.PRE, ignoreInvalidFields = true)
 public class CaptchaProperties {
@@ -82,7 +83,7 @@ public class CaptchaProperties {
     }
 
     /**
-     * 获取 type
+      * 获取 类型
      *
      * @return type
      */
@@ -91,9 +92,9 @@ public class CaptchaProperties {
     }
 
     /**
-     * 设置 type
+      * 设置 类型
      *
-     * @param type type
+     * @param type 类型
      */
     public void setType(CaptchaTypeEnum type) {
         this.type = type;
@@ -118,7 +119,7 @@ public class CaptchaProperties {
     }
 
     /**
-     * 获取 length
+      * 获取 长度
      *
      * @return length
      */
@@ -127,9 +128,9 @@ public class CaptchaProperties {
     }
 
     /**
-     * 设置 length
+      * 设置 长度
      *
-     * @param length length
+     * @param length 长度
      */
     public void setLength(int length) {
         this.length = length;
@@ -172,7 +173,7 @@ public class CaptchaProperties {
     }
 
     /**
-     * 获取 fontName
+      * 获取 font名称
      *
      * @return fontName
      */
@@ -181,16 +182,16 @@ public class CaptchaProperties {
     }
 
     /**
-     * 设置 fontName
+      * 设置 font名称
      *
-     * @param fontName fontName
+     * @param fontName font名称
      */
     public void setFontName(String fontName) {
         this.fontName = fontName;
     }
 
     /**
-     * 获取 fontStyle
+      * 获取 fontstyle
      *
      * @return fontStyle
      */
@@ -199,16 +200,16 @@ public class CaptchaProperties {
     }
 
     /**
-     * 设置 fontStyle
+      * 设置 fontstyle
      *
-     * @param fontStyle fontStyle
+     * @param fontStyle fontstyle
      */
     public void setFontStyle(Integer fontStyle) {
         this.fontStyle = fontStyle;
     }
 
     /**
-     * 获取 fontSize
+      * 获取 font大小
      *
      * @return fontSize
      */
@@ -217,9 +218,9 @@ public class CaptchaProperties {
     }
 
     /**
-     * 设置 fontSize
+      * 设置 font大小
      *
-     * @param fontSize fontSize
+     * @param fontSize font大小
      */
     public void setFontSize(int fontSize) {
         this.fontSize = fontSize;

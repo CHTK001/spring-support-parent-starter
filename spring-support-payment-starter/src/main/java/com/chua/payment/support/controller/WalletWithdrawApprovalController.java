@@ -25,6 +25,7 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * 钱包提现审批控制器（管理员端）
  * @author CH
+ * @since 4.0.0
  */
 @RestController
 @RequestMapping("/wallet/withdraw-approval")
@@ -43,27 +44,37 @@ public class WalletWithdrawApprovalController {
     @GetMapping("/page")
     /**
      * 分页
-     * @param request request
-     * @param pageNum pageNum
-     * @param pageSize pageSize
-     * @param status status
+     * @param request 请求
+     * @param pageNum pagenum
+     * @param pageSize page大小
+     * @param status 状态
      */
     public Result<PageResult<WalletWithdrawApproval>> page(HttpServletRequest request,
                                                             @RequestParam(defaultValue = "1") int pageNum,
                                                             @RequestParam(defaultValue = "10") int pageSize,
                                                             @RequestParam(required = false) String status) {
         Result<PageResult<WalletWithdrawApproval>> denied = denyIfNecessary(request);
-        if (denied != null) return denied;
+        if (denied != null) {
+            return denied;
+        }
 
         Page<WalletWithdrawApproval> page = walletWithdrawApprovalService.pageApprovals(pageNum, pageSize, status);
         return Result.success(PageResult.of(page));
     }
 
     @PostMapping("/{id}/approve")
-    /** Approve */
+    /**
+     * Approve
+     *
+     * @param id 标识
+     * @param request 请求
+     * @return approve的结果
+     */
     public Result<String> approve(@PathVariable Long id, HttpServletRequest request) {
         Result<String> denied = denyIfNecessary(request);
-        if (denied != null) return denied;
+        if (denied != null) {
+            return denied;
+        }
 
         String operator = resolveOperator(request);
         WalletWithdrawApproval approval = walletWithdrawApprovalService.getById(id);
@@ -96,20 +107,22 @@ public class WalletWithdrawApprovalController {
     @PostMapping("/{id}/reject")
     /**
      * Reject
-     * @param id id
-     * @param reason reason
-     * @param request request
+     * @param id 标识
+     * @param reason ReasonMLML
+     * @param request 请求
      */
     public Result<String> reject(@PathVariable Long id,
                                  @RequestParam(required = false) String reason,
                                  HttpServletRequest request) {
         Result<String> denied = denyIfNecessary(request);
-        if (denied != null) return denied;
+        if (denied != null) {
+            return denied;
+        }
 
         String operator = resolveOperator(request);
         WalletWithdrawApproval approval = walletWithdrawApprovalService.getById(id);
 
-        // 解冻余额（frozen → available）
+ // 解冻余额（frozen → 可用）
         walletAccountService.cancelWithdraw(new WalletCancelWithdrawRequest(
                 approval.getMerchantId(), approval.getUserId(),
                 approval.getWithdrawNo(), approval.getAmount(), reason));
@@ -132,7 +145,9 @@ public class WalletWithdrawApprovalController {
                                              @RequestParam(required = false) String responsePayload,
                                              HttpServletRequest request) {
         Result<String> denied = denyIfNecessary(request);
-        if (denied != null) return denied;
+        if (denied != null) {
+            return denied;
+        }
 
         WalletOrder order = walletOrderService.getByOrderNo(orderNo);
         if (order == null) {
@@ -158,7 +173,9 @@ public class WalletWithdrawApprovalController {
                                           @RequestParam(required = false) String reason,
                                           HttpServletRequest request) {
         Result<String> denied = denyIfNecessary(request);
-        if (denied != null) return denied;
+        if (denied != null) {
+            return denied;
+        }
 
         WalletOrder order = walletOrderService.getByOrderNo(orderNo);
         if (order == null) {
@@ -169,7 +186,12 @@ public class WalletWithdrawApprovalController {
         return Result.success("提现失败已记录");
     }
 
-    /** DenyIfNecessary */
+    /**
+     * denyifnecessary
+     *
+     * @param request 请求
+     * @return denyIfNecessary的结果
+     */
     private <T> Result<T> denyIfNecessary(HttpServletRequest request) {
         UserResume userResume = principalResolver.resolve(request);
         if (userResume == null) {
@@ -181,10 +203,17 @@ public class WalletWithdrawApprovalController {
         return null;
     }
 
-    /** 解析Operator */
+    /**
+     * 解析操作符
+     *
+     * @param request 请求
+     * @return resolve操作符的结果
+     */
     private String resolveOperator(HttpServletRequest request) {
         UserResume userResume = principalResolver.resolve(request);
-        if (userResume == null) return "system";
+        if (userResume == null) {
+            return "system";
+        }
         return String.valueOf(userResume.getUserId());
     }
 }

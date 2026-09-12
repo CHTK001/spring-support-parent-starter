@@ -19,7 +19,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * OSGi 自动配置。
+   * osgi 自动配置。
  *
  * <p>集成 Apache Felix OSGi 框架，提供以下核心能力：</p>
  * <ul>
@@ -45,17 +45,17 @@ public class OsgiAutoConfiguration {
 
     /** Gogo runtime 类标记 */
     private static final String GOGO_RUNTIME_CLASS = "org.apache.felix.gogo.runtime.Closure";
-    /** Gogo command 类标记 */
+    /** Gogo 命令 类标记 */
     private static final String GOGO_COMMAND_CLASS = "org.apache.felix.gogo.command.Basic";
-    /** Gogo shell 类标记 */
+    /** Gogo Shell 类标记 */
     private static final String GOGO_SHELL_CLASS = "org.apache.felix.gogo.shell.Shell";
     /** SSHD osgi 类标记 */
     private static final String SSHD_OSGI_CLASS = "org.apache.sshd.agent.SshAgent";
 
     /**
-     * 创建并启动 Felix OSGi 框架。
+      * 创建并启动 Felix osgi 框架。
      *
-     * @param properties OSGi 配置
+     * @param properties osgi 配置
      * @return 已启动的 Felix 启动器
      */
     @Bean(destroyMethod = "stop")
@@ -63,6 +63,11 @@ public class OsgiAutoConfiguration {
         FelixOsgiLauncher launcher = new FelixOsgiLauncher();
         try {
             launcher.start(buildFelixConfig(properties));
+            /**
+              * installshellbundles。
+             * @param launcher launcher
+             * @param properties 属性
+             */
             installShellBundles(launcher, properties);
             log.info("[OSGi] Felix 框架已启动，OSGi 集成就绪");
         } catch (Exception e) {
@@ -72,9 +77,9 @@ public class OsgiAutoConfiguration {
     }
 
     /**
-     * Gogo SSH shell 服务器：SSH 模式远程管理（bundle 安装/卸载等 Gogo 命令）。
+      * Gogo SSH Shell 服务器：SSH 模式远程管理（bundle 安装/卸载等 Gogo 命令）。
      * 补齐 {@code osgi.shell.ssh.*} 配置无消费方的缺失装配——MINA SSHD 2.x 直连启动，
-     * SSH 通道会话接线到框架内 Gogo CommandProcessor（按名服务查找 + 反射调用，
+      * SSH 通道会话接线到框架内 Gogo 命令处理器（按名服务查找 + 反射调用，
      * 规避 bundle/应用类加载器类身份差异）。
      */
     @Bean(destroyMethod = "stop")
@@ -93,16 +98,22 @@ public class OsgiAutoConfiguration {
         try {
             server.start();
         } catch (java.io.IOException e) {
+            /**
+             * illegal状态异常。
+             * @param 启动失败" 启动失败"
+             * @param e e
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("[OSGi] SSH shell 启动失败", e);
         }
         return server;
     }
 
     /**
-     * 创建 OsgiBeanDefinitionRegister Bean，并将其挂接到核心 ObjectContext。
+       * 创建 osgibeandefinition注册 Bean，并将其挂接到核心 对象上下文。
      *
-     * @param launcher              Felix OSGi 启动器
-     * @param objectContextProvider ObjectContext 注入
+     * @param launcher              Felix osgi 启动器
+     * @param objectContextProvider 对象上下文 注入
      * @return OsgiBeanDefinitionRegister 实例
      */
     @Bean
@@ -125,6 +136,8 @@ public class OsgiAutoConfiguration {
 
     /**
      * 构建 Felix 框架配置。
+     * @param properties 属性
+     * @return 构建felix配置的结果
      */
     private Map<String, String> buildFelixConfig(OsgiProperties properties) {
         Map<String, String> config = new HashMap<>();
@@ -132,7 +145,7 @@ public class OsgiAutoConfiguration {
         config.put("org.osgi.framework.startlevel.beginning", String.valueOf(properties.getStartLevel()));
         config.put("org.osgi.framework.storage.clean", "onFirstInit");
 
-        // 透传自定义 Felix 框架配置（如 org.osgi.framework.system.packages.extra 导出应用接口包）
+ // 透传自定义 Felix 框架配置（如 org.osgi.框架.系统.包.extra 导出应用接口包）
         properties.getFrameworkProperties().forEach((k, v) -> {
             if (v != null) {
                 config.put(k, String.valueOf(v));
@@ -168,6 +181,8 @@ public class OsgiAutoConfiguration {
      * 安装远程管理 bundle：优先 SSHD，回退 Gogo telnet。
      *
      * <p>安装顺序：先装 runtime → command → shell，再装 SSHD（若启用）。</p>
+     * @param launcher launcher
+     * @param properties 属性
      */
     private void installShellBundles(FelixOsgiLauncher launcher, OsgiProperties properties) {
         if (!launcher.isActive()) {
@@ -178,16 +193,24 @@ public class OsgiAutoConfiguration {
             return;
         }
 
-        // 始终安装 Gogo runtime/command/shell（SSHD 依赖 Gogo）
+ // 始终安装 Gogo runtime/命令/Shell（SSHD 依赖 Gogo）
+        /**
+          * installgogobundles。
+         * @param launcher launcher
+         */
         installGogoBundles(launcher);
 
-        // 根据 protocol 决定启用哪种远程管理
+ // 根据 协议 决定启用哪种远程管理
         String protocol = shell.getProtocol();
         if ("telnet".equalsIgnoreCase(protocol)) {
             log.info("[OSGi] 使用 Telnet 远程管理（端口 {}）", shell.getPort() > 0 ? shell.getPort() : 6666);
         } else {
-            // SSH 模式（默认）：检查 SSHD osgi bundle 是否在 classpath
+ // SSH 模式（默认）：检查 SSHD osgi bundle 是否在 类路径
             if (isClassAvailable(SSHD_OSGI_CLASS)) {
+                /**
+                  * installsshdbundles。
+                 * @param launcher launcher
+                 */
                 installSshdBundles(launcher);
                 log.info("[OSGi] 使用 SSH 远程管理（端口 {}）", shell.getPort() > 0 ? shell.getPort() : 8122);
             } else {
@@ -198,6 +221,7 @@ public class OsgiAutoConfiguration {
 
     /**
      * 安装 Gogo bundle 套件。
+     * @param launcher launcher
      */
     private void installGogoBundles(FelixOsgiLauncher launcher) {
         for (String marker : new String[]{GOGO_RUNTIME_CLASS, GOGO_COMMAND_CLASS, GOGO_SHELL_CLASS}) {
@@ -216,20 +240,48 @@ public class OsgiAutoConfiguration {
     }
 
     /**
-     * 安装 SSHD OSGi bundle。
+      * 安装 SSHD osgi bundle。
      *
      * <p>安装顺序必须遵守依赖关系：sshd-core → sshd-osgi → sshd-sftp → sshd-scp。</p>
+     * @param launcher launcher
      */
     private void installSshdBundles(FelixOsgiLauncher launcher) {
-        // sshd-core 是其他 SSHD bundle 的基础依赖，必须先安装
+ // sshd-核心 是其他 SSHD bundle 的基础依赖，必须先安装
+        /**
+         * install从记号笔。
+         * @param launcher launcher
+         * @param "org.apache.sshd.server.SshServer" "org.Apache.sshd.服务端.ssh服务端"
+         * @param "sshd-core" "sshd-核心"
+         */
         installFromMarker(launcher, "org.apache.sshd.server.SshServer", "sshd-core");
+        /**
+         * install从记号笔。
+         * @param launcher launcher
+         * @param SSHD_OSGI_CLASS sshdosgi类
+         * @param "sshd-osgi" "sshd-osgi"
+         */
         installFromMarker(launcher, SSHD_OSGI_CLASS, "sshd-osgi");
+        /**
+         * install从记号笔。
+         * @param launcher launcher
+         * @param "org.apache.sshd.sftp.server.SftpSubsystemFactory" "org.Apache.sshd.sftp.服务端.sftpsubsystem工厂"
+         * @param "sshd-sftp" "sshd-sftp"
+         */
         installFromMarker(launcher, "org.apache.sshd.sftp.server.SftpSubsystemFactory", "sshd-sftp");
+        /**
+         * install从记号笔。
+         * @param launcher launcher
+         * @param "org.apache.sshd.scp.ScpSubsystemFactory" "org.Apache.sshd.scp.scpsubsystem工厂"
+         * @param "sshd-scp" "sshd-scp"
+         */
         installFromMarker(launcher, "org.apache.sshd.scp.ScpSubsystemFactory", "sshd-scp");
     }
 
     /**
-     * 根据 marker 类定位 jar 并安装。
+      * 根据 记号笔 类定位 jar 并安装。
+     * @param launcher launcher
+     * @param markerClass 记号笔类
+     * @param logName 日志名称
      */
     private void installFromMarker(FelixOsgiLauncher launcher, String markerClass, String logName) {
         String jarUrl = findJarUrl(markerClass);
@@ -246,7 +298,9 @@ public class OsgiAutoConfiguration {
     }
 
     /**
-     * 根据类名定位其所在 jar 的 file URL。
+      * 根据类名定位其所在 jar 的 文件 URL。
+     * @param className 类名称
+     * @return findJarUrl的结果
      */
     private String findJarUrl(String className) {
         try {
@@ -264,7 +318,9 @@ public class OsgiAutoConfiguration {
     }
 
     /**
-     * 检查类是否在 classpath 中。
+      * 检查类是否在 类路径 中。
+     * @param className 类名称
+     * @return 是否类可用的结果
      */
     private boolean isClassAvailable(String className) {
         try {
@@ -276,7 +332,8 @@ public class OsgiAutoConfiguration {
     }
 
     /**
-     * 注册 OSGi 模块服务信息。
+      * 注册 osgi 模块服务信息。
+     * @return osgi服务信息contributor的结果
      */
     @Bean
     public ServiceInfoContributor osgiServiceInfoContributor() {

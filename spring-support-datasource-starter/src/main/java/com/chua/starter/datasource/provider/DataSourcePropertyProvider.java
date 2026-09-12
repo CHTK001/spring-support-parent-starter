@@ -51,7 +51,7 @@ public interface DataSourcePropertyProvider<T extends DataSource> {
      * 设置数据源属性
      *
      * @param dataSource 数据源
-     * @param properties 属性Map
+     * @param properties 属性映射
      */
     void setProperties(T dataSource, Map<String, Object> properties);
 
@@ -78,7 +78,7 @@ public interface DataSourcePropertyProvider<T extends DataSource> {
      * 获取属性名称映射
      * 用于处理不同数据源的属性名差异
      *
-     * @return 属性名映射 key=通用名称, value=实际属性名
+     * @return 属性名映射 钥匙=通用名称, 价值观=实际属性名
      */
     default Map<String, String> getPropertyNameMapping() {
         return Map.of();

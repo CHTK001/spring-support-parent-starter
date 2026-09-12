@@ -14,7 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-/** @author CH */
+/** @作者 CH */
 
 @Tag(name = "订单配置管理", description = "订单和流水分表策略配置")
 @RestController
@@ -22,14 +22,19 @@ import java.util.List;
 @RequiredArgsConstructor
 public class OrderConfigController {
 
-    /** 排序partition配置服务 */
+    /** 排序分区配置服务 */
     private final OrderPartitionConfigService orderPartitionConfigService;
     /** Principal解析器 */
     private final PaymentAccountPrincipalResolver principalResolver;
 
     @Operation(summary = "查询分表配置")
     @GetMapping("/partitions")
-    /** List */
+    /**
+     * 列表
+     *
+     * @param request 请求
+     * @return 列表的结果
+     */
     public Result<List<OrderPartitionConfigVO>> list(HttpServletRequest request) {
         Result<List<OrderPartitionConfigVO>> denied = denyIfNecessary(request);
         return denied != null ? denied : Result.success(orderPartitionConfigService.listConfigs());
@@ -39,9 +44,9 @@ public class OrderConfigController {
     @PutMapping("/partitions/{businessType}")
     /**
      * 更新
-     * @param businessType businessType
+     * @param businessType 业务类型
      * @param dto dto
-     * @param request request
+     * @param request 请求
      */
     public Result<OrderPartitionConfigVO> update(@PathVariable String businessType,
                                                  @RequestBody OrderPartitionConfigDTO dto,
@@ -52,7 +57,13 @@ public class OrderConfigController {
 
     @Operation(summary = "预览分表策略")
     @GetMapping("/partitions/{businessType}/preview")
-    /** Preview */
+    /**
+     * Preview
+     *
+     * @param businessType 业务类型
+     * @param request 请求
+     * @return preview的结果
+     */
     public Result<OrderPartitionPreviewVO> preview(@PathVariable String businessType, HttpServletRequest request) {
         Result<OrderPartitionPreviewVO> denied = denyIfNecessary(request);
         return denied != null ? denied : Result.success(orderPartitionConfigService.preview(businessType));
@@ -60,25 +71,46 @@ public class OrderConfigController {
 
     @Operation(summary = "手动触发建表")
     @PostMapping("/partitions/{businessType}/create")
-    /** Trigger创建 */
+    /**
+     * Trigger创建
+     *
+     * @param businessType 业务类型
+     * @param request 请求
+     * @return trigger创建的结果
+     */
     public Result<Void> triggerCreate(@PathVariable String businessType, HttpServletRequest request) {
         Result<Void> denied = denyIfNecessary(request);
-        if (denied != null) return denied;
+        if (denied != null) {
+            return denied;
+        }
         orderPartitionConfigService.executeAutoCreate(businessType);
         return Result.success();
     }
 
     @Operation(summary = "手动触发迁移")
     @PostMapping("/partitions/{businessType}/migrate")
-    /** TriggerMigrate */
+    /**
+     * triggermigrate
+     *
+     * @param businessType 业务类型
+     * @param request 请求
+     * @return triggerMigrate的结果
+     */
     public Result<Void> triggerMigrate(@PathVariable String businessType, HttpServletRequest request) {
         Result<Void> denied = denyIfNecessary(request);
-        if (denied != null) return denied;
+        if (denied != null) {
+            return denied;
+        }
         orderPartitionConfigService.executeAutoMigrate(businessType);
         return Result.success();
     }
 
-    /** DenyIfNecessary */
+    /**
+     * denyifnecessary
+     *
+     * @param request 请求
+     * @return denyIfNecessary的结果
+     */
     private <T> Result<T> denyIfNecessary(HttpServletRequest request) {
         UserResume userResume = principalResolver.resolve(request);
         if (userResume == null) {

@@ -6,7 +6,7 @@ import com.chua.starter.filesystem.support.entity.SysFileSystemUploadUploadLog;
 import java.util.List;
 
 /**
- * 文件系统上传 OSS 记录服务接口。
+   * 文件系统上传 对象存储 记录服务接口。
  *
  * @since 4.0.0.42
  * @author CH
@@ -16,7 +16,7 @@ public interface SysFileSystemUploadUploadLogService extends IService<SysFileSys
     /**
      * 记录一次上传结果（成功/失败均写入）。
      *
-     * @param uploadId   上传任务 ID
+     * @param uploadId   上传任务 标识
      * @param success    是否成功
      * @param message    记录信息
      * @param retryCount 第几次尝试
@@ -27,7 +27,7 @@ public interface SysFileSystemUploadUploadLogService extends IService<SysFileSys
     /**
      * 查询某任务的全部上传记录。
      *
-     * @param uploadId 上传任务 ID
+     * @param uploadId 上传任务 标识
      * @return 上传记录列表（按时间升序）
      */
     List<SysFileSystemUploadUploadLog> listByUploadId(String uploadId);
@@ -35,7 +35,7 @@ public interface SysFileSystemUploadUploadLogService extends IService<SysFileSys
     /**
      * 删除某任务的全部上传记录。
      *
-     * @param uploadId 上传任务 ID
+     * @param uploadId 上传任务 标识
      * @return 是否删除成功
      */
     boolean deleteByUploadId(String uploadId);

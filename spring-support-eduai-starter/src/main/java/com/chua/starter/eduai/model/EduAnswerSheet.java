@@ -18,19 +18,19 @@ import java.time.LocalDateTime;
 public class EduAnswerSheet {
 
     /**
-     * 答题卡ID
+      * 答题卡标识
      */
     @TableId(type = IdType.AUTO)
-    /** AnswersheetID */
+    /** answersheetid */
     private Long answerSheetId;
 
     /**
-     * 考试ID
+      * 考试标识
      */
     private Long answerSheetExamId;
 
     /**
-     * 学生ID
+      * 学生标识
      */
     private String answerSheetStudentId;
 

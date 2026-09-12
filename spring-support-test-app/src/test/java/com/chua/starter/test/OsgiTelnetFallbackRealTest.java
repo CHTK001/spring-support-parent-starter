@@ -13,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * OSGi 真实测试（Telnet 回退模式）：{@code plugin.osgi.shell.protocol=telnet} 独立上下文。
+   * osgi 真实测试（Telnet 回退模式）：{@code plugin.osgi.shell.protocol=telnet} 独立上下文。
  *
  * <p>验证链路：Felix 框架正常启动（SSH bean 退避为 null）；telnet 远程管理声明但不具备
  * 框架级监听能力（Gogo 1.1.4 仅提供 {@code telnetd PORT start} 会话内命令，无
@@ -31,17 +31,27 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
         "plugin.osgi.shell.port=6666",
         "plugin.osgi.shell.host=127.0.0.1"
 })
+/**
+ * osgitelnet降级real测试类。
+ *
+ * @author CH
+ * @since 4.0.0
+ */
 class OsgiTelnetFallbackRealTest {
 
     @Autowired
-    private ObjectProvider<com.chua.starter.osgi.shell.GogoSshShellServer> sshShellProvider;
+    private ObjectProvider<com.chua.starter.osgi.shell.GogoSshShellServer> sshShellProvider; // sshshell提供者
 
     @Autowired
-    private ObjectProvider<com.chua.osgi.support.FelixOsgiLauncher> osgiLauncherProvider;
+    private ObjectProvider<com.chua.osgi.support.FelixOsgiLauncher> osgiLauncherProvider; // osgilauncher提供者
 
-    /** 真实测试：telnet 模式下 SSH shell bean 应退避为 null（协议二选一） */
+    /** 真实测试：telnet 模式下 SSH Shell Bean 应退避为 空（协议二选一） */
     @Test
     void sshShellBackedOffInTelnetMode() {
+        /**
+         * 断言空。
+         * @param sshShellProvider.getIfAvailable( sshshell提供者.获取if可用(
+         */
         assertNull(sshShellProvider.getIfAvailable(),
                 "protocol=telnet 时 GogoSshShellServer 不应装配");
     }
@@ -50,6 +60,10 @@ class OsgiTelnetFallbackRealTest {
     @Test
     void felixStartsInTelnetMode() {
         com.chua.osgi.support.FelixOsgiLauncher launcher = osgiLauncherProvider.getIfAvailable();
+        /**
+         * 断言true。
+         * @param launcher.isActive( launcher.是否活跃(
+         */
         assertTrue(launcher != null && launcher.isActive(), "telnet 模式下 Felix 框架应激活");
     }
 
@@ -59,6 +73,10 @@ class OsgiTelnetFallbackRealTest {
         // 127.0.0.1:6666 尝试连接：预期拒绝（Connection refused）或超时；
         // 如实际被监听，则 telnet 模式真实可用，测试据实判断
         boolean connectable;
+        /**
+         * 尝试。
+         * @param Socket( 套接字(
+         */
         try (Socket socket = new Socket()) {
             socket.connect(new InetSocketAddress("127.0.0.1", 6666), 2000);
             connectable = true;

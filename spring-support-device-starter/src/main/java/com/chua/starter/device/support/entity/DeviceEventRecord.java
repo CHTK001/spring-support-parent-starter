@@ -20,17 +20,17 @@ import java.time.LocalDateTime;
 public class DeviceEventRecord {
 
     /**
-     * 主键 ID
+      * 主键 标识
      */
     @TableId(value = "device_event_record_id", type = IdType.ASSIGN_UUID)
-    /** Device事件recordID */
+    /** Device事件recordid */
     private String deviceEventRecordId;
 
     /**
-     * 所属设备 ID
+      * 所属设备 标识
      */
     @TableField("device_event_record_device_id")
-    /** Device事件recorddeviceID */
+    /** Device事件recorddeviceid */
     private String deviceEventRecordDeviceId;
 
     /**
@@ -58,6 +58,6 @@ public class DeviceEventRecord {
      * 发生时间
      */
     @TableField("device_event_record_occurred_at")
-    /** Device事件recordoccurredAT */
+    /** Device事件recordoccurredat */
     private LocalDateTime deviceEventRecordOccurredAt;
 }

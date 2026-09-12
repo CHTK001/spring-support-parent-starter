@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
  * 执行日志实体。
  *
  * <p>对应 {@code spider_execution_log} 表，记录每次执行中每个节点的输入输出、
- * 状态与耗时，以 execution_no（traceId）串联一次执行的完整链路。</p>
+   * 状态与耗时，以 执行_no（追踪标识）串联一次执行的完整链路。</p>
  *
  * @since 4.0.0.42
  * @author CH
@@ -28,19 +28,19 @@ import java.time.LocalDateTime;
 public class SpiderExecutionLog extends SysBase {
 
     /**
-     * 主键 ID（自增）
+      * 主键 标识（自增）
      */
     @TableId(type = IdType.AUTO)
     @Schema(description = "主键 ID")
-    /** ID */
+    /** 标识 */
     private Long id;
 
     /**
-     * 执行号（traceId）
+       * 执行号（追踪标识）
      */
     @TableField("execution_no")
     @Schema(description = "执行号")
-    /** ExecutionNO */
+    /** 执行no */
     private String executionNo;
 
     /**
@@ -52,19 +52,19 @@ public class SpiderExecutionLog extends SysBase {
     private String definitionCode;
 
     /**
-     * 流程 ID
+      * 流程 标识
      */
     @TableField("flow_id")
     @Schema(description = "流程 ID")
-    /** FlowID */
+    /** 流标识 */
     private Long flowId;
 
     /**
-     * 节点 ID
+      * 节点 标识
      */
     @TableField("node_id")
     @Schema(description = "节点 ID")
-    /** 节点ID */
+    /** 节点标识 */
     private String nodeId;
 
     /**
@@ -84,7 +84,7 @@ public class SpiderExecutionLog extends SysBase {
     private String nodeType;
 
     /**
-     * 状态（RUNNING/SUCCESS/FAIL）
+      * 状态（RUNNING/成功/失败）
      */
     @TableField("status")
     @Schema(description = "状态")

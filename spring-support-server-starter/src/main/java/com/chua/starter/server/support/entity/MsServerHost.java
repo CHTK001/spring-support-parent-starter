@@ -27,7 +27,7 @@ import lombok.EqualsAndHashCode;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class MsServerHost extends SysBase {
 
-    /** Serial版本UID */
+    /** 串行版本UID */
     private static final long serialVersionUID = 1L;
 
     /**
@@ -35,238 +35,238 @@ public class MsServerHost extends SysBase {
      */
     @TableId(value = "id", type = IdType.AUTO)
     @Schema(description = "主键", example = "1")
-    private Long id;
+    private Long id; // 标识
 
     /**
      * 主机名称
      */
     @TableField("ms_server_host_name")
     @Schema(description = "主机名称", example = "应用服务器-01")
-    private String serverHostName;
+    private String serverHostName; // 服务端主机名称
 
     /**
      * 主机编码（唯一标识）
      */
     @TableField("ms_server_host_code")
     @Schema(description = "主机编码", example = "app-01")
-    private String serverHostCode;
+    private String serverHostCode; // 服务端主机编码
 
     /**
      * 主机地址
      */
     @TableField("ms_server_host_address")
     @Schema(description = "主机地址", example = "124.221.230.112")
-    private String serverHostAddress;
+    private String serverHostAddress; // 服务端主机地址
 
     /**
      * SSH 端口
      */
     @TableField("ms_server_host_port")
     @Schema(description = "SSH端口", example = "22")
-    private Integer serverHostPort;
+    private Integer serverHostPort; // 服务端主机端口
 
     /**
      * 操作系统类型
      */
     @TableField("ms_server_host_os_type")
     @Schema(description = "操作系统类型: LINUX / WINDOWS / MACOS", example = "LINUX")
-    private String serverHostOsType;
+    private String serverHostOsType; // 服务端主机os类型
 
     /**
      * 操作系统架构
      */
     @TableField("ms_server_host_os_arch")
     @Schema(description = "操作系统架构", example = "x86_64")
-    private String serverHostOsArch;
+    private String serverHostOsArch; // 服务端主机osArch Linux Linux Linux
 
     /**
-     * 所属分组 ID
+      * 所属分组 标识
      */
     @TableField("ms_server_group_id")
     @Schema(description = "所属分组ID", example = "1")
-    private Long msServerGroupId;
+    private Long msServerGroupId; // ms服务端群体标识
 
     /**
      * 标签集合（JSON 数组字符串）
      */
     @TableField("ms_server_host_tags")
     @Schema(description = "标签集合(JSON数组)", example = "[\"生产\",\"核心\"]")
-    private String serverHostTags;
+    private String serverHostTags; // 服务端主机标签
 
     /**
      * 启用状态
      */
     @TableField("ms_server_host_status")
     @Schema(description = "启用状态 1启用 0停用", example = "1")
-    private Integer serverHostStatus;
+    private Integer serverHostStatus; // 服务端主机状态
 
     /**
      * 在线状态
      */
     @TableField("ms_server_host_online")
     @Schema(description = "在线状态 1在线 0离线 -1未知", example = "-1")
-    private Integer serverHostOnline;
+    private Integer serverHostOnline; // 服务端主机online
 
     /**
      * 最近在线时间
      */
     @TableField("ms_server_host_online_time")
     @Schema(description = "最近在线时间")
-    private java.time.LocalDateTime serverHostOnlineTime;
+    private java.time.LocalDateTime serverHostOnlineTime; // 服务端主机online时间
 
     /**
-     * 探针标识（为后续 Agent 上报预留，服务端生成）
+      * 探针标识（为后续 智能体 上报预留，服务端生成）
      */
     @TableField("ms_server_host_agent_key")
     @Schema(description = "探针标识(32位)", example = "8f14e45fceea167a5a36dedd4bea2543")
-    private String serverHostAgentKey;
+    private String serverHostAgentKey; // 服务端主机智能体钥匙
 
     /**
      * 描述
      */
     @TableField("ms_server_host_description")
     @Schema(description = "描述", example = "核心业务服务器")
-    private String serverHostDescription;
+    private String serverHostDescription; // 服务端主机description
 
     /**
      * CPU 核心数
      */
     @TableField("ms_server_host_cpu_cores")
     @Schema(description = "CPU核心数", example = "8")
-    private Integer serverHostCpuCores;
+    private Integer serverHostCpuCores; // 服务端主机cpu核心
 
     /**
      * 内存容量(MB)
      */
     @TableField("ms_server_host_memory_mb")
     @Schema(description = "内存容量(MB)", example = "16384")
-    private Long serverHostMemoryMb;
+    private Long serverHostMemoryMb; // 服务端主机内存mb
 
     /**
      * 磁盘容量(GB)
      */
     @TableField("ms_server_host_disk_gb")
     @Schema(description = "磁盘容量(GB)", example = "100")
-    private Long serverHostDiskGb;
+    private Long serverHostDiskGb; // 服务端主机diskgb
 
     /**
      * 系统版本
      */
     @TableField("ms_server_host_os_version")
     @Schema(description = "系统版本", example = "Ubuntu 24.04 LTS")
-    private String serverHostOsVersion;
+    private String serverHostOsVersion; // 服务端主机os版本
 
     /**
      * 公网 IP
      */
     @TableField("ms_server_host_public_ip")
     @Schema(description = "公网IP", example = "124.221.230.112")
-    private String serverHostPublicIp;
+    private String serverHostPublicIp; // 服务端主机公共ip
 
     /**
      * 内网 IP
      */
     @TableField("ms_server_host_private_ip")
     @Schema(description = "内网IP", example = "10.0.0.3")
-    private String serverHostPrivateIp;
+    private String serverHostPrivateIp; // 服务端主机私募ip
 
     /**
      * 在离线检测开关（主机级）
      */
     @TableField("ms_server_host_online_enabled")
     @Schema(description = "在离线检测开关(主机级)", example = "1")
-    private Integer serverHostOnlineEnabled;
+    private Integer serverHostOnlineEnabled; // 服务端主机online已启用
 
     /**
      * 在离线检测间隔(秒)（主机级）
      */
     @TableField("ms_server_host_online_interval")
     @Schema(description = "在离线检测间隔秒(主机级)", example = "60")
-    private Integer serverHostOnlineInterval;
+    private Integer serverHostOnlineInterval; // 服务端主机online间隔
 
     /**
      * 硬件采集开关（主机级）
      */
     @TableField("ms_server_host_collect_enabled")
     @Schema(description = "硬件采集开关(主机级)", example = "0")
-    private Integer serverHostCollectEnabled;
+    private Integer serverHostCollectEnabled; // 服务端主机collect已启用
 
     /**
      * 采集方式（主机级）
      */
     @TableField("ms_server_host_collect_mode")
     @Schema(description = "采集方式(主机级): SCHEDULED/AGENT/HTTP/PROMETHEUS", example = "SCHEDULED")
-    private String serverHostCollectMode;
+    private String serverHostCollectMode; // 服务端主机collectmode
 
     /**
      * 采集间隔(秒)（主机级）
      */
     @TableField("ms_server_host_collect_interval")
     @Schema(description = "采集间隔秒(主机级)", example = "3600")
-    private Integer serverHostCollectInterval;
+    private Integer serverHostCollectInterval; // 服务端主机collect间隔
 
     /**
      * 最近采集时间（主机级，采集节奏控制）
      */
     @TableField("ms_server_host_last_collect_time")
     @Schema(description = "最近采集时间(主机级)")
-    private java.time.LocalDateTime serverHostLastCollectTime;
+    private java.time.LocalDateTime serverHostLastCollectTime; // 服务端主机最后一个collect时间
 
     /**
-     * Agent 上报开关（主机级）
+      * 智能体 上报开关（主机级）
      */
     @TableField("ms_server_host_agent_enabled")
     @Schema(description = "Agent上报开关(主机级)", example = "0")
-    private Integer serverHostAgentEnabled;
+    private Integer serverHostAgentEnabled; // 服务端主机智能体已启用
 
     /**
      * 远控开关（主机级）
      */
     @TableField("ms_server_host_remote_enabled")
     @Schema(description = "远控开关(主机级)", example = "1")
-    private Integer serverHostRemoteEnabled;
+    private Integer serverHostRemoteEnabled; // 服务端主机远程已启用
 
     /**
      * 延迟检测开关（主机级）
      */
     @TableField("ms_server_host_delay_enabled")
     @Schema(description = "延迟检测开关(主机级)", example = "0")
-    private Integer serverHostDelayEnabled;
+    private Integer serverHostDelayEnabled; // 服务端主机延迟已启用
 
     /**
      * 延迟检测间隔(秒)（主机级）
      */
     @TableField("ms_server_host_delay_interval")
     @Schema(description = "延迟检测间隔秒(主机级)", example = "60")
-    private Integer serverHostDelayInterval;
+    private Integer serverHostDelayInterval; // 服务端主机延迟间隔
 
     /**
      * 最近延迟毫秒（检测结果回写）
      */
     @TableField("ms_server_host_delay_ms")
     @Schema(description = "最近延迟毫秒(检测结果)", example = "23")
-    private Long serverHostDelayMs;
+    private Long serverHostDelayMs; // 服务端主机延迟ms
 
     /**
-     * 端口扫描结果（JSON 数组字符串：[{"port":22,"protocol":"tcp","service":"ssh","state":"open"}]）
+      * 端口扫描结果（JSON 数组字符串：[{"端口":22,"协议":"tcp","服务":"ssh","状态":"打开"}]）
      */
     @TableField("ms_server_host_ports")
     @Schema(description = "端口扫描结果(JSON数组)", example = "[{\"port\":22,\"protocol\":\"tcp\",\"service\":\"ssh\"}]")
-    private String serverHostPorts;
+    private String serverHostPorts; // 服务端主机端口
 
     /**
      * 最近端口扫描时间
      */
     @TableField("ms_server_host_last_port_scan_time")
     @Schema(description = "最近端口扫描时间")
-    private java.time.LocalDateTime serverHostLastPortScanTime;
+    private java.time.LocalDateTime serverHostLastPortScanTime; // 服务端主机最后一个端口扫描时间
 
     /**
      * 最近延迟检测时间
      */
     @TableField("ms_server_host_last_delay_time")
     @Schema(description = "最近延迟检测时间")
-    private java.time.LocalDateTime serverHostLastDelayTime;
+    private java.time.LocalDateTime serverHostLastDelayTime; // 服务端主机最后一个延迟时间
 
     /**
      * 登录账号（瞬态，新增表单直接提交，不落库）
@@ -274,7 +274,7 @@ public class MsServerHost extends SysBase {
     @TableField(exist = false)
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     @Schema(description = "登录账号(瞬态)")
-    private String serverHostAccount;
+    private String serverHostAccount; // 服务端主机账户
 
     /**
      * 登录密码（瞬态，新增表单直接提交，不落库）
@@ -282,7 +282,7 @@ public class MsServerHost extends SysBase {
     @TableField(exist = false)
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     @Schema(description = "登录密码(瞬态)")
-    private String serverHostPassword;
+    private String serverHostPassword; // 服务端主机密码
 
     /**
      * PEM 私钥内容（瞬态，新增表单直接提交，不落库）
@@ -290,5 +290,5 @@ public class MsServerHost extends SysBase {
     @TableField(exist = false)
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     @Schema(description = "PEM私钥(瞬态)")
-    private String serverHostPrivateKey;
+    private String serverHostPrivateKey; // 服务端主机私募钥匙
 }

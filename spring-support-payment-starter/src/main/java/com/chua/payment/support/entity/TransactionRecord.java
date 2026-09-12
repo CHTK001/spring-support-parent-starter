@@ -16,15 +16,15 @@ import java.time.LocalDateTime;
 @TableName("pay_transaction_record")
 public class TransactionRecord {
     @TableId(value = "pay_transaction_record_id", type = IdType.AUTO)
-    /** ID */
+    /** 标识 */
     private Long id;
 
     @TableField("pay_transaction_record_transaction_no")
-    /** TransactionNO */
+    /** transactionno */
     private String transactionNo;
 
     @TableField("pay_transaction_record_order_id")
-    /** 排序ID */
+    /** 排序标识 */
     private Long orderId;
 
     @TableField("pay_transaction_record_order_no")
@@ -32,11 +32,11 @@ public class TransactionRecord {
     private String orderNo;
 
     @TableField("pay_transaction_record_merchant_id")
-    /** MerchantID */
+    /** merchantid */
     private Long merchantId;
 
     @TableField("pay_transaction_record_channel_id")
-    /** 通道ID */
+    /** 通道标识 */
     private Long channelId;
 
     @TableField("pay_transaction_record_transaction_type")
@@ -52,7 +52,7 @@ public class TransactionRecord {
     private String channelType;
 
     @TableField("pay_transaction_record_third_party_transaction_no")
-    /** ThirdpartytransactionNO */
+    /** thirdpartytransactionno */
     private String thirdPartyTransactionNo;
 
     @TableField("pay_transaction_record_status")
@@ -68,7 +68,7 @@ public class TransactionRecord {
     private String responsePayload;
 
     @TableField("pay_transaction_record_remark")
-    /** Remark */
+    /** 评论 */
     private String remark;
 
     @TableField(value = "pay_transaction_record_created_at", fill = FieldFill.INSERT)

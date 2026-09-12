@@ -8,6 +8,7 @@ import lombok.Data;
  * 登录信息
  *
  * @author CH
+ * @since 4.0.0
  */
 @Data
 @Schema(description = "登录信息")
@@ -17,7 +18,7 @@ public class LoginData {
      * 账号
      */
     @Schema(description = "账号/微信code/微信openId")
-    /** Username */
+    /** 用户名 */
     private String username;
 
     /**
@@ -31,13 +32,13 @@ public class LoginData {
      */
     @Schema(description = "校验码; 由服务器决定是否必填")
     @RequestParamMapping(name = {"verifyCode", "verifyCodeKey"})
-    /** Verify代码密钥 */
+    /** 验证代码密钥 */
     private String verifyCodeKey;
     /**
      * 校验码
      */
     @Schema(description = "校验码标识, 非必填")
-    /** Verify代码ulid */
+    /** 验证代码ulid */
     private String verifyCodeUlid;
     /**
      * 登录类型
@@ -51,15 +52,15 @@ public class LoginData {
      * 账号类型
      */
     @Schema(description = "账号类型, 用于区分同一种登录方式")
-    /** Account类型 */
+    /** 账户类型 */
     private String accountType;
 
 
     /**
-     * 租户ID
+      * 租户标识
      */
     @Schema(description = "租户ID")
-    /** TenantID */
+    /** tenantid */
     private String tenantId;
 
     /**
@@ -71,14 +72,14 @@ public class LoginData {
     /**
      * 谷歌验证码
      */
-//    @ApiModelProperty(value = "谷歌/其它验证码")
-//    @Schema(description = "谷歌/其它验证码")
-//    private String totpCode;
+ // @api模型财产(价值观 = "谷歌/其它验证码")
+ // @模式(description = "谷歌/其它验证码")
+ // 私募 字符串 totp编码;
     /**
      * 登录凭证
      */
     @Schema(description = "登录凭证(加密数据)")
-    /** WXencrypted数据 */
+    /** wxencrypted数据 */
     private String wxEncryptedData;
 
     /**

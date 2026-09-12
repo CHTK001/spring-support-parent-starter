@@ -14,7 +14,7 @@ import org.springframework.util.StringUtils;
 @ConfigurationProperties(prefix = AliyunAlipayProperties.PREFIX, ignoreInvalidFields = true)
 public class AliyunAlipayProperties {
 
-    /** Prefix */
+    /** 前缀 */
     public static final String PREFIX = "plugin.aliyun.alipay";
 
     /** Enable */
@@ -38,7 +38,7 @@ public class AliyunAlipayProperties {
     /** Alipay公开密钥 */
     private String alipayPublicKey;
 
-    /** NotifyURL */
+    /** 通知url */
     private String notifyUrl;
 
     /** 返回值URL */
@@ -50,13 +50,13 @@ public class AliyunAlipayProperties {
     /** 字符集 */
     private String charset = "UTF-8";
 
-    /** Sign类型 */
+    /** 标志类型 */
     private String signType = "RSA2";
 
-    /** Connect超时 */
+    /** 连接超时 */
     private Integer connectTimeout = 10000;
 
-    /** Read超时 */
+    /** 读取超时 */
     private Integer readTimeout = 30000;
 
     /** 最大值idleconnections */
@@ -65,7 +65,11 @@ public class AliyunAlipayProperties {
     /** Keepalive持续时间 */
     private Long keepAliveDuration = 300000L;
 
-    /** 解析ServerUrl */
+    /**
+     * 解析服务端url
+     *
+     * @return resolve服务端url的结果
+     */
     public String resolveServerUrl() {
         if (StringUtils.hasText(serverUrl)) {
             return serverUrl;

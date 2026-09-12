@@ -16,19 +16,24 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-/** @author CH */
+/** @作者 CH */
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class MonitorConfigServiceImpl implements MonitorConfigService {
 
-    /** 配置mapper */
+    /** 配置映射器 */
     private final MsMonitorConfigMapper configMapper;
 
     @Override
     @Cacheable(cacheNames = "monitorConfig", key = "'monitor.config:key:' + #key")
-    /** 查找ByKey */
+    /**
+     * 查找by键
+     *
+     * @param key 键
+     * @return findby键的结果
+     */
     public ReturnResult<MsMonitorConfig> findByKey(String key) {
         try {
             LambdaQueryWrapper<MsMonitorConfig> w = new LambdaQueryWrapper<>();
@@ -40,7 +45,7 @@ public class MonitorConfigServiceImpl implements MonitorConfigService {
     @Override public String getString(String key) { return getString(key, ""); }
 
     @Override
-    /** 获取String */
+    /** 获取字符串 */
     public String getString(String key, String defaultValue) {
         Optional<MsMonitorConfig> opt = Optional.ofNullable(findByKey(key).getData());
         return opt.map(MsMonitorConfig::getMonitorConfigValue).orElse(defaultValue);
@@ -59,7 +64,7 @@ public class MonitorConfigServiceImpl implements MonitorConfigService {
     }
 
     @Override
-    /** 获取Boolean */
+    /** 获取布尔值 */
     public boolean getBoolean(String key, boolean defaultValue) {
         String val = getString(key);
         return val == null || val.isEmpty() ? defaultValue : Boolean.parseBoolean(val);
@@ -67,23 +72,34 @@ public class MonitorConfigServiceImpl implements MonitorConfigService {
 
     @Override
     @Cacheable(cacheNames = "monitorConfig", key = "'monitor.config:all'")
-    /** 获取All */
+    /**
+     * 获取全部
+     *
+     * @return 获取全部的结果
+     */
     public ReturnResult<Map<String, String>> getAll() {
         try {
             Map<String, String> map = new HashMap<>();
-            for (MsMonitorConfig c : listAll()) map.put(c.getMonitorConfigKey(), c.getMonitorConfigValue());
+            for (MsMonitorConfig c : listAll()) {
+                map.put(c.getMonitorConfigKey(), c.getMonitorConfigValue());
+            }
             return ReturnResult.ok(map);
         } catch (Exception e) { return ReturnResult.error(e.getMessage()); }
     }
 
     @Override
-    /** ListAll */
+    /** 列表全部 */
     public List<MsMonitorConfig> listAll() { return configMapper.selectList(null); }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     @CacheEvict(allEntries = true, cacheNames = "monitorConfig")
-    /** Upsert */
+    /**
+     * Upsert
+     *
+     * @param entity 实体
+     * @return upsert的结果
+     */
     public ReturnResult<MsMonitorConfig> upsert(MsMonitorConfig entity) {
         try {
             ReturnResult<MsMonitorConfig> existing = findByKey(entity.getMonitorConfigKey());
@@ -102,7 +118,12 @@ public class MonitorConfigServiceImpl implements MonitorConfigService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     @CacheEvict(allEntries = true, cacheNames = "monitorConfig")
-    /** UpsertAll */
+    /**
+     * upsert全部
+     *
+     * @param entities 实体
+     * @return upsert全部的结果
+     */
     public ReturnResult<Integer> upsertAll(List<MsMonitorConfig> entities) {
         if (entities == null || entities.isEmpty()) {
             return ReturnResult.ok(0);

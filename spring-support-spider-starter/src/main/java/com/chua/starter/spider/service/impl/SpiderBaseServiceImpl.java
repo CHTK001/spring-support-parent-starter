@@ -11,9 +11,10 @@ import com.chua.starter.spider.service.SpiderBaseService;
  * <p>基于 {@link ServiceImpl} 提供标准 CRUD，公共字段由
  * {@code SpiderMetaObjectHandler} 自动填充。</p>
  *
- * @param <M> Mapper 类型
+ * @param <M> 映射器 类型
  * @param <T> 实体类型
  * @since 4.0.0.42
+ * @author CH
  */
 public abstract class SpiderBaseServiceImpl<M extends BaseMapper<T>, T extends SysBase>
         extends ServiceImpl<M, T> implements SpiderBaseService<T> {

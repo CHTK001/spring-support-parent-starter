@@ -19,10 +19,10 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 
 /**
- * 全局 Agent 注册中心。
+   * 全局 智能体 注册中心。
  *
  * <p>管理所有 AI Agent 实例，支持按名称、能力、分组等维度查找。
- * 与 {@link ChatClientRegistry} 配合，Agent 通过 ChatClient 与大模型通信。
+   * 与 {@link ChatClientRegistry} 配合，智能体 通过 对话客户端 与大模型通信。
  *
  * <h2>注册体系</h2>
  * <pre>
@@ -49,6 +49,7 @@ import java.util.function.Consumer;
  *   // 注册新 Agent
  *   registry.register("dev-agent", "开发助手", "代码开发专家",
  *       chatClient, AgentDefinition.builder().build());
+ * }</pre>      chatClient, AgentDefinition.builder().build());
  * }</pre>
  *
  * @since 4.0.0.42
@@ -58,56 +59,56 @@ import java.util.function.Consumer;
 public class AgentRegistry {
 
     /**
-     * 按名称索引的 Agent
+      * 按名称索引的 智能体
      */
     private final Map<String, Agent> agentIndex = new ConcurrentHashMap<>();
 
     /**
-     * 按分组索引的 Agent 列表
+      * 按分组索引的 智能体 列表
      */
     private final Map<String, List<Agent>> groupIndex = new ConcurrentHashMap<>();
 
     /**
-     * 按能力索引的 Agent 列表
+      * 按能力索引的 智能体 列表
      */
     private final Map<String, List<Agent>> capabilityIndex = new ConcurrentHashMap<>();
 
     /**
-     * 主 Agent（Router/Auto 模式）
+      * 主 智能体（Router/Auto 模式）
      */
     private volatile Agent masterAgent;
 
     /**
-     * Agent 定义列表（延迟初始化）
+      * 智能体 定义列表（延迟初始化）
      */
     private final List<AgentDefinition> pendingDefinitions = new CopyOnWriteArrayList<>();
 
     /**
-     * 所有已注册的 Agent 列表
+      * 所有已注册的 智能体 列表
      */
     private final List<Agent> allAgents = new CopyOnWriteArrayList<>();
 
     /**
-     * 全局 SkillManager（可选）
+      * 全局 skill管理器（可选）
      */
     private volatile SkillManager skillManager;
 
     /**
-     * 全局 McpManager（可选）
+      * 全局 mcp管理器（可选）
      */
     private volatile McpManager mcpManager;
 
     /**
-     * 注册 Agent。
+      * 注册 智能体。
      *
-     * @param name          Agent 名称
-     * @param displayName   Agent 显示名称
-     * @param description   Agent 描述
-     * @param chatClient    关联的 ChatClient
-     * @param definition    Agent 定义
+     * @param name          智能体 名称
+     * @param displayName   智能体 显示名称
+     * @param description   智能体 描述
+     * @param chatClient    关联的 对话客户端
+     * @param definition    智能体 定义
      * @param groups        分组标签
      * @param capabilities  能力标签
-     * @return 注册后的 Agent 实例
+     * @return 注册后的 智能体 实例
      */
     public Agent register(String name, String displayName, String description,
                           ChatClient chatClient, AgentDefinition definition,
@@ -152,32 +153,32 @@ public class AgentRegistry {
     }
 
     /**
-     * 注册 Agent（简化版）。
+      * 注册 智能体（简化版）。
      *
-     * @param name        Agent 名称
-     * @param chatClient  关联的 ChatClient
-     * @param definition  Agent 定义
-     * @return 注册后的 Agent 实例
+     * @param name        智能体 名称
+     * @param chatClient  关联的 对话客户端
+     * @param definition  智能体 定义
+     * @return 注册后的 智能体 实例
      */
     public Agent register(String name, ChatClient chatClient, AgentDefinition definition) {
         return register(name, name, "", chatClient, definition, null, null);
     }
 
     /**
-     * 注册已构建的 Agent 实例（保留子 Agent 独立模型/MCP/Skill 配置）。
+      * 注册已构建的 智能体 实例（保留子 智能体 独立模型/MCP/Skill 配置）。
      *
-     * @param name         Agent 名称
-     * @param agent        已构建的 Agent 实例
+     * @param name         智能体 名称
+     * @param agent        已构建的 智能体 实例
      * @param groups       分组标签
      * @param capabilities 能力标签
-     * @return 注册后的 Agent 实例
+     * @return 注册后的 智能体 实例
      */
     public Agent registerInstance(String name, Agent agent, String[] groups, String[] capabilities) {
         if (name == null || agent == null) {
             log.warn("[AgentRegistry] 注册参数不完整: name={}, agent={}", name, agent);
             return null;
         }
-        // 注入全局 SkillManager / McpManager
+ // 注入全局 skill管理器 / mcp管理器
         if (skillManager != null) {
             try {
                 agent.skillManager(skillManager);
@@ -212,10 +213,10 @@ public class AgentRegistry {
     }
 
     /**
-     * 批量注册 Agent 定义（延迟初始化）。
+      * 批量注册 智能体 定义（延迟初始化）。
      * <p>在 ChatClient 就绪后统一初始化。</p>
      *
-     * @param definitions Agent 定义列表
+     * @param definitions 智能体 定义列表
      */
     public void registerDefinitions(List<AgentDefinition> definitions) {
         if (definitions != null) {
@@ -225,10 +226,10 @@ public class AgentRegistry {
     }
 
     /**
-     * 设置主 Agent。
+      * 设置主 智能体。
      * <p>主 Agent 负责路由和分发，支持 Router/Auto/Pipeline/FanOut 等模式。</p>
      *
-     * @param agent 主 Agent
+     * @param agent 主 智能体
      */
     public void setMaster(Agent agent) {
         this.masterAgent = agent;
@@ -236,13 +237,13 @@ public class AgentRegistry {
     }
 
     /**
-     * 设置全局 SkillManager。
+      * 设置全局 skill管理器。
      *
      * @param skillManager 技能管理器
      */
     public void setSkillManager(SkillManager skillManager) {
         this.skillManager = skillManager;
-        // 为所有已注册 Agent 注入 SkillManager
+ // 为所有已注册 智能体 注入 skill管理器
         for (Agent agent : allAgents) {
             agent.skillManager(skillManager);
         }
@@ -250,7 +251,7 @@ public class AgentRegistry {
     }
 
     /**
-     * 设置全局 McpManager。
+      * 设置全局 mcp管理器。
      *
      * @param mcpManager MCP 管理器
      */
@@ -265,26 +266,26 @@ public class AgentRegistry {
     // ==================== 查询方法 ====================
 
     /**
-     * 获取主 Agent。
+      * 获取主 智能体。
      *
-     * @return 主 Agent，未设置时返回 null
+     * @return 主 智能体，未设置时返回 空
      */
     public Agent getMaster() {
         return masterAgent;
     }
 
     /**
-     * 按名称获取 Agent。
+      * 按名称获取 智能体。
      *
-     * @param name Agent 名称
-     * @return Agent，未找到返回 null
+     * @param name 智能体 名称
+     * @return Agent，未找到返回 空
      */
     public Agent getByName(String name) {
         return agentIndex.get(name);
     }
 
     /**
-     * 按分组获取 Agent 列表。
+      * 按分组获取 智能体 列表。
      *
      * @param group 分组标签
      * @return Agent 列表，未找到返回空列表
@@ -294,7 +295,7 @@ public class AgentRegistry {
     }
 
     /**
-     * 按能力获取 Agent 列表。
+      * 按能力获取 智能体 列表。
      *
      * @param capability 能力标签
      * @return Agent 列表，未找到返回空列表
@@ -304,7 +305,7 @@ public class AgentRegistry {
     }
 
     /**
-     * 获取所有已注册的 Agent。
+      * 获取所有已注册的 智能体。
      *
      * @return Agent 列表
      */
@@ -313,7 +314,7 @@ public class AgentRegistry {
     }
 
     /**
-     * 获取所有已注册的 provider 名称。
+      * 获取所有已注册的 提供者 名称。
      *
      * @return provider 名称集合
      */
@@ -322,7 +323,7 @@ public class AgentRegistry {
     }
 
     /**
-     * 获取待初始化的 Agent 定义。
+      * 获取待初始化的 智能体 定义。
      *
      * @return Agent 定义列表
      */
@@ -331,9 +332,9 @@ public class AgentRegistry {
     }
 
     /**
-     * 判断 Agent 是否已注册。
+      * 判断 智能体 是否已注册。
      *
-     * @param name Agent 名称
+     * @param name 智能体 名称
      * @return true 表示已注册
      */
     public boolean hasAgent(String name) {
@@ -341,9 +342,9 @@ public class AgentRegistry {
     }
 
     /**
-     * 注销 Agent（移除所有索引并关闭）。
+      * 注销 智能体（移除所有索引并关闭）。
      *
-     * @param name Agent 名称
+     * @param name 智能体 名称
      * @return 是否注销成功（原已注册）
      */
     public boolean unregister(String name) {
@@ -367,7 +368,7 @@ public class AgentRegistry {
     }
 
     /**
-     * 获取已注册的 Agent 数量。
+      * 获取已注册的 智能体 数量。
      *
      * @return 数量
      */
@@ -376,18 +377,18 @@ public class AgentRegistry {
     }
 
     /**
-     * 获取全局 SkillManager。
+      * 获取全局 skill管理器。
      *
-     * @return SkillManager，未设置返回 null
+     * @return SkillManager，未设置返回 空
      */
     public SkillManager getSkillManager() {
         return skillManager;
     }
 
     /**
-     * 获取全局 McpManager。
+      * 获取全局 mcp管理器。
      *
-     * @return McpManager，未设置返回 null
+     * @return McpManager，未设置返回 空
      */
     public McpManager getMcpManager() {
         return mcpManager;
@@ -396,7 +397,7 @@ public class AgentRegistry {
     // ==================== 生命周期 ====================
 
     /**
-     * 关闭所有 Agent，释放资源。
+      * 关闭所有 智能体，释放资源。
      */
     public void closeAll() {
         for (Agent agent : allAgents) {

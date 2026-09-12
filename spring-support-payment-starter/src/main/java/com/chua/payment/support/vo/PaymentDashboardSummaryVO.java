@@ -9,10 +9,11 @@ import java.time.LocalDateTime;
 /**
  * 支付首页业务统计汇总。
  * @author CH
+ * @since 4.0.0
  */
 @Data
 public class PaymentDashboardSummaryVO implements Serializable {
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L; // 串行版本uid
 
     /** 开始时间 */
     private LocalDateTime startTime;
@@ -32,7 +33,7 @@ public class PaymentDashboardSummaryVO implements Serializable {
     /** Payment排序数量 */
     private Long paymentOrderCount;
 
-    /** Refund数量 */
+    /** 退税数量 */
     private Long refundCount;
 
     /** Transaction数量 */

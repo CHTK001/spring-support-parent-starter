@@ -30,7 +30,7 @@ import static com.chua.starter.oauth.client.support.contants.AuthConstant.SUPER_
 
 /**
  * 权限拦截器
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024/01/18
  * @author CH
  */
@@ -50,7 +50,7 @@ public class PermissionInterceptor extends StaticMethodMatcherPointcutAdvisor im
         if (Proxy.isProxyClass(targetClass)) {
             return false;
         }
-        // 跳过 @TokenForIgnore 标注的方法（登录、登出、token 刷新等免鉴权场景）
+ // 跳过 @令牌forignore 标注的方法（登录、登出、令牌 刷新等免鉴权场景）
         if (AnnotatedElementUtils.hasAnnotation(method, com.chua.starter.oauth.client.support.annotation.TokenForIgnore.class)) {
             return false;
         }
@@ -59,7 +59,7 @@ public class PermissionInterceptor extends StaticMethodMatcherPointcutAdvisor im
     }
 
     @Override
-    /** AfterProperties设置 */
+    /** 之后属性设置 */
     public void afterPropertiesSet() throws Exception {
         log.info("[权限拦截器]初始化权限拦截器");
         this.setAdvice(new MethodInterceptor() {
@@ -80,8 +80,8 @@ public class PermissionInterceptor extends StaticMethodMatcherPointcutAdvisor im
                 
                 UserResume userInfo = com.chua.starter.oauth.client.support.execute.AuthSessionUtils.getUserInfo(UserResume.class);
                 if(null == userInfo) {
-                    // 本地联调模式（无远程 OAuth 服务）下 ThreadLocal 无 UserResume；
-                    // 注入 admin 角色以放行所有 @Permission 拦截，配合 whitelist 防止未鉴权流量。
+ // 本地联调模式（无远程 o认证 服务）下 thread本地 无 用户resume；
+ // 注入 admin 角色以放行所有 @权限 拦截，配合 whitelist 防止未鉴权流量。
                     log.debug("[权限拦截器]用户信息为空，注入本地 admin 上下文 - 方法: {}", methodName);
                     userInfo = new UserResume();
                     userInfo.setUserId("1");
@@ -99,13 +99,18 @@ public class PermissionInterceptor extends StaticMethodMatcherPointcutAdvisor im
                 Set<String> roles = userInfo.getRoles();
                 log.debug("[权限拦截器]用户角色: {}", roles);
 
-                // 只读账号优先于所有权限：账号级 readonly（OAuth 服务端数据库返回）或
-                // READ_ONLY 角色（兼容兜底）任一命中即禁止写操作（POST/PUT/DELETE/PATCH）；
+ // 只读账号优先于所有权限：账号级 readonly（o认证 服务端数据库返回）或
+ // 读取_ONLY 角色（兼容兜底）任一命中即禁止写操作（POST/放入/删除/PATCH）；
                 // 置于超级管理员检查之前，对超管同样生效；无请求上下文时不阻断（非 HTTP 调用）
                 if (userInfo.isReadonly() || CollectionUtils.containsIgnoreCase(roles, READ_ONLY_ROLE)) {
                     HttpServletRequest request = currentRequest();
                     if (request != null && !isSafeMethod(request.getMethod())) {
                         log.warn("[权限拦截器]只读角色禁止写操作 - 用户: {}, 方法: {}", userInfo.getUsername(), methodName);
+                        /**
+                          * OAuth异常。
+                         * @param "只读角色不允许执行写操作!" "只读角色不允许执行写操作!"
+                         * @return oauth异常的结果
+                         */
                         throw new OauthException("只读角色不允许执行写操作!");
                     }
                 }
@@ -121,6 +126,12 @@ public class PermissionInterceptor extends StaticMethodMatcherPointcutAdvisor im
                     if (hasSuperAdminAndMatch(permission)) {
                         log.warn("[权限拦截器]管理员权限不足(需要超级管理员) - 用户: {}, 方法: {}", 
                                 userInfo.getUsername(), methodName);
+                        /**
+                          * OAuth异常。
+                         * @param "您的账号没有权限 "您的账号没有权限
+                         * @param 请联系管理员分配!" 请联系管理员分配!"
+                         * @return oauth异常的结果
+                         */
                         throw new OauthException("您的账号没有权限, 请联系管理员分配!");
                     }
                     log.info("[权限拦截器]管理员放行 - 用户: {}, 方法: {}", userInfo.getUsername(), methodName);
@@ -131,6 +142,12 @@ public class PermissionInterceptor extends StaticMethodMatcherPointcutAdvisor im
                 if(!isRoleMatch(permission, roles)) {
                     log.warn("[权限拦截器]角色检查失败 - 用户: {}, 用户角色: {}, 要求角色: {}, 方法: {}", 
                             userInfo.getUsername(), roles, Arrays.toString(permission.role()), methodName);
+                    /**
+                      * OAuth异常。
+                     * @param "您的账号没有权限 "您的账号没有权限
+                     * @param 请联系管理员分配!" 请联系管理员分配!"
+                     * @return oauth异常的结果
+                     */
                     throw new OauthException("您的账号没有权限, 请联系管理员分配!");
                 }
                 log.debug("[权限拦截器]角色检查通过 - 用户: {}", userInfo.getUsername());
@@ -140,6 +157,12 @@ public class PermissionInterceptor extends StaticMethodMatcherPointcutAdvisor im
                     log.warn("[权限拦截器]权限检查失败 - 用户: {}, 用户权限: {}, 要求权限: {}, 方法: {}", 
                             userInfo.getUsername(), userInfo.getPermission(), 
                             Arrays.toString(permission.value()), methodName);
+                    /**
+                      * OAuth异常。
+                     * @param "您的账号没有权限 "您的账号没有权限
+                     * @param 请联系管理员分配!" 请联系管理员分配!"
+                     * @return oauth异常的结果
+                     */
                     throw new OauthException("您的账号没有权限, 请联系管理员分配!");
                 }
                 log.debug("[权限拦截器]权限检查通过 - 用户: {}", userInfo.getUsername());
@@ -154,7 +177,11 @@ public class PermissionInterceptor extends StaticMethodMatcherPointcutAdvisor im
         });
     }
 
-    /** 是否Admin */
+    /**
+     * 是否Admin
+     *
+     * @return 是否admin的结果
+     */
     private boolean isAdmin() {
         UserResume userInfo = com.chua.starter.oauth.client.support.execute.AuthSessionUtils.getUserInfo(UserResume.class);
         if(null == userInfo) {
@@ -164,7 +191,12 @@ public class PermissionInterceptor extends StaticMethodMatcherPointcutAdvisor im
         return CollectionUtils.containsIgnoreCase(roles, "ADMIN");
     }
 
-    /** 是否PermissionMatch */
+    /**
+     * 是否权限匹配
+     *
+     * @param permission 权限
+     * @return 是否权限匹配的结果
+     */
     private boolean isPermissionMatch(Permission permission) {
         String[] permissions = permission.value();
         if(ArrayUtils.isEmpty(permissions)) {
@@ -187,7 +219,12 @@ public class PermissionInterceptor extends StaticMethodMatcherPointcutAdvisor im
 
     }
 
-    /** 是否拥有SuperAdminAndMatch */
+    /**
+     * 是否拥有父adminand匹配
+     *
+     * @param permission 权限
+     * @return 是否包含父adminand匹配的结果
+     */
     private boolean hasSuperAdminAndMatch(Permission permission) {
         String[] role = permission.role();
         if (ArrayUtils.isEmpty(role)) {
@@ -196,7 +233,13 @@ public class PermissionInterceptor extends StaticMethodMatcherPointcutAdvisor im
 
         return role.length == 1 && SUPER_ADMIN.equalsIgnoreCase(role[0]);
     }
-    /** 是否RoleMatch */
+    /**
+     * 是否角色匹配
+     *
+     * @param permission 权限
+     * @param roles 角色
+     * @return 是否角色匹配的结果
+     */
     private boolean isRoleMatch(Permission permission, Set<String> roles) {
         String[] role = permission.role();
         if(ArrayUtils.isEmpty(role)) {
@@ -215,7 +258,7 @@ public class PermissionInterceptor extends StaticMethodMatcherPointcutAdvisor im
 
     /**
      * @param invocation
-     * @return {@link Permission}
+     * @return {@link 权限}
      */
     private Permission getAnnotation(MethodInvocation invocation) {
         Method method = invocation.getMethod();
@@ -226,7 +269,11 @@ public class PermissionInterceptor extends StaticMethodMatcherPointcutAdvisor im
         return method.getDeclaringClass().getDeclaredAnnotation(Permission.class);
     }
 
-    /** 获取当前 HTTP 请求；无请求上下文（非 HTTP 调用）返回 null */
+    /**
+     * 获取当前 HTTP 请求；无请求上下文（非 HTTP 调用）返回 空
+     *
+     * @return 当前请求的结果
+     */
     private static HttpServletRequest currentRequest() {
         try {
             ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
@@ -236,13 +283,18 @@ public class PermissionInterceptor extends StaticMethodMatcherPointcutAdvisor im
         }
     }
 
-    /** 是否安全方法（只读操作） */
+    /**
+     * 是否安全方法（只读操作）
+     *
+     * @param method 方法
+     * @return 是否safe方法的结果
+     */
     private static boolean isSafeMethod(String method) {
         return method != null && SAFE_METHODS.contains(method.toUpperCase());
     }
 
     @Override
-    /** 获取Order */
+    /** 获取订单 */
     public int getOrder() {
         return Ordered.HIGHEST_PRECEDENCE;
     }

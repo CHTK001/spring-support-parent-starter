@@ -11,6 +11,7 @@ import org.springframework.context.annotation.Bean;
  * 切入点
  *
  * @author CH
+ * @since 4.0.0
  */
 public class MethodPointcut implements ApplicationContextAware {
 
@@ -32,7 +33,7 @@ public class MethodPointcut implements ApplicationContextAware {
     }
 
     @Override
-    /** 设置ApplicationContext */
+    /** 设置application上下文 */
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
     }

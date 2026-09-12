@@ -7,17 +7,17 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Socket 用户信息
+   * 套接字 用户信息
  * 封装连接用户的基本信息
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024-12-04
  * @author CH
  */
 @Data
 public class SocketUser implements Serializable {
 
-    /** Serial版本UID */
+    /** 串行版本UID */
     private static final long serialVersionUID = 1L;
 
     /**
@@ -25,12 +25,12 @@ public class SocketUser implements Serializable {
      */
     private String roomId;
     /**
-     * 用户ID
+      * 用户标识
      */
     private String userId;
 
     /**
-     * 获取用户ID
+      * 获取用户标识
      *
      * @return 用户ID
      */
@@ -39,9 +39,9 @@ public class SocketUser implements Serializable {
     }
 
     /**
-     * 设置用户ID
+      * 设置用户标识
      *
-     * @param userId 用户ID
+     * @param userId 用户标识
      */
     public void setUserId(String userId) {
         this.userId = userId;
@@ -58,7 +58,7 @@ public class SocketUser implements Serializable {
     private String type;
 
     /**
-     * 租户ID
+      * 租户标识
      */
     private String tenantId;
 
@@ -67,22 +67,23 @@ public class SocketUser implements Serializable {
      */
     private Map<String, Object> extras = new ConcurrentHashMap<>();
 
-    /** 创建 SocketUser 实例 */
+    /** 创建 套接字用户 实例 */
     public SocketUser() {
     }
 
     /**
-     * 创建 SocketUser 实例
-     * @param userId userId
+      * 创建 套接字用户 实例
+     * @param userId 用户标识
      */
     public SocketUser(String userId) {
         this.userId = userId;
     }
 
     /**
-     * 创建 SocketUser 实例
-     * @param userId userId
-     * @param String String
+      * 创建 套接字用户 实例
+     * @param userId 用户标识
+     * @param userId 字符串
+     * @param username 用户名
      */
     public SocketUser(String userId, String username) {
         this.userId = userId;

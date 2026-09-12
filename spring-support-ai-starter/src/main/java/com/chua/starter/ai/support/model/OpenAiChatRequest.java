@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * OpenAI 兼容对话请求模型。
+   * 打开AI 兼容对话请求模型。
  *
  * @since 4.0.0.42
  * @author CH
@@ -30,7 +30,7 @@ public class OpenAiChatRequest {
     private Double temperature;
 
     /**
-     * 最大生成 tokens
+      * 最大生成 令牌
      */
     private Integer maxTokens;
 
@@ -40,7 +40,7 @@ public class OpenAiChatRequest {
     private Boolean stream;
 
     /**
-     * 响应格式（如 json_object）
+      * 响应格式（如 json_对象）
      */
     private Map<String, Object> responseFormat;
 

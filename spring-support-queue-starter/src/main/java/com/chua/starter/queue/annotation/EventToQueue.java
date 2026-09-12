@@ -5,7 +5,7 @@ import java.lang.annotation.*;
 /**
  * 事件转队列注解
  * <p>
- * 标注在Spring ApplicationEvent类上，自动将该事件发送到指定的队列。
+   * 标注在Spring application事件类上，自动将该事件发送到指定的队列。
  * </p>
  *
  * <pre>
@@ -15,9 +15,14 @@ import java.lang.annotation.*;
  *     // ...
  * }
  * }
+ * </pre>t {
+ *     // ...
+ * }
+ * }
  * </pre>
  *
  * @since 2025-03-20
+ * @author CH
  */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
@@ -25,7 +30,7 @@ import java.lang.annotation.*;
 public @interface EventToQueue {
 
     /**
-     * 目标队列地址（topic/queue）
+      * 目标队列地址（topic/队列）
      *
      * @return 目标地址
      */
@@ -49,9 +54,9 @@ public @interface EventToQueue {
     boolean async() default true;
 
     /**
-     * 消息头（key=value格式，多个用逗号分隔）
+      * 消息头（钥匙=价值观格式，多个用逗号分隔）
      * <p>
-     * 例如: "priority=high,retry=3"
+      * 例如: "priority=high,重试=3"
      * </p>
      *
      * @return 消息头

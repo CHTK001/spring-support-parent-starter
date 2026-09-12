@@ -18,10 +18,10 @@ import java.time.LocalDateTime;
 public class EduKnowledgeDoc {
 
     /**
-     * 文档ID
+      * 文档标识
      */
     @TableId(type = IdType.AUTO)
-    /** KnowledgeDOCID */
+    /** 知识docid */
     private Long knowledgeDocId;
 
     /**
@@ -45,7 +45,7 @@ public class EduKnowledgeDoc {
     private Long knowledgeDocFileSize;
 
     /**
-     * 向量存储ID
+      * 向量存储标识
      */
     private String knowledgeDocVectorStoreId;
 

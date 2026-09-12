@@ -14,7 +14,7 @@ import lombok.EqualsAndHashCode;
  * 流程编排实体。
  *
  * <p>对应 {@code spider_flow} 表，保存前端 ReFlow 可视化画布导出的
- * 节点 JSON（nodes_json）与连线 JSON（edges_json），一个爬虫定义对应一条流程。</p>
+   * 节点 JSON（节点_json）与连线 JSON（edges_json），一个爬虫定义对应一条流程。</p>
  *
  * @since 4.0.0.42
  * @author CH
@@ -26,23 +26,23 @@ import lombok.EqualsAndHashCode;
 public class SpiderFlow extends SysBase {
 
     /**
-     * 主键 ID（自增）
+      * 主键 标识（自增）
      */
     @TableId(type = IdType.AUTO)
     @Schema(description = "主键 ID")
-    /** ID */
+    /** 标识 */
     private Long id;
 
     /**
-     * 关联爬虫定义 ID
+      * 关联爬虫定义 标识
      */
     @TableField("definition_id")
     @Schema(description = "关联爬虫定义 ID")
-    /** DefinitionID */
+    /** definitionid */
     private Long definitionId;
 
     /**
-     * 流程编码（前端 flowCode）
+      * 流程编码（前端 流编码）
      */
     @TableField("code")
     @Schema(description = "流程编码（前端 flowCode）")
@@ -66,19 +66,19 @@ public class SpiderFlow extends SysBase {
     private String name;
 
     /**
-     * 节点 JSON（ReFlow 导出）
+      * 节点 JSON（re流 导出）
      */
     @TableField("nodes_json")
     @Schema(description = "节点 JSON")
-    /** NodesJSON */
+    /** 节点json */
     private String nodesJson;
 
     /**
-     * 连线 JSON（ReFlow 导出）
+      * 连线 JSON（re流 导出）
      */
     @TableField("edges_json")
     @Schema(description = "连线 JSON")
-    /** EdgesJSON */
+    /** edgesjson */
     private String edgesJson;
 
     /**

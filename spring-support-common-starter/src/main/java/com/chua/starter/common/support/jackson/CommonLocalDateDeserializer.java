@@ -14,7 +14,7 @@ import java.io.IOException;
 import java.time.LocalDate;
 
 /**
- * 通用LocalDate解析
+   * 通用本地日期解析
  * @since 2024/12/19
  * @author CH
  */

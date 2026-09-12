@@ -43,7 +43,7 @@ public class MarkingMessageListener {
         log.info("[EduAi] 阅卷队列消费: taskId={}, items={}",
                 job.getTaskId(),
                 job.getItems() == null ? 0 : job.getItems().size());
-        // EduMarkingServiceImpl.markSync 是 public，供队列消费调用
+ // edumarking服务impl.mark同步 是 公共，供队列消费调用
         ((EduMarkingServiceImpl) markingService).markSync(job.getTaskId(), job.getItems());
     }
 }

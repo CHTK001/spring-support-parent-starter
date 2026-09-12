@@ -15,6 +15,6 @@ public class MaterializedSqlOptions {
     private long defaultThreshold = 1000L;
     /** Refresh间隔秒 */
     private long refreshIntervalSeconds = 300L;
-    /** 缓存数据来源prefix */
+    /** 缓存数据来源前缀 */
     private String cacheDataSourcePrefix = "materialized#";
 }

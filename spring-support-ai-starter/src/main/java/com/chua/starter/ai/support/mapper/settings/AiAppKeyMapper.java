@@ -5,7 +5,7 @@ import com.chua.starter.ai.support.entity.settings.SysAiAppKey;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
- * AppKey Mapper
+   * app钥匙 映射器
  *
  * @since 2026-08-03
  * @author CH

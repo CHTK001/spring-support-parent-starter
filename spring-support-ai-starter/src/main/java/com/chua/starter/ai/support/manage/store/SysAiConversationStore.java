@@ -23,7 +23,7 @@ import javax.sql.DataSource;
  *
  * <p>作为前端契约的会话状态层，提供会话 CRUD、消息追加与分页查询。
  * 基于 MyBatis-Plus 持久化到 H2（或 MySQL）数据库：会话存 {@code sys_nomifun_conversation} 表，
- * 消息存 {@code sys_nomifun_message} 表。JSON 字段（model/extra/content）通过
+   * 消息存 {@code sys_nomifun_message} 表。JSON 字段（模型/extra/内容）通过
  * {@link com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler} 序列化存储。</p>
  *
  * <p>时间戳与主键由后端生成：主键为 UUIDv7 字符串，时间戳为 epoch 毫秒。</p>
@@ -36,17 +36,17 @@ import javax.sql.DataSource;
 public class SysAiConversationStore {
 
     /**
-     * 会话表 Mapper：提供会话增删改查
+      * 会话表 映射器：提供会话增删改查
      */
     private final SysAiConversationMapper conversationMapper;
 
     /**
-     * 消息表 Mapper：提供消息增删改查
+      * 消息表 映射器：提供消息增删改查
      */
     private final SysAiConversationMessageMapper messageMapper;
 
     /**
-     * 分页单页最大条数，防止前端传入超大 page_size 拖垮查询
+      * 分页单页最大条数，防止前端传入超大 page_大小 拖垮查询
      */
     private static final int MAX_PAGE_SIZE = 200;
 
@@ -56,10 +56,10 @@ public class SysAiConversationStore {
     private static final int MAX_LIST_LIMIT = 500;
 
     /**
-     * 构造注入 MyBatis-Plus Mapper，启动时自动补列。
+      * 构造注入 MyBatis-Plus 映射器，启动时自动补列。
      *
-     * @param conversationMapper 会话 Mapper
-     * @param messageMapper      消息 Mapper
+     * @param conversationMapper 会话 映射器
+     * @param messageMapper      消息 映射器
      * @param dataSource         数据源（用于启动时检查并补列）
      */
     public SysAiConversationStore(SysAiConversationMapper conversationMapper,
@@ -71,8 +71,9 @@ public class SysAiConversationStore {
     }
 
     /**
-     * 启动时检查 sys_ai_conversation 表是否缺少 extra 等列，自动 ALTER TABLE 补上。
+      * 启动时检查 sys_AI_conversation 表是否缺少 extra 等列，自动 ALTER TABLE 补上。
      * 这样即使 MySQL 建表时遗漏了新列，重启后也能自动修复。
+     * @param dataSource 数据源
      */
     private void ensureColumns(DataSource dataSource) {
         String table = "sys_ai_conversation";
@@ -106,16 +107,16 @@ public class SysAiConversationStore {
     }
 
     /**
-     * 生成 UUID 字符串（前端要求 UUID 格式主键，UUIDv7 含时间前缀）。
+      * 生成 UUID 字符串（前端要求 UUID 格式主键，uuidv7 含时间前缀）。
      *
-     * @return 36 位 UUIDv7 字符串
+     * @return 36 位 uuidv7 字符串
      */
     public String newId() {
         return generateUuidV7();
     }
 
     /**
-     * 生成 UUIDv7：前 48 位为毫秒时间戳，随后填充版本/变体位与随机位。
+      * 生成 uuidv7：前 48 位为毫秒时间戳，随后填充版本/变体位与随机位。
      *
      * <p>UUIDv7 格式：{@code xxxxxxxx-xxxx-7xxx-xxxx-xxxxxxxxxxxx}</p>
      * <ul>
@@ -124,7 +125,7 @@ public class SysAiConversationStore {
      *   <li>第17位：变体（固定为10xx，即8/9/a/b）</li>
      * </ul>
      *
-     * @return 36 位 UUIDv7 字符串
+     * @return 36 位 uuidv7 字符串
      */
     public static String generateUuidV7() {
         long millis = System.currentTimeMillis();
@@ -151,7 +152,9 @@ public class SysAiConversationStore {
         char[] hex = "0123456789abcdef".toCharArray();
         StringBuilder sb = new StringBuilder(36);
         for (int i = 0; i < 16; i++) {
-            if (i == 4 || i == 6 || i == 8 || i == 10) sb.append('-');
+            if (i == 4 || i == 6 || i == 8 || i == 10) {
+                sb.append('-');
+            }
             sb.append(hex[(bytes[i] >> 4) & 0xF]).append(hex[bytes[i] & 0xF]);
         }
         return sb.toString();
@@ -171,7 +174,7 @@ public class SysAiConversationStore {
     /**
      * 获取会话（不存在抛 NOT_FOUND）。
      *
-     * @param conversationId 会话 ID
+     * @param conversationId 会话 标识
      * @return 会话
      */
     public SysAiConversation get(String conversationId) {
@@ -185,7 +188,7 @@ public class SysAiConversationStore {
     /**
      * 判断会话是否存在。
      *
-     * @param conversationId 会话 ID
+     * @param conversationId 会话 标识
      * @return 存在返回 true
      */
     public boolean exists(String conversationId) {
@@ -195,7 +198,7 @@ public class SysAiConversationStore {
     /**
      * 删除会话及其全部消息。
      *
-     * @param conversationId 会话 ID
+     * @param conversationId 会话 标识
      */
     public void delete(String conversationId) {
         conversationMapper.deleteById(conversationId);
@@ -210,8 +213,8 @@ public class SysAiConversationStore {
      * <p>仅覆盖 {@code patch} 中非 null 的顶层字段；{@code extra} 采用合并语义（追加/覆盖同名键，
      * 而非整体替换）。</p>
      *
-     * @param conversationId 会话 ID
-     * @param patch          部分更新内容（非 null 字段生效）
+     * @param conversationId 会话 标识
+     * @param patch          部分更新内容（非 空 字段生效）
      * @return 更新后的会话
      */
     public SysAiConversation patch(String conversationId, SysAiConversation patch) {
@@ -247,7 +250,7 @@ public class SysAiConversationStore {
      *
      * @param page     页码，从 1 开始
      * @param pageSize 每页条数（默认 50，上限 500）
-     * @return 分页结果（含 total/hasMore）
+     * @return 分页结果（含 total/是否包含more）
      */
     public com.baomidou.mybatisplus.extension.plugins.pagination.Page<SysAiConversation> page(int page, int pageSize) {
         long current = page <= 0 ? 1 : page;
@@ -262,7 +265,7 @@ public class SysAiConversationStore {
     /**
      * 追加消息并落库。
      *
-     * @param conversationId 会话 ID
+     * @param conversationId 会话 标识
      * @param message        消息（已填充主键与时间戳）
      * @return 追加后的消息
      */
@@ -274,7 +277,7 @@ public class SysAiConversationStore {
     /**
      * 分页列出消息（按创建时间升序）。
      *
-     * @param conversationId 会话 ID
+     * @param conversationId 会话 标识
      * @param page          页号（从 1 开始）
      * @param pageSize      每页条数（默认 50，上限 200）
      * @return 分页结果（含 total）
@@ -294,8 +297,8 @@ public class SysAiConversationStore {
     /**
      * 获取单条消息（不存在抛 NOT_FOUND）。
      *
-     * @param conversationId 会话 ID
-     * @param messageId      消息 ID
+     * @param conversationId 会话 标识
+     * @param messageId      消息 标识
      * @return 消息
      */
     public SysAiConversationMessage getMessage(String conversationId, String messageId) {
@@ -313,7 +316,7 @@ public class SysAiConversationStore {
     /**
      * 获取会话全部消息（供对话历史拼装）。
      *
-     * @param conversationId 会话 ID
+     * @param conversationId 会话 标识
      * @return 消息列表（升序）
      */
     public List<SysAiConversationMessage> allMessages(String conversationId) {
@@ -326,7 +329,7 @@ public class SysAiConversationStore {
     /**
      * 清空指定会话的全部消息（保留会话行，不触碰记忆库）。
      *
-     * @param conversationId 会话 ID
+     * @param conversationId 会话 标识
      */
     public void clearMessages(String conversationId) {
         LambdaQueryWrapper<SysAiConversationMessage> wrapper = new LambdaQueryWrapper<SysAiConversationMessage>()
@@ -337,8 +340,8 @@ public class SysAiConversationStore {
     /**
      * 删除单条消息。
      *
-     * @param conversationId 会话 ID
-     * @param messageId      消息 ID
+     * @param conversationId 会话 标识
+     * @param messageId      消息 标识
      */
     public void removeMessage(String conversationId, String messageId) {
         LambdaQueryWrapper<SysAiConversationMessage> wrapper = new LambdaQueryWrapper<SysAiConversationMessage>()
@@ -350,8 +353,8 @@ public class SysAiConversationStore {
     /**
      * 截断指定消息及其之后的全部消息（用于编辑重提交场景）。
      *
-     * @param conversationId 会话 ID
-     * @param messageId      锚点消息 ID
+     * @param conversationId 会话 标识
+     * @param messageId      锚点消息 标识
      */
     public void truncateAfter(String conversationId, String messageId) {
         List<SysAiConversationMessage> all = allMessages(conversationId);

@@ -23,7 +23,15 @@ public class LayoutConfigController extends AbstractCapabilityConfigController {
      */
     private static final String GROUP = "layout";
 
+    /**
+     * layout配置控制器。
+     * @param settingService setting服务
+     */
     public LayoutConfigController(SysAiGlobalSettingService settingService) {
+        /**
+         * 父。
+         * @param settingService setting服务
+         */
         super(settingService);
     }
 

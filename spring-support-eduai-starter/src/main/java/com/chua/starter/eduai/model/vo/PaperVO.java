@@ -14,11 +14,11 @@ import java.util.List;
 @Data
 public class PaperVO {
 
-    /** ID */
+    /** 标识 */
     private Long id;
     /** 名称 */
     private String name;
-    /** Subject */
+    /** 主题 */
     private String subject;
     /** Grade级别 */
     private String gradeLevel;
@@ -34,7 +34,7 @@ public class PaperVO {
     private Integer status;
     /** 来源 */
     private String source;
-    /** Create时间 */
+    /** 创建时间 */
     private LocalDateTime createTime;
 
     /** Questions */

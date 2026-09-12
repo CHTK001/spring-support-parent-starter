@@ -23,7 +23,7 @@ import java.util.Map;
 public interface IRequirementDataSource {
 
     /**
-     * 数据源类型标识（对应 sys_ai_data_source.sys_ai_data_source_type）。
+      * 数据源类型标识（对应 sys_AI_数据_源.sys_AI_数据_源_类型）。
      *
      * @return 类型字符串，如 {@code "lark"} / {@code "jira"} / {@code "notion"} / {@code "generic"}
      */
@@ -32,8 +32,8 @@ public interface IRequirementDataSource {
     /**
      * 从外部系统拉取需求列表，写入本地库。
      *
-     * @param config     数据源配置（从 sys_ai_data_source.sys_ai_data_source_config JSON 反序列化）
-     * @param lastSyncAt 上次同步时间戳（epoch ms），provider 可用于增量同步
+     * @param config     数据源配置（从 sys_AI_数据_源.sys_AI_数据_源_配置 JSON 反序列化）
+     * @param lastSyncAt 上次同步时间戳（轮次 ms），提供者 可用于增量同步
      * @return 本次同步新增/更新的需求数量
      */
     int sync(Map<String, Object> config, long lastSyncAt);
@@ -61,8 +61,8 @@ public interface IRequirementDataSource {
      * 将本地需求的变更回写到外部系统（可选，双向同步）。
      *
      * @param config        数据源配置
-     * @param requirementId 本地需求 ID
-     * @param remoteId      外部系统中的对应 ID（首次同步时由 sync() 返回并缓存）
+     * @param requirementId 本地需求 标识
+     * @param remoteId      外部系统中的对应 标识（首次同步时由 同步() 返回并缓存）
      * @param changes       变更字段
      */
     default void writeBack(Map<String, Object> config, String requirementId, String remoteId, Map<String, Object> changes) {

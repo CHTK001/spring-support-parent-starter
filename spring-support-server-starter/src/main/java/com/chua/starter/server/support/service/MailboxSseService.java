@@ -23,9 +23,9 @@ import java.util.stream.Collectors;
 /**
  * 邮箱账号(MAILBOX) SSE 实时推送服务
  * <p>
- * 管理邮箱身份的 SSE 连接：前端通过 /sse/connect 建立连接后，注册到本服务；
- * 服务定时轮询邮箱(IMAP 真实邮箱 / 临时邮箱 API)检测新邮件，通过 SseSocketSessionTemplate 推送到前端。
- * SSE 未启用（无 SseSocketSessionTemplate Bean）时推送静默跳过。
+   * 管理邮箱身份的 SSE 连接：前端通过 /sse/连接 建立连接后，注册到本服务；
+   * 服务定时轮询邮箱(IMAP 真实邮箱 / 临时邮箱 API)检测新邮件，通过 sse套接字会话template 推送到前端。
+   * SSE 未启用（无 sse套接字会话template Bean）时推送静默跳过。
  * </p>
  *
  * @author CH
@@ -35,9 +35,9 @@ import java.util.stream.Collectors;
 @Service
 public class MailboxSseService {
 
-    /** SSE 会话模板(全局 socket 基础设施；未启用 SSE 时为空) */
+    /** SSE 会话模板(全局 套接字 基础设施；未启用 SSE 时为空) */
     private final ObjectProvider<SseSocketSessionTemplate> sseSocketSessionTemplateProvider;
-    /** 身份 Mapper */
+    /** 身份 映射器 */
     private final MsServerIdentityMapper identityMapper;
     /** 凭据加解密器 */
     private final CredentialCipher cipher;
@@ -46,7 +46,7 @@ public class MailboxSseService {
      * 构造
      *
      * @param sseSocketSessionTemplateProvider SSE 会话模板提供器
-     * @param identityMapper                  身份 Mapper
+     * @param identityMapper                  身份 映射器
      * @param cipher                          凭据加解密器
      */
     public MailboxSseService(ObjectProvider<SseSocketSessionTemplate> sseSocketSessionTemplateProvider,
@@ -62,16 +62,16 @@ public class MailboxSseService {
     /** 单次推送最大新邮件数 */
     private static final int MAX_PUSH_PER_TICK = 20;
 
-    /** clientId → 邮箱身份 ID 映射 */
+    /** 客户端标识 → 邮箱身份 标识 映射 */
     private final Map<String, Long> clientIdentityMap = new ConcurrentHashMap<>();
-    /** 邮箱身份 ID → 已推送邮件 ID 集合(检测新邮件) */
+    /** 邮箱身份 标识 → 已推送邮件 标识 集合(检测新邮件) */
     private final Map<Long, Set<String>> seenEmailIds = new ConcurrentHashMap<>();
 
     /**
      * 注册邮箱 SSE 连接(前端打开邮件箱时调用)。
      *
-     * @param clientId   前端 SSE 连接 clientId
-     * @param identityId 邮箱身份 ID
+     * @param clientId   前端 SSE 连接 客户端标识
+     * @param identityId 邮箱身份 标识
      */
     public void register(String clientId, Long identityId) {
         if (clientId == null || identityId == null) {
@@ -85,7 +85,7 @@ public class MailboxSseService {
     /**
      * 注销邮箱 SSE 连接(前端关闭邮件箱时调用)。
      *
-     * @param clientId 前端 SSE 连接 clientId
+     * @param clientId 前端 SSE 连接 客户端标识
      */
     public void unregister(String clientId) {
         if (clientId == null) {
@@ -109,6 +109,11 @@ public class MailboxSseService {
             String clientId = entry.getKey();
             Long identityId = entry.getValue();
             try {
+                /**
+                 * push新emails。
+                 * @param clientId 客户端标识
+                 * @param identityId identityid
+                 */
                 pushNewEmails(clientId, identityId);
             } catch (Exception e) {
                 log.warn("[mailbox-sse] 轮询推送异常 identityId={} - {}", identityId, e.getMessage());
@@ -118,6 +123,8 @@ public class MailboxSseService {
 
     /**
      * 推送指定身份的新邮件到对应前端。
+     * @param clientId 客户端标识
+     * @param identityId identityid
      */
     private void pushNewEmails(String clientId, Long identityId) {
         MsServerIdentity identity = identityMapper.selectById(identityId);
@@ -144,6 +151,9 @@ public class MailboxSseService {
 
     /**
      * 拉取新邮件(真实邮箱走 IMAP / 临时邮箱走 API)，过滤已推送。
+     * @param identity identity
+     * @param email email
+     * @return 获取新emails的结果
      */
     private List<Map<String, Object>> fetchNewEmails(MsServerIdentity identity, String email) {
         String source = identity.getMsServerIdentityEmailSource();
@@ -179,7 +189,10 @@ public class MailboxSseService {
     }
 
     /**
-     * 拉取临时邮箱邮件(走 EmailProvider API)。
+      * 拉取临时邮箱邮件(走 email提供者 API)。
+     * @param provider 提供者
+     * @param email email
+     * @return 获取tempemails的结果
      */
     private List<Map<String, Object>> fetchTempEmails(String provider, String email) {
         if (provider == null || provider.isBlank()) {
@@ -203,7 +216,10 @@ public class MailboxSseService {
     }
 
     /**
-     * 拉取真实邮箱邮件(走 IMAP EmailClient)。
+      * 拉取真实邮箱邮件(走 IMAP email客户端)。
+     * @param identity identity
+     * @param email email
+     * @return 获取imapemails的结果
      */
     private List<Map<String, Object>> fetchImapEmails(MsServerIdentity identity, String email) {
         try {
@@ -224,6 +240,8 @@ public class MailboxSseService {
 
     /**
      * 序列化邮件列表为 JSON 字符串。
+     * @param emails emails
+     * @return serializeEmails的结果
      */
     private String serializeEmails(List<Map<String, Object>> emails) {
         try {

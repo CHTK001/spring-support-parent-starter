@@ -28,7 +28,7 @@ import org.slf4j.LoggerFactory;
  * </p>
  *
  * @since 2024/12/07
- * @version 1.0.0
+   * @版本 1.0.0
  * @author CH
  */
 public class ApiRequestDecodeRegister implements Upgrade<ApiRequestDecodeSetting>  {
@@ -92,6 +92,9 @@ public class ApiRequestDecodeRegister implements Upgrade<ApiRequestDecodeSetting
      * @return 是否开启
      */
     public boolean requestDecodeOpen() {
+        /**
+         * 检查。
+         */
         check();
         return null != decodeSetting && decodeSetting.isEnable();
     }
@@ -110,7 +113,11 @@ public class ApiRequestDecodeRegister implements Upgrade<ApiRequestDecodeSetting
         this.upgrade(setting);
     }
 
-    /** 获取Or创建Setting */
+    /**
+      * 获取或创建Setting
+     *
+     * @return 获取or创建setting的结果
+     */
     private ApiRequestDecodeSetting getOrCreateSetting() {
         ApiRequestDecodeSetting setting = globalSettingFactory.get("config", ApiRequestDecodeSetting.class);
         if (setting == null) {
@@ -149,11 +156,14 @@ public class ApiRequestDecodeRegister implements Upgrade<ApiRequestDecodeSetting
     }
 
     /**
-     * 获取请求key
+      * 获取请求钥匙
      *
      * @return 请求key
      */
     public String getRequestKey() {
+        /**
+         * 检查。
+         */
         check();
         return decodeSetting != null ? decodeSetting.getCodecRequestKey() : null;
     }
@@ -167,11 +177,21 @@ public class ApiRequestDecodeRegister implements Upgrade<ApiRequestDecodeSetting
     public byte[] decodeRequest(String data) {
         try {
             if (requestCodec == null) {
+                /**
+                 * runtime异常。
+                 * @param "解密器未初始化" "解密器未初始化"
+                 * @return runtime异常的结果
+                 */
                 throw new RuntimeException("解密器未初始化");
             }
             String decoded = requestCodec.decodeHex(data);
             return decoded.getBytes(StandardCharsets.UTF_8);
         } catch (Exception e) {
+            /**
+             * runtime异常。
+             * @param e.getMessage( e.获取消息(
+             * @return runtime异常的结果
+             */
             throw new RuntimeException("请求解析失败: " + e.getMessage());
         }
     }
@@ -206,6 +226,9 @@ public class ApiRequestDecodeRegister implements Upgrade<ApiRequestDecodeSetting
             }
 
             requestTimestampStore.put(requestId, currentTime);
+            /**
+             * cleanupexpiredRequests。
+             */
             cleanupExpiredRequests();
 
             log.debug("[AntiReplay] 请求验证通过，请求ID: {}", requestId);

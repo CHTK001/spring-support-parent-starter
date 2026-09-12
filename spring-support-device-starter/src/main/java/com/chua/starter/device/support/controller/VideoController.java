@@ -17,7 +17,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 /**
- * 视频控制 Controller
+   * 视频控制 控制器
  * <p>对外提供设备视频流地址获取、录像列表查询、回放 URL 获取。</p>
  *
  * <p>前端通过 {@code /api/device/video/stream} 获取拉流 URL，</p>
@@ -46,7 +46,7 @@ public class VideoController {
     /**
      * 获取实时视频流地址
      *
-     * @param deviceId 设备 ID
+     * @param deviceId 设备 标识
      * @param channel  通道号
      * @param protocol 协议类型，默认 hls
      * @return 拉流 URL
@@ -68,7 +68,7 @@ public class VideoController {
     /**
      * 查询录像列表
      *
-     * @param deviceId 设备 ID
+     * @param deviceId 设备 标识
      * @param channel  通道号
      * @param start    开始时间（yyyy-MM-dd HH:mm:ss）
      * @param end      结束时间（yyyy-MM-dd HH:mm:ss）
@@ -86,7 +86,7 @@ public class VideoController {
     /**
      * 获取录像回放 URL（HLS）
      *
-     * @param deviceId 设备 ID
+     * @param deviceId 设备 标识
      * @param channel  通道号
      * @param start    开始时间
      * @param end      结束时间
@@ -99,7 +99,7 @@ public class VideoController {
                            @RequestParam String end) {
         DeviceSession session = requireOnline(deviceId);
         TimeRange range = parseRange(start, end);
-        // 优先使用 OpenAPI 平台的回放 URL（HLS）
+ // 优先使用 打开api 平台的回放 URL（HLS）
         String url = session.getPlaybackUrl(channel, range);
         if (url == null || url.isEmpty()) {
             throw new RuntimeException("设备 " + deviceId + " 不支持录像回放或未返回回放 URL");
@@ -110,6 +110,8 @@ public class VideoController {
 
     /**
      * 校验设备在线
+     * @param deviceId deviceid
+     * @return requireOnline的结果
      */
     private DeviceSession requireOnline(String deviceId) {
         DeviceSession session = sessionManager.getSession(deviceId);
@@ -121,6 +123,9 @@ public class VideoController {
 
     /**
      * 解析时间范围
+     * @param start 启动
+     * @param end 结束
+     * @return 解析范围的结果
      */
     private TimeRange parseRange(String start, String end) {
         LocalDateTime s;
@@ -139,10 +144,14 @@ public class VideoController {
     }
 
     /**
-     * 拉流 URL 脱敏（隐藏 token / signature 段）
+      * 拉流 URL 脱敏（隐藏 令牌 / 签名 段）
+     * @param url url
+     * @return mask的结果
      */
     private static String mask(String url) {
-        if (url == null) return "";
+        if (url == null) {
+            return "";
+        }
         int q = url.indexOf('?');
         return q < 0 ? url : url.substring(0, q) + "?***";
     }

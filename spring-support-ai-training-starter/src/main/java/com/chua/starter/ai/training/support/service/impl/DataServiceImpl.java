@@ -17,7 +17,7 @@ import java.util.Enumeration;
 import java.util.UUID;
 
 /**
- * 训练数据服务实现：ZIP 文件上传保存与解压。
+   * 训练数据服务实现：压缩 文件上传保存与解压。
  *
  * @author CH
  * @since 4.0.0.42
@@ -30,19 +30,24 @@ public class DataServiceImpl implements DataService {
     /** 文件名净化后为空时的回退名。 */
     static final String DEFAULT_FILE_NAME = "upload.zip";
 
-    private final TrainProperties properties;
+    private final TrainProperties properties; // 属性
 
     @Override
     public String saveUploadedFile(byte[] data, String name) throws Exception {
-        // 魔数校验：ZIP 本地文件头 PK\x03\x04（兼容空包 \x05\x06 / 分卷 \x07\x08），拦截伪装文件
+ // 魔数校验：压缩 本地文件头 PK\x03\x04（兼容空包 \x05\x06 / 分卷 \x07\x08），拦截伪装文件
         if (data == null || data.length < 4 || data[0] != 'P' || data[1] != 'K'
                 || (data[2] != 3 && data[2] != 5 && data[2] != 7)) {
+            /**
+             * illegal参数异常。
+             * @param 格式" 格式"
+             * @return illegal参数异常的结果
+             */
             throw new IllegalArgumentException("文件内容不是有效的 ZIP 格式");
         }
         Path uploadDir = Path.of(properties.getUploadPath());
         Files.createDirectories(uploadDir);
-        // 文件名净化（基名 + 剔除非法字符）：originalFilename 可能携带路径分隔符/盘符，
-        // 直接拼入 Path.resolve 有逃逸上传目录的隐患（配合随机前缀防重名）
+ // 文件名净化（基名 + 剔除非法字符）：原始文件名 可能携带路径分隔符/盘符，
+ // 直接拼入 路径.resolve 有逃逸上传目录的隐患（配合随机前缀防重名）
         String safeName = UUID.randomUUID() + "_" + sanitizeFileName(name);
         Path target = uploadDir.resolve(safeName);
         Files.write(target, data);
@@ -52,12 +57,12 @@ public class DataServiceImpl implements DataService {
 
     /**
      * 净化客户端原始文件名：仅保留末段路径基名，并剔除路径分隔符与
-     * Windows/通用非法字符（{@code \ / : * ? " < > |} 及控制字符）。
+      * 窗口/通用非法字符（{@code \ / : * ? " < > |} 及控制字符）。
      * 净化结果为空（全非法字符/纯路径）时回退 {@link #DEFAULT_FILE_NAME}。
      *
      * <p>包可见便于单测直接覆盖净化规则。</p>
      *
-     * @param name 客户端原始文件名（可为 null）
+     * @param name 客户端原始文件名（可为 空）
      * @return 安全文件名（不含任何路径分隔符/非法字符）
      */
     static String sanitizeFileName(String name) {
@@ -77,6 +82,11 @@ public class DataServiceImpl implements DataService {
     public String unzip(String zipFilePath) throws Exception {
         File zipFile = new File(zipFilePath);
         if (!zipFile.exists()) {
+            /**
+             * illegal参数异常。
+             * @param zipFilePath 压缩文件路径
+             * @return illegal参数异常的结果
+             */
             throw new IllegalArgumentException("ZIP 文件不存在: " + zipFilePath);
         }
 
@@ -85,21 +95,34 @@ public class DataServiceImpl implements DataService {
         File destDir = new File(properties.getDataRootPath(), uuid);
         destDir.mkdirs();
 
+        /**
+         * 尝试。
+         * @param ZipFile(zipFile 压缩文件(压缩文件
+         */
         try (ZipFile zip = new ZipFile(zipFile)) {
             Enumeration<? extends ZipArchiveEntry> entries = zip.getEntries();
             while (entries.hasMoreElements()) {
                 ZipArchiveEntry entry = entries.nextElement();
                 File outFile = new File(destDir, entry.getName());
-                // 安全检查：防止 Zip Slip 攻击
+ // 安全检查：防止 压缩 Slip 攻击
                 String canonicalDestPath = outFile.getCanonicalPath();
                 String canonicalDestDir = destDir.getCanonicalPath();
                 if (!canonicalDestPath.startsWith(canonicalDestDir + File.separator)) {
+                    /**
+                     * 安全性异常。
+                     * @param entry.getName( entry.获取名称(
+                     * @return 安全性异常的结果
+                     */
                     throw new SecurityException("ZIP 路径越界: " + entry.getName());
                 }
                 if (entry.isDirectory()) {
                     outFile.mkdirs();
                 } else {
                     outFile.getParentFile().mkdirs();
+                    /**
+                     * 尝试。
+                     * @param FileOutputStream(outFile 文件输出流(出文件
+                     */
                     try (OutputStream os = new FileOutputStream(outFile)) {
                         zip.getInputStream(entry).transferTo(os);
                     }

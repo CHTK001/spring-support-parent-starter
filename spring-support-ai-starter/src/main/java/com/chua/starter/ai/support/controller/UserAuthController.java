@@ -38,20 +38,20 @@ import java.util.UUID;
 @Slf4j
 public class UserAuthController {
 
-    /** Bearer Token 前缀 */
+    /** Bearer 令牌 前缀 */
     private static final String BEARER_PREFIX = "Bearer ";
 
-    /** Bearer Token 前缀长度 */
+    /** Bearer 令牌 前缀长度 */
     private static final int BEARER_PREFIX_LENGTH = BEARER_PREFIX.length();
 
     /**
-     * 用户登录（对接 OAuth static 协议）。
+      * 用户登录（对接 o认证 静态 协议）。
      *
      * <p>调用 oauth 客户端换取访问令牌，成功后组装前端契约所需的
      * {@code LoginResult} 结构并返回。</p>
      *
-     * @param body 请求体（含 username / password）
-     * @return 登录结果（成功含 accessToken / refreshToken / userInfo / roles / expires）
+     * @param body 请求体（含 用户名 / 密码）
+     * @return 登录结果（成功含 access令牌 / refresh令牌 / 用户信息 / 角色 / expires）
      */
     @TokenForIgnore
     @PostMapping("/login")
@@ -69,12 +69,12 @@ public class UserAuthController {
         }
 
         String token = result.getToken();
-        // refreshToken 暂无独立来源，先复用 token 占位
+ // refresh令牌 暂无独立来源，先复用 令牌 占位
         String refreshToken = StringUtils.isNotBlank(result.getRefreshToken())
                 ? result.getRefreshToken() : (token != null ? token : "");
 
         Map<String, Object> userInfo = new LinkedHashMap<>();
-        // 前端要求 UUIDv7 格式的 userId
+ // 前端要求 uuidv7 格式的 用户标识
         userInfo.put("userId", generateUuidV7());
         userInfo.put("username", result.getUserResume() != null
                 ? result.getUserResume().getUsername() : username);
@@ -117,10 +117,10 @@ public class UserAuthController {
      * 获取当前登录用户信息。
      *
      * <p>从 {@code Authorization: Bearer <token>} 请求头（或 query token）提取令牌，
-     * 调用 oauth 客户端校验并解析用户信息；无法解析时返回未登录。</p>
+      * 调用 OAuth 客户端校验并解析用户信息；无法解析时返回未登录。</p>
      *
      * @param request HTTP 请求
-     * @return 当前用户信息（userId / username / nickname / roles）
+     * @return 当前用户信息（userId / 用户名 / nickname / 角色）
      */
     @TokenForIgnore
     @GetMapping("/me")
@@ -137,7 +137,7 @@ public class UserAuthController {
             log.warn("解析用户信息异常: {}", e.getMessage());
         }
 
-        // 若 oauth 客户端暂未接通校验服务，则返回占位用户信息，待完善
+ // 若 OAuth 客户端暂未接通校验服务，则返回占位用户信息，待完善
         Map<String, Object> userInfo = new LinkedHashMap<>();
         userInfo.put("userId", userResult != null && StringUtils.isNotBlank(userResult.getUserId())
                 ? userResult.getUserId() : generateUuidV7());
@@ -169,14 +169,15 @@ public class UserAuthController {
      * {@link AuthClientExecute#upgrade(String, com.chua.starter.oauth.client.support.enums.UpgradeType)}
      * 实现真正的令牌刷新。</p>
      *
-     * @param body 请求体（含 refreshToken）
+     * @param body 请求体（含 refresh令牌）
      * @return 刷新后的令牌结果
+     * @param false false
      */
     @TokenForIgnore
     @PostMapping("/refresh-token")
     public ReturnResult<Map<String, Object>> refreshToken(@RequestBody(required = false) Map<String, String> body) {
         String refreshToken = body != null ? body.get("refreshToken") : null;
-        // 占位：沿用旧 token，待对接 oauth 刷新
+ // 占位：沿用旧 令牌，待对接 OAuth 刷新
         String accessToken = refreshToken != null ? refreshToken : "";
 
         Map<String, Object> data = new LinkedHashMap<>();
@@ -186,7 +187,7 @@ public class UserAuthController {
     }
 
     /**
-     * 从请求中解析 Token（优先 Authorization 头，其次 query token）。
+      * 从请求中解析 令牌（优先 授权 头，其次 查询 令牌）。
      *
      * @param request HTTP 请求
      * @return Token 字符串，无法解析时返回 {@code null}
@@ -199,12 +200,12 @@ public class UserAuthController {
                 return token;
             }
         }
-        // query token 兜底
+ // 查询 令牌 兜底
         return request.getParameter("token");
     }
 
     /**
-     * 生成 UUIDv7 格式字符串。
+      * 生成 uuidv7 格式字符串。
      *
      * <p>格式：xxxxxxxx-xxxx-7xxx-yxxx-xxxxxxxxxxxx（y ∈ {8,9,a,b}）</p>
      *
@@ -214,7 +215,7 @@ public class UserAuthController {
         UUID uuid = UUID.randomUUID();
         long ms = System.currentTimeMillis();
         byte[] bytes = new byte[16];
-        // 时间戳高位 (48 bits) 放入前6字节
+ // 时间戳高位 (48 钻头) 放入前6字节
         bytes[0] = (byte) (ms >> 40);
         bytes[1] = (byte) (ms >> 32);
         bytes[2] = (byte) (ms >> 24);
@@ -224,7 +225,7 @@ public class UserAuthController {
         // 用随机数填充剩余字节
         byte[] random = uuid.toString().replace("-", "").substring(12).getBytes();
         System.arraycopy(random, 0, bytes, 6, 10);
-        // 设置 version = 7 (0111)
+ // 设置 版本 = 7 (0111)
         bytes[6] = (byte) ((bytes[6] & 0x0F) | 0x70);
         // 设置 variant = 10xx
         bytes[8] = (byte) ((bytes[8] & 0x3F) | 0x80);

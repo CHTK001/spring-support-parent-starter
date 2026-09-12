@@ -3,6 +3,7 @@ package com.chua.starter.common.support.oauth;
 /**
  * 权限服务
  * @author CH
+ * @since 4.0.0
  */
 public interface AuthService {
     /**
@@ -21,10 +22,16 @@ public interface AuthService {
     }
 
 
+    /**
+     * 默认认证服务类。
+     *
+     * @author CH
+     * @since 4.0.0
+     */
     class DefaultAuthService implements AuthService {
 
         @Override
-        /** 获取CurrentUser */
+        /** 获取当前用户 */
         public CurrentUser getCurrentUser() {
             return null;
         }

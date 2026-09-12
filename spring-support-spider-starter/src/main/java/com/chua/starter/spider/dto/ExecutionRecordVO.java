@@ -24,7 +24,7 @@ public class ExecutionRecordVO {
      */
     private String triggerType;
     /**
-     * 执行状态（RUNNING / SUCCESS / FAIL）
+      * 执行状态（RUNNING / 成功 / 失败）
      */
     private String executionStatus;
     /**

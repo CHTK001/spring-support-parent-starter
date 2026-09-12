@@ -12,7 +12,7 @@ import java.util.Map;
  * 用于在异步任务中传递MDC上下文。
  * </p>
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024/01/01
  * @author CH
  */
@@ -20,7 +20,12 @@ public class MdcTaskDecorator implements TaskDecorator {
 
     @Override
     @NonNull
-    /** Decorate */
+    /**
+     * Decorate
+     *
+     * @param runnable runnable
+     * @return decorate的结果
+     */
     public Runnable decorate(@NonNull Runnable runnable) {
         Map<String, String> contextMap = MDC.getCopyOfContextMap();
         return () -> {

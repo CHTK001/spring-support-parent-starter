@@ -32,39 +32,49 @@ import java.util.Map;
         @Signature(type = Executor.class, method = "update",
                 args = {MappedStatement.class, Object.class})
 )
+/**
+ * 删除onlyself拦截器类。
+ *
+ * @author CH
+ * @since 4.0.0
+ */
 public class DeleteOnlySelfInterceptor implements Interceptor {
     /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(DeleteOnlySelfInterceptor.class);
 
-    /** Auth服务 */
+    /** 认证服务 */
     private final AuthService authService;
 
+    /**
+     * 删除onlyself拦截器。
+     * @param authService 认证服务
+     */
     public DeleteOnlySelfInterceptor(AuthService authService) {
         this.authService = authService;
     }
 
     /**
-     * 拦截MyBatis的删除操作，在SQL执行前添加创建人过滤条件
+       * 拦截MyBatis的删除操作，在SQL执行前添加创建人过滤条件
      *
      * @param invocation MyBatis调用上下文对象，包含执行的方法和参数
-     *                   invocation.getArgs()[0] 为 MappedStatement 对象，包含SQL信息
-     *                   invocation.getArgs()[1] 为 方法参数对象，可能为实体对象或Map
+      * invocation.获取参数()[0] 为 mapped对账单 对象，包含SQL信息
+      * invocation.获取参数()[1] 为 方法参数对象，可能为实体对象或映射
      * @return 原始方法的执行结果
      * @throws Throwable 当反射操作或方法执行出现异常时抛出
      */
     @Override
     public Object intercept(Invocation invocation) throws Throwable {
-        // 获取MappedStatement对象，包含SQL相关信息
+ // 获取mapped对账单对象，包含SQL相关信息
         MappedStatement ms = (MappedStatement) invocation.getArgs()[0];
         // 获取方法参数对象
         Object parameter = invocation.getArgs()[1];
 
-        // 1. 只拦截DELETE类型的SQL操作
+ // 1. 只拦截删除类型的SQL操作
         if (ms.getSqlCommandType() != SqlCommandType.DELETE) {
             return invocation.proceed();
         }
 
-        // 2. 获取Mapper接口方法上的@DeleteOnlySelf注解
+ // 2. 获取映射器接口方法上的@删除onlyself注解
         Method mapperMethod = getMapperMethod(ms);
         if (mapperMethod == null) {
             return invocation.proceed();
@@ -74,7 +84,7 @@ public class DeleteOnlySelfInterceptor implements Interceptor {
             return invocation.proceed();
         }
 
-        // 3. 从参数中获取当前登录用户ID
+ // 3. 从参数中获取当前登录用户标识
         String loginUserId = authService.getCurrentUser().getUserId();
         if (loginUserId == null) {
             log.warn("未找到当前登录人ID，跳过权限控制");
@@ -82,20 +92,27 @@ public class DeleteOnlySelfInterceptor implements Interceptor {
         }
 
         // 4. 在原始SQL基础上追加创建人过滤条件，使用参数化查询防止SQL注入
-        // 例如：原始SQL为"DELETE FROM login WHERE id = ?"，追加后变为"DELETE FROM login WHERE id = ? AND create_by = ?"
+ // 例如：原始SQL为"删除 从 login WHERE id = ?"，追加后变为"删除 从 login WHERE id = ? AND 创建_by = ?"
         BoundSql boundSql = ms.getBoundSql(parameter);
         String createUserColumn = anno.createUserColumn();
         String newSql = boundSql.getSql() + " AND " + createUserColumn + " = ?";
+        /**
+         * 更新boundsql。
+         * @param ms ms
+         * @param boundSql boundsql
+         * @param newSql 新SQL
+         * @param loginUserId login用户标识
+         */
         updateBoundSql(ms, boundSql, newSql, loginUserId);
 
         return invocation.proceed();
     }
 
     /**
-     * 根据MappedStatement的ID获取对应的Mapper接口方法
+       * 根据mapped对账单的标识获取对应的映射器接口方法
      *
-     * @param ms MappedStatement对象，包含SQL的唯一标识ID
-     *           例如：ID为"com.example.mapper.UserMapper.deleteUser"
+     * @param ms mapped对账单对象，包含SQL的唯一标识标识
+       * 例如：标识为"com.example.映射器.用户映射器.删除用户"
      * @return 对应的Mapper接口方法，如果未找到则返回null
      */
     private Method getMapperMethod(MappedStatement ms) {
@@ -105,9 +122,9 @@ public class DeleteOnlySelfInterceptor implements Interceptor {
             if (last <= 0) {
                 return null;
             }
-            // 获取Mapper接口类名，例如："com.example.mapper.UserMapper"
+ // 获取映射器接口类名，例如："com.example.映射器.用户映射器"
             Class<?> mapper = ClassUtils.forName(id.substring(0, last));
-            // 获取方法名，例如："deleteUser"
+ // 获取方法名，例如："删除用户"
             String methodName = id.substring(last + 1);
             for (Method m : mapper.getDeclaredMethods()) {
                 if (m.getName().equals(methodName)) {
@@ -121,17 +138,17 @@ public class DeleteOnlySelfInterceptor implements Interceptor {
     }
 
     /**
-     * 更新BoundSql的SQL语句和参数，使用参数化查询防止SQL注入
+      * 更新boundsql的SQL语句和参数，使用参数化查询防止SQL注入
      *
-     * @param ms       MappedStatement对象，用于获取Configuration
-     * @param boundSql BoundSql对象，包含待执行的SQL语句
+     * @param ms       mapped对账单对象，用于获取配置
+     * @param boundSql boundsql对象，包含待执行的SQL语句
      * @param newSql   新的SQL语句，包含参数占位符
-     *                 例如："DELETE FROM login WHERE id = ? AND create_by = ?"
-     * @param userId   用户ID参数值
+       * 例如："删除 从 login WHERE 标识 = ? 和 创建_by = ?"
+     * @param userId   用户标识参数值
      */
     private void updateBoundSql(MappedStatement ms, BoundSql boundSql, String newSql, String userId) {
         try {
-            // 通过 ReflectUtils 访问 BoundSql 私有字段
+ // 通过 reflect工具 访问 boundsql 私有字段
             ReflectUtils.setField(boundSql, "sql", newSql);
 
             // 更新参数映射列表
@@ -162,6 +179,12 @@ public class DeleteOnlySelfInterceptor implements Interceptor {
             additionalParameters.put("userId", userId);
         } catch (Exception e) {
             log.error("更新BoundSql失败", e);
+            /**
+             * runtime异常。
+             * @param "更新BoundSql失败" "更新boundsql失败"
+             * @param e e
+             * @return runtime异常的结果
+             */
             throw new RuntimeException("更新BoundSql失败", e);
         }
     }

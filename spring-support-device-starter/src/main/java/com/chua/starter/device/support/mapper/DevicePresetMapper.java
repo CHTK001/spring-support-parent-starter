@@ -5,7 +5,7 @@ import com.chua.starter.device.support.entity.DevicePreset;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
- * 设备预置位 Mapper
+   * 设备预置位 映射器
  *
  * @since 4.0.0.42
  * @author CH

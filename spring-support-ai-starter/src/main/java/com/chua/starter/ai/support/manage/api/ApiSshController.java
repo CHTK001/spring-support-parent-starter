@@ -29,7 +29,7 @@ import java.util.Map;
  * 通过 {@code ssh.status} WebSocket 事件推送，快照见 {@code /statuses}。</p>
  *
  * <p>响应字段为 camelCase（对齐前端 {@code IApiSshHost}），
- * 与 {@code SysAiConversation} 等 manage 域的 snake_case 契约不同——这是 SSH
+   * 与 {@code SysAiConversation} 等 manage 域的 snake_大小写 契约不同——这是 SSH
  * 主机簿独有的契约，前端 {@code fromApiSshHost} 仅做主键 brand 化转换。</p>
  *
  * @since 4.0.0.42
@@ -65,7 +65,7 @@ public class ApiSshController {
     /**
      * 查询单台主机。
      *
-     * @param sshHostId 主机 ID
+     * @param sshHostId 主机 标识
      * @return 主机（密钥字段脱敏）
      */
     @GetMapping("/{sshHostId}")
@@ -76,7 +76,7 @@ public class ApiSshController {
     /**
      * 新增主机并落库。
      *
-     * @param body 请求体（camelCase，密钥为明文）
+     * @param body 请求体（camel大小写，密钥为明文）
      * @return 创建的主机（密钥字段脱敏）
      */
     @PostMapping
@@ -104,31 +104,51 @@ public class ApiSshController {
     /**
      * 部分更新主机（密钥字段带掩码哨兵则保留原值）。
      *
-     * @param sshHostId 主机 ID
-     * @param body      请求体（camelCase，密钥为明文或掩码哨兵）
+     * @param sshHostId 主机 标识
+     * @param body      请求体（camel大小写，密钥为明文或掩码哨兵）
      * @return 更新后的主机（密钥字段脱敏）
      */
     @PutMapping("/{sshHostId}")
     public ApiResult<Map<String, Object>> update(@PathVariable String sshHostId,
                                                  @RequestBody Map<String, Object> body) {
         SysAiSshHost updates = new SysAiSshHost();
-        if (body.containsKey("name")) updates.setName(asString(body.get("name"), null));
-        if (body.containsKey("host")) updates.setHost(asString(body.get("host"), null));
-        if (body.containsKey("port")) updates.setPort(body.get("port") instanceof Number n ? n.intValue() : null);
-        if (body.containsKey("username")) updates.setUsername(asString(body.get("username"), null));
-        if (body.containsKey("authType")) updates.setAuthType(asString(body.get("authType"), null));
-        if (body.containsKey("password")) updates.setPassword(asString(body.get("password"), null));
-        if (body.containsKey("privateKey")) updates.setPrivateKey(asString(body.get("privateKey"), null));
-        if (body.containsKey("passphrase")) updates.setPassphrase(asString(body.get("passphrase"), null));
-        if (body.containsKey("certificate")) updates.setCertificate(asString(body.get("certificate"), null));
-        if (body.containsKey("sudoPassword")) updates.setSudoPassword(asString(body.get("sudoPassword"), null));
+        if (body.containsKey("name")) {
+            updates.setName(asString(body.get("name"), null));
+        }
+        if (body.containsKey("host")) {
+            updates.setHost(asString(body.get("host"), null));
+        }
+        if (body.containsKey("port")) {
+            updates.setPort(body.get("port") instanceof Number n ? n.intValue() : null);
+        }
+        if (body.containsKey("username")) {
+            updates.setUsername(asString(body.get("username"), null));
+        }
+        if (body.containsKey("authType")) {
+            updates.setAuthType(asString(body.get("authType"), null));
+        }
+        if (body.containsKey("password")) {
+            updates.setPassword(asString(body.get("password"), null));
+        }
+        if (body.containsKey("privateKey")) {
+            updates.setPrivateKey(asString(body.get("privateKey"), null));
+        }
+        if (body.containsKey("passphrase")) {
+            updates.setPassphrase(asString(body.get("passphrase"), null));
+        }
+        if (body.containsKey("certificate")) {
+            updates.setCertificate(asString(body.get("certificate"), null));
+        }
+        if (body.containsKey("sudoPassword")) {
+            updates.setSudoPassword(asString(body.get("sudoPassword"), null));
+        }
         return ApiResult.ok(toResponse(sshHostStore.update(sshHostId, updates)));
     }
 
     /**
      * 删除主机（同时关闭其关联链路）。
      *
-     * @param sshHostId 主机 ID
+     * @param sshHostId 主机 标识
      * @return 空结果
      */
     @DeleteMapping("/{sshHostId}")
@@ -141,7 +161,7 @@ public class ApiSshController {
     /**
      * 真实测试主机连通性（SSH 握手 + 探活）。
      *
-     * @param sshHostId 主机 ID
+     * @param sshHostId 主机 标识
      * @return 测试结果 {@code {ok, message}}
      */
     @PostMapping("/{sshHostId}/test-connection")
@@ -191,7 +211,7 @@ public class ApiSshController {
      * 实体转前端契约响应（密钥字段脱敏为 {@code "***"}）。
      *
      * @param host 主机实体
-     * @return camelCase 响应 Map
+     * @return camelCase 响应 映射
      */
     private Map<String, Object> toResponse(SysAiSshHost host) {
         Map<String, Object> map = new LinkedHashMap<>();
@@ -215,7 +235,7 @@ public class ApiSshController {
     }
 
     /**
-     * 密钥脱敏：存在则返回掩码哨兵，否则返回 null。
+      * 密钥脱敏：存在则返回掩码哨兵，否则返回 空。
      *
      * @param value 原始值
      * @return 脱敏值
@@ -225,7 +245,7 @@ public class ApiSshController {
     }
 
     /**
-     * 安全取字符串（含 Number 转字符串的兜底）。
+      * 安全取字符串（含 数字 转字符串的兜底）。
      *
      * @param value        原始值
      * @param defaultValue 缺失或空时的默认值

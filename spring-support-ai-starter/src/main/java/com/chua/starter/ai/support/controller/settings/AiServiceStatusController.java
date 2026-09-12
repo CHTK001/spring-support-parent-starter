@@ -47,6 +47,9 @@ public class AiServiceStatusController {
      * 启动指定服务。
      *
      * @param serviceName 服务名称
+     * @param "服务名称" "服务名称"
+     * @param "服务名称" "服务名称"
+     * @param "服务名称" "服务名称"
      */
     @Permission("admin")
     @Operation(summary = "启动服务")
@@ -59,6 +62,9 @@ public class AiServiceStatusController {
      * 停止指定服务。
      *
      * @param serviceName 服务名称
+     * @param "服务名称" "服务名称"
+     * @param "服务名称" "服务名称"
+     * @param "服务名称" "服务名称"
      */
     @Permission("admin")
     @Operation(summary = "停止服务")

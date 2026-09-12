@@ -15,26 +15,29 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * MyBatis扩展端点
+   * MyBatis扩展端点
  * 提供热重载、文件列表等功能
  *
  * @author CH
+ * @since 4.0.0
  */
 @WebEndpoint(id = "mybatis-extension")
 public class MybatisEndpoint {
 
     /** Reload */
     private final Reload reload;
-    /** Configuration */
+    /** 配置 */
     private final Configuration configuration;
     /** Supportinjector */
     private final SupportInjector supportInjector;
 
     /**
-     * 创建 MybatisEndpoint 实例
+       * 创建 MyBatis端点 实例
      * @param reload reload
-     * @param Configuration Configuration
-     * @param SupportInjector SupportInjector
+     * @param configuration 配置
+     * @param supportInjector 支持injector
+     * @param configuration 配置
+     * @param supportInjector 支持injector
      */
     public MybatisEndpoint(Reload reload, Configuration configuration, SupportInjector supportInjector) {
         this.reload = reload;
@@ -43,10 +46,10 @@ public class MybatisEndpoint {
     }
 
     /**
-     * 热重载指定的Mapper文件
+      * 热重载指定的映射器文件
      *
-     * @param name Mapper XML文件名或路径
-     * @param type 类型: name（Mapper方法名）, mapper（Mapper XML文件名）
+     * @param name 映射器 XML文件名或路径
+     * @param type 类型: 名称（映射器方法名）, 映射器（映射器 XML文件名）
      * @return 重载结果信息
      */
     @WriteOperation
@@ -62,13 +65,13 @@ public class MybatisEndpoint {
             return this.supportInjector.refresh(name);
         }
         
-        // 支持mapper类型，直接重载文件
+ // 支持映射器类型，直接重载文件
         return this.reload.reload(name);
     }
 
     /**
-     * 获取MyBatis扩展端点信息（根路径）
-     * 包含MappedStatement列表和可重载文件列表
+       * 获取MyBatis扩展端点信息（根路径）
+      * 包含mapped对账单列表和可重载文件列表
      *
      * @return 端点信息
      */
@@ -76,7 +79,7 @@ public class MybatisEndpoint {
     public Map<String, Object> info() {
         Map<String, Object> result = new HashMap<>();
         
-        // MappedStatement信息
+ // mapped对账单信息
         Collection<String> statements = configuration.getMappedStatementNames();
         result.put("statements", statements);
         result.put("statementCount", statements.size());

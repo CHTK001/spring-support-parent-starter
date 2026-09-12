@@ -19,9 +19,9 @@ import java.util.concurrent.ConcurrentHashMap;
  * SSH 交互式终端会话管理。
  *
  * <p>基于 {@link SshClient#terminal()}（MINA SSHD PTY 实时终端）维护一组
- * 活跃的远程主机交互终端：创建时连接远端 shell，把输出通过
+   * 活跃的远程主机交互终端：创建时连接远端 Shell，把输出通过
  * {@code terminal.output} WebSocket 事件推给前端 XtermView，输入/尺寸经
- * REST 端点转发到远端 PTY。scrollback 按 base64 缓冲，供断线重放。</p>
+   * REST 端点转发到远端 伪终端。scrollback 按 基础64 缓冲，供断线重放。</p>
  *
  * @since 4.0.0.42
  * @author CH
@@ -37,7 +37,7 @@ public class SshTerminalSessionManager {
     private final ApiWebSocketPushService pushService;
 
     /**
-     * 活跃 SSH 终端会话：terminal_id → 会话包装
+      * 活跃 SSH 终端会话：terminal_标识 → 会话包装
      */
     private final Map<String, SshTerminalSession> sessions = new ConcurrentHashMap<>();
 
@@ -50,7 +50,7 @@ public class SshTerminalSessionManager {
      * 创建一个连接指定主机的交互式 SSH 终端。
      *
      * @param host     主机档案（含真实凭据）
-     * @param terminalId 终端 ID（由调用方生成，如 UUIDv7）
+     * @param terminalId 终端 标识（由调用方生成，如 uuidv7）
      * @param cols     初始列数
      * @param rows     初始行数
      * @return 会话包装；连接失败抛异常
@@ -70,7 +70,7 @@ public class SshTerminalSessionManager {
                 .width(Math.max(cols, 20))
                 .height(Math.max(rows, 5))
                 .onOutput(data -> {
-                    // 输出：缓冲 + WS 推送（base64）
+ // 输出：缓冲 + WS 推送（基础64）
                     synchronized (scrollback) {
                         scrollback.append(data);
                         int excess = scrollback.length() - MAX_SCROLLBACK_CHARS;
@@ -102,10 +102,10 @@ public class SshTerminalSessionManager {
     }
 
     /**
-     * 发送原始输入到远端 PTY（按键/粘贴，UTF-8 base64 解码后透传）。
+       * 发送原始输入到远端 伪终端（按键/粘贴，UTF-8 基础64 解码后透传）。
      *
-     * @param terminalId 终端 ID
-     * @param dataB64    base64 编码的输入字节
+     * @param terminalId 终端 标识
+     * @param dataB64    基础64 编码的输入字节
      * @return 是否成功
      */
     public boolean input(String terminalId, String dataB64) {
@@ -124,9 +124,9 @@ public class SshTerminalSessionManager {
     }
 
     /**
-     * 调整远端 PTY 尺寸（读取内部 channel 调用 window-change）。
+      * 调整远端 伪终端 尺寸（读取内部 通道 调用 窗口-改变）。
      *
-     * @param terminalId 终端 ID
+     * @param terminalId 终端 标识
      * @param cols       列数
      * @param rows       行数
      * @return 是否成功
@@ -137,7 +137,7 @@ public class SshTerminalSessionManager {
             return false;
         }
         try {
-            // TerminalOperation 内部 channel 是私有的，通过 ReflectUtils 取出来调 window-change
+ // terminaloperation 内部 通道 是私有的，通过 reflect工具 取出来调 窗口-改变
             Object channel = ReflectUtils.getField(session.operation, "channel");
             if (channel instanceof org.apache.sshd.client.channel.PtyCapableChannelSession pty) {
                 pty.sendWindowChange(Math.max(cols, 20), Math.max(rows, 5));
@@ -152,7 +152,7 @@ public class SshTerminalSessionManager {
     /**
      * 关闭 SSH 终端会话（断开远端连接并清理）。
      *
-     * @param terminalId 终端 ID
+     * @param terminalId 终端 标识
      */
     public void close(String terminalId) {
         SshTerminalSession session = sessions.remove(terminalId);
@@ -179,8 +179,8 @@ public class SshTerminalSessionManager {
     /**
      * 查询会话（用于 scrollback 重放）。
      *
-     * @param terminalId 终端 ID
-     * @return 会话包装，不存在返回 null
+     * @param terminalId 终端 标识
+     * @return 会话包装，不存在返回 空
      */
     public SshTerminalSession get(String terminalId) {
         return sessions.get(terminalId);
@@ -188,6 +188,8 @@ public class SshTerminalSessionManager {
 
     /**
      * 会话是否存在且运行中。
+     * @param terminalId terminalid
+     * @return 是否running的结果
      */
     public boolean isRunning(String terminalId) {
         SshTerminalSession session = sessions.get(terminalId);
@@ -198,14 +200,16 @@ public class SshTerminalSessionManager {
 
     /**
      * 单个 SSH 终端会话的运行时载体。
+     * @author CH
+     * @since 4.0.0
      */
     public static class SshTerminalSession {
         /**
-         * 终端 ID
+          * 终端 标识
          */
         public String terminalId;
         /**
-         * 关联主机 ID
+          * 关联主机 标识
          */
         public String sshHostId;
         /**
@@ -217,7 +221,7 @@ public class SshTerminalSessionManager {
          */
         public SshClient client;
         /**
-         * PTY 终端操作
+          * 伪终端 终端操作
          */
         public SshClient.TerminalOperation operation;
         /**
@@ -234,7 +238,8 @@ public class SshTerminalSessionManager {
         public long updatedAt = System.currentTimeMillis();
 
         /**
-         * 以 base64 返回 scrollback 快照。
+          * 以 基础64 返回 scrollback 快照。
+         * @return scrollbackB64的结果
          */
         public String scrollbackB64() {
             synchronized (scrollback) {
@@ -249,7 +254,9 @@ public class SshTerminalSessionManager {
     // ==================== 私有方法 ====================
 
     /**
-     * 装配并建立真实 SSH 连接（与 SshConnectionManager 一致：password / key / certificate）。
+      * 装配并建立真实 SSH 连接（与 sshconnection管理器 一致：密码 / 钥匙 / 证书）。
+     * @param host 主机
+     * @return 构建连接客户端的结果
      */
     private SshClient buildConnectedClient(SysAiSshHost host) throws Exception {
         String authType = host.getAuthType() == null ? "password" : host.getAuthType();

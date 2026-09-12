@@ -8,6 +8,7 @@ import org.springframework.expression.Expression;
 /**
  * Spring EL 表达式解析器
  * @author CH
+ * @since 4.0.0
  */
 @Spi("spring")
 public class SpelExpressionParser implements ExpressionParser {
@@ -16,7 +17,7 @@ public class SpelExpressionParser implements ExpressionParser {
     private final org.springframework.expression.ExpressionParser expressionParser = new org.springframework.expression.spel.standard.SpelExpressionParser();
 
     @Override
-    /** Type */
+    /** 类型 */
     public String type() {
         return "spring";
     }
@@ -26,8 +27,22 @@ public class SpelExpressionParser implements ExpressionParser {
     public BTreeNode parse(String expression) {
         try {
             Expression expr = expressionParser.parseExpression(expression);
+            /**
+             * b树节点。
+             * @param BTreeNode.Type.RAW b树节点.类型.raw
+             * @param expression expression
+             * @param expression expression
+             * @return b树节点的结果
+             */
             return new BTreeNode(BTreeNode.Type.RAW, expression, expression);
         } catch (Exception e) {
+            /**
+             * b树节点。
+             * @param BTreeNode.Type.RAW b树节点.类型.raw
+             * @param expression expression
+             * @param expression expression
+             * @return b树节点的结果
+             */
             return new BTreeNode(BTreeNode.Type.RAW, expression, expression);
         }
     }

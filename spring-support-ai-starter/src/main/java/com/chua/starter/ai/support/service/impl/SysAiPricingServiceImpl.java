@@ -27,7 +27,7 @@ import java.util.List;
 public class SysAiPricingServiceImpl implements SysAiPricingService {
 
     /**
-     * 定价 Mapper
+      * 定价 映射器
      */
     private final SysAiPricingMapper pricingMapper;
 
@@ -37,16 +37,16 @@ public class SysAiPricingServiceImpl implements SysAiPricingService {
     private final AiModelMetricsEnrichmentService metricsEnrichment;
 
     /**
-     * 查询指定 provider + model 的最新官方定价记录。
+      * 查询指定 提供者 + 模型 的最新官方定价记录。
      * <p>优先从 AA 缓存查找，未命中时回退到数据库。</p>
      *
-     * @param provider 服务商标识，如 openai、deepseek，不能为 null
-     * @param model    模型标识，如 gpt-4o、deepseek-chat，不能为 null
-     * @return 最新定价记录，未找到时返回 null
+     * @param provider 服务商标识，如 openai、deepseek，不能为 空
+     * @param model    模型标识，如 gpt-4o、deepseek-对话，不能为 空
+     * @return 最新定价记录，未找到时返回 空
      */
     @Override
     public SysAiPricing getLatestPricing(String provider, String model) {
-        // 1. 优先从 AA 缓存查找（USD/百万Token → USD/千Token）
+ // 1. 优先从 AA 缓存查找（USD/百万令牌 → USD/千令牌）
         var rec = metricsEnrichment.getPricingRecord(model);
         if (rec != null && rec.inputPerMillion() != null && rec.outputPerMillion() != null) {
             SysAiPricing pricing = new SysAiPricing();
@@ -89,8 +89,12 @@ public class SysAiPricingServiceImpl implements SysAiPricingService {
             int inserted = 0;
             LocalDateTime now = LocalDateTime.now();
             for (com.chua.common.support.ai.chat.ModelDefinition md : models) {
-                if (md.getId() == null || md.getProvider() == null) continue;
-                if (md.getInputUnitPrice() == null && md.getOutputUnitPrice() == null) continue;
+                if (md.getId() == null || md.getProvider() == null) {
+                    continue;
+                }
+                if (md.getInputUnitPrice() == null && md.getOutputUnitPrice() == null) {
+                    continue;
+                }
                 LambdaQueryWrapper<SysAiPricing> wrapper = new LambdaQueryWrapper<>();
                 wrapper.eq(SysAiPricing::getProvider, md.getProvider())
                         .eq(SysAiPricing::getModel, md.getId());

@@ -8,6 +8,7 @@ import java.util.Set;
 /**
  * 用户菜单结果
  * @author CH
+ * @since 4.0.0
  */
 @Data
 public class UserMenuResult {

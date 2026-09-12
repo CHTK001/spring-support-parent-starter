@@ -34,17 +34,18 @@ import java.util.concurrent.CompletableFuture;
  * </ul>
  *
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 public abstract class BaseAiController {
 
     /**
-     * Bearer Token 前缀
+      * Bearer 令牌 前缀
      */
     protected static final String BEARER_PREFIX = "Bearer ";
 
     /**
-     * Bearer Token 前缀长度
+      * Bearer 令牌 前缀长度
      */
     protected static final int BEARER_PREFIX_LENGTH = BEARER_PREFIX.length();
 
@@ -54,14 +55,14 @@ public abstract class BaseAiController {
     protected static final long SSE_TIMEOUT_MILLIS = 30_000L;
 
     /**
-     * 访问守卫服务，提供 AppKey 与 Bearer Token 校验能力
+      * 访问守卫服务，提供 app钥匙 与 Bearer 令牌 校验能力
      */
     @Autowired
-    /** AIaccessguard服务 */
+    /** aiaccessguard服务 */
     protected AiAccessGuardService aiAccessGuardService;
 
     /**
-     * AppKey 服务，提供分组 ID 查询等能力
+       * app钥匙 服务，提供分组 标识 查询等能力
      */
     @Autowired
     /** SYSAIAPP密钥服务 */
@@ -82,7 +83,7 @@ public abstract class BaseAiController {
     protected ObjectMapper objectMapper;
 
     /**
-     * Bearer Token 鉴权校验。
+      * Bearer 令牌 鉴权校验。
      *
      * <p>从请求头 {@code Authorization} 中提取 Bearer Token，
      * 委托 {@link AiAccessGuardService#verifyBearerToken(String, String)} 进行校验。</p>
@@ -91,7 +92,7 @@ public abstract class BaseAiController {
      * @return 校验通过返回 {@code true}，否则返回 {@code false}
      */
     protected boolean authCheck(HttpServletRequest request) {
-        // Tauri / 本地开发模式：LocalTrustAuthFilter 已置位 nomifun.local.trusted=true，直接放行
+ // Tauri / 本地开发模式：本地信任认证过滤器 已置位 nomifun.本地.信任=true，直接放行
         Object trusted = request.getAttribute(LocalTrustAuthFilter.TRUSTED_ATTR);
         if (Boolean.TRUE.equals(trusted)) {
             return true;
@@ -101,10 +102,10 @@ public abstract class BaseAiController {
     }
 
     /**
-     * 从 Authorization 请求头中提取 Bearer Token。
+      * 从 授权 请求头中提取 Bearer 令牌。
      *
      * @param request HTTP 请求
-     * @return Bearer Token，无法提取时返回 {@code null}
+     * @return Bearer 令牌，无法提取时返回 {@code null}
      */
     private String extractBearerToken(HttpServletRequest request) {
         String auth = request.getHeader("Authorization");
@@ -119,13 +120,13 @@ public abstract class BaseAiController {
     }
 
     /**
-     * 从 Authorization 请求头中解析 AppKey 所属的分组 ID。
+       * 从 授权 请求头中解析 app钥匙 所属的分组 标识。
      *
      * <p>提取 Bearer Token 后调用 {@link SysAiAppKeyService#getGroupIdByAppKey(String)}
-     * 获取分组 ID，用于后续的模型隔离与限流。</p>
+      * 获取分组 标识，用于后续的模型隔离与限流。</p>
      *
      * @param request HTTP 请求
-     * @return 分组 ID，若无法解析则返回 {@code null}
+     * @return 分组 标识，若无法解析则返回 {@code null}
      */
     protected Integer resolveGroupId(HttpServletRequest request) {
         String token = extractBearerToken(request);
@@ -138,13 +139,13 @@ public abstract class BaseAiController {
     }
 
     /**
-     * 从 Authorization 请求头中提取 Bearer Token 值（即 AppKey）。
+      * 从 授权 请求头中提取 Bearer 令牌 值（即 app钥匙）。
      *
      * <p>用于在 {@link com.chua.starter.ai.support.model.AiChatRequest} 的 parameters 中注入
      * {@code _appKey} 字段，供底层服务在用量记录时同步更新 AppKey 的 Token 配额。</p>
      *
      * @param request HTTP 请求
-     * @return Bearer Token 字符串，无法提取时返回 {@code null}
+     * @return Bearer 令牌 字符串，无法提取时返回 {@code null}
      */
     protected String resolveAppKey(HttpServletRequest request) {
         return extractBearerToken(request);
@@ -215,6 +216,8 @@ public abstract class BaseAiController {
      *     "message": "AI AppKey 校验失败",
      *     "type": "authentication_error"
      *   }
+     * }
+     * }</pre>    *   }
      * }
      * }</pre>
      *

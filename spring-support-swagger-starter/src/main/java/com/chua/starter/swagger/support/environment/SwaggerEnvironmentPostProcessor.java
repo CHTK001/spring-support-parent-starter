@@ -16,9 +16,10 @@ import java.util.Properties;
 
 /**
  * Swagger环境后处理器
- * 用于配置Knife4j和SpringDoc的相关属性
+   * 用于配置刀4j和springdoc的相关属性
  *
  * @author CH
+ * @since 4.0.0
  */
 public class SwaggerEnvironmentPostProcessor implements EnvironmentPostProcessor {
     

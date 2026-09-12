@@ -12,6 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * 分区感知表工厂 — 从数据库元数据发现分区配置并构建 {@link PartitionRoutingTable}。
  *
  * @author CH
+ * @since 4.0.0
  */
 @Slf4j
 public class PartitionAwareTableFactory {
@@ -20,11 +21,11 @@ public class PartitionAwareTableFactory {
     private final DataSource dataSource;
     /** JDBC模板 */
     private final JdbcTemplate jdbcTemplate;
-    private final ConcurrentHashMap<String, PartitionRoutingTable> cache = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, PartitionRoutingTable> cache = new ConcurrentHashMap<>(); // 缓存
 
     /**
-     * 创建 PartitionAwareTableFactory 实例
-     * @param dataSource dataSource
+      * 创建 分区awaretable工厂 实例
+     * @param dataSource 数据源
      */
     public PartitionAwareTableFactory(DataSource dataSource) {
         this.dataSource = dataSource;
@@ -34,7 +35,7 @@ public class PartitionAwareTableFactory {
     /**
      * 读取支付分表配置并创建对应的路由表。
      *
-     * @return 路由表 Map，key 为源表名（如 pay_order），value 为路由表实例
+     * @return 路由表 映射，钥匙 为源表名（如 薪酬_订单），价值观 为路由表实例
      */
     public Map<String, PartitionRoutingTable> buildAllRoutingTables() {
         Map<String, PartitionRoutingTable> result = new java.util.LinkedHashMap<>();
@@ -70,12 +71,21 @@ public class PartitionAwareTableFactory {
                     jdbcTemplate, partitionPrefix, sourceTable);
             List<String> allTables = PartitionRoutingService.resolveAllTables(
                     sourceTable, partitionPrefix, "MONTH", discovered);
+            /**
+             * 分区routingtable。
+             * @param sourceTable 源table
+             * @param allTables 全部tables
+             * @param jdbcTemplate jdbctemplate
+             * @return 分区routingtable的结果
+             */
             return new PartitionRoutingTable(sourceTable, allTables, jdbcTemplate);
         });
     }
 
     /**
      * 刷新指定路由表的分区列表（发现新建的分区表）。
+     * @param routingTable routingtable
+     * @param partitionPrefix 分区前缀
      */
     public void refreshRoutingTable(PartitionRoutingTable routingTable, String partitionPrefix) {
         List<String> discovered = PartitionRoutingService.discoverPartitionTables(
@@ -83,10 +93,14 @@ public class PartitionAwareTableFactory {
         routingTable.refreshTableNames(discovered);
     }
 
-    /** 查询PartitionConfigs */
+    /**
+     * 查询分区配置
+     *
+     * @return 查询分区配置的结果
+     */
     private List<Map<String, Object>> queryPartitionConfigs() {
         try {
-            // 优先使用 pay_partition_config 表
+ // 优先使用 薪酬_分区_配置 表
             return jdbcTemplate.queryForList(
                     "SELECT * FROM pay_partition_config WHERE pay_partition_config_auto_create_enabled = true");
         } catch (Exception e) {
@@ -95,10 +109,14 @@ public class PartitionAwareTableFactory {
         }
     }
 
-    /** 查询FromSystemTables */
+    /**
+     * 查询从系统tables
+     *
+     * @return 查询从系统tables的结果
+     */
     private List<Map<String, Object>> queryFromSystemTables() {
         try {
-            // 扫描 information_schema 中匹配分区模式的所有表
+ // 扫描 信息_模式 中匹配分区模式的所有表
             String sql = "SELECT DISTINCT SUBSTRING_INDEX(TABLE_NAME, '_part', 1) AS source_table_pattern " +
                     "FROM information_schema.tables " +
                     "WHERE TABLE_SCHEMA = (SELECT DATABASE()) " +
@@ -110,7 +128,12 @@ public class PartitionAwareTableFactory {
         }
     }
 
-    /** Str */
+    /**
+     * Str
+     *
+     * @param value 价值观
+     * @return str的结果
+     */
     private static String str(Object value) {
         return value instanceof String s ? s : null;
     }

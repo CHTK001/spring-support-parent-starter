@@ -13,7 +13,7 @@ import lombok.Data;
 @Schema(description = "软件信息响应")
 public class SoftwareDTO extends com.chua.starter.software.support.entity.SoftSoftware {
 
-    /** Serial版本UID */
+    /** 串行版本UID */
     private static final long serialVersionUID = 1L;
 
     /**

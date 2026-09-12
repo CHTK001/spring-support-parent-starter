@@ -5,7 +5,7 @@ import com.chua.starter.taskdistribution.support.entity.SysTaskStore;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
- * 任务存储 Mapper。
+   * 任务存储 映射器。
  *
  * @since 4.0.0.42
  * @author CH

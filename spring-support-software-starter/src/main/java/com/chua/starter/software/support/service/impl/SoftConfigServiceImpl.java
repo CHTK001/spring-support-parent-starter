@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * 软件配置表 Service 实现
+   * 软件配置表 服务 实现
  *
  * @since 2026/7/25
  * @author CH
@@ -32,14 +32,14 @@ public class SoftConfigServiceImpl extends ServiceImpl<SoftConfigMapper, SoftCon
     private final TransactionTemplate transactionTemplate;
 
     @Override
-    /** PageFor */
+    /** pagefor */
     public IPage<SoftConfig> pageFor(com.chua.starter.mybatis.entity.Query<SoftConfig> query, SoftConfig request) {
         Page<SoftConfig> page = query.createPage();
         return baseMapper.selectPageFor(page, request);
     }
 
     @Override
-    /** 保存Config */
+    /** 保存配置 */
     public ReturnResult<SoftConfig> saveConfig(SoftConfig config) {
         if (config.getConfigSoftwareId() == null) {
             return ReturnResult.illegal("软件ID不能为空");
@@ -53,7 +53,7 @@ public class SoftConfigServiceImpl extends ServiceImpl<SoftConfigMapper, SoftCon
     }
 
     @Override
-    /** 更新Config */
+    /** 更新配置 */
     public ReturnResult<SoftConfig> updateConfig(SoftConfig config) {
         if (config.getConfigId() == null) {
             return ReturnResult.illegal("配置ID不能为空");
@@ -68,7 +68,7 @@ public class SoftConfigServiceImpl extends ServiceImpl<SoftConfigMapper, SoftCon
     }
 
     @Override
-    /** 删除Config */
+    /** 删除配置 */
     public ReturnResult<Boolean> deleteConfig(String configId) {
         if (configId == null) {
             return ReturnResult.illegal("配置ID不能为空");
@@ -82,7 +82,7 @@ public class SoftConfigServiceImpl extends ServiceImpl<SoftConfigMapper, SoftCon
     }
 
     @Override
-    /** 获取BySoftwareAndKey */
+    /** 获取bysoftwareand钥匙 */
     public SoftConfig getBySoftwareAndKey(String softwareId, String key) {
         return baseMapper.selectOne(new LambdaQueryWrapper<SoftConfig>()
                 .eq(SoftConfig::getConfigSoftwareId, softwareId)
@@ -92,7 +92,7 @@ public class SoftConfigServiceImpl extends ServiceImpl<SoftConfigMapper, SoftCon
     }
 
     @Override
-    /** ListBySoftwareId */
+    /** 列表bysoftwareid */
     public List<SoftConfig> listBySoftwareId(String softwareId) {
         return baseMapper.selectList(new LambdaQueryWrapper<SoftConfig>()
                 .eq(SoftConfig::getConfigSoftwareId, softwareId)
@@ -101,7 +101,7 @@ public class SoftConfigServiceImpl extends ServiceImpl<SoftConfigMapper, SoftCon
     }
 
     @Override
-    /** ListBySoftwareIdAndUserId */
+    /** 列表bysoftwareidand用户标识 */
     public List<SoftConfig> listBySoftwareIdAndUserId(String softwareId, String userId) {
         return baseMapper.selectList(new LambdaQueryWrapper<SoftConfig>()
                 .eq(SoftConfig::getConfigSoftwareId, softwareId)
@@ -112,7 +112,7 @@ public class SoftConfigServiceImpl extends ServiceImpl<SoftConfigMapper, SoftCon
     }
 
     @Override
-    /** ListBySoftwareIdAndDeviceId */
+    /** 列表bysoftwareidanddeviceid */
     public List<SoftConfig> listBySoftwareIdAndDeviceId(String softwareId, String deviceId) {
         return baseMapper.selectList(new LambdaQueryWrapper<SoftConfig>()
                 .eq(SoftConfig::getConfigSoftwareId, softwareId)
@@ -123,7 +123,7 @@ public class SoftConfigServiceImpl extends ServiceImpl<SoftConfigMapper, SoftCon
     }
 
     @Override
-    /** Batch保存Or更新 */
+    /** 批量保存或更新 */
     public ReturnResult<Boolean> batchSaveOrUpdate(List<SoftConfig> configs) {
         if (configs == null || configs.isEmpty()) {
             return ReturnResult.ok(true);

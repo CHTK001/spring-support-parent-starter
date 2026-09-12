@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-/** @author CH */
+/** @作者 CH */
 
 @Tag(name = "采集数据管理")
 @RestController
@@ -31,8 +31,8 @@ public class SpiderDataRecordController {
     private final SpiderDataRecordService recordService;
 
     /**
-     * 创建 SpiderDataRecordController 实例
-     * @param recordService recordService
+      * 创建 蜘蛛数据record控制器 实例
+     * @param recordService record服务
      */
     public SpiderDataRecordController(SpiderDataRecordService recordService) {
         this.recordService = recordService;
@@ -42,19 +42,19 @@ public class SpiderDataRecordController {
     @Operation(summary = "分页查询采集记录")
     /**
      * Page
-     * @param pageNo pageNo
-     * @param pageSize pageSize
+     * @param pageNo pageno
+     * @param pageSize page大小
      * @param keyword keyword
-     * @param spiderCode spiderCode
-     * @param pageSize pageSize
-     * @param spiderCode spiderCode
+     * @param spiderCode 蜘蛛编码
+     * @param pageSize page大小
+     * @param spiderCode 蜘蛛编码
      * @param keyword keyword
      * @param keyword keyword
-     * @param wrapper wrapper
-     * @param spiderId spiderId
-     * @param spiderId spiderId
-     * @param executionNo executionNo
-     * @param executionNo executionNo
+     * @param wrapper 包装器
+     * @param spiderId 蜘蛛标识
+     * @param spiderId 蜘蛛标识
+     * @param executionNo 执行no
+     * @param executionNo 执行no
      */
     public ReturnResult<PageResultVO<DataRecordVO>> page(
             @RequestParam(defaultValue = "1") long pageNo,
@@ -85,7 +85,12 @@ public class SpiderDataRecordController {
 
     @GetMapping("/detail")
     @Operation(summary = "查询记录详情")
-    /** Detail */
+    /**
+     * Detail
+     *
+     * @param spiderId 蜘蛛标识
+     * @return detail的结果
+     */
     public ReturnResult<DataRecordVO> detail(@RequestParam Long spiderId) {
         SpiderDataRecord record = recordService.getById(spiderId);
         return ReturnResult.ok(SpiderConverter.toDataRecordVO(record));
@@ -93,14 +98,24 @@ public class SpiderDataRecordController {
 
     @DeleteMapping("/{spiderId}")
     @Operation(summary = "删除记录")
-    /** 删除 */
+    /**
+     * 删除
+     *
+     * @param spiderId 蜘蛛标识
+     * @return 删除的结果
+     */
     public ReturnResult<Boolean> delete(@PathVariable Long spiderId) {
         return ReturnResult.ok(recordService.removeById(spiderId));
     }
 
     @GetMapping("/by-execution")
     @Operation(summary = "按执行号查询记录")
-    /** ByExecution */
+    /**
+     * by执行
+     *
+     * @param executionNo 执行no
+     * @return by执行的结果
+     */
     public ReturnResult<List<DataRecordVO>> byExecution(@RequestParam String executionNo) {
         List<SpiderDataRecord> list = recordService.lambdaQuery()
                 .eq(SpiderDataRecord::getExecutionNo, executionNo)

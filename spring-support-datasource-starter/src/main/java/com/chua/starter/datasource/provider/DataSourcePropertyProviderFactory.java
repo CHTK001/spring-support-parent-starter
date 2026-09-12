@@ -18,16 +18,19 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 public class DataSourcePropertyProviderFactory {
 
-    private static final Map<Class<?>, DataSourcePropertyProvider<?>> PROVIDER_CACHE = new ConcurrentHashMap<>();
-    private static final List<DataSourcePropertyProvider<?>> PROVIDERS = new ArrayList<>();
+    private static final Map<Class<?>, DataSourcePropertyProvider<?>> PROVIDER_CACHE = new ConcurrentHashMap<>(); // 提供者缓存
+    private static final List<DataSourcePropertyProvider<?>> PROVIDERS = new ArrayList<>(); // 提供者
 
     static {
-        // 使用SPI机制加载Provider
+ // 使用SPI机制加载提供者
+        /**
+         * 加载提供者byspi。
+         */
         loadProvidersBySpi();
     }
 
     /**
-     * 使用Java SPI机制加载Provider
+      * 使用Java SPI机制加载提供者
      */
     private static void loadProvidersBySpi() {
         var serviceProvider = ServiceProvider.of(DataSourcePropertyProvider.class);
@@ -50,7 +53,9 @@ public class DataSourcePropertyProviderFactory {
     }
     
     /**
-     * 检查Provider对应的数据源类是否可用
+      * 检查提供者对应的数据源类是否可用
+     * @param provider 提供者
+     * @return 是否数据源类可用的结果
      */
     private static boolean isDataSourceClassAvailable(DataSourcePropertyProvider<?> provider) {
         try {
@@ -62,9 +67,9 @@ public class DataSourcePropertyProviderFactory {
     }
 
     /**
-     * 注册自定义Provider
+      * 注册自定义提供者
      *
-     * @param provider provider实例
+     * @param provider 提供者实例
      */
     public static void register(DataSourcePropertyProvider<?> provider) {
         PROVIDERS.add(provider);
@@ -74,7 +79,7 @@ public class DataSourcePropertyProviderFactory {
     }
 
     /**
-     * 获取数据源对应的Provider
+      * 获取数据源对应的提供者
      *
      * @param dataSource 数据源
      * @return Provider，如果没有找到返回null
@@ -88,7 +93,7 @@ public class DataSourcePropertyProviderFactory {
     }
 
     /**
-     * 获取数据源类型对应的Provider
+      * 获取数据源类型对应的提供者
      *
      * @param dataSourceClass 数据源类型
      * @return Provider，如果没有找到返回null
@@ -110,7 +115,7 @@ public class DataSourcePropertyProviderFactory {
     }
 
     /**
-     * 获取所有已注册的Provider
+      * 获取所有已注册的提供者
      *
      * @return Provider列表
      */
@@ -137,7 +142,7 @@ public class DataSourcePropertyProviderFactory {
      * 设置数据源属性
      *
      * @param dataSource 数据源
-     * @param properties 属性Map
+     * @param properties 属性映射
      */
     @SuppressWarnings("unchecked")
     public static void setProperties(DataSource dataSource, Map<String, Object> properties) {

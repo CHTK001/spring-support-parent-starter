@@ -13,11 +13,11 @@ import java.time.LocalDateTime;
  */
 @Data
 public class MerchantVO implements Serializable {
-    private static final long serialVersionUID = 1L;
-    /** ID */
+    private static final long serialVersionUID = 1L; // 串行版本uid
+    /** 标识 */
     private Long id;
 
-    /** MerchantNO */
+    /** merchantno */
     private String merchantNo;
 
     /** Merchant名称 */
@@ -38,7 +38,7 @@ public class MerchantVO implements Serializable {
     /** Legalperson */
     private String legalPerson;
 
-    /** 默认notifyURL */
+    /** 默认通知url */
     private String defaultNotifyUrl;
 
     /** 默认返回值URL */
@@ -62,7 +62,7 @@ public class MerchantVO implements Serializable {
     /** Paymentcoupon是否启用 */
     private Boolean paymentCouponEnabled;
 
-    /** Remark */
+    /** 评论 */
     private String remark;
 
     /** 状态 */

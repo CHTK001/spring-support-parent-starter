@@ -47,11 +47,11 @@ public class MultiLevelCacheManager implements CacheManager, InitializingBean, A
      */
     private static final String CACHE_KEY_PREFIX = "plugin.cache.";
 
-    private final Map<String, Cache> cacheMap = new ConcurrentHashMap<>();
+    private final Map<String, Cache> cacheMap = new ConcurrentHashMap<>(); // 缓存映射
 
-    /** 缓存managers */
+    /** 缓存管理器 */
     private final List<CacheManager> cacheManagers = new ArrayList<>();
-    private final Map<String, CacheManager> cacheManagerMap = new ConcurrentHashMap<>();
+    private final Map<String, CacheManager> cacheManagerMap = new ConcurrentHashMap<>(); // 缓存管理器映射
 
     /** Application上下文 */
     private ApplicationContext applicationContext;
@@ -61,20 +61,20 @@ public class MultiLevelCacheManager implements CacheManager, InitializingBean, A
     private CacheProperties cacheProperties;
 
     @Override
-    /** 设置ApplicationContext */
+    /** 设置application上下文 */
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
         this.environment = applicationContext.getEnvironment();
     }
 
     @Override
-    /** AfterProperties设置 */
+    /** 之后属性设置 */
     public void afterPropertiesSet() {
         // 加载配置
         cacheProperties = Binder.get(environment)
                 .bindOrCreate(CacheProperties.PRE, CacheProperties.class);
 
-        // 通过 ApplicationContext 获取所有 CacheManager
+ // 通过 application上下文 获取所有 缓存管理器
         Map<String, CacheManager> beansOfType = applicationContext.getBeansOfType(CacheManager.class);
         for (Map.Entry<String, CacheManager> entry : beansOfType.entrySet()) {
             cacheManagerMap.put(entry.getKey().toUpperCase(), entry.getValue());
@@ -101,7 +101,7 @@ public class MultiLevelCacheManager implements CacheManager, InitializingBean, A
     }
 
     /**
-     * 将层级名称解析为 CacheManager 的 Bean 名称（默认转大写）。
+      * 将层级名称解析为 缓存管理器 的 Bean 名称（默认转大写）。
      *
      * @param level      层级名称
      * @param properties 缓存配置
@@ -125,7 +125,7 @@ public class MultiLevelCacheManager implements CacheManager, InitializingBean, A
     }
 
     @Override
-    /** 获取Cache */
+    /** 获取缓存 */
     public Cache getCache(String name) {
         if (name == null || name.isEmpty()) {
             return null;
@@ -133,7 +133,12 @@ public class MultiLevelCacheManager implements CacheManager, InitializingBean, A
         return cacheMap.computeIfAbsent(name, this::buildCache);
     }
 
-    /** 构建Cache */
+    /**
+     * 构建缓存
+     *
+     * @param name 名称
+     * @return 构建缓存的结果
+     */
     private Cache buildCache(String name) {
         if (cacheManagers.isEmpty()) {
             log.warn("无法创建多级缓存: name={}, 没有可用的缓存管理器", name);
@@ -163,11 +168,18 @@ public class MultiLevelCacheManager implements CacheManager, InitializingBean, A
         }
 
         log.debug("创建多级缓存: name={}, levels={}", name, caches.size());
+        /**
+         * multi水平仪缓存。
+         * @param name 名称
+         * @param caches 缓存
+         * @param cacheProperties.isCacheNullValues( 缓存属性.是否缓存空值(
+         * @return multi水平仪缓存的结果
+         */
         return new MultiLevelCache(name, caches, cacheProperties != null && cacheProperties.isCacheNullValues());
     }
 
     @Override
-    /** 获取CacheNames */
+    /** 获取缓存名称 */
     public Collection<String> getCacheNames() {
         if (cacheManagers.isEmpty()) {
             return List.of();
@@ -286,6 +298,7 @@ public class MultiLevelCacheManager implements CacheManager, InitializingBean, A
      * @param hitRate       命中率
      * @param backfillCount 回填次数
      * @param levelCount    缓存层级数
+     * @return 缓存stats的结果
      */
     public record CacheStats(long hitCount, long missCount, double hitRate, long backfillCount, int levelCount) {
     }

@@ -8,7 +8,7 @@ import java.util.Map;
  * 用于处理特定主题的消息，通过 SPI 机制加载实现类
  * </p>
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024/12/04
  * @author CH
  */
@@ -40,9 +40,9 @@ public interface SyncMessageHandler {
      * 处理消息
      *
      * @param topic     主题
-     * @param sessionId 会话ID
+     * @param sessionId 会话标识
      * @param data      消息数据
-     * @return 处理结果，可为 null
+     * @return 处理结果，可为 空
      */
     Object handle(String topic, String sessionId, Map<String, Object> data);
 

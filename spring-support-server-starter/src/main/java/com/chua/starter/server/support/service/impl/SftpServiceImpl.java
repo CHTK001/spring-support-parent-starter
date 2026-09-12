@@ -23,7 +23,7 @@ import java.util.Map;
 /**
  * SFTP 文件管理服务实现
  * <p>
- * 每次操作按需建立 SFTP 连接（try-with-resources 保证关闭），
+   * 每次操作按需建立 SFTP 连接（尝试-with-resources 保证关闭），
  * 内容读取设置 1MB 截断上限以保护网关内存。
  * </p>
  *
@@ -51,9 +51,13 @@ public class SftpServiceImpl implements SftpService {
             return ReturnResult.error(resolved.getMsg());
         }
         var host = requireHost(hostId);
+        /**
+         * 尝试。
+         * @param openSftpClient(host.getServerHostAddress( 打开sftpclient(主机.获取服务端主机地址(
+         */
         try (var client = openSftpClient(host.getServerHostAddress(), host.getServerHostPort(), resolved.getData())) {
             var entries = client.ls().path(normalizeDir(path)).exec();
-            // 归一化为前端契约: name/path/directory/file/size
+ // 归一化为前端契约: 名称/路径/目录/文件/大小
             List<Map<String, Object>> normalized = new ArrayList<>(entries.size());
             for (Map<String, Object> entry : entries) {
                 Map<String, Object> row = new LinkedHashMap<>();
@@ -78,7 +82,7 @@ public class SftpServiceImpl implements SftpService {
     }
 
     /**
-     * 从目录条目中判断是否目录（兼容 attributes 对象或 map 两种形态）
+      * 从目录条目中判断是否目录（兼容 attributes 对象或 映射 两种形态）
      *
      * @param entry 目录条目
      * @return 是否目录
@@ -104,6 +108,10 @@ public class SftpServiceImpl implements SftpService {
             return ReturnResult.error(resolved.getMsg());
         }
         var host = requireHost(hostId);
+        /**
+         * 尝试。
+         * @param openSftpClient(host.getServerHostAddress( 打开sftpclient(主机.获取服务端主机地址(
+         */
         try (var client = openSftpClient(host.getServerHostAddress(), host.getServerHostPort(), resolved.getData());
              TempFile temp = downloadToTemp(client, path)) {
             long size = Files.size(temp.path());
@@ -134,6 +142,10 @@ public class SftpServiceImpl implements SftpService {
         }
         var host = requireHost(hostId);
         Path localTemp = null;
+        /**
+         * 尝试。
+         * @param openSftpClient(host.getServerHostAddress( 打开sftpclient(主机.获取服务端主机地址(
+         */
         try (var client = openSftpClient(host.getServerHostAddress(), host.getServerHostPort(), resolved.getData())) {
             localTemp = Files.createTempFile("ms-sftp-write-", ".tmp");
             Files.writeString(localTemp, content == null ? "" : content, StandardCharsets.UTF_8);
@@ -143,6 +155,10 @@ public class SftpServiceImpl implements SftpService {
             log.warn("[sftp] 写入内容失败 hostId={} path={}: {}", hostId, path, e.getMessage());
             return ReturnResult.error("写入失败: " + e.getMessage());
         } finally {
+            /**
+              * cleanupquietly。
+             * @param localTemp 本地temp
+             */
             cleanupQuietly(localTemp);
         }
     }
@@ -161,6 +177,10 @@ public class SftpServiceImpl implements SftpService {
         String remotePath = dir.endsWith("/") ? dir + sanitizeFileName(file.getOriginalFilename())
                 : dir + "/" + sanitizeFileName(file.getOriginalFilename());
         Path localTemp = null;
+        /**
+         * 尝试。
+         * @param openSftpClient(host.getServerHostAddress( 打开sftpclient(主机.获取服务端主机地址(
+         */
         try (var client = openSftpClient(host.getServerHostAddress(), host.getServerHostPort(), resolved.getData())) {
             localTemp = Files.createTempFile("ms-sftp-upload-", ".tmp");
             file.transferTo(localTemp.toFile());
@@ -170,6 +190,10 @@ public class SftpServiceImpl implements SftpService {
             log.warn("[sftp] 上传失败 hostId={} dir={}: {}", hostId, directory, e.getMessage());
             return ReturnResult.error("上传失败: " + e.getMessage());
         } finally {
+            /**
+              * cleanupquietly。
+             * @param localTemp 本地temp
+             */
             cleanupQuietly(localTemp);
         }
     }
@@ -184,6 +208,10 @@ public class SftpServiceImpl implements SftpService {
             return ReturnResult.error(resolved.getMsg());
         }
         var host = requireHost(hostId);
+        /**
+         * 尝试。
+         * @param openSftpClient(host.getServerHostAddress( 打开sftpclient(主机.获取服务端主机地址(
+         */
         try (var client = openSftpClient(host.getServerHostAddress(), host.getServerHostPort(), resolved.getData())) {
             TempFile temp = downloadToTemp(client, path);
             return ReturnResult.ok(temp);
@@ -203,6 +231,10 @@ public class SftpServiceImpl implements SftpService {
             return ReturnResult.error(resolved.getMsg());
         }
         var host = requireHost(hostId);
+        /**
+         * 尝试。
+         * @param openSftpClient(host.getServerHostAddress( 打开sftpclient(主机.获取服务端主机地址(
+         */
         try (var client = openSftpClient(host.getServerHostAddress(), host.getServerHostPort(), resolved.getData())) {
             client.mkdir().path(path).recursive(true).exec();
             return ReturnResult.success();
@@ -222,6 +254,10 @@ public class SftpServiceImpl implements SftpService {
             return ReturnResult.error(resolved.getMsg());
         }
         var host = requireHost(hostId);
+        /**
+         * 尝试。
+         * @param openSftpClient(host.getServerHostAddress( 打开sftpclient(主机.获取服务端主机地址(
+         */
         try (var client = openSftpClient(host.getServerHostAddress(), host.getServerHostPort(), resolved.getData())) {
             client.rm().path(path).recursive(recursive).exec();
             return ReturnResult.success();
@@ -241,6 +277,10 @@ public class SftpServiceImpl implements SftpService {
             return ReturnResult.error(resolved.getMsg());
         }
         var host = requireHost(hostId);
+        /**
+         * 尝试。
+         * @param openSftpClient(host.getServerHostAddress( 打开sftpclient(主机.获取服务端主机地址(
+         */
         try (var client = openSftpClient(host.getServerHostAddress(), host.getServerHostPort(), resolved.getData())) {
             client.rename().from(fromPath).to(toPath).exec();
             return ReturnResult.success();
@@ -282,13 +322,31 @@ public class SftpServiceImpl implements SftpService {
             SftpClient client = builder.build();
             client.connect();
             // 认证已完成, 私钥明文即刻从磁盘清除
+            /**
+              * cleanupquietly。
+             * @param tempKey temp钥匙
+             */
             cleanupQuietly(tempKey);
             return client;
         } catch (IOException e) {
+            /**
+              * cleanupquietly。
+             * @param tempKey temp钥匙
+             */
             cleanupQuietly(tempKey);
+            /**
+             * illegal状态异常。
+             * @param "写入私钥临时文件失败" "写入私钥临时文件失败"
+             * @param e e
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("写入私钥临时文件失败", e);
         } catch (RuntimeException e) {
             // 连接/认证失败同样清理临时私钥
+            /**
+              * cleanupquietly。
+             * @param tempKey temp钥匙
+             */
             cleanupQuietly(tempKey);
             throw e;
         }
@@ -308,9 +366,20 @@ public class SftpServiceImpl implements SftpService {
             client.download().remote(path).local(temp.toString()).exec();
         } catch (Exception e) {
             Files.deleteIfExists(temp);
+            /**
+             * io异常。
+             * @param e.getMessage( e.获取消息(
+             * @return io异常的结果
+             */
             throw new IOException("远端下载失败: " + e.getMessage(), e);
         }
         String fileName = path.contains("/") ? path.substring(path.lastIndexOf('/') + 1) : path;
+        /**
+         * temp文件。
+         * @param temp temp
+         * @param fileName 文件名称
+         * @return temp文件的结果
+         */
         return new TempFile(temp, fileName);
     }
 
@@ -324,8 +393,12 @@ public class SftpServiceImpl implements SftpService {
      */
     private Path sliceFile(Path source, int limit) throws IOException {
         Path target = Files.createTempFile("ms-sftp-slice-", ".tmp");
+        /**
+         * 尝试。
+         * @param Files.newInputStream(source 文件.新输入流(源
+         */
         try (var in = Files.newInputStream(source)) {
-            // 仅读取前 limit 字节，避免超大文件全量进入内存
+ // 仅读取前 限制 字节，避免超大文件全量进入内存
             byte[] head = in.readNBytes(limit);
             Files.write(target, head);
         }
@@ -335,8 +408,8 @@ public class SftpServiceImpl implements SftpService {
     /**
      * 解析主机与凭据
      *
-     * @param hostId     主机 ID
-     * @param identityId 身份 ID，可为空
+     * @param hostId     主机 标识
+     * @param identityId 身份 标识，可为空
      * @return 解析结果
      */
     private ReturnResult<SshCredential> resolve(Long hostId, Long identityId) {
@@ -346,12 +419,17 @@ public class SftpServiceImpl implements SftpService {
     /**
      * 加载主机实体，不存在时抛出业务异常
      *
-     * @param hostId 主机 ID
+     * @param hostId 主机 标识
      * @return 主机实体
      */
     private com.chua.starter.server.support.entity.MsServerHost requireHost(Long hostId) {
         var result = serverHostService.get(hostId);
         if (!result.isOk()) {
+            /**
+             * illegal参数异常。
+             * @param result.getMsg( 结果.获取msg(
+             * @return illegal参数异常的结果
+             */
             throw new IllegalArgumentException(result.getMsg());
         }
         return result.getData();

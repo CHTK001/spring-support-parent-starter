@@ -38,14 +38,14 @@ public class CalciteDataSourceProperties {
     private int maxPoolSize = 10;
 
     /**
-     * Schema名称映射
-     * key: 原数据源名称
-     * value: Calcite中的Schema名称
+      * 模式名称映射
+      * 钥匙: 原数据源名称
+      * 价值观: Calcite中的模式名称
      */
     private Map<String, String> schemaMapping;
 
     /**
-     * 默认Schema名称
+      * 默认模式名称
      */
     private String defaultSchema;
 }

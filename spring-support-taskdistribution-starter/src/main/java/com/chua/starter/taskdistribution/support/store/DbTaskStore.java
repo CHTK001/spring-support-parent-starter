@@ -23,7 +23,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * 数据库任务存储实现。
  *
  * <p>基于 MyBatis-Plus 将任务持久化到数据库，支持应用重启后自动恢复。
- * 表结构：{@code sys_task_store}（taskId / taskType / taskStatus / taskJson / resultJson）。</p>
+   * 表结构：{@code sys_task_store}（任务标识 / 任务类型 / 任务状态 / 任务json / 结果json）。</p>
  *
  * @since 4.0.0.42
  * @author CH
@@ -37,17 +37,20 @@ public class DbTaskStore implements TaskStore {
     private final Map<String, SysTaskStore> cache = new ConcurrentHashMap<>();
 
     /**
-     * Mapper
+      * 映射器
      */
     private final TaskStoreMapper mapper;
 
     /**
      * 构造数据库任务存储。
      *
-     * @param mapper MyBatis-Plus Mapper
+     * @param mapper MyBatis-Plus 映射器
      */
     public DbTaskStore(TaskStoreMapper mapper) {
         this.mapper = mapper;
+        /**
+         * 加载从db。
+         */
         loadFromDb();
     }
 
@@ -67,7 +70,7 @@ public class DbTaskStore implements TaskStore {
     }
 
     @Override
-    /** 保存Task */
+    /** 保存任务 */
     public void saveTask(Task<?> task, TaskStatus status) {
         if (task == null || task.getTaskId() == null) {
             return;
@@ -91,6 +94,10 @@ public class DbTaskStore implements TaskStore {
             if (task.getTraceId() != null) {
                 MDC.put(MdcDecorator.KEY_TRACE_ID, task.getTraceId());
             }
+            /**
+             * upsert。
+             * @param entity 实体
+             */
             upsert(entity);
         } catch (Exception e) {
             log.warn("保存任务失败: {}", task.getTaskId(), e);
@@ -101,7 +108,7 @@ public class DbTaskStore implements TaskStore {
     }
 
     @Override
-    /** 更新Status */
+    /** 更新状态 */
     public void updateStatus(String taskId, TaskStatus status) {
         if (taskId == null) {
             return;
@@ -127,7 +134,7 @@ public class DbTaskStore implements TaskStore {
     }
 
     @Override
-    /** 保存Result */
+    /** 保存结果 */
     public void saveResult(TaskResult<?> result) {
         if (result == null || result.getTaskId() == null) {
             return;
@@ -146,6 +153,10 @@ public class DbTaskStore implements TaskStore {
             if (result.getTaskId() != null) {
                 MDC.put(MdcDecorator.KEY_TASK_ID, result.getTaskId());
             }
+            /**
+             * upsert。
+             * @param entity 实体
+             */
             upsert(entity);
         } catch (Exception e) {
             log.warn("保存结果失败: {}", result.getTaskId(), e);
@@ -155,7 +166,7 @@ public class DbTaskStore implements TaskStore {
     }
 
     /**
-     * 插入或更新（upsert 语义，基于 taskId 同步保证原子性）。
+       * 插入或更新（upsert 语义，基于 任务标识 同步保证原子性）。
      *
      * @param entity 实体
      */
@@ -176,6 +187,11 @@ public class DbTaskStore implements TaskStore {
 
     @Override
     @SuppressWarnings("unchecked")
+    /**
+     * 获取任务。
+     * @param taskId 任务标识
+     * @return 获取任务的结果
+     */
     public Task<?> getTask(String taskId) {
         SysTaskStore entity = cache.get(taskId);
         if (entity == null) {
@@ -192,7 +208,7 @@ public class DbTaskStore implements TaskStore {
     }
 
     @Override
-    /** 获取Status */
+    /** 获取状态 */
     public TaskStatus getStatus(String taskId) {
         SysTaskStore entity = cache.get(taskId);
         if (entity == null) {
@@ -214,6 +230,11 @@ public class DbTaskStore implements TaskStore {
 
     @Override
     @SuppressWarnings("unchecked")
+    /**
+     * 获取结果。
+     * @param taskId 任务标识
+     * @return 获取结果的结果
+     */
     public TaskResult<?> getResult(String taskId) {
         SysTaskStore entity = cache.get(taskId);
         if (entity == null) {
@@ -251,7 +272,7 @@ public class DbTaskStore implements TaskStore {
     }
 
     @Override
-    /** 移除Task */
+    /** 移除任务 */
     public void removeTask(String taskId) {
         cache.remove(taskId);
         try {

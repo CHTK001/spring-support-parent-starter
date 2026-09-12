@@ -23,7 +23,7 @@ import java.util.concurrent.TimeUnit;
  * 定时上报Spring应用基本信息，服务端覆盖更新
  * </p>
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024/12/05
  * @author CH
  */
@@ -41,7 +41,7 @@ public class AppRegisterReporter {
 
     /** 调度器 */
     private ScheduledExecutorService scheduler;
-    private volatile boolean running = false;
+    private volatile boolean running = false; // running
 
     // Spring 应用信息
     @Setter
@@ -49,7 +49,7 @@ public class AppRegisterReporter {
     private String applicationName;
 
     @Setter
-    /** 是否激活profiles */
+    /** 是否激活配置文件 */
     private String[] activeProfiles;
 
     @Setter
@@ -78,7 +78,11 @@ public class AppRegisterReporter {
     /** 开始时间 */
     private long startTime;
 
-    /** 获取Instance */
+    /**
+     * 获取Instance
+     *
+     * @return 获取instance的结果
+     */
     public static AppRegisterReporter getInstance() {
         return INSTANCE;
     }
@@ -97,6 +101,9 @@ public class AppRegisterReporter {
         }
 
         // 初始化网络信息
+        /**
+         * 初始化network信息。
+         */
         initNetworkInfo();
         this.startTime = System.currentTimeMillis();
 
@@ -159,6 +166,7 @@ public class AppRegisterReporter {
 
     /**
      * 采集应用信息
+     * @return collectapp信息的结果
      */
     private Map<String, Object> collectAppInfo() {
         Map<String, Object> info = new HashMap<>();

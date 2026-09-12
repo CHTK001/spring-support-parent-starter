@@ -10,7 +10,9 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import java.util.List;
 
 /**
- * Web MVC additional configuration for AI starter.
+   * Web MVC additional 配置 for AI 启动.
+ * @author CH
+ * @since 4.0.0
  */
 @Configuration
 public class AiWebMvcConverterConfiguration implements WebMvcConfigurer {

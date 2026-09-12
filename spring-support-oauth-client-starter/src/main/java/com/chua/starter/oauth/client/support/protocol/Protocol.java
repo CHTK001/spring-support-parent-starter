@@ -26,7 +26,7 @@ import java.util.Map;
  * </ul>
  *
  * @since 2024/12/11
- * @version 4.0.0.34
+   * @版本 4.0.0.34
  * @author CH
  */
 public interface Protocol {
@@ -91,10 +91,16 @@ public interface Protocol {
      * <p>基于源令牌创建一个短期有效的临时令牌，适用于临时授权场景</p>
      *
      * @param sourceToken 源令牌
-     * @param ext         扩展参数（如 expireTime、allowedUrls 等）
+     * @param ext         扩展参数（如 expire时间、allowedurls 等）
      * @return 临时令牌结果
      */
     default LoginAuthResult createTemporaryToken(String sourceToken, Map<String, Object> ext) {
+        /**
+         * login认证结果。
+         * @param 501 501
+         * @param "当前协议不支持临时令牌功能" "当前协议不支持临时令牌功能"
+         * @return login认证结果的结果
+         */
         return new LoginAuthResult(501, "当前协议不支持临时令牌功能");
     }
 
@@ -137,7 +143,7 @@ public interface Protocol {
      * <p>用于安全审计：通过浏览器指纹查询对应用户身份</p>
      *
      * @param fingerprint 浏览器指纹
-     * @return 用户信息 Map（含 userId、username、ip 等），不存在返回 null
+     * @return 用户信息 映射（含 用户标识、用户名、ip 等），不存在返回 空
      */
     default Map<String, Object> getFingerprintUser(String fingerprint) {
         return null;
@@ -156,6 +162,8 @@ public interface Protocol {
 
     /**
      * 指纹验证结果
+     * @author CH
+     * @since 4.0.0
      */
     @Data
     @NoArgsConstructor
@@ -180,42 +188,86 @@ public interface Protocol {
 
         /**
          * 验证通过
+         * @param storedFingerprint 存储fingerprint
+         * @return 成功的结果
          */
         public static FingerprintVerifyResult success(String storedFingerprint) {
+            /**
+             * fingerprint验证结果。
+             * @param true true
+             * @param 200 200
+             * @param "OK" "OK"
+             * @param storedFingerprint 存储fingerprint
+             */
             return new FingerprintVerifyResult(true, 200, "OK", storedFingerprint);
         }
 
         /**
          * 指纹不匹配
+         * @return mismatch的结果
          */
         public static FingerprintVerifyResult mismatch() {
+            /**
+             * fingerprint验证结果。
+             * @param false false
+             * @param 40301 40301
+             * @param "浏览器指纹不匹配，请重新登录" "浏览器指纹不匹配，请重新登录"
+             * @param null 空
+             */
             return new FingerprintVerifyResult(false, 40301, "浏览器指纹不匹配，请重新登录", null);
         }
 
         /**
          * 缺少指纹
+         * @return missing的结果
          */
         public static FingerprintVerifyResult missing() {
+            /**
+             * fingerprint验证结果。
+             * @param false false
+             * @param 40302 40302
+             * @param "缺少浏览器指纹" "缺少浏览器指纹"
+             * @param null 空
+             */
             return new FingerprintVerifyResult(false, 40302, "缺少浏览器指纹", null);
         }
 
         /**
          * 不支持指纹验证
+         * @return not支持的结果
          */
         public static FingerprintVerifyResult notSupported() {
+            /**
+             * fingerprint验证结果。
+             * @param false false
+             * @param 501 501
+             * @param "当前协议不支持指纹验证" "当前协议不支持指纹验证"
+             * @param null 空
+             */
             return new FingerprintVerifyResult(false, 501, "当前协议不支持指纹验证", null);
         }
 
         /**
          * 服务器错误
+         * @param message 消息
+         * @return 服务端错误的结果
          */
         public static FingerprintVerifyResult serverError(String message) {
+            /**
+             * fingerprint验证结果。
+             * @param false false
+             * @param 500 500
+             * @param message 消息
+             * @param null 空
+             */
             return new FingerprintVerifyResult(false, 500, message, null);
         }
     }
 
     /**
      * 在线用户查询参数
+     * @author CH
+     * @since 4.0.0
      */
     @Data
     @NoArgsConstructor
@@ -241,6 +293,8 @@ public interface Protocol {
 
     /**
      * 在线用户列表返回结果
+     * @author CH
+     * @since 4.0.0
      */
     @Data
     @NoArgsConstructor
@@ -263,20 +317,30 @@ public interface Protocol {
          */
         private int size;
 
+        /**
+         * 空。
+         * @return 空的结果
+         */
         public static OnlineUserResult empty() {
+            /**
+             * online用户结果。
+             * @param java.util.Collections.emptyList( Java.util.集合.空列表(
+             */
             return new OnlineUserResult(java.util.Collections.emptyList(), 0, 1, 20);
         }
     }
 
     /**
      * 在线用户信息
+     * @author CH
+     * @since 4.0.0
      */
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
     class OnlineUserInfo {
         /**
-         * 用户ID
+          * 用户标识
          */
         private String userId;
         /**
@@ -308,7 +372,7 @@ public interface Protocol {
          */
         private Long loginTime;
         /**
-         * Token
+          * 令牌
          */
         private String token;
         /**
@@ -361,6 +425,9 @@ public interface Protocol {
          * @return 默认在线状态
          */
         public static OnlineStatus defaultStatus() {
+            /**
+             * online状态。
+             */
             return new OnlineStatus();
         }
 

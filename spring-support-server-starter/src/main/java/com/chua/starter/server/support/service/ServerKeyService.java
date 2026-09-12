@@ -22,7 +22,7 @@ public interface ServerKeyService {
     ReturnResult<MsServerKey> create(MsServerKey key);
 
     /**
-     * 更新密钥（私钥/口令为空串时表示清空，null 表示保持不变）
+      * 更新密钥（私钥/口令为空串时表示清空，空 表示保持不变）
      *
      * @param id  主键
      * @param key 密钥

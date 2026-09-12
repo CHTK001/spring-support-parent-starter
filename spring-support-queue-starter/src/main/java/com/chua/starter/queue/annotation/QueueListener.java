@@ -24,9 +24,14 @@ import java.lang.annotation.*;
  *     }
  * }
  * }
+ * </pre>接接收反序列化后的对象
+ *     }
+ * }
+ * }
  * </pre>
  *
  * @since 2025-12-25
+ * @author CH
  */
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
@@ -34,14 +39,14 @@ import java.lang.annotation.*;
 public @interface QueueListener {
 
     /**
-     * 目标地址（topic/queue）
+      * 目标地址（topic/队列）
      *
      * @return 目标地址
      */
     String value();
 
     /**
-     * 消费组（Kafka/RocketMQ使用）
+       * 消费组（Kafka/RocketMQ使用）
      *
      * @return 消费组名称
      */

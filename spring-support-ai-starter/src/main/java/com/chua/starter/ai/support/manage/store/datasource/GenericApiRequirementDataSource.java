@@ -45,15 +45,28 @@ import java.util.*;
  *
  * @since 4.0.0.42
  * @author CH
+ * @param config 配置
+ * @param lastSyncAt 最后一个同步at
+ * @return 同步的结果
  */
 @Slf4j
 @Component
 @Spi("generic")
 public class GenericApiRequirementDataSource implements IRequirementDataSource {
 
-    private static final String TYPE = "generic";
-    private static final Duration HTTP_TIMEOUT = Duration.ofSeconds(30);
+    private static final String TYPE = "generic"; // 类型
+    private static final Duration HTTP_TIMEOUT = Duration.ofSeconds(30); // http超时
+    /**
+     * 类型。
+     * @return 类型的结果
+     * @param config 配置
+     * @param lastSyncAt 最后一个同步at
+     */
     private static final com.fasterxml.jackson.databind.ObjectMapper JSON = new com.fasterxml.jackson.databind.ObjectMapper();
+/**
+ * 类型。
+ * @return 类型的结果
+ */
 
     @Override
     public String type() {
@@ -76,7 +89,7 @@ public class GenericApiRequirementDataSource implements IRequirementDataSource {
             String authType = getString(config, "api_auth_type", "none");
             String authValue = getString(config, "api_auth_value");
 
-            // 构建请求 URL（拼接 query params）
+ // 构建请求 URL（拼接 查询 参数）
             String fullUrl = apiUrl;
             if (queryParams != null && !queryParams.isEmpty()) {
                 StringBuilder sb = new StringBuilder(fullUrl);
@@ -104,7 +117,7 @@ public class GenericApiRequirementDataSource implements IRequirementDataSource {
                 reqBuilder.header("X-API-Token", authValue);
             }
 
-            // 自定义 headers
+ // 自定义 头部
             if (headers != null) {
                 headers.forEach(reqBuilder::header);
             }
@@ -130,7 +143,7 @@ public class GenericApiRequirementDataSource implements IRequirementDataSource {
                 return 0;
             }
 
-            // 兼容两种格式：直接 array 或 { data: [...] } 或 { results: [...] }
+ // 兼容两种格式：直接 array 或 { 数据: [...] } 或 { 结果: [...] }
             List<Map<String, Object>> records = extractRecords(resp);
             if (records == null || records.isEmpty()) {
                 log.info("[GenericDS] API 返回 0 条记录: {}", fullUrl);
@@ -146,7 +159,9 @@ public class GenericApiRequirementDataSource implements IRequirementDataSource {
             for (Map<String, Object> raw : records) {
                 Map<String, Object> mapped = mapFields(raw, fieldMapping);
                 String title = getString(mapped, "title");
-                if (title == null || title.isEmpty()) continue;
+                if (title == null || title.isEmpty()) {
+                    continue;
+                }
 
                 String status = getString(mapped, "status");
                 if (statusMap != null && statusMap.containsKey(status)) {
@@ -181,7 +196,7 @@ public class GenericApiRequirementDataSource implements IRequirementDataSource {
             if (apiUrl == null) {
                 return false;
             }
-            // 发一次 HEAD 或 GET，验证连通性
+ // 发一次 HEAD 或 获取，验证连通性
             HttpClient client = HttpClient.newHttpClient();
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(apiUrl))
@@ -198,6 +213,8 @@ public class GenericApiRequirementDataSource implements IRequirementDataSource {
 
     /**
      * 从 API 响应中提取记录列表，兼容多种常见格式。
+     * @param resp resp
+     * @return extractRecords的结果
      */
     @SuppressWarnings("unchecked")
     private List<Map<String, Object>> extractRecords(Map<String, Object> resp) {
@@ -233,6 +250,12 @@ public class GenericApiRequirementDataSource implements IRequirementDataSource {
     }
 
     @SuppressWarnings("unchecked")
+    /**
+     * 映射字段。
+     * @param raw raw
+     * @param fieldMapping 字段mapping
+     * @return 映射字段的结果
+     */
     private Map<String, Object> mapFields(Map<String, Object> raw, Map<String, String> fieldMapping) {
         Map<String, Object> mapped = new LinkedHashMap<>();
         if (fieldMapping == null) {
@@ -250,7 +273,13 @@ public class GenericApiRequirementDataSource implements IRequirementDataSource {
         return mapped;
     }
 
-    /** 通过点分路径从嵌套 Map 中取值：如 "status.name" → map.get("status").get("name") */
+    /**
+     * 通过点分路径从嵌套 映射 中取值：如 "状态.名称" → 映射.获取("状态").获取("名称")
+     *
+     * @param map 映射
+     * @param path 点分路径
+     * @return 路径处的值（不存在返回 null）
+     */
     @SuppressWarnings("unchecked")
     private Object getByDotPath(Map<String, Object> map, String path) {
         if (map == null || path == null) {
@@ -276,6 +305,12 @@ public class GenericApiRequirementDataSource implements IRequirementDataSource {
     }
 
     private String getString(Map<String, Object> map, String key, String defaultValue) {
+        /**
+         * 解析json。
+         * @param json json
+         * @return 解析json的结果
+         * @param obj obj
+         */
         Object v = map.get(key);
         return v != null ? v.toString() : defaultValue;
     }

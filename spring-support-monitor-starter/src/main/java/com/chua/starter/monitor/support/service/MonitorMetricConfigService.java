@@ -6,7 +6,7 @@ import com.chua.starter.monitor.support.entity.MsMonitorMetricConfig;
 import java.util.List;
 
 /**
- * 监控解析规则 Service
+   * 监控解析规则 服务
  *
  * @since 2026/8/4
  * @author CH
@@ -40,7 +40,7 @@ public interface MonitorMetricConfigService {
     /**
      * 按任务列出
      *
-     * @param taskId 任务 id
+     * @param taskId 任务 标识
      * @return 列表
      */
     ReturnResult<List<MsMonitorMetricConfig>> listByTask(Long taskId);

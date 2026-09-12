@@ -43,14 +43,14 @@ public class ScheduledAnnotationScanner implements BeanPostProcessor, SmartIniti
     /**
      * 构造扫描器。
      *
-     * @param taskScheduler Spring TaskScheduler
+     * @param taskScheduler Spring 任务调度器
      */
     public ScheduledAnnotationScanner(TaskScheduler taskScheduler) {
         this.taskScheduler = taskScheduler;
     }
 
     @Override
-    /** Post处理AfterInitialization */
+    /** Post处理之后initialization */
     public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
         Class<?> targetClass = ClassUtils.getUserClass(bean);
         java.util.Map<Method, Scheduled> annotated = null;
@@ -66,13 +66,19 @@ public class ScheduledAnnotationScanner implements BeanPostProcessor, SmartIniti
             return bean;
         }
         for (java.util.Map.Entry<Method, Scheduled> entry : annotated.entrySet()) {
+            /**
+             * 调度。
+             * @param targetClass Target类
+             * @param bean Bean
+             * @param entry.getKey( entry.获取键(
+             */
             schedule(targetClass, bean, entry.getKey(), entry.getValue());
         }
         return bean;
     }
 
     @Override
-    /** AfterSingletonsInstantiated */
+    /** 之后单例instantiated */
     public void afterSingletonsInstantiated() {
         log.info("[job] @Scheduled 扫描完成, 共注册 {} 个定时任务", registeredCount.get());
     }
@@ -81,7 +87,7 @@ public class ScheduledAnnotationScanner implements BeanPostProcessor, SmartIniti
      * 将方法注册为定时任务。
      *
      * @param targetClass 业务类
-     * @param bean        业务 bean
+     * @param bean        业务 Bean
      * @param method      方法
      * @param ann         Spring {@link Scheduled} 注解
      */

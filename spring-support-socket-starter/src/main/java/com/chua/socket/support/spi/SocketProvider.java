@@ -9,10 +9,10 @@ import com.chua.socket.support.session.SocketSessionTemplate;
 import java.util.List;
 
 /**
- * Socket 服务提供者接口（SPI）
- * 定义 Socket 服务的创建和生命周期管理
+   * 套接字 服务提供者接口（SPI）
+   * 定义 套接字 服务的创建和生命周期管理
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024-12-04
  * @author CH
  */

@@ -14,10 +14,10 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * RSocket 会话实现
- * 基于 Spring WebSocket
+   * r套接字 会话实现
+   * 基于 Spring web套接字
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024-12-04
  * @author CH
  */
@@ -30,46 +30,46 @@ public class RSocketSessionImpl implements SocketSession {
     private static final ObjectMapper objectMapper = new ObjectMapper();
     /** 会话 */
     private final WebSocketSession session;
-    private final Map<String, Object> attributes = new ConcurrentHashMap<>();
-    /** 客户端ID */
+    private final Map<String, Object> attributes = new ConcurrentHashMap<>(); // attributes
+    /** 客户端标识 */
     private String clientId;
     /** 用户 */
     private SocketUser user;
 
     /**
-     * 创建 RSocketSessionImpl 实例
-     * @param session session
+      * 创建 r套接字会话impl 实例
+     * @param session 会话
      */
     public RSocketSessionImpl(WebSocketSession session) {
         this.session = session;
     }
 
     @Override
-    /** 获取Id */
+    /** 获取标识 */
     public String getId() {
         return session.getId();
     }
 
     @Override
-    /** 获取ClientId */
+    /** 获取客户端标识 */
     public String getClientId() {
         return clientId;
     }
 
     @Override
-    /** 设置ClientId */
+    /** 设置客户端标识 */
     public void setClientId(String clientId) {
         this.clientId = clientId;
     }
 
     @Override
-    /** 获取User */
+    /** 获取用户 */
     public SocketUser getUser() {
         return user;
     }
 
     @Override
-    /** 设置User */
+    /** 设置用户 */
     public void setUser(SocketUser user) {
         this.user = user;
     }
@@ -82,7 +82,12 @@ public class RSocketSessionImpl implements SocketSession {
 
     @Override
     @SuppressWarnings("unchecked")
-    /** 获取Attribute */
+    /**
+     * 获取Attribute
+     *
+     * @param key 钥匙
+     * @return 获取attribute的结果
+     */
     public <T> T getAttribute(String key) {
         return (T) attributes.get(key);
     }
@@ -100,7 +105,7 @@ public class RSocketSessionImpl implements SocketSession {
     }
 
     @Override
-    /** 是否Connected */
+    /** 是否连接 */
     public boolean isConnected() {
         return session.isOpen();
     }
@@ -149,13 +154,20 @@ public class RSocketSessionImpl implements SocketSession {
 
     @Override
     @SuppressWarnings("unchecked")
-    /** 获取Connection */
+    /**
+     * 获取Connection
+     *
+     * @return 获取connection的结果
+     */
     public <T> T getConnection() {
         return (T) session;
     }
 
     /**
      * 创建消息
+     * @param event 事件
+     * @param data 数据
+     * @return 创建消息的结果
      */
     private String createMessage(String event, Object data) {
         try {

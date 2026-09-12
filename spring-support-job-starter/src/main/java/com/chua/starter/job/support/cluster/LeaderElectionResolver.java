@@ -1,7 +1,7 @@
 package com.chua.starter.job.support.cluster;
 
 /**
- * Leader 选举解析器 SPI, 用于生产环境接入真实选主 (MySQL 行锁 / Redis SETNX / etcd 等)。
+   * 铅 选举解析器 SPI, 用于生产环境接入真实选主 (MySQL 行锁 / Redis SETNX / etcd 等)。
  *
  * <p>默认实现见 {@link LeaderElector} 内部 CAS, 单进程自认 Leader,
  * 适合单机或调试; 多进程场景请实现本接口覆盖。</p>

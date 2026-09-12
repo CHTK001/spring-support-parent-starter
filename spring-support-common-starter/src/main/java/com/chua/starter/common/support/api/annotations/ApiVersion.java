@@ -12,7 +12,7 @@ import java.lang.annotation.*;
  *
  * <h3>处理优先级：8（映射注册阶段最低）</h3>
  * <p>
- * 映射注册阶段优先级顺序：@ApiProfile(6) &gt; @ApiPlatform(7) &gt; @ApiVersion(8)
+   * 映射注册阶段优先级顺序：@api配置文件(6) &gt; @apiplatform(7) &gt; @api版本(8)
  * </p>
  * <p>
  * 处理阶段：映射注册阶段（应用启动时），为接口添加版本匹配条件。
@@ -66,9 +66,10 @@ import java.lang.annotation.*;
  * </pre>
  *
  * @since 2020-09-23
- * @version 1.1.0
+   * @版本 1.1.0
  * @see com.chua.starter.common.support.api.control.ApiVersionCondition
  * @see com.chua.starter.common.support.api.control.ApiVersionRequestMappingHandlerMapping
+ * @author CH
  */
 @Target({ElementType.METHOD, ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)

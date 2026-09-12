@@ -54,12 +54,12 @@ public class DataSourceScriptProperties {
     /**
      * 默认扫描路径
      * <p>
-     * 推荐各业务模块将结构初始化脚本与初始化数据脚本统一放在 db/init 目录：
+      * 推荐各业务模块将结构初始化脚本与初始化数据脚本统一放在 db/初始化 目录：
      * <ul>
      *   <li>V1.0__init_xxx_complete.sql</li>
      *   <li>V1.0__initdata_xxx.sql</li>
      * </ul>
-     * migration / sync 路径仍然保留兼容能力，但更推荐在业务模块内收敛到单一 init 目录。
+      * migration / 同步 路径仍然保留兼容能力，但更推荐在业务模块内收敛到单一 初始化 目录。
      * </p>
      */
     public static final String DEFAULT_SCRIPT_PATH =
@@ -75,48 +75,48 @@ public class DataSourceScriptProperties {
     /**
      * 表结构脚本扫描模式
      * <p>
-     * NONE   : 不扫描
+      * 无   : 不扫描
      * ONCE   : 仅当当前数据库没有任何业务表时扫描一次
      * ALWAYS : 每次启动都扫描
      * </p>
      * 默认值: ONCE
-     * 示例: plugin.datasource.script.scan-mode=ALWAYS
+      * 示例: plugin.datasource.script.扫描-mode=ALWAYS
      */
     private ScanMode scanMode = ScanMode.ONCE;
 
     /**
      * 升级补丁脚本扫描模式
      * <p>
-     * NONE   : 不扫描
+      * 无   : 不扫描
      * ALWAYS : 每次启动都扫描
      * </p>
      * 默认值: ALWAYS
-     * 示例: plugin.datasource.script.migration-scan-mode=NONE
+      * 示例: plugin.datasource.script.migration-扫描-mode=无
      */
     private RepeatableScanMode migrationScanMode = RepeatableScanMode.ALWAYS;
 
     /**
      * 初始化数据脚本扫描模式
      * <p>
-     * NONE   : 不扫描
+      * 无   : 不扫描
      * ONCE   : 仅当当前数据库不存在业务数据时扫描一次
      * ALWAYS : 每次启动都扫描
      * </p>
      * 默认值: ONCE
-     * 示例: plugin.datasource.script.data-scan-mode=ALWAYS
+      * 示例: plugin.datasource.script.数据-扫描-mode=ALWAYS
      */
     private ScanMode dataScanMode = ScanMode.ONCE;
 
     /**
      * 是否继续执行脚本，如果某个脚本执行失败，是否继续执行下一个脚本
      * 默认值: false
-     * 示例: plugin.datasource.script.continue-on-error=true
+      * 示例: plugin.datasource.script.继续-on-错误=true
      */
     private boolean continueOnError = true;
     /**
-     * 是否忽略失败的DROP语句
+      * 是否忽略失败的掉落语句
      * 默认值: true
-     * 示例: plugin.datasource.script.ignore-failed-drops=true
+      * 示例: plugin.datasource.script.ignore-失败-掉落=true
      */
     private boolean ignoreFailedDrops = true;
 
@@ -131,25 +131,25 @@ public class DataSourceScriptProperties {
     /**
      * 脚本编码
      * 默认值: UTF-8
-     * 示例: plugin.datasource.script.encoding=UTF-8
+      * 示例: plugin.datasource.script.编码=UTF-8
      */
     private String sqlScriptEncoding = "UTF-8";
     /**
      * 数据源脚本路径
      * <p>
      * 支持多个路径，使用英文逗号、分号或换行分隔。
-     * 推荐值：classpath*:db/init/*.sql
+       * 推荐值：类路径*:db/初始化/*.SQL
      * </p>
-     * 默认值: classpath*:db/init/*.sql,classpath*:db/migration/*.sql,classpath*:db/sync/*.sql
-     * 示例: plugin.datasource.script.script-path=classpath*:db/init/*.sql
+       * 默认值: 类路径*:db/初始化/*.SQL,类路径*:db/migration/*.SQL,类路径*:db/同步/*.SQL
+       * 示例: plugin.datasource.script.script-路径=类路径*:db/初始化/*.SQL
      */
     private String scriptPath = DEFAULT_SCRIPT_PATH;
 
     /**
      * 数据库类型
      * 用于指定特定数据库的脚本目录
-     * 默认值: null (不指定数据库类型)
-     * 示例: plugin.datasource.script.database-type=mysql
+      * 默认值: 空 (不指定数据库类型)
+       * 示例: plugin.datasource.script.database-类型=MySQL
      */
     private String databaseType;
 
@@ -163,21 +163,21 @@ public class DataSourceScriptProperties {
     /**
      * 是否禁用清理
      * 默认: true
-     * 示例: plugin.datasource.script.clean-disabled=false
+      * 示例: plugin.datasource.script.clean-已禁用=false
      */
     private boolean cleanDisabled = true;
 
     /**
      * 版本记录表名
-     * 默认值: sys_database_version
-     * 示例: plugin.datasource.script.version-table=flyway_schema_history
+      * 默认值: sys_database_版本
+       * 示例: plugin.datasource.script.版本-table=Flyway_模式_历史
      */
     private String versionTable = "sys_database_version";
 
     /**
      * 基线版本号
      * 默认值: 1.0.0
-     * 示例: plugin.datasource.script.baseline-version=1.0.0
+      * 示例: plugin.datasource.script.baseline-版本=1.0.0
      */
     private String baselineVersion = "1.0.0";
 
@@ -191,42 +191,42 @@ public class DataSourceScriptProperties {
     /**
      * 脚本文件名前缀
      * 默认值: V
-     * 示例: plugin.datasource.script.script-prefix=V
+      * 示例: plugin.datasource.script.script-前缀=V
      */
     private String scriptPrefix = "V";
 
     /**
      * 脚本文件名后缀
-     * 默认值: .sql
-     * 示例: plugin.datasource.script.script-suffix=.sql
+      * 默认值: .SQL
+       * 示例: plugin.datasource.script.script-后缀=.SQL
      */
     private String scriptSuffix = ".sql";
 
     /**
      * 版本分隔符
      * 默认值: __
-     * 示例: plugin.datasource.script.version-separator=__
+      * 示例: plugin.datasource.script.版本-separator=__
      */
     private String versionSeparator = "__";
 
     /**
      * 是否验证脚本校验和
      * 默认值: true
-     * 示例: plugin.datasource.script.validate-checksum=false
+      * 示例: plugin.datasource.script.校验-校验和=false
      */
     private boolean validateChecksum = true;
 
     /**
      * 是否允许混合模式（允许非版本化脚本）
      * 默认值: false
-     * 示例: plugin.datasource.script.mixed=true
+      * 示例: plugin.datasource.script.混合=true
      */
     private boolean mixed = false;
 
     /**
      * 脚本执行超时时间（秒）
      * 默认值: 0（无超时）
-     * 示例: plugin.datasource.script.timeout=300
+      * 示例: plugin.datasource.script.超时=300
      */
     private int timeout = 0;
 
@@ -240,15 +240,15 @@ public class DataSourceScriptProperties {
     /**
      * 允许执行的版本类型
      * 默认值: STABLE（只执行正式版本）
-     * 示例: plugin.datasource.script.release-type=STABLE
-     * 可选值: SNAPSHOT, ALPHA, BETA, RC, STABLE, ALL
+      * 示例: plugin.datasource.script.release-类型=st
+      * 可选值: SNAPSHOT, ALPHA, BETA, RC, st, 全部
      */
     private ReleaseType releaseType = ReleaseType.STABLE;
 
     /**
      * 允许执行的版本类型集合（用于更精细控制）
-     * 当设置此属性时，会覆盖 releaseType 的配置
-     * 示例: plugin.datasource.script.allowed-release-types=STABLE,RC
+      * 当设置此属性时，会覆盖 release类型 的配置
+      * 示例: plugin.datasource.script.allowed-release-类型=st,RC
      */
     private Set<ReleaseType> allowedReleaseTypes;
 
@@ -263,19 +263,19 @@ public class DataSourceScriptProperties {
     /**
      * 初始化数据脚本(initdata)的等待超时时间（分钟）
      * 默认值: 5
-     * 示例: plugin.datasource.script.initdata-timeout-minutes=10
+      * 示例: plugin.datasource.script.initdata-超时-minutes=10
      */
     private int initdataTimeoutMinutes = 5;
 
     /**
      * 数据库初始化脚本的安装判断范围
      * <p>
-     * table（默认）: 基于业务表判断 — 在 isDatabaseEmpty() 中排除已知系统表前缀（如 sys_），
+      * table（默认）: 基于业务表判断 — 在 是否database空() 中排除已知系统表前缀（如 sys_），
      *               避免其他模块创建的系统表导致初始化脚本被跳过。
-     * file: 基于表全量判断 — 保持原行为，仅在数据库完全为空时执行初始化脚本。
+      * 文件: 基于表全量判断 — 保持原行为，仅在数据库完全为空时执行初始化脚本。
      * </p>
      * 默认值: table
-     * 示例: plugin.datasource.script.scope=file
+      * 示例: plugin.datasource.script.scope=文件
      */
     private String scope = "table";
 
@@ -283,135 +283,263 @@ public class DataSourceScriptProperties {
      * 空库判断时排除的表名前缀列表
      * 仅在 scope=table 时生效
      * 默认值: ["sys_"]
-     * 示例: plugin.datasource.script.exclude-table-prefixes=sys_,act_
+      * 示例: plugin.datasource.script.exclude-table-前缀=sys_,行为_
      */
     private String[] excludeTablePrefixes = {"sys_"};
 
     // Getter 方法（Lombok 在 Java 25 下可能不工作，手动添加）
+    /**
+     * 是否enable。
+     * @return 是否enable的结果
+     */
     public boolean isEnable() {
         return enable;
     }
 
+    /**
+     * 是否继续on错误。
+     * @return 是否继续on错误的结果
+     */
     public boolean isContinueOnError() {
         return continueOnError;
     }
 
+    /**
+     * 获取扫描mode。
+     * @return 获取扫描mode的结果
+     */
     public ScanMode getScanMode() {
         return scanMode;
     }
 
+    /**
+     * 获取effective扫描mode。
+     * @return 获取effective扫描mode的结果
+     */
     public ScanMode getEffectiveScanMode() {
         return enable ? scanMode : ScanMode.NONE;
     }
 
+    /**
+     * 获取模式扫描mode。
+     * @return 获取模式扫描mode的结果
+     */
     public ScanMode getSchemaScanMode() {
         return scanMode;
     }
 
+    /**
+     * 获取effective模式扫描mode。
+     * @return 获取effective模式扫描mode的结果
+     */
     public ScanMode getEffectiveSchemaScanMode() {
         return enable ? scanMode : ScanMode.NONE;
     }
 
+    /**
+     * 获取migration扫描mode。
+     * @return 获取migration扫描mode的结果
+     */
     public RepeatableScanMode getMigrationScanMode() {
         return migrationScanMode;
     }
 
+    /**
+     * 获取effectivemigration扫描mode。
+     * @return 获取effectivemigration扫描mode的结果
+     */
     public RepeatableScanMode getEffectiveMigrationScanMode() {
         return enable ? migrationScanMode : RepeatableScanMode.NONE;
     }
 
+    /**
+     * 获取数据扫描mode。
+     * @return 获取数据扫描mode的结果
+     */
     public ScanMode getDataScanMode() {
         return dataScanMode;
     }
 
+    /**
+     * 获取effective数据扫描mode。
+     * @return 获取effective数据扫描mode的结果
+     */
     public ScanMode getEffectiveDataScanMode() {
         return enable ? dataScanMode : ScanMode.NONE;
     }
 
+    /**
+     * 获取separator。
+     * @return 获取separator的结果
+     */
     public String getSeparator() {
         return separator;
     }
 
+    /**
+     * 获取sqlscript编码。
+     * @return 获取sqlscript编码的结果
+     */
     public String getSqlScriptEncoding() {
         return sqlScriptEncoding;
     }
 
+    /**
+     * 获取script路径。
+     * @return 获取script路径的结果
+     */
     public String getScriptPath() {
         return scriptPath;
     }
 
+    /**
+     * 获取database类型。
+     * @return 获取database类型的结果
+     */
     public String getDatabaseType() {
         return databaseType;
     }
 
+    /**
+     * 是否baselineonmigrate。
+     * @return 是否baselineonmigrate的结果
+     */
     public boolean isBaselineOnMigrate() {
         return baselineOnMigrate;
     }
 
+    /**
+     * 是否clean已禁用。
+     * @return 是否clean已禁用的结果
+     */
     public boolean isCleanDisabled() {
         return cleanDisabled;
     }
 
+    /**
+     * 获取版本table。
+     * @return 获取版本table的结果
+     */
     public String getVersionTable() {
         return versionTable;
     }
 
+    /**
+     * 获取baseline版本。
+     * @return 获取baseline版本的结果
+     */
     public String getBaselineVersion() {
         return baselineVersion;
     }
 
+    /**
+     * 获取baselinedescription。
+     * @return 获取baselinedescription的结果
+     */
     public String getBaselineDescription() {
         return baselineDescription;
     }
 
+    /**
+     * 获取script前缀。
+     * @return 获取script前缀的结果
+     */
     public String getScriptPrefix() {
         return scriptPrefix;
     }
 
+    /**
+     * 获取script后缀。
+     * @return 获取script后缀的结果
+     */
     public String getScriptSuffix() {
         return scriptSuffix;
     }
 
+    /**
+     * 获取版本separator。
+     * @return 获取版本separator的结果
+     */
     public String getVersionSeparator() {
         return versionSeparator;
     }
 
+    /**
+     * 是否校验校验和。
+     * @return 是否校验校验和的结果
+     */
     public boolean isValidateChecksum() {
         return validateChecksum;
     }
 
+    /**
+     * 是否混合。
+     * @return 是否混合的结果
+     */
     public boolean isMixed() {
         return mixed;
     }
 
+    /**
+     * 获取超时。
+     * @return 获取超时的结果
+     */
     public int getTimeout() {
         return timeout;
     }
 
+    /**
+     * 是否verbose。
+     * @return 是否verbose的结果
+     */
     public boolean isVerbose() {
         return verbose;
     }
 
+    /**
+     * 获取release类型。
+     * @return 获取release类型的结果
+     */
     public ReleaseType getReleaseType() {
         return releaseType;
     }
 
+    /**
+     * 获取allowedrelease类型。
+     * @return 获取allowedrelease类型的结果
+     */
     public Set<ReleaseType> getAllowedReleaseTypes() {
         return allowedReleaseTypes;
     }
 
+    /**
+     * 获取initdataparallelism。
+     * @return 获取initdataparallelism的结果
+     */
     public int getInitdataParallelism() {
         return initdataParallelism;
     }
 
+    /**
+     * 获取initdata超时minutes。
+     * @return 获取initdata超时minutes的结果
+     */
     public int getInitdataTimeoutMinutes() {
         return initdataTimeoutMinutes;
     }
 
+    /**
+     * 获取scope。
+     * @return 获取scope的结果
+     */
     public String getScope() {
         return scope;
     }
 
+    /**
+     * 获取excludetable前缀。
+     * @return 获取excludetable前缀的结果
+     */
     public String[] getExcludeTablePrefixes() {
         return excludeTablePrefixes;
     }
@@ -428,36 +556,54 @@ public class DataSourceScriptProperties {
         
         /**
          * 快照版本
-         * 示例: V1.0.0-SNAPSHOT__init_user.sql
+           * 示例: V1.0.0-SNAPSHOT__初始化_用户.SQL
+         * @param "snapshot" "snapshot"
+         * @param 0 0
+         * @return SNAPSHOT的结果
          */
         SNAPSHOT("snapshot", 0),
         
         /**
          * Alpha 内部测试版本
-         * 示例: V1.0.0-alpha__init_user.sql
+           * 示例: V1.0.0-alpha__初始化_用户.SQL
+         * @param "alpha" "alpha"
+         * @param 1 1
+         * @return ALPHA的结果
          */
         ALPHA("alpha", 1),
         
         /**
          * Beta 公开测试版本
-         * 示例: V1.0.0-beta__init_user.sql
+           * 示例: V1.0.0-beta__初始化_用户.SQL
+         * @param "beta" "beta"
+         * @param 2 2
+         * @return BETA的结果
          */
         BETA("beta", 2),
         
         /**
          * RC（Release Candidate）候选发布版本
-         * 示例: V1.0.0-rc1__init_user.sql
+           * 示例: V1.0.0-rc1__初始化_用户.SQL
+         * @param "rc" "rc"
+         * @param 3 3
+         * @return RC的结果
          */
         RC("rc", 3),
         
         /**
          * 正式稳定版本
-         * 示例: V1.0.0__init_user.sql
+           * 示例: V1.0.0__初始化_用户.SQL
+         * @param "stable" "stable"
+         * @param 4 4
+         * @return st的结果
          */
         STABLE("stable", 4),
         
         /**
          * 允许所有版本类型
+         * @param "all" "全部"
+         * @param 99 99
+         * @return 全部的结果
          */
         ALL("all", 99);
 
@@ -522,6 +668,8 @@ public class DataSourceScriptProperties {
 
     /**
      * 数据库脚本扫描模式
+     * @author CH
+     * @since 4.0.0
      */
     public enum ScanMode {
         /**
@@ -540,6 +688,8 @@ public class DataSourceScriptProperties {
 
     /**
      * 可重复执行脚本扫描模式
+     * @author CH
+     * @since 4.0.0
      */
     public enum RepeatableScanMode {
         /**

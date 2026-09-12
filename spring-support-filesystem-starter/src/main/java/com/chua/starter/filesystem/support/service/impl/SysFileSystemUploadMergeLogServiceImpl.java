@@ -23,7 +23,7 @@ public class SysFileSystemUploadMergeLogServiceImpl
         implements SysFileSystemUploadMergeLogService {
 
     /**
-     * 系统默认操作人 ID
+      * 系统默认操作人 标识
      */
     private static final int SYSTEM_USER_ID = 0;
 
@@ -34,7 +34,15 @@ public class SysFileSystemUploadMergeLogServiceImpl
 
     @Override
     @Transactional
-    /** Record */
+    /**
+     * Record
+     *
+     * @param uploadId uploadid
+     * @param success 成功
+     * @param message 消息
+     * @param retryCount 重试数量
+     * @return record的结果
+     */
     public boolean record(String uploadId, boolean success, String message, int retryCount) {
         SysFileSystemUploadMergeLog log = new SysFileSystemUploadMergeLog();
         LocalDateTime now = LocalDateTime.now();
@@ -57,7 +65,7 @@ public class SysFileSystemUploadMergeLogServiceImpl
     }
 
     @Override
-    /** ListByUploadId */
+    /** 列表byuploadid */
     public List<SysFileSystemUploadMergeLog> listByUploadId(String uploadId) {
         return list(new LambdaQueryWrapper<SysFileSystemUploadMergeLog>()
                 .eq(SysFileSystemUploadMergeLog::getFilesystemUploadMergeLogUploadId, uploadId)
@@ -66,7 +74,12 @@ public class SysFileSystemUploadMergeLogServiceImpl
 
     @Override
     @Transactional
-    /** 删除ByUploadId */
+    /**
+     * 删除byuploadid
+     *
+     * @param uploadId uploadid
+     * @return 删除byuploadid的结果
+     */
     public boolean deleteByUploadId(String uploadId) {
         return remove(new LambdaQueryWrapper<SysFileSystemUploadMergeLog>()
                 .eq(SysFileSystemUploadMergeLog::getFilesystemUploadMergeLogUploadId, uploadId));

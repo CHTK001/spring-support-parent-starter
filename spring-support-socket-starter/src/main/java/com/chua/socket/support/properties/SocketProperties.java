@@ -12,10 +12,10 @@ import java.util.List;
 import static com.chua.socket.support.properties.SocketProperties.PRE;
 
 /**
- * Socket 基础配置属性类
- * 提供统一的 Socket 配置，支持多种协议切换
+   * 套接字 基础配置属性类
+   * 提供统一的 套接字 配置，支持多种协议切换
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024-12-04
  * @author CH
  */
@@ -32,7 +32,7 @@ public class SocketProperties {
     private boolean enable;
 
     /**
-     * 是否在 Spring 容器启动阶段自动启动 Socket 服务
+      * 是否在 Spring 容器启动阶段自动启动 套接字 服务
      * <p>
      * 关闭后仍会创建对应的 {@link com.chua.socket.support.session.SocketSessionTemplate} Bean，
      * 但不会在应用启动时自动监听端口，适合由外部逻辑或运维脚本显式控制生命周期。
@@ -43,7 +43,7 @@ public class SocketProperties {
     /**
      * 房间配置列表
      * <p>
-     * 支持配置多个独立的 Socket 服务实例，每个实例可以有不同的端口和路径
+      * 支持配置多个独立的 套接字 服务实例，每个实例可以有不同的端口和路径
      * </p>
      * 示例配置：
      * <pre>
@@ -64,7 +64,7 @@ public class SocketProperties {
 
     /**
      * 协议类型，默认 sse
-     * 可选值：socketio, rsocket, sse
+       * 可选值：套接字.IO, rsocket, sse
      */
     private SocketProtocol protocol = SocketProtocol.SSE;
 
@@ -72,7 +72,7 @@ public class SocketProperties {
      * 多协议配置列表（可选）
      * <p>
      * 支持同时启用多种协议，每种协议可独立配置房间
-     * 如果配置了此项，将忽略单一的 protocol 和 room 配置
+      * 如果配置了此项，将忽略单一的 协议 和 room 配置
      * </p>
      * 示例配置：
      * <pre>
@@ -92,7 +92,7 @@ public class SocketProperties {
 
     /**
      * 获取有效的协议配置列表
-     * 优先返回 protocols 配置，如果为空则将单一 protocol 配置转换为列表
+      * 优先返回 协议 配置，如果为空则将单一 协议 配置转换为列表
      *
      * @return 协议配置列表
      */
@@ -178,7 +178,7 @@ public class SocketProperties {
     private String authFactory;
 
     /**
-     * 是否使用 Linux 的 Native Epoll
+      * 是否使用 Linux 的 NAT Epoll
      */
     private boolean useLinuxNativeEpoll;
 
@@ -461,7 +461,7 @@ public class SocketProperties {
     }
 
     /**
-     * 获取是否使用Linux的Native Epoll
+      * 获取是否使用Linux的NAT Epoll
      *
      * @return 是否使用Linux的Native Epoll
      */
@@ -470,9 +470,9 @@ public class SocketProperties {
     }
 
     /**
-     * 设置是否使用Linux的Native Epoll
+      * 设置是否使用Linux的NAT Epoll
      *
-     * @param useLinuxNativeEpoll 是否使用Linux的Native Epoll
+     * @param useLinuxNativeEpoll 是否使用Linux的NAT Epoll
      */
     public void setUseLinuxNativeEpoll(boolean useLinuxNativeEpoll) {
         this.useLinuxNativeEpoll = useLinuxNativeEpoll;
@@ -480,6 +480,8 @@ public class SocketProperties {
 
     /**
      * 协议配置
+     * @author CH
+     * @since 4.0.0
      */
     @Data
     public static class ProtocolConfig {
@@ -533,6 +535,8 @@ public class SocketProperties {
 
     /**
      * 房间配置
+     * @author CH
+     * @since 4.0.0
      */
     @Data
     public static class Room {
@@ -543,7 +547,7 @@ public class SocketProperties {
         private String clientId = "default";
 
         /**
-         * 上下文路径，如 /webrtc、/shell 等
+          * 上下文路径，如 /WebRTC、/Shell 等
          */
         private String contextPath = "/socket.io";
 

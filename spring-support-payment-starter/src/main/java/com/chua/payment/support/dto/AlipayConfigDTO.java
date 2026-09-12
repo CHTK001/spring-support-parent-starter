@@ -16,7 +16,7 @@ public class AlipayConfigDTO {
     private String privateKey;
     /** 公开密钥 */
     private String publicKey;
-    /** NotifyURL */
+    /** 通知url */
     private String notifyUrl;
     /** Sandbox */
     private Boolean sandbox;

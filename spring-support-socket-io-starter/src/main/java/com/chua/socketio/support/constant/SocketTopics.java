@@ -1,27 +1,32 @@
 package com.chua.socketio.support.constant;
 
 /**
- * Socket.IO 主题常量
+   * 套接字.IO 主题常量
  * <p>
  * 命名格式: 项目:模块:功能
- * 例如: monitor:docker:pull_progress, system:message:push
+   * 例如: 监控:Docker:拉手_进步, 系统:消息:push
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024-12-04
+ * @author CH
  */
 public final class SocketTopics {
 
-    /** 创建 SocketTopics 实例 */
+    /** 创建 套接字topics 实例 */
     private SocketTopics() {
         // 私有构造函数，防止实例化
     }
     /**
-     * 服务模块主题 (service)
+      * 服务模块主题 (服务)
      * 用于服务级别的通用功能
      */
     public static final class Service {
 
-        /** 创建 Service 实例 */
+        /**
+         * 创建 服务 实例
+         *
+         * @return 服务的结果
+         */
         private Service() {
         }
 
@@ -33,12 +38,16 @@ public final class SocketTopics {
             public static final String PUSH = "service:message:push";
             /** Notification */
             public static final String NOTIFICATION = "service:message:notification";
-            /** Read */
+            /** 读取 */
             public static final String READ = "service:message:read";
-            /** Delete */
+            /** 删除 */
             public static final String DELETE = "service:message:delete";
 
-            /** 创建 Message 实例 */
+            /**
+             * 创建 消息 实例
+             *
+             * @return 消息的结果
+             */
             private Message() {
             }
         }
@@ -49,7 +58,7 @@ public final class SocketTopics {
         public static final class Operation {
             /** 开始 */
             public static final String START = "service:operation:start";
-            /** Stop */
+            /** 停止 */
             public static final String STOP = "service:operation:stop";
             /** Restart */
             public static final String RESTART = "service:operation:restart";
@@ -57,25 +66,33 @@ public final class SocketTopics {
             public static final String STATUS = "service:operation:status";
             /** 日志 */
             public static final String LOG = "service:operation:log";
-            /** Progress */
+            /** 进步 */
             public static final String PROGRESS = "service:operation:progress";
-            /** Complete */
+            /** 完成 */
             public static final String COMPLETE = "service:operation:complete";
             /** 错误 */
             public static final String ERROR = "service:operation:error";
 
-            /** 创建 Operation 实例 */
+            /**
+             * 创建 Operation 实例
+             *
+             * @return Operation的结果
+             */
             private Operation() {
             }
         }
     }
     /**
-     * 系统模块主题 (system)
+      * 系统模块主题 (系统)
      * 用于系统级别的通用功能
      */
     public static final class System {
 
-        /** 创建 System 实例 */
+        /**
+         * 创建 系统 实例
+         *
+         * @return 系统的结果
+         */
         private System() {
         }
 
@@ -87,12 +104,16 @@ public final class SocketTopics {
             public static final String PUSH = "system:message:push";
             /** Notification */
             public static final String NOTIFICATION = "system:message:notification";
-            /** Read */
+            /** 读取 */
             public static final String READ = "system:message:read";
-            /** Delete */
+            /** 删除 */
             public static final String DELETE = "system:message:delete";
 
-            /** 创建 Message 实例 */
+            /**
+             * 创建 消息 实例
+             *
+             * @return 消息的结果
+             */
             private Message() {
             }
         }
@@ -110,7 +131,11 @@ public final class SocketTopics {
             /** Kick */
             public static final String KICK = "system:user:kick";
 
-            /** 创建 User 实例 */
+            /**
+             * 创建 用户 实例
+             *
+             * @return 用户的结果
+             */
             private User() {
             }
         }
@@ -119,12 +144,16 @@ public final class SocketTopics {
          * 配置相关
          */
         public static final class Config {
-            /** Update */
+            /** 更新 */
             public static final String UPDATE = "system:config:update";
             /** 版本 */
             public static final String VERSION = "system:config:version";
 
-            /** 创建 Config 实例 */
+            /**
+             * 创建 配置 实例
+             *
+             * @return 配置的结果
+             */
             private Config() {
             }
         }
@@ -133,12 +162,16 @@ public final class SocketTopics {
          * 权限相关
          */
         public static final class Auth {
-            /** Token_expired */
+            /** 令牌_expired */
             public static final String TOKEN_EXPIRED = "system:auth:token_expired";
-            /** Permission_change */
+            /** 权限_改变 */
             public static final String PERMISSION_CHANGE = "system:auth:permission_change";
 
-            /** 创建 Auth 实例 */
+            /**
+             * 创建 认证 实例
+             *
+             * @return 认证的结果
+             */
             private Auth() {
             }
         }

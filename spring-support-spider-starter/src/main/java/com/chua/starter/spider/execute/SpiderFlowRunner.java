@@ -117,15 +117,30 @@ public class SpiderFlowRunner {
     @Transactional(rollbackFor = Exception.class)
     public String run(SpiderDefinition definition) {
         if (definition == null) {
+            /**
+             * illegal参数异常。
+             * @param "爬虫定义不存在" "爬虫定义不存在"
+             * @return illegal参数异常的结果
+             */
             throw new IllegalArgumentException("爬虫定义不存在");
         }
         Long flowId = definition.getFlowId();
         SpiderFlow flow = flowId == null ? null : flowService.getById(flowId);
         if (flow == null) {
+            /**
+             * illegal状态异常。
+             * @param definition.getCode( definition.获取编码(
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("爬虫 [" + definition.getCode() + "] 未关联流程编排");
         }
         FlowDefinition definitionModel = toFlowDefinition(flow);
         if (definitionModel.getNodes().isEmpty()) {
+            /**
+             * illegal状态异常。
+             * @param "流程编排为空，无法执行" "流程编排为空，无法执行"
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("流程编排为空，无法执行");
         }
         String executionNo = UUID.randomUUID().toString().replace("-", "").substring(0, 24);
@@ -136,12 +151,39 @@ public class SpiderFlowRunner {
             Flow flowModel = FlowEngine.createFlow(definitionModel);
             FlowInstance instance = flowModel.createGraph().createInstance(executionParams(definition, executionNo));
             instance.run();
+            /**
+             * record追踪。
+             * @param definition definition
+             * @param flow 流
+             * @param executionNo 执行no
+             * @param instance instance
+             * @param startAt 启动at
+             */
             recordTraces(definition, flow, executionNo, instance, startAt);
+            /**
+             * 饰面。
+             * @param definition definition
+             * @param "SUCCESS" "成功"
+             * @param (System.currentTimeMillis( (系统.当前时间millis(
+             */
             finish(definition, "SUCCESS", "执行成功，耗时 " + (System.currentTimeMillis() - start) + "ms");
             log.info("爬虫 [{}] 执行成功，executionNo={}", definition.getCode(), executionNo);
             return executionNo;
         } catch (Exception e) {
+            /**
+             * record失败。
+             * @param definition definition
+             * @param flow 流
+             * @param executionNo 执行no
+             * @param startAt 启动at
+             * @param e e
+             */
             recordFailure(definition, flow, executionNo, startAt, e);
+            /**
+             * illegal状态异常。
+             * @param definition.getCode( definition.获取编码(
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("爬虫 [" + definition.getCode() + "] 执行失败: " + e.getMessage(), e);
         }
     }
@@ -203,6 +245,11 @@ public class SpiderFlowRunner {
                 result.add(new FlowDefinition.FlowNodeDef(key, engineType, props, x, y));
             }
         } catch (Exception e) {
+            /**
+             * illegal状态异常。
+             * @param e.getMessage( e.获取消息(
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("解析节点 JSON 失败: " + e.getMessage(), e);
         }
         return result;
@@ -233,6 +280,11 @@ public class SpiderFlowRunner {
                 result.add(FlowDefinition.FlowEdgeDef.of(from, to));
             }
         } catch (Exception e) {
+            /**
+             * illegal状态异常。
+             * @param e.getMessage( e.获取消息(
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("解析连线 JSON 失败: " + e.getMessage(), e);
         }
         return result;
@@ -269,7 +321,7 @@ public class SpiderFlowRunner {
      *
      * @param node JSON 节点
      * @param key  字段名
-     * @return 字符串值，不存在时为 null
+     * @return 字符串值，不存在时为 空
      */
     private String text(JsonNode node, String key) {
         JsonNode value = node.get(key);

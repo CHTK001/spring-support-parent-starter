@@ -8,6 +8,7 @@ import net.sf.jsqlparser.expression.Expression;
  * 不进行任何数据权限过滤，直接返回原始查询条件
  *
  * @author CH
+ * @since 4.0.0
  */
 public class EmptyDataPermissionHandler implements DataPermissionHandler {
 
@@ -16,7 +17,7 @@ public class EmptyDataPermissionHandler implements DataPermissionHandler {
      * 不进行任何处理，直接返回原始查询条件
      *
      * @param where            当前查询条件
-     * @param mappedStatementId Mapper 方法全限定名
+     * @param mappedStatementId 映射器 方法全限定名
      * @return 原始查询条件
      */
     @Override

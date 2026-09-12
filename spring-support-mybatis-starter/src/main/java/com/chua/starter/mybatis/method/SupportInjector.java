@@ -15,27 +15,28 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * support
+   * 支持
  *
  * @author CH
+ * @since 4.0.0
  */
 public class SupportInjector extends DefaultSqlInjector implements DisposableBean {
 
-    /** Mybatis属性 */
+    /** MyBatis属性 */
     private MybatisPlusProperties mybatisProperties;
-    private final Map<MybatisPlusProperties.SqlMethodProperties, SqlMethodMarker> cache = new ConcurrentHashMap<>();
-    private final Map<MybatisPlusProperties.SqlMethodProperties, List<AbstractMethod>> cacheAbstractMethod = new ConcurrentHashMap<>();
+    private final Map<MybatisPlusProperties.SqlMethodProperties, SqlMethodMarker> cache = new ConcurrentHashMap<>(); // 缓存
+    private final Map<MybatisPlusProperties.SqlMethodProperties, List<AbstractMethod>> cacheAbstractMethod = new ConcurrentHashMap<>(); // 缓存抽象方法
 
     /**
-     * 创建 SupportInjector 实例
-     * @param mybatisProperties mybatisProperties
+      * 创建 支持injector 实例
+     * @param mybatisProperties MyBatis属性
      */
     public SupportInjector(MybatisPlusProperties mybatisProperties) {
         this.mybatisProperties = mybatisProperties;
     }
 
     @Override
-    /** 获取MethodList */
+    /** 获取方法列表 */
     public List<AbstractMethod> getMethodList(Class<?> mapperClass, TableInfo tableInfo) {
         List<AbstractMethod> list = new ArrayList<>();
 
@@ -66,7 +67,12 @@ public class SupportInjector extends DefaultSqlInjector implements DisposableBea
         return list;
     }
 
-    /** 获取Marker */
+    /**
+     * 获取记号笔
+     *
+     * @param sqlMethodProperties SQL方法属性
+     * @return 获取记号笔的结果
+     */
     private SqlMethodMarker getMarker(MybatisPlusProperties.SqlMethodProperties sqlMethodProperties) {
         MybatisPlusProperties.SqlMethodType type = sqlMethodProperties.getType();
         return type == MybatisPlusProperties.SqlMethodType.FILE ?
@@ -82,7 +88,12 @@ public class SupportInjector extends DefaultSqlInjector implements DisposableBea
         }
     }
 
-    /** Refresh */
+    /**
+     * Refresh
+     *
+     * @param name 名称
+     * @return refresh的结果
+     */
     public String refresh(String name) {
         for (SqlMethodMarker marker : cache.values()) {
             marker.refresh(name);
@@ -90,7 +101,11 @@ public class SupportInjector extends DefaultSqlInjector implements DisposableBea
         return "刷新成功";
     }
 
-    /** RefreshAll */
+    /**
+     * refresh全部
+     *
+     * @return refresh全部的结果
+     */
     public String refreshAll() {
         for (SqlMethodMarker marker : cache.values()) {
             if (marker instanceof MysqlSqlMethodMarker mysqlMarker) {

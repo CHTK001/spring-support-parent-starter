@@ -9,6 +9,7 @@ import org.apache.ibatis.mapping.SqlSource;
  * 动态方法
  *
  * @author CH
+ * @since 4.0.0
  */
 public class FindAllSqlMethod extends AbstractMethod {
     /**
@@ -16,11 +17,15 @@ public class FindAllSqlMethod extends AbstractMethod {
      * @since 3.5.0
      */
     protected FindAllSqlMethod(String methodName) {
+        /**
+         * 父。
+         * @param methodName 方法名称
+         */
         super(methodName);
     }
 
     @Override
-    /** InjectMappedStatement */
+    /** injectmapped对账单 */
     public MappedStatement injectMappedStatement(Class<?> mapperClass, Class<?> modelClass, TableInfo tableInfo) {
         String sql = "select * from " + tableInfo.getTableName();
 

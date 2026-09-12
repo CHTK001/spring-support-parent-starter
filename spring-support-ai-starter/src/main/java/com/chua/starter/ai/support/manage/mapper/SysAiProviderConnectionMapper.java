@@ -5,7 +5,7 @@ import com.chua.starter.ai.support.manage.store.SysAiProviderConnection;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
- * nomifun 提供商连接 Mapper。
+   * nomifun 提供商连接 映射器。
  *
  * @since 4.0.0.42
  * @author CH

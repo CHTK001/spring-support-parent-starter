@@ -44,6 +44,9 @@ public class LayoutController {
      *
      * @param file 图片文件
      * @return 按区域类型分组的检测框 + 总数 + 耗时
+     * @param @RequestParam("file" @请求参数("文件"
+     * @param @RequestParam("file" @请求参数("文件"
+     * @param @RequestParam("file" @RequestParam("file"
      */
     @Permission("admin")
     @Operation(summary = "版面区域检测", description = "检测文档中文字/表格/图片等版面区域，返回按类型分组的检测框")
@@ -72,6 +75,9 @@ public class LayoutController {
      *
      * @param file 图片文件
      * @return Markdown 文本
+     * @param @RequestParam("file" @请求参数("文件"
+     * @param @RequestParam("file" @请求参数("文件"
+     * @param @RequestParam("file" @RequestParam("file"
      */
     @Permission("admin")
     @Operation(summary = "版面结构化解析", description = "将文档版面解析为 Markdown 结构化文本（表格/公式/阅读顺序）")

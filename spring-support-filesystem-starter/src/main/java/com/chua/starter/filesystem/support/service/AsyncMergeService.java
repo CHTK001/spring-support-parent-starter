@@ -16,7 +16,7 @@ public interface AsyncMergeService {
     void mergePendingTasks();
 
     /**
-     * 上传 OSS 调度：扫描待上传任务并上传到对象存储。
+      * 上传 对象存储 调度：扫描待上传任务并上传到对象存储。
      */
     void uploadPendingTasks();
 

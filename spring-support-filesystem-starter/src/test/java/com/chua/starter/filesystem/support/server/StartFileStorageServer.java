@@ -36,7 +36,7 @@ public class StartFileStorageServer {
     /**
      * 程序入口。
      *
-     * @param args args[0] 可选端口号，默认 18080
+     * @param args 参数[0] 可选端口号，默认 18080
      * @throws Exception 启动失败时抛出
      */
     public static void main(String[] args) throws Exception {
@@ -65,7 +65,7 @@ public class StartFileStorageServer {
                 .host("127.0.0.1")
                 .port(port)
                 .build();
-        // Vue 静态资源（classpath static/assets/ → /assets/）
+ // Vue 静态资源（类路径 静态/assets/ → /assets/）
         server.addFilter(new StaticResourceServerFilter("/assets", "static/assets"));
         server.addFilter(filter);
         server.start();

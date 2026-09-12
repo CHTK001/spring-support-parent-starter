@@ -10,7 +10,7 @@ import java.lang.annotation.*;
  *
  * <h3>处理优先级：5</h3>
  * <p>
- * 优先级顺序：@ApiInternal(1) &gt; @ApiFeature(2) &gt; @ApiMock(3) &gt; @ApiDeprecated(4) &gt; @ApiGray(5)
+   * 优先级顺序：@api内部(1) &gt; @api特征(2) &gt; @apimock(3) &gt; @api已弃用(4) &gt; @apigray(5)
  * </p>
  * <p>
  * 处理阶段：拦截器阶段（请求进入前）。
@@ -57,7 +57,8 @@ import java.lang.annotation.*;
  * </pre>
  *
  * @since 2024/12/18
- * @version 1.0.0
+   * @版本 1.0.0
+ * @author CH
  */
 @Target({ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
@@ -93,7 +94,7 @@ public @interface ApiGray {
     int percentage() default 0;
 
     /**
-     * 灰度规则（SpEL 表达式）
+      * 灰度规则（spel 表达式）
      * <p>
      * 返回 true 时请求进入灰度版本。
      * 支持的上下文变量：
@@ -134,7 +135,7 @@ public @interface ApiGray {
     /**
      * 灰度角色白名单
      * <p>
-     * 指定角色直接进入灰度版本，角色来源于 request/session 中的 "roles" 属性（Collection 或逗号分隔字符串）
+      * 指定角色直接进入灰度版本，角色来源于 请求/会话 中的 "角色" 属性（集合 或逗号分隔字符串）
      * </p>
      *
      * @return 角色列表
@@ -145,7 +146,7 @@ public @interface ApiGray {
      * 灰度请求头匹配
      * <p>
      * 指定请求头存在时进入灰度版本。
-     * 格式：headerName 或 headerName=value
+      * 格式：头部名称 或 头部名称=价值观
      * </p>
      *
      * @return 请求头配置

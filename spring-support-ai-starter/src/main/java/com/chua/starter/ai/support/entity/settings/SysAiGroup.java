@@ -13,7 +13,7 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
- * 模型分组表，将模型与 AppKey 按业务/团队维度聚合。
+   * 模型分组表，将模型与 app钥匙 按业务/团队维度聚合。
  *
  * @since 2026-08-03
  * @author CH
@@ -22,17 +22,17 @@ import java.time.LocalDateTime;
 @TableName("sys_ai_group")
 @Schema(name = "模型分组")
 public class SysAiGroup implements Serializable {
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L; // 串行版本uid
 
     /**
-     * 分组主键 ID
+      * 分组主键 标识
      */
     /**
-     * 分组主键 ID
+      * 分组主键 标识
      */
     @TableId(value = "sys_ai_group_id", type = IdType.AUTO)
     @Schema(description = "分组主键 ID")
-    /** 分组ID */
+    /** 分组标识 */
     private Long groupId;
 
     /**
@@ -65,18 +65,18 @@ public class SysAiGroup implements Serializable {
      */
     @TableField("sys_ai_group_models")
     @Schema(description = "关联模型列表(JSON)")
-    /** 分组models */
+    /** 分组模型 */
     private String groupModels;
 
     /**
-     * 绑定 AppKey ID 列表（JSON 数组字符串）
+       * 绑定 app钥匙 标识 列表（JSON 数组字符串）
      */
     /**
-     * 绑定 AppKey ID 列表(JSON)
+       * 绑定 app钥匙 标识 列表(JSON)
      */
     @TableField("sys_ai_group_app_key_ids")
     @Schema(description = "绑定 AppKey ID 列表(JSON)")
-    /** 分组APP密钥IDS */
+    /** 分组APP密钥标识 */
     private String groupAppKeyIds;
 
     /**
@@ -98,7 +98,7 @@ public class SysAiGroup implements Serializable {
      */
     @TableField(value = "create_time", fill = FieldFill.INSERT)
     @Schema(description = "创建时间")
-    /** 分组create时间 */
+    /** 分组创建时间 */
     private LocalDateTime groupCreateTime;
 
     /**
@@ -109,7 +109,7 @@ public class SysAiGroup implements Serializable {
      */
     @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
     @Schema(description = "更新时间")
-    /** 分组update时间 */
+    /** 分组更新时间 */
     private LocalDateTime groupUpdateTime;
 
     /**

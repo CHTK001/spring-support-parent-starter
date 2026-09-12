@@ -8,6 +8,7 @@ import java.util.List;
  * AI 模型定义服务接口
  *
  * @author CH
+ * @since 4.0.0
  */
 public interface AiModelService {
 
@@ -41,4 +42,15 @@ public interface AiModelService {
      * @param modelId 模型主键
      */
     void delete(Long modelId);
+
+    /**
+     * 测试模型连通性延迟（非本地模型）。
+     *
+     * <p>发送一个最小请求（max_tokens=1）测量端到端延迟，
+     * 结果写入模型记录的 lastLatency / lastTestTime 字段。</p>
+     *
+     * @param modelId 模型主键
+     * @return 测试结果 DTO（含延迟毫秒数和状态）
+     */
+    AiModelDTO testLatency(Long modelId);
 }

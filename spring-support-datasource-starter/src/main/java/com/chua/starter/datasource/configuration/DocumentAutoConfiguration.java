@@ -39,6 +39,12 @@ import javax.sql.DataSource;
 @ConditionalOnWebApplication
 @ConditionalOnProperty(prefix = DocumentProperties.PRE, name = "enable", havingValue = "true", matchIfMissing = true)
 @EnableConfigurationProperties(DocumentProperties.class)
+/**
+ * 文档auto配置类。
+ *
+ * @author CH
+ * @since 4.0.0
+ */
 public class DocumentAutoConfiguration {
 
     /**
@@ -53,6 +59,12 @@ public class DocumentAutoConfiguration {
             log.debug("DataSource 不可用，跳过 DataSourceDocumentService");
             return null;
         }
+        /**
+         * 数据源文档服务。
+         * @param ds ds
+         * @param properties 属性
+         * @return 数据源文档服务的结果
+         */
         return new DataSourceDocumentService(ds, properties);
     }
 
@@ -67,6 +79,12 @@ public class DocumentAutoConfiguration {
             log.debug("DataSource 不可用，跳过 DatabaseGraphService");
             return null;
         }
+        /**
+         * database图计算服务。
+         * @param ds ds
+         * @param properties 属性
+         * @return database图计算服务的结果
+         */
         return new DatabaseGraphService(ds, properties);
     }
 
@@ -84,11 +102,18 @@ public class DocumentAutoConfiguration {
             return null;
         }
         DatabaseGraphService graphService = graphServiceProvider.getIfAvailable();
+        /**
+         * 数据源文档控制器。
+         * @param service 服务
+         * @param properties 属性
+         * @param graphService 图计算服务
+         * @return 数据源文档控制器的结果
+         */
         return new DataSourceDocumentController(service, properties, graphService);
     }
 
     /**
-     * 注册器（把 Controller 方法挂到 Spring MVC）。
+      * 注册器（把 控制器 方法挂到 Spring MVC）。
      */
     @Bean
     public DataSourceDocumentHandler dataSourceDocumentHandler(
@@ -98,11 +123,19 @@ public class DocumentAutoConfiguration {
             log.debug("DataSourceDocumentController 不可用，跳过 Handler");
             return null;
         }
+        /**
+         * 数据源文档处理器。
+         * @param controller 控制器
+         * @param properties.getBasePath( 属性.获取基础路径(
+         * @return 数据源文档处理器的结果
+         */
         return new DataSourceDocumentHandler(controller, properties.getBasePath());
     }
 
     /**
  * * 触发路径注册
+     * @param context 上下文
+     * @return 文档路径registrar的结果
  */
 @Bean
 public SmartInitializingSingleton documentPathRegistrar(ApplicationContext context) {

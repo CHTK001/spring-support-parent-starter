@@ -5,7 +5,7 @@ import com.chua.starter.monitor.support.enums.ServiceType;
 import reactor.core.publisher.Mono;
 
 /**
- * 指标采集 Provider SPI
+   * 指标采集 提供者 SPI
  * <p>
  * 由 Registry 按 {@link ServiceType} + {@link ProviderType} 双键索引,
  * 调度器调用 {@link #collect} 获得 {@link CollectResult}。
@@ -17,14 +17,14 @@ import reactor.core.publisher.Mono;
 public interface MetricProvider {
 
     /**
-     * 该 Provider 对应的采集方式
+      * 该 提供者 对应的采集方式
      *
      * @return Provider 类型
      */
     ProviderType providerType();
 
     /**
-     * 该 Provider 支持的服务类型集合
+      * 该 提供者 支持的服务类型集合
      *
      * @return 支持的服务类型集合
      */

@@ -13,36 +13,40 @@ import org.springframework.web.context.request.ServletRequestAttributes;
  * <p>提供 Session 相关的静态工具方法</p>
  *
  * @since 2024/12/11
+ * @author CH
  */
 public final class AuthSessionUtils {
 
+    /**
+     * 认证会话工具。
+     */
     private AuthSessionUtils() {
     }
 
     /**
-     * Session 中存储用户信息的键
+      * 会话 中存储用户信息的键
      */
     public static final String SESSION_USER_INFO = "userInfo";
 
     /**
-     * Session 中存储用户名的键
+      * 会话 中存储用户名的键
      */
     public static final String SESSION_USERNAME = "username";
 
     /**
-     * Session 中存储用户ID的键
+       * 会话 中存储用户标识的键
      */
     public static final String SESSION_USERID = "userId";
 
     /**
-     * Session 中存储租户ID的键
+       * 会话 中存储租户标识的键
      */
     public static final String SESSION_TENANT_ID = "tenantId";
 
     /**
      * 获取当前请求
      *
-     * @return HttpServletRequest，如果不在请求上下文中返回 null
+     * @return HttpServletRequest，如果不在请求上下文中返回 空
      */
     public static HttpServletRequest getRequest() {
         RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
@@ -53,7 +57,7 @@ public final class AuthSessionUtils {
     }
 
     /**
-     * 获取租户ID
+      * 获取租户标识
      *
      * @return 租户ID，例如："tenant_001"
      */
@@ -62,7 +66,7 @@ public final class AuthSessionUtils {
         if (request == null) {
             return null;
         }
-        // 读取操作不强制创建会话，避免无状态请求产生不必要的 Session
+ // 读取操作不强制创建会话，避免无状态请求产生不必要的 会话
         HttpSession session = request.getSession(false);
         if (session == null) {
             return null;
@@ -72,7 +76,7 @@ public final class AuthSessionUtils {
     }
 
     /**
-     * 获取用户ID
+      * 获取用户标识
      *
      * @return 用户ID，例如："user_001"
      */
@@ -81,7 +85,7 @@ public final class AuthSessionUtils {
         if (request == null) {
             return null;
         }
-        // 读取操作不强制创建会话，避免无状态请求产生不必要的 Session
+ // 读取操作不强制创建会话，避免无状态请求产生不必要的 会话
         HttpSession session = request.getSession(false);
         if (session == null) {
             return null;
@@ -100,7 +104,7 @@ public final class AuthSessionUtils {
         if (request == null) {
             return null;
         }
-        // 读取操作不强制创建会话，避免无状态请求产生不必要的 Session
+ // 读取操作不强制创建会话，避免无状态请求产生不必要的 会话
         HttpSession session = request.getSession(false);
         if (session == null) {
             return null;
@@ -138,7 +142,7 @@ public final class AuthSessionUtils {
     /**
      * 获取用户信息
      *
-     * @param target 目标类型，例如：UserResult.class
+     * @param target 目标类型，例如：用户结果.类
      * @param <T>    泛型类型
      * @return 用户信息对象
      */
@@ -148,7 +152,7 @@ public final class AuthSessionUtils {
         if (request == null) {
             return null;
         }
-        // 读取操作不强制创建会话，避免无状态请求产生不必要的 Session
+ // 读取操作不强制创建会话，避免无状态请求产生不必要的 会话
         HttpSession session = request.getSession(false);
         if (session == null) {
             return null;

@@ -35,7 +35,7 @@ public class BundleAutoConfiguration {
     /**
      * 创建 Bundle 管理器服务。
      *
-     * @param launcher   OSGi 启动器（由 spring-support-osgi-starter 提供）
+     * @param launcher   osgi 启动器（由 spring-支持-osgi-启动 提供）
      * @param properties Bundle 配置
      * @return Bundle 管理器
      */
@@ -43,6 +43,12 @@ public class BundleAutoConfiguration {
     public BundleManagerService bundleManagerService(
             OsgiLauncher launcher,
             BundleProperties properties) {
+        /**
+         * bundle管理器服务。
+         * @param launcher launcher
+         * @param properties 属性
+         * @return bundle管理器服务的结果
+         */
         return new BundleManagerService(launcher, properties);
     }
 
@@ -83,6 +89,7 @@ public class BundleAutoConfiguration {
 
     /**
      * 注册 Bundle 模块服务信息。
+     * @return bundle服务信息contributor的结果
      */
     @Bean
     public ServiceInfoContributor bundleServiceInfoContributor() {

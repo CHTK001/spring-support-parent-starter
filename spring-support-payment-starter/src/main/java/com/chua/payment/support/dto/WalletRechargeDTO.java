@@ -7,22 +7,23 @@ import java.math.BigDecimal;
 /**
  * 钱包充值 DTO
  * @author CH
+ * @since 4.0.0
  */
 @Data
 public class WalletRechargeDTO {
-    /** MerchantID */
+    /** merchantid */
     private Long merchantId;
-    /** 用户ID */
+    /** 用户标识 */
     private Long userId;
-    /** RechargeNO */
+    /** rechargeno */
     private String rechargeNo;
-    /** NotifyURL */
+    /** 通知url */
     private String notifyUrl;
     /** Amount */
     private BigDecimal amount;
-    /** Operator */
+    /** 操作符 */
     private String operator;
-    /** Remark */
+    /** 评论 */
     private String remark;
 }
 

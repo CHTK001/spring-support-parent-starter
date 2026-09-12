@@ -19,7 +19,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * 收集 URL 请求统计数据并定时上报到服务端
  * </p>
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2025/01/17
  * @author CH
  */
@@ -52,20 +52,24 @@ public class UrlQpsReporter {
 
     /**
      * URL 统计数据
-     * key: URL pattern
-     * value: UrlStats
+      * 钥匙: URL 模式
+      * 价值观: urlstats
      */
     private final ConcurrentHashMap<String, UrlStats> urlStatsMap = new ConcurrentHashMap<>();
 
     /** 调度器 */
     private ScheduledExecutorService scheduler;
-    private volatile boolean running = false;
+    private volatile boolean running = false; // running
 
-    /** 创建 UrlQpsReporter 实例 */
+    /** 创建 urlqpsreporter 实例 */
     private UrlQpsReporter() {
     }
 
-    /** 获取Instance */
+    /**
+     * 获取Instance
+     *
+     * @return 获取instance的结果
+     */
     public static UrlQpsReporter getInstance() {
         return INSTANCE;
     }
@@ -131,6 +135,9 @@ public class UrlQpsReporter {
         }
 
         // 最后上报一次
+        /**
+          * reportstats。
+         */
         reportStats();
         urlStatsMap.clear();
         log.info("[UrlQpsReporter] 已停止");
@@ -197,27 +204,29 @@ public class UrlQpsReporter {
 
     /**
      * URL 统计数据
+     * @author CH
+     * @since 4.0.0
      */
     private static class UrlStats {
         /** URL */
         private final String url;
-        /** Method */
+        /** 方法 */
         private final String method;
 
         // 当前周期统计
         /** 总数数量 */
         private final AtomicLong totalCount = new AtomicLong(0);
-        /** Success数量 */
+        /** 成功数量 */
         private final AtomicLong successCount = new AtomicLong(0);
-        /** Fail数量 */
+        /** 失败数量 */
         private final AtomicLong failCount = new AtomicLong(0);
         /** 总数持续时间 */
         private final AtomicLong totalDuration = new AtomicLong(0);
-        private volatile long minDuration = Long.MAX_VALUE;
-        private volatile long maxDuration = 0;
+        private volatile long minDuration = Long.MAX_VALUE; // 最小持续时间
+        private volatile long maxDuration = 0; // 最大持续时间
 
         // 历史累计统计
-        /** History总数数量 */
+        /** 历史总数数量 */
         private final AtomicLong historyTotalCount = new AtomicLong(0);
         /** Historysuccess数量 */
         private final AtomicLong historySuccessCount = new AtomicLong(0);
@@ -227,6 +236,11 @@ public class UrlQpsReporter {
         // 状态码统计
         private final ConcurrentHashMap<Integer, AtomicLong> statusCodeCount = new ConcurrentHashMap<>();
 
+        /**
+          * urlstats。
+         * @param url url
+         * @param method 方法
+         */
         UrlStats(String url, String method) {
             this.url = url;
             this.method = method;
@@ -234,6 +248,9 @@ public class UrlQpsReporter {
 
         /**
          * 记录请求
+         * @param duration 持续时间
+         * @param success 成功
+         * @param statusCode 状态编码
          */
         void record(long duration, boolean success, int statusCode) {
             totalCount.incrementAndGet();
@@ -263,7 +280,7 @@ public class UrlQpsReporter {
         /**
          * 收集数据并重置当前周期计数
          *
-         * @return 统计数据，如果无数据返回 null
+         * @return 统计数据，如果无数据返回 空
          */
         Map<String, Object> collectAndReset() {
             long count = totalCount.getAndSet(0);
@@ -277,7 +294,7 @@ public class UrlQpsReporter {
             long min = minDuration;
             long max = maxDuration;
 
-            // 重置 min/max
+ // 重置 最小/最大
             minDuration = Long.MAX_VALUE;
             maxDuration = 0;
 
@@ -311,6 +328,7 @@ public class UrlQpsReporter {
 
         /**
          * 获取快照（不重置）
+         * @return 获取snapshot的结果
          */
         Map<String, Object> getSnapshot() {
             Map<String, Object> data = new HashMap<>();

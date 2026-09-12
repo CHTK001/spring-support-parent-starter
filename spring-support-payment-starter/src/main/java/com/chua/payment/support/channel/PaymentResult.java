@@ -13,9 +13,9 @@ import java.util.Map;
  */
 @Data
 public class PaymentResult {
-    /** Success */
+    /** 成功 */
     private boolean success;
-    /** TradeNO */
+    /** 贸易no */
     private String tradeNo;
     /** 消息 */
     private String message;
@@ -23,11 +23,11 @@ public class PaymentResult {
     private String payUrl;
     /** Launch类型 */
     private String launchType;
-    /** FormHTML */
+    /** formhtml */
     private String formHtml;
     /** 请求体 */
     private String body;
-    private Map<String, Object> sdkParams;
+    private Map<String, Object> sdkParams; // sdk参数
     /** Paidamount */
     private BigDecimal paidAmount;
     /** 状态 */

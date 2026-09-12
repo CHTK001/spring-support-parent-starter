@@ -9,7 +9,7 @@ import com.chua.common.support.lang.code.ResultCode;
  * </p>
  *
  * @since 2022/7/31
- * @version 1.0.0
+   * @版本 1.0.0
  * @author CH
  */
 public class BusinessException extends RuntimeException {
@@ -25,6 +25,10 @@ public class BusinessException extends RuntimeException {
      * @param errorCode 错误码对象
      */
     public BusinessException(ResultCode errorCode) {
+        /**
+         * 父。
+         * @param errorCode.getMsg( 错误编码.getmsg(
+         */
         super(errorCode.getMsg());
         this.resultCode = errorCode;
     }
@@ -35,6 +39,10 @@ public class BusinessException extends RuntimeException {
      * @param message 错误消息
      */
     public BusinessException(String message) {
+        /**
+         * 父。
+         * @param message 消息
+         */
         super(message);
     }
 
@@ -45,6 +53,11 @@ public class BusinessException extends RuntimeException {
      * @param cause   原始异常
      */
     public BusinessException(String message, Throwable cause) {
+        /**
+         * 父。
+         * @param message 消息
+         * @param cause cause
+         */
         super(message, cause);
     }
 
@@ -54,10 +67,14 @@ public class BusinessException extends RuntimeException {
      * @param cause 原始异常
      */
     public BusinessException(Throwable cause) {
+        /**
+         * 父。
+         * @param cause cause
+         */
         super(cause);
     }
     /**
-     * 获取 resultCode
+      * 获取 结果编码
      *
      * @return resultCode
      */

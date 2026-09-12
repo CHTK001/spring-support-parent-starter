@@ -11,7 +11,7 @@ public interface SwaggerEnum {
     /**
      * 获取枚举编码
      *
-     * @return 枚举编码，例如：1, "ACTIVE", "001" 等任意对象类型
+     * @return 枚举编码，例如：1, "活跃", "001" 等任意对象类型
      */
     Object getCode();
 

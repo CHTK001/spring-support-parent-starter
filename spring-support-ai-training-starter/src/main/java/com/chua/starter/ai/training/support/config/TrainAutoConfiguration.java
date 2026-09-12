@@ -31,31 +31,62 @@ public class TrainAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
+    /**
+     * 数据服务。
+     * @param properties 属性
+     * @return 数据服务的结果
+     */
     public DataService dataService(TrainProperties properties) {
         log.info("[Train] 注册 DataService");
+        /**
+         * 数据服务impl。
+         * @param properties 属性
+         * @return 数据服务impl的结果
+         */
         return new DataServiceImpl(properties);
     }
 
     @Bean
     @ConditionalOnMissingBean
+    /**
+     * train服务。
+     * @param properties 属性
+     * @param eventPublisher 事件发布
+     * @return train服务的结果
+     */
     public TrainService trainService(TrainProperties properties, ApplicationEventPublisher eventPublisher) {
         log.info("[Train] 注册 TrainService");
+        /**
+         * train服务impl。
+         * @param properties 属性
+         * @param eventPublisher 事件发布
+         * @return train服务impl的结果
+         */
         return new TrainServiceImpl(properties, eventPublisher);
     }
 
     /**
      * 导出 REST 控制器：当宿主未通过组件扫描注册 {@link TrainController} 时生效，
-     * 避免训练端点依赖宿主的扫描包路径（与 common/filesystem starter 的惯例一致）。
+      * 避免训练端点依赖宿主的扫描包路径（与 通用/filesystem 启动 的惯例一致）。
+     * @param dataService 数据服务
+     * @param trainService train服务
+     * @return train控制器的结果
      */
     @Bean
     @ConditionalOnMissingBean
     public TrainController trainController(DataService dataService, TrainService trainService) {
         log.info("[Train] 注册 TrainController");
+        /**
+         * train控制器。
+         * @param dataService 数据服务
+         * @param trainService train服务
+         * @return train控制器的结果
+         */
         return new TrainController(dataService, trainService);
     }
 
     /**
-     * AI 训练平台的 ServiceInfo 贡献者。
+      * AI 训练平台的 服务信息 贡献者。
      *
      * @param properties 训练配置
      * @return ServiceInfoContributor

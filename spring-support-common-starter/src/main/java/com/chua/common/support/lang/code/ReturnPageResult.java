@@ -4,6 +4,7 @@ package com.chua.common.support.lang.code;
  * 分页返回结果
  *
  * @author CH
+ * @since 4.0.0
  */
 public class ReturnPageResult<T> {
 
@@ -45,10 +46,19 @@ public class ReturnPageResult<T> {
         this.data = data;
     }
 
+    /**
+     * 的。
+     * @param data 数据
+     * @return 的的结果
+     */
     public static <T> ReturnPageResult<T> of(T data) {
         return new ReturnPageResult<>(data);
     }
 
+    /**
+     * 空。
+     * @return 空的结果
+     */
     public static <T> ReturnPageResult<T> empty() {
         return new ReturnPageResult<>(null);
     }

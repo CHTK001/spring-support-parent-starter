@@ -26,7 +26,7 @@ import java.util.Map;
  * </ul>
  *
  * <p>所有方法都做了"AI 不可用时回退"的兜底：未注册 ChatClient 或 ChatClient 调用失败时，
- * 业务侧仍可继续运行（标记 fallback 标志）。</p>
+   * 业务侧仍可继续运行（标记 降级 标志）。</p>
  *
  * @since 4.0.0.42
  * @author CH
@@ -36,7 +36,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class EduAiService {
 
-    /** Chat客户端注册表 */
+    /** 对话客户端注册表 */
     private final ChatClientRegistry chatClientRegistry;
     /** 属性 */
     private final EduAiProperties properties;
@@ -44,7 +44,8 @@ public class EduAiService {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
-     * 是否启用 AI（总开关 + ChatClient 是否可用）。
+      * 是否启用 AI（总开关 + 对话客户端 是否可用）。
+     * @return 是否可用的结果
      */
     public boolean isAvailable() {
         if (!properties.getAi().isEnabled()) {
@@ -54,7 +55,7 @@ public class EduAiService {
     }
 
     /**
-     * AI 组卷：根据知识点/难度/题量生成题目 ID 列表。
+      * AI 组卷：根据知识点/难度/题量生成题目 标识 列表。
      *
      * <p>Prompt 让模型返回形如 {@code {"questionIds":[1,2,3]}} 的 JSON；解析失败回退到传入的
      * {@code fallbackIds}。</p>
@@ -62,10 +63,10 @@ public class EduAiService {
      * @param subject     学科
      * @param gradeLevel  学段
      * @param grade       年级
-     * @param types       题型列表，如 ["SINGLE_CHOICE","JUDGE"]
-     * @param knowledgeIds 关联知识点ID列表
+     * @param types       题型列表，如 ["单个_CHOICE","JUDGE"]
+     * @param knowledgeIds 关联知识点标识列表
      * @param count       期望生成多少题
-     * @param fallbackIds AI 不可用或失败时使用的回退题目ID
+     * @param fallbackIds AI 不可用或失败时使用的回退题目标识
      * @return 题目ID列表（来自 AI 或回退）
      */
     public List<Long> generatePaperOutline(
@@ -92,7 +93,15 @@ public class EduAiService {
                 学科: %s
                 学段: %s
                 年级: %s
+                /**
+                 * 题型。
+                 * @param 逗号分隔 逗号分隔
+                 */
                 题型(逗号分隔): %s
+                /**
+                 * 关联知识点ID。
+                 * @param 逗号分隔 逗号分隔
+                 */
                 关联知识点ID(逗号分隔): %s
                 题目数量: %d
 
@@ -138,7 +147,7 @@ public class EduAiService {
      * @param standardAnswer 标准答案
      * @param studentAnswer  学生作答
      * @param maxScore       满分
-     * @return 阅卷结果（包含 aiScore/aiComment/source 三个字段，source = AI/FALLBACK）
+     * @return 阅卷结果（包含 aiscore/AI评论/源 三个字段，源 = AI/降级）
      */
     public MarkingOutcome markQuestion(
             String questionType,
@@ -208,8 +217,20 @@ public class EduAiService {
                 3. 只返回 JSON
                 """,
                 questionType,
+                /**
+                 * safe。
+                 * @param questionStem questionstem
+                 */
                 safe(questionStem),
+                /**
+                 * safe。
+                 * @param standardAnswer 标准answer
+                 */
                 safe(standardAnswer),
+                /**
+                 * safe。
+                 * @param studentAnswer studentanswer
+                 */
                 safe(studentAnswer),
                 maxScore,
                 maxScore
@@ -258,22 +279,36 @@ public class EduAiService {
     }
 
     /**
-     * 解析 ChatClient 并发起一次同步调用。
+      * 解析 对话客户端 并发起一次同步调用。
+     * @param systemPrompt 系统提示符
+     * @param userPrompt 用户提示符
+     * @return call的结果
      */
     private ChatResponse call(String systemPrompt, String userPrompt) {
         com.chua.common.support.ai.chat.ChatClient commonClient = resolveClient();
         if (commonClient == null) {
+            /**
+             * 对话响应。
+             * @param "" ""
+             * @return 对话响应的结果
+             */
             return new ChatResponse("");
         }
 
-        // ChatClientRegistry 提供的是 common ChatClient，调用 chatSync 即可
+ // 对话客户端registry 提供的是 通用 对话客户端，调用 对话同步 即可
         long timeout = properties.getMarking().getTimeout() * 1000L;
         String text = timeout > 0 ? commonClient.chatSync(userPrompt, timeout) : commonClient.chatSync(userPrompt);
+        /**
+         * 对话响应。
+         * @param text 文本
+         * @return 对话响应的结果
+         */
         return new ChatResponse(text);
     }
 
     /**
-     * 解析 ChatClient：优先按 provider 配置查找，再回退到默认（聚合）客户端。
+      * 解析 对话客户端：优先按 提供者 配置查找，再回退到默认（聚合）客户端。
+     * @return resolve客户端的结果
      */
     private com.chua.common.support.ai.chat.ChatClient resolveClient() {
         String provider = properties.getAi().getProvider();
@@ -289,6 +324,9 @@ public class EduAiService {
 
     /**
      * 解析 JSON 中数字数组。
+     * @param json json
+     * @param field 字段
+     * @return 解析longarray的结果
      */
     private List<Long> parseLongArray(String json, String field) {
         List<Long> result = new ArrayList<>();
@@ -322,6 +360,8 @@ public class EduAiService {
 
     /**
      * 客观题判定：单选/多选/判断/填空走字符串匹配，不调 AI。
+     * @param type 类型
+     * @return 是否对象question的结果
      */
     private boolean isObjectiveQuestion(String type) {
         if (type == null) {
@@ -335,13 +375,20 @@ public class EduAiService {
                 || t.equals("BLANK");
     }
 
-    /** Safe */
+    /**
+     * Safe
+     *
+     * @param s s
+     * @return safe的结果
+     */
     private String safe(String s) {
         return s == null ? "" : s;
     }
 
     /**
      * 阅卷结果。
+     * @author CH
+     * @since 4.0.0
      */
     @lombok.Data
     public static class MarkingOutcome {
@@ -354,17 +401,18 @@ public class EduAiService {
          */
         private String comment;
         /**
-         * 来源：AI / FALLBACK
+          * 来源：AI / 降级
          */
         private String source;
         /**
-         * 回退原因（仅 source=FALLBACK 时存在）
+          * 回退原因（仅 源=降级 时存在）
          */
         private String fallbackReason;
     }
 
     /**
      * 用于返回拓展信息。
+     * @return 调试信息的结果
      */
     public Map<String, Object> debugInfo() {
         Map<String, Object> info = new LinkedHashMap<>();

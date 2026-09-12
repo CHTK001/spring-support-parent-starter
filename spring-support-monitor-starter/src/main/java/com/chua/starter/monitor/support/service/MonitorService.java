@@ -7,7 +7,7 @@ import com.chua.starter.monitor.support.entity.MsMonitor;
 import java.util.List;
 
 /**
- * 监控 Service
+   * 监控 服务
  *
  * @since 2026/8/4
  * @author CH
@@ -39,7 +39,7 @@ public interface MonitorService {
     ReturnResult<Void> delete(Long id);
 
     /**
-     * 按 ID 查询
+      * 按 标识 查询
      *
      * @param id 主键
      * @return 查询结果

@@ -9,6 +9,7 @@ import static com.chua.starter.mybatis.properties.MybatisPlusDataScopeProperties
  * 数据权限(机构帐号)
  *
  * @author CH
+ * @since 4.0.0
  */
 @Data
 @ConfigurationProperties(prefix = PRE)
@@ -33,12 +34,12 @@ public class MybatisPlusDataScopeProperties {
     private String deptIdColumn = "sys_dept_id";
 
     /**
-     * 树id
+      * 树标识
      */
     private String deptTreeIdColumn = "sys_dept_tree_id";
 
     /**
-     * 当前用户ID
+      * 当前用户标识
      */
     private String currentUserIdColumn = "create_by";
 
@@ -61,7 +62,7 @@ public class MybatisPlusDataScopeProperties {
     }
 
     /**
-     * 获取部门ID列名
+      * 获取部门标识列名
      *
      * @return 部门ID列名
      */
@@ -70,7 +71,7 @@ public class MybatisPlusDataScopeProperties {
     }
 
     /**
-     * 获取部门树ID列名
+      * 获取部门树标识列名
      *
      * @return 部门树ID列名
      */
@@ -79,7 +80,7 @@ public class MybatisPlusDataScopeProperties {
     }
 
     /**
-     * 获取当前用户ID列名
+      * 获取当前用户标识列名
      *
      * @return 当前用户ID列名
      */

@@ -8,15 +8,16 @@ import java.time.LocalDateTime;
 /**
  * 商户支付方式视图对象
  * @author CH
+ * @since 4.0.0
  */
 @Data
 public class MerchantChannelVO implements Serializable {
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L; // 串行版本uid
 
-    /** ID */
+    /** 标识 */
     private Long id;
 
-    /** MerchantID */
+    /** merchantid */
     private Long merchantId;
 
     /** Merchant名称 */
@@ -34,7 +35,7 @@ public class MerchantChannelVO implements Serializable {
     /** APPID */
     private String appId;
 
-    /** MerchantNO */
+    /** merchantno */
     private String merchantNo;
 
     /** API密钥configured */
@@ -52,7 +53,7 @@ public class MerchantChannelVO implements Serializable {
     /** Sandbox模式 */
     private Integer sandboxMode;
 
-    /** NotifyURL */
+    /** 通知url */
     private String notifyUrl;
 
     /** 返回值URL */
@@ -70,13 +71,13 @@ public class MerchantChannelVO implements Serializable {
     /** Guide标题 */
     private String guideTitle;
 
-    /** GuideURL */
+    /** guideurl */
     private String guideUrl;
 
     /** 通道类型desc */
     private String channelTypeDesc;
 
-    /** EffectivenotifyURL */
+    /** effectivenotifyurl */
     private String effectiveNotifyUrl;
 
     /** Effective返回值URL */

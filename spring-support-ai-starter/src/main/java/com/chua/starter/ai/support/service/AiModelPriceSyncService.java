@@ -24,6 +24,9 @@ public interface AiModelPriceSyncService {
      * @param code 厂商编码
      */
     default void syncPrices(String code) {
+        /**
+         * 同步prices。
+         */
         syncPrices();
     }
 
@@ -33,6 +36,9 @@ public interface AiModelPriceSyncService {
      * @param code 厂商编码
      */
     default void replaceModels(String code) {
+        /**
+         * 同步模型列表。
+         */
         syncModelList();
     }
 }

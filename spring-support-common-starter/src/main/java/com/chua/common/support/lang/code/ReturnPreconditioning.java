@@ -14,6 +14,7 @@ import com.chua.starter.common.support.http.ContentType;
  * 返回前置条件
  *
  * @author CH
+ * @since 4.0.0
  */
 @Getter
 @ToString
@@ -21,7 +22,7 @@ import com.chua.starter.common.support.http.ContentType;
 public class ReturnPreconditioning<T> {
 
     /**
-     * 非空判断条件：对象不为 null 时满足条件
+      * 非空判断条件：对象不为 空 时满足条件
      */
     public static final Predicate<Object> NOT_NULL = data -> null != data;
 
@@ -31,7 +32,7 @@ public class ReturnPreconditioning<T> {
     public static final Predicate<Boolean> BOOLEAN = data -> null != data && data;
 
     /**
-     * 数值判断条件：数值不为 null 且大于 0 时满足条件
+      * 数值判断条件：数值不为 空 且大于 0 时满足条件
      */
     public static final Predicate<Number> NUMBER = data -> null != data && data.intValue() > 0;
 
@@ -124,6 +125,11 @@ public class ReturnPreconditioning<T> {
         try {
             return of(null == callable ? null : callable.call());
         } catch (Exception e) {
+            /**
+             * runtime异常。
+             * @param e e
+             * @return runtime异常的结果
+             */
             throw new RuntimeException(e);
         }
     }
@@ -166,7 +172,7 @@ public class ReturnPreconditioning<T> {
      *
      * @param <R>      目标数据类型
      * @param function 转换函数
-     * @return 新的 ReturnPreconditioning 实例
+     * @return 新的 申报preconditioning 实例
      */
     public <R> ReturnPreconditioning<R> withConverter(Function<T, R> function) {
         return of(function.apply(data));
@@ -210,7 +216,7 @@ public class ReturnPreconditioning<T> {
     }
 
     /**
-     * 根据条件判断结果返回统一的 ReturnResult
+      * 根据条件判断结果返回统一的 申报结果
      * <p>条件满足时返回成功结果（包含转换后的数据），否则返回错误结果。</p>
      *
      * @param <R>       返回值类型
@@ -238,7 +244,7 @@ public class ReturnPreconditioning<T> {
      * 条件不满足时通过提供者获取备选值
      *
      * @param supplier 备选值的提供者
-     * @return 满足条件时返回原数据，否则从 supplier 获取
+     * @return 满足条件时返回原数据，否则从 供应商 获取
      */
     public T otherwiseGet(Supplier<T> supplier) {
         return isSuccessful() ? data : supplier.get();
@@ -254,7 +260,7 @@ public class ReturnPreconditioning<T> {
     }
 
     /**
-     * 将前置条件结果转换为统一的 ReturnResult 响应
+      * 将前置条件结果转换为统一的 申报结果 响应
      * <p>成功时包含数据和成功消息；失败时根据异常、错误码或默认错误码构造错误响应。</p>
      *
      * @return ReturnResult 实例
@@ -283,18 +289,18 @@ public class ReturnPreconditioning<T> {
     }
 
     /**
-     * 获取内容类型，当前实现固定返回 null
+      * 获取内容类型，当前实现固定返回 空
      *
-     * @return 内容类型，始终为 null
+     * @return 内容类型，始终为 空
      */
     public ContentType getContentType() {
         return null;
     }
 
     /**
-     * 获取内容分发描述，当前实现固定返回 null
+      * 获取内容分发描述，当前实现固定返回 空
      *
-     * @return 内容分发描述，始终为 null
+     * @return 内容分发描述，始终为 空
      */
     public ContentDisposition getContentDisposition() {
         return null;

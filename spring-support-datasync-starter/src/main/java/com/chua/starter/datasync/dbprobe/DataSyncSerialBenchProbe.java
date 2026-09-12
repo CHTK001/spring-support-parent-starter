@@ -17,16 +17,21 @@ import java.util.concurrent.TimeUnit;
  * 序列化实现基准测试 — 使用 datasync 实际数据格式 {@code List<Map<String, Object>>}。
  *
  * @since 4.0.0.42
+ * @author CH
  */
 public final class DataSyncSerialBenchProbe {
 
-    static final int ROWS = 1000;
-    static final int WARMUP_MS = 500;
-    static final int MEASURE_MS = 1000;
-    static final int ROUNDS = 3;
-    static final ObjectMapper MAPPER = new ObjectMapper();
+    static final int ROWS = 1000; // ROWS
+    static final int WARMUP_MS = 500; // WARMUP_MS
+    static final int MEASURE_MS = 1000; // 测量ms
+    static final int ROUNDS = 3; // ROUNDS
+    static final ObjectMapper MAPPER = new ObjectMapper(); // 映射器
 
-    /** Main */
+    /**
+     * Main
+     *
+     * @param args 参数
+     */
     public static void main(String[] args) throws Exception {
         // 构造 datasync 实际数据：1000 行，每行 6 个字段
         List<Map<String, Object>> data = new ArrayList<>(ROWS);
@@ -62,12 +67,16 @@ public final class DataSyncSerialBenchProbe {
         System.err.println("========================================================================");
     }
 
-    /** BenchJackson */
+    /**
+     * benchjackson
+     *
+     * @param data 数据
+     */
     static void benchJackson(List<Map<String, Object>> data) throws Exception {
         String json = MAPPER.writeValueAsString(data);
         long size = json.getBytes("UTF-8").length;
         boolean ok = data.equals(MAPPER.readValue(json, List.class));
-        // 验证：反序列化后应得到 ArrayList of LinkedHashMap
+ // 验证：反序列化后应得到 array列表 的 链接哈希映射
         Object back = MAPPER.readValue(json, List.class);
         ok &= back instanceof List;
         if (ok) {
@@ -85,7 +94,13 @@ public final class DataSyncSerialBenchProbe {
     }
 
     @SuppressWarnings("unchecked")
-    /** BenchBinary */
+    /**
+     * benchbinary
+     *
+     * @param label 标签
+     * @param s s
+     * @param data 数据
+     */
     static void benchBinary(String label, Serialization s, List<Map<String, Object>> data) throws Exception {
         byte[] bytes = s.serialize(data);
         long size = bytes.length;
@@ -102,7 +117,13 @@ public final class DataSyncSerialBenchProbe {
     }
 
     @SuppressWarnings("unchecked")
-    /** BenchJsonProvider */
+    /**
+     * benchjson提供者
+     *
+     * @param label 标签
+     * @param p p
+     * @param data 数据
+     */
     static void benchJsonProvider(String label, JsonProvider p, List<Map<String, Object>> data) throws Exception {
         String json = p.toJson(data);
         long size = json.getBytes("UTF-8").length;
@@ -119,7 +140,11 @@ public final class DataSyncSerialBenchProbe {
     }
 
     @SuppressWarnings("unchecked")
-    /** BenchKryo */
+    /**
+     * benchkryo
+     *
+     * @param data 数据
+     */
     static void benchKryo(List<Map<String, Object>> data) throws Exception {
         KryoSerializer<Serializable> ks = new KryoSerializer<>((Class<Serializable>)(Class<?>)List.class);
         byte[] bytes = ks.serialize((Serializable) data);
@@ -136,7 +161,15 @@ public final class DataSyncSerialBenchProbe {
         report("kryo", size, ser, des, ok);
     }
 
-    /** Report */
+    /**
+     * Report
+     *
+     * @param label 标签
+     * @param size 大小
+     * @param ser ser
+     * @param des des
+     * @param ok ok
+     */
     static void report(String label, long size, Runnable ser, Runnable des, boolean ok) {
         warmup(ser, WARMUP_MS);
         warmup(des, WARMUP_MS);
@@ -147,13 +180,26 @@ public final class DataSyncSerialBenchProbe {
                 label, size, serOps, desOps, avg, ok ? "[OK]" : "[FAIL]");
     }
 
-    /** Warmup */
+    /**
+     * Warmup
+     *
+     * @param task 任务
+     * @param ms ms
+     */
     static void warmup(Runnable task, long ms) {
         long deadline = System.nanoTime() + ms * 1_000_000L;
-        while (System.nanoTime() < deadline) task.run();
+        while (System.nanoTime() < deadline) {
+            task.run();
+        }
     }
 
-    /** MeasureOps */
+    /**
+     * 测量ops
+     *
+     * @param task 任务
+     * @param ms ms
+     * @return 测量ops的结果
+     */
     static long measureOps(Runnable task, long ms) {
         long start = System.nanoTime();
         long deadline = start + ms * 1_000_000L;
@@ -162,10 +208,19 @@ public final class DataSyncSerialBenchProbe {
         return count * 1_000_000_000L / (System.nanoTime() - start);
     }
 
-    /** BestOf */
+    /**
+     * best的
+     *
+     * @param task 任务
+     * @param ms ms
+     * @param rounds rounds
+     * @return best的的结果
+     */
     static long bestOf(Runnable task, long ms, int rounds) {
         long best = 0;
-        for (int i = 0; i < rounds; i++) best = Math.max(best, measureOps(task, ms));
+        for (int i = 0; i < rounds; i++) {
+            best = Math.max(best, measureOps(task, ms));
+        }
         return best;
     }
 }

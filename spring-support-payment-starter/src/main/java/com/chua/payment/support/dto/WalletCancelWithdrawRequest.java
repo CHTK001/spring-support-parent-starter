@@ -5,8 +5,8 @@ import java.math.BigDecimal;
 /**
  * 钱包提现取消请求参数对象。
  *
- * @param merchantId 商户ID
- * @param userId     用户ID
+ * @param merchantId 商户标识
+ * @param userId     用户标识
  * @param bizNo      业务单号
  * @param amount     金额
  * @param remark     备注

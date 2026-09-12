@@ -14,10 +14,10 @@ import java.security.Principal;
 import java.util.Arrays;
 
 /**
- * OAuth增强的HttpServletRequestWrapper
+   * o认证增强的httpservlet请求包装器
  * 
- * 实现HttpServletRequest的认证相关方法，包括isUserInRole、getAuthType、logout、login等，
- * 集成OAuth用户信息和Principal支持。
+   * 实现httpservlet请求的认证相关方法，包括是否用户入角色、获取认证类型、logout、login等，
+   * 集成o认证用户信息和Principal支持。
  * 
  * @since 2024/12/20
  * @author CH
@@ -26,13 +26,13 @@ import java.util.Arrays;
 public class OAuthHttpServletRequestWrapper extends ContentCachingRequestWrapper {
 
     /**
-     * 内容缓存上限（字节）。Spring Boot 4.x 中 ContentCachingRequestWrapper
-     * 仅提供 (request, contentCacheLimit) 双参构造，此处传 1MB 缓存请求体。
+      * 内容缓存上限（字节）。Spring Boot 4.x 中 内容缓存请求包装器
+      * 仅提供 (请求, 内容缓存限制) 双参构造，此处传 1MB 缓存请求体。
      */
     private static final int DEFAULT_CONTENT_CACHE_LIMIT = 1024 * 1024;
 
     /**
-     * OAuth Principal
+      * o认证 Principal
      */
     private final OAuthPrincipal principal;
 
@@ -54,6 +54,11 @@ public class OAuthHttpServletRequestWrapper extends ContentCachingRequestWrapper
      * @param authType 认证类型
      */
     public OAuthHttpServletRequestWrapper(HttpServletRequest request, UserResume userResume, String authType) {
+        /**
+         * 父。
+         * @param request 请求
+         * @param DEFAULT_CONTENT_CACHE_LIMIT 默认内容缓存限制
+         */
         super(request, DEFAULT_CONTENT_CACHE_LIMIT);
         this.authType = authType;
         this.remoteUser = userResume != null ? userResume.getUsername() : null;
@@ -94,6 +99,12 @@ public class OAuthHttpServletRequestWrapper extends ContentCachingRequestWrapper
         log.debug("[请求包装]创建已认证的请求包装器 - 用户: {}, 认证类型: {}",
                 userResume != null ? userResume.getUsername() : "null",
                 authType);
+        /**
+         * o认证httpservlet请求包装器。
+         * @param request 请求
+         * @param userResume 用户resume
+         * @param authType 认证类型
+         */
         return new OAuthHttpServletRequestWrapper(request, userResume, authType);
     }
 
@@ -105,25 +116,31 @@ public class OAuthHttpServletRequestWrapper extends ContentCachingRequestWrapper
      */
     public static OAuthHttpServletRequestWrapper unauthenticated(HttpServletRequest request) {
         log.debug("[请求包装]创建未认证的请求包装器 - 请求URI: {}", request.getRequestURI());
+        /**
+         * o认证httpservlet请求包装器。
+         * @param request 请求
+         * @param null 空
+         * @param null 空
+         */
         return new OAuthHttpServletRequestWrapper(request, null, null);
     }
 
     @Override
-    /** 获取AuthType */
+    /** 获取认证类型 */
     public String getAuthType() {
         log.debug("[Wrapper获取]获取认证类型: {}", authType);
         return authType;
     }
 
     @Override
-    /** 获取RemoteUser */
+    /** 获取远程用户 */
     public String getRemoteUser() {
         log.debug("[Wrapper获取]获取远程用户: {}", remoteUser);
         return remoteUser;
     }
 
     @Override
-    /** 获取UserPrincipal */
+    /** 获取用户principal */
     public Principal getUserPrincipal() {
         log.debug("[Wrapper获取]获取用户Principal - 用户: {}, 已认证: {}", 
                  principal != null ? principal.getName() : "null",
@@ -132,7 +149,7 @@ public class OAuthHttpServletRequestWrapper extends ContentCachingRequestWrapper
     }
 
     @Override
-    /** 是否UserInRole */
+    /** 是否用户入角色 */
     public boolean isUserInRole(String role) {
         boolean hasRole = principal != null && principal.hasRole(role);
         
@@ -159,13 +176,23 @@ public class OAuthHttpServletRequestWrapper extends ContentCachingRequestWrapper
         // 检查是否已经登录
         if (principal != null && principal.isAuthenticated()) {
             log.warn("[Wrapper登录]登录失败 - 用户已经登录，无法重复登录 - 当前用户: {}, 尝试登录用户: {}", remoteUser, username);
+            /**
+             * servlet异常。
+             * @param "用户已经登录，无法重复登录" "用户已经登录，无法重复登录"
+             * @return servlet异常的结果
+             */
             throw new ServletException("用户已经登录，无法重复登录");
         }
         
         // 这里可以集成实际的登录逻辑
-        // 由于OAuth客户端通常通过外部认证服务器进行认证，
+ // 由于o认证客户端通常通过外部认证服务器进行认证，
         // 这个方法主要用于记录和验证
         log.warn("[Wrapper登录]OAuth客户端不支持直接用户名密码登录，请使用OAuth认证流程");
+        /**
+         * servlet异常。
+         * @param "OAuth客户端不支持直接用户名密码登录，请使用OAuth认证流程" "OAuth客户端不支持直接用户名密码登录，请使用OAuth认证流程"
+         * @return servlet异常的结果
+         */
         throw new ServletException("OAuth客户端不支持直接用户名密码登录，请使用OAuth认证流程");
     }
 
@@ -177,20 +204,20 @@ public class OAuthHttpServletRequestWrapper extends ContentCachingRequestWrapper
                  remoteUser, authType, principal != null && principal.isAuthenticated());
         
         try {
-            // 清除Session中的用户信息
+ // 清除会话中的用户信息
             HttpSession session = getSession(false);
             if (session != null) {
                 String sessionId = session.getId();
                 log.debug("[Wrapper登出]清除Session - SessionID: {}", sessionId);
                 
-                // 清除用户相关的Session属性
+ // 清除用户相关的会话属性
                 session.removeAttribute("userResume");
                 session.removeAttribute("userInfo");
                 session.removeAttribute("principal");
                 session.removeAttribute("authType");
                 log.debug("[Wrapper登出]已清除Session属性: userResume, userInfo, principal, authType");
                 
-                // 可以选择是否完全销毁Session
+ // 可以选择是否完全销毁会话
                 session.invalidate();
                 log.debug("[Wrapper登出]Session已销毁 - SessionID: {}", sessionId);
                 
@@ -199,12 +226,17 @@ public class OAuthHttpServletRequestWrapper extends ContentCachingRequestWrapper
                 log.warn("[Wrapper登出]Session不存在，无需清理 - 用户: {}", remoteUser);
             }
             // 这里可以添加其他登出逻辑，比如：
-            // 1. 通知OAuth服务器用户登出
+ // 1. 通知o认证服务器用户登出
             // 2. 清除缓存中的用户信息
             // 3. 记录登出日志
         } catch (Exception e) {
             log.error("[Wrapper登出]登出操作失败 - 用户: {}, 错误类型: {}, 错误信息: {}", 
                      remoteUser, e.getClass().getSimpleName(), e.getMessage(), e);
+            /**
+             * servlet异常。
+             * @param e.getMessage( e.获取消息(
+             * @return servlet异常的结果
+             */
             throw new ServletException("登出操作失败: " + e.getMessage(), e);
         }
     }
@@ -284,7 +316,7 @@ public class OAuthHttpServletRequestWrapper extends ContentCachingRequestWrapper
     }
 
     /**
-     * 获取用户ID
+      * 获取用户标识
      * 
      * @return 用户ID
      */
@@ -295,7 +327,7 @@ public class OAuthHttpServletRequestWrapper extends ContentCachingRequestWrapper
     }
 
     /**
-     * 获取租户ID
+      * 获取租户标识
      * 
      * @return 租户ID
      */
@@ -306,7 +338,7 @@ public class OAuthHttpServletRequestWrapper extends ContentCachingRequestWrapper
     }
 
     /**
-     * 获取部门ID
+      * 获取部门标识
      * 
      * @return 部门ID
      */
@@ -331,7 +363,7 @@ public class OAuthHttpServletRequestWrapper extends ContentCachingRequestWrapper
     }
 
     /**
-     * 获取OAuth Principal
+      * 获取o认证 Principal
      * 
      * @return OAuth Principal
      */

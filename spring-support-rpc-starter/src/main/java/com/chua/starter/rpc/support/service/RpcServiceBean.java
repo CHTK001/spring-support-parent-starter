@@ -8,9 +8,9 @@ import lombok.Setter;
 import org.springframework.beans.factory.InitializingBean;
 
 /**
- * rpc服务bean
+   * rpc服务Bean
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024/04/08
  * @author CH
  */
@@ -27,11 +27,14 @@ public class RpcServiceBean<T> extends AbstractRpcServiceSetting<T> implements I
     /** RPC服务器 */
     private final RpcServer rpcServer;
     /**
-     * 创建 RpcServiceBean 实例
-     * @param type type
-     * @param RpcType RpcType
-     * @param RpcProperties RpcProperties
-     * @param RpcServer RpcServer
+      * 创建 rpc服务Bean 实例
+     * @param type 类型
+     * @param rpcType rpc类型
+     * @param rpcProperties rpc属性
+     * @param rpcServer rpc服务端
+     * @param rpcType rpc类型
+     * @param rpcProperties rpc属性
+     * @param rpcServer rpc服务端
      */
     public RpcServiceBean(Class<T> type, RpcType rpcType, RpcProperties rpcProperties, RpcServer rpcServer) {
         this.type = type;
@@ -42,12 +45,15 @@ public class RpcServiceBean<T> extends AbstractRpcServiceSetting<T> implements I
 
 
     @Override
-    /** AfterProperties设置 */
+    /** 之后属性设置 */
     public void afterPropertiesSet() throws Exception {
+        /**
+         * 导出。
+         */
         export();
     }
 
-    /** Export */
+    /** 导出 */
     private void export() {
         rpcServer.register(getInterfaceName(), getRef());
     }
@@ -72,12 +78,20 @@ public class RpcServiceBean<T> extends AbstractRpcServiceSetting<T> implements I
         return null;
     }
 
-    /** 获取Type */
+    /**
+     * 获取类型
+     *
+     * @return 获取类型的结果
+     */
     public RpcType getType() {
         return rpcType;
     }
 
-    /** 设置Type */
+    /**
+     * 设置类型
+     *
+     * @param rpcType rpc类型
+     */
     public void setType(RpcType rpcType) {
         this.rpcType = rpcType;
     }

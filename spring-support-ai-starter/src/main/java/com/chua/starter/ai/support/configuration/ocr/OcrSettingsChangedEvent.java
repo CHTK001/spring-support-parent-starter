@@ -13,10 +13,18 @@ public class OcrSettingsChangedEvent {
     /** 变更的分组名 */
     private final String group;
 
+    /**
+     * ocrsettings改变事件。
+     * @param group 群体
+     */
     public OcrSettingsChangedEvent(String group) {
         this.group = group;
     }
 
+    /**
+     * 获取群体。
+     * @return 获取群体的结果
+     */
     public String getGroup() {
         return group;
     }

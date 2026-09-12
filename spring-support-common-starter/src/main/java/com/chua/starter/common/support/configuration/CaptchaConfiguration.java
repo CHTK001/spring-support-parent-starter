@@ -19,8 +19,9 @@ import org.slf4j.LoggerFactory;
  * 用于配置验证码相关的Bean。
  * </p>
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @author CH
+ * @since 4.0.0
  */
 @Configuration
 @ConditionalOnProperty(prefix = "plugin.captcha", name = "enable", havingValue = "true", matchIfMissing = true)
@@ -33,10 +34,18 @@ public class CaptchaConfiguration {
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = CaptchaProperties.PRE, name = "enable", havingValue = "true", matchIfMissing = true)
-    /** CaptchaProvider */
+    /**
+     * captcha提供者
+     *
+     * @return captcha提供者的结果
+     */
     public CaptchaProvider captchaProvider() {
         ServiceInfoRegistry.getInstance().registerFlag(
                 "captcha", "校验码", true, "图形验证码接口", null);
+        /**
+         * captcha提供者。
+         * @return captcha提供者的结果
+         */
         return new CaptchaProvider();
     }
 }

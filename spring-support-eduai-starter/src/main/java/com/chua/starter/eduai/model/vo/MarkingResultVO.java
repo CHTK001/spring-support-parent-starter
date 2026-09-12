@@ -23,7 +23,7 @@ import java.util.List;
 @Data
 public class MarkingResultVO {
 
-    /** 任务ID */
+    /** 任务标识 */
     private String taskId;
     /** 状态 */
     private Integer status;
@@ -31,18 +31,24 @@ public class MarkingResultVO {
     private Integer totalScore;
     /** 总数 */
     private Integer total;
-    /** Finished */
+    /** 饰面 */
     private Boolean finished;
-    /** Results */
+    /** 结果 */
     private List<QuestionResult> results;
 
     @Data
+    /**
+     * question结果类。
+     *
+     * @author CH
+     * @since 4.0.0
+     */
     public static class QuestionResult {
-        /** QuestionID */
+        /** questionid */
         private Long questionId;
         /** 分数 */
         private Integer score;
-        /** Comment */
+        /** 评论 */
         private String comment;
         /** Teacher分数 */
         private Integer teacherScore;

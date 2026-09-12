@@ -15,7 +15,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * 接口权限 + 按钮权限真实测试（@SpringBootTest + MockMvc + 真实 PermissionInterceptor）。
+   * 接口权限 + 按钮权限真实测试（@springboot测试 + mockmvc + 真实 权限拦截器）。
  *
  * <p>用户上下文经会话注入（{@code AuthSessionUtils.SESSION_USER_INFO}），
  * 与生产请求路径一致；拒绝场景由 {@code OauthExceptionAdvice} 映射为 403。</p>
@@ -28,14 +28,25 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class PermissionRealTest {
 
     @Autowired
-    private MockMvc mockMvc;
+    private MockMvc mockMvc; // mockmvc
 
+    /**
+     * 会话with。
+     * @param user 用户
+     * @return 会话with的结果
+     */
     private MockHttpSession sessionWith(UserResume user) {
         MockHttpSession session = new MockHttpSession();
         session.setAttribute("userInfo", user);
         return session;
     }
 
+    /**
+     * 用户。
+     * @param roles 角色
+     * @param permissions 权限
+     * @return 用户的结果
+     */
     private static UserResume user(Set<String> roles, Set<String> permissions) {
         UserResume user = new UserResume();
         user.setUserId("1");
@@ -72,7 +83,7 @@ class PermissionRealTest {
         mockMvc.perform(post("/api/permission/delete").session(session)).andExpect(status().isForbidden());
     }
 
-    /** 按钮权限：按钮权限码（btn:user:add）与接口权限码同机制——持码放行、缺码 403 */
+    /** 按钮权限：按钮权限码（btn:用户:添加）与接口权限码同机制——持码放行、缺码 403 */
     @Test
     void buttonPermission() throws Exception {
         MockHttpSession withButton = sessionWith(user(Set.of("USER"), Set.of("btn:user:add")));

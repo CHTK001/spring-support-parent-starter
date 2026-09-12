@@ -16,17 +16,17 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
- * SSE Socket 会话模板实现
- * 实现 SocketSessionTemplate 接口，提供统一的消息发送能力
+   * SSE 套接字 会话模板实现
+   * 实现 套接字会话template 接口，提供统一的消息发送能力
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024-12-24
  * @author CH
  */
 @Slf4j
 public class SseSocketSessionTemplate implements SocketSessionTemplate {
 
-    /** Object_mapper */
+    /** 对象_映射器 */
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     /**
@@ -36,24 +36,28 @@ public class SseSocketSessionTemplate implements SocketSessionTemplate {
 
     /**
      * 客户端连接映射
-     * key: clientId, value: SseSocketSession
+       * 钥匙: 客户端标识, 价值观: sse套接字会话
      */
     private final Map<String, SseSocketSession> sessions = new ConcurrentHashMap<>();
 
     /**
      * 用户到会话的映射
-     * key: userId, value: clientId
+       * 钥匙: 用户标识, 价值观: 客户端标识
      */
     private final Map<String, String> userSessionMap = new ConcurrentHashMap<>();
 
-    /** 创建 SseSocketSessionTemplate 实例 */
+    /** 创建 sse套接字会话template 实例 */
     public SseSocketSessionTemplate() {
+        /**
+         * this。
+         * @param 1000L 1000L
+         */
         this(30 * 60 * 1000L);
     }
 
     /**
-     * 创建 SseSocketSessionTemplate 实例
-     * @param timeout timeout
+      * 创建 sse套接字会话template 实例
+     * @param timeout 超时
      */
     public SseSocketSessionTemplate(long timeout) {
         this.timeout = timeout;
@@ -62,7 +66,7 @@ public class SseSocketSessionTemplate implements SocketSessionTemplate {
     /**
      * 创建新的 SSE 连接
      *
-     * @param clientId 客户端ID，如果为空则自动生成
+     * @param clientId 客户端标识，如果为空则自动生成
      * @return SseEmitter
      */
     public SseEmitter createConnection(String clientId) {
@@ -72,6 +76,11 @@ public class SseSocketSessionTemplate implements SocketSessionTemplate {
 
         // 如果已存在连接，先关闭旧连接
         if (sessions.containsKey(clientId)) {
+            /**
+             * 移除。
+             * @param clientId 客户端标识
+             * @param sessions.get(clientId 会话.获取(客户端标识
+             */
             remove(clientId, sessions.get(clientId));
         }
 
@@ -131,7 +140,7 @@ public class SseSocketSessionTemplate implements SocketSessionTemplate {
     }
 
     @Override
-    /** 获取Session */
+    /** 获取会话 */
     public SocketSession getSession(String sessionId) {
         return sessions.get(sessionId);
     }
@@ -171,16 +180,22 @@ public class SseSocketSessionTemplate implements SocketSessionTemplate {
     }
 
     @Override
-    /** 发送ToUser */
+    /** 发送转为用户 */
     public void sendToUser(String userId, String event, String msg) {
         String clientId = userSessionMap.get(userId);
         if (clientId != null) {
+            /**
+             * 发送。
+             * @param clientId 客户端标识
+             * @param event 事件
+             * @param msg msg
+             */
             send(clientId, event, msg);
         }
     }
 
     @Override
-    /** 获取OnlineSessions */
+    /** 获取online会话 */
     public List<SocketSession> getOnlineSessions() {
         return sessions.values().stream()
                 .filter(SocketSession::isConnected)
@@ -188,14 +203,14 @@ public class SseSocketSessionTemplate implements SocketSessionTemplate {
     }
 
     @Override
-    /** 获取OnlineSession */
+    /** 获取online会话 */
     public List<SocketSession> getOnlineSession(String type, String roomId) {
         // SSE 不支持房间概念，返回所有在线会话
         return getOnlineSessions();
     }
 
     @Override
-    /** 获取OnlineUsers */
+    /** 获取online用户 */
     public List<SocketUser> getOnlineUsers(String type) {
         return sessions.values().stream()
                 .filter(SocketSession::isConnected)
@@ -231,8 +246,8 @@ public class SseSocketSessionTemplate implements SocketSessionTemplate {
     /**
      * 绑定用户到会话
      *
-     * @param userId   用户ID
-     * @param clientId 客户端ID
+     * @param userId   用户标识
+     * @param clientId 客户端标识
      */
     public void bindUser(String userId, String clientId) {
         userSessionMap.put(userId, clientId);
@@ -247,7 +262,7 @@ public class SseSocketSessionTemplate implements SocketSessionTemplate {
     /**
      * 解绑用户
      *
-     * @param userId 用户ID
+     * @param userId 用户标识
      */
     public void unbindUser(String userId) {
         userSessionMap.remove(userId);

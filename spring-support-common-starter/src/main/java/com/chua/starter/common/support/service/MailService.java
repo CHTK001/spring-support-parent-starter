@@ -17,8 +17,8 @@ import java.util.List;
 /**
  * 邮件发送服务实现
  * <p>
- * 使用 Spring Boot 自动配置的 JavaMailSender，
- * 邮件配置请在 application.properties 中设置 spring.mail.* 属性。
+   * 使用 Spring Boot 自动配置的 javamail发送，
+   * 邮件配置请在 application.属性 中设置 spring.mail.* 属性。
  * </p>
  *
  * @since 2026/8/4
@@ -30,7 +30,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class MailService {
 
-    /** JavaMailSender Bean（由 Spring Boot 自动配置） */
+    /** javamail发送 Bean（由 Spring Boot 自动配置） */
     private final JavaMailSender mailSender;
 
     /**
@@ -44,7 +44,7 @@ public class MailService {
     public ReturnResult<Void> sendSimpleMail(String to, String subject, String content) {
         try {
             SimpleMailMessage message = new SimpleMailMessage();
-            // 从 Spring 环境配置获取 from 地址，默认 fallback
+ // 从 Spring 环境配置获取 从 地址，默认 降级
             String from = System.getProperty("spring.mail.from", "no-reply@example.com");
             message.setFrom(from);
             message.setTo(to);
@@ -73,7 +73,7 @@ public class MailService {
             MimeMessage mimeMessage = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, StandardCharsets.UTF_8.name());
 
-            // 从 Spring 环境配置获取 from 地址
+ // 从 Spring 环境配置获取 从 地址
             String from = System.getProperty("spring.mail.from", "no-reply@example.com");
             helper.setFrom(from);
             helper.setTo(to);

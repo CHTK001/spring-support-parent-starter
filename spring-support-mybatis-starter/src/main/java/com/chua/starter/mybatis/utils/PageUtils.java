@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
  */
 public class PageUtils {
 
-    /** 创建 PageUtils 实例 */
+    /** 创建 page工具 实例 */
     private PageUtils() {
     }
 
@@ -39,6 +39,11 @@ public class PageUtils {
                 BeanUtils.copyProperties(it, r);
                 return r;
             } catch (Exception e) {
+                /**
+                 * runtime异常。
+                 * @param e e
+                 * @return runtime异常的结果
+                 */
                 throw new RuntimeException(e);
             }
         }).collect(Collectors.toList()));
@@ -58,6 +63,11 @@ public class PageUtils {
             try {
                 return ReflectUtils.instantiate(type);
             } catch (Exception e) {
+                /**
+                 * runtime异常。
+                 * @param e e
+                 * @return runtime异常的结果
+                 */
                 throw new RuntimeException(e);
             }
         });

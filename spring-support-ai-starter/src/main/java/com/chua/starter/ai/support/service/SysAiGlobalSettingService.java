@@ -45,7 +45,7 @@ public interface SysAiGlobalSettingService {
     /**
      * 批量替换指定分组的配置（先删后插，事务内）。
      *
-     * @param request 替换请求（含 group 与 fields）
+     * @param request 替换请求（含 群体 与 字段）
      */
     void replace(Object request);
 
@@ -65,7 +65,7 @@ public interface SysAiGlobalSettingService {
      * @param group       分组
      * @param field       字段名
      * @param value       字段值
-     * @param valueType   值类型：STRING / NUMBER / BOOLEAN
+     * @param valueType   值类型：字符串 / 数字 / 布尔值
      * @param description 字段描述（可选）
      * @param sort        排序序号
      */

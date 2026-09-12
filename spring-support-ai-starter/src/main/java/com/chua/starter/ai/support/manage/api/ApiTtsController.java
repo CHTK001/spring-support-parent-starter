@@ -39,9 +39,10 @@ public class ApiTtsController {
      *
      * <p>未接入 TTS 引擎，返回 {@code NO_COMPLETER} 错误信封，HTTP 状态 409。</p>
      *
-     * @param body    请求体（含 text / voice 等字段，本实现忽略）
+     * @param body    请求体（含 文本 / voice 等字段，本实现忽略）
      * @param voice   可选音色参数
      * @return JSON 错误信封
+     * @param false false
      */
     @PostMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResult<Void>> tts(@RequestBody(required = false) Map<String, Object> body,

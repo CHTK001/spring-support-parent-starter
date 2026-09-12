@@ -35,6 +35,11 @@ public class CollectOutcome {
      * @return 结果
      */
     public static CollectOutcome ok(String message) {
+        /**
+          * collectoutcome。
+         * @param true true
+         * @param message 消息
+         */
         return new CollectOutcome(true, message);
     }
 
@@ -45,6 +50,11 @@ public class CollectOutcome {
      * @return 结果
      */
     public static CollectOutcome fail(String message) {
+        /**
+          * collectoutcome。
+         * @param false false
+         * @param message 消息
+         */
         return new CollectOutcome(false, message);
     }
 }

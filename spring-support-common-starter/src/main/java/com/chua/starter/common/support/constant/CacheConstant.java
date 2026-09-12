@@ -11,6 +11,9 @@ package com.chua.starter.common.support.constant;
  */
 public final class CacheConstant {
 
+    /**
+     * 缓存常量。
+     */
     private CacheConstant() {
     }
 

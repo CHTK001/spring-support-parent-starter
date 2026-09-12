@@ -31,12 +31,12 @@ import java.util.UUID;
 public class DeviceServiceImpl implements DeviceService {
 
     /**
-     * 设备信息 Mapper
+      * 设备信息 映射器
      */
     private final DeviceInfoMapper deviceInfoMapper;
 
     /**
-     * 设备组织 Mapper
+      * 设备组织 映射器
      */
     private final DeviceOrganizationMapper deviceOrganizationMapper;
 
@@ -46,7 +46,7 @@ public class DeviceServiceImpl implements DeviceService {
     private final DeviceSessionManager sessionManager;
 
     /**
-     * 所有可用的设备 Provider（由 SPI 自动注入）
+      * 所有可用的设备 提供者（由 SPI 自动注入）
      */
     private final List<DeviceProvider> providers;
 
@@ -97,7 +97,7 @@ public class DeviceServiceImpl implements DeviceService {
     }
 
     @Override
-    /** ListDevices */
+    /** 列表devices */
     public List<DeviceInfo> listDevices(String orgId) {
         LambdaQueryWrapper<DeviceInfo> wrapper = new LambdaQueryWrapper<>();
         if (StringUtils.hasText(orgId)) {
@@ -108,7 +108,7 @@ public class DeviceServiceImpl implements DeviceService {
     }
 
     @Override
-    /** ListByCategory */
+    /** 列表by分类 */
     public List<DeviceInfo> listByCategory(String category) {
         LambdaQueryWrapper<DeviceInfo> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(DeviceInfo::getDeviceInfoCategory, category);
@@ -116,7 +116,7 @@ public class DeviceServiceImpl implements DeviceService {
     }
 
     @Override
-    /** SyncOrganization */
+    /** 同步组织 */
     public void syncOrganization() {
         for (DeviceProvider provider : providers) {
             try {
@@ -142,7 +142,7 @@ public class DeviceServiceImpl implements DeviceService {
     }
 
     @Override
-    /** 获取OrganizationTree */
+    /** 获取组织树 */
     public List<DeviceOrganization> getOrganizationTree(String vendor) {
         LambdaQueryWrapper<DeviceOrganization> wrapper = new LambdaQueryWrapper<>();
         if (StringUtils.hasText(vendor)) {
@@ -152,10 +152,15 @@ public class DeviceServiceImpl implements DeviceService {
     }
 
     @Override
-    /** 更新OfflineThreshold */
+    /** 更新offline阈值 */
     public void updateOfflineThreshold(String id, int threshold) {
         DeviceInfo device = deviceInfoMapper.selectById(id);
         if (device == null) {
+            /**
+             * runtime异常。
+             * @param id 标识
+             * @return runtime异常的结果
+             */
             throw new RuntimeException("设备不存在: " + id);
         }
         DeviceInfo update = new DeviceInfo();
@@ -171,6 +176,11 @@ public class DeviceServiceImpl implements DeviceService {
     public void reconnect(String id) {
         DeviceInfo device = deviceInfoMapper.selectById(id);
         if (device == null) {
+            /**
+             * runtime异常。
+             * @param id 标识
+             * @return runtime异常的结果
+             */
             throw new RuntimeException("设备不存在: " + id);
         }
         // 关闭旧会话
@@ -188,6 +198,11 @@ public class DeviceServiceImpl implements DeviceService {
                 .map(p -> p.connect(info))
                 .orElse(null);
         if (session == null) {
+            /**
+             * runtime异常。
+             * @param id 标识
+             * @return runtime异常的结果
+             */
             throw new RuntimeException("设备重连失败，无可用 Provider: " + id);
         }
         sessionManager.register(id, session);
@@ -200,10 +215,15 @@ public class DeviceServiceImpl implements DeviceService {
     }
 
     @Override
-    /** RefreshStatus */
+    /** refresh状态 */
     public void refreshStatus(String id) {
         DeviceInfo device = deviceInfoMapper.selectById(id);
         if (device == null) {
+            /**
+             * runtime异常。
+             * @param id 标识
+             * @return runtime异常的结果
+             */
             throw new RuntimeException("设备不存在: " + id);
         }
         DeviceSession session = sessionManager.getSession(id);
@@ -217,7 +237,7 @@ public class DeviceServiceImpl implements DeviceService {
     }
 
     @Override
-    /** TestConnection */
+    /** 测试connection */
     public boolean testConnection(DeviceConnectInfo info) {
         DeviceSession session = providers.stream()
                 .filter(p -> p.support(info))

@@ -10,7 +10,7 @@ import java.util.function.Supplier;
  * 缓存操作模板
  * <p>
  * 提供高层次的手动缓存操作方法，内部自动使用 {@link TenantedKeyGenerator}
- * 拼接完整的缓存键（包含应用名、平台名、租户ID），保证手动操作与
+   * 拼接完整的缓存键（包含应用名、平台名、租户标识），保证手动操作与
  * {@code @Cacheable} / {@code @CachePut} / {@code @CacheEvict} 注解生成的 key 一致。
  * </p>
  *
@@ -31,6 +31,7 @@ import java.util.function.Supplier;
  *
  * // 按模式清除
  * cacheTemplate.evictByPattern("users", "user:*");
+ * }</pre>acheTemplate.evictByPattern("users", "user:*");
  * }</pre>
  *
  * @since 2025/8/3
@@ -43,13 +44,14 @@ public class CacheTemplate {
 
     /** 缓存管理器 */
     private final MultiLevelCacheManager cacheManager;
-    /** 密钥generator */
+    /** 密钥生成器 */
     private final TenantedKeyGenerator keyGenerator;
 
     /**
-     * 创建 CacheTemplate 实例
-     * @param cacheManager cacheManager
-     * @param TenantedKeyGenerator TenantedKeyGenerator
+      * 创建 缓存template 实例
+     * @param cacheManager 缓存管理器
+     * @param keyGenerator tenanted钥匙生成器
+     * @param keyGenerator 钥匙生成器
      */
     public CacheTemplate(MultiLevelCacheManager cacheManager, TenantedKeyGenerator keyGenerator) {
         this.cacheManager = cacheManager;
@@ -57,7 +59,7 @@ public class CacheTemplate {
     }
 
     /**
-     * 根据业务键构建完整的缓存键（与 {@code @Cacheable} 注解生成的 key 一致）
+      * 根据业务键构建完整的缓存键（与 {@code @Cacheable} 注解生成的 钥匙 一致）
      *
      * @param businessKey 业务键，例如 {@code "user:123"}
      * @return 完整缓存键，例如 {@code "cache:myapp:default:tenant-0:user:123"}
@@ -190,6 +192,7 @@ public class CacheTemplate {
 
     /**
      * 获取缓存管理器（供高级使用）
+     * @return 获取缓存管理器的结果
      */
     public MultiLevelCacheManager getCacheManager() {
         return cacheManager;
@@ -197,6 +200,7 @@ public class CacheTemplate {
 
     /**
      * 获取键生成器（供高级使用）
+     * @return 获取钥匙生成器的结果
      */
     public TenantedKeyGenerator getKeyGenerator() {
         return keyGenerator;

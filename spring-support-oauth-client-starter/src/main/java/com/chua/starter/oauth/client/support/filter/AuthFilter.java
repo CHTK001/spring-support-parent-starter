@@ -31,6 +31,7 @@ import java.util.Objects;
  * 鉴权拦截器
  *
  * @author CH
+ * @since 4.0.0
  */
 @Slf4j
 public class AuthFilter implements Filter {
@@ -41,16 +42,17 @@ public class AuthFilter implements Filter {
     private final RequestMappingHandlerMapping requestMappingHandlerMapping;
     
     /**
-     * 缓存HandlerMethod是否需要指纹验证的结果
-     * 使用ConcurrentReferenceHashMap，线程安全且支持弱引用
+      * 缓存处理器方法是否需要指纹验证的结果
+      * 使用并发引用哈希映射，线程安全且支持弱引用
      */
     private final ConcurrentReferenceHashMap<HandlerMethod, Boolean> fingerprintVerificationCache = 
             new ConcurrentReferenceHashMap<>(16, ConcurrentReferenceHashMap.ReferenceType.WEAK);
 
     /**
-     * 创建 AuthFilter 实例
-     * @param webRequest webRequest
-     * @param RequestMappingHandlerMapping RequestMappingHandlerMapping
+      * 创建 认证过滤器 实例
+     * @param webRequest web请求
+     * @param requestMappingHandlerMapping 请求mapping处理器mapping
+     * @param requestMappingHandlerMapping 请求mapping处理器mapping
      */
     public AuthFilter(WebRequest webRequest, RequestMappingHandlerMapping requestMappingHandlerMapping) {
         this.webRequest = webRequest;
@@ -60,7 +62,7 @@ public class AuthFilter implements Filter {
     /**
      * 动态添加白名单规则
      * <p>
-     * 支持 Ant 风格的 URL Pattern，例如 /v2/face/**，添加后立即生效，无需重启。
+      * 支持 Ant 风格的 URL 模式，例如 /v2/face/**，添加后立即生效，无需重启。
      * </p>
      *
      * @param pattern 白名单规则
@@ -98,7 +100,7 @@ public class AuthFilter implements Filter {
     }
 
     @Override
-    /** Do过滤 */
+    /** 执行过滤 */
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
         HttpServletRequest httpRequest = (HttpServletRequest) request;
         String requestURI = httpRequest.getRequestURI();
@@ -122,7 +124,7 @@ public class AuthFilter implements Filter {
 
         log.debug("[AuthFilter拦截]拦截到需要认证的请求 - URI: {}, 方法: {}, IP: {}", requestURI, method, remoteAddr);
 
-        // Token检查
+ // 令牌检查
         if (webRequest.isFailure()) {
             log.warn("[AuthFilter认证失败]未找到有效Token - URI: {}, 方法: {}", requestURI, method);
             log.debug("[AuthFilter认证失败]Token检查失败，执行失败链");
@@ -145,7 +147,7 @@ public class AuthFilter implements Filter {
             return;
         }
 
-        log.info("[AuthFilter鉴权成功]鉴权通过 - URI: {}", requestURI);        // 验证浏览器指纹（仅对标记了@VerifyFingerprint注解的接口）
+        log.info("[AuthFilter鉴权成功]鉴权通过 - URI: {}", requestURI); // 验证浏览器指纹（仅对标记了@验证fingerprint注解的接口）
         UserResume userResume = authentication.getReturnResult();
         Information fingerprintResult = verifyFingerprint(httpRequest, userResume);
         if (fingerprintResult != null && fingerprintResult != Information.OK) {
@@ -156,10 +158,15 @@ public class AuthFilter implements Filter {
             return;
         }
 
-        // 渲染用户信息到Session
+ // 渲染用户信息到会话
+        /**
+         * render。
+         * @param authentication 认证
+         * @param httpRequest http请求
+         */
         render(authentication, httpRequest);
 
-        // 创建增强的HttpServletRequestWrapper，集成Principal支持
+ // 创建增强的httpservlet请求包装器，集成Principal支持
         String authType = determineAuthType(webRequest);
 
         log.debug("[AuthFilter包装]创建OAuth请求包装器 - 用户: {}, 认证类型: {}", 
@@ -168,7 +175,7 @@ public class AuthFilter implements Filter {
         OAuthHttpServletRequestWrapper wrappedRequest = OAuthHttpServletRequestWrapper.authenticated(
             httpRequest, userResume, authType);
 
-        // 设置 userId 到 request 属性，供拦截器和业务代码使用
+ // 设置 用户标识 到 请求 属性，供拦截器和业务代码使用
         if (userResume != null && userResume.getUserId() != null) {
             wrappedRequest.setAttribute("userId", userResume.getUserId());
             log.debug("[AuthFilter属性]设置userId到request属性 - userId: {}", userResume.getUserId());
@@ -196,7 +203,7 @@ public class AuthFilter implements Filter {
      * @return 认证类型
      */
     private String determineAuthType(WebRequest webRequest) {
-        // 根据OAuth客户端配置确定认证类型
+ // 根据o认证客户端配置确定认证类型
         String protocol = webRequest.getAuthProperties().getProtocol();
         if (protocol != null) {
             return switch (protocol.toLowerCase()) {
@@ -210,7 +217,12 @@ public class AuthFilter implements Filter {
         return "OAUTH";
     }
 
-    /** Render */
+    /**
+     * Render
+     *
+     * @param authentication 认证
+     * @param request 请求
+     */
     private void render(AuthenticationInformation authentication, HttpServletRequest request) {
         if(authentication.getInformation() != Information.OK) {
             log.debug("[AuthFilter渲染]认证信息状态非OK，跳过渲染 - 状态: {}", authentication.getInformation());
@@ -222,13 +234,13 @@ public class AuthFilter implements Filter {
         HttpSession session = request.getSession();
         UserResume userResume = authentication.getReturnResult();
 
-        // 存储用户信息到Session
+ // 存储用户信息到会话
         session.setAttribute("username", userResume.getUsername());
         session.setAttribute("userId", MapUtils.getString(userResume.getExt(), "userId"));
         session.setAttribute("userResume", userResume);
         session.setAttribute(AuthSessionUtils.SESSION_USER_INFO, userResume);
         
-        // 存储浏览器指纹到Session
+ // 存储浏览器指纹到会话
         if (userResume.getFingerprint() != null) {
             session.setAttribute("x-oauth-fingerprint", userResume.getFingerprint());
             log.debug("[AuthFilter渲染]浏览器指纹已存储到Session");
@@ -308,7 +320,7 @@ public class AuthFilter implements Filter {
      * <p>
      * 判断逻辑：
      * 1. 如果开启了全局指纹验证，则所有接口都需要验证
-     * 2. 否则，只检查处理方法或其所在类是否标记了@VerifyFingerprint注解
+      * 2. 否则，只检查处理方法或其所在类是否标记了@验证fingerprint注解
      * </p>
      *
      * @param request HTTP请求
@@ -341,10 +353,10 @@ public class AuthFilter implements Filter {
                 return cached;
             }
             
-            // 检查方法上是否有@VerifyFingerprint注解
+ // 检查方法上是否有@验证fingerprint注解
             boolean requiresVerification = handlerMethod.hasMethodAnnotation(VerifyFingerprint.class);
             
-            // 检查类上是否有@VerifyFingerprint注解
+ // 检查类上是否有@验证fingerprint注解
             if (!requiresVerification) {
                 requiresVerification = handlerMethod.getBeanType().isAnnotationPresent(VerifyFingerprint.class);
             }
@@ -360,6 +372,8 @@ public class AuthFilter implements Filter {
 
     /**
      * 脱敏指纹（用于日志输出）
+     * @param fingerprint fingerprint
+     * @return maskFingerprint的结果
      */
     private String maskFingerprint(String fingerprint) {
         if (fingerprint == null || fingerprint.length() < 8) {

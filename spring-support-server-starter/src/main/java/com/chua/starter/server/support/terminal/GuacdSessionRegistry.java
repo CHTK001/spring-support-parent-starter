@@ -16,7 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * guacd 会话注册表
  * <p>
- * 以 tunnelId 为键集中管理全部在线远控会话，提供注册、查找、
+   * 以 tunnelid 为键集中管理全部在线远控会话，提供注册、查找、
  * 主动关闭与空闲扫描能力。容器使用 {@link ConcurrentHashMap}
  * 保证多连接并发安全。
  * </p>
@@ -28,10 +28,10 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 public class GuacdSessionRegistry {
 
-    /** 在线会话表：tunnelId -> 会话 */
+    /** 在线会话表：tunnelid -> 会话 */
     private final Map<String, GuacdSession> sessions = new ConcurrentHashMap<>();
 
-    /** 审计记录 ID -> tunnelId 索引（供管理端按记录强制关闭） */
+    /** 审计记录 标识 -> tunnelid 索引（供管理端按记录强制关闭） */
     private final Map<Long, String> sessionRecordIndex = new ConcurrentHashMap<>();
 
     /**
@@ -47,10 +47,10 @@ public class GuacdSessionRegistry {
     }
 
     /**
-     * 按 WS 会话 ID 查找会话
+      * 按 WS 会话 标识 查找会话
      *
-     * @param wsSessionId 浏览器 WS 会话 ID
-     * @return 会话，不存在时返回 null
+     * @param wsSessionId 浏览器 WS 会话 标识
+     * @return 会话，不存在时返回 空
      */
     public GuacdSession findByWsSessionId(String wsSessionId) {
         for (GuacdSession session : sessions.values()) {
@@ -62,9 +62,9 @@ public class GuacdSessionRegistry {
     }
 
     /**
-     * 按审计记录 ID 强制关闭会话
+      * 按审计记录 标识 强制关闭会话
      *
-     * @param recordId 审计记录 ID
+     * @param recordId 审计记录 标识
      * @param reason   关闭原因
      * @return true 表示存在会话并已触发关闭
      */
@@ -78,6 +78,11 @@ public class GuacdSessionRegistry {
             sessionRecordIndex.remove(recordId);
             return false;
         }
+        /**
+         * 关闭。
+         * @param session 会话
+         * @param reason ReasonMLmlml
+         */
         close(session, reason);
         return true;
     }
@@ -85,7 +90,7 @@ public class GuacdSessionRegistry {
     /**
      * 关闭指定会话并从注册表移除
      * <p>
-     * 幂等：重复调用无副作用。关闭顺序：guacd Socket -> 浏览器 WS。
+      * 幂等：重复调用无副作用。关闭顺序：guacd 套接字 -> 浏览器 WS。
      * </p>
      *
      * @param session 会话
@@ -133,6 +138,11 @@ public class GuacdSessionRegistry {
             }
         }
         for (GuacdSession session : idleSessions) {
+            /**
+             * 关闭。
+             * @param session 会话
+             * @param "空闲超时" "空闲超时"
+             */
             close(session, "空闲超时");
         }
         return idleSessions.size();

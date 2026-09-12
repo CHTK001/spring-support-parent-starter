@@ -59,7 +59,7 @@ public class DataSourceSqlMonitor {
     private final SqlMonitorProperties properties;
 
     /**
-     * 数据源统计缓存：dataSourceName → 统计
+      * 数据源统计缓存：数据源名称 → 统计
      */
     private final Map<String, SqlStatistics> statisticsMap = new ConcurrentHashMap<>();
 
@@ -74,7 +74,7 @@ public class DataSourceSqlMonitor {
     private final Map<DataSource, DataSource> wrappedCache = new ConcurrentHashMap<>();
 
     /**
-     * 已包装数据源 key 集合（有界去重，按策略淘汰）
+      * 已包装数据源 钥匙 集合（有界去重，按策略淘汰）
      */
     private final CircularLinkedSet<DataSource> trackedWrappedKeys;
 
@@ -107,7 +107,7 @@ public class DataSourceSqlMonitor {
     /**
      * 获取静态实例
      *
-     * @return 监控实例，未初始化时返回 null
+     * @return 监控实例，未初始化时返回 空
      */
     public static DataSourceSqlMonitor getInstance() {
         return INSTANCE;
@@ -118,7 +118,7 @@ public class DataSourceSqlMonitor {
      *
      * @param dataSourceName 数据源名称
      * @param dataSource     数据源
-     * @return 包装后的数据源（监控未启用或数据源为 null 时返回原对象）
+     * @return 包装后的数据源（监控未启用或数据源为 空 时返回原对象）
      */
     public static DataSource wrapIfEnabled(String dataSourceName, DataSource dataSource) {
         DataSourceSqlMonitor instance = INSTANCE;
@@ -164,7 +164,7 @@ public class DataSourceSqlMonitor {
             }
             DataSource wrapped = instance.wrap(dataSource, name);
             if (wrapped != dataSource) {
-                // 重新注册以替换 TARGET_DATA_SOURCES 与分组注册表中的引用
+ // 重新注册以替换 Target_数据_源 与分组注册表中的引用
                 com.chua.starter.datasource.support.DataSourceContextSupport.addDatasource(name, wrapped);
             }
         }
@@ -182,7 +182,7 @@ public class DataSourceSqlMonitor {
         if (dataSource instanceof MonitoringDataSource) {
             return dataSource;
         }
-        // 穿透 Seata DataSourceProxy 等包装器检测，避免嵌套
+ // 穿透 Seata 数据源代理 等包装器检测，避免嵌套
         if (isMonitored(dataSource)) {
             return dataSource;
         }
@@ -201,7 +201,7 @@ public class DataSourceSqlMonitor {
             if (trackedWrappedKeys.add(dataSource)) {
                 wrappedCache.put(dataSource, wrapped);
             }
-            // 容量满被淘汰的 key 需同步清理缓存，避免 wrappedCache 无限增长
+ // 容量满被淘汰的 钥匙 需同步清理缓存，避免 wrapped缓存 无限增长
             DataSource evicted = trackedWrappedKeys.lastEvicted();
             if (evicted != null) {
                 wrappedCache.remove(evicted);
@@ -232,7 +232,7 @@ public class DataSourceSqlMonitor {
                 if (statistics == null) {
                     if (trackedDataSources.add(dataSourceName)) {
                         statistics = statisticsMap.computeIfAbsent(dataSourceName, SqlStatistics::new);
-                        // 容量满被淘汰的数据源名需同步清理统计，避免 statisticsMap 无限增长
+ // 容量满被淘汰的数据源名需同步清理统计，避免 statistics映射 无限增长
                         String evicted = trackedDataSources.lastEvicted();
                         if (evicted != null) {
                             statisticsMap.remove(evicted);
@@ -283,7 +283,7 @@ public class DataSourceSqlMonitor {
      * 获取某数据源的统计
      *
      * @param dataSourceName 数据源名称
-     * @return 统计信息，不存在时返回 null
+     * @return 统计信息，不存在时返回 空
      */
     public SqlStatistics getStatistics(String dataSourceName) {
         return statisticsMap.get(dataSourceName);

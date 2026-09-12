@@ -5,8 +5,9 @@ import com.chua.payment.support.entity.WalletAccount;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
- * 钱包账户 Mapper
+   * 钱包账户 映射器
  * @author CH
+ * @since 4.0.0
  */
 @Mapper
 public interface WalletAccountMapper extends BaseMapper<WalletAccount> {

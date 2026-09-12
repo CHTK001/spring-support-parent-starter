@@ -1,19 +1,19 @@
 package com.chua.starter.swagger.support.customize;
 
 /*
- * Copyright © 2017-2023 Knife4j(xiaoymin@foxmail.com)
+   * Copyright © 2017-2023 刀4j(xiaoymin@foxmail.com)
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+   * 执照 under the Apache 执照, 版本 2.0 (the "执照");
+   * you may not use this 文件 except 入 compliance with the 执照.
+   * You may obtain a 副本 的 the 执照 at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+   * Unless required by applicable 定律 或 agreed 转为 入 写入, software
+   * distributed under the 执照 是否 distributed on an "AS 是否" BASIS,
+   * WITHOUT WARRANTIES 或 条件 的 任意 种类, either express 或 implied.
+   * 参见 the 执照 for the 特定 language governing 权限 和
+   * limitations under the 执照.
  */
 
 import com.chua.common.support.reflection.ReflectUtils;
@@ -58,20 +58,20 @@ import java.util.stream.Collectors;
 public class CustomKnife4jOpenApiCustomizer implements GlobalOpenApiCustomizer {
     
     /**
-     * Knife4j配置属性
+      * 刀4j配置属性
      */
     private final Knife4jProperties knife4jProperties;
     
     /**
-     * SpringDoc配置属性
+      * springdoc配置属性
      */
     private final SpringDocConfigProperties properties;
 
     /**
      * 构造函数
      *
-     * @param knife4jProperties Knife4j配置属性
-     * @param properties SpringDoc配置属性
+     * @param knife4jProperties 刀4j配置属性
+     * @param properties springdoc配置属性
      */
     public CustomKnife4jOpenApiCustomizer(Knife4jProperties knife4jProperties, SpringDocConfigProperties properties) {
         this.knife4jProperties = knife4jProperties;
@@ -79,9 +79,9 @@ public class CustomKnife4jOpenApiCustomizer implements GlobalOpenApiCustomizer {
     }
 
     /**
-     * 定制OpenAPI
+      * 定制打开api
      *
-     * @param openApi OpenAPI对象
+     * @param openApi 打开api对象
      */
     @Override
     public void customise(OpenAPI openApi) {
@@ -95,14 +95,18 @@ public class CustomKnife4jOpenApiCustomizer implements GlobalOpenApiCustomizer {
             objectMap.put(GlobalConstants.EXTENSION_OPEN_SETTING_NAME, setting);
             objectMap.put(GlobalConstants.EXTENSION_OPEN_MARKDOWN_NAME, openApiExtensionResolver.getMarkdownFiles());
             openApi.addExtension(GlobalConstants.EXTENSION_OPEN_API_NAME, objectMap);
+            /**
+             * 添加订单延伸。
+             * @param openApi 打开api
+             */
             addOrderExtension(openApi);
         }
     }
 
     /**
-     * 往OpenAPI内tags字段添加x-order属性
+      * 往打开api内标签字段添加x-订单属性
      *
-     * @param openApi OpenAPI对象
+     * @param openApi 打开api对象
      */
     private void addOrderExtension(OpenAPI openApi) {
         if (CollectionUtils.isEmpty(properties.getGroupConfigs())) {
@@ -118,7 +122,7 @@ public class CustomKnife4jOpenApiCustomizer implements GlobalOpenApiCustomizer {
         if (CollectionUtils.isEmpty(packagesToScan)) {
             return;
         }
-        // 扫描包下被ApiSupport注解的RestController Class
+ // 扫描包下被api支持注解的rest控制器 类
         Set<Class<?>> classes =
                 packagesToScan.stream()
                         .map(packageToScan -> scanPackageByAnnotation(packageToScan, RestController.class))
@@ -126,7 +130,7 @@ public class CustomKnife4jOpenApiCustomizer implements GlobalOpenApiCustomizer {
                         .filter(clazz -> clazz.isAnnotationPresent(ApiSupport.class))
                         .collect(Collectors.toSet());
         if (!CollectionUtils.isEmpty(classes)) {
-            // ApiSupport oder值存入tagSortMap<Tag.name,ApiSupport.order>
+ // api支持 oder值存入标签排序映射<Tag.name,ApiSupport.order>
             Map<String, Integer> tagOrderMap = new HashMap<>();
             classes.forEach(
                     clazz -> {
@@ -136,7 +140,7 @@ public class CustomKnife4jOpenApiCustomizer implements GlobalOpenApiCustomizer {
                             tagOrderMap.putIfAbsent(tag.name(), apiSupport.order());
                         }
                     });
-            // 往openApi tags字段添加x-order增强属性
+ // 往打开api 标签字段添加x-订单增强属性
             if (openApi.getTags() != null) {
                 openApi
                         .getTags()
@@ -152,7 +156,7 @@ public class CustomKnife4jOpenApiCustomizer implements GlobalOpenApiCustomizer {
     }
 
     /**
-     * 获取Tag注解
+      * 获取标签注解
      *
      * @param clazz 类
      * @return Tag注解

@@ -31,20 +31,20 @@ public class SpiderDefinitionServiceImpl
         implements SpiderDefinitionService {
 
     /**
-     * 启用列表缓存 key 常量
+      * 启用列表缓存 钥匙 常量
      */
     private static final String ENABLED_LIST_KEY = "'definitions:enabled'";
 
     @Cacheable(key = ENABLED_LIST_KEY)
     @Override
-    /** ListEnabled */
+    /** 列表已启用 */
     public List<SpiderDefinition> listEnabled() {
         return list(Wrappers.<SpiderDefinition>lambdaQuery()
                 .eq(SpiderDefinition::getEnabled, Integer.valueOf(1)));
     }
 
     @Override
-    /** 标记运行AtOnly */
+    /** 标记运行atonly */
     public boolean markRunAtOnly(Long id, LocalDateTime lastRunAt) {
         if (id == null || lastRunAt == null) {
             return false;
@@ -64,14 +64,14 @@ public class SpiderDefinitionServiceImpl
 
     @CacheEvict(allEntries = true)
     @Override
-    /** 更新ById */
+    /** 更新byid */
     public boolean updateById(SpiderDefinition entity) {
         return super.updateById(entity);
     }
 
     @CacheEvict(allEntries = true)
     @Override
-    /** 移除ById */
+    /** 移除byid */
     public boolean removeById(Serializable id) {
         return super.removeById(id);
     }

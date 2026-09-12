@@ -57,7 +57,12 @@ public class DSTransactionalAspect {
     @Around("execution(* *(..)) && " +
             "(@annotation(com.chua.starter.datasource.annotation.DSTransactional) || " +
             "@within(com.chua.starter.datasource.annotation.DSTransactional))")
-    /** Around */
+    /**
+     * Around
+     *
+     * @param pjp pjp
+     * @return around的结果
+     */
     public Object around(ProceedingJoinPoint pjp) throws Throwable {
         // 解析注解（方法优先 -> 类级别回退）
         DSTransactional dsTransactional = resolveAnnotation(pjp);
@@ -69,7 +74,7 @@ public class DSTransactionalAspect {
         String txName = getTransactionName(pjp, dsTransactional);
 
         // ===== 嵌套传播 =====
-        // 如果已经在一个 @DSTransactional 上下文中且 propagate=true，直接执行
+ // 如果已经在一个 @dstransactional 上下文中且 propagate=true，直接执行
         MultiDSTransactionContext existing = MultiDSTransactionContext.getCurrent();
         if (existing != null && dsTransactional.propagate()) {
             MultiDSTransactionContext.incrementDepth();
@@ -110,6 +115,8 @@ public class DSTransactionalAspect {
     /**
      * 解析 {@code @DSTransactional} 注解
      * <p>方法级别优先级高于类级别。</p>
+     * @param pjp pjp
+     * @return resolve注解的结果
      */
     private DSTransactional resolveAnnotation(ProceedingJoinPoint pjp) {
         // 方法级别
@@ -125,6 +132,9 @@ public class DSTransactionalAspect {
 
     /**
      * 获取事务名称
+     * @param pjp pjp
+     * @param dsTransactional dstransactional
+     * @return 获取transaction名称的结果
      */
     private String getTransactionName(ProceedingJoinPoint pjp, DSTransactional dsTransactional) {
         String name = dsTransactional.value();

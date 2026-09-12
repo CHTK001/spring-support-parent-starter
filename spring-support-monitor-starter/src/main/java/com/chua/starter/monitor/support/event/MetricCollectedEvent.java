@@ -10,17 +10,10 @@ import com.chua.starter.monitor.support.spi.CollectResult;
  * 不影响采集与入库主链路。
  * </p>
  *
+ * @param result 采集结果
  * @author CH
  * @since 4.0.0.42
+ * @return 指标collected事件的结果
  */
 public record MetricCollectedEvent(CollectResult result) {
-
-    /**
-     * 获取采集结果
-     *
-     * @return 采集结果
-     */
-    public CollectResult getResult() {
-        return result;
-    }
 }

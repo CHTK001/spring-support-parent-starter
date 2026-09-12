@@ -4,7 +4,7 @@ import com.chua.common.support.utils.DigestUtils;
 import org.apache.commons.lang3.StringUtils;
 
 /**
- * OpenID 和 UnionID 生成器
+   * 打开标识 和 unionid 生成器
  * <p>
  * 用于生成第三方登录场景下的用户唯一标识
  * </p>
@@ -74,20 +74,23 @@ import org.apache.commons.lang3.StringUtils;
  *
  * // 快捷方式
  * String[] ids = OpenIdGenerator.generateSystemIds("user_001");
+ * }</pre> 快捷方式
+ * String[] ids = OpenIdGenerator.generateSystemIds("user_001");
  * }</pre>
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2025-12-07
+ * @author CH
  */
 public final class OpenIdGenerator {
 
     /**
-     * OpenID 前缀
+       * 打开标识 前缀
      */
     private static final String OPEN_ID_PREFIX = "o_";
 
     /**
-     * UnionID 前缀
+      * unionid 前缀
      */
     private static final String UNION_ID_PREFIX = "u_";
 
@@ -96,19 +99,22 @@ public final class OpenIdGenerator {
      */
     private static final String DEFAULT_SALT = "oauth_salt_2025";
 
+    /**
+      * 打开标识生成器。
+     */
     private OpenIdGenerator() {
         // 工具类禁止实例化
     }
 
     /**
-     * 生成 OpenID
+       * 生成 打开标识
      * <p>
      * 用户在某个具体应用下的唯一标识
-     * 同一用户在不同应用（appId不同）下，OpenID 不同
+       * 同一用户在不同应用（appid不同）下，打开标识 不同
      * </p>
      *
-     * @param platform 平台标识（如：wechat, alipay, system）
-     * @param appId    应用ID（如：wx123456, app_001）
+     * @param platform 平台标识（如：wechat, alipay, 系统）
+     * @param appId    应用标识（如：wx123456, app_001）
      * @param userId   用户唯一标识（如：数据库主键、手机号等）
      * @return OpenID，格式：o_{32位MD5}
      */
@@ -121,13 +127,13 @@ public final class OpenIdGenerator {
     }
 
     /**
-     * 生成 UnionID
+      * 生成 unionid
      * <p>
      * 用户在同一开放平台下所有应用的唯一标识
-     * 同一用户在同一平台的不同应用下，UnionID 相同
+      * 同一用户在同一平台的不同应用下，unionid 相同
      * </p>
      *
-     * @param platform    平台标识（如：wechat, alipay, system）
+     * @param platform    平台标识（如：wechat, alipay, 系统）
      * @param platformKey 平台密钥（开放平台的唯一标识，同一开放平台下所有应用共享）
      * @param userId      用户唯一标识（如：数据库主键、手机号等）
      * @return UnionID，格式：u_{32位MD5}
@@ -141,9 +147,9 @@ public final class OpenIdGenerator {
     }
 
     /**
-     * 生成 OpenID（简化版）
+       * 生成 打开标识（简化版）
      * <p>
-     * 使用平台标识作为 appId
+      * 使用平台标识作为 appid
      * </p>
      *
      * @param platform 平台标识
@@ -155,9 +161,9 @@ public final class OpenIdGenerator {
     }
 
     /**
-     * 生成 UnionID（简化版）
+      * 生成 unionid（简化版）
      * <p>
-     * 使用平台标识作为 platformKey
+      * 使用平台标识作为 platform钥匙
      * </p>
      *
      * @param platform 平台标识
@@ -169,24 +175,24 @@ public final class OpenIdGenerator {
     }
 
     /**
-     * 为系统内部用户生成 OpenID 和 UnionID
+       * 为系统内部用户生成 打开标识 和 unionid
      * <p>
      * 适用于自建系统，非第三方登录场景
      * </p>
      *
-     * @param userId 用户ID
-     * @return 包含 openId 和 unionId 的数组 [openId, unionId]
+     * @param userId 用户标识
+     * @return 包含 打开标识 和 unionid 的数组 [打开标识, unionid]
      */
     public static String[] generateSystemIds(String userId) {
         return generateSystemIds("system", userId);
     }
 
     /**
-     * 为系统内部用户生成 OpenID 和 UnionID
+       * 为系统内部用户生成 打开标识 和 unionid
      *
      * @param appId  应用标识
-     * @param userId 用户ID
-     * @return 包含 openId 和 unionId 的数组 [openId, unionId]
+     * @param userId 用户标识
+     * @return 包含 打开标识 和 unionid 的数组 [打开标识, unionid]
      */
     public static String[] generateSystemIds(String appId, String userId) {
         String openId = generateOpenId("system", appId, userId);
@@ -195,9 +201,9 @@ public final class OpenIdGenerator {
     }
 
     /**
-     * 判断是否为有效的 OpenID
+       * 判断是否为有效的 打开标识
      *
-     * @param openId OpenID
+     * @param openId 打开标识
      * @return 是否有效
      */
     public static boolean isValidOpenId(String openId) {
@@ -205,9 +211,9 @@ public final class OpenIdGenerator {
     }
 
     /**
-     * 判断是否为有效的 UnionID
+      * 判断是否为有效的 unionid
      *
-     * @param unionId UnionID
+     * @param unionId unionid
      * @return 是否有效
      */
     public static boolean isValidUnionId(String unionId) {
@@ -216,6 +222,8 @@ public final class OpenIdGenerator {
 
     /**
      * 平台枚举
+     * @author CH
+     * @since 4.0.0
      */
     public static class Platform {
         /** 微信 */
@@ -237,14 +245,17 @@ public final class OpenIdGenerator {
         /** Wework */
         public static final String WEWORK = "wework";
         /** GitHub */
-        /** Github */
+        /** GitHub */
         public static final String GITHUB = "github";
         /** Gitee */
         public static final String GITEE = "gitee";
         /** 系统内部 */
-        /** System */
+        /** 系统 */
         public static final String SYSTEM = "system";
 
+        /**
+         * Platform。
+         */
         private Platform() {
         }
     }

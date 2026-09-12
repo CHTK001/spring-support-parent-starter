@@ -42,7 +42,7 @@ import java.util.regex.Pattern;
  * <p>
  * 每 10 秒扫描启用的任务, 通过 Trigger 判断任务是否到达触发时间,
  * 使用 Reactor 背压控制采集并发与入库压力。
- * 支持从配置读取调度间隔, 应用 MsMonitorMetricConfig 解析规则将原始输出转为结构化指标。
+   * 支持从配置读取调度间隔, 应用 ms监控指标配置 解析规则将原始输出转为结构化指标。
  * </p>
  *
  * @since 2026/8/4
@@ -54,38 +54,38 @@ import java.util.regex.Pattern;
 public class MonitorScheduler {
 
     /** 默认调度间隔(毫秒) */
-    /** Default_interval_ms */
+    /** 默认_间隔_ms */
     private static final long DEFAULT_INTERVAL_MS = 10_000L;
     /** 最大并发数 */
     /** Concurrency */
     private static final int CONCURRENCY = 50;
     /** 调度间隔配置键 */
-    /** Config_key_interval */
+    /** 配置_钥匙_间隔 */
     private static final String CONFIG_KEY_INTERVAL = "monitor.collect.interval.ms";
 
-    /** 任务 Service */
+    /** 任务 服务 */
     /** 任务服务 */
     private final MonitorTaskService taskService;
-    /** 资产 Service */
-    /** Monitor服务 */
+    /** 资产 服务 */
+    /** 监控服务 */
     private final MonitorService monitorService;
-    /** 指标 Service */
+    /** 指标 服务 */
     /** 指标服务 */
     private final MetricService metricService;
-    /** 配置 Service */
+    /** 配置 服务 */
     /** 配置服务 */
     private final MonitorConfigService configService;
-    /** 指标配置 Service */
+    /** 指标配置 服务 */
     /** 指标配置服务 */
     private final MonitorMetricConfigService metricConfigService;
-    /** Provider 注册中心 */
+    /** 提供者 注册中心 */
     /** 提供者注册表 */
     private final ProviderRegistry providerRegistry;
     /** JSON 解析器 */
     /** Objectmapper */
     private final ObjectMapper objectMapper;
 
-    /** 上次调度时间(nanoTime), 用于间隔控制 */
+    /** 上次调度时间(nano时间), 用于间隔控制 */
     /** 最后tick时间 */
     private final AtomicLong lastTickTime = new AtomicLong(0);
 
@@ -164,8 +164,8 @@ public class MonitorScheduler {
     /**
      * 执行采集任务
      * <p>
-     * 无论执行成功、失败或提前跳过，均会标记 lastRunTime，
-     * 防止 isTriggered 在后续 tick 中被重复判定为真（避免任务刷屏）。
+      * 无论执行成功、失败或提前跳过，均会标记 最后一个运行时间，
+      * 防止 是否triggered 在后续 tick 中被重复判定为真（避免任务刷屏）。
      * </p>
      *
      * @param task 任务
@@ -178,7 +178,7 @@ public class MonitorScheduler {
         if (providerOpt.isEmpty()) {
             log.warn("[MonitorScheduler] 未找到 Provider service={} provider={} task={}",
                     serviceType, providerType, task.getId());
-            // Provider 缺失属正常兜底（如本地无对应采集器），标记完成防止反复触发
+ // 提供者 缺失属正常兜底（如本地无对应采集器），标记完成防止反复触发
             taskService.markLastRunTime(task.getId());
             return reactor.core.publisher.Mono.empty();
         }
@@ -194,8 +194,12 @@ public class MonitorScheduler {
                 .build();
         return providerOpt.get().collect(context)
                 .doOnSuccess(result -> {
-                    // 成功：标记时间 + 解析规则 + 写入指标（含 InfluxDB 双写）
+ // 成功：标记时间 + 解析规则 + 写入指标（含 influxdb 双写）
                     taskService.markLastRunTime(task.getId());
+                    /**
+                     * apply解析rules。
+                     * @param task.getId( 任务.获取标识(
+                     */
                     applyParseRules(task.getId(), result);
                     metricService.writeCollectResult(result);
                 })
@@ -205,17 +209,17 @@ public class MonitorScheduler {
                     taskService.markLastRunTime(task.getId());
                 })
                 .doOnTerminate(() -> {
-                    // 兜底：Mono.empty() 路径（provider/monitor 缺失）不触发 doOnSuccess/doOnError，
-                    // 但 isTriggered 已在调用前通过，需保证时间被更新。
-                    // 此处仅作为保险，正常路径已在 doOnSuccess 中完成标记。
+ // 兜底：Mono.空() 路径（提供者/监控 缺失）不触发 执行on成功/执行on错误，
+ // 但 是否triggered 已在调用前通过，需保证时间被更新。
+ // 此处仅作为保险，正常路径已在 执行on成功 中完成标记。
                 })
                 .subscribeOn(Schedulers.boundedElastic());
     }
 
     /**
-     * 应用 MsMonitorMetricConfig 解析规则, 将原始输出转为结构化指标点
+      * 应用 ms监控指标配置 解析规则, 将原始输出转为结构化指标点
      *
-     * @param taskId 任务 id
+     * @param taskId 任务 标识
      * @param result 采集结果
      */
     private void applyParseRules(Long taskId, CollectResult result) {
@@ -272,12 +276,12 @@ public class MonitorScheduler {
     }
 
     /**
-     * 按 JSONPath 表达式解析, 从原始输出 JSON 中提取指定路径的值
+      * 按 json路径 表达式解析, 从原始输出 JSON 中提取指定路径的值
      * <p>规则格式: {"type":"jsonpath","expression":"$.cpu.usage"}</p>
      *
      * @param rule       解析规则
      * @param rawOutput  原始输出
-     * @param expression JSONPath 表达式, 如 "$.cpu.usage"
+     * @param expression json路径 表达式, 如 "$.cpu.usage"
      * @return 指标点列表
      */
     private List<MetricPoint> parseJsonPath(MsMonitorMetricConfig rule, String rawOutput, String expression) {
@@ -392,11 +396,11 @@ public class MonitorScheduler {
     }
 
     /**
-     * 按点号分隔的路径从 Map 中取值
+      * 按点号分隔的路径从 映射 中取值
      *
-     * @param root 根 Map
+     * @param root 根 映射
      * @param path 点号分隔路径, 如 "cpu.usage"
-     * @return 路径对应的值, 不存在返回 null
+     * @return 路径对应的值, 不存在返回 空
      */
     @SuppressWarnings("unchecked")
     private Object resolveJsonPath(Map<String, Object> root, String path) {

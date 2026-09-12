@@ -20,17 +20,29 @@ import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+/**
+ * 数据同步modecompare探针类。
+ *
+ * @author CH
+ * @since 4.0.0
+ */
 public final class DataSyncModeCompareProbe {
-    static final Path CSV = Paths.get("target/stress-compare/source.csv");
-    static final int ROWS = 100_000;
-    static final int BATCH = 1000;
-    /** Main */
+    static final Path CSV = Paths.get("target/stress-compare/source.csv"); // CSV
+    static final int ROWS = 100_000; // ROWS
+    static final int BATCH = 1000; // 批量
+    /**
+     * Main
+     *
+     * @param args 参数
+     */
     public static void main(String[] args) throws Exception {
         Files.createDirectories(CSV.getParent());
         if (!Files.exists(CSV)) {
             try (var w = Files.newBufferedWriter(CSV, StandardCharsets.UTF_8)) {
                 w.write("id,name,age,score,active,created_at\n");
-                for (int i = 0; i < ROWS; i++) w.write(i + ",u" + i + "," + (20+i%40) + ",1.0,true,2026-01-01\n");
+                for (int i = 0; i < ROWS; i++) {
+                    w.write(i + ",u" + i + "," + (20+i%40) + ",1.0,true,2026-01-01\n");
+                }
             }
         }
         System.err.println("========================================================================");
@@ -41,7 +53,11 @@ public final class DataSyncModeCompareProbe {
         testInMemory("3. InMemory pub/sub (InMemoryDispatcherProvider)");
         System.err.println("========================================================================");
     }
-    /** TestDirect */
+    /**
+     * 测试direct
+     *
+     * @param label 标签
+     */
     static void testDirect(String label) throws Exception {
         var cfg = DefaultSyncDataSchedulerManager.SchedulerConfig.builder()
             .directDispatch(true).retryMaxAttempts(0).memorySafeEnabled(false).build();
@@ -59,13 +75,17 @@ public final class DataSyncModeCompareProbe {
         server.stop();
         report(label, ms, sink.count.get());
     }
-    /** TestChronicle */
+    /**
+     * 测试chronicle
+     *
+     * @param label 标签
+     */
     static void testChronicle(String label) throws Exception {
         try {
             var cfg = DefaultSyncDataSchedulerManager.SchedulerConfig.builder()
                 .directDispatch(false).retryMaxAttempts(0).memorySafeEnabled(false).build();
             var server = new DefaultDataSyncServer(new DataSyncAgentServer(null, null, "cmp"), cfg);
-            // 触发 executor 创建，会尝试初始化 Chronicle
+ // 触发 执行器 创建，会尝试初始化 Chronicle
             var executor = server.executorManager().getExecutor("cmp-out");
             executor.start();
             // 如果 Chronicle 初始化成功，则继续
@@ -85,12 +105,16 @@ public final class DataSyncModeCompareProbe {
             System.err.printf("%-45s %s (Java 25 不兼容)%n", label, e.getClass().getSimpleName());
         }
     }
-    /** TestInMemory */
+    /**
+     * 测试入内存
+     *
+     * @param label 标签
+     */
     static void testInMemory(String label) throws Exception {
         var cfg = DefaultSyncDataSchedulerManager.SchedulerConfig.builder()
             .directDispatch(false).retryMaxAttempts(0).memorySafeEnabled(false).build();
         var server = new DefaultDataSyncServer(new DataSyncAgentServer(null, null, "cmp"), cfg);
-        // 替换为 InMemoryDispatcherProvider
+ // 替换为 入内存dispatcher提供者
         var executor = (ReactorDataSyncExecutor) server.executorManager().getExecutor("out");
         executor.setDispatcherProvider(new InMemoryDispatcherProvider(DispatcherConfig.builder().build()));
         executor.start();
@@ -107,7 +131,13 @@ public final class DataSyncModeCompareProbe {
         server.stop();
         report(label, ms, sink.count.get());
     }
-    /** Report */
+    /**
+     * Report
+     *
+     * @param label 标签
+     * @param ms ms
+     * @param count 数量
+     */
     static void report(String label, long ms, long count) {
         long tp = count * 1000L / Math.max(1, ms);
         System.err.printf("%-45s %5dms  %,d 行/s  rows=%d%n", label, ms, tp, count);

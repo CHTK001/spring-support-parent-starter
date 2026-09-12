@@ -22,22 +22,22 @@ import org.springframework.util.StringUtils;
 @RequiredArgsConstructor
 public class PaymentGlobalConfigServiceImpl implements PaymentGlobalConfigService {
 
-    /** Default_key */
+    /** 默认_钥匙 */
     private static final String DEFAULT_KEY = "DEFAULT";
 
-    /** Payment全局配置mapper */
+    /** 薪酬全局配置映射器 */
     private final PaymentGlobalConfigMapper paymentGlobalConfigMapper;
     /** Paymentcallback属性 */
     private final PaymentCallbackProperties paymentCallbackProperties;
 
     @Override
-    /** 获取Config */
+    /** 获取配置 */
     public PaymentGlobalConfigVO getConfig() {
         return toVO(getConfigEntity());
     }
 
     @Override
-    /** 获取ConfigEntity */
+    /** 获取配置实体 */
     public PaymentGlobalConfig getConfigEntity() {
         PaymentGlobalConfig entity = paymentGlobalConfigMapper.selectOne(new LambdaQueryWrapper<PaymentGlobalConfig>()
                 .eq(PaymentGlobalConfig::getConfigKey, DEFAULT_KEY)
@@ -55,7 +55,7 @@ public class PaymentGlobalConfigServiceImpl implements PaymentGlobalConfigServic
     }
 
     @Override
-    /** 保存Or更新 */
+    /** 保存或更新 */
     public PaymentGlobalConfigVO saveOrUpdate(PaymentGlobalConfigDTO dto) {
         PaymentGlobalConfig entity = paymentGlobalConfigMapper.selectOne(new LambdaQueryWrapper<PaymentGlobalConfig>()
                 .eq(PaymentGlobalConfig::getConfigKey, DEFAULT_KEY)
@@ -80,7 +80,12 @@ public class PaymentGlobalConfigServiceImpl implements PaymentGlobalConfigServic
         return toVO(entity);
     }
 
-    /** ToVO */
+    /**
+     * 转为vo
+     *
+     * @param entity 实体
+     * @return 转为vo的结果
+     */
     private PaymentGlobalConfigVO toVO(PaymentGlobalConfig entity) {
         PaymentGlobalConfigVO vo = new PaymentGlobalConfigVO();
         BeanUtils.copyProperties(entity, vo);
@@ -90,7 +95,12 @@ public class PaymentGlobalConfigServiceImpl implements PaymentGlobalConfigServic
         return vo;
     }
 
-    /** Normalize */
+    /**
+     * Normalize
+     *
+     * @param value 价值观
+     * @return normalize的结果
+     */
     private String normalize(String value) {
         if (!StringUtils.hasText(value)) {
             return null;

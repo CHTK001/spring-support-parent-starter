@@ -23,7 +23,7 @@ import java.time.LocalDateTime;
 @TableName("ms_monitor_metric_cpu")
 public class MsMonitorMetricCpu implements Serializable {
 
-    /** Serial版本UID */
+    /** 串行版本UID */
     private static final long serialVersionUID = 1L;
 
     /**
@@ -31,15 +31,15 @@ public class MsMonitorMetricCpu implements Serializable {
      */
     @TableId(value = "id", type = IdType.AUTO)
     @Schema(description = "主键", example = "1")
-    /** ID */
+    /** 标识 */
     private Long id;
 
     /**
-     * 监控主机 id
+      * 监控主机 标识
      */
     @TableField("ms_monitor_metric_cpu_monitor_id")
     @Schema(description = "监控主机 id", example = "1")
-    /** MonitorID */
+    /** 监控标识 */
     private Long monitorId;
 
     /**
@@ -55,7 +55,7 @@ public class MsMonitorMetricCpu implements Serializable {
      */
     @TableField("ms_monitor_metric_cpu_cpu_cores")
     @Schema(description = "核数", example = "8")
-    /** CPUcores */
+    /** cpucores */
     private Integer cpuCores;
 
     /**
@@ -63,7 +63,7 @@ public class MsMonitorMetricCpu implements Serializable {
      */
     @TableField("ms_monitor_metric_cpu_cpu_usage")
     @Schema(description = "使用率", example = "23.5")
-    /** CPUusage */
+    /** cpuusage */
     private Double cpuUsage;
 
     /**
@@ -71,7 +71,7 @@ public class MsMonitorMetricCpu implements Serializable {
      */
     @TableField("ms_monitor_metric_cpu_load1")
     @Schema(description = "1 分钟平均负载", example = "0.85")
-    /** Load1 */
+    /** 加载1 */
     private Double load1;
 
     /**
@@ -79,7 +79,7 @@ public class MsMonitorMetricCpu implements Serializable {
      */
     @TableField("ms_monitor_metric_cpu_load5")
     @Schema(description = "5 分钟平均负载", example = "0.72")
-    /** Load5 */
+    /** 加载5 */
     private Double load5;
 
     /**
@@ -87,7 +87,7 @@ public class MsMonitorMetricCpu implements Serializable {
      */
     @TableField("ms_monitor_metric_cpu_load15")
     @Schema(description = "15 分钟平均负载", example = "0.68")
-    /** Load15 */
+    /** 加载15 */
     private Double load15;
 
     /**

@@ -24,10 +24,10 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * Socket 自动配置类
- * 通过 SPI 机制根据配置的协议类型创建对应的 Socket 服务
+   * 套接字 自动配置类
+   * 通过 SPI 机制根据配置的协议类型创建对应的 套接字 服务
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024-12-04
  * @author CH
  */
@@ -37,7 +37,7 @@ import java.util.stream.Collectors;
 public class SocketConfiguration {
 
     /**
-     * 创建多协议 Socket 会话模板集合
+      * 创建多协议 套接字 会话模板集合
      * 根据配置的协议类型通过 SPI 获取对应的提供者
      *
      * @param properties 配置属性
@@ -60,7 +60,7 @@ public class SocketConfiguration {
             String protocolName = protocolConfig.getProtocol().getValue();
             log.info("[Socket] 使用协议: {}", highlight(protocolName));
 
-            // 通过 SPI 获取对应的 Socket 提供者
+ // 通过 SPI 获取对应的 套接字 提供者
             SocketProvider provider = ServiceProvider.of(SocketProvider.class)
                     .getNewExtension(protocolName);
 
@@ -134,7 +134,7 @@ public class SocketConfiguration {
     }
 
     /**
-     * Socket 生命周期管理
+      * 套接字 生命周期管理
      *
      * @param templates  所有协议模板映射
      * @param properties 配置属性
@@ -145,24 +145,33 @@ public class SocketConfiguration {
     public SocketLifecycle socketLifecycle(
             Map<String, SocketSessionTemplate> templates,
             SocketProperties properties) {
+        /**
+         * 套接字lifecycle。
+         * @param templates templates
+         * @param properties 属性
+         * @return 套接字lifecycle的结果
+         */
         return new SocketLifecycle(templates, properties);
     }
 
     /**
-     * Socket 生命周期管理类
+      * 套接字 生命周期管理类
      * 支持管理多个协议模板的启动和停止
+     * @author CH
+     * @since 4.0.0
      */
     @Slf4j
     public static class SocketLifecycle implements InitializingBean, DisposableBean {
-        private final Map<String, SocketSessionTemplate> templates;
+        private final Map<String, SocketSessionTemplate> templates; // templates
         /** 属性 */
         private final SocketProperties properties;
 
         /**
-         * 创建 SocketLifecycle 实例
-         * @param SocketSessionTemplate SocketSessionTemplate
+          * 创建 套接字lifecycle 实例
+         * @param templates 套接字会话template
          * @param templates templates
-         * @param SocketProperties SocketProperties
+         * @param properties 套接字属性
+         * @param properties 属性
          */
         public SocketLifecycle(Map<String, SocketSessionTemplate> templates, SocketProperties properties) {
             this.templates = templates;
@@ -170,7 +179,7 @@ public class SocketConfiguration {
         }
 
         @Override
-        /** AfterProperties设置 */
+        /** 之后属性设置 */
         public void afterPropertiesSet() throws Exception {
             if (!properties.isAutoStart()) {
                 log.info("[Socket] auto-start=false，已跳过 Socket 服务自动启动");
@@ -202,7 +211,11 @@ public class SocketConfiguration {
     }
 
     @Bean
-    /** SocketServiceInfoContributor */
+    /**
+     * 套接字服务信息contributor
+     *
+     * @return 套接字服务信息contributor的结果
+     */
     public ServiceInfoContributor socketServiceInfoContributor() {
         return registry -> {
             registry.registerFlag("socket", "Socket通信", true, "Socket通信模块");

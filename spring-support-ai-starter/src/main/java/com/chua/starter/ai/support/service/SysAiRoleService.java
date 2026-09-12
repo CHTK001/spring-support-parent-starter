@@ -29,7 +29,7 @@ public interface SysAiRoleService {
     List<SysAiRole> listEnabled();
 
     /**
-     * 按 ID 查询角色。
+      * 按 标识 查询角色。
      *
      * @param id 角色主键
      * @return 角色实体

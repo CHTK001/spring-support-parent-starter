@@ -7,6 +7,7 @@ import lombok.experimental.Accessors;
  * 角色信息
  *
  * @author CH
+ * @since 4.0.0
  */
 @Accessors(chain = true)
 @Data
@@ -17,7 +18,7 @@ public class RoleInfo {
      */
     private String roleName;
     /**
-     * 角色id
+      * 角色标识
      */
     private String roleId;
 

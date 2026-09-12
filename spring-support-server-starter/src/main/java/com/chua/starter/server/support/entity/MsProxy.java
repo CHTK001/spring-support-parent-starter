@@ -8,6 +8,8 @@ import lombok.EqualsAndHashCode;
 
 /**
  * 免费代理（每次获取免费代理时清空重录——页面从本表读取）
+ * @author CH
+ * @since 4.0.0
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -16,17 +18,17 @@ public class MsProxy extends SysBase {
 
     /** 代理主机 */
     @TableField("host")
-    private String host;
+    private String host; // 主机
 
     /** 代理端口 */
     @TableField("port")
-    private Integer port;
+    private Integer port; // 端口
 
     /** 协议（Http/Https/Socks4/Socks5） */
     @TableField("protocol")
-    private String protocol;
+    private String protocol; // 协议
 
     /** 来源 */
     @TableField("source")
-    private String source;
+    private String source; // 源
 }

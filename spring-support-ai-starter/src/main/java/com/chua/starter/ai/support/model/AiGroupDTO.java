@@ -15,13 +15,13 @@ import java.util.List;
 @Data
 @Schema(name = "模型分组 DTO")
 public class AiGroupDTO implements Serializable {
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L; // 串行版本uid
 
     /**
-     * 分组主键 ID
+      * 分组主键 标识
      */
     @Schema(description = "分组主键 ID")
-    /** ID */
+    /** 标识 */
     private Long id;
 
     /**
@@ -42,14 +42,14 @@ public class AiGroupDTO implements Serializable {
      * 关联模型列表
      */
     @Schema(description = "关联模型列表")
-    /** Models */
+    /** 模型 */
     private List<String> models;
 
     /**
-     * 绑定 AppKey ID 列表
+       * 绑定 app钥匙 标识 列表
      */
     @Schema(description = "绑定 AppKey ID 列表")
-    /** APP密钥IDS */
+    /** APP密钥标识 */
     private List<Long> appKeyIds;
 
     /**

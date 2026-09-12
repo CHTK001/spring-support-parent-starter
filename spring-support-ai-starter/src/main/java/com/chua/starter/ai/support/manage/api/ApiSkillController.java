@@ -62,7 +62,7 @@ import java.util.zip.ZipInputStream;
  * {@code user} 子目录存放用户自定义技能。</p>
  *
  * <p>技能识别规则：目录下存在 {@code SKILL.md}（或 {@code skill.md}）即视为一个技能，其首行非空文本
- * 作为技能描述。市场相关接口支持从 GitHub 仓库真实下载并安装技能包。</p>
+   * 作为技能描述。市场相关接口支持从 GitHub 仓库真实下载并安装技能包。</p>
  *
  * @since 4.0.0.42
  * @author CH
@@ -78,7 +78,7 @@ public class ApiSkillController {
      * 技能根目录
      */
     @Value("${nomifun.skills-root:./skills}")
-    private String skillsRoot;
+    private String skillsRoot; // skills根
 
     /**
      * Skill 市场 API 基础地址，可通过环境变量或配置覆盖。
@@ -86,7 +86,7 @@ public class ApiSkillController {
      *       https://api.example.com/skills
      */
     @Value("${ai.skills-market-url:https://skillsmp.com/api/skills}")
-    private String skillsMarketUrl;
+    private String skillsMarketUrl; // skills市场url
 
     /**
      * 用户自定义外部技能搜索路径（内存维护）
@@ -109,11 +109,11 @@ public class ApiSkillController {
     private static final String MARKET_ENABLED_FIELD = "market_enabled";
 
     /**
-     * 按市场源的启用状态字段名前缀（skills.market_clawhub_enabled / market_skillhub_mcp_enabled 等）。
+      * 按市场源的启用状态字段名前缀（skills.市场_clawhub_已启用 / 市场_skillhub_mcp_已启用 等）。
      * 未显式配置时默认启用。
      */
     private static final String MARKET_SOURCE_FIELD_PREFIX = "market_";
-    private static final String MARKET_SOURCE_FIELD_SUFFIX = "_enabled";
+    private static final String MARKET_SOURCE_FIELD_SUFFIX = "_enabled"; // 市场源字段后缀
 
     /**
      * 专家包“添加”时单次安装的上限技能数（避免一次下载整仓全部技能）。
@@ -130,7 +130,19 @@ public class ApiSkillController {
         List<Map<String, Object>> result = new ArrayList<>();
         Path userDir = Paths.get(skillsRoot).resolve("user");
         Path builtinDir = Paths.get(skillsRoot).resolve("builtin");
+        /**
+         * 扫描skills。
+         * @param userDir 用户dir
+         * @param "custom" "习俗"
+         * @param result 结果
+         */
         scanSkills(userDir, "custom", result);
+        /**
+         * 扫描skills。
+         * @param builtinDir builtindir
+         * @param "builtin" "builtin"
+         * @param result 结果
+         */
         scanSkills(builtinDir, "builtin", result);
         return ApiResult.ok(result);
     }
@@ -145,6 +157,10 @@ public class ApiSkillController {
         List<Map<String, Object>> result = new ArrayList<>();
         Path builtinDir = Paths.get(skillsRoot).resolve("builtin");
         if (Files.exists(builtinDir) && Files.isDirectory(builtinDir)) {
+            /**
+             * 尝试。
+             * @param Files.list(builtinDir 文件.列表(builtindir
+             */
             try (Stream<Path> stream = Files.list(builtinDir)) {
                 for (Path p : stream.filter(Files::isDirectory).sorted().toList()) {
                     Map<String, Object> skill = new LinkedHashMap<>();
@@ -164,9 +180,9 @@ public class ApiSkillController {
      * 扫描本机已安装 AI 编辑器的 skill/rules 目录，返回可导入的技能列表。
      *
      * <p>通过 {@link ServiceProvider} SPI 收集全部离线 {@link SkillOfflineProvider} 实现，
-     * 汇总每个已安装 agent 的 {@code listAgentSkills()} 扫描结果，避免反射与硬编码目录。</p>
+      * 汇总每个已安装 智能体 的 {@code listAgentSkills()} 扫描结果，避免反射与硬编码目录。</p>
      *
-     * @return 技能列表（按 provider 分组）
+     * @return 技能列表（按 提供者 分组）
      */
     @GetMapping("/agent")
     public ApiResult<List<Map<String, Object>>> fromAgent() {
@@ -210,7 +226,9 @@ public class ApiSkillController {
     }
 
     /**
-     * 安全读取 provider 是否安装（兜底 try/catch）。
+      * 安全读取 提供者 是否安装（兜底 尝试/卡扣）。
+     * @param provider 提供者
+     * @return safeInstalled的结果
      */
     private boolean safeInstalled(SkillOfflineProvider provider) {
         try {
@@ -222,6 +240,8 @@ public class ApiSkillController {
 
     /**
      * 读取文件首行非空文本作为描述。
+     * @param file 文件
+     * @return 读取第一个线的结果
      */
     private String readFirstLine(Path file) {
         try {
@@ -298,6 +318,12 @@ public class ApiSkillController {
     public ApiResult<Map<String, String>> info(@RequestBody Map<String, Object> body) {
         Path skillPath = resolveSkillPath(body);
         if (!Files.exists(skillPath) || !Files.isDirectory(skillPath)) {
+            /**
+             * api异常。
+             * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
+             * @param skillPath skill路径
+             * @return api异常的结果
+             */
             throw new ApiException(ApiErrorCode.NOT_FOUND, "技能不存在: " + skillPath);
         }
         Map<String, String> result = new LinkedHashMap<>();
@@ -307,7 +333,7 @@ public class ApiSkillController {
     }
 
     /**
-     * 导入技能（复制到用户目录）。支持 zip 文件、单个技能目录和父目录。
+      * 导入技能（复制到用户目录）。支持 压缩 文件、单个技能目录和父目录。
      *
      * @param body 请求体 {@code { skill_path: string }}
      * @return 导入结果
@@ -320,6 +346,12 @@ public class ApiSkillController {
          }
          Path skillPath = resolveSkillPath(body);
         if (!Files.exists(skillPath)) {
+            /**
+             * api异常。
+             * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
+             * @param skillPath skill路径
+             * @return api异常的结果
+             */
             throw new ApiException(ApiErrorCode.NOT_FOUND, "路径不存在: " + skillPath);
         }
 
@@ -327,6 +359,12 @@ public class ApiSkillController {
         try {
             Files.createDirectories(userDir);
         } catch (IOException e) {
+            /**
+             * api异常。
+             * @param ApiErrorCode.INTERNAL_ERROR api错误编码.内部错误
+             * @param e.getMessage( e.获取消息(
+             * @return api异常的结果
+             */
             throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "创建用户技能目录失败: " + e.getMessage());
         }
 
@@ -336,25 +374,69 @@ public class ApiSkillController {
             if (Files.isRegularFile(skillPath) && skillPath.toString().toLowerCase().endsWith(".zip")) {
                 Path tempDir = Files.createTempDirectory("skill-import-");
                 try {
+                    /**
+                     * extract压缩。
+                     * @param skillPath skill路径
+                     * @param tempDir tempdir
+                     */
                     extractZip(skillPath, tempDir);
+                    /**
+                     * 副本skills从目录。
+                     * @param tempDir tempdir
+                     * @param userDir 用户dir
+                     * @param importedNames 导入名称
+                     */
                     copySkillsFromDirectory(tempDir, userDir, importedNames);
                 } catch (IOException e) {
+                    /**
+                     * api异常。
+                     * @param ApiErrorCode.INTERNAL_ERROR api错误编码.内部错误
+                     * @param e.getMessage( e.获取消息(
+                     * @return api异常的结果
+                     */
                     throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "导入 zip 技能失败: " + e.getMessage());
                 } finally {
+                    /**
+                     * 删除recursively。
+                     * @param tempDir tempdir
+                     */
                     deleteRecursively(tempDir);
                 }
             } else if (Files.isDirectory(skillPath) && hasSkillMark(skillPath)) {
                 String name = skillPath.getFileName().toString();
+                /**
+                 * 副本目录。
+                 * @param skillPath skill路径
+                 * @param userDir.resolve(name 用户dir.resolve(名称
+                 */
                 copyDirectory(skillPath, userDir.resolve(name));
                 importedNames.add(name);
             } else if (Files.isDirectory(skillPath)) {
+                /**
+                 * 副本skills从目录。
+                 * @param skillPath skill路径
+                 * @param userDir 用户dir
+                 * @param importedNames 导入名称
+                 */
                 copySkillsFromDirectory(skillPath, userDir, importedNames);
             } else {
+                /**
+                 * api异常。
+                 * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
+                 * @param skillPath skill路径
+                 * @return api异常的结果
+                 */
                 throw new ApiException(ApiErrorCode.INVALID_PARAM, "不支持的导入类型: " + skillPath);
             }
         } catch (ApiException e) {
             throw e;
         } catch (IOException e) {
+            /**
+             * api异常。
+             * @param ApiErrorCode.INTERNAL_ERROR api错误编码.内部错误
+             * @param e.getMessage( e.获取消息(
+             * @return api异常的结果
+             */
             throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "导入技能失败: " + e.getMessage());
         }
 
@@ -379,6 +461,10 @@ public class ApiSkillController {
         }
         Path dir = Paths.get(folderPath);
         if (Files.exists(dir) && Files.isDirectory(dir)) {
+            /**
+             * 尝试。
+             * @param Files.list(dir 文件.列表(dir
+             */
             try (Stream<Path> stream = Files.list(dir)) {
                 for (Path p : stream.filter(Files::isDirectory).sorted().toList()) {
                     if (hasSkillMark(p)) {
@@ -430,6 +516,10 @@ public class ApiSkillController {
                 continue;
             }
             List<Map<String, Object>> skills = new ArrayList<>();
+            /**
+             * 尝试。
+             * @param Files.list(dir 文件.列表(dir
+             */
             try (Stream<Path> stream = Files.list(dir)) {
                 for (Path p : stream.filter(Files::isDirectory).sorted().toList()) {
                     if (hasSkillMark(p)) {
@@ -473,6 +563,12 @@ public class ApiSkillController {
          }
          Path skillPath = resolveSkillPath(body);
         if (!Files.exists(skillPath)) {
+            /**
+             * api异常。
+             * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
+             * @param skillPath skill路径
+             * @return api异常的结果
+             */
             throw new ApiException(ApiErrorCode.NOT_FOUND, "路径不存在: " + skillPath);
         }
 
@@ -480,6 +576,12 @@ public class ApiSkillController {
         try {
             Files.createDirectories(userDir);
         } catch (IOException e) {
+            /**
+             * api异常。
+             * @param ApiErrorCode.INTERNAL_ERROR api错误编码.内部错误
+             * @param e.getMessage( e.获取消息(
+             * @return api异常的结果
+             */
             throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "创建用户技能目录失败: " + e.getMessage());
         }
 
@@ -487,30 +589,74 @@ public class ApiSkillController {
 
         try {
             if (Files.isRegularFile(skillPath) && skillPath.toString().toLowerCase().endsWith(".zip")) {
-                // Case 1: zip 文件 → 解压到临时目录，扫描技能后导入
+ // 大小写 1: 压缩 文件 → 解压到临时目录，扫描技能后导入
                 Path tempDir = Files.createTempDirectory("skill-import-");
                 try {
+                    /**
+                     * extract压缩。
+                     * @param skillPath skill路径
+                     * @param tempDir tempdir
+                     */
                     extractZip(skillPath, tempDir);
+                    /**
+                     * 导入skills从目录。
+                     * @param tempDir tempdir
+                     * @param userDir 用户dir
+                     * @param importedNames 导入名称
+                     */
                     importSkillsFromDirectory(tempDir, userDir, importedNames);
                 } catch (IOException e) {
+                    /**
+                     * api异常。
+                     * @param ApiErrorCode.INTERNAL_ERROR api错误编码.内部错误
+                     * @param e.getMessage( e.获取消息(
+                     * @return api异常的结果
+                     */
                     throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "导入 zip 技能失败: " + e.getMessage());
                 } finally {
+                    /**
+                     * 删除recursively。
+                     * @param tempDir tempdir
+                     */
                     deleteRecursively(tempDir);
                 }
             } else if (Files.isDirectory(skillPath) && hasSkillMark(skillPath)) {
-                // Case 2: 单个技能目录 → 符号链接/复制
+ // 大小写 2: 单个技能目录 → 符号链接/复制
                 String name = skillPath.getFileName().toString();
+                /**
+                 * symlinkor副本。
+                 * @param skillPath skill路径
+                 * @param userDir.resolve(name 用户dir.resolve(名称
+                 */
                 symlinkOrCopy(skillPath, userDir.resolve(name));
                 importedNames.add(name);
             } else if (Files.isDirectory(skillPath)) {
-                // Case 3: 父目录 → 扫描子目录批量导入
+ // 大小写 3: 父目录 → 扫描子目录批量导入
+                /**
+                 * 导入skills从目录。
+                 * @param skillPath skill路径
+                 * @param userDir 用户dir
+                 * @param importedNames 导入名称
+                 */
                 importSkillsFromDirectory(skillPath, userDir, importedNames);
             } else {
+                /**
+                 * api异常。
+                 * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
+                 * @param skillPath skill路径
+                 * @return api异常的结果
+                 */
                 throw new ApiException(ApiErrorCode.INVALID_PARAM, "不支持的导入类型: " + skillPath);
             }
         } catch (ApiException e) {
             throw e;
         } catch (IOException e) {
+            /**
+             * api异常。
+             * @param ApiErrorCode.INTERNAL_ERROR api错误编码.内部错误
+             * @param e.getMessage( e.获取消息(
+             * @return api异常的结果
+             */
             throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "导入技能失败: " + e.getMessage());
         }
 
@@ -525,14 +671,27 @@ public class ApiSkillController {
      *
      * @param skillName 技能名
      * @return 成功信封
+     * @param @PathVariable("skill_name" @路径变量("skill_名称"
+     * @param @PathVariable("skill_name" @路径变量("skill_名称"
+     * @param @PathVariable("skill_name" @PathVariable("skill_name"
      */
     @DeleteMapping("/{skill_name}")
     public ApiResult<Void> delete(@PathVariable("skill_name") String skillName) {
         Path userDir = Paths.get(skillsRoot).resolve("user").resolve(skillName);
         if (Files.exists(userDir)) {
             try {
+                /**
+                 * 删除recursively。
+                 * @param userDir 用户dir
+                 */
                 deleteRecursively(userDir);
             } catch (IOException e) {
+                /**
+                 * api异常。
+                 * @param ApiErrorCode.INTERNAL_ERROR api错误编码.内部错误
+                 * @param e.getMessage( e.获取消息(
+                 * @return api异常的结果
+                 */
                 throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "删除技能失败: " + e.getMessage());
             }
         }
@@ -545,6 +704,7 @@ public class ApiSkillController {
      * @param skillName 技能名
      * @param body      请求体 {@code { audience_tags: string[], scenario_tags: string[] }}
      * @return 成功信封
+     * @param @PathVariable("skill_name" @路径变量("skill_名称"
      */
     @PutMapping("/{skill_name}/tags")
     public ApiResult<Void> setTags(@PathVariable("skill_name") String skillName,
@@ -587,6 +747,12 @@ public class ApiSkillController {
         String name = asText(body.get("name"));
         String path = asText(body.get("path"));
         if (name == null || path == null) {
+            /**
+             * api异常。
+             * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
+             * @param 不能为空" 不能为空"
+             * @return api异常的结果
+             */
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "name 与 path 不能为空");
         }
         externalPaths.removeIf(e -> path.equals(e.get("path")));
@@ -599,6 +765,9 @@ public class ApiSkillController {
      *
      * @param path 路径参数
      * @return 成功信封
+     * @param @RequestParam("path" @请求参数("路径"
+     * @param @RequestParam("path" @请求参数("路径"
+     * @param @RequestParam("path" @RequestParam("path"
      */
     @DeleteMapping("/external-paths")
     public ApiResult<Void> removeExternalPath(@RequestParam("path") String path) {
@@ -646,18 +815,25 @@ public class ApiSkillController {
     }
 
     /**
-     * 按市场源启用/禁用。源值示例：clawhub、loophub、skillhub、skillhub_mcp、mcpworld、clawhub_plugins、skillhub_packages。
+      * 按市场源启用/禁用。源值示例：clawhub、loophub、skillhub、skillhub_mcp、mcpworld、clawhub_plugins、skillhub_包。
      * <p>持久化到 {@code sys_ai_global_setting}（分组 skills，字段 market_<source>_enabled）。</p>
      *
      * @param source 市场源标识
      * @param enabled 是否启用
      * @return 成功信封
+     * @param body 主体
      */
     @PostMapping("/market/source/toggle")
     public ApiResult<Void> marketSourceToggle(@RequestBody Map<String, Object> body) {
         String source = asText(body.get("source"));
         boolean enabled = body.get("enabled") != null && Boolean.parseBoolean(String.valueOf(body.get("enabled")));
         if (source == null || source.isBlank()) {
+            /**
+             * api异常。
+             * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
+             * @param "市场源不能为空" "市场源不能为空"
+             * @return api异常的结果
+             */
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "市场源不能为空");
         }
         sysAiGlobalSettingService.upsertValue(
@@ -673,7 +849,7 @@ public class ApiSkillController {
      * 查询各市场源配置（由 {@link SkillMarketSourceProvider} SPI 枚举，含启用状态）。
      * 未显式配置的源默认启用。
      *
-     * @param marketType 可选：marketType 过滤（skill/mcp/plugin/preset）；为空返回全部
+     * @param marketType 可选：市场类型 过滤（skill/mcp/plugin/preset）；为空返回全部
      * @return {@code { sources: [{ source, displayName, url, marketType, enabled }] }}
      */
     @GetMapping("/market/sources/status")
@@ -683,8 +859,8 @@ public class ApiSkillController {
         Map<String, SkillMarketSourceProvider> providers =
                 ServiceProvider.of(SkillMarketSourceProvider.class).list();
         if (providers == null || providers.isEmpty()) {
-            // Spring Boot fat jar 下 BOOT-INF/classes 内嵌的 ServiceProvider 静态发现
-            // 可能失败，回退到显式枚举全部 SkillMarketSourceProvider SPI 实现。
+ // Spring Boot fat jar 下 BOOT-INF/类 内嵌的 服务提供者 静态发现
+ // 可能失败，回退到显式枚举全部 skill市场源提供者 SPI 实现。
             providers = new LinkedHashMap<>();
             for (SkillMarketSourceProvider p : List.of(
                     new ClawHubSkillMarketSourceProvider(),
@@ -725,14 +901,26 @@ public class ApiSkillController {
 
     /**
      * 从目录中扫描并以符号链接方式导入所有技能子目录。
+     * @param dir dir
+     * @param userDir 用户dir
+     * @param importedNames 导入名称
      */
     private void importSkillsFromDirectory(Path dir, Path userDir, List<String> importedNames) {
+        /**
+         * 尝试。
+         * @param Files.list(dir 文件.列表(dir
+         */
         try (Stream<Path> stream = Files.list(dir)) {
             for (Path p : stream.filter(Files::isDirectory).sorted().toList()) {
                 if (hasSkillMark(p)) {
                     String name = p.getFileName().toString();
                     Path target = userDir.resolve(name);
                     if (!Files.exists(target)) {
+                        /**
+                         * symlinkor副本。
+                         * @param p p
+                         * @param target Target
+                         */
                         symlinkOrCopy(p, target);
                     }
                     importedNames.add(name);
@@ -745,14 +933,26 @@ public class ApiSkillController {
 
     /**
      * 从目录中扫描并以复制方式导入所有技能子目录。
+     * @param dir dir
+     * @param userDir 用户dir
+     * @param importedNames 导入名称
      */
     private void copySkillsFromDirectory(Path dir, Path userDir, List<String> importedNames) {
+        /**
+         * 尝试。
+         * @param Files.list(dir 文件.列表(dir
+         */
         try (Stream<Path> stream = Files.list(dir)) {
             for (Path p : stream.filter(Files::isDirectory).sorted().toList()) {
                 if (hasSkillMark(p)) {
                     String name = p.getFileName().toString();
                     Path target = userDir.resolve(name);
                     if (!Files.exists(target)) {
+                        /**
+                         * 副本目录。
+                         * @param p p
+                         * @param target Target
+                         */
                         copyDirectory(p, target);
                     }
                     importedNames.add(name);
@@ -765,12 +965,19 @@ public class ApiSkillController {
 
     /**
      * 创建符号链接，不支持时回退为复制。
+     * @param source 源
+     * @param target Target
      */
     private void symlinkOrCopy(Path source, Path target) {
         try {
             Files.createSymbolicLink(target, source.toAbsolutePath());
         } catch (IOException | UnsupportedOperationException e) {
             try {
+                /**
+                 * 副本目录。
+                 * @param source 源
+                 * @param target Target
+                 */
                 copyDirectory(source, target);
             } catch (IOException ex) {
                 log.warn("[skills] 复制技能失败: {} -> {}", source, target, ex);
@@ -779,9 +986,15 @@ public class ApiSkillController {
     }
 
     /**
-     * 解压 zip 文件到目标目录。
+      * 解压 压缩 文件到目标目录。
+     * @param zipFile 压缩文件
+     * @param targetDir Targetdir
      */
     private void extractZip(Path zipFile, Path targetDir) throws IOException {
+        /**
+         * 尝试。
+         * @param ZipInputStream(Files.newInputStream(zipFile 压缩输入流(文件.新输入流(压缩文件
+         */
         try (ZipInputStream zis = new ZipInputStream(Files.newInputStream(zipFile), StandardCharsets.UTF_8)) {
             ZipEntry entry;
             while ((entry = zis.getNextEntry()) != null) {
@@ -811,6 +1024,10 @@ public class ApiSkillController {
         if (!Files.exists(dir) || !Files.isDirectory(dir)) {
             return;
         }
+        /**
+         * 尝试。
+         * @param Files.list(dir 文件.列表(dir
+         */
         try (Stream<Path> stream = Files.list(dir)) {
             for (Path p : stream.filter(Files::isDirectory).sorted().toList()) {
                 if (!hasSkillMark(p)) {
@@ -861,20 +1078,26 @@ public class ApiSkillController {
      private Path resolveSkillPath(Map<String, Object> body) {
          String skillPath = asText(body.get("skill_path"));
          if (skillPath == null || skillPath.isBlank()) {
+             /**
+              * api异常。
+              * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
+              * @param 不能为空" 不能为空"
+              * @return api异常的结果
+              */
              throw new ApiException(ApiErrorCode.INVALID_PARAM, "skill_path 不能为空");
          }
          return Paths.get(skillPath).toAbsolutePath().normalize();
      }
 
     /**
-     * 导入 {@code agent://PROVIDER/SKILL} 虚拟地址指向的 Agent 本地技能。
+      * 导入 {@code agent://PROVIDER/SKILL} 虚拟地址指向的 智能体 本地技能。
      *
      * <p>前端「从 Agent 导入」对 agent 类来源合成 {@code agent://<providerKey>/<skillName>}
      * 地址。这里通过 {@link SkillOfflineProvider} SPI 将虚拟地址解析为真实落盘位置
      * （技能目录或单文件规则），再走与文件系统导入相同的符号链接/复制逻辑。</p>
      *
-     * @param agentUri agent:// 虚拟地址
-     * @return 导入结果（skill_name / skill_names）
+     * @param agentUri 智能体:// 虚拟地址
+     * @return 导入结果（skill_name / skill_名称）
      */
     private Map<String, Object> importAgentSkill(String agentUri) {
         String rest = agentUri.substring("agent://".length());
@@ -882,6 +1105,12 @@ public class ApiSkillController {
         String providerKey = slash > 0 ? rest.substring(0, slash) : rest;
         String skillName = slash > 0 ? rest.substring(slash + 1) : "";
         if (skillName.isBlank()) {
+            /**
+             * api异常。
+             * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
+             * @param agentUri 智能体uri
+             * @return api异常的结果
+             */
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "agent 地址不完整: " + agentUri);
         }
 
@@ -908,6 +1137,12 @@ public class ApiSkillController {
         try {
             Files.createDirectories(userDir);
         } catch (IOException e) {
+            /**
+             * api异常。
+             * @param ApiErrorCode.INTERNAL_ERROR api错误编码.内部错误
+             * @param e.getMessage( e.获取消息(
+             * @return api异常的结果
+             */
             throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "创建用户技能目录失败: " + e.getMessage());
         }
 
@@ -926,10 +1161,21 @@ public class ApiSkillController {
                 Files.copy(resolved, target.resolve("SKILL.md"), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
                 imported.add(name);
             } else {
+                /**
+                 * symlinkor副本。
+                 * @param resolved resolved
+                 * @param target Target
+                 */
                 symlinkOrCopy(resolved, target);
                 imported.add(name);
             }
         } catch (IOException e) {
+            /**
+             * api异常。
+             * @param ApiErrorCode.INTERNAL_ERROR api错误编码.内部错误
+             * @param e.getMessage( e.获取消息(
+             * @return api异常的结果
+             */
             throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "导入 Agent 技能失败: " + e.getMessage());
         }
         log.info("[ApiSkill] Agent 技能导入成功: {} <- {} -> {}", name, agentUri, resolved);
@@ -941,11 +1187,11 @@ public class ApiSkillController {
     }
 
     /**
-     * 按 SPI 注册键查找 provider（大小写不敏感，前端可能以任意大小写合成 agent:// 地址）。
+      * 按 SPI 注册键查找 提供者（大小写不敏感，前端可能以任意大小写合成 智能体:// 地址）。
      *
      * @param providers SPI 枚举结果
-     * @param key       请求的 provider 键
-     * @return 匹配的 provider；未找到返回 null
+     * @param key       请求的 提供者 键
+     * @return 匹配的 提供者；未找到返回 空
      */
     private SkillOfflineProvider findProviderByKey(Map<String, SkillOfflineProvider> providers, String key) {
         if (providers == null || key == null || key.isBlank()) {
@@ -1022,6 +1268,10 @@ public class ApiSkillController {
      */
     private void copyDirectory(Path source, Path target) throws IOException {
         Files.createDirectories(target);
+        /**
+         * 尝试。
+         * @param Files.walk(source 文件.walk(源
+         */
         try (Stream<Path> stream = Files.walk(source)) {
             for (Path p : stream.filter(Files::isRegularFile).toList()) {
                 Path dest = target.resolve(source.relativize(p).toString());
@@ -1039,6 +1289,10 @@ public class ApiSkillController {
      */
     private void deleteRecursively(Path path) throws IOException {
         if (Files.isDirectory(path)) {
+            /**
+             * 尝试。
+             * @param Files.walk(path 文件.walk(路径
+             */
             try (Stream<Path> stream = Files.walk(path)) {
                 List<Path> all = stream.sorted((a, b) -> b.getNameCount() - a.getNameCount()).toList();
                 for (Path p : all) {
@@ -1054,7 +1308,7 @@ public class ApiSkillController {
      * 安全取文本。
      *
      * @param obj 对象
-     * @return 文本或 null
+     * @return 文本或 空
      */
     private static String asText(Object obj) {
         return obj == null ? null : String.valueOf(obj);
@@ -1063,7 +1317,7 @@ public class ApiSkillController {
     // ==================== 技能市场 ====================
 
     /**
-     * 搜索 SkillsMP 技能市场。
+      * 搜索 skillsmp 技能市场。
      *
      * @param search 搜索关键词
      * @param page   页码（默认 1）
@@ -1131,7 +1385,7 @@ public class ApiSkillController {
      * 同步市场排行数据。前端调用此接口拉取市场数据。
      *
      * <p>按市场类型分发：扁平技能源（skillsmp/clawhub/skillhub/loophub）共享 SkillsMP 技能榜
-     * （仅拉取一次并按源打标签）；专家包源（skillhub_packages）将 SkillsMP 技能按作者聚合为
+      * （仅拉取一次并按源打标签）；专家包源（skillhub_包）将 skillsmp 技能按作者聚合为
      * “专家包”（一个作者=一个包，含其下技能清单），与扁平技能榜结构区分；MCP/插件源
      * （skillhub_mcp/mcpworld/clawhub_plugins）暂无可用数据源，标记 {@code unavailable} 并返回
      * 空列表，不返回伪造数据，也不报错。响应附带 {@code source_status} 供前端展示诚实空态。</p>
@@ -1157,7 +1411,7 @@ public class ApiSkillController {
         List<String> errors = new ArrayList<>();
         Map<String, String> sourceStatus = new LinkedHashMap<>();
 
-        // 扁平技能源：共享 SkillsMP 技能榜，仅拉取一次，按请求的源打标签
+ // 扁平技能源：共享 skillsmp 技能榜，仅拉取一次，按请求的源打标签
         Set<String> flatSources = Set.of("skillsmp", "clawhub", "skillhub", "loophub");
         List<String> requestedFlat = sources.stream().filter(flatSources::contains).toList();
         if (!requestedFlat.isEmpty()) {
@@ -1211,10 +1465,10 @@ public class ApiSkillController {
     }
 
     /**
-     * 拉取 SkillsMP 技能榜单页原始技能数据。
+      * 拉取 skillsmp 技能榜单页原始技能数据。
      *
      * @param page  页码（从 1 开始）
-     * @param limit 每页数量（SkillsMP 上限 48，超出自动截断）
+     * @param limit 每页数量（skillsmp 上限 48，超出自动截断）
      * @return 原始技能数据列表（拉取失败返回空列表，不抛异常）
      */
     @SuppressWarnings("unchecked")
@@ -1405,7 +1659,7 @@ public class ApiSkillController {
     }
 
     /**
-     * 读取本机 Agent 技能内容（「从 Agent 导入」扫描项的内容预览）。
+      * 读取本机 智能体 技能内容（「从 智能体 导入」扫描项的内容预览）。
      *
      * <p>通过 {@link SkillOfflineProvider} SPI 将 {@code provider + skill_name} 解析为本机
      * 落盘位置（技能目录或单文件规则），读取其 SKILL.md 文本。未安装/已删除时
@@ -1470,11 +1724,11 @@ public class ApiSkillController {
     /**
      * 安装市场技能包。
      * <p>从市场技能项（GitHub 仓库子目录）真实下载并安装到 {@code skillsRoot/user/<name>}：
-     * 解析 GitHub tree/blob URL → 通过 GitHub Contents API 递归拉取目录文件 → 校验 SKILL.md →
+       * 解析 GitHub 树/blob URL → 通过 GitHub 内容 API 递归拉取目录文件 → 校验 SKILL.md →
      * 写入用户技能目录。失败时返回具体错误，不再返回假成功。</p>
      *
      * @param body 请求体 {@code { source, id, url }}
-     * @return 安装结果（真实 installed_skill_names 或 errors）
+     * @return 安装结果（真实 installed_skill_名称 或 错误）
      */
     @PostMapping("/market/package/install")
     public ApiResult<Map<String, Object>> installMarketPackage(@RequestBody Map<String, Object> body) {
@@ -1528,6 +1782,11 @@ public class ApiSkillController {
         try {
             Files.createDirectories(userDir);
             tmpDir = Files.createTempDirectory("skill-market-" + skillName);
+            /**
+              * downloadgithubdir。
+             * @param ref ref
+             * @param ref.path( ref.路径(
+             */
             downloadGithubDir(ref, ref.path(), tmpDir, errors);
             if (!errors.isEmpty()) {
                 return installResult(skillName, installed, errors);
@@ -1536,6 +1795,11 @@ public class ApiSkillController {
                 errors.add(errorEntry(id, "下载内容不含 SKILL.md，不是有效技能: " + skillName));
                 return installResult(skillName, installed, errors);
             }
+            /**
+             * 副本目录。
+             * @param tmpDir tmpdir
+             * @param targetDir Targetdir
+             */
             copyDirectory(tmpDir, targetDir);
             installed.add(skillName);
             log.info("[skills] 市场技能安装成功: {} <- {}", skillName, url);
@@ -1546,6 +1810,10 @@ public class ApiSkillController {
             return installResult(skillName, installed, errors);
         } finally {
             if (tmpDir != null) {
+                /**
+                 * 删除recursivelyquietly。
+                 * @param tmpDir tmpdir
+                 */
                 deleteRecursivelyQuietly(tmpDir);
             }
         }
@@ -1554,7 +1822,7 @@ public class ApiSkillController {
     /**
      * 组装市场安装结果信封。
      *
-     * @param skillName 目标技能名（失败时可为 null）
+     * @param skillName 目标技能名（失败时可为 空）
      * @param installed 已安装技能名列表
      * @param errors    错误列表
      * @return 安装结果
@@ -1576,7 +1844,7 @@ public class ApiSkillController {
     }
 
     /**
-     * 安装“专家包”（按作者）：从 SkillsMP 榜单筛选该作者名下技能，下载并安装其 top 技能，
+      * 安装“专家包”（按作者）：从 skillsmp 榜单筛选该作者名下技能，下载并安装其 top 技能，
      * 返回已安装技能名列表。用于角色/专家包市场“添加”动作；单次安装数量受
      * {@link #MAX_AUTHOR_PACKAGE_SKILLS} 限制，避免一次下载整仓全部技能。
      *
@@ -1628,8 +1896,18 @@ public class ApiSkillController {
             Path tmpDir = null;
             try {
                 tmpDir = Files.createTempDirectory("skill-market-" + skillName + "-");
+                /**
+                  * downloadgithubdir。
+                 * @param ref ref
+                 * @param ref.path( ref.路径(
+                 */
                 downloadGithubDir(ref, ref.path(), tmpDir, errors);
                 if (hasSkillMark(tmpDir)) {
+                    /**
+                     * 副本目录。
+                     * @param tmpDir tmpdir
+                     * @param targetDir Targetdir
+                     */
                     copyDirectory(tmpDir, targetDir);
                     installed.add(skillName);
                 } else {
@@ -1640,6 +1918,10 @@ public class ApiSkillController {
                 errors.add(errorEntry(skillName, "安装失败: " + e.getMessage()));
             } finally {
                 if (tmpDir != null) {
+                    /**
+                     * 删除recursivelyquietly。
+                     * @param tmpDir tmpdir
+                     */
                     deleteRecursivelyQuietly(tmpDir);
                 }
             }
@@ -1674,24 +1956,25 @@ public class ApiSkillController {
     }
 
     /**
-     * GitHub 引用信息。
+       * GitHub 引用信息。
      *
      * @param owner  仓库所有者
      * @param repo   仓库名
      * @param branch 分支名
      * @param path   目录路径（可为空串）
+     * @return GithubRef的结果
      */
     private record GithubRef(String owner, String repo, String branch, String path) {
     }
 
     /**
-     * 解析 GitHub tree/blob 地址。
+       * 解析 GitHub 树/blob 地址。
      * <p>支持形如：{@code https://github.com/owner/repo/tree/branch/path}、
      * {@code https://github.com/owner/repo/blob/branch/path}、
      * {@code https://github.com/owner/repo}。</p>
      *
      * @param url GitHub 地址
-     * @return 解析结果，无法解析返回 null
+     * @return 解析结果，无法解析返回 空
      */
     private GithubRef parseGithubUrl(String url) {
         if (url == null || url.isBlank()) {
@@ -1710,11 +1993,19 @@ public class ApiSkillController {
         if (branch == null || branch.isBlank()) {
             branch = "main";
         }
+        /**
+          * githubref。
+         * @param owner owner
+         * @param repo repo
+         * @param branch 分支
+         * @param "" ""
+         * @return GithubRef的结果
+         */
         return new GithubRef(owner, repo, branch, path != null ? path : "");
     }
 
     /**
-     * 下载 GitHub 目录（递归），文件写入目标目录。
+       * 下载 GitHub 目录（递归），文件写入目标目录。
      * <p>通过 GitHub Contents API 列出目录项，文件用 raw 地址逐一下载。</p>
      *
      * @param ref      GitHub 引用
@@ -1742,6 +2033,13 @@ public class ApiSkillController {
                 String childPath = dirPath == null || dirPath.isBlank()
                         ? name
                         : dirPath + "/" + name;
+                /**
+                  * downloadgithubdir。
+                 * @param ref ref
+                 * @param childPath 子路径
+                 * @param target Target
+                 * @param errors 错误
+                 */
                 downloadGithubDir(ref, childPath, target, errors);
             } else if ("file".equals(type)) {
                 Object downloadUrlObj = entry.get("download_url");
@@ -1802,6 +2100,10 @@ public class ApiSkillController {
      * @param dir 目录
      */
     private void deleteRecursivelyQuietly(Path dir) {
+        /**
+         * 尝试。
+         * @param Files.walk(dir 文件.walk(dir
+         */
         try (Stream<Path> stream = Files.walk(dir)) {
             stream.sorted(java.util.Comparator.reverseOrder()).forEach(p -> {
                 try {
@@ -1816,7 +2118,7 @@ public class ApiSkillController {
     }
 
     /**
-     * 简易 HTTP GET（返回字符串）。
+      * 简易 HTTP 获取（返回字符串）。
      *
      * @param urlStr URL
      * @return 响应体
@@ -1824,11 +2126,16 @@ public class ApiSkillController {
      * @throws InterruptedException 中断异常
      */
     private String httpGet(String urlStr) throws IOException, InterruptedException {
+        /**
+         * 字符串。
+         * @param httpGetBytes(urlStr http获取bytes(urlstr
+         * @return 字符串的结果
+         */
         return new String(httpGetBytes(urlStr), StandardCharsets.UTF_8);
     }
 
     /**
-     * 下载字节内容（HTTP GET，跟随重定向）。
+      * 下载字节内容（HTTP 获取，跟随重定向）。
      *
      * @param urlStr URL
      * @return 响应字节
@@ -1844,6 +2151,12 @@ public class ApiSkillController {
         try {
             uri = URI.create(urlStr);
         } catch (IllegalArgumentException e) {
+            /**
+             * io异常。
+             * @param urlStr urlstr
+             * @param e e
+             * @return io异常的结果
+             */
             throw new IOException("非法 URL: " + urlStr, e);
         }
         HttpRequest request = HttpRequest.newBuilder()
@@ -1855,6 +2168,11 @@ public class ApiSkillController {
         HttpResponse<byte[]> response = client.send(request, HttpResponse.BodyHandlers.ofByteArray());
         int status = response.statusCode();
         if (status < 200 || status >= 300) {
+            /**
+             * io异常。
+             * @param urlStr urlstr
+             * @return io异常的结果
+             */
             throw new IOException("HTTP " + status + " for " + urlStr);
         }
         return response.body();
@@ -1862,6 +2180,8 @@ public class ApiSkillController {
 
     /**
      * 简易 JSON 解析。
+     * @param json json
+     * @return 解析json的结果
      */
     @SuppressWarnings("unchecked")
     private Map<String, Object> parseJson(String json) {

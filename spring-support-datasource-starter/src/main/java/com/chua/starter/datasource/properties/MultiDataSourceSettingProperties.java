@@ -33,32 +33,52 @@ public class MultiDataSourceSettingProperties {
     private boolean strict = false;
 
     /**
-     * 负载均衡策略：round_robin（轮询）/ random（随机）
+      * 负载均衡策略：round_robin（轮询）/ 随机（随机）
      */
     private String loadBalance = "round_robin";
 
     // Getter 方法
-    /** 是否ForceAnnotation */
+    /**
+     * 是否force注解
+     *
+     * @return 是否force注解的结果
+     */
     public boolean isForceAnnotation() {
         return forceAnnotation;
     }
 
-    /** 是否Strict */
+    /**
+     * 是否Strict
+     *
+     * @return 是否strict的结果
+     */
     public boolean isStrict() {
         return strict;
     }
 
-    /** 设置Strict */
+    /**
+     * 设置Strict
+     *
+     * @param strict strict
+     */
     public void setStrict(boolean strict) {
         this.strict = strict;
     }
 
-    /** 获取加载Balance */
+    /**
+     * 获取加载Balance
+     *
+     * @return 获取加载balance的结果
+     */
     public String getLoadBalance() {
         return loadBalance;
     }
 
-    /** 设置加载Balance */
+    /**
+     * 设置加载Balance
+     *
+     * @param loadBalance 加载balance
+     */
     public void setLoadBalance(String loadBalance) {
         this.loadBalance = loadBalance;
     }

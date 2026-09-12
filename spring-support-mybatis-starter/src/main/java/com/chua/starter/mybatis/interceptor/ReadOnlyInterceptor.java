@@ -22,6 +22,12 @@ import org.apache.ibatis.plugin.Signature;
         @Signature(type = Executor.class, method = "update",
                 args = {MappedStatement.class, Object.class})
 )
+/**
+ * 读取only拦截器类。
+ *
+ * @author CH
+ * @since 4.0.0
+ */
 public class ReadOnlyInterceptor implements Interceptor {
     /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(ReadOnlyInterceptor.class);
@@ -39,12 +45,12 @@ public class ReadOnlyInterceptor implements Interceptor {
     }
 
     /**
-     * 拦截MyBatis的更新操作
-     * 当处于只读模式时，拦截INSERT、UPDATE、DELETE操作并抛出只读异常
+       * 拦截MyBatis的更新操作
+      * 当处于只读模式时，拦截插入、更新、删除操作并抛出只读异常
      *
      * @param invocation MyBatis调用上下文对象
      * @return 原始方法的执行结果
-     * @throws Throwable 当只读模式下执行写操作时抛出ReadOnlyException
+     * @throws Throwable 当只读模式下执行写操作时抛出读取only异常
      */
     @Override
     public Object intercept(Invocation invocation) throws Throwable {
@@ -53,11 +59,11 @@ public class ReadOnlyInterceptor implements Interceptor {
             return invocation.proceed();
         }
 
-        // 获取MappedStatement对象
+ // 获取mapped对账单对象
         MappedStatement ms = (MappedStatement) invocation.getArgs()[0];
         SqlCommandType sqlCommandType = ms.getSqlCommandType();
 
-        // 拦截INSERT、UPDATE、DELETE操作
+ // 拦截插入、更新、删除操作
         if (sqlCommandType == SqlCommandType.INSERT
                 || sqlCommandType == SqlCommandType.UPDATE
                 || sqlCommandType == SqlCommandType.DELETE) {

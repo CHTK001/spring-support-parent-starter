@@ -15,10 +15,11 @@ import java.util.Properties;
  * datasource 默认环境配置
  *
  * @author CH
+ * @since 4.0.0
  */
 public class DataSourceEnvironmentPostProcessor implements EnvironmentPostProcessor, Ordered {
     @Override
-    /** Post处理Environment */
+    /** Post处理环境 */
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
         Properties properties = new Properties();
 
@@ -34,9 +35,9 @@ public class DataSourceEnvironmentPostProcessor implements EnvironmentPostProces
         properties.setProperty("spring.jpa.hibernate.ddl-auto", "update");
         properties.setProperty("spring.jpa.show-db", "true");
 
-        // 数据库脚本迁移默认全部交给自研 FlywayLike（plugin.datasource.script）：
-        // 关闭 spring.sql.init（schema-locations 手工清单），由 DataSourceScriptConfiguration
-        // 启动时自动扫描 classpath*:db/init|migration|sync 下 V*__*.sql 执行。
+ // 数据库脚本迁移默认全部交给自研 flywaylike（plugin.datasource.script）：
+ // 关闭 spring.SQL.初始化（模式-位置 手工清单），由 数据源script配置
+ // 启动时自动扫描 类路径*:db/初始化|migration|同步 下 V*__*.SQL 执行。
         // 仅在用户未显式设置时写入默认值，避免覆盖应用自定义配置。
         if (!environment.containsProperty("spring.sql.init.mode")) {
             properties.setProperty("spring.sql.init.mode", "never");
@@ -51,7 +52,7 @@ public class DataSourceEnvironmentPostProcessor implements EnvironmentPostProces
     }
 
     @Override
-    /** 获取Order */
+    /** 获取订单 */
     public int getOrder() {
         return ConfigDataEnvironmentPostProcessor.ORDER + 10;
     }

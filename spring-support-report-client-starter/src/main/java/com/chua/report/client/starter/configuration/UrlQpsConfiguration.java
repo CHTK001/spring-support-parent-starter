@@ -19,7 +19,7 @@ import java.util.Set;
  * 配置 URL QPS 拦截器
  * </p>
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2025/01/17
  * @author CH
  */
@@ -33,7 +33,7 @@ public class UrlQpsConfiguration implements WebMvcConfigurer {
     private final ReportProperties reportProperties;
 
     @Override
-    /** 添加Interceptors */
+    /** 添加拦截器 */
     public void addInterceptors(InterceptorRegistry registry) {
         ReportProperties.UrlQps urlQpsConfig = reportProperties.getUrlQps();
         Set<String> excludePatterns = urlQpsConfig.getExcludePatterns();

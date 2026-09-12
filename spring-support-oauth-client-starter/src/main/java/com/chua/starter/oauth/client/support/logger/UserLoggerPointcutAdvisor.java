@@ -31,7 +31,7 @@ import java.util.Optional;
  * <p>日志格式：[时间] 用户名 执行了 模块-操作名称 (耗时: xxxms, 状态: 成功/失败)</p>
  * <p>通过事件机制发布日志信息，各模块可以监听并处理日志事件</p>
  *
- * @version 1.0
+   * @版本 1.0
  * @since 2024-01-01
  * @see UserLog
  * @see UserLoggerInfo
@@ -59,7 +59,7 @@ public class UserLoggerPointcutAdvisor extends AbstractLoggerPointcutAdvisor {
     }
 
     @Override
-    /** 创建OperateLogger */
+    /** 创建operate日志记录器 */
     protected void createOperateLogger(Object proceed, Throwable throwable, MethodInvocation invocation, long startTime) {
         Method method = invocation.getMethod();
         UserLog userLog = method.getDeclaredAnnotation(UserLog.class);
@@ -91,6 +91,12 @@ public class UserLoggerPointcutAdvisor extends AbstractLoggerPointcutAdvisor {
 
         // 构建并输出格式化日志：[时间] 用户名 执行了 模块-操作名称
         String logMessage = buildLogMessage(formattedTime, displayUsername, logModule, name, costTime, statusText, throwable);
+        /**
+         * 输出日志。
+         * @param isSuccess 是否成功
+         * @param logMessage 日志消息
+         * @param throwable 抛出
+         */
         outputLog(isSuccess, logMessage, throwable);
 
         // 构建日志信息对象
@@ -127,6 +133,10 @@ public class UserLoggerPointcutAdvisor extends AbstractLoggerPointcutAdvisor {
         userLoggerInfo.setLogContent(getContent(content, invocation, proceed));
 
         // 发布日志事件
+        /**
+         * 发布事件。
+         * @param userLoggerInfo 用户日志记录器信息
+         */
         publishEvent(userLoggerInfo);
     }
 
@@ -139,7 +149,7 @@ public class UserLoggerPointcutAdvisor extends AbstractLoggerPointcutAdvisor {
      * @param name          操作名称
      * @param costTime      操作耗时(毫秒)
      * @param statusText    状态文本(成功/失败)
-     * @param throwable     异常信息，可为null
+     * @param throwable     异常信息，可为空
      * @return 格式化后的日志消息
      */
     private String buildLogMessage(String formattedTime, String username, String module, String name,
@@ -164,7 +174,7 @@ public class UserLoggerPointcutAdvisor extends AbstractLoggerPointcutAdvisor {
      *
      * @param isSuccess  操作是否成功
      * @param logMessage 日志消息
-     * @param throwable  异常信息，可为null
+     * @param throwable  异常信息，可为空
      */
     private void outputLog(boolean isSuccess, String logMessage, Throwable throwable) {
         if (isSuccess) {
@@ -175,7 +185,7 @@ public class UserLoggerPointcutAdvisor extends AbstractLoggerPointcutAdvisor {
     }
 
     @Override
-    /** 获取Content */
+    /** 获取内容 */
     protected String getContent(String content, MethodInvocation invocation, Object proceed) {
         if (StringUtils.isEmpty(content)) {
             return "";
@@ -245,7 +255,7 @@ public class UserLoggerPointcutAdvisor extends AbstractLoggerPointcutAdvisor {
     }
 
     @Override
-    /** 获取Name */
+    /** 获取名称 */
     protected String getName(String annotationName, Method method) {
         String name = super.getName(annotationName, method);
         if (null != name) {

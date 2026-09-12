@@ -33,7 +33,7 @@ public class SysAiRoleServiceImpl implements SysAiRoleService {
     private static final int DELETE_NOT_DELETED = 0;
 
     /**
-     * 角色 Mapper
+      * 角色 映射器
      */
     private final SysAiRoleMapper sysAiRoleMapper;
 
@@ -65,7 +65,7 @@ public class SysAiRoleServiceImpl implements SysAiRoleService {
     }
 
     /**
-     * 按 ID 查询角色。
+      * 按 标识 查询角色。
      *
      * @param id 角色主键
      * @return 角色实体
@@ -144,7 +144,7 @@ public class SysAiRoleServiceImpl implements SysAiRoleService {
         if (id == null) {
             return false;
         }
-        // 使用 MyBatis-Plus 内置 deleteById：@TableLogic 逻辑删除（SET delete=1）
+ // 使用 mybatis-Plus 内置 删除byid：@table逻辑 逻辑删除（设置 删除=1）
         return sysAiRoleMapper.deleteById(id) > 0;
     }
 }

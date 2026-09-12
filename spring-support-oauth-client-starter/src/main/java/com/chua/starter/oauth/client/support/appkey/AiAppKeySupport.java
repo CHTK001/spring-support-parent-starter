@@ -13,13 +13,13 @@ import java.util.Map;
 import java.util.regex.Pattern;
 
 /**
- * AI AppKey 本地认证支持。
+   * AI app钥匙 本地认证支持。
  *
  * <p>基于 {@link JdbcEngine} 直接查询动态配置的 AppKey 表（默认 {@code sys_ai_app_key}），
- * 无需编写 Mapper，支持通过配置指定表名与列名，适配不同命名规范的 AI 模块。</p>
+   * 无需编写 映射器，支持通过配置指定表名与列名，适配不同命名规范的 AI 模块。</p>
  *
  * <p>当 {@code plugin.oauth.ai-app-key.enabled=true} 时生效，
- * 用于单机部署或外部 OAuth 服务不可达场景下的 AI AppKey 认证。</p>
+   * 用于单机部署或外部 o认证 服务不可达场景下的 AI app钥匙 认证。</p>
  *
  * @author CH
  * @since 4.0.0.42
@@ -28,7 +28,7 @@ import java.util.regex.Pattern;
 public class AiAppKeySupport {
 
     /**
-     * 全局静态实例（由 AuthClientConfiguration 注册，供每请求新建的 WebRequest 读取）
+      * 全局静态实例（由 认证客户端配置 注册，供每请求新建的 web请求 读取）
      */
     private static volatile AiAppKeySupport INSTANCE;
 
@@ -40,7 +40,7 @@ public class AiAppKeySupport {
     /**
      * 注册全局实例。
      *
-     * @param support AI AppKey 认证支持
+     * @param support AI app钥匙 认证支持
      */
     public static void register(AiAppKeySupport support) {
         INSTANCE = support;
@@ -49,7 +49,7 @@ public class AiAppKeySupport {
     /**
      * 获取全局实例。
      *
-     * @return AI AppKey 认证支持，未注册返回 {@code null}
+     * @return AI app钥匙 认证支持，未注册返回 {@code null}
      */
     public static AiAppKeySupport get() {
         return INSTANCE;
@@ -71,9 +71,9 @@ public class AiAppKeySupport {
     private volatile JdbcEngine engine;
 
     /**
-     * 构造 AI AppKey 认证支持。
+      * 构造 AI app钥匙 认证支持。
      *
-     * @param authProperties OAuth 客户端配置
+     * @param authProperties o认证 客户端配置
      * @param dataSource     应用数据源（与 MyBatis 同源）
      */
     public AiAppKeySupport(AuthClientProperties authProperties, DataSource dataSource) {
@@ -82,7 +82,7 @@ public class AiAppKeySupport {
     }
 
     /**
-     * 是否已启用 AI AppKey 本地认证。
+      * 是否已启用 AI app钥匙 本地认证。
      *
      * @return 是否启用
      */
@@ -91,13 +91,13 @@ public class AiAppKeySupport {
     }
 
     /**
-     * 校验 AppKey 是否有效。
+      * 校验 app钥匙 是否有效。
      *
      * <p>查询条件：{@code <appKeyColumn> = ? AND <statusColumn> = 1}，
      * 若配置了过期时间列则追加 {@code (<expireColumn> IS NULL OR <expireColumn> &gt; now)}。</p>
      *
-     * @param appKey AppKey 值
-     * @return 匹配的 AppKey 行（Map，键为列名），不存在或无效返回 {@code null}
+     * @param appKey app钥匙 值
+     * @return 匹配的 app钥匙 行（映射，键为列名），不存在或无效返回 {@code null}
      */
     public Map<String, Object> verifyAppKey(String appKey) {
         if (appKey == null || appKey.isBlank()) {
@@ -147,20 +147,30 @@ public class AiAppKeySupport {
      */
     private String safeIdentifier(String id) {
         if (id == null) {
+            /**
+             * illegal参数异常。
+             * @param 标识符不能为空" 标识符不能为空"
+             * @return illegal参数异常的结果
+             */
             throw new IllegalArgumentException("SQL 标识符不能为空");
         }
         String trimmed = id.trim();
         if (!SAFE_IDENTIFIER.matcher(trimmed).matches()) {
+            /**
+             * illegal参数异常。
+             * @param id 标识
+             * @return illegal参数异常的结果
+             */
             throw new IllegalArgumentException("非法的 SQL 标识符: " + id);
         }
         return trimmed;
     }
 
     /**
-     * 从 AppKey 行中提取用户名（默认取 AppKey 列值）。
+      * 从 app钥匙 行中提取用户名（默认取 app钥匙 列值）。
      *
-     * @param row  AppKey 行
-     * @param appKey 原始 AppKey
+     * @param row  app钥匙 行
+     * @param appKey 原始 app钥匙
      * @return 用户名
      */
     public String resolveUsername(Map<String, Object> row, String appKey) {

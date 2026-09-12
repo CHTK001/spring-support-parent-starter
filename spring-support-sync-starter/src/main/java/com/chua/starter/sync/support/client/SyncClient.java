@@ -8,7 +8,7 @@ import java.util.Map;
  * 同步客户端门面接口。
  * <p>
  * 在 {@link com.chua.common.support.network.sync.SyncClient} 基础上，
- * 补充面向业务的批量主题订阅、SPI 处理器注册和 Map 数据发布能力，
+   * 补充面向业务的批量主题订阅、SPI 处理器注册和 映射 数据发布能力，
  * 供 {@code spring-support-report-client-starter} 等上层模块使用。
  * </p>
  *
@@ -25,7 +25,7 @@ public interface SyncClient extends com.chua.common.support.network.sync.SyncCli
     void subscribe(String... topics);
 
     /**
-     * 注册主题消息处理器（SPI 风格，携带 sessionId 与结构化数据）。
+       * 注册主题消息处理器（SPI 风格，携带 会话标识 与结构化数据）。
      *
      * @param topic   主题
      * @param handler 处理器

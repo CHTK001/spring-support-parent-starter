@@ -43,6 +43,7 @@ import java.util.stream.Collectors;
  * 便于聚焦调度器并发与数据吞吐的可复现测量。</p>
  *
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 public final class DataSyncLoadProbe {
@@ -65,7 +66,7 @@ public final class DataSyncLoadProbe {
     public static void main(String[] args) throws Exception {
         Files.createDirectories(WORK_DIR);
 
-        // 构造全链路 DataSyncServer（本地 AgentServerManager，无 Spring）
+ // 构造全链路 数据同步服务端（本地 智能体服务端管理器，无 Spring）
         DefaultDataSyncServer server = new DefaultDataSyncServer(new DataSyncAgentServer(null, null, "load-probe"));
         DataSyncMappingManager mappingManager = new DefaultDataSyncMappingManager();
         server.setMappingManager(mappingManager);
@@ -76,6 +77,11 @@ public final class DataSyncLoadProbe {
         for (int i = 1; i <= 3; i++) {
             String id = "load-" + i;
             Path csv = WORK_DIR.resolve("source-" + i + ".csv");
+            /**
+              * generatecsv。
+             * @param csv csv
+             * @param LINES_PER_SOURCE 线per源
+             */
             generateCsv(csv, LINES_PER_SOURCE);
 
             server.registerSource(new DelimitedDataSyncAgentSource(id + "-src", id + "-input", csv.toString(), ","));
@@ -122,10 +128,14 @@ public final class DataSyncLoadProbe {
     /**
      * 创建极简配置定义（cron 与 mapping 保持一致）。
      *
-     * @param id 映射 id
+     * @param id 映射 标识
      * @return 配置定义
      */
     private static DataSyncConfigDefinition config(String id) {
+        /**
+         * 数据同步配置definition。
+         * @return 数据同步配置definition的结果
+         */
         return new DataSyncConfigDefinition() {
             @Override
             public String inputId() {
@@ -195,11 +205,13 @@ public final class DataSyncLoadProbe {
 
 /**
  * 记录执行信息的数据 Sink（委托 CSV 写入 + 计时统计）。
+ * @author CH
+ * @since 4.0.0
  */
 final class TimerSink implements DataSyncAgentSink {
 
     /**
-     * Sink id
+      * Sink 标识
      */
     private final String sinkId;
 
@@ -236,7 +248,7 @@ final class TimerSink implements DataSyncAgentSink {
     /**
      * 构造器。
      *
-     * @param sinkId  Sink id
+     * @param sinkId  Sink 标识
      * @param outPath 输出文件路径
      */
     TimerSink(String sinkId, Path outPath) {
@@ -259,7 +271,7 @@ final class TimerSink implements DataSyncAgentSink {
     public void write(Flux<Map<String, Object>> rows) {
         threads.add(Thread.currentThread().getName());
         final LongAdder counter = new LongAdder();
-        // 批次到达 wall-clock 计时（调度线程调用 write 与批回调为异步，避免 nanotime 跨线程污染）
+ // 批次到达 墙-clock 计时（调度线程调用 写入 与批回调为异步，避免 nanotime 跨线程污染）
         final long reachedAt = System.currentTimeMillis();
         rows.doOnNext(m -> counter.increment())
                 .collectList()
@@ -271,6 +283,10 @@ final class TimerSink implements DataSyncAgentSink {
                     rounds.increment();
                     totalRows.add(counter.sum());
                     totalMillis.addAndGet(ms);
+                    /**
+                     * persist。
+                     * @param list 列表
+                     */
                     persist(list);
                     System.out.println("[LOAD-PROBE] " + sinkId + " 轮次#" + rounds.sum() + " 写入 " + counter.sum()
                             + " 行, " + ms + "ms, thread=" + Thread.currentThread().getName());

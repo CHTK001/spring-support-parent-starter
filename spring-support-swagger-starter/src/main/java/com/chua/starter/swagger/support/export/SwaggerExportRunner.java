@@ -9,7 +9,7 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 /**
- * 应用启动后将 SpringDoc 收集的 OpenAPI 按泛微 E10 风格导出到本地 HTML。
+   * 应用启动后将 springdoc 收集的 打开api 按泛微 E10 风格导出到本地 HTML。
  *
  * <p>默认在 {@code chua.swagger.export.enabled=true} 时启用。
  * 输出路径由 {@link SwaggerExportProperties#getOutput()} 指定, 默认 {@code ./swagger-export.html}。</p>
@@ -25,15 +25,15 @@ import org.springframework.stereotype.Component;
 @ConditionalOnProperty(prefix = "chua.swagger.export", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class SwaggerExportRunner implements CommandLineRunner {
 
-    /** OpenAPI */
+    /** 打开api */
     private final OpenAPI openAPI;
     /** 属性 */
     private final SwaggerExportProperties properties;
 
     /**
-     * 创建 SwaggerExportRunner 实例
-     * @param openAPIProvider openAPIProvider
-     * @param properties properties
+       * 创建 Swagger导出runner 实例
+     * @param openAPIProvider 打开api提供者
+     * @param properties 属性
      */
     public SwaggerExportRunner(org.springframework.beans.factory.ObjectProvider<OpenAPI> openAPIProvider,
                                SwaggerExportProperties properties) {

@@ -58,9 +58,10 @@ public class DataSourceDocumentService {
     private final ReentrantLock lock = new ReentrantLock();
 
     /**
-     * 创建 DataSourceDocumentService 实例
-     * @param dataSource dataSource
-     * @param DocumentProperties DocumentProperties
+      * 创建 数据源文档服务 实例
+     * @param dataSource 数据源
+     * @param properties 文档属性
+     * @param properties 属性
      */
     public DataSourceDocumentService(DataSource dataSource, DocumentProperties properties) {
         this.dataSource = dataSource;
@@ -104,6 +105,7 @@ public class DataSourceDocumentService {
 
     /**
      * 上一次刷新时间戳
+     * @return 获取缓存at的结果
      */
     public long getCachedAt() {
         return cachedAt;
@@ -111,6 +113,7 @@ public class DataSourceDocumentService {
 
     /**
      * 当前是否已有缓存
+     * @return 是否包含缓存的结果
      */
     public boolean hasCache() {
         return cached != null;
@@ -118,7 +121,11 @@ public class DataSourceDocumentService {
 
     // ====================== 私有 ======================
 
-    /** Do解析 */
+    /**
+     * 执行解析
+     *
+     * @return 执行解析的结果
+     */
     private DocumentData doParse() {
         DocumentParser parser;
         try {
@@ -134,7 +141,7 @@ public class DataSourceDocumentService {
 
         ConnectionInfo conn = readConnectionInfo();
 
-        // 复制透传 options，并补上 schemas/version/title
+ // 复制透传 期权，并补上 模式/版本/title
         java.util.Map<String, Object> opts = new java.util.LinkedHashMap<>();
         if (properties.getOptions() != null) {
             opts.putAll(properties.getOptions());
@@ -152,7 +159,7 @@ public class DataSourceDocumentService {
                         .url(conn.url)
                         .username(conn.username)
                         .password(conn.password)
-                        // 不传 driverClass，让 DriverManager 自动发现（getDriverName 返回的是人话名带空格）
+ // 不传 driver类，让 driver管理器 自动发现（获取driver名称 返回的是人话名带空格）
                         .options(opts)
                         .build();
 
@@ -173,6 +180,8 @@ public class DataSourceDocumentService {
 
     /**
      * 按白/黑名单过滤表
+     * @param source 源
+     * @return 过滤器tables的结果
      */
     private List<TableData> filterTables(List<TableData> source) {
         if (source == null || source.isEmpty()) {
@@ -199,17 +208,28 @@ public class DataSourceDocumentService {
     }
 
     /**
-     * 从 DataSource 读取连接信息（url/username/password）
+      * 从 数据源 读取连接信息（url/用户名/密码）
      * <p>注：JDBC 不暴露密码，通过反射读取常见连接池字段；拿不到也不致命，
-     * 因为用户可能使用 XA 包装、Sharding 路由等，url 本身已足够解析元数据。</p>
+      * 因为用户可能使用 XA 包装、分库分表 路由等，url 本身已足够解析元数据。</p>
+     * @return 读取connection信息的结果
      */
     private ConnectionInfo readConnectionInfo() {
         ConnectionInfo info = new ConnectionInfo();
+        /**
+         * 尝试。
+         * @param dataSource.getConnection( 数据源.getconnection(
+         */
         try (Connection conn = dataSource.getConnection()) {
             info.url = conn.getMetaData().getURL();
             info.username = conn.getMetaData().getUserName();
             info.password = readPassword();
         } catch (SQLException e) {
+            /**
+             * illegal状态异常。
+             * @param 连接信息" 连接信息"
+             * @param e e
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("无法读取 DataSource 连接信息", e);
         }
         return info;
@@ -217,6 +237,7 @@ public class DataSourceDocumentService {
 
     /**
      * 通过反射常见字段读取数据库密码
+     * @return 读取密码的结果
      */
     private String readPassword() {
         if (!(dataSource instanceof javax.sql.DataSource ds)) {
@@ -250,7 +271,13 @@ public class DataSourceDocumentService {
         return null;
     }
 
-    /** 查找Field */
+    /**
+     * 查找字段
+     *
+     * @param clazz clazz
+     * @param names 名称
+     * @return find字段的结果
+     */
     private static java.lang.reflect.Field findField(Class<?> clazz, String... names) {
         for (Class<?> c = clazz; c != null && c != Object.class; c = c.getSuperclass()) {
             for (java.lang.reflect.Field f : c.getDeclaredFields()) {

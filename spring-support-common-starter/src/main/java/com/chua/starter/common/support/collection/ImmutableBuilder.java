@@ -5,16 +5,26 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * 不可变 Map 构造器。
+   * 不可变 映射 构造器。
+ * @author CH
+ * @since 4.0.0
  */
 public final class ImmutableBuilder {
 
-    /** 创建 ImmutableBuilder 实例 */
+    /** 创建 immutable构建器 实例 */
     private ImmutableBuilder() {
     }
 
-    /** BuilderOfStringStringMap */
+    /**
+     * 构建器的字符串字符串映射
+     *
+     * @return 构建器的字符串字符串映射的结果
+     */
     public static ImmutableStringStringMapBuilder builderOfStringStringMap() {
+        /**
+         * immutable字符串字符串映射构建器。
+         * @return immutable字符串字符串映射构建器的结果
+         */
         return new ImmutableStringStringMapBuilder();
     }
 
@@ -22,13 +32,23 @@ public final class ImmutableBuilder {
 
         private final Map<String, String> map = new LinkedHashMap<>();
 
-        /** Put */
+        /**
+         * 放入
+         *
+         * @param key 钥匙
+         * @param value 价值观
+         * @return 放入的结果
+         */
         public ImmutableStringStringMapBuilder put(String key, String value) {
             map.put(key, value);
             return this;
         }
 
-        /** AsSynchronizedMap */
+        /**
+         * as同步映射
+         *
+         * @return as同步映射的结果
+         */
         public Map<String, String> asSynchronizedMap() {
             return Collections.synchronizedMap(Collections.unmodifiableMap(new LinkedHashMap<>(map)));
         }

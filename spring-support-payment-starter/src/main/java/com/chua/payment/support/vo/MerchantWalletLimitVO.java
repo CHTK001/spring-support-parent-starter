@@ -8,12 +8,13 @@ import java.math.BigDecimal;
 /**
  * 商户钱包限额 VO
  * @author CH
+ * @since 4.0.0
  */
 @Data
 public class MerchantWalletLimitVO implements Serializable {
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L; // 串行版本uid
 
-    /** MerchantID */
+    /** merchantid */
     private Long merchantId;
 
     /** Singlerecharge限制 */

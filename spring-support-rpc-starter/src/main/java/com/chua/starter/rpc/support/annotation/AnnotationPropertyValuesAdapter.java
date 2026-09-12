@@ -14,9 +14,9 @@ import java.util.Map;
  * {@link Annotation}
  * <p>
  * {@link PropertyValues}
- * Adapter
+   * 适配器
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2.5.11
  * @author CH
  */
@@ -37,22 +37,22 @@ public class AnnotationPropertyValuesAdapter implements PropertyValues {
     }
 
     /**
-     * 创建 AnnotationPropertyValuesAdapter 实例
-     * @param annotation annotation
-     * @param propertyResolver propertyResolver
-     * @param ignoreDefaultValue ignoreDefaultValue
-     * @param ignoreAttributeNames ignoreAttributeNames
+      * 创建 注解财产价值观适配器 实例
+     * @param annotation 注解
+     * @param propertyResolver 财产解析器
+     * @param ignoreDefaultValue ignore默认价值观
+     * @param ignoreAttributeNames ignoreattribute名称
      * @param false false
      * @param false false
-     * @param annotation annotation
-     * @param propertyResolver propertyResolver
-     * @param ignoreAttributeNames ignoreAttributeNames
-     * @param propertyResolver propertyResolver
+     * @param annotation 注解
+     * @param propertyResolver 财产解析器
+     * @param ignoreAttributeNames ignoreattribute名称
+     * @param propertyResolver 财产解析器
      * @param true true
-     * @param ignoreAttributeNames ignoreAttributeNames
-     * @param propertyName propertyName
-     * @param old old
-     * @param propertyName propertyName
+     * @param ignoreAttributeNames ignoreattribute名称
+     * @param propertyName 财产名称
+     * @param old 旧
+     * @param propertyName 财产名称
      */
     public AnnotationPropertyValuesAdapter(
             Annotation annotation,
@@ -64,36 +64,43 @@ public class AnnotationPropertyValuesAdapter implements PropertyValues {
     }
 
     /**
-     * 创建 AnnotationPropertyValuesAdapter 实例
-     * @param annotation annotation
-     * @param propertyResolver propertyResolver
-     * @param ignoreAttributeNames ignoreAttributeNames
-     * @param propertyResolver propertyResolver
+      * 创建 注解财产价值观适配器 实例
+     * @param annotation 注解
+     * @param propertyResolver 财产解析器
+     * @param ignoreAttributeNames ignoreattribute名称
+     * @param propertyResolver 财产解析器
      * @param true true
-     * @param ignoreAttributeNames ignoreAttributeNames
-     * @param propertyName propertyName
-     * @param old old
-     * @param propertyName propertyName
+     * @param ignoreAttributeNames ignoreattribute名称
+     * @param propertyName 财产名称
+     * @param old 旧
+     * @param propertyName 财产名称
      */
     public AnnotationPropertyValuesAdapter(
             Annotation annotation, PropertyResolver propertyResolver, String... ignoreAttributeNames) {
+        /**
+         * this。
+         * @param annotation 注解
+         * @param propertyResolver 财产解析器
+         * @param true true
+         * @param ignoreAttributeNames ignoreattribute名称
+         */
         this(annotation, propertyResolver, true, ignoreAttributeNames);
     }
 
     @Override
-    /** 获取PropertyValues */
+    /** 获取财产价值观 */
     public PropertyValue[] getPropertyValues() {
         return delegate.getPropertyValues();
     }
 
     @Override
-    /** 获取PropertyValue */
+    /** 获取财产价值观 */
     public PropertyValue getPropertyValue(String propertyName) {
         return delegate.getPropertyValue(propertyName);
     }
 
     @Override
-    /** ChangesSince */
+    /** 改变自 */
     public PropertyValues changesSince(PropertyValues old) {
         return delegate.changesSince(old);
     }
@@ -105,7 +112,7 @@ public class AnnotationPropertyValuesAdapter implements PropertyValues {
     }
 
     @Override
-    /** 是否Empty */
+    /** 是否空 */
     public boolean isEmpty() {
         return delegate.isEmpty();
     }

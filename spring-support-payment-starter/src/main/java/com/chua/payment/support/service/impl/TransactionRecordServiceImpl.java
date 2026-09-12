@@ -31,7 +31,7 @@ public class TransactionRecordServiceImpl implements TransactionRecordService {
     }
 
     @Override
-    /** 获取ById */
+    /** 获取byid */
     public TransactionRecord getById(Long id) {
         return transactionRecordMapper.selectById(id);
     }
@@ -49,6 +49,11 @@ public class TransactionRecordServiceImpl implements TransactionRecordService {
     @Override
     public Page<TransactionRecord> page(TransactionRecordQueryRequest request) {
         if (request == null) {
+            /**
+             * illegal参数异常。
+             * @param "查询参数不能为空" "查询参数不能为空"
+             * @return illegal参数异常的结果
+             */
             throw new IllegalArgumentException("查询参数不能为空");
         }
         Page<TransactionRecord> page = new Page<>(request.pageNum(), request.pageSize());

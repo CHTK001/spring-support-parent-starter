@@ -8,12 +8,12 @@ import java.util.Set;
  * API 功能开关信息
  *
  * @since 2024/12/08
- * @version 1.0.0
+   * @版本 1.0.0
  * @author CH
  */
 public class ApiFeatureInfo implements Serializable {
 
-    /** Serial版本UID */
+    /** 串行版本UID */
     private static final long serialVersionUID = 1L;
 
     /**
@@ -102,20 +102,28 @@ public class ApiFeatureInfo implements Serializable {
     }
 
     /**
-     * 创建 Builder
+      * 创建 构建器
      *
      * @return Builder 实例
      */
     public static Builder builder() {
+        /**
+         * 构建器。
+         * @return 构建器的结果
+         */
         return new Builder();
     }
 
     /**
-     * 创建 toBuilder
+      * 创建 转为构建器
      *
      * @return Builder 实例
      */
     public Builder toBuilder() {
+        /**
+         * 构建器。
+         * @return 构建器的结果
+         */
         return new Builder()
                 .featureId(this.featureId)
                 .description(this.description)
@@ -130,10 +138,12 @@ public class ApiFeatureInfo implements Serializable {
     }
 
     /**
-     * Builder 类
+      * 构建器 类
+     * @author CH
+     * @since 4.0.0
      */
     public static class Builder {
-        /** FeatureID */
+        /** 特征标识 */
         private String featureId;
         /** 描述 */
         private String description;
@@ -143,78 +153,132 @@ public class ApiFeatureInfo implements Serializable {
         private boolean defaultEnabled;
         /** 是否启用 */
         private boolean enabled;
-        /** Disabled消息 */
+        /** 已禁用消息 */
         private String disabledMessage;
-        /** Disabled状态 */
+        /** 已禁用状态 */
         private int disabledStatus;
-        /** Class名称 */
+        /** 类名称 */
         private String className;
-        /** Method名称 */
+        /** 方法名称 */
         private String methodName;
-        /** Patterns */
+        /** 模式 */
         private Set<String> patterns;
 
-        /** FeatureId */
+        /**
+          * 特征标识
+         *
+         * @param featureId 特征标识
+         * @return 特征id的结果
+         */
         public Builder featureId(String featureId) {
             this.featureId = featureId;
             return this;
         }
 
-        /** Description */
+        /**
+         * Description
+         *
+         * @param description description
+         * @return description的结果
+         */
         public Builder description(String description) {
             this.description = description;
             return this;
         }
 
-        /** 分组 */
+        /**
+         * 分组
+         *
+         * @param group 群体
+         * @return 群体的结果
+         */
         public Builder group(String group) {
             this.group = group;
             return this;
         }
 
-        /** DefaultEnabled */
+        /**
+         * 默认已启用
+         *
+         * @param defaultEnabled 默认已启用
+         * @return 默认已启用的结果
+         */
         public Builder defaultEnabled(boolean defaultEnabled) {
             this.defaultEnabled = defaultEnabled;
             return this;
         }
 
-        /** Enabled */
+        /**
+         * 已启用
+         *
+         * @param enabled 已启用
+         * @return 已启用的结果
+         */
         public Builder enabled(boolean enabled) {
             this.enabled = enabled;
             return this;
         }
 
-        /** DisabledMessage */
+        /**
+         * 已禁用消息
+         *
+         * @param disabledMessage 已禁用消息
+         * @return 已禁用消息的结果
+         */
         public Builder disabledMessage(String disabledMessage) {
             this.disabledMessage = disabledMessage;
             return this;
         }
 
-        /** DisabledStatus */
+        /**
+         * 已禁用状态
+         *
+         * @param disabledStatus 已禁用状态
+         * @return 已禁用状态的结果
+         */
         public Builder disabledStatus(int disabledStatus) {
             this.disabledStatus = disabledStatus;
             return this;
         }
 
-        /** ClassName */
+        /**
+         * 类名称
+         *
+         * @param className 类名称
+         * @return 类名称的结果
+         */
         public Builder className(String className) {
             this.className = className;
             return this;
         }
 
-        /** MethodName */
+        /**
+         * 方法名称
+         *
+         * @param methodName 方法名称
+         * @return 方法名称的结果
+         */
         public Builder methodName(String methodName) {
             this.methodName = methodName;
             return this;
         }
 
-        /** Patterns */
+        /**
+         * 模式
+         *
+         * @param patterns 模式
+         * @return 模式的结果
+         */
         public Builder patterns(Set<String> patterns) {
             this.patterns = patterns;
             return this;
         }
 
-        /** 构建 */
+        /**
+         * 构建
+         *
+         * @return 构建的结果
+         */
         public ApiFeatureInfo build() {
             return new ApiFeatureInfo(featureId, description, group, defaultEnabled, enabled,
                     disabledMessage, disabledStatus, className, methodName, patterns);
@@ -222,7 +286,7 @@ public class ApiFeatureInfo implements Serializable {
     }
 
     /**
-     * 获取 featureId
+       * 获取 特征标识
      *
      * @return featureId
      */
@@ -231,9 +295,9 @@ public class ApiFeatureInfo implements Serializable {
     }
 
     /**
-     * 设置 featureId
+       * 设置 特征标识
      *
-     * @param featureId featureId
+     * @param featureId 特征标识
      */
     public void setFeatureId(String featureId) {
         this.featureId = featureId;
@@ -258,7 +322,7 @@ public class ApiFeatureInfo implements Serializable {
     }
 
     /**
-     * 获取 group
+      * 获取 群体
      *
      * @return group
      */
@@ -267,16 +331,16 @@ public class ApiFeatureInfo implements Serializable {
     }
 
     /**
-     * 设置 group
+      * 设置 群体
      *
-     * @param group group
+     * @param group 群体
      */
     public void setGroup(String group) {
         this.group = group;
     }
 
     /**
-     * 获取 defaultEnabled
+      * 获取 默认已启用
      *
      * @return defaultEnabled
      */
@@ -285,16 +349,16 @@ public class ApiFeatureInfo implements Serializable {
     }
 
     /**
-     * 设置 defaultEnabled
+      * 设置 默认已启用
      *
-     * @param defaultEnabled defaultEnabled
+     * @param defaultEnabled 默认已启用
      */
     public void setDefaultEnabled(boolean defaultEnabled) {
         this.defaultEnabled = defaultEnabled;
     }
 
     /**
-     * 获取 enabled
+      * 获取 已启用
      *
      * @return enabled
      */
@@ -303,16 +367,16 @@ public class ApiFeatureInfo implements Serializable {
     }
 
     /**
-     * 设置 enabled
+      * 设置 已启用
      *
-     * @param enabled enabled
+     * @param enabled 已启用
      */
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
     }
 
     /**
-     * 获取 disabledMessage
+      * 获取 已禁用消息
      *
      * @return disabledMessage
      */
@@ -321,16 +385,16 @@ public class ApiFeatureInfo implements Serializable {
     }
 
     /**
-     * 设置 disabledMessage
+      * 设置 已禁用消息
      *
-     * @param disabledMessage disabledMessage
+     * @param disabledMessage 已禁用消息
      */
     public void setDisabledMessage(String disabledMessage) {
         this.disabledMessage = disabledMessage;
     }
 
     /**
-     * 获取 disabledStatus
+      * 获取 已禁用状态
      *
      * @return disabledStatus
      */
@@ -339,16 +403,16 @@ public class ApiFeatureInfo implements Serializable {
     }
 
     /**
-     * 设置 disabledStatus
+      * 设置 已禁用状态
      *
-     * @param disabledStatus disabledStatus
+     * @param disabledStatus 已禁用状态
      */
     public void setDisabledStatus(int disabledStatus) {
         this.disabledStatus = disabledStatus;
     }
 
     /**
-     * 获取 className
+      * 获取 类名称
      *
      * @return className
      */
@@ -357,16 +421,16 @@ public class ApiFeatureInfo implements Serializable {
     }
 
     /**
-     * 设置 className
+      * 设置 类名称
      *
-     * @param className className
+     * @param className 类名称
      */
     public void setClassName(String className) {
         this.className = className;
     }
 
     /**
-     * 获取 methodName
+      * 获取 方法名称
      *
      * @return methodName
      */
@@ -375,16 +439,16 @@ public class ApiFeatureInfo implements Serializable {
     }
 
     /**
-     * 设置 methodName
+      * 设置 方法名称
      *
-     * @param methodName methodName
+     * @param methodName 方法名称
      */
     public void setMethodName(String methodName) {
         this.methodName = methodName;
     }
 
     /**
-     * 获取 patterns
+      * 获取 模式
      *
      * @return patterns
      */
@@ -393,9 +457,9 @@ public class ApiFeatureInfo implements Serializable {
     }
 
     /**
-     * 设置 patterns
+      * 设置 模式
      *
-     * @param patterns patterns
+     * @param patterns 模式
      */
     public void setPatterns(Set<String> patterns) {
         this.patterns = patterns;

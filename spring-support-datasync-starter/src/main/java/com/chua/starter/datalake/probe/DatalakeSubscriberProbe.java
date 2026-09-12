@@ -40,19 +40,23 @@ import java.util.function.Consumer;
 @Slf4j
 public class DatalakeSubscriberProbe {
 
-    private static int passed = 0;
-    private static int failed = 0;
-    private static int total = 0;
-    private static final List<String> failedCases = new CopyOnWriteArrayList<>();
+    private static int passed = 0; // 通过
+    private static int failed = 0; // 失败
+    private static int total = 0; // total
+    private static final List<String> failedCases = new CopyOnWriteArrayList<>(); // 失败CAS
 
-    private static PipelineManager pipelineManager;
-    private static final Map<String, DataSink> sinkRegistry = new ConcurrentHashMap<>();
-    private static PipelineEngine pipelineEngine;
-    private static CapturingSink logSink;
-    private static CapturingSink statSink;
-    private static FailingSink failingSink;
-    private static OffsetFlow offsetFlow;
+    private static PipelineManager pipelineManager; // pipeline管理器
+    private static final Map<String, DataSink> sinkRegistry = new ConcurrentHashMap<>(); // sinkregistry
+    private static PipelineEngine pipelineEngine; // pipelineengine
+    private static CapturingSink logSink; // 日志sink
+    private static CapturingSink statSink; // statsink
+    private static FailingSink failingSink; // 失败sink
+    private static OffsetFlow offsetFlow; // 偏移量流
 
+    /**
+     * main。
+     * @param args 参数
+     */
     public static void main(String[] args) throws Exception {
         log.info("═══════════════════════════════════════════════════════");
         log.info("║       实时订阅器与多 Sink 容错全面探测 (DatalakeSubscriberProbe)  ║");
@@ -81,6 +85,9 @@ public class DatalakeSubscriberProbe {
 
     // ━━━━━━━━━━━━━━━ 基础设施 ━━━━━━━━━━━━━━━
 
+    /**
+      * setupinfrastructure。
+     */
     private static void setupInfrastructure() {
         pipelineManager = new DefaultPipelineManager();
         logSink = new CapturingSink("log");
@@ -98,22 +105,37 @@ public class DatalakeSubscriberProbe {
         log.info("[DatalakeSubscriberProbe] 基础设施就绪: log/stat/failing 共 3 个 Sink");
     }
 
+    /**
+     * 单个sinkpipeline。
+     * @param sinkType sink类型
+     * @return 单个sinkpipeline的结果
+     */
     private static String singleSinkPipeline(String sinkType) {
         return "{\"stages\":{\"default\":{\"sink\":[{\"type\":\"" + sinkType + "\"}]}}}";
     }
 
+    /**
+      * multisinkpipeline。
+     * @param sinkTypes sink类型
+     * @return multiSinkPipeline的结果
+     */
     private static String multiSinkPipeline(String... sinkTypes) {
         StringBuilder sb = new StringBuilder("{\"stages\":{\"default\":{\"sink\":[");
         for (int i = 0; i < sinkTypes.length; i++) {
-            if (i > 0) sb.append(',');
+            if (i > 0) {
+                sb.append(',');
+            }
             sb.append("{\"type\":\"").append(sinkTypes[i]).append("\"}");
         }
         sb.append("]}}}");
         return sb.toString();
     }
 
-    // ━━━━━━━━━━━━━━━ S01~S05: RealTimeDatalakeSubscriber push 行为 ━━━━━━━━━━━━━━━
+ // ━━━━━━━━━━━━━━━ S01~S05: real时间数据湖subscriber push 行为 ━━━━━━━━━━━━━━━
 
+    /**
+     * 测试subscriberpush。
+     */
     private static void testSubscriberPush() {
         log.info("───── S01~S05: RealTimeDatalakeSubscriber push 行为 ─────");
 
@@ -180,8 +202,11 @@ public class DatalakeSubscriberProbe {
         });
     }
 
-    // ━━━━━━━━━━━━━━━ S06~S07: pushBatch ━━━━━━━━━━━━━━━
+ // ━━━━━━━━━━━━━━━ S06~S07: pushbatch ━━━━━━━━━━━━━━━
 
+    /**
+     * 测试pushbatch。
+     */
     private static void testPushBatch() {
         log.info("───── S06~S07: pushBatch 批量推送 ─────");
 
@@ -211,8 +236,11 @@ public class DatalakeSubscriberProbe {
         });
     }
 
-    // ━━━━━━━━━━━━━━━ S08~S09: offset 推进 ━━━━━━━━━━━━━━━
+ // ━━━━━━━━━━━━━━━ S08~S09: 偏移量 推进 ━━━━━━━━━━━━━━━
 
+    /**
+     * 测试偏移量advance。
+     */
     private static void testOffsetAdvance() {
         log.info("───── S08~S09: offset 推进与 reset ─────");
 
@@ -239,6 +267,9 @@ public class DatalakeSubscriberProbe {
 
     // ━━━━━━━━━━━━━━━ S10~S12: 多 Sink 容错 ━━━━━━━━━━━━━━━
 
+    /**
+     * 测试multisinkfault容错。
+     */
     private static void testMultiSinkFaultTolerance() {
         log.info("───── S10~S12: 多 Sink 容错 ─────");
 
@@ -292,6 +323,9 @@ public class DatalakeSubscriberProbe {
 
     // ━━━━━━━━━━━━━━━ S13~S14: 非法管线 JSON 容错 ━━━━━━━━━━━━━━━
 
+    /**
+     * 测试invalidpipelinejson。
+     */
     private static void testInvalidPipelineJson() {
         log.info("───── S13~S14: 非法管线 JSON 容错 ─────");
 
@@ -322,6 +356,9 @@ public class DatalakeSubscriberProbe {
 
     // ━━━━━━━━━━━━━━━ S15~S16: SPI 自动发现 ━━━━━━━━━━━━━━━
 
+    /**
+     * 测试spidiscovery。
+     */
     private static void testSpiDiscovery() {
         log.info("───── S15~S16: SPI 自动发现 Sink ─────");
 
@@ -352,6 +389,9 @@ public class DatalakeSubscriberProbe {
 
     // ━━━━━━━━━━━━━━━ S17~S20: Webhook 边界 ━━━━━━━━━━━━━━━
 
+    /**
+      * 测试webhookedgecas。
+     */
     private static void testWebhookEdgeCases() throws Exception {
         log.info("───── S17~S20: Webhook 边界 ─────");
 
@@ -414,7 +454,9 @@ public class DatalakeSubscriberProbe {
 
                 StringBuilder sb = new StringBuilder("{");
                 for (int i = 0; i < 50000; i++) {
-                    if (i > 0) sb.append(',');
+                    if (i > 0) {
+                        sb.append(',');
+                    }
                     sb.append("\"key_").append(i).append("\":\"value_padding_data_1234567890\"");
                 }
                 sb.append("}");
@@ -459,7 +501,9 @@ public class DatalakeSubscriberProbe {
                                     .build();
                             java.net.http.HttpResponse<String> resp = client.send(request,
                                     java.net.http.HttpResponse.BodyHandlers.ofString());
-                            if (resp.statusCode() == 200) success.incrementAndGet();
+                            if (resp.statusCode() == 200) {
+                                success.incrementAndGet();
+                            }
                         } catch (Exception e) {
                             // ignore
                         } finally {
@@ -477,6 +521,14 @@ public class DatalakeSubscriberProbe {
     }
 
     // ━━━━━━━━━━━━━━━ 辅助 ━━━━━━━━━━━━━━━
+    /**
+     * 探针检查接口。
+     *
+     * @author CH
+     * @since 4.0.0
+     * @param name 名称
+     * @param check 检查
+     */
 
     private static void check(String name, ProbeCheck check) {
         total++;
@@ -503,15 +555,41 @@ public class DatalakeSubscriberProbe {
     }
 
     // ━━━━━━━━━━━━━━━ 辅助类 ━━━━━━━━━━━━━━━
+     /**
+       * capturingsink类。
+      *
+      * @author CH
+      * @since 4.0.0
+      */
+     * 失败sink类。
+     *
+     */
 
     public static class CapturingSink implements DataSink {
         private final String type;
         private final AtomicInteger count = new AtomicInteger(0);
         private volatile Map<String, Object> lastConfig;
 
+        /**
+          * capturingsink。
+         * @param type 类型
+         */
         public CapturingSink(String type) { this.type = type; }
+        /**
+         * reset。
+         */
         public void reset() { count.set(0); lastConfig = null; }
+        /**
+         * 获取数量。
+         * @return 获取数量的结果
+         */
         public int getCount() { return count.get(); }
+        /**
+         * 获取最后一个配置。
+         * @return 获取最后一个配置的结果
+         * @author CH
+         * @since 4.0.0
+         */
         public Map<String, Object> getLastConfig() { return lastConfig; }
 
         @Override
@@ -532,7 +610,14 @@ public class DatalakeSubscriberProbe {
 
     public static class FailingSink implements DataSink {
         private final AtomicInteger count = new AtomicInteger(0);
+        /**
+         * reset。
+         */
         public void reset() { count.set(0); }
+        /**
+         * 获取数量。
+         * @return 获取数量的结果
+         */
         public int getCount() { return count.get(); }
         @Override
         public String type() { return "failing"; }

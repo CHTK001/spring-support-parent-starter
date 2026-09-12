@@ -56,12 +56,12 @@ public class ServerNodeRegistry {
     private static final Set<String> HTTP_ENGINES = Set.of("jdk", "nio", "aio");
 
     /**
-     * 运行中/曾拉起的节点: nodeId -> 运行时
+       * 运行中/曾拉起的节点: 节点标识 -> 运行时
      */
     private final Map<Long, RuntimeServer> runtimes = new ConcurrentHashMap<>();
 
     /**
-     * 节点 Mapper
+      * 节点 映射器
      */
     private final MsServerNodeMapper nodeMapper;
     /**
@@ -76,7 +76,7 @@ public class ServerNodeRegistry {
     /**
      * 创建注册表
      *
-     * @param nodeMapper    节点 Mapper
+     * @param nodeMapper    节点 映射器
      * @param filterFactory 插件工厂
      * @param objectMapper  JSON
      */
@@ -115,7 +115,7 @@ public class ServerNodeRegistry {
                 }
             }
         } catch (Exception e) {
-            // 数据库未就绪(ms_server_node 表缺失)等场景不应阻断应用启动
+ // 数据库未就绪(ms_服务端_节点 表缺失)等场景不应阻断应用启动
             log.warn("[ServerNodeRegistry] 自动拉起跳过: {}", e.getMessage());
         }
     }
@@ -130,15 +130,24 @@ public class ServerNodeRegistry {
     public RuntimeServer start(MsServerNode node) throws Exception {
         ServerNodeProtocol protocol = ServerNodeProtocol.of(node.getProtocol());
         if (protocol == null) {
+            /**
+             * illegal参数异常。
+             * @param node.getProtocol( 节点.获取协议(
+             * @return illegal参数异常的结果
+             */
             throw new IllegalArgumentException("未知协议类型: " + node.getProtocol());
         }
-        // 幂等: 已存在且运行中的实例直接复用, 避免重复 bind 导致 BindException / 端口泄漏
+ // 幂等: 已存在且运行中的实例直接复用, 避免重复 bind 导致 bind异常 / 端口泄漏
         RuntimeServer existing = runtimes.get(node.getId());
         if (existing != null && existing.isRunning()) {
             return existing;
         }
-        // 若残留未运行或错误实例, 先清理, 避免旧 server 占着端口
+ // 若残留未运行或错误实例, 先清理, 避免旧 服务端 占着端口
         if (existing != null) {
+            /**
+             * 停止。
+             * @param node.getId( 节点.获取标识(
+             */
             stop(node.getId());
         }
         RuntimeServer runtime = new RuntimeServer();
@@ -162,7 +171,7 @@ public class ServerNodeRegistry {
     /**
      * 停止节点(定义保留)。
      *
-     * @param nodeId 节点 ID
+     * @param nodeId 节点 标识
      */
     public void stop(Long nodeId) {
         RuntimeServer runtime = runtimes.remove(nodeId);
@@ -184,17 +193,21 @@ public class ServerNodeRegistry {
     /**
      * 停止并移除节点。
      *
-     * @param nodeId 节点 ID
+     * @param nodeId 节点 标识
      */
     public void remove(Long nodeId) {
+        /**
+         * 停止。
+         * @param nodeId 节点标识
+         */
         stop(nodeId);
     }
 
     /**
      * 查询节点运行时。
      *
-     * @param nodeId 节点 ID
-     * @return 运行时，未拉起返回 null
+     * @param nodeId 节点 标识
+     * @return 运行时，未拉起返回 空
      */
     public RuntimeServer get(Long nodeId) {
         return runtimes.get(nodeId);
@@ -230,9 +243,9 @@ public class ServerNodeRegistry {
     }
 
     /**
-     * 通过 ServiceProvider SPI 创建代理服务器。
+      * 通过 服务提供者 SPI 创建代理服务器。
      *
-     * @param spiName  SPI 扩展名（http-proxy / tcp-proxy）
+     * @param spiName  SPI 扩展名（http-代理 / tcp-代理）
      * @param setting 服务器配置
      * @param backend 后端地址
      * @return 代理服务器实例
@@ -240,6 +253,11 @@ public class ServerNodeRegistry {
     private Server createProxyServer(String spiName, ServerSetting setting, InetSocketAddress backend) {
         Server server = ServiceProvider.of(Server.class).getNewExtension(spiName, setting, backend);
         if (server == null) {
+            /**
+             * illegal状态异常。
+             * @param spiName spi名称
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("代理服务器 SPI 未注册: " + spiName);
         }
         return server;
@@ -257,6 +275,11 @@ public class ServerNodeRegistry {
         String engine = node.getEngine() == null || node.getEngine().isBlank()
                 ? ServerNodeProtocol.HTTP.getDefaultEngine() : node.getEngine().trim().toLowerCase();
         if (!HTTP_ENGINES.contains(engine)) {
+            /**
+             * illegal参数异常。
+             * @param engine engine
+             * @return illegal参数异常的结果
+             */
             throw new IllegalArgumentException("HTTP 服务器引擎仅支持 jdk/nio/aio: " + engine);
         }
         Server server = ServerBuilder.create()
@@ -318,7 +341,7 @@ public class ServerNodeRegistry {
     }
 
     /**
-     * 构建通用 ServerSetting。
+      * 构建通用 服务端setting。
      *
      * @param node     节点定义
      * @param protocol 协议枚举
@@ -330,6 +353,11 @@ public class ServerNodeRegistry {
         setting.setHost(node.getHost() == null || node.getHost().isBlank() ? "0.0.0.0" : node.getHost());
         setting.setPort(node.getPort() != null ? node.getPort() : protocol.getDefaultPort());
         setting.setProtocol(protocol.getAlias());
+        /**
+         * apply通用期权。
+         * @param setting setting
+         * @param config 配置
+         */
         applyCommonOptions(setting, config);
         return setting;
     }
@@ -355,7 +383,7 @@ public class ServerNodeRegistry {
     }
 
     /**
-     * 解析代理后端地址（config.backendHost/backendPort 必填）。
+      * 解析代理后端地址（配置.backend主机/backend端口 必填）。
      *
      * @param config 协议配置
      * @return 后端地址
@@ -365,16 +393,26 @@ public class ServerNodeRegistry {
         Object backendPort = config.get("backendPort");
         if (backendHost == null || String.valueOf(backendHost).isBlank()
                 || backendPort == null || String.valueOf(backendPort).isBlank()) {
+            /**
+             * illegal参数异常。
+             * @param backendPort" backend端口"
+             * @return illegal参数异常的结果
+             */
             throw new IllegalArgumentException("代理服务器必须在 config 中提供 backendHost 与 backendPort");
         }
+        /**
+         * inet套接字地址。
+         * @param String.valueOf(backendHost 字符串.valueof(backend主机
+         * @return inet套接字地址的结果
+         */
         return new InetSocketAddress(String.valueOf(backendHost), Integer.parseInt(String.valueOf(backendPort).trim()));
     }
 
     /**
-     * 解析节点 config JSON。
+      * 解析节点 配置 JSON。
      *
      * @param node 节点定义
-     * @return 配置 Map
+     * @return 配置 映射
      */
     public Map<String, Object> parseConfig(MsServerNode node) {
         String json = node.getConfig();
@@ -385,12 +423,17 @@ public class ServerNodeRegistry {
             return objectMapper.readValue(json, new TypeReference<LinkedHashMap<String, Object>>() {
             });
         } catch (Exception e) {
+            /**
+             * illegal参数异常。
+             * @param node.getName( 节点.获取名称(
+             * @return illegal参数异常的结果
+             */
             throw new IllegalArgumentException("节点 [" + node.getName() + "] config JSON 解析失败: " + e.getMessage(), e);
         }
     }
 
     /**
-     * 解析节点 filters JSON。
+      * 解析节点 过滤器 JSON。
      *
      * @param node 节点定义
      * @return 插件描述列表
@@ -404,6 +447,11 @@ public class ServerNodeRegistry {
             return objectMapper.readValue(json, new TypeReference<List<ServerFilterDescriptor>>() {
             });
         } catch (Exception e) {
+            /**
+             * illegal参数异常。
+             * @param node.getName( 节点.获取名称(
+             * @return illegal参数异常的结果
+             */
             throw new IllegalArgumentException("节点 [" + node.getName() + "] filters JSON 解析失败: " + e.getMessage(), e);
         }
     }
@@ -425,6 +473,12 @@ public class ServerNodeRegistry {
                 + ":" + (node.getPort() != null ? node.getPort() : protocol.getDefaultPort()) + "/";
     }
 
+    /**
+     * apply字符串。
+     * @param setter setter
+     * @param config 配置
+     * @param key 钥匙
+     */
     private void applyString(java.util.function.Consumer<String> setter, Map<String, Object> config, String key) {
         Object v = config.get(key);
         if (v != null && !String.valueOf(v).isBlank()) {
@@ -432,6 +486,12 @@ public class ServerNodeRegistry {
         }
     }
 
+    /**
+      * applyint。
+     * @param setter setter
+     * @param config 配置
+     * @param key 钥匙
+     */
     private void applyInt(java.util.function.IntConsumer setter, Map<String, Object> config, String key) {
         Object v = config.get(key);
         if (v != null && !String.valueOf(v).isBlank()) {
@@ -439,6 +499,12 @@ public class ServerNodeRegistry {
         }
     }
 
+    /**
+      * applylong。
+     * @param setter setter
+     * @param config 配置
+     * @param key 钥匙
+     */
     private void applyLong(java.util.function.LongConsumer setter, Map<String, Object> config, String key) {
         Object v = config.get(key);
         if (v != null && !String.valueOf(v).isBlank()) {
@@ -446,6 +512,12 @@ public class ServerNodeRegistry {
         }
     }
 
+    /**
+     * apply布尔值。
+     * @param setter setter
+     * @param config 配置
+     * @param key 钥匙
+     */
     private void applyBoolean(java.util.function.Consumer<Boolean> setter, Map<String, Object> config, String key) {
         Object v = config.get(key);
         if (v != null && !String.valueOf(v).isBlank()) {
@@ -456,12 +528,14 @@ public class ServerNodeRegistry {
 
     /**
      * 节点运行时。
+     * @author CH
+     * @since 4.0.0
      */
     @Getter
     public static class RuntimeServer {
 
         /**
-         * 节点 ID
+          * 节点 标识
          */
         private Long id;
         /**
@@ -486,9 +560,9 @@ public class ServerNodeRegistry {
         private volatile String error;
 
         /**
-         * 设置节点 ID
+          * 设置节点 标识
          *
-         * @param id 节点 ID
+         * @param id 节点 标识
          */
         public void setId(Long id) {
             this.id = id;
@@ -542,7 +616,7 @@ public class ServerNodeRegistry {
 /**
      * 运行状态。
      *
-     * @return RUNNING / STOPPED / ERROR
+     * @return RUNNING / STOPPED / 错误
      */
     public String status() {
         Server s = this.server;
@@ -556,7 +630,7 @@ public class ServerNodeRegistry {
     }
 
     /**
-     * 是否处于运行中(server 非空且底层服务器正在运行)。
+      * 是否处于运行中(服务端 非空且底层服务器正在运行)。
      *
      * @return true=运行中
      */

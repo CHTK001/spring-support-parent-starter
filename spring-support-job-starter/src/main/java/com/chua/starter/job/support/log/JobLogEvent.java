@@ -9,8 +9,8 @@ import java.util.regex.Pattern;
  * 任务执行日志事件 (record)。
  *
  * <p>由 EXECUTOR 端的 {@link com.chua.starter.job.support.execute.JobExecutor}
- * 在 handler.invoke 之后构造, 经 {@link com.chua.starter.job.support.sync.ExecutorSyncBinder}
- * 上行到 SCHEDULER, 由 {@link com.chua.starter.job.support.sync.SchedulerSyncBinder}
+   * 在 处理器.invoke 之后构造, 经 {@link com.chua.starter.job.support.sync.ExecutorSyncBinder}
+   * 上行到 调度器, 由 {@link com.chua.starter.job.support.sync.SchedulerSyncBinder}
  * 写入 {@link JobLogSink}。</p>
  *
  * <p>SCHEDULER 自身的本地执行 (SINGLE 模式) 同样适用本事件,
@@ -46,6 +46,11 @@ public record JobLogEvent(
 
     /**
      * 构造成功事件 (无日志内容)。
+     * @param jobName 作业名称
+     * @param costMs costms
+     * @param executedAtMs 执行atms
+     * @param nodeId 节点标识
+     * @return 成功的结果
      */
     public static JobLogEvent success(String jobName, long costMs, long executedAtMs, String nodeId) {
         return new JobLogEvent(jobName, Status.SUCCESS, costMs, null,
@@ -54,6 +59,12 @@ public record JobLogEvent(
 
     /**
      * 构造成功事件 (含日志内容)。
+     * @param jobName 作业名称
+     * @param costMs costms
+     * @param executedAtMs 执行atms
+     * @param nodeId 节点标识
+     * @param logContent 日志内容
+     * @return 成功的结果
      */
     public static JobLogEvent success(String jobName, long costMs, long executedAtMs, String nodeId, String logContent) {
         return new JobLogEvent(jobName, Status.SUCCESS, costMs, null,
@@ -70,6 +81,8 @@ public record JobLogEvent(
 
     /**
      * 构造失败事件 (含日志内容)。
+     * @param throwable 抛出
+     * @return extract消息的结果
      */
     public static JobLogEvent failure(String jobName, long costMs, Throwable throwable,
                                       long executedAtMs, String nodeId, String logContent) {
@@ -79,12 +92,16 @@ public record JobLogEvent(
     }
 
     private static String extractMessage(Throwable throwable) {
-        if (throwable == null) return null;
+        if (throwable == null) {
+            return null;
+        }
         Throwable cur = throwable;
         int depth = 0;
         while (cur != null && depth++ < 10) {
             String msg = cur.getMessage();
-            if (msg != null && !msg.isEmpty()) return msg;
+            if (msg != null && !msg.isEmpty()) {
+                return msg;
+            }
             cur = cur.getCause();
         }
         return throwable.getClass().getSimpleName();
@@ -92,6 +109,10 @@ public record JobLogEvent(
 
     /**
      * 构造跳过事件。
+     * @param jobName 作业名称
+     * @param reason ReasonMLML
+     * @param nodeId 节点标识
+     * @return skipped的结果
      */
     public static JobLogEvent skipped(String jobName, String reason, String nodeId) {
         return new JobLogEvent(jobName, Status.SKIPPED, 0L, reason,
@@ -99,7 +120,8 @@ public record JobLogEvent(
     }
 
     /**
-     * 序列化为 wire 格式 (Base64 编码 logContent)。
+      * 序列化为 wire 格式 (基础64 编码 日志内容)。
+     * @return 转为json的结果
      */
     public String toJson() {
         return "JobLogEvent["
@@ -116,16 +138,22 @@ public record JobLogEvent(
 
     /**
      * 从 wire 格式反序列化。
+     * @param text 文本
+     * @return 从json的结果
      */
     public static JobLogEvent fromJson(String text) {
-        if (text == null || text.isEmpty()) return null;
+        if (text == null || text.isEmpty()) {
+            return null;
+        }
         try {
             String jobName = readField(text, "jobName");
             String statusStr = readField(text, "status");
             Status status = statusStr == null ? null : Status.valueOf(statusStr);
             long costMs = readLongField(text, "costMs");
             String exception = readField(text, "exception");
-            if ("null".equals(exception)) exception = null;
+            if ("null".equals(exception)) {
+                exception = null;
+            }
             long executedAtMs = readLongField(text, "executedAtMs");
             String nodeId = readField(text, "nodeId");
             long ts = readLongField(text, "timestamp");
@@ -141,21 +169,56 @@ public record JobLogEvent(
         }
     }
 
-    /** Field_pattern */
+    /**
+     * 字段_模式
+     *
+     /**
+      * 读取字段。
+      * @param text 文本
+      * @param name 名称
+      * @return 读取字段的结果
+      */
+     * @param encoded encoded
+     * @return decode日志内容的结果
+     * @param content 内容
+     */
     private static final Pattern FIELD_PATTERN = Pattern.compile("\\b([a-zA-Z]+)=([^,\\]]*)");
 
+    /**
+     * 读取字段。
+     * @param text 文本
+     * @param name 名称
+     * @return 读取字段的结果
+     */
     private static String readField(String text, String name) {
         Matcher m = FIELD_PATTERN.matcher(text);
+        /**
+         * 读取long字段。
+         * @param text 文本
+         * @param name 名称
+         * @return 读取long字段的结果
+         */
         while (m.find()) {
-            if (m.group(1).equals(name)) return m.group(2);
+            if (m.group(1).equals(name)) {
+                return m.group(2);
+            }
         }
         return null;
     }
 
     private static long readLongField(String text, String name) {
         String v = readField(text, name);
-        if (v == null || v.isEmpty() || "null".equals(v)) return 0L;
+        if (v == null || v.isEmpty() || "null".equals(v)) {
+            return 0L;
+        }
         try {
+            /**
+             * nvl。
+             * @param s s
+             * @return nvl的结果
+             * @param encoded encoded
+             * @param content 内容
+             */
             return Long.parseLong(v.trim());
         } catch (NumberFormatException ex) {
             return 0L;
@@ -167,12 +230,16 @@ public record JobLogEvent(
     }
 
     private static String encodeLogContent(String content) {
-        if (content == null) return "null";
+        if (content == null) {
+            return "null";
+        }
         return Base64.getEncoder().encodeToString(content.getBytes(java.nio.charset.StandardCharsets.UTF_8));
     }
 
     private static String decodeLogContent(String encoded) {
-        if (encoded == null || encoded.isEmpty()) return null;
+        if (encoded == null || encoded.isEmpty()) {
+            return null;
+        }
         try {
             byte[] decoded = Base64.getDecoder().decode(encoded);
             return new String(decoded, java.nio.charset.StandardCharsets.UTF_8);

@@ -42,12 +42,7 @@ CREATE TABLE IF NOT EXISTS filesystem_upload_chunk (
     update_name VARCHAR(50)
 );
 
-SET @idx_exists = IF(
-    EXISTS (SELECT 1 FROM information_schema.statistics WHERE table_schema=DATABASE() AND table_name='filesystem_upload_chunk' AND index_name='idx_filesystem_upload_chunk_upload_id'),
-    'SELECT 1',
-    'CREATE INDEX idx_filesystem_upload_chunk_upload_id ON filesystem_upload_chunk(filesystem_upload_chunk_upload_id)'
-);
-PREPARE fs_stmt FROM @idx_exists; EXECUTE fs_stmt; DEALLOCATE PREPARE fs_stmt;
+CREATE INDEX IF NOT EXISTS idx_filesystem_upload_chunk_upload_id ON filesystem_upload_chunk(filesystem_upload_chunk_upload_id);
 
 CREATE TABLE IF NOT EXISTS filesystem_upload_file (
     filesystem_upload_file_id BIGINT AUTO_INCREMENT PRIMARY KEY,

@@ -26,8 +26,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class PermissionAttackSurfaceTest {
 
     @Autowired
-    private MockMvc mockMvc;
+    private MockMvc mockMvc; // mockmvc
 
+    /**
+     * 会话with。
+     * @param roles 角色
+     * @param permissions 权限
+     * @return 会话with的结果
+     */
     private MockHttpSession sessionWith(Set<String> roles, Set<String> permissions) {
         UserResume user = new UserResume();
         user.setUserId("1");
@@ -56,7 +62,7 @@ class PermissionAttackSurfaceTest {
                 .andExpect(status().isNotFound());
     }
 
-    /** 方法覆盖：X-HTTP-Method-Override 不被框架识别——GET 访问写接口 405，写操作不执行 */
+    /** 方法覆盖：X-HTTP-方法-Override 不被框架识别——获取 访问写接口 405，写操作不执行 */
     @Test
     void methodOverrideIgnored() throws Exception {
         mockMvc.perform(get("/api/permission/delete")

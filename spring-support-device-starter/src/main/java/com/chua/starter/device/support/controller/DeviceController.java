@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 设备管理 Controller
+   * 设备管理 控制器
  *
  * @since 4.0.0.42
  * @author CH
@@ -48,7 +48,7 @@ public class DeviceController {
     /**
      * 更新设备
      *
-     * @param id   设备 ID
+     * @param id   设备 标识
      * @param info 设备信息
      */
     @PutMapping("/{id}")
@@ -59,7 +59,7 @@ public class DeviceController {
     /**
      * 删除设备
      *
-     * @param id 设备 ID
+     * @param id 设备 标识
      */
     @DeleteMapping("/{id}")
     public void deleteDevice(@PathVariable String id) {
@@ -69,7 +69,7 @@ public class DeviceController {
     /**
      * 获取设备详情
      *
-     * @param id 设备 ID
+     * @param id 设备 标识
      * @return 设备信息
      */
     @GetMapping("/{id}")
@@ -80,8 +80,9 @@ public class DeviceController {
     /**
      * 查询设备列表
      *
-     * @param orgId 组织 ID，可选
+     * @param orgId 组织 标识，可选
      * @return 设备列表
+     * @param false false
      */
     @GetMapping("/list")
     public List<DeviceInfo> listDevices(@RequestParam(required = false) String orgId) {
@@ -112,6 +113,7 @@ public class DeviceController {
      *
      * @param vendor 厂商，可选
      * @return 组织列表
+     * @param false false
      */
     @GetMapping("/org/tree")
     public List<DeviceOrganization> getOrgTree(@RequestParam(required = false) String vendor) {
@@ -121,9 +123,10 @@ public class DeviceController {
     /**
      * 导出设备列表为 Excel
      *
-     * @param orgId 组织 ID，可选
+     * @param orgId 组织 标识，可选
      * @param response HTTP 响应
      * @throws Exception 导出异常
+     * @param false false
      */
     @GetMapping("/export")
     public void exportDevices(@RequestParam(required = false) String orgId, HttpServletResponse response) throws Exception {
@@ -155,7 +158,7 @@ public class DeviceController {
     /**
      * 更新指定设备的离线检测阈值（秒）
      *
-     * @param id        设备 ID
+     * @param id        设备 标识
      * @param threshold 阈值（秒）
      */
     @PutMapping("/{id}/offline-threshold")
@@ -166,7 +169,7 @@ public class DeviceController {
     /**
      * 重新连接设备
      *
-     * @param id 设备 ID
+     * @param id 设备 标识
      */
     @PostMapping("/{id}/reconnect")
     public void reconnect(@PathVariable String id) {
@@ -176,7 +179,7 @@ public class DeviceController {
     /**
      * 刷新设备在线状态
      *
-     * @param id 设备 ID
+     * @param id 设备 标识
      */
     @PostMapping("/{id}/refresh-status")
     public void refreshStatus(@PathVariable String id) {

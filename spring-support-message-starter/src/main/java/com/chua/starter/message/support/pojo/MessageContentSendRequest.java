@@ -16,10 +16,10 @@ import java.util.Map;
 public class MessageContentSendRequest {
 
     /**
-     * 提供商ID
+      * 提供商标识
      */
     @Schema(description = "提供商ID")
-    /** SYS消息提供者ID */
+    /** SYS消息提供者标识 */
     private Integer sysMessageProviderId;
 
     /**
@@ -33,7 +33,7 @@ public class MessageContentSendRequest {
      * 消息标题
      */
     @Schema(description = "消息标题")
-    /** Subject */
+    /** 主题 */
     private String subject;
 
     /**
@@ -47,5 +47,5 @@ public class MessageContentSendRequest {
      * 消息参数
      */
     @Schema(description = "消息参数")
-    private Map<String, Object> params;
+    private Map<String, Object> params; // 参数
 }

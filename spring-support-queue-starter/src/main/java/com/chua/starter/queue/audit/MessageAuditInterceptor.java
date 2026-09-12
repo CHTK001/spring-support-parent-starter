@@ -30,17 +30,17 @@ public class MessageAuditInterceptor implements MessageInterceptor, ApplicationE
     /** 事件publisher */
     private ApplicationEventPublisher eventPublisher;
 
-    private final ConcurrentHashMap<String, MessageAuditLog> auditLogs = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<String, Long> startTimes = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, MessageAuditLog> auditLogs = new ConcurrentHashMap<>(); // 审计日志
+    private final ConcurrentHashMap<String, Long> startTimes = new ConcurrentHashMap<>(); // 启动时间
 
     @Override
-    /** 设置ApplicationEventPublisher */
+    /** 设置application事件发布 */
     public void setApplicationEventPublisher(ApplicationEventPublisher eventPublisher) {
         this.eventPublisher = eventPublisher;
     }
 
     @Override
-    /** Before发送 */
+    /** 之前发送 */
     public Message beforeSend(Message message) {
         startTimes.put(message.getId(), System.currentTimeMillis());
 
@@ -54,7 +54,7 @@ public class MessageAuditInterceptor implements MessageInterceptor, ApplicationE
     }
 
     @Override
-    /** After发送 */
+    /** 之后发送 */
     public void afterSend(Message message, boolean success, Throwable error) {
         MessageAuditLog auditLog = auditLogs.get(message.getId());
         if (auditLog != null) {
@@ -70,6 +70,10 @@ public class MessageAuditInterceptor implements MessageInterceptor, ApplicationE
             }
 
             // 持久化审计日志（发布事件，由监听方写入数据库或其他存储）
+            /**
+             * 发布审计日志。
+             * @param auditLog 审计日志
+             */
             publishAuditLog(auditLog);
 
             // 无论大小都清理对应记录，避免内存泄漏
@@ -78,7 +82,7 @@ public class MessageAuditInterceptor implements MessageInterceptor, ApplicationE
     }
 
     @Override
-    /** Before接收 */
+    /** 之前接收 */
     public Message beforeReceive(Message message) {
         startTimes.put(message.getId() + "_receive", System.currentTimeMillis());
 
@@ -92,7 +96,7 @@ public class MessageAuditInterceptor implements MessageInterceptor, ApplicationE
     }
 
     @Override
-    /** After接收 */
+    /** 之后接收 */
     public void afterReceive(Message message, boolean success, Throwable error) {
         MessageAuditLog auditLog = auditLogs.get(message.getId() + "_receive");
         if (auditLog != null) {
@@ -108,6 +112,10 @@ public class MessageAuditInterceptor implements MessageInterceptor, ApplicationE
             }
 
             // 持久化审计日志（发布事件，由监听方写入数据库或其他存储）
+            /**
+             * 发布审计日志。
+             * @param auditLog 审计日志
+             */
             publishAuditLog(auditLog);
 
             // 无论大小都清理对应记录，避免内存泄漏
@@ -117,6 +125,9 @@ public class MessageAuditInterceptor implements MessageInterceptor, ApplicationE
 
     /**
      * 创建审计日志
+     * @param message 消息
+     * @param operation operation
+     * @return 创建审计日志的结果
      */
     private MessageAuditLog createAuditLog(Message message, String operation) {
         MessageAuditLog auditLog = new MessageAuditLog();
@@ -126,7 +137,7 @@ public class MessageAuditInterceptor implements MessageInterceptor, ApplicationE
         auditLog.setMessageType(message.getType());
         auditLog.setOperation(operation);
 
-        // 提取租户ID和用户ID
+ // 提取租户标识和用户标识
         Object tenantId = message.getHeader("tenantId");
         if (tenantId instanceof Long) {
             auditLog.setTenantId((Long) tenantId);
@@ -158,6 +169,7 @@ public class MessageAuditInterceptor implements MessageInterceptor, ApplicationE
 
     /**
      * 发布审计日志事件，由外部监听器持久化
+     * @param auditLog 审计日志
      */
     private void publishAuditLog(MessageAuditLog auditLog) {
         log.info("[Audit] 消息审计: operation={}, destination={}, status={}, duration={}ms, messageId={}",
@@ -172,6 +184,8 @@ public class MessageAuditInterceptor implements MessageInterceptor, ApplicationE
 
     /**
      * 获取异常堆栈
+     * @param error 错误
+     * @return 获取stack追踪的结果
      */
     private String getStackTrace(Throwable error) {
         if (error == null) {
@@ -191,6 +205,8 @@ public class MessageAuditInterceptor implements MessageInterceptor, ApplicationE
 
     /**
      * 获取审计日志
+     * @param messageId 消息标识
+     * @return 获取审计日志的结果
      */
     public MessageAuditLog getAuditLog(String messageId) {
         return auditLogs.get(messageId);
@@ -205,7 +221,7 @@ public class MessageAuditInterceptor implements MessageInterceptor, ApplicationE
     }
 
     @Override
-    /** 获取Order */
+    /** 获取订单 */
     public int getOrder() {
         return -500; // 高优先级
     }

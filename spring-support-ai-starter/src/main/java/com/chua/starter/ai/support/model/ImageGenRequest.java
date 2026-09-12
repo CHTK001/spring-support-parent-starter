@@ -6,11 +6,12 @@ import lombok.Data;
  * 文生图请求参数
  *
  * @author CH
+ * @since 4.0.0
  */
 @Data
 public class ImageGenRequest {
     /** 提示词 */
-    /** Prompt */
+    /** 提示符 */
     private String prompt;
     /** 模型名称，可选 */
     /** 模型 */

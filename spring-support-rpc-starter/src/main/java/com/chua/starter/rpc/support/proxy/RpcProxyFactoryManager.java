@@ -12,7 +12,7 @@ import java.util.List;
  * RPC 代理工厂管理器
  * <p>按优先级尝试不同的代理工厂创建代理</p>
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024/04/07
  * @author CH
  */
@@ -27,7 +27,7 @@ public class RpcProxyFactoryManager {
     /** Factories */
     private final List<RpcProxyFactory> factories;
 
-    /** 创建 RpcProxyFactoryManager 实例 */
+    /** 创建 rpc代理工厂管理器 实例 */
     private RpcProxyFactoryManager() {
         this.factories = new ArrayList<>();
         // 注册默认工厂
@@ -39,7 +39,11 @@ public class RpcProxyFactoryManager {
         factories.sort(Comparator.comparingInt(RpcProxyFactory::getOrder));
     }
 
-    /** 获取Instance */
+    /**
+     * 获取Instance
+     *
+     * @return 获取instance的结果
+     */
     public static RpcProxyFactoryManager getInstance() {
         return INSTANCE;
     }
@@ -71,6 +75,12 @@ public class RpcProxyFactoryManager {
             }
         }
 
+        /**
+         * rpc代理创建异常。
+         * @param interfaces 接口
+         * @param lastException 最后一个异常
+         * @return rpc代理创建异常的结果
+         */
         throw new RpcProxyCreationException("Failed to create proxy with all available factories. Interfaces: " + interfaces, lastException);
     }
 

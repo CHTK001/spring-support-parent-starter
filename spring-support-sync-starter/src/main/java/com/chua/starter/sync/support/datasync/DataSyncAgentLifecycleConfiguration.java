@@ -14,10 +14,10 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import java.util.function.BiConsumer;
 
 /**
- * DataSync Agent 生命周期桥接配置
+   * 数据同步 智能体 生命周期桥接配置
  * <p>
- * 将 Spring Sync 的客户端连接/断开事件桥接到 DataSyncAgentServer：
- * - 客户端断开时，自动从 DataSyncAgentServer 注销对应 Agent
+   * 将 Spring 同步 的客户端连接/断开事件桥接到 数据同步智能体服务端：
+   * - 客户端断开时，自动从 数据同步智能体服务端 注销对应 智能体
  * </p>
  *
  * @since 2026/01/15
@@ -32,19 +32,19 @@ public class DataSyncAgentLifecycleConfiguration {
     private static final Logger log = LoggerFactory.getLogger(DataSyncAgentLifecycleConfiguration.class);
 
     /**
-     * 客户端能力标识：DataSync Agent
+      * 客户端能力标识：数据同步 智能体
      */
     private static final String CAPABILITY_DATASYNC = "datasync";
 
     /** 同步服务器提供者 */
     private final ObjectProvider<SyncServer> syncServerProvider;
-    /** 数据同步agent服务器提供者 */
+    /** 数据同步智能体服务器提供者 */
     private final ObjectProvider<DataSyncAgentServer> dataSyncAgentServerProvider;
 
     /**
-     * 创建 DataSyncAgentLifecycleConfiguration 实例
-     * @param syncServerProvider syncServerProvider
-     * @param dataSyncAgentServerProvider dataSyncAgentServerProvider
+      * 创建 数据同步智能体lifecycle配置 实例
+     * @param syncServerProvider 同步服务端提供者
+     * @param dataSyncAgentServerProvider 数据同步智能体服务端提供者
      */
     public DataSyncAgentLifecycleConfiguration(ObjectProvider<SyncServer> syncServerProvider,
                                                ObjectProvider<DataSyncAgentServer> dataSyncAgentServerProvider) {
@@ -53,7 +53,7 @@ public class DataSyncAgentLifecycleConfiguration {
     }
 
     /**
-     * 判断客户端是否声明了 DataSync 能力。
+      * 判断客户端是否声明了 数据同步 能力。
      *
      * @param clientInfo 客户端信息
      * @return 是否包含 datasync 能力标识
@@ -85,7 +85,7 @@ public class DataSyncAgentLifecycleConfiguration {
             return;
         }
 
-        // 客户端断开时，注销对应 Agent
+ // 客户端断开时，注销对应 智能体
         syncServer.addDisconnectListener(new BiConsumer<String, ClientInfo>() {
             @Override
             /** Accept */

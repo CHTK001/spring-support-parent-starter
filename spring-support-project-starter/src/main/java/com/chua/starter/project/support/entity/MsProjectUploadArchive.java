@@ -32,7 +32,7 @@ import java.time.LocalDateTime;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class MsProjectUploadArchive extends SysBase {
 
-    /** Serial版本UID */
+    /** 串行版本UID */
     private static final long serialVersionUID = 1L;
 
     /**
@@ -40,91 +40,91 @@ public class MsProjectUploadArchive extends SysBase {
      */
     @TableId(value = "id", type = IdType.AUTO)
     @Schema(description = "主键", example = "1")
-    private Long id;
+    private Long id; // 标识
 
     /**
-     * 关联项目 ID
+      * 关联项目 标识
      */
     @TableField("ms_project_upload_archive_project_id")
     @Schema(description = "项目ID", example = "1")
-    private Long msProjectUploadArchiveProjectId;
+    private Long msProjectUploadArchiveProjectId; // msprojectuploadArch Linux Linux Linuxprojectid
 
     /**
      * 项目名称（冗余）
      */
     @TableField("ms_project_upload_archive_project_name")
     @Schema(description = "项目名称", example = "user-service")
-    private String msProjectUploadArchiveProjectName;
+    private String msProjectUploadArchiveProjectName; // msprojectuploadArch Linux Linux Linuxproject名称
 
     /**
-     * 目标主机 ID（资产维度锚点）
+      * 目标主机 标识（资产维度锚点）
      */
     @TableField("ms_project_upload_archive_host_id")
     @Schema(description = "目标主机ID", example = "1")
-    private Long msProjectUploadArchiveHostId;
+    private Long msProjectUploadArchiveHostId; // msprojectuploadArch Linux Linux Linux主机标识
 
     /**
      * 主机名称（冗余）
      */
     @TableField("ms_project_upload_archive_host_name")
     @Schema(description = "主机名称", example = "应用服务器-01")
-    private String msProjectUploadArchiveHostName;
+    private String msProjectUploadArchiveHostName; // msprojectuploadArch Linux Linux Linux主机名称
 
     /**
      * 操作类型：DEPLOY/UPGRADE/ROLLBACK
      */
     @TableField("ms_project_upload_archive_action")
     @Schema(description = "操作类型", example = "UPGRADE")
-    private String msProjectUploadArchiveAction;
+    private String msProjectUploadArchiveAction; // msprojectuploadArch Linux Linux Linux动作
 
     /**
      * 版本标识（原始包文件名）
      */
     @TableField("ms_project_upload_archive_version")
     @Schema(description = "版本标识(原始包文件名)", example = "app-v1.0.0.jar")
-    private String msProjectUploadArchiveVersion;
+    private String msProjectUploadArchiveVersion; // msprojectuploadArch Linux Linux Linux版本
 
     /**
-     * 包类型：SINGLE_FILE/COMPRESSED
+      * 包类型：单个_文件/COMPRESSED
      */
     @TableField("ms_project_upload_archive_type")
     @Schema(description = "包类型: SINGLE_FILE/COMPRESSED", example = "SINGLE_FILE")
-    private String msProjectUploadArchiveType;
+    private String msProjectUploadArchiveType; // msprojectuploadArch Linux Linux Linux类型
 
     /**
      * 归档存储路径
      */
     @TableField("ms_project_upload_archive_upload_path")
     @Schema(description = "归档存储路径")
-    private String msProjectUploadArchiveUploadPath;
+    private String msProjectUploadArchiveUploadPath; // msprojectuploadArch Linux Linux Linuxupload路径
 
     /**
      * 末端部署目录
      */
     @TableField("ms_project_upload_archive_deploy_dir")
     @Schema(description = "末端部署目录", example = "/opt/apps/user-service")
-    private String msProjectUploadArchiveDeployDir;
+    private String msProjectUploadArchiveDeployDir; // msprojectuploadArch Linux Linux Linuxdeploydir
 
     /**
      * 包大小（字节）
      */
     @TableField("ms_project_upload_archive_file_size")
     @Schema(description = "包大小(字节)", example = "52428800")
-    private Long msProjectUploadArchiveFileSize;
+    private Long msProjectUploadArchiveFileSize; // msprojectuploadArch Linux Linux Linux文件大小
 
     /**
      * 包 MD5
      */
     @TableField("ms_project_upload_archive_md5")
     @Schema(description = "包MD5")
-    private String msProjectUploadArchiveMd5;
+    private String msProjectUploadArchiveMd5; // msprojectuploadArch Linux Linux Linuxmd5
 
     /**
-     * 部署结果：SUCCESS/FAIL
+      * 部署结果：成功/失败
      */
     @TableField("ms_project_upload_archive_status")
     @Schema(description = "部署结果", example = "SUCCESS")
-    private String msProjectUploadArchiveStatus;
+    private String msProjectUploadArchiveStatus; // msprojectuploadArch Linux Linux Linux状态
 
     /**
      * 部署时间
@@ -134,5 +134,5 @@ public class MsProjectUploadArchive extends SysBase {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     @JsonSerialize(using = LocalDateTimeSerializer.class)
     @JsonDeserialize(using = LocalDateTimeDeserializer.class)
-    private LocalDateTime msProjectUploadArchiveDeployTime;
+    private LocalDateTime msProjectUploadArchiveDeployTime; // msprojectuploadArch Linux Linux Linuxdeploy时间
 }

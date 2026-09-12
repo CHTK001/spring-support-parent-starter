@@ -10,7 +10,7 @@ import lombok.Data;
  */
 @Data
 public class ChannelConfigDTO {
-    /** MerchantID */
+    /** merchantid */
     private Long merchantId;
     /** 通道类型 */
     private String channelType;
@@ -20,7 +20,7 @@ public class ChannelConfigDTO {
     private String channelName;
     /** APPID */
     private String appId;
-    /** MerchantNO */
+    /** merchantno */
     private String merchantNo;
     /** API密钥 */
     private String apiKey;
@@ -32,7 +32,7 @@ public class ChannelConfigDTO {
     private String certPath;
     /** Sandbox模式 */
     private Integer sandboxMode;
-    /** NotifyURL */
+    /** 通知url */
     private String notifyUrl;
     /** 返回值URL */
     private String returnUrl;

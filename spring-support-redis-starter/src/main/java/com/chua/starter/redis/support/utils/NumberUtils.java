@@ -6,10 +6,11 @@ import com.chua.common.support.utils.StringUtils;
  * 数字工具类
  *
  * @since 2024/12/25
+ * @author CH
  */
 public final class NumberUtils {
 
-    /** 创建 NumberUtils 实例 */
+    /** 创建 数字工具 实例 */
     private NumberUtils() {
     }
 

@@ -46,18 +46,23 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
     private Environment environment;
 
     @Override
-    /** 设置Environment */
+    /** 设置环境 */
     public void setEnvironment(Environment environment) {
       this.environment = environment;
     }
 
     @Override
-    /** Post处理BeanDefinitionRegistry */
+    /** Post处理Beandefinitionregistry */
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
         DiscoveryListProperties properties = Binder.get(environment).bindOrCreate(DiscoveryListProperties.PRE, DiscoveryListProperties.class);
         if (!properties.isEnable()) {
             log.info("[Discovery] 服务状态 [{}]", disabled());
             registry.registerBeanDefinition("discoveryService#embedd", BeanDefinitionBuilder.rootBeanDefinition(DiscoveryService.class, () -> {
+                        /**
+                         * discovery服务。
+                         * @param DefaultServiceDiscovery( 默认服务discovery(
+                         * @return discovery服务的结果
+                         */
                         return new DiscoveryService(new DefaultServiceDiscovery());
                     })
                     .setAutowireMode(AutowireCapableBeanFactory.AUTOWIRE_BY_TYPE)
@@ -100,7 +105,7 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
      * @param registry            Bean 注册器
      * @param discoveryProperties 当前发现配置
      * @param primaryCandidate    是否作为首选实现
-     * @return 是否成功注册 ServiceDiscovery Bean
+     * @return 是否成功注册 服务discovery Bean
      */
     private boolean registryBean(BeanDefinitionRegistry registry, DiscoveryProperties discoveryProperties, boolean primaryCandidate) {
         DiscoveryOption discoveryOption = new DiscoveryOption();
@@ -138,7 +143,12 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
         return true;
     }
 
-    /** RegistryNode */
+    /**
+     * registry节点
+     *
+     * @param discoveryNodeProperties discovery节点属性
+     * @return registry节点的结果
+     */
     private Discovery registryNode(DiscoveryNodeProperties discoveryNodeProperties) {
         Project project = Project.getInstance();
         String serverId = discoveryNodeProperties.getServerId();
@@ -180,7 +190,7 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
     }
 
     /**
-     * 创建服务发现 BeanDefinition
+      * 创建服务发现 Beandefinition
      *
      * @param serviceDiscovery 服务发现实现
      * @param discovery        发现配置列表
@@ -199,17 +209,23 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
 
 
 
+    /**
+     * 服务discoverty工厂Bean类。
+     *
+     * @author CH
+     * @since 4.0.0
+     */
     static class ServiceDiscovertyFactoryBean implements FactoryBean<ServiceDiscovery>, AutoCloseable{
 
-        final ServiceDiscovery serviceDiscovery;
+        final ServiceDiscovery serviceDiscovery; // 服务discovery
         /** Discovery列表 */
         private final List<Discovery> discoveryList;
 
         /**
-         * 创建 ServiceDiscovertyFactoryBean 实例
-         * @param serviceDiscovery serviceDiscovery
-         * @param List List
-         * @param discoveryList discoveryList
+          * 创建 服务discoverty工厂Bean 实例
+         * @param serviceDiscovery 服务discovery
+         * @param discoveryList 列表
+         * @param discoveryList discovery列表
          */
         public ServiceDiscovertyFactoryBean(ServiceDiscovery serviceDiscovery, List<Discovery> discoveryList) {
             this.serviceDiscovery = serviceDiscovery;
@@ -217,7 +233,7 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
         }
 
         @Override
-        /** 获取Object */
+        /** 获取对象 */
         public ServiceDiscovery getObject() throws Exception {
             return serviceDiscovery;
         }
@@ -253,7 +269,11 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
     }
 
     @Bean
-    /** DiscoveryServiceInfoContributor */
+    /**
+     * discovery服务信息contributor
+     *
+     * @return discovery服务信息contributor的结果
+     */
     public ServiceInfoContributor discoveryServiceInfoContributor() {
         return registry -> {
             registry.registerFlag("discovery", "服务发现", true, "服务发现模块");

@@ -39,7 +39,7 @@ import java.util.Map;
 public class RpcMonitorController {
 
     /**
-     * 应用上下文（用于枚举已暴露的 RpcServiceBean）
+      * 应用上下文（用于枚举已暴露的 rpc服务Bean）
      */
     private final ApplicationContext applicationContext;
 
@@ -57,8 +57,22 @@ public class RpcMonitorController {
     public MonitorInfo info() {
         RpcServer server = currentServer();
         if (server == null) {
+            /**
+             * 监控信息。
+             * @param false false
+             * @param null 空
+             * @param 0 0
+             * @param List.of( 列表.的(
+             * @return 监控信息的结果
+             */
             return new MonitorInfo(false, null, 0, List.of());
         }
+        /**
+         * 监控信息。
+         * @param true true
+         * @param server.getProtocol( 服务端.获取协议(
+         * @return 监控信息的结果
+         */
         return new MonitorInfo(true, server.getProtocol(), server.getServiceCount(), collectServices());
     }
 
@@ -71,9 +85,23 @@ public class RpcMonitorController {
     public ConnectionsInfo connections() {
         RpcServer server = currentServer();
         if (server == null) {
+            /**
+             * connections信息。
+             * @param false false
+             * @param null 空
+             * @param 0 0
+             * @param List.of( 列表.的(
+             * @return connections信息的结果
+             */
             return new ConnectionsInfo(false, null, 0, List.of());
         }
         List<RpcConnectionInfo> connections = server.getConnections();
+        /**
+         * connections信息。
+         * @param true true
+         * @param server.getProtocol( 服务端.获取协议(
+         * @return connections信息的结果
+         */
         return new ConnectionsInfo(true, server.getProtocol(), connections.size(), connections);
     }
 
@@ -86,6 +114,12 @@ public class RpcMonitorController {
     public MetricsInfo metrics() {
         RpcServer server = currentServer();
         if (server == null) {
+            /**
+             * 指标信息。
+             * @param false false
+             * @param RpcMetrics("unknown" rpc指标("unknown"
+             * @return 指标信息的结果
+             */
             return new MetricsInfo(false, new RpcMetrics("unknown"));
         }
         RpcMetrics metrics = server.getMetrics();
@@ -96,11 +130,17 @@ public class RpcMonitorController {
         MetricsRpcInterceptor interceptor = metricsRpcInterceptor.getIfAvailable();
         if (interceptor != null) {
             for (RpcMetrics.MethodStat stat : interceptor.getMethodStats()) {
-                // 协议层（filter）统计优先；客户端拦截器仅补充协议层未覆盖的方法
+ // 协议层（过滤器）统计优先；客户端拦截器仅补充协议层未覆盖的方法
                 merged.putIfAbsent(stat.method(), stat);
             }
         }
         metrics.setMethodStats(new ArrayList<>(merged.values()));
+        /**
+         * 指标信息。
+         * @param true true
+         * @param metrics 指标
+         * @return 指标信息的结果
+         */
         return new MetricsInfo(true, metrics);
     }
 
@@ -140,6 +180,7 @@ public class RpcMonitorController {
      * @param protocol     协议名称
      * @param serviceCount 服务数量
      * @param services     服务接口全限定名列表
+     * @return 监控信息的结果
      */
     public record MonitorInfo(boolean enabled, String protocol, int serviceCount, List<String> services) {
     }
@@ -161,6 +202,7 @@ public class RpcMonitorController {
      *
      * @param enabled RPC 是否启用
      * @param metrics 指标快照
+     * @return 指标信息的结果
      */
     public record MetricsInfo(boolean enabled, RpcMetrics metrics) {
     }

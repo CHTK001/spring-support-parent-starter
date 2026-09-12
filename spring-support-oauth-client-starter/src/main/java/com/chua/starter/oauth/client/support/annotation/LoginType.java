@@ -8,6 +8,7 @@ import java.lang.annotation.*;
  * 登录类型注解，用于标识不同的登录方式
  *
  * @since 2022/7/29 8:23
+ * @author CH
  */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)

@@ -10,7 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
- * guacd 连接工厂（对齐 Orion-Visor 的 GuacdTunnel 参数集）
+   * guacd 连接工厂（对齐 Orion-Visor 的 guacdtunnel 参数集）
  *
  * <p>按协议（SSH/VNC/RDP）组装 {@link GuacamoleConfiguration} 并与 guacd 完成握手。
  * 协议参数遵循 Guacamole 官方协议定义，支持：
@@ -61,10 +61,10 @@ public class GuacdConnectionFactory {
      *
      * @param protocolType 协议类型
      * @param address      目标主机地址
-     * @param targetPort   目标服务端口，null 时按协议默认值
+     * @param targetPort   目标服务端口，空 时按协议默认值
      * @param credential   解密后的凭据
      * @param sessionId    会话标识
-     * @return 已配置隧道（使用方负责 close）
+     * @return 已配置隧道（使用方负责 关闭）
      */
     public GuacdTunnel create(ProtocolType protocolType, String address,
                               Integer targetPort, SshCredential credential, String sessionId) {
@@ -87,6 +87,11 @@ public class GuacdConnectionFactory {
             tunnel.connect();
         } catch (Exception e) {
             tunnel.close();
+            /**
+             * runtime异常。
+             * @param e.getMessage( e.获取消息(
+             * @return runtime异常的结果
+             */
             throw new RuntimeException("guacd 握手失败: " + e.getMessage(), e);
         }
         return tunnel;
@@ -94,6 +99,10 @@ public class GuacdConnectionFactory {
 
     /**
      * 组装 SSH 参数
+     * @param tunnel tunnel
+     * @param address 地址
+     * @param targetPort Target端口
+     * @param credential credential
      */
     private void buildSshConfig(GuacdTunnel tunnel, String address, Integer targetPort, SshCredential credential) {
         tunnel.remote(address, targetPort == null ? DEFAULT_SSH_PORT : targetPort);
@@ -119,6 +128,10 @@ public class GuacdConnectionFactory {
 
     /**
      * 组装 VNC 参数
+     * @param tunnel tunnel
+     * @param address 地址
+     * @param targetPort Target端口
+     * @param credential credential
      */
     private void buildVncConfig(GuacdTunnel tunnel, String address, Integer targetPort, SshCredential credential) {
         tunnel.remote(address, targetPort == null ? DEFAULT_VNC_PORT : targetPort);
@@ -138,6 +151,10 @@ public class GuacdConnectionFactory {
 
     /**
      * 组装 RDP 参数
+     * @param tunnel tunnel
+     * @param address 地址
+     * @param targetPort Target端口
+     * @param credential credential
      */
     private void buildRdpConfig(GuacdTunnel tunnel, String address, Integer targetPort, SshCredential credential) {
         tunnel.remote(address, targetPort == null ? DEFAULT_RDP_PORT : targetPort);

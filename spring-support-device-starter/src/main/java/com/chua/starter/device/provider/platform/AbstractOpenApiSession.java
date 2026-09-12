@@ -30,13 +30,14 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
- * 厂商平台 OpenAPI 会话基类（基于 common-starter HttpClient）
+   * 厂商平台 打开api 会话基类（基于 common-starter http客户端）
  * <p>复用公共模块的 {@link HttpClient}（JDK HttpClient 封装），不依赖任何本地动态库，全平台可用。</p>
  *
  * <p>覆盖海康云耀、云眸、安防平台以及大华云睿、乐橙等厂商平台，</p>
  * <p>各平台接入的 endpoint、签名算法需按平台官方 OpenAPI 文档配置。</p>
  *
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 public abstract class AbstractOpenApiSession implements DeviceSession {
@@ -79,7 +80,7 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
     protected volatile boolean online = true;
 
     /**
-     * accessToken / sessionId
+       * access令牌 / 会话标识
      */
     protected volatile String accessToken;
 
@@ -89,7 +90,7 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
     protected volatile Instant tokenExpiry = Instant.EPOCH;
 
     /**
-     * 平台 baseUrl
+      * 平台 baseurl
      */
     protected final String baseUrl;
 
@@ -104,10 +105,10 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
     protected final List<DeviceEvent> eventQueue = new CopyOnWriteArrayList<>();
 
     /**
-     * 构造 OpenAPI 会话
+      * 构造 打开api 会话
      *
      * @param info    设备连接信息
-     * @param baseUrl 平台默认 baseUrl
+     * @param baseUrl 平台默认 baseurl
      */
     protected AbstractOpenApiSession(DeviceConnectInfo info, String baseUrl) {
         this.info = info;
@@ -118,15 +119,18 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
     /**
      * 子类实现：执行带签名/认证的 HTTP 请求并返回 JSON 节点。
      *
-     * @param method HTTP 方法（GET / POST）
-     * @param path   接口路径（相对于平台 baseUrl）
+     * @param method HTTP 方法（获取 / POST）
+     * @param path   接口路径（相对于平台 baseurl）
      * @param params 请求参数
      * @return 响应 JSON
      */
     protected abstract JsonNode doRequest(String method, String path, Map<String, Object> params);
 
     /**
-     * 通用 GET
+      * 通用 获取
+     * @param path 路径
+     * @param params 参数
+     * @return 获取的结果
      */
     protected JsonNode get(String path, Map<String, Object> params) {
         return doRequest("GET", path, params);
@@ -134,13 +138,16 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
 
     /**
      * 通用 POST
+     * @param path 路径
+     * @param params 参数
+     * @return post的结果
      */
     protected JsonNode post(String path, Map<String, Object> params) {
         return doRequest("POST", path, params);
     }
 
     /**
-     * 调用 common-starter HttpClient 发起请求并解析响应 JSON
+      * 调用 common-starter http客户端 发起请求并解析响应 JSON
      *
      * @param method  HTTP 方法
      * @param path    接口路径
@@ -152,6 +159,13 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
                                Map<String, String> headers) {
         boolean debug = debugEnabled();
         if (debug) {
+            /**
+             * 日志请求。
+             * @param method 方法
+             * @param path 路径
+             * @param headers 头部
+             * @param params 参数
+             */
             logRequest(method, path, headers, params);
         }
         try {
@@ -179,6 +193,13 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
             }
             String respBody = response.getBodyString();
             if (debug) {
+                /**
+                 * 日志响应。
+                 * @param method 方法
+                 * @param path 路径
+                 * @param response 响应
+                 * @param respBody resp主体
+                 */
                 logResponse(method, path, response, respBody);
             }
             return MAPPER.readTree(respBody == null ? "{}" : respBody);
@@ -197,7 +218,11 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
     }
 
     /**
-     * 打印请求调试日志（脱敏 secret/appKey）
+      * 打印请求调试日志（脱敏 secret/app钥匙）
+     * @param method 方法
+     * @param path 路径
+     * @param headers 头部
+     * @param params 参数
      */
     private void logRequest(String method, String path, Map<String, String> headers, Map<String, Object> params) {
         log.info("[OpenAPI-DEBUG] -> {} {}{}", method, baseUrl, path);
@@ -211,6 +236,10 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
 
     /**
      * 打印响应调试日志
+     * @param method 方法
+     * @param path 路径
+     * @param response 响应
+     * @param respBody resp主体
      */
     private void logResponse(String method, String path, ClientResponse response, String respBody) {
         log.info("[OpenAPI-DEBUG] <- {} {}{} status={}", method, baseUrl, path, response.getStatusCode());
@@ -223,7 +252,9 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
     }
 
     /**
-     * 脱敏请求头：将含敏感字段（secret、token、signature）的值替换为 {@code ****xxxx} 形式。
+      * 脱敏请求头：将含敏感字段（secret、令牌、签名）的值替换为 {@code ****xxxx} 形式。
+     * @param headers 头部
+     * @return mask头部的结果
      */
     private static Map<String, String> maskHeaders(Map<String, String> headers) {
         java.util.LinkedHashMap<String, String> masked = new java.util.LinkedHashMap<>();
@@ -239,7 +270,9 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
     }
 
     /**
-     * 脱敏参数：将 appSecret/appKey 等敏感字段值替换。
+      * 脱敏参数：将 appsecret/app钥匙 等敏感字段值替换。
+     * @param params 参数
+     * @return mask参数的结果
      */
     private static Map<String, Object> maskParams(Map<String, Object> params) {
         java.util.LinkedHashMap<String, Object> masked = new java.util.LinkedHashMap<>();
@@ -256,6 +289,8 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
 
     /**
      * 保留值前 2 位 + 末 2 位，中间用 **** 替换。
+     * @param v v
+     * @return maskTail的结果
      */
     private static String maskTail(String v) {
         if (v == null) {
@@ -269,7 +304,7 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
     }
 
     @Override
-    /** 获取DeviceId */
+    /** 获取deviceid */
     public String getDeviceId() {
         return info.getDeviceSerial() != null ? info.getDeviceSerial() : info.getIp();
     }
@@ -288,18 +323,28 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
     }
 
     /**
-     * 校验响应码：约定 code == 200 / "200" 表示成功，其它抛出异常。
+      * 校验响应码：约定 编码 == 200 / "200" 表示成功，其它抛出异常。
      *
      * @param resp 响应 JSON
      * @return data 节点
      */
     protected JsonNode assertOk(JsonNode resp) {
         if (resp == null) {
+            /**
+             * illegal状态异常。
+             * @param 响应为空" 响应为空"
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("OpenAPI 响应为空");
         }
         JsonNode code = resp.get("code");
         if (code != null && !code.asText("200").equals("200")) {
             String msg = resp.path("msg").asText("");
+            /**
+             * illegal状态异常。
+             * @param code.asText( 编码.as文本(
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("OpenAPI 调用失败: code=" + code.asText() + ", msg=" + msg);
         }
         JsonNode data = resp.get("data");
@@ -307,10 +352,16 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
     }
 
     /**
-     * 平台会话通用方法：OpenAPI 拉流返回 URL，由前端直接播放 HLS/FLV，
+      * 平台会话通用方法：打开api 拉流返回 URL，由前端直接播放 HLS/FLV，
      * 此处返回只读空流，避免阻塞调用方。
+     * @return 空流的结果
      */
     protected InputStream emptyStream() {
+        /**
+         * bytearray输入流。
+         * @param byte[0] byte[0]
+         * @return bytearray输入流的结果
+         */
         return new ByteArrayInputStream(new byte[0]);
     }
 
@@ -333,52 +384,52 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
     }
 
     @Override
-    /** 获取LiveUrl */
+    /** 获取liveurl */
     public String getLiveUrl(int channel, String protocol) {
         // 子类按平台实现获取 HLS/FLV URL；默认返回空
         return "";
     }
 
     @Override
-    /** 获取PlaybackUrl */
+    /** 获取playbackurl */
     public String getPlaybackUrl(int channel, TimeRange range) {
         // 子类按平台实现获取回放 URL
         return null;
     }
 
     @Override
-    /** TestConnection */
+    /** 测试connection */
     public boolean testConnection() {
-        // 默认通过 token 缓存判断：有效即认为可达
+ // 默认通过 令牌 缓存判断：有效即认为可达
         return tokenValid();
     }
 
     @Override
-    /** ListPresets */
+    /** 列表presets */
     public List<PresetInfo> listPresets() {
         return Collections.emptyList();
     }
 
     @Override
-    /** 查询AccessRecords */
+    /** 查询accessrecords */
     public List<AccessRecord> queryAccessRecords(TimeRange range) {
         return Collections.emptyList();
     }
 
     @Override
-    /** 订阅Event */
+    /** 订阅事件 */
     public void subscribeEvent(EventType type, EventListener listener) {
         listeners.computeIfAbsent(type, k -> new CopyOnWriteArrayList<>()).add(listener);
     }
 
     @Override
-    /** 取消订阅Event */
+    /** 取消订阅事件 */
     public void unsubscribeEvent(EventType type) {
         listeners.remove(type);
     }
 
     @Override
-    /** 取出Events */
+    /** 取出事件 */
     public List<DeviceEvent> pollEvents(TimeRange range) {
         if (eventQueue.isEmpty()) {
             return Collections.emptyList();
@@ -389,37 +440,37 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
     }
 
     @Override
-    /** Remote解锁 */
+    /** 远程解锁 */
     public void remoteUnlock(int doorId) {
-        // 平台 OpenAPI 远程开门由具体平台实现重写
+ // 平台 打开api 远程开门由具体平台实现重写
     }
 
     @Override
     /** 设置Preset */
     public void setPreset(int presetId, String name) {
-        // 平台 OpenAPI 预置位操作由具体平台实现重写
+ // 平台 打开api 预置位操作由具体平台实现重写
     }
 
     @Override
     /** 调用Preset */
     public void callPreset(int presetId) {
-        // 平台 OpenAPI 预置位操作由具体平台实现重写
+ // 平台 打开api 预置位操作由具体平台实现重写
     }
 
     @Override
     /** 删除Preset */
     public void deletePreset(int presetId) {
-        // 平台 OpenAPI 预置位操作由具体平台实现重写
+ // 平台 打开api 预置位操作由具体平台实现重写
     }
 
     @Override
-    /** PtzControl */
+    /** ptzcontrol */
     public void ptzControl(PtzCommand cmd, double speed) {
-        // 平台 OpenAPI 云台控制由具体平台实现重写
+ // 平台 打开api 云台控制由具体平台实现重写
     }
 
     /**
-     * 缓存 accessToken 等凭证
+      * 缓存 access令牌 等凭证
      *
      * @param token     凭证
      * @param ttlSecond 有效期（秒）
@@ -430,7 +481,8 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
     }
 
     /**
-     * token 是否仍然有效
+      * 令牌 是否仍然有效
+     * @return 令牌valid的结果
      */
     protected boolean tokenValid() {
         return accessToken != null && Instant.now().isBefore(tokenExpiry);
@@ -438,6 +490,8 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
 
     /**
      * UTF-8 字节
+     * @param s s
+     * @return utf8的结果
      */
     protected static byte[] utf8(String s) {
         return s == null ? new byte[0] : s.getBytes(StandardCharsets.UTF_8);

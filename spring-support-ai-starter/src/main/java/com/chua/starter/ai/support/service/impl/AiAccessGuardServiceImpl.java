@@ -17,17 +17,18 @@ import java.util.concurrent.TimeUnit;
  * AI 访问守卫服务实现。
  *
  * @author CH
+ * @since 4.0.0
  */
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class AiAccessGuardServiceImpl implements AiAccessGuardService {
 
-    /** Bearer_prefix */
+    /** Bearer_前缀 */
     private static final String BEARER_PREFIX = "Bearer ";
 
     /**
-     * app_key_enabled 开关缓存，5s TTL — 避免每次请求都查询远程 DB/Redis
+      * app_钥匙_已启用 开关缓存，5s TTL — 避免每次请求都查询远程 DB/Redis
      */
     private static final Cache<String, Boolean> APP_KEY_ENABLED_CACHE = Caffeine.newBuilder()
             .expireAfterWrite(5, TimeUnit.SECONDS)
@@ -35,7 +36,7 @@ public class AiAccessGuardServiceImpl implements AiAccessGuardService {
             .build();
 
     /**
-     * Bearer token 校验缓存，2s TTL — 尽量缩短"禁用/删除 Key 后僵尸窗口"，
+      * Bearer 令牌 校验缓存，2s TTL — 尽量缩短"禁用/删除 钥匙 后僵尸窗口"，
      * 同时避免每次请求都查询远端 DB/Redis
      */
     private static final Cache<String, Boolean> BEARER_TOKEN_CACHE = Caffeine.newBuilder()
@@ -51,14 +52,14 @@ public class AiAccessGuardServiceImpl implements AiAccessGuardService {
     private final SysAiTokenService sysAiTokenService;
 
     @Override
-    /** 是否AppKeyEnabled */
+    /** 是否app钥匙已启用 */
     public boolean isAppKeyEnabled() {
         return APP_KEY_ENABLED_CACHE.get("app_key_enabled", k ->
                 sysAiGlobalSettingService.getBoolean("runtime", "app_key_enabled", true));
     }
 
     @Override
-    /** 验证AppKey */
+    /** 验证app钥匙 */
     public boolean verifyAppKey(String appKey, String appSecret, String clientIp) {
         if (!isAppKeyEnabled()) {
             return true;
@@ -74,9 +75,9 @@ public class AiAccessGuardServiceImpl implements AiAccessGuardService {
     }
 
     @Override
-    /** 验证BearerToken */
+    /** 验证bearer令牌 */
     public boolean verifyBearerToken(String authorizationHeader, String clientIp) {
-        // 与 verifyAppKey 保持一致：app_key_enabled 关闭时免鉴权（仅当管理员显式关闭）
+ // 与 验证app钥匙 保持一致：app_钥匙_已启用 关闭时免鉴权（仅当管理员显式关闭）
         if (!isAppKeyEnabled()) {
             return true;
         }
@@ -92,7 +93,7 @@ public class AiAccessGuardServiceImpl implements AiAccessGuardService {
                 sysAiAppKeyService.verifyAppKeyOnly(token, clientIp));
         if (passed) {
             sysAiAppKeyService.updateUseInfoByAppKey(token);
-            // 限流检查有副作用（更新 rateCount），不并入 Caffeine 缓存
+ // 限流检查有副作用（更新 rate数量），不并入 Caffeine 缓存
             if (!isGroupRateLimited(token)) {
                 return false;
             }
@@ -101,9 +102,9 @@ public class AiAccessGuardServiceImpl implements AiAccessGuardService {
     }
 
     /**
-     * 按 AppKey 绑定分组的 Token 限流检查。
+      * 按 app钥匙 绑定分组的 令牌 限流检查。
      *
-     * @param appKey AppKey
+     * @param appKey app钥匙
      * @return 未触发限流返回 true
      */
     private boolean isGroupRateLimited(String appKey) {

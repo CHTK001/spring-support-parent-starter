@@ -107,7 +107,7 @@ public class FaceConfigController {
     /**
      * 更新人脸识别配置（整组替换，触发实例热重建）。
      *
-     * @param body 配置请求（group + fields）
+     * @param body 配置请求（群体 + 字段）
      * @return 更新结果
      */
     @Permission("admin")
@@ -123,7 +123,7 @@ public class FaceConfigController {
     }
 
     /**
-     * 可用人脸模型清单（复用 AiFaceService.listModels）。
+       * 可用人脸模型清单（复用 aiface服务.列表模型）。
      *
      * @return 模型清单
      */

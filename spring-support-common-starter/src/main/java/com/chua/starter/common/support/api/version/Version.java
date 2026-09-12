@@ -8,7 +8,7 @@ import java.util.regex.Pattern;
 /**
  * 语义化版本号
  * <p>
- * 支持标准语义化版本格式：major.minor.patch[-prerelease][+build]
+   * 支持标准语义化版本格式：major.minor.patch[-prerelease][+构建]
  * </p>
  *
  * <h3>版本格式</h3>
@@ -34,7 +34,7 @@ import java.util.regex.Pattern;
  * </ol>
  *
  * @since 2024/12/18
- * @version 1.0.0
+   * @版本 1.0.0
  * @author CH
  */
 public class Version implements Comparable<Version> {
@@ -46,7 +46,7 @@ public class Version implements Comparable<Version> {
 
     /**
      * 版本号正则表达式
-     * 支持格式：1, 1.0, 1.0.0, 1.0.0-alpha, 1.0.0-alpha.1, 1.0.0+build
+      * 支持格式：1, 1.0, 1.0.0, 1.0.0-alpha, 1.0.0-alpha.1, 1.0.0+构建
      */
     private static final Pattern VERSION_PATTERN = Pattern.compile(
             "^[vV]?(\\d+)(?:\\.(\\d+))?(?:\\.(\\d+))?(?:-([a-zA-Z][a-zA-Z0-9]*(?:\\.[a-zA-Z0-9]+)*))?(?:\\+([a-zA-Z0-9.]+))?$"
@@ -203,7 +203,7 @@ public class Version implements Comparable<Version> {
     /**
      * 获取最新版本对象
      *
-     * @return 表示最新版本的 Version 对象
+     * @return 表示最新版本的 版本 对象
      */
     public static Version latest() {
         return new Version(Integer.MAX_VALUE, Integer.MAX_VALUE, Integer.MAX_VALUE, 
@@ -257,6 +257,9 @@ public class Version implements Comparable<Version> {
 
     /**
      * 比较预发布标识
+     * @param pre1 pre1
+     * @param pre2 pre2
+     * @return comparePrerelease的结果
      */
     private int comparePrerelease(String pre1, String pre2) {
         // 没有预发布标识的版本比有预发布标识的版本高
@@ -304,6 +307,8 @@ public class Version implements Comparable<Version> {
 
     /**
      * 获取预发布类型的优先级
+     * @param type 类型
+     * @return 获取prereleasepriority的结果
      */
     private int getPrereleasePriority(String type) {
         return PRERELEASE_PRIORITY.getOrDefault(type.toLowerCase(), 0);
@@ -393,20 +398,24 @@ public class Version implements Comparable<Version> {
     @Override
     /** 判断相等 */
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
         Version version = (Version) o;
         return compareTo(version) == 0;
     }
 
     @Override
-    /** HashCode */
+    /** 哈希编码 */
     public int hashCode() {
         return Objects.hash(major, minor, patch, prerelease);
     }
 
     @Override
-    /** ToString */
+    /** 转为字符串 */
     public String toString() {
         return original;
     }
@@ -447,7 +456,7 @@ public class Version implements Comparable<Version> {
     }
 
     /**
-     * 获取 buildMetadata
+      * 获取 构建metadata
      *
      * @return buildMetadata
      */
@@ -465,7 +474,7 @@ public class Version implements Comparable<Version> {
     }
 
     /**
-     * 获取 original
+      * 获取 原始
      *
      * @return original
      */

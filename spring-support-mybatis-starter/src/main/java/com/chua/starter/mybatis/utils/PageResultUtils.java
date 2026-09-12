@@ -9,12 +9,21 @@ import com.chua.starter.common.support.lang.ReturnPageResult;
 /**
  * 分页结果工具类
  * @author CH
+ * @since 4.0.0
  */
 public class PageResultUtils {
 
+    /**
+     * page结果工具。
+     */
     private PageResultUtils() {
     }
 
+    /**
+     * ok。
+     * @param page page
+     * @return ok的结果
+     */
     public static <T> ReturnPageResult<T> ok(IPage<T> page) {
         if (page == null) {
             return ReturnPageResult.empty();
@@ -30,14 +39,27 @@ public class PageResultUtils {
     }
 
     @SuppressWarnings("unchecked")
+    /**
+     * ok。
+     * @return ok的结果
+     */
     public static <T> ReturnPageResult<T> ok() {
         return (ReturnPageResult<T>) ReturnPageResult.empty();
     }
 
+    /**
+     * 错误。
+     * @return 错误的结果
+     */
     public static <T> ReturnPageResult<T> error() {
         return error("操作失败");
     }
 
+    /**
+     * 错误。
+     * @param message 消息
+     * @return 错误的结果
+     */
     public static <T> ReturnPageResult<T> error(String message) {
         return ReturnPageResult.<T>builder()
                 .code(-1)

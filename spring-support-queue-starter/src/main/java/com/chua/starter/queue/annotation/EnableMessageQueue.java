@@ -21,9 +21,12 @@ import java.lang.annotation.*;
  *     }
  * }
  * }
+ * </pre> * }
+ * }
  * </pre>
  *
  * @since 2025-12-25
+ * @author CH
  */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)

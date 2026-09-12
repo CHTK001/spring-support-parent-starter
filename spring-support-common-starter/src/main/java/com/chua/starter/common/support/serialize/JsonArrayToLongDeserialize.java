@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
  * JSON 数组转 Long 反序列化器
  *
  * @author CH
+ * @since 4.0.0
  */
 public class JsonArrayToLongDeserialize extends JsonDeserializer<Long> {
     /** 日志 */

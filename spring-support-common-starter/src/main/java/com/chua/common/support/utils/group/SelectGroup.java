@@ -7,6 +7,7 @@ package com.chua.common.support.utils.group;
  * </p>
  *
  * @author CH
+ * @since 4.0.0
  */
 public interface SelectGroup {
 }

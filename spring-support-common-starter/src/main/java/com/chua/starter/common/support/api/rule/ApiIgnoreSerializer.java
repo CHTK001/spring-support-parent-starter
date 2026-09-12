@@ -29,18 +29,21 @@ import java.io.IOException;
 public class ApiIgnoreSerializer extends JsonSerializer<Object> implements ContextualSerializer {
     /** 请求mapping处理器mapping */
     private final RequestMappingHandlerMapping requestMappingHandlerMapping;
-    private Class<?>[] group;
+    private Class<?>[] group; // 群体
 
     /**
-     * 创建 ApiIgnoreSerializer 实例
-     * @param group group
+      * 创建 apiignore序列化器 实例
+     * @param group 群体
      */
     public ApiIgnoreSerializer(Class<?>[] group) {
+        /**
+         * this。
+         */
         this();
         this.group = group;
     }
 
-    /** 创建 ApiIgnoreSerializer 实例 */
+    /** 创建 apiignore序列化器 实例 */
     public ApiIgnoreSerializer() {
         requestMappingHandlerMapping = SpringBeanUtils.getRequestMappingHandlerMapping();
     }
@@ -59,6 +62,10 @@ public class ApiIgnoreSerializer extends JsonSerializer<Object> implements Conte
                 apiFieldIgnore = beanProperty.getContextAnnotation(ApiFieldIgnore.class);
             }
             if (apiFieldIgnore != null&& isMatch(apiFieldIgnore)) {
+                /**
+                 * apiignore序列化器。
+                 * @param apiFieldIgnore.value( api字段ignore.值(
+                 */
                 return new ApiIgnoreSerializer(apiFieldIgnore.value());
             }
             return serializerProvider.findValueSerializer(beanProperty.getType(), beanProperty);
@@ -66,7 +73,12 @@ public class ApiIgnoreSerializer extends JsonSerializer<Object> implements Conte
         return serializerProvider.findNullValueSerializer(null);
     }
 
-    /** 是否Match */
+    /**
+     * 是否匹配
+     *
+     * @param apiFieldIgnore api字段ignore
+     * @return 是否匹配的结果
+     */
     private boolean isMatch(ApiFieldIgnore apiFieldIgnore) {
         Class<?>[] value = apiFieldIgnore.value();
         if(value.length == 0) {
@@ -104,8 +116,8 @@ public class ApiIgnoreSerializer extends JsonSerializer<Object> implements Conte
     /**
      * 是否匹配
      *
-     * @param value value
-     * @param group group
+     * @param value 价值观
+     * @param group 群体
      * @return 是否匹配
      */
     private boolean isMatch(Class<?>[] value, Class<?>[] group) {

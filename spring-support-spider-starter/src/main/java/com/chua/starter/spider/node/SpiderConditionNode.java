@@ -115,6 +115,11 @@ public class SpiderConditionNode implements ConditionNode {
         String op = props.getString("op", DEFAULT_OP);
         String value = props.getString("value");
         if (value == null) {
+            /**
+             * illegal参数异常。
+             * @param 参数" 参数"
+             * @return illegal参数异常的结果
+             */
             throw new IllegalArgumentException("spider.condition 节点缺少 value 参数");
         }
         Object actual = resolveValue(field, context);

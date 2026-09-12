@@ -35,9 +35,9 @@ public class SysFileSystemUploadFileServiceImpl
     /**
      * 从上传任务创建文件记录。
      *
-     * @param uploadId 上传任务 ID
+     * @param uploadId 上传任务 标识
      * @param url      文件来源 URL
-     * @param etag     文件 ETag
+     * @param etag     文件 e标签
      * @return 是否保存成功
      */
     @Override
@@ -69,10 +69,10 @@ public class SysFileSystemUploadFileServiceImpl
     }
 
     /**
-     * 按上传任务 ID 查询文件记录。
+      * 按上传任务 标识 查询文件记录。
      *
-     * @param uploadId 上传任务 ID
-     * @return 文件记录，不存在返回 null
+     * @param uploadId 上传任务 标识
+     * @return 文件记录，不存在返回 空
      */
     @Override
     public SysFileSystemUploadFile getByUploadId(String uploadId) {
@@ -83,7 +83,7 @@ public class SysFileSystemUploadFileServiceImpl
     /**
      * 删除指定上传任务的所有文件记录。
      *
-     * @param uploadId 上传任务 ID
+     * @param uploadId 上传任务 标识
      * @return 是否删除成功
      */
     @Override

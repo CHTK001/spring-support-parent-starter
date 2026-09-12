@@ -14,7 +14,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 /**
  * 同步服务端抽象基类，封装会话管理与事件分发通用逻辑。
  * <p>
- * 各协议（WebSocket、Socket.IO、RSocket 等）的同步服务端实现继承该类，只需实现
+   * 各协议（web套接字、套接字.IO、r套接字 等）的同步服务端实现继承该类，只需实现
  * {@link #doStart()}、{@link #doStop()}、{@link #doSend(String, String, Object)} 三个协议相关方法，
  * 并在合适时机调用 {@link #fireConnectionEstablished(SyncSession)}、
  * {@link #fireConnectionClosed(SyncSession)}、{@link #fireMessageReceived(SyncSession, String, Object)}
@@ -22,16 +22,17 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * </p>
  *
  * @since 4.0.0.42
+ * @author CH
  */
 public abstract class AbstractSyncServer extends AbstractServer implements SyncServer {
 
     /**
-     * 协议名称（小写，如 websocket、socketio、rsocket），由子类构造函数设置。
+       * 协议名称（小写，如 WebSocket、套接字.IO、rsocket），由子类构造函数设置。
      */
     protected String protocol;
 
     /**
-     * 当前活跃会话（sessionId -> SyncSession）。
+       * 当前活跃会话（会话标识 -> 同步会话）。
      */
     protected final Map<String, SyncSession> sessions = new ConcurrentHashMap<>();
 
@@ -44,11 +45,15 @@ public abstract class AbstractSyncServer extends AbstractServer implements SyncS
      * 构造函数，使用默认服务器配置。
      */
     protected AbstractSyncServer() {
+        /**
+         * 父。
+         * @param ServerSetting.defaults( 服务端setting.默认(
+         */
         super(ServerSetting.defaults());
     }
 
     @Override
-    /** 获取ProtocolType */
+    /** 获取协议类型 */
     public ProtocolType getProtocolType() {
         if (protocol == null) {
             return ProtocolType.UNKNOWN;
@@ -65,6 +70,12 @@ public abstract class AbstractSyncServer extends AbstractServer implements SyncS
     /** 发布 */
     public void publish(String topic, Object message) {
         for (String sessionId : sessions.keySet()) {
+            /**
+             * 执行发送。
+             * @param sessionId 会话标识
+             * @param topic topic
+             * @param message 消息
+             */
             doSend(sessionId, topic, message);
         }
     }
@@ -72,24 +83,30 @@ public abstract class AbstractSyncServer extends AbstractServer implements SyncS
     @Override
     /** 发送 */
     public void send(String clientId, String topic, Object message) {
+        /**
+         * 执行发送。
+         * @param clientId 客户端标识
+         * @param topic topic
+         * @param message 消息
+         */
         doSend(clientId, topic, message);
     }
 
     @Override
-    /** 获取ConnectedClients */
+    /** 获取连接客户端 */
     public List<String> getConnectedClients() {
         return List.copyOf(sessions.keySet());
     }
 
     @Override
-    /** 获取ClientMetadata */
+    /** 获取客户端metadata */
     public Map<String, Object> getClientMetadata(String clientId) {
         SyncSession session = sessions.get(clientId);
         return session == null ? Map.of() : session.toMetadata();
     }
 
     @Override
-    /** 添加Listener */
+    /** 添加监听器 */
     public void addListener(SyncServerListener listener) {
         if (listener != null) {
             listeners.add(listener);
@@ -97,7 +114,7 @@ public abstract class AbstractSyncServer extends AbstractServer implements SyncS
     }
 
     @Override
-    /** 移除Listener */
+    /** 移除监听器 */
     public void removeListener(SyncServerListener listener) {
         listeners.remove(listener);
     }

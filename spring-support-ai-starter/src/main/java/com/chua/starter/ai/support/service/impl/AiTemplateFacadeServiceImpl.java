@@ -15,18 +15,19 @@ import java.util.List;
  * AI 模板门面服务实现。
  *
  * @author CH
+ * @since 4.0.0
  */
 @Service
 @RequiredArgsConstructor
 public class AiTemplateFacadeServiceImpl implements AiTemplateFacadeService {
 
-    /** SYSAI模板mapper */
+    /** SYSAI模板映射器 */
     private final SysAiTemplateMapper sysAiTemplateMapper;
 
     /**
      * 根据条件查询AI模板列表。
      *
-     * @param moduleId    模块ID（可选）
+     * @param moduleId    模块标识（可选）
      * @param templateType 模板类型（可选）
      * @param category    分类（可选）
      * @param name        模板名称模糊匹配（可选）
@@ -49,7 +50,7 @@ public class AiTemplateFacadeServiceImpl implements AiTemplateFacadeService {
     }
 
     /**
-     * 保存新AI模板，自动初始化ID为空、排序为0、状态为1及时间戳。
+      * 保存新AI模板，自动初始化标识为空、排序为0、状态为1及时间戳。
      *
      * @param template 待保存的模板对象
      * @return 保存后的模板对象（含生成的ID）
@@ -80,7 +81,7 @@ public class AiTemplateFacadeServiceImpl implements AiTemplateFacadeService {
     /**
      * 根据主键删除AI模板。
      *
-     * @param templateId 模板ID
+     * @param templateId 模板标识
      * @return 是否删除成功
      */
     @Override

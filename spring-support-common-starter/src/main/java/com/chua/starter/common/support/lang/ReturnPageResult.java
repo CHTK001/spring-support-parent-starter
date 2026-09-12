@@ -13,6 +13,7 @@ import lombok.NoArgsConstructor;
  *
  * @param <T> 数据类型
  * @author CH
+ * @since 4.0.0
  */
 @Data
 @Builder
@@ -65,7 +66,7 @@ public class ReturnPageResult<T> {
     }
 
     /**
-     * 快捷方式：构造成功返回（等价于 of 方法）
+      * 快捷方式：构造成功返回（等价于 的 方法）
      *
      * @param result 分页结果
      * @param <T>    数据类型

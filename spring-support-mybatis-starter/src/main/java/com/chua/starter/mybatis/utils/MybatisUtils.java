@@ -14,18 +14,22 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * MyBatis 工具类
+   * MyBatis 工具类
  * 提供分页构建、数据拷贝等工具方法
  *
  * @author CH
+ * @since 4.0.0
  */
 public class MybatisUtils {
 
+    /**
+      * MyBatis工具。
+     */
     private MybatisUtils() {
     }
 
     /**
-     * MySQL 转义字符
+       * MySQL 转义字符
      */
     private static final String MYSQL_ESCAPE_CHARACTER = "`";
 
@@ -81,30 +85,38 @@ public class MybatisUtils {
     }
 
     /**
-     * 根据 Statement ID 执行 XML 映射的查询，返回列表
+       * 根据 对账单 标识 执行 XML 映射的查询，返回列表
      *
-     * @param sqlSessionFactory SqlSessionFactory
-     * @param statementId       映射语句ID，格式为 "namespace.methodName"
+     * @param sqlSessionFactory SQL会话工厂
+     * @param statementId       映射语句标识，格式为 "namespace.方法名称"
      * @param params            参数对象
      * @param <T>               返回类型
      * @return 查询结果列表
      */
     public static <T> List<T> selectList(SqlSessionFactory sqlSessionFactory, String statementId, Object params) {
+        /**
+         * 尝试。
+         * @param sqlSessionFactory.openSession(true SQL会话工厂.opensession(true
+         */
         try (SqlSession session = sqlSessionFactory.openSession(true)) {
             return session.selectList(statementId, params);
         }
     }
 
     /**
-     * 根据 Statement ID 执行 XML 映射的查询，返回单条记录
+       * 根据 对账单 标识 执行 XML 映射的查询，返回单条记录
      *
-     * @param sqlSessionFactory SqlSessionFactory
-     * @param statementId       映射语句ID
+     * @param sqlSessionFactory SQL会话工厂
+     * @param statementId       映射语句标识
      * @param params            参数对象
      * @param <T>               返回类型
      * @return 查询结果
      */
     public static <T> T selectOne(SqlSessionFactory sqlSessionFactory, String statementId, Object params) {
+        /**
+         * 尝试。
+         * @param sqlSessionFactory.openSession(true SQL会话工厂.opensession(true
+         */
         try (SqlSession session = sqlSessionFactory.openSession(true)) {
             return session.selectOne(statementId, params);
         }
@@ -113,27 +125,35 @@ public class MybatisUtils {
     /**
      * 执行原生 SQL 查询
      *
-     * @param sqlSessionFactory SqlSessionFactory
+     * @param sqlSessionFactory SQL会话工厂
      * @param sql               SQL 语句
      * @param params            参数数组
      * @param <T>               返回类型
      * @return 查询结果列表
      */
     public static <T> List<T> query(SqlSessionFactory sqlSessionFactory, String sql, Object... params) {
+        /**
+         * 尝试。
+         * @param sqlSessionFactory.openSession(true SQL会话工厂.opensession(true
+         */
         try (SqlSession session = sqlSessionFactory.openSession(true)) {
             return session.selectList(sql, params);
         }
     }
 
     /**
-     * 执行原生 SQL 更新（INSERT/UPDATE/DELETE）
+      * 执行原生 SQL 更新（插入/更新/删除）
      *
-     * @param sqlSessionFactory SqlSessionFactory
+     * @param sqlSessionFactory SQL会话工厂
      * @param sql               SQL 语句
      * @param params            参数数组
      * @return 影响行数
      */
     public static int execute(SqlSessionFactory sqlSessionFactory, String sql, Object... params) {
+        /**
+         * 尝试。
+         * @param sqlSessionFactory.openSession(true SQL会话工厂.opensession(true
+         */
         try (SqlSession session = sqlSessionFactory.openSession(true)) {
             return session.update(sql, params);
         }

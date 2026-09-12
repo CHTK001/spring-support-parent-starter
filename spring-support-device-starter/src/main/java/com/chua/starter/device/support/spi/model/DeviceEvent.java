@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
 public class DeviceEvent {
 
     /**
-     * 设备 ID
+      * 设备 标识
      */
     private String deviceId;
 

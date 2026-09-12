@@ -7,6 +7,7 @@ import java.math.BigDecimal;
 /**
  * 支付宝下单请求
  * @author CH
+ * @since 4.0.0
  */
 @Data
 public class AliyunAlipayPayRequest {
@@ -14,17 +15,17 @@ public class AliyunAlipayPayRequest {
     private String orderNo;
     /** 总数amount */
     private BigDecimal totalAmount;
-    /** Subject */
+    /** 主题 */
     private String subject;
     /** 请求体 */
     private String body;
-    /** NotifyURL */
+    /** 通知url */
     private String notifyUrl;
     /** 返回值URL */
     private String returnUrl;
     /** Product代码 */
     private String productCode;
-    /** PayeropenID */
+    /** payeropenid */
     private String payerOpenId;
 }
 

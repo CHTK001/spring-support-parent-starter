@@ -25,10 +25,10 @@ import org.springframework.core.env.Environment;
 /**
  * 同步协议自动配置
  * <p>
- * 支持 server、client、both 三种模式，同时判断对应的 enable 属性
+   * 支持 服务端、客户端、both 三种模式，同时判断对应的 enable 属性
  * </p>
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024/12/04
  * @author CH
  */
@@ -56,11 +56,11 @@ public class SyncAutoConfiguration {
     /**
      * 创建同步服务端
      * <p>
-     * 条件：type 为 server 或 both，且 server.enable = true
+      * 条件：类型 为 服务端 或 both，且 服务端.enable = true
      * </p>
      *
      * @param syncProperties 同步配置属性
-     * @return 同步服务端实例，如果未启用则返回 null
+     * @return 同步服务端实例，如果未启用则返回 空
      * @since 1.0.0
      */
     @Bean
@@ -68,17 +68,22 @@ public class SyncAutoConfiguration {
     @Conditional(SyncServerCondition.class)
     public SyncServer syncServer(SyncProperties syncProperties) {
         log.info("[Sync] 创建服务端");
+        /**
+         * 同步服务端。
+         * @param syncProperties 同步属性
+         * @return 同步服务端的结果
+         */
         return new SyncServer(syncProperties);
     }
 
     /**
      * 创建同步客户端
      * <p>
-     * 条件：type 为 client 或 both，且 client.enable = true
+      * 条件：类型 为 客户端 或 both，且 客户端.enable = true
      * </p>
      *
      * @param syncProperties 同步配置属性
-     * @return 同步客户端实例，如果未启用则返回 null
+     * @return 同步客户端实例，如果未启用则返回 空
      * @since 1.0.0
      */
     @Bean
@@ -99,8 +104,8 @@ public class SyncAutoConfiguration {
     /**
      * 创建数据同步交换服务。
      *
-     * @param syncClientProvider Sync客户端提供器
-     * @param syncServerProvider Sync服务端提供器
+     * @param syncClientProvider 同步客户端提供器
+     * @param syncServerProvider 同步服务端提供器
      * @param syncProperties     同步配置
      * @return 数据同步交换服务
      */
@@ -111,6 +116,13 @@ public class SyncAutoConfiguration {
                                                            ObjectProvider<SyncServer> syncServerProvider,
                                                            SyncProperties syncProperties) {
         log.info("[Sync] 创建数据同步交换服务");
+        /**
+         * 同步数据exchange服务。
+         * @param syncClientProvider 同步客户端提供者
+         * @param syncServerProvider 同步服务端提供者
+         * @param syncProperties 同步属性
+         * @return 同步数据exchange服务的结果
+         */
         return new SyncDataExchangeService(syncClientProvider, syncServerProvider, syncProperties);
     }
 

@@ -7,24 +7,25 @@ import java.math.BigDecimal;
 /**
  * 转账请求
  * @author CH
+ * @since 4.0.0
  */
 @Data
 public class TransferRequest {
-    /** TransferNO */
+    /** 调动no */
     private String transferNo;
-    /** NotifyURL */
+    /** 通知url */
     private String notifyUrl;
-    /** MerchantID */
+    /** merchantid */
     private Long merchantId;
-    /** From用户ID */
+    /** 从用户标识 */
     private Long fromUserId;
-    /** TO用户ID */
+    /** 转为用户标识 */
     private Long toUserId;
     /** Amount */
     private BigDecimal amount;
-    /** Operator */
+    /** 操作符 */
     private String operator;
-    /** Remark */
+    /** 评论 */
     private String remark;
 }
 

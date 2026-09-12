@@ -1,9 +1,10 @@
 package com.chua.mysql.support.binlog.event;
 
 /**
- * Binary Log 事件
+   * Binary 日志 事件
  *
  * @author CH
+ * @since 4.0.0
  */
 public class Event {
 

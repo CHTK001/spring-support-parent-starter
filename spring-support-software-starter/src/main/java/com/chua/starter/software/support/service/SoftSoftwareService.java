@@ -12,7 +12,7 @@ import java.util.Collection;
 import java.util.List;
 
 /**
- * 软件信息表 Service 接口
+   * 软件信息表 服务 接口
  *
  * @since 2026/7/25
  * @author CH
@@ -24,7 +24,7 @@ public interface SoftSoftwareService extends IService<SoftSoftware> {
      *
      * @param query 查询条件对象，用于分页和排序
      * @param request 软件查询请求对象
-     * @param installedSoftwareIds 已安装软件ID集合，用于排序（已安装的排前面）
+     * @param installedSoftwareIds 已安装软件标识集合，用于排序（已安装的排前面）
      * @return 返回分页查询结果
      */
     IPage<SoftSoftware> pageFor(Query<SoftSoftware> query, SoftwarePageRequest request, Collection<String> installedSoftwareIds);
@@ -48,7 +48,7 @@ public interface SoftSoftwareService extends IService<SoftSoftware> {
     /**
      * 删除软件信息
      *
-     * @param softwareId 软件ID
+     * @param softwareId 软件标识
      * @return 返回删除结果
      */
     ReturnResult<Boolean> deleteSoftware(String softwareId);
@@ -62,9 +62,9 @@ public interface SoftSoftwareService extends IService<SoftSoftware> {
     SoftSoftware getByCode(String code);
 
     /**
-     * 根据源ID获取软件列表
+      * 根据源标识获取软件列表
      *
-     * @param sourceId 源ID
+     * @param sourceId 源标识
      * @return 软件列表
      */
     java.util.List<SoftSoftware> listBySourceId(String sourceId);
@@ -72,7 +72,7 @@ public interface SoftSoftwareService extends IService<SoftSoftware> {
     /**
      * 从软件源同步软件信息
      *
-     * @param sourceId 源ID
+     * @param sourceId 源标识
      * @return 返回同步数量
      */
     ReturnResult<Integer> syncFromSource(String sourceId);
@@ -94,7 +94,7 @@ public interface SoftSoftwareService extends IService<SoftSoftware> {
     /**
      * 从 Elasticsearch 中删除软件信息
      *
-     * @param softwareId 软件ID
+     * @param softwareId 软件标识
      */
     void deleteFromElasticsearch(String softwareId);
 

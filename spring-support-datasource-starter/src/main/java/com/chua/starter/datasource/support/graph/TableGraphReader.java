@@ -26,8 +26,8 @@ public class TableGraphReader {
     private final DataSource dataSource;
 
     /**
-     * 创建 TableGraphReader 实例
-     * @param dataSource dataSource
+      * 创建 table图计算读取 实例
+     * @param dataSource 数据源
      */
     public TableGraphReader(DataSource dataSource) {
         this.dataSource = dataSource;
@@ -35,8 +35,13 @@ public class TableGraphReader {
 
     /**
      * 读取全部表节点 + 外键边
+     * @return 读取的结果
      */
     public GraphReadResult read() throws SQLException {
+        /**
+         * 尝试。
+         * @param dataSource.getConnection( 数据源.getconnection(
+         */
         try (Connection conn = dataSource.getConnection()) {
             DatabaseMetaData meta = conn.getMetaData();
             String catalog = conn.getCatalog();
@@ -45,6 +50,10 @@ public class TableGraphReader {
             // 1) 读全部表
             Map<String, TableNodeInfo> tableMap = new LinkedHashMap<>();
             List<GraphEdge> edges = new ArrayList<>();
+            /**
+             * 尝试。
+             * @param String[]{"TABLE"} 字符串[]{"TABLE"}
+             */
             try (ResultSet rs = meta.getTables(catalog, schema, "%", new String[]{"TABLE"})) {
                 while (rs.next()) {
                     String name = rs.getString("TABLE_NAME");
@@ -62,8 +71,25 @@ public class TableGraphReader {
 
             // 2) 填充列、主键、外键
             for (TableNodeInfo t : tableMap.values()) {
+                /**
+                  * fillcolumns。
+                 * @param meta meta
+                 * @param t t
+                 */
                 fillColumns(meta, t);
+                /**
+                 * fillprimary钥匙。
+                 * @param meta meta
+                 * @param t t
+                 */
                 fillPrimaryKeys(meta, t);
+                /**
+                 * fill导入钥匙。
+                 * @param meta meta
+                 * @param t t
+                 * @param edges edges
+                 * @param tableMap table映射
+                 */
                 fillImportedKeys(meta, t, edges, tableMap);
             }
 
@@ -82,12 +108,26 @@ public class TableGraphReader {
 
             log.debug("TableGraphReader: 读取 {} 张表，{} 条外键边",
                     tableMap.size(), edges.size());
+            /**
+             * 图计算读取结果。
+             * @param ArrayList<>(tableMap.values( array列表<>(table映射.值(
+             * @return 图计算读取结果的结果
+             */
             return new GraphReadResult(new ArrayList<>(tableMap.values()), edges);
         }
     }
 
-    /** FillColumns */
+    /**
+     * fillcolumns
+     *
+     * @param meta meta
+     * @param t t
+     */
     private void fillColumns(DatabaseMetaData meta, TableNodeInfo t) throws SQLException {
+        /**
+         * 尝试。
+         * @param meta.getColumns(t.getSchema( meta.获取columns(t.获取模式(
+         */
         try (ResultSet rs = meta.getColumns(t.getSchema(), null, t.getName(), "%")) {
             int ord = 0;
             while (rs.next()) {
@@ -101,8 +141,17 @@ public class TableGraphReader {
         }
     }
 
-    /** FillPrimaryKeys */
+    /**
+     * fillprimary钥匙
+     *
+     * @param meta meta
+     * @param t t
+     */
     private void fillPrimaryKeys(DatabaseMetaData meta, TableNodeInfo t) throws SQLException {
+        /**
+         * 尝试。
+         * @param meta.getPrimaryKeys(t.getSchema( meta.获取primary键(t.获取模式(
+         */
         try (ResultSet rs = meta.getPrimaryKeys(t.getSchema(), null, t.getName())) {
             Map<Short, String> ordered = new LinkedHashMap<>();
             while (rs.next()) {
@@ -113,14 +162,18 @@ public class TableGraphReader {
     }
 
     /**
-     * FillImportedKeys
+      * fill导入钥匙
      * @param meta meta
      * @param t t
      * @param edges edges
-     * @param tableMap tableMap
+     * @param tableMap table映射
      */
     private void fillImportedKeys(DatabaseMetaData meta, TableNodeInfo t,
                                   List<GraphEdge> edges, Map<String, TableNodeInfo> tableMap) throws SQLException {
+        /**
+         * 尝试。
+         * @param meta.getImportedKeys(t.getSchema( meta.获取导入键(t.getschema(
+         */
         try (ResultSet rs = meta.getImportedKeys(t.getSchema(), null, t.getName())) {
             while (rs.next()) {
                 String pkTable = rs.getString("PKTABLE_NAME");
@@ -128,7 +181,7 @@ public class TableGraphReader {
                 String fkCol = rs.getString("FKCOLUMN_NAME");
                 String fkName = rs.getString("FK_NAME");
                 if (pkTable == null || !tableMap.containsKey(pkTable)) {
-                    // 目标表不在本批（视图或不同 schema），跳过
+ // 目标表不在本批（视图或不同 模式），跳过
                     continue;
                 }
                 GraphEdge edge = new GraphEdge();
@@ -144,7 +197,12 @@ public class TableGraphReader {
         }
     }
 
-    /** 解析Rule */
+    /**
+     * 解析Rule
+     *
+     * @param rule rule
+     * @return resolveRule的结果
+     */
     private static String resolveRule(short rule) {
         switch (rule) {
             case DatabaseMetaData.importedKeyCascade: return "CASCADE";
@@ -156,13 +214,20 @@ public class TableGraphReader {
         }
     }
 
-    /** EmptyToNull */
+    /**
+     * 空转为空
+     *
+     * @param s s
+     * @return 空转为空的结果
+     */
     private static String emptyToNull(String s) {
         return (s == null || s.isEmpty()) ? null : s;
     }
 
     /**
      * 读取结果封装
+     * @author CH
+     * @since 4.0.0
      */
     public static class GraphReadResult {
         /** Tables */
@@ -171,9 +236,9 @@ public class TableGraphReader {
         public final List<GraphEdge> edges;
 
         /**
-         * 创建 GraphReadResult 实例
+          * 创建 图计算读取结果 实例
          * @param tables tables
-         * @param List List
+         * @param tables 列表
          * @param edges edges
          */
         public GraphReadResult(List<TableNodeInfo> tables, List<GraphEdge> edges) {

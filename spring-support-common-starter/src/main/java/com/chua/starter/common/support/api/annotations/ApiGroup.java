@@ -5,8 +5,8 @@ import java.lang.annotation.*;
 /**
  * API分组注解
  * <p>
- * 用于在Controller方法上声明当前请求激活的分组。
- * 与@ApiFieldIgnore 配合实现字段的条件输出。
+   * 用于在控制器方法上声明当前请求激活的分组。
+   * 与@api字段ignore 配合实现字段的条件输出。
  * </p>
  *
  * <h3>使用场景</h3>
@@ -49,8 +49,9 @@ import java.lang.annotation.*;
  * </pre>
  *
  * @since 2025/1/1
- * @version 1.0.0
+   * @版本 1.0.0
  * @see ApiFieldIgnore
+ * @author CH
  */
 @Target({ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
@@ -61,7 +62,7 @@ public @interface ApiGroup {
      * 激活的分组
      * <p>
      * 指定当前接口激活的分组类。
-     * 与@ApiFieldIgnore 标记且包含此分组的字段将被忽略。
+      * 与@api字段ignore 标记且包含此分组的字段将被忽略。
      * </p>
      *
      * @return 分组类数组

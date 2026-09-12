@@ -23,6 +23,7 @@ import java.util.Objects;
 
 /**
  * @author CH
+ * @since 4.0.0
  */
 public class ApiCryptoSerializer extends JsonSerializer<String> implements ContextualSerializer {
 
@@ -54,21 +55,21 @@ public class ApiCryptoSerializer extends JsonSerializer<String> implements Conte
         this.key = key;
     }
 
-    /** 创建 ApiCryptoSerializer 实例 */
+    /** 创建 api加密货币序列化器 实例 */
     private ApiCryptoSerializer() {
         this.publicKeyHex = null;
         this.cryptoType = null;
         this.key = null;
     }
 
-    private static final Map<Class<?>, String> KEY_MAP = new ConcurrentReferenceHashMap<>(512);
+    private static final Map<Class<?>, String> KEY_MAP = new ConcurrentReferenceHashMap<>(512); // 钥匙映射
 
     @Override
     /**
      * 序列化
      * @param origin origin
-     * @param jsonGenerator jsonGenerator
-     * @param serializerProvider serializerProvider
+     * @param jsonGenerator json生成器
+     * @param serializerProvider 序列化器提供者
      */
     public void serialize(final String origin, final JsonGenerator jsonGenerator,
                           final SerializerProvider serializerProvider) throws IOException {
@@ -95,7 +96,13 @@ public class ApiCryptoSerializer extends JsonSerializer<String> implements Conte
         jsonGenerator.writeString(origin);
     }
 
-    /** SmEncrypt */
+    /**
+     * smencrypt
+     *
+     * @param data 数据
+     * @param publicKeyHex 公共钥匙hex
+     * @return sm2Encrypt的结果
+     */
     private String sm2Encrypt(String data, String publicKeyHex) {
         try {
             Sm2Cipher sm2Cipher = Sm2Cipher.create("bc");
@@ -108,7 +115,12 @@ public class ApiCryptoSerializer extends JsonSerializer<String> implements Conte
         }
     }
 
-    /** HexToBytes */
+    /**
+     * hex转为bytes
+     *
+     * @param hex hex
+     * @return hex转为bytes的结果
+     */
     private static byte[] hexToBytes(String hex) {
         int len = hex.length();
         byte[] data = new byte[len / 2];
@@ -118,7 +130,12 @@ public class ApiCryptoSerializer extends JsonSerializer<String> implements Conte
         return data;
     }
 
-    /** BytesToHex */
+    /**
+     * bytes转为hex
+     *
+     * @param bytes bytes
+     * @return bytes转为hex的结果
+     */
     private static String bytesToHex(byte[] bytes) {
         StringBuilder sb = new StringBuilder(bytes.length * 2);
         for (byte b : bytes) {
@@ -129,12 +146,20 @@ public class ApiCryptoSerializer extends JsonSerializer<String> implements Conte
 
     /**
      * 判断是否相同
+     * @param key 钥匙
+     * @param key1 键1
+     * @return 是否equals的结果
      */
     private boolean isEquals(String key, String key1) {
         return StringUtils.equals(key, key1);
     }
 
-    /** 获取DynamicKey */
+    /**
+     * 获取dynamic钥匙
+     *
+     * @param jsonGenerator json生成器
+     * @return 获取dynamic钥匙的结果
+     */
     private String getDynamicKey(JsonGenerator jsonGenerator) {
         Object currentValue = jsonGenerator.getCurrentValue();
         if (null == currentValue) {
@@ -169,6 +194,11 @@ public class ApiCryptoSerializer extends JsonSerializer<String> implements Conte
                 }
                 if (crypto != null) {
                     String key = SpringBeanUtils.getEnvironment().resolvePlaceholders(crypto.key());
+                    /**
+                     * api加密货币序列化器。
+                     * @param null 空
+                     * @param crypto.cryptoType( 加密货币.加密货币类型(
+                     */
                     return new ApiCryptoSerializer(null, crypto.cryptoType(), key);
                 }
             }

@@ -20,21 +20,21 @@ import java.util.concurrent.atomic.AtomicLong;
 @Component
 public class MetricsMessageInterceptor implements MessageInterceptor {
 
-    private final ConcurrentHashMap<String, AtomicLong> sendCounters = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<String, AtomicLong> receiveCounters = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<String, AtomicLong> sendFailureCounters = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<String, AtomicLong> receiveFailureCounters = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<String, Long> sendTimestamps = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, AtomicLong> sendCounters = new ConcurrentHashMap<>(); // 发送counters
+    private final ConcurrentHashMap<String, AtomicLong> receiveCounters = new ConcurrentHashMap<>(); // 接收counters
+    private final ConcurrentHashMap<String, AtomicLong> sendFailureCounters = new ConcurrentHashMap<>(); // 发送失败counters
+    private final ConcurrentHashMap<String, AtomicLong> receiveFailureCounters = new ConcurrentHashMap<>(); // 接收失败counters
+    private final ConcurrentHashMap<String, Long> sendTimestamps = new ConcurrentHashMap<>(); // 发送时间戳
 
     @Override
-    /** Before发送 */
+    /** 之前发送 */
     public Message beforeSend(Message message) {
         sendTimestamps.put(message.getId(), System.currentTimeMillis());
         return message;
     }
 
     @Override
-    /** After发送 */
+    /** 之后发送 */
     public void afterSend(Message message, boolean success, Throwable error) {
         String destination = message.getDestination();
         if (success) {
@@ -54,14 +54,14 @@ public class MetricsMessageInterceptor implements MessageInterceptor {
     }
 
     @Override
-    /** Before接收 */
+    /** 之前接收 */
     public Message beforeReceive(Message message) {
         message.getHeaders().put("receiveStartTime", System.currentTimeMillis());
         return message;
     }
 
     @Override
-    /** After接收 */
+    /** 之后接收 */
     public void afterReceive(Message message, boolean success, Throwable error) {
         String destination = message.getDestination();
         if (success) {
@@ -82,6 +82,8 @@ public class MetricsMessageInterceptor implements MessageInterceptor {
 
     /**
      * 获取发送计数
+     * @param destination 目标
+     * @return 获取发送数量的结果
      */
     public long getSendCount(String destination) {
         AtomicLong counter = sendCounters.get(destination);
@@ -90,6 +92,8 @@ public class MetricsMessageInterceptor implements MessageInterceptor {
 
     /**
      * 获取接收计数
+     * @param destination 目标
+     * @return 获取接收数量的结果
      */
     public long getReceiveCount(String destination) {
         AtomicLong counter = receiveCounters.get(destination);
@@ -98,6 +102,8 @@ public class MetricsMessageInterceptor implements MessageInterceptor {
 
     /**
      * 获取发送失败计数
+     * @param destination 目标
+     * @return 获取发送失败数量的结果
      */
     public long getSendFailureCount(String destination) {
         AtomicLong counter = sendFailureCounters.get(destination);
@@ -106,6 +112,8 @@ public class MetricsMessageInterceptor implements MessageInterceptor {
 
     /**
      * 获取接收失败计数
+     * @param destination 目标
+     * @return 获取接收失败数量的结果
      */
     public long getReceiveFailureCount(String destination) {
         AtomicLong counter = receiveFailureCounters.get(destination);
@@ -124,7 +132,7 @@ public class MetricsMessageInterceptor implements MessageInterceptor {
     }
 
     @Override
-    /** 获取Order */
+    /** 获取订单 */
     public int getOrder() {
         return -100; // 高优先级
     }

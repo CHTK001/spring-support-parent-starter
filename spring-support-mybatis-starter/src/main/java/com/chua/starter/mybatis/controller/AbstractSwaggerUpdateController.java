@@ -22,8 +22,10 @@ import static com.chua.common.support.lang.code.ReturnCode.REQUEST_PARAM_ERROR;
  * Swagger更新控制器基类
  * 提供通用的增删改查功能
  *
- * @param <S> Service类型
+ * @param <S> 服务类型
  * @param <T> 实体类型
+ * @author CH
+ * @since 4.0.0
  */
 public abstract class AbstractSwaggerUpdateController<S extends IService<T>, T> {
 
@@ -39,6 +41,9 @@ public abstract class AbstractSwaggerUpdateController<S extends IService<T>, T> 
      *
      * @param id 页码
      * @return 分页结果
+     * @param "主键" "主键"
+     * @param "主键" "主键"
+     * @param "主键" "主键"
      */
     @ResponseBody
     @Operation(summary = "删除数据")
@@ -66,6 +71,9 @@ public abstract class AbstractSwaggerUpdateController<S extends IService<T>, T> 
      * @param t            实体列表
      * @param bindingResult 绑定结果
      * @return 操作结果
+     * @param @Validated(UpdateGroup.class @校验(更新群体.类
+     * @param @Validated(UpdateGroup.class @校验(更新群体.类
+     * @param @Validated(UpdateGroup.class @Validated(UpdateGroup.class
      */
     @ResponseBody
     @Operation(summary = "更新/保存数据")
@@ -85,6 +93,9 @@ public abstract class AbstractSwaggerUpdateController<S extends IService<T>, T> 
      *
      * @param t 实体
      * @return 分页结果
+     * @param @Validated(UpdateGroup.class @校验(更新群体.类
+     * @param @Validated(UpdateGroup.class @校验(更新群体.类
+     * @param @Validated(UpdateGroup.class @Validated(UpdateGroup.class
      */
     @ResponseBody
     @Operation(summary = "更新/保存数据")
@@ -98,6 +109,10 @@ public abstract class AbstractSwaggerUpdateController<S extends IService<T>, T> 
             if (!saveOrUpdate) {
                 return ReturnResult.error("保存失败");
             }
+            /**
+              * 保存或更新之后。
+             * @param t t
+             */
             saveOrUpdateAfter(t);
             return ReturnResult.of(saveOrUpdate);
         }
@@ -105,8 +120,17 @@ public abstract class AbstractSwaggerUpdateController<S extends IService<T>, T> 
         return transactionTemplate.execute(it -> {
             boolean saveOrUpdate = getService().saveOrUpdate(render(t));
             if (!saveOrUpdate) {
+                /**
+                 * runtime异常。
+                 * @param "保存失败" "保存失败"
+                 * @return runtime异常的结果
+                 */
                 throw new RuntimeException("保存失败");
             }
+            /**
+              * 保存或更新之后。
+             * @param t t
+             */
             saveOrUpdateAfter(t);
             return ReturnResult.of(saveOrUpdate);
         });
@@ -117,6 +141,9 @@ public abstract class AbstractSwaggerUpdateController<S extends IService<T>, T> 
      *
      * @param t 实体
      * @return 分页结果
+     * @param @Validated(UpdateGroup.class @校验(更新群体.类
+     * @param @Validated(UpdateGroup.class @校验(更新群体.类
+     * @param @Validated(UpdateGroup.class @Validated(UpdateGroup.class
      */
     @ResponseBody
     @Operation(summary = "更新数据")
@@ -132,12 +159,18 @@ public abstract class AbstractSwaggerUpdateController<S extends IService<T>, T> 
      *
      * @param t 实体
      * @return 分页结果
+     * @param @Validated(AddGroup.class @校验(添加群体.类
+     * @param @Validated(AddGroup.class @校验(添加群体.类
+     * @param @Validated(AddGroup.class @Validated(AddGroup.class
      */
     @ResponseBody
     @Operation(summary = "添加数据")
     @PostMapping("save")
     public ReturnResult<T> save(@Validated(AddGroup.class) @RequestBody T t, BindingResult bindingResult) {
         if(bindingResult.hasErrors()) { return ReturnResult.error(REQUEST_PARAM_ERROR.getCode(), bindingResult.getAllErrors().getFirst().getDefaultMessage()); }
+        /**
+         * 获取服务。
+         */
         getService().save(render(t));
         return ReturnResult.ok(t);
     }

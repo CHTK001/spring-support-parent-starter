@@ -10,7 +10,9 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
- * 服务器资产系统配置（key-value）
+   * 服务器资产系统配置（钥匙-价值观）
+ * @author CH
+ * @since 4.0.0
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -18,21 +20,21 @@ import lombok.EqualsAndHashCode;
 @TableName("ms_server_config")
 public class MsServerConfig extends SysBase {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L; // 串行版本uid
 
     @TableId(value = "id", type = IdType.AUTO)
     @Schema(description = "主键", example = "1")
-    private Long id;
+    private Long id; // 标识
 
     @TableField("ms_server_config_key")
     @Schema(description = "配置键", example = "guacd.host")
-    private String configKey;
+    private String configKey; // 配置钥匙
 
     @TableField("ms_server_config_value")
     @Schema(description = "配置值(JSON 字符串)", example = "\"true\"")
-    private String configValue;
+    private String configValue; // 配置价值观
 
     @TableField("ms_server_config_desc")
     @Schema(description = "配置说明")
-    private String configDesc;
+    private String configDesc; // 配置desc
 }

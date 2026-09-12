@@ -13,6 +13,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 class SpringSupportTestApplicationTests {
 
     @Test
+    /**
+     * 上下文加载。
+     */
     void contextLoads() {
         // 上下文启动成功即通过（各模块自动装配链无冲突）
     }

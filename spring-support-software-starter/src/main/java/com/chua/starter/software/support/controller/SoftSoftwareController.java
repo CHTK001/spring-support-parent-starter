@@ -52,7 +52,14 @@ public class SoftSoftwareController {
     @Operation(summary = "保存软件")
     @PostMapping("/save")
     @Permission(value = "sys:soft:add", role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
-    /** 保存 */
+    /**
+     * 保存
+     *
+     * @param @Validated(AddGroup.class @校验(添加群体.类
+     * @return 保存的结果
+     * @param @Validated(AddGroup.class @校验(添加群体.类
+     * @param @Validated(AddGroup.class @Validated(AddGroup.class
+     */
     public ReturnResult<SoftSoftware> save(@Validated(AddGroup.class) @RequestBody SoftSoftware software, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
             return ReturnResult.illegal(bindingResult.getAllErrors().getFirst().getDefaultMessage());
@@ -63,7 +70,14 @@ public class SoftSoftwareController {
     @Operation(summary = "更新软件")
     @PutMapping("/update")
     @Permission(value = "sys:soft:update", role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
-    /** 更新 */
+    /**
+     * 更新
+     *
+     * @param @Validated(UpdateGroup.class @校验(更新群体.类
+     * @return 更新的结果
+     * @param @Validated(UpdateGroup.class @校验(更新群体.类
+     * @param @Validated(UpdateGroup.class @Validated(UpdateGroup.class
+     */
     public ReturnResult<SoftSoftware> update(@Validated(UpdateGroup.class) @RequestBody SoftSoftware software, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
             return ReturnResult.illegal(bindingResult.getAllErrors().getFirst().getDefaultMessage());
@@ -74,7 +88,12 @@ public class SoftSoftwareController {
     @Operation(summary = "删除软件")
     @DeleteMapping("/delete")
     @Permission(value = "sys:soft:delete", role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
-    /** 删除 */
+    /**
+     * 删除
+     *
+     * @param softwareId softwareid
+     * @return 删除的结果
+     */
     public ReturnResult<Boolean> delete(String softwareId) {
         return softSoftwareService.deleteSoftware(softwareId);
     }
@@ -82,7 +101,12 @@ public class SoftSoftwareController {
     @Operation(summary = "软件详情")
     @GetMapping("/detail")
     @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
-    /** Detail */
+    /**
+     * Detail
+     *
+     * @param softwareId softwareid
+     * @return detail的结果
+     */
     public ReturnResult<SoftSoftware> detail(String softwareId) {
         return ReturnResult.ok(softSoftwareService.getById(softwareId));
     }

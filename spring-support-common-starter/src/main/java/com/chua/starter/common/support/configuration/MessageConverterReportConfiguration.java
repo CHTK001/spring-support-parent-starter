@@ -26,7 +26,7 @@ public class MessageConverterReportConfiguration implements ApplicationListener<
     /**
      * 构造函数
      *
-     * @param requestMappingHandlerAdapter RequestMappingHandlerAdapter
+     * @param requestMappingHandlerAdapter 请求mapping处理器适配器
      */
     public MessageConverterReportConfiguration(RequestMappingHandlerAdapter requestMappingHandlerAdapter) {
         this.requestMappingHandlerAdapter = requestMappingHandlerAdapter;

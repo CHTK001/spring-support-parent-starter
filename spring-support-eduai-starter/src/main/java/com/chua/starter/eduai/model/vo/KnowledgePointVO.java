@@ -15,7 +15,7 @@ import java.util.List;
 public class KnowledgePointVO {
 
     /**
-     * 知识点ID
+      * 知识点标识
      */
     private Long id;
 
@@ -30,7 +30,7 @@ public class KnowledgePointVO {
     private String code;
 
     /**
-     * 父知识点ID
+      * 父知识点标识
      */
     private Long parentId;
 

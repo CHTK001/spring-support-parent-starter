@@ -17,12 +17,22 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+/**
+ * 数据湖perf探针类。
+ *
+ * @author CH
+ * @since 4.0.0
+ */
 
 @Slf4j
 public class DatalakePerfProbe {
 
-    private static final Map<String, Object> RESULT = new LinkedHashMap<>();
+    private static final Map<String, Object> RESULT = new LinkedHashMap<>(); // 结果
 
+    /**
+     * main。
+     * @param args 参数
+     */
     public static void main(String[] args) throws Exception {
         long globalStart = System.currentTimeMillis();
         System.err.println("=============================================================");
@@ -51,7 +61,7 @@ public class DatalakePerfProbe {
         System.err.println("--------------------------------------------------------------");
 
         int ni = 0;
-        // Sequential throughput
+ // Sequential 吞吐量
         benchSeq(engine, "p-single", "Sequential 1K log", 1_000);
         benchSeq(engine, "p-single", "Sequential 10K log", 10_000);
         benchSeq(engine, "p-single", "Sequential 100K log", 100_000);
@@ -59,16 +69,16 @@ public class DatalakePerfProbe {
         benchSeq(engine, "p-multi", "Sequential 100K 3-sink", 100_000);
         benchSeq(engine, "p-multi", "Sequential 1M 3-sink", 1_000_000);
 
-        // Latency distribution
+ // 延迟 distribution
         benchLatency(engine, "p-single", "Latency p50/p95/p99/max", 100_000);
 
         // Engine overhead
         benchOverhead(pm, sinkRegistry);
 
-        // Webhook HTTP throughput
+ // Webhook HTTP 吞吐量
         benchWebhook(engine);
 
-        // Multi-thread concurrent
+ // Multi-thread 并发
         benchConcurrent(engine, "p-concurrent", "16 threads x 100K", 16, 100_000);
         benchConcurrent(engine, "p-concurrent", "32 threads x 100K", 32, 100_000);
         benchConcurrent(engine, "p-concurrent", "64 threads x 100K", 64, 100_000);
@@ -91,8 +101,15 @@ public class DatalakePerfProbe {
         dispatcher.close();
     }
 
-    // ── Sequential Throughput ──────────────────────────────────────
+ // ── Sequential 吞吐量 ──────────────────────────────────────
 
+    /**
+      * benchseq。
+     * @param engine engine
+     * @param pipeId 管道标识
+     * @param label 标签
+     * @param count 数量
+     */
     private static void benchSeq(PipelineEngine engine, String pipeId, String label, int count) {
         long t0 = System.nanoTime();
         for (int i = 0; i < count; i++) {
@@ -106,8 +123,15 @@ public class DatalakePerfProbe {
         RESULT.put(label, String.format("%.0f ops/s (%.1f ms for %d ops)", ops, ms, count));
     }
 
-    // ── Latency Distribution ───────────────────────────────────────
+ // ── 延迟 Distribution ───────────────────────────────────────
 
+    /**
+     * bench延迟。
+     * @param engine engine
+     * @param pipeId 管道标识
+     * @param label 标签
+     * @param count 数量
+     */
     private static void benchLatency(PipelineEngine engine, String pipeId, String label, int count) {
         long[] lat = new long[count];
         long t0 = System.nanoTime();
@@ -132,6 +156,11 @@ public class DatalakePerfProbe {
 
     // ── Engine Overhead vs Direct Sink ─────────────────────────────
 
+    /**
+      * benchoverhead。
+     * @param pm pm
+     * @param reg reg
+     */
     private static void benchOverhead(PipelineManager pm, Map<String, DataSink> reg) {
         DataSink logSink = reg.get("log");
         int count = 100_000;
@@ -160,8 +189,12 @@ public class DatalakePerfProbe {
                 directOps, engineOps, overhead));
     }
 
-    // ── Webhook HTTP Throughput ────────────────────────────────────
+ // ── Webhook HTTP 吞吐量 ────────────────────────────────────
 
+    /**
+      * benchwebhook。
+     * @param engine engine
+     */
     private static void benchWebhook(PipelineEngine engine) throws Exception {
         int[] counts = {5_000, 50_000, 100_000};
         for (int count : counts) {
@@ -188,8 +221,16 @@ public class DatalakePerfProbe {
         }
     }
 
-    // ── Multi-thread Concurrent ────────────────────────────────────
+ // ── Multi-thread 并发 ────────────────────────────────────
 
+    /**
+     * bench并发。
+     * @param engine engine
+     * @param pipeId 管道标识
+     * @param label 标签
+     * @param threads threads
+     * @param totalOps totalops
+     */
     private static void benchConcurrent(PipelineEngine engine, String pipeId, String label, int threads, int totalOps) throws InterruptedException {
         int perThread = totalOps / threads;
         CountDownLatch latch = new CountDownLatch(threads);
@@ -215,6 +256,11 @@ public class DatalakePerfProbe {
 
     // ── Multi-pipeline Scaling ─────────────────────────────────────
 
+    /**
+      * benchmultipipeline。
+     * @param engine engine
+     * @param pm pm
+     */
     private static void benchMultiPipeline(PipelineEngine engine, PipelineManager pm) throws InterruptedException {
         int[] pipelineCounts = {1, 10, 50};
         int opsPerPipeline = 10_000;
@@ -255,13 +301,17 @@ public class DatalakePerfProbe {
         PipelineEngine noDisp = new DefaultPipelineEngine(pm, reg, null);
         pm.savePipeline("p-nodisp", "{\"stages\":{\"default\":{\"sink\":[{\"type\":\"log\"}]}}}");
         long t0 = System.nanoTime();
-        for (int i = 0; i < count; i++) noDisp.execute("p-nodisp", buildEnv("p-nodisp", i));
+        for (int i = 0; i < count; i++) {
+            noDisp.execute("p-nodisp", buildEnv("p-nodisp", i));
+        }
         double noDispMs = (System.nanoTime() - t0) / 1_000_000.0;
         double noDispOps = count / (noDispMs / 1000.0);
 
         pm.savePipeline("p-withdisp", "{\"stages\":{\"default\":{\"sink\":[{\"type\":\"log\"}]}}}");
         t0 = System.nanoTime();
-        for (int i = 0; i < count; i++) engine.execute("p-withdisp", buildEnv("p-withdisp", i));
+        for (int i = 0; i < count; i++) {
+            engine.execute("p-withdisp", buildEnv("p-withdisp", i));
+        }
         double withDispMs = (System.nanoTime() - t0) / 1_000_000.0;
         double withDispOps = count / (withDispMs / 1000.0);
         double ratio = withDispMs * 100.0 / Math.max(noDispMs, 0.001);
@@ -274,7 +324,22 @@ public class DatalakePerfProbe {
                 noDispOps, withDispOps, ratio));
     }
 
-    // ── Helpers ────────────────────────────────────────────────────
+ // ── 助手 ────────────────────────────────────────────────────
+    /**
+      * capturingsink类。
+     *
+     * @author CH
+     * @since 4.0.0
+     * @param n n
+     * @return fmt数量的结果
+     /**
+      * 构建env。
+      * @param pipeId 管道标识
+      * @param i i
+      * @return 构建env的结果
+      */
+      * @param n n
+     */
 
     private static DataEnvelope buildEnv(String pipeId, int i) {
         return DataEnvelope.builder()
@@ -286,16 +351,31 @@ public class DatalakePerfProbe {
     }
 
     private static String fmtCount(int n) {
-        if (n >= 1_000_000) return (n / 1_000_000) + "M";
-        if (n >= 1_000) return (n / 1_000) + "K";
+        if (n >= 1_000_000) {
+            return (n / 1_000_000) + "M";
+        }
+        if (n >= 1_000) {
+            return (n / 1_000) + "K";
+        }
         return String.valueOf(n);
     }
 
     public static class CapturingSink implements DataSink {
-        private final String type;
-        private final AtomicInteger count = new AtomicInteger(0);
+        private final String type; // 类型
+        private final AtomicInteger count = new AtomicInteger(0); // 数量
+        /**
+          * capturingsink。
+         * @param type 类型
+         */
         public CapturingSink(String type) { this.type = type; }
+        /**
+         * reset。
+         */
         public void reset() { count.set(0); }
+        /**
+         * 获取数量。
+         * @return 获取数量的结果
+         */
         public int getCount() { return count.get(); }
         @Override public String type() { return type; }
         @Override public void start() {}

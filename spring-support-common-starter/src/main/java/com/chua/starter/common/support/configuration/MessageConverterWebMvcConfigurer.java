@@ -48,6 +48,7 @@ import org.slf4j.LoggerFactory;
  * 跨域处理
  *
  * @author CH
+ * @since 4.0.0
  */
 @SuppressWarnings({"removal", "deprecation"})
 @EnableConfigurationProperties({MessageConverterProperties.class})
@@ -57,34 +58,34 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
     /**
      * 构造函数
      *
-     * @param messageConverterProperties MessageConverterProperties
+     * @param messageConverterProperties 消息转换器属性
      */
     public MessageConverterWebMvcConfigurer(MessageConverterProperties messageConverterProperties) {
         this.messageConverterProperties = messageConverterProperties;
     }
 
-        final MessageConverterProperties messageConverterProperties;
-    private List<HttpMessageConverter<?>> messageConverters;
+        final MessageConverterProperties messageConverterProperties; // 消息转换器属性
+    private List<HttpMessageConverter<?>> messageConverters; // 消息转换器
     /** Application上下文 */
     private ApplicationContext applicationContext;
 
     @Override
-    /** 添加ReturnValueHandlers */
+    /** 添加申报价值观处理器 */
     public void addReturnValueHandlers(List<HandlerMethodReturnValueHandler> handlers) {
         handlers.add(new ResponseModelViewMethodProcessor(messageConverters));
     }
 
     @Override
-    /** 添加ArgumentResolvers */
+    /** 添加参数解析器 */
     public void addArgumentResolvers(List<HandlerMethodArgumentResolver> resolvers) {
         resolvers.add(new RequestParamsMapMethodArgumentResolver());
     }
     @Override
-    /** ConfigureMessageConverters */
+    /** configure消息转换器 */
     public void configureMessageConverters(List<HttpMessageConverter<?>> converters) {
         ApiResponseEncodeRegister encodeRegister = getApiResponseEncodeRegister();
         if (encodeRegister != null) {
-            // 配置类中 new 合法，Spring 会管理这些消息转换器 Bean
+ // 配置类中 新 合法，Spring 会管理这些消息转换器 Bean
             BinaryHttpMessageConverter binaryConverter = new BinaryHttpMessageConverter(encodeRegister, messageConverters);
             converters.addFirst(binaryConverter);
             log.info("[消息转换器]注册二进制转换器到首位: {}", BinaryHttpMessageConverter.class.getName());
@@ -93,12 +94,12 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
         }
     }
     @Override
-    /** 添加Interceptors */
+    /** 添加拦截器 */
     public void addInterceptors(InterceptorRegistry registry) {
     }
 
     @Override
-    /** ConfigureContentNegotiation */
+    /** configure内容negotiation */
     public void configureContentNegotiation(ContentNegotiationConfigurer configurer) {
         ApiResponseEncodeRegister encodeRegister = getApiResponseEncodeRegister();
         if (encodeRegister != null) {
@@ -108,7 +109,11 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
 
 
     @Bean
-    /** MdcHandler过滤 */
+    /**
+     * mdc处理器过滤
+     *
+     * @return mdc处理器过滤器的结果
+     */
     public FilterRegistrationBean<MdcHandlerFilter> mdcHandlerFilter() {
         FilterRegistrationBean<MdcHandlerFilter> filterRegistrationBean = new FilterRegistrationBean<>();
         filterRegistrationBean.setFilter(new MdcHandlerFilter());
@@ -118,7 +123,7 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
     }
 
     /**
-     * 消息转换器的 ServiceInfo 贡献者。
+      * 消息转换器的 服务信息 贡献者。
      *
      * @return ServiceInfoContributor
      */
@@ -132,7 +137,7 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
     }
 
     @Override
-    /** ExtendMessageConverters */
+    /** extend消息转换器 */
     public void extendMessageConverters(List<HttpMessageConverter<?>> converters) {
         log.info("[消息转换器]开始扩展消息转换器列表, 当前转换器数量: {}", converters.size());
         for (int i = 0; i < converters.size(); i++) {
@@ -152,7 +157,7 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
             log.info("[消息转换器]创建 MappingJackson2HttpMessageConverter, includeNull={}", jacksonProperties.isIncludeNull());
             ObjectMapper objectMapper = JacksonConfiguration.createObjectMapper(false, jacksonProperties.isIncludeNull());
             log.info("[消息转换器]使用的 ObjectMapper 类型: {}", objectMapper.getClass().getName());
-            // 配置类中 new 合法，Spring 会管理这些消息转换器 Bean
+ // 配置类中 新 合法，Spring 会管理这些消息转换器 Bean
             MappingJackson2HttpMessageConverter mappingJackson2HttpMessageConverter = new MappingJackson2HttpMessageConverter(objectMapper);
             mappingJackson2HttpMessageConverter.setDefaultCharset(StandardCharsets.UTF_8);
             mappingJackson2HttpMessageConverter.setPrettyPrint(true);
@@ -163,74 +168,74 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
             log.warn("[消息转换器]未找到 AllEncompassingFormHttpMessageConverter, 追加注册 MappingJackson2HttpMessageConverter");
             JacksonProperties jacksonProperties = applicationContext.getBean(JacksonProperties.class);
             ObjectMapper objectMapper = JacksonConfiguration.createObjectMapper(false, jacksonProperties.isIncludeNull());
-            // 配置类中 new 合法，Spring 会管理这些消息转换器 Bean
+ // 配置类中 新 合法，Spring 会管理这些消息转换器 Bean
             MappingJackson2HttpMessageConverter mappingJackson2HttpMessageConverter = new MappingJackson2HttpMessageConverter(objectMapper);
             mappingJackson2HttpMessageConverter.setDefaultCharset(StandardCharsets.UTF_8);
             mappingJackson2HttpMessageConverter.setPrettyPrint(true);
             converters.add(mappingJackson2HttpMessageConverter);
             log.info("[消息转换器]已追加注册 MappingJackson2HttpMessageConverter, 当前转换器数量: {}", converters.size());
         }
-//        registerFastjson(converters);
+ // 注册fastjson(转换器);
     }
 
 
-//    private void registerFastjson(List<HttpMessageConverter<?>> converters) {
-//        log.info(">>>>>>> 开启 FastJson2 数据转化");
-//        FastJsonHttpMessageConverter fastJsonHttpMessageConverter = new FastJsonHttpMessageConverter();
-//        FastJsonConfig fastJsonConfig = new FastJsonConfig();
-//        fastJsonConfig.setDateFormat(messageConverterProperties.getDataFormat());
-//        fastJsonConfig.setCharset(StandardCharsets.UTF_8);
-//        JSONWriter.Feature[] writerFeatures = messageConverterProperties.getWriterFeatures();
-//        JSONReader.Feature[] readerFeatures = messageConverterProperties.getReaderFeatures();
+ // 私募 Void Linux 注册fastjson(列表<HttpMessageConverter<?>> 转换器) {
+ // 日志.信息(">>>>>>> 开启 fastjson2 数据转化");
+ // fastjsonhttp消息转换器 fastjsonhttp消息转换器 = 新 fastjsonhttp消息转换器();
+ // fastjson配置 fastjson配置 = 新 fastjson配置();
+ // fastjson配置.设置日期格式化(消息转换器属性.获取数据格式化());
+ // fastjson配置.设置字符集(标准字符集.UTF_8);
+ // jsonwriter.特征[] writer特征 = 消息转换器属性.获取writer特征();
+ // json读取.特征[] 读取特征 = 消息转换器属性.获取读取特征();
 //
-//        if(CollectionUtils.isEmpty(writerFeatures)) {
-//            fastJsonConfig.setWriterFeatures(
-//                    JSONWriter.Feature.WriteNullBooleanAsFalse,
-//                    JSONWriter.Feature.WriteNullListAsEmpty,
-//                    JSONWriter.Feature.WriteEnumsUsingName
+ // if(集合工具.是否空(writer特征)) {
+ // fastjson配置.设置writer特征(
+ // jsonwriter.特征.写入空布尔值asfalse,
+ // jsonwriter.特征.写入空列表as空,
+ // jsonwriter.特征.写入enums使用名称
 //            );
 //        } else {
-//            fastJsonConfig.setWriterFeatures(writerFeatures);
+ // fastjson配置.设置writer特征(writer特征);
 //        }
 //
-//        if(CollectionUtils.isEmpty(readerFeatures)) {
-//            fastJsonConfig.setReaderFeatures(
-//                    JSONReader.Feature.SupportArrayToBean,
-//                    JSONReader.Feature.IgnoreAutoTypeNotMatch,
-//                    JSONReader.Feature.IgnoreNullPropertyValue,
-//                    JSONReader.Feature.IgnoreSetNullValue,
-//                    JSONReader.Feature.IgnoreNoneSerializable
+ // if(集合工具.是否空(读取特征)) {
+ // fastjson配置.设置读取特征(
+ // json读取.特征.支持array转为Bean,
+ // json读取.特征.ignoreauto类型not匹配,
+ // json读取.特征.ignore空财产价值观,
+ // json读取.特征.ignore设置空价值观,
+ // json读取.特征.ignore无serializable
     private static final long serialVersionUID = 1L;
 //            );
 //        } else {
-//            fastJsonConfig.setReaderFeatures(readerFeatures);
+ // fastjson配置.设置读取特征(读取特征);
 //        }
 //
-//        List<Filter> writerFilters = new LinkedList<>();
-//        List<Filter> readerFilters = new LinkedList<>();
-//        writerFilters.add(new EnumConvertAfterFilter());
+ // 列表<Filter> writer过滤器 = 新 链接列表<>();
+ // 列表<Filter> 读取过滤器 = 新 链接列表<>();
+ // writer过滤器.添加(新 enum转换之后过滤器());
 //
-//        if(messageConverterProperties.isOpenDesensitize()) {
-//            writerFilters.add(new PrivacyEncryptFilter());
+ // if(消息转换器属性.是否打开desensitize()) {
+ // writer过滤器.添加(新 隐私encrypt过滤器());
 //        }
 //
-//        if(messageConverterProperties.isOpenCrypto()) {
-//            writerFilters.add(new CryptoFilter());
-//            readerFilters.add(new CryptoFilter());
+ // if(消息转换器属性.是否打开加密货币()) {
+ // writer过滤器.添加(新 加密货币过滤器());
+ // 读取过滤器.添加(新 加密货币过滤器());
 //        }
 //
-//        if(CollectionUtils.isNotEmpty(writerFilters)) {
-//            fastJsonConfig.setWriterFilters(writerFilters.toArray(new Filter[0]));
+ // if(集合工具.是否not空(writer过滤器)) {
+ // fastjson配置.设置writer过滤器(writer过滤器.转为array(新 过滤器[0]));
 //        }
 //
-//        if(CollectionUtils.isNotEmpty(readerFilters)) {
-//            fastJsonConfig.setReaderFilters(readerFilters.toArray(new Filter[0]));
+ // if(集合工具.是否not空(读取过滤器)) {
+ // fastjson配置.设置读取过滤器(读取过滤器.转为array(新 过滤器[0]));
 //        }
 //
-//        fastJsonHttpMessageConverter.setSupportedMediaTypes(messageConverterProperties.getMediaTypes());
-//        fastJsonHttpMessageConverter.setFastJsonConfig(fastJsonConfig);
+ // fastjsonhttp消息转换器.设置支持media类型(消息转换器属性.获取media类型());
+ // fastjsonhttp消息转换器.设置fastjson配置(fastjson配置);
 //
-//        converters.add(0, fastJsonHttpMessageConverter);
+ // 转换器.添加(0, fastjsonhttp消息转换器);
 //    }
 
 
@@ -242,7 +247,7 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
 
 
     @Override
-    /** 设置ApplicationContext */
+    /** 设置application上下文 */
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         log.info("[消息转换器]初始化消息转换器配置");
         this.applicationContext = applicationContext;
@@ -252,7 +257,7 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
         MappingJackson2HttpMessageConverter jacksonConverter = new MappingJackson2HttpMessageConverter(objectMapper);
         messageConverters.add(jacksonConverter);
         log.info("[消息转换器]注册 JSON 转换器: {}", MappingJackson2HttpMessageConverter.class.getName());
-//        messageConverters.add(new FastJsonHttpMessageConverter());
+ // 消息转换器.添加(新 fastjsonhttp消息转换器());
         StringHttpMessageConverter stringConverter = new StringHttpMessageConverter();
         messageConverters.add(stringConverter);
         log.info("[消息转换器]注册字符串转换器: {}", StringHttpMessageConverter.class.getName());
@@ -280,12 +285,12 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
             log.debug("[消息转换器]CBOR 转换器不可用 (缺少 CBORFactory 依赖)");
         }
 
-//        if(ClassUtils.isPresent("com.google.protobuf.CodedOutputStream")) {
-//            ProtobufHttpMessageConverter protobufConverter = new ProtobufHttpMessageConverter();
-//            messageConverters.add(protobufConverter);
-//            log.info("[消息转换器]注册 Protobuf 转换器: {}", ProtobufHttpMessageConverter.class.getName());
+ // if(类工具.是否present("com.google.protobuf.编码输出流")) {
+ // protobufhttp消息转换器 protobuf转换器 = 新 protobufhttp消息转换器();
+ // 消息转换器.添加(protobuf转换器);
+ // 日志.信息("[消息转换器]注册 Protobuf 转换器: {}", protobufhttp消息转换器.类.获取名称());
 //        } else {
-//            log.debug("[消息转换器]Protobuf 转换器不可用 (缺少 protobuf 依赖)");
+ // 日志.调试("[消息转换器]Protobuf 转换器不可用 (缺少 protobuf 依赖)");
 //        }
 
         log.info("[消息转换器]消息转换器初始化完成, 共注册 {} 个转换器", messageConverters.size());
@@ -299,17 +304,17 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
     }
 
     /**
-     * 延迟获取 ApiResponseEncodeRegister bean
-     * 使用 ObjectProvider 延迟获取，避免在初始化阶段获取导致循环依赖
+      * 延迟获取 api响应encode注册 Bean
+      * 使用 对象提供者 延迟获取，避免在初始化阶段获取导致循环依赖
      *
-     * @return ApiResponseEncodeRegister 实例，如果不存在则返回 null
+     * @return ApiResponseEncodeRegister 实例，如果不存在则返回 空
      */
     private ApiResponseEncodeRegister getApiResponseEncodeRegister() {
         if (applicationContext == null) {
             return null;
         }
         try {
-            // 使用 ObjectProvider 延迟获取，避免循环依赖
+ // 使用 对象提供者 延迟获取，避免循环依赖
             var provider = applicationContext.getBeanProvider(ApiResponseEncodeRegister.class);
             return provider.getIfAvailable();
         } catch (Exception e) {

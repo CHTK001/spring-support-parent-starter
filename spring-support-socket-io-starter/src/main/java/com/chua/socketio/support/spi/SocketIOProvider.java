@@ -14,10 +14,10 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 
 /**
- * Socket.IO 协议提供者
- * 实现基础 Socket 模块的 SPI 接口
+   * 套接字.IO 协议提供者
+   * 实现基础 套接字 模块的 SPI 接口
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024-12-04
  * @author CH
  */
@@ -29,17 +29,17 @@ public class SocketIOProvider implements SocketProvider {
     private static final Logger log = LoggerFactory.getLogger(SocketIOProvider.class);
 
     @Override
-    /** 获取Protocol */
+    /** 获取协议 */
     public SocketProtocol getProtocol() {
         return SocketProtocol.SOCKETIO;
     }
 
     @Override
     /**
-     * 创建SessionTemplate
-     * @param properties properties
-     * @param listeners listeners
-     * @param listeners listeners
+      * 创建会话template
+     * @param properties 属性
+     * @param listeners 监听器
+     * @param listeners 监听器
      * @param template template
      * @param template template
      */
@@ -47,6 +47,12 @@ public class SocketIOProvider implements SocketProvider {
             SocketProperties properties,
             List<SocketListener> listeners) {
         log.info("[SocketIO] 创建 Socket.IO 会话模板");
+        /**
+         * 套接字io会话template。
+         * @param properties 属性
+         * @param listeners 监听器
+         * @return 套接字io会话template的结果
+         */
         return new SocketIOSessionTemplate(properties, listeners);
     }
 

@@ -43,7 +43,7 @@ import java.util.Set;
 public class RagClientManager {
 
     /**
-     * 与默认 MemoryEmbeddingClient 输出维度一致。
+      * 与默认 内存嵌入客户端 输出维度一致。
      */
     private static final int DEFAULT_EMBEDDING_DIMENSIONS = 1536;
 
@@ -63,7 +63,7 @@ public class RagClientManager {
     private final GlobalSettingReader settingReader;
 
     /**
-     * 全局 ChatClient 注册表（按模型解析 RAG LLM）
+      * 全局 对话客户端 注册表（按模型解析 RAG LLM）
      */
     private final ChatClientRegistry chatClientRegistry;
 
@@ -73,7 +73,7 @@ public class RagClientManager {
     private final RagProperties properties;
 
     /**
-     * Spring BeanFactory（动态注册/替换 globalRagClient Bean）
+      * Spring Bean工厂（动态注册/替换 全局rag客户端 Bean）
      */
     private final DefaultListableBeanFactory beanFactory;
 
@@ -85,7 +85,7 @@ public class RagClientManager {
     /**
      * 获取当前 RAG 客户端，未构建时按全局配置懒构建。
      *
-     * @return RAG 客户端（配置缺失时可能为 null）
+     * @return RAG 客户端（配置缺失时可能为 空）
      */
     public RagClient current() {
         RagClient client = ragClient;
@@ -102,6 +102,7 @@ public class RagClientManager {
 
     /**
      * 监听 OCR 设置变更事件，重建 RAG 客户端以使用最新的 OCR 模型配置。
+     * @param event 事件
      */
     @EventListener
     public void onOcrSettingsChanged(OcrSettingsChangedEvent event) {
@@ -132,7 +133,7 @@ public class RagClientManager {
     }
 
     /**
-     * 通过 BeanFactory 动态注册 {@code globalRagClient} 单例 Bean，供容器内按名称获取最新实例。
+      * 通过 Bean工厂 动态注册 {@code globalRagClient} 单例 Bean，供容器内按名称获取最新实例。
      *
      * @param client RAG 客户端
      */
@@ -151,6 +152,7 @@ public class RagClientManager {
 
     /**
      * 基于全局配置构建 RAG 客户端。
+     * @return 构建的结果
      */
     private RagClient build() {
         String ragEmbeddingModel = settingReader.getStr(GROUP, "rag_embedding_model");
@@ -199,7 +201,9 @@ public class RagClientManager {
     }
 
     /**
-     * 解析 RAG 使用的 LLM：优先 rag_llm_model 指定模型，否则全局默认客户端。
+      * 解析 RAG 使用的 LLM：优先 rag_llm_模型 指定模型，否则全局默认客户端。
+     * @param ragLlmModel ragllm模型
+     * @return resolve对话客户端的结果
      */
     private ChatClient resolveChatClient(String ragLlmModel) {
         if (chatClientRegistry == null) {
@@ -216,13 +220,13 @@ public class RagClientManager {
     }
 
     /**
-     * 解析文本提取器：配置了 RAG OCR 模型时使用 OCR 提取器识别图片文字，否则返回 null。
+      * 解析文本提取器：配置了 RAG OCR 模型时使用 OCR 提取器识别图片文字，否则返回 空。
      *
      * <p>优先使用 ocr 分组的完整管线配置（detector + recognizer + 阈值 + 阅读序 + direction + restorer），
      * 未配置 detector/recognizer 时回退到旧版单模型 recognizer 路径。</p>
      *
-     * @param ocrModel 兜底 OCR 模型名（rag_ocr_model）
-     * @return 文本提取器，未配置 OCR 时返回 null
+     * @param ocrModel 兜底 OCR 模型名（rag_ocr_模型）
+     * @return 文本提取器，未配置 OCR 时返回 空
      */
     private TextExtractor resolveTextExtractor(String ocrModel) {
         String detectorModel = settingReader.getStr("ocr", "detector_model");
@@ -257,9 +261,14 @@ public class RagClientManager {
 
     /**
      * 安全解析 float，失败返回默认值。
+     * @param s s
+     * @param def def
+     * @return 解析floatsafe的结果
      */
     private static float parseFloatSafe(String s, float def) {
-        if (!StringUtils.hasText(s)) return def;
+        if (!StringUtils.hasText(s)) {
+            return def;
+        }
         try {
             return Float.parseFloat(s.trim());
         } catch (NumberFormatException e) {
@@ -268,7 +277,9 @@ public class RagClientManager {
     }
 
     /**
-     * 创建向量化客户端：优先使用已注册的 EmbeddingClient SPI，否则使用离线 MemoryEmbeddingClient。
+      * 创建向量化客户端：优先使用已注册的 嵌入客户端 SPI，否则使用离线 内存嵌入客户端。
+     * @param model 模型
+     * @return 创建嵌入客户端的结果
      */
     private EmbeddingClient createEmbeddingClient(String model) {
         String engine = StringUtils.hasText(model) ? model.trim() : properties.getEmbeddingEngine();
@@ -288,6 +299,9 @@ public class RagClientManager {
 
     /**
      * 创建向量存储：jvector 使用 ON_DISK 落盘，其余使用内存实现。
+     * @param storageName storage名称
+     * @param uploadDir uploaddir
+     * @return 创建向量storage的结果
      */
     private VectorStorage createVectorStorage(String storageName, String uploadDir) {
         String name = StringUtils.hasText(storageName)
@@ -304,6 +318,10 @@ public class RagClientManager {
 
     /**
      * 创建文本分割器：按全局配置的切片 SPI 名称解析，未配置或不可用时回退 sentence。
+     * @param splitterName splitter名称
+     * @param chunkSize chunk大小
+     * @param chunkOverlap chunkoverlap
+     * @return 创建文本splitter的结果
      */
     private TextSplitter createTextSplitter(String splitterName, int chunkSize, int chunkOverlap) {
         String name = StringUtils.hasText(splitterName) ? splitterName.trim().toLowerCase() : "sentence";

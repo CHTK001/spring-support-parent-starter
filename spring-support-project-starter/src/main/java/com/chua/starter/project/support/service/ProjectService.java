@@ -71,7 +71,7 @@ public interface ProjectService {
     /**
      * 查询可选服务器（按 OS 过滤，供前端选择服务器）
      *
-     * @param os 操作系统类型 LINUX/WINDOWS，可为空
+     * @param os 操作系统类型 Linux/窗口，可为空
      * @return 结果（id/name/address/osType）
      */
     ReturnResult<List<Map<String, Object>>> hostOptions(String os);

@@ -14,7 +14,7 @@ import lombok.Data;
 @Schema(description = "软件配置分页查询请求")
 public class SoftwareConfigPageRequest extends SoftConfig {
 
-    /** Serial版本UID */
+    /** 串行版本UID */
     private static final long serialVersionUID = 1L;
 
     /**

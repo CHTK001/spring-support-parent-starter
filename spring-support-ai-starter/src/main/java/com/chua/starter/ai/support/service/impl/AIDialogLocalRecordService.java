@@ -18,18 +18,19 @@ import java.util.concurrent.atomic.AtomicLong;
  * 重启后数据丢失。
  *
  * @author CH
+ * @since 4.0.0
  */
 public class AIDialogLocalRecordService implements AIDialogRecordService {
 
-    /** DialogIDgenerator */
+    /** dialogidgenerator */
     private final AtomicLong dialogIdGenerator = new AtomicLong(1);
-    /** 消息IDgenerator */
+    /** 消息idgenerator */
     private final AtomicLong messageIdGenerator = new AtomicLong(1);
 
-    /** dialogId → AIDialog */
+    /** dialogid → aidialog */
     private final Map<Long, AIDialog> dialogs = new ConcurrentHashMap<>();
 
-    /** dialogId → List&lt;ChatMessage&gt; */
+    /** dialogid → 列表&lt;对话消息&gt; */
     private final Map<Long, List<ChatMessage>> messages = new ConcurrentHashMap<>();
 
     @Override
@@ -50,13 +51,13 @@ public class AIDialogLocalRecordService implements AIDialogRecordService {
     }
 
     @Override
-    /** ListDialog */
+    /** 列表dialog */
     public List<AIDialog> listDialog() {
         return new ArrayList<>(dialogs.values());
     }
 
     @Override
-    /** 获取DialogMessages */
+    /** 获取dialog消息 */
     public List<ChatMessage> getDialogMessages(Long dialogId) {
         List<ChatMessage> list = messages.get(dialogId);
         if (list == null) {
@@ -66,7 +67,7 @@ public class AIDialogLocalRecordService implements AIDialogRecordService {
     }
 
     @Override
-    /** 添加Message */
+    /** 添加消息 */
     public void addMessage(Long dialogId, ChatMessage message) {
         List<ChatMessage> list = messages.get(dialogId);
         if (list == null) {

@@ -8,8 +8,10 @@ import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
 import com.chua.starter.ai.support.entity.SysAiPricing;
 import com.chua.starter.ai.support.entity.SysAiUsage;
 import com.chua.starter.ai.support.entity.SysAiUsageDaily;
+import com.chua.starter.ai.support.entity.SysAiUsageSyncLog;
 import com.chua.starter.ai.support.mapper.SysAiUsageDailyMapper;
 import com.chua.starter.ai.support.mapper.SysAiUsageMapper;
+import com.chua.starter.ai.support.mapper.SysAiUsageSyncLogMapper;
 import com.chua.starter.ai.support.service.SysAiPricingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,6 +23,7 @@ import org.springframework.scheduling.TriggerContext;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.annotation.PreDestroy;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
@@ -29,24 +32,29 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.TimeUnit;
 
 /**
  * AI 用量聚合任务
  * <p>
- * 采用动态 {@link Trigger} 调度，执行开关与间隔从 {@code ai_global_setting} 表读取：
+ * 采用动态 {@link Trigger} 调度（默认），执行开关与间隔从 {@code ai_global_setting} 表读取：
  * <ul>
  *   <li>开关：{@code setting_enable_usage_analysis}（前端"启用用量分析"），关闭时跳过执行</li>
  *   <li>间隔：{@code setting_usage_interval_sec}（前端"上报频率"，最小 10 秒），未配置时默认 1 小时</li>
+ *   <li>数据源白名单：{@code usage_sync_providers}（Provider SPI 开关，逗号分隔，留空 = 全部）</li>
+ *   <li>后台时间轮：{@code usage_timewheel_enabled}（开启后改用时间轮调度）</li>
  * </ul>
  * <p>
  * 每次执行：
  * <ol>
  *   <li>通过 datasearch 的 {@link UsageParser} SPI 拉取所有外部工具用量，写入本地用量表</li>
  *   <li>聚合当天用量明细数据到日汇总表（默认只聚合当天，压力小）</li>
+ *   <li>同步过程日志写入 {@code sys_ai_usage_sync_log} 表（前端用量同步日志页持久化查询）</li>
  * </ol>
  * <p>历史数据回填请调用 {@link #aggregateAll()}（手动全量同步），由接口异步触发。</p>
  *
@@ -74,7 +82,7 @@ public class UsageAggregationTask implements SchedulingConfigurer {
     private static final String GROUP_KEY_SEPARATOR = "|";
 
     /**
-     * 同步日志级别：INFO
+      * 同步日志级别：信息
      */
     private static final String LOG_LEVEL_INFO = "INFO";
 
@@ -84,12 +92,12 @@ public class UsageAggregationTask implements SchedulingConfigurer {
     private static final String LOG_LEVEL_WARN = "WARN";
 
     /**
-     * 同步日志级别：ERROR
+      * 同步日志级别：错误
      */
     private static final String LOG_LEVEL_ERROR = "ERROR";
 
     /**
-     * 最近一次同步运行日志（线程安全，供 /v2/usage/logs 读取）
+      * 最近一次同步运行日志（线程安全，供 /v2/usage/日志 读取）
      */
     private static final java.util.concurrent.ConcurrentLinkedDeque<SyncLogEntry> SYNC_LOGS =
             new java.util.concurrent.ConcurrentLinkedDeque<>();
@@ -97,38 +105,26 @@ public class UsageAggregationTask implements SchedulingConfigurer {
     /**
      * 同步日志条目
      *
-     * @param level     日志级别 INFO/WARN/ERROR
+     * @param level     日志级别 信息/WARN/错误
      * @param message   日志内容
      * @param timestamp 时间戳（ISO 格式）
+     * @return 同步日志entry的结果
      */
     public record SyncLogEntry(String level, String message, String timestamp) {
     }
 
     /**
-     * 全局设置读取工具（分组 global：用量开关与上报间隔）
+      * 全局设置读取工具（分组 全局：用量开关与上报间隔）
      */
     private final GlobalSettingReader settingReader;
 
     /**
-     * 用量 Mapper
+      * 用量 映射器
      */
     private final SysAiUsageMapper usageMapper;
 
     /**
-     * Spring 应用上下文（用于收集 Spring 容器中的 UsageParser 实现）
-     */
-    @org.springframework.beans.factory.annotation.Autowired
-    private ApplicationContext applicationContext;
-
-    /**
-     * 自引用：方法内部通过代理调用，确保 {@link Transactional} 与 AOP 生效。
-     */
-    @org.springframework.beans.factory.annotation.Autowired
-    @org.springframework.context.annotation.Lazy
-    private UsageAggregationTask self;
-
-    /**
-     * 日汇总 Mapper
+      * 日汇总 映射器
      */
     private final SysAiUsageDailyMapper dailyMapper;
 
@@ -138,14 +134,60 @@ public class UsageAggregationTask implements SchedulingConfigurer {
     private final SysAiPricingService pricingService;
 
     /**
-     * 注册动态调度任务，每次执行后按配置间隔计算下次执行时间。
+      * 用量同步日志 映射器（落库持久化）
+     */
+    private final SysAiUsageSyncLogMapper syncLogMapper;
+
+    /**
+      * Spring 应用上下文（用于收集 Spring 容器中的 usageparser 实现）
+     */
+    @org.springframework.beans.factory.annotation.Autowired
+    private ApplicationContext applicationContext; // application上下文
+
+    /**
+     * 自引用：方法内部通过代理调用，确保 {@link Transactional} 与 AOP 生效。
+     */
+    @org.springframework.beans.factory.annotation.Autowired
+    @org.springframework.context.annotation.Lazy
+    private UsageAggregationTask self; // self
+
+    /**
+      * 后台时间轮实例（usage_timewheel_已启用 时启用）
+     */
+    private volatile com.chua.common.support.task.timer.Timer timeWheel;
+
+    /**
+     * 注册动态调度任务：默认 Trigger 调度；开启后台时间轮时改用时间轮。
      *
      * @param taskRegistrar 调度任务注册器
      */
     @Override
     public void configureTasks(ScheduledTaskRegistrar taskRegistrar) {
+        if (isTimeWheelEnabled()) {
+            log.info("[UsageAggregation] 用量同步使用后台时间轮调度");
+            /**
+             * 启动时间wheel。
+             */
+            startTimeWheel();
+            return;
+        }
         Trigger trigger = this::nextTriggerTime;
         taskRegistrar.addTriggerTask(this::run, trigger);
+    }
+
+    /**
+     * 关闭时间轮资源。
+     */
+    @PreDestroy
+    public void destroyTimeWheel() {
+        if (timeWheel != null) {
+            try {
+                timeWheel.shutdown();
+            } catch (Exception e) {
+                log.debug("[UsageAggregation] 时间轮关闭异常: {}", e.getMessage());
+            }
+            timeWheel = null;
+        }
     }
 
     /**
@@ -157,30 +199,70 @@ public class UsageAggregationTask implements SchedulingConfigurer {
     public void run() {
         if (!isUsageEnabled()) {
             log.debug("[UsageAggregation] 用量分析未启用，跳过本次执行");
+            /**
+             * record日志。
+             * @param LOG_LEVEL_WARN 日志水平仪warn
+             * @param "用量分析未启用，跳过本次执行" "用量分析未启用，跳过本次执行"
+             */
             recordLog(LOG_LEVEL_WARN, "用量分析未启用，跳过本次执行");
             return;
         }
+        /**
+         * record日志。
+         * @param ")" 日志水平仪信息
+         * @param java.time.LocalTime.now( Java.时间.本地时间.now(
+         */
         recordLog(LOG_LEVEL_INFO, "开始定时同步与聚合 (" + java.time.LocalTime.now().withNano(0) + ")");
         self.syncExternalUsage();
         self.aggregateToday();
     }
 
     /**
-     * 记录一次同步日志到内存缓冲（供前端用量同步日志页读取）。
+      * 记录一次同步日志：写入内存缓冲（前端 /v2/usage/日志 读取）并落库持久化。
      *
      * @param level   级别
      * @param message 内容
      */
-    private static void recordLog(String level, String message) {
+    private void recordLog(String level, String message) {
         SYNC_LOGS.addLast(new SyncLogEntry(level, message,
                 java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME)));
         while (SYNC_LOGS.size() > LOG_BUFFER_LIMIT) {
             SYNC_LOGS.pollFirst();
         }
+        /**
+         * persist日志。
+         * @param level 水平仪
+         * @param "schedule" "调度"
+         * @param message 消息
+         */
+        persistLog(level, "schedule", message);
     }
 
     /**
-     * 返回最近同步日志（新→旧），供 /v2/usage/logs 接口读取。
+     * 同步日志落库（幂等容错：失败不影响主流程）。
+     *
+     * @param level   日志级别
+     * @param source  来源（调度 / manual / parser）
+     * @param message 日志内容
+     */
+    private void persistLog(String level, String source, String message) {
+        try {
+            if (syncLogMapper == null) {
+                return;
+            }
+            SysAiUsageSyncLog entry = new SysAiUsageSyncLog();
+            entry.setLevel(level);
+            entry.setSource(source);
+            entry.setMessage(message);
+            entry.setCreateTime(LocalDateTime.now());
+            syncLogMapper.insert(entry);
+        } catch (Exception e) {
+            log.debug("[UsageAggregation] 同步日志落库失败: {}", e.getMessage());
+        }
+    }
+
+    /**
+      * 返回最近同步日志（新→旧），供 /v2/usage/日志 接口读取。
      *
      * @return 日志条目列表
      */
@@ -194,6 +276,16 @@ public class UsageAggregationTask implements SchedulingConfigurer {
      * 用量上报间隔键（秒），从全局设置读取；未配置时默认 {@link #DEFAULT_REPORT_INTERVAL_SEC}。
      */
     private static final String SETTING_REPORT_INTERVAL = "usage_report_interval";
+
+    /**
+     * 后台时间轮开关键。
+     */
+    private static final String SETTING_TIMEWHEEL = "usage_timewheel_enabled";
+
+    /**
+      * 提供者 SPI 白名单键（逗号分隔，留空 = 全部启用）。
+     */
+    private static final String SETTING_SYNC_PROVIDERS = "usage_sync_providers";
 
     /**
      * 默认用量上报间隔（秒）——未配置时取 300 秒（5 分钟）。
@@ -223,7 +315,7 @@ public class UsageAggregationTask implements SchedulingConfigurer {
     }
 
     /**
-     * 判断用量分析是否启用（global 分组 enable_usage_analysis，默认启用）。
+      * 判断用量分析是否启用（全局 分组 enable_usage_analysis，默认启用）。
      *
      * @return true 表示启用
      */
@@ -232,21 +324,128 @@ public class UsageAggregationTask implements SchedulingConfigurer {
     }
 
     /**
-     * 通过 datasearch UsageParser SPI 解析所有外部工具本地用量，写入本地用量表。
+      * 判断是否启用后台时间轮（全局 分组 usage_timewheel_已启用，默认关闭）。
+     *
+     * @return true 表示启用时间轮
+     */
+    private boolean isTimeWheelEnabled() {
+        return settingReader.getBool(GROUP, SETTING_TIMEWHEEL, false);
+    }
+
+    /**
+     * 启动时间轮并注册首个 tick。
+     */
+    private void startTimeWheel() {
+        if (timeWheel != null) {
+            return;
+        }
+        timeWheel = com.chua.common.support.task.timer.Timer.newTimer(512, 100, TimeUnit.MILLISECONDS);
+        /**
+         * 调度下一个wheeltick。
+         */
+        scheduleNextWheelTick();
+    }
+
+    /**
+     * 时间轮自续调度：每次执行后按最新配置间隔重新注册下一次。
+     */
+    private void scheduleNextWheelTick() {
+        com.chua.common.support.task.timer.Timer wheel = timeWheel;
+        if (wheel == null || !wheel.isRunning()) {
+            return;
+        }
+        int intervalSec = Math.max(settingReader.getInt(GROUP, SETTING_REPORT_INTERVAL, DEFAULT_REPORT_INTERVAL_SEC), 1);
+        try {
+            wheel.schedule(this::wheelTick, intervalSec, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            log.debug("[UsageAggregation] 时间轮注册失败: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 时间轮 tick 执行体。
+     */
+    private void wheelTick() {
+        try {
+            /**
+             * 运行。
+             */
+            run();
+        } catch (Throwable e) {
+            log.error("[UsageAggregation] 时间轮执行失败: {}", e.getMessage(), e);
+            /**
+             * record日志。
+             * @param e.getMessage() 日志水平仪错误
+             * @param e.getMessage( e.获取消息(
+             */
+            recordLog(LOG_LEVEL_ERROR, "时间轮执行失败: " + e.getMessage());
+        }
+        /**
+         * 调度下一个wheeltick。
+         */
+        scheduleNextWheelTick();
+    }
+
+    /**
+      * 提供者 SPI 白名单集合（小写去空格）；空集合 = 全部启用。
+     *
+     * @return 允许同步的数据源名称集合
+     */
+    private Set<String> allowedProviders() {
+        String raw = settingReader.getStr(GROUP, SETTING_SYNC_PROVIDERS);
+        if (raw == null || raw.isBlank()) {
+            return Set.of();
+        }
+        Set<String> allowed = new java.util.LinkedHashSet<>();
+        for (String part : raw.split("[,，\\s]+")) {
+            String name = part.trim().toLowerCase(Locale.ROOT);
+            if (!name.isEmpty()) {
+                allowed.add(name);
+            }
+        }
+        return allowed;
+    }
+
+    /**
+      * 通过 datasearch usageparser SPI 解析所有外部工具本地用量，写入本地用量表。
      * <p>注意：不使用 {@link Transactional}——外部解析可能耗时（每个 Parser 最多阻塞 120s），
-     * 若包在事务里会长时间占用数据库连接导致连接池耗尽。逐条插入由 MyBatis 自动提交。</p>
+       * 若包在事务里会长时间占用数据库连接导致连接池耗尽。逐条插入由 MyBatis 自动提交。</p>
      */
     public void syncExternalUsage() {
         Map<String, UsageParser> parsers = collectParsers();
         if (parsers == null || parsers.isEmpty()) {
             log.debug("[UsageAggregation] 未发现 UsageParser 实现");
+            /**
+             * record日志。
+             * @param LOG_LEVEL_WARN 日志水平仪warn
+             * @param "未发现可用用量数据源，跳过外部同步" "未发现可用用量数据源，跳过外部同步"
+             */
             recordLog(LOG_LEVEL_WARN, "未发现可用用量数据源，跳过外部同步");
             return;
         }
+        Set<String> allowed = allowedProviders();
+        if (!allowed.isEmpty()) {
+            /**
+             * record日志。
+             * @param allowed) 日志水平仪信息
+             * @param allowed allowed
+             */
+            recordLog(LOG_LEVEL_INFO, "Provider SPI 白名单生效：" + String.join(", ", allowed));
+        }
         int total = 0;
         for (Map.Entry<String, UsageParser> entry : parsers.entrySet()) {
-            // 跳过 "system" parser ——它从 sys_ai_usage 读取（写入目标表），不拉外部数据，避免循环阻塞
+ // 跳过 "系统" parser ——它从 sys_AI_usage 读取（写入目标表），不拉外部数据，避免循环阻塞
             if ("system".equals(entry.getKey())) {
+                continue;
+            }
+ // 提供者 SPI 配置开关：白名单外数据源跳过
+            if (!allowed.isEmpty() && !allowed.contains(entry.getKey().toLowerCase(Locale.ROOT))) {
+                /**
+                 * record日志。
+                 * @param 白名单中，已跳过" 日志水平仪信息
+                 * @param entry.getKey( entry.获取键(
+                 */
+                recordLog(LOG_LEVEL_INFO, "[" + entry.getKey() + "] 未在 Provider SPI 白名单中，已跳过");
                 continue;
             }
             try {
@@ -258,7 +457,7 @@ public class UsageAggregationTask implements SchedulingConfigurer {
                 if (batch.isEmpty()) {
                     continue;
                 }
-                // 增量同步：仅插入 call_time 晚于库内该 group 最大时间的记录，
+ // 增量同步：仅插入 call_时间 晚于库内该 群体 最大时间的记录，
                 // 避免全量重复插入拖慢同步，也保证新数据能进来（旧实现按 ASC 排，新数据永远被超时截断）
                 LocalDateTime since = maxCallTimeOfGroup(entry.getKey());
                 int inserted = 0;
@@ -276,27 +475,47 @@ public class UsageAggregationTask implements SchedulingConfigurer {
                         total++;
                     }
                 }
+                /**
+                 * record日志。
+                 * @param inserted) 日志水平仪信息
+                 * @param entry.getKey( entry.获取键(
+                 */
                 recordLog(LOG_LEVEL_INFO, String.format("[%s] 同步 %d 条用量（新增 %d）", entry.getKey(), batch.size(), inserted));
             } catch (Throwable e) {
-                // 用 Throwable 而非 Exception：单个 Parser 的 Error（如缺依赖 NoClassDefFoundError）
+ // 用 抛出 而非 异常：单个 Parser 的 错误（如缺依赖 no类deffound错误）
                 // 也会捕获，避免中断后续 parser 的同步
                 log.warn("[UsageAggregation] UsageParser[{}] 同步失败: {}", entry.getKey(), e.getMessage(), e);
+                /**
+                 * record日志。
+                 * @param e.getMessage()) 日志水平仪错误
+                 * @param entry.getKey( entry.获取键(
+                 */
                 recordLog(LOG_LEVEL_ERROR, String.format("[%s] 同步失败: %s", entry.getKey(), e.getMessage()));
             }
         }
         if (total > 0) {
             log.info("[UsageAggregation] 已同步 {} 条外部用量（共 {} 个 Parser）", total, parsers.size());
+            /**
+             * record日志。
+             * @param parsers.size()) 日志水平仪信息
+             * @param parsers.size( parsers.大小(
+             */
             recordLog(LOG_LEVEL_INFO, String.format("本次共同步 %d 条外部用量（%d 个数据源）", total, parsers.size()));
         } else {
+            /**
+             * record日志。
+             * @param LOG_LEVEL_INFO 日志水平仪信息
+             * @param "本次外部同步无新增数据（本地工具无可用记录）" "本次外部同步无新增数据（本地工具无可用记录）"
+             */
             recordLog(LOG_LEVEL_INFO, "本次外部同步无新增数据（本地工具无可用记录）");
         }
     }
 
     /**
-     * 查询指定 group 在 `sys_ai_usage` 中已入库的最大调用时间。
+      * 查询指定 群体 在 `sys_ai_usage` 中已入库的最大调用时间。
      *
      * @param groupName 分组名称
-     * @return 最大调用时间；无记录时返回 null
+     * @return 最大调用时间；无记录时返回 空
      */
     private LocalDateTime maxCallTimeOfGroup(String groupName) {
         List<SysAiUsage> list = usageMapper.selectList(new LambdaQueryWrapper<SysAiUsage>()
@@ -309,7 +528,7 @@ public class UsageAggregationTask implements SchedulingConfigurer {
     }
 
     /**
-     * 收集所有可用 UsageParser：优先 Spring 容器（如系统默认 SystemUsageParser），
+      * 收集所有可用 usageparser：优先 Spring 容器（如系统默认 系统usageparser），
      * 再补 SPI 注册的外部工具解析器，并去重。
      *
      * @return name -> parser 映射
@@ -317,7 +536,7 @@ public class UsageAggregationTask implements SchedulingConfigurer {
     private Map<String, UsageParser> collectParsers() {
         Map<String, UsageParser> allParsers = new LinkedHashMap<>();
 
-        // 1. Spring 容器中的 UsageParser Bean
+ // 1. Spring 容器中的 usageparser Bean
         if (applicationContext != null) {
             try {
                 Map<String, UsageParser> springBeans = applicationContext.getBeansOfType(UsageParser.class);
@@ -348,10 +567,10 @@ public class UsageAggregationTask implements SchedulingConfigurer {
     }
 
     /**
-     * 将 common 的 AiUsage 映射为本地用量记录。
+       * 将 通用 的 aiusage 映射为本地用量记录。
      *
-     * @param providerName Provider 名称（作为 groupName 前缀）
-     * @param usage        AiUsage 用量数据
+     * @param providerName 提供者 名称（作为 群体名称 前缀）
+     * @param usage        aiusage 用量数据
      * @return 本地用量记录
      */
     private SysAiUsage toSysAiUsage(String providerName, AiUsage usage) {
@@ -426,6 +645,11 @@ public class UsageAggregationTask implements SchedulingConfigurer {
         LocalDateTime start = today.atStartOfDay();
         LocalDateTime end = LocalDateTime.now();
         long total = self.aggregateRange(start, end);
+        /**
+         * record日志。
+         * @param total) 日志水平仪信息
+         * @param total total
+         */
         recordLog(LOG_LEVEL_INFO, String.format("当日聚合完成 [%s]，共 %d 条记录", today, total));
         log.info("[UsageAggregation] 当日聚合完成: date={}, records={}", today, total);
     }
@@ -439,6 +663,11 @@ public class UsageAggregationTask implements SchedulingConfigurer {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime earliest = findEarliestUsageTime();
         if (earliest == null) {
+            /**
+             * record日志。
+             * @param LOG_LEVEL_INFO 日志水平仪信息
+             * @param "全量同步：无任何用量明细数据" "全量同步：无任何用量明细数据"
+             */
             recordLog(LOG_LEVEL_INFO, "全量同步：无任何用量明细数据");
             return;
         }
@@ -447,6 +676,11 @@ public class UsageAggregationTask implements SchedulingConfigurer {
         LocalDateTime start = startDay.atStartOfDay();
         LocalDateTime end = endDay.plusDays(1).atStartOfDay();
         long total = self.aggregateRange(start, end);
+        /**
+         * record日志。
+         * @param total) 日志水平仪信息
+         * @param total total
+         */
         recordLog(LOG_LEVEL_INFO, String.format("全量同步完成 [%s ~ %s]，共 %d 条记录", startDay, endDay, total));
         log.info("[UsageAggregation] 全量同步完成: {} ~ {}, records={}", startDay, endDay, total);
     }
@@ -454,7 +688,7 @@ public class UsageAggregationTask implements SchedulingConfigurer {
     /**
      * 查询最早的用量明细时间。
      *
-     * @return 最早调用时间，无数据返回 null
+     * @return 最早调用时间，无数据返回 空
      */
     private LocalDateTime findEarliestUsageTime() {
         LambdaQueryWrapper<SysAiUsage> wrapper = new LambdaQueryWrapper<>();
@@ -465,20 +699,20 @@ public class UsageAggregationTask implements SchedulingConfigurer {
     }
 
     /**
-     * 聚合指定时间范围内的 usage 明细到日汇总表（按天、group、provider、model 分组）。
+      * 聚合指定时间范围内的 usage 明细到日汇总表（按天、群体、提供者、模型 分组）。
      * <p>采用「先删后插」策略：同一天重新聚合时先删除旧汇总，避免重复累计。</p>
      *
-     * @param start 开始时间（含），不能为 null
-     * @param end   结束时间（不含），不能为 null
+     * @param start 开始时间（含），不能为 空
+     * @param end   结束时间（不含），不能为 空
      * @return 聚合的明细条数
-     * @throws NullPointerException 当 start 或 end 为 null 时
+     * @throws NullPointerException 当 启动 或 结束 为 空 时
      */
     @Transactional
     public long aggregateRange(LocalDateTime start, LocalDateTime end) {
         Objects.requireNonNull(start, "start must not be null");
         Objects.requireNonNull(end, "end must not be null");
 
-        // 数据库端 GROUP BY 聚合，一次返回全部日汇总数据，避免全量装载到 JVM
+ // 数据库端 群体 BY 聚合，一次返回全部日汇总数据，避免全量装载到 JVM
         List<SysAiUsageMapper.DailyAggregateRow> rows = usageMapper.selectDailyAggregate(start, end);
         if (rows.isEmpty()) {
             log.info("[UsageAggregation] {} ~ {} 无数据，跳过聚合", start, end);
@@ -495,7 +729,7 @@ public class UsageAggregationTask implements SchedulingConfigurer {
                     .eq(SysAiUsageDaily::getStatDate, d));
         }
 
-        // provider|model -> 定价 缓存，避免对每个分组重复查询（N+1）
+ // 提供者|模型 -> 定价 缓存，避免对每个分组重复查询（N+1）
         Map<String, SysAiPricing> pricingCache = new LinkedHashMap<>();
         long totalAggregated = 0;
         for (SysAiUsageMapper.DailyAggregateRow row : rows) {

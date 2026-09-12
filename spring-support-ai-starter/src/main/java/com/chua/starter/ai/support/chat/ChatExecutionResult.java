@@ -12,6 +12,7 @@ import java.util.Map;
  * @param metadata 扩展元数据
  * @since 4.0.0.42
  * @author CH
+ * @return 对话执行结果的结果
  */
 public record ChatExecutionResult(String text, AgentUsage usage, Map<String, Object> metadata) {
 }

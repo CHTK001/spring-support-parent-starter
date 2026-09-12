@@ -9,19 +9,20 @@ import java.util.Set;
 /**
  * @author Administrator
  * @author CH
+ * @since 4.0.0
  */
 public class Span implements Serializable {
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L; // 串行版本uid
     /**
-     * 分布式追踪中的链路ID
+      * 分布式追踪中的链路标识
      */
     private String linkId;
     /**
-     * Span的唯一标识ID
+      * Span的唯一标识标识
      */
     private String id;
     /**
-     * 父Span的ID
+      * 父Span的标识
      */
     private String pid;
     /**
@@ -45,7 +46,7 @@ public class Span implements Serializable {
      */
     private List<String> stack;
     /**
-     * Header信息列表
+      * 头部信息列表
      */
     private List<String> header;
     /**
@@ -112,13 +113,17 @@ public class Span implements Serializable {
     }
 
     /**
-     * 带链路ID的构造方法
-     * @param linkId 分布式追踪中的链路ID
-     * 初始化链路ID、进入时间、堆栈信息和线程名称
+      * 带链路标识的构造方法
+     * @param linkId 分布式追踪中的链路标识
+      * 初始化链路标识、进入时间、堆栈信息和线程名称
      */
     public Span(String linkId) {
         this.linkId = linkId;
         this.enterTime = System.nanoTime();
+        /**
+         * 设置stack。
+         * @param Thread.currentThread( Thread.当前thread(
+         */
         setStack(Thread.currentThread().getStackTrace());
         this.threadName = Thread.currentThread().getName();
     }
@@ -140,7 +145,7 @@ public class Span implements Serializable {
 
             String string = element.toString();
             rs.add(string);
-            // 特殊条件判断，决定是否添加到parents集合
+ // 特殊条件判断，决定是否添加到父集合
             if (i < 1 || string.startsWith("sun") || string.contains("$") || string.contains("<init>") || string.startsWith("java")) {
                 continue;
             }
@@ -152,7 +157,7 @@ public class Span implements Serializable {
     }
 
     /**
-     * 获取 linkId
+       * 获取 链接标识
      *
      * @return linkId
      */
@@ -161,16 +166,16 @@ public class Span implements Serializable {
     }
 
     /**
-     * 设置 linkId
+       * 设置 链接标识
      *
-     * @param linkId linkId
+     * @param linkId 链接标识
      */
     public void setLinkId(String linkId) {
         this.linkId = linkId;
     }
 
     /**
-     * 获取 id
+      * 获取 标识
      *
      * @return id
      */
@@ -179,9 +184,9 @@ public class Span implements Serializable {
     }
 
     /**
-     * 设置 id
+      * 设置 标识
      *
-     * @param id id
+     * @param id 标识
      */
     public void setId(String id) {
         this.id = id;
@@ -206,7 +211,7 @@ public class Span implements Serializable {
     }
 
     /**
-     * 获取 enterTime
+      * 获取 enter时间
      *
      * @return enterTime
      */
@@ -215,16 +220,16 @@ public class Span implements Serializable {
     }
 
     /**
-     * 设置 enterTime
+      * 设置 enter时间
      *
-     * @param enterTime enterTime
+     * @param enterTime enter时间
      */
     public void setEnterTime(long enterTime) {
         this.enterTime = enterTime;
     }
 
     /**
-     * 获取 endTime
+      * 获取 结束时间
      *
      * @return endTime
      */
@@ -233,16 +238,16 @@ public class Span implements Serializable {
     }
 
     /**
-     * 设置 endTime
+      * 设置 结束时间
      *
-     * @param endTime endTime
+     * @param endTime 结束时间
      */
     public void setEndTime(long endTime) {
         this.endTime = endTime;
     }
 
     /**
-     * 获取 costTime
+      * 获取 cost时间
      *
      * @return costTime
      */
@@ -251,16 +256,16 @@ public class Span implements Serializable {
     }
 
     /**
-     * 设置 costTime
+      * 设置 cost时间
      *
-     * @param costTime costTime
+     * @param costTime cost时间
      */
     public void setCostTime(long costTime) {
         this.costTime = costTime;
     }
 
     /**
-     * 获取 message
+      * 获取 消息
      *
      * @return message
      */
@@ -269,9 +274,9 @@ public class Span implements Serializable {
     }
 
     /**
-     * 设置 message
+      * 设置 消息
      *
-     * @param message message
+     * @param message 消息
      */
     public void setMessage(String message) {
         this.message = message;
@@ -287,7 +292,7 @@ public class Span implements Serializable {
     }
 
     /**
-     * 获取 header
+      * 获取 头部
      *
      * @return header
      */
@@ -296,16 +301,16 @@ public class Span implements Serializable {
     }
 
     /**
-     * 设置 header
+      * 设置 头部
      *
-     * @param header header
+     * @param header 头部
      */
     public void setHeader(List<String> header) {
         this.header = header;
     }
 
     /**
-     * 获取 method
+      * 获取 方法
      *
      * @return method
      */
@@ -314,16 +319,16 @@ public class Span implements Serializable {
     }
 
     /**
-     * 设置 method
+      * 设置 方法
      *
-     * @param method method
+     * @param method 方法
      */
     public void setMethod(String method) {
         this.method = method;
     }
 
     /**
-     * 获取 typeMethod
+      * 获取 类型方法
      *
      * @return typeMethod
      */
@@ -332,16 +337,16 @@ public class Span implements Serializable {
     }
 
     /**
-     * 设置 typeMethod
+      * 设置 类型方法
      *
-     * @param typeMethod typeMethod
+     * @param typeMethod 类型方法
      */
     public void setTypeMethod(String typeMethod) {
         this.typeMethod = typeMethod;
     }
 
     /**
-     * 获取 type
+      * 获取 类型
      *
      * @return type
      */
@@ -350,16 +355,16 @@ public class Span implements Serializable {
     }
 
     /**
-     * 设置 type
+      * 设置 类型
      *
-     * @param type type
+     * @param type 类型
      */
     public void setType(String type) {
         this.type = type;
     }
 
     /**
-     * 获取 args
+      * 获取 参数
      *
      * @return args
      */
@@ -368,9 +373,9 @@ public class Span implements Serializable {
     }
 
     /**
-     * 设置 args
+      * 设置 参数
      *
-     * @param args args
+     * @param args 参数
      */
     public void setArgs(Object[] args) {
         this.args = args;
@@ -413,7 +418,7 @@ public class Span implements Serializable {
     }
 
     /**
-     * 获取 error
+      * 获取 错误
      *
      * @return error
      */
@@ -422,9 +427,9 @@ public class Span implements Serializable {
     }
 
     /**
-     * 设置 error
+      * 设置 错误
      *
-     * @param error error
+     * @param error 错误
      */
     public void setError(String error) {
         this.error = error;
@@ -449,7 +454,7 @@ public class Span implements Serializable {
     }
 
     /**
-     * 获取 model
+      * 获取 模型
      *
      * @return model
      */
@@ -458,16 +463,16 @@ public class Span implements Serializable {
     }
 
     /**
-     * 设置 model
+      * 设置 模型
      *
-     * @param model model
+     * @param model 模型
      */
     public void setModel(String model) {
         this.model = model;
     }
 
     /**
-     * 获取 threadName
+      * 获取 thread名称
      *
      * @return threadName
      */
@@ -476,16 +481,16 @@ public class Span implements Serializable {
     }
 
     /**
-     * 设置 threadName
+      * 设置 thread名称
      *
-     * @param threadName threadName
+     * @param threadName thread名称
      */
     public void setThreadName(String threadName) {
         this.threadName = threadName;
     }
 
     /**
-     * 获取 from
+      * 获取 从
      *
      * @return from
      */
@@ -494,9 +499,9 @@ public class Span implements Serializable {
     }
 
     /**
-     * 设置 from
+      * 设置 从
      *
-     * @param from from
+     * @param from 从
      */
     public void setFrom(String from) {
         this.from = from;
@@ -521,7 +526,7 @@ public class Span implements Serializable {
     }
 
     /**
-     * 获取 parents
+      * 获取 父
      *
      * @return parents
      */
@@ -530,9 +535,9 @@ public class Span implements Serializable {
     }
 
     /**
-     * 设置 parents
+      * 设置 父
      *
-     * @param parents parents
+     * @param parents 父
      */
     public void setParents(Set<String> parents) {
         this.parents = parents;

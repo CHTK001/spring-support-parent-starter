@@ -24,8 +24,9 @@ import java.util.Collections;
 /**
  * SSH服务端服务
  * 
- * @version 4.0.0.32
+   * @版本 4.0.0.32
  * @author CH
+ * @since 4.0.0
  */
 @Slf4j
 public class SshServerService implements InitializingBean, DisposableBean {
@@ -36,17 +37,20 @@ public class SshServerService implements InitializingBean, DisposableBean {
     private SshServer sshServer;
 
     /**
-     * 创建 SshServerService 实例
-     * @param properties properties
+      * 创建 ssh服务端服务 实例
+     * @param properties 属性
      */
     public SshServerService(SshServerProperties properties) {
         this.properties = properties;
     }
 
     @Override
-    /** AfterProperties设置 */
+    /** 之后属性设置 */
     public void afterPropertiesSet() throws Exception {
         if (properties.isEnabled()) {
+            /**
+             * 启动ssh服务端。
+             */
             startSshServer();
         } else {
             log.info("[SSH] 服务状态 [{}]", disabled());
@@ -56,6 +60,9 @@ public class SshServerService implements InitializingBean, DisposableBean {
     @Override
     /** 销毁 */
     public void destroy() throws Exception {
+        /**
+         * 停止ssh服务端。
+         */
         stopSshServer();
     }
 
@@ -76,15 +83,24 @@ public class SshServerService implements InitializingBean, DisposableBean {
         sshServer.setKeyPairProvider(new SimpleGeneratorHostKeyProvider(Paths.get("hostkey.ser")));
 
         // 配置认证
+        /**
+         * configure认证。
+         */
         configureAuthentication();
 
         // 配置Shell命令工厂
         sshServer.setShellFactory(new ProcessShellFactory());
 
         // 配置文件传输
+        /**
+         * configure文件调动。
+         */
         configureFileTransfer();
 
         // 配置会话
+        /**
+         * configure会话。
+         */
         configureSession();
 
         // 启动服务器
@@ -130,7 +146,7 @@ public class SshServerService implements InitializingBean, DisposableBean {
             });
         }
 
-        // 公钥认证：从 publicKeyFile 加载授权公钥
+ // 公钥认证：从 公共钥匙文件 加载授权公钥
         if (auth.isPublicKey()) {
             if (StringUtils.hasText(auth.getPublicKeyFile())) {
                 sshServer.setPublickeyAuthenticator(
@@ -167,13 +183,14 @@ public class SshServerService implements InitializingBean, DisposableBean {
         SshServerProperties.Session session = properties.getSession();
         
         // 设置会话超时
-//        sshServer.getProperties().put(SshServer.IDLE_TIMEOUT, session.getIdleTimeout() * 1000);
+ // ssh服务端.获取属性().放入(ssh服务端.空闲_超时, 会话.获取空闲超时() * 1000);
 
         log.debug("[SSH] 会话配置 - 超时: {}s, 最大会话: {}", session.getTimeout(), session.getMaxSessions());
     }
 
     /**
      * 获取SSH服务端状态
+     * @return 是否running的结果
      */
     public boolean isRunning() {
         return sshServer != null && sshServer.isStarted() && !sshServer.isClosed();
@@ -181,6 +198,7 @@ public class SshServerService implements InitializingBean, DisposableBean {
 
     /**
      * 获取当前连接数
+     * @return 获取活跃会话数量的结果
      */
     public int getActiveSessionCount() {
         return sshServer != null ? sshServer.getActiveSessions().size() : 0;

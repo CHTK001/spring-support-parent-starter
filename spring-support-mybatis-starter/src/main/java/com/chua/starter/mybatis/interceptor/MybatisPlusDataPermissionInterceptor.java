@@ -23,37 +23,43 @@ import java.util.function.Supplier;
  * 数据权限拦截器
  *
  * @author CH
+ * @since 4.0.0
  */
 @Slf4j
 public class MybatisPlusDataPermissionInterceptor extends DataPermissionInterceptor {
     /** Dept_leader */
     private static final String DEPT_LEADER = "DEPT_LEADER";
-    /** Managed_dept_tree_ids */
+    /** Managed_dept_树_标识 */
     private static final String MANAGED_DEPT_TREE_IDS = "managedDeptTreeIds";
 
     /** Methodsecurityinterceptor */
     private final MybatisPlusDataScopeProperties methodSecurityInterceptor;
-    /** Auth服务供应商 */
+    /** 认证服务供应商 */
     private final Supplier<AuthService> authServiceSupplier;
 
     /**
-     * 创建 MybatisPlusDataPermissionInterceptor 实例
-     * @param dataPermissionHandler dataPermissionHandler
-     * @param MybatisPlusDataScopeProperties MybatisPlusDataScopeProperties
+      * 创建 mybatisplus数据权限拦截器 实例
+     * @param dataPermissionHandler 数据权限处理器
+     * @param methodSecurityInterceptor mybatisplus数据scope属性
+     * @param methodSecurityInterceptor 方法安全性拦截器
      */
     public MybatisPlusDataPermissionInterceptor(DataPermissionHandler dataPermissionHandler, MybatisPlusDataScopeProperties methodSecurityInterceptor) {
         this(dataPermissionHandler, methodSecurityInterceptor, () -> null);
     }
 
     /**
-     * 创建 MybatisPlusDataPermissionInterceptor 实例
-     * @param dataPermissionHandler dataPermissionHandler
-     * @param methodSecurityInterceptor methodSecurityInterceptor
-     * @param authServiceSupplier authServiceSupplier
+      * 创建 mybatisplus数据权限拦截器 实例
+     * @param dataPermissionHandler 数据权限处理器
+     * @param methodSecurityInterceptor 方法安全性拦截器
+     * @param authServiceSupplier 认证服务供应商
      */
     public MybatisPlusDataPermissionInterceptor(DataPermissionHandler dataPermissionHandler,
                                                 MybatisPlusDataScopeProperties methodSecurityInterceptor,
                                                 Supplier<AuthService> authServiceSupplier) {
+        /**
+         * 父。
+         * @param dataPermissionHandler 数据权限处理器
+         */
         super(dataPermissionHandler);
         this.methodSecurityInterceptor = methodSecurityInterceptor;
         this.authServiceSupplier = authServiceSupplier;
@@ -122,14 +128,23 @@ public class MybatisPlusDataPermissionInterceptor extends DataPermissionIntercep
         return true;
     }
 
-    /** 是否拥有ManagedDeptLeaderScope */
+    /**
+     * 是否拥有manageddept铅scope
+     *
+     * @param currentUser 当前用户
+     * @return 是否包含manageddept铅scope的结果
+     */
     private boolean hasManagedDeptLeaderScope(CurrentUser currentUser) {
         return currentUser.hasRole(DEPT_LEADER)
                 && null != currentUser.getExt()
                 && null != currentUser.getExt().get(MANAGED_DEPT_TREE_IDS);
     }
 
-    /** 获取CurrentUser */
+    /**
+     * 获取当前用户
+     *
+     * @return 获取当前用户的结果
+     */
     private CurrentUser getCurrentUser() {
         if (authServiceSupplier == null) {
             return null;

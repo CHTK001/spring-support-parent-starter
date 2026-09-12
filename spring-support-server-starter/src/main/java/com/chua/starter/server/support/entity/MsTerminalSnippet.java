@@ -23,7 +23,7 @@ import lombok.EqualsAndHashCode;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class MsTerminalSnippet extends SysBase {
 
-    /** Serial版本UID */
+    /** 串行版本UID */
     private static final long serialVersionUID = 1L;
 
     /**
@@ -31,26 +31,26 @@ public class MsTerminalSnippet extends SysBase {
      */
     @TableId(value = "id", type = IdType.AUTO)
     @Schema(description = "主键", example = "1")
-    private Long id;
+    private Long id; // 标识
 
     /**
      * 片段名称
      */
     @TableField("ms_terminal_snippet_name")
     @Schema(description = "片段名称", example = "查看磁盘占用")
-    private String msTerminalSnippetName;
+    private String msTerminalSnippetName; // msterminalsnippet名称
 
     /**
      * 片段内容
      */
     @TableField("ms_terminal_snippet_content")
     @Schema(description = "片段内容", example = "df -h")
-    private String msTerminalSnippetContent;
+    private String msTerminalSnippetContent; // msterminalsnippet内容
 
     /**
      * 备注
      */
     @TableField("ms_terminal_snippet_remark")
     @Schema(description = "备注")
-    private String msTerminalSnippetRemark;
+    private String msTerminalSnippetRemark; // msterminalsnippet评论
 }

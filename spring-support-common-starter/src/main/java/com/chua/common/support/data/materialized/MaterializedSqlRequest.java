@@ -7,10 +7,11 @@ import java.util.List;
  * 物化视图 SQL 请求类
  *
  * @author CH
+ * @since 4.0.0
  */
 public class MaterializedSqlRequest {
 
-    /** StatementID */
+    /** 对账单标识 */
     private String statementId;
     /** 来源数据来源 */
     private String sourceDataSource;
@@ -22,7 +23,7 @@ public class MaterializedSqlRequest {
     private MaterializedRouteDefinition definition;
     /** Tables */
     private List<String> tables = new ArrayList<>();
-    /** Parameters */
+    /** 参数 */
     private List<Object> parameters = new ArrayList<>();
 
     /**
@@ -35,9 +36,9 @@ public class MaterializedSqlRequest {
     }
 
     /**
-     * 获取 SQL 语句 ID
+      * 获取 SQL 语句 标识
      *
-     * @return 语句 ID
+     * @return 语句 标识
      */
     public String getStatementId() {
         return statementId;
@@ -85,20 +86,26 @@ public class MaterializedSqlRequest {
      * @return 构建器实例
      */
     public static MaterializedSqlRequestBuilder builder() {
+        /**
+          * 物化SQL请求构建器。
+         * @return 物化sql请求构建器的结果
+         */
         return new MaterializedSqlRequestBuilder();
     }
 
     /**
-     * MaterializedSqlRequest 构建器
+       * 物化SQL请求 构建器
+     * @author CH
+     * @since 4.0.0
      */
     public static class MaterializedSqlRequestBuilder {
         /** 请求 */
         private final MaterializedSqlRequest request = new MaterializedSqlRequest();
 
         /**
-         * 设置语句 ID
+          * 设置语句 标识
          *
-         * @param statementId 语句 ID
+         * @param statementId 语句 标识
          * @return 当前构建器
          */
         public MaterializedSqlRequestBuilder statementId(String statementId) {

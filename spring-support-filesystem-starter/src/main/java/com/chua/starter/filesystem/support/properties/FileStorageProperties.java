@@ -11,10 +11,10 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 文件存储配置属性 (多 Provider 模式)。
+   * 文件存储配置属性 (多 提供者 模式)。
  *
  * <p>支持配置多种存储后端 (Provider)，每个 Provider 独立配置，
- * 参考 utils-support-common-starter 的 FileSystem SPI 多实现风格。</p>
+   * 参考 utils-support-common-starter 的 文件系统 SPI 多实现风格。</p>
  *
  * <h3>配置示例</h3>
  * <pre>{@code
@@ -41,6 +41,10 @@ import java.util.Map;
  *         access-key: minioadmin
  *         secret-key: minioadmin
  *         region: us-east-1
+ * }</pre>    endpoint: http://172.16.0.40:9000
+ *         access-key: minioadmin
+ *         secret-key: minioadmin
+ *         region: us-east-1
  * }</pre>
  *
  * @since 4.0.0.42
@@ -52,7 +56,7 @@ import java.util.Map;
 @ConfigurationProperties(prefix = FileStorageProperties.PREFIX)
 public class FileStorageProperties {
 
-    /** Prefix */
+    /** 前缀 */
     public static final String PREFIX = "plugin.filesystem";
 
     /**
@@ -68,12 +72,12 @@ public class FileStorageProperties {
     private boolean dirList = false;
 
     /**
-     * 默认 Provider 名称 (用于 FileStorageTemplate.getDefaultStorage())
+      * 默认 提供者 名称 (用于 文件storagetemplate.获取默认storage())
      */
     private String defaultProvider;
 
     /**
-     * 多 Provider 配置列表 (按名称路由)
+      * 多 提供者 配置列表 (按名称路由)
      */
     private Map<String, ProviderConfig> providers = new LinkedHashMap<>();
 
@@ -97,21 +101,23 @@ public class FileStorageProperties {
 
     /** Openwebjars */
     private boolean openWebjars = true;
-    /** Open远程文件 */
+    /** 打开远程文件 */
     private boolean openRemoteFile = false;
 
     /**
-     * 访问 URL 后缀（可选，如 "?size=800x600&format=jpg"），生成访问地址时拼接
+      * 访问 URL 后缀（可选，如 "?大小=800x600&格式化=jpg"），生成访问地址时拼接
      */
     private String urlSuffix;
 
     /**
-     * 图片处理与预览设置（对应底层 FileOperationSetting）
+      * 图片处理与预览设置（对应底层 文件operationsetting）
      */
     private FileOperationConfig operation;
 
     /**
      * 访问模式枚举。
+     * @author CH
+     * @since 4.0.0
      */
     public enum AccessMode {
         /**
@@ -129,7 +135,9 @@ public class FileStorageProperties {
     }
 
     /**
-     * 图片处理与预览配置（对应底层 FileOperationSetting）。
+      * 图片处理与预览配置（对应底层 文件operationsetting）。
+     * @author CH
+     * @since 4.0.0
      */
     @Data
     @Getter
@@ -202,14 +210,16 @@ public class FileStorageProperties {
     }
 
     /**
-     * 单个存储 Provider 配置 (对应一个 FileStorage SPI 实现)。
+      * 单个存储 提供者 配置 (对应一个 文件storage SPI 实现)。
+     * @author CH
+     * @since 4.0.0
      */
     @Data
     @Getter
     @Setter
     public static class ProviderConfig {
         /**
-         * 服务端点 URL (local/ftp 可空; minio/s3 例 http://10.0.0.1:9000)
+          * 服务端点 URL (本地/ftp 可空; minio/s3 例 http://10.0.0.1:9000)
          */
         private String endpoint;
         /**
@@ -217,19 +227,19 @@ public class FileStorageProperties {
          */
         private String bucket;
         /**
-         * 访问密钥 ID (local 可空)
+           * 访问密钥 标识 (本地 可空)
          */
         private String accessKey;
         /**
-         * 访问密钥 Secret (local 可空)
+          * 访问密钥 Secret (本地 可空)
          */
         private String secretKey;
         /**
-         * 区域 (local 可空; 例 cn-hangzhou, us-east-1)
+          * 区域 (本地 可空; 例 cn-hangzhou, us-east-1)
          */
         private String region;
         /**
-         * 本地存储根目录 (type=local 时有效)
+          * 本地存储根目录 (类型=本地 时有效)
          */
         private String basePath;
         /**
@@ -250,9 +260,9 @@ public class FileStorageProperties {
         private boolean secure = false;
         /**
          * 自定义 SPI 类型 (留空时根据配置自动推断)
-         *   - endpoint 为空 → local
-         *   - endpoint 以 s3/amazonaws 开头 → s3
-         *   - endpoint 包含 oss.aliyuncs → oss
+          * - 端点 为空 → 本地
+          * - 端点 以 s3/amazonaws 开头 → s3
+           * - 端点 包含 对象存储.aliyuncs → 对象存储
          *   - 兜底 → minio (S3 兼容)
          */
         private String type;
@@ -260,6 +270,8 @@ public class FileStorageProperties {
 
     /**
      * HTTP 文件服务器配置。
+     * @author CH
+     * @since 4.0.0
      */
     @Data
     @Getter
@@ -281,15 +293,15 @@ public class FileStorageProperties {
         private String sslCertPath;
         /** SSL证书密码 */
         private String sslCertPassword;
-        /** 提供者names */
+        /** 提供者名称 */
         private List<String> providerNames = new ArrayList<>();
         /** 上下文路径 */
         private String contextPath = "/";
-        /** Read超时毫秒 */
+        /** 读取超时毫秒 */
         private long readTimeoutMillis = 30_000;
-        /** Write超时毫秒 */
+        /** 写入超时毫秒 */
         private long writeTimeoutMillis = 30_000;
-        /** Filters */
+        /** 过滤器 */
         private List<String> filters = new ArrayList<>();
         /**
          * 最大请求大小（字节）
@@ -325,10 +337,10 @@ public class FileStorageProperties {
         private String charset = "UTF-8";
     }
 
-    // ==================== 兼容老配置 (deprecated, 但保留解析能力) ====================
+ // ==================== 兼容老配置 (已弃用, 但保留解析能力) ====================
 
     /**
-     * 旧版存储配置列表 (List&lt;StorageConfig&gt;)。
+      * 旧版存储配置列表 (列表&lt;storage配置&gt;)。
      * 新版本请改用 {@link #providers}, 此字段保留用于向后兼容解析。
      */
     @Deprecated
@@ -337,6 +349,8 @@ public class FileStorageProperties {
 
     /**
      * 旧版单存储配置 (用于平滑迁移)。
+     * @author CH
+     * @since 4.0.0
      */
     @Data
     @Getter
@@ -347,9 +361,9 @@ public class FileStorageProperties {
         private String name;
         /** 类型 */
         private String type = "minio";
-        /** Endpoint */
+        /** 端点 */
         private String endpoint;
-        /** Access密钥ID */
+        /** Access密钥标识 */
         private String accessKeyId;
         /** Access密钥secret */
         private String accessKeySecret;
@@ -359,7 +373,7 @@ public class FileStorageProperties {
         private String region;
         /** 默认存储 */
         private boolean defaultStorage = false;
-        /** Base路径 */
+        /** 基础路径 */
         private String basePath;
     }
 }

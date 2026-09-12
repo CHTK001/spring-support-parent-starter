@@ -8,6 +8,7 @@ package com.chua.starter.server.support.model;
  * @param privateKey 私钥内容，可为空
  * @author CH
  * @since 4.0.0.42
+ * @return SshCredential的结果
  */
 public record SshCredential(String username, String password, String privateKey) {
 

@@ -12,7 +12,7 @@ import org.springframework.web.servlet.HandlerInterceptor;
  * 拦截所有请求并记录统计数据
  * </p>
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2025/01/17
  * @author CH
  */
@@ -20,7 +20,7 @@ import org.springframework.web.servlet.HandlerInterceptor;
 public class UrlQpsInterceptor implements HandlerInterceptor {
 
 
-    /** Attr_start_time */
+    /** Attr_启动_时间 */
     private static final String ATTR_START_TIME = "urlQps_startTime";
 
     @Override
@@ -33,10 +33,10 @@ public class UrlQpsInterceptor implements HandlerInterceptor {
 
     @Override
     /**
-     * AfterCompletion
-     * @param request request
-     * @param response response
-     * @param handler handler
+      * 之后完成
+     * @param request 请求
+     * @param response 响应
+     * @param handler 处理器
      * @param ex ex
      */
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response, 
@@ -75,12 +75,12 @@ public class UrlQpsInterceptor implements HandlerInterceptor {
         String uri = request.getRequestURI();
         String contextPath = request.getContextPath();
 
-        // 移除 context path
+ // 移除 上下文 路径
         if (contextPath != null && !contextPath.isEmpty() && uri.startsWith(contextPath)) {
             uri = uri.substring(contextPath.length());
         }
 
-        // 简化路径变量（将数字替换为 {id}）
+ // 简化路径变量（将数字替换为 {标识}）
         uri = uri.replaceAll("/\\d+", "/{id}");
         // 处理 UUID 格式
         uri = uri.replaceAll("/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}", "/{uuid}");

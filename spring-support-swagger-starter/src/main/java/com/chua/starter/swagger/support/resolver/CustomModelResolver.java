@@ -18,12 +18,12 @@ import java.lang.reflect.Type;
 public class CustomModelResolver extends ModelResolver {
     
     /**
-     * UserValue注解类（可选依赖）
+      * 用户价值观注解类（可选依赖）
      */
     private static final Class<?> USER_VALUE_CLASS = loadUserValueClass();
 
     /**
-     * 加载UserValue注解类
+      * 加载用户价值观注解类
      *
      * @return UserValue注解类，如果不存在则返回null
      */
@@ -39,10 +39,14 @@ public class CustomModelResolver extends ModelResolver {
     /**
      * 构造函数
      *
-     * @param mapper ObjectMapper
+     * @param mapper 对象映射器
      */
 
     public CustomModelResolver(ObjectMapper mapper) {
+        /**
+         * 父。
+         * @param mapper 映射器
+         */
         super(mapper);
     }
 
@@ -56,11 +60,11 @@ public class CustomModelResolver extends ModelResolver {
     protected boolean shouldIgnoreClass(Type type) {
         if (type instanceof Class) {
             Class<?> clazz = (Class<?>) type;
-            // 忽略HiddenParam注解的类
+ // 忽略hidden参数注解的类
             if (clazz.isAnnotationPresent(HiddenParam.class)) {
                 return true;
             }
-            // 忽略UserValue注解的类（如果存在）
+ // 忽略用户价值观注解的类（如果存在）
             if (USER_VALUE_CLASS != null && clazz.isAnnotationPresent(getUserValueAnnotationClass())) {
                 return true;
             }
@@ -69,9 +73,9 @@ public class CustomModelResolver extends ModelResolver {
     }
 
     /**
-     * 获取 UserValue 注解类型
+      * 获取 用户价值观 注解类型
      *
-     * @return UserValue 注解 Class
+     * @return UserValue 注解 类
      */
     @SuppressWarnings("unchecked")
     private Class<? extends Annotation> getUserValueAnnotationClass() {

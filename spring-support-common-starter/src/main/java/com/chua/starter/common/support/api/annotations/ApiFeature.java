@@ -10,7 +10,7 @@ import java.lang.annotation.*;
  *
  * <h3>处理优先级：2</h3>
  * <p>
- * 优先级顺序：@ApiInternal(1) &gt; @ApiFeature(2) &gt; @ApiMock(3) &gt; @ApiDeprecated(4) &gt; @ApiGray(5)
+   * 优先级顺序：@api内部(1) &gt; @api特征(2) &gt; @apimock(3) &gt; @api已弃用(4) &gt; @apigray(5)
  * </p>
  * <p>
  * 处理阶段：拦截器阶段（请求进入前）。
@@ -43,7 +43,8 @@ import java.lang.annotation.*;
  * </pre>
  *
  * @since 2024/12/08
- * @version 1.0.0
+   * @版本 1.0.0
+ * @author CH
  */
 @Target({ElementType.METHOD, ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)

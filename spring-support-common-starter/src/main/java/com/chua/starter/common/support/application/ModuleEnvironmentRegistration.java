@@ -22,6 +22,10 @@ public class ModuleEnvironmentRegistration {
      * @param config 配置对象
      */
     public ModuleEnvironmentRegistration(Object config) {
+        /**
+         * this。
+         * @param config.getClass( 配置.获取类(
+         */
         this(config != null ? config.getClass().getName() : null, config, true);
     }
 

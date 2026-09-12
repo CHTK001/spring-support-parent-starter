@@ -20,11 +20,11 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
- * InfluxDB 时序存储实现
+   * influxdb 时序存储实现
  * <p>
  * 由 {@code monitor.timeseries.engine=influxdb} 条件装配。
- * 采集明细以行协议写入，measurement 与 MySQL 明细表同名（语义对齐），
- * tag 包含 monitor_id；支持 mean 聚合曲线查询。
+   * 采集明细以行协议写入，测量 与 MySQL 明细表同名（语义对齐），
+   * 标签 包含 监控_标识；支持 mean 聚合曲线查询。
  * </p>
  *
  * @author CH
@@ -41,7 +41,7 @@ public class InfluxMetricTimeSeriesProvider implements MetricTimeSeriesProvider 
     /** 单次曲线返回点数上限（防止超大响应） */
     private static final int MAX_POINTS = 1440;
 
-    /** InfluxDB 引擎（SPI 获取） */
+    /** influxdb 引擎（SPI 获取） */
     private final InfluxDbEngine influxDbEngine;
 
     /** 时序配置（提供库名等） */
@@ -90,6 +90,12 @@ public class InfluxMetricTimeSeriesProvider implements MetricTimeSeriesProvider 
                 ? result.getCollectTime().atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
                 : System.currentTimeMillis();
         for (MetricPoint point : result.getPoints()) {
+            /**
+             * 写入point。
+             * @param monitorId 监控标识
+             * @param point point
+             * @param timestamp 时间戳
+             */
             writePoint(monitorId, point, timestamp);
         }
     }
@@ -115,7 +121,7 @@ public class InfluxMetricTimeSeriesProvider implements MetricTimeSeriesProvider 
             tags.forEach(builder::tag);
             influxDbEngine.write(builder.build());
         } catch (Exception e) {
-            // 时序写入失败不阻断 MySQL 主链路，仅告警日志
+ // 时序写入失败不阻断 MySQL 主链路，仅告警日志
             log.warn("[monitor] InfluxDB 写入失败 metric={}: {}", point.getMetricName(), e.getMessage());
         }
     }
@@ -126,15 +132,38 @@ public class InfluxMetricTimeSeriesProvider implements MetricTimeSeriesProvider 
             return List.of();
         }
         if (target == null || !target.matches("[a-zA-Z0-9_]+")) {
+            /**
+             * illegal参数异常。
+             * @param target" Target"
+             * @return illegal参数异常的结果
+             */
             throw new IllegalArgumentException("非法 target");
         }
         if (window == null || !window.matches("\\d+[smhd]")) {
+            /**
+             * illegal参数异常。
+             * @param window" 窗口"
+             * @return illegal参数异常的结果
+             */
             throw new IllegalArgumentException("非法 window");
         }
         int safeHours = Math.max(1, Math.min(hours, 24 * 7));
-        String influxql = "SELECT mean(value) AS value FROM \"" + target + "\""
-                + " WHERE monitor_id='" + monitorId + "' AND time > now() - " + safeHours + "h"
-                + " GROUP BY time(" + window + ") fill(none)";
+ // Target/窗口 已正则白名单化、监控标识 为 Long 强类型（influxql 非 JDBC，无注入面）
+        String influxql = """
+                /**
+                 * mean。
+                 * @param value 价值观
+                 * @return mean的结果
+                 */
+                SELECT mean(value) AS value FROM "%s"
+                WHERE monitor_id='%s' AND time > now() - %sh
+                /**
+                 * 时间。
+                 * @param %s %s
+                 * @return 时间的结果
+                 */
+                GROUP BY time(%s) fill(none)
+                """.formatted(target, monitorId, safeHours, window);
         try {
             QueryResult result = influxDbEngine.client().query(new Query(influxql, properties.getDatabase()));
             List<List<Object>> points = new ArrayList<>();
@@ -150,7 +179,7 @@ public class InfluxMetricTimeSeriesProvider implements MetricTimeSeriesProvider 
                             Object ts = row.get(timeIdx);
                             Object value = valueIdx >= 0 ? row.get(valueIdx) : null;
                             if (ts == null || value == null) {
-                                continue; // fill(none) 空窗跳过
+                                continue; // fill(无) 空窗跳过
                             }
                             List<Object> pair = new ArrayList<>(2);
                             pair.add(toEpochMilli(String.valueOf(ts)));
@@ -160,19 +189,24 @@ public class InfluxMetricTimeSeriesProvider implements MetricTimeSeriesProvider 
                     }
                 }
             }
-            // 截断保护：仅保留最近 MAX_POINTS 个点
+ // 截断保护：仅保留最近 最大_POINTS 个点
             if (points.size() > MAX_POINTS) {
                 points = points.subList(points.size() - MAX_POINTS, points.size());
             }
             return points;
         } catch (Exception e) {
             log.warn("[monitor] series 查询失败 target={} monitor={}: {}", target, monitorId, e.getMessage());
+            /**
+             * runtime异常。
+             * @param e.getMessage( e.获取消息(
+             * @return runtime异常的结果
+             */
             throw new RuntimeException("查询失败: " + e.getMessage(), e);
         }
     }
 
     /**
-     * InfluxDB 时间字符串(RFC3339)转毫秒时间戳
+      * influxdb 时间字符串(RFC3339)转毫秒时间戳
      *
      * @param iso 时间串
      * @return 毫秒

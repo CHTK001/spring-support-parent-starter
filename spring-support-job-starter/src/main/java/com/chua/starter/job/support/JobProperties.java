@@ -67,12 +67,12 @@ public class JobProperties {
     private boolean enable = true;
 
     /**
-     * 进程角色,默认 SINGLE (单机自闭环,开箱即用)
+      * 进程角色,默认 单个 (单机自闭环,开箱即用)
      */
     private Role role = Role.SINGLE;
 
     /**
-     * 当前节点唯一标识,留空时自动按 hostName-pid 推导
+      * 当前节点唯一标识,留空时自动按 主机名称-pid 推导
      */
     private String nodeId;
 
@@ -82,7 +82,7 @@ public class JobProperties {
     private final ClusterConfig cluster = new ClusterConfig();
 
     /**
-     * 长链同步配置 (嵌套 scheduler/executor)
+      * 长链同步配置 (嵌套 调度器/执行器)
      */
     private final SyncConfig sync = new SyncConfig();
 
@@ -97,27 +97,27 @@ public class JobProperties {
     private final LogConfig log = new LogConfig();
 
     /**
-     * 当前角色是否为 SCHEDULER
+      * 当前角色是否为 调度器
      *
-     * @return 是 SCHEDULER 返回 true
+     * @return 是 调度器 返回 true
      */
     public boolean isScheduler() {
         return role == Role.SCHEDULER;
     }
 
     /**
-     * 当前角色是否为 EXECUTOR
+      * 当前角色是否为 执行器
      *
-     * @return 是 EXECUTOR 返回 true
+     * @return 是 执行器 返回 true
      */
     public boolean isExecutor() {
         return role == Role.EXECUTOR;
     }
 
     /**
-     * 当前角色是否为 SINGLE
+      * 当前角色是否为 单个
      *
-     * @return 是 SINGLE 返回 true
+     * @return 是 单个 返回 true
      */
     public boolean isSingle() {
         return role == Role.SINGLE;
@@ -137,7 +137,7 @@ public class JobProperties {
         SCHEDULER,
 
         /**
-         * 执行器模式: 连上 Scheduler, 消费 cmd, 上行 log
+           * 执行器模式: 连上 调度器, 消费 CMD, 上行 日志
          */
         EXECUTOR,
 
@@ -151,6 +151,7 @@ public class JobProperties {
      * 集群配置。
      *
      * @since 4.0.0.42
+     * @author CH
      */
     @Data
     public static class ClusterConfig {
@@ -171,7 +172,7 @@ public class JobProperties {
         public static final long DEFAULT_SCAN_INTERVAL_MS = 1000L;
 
         /**
-         * 命名空间, 同一 group 内 Leader 唯一
+          * 命名空间, 同一 群体 内 铅 唯一
          */
         private String group = "default";
 
@@ -192,34 +193,36 @@ public class JobProperties {
     }
 
     /**
-     * 长链同步配置, 内部拆分 scheduler 与 executor。
+      * 长链同步配置, 内部拆分 调度器 与 执行器。
      *
      * @since 4.0.0.42
+     * @author CH
      */
     @Data
     public static class SyncConfig {
 
         /**
-         * 是否强制使用内存 SPI 实现 (跳过真实 RSocket/HTTP 选取)。
+          * 是否强制使用内存 SPI 实现 (跳过真实 r套接字/HTTP 选取)。
          * <p>主要用于单元测试和精简部署,默认 false。</p>
          */
         private boolean inMemory = false;
 
         /**
-         * 调度中心侧配置 (role=SCHEDULER 或 SINGLE 时生效, SINGLE 仅占位)
+          * 调度中心侧配置 (角色=调度器 或 单个 时生效, 单个 仅占位)
          */
         private final SchedulerConfig scheduler = new SchedulerConfig();
 
         /**
-         * 执行器侧配置 (role=EXECUTOR 时生效)
+          * 执行器侧配置 (角色=执行器 时生效)
          */
         private final ExecutorConfig executor = new ExecutorConfig();
     }
 
     /**
-     * Scheduler 长链配置。
+      * 调度器 长链配置。
      *
      * @since 4.0.0.42
+     * @author CH
      */
     @Data
     public static class SchedulerConfig {
@@ -241,9 +244,10 @@ public class JobProperties {
     }
 
     /**
-     * Executor 长链配置。
+      * 执行器 长链配置。
      *
      * @since 4.0.0.42
+     * @author CH
      */
     @Data
     public static class ExecutorConfig {
@@ -278,6 +282,7 @@ public class JobProperties {
      * 执行线程池配置。
      *
      * @since 4.0.0.42
+     * @author CH
      */
     @Data
     public static class PoolConfig {
@@ -288,12 +293,12 @@ public class JobProperties {
         public static final int DEFAULT_CORE_SIZE = 16;
 
         /**
-         * 默认最大线程数 (4×core, 阻塞型突发削峰)
+          * 默认最大线程数 (4×核心, 阻塞型突发削峰)
          */
         public static final int DEFAULT_MAX_SIZE = 64;
 
         /**
-         * 默认队列容量 (小队列快速扩容削峰, 避免大队列吞掉 max 弹性)
+          * 默认队列容量 (小队列快速扩容削峰, 避免大队列吞掉 最大 弹性)
          */
         public static final int DEFAULT_QUEUE_CAPACITY = 128;
 
@@ -316,8 +321,8 @@ public class JobProperties {
          * 是否启用虚拟线程执行器, 默认开启。
          *
          * <p>开启时使用 {@code Executors.newVirtualThreadPerTaskExecutor()}
-         * (每任务一个虚拟线程, 阻塞型任务大幅提升吞吐, 无 max/queue 限制);
-         * 关闭时回退到 {@link ThreadPoolExecutor} (core/max/queue 平台线程池)。</p>
+          * (每任务一个虚拟线程, 阻塞型任务大幅提升吞吐, 无 最大/队列 限制);
+          * 关闭时回退到 {@link ThreadPoolExecutor} (核心/最大/队列 平台线程池)。</p>
          */
         private boolean virtual = true;
     }
@@ -326,6 +331,7 @@ public class JobProperties {
      * 日志配置。
      *
      * @since 4.0.0.42
+     * @author CH
      */
     @Data
     public static class LogConfig {

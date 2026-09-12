@@ -26,7 +26,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Prometheus 采集 Provider
+   * Prometheus 采集 提供者
  * <p>
  * 基于 {@link PrometheusClient} 拉取 Prometheus 指标, 支持服务器 / Redis / 数据库等
  * 任意已接入 Prometheus 的目标。Prometheus 地址取自全局配置
@@ -51,7 +51,7 @@ public class PrometheusProvider implements MetricProvider {
     private final ObjectProvider<PrometheusClient> clientProvider;
 
     /**
-     * 全局配置 Service
+      * 全局配置 服务
      */
     private final MonitorConfigService configService;
 
@@ -59,7 +59,7 @@ public class PrometheusProvider implements MetricProvider {
      * 构造方法
      *
      * @param clientProvider Prometheus 客户端提供者
-     * @param configService  全局配置 Service
+     * @param configService  全局配置 服务
      */
     @Autowired
     public PrometheusProvider(ObjectProvider<PrometheusClient> clientProvider,
@@ -69,13 +69,13 @@ public class PrometheusProvider implements MetricProvider {
     }
 
     @Override
-    /** ProviderType */
+    /** 提供者类型 */
     public ProviderType providerType() {
         return ProviderType.PROMETHEUS;
     }
 
     @Override
-    /** SupportServiceTypes */
+    /** 支持服务类型 */
     public Set<ServiceType> supportServiceTypes() {
         return Set.of(ServiceType.SERVER, ServiceType.REDIS, ServiceType.MYSQL,
                 ServiceType.PG, ServiceType.ORACLE, ServiceType.MSSQL, ServiceType.MQ);
@@ -89,7 +89,7 @@ public class PrometheusProvider implements MetricProvider {
     }
 
     /**
-     * 同步执行 PromQL 查询
+      * 同步执行 promql 查询
      *
      * @param context 采集上下文
      * @return 采集结果
@@ -118,6 +118,12 @@ public class PrometheusProvider implements MetricProvider {
                     return;
                 }
                 QueryResult queryResult = client.query(promql).execute();
+                /**
+                 * 解析查询结果。
+                 * @param queryResult 查询结果
+                 * @param promql promql
+                 * @param result 结果
+                 */
                 parseQueryResult(queryResult, promql, result);
             });
             result.setSuccess(true);
@@ -132,7 +138,7 @@ public class PrometheusProvider implements MetricProvider {
      * 解析查询结果为指标点
      *
      * @param queryResult 查询结果
-     * @param promql      PromQL 语句
+     * @param promql      promql 语句
      * @param result      采集结果
      */
     private void parseQueryResult(QueryResult queryResult, String promql, CollectResult result) {

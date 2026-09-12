@@ -19,9 +19,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * OAuth客户端白名单文件监听器
+   * o认证客户端白名单文件监听器
  * <p>
- * 监听外部 oauth.whitelist 文件的变更，动态更新白名单配置。
+   * 监听外部 OAuth.whitelist 文件的变更，动态更新白名单配置。
  * 支持以下功能：
  * <ul>
  * <li>启动时合并外部白名单文件与配置文件白名单</li>
@@ -31,7 +31,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * </ul>
  * </p>
  * <p>
- * 白名单文件格式：每行一个URL Pattern，支持 # 注释
+   * 白名单文件格式：每行一个URL 模式，支持 # 注释
  * </p>
  *
  * @since 2024/12/07
@@ -42,7 +42,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @RequiredArgsConstructor
 public class WhitelistFileWatcher {
 
-    /** Auth客户端属性 */
+    /** 认证客户端属性 */
     private final AuthClientProperties authClientProperties;
 
     /**
@@ -67,9 +67,15 @@ public class WhitelistFileWatcher {
         log.info("[白名单监听]初始化开始 - 文件路径: {}", authClientProperties.getWhitelistFile());
         
         // 1. 合并配置文件白名单和外部文件白名单
+        /**
+          * 加载和合并whitelist。
+         */
         loadAndMergeWhitelist();
         
         // 2. 启动文件监听
+        /**
+         * 启动文件watcher。
+         */
         startFileWatcher();
         
         log.info("[白名单监听]初始化完成 - 合并后白名单数量: {}", mergedWhitelist.size());
@@ -96,13 +102,14 @@ public class WhitelistFileWatcher {
             }
         }
         
-        // 更新到 AuthClientProperties
+ // 更新到 认证客户端属性
         authClientProperties.setWhitelist(new ArrayList<>(mergedWhitelist));
         log.info("[白名单监听]白名单合并完成 - 总数: {}", mergedWhitelist.size());
     }
 
     /**
      * 从外部文件加载白名单
+     * @return 加载whitelist从文件的结果
      */
     private List<String> loadWhitelistFromFile() {
         List<String> whitelist = new ArrayList<>();
@@ -110,6 +117,10 @@ public class WhitelistFileWatcher {
         
         if (!Files.exists(path)) {
             log.info("[白名单监听]外部白名单文件不存在，将创建: {}", authClientProperties.getWhitelistFile());
+            /**
+             * 创建whitelist文件。
+             * @param path 路径
+             */
             createWhitelistFile(path);
             return whitelist;
         }
@@ -133,6 +144,7 @@ public class WhitelistFileWatcher {
 
     /**
      * 创建白名单文件
+     * @param path 路径
      */
     private void createWhitelistFile(Path path) {
         try {
@@ -199,6 +211,7 @@ public class WhitelistFileWatcher {
 
     /**
      * 监听文件变更
+     * @param fileName 文件名称
      */
     private void watchFileChanges(Path fileName) {
         while (running.get()) {
@@ -221,6 +234,9 @@ public class WhitelistFileWatcher {
                         log.info("[白名单监听]检测到文件变更: {}", changed);
                         // 延迟一下，确保文件写入完成
                         Thread.sleep(100);
+                        /**
+                          * reloadwhitelist。
+                         */
                         reloadWhitelist();
                     }
                 }
@@ -240,6 +256,9 @@ public class WhitelistFileWatcher {
      */
     public void reloadWhitelist() {
         log.info("[白名单监听]开始重新加载白名单...");
+        /**
+          * 加载和合并whitelist。
+         */
         loadAndMergeWhitelist();
         // 清除认证缓存
         AbstractProtocol.invalidateAllCache();
@@ -249,7 +268,7 @@ public class WhitelistFileWatcher {
     /**
      * 添加白名单（动态添加并持久化）
      *
-     * @param pattern URL Pattern
+     * @param pattern URL 模式
      * @return 是否添加成功
      */
     public boolean addWhitelist(String pattern) {
@@ -265,6 +284,9 @@ public class WhitelistFileWatcher {
         
         mergedWhitelist.add(trimmed);
         authClientProperties.setWhitelist(new ArrayList<>(mergedWhitelist));
+        /**
+          * persistwhitelist。
+         */
         persistWhitelist();
         
         log.info("[白名单监听]添加白名单成功: {}", trimmed);
@@ -274,7 +296,7 @@ public class WhitelistFileWatcher {
     /**
      * 删除白名单（动态删除并持久化）
      *
-     * @param pattern URL Pattern
+     * @param pattern URL 模式
      * @return 是否删除成功
      */
     public boolean removeWhitelist(String pattern) {
@@ -287,6 +309,9 @@ public class WhitelistFileWatcher {
         
         if (removed) {
             authClientProperties.setWhitelist(new ArrayList<>(mergedWhitelist));
+            /**
+              * persistwhitelist。
+             */
             persistWhitelist();
             log.info("[白名单监听]删除白名单成功: {}", trimmed);
         }
@@ -296,6 +321,7 @@ public class WhitelistFileWatcher {
 
     /**
      * 获取当前白名单列表
+     * @return 获取whitelist的结果
      */
     public List<String> getWhitelist() {
         return new ArrayList<>(mergedWhitelist);

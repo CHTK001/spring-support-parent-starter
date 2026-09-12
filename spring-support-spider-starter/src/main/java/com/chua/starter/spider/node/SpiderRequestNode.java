@@ -132,6 +132,11 @@ public class SpiderRequestNode implements FlowNode {
         FlowProps props = context.currentNodeProps();
         String url = envResolver.resolve(props.getString("url"));
         if (url == null || url.isEmpty()) {
+            /**
+             * illegal参数异常。
+             * @param 参数" 参数"
+             * @return illegal参数异常的结果
+             */
             throw new IllegalArgumentException("spider.request 节点缺少 url 参数");
         }
         String method = props.getString("method", DEFAULT_METHOD).toUpperCase();
@@ -180,8 +185,20 @@ public class SpiderRequestNode implements FlowNode {
             return client.send(request, HttpResponse.BodyHandlers.ofString());
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+            /**
+             * illegal状态异常。
+             * @param url url
+             * @param e e
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("spider.request 请求被中断: " + url, e);
         } catch (Exception e) {
+            /**
+             * illegal状态异常。
+             * @param url url
+             * @param e e
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("spider.request 请求失败: " + url, e);
         }
     }

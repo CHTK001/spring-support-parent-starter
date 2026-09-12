@@ -30,7 +30,7 @@ public class TransactionProperties {
     private boolean enable = false;
 
 
-    /** Prefix */
+    /** 前缀 */
     public static final String PREFIX = "plugin.transaction";
     /**
      * 事务超时时间
@@ -54,32 +54,56 @@ public class TransactionProperties {
     private String writeOnly = "";
 
     // Getter 方法（Lombok 在 Java 25 下可能不工作，手动添加）
-    /** 是否启用 */
+    /**
+     * 是否启用
+     *
+     * @return 是否enable的结果
+     */
     public boolean isEnable() {
         return enable;
     }
 
-    /** 获取Timeout */
+    /**
+     * 获取超时
+     *
+     * @return 获取超时的结果
+     */
     public Integer getTimeout() {
         return timeout;
     }
 
-    /** 获取TxMapper */
+    /**
+     * 获取tx映射器
+     *
+     * @return 获取tx映射器的结果
+     */
     public String getTxMapper() {
         return txMapper;
     }
 
-    /** 获取读取Only */
+    /**
+     * 获取读取Only
+     *
+     * @return 获取读取only的结果
+     */
     public String getReadOnly() {
         return readOnly;
     }
 
-    /** 获取NoTx */
+    /**
+     * 获取notx
+     *
+     * @return 获取notx的结果
+     */
     public String getNoTx() {
         return noTx;
     }
 
-    /** 获取写入Only */
+    /**
+     * 获取写入Only
+     *
+     * @return 获取写入only的结果
+     */
     public String getWriteOnly() {
         return writeOnly;
     }

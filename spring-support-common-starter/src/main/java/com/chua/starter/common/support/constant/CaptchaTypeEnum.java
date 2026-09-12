@@ -1,14 +1,14 @@
 package com.chua.starter.common.support.constant;
 
 /**
- * EasyCaptcha 验证码类型枚举
+   * easycaptcha 验证码类型枚举
  * <p>
  * 定义了系统支持的各种验证码类型，包括普通字符、算数运算、中文字符等。
  * </p>
  *
  * @author haoxr
  * @since 2023/03/24
- * @version 1.0.0
+   * @版本 1.0.0
  * @author CH
  */
 public enum CaptchaTypeEnum {

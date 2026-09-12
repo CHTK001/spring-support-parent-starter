@@ -33,10 +33,10 @@ import java.time.Duration;
 import java.util.Map;
 
 /**
- * RSocket 协议实现
- * 使用 RSocket 进行 OAuth 认证，支持响应式通信
+   * r套接字 协议实现
+   * 使用 r套接字 进行 o认证 认证，支持响应式通信
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2025-12-02
  * @author CH
  */
@@ -44,7 +44,7 @@ import java.util.Map;
 @Slf4j
 public class RSocketProtocol extends AbstractProtocol {
 
-    private volatile RSocket rSocket;
+    private volatile RSocket rSocket; // r套接字
 
     /**
      * 构造函数
@@ -52,11 +52,15 @@ public class RSocketProtocol extends AbstractProtocol {
      * @param authClientProperties 认证客户端配置
      */
     public RSocketProtocol(AuthClientProperties authClientProperties) {
+        /**
+         * 父。
+         * @param authClientProperties 认证客户端属性
+         */
         super(authClientProperties);
     }
 
     /**
-     * 初始化 RSocket 连接
+      * 初始化 r套接字 连接
      */
     private void initializeRSocket() {
         if (rSocket == null || rSocket.isDisposed()) {
@@ -64,6 +68,11 @@ public class RSocketProtocol extends AbstractProtocol {
                 if (rSocket == null || rSocket.isDisposed()) {
                     String selectedUrl = selectUrl();
                     if (selectedUrl == null) {
+                        /**
+                         * illegal状态异常。
+                         * @param 服务器地址不存在" 服务器地址不存在"
+                         * @return illegal状态异常的结果
+                         */
                         throw new IllegalStateException("OAuth 服务器地址不存在");
                     }
 
@@ -84,7 +93,7 @@ public class RSocketProtocol extends AbstractProtocol {
     @Override
     /** Approve */
     protected AuthenticationInformation approve(Cookie cookie, String token, String subProtocol) {
-        // 如果传入的subProtocol（认证类型）为空，尝试从Header读取 x-oauth-type
+ // 如果传入的sub协议（认证类型）为空，尝试从头部读取 x-OAuth-类型
         if (StringUtils.isBlank(subProtocol)) {
             jakarta.servlet.http.HttpServletRequest request = RequestUtils.getRequest();
             if (request != null) {
@@ -107,7 +116,7 @@ public class RSocketProtocol extends AbstractProtocol {
     }
 
     @Override
-    /** AuthenticationUserCode */
+    /** 认证用户编码 */
     protected AuthenticationInformation authenticationUserCode(AppKeySecret appKeySecret) {
         JsonObject jsonObject = createAppKeyAuthenticationData(appKeySecret);
         jsonObject.put("x-oauth-access-key", authClientProperties.getKey().getAccessKey());
@@ -120,11 +129,11 @@ public class RSocketProtocol extends AbstractProtocol {
 
     @Override
     /**
-     * UpgradeInformation
-     * @param cookie cookie
-     * @param token token
-     * @param upgradeType upgradeType
-     * @param refreshToken refreshToken
+      * upgrade信息
+     * @param cookie Cookie
+     * @param token 令牌
+     * @param upgradeType upgrade类型
+     * @param refreshToken refresh令牌
      */
     protected AuthenticationInformation upgradeInformation(Cookie cookie, String token, UpgradeType upgradeType,
             String refreshToken) {
@@ -142,13 +151,25 @@ public class RSocketProtocol extends AbstractProtocol {
                 com.chua.starter.oauth.client.support.execute.AuthSessionUtils.removeUserInfo();
                 String cacheKey = getCacheKey(new Cookie[] { cookie }, token);
                 if (hasCache(cacheKey)) {
+                    /**
+                     * clear认证信息。
+                     * @param cacheKey 缓存钥匙
+                     */
                     clearAuthenticationInformation(cacheKey);
                 }
             } else if (upgradeType == UpgradeType.REFRESH) {
                 String cacheKey = getCacheKey(new Cookie[] { cookie }, token);
                 if (hasCache(cacheKey)) {
+                    /**
+                     * clear认证信息。
+                     * @param cacheKey 缓存钥匙
+                     */
                     clearAuthenticationInformation(cacheKey);
                 }
+                /**
+                 * invalidate缓存。
+                 * @param token 令牌
+                 */
                 invalidateCache(token);
             }
         }
@@ -157,10 +178,10 @@ public class RSocketProtocol extends AbstractProtocol {
 
     @Override
     /**
-     * 获取AccessToken
-     * @param username username
-     * @param password password
-     * @param authType authType
+      * 获取access令牌
+     * @param username 用户名
+     * @param password 密码
+     * @param authType 认证类型
      * @param ext ext
      */
     public LoginAuthResult getAccessToken(String username, String password, AuthType authType,
@@ -203,11 +224,16 @@ public class RSocketProtocol extends AbstractProtocol {
         if (information.getInformation() == Information.OK) {
             return LoginAuthResult.OK;
         }
+        /**
+         * 认证异常。
+         * @param information.getInformation( 信息.获取信息(
+         * @return 认证异常的结果
+         */
         throw new AuthException(information.getInformation().getMessage());
     }
 
     @Override
-    /** 创建TemporaryToken */
+    /** 创建temporary令牌 */
     public LoginAuthResult createTemporaryToken(String sourceToken, Map<String, Object> ext) {
         JsonObject jsonObject = new JsonObject();
         jsonObject.put("x-oauth-access-key", authClientProperties.getKey().getAccessKey());
@@ -230,7 +256,7 @@ public class RSocketProtocol extends AbstractProtocol {
     }
 
     /**
-     * 发送 RSocket 请求
+      * 发送 r套接字 请求
      *
      * @param route       路由
      * @param jsonObject  请求数据
@@ -238,6 +264,9 @@ public class RSocketProtocol extends AbstractProtocol {
      * @return 认证信息
      */
     protected AuthenticationInformation sendRSocketRequest(String route, JsonObject jsonObject, UpgradeType upgradeType) {
+        /**
+         * 初始化r套接字。
+         */
         initializeRSocket();
 
         try {
@@ -247,7 +276,7 @@ public class RSocketProtocol extends AbstractProtocol {
             String timestamp = System.nanoTime() + "";
             String key1 = IdUtils.simpleUuid();
 
-            // 添加认证类型到元数据（x-oauth-type）
+ // 添加认证类型到元数据（x-OAuth-类型）
             jakarta.servlet.http.HttpServletRequest currentRequest = RequestUtils.getRequest();
             String authType = null;
             if (currentRequest != null) {
@@ -274,7 +303,7 @@ public class RSocketProtocol extends AbstractProtocol {
                     .fluentPut("data", createData(jsonObject, key))
                     .toJSONString();
 
-            // 发送 RSocket 请求
+ // 发送 r套接字 请求
             Payload payload = DefaultPayload.create(requestBody, metadata.toJSONString());
             Payload responsePayload = rSocket.requestResponse(payload)
                     .block(Duration.ofSeconds(10));
@@ -299,7 +328,7 @@ public class RSocketProtocol extends AbstractProtocol {
                     JsonObject responseMeta = Json.fromJson(responseMetadata, JsonObject.class);
                     responseSerial = responseMeta != null ? responseMeta.getObject("x-oauth-response-serial", String.class) : null;
                 } catch (Exception ignored) {
-                    // metadata 解析失败时忽略，responseSerial 保持 null
+ // metadata 解析失败时忽略，响应串行 保持 空
                 }
             }
 
@@ -316,6 +345,8 @@ public class RSocketProtocol extends AbstractProtocol {
 
     /**
      * 提取主机名
+     * @param url url
+     * @return extract主机的结果
      */
     private String extractHost(String url) {
         if (url.startsWith("rsocket://")) {
@@ -341,6 +372,9 @@ public class RSocketProtocol extends AbstractProtocol {
 
     /**
      * 提取端口
+     * @param url url
+     * @param defaultPort 默认端口
+     * @return extract端口的结果
      */
     private int extractPort(String url, int defaultPort) {
         if (url.startsWith("rsocket://")) {
@@ -366,7 +400,7 @@ public class RSocketProtocol extends AbstractProtocol {
     }
 
     /**
-     * 关闭 RSocket 连接
+      * 关闭 r套接字 连接
      */
     public void shutdown() {
         if (rSocket != null && !rSocket.isDisposed()) {

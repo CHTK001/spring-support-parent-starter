@@ -29,7 +29,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * 监控指标 Service 实现
+   * 监控指标 服务 实现
  *
  * @since 2026/8/4
  * @author CH
@@ -40,39 +40,39 @@ import java.util.stream.Collectors;
 public class MetricServiceImpl implements MetricService {
 
     /**
-     * 通用指标 Mapper
+      * 通用指标 映射器
      */
     private final MsMonitorMetricMapper metricMapper;
     /**
-     * 通用指标统计 Mapper
+      * 通用指标统计 映射器
      */
     private final MsMonitorMetricStatisticsMapper statisticsMapper;
     /**
-     * CPU 指标 Mapper
+      * CPU 指标 映射器
      */
     private final MsMonitorMetricCpuMapper cpuMapper;
     /**
-     * 内存指标 Mapper
+      * 内存指标 映射器
      */
     private final MsMonitorMetricMemoryMapper memoryMapper;
     /**
-     * 磁盘指标 Mapper
+      * 磁盘指标 映射器
      */
     private final MsMonitorMetricDiskMapper diskMapper;
     /**
-     * 网络指标 Mapper
+      * 网络指标 映射器
      */
     private final MsMonitorMetricNetworkMapper networkMapper;
     /**
-     * JVM 指标 Mapper
+      * JVM 指标 映射器
      */
     private final MsMonitorMetricJvmMapper jvmMapper;
     /**
-     * Redis 指标 Mapper
+      * Redis 指标 映射器
      */
     private final MsMonitorRedisMetricMapper redisMetricMapper;
     /**
-     * Redis 指标统计 Mapper
+      * Redis 指标统计 映射器
      */
     private final MsMonitorRedisMetricStatisticsMapper redisMetricStatsMapper;
     /**
@@ -84,7 +84,7 @@ public class MetricServiceImpl implements MetricService {
      */
     private final ObjectMapper objectMapper;
     /**
-     * 时序存储门面（influxdb / redis / none，按配置选择）
+       * 时序存储门面（influxdb / Redis / 无，按配置选择）
      */
     private final MetricTimeSeriesWriter timeSeriesWriter;
     /**
@@ -111,7 +111,12 @@ public class MetricServiceImpl implements MetricService {
             @org.springframework.cache.annotation.CacheEvict(cacheNames = "monitor:metric:latest", key = "'network:' + #result.monitor.id", condition = "#result != null && #result.monitor != null && #result.monitor.id != null"),
             @org.springframework.cache.annotation.CacheEvict(cacheNames = "monitor:metric:latest", key = "'jvm:' + #result.monitor.id", condition = "#result != null && #result.monitor != null && #result.monitor.id != null")
     })
-    /** 写入CollectResult */
+    /**
+     * 写入collect结果
+     *
+     * @param result 结果
+     * @return 写入collect结果的结果
+     */
     public ReturnResult<Void> writeCollectResult(CollectResult result) {
         try {
             if (result == null || result.getPoints() == null || result.getPoints().isEmpty()) {
@@ -147,16 +152,44 @@ public class MetricServiceImpl implements MetricService {
                     genericBatch.add(buildGenericMetric(monitorId, point, collectTime));
                 }
             }
+            /**
+              * 批量插入generic。
+             * @param genericBatch genericbatch
+             */
             batchInsertGeneric(genericBatch);
+            /**
+              * 批量插入cpu。
+             * @param cpuBatch cpubatch
+             */
             batchInsertCpu(cpuBatch);
+            /**
+              * 批量插入内存。
+             * @param memBatch membatch
+             */
             batchInsertMemory(memBatch);
+            /**
+              * 批量插入disk。
+             * @param diskBatch diskbatch
+             */
             batchInsertDisk(diskBatch);
+            /**
+              * 批量插入network。
+             * @param netBatch netbatch
+             */
             batchInsertNetwork(netBatch);
+            /**
+              * 批量插入jvm。
+             * @param jvmBatch jvmbatch
+             */
             batchInsertJvm(jvmBatch);
+            /**
+              * 批量插入Redis。
+             * @param redisBatch redisbatch
+             */
             batchInsertRedis(redisBatch);
-            // 时序明细同步写入（按 monitor.timeseries.engine 选择 influxdb/redis，未配置时跳过），失败不阻断主链路
+ // 时序明细同步写入（按 监控.timeseries.engine 选择 influxdb/Redis，未配置时跳过），失败不阻断主链路
             timeSeriesWriter.write(result);
-            // 写入链路尾部：发布采集完成事件，解耦告警评估 / 实时推送（见 MetricCollectedEventListener）
+ // 写入链路尾部：发布采集完成事件，解耦告警评估 / 实时推送（见 指标collected事件监听器）
             if (monitorId != null) {
                 try {
                     eventPublisher.publishEvent(new MetricCollectedEvent(result));
@@ -173,7 +206,14 @@ public class MetricServiceImpl implements MetricService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    /** 写入Points */
+    /**
+     * 写入Points
+     *
+     * @param monitorId 监控标识
+     * @param points points
+     * @param collectTime collect时间
+     * @return 写入points的结果
+     */
     public ReturnResult<Void> writePoints(Long monitorId, List<MetricPoint> points, LocalDateTime collectTime) {
         try {
             if (points == null || points.isEmpty()) {
@@ -184,6 +224,10 @@ public class MetricServiceImpl implements MetricService {
             for (MetricPoint point : points) {
                 genericBatch.add(buildGenericMetric(monitorId, point, ct));
             }
+            /**
+              * 批量插入generic。
+             * @param genericBatch genericbatch
+             */
             batchInsertGeneric(genericBatch);
             return ReturnResult.ok();
         } catch (Exception e) {
@@ -194,7 +238,11 @@ public class MetricServiceImpl implements MetricService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    /** AggregateHourly */
+    /**
+     * aggregate时薪
+     *
+     * @return aggregate时薪的结果
+     */
     public ReturnResult<Void> aggregateHourly() {
         try {
             LocalDateTime hourEnd = LocalDateTime.now().truncatedTo(ChronoUnit.HOURS);
@@ -301,13 +349,16 @@ public class MetricServiceImpl implements MetricService {
     }
 
     /**
-     * 统计聚合唯一键（monitorId + metricName）
+       * 统计聚合唯一键（监控标识 + 指标名称）
+     * @param monitorId 监控标识
+     * @param metricName 指标名称
+     * @return statistics钥匙的结果
      */
     private record StatisticsKey(Long monitorId, String metricName) {
     }
 
     @Override
-    /** CleanupOldData */
+    /** cleanup旧数据 */
     public ReturnResult<Void> cleanupOldData(int retentionDays) {
         try {
             LocalDateTime cutoff = LocalDateTime.now().minusDays(retentionDays);
@@ -330,7 +381,12 @@ public class MetricServiceImpl implements MetricService {
 
     @Override
     @Cacheable(cacheNames = "monitor:metric:latest", key = "'cpu:' + #monitorId", unless = "#result == null || #result.data == null")
-    /** 获取LatestCpu */
+    /**
+     * 获取latestcpu
+     *
+     * @param monitorId 监控标识
+     * @return 获取latestcpu的结果
+     */
     public ReturnResult<MsMonitorMetricCpu> getLatestCpu(Long monitorId) {
         return ReturnResult.ok(cpuMapper.selectOne(
                 new LambdaQueryWrapper<MsMonitorMetricCpu>()
@@ -341,7 +397,12 @@ public class MetricServiceImpl implements MetricService {
 
     @Override
     @Cacheable(cacheNames = "monitor:metric:latest", key = "'memory:' + #monitorId", unless = "#result == null || #result.data == null")
-    /** 获取LatestMemory */
+    /**
+     * 获取latest内存
+     *
+     * @param monitorId 监控标识
+     * @return 获取latest内存的结果
+     */
     public ReturnResult<MsMonitorMetricMemory> getLatestMemory(Long monitorId) {
         return ReturnResult.ok(memoryMapper.selectOne(
                 new LambdaQueryWrapper<MsMonitorMetricMemory>()
@@ -352,7 +413,12 @@ public class MetricServiceImpl implements MetricService {
 
     @Override
     @Cacheable(cacheNames = "monitor:metric:latest", key = "'disk:' + #monitorId", unless = "#result == null || #result.data == null || #result.data.isEmpty()")
-    /** 获取LatestDisk */
+    /**
+     * 获取latestdisk
+     *
+     * @param monitorId 监控标识
+     * @return 获取latestdisk的结果
+     */
     public ReturnResult<List<MsMonitorMetricDisk>> getLatestDisk(Long monitorId) {
         return ReturnResult.ok(diskMapper.selectList(
                 new LambdaQueryWrapper<MsMonitorMetricDisk>()
@@ -363,7 +429,12 @@ public class MetricServiceImpl implements MetricService {
 
     @Override
     @Cacheable(cacheNames = "monitor:metric:latest", key = "'network:' + #monitorId", unless = "#result == null || #result.data == null")
-    /** 获取LatestNetwork */
+    /**
+     * 获取latestnetwork
+     *
+     * @param monitorId 监控标识
+     * @return 获取latestnetwork的结果
+     */
     public ReturnResult<MsMonitorMetricNetwork> getLatestNetwork(Long monitorId) {
         return ReturnResult.ok(networkMapper.selectOne(
                 new LambdaQueryWrapper<MsMonitorMetricNetwork>()
@@ -374,7 +445,12 @@ public class MetricServiceImpl implements MetricService {
 
     @Override
     @Cacheable(cacheNames = "monitor:metric:latest", key = "'jvm:' + #monitorId", unless = "#result == null || #result.data == null")
-    /** 获取LatestJvm */
+    /**
+     * 获取latestjvm
+     *
+     * @param monitorId 监控标识
+     * @return 获取latestjvm的结果
+     */
     public ReturnResult<MsMonitorMetricJvm> getLatestJvm(Long monitorId) {
         return ReturnResult.ok(jvmMapper.selectOne(
                 new LambdaQueryWrapper<MsMonitorMetricJvm>()
@@ -384,7 +460,7 @@ public class MetricServiceImpl implements MetricService {
     }
 
     @Override
-    /** 获取CpuHistory */
+    /** 获取cpu历史 */
     public ReturnResult<List<MsMonitorMetricCpu>> getCpuHistory(Long monitorId, LocalDateTime startTime, LocalDateTime endTime) {
         return ReturnResult.ok(cpuMapper.selectList(
                 new LambdaQueryWrapper<MsMonitorMetricCpu>()
@@ -396,7 +472,7 @@ public class MetricServiceImpl implements MetricService {
     }
 
     @Override
-    /** 获取MemoryHistory */
+    /** 获取内存历史 */
     public ReturnResult<List<MsMonitorMetricMemory>> getMemoryHistory(Long monitorId, LocalDateTime startTime, LocalDateTime endTime) {
         return ReturnResult.ok(memoryMapper.selectList(
                 new LambdaQueryWrapper<MsMonitorMetricMemory>()
@@ -408,7 +484,7 @@ public class MetricServiceImpl implements MetricService {
     }
 
     @Override
-    /** 获取JvmHistory */
+    /** 获取jvm历史 */
     public ReturnResult<List<MsMonitorMetricJvm>> getJvmHistory(Long monitorId, LocalDateTime startTime, LocalDateTime endTime) {
         return ReturnResult.ok(jvmMapper.selectList(
                 new LambdaQueryWrapper<MsMonitorMetricJvm>()
@@ -420,7 +496,7 @@ public class MetricServiceImpl implements MetricService {
     }
 
     @Override
-    /** 获取NetworkHistory */
+    /** 获取network历史 */
     public ReturnResult<List<MsMonitorMetricNetwork>> getNetworkHistory(Long monitorId, LocalDateTime startTime, LocalDateTime endTime) {
         return ReturnResult.ok(networkMapper.selectList(
                 new LambdaQueryWrapper<MsMonitorMetricNetwork>()
@@ -432,7 +508,7 @@ public class MetricServiceImpl implements MetricService {
     }
 
     @Override
-    /** 获取DiskHistory */
+    /** 获取disk历史 */
     public ReturnResult<List<MsMonitorMetricDisk>> getDiskHistory(Long monitorId, LocalDateTime startTime, LocalDateTime endTime) {
         return ReturnResult.ok(diskMapper.selectList(
                 new LambdaQueryWrapper<MsMonitorMetricDisk>()
@@ -444,7 +520,7 @@ public class MetricServiceImpl implements MetricService {
     }
 
     @Override
-    /** 获取LatestRedisMetric */
+    /** 获取latestredis指标 */
     public ReturnResult<MsMonitorRedisMetric> getLatestRedisMetric(Long monitorId) {
         return ReturnResult.ok(redisMetricMapper.selectOne(
                 new LambdaQueryWrapper<MsMonitorRedisMetric>()
@@ -454,7 +530,7 @@ public class MetricServiceImpl implements MetricService {
     }
 
     @Override
-    /** 获取RedisMetricHistory */
+    /** 获取Redis指标历史 */
     public ReturnResult<List<MsMonitorRedisMetric>> getRedisMetricHistory(Long monitorId, LocalDateTime startTime, LocalDateTime endTime) {
         return ReturnResult.ok(redisMetricMapper.selectList(
                 new LambdaQueryWrapper<MsMonitorRedisMetric>()
@@ -466,7 +542,7 @@ public class MetricServiceImpl implements MetricService {
     }
 
     @Override
-    /** 获取GenericMetricHistory */
+    /** 获取generic指标历史 */
     public ReturnResult<List<MsMonitorMetric>> getGenericMetricHistory(Long monitorId, String metricName, LocalDateTime startTime, LocalDateTime endTime) {
         return ReturnResult.ok(metricMapper.selectList(
                 new LambdaQueryWrapper<MsMonitorMetric>()
@@ -479,7 +555,7 @@ public class MetricServiceImpl implements MetricService {
     }
 
     @Override
-    /** 获取MetricStatistics */
+    /** 获取指标statistics */
     public ReturnResult<List<MsMonitorMetricStatistics>> getMetricStatistics(Long monitorId, String metricName, LocalDateTime startTime, LocalDateTime endTime) {
         return ReturnResult.ok(statisticsMapper.selectList(
                 new LambdaQueryWrapper<MsMonitorMetricStatistics>()
@@ -506,7 +582,7 @@ public class MetricServiceImpl implements MetricService {
     /** 导出指标历史数据 */
     public ReturnResult<String> exportMetricHistory(Long monitorId, String metricName, LocalDateTime startTime, LocalDateTime endTime) {
         try {
-            // 1. 查询通用指标 (ms_monitor_metric)
+ // 1. 查询通用指标 (ms_监控_指标)
             LambdaQueryWrapper<MsMonitorMetric> wrapper = new LambdaQueryWrapper<MsMonitorMetric>()
                     .eq(monitorId != null, MsMonitorMetric::getMonitorId, monitorId)
                     .ge(startTime != null, MsMonitorMetric::getCollectTime, startTime)
@@ -516,7 +592,7 @@ public class MetricServiceImpl implements MetricService {
             }
             List<MsMonitorMetric> metrics = metricMapper.selectList(wrapper);
 
-            // 2. 查询 Redis 指标 (ms_monitor_redis_metric)
+ // 2. 查询 Redis 指标 (ms_监控_redis_指标)
             LambdaQueryWrapper<MsMonitorRedisMetric> redisWrapper = new LambdaQueryWrapper<MsMonitorRedisMetric>()
                     .eq(monitorId != null, MsMonitorRedisMetric::getMonitorId, monitorId)
                     .ge(startTime != null, MsMonitorRedisMetric::getCollectTime, startTime)
@@ -566,8 +642,8 @@ public class MetricServiceImpl implements MetricService {
             // 4. 生成 Excel (使用 Apache POI) - 这里先返回 CSV 下载路径
             // TODO: 实际项目中可使用 POI 生成 .xlsx 文件
             String fileName = "monitor_metrics_" + System.currentTimeMillis() + ".csv";
-            // 这里应该写入文件系统或返回 base64，此处简化返回文件名
-            // 实际可调用 ExcelUtil 或 ApachePOI 写入
+ // 这里应该写入文件系统或返回 基础64，此处简化返回文件名
+ // 实际可调用 excelutil 或 apachepoi 写入
 
             return ReturnResult.ok(fileName);
         } catch (Exception e) {
@@ -678,7 +754,7 @@ public class MetricServiceImpl implements MetricService {
     /**
      * 构建通用指标实体
      *
-     * @param monitorId   监控主机 ID
+     * @param monitorId   监控主机 标识
      * @param point       指标点
      * @param collectTime 采集时间
      * @return 通用指标实体
@@ -700,9 +776,9 @@ public class MetricServiceImpl implements MetricService {
     }
 
     /**
-     * 构建 CPU 指标实体, 从 MetricPoint 的 tags 中提取 model/cores 字段
+      * 构建 CPU 指标实体, 从 指标point 的 标签 中提取 模型/核心 字段
      *
-     * @param monitorId   监控主机 ID
+     * @param monitorId   监控主机 标识
      * @param point       指标点
      * @param collectTime 采集时间
      * @return CPU 指标实体
@@ -723,9 +799,9 @@ public class MetricServiceImpl implements MetricService {
     }
 
     /**
-     * 构建内存指标实体, 从 MetricPoint 的 tags 中提取 total_bytes/used_bytes/free_bytes 字段
+      * 构建内存指标实体, 从 指标point 的 标签 中提取 total_bytes/used_bytes/free_bytes 字段
      *
-     * @param monitorId   监控主机 ID
+     * @param monitorId   监控主机 标识
      * @param point       指标点
      * @param collectTime 采集时间
      * @return 内存指标实体
@@ -744,9 +820,9 @@ public class MetricServiceImpl implements MetricService {
     }
 
     /**
-     * 构建磁盘指标实体, 从 MetricPoint 的 tags 中提取 mount/fs/total_bytes/used_bytes 字段
+      * 构建磁盘指标实体, 从 指标point 的 标签 中提取 mount/fs/total_bytes/used_bytes 字段
      *
-     * @param monitorId   监控主机 ID
+     * @param monitorId   监控主机 标识
      * @param point       指标点
      * @param collectTime 采集时间
      * @return 磁盘指标实体
@@ -766,10 +842,10 @@ public class MetricServiceImpl implements MetricService {
     }
 
     /**
-     * 构建网络指标实体, 从 MetricPoint 的 tags 中提取 iface/rx_bytes/tx_bytes 字段,
-     * 并根据前一次采集记录计算网卡速率 speedBps
+      * 构建网络指标实体, 从 指标point 的 标签 中提取 iface/rx_bytes/tx_bytes 字段,
+      * 并根据前一次采集记录计算网卡速率 速度bps
      *
-     * @param monitorId   监控主机 ID
+     * @param monitorId   监控主机 标识
      * @param point       指标点
      * @param collectTime 采集时间
      * @return 网络指标实体
@@ -811,9 +887,9 @@ public class MetricServiceImpl implements MetricService {
     }
 
     /**
-     * 构建 JVM 指标实体, 从 MetricPoint 的 tags 中提取 heap_used/heap_max/young_gc/full_gc/threads 字段
+      * 构建 JVM 指标实体, 从 指标point 的 标签 中提取 heap_used/heap_最大/young_gc/完整_gc/threads 字段
      *
-     * @param monitorId   监控主机 ID
+     * @param monitorId   监控主机 标识
      * @param point       指标点
      * @param collectTime 采集时间
      * @return JVM 指标实体
@@ -837,7 +913,7 @@ public class MetricServiceImpl implements MetricService {
     /**
      * 构建 Redis 指标实体
      *
-     * @param monitorId   监控主机 ID
+     * @param monitorId   监控主机 标识
      * @param point       指标点
      * @param collectTime 采集时间
      * @return Redis 指标实体

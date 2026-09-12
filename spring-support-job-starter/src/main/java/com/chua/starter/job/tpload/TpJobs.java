@@ -46,6 +46,10 @@ public class TpJobs {
      */
     @Job(value = "example.tp.01", desc = "吞吐量压测任务 01", cron = TP_CRON)
     public void tp01() {
+        /**
+         * 吞吐量tick。
+         * @param 1 1
+         */
         throughputTick(1);
     }
 
@@ -54,6 +58,10 @@ public class TpJobs {
      */
     @Job(value = "example.tp.02", desc = "吞吐量压测任务 02", cron = TP_CRON)
     public void tp02() {
+        /**
+         * 吞吐量tick。
+         * @param 2 2
+         */
         throughputTick(2);
     }
 
@@ -62,6 +70,10 @@ public class TpJobs {
      */
     @Job(value = "example.tp.03", desc = "吞吐量压测任务 03", cron = TP_CRON)
     public void tp03() {
+        /**
+         * 吞吐量tick。
+         * @param 3 3
+         */
         throughputTick(3);
     }
 
@@ -70,6 +82,10 @@ public class TpJobs {
      */
     @Job(value = "example.tp.04", desc = "吞吐量压测任务 04", cron = TP_CRON)
     public void tp04() {
+        /**
+         * 吞吐量tick。
+         * @param 4 4
+         */
         throughputTick(4);
     }
 
@@ -78,6 +94,10 @@ public class TpJobs {
      */
     @Job(value = "example.tp.05", desc = "吞吐量压测任务 05", cron = TP_CRON)
     public void tp05() {
+        /**
+         * 吞吐量tick。
+         * @param 5 5
+         */
         throughputTick(5);
     }
 
@@ -86,6 +106,10 @@ public class TpJobs {
      */
     @Job(value = "example.tp.06", desc = "吞吐量压测任务 06", cron = TP_CRON)
     public void tp06() {
+        /**
+         * 吞吐量tick。
+         * @param 6 6
+         */
         throughputTick(6);
     }
 
@@ -94,6 +118,10 @@ public class TpJobs {
      */
     @Job(value = "example.tp.07", desc = "吞吐量压测任务 07", cron = TP_CRON)
     public void tp07() {
+        /**
+         * 吞吐量tick。
+         * @param 7 7
+         */
         throughputTick(7);
     }
 
@@ -102,6 +130,10 @@ public class TpJobs {
      */
     @Job(value = "example.tp.08", desc = "吞吐量压测任务 08", cron = TP_CRON)
     public void tp08() {
+        /**
+         * 吞吐量tick。
+         * @param 8 8
+         */
         throughputTick(8);
     }
 
@@ -110,6 +142,10 @@ public class TpJobs {
      */
     @Job(value = "example.tp.09", desc = "吞吐量压测任务 09", cron = TP_CRON)
     public void tp09() {
+        /**
+         * 吞吐量tick。
+         * @param 9 9
+         */
         throughputTick(9);
     }
 
@@ -118,6 +154,10 @@ public class TpJobs {
      */
     @Job(value = "example.tp.10", desc = "吞吐量压测任务 10", cron = TP_CRON)
     public void tp10() {
+        /**
+         * 吞吐量tick。
+         * @param 10 10
+         */
         throughputTick(10);
     }
 
@@ -126,6 +166,10 @@ public class TpJobs {
      */
     @Job(value = "example.tp.11", desc = "吞吐量压测任务 11", cron = TP_CRON)
     public void tp11() {
+        /**
+         * 吞吐量tick。
+         * @param 11 11
+         */
         throughputTick(11);
     }
 
@@ -134,6 +178,10 @@ public class TpJobs {
      */
     @Job(value = "example.tp.12", desc = "吞吐量压测任务 12", cron = TP_CRON)
     public void tp12() {
+        /**
+         * 吞吐量tick。
+         * @param 12 12
+         */
         throughputTick(12);
     }
 
@@ -142,6 +190,10 @@ public class TpJobs {
      */
     @Job(value = "example.tp.13", desc = "吞吐量压测任务 13", cron = TP_CRON)
     public void tp13() {
+        /**
+         * 吞吐量tick。
+         * @param 13 13
+         */
         throughputTick(13);
     }
 
@@ -150,6 +202,10 @@ public class TpJobs {
      */
     @Job(value = "example.tp.14", desc = "吞吐量压测任务 14", cron = TP_CRON)
     public void tp14() {
+        /**
+         * 吞吐量tick。
+         * @param 14 14
+         */
         throughputTick(14);
     }
 
@@ -158,6 +214,10 @@ public class TpJobs {
      */
     @Job(value = "example.tp.15", desc = "吞吐量压测任务 15", cron = TP_CRON)
     public void tp15() {
+        /**
+         * 吞吐量tick。
+         * @param 15 15
+         */
         throughputTick(15);
     }
 
@@ -166,6 +226,10 @@ public class TpJobs {
      */
     @Job(value = "example.tp.16", desc = "吞吐量压测任务 16", cron = TP_CRON)
     public void tp16() {
+        /**
+         * 吞吐量tick。
+         * @param 16 16
+         */
         throughputTick(16);
     }
 
@@ -174,6 +238,10 @@ public class TpJobs {
      */
     @Job(value = "example.tp.17", desc = "吞吐量压测任务 17", cron = TP_CRON)
     public void tp17() {
+        /**
+         * 吞吐量tick。
+         * @param 17 17
+         */
         throughputTick(17);
     }
 
@@ -182,6 +250,10 @@ public class TpJobs {
      */
     @Job(value = "example.tp.18", desc = "吞吐量压测任务 18", cron = TP_CRON)
     public void tp18() {
+        /**
+         * 吞吐量tick。
+         * @param 18 18
+         */
         throughputTick(18);
     }
 
@@ -190,6 +262,10 @@ public class TpJobs {
      */
     @Job(value = "example.tp.19", desc = "吞吐量压测任务 19", cron = TP_CRON)
     public void tp19() {
+        /**
+         * 吞吐量tick。
+         * @param 19 19
+         */
         throughputTick(19);
     }
 
@@ -198,6 +274,10 @@ public class TpJobs {
      */
     @Job(value = "example.tp.20", desc = "吞吐量压测任务 20", cron = TP_CRON)
     public void tp20() {
+        /**
+         * 吞吐量tick。
+         * @param 20 20
+         */
         throughputTick(20);
     }
 
@@ -206,6 +286,10 @@ public class TpJobs {
      */
     @Job(value = "example.tp.21", desc = "吞吐量压测任务 21", cron = TP_CRON)
     public void tp21() {
+        /**
+         * 吞吐量tick。
+         * @param 21 21
+         */
         throughputTick(21);
     }
 
@@ -214,6 +298,10 @@ public class TpJobs {
      */
     @Job(value = "example.tp.22", desc = "吞吐量压测任务 22", cron = TP_CRON)
     public void tp22() {
+        /**
+         * 吞吐量tick。
+         * @param 22 22
+         */
         throughputTick(22);
     }
 
@@ -222,6 +310,10 @@ public class TpJobs {
      */
     @Job(value = "example.tp.23", desc = "吞吐量压测任务 23", cron = TP_CRON)
     public void tp23() {
+        /**
+         * 吞吐量tick。
+         * @param 23 23
+         */
         throughputTick(23);
     }
 
@@ -230,6 +322,10 @@ public class TpJobs {
      */
     @Job(value = "example.tp.24", desc = "吞吐量压测任务 24", cron = TP_CRON)
     public void tp24() {
+        /**
+         * 吞吐量tick。
+         * @param 24 24
+         */
         throughputTick(24);
     }
 

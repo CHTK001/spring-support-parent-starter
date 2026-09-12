@@ -30,9 +30,9 @@ public class ToolMetricsController {
 
     /** 本地用量同步服务 */
     private final LocalToolUsageSyncService localToolUsageSyncService;
-    /** 用量 Mapper */
+    /** 用量 映射器 */
     private final SysAiUsageMapper sysAiUsageMapper;
-    /** 压缩记录 Mapper */
+    /** 压缩记录 映射器 */
     private final SysAiSessionCompressionMapper compressionMapper;
 
     /**

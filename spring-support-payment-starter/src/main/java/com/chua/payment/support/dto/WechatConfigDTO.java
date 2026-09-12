@@ -18,6 +18,6 @@ public class WechatConfigDTO {
     private String apiKey;
     /** 证书路径 */
     private String certPath;
-    /** NotifyURL */
+    /** 通知url */
     private String notifyUrl;
 }

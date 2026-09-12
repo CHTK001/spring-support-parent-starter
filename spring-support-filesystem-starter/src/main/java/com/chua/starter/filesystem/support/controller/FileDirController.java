@@ -69,6 +69,10 @@ public class FileDirController {
         }
 
         List<Map<String, Object>> result = new ArrayList<>();
+        /**
+         * 尝试。
+         * @param Files.newDirectoryStream(dir 文件.新目录流(dir
+         */
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir)) {
             for (Path entry : stream) {
                 if (!Files.isDirectory(entry)) {

@@ -15,16 +15,16 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 服务管理 —— ServerFilter 插件工厂。
+   * 服务管理 —— 服务端过滤器 插件工厂。
  *
  * <p>依据 {@link ServerFilterDescriptor} 实例化过滤器：</p>
  * <ul>
  *   <li><b>file-storage 预设</b>：反射创建 filesystem-starter 的
  *       {@code FileStorageServerFilter}（classpath 存在该模块时可用），
- *       params 映射到 {@code FileStorageSetting}，并自动发现 Spring 容器中的
+   * 参数 映射到 {@code FileStorageSetting}，并自动发现 Spring 容器中的
  *       {@code FileStorage} Bean 注册为存储桶，使 HTTP 服务器变成文件服务器</li>
  *   <li><b>通用插件</b>：type 视为 ServerFilter 全限定类名，反射实例化
- *       （优先无参构造，其次 (ServerSetting) 构造），params 经
+   * （优先无参构造，其次 (服务端setting) 构造），参数 经
  *       {@code init(ServerFilterConfig)} 注入</li>
  * </ul>
  *
@@ -40,26 +40,26 @@ public class ServerFilterFactory {
      */
     public static final String FILE_STORAGE_ALIAS = "file-storage";
     /**
-     * FileStorageServerFilter 全限定类名（spring-support-filesystem-starter）
+      * 文件storage服务端过滤器 全限定类名（spring-支持-filesystem-启动）
      */
     public static final String FILE_STORAGE_FILTER_CLASS = "com.chua.starter.filesystem.support.server.FileStorageServerFilter";
     /**
-     * FileStorageSetting 全限定类名（spring-support-filesystem-starter）
+      * 文件storagesetting 全限定类名（spring-支持-filesystem-启动）
      */
     private static final String FILE_STORAGE_SETTING_CLASS = "com.chua.starter.filesystem.support.server.FileStorageSetting";
     /**
-     * FileStorage 全限定类名（common-starter）
+      * 文件storage 全限定类名（common-starter）
      */
     private static final String FILE_STORAGE_CLASS = "com.chua.common.support.storage.FileStorage";
 
     /**
-     * FileStorageSetting 布尔开关映射的参数名
+      * 文件storagesetting 布尔开关映射的参数名
      */
     private static final List<String> SETTING_BOOLEAN_KEYS = List.of(
             "openPreview", "openDownload", "openRange", "openWatermark", "openRemoteFile", "openWebjars", "layout");
 
     /**
-     * FileStorageSetting 字符串参数映射的参数名
+      * 文件storagesetting 字符串参数映射的参数名
      */
     private static final List<String> SETTING_STRING_KEYS = List.of("watermark", "layoutType");
 
@@ -79,7 +79,7 @@ public class ServerFilterFactory {
     }
 
     /**
-     * 按描述列表实例化全部过滤器（按 order 升序返回）。
+      * 按描述列表实例化全部过滤器（按 订单 升序返回）。
      *
      * @param descriptors 插件描述列表
      * @param setting     所属服务器配置
@@ -105,6 +105,11 @@ public class ServerFilterFactory {
                 filter.init(new DefaultServerFilterConfig(
                         descriptor.getName(), descriptor.getParams(), setting));
             } catch (Exception e) {
+                /**
+                 * illegal参数异常。
+                 * @param descriptor.getName( descriptor.获取名称(
+                 * @return illegal参数异常的结果
+                 */
                 throw new IllegalArgumentException("过滤器 [" + descriptor.getName() + "] 初始化失败: " + e.getMessage(), e);
             }
             filters.add(filter);
@@ -123,6 +128,11 @@ public class ServerFilterFactory {
     private ServerFilter instantiate(ServerFilterDescriptor descriptor, ServerSetting setting) {
         String type = descriptor.resolveType();
         if (type == null || type.isBlank()) {
+            /**
+             * illegal参数异常。
+             * @param descriptor descriptor
+             * @return illegal参数异常的结果
+             */
             throw new IllegalArgumentException("ServerFilter 描述缺少 name/type: " + descriptor);
         }
         if (FILE_STORAGE_ALIAS.equalsIgnoreCase(type) || FILE_STORAGE_FILTER_CLASS.equals(type)) {
@@ -132,7 +142,7 @@ public class ServerFilterFactory {
     }
 
     /**
-     * 反射创建 FileStorageServerFilter（可选插件，classpath 含 spring-support-filesystem-starter 时可用）。
+      * 反射创建 文件storage服务端过滤器（可选插件，类路径 含 spring-支持-filesystem-启动 时可用）。
      *
      * @param descriptor 插件描述
      * @return 过滤器实例
@@ -150,8 +160,18 @@ public class ServerFilterFactory {
         }
         try {
             Object storageSetting = settingClass.getDeclaredConstructor().newInstance();
+            /**
+             * applysetting参数。
+             * @param storageSetting storagesetting
+             * @param descriptor.getParams( descriptor.获取参数(
+             */
             applySettingParams(storageSetting, descriptor.getParams());
             Object filter = filterClass.getDeclaredConstructor(settingClass).newInstance(storageSetting);
+            /**
+              * wirestorages。
+             * @param filterClass 过滤器类
+             * @param filter 过滤器
+             */
             wireStorages(filterClass, filter);
             log.info("[ServerFilterFactory] file-storage 插件已创建: name={}, params={}",
                     descriptor.getName(), descriptor.getParams());
@@ -159,14 +179,19 @@ public class ServerFilterFactory {
         } catch (IllegalArgumentException e) {
             throw e;
         } catch (Exception e) {
+            /**
+             * illegal参数异常。
+             * @param e.getMessage( e.获取消息(
+             * @return illegal参数异常的结果
+             */
             throw new IllegalArgumentException("file-storage 插件实例化失败: " + e.getMessage(), e);
         }
     }
 
     /**
-     * 将 params 映射到 FileStorageSetting。
+      * 将 参数 映射到 文件storagesetting。
      *
-     * @param storageSetting FileStorageSetting 实例
+     * @param storageSetting 文件storagesetting 实例
      * @param params         参数
      */
     private void applySettingParams(Object storageSetting, Map<String, String> params) {
@@ -198,7 +223,7 @@ public class ServerFilterFactory {
     }
 
     /**
-     * 自动发现 Spring 容器中的 FileStorage Bean 并注册为存储桶。
+      * 自动发现 Spring 容器中的 文件storage Bean 并注册为存储桶。
      *
      * @param filterClass 过滤器类
      * @param filter      过滤器实例
@@ -208,7 +233,7 @@ public class ServerFilterFactory {
             Class<?> storageClass = Class.forName(FILE_STORAGE_CLASS);
             Method addStorage = filterClass.getMethod("addFileStorage", String.class, storageClass);
 
-            // 1) 优先注册 Spring 容器中直接暴露的 FileStorage Bean
+ // 1) 优先注册 Spring 容器中直接暴露的 文件storage Bean
             int registered = 0;
             String[] beanNames = applicationContext.getBeanNamesForType(storageClass);
             for (String beanName : beanNames) {
@@ -218,8 +243,8 @@ public class ServerFilterFactory {
                 log.info("[ServerFilterFactory] 注册文件存储桶(Bean): {} -> {}", beanName, storage.getClass().getSimpleName());
             }
 
-            // 2) 兜底: FileStorageTemplate 的 storageMap 常以内部 Map 形式持有 Provider,
-            //    并不注册为独立 Bean —— 从模板取桶, 使 file-storage 过滤器真正有后端可用
+ // 2) 兜底: 文件storagetemplate 的 storage映射 常以内部 映射 形式持有 提供者,
+ // 并不注册为独立 Bean —— 从模板取桶, 使 文件-storage 过滤器真正有后端可用
             try {
                 Object template = applicationContext.getBean("fileStorageTemplate");
                 @SuppressWarnings("unchecked")
@@ -234,7 +259,7 @@ public class ServerFilterFactory {
                     }
                 }
             } catch (Exception ignored) {
-                // fileStorageTemplate Bean 不存在(非 filesystem-starter 场景)时忽略
+ // 文件storagetemplate Bean 不存在(非 filesystem-启动 场景)时忽略
             }
 
             if (registered == 0) {
@@ -248,7 +273,7 @@ public class ServerFilterFactory {
     }
 
     /**
-     * 反射创建通用 ServerFilter 插件（type 为全限定类名）。
+      * 反射创建通用 服务端过滤器 插件（类型 为全限定类名）。
      *
      * @param type       全限定类名
      * @param descriptor 插件描述
@@ -267,6 +292,11 @@ public class ServerFilterFactory {
         try {
             Object instance = newInstance(clazz, setting);
             if (!(instance instanceof ServerFilter filter)) {
+                /**
+                 * illegal参数异常。
+                 * @param type 类型
+                 * @return illegal参数异常的结果
+                 */
                 throw new IllegalArgumentException("类型不是 ServerFilter 实现: " + type);
             }
             return filter;
@@ -279,7 +309,7 @@ public class ServerFilterFactory {
     }
 
     /**
-     * 按构造器优先级实例化：无参构造 → (ServerSetting) 构造。
+      * 按构造器优先级实例化：无参构造 → (服务端setting) 构造。
      *
      * @param clazz   目标类
      * @param setting 服务器配置
@@ -290,11 +320,16 @@ public class ServerFilterFactory {
         try {
             return clazz.getDeclaredConstructor().newInstance();
         } catch (NoSuchMethodException ignored) {
-            // 尝试 (ServerSetting) 构造
+ // 尝试 (服务端setting) 构造
         }
         try {
             return clazz.getDeclaredConstructor(ServerSetting.class).newInstance(setting);
         } catch (NoSuchMethodException e) {
+            /**
+             * illegal参数异常。
+             * @param clazz.getName( clazz.获取名称(
+             * @return illegal参数异常的结果
+             */
             throw new IllegalArgumentException(clazz.getName() + " 缺少无参或 (ServerSetting) 构造器");
         }
     }

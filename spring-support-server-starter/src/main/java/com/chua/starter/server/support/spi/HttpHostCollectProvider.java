@@ -10,11 +10,11 @@ import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
 /**
- * HTTP 接口拉取采集 Provider（HTTP）
+   * HTTP 接口拉取采集 提供者（HTTP）
  * <p>
- * 目标主机暴露采集 HTTP 端点（如 /agent/metrics 返回 JSON），
- * 服务端定时 GET 拉取并回写。适合安装了轻量采集端但不开 SSH 的主机。
- * 端点约定：{@code http://{address}:{port}/agent/metrics}。
+   * 目标主机暴露采集 HTTP 端点（如 /智能体/指标 返回 JSON），
+   * 服务端定时 获取 拉取并回写。适合安装了轻量采集端但不开 SSH 的主机。
+   * 端点约定：{@code http://{address}:{端口}/智能体/指标}。
  * </p>
  *
  * @author CH
@@ -28,7 +28,7 @@ public class HttpHostCollectProvider implements HostCollectProvider {
     /** 采集端点路径 */
     private static final String METRICS_PATH = "/agent/metrics";
 
-    /** 主机 Mapper */
+    /** 主机 映射器 */
     private final MsServerHostMapper hostMapper;
 
     @Override
@@ -69,9 +69,18 @@ public class HttpHostCollectProvider implements HostCollectProvider {
                 return CollectOutcome.fail("HTTP 端点返回 " + code);
             }
             String body;
+            /**
+             * 尝试。
+             * @param conn.getInputStream( conn.获取输入流(
+             */
             try (var in = conn.getInputStream()) {
                 body = new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
             }
+            /**
+              * applypayload。
+             * @param host 主机
+             * @param body 主体
+             */
             applyPayload(host, body);
             hostMapper.updateById(host);
             return CollectOutcome.ok("HTTP 采集成功");

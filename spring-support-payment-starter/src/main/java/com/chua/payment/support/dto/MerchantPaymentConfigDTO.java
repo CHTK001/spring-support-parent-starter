@@ -5,6 +5,7 @@ import lombok.Data;
 /**
  * 商户支付规则 DTO
  * @author CH
+ * @since 4.0.0
  */
 @Data
 public class MerchantPaymentConfigDTO {

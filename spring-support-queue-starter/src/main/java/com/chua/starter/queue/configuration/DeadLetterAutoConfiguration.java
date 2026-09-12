@@ -33,13 +33,15 @@ public class DeadLetterAutoConfiguration {
 
     /**
      * 死信队列消息模板
+     * @param false false
+     * @return deadLetterTemplate的结果
      */
     @Bean(destroyMethod = "close")
     public DeadLetterTemplate deadLetterTemplate(@Autowired(required = false) MessageTemplate mainMessageTemplate) {
         // 创建死信队列底层存储
         MessageTemplate dlqStorage = createDlqStorage();
 
-        // 使用 AllArgsConstructor 创建配置对象
+ // 使用 全部参数constructor 创建配置对象
         var config = new DeadLetterTemplate.DeadLetterConfig(
                 deadLetterProperties.getMaxRetries(),
                 java.time.Duration.ofSeconds(deadLetterProperties.getRetryDelaySeconds()),
@@ -53,11 +55,19 @@ public class DeadLetterAutoConfiguration {
 
         log.info("[Queue] 创建死信队列模板, 类型: {}, 最大重试: {}",
                 deadLetterProperties.getType(), deadLetterProperties.getMaxRetries());
+        /**
+          * deadlettertemplate。
+         * @param sourceTemplate 源template
+         * @param dlqStorage dlqstorage
+         * @param config 配置
+         * @return DeadLetterTemplate的结果
+         */
         return new DeadLetterTemplate(sourceTemplate, dlqStorage, config);
     }
 
     /**
      * 创建死信队列底层存储
+     * @return 创建dlqstorage的结果
      */
     private MessageTemplate createDlqStorage() {
         String type = deadLetterProperties.getType();
@@ -65,12 +75,22 @@ public class DeadLetterAutoConfiguration {
             case "local" -> {
                 QueueProperties.LocalConfig localConfig = new QueueProperties.LocalConfig();
                 localConfig.setDelayThreads(deadLetterProperties.getDelayThreads());
+                /**
+                 * 本地消息template。
+                 * @param localConfig 本地配置
+                 * @return 本地消息template的结果
+                 */
                 yield new LocalMessageTemplate(localConfig);
             }
             default -> {
                 log.warn("Unsupported dead-letter queue type: {}, using local", type);
                 QueueProperties.LocalConfig localConfig = new QueueProperties.LocalConfig();
                 localConfig.setDelayThreads(deadLetterProperties.getDelayThreads());
+                /**
+                 * 本地消息template。
+                 * @param localConfig 本地配置
+                 * @return 本地消息template的结果
+                 */
                 yield new LocalMessageTemplate(localConfig);
             }
         };

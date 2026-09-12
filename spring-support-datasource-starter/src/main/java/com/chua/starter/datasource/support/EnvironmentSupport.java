@@ -14,6 +14,7 @@ import java.util.Map;
  * 环境变量
  *
  * @author CH
+ * @since 4.0.0
  */
 public class EnvironmentSupport {
     /**
@@ -25,8 +26,8 @@ public class EnvironmentSupport {
     private final PathMatcher pathMatcher = new AntPathMatcher();
 
     /**
-     * 创建 EnvironmentSupport 实例
-     * @param environment environment
+      * 创建 环境支持 实例
+     * @param environment 环境
      */
     public EnvironmentSupport(Environment environment) {
         this.environment = environment;

@@ -42,7 +42,7 @@ public class AiModelMetricsEnrichmentService {
     /** 磁盘快照文件名 */
     private static final String SNAPSHOT_FILE = "ai-model-metrics.json";
 
-    private static final long CACHE_TTL_MILLIS = 6L * 60 * 60 * 1000;
+    private static final long CACHE_TTL_MILLIS = 6L * 60 * 60 * 1000; // 缓存ttlmillis
 
     /**
      * 指标数据源名称
@@ -50,13 +50,13 @@ public class AiModelMetricsEnrichmentService {
     private static final String SOURCE_NAME = "artificialanalysis";
 
     /**
-     * 硬编码兜底定价（USD/百万 Token）—— 用于不在 Artificial Analysis 数据库中的模型。
-     * 键为归一化模型名，值为 {input, output}。
+      * 硬编码兜底定价（USD/百万 令牌）—— 用于不在 Artificial Analysis 数据库中的模型。
+      * 键为归一化模型名，值为 {输入, 输出}。
      */
     private static final Map<String, double[]> FALLBACK_PRICING = new java.util.HashMap<>();
 
     static {
-        // Agnes AI 自有模型（基于 OpenRouter 同类产品参考定价）
+ // Agnes AI 自有模型（基于 打开router 同类产品参考定价）
         FALLBACK_PRICING.put("agnes-2-5-flash", new double[]{0.10, 0.40});
         FALLBACK_PRICING.put("agnes-image-2-0-flash", new double[]{0.00, 0.20});
         FALLBACK_PRICING.put("agnes-image-2-1-flash", new double[]{0.00, 0.30});
@@ -66,21 +66,21 @@ public class AiModelMetricsEnrichmentService {
         FALLBACK_PRICING.put("glm-4.1v-thinking-flash", new double[]{0.00, 0.00});
         // Google Gemini
         FALLBACK_PRICING.put("gemini-2.0-flash", new double[]{0.10, 0.40});
-        // SenseNova
+ // sensenova
         FALLBACK_PRICING.put("sensenova-6.7-flash-lite", new double[]{0.02, 0.06});
-        // OpenRouter 免费嵌入模型
+ // 打开router 免费嵌入模型
         FALLBACK_PRICING.put("llama-nemotron-embed-vl-1b-v2-free", new double[]{0.00, 0.00});
         FALLBACK_PRICING.put("nemotron-3-embed-1b-free", new double[]{0.00, 0.00});
         FALLBACK_PRICING.put("bge-large-en-v1.5", new double[]{0.00, 0.00});
-        // Qwen 免费模型
+ // 通义千问 免费模型
         FALLBACK_PRICING.put("qwen3-coder-free", new double[]{0.00, 0.00});
         FALLBACK_PRICING.put("qwen3-next-80b-a3b-instruct-free", new double[]{0.30, 0.30});
         // Nemotron
         FALLBACK_PRICING.put("nemotron-nano-12b-v2-vl-free", new double[]{0.00, 0.00});
-        // CogVideo
+ // cog视频
         FALLBACK_PRICING.put("cogvideox-flash", new double[]{0.00, 1.00});
         FALLBACK_PRICING.put("cogview-3-flash", new double[]{0.00, 0.50});
-        // DeepSeek（与 AA 数据对齐，确保一致）
+ // deepseek（与 AA 数据对齐，确保一致）
         FALLBACK_PRICING.put("deepseek-v4-flash-free", new double[]{0.14, 0.28});
         FALLBACK_PRICING.put("deepseek-v4-flash", new double[]{0.14, 0.28});
         FALLBACK_PRICING.put("deepseek-ai-deepseek-v4-flash", new double[]{0.14, 0.28});
@@ -92,7 +92,7 @@ public class AiModelMetricsEnrichmentService {
      * <p>HttpClient5 会自动请求 brotli 编码并解压响应，但 brotli4j 的 native 库
      * 需要显式调用 {@code Brotli4jLoader.ensureAvailability()} 才会加载；未加载时
      * 解压会抛 {@code UnsatisfiedLinkError}，导致在线指标同步失败。这里用反射调用
-     * 以避免编译期硬依赖 brotli4j（运行时才在 classpath）。</p>
+      * 以避免编译期硬依赖 brotli4j（运行时才在 类路径）。</p>
      */
     static {
         try {
@@ -130,34 +130,119 @@ public class AiModelMetricsEnrichmentService {
      *   <li>{@code context_window_tokens}</li>
      * </ul>
      *
-     * @param modelId 模型 ID（如 gpt-4o、deepseek-v4-flash）
+     * @param modelId 模型 标识（如 gpt-4o、deepseek-v4-flash）
      * @param row     模型行数据（原地追加）
      */
     public void enrich(String modelId, Map<String, Object> row) {
         MetricsRecord rec = find(modelId);
         if (rec != null) {
             // AA 数据完整，直接写入
+            /**
+             * 放入ifnot空。
+             * @param row row
+             * @param "price_input_per_musd" "price输入permusd"
+             * @param rec.inputPerMillion rec.输入permillion
+             */
             putIfNotNull(row, "price_input_per_musd", rec.inputPerMillion);
+            /**
+             * 放入ifnot空。
+             * @param row row
+             * @param "price_output_per_musd" "price输出permusd"
+             * @param rec.outputPerMillion rec.输出permillion
+             */
             putIfNotNull(row, "price_output_per_musd", rec.outputPerMillion);
+            /**
+             * 放入ifnot空。
+             * @param row row
+             * @param "intelligence_index" "智能_索引"
+             * @param rec.intelligenceIndex rec.智能索引
+             */
             putIfNotNull(row, "intelligence_index", rec.intelligenceIndex);
+            /**
+             * 放入ifnot空。
+             * @param row row
+             * @param "output_speed_tps" "输出速度tps"
+             * @param rec.outputSpeedTps rec.输出速度tps
+             */
             putIfNotNull(row, "output_speed_tps", rec.outputSpeedTps);
+            /**
+             * 放入ifnot空。
+             * @param row row
+             * @param "latency_first_token_seconds" "延迟第一个令牌seconds"
+             * @param rec.latencyFirstTokenSeconds rec.延迟第一个令牌seconds
+             */
             putIfNotNull(row, "latency_first_token_seconds", rec.latencyFirstTokenSeconds);
+            /**
+             * 放入ifnot空。
+             * @param row row
+             * @param "icon_url" "icon_url"
+             * @param rec.iconUrl rec.iconurl
+             */
             putIfNotNull(row, "icon_url", rec.iconUrl);
+            /**
+             * 放入ifnot空。
+             * @param row row
+             * @param "reasoning_model" "ReasonMLML_模型"
+             * @param rec.reasoning rec.ReasonMLML
+             */
             putIfNotNull(row, "reasoning_model", rec.reasoning);
+            /**
+             * 放入ifnot空。
+             * @param row row
+             * @param "web_search" "web_搜索"
+             * @param rec.webSearch rec.web搜索
+             */
             putIfNotNull(row, "web_search", rec.webSearch);
+            /**
+             * 放入ifnot空。
+             * @param row row
+             * @param "image_input" "镜像_输入"
+             * @param rec.imageInput rec.镜像输入
+             */
             putIfNotNull(row, "image_input", rec.imageInput);
+            /**
+             * 放入ifnot空。
+             * @param row row
+             * @param "function_calling" "function_calling"
+             * @param rec.functionCalling rec.functioncalling
+             */
             putIfNotNull(row, "function_calling", rec.functionCalling);
+            /**
+             * 放入ifnot空。
+             * @param row row
+             * @param "price_cache_hit_per_musd" "price缓存hitpermusd"
+             * @param rec.cacheHitPrice rec.缓存hitprice
+             */
             putIfNotNull(row, "price_cache_hit_per_musd", rec.cacheHitPrice);
+            /**
+             * 放入ifnot空。
+             * @param row row
+             * @param "price_cache_write_per_musd" "price缓存写入permusd"
+             * @param rec.cacheWritePrice rec.缓存写入price
+             */
             putIfNotNull(row, "price_cache_write_per_musd", rec.cacheWritePrice);
+            /**
+             * 放入ifnot空。
+             * @param row row
+             * @param "context_window_tokens" "上下文窗口令牌"
+             * @param rec.contextWindowTokens rec.上下文窗口令牌
+             */
             putIfNotNull(row, "context_window_tokens", rec.contextWindowTokens);
         } else {
             // AA 无数据，尝试硬编码兜底定价
+            /**
+             * apply降级pricing。
+             * @param modelId 模型标识
+             * @param row row
+             */
             applyFallbackPricing(modelId, row);
         }
     }
 
     /**
-     * 应用硬编码兜底定价：只补充 price_input/output，其余指标保持 null。
+      * 应用硬编码兜底定价：只补充 price_输入/输出，其余指标保持 空。
+     * @param modelId 模型标识
+     * @param row row
      */
     private void applyFallbackPricing(String modelId, Map<String, Object> row) {
         String key = normalize(modelId);
@@ -172,20 +257,28 @@ public class AiModelMetricsEnrichmentService {
     /**
      * 归一化匹配模型并返回指标记录。
      *
-     * @param modelId 模型 ID
-     * @return 命中的指标记录，未命中返回 null
+     * @param modelId 模型 标识
+     * @return 命中的指标记录，未命中返回 空
      */
     /**
      * 按模型标识查找 AA 定价记录（精确匹配优先，模糊匹配兜底）。
      *
      * @param modelId 模型标识，如 deepseek-v4-pro
-     * @return 定价记录，未找到时返回 null
+     * @return 定价记录，未找到时返回 空
      */
     public MetricsRecord getPricingRecord(String modelId) {
         return find(modelId);
     }
 
+    /**
+      * 查找。
+     * @param modelId 模型标识
+     * @return find的结果
+     */
     private MetricsRecord find(String modelId) {
+        /**
+         * ensure加载。
+         */
         ensureLoaded();
         if (index.isEmpty()) { return null; }
         String key = normalize(modelId);
@@ -224,6 +317,10 @@ public class AiModelMetricsEnrichmentService {
                 index.clear();
                 index.putAll(indexOf(fresh));
                 lastLoadAt.set(now);
+                /**
+                 * 保存转为disk。
+                 * @param fresh fresh
+                 */
                 saveToDisk(fresh);
                 log.info("[AiModelMetrics] 在线指标已加载并持久化，共 {} 条", fresh.size());
                 return;
@@ -252,7 +349,7 @@ public class AiModelMetricsEnrichmentService {
         if (provider == null) { return Map.of(); }
         List<ModelDefinition> list;
         if (provider instanceof AbstractModelMetricsProvider abstractProvider) {
-            // SPI 实例未注入 configSaveOrLoader，getMetrics()/syncFromOnline() 无法持久化读取，
+ // SPI 实例未注入 配置保存or加载，获取指标()/同步从online() 无法持久化读取，
             // 直接调用在线抓取方法拿原始列表。
             list = abstractProvider.fetchOnlinePricing();
         } else {
@@ -269,7 +366,15 @@ public class AiModelMetricsEnrichmentService {
             if (key.isEmpty()) { continue; }
             idx.putIfAbsent(key, new MetricsRecord(
                     key,
+                    /**
+                     * scale。
+                     * @param md.getInputUnitPrice( md.获取输入unitprice(
+                     */
                     scale(md.getInputUnitPrice()),
+                    /**
+                     * scale。
+                     * @param md.getOutputUnitPrice( md.获取输出unitprice(
+                     */
                     scale(md.getOutputUnitPrice()),
                     md.getIntelligenceIndex(),
                     md.getOutputSpeedTokensPerSecond(),
@@ -289,7 +394,7 @@ public class AiModelMetricsEnrichmentService {
     /**
      * 归一化：小写、去除厂商前缀、非字母数字合并为连字符。
      *
-     * @param id 原始模型 ID
+     * @param id 原始模型 标识
      * @return 归一化键
      */
     private String normalize(String id) {
@@ -315,7 +420,7 @@ public class AiModelMetricsEnrichmentService {
      * 数值格式化（4 位小数）。
      *
      * @param v 原始值
-     * @return 格式化值或 null
+     * @return 格式化值或 空
      */
     private BigDecimal scale(BigDecimal v) {
         return v == null ? null : v.setScale(4, RoundingMode.HALF_UP).stripTrailingZeros();
@@ -364,7 +469,7 @@ public class AiModelMetricsEnrichmentService {
     /**
      * 从磁盘快照恢复指标列表。
      *
-     * @return 指标记录列表，文件缺失或损坏返回 null
+     * @return 指标记录列表，文件缺失或损坏返回 空
      */
     @SuppressWarnings("unchecked")
     private List<MetricsRecord> loadFromDisk() {
@@ -380,17 +485,61 @@ public class AiModelMetricsEnrichmentService {
             for (Map<String, Object> o : arr) {
                 out.add(new MetricsRecord(
                         String.valueOf(o.get("key")),
+                        /**
+                         * dec。
+                         * @param o.get("in" o.获取("入"
+                         */
                         dec(o.get("in")),
+                        /**
+                         * dec。
+                         * @param o.get("out" o.获取("出"
+                         */
                         dec(o.get("out")),
+                        /**
+                         * dec。
+                         * @param o.get("intel" o.获取("intel"
+                         */
                         dec(o.get("intel")),
+                        /**
+                         * dec。
+                         * @param o.get("spd" o.获取("spd"
+                         */
                         dec(o.get("spd")),
+                        /**
+                         * dec。
+                         * @param o.get("ttft" o.获取("ttft"
+                         */
                         dec(o.get("ttft")),
                         o.get("icon") == null ? null : String.valueOf(o.get("icon")),
+                        /**
+                         * bool。
+                         * @param o.get("reason" o.获取("ReasonMLML"
+                         */
                         bool(o.get("reason")),
+                        /**
+                         * bool。
+                         * @param o.get("wsrch" o.获取("wsrch"
+                         */
                         bool(o.get("wsrch")),
+                        /**
+                         * bool。
+                         * @param o.get("imgin" o.获取("imgin"
+                         */
                         bool(o.get("imgin")),
+                        /**
+                         * bool。
+                         * @param o.get("fncall" o.获取("fncall"
+                         */
                         bool(o.get("fncall")),
+                        /**
+                         * dec。
+                         * @param o.get("cachehit" o.获取("cachehit"
+                         */
                         dec(o.get("cachehit")),
+                        /**
+                         * dec。
+                         * @param o.get("cachewr" o.获取("cachewr"
+                         */
                         dec(o.get("cachewr")),
                         lng(o.get("ctx"))));
             }
@@ -419,7 +568,7 @@ public class AiModelMetricsEnrichmentService {
      * 空值安全的数值转换。
      *
      * @param v 原始值
-     * @return 数值或 null
+     * @return 数值或 空
      */
     private BigDecimal dec(Object v) {
         if (v == null) { return null; }
@@ -428,10 +577,10 @@ public class AiModelMetricsEnrichmentService {
     }
 
     /**
-     * 空值安全的布尔转换（磁盘旧快照缺字段时返回 null）。
+      * 空值安全的布尔转换（磁盘旧快照缺字段时返回 空）。
      *
      * @param v 原始值
-     * @return 布尔或 null
+     * @return 布尔或 空
      */
     private Boolean bool(Object v) {
         return v == null ? null : Boolean.valueOf(String.valueOf(v));
@@ -441,7 +590,7 @@ public class AiModelMetricsEnrichmentService {
      * 空值安全的长整型转换。
      *
      * @param v 原始值
-     * @return 数值或 null
+     * @return 数值或 空
      */
     private Long lng(Object v) {
         if (v == null) { return null; }
@@ -465,15 +614,15 @@ public class AiModelMetricsEnrichmentService {
     public record MetricsRecord(
             /** 归一化键 */
             String normalizedKey,
-            /** 输入单价（USD/百万 Token） */
+            /** 输入单价（USD/百万 令牌） */
             BigDecimal inputPerMillion,
-            /** 输出单价（USD/百万 Token） */
+            /** 输出单价（USD/百万 令牌） */
             BigDecimal outputPerMillion,
             /** 智能指数 */
             BigDecimal intelligenceIndex,
-            /** 输出速度（Token/秒） */
+            /** 输出速度（令牌/秒） */
             BigDecimal outputSpeedTps,
-            /** 首 Token 延迟（秒） */
+            /** 首 令牌 延迟（秒） */
             BigDecimal latencyFirstTokenSeconds,
             /** 图标地址 */
             String iconUrl,
@@ -485,11 +634,11 @@ public class AiModelMetricsEnrichmentService {
             Boolean imageInput,
             /** 是否函数调用 */
             Boolean functionCalling,
-            /** 缓存命中输入价（USD/百万 Token） */
+            /** 缓存命中输入价（USD/百万 令牌） */
             BigDecimal cacheHitPrice,
-            /** 缓存写入价（USD/百万 Token） */
+            /** 缓存写入价（USD/百万 令牌） */
             BigDecimal cacheWritePrice,
-            /** 上下文窗口（Token 数） */
+            /** 上下文窗口（令牌 数） */
             Long contextWindowTokens) {
     }
 

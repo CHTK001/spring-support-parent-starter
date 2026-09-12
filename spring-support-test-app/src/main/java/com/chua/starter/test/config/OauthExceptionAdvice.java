@@ -20,6 +20,11 @@ import java.util.Map;
 public class OauthExceptionAdvice {
 
     @ExceptionHandler(OauthException.class)
+    /**
+      * 把手OAuth异常。
+     * @param ex ex
+     * @return 把手oauth异常的结果
+     */
     public ResponseEntity<Map<String, Object>> handleOauthException(OauthException ex) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
                 .body(Map.of("code", 403, "message", String.valueOf(ex.getMessage())));

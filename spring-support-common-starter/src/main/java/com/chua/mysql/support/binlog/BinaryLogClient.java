@@ -3,9 +3,10 @@ package com.chua.mysql.support.binlog;
 import com.chua.mysql.support.binlog.event.Event;
 
 /**
- * MySQL Binary Log 客户端
+   * MySQL Binary 日志 客户端
  *
  * @author CH
+ * @since 4.0.0
  */
 public class BinaryLogClient {
 
@@ -13,17 +14,17 @@ public class BinaryLogClient {
     private final String host;
     /** 端口 */
     private final int port;
-    /** Username */
+    /** 用户名 */
     private final String username;
     /** 密码 */
     private final String password;
-    /** 服务器ID */
+    /** 服务器标识 */
     private int serverId = 0;
-    /** Connect超时 */
+    /** 连接超时 */
     private int connectTimeout = 0;
 
     /**
-     * 创建 MySQL Binary Log 客户端
+       * 创建 MySQL Binary 日志 客户端
      *
      * @param host 主机地址
      * @param port 端口
@@ -38,9 +39,9 @@ public class BinaryLogClient {
     }
 
     /**
-     * 设置服务器 ID
+      * 设置服务器 标识
      *
-     * @param serverId 服务器 ID
+     * @param serverId 服务器 标识
      */
     public void setServerId(int serverId) {
         this.serverId = serverId;
@@ -72,7 +73,7 @@ public class BinaryLogClient {
     }
 
     /**
-     * 连接到 MySQL 服务器
+       * 连接到 MySQL 服务器
      */
     public void connect() {
     }
@@ -84,12 +85,14 @@ public class BinaryLogClient {
     }
 
     /**
-     * Binary Log 事件监听器接口
+      * Binary 日志 事件监听器接口
+     * @author CH
+     * @since 4.0.0
      */
     public interface EventListener {
 
         /**
-         * 处理 Binary Log 事件
+          * 处理 Binary 日志 事件
          *
          * @param event 事件对象
          */

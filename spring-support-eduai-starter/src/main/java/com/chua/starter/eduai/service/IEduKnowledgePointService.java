@@ -36,7 +36,7 @@ public interface IEduKnowledgePointService extends IService<EduKnowledgePoint> {
     /**
      * 删除知识点（含子节点）
      *
-     * @param id 知识点ID
+     * @param id 知识点标识
      * @return 是否成功
      */
     boolean deleteKnowledgePoint(Long id);

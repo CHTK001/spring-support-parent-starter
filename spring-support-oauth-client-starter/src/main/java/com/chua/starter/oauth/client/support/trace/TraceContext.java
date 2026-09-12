@@ -9,9 +9,9 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * OAuth 链路追踪上下文
+   * o认证 链路追踪上下文
  * <p>
- * 管理整个请求的追踪信息，包括 traceId、spanId 和各节点耗时
+   * 管理整个请求的追踪信息，包括 追踪标识、spanid 和各节点耗时
  * </p>
  *
  * @since 2024/12/28
@@ -19,9 +19,9 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class TraceContext {
 
-    /** Mdc_trace_id */
+    /** Mdc_追踪_标识 */
     private static final String MDC_TRACE_ID = "traceId";
-    /** Mdc_span_id */
+    /** Mdc_span_标识 */
     private static final String MDC_SPAN_ID = "spanId";
 
     /**
@@ -30,14 +30,14 @@ public class TraceContext {
     private static final ThreadLocal<TraceContext> CONTEXT_HOLDER = new ThreadLocal<>();
 
     /**
-     * 追踪ID（全局唯一）
+      * 追踪标识（全局唯一）
      */
     @Getter
-    /** 跟踪ID */
+    /** 跟踪标识 */
     private final String traceId;
 
     /**
-     * 当前 Span ID 计数器
+      * 当前 Span 标识 计数器
      */
     private final AtomicInteger spanCounter = new AtomicInteger(0);
 
@@ -76,6 +76,7 @@ public class TraceContext {
 
     /**
      * 私有构造
+     * @param traceId 追踪标识
      */
     private TraceContext(String traceId) {
         this.traceId = traceId != null ? traceId : UUID.randomUUID().toString().replace("-", "");
@@ -95,9 +96,9 @@ public class TraceContext {
     }
 
     /**
-     * 创建追踪上下文（使用指定的 traceId）
+       * 创建追踪上下文（使用指定的 追踪标识）
      *
-     * @param traceId 追踪ID
+     * @param traceId 追踪标识
      * @return 追踪上下文
      */
     public static TraceContext create(String traceId) {
@@ -110,7 +111,7 @@ public class TraceContext {
     /**
      * 获取当前追踪上下文
      *
-     * @return 追踪上下文，可能为 null
+     * @return 追踪上下文，可能为 空
      */
     public static TraceContext current() {
         return CONTEXT_HOLDER.get();
@@ -139,9 +140,9 @@ public class TraceContext {
     }
 
     /**
-     * 生成新的 Span ID
+      * 生成新的 Span 标识
      *
-     * @return Span ID
+     * @return Span 标识
      */
     public String nextSpanId() {
         return traceId.substring(0, 8) + "-" + spanCounter.incrementAndGet();

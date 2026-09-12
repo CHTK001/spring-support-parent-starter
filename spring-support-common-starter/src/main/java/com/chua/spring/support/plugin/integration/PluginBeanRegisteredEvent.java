@@ -6,10 +6,11 @@ import org.springframework.context.ApplicationEvent;
  * 插件 Bean 注册事件
  * <p>
  * 当插件中的 Bean 注册到 Spring 容器时发布该事件，
- * 可用于监听插件 Bean 的注册行为，进行后续处理（如自动注册 MyBatis Mapper）。
+   * 可用于监听插件 Bean 的注册行为，进行后续处理（如自动注册 MyBatis 映射器）。
  * </p>
  *
  * @author CH
+ * @since 4.0.0
  */
 public class PluginBeanRegisteredEvent extends ApplicationEvent {
 
@@ -36,6 +37,10 @@ public class PluginBeanRegisteredEvent extends ApplicationEvent {
      * @param beanInstance Bean 实例
      */
     public PluginBeanRegisteredEvent(Object source, String beanName, Object beanInstance) {
+        /**
+         * 父。
+         * @param source 源
+         */
         super(source);
         this.beanName = beanName;
         this.beanInstance = beanInstance;

@@ -5,7 +5,7 @@ import com.chua.starter.device.support.entity.DeviceDoor;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
- * 设备门禁 Mapper
+   * 设备门禁 映射器
  *
  * @since 4.0.0.42
  * @author CH

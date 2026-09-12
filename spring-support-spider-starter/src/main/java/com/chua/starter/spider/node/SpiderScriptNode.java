@@ -17,7 +17,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 脚本节点（SpEL 表达式）。
+   * 脚本节点（spel 表达式）。
  *
  * <p>使用 Spring Expression Language 计算一个表达式，并将结果写入上下文属性，
  * 用于在不写额外 Java 代码的前提下完成拼接、计算与条件取值等逻辑。</p>
@@ -44,7 +44,7 @@ public class SpiderScriptNode implements FlowNode {
     private static final String VAR_DATA = "data";
 
     /**
-     * SpEL 表达式解析器
+      * spel 表达式解析器
      */
     private final ExpressionParser expressionParser = new SpelExpressionParser();
 
@@ -82,9 +82,19 @@ public class SpiderScriptNode implements FlowNode {
         String expression = props.getString("expression");
         String saveAs = props.getString("saveAs");
         if (expression == null || expression.isEmpty()) {
+            /**
+             * illegal参数异常。
+             * @param 参数" 参数"
+             * @return illegal参数异常的结果
+             */
             throw new IllegalArgumentException("spider.script 节点缺少 expression 参数");
         }
         if (saveAs == null || saveAs.isEmpty()) {
+            /**
+             * illegal参数异常。
+             * @param 参数" 参数"
+             * @return illegal参数异常的结果
+             */
             throw new IllegalArgumentException("spider.script 节点缺少 saveAs 参数");
         }
         StandardEvaluationContext evalContext = new StandardEvaluationContext();

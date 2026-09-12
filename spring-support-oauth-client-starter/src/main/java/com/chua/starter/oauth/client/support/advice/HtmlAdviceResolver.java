@@ -24,7 +24,7 @@ import java.nio.charset.StandardCharsets;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * html
+   * HTML
  *
  * @since 2022/7/29 10:24
  * @author CH
@@ -33,7 +33,7 @@ import lombok.extern.slf4j.Slf4j;
 public class HtmlAdviceResolver implements AdviceResolver {
 
     @Override
-    /** Type */
+    /** 类型 */
     public String type() {
         return MediaType.TEXT_HTML_VALUE;
     }
@@ -45,17 +45,18 @@ public class HtmlAdviceResolver implements AdviceResolver {
     }
 
     @Override
-    /** 是否Html */
+    /** 是否HTML */
     public boolean isHtml() {
         return true;
     }
 
     /**
-     * html
+      * HTML
      *
      * @param request        请求
      * @param response       响应
      * @param code           错误码
+     * @param authProperties 认证属性
      */
     public void resolve(HttpServletRequest request, HttpServletResponse response, int code, AuthClientProperties authProperties) {
         String url1 = authProperties.getLoginPage();
@@ -89,9 +90,18 @@ public class HtmlAdviceResolver implements AdviceResolver {
             String encode = URLEncoder.encode(toString, StandardCharsets.UTF_8);
             String url = address;
             if (Strings.isNullOrEmpty(url)) {
+                /**
+                 * 尝试。
+                 * @param response.getOutputStream( 响应.获取输出流(
+                 */
                 try (OutputStream writer = response.getOutputStream()) {
                     writer.write(Xml.toXmlByte(Json.getJsonObject(Json.toJson(ReturnResult.error("未授权")))));
                 } catch (Exception e) {
+                    /**
+                     * runtime异常。
+                     * @param e e
+                     * @return runtime异常的结果
+                     */
                     throw new RuntimeException(e);
                 }
                 return;

@@ -5,22 +5,23 @@ import lombok.Data;
 /**
  * 微信退款请求
  * @author CH
+ * @since 4.0.0
  */
 @Data
 public class TencentWechatRefundRequest {
     /** 排序NO */
     private String orderNo;
-    /** TradeNO */
+    /** 贸易no */
     private String tradeNo;
-    /** RefundNO */
+    /** 退税no */
     private String refundNo;
-    /** RefundamountFEN */
+    /** refundamountfen */
     private Long refundAmountFen;
-    /** 总数amountFEN */
+    /** 总数amountfen */
     private Long totalAmountFen;
-    /** Reason */
+    /** ReasonMLmlml */
     private String reason;
-    /** NotifyURL */
+    /** 通知url */
     private String notifyUrl;
 }
 

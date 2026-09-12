@@ -6,7 +6,7 @@ package com.chua.starter.common.support.constant;
  * 定义数据查询时支持的各种运算符类型，用于构建动态查询条件。
  * </p>
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024/01/22
  * @author CH
  */
@@ -14,31 +14,43 @@ public enum OperatorType {
 
     /**
      * 等于运算符
+     * @param "=" "="
+     * @return EQ的结果
      */
     EQ("="),
 
     /**
      * 全模糊匹配（前后都加%）
+     * @param "%%" "%%"
+     * @return LIKE的结果
      */
     LIKE("%%"),
 
     /**
      * 左模糊匹配（前面加%）
+     * @param "%" "%"
+     * @return LEFT_LIKE的结果
      */
     LEFT_LIKE("%"),
 
     /**
      * 右模糊匹配（后面加%）
+     * @param "%" "%"
+     * @return RIGHT_LIKE的结果
      */
     RIGHT_LIKE("%"),
 
     /**
      * 正则表达式匹配
+     * @param "" ""
+     * @return REGEX的结果
      */
     REGEX(""),
 
     /**
      * 通配符匹配
+     * @param "*" "*"
+     * @return WILL的结果
      */
     WILL("*"),
     ;
@@ -58,7 +70,7 @@ public enum OperatorType {
     }
 
     /**
-     * 获取 operator
+      * 获取 操作符
      *
      * @return operator
      */

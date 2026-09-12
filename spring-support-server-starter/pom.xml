@@ -71,7 +71,23 @@
         </dependency>
         <dependency>
             <groupId>com.chua</groupId>
+            <artifactId>utils-support-nmap-starter</artifactId>
+            <version>${utils.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-guacamole-starter</artifactId>
+            <version>${utils.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.chua</groupId>
             <artifactId>utils-support-ssh-starter</artifactId>
+        </dependency>
+        <!-- WinRM：Windows 主机命令执行 / 硬件采集（与 SSH 并存，按系统类型路由） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-winrm-starter</artifactId>
+            <version>${utils.version}</version>
         </dependency>
         <dependency>
             <groupId>com.chua</groupId>

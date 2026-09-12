@@ -28,10 +28,10 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * 服务器本地采集 Provider
+   * 服务器本地采集 提供者
  * <p>
- * 基于 utils-support-metrics-starter 直采本机 CPU/内存/磁盘/网络/负载等指标,
- * macOS 下 native 库不支持, 通过配置项跳过。
+   * 基于 utils-support-metrics-starter 直采本机 CPU/内存/磁盘/网络/负载等指标,
+   * macOS 下 NAT 库不支持, 通过配置项跳过。
  * </p>
  *
  * @since 2026/8/4
@@ -42,25 +42,25 @@ import java.util.Set;
 public class ServerLocalProvider implements MetricProvider {
 
     /**
-     * macOS 跳过配置项
+       * macOS 跳过配置项
      */
     private static final String CONFIG_KEY_SKIP_MACOS = "monitor.local.skip.macos";
 
     /**
-     * MetricsService 提供者(可能未启用)
+      * 指标服务 提供者(可能未启用)
      */
     private final ObjectProvider<MetricsService> metricsServiceProvider;
 
     /**
-     * 全局配置 Service
+      * 全局配置 服务
      */
     private final MonitorConfigService configService;
 
     /**
      * 构造方法
      *
-     * @param metricsServiceProvider MetricsService 提供者
-     * @param configService          全局配置 Service
+     * @param metricsServiceProvider 指标服务 提供者
+     * @param configService          全局配置 服务
      */
     @Autowired
     public ServerLocalProvider(ObjectProvider<MetricsService> metricsServiceProvider,
@@ -70,13 +70,13 @@ public class ServerLocalProvider implements MetricProvider {
     }
 
     @Override
-    /** ProviderType */
+    /** 提供者类型 */
     public ProviderType providerType() {
         return ProviderType.LOCAL;
     }
 
     @Override
-    /** SupportServiceTypes */
+    /** 支持服务类型 */
     public Set<ServiceType> supportServiceTypes() {
         return Set.of(ServiceType.SERVER);
     }
@@ -119,11 +119,41 @@ public class ServerLocalProvider implements MetricProvider {
                 return result.fail("无指标数据");
             }
 
+            /**
+              * collectcpu。
+             * @param snapshot snapshot
+             * @param result 结果
+             */
             collectCpu(snapshot, result);
+            /**
+             * collect内存。
+             * @param snapshot snapshot
+             * @param result 结果
+             */
             collectMemory(snapshot, result);
+            /**
+              * collectdisk。
+             * @param snapshot snapshot
+             * @param result 结果
+             */
             collectDisk(snapshot, result);
+            /**
+              * collectdiskio。
+             * @param snapshot snapshot
+             * @param result 结果
+             */
             collectDiskIo(snapshot, result);
+            /**
+              * collectnetwork。
+             * @param snapshot snapshot
+             * @param result 结果
+             */
             collectNetwork(snapshot, result);
+            /**
+             * collect系统加载。
+             * @param snapshot snapshot
+             * @param result 结果
+             */
             collectSystemLoad(snapshot, result);
 
             result.setSuccess(true);
@@ -357,7 +387,7 @@ public class ServerLocalProvider implements MetricProvider {
     }
 
     /**
-     * 检测是否为 macOS
+       * 检测是否为 macOS
      *
      * @return 是否
      */

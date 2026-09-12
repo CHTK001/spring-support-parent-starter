@@ -51,7 +51,7 @@ public class FileChunkUploadController {
     private static final double PERCENT_BASE = 100.0;
 
     /**
-     * 远端 Key 路径分隔符
+      * 远端 钥匙 路径分隔符
      */
     private static final String KEY_PATH_SEPARATOR = "/";
 
@@ -81,7 +81,7 @@ public class FileChunkUploadController {
     private final FileStorageProperties fileStorageProperties;
 
     /**
-     * 分片上传配置 (chunkSize 等)
+      * 分片上传配置 (chunk大小 等)
      */
     private final FileStorageUploadProperties uploadProperties;
 
@@ -91,12 +91,12 @@ public class FileChunkUploadController {
     private final FileServerManager fileServerManager;
 
     /**
-     * 上传任务 ID → 分片 → 本地路径占位 的映射
+      * 上传任务 标识 → 分片 → 本地路径占位 的映射
      */
     private final Map<String, Map<Integer, String>> chunkTempPathMap = new ConcurrentHashMap<>();
 
     /**
-     * 上传任务 ID → 实时进度 的映射
+      * 上传任务 标识 → 实时进度 的映射
      */
     private final Map<String, Map<String, Object>> progressMap = new ConcurrentHashMap<>();
 
@@ -104,14 +104,14 @@ public class FileChunkUploadController {
      * 初始化分片上传任务。
      *
      * <p>校验 bucket 是否被 FileServerManager 管理，按 properties 配置的 chunkSize 切分文件，
-     * 返回每个分片的 partNumber 与 size。</p>
+      * 返回每个分片的 part数字 与 大小。</p>
      *
      * @param fileName    文件名称
      * @param fileSize    文件大小（字节）
      * @param md5         文件 MD5（可选，用于秒传校验）
-     * @param bucket      目标 bucket（必须已被 FileServerManager 管理）
+     * @param bucket      目标 bucket（必须已被 文件服务端管理器 管理）
      * @param contentType 内容类型（可选）
-     * @return 包含 uploadId、chunkSize、totalChunks、parts 等信息
+     * @return 包含 uploadid、chunk大小、totalchunks、parts 等信息
      */
     @Operation(summary = "初始化分片上传任务")
     @PostMapping("/chunk/create")
@@ -130,13 +130,13 @@ public class FileChunkUploadController {
             return ReturnResult.illegal("文件大小必须大于0");
         }
 
-        // 从 properties 读取分片大小（不允许客户端覆盖）
+ // 从 属性 读取分片大小（不允许客户端覆盖）
         long chunkSize = uploadProperties.getChunkSize();
         if (chunkSize <= 0) {
             return ReturnResult.illegal("分片大小配置错误: " + chunkSize);
         }
 
-        // 校验 bucket 是否被 FileServerManager 管理（只有启动成功的 server 才计入 serverMap）
+ // 校验 bucket 是否被 文件服务端管理器 管理（只有启动成功的 服务端 才计入 服务端映射）
         if (!fileServerManager.isRunning(bucket)) {
             return ReturnResult.illegal("bucket 不存在或未启动: " + bucket);
         }
@@ -147,7 +147,7 @@ public class FileChunkUploadController {
             totalChunks = 1;
         }
 
-        // 生成上传任务 ID 与默认 Key
+ // 生成上传任务 标识 与默认 钥匙
         String uploadId = UUID.randomUUID().toString().replace("-", "");
         String finalKey = "uploads/" + uploadId + "/" + fileName;
 
@@ -184,7 +184,7 @@ public class FileChunkUploadController {
     /**
      * 上传单个分片。
      *
-     * @param uploadId   上传任务 ID
+     * @param uploadId   上传任务 标识
      * @param partNumber 分片序号（1-based）
      * @param file       分片文件
      * @return 上传结果
@@ -261,7 +261,7 @@ public class FileChunkUploadController {
      * <p>校验分片齐全后，将任务入队为"待合并"阶段，由异步合并调度与上传调度
      * 依次执行合并与对象存储上传。</p>
      *
-     * @param uploadId 上传任务 ID
+     * @param uploadId 上传任务 标识
      * @return 入队结果
      */
     @Operation(summary = "完成分片上传")
@@ -309,7 +309,7 @@ public class FileChunkUploadController {
     /**
      * 取消分片上传。
      *
-     * @param uploadId 上传任务 ID
+     * @param uploadId 上传任务 标识
      * @return 空结果
      */
     @Operation(summary = "取消分片上传")
@@ -324,6 +324,11 @@ public class FileChunkUploadController {
             SysFileSystemUpload task = uploadService.getByUploadId(uploadId);
             // 清理临时分片（如果有）
             if (task != null) {
+                /**
+                  * cleanuptempchunks。
+                 * @param uploadId uploadid
+                 * @param task.getFilesystemUploadTaskTotalChunks( 任务.getfilesystemupload任务totalchunks(
+                 */
                 cleanupTempChunks(uploadId, task.getFilesystemUploadTaskTotalChunks());
             }
             uploadService.markFailed(uploadId, "用户取消上传");
@@ -344,7 +349,7 @@ public class FileChunkUploadController {
     /**
      * 查询上传进度。
      *
-     * @param uploadId 上传任务 ID
+     * @param uploadId 上传任务 标识
      * @return 进度信息
      */
     @Operation(summary = "查询上传进度")
@@ -411,7 +416,7 @@ public class FileChunkUploadController {
     /**
      * 清理临时分片文件。
      *
-     * @param uploadId    上传任务 ID
+     * @param uploadId    上传任务 标识
      * @param totalChunks 总分片数
      */
     private void cleanupTempChunks(String uploadId, int totalChunks) {

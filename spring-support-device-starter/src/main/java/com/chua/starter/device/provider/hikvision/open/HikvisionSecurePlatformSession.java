@@ -12,7 +12,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * 海康安防平台（iSecure Center / 综合安防管理平台）OpenAPI 会话
+   * 海康安防平台（isecure Center / 综合安防管理平台）打开api 会话
  * <p>对接海康综合安防平台 OpenAPI（artemis 协议），基于 common-starter HttpClient，全平台可用。</p>
  *
  * <h3>接入说明</h3>
@@ -28,7 +28,7 @@ import java.util.Map;
 public class HikvisionSecurePlatformSession extends AbstractOpenApiSession {
 
     /**
-     * 海康安防平台默认 baseUrl（按官方文档配置）
+      * 海康安防平台默认 baseurl（按官方文档配置）
      */
     private static final String DEFAULT_BASE_URL = "https://artemis.hikvision.com";
 
@@ -48,18 +48,22 @@ public class HikvisionSecurePlatformSession extends AbstractOpenApiSession {
     private static final String PATH_DOOR_CONTROL = "/api/access/v1/door/control";
 
     /**
-     * 创建 HikvisionSecurePlatformSession 实例
-     * @param info info
+      * 创建 hikvisionsecureplatform会话 实例
+     * @param info 信息
      */
     public HikvisionSecurePlatformSession(DeviceConnectInfo info) {
         super(info, DEFAULT_BASE_URL);
-        // 安防平台通常无独立登录，AppKey/AppSecret 通过签名头传递
+ // 安防平台通常无独立登录，app键/appsecret 通过签名头传递
         this.accessToken = "artemis:" + info.getAppKey();
         this.tokenExpiry = Instant.MAX;
     }
 
     /**
-     * artemis 网关签名：x-ca-signature = Base64(HMAC-SHA256(appSecret, StringToSign))
+      * Artemis 网关签名：x-ca-签名 = 基础64(HMAC-SHA256(appsecret, 字符串转为标志))
+     * @param method 方法
+     * @param path 路径
+     * @param headers 头部
+     * @return Artemis标志的结果
      */
     private String artemisSign(String method, String path, Map<String, String> headers) {
         String stringToSign = method + "\n"
@@ -78,7 +82,7 @@ public class HikvisionSecurePlatformSession extends AbstractOpenApiSession {
     }
 
     @Override
-    /** DoRequest */
+    /** 执行请求 */
     protected JsonNode doRequest(String method, String path, Map<String, Object> params) {
         String timestamp = String.valueOf(System.currentTimeMillis());
         String nonce = java.util.UUID.randomUUID().toString();
@@ -92,7 +96,9 @@ public class HikvisionSecurePlatformSession extends AbstractOpenApiSession {
             StringBuilder sb = new StringBuilder();
             params.forEach((k, v) -> {
                 if (v != null) {
-                    if (sb.length() > 0) sb.append("&");
+                    if (sb.length() > 0) {
+                        sb.append("&");
+                    }
                     sb.append(java.net.URLEncoder.encode(k, java.nio.charset.StandardCharsets.UTF_8));
                     sb.append("=");
                     sb.append(java.net.URLEncoder.encode(String.valueOf(v), java.nio.charset.StandardCharsets.UTF_8));
@@ -113,6 +119,8 @@ public class HikvisionSecurePlatformSession extends AbstractOpenApiSession {
 
     /**
      * 获取摄像头预览 URL（HLS/RTSP 等）
+     * @param channel 通道
+     * @return 获取previewurl的结果
      */
     public JsonNode getPreviewUrl(int channel) {
         Map<String, Object> params = new HashMap<>();
@@ -124,14 +132,14 @@ public class HikvisionSecurePlatformSession extends AbstractOpenApiSession {
     }
 
     @Override
-    /** 获取LiveUrl */
+    /** 获取liveurl */
     public String getLiveUrl(int channel, String protocol) {
         JsonNode data = getPreviewUrl(channel);
         return data.path("url").asText(data.path("hls").asText(data.path("rtsp").asText("")));
     }
 
     @Override
-    /** 获取PlaybackUrl */
+    /** 获取playbackurl */
     public String getPlaybackUrl(int channel, com.chua.starter.device.spi.model.TimeRange range) {
         Map<String, Object> params = new HashMap<>();
         params.put("cameraIndexCode", info.getDeviceSerial());
@@ -143,7 +151,7 @@ public class HikvisionSecurePlatformSession extends AbstractOpenApiSession {
     }
 
     @Override
-    /** PtzControl */
+    /** ptzcontrol */
     public void ptzControl(com.chua.starter.device.spi.model.PtzCommand cmd, double speed) {
         if (cmd == com.chua.starter.device.spi.model.PtzCommand.STOP) {
             return;
@@ -155,7 +163,12 @@ public class HikvisionSecurePlatformSession extends AbstractOpenApiSession {
         post(PATH_PTZ_CONTROL, params);
     }
 
-    /** MapArtemisDirection */
+    /**
+     * 映射Artemisdirection
+     *
+     * @param cmd CMD
+     * @return 映射Artemisdirection的结果
+     */
     private int mapArtemisDirection(com.chua.starter.device.spi.model.PtzCommand cmd) {
         switch (cmd) {
             case UP: return 0;
@@ -173,7 +186,7 @@ public class HikvisionSecurePlatformSession extends AbstractOpenApiSession {
     }
 
     @Override
-    /** Remote解锁 */
+    /** 远程解锁 */
     public void remoteUnlock(int doorId) {
         Map<String, Object> params = new HashMap<>();
         params.put("doorIndexCode", info.getDeviceSerial() + ":" + doorId);

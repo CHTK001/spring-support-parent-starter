@@ -25,10 +25,10 @@ public interface DeviceEventService {
     /**
      * 查询事件
      *
-     * @param deviceId 设备 ID
-     * @param type     事件类型，null 表示全部
-     * @param start    开始时间，null 表示不限
-     * @param end      结束时间，null 表示不限
+     * @param deviceId 设备 标识
+     * @param type     事件类型，空 表示全部
+     * @param start    开始时间，空 表示不限
+     * @param end      结束时间，空 表示不限
      * @return 事件列表
      */
     List<DeviceEventRecord> queryEvents(String deviceId, EventType type, LocalDateTime start, LocalDateTime end);

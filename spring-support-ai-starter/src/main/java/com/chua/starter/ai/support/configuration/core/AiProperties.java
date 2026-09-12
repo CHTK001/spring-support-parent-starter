@@ -32,6 +32,7 @@ public class AiProperties {
      * 图片生成配置。
      *
      * @since 4.0.0.42
+     * @author CH
      */
     @Data
     public static class Image {
@@ -42,12 +43,12 @@ public class AiProperties {
         private String provider = "openai";
 
         /**
-         * API Key
+          * API 钥匙
          */
         private String apiKey;
 
         /**
-         * 自定义 Base URL（可选）
+          * 自定义 基础 URL（可选）
          */
         private String baseUrl;
 
@@ -71,6 +72,7 @@ public class AiProperties {
      * 视频生成配置。
      *
      * @since 4.0.0.42
+     * @author CH
      */
     @Data
     public static class Video {
@@ -81,12 +83,12 @@ public class AiProperties {
         private String provider = "openai";
 
         /**
-         * API Key
+          * API 钥匙
          */
         private String apiKey;
 
         /**
-         * 自定义 Base URL（可选）
+          * 自定义 基础 URL（可选）
          */
         private String baseUrl;
 
@@ -105,6 +107,7 @@ public class AiProperties {
      * 图片上色配置。
      *
      * @since 4.0.0.42
+     * @author CH
      */
     @Data
     public static class Colorize {
@@ -115,12 +118,12 @@ public class AiProperties {
         private String provider = "openai";
 
         /**
-         * API Key
+          * API 钥匙
          */
         private String apiKey;
 
         /**
-         * 自定义 Base URL（可选）
+          * 自定义 基础 URL（可选）
          */
         private String baseUrl;
 

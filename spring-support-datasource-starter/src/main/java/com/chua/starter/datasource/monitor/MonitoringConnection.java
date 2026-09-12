@@ -13,7 +13,7 @@ import java.sql.Statement;
  * SQL 监控连接
  *
  * <p>基于 JDK 动态代理包装 {@link Connection}，透明透传全部方法（含 commit/rollback/close
- * 等事务方法），仅拦截创建 Statement 的入口返回 {@link MonitoringStatement}，从而对执行的
+   * 等事务方法），仅拦截创建 对账单 的入口返回 {@link MonitoringStatement}，从而对执行的
  * SQL 进行计时与上报，不影响连接池与事务语义。</p>
  *
  * <p>若底层连接本身已是代理（如 Seata ConnectionProxy），内部再创建 Statement 时
@@ -41,7 +41,7 @@ public class MonitoringConnection implements InvocationHandler {
     private final DataSourceSqlMonitor monitor;
 
     /**
-     * 连接关闭时的回调（用于连接数统计递减），可为 null
+      * 连接关闭时的回调（用于连接数统计递减），可为 空
      */
     private final Runnable onClose;
 
@@ -53,6 +53,13 @@ public class MonitoringConnection implements InvocationHandler {
      * @param monitor        监控门面
      */
     public MonitoringConnection(Connection delegate, String dataSourceName, DataSourceSqlMonitor monitor) {
+        /**
+         * this。
+         * @param delegate delegate
+         * @param dataSourceName 数据源名称
+         * @param monitor 监控
+         * @param null 空
+         */
         this(delegate, dataSourceName, monitor, null);
     }
 
@@ -62,7 +69,7 @@ public class MonitoringConnection implements InvocationHandler {
      * @param delegate       目标连接
      * @param dataSourceName 数据源名称
      * @param monitor        监控门面
-     * @param onClose        连接关闭回调，可为 null
+     * @param onClose        连接关闭回调，可为 空
      */
     public MonitoringConnection(Connection delegate, String dataSourceName, DataSourceSqlMonitor monitor, Runnable onClose) {
         this.delegate = delegate;
@@ -88,7 +95,7 @@ public class MonitoringConnection implements InvocationHandler {
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
         String name = method.getName();
 
-        // 关闭连接：透传并触发关闭回调（幂等，多次 close 仅回调一次）
+ // 关闭连接：透传并触发关闭回调（幂等，多次 关闭 仅回调一次）
         if ("close".equals(name)) {
             try {
                 return invokeTarget(method, args);
@@ -99,19 +106,19 @@ public class MonitoringConnection implements InvocationHandler {
             }
         }
 
-        // 创建 Statement 的入口：统一反射分派，避免手工解析重载参数导致
-        // (String, String[]) / (String, int[]) 等重载被误强转为 int 抛 ClassCastException
+ // 创建 对账单 的入口：统一反射分派，避免手工解析重载参数导致
+ // (字符串, 字符串[]) / (字符串, int[]) 等重载被误强转为 int 抛 类cast异常
         if ("createStatement".equals(name) || "prepareStatement".equals(name) || "prepareCall".equals(name)) {
             Object result = invokeTarget(method, args);
             if (result instanceof Statement statement) {
-                // 提取 SQL 文本：仅当第一个参数为 String（execute(sql) 形式）时携带
+ // 提取 SQL 文本：仅当第一个参数为 字符串（执行(sql) 形式）时携带
                 String sql = args != null && args.length > 0 && args[0] instanceof String sqlText ? sqlText : null;
                 return MonitoringStatement.wrap(statement, dataSourceName, monitor, sql);
             }
             return result;
         }
 
-        // Object 基础方法透传
+ // 对象 基础方法透传
         if ("toString".equals(name)) {
             return "MonitoringConnection[" + delegate + "]";
         }

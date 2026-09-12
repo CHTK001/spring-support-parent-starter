@@ -24,8 +24,8 @@ import java.util.Map;
  * 服务管理 —— 协议服务器节点管理端点。
  *
  * <p>基于 common-starter {@code Server} 接口提供 HTTP / HTTP_PROXY / TCP_PROXY / SIP
- * 四类服务器的全生命周期管理：创建、删除、更新、查询、启停，以及 ServerFilter
- * 插件挂载（例如 HTTP 服务器挂 file-storage 变文件服务器）。</p>
+   * 四类服务器的全生命周期管理：创建、删除、更新、查询、启停，以及 服务端过滤器
+   * 插件挂载（例如 HTTP 服务器挂 文件-storage 变文件服务器）。</p>
  *
  * @author CH
  * @since 4.0.0.42
@@ -54,7 +54,7 @@ public class ServerManageController {
     /**
      * 查询单个节点。
      *
-     * @param id 节点 ID
+     * @param id 节点 标识
      * @return 节点视图
      */
     @Operation(summary = "查询服务器节点详情")
@@ -78,7 +78,7 @@ public class ServerManageController {
     /**
      * 更新节点。
      *
-     * @param id      节点 ID
+     * @param id      节点 标识
      * @param request 请求体
      * @return 节点视图
      */
@@ -91,7 +91,7 @@ public class ServerManageController {
     /**
      * 删除节点。
      *
-     * @param id 节点 ID
+     * @param id 节点 标识
      * @return 空数据
      */
     @Operation(summary = "删除服务器节点", description = "先停止运行实例再删除定义")
@@ -103,7 +103,7 @@ public class ServerManageController {
     /**
      * 启动节点。
      *
-     * @param id 节点 ID
+     * @param id 节点 标识
      * @return 节点视图
      */
     @Operation(summary = "启动服务器节点")
@@ -115,7 +115,7 @@ public class ServerManageController {
     /**
      * 停止节点。
      *
-     * @param id 节点 ID
+     * @param id 节点 标识
      * @return 节点视图
      */
     @Operation(summary = "停止服务器节点", description = "仅停止运行实例，定义保留")
@@ -136,7 +136,7 @@ public class ServerManageController {
     }
 
     /**
-     * 支持的 ServerFilter 插件类型。
+      * 支持的 服务端过滤器 插件类型。
      *
      * @return 插件元数据
      */

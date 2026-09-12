@@ -19,21 +19,21 @@ import java.time.LocalDateTime;
 @Data
 public class SysMessageStationItem implements Serializable {
 
-    /** Serial版本UID */
+    /** 串行版本UID */
     private static final long serialVersionUID = 1L;
 
     /**
-     * 消息ID（推送日志ID，作为已读游标使用）
+      * 消息标识（推送日志标识，作为已读游标使用）
      */
     @Schema(description = "消息ID（已读游标）")
-    /** ID */
+    /** 标识 */
     private Integer id;
 
     /**
      * 消息主题
      */
     @Schema(description = "消息主题")
-    /** Subject */
+    /** 主题 */
     private String subject;
 
     /**
@@ -47,13 +47,13 @@ public class SysMessageStationItem implements Serializable {
      * 发送时间
      */
     @Schema(description = "发送时间")
-    /** Send时间 */
+    /** 发送时间 */
     private LocalDateTime sendTime;
 
     /**
      * 已读状态：0-未读 / 1-已读
      */
     @Schema(description = "已读状态：0-未读 / 1-已读")
-    /** Read状态 */
+    /** 读取状态 */
     private Integer readStatus;
 }

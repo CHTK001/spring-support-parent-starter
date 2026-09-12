@@ -38,10 +38,10 @@ public class SyncClientWrapper implements com.chua.starter.sync.support.client.S
     private ClientInfo clientInfo;
 
     /**
-     * 创建 SyncClientWrapper 实例
-     * @param syncProperties syncProperties
-     * @param environment environment
-     * @param infoCustomizers infoCustomizers
+      * 创建 同步客户端包装器 实例
+     * @param syncProperties 同步属性
+     * @param environment 环境
+     * @param infoCustomizers 信息customizers
      * @param customizers customizers
      */
     public SyncClientWrapper(SyncProperties syncProperties,
@@ -56,6 +56,11 @@ public class SyncClientWrapper implements com.chua.starter.sync.support.client.S
             this.delegate = ServiceProvider.of(com.chua.common.support.network.sync.SyncClient.class)
                     .getNewExtension(protocol, serverAddress);
             if (this.delegate == null) {
+                /**
+                 * illegal参数异常。
+                 * @param protocol 协议
+                 * @return illegal参数异常的结果
+                 */
                 throw new IllegalArgumentException("Unsupported sync client protocol: " + protocol);
             }
             if (this.delegate.getClientId() == null) {
@@ -69,11 +74,21 @@ public class SyncClientWrapper implements com.chua.starter.sync.support.client.S
                 customizer.customize(this);
             }
         } catch (Exception e) {
+            /**
+             * illegal状态异常。
+             * @param 失败" 失败"
+             * @param e e
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("创建 SyncClient 失败", e);
         }
     }
 
-    /** 构建ClientInfo */
+    /**
+     * 构建客户端信息
+     *
+     * @return 构建客户端信息的结果
+     */
     private ClientInfo buildClientInfo() {
         ClientInfo info = new ClientInfo();
         info.setClientId(delegate.getClientId());
@@ -99,6 +114,9 @@ public class SyncClientWrapper implements com.chua.starter.sync.support.client.S
     public void connect() {
         delegate.connect();
         if (syncProperties.getClient().isAutoRegister() && clientInfo != null) {
+            /**
+             * 发送注册。
+             */
             sendRegister();
         }
     }
@@ -118,6 +136,10 @@ public class SyncClientWrapper implements com.chua.starter.sync.support.client.S
             register.put("clientIpAddress", clientInfo.getClientIpAddress());
             register.put("clientPort", clientInfo.getClientPort());
             register.put("clientMetadata", clientInfo.getClientMetadata());
+            /**
+             * 发送。
+             * @param syncProperties.getClient( 同步属性.getclient(
+             */
             send(syncProperties.getClient().getRegisterTopic(), register);
             log.info("[SyncClient] 已发送客户端注册: clientId={}", clientInfo.getClientId());
         } catch (Exception e) {
@@ -132,13 +154,13 @@ public class SyncClientWrapper implements com.chua.starter.sync.support.client.S
     }
 
     @Override
-    /** 是否Connected */
+    /** 是否连接 */
     public boolean isConnected() {
         return delegate.isConnected();
     }
 
     @Override
-    /** 获取ClientId */
+    /** 获取客户端标识 */
     public String getClientId() {
         return delegate.getClientId();
     }
@@ -164,7 +186,7 @@ public class SyncClientWrapper implements com.chua.starter.sync.support.client.S
     }
 
     @Override
-    /** 注册Handler */
+    /** 注册处理器 */
     public void registerHandler(String topic, com.chua.starter.sync.support.spi.SyncMessageHandler handler) {
         delegate.subscribe(topic, (sessionId, message) -> {
             Object decrypted = SyncCryptoUtils.decrypt(parseIfNeeded(message), syncProperties);
@@ -175,7 +197,7 @@ public class SyncClientWrapper implements com.chua.starter.sync.support.client.S
     }
 
     /**
-     * 将传输层收到的字符串消息解析为结构化对象（JSON -> Map）。
+      * 将传输层收到的字符串消息解析为结构化对象（JSON -> 映射）。
      *
      * @param message 收到的消息
      * @return 解析后的对象，无法解析时原样返回
@@ -204,13 +226,13 @@ public class SyncClientWrapper implements com.chua.starter.sync.support.client.S
     }
 
     @Override
-    /** 添加Listener */
+    /** 添加监听器 */
     public void addListener(SyncFlowListener listener) {
         delegate.addListener(listener);
     }
 
     @Override
-    /** 移除Listener */
+    /** 移除监听器 */
     public void removeListener(SyncFlowListener listener) {
         delegate.removeListener(listener);
     }

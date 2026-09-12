@@ -24,7 +24,7 @@ import java.util.Map;
  * 执行日志服务实现。
  *
  * <p>执行历史按 execution_no 聚合自 {@code spider_execution_log}：通过
- * MIN(start_at)/MAX(end_at) 与 SUM(status) 规则推导每条执行的起止时间与最终状态，
+   * 最小(启动_at)/最大(结束_at) 与 SUM(状态) 规则推导每条执行的起止时间与最终状态，
  * 分页结果不含节点级明细，仅返回概要记录。</p>
  *
  * @since 4.0.0.42
@@ -49,7 +49,7 @@ public class SpiderExecutionLogServiceImpl
     private static final String STATUS_RUNNING = "RUNNING";
 
     @Override
-    /** ListByExecutionNo */
+    /** 列表by执行no */
     public List<SpiderExecutionLog> listByExecutionNo(String executionNo) {
         return list(Wrappers.<SpiderExecutionLog>lambdaQuery()
                 .eq(SpiderExecutionLog::getExecutionNo, executionNo)
@@ -57,7 +57,7 @@ public class SpiderExecutionLogServiceImpl
     }
 
     @Override
-    /** PageExecutionRecords */
+    /** page执行records */
     public PageResultVO<ExecutionRecordVO> pageExecutionRecords(long pageNo, long pageSize, String definitionCode, String status) {
         long safePageSize = pageSize <= 0 ? 10 : pageSize;
         long safePageNo = pageNo <= 0 ? 1 : pageNo;
@@ -66,6 +66,12 @@ public class SpiderExecutionLogServiceImpl
                 .select(SpiderExecutionLog::getExecutionNo)
                 .isNotNull(SpiderExecutionLog::getExecutionNo)
                 .ne(SpiderExecutionLog::getExecutionNo, "");
+        /**
+         * apply过滤器。
+         * @param countQuery 数量查询
+         * @param definitionCode definition编码
+         * @param status 状态
+         */
         applyFilters(countQuery, definitionCode, status);
         List<SpiderExecutionLog> distinctLogs = baseMapper.selectList(countQuery);
         long total = distinctLogs == null ? 0L : distinctLogs.size();
@@ -134,7 +140,7 @@ public class SpiderExecutionLogServiceImpl
     }
 
     @Override
-    /** AggregateStats */
+    /** aggregatestats */
     public List<DefinitionStatsVO> aggregateStats() {
         QueryWrapper<SpiderExecutionLog> wrapper = new QueryWrapper<>();
         wrapper.select(
@@ -179,7 +185,7 @@ public class SpiderExecutionLogServiceImpl
     }
 
     /**
-     * 推导整体执行状态：任一节点 FAIL 则整体 FAIL；否则若有 RUNNING 则 RUNNING；全 SUCCESS 则 SUCCESS。
+      * 推导整体执行状态：任一节点 失败 则整体 失败；否则若有 RUNNING 则 RUNNING；全 成功 则 成功。
      *
      * @param row 聚合行
      * @return 状态字符串
@@ -197,7 +203,7 @@ public class SpiderExecutionLogServiceImpl
     }
 
     /**
-     * 在 LambdaQueryWrapper 上叠加 definitionCode 与 status 过滤。
+      * 在 lambda查询包装器 上叠加 definition编码 与 状态 过滤。
      *
      * @param wrapper        查询条件
      * @param definitionCode 爬虫编码（可选）

@@ -15,7 +15,7 @@ import org.slf4j.LoggerFactory;
 /**
  * IP地址服务实现类，提供IP地址转换为地理位置信息的功能
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024/01/19
  * @author CH
  */
@@ -26,8 +26,8 @@ public class IptablesServiceImpl implements IptablesService  {
 
     /** IP属性 */
     private final IpProperties ipProperties;
-    private volatile IpPosition ipPosition;
-    private volatile boolean isLoaded = false;
+    private volatile IpPosition ipPosition; // ip立场
+    private volatile boolean isLoaded = false; // 是否加载
 
     /**
      * 构造方法，注入IP配置属性

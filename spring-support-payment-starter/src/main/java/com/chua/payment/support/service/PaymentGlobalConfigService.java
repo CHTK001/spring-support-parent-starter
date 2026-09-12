@@ -12,10 +12,23 @@ import com.chua.payment.support.vo.PaymentGlobalConfigVO;
  */
 public interface PaymentGlobalConfigService {
 
+    /**
+     * 获取配置。
+     * @return 获取配置的结果
+     */
     PaymentGlobalConfigVO getConfig();
 
+    /**
+     * 获取配置实体。
+     * @return 获取配置实体的结果
+     */
     PaymentGlobalConfig getConfigEntity();
 
+    /**
+      * 保存或更新。
+     * @param dto dto
+     * @return 保存or更新的结果
+     */
     PaymentGlobalConfigVO saveOrUpdate(PaymentGlobalConfigDTO dto);
 }
 

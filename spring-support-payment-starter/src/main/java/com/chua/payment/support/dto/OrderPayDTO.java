@@ -5,23 +5,24 @@ import lombok.Data;
 /**
  * 订单发起支付 DTO
  * @author CH
+ * @since 4.0.0
  */
 @Data
 public class OrderPayDTO {
 
-    /** Operator */
+    /** 操作符 */
     private String operator;
 
-    /** PayeropenID */
+    /** payeropenid */
     private String payerOpenId;
 
     /** 客户端IP */
     private String clientIp;
 
-    /** DeviceID */
+    /** deviceid */
     private String deviceId;
 
-    /** 用户agent */
+    /** 用户智能体 */
     private String userAgent;
 }
 

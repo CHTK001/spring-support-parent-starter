@@ -9,11 +9,11 @@ import java.lang.reflect.Method;
 /**
  * Spring Bean方式的作业处理程序
  * <p>
- * 通过反射调用Spring Bean中标注了@Job注解的方法来执行任务。
+   * 通过反射调用Spring Bean中标注了@作业注解的方法来执行任务。
  * 支持配置初始化方法和销毁方法。
  * </p>
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024/03/11
  * @author CH
  */
@@ -47,8 +47,8 @@ public class BeanJobHandler implements JobHandler {
      *
      * @param target        目标Bean对象
      * @param method        执行方法
-     * @param initMethod    初始化方法，可为null
-     * @param destroyMethod 销毁方法，可为null
+     * @param initMethod    初始化方法，可为空
+     * @param destroyMethod 销毁方法，可为空
      */
     public BeanJobHandler(Object target, Method method, Method initMethod, Method destroyMethod) {
         this.target = target;
@@ -92,7 +92,7 @@ public class BeanJobHandler implements JobHandler {
     }
 
     @Override
-    /** ToString */
+    /** 转为字符串 */
     public String toString() {
         return super.toString() + "[" + target.getClass().getSimpleName() + "#" + method.getName() + "]";
     }

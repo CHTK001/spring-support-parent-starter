@@ -14,15 +14,15 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
 /**
- * AI 模型定义控制器，提供模型的增删改查。
+ * AI 模型定义控制器，提供模型的增删改查和连通性测试。
  *
  * @author CH
+ * @since 4.0.0
  */
 @RestController
 @RequestMapping("/v2/models")
@@ -30,13 +30,11 @@ import java.util.List;
 @Tag(name = "AI 设置 - 模型定义")
 public class AiModelController {
 
-    /** 模型服务 */
     private final AiModelService modelService;
 
     @Permission("admin")
     @Operation(summary = "查询所有模型")
     @GetMapping
-    /** List */
     public List<AiModelDTO> list() {
         return modelService.list();
     }
@@ -44,7 +42,6 @@ public class AiModelController {
     @Permission("admin")
     @Operation(summary = "新建模型")
     @PostMapping
-    /** 创建 */
     public AiModelDTO create(@RequestBody AiModelDTO model) {
         return modelService.create(model);
     }
@@ -52,7 +49,6 @@ public class AiModelController {
     @Permission("admin")
     @Operation(summary = "更新模型")
     @PutMapping("/{modelId}")
-    /** 更新 */
     public AiModelDTO update(@Parameter(description = "模型主键") @PathVariable Long modelId,
                              @RequestBody AiModelDTO model) {
         return modelService.update(modelId, model);
@@ -61,8 +57,14 @@ public class AiModelController {
     @Permission("admin")
     @Operation(summary = "删除模型")
     @DeleteMapping("/{modelId}")
-    /** 删除 */
     public void delete(@Parameter(description = "模型主键") @PathVariable Long modelId) {
         modelService.delete(modelId);
+    }
+
+    @Permission("admin")
+    @Operation(summary = "测试模型连通性延迟（非本地模型）")
+    @PostMapping("/{modelId}/test-latency")
+    public AiModelDTO testLatency(@Parameter(description = "模型主键") @PathVariable Long modelId) {
+        return modelService.testLatency(modelId);
     }
 }

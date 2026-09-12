@@ -6,6 +6,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * 跨域/版本控制/统一响应
  *
  * @author CH
+ * @since 4.0.0
  */
 @ConfigurationProperties(prefix = IpProperties.PRE, ignoreInvalidFields = true)
 public class IpProperties {
@@ -48,7 +49,7 @@ public class IpProperties {
     }
 
     /**
-     * 获取 databaseFile
+      * 获取 database文件
      *
      * @return databaseFile
      */
@@ -57,16 +58,16 @@ public class IpProperties {
     }
 
     /**
-     * 设置 databaseFile
+      * 设置 database文件
      *
-     * @param databaseFile databaseFile
+     * @param databaseFile database文件
      */
     public void setDatabaseFile(String databaseFile) {
         this.databaseFile = databaseFile;
     }
 
     /**
-     * 获取 ipType
+      * 获取 ip类型
      *
      * @return ipType
      */
@@ -75,9 +76,9 @@ public class IpProperties {
     }
 
     /**
-     * 设置 ipType
+      * 设置 ip类型
      *
-     * @param ipType ipType
+     * @param ipType ip类型
      */
     public void setIpType(String ipType) {
         this.ipType = ipType;

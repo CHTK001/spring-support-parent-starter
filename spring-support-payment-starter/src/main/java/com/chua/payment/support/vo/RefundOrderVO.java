@@ -9,30 +9,31 @@ import java.time.LocalDateTime;
 /**
  * 退款单视图对象
  * @author CH
+ * @since 4.0.0
  */
 @Data
 public class RefundOrderVO implements Serializable {
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L; // 串行版本uid
 
-    /** ID */
+    /** 标识 */
     private Long id;
 
-    /** RefundNO */
+    /** 退税no */
     private String refundNo;
 
-    /** 排序ID */
+    /** 排序标识 */
     private Long orderId;
 
     /** 排序NO */
     private String orderNo;
 
-    /** MerchantID */
+    /** merchantid */
     private Long merchantId;
 
     /** Merchant名称 */
     private String merchantName;
 
-    /** 通道ID */
+    /** 通道标识 */
     private Long channelId;
 
     /** 通道名称 */
@@ -44,7 +45,7 @@ public class RefundOrderVO implements Serializable {
     /** 来源排序状态desc */
     private String sourceOrderStatusDesc;
 
-    /** ThirdpartyrefundNO */
+    /** thirdpartyrefundno */
     private String thirdPartyRefundNo;
 
     /** Refundamount */
@@ -56,10 +57,10 @@ public class RefundOrderVO implements Serializable {
     /** 状态desc */
     private String statusDesc;
 
-    /** Reason */
+    /** ReasonMLmlml */
     private String reason;
 
-    /** Notify状态 */
+    /** 通知状态 */
     private Integer notifyStatus;
 
     /** 请求payload */
@@ -68,10 +69,10 @@ public class RefundOrderVO implements Serializable {
     /** 响应payload */
     private String responsePayload;
 
-    /** Operator */
+    /** 操作符 */
     private String operator;
 
-    /** Remark */
+    /** 评论 */
     private String remark;
 
     /** 创建时间AT */

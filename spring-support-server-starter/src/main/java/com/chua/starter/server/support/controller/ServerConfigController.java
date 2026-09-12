@@ -18,6 +18,8 @@ import java.util.Map;
 
 /**
  * 服务器系统配置接口
+ * @author CH
+ * @since 4.0.0
  */
 @Tag(name = "服务器资产-系统配置", description = "在离线/采集/Agent/远控等系统设置")
 @RestController
@@ -30,6 +32,7 @@ public class ServerConfigController {
 
     /**
      * 查询全部配置
+     * @return 列表的结果
      */
     @Operation(summary = "查询全部配置")
     @GetMapping
@@ -38,7 +41,8 @@ public class ServerConfigController {
     }
 
     /**
-     * 读取配置为扁平 Map（含默认值）
+      * 读取配置为扁平 映射（含默认值）
+     * @return 映射的结果
      */
     @Operation(summary = "读取配置Map")
     @GetMapping("/map")
@@ -48,6 +52,8 @@ public class ServerConfigController {
 
     /**
      * 保存配置
+     * @param body 主体
+     * @return 保存的结果
      */
     @Operation(summary = "保存配置")
     @PostMapping

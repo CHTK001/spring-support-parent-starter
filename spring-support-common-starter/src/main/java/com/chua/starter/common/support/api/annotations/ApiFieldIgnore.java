@@ -49,9 +49,10 @@ import java.lang.annotation.*;
  * </pre>
  *
  * @since 2025/1/1
- * @version 1.0.0
+   * @版本 1.0.0
  * @see ApiGroup
  * @see ApiIgnoreSerializer
+ * @author CH
  */
 @Target({ElementType.FIELD})
 @Retention(RetentionPolicy.RUNTIME)

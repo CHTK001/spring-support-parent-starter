@@ -11,7 +11,7 @@ import java.util.Map;
  * SQL 监听 Actuator 端点
  *
  * <p>暴露数据源 SQL 执行统计信息，端点路径 {@code /actuator/sqlmonitor}。
- * 支持 GET 查询统计、POST 重置统计。</p>
+   * 支持 获取 查询统计、POST 重置统计。</p>
  *
  * @since 4.0.0.42
  * @author CH

@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * 事件查询 Controller
+   * 事件查询 控制器
  *
  * @since 4.0.0.42
  * @author CH
@@ -32,7 +32,7 @@ public class EventController {
     /**
      * 查询事件
      *
-     * @param deviceId 设备 ID
+     * @param deviceId 设备 标识
      * @param type     事件类型，可选
      * @param start    开始时间，可选
      * @param end      结束时间，可选

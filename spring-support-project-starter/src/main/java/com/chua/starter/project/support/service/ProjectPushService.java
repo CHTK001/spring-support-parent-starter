@@ -12,8 +12,8 @@ import java.util.Map;
 /**
  * 发布项目管理实时推送服务
  * <p>
- * 复用 spring-support-socket-* 的 {@link SocketSessionTemplate}（socketio 协议），
- * 广播项目部署/回滚进度。宿主未装配 socket 时静默降级（ObjectProvider 为空）。
+   * 复用 spring-支持-套接字-* 的 {@link SocketSessionTemplate}（套接字.IO 协议），
+   * 广播项目部署/回滚进度。宿主未装配 套接字 时静默降级（对象提供者 为空）。
  * </p>
  *
  * @author CH
@@ -23,13 +23,13 @@ import java.util.Map;
 @Service
 public class ProjectPushService {
 
-    /** Socket 模板（可空） */
+    /** 套接字 模板（可空） */
     private final ObjectProvider<SocketSessionTemplate> socketTemplates;
 
     /**
      * 构造器注入
      *
-     * @param socketTemplates Socket 模板
+     * @param socketTemplates 套接字 模板
      */
     public ProjectPushService(ObjectProvider<SocketSessionTemplate> socketTemplates) {
         this.socketTemplates = socketTemplates;
@@ -38,11 +38,11 @@ public class ProjectPushService {
     /**
      * 广播部署进度
      *
-     * @param projectId 项目 ID
-     * @param hostId    主机 ID，可为空（表示整体阶段）
+     * @param projectId 项目 标识
+     * @param hostId    主机 标识，可为空（表示整体阶段）
      * @param action    操作类型 DEPLOY/UPGRADE/ROLLBACK
-     * @param stage     阶段：VALIDATE/CLEAN/UPLOAD/EXTRACT/EXEC/START/FINISH
-     * @param status    状态 RUNNING/SUCCESS/FAIL
+     * @param stage     阶段：校验/CLEAN/UPLOAD/EXTRACT/执行/启动/饰面
+     * @param status    状态 RUNNING/成功/失败
      * @param message   描述
      * @param version   版本标识，可为空
      */

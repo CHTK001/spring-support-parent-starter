@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.function.Consumer;
 
 /**
- * Agent 对话客户端 —— 将 Agent 运行时包装为 ChatClient。
+   * 智能体 对话客户端 —— 将 智能体 运行时包装为 对话客户端。
  *
  * <p>用于将已注册的 Agent 实例暴露为可被对话链路调用的 ChatClient，
  * 注册到 {@link com.chua.starter.ai.support.registry.ChatClientRegistry} 后
@@ -26,23 +26,24 @@ public class AgentChatClient implements ChatClient {
     /** 默认模型名称 */
     private static final String DEFAULT_MODEL = "agent-router";
 
-    /** 内部 Agent 实例 */
+    /** 内部 智能体 实例 */
     private final Agent agent;
 
     /** 模型名称 */
     private String model = DEFAULT_MODEL;
 
     /**
-     * 创建 AgentChatClient 实例
+      * 创建 智能体对话客户端 实例
      *
-     * @param agent agent 运行时实例
+     * @param agent 智能体 运行时实例
      */
     public AgentChatClient(Agent agent) {
         this.agent = agent;
     }
 
     /**
-     * 获取内部 Agent 实例
+      * 获取内部 智能体 实例
+     * @return 获取智能体的结果
      */
     public Agent getAgent() {
         return agent;

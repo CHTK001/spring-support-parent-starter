@@ -28,103 +28,103 @@ import java.io.Serializable;
 public class SysAiSshHost implements Serializable {
 
     /**
-     * Serial版本UID
+      * 串行版本UID
      */
     private static final long serialVersionUID = 1L;
 
     /**
-     * 主机主键（UUIDv7 字符串），由后端 {@code newId()} 生成并填充
+      * 主机主键（uuidv7 字符串），由后端 {@code newId()} 生成并填充
      */
     @TableId(value = "sys_ai_ssh_host_id", type = IdType.INPUT)
-    private String sshHostId;
+    private String sshHostId; // ssh主机标识
 
     /**
      * 主机显示名称
      */
     @TableField("sys_ai_ssh_host_name")
-    private String name;
+    private String name; // 名称
 
     /**
      * 主机地址（IP 或域名）
      */
     @TableField("sys_ai_ssh_host_host")
-    private String host;
+    private String host; // 主机
 
     /**
      * SSH 端口号（默认 22）
      */
     @TableField("sys_ai_ssh_host_port")
-    private Integer port;
+    private Integer port; // 端口
 
     /**
      * 登录用户名
      */
     @TableField("sys_ai_ssh_host_username")
-    private String username;
+    private String username; // 用户名
 
     /**
-     * 认证方式（password / key / certificate / agent）
+      * 认证方式（密码 / 钥匙 / 证书 / 智能体）
      */
     @TableField("sys_ai_ssh_host_auth_type")
-    private String authType;
+    private String authType; // 认证类型
 
     /**
      * 登录密码（写入后不回显）
      */
     @TableField("sys_ai_ssh_host_password")
-    private String password;
+    private String password; // 密码
 
     /**
      * 私钥内容（写入后不回显）
      */
     @TableField("sys_ai_ssh_host_private_key")
-    private String privateKey;
+    private String privateKey; // 私募钥匙
 
     /**
      * 私钥口令（passphrase，写入后不回显）
      */
     @TableField("sys_ai_ssh_host_passphrase")
-    private String passphrase;
+    private String passphrase; // passphrase
 
     /**
      * 证书内容（写入后不回显）
      */
     @TableField("sys_ai_ssh_host_certificate")
-    private String certificate;
+    private String certificate; // 证书
 
     /**
      * sudo 密码（写入后不回显）
      */
     @TableField("sys_ai_ssh_host_sudo_password")
-    private String sudoPassword;
+    private String sudoPassword; // sudo密码
 
     /**
      * 主机密钥指纹（首次连接后固定，连接过即永久绿）
      */
     @TableField("sys_ai_ssh_host_host_fingerprint")
-    private String hostFingerprint;
+    private String hostFingerprint; // 主机fingerprint
 
     /**
-     * 主机状态（unknown / error / ok，前端仅作提示列，不参与实时链路判断）
+      * 主机状态（unknown / 错误 / ok，前端仅作提示列，不参与实时链路判断）
      */
     @TableField("sys_ai_ssh_host_status")
-    private String status;
+    private String status; // 状态
 
     /**
-     * 最后连接成功时间（epoch 毫秒，未连接为 null）
+      * 最后连接成功时间（轮次 毫秒，未连接为 空）
      */
     @TableField("sys_ai_ssh_host_last_connected_at")
-    private Long lastConnectedAt;
+    private Long lastConnectedAt; // 最后一个连接at
 
     /**
-     * 创建时间（epoch 毫秒）
+      * 创建时间（轮次 毫秒）
      */
     @TableField("sys_ai_ssh_host_created_at")
-    private Long createdAt;
+    private Long createdAt; // 创建at
 
     /**
-     * 最后更新时间（epoch 毫秒）
+      * 最后更新时间（轮次 毫秒）
      */
     @TableField("sys_ai_ssh_host_updated_at")
-    private Long updatedAt;
+    private Long updatedAt; // 更新at
 }

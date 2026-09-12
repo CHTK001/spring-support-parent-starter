@@ -18,7 +18,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 public class RpcCircuitBreakerManager {
 
-    private final ConcurrentHashMap<String, RpcCircuitBreaker> circuitBreakers = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, RpcCircuitBreaker> circuitBreakers = new ConcurrentHashMap<>(); // 熔断breakers
 
     /**
      * 获取或创建熔断器

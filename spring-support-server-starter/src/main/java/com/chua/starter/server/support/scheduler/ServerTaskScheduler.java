@@ -17,7 +17,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * 服务器周期任务时间轮调度器
  * <p>
- * 统一使用 common-starter 的哈希时间轮（{@link Timer}）调度全部周期任务：
+   * 统一使用 common-starter 的哈希时间轮（{@link Timer}）调度全部周期任务：
  * <ul>
  *   <li>在离线检测 / 硬件定时采集——主机级配置（各主机开关/间隔存于 ms_server_host 字段）</li>
  *   <li>计划任务扫描（ms_exec_job）</li>
@@ -90,11 +90,29 @@ public class ServerTaskScheduler {
     @PostConstruct
     public void start() {
         timer = Timer.newTimer(WHEEL_SLOTS, TICK_MILLIS, TimeUnit.MILLISECONDS);
+        /**
+          * rescheduleonline。
+         */
         rescheduleOnline();
+        /**
+          * reschedulecollect。
+         */
         rescheduleCollect();
+        /**
+         * reschedule延迟。
+         */
         rescheduleDelay();
+        /**
+         * reschedule执行。
+         */
         rescheduleExec();
+        /**
+         * reschedule会话。
+         */
         rescheduleSession();
+        /**
+          * rescheduleconnection。
+         */
         rescheduleConnection();
         log.info("[task-scheduler] 时间轮调度器已启动: 在离线/采集/延迟检测/计划任务/会话清理/连接健康检查");
     }
@@ -121,8 +139,17 @@ public class ServerTaskScheduler {
         if (timer == null || !timer.isRunning()) {
             return;
         }
+        /**
+          * rescheduleonline。
+         */
         rescheduleOnline();
+        /**
+          * reschedulecollect。
+         */
         rescheduleCollect();
+        /**
+         * reschedule延迟。
+         */
         rescheduleDelay();
         log.info("[task-scheduler] 配置变更已重排周期任务: {}", event.getKeys());
     }
@@ -131,6 +158,10 @@ public class ServerTaskScheduler {
      * 重排在离线检测任务：固定细粒度扫描，各主机按自身开关/间隔决定是否探测
      */
     private void rescheduleOnline() {
+        /**
+         * cancel任务。
+         * @param onlineTask online任务
+         */
         cancelTask(onlineTask);
         onlineTask = timer.scheduleAtFixedRate(onlineScheduler::tick,
                 HOST_SCAN_INTERVAL_SECONDS, HOST_SCAN_INTERVAL_SECONDS, TimeUnit.SECONDS);
@@ -140,6 +171,10 @@ public class ServerTaskScheduler {
      * 重排采集任务：固定细粒度扫描，各主机按自身开关/间隔/方式决定是否采集
      */
     private void rescheduleCollect() {
+        /**
+         * cancel任务。
+         * @param collectTask collect任务
+         */
         cancelTask(collectTask);
         collectTask = timer.scheduleAtFixedRate(onlineScheduler::collectTick,
                 HOST_SCAN_INTERVAL_SECONDS, HOST_SCAN_INTERVAL_SECONDS, TimeUnit.SECONDS);
@@ -149,6 +184,10 @@ public class ServerTaskScheduler {
      * 重排延迟检测任务：固定细粒度扫描，各主机按自身开关/间隔测 RTT 延迟
      */
     private void rescheduleDelay() {
+        /**
+         * cancel任务。
+         * @param delayTask 延迟任务
+         */
         cancelTask(delayTask);
         delayTask = timer.scheduleAtFixedRate(onlineScheduler::delayTick,
                 HOST_SCAN_INTERVAL_SECONDS, HOST_SCAN_INTERVAL_SECONDS, TimeUnit.SECONDS);
@@ -158,6 +197,10 @@ public class ServerTaskScheduler {
      * 重排计划任务扫描
      */
     private void rescheduleExec() {
+        /**
+         * cancel任务。
+         * @param execTask 执行任务
+         */
         cancelTask(execTask);
         execTask = timer.scheduleAtFixedRate(execJobScheduler::tick,
                 60, 30, TimeUnit.SECONDS);
@@ -167,6 +210,10 @@ public class ServerTaskScheduler {
      * 重排会话清理
      */
     private void rescheduleSession() {
+        /**
+         * cancel任务。
+         * @param sessionTask 会话任务
+         */
         cancelTask(sessionTask);
         sessionTask = timer.scheduleAtFixedRate(sessionIdleSweeper::sweep,
                 120, 60, TimeUnit.SECONDS);
@@ -176,6 +223,10 @@ public class ServerTaskScheduler {
      * 重排连接健康检查
      */
     private void rescheduleConnection() {
+        /**
+         * cancel任务。
+         * @param connectionTask connection任务
+         */
         cancelTask(connectionTask);
         int interval = normalizeInterval(configService.getInt("connection.sweep.interval", 60));
         connectionTask = timer.scheduleAtFixedRate(() -> {

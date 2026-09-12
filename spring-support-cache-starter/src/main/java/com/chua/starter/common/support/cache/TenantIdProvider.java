@@ -1,9 +1,9 @@
 package com.chua.starter.common.support.cache;
 
 /**
- * 租户ID提供者接口
+   * 租户标识提供者接口
  * <p>
- * 用于从当前请求上下文中获取租户ID，由 {@link com.chua.starter.common.support.cache.TenantedKeyGenerator}
+   * 用于从当前请求上下文中获取租户标识，由 {@link com.chua.starter.common.support.cache.TenantedKeyGenerator}
  * 在生成缓存键时自动调用，确保多租户场景下缓存键天然隔离。
  * </p>
  *
@@ -15,6 +15,9 @@ package com.chua.starter.common.support.cache;
  *     @Override
  *     public String getCurrentTenantId() {
  *         return RequestUtils.getCurrentTenantId();
+ *     }
+ * }
+ * }</pre>rn RequestUtils.getCurrentTenantId();
  *     }
  * }
  * }</pre>
@@ -29,7 +32,7 @@ package com.chua.starter.common.support.cache;
 public interface TenantIdProvider {
 
     /**
-     * 获取当前请求的租户ID
+      * 获取当前请求的租户标识
      *
      * @return 租户ID，不可返回 {@code null}
      */

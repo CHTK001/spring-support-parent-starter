@@ -20,13 +20,13 @@ import java.io.InputStream;
 import java.util.*;
 
 /**
- * MyBatis 配置处理器
+   * MyBatis 配置处理器
  * <p>
- * 监听 MyBatis 配置 Topic，提供 XML 刷新功能
- * Mapper 信息查询通过 actuator 端点 /actuator/mybatis 获取
+   * 监听 MyBatis 配置 Topic，提供 XML 刷新功能
+   * 映射器 信息查询通过 actuator 端点 /actuator/MyBatis 获取
  * </p>
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2025/01/17
  * @author CH
  */
@@ -39,19 +39,19 @@ public class MyBatisConfigHandler implements SyncMessageHandler, ApplicationCont
     private ApplicationContext applicationContext;
 
     @Override
-    /** 设置ApplicationContext */
+    /** 设置application上下文 */
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
     }
 
     @Override
-    /** 获取Name */
+    /** 获取名称 */
     public String getName() {
         return "myBatisConfigHandler";
     }
 
     @Override
-    /** Supports */
+    /** 支持 */
     public boolean supports(String topic) {
         return MonitorTopics.MYBATIS_CONFIG.equals(topic);
     }
@@ -72,7 +72,7 @@ public class MyBatisConfigHandler implements SyncMessageHandler, ApplicationCont
     /**
      * 刷新指定的 XML 文件
      *
-     * @param data 请求数据，包含 resourcePath
+     * @param data 请求数据，包含 resource路径
      * @return 刷新结果
      */
     private Object handleRefreshXml(Map<String, Object> data) {
@@ -158,9 +158,9 @@ public class MyBatisConfigHandler implements SyncMessageHandler, ApplicationCont
     }
 
     /**
-     * 获取 SqlSessionFactory
+       * 获取 SQL会话工厂
      *
-     * @return SqlSessionFactory 实例，未找到返回 null
+     * @return SqlSessionFactory 实例，未找到返回 空
      */
     private SqlSessionFactory getSqlSessionFactory() {
         if (applicationContext == null) {
@@ -191,7 +191,7 @@ public class MyBatisConfigHandler implements SyncMessageHandler, ApplicationCont
     }
 
     /**
-     * 刷新 Mapper XML 文件
+      * 刷新 映射器 XML 文件
      *
      * @param configuration  MyBatis 配置
      * @param resourcePath   资源路径
@@ -214,11 +214,20 @@ public class MyBatisConfigHandler implements SyncMessageHandler, ApplicationCont
                 return false;
             }
 
-            // 清除旧的 MappedStatement
+ // 清除旧的 mapped对账单
+            /**
+             * clearmapped对账单。
+             * @param configuration 配置
+             * @param resourcePath resource路径
+             */
             clearMappedStatements(configuration, resourcePath);
 
             // 重新加载 XML
             for (Resource resource : resources) {
+                /**
+                 * 尝试。
+                 * @param resource.getInputStream( resource.获取输入流(
+                 */
                 try (InputStream inputStream = resource.getInputStream()) {
                     XMLMapperBuilder xmlMapperBuilder = new XMLMapperBuilder(
                             inputStream,
@@ -240,7 +249,7 @@ public class MyBatisConfigHandler implements SyncMessageHandler, ApplicationCont
     }
 
     /**
-     * 清除指定资源的 MappedStatement
+      * 清除指定资源的 mapped对账单
      *
      * @param configuration MyBatis 配置
      * @param resourcePath  资源路径
@@ -248,7 +257,7 @@ public class MyBatisConfigHandler implements SyncMessageHandler, ApplicationCont
     @SuppressWarnings("unchecked")
     private void clearMappedStatements(Configuration configuration, String resourcePath) {
         try {
-            // 获取 mappedStatements 字段
+ // 获取 mapped对账单 字段
             Map<String, MappedStatement> mappedStatements =
                     (Map<String, MappedStatement>) ReflectUtils.getField(configuration, "mappedStatements");
             if (mappedStatements == null) {
@@ -256,7 +265,7 @@ public class MyBatisConfigHandler implements SyncMessageHandler, ApplicationCont
                 return;
             }
 
-            // 移除与该资源相关的 MappedStatement
+ // 移除与该资源相关的 mapped对账单
             List<String> toRemove = new ArrayList<>();
             for (Map.Entry<String, MappedStatement> entry : mappedStatements.entrySet()) {
                 if (entry.getValue() instanceof MappedStatement ms) {

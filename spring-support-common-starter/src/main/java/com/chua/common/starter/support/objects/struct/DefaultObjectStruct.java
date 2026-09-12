@@ -11,6 +11,7 @@ import java.util.*;
  * 默认对象结构化实现
  *
  * @author CH
+ * @since 4.0.0
  */
 public class DefaultObjectStruct<T> implements ObjectStruct<T> {
 
@@ -18,15 +19,15 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
     private final TreeStructConfig<T> config;
 
     /**
-     * 创建 DefaultObjectStruct 实例
-     * @param config config
+      * 创建 默认对象struct 实例
+     * @param config 配置
      */
     public DefaultObjectStruct(TreeStructConfig<T> config) {
         this.config = config;
     }
 
     @Override
-    /** ToTree */
+    /** 转为树 */
     public List<TreeNode<T>> toTree(List<T> source) {
         if (source == null || source.isEmpty()) {
             return Collections.emptyList();
@@ -58,7 +59,7 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
     }
 
     @Override
-    /** ToBarChartData */
+    /** 转为barchart数据 */
     public BarChartData toBarChartData(List<TreeNode<T>> tree) {
         BarChartData data = new BarChartData();
         if (tree == null) {
@@ -66,6 +67,11 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
         }
 
         List<TreeNode<T>> allNodes = new ArrayList<>();
+        /**
+         * collect节点。
+         * @param tree 树
+         * @param allNodes 全部节点
+         */
         collectNodes(tree, allNodes);
 
         for (TreeNode<T> node : allNodes) {
@@ -79,7 +85,7 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
     }
 
     @Override
-    /** ToRadarChartData */
+    /** 转为radarchart数据 */
     public RadarChartData toRadarChartData(List<TreeNode<T>> tree) {
         RadarChartData data = new RadarChartData();
         if (tree == null) {
@@ -87,6 +93,11 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
         }
 
         List<TreeNode<T>> allNodes = new ArrayList<>();
+        /**
+         * collect节点。
+         * @param tree 树
+         * @param allNodes 全部节点
+         */
         collectNodes(tree, allNodes);
 
         for (TreeNode<T> node : allNodes) {
@@ -100,7 +111,7 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
     }
 
     @Override
-    /** ToRelationData */
+    /** 转为relation数据 */
     public RelationData toRelationData(List<TreeNode<T>> tree) {
         RelationData data = new RelationData();
         if (tree == null) {
@@ -108,6 +119,11 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
         }
 
         List<TreeNode<T>> allNodes = new ArrayList<>();
+        /**
+         * collect节点。
+         * @param tree 树
+         * @param allNodes 全部节点
+         */
         collectNodes(tree, allNodes);
 
         for (TreeNode<T> node : allNodes) {
@@ -115,12 +131,17 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
             data.getNodes().add(new RelationData.Node(String.valueOf(node.getId()), name));
         }
 
+        /**
+         * 添加链接。
+         * @param tree 树
+         * @param data 数据
+         */
         addLinks(tree, data);
         return data;
     }
 
     @Override
-    /** ToTreemapData */
+    /** 转为treemap数据 */
     public TreemapData toTreemapData(List<TreeNode<T>> tree) {
         TreemapData data = new TreemapData();
         if (tree == null) {
@@ -128,6 +149,11 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
         }
 
         List<TreeNode<T>> allNodes = new ArrayList<>();
+        /**
+         * collect节点。
+         * @param tree 树
+         * @param allNodes 全部节点
+         */
         collectNodes(tree, allNodes);
 
         for (TreeNode<T> node : allNodes) {
@@ -143,29 +169,49 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
         return data;
     }
 
-    /** 构建Path */
+    /**
+     * 构建路径
+     *
+     * @param node 节点
+     * @param currentName 当前名称
+     * @return 构建路径的结果
+     */
     private String buildPath(TreeNode<T> node, String currentName) {
         if (node.getParentId() == null) {
             return currentName;
         }
         
-        // 这里我们需要通过ID查找父节点来构建路径
+ // 这里我们需要通过标识查找父节点来构建路径
         // 为了简化，我们先返回当前名称
         // 实际应用中可能需要传递父节点信息或递归构建
         return currentName;
     }
 
-    /** CollectNodes */
+    /**
+     * collect节点
+     *
+     * @param nodes 节点
+     * @param result 结果
+     */
     private void collectNodes(List<TreeNode<T>> nodes, List<TreeNode<T>> result) {
         for (TreeNode<T> node : nodes) {
             result.add(node);
             if (node.getChildren() != null) {
+                /**
+                 * collect节点。
+                 * @param node.getChildren( 节点.获取children(
+                 */
                 collectNodes(node.getChildren(), result);
             }
         }
     }
 
-    /** 添加Links */
+    /**
+     * 添加链接
+     *
+     * @param nodes 节点
+     * @param data 数据
+     */
     private void addLinks(List<TreeNode<T>> nodes, RelationData data) {
         for (TreeNode<T> node : nodes) {
             if (node.getChildren() != null) {
@@ -175,6 +221,10 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
                             String.valueOf(child.getId())
                     ));
                 }
+                /**
+                 * 添加链接。
+                 * @param node.getChildren( 节点.获取children(
+                 */
                 addLinks(node.getChildren(), data);
             }
         }

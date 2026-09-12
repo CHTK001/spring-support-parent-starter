@@ -40,6 +40,8 @@ public class ServerProperties {
 
     /**
      * guacd 连接配置
+     * @author CH
+     * @since 4.0.0
      */
     @Data
     public static class Guacd {
@@ -55,13 +57,13 @@ public class ServerProperties {
         private int port = 4822;
 
         /**
-         * guacd-client 网关地址（浏览器侧 guacamole 客户端回连后端 WS 隧道的 host:port；
-         * 前端与后端同域部署时置空即可，页面自动使用 location.host）
+          * guacd-客户端 网关地址（浏览器侧 guacamole 客户端回连后端 WS 隧道的 主机:端口；
+          * 前端与后端同域部署时置空即可，页面自动使用 位置.主机）
          */
         private String clientHost = "127.0.0.1:8082";
 
         /**
-         * RDP 磁盘映射挂载根目录（enable-drive 时使用）
+          * RDP 磁盘映射挂载根目录（enable-Drive 时使用）
          */
         private String drivePath = "/opt/spring-support/drive";
 

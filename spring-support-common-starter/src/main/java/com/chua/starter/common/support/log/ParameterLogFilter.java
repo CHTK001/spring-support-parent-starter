@@ -52,21 +52,26 @@ import lombok.extern.slf4j.Slf4j;
  * </pre>
  *
  * @author CH
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2023/09/08
  */
 @Slf4j
 public class ParameterLogFilter implements Filter {
-        public static final DateTimeFormatter DATE_TIME_FORMATTER = ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
-    private final LogProperties logProperties;
-    private final ApplicationContext applicationContext;
-    private final ExecutorService interfaceServiceLog = Executors.newVirtualThreadPerTaskExecutor();
+        public static final DateTimeFormatter DATE_TIME_FORMATTER = ofPattern("yyyy-MM-dd HH:mm:ss.SSS"); // 日期时间formatter
+    private final LogProperties logProperties; // 日志属性
+    private final ApplicationContext applicationContext; // application上下文
+    private final ExecutorService interfaceServiceLog = Executors.newVirtualThreadPerTaskExecutor(); // 接口服务日志
     
     /**
      * 请求开始时间的属性名
      */
     private static final String REQUEST_START_TIME = "REQUEST_START_TIME";
 
+    /**
+     * 参数日志过滤器。
+     * @param logProperties 日志属性
+     * @param applicationContext application上下文
+     */
     public ParameterLogFilter(LogProperties logProperties, ApplicationContext applicationContext) {
         this.logProperties = logProperties;
         this.applicationContext = applicationContext;
@@ -90,7 +95,7 @@ public class ParameterLogFilter implements Filter {
         
         String connection = requestWrapper.getHeader("upgrade");
         
-        // WebSocket 请求跳过日志记录
+ // web套接字 请求跳过日志记录
         if ("websocket".equalsIgnoreCase(connection)) {
             filterChain.doFilter(servletRequest, servletResponse);
             return;
@@ -111,7 +116,18 @@ public class ParameterLogFilter implements Filter {
         if (isPass(requestURI)) {
             filterChain.doFilter(requestWrapper, responseWrapper);
             responseWrapper.copyBodyToResponse();
+            /**
+             * inject接口服务日志。
+             * @param requestWrapper 请求包装器
+             */
             injectInterfaceServiceLog(requestWrapper);
+            /**
+             * printcost时间。
+             * @param method 方法
+             * @param requestURI 请求uri
+             * @param startTime 启动时间
+             * @param responseWrapper.getStatus( 响应包装器.getstatus(
+             */
             printCostTime(method, requestURI, startTime, responseWrapper.getStatus());
             return;
         }
@@ -126,45 +142,116 @@ public class ParameterLogFilter implements Filter {
         logBuilder.append("╠═══════════════════════════════════════════════════════════════════════════════════════════════════════\n");
         
         try {
-            // form-data 请求
+ // form-数据 请求
             if (StringUtils.contains(contentType, "form-data")) {
+                /**
+                 * 追加url。
+                 * @param logBuilder 日志构建器
+                 * @param requestWrapper 请求包装器
+                 */
                 appendUrl(logBuilder, requestWrapper);
+                /**
+                 * 追加头部。
+                 * @param logBuilder 日志构建器
+                 * @param requestWrapper 请求包装器
+                 */
                 appendHeader(logBuilder, requestWrapper);
                 logBuilder.append("║ 请求类型: multipart/form-data (文件上传)\n");
                 log.debug(logBuilder.toString());
                 filterChain.doFilter(requestWrapper, responseWrapper);
                 responseWrapper.copyBodyToResponse();
+                /**
+                 * inject接口服务日志。
+                 * @param requestWrapper 请求包装器
+                 */
                 injectInterfaceServiceLog(requestWrapper);
+                /**
+                 * print响应。
+                 * @param responseWrapper 响应包装器
+                 * @param startTime 启动时间
+                 */
                 printResponse(responseWrapper, startTime);
                 return;
             }
 
-            // GET/DELETE 请求
+ // 获取/删除 请求
             if (StringUtils.isEmpty(contentType) || GET.equals(method) || DELETE.equals(method)) {
+                /**
+                 * 追加url。
+                 * @param logBuilder 日志构建器
+                 * @param requestWrapper 请求包装器
+                 */
                 appendUrl(logBuilder, requestWrapper);
+                /**
+                 * 追加查询。
+                 * @param logBuilder 日志构建器
+                 * @param requestWrapper 请求包装器
+                 */
                 appendQuery(logBuilder, requestWrapper);
+                /**
+                 * 追加头部。
+                 * @param logBuilder 日志构建器
+                 * @param requestWrapper 请求包装器
+                 */
                 appendHeader(logBuilder, requestWrapper);
                 log.debug("\n{}", logBuilder);
                 filterChain.doFilter(requestWrapper, responseWrapper);
+                /**
+                 * inject接口服务日志。
+                 * @param request 请求
+                 */
                 injectInterfaceServiceLog(request);
+                /**
+                 * print响应。
+                 * @param responseWrapper 响应包装器
+                 * @param startTime 启动时间
+                 */
                 printResponse(responseWrapper, startTime);
                 return;
             }
 
-            // POST/PUT/PATCH 请求
+ // POST/放入/PATCH 请求
             if (POST.equalsIgnoreCase(method) || PUT.equalsIgnoreCase(method) || "patch".equalsIgnoreCase(method)) {
+                /**
+                 * 追加主体。
+                 * @param logBuilder 日志构建器
+                 * @param requestWrapper 请求包装器
+                 */
                 appendBody(logBuilder, requestWrapper);
+                /**
+                 * 追加头部。
+                 * @param logBuilder 日志构建器
+                 * @param requestWrapper 请求包装器
+                 */
                 appendHeader(logBuilder, requestWrapper);
                 log.debug("\n{}", logBuilder.toString());
                 filterChain.doFilter(requestWrapper, responseWrapper);
+                /**
+                 * inject接口服务日志。
+                 * @param requestWrapper 请求包装器
+                 */
                 injectInterfaceServiceLog(requestWrapper);
+                /**
+                 * print响应。
+                 * @param responseWrapper 响应包装器
+                 * @param startTime 启动时间
+                 */
                 printResponse(responseWrapper, startTime);
                 return;
             }
 
             log.debug(logBuilder.toString());
+            /**
+             * inject接口服务日志。
+             * @param requestWrapper 请求包装器
+             */
             injectInterfaceServiceLog(requestWrapper);
             filterChain.doFilter(requestWrapper, responseWrapper);
+            /**
+             * print响应。
+             * @param responseWrapper 响应包装器
+             * @param startTime 启动时间
+             */
             printResponse(responseWrapper, startTime);
         } finally {
             responseWrapper.copyBodyToResponse();
@@ -259,7 +346,7 @@ public class ParameterLogFilter implements Filter {
     /**
      * 追加URL信息到日志
      *
-     * @param sb      StringBuilder
+     * @param sb      字符串构建器
      * @param request 请求
      */
     private void appendUrl(StringBuilder sb, HttpServletRequest request) {
@@ -275,7 +362,7 @@ public class ParameterLogFilter implements Filter {
     /**
      * 追加请求头信息到日志
      *
-     * @param sb      StringBuilder
+     * @param sb      字符串构建器
      * @param request 请求
      */
     private void appendHeader(StringBuilder sb, HttpServletRequest request) {
@@ -305,7 +392,7 @@ public class ParameterLogFilter implements Filter {
     /**
      * 追加查询参数到日志
      *
-     * @param sb      StringBuilder
+     * @param sb      字符串构建器
      * @param request 请求
      */
     private void appendQuery(StringBuilder sb, HttpServletRequest request) {
@@ -324,7 +411,7 @@ public class ParameterLogFilter implements Filter {
     /**
      * 追加请求体到日志
      *
-     * @param sb             StringBuilder
+     * @param sb             字符串构建器
      * @param requestWrapper 请求包装器
      */
     private void appendBody(StringBuilder sb, ContentCachingRequestWrapper requestWrapper) {

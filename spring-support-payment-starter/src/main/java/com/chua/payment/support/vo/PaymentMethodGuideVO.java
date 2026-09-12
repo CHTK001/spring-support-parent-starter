@@ -8,10 +8,11 @@ import java.util.List;
 /**
  * 支付方式开通指引
  * @author CH
+ * @since 4.0.0
  */
 @Data
 public class PaymentMethodGuideVO implements Serializable {
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L; // 串行版本uid
 
     /** 通道类型 */
     private String channelType;
@@ -25,13 +26,13 @@ public class PaymentMethodGuideVO implements Serializable {
     /** Official名称 */
     private String officialName;
 
-    /** OfficialURL */
+    /** officialurl */
     private String officialUrl;
 
-    /** ApplyURL */
+    /** applyurl */
     private String applyUrl;
 
-    /** SandboxURL */
+    /** sandboxurl */
     private String sandboxUrl;
 
     /** Summary */
@@ -43,6 +44,6 @@ public class PaymentMethodGuideVO implements Serializable {
     /** Steps */
     private List<String> steps;
 
-    /** Tips */
+    /** 小费 */
     private List<String> tips;
 }

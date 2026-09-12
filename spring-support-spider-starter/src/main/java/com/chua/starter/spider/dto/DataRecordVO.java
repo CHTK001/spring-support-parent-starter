@@ -2,55 +2,119 @@ package com.chua.starter.spider.dto;
 
 import java.time.LocalDateTime;
 
-/** @author CH */
+/** @作者 CH */
 public class DataRecordVO {
-    /** SpiderID */
+    /** 蜘蛛标识 */
     private Long spiderId;
-    /** SpiderexecutionNO */
+    /** spiderexecutionno */
     private String spiderExecutionNo;
-    /** Spider目标URL */
+    /** 蜘蛛目标URL */
     private String spiderTargetUrl;
-    /** Spider数据名称 */
+    /** 蜘蛛数据名称 */
     private String spiderDataName;
-    /** Spider深度 */
+    /** 蜘蛛深度 */
     private Integer spiderDepth;
-    /** Spider数据状态 */
+    /** 蜘蛛数据状态 */
     private String spiderDataStatus;
-    /** Create时间 */
+    /** 创建时间 */
     private LocalDateTime createTime;
-    /** Spider数据payload */
+    /** 蜘蛛数据payload */
     private String spiderDataPayload;
 
-    /** 获取SpiderId */
+    /**
+      * 获取蜘蛛标识
+     *
+     * @return 获取蜘蛛id的结果
+     */
     public Long getSpiderId() { return spiderId; }
-    /** 设置SpiderId */
+    /**
+      * 设置蜘蛛标识
+     *
+     * @param spiderId 蜘蛛标识
+     */
     public void setSpiderId(Long spiderId) { this.spiderId = spiderId; }
-    /** 获取SpiderExecutionNo */
+    /**
+     * 获取蜘蛛执行no
+     *
+     * @return 获取蜘蛛执行no的结果
+     */
     public String getSpiderExecutionNo() { return spiderExecutionNo; }
-    /** 设置SpiderExecutionNo */
+    /**
+     * 设置蜘蛛执行no
+     *
+     * @param spiderExecutionNo 蜘蛛执行no
+     */
     public void setSpiderExecutionNo(String spiderExecutionNo) { this.spiderExecutionNo = spiderExecutionNo; }
-    /** 获取SpiderTargetUrl */
+    /**
+     * 获取蜘蛛Targeturl
+     *
+     * @return 获取蜘蛛Targeturl的结果
+     */
     public String getSpiderTargetUrl() { return spiderTargetUrl; }
-    /** 设置SpiderTargetUrl */
+    /**
+     * 设置蜘蛛Targeturl
+     *
+     * @param spiderTargetUrl 蜘蛛Targeturl
+     */
     public void setSpiderTargetUrl(String spiderTargetUrl) { this.spiderTargetUrl = spiderTargetUrl; }
-    /** 获取SpiderDataName */
+    /**
+     * 获取蜘蛛数据名称
+     *
+     * @return 获取蜘蛛数据名称的结果
+     */
     public String getSpiderDataName() { return spiderDataName; }
-    /** 设置SpiderDataName */
+    /**
+     * 设置蜘蛛数据名称
+     *
+     * @param spiderDataName 蜘蛛数据名称
+     */
     public void setSpiderDataName(String spiderDataName) { this.spiderDataName = spiderDataName; }
-    /** 获取SpiderDepth */
+    /**
+     * 获取蜘蛛深度
+     *
+     * @return 获取蜘蛛深度的结果
+     */
     public Integer getSpiderDepth() { return spiderDepth; }
-    /** 设置SpiderDepth */
+    /**
+     * 设置蜘蛛深度
+     *
+     * @param spiderDepth 蜘蛛深度
+     */
     public void setSpiderDepth(Integer spiderDepth) { this.spiderDepth = spiderDepth; }
-    /** 获取SpiderDataStatus */
+    /**
+     * 获取蜘蛛数据状态
+     *
+     * @return 获取蜘蛛数据状态的结果
+     */
     public String getSpiderDataStatus() { return spiderDataStatus; }
-    /** 设置SpiderDataStatus */
+    /**
+     * 设置蜘蛛数据状态
+     *
+     * @param spiderDataStatus 蜘蛛数据状态
+     */
     public void setSpiderDataStatus(String spiderDataStatus) { this.spiderDataStatus = spiderDataStatus; }
-    /** 获取创建Time */
+    /**
+     * 获取创建时间
+     *
+     * @return 获取创建时间的结果
+     */
     public LocalDateTime getCreateTime() { return createTime; }
-    /** 设置创建Time */
+    /**
+     * 设置创建时间
+     *
+     * @param createTime 创建时间
+     */
     public void setCreateTime(LocalDateTime createTime) { this.createTime = createTime; }
-    /** 获取SpiderDataPayload */
+    /**
+     * 获取蜘蛛数据payload
+     *
+     * @return 获取蜘蛛数据payload的结果
+     */
     public String getSpiderDataPayload() { return spiderDataPayload; }
-    /** 设置SpiderDataPayload */
+    /**
+     * 设置蜘蛛数据payload
+     *
+     * @param spiderDataPayload 蜘蛛数据payload
+     */
     public void setSpiderDataPayload(String spiderDataPayload) { this.spiderDataPayload = spiderDataPayload; }
 }

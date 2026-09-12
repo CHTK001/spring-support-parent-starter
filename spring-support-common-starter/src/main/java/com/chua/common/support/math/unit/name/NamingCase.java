@@ -4,6 +4,7 @@ package com.chua.common.support.math.unit.name;
  * 命名格式转换工具类，提供驼峰命名等多种命名格式转换功能
  *
  * @author CH
+ * @since 4.0.0
  */
 public class NamingCase {
 
@@ -21,7 +22,9 @@ public class NamingCase {
      * @return 驼峰格式的名称
      */
     public static String toCamelCase(String name) {
-        if (name == null || name.isEmpty()) return name;
+        if (name == null || name.isEmpty()) {
+            return name;
+        }
         StringBuilder sb = new StringBuilder();
         boolean nextUpper = false;
         for (int i = 0; i < name.length(); i++) {
@@ -50,7 +53,9 @@ public class NamingCase {
      * @return 首字母大写后的字符串
      */
     public static String toFirstUpperCase(String name) {
-        if (name == null || name.isEmpty()) return name;
+        if (name == null || name.isEmpty()) {
+            return name;
+        }
         return Character.toUpperCase(name.charAt(0)) + name.substring(1);
     }
 }

@@ -4,6 +4,7 @@ package com.chua.common.support.geo;
  * 城市地理信息
  *
  * @author CH
+ * @since 4.0.0
  */
 public class GeoCity {
 

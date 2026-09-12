@@ -36,7 +36,7 @@ import org.slf4j.LoggerFactory;
  *       - /actuator/health
  * </pre>
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024/06/21
  * @author CH
  */
@@ -48,7 +48,7 @@ public class ActuatorConfiguration  {
     /**
      * 构造函数
      *
-     * @param actuatorProperties ActuatorProperties
+     * @param actuatorProperties actuator属性
      */
     public ActuatorConfiguration(ActuatorProperties actuatorProperties) {
         this.actuatorProperties = actuatorProperties;
@@ -71,7 +71,7 @@ public class ActuatorConfiguration  {
     /**
      * Actuator 认证过滤器
      * <p>
-     * 对 /actuator/* 端点进行 Basic Auth 认证，防止未授权访问。
+       * 对 /actuator/* 端点进行 基础 认证 认证，防止未授权访问。
      * 支持 IP 白名单和路径排除。
      * </p>
      *

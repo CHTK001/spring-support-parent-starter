@@ -8,6 +8,7 @@ import java.util.Map;
 /**
  * 消息
  * @author CH
+ * @since 4.0.0
  */
 @Data
 @Builder
@@ -31,7 +32,7 @@ public class SseMessage {
      */
     private SseMessageStatus status;
     /**
-     * 任务ID
+      * 任务标识
      */
     private String tid;
     /**

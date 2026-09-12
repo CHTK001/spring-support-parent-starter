@@ -3,7 +3,7 @@ package com.chua.starter.message.support.pojo;
 /**
  * 消息渠道信息
  * <p>
- * 描述一个已注册的消息推送渠道（MessagePush SPI 实现）的标识、名称、类型与支持能力，
+   * 描述一个已注册的消息推送渠道（消息push SPI 实现）的标识、名称、类型与支持能力，
  * 数据来自实现类上的 {@code @SpiDescribe}/{@code @SpiSupport} 注解，前端据此渲染渠道下拉，
  * 新增渠道无需改动前端代码。
  * </p>

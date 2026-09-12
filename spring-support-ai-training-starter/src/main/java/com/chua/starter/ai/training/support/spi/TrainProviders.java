@@ -8,10 +8,10 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
- * 训练引擎 SPI 注册表：按 type 查找已接入的 {@link TrainProvider}。
+   * 训练引擎 SPI 注册表：按 类型 查找已接入的 {@link TrainProvider}。
  *
  * <p>实现通过 {@code META-INF/services/com...TrainProvider} 注册（标准 Java SPI），
- * 与仓库既有 ServiceProvider 用法一致（vector / datasearch 各 provider）。</p>
+   * 与仓库既有 服务提供者 用法一致（向量 / datasearch 各 提供者）。</p>
  *
  * @author CH
  * @since 4.0.0.42
@@ -19,10 +19,13 @@ import java.util.stream.Collectors;
 public final class TrainProviders {
 
     /**
-     * 默认训练类型：ResNet50 迁移学习（既有语义，type 缺省时的兼容值）。
+      * 默认训练类型：Rnet50 迁移学习（既有语义，类型 缺省时的兼容值）。
      */
     public static final String DEFAULT_TYPE = "resnet50";
 
+    /**
+     * train提供者。
+     */
     private TrainProviders() {
     }
 

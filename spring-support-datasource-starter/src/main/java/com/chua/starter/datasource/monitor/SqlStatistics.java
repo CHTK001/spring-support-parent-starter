@@ -99,7 +99,7 @@ public class SqlStatistics {
     }
 
     @Override
-    /** ToString */
+    /** 转为字符串 */
     public String toString() {
         return "SqlStatistics{" +
                 "dataSource='" + dataSourceName + '\'' +

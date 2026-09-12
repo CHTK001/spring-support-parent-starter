@@ -28,7 +28,7 @@ import static com.chua.starter.common.support.constant.CacheConstant.REDIS_CACHE
 /**
  * AI 模型厂商管理服务实现。
  * <p>
- * 基于 MyBatis Plus 操作 sys_ai_manufacturer 表，
+   * 基于 MyBatis Plus 操作 sys_AI_manufacturer 表，
  * 提供厂商的增删改查，并缓存列表以降低频繁读取。
  *
  * @since 4.0.0.42
@@ -45,12 +45,12 @@ public class AiManufacturerFacadeServiceImpl implements AiManufacturerFacadeServ
     private static final int HTTP_TIMEOUT_SECONDS = 15;
 
     /**
-     * 厂商 Mapper
+      * 厂商 映射器
      */
     private final SysAiManufacturerMapper sysAiManufacturerMapper;
 
     /**
-     * 模型 Mapper
+      * 模型 映射器
      */
     private final AiModelMapper aiModelMapper;
 
@@ -64,7 +64,11 @@ public class AiManufacturerFacadeServiceImpl implements AiManufacturerFacadeServ
     @Override
     @Cacheable(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS,
             key = "'sys:ai:manufacturer:list'", unless = "#result == null || #result.isEmpty()")
-    /** List */
+    /**
+     * 列表
+     *
+     * @return 列表的结果
+     */
     public List<SysAiManufacturer> list() {
         return sysAiManufacturerMapper.selectList(null);
     }
@@ -72,7 +76,12 @@ public class AiManufacturerFacadeServiceImpl implements AiManufacturerFacadeServ
     @Override
     @CacheEvict(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS,
             key = "'sys:ai:manufacturer:list'")
-    /** 保存 */
+    /**
+     * 保存
+     *
+     * @param manufacturer manufacturer
+     * @return 保存的结果
+     */
     public SysAiManufacturer save(SysAiManufacturer manufacturer) {
         manufacturer.setStatus(
                 manufacturer.getStatus() == null ? 1 : manufacturer.getStatus());
@@ -87,13 +96,18 @@ public class AiManufacturerFacadeServiceImpl implements AiManufacturerFacadeServ
     @Override
     @CacheEvict(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS,
             key = "'sys:ai:manufacturer:list'")
-    /** 更新 */
+    /**
+     * 更新
+     *
+     * @param manufacturer manufacturer
+     * @return 更新的结果
+     */
     public boolean update(SysAiManufacturer manufacturer) {
         if (manufacturer == null || manufacturer.getId() == null) {
             log.warn("[AiManufacturerFacade] update 失败: ID 为空");
             return false;
         }
-        // 编辑/启停时脱敏占位值或空值不覆盖真实密钥（含 **** 的占位符直接置 null，避免覆盖损坏）
+ // 编辑/启停时脱敏占位值或空值不覆盖真实密钥（含 **** 的占位符直接置 空，避免覆盖损坏）
         if (manufacturer.getAppKey() != null
                 && (manufacturer.getAppKey().isBlank()
                 || manufacturer.getAppKey().contains("****"))) {
@@ -111,7 +125,12 @@ public class AiManufacturerFacadeServiceImpl implements AiManufacturerFacadeServ
     @Override
     @CacheEvict(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS,
             key = "'sys:ai:manufacturer:list'")
-    /** 删除 */
+    /**
+     * 删除
+     *
+     * @param id 标识
+     * @return 删除的结果
+     */
     public boolean delete(Integer id) {
         return deleteById(id);
     }
@@ -119,7 +138,12 @@ public class AiManufacturerFacadeServiceImpl implements AiManufacturerFacadeServ
     @Override
     @CacheEvict(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS,
             key = "'sys:ai:manufacturer:list'")
-    /** 删除ById */
+    /**
+     * 删除byid
+     *
+     * @param id 标识
+     * @return 删除byid的结果
+     */
     public boolean deleteById(Integer id) {
         if (id == null) {
             return false;
@@ -186,11 +210,11 @@ public class AiManufacturerFacadeServiceImpl implements AiManufacturerFacadeServ
     }
 
     /**
-     * 调用 OpenAI 兼容的 {@code /models} 接口拉取模型 ID 列表。
+       * 调用 打开AI 兼容的 {@code /models} 接口拉取模型 标识 列表。
      *
-     * @param url    models 接口地址
-     * @param apiKey 厂商 API Key（可能为 null）
-     * @return 模型 ID 列表
+     * @param url    模型 接口地址
+     * @param apiKey 厂商 API 钥匙（可能为 空）
+     * @return 模型 标识 列表
      */
     private List<String> fetchModels(String url, String apiKey) {
         try {
@@ -214,10 +238,10 @@ public class AiManufacturerFacadeServiceImpl implements AiManufacturerFacadeServ
     }
 
     /**
-     * 解析 OpenAI 兼容的模型列表响应，提取 data[].id。
+       * 解析 打开AI 兼容的模型列表响应，提取 数据[].标识。
      *
      * @param body 响应体
-     * @return 模型 ID 列表
+     * @return 模型 标识 列表
      */
     private List<String> parseModelIds(String body) {
         try {

@@ -24,7 +24,7 @@ import java.util.Map;
 import java.util.concurrent.CompletionStage;
 
 /**
- * FileStorageServerFilter 使用示例：演示文件存储过滤器的典型用法。
+   * 文件storage服务端过滤器 使用示例：演示文件存储过滤器的典型用法。
  *
  * <p>覆盖过滤器创建、存储注册/注销、OPTIONS 预检、未注册 bucket 放行等场景。</p>
  *
@@ -34,13 +34,16 @@ import java.util.concurrent.CompletionStage;
 @Slf4j
 public class FileStorageServerFilterExample {
 
+    /**
+     * 文件storage服务端过滤器example。
+     */
     private FileStorageServerFilterExample() {
     }
 
     /**
-     * 运行示例自检：验证 FileStorageServerFilter 基本功能。
+      * 运行示例自检：验证 文件storage服务端过滤器 基本功能。
      *
-     * @param args 命令行参数（key=value 形式），当前未使用
+     * @param args 命令行参数（键=值 形式），当前未使用
      * @return 全部场景通过返回 true
      */
     public static boolean run(Map<String, String> args) {
@@ -59,7 +62,7 @@ public class FileStorageServerFilterExample {
         pass++;
         total++;
 
-        // 2. 验证 getOrder 和 supportPath
+ // 2. 验证 获取订单 和 支持路径
         assert filter.getOrder() == 100 : "[FAIL] order 应为 100, got " + filter.getOrder();
         assert filter.supportPath() == null : "[FAIL] supportPath 应为 null（Access Filter）";
         log.info("[PASS] getOrder={} supportPath={}", filter.getOrder(), filter.supportPath());
@@ -79,7 +82,7 @@ public class FileStorageServerFilterExample {
         pass++;
         total++;
 
-        // 4. OPTIONS 预检请求
+ // 4. 期权 预检请求
         try {
             MockRequest optsReq = new MockRequest(HttpMethod.OPTIONS, "/");
             MockResponse optsResp = new MockResponse();
@@ -121,7 +124,7 @@ public class FileStorageServerFilterExample {
     /**
      * 入口方法：解析参数并执行自检。
      *
-     * @param args 命令行参数（key=value 形式）
+     * @param args 命令行参数（键=值 形式）
      */
     public static void main(String[] args) {
         Map<String, String> parsed = com.chua.common.support.utils.CommandLine.parse(args).getOptions();
@@ -130,6 +133,13 @@ public class FileStorageServerFilterExample {
     }
 
     // ==================== 测试用 Mock ====================
+    /**
+     * mock响应类。
+     *
+     * @author CH
+     * @since 4.0.0
+     * @return 创建mockstorage的结果
+     */
 
     private static FileStorage createMockStorage() {
         return new FileStorage() {
@@ -186,10 +196,10 @@ public class FileStorageServerFilterExample {
     }
 
     static class MockRequest implements ServerRequest {
-        private final HttpMethod method;
-        private final String path;
-        private final Map<String, String> params = Map.of();
-        private final HttpHeader headers = HttpHeader.create();
+        private final HttpMethod method; // 方法
+        private final String path; // 路径
+        private final Map<String, String> params = Map.of(); // 参数
+        private final HttpHeader headers = HttpHeader.create(); // 头部
 
         MockRequest(HttpMethod method, String path) {
             this.method = method;
@@ -216,9 +226,9 @@ public class FileStorageServerFilterExample {
     }
 
     static class MockResponse implements ServerResponse {
-        private int status = 0;
-        private HttpHeader headers = HttpHeader.create();
-        private byte[] bodyBytes;
+        private int status = 0; // 状态
+        private HttpHeader headers = HttpHeader.create(); // 头部
+        private byte[] bodyBytes; // 主体bytes
 
         @Override public ServerResponse setStatus(int status) { this.status = status; return this; }
         @Override public int getStatus() { return status; }
@@ -238,8 +248,12 @@ public class FileStorageServerFilterExample {
         @Override public boolean isEnded() { return false; }
         @Override public void end() {}
         @Override public void writeRaw(byte[] bytes) {
-            if (bodyBytes == null) bodyBytes = bytes;
-            else bodyBytes = java.util.Arrays.copyOf(bodyBytes, bodyBytes.length + bytes.length);
+            if (bodyBytes == null) {
+                bodyBytes = bytes;
+            }
+            else {
+                bodyBytes = java.util.Arrays.copyOf(bodyBytes, bodyBytes.length + bytes.length);
+            }
             System.arraycopy(bytes, 0, bodyBytes, bodyBytes.length - bytes.length, bytes.length);
         }
         @Override public ServerResponse reset() { status = 0; headers = HttpHeader.create(); bodyBytes = null; return this; }

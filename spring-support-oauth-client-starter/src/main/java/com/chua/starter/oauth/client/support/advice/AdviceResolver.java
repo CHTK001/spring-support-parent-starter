@@ -30,7 +30,7 @@ public interface AdviceResolver {
     Object resolve(HttpServletResponse response, Integer status, String message) throws IOException;
 
     /**
-     * 是否是html
+      * 是否是HTML
      *
      * @return html
      */

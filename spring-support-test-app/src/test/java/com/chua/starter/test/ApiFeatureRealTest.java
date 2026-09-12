@@ -13,7 +13,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * api 功能开关（@ApiFeature）真实测试：经真实 ApiControlInterceptor 拦截链验证
+   * api 功能开关（@api特征）真实测试：经真实 apicontrol拦截器 拦截链验证
  * 开关开放/关闭的放行与拒绝路径。
  *
  * @author CH
@@ -25,9 +25,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class ApiFeatureRealTest {
 
     @Autowired
-    private MockMvc mockMvc;
+    private MockMvc mockMvc; // mockmvc
 
-    /** 实验性功能（defaultEnabled=false）：拦截返回 503 + 未开放提示（ReturnResult.msg 字段） */
+    /** 实验性功能（默认已启用=false）：拦截返回 503 + 未开放提示（申报结果.msg 字段） */
     @Test
     void disabledFeatureReturns503() throws Exception {
         mockMvc.perform(get("/api/feature/beta"))
@@ -35,7 +35,7 @@ class ApiFeatureRealTest {
                 .andExpect(jsonPath("$.msg").value("此功能暂未开放"));
     }
 
-    /** 常规功能（defaultEnabled=true）：正常放行 200 */
+    /** 常规功能（默认已启用=true）：正常放行 200 */
     @Test
     void enabledFeatureReturns200() throws Exception {
         mockMvc.perform(get("/api/feature/open"))

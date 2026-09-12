@@ -8,15 +8,16 @@ import java.time.LocalDateTime;
 /**
  * 支付全局配置 VO
  * @author CH
+ * @since 4.0.0
  */
 @Data
 public class PaymentGlobalConfigVO implements Serializable {
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L; // 串行版本uid
 
     /** 配置密钥 */
     private String configKey;
 
-    /** PaymentnotifybaseURL */
+    /** paymentnotifybaseurl */
     private String paymentNotifyBaseUrl;
 
     /** Payment返回值URL */
@@ -28,13 +29,13 @@ public class PaymentGlobalConfigVO implements Serializable {
     /** Paymentautorefresh秒 */
     private Integer paymentAutoRefreshSeconds;
 
-    /** Remark */
+    /** 评论 */
     private String remark;
 
-    /** Payment示例PAYnotifyURL */
+    /** 薪酬示例paynotifyurl */
     private String paymentSamplePayNotifyUrl;
 
-    /** Payment示例refundnotifyURL */
+    /** 薪酬示例refundnotifyurl */
     private String paymentSampleRefundNotifyUrl;
 
     /** Coupondeductwithdrawable */

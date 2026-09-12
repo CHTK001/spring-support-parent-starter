@@ -40,7 +40,7 @@ public class ExecController {
     /**
      * 批量执行命令
      *
-     * @param body 请求体：hostIds / command / timeoutSeconds
+     * @param body 请求体：主机标识 / 命令 / 超时seconds
      * @return 各主机日志
      */
     @Operation(summary = "批量执行命令")
@@ -55,10 +55,11 @@ public class ExecController {
     /**
      * 文件分发
      *
-     * @param hostIds   主机 ID 集合（逗号分隔）
+     * @param hostIds   主机 标识 集合（逗号分隔）
      * @param directory 目标目录
      * @param file      文件
      * @return 各主机日志
+     * @param @RequestParam("hostIds" @请求参数("主机标识"
      */
     @Operation(summary = "文件分发")
     @PostMapping("/file")
@@ -134,6 +135,7 @@ public class ExecController {
      * @param type   类型过滤，可为空
      * @param hostId 主机过滤，可为空
      * @return 日志列表
+     * @param false false
      */
     @Operation(summary = "执行日志查询")
     @GetMapping("/log")
@@ -164,7 +166,7 @@ public class ExecController {
     }
 
     /**
-     * 解析逗号分隔的主机 ID
+      * 解析逗号分隔的主机 标识
      *
      * @param csv 逗号分隔串
      * @return 长整型列表
@@ -187,7 +189,7 @@ public class ExecController {
      * 安全转换长整型
      *
      * @param value 原始值
-     * @return 长整型或 null
+     * @return 长整型或 空
      */
     private Long toLong(Object value) {
         if (value == null) {
@@ -204,7 +206,7 @@ public class ExecController {
      * 安全转换整型
      *
      * @param value 原始值
-     * @return 整型或 null
+     * @return 整型或 空
      */
     private Integer toInteger(Object value) {
         Long parsed = toLong(value);

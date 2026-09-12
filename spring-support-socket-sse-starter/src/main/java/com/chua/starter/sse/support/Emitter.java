@@ -9,9 +9,10 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import java.util.Set;
 
 /**
- * 定义了一种发布者对象，用于SSE (Server-Sent Events) 功能
+   * 定义了一种发布者对象，用于SSE (服务端-Sent 事件) 功能
  * 该类使用了 Lombok 注解来简化代码
  * @author CH
+ * @since 4.0.0
  */
 @Data
 @Builder
@@ -43,7 +44,7 @@ public class Emitter {
      * 创建时间，初始化为当前的纳秒数
      */
     @Builder.Default
-    /** Create时间 */
+    /** 创建时间 */
     private long createTime = System.nanoTime();
 
     /**
@@ -52,7 +53,7 @@ public class Emitter {
     private SseEmitter sseEmitter;
 
     /**
-     * 获取客户端ID
+      * 获取客户端标识
      *
      * @return 客户端ID
      */
@@ -61,9 +62,9 @@ public class Emitter {
     }
 
     /**
-     * 设置客户端ID
+      * 设置客户端标识
      *
-     * @param clientId 客户端ID
+     * @param clientId 客户端标识
      */
     public void setClientId(String clientId) {
         this.clientId = clientId;

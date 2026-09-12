@@ -16,9 +16,9 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * ApplicationEvent转队列监听器
+   * application事件转队列监听器
  * <p>
- * 自动监听所有标注了@EventToQueue的ApplicationEvent，并将其发送到指定队列
+   * 自动监听所有标注了@事件转为队列的application事件，并将其发送到指定队列
  * </p>
  *
  * @since 2025-03-20
@@ -33,10 +33,11 @@ public class ApplicationEventToQueueListener {
     private final List<MessageTemplate> messageTemplates;
     /** 队列属性 */
     private final QueueProperties queueProperties;
-    private final Map<String, MessageTemplate> templateCache = new ConcurrentHashMap<>();
+    private final Map<String, MessageTemplate> templateCache = new ConcurrentHashMap<>(); // template缓存
 
     /**
-     * 监听所有ApplicationEvent
+      * 监听所有application事件
+     * @param event 事件
      */
     @Async
     @EventListener
@@ -79,7 +80,9 @@ public class ApplicationEventToQueueListener {
     }
 
     /**
-     * 获取MessageTemplate
+      * 获取消息template
+     * @param type 类型
+     * @return 获取消息template的结果
      */
     private MessageTemplate getMessageTemplate(String type) {
         return templateCache.computeIfAbsent(type, t -> {
@@ -95,6 +98,8 @@ public class ApplicationEventToQueueListener {
 
     /**
      * 解析消息头
+     * @param headerArray 头部array
+     * @return 解析头部的结果
      */
     private Map<String, Object> parseHeaders(String[] headerArray) {
         Map<String, Object> headers = new HashMap<>();

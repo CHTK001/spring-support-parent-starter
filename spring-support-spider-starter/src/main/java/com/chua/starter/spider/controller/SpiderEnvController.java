@@ -94,7 +94,7 @@ public class SpiderEnvController {
     /**
      * 删除环境变量。
      *
-     * @param id 主键 ID
+     * @param id 主键 标识
      * @return 是否成功
      */
     @DeleteMapping("/{id}")

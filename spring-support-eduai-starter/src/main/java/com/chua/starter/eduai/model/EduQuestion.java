@@ -19,10 +19,10 @@ import java.time.LocalDateTime;
 public class EduQuestion {
 
     /**
-     * 题目ID
+      * 题目标识
      */
     @TableId(type = IdType.AUTO)
-    /** QuestionID */
+    /** questionid */
     private Long questionId;
 
     /**
@@ -56,7 +56,7 @@ public class EduQuestion {
     private Integer questionDifficulty;
 
     /**
-     * 知识点ID列表
+      * 知识点标识列表
      */
     private String questionKnowledgePointIds;
 

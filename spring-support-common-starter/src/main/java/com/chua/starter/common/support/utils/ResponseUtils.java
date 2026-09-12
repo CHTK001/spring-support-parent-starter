@@ -20,7 +20,7 @@ public class ResponseUtils {
     }
 
     /**
-     * 获取当前请求的HttpServletResponse对象
+      * 获取当前请求的httpservlet响应对象
      * <p>通过Spring的RequestContextHolder获取当前线程绑定的请求属性，从而获取HttpServletResponse对象。</p>
      * <p>使用示例：</p>
      * <pre>
@@ -30,7 +30,7 @@ public class ResponseUtils {
      *     }
      * </pre>
      *
-     * @return {@link HttpServletResponse} 当前请求的响应对象，如果无法获取则返回null
+     * @return {@link httpservlet响应} 当前请求的响应对象，如果无法获取则返回空
      */
     public static HttpServletResponse getResponse() {
         ServletRequestAttributes attributes = null;
@@ -38,7 +38,7 @@ public class ResponseUtils {
             attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
             return null != attributes ? attributes.getResponse() : null;
         } catch (Exception e) {
-            // 忽略异常，返回null
+ // 忽略异常，返回空
         }
         return null;
     }

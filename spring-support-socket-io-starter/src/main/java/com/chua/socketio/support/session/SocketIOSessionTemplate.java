@@ -24,10 +24,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
- * Socket.IO 会话模板实现
- * 基于 netty-socketio 实现，支持多房间配置
+   * 套接字.IO 会话模板实现
+   * 基于 Netty-套接字.IO 实现，支持多房间配置
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024-12-04
  * @author CH
  */
@@ -38,22 +38,22 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
     private static final Logger log = LoggerFactory.getLogger(SocketIOSessionTemplate.class);
     /** 属性 */
     private final SocketProperties properties;
-    /** Listeners */
+    /** 监听器 */
     private final List<SocketListener> listeners;
-    private final Map<String, List<SocketIOSession>> sessionCache = new ConcurrentHashMap<>();
+    private final Map<String, List<SocketIOSession>> sessionCache = new ConcurrentHashMap<>(); // 会话缓存
     /** 事件监听器处理器 */
     private final EventListenerProcessor eventListenerProcessor;
     
     /**
-     * 多服务器实例：clientId -> server
+       * 多服务器实例：客户端标识 -> 服务端
      */
     private final Map<String, DelegateSocketIOServer> servers = new ConcurrentHashMap<>();
 
     /**
-     * 创建 SocketIOSessionTemplate 实例
-     * @param properties properties
-     * @param List List
-     * @param listeners listeners
+      * 创建 套接字io会话template 实例
+     * @param properties 属性
+     * @param listeners 列表
+     * @param listeners 监听器
      */
     public SocketIOSessionTemplate(SocketProperties properties, List<SocketListener> listeners) {
         this.properties = properties;
@@ -84,7 +84,7 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
     }
 
     @Override
-    /** 获取Session */
+    /** 获取会话 */
     public SocketSession getSession(String sessionId) {
         for (List<SocketIOSession> sessions : sessionCache.values()) {
             for (SocketIOSession session : sessions) {
@@ -121,7 +121,7 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
     }
 
     @Override
-    /** 发送ToUser */
+    /** 发送转为用户 */
     public void sendToUser(String userId, String event, String msg) {
         for (List<SocketIOSession> sessions : sessionCache.values()) {
             for (SocketIOSession session : sessions) {
@@ -139,7 +139,7 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
     }
 
     @Override
-    /** 获取OnlineSessions */
+    /** 获取online会话 */
     public List<SocketSession> getOnlineSessions() {
         List<SocketSession> result = new java.util.ArrayList<>();
         for (List<SocketIOSession> sessions : sessionCache.values()) {
@@ -149,7 +149,7 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
     }
 
     @Override
-    /** 获取OnlineSession */
+    /** 获取online会话 */
     public List<SocketSession> getOnlineSession(String type, String roomId) {
         List<SocketIOSession> sessions = sessionCache.get(type);
         if (sessions == null) {
@@ -160,7 +160,7 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
             return new java.util.ArrayList<>(sessions);
         }
 
-        // 根据 roomId 过滤会话
+ // 根据 roomid 过滤会话
         List<SocketSession> result = new java.util.ArrayList<>();
         for (SocketIOSession session : sessions) {
             Object sessionRoomId = session.getAttribute("roomId");
@@ -172,7 +172,7 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
     }
 
     @Override
-    /** 获取OnlineUsers */
+    /** 获取online用户 */
     public List<SocketUser> getOnlineUsers(String type) {
         List<SocketUser> result = new java.util.ArrayList<>();
         java.util.Set<String> userIds = new java.util.HashSet<>();
@@ -229,11 +229,18 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
 
             String clientId = room.getClientId();
             String host = room.getActualHost(properties.getHost());
-            // 如果 port 是正数，直接使用；如果是负数，需要主端口（这里使用默认值 9000）
+ // 如果 端口 是正数，直接使用；如果是负数，需要主端口（这里使用默认值 9000）
             int port = room.getPort() >= 0 ? room.getPort() : room.getActualPort(9000);
             String contextPath = room.getContextPath();
             log.info("[SocketIO] 启动服务: 客户端ID={}, 地址={}, 端口={}, 上下文={}", 
                     clientId, host, port, contextPath);
+            /**
+             * 启动服务端。
+             * @param clientId 客户端标识
+             * @param host 主机
+             * @param port 端口
+             * @param contextPath 上下文路径
+             */
             startServer(clientId, host, port, contextPath);
         }
         log.info("[SocketIO] 服务启动完成 [{}]", enabled());
@@ -257,6 +264,11 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
                 SocketIOSession session = new SocketIOSession(client, properties);
                 session.setAttribute("clientId", clientId);
                 session.setAttribute("contextPath", contextPath);
+                /**
+                 * 保存。
+                 * @param clientId 客户端标识
+                 * @param session 会话
+                 */
                 save(clientId, session);
                 log.debug("[SocketIO] 客户端连接: clientId={}, sessionId={}", clientId, client.getSessionId());
             });
@@ -266,11 +278,22 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
                 String sessionId = client.getSessionId().toString();
                 SocketSession session = getSession(sessionId);
                 if (session != null) {
+                    /**
+                     * 移除。
+                     * @param clientId 客户端标识
+                     * @param session 会话
+                     */
                     remove(clientId, session);
                 }
                 log.debug("[SocketIO] 客户端断开: clientId={}, sessionId={}", clientId, sessionId);
             });
 
+            /**
+             * 注册事件监听器。
+             * @param server 服务端
+             * @param clientId 客户端标识
+             * @param contextPath 上下文路径
+             */
             registerEventListeners(server, clientId, contextPath);
 
             server.start();
@@ -280,11 +303,23 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
 
         } catch (Exception e) {
             log.error("[SocketIO] 服务启动 {} - clientId={}", failed(), clientId, e);
+            /**
+             * runtime异常。
+             * @param clientId 客户端标识
+             * @param e e
+             * @return runtime异常的结果
+             */
             throw new RuntimeException("Socket.IO 服务启动失败: " + clientId, e);
         }
     }
 
-    /** 注册EventListeners */
+    /**
+     * 注册事件监听器
+     *
+     * @param server 服务端
+     * @param clientId 客户端标识
+     * @param contextPath 上下文路径
+     */
     private void registerEventListeners(DelegateSocketIOServer server, String clientId, String contextPath) {
         for (String eventName : eventListenerProcessor.getRegisteredEvents()) {
             server.addEventListener(eventName, String.class, (client, data, ackSender) -> {
@@ -293,6 +328,11 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
                     SocketIOSession ioSession = new SocketIOSession(client, properties);
                     ioSession.setAttribute("clientId", clientId);
                     ioSession.setAttribute("contextPath", contextPath);
+                    /**
+                     * 保存。
+                     * @param clientId 客户端标识
+                     * @param ioSession io会话
+                     */
                     save(clientId, ioSession);
                     session = ioSession;
                 }
@@ -322,10 +362,10 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
     }
 
     /**
-     * 获取指定 clientId 的服务器实例
+       * 获取指定 客户端标识 的服务器实例
      *
      * @param clientId 客户端标识
-     * @return 服务器实例，不存在返回 null
+     * @return 服务器实例，不存在返回 空
      */
     public DelegateSocketIOServer getServer(String clientId) {
         return servers.get(clientId);
@@ -341,7 +381,7 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
     }
 
     /**
-     * 创建 Socket.IO 配置
+      * 创建 套接字.IO 配置
      *
      * @param host        主机地址
      * @param port        端口

@@ -23,10 +23,10 @@ import org.springframework.context.ApplicationEvent;
 @Getter
 public class TrainLifecycleEvent extends ApplicationEvent {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L; // 串行版本uid
 
     /**
-     * 任务 ID。
+      * 任务 标识。
      */
     private final String taskId;
 
@@ -36,7 +36,7 @@ public class TrainLifecycleEvent extends ApplicationEvent {
     private final TrainStage stage;
 
     /**
-     * 当前进度快照（任务创建/参数更新等无训练进度的阶段为 null）。
+      * 当前进度快照（任务创建/参数更新等无训练进度的阶段为 空）。
      */
     private final TrainProgress progress;
 
@@ -46,21 +46,25 @@ public class TrainLifecycleEvent extends ApplicationEvent {
     private final String message;
 
     /**
-     * 异常原因（失败/取消时携带，可为 null）。
+      * 异常原因（失败/取消时携带，可为 空）。
      */
     private final Throwable cause;
 
     /**
      * 构造生命周期事件。
      *
-     * @param taskId   任务 ID
+     * @param taskId   任务 标识
      * @param stage    生命周期阶段
-     * @param progress 进度快照（可为 null）
-     * @param message  附加消息（可为 null）
-     * @param cause    异常原因（可为 null）
+     * @param progress 进度快照（可为 空）
+     * @param message  附加消息（可为 空）
+     * @param cause    异常原因（可为 空）
      */
     public TrainLifecycleEvent(String taskId, TrainStage stage, TrainProgress progress,
                                String message, Throwable cause) {
+        /**
+         * 父。
+         * @param taskId 任务标识
+         */
         super(taskId);
         this.taskId = taskId;
         this.stage = stage;
