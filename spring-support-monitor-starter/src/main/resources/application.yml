@@ -84,9 +84,10 @@ plugin:
 
 # 时序存储引擎：influxdb / redis / none（默认 influxdb，向后兼容）
 # influxdb：需 InfluxDB 服务；redis：走 ZSET 简化时序（需上方 spring.data.redis 可达）
+# 本地冒烟验证用 none（仅 MySQL 明细），生产按需切换
 monitor:
   timeseries:
-    engine: influxdb
+    engine: none
     url: http://172.16.0.40:8086
     database: monitor
 
