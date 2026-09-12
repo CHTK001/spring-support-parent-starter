@@ -9,6 +9,7 @@ import com.chua.starter.server.support.spi.HostCollectProvider;
 import com.chua.starter.server.support.spi.HostCollectProviderRegistry;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
@@ -20,6 +21,8 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 /**
  * 主机在离线定时检测器 / 定时采集器（主机级配置）
@@ -47,6 +50,14 @@ public class HostOnlineScheduler {
 
     /** 采集 Provider 注册中心（SPI 按 mode 路由） */
     private final HostCollectProviderRegistry collectRegistry;
+
+    /** 延迟检测结果钩子（monitor 侧注册，推送 socket 实时延迟；未注册时不推送） */
+    @Setter
+    private Consumer<MsServerHost> delayHook;
+
+    /** 在线状态变更钩子（monitor 侧注册；仅状态翻转时回调） */
+    @Setter
+    private Consumer<MsServerHost> onlineHook;
 
     /** TCP 连接超时(毫秒) */
     private static final int CONNECT_TIMEOUT_MS = 3000;
@@ -92,7 +103,16 @@ public class HostOnlineScheduler {
                 if (reachable) {
                     online++;
                 }
+                boolean prevOnline = isEnabled(host.getServerHostOnline());
                 updateOnline(host.getId(), reachable);
+                if (onlineHook != null && prevOnline != reachable) {
+                    host.setServerHostOnline(reachable ? 1 : 0);
+                    try {
+                        onlineHook.accept(host);
+                    } catch (Exception hookEx) {
+                        log.debug("[online] 在线状态钩子异常 hostId={}: {}", host.getId(), hookEx.getMessage());
+                    }
+                }
             }
             if (probed > 0) {
                 log.info("[online] 在离线检测完成: 探测 {} 台, {} 台在线", probed, online);
