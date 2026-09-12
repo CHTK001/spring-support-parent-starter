@@ -19,6 +19,8 @@ import com.chua.starter.server.support.mapper.MsServerIdentityMapper;
 import com.chua.starter.server.support.mapper.MsServerKeyMapper;
 import com.chua.starter.server.support.model.SshCredential;
 import com.chua.starter.server.support.service.ServerHostService;
+import com.chua.starter.server.support.spi.HostDetectProvider;
+import com.chua.starter.server.support.spi.HostDetectProviderRegistry;
 import com.chua.starter.server.support.util.CredentialCipher;
 import com.chua.starter.server.support.util.SshClients;
 import com.chua.winrm.support.client.WinRmExecClient;
@@ -91,15 +93,18 @@ public class ServerHostServiceImpl implements ServerHostService {
     /** 连接缓存管理器 */
     private final ConnectionManager connectionManager;
 
+    /** 主机硬件探测提供者注册中心（按系统类型 SPI 路由） */
+    private final HostDetectProviderRegistry detectProviderRegistry;
+
     /** 探针标识随机源 */
     private final SecureRandom secureRandom = new SecureRandom();
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-     * 创建。
-     * @param host 主机
-     * @return 创建的结果
+    * 创建。
+    * @param host 主机
+    * @return 创建的结果
      */
     public ReturnResult<MsServerHost> create(MsServerHost host) {
         // 参数校验前置
@@ -685,15 +690,15 @@ public class ServerHostServiceImpl implements ServerHostService {
     }
 
     /**
-     * 同步单台主机资产（SSH 硬件探测 + 公网/内网 IP，信息无变化时跳过回写）
-     * <p>
-     * 探测到的主机信息 / 硬件规格 / IP 会同步回资产表；当公网 IP 或内网 IP
-     * 与库中不一致时触发更新并记录变更明细，其他字段仅在探测值有效且不同时覆盖。
-     * </p>
-     *
-     * @param target  目标主机
-     * @param changes 变更明细收集器
-     * @return true=有字段更新，false=无变化跳过
+    * 同步单台主机资产（SSH 硬件探测 + 公网/内网 IP，信息无变化时跳过回写）
+    * <p>
+    * 探测到的主机信息 / 硬件规格 / IP 会同步回资产表；当公网 IP 或内网 IP
+    * 与库中不一致时触发更新并记录变更明细，其他字段仅在探测值有效且不同时覆盖。
+    * </p>
+    *
+    * @param target  目标主机
+    * @param changes 变更明细收集器
+    * @return true=有字段更新，false=无变化跳过
      */
     private boolean syncSingleHost(MsServerHost target, java.util.List<java.util.Map<String, Object>> changes) {
         // 保存探测前 IP 快照（用于判断是否发生变更）
