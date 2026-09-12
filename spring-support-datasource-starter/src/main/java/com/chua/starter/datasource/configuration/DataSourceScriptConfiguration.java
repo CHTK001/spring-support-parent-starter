@@ -4,6 +4,8 @@ import com.chua.common.support.lang.process.ProgressBar;
 import com.chua.common.support.lang.process.ProgressBarBuilder;
 import com.chua.common.support.lang.process.ProgressBarStyle;
 import com.chua.common.support.lang.version.Version;
+import com.chua.common.support.lang.datasource.flyway.Flyway;
+import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.datasource.properties.DataSourceScriptProperties;
 import com.chua.starter.datasource.support.DatabaseFileProvider;
 import lombok.extern.slf4j.Slf4j;
@@ -80,9 +82,15 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
             if (processedDataSources.add(beanName)) {
                 try {
                     log.info("检测到 DataSource [{}] 初始化完成，开始执行数据库脚本...", beanName);
-                    FlywayLikePopulator populator = new FlywayLikePopulator(ds, dataSourceScriptProperties);
-                    populator.populate();
-                    log.info("DataSource [{}] 数据库脚本执行完成", beanName);
+                    // 优先通过 SPI 获取 Flyway 高优先级实现（utils-support-flyway-starter 的 DataSourceFlyway）；
+                    // 获取成功则委托其迁移，否则回退到内置 FlywayLikePopulator。
+                    if (tryMigrateWithSpiFlyway(ds, beanName)) {
+                        log.info("DataSource [{}] 数据库脚本执行完成（SPI Flyway）", beanName);
+                    } else {
+                        FlywayLikePopulator populator = new FlywayLikePopulator(ds, dataSourceScriptProperties);
+                        populator.populate();
+                        log.info("DataSource [{}] 数据库脚本执行完成", beanName);
+                    }
                 } catch (Exception e) {
                     log.warn("执行数据库脚本失败: {}", beanName, e);
                     if (!dataSourceScriptProperties.isContinueOnError()) {
