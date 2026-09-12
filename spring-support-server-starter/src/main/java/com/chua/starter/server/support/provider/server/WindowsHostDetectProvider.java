@@ -49,7 +49,13 @@ public class WindowsHostDetectProvider implements HostDetectProvider {
                     + "+('|DISK='+[math]::Round((Get-CimInstance Win32_LogicalDisk -Filter 'DriveType=3' | Measure-Object -Property Size -Sum).Sum/1GB)) "
                     + "+('|OS='+(Get-CimInstance Win32_OperatingSystem).Caption) "
                     + "+('|ARCH='+$env:PROCESSOR_ARCHITECTURE) "
-                    + "+('|IP='+((Get-NetIPAddress -AddressFamily IPv4 | Where-Object {$_.IPAddress -notlike '127.*'} | Select-Object -First 1).IPAddress))";
+                    + "+('|IP='+((Get-NetIPAddress -AddressFamily IPv4 | Where-Object {$_.IPAddress -notlike '127.*'} | Select-Object -First 1).IPAddress)) "
+                    + "+('|GPUCOUNT='+@(Get-CimInstance Win32_VideoController).Count) "
+                    + "+('|GPUMODEL='+((Get-CimInstance Win32_VideoController | Select-Object -First 1).Name)) "
+                    + "+('|NET='+((Get-NetIPAddress -AddressFamily IPv4 | Where-Object {$_.IPAddress -notlike '127.*'} | ForEach-Object {$_.InterfaceAlias+':'+$_.IPAddress}) -join ',')) "
+                    + "+('|CPUUSAGE='+[math]::Round((Get-Counter '\\Processor(_Total)\\% Processor Time' -SampleInterval 1 -MaxSamples 1).CounterSamples.CookedValue,2)) "
+                    + "+('|MEMUSAGE='+[math]::Round((((Get-Counter '\\Memory\\Available MBytes').CounterSamples.CookedValue))/((Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory/1MB)*100,2)) "
+                    + "+('|DISKUSAGE='+[math]::Round((((Get-CimInstance Win32_LogicalDisk -Filter 'DriveType=3' | Measure-Object -Property FreeSpace -Sum).Sum)/((Get-CimInstance Win32_LogicalDisk -Filter 'DriveType=3' | Measure-Object -Property Size -Sum).Sum))*100,2))";
             String output = winrm.exec().command(ps).executeAndGetOutput();
             // 解析并回写硬件字段
             parseWinrmOutput(output, host);
@@ -108,6 +114,41 @@ public class WindowsHostDetectProvider implements HostDetectProvider {
                             host.setServerHostPrivateIp(value);
                         }
                     }
+                    case "gpucount" -> {
+                        int gpu = Integer.parseInt(value);
+                        if (gpu > 0) {
+                            host.setServerHostGpuCount(gpu);
+                        }
+                    }
+                    case "gpumodel" -> {
+                        if (StringUtils.isNotBlank(value)) {
+                            host.setServerHostGpuModel(value);
+                        }
+                    }
+                    case "net" -> {
+                        if (value.contains(":")) {
+                            // 网卡别名:IP 逗号拼接，转 JSON 数组
+                            host.setServerHostNetworks(toNetworksJson(value));
+                        }
+                    }
+                    case "cpuusage" -> {
+                        double usage = parseRatio(value);
+                        if (usage >= 0) {
+                            host.setServerHostCpuUsage(usage);
+                        }
+                    }
+                    case "memusage" -> {
+                        double usage = parseRatio(value);
+                        if (usage >= 0) {
+                            host.setServerHostMemUsage(usage);
+                        }
+                    }
+                    case "diskusage" -> {
+                        double usage = parseRatio(value);
+                        if (usage >= 0) {
+                            host.setServerHostDiskUsage(usage);
+                        }
+                    }
                     default -> {
                         // 忽略未知字段
                     }
@@ -118,6 +159,64 @@ public class WindowsHostDetectProvider implements HostDetectProvider {
         }
         if (StringUtils.isBlank(host.getServerHostOsVersion())) {
             host.setServerHostOsVersion("Windows");
+        }
+    }
+
+    /**
+    * 将 WinRM 网卡字符串（别名:IP 逗号拼接）转为 JSON 数组
+    *
+    * @param value 网卡字符串，如 "以太网:10.0.0.3,WLAN:192.168.1.5"
+    * @return JSON 数组字符串，解析失败返回 null
+     */
+    private String toNetworksJson(String value) {
+        try {
+            StringBuilder sb = new StringBuilder("[");
+            String[] parts = value.split(",");
+            for (int i = 0; i < parts.length; i++) {
+                String part = parts[i];
+                int colon = part.indexOf(':');
+                if (colon <= 0) {
+                    continue;
+                }
+                String name = part.substring(0, colon).trim();
+                String ip = part.substring(colon + 1).trim();
+                if (ip.isEmpty()) {
+                    continue;
+                }
+                if (sb.length() > 1) {
+                    sb.append(",");
+                }
+                sb.append("{\"name\":\"").append(escapeJson(name)).append("\",\"ip\":\"").append(ip).append("\"}");
+            }
+            sb.append("]");
+            return sb.toString();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+    * 转义 JSON 字符串中的双引号与反斜杠
+    *
+    * @param value 原始字符串
+    * @return 转义后的字符串
+     */
+    private String escapeJson(String value) {
+        return value.replace("\\", "\\\\").replace("\"", "\\\"");
+    }
+
+    /**
+    * 解析百分比字符串为 Double，非法返回 -1
+    *
+    * @param value 百分比字符串
+    * @return Double，非法返回 -1
+     */
+    private double parseRatio(String value) {
+        try {
+            double d = Double.parseDouble(value.trim());
+            return d >= 0 && d <= 100 ? d : -1;
+        } catch (NumberFormatException e) {
+            return -1;
         }
     }
 }

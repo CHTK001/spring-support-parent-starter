@@ -6,6 +6,8 @@ import com.chua.common.support.network.server.filter.ReactiveServerFilter;
 import com.chua.common.support.network.server.filter.ServerFilter;
 import com.chua.common.support.network.server.request.ServerRequest;
 import com.chua.common.support.network.server.response.ServerResponse;
+import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.spi.annotations.SpiDescribe;
 import com.chua.common.support.storage.FileStorage;
 import com.chua.common.support.storage.metadata.Metadata;
 import com.chua.common.support.storage.request.ExistObjectRequest;
@@ -19,6 +21,8 @@ import com.chua.common.support.storage.result.ObjectResult;
 import com.chua.common.support.storage.result.PutObjectResult;
 import com.chua.filestorage.support.preview.FileStoragePreviewProvider;
 import com.chua.filestorage.support.preview.PreviewResult;
+import com.chua.filestorage.support.spi.FileStorageFileSetting;
+import com.chua.filestorage.support.spi.FileStorageFilterSetting;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.ByteArrayOutputStream;
@@ -31,9 +35,11 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
@@ -157,6 +163,17 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
     * 动作配置令牌参数名（setConfig 管理员校验）
      */
     private static final String PARAM_TOKEN = "token";
+
+    /**
+    * 图片滤镜 SPI 接口及已知子接口类名（具体滤镜分散注册在多级接口下，
+    * 用 Class.forName 加载以避免 utils-support-image-starter 缺失时编译/类加载失败）
+     */
+    private static final String[] IMAGE_FILTER_SPI_CLASSES = {
+            "com.chua.common.support.image.filter.ImageFilter",
+            "com.chua.image.support.filter.AbstractImageFilter",
+            "com.chua.image.support.filter.AbstractImagePointFilter",
+            "com.chua.image.support.filter.ImageGaussianBlurFilter"
+    };
 
     /**
     * 列表查询上限（管理动作递归遍历使用）
@@ -817,6 +834,10 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
             }
             return writeTree(storage, bucket, response);
         }
+        // ?format=capabilities（Vue 管理配置：真实 SPI 能力列表）
+        if (params != null && "capabilities".equalsIgnoreCase(params.get("format"))) {
+            return writeCapabilities(response);
+        }
         // ?format=json（Vue API 目录列表）
         if (params != null && "json".equalsIgnoreCase(params.get("format"))) {
             return writeJsonList(bucket, dir, result, response);
@@ -925,6 +946,195 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
                 .setBody(json)
                 .end();
         return CompletableFuture.completedFuture(null);
+    }
+
+    /**
+    * 输出 SPI 真实支持的能力列表（供 Vue 管理配置动态渲染）。
+    *
+    * <p>用法：{@code GET /{bucket}?format=capabilities}，返回结构：</p>
+    * <pre>{@code
+    * {
+    *   "fileSettingCapabilities": [{"spi":"JDK","capabilities":["size","format"]}],
+    *   "filterSettingCapabilities": [{"spi":"JDK","capabilities":["grayscale"]}],
+    *   "imageFilters": [{"name":"GRAY","label":"灰度化图像滤镜"}]
+    * }
+    * }</pre>
+    *
+    * <p>三类能力均通过 ServiceLoader SPI 实时发现，前端不硬编码。</p>
+    *
+    * @param response 响应
+    * @return 写入能力列表的结果
+     */
+    private CompletionStage<Void> writeCapabilities(ServerResponse response) {
+        StringBuilder sb = new StringBuilder(1024);
+        sb.append("{");
+        // 文件级 URL 参数能力（FileStorageFileSetting SPI）
+        sb.append("\"fileSettingCapabilities\":[");
+        appendFileSettingGroups(sb);
+        sb.append("]");
+        // 全局滤镜能力（FileStorageFilterSetting SPI）
+        sb.append(",\"filterSettingCapabilities\":[");
+        appendFilterSettingGroups(sb);
+        sb.append("]");
+        // 图片滤镜实现（ImageFilter SPI 及子 SPI，含 @SpiDescribe 中文标签）
+        sb.append(",\"imageFilters\":[");
+        appendImageFilters(sb);
+        sb.append("]");
+        sb.append("}");
+        response.setStatus(200)
+                .setContentType("application/json;charset=UTF-8")
+                .setBody(sb.toString())
+                .end();
+        return CompletableFuture.completedFuture(null);
+    }
+
+    /**
+    * 追加文件级 URL 参数能力分组（一个 SPI 实现对应一个分组）。
+    *
+    * @param sb JSON 构造器
+     */
+    private void appendFileSettingGroups(StringBuilder sb) {
+        try {
+            ServiceProvider<FileStorageFileSetting> provider = ServiceProvider.of(FileStorageFileSetting.class);
+            Set<String> names = provider.getExtensions();
+            boolean firstGroup = true;
+            for (String name : names) {
+                FileStorageFileSetting instance = provider.getExtension(name);
+                if (instance == null) {
+                    continue;
+                }
+                if (!firstGroup) {
+                    sb.append(",");
+                }
+                firstGroup = false;
+                sb.append("{\"spi\":\"").append(escapeJson(name)).append("\",\"capabilities\":[");
+                appendStringArray(sb, instance.capabilities());
+                sb.append("]}");
+            }
+        } catch (Throwable t) {
+            log.warn("FileStorageFileSetting SPI 能力加载失败（缺少 utils-support-filestorage-starter 依赖时忽略）: {}",
+                    t.getMessage());
+        }
+    }
+
+    /**
+    * 追加全局滤镜能力分组（一个 SPI 实现对应一个分组）。
+    *
+    * @param sb JSON 构造器
+     */
+    private void appendFilterSettingGroups(StringBuilder sb) {
+        try {
+            ServiceProvider<FileStorageFilterSetting> provider = ServiceProvider.of(FileStorageFilterSetting.class);
+            Set<String> names = provider.getExtensions();
+            boolean firstGroup = true;
+            for (String name : names) {
+                FileStorageFilterSetting instance = provider.getExtension(name);
+                if (instance == null) {
+                    continue;
+                }
+                if (!firstGroup) {
+                    sb.append(",");
+                }
+                firstGroup = false;
+                sb.append("{\"spi\":\"").append(escapeJson(name)).append("\",\"capabilities\":[");
+                appendStringArray(sb, instance.capabilities());
+                sb.append("]}");
+            }
+        } catch (Throwable t) {
+            log.warn("FileStorageFilterSetting SPI 能力加载失败（缺少 utils-support-filestorage-starter 依赖时忽略）: {}",
+                    t.getMessage());
+        }
+    }
+
+    /**
+    * 追加图片滤镜实现列表。
+    *
+    * <p>具体滤镜分散注册在 {@link #IMAGE_FILTER_SPI_CLASSES} 列出的多级 SPI 接口下，
+    * 逐级 ServiceProvider 发现并按扩展名去重；标签优先取 {@link SpiDescribe} 的中文描述。</p>
+    *
+    * @param sb JSON 构造器
+     */
+    private void appendImageFilters(StringBuilder sb) {
+        Set<String> seenFilters = resolveImageFilterNames();
+        int index = 0;
+        for (String name : seenFilters) {
+            if (index > 0) {
+                sb.append(",");
+            }
+            index++;
+            sb.append("{\"name\":\"").append(escapeJson(name)).append("\"");
+            sb.append(",\"label\":\"").append(escapeJson(resolveFilterLabel(name))).append("\"}");
+        }
+    }
+
+    /**
+    * 收集全部图片滤镜 SPI 扩展名（跨 {@link #IMAGE_FILTER_SPI_CLASSES} 多级接口去重）。
+    *
+    * @return 扩展名集合（SPI 名称统一为大写，保持发现顺序）
+     */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private Set<String> resolveImageFilterNames() {
+        Set<String> seenFilters = new LinkedHashSet<>();
+        for (String spiClassName : IMAGE_FILTER_SPI_CLASSES) {
+            try {
+                Class<?> spiType = Class.forName(spiClassName);
+                ServiceProvider provider = ServiceProvider.of((Class) spiType);
+                seenFilters.addAll(provider.getExtensions());
+            } catch (ClassNotFoundException e) {
+                log.debug("图片滤镜 SPI 接口未找到[{}]: {}", spiClassName, e.getMessage());
+            } catch (Throwable t) {
+                log.warn("图片滤镜 SPI 实现加载失败[{}]: {}", spiClassName, t.getMessage());
+            }
+        }
+        return seenFilters;
+    }
+
+    /**
+    * 解析滤镜中文标签：在多级 SPI 接口下查找该扩展名对应的实现实例，
+    * 优先读取实现类上的 {@link SpiDescribe} 注解，缺失时回退为扩展名。
+    *
+    * @param name 扩展名
+    * @return 中文标签或扩展名
+     */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private String resolveFilterLabel(String name) {
+        for (String spiClassName : IMAGE_FILTER_SPI_CLASSES) {
+            try {
+                Class<?> spiType = Class.forName(spiClassName);
+                ServiceProvider provider = ServiceProvider.of((Class) spiType);
+                Object instance = provider.getExtension(name);
+                if (instance != null) {
+                    SpiDescribe describe = instance.getClass().getAnnotation(SpiDescribe.class);
+                    if (describe != null && !describe.value().isEmpty()) {
+                        return describe.value();
+                    }
+                    return name;
+                }
+            } catch (Throwable t) {
+                log.debug("滤镜标签解析失败[{}/{}]: {}", spiClassName, name, t.getMessage());
+            }
+        }
+        return name;
+    }
+
+    /**
+    * 向 JSON 构造器追加字符串数组元素（不含外层方括号，null 安全）。
+    *
+    * @param sb JSON 构造器
+    * @param values 字符串列表
+     */
+    private void appendStringArray(StringBuilder sb, List<String> values) {
+        if (values == null) {
+            return;
+        }
+        boolean first = true;
+        for (String value : values) {
+            if (!first) {
+                sb.append(",");
+            }
+            first = false;
+            sb.append("\"").append(escapeJson(value)).append("\"");
+        }
     }
 
     /**
@@ -2187,10 +2397,10 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         }
         if ((text = extractString(body, "imageFilter")) != null) {
             String upper = text.trim().toUpperCase(Locale.ROOT);
-            try {
-                FileStorageSetting.ImageFilter.valueOf(upper);
-            } catch (IllegalArgumentException e) {
-                throw new FileActionException(400, "imageFilter 仅支持 NONE/GRAYSCALE/SEPIA/INVERT/BLUR/SATURATE: " + text);
+            // 原图固定合法；其余取值必须是 ImageFilter SPI 真实注册的扩展名
+            if (!"NONE".equals(upper) && !resolveImageFilterNames().contains(upper)) {
+                throw new FileActionException(400,
+                        "imageFilter 不支持的滤镜: " + text + "，可用值: NONE/" + String.join("/", resolveImageFilterNames()));
             }
             setting.setImageFilter(upper);
         }

@@ -57,6 +57,45 @@ public class LinuxHostDetectProvider implements HostDetectProvider {
             if (NumberUtils.isNumber(disk)) {
                 host.setServerHostDiskGb(NumberUtils.toLong(disk));
             }
+            // GPU 卡数（nvidia-smi 优先，回退 lspci 统计 VGA）
+            String gpuCount = execQuiet(handle, "nvidia-smi -L 2>/dev/null | wc -l");
+            if (!NumberUtils.isNumber(gpuCount) || NumberUtils.toInt(gpuCount) == 0) {
+                gpuCount = execQuiet(handle, "lspci 2>/dev/null | grep -ci 'vga.*\\|3d controller'");
+            }
+            if (NumberUtils.isNumber(gpuCount)) {
+                int gpu = NumberUtils.toInt(gpuCount);
+                if (gpu > 0) {
+                    host.setServerHostGpuCount(gpu);
+                    // GPU 型号（首个 GPU 名称）
+                    String gpuModel = execQuiet(handle, "nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | head -1");
+                    if (StringUtils.isBlank(gpuModel)) {
+                        gpuModel = execQuiet(handle, "lspci 2>/dev/null | grep -im1 'vga\\|3d controller' | sed 's/^.*controller: //'");
+                    }
+                    if (StringUtils.isNotBlank(gpuModel)) {
+                        host.setServerHostGpuModel(gpuModel.trim());
+                    }
+                }
+            }
+            // 网卡信息（JSON 数组：[{"name":"eth0","ip":"10.0.0.3"}]，取 IPv4 全局地址）
+            String networks = execQuiet(handle, "ip -o -4 addr show 2>/dev/null | awk 'NR==1{print \"[{\\\"name\\\":\\\"\"$2\"\\\",\\\"ip\\\":\\\"\"substr($4,1,index($4,\"/\")-1)\"\\\"}\"} NR>1{printf \",{\\\"name\\\":\\\"\"$2\"\\\",\\\"ip\\\":\\\"\"substr($4,1,index($4,\"/\")-1)\"\\\"}\"} END{print \"]\"}'");
+            if (StringUtils.isNotBlank(networks) && networks.startsWith("[")) {
+                host.setServerHostNetworks(networks);
+            }
+            // CPU 使用率（%）（top 空闲列换算）
+            String cpuUsage = execQuiet(handle, "top -bn1 2>/dev/null | grep 'Cpu(s)' | awk '{print 100-$8}'");
+            if (StringUtils.isNotBlank(cpuUsage) && isRatio(cpuUsage)) {
+                host.setServerHostCpuUsage(toRatio(cpuUsage));
+            }
+            // 内存使用率（%）（free 第三行 used/total）
+            String memUsage = execQuiet(handle, "free | awk '/^Mem:/{printf \"%.2f\", $3/$2*100}'");
+            if (StringUtils.isNotBlank(memUsage) && isRatio(memUsage)) {
+                host.setServerHostMemUsage(toRatio(memUsage));
+            }
+            // 磁盘使用率（%）（df 根分区已用/总容量）
+            String diskUsage = execQuiet(handle, "df -k / | awk 'NR==2{printf \"%.2f\", $3/$2*100}'");
+            if (StringUtils.isNotBlank(diskUsage) && isRatio(diskUsage)) {
+                host.setServerHostDiskUsage(toRatio(diskUsage));
+            }
             // 系统版本（os-release 优先，回退 uname -sr）
             String os = execQuiet(handle,
                     "cat /etc/os-release 2>/dev/null | grep -m1 PRETTY_NAME | cut -d'=' -f2 | tr -d '\"'");
@@ -85,6 +124,33 @@ public class LinuxHostDetectProvider implements HostDetectProvider {
             if (handle != null) {
                 connectionManager.release(host.getId());
             }
+        }
+    }
+
+    /**
+    * 判断字符串是否为可解析的百分比数字（非空且为数字或小数）
+    *
+    * @param value 待判断字符串
+    * @return 是否可解析
+     */
+    private boolean isRatio(String value) {
+        return StringUtils.isNotBlank(value) && NumberUtils.isNumber(value);
+    }
+
+    /**
+    * 将百分比字符串转为 Double（四舍五入保留两位小数），解析失败返回 null
+    *
+    * @param value 百分比字符串
+    * @return Double 或 null
+     */
+    private Double toRatio(String value) {
+        if (StringUtils.isBlank(value)) {
+            return null;
+        }
+        try {
+            return Double.parseDouble(value.trim());
+        } catch (NumberFormatException e) {
+            return null;
         }
     }
 

@@ -6,7 +6,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -32,7 +31,7 @@ class ApmControllerTest {
 
     @Test
     void statsShouldReturnReturnResultWithAgentFlags() throws Exception {
-        MvcResult result = mockMvc.perform(get("/api/apm/stats"))
+        mockMvc.perform(get("/api/apm/stats"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("00000"))
                 .andExpect(jsonPath("$.success").value(true))
@@ -41,11 +40,7 @@ class ApmControllerTest {
                 .andExpect(jsonPath("$.data.leakCount").isNumber())
                 .andExpect(jsonPath("$.data.errorCount").isNumber())
                 .andExpect(jsonPath("$.data.traceCount").isNumber())
-                .andExpect(jsonPath("$.data.dependencyCount").isNumber())
-                .andReturn();
-
-        // 响应体应是合法 JSON
-        assertThat(result.getResponse().getContentAsString()).contains("\"code\":\"00000\"");
+                .andExpect(jsonPath("$.data.dependencyCount").isNumber());
     }
 
     @Test

@@ -150,6 +150,48 @@ public class MsServerHost extends SysBase {
     private Long serverHostDiskGb; // 服务端主机diskgb
 
     /**
+    * GPU 卡数（探测结果）
+     */
+    @TableField("ms_server_host_gpu_count")
+    @Schema(description = "GPU卡数(探测结果)", example = "2")
+    private Integer serverHostGpuCount; // 服务端主机gpu计数
+
+    /**
+    * GPU 型号（探测结果）
+     */
+    @TableField("ms_server_host_gpu_model")
+    @Schema(description = "GPU型号(探测结果)", example = "NVIDIA GeForce RTX 4090")
+    private String serverHostGpuModel; // 服务端主机gpu型号
+
+    /**
+    * 网卡信息（JSON 数组字符串：[{"名称":"eth0","ip":"10.0.0.3","mac":"aa:bb:cc:dd:ee:ff"}]）
+     */
+    @TableField("ms_server_host_networks")
+    @Schema(description = "网卡信息(JSON数组)", example = "[{\"name\":\"eth0\",\"ip\":\"10.0.0.3\"}]")
+    private String serverHostNetworks; // 服务端主机网卡
+
+    /**
+    * CPU 使用率（%，探测结果）
+     */
+    @TableField("ms_server_host_cpu_usage")
+    @Schema(description = "CPU使用率%(探测结果)", example = "12.50")
+    private Double serverHostCpuUsage; // 服务端主机cpu使用率
+
+    /**
+    * 内存使用率（%，探测结果）
+     */
+    @TableField("ms_server_host_mem_usage")
+    @Schema(description = "内存使用率%(探测结果)", example = "45.30")
+    private Double serverHostMemUsage; // 服务端主机内存使用率
+
+    /**
+    * 磁盘使用率（%，探测结果）
+     */
+    @TableField("ms_server_host_disk_usage")
+    @Schema(description = "磁盘使用率%(探测结果)", example = "68.00")
+    private Double serverHostDiskUsage; // 服务端主机磁盘使用率
+
+    /**
     * 系统版本
      */
     @TableField("ms_server_host_os_version")

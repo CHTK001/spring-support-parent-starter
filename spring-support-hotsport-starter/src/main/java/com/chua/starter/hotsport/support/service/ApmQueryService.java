@@ -182,18 +182,21 @@ public class ApmQueryService {
     // ------------------------------------------------------------------
 
     /**
-    * 分页查询传输记录。
-    *
-    * @param page     页码（从 1 起）
-    * @param size     每页条数
-    * @param source   源端过滤（可空）
-    * @param target   目标端过滤（可空）
-    * @param protocol 协议过滤（可空）
-    * @param errorOnly 仅看错误（可空）
-    * @return 分页结果
+     * 分页查询传输记录。
+     *
+     * @param page      页码（从 1 起）
+     * @param size      每页条数
+     * @param source    源端过滤（可空）
+     * @param target    目标端过滤（可空）
+     * @param protocol  协议过滤（可空）
+     * @param errorOnly 仅看错误（可空）
+     * @param startTime 开始时间毫秒（可空）
+     * @param endTime   结束时间毫秒（可空）
+     * @return 分页结果
      */
     public Map<String, Object> transmissions(int page, int size, String source, String target,
-                                              String protocol, Boolean errorOnly) {
+                                              String protocol, Boolean errorOnly,
+                                              Long startTime, Long endTime) {
         int offset = Math.max(0, (page - 1) * size);
         Query q = new Query().setLimit(size).setOffset(offset);
         if (protocol != null && !protocol.isBlank()) {
@@ -201,6 +204,12 @@ public class ApmQueryService {
         }
         if (Boolean.TRUE.equals(errorOnly)) {
             q.setErrorOnly(true);
+        }
+        if (startTime != null) {
+            q.setStartTime(startTime);
+        }
+        if (endTime != null) {
+            q.setEndTime(endTime);
         }
         List<TransmissionEvent> all = queryAll(q, storage -> storage.queryTransmissions(q));
  // 源/Target 在 transmission事件 里是 源主机/Target主机，做内存过滤
@@ -290,16 +299,25 @@ public class ApmQueryService {
     // ------------------------------------------------------------------
 
     /**
-    * 分页查询资源泄漏。
-    *
-    * @param page         页码
-    * @param size         每页条数
-    * @param resourceType 类型过滤（可空）
-    * @param minAgeMs     最小存活毫秒（可空）
-    * @return 分页结果
+     * 分页查询资源泄漏。
+     *
+     * @param page         页码
+     * @param size         每页条数
+     * @param resourceType 类型过滤（可空）
+     * @param minAgeMs     最小存活毫秒（可空）
+     * @param startTime    开始时间毫秒（可空）
+     * @param endTime      结束时间毫秒（可空）
+     * @return 分页结果
      */
-    public Map<String, Object> leaks(int page, int size, String resourceType, Long minAgeMs) {
+    public Map<String, Object> leaks(int page, int size, String resourceType, Long minAgeMs,
+                                     Long startTime, Long endTime) {
         Query q = new Query().setLimit(size).setOffset(Math.max(0, (page - 1) * size));
+        if (startTime != null) {
+            q.setStartTime(startTime);
+        }
+        if (endTime != null) {
+            q.setEndTime(endTime);
+        }
         List<LeakRecord> all = queryAll(q, storage -> storage.queryLeaks(q));
         long now = System.currentTimeMillis();
         List<Map<String, Object>> items = new ArrayList<>();
