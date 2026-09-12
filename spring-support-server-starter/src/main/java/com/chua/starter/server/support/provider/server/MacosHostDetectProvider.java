@@ -94,7 +94,7 @@ public class MacosHostDetectProvider implements HostDetectProvider {
      */
     private String execQuiet(SshClients.Handle handle, String command) {
         try {
-            return handle.exec(command);
+            return handle.client().exec().command(command).executeAndGetOutput();
         } catch (Exception e) {
             log.debug("[detect] macOS 命令执行失败 {}: {}", command, e.getMessage());
             return null;
