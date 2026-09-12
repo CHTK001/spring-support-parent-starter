@@ -69,6 +69,13 @@
             <artifactId>utils-support-common-starter</artifactId>
         </dependency>
 
+        <!-- Flyway SPI 高优先级实现 - 脚本迁移自动执行（DataSource 版） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-flyway-starter</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
         <!-- Spring Boot JDBC支持 - 提供数据库访问和事务管理功能 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
