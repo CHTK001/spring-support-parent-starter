@@ -1385,77 +1385,77 @@ public class MonitorController {
 
     // ==================== AI 智能分析 ====================
 
-    @Operation(summary = "查询 AI 分析是否启用")
-    @GetMapping("/ai/status")
-    public ReturnResult<Map<String, Object>> getAiStatus() {
-        com.chua.starter.ai.support.chat.ChatClient chatClient = chatClientProvider.getIfAvailable();
-        Map<String, Object> result = new java.util.LinkedHashMap<>();
-        result.put("enabled", chatClient != null);
-        if (chatClient != null) {
-            result.put("model", chatClient.getDefaultModel());
-            result.put("provider", chatClient.getProvider());
-        }
-        return ReturnResult.ok(result);
-    }
+//     @Operation(summary = "查询 AI 分析是否启用")
+//     @GetMapping("/ai/status")
+//     public ReturnResult<Map<String, Object>> getAiStatus() {
+//         com.chua.starter.ai.support.chat.ChatClient chatClient = chatClientProvider.getIfAvailable();
+//         Map<String, Object> result = new java.util.LinkedHashMap<>();
+//         result.put("enabled", chatClient != null);
+//         if (chatClient != null) {
+//             result.put("model", chatClient.getDefaultModel());
+//             result.put("provider", chatClient.getProvider());
+//         }
+//         return ReturnResult.ok(result);
+//     }
 
-    @Operation(summary = "通用 AI 分析")
-    @PostMapping("/ai/analyze")
-    public Mono<ReturnResult<Map<String, Object>>> aiAnalyze(@RequestBody Map<String, Object> request) {
-        com.chua.starter.ai.support.chat.ChatClient chatClient = chatClientProvider.getIfAvailable();
-        if (chatClient == null) {
-            return Mono.just(ReturnResult.error("AI 分析未启用，请配置 AI 模型"));
-        }
-        String prompt = request.get("prompt") != null ? String.valueOf(request.get("prompt")) : "";
-        String systemPrompt = request.get("systemPrompt") != null ? String.valueOf(request.get("systemPrompt")) : null;
-        String model = request.get("model") != null ? String.valueOf(request.get("model")) : null;
-        if (prompt.isBlank()) {
-            return Mono.just(ReturnResult.error("分析内容不能为空"));
-        }
-        return Mono.fromCallable(() -> {
-            com.chua.starter.ai.support.chat.ChatScope scope = new com.chua.starter.ai.support.chat.ChatScope();
-            scope.setInput(prompt);
-            if (systemPrompt != null && !systemPrompt.isBlank()) scope.setSystemPrompt(systemPrompt);
-            if (model != null && !model.isBlank()) scope.setModel(model);
-            com.chua.common.support.ai.chat.ChatResponse response = chatClient.chat(scope);
-            Map<String, Object> result = new java.util.LinkedHashMap<>();
-            result.put("content", response != null ? response.getContent() : "");
-            result.put("model", response != null ? chatClient.getDefaultModel() : chatClient.getDefaultModel());
-            result.put("usage", response != null ? response.getUsage() : null);
-            return ReturnResult.ok(result);
-        }).onErrorResume(e -> Mono.just(ReturnResult.error("AI 分析失败: " + e.getMessage())));
-    }
+//     @Operation(summary = "通用 AI 分析")
+//     @PostMapping("/ai/analyze")
+//     public Mono<ReturnResult<Map<String, Object>>> aiAnalyze(@RequestBody Map<String, Object> request) {
+//         com.chua.starter.ai.support.chat.ChatClient chatClient = chatClientProvider.getIfAvailable();
+//         if (chatClient == null) {
+//             return Mono.just(ReturnResult.error("AI 分析未启用，请配置 AI 模型"));
+//         }
+//         String prompt = request.get("prompt") != null ? String.valueOf(request.get("prompt")) : "";
+//         String systemPrompt = request.get("systemPrompt") != null ? String.valueOf(request.get("systemPrompt")) : null;
+//         String model = request.get("model") != null ? String.valueOf(request.get("model")) : null;
+//         if (prompt.isBlank()) {
+//             return Mono.just(ReturnResult.error("分析内容不能为空"));
+//         }
+//         return Mono.fromCallable(() -> {
+//             com.chua.starter.ai.support.chat.ChatScope scope = new com.chua.starter.ai.support.chat.ChatScope();
+//             scope.setInput(prompt);
+//             if (systemPrompt != null && !systemPrompt.isBlank()) scope.setSystemPrompt(systemPrompt);
+//             if (model != null && !model.isBlank()) scope.setModel(model);
+//             com.chua.common.support.ai.chat.ChatResponse response = chatClient.chat(scope);
+//             Map<String, Object> result = new java.util.LinkedHashMap<>();
+//             result.put("content", response != null ? response.getContent() : "");
+//             result.put("model", response != null ? chatClient.getDefaultModel() : chatClient.getDefaultModel());
+//             result.put("usage", response != null ? response.getUsage() : null);
+//             return ReturnResult.ok(result);
+//         }).onErrorResume(e -> Mono.just(ReturnResult.error("AI 分析失败: " + e.getMessage())));
+//     }
 
-    @Operation(summary = "主机指标智能分析")
-    @PostMapping("/ai/host/{id}/analyze")
-    public Mono<ReturnResult<Map<String, Object>>> aiAnalyzeHost(@PathVariable Long id, @RequestBody(required = false) Map<String, Object> request) {
-        com.chua.starter.ai.support.chat.ChatClient chatClient = chatClientProvider.getIfAvailable();
-        if (chatClient == null) {
-            return Mono.just(ReturnResult.error("AI 分析未启用，请配置 AI 模型"));
-        }
-        MsMonitor monitor = monitorService.findById(id).getData();
-        if (monitor == null) {
-            return Mono.just(ReturnResult.error("监控资产不存在"));
-        }
-        return Mono.fromCallable(() -> {
-            StringBuilder prompt = new StringBuilder();
-            prompt.append("请对以下主机监控指标进行智能分析，给出性能评估、瓶颈识别和优化建议：\n\n");
-            prompt.append("主机名称: ").append(monitor.getMonitorName()).append("\n");
-            prompt.append("主机地址: ").append(monitor.getMonitorHost()).append(":").append(monitor.getMonitorPort()).append("\n");
-            prompt.append("服务类型: ").append(monitor.getServiceType()).append("\n\n");
-            if (request != null && request.get("metrics") != null) {
-                prompt.append("最近指标数据:\n").append(request.get("metrics").toString()).append("\n\n");
-            }
-            prompt.append("请按以下结构输出：\n1. 整体性能评分（0-100）\n2. 关键指标评估\n3. 潜在瓶颈识别\n4. 具体优化建议\n5. 风险预警");
-            com.chua.starter.ai.support.chat.ChatScope scope = new com.chua.starter.ai.support.chat.ChatScope();
-            scope.setInput(prompt.toString());
-            scope.setSystemPrompt("你是一位资深的运维监控专家，擅长主机性能分析和容量规划。请用专业、简洁、可操作的语言输出分析结果。");
-            com.chua.common.support.ai.chat.ChatResponse response = chatClient.chat(scope);
-            Map<String, Object> result = new java.util.LinkedHashMap<>();
-            result.put("hostId", id);
-            result.put("hostName", monitor.getMonitorName());
-            result.put("content", response != null ? response.getContent() : "");
-            result.put("model", response != null ? chatClient.getDefaultModel() : chatClient.getDefaultModel());
-            return ReturnResult.ok(result);
-        }).onErrorResume(e -> Mono.just(ReturnResult.error("主机 AI 分析失败: " + e.getMessage())));
-    }
+//     @Operation(summary = "主机指标智能分析")
+//     @PostMapping("/ai/host/{id}/analyze")
+//     public Mono<ReturnResult<Map<String, Object>>> aiAnalyzeHost(@PathVariable Long id, @RequestBody(required = false) Map<String, Object> request) {
+//         com.chua.starter.ai.support.chat.ChatClient chatClient = chatClientProvider.getIfAvailable();
+//         if (chatClient == null) {
+//             return Mono.just(ReturnResult.error("AI 分析未启用，请配置 AI 模型"));
+//         }
+//         MsMonitor monitor = monitorService.findById(id).getData();
+//         if (monitor == null) {
+//             return Mono.just(ReturnResult.error("监控资产不存在"));
+//         }
+//         return Mono.fromCallable(() -> {
+//             StringBuilder prompt = new StringBuilder();
+//             prompt.append("请对以下主机监控指标进行智能分析，给出性能评估、瓶颈识别和优化建议：\n\n");
+//             prompt.append("主机名称: ").append(monitor.getMonitorName()).append("\n");
+//             prompt.append("主机地址: ").append(monitor.getMonitorHost()).append(":").append(monitor.getMonitorPort()).append("\n");
+//             prompt.append("服务类型: ").append(monitor.getServiceType()).append("\n\n");
+//             if (request != null && request.get("metrics") != null) {
+//                 prompt.append("最近指标数据:\n").append(request.get("metrics").toString()).append("\n\n");
+//             }
+//             prompt.append("请按以下结构输出：\n1. 整体性能评分（0-100）\n2. 关键指标评估\n3. 潜在瓶颈识别\n4. 具体优化建议\n5. 风险预警");
+//             com.chua.starter.ai.support.chat.ChatScope scope = new com.chua.starter.ai.support.chat.ChatScope();
+//             scope.setInput(prompt.toString());
+//             scope.setSystemPrompt("你是一位资深的运维监控专家，擅长主机性能分析和容量规划。请用专业、简洁、可操作的语言输出分析结果。");
+//             com.chua.common.support.ai.chat.ChatResponse response = chatClient.chat(scope);
+//             Map<String, Object> result = new java.util.LinkedHashMap<>();
+//             result.put("hostId", id);
+//             result.put("hostName", monitor.getMonitorName());
+//             result.put("content", response != null ? response.getContent() : "");
+//             result.put("model", response != null ? chatClient.getDefaultModel() : chatClient.getDefaultModel());
+//             return ReturnResult.ok(result);
+//         }).onErrorResume(e -> Mono.just(ReturnResult.error("主机 AI 分析失败: " + e.getMessage())));
+//     }
 }
