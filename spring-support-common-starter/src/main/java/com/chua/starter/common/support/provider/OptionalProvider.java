@@ -201,10 +201,10 @@ public class OptionalProvider {
     }
 
     /**
-    * 把 服务提供者.期权() 的 列表<?> 安全转换为 列表<SpiOption>（元素实际均为 spi期权）
+    * 把 ServiceProvider.options() 返回的 List<?> 安全转换为 List<SpiOption>（元素实际均为 SpiOption）。
     *
-    * @param raw raw
-    * @return 转为spi期权的结果
+    * @param raw 原始选项列表（运行时元素均为 {@link SpiOption}）
+    * @return SpiOption 列表；入参为 null 时返回空列表
      */
     @SuppressWarnings("unchecked")
     private static List<SpiOption> toSpiOptions(List<?> raw) {
