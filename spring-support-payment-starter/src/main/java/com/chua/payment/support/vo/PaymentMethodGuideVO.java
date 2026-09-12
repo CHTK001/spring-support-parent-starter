@@ -6,9 +6,9 @@ import java.io.Serializable;
 import java.util.List;
 
 /**
- * 支付方式开通指引
- * @author CH
- * @since 4.0.0
+* 支付方式开通指引
+* @author CH
+* @since 4.0.0
  */
 @Data
 public class PaymentMethodGuideVO implements Serializable {

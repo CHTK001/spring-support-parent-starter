@@ -18,10 +18,10 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * 认证控制器（根路径 /login、/logout）。
-   * 对接 o认证 静态协议，桌面模式单用户认证。
- * @author CH
- * @since 4.0.0
+* 认证控制器（根路径 /login、/logout）。
+* 对接 o认证 静态协议，桌面模式单用户认证。
+* @author CH
+* @since 4.0.0
  */
 @Slf4j
 @ApiReturnFormatIgnore
@@ -29,11 +29,11 @@ import java.util.UUID;
 public class AuthController {
 
     /**
-     * 用户登录。
-     *
-     * @param body     请求体 {用户名, 密码}
-     * @param response HTTP 响应（用于设置 Cookie）
-     * @return 登录结果 {成功, 令牌, 用户}
+    * 用户登录。
+    *
+    * @param body     请求体 {用户名, 密码}
+    * @param response HTTP 响应（用于设置 Cookie）
+    * @return 登录结果 {成功, 令牌, 用户}
      */
     @TokenForIgnore
     @PostMapping("/login")
@@ -79,9 +79,9 @@ public class AuthController {
     @TokenForIgnore
     @PostMapping("/logout")
     /**
-     * logout。
-     * @param response 响应
-     * @return logout的结果
+    * logout。
+    * @param response 响应
+    * @return logout的结果
      */
     public Map<String, Object> logout(HttpServletResponse response) {
         var clientExecute = AuthClientExecute.getInstance();
@@ -98,8 +98,8 @@ public class AuthController {
     }
 
     /**
-      * generateuuidv7。
-     * @return generateUuidV7的结果
+    * generateuuidv7。
+    * @return generateUuidV7的结果
      */
     private static String generateUuidV7() {
         UUID uuid = UUID.randomUUID();

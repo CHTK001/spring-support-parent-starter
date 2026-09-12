@@ -7,13 +7,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 注解驱动的运行时开关清单（扫描结果）。
- *
- * <p>包含 {@code @ApiFeature}/{@code @ApiGray} 注解的规范化描述与整体指纹：
-   * 指纹用于启动时与 sqlite 存储的上次指纹比对，不一致则重置覆盖库（"注解更新启动重置"）。</p>
- *
- * @author CH
- * @since 2026/09/04
+* 注解驱动的运行时开关清单（扫描结果）。
+*
+* <p>包含 {@code @ApiFeature}/{@code @ApiGray} 注解的规范化描述与整体指纹：
+* 指纹用于启动时与 sqlite 存储的上次指纹比对，不一致则重置覆盖库（"注解更新启动重置"）。</p>
+*
+* @author CH
+* @since 2026/09/04
  */
 @Data
 @Builder
@@ -57,9 +57,9 @@ public class SwitchInventory {
         private List<String> patterns;
 
         /**
-         * 规范化描述（参与指纹计算）
-         *
-         * @return canonical的结果
+        * 规范化描述（参与指纹计算）
+        *
+        * @return canonical的结果
          */
         public String canonical() {
             return "feature:" + featureId + ":enabled=" + defaultEnabled
@@ -100,9 +100,9 @@ public class SwitchInventory {
         private List<String> patterns;
 
         /**
-         * 规范化描述（参与指纹计算）
-         *
-         * @return canonical的结果
+        * 规范化描述（参与指纹计算）
+        *
+        * @return canonical的结果
          */
         public String canonical() {
             return "gray:" + pattern + ":percentage=" + percentage
@@ -113,18 +113,18 @@ public class SwitchInventory {
     }
 
     /**
-     * nvl。
-     * @param s s
-     * @return nvl的结果
+    * nvl。
+    * @param s s
+    * @return nvl的结果
      */
     private static String nvl(String s) {
         return s == null ? "" : s;
     }
 
     /**
-     * 连接。
-     * @param arr arr
-     * @return 连接的结果
+    * 连接。
+    * @param arr arr
+    * @return 连接的结果
      */
     private static String join(String[] arr) {
         if (arr == null || arr.length == 0) {

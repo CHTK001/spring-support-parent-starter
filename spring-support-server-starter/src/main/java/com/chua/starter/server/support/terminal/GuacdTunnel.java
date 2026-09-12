@@ -14,13 +14,13 @@ import org.apache.guacamole.protocol.GuacamoleInstruction;
 import java.util.Map;
 
 /**
-   * guacd 隧道封装（对齐 Orion-Visor 的 guacdtunnel）
- *
- * <p>封装 {@link GuacamoleConfiguration} 与 guacd 的握手、指令读写、参数设置。
-   * 支持 SSH/RDP/VNC 全部协议参数，包括 RDP 磁盘映射、远程app、VNC 红蓝交换等。</p>
- *
- * @author CH
- * @since 4.0.0.42
+* guacd 隧道封装（对齐 Orion-Visor 的 guacdtunnel）
+*
+* <p>封装 {@link GuacamoleConfiguration} 与 guacd 的握手、指令读写、参数设置。
+* 支持 SSH/RDP/VNC 全部协议参数，包括 RDP 磁盘映射、远程app、VNC 红蓝交换等。</p>
+*
+* @author CH
+* @since 4.0.0.42
  */
 public class GuacdTunnel {
 
@@ -52,12 +52,12 @@ public class GuacdTunnel {
     private volatile boolean closed;
 
     /**
-     * 构造隧道
-     *
-     * @param protocol      协议 ssh/vnc/rdp
-     * @param uuid          会话标识
-     * @param serverAddress guacd 地址
-     * @param serverPort    guacd 端口
+    * 构造隧道
+    *
+    * @param protocol      协议 ssh/vnc/rdp
+    * @param uuid          会话标识
+    * @param serverAddress guacd 地址
+    * @param serverPort    guacd 端口
      */
     public GuacdTunnel(String protocol, String uuid, String serverAddress, int serverPort) {
         this.protocol = protocol;
@@ -71,19 +71,19 @@ public class GuacdTunnel {
     }
 
     /**
-     * 连接 guacd 并完成握手
-     *
-     * @throws GuacamoleException 连接或握手失败
+    * 连接 guacd 并完成握手
+    *
+    * @throws GuacamoleException 连接或握手失败
      */
     public void connect() throws GuacamoleException {
         this.socket = new ConfiguredGuacamoleSocket(new InetGuacamoleSocket(serverAddress, serverPort), serverConfig, clientConfig);
     }
 
     /**
-     * 设置目标主机
-     *
-     * @param address 地址
-     * @param port    端口
+    * 设置目标主机
+    *
+    * @param address 地址
+    * @param port    端口
      */
     public void remote(String address, int port) {
         this.setParameter("hostname", address);
@@ -91,10 +91,10 @@ public class GuacdTunnel {
     }
 
     /**
-     * 设置认证信息
-     *
-     * @param username 用户名
-     * @param password 密码
+    * 设置认证信息
+    *
+    * @param username 用户名
+    * @param password 密码
      */
     public void auth(String username, String password) {
         this.setParameter("username", username);
@@ -102,10 +102,10 @@ public class GuacdTunnel {
     }
 
     /**
-     * 设置分辨率
-     *
-     * @param width  宽
-     * @param height 高
+    * 设置分辨率
+    *
+    * @param width  宽
+    * @param height 高
      */
     public void size(int width, int height) {
         clientConfig.setOptimalScreenWidth(width);
@@ -115,9 +115,9 @@ public class GuacdTunnel {
     }
 
     /**
-     * 设置 dpi
-     *
-     * @param dpi dpi
+    * 设置 dpi
+    *
+    * @param dpi dpi
      */
     public void dpi(int dpi) {
         clientConfig.setOptimalResolution(dpi);
@@ -125,9 +125,9 @@ public class GuacdTunnel {
     }
 
     /**
-     * 设置时区
-     *
-     * @param timezone 时区
+    * 设置时区
+    *
+    * @param timezone 时区
      */
     public void timezone(String timezone) {
         clientConfig.setTimezone(timezone);
@@ -135,10 +135,10 @@ public class GuacdTunnel {
     }
 
     /**
-     * 设置单个协议参数
-     *
-     * @param key   参数名
-     * @param value 参数值
+    * 设置单个协议参数
+    *
+    * @param key   参数名
+    * @param value 参数值
      */
     public void setParameter(String key, Object value) {
         if (value != null) {
@@ -149,18 +149,18 @@ public class GuacdTunnel {
     }
 
     /**
-     * 批量设置协议参数
-     *
-     * @param params 参数表
+    * 批量设置协议参数
+    *
+    * @param params 参数表
      */
     public void setParameter(Map<String, Object> params) {
         params.forEach(this::setParameter);
     }
 
     /**
-     * 设置音频 MIME 类型
-     *
-     * @param mimeTypes 类型列表
+    * 设置音频 MIME 类型
+    *
+    * @param mimeTypes 类型列表
      */
     public void setAudioMimeTypes(java.util.List<String> mimeTypes) {
         if (mimeTypes == null || mimeTypes.isEmpty()) {
@@ -170,30 +170,30 @@ public class GuacdTunnel {
     }
 
     /**
-     * 写入 guacd 指令
-     *
-     * @param data 指令文本
-     * @throws GuacamoleException 写入失败
+    * 写入 guacd 指令
+    *
+    * @param data 指令文本
+    * @throws GuacamoleException 写入失败
      */
     public void write(String data) throws GuacamoleException {
         this.write(data.toCharArray());
     }
 
     /**
-     * 写入 guacd 指令
-     *
-     * @param data 指令字节
-     * @throws GuacamoleException 写入失败
+    * 写入 guacd 指令
+    *
+    * @param data 指令字节
+    * @throws GuacamoleException 写入失败
      */
     public void write(byte[] data) throws GuacamoleException {
         this.write(new String(data));
     }
 
     /**
-     * 写入 guacd 指令
-     *
-     * @param data 指令字符
-     * @throws GuacamoleException 写入失败
+    * 写入 guacd 指令
+    *
+    * @param data 指令字符
+    * @throws GuacamoleException 写入失败
      */
     public void write(char[] data) throws GuacamoleException {
         GuacamoleWriter writer = socket.getWriter();
@@ -201,21 +201,21 @@ public class GuacdTunnel {
     }
 
     /**
-     * 写入结构化指令
-     *
-     * @param opcode 操作码
-     * @param args   参数
-     * @throws GuacamoleException 写入失败
+    * 写入结构化指令
+    *
+    * @param opcode 操作码
+    * @param args   参数
+    * @throws GuacamoleException 写入失败
      */
     public void writeInstruction(String opcode, String... args) throws GuacamoleException {
         socket.getWriter().writeInstruction(new GuacamoleInstruction(opcode, args));
     }
 
     /**
-     * 读取 guacd 输出
-     *
-     * @return 读取到的字符数组，EOF 返回 空
-     * @throws GuacamoleException 读取失败
+    * 读取 guacd 输出
+    *
+    * @return 读取到的字符数组，EOF 返回 空
+    * @throws GuacamoleException 读取失败
      */
     public char[] read() throws GuacamoleException {
         GuacamoleReader reader = socket.getReader();
@@ -223,16 +223,16 @@ public class GuacdTunnel {
     }
 
     /**
-     * 是否打开
-     *
-     * @return 是否打开
+    * 是否打开
+    *
+    * @return 是否打开
      */
     public boolean isOpen() {
         return socket != null && socket.isOpen();
     }
 
     /**
-     * 关闭隧道
+    * 关闭隧道
      */
     public void close() {
         if (closed) {
@@ -248,9 +248,9 @@ public class GuacdTunnel {
     }
 
     /**
-      * 获取连接 标识
-     *
-     * @return 连接 标识
+    * 获取连接 标识
+    *
+    * @return 连接 标识
      */
     public String getConnectionId() {
         return serverConfig.getConnectionID();

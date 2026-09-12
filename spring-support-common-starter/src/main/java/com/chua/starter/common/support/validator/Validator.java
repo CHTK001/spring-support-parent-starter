@@ -1,9 +1,9 @@
 package com.chua.starter.common.support.validator;
 
 /**
- * 简单校验器。
- * @author CH
- * @since 4.0.0
+* 简单校验器。
+* @author CH
+* @since 4.0.0
  */
 public final class Validator {
 
@@ -12,10 +12,10 @@ public final class Validator {
     }
 
     /**
-     * 是否拥有Chinese
-     *
-     * @param value 价值观
-     * @return 是否包含chinese的结果
+    * 是否拥有Chinese
+    *
+    * @param value 价值观
+    * @return 是否包含chinese的结果
      */
     public static boolean hasChinese(String value) {
         if (value == null || value.isEmpty()) {

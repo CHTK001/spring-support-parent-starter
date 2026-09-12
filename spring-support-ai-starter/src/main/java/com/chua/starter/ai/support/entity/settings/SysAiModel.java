@@ -13,10 +13,10 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
- * AI 模型定义表，存储模型标识、关联供应商与能力标签。
- *
- * @author CH
- * @since 4.0.0
+* AI 模型定义表，存储模型标识、关联供应商与能力标签。
+*
+* @author CH
+* @since 4.0.0
  */
 @Data
 @TableName("sys_ai_model")

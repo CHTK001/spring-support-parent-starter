@@ -4,10 +4,10 @@ import com.fasterxml.jackson.databind.JsonNode;
 import java.io.IOException;
 
 /**
-   * 转为detect IP 质量检测器实现
- *
- * @since 4.0.0.42
- * @author CH
+* 转为detect IP 质量检测器实现
+*
+* @since 4.0.0.42
+* @author CH
  */
 public class ToDetectIpQualityDetector extends AbstractHttpIpQualityDetector {
 
@@ -17,19 +17,19 @@ public class ToDetectIpQualityDetector extends AbstractHttpIpQualityDetector {
     /** 创建 转为detectipqualitydetector 实例 */
     public ToDetectIpQualityDetector() {
         /**
-         * this。
-         * @param "https://www.todetect.cn/ip" "https://www.todetect.cn/ip"
+        * this。
+        * @param "https://www.todetect.cn/ip" "https://www.todetect.cn/ip"
          */
         this("https://www.todetect.cn/ip");
     }
 
     /**
-      * 创建 转为detectipqualitydetector 实例
-     * @param baseUrl baseurl
+    * 创建 转为detectipqualitydetector 实例
+    * @param baseUrl baseurl
      */
     public ToDetectIpQualityDetector(String baseUrl) {
         /**
-         * 父。
+        * 父。
          */
         super();
         this.baseUrl = baseUrl;
@@ -68,11 +68,11 @@ public class ToDetectIpQualityDetector extends AbstractHttpIpQualityDetector {
     }
 
     /**
-     * 获取Bool
-     *
-     * @param node 节点
-     * @param field 字段
-     * @return 获取bool的结果
+    * 获取Bool
+    *
+    * @param node 节点
+    * @param field 字段
+    * @return 获取bool的结果
      */
     private boolean getBool(JsonNode node, String field) {
         JsonNode v = node.get(field);
@@ -83,11 +83,11 @@ public class ToDetectIpQualityDetector extends AbstractHttpIpQualityDetector {
     }
 
     /**
-     * 获取Int
-     *
-     * @param node 节点
-     * @param field 字段
-     * @return 获取int的结果
+    * 获取Int
+    *
+    * @param node 节点
+    * @param field 字段
+    * @return 获取int的结果
      */
     private int getInt(JsonNode node, String field) {
         JsonNode v = node.get(field);
@@ -98,11 +98,11 @@ public class ToDetectIpQualityDetector extends AbstractHttpIpQualityDetector {
     }
 
     /**
-     * 获取Double
-     *
-     * @param node 节点
-     * @param field 字段
-     * @return 获取double的结果
+    * 获取Double
+    *
+    * @param node 节点
+    * @param field 字段
+    * @return 获取double的结果
      */
     private double getDouble(JsonNode node, String field) {
         JsonNode v = node.get(field);

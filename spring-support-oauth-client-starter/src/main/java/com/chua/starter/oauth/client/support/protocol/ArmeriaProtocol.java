@@ -36,21 +36,21 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Armeria 协议实现
- * <p>
-   * 使用 Armeria web客户端 进行 o认证 认证，基于 Netty 的高性能异步框架。
- * 相比 HTTP 协议具有以下优势：
- * <ul>
- * <li>支持 HTTP/2 多路复用，减少连接开销</li>
- * <li>异步非阻塞 IO，更高的并发处理能力</li>
- * <li>内置连接池管理，自动重连</li>
- * <li>更低的延迟和更高的吞吐量</li>
- * </ul>
- * </p>
- *
-   * @版本 1.0.0
- * @since 2025-12-02
- * @author CH
+* Armeria 协议实现
+* <p>
+* 使用 Armeria web客户端 进行 o认证 认证，基于 Netty 的高性能异步框架。
+* 相比 HTTP 协议具有以下优势：
+* <ul>
+* <li>支持 HTTP/2 多路复用，减少连接开销</li>
+* <li>异步非阻塞 IO，更高的并发处理能力</li>
+* <li>内置连接池管理，自动重连</li>
+* <li>更低的延迟和更高的吞吐量</li>
+* </ul>
+* </p>
+*
+* @版本 1.0.0
+* @since 2025-12-02
+* @author CH
  */
 @Spi({"armeria"})
 @Slf4j
@@ -61,26 +61,26 @@ public class ArmeriaProtocol extends AbstractProtocol {
     private static final Object CLIENT_LOCK = new Object();
     
     /**
-     * 弹性处理器（熔断+重试）
+    * 弹性处理器（熔断+重试）
      */
     private final OAuthClientResilience resilience;
 
     /**
-     * 构造函数
-     *
-     * @param authClientProperties 认证客户端配置
+    * 构造函数
+    *
+    * @param authClientProperties 认证客户端配置
      */
     public ArmeriaProtocol(AuthClientProperties authClientProperties) {
         /**
-         * 父。
-         * @param authClientProperties 认证客户端属性
+        * 父。
+        * @param authClientProperties 认证客户端属性
          */
         super(authClientProperties);
         this.resilience = new OAuthClientResilience(authClientProperties);
     }
 
     /**
-      * 初始化 Armeria web客户端（配置超时和连接池）
+    * 初始化 Armeria web客户端（配置超时和连接池）
      */
     private void initializeClient() {
         if (webClient == null) {
@@ -89,9 +89,9 @@ public class ArmeriaProtocol extends AbstractProtocol {
                     String selectedUrl = selectUrl();
                     if (selectedUrl == null) {
                         /**
-                         * illegal状态异常。
-                         * @param 服务器地址不存在" 服务器地址不存在"
-                         * @return illegal状态异常的结果
+                        * illegal状态异常。
+                        * @param 服务器地址不存在" 服务器地址不存在"
+                        * @return illegal状态异常的结果
                          */
                         throw new IllegalStateException("OAuth 服务器地址不存在");
                     }
@@ -163,9 +163,9 @@ public class ArmeriaProtocol extends AbstractProtocol {
     }
     
     /**
-      * 脱敏 app钥匙
-     * @param appKey app钥匙
-     * @return maskapp钥匙的结果
+    * 脱敏 app钥匙
+    * @param appKey app钥匙
+    * @return maskapp钥匙的结果
      */
     private String maskAppKey(String appKey) {
         if (appKey == null || appKey.length() < 8) {
@@ -175,9 +175,9 @@ public class ArmeriaProtocol extends AbstractProtocol {
     }
     
     /**
-     * 脱敏指纹
-     * @param fingerprint fingerprint
-     * @return maskFingerprint的结果
+    * 脱敏指纹
+    * @param fingerprint fingerprint
+    * @return maskFingerprint的结果
      */
     private String maskFingerprint(String fingerprint) {
         if (fingerprint == null || fingerprint.length() < 8) {
@@ -204,8 +204,8 @@ public class ArmeriaProtocol extends AbstractProtocol {
                 String cacheKey = getCacheKey(new Cookie[]{cookie}, token);
                 if (hasCache(cacheKey)) {
                     /**
-                     * clear认证信息。
-                     * @param cacheKey 缓存钥匙
+                    * clear认证信息。
+                    * @param cacheKey 缓存钥匙
                      */
                     clearAuthenticationInformation(cacheKey);
                 }
@@ -214,14 +214,14 @@ public class ArmeriaProtocol extends AbstractProtocol {
                 String cacheKey = getCacheKey(new Cookie[]{cookie}, token);
                 if (hasCache(cacheKey)) {
                     /**
-                     * clear认证信息。
-                     * @param cacheKey 缓存钥匙
+                    * clear认证信息。
+                    * @param cacheKey 缓存钥匙
                      */
                     clearAuthenticationInformation(cacheKey);
                 }
                 /**
-                 * invalidate缓存。
-                 * @param token 令牌
+                * invalidate缓存。
+                * @param token 令牌
                  */
                 invalidateCache(token);
             }
@@ -276,22 +276,22 @@ public class ArmeriaProtocol extends AbstractProtocol {
             // 清除本地缓存，防止登出后仍命中缓存
             if (logoutType == LogoutType.LOGOUT_ALL || logoutType == LogoutType.UN_REGISTER) {
                 /**
-                 * invalidate全部缓存。
+                * invalidate全部缓存。
                  */
                 invalidateAllCache();
             } else {
                 /**
-                 * invalidate缓存。
-                 * @param uid uid
+                * invalidate缓存。
+                * @param uid uid
                  */
                 invalidateCache(uid);
             }
             return LoginAuthResult.OK;
         }
         /**
-         * 认证异常。
-         * @param information.getInformation( 信息.获取信息(
-         * @return 认证异常的结果
+        * 认证异常。
+        * @param information.getInformation( 信息.获取信息(
+        * @return 认证异常的结果
          */
         throw new AuthException(information.getInformation().getMessage());
     }
@@ -378,10 +378,10 @@ public class ArmeriaProtocol extends AbstractProtocol {
     }
 
     /**
-     * 解析online用户结果
-     *
-     * @param resultMap 结果映射
-     * @return 解析online用户结果的结果
+    * 解析online用户结果
+    *
+    * @param resultMap 结果映射
+    * @return 解析online用户结果的结果
      */
     private OnlineUserResult parseOnlineUserResult(java.util.Map<String, Object> resultMap) {
         OnlineUserResult result = new OnlineUserResult();
@@ -419,12 +419,12 @@ public class ArmeriaProtocol extends AbstractProtocol {
     }
 
     /**
-     * 获取int价值观
-     *
-     * @param map 映射
-     * @param key 钥匙
-     * @param defaultValue 默认价值观
-     * @return 获取int价值观的结果
+    * 获取int价值观
+    *
+    * @param map 映射
+    * @param key 钥匙
+    * @param defaultValue 默认价值观
+    * @return 获取int价值观的结果
      */
     private int getIntValue(java.util.Map<String, Object> map, String key, int defaultValue) {
         Object value = map.get(key);
@@ -435,12 +435,12 @@ public class ArmeriaProtocol extends AbstractProtocol {
     }
 
     /**
-     * 获取字符串价值观
-     *
-     * @param map 映射
-     * @param key 钥匙
-     * @param defaultValue 默认价值观
-     * @return 获取字符串价值观的结果
+    * 获取字符串价值观
+    *
+    * @param map 映射
+    * @param key 钥匙
+    * @param defaultValue 默认价值观
+    * @return 获取字符串价值观的结果
      */
     private String getStringValue(java.util.Map<String, Object> map, String key, String defaultValue) {
         Object value = map.get(key);
@@ -448,13 +448,13 @@ public class ArmeriaProtocol extends AbstractProtocol {
     }
 
     /**
-     * 创建认证信息
-      * 使用 Armeria web客户端 向远程认证服务器发送请求
-     *
-     * @param jsonObject  包含认证所需参数的JSON对象
-     * @param upgradeType 升级类型
-     * @param path        请求路径
-     * @return 认证结果
+    * 创建认证信息
+    * 使用 Armeria web客户端 向远程认证服务器发送请求
+    *
+    * @param jsonObject  包含认证所需参数的JSON对象
+    * @param upgradeType 升级类型
+    * @param path        请求路径
+    * @return 认证结果
      */
     protected AuthenticationInformation createAuthenticationInformation(JsonObject jsonObject, UpgradeType upgradeType, String path) {
         // 使用弹性处理器执行请求（含熔断和重试）
@@ -466,15 +466,15 @@ public class ArmeriaProtocol extends AbstractProtocol {
     }
 
     /**
-     * 执行实际的 Armeria 请求
-     * @param jsonObject json对象
-     * @param upgradeType upgrade类型
-     * @param path 路径
-     * @return 执行请求的结果
+    * 执行实际的 Armeria 请求
+    * @param jsonObject json对象
+    * @param upgradeType upgrade类型
+    * @param path 路径
+    * @return 执行请求的结果
      */
     private AuthenticationInformation doRequest(JsonObject jsonObject, UpgradeType upgradeType, String path) {
         /**
-         * 初始化客户端。
+        * 初始化客户端。
          */
         initializeClient();
         

@@ -16,10 +16,10 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
- * 聚合服务运行状态控制器，提供状态查询与服务启停。
- *
- * @since 2026-08-03
- * @author CH
+* 聚合服务运行状态控制器，提供状态查询与服务启停。
+*
+* @since 2026-08-03
+* @author CH
  */
 @RestController
 @RequestMapping("/v2/services")
@@ -28,14 +28,14 @@ import java.util.List;
 public class AiServiceStatusController {
 
     /**
-     * 服务状态服务
+    * 服务状态服务
      */
     private final AiServiceStatusService statusService;
 
     /**
-     * 查询所有服务运行状态。
-     *
-     * @return 服务状态 DTO 列表
+    * 查询所有服务运行状态。
+    *
+    * @return 服务状态 DTO 列表
      */
     @Operation(summary = "查询所有服务运行状态")
     @GetMapping("/status")
@@ -44,12 +44,12 @@ public class AiServiceStatusController {
     }
 
     /**
-     * 启动指定服务。
-     *
-     * @param serviceName 服务名称
-     * @param "服务名称" "服务名称"
-     * @param "服务名称" "服务名称"
-     * @param "服务名称" "服务名称"
+    * 启动指定服务。
+    *
+    * @param serviceName 服务名称
+    * @param "服务名称" "服务名称"
+    * @param "服务名称" "服务名称"
+    * @param "服务名称" "服务名称"
      */
     @Permission("admin")
     @Operation(summary = "启动服务")
@@ -59,12 +59,12 @@ public class AiServiceStatusController {
     }
 
     /**
-     * 停止指定服务。
-     *
-     * @param serviceName 服务名称
-     * @param "服务名称" "服务名称"
-     * @param "服务名称" "服务名称"
-     * @param "服务名称" "服务名称"
+    * 停止指定服务。
+    *
+    * @param serviceName 服务名称
+    * @param "服务名称" "服务名称"
+    * @param "服务名称" "服务名称"
+    * @param "服务名称" "服务名称"
      */
     @Permission("admin")
     @Operation(summary = "停止服务")

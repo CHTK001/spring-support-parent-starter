@@ -19,10 +19,10 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
- * AI 模型定义控制器，提供模型的增删改查和连通性测试。
- *
- * @author CH
- * @since 4.0.0
+* AI 模型定义控制器，提供模型的增删改查和连通性测试。
+*
+* @author CH
+* @since 4.0.0
  */
 @RestController
 @RequestMapping("/v2/models")

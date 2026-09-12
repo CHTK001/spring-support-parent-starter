@@ -19,10 +19,10 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
- * 服务器分组接口
- *
- * @author CH
- * @since 4.0.0.42
+* 服务器分组接口
+*
+* @author CH
+* @since 4.0.0.42
  */
 @Tag(name = "服务器资产-分组", description = "主机分组管理")
 @RestController
@@ -34,10 +34,10 @@ public class ServerGroupController {
     private final ServerGroupService serverGroupService;
 
     /**
-     * 新增分组
-     *
-     * @param group 分组
-     * @return 结果
+    * 新增分组
+    *
+    * @param group 分组
+    * @return 结果
      */
     @Operation(summary = "新增分组")
     @PostMapping
@@ -46,11 +46,11 @@ public class ServerGroupController {
     }
 
     /**
-     * 更新分组
-     *
-     * @param id    主键
-     * @param group 分组
-     * @return 结果
+    * 更新分组
+    *
+    * @param id    主键
+    * @param group 分组
+    * @return 结果
      */
     @Operation(summary = "更新分组")
     @PutMapping("/{id}")
@@ -59,10 +59,10 @@ public class ServerGroupController {
     }
 
     /**
-     * 删除分组
-     *
-     * @param id 主键
-     * @return 结果
+    * 删除分组
+    *
+    * @param id 主键
+    * @return 结果
      */
     @Operation(summary = "删除分组")
     @DeleteMapping("/{id}")
@@ -71,9 +71,9 @@ public class ServerGroupController {
     }
 
     /**
-     * 分组列表（平铺，前端组树）
-     *
-     * @return 列表
+    * 分组列表（平铺，前端组树）
+    *
+    * @return 列表
      */
     @Operation(summary = "分组列表")
     @GetMapping

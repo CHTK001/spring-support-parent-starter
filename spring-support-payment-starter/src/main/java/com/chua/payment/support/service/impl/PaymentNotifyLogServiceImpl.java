@@ -14,10 +14,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 
 /**
- * 支付回调日志服务实现，记录各渠道异步通知的请求与响应详情。
- *
- * @author CH
- * @since 4.0.0.50
+* 支付回调日志服务实现，记录各渠道异步通知的请求与响应详情。
+*
+* @author CH
+* @since 4.0.0.50
  */
 @Service
 @RequiredArgsConstructor
@@ -31,11 +31,11 @@ public class PaymentNotifyLogServiceImpl implements PaymentNotifyLogService {
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
     /**
-     * 开始
-     * @param notifyType 通知类型
-     * @param channelId 通道标识
-     * @param requestHeaders 请求头部
-     * @param requestBody 请求主体
+    * 开始
+    * @param notifyType 通知类型
+    * @param channelId 通道标识
+    * @param requestHeaders 请求头部
+    * @param requestBody 请求主体
      */
     public PaymentNotifyLog start(String notifyType,
                                   Long channelId,
@@ -62,16 +62,16 @@ public class PaymentNotifyLogServiceImpl implements PaymentNotifyLogService {
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
     /**
-      * 饰面
-     * @param logId 日志标识
-     * @param signVerified 标志verified
-     * @param channelType 通道类型
-     * @param channelSubType 通道sub类型
-     * @param processStatus 处理状态
-     * @param processResult 处理结果
-     * @param relatedOrderId related订单标识
-     * @param relatedRefundId related退税标识
-     * @param dto dto
+    * 饰面
+    * @param logId 日志标识
+    * @param signVerified 标志verified
+    * @param channelType 通道类型
+    * @param channelSubType 通道sub类型
+    * @param processStatus 处理状态
+    * @param processResult 处理结果
+    * @param relatedOrderId related订单标识
+    * @param relatedRefundId related退税标识
+    * @param dto dto
      */
     public void finish(FinishNotifyLogDTO dto) {
         if (dto.logId() == null) {

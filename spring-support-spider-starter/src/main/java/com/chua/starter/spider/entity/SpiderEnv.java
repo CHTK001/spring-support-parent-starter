@@ -11,13 +11,13 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
- * 环境变量实体。
- *
- * <p>对应 {@code spider_env} 表，供爬虫在运行期通过 {@code {{env.KEY}}}
- * 语法在 URL / 请求体 / 提取表达式等位置插值使用。</p>
- *
- * @since 4.0.0.42
- * @author CH
+* 环境变量实体。
+*
+* <p>对应 {@code spider_env} 表，供爬虫在运行期通过 {@code {{env.KEY}}}
+* 语法在 URL / 请求体 / 提取表达式等位置插值使用。</p>
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -26,7 +26,7 @@ import lombok.EqualsAndHashCode;
 public class SpiderEnv extends SysBase {
 
     /**
-      * 主键 标识（自增）
+    * 主键 标识（自增）
      */
     @TableId(type = IdType.AUTO)
     @Schema(description = "主键 ID")
@@ -34,7 +34,7 @@ public class SpiderEnv extends SysBase {
     private Long id;
 
     /**
-      * 变量名（如 Cookie、令牌）
+    * 变量名（如 Cookie、令牌）
      */
     @TableField("env_key")
     @Schema(description = "变量名")
@@ -42,7 +42,7 @@ public class SpiderEnv extends SysBase {
     private String envKey;
 
     /**
-     * 变量值
+    * 变量值
      */
     @TableField("env_value")
     @Schema(description = "变量值")
@@ -50,7 +50,7 @@ public class SpiderEnv extends SysBase {
     private String envValue;
 
     /**
-     * 描述
+    * 描述
      */
     @TableField("description")
     @Schema(description = "描述")
@@ -58,7 +58,7 @@ public class SpiderEnv extends SysBase {
     private String description;
 
     /**
-     * 是否启用（1 启用 / 0 停用）
+    * 是否启用（1 启用 / 0 停用）
      */
     @TableField("enabled")
     @Schema(description = "是否启用")
@@ -66,7 +66,7 @@ public class SpiderEnv extends SysBase {
     private Integer enabled;
 
     /**
-     * 逻辑删除标记（0 未删除 / 1 已删除）
+    * 逻辑删除标记（0 未删除 / 1 已删除）
      */
     @TableField("sys_deleted")
     @TableLogic

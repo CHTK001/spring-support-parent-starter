@@ -6,10 +6,10 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * AI 分析结构化建议
- *
- * @since 2026/7/30
- * @author CH
+* AI 分析结构化建议
+*
+* @since 2026/7/30
+* @author CH
  */
 @Data
 @Builder
@@ -18,27 +18,27 @@ import lombok.NoArgsConstructor;
 public class ServerAiStructuredAdvice {
 
     /**
-     * 分析摘要
+    * 分析摘要
      */
     private String summary;
 
     /**
-     * 风险等级
+    * 风险等级
      */
     private String riskLevel;
 
     /**
-     * 处置建议
+    * 处置建议
      */
     private String suggestion;
 
     /**
-     * 提供者
+    * 提供者
      */
     private String provider;
 
     /**
-     * 模型名称
+    * 模型名称
      */
     private String model;
 }

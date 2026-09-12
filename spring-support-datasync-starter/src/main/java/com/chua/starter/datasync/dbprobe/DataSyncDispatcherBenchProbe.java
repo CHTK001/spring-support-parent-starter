@@ -19,10 +19,10 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
 /**
-   * 四种派发提供者压测对比：入内存 / WAL / Chronicle。
- *
- * @since 4.0.0.42
- * @author CH
+* 四种派发提供者压测对比：入内存 / WAL / Chronicle。
+*
+* @since 4.0.0.42
+* @author CH
  */
 public final class DataSyncDispatcherBenchProbe {
 
@@ -30,9 +30,9 @@ public final class DataSyncDispatcherBenchProbe {
     static final int BATCH = 1000; // 批量
 
     /**
-     * Main
-     *
-     * @param args 参数
+    * Main
+    *
+    * @param args 参数
      */
     public static void main(String[] args) throws Exception {
         Path tmp = Files.createTempDirectory("dispatch-bench");
@@ -76,10 +76,10 @@ public final class DataSyncDispatcherBenchProbe {
     }
 
     /**
-     * make数据
-     *
-     * @param n n
-     * @return make数据的结果
+    * make数据
+    *
+    * @param n n
+    * @return make数据的结果
      */
     static List<Map<String, Object>> makeData(int n) {
         List<Map<String, Object>> data = new ArrayList<>(n);
@@ -97,11 +97,11 @@ public final class DataSyncDispatcherBenchProbe {
     }
 
     /**
-     * Bench
-     *
-     * @param label 标签
-     * @param provider 提供者
-     * @param data 数据
+    * Bench
+    *
+    * @param label 标签
+    * @param provider 提供者
+    * @param data 数据
      */
     static void bench(String label, DispatcherProvider provider, List<Map<String, Object>> data) throws Exception {
         AtomicLong count = new AtomicLong();

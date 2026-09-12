@@ -3,10 +3,10 @@ package com.chua.starter.server.support.spi;
 import lombok.Getter;
 
 /**
- * 主机采集结果
- *
- * @author CH
- * @since 4.0.0.42
+* 主机采集结果
+*
+* @author CH
+* @since 4.0.0.42
  */
 @Getter
 public class CollectOutcome {
@@ -18,10 +18,10 @@ public class CollectOutcome {
     private final String message;
 
     /**
-     * 构造
-     *
-     * @param success 是否成功
-     * @param message 消息
+    * 构造
+    *
+    * @param success 是否成功
+    * @param message 消息
      */
     public CollectOutcome(boolean success, String message) {
         this.success = success;
@@ -29,31 +29,31 @@ public class CollectOutcome {
     }
 
     /**
-     * 成功
-     *
-     * @param message 消息
-     * @return 结果
+    * 成功
+    *
+    * @param message 消息
+    * @return 结果
      */
     public static CollectOutcome ok(String message) {
         /**
-          * collectoutcome。
-         * @param true true
-         * @param message 消息
+        * collectoutcome。
+        * @param true true
+        * @param message 消息
          */
         return new CollectOutcome(true, message);
     }
 
     /**
-     * 失败
-     *
-     * @param message 消息
-     * @return 结果
+    * 失败
+    *
+    * @param message 消息
+    * @return 结果
      */
     public static CollectOutcome fail(String message) {
         /**
-          * collectoutcome。
-         * @param false false
-         * @param message 消息
+        * collectoutcome。
+        * @param false false
+        * @param message 消息
          */
         return new CollectOutcome(false, message);
     }

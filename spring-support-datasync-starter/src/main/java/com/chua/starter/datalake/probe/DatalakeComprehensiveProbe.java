@@ -29,11 +29,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
-   * 数据湖 全面功能探测 — 覆盖 reactor执行器 / 执行器管理器 / sink管理器 /
-   * 服务端构建器 / 真实Sink / 偏移量流 / 并发安全 共 41 项场景。
- *
- * @author CH
- * @since 4.0.0.42
+* 数据湖 全面功能探测 — 覆盖 reactor执行器 / 执行器管理器 / sink管理器 /
+* 服务端构建器 / 真实Sink / 偏移量流 / 并发安全 共 41 项场景。
+*
+* @author CH
+* @since 4.0.0.42
  */
 @Slf4j
 public class DatalakeComprehensiveProbe {
@@ -42,8 +42,8 @@ public class DatalakeComprehensiveProbe {
     private static final List<String> failedCases = new CopyOnWriteArrayList<>(); // 失败CAS
 
     /**
-     * main。
-     * @param args 参数
+    * main。
+    * @param args 参数
      */
     public static void main(String[] args) throws Exception {
         System.err.println("=============================================================");
@@ -73,7 +73,7 @@ public class DatalakeComprehensiveProbe {
     // ═══════════════════════════════════════════════════════════════
 
     /**
-     * 测试reactor执行器。
+    * 测试reactor执行器。
      */
     private static void testReactorExecutor() {
         System.err.println("\n─── E01~E08: DatalakeReactorExecutor ───");
@@ -167,7 +167,7 @@ public class DatalakeComprehensiveProbe {
     // ═══════════════════════════════════════════════════════════════
 
     /**
-     * 测试执行器管理器。
+    * 测试执行器管理器。
      */
     private static void testExecutorManager() {
         System.err.println("\n─── E09~E13: DatalakeExecutorManager ───");
@@ -218,7 +218,7 @@ public class DatalakeComprehensiveProbe {
     // ═══════════════════════════════════════════════════════════════
 
     /**
-     * 测试sink管理器。
+    * 测试sink管理器。
      */
     private static void testSinkManager() {
         System.err.println("\n─── E14~E18: SinkManager ───");
@@ -228,55 +228,55 @@ public class DatalakeComprehensiveProbe {
             Map<String, DataSink> reg = new ConcurrentHashMap<>();
             reg.put("s1", new DataSink() {
                 /**
-                 * 类型。
-                 * @return 类型的结果
+                * 类型。
+                * @return 类型的结果
                  */
                 public String type() { return "s1"; }
                 /**
-                 * 启动。
+                * 启动。
                  */
                 public void start() { startCount.incrementAndGet(); }
                 /**
-                 * 停止。
+                * 停止。
                  */
                 public void stop() {}
                 /**
-                 * 写入。
-                 * @param e e
-                 * @param c c
-                 * @return 写入的结果
+                * 写入。
+                * @param e e
+                * @param c c
+                * @return 写入的结果
                  */
                 public boolean write(DataEnvelope e, Map<String, Object> c) { return true; }
                 /**
-                 * 获取数据源。
-                 * @return 获取数据源的结果
+                * 获取数据源。
+                * @return 获取数据源的结果
                  */
                 public com.chua.common.support.lang.datasource.engine.EngineDataSource<?> getDataSource() { return null; }
             });
             reg.put("s2", new DataSink() {
                 /**
-                 * 类型。
-                 * @return 类型的结果
+                * 类型。
+                * @return 类型的结果
                  */
                 public String type() { return "s2"; }
                 /**
-                 * 启动。
+                * 启动。
                  */
                 public void start() { startCount.incrementAndGet(); }
                 /**
-                 * 停止。
+                * 停止。
                  */
                 public void stop() {}
                 /**
-                 * 写入。
-                 * @param e e
-                 * @param c c
-                 * @return 写入的结果
+                * 写入。
+                * @param e e
+                * @param c c
+                * @return 写入的结果
                  */
                 public boolean write(DataEnvelope e, Map<String, Object> c) { return true; }
                 /**
-                 * 获取数据源。
-                 * @return 获取数据源的结果
+                * 获取数据源。
+                * @return 获取数据源的结果
                  */
                 public com.chua.common.support.lang.datasource.engine.EngineDataSource<?> getDataSource() { return null; }
             });
@@ -291,28 +291,28 @@ public class DatalakeComprehensiveProbe {
                 final int idx = i;
                 reg.put("s" + idx, new DataSink() {
                     /**
-                     * 类型。
-                     * @return 类型的结果
+                    * 类型。
+                    * @return 类型的结果
                      */
                     public String type() { return "s" + idx; }
                     /**
-                     * 启动。
+                    * 启动。
                      */
                     public void start() {}
                     /**
-                     * 停止。
+                    * 停止。
                      */
                     public void stop() { stopCount.incrementAndGet(); }
                     /**
-                     * 写入。
-                     * @param e e
-                     * @param c c
-                     * @return 写入的结果
+                    * 写入。
+                    * @param e e
+                    * @param c c
+                    * @return 写入的结果
                      */
                     public boolean write(DataEnvelope e, Map<String, Object> c) { return true; }
                     /**
-                     * 获取数据源。
-                     * @return 获取数据源的结果
+                    * 获取数据源。
+                    * @return 获取数据源的结果
                      */
                     public com.chua.common.support.lang.datasource.engine.EngineDataSource<?> getDataSource() { return null; }
                 });
@@ -335,82 +335,82 @@ public class DatalakeComprehensiveProbe {
             Map<String, DataSink> reg = new ConcurrentHashMap<>();
             reg.put("good1", new DataSink() {
                 /**
-                 * 类型。
-                 * @return 类型的结果
+                * 类型。
+                * @return 类型的结果
                  */
                 public String type() { return "good1"; }
                 /**
-                 * 启动。
+                * 启动。
                  */
                 public void start() {}
                 /**
-                 * 停止。
+                * 停止。
                  */
                 public void stop() {}
                 /**
-                 * 写入。
-                 * @param e e
-                 * @param c c
-                 * @return 写入的结果
+                * 写入。
+                * @param e e
+                * @param c c
+                * @return 写入的结果
                  */
                 public boolean write(DataEnvelope e, Map<String, Object> c) { return true; }
                 /**
-                 * 获取数据源。
-                 * @return 获取数据源的结果
+                * 获取数据源。
+                * @return 获取数据源的结果
                  */
                 public EngineDataSource<?> getDataSource() { return null; }
             });
             reg.put("bad", new DataSink() {
                 /**
-                 * 类型。
-                 * @return 类型的结果
+                * 类型。
+                * @return 类型的结果
                  */
                 public String type() { return "bad"; }
                 /**
-                 * 启动。
+                * 启动。
                  */
                 public void start() { throw new RuntimeException("boom"); }
                 /**
-                 * 停止。
+                * 停止。
                  */
                 public void stop() {}
                 /**
-                 * 写入。
-                 * @param e e
-                 * @param c c
-                 * @return 写入的结果
+                * 写入。
+                * @param e e
+                * @param c c
+                * @return 写入的结果
                  */
                 public boolean write(DataEnvelope e, Map<String, Object> c) { return true; }
                 /**
-                 * 获取数据源。
-                 * @return 获取数据源的结果
+                * 获取数据源。
+                * @return 获取数据源的结果
                  */
                 public EngineDataSource<?> getDataSource() { return null; }
             });
             reg.put("good2", new DataSink() {
                 /**
-                 * 类型。
-                 * @return 类型的结果
+                * 类型。
+                * @return 类型的结果
                  */
                 public String type() { return "good2"; }
                 /**
-                 * 启动。
+                * 启动。
                  */
                 public void start() {}
                 /**
-                 * 停止。
+                * 停止。
                  */
                 public void stop() {}
                 /**
-                 * 写入。
-                 * @param e e
-                 * @param c c
-                 * @return 写入的结果
+                * 写入。
+                * @param e e
+                * @param c c
+                * @return 写入的结果
                  */
                 public boolean write(DataEnvelope e, Map<String, Object> c) { return true; }
                 /**
-                 * 获取数据源。
-                 * @return 获取数据源的结果
+                * 获取数据源。
+                * @return 获取数据源的结果
                  */
                 public EngineDataSource<?> getDataSource() { return null; }
             });
@@ -437,7 +437,7 @@ public class DatalakeComprehensiveProbe {
     // ═══════════════════════════════════════════════════════════════
 
     /**
-     * 测试服务端构建器。
+    * 测试服务端构建器。
      */
     private static void testServerBuilder() throws Exception {
         System.err.println("\n─── E19~E24: DatalakeServerBuilder ───");
@@ -531,7 +531,7 @@ public class DatalakeComprehensiveProbe {
     // ═══════════════════════════════════════════════════════════════
 
     /**
-     * 测试concurrencysafety。
+    * 测试concurrencysafety。
      */
     private static void testConcurrencySafety() throws InterruptedException {
         System.err.println("\n─── E25~E27: 并发安全 ───");
@@ -602,7 +602,7 @@ public class DatalakeComprehensiveProbe {
     // ═══════════════════════════════════════════════════════════════
 
     /**
-     * 测试realsink。
+    * 测试realsink。
      */
     private static void testRealSink() {
         System.err.println("\n─── E28~E33: Real Sink 实现 ───");
@@ -637,7 +637,7 @@ public class DatalakeComprehensiveProbe {
     // ═══════════════════════════════════════════════════════════════
 
     /**
-     * 测试偏移量流。
+    * 测试偏移量流。
      */
     private static void testOffsetFlow() throws Exception {
         System.err.println("\n─── E34~E38: OffsetFlow 高级 ───");
@@ -721,7 +721,7 @@ public class DatalakeComprehensiveProbe {
     // ═══════════════════════════════════════════════════════════════
 
     /**
-     * 测试数据envelopeedge。
+    * 测试数据envelopeedge。
      */
     private static void testDataEnvelopeEdge() {
         System.err.println("\n─── E39~E41: DataEnvelope 边界 ───");
@@ -770,12 +770,12 @@ public class DatalakeComprehensiveProbe {
 
     // ━━━━━━━━━━━━━━━ 辅助 ━━━━━━━━━━━━━━━
     /**
-     * 失败sink类。
-     *
-     * @author CH
-     * @since 4.0.0
-     * @param name 名称
-     * @param check 检查
+    * 失败sink类。
+    *
+    * @author CH
+    * @since 4.0.0
+    * @param name 名称
+    * @param check 检查
      */
 
     private static void check(String name, Check check) {
@@ -788,10 +788,10 @@ public class DatalakeComprehensiveProbe {
             failed++; failedCases.add(name + " (" + e.getMessage() + ")");
             System.err.printf("  [ERROR] %s: %s%n", name, e.getMessage());
         /**
-          * capturingsink类。
-         *
-         * @author CH
-         * @since 4.0.0
+        * capturingsink类。
+        *
+        * @author CH
+        * @since 4.0.0
          */
         }
     }
@@ -799,29 +799,29 @@ public class DatalakeComprehensiveProbe {
     @FunctionalInterface
     interface Check { boolean check() throws Exception; }
     /**
-     * CapturingSink类。
-     *
-     * @author CH
-     * @since 4.0.0
+    * CapturingSink类。
+    *
+    * @author CH
+    * @since 4.0.0
      */
 
     public static class CapturingSink implements DataSink {
         private final String type; // 类型
         private final AtomicInteger count = new AtomicInteger(0); // 数量
         /**
-          * capturingsink。
-         * @param type 类型
+        * capturingsink。
+        * @param type 类型
          */
         public CapturingSink(String type) { this.type = type; }
         /**
-         * reset。
+        * reset。
          */
         public void reset() { count.set(0); }
         /**
-         * 获取数量。
-         * @return 获取数量的结果
-         * @author CH
-         * @since 4.0.0
+        * 获取数量。
+        * @return 获取数量的结果
+        * @author CH
+        * @since 4.0.0
          */
         public int getCount() { return count.get(); }
         @Override public String type() { return type; }

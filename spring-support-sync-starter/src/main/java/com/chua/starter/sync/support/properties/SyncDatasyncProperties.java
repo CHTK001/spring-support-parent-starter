@@ -5,40 +5,40 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import java.util.Map;
 
 /**
-   * 数据同步 桥接配置。
- * <p>
- * 对应配置前缀：{@code plugin.sync.datasync}
- * </p>
- *
- * @since 2026/01/15
- * @author CH
+* 数据同步 桥接配置。
+* <p>
+* 对应配置前缀：{@code plugin.sync.datasync}
+* </p>
+*
+* @since 2026/01/15
+* @author CH
  */
 @ConfigurationProperties(prefix = SyncDatasyncProperties.PRE, ignoreInvalidFields = true)
 public class SyncDatasyncProperties {
 
     /**
-     * 配置前缀
+    * 配置前缀
      */
     public static final String PRE = "plugin.sync.datasync";
 
     /**
-      * 是否启用 数据同步 桥接
+    * 是否启用 数据同步 桥接
      */
     private boolean enabled = true;
 
     /**
-     * 是否已启用
-     *
-     * @return 是否已启用的结果
+    * 是否已启用
+    *
+    * @return 是否已启用的结果
      */
     public boolean isEnabled() {
         return enabled;
     }
 
     /**
-     * 设置已启用
-     *
-     * @param enabled 已启用
+    * 设置已启用
+    *
+    * @param enabled 已启用
      */
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;

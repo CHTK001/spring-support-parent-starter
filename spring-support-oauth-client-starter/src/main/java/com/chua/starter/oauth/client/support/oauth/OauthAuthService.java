@@ -6,10 +6,10 @@ import com.chua.starter.common.support.oauth.CurrentUser;
 import com.chua.starter.oauth.client.support.user.UserResume;
 
 /**
-   * o认证 权限服务
- *
- * @author CH
- * @since 4.0.0
+* o认证 权限服务
+*
+* @author CH
+* @since 4.0.0
  */
 public class OauthAuthService implements AuthService {
 

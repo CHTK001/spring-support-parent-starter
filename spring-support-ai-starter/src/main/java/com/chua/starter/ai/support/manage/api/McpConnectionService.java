@@ -19,16 +19,16 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * MCP 真实连接服务。
- *
- * <p>基于 MCP Java SDK 连接真实的 MCP 服务器，支持
- * streamable HTTP 与 SSE 两种传输，连接成功后列举服务器声明的工具。</p>
- *
- * <p>前端约定的请求体：{@code { name, transport }}，其中 transport 支持
- * {@code { type: 'http'|'streamable_http'|'sse', url, headers? }}。</p>
- *
- * @since 4.0.0.42
- * @author CH
+* MCP 真实连接服务。
+*
+* <p>基于 MCP Java SDK 连接真实的 MCP 服务器，支持
+* streamable HTTP 与 SSE 两种传输，连接成功后列举服务器声明的工具。</p>
+*
+* <p>前端约定的请求体：{@code { name, transport }}，其中 transport 支持
+* {@code { type: 'http'|'streamable_http'|'sse', url, headers? }}。</p>
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Service
 @Slf4j
@@ -38,12 +38,12 @@ public class McpConnectionService {
     private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(15);
 
     /**
-     * 连接 MCP 服务器并列举其工具。
-     *
-     * @param name      服务器名称（仅用于日志）
-     * @param transport transport 配置（类型 + url + 头部）
-     * @return 前端约定的连接测试结果：
-     *         {@code { success, tools?: [{name, description, input_schema}], error?, code? }}
+    * 连接 MCP 服务器并列举其工具。
+    *
+    * @param name      服务器名称（仅用于日志）
+    * @param transport transport 配置（类型 + url + 头部）
+    * @return 前端约定的连接测试结果：
+    *         {@code { success, tools?: [{name, description, input_schema}], error?, code? }}
      */
     public Map<String, Object> testConnection(String name, Map<String, Object> transport) {
         Map<String, Object> result = new LinkedHashMap<>();
@@ -69,8 +69,8 @@ public class McpConnectionService {
         try {
             io.modelcontextprotocol.spec.McpClientTransport clientTransport =
                     /**
-                     * 构建transport。
-                     * @param transport transport
+                    * 构建transport。
+                    * @param transport transport
                      */
                     buildTransport(transport);
             if (clientTransport == null) {
@@ -81,8 +81,8 @@ public class McpConnectionService {
             }
 
             /**
-             * 尝试。
-             * @param McpClient.sync(clientTransport mcp客户端.同步(客户端transport
+            * 尝试。
+            * @param McpClient.sync(clientTransport mcp客户端.同步(客户端transport
              */
             try (McpSyncClient client = McpClient.sync(clientTransport)
                     .requestTimeout(CONNECT_TIMEOUT)
@@ -112,10 +112,10 @@ public class McpConnectionService {
     }
 
     /**
-      * 根据传输配置构建 MCP 客户端 transport。
-     *
-     * @param transport transport 配置（类型 + url/命令/参数/env + 头部）
-     * @return 对应 transport，不支持的 类型 返回 空
+    * 根据传输配置构建 MCP 客户端 transport。
+    *
+    * @param transport transport 配置（类型 + url/命令/参数/env + 头部）
+    * @return 对应 transport，不支持的 类型 返回 空
      */
     private io.modelcontextprotocol.spec.McpClientTransport buildTransport(Map<String, Object> transport) {
         String type = transport == null ? "" : String.valueOf(transport.getOrDefault("type", ""));
@@ -146,9 +146,9 @@ public class McpConnectionService {
         HttpClientStreamableHttpTransport.Builder builder =
                 HttpClientStreamableHttpTransport.builder(url);
         /**
-         * apply头部。
-         * @param builder 构建器
-         * @param headers 头部
+        * apply头部。
+        * @param builder 构建器
+        * @param headers 头部
          */
         applyHeaders(builder, headers);
         return builder.build();
@@ -158,19 +158,19 @@ public class McpConnectionService {
             String url, Map<String, Object> headers) {
         HttpClientSseClientTransport.Builder builder = HttpClientSseClientTransport.builder(url);
         /**
-         * apply头部。
-         * @param builder 构建器
-         * @param headers 头部
+        * apply头部。
+        * @param builder 构建器
+        * @param headers 头部
          */
         applyHeaders(builder, headers);
         return builder.build();
     }
 
     /**
-     * 构建 stdio 本地进程 transport（命令 + 参数 + env）
-     *
-     * @param transport transport
-     * @return 构建stdiotransport的结果
+    * 构建 stdio 本地进程 transport（命令 + 参数 + env）
+    *
+    * @param transport transport
+    * @return 构建stdiotransport的结果
      */
     private io.modelcontextprotocol.spec.McpClientTransport buildStdioTransport(Map<String, Object> transport) {
         String command = String.valueOf(transport.getOrDefault("command", ""));
@@ -201,9 +201,9 @@ public class McpConnectionService {
         }
 
         /**
-         * stdio客户端transport。
-         * @param builder.build( 构建器.构建(
-         * @return stdio客户端transport的结果
+        * stdio客户端transport。
+        * @param builder.build( 构建器.构建(
+        * @return stdio客户端transport的结果
          */
         return new StdioClientTransport(builder.build(), McpJsonDefaults.getMapper());
     }

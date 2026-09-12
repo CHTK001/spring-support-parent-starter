@@ -12,12 +12,12 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.List;
 
 /**
-   * r套接字 协议提供者
-   * 实现基础 套接字 模块的 SPI 接口
- *
-   * @版本 1.0.0
- * @since 2024-12-04
- * @author CH
+* r套接字 协议提供者
+* 实现基础 套接字 模块的 SPI 接口
+*
+* @版本 1.0.0
+* @since 2024-12-04
+* @author CH
  */
 @Slf4j
 @Spi("rsocket")
@@ -31,22 +31,22 @@ public class RSocketProvider implements SocketProvider {
 
     @Override
     /**
-      * 创建会话template
-     * @param properties 属性
-     * @param listeners 监听器
-     * @param listeners 监听器
-     * @param template template
-     * @param template template
+    * 创建会话template
+    * @param properties 属性
+    * @param listeners 监听器
+    * @param listeners 监听器
+    * @param template template
+    * @param template template
      */
     public SocketSessionTemplate createSessionTemplate(
             SocketProperties properties,
             List<SocketListener> listeners) {
         log.info("[RSocket] 创建 RSocket 会话模板");
         /**
-         * r套接字会话templateimpl。
-         * @param properties 属性
-         * @param listeners 监听器
-         * @return r套接字会话templateimpl的结果
+        * r套接字会话templateimpl。
+        * @param properties 属性
+        * @param listeners 监听器
+        * @return r套接字会话templateimpl的结果
          */
         return new RSocketSessionTemplateImpl(properties, listeners);
     }

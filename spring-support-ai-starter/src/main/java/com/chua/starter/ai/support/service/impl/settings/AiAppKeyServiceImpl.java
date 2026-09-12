@@ -26,13 +26,13 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
-   * app钥匙 服务实现类。
- *
- * <p>面板层 AppKey 复用 {@link SysAiAppKey} 实体与 {@link SysAiAppKeyMapper}，
- * 与协议层共用同一张 {@code sys_ai_app_key} 表，消除双实体对账写的风险。</p>
- *
- * @since 2026-08-03
- * @author CH
+* app钥匙 服务实现类。
+*
+* <p>面板层 AppKey 复用 {@link SysAiAppKey} 实体与 {@link SysAiAppKeyMapper}，
+* 与协议层共用同一张 {@code sys_ai_app_key} 表，消除双实体对账写的风险。</p>
+*
+* @since 2026-08-03
+* @author CH
  */
 @Slf4j
 @Service
@@ -40,12 +40,12 @@ import java.util.stream.Collectors;
 public class AiAppKeyServiceImpl implements AiAppKeyService {
 
     /**
-     * 时间格式化器
+    * 时间格式化器
      */
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     /**
-      * app钥匙 映射器（与协议层共用）
+    * app钥匙 映射器（与协议层共用）
      */
     private final SysAiAppKeyMapper appKeyMapper;
     /** 提供者映射器 */
@@ -54,9 +54,9 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
     private final AiGroupMapper groupMapper;
 
     /**
-      * 查询所有 app钥匙。
-     *
-     * @return 操作结果
+    * 查询所有 app钥匙。
+    *
+    * @return 操作结果
      */
     @Override
     public ReturnResult<List<AiAppKeyDTO>> list() {
@@ -76,9 +76,9 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
     }
 
     /**
-     * 解析全部分组名称映射。
-     *
-     * @return groupId → 群体名称 映射
+    * 解析全部分组名称映射。
+    *
+    * @return groupId → 群体名称 映射
      */
     private Map<Integer, String> resolveGroupNames() {
         return groupMapper.selectList(null).stream()
@@ -86,10 +86,10 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
     }
 
     /**
-      * 新建 app钥匙。
-     *
-     * @param dto app钥匙 DTO
-     * @return 操作结果
+    * 新建 app钥匙。
+    *
+    * @param dto app钥匙 DTO
+    * @return 操作结果
      */
     @Override
     @Transactional
@@ -116,11 +116,11 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
     }
 
     /**
-      * 更新 app钥匙。
-     *
-     * @param appKeyId app钥匙 主键
-     * @param dto      app钥匙 DTO
-     * @return 操作结果
+    * 更新 app钥匙。
+    *
+    * @param appKeyId app钥匙 主键
+    * @param dto      app钥匙 DTO
+    * @return 操作结果
      */
     @Override
     @Transactional
@@ -142,10 +142,10 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
     }
 
     /**
-      * 删除 app钥匙（逻辑删除）。
-     *
-     * @param appKeyId app钥匙 主键
-     * @return 操作结果
+    * 删除 app钥匙（逻辑删除）。
+    *
+    * @param appKeyId app钥匙 主键
+    * @return 操作结果
      */
     @Override
     @Transactional
@@ -159,11 +159,11 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
     }
 
     /**
-      * 切换 app钥匙 启用状态。
-     *
-     * @param appKeyId app钥匙 主键
-     * @param enabled  是否启用
-     * @return 操作结果
+    * 切换 app钥匙 启用状态。
+    *
+    * @param appKeyId app钥匙 主键
+    * @param enabled  是否启用
+    * @return 操作结果
      */
     @Override
     @Transactional
@@ -182,10 +182,10 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
     }
 
     /**
-     * 解析供应商名称。
-     *
-     * @param providerId 供应商 标识
-     * @return 供应商名称
+    * 解析供应商名称。
+    *
+    * @param providerId 供应商 标识
+    * @return 供应商名称
      */
     private String resolveProvider(Long providerId) {
         if (providerId == null) {
@@ -197,10 +197,10 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
     }
 
     /**
-     * 解析分组名称。
-     *
-     * @param groupId 分组 标识
-     * @return 分组名称
+    * 解析分组名称。
+    *
+    * @param groupId 分组 标识
+    * @return 分组名称
      */
     private String resolveGroup(Integer groupId) {
         if (groupId == null) {
@@ -212,12 +212,12 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
     }
 
     /**
-     * 实体转 DTO。
-     *
-     * @param entity       app钥匙 实体
-     * @param providerName 供应商名称
-     * @param groupName    分组名称
-     * @return AppKey DTO
+    * 实体转 DTO。
+    *
+    * @param entity       app钥匙 实体
+    * @param providerName 供应商名称
+    * @param groupName    分组名称
+    * @return AppKey DTO
      */
     private AiAppKeyDTO toDto(SysAiAppKey entity, String providerName, String groupName) {
         if (entity == null) {
@@ -244,10 +244,10 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
     }
 
     /**
-     * DTO 转实体。
-     *
-     * @param dto app钥匙 DTO
-     * @return AppKey 实体
+    * DTO 转实体。
+    *
+    * @param dto app钥匙 DTO
+    * @return AppKey 实体
      */
     private SysAiAppKey toEntity(AiAppKeyDTO dto) {
         SysAiAppKey entity = new SysAiAppKey();

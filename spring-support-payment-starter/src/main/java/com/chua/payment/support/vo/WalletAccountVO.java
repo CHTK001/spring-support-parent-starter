@@ -6,9 +6,9 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * 钱包账户 VO
- * @author CH
- * @since 4.0.0
+* 钱包账户 VO
+* @author CH
+* @since 4.0.0
  */
 @Data
 public class WalletAccountVO {

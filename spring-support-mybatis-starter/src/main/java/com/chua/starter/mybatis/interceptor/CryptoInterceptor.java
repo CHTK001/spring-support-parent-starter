@@ -22,10 +22,10 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 加密解密拦截器
- * 用于在执行SQL前加密参数，在执行SQL后解密结果
- *
- * @since 2025/9/4 14:46
+* 加密解密拦截器
+* 用于在执行SQL前加密参数，在执行SQL后解密结果
+*
+* @since 2025/9/4 14:46
  */
 @Intercepts({
         // 加密参数
@@ -36,50 +36,50 @@ import java.util.Map;
                 args = {Statement.class})
 })
 /**
- * 加密货币拦截器类。
- *
- * @author CH
- * @since 4.0.0
+* 加密货币拦截器类。
+*
+* @author CH
+* @since 4.0.0
  */
 public class CryptoInterceptor implements Interceptor {
     /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(CryptoInterceptor.class);
 
     /**
-      * 缓存类对应的加密字段列表，钥匙为类对象，价值观为该类所有带@加密货币注解的字段列表
+    * 缓存类对应的加密字段列表，钥匙为类对象，价值观为该类所有带@加密货币注解的字段列表
      */
     private static final Map<Class<?>, List<CryptoFieldInfo>> CRYPTO_FIELD_CACHE = new ConcurrentReferenceHashMap<>(256);
 
     /**
-     * 加密字段信息
-     * @param field 字段
-     * @param annotation 注解
-     * @return 加密货币字段信息的结果
+    * 加密字段信息
+    * @param field 字段
+    * @param annotation 注解
+    * @return 加密货币字段信息的结果
      */
     private record CryptoFieldInfo(Field field, Crypto annotation) {
     }
     /**
-       * 拦截MyBatis的参数设置和结果处理
-     *
-     * @param invocation MyBatis调用上下文对象
-     * @return 原始方法的执行结果
-     * @throws Throwable 当方法执行出现异常时抛出
+    * 拦截MyBatis的参数设置和结果处理
+    *
+    * @param invocation MyBatis调用上下文对象
+    * @return 原始方法的执行结果
+    * @throws Throwable 当方法执行出现异常时抛出
      */
     @Override
     public Object intercept(Invocation invocation) throws Throwable {
         Object target = invocation.getTarget();
         if (target instanceof ParameterHandler parameterHandler) {
             /**
-             * encrypt。
-             * @param parameterHandler.getParameterObject( 参数处理器.获取参数对象(
+            * encrypt。
+            * @param parameterHandler.getParameterObject( 参数处理器.获取参数对象(
              */
             encrypt(parameterHandler.getParameterObject());
         } else if (target instanceof ResultSetHandler) {
             List<?> result = (List<?>) invocation.proceed();
             for (Object obj : result) {
                 /**
-                 * decrypt。
-                 * @param obj obj
+                * decrypt。
+                * @param obj obj
                  */
                 decrypt(obj);
             }
@@ -89,9 +89,9 @@ public class CryptoInterceptor implements Interceptor {
     }
 
     /**
-     * 加密参数对象
-     *
-     * @param param 参数
+    * 加密参数对象
+    *
+    * @param param 参数
      */
     private void encrypt(Object param) {
         if (param == null) {
@@ -102,45 +102,45 @@ public class CryptoInterceptor implements Interceptor {
             map.forEach((k, v) -> {
                 if (v != null) {
                     /**
-                     * 处理加密货币字段。
-                     * @param v v
-                     * @param true true
+                    * 处理加密货币字段。
+                    * @param v v
+                    * @param true true
                      */
                     processCryptoFields(v, true);
                 }
             });
         } else {
             /**
-             * 处理加密货币字段。
-             * @param param 参数
-             * @param true true
+            * 处理加密货币字段。
+            * @param param 参数
+            * @param true true
              */
             processCryptoFields(param, true);
         }
     }
 
     /**
-     * 解密结果对象
-     *
-     * @param obj 结果对象
+    * 解密结果对象
+    *
+    * @param obj 结果对象
      */
     private void decrypt(Object obj) {
         if (obj == null) {
             return;
         }
         /**
-         * 处理加密货币字段。
-         * @param obj obj
-         * @param false false
+        * 处理加密货币字段。
+        * @param obj obj
+        * @param false false
          */
         processCryptoFields(obj, false);
     }
 
     /**
-     * 处理对象的加密/解密字段
-     *
-     * @param obj    目标对象
-     * @param encrypt true表示加密，false表示解密
+    * 处理对象的加密/解密字段
+    *
+    * @param obj    目标对象
+    * @param encrypt true表示加密，false表示解密
      */
     private void processCryptoFields(Object obj, boolean encrypt) {
         Class<?> clazz = obj.getClass();
@@ -172,9 +172,9 @@ public class CryptoInterceptor implements Interceptor {
             } catch (IllegalAccessException e) {
                 log.error("处理加密字段失败: {}", fieldInfo.field().getName(), e);
                 /**
-                 * runtime异常。
-                 * @param fieldInfo.field( 字段信息.字段(
-                 * @return runtime异常的结果
+                * runtime异常。
+                * @param fieldInfo.field( 字段信息.字段(
+                * @return runtime异常的结果
                  */
                 throw new RuntimeException("处理加密字段失败: " + fieldInfo.field().getName(), e);
             }
@@ -182,20 +182,20 @@ public class CryptoInterceptor implements Interceptor {
     }
 
     /**
-     * 获取类对应的加密字段列表，使用缓存提升性能
-     *
-     * @param clazz 目标类
-     * @return 加密字段信息列表
+    * 获取类对应的加密字段列表，使用缓存提升性能
+    *
+    * @param clazz 目标类
+    * @return 加密字段信息列表
      */
     private List<CryptoFieldInfo> getCryptoFields(Class<?> clazz) {
         return CRYPTO_FIELD_CACHE.computeIfAbsent(clazz, this::scanCryptoFields);
     }
 
     /**
-      * 扫描类中所有带@加密货币注解的字段
-     *
-     * @param clazz 目标类
-     * @return 加密字段信息列表
+    * 扫描类中所有带@加密货币注解的字段
+    *
+    * @param clazz 目标类
+    * @return 加密字段信息列表
      */
     private List<CryptoFieldInfo> scanCryptoFields(Class<?> clazz) {
         List<CryptoFieldInfo> fields = new ArrayList<>();

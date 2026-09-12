@@ -19,12 +19,12 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
- * 模型分组控制器，提供分组的增删改查。
- *
- * <p>所有写接口均受 {@code @Permission("admin")} 保护。</p>
- *
- * @since 2026-08-03
- * @author CH
+* 模型分组控制器，提供分组的增删改查。
+*
+* <p>所有写接口均受 {@code @Permission("admin")} 保护。</p>
+*
+* @since 2026-08-03
+* @author CH
  */
 @RestController
 @RequestMapping("/v2/groups")
@@ -33,14 +33,14 @@ import java.util.List;
 public class AiGroupController {
 
     /**
-     * 分组服务
+    * 分组服务
      */
     private final AiGroupService groupService;
 
     /**
-     * 查询所有分组。
-     *
-     * @return 分组 DTO 列表
+    * 查询所有分组。
+    *
+    * @return 分组 DTO 列表
      */
     @Permission("admin")
     @Operation(summary = "查询所有分组")
@@ -50,10 +50,10 @@ public class AiGroupController {
     }
 
     /**
-     * 新建分组。
-     *
-     * @param group 分组 DTO
-     * @return 创建后的分组 DTO
+    * 新建分组。
+    *
+    * @param group 分组 DTO
+    * @return 创建后的分组 DTO
      */
     @Permission("admin")
     @Operation(summary = "新建分组")
@@ -63,12 +63,12 @@ public class AiGroupController {
     }
 
     /**
-     * 更新分组。
-     *
-     * @param groupId 分组主键
-     * @param group   分组 DTO
-     * @return 更新后的分组 DTO
-     * @param ID" 标识"
+    * 更新分组。
+    *
+    * @param groupId 分组主键
+    * @param group   分组 DTO
+    * @return 更新后的分组 DTO
+    * @param ID" 标识"
      */
     @Permission("admin")
     @Operation(summary = "更新分组")
@@ -79,12 +79,12 @@ public class AiGroupController {
     }
 
     /**
-     * 删除分组（逻辑删除）。
-     *
-     * @param groupId 分组主键
-     * @param ID" 标识"
-     * @param ID" 标识"
-     * @param ID" ID"
+    * 删除分组（逻辑删除）。
+    *
+    * @param groupId 分组主键
+    * @param ID" 标识"
+    * @param ID" 标识"
+    * @param ID" ID"
      */
     @Permission("admin")
     @Operation(summary = "删除分组")

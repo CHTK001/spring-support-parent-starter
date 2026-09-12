@@ -11,15 +11,15 @@ import reactor.core.publisher.Mono;
 import java.time.LocalDateTime;
 
 /**
-   * 智能体 主动上报采集 提供者（智能体）
- * <p>
-   * 目标主机上的 智能体 主动上报硬件/状态数据，服务端按 智能体钥匙 定位主机并回写。
- * 不主动发起连接，适用于无法从服务端直连（NAT / 防火墙）的主机。
- * 上报侧直接回写，响应式仅作统一封装。
- * </p>
- *
- * @author CH
- * @since 4.0.0.42
+* 智能体 主动上报采集 提供者（智能体）
+* <p>
+* 目标主机上的 智能体 主动上报硬件/状态数据，服务端按 智能体钥匙 定位主机并回写。
+* 不主动发起连接，适用于无法从服务端直连（NAT / 防火墙）的主机。
+* 上报侧直接回写，响应式仅作统一封装。
+* </p>
+*
+* @author CH
+* @since 4.0.0.42
  */
 @Slf4j
 @Component
@@ -27,8 +27,8 @@ import java.time.LocalDateTime;
 public class AgentHostCollectProvider implements HostCollectProvider {
 
     /** 
-      * 主机 映射器
-     **/
+    * 主机 映射器
+    *
     private final MsServerHostMapper hostMapper;
 
     @Override
@@ -42,10 +42,10 @@ public class AgentHostCollectProvider implements HostCollectProvider {
     }
 
     /**
-      * 同步回写 智能体 上报数据
-     *
-     * @param context 上下文
-     * @return 结果
+    * 同步回写 智能体 上报数据
+    *
+    * @param context 上下文
+    * @return 结果
      */
     private CollectOutcome doCollect(HostCollectContext context) {
         if (context == null || context.getHost() == null || context.getHost().getId() == null) {

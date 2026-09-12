@@ -5,13 +5,13 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 
 /**
-   * 任务日志收集器 (执行器 端)。
- *
- * <p>在 handler 执行期间通过 {@link #log(String)} 收集日志文本,
-   * 执行完成后由 {@link JobExecutor} 提取并随 {@link JobLogEvent} 上行到 调度器。</p>
- *
- * @since 4.0.0.42
- * @author CH
+* 任务日志收集器 (执行器 端)。
+*
+* <p>在 handler 执行期间通过 {@link #log(String)} 收集日志文本,
+* 执行完成后由 {@link JobExecutor} 提取并随 {@link JobLogEvent} 上行到 调度器。</p>
+*
+* @since 4.0.0.42
+* @author CH
  */
 public final class JobLogHelper {
 
@@ -28,9 +28,9 @@ public final class JobLogHelper {
     }
 
     /**
-     * 写入一行日志文本。
-     *
-     * @param msg 日志消息
+    * 写入一行日志文本。
+    *
+    * @param msg 日志消息
      */
     public static void log(String msg) {
         StringBuilder sb = LOG_BUFFER.get();
@@ -42,9 +42,9 @@ public final class JobLogHelper {
     }
 
     /**
-     * 获取并清空当前线程的日志缓冲区。
-     *
-     * @return 日志文本; 无日志时返回 空
+    * 获取并清空当前线程的日志缓冲区。
+    *
+    * @return 日志文本; 无日志时返回 空
      */
     public static String getAndClear() {
         StringBuilder sb = LOG_BUFFER.get();
@@ -57,7 +57,7 @@ public final class JobLogHelper {
     }
 
     /**
-     * 清空当前线程的日志缓冲区（异常回滚时调用）。
+    * 清空当前线程的日志缓冲区（异常回滚时调用）。
      */
     public static void clear() {
         LOG_BUFFER.remove();

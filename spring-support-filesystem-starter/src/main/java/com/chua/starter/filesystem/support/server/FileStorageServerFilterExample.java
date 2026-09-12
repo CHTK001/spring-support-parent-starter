@@ -24,27 +24,27 @@ import java.util.Map;
 import java.util.concurrent.CompletionStage;
 
 /**
-   * 文件storage服务端过滤器 使用示例：演示文件存储过滤器的典型用法。
- *
- * <p>覆盖过滤器创建、存储注册/注销、OPTIONS 预检、未注册 bucket 放行等场景。</p>
- *
- * @author CH
- * @since 4.0.0.42
+* 文件storage服务端过滤器 使用示例：演示文件存储过滤器的典型用法。
+*
+* <p>覆盖过滤器创建、存储注册/注销、OPTIONS 预检、未注册 bucket 放行等场景。</p>
+*
+* @author CH
+* @since 4.0.0.42
  */
 @Slf4j
 public class FileStorageServerFilterExample {
 
     /**
-     * 文件storage服务端过滤器example。
+    * 文件storage服务端过滤器example。
      */
     private FileStorageServerFilterExample() {
     }
 
     /**
-      * 运行示例自检：验证 文件storage服务端过滤器 基本功能。
-     *
-     * @param args 命令行参数（键=值 形式），当前未使用
-     * @return 全部场景通过返回 true
+    * 运行示例自检：验证 文件storage服务端过滤器 基本功能。
+    *
+    * @param args 命令行参数（键=值 形式），当前未使用
+    * @return 全部场景通过返回 true
      */
     public static boolean run(Map<String, String> args) {
         int pass = 0;
@@ -122,9 +122,9 @@ public class FileStorageServerFilterExample {
     }
 
     /**
-     * 入口方法：解析参数并执行自检。
-     *
-     * @param args 命令行参数（键=值 形式）
+    * 入口方法：解析参数并执行自检。
+    *
+    * @param args 命令行参数（键=值 形式）
      */
     public static void main(String[] args) {
         Map<String, String> parsed = com.chua.common.support.utils.CommandLine.parse(args).getOptions();
@@ -134,11 +134,11 @@ public class FileStorageServerFilterExample {
 
     // ==================== 测试用 Mock ====================
     /**
-     * mock响应类。
-     *
-     * @author CH
-     * @since 4.0.0
-     * @return 创建mockstorage的结果
+    * mock响应类。
+    *
+    * @author CH
+    * @since 4.0.0
+    * @return 创建mockstorage的结果
      */
 
     private static FileStorage createMockStorage() {

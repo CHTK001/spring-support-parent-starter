@@ -1,10 +1,10 @@
 package com.chua.starter.common.support.constant;
 
 /**
- * 常量
- *
- * @author CH
- * @since 4.0.0
+* 常量
+*
+* @author CH
+* @since 4.0.0
  */
 public final class Constant {
 
@@ -36,7 +36,7 @@ public final class Constant {
     public static final String BEAN = "BEAN"; // Bean
 
     /**
-     * 常量。
+    * 常量。
      */
     private Constant() {
     }

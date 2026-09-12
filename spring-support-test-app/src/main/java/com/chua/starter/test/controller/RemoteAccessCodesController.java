@@ -17,13 +17,13 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 接入码管理接口（远控管理台）。
- *
- * <p>接入码列表经 {@code GET /api/remote/access-codes} 读取、{@code POST} 保存，
-   * 持久化到本地文件 远程-access-编码.json。</p>
- *
- * @author CH
- * @since 4.0.0.42
+* 接入码管理接口（远控管理台）。
+*
+* <p>接入码列表经 {@code GET /api/remote/access-codes} 读取、{@code POST} 保存，
+* 持久化到本地文件 远程-access-编码.json。</p>
+*
+* @author CH
+* @since 4.0.0.42
  */
 @RestController
 @RequestMapping("/api/remote/access-codes")
@@ -35,9 +35,9 @@ public class RemoteAccessCodesController {
     private final ObjectMapper objectMapper = new ObjectMapper(); // 对象映射器
 
     /**
-     * 读取接入码列表。
-     *
-     * @return 接入码列表（无则空数组）
+    * 读取接入码列表。
+    *
+    * @return 接入码列表（无则空数组）
      */
     @GetMapping
     public List<Map<String, Object>> list() throws IOException {
@@ -48,10 +48,10 @@ public class RemoteAccessCodesController {
     }
 
     /**
-     * 保存接入码列表（持久化到本地文件）。
-     *
-     * @param codes 接入码列表
-     * @return 保存结果
+    * 保存接入码列表（持久化到本地文件）。
+    *
+    * @param codes 接入码列表
+    * @return 保存结果
      */
     @PostMapping
     public Map<String, Object> save(@RequestBody List<Map<String, Object>> codes) throws IOException {

@@ -12,13 +12,13 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 
 /**
- * AI 会话压缩上下文服务实现。
- *
- * <p>基于 MyBatis Plus 操作 {@code sys_ai_session_compression} 表，
- * 按会话维度保存压缩后的摘要上下文。</p>
- *
- * @since 4.0.0.42
- * @author CH
+* AI 会话压缩上下文服务实现。
+*
+* <p>基于 MyBatis Plus 操作 {@code sys_ai_session_compression} 表，
+* 按会话维度保存压缩后的摘要上下文。</p>
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Slf4j
 @Service
@@ -26,15 +26,15 @@ import java.time.LocalDateTime;
 public class SysAiSessionCompressionServiceImpl implements SysAiSessionCompressionService {
 
     /**
-      * 压缩上下文 映射器
+    * 压缩上下文 映射器
      */
     private final SysAiSessionCompressionMapper compressionMapper;
 
     /**
-      * 按会话 标识 查询压缩上下文。
-     *
-     * @param sessionId 会话 标识
-     * @return 压缩上下文实体，不存在时返回 {@code null}
+    * 按会话 标识 查询压缩上下文。
+    *
+    * @param sessionId 会话 标识
+    * @return 压缩上下文实体，不存在时返回 {@code null}
      */
     @Override
     public SysAiSessionCompression getBySessionId(Long sessionId) {
@@ -45,9 +45,9 @@ public class SysAiSessionCompressionServiceImpl implements SysAiSessionCompressi
     }
 
     /**
-     * 保存（新增或更新）会话的压缩上下文。
-     *
-     * @param compression 压缩上下文实体
+    * 保存（新增或更新）会话的压缩上下文。
+    *
+    * @param compression 压缩上下文实体
      */
     @Override
     public void saveOrUpdate(SysAiSessionCompression compression) {
@@ -73,9 +73,9 @@ public class SysAiSessionCompressionServiceImpl implements SysAiSessionCompressi
     }
 
     /**
-     * 删除会话的压缩上下文。
-     *
-     * @param sessionId 会话 标识
+    * 删除会话的压缩上下文。
+    *
+    * @param sessionId 会话 标识
      */
     @Override
     public void deleteBySessionId(Long sessionId) {

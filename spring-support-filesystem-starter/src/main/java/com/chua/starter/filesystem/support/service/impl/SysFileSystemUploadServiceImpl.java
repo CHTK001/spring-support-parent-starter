@@ -12,13 +12,13 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * 文件系统分片上传任务服务实现。
- *
- * <p>继承 MyBatis-Plus {@link ServiceImpl} 获取 Base CRUD，
- * 实现 {@link SysFileSystemUploadService} 中定义的分片上传特有业务逻辑。</p>
- *
- * @since 1.0
- * @author CH
+* 文件系统分片上传任务服务实现。
+*
+* <p>继承 MyBatis-Plus {@link ServiceImpl} 获取 Base CRUD，
+* 实现 {@link SysFileSystemUploadService} 中定义的分片上传特有业务逻辑。</p>
+*
+* @since 1.0
+* @author CH
  */
 @Service
 public class SysFileSystemUploadServiceImpl
@@ -26,38 +26,38 @@ public class SysFileSystemUploadServiceImpl
         implements SysFileSystemUploadService {
 
     /**
-     * 最大重试次数
+    * 最大重试次数
      */
     private static final int MAX_RETRY = 3;
 
     /**
-      * 系统默认操作人 标识
+    * 系统默认操作人 标识
      */
     private static final int SYSTEM_USER_ID = 0;
 
     /**
-     * 系统默认操作人名称
+    * 系统默认操作人名称
      */
     private static final String SYSTEM_USER_NAME = "system";
 
     /**
-     * 初始已上传分片数
+    * 初始已上传分片数
      */
     private static final int INITIAL_UPLOADED_CHUNKS = 0;
 
     @Override
     /**
-      * 创建任务
-     * @param uploadId uploadid
-     * @param fileName 文件名称
-     * @param originalName 原始名称
-     * @param fileSize 文件大小
-     * @param chunkSize chunk大小
-     * @param totalChunks totalchunks
-     * @param storageType storage类型
-     * @param bucket bucket
-     * @param key 钥匙
-     * @param contentType 内容类型
+    * 创建任务
+    * @param uploadId uploadid
+    * @param fileName 文件名称
+    * @param originalName 原始名称
+    * @param fileSize 文件大小
+    * @param chunkSize chunk大小
+    * @param totalChunks totalchunks
+    * @param storageType storage类型
+    * @param bucket bucket
+    * @param key 钥匙
+    * @param contentType 内容类型
      */
     public SysFileSystemUpload createTask(String uploadId, String fileName, String originalName,
                                           Long fileSize, Long chunkSize, Integer totalChunks,
@@ -86,8 +86,8 @@ public class SysFileSystemUploadServiceImpl
         task.setUpdateBy(SYSTEM_USER_ID);
         task.setUpdateName(SYSTEM_USER_NAME);
         /**
-         * 保存。
-         * @param task 任务
+        * 保存。
+        * @param task 任务
          */
         save(task);
         return task;

@@ -13,24 +13,24 @@ import java.io.IOException;
 import java.util.UUID;
 
 /**
- * 全链路追踪过滤器。
- *
- * <p>为每个进入的请求生成 traceId：优先循 {@code X-Trace-Id} 请求头，
-   * 缺失则生成 UUID；写入 MDC（钥匙 与 流 引擎 追踪标识 一致），并回写
- * 到响应头 {@code X-Trace-Id}，请求结束后清理 MDC，避免线程污染。</p>
- *
- * @since 4.0.0.42
- * @author CH
+* 全链路追踪过滤器。
+*
+* <p>为每个进入的请求生成 traceId：优先循 {@code X-Trace-Id} 请求头，
+* 缺失则生成 UUID；写入 MDC（钥匙 与 流 引擎 追踪标识 一致），并回写
+* 到响应头 {@code X-Trace-Id}，请求结束后清理 MDC，避免线程污染。</p>
+*
+* @since 4.0.0.42
+* @author CH
  */
 public class SpiderTraceFilter implements Filter {
 
     /**
-       * 追踪标识 请求头 / 响应头名称
+    * 追踪标识 请求头 / 响应头名称
      */
     private static final String TRACE_ID_HEADER = "X-Trace-Id";
 
     /**
-       * MDC 中 追踪标识 的 钥匙（与 流-启动 引擎使用的 钥匙 保持一致）
+    * MDC 中 追踪标识 的 钥匙（与 流-启动 引擎使用的 钥匙 保持一致）
      */
     private static final String TRACE_ID_MDC_KEY = "traceId";
 

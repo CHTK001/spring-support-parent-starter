@@ -15,10 +15,10 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * 错题库管理控制器
- *
- * @since 4.0.0.42
- * @author CH
+* 错题库管理控制器
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Slf4j
 @RestController
@@ -31,10 +31,10 @@ public class EduWrongQuestionController {
     private final IEduWrongQuestionService wrongService;
 
     /**
-     * 分页查询错题
-     *
-     * @param query 查询条件
-     * @return 分页结果
+    * 分页查询错题
+    *
+    * @param query 查询条件
+    * @return 分页结果
      */
     @Operation(summary = "分页查询错题")
     @GetMapping("/page")
@@ -43,10 +43,10 @@ public class EduWrongQuestionController {
     }
 
     /**
-     * 生成复习卷
-     *
-     * @param dto 复习卷配置
-     * @return 题目ID列表
+    * 生成复习卷
+    *
+    * @param dto 复习卷配置
+    * @return 题目ID列表
      */
     @Operation(summary = "生成复习卷")
     @PostMapping("/review")
@@ -55,11 +55,11 @@ public class EduWrongQuestionController {
     }
 
     /**
-     * 更新掌握度
-     *
-     * @param wrongId      错题记录标识
-     * @param masteryLevel 掌握度
-     * @return 是否成功
+    * 更新掌握度
+    *
+    * @param wrongId      错题记录标识
+    * @param masteryLevel 掌握度
+    * @return 是否成功
      */
     @Operation(summary = "更新掌握度")
     @PutMapping("/mastery")

@@ -24,10 +24,10 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * 软件管理接口
- *
- * @since 2026/7/25
- * @author CH
+* 软件管理接口
+*
+* @since 2026/7/25
+* @author CH
  */
 @Tag(name = "软件管理接口")
 @RestController
@@ -53,12 +53,12 @@ public class SoftSoftwareController {
     @PostMapping("/save")
     @Permission(value = "sys:soft:add", role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
     /**
-     * 保存
-     *
-     * @param @Validated(AddGroup.class @校验(添加群体.类
-     * @return 保存的结果
-     * @param @Validated(AddGroup.class @校验(添加群体.类
-     * @param @Validated(AddGroup.class @Validated(AddGroup.class
+    * 保存
+    *
+    * @param @Validated(AddGroup.class @校验(添加群体.类
+    * @return 保存的结果
+    * @param @Validated(AddGroup.class @校验(添加群体.类
+    * @param @Validated(AddGroup.class @Validated(AddGroup.class
      */
     public ReturnResult<SoftSoftware> save(@Validated(AddGroup.class) @RequestBody SoftSoftware software, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
@@ -71,12 +71,12 @@ public class SoftSoftwareController {
     @PutMapping("/update")
     @Permission(value = "sys:soft:update", role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
     /**
-     * 更新
-     *
-     * @param @Validated(UpdateGroup.class @校验(更新群体.类
-     * @return 更新的结果
-     * @param @Validated(UpdateGroup.class @校验(更新群体.类
-     * @param @Validated(UpdateGroup.class @Validated(UpdateGroup.class
+    * 更新
+    *
+    * @param @Validated(UpdateGroup.class @校验(更新群体.类
+    * @return 更新的结果
+    * @param @Validated(UpdateGroup.class @校验(更新群体.类
+    * @param @Validated(UpdateGroup.class @Validated(UpdateGroup.class
      */
     public ReturnResult<SoftSoftware> update(@Validated(UpdateGroup.class) @RequestBody SoftSoftware software, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
@@ -89,10 +89,10 @@ public class SoftSoftwareController {
     @DeleteMapping("/delete")
     @Permission(value = "sys:soft:delete", role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
     /**
-     * 删除
-     *
-     * @param softwareId softwareid
-     * @return 删除的结果
+    * 删除
+    *
+    * @param softwareId softwareid
+    * @return 删除的结果
      */
     public ReturnResult<Boolean> delete(String softwareId) {
         return softSoftwareService.deleteSoftware(softwareId);
@@ -102,10 +102,10 @@ public class SoftSoftwareController {
     @GetMapping("/detail")
     @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
     /**
-     * Detail
-     *
-     * @param softwareId softwareid
-     * @return detail的结果
+    * Detail
+    *
+    * @param softwareId softwareid
+    * @return detail的结果
      */
     public ReturnResult<SoftSoftware> detail(String softwareId) {
         return ReturnResult.ok(softSoftwareService.getById(softwareId));

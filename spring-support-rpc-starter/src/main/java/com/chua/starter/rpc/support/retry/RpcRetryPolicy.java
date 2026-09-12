@@ -5,44 +5,44 @@ import lombok.Data;
 import java.time.Duration;
 
 /**
- * RPC重试策略
- * <p>
- * 配置RPC调用失败时的重试行为
- * </p>
- *
- * @since 2025-03-20
- * @author CH
+* RPC重试策略
+* <p>
+* 配置RPC调用失败时的重试行为
+* </p>
+*
+* @since 2025-03-20
+* @author CH
  */
 @Data
 public class RpcRetryPolicy {
 
     /**
-     * 最大重试次数
+    * 最大重试次数
      */
     private int maxRetries = 3;
 
     /**
-     * 初始重试延迟
+    * 初始重试延迟
      */
     private Duration initialDelay = Duration.ofMillis(100);
 
     /**
-     * 最大重试延迟
+    * 最大重试延迟
      */
     private Duration maxDelay = Duration.ofSeconds(10);
 
     /**
-     * 延迟倍数（指数退避）
+    * 延迟倍数（指数退避）
      */
     private double multiplier = 2.0;
 
     /**
-     * 是否启用重试
+    * 是否启用重试
      */
     private boolean enabled = true;
 
     /**
-     * 可重试的异常类型
+    * 可重试的异常类型
      */
     private Class<? extends Throwable>[] retryableExceptions = new Class[]{
         java.net.SocketTimeoutException.class,
@@ -52,10 +52,10 @@ public class RpcRetryPolicy {
     };
 
     /**
-     * 计算重试延迟
-     *
-     * @param retryCount 当前重试次数（从0开始）
-     * @return 延迟时间
+    * 计算重试延迟
+    *
+    * @param retryCount 当前重试次数（从0开始）
+    * @return 延迟时间
      */
     public Duration calculateDelay(int retryCount) {
         if (retryCount <= 0) {
@@ -69,20 +69,20 @@ public class RpcRetryPolicy {
     }
 
     /**
-     * 是否应该重试
-     *
-     * @param retryCount 当前重试次数
-     * @return 是否应该重试
+    * 是否应该重试
+    *
+    * @param retryCount 当前重试次数
+    * @return 是否应该重试
      */
     public boolean shouldRetry(int retryCount) {
         return enabled && retryCount < maxRetries;
     }
 
     /**
-     * 是否为可重试异常
-     *
-     * @param throwable 异常
-     * @return 是否可重试
+    * 是否为可重试异常
+    *
+    * @param throwable 异常
+    * @return 是否可重试
      */
     public boolean isRetryableException(Throwable throwable) {
         if (!enabled || retryableExceptions == null) {
@@ -98,19 +98,19 @@ public class RpcRetryPolicy {
     }
 
     /**
-     * 创建默认重试策略
-     * @return 默认policy的结果
+    * 创建默认重试策略
+    * @return 默认policy的结果
      */
     public static RpcRetryPolicy defaultPolicy() {
         /**
-         * rpc重试policy。
+        * rpc重试policy。
          */
         return new RpcRetryPolicy();
     }
 
     /**
-     * 创建快速重试策略
-     * @return fast重试的结果
+    * 创建快速重试策略
+    * @return fast重试的结果
      */
     public static RpcRetryPolicy fastRetry() {
         RpcRetryPolicy policy = new RpcRetryPolicy();
@@ -122,8 +122,8 @@ public class RpcRetryPolicy {
     }
 
     /**
-     * 创建慢速重试策略
-     * @return slow重试的结果
+    * 创建慢速重试策略
+    * @return slow重试的结果
      */
     public static RpcRetryPolicy slowRetry() {
         RpcRetryPolicy policy = new RpcRetryPolicy();
@@ -135,8 +135,8 @@ public class RpcRetryPolicy {
     }
 
     /**
-     * 创建无重试策略
-     * @return no重试的结果
+    * 创建无重试策略
+    * @return no重试的结果
      */
     public static RpcRetryPolicy noRetry() {
         RpcRetryPolicy policy = new RpcRetryPolicy();

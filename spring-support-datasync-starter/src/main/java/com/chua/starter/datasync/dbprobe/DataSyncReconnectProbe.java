@@ -23,35 +23,35 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * 网络断线重连专项探针。
- *
- * <p>真实场景验证点（"突然掉线 / 短线重连"）：</p>
- * <ol>
- *   <li><b>正常连接</b>：{@link TcpSyncServer} 启动，{@link TcpSyncClient} 连接并注册成功；</li>
- *   <li><b>数据推送</b>：客户端订阅主题并通过网络发送数据，服务端 listener 收到消息；</li>
- *   <li><b>突然掉线</b>：服务端 {@code stop()}（模拟宕机/断网），客户端连接被断开；</li>
- *   <li><b>短线重连</b>：服务端重新 {@code start()}，客户端重新 {@code connect()}，
- *       恢复订阅与数据收发，验证链路自愈。</li>
- * </ol>
- *
- * <p>使用 {@link TcpSyncServer}（真实 TCP 长连接）+ {@link TcpSyncClient}，
-   * 覆盖 {@link DataSyncAgentServer} 网络模式所依赖的 同步服务端 链路。</p>
- *
- * @since 4.0.0.42
- * @author CH
+* 网络断线重连专项探针。
+*
+* <p>真实场景验证点（"突然掉线 / 短线重连"）：</p>
+* <ol>
+*   <li><b>正常连接</b>：{@link TcpSyncServer} 启动，{@link TcpSyncClient} 连接并注册成功；</li>
+*   <li><b>数据推送</b>：客户端订阅主题并通过网络发送数据，服务端 listener 收到消息；</li>
+*   <li><b>突然掉线</b>：服务端 {@code stop()}（模拟宕机/断网），客户端连接被断开；</li>
+*   <li><b>短线重连</b>：服务端重新 {@code start()}，客户端重新 {@code connect()}，
+*       恢复订阅与数据收发，验证链路自愈。</li>
+* </ol>
+*
+* <p>使用 {@link TcpSyncServer}（真实 TCP 长连接）+ {@link TcpSyncClient}，
+* 覆盖 {@link DataSyncAgentServer} 网络模式所依赖的 同步服务端 链路。</p>
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Slf4j
 public final class DataSyncReconnectProbe {
 
     /**
-      * 固定测试端口（避免与 ssh 2222 / Shell 6666 冲突）
+    * 固定测试端口（避免与 ssh 2222 / Shell 6666 冲突）
      */
     private static final int PORT = 28979;
 
     /**
-     * 程序入口。
-     *
-     * @param args 命令行参数
+    * 程序入口。
+    *
+    * @param args 命令行参数
      */
     public static void main(String[] args) throws Exception {
  // 先构造 数据同步服务端（本地 智能体服务端管理器，无 Spring）
@@ -108,8 +108,8 @@ public final class DataSyncReconnectProbe {
         log.info("[RECONNECT-PROBE] 步骤1: 启动 SyncServer 端口={}", PORT);
         syncServer.start();
         /**
-         * sleep。
-         * @param 1200 1200
+        * sleep。
+        * @param 1200 1200
          */
         sleep(1200);
 
@@ -148,8 +148,8 @@ public final class DataSyncReconnectProbe {
         client.send("sink:data:user-sink", "batch-1:张三,30");
         client.send("sink:data:user-sink", "batch-1:李四,25");
         /**
-         * sleep。
-         * @param 1200 1200
+        * sleep。
+        * @param 1200 1200
          */
         sleep(1200);
 
@@ -167,8 +167,8 @@ public final class DataSyncReconnectProbe {
             log.info("[RECONNECT-PROBE] 服务端停止异常(可忽略): {}", e.getMessage());
         }
         /**
-         * sleep。
-         * @param 1500 1500
+        * sleep。
+        * @param 1500 1500
          */
         sleep(1500);
 
@@ -185,8 +185,8 @@ public final class DataSyncReconnectProbe {
         log.info("[RECONNECT-PROBE] 步骤4: 服务端重新 start() + 客户端 disconnect+connect 短线重连");
         syncServer.start();
         /**
-         * sleep。
-         * @param 1500 1500
+        * sleep。
+        * @param 1500 1500
          */
         sleep(1500);
 
@@ -203,14 +203,14 @@ public final class DataSyncReconnectProbe {
         client.send("sink:data:user-sink", "batch-3:赵六,32");
         log.info("[RECONNECT-PROBE] 重连后发送数据成功, isConnected={}", client.isConnected());
         /**
-         * sleep。
-         * @param 1200 1200
+        * sleep。
+        * @param 1200 1200
          */
         sleep(1200);
         syncServer.publish("sink:data:user-sink", "server-push-after-reconnect");
         /**
-         * sleep。
-         * @param 1200 1200
+        * sleep。
+        * @param 1200 1200
          */
         sleep(1200);
 
@@ -240,9 +240,9 @@ public final class DataSyncReconnectProbe {
     }
 
     /**
-     * 简单休眠。
-     *
-     * @param millis 毫秒
+    * 简单休眠。
+    *
+    * @param millis 毫秒
      */
     private static void sleep(long millis) {
         try {

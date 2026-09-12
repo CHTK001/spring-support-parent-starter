@@ -17,12 +17,12 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 /**
- * 同步服务器，负责客户端连接管理、健康检查与消息分发。
- *
- * <p>通过 SPI 加载 {@link SyncMessageHandler} 处理同步消息，并监听客户端连接/断开事件。</p>
- *
- * @since 4.0.0.42
- * @author CH
+* 同步服务器，负责客户端连接管理、健康检查与消息分发。
+*
+* <p>通过 SPI 加载 {@link SyncMessageHandler} 处理同步消息，并监听客户端连接/断开事件。</p>
+*
+* @since 4.0.0.42
+* @author CH
  */
 public class SyncServer implements InitializingBean, DisposableBean {
 
@@ -53,26 +53,26 @@ public class SyncServer implements InitializingBean, DisposableBean {
     private final List<BiConsumer<String, ClientInfo>> disconnectListeners = new CopyOnWriteArrayList<>(); // 断开连接监听器
 
     /**
-      * 创建 同步服务端 实例
-     * @param syncProperties 同步属性
+    * 创建 同步服务端 实例
+    * @param syncProperties 同步属性
      */
     public SyncServer(SyncProperties syncProperties) {
         this.syncProperties = SyncProperties.copyOf(syncProperties);
     }
 
     /**
-     * 获取同步属性
-     *
-     * @return 获取同步属性的结果
+    * 获取同步属性
+    *
+    * @return 获取同步属性的结果
      */
     public SyncProperties getSyncProperties() {
         return syncProperties;
     }
 
     /**
-     * 获取Instances
-     *
-     * @return 获取instances的结果
+    * 获取Instances
+    *
+    * @return 获取instances的结果
      */
     public Map<String, SyncServerInstance> getInstances() {
         return instances;
@@ -86,7 +86,7 @@ public class SyncServer implements InitializingBean, DisposableBean {
             return;
         }
         /**
-         * 启动全部instances。
+        * 启动全部instances。
          */
         startAllInstances();
     }
@@ -103,27 +103,27 @@ public class SyncServer implements InitializingBean, DisposableBean {
 
             SyncServerInstance instance = new SyncServerInstance(config, syncProperties);
             /**
-             * 注册处理器转为instance。
-             * @param instance instance
-             * @param config 配置
+            * 注册处理器转为instance。
+            * @param instance instance
+            * @param config 配置
              */
             registerHandlersToInstance(instance, config);
 
             instance.addConnectListener((sessionId, clientInfo) -> {
                 allClientsInternal.put(sessionId, clientInfo);
                 /**
-                 * 通知连接监听器。
-                 * @param sessionId 会话标识
-                 * @param clientInfo 客户端信息
+                * 通知连接监听器。
+                * @param sessionId 会话标识
+                * @param clientInfo 客户端信息
                  */
                 notifyConnectListeners(sessionId, clientInfo);
             });
             instance.addDisconnectListener((sessionId, clientInfo) -> {
                 allClientsInternal.remove(sessionId);
                 /**
-                 * 通知断开连接监听器。
-                 * @param sessionId 会话标识
-                 * @param clientInfo 客户端信息
+                * 通知断开连接监听器。
+                * @param sessionId 会话标识
+                * @param clientInfo 客户端信息
                  */
                 notifyDisconnectListeners(sessionId, clientInfo);
             });
@@ -136,10 +136,10 @@ public class SyncServer implements InitializingBean, DisposableBean {
     }
 
     /**
-     * 注册处理器转为instance
-     *
-     * @param instance instance
-     * @param config 配置
+    * 注册处理器转为instance
+    *
+    * @param instance instance
+    * @param config 配置
      */
     private void registerHandlersToInstance(SyncServerInstance instance, SyncProperties.ServerInstance config) {
         Map<String, String> topics = new HashMap<>(syncProperties.getTopics());
@@ -156,10 +156,10 @@ public class SyncServer implements InitializingBean, DisposableBean {
     }
 
     /**
-     * 注册处理器
-     *
-     * @param topic topic
-     * @param handler 处理器
+    * 注册处理器
+    *
+    * @param topic topic
+    * @param handler 处理器
      */
     public void registerHandler(String topic, com.chua.common.support.network.sync.SyncMessageHandler handler) {
         if (topic == null || topic.isBlank() || handler == null) {
@@ -176,15 +176,15 @@ public class SyncServer implements InitializingBean, DisposableBean {
     }
 
     /**
-     * 注册主题处理器（业务 SPI 版本）。
-     * <p>
-     * 与客户端 {@link com.chua.starter.sync.support.client.SyncClient#registerHandler(String, com.chua.starter.sync.support.spi.SyncMessageHandler)}
-     * 暴露一致的处理器注册入口，内部将 SPI 处理器适配到底层会话分发，
-     * 并注入来源客户端标识供业务处理器反查会话上下文。
-     * </p>
-     *
-     * @param topic   主题
-     * @param handler 业务处理器
+    * 注册主题处理器（业务 SPI 版本）。
+    * <p>
+    * 与客户端 {@link com.chua.starter.sync.support.client.SyncClient#registerHandler(String, com.chua.starter.sync.support.spi.SyncMessageHandler)}
+    * 暴露一致的处理器注册入口，内部将 SPI 处理器适配到底层会话分发，
+    * 并注入来源客户端标识供业务处理器反查会话上下文。
+    * </p>
+    *
+    * @param topic   主题
+    * @param handler 业务处理器
      */
     public void registerHandler(String topic, com.chua.starter.sync.support.spi.SyncMessageHandler handler) {
         if (topic == null || topic.isBlank() || handler == null) {
@@ -203,36 +203,36 @@ public class SyncServer implements InitializingBean, DisposableBean {
             handler.handle(topic, sessionId, dataMap);
         };
         /**
-         * 注册处理器。
-         * @param topic topic
-         * @param adapter 适配器
+        * 注册处理器。
+        * @param topic topic
+        * @param adapter 适配器
          */
         registerHandler(topic, adapter);
     }
 
     /**
-     * 添加连接监听器
-     *
-     * @param listener 监听器
+    * 添加连接监听器
+    *
+    * @param listener 监听器
      */
     public void addConnectListener(BiConsumer<String, ClientInfo> listener) {
         connectListeners.add(listener);
     }
 
     /**
-     * 添加断开监听器
-     *
-     * @param listener 监听器
+    * 添加断开监听器
+    *
+    * @param listener 监听器
      */
     public void addDisconnectListener(BiConsumer<String, ClientInfo> listener) {
         disconnectListeners.add(listener);
     }
 
     /**
-     * 通知连接监听器
-     *
-     * @param sessionId 会话标识
-     * @param clientInfo 客户端信息
+    * 通知连接监听器
+    *
+    * @param sessionId 会话标识
+    * @param clientInfo 客户端信息
      */
     private void notifyConnectListeners(String sessionId, ClientInfo clientInfo) {
         for (BiConsumer<String, ClientInfo> listener : connectListeners) {
@@ -245,10 +245,10 @@ public class SyncServer implements InitializingBean, DisposableBean {
     }
 
     /**
-     * 通知断开监听器
-     *
-     * @param sessionId 会话标识
-     * @param clientInfo 客户端信息
+    * 通知断开监听器
+    *
+    * @param sessionId 会话标识
+    * @param clientInfo 客户端信息
      */
     private void notifyDisconnectListeners(String sessionId, ClientInfo clientInfo) {
         for (BiConsumer<String, ClientInfo> listener : disconnectListeners) {
@@ -261,11 +261,11 @@ public class SyncServer implements InitializingBean, DisposableBean {
     }
 
     /**
-     * 发送
-     *
-     * @param sessionId 会话标识
-     * @param topic topic
-     * @param data 数据
+    * 发送
+    *
+    * @param sessionId 会话标识
+    * @param topic topic
+    * @param data 数据
      */
     public void send(String sessionId, String topic, Object data) {
         for (SyncServerInstance instance : instances.values()) {
@@ -278,10 +278,10 @@ public class SyncServer implements InitializingBean, DisposableBean {
     }
 
     /**
-     * Broadcast
-     *
-     * @param topic topic
-     * @param data 数据
+    * Broadcast
+    *
+    * @param topic topic
+    * @param data 数据
      */
     public void broadcast(String topic, Object data) {
         for (SyncServerInstance instance : instances.values()) {
@@ -290,26 +290,26 @@ public class SyncServer implements InitializingBean, DisposableBean {
     }
 
     /**
-     * 发布
-     *
-     * @param topic topic
-     * @param data 数据
+    * 发布
+    *
+    * @param topic topic
+    * @param data 数据
      */
     public void publish(String topic, Object data) {
         /**
-         * broadcast。
-         * @param topic topic
-         * @param data 数据
+        * broadcast。
+        * @param topic topic
+        * @param data 数据
          */
         broadcast(topic, data);
     }
 
     /**
-     * Broadcast
-     *
-     * @param instanceName instance名称
-     * @param topic topic
-     * @param data 数据
+    * Broadcast
+    *
+    * @param instanceName instance名称
+    * @param topic topic
+    * @param data 数据
      */
     public void broadcast(String instanceName, String topic, Object data) {
         SyncServerInstance instance = instances.get(instanceName);
@@ -319,22 +319,22 @@ public class SyncServer implements InitializingBean, DisposableBean {
     }
 
     /**
-     * 发布
-     *
-     * @param host 主机
-     * @param port 端口
-     * @param topic topic
-     * @param data 数据
-     * @return 发布的结果
+    * 发布
+    *
+    * @param host 主机
+    * @param port 端口
+    * @param topic topic
+    * @param data 数据
+    * @return 发布的结果
      */
     public boolean publish(String host, int port, String topic, Object data) {
         String clientId = findClientId(host, port, null);
         if (clientId != null) {
             /**
-             * 发送。
-             * @param clientId 客户端标识
-             * @param topic topic
-             * @param data 数据
+            * 发送。
+            * @param clientId 客户端标识
+            * @param topic topic
+            * @param data 数据
              */
             send(clientId, topic, data);
             log.debug("[SyncServer] 向节点 {}:{} 发送消息, topic={}", host, port, topic);
@@ -345,12 +345,12 @@ public class SyncServer implements InitializingBean, DisposableBean {
     }
 
     /**
-     * 发布byapp名称
-     *
-     * @param appName app名称
-     * @param topic topic
-     * @param data 数据
-     * @return 发布byapp名称的结果
+    * 发布byapp名称
+    *
+    * @param appName app名称
+    * @param topic topic
+    * @param data 数据
+    * @return 发布byapp名称的结果
      */
     public int publishByAppName(String appName, String topic, Object data) {
         List<String> clientIds = findClientIdsByAppName(appName);
@@ -360,10 +360,10 @@ public class SyncServer implements InitializingBean, DisposableBean {
         }
         for (String clientId : clientIds) {
             /**
-             * 发送。
-             * @param clientId 客户端标识
-             * @param topic topic
-             * @param data 数据
+            * 发送。
+            * @param clientId 客户端标识
+            * @param topic topic
+            * @param data 数据
              */
             send(clientId, topic, data);
         }
@@ -372,23 +372,23 @@ public class SyncServer implements InitializingBean, DisposableBean {
     }
 
     /**
-     * 发布
-     *
-     * @param host 主机
-     * @param port 端口
-     * @param appName app名称
-     * @param topic topic
-     * @param data 数据
-     * @return 发布的结果
+    * 发布
+    *
+    * @param host 主机
+    * @param port 端口
+    * @param appName app名称
+    * @param topic topic
+    * @param data 数据
+    * @return 发布的结果
      */
     public boolean publish(String host, int port, String appName, String topic, Object data) {
         String clientId = findClientId(host, port, appName);
         if (clientId != null) {
             /**
-             * 发送。
-             * @param clientId 客户端标识
-             * @param topic topic
-             * @param data 数据
+            * 发送。
+            * @param clientId 客户端标识
+            * @param topic topic
+            * @param data 数据
              */
             send(clientId, topic, data);
             log.debug("[SyncServer] 向节点 {}:{}({}) 发送消息, topic={}", host, port, appName, topic);
@@ -399,40 +399,40 @@ public class SyncServer implements InitializingBean, DisposableBean {
     }
 
     /**
-     * 获取Instance
-     *
-     * @param name 名称
-     * @return 获取instance的结果
+    * 获取Instance
+    *
+    * @param name 名称
+    * @return 获取instance的结果
      */
     public SyncServerInstance getInstance(String name) {
         return instances.get(name);
     }
 
     /**
-     * 获取默认instance
-     *
-     * @return 获取默认instance的结果
+    * 获取默认instance
+    *
+    * @return 获取默认instance的结果
      */
     public SyncServerInstance getDefaultInstance() {
         return instances.get("default");
     }
 
     /**
-     * 获取Connection计算数量
-     *
-     * @return 获取connection数量的结果
+    * 获取Connection计算数量
+    *
+    * @return 获取connection数量的结果
      */
     public int getConnectionCount() {
         return instances.values().stream().mapToInt(SyncServerInstance::getConnectionCount).sum();
     }
 
     /**
-      * 查找客户端标识
-     *
-     * @param host 主机
-     * @param port 端口
-     * @param appName app名称
-     * @return find客户端id的结果
+    * 查找客户端标识
+    *
+    * @param host 主机
+    * @param port 端口
+    * @param appName app名称
+    * @return find客户端id的结果
      */
     public String findClientId(String host, int port, String appName) {
         for (Map.Entry<String, ClientInfo> entry : allClientsInternal.entrySet()) {
@@ -452,10 +452,10 @@ public class SyncServer implements InitializingBean, DisposableBean {
     }
 
     /**
-     * 查找客户端标识byapp名称
-     *
-     * @param appName app名称
-     * @return find客户端标识byapp名称的结果
+    * 查找客户端标识byapp名称
+    *
+    * @param appName app名称
+    * @return find客户端标识byapp名称的结果
      */
     public List<String> findClientIdsByAppName(String appName) {
         List<String> result = new ArrayList<>();
@@ -468,10 +468,10 @@ public class SyncServer implements InitializingBean, DisposableBean {
     }
 
     /**
-     * 查找客户端标识by主机
-     *
-     * @param host 主机
-     * @return find客户端标识by主机的结果
+    * 查找客户端标识by主机
+    *
+    * @param host 主机
+    * @return find客户端标识by主机的结果
      */
     public List<String> findClientIdsByHost(String host) {
         List<String> result = new ArrayList<>();
@@ -484,11 +484,11 @@ public class SyncServer implements InitializingBean, DisposableBean {
     }
 
     /**
-     * 查找客户端标识bymetadata
-     *
-     * @param metadataKey metadata钥匙
-     * @param metadataValue metadata价值观
-     * @return find客户端标识bymetadata的结果
+    * 查找客户端标识bymetadata
+    *
+    * @param metadataKey metadata钥匙
+    * @param metadataValue metadata价值观
+    * @return find客户端标识bymetadata的结果
      */
     public List<String> findClientIdsByMetadata(String metadataKey, Object metadataValue) {
         return findClientIds(clientInfo -> {
@@ -501,10 +501,10 @@ public class SyncServer implements InitializingBean, DisposableBean {
     }
 
     /**
-     * 查找客户端标识
-     *
-     * @param filter 过滤器
-     * @return find客户端标识的结果
+    * 查找客户端标识
+    *
+    * @param filter 过滤器
+    * @return find客户端标识的结果
      */
     public List<String> findClientIds(Predicate<ClientInfo> filter) {
         if (filter == null) {
@@ -522,13 +522,13 @@ public class SyncServer implements InitializingBean, DisposableBean {
     }
 
     /**
-     * 发布bymetadata
-     *
-     * @param metadataKey metadata钥匙
-     * @param metadataValue metadata价值观
-     * @param topic topic
-     * @param data 数据
-     * @return 发布bymetadata的结果
+    * 发布bymetadata
+    *
+    * @param metadataKey metadata钥匙
+    * @param metadataValue metadata价值观
+    * @param topic topic
+    * @param data 数据
+    * @return 发布bymetadata的结果
      */
     public int publishByMetadata(String metadataKey, Object metadataValue, String topic, Object data) {
         return publishToClients(clientInfo -> {
@@ -541,12 +541,12 @@ public class SyncServer implements InitializingBean, DisposableBean {
     }
 
     /**
-     * 发布转为客户端
-     *
-     * @param filter 过滤器
-     * @param topic topic
-     * @param data 数据
-     * @return 发布转为客户端的结果
+    * 发布转为客户端
+    *
+    * @param filter 过滤器
+    * @param topic topic
+    * @param data 数据
+    * @return 发布转为客户端的结果
      */
     public int publishToClients(Predicate<ClientInfo> filter, String topic, Object data) {
         List<String> clientIds = findClientIds(filter);
@@ -556,10 +556,10 @@ public class SyncServer implements InitializingBean, DisposableBean {
 
         for (String clientId : clientIds) {
             /**
-             * 发送。
-             * @param clientId 客户端标识
-             * @param topic topic
-             * @param data 数据
+            * 发送。
+            * @param clientId 客户端标识
+            * @param topic topic
+            * @param data 数据
              */
             send(clientId, topic, data);
         }
@@ -567,11 +567,11 @@ public class SyncServer implements InitializingBean, DisposableBean {
     }
 
     /**
-     * 匹配价值观
-     *
-     * @param actual actual
-     * @param expected 期望
-     * @return 匹配价值观的结果
+    * 匹配价值观
+    *
+    * @param actual actual
+    * @param expected 期望
+    * @return 匹配价值观的结果
      */
     private boolean matchesValue(Object actual, Object expected) {
         if (Objects.equals(actual, expected)) {
@@ -584,9 +584,9 @@ public class SyncServer implements InitializingBean, DisposableBean {
     }
 
     /**
-     * 获取连接会话
-     *
-     * @return 获取连接会话的结果
+    * 获取连接会话
+    *
+    * @return 获取连接会话的结果
      */
     public Set<String> getConnectedSessions() {
         Set<String> all = new HashSet<>();
@@ -597,9 +597,9 @@ public class SyncServer implements InitializingBean, DisposableBean {
     }
 
     /**
-     * 获取全部客户端
-     *
-     * @return 获取全部客户端的结果
+    * 获取全部客户端
+    *
+    * @return 获取全部客户端的结果
      */
     public Map<String, ClientInfo> getAllClients() {
         if (allClientsInternal.isEmpty()) {
@@ -623,9 +623,9 @@ public class SyncServer implements InitializingBean, DisposableBean {
     }
 
     /**
-     * 获取全部客户端raw
-     *
-     * @return 获取全部客户端raw的结果
+    * 获取全部客户端raw
+    *
+    * @return 获取全部客户端raw的结果
      */
     public Map<String, ClientInfo> getAllClientsRaw() {
         return new HashMap<>(allClientsInternal);

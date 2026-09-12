@@ -29,10 +29,10 @@ import static com.chua.starter.common.support.constant.CacheConstant.CACHE_MANAG
 import static com.chua.starter.common.support.constant.CacheConstant.REDIS_CACHE_ALWAYS;
 
 /**
- * 获取选项
- *
- * @author CH
- * @since 4.0.0
+* 获取选项
+*
+* @author CH
+* @since 4.0.0
  */
 @Slf4j
 @RestController
@@ -41,10 +41,10 @@ import static com.chua.starter.common.support.constant.CacheConstant.REDIS_CACHE
 @Tag(name = "选项")
 public class OptionalProvider {
     /**
-     * 构造函数
-     *
-     * @param apiProperties api属性
-     * @param beanFactory Bean工厂
+    * 构造函数
+    *
+    * @param apiProperties api属性
+    * @param beanFactory Bean工厂
      */
     public OptionalProvider(ApiProperties apiProperties, BeanFactory beanFactory) {
         this.apiProperties = apiProperties;
@@ -55,12 +55,12 @@ public class OptionalProvider {
     private final ApiProperties apiProperties; // api属性
     private final BeanFactory beanFactory; // Bean工厂
     /**
-     * 获取选项
-     *
-     * @param type 类型
-     * @return 获取选项
-     * @param =false =false
-     * @param =false =false
+    * 获取选项
+    *
+    * @param type 类型
+    * @return 获取选项
+    * @param =false =false
+    * @param =false =false
      */
     @Operation(summary = "获取已经加载选项")
     @GetMapping("objects/get")
@@ -99,10 +99,10 @@ public class OptionalProvider {
     }
 
     /**
-     * 获取选项
-     *
-     * @param type 类型
-     * @return 获取选项
+    * 获取选项
+    *
+    * @param type 类型
+    * @return 获取选项
      */
     private String[] getTypes(String type) {
         ApiProperties.SpiConfig spi = apiProperties.getSpi();
@@ -120,10 +120,10 @@ public class OptionalProvider {
     }
 
     /**
-     * 获取选项
-     *
-     * @param type 类型
-     * @return 获取选项
+    * 获取选项
+    *
+    * @param type 类型
+    * @return 获取选项
      */
     private String getType(String type) {
         ApiProperties.SpiConfig spi = apiProperties.getSpi();
@@ -134,12 +134,12 @@ public class OptionalProvider {
     }
 
     /**
-     * 获取选项
-     *
-     * @param type 类型
-     * @return 获取选项
-     * @param =false =false
-     * @param =false =false
+    * 获取选项
+    *
+    * @param type 类型
+    * @return 获取选项
+    * @param =false =false
+    * @param =false =false
      */
     @Operation(summary = "获取选项")
     @GetMapping("get")
@@ -163,12 +163,12 @@ public class OptionalProvider {
         return ReturnResult.success(options);
     }
     /**
-     * 获取选项
-     *
-     * @param type 类型
-     * @return 获取选项
-     * @param =false =false
-     * @param =false =false
+    * 获取选项
+    *
+    * @param type 类型
+    * @return 获取选项
+    * @param =false =false
+    * @param =false =false
      */
     @Operation(summary = "获取选项")
     @GetMapping("list")
@@ -201,10 +201,10 @@ public class OptionalProvider {
     }
 
     /**
-     * 把 服务提供者.期权() 的 列表<?> 安全转换为 列表<SpiOption>（元素实际均为 spi期权）
-     *
-     * @param raw raw
-     * @return 转为spi期权的结果
+    * 把 服务提供者.期权() 的 列表<?> 安全转换为 列表<SpiOption>（元素实际均为 spi期权）
+    *
+    * @param raw raw
+    * @return 转为spi期权的结果
      */
     @SuppressWarnings("unchecked")
     private static List<SpiOption> toSpiOptions(List<?> raw) {

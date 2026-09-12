@@ -16,10 +16,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 /**
-   * 监控网关 服务 实现
- *
- * @since 2026/8/4
- * @author CH
+* 监控网关 服务 实现
+*
+* @since 2026/8/4
+* @author CH
  */
 @Slf4j
 @Service
@@ -34,9 +34,9 @@ public class MonitorGatewayServiceImpl implements MonitorGatewayService {
     @Transactional(rollbackFor = Exception.class)
     @CacheEvict(allEntries = true, cacheNames = "monitorGateway")
     /**
-     * 创建。
-     * @param entity 实体
-     * @return 创建的结果
+    * 创建。
+    * @param entity 实体
+    * @return 创建的结果
      */
     public ReturnResult<MsMonitorGateway> create(MsMonitorGateway entity) {
         try {
@@ -61,9 +61,9 @@ public class MonitorGatewayServiceImpl implements MonitorGatewayService {
     @Transactional(rollbackFor = Exception.class)
     @CacheEvict(allEntries = true, cacheNames = "monitorGateway")
     /**
-     * 更新。
-     * @param entity 实体
-     * @return 更新的结果
+    * 更新。
+    * @param entity 实体
+    * @return 更新的结果
      */
     public ReturnResult<MsMonitorGateway> update(MsMonitorGateway entity) {
         try {
@@ -79,9 +79,9 @@ public class MonitorGatewayServiceImpl implements MonitorGatewayService {
     @Transactional(rollbackFor = Exception.class)
     @CacheEvict(allEntries = true, cacheNames = "monitorGateway")
     /**
-     * 删除。
-     * @param id 标识
-     * @return 删除的结果
+    * 删除。
+    * @param id 标识
+    * @return 删除的结果
      */
     public ReturnResult<Void> delete(Long id) {
         try {
@@ -96,9 +96,9 @@ public class MonitorGatewayServiceImpl implements MonitorGatewayService {
     @Override
     @Cacheable(cacheNames = "monitorGateway", key = "'monitor.gateway:monitor:' + #monitorId")
     /**
-     * 列表by监控。
-     * @param monitorId 监控标识
-     * @return 列表by监控的结果
+    * 列表by监控。
+    * @param monitorId 监控标识
+    * @return 列表by监控的结果
      */
     public ReturnResult<List<MsMonitorGateway>> listByMonitor(Long monitorId) {
         try {

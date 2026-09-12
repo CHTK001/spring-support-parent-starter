@@ -13,10 +13,10 @@ import java.util.List;
 import java.util.Map;
 
 /**
-   * 免费代理（业务——代理表 ms_代理）：
- * 获取（抓取→清空→录入——较慢）· 列表（读表——快）· 当前代理（自动——无需业务指定）
- * @author CH
- * @since 4.0.0
+* 免费代理（业务——代理表 ms_代理）：
+* 获取（抓取→清空→录入——较慢）· 列表（读表——快）· 当前代理（自动——无需业务指定）
+* @author CH
+* @since 4.0.0
  */
 @RestController
 @RequestMapping(ServerConstants.API_PREFIX + "/proxy")
@@ -26,9 +26,9 @@ public class ProxyController {
     private final ProxyService proxyService; // 代理服务
 
     /**
-     * 获取免费代理（抓取→清空→录入——较慢——前端加载等待动画）
-     *
-     * @return free的结果
+    * 获取免费代理（抓取→清空→录入——较慢——前端加载等待动画）
+    *
+    * @return free的结果
      */
     @GetMapping("/free")
     public ReturnResult<List<MsProxy>> free() {
@@ -36,9 +36,9 @@ public class ProxyController {
     }
 
     /**
-     * 免费代理列表（从数据表读取——快）
-     *
-     * @return 列表的结果
+    * 免费代理列表（从数据表读取——快）
+    *
+    * @return 列表的结果
      */
     @GetMapping("/list")
     public ReturnResult<List<MsProxy>> list() {
@@ -46,9 +46,9 @@ public class ProxyController {
     }
 
     /**
-     * 当前代理（自动——表内第一个——业务无需手动指定）
-     *
-     * @return 当前的结果
+    * 当前代理（自动——表内第一个——业务无需手动指定）
+    *
+    * @return 当前的结果
      */
     @GetMapping("/current")
     public ReturnResult<Map<String, String>> current() {

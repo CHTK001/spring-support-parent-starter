@@ -8,13 +8,13 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 消息去重过滤器
- * <p>
-   * 基于消息标识进行去重，防止重复消息处理
- * </p>
- *
- * @since 2025-03-20
- * @author CH
+* 消息去重过滤器
+* <p>
+* 基于消息标识进行去重，防止重复消息处理
+* </p>
+*
+* @since 2025-03-20
+* @author CH
  */
 @Slf4j
 @Component
@@ -50,8 +50,8 @@ public class DuplicateMessageFilter implements MessageFilter {
 
         // 清理过期记录
         /**
-          * cleanupexpiredrecords。
-         * @param now now
+        * cleanupexpiredrecords。
+        * @param now now
          */
         cleanupExpiredRecords(now);
 
@@ -59,8 +59,8 @@ public class DuplicateMessageFilter implements MessageFilter {
     }
 
     /**
-     * 清理过期记录
-     * @param now now
+    * 清理过期记录
+    * @param now now
      */
     private void cleanupExpiredRecords(long now) {
         if (processedMessages.size() > 10000) {
@@ -70,7 +70,7 @@ public class DuplicateMessageFilter implements MessageFilter {
     }
 
     /**
-     * 清空所有记录
+    * 清空所有记录
      */
     public void clear() {
         processedMessages.clear();

@@ -24,21 +24,21 @@ import java.util.Map;
 import java.util.Set;
 
 /**
-   * 服务器 HTTP 采集 提供者
- * <p>
- * 请求目标服务器暴露的 HTTP 接口(actuator/exporter 等),
- * 支持 JSON 响应按指标名取值, 原始文本返回可给终端/解析规则二次解析。
- * </p>
- *
- * @since 2026/8/4
- * @author CH
+* 服务器 HTTP 采集 提供者
+* <p>
+* 请求目标服务器暴露的 HTTP 接口(actuator/exporter 等),
+* 支持 JSON 响应按指标名取值, 原始文本返回可给终端/解析规则二次解析。
+* </p>
+*
+* @since 2026/8/4
+* @author CH
  */
 @Slf4j
 @Component
 public class ServerHttpProvider implements MetricProvider {
 
     /**
-     * 默认超时(毫秒)
+    * 默认超时(毫秒)
      */
     private static final int DEFAULT_TIMEOUT_MS = 5_000;
 
@@ -62,10 +62,10 @@ public class ServerHttpProvider implements MetricProvider {
     }
 
     /**
-     * 同步执行 HTTP 请求
-     *
-     * @param context 采集上下文
-     * @return 采集结果
+    * 同步执行 HTTP 请求
+    *
+    * @param context 采集上下文
+    * @return 采集结果
      */
 
     private CollectResult doCollect(CollectContext context) {
@@ -121,9 +121,9 @@ public class ServerHttpProvider implements MetricProvider {
             // JSON 响应自动取值
             if (isJson(responseBody)) {
                 /**
-                 * 解析json字段。
-                 * @param responseBody 响应主体
-                 * @param result 结果
+                * 解析json字段。
+                * @param responseBody 响应主体
+                * @param result 结果
                  */
                 parseJsonFields(responseBody, result);
             }
@@ -139,10 +139,10 @@ public class ServerHttpProvider implements MetricProvider {
     }
 
     /**
-     * 解析 JSON 响应中的数值字段为指标点
-     *
-     * @param json   JSON 字符串
-     * @param result 采集结果
+    * 解析 JSON 响应中的数值字段为指标点
+    *
+    * @param json   JSON 字符串
+    * @param result 采集结果
      */
     private void parseJsonFields(String json, CollectResult result) {
         JsonObject obj = Json.getJsonObject(json);
@@ -160,10 +160,10 @@ public class ServerHttpProvider implements MetricProvider {
     }
 
     /**
-     * 判断响应是否为 JSON
-     *
-     * @param body 响应体
-     * @return true 表示为 JSON
+    * 判断响应是否为 JSON
+    *
+    * @param body 响应体
+    * @return true 表示为 JSON
      */
     private boolean isJson(String body) {
         if (body == null) {
@@ -175,20 +175,20 @@ public class ServerHttpProvider implements MetricProvider {
     }
 
     /**
-     * 对象转字符串
-     *
-     * @param o 对象
-     * @return 字符串
+    * 对象转字符串
+    *
+    * @param o 对象
+    * @return 字符串
      */
     private static String str(Object o) {
         return o == null ? null : String.valueOf(o);
     }
 
     /**
-     * 对象转 Integer
-     *
-     * @param o 对象
-     * @return Integer, 转换失败返回 空
+    * 对象转 Integer
+    *
+    * @param o 对象
+    * @return Integer, 转换失败返回 空
      */
     private static Integer intOrNull(Object o) {
         if (o == null) {

@@ -15,31 +15,31 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 进程内 {@link SyncServer} 默认实现。
- *
- * <p>当 SPI 未发现 SyncServer 扩展时 (常见于精简部署或单元测试),
- * {@link com.chua.starter.job.support.JobAutoConfiguration} 装配本 bean,
-   * 让 调度器 模式不需要真实网络也能工作。</p>
- *
- * <p>所有 publish / send 都进入内存列表,可通过 {@link #getPublished} 断言。</p>
- *
- * @since 4.0.0.42
- * @author CH
+* 进程内 {@link SyncServer} 默认实现。
+*
+* <p>当 SPI 未发现 SyncServer 扩展时 (常见于精简部署或单元测试),
+* {@link com.chua.starter.job.support.JobAutoConfiguration} 装配本 bean,
+* 让 调度器 模式不需要真实网络也能工作。</p>
+*
+* <p>所有 publish / send 都进入内存列表,可通过 {@link #getPublished} 断言。</p>
+*
+* @since 4.0.0.42
+* @author CH
  */
 public class InMemorySyncServer implements SyncServer {
 
     /**
-     * 已发布的 topic 列表
+    * 已发布的 topic 列表
      */
     private final Map<String, List<Object>> published = new HashMap<>();
 
     /**
-      * 监听器 列表
+    * 监听器 列表
      */
     private final List<SyncServerListener> listeners = new ArrayList<>();
 
     /**
-     * 客户端列表
+    * 客户端列表
      */
     private final List<String> clients = new ArrayList<>();
 
@@ -172,19 +172,19 @@ public class InMemorySyncServer implements SyncServer {
     }
 
     /**
-     * 读取已发布的消息。
-     *
-     * @param topic 主题
-     * @return 消息列表
+    * 读取已发布的消息。
+    *
+    * @param topic 主题
+    * @return 消息列表
      */
     public List<Object> getPublished(String topic) {
         return Collections.unmodifiableList(published.getOrDefault(topic, List.of()));
     }
 
     /**
-     * 模拟一个客户端连入。
-     *
-     * @param clientId 客户端标识
+    * 模拟一个客户端连入。
+    *
+    * @param clientId 客户端标识
      */
     public void addClient(String clientId) {
         clients.add(clientId);

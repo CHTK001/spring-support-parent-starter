@@ -20,15 +20,15 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
 import javax.sql.DataSource;
 
 /**
- * 数据源文档预览自动配置。
- * <p>
- * 所有 Bean 都是无条件注册（依赖检测在构造函数内做），
- * 避免 Spring Boot 的 {@code @ConditionalOnBean} 在同类配置中求值失败的问题。
- * 顶级 {@code @ConditionalOnClass} 保证核心类存在；{@code @ConditionalOnWebApplication}
- * 保证仅 Web 上下文生效。
- * </p>
- *
- * @since 2026/8/5
+* 数据源文档预览自动配置。
+* <p>
+* 所有 Bean 都是无条件注册（依赖检测在构造函数内做），
+* 避免 Spring Boot 的 {@code @ConditionalOnBean} 在同类配置中求值失败的问题。
+* 顶级 {@code @ConditionalOnClass} 保证核心类存在；{@code @ConditionalOnWebApplication}
+* 保证仅 Web 上下文生效。
+* </p>
+*
+* @since 2026/8/5
  */
 @Slf4j
 @Configuration
@@ -40,16 +40,16 @@ import javax.sql.DataSource;
 @ConditionalOnProperty(prefix = DocumentProperties.PRE, name = "enable", havingValue = "true", matchIfMissing = true)
 @EnableConfigurationProperties(DocumentProperties.class)
 /**
- * 文档auto配置类。
- *
- * @author CH
- * @since 4.0.0
+* 文档auto配置类。
+*
+* @author CH
+* @since 4.0.0
  */
 public class DocumentAutoConfiguration {
 
     /**
-     * 文档服务（解析 + 缓存）。
-     * <p>若 classpath 缺 DocumentParser SPI 或 DataSource 不可用，返回 null</p>
+    * 文档服务（解析 + 缓存）。
+    * <p>若 classpath 缺 DocumentParser SPI 或 DataSource 不可用，返回 null</p>
      */
     @Bean
     public DataSourceDocumentService dataSourceDocumentService(
@@ -60,16 +60,16 @@ public class DocumentAutoConfiguration {
             return null;
         }
         /**
-         * 数据源文档服务。
-         * @param ds ds
-         * @param properties 属性
-         * @return 数据源文档服务的结果
+        * 数据源文档服务。
+        * @param ds ds
+        * @param properties 属性
+        * @return 数据源文档服务的结果
          */
         return new DataSourceDocumentService(ds, properties);
     }
 
     /**
-     * 数据库关系图谱服务。
+    * 数据库关系图谱服务。
      */
     @Bean
     public DatabaseGraphService databaseGraphService(
@@ -80,16 +80,16 @@ public class DocumentAutoConfiguration {
             return null;
         }
         /**
-         * database图计算服务。
-         * @param ds ds
-         * @param properties 属性
-         * @return database图计算服务的结果
+        * database图计算服务。
+        * @param ds ds
+        * @param properties 属性
+        * @return database图计算服务的结果
          */
         return new DatabaseGraphService(ds, properties);
     }
 
     /**
-     * 文档控制器（图谱服务可选）。
+    * 文档控制器（图谱服务可选）。
      */
     @Bean
     public DataSourceDocumentController dataSourceDocumentController(
@@ -103,17 +103,17 @@ public class DocumentAutoConfiguration {
         }
         DatabaseGraphService graphService = graphServiceProvider.getIfAvailable();
         /**
-         * 数据源文档控制器。
-         * @param service 服务
-         * @param properties 属性
-         * @param graphService 图计算服务
-         * @return 数据源文档控制器的结果
+        * 数据源文档控制器。
+        * @param service 服务
+        * @param properties 属性
+        * @param graphService 图计算服务
+        * @return 数据源文档控制器的结果
          */
         return new DataSourceDocumentController(service, properties, graphService);
     }
 
     /**
-      * 注册器（把 控制器 方法挂到 Spring MVC）。
+    * 注册器（把 控制器 方法挂到 Spring MVC）。
      */
     @Bean
     public DataSourceDocumentHandler dataSourceDocumentHandler(
@@ -124,18 +124,18 @@ public class DocumentAutoConfiguration {
             return null;
         }
         /**
-         * 数据源文档处理器。
-         * @param controller 控制器
-         * @param properties.getBasePath( 属性.获取基础路径(
-         * @return 数据源文档处理器的结果
+        * 数据源文档处理器。
+        * @param controller 控制器
+        * @param properties.getBasePath( 属性.获取基础路径(
+        * @return 数据源文档处理器的结果
          */
         return new DataSourceDocumentHandler(controller, properties.getBasePath());
     }
 
     /**
- * * 触发路径注册
-     * @param context 上下文
-     * @return 文档路径registrar的结果
+    * * 触发路径注册
+    * @param context 上下文
+    * @return 文档路径registrar的结果
  */
 @Bean
 public SmartInitializingSingleton documentPathRegistrar(ApplicationContext context) {

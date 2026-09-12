@@ -7,14 +7,14 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 资产聚合详情视图。
- *
- * <p>把一个资产（主机台账）与其在监控侧关联的资源聚合为一个视图：
- * 基础信息 + 在线/采集/远控通道状态 + 挂在该资产 IP 上的服务节点 + 协议端点清单。
- * 用于监控台「资产详情 / 链路总览」，避免分别查询台账与节点再手工拼装。</p>
- *
- * @author CH
- * @since 4.0.0.42
+* 资产聚合详情视图。
+*
+* <p>把一个资产（主机台账）与其在监控侧关联的资源聚合为一个视图：
+* 基础信息 + 在线/采集/远控通道状态 + 挂在该资产 IP 上的服务节点 + 协议端点清单。
+* 用于监控台「资产详情 / 链路总览」，避免分别查询台账与节点再手工拼装。</p>
+*
+* @author CH
+* @since 4.0.0.42
  */
 @Data
 @Accessors(chain = true)
@@ -57,9 +57,9 @@ public class AssetDetailView {
     private List<MonitorItem> monitors;
 
     /**
-     * 单个服务节点 / 通道摘要。
-     * @author CH
-     * @since 4.0.0
+    * 单个服务节点 / 通道摘要。
+    * @author CH
+    * @since 4.0.0
      */
     @Data
     @Accessors(chain = true)
@@ -81,9 +81,9 @@ public class AssetDetailView {
     }
 
     /**
-     * 资产关联的监控项及告警摘要。
-     * @author CH
-     * @since 4.0.0
+    * 资产关联的监控项及告警摘要。
+    * @author CH
+    * @since 4.0.0
      */
     @Data
     @Accessors(chain = true)

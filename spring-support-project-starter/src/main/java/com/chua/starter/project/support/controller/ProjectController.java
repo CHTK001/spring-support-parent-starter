@@ -25,13 +25,13 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 发布项目管理接口
- * <p>
- * 提供部署项目台账 CRUD、可选服务器查询与部署/升级/启停操作。
- * </p>
- *
- * @author CH
- * @since 4.0.0.42
+* 发布项目管理接口
+* <p>
+* 提供部署项目台账 CRUD、可选服务器查询与部署/升级/启停操作。
+* </p>
+*
+* @author CH
+* @since 4.0.0.42
  */
 @Tag(name = "发布项目管理", description = "部署项目台账、部署/升级/启停与部署日志")
 @RestController
@@ -46,10 +46,10 @@ public class ProjectController {
     private final DeployService deployService;
 
     /**
-     * 新增项目
-     *
-     * @param project 项目
-     * @return 结果
+    * 新增项目
+    *
+    * @param project 项目
+    * @return 结果
      */
     @Operation(summary = "新增项目")
     @PostMapping
@@ -58,11 +58,11 @@ public class ProjectController {
     }
 
     /**
-     * 更新项目
-     *
-     * @param id      主键
-     * @param project 项目
-     * @return 结果
+    * 更新项目
+    *
+    * @param id      主键
+    * @param project 项目
+    * @return 结果
      */
     @Operation(summary = "更新项目")
     @PutMapping("/{id}")
@@ -71,10 +71,10 @@ public class ProjectController {
     }
 
     /**
-     * 删除项目
-     *
-     * @param id 主键
-     * @return 结果
+    * 删除项目
+    *
+    * @param id 主键
+    * @return 结果
      */
     @Operation(summary = "删除项目")
     @DeleteMapping("/{id}")
@@ -83,10 +83,10 @@ public class ProjectController {
     }
 
     /**
-     * 项目详情
-     *
-     * @param id 主键
-     * @return 结果
+    * 项目详情
+    *
+    * @param id 主键
+    * @return 结果
      */
     @Operation(summary = "项目详情")
     @GetMapping("/{id}")
@@ -95,12 +95,12 @@ public class ProjectController {
     }
 
     /**
-     * 项目列表（卡片展示）
-     *
-     * @param keyword 关键字（名称/编码）
-     * @param type    项目类型
-     * @return 结果
-     * @param false false
+    * 项目列表（卡片展示）
+    *
+    * @param keyword 关键字（名称/编码）
+    * @param type    项目类型
+    * @return 结果
+    * @param false false
      */
     @Operation(summary = "项目列表")
     @GetMapping
@@ -110,11 +110,11 @@ public class ProjectController {
     }
 
     /**
-     * 项目列表（POST 兼容）
-     *
-     * @param body keyword / 类型
-     * @return 结果
-     * @param false false
+    * 项目列表（POST 兼容）
+    *
+    * @param body keyword / 类型
+    * @return 结果
+    * @param false false
      */
     @Operation(summary = "项目列表(条件查询)")
     @PostMapping("/query")
@@ -125,11 +125,11 @@ public class ProjectController {
     }
 
     /**
-     * 更新启用状态
-     *
-     * @param id      主键
-     * @param enabled 是否启用
-     * @return 结果
+    * 更新启用状态
+    *
+    * @param id      主键
+    * @param enabled 是否启用
+    * @return 结果
      */
     @Operation(summary = "更新启用状态")
     @PutMapping("/{id}/status")
@@ -139,11 +139,11 @@ public class ProjectController {
     }
 
     /**
-     * 可选服务器列表（按 OS 过滤）
-     *
-     * @param os 操作系统类型 Linux/窗口
-     * @return 结果
-     * @param false false
+    * 可选服务器列表（按 OS 过滤）
+    *
+    * @param os 操作系统类型 Linux/窗口
+    * @return 结果
+    * @param false false
      */
     @Operation(summary = "可选服务器列表")
     @GetMapping("/host-options")
@@ -152,12 +152,12 @@ public class ProjectController {
     }
 
     /**
-     * 部署/升级项目
-     *
-     * @param id     项目 标识
-     * @param action 操作类型 DEPLOY/UPGRADE
-     * @param file   部署包
-     * @return 每台主机的部署日志
+    * 部署/升级项目
+    *
+    * @param id     项目 标识
+    * @param action 操作类型 DEPLOY/UPGRADE
+    * @param file   部署包
+    * @return 每台主机的部署日志
      */
     @Operation(summary = "部署/升级项目")
     @PostMapping("/{id}/deploy")
@@ -168,10 +168,10 @@ public class ProjectController {
     }
 
     /**
-     * 启动项目
-     *
-     * @param id 项目 标识
-     * @return 每台主机的执行日志
+    * 启动项目
+    *
+    * @param id 项目 标识
+    * @return 每台主机的执行日志
      */
     @Operation(summary = "启动项目")
     @PostMapping("/{id}/start")
@@ -180,10 +180,10 @@ public class ProjectController {
     }
 
     /**
-     * 停止项目
-     *
-     * @param id 项目 标识
-     * @return 每台主机的执行日志
+    * 停止项目
+    *
+    * @param id 项目 标识
+    * @return 每台主机的执行日志
      */
     @Operation(summary = "停止项目")
     @PostMapping("/{id}/stop")
@@ -192,10 +192,10 @@ public class ProjectController {
     }
 
     /**
-     * 重启项目
-     *
-     * @param id 项目 标识
-     * @return 每台主机的执行日志
+    * 重启项目
+    *
+    * @param id 项目 标识
+    * @return 每台主机的执行日志
      */
     @Operation(summary = "重启项目")
     @PostMapping("/{id}/restart")
@@ -204,11 +204,11 @@ public class ProjectController {
     }
 
     /**
-     * 部署日志列表
-     *
-     * @param id     项目 标识
-     * @param action 操作类型过滤
-     * @return 日志列表
+    * 部署日志列表
+    *
+    * @param id     项目 标识
+    * @param action 操作类型过滤
+    * @return 日志列表
      */
     @Operation(summary = "部署日志列表")
     @GetMapping("/{id}/logs")
@@ -218,11 +218,11 @@ public class ProjectController {
     }
 
     /**
-     * 部署包归档列表（资产维度历史版本）
-     *
-     * @param id     项目 标识
-     * @param hostId 主机 标识，可为空
-     * @return 归档列表
+    * 部署包归档列表（资产维度历史版本）
+    *
+    * @param id     项目 标识
+    * @param hostId 主机 标识，可为空
+    * @return 归档列表
      */
     @Operation(summary = "部署包归档列表")
     @GetMapping("/{id}/archives")
@@ -232,11 +232,11 @@ public class ProjectController {
     }
 
     /**
-     * 回滚到指定历史版本
-     *
-     * @param id        项目 标识
-     * @param archiveId 归档记录 标识
-     * @return 每台主机的部署日志
+    * 回滚到指定历史版本
+    *
+    * @param id        项目 标识
+    * @param archiveId 归档记录 标识
+    * @return 每台主机的部署日志
      */
     @Operation(summary = "回滚到历史版本")
     @PostMapping("/{id}/rollback")
@@ -246,13 +246,13 @@ public class ProjectController {
     }
 
     /**
-     * 实时查看项目日志（tail）
-     *
-     * @param id     项目 标识
-     * @param hostId 目标主机 标识
-     * @param cursor 上次读取字节偏移，可为空
-     * @param lines  拉取行数，默认 500
-     * @return 日志内容
+    * 实时查看项目日志（tail）
+    *
+    * @param id     项目 标识
+    * @param hostId 目标主机 标识
+    * @param cursor 上次读取字节偏移，可为空
+    * @param lines  拉取行数，默认 500
+    * @return 日志内容
      */
     @Operation(summary = "实时查看项目日志")
     @GetMapping("/{id}/log")
@@ -264,10 +264,10 @@ public class ProjectController {
     }
 
     /**
-     * 安全转换字符串
-     *
-     * @param value 原始值
-     * @return 字符串或 空
+    * 安全转换字符串
+    *
+    * @param value 原始值
+    * @return 字符串或 空
      */
     private String asString(Object value) {
         if (value == null) {

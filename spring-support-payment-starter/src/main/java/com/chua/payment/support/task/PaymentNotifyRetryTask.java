@@ -14,9 +14,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * 回调异常处理定时任务
- * @author CH
- * @since 4.0.0
+* 回调异常处理定时任务
+* @author CH
+* @since 4.0.0
  */
 @Slf4j
 @Component
@@ -89,7 +89,7 @@ public class PaymentNotifyRetryTask implements PaymentManagedTask {
     /** 执行 */
     public void execute() {
         /**
-         * 重试失败通知。
+        * 重试失败通知。
          */
         retryFailedNotifies();
     }

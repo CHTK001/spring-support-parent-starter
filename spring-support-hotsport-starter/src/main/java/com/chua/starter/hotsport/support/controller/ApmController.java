@@ -12,13 +12,13 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * APM 热点观测 REST 接口。
- *
- * <p>统一前缀 {@code /api/apm}，由前端 vue-support-hotspot-starter 经
- * {@code @repo/utils} 的 {@code http().get('/api/apm/...')} 调用。</p>
- *
- * @author CH
- * @since 4.0.0.42
+* APM 热点观测 REST 接口。
+*
+* <p>统一前缀 {@code /api/apm}，由前端 vue-support-hotspot-starter 经
+* {@code @repo/utils} 的 {@code http().get('/api/apm/...')} 调用。</p>
+*
+* @author CH
+* @since 4.0.0.42
  */
 @RestController
 @RequestMapping("/api/apm")
@@ -29,9 +29,9 @@ public class ApmController {
     private final ApmQueryService apmQueryService;
 
     /**
-     * 概览统计。
-     *
-     * @return 各类型总量 + 智能体 状态
+    * 概览统计。
+    *
+    * @return 各类型总量 + 智能体 状态
      */
     @GetMapping("/stats")
     public ReturnResult<Map<String, Object>> stats() {
@@ -39,15 +39,15 @@ public class ApmController {
     }
 
     /**
-     * 分页查询传输记录。
-     *
-     * @param page      页码，默认 1
-     * @param size      每页条数，默认 20
-     * @param source    源端过滤
-     * @param target    目标端过滤
-     * @param protocol  协议过滤
-     * @param errorOnly 仅看错误
-     * @return 分页数据
+    * 分页查询传输记录。
+    *
+    * @param page      页码，默认 1
+    * @param size      每页条数，默认 20
+    * @param source    源端过滤
+    * @param target    目标端过滤
+    * @param protocol  协议过滤
+    * @param errorOnly 仅看错误
+    * @return 分页数据
      */
     @GetMapping("/transmissions")
     public ReturnResult<Map<String, Object>> transmissions(
@@ -61,10 +61,10 @@ public class ApmController {
     }
 
     /**
-     * 查询依赖边。
-     *
-     * @param size 上限，默认 100
-     * @return 依赖边列表
+    * 查询依赖边。
+    *
+    * @param size 上限，默认 100
+    * @return 依赖边列表
      */
     @GetMapping("/dependencies")
     public ReturnResult<Map<String, Object>> dependencies(
@@ -75,13 +75,13 @@ public class ApmController {
     }
 
     /**
-     * 分页查询资源泄漏。
-     *
-     * @param page         页码，默认 1
-     * @param size         每页条数，默认 20
-     * @param resourceType 类型过滤
-     * @param minAgeMs     最小存活毫秒
-     * @return 分页数据
+    * 分页查询资源泄漏。
+    *
+    * @param page         页码，默认 1
+    * @param size         每页条数，默认 20
+    * @param resourceType 类型过滤
+    * @param minAgeMs     最小存活毫秒
+    * @return 分页数据
      */
     @GetMapping("/leaks")
     public ReturnResult<Map<String, Object>> leaks(
@@ -93,12 +93,12 @@ public class ApmController {
     }
 
     /**
-     * 分页查询日志。
-     *
-     * @param page  页码，默认 1
-     * @param size  每页条数，默认 20
-     * @param level 级别过滤
-     * @return 分页数据
+    * 分页查询日志。
+    *
+    * @param page  页码，默认 1
+    * @param size  每页条数，默认 20
+    * @param level 级别过滤
+    * @return 分页数据
      */
     @GetMapping("/logs")
     public ReturnResult<Map<String, Object>> logs(
@@ -109,9 +109,9 @@ public class ApmController {
     }
 
     /**
-      * 智能体 实时状态。
-     *
-     * @return agent 是否激活 + Shell 端口等
+    * 智能体 实时状态。
+    *
+    * @return agent 是否激活 + Shell 端口等
      */
     @GetMapping("/agent/status")
     public ReturnResult<Map<String, Object>> agentStatus() {

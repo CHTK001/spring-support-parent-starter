@@ -3,9 +3,9 @@ package com.chua.starter.tencent.support.payment.dto;
 import lombok.Data;
 
 /**
- * 微信订单查询响应
- * @author CH
- * @since 4.0.0
+* 微信订单查询响应
+* @author CH
+* @since 4.0.0
  */
 @Data
 public class TencentWechatOrderResponse {

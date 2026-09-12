@@ -9,13 +9,13 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
-   * o认证 链路追踪上下文
- * <p>
-   * 管理整个请求的追踪信息，包括 追踪标识、spanid 和各节点耗时
- * </p>
- *
- * @since 2024/12/28
- * @author CH
+* o认证 链路追踪上下文
+* <p>
+* 管理整个请求的追踪信息，包括 追踪标识、spanid 和各节点耗时
+* </p>
+*
+* @since 2024/12/28
+* @author CH
  */
 public class TraceContext {
 
@@ -25,58 +25,58 @@ public class TraceContext {
     private static final String MDC_SPAN_ID = "spanId";
 
     /**
-     * 线程本地存储
+    * 线程本地存储
      */
     private static final ThreadLocal<TraceContext> CONTEXT_HOLDER = new ThreadLocal<>();
 
     /**
-      * 追踪标识（全局唯一）
+    * 追踪标识（全局唯一）
      */
     @Getter
     /** 跟踪标识 */
     private final String traceId;
 
     /**
-      * 当前 Span 标识 计数器
+    * 当前 Span 标识 计数器
      */
     private final AtomicInteger spanCounter = new AtomicInteger(0);
 
     /**
-     * 请求开始时间戳
+    * 请求开始时间戳
      */
     @Getter
     /** 开始时间戳 */
     private final long startTimestamp;
 
     /**
-     * 追踪的 Span 列表
+    * 追踪的 Span 列表
      */
     @Getter
     /** Spans */
     private final List<TraceSpan> spans = new ArrayList<>();
 
     /**
-     * 当前活跃的 Span
+    * 当前活跃的 Span
      */
     private TraceSpan currentSpan;
 
     /**
-     * 客户端应用名称
+    * 客户端应用名称
      */
     @Getter
     /** 客户端APP名称 */
     private String clientAppName;
 
     /**
-     * 客户端IP
+    * 客户端IP
      */
     @Getter
     /** 客户端IP */
     private String clientIp;
 
     /**
-     * 私有构造
-     * @param traceId 追踪标识
+    * 私有构造
+    * @param traceId 追踪标识
      */
     private TraceContext(String traceId) {
         this.traceId = traceId != null ? traceId : UUID.randomUUID().toString().replace("-", "");
@@ -84,9 +84,9 @@ public class TraceContext {
     }
 
     /**
-     * 创建新的追踪上下文
-     *
-     * @return 追踪上下文
+    * 创建新的追踪上下文
+    *
+    * @return 追踪上下文
      */
     public static TraceContext create() {
         TraceContext context = new TraceContext(null);
@@ -96,10 +96,10 @@ public class TraceContext {
     }
 
     /**
-       * 创建追踪上下文（使用指定的 追踪标识）
-     *
-     * @param traceId 追踪标识
-     * @return 追踪上下文
+    * 创建追踪上下文（使用指定的 追踪标识）
+    *
+    * @param traceId 追踪标识
+    * @return 追踪上下文
      */
     public static TraceContext create(String traceId) {
         TraceContext context = new TraceContext(traceId);
@@ -109,16 +109,16 @@ public class TraceContext {
     }
 
     /**
-     * 获取当前追踪上下文
-     *
-     * @return 追踪上下文，可能为 空
+    * 获取当前追踪上下文
+    *
+    * @return 追踪上下文，可能为 空
      */
     public static TraceContext current() {
         return CONTEXT_HOLDER.get();
     }
 
     /**
-     * 清除当前追踪上下文
+    * 清除当前追踪上下文
      */
     public static void clear() {
         CONTEXT_HOLDER.remove();
@@ -127,11 +127,11 @@ public class TraceContext {
     }
 
     /**
-     * 设置客户端信息
-     *
-     * @param appName 应用名称
-     * @param ip      客户端IP
-     * @return this
+    * 设置客户端信息
+    *
+    * @param appName 应用名称
+    * @param ip      客户端IP
+    * @return this
      */
     public TraceContext clientInfo(String appName, String ip) {
         this.clientAppName = appName;
@@ -140,19 +140,19 @@ public class TraceContext {
     }
 
     /**
-      * 生成新的 Span 标识
-     *
-     * @return Span 标识
+    * 生成新的 Span 标识
+    *
+    * @return Span 标识
      */
     public String nextSpanId() {
         return traceId.substring(0, 8) + "-" + spanCounter.incrementAndGet();
     }
 
     /**
-     * 开始一个新的 Span
-     *
-     * @param spanName Span 名称
-     * @return TraceSpan
+    * 开始一个新的 Span
+    *
+    * @param spanName Span 名称
+    * @return TraceSpan
      */
     public TraceSpan startSpan(String spanName) {
         String spanId = nextSpanId();
@@ -165,7 +165,7 @@ public class TraceContext {
     }
 
     /**
-     * 结束当前 Span
+    * 结束当前 Span
      */
     public void endSpan() {
         if (currentSpan != null) {
@@ -185,18 +185,18 @@ public class TraceContext {
     }
 
     /**
-     * 获取总耗时（毫秒）
-     *
-     * @return 总耗时
+    * 获取总耗时（毫秒）
+    *
+    * @return 总耗时
      */
     public long getTotalCostMs() {
         return System.currentTimeMillis() - startTimestamp;
     }
 
     /**
-     * 获取所有 Span 的耗时摘要
-     *
-     * @return 耗时摘要 JSON 字符串
+    * 获取所有 Span 的耗时摘要
+    *
+    * @return 耗时摘要 JSON 字符串
      */
     public String getSpansSummary() {
         StringBuilder sb = new StringBuilder("[");

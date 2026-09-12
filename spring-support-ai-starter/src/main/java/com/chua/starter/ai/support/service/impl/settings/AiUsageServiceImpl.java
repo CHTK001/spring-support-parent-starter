@@ -14,10 +14,10 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * 用量统计服务实现类
- *
- * @since 2026-08-03
- * @author CH
+* 用量统计服务实现类
+*
+* @since 2026-08-03
+* @author CH
  */
 @Slf4j
 @Service
@@ -25,20 +25,20 @@ import java.util.stream.Collectors;
 public class AiUsageServiceImpl implements AiUsageService {
 
     /**
-     * 时间格式化器
+    * 时间格式化器
      */
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     /**
-      * 用量 映射器
+    * 用量 映射器
      */
     private final AiUsageMapper usageMapper;
 
     /**
-     * 查询用量，可按模型过滤。
-     *
-     * @param model 模型名称（可选）
-     * @return 用量 DTO 列表
+    * 查询用量，可按模型过滤。
+    *
+    * @param model 模型名称（可选）
+    * @return 用量 DTO 列表
      */
     @Override
     public List<AiUsageDTO> query(String model) {
@@ -54,10 +54,10 @@ public class AiUsageServiceImpl implements AiUsageService {
     }
 
     /**
-     * 实体转 DTO。
-     *
-     * @param entity 用量实体
-     * @return 用量 DTO
+    * 实体转 DTO。
+    *
+    * @param entity 用量实体
+    * @return 用量 DTO
      */
     private AiUsageDTO toDto(SysAiSettingUsage entity) {
         AiUsageDTO dto = new AiUsageDTO();

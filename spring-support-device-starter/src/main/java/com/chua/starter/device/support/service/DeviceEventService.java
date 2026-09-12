@@ -8,34 +8,34 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * 设备事件服务接口
- *
- * @since 4.0.0.42
- * @author CH
+* 设备事件服务接口
+*
+* @since 4.0.0.42
+* @author CH
  */
 public interface DeviceEventService {
 
     /**
-     * 保存事件
-     *
-     * @param event 事件对象
+    * 保存事件
+    *
+    * @param event 事件对象
      */
     void saveEvent(DeviceEvent event);
 
     /**
-     * 查询事件
-     *
-     * @param deviceId 设备 标识
-     * @param type     事件类型，空 表示全部
-     * @param start    开始时间，空 表示不限
-     * @param end      结束时间，空 表示不限
-     * @return 事件列表
+    * 查询事件
+    *
+    * @param deviceId 设备 标识
+    * @param type     事件类型，空 表示全部
+    * @param start    开始时间，空 表示不限
+    * @param end      结束时间，空 表示不限
+    * @return 事件列表
      */
     List<DeviceEventRecord> queryEvents(String deviceId, EventType type, LocalDateTime start, LocalDateTime end);
 
     /**
-     * 轮询所有在线设备的事件
-     * <p>由 Spring 定时任务驱动，每个厂商可独立配置轮询间隔。</p>
+    * 轮询所有在线设备的事件
+    * <p>由 Spring 定时任务驱动，每个厂商可独立配置轮询间隔。</p>
      */
     void pollAllDevices();
 }

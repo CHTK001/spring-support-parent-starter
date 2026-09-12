@@ -13,12 +13,12 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 
 /**
- * 文件版 {@link JobLogSink}，每个任务执行写入独立日志文件。
- *
- * <p>文件路径: {@code {basePath}/{yyyy-MM-dd}/{jobName}/{executedAtMs}.log}</p>
- *
- * @since 4.0.0.42
- * @author CH
+* 文件版 {@link JobLogSink}，每个任务执行写入独立日志文件。
+*
+* <p>文件路径: {@code {basePath}/{yyyy-MM-dd}/{jobName}/{executedAtMs}.log}</p>
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Slf4j
 public class FileJobLogSink implements JobLogSink {
@@ -31,9 +31,9 @@ public class FileJobLogSink implements JobLogSink {
     private final Path basePath;
 
     /**
-     * 构造文件日志落库。
-     *
-     * @param basePath 日志根目录
+    * 构造文件日志落库。
+    *
+    * @param basePath 日志根目录
      */
     public FileJobLogSink(String basePath) {
         this.basePath = Paths.get(basePath).toAbsolutePath().normalize();
@@ -69,10 +69,10 @@ public class FileJobLogSink implements JobLogSink {
     }
 
     /**
-     * 获取文件路径 (用于写入 DB)。
-     *
-     * @param event 事件
-     * @return 相对路径字符串
+    * 获取文件路径 (用于写入 DB)。
+    *
+    * @param event 事件
+    * @return 相对路径字符串
      */
     public String resolveRelativePath(JobLogEvent event) {
         String dateDir = DATE_FMT.format(Instant.now());
@@ -81,10 +81,10 @@ public class FileJobLogSink implements JobLogSink {
     }
 
     /**
-     * 格式化记录日志
-     *
-     * @param event 事件
-     * @return 格式化日志的结果
+    * 格式化记录日志
+    *
+    * @param event 事件
+    * @return 格式化日志的结果
      */
     private String formatLog(JobLogEvent event) {
         StringBuilder sb = new StringBuilder(512);
@@ -108,10 +108,10 @@ public class FileJobLogSink implements JobLogSink {
     }
 
     /**
-     * Sanitize
-     *
-     * @param name 名称
-     * @return sanitize的结果
+    * Sanitize
+    *
+    * @param name 名称
+    * @return sanitize的结果
      */
     private static String sanitize(String name) {
         return name.replaceAll("[/\\\\:*?\"<>|]", "_");

@@ -1,9 +1,9 @@
 package com.chua.starter.common.support.trace;
 
 /**
- * 链路追踪上下文。
- * @author CH
- * @since 4.0.0
+* 链路追踪上下文。
+* @author CH
+* @since 4.0.0
  */
 public final class TrackContext {
 
@@ -15,18 +15,18 @@ public final class TrackContext {
     }
 
     /**
-      * 设置链接标识
-     *
-     * @param linkId 链接标识
+    * 设置链接标识
+    *
+    * @param linkId 链接标识
      */
     public static void setLinkId(String linkId) {
         LINK_ID.set(linkId);
     }
 
     /**
-      * 获取链接标识
-     *
-     * @return 获取链接id的结果
+    * 获取链接标识
+    *
+    * @return 获取链接id的结果
      */
     public static String getLinkId() {
         return LINK_ID.get();

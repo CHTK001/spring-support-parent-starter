@@ -12,10 +12,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * 阅卷管理控制器
- *
- * @since 4.0.0.42
- * @author CH
+* 阅卷管理控制器
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Slf4j
 @RestController
@@ -28,10 +28,10 @@ public class EduMarkingController {
     private final IEduMarkingService markingService;
 
     /**
-     * 提交答题卡
-     *
-     * @param dto 答题卡数据
-     * @return 任务ID
+    * 提交答题卡
+    *
+    * @param dto 答题卡数据
+    * @return 任务ID
      */
     @Operation(summary = "提交答题卡")
     @PostMapping("/submit")
@@ -40,10 +40,10 @@ public class EduMarkingController {
     }
 
     /**
-     * 轮询阅卷结果
-     *
-     * @param taskId 任务标识
-     * @return 阅卷结果
+    * 轮询阅卷结果
+    *
+    * @param taskId 任务标识
+    * @return 阅卷结果
      */
     @Operation(summary = "轮询阅卷结果")
     @GetMapping("/result/{taskId}")
@@ -52,10 +52,10 @@ public class EduMarkingController {
     }
 
     /**
-     * 教师确认评分
-     *
-     * @param dto 确认数据
-     * @return 是否成功
+    * 教师确认评分
+    *
+    * @param dto 确认数据
+    * @return 是否成功
      */
     @Operation(summary = "教师确认评分")
     @PutMapping("/confirm")

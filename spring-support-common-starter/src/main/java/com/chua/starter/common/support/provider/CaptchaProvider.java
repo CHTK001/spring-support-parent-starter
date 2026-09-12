@@ -25,10 +25,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * 校验码
- *
- * @author CH
- * @since 4.0.0
+* 校验码
+*
+* @author CH
+* @since 4.0.0
  */
 @RestController
 @Tag(name = "校验码")
@@ -43,41 +43,41 @@ public class CaptchaProvider {
     private CaptchaProperties captchaProperties;
 
     /**
-     * Producer
-     *
-     * @return producer的结果
+    * Producer
+    *
+    * @return producer的结果
      */
     public Captcha producer() {
         return createCaptcha(captchaProperties.getType(), captchaProperties.getLength());
     }
 
     /**
-     * Producer
-     *
-     * @param typeEnum 类型enum
-     * @return producer的结果
+    * Producer
+    *
+    * @param typeEnum 类型enum
+    * @return producer的结果
      */
     public Captcha producer(CaptchaTypeEnum typeEnum) {
         return createCaptcha(typeEnum, captchaProperties.getLength());
     }
 
     /**
-     * Producer
-     *
-     * @param typeEnum 类型enum
-     * @param length 长度
-     * @return producer的结果
+    * Producer
+    *
+    * @param typeEnum 类型enum
+    * @param length 长度
+    * @return producer的结果
      */
     public Captcha producer(CaptchaTypeEnum typeEnum, int length) {
         return createCaptcha(typeEnum, length);
     }
 
     /**
-     * 创建Captcha
-     *
-     * @param type 类型
-     * @param length 长度
-     * @return 创建captcha的结果
+    * 创建Captcha
+    *
+    * @param type 类型
+    * @param length 长度
+    * @return 创建captcha的结果
      */
     private Captcha createCaptcha(CaptchaTypeEnum type, int length) {
         int width = captchaProperties.getWidth();
@@ -86,10 +86,10 @@ public class CaptchaProvider {
         CaptchaGenerator generator = ServiceProvider.of(CaptchaGenerator.class).getExtension(spiName);
         if (generator == null) {
             /**
-             * runtime异常。
-             * @param CaptchaTypeEnum captcha类型enum
-             * @param spiName spi名称
-             * @return runtime异常的结果
+            * runtime异常。
+            * @param CaptchaTypeEnum captcha类型enum
+            * @param spiName spi名称
+            * @return runtime异常的结果
              */
             throw new RuntimeException("验证码配置信息错误！正确配置查看 CaptchaTypeEnum , 不支持的类型: " + spiName);
         }
@@ -98,9 +98,9 @@ public class CaptchaProvider {
 
 
     /**
-     * 创建Captcha
-     *
-     * @return 创建captcha的结果
+    * 创建Captcha
+    *
+    * @return 创建captcha的结果
      */
     public Captcha createCaptcha() {
         int randomInt = RandomUtils.randomInt(2, 3);
@@ -118,10 +118,10 @@ public class CaptchaProvider {
         return producer(captchaTypeEnum, randomInt);
     }
     /**
-     * 校验码
-     *
-     * @param request  请求
-     * @param response 响应
+    * 校验码
+    *
+    * @param request  请求
+    * @param response 响应
      */
     @Operation(summary = "获取验证码")
     @GetMapping("captcha.jpg")
@@ -150,11 +150,11 @@ public class CaptchaProvider {
     }
 
     /**
-     * 校验码
-     *
-     * @param request 请求
-     * @param response 响应
-     * @return captchaBase64的结果
+    * 校验码
+    *
+    * @param request 请求
+    * @param response 响应
+    * @return captchaBase64的结果
      */
     @Operation(summary = "获取验证码")
     @GetMapping("captcha")
@@ -178,10 +178,10 @@ public class CaptchaProvider {
 
 
     /**
-     * 验证码响应对象
-     *
-     * @author haoxr
-     * @since 2023/03/24
+    * 验证码响应对象
+    *
+    * @author haoxr
+    * @since 2023/03/24
      */
     public static class CaptchaResult {
         /** 验证代码密钥 */
@@ -190,54 +190,54 @@ public class CaptchaProvider {
         private String verifyCodeBase64;
 
         /**
-         * 获取验证编码钥匙
-         *
-         * @return 获取验证编码钥匙的结果
+        * 获取验证编码钥匙
+        *
+        * @return 获取验证编码钥匙的结果
          */
         public String getVerifyCodeKey() {
             return verifyCodeKey;
         }
 
         /**
-         * 设置验证编码钥匙
-         *
-         * @param verifyCodeKey 验证编码钥匙
+        * 设置验证编码钥匙
+        *
+        * @param verifyCodeKey 验证编码钥匙
          */
         public void setVerifyCodeKey(String verifyCodeKey) {
             this.verifyCodeKey = verifyCodeKey;
         }
 
         /**
-          * 获取验证编码基础
-         *
-         * @return 获取验证编码base64的结果
+        * 获取验证编码基础
+        *
+        * @return 获取验证编码base64的结果
          */
         public String getVerifyCodeBase64() {
             return verifyCodeBase64;
         }
 
         /**
-          * 设置验证编码基础
-         *
-         * @param verifyCodeBase64 验证编码基础64
+        * 设置验证编码基础
+        *
+        * @param verifyCodeBase64 验证编码基础64
          */
         public void setVerifyCodeBase64(String verifyCodeBase64) {
             this.verifyCodeBase64 = verifyCodeBase64;
         }
     }
     /**
-      * 获取 captcha属性
-     *
-     * @return captchaProperties
+    * 获取 captcha属性
+    *
+    * @return captchaProperties
      */
     public CaptchaProperties getCaptchaProperties() {
         return captchaProperties;
     }
 
     /**
-      * 设置 captcha属性
-     *
-     * @param captchaProperties captcha属性
+    * 设置 captcha属性
+    *
+    * @param captchaProperties captcha属性
      */
     public void setCaptchaProperties(CaptchaProperties captchaProperties) {
         this.captchaProperties = captchaProperties;

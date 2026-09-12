@@ -14,13 +14,13 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 消息审计拦截器
- * <p>
- * 自动记录消息的审计日志
- * </p>
- *
- * @since 2025-03-20
- * @author CH
+* 消息审计拦截器
+* <p>
+* 自动记录消息的审计日志
+* </p>
+*
+* @since 2025-03-20
+* @author CH
  */
 @Slf4j
 @Component
@@ -71,8 +71,8 @@ public class MessageAuditInterceptor implements MessageInterceptor, ApplicationE
 
             // 持久化审计日志（发布事件，由监听方写入数据库或其他存储）
             /**
-             * 发布审计日志。
-             * @param auditLog 审计日志
+            * 发布审计日志。
+            * @param auditLog 审计日志
              */
             publishAuditLog(auditLog);
 
@@ -113,8 +113,8 @@ public class MessageAuditInterceptor implements MessageInterceptor, ApplicationE
 
             // 持久化审计日志（发布事件，由监听方写入数据库或其他存储）
             /**
-             * 发布审计日志。
-             * @param auditLog 审计日志
+            * 发布审计日志。
+            * @param auditLog 审计日志
              */
             publishAuditLog(auditLog);
 
@@ -124,10 +124,10 @@ public class MessageAuditInterceptor implements MessageInterceptor, ApplicationE
     }
 
     /**
-     * 创建审计日志
-     * @param message 消息
-     * @param operation operation
-     * @return 创建审计日志的结果
+    * 创建审计日志
+    * @param message 消息
+    * @param operation operation
+    * @return 创建审计日志的结果
      */
     private MessageAuditLog createAuditLog(Message message, String operation) {
         MessageAuditLog auditLog = new MessageAuditLog();
@@ -168,8 +168,8 @@ public class MessageAuditInterceptor implements MessageInterceptor, ApplicationE
     }
 
     /**
-     * 发布审计日志事件，由外部监听器持久化
-     * @param auditLog 审计日志
+    * 发布审计日志事件，由外部监听器持久化
+    * @param auditLog 审计日志
      */
     private void publishAuditLog(MessageAuditLog auditLog) {
         log.info("[Audit] 消息审计: operation={}, destination={}, status={}, duration={}ms, messageId={}",
@@ -183,9 +183,9 @@ public class MessageAuditInterceptor implements MessageInterceptor, ApplicationE
     }
 
     /**
-     * 获取异常堆栈
-     * @param error 错误
-     * @return 获取stack追踪的结果
+    * 获取异常堆栈
+    * @param error 错误
+    * @return 获取stack追踪的结果
      */
     private String getStackTrace(Throwable error) {
         if (error == null) {
@@ -204,16 +204,16 @@ public class MessageAuditInterceptor implements MessageInterceptor, ApplicationE
     }
 
     /**
-     * 获取审计日志
-     * @param messageId 消息标识
-     * @return 获取审计日志的结果
+    * 获取审计日志
+    * @param messageId 消息标识
+    * @return 获取审计日志的结果
      */
     public MessageAuditLog getAuditLog(String messageId) {
         return auditLogs.get(messageId);
     }
 
     /**
-     * 清理审计日志
+    * 清理审计日志
      */
     public void clearAuditLogs() {
         auditLogs.clear();

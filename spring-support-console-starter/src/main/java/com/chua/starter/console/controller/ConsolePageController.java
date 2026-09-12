@@ -17,14 +17,14 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 管理控制台 FTL 页面控制器。
- *
- * <p>页面与调整接口统一以 {@link #CONSOLE_PERMISSION} 权限码鉴权（oauth-client
- * {@code @Permission} + PermissionInterceptor）；页面临时调整写入 SQLite 覆盖库，
-   * 经 {@code ConsoleOverrideProvider} 接入 通用 拦截器判定即时生效。</p>
- *
- * @author CH
- * @since 2026/09/04
+* 管理控制台 FTL 页面控制器。
+*
+* <p>页面与调整接口统一以 {@link #CONSOLE_PERMISSION} 权限码鉴权（oauth-client
+* {@code @Permission} + PermissionInterceptor）；页面临时调整写入 SQLite 覆盖库，
+* 经 {@code ConsoleOverrideProvider} 接入 通用 拦截器判定即时生效。</p>
+*
+* @author CH
+* @since 2026/09/04
  */
 @Controller
 @RequestMapping("/console")
@@ -37,9 +37,9 @@ public class ConsolePageController {
     private final ConsoleSqliteStore store; // 存储
 
     /**
-     * 控制台page控制器。
-     * @param scanner scanner
-     * @param store 存储
+    * 控制台page控制器。
+    * @param scanner scanner
+    * @param store 存储
      */
     public ConsolePageController(AnnotationSwitchScanner scanner, ConsoleSqliteStore store) {
         this.scanner = scanner;
@@ -49,8 +49,8 @@ public class ConsolePageController {
     @GetMapping("/")
     @Permission(CONSOLE_PERMISSION)
     /**
-     * 索引。
-     * @return 索引的结果
+    * 索引。
+    * @return 索引的结果
      */
     public String index() {
         return "redirect:/console/features";
@@ -59,10 +59,10 @@ public class ConsolePageController {
     // ==================== 页面 ====================
 
     /**
-     * @api特征 功能开关管理页
-     *
-     * @param model 模型
-     * @return 特征的结果
+    * @api特征 功能开关管理页
+    *
+    * @param model 模型
+    * @return 特征的结果
      */
     @GetMapping("/features")
     @Permission(CONSOLE_PERMISSION)
@@ -92,10 +92,10 @@ public class ConsolePageController {
     }
 
     /**
-     * @apigray 灰度规则管理页
-     *
-     * @param model 模型
-     * @return grays的结果
+    * @apigray 灰度规则管理页
+    *
+    * @param model 模型
+    * @return grays的结果
      */
     @GetMapping("/grays")
     @Permission(CONSOLE_PERMISSION)
@@ -127,10 +127,10 @@ public class ConsolePageController {
     }
 
     /**
-     * 通用键值运行设置管理页
-     *
-     * @param model 模型
-     * @return kv的结果
+    * 通用键值运行设置管理页
+    *
+    * @param model 模型
+    * @return kv的结果
      */
     @GetMapping("/kv")
     @Permission(CONSOLE_PERMISSION)
@@ -154,10 +154,10 @@ public class ConsolePageController {
     }
 
     /**
-     * 移除 @api特征 覆盖
-     *
-     * @param featureId 特征标识
-     * @return 删除特征的结果
+    * 移除 @api特征 覆盖
+    *
+    * @param featureId 特征标识
+    * @return 删除特征的结果
      */
     @PostMapping("/api/features/delete")
     @Permission(CONSOLE_PERMISSION)
@@ -181,10 +181,10 @@ public class ConsolePageController {
     }
 
     /**
-     * 移除 @apigray 覆盖
-     *
-     * @param pattern 模式
-     * @return 删除gray的结果
+    * 移除 @apigray 覆盖
+    *
+    * @param pattern 模式
+    * @return 删除gray的结果
      */
     @PostMapping("/api/grays/delete")
     @Permission(CONSOLE_PERMISSION)
@@ -194,11 +194,11 @@ public class ConsolePageController {
     }
 
     /**
-     * 写入通用键值
-     *
-     * @param key 钥匙
-     * @param value 价值观
-     * @return upsertKv的结果
+    * 写入通用键值
+    *
+    * @param key 钥匙
+    * @param value 价值观
+    * @return upsertKv的结果
      */
     @PostMapping("/api/kv")
     @Permission(CONSOLE_PERMISSION)
@@ -208,10 +208,10 @@ public class ConsolePageController {
     }
 
     /**
-     * 删除通用键值
-     *
-     * @param key 钥匙
-     * @return 删除kv的结果
+    * 删除通用键值
+    *
+    * @param key 钥匙
+    * @return 删除kv的结果
      */
     @PostMapping("/api/kv/delete")
     @Permission(CONSOLE_PERMISSION)
@@ -223,9 +223,9 @@ public class ConsolePageController {
     // ==================== 工具 ====================
 
     /**
-     * 连接。
-     * @param arr arr
-     * @return 连接的结果
+    * 连接。
+    * @param arr arr
+    * @return 连接的结果
      */
     private static String join(String[] arr) {
         if (arr == null || arr.length == 0) {
@@ -235,9 +235,9 @@ public class ConsolePageController {
     }
 
     /**
-     * 分割。
-     * @param s s
-     * @return 分割的结果
+    * 分割。
+    * @param s s
+    * @return 分割的结果
      */
     private static String[] split(String s) {
         if (s == null || s.trim().isEmpty()) {

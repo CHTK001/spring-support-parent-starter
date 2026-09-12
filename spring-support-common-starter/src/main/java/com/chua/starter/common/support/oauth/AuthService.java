@@ -1,21 +1,21 @@
 package com.chua.starter.common.support.oauth;
 
 /**
- * 权限服务
- * @author CH
- * @since 4.0.0
+* 权限服务
+* @author CH
+* @since 4.0.0
  */
 public interface AuthService {
     /**
-     * 获取当前登录账号
-     * @return 获取当前登录账号
+    * 获取当前登录账号
+    * @return 获取当前登录账号
      */
     CurrentUser getCurrentUser();
 
     /**
-     * 是否已认证
-     *
-     * @return 是否已认证
+    * 是否已认证
+    *
+    * @return 是否已认证
      */
     default boolean isAuthenticated() {
         return getCurrentUser() != null;
@@ -23,10 +23,10 @@ public interface AuthService {
 
 
     /**
-     * 默认认证服务类。
-     *
-     * @author CH
-     * @since 4.0.0
+    * 默认认证服务类。
+    *
+    * @author CH
+    * @since 4.0.0
      */
     class DefaultAuthService implements AuthService {
 

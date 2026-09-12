@@ -15,11 +15,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * 权限攻击面真实测试：路径遍历 / 方法覆盖 / 编码大小写绕过 / 越权等攻击向量
- * 均不得绕过权限拦截（无授权一律 403/404/405，绝不 200）。
- *
- * @author CH
- * @since 2026/09/04
+* 权限攻击面真实测试：路径遍历 / 方法覆盖 / 编码大小写绕过 / 越权等攻击向量
+* 均不得绕过权限拦截（无授权一律 403/404/405，绝不 200）。
+*
+* @author CH
+* @since 2026/09/04
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -29,10 +29,10 @@ class PermissionAttackSurfaceTest {
     private MockMvc mockMvc; // mockmvc
 
     /**
-     * 会话with。
-     * @param roles 角色
-     * @param permissions 权限
-     * @return 会话with的结果
+    * 会话with。
+    * @param roles 角色
+    * @param permissions 权限
+    * @return 会话with的结果
      */
     private MockHttpSession sessionWith(Set<String> roles, Set<String> permissions) {
         UserResume user = new UserResume();

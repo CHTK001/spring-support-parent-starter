@@ -3,10 +3,10 @@ package com.chua.starter.ai.support.model;
 import lombok.Data;
 
 /**
- * URL 文档抓取请求
- *
- * @author CH
- * @since 4.0.0
+* URL 文档抓取请求
+*
+* @author CH
+* @since 4.0.0
  */
 @Data
 public class UrlDocumentRequest {

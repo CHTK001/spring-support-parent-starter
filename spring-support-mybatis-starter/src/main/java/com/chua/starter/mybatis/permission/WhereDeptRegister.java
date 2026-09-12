@@ -15,10 +15,10 @@ import java.util.Arrays;
 import java.util.stream.Collectors;
 
 /**
-   * where注入机构标识
- *
- * @author CH
- * @since 4.0.0
+* where注入机构标识
+*
+* @author CH
+* @since 4.0.0
  */
 public class WhereDeptRegister extends AbstractDeptRegister {
 
@@ -27,13 +27,13 @@ public class WhereDeptRegister extends AbstractDeptRegister {
     private final Table currentTable;
 
     /**
-      * 创建 wheredept注册 实例
-     * @param plainSelect plain选择
-     * @param where where
-     * @param user 用户
-     * @param dataPermission 数据权限
-     * @param scopeProperties scope属性
-     * @param currentTable 当前table
+    * 创建 wheredept注册 实例
+    * @param plainSelect plain选择
+    * @param where where
+    * @param user 用户
+    * @param dataPermission 数据权限
+    * @param scopeProperties scope属性
+    * @param currentTable 当前table
      */
     public WhereDeptRegister(PlainSelect plainSelect,
                              Expression where,
@@ -42,12 +42,12 @@ public class WhereDeptRegister extends AbstractDeptRegister {
                              MybatisPlusDataScopeProperties scopeProperties,
                              Table currentTable) {
         /**
-         * 父。
-         * @param plainSelect plain选择
-         * @param where where
-         * @param user 用户
-         * @param dataPermission 数据权限
-         * @param scopeProperties scope属性
+        * 父。
+        * @param plainSelect plain选择
+        * @param where where
+        * @param user 用户
+        * @param dataPermission 数据权限
+        * @param scopeProperties scope属性
          */
         super(plainSelect, where, user, dataPermission, scopeProperties);
         this.currentTable = currentTable;
@@ -55,18 +55,18 @@ public class WhereDeptRegister extends AbstractDeptRegister {
     }
 
     /**
-     * 注册
-     *
-     * @return 注册的结果
+    * 注册
+    *
+    * @return 注册的结果
      */
     public Expression register() {
         return registerDataScope();
     }
 
     /**
-      * 创建入表达式
-     *
-     * @return
+    * 创建入表达式
+    *
+    * @return
      */
     private Expression createInExpression() {
         return new InExpression(

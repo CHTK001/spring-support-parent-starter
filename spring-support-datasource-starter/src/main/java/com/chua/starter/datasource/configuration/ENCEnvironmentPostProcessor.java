@@ -20,29 +20,29 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * ENC 配置加密处理器
- * <p>
- * 在 Spring 环境初始化阶段，扫描所有配置属性中的 {@code ENC(...)} 值并进行解密。
- * 支持数据源密码、URL、用户名等敏感信息的加密存储。
- * </p>
- *
- * <h3>使用方式</h3>
- * <pre>{@code
- * spring.datasource.password: ENC(uX5z1H+z5f3k8L9mW2qR4w==)
- * spring.datasource.url: ENC(jdbc:mysql://...)        # 可选：加密URL
- *
- * # 自定义加密密钥
- * plugin.datasource.enc.secret-key: mySecretKey12345
- * }</pre>e>
- *
- * <h3>ENC 格式</h3>
- * <ul>
- *   <li>{@code ENC(base64EncryptedValue)} - 使用 AES 解密</li>
- *   <li>{@code ENC(AES:base64EncryptedValue)} - 指定 AES 算法</li>
- * </ul>
- *
- * @since 2026/07/14
- * @author CH
+* ENC 配置加密处理器
+* <p>
+* 在 Spring 环境初始化阶段，扫描所有配置属性中的 {@code ENC(...)} 值并进行解密。
+* 支持数据源密码、URL、用户名等敏感信息的加密存储。
+* </p>
+*
+* <h3>使用方式</h3>
+* <pre>{@code
+* spring.datasource.password: ENC(uX5z1H+z5f3k8L9mW2qR4w==)
+* spring.datasource.url: ENC(jdbc:mysql://...)        # 可选：加密URL
+*
+* # 自定义加密密钥
+* plugin.datasource.enc.secret-key: mySecretKey12345
+* }</pre>e>
+*
+* <h3>ENC 格式</h3>
+* <ul>
+*   <li>{@code ENC(base64EncryptedValue)} - 使用 AES 解密</li>
+*   <li>{@code ENC(AES:base64EncryptedValue)} - 指定 AES 算法</li>
+* </ul>
+*
+* @since 2026/07/14
+* @author CH
  */
 @Slf4j
 public class ENCEnvironmentPostProcessor implements EnvironmentPostProcessor, Ordered {
@@ -90,16 +90,16 @@ public class ENCEnvironmentPostProcessor implements EnvironmentPostProcessor, Or
             PropertySource<?> source = iterator.next();
             if (source instanceof MapPropertySource mapSource) {
                 /**
-                 * 扫描anddecrypt。
-                 * @param mapSource.getSource( 映射源.getsource(
+                * 扫描anddecrypt。
+                * @param mapSource.getSource( 映射源.getsource(
                  */
                 scanAndDecrypt(mapSource.getSource(), decryptedProperties);
             } else {
  // 通过反射尝试 enumerable财产源（Spring 内部类，避免编译依赖）
                 /**
-                 * 扫描by反射。
-                 * @param source 源
-                 * @param decryptedProperties decrypted属性
+                * 扫描by反射。
+                * @param source 源
+                * @param decryptedProperties decrypted属性
                  */
                 scanByReflection(source, decryptedProperties);
             }
@@ -114,34 +114,34 @@ public class ENCEnvironmentPostProcessor implements EnvironmentPostProcessor, Or
     }
 
     /**
-     * 创建密码解密器
-     * @param environment 环境
-     * @return 创建decryptor的结果
+    * 创建密码解密器
+    * @param environment 环境
+    * @return 创建decryptor的结果
      */
     private PasswordDecryptor createDecryptor(ConfigurableEnvironment environment) {
         String secretKey = environment.getProperty(SECRET_KEY_PROP);
         if (secretKey != null && !secretKey.isEmpty()) {
             log.info("[ENC] 使用自定义密钥（配置项: {}）", SECRET_KEY_PROP);
             /**
-             * aes密码decryptor。
-             * @param secretKey secret钥匙
-             * @return aes密码decryptor的结果
+            * aes密码decryptor。
+            * @param secretKey secret钥匙
+            * @return aes密码decryptor的结果
              */
             return new AesPasswordDecryptor(secretKey);
         }
         log.warn("[ENC] 未配置自定义密钥 ({}), 使用默认密钥。请在生产环境中配置自定义密钥以提高安全性！",
                 SECRET_KEY_PROP);
         /**
-         * aes密码decryptor。
-         * @return aes密码decryptor的结果
+        * aes密码decryptor。
+        * @return aes密码decryptor的结果
          */
         return new AesPasswordDecryptor();
     }
 
     /**
-      * 扫描 映射财产源 并解密 ENC 值
-     * @param source 源
-     * @param result 结果
+    * 扫描 映射财产源 并解密 ENC 值
+    * @param source 源
+    * @param result 结果
      */
     private void scanAndDecrypt(Map<String, Object> source, Map<String, Object> result) {
         for (Map.Entry<String, Object> entry : source.entrySet()) {
@@ -155,13 +155,13 @@ public class ENCEnvironmentPostProcessor implements EnvironmentPostProcessor, Or
     }
 
     /**
-      * 通过反射扫描 enumerable财产源（如 .属性 文件）
-     * <p>
-     * Spring 的 {@code EnumerablePropertySource} 提供了 {@code getPropertyNames()} 方法，
-     * 但为了避免编译期依赖，通过反射调用。
-     * </p>
-     * @param source 源
-     * @param result 结果
+    * 通过反射扫描 enumerable财产源（如 .属性 文件）
+    * <p>
+    * Spring 的 {@code EnumerablePropertySource} 提供了 {@code getPropertyNames()} 方法，
+    * 但为了避免编译期依赖，通过反射调用。
+    * </p>
+    * @param source 源
+    * @param result 结果
      */
     private void scanByReflection(PropertySource<?> source, Map<String, Object> result) {
         try {
@@ -185,9 +185,9 @@ public class ENCEnvironmentPostProcessor implements EnvironmentPostProcessor, Or
     }
 
     /**
-     * 判断值是否为 ENC 加密格式
-     * @param value 价值观
-     * @return 是否enc价值观的结果
+    * 判断值是否为 ENC 加密格式
+    * @param value 价值观
+    * @return 是否enc价值观的结果
      */
     static boolean isEncValue(String value) {
         if (value == null || value.isEmpty()) {
@@ -197,10 +197,10 @@ public class ENCEnvironmentPostProcessor implements EnvironmentPostProcessor, Or
     }
 
     /**
-     * 解析并解密 ENC 值
-     *
-     * @param encValue ENC 格式的值
-     * @return 解密后的明文
+    * 解析并解密 ENC 值
+    *
+    * @param encValue ENC 格式的值
+    * @return 解密后的明文
      */
     String resolveEncValue(String encValue) {
         if (!isEncValue(encValue)) {
@@ -232,9 +232,9 @@ public class ENCEnvironmentPostProcessor implements EnvironmentPostProcessor, Or
     }
 
     /**
-     * 检查配置键是否敏感（需要优先解密）
-     * @param key 钥匙
-     * @return 是否sensitive钥匙的结果
+    * 检查配置键是否敏感（需要优先解密）
+    * @param key 钥匙
+    * @return 是否sensitive钥匙的结果
      */
     @SuppressWarnings("unused")
     private boolean isSensitiveKey(String key) {

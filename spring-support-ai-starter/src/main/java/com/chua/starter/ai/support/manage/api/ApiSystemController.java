@@ -29,14 +29,14 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
-   * 系统 / 设置 / webui 凭据 / 鉴权 / 计算机权限 控制器（对接 nomicore 契约）。
- *
- * <p>替代 Rust 后端的 system / settings / webui / auth / computer 命名空间，
-   * 向前端 pages/AI（React+Tauri 桌面应用）提供纯 Spring 实现的 /api/* 接口。
-   * 客户端设置与伙伴访问令牌使用内存 映射 维护（无持久态，符合契约占位语义）。</p>
- *
- * @since 4.0.0.42
- * @author CH
+* 系统 / 设置 / webui 凭据 / 鉴权 / 计算机权限 控制器（对接 nomicore 契约）。
+*
+* <p>替代 Rust 后端的 system / settings / webui / auth / computer 命名空间，
+* 向前端 pages/AI（React+Tauri 桌面应用）提供纯 Spring 实现的 /api/* 接口。
+* 客户端设置与伙伴访问令牌使用内存 映射 维护（无持久态，符合契约占位语义）。</p>
+*
+* @since 4.0.0.42
+* @author CH
  */
 @ApiReturnFormatIgnore
 @RestController
@@ -46,28 +46,28 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ApiSystemController {
 
     /**
-     * WS 事件推送服务
+    * WS 事件推送服务
      */
     private final ApiWebSocketPushService pushService;
 
     /**
-      * Spring 环境（用于读取 活跃 配置文件）
+    * Spring 环境（用于读取 活跃 配置文件）
      */
     private final Environment environment;
 
     /**
-      * 客户端设置内存存储（键: notification已启用|cronnotification已启用|keepawake|
-      * 保存upload转为workspace|autopreview办公室文件，值: 是否开启）
+    * 客户端设置内存存储（键: notification已启用|cronnotification已启用|keepawake|
+    * 保存upload转为workspace|autopreview办公室文件，值: 是否开启）
      */
     private final Map<String, Boolean> clientSettings = new ConcurrentHashMap<>();
 
     /**
-      * 伙伴远程访问令牌内存存储（companionid → 令牌 明文，仅生成一次，再次查询返回已配置）
+    * 伙伴远程访问令牌内存存储（companionid → 令牌 明文，仅生成一次，再次查询返回已配置）
      */
     private final Map<String, String> companionAccessTokens = new ConcurrentHashMap<>();
 
     /**
-     * 客户端设置支持的键集合
+    * 客户端设置支持的键集合
      */
     private static final java.util.Set<String> CLIENT_SETTING_KEYS = java.util.Set.of(
             "notificationEnabled",
@@ -88,9 +88,9 @@ public class ApiSystemController {
     // -----------------------------------------------------------------------
 
     /**
-     * 返回运行时真实系统信息。
-     *
-     * @return 系统信息（缓存目录 / 工作目录 / 日志目录 / 存储代际 / 平台 / 架构）
+    * 返回运行时真实系统信息。
+    *
+    * @return 系统信息（缓存目录 / 工作目录 / 日志目录 / 存储代际 / 平台 / 架构）
      */
     @TokenForIgnore
     @GetMapping("/system/info")
@@ -107,9 +107,9 @@ public class ApiSystemController {
     }
 
     /**
-     * 触发出厂重置（纯后端无副作用实现，返回成功信封）。
-     *
-     * @return 成功信封
+    * 触发出厂重置（纯后端无副作用实现，返回成功信封）。
+    *
+    * @return 成功信封
      */
     @PostMapping("/system/factory-reset")
     public ApiResult<Void> factoryReset() {
@@ -118,12 +118,12 @@ public class ApiSystemController {
     }
 
     /**
-     * 持久化用户选择的目录配置。
-      * 角色校验由 @权限 注解经 OAuth 权限拦截器 处理。
-      * dev 配置文件 校验在此处直接执行。
-     *
-     * @param body 请求体（含 work_dir / 缓存_dir / 日志_dir）
-     * @return 成功信封
+    * 持久化用户选择的目录配置。
+    * 角色校验由 @权限 注解经 OAuth 权限拦截器 处理。
+    * dev 配置文件 校验在此处直接执行。
+    *
+    * @param body 请求体（含 work_dir / 缓存_dir / 日志_dir）
+    * @return 成功信封
      */
     @Permission(role = {"admin", "superadmin"})
     @PostMapping("/system/work-dir")
@@ -152,11 +152,11 @@ public class ApiSystemController {
     // -----------------------------------------------------------------------
 
     /**
-     * 读取单个客户端设置（未设置默认 false）。
-     *
-     * @param key 设置键（如 notification已启用）
-     * @return 布尔值
-     * @param false false
+    * 读取单个客户端设置（未设置默认 false）。
+    *
+    * @param key 设置键（如 notification已启用）
+    * @return 布尔值
+    * @param false false
      */
     @GetMapping("/settings/client")
     public ApiResult<Object> getClientSetting(@RequestParam(required = false) String key) {
@@ -167,10 +167,10 @@ public class ApiSystemController {
     }
 
     /**
-      * 更新客户端设置（请求体以 键 为字段名，如 {notification已启用:true}）。
-     *
-     * @param body 设置键值对
-     * @return 成功信封
+    * 更新客户端设置（请求体以 键 为字段名，如 {notification已启用:true}）。
+    *
+    * @param body 设置键值对
+    * @return 成功信封
      */
     @PutMapping("/settings/client")
     public ApiResult<Void> putClientSetting(@RequestBody Map<String, Object> body) {
@@ -182,10 +182,10 @@ public class ApiSystemController {
     }
 
     /**
-     * 变更界面语言并推送 WS 事件。
-     *
-     * @param body 请求体（含 language）
-     * @return 成功信封
+    * 变更界面语言并推送 WS 事件。
+    *
+    * @param body 请求体（含 language）
+    * @return 成功信封
      */
     @PatchMapping("/settings")
     public ApiResult<Void> patchSettings(@RequestBody Map<String, Object> body) {
@@ -202,10 +202,10 @@ public class ApiSystemController {
     // -----------------------------------------------------------------------
 
     /**
-      * 修改 webui 管理员密码（纯后端占位实现）。
-     *
-     * @param body 请求体（含 新_密码）
-     * @return 成功信封
+    * 修改 webui 管理员密码（纯后端占位实现）。
+    *
+    * @param body 请求体（含 新_密码）
+    * @return 成功信封
      */
     @PostMapping("/webui/change-password")
     public ApiResult<Void> webuiChangePassword(@RequestBody Map<String, Object> body) {
@@ -217,10 +217,10 @@ public class ApiSystemController {
     }
 
     /**
-      * 修改 webui 管理员用户名。
-     *
-     * @param body 请求体（含 新_用户名）
-     * @return 新用户名
+    * 修改 webui 管理员用户名。
+    *
+    * @param body 请求体（含 新_用户名）
+    * @return 新用户名
      */
     @PostMapping("/webui/change-username")
     public ApiResult<Map<String, Object>> webuiChangeUsername(@RequestBody Map<String, Object> body) {
@@ -234,9 +234,9 @@ public class ApiSystemController {
     }
 
     /**
-     * 生成用于移动端配对的二维码令牌。
-     *
-     * @return 令牌与过期时间戳
+    * 生成用于移动端配对的二维码令牌。
+    *
+    * @return 令牌与过期时间戳
      */
     @PostMapping("/webui/generate-qr-token")
     public ApiResult<Map<String, Object>> generateQrToken() {
@@ -248,10 +248,10 @@ public class ApiSystemController {
     }
 
     /**
-     * 查询某伙伴的远程访问令牌是否已配置。
-     *
-     * @param companionId 伙伴 标识
-     * @return 是否已配置
+    * 查询某伙伴的远程访问令牌是否已配置。
+    *
+    * @param companionId 伙伴 标识
+    * @return 是否已配置
      */
     @GetMapping("/webui/companions/{companionId}/access-token")
     public ApiResult<Map<String, Object>> getCompanionAccessToken(@PathVariable String companionId) {
@@ -261,10 +261,10 @@ public class ApiSystemController {
     }
 
     /**
-     * 为某伙伴生成远程访问令牌（仅返回明文一次）。
-     *
-     * @param companionId 伙伴 标识
-     * @return 令牌 / 伙伴 标识 / 可选告警
+    * 为某伙伴生成远程访问令牌（仅返回明文一次）。
+    *
+    * @param companionId 伙伴 标识
+    * @return 令牌 / 伙伴 标识 / 可选告警
      */
     @PostMapping("/webui/companions/{companionId}/access-token")
     public ApiResult<Map<String, Object>> mintCompanionAccessToken(@PathVariable String companionId) {
@@ -277,10 +277,10 @@ public class ApiSystemController {
     }
 
     /**
-     * 吊销某伙伴的远程访问令牌。
-     *
-     * @param companionId 伙伴 标识
-     * @return 是否已配置（吊销后恒为 false）
+    * 吊销某伙伴的远程访问令牌。
+    *
+    * @param companionId 伙伴 标识
+    * @return 是否已配置（吊销后恒为 false）
      */
     @DeleteMapping("/webui/companions/{companionId}/access-token")
     public ApiResult<Map<String, Object>> revokeCompanionAccessToken(@PathVariable String companionId) {
@@ -295,9 +295,9 @@ public class ApiSystemController {
     // -----------------------------------------------------------------------
 
     /**
-     * 返回当前认证状态（桌面模式免登录，直接返回已认证且无需 setup）。
-     *
-     * @return 认证状态
+    * 返回当前认证状态（桌面模式免登录，直接返回已认证且无需 setup）。
+    *
+    * @return 认证状态
      */
     @TokenForIgnore
     @GetMapping("/auth/status")
@@ -309,9 +309,9 @@ public class ApiSystemController {
     }
 
     /**
-     * 返回当前登录用户信息（桌面模式返回默认管理员）。
-     *
-     * @return 用户信息
+    * 返回当前登录用户信息（桌面模式返回默认管理员）。
+    *
+    * @return 用户信息
      */
     @TokenForIgnore
     @GetMapping("/auth/user")
@@ -328,10 +328,10 @@ public class ApiSystemController {
     }
 
     /**
-     * 校验当前密码并修改登录密码（纯后端占位实现）。
-     *
-     * @param body 请求体（含 当前_密码 / 新_密码）
-     * @return 成功信封
+    * 校验当前密码并修改登录密码（纯后端占位实现）。
+    *
+    * @param body 请求体（含 当前_密码 / 新_密码）
+    * @return 成功信封
      */
     @PostMapping("/auth/change-password")
     public ApiResult<Void> authChangePassword(@RequestBody Map<String, Object> body) {
@@ -346,10 +346,10 @@ public class ApiSystemController {
     }
 
     /**
-     * 校验当前密码并修改登录用户名。
-     *
-     * @param body 请求体（含 当前_密码 / 新_用户名）
-     * @return 新用户名
+    * 校验当前密码并修改登录用户名。
+    *
+    * @param body 请求体（含 当前_密码 / 新_用户名）
+    * @return 新用户名
      */
     @PostMapping("/auth/change-username")
     public ApiResult<Map<String, Object>> authChangeUsername(@RequestBody Map<String, Object> body) {
@@ -370,9 +370,9 @@ public class ApiSystemController {
     // -----------------------------------------------------------------------
 
     /**
-      * 返回当前进程的辅助功能 / 屏幕录制授权状态（占位：非 macOS 返回 空）。
-     *
-     * @return 权限状态
+    * 返回当前进程的辅助功能 / 屏幕录制授权状态（占位：非 macOS 返回 空）。
+    *
+    * @return 权限状态
      */
     @GetMapping("/computer/permissions")
     public ApiResult<Map<String, Object>> computerPermissions() {
@@ -380,10 +380,10 @@ public class ApiSystemController {
     }
 
     /**
-     * 触发授权请求（占位：仅返回当前探测状态）。
-     *
-     * @param body 请求体（含 种类）
-     * @return 权限状态
+    * 触发授权请求（占位：仅返回当前探测状态）。
+    *
+    * @param body 请求体（含 种类）
+    * @return 权限状态
      */
     @PostMapping("/computer/permissions/request")
     public ApiResult<Map<String, Object>> requestComputerPermission(@RequestBody Map<String, Object> body) {
@@ -395,10 +395,10 @@ public class ApiSystemController {
     }
 
     /**
-     * 打开系统设置的对应隐私面板（占位实现）。
-     *
-     * @param body 请求体（含 种类）
-     * @return 成功信封
+    * 打开系统设置的对应隐私面板（占位实现）。
+    *
+    * @param body 请求体（含 种类）
+    * @return 成功信封
      */
     @PostMapping("/computer/permissions/open-settings")
     public ApiResult<Void> openComputerPermissionSettings(@RequestBody Map<String, Object> body) {
@@ -414,8 +414,8 @@ public class ApiSystemController {
     // -----------------------------------------------------------------------
 
         /**
-          * resolvestoragegeneration。
-         * @return resolveStorageGeneration的结果
+        * resolvestoragegeneration。
+        * @return resolveStorageGeneration的结果
          */
         private String resolveStorageGeneration() {
         String env = System.getenv("STORAGE_GENERATION");
@@ -445,9 +445,9 @@ public class ApiSystemController {
     }
 
 /**
-     * 构造计算机权限状态对象。
-     *
-     * @return 权限状态（accessibility / 屏幕_recording / platform / app_标签）
+* 构造计算机权限状态对象。
+*
+* @return 权限状态（accessibility / 屏幕_recording / platform / app_标签）
      */
     private Map<String, Object> buildPermissionStatus() {
         Map<String, Object> status = new LinkedHashMap<>();
@@ -459,9 +459,9 @@ public class ApiSystemController {
     }
 
     /**
-     * 探测运行平台。
-     *
-     * @return macos / 窗口 / Linux / other
+    * 探测运行平台。
+    *
+    * @return macos / 窗口 / Linux / other
      */
     private String detectPlatform() {
         String os = System.getProperty("os.name", "").toLowerCase();
@@ -478,9 +478,9 @@ public class ApiSystemController {
     }
 
     /**
-     * 解析缓存目录（优先环境变量，回退到系统临时目录）。
-     *
-     * @return 缓存目录真实路径
+    * 解析缓存目录（优先环境变量，回退到系统临时目录）。
+    *
+    * @return 缓存目录真实路径
      */
     private String resolveCacheDir() {
         String env = System.getenv("NOMIFUN_CACHE_DIR");
@@ -491,9 +491,9 @@ public class ApiSystemController {
     }
 
     /**
-     * 解析日志目录（优先环境变量，回退到用户主目录下的隐藏目录）。
-     *
-     * @return 日志目录真实路径
+    * 解析日志目录（优先环境变量，回退到用户主目录下的隐藏目录）。
+    *
+    * @return 日志目录真实路径
      */
     private String resolveLogDir() {
         String env = System.getenv("NOMIFUN_LOG_DIR");
@@ -504,16 +504,16 @@ public class ApiSystemController {
     }
 
     /**
-     * 解析存储代际（优先环境变量，回退常量 1）。
-     *
-     * @return 存储代际字符串
+    * 解析存储代际（优先环境变量，回退常量 1）。
+    *
+    * @return 存储代际字符串
      */
     
 
     /**
-     * 解析应用显示名（优先环境变量，回退默认值）。
-     *
-     * @return 应用标签
+    * 解析应用显示名（优先环境变量，回退默认值）。
+    *
+    * @return 应用标签
      */
     private String resolveAppLabel() {
         String env = System.getenv("NOMIFUN_APP_LABEL");
@@ -521,8 +521,8 @@ public class ApiSystemController {
     }
 
     /**
-      * 返回当前激活的 Spring 配置文件（用于前端 dev 模式判断）。
-     * @return resolve活跃配置文件的结果
+    * 返回当前激活的 Spring 配置文件（用于前端 dev 模式判断）。
+    * @return resolve活跃配置文件的结果
      */
     private String resolveActiveProfile() {
         String[] profiles = environment.getActiveProfiles();

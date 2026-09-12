@@ -9,14 +9,14 @@ import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
 /**
-   * 定时 SSH 采集 提供者（调度）
- * <p>
- * 通过 SSH 连接目标主机采集硬件信息（CPU/内存/磁盘/系统版本/IP）。
- * SSH 为阻塞 IO，在 boundedElastic 调度器上执行，避免阻塞 Web 线程。
- * </p>
- *
- * @author CH
- * @since 4.0.0.42
+* 定时 SSH 采集 提供者（调度）
+* <p>
+* 通过 SSH 连接目标主机采集硬件信息（CPU/内存/磁盘/系统版本/IP）。
+* SSH 为阻塞 IO，在 boundedElastic 调度器上执行，避免阻塞 Web 线程。
+* </p>
+*
+* @author CH
+* @since 4.0.0.42
  */
 @Slf4j
 @Component
@@ -38,10 +38,10 @@ public class ScheduledHostCollectProvider implements HostCollectProvider {
     }
 
     /**
-     * 同步执行采集
-     *
-     * @param context 上下文
-     * @return 结果
+    * 同步执行采集
+    *
+    * @param context 上下文
+    * @return 结果
      */
     private CollectOutcome doCollect(HostCollectContext context) {
         if (context == null || context.getHost() == null || context.getHost().getId() == null) {

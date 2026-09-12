@@ -3,10 +3,10 @@ package com.chua.starter.job.support.log;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * 默认日志落库实现, 仅打印 stdout。
- *
- * @since 4.0.0.42
- * @author CH
+* 默认日志落库实现, 仅打印 stdout。
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Slf4j
 public class StdoutJobLogSink implements JobLogSink {

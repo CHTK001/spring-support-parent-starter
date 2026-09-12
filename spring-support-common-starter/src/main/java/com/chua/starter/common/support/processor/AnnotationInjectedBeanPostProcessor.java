@@ -31,16 +31,16 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 /**
- * 注解注入Bean后置处理器
- * <p>
- * 用于处理自定义注解的依赖注入，支持字段注入和方法注入。
- * 子类需要实现 {@link #doGetInjectedBean} 方法来提供注入对象。
- * </p>
- *
- * @param <A> 注解类型
- * @since 2022/7/30 11:36
-   * @版本 1.0.0
- * @author CH
+* 注解注入Bean后置处理器
+* <p>
+* 用于处理自定义注解的依赖注入，支持字段注入和方法注入。
+* 子类需要实现 {@link #doGetInjectedBean} 方法来提供注入对象。
+* </p>
+*
+* @param <A> 注解类型
+* @since 2022/7/30 11:36
+* @版本 1.0.0
+* @author CH
  */
 @SuppressWarnings("ALL")
 public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> implements MergedBeanDefinitionPostProcessor, PriorityOrdered, BeanFactoryAware, BeanClassLoaderAware, EnvironmentAware, DisposableBean, SmartInstantiationAwareBeanPostProcessor {
@@ -63,7 +63,7 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
     private int order;
 
     /**
-      * 注解injectedbeanpost处理器。
+    * 注解injectedbeanpost处理器。
      */
     public AnnotationInjectedBeanPostProcessor() {
         this.injectionMetadataCache = new ConcurrentHashMap(CACHE_SIZE);
@@ -73,9 +73,9 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
     }
 
     /**
-     * 组合。
-     * @param elements elements
-     * @return 组合的结果
+    * 组合。
+    * @param elements elements
+    * @return 组合的结果
      */
     private static <T> Collection<T> combine(Collection<? extends T>... elements) {
         List<T> allElements = new ArrayList();
@@ -91,8 +91,8 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
     }
 
     /**
-     * 获取注解类型。
-     * @return 获取注解类型的结果
+    * 获取注解类型。
+    * @return 获取注解类型的结果
      */
     public final Class<A> getAnnotationType() {
         return this.annotationType;
@@ -115,10 +115,10 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
             throw var7;
         } catch (Throwable var8) {
             /**
-             * Bean创建异常。
-             * @param beanName Bean名称
-             * @param this.getAnnotationType( this.获取注解类型(
-             * @return Bean创建异常的结果
+            * Bean创建异常。
+            * @param beanName Bean名称
+            * @param this.getAnnotationType( this.获取注解类型(
+            * @return Bean创建异常的结果
              */
             throw new BeanCreationException(beanName, "Injection of @" + this.getAnnotationType().getName() + " dependencies is failed", var8);
         }
@@ -126,9 +126,9 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
 
 
     /**
-      * 查找字段注解metadata。
-     * @param beanClass Bean类
-     * @return find字段注解metadata的结果
+    * 查找字段注解metadata。
+    * @param beanClass Bean类
+    * @return find字段注解metadata的结果
      */
     private List<AnnotatedFieldElement> findFieldAnnotationMetadata(Class<?> beanClass) {
         final List<AnnotatedFieldElement> elements = new LinkedList();
@@ -155,9 +155,9 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
 
     @SuppressWarnings("removal")
     /**
-     * findannotated方法metadata。
-     * @param beanClass Bean类
-     * @return findannotated方法metadata的结果
+    * findannotated方法metadata。
+    * @param beanClass Bean类
+    * @return findannotated方法metadata的结果
      */
     private List<AnnotatedMethodElement> findAnnotatedMethodMetadata(final Class<?> beanClass) {
         final List<AnnotatedMethodElement> elements = new LinkedList();
@@ -191,29 +191,29 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
     }
 
     /**
-     * 构建annotatedmetadata。
-     * @param beanClass Bean类
-     * @return 构建annotatedmetadata的结果
+    * 构建annotatedmetadata。
+    * @param beanClass Bean类
+    * @return 构建annotatedmetadata的结果
      */
     private AnnotatedInjectionMetadata buildAnnotatedMetadata(Class<?> beanClass) {
         Collection<AnnotatedFieldElement> fieldElements = this.findFieldAnnotationMetadata(beanClass);
         Collection<AnnotatedMethodElement> methodElements = this.findAnnotatedMethodMetadata(beanClass);
         /**
-          * annotatedinjectionmetadata。
-         * @param beanClass Bean类
-         * @param fieldElements 字段elements
-         * @param methodElements 方法elements
-         * @return AnnotatedInjectionMetadata的结果
+        * annotatedinjectionmetadata。
+        * @param beanClass Bean类
+        * @param fieldElements 字段elements
+        * @param methodElements 方法elements
+        * @return AnnotatedInjectionMetadata的结果
          */
         return new AnnotatedInjectionMetadata(beanClass, fieldElements, methodElements);
     }
 
     /**
-      * findinjectionmetadata。
-     * @param beanName Bean名称
-     * @param clazz clazz
-     * @param pvs pvs
-     * @return findInjectionMetadata的结果
+    * findinjectionmetadata。
+    * @param beanName Bean名称
+    * @param clazz clazz
+    * @param pvs pvs
+    * @return findInjectionMetadata的结果
      */
     private InjectionMetadata findInjectionMetadata(String beanName, Class<?> clazz, PropertyValues pvs) {
         String cacheKey = StringUtils.hasLength(beanName) ? beanName : clazz.getName();
@@ -231,9 +231,9 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
                         this.injectionMetadataCache.put(cacheKey, metadata);
                     } catch (NoClassDefFoundError var9) {
                         /**
-                         * illegal状态异常。
-                         * @param clazz.getName( clazz.获取名称(
-                         * @return illegal状态异常的结果
+                        * illegal状态异常。
+                        * @param clazz.getName( clazz.获取名称(
+                        * @return illegal状态异常的结果
                          */
                         throw new IllegalStateException("Failed to introspect object class [" + clazz.getName() + "] for annotation metadata: could not find class that it depends on", var9);
                     }
@@ -259,8 +259,8 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
     }
 
     /**
-     * 设置订单。
-     * @param order 订单
+    * 设置订单。
+    * @param order 订单
      */
     public void setOrder(int order) {
         this.order = order;
@@ -300,45 +300,45 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
     }
 
     /**
-     * 获取环境。
-     * @return 获取环境的结果
+    * 获取环境。
+    * @return 获取环境的结果
      */
     protected Environment getEnvironment() {
         return this.environment;
     }
 
     /**
-     * 获取类加载。
-     * @return 获取类加载的结果
+    * 获取类加载。
+    * @return 获取类加载的结果
      */
     protected ClassLoader getClassLoader() {
         return this.classLoader;
     }
 
     /**
-     * 获取Bean工厂。
-     * @return 获取Bean工厂的结果
+    * 获取Bean工厂。
+    * @return 获取Bean工厂的结果
      */
     protected ConfigurableListableBeanFactory getBeanFactory() {
         return this.beanFactory;
     }
 
     /**
-     * 获取injected对象。
-     * @return 获取injected对象的结果
+    * 获取injected对象。
+    * @return 获取injected对象的结果
      */
     protected Collection<Object> getInjectedObjects() {
         return this.injectedObjectsCache.values();
     }
 
     /**
-     * 获取injected对象。
-     * @param annotation 注解
-     * @param bean Bean
-     * @param beanName Bean名称
-     * @param injectedType injected类型
-     * @param injectedElement injectedelement
-     * @return 获取injected对象的结果
+    * 获取injected对象。
+    * @param annotation 注解
+    * @param bean Bean
+    * @param beanName Bean名称
+    * @param injectedType injected类型
+    * @param injectedElement injectedelement
+    * @return 获取injected对象的结果
      */
     protected Object getInjectedObject(A annotation, Object bean, String beanName, Class<?> injectedType, InjectionMetadata.InjectedElement injectedElement) throws Exception {
         String cacheKey = this.buildInjectedObjectCacheKey(annotation, bean, beanName, injectedType, injectedElement);
@@ -352,37 +352,37 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
     }
 
     /**
-     * 生成对象
-     *
-     * @param annotation      注解
-     * @param bean            Bean
-     * @param beanName        名称
-     * @param injectedType    类型
-     * @param injectedElement 元素
-     * @return 对象
-     * @throws Exception ex
+    * 生成对象
+    *
+    * @param annotation      注解
+    * @param bean            Bean
+    * @param beanName        名称
+    * @param injectedType    类型
+    * @param injectedElement 元素
+    * @return 对象
+    * @throws Exception ex
      */
     protected abstract Object doGetInjectedBean(A annotation, Object bean, String beanName, Class<?> injectedType,
                                                 InjectionMetadata.InjectedElement injectedElement) throws Exception;
 
     /**
-     * /**
-     * 对象索引
-     *
-     * @param annotation      注解
-     * @param bean            Bean
-     * @param beanName        名称
-     * @param injectedType    类型
-     * @param injectedElement 元素
-     * @return 对象索引
+    * /**
+    * 对象索引
+    *
+    * @param annotation      注解
+    * @param bean            Bean
+    * @param beanName        名称
+    * @param injectedType    类型
+    * @param injectedElement 元素
+    * @return 对象索引
      */
     protected abstract String buildInjectedObjectCacheKey(A annotation, Object bean, String beanName,
                                                           Class<?> injectedType,
                                                           InjectionMetadata.InjectedElement injectedElement);
 
     /**
-     * 获取injected字段对象映射。
-     * @return 获取injected字段对象映射的结果
+    * 获取injected字段对象映射。
+    * @return 获取injected字段对象映射的结果
      */
     protected Map<InjectionMetadata.InjectedElement, Object> getInjectedFieldObjectsMap() {
         Map<InjectionMetadata.InjectedElement, Object> injectedElementBeanMap = new LinkedHashMap<>();
@@ -403,8 +403,8 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
     }
 
     /**
-     * 获取injected方法对象映射。
-     * @return 获取injected方法对象映射的结果
+    * 获取injected方法对象映射。
+    * @return 获取injected方法对象映射的结果
      */
     protected Map<InjectionMetadata.InjectedElement, Object> getInjectedMethodObjectsMap() {
         Map<InjectionMetadata.InjectedElement, Object> injectedElementBeanMap = new LinkedHashMap<>();
@@ -425,10 +425,10 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
     }
 
     /**
-     * annotated字段element类。
-     *
-     * @author CH
-     * @since 4.0.0
+    * annotated字段element类。
+    *
+    * @author CH
+    * @since 4.0.0
      */
     public class AnnotatedFieldElement extends InjectionMetadata.InjectedElement {
         /** 字段 */
@@ -438,15 +438,15 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
         private volatile Object bean; // Bean
 
         /**
-         * annotated字段element。
-         * @param field 字段
-         * @param annotation 注解
+        * annotated字段element。
+        * @param field 字段
+        * @param annotation 注解
          */
         protected AnnotatedFieldElement(Field field, A annotation) {
             /**
-             * 父。
-             * @param field 字段
-             * @param (PropertyDescriptor (财产descriptor
+            * 父。
+            * @param field 字段
+            * @param (PropertyDescriptor (财产descriptor
              */
             super(field, (PropertyDescriptor) null);
             this.field = field;
@@ -463,10 +463,10 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
     }
 
     /**
-     * annotated方法element类。
-     *
-     * @author CH
-     * @since 4.0.0
+    * annotated方法element类。
+    *
+    * @author CH
+    * @since 4.0.0
      */
     private class AnnotatedMethodElement extends InjectionMetadata.InjectedElement {
         /** 方法 */
@@ -476,16 +476,16 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
         private volatile Object object; // 对象
 
         /**
-         * annotated方法element。
-         * @param method 方法
-         * @param pd pd
-         * @param annotation 注解
+        * annotated方法element。
+        * @param method 方法
+        * @param pd pd
+        * @param annotation 注解
          */
         protected AnnotatedMethodElement(Method method, PropertyDescriptor pd, A annotation) {
             /**
-             * 父。
-             * @param method 方法
-             * @param pd pd
+            * 父。
+            * @param method 方法
+            * @param pd pd
              */
             super(method, pd);
             this.method = method;
@@ -502,10 +502,10 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
     }
 
     /**
-      * annotatedinjectionmetadata类。
-     *
-     * @author CH
-     * @since 4.0.0
+    * annotatedinjectionmetadata类。
+    *
+    * @author CH
+    * @since 4.0.0
      */
     private class AnnotatedInjectionMetadata extends InjectionMetadata {
         /** Fieldelements */
@@ -514,16 +514,16 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
         private final Collection<AnnotatedMethodElement> methodElements;
 
         /**
-          * annotatedinjectionmetadata。
-         * @param targetClass Target类
-         * @param fieldElements 字段elements
-         * @param methodElements 方法elements
+        * annotatedinjectionmetadata。
+        * @param targetClass Target类
+        * @param fieldElements 字段elements
+        * @param methodElements 方法elements
          */
         public AnnotatedInjectionMetadata(Class<?> targetClass, Collection<AnnotatedFieldElement> fieldElements, Collection<AnnotatedMethodElement> methodElements) {
             /**
-             * 父。
-             * @param targetClass Target类
-             * @param methodElements 方法elements
+            * 父。
+            * @param targetClass Target类
+            * @param methodElements 方法elements
              */
             super(targetClass, AnnotationInjectedBeanPostProcessor.combine(fieldElements, methodElements));
             this.fieldElements = fieldElements;
@@ -531,16 +531,16 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
         }
 
         /**
-         * 获取字段elements。
-         * @return 获取字段elements的结果
+        * 获取字段elements。
+        * @return 获取字段elements的结果
          */
         public Collection<AnnotatedFieldElement> getFieldElements() {
             return this.fieldElements;
         }
 
         /**
-         * 获取方法elements。
-         * @return 获取方法elements的结果
+        * 获取方法elements。
+        * @return 获取方法elements的结果
          */
         public Collection<AnnotatedMethodElement> getMethodElements() {
             return this.methodElements;

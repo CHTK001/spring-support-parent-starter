@@ -7,9 +7,9 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
- * 免费代理（每次获取免费代理时清空重录——页面从本表读取）
- * @author CH
- * @since 4.0.0
+* 免费代理（每次获取免费代理时清空重录——页面从本表读取）
+* @author CH
+* @since 4.0.0
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

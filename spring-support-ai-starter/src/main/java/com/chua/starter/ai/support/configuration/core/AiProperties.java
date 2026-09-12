@@ -4,131 +4,131 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * AI 生成配置属性。
- *
- * @since 4.0.0.42
- * @author CH
+* AI 生成配置属性。
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Data
 @ConfigurationProperties(prefix = "spring.ai.generate")
 public class AiProperties {
 
     /**
-     * 图片生成默认配置
+    * 图片生成默认配置
      */
     private Image image = new Image();
 
     /**
-     * 视频生成默认配置
+    * 视频生成默认配置
      */
     private Video video = new Video();
 
     /**
-     * 图片上色默认配置
+    * 图片上色默认配置
      */
     private Colorize colorize = new Colorize();
 
     /**
-     * 图片生成配置。
-     *
-     * @since 4.0.0.42
-     * @author CH
+    * 图片生成配置。
+    *
+    * @since 4.0.0.42
+    * @author CH
      */
     @Data
     public static class Image {
 
         /**
-         * 生成提供者（如 openai、zhipu）
+        * 生成提供者（如 openai、zhipu）
          */
         private String provider = "openai";
 
         /**
-          * API 钥匙
+        * API 钥匙
          */
         private String apiKey;
 
         /**
-          * 自定义 基础 URL（可选）
+        * 自定义 基础 URL（可选）
          */
         private String baseUrl;
 
         /**
-         * 默认模型（如 dall-e-3）
+        * 默认模型（如 dall-e-3）
          */
         private String model = "dall-e-3";
 
         /**
-         * 默认宽度
+        * 默认宽度
          */
         private int width = 1024;
 
         /**
-         * 默认高度
+        * 默认高度
          */
         private int height = 1024;
     }
 
     /**
-     * 视频生成配置。
-     *
-     * @since 4.0.0.42
-     * @author CH
+    * 视频生成配置。
+    *
+    * @since 4.0.0.42
+    * @author CH
      */
     @Data
     public static class Video {
 
         /**
-         * 生成提供者（如 openai、zhipu）
+        * 生成提供者（如 openai、zhipu）
          */
         private String provider = "openai";
 
         /**
-          * API 钥匙
+        * API 钥匙
          */
         private String apiKey;
 
         /**
-          * 自定义 基础 URL（可选）
+        * 自定义 基础 URL（可选）
          */
         private String baseUrl;
 
         /**
-         * 默认模型（如 sora）
+        * 默认模型（如 sora）
          */
         private String model = "sora";
 
         /**
-         * 默认时长（秒）
+        * 默认时长（秒）
          */
         private Integer duration = 5;
     }
 
     /**
-     * 图片上色配置。
-     *
-     * @since 4.0.0.42
-     * @author CH
+    * 图片上色配置。
+    *
+    * @since 4.0.0.42
+    * @author CH
      */
     @Data
     public static class Colorize {
 
         /**
-         * 生成提供者（如 openai、zhipu）
+        * 生成提供者（如 openai、zhipu）
          */
         private String provider = "openai";
 
         /**
-          * API 钥匙
+        * API 钥匙
          */
         private String apiKey;
 
         /**
-          * 自定义 基础 URL（可选）
+        * 自定义 基础 URL（可选）
          */
         private String baseUrl;
 
         /**
-         * 默认模型（如 dall-e-3）
+        * 默认模型（如 dall-e-3）
          */
         private String model = "dall-e-3";
     }

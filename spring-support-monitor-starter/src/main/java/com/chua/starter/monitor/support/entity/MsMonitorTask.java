@@ -12,10 +12,10 @@ import lombok.EqualsAndHashCode;
 import java.time.LocalDateTime;
 
 /**
- * 监控采集任务实体
- *
- * @since 2026/8/4
- * @author CH
+* 监控采集任务实体
+*
+* @since 2026/8/4
+* @author CH
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -27,7 +27,7 @@ public class MsMonitorTask extends SysBase {
     private static final long serialVersionUID = 1L;
 
     /**
-     * 主键
+    * 主键
      */
     @TableId(value = "id", type = IdType.AUTO)
     @Schema(description = "主键", example = "1")
@@ -35,7 +35,7 @@ public class MsMonitorTask extends SysBase {
     private Long id;
 
     /**
-      * 关联监控资产 标识
+    * 关联监控资产 标识
      */
     @TableField("ms_monitor_task_monitor_id")
     @Schema(description = "关联监控资产 id", example = "1")
@@ -43,7 +43,7 @@ public class MsMonitorTask extends SysBase {
     private Long monitorId;
 
     /**
-     * 任务名称
+    * 任务名称
      */
     @TableField("ms_monitor_task_name")
     @Schema(description = "任务名称", example = "Redis INFO 采集")
@@ -51,7 +51,7 @@ public class MsMonitorTask extends SysBase {
     private String monitorTaskName;
 
     /**
-     * 服务类型
+    * 服务类型
      */
     @TableField("ms_monitor_task_service_type")
     @Schema(description = "服务类型: SERVER / REDIS / MYSQL / PG / ORACLE / MSSQL / MQ",
@@ -60,7 +60,7 @@ public class MsMonitorTask extends SysBase {
     private String serviceType;
 
     /**
-     * 采集方式
+    * 采集方式
      */
     @TableField("ms_monitor_task_provider")
     @Schema(description = "采集方式: LOCAL / TERMINAL / HTTP / PROMETHEUS", example = "LOCAL")
@@ -68,7 +68,7 @@ public class MsMonitorTask extends SysBase {
     private String provider;
 
     /**
-     * 采集参数 JSON
+    * 采集参数 JSON
      */
     @TableField("ms_monitor_task_collect_config")
     @Schema(description = "采集参数 JSON, 含账号密码/连接信息/命令/PromQL 等",
@@ -77,7 +77,7 @@ public class MsMonitorTask extends SysBase {
     private String collectConfig;
 
     /**
-     * cron 表达式
+    * cron 表达式
      */
     @TableField("ms_monitor_task_cron")
     @Schema(description = "cron 表达式", example = "0/10 * * * * ?")
@@ -85,7 +85,7 @@ public class MsMonitorTask extends SysBase {
     private String monitorTaskCron;
 
     /**
-     * 超时(毫秒)
+    * 超时(毫秒)
      */
     @TableField("ms_monitor_task_timeout")
     @Schema(description = "超时(毫秒)", example = "5000")
@@ -93,7 +93,7 @@ public class MsMonitorTask extends SysBase {
     private Integer monitorTaskTimeout;
 
     /**
-     * 是否启用
+    * 是否启用
      */
     @TableField("ms_monitor_task_enabled")
     @Schema(description = "是否启用 1启用 0禁用", example = "1")
@@ -101,7 +101,7 @@ public class MsMonitorTask extends SysBase {
     private Integer monitorTaskEnabled;
 
     /**
-     * 备注
+    * 备注
      */
     @TableField("ms_monitor_task_remark")
     @Schema(description = "备注", example = "Redis INFO 关键指标 10 秒一采")
@@ -109,7 +109,7 @@ public class MsMonitorTask extends SysBase {
     private String monitorTaskRemark;
 
     /**
-     * 最近一次触发时间
+    * 最近一次触发时间
      */
     @TableField("ms_monitor_task_last_run_time")
     @Schema(description = "最近一次触发时间", example = "2026-08-04T10:00:00")

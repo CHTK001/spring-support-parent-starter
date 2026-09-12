@@ -8,10 +8,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 
 /**
-   * 套接字 消息编解码包装
- *
- * @since 2026-04-08
- * @author CH
+* 套接字 消息编解码包装
+*
+* @since 2026-04-08
+* @author CH
  */
 @Slf4j
 public class SocketMessageCodec {
@@ -33,8 +33,8 @@ public class SocketMessageCodec {
     private final String publicKeyHex;
 
     /**
-      * 创建 套接字消息codec 实例
-     * @param properties 属性
+    * 创建 套接字消息codec 实例
+    * @param properties 属性
      */
     public SocketMessageCodec(SocketProperties properties) {
         String codecType = properties == null || properties.getCodecType() == null
@@ -64,21 +64,21 @@ public class SocketMessageCodec {
     }
 
     /**
-     * 编码
-     *
-     * @param payload payload
-     * @return encode的结果
+    * 编码
+    *
+    * @param payload payload
+    * @return encode的结果
      */
     public Object encode(String payload) {
         return encode(payload, null);
     }
 
     /**
-     * 编码
-     *
-     * @param payload payload
-     * @param encryptRequested encrypt请求
-     * @return encode的结果
+    * 编码
+    *
+    * @param payload payload
+    * @param encryptRequested encrypt请求
+    * @return encode的结果
      */
     public Object encode(String payload, Boolean encryptRequested) {
         if (!shouldEncrypt(payload, encryptRequested)) {
@@ -103,11 +103,11 @@ public class SocketMessageCodec {
     }
 
     /**
-     * 是否应该Encrypt
-     *
-     * @param payload payload
-     * @param encryptRequested encrypt请求
-     * @return shouldEncrypt的结果
+    * 是否应该Encrypt
+    *
+    * @param payload payload
+    * @param encryptRequested encrypt请求
+    * @return shouldEncrypt的结果
      */
     private boolean shouldEncrypt(String payload, Boolean encryptRequested) {
         return shouldEncryptForCurrentSession(encryptRequested)
@@ -118,10 +118,10 @@ public class SocketMessageCodec {
     }
 
     /**
-     * 是否应该encryptfor当前会话
-     *
-     * @param encryptRequested encrypt请求
-     * @return shouldencryptfor当前会话的结果
+    * 是否应该encryptfor当前会话
+    *
+    * @param encryptRequested encrypt请求
+    * @return shouldencryptfor当前会话的结果
      */
     private boolean shouldEncryptForCurrentSession(Boolean encryptRequested) {
         return switch (encryptMode) {
@@ -132,10 +132,10 @@ public class SocketMessageCodec {
     }
 
     /**
-      * 解析数据标识
-     *
-     * @param payload payload
-     * @return resolve数据id的结果
+    * 解析数据标识
+    *
+    * @param payload payload
+    * @return resolve数据id的结果
      */
     private String resolveDataId(String payload) {
         try {

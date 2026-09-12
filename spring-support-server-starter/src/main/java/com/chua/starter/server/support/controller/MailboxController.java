@@ -16,11 +16,11 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 邮箱账号(MAILBOX 身份)邮件箱接口
- * <p>读取邮箱身份的 IMAP 收件箱：列表 + 邮件正文详情。邮箱地址/授权码均取自登录身份，授权码加密存储、不对外返回。</p>
- *
- * @author CH
- * @since 4.0.0.42
+* 邮箱账号(MAILBOX 身份)邮件箱接口
+* <p>读取邮箱身份的 IMAP 收件箱：列表 + 邮件正文详情。邮箱地址/授权码均取自登录身份，授权码加密存储、不对外返回。</p>
+*
+* @author CH
+* @since 4.0.0.42
  */
 @Tag(name = "服务器资产-邮箱账号", description = "MAILBOX 身份邮件箱(IMAP 读取)")
 @RestController
@@ -32,12 +32,12 @@ public class MailboxController {
     private final MailboxService mailboxService;
 
     /**
-     * 收件箱邮件列表
-     *
-     * @param identityId 邮箱身份 标识
-     * @param folder     文件夹(默认 INBOX)
-     * @param limit      最大条数(默认 20)
-     * @return 邮件列表
+    * 收件箱邮件列表
+    *
+    * @param identityId 邮箱身份 标识
+    * @param folder     文件夹(默认 INBOX)
+    * @param limit      最大条数(默认 20)
+    * @return 邮件列表
      */
     @Operation(summary = "邮箱收件箱列表")
     @GetMapping("/{identityId}/mailbox/list")
@@ -48,12 +48,12 @@ public class MailboxController {
     }
 
     /**
-     * 邮件正文详情
-     *
-     * @param identityId 邮箱身份 标识
-     * @param folder     文件夹(默认 INBOX)
-     * @param subject    邮件主题关键字(定位，可空默认最新)
-     * @return 邮件详情
+    * 邮件正文详情
+    *
+    * @param identityId 邮箱身份 标识
+    * @param folder     文件夹(默认 INBOX)
+    * @param subject    邮件主题关键字(定位，可空默认最新)
+    * @return 邮件详情
      */
     @Operation(summary = "邮件正文详情")
     @GetMapping("/{identityId}/mailbox/message")

@@ -14,13 +14,13 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 基于Spring的RPC服务器实现
- * <p>
-   * 使用Spring的application上下文来注册和管理服务
- * </p>
- *
- * @since 2025-03-20
- * @author CH
+* 基于Spring的RPC服务器实现
+* <p>
+* 使用Spring的application上下文来注册和管理服务
+* </p>
+*
+* @since 2025-03-20
+* @author CH
  */
 @Slf4j
 public class SpringRpcServer implements RpcServer, ApplicationContextAware {
@@ -37,10 +37,10 @@ public class SpringRpcServer implements RpcServer, ApplicationContextAware {
     private volatile boolean initialized = false; // 初始化
 
     /**
-      * 创建 springrpc服务端 实例
-     * @param registryConfigs registry配置
-     * @param protocolConfig 协议配置
-     * @param appName app名称
+    * 创建 springrpc服务端 实例
+    * @param registryConfigs registry配置
+    * @param protocolConfig 协议配置
+    * @param appName app名称
      */
     public SpringRpcServer(List<RpcRegistryConfig> registryConfigs,
                           RpcProtocolConfig protocolConfig,
@@ -104,17 +104,17 @@ public class SpringRpcServer implements RpcServer, ApplicationContextAware {
     }
 
     /**
-     * 获取已注册的服务
-     * @param name 名称
-     * @return 获取服务的结果
+    * 获取已注册的服务
+    * @param name 名称
+    * @return 获取服务的结果
      */
     public Object getService(String name) {
         return serviceRegistry.get(name);
     }
 
     /**
-     * 获取所有已注册的服务
-     * @return 获取全部服务的结果
+    * 获取所有已注册的服务
+    * @return 获取全部服务的结果
      */
     public Map<String, Object> getAllServices() {
         return new ConcurrentHashMap<>(serviceRegistry);

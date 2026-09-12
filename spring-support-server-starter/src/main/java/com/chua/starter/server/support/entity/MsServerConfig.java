@@ -10,9 +10,9 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
-   * 服务器资产系统配置（钥匙-价值观）
- * @author CH
- * @since 4.0.0
+* 服务器资产系统配置（钥匙-价值观）
+* @author CH
+* @since 4.0.0
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

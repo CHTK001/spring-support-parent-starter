@@ -26,14 +26,14 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
- * 资产联动服务 —— 聚合「主机台账 + 服务节点 + 通道状态」。
- *
- * <p>把资产监控系统的两个核心概念（资产 inventory 与协议服务节点）打通：
-   * 按主机查询其关联的服务节点，聚合在线/采集/智能体/远控等通道状态，
- * 供监控台「资产详情 / 链路总览」一次性获取，避免前端拉多处接口再拼接。</p>
- *
- * @author CH
- * @since 4.0.0.42
+* 资产联动服务 —— 聚合「主机台账 + 服务节点 + 通道状态」。
+*
+* <p>把资产监控系统的两个核心概念（资产 inventory 与协议服务节点）打通：
+* 按主机查询其关联的服务节点，聚合在线/采集/智能体/远控等通道状态，
+* 供监控台「资产详情 / 链路总览」一次性获取，避免前端拉多处接口再拼接。</p>
+*
+* @author CH
+* @since 4.0.0.42
  */
 @Slf4j
 @Service
@@ -52,10 +52,10 @@ public class AssetLinkageService {
     private final MsMonitorAlarmEventMapper alarmEventMapper;
 
     /**
-      * 按主机 标识 聚合资产详情。
-     *
-     * @param hostId 主机 标识
-     * @return 资产聚合详情；主机不存在返回 数据=空（编码 仍 00000）
+    * 按主机 标识 聚合资产详情。
+    *
+    * @param hostId 主机 标识
+    * @return 资产聚合详情；主机不存在返回 数据=空（编码 仍 00000）
      */
     public ReturnResult<AssetDetailView> assetDetail(Long hostId) {
         try {
@@ -72,10 +72,10 @@ public class AssetLinkageService {
     }
 
     /**
-     * 按关键字列出资产（含简化的在线/通道状态），供监控台搜索、导航。
-     *
-     * @param keyword 关键字（名称/IP 模糊，可空）
-     * @return 资产简表列表
+    * 按关键字列出资产（含简化的在线/通道状态），供监控台搜索、导航。
+    *
+    * @param keyword 关键字（名称/IP 模糊，可空）
+    * @return 资产简表列表
      */
     public ReturnResult<List<Map<String, Object>>> searchAssets(String keyword) {
         try {
@@ -105,10 +105,10 @@ public class AssetLinkageService {
     }
 
     /**
-     * 构建资产聚合视图。
-     *
-     * @param host 主机台账
-     * @return 聚合视图
+    * 构建资产聚合视图。
+    *
+    * @param host 主机台账
+    * @return 聚合视图
      */
     private AssetDetailView buildView(MsServerHost host) {
         AssetDetailView view = new AssetDetailView()
@@ -140,19 +140,19 @@ public class AssetLinkageService {
 
         // 资产 → 监控项 → 告警 聚合
         /**
-          * aggregate监控和报警器。
-         * @param view view
-         * @param host 主机
+        * aggregate监控和报警器。
+        * @param view view
+        * @param host 主机
          */
         aggregateMonitorsAndAlarms(view, host);
         return view;
     }
 
     /**
-     * 聚合该资产关联的监控项及其活跃告警。
-     *
-     * @param view 资产视图（就地填充）
-     * @param host 主机台账
+    * 聚合该资产关联的监控项及其活跃告警。
+    *
+    * @param view 资产视图（就地填充）
+    * @param host 主机台账
      */
     private void aggregateMonitorsAndAlarms(AssetDetailView view, MsServerHost host) {
         List<MsMonitor> monitors = loadMonitorsForHost(host);
@@ -193,10 +193,10 @@ public class AssetLinkageService {
     }
 
     /**
-       * 从库里取关联该主机的监控项（通过 ms_服务端_主机_标识 或主机 IP 兜底匹配）。
-     *
-     * @param host 主机
-     * @return 监控项列表
+    * 从库里取关联该主机的监控项（通过 ms_服务端_主机_标识 或主机 IP 兜底匹配）。
+    *
+    * @param host 主机
+    * @return 监控项列表
      */
     private List<MsMonitor> loadMonitorsForHost(MsServerHost host) {
  // 首选 ms_服务端_主机_标识 精确关联
@@ -216,10 +216,10 @@ public class AssetLinkageService {
     }
 
     /**
-      * 告警是否已处理（新 之外的状态视为已结束）。
-     *
-     * @param alarm 告警事件
-     * @return true 已处理
+    * 告警是否已处理（新 之外的状态视为已结束）。
+    *
+    * @param alarm 告警事件
+    * @return true 已处理
      */
     private static boolean isProcessed(MsMonitorAlarmEvent alarm) {
         String s = alarm.getMsMonitorAlarmEventStatus();
@@ -227,10 +227,10 @@ public class AssetLinkageService {
     }
 
     /**
-     * 取未处理告警中的最高级别（P0 最高）。
-     *
-     * @param alarms 未处理告警
-     * @return 最高级别；无则 空
+    * 取未处理告警中的最高级别（P0 最高）。
+    *
+    * @param alarms 未处理告警
+    * @return 最高级别；无则 空
      */
     private static String maxLevel(List<MsMonitorAlarmEvent> alarms) {
         if (alarms == null || alarms.isEmpty()) {
@@ -250,10 +250,10 @@ public class AssetLinkageService {
     }
 
     /**
-     * 告警级别严重度（P0=0 最高，P4=4最低；未知按 P9）。
-     *
-     * @param level 级别
-     * @return 严重度数字
+    * 告警级别严重度（P0=0 最高，P4=4最低；未知按 P9）。
+    *
+    * @param level 级别
+    * @return 严重度数字
      */
     private static int severity(String level) {
         try {
@@ -266,10 +266,10 @@ public class AssetLinkageService {
     }
 
     /**
-     * 从库里取挂在该主机 IP 上的全部服务节点（无论是否运行）。
-     *
-     * @param host 主机
-     * @return 节点列表
+    * 从库里取挂在该主机 IP 上的全部服务节点（无论是否运行）。
+    *
+    * @param host 主机
+    * @return 节点列表
      */
     private List<MsServerNode> loadNodesForHost(MsServerHost host) {
         String address = host.getServerHostAddress();
@@ -291,10 +291,10 @@ public class AssetLinkageService {
     }
 
     /**
-     * 把节点定义为通道摘要，并叠加运行时真实状态。
-     *
-     * @param node 节点定义
-     * @return 通道摘要
+    * 把节点定义为通道摘要，并叠加运行时真实状态。
+    *
+    * @param node 节点定义
+    * @return 通道摘要
      */
     private NodeChannel toChannel(MsServerNode node) {
         NodeChannel ch = new NodeChannel()
@@ -314,10 +314,10 @@ public class AssetLinkageService {
     }
 
     /**
-     * 构造节点访问地址（仅对已运行的 HTTP 节点给出完整 URL）。
-     *
-     * @param node 节点
-     * @return 访问地址；未知协议返回 空
+    * 构造节点访问地址（仅对已运行的 HTTP 节点给出完整 URL）。
+    *
+    * @param node 节点
+    * @return 访问地址；未知协议返回 空
      */
     private String buildUrl(MsServerNode node) {
         if (node.getPort() == null) {
@@ -332,10 +332,10 @@ public class AssetLinkageService {
     }
 
     /**
-      * 0/1/空 → 布尔值。
-     *
-     * @param flag 原始整型开关
-     * @return 布尔；null 视为 false
+    * 0/1/空 → 布尔值。
+    *
+    * @param flag 原始整型开关
+    * @return 布尔；null 视为 false
      */
     private static Boolean toBoolean(Integer flag) {
         return flag != null && flag == 1;

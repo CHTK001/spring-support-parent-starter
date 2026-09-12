@@ -4,23 +4,23 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
-   * app钥匙 指纹配置工具类
- * <p>
-   * 用于从配置文件读取的 app钥匙 指纹配置信息
- * </p>
- *
- * @author CH
- * @since 4.0.0
+* app钥匙 指纹配置工具类
+* <p>
+* 用于从配置文件读取的 app钥匙 指纹配置信息
+* </p>
+*
+* @author CH
+* @since 4.0.0
  */
 public class AppKeyFingerprintConfig {
     
     /**
-     * 检查指纹是否在白名单中
-     *
-     * @param enableFingerprint 是否启用指纹检测（0-不启用, 1-启用）
-     * @param fingerprintWhitelist 指纹白名单（多个指纹用逗号分隔）
-     * @param fingerprint 待检查的指纹
-     * @return true 如果在白名单中或白名单为空，false 如果不在白名单中
+    * 检查指纹是否在白名单中
+    *
+    * @param enableFingerprint 是否启用指纹检测（0-不启用, 1-启用）
+    * @param fingerprintWhitelist 指纹白名单（多个指纹用逗号分隔）
+    * @param fingerprint 待检查的指纹
+    * @return true 如果在白名单中或白名单为空，false 如果不在白名单中
      */
     public static boolean isFingerprintAllowed(Integer enableFingerprint, String fingerprintWhitelist, String fingerprint) {
         // 如果未启用指纹检测，允许所有指纹

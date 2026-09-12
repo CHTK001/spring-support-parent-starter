@@ -19,13 +19,13 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * AI 版面检测控制器。
- *
- * <p>提供文档版面分析执行能力（文字/表格/图片等区域检测、结构化解析），
- * 全部配置读取自 {@code layout} 分组全局设置，配置变更实时生效。</p>
- *
- * @since 4.0.0.42
- * @author CH
+* AI 版面检测控制器。
+*
+* <p>提供文档版面分析执行能力（文字/表格/图片等区域检测、结构化解析），
+* 全部配置读取自 {@code layout} 分组全局设置，配置变更实时生效。</p>
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Slf4j
 @RestController
@@ -35,18 +35,18 @@ import java.util.Map;
 public class LayoutController {
 
     /**
-     * 版面检测客户端管理器
+    * 版面检测客户端管理器
      */
     private final LayoutClientManager layoutClientManager;
 
     /**
-     * 检测文档版面区域。
-     *
-     * @param file 图片文件
-     * @return 按区域类型分组的检测框 + 总数 + 耗时
-     * @param @RequestParam("file" @请求参数("文件"
-     * @param @RequestParam("file" @请求参数("文件"
-     * @param @RequestParam("file" @RequestParam("file"
+    * 检测文档版面区域。
+    *
+    * @param file 图片文件
+    * @return 按区域类型分组的检测框 + 总数 + 耗时
+    * @param @RequestParam("file" @请求参数("文件"
+    * @param @RequestParam("file" @请求参数("文件"
+    * @param @RequestParam("file" @RequestParam("file"
      */
     @Permission("admin")
     @Operation(summary = "版面区域检测", description = "检测文档中文字/表格/图片等版面区域，返回按类型分组的检测框")
@@ -71,13 +71,13 @@ public class LayoutController {
     }
 
     /**
-     * 解析文档版面为结构化文本（Markdown）。
-     *
-     * @param file 图片文件
-     * @return Markdown 文本
-     * @param @RequestParam("file" @请求参数("文件"
-     * @param @RequestParam("file" @请求参数("文件"
-     * @param @RequestParam("file" @RequestParam("file"
+    * 解析文档版面为结构化文本（Markdown）。
+    *
+    * @param file 图片文件
+    * @return Markdown 文本
+    * @param @RequestParam("file" @请求参数("文件"
+    * @param @RequestParam("file" @请求参数("文件"
+    * @param @RequestParam("file" @RequestParam("file"
      */
     @Permission("admin")
     @Operation(summary = "版面结构化解析", description = "将文档版面解析为 Markdown 结构化文本（表格/公式/阅读顺序）")
@@ -100,9 +100,9 @@ public class LayoutController {
     }
 
     /**
-     * 版面模型枚举。
-     *
-     * @return 可用模型清单
+    * 版面模型枚举。
+    *
+    * @return 可用模型清单
      */
     @Permission("admin")
     @Operation(summary = "版面模型清单", description = "枚举可用的版面分析模型")

@@ -29,15 +29,15 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
-   * osgi 真实测试（启动时自动安装/卸载）：独立 Spring 上下文通过配置
- * {@code plugin.bundle.install-at-startup / uninstall-at-startup}，
- * 在 Spring 初始化完成后自动安装指定坐标的 bundle。
- *
- * <p>{@code uninstall-at-startup} 先执行（容错不存在的 bundle），随后
- * {@code install-at-startup} 安装；file: 协议本地伪仓库，避免依赖外网。</p>
- *
- * @author CH
- * @since 2026/09/11
+* osgi 真实测试（启动时自动安装/卸载）：独立 Spring 上下文通过配置
+* {@code plugin.bundle.install-at-startup / uninstall-at-startup}，
+* 在 Spring 初始化完成后自动安装指定坐标的 bundle。
+*
+* <p>{@code uninstall-at-startup} 先执行（容错不存在的 bundle），随后
+* {@code install-at-startup} 安装；file: 协议本地伪仓库，避免依赖外网。</p>
+*
+* @author CH
+* @since 2026/09/11
  */
 @SpringBootTest(properties = {
         "plugin.osgi.enabled=true",
@@ -50,10 +50,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
         "plugin.bundle.uninstall-at-startup[0]=com.chua.osgi.test.nonexistent"
 })
 /**
- * bundlestartupinstallreal测试类。
- *
- * @author CH
- * @since 4.0.0
+* bundlestartupinstallreal测试类。
+*
+* @author CH
+* @since 4.0.0
  */
 class BundleStartupInstallRealTest {
 
@@ -63,15 +63,15 @@ class BundleStartupInstallRealTest {
     static {
         try {
             /**
-             * 放入startuprepojar。
+            * 放入startuprepojar。
              */
             putStartupRepoJar();
         } catch (Exception e) {
             /**
-             * illegal状态异常。
-             * @param "启动测试伪仓库准备失败" "启动测试伪仓库准备失败"
-             * @param e e
-             * @return illegal状态异常的结果
+            * illegal状态异常。
+            * @param "启动测试伪仓库准备失败" "启动测试伪仓库准备失败"
+            * @param e e
+            * @return illegal状态异常的结果
              */
             throw new IllegalStateException("启动测试伪仓库准备失败", e);
         }
@@ -79,8 +79,8 @@ class BundleStartupInstallRealTest {
 
     @DynamicPropertySource
     /**
-     * 本地repo。
-     * @param registry registry
+    * 本地repo。
+    * @param registry registry
      */
     static void localRepo(DynamicPropertyRegistry registry) {
         String repo = Paths.get("target", "test-maven-repo").toAbsolutePath().toString();
@@ -100,46 +100,46 @@ class BundleStartupInstallRealTest {
     @Test
     void startupInstalledBundleAvailable() {
         /**
-         * 断言true。
-         * @param osgiLauncher.isActive( osgilauncher.是否活跃(
+        * 断言true。
+        * @param osgiLauncher.isActive( osgilauncher.是否活跃(
          */
         assertTrue(osgiLauncher.isActive(), "Felix 框架应激活");
         GreetService service = osgiLauncher.getService(GreetService.class);
         /**
-         * 断言not空。
-         * @param service 服务
-         * @param GreetService" greet服务"
+        * 断言not空。
+        * @param service 服务
+        * @param GreetService" greet服务"
          */
         assertNotNull(service, "启动自动安装后应能获取 GreetService");
         /**
-         * 断言equals。
-         * @param "startup-v1:world" "startup-v1:world"
-         * @param service.greet("world" 服务.greet("world"
+        * 断言equals。
+        * @param "startup-v1:world" "startup-v1:world"
+        * @param service.greet("world" 服务.greet("world"
          */
         assertEquals("startup-v1:world", service.greet("world"), "启动自动安装的服务应返回 startup-v1 结果");
 
         GreetService fromContext = objectContext.getBeanOfTypeSafely(GreetService.class);
         /**
-         * 断言not空。
-         * @param fromContext 从上下文
-         * @param GreetService" greet服务"
+        * 断言not空。
+        * @param fromContext 从上下文
+        * @param GreetService" greet服务"
          */
         assertNotNull(fromContext, "ObjectContext 应能查到启动自动安装的 GreetService");
         /**
-         * 断言equals。
-         * @param "startup-v1:world" "startup-v1:world"
-         * @param fromContext.greet("world" 从上下文.greet("world"
+        * 断言equals。
+        * @param "startup-v1:world" "startup-v1:world"
+        * @param fromContext.greet("world" 从上下文.greet("world"
          */
         assertEquals("startup-v1:world", fromContext.greet("world"), "ObjectContext 查询结果应一致");
 
         /**
-         * 断言true。
-         * @param bundleManager.isInstalled(BUNDLE_SYMBOLIC_NAME bundlemanager.isinstalled(bundlesymbolic名称
+        * 断言true。
+        * @param bundleManager.isInstalled(BUNDLE_SYMBOLIC_NAME bundlemanager.isinstalled(bundlesymbolic名称
          */
         assertTrue(bundleManager.isInstalled(BUNDLE_SYMBOLIC_NAME), "启动自动安装的 bundle 应已安装");
         /**
-         * 断言true。
-         * @param bundleManager.getManagedBundles( bundle管理器.获取managedbundles(
+        * 断言true。
+        * @param bundleManager.getManagedBundles( bundle管理器.获取managedbundles(
          */
         assertTrue(bundleManager.getManagedBundles().contains("startup"), "managed 应包含 artifactId startup");
     }
@@ -156,8 +156,8 @@ class BundleStartupInstallRealTest {
         Path classOut = Paths.get("target", "bundle-mgr-classes", className);
         if (Files.exists(classOut)) {
             /**
-             * 尝试。
-             * @param Files.walk(classOut 文件.walk(类出
+            * 尝试。
+            * @param Files.walk(classOut 文件.walk(类出
              */
             try (var walk = Files.walk(classOut)) {
                 walk.sorted(Comparator.reverseOrder()).forEach(p -> {
@@ -165,9 +165,9 @@ class BundleStartupInstallRealTest {
                         Files.deleteIfExists(p);
                     } catch (java.io.IOException e) {
                         /**
-                         * uncheckedio异常。
-                         * @param e e
-                         * @return uncheckedio异常的结果
+                        * uncheckedio异常。
+                        * @param e e
+                        * @return uncheckedio异常的结果
                          */
                         throw new UncheckedIOException(e);
                     }
@@ -183,9 +183,9 @@ class BundleStartupInstallRealTest {
                 srcFile.toString());
         if (result != 0) {
             /**
-             * illegal状态异常。
-             * @param className 类名称
-             * @return illegal状态异常的结果
+            * illegal状态异常。
+            * @param className 类名称
+            * @return illegal状态异常的结果
              */
             throw new IllegalStateException("bundle 实现类编译失败: " + className);
         }
@@ -202,13 +202,13 @@ class BundleStartupInstallRealTest {
         attrs.putValue("Bundle-Activator", BUNDLE_BASE_PACKAGE + "." + className);
         attrs.putValue("Import-Package", "org.osgi.framework, com.chua.starter.test.osgi");
         /**
-         * 尝试。
-         * @param FileOutputStream(jarFile.toFile( 文件输出流(jarfile.tofile(
+        * 尝试。
+        * @param FileOutputStream(jarFile.toFile( 文件输出流(jarfile.tofile(
          */
         try (JarOutputStream jos = new JarOutputStream(new FileOutputStream(jarFile.toFile()), manifest)) {
             /**
-             * 尝试。
-             * @param Files.walk(classOut 文件.walk(类出
+            * 尝试。
+            * @param Files.walk(classOut 文件.walk(类出
              */
             try (var walk = Files.walk(classOut)) {
                 for (Path p : walk.filter(Files::isRegularFile).toList()) {
@@ -224,11 +224,11 @@ class BundleStartupInstallRealTest {
     }
 
     /**
-     * bundle 实现类源码：实现应用侧接口 + bundleactivator，启动 时注册服务
-     *
-     * @param className 类名称
-     * @param prefix 前缀
-     * @return bundle源的结果
+    * bundle 实现类源码：实现应用侧接口 + bundleactivator，启动 时注册服务
+    *
+    * @param className 类名称
+    * @param prefix 前缀
+    * @return bundle源的结果
      */
     private static String bundleSource(String className, String prefix) {
         return "package " + BUNDLE_BASE_PACKAGE + ";\n"

@@ -4,10 +4,10 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 
 /**
-   * 生成结果（返回 URL 或 基础64 数据）
- *
- * @author CH
- * @since 4.0.0
+* 生成结果（返回 URL 或 基础64 数据）
+*
+* @author CH
+* @since 4.0.0
  */
 @Data
 @AllArgsConstructor

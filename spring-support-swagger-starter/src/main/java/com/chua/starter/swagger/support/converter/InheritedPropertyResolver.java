@@ -12,28 +12,28 @@ import java.util.Arrays;
 import java.util.Iterator;
 
 /**
- * 继承属性解析器
-   * 用于解析父类属性并添加到模式中
- *
- * @since 2025/5/27 13:04
- * @author CH
+* 继承属性解析器
+* 用于解析父类属性并添加到模式中
+*
+* @since 2025/5/27 13:04
+* @author CH
  */
 public class InheritedPropertyResolver implements ModelConverter {
 
     /**
-     * 添加父类属性
-     *
-     * @param clazz 类
-     * @param schema 模式对象
+    * 添加父类属性
+    *
+    * @param clazz 类
+    * @param schema 模式对象
      */
     private void addParentProperties(Class<?> clazz, Schema schema) {
         Class<?> superClass = clazz.getSuperclass();
         if (superClass != null && !superClass.equals(Object.class)) {
             // 递归处理父类
             /**
-             * 添加父属性。
-             * @param superClass 父类
-             * @param schema 模式
+            * 添加父属性。
+            * @param superClass 父类
+            * @param schema 模式
              */
             addParentProperties(superClass, schema);
 
@@ -50,12 +50,12 @@ public class InheritedPropertyResolver implements ModelConverter {
     }
 
     /**
-      * 解析模式
-     *
-     * @param type 注解类型
-     * @param context 模型转换器上下文
-     * @param chain 转换器链
-     * @return 解析后的Schema
+    * 解析模式
+    *
+    * @param type 注解类型
+    * @param context 模型转换器上下文
+    * @param chain 转换器链
+    * @return 解析后的Schema
      */
     @Override
     public Schema resolve(AnnotatedType type, ModelConverterContext context, Iterator<ModelConverter> chain) {
@@ -66,9 +66,9 @@ public class InheritedPropertyResolver implements ModelConverter {
             Class<?> clazz = (Class<?>) type.getType();
             // 获取父类属性
             /**
-             * 添加父属性。
-             * @param clazz clazz
-             * @param resolvedSchema.schema resolved模式.模式
+            * 添加父属性。
+            * @param clazz clazz
+            * @param resolvedSchema.schema resolved模式.模式
              */
             addParentProperties(clazz, resolvedSchema.schema);
         }

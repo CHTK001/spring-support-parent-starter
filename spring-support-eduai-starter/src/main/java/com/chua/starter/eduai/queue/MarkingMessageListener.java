@@ -9,16 +9,16 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
- * 阅卷队列消费者。
- *
- * <p>通过 {@link QueueListener} 订阅 {@link EduMarkingServiceImpl#QUEUE_NAME} 队列，
- * 收到消息后委托 {@link EduMarkingServiceImpl#markSync(String, java.util.List)} 完成批改。</p>
- *
- * <p>消费失败由 {@code queue-starter} 自身的重试/死信策略处理；阅卷任务在数据库侧有 taskId 兜底，
- * 重新提交答题卡即可重试。</p>
- *
- * @since 4.0.0.42
- * @author CH
+* 阅卷队列消费者。
+*
+* <p>通过 {@link QueueListener} 订阅 {@link EduMarkingServiceImpl#QUEUE_NAME} 队列，
+* 收到消息后委托 {@link EduMarkingServiceImpl#markSync(String, java.util.List)} 完成批改。</p>
+*
+* <p>消费失败由 {@code queue-starter} 自身的重试/死信策略处理；阅卷任务在数据库侧有 taskId 兜底，
+* 重新提交答题卡即可重试。</p>
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Slf4j
 @Component
@@ -29,10 +29,10 @@ public class MarkingMessageListener {
     private final IEduMarkingService markingService;
 
     /**
-     * 消费阅卷任务。
-     *
-     * @param job    阅卷任务载荷（由 {@link com.chua.starter.queue.MessageTemplate} 反序列化得到）
-     * @param message 原始消息，用于失败日志
+    * 消费阅卷任务。
+    *
+    * @param job    阅卷任务载荷（由 {@link com.chua.starter.queue.MessageTemplate} 反序列化得到）
+    * @param message 原始消息，用于失败日志
      */
     @QueueListener(EduMarkingServiceImpl.QUEUE_NAME)
     public void onMessage(MarkingJob job, Message message) {

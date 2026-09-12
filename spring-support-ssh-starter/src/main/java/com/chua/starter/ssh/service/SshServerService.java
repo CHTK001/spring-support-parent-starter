@@ -22,11 +22,11 @@ import java.nio.file.Paths;
 import java.util.Collections;
 
 /**
- * SSH服务端服务
- * 
-   * @版本 4.0.0.32
- * @author CH
- * @since 4.0.0
+* SSH服务端服务
+* 
+* @版本 4.0.0.32
+* @author CH
+* @since 4.0.0
  */
 @Slf4j
 public class SshServerService implements InitializingBean, DisposableBean {
@@ -37,8 +37,8 @@ public class SshServerService implements InitializingBean, DisposableBean {
     private SshServer sshServer;
 
     /**
-      * 创建 ssh服务端服务 实例
-     * @param properties 属性
+    * 创建 ssh服务端服务 实例
+    * @param properties 属性
      */
     public SshServerService(SshServerProperties properties) {
         this.properties = properties;
@@ -49,7 +49,7 @@ public class SshServerService implements InitializingBean, DisposableBean {
     public void afterPropertiesSet() throws Exception {
         if (properties.isEnabled()) {
             /**
-             * 启动ssh服务端。
+            * 启动ssh服务端。
              */
             startSshServer();
         } else {
@@ -61,13 +61,13 @@ public class SshServerService implements InitializingBean, DisposableBean {
     /** 销毁 */
     public void destroy() throws Exception {
         /**
-         * 停止ssh服务端。
+        * 停止ssh服务端。
          */
         stopSshServer();
     }
 
     /**
-     * 启动SSH服务端
+    * 启动SSH服务端
      */
     private void startSshServer() throws IOException {
         sshServer = SshServer.setUpDefaultServer();
@@ -84,7 +84,7 @@ public class SshServerService implements InitializingBean, DisposableBean {
 
         // 配置认证
         /**
-         * configure认证。
+        * configure认证。
          */
         configureAuthentication();
 
@@ -93,13 +93,13 @@ public class SshServerService implements InitializingBean, DisposableBean {
 
         // 配置文件传输
         /**
-         * configure文件调动。
+        * configure文件调动。
          */
         configureFileTransfer();
 
         // 配置会话
         /**
-         * configure会话。
+        * configure会话。
          */
         configureSession();
 
@@ -110,7 +110,7 @@ public class SshServerService implements InitializingBean, DisposableBean {
     }
 
     /**
-     * 停止SSH服务端
+    * 停止SSH服务端
      */
     private void stopSshServer() throws IOException {
         if (sshServer != null && !sshServer.isClosed()) {
@@ -120,7 +120,7 @@ public class SshServerService implements InitializingBean, DisposableBean {
     }
 
     /**
-     * 配置认证
+    * 配置认证
      */
     private void configureAuthentication() {
         SshServerProperties.Authentication auth = properties.getAuthentication();
@@ -160,7 +160,7 @@ public class SshServerService implements InitializingBean, DisposableBean {
     }
 
     /**
-     * 配置文件传输
+    * 配置文件传输
      */
     private void configureFileTransfer() {
         SshServerProperties.FileTransfer fileTransfer = properties.getFileTransfer();
@@ -177,7 +177,7 @@ public class SshServerService implements InitializingBean, DisposableBean {
     }
 
     /**
-     * 配置会话
+    * 配置会话
      */
     private void configureSession() {
         SshServerProperties.Session session = properties.getSession();
@@ -189,16 +189,16 @@ public class SshServerService implements InitializingBean, DisposableBean {
     }
 
     /**
-     * 获取SSH服务端状态
-     * @return 是否running的结果
+    * 获取SSH服务端状态
+    * @return 是否running的结果
      */
     public boolean isRunning() {
         return sshServer != null && sshServer.isStarted() && !sshServer.isClosed();
     }
 
     /**
-     * 获取当前连接数
-     * @return 获取活跃会话数量的结果
+    * 获取当前连接数
+    * @return 获取活跃会话数量的结果
      */
     public int getActiveSessionCount() {
         return sshServer != null ? sshServer.getActiveSessions().size() : 0;

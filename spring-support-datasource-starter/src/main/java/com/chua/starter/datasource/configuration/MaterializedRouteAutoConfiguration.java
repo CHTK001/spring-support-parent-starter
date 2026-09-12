@@ -18,10 +18,10 @@ import org.springframework.core.env.Environment;
 import javax.sql.DataSource;
 
 /**
- * SQL 物理化自动配置。
- *
- * @since 2026/4/2
- * @author CH
+* SQL 物理化自动配置。
+*
+* @since 2026/4/2
+* @author CH
  */
 @Conditional(MaterializedRouteAutoConfiguration.MaterializedRouteEnabledCondition.class)
 public class MaterializedRouteAutoConfiguration {
@@ -29,10 +29,10 @@ public class MaterializedRouteAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     /**
-     * 物化route属性
-     *
-     * @param environment 环境
-     * @return 物化route属性的结果
+    * 物化route属性
+    *
+    * @param environment 环境
+    * @return 物化route属性的结果
      */
     public MaterializedRouteProperties materializedRouteProperties(Environment environment) {
         return MaterializedRouteProperties.bind(environment);
@@ -41,9 +41,9 @@ public class MaterializedRouteAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean(name = "defaultAdvisorAutoProxyCreator")
     /**
-     * 默认advisorauto代理creator
-     *
-     * @return 默认advisorauto代理creator的结果
+    * 默认advisorauto代理creator
+    *
+    * @return 默认advisorauto代理creator的结果
      */
     public DefaultAdvisorAutoProxyCreator defaultAdvisorAutoProxyCreator() {
         DefaultAdvisorAutoProxyCreator creator = new DefaultAdvisorAutoProxyCreator();
@@ -54,16 +54,16 @@ public class MaterializedRouteAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     /**
-     * 物化routeadvisor
-     *
-     * @param properties 属性
-     * @return 物化routeadvisor的结果
+    * 物化routeadvisor
+    *
+    * @param properties 属性
+    * @return 物化routeadvisor的结果
      */
     public MaterializedRouteAdvisor materializedRouteAdvisor(MaterializedRouteProperties properties) {
         /**
-         * 物化routeadvisor。
-         * @param properties 属性
-         * @return 物化routeadvisor的结果
+        * 物化routeadvisor。
+        * @param properties 属性
+        * @return 物化routeadvisor的结果
          */
         return new MaterializedRouteAdvisor(properties);
     }
@@ -71,16 +71,16 @@ public class MaterializedRouteAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     /**
-     * 物化refreshadvisor
-     *
-     * @param properties 属性
-     * @return 物化refreshadvisor的结果
+    * 物化refreshadvisor
+    *
+    * @param properties 属性
+    * @return 物化refreshadvisor的结果
      */
     public MaterializedRefreshAdvisor materializedRefreshAdvisor(MaterializedRouteProperties properties) {
         /**
-         * 物化refreshadvisor。
-         * @param properties 属性
-         * @return 物化refreshadvisor的结果
+        * 物化refreshadvisor。
+        * @param properties 属性
+        * @return 物化refreshadvisor的结果
          */
         return new MaterializedRefreshAdvisor(properties);
     }
@@ -88,11 +88,11 @@ public class MaterializedRouteAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     /**
-     * 物化sqlrouter
-     *
-     * @param properties 属性
-     * @param dataSource 数据源
-     * @return 物化sqlrouter的结果
+    * 物化sqlrouter
+    *
+    * @param properties 属性
+    * @param dataSource 数据源
+    * @return 物化sqlrouter的结果
      */
     public MaterializedSqlDataSourceRouter materializedSqlRouter(MaterializedRouteProperties properties, DataSource dataSource) {
         return new CalciteMaterializedSqlRouter(

@@ -15,10 +15,10 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * 本地软件源实现 - 根据当前操作系统选择对应的采集器
- *
- * @since 2026/7/25
- * @author CH
+* 本地软件源实现 - 根据当前操作系统选择对应的采集器
+*
+* @since 2026/7/25
+* @author CH
  */
 @Slf4j
 @Component
@@ -29,8 +29,8 @@ public class LocalSoftwareSource implements SoftwareSource {
 
     @Autowired
     /**
-      * 创建 本地software源 实例
-     * @param collectors collectors
+    * 创建 本地software源 实例
+    * @param collectors collectors
      */
     public LocalSoftwareSource(List<LocalSoftwareCollector> collectors) {
         this.collectors = collectors;

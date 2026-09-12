@@ -16,12 +16,12 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
-   * 窗口 平台本地软件采集器
- *
- * <p>从注册表 Uninstall 节点读取已安装软件，提取 DisplayName / DisplayVersion / InstallLocation / DisplayIcon。</p>
- *
- * @since 2026/7/25
- * @author CH
+* 窗口 平台本地软件采集器
+*
+* <p>从注册表 Uninstall 节点读取已安装软件，提取 DisplayName / DisplayVersion / InstallLocation / DisplayIcon。</p>
+*
+* @since 2026/7/25
+* @author CH
  */
 @Slf4j
 @Component
@@ -50,10 +50,10 @@ public class WindowsLocalSoftwareCollector implements LocalSoftwareCollector {
     }
 
     /**
-     * 扫描uninstall钥匙
-     *
-     * @param baseKey 基础钥匙
-     * @return 扫描uninstall钥匙的结果
+    * 扫描uninstall钥匙
+    *
+    * @param baseKey 基础钥匙
+    * @return 扫描uninstall钥匙的结果
      */
     private List<SoftSoftware> scanUninstallKey(String baseKey) {
         List<SoftSoftware> list = new ArrayList<>();
@@ -77,10 +77,10 @@ public class WindowsLocalSoftwareCollector implements LocalSoftwareCollector {
     }
 
     /**
-     * 读取software信息
-     *
-     * @param key 钥匙
-     * @return 读取software信息的结果
+    * 读取software信息
+    *
+    * @param key 钥匙
+    * @return 读取software信息的结果
      */
     private SoftSoftware readSoftwareInfo(String key) {
         try {
@@ -112,11 +112,11 @@ public class WindowsLocalSoftwareCollector implements LocalSoftwareCollector {
     }
 
     /**
-     * extract价值观
-     *
-     * @param output 输出
-     * @param name 名称
-     * @return extract价值观的结果
+    * extract价值观
+    *
+    * @param output 输出
+    * @param name 名称
+    * @return extract价值观的结果
      */
     private String extractValue(String output, String name) {
         for (String line : output.split("\n")) {
@@ -131,10 +131,10 @@ public class WindowsLocalSoftwareCollector implements LocalSoftwareCollector {
     }
 
     /**
-     * extracticon路径
-     *
-     * @param output 输出
-     * @return extracticon路径的结果
+    * extracticon路径
+    *
+    * @param output 输出
+    * @return extracticon路径的结果
      */
     private String extractIconPath(String output) {
         String icon = extractValue(output, "DisplayIcon");

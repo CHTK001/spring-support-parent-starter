@@ -5,10 +5,10 @@ import com.chua.starter.ai.support.entity.SysAiRole;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
-   * AI 角色（人设）映射器。
- *
- * @since 4.0.0.42
- * @author CH
+* AI 角色（人设）映射器。
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Mapper
 public interface SysAiRoleMapper extends BaseMapper<SysAiRole> {

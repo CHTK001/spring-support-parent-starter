@@ -9,10 +9,10 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * 上报客户端配置
- *
- * @since 2024/12/05
- * @author CH
+* 上报客户端配置
+*
+* @since 2024/12/05
+* @author CH
  */
 @Data
 @ConfigurationProperties(prefix = ReportProperties.PRE)
@@ -22,84 +22,84 @@ public class ReportProperties {
     public static final String PRE = "plugin.report.client";
 
     /**
-     * 应用信息上报配置
+    * 应用信息上报配置
      */
     private AppReport appReport = new AppReport();
 
     /**
-     * 设备指标上报配置
+    * 设备指标上报配置
      */
     private Metrics metrics = new Metrics();
     /**
-     * 是否启用同步
+    * 是否启用同步
      */
     private boolean enable = false;
 
     /**
-     * 通信协议: rsocket
+    * 通信协议: rsocket
      */
     private String protocol = "rsocket-sync";
 
     /**
-     * 服务端地址
+    * 服务端地址
      */
     private String host = "localhost";
 
     /**
-     * 服务端端口
+    * 服务端端口
      */
     private int port = 29170;
     /**
-     * 应用信息上报配置
-     * @author CH
-     * @since 4.0.0
+    * 应用信息上报配置
+    * @author CH
+    * @since 4.0.0
      */
     @Data
     public static class AppReport {
 
         /**
-         * 是否启用
+        * 是否启用
          */
         private boolean enabled = true;
 
         /**
-         * 上报间隔（秒）
+        * 上报间隔（秒）
          */
         private long interval = 30;
     }
 
     /**
-     * 设备指标上报配置
-     * @author CH
-     * @since 4.0.0
+    * 设备指标上报配置
+    * @author CH
+    * @since 4.0.0
      */
     @Data
     public static class Metrics {
 
         /**
-         * 是否启用
+        * 是否启用
          */
         private boolean enabled = true;
 
         /**
-         * 上报间隔（秒）
+        * 上报间隔（秒）
          */
         private long interval = 30;
 
         /**
-         * 要上报的指标类型列表
-         * <p>
-          * 可选值: CPU, 内存, DISK, NETWORK, 加载, 处理, TEMPERATURE
-         * 默认为空表示全部上报
-         * </p>
+        * 要上报的指标类型列表
+        * <p>
+        * 可选值: CPU, 内存, DISK, NETWORK, 加载, 处理, TEMPERATURE
+        * 默认为空表示全部上报
+        * </p>
          */
         private Set<MetricType> types = new HashSet<>();
 
         /**
-         * 获取要上报的指标类型
-         *
-         * @return 指标类型集合，为空返回全部
-         * @since 1.0.0
+        * 获取要上报的指标类型
+        *
+        * @return 指标类型集合，为空返回全部
+        * @since 1.0.0
          */
         public Set<MetricType> getEffectiveTypes() {
             if (types == null || types.isEmpty()) {
@@ -110,60 +110,60 @@ public class ReportProperties {
     }
 
     /**
-     * 客户端信息配置
-     * <p>
-     * 用于多网卡场景下指定客户端信息
-     * </p>
+    * 客户端信息配置
+    * <p>
+    * 用于多网卡场景下指定客户端信息
+    * </p>
      */
     private ClientInfo info = new ClientInfo();
 
     /**
-     * URL QPS 统计配置
+    * URL QPS 统计配置
      */
     private UrlQps urlQps = new UrlQps();
 
 
     /**
-     * 客户端信息配置
-     * @author CH
-     * @since 4.0.0
+    * 客户端信息配置
+    * @author CH
+    * @since 4.0.0
      */
     @Data
     public static class ClientInfo {
 
         /**
-         * 客户端 IP 地址
-         * <p>
-         * 多网卡场景下指定使用的 IP 地址，为空则自动获取
-         * </p>
+        * 客户端 IP 地址
+        * <p>
+        * 多网卡场景下指定使用的 IP 地址，为空则自动获取
+        * </p>
          */
         private String host;
 
     }
 
     /**
-     * URL QPS 统计配置
-     * @author CH
-     * @since 4.0.0
+    * URL QPS 统计配置
+    * @author CH
+    * @since 4.0.0
      */
     @Data
     public static class UrlQps {
 
         /**
-         * 是否启用 URL QPS 统计
+        * 是否启用 URL QPS 统计
          */
         private boolean enabled = true;
 
         /**
-         * 上报间隔（秒）
+        * 上报间隔（秒）
          */
         private long interval = 30;
 
         /**
-         * 排除的 URL 前缀
-         * <p>
-          * 如: /actuator, /健康
-         * </p>
+        * 排除的 URL 前缀
+        * <p>
+        * 如: /actuator, /健康
+        * </p>
          */
         private Set<String> excludePatterns = new HashSet<>(Arrays.asList(
                 "/actuator",

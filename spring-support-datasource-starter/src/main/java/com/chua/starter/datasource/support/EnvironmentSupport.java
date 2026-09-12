@@ -11,14 +11,14 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * 环境变量
- *
- * @author CH
- * @since 4.0.0
+* 环境变量
+*
+* @author CH
+* @since 4.0.0
  */
 public class EnvironmentSupport {
     /**
-     * 环境变量
+    * 环境变量
      */
     public Environment environment;
 
@@ -26,18 +26,18 @@ public class EnvironmentSupport {
     private final PathMatcher pathMatcher = new AntPathMatcher();
 
     /**
-      * 创建 环境支持 实例
-     * @param environment 环境
+    * 创建 环境支持 实例
+    * @param environment 环境
      */
     public EnvironmentSupport(Environment environment) {
         this.environment = environment;
     }
 
     /**
-     * 根据名字获取值
-     *
-     * @param name 名称
-     * @return 值
+    * 根据名字获取值
+    *
+    * @param name 名称
+    * @return 值
      */
     public Map<String, Object> getProperties(String name) {
         if (null == name || null == environment) {
@@ -52,10 +52,10 @@ public class EnvironmentSupport {
     }
 
     /**
-     * 获取满足条件的配置项
-     *
-     * @param name 名称
-     * @return 配置项
+    * 获取满足条件的配置项
+    *
+    * @param name 名称
+    * @return 配置项
      */
     private Map<String, Object> getValueProperties(String name) {
         if (!(environment instanceof ConfigurableEnvironment)) {
@@ -77,11 +77,11 @@ public class EnvironmentSupport {
 
 
     /**
-     * 獲取配置
-     *
-     * @param source 配置
-     * @param name   名稱
-     * @return 配置
+    * 獲取配置
+    *
+    * @param source 配置
+    * @param name   名稱
+    * @return 配置
      */
     private Map<String, Object> analysisPropertySource(Map source, String name) {
         Map<String, Object> result = new HashMap<>();

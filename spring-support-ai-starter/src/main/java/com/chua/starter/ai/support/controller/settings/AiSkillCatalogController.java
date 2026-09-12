@@ -12,13 +12,13 @@ import java.util.List;
 import java.util.Map;
 
 /**
-   * AI 技能目录控制器，为 机器人 绑定等场景提供可用技能名清单。
- *
- * <p>{@code GET /v2/ai/skills/catalog} 聚合本地已安装技能（user + builtin）的名称，
-   * 供 机器人managementpage 等前端做技能下拉/选择。缺失时返回空列表而非报错。</p>
- *
- * @since 4.0.0.42
- * @author CH
+* AI 技能目录控制器，为 机器人 绑定等场景提供可用技能名清单。
+*
+* <p>{@code GET /v2/ai/skills/catalog} 聚合本地已安装技能（user + builtin）的名称，
+* 供 机器人managementpage 等前端做技能下拉/选择。缺失时返回空列表而非报错。</p>
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Tag(name = "AI 技能目录")
 @RestController
@@ -27,14 +27,14 @@ import java.util.Map;
 public class AiSkillCatalogController {
 
     /**
-     * 技能控制器（本地文件系统扫描）
+    * 技能控制器（本地文件系统扫描）
      */
     private final ApiSkillController apiSkillController;
 
     /**
-     * 查询可用技能名目录。
-     *
-     * @return 技能名列表（去重）
+    * 查询可用技能名目录。
+    *
+    * @return 技能名列表（去重）
      */
     @Operation(summary = "查询技能名目录")
     @GetMapping("/catalog")

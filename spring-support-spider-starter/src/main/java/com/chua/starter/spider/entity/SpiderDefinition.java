@@ -13,13 +13,13 @@ import lombok.EqualsAndHashCode;
 import java.time.LocalDateTime;
 
 /**
- * 爬虫定义实体。
- *
- * <p>对应 {@code spider_definition} 表，描述一个爬虫的基本信息：编码、名称、
- * 状态、关联流程与定时调度表达式。cron_expression 为空时不参与自动调度。</p>
- *
- * @since 4.0.0.42
- * @author CH
+* 爬虫定义实体。
+*
+* <p>对应 {@code spider_definition} 表，描述一个爬虫的基本信息：编码、名称、
+* 状态、关联流程与定时调度表达式。cron_expression 为空时不参与自动调度。</p>
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -28,7 +28,7 @@ import java.time.LocalDateTime;
 public class SpiderDefinition extends SysBase {
 
     /**
-      * 主键 标识（自增）
+    * 主键 标识（自增）
      */
     @TableId(type = IdType.AUTO)
     @Schema(description = "主键 ID")
@@ -36,7 +36,7 @@ public class SpiderDefinition extends SysBase {
     private Long id;
 
     /**
-     * 爬虫唯一编码
+    * 爬虫唯一编码
      */
     @TableField("code")
     @Schema(description = "爬虫唯一编码")
@@ -44,7 +44,7 @@ public class SpiderDefinition extends SysBase {
     private String code;
 
     /**
-     * 爬虫名称
+    * 爬虫名称
      */
     @TableField("name")
     @Schema(description = "爬虫名称")
@@ -52,7 +52,7 @@ public class SpiderDefinition extends SysBase {
     private String name;
 
     /**
-     * 描述
+    * 描述
      */
     @TableField("description")
     @Schema(description = "描述")
@@ -60,7 +60,7 @@ public class SpiderDefinition extends SysBase {
     private String description;
 
     /**
-       * 关联流程 标识（蜘蛛_流.标识）
+    * 关联流程 标识（蜘蛛_流.标识）
      */
     @TableField("flow_id")
     @Schema(description = "关联流程 ID")
@@ -68,7 +68,7 @@ public class SpiderDefinition extends SysBase {
     private Long flowId;
 
     /**
-     * 是否启用（1 启用 / 0 停用）
+    * 是否启用（1 启用 / 0 停用）
      */
     @TableField("enabled")
     @Schema(description = "是否启用")
@@ -76,7 +76,7 @@ public class SpiderDefinition extends SysBase {
     private Integer enabled;
 
     /**
-     * 定时 cron 表达式，为空则不自动调度
+    * 定时 cron 表达式，为空则不自动调度
      */
     @TableField("cron_expression")
     @Schema(description = "定时 cron 表达式")
@@ -84,7 +84,7 @@ public class SpiderDefinition extends SysBase {
     private String cronExpression;
 
     /**
-      * 执行类型（ONCE 一次 / 调度 定时），为空时按 cron 是否配置自动判定
+    * 执行类型（ONCE 一次 / 调度 定时），为空时按 cron 是否配置自动判定
      */
     @TableField("executor_type")
     @Schema(description = "执行类型（ONCE 一次 / SCHEDULE 定时）")
@@ -92,7 +92,7 @@ public class SpiderDefinition extends SysBase {
     private String executorType;
 
     /**
-     * 上次执行时间
+    * 上次执行时间
      */
     @TableField("last_run_at")
     @Schema(description = "上次执行时间")
@@ -100,7 +100,7 @@ public class SpiderDefinition extends SysBase {
     private LocalDateTime lastRunAt;
 
     /**
-      * 上次执行状态（成功/失败/RUNNING）
+    * 上次执行状态（成功/失败/RUNNING）
      */
     @TableField("last_status")
     @Schema(description = "上次执行状态")
@@ -108,7 +108,7 @@ public class SpiderDefinition extends SysBase {
     private String lastStatus;
 
     /**
-     * 上次执行消息
+    * 上次执行消息
      */
     @TableField("last_message")
     @Schema(description = "上次执行消息")
@@ -116,7 +116,7 @@ public class SpiderDefinition extends SysBase {
     private String lastMessage;
 
     /**
-     * 入口 URL
+    * 入口 URL
      */
     @TableField("entry_url")
     @Schema(description = "入口 URL")
@@ -124,7 +124,7 @@ public class SpiderDefinition extends SysBase {
     private String entryUrl;
 
     /**
-     * 站点主机
+    * 站点主机
      */
     @TableField("site_host")
     @Schema(description = "站点主机")
@@ -132,7 +132,7 @@ public class SpiderDefinition extends SysBase {
     private String siteHost;
 
     /**
-     * 是否深度采集（1/0）
+    * 是否深度采集（1/0）
      */
     @TableField("collect_deep_url")
     @Schema(description = "是否深度采集")
@@ -140,7 +140,7 @@ public class SpiderDefinition extends SysBase {
     private Integer collectDeepUrl;
 
     /**
-     * 最大深度
+    * 最大深度
      */
     @TableField("max_depth")
     @Schema(description = "最大深度")
@@ -148,7 +148,7 @@ public class SpiderDefinition extends SysBase {
     private Integer maxDepth;
 
     /**
-     * 最大页数
+    * 最大页数
      */
     @TableField("max_pages")
     @Schema(description = "最大页数")
@@ -156,7 +156,7 @@ public class SpiderDefinition extends SysBase {
     private Integer maxPages;
 
     /**
-     * 执行轮次
+    * 执行轮次
      */
     @TableField("executor_rounds")
     @Schema(description = "执行轮次")
@@ -164,7 +164,7 @@ public class SpiderDefinition extends SysBase {
     private Integer executorRounds;
 
     /**
-     * 备注
+    * 备注
      */
     @TableField("remark")
     @Schema(description = "备注")
@@ -172,7 +172,7 @@ public class SpiderDefinition extends SysBase {
     private String remark;
 
     /**
-     * 逻辑删除标记（0 未删除 / 1 已删除）
+    * 逻辑删除标记（0 未删除 / 1 已删除）
      */
     @TableField("sys_deleted")
     @TableLogic

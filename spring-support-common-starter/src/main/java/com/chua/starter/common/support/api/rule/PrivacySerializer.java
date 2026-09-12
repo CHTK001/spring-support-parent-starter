@@ -13,48 +13,48 @@ import java.io.IOException;
 import java.util.Objects;
 
 /**
- * 隐私序列化器
- * @author CH
- * @since 4.0.0
+* 隐私序列化器
+* @author CH
+* @since 4.0.0
  */
 public class PrivacySerializer extends JsonSerializer<String> implements ContextualSerializer {
 
     /**
-     * 脱敏类型
+    * 脱敏类型
      */
     private PrivacyTypeEnum privacyTypeEnum;
     /**
-     * 前几位不脱敏
+    * 前几位不脱敏
      */
     private Integer prefixNoMaskLen;
     /**
-     * 最后几位不脱敏
+    * 最后几位不脱敏
      */
     private Integer suffixNoMaskLen;
     /**
-     * 用什么打码
+    * 用什么打码
      */
     private String symbol;
 
     /**
-     * 隐私加密注解
+    * 隐私加密注解
      */
     private ApiFieldPrivacyEncrypt apiFieldPrivacyEncrypt;
 
     /**
-     * 无参构造函数
+    * 无参构造函数
      */
     public PrivacySerializer() {
     }
 
     /**
-     * 构造函数
-     *
-     * @param privacyTypeEnum 脱敏类型
-     * @param prefixNoMaskLen 前几位不脱敏
-     * @param suffixNoMaskLen 最后几位不脱敏
-     * @param symbol 用什么打码
-     * @param apiFieldPrivacyEncrypt 隐私加密注解
+    * 构造函数
+    *
+    * @param privacyTypeEnum 脱敏类型
+    * @param prefixNoMaskLen 前几位不脱敏
+    * @param suffixNoMaskLen 最后几位不脱敏
+    * @param symbol 用什么打码
+    * @param apiFieldPrivacyEncrypt 隐私加密注解
      */
     public PrivacySerializer(PrivacyTypeEnum privacyTypeEnum, Integer prefixNoMaskLen, Integer suffixNoMaskLen, String symbol, ApiFieldPrivacyEncrypt apiFieldPrivacyEncrypt) {
         this.privacyTypeEnum = privacyTypeEnum;
@@ -65,12 +65,12 @@ public class PrivacySerializer extends JsonSerializer<String> implements Context
     }
 
     /**
-     * 构造函数
-     *
-     * @param privacyTypeEnum 脱敏类型
-     * @param prefixNoMaskLen 前几位不脱敏
-     * @param suffixNoMaskLen 最后几位不脱敏
-     * @param symbol 用什么打码
+    * 构造函数
+    *
+    * @param privacyTypeEnum 脱敏类型
+    * @param prefixNoMaskLen 前几位不脱敏
+    * @param suffixNoMaskLen 最后几位不脱敏
+    * @param symbol 用什么打码
      */
     public PrivacySerializer(PrivacyTypeEnum privacyTypeEnum, Integer prefixNoMaskLen, Integer suffixNoMaskLen, String symbol) {
         this.privacyTypeEnum = privacyTypeEnum;
@@ -81,10 +81,10 @@ public class PrivacySerializer extends JsonSerializer<String> implements Context
 
     @Override
     /**
-     * 序列化
-     * @param origin origin
-     * @param jsonGenerator json生成器
-     * @param serializerProvider 序列化器提供者
+    * 序列化
+    * @param origin origin
+    * @param jsonGenerator json生成器
+    * @param serializerProvider 序列化器提供者
      */
     public void serialize(final String origin, final JsonGenerator jsonGenerator,
                           final SerializerProvider serializerProvider) throws IOException {
@@ -122,9 +122,9 @@ public class PrivacySerializer extends JsonSerializer<String> implements Context
                     break;
                 default:
                     /**
-                     * illegal参数异常。
-                     * @param privacyTypeEnum 隐私类型enum
-                     * @return illegal参数异常的结果
+                    * illegal参数异常。
+                    * @param privacyTypeEnum 隐私类型enum
+                    * @return illegal参数异常的结果
                      */
                     throw new IllegalArgumentException("unknown privacy type enum " + privacyTypeEnum);
             }
@@ -145,8 +145,8 @@ public class PrivacySerializer extends JsonSerializer<String> implements Context
                 }
                 if (apiFieldPrivacyEncrypt != null) {
                     /**
-                     * 隐私序列化器。
-                     * @param apiFieldPrivacyEncrypt.type( api字段隐私encrypt.类型(
+                    * 隐私序列化器。
+                    * @param apiFieldPrivacyEncrypt.type( api字段隐私encrypt.类型(
                      */
                     return new PrivacySerializer(apiFieldPrivacyEncrypt.type(), apiFieldPrivacyEncrypt.prefixNoMaskLen(),
                             apiFieldPrivacyEncrypt.suffixNoMaskLen(), apiFieldPrivacyEncrypt.symbol());

@@ -3,41 +3,41 @@ package com.chua.starter.ai.support.model;
 import lombok.Data;
 
 /**
-   * 打开AI 兼容补全请求模型。
- *
- * @since 4.0.0.42
- * @author CH
+* 打开AI 兼容补全请求模型。
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Data
 public class OpenAiCompletionRequest {
 
     /**
-     * 模型名称
+    * 模型名称
      */
     private String model;
 
     /**
-     * 输入提示
+    * 输入提示
      */
     private String prompt;
 
     /**
-     * 采样温度
+    * 采样温度
      */
     private Double temperature;
 
     /**
-      * 最大生成 令牌
+    * 最大生成 令牌
      */
     private Integer maxTokens;
 
     /**
-     * 核采样参数
+    * 核采样参数
      */
     private Integer topP;
 
     /**
-     * 是否流式输出
+    * 是否流式输出
      */
     private Boolean stream;
 }

@@ -12,12 +12,12 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 import java.util.List;
 
 /**
- * 设备模块自动配置类
- * <p>负责组件扫描与 Mapper 扫描，并启用定时调度。</p>
- * <p>设备厂商 Provider 由 {@link DeviceProvider} 子类通过 {@code @Component} 自动注册为 Spring Bean，</p>
- * <p>业务方添加新厂商只需新增 Provider 实现即可，SPI 文件不再使用。</p>
- *
- * @since 4.0.0.42
+* 设备模块自动配置类
+* <p>负责组件扫描与 Mapper 扫描，并启用定时调度。</p>
+* <p>设备厂商 Provider 由 {@link DeviceProvider} 子类通过 {@code @Component} 自动注册为 Spring Bean，</p>
+* <p>业务方添加新厂商只需新增 Provider 实现即可，SPI 文件不再使用。</p>
+*
+* @since 4.0.0.42
  */
 @Slf4j
 @AutoConfiguration
@@ -31,18 +31,18 @@ import java.util.List;
 @MapperScan("com.chua.starter.device.support.mapper")
 @EnableScheduling
 /**
- * deviceauto配置类。
- *
- * @author CH
- * @since 4.0.0
+* deviceauto配置类。
+*
+* @author CH
+* @since 4.0.0
  */
 public class DeviceAutoConfiguration {
 
     /**
-      * 注入所有设备 提供者 Bean（@组件 自动注册）。
-     *
-     * @param providers Spring 容器中所有 device提供者 实现
-     * @return Provider 列表
+    * 注入所有设备 提供者 Bean（@组件 自动注册）。
+    *
+    * @param providers Spring 容器中所有 device提供者 实现
+    * @return Provider 列表
      */
     @Bean
     public List<DeviceProvider> deviceProviders(List<DeviceProvider> providers) {
@@ -51,8 +51,8 @@ public class DeviceAutoConfiguration {
     }
 
     /**
-     * 注册设备模块服务信息。
-     * @return device服务信息contributor的结果
+    * 注册设备模块服务信息。
+    * @return device服务信息contributor的结果
      */
     @Bean
     public ServiceInfoContributor deviceServiceInfoContributor() {

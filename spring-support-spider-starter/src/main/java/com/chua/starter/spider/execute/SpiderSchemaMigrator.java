@@ -10,40 +10,40 @@ import org.springframework.stereotype.Component;
 import javax.sql.DataSource;
 
 /**
- * 爬虫模块数据库增量迁移执行器。
- *
- * <p>对已存在的库补列增量字段，避免叶 FlywayLike 脚本在表结构已存在时被跳过
- * 导致实体字段与表列不一致。当前补 {@code spider_definition.executor_type} 列。</p>
- *
- * @since 4.0.0.42
- * @author CH
+* 爬虫模块数据库增量迁移执行器。
+*
+* <p>对已存在的库补列增量字段，避免叶 FlywayLike 脚本在表结构已存在时被跳过
+* 导致实体字段与表列不一致。当前补 {@code spider_definition.executor_type} 列。</p>
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Component
 public class SpiderSchemaMigrator implements ApplicationRunner {
 
     /**
-     * 日志记录器
+    * 日志记录器
      */
     private static final Logger log = LoggerFactory.getLogger(SpiderSchemaMigrator.class);
 
     /**
-     * 数据源
+    * 数据源
      */
     private final DataSource dataSource;
 
     /**
-     * 构造迁移执行器。
-     *
-     * @param dataSource 数据源
+    * 构造迁移执行器。
+    *
+    * @param dataSource 数据源
      */
     public SpiderSchemaMigrator(DataSource dataSource) {
         this.dataSource = dataSource;
     }
 
     /**
-     * 启动后执行增量迁移。
-     *
-     * @param args 应用参数
+    * 启动后执行增量迁移。
+    *
+    * @param args 应用参数
      */
     @Override
     public void run(ApplicationArguments args) {
@@ -81,13 +81,13 @@ public class SpiderSchemaMigrator implements ApplicationRunner {
     }
 
     /**
-     * 确保目标表存在指定列，不存在则追加。
-     *
-     * @param jdbc           JDBC 模板
-     * @param table          表名
-     * @param column         列名
-     * @param definition     列定义（含类型与注释）
-     * @param afterColumn    之后 列，可空
+    * 确保目标表存在指定列，不存在则追加。
+    *
+    * @param jdbc           JDBC 模板
+    * @param table          表名
+    * @param column         列名
+    * @param definition     列定义（含类型与注释）
+    * @param afterColumn    之后 列，可空
      */
     private void ensureColumn(JdbcTemplate jdbc, String table, String column,
                               String definition, String afterColumn) {

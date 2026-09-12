@@ -1,9 +1,9 @@
 package com.chua.starter.common.support.lang;
 
 /**
- * 命名转换工具。
- * @author CH
- * @since 4.0.0
+* 命名转换工具。
+* @author CH
+* @since 4.0.0
  */
 public final class NamingCase {
 
@@ -12,10 +12,10 @@ public final class NamingCase {
     }
 
     /**
-     * 转为camel大小写
-     *
-     * @param name 名称
-     * @return 转为camel大小写的结果
+    * 转为camel大小写
+    *
+    * @param name 名称
+    * @return 转为camel大小写的结果
      */
     public static String toCamelCase(String name) {
         if (name == null || name.isEmpty()) {
@@ -36,10 +36,10 @@ public final class NamingCase {
     }
 
     /**
-     * 转为第一个大写大小写
-     *
-     * @param name 名称
-     * @return 转为第一个大写大小写的结果
+    * 转为第一个大写大小写
+    *
+    * @param name 名称
+    * @return 转为第一个大写大小写的结果
      */
     public static String toFirstUpperCase(String name) {
         if (name == null || name.isEmpty()) {

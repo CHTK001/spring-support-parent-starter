@@ -9,14 +9,14 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.Map;
 
 /**
- * API 功能开关消息处理器
- * <p>
- * 接收来自服务端的功能开关控制命令，执行对应的操作。
- * </p>
- *
- * @since 2024/12/08
-   * @版本 1.0.0
- * @author CH
+* API 功能开关消息处理器
+* <p>
+* 接收来自服务端的功能开关控制命令，执行对应的操作。
+* </p>
+*
+* @since 2024/12/08
+* @版本 1.0.0
+* @author CH
  */
 @Slf4j
 @RequiredArgsConstructor
@@ -67,9 +67,9 @@ public class ApiFeatureHandler implements SyncMessageHandler {
     }
 
     /**
-     * 处理设置单个功能开关状态
-     * @param payload payload
-     * @return 把手设置已启用的结果
+    * 处理设置单个功能开关状态
+    * @param payload payload
+    * @return 把手设置已启用的结果
      */
     private Object handleSetEnabled(Map<String, Object> payload) {
         String featureId = MapUtils.getString(payload, "featureId");
@@ -86,9 +86,9 @@ public class ApiFeatureHandler implements SyncMessageHandler {
     }
 
     /**
-     * 处理批量设置功能开关状态
-     * @param payload payload
-     * @return 把手设置batch的结果
+    * 处理批量设置功能开关状态
+    * @param payload payload
+    * @return 把手设置batch的结果
      */
     @SuppressWarnings("unchecked")
     private Object handleSetBatch(Map<String, Object> payload) {
@@ -105,8 +105,8 @@ public class ApiFeatureHandler implements SyncMessageHandler {
     }
 
     /**
-     * 处理重置所有功能开关
-     * @return 把手reset全部的结果
+    * 处理重置所有功能开关
+    * @return 把手reset全部的结果
      */
     private Object handleResetAll() {
         featureManager.resetAllToDefault();
@@ -115,9 +115,9 @@ public class ApiFeatureHandler implements SyncMessageHandler {
     }
 
     /**
-     * 处理重置单个功能开关
-     * @param payload payload
-     * @return 把手reset的结果
+    * 处理重置单个功能开关
+    * @param payload payload
+    * @return 把手reset的结果
      */
     private Object handleReset(Map<String, Object> payload) {
         String featureId = MapUtils.getString(payload, "featureId");

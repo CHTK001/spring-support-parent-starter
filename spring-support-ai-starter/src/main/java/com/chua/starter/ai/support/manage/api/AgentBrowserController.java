@@ -29,21 +29,21 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
-   * 智能体 Browser 管理控制器。
- *
- * <p>提供浏览器实例（Lane）、标签页（Tab）、宿主进程（Host）和全局设置的 CRUD 操作。
- * 对接前端 {@code /api/browser/*} 端点，替代原 Rust 后端的浏览器管理能力。</p>
- *
- * <p>核心概念：</p>
- * <ul>
- *   <li><b>Lane</b> - 浏览器调度单元，对应一个托管的浏览器实例</li>
- *   <li><b>Tab</b> - 浏览器标签页，每个 Lane 可包含多个 Tab</li>
- *   <li><b>Host</b> - 浏览器宿主进程，负责管理多个 Lane</li>
- *   <li><b>Setting</b> - 全局设置（显示模式、资源策略等）</li>
- * </ul>
- *
- * @author CH
- * @since 4.0.0.42
+* 智能体 Browser 管理控制器。
+*
+* <p>提供浏览器实例（Lane）、标签页（Tab）、宿主进程（Host）和全局设置的 CRUD 操作。
+* 对接前端 {@code /api/browser/*} 端点，替代原 Rust 后端的浏览器管理能力。</p>
+*
+* <p>核心概念：</p>
+* <ul>
+*   <li><b>Lane</b> - 浏览器调度单元，对应一个托管的浏览器实例</li>
+*   <li><b>Tab</b> - 浏览器标签页，每个 Lane 可包含多个 Tab</li>
+*   <li><b>Host</b> - 浏览器宿主进程，负责管理多个 Lane</li>
+*   <li><b>Setting</b> - 全局设置（显示模式、资源策略等）</li>
+* </ul>
+*
+* @author CH
+* @since 4.0.0.42
  */
 @Slf4j
 @ApiReturnFormatIgnore
@@ -54,34 +54,34 @@ import java.util.stream.Collectors;
 public class AgentBrowserController {
 
     /**
-      * Lane 映射器
+    * Lane 映射器
      */
     private final AgentBrowserLaneMapper laneMapper;
 
     /**
-      * Tab 映射器
+    * Tab 映射器
      */
     private final AgentBrowserTabMapper tabMapper;
 
     /**
-      * 主机 映射器
+    * 主机 映射器
      */
     private final AgentBrowserHostMapper hostMapper;
 
     /**
-      * Setting 映射器
+    * Setting 映射器
      */
     private final AgentBrowserSettingMapper settingMapper;
 
     // ==================== Overview ====================
 
     /**
-     * 获取浏览器总览信息。
-     *
-     * <p>返回全局视图，包括支持状态、运行/排队数量、容量信息、Host 列表等。
-     * 前端通过此接口判断浏览器功能是否可用，以及当前的资源压力状态。</p>
-     *
-     * @return 浏览器总览信息
+    * 获取浏览器总览信息。
+    *
+    * <p>返回全局视图，包括支持状态、运行/排队数量、容量信息、Host 列表等。
+    * 前端通过此接口判断浏览器功能是否可用，以及当前的资源压力状态。</p>
+    *
+    * @return 浏览器总览信息
      */
     @GetMapping("/overview")
     @Operation(summary = "获取浏览器总览", description = "返回全局视图，包括支持状态、运行/排队数量、容量信息、Host 列表等")
@@ -89,8 +89,8 @@ public class AgentBrowserController {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "获取成功")
     })
     /**
-     * 获取overview。
-     * @return 获取overview的结果
+    * 获取overview。
+    * @return 获取overview的结果
      */
     public ApiResult<Map<String, Object>> getOverview() {
         long now = System.currentTimeMillis();
@@ -161,12 +161,12 @@ public class AgentBrowserController {
     // ==================== Lane CRUD ====================
 
     /**
-     * 获取所有 Lane 列表。
-     *
-     * <p>返回所有浏览器 Lane 的详细信息，包括状态、Owner、Identity、Tab 等。
-     * 前端通过此接口渲染左侧导航树和详情面板。</p>
-     *
-     * @return Lane 列表
+    * 获取所有 Lane 列表。
+    *
+    * <p>返回所有浏览器 Lane 的详细信息，包括状态、Owner、Identity、Tab 等。
+    * 前端通过此接口渲染左侧导航树和详情面板。</p>
+    *
+    * @return Lane 列表
      */
     @GetMapping("/lanes")
     @Operation(summary = "获取所有 Lane", description = "返回所有浏览器 Lane 的详细信息")
@@ -179,10 +179,10 @@ public class AgentBrowserController {
     }
 
     /**
-     * 获取单个 Lane 详情。
-     *
-     * @param laneId Lane 标识
-     * @return Lane 详情
+    * 获取单个 Lane 详情。
+    *
+    * @param laneId Lane 标识
+    * @return Lane 详情
      */
     @GetMapping("/lanes/{lane_id}")
     @Operation(summary = "获取 Lane 详情", description = "根据 ID 获取单个 Lane 的详细信息")
@@ -191,10 +191,10 @@ public class AgentBrowserController {
         AgentBrowserLane lane = laneMapper.selectById(laneId);
         if (lane == null) {
             /**
-             * api异常。
-             * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
-             * @param laneId laneid
-             * @return api异常的结果
+            * api异常。
+            * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
+            * @param laneId laneid
+            * @return api异常的结果
              */
             throw new ApiException(ApiErrorCode.NOT_FOUND, "Lane 不存在: " + laneId);
         }
@@ -202,10 +202,10 @@ public class AgentBrowserController {
     }
 
     /**
-     * 创建新 Lane。
-     *
-     * @param body Lane 创建参数
-     * @return 创建后的 Lane 信息
+    * 创建新 Lane。
+    *
+    * @param body Lane 创建参数
+    * @return 创建后的 Lane 信息
      */
     @PostMapping("/lanes")
     @Operation(summary = "创建 Lane", description = "创建新的浏览器 Lane")
@@ -253,11 +253,11 @@ public class AgentBrowserController {
     }
 
     /**
-     * 更新 Lane 信息。
-     *
-     * @param laneId Lane 标识
-     * @param body   更新参数
-     * @return 更新后的 Lane 信息
+    * 更新 Lane 信息。
+    *
+    * @param laneId Lane 标识
+    * @param body   更新参数
+    * @return 更新后的 Lane 信息
      */
     @PutMapping("/lanes/{lane_id}")
     @Operation(summary = "更新 Lane", description = "更新指定 Lane 的信息")
@@ -267,10 +267,10 @@ public class AgentBrowserController {
         AgentBrowserLane lane = laneMapper.selectById(laneId);
         if (lane == null) {
             /**
-             * api异常。
-             * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
-             * @param laneId laneid
-             * @return api异常的结果
+            * api异常。
+            * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
+            * @param laneId laneid
+            * @return api异常的结果
              */
             throw new ApiException(ApiErrorCode.NOT_FOUND, "Lane 不存在: " + laneId);
         }
@@ -298,12 +298,12 @@ public class AgentBrowserController {
     }
 
     /**
-     * 关闭指定 Lane。
-     *
-     * <p>将 Lane 状态设置为 stopping，删除关联的 Tab，并更新 Host 的 lane_count。</p>
-     *
-     * @param laneId Lane 标识
-     * @return 关闭结果
+    * 关闭指定 Lane。
+    *
+    * <p>将 Lane 状态设置为 stopping，删除关联的 Tab，并更新 Host 的 lane_count。</p>
+    *
+    * @param laneId Lane 标识
+    * @return 关闭结果
      */
     @PostMapping("/lanes/{lane_id}/close")
     @Operation(summary = "关闭 Lane", description = "关闭指定的浏览器 Lane")
@@ -313,10 +313,10 @@ public class AgentBrowserController {
         AgentBrowserLane lane = laneMapper.selectById(laneId);
         if (lane == null) {
             /**
-             * api异常。
-             * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
-             * @param laneId laneid
-             * @return api异常的结果
+            * api异常。
+            * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
+            * @param laneId laneid
+            * @return api异常的结果
              */
             throw new ApiException(ApiErrorCode.NOT_FOUND, "Lane 不存在: " + laneId);
         }
@@ -335,10 +335,10 @@ public class AgentBrowserController {
     }
 
     /**
-     * 将 Lane 前台化（显示窗口）。
-     *
-     * @param laneId Lane 标识
-     * @return 前台化结果
+    * 将 Lane 前台化（显示窗口）。
+    *
+    * @param laneId Lane 标识
+    * @return 前台化结果
      */
     @PostMapping("/lanes/{lane_id}/foreground")
     @Operation(summary = "前台化 Lane", description = "将 Lane 切换到前台显示模式")
@@ -347,10 +347,10 @@ public class AgentBrowserController {
         AgentBrowserLane lane = laneMapper.selectById(laneId);
         if (lane == null) {
             /**
-             * api异常。
-             * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
-             * @param laneId laneid
-             * @return api异常的结果
+            * api异常。
+            * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
+            * @param laneId laneid
+            * @return api异常的结果
              */
             throw new ApiException(ApiErrorCode.NOT_FOUND, "Lane 不存在: " + laneId);
         }
@@ -371,10 +371,10 @@ public class AgentBrowserController {
     }
 
     /**
-     * 将 Lane 后台化（返回无头）。
-     *
-     * @param laneId Lane 标识
-     * @return 后台化结果
+    * 将 Lane 后台化（返回无头）。
+    *
+    * @param laneId Lane 标识
+    * @return 后台化结果
      */
     @PostMapping("/lanes/{lane_id}/background")
     @Operation(summary = "后台化 Lane", description = "将 Lane 切换到后台无头模式")
@@ -383,10 +383,10 @@ public class AgentBrowserController {
         AgentBrowserLane lane = laneMapper.selectById(laneId);
         if (lane == null) {
             /**
-             * api异常。
-             * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
-             * @param laneId laneid
-             * @return api异常的结果
+            * api异常。
+            * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
+            * @param laneId laneid
+            * @return api异常的结果
              */
             throw new ApiException(ApiErrorCode.NOT_FOUND, "Lane 不存在: " + laneId);
         }
@@ -409,10 +409,10 @@ public class AgentBrowserController {
     // ==================== 对话关联操作 ====================
 
     /**
-     * 关闭指定对话的所有 Lane。
-     *
-     * @param conversationId 对话 标识
-     * @return 关闭结果
+    * 关闭指定对话的所有 Lane。
+    *
+    * @param conversationId 对话 标识
+    * @return 关闭结果
      */
     @PostMapping("/conversations/{conversation_id}/close")
     @Operation(summary = "关闭对话的 Lane", description = "关闭指定对话关联的所有浏览器 Lane")
@@ -435,9 +435,9 @@ public class AgentBrowserController {
     }
 
     /**
-     * 全局关闭所有浏览器资源。
-     *
-     * @return 关闭结果
+    * 全局关闭所有浏览器资源。
+    *
+    * @return 关闭结果
      */
     @PostMapping("/close-all")
     @Operation(summary = "全局关闭", description = "关闭所有浏览器 Lane 和 Tab")
@@ -475,9 +475,9 @@ public class AgentBrowserController {
     // ==================== Display Mode ====================
 
     /**
-     * 获取全局显示策略。
-     *
-     * @return 显示策略
+    * 获取全局显示策略。
+    *
+    * @return 显示策略
      */
     @GetMapping("/display-mode")
     @Operation(summary = "获取显示策略", description = "获取全局浏览器显示策略（headless/auto/external）")
@@ -495,10 +495,10 @@ public class AgentBrowserController {
     }
 
     /**
-     * 设置全局显示策略。
-     *
-     * @param body 显示策略参数
-     * @return 设置结果
+    * 设置全局显示策略。
+    *
+    * @param body 显示策略参数
+    * @return 设置结果
      */
     @PutMapping("/display-mode")
     @Operation(summary = "设置显示策略", description = "设置全局浏览器显示策略")
@@ -529,9 +529,9 @@ public class AgentBrowserController {
     // ==================== Resource Policy ====================
 
     /**
-     * 获取资源策略。
-     *
-     * @return 资源策略
+    * 获取资源策略。
+    *
+    * @return 资源策略
      */
     @GetMapping("/resource-policy")
     @Operation(summary = "获取资源策略", description = "获取浏览器资源策略配置")
@@ -558,10 +558,10 @@ public class AgentBrowserController {
     }
 
     /**
-     * 更新资源策略。
-     *
-     * @param body 资源策略参数
-     * @return 更新结果
+    * 更新资源策略。
+    *
+    * @param body 资源策略参数
+    * @return 更新结果
      */
     @PutMapping("/resource-policy")
     @Operation(summary = "更新资源策略", description = "更新浏览器资源策略配置")
@@ -592,9 +592,9 @@ public class AgentBrowserController {
     // ==================== Login ====================
 
     /**
-     * 打开登录窗口。
-     *
-     * @return 操作结果
+    * 打开登录窗口。
+    *
+    * @return 操作结果
      */
     @PostMapping("/login/open")
     @Operation(summary = "打开登录窗口", description = "打开浏览器登录窗口（Primary 身份 Lane）")
@@ -620,9 +620,9 @@ public class AgentBrowserController {
     }
 
     /**
-     * 关闭登录窗口。
-     *
-     * @return 操作结果
+    * 关闭登录窗口。
+    *
+    * @return 操作结果
      */
     @PostMapping("/login/close")
     @Operation(summary = "关闭登录窗口", description = "关闭浏览器登录窗口")
@@ -648,9 +648,9 @@ public class AgentBrowserController {
     }
 
     /**
-     * 查询登录窗口状态。
-     *
-     * @return 登录状态
+    * 查询登录窗口状态。
+    *
+    * @return 登录状态
      */
     @GetMapping("/login/status")
     @Operation(summary = "查询登录状态", description = "查询浏览器登录窗口状态")
@@ -669,10 +669,10 @@ public class AgentBrowserController {
     // ==================== 辅助方法 ====================
 
     /**
-     * 将 Lane 实体转换为前端期望的响应格式。
-     *
-     * @param lane Lane 实体
-     * @return 前端格式的 Lane 数据
+    * 将 Lane 实体转换为前端期望的响应格式。
+    *
+    * @param lane Lane 实体
+    * @return 前端格式的 Lane 数据
      */
     private Map<String, Object> toLaneResponse(AgentBrowserLane lane) {
         Map<String, Object> resp = new LinkedHashMap<>();
@@ -726,12 +726,12 @@ public class AgentBrowserController {
     }
 
     /**
-      * 从 映射 中安全获取字符串值。
-     *
-     * @param map          源 映射
-     * @param key          键名
-     * @param defaultValue 默认值
-     * @return 字符串值
+    * 从 映射 中安全获取字符串值。
+    *
+    * @param map          源 映射
+    * @param key          键名
+    * @param defaultValue 默认值
+    * @return 字符串值
      */
     private String str(Map<String, Object> map, String key, String defaultValue) {
         Object val = map.get(key);

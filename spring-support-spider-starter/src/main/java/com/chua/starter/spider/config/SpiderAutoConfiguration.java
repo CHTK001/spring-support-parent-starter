@@ -27,14 +27,14 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
- * 爬虫中心自动配置。
- *
- * <p>负责：组件扫描（service / controller / mapper）、全链路追踪过滤器，
-   * 以及将 10 个爬虫节点（请求/extract/转换/sub循环/映射/输出/条件/script/db/function）
- * 注册到 {@link FlowNodeRegistry}，供流程编排与节点清单使用。</p>
- *
- * @since 4.0.0.42
- * @author CH
+* 爬虫中心自动配置。
+*
+* <p>负责：组件扫描（service / controller / mapper）、全链路追踪过滤器，
+* 以及将 10 个爬虫节点（请求/extract/转换/sub循环/映射/输出/条件/script/db/function）
+* 注册到 {@link FlowNodeRegistry}，供流程编排与节点清单使用。</p>
+*
+* @since 4.0.0.42
+* @author CH
  */
 @AutoConfiguration
 @AutoConfigureAfter(name = "com.chua.starter.mybatis.MybatisPlusConfiguration")
@@ -46,79 +46,79 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 public class SpiderAutoConfiguration {
 
     /**
-       * 追踪标识 过滤器注册顺序
+    * 追踪标识 过滤器注册顺序
      */
     private static final int TRACE_FILTER_ORDER = 0;
 
     /**
-     * 请求节点
+    * 请求节点
      */
     private final SpiderRequestNode requestNode;
 
     /**
-     * 提取节点
+    * 提取节点
      */
     private final SpiderExtractNode extractNode;
 
     /**
-     * 转换节点
+    * 转换节点
      */
     private final SpiderTransformNode transformNode;
 
     /**
-     * 循环节点
+    * 循环节点
      */
     private final SpiderSubLoopNode subLoopNode;
 
     /**
-     * 映射节点
+    * 映射节点
      */
     private final SpiderMapNode mapNode;
 
     /**
-     * 落库节点
+    * 落库节点
      */
     private final SpiderOutputNode outputNode;
 
     /**
-     * 条件节点
+    * 条件节点
      */
     private final SpiderConditionNode conditionNode;
 
     /**
-     * 脚本节点
+    * 脚本节点
      */
     private final SpiderScriptNode scriptNode;
 
     /**
-     * 数据库节点
+    * 数据库节点
      */
     private final SpiderDbNode dbNode;
 
     /**
-     * 函数调用节点
+    * 函数调用节点
      */
     private final SpiderFunctionNode functionNode;
 
     /**
-     * 占位节点（兜底，用于未识别类型或后续扩展）
+    * 占位节点（兜底，用于未识别类型或后续扩展）
      */
     private final SpiderNoopNode noopNode;
 
     /**
-     * 构造器注入 11 个爬虫节点。
-     *
-     * @param requestNode   请求节点
-     * @param extractNode   提取节点
-     * @param transformNode 转换节点
-     * @param subLoopNode   循环节点
-     * @param mapNode       映射节点
-     * @param outputNode    落库节点
-     * @param conditionNode 条件节点
-     * @param scriptNode    脚本节点
-     * @param dbNode        数据库节点
-     * @param functionNode  函数调用节点
-     * @param noopNode      占位节点
+    * 构造器注入 11 个爬虫节点。
+    *
+    * @param requestNode   请求节点
+    * @param extractNode   提取节点
+    * @param transformNode 转换节点
+    * @param subLoopNode   循环节点
+    * @param mapNode       映射节点
+    * @param outputNode    落库节点
+    * @param conditionNode 条件节点
+    * @param scriptNode    脚本节点
+    * @param dbNode        数据库节点
+    * @param functionNode  函数调用节点
+    * @param noopNode      占位节点
      */
     public SpiderAutoConfiguration(SpiderRequestNode requestNode,
                                    SpiderExtractNode extractNode,
@@ -145,10 +145,10 @@ public class SpiderAutoConfiguration {
     }
 
     /**
-     * 注册爬虫节点到流程节点注册中心。
-     *
-     * <p>节点统一使用 {@code spider.} 前缀注册，供前端节点清单展示与流程 JSON 导入匹配；
-     * script/db/function 已绑定到真实节点实现，{@link SpiderNoopNode} 仅作为兜底。</p>
+    * 注册爬虫节点到流程节点注册中心。
+    *
+    * <p>节点统一使用 {@code spider.} 前缀注册，供前端节点清单展示与流程 JSON 导入匹配；
+    * script/db/function 已绑定到真实节点实现，{@link SpiderNoopNode} 仅作为兜底。</p>
      */
     @PostConstruct
     public void registerSpiderNodes() {
@@ -166,11 +166,11 @@ public class SpiderAutoConfiguration {
     }
 
     /**
-     * 注册全链路追踪过滤器 Bean。
-     *
-     * <p>覆盖所有路径，为请求注入 traceId 到 MDC 与响应头。</p>
-     *
-     * @return 过滤器注册 Bean
+    * 注册全链路追踪过滤器 Bean。
+    *
+    * <p>覆盖所有路径，为请求注入 traceId 到 MDC 与响应头。</p>
+    *
+    * @return 过滤器注册 Bean
      */
     @Bean
     @ConditionalOnWebApplication

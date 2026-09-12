@@ -28,10 +28,10 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Pattern;
 /**
- * 订单分表配置服务实现，管理支付订单的按时间分片策略及预创建任务。
- *
- * @author CH
- * @since 4.0.0.50
+* 订单分表配置服务实现，管理支付订单的按时间分片策略及预创建任务。
+*
+* @author CH
+* @since 4.0.0.50
  */
 
 @Service
@@ -58,7 +58,7 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
     /** 初始化默认 */
     public void initDefaults() {
         /**
-         * 同步默认。
+        * 同步默认。
          */
         syncDefaults();
     }
@@ -67,7 +67,7 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
     /** 列表配置 */
     public List<OrderPartitionConfigVO> listConfigs() {
         /**
-         * 同步默认。
+        * 同步默认。
          */
         syncDefaults();
         return orderPartitionConfigMapper.selectList(new LambdaQueryWrapper<OrderPartitionConfig>().orderByAsc(OrderPartitionConfig::getId))
@@ -77,11 +77,11 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-     * 更新配置
-     *
-     * @param businessType 业务类型
-     * @param dto dto
-     * @return 更新配置的结果
+    * 更新配置
+    *
+    * @param businessType 业务类型
+    * @param dto dto
+    * @return 更新配置的结果
      */
     public OrderPartitionConfigVO updateConfig(String businessType, OrderPartitionConfigDTO dto) {
         OrderPartitionConfig config = requireConfig(businessType);
@@ -128,16 +128,16 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-     * 执行Auto创建
-     *
-     * @param businessType 业务类型
+    * 执行Auto创建
+    *
+    * @param businessType 业务类型
      */
     public void executeAutoCreate(String businessType) {
         OrderPartitionConfig config = requireConfig(businessType);
         String tableName = resolvePartitionTable(config, LocalDate.now().plusDays(config.getCreateAheadDays()));
         /**
-         * ensure分区tableexists。
-         * @param config.getSourceTable( 配置.获取源table(
+        * ensure分区tableexists。
+        * @param config.getSourceTable( 配置.获取源table(
          */
         ensurePartitionTableExists(config.getSourceTable(), tableName);
         config.setLastPartitionTable(tableName);
@@ -148,9 +148,9 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-     * 执行automigrate
-     *
-     * @param businessType 业务类型
+    * 执行automigrate
+    *
+    * @param businessType 业务类型
      */
     public void executeAutoMigrate(String businessType) {
         OrderPartitionConfig config = requireConfig(businessType);
@@ -158,25 +158,25 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
         String idCol = config.getTableIdColumn();
         if (!StringUtils.hasText(timeCol)) {
             /**
-             * 薪酬异常。
-             * @param timeColumn" 时间column"
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param timeColumn" 时间column"
+            * @return 薪酬异常的结果
              */
             throw new PaymentException("分表配置缺少 timeColumn");
         }
         if (!StringUtils.hasText(idCol)) {
             /**
-             * 薪酬异常。
-             * @param idColumn" idcolumn"
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param idColumn" idcolumn"
+            * @return 薪酬异常的结果
              */
             throw new PaymentException("分表配置缺少 idColumn");
         }
         LocalDateTime cutoff = LocalDateTime.now().minusDays(config.getMigrateBeforeDays());
         String targetTable = resolvePartitionTable(config, cutoff.toLocalDate());
         /**
-         * ensure分区tableexists。
-         * @param config.getSourceTable( 配置.获取源table(
+        * ensure分区tableexists。
+        * @param config.getSourceTable( 配置.获取源table(
          */
         ensurePartitionTableExists(config.getSourceTable(), targetTable);
         String sourceTable = validateTableName(config.getSourceTable(), "源表名");
@@ -207,11 +207,11 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
     }
 
     /**
-     * 验证分区查询
-     *
-     * @param businessType 业务类型
-     * @param cutoff cutoff
-     * @return 验证分区查询的结果
+    * 验证分区查询
+    *
+    * @param businessType 业务类型
+    * @param cutoff cutoff
+    * @return 验证分区查询的结果
      */
     private int verifyPartitionQuery(String businessType, LocalDateTime cutoff) {
         try {
@@ -270,17 +270,17 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
     }
 
     /**
-     * require配置
-     *
-     * @param businessType 业务类型
-     * @return require配置的结果
+    * require配置
+    *
+    * @param businessType 业务类型
+    * @return require配置的结果
      */
     private OrderPartitionConfig requireConfig(String businessType) {
         if (!DEFAULTS.containsKey(normalizeBusinessType(businessType))) {
             /**
-             * 薪酬异常。
-             * @param businessType 业务类型
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param businessType 业务类型
+            * @return 薪酬异常的结果
              */
             throw new PaymentException("不支持的业务类型: " + businessType);
         }
@@ -289,9 +289,9 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
                 .last("limit 1"));
         if (config == null) {
             /**
-             * 薪酬异常。
-             * @param businessType 业务类型
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param businessType 业务类型
+            * @return 薪酬异常的结果
              */
             throw new PaymentException("分表配置不存在: " + businessType);
         }
@@ -299,11 +299,11 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
     }
 
     /**
-     * 解析分区table
-     *
-     * @param config 配置
-     * @param date 日期
-     * @return resolve分区table的结果
+    * 解析分区table
+    *
+    * @param config 配置
+    * @param date 日期
+    * @return resolve分区table的结果
      */
     private String resolvePartitionTable(OrderPartitionConfig config, LocalDate date) {
         String suffix = "DAY".equalsIgnoreCase(config.getPartitionGranularity()) ? DAY_FORMAT.format(date) : MONTH_FORMAT.format(date.withDayOfMonth(1));
@@ -311,38 +311,38 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
     }
 
     /**
-     * ensure分区table是否存在
-     *
-     * @param sourceTable 源table
-     * @param targetTable Targettable
+    * ensure分区table是否存在
+    *
+    * @param sourceTable 源table
+    * @param targetTable Targettable
      */
     private void ensurePartitionTableExists(String sourceTable, String targetTable) {
         /**
-         * 校验table名称。
-         * @param sourceTable 源table
-         * @param "源表" "源表"
+        * 校验table名称。
+        * @param sourceTable 源table
+        * @param "源表" "源表"
          */
         validateTableName(sourceTable, "源表");
         /**
-         * 校验table名称。
-         * @param targetTable Targettable
-         * @param "目标表" "目标表"
+        * 校验table名称。
+        * @param targetTable Targettable
+        * @param "目标表" "目标表"
          */
         validateTableName(targetTable, "目标表");
         jdbcTemplate.execute(resolveCloneSql(sourceTable, targetTable));
     }
 
     /**
-     * 解析clonesql
-     *
-     * @param sourceTable 源table
-     * @param targetTable Targettable
-     * @return resolveCloneSql的结果
+    * 解析clonesql
+    *
+    * @param sourceTable 源table
+    * @param targetTable Targettable
+    * @return resolveCloneSql的结果
      */
     private String resolveCloneSql(String sourceTable, String targetTable) {
         /**
-         * 尝试。
-         * @param dataSource.getConnection( 数据源.getconnection(
+        * 尝试。
+        * @param dataSource.getConnection( 数据源.getconnection(
          */
         try (Connection connection = dataSource.getConnection()) {
             String database = connection.getMetaData().getDatabaseProductName().toLowerCase(Locale.ROOT);
@@ -355,10 +355,10 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
     }
 
     /**
-     * 转为vo
-     *
-     * @param config 配置
-     * @return 转为vo的结果
+    * 转为vo
+    *
+    * @param config 配置
+    * @return 转为vo的结果
      */
     private OrderPartitionConfigVO toVO(OrderPartitionConfig config) {
         OrderPartitionConfigVO vo = new OrderPartitionConfigVO();
@@ -367,9 +367,9 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
     }
 
     /**
-     * 创建默认
-     *
-     * @return 创建默认的结果
+    * 创建默认
+    *
+    * @return 创建默认的结果
      */
     private static Map<String, OrderPartitionConfig> createDefaults() {
         Map<String, OrderPartitionConfig> result = new LinkedHashMap<>();
@@ -379,14 +379,14 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
     }
 
     /**
-     * 构建默认
-     *
-     * @param businessType 业务类型
-     * @param sourceTable 源table
-     * @param prefix 前缀
-     * @param createTaskKey 创建任务钥匙
-     * @param migrateTaskKey migrate任务钥匙
-     * @return 构建默认的结果
+    * 构建默认
+    *
+    * @param businessType 业务类型
+    * @param sourceTable 源table
+    * @param prefix 前缀
+    * @param createTaskKey 创建任务钥匙
+    * @param migrateTaskKey migrate任务钥匙
+    * @return 构建默认的结果
      */
     private static OrderPartitionConfig buildDefault(String businessType, String sourceTable, String prefix, String createTaskKey, String migrateTaskKey) {
         OrderPartitionConfig config = new OrderPartitionConfig();
@@ -410,28 +410,28 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
     }
 
     /**
-     * normalize业务类型
-     *
-     * @param businessType 业务类型
-     * @return normalize业务类型的结果
+    * normalize业务类型
+    *
+    * @param businessType 业务类型
+    * @return normalize业务类型的结果
      */
     private String normalizeBusinessType(String businessType) {
         return fallback(businessType, "").trim().toUpperCase(Locale.ROOT);
     }
 
     /**
-     * 解析Granularity
-     *
-     * @param value 价值观
-     * @return resolveGranularity的结果
+    * 解析Granularity
+    *
+    * @param value 价值观
+    * @return resolveGranularity的结果
      */
     private String resolveGranularity(String value) {
         String result = fallback(value, "MONTH").trim().toUpperCase(Locale.ROOT);
         if (!"MONTH".equals(result) && !"DAY".equals(result)) {
             /**
-             * 薪酬异常。
-             * @param value 价值观
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param value 价值观
+            * @return 薪酬异常的结果
              */
             throw new PaymentException("不支持的分表粒度: " + value);
         }
@@ -439,20 +439,20 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
     }
 
     /**
-     * 解析Positive
-     *
-     * @param value 价值观
-     * @param fallback 降级
-     * @param label 标签
-     * @return resolvePositive的结果
+    * 解析Positive
+    *
+    * @param value 价值观
+    * @param fallback 降级
+    * @param label 标签
+    * @return resolvePositive的结果
      */
     private Integer resolvePositive(Integer value, Integer fallback, String label) {
         int result = value != null ? value : fallback;
         if (result <= 0) {
             /**
-             * 薪酬异常。
-             * @param 0" 0"
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param 0" 0"
+            * @return 薪酬异常的结果
              */
             throw new PaymentException(label + "必须大于 0");
         }
@@ -460,20 +460,20 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
     }
 
     /**
-     * 解析nonnegative
-     *
-     * @param value 价值观
-     * @param fallback 降级
-     * @param label 标签
-     * @return resolveNonNegative的结果
+    * 解析nonnegative
+    *
+    * @param value 价值观
+    * @param fallback 降级
+    * @param label 标签
+    * @return resolveNonNegative的结果
      */
     private Integer resolveNonNegative(Integer value, Integer fallback, String label) {
         int result = value != null ? value : fallback;
         if (result < 0) {
             /**
-             * 薪酬异常。
-             * @param 0" 0"
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param 0" 0"
+            * @return 薪酬异常的结果
              */
             throw new PaymentException(label + "不能小于 0");
         }
@@ -481,18 +481,18 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
     }
 
     /**
-     * 校验table名称
-     *
-     * @param value 价值观
-     * @param label 标签
-     * @return 校验table名称的结果
+    * 校验table名称
+    *
+    * @param value 价值观
+    * @param label 标签
+    * @return 校验table名称的结果
      */
     private String validateTableName(String value, String label) {
         if (!StringUtils.hasText(value) || !SAFE_TABLE.matcher(value.trim()).matches()) {
             /**
-             * 薪酬异常。
-             * @param value 价值观
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param value 价值观
+            * @return 薪酬异常的结果
              */
             throw new PaymentException(label + "不合法: " + value);
         }
@@ -500,11 +500,11 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
     }
 
     /**
-     * 降级
-     *
-     * @param value 价值观
-     * @param fallback 降级
-     * @return 降级的结果
+    * 降级
+    *
+    * @param value 价值观
+    * @param fallback 降级
+    * @return 降级的结果
      */
     private String fallback(String value, String fallback) {
         return StringUtils.hasText(value) ? value : fallback;

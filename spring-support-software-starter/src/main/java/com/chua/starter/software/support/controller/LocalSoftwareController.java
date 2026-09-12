@@ -24,12 +24,12 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * 本地软件管理接口
- *
- * <p>提供本地软件扫描、列表查询、安装、卸载等功能。</p>
- *
- * @since 2026/7/25
- * @author CH
+* 本地软件管理接口
+*
+* <p>提供本地软件扫描、列表查询、安装、卸载等功能。</p>
+*
+* @since 2026/7/25
+* @author CH
  */
 @Tag(name = "本地软件管理接口")
 @RestController
@@ -43,12 +43,12 @@ public class LocalSoftwareController {
     private final SoftSoftwareService softSoftwareService;
 
     /**
-     * 触发本地软件扫描
-     *
-     * <p>扫描当前操作系统已安装的软件，同步到本地软件源（source_type=3）。</p>
-     *
-     * @param sourceId 软件源标识（可选，为空时使用默认本地源）
-     * @return 扫描结果，包含扫描数量
+    * 触发本地软件扫描
+    *
+    * <p>扫描当前操作系统已安装的软件，同步到本地软件源（source_type=3）。</p>
+    *
+    * @param sourceId 软件源标识（可选，为空时使用默认本地源）
+    * @return 扫描结果，包含扫描数量
      */
     @Operation(summary = "扫描本地软件")
     @PostMapping("/scan")
@@ -60,12 +60,12 @@ public class LocalSoftwareController {
     }
 
     /**
-     * 清空本地软件（指定源）
-     *
-     * <p>将指定本地源下的所有软件标记为删除状态（软删除）。</p>
-     *
-     * @param sourceId 软件源标识
-     * @return 操作结果
+    * 清空本地软件（指定源）
+    *
+    * <p>将指定本地源下的所有软件标记为删除状态（软删除）。</p>
+    *
+    * @param sourceId 软件源标识
+    * @return 操作结果
      */
     @Operation(summary = "清空本地软件")
     @DeleteMapping("/clear")
@@ -77,13 +77,13 @@ public class LocalSoftwareController {
     }
 
     /**
-     * 本地软件列表（分页）
-     *
-     * <p>查询本地源（source_type=3）下的软件列表。</p>
-     *
-     * @param query   分页参数
-     * @param request 查询条件
-     * @return 分页结果
+    * 本地软件列表（分页）
+    *
+    * <p>查询本地源（source_type=3）下的软件列表。</p>
+    *
+    * @param query   分页参数
+    * @param request 查询条件
+    * @return 分页结果
      */
     @Operation(summary = "本地软件列表")
     @GetMapping("/page")
@@ -96,10 +96,10 @@ public class LocalSoftwareController {
     }
 
     /**
-     * 本地软件详情
-     *
-     * @param softwareId 软件标识
-     * @return 软件详情
+    * 本地软件详情
+    *
+    * @param softwareId 软件标识
+    * @return 软件详情
      */
     @Operation(summary = "本地软件详情")
     @GetMapping("/detail")
@@ -110,12 +110,12 @@ public class LocalSoftwareController {
     }
 
     /**
-     * 安装本地软件
-     *
-     * <p>从本地软件列表中安装软件到指定路径。</p>
-     *
-     * @param request 安装请求
-     * @return 安装结果
+    * 安装本地软件
+    *
+    * <p>从本地软件列表中安装软件到指定路径。</p>
+    *
+    * @param request 安装请求
+    * @return 安装结果
      */
     @Operation(summary = "安装本地软件")
     @PostMapping("/install")
@@ -130,14 +130,14 @@ public class LocalSoftwareController {
     }
 
     /**
-     * 卸载本地软件
-     *
-     * <p>从管理系统中移除本地软件记录。</p>
-     *
-     * @param softwareId 软件标识
-     * @param userId     用户标识
-     * @param deviceId   设备标识
-     * @return 卸载结果
+    * 卸载本地软件
+    *
+    * <p>从管理系统中移除本地软件记录。</p>
+    *
+    * @param softwareId 软件标识
+    * @param userId     用户标识
+    * @param deviceId   设备标识
+    * @return 卸载结果
      */
     @Operation(summary = "卸载本地软件")
     @DeleteMapping("/uninstall")
@@ -150,12 +150,12 @@ public class LocalSoftwareController {
     }
 
     /**
-     * 添加本地软件（手动添加）
-     *
-     * <p>管理员可以手动添加本地发现的软件到管理系统。</p>
-     *
-     * @param software 软件信息
-     * @return 添加结果
+    * 添加本地软件（手动添加）
+    *
+    * <p>管理员可以手动添加本地发现的软件到管理系统。</p>
+    *
+    * @param software 软件信息
+    * @return 添加结果
      */
     @Operation(summary = "添加本地软件")
     @PostMapping("/add")
@@ -166,9 +166,9 @@ public class LocalSoftwareController {
     }
 
     /**
-     * 批量获取本地软件（用于下拉选择等）
-     *
-     * @return 软件列表
+    * 批量获取本地软件（用于下拉选择等）
+    *
+    * @return 软件列表
      */
     @Operation(summary = "本地软件列表（不分页）")
     @GetMapping("/list")

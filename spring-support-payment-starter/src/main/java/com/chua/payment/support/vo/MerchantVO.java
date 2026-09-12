@@ -6,10 +6,10 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
- * 商户视图对象
- *
- * @since 2026-03-18
- * @author CH
+* 商户视图对象
+*
+* @since 2026-03-18
+* @author CH
  */
 @Data
 public class MerchantVO implements Serializable {

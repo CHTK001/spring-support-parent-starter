@@ -20,17 +20,17 @@ import javax.sql.DataSource;
 import java.io.File;
 
 /**
-   * 数据库模式探针 (H2 代替外网 MySQL, 验证 databasemapping加载 加载链路)。
- *
- * <p>与 {@link com.chua.starter.datasync.support.DataSyncApplication} 的区别:
-   * 数据同步application 的 database 模式
-   * 硬编码外网 MySQL (172.16.0.40), 探针改用嵌入式 H2 + {@code schema.sql}
-   * (预置 db-用户-同步 映射 + 用户-sink 字段映射), 使数据库加载链路可在无外网环境
-   * 真实验证: H2 建表 → databasemapping加载 查 datasync_mapping → 加载到 管理器 →
- * 定时调度真实执行。</p>
- *
- * @since 4.0.0.42
- * @author CH
+* 数据库模式探针 (H2 代替外网 MySQL, 验证 databasemapping加载 加载链路)。
+*
+* <p>与 {@link com.chua.starter.datasync.support.DataSyncApplication} 的区别:
+* 数据同步application 的 database 模式
+* 硬编码外网 MySQL (172.16.0.40), 探针改用嵌入式 H2 + {@code schema.sql}
+* (预置 db-用户-同步 映射 + 用户-sink 字段映射), 使数据库加载链路可在无外网环境
+* 真实验证: H2 建表 → databasemapping加载 查 datasync_mapping → 加载到 管理器 →
+* 定时调度真实执行。</p>
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Slf4j
 @SpringBootApplication(exclude = {DataSourceAutoConfiguration.class, DataSourceInspect.class})
@@ -38,9 +38,9 @@ import java.io.File;
 public class DataSyncDatabaseProbe {
 
     /**
-     * 程序入口。
-     *
-     * @param args 命令行参数
+    * 程序入口。
+    *
+    * @param args 命令行参数
      */
     public static void main(String[] args) {
         // 强制 database 模式 + 启用数据库映射源
@@ -82,15 +82,15 @@ public class DataSyncDatabaseProbe {
     }
 
     /**
-       * 配置嵌入式 H2 数据源 (模式.SQL 建 datasync_mapping / datasync_字段_mapping 两表并预置数据)。
-     *
-     * @return 数据源
+    * 配置嵌入式 H2 数据源 (模式.SQL 建 datasync_mapping / datasync_字段_mapping 两表并预置数据)。
+    *
+    * @return 数据源
      */
     @Bean
     public DataSource dataSource() {
         /**
-         * embeddeddatabase构建器。
-         * @return embeddeddatabase构建器的结果
+        * embeddeddatabase构建器。
+        * @return embeddeddatabase构建器的结果
          */
         return new EmbeddedDatabaseBuilder()
                 .setType(EmbeddedDatabaseType.H2)

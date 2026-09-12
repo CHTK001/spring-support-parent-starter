@@ -9,9 +9,9 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
- * 分页工具
- * @since 2024/12/31
- * @author CH
+* 分页工具
+* @since 2024/12/31
+* @author CH
  */
 public class PageUtils {
 
@@ -20,12 +20,12 @@ public class PageUtils {
     }
 
     /**
-     * 分页复制
-     * @param page 分页
-     * @param type 类型
-     * @param <E> E 原始类型
-     * @param <R> R 返回类型
-     * @return IPage
+    * 分页复制
+    * @param page 分页
+    * @param type 类型
+    * @param <E> E 原始类型
+    * @param <R> R 返回类型
+    * @return IPage
      */
     public static <E, R>IPage<R> copyProperties(IPage<E> page, Supplier<R> type) {
         IPage<R> rs = new Page<>();
@@ -40,9 +40,9 @@ public class PageUtils {
                 return r;
             } catch (Exception e) {
                 /**
-                 * runtime异常。
-                 * @param e e
-                 * @return runtime异常的结果
+                * runtime异常。
+                * @param e e
+                * @return runtime异常的结果
                  */
                 throw new RuntimeException(e);
             }
@@ -51,12 +51,12 @@ public class PageUtils {
     }
 
     /**
-     * 分页复制
-     * @param page 分页
-     * @param type 类型
-     * @param <E> E 原始类型
-     * @param <R> R 返回类型
-     * @return IPage
+    * 分页复制
+    * @param page 分页
+    * @param type 类型
+    * @param <E> E 原始类型
+    * @param <R> R 返回类型
+    * @return IPage
      */
     public static <E, R>IPage<R> copyProperties(IPage<E> page, Class<R> type) {
         return copyProperties(page, () -> {
@@ -64,9 +64,9 @@ public class PageUtils {
                 return ReflectUtils.instantiate(type);
             } catch (Exception e) {
                 /**
-                 * runtime异常。
-                 * @param e e
-                 * @return runtime异常的结果
+                * runtime异常。
+                * @param e e
+                * @return runtime异常的结果
                  */
                 throw new RuntimeException(e);
             }

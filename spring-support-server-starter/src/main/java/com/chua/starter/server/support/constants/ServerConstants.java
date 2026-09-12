@@ -1,10 +1,10 @@
 package com.chua.starter.server.support.constants;
 
 /**
- * 服务器资产模块常量
- *
- * @author CH
- * @since 4.0.0.42
+* 服务器资产模块常量
+*
+* @author CH
+* @since 4.0.0.42
  */
 public final class ServerConstants {
 
@@ -36,7 +36,7 @@ public final class ServerConstants {
     public static final String EXEC_STATUS_FAIL = "FAIL";
 
     /**
-     * 工具类禁止实例化
+    * 工具类禁止实例化
      */
     private ServerConstants() {
     }

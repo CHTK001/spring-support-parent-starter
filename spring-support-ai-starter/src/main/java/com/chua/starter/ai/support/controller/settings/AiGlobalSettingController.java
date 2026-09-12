@@ -13,10 +13,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 全局设置控制器（单条记录），提供查询与更新。
- *
- * @since 2026-08-03
- * @author CH
+* 全局设置控制器（单条记录），提供查询与更新。
+*
+* @since 2026-08-03
+* @author CH
  */
 @RestController
 @RequestMapping("/v2/global-settings")
@@ -25,14 +25,14 @@ import org.springframework.web.bind.annotation.RestController;
 public class AiGlobalSettingController {
 
     /**
-     * 全局设置服务
+    * 全局设置服务
      */
     private final AiGlobalSettingService settingService;
 
     /**
-     * 获取全局设置。
-     *
-     * @return 全局设置 DTO
+    * 获取全局设置。
+    *
+    * @return 全局设置 DTO
      */
     @Permission("admin")
     @Operation(summary = "获取全局设置")
@@ -42,10 +42,10 @@ public class AiGlobalSettingController {
     }
 
     /**
-     * 更新全局设置。
-     *
-     * @param setting 全局设置 DTO
-     * @return 更新后的全局设置 DTO
+    * 更新全局设置。
+    *
+    * @param setting 全局设置 DTO
+    * @return 更新后的全局设置 DTO
      */
     @Permission("admin")
     @Operation(summary = "更新全局设置")

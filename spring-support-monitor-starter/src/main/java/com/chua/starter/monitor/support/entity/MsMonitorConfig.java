@@ -10,10 +10,10 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
- * 监控全局配置实体
- *
- * @since 2026/8/4
- * @author CH
+* 监控全局配置实体
+*
+* @since 2026/8/4
+* @author CH
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -25,7 +25,7 @@ public class MsMonitorConfig extends SysBase {
     private static final long serialVersionUID = 1L;
 
     /**
-     * 主键
+    * 主键
      */
     @TableId(value = "id", type = IdType.AUTO)
     @Schema(description = "主键", example = "1")
@@ -33,7 +33,7 @@ public class MsMonitorConfig extends SysBase {
     private Long id;
 
     /**
-      * 配置项 钥匙
+    * 配置项 钥匙
      */
     @TableField("ms_monitor_config_key")
     @Schema(description = "配置项 key", example = "monitor.data.retention.days")
@@ -41,7 +41,7 @@ public class MsMonitorConfig extends SysBase {
     private String monitorConfigKey;
 
     /**
-      * 配置项 价值观
+    * 配置项 价值观
      */
     @TableField("ms_monitor_config_value")
     @Schema(description = "配置项 value", example = "30")
@@ -49,7 +49,7 @@ public class MsMonitorConfig extends SysBase {
     private String monitorConfigValue;
 
     /**
-     * 配置项描述
+    * 配置项描述
      */
     @TableField("ms_monitor_config_desc")
     @Schema(description = "配置项描述", example = "历史数据保留天数")

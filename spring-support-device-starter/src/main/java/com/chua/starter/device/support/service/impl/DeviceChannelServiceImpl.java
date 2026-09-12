@@ -11,10 +11,10 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 
 /**
- * 设备通道服务实现
- *
- * @since 4.0.0.42
- * @author CH
+* 设备通道服务实现
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Slf4j
 @Service
@@ -22,7 +22,7 @@ import java.util.List;
 public class DeviceChannelServiceImpl implements DeviceChannelService {
 
     /**
-      * 通道 映射器
+    * 通道 映射器
      */
     private final DeviceChannelMapper channelMapper;
 

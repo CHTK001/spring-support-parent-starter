@@ -3,13 +3,13 @@ package com.chua.starter.common.support.serviceinfo;
 import org.springframework.core.env.Environment;
 
 /**
- * 端点探测器: 探测 Swagger / Actuator 等基础端点是否启用。
- *
- * <p>在应用就绪时由 {@link ServiceInfoBannerListener} 调用,
- * 把探测结果注册到 {@link ServiceInfoRegistry}。</p>
- *
- * @since 4.0.0.42
- * @author CH
+* 端点探测器: 探测 Swagger / Actuator 等基础端点是否启用。
+*
+* <p>在应用就绪时由 {@link ServiceInfoBannerListener} 调用,
+* 把探测结果注册到 {@link ServiceInfoRegistry}。</p>
+*
+* @since 4.0.0.42
+* @author CH
  */
 public class ServiceInfoEndpointDetector {
 
@@ -20,18 +20,18 @@ public class ServiceInfoEndpointDetector {
     private boolean infrastructureEnabled = true;
 
     /**
-      * 创建 服务信息端点detector 实例
-     * @param environment 环境
+    * 创建 服务信息端点detector 实例
+    * @param environment 环境
      */
     public ServiceInfoEndpointDetector(Environment environment) {
         this.environment = environment;
     }
 
     /**
-     * 设置是否展示基础设施连接信息。
-     *
-     * @param infrastructureEnabled true 展示已配置的中间件连接信息
-     * @return this
+    * 设置是否展示基础设施连接信息。
+    *
+    * @param infrastructureEnabled true 展示已配置的中间件连接信息
+    * @return this
      */
     public ServiceInfoEndpointDetector infrastructureEnabled(boolean infrastructureEnabled) {
         this.infrastructureEnabled = infrastructureEnabled;
@@ -39,7 +39,7 @@ public class ServiceInfoEndpointDetector {
     }
 
     /**
-     * 探测基础端点 (应用自身 / Swagger / Actuator) 并注册到 {@link ServiceInfoRegistry}。
+    * 探测基础端点 (应用自身 / Swagger / Actuator) 并注册到 {@link ServiceInfoRegistry}。
      */
     public void detectAndRegister() {
         String port = environment.getProperty("server.port", "8080");
@@ -77,11 +77,11 @@ public class ServiceInfoEndpointDetector {
     }
 
     /**
-     * 注册基础设施连接信息 (Redis / JDBC / Kafka / RabbitMQ / Spring Cloud / Dubbo)。
-     *
-     * <p>从 {@link Environment} 读取 Spring Boot / Spring Cloud / Dubbo 标准配置,
-     * 以端点的形式展示真实连接地址, 便于联调排查。所有条目均做脱敏: 不输出任何密码/密钥。</p>
-     * @param registry registry
+    * 注册基础设施连接信息 (Redis / JDBC / Kafka / RabbitMQ / Spring Cloud / Dubbo)。
+    *
+    * <p>从 {@link Environment} 读取 Spring Boot / Spring Cloud / Dubbo 标准配置,
+    * 以端点的形式展示真实连接地址, 便于联调排查。所有条目均做脱敏: 不输出任何密码/密钥。</p>
+    * @param registry registry
      */
     private void registerInfrastructure(ServiceInfoRegistry registry) {
         if (!infrastructureEnabled) {
@@ -98,9 +98,9 @@ public class ServiceInfoEndpointDetector {
     }
 
     /**
-     * 注册 Redis 连接信息 (spring.数据.Redis.*)
-     *
-     * @param registry registry
+    * 注册 Redis 连接信息 (spring.数据.Redis.*)
+    *
+    * @param registry registry
      */
     private void registerRedis(ServiceInfoRegistry registry) {
         String host = environment.getProperty("spring.data.redis.host");
@@ -117,9 +117,9 @@ public class ServiceInfoEndpointDetector {
     }
 
     /**
-     * 注册 JDBC 连接信息 (spring.datasource.*)
-     *
-     * @param registry registry
+    * 注册 JDBC 连接信息 (spring.datasource.*)
+    *
+    * @param registry registry
      */
     private void registerJdbc(ServiceInfoRegistry registry) {
         String url = environment.getProperty("spring.datasource.url");
@@ -135,11 +135,11 @@ public class ServiceInfoEndpointDetector {
     }
 
     /**
-     * 精简 JDBC URL: 保留协议 + 主机:端口/库名, 去掉冗长的连接参数, 便于横幅可读。
-     *
-     * <p>例如 {@code jdbc:mysql://host:3306/db?useSSL=false&...} -> {@code jdbc:mysql://host:3306/db}。</p>
-     * @param url url
-     * @return compactJdbcUrl的结果
+    * 精简 JDBC URL: 保留协议 + 主机:端口/库名, 去掉冗长的连接参数, 便于横幅可读。
+    *
+    * <p>例如 {@code jdbc:mysql://host:3306/db?useSSL=false&...} -> {@code jdbc:mysql://host:3306/db}。</p>
+    * @param url url
+    * @return compactJdbcUrl的结果
      */
     private static String compactJdbcUrl(String url) {
         int query = url.indexOf('?');
@@ -150,9 +150,9 @@ public class ServiceInfoEndpointDetector {
     }
 
     /**
-     * 注册 Kafka 连接信息 (spring.Kafka.bootstrap-服务端)
-     *
-     * @param registry registry
+    * 注册 Kafka 连接信息 (spring.Kafka.bootstrap-服务端)
+    *
+    * @param registry registry
      */
     private void registerKafka(ServiceInfoRegistry registry) {
         String servers = environment.getProperty("spring.kafka.bootstrap-servers");
@@ -165,9 +165,9 @@ public class ServiceInfoEndpointDetector {
     }
 
     /**
-     * 注册 RabbitMQ 连接信息 (spring.RabbitMQ.*)
-     *
-     * @param registry registry
+    * 注册 RabbitMQ 连接信息 (spring.RabbitMQ.*)
+    *
+    * @param registry registry
      */
     private void registerRabbitMq(ServiceInfoRegistry registry) {
         String host = environment.getProperty("spring.rabbitmq.host");
@@ -186,20 +186,20 @@ public class ServiceInfoEndpointDetector {
     }
 
     /**
-     * 是否拥有财产
-     *
-     * @param key 键
-     * @return 是否包含财产的结果
+    * 是否拥有财产
+    *
+    * @param key 键
+    * @return 是否包含财产的结果
      */
     private boolean hasProperty(String key) {
         return environment.getProperty(key) != null;
     }
 
     /**
-     * 是否非空文本
-     *
-     * @param text 文本
-     * @return 是否包含文本的结果
+    * 是否非空文本
+    *
+    * @param text 文本
+    * @return 是否包含文本的结果
      */
     private static boolean hasText(String text) {
         return text != null && !text.trim().isEmpty();
@@ -208,11 +208,11 @@ public class ServiceInfoEndpointDetector {
     // ------------------------------------------------------------------ Spring Cloud / Dubbo
 
     /**
-     * 注册 Spring Cloud 体系注册中心/配置中心连接信息。
-     *
-     * <p>覆盖 Nacos / Consul / Eureka / ZooKeeper / Spring Cloud Config Server,
-     * 从 Spring Cloud 标准配置读取。</p>
-     * @param registry registry
+    * 注册 Spring Cloud 体系注册中心/配置中心连接信息。
+    *
+    * <p>覆盖 Nacos / Consul / Eureka / ZooKeeper / Spring Cloud Config Server,
+    * 从 Spring Cloud 标准配置读取。</p>
+    * @param registry registry
      */
     private void registerSpringCloud(ServiceInfoRegistry registry) {
         registerNacos(registry);
@@ -223,9 +223,9 @@ public class ServiceInfoEndpointDetector {
     }
 
     /**
-     * 注册 Nacos (spring.cloud.nacos.*)
-     *
-     * @param registry registry
+    * 注册 Nacos (spring.cloud.nacos.*)
+    *
+    * @param registry registry
      */
     private void registerNacos(ServiceInfoRegistry registry) {
         String discovery = environment.getProperty("spring.cloud.nacos.discovery.server-addr");
@@ -239,9 +239,9 @@ public class ServiceInfoEndpointDetector {
     }
 
     /**
-     * 注册 Consul (spring.cloud.consul.*)
-     *
-     * @param registry registry
+    * 注册 Consul (spring.cloud.consul.*)
+    *
+    * @param registry registry
      */
     private void registerConsul(ServiceInfoRegistry registry) {
         String host = environment.getProperty("spring.cloud.consul.host");
@@ -253,9 +253,9 @@ public class ServiceInfoEndpointDetector {
     }
 
     /**
-     * 注册 Eureka (eureka.客户端.服务-url.*)
-     *
-     * @param registry registry
+    * 注册 Eureka (eureka.客户端.服务-url.*)
+    *
+    * @param registry registry
      */
     private void registerEureka(ServiceInfoRegistry registry) {
         String zone = environment.getProperty("eureka.client.service-url.defaultZone");
@@ -266,9 +266,9 @@ public class ServiceInfoEndpointDetector {
     }
 
     /**
-     * 注册 ZooKeeper (spring.cloud.ZooKeeper.连接-字符串)
-     *
-     * @param registry registry
+    * 注册 ZooKeeper (spring.cloud.ZooKeeper.连接-字符串)
+    *
+    * @param registry registry
      */
     private void registerZookeeper(ServiceInfoRegistry registry) {
         String connect = environment.getProperty("spring.cloud.zookeeper.connect-string");
@@ -279,9 +279,9 @@ public class ServiceInfoEndpointDetector {
     }
 
     /**
-     * 注册 Spring Cloud 配置 服务端 (spring.cloud.配置.uri)
-     *
-     * @param registry registry
+    * 注册 Spring Cloud 配置 服务端 (spring.cloud.配置.uri)
+    *
+    * @param registry registry
      */
     private void registerSpringCloudConfig(ServiceInfoRegistry registry) {
         String uri = environment.getProperty("spring.cloud.config.uri");
@@ -292,10 +292,10 @@ public class ServiceInfoEndpointDetector {
     }
 
     /**
-     * 注册 Dubbo 连接信息。
-     *
-     * <p>读取 {@code dubbo.registry.address} 与 {@code dubbo.protocol.*}。</p>
-     * @param registry registry
+    * 注册 Dubbo 连接信息。
+    *
+    * <p>读取 {@code dubbo.registry.address} 与 {@code dubbo.protocol.*}。</p>
+    * @param registry registry
      */
     private void registerDubbo(ServiceInfoRegistry registry) {
         String registryAddr = environment.getProperty("dubbo.registry.address");
@@ -313,9 +313,9 @@ public class ServiceInfoEndpointDetector {
     }
 
     /**
-     * 注册框架自身服务发现配置 (plugin.discovery.*)
-     *
-     * @param registry registry
+    * 注册框架自身服务发现配置 (plugin.discovery.*)
+    *
+    * @param registry registry
      */
     private void registerFrameworkDiscovery(ServiceInfoRegistry registry) {
         String address = environment.getProperty("plugin.discovery.address");
@@ -327,9 +327,9 @@ public class ServiceInfoEndpointDetector {
     }
 
     /**
-     * 注册框架自身配置中心 (plugin.配置-center.*)
-     *
-     * @param registry registry
+    * 注册框架自身配置中心 (plugin.配置-center.*)
+    *
+    * @param registry registry
      */
     private void registerFrameworkConfigCenter(ServiceInfoRegistry registry) {
         String address = environment.getProperty("plugin.config-center.address");

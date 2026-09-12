@@ -5,9 +5,9 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 /**
- * 支付调度任务视图
- * @author CH
- * @since 4.0.0
+* 支付调度任务视图
+* @author CH
+* @since 4.0.0
  */
 @Data
 public class PaymentSchedulerTaskVO {

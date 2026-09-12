@@ -30,17 +30,17 @@ import java.util.concurrent.ConcurrentHashMap;
 import static com.chua.common.support.constant.NameConstant.*;
 
 /**
- * 抽象日志切入点顾问
- * <p>提供日志切面的通用功能，包括参数提取、SpEL表达式解析、Swagger注解识别等</p>
- *
- * @author CH
- * @since 2024-01-01
+* 抽象日志切入点顾问
+* <p>提供日志切面的通用功能，包括参数提取、SpEL表达式解析、Swagger注解识别等</p>
+*
+* @author CH
+* @since 2024-01-01
  */
 @Lazy
 public abstract class AbstractLoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor implements InitializingBean {
 
     /**
-     * 请求指纹头
+    * 请求指纹头
      */
     public static final String X_REQ_FINGERPRINT = "x-req-fingerprint";
 
@@ -55,9 +55,9 @@ public abstract class AbstractLoggerPointcutAdvisor extends StaticMethodMatcherP
 
     @SuppressWarnings("unchecked")
     /**
-     * resolve注解类。
-     * @param className 类名称
-     * @return resolve注解类的结果
+    * resolve注解类。
+    * @param className 类名称
+    * @return resolve注解类的结果
      */
     private static Class<? extends Annotation> resolveAnnotationClass(String className) {
         try {
@@ -68,17 +68,17 @@ public abstract class AbstractLoggerPointcutAdvisor extends StaticMethodMatcherP
     }
 
     /**
-     * Swagger 3.x Operation 注解类
+    * Swagger 3.x Operation 注解类
      */
     private static final Class<? extends Annotation> OPERATION = resolveAnnotationClass("io.swagger.v3.oas.annotations.Operation");
 
     /**
-      * Swagger 2.x apioperation 注解类
+    * Swagger 2.x apioperation 注解类
      */
     private static final Class<? extends Annotation> API_OPERATION = resolveAnnotationClass("io.swagger.annotations.ApiOperation");
 
     /**
-      * spel 表达式缓存，避免每次调用都重新解析
+    * spel 表达式缓存，避免每次调用都重新解析
      */
     private static final ConcurrentHashMap<String, Expression> EXPRESSION_CACHE = new ConcurrentHashMap<>();
     private static final ExpressionParser EXPRESSION_PARSER = new SpelExpressionParser(); // EXPRESSION_PARSER
@@ -96,11 +96,11 @@ public abstract class AbstractLoggerPointcutAdvisor extends StaticMethodMatcherP
     }
 
     /**
-     * 执行方法并记录日志
-     *
-     * @param invocation 方法调用
-     * @return 方法返回值
-     * @throws Throwable 方法执行异常
+    * 执行方法并记录日志
+    *
+    * @param invocation 方法调用
+    * @return 方法返回值
+    * @throws Throwable 方法执行异常
      */
     protected Object invokeValue(MethodInvocation invocation) throws Throwable {
         Object proceed = null;
@@ -112,11 +112,11 @@ public abstract class AbstractLoggerPointcutAdvisor extends StaticMethodMatcherP
             throwable = e;
         }
         /**
-         * 创建operate日志记录器。
-         * @param proceed proceed
-         * @param throwable 抛出
-         * @param invocation invocation
-         * @param startTime 启动时间
+        * 创建operate日志记录器。
+        * @param proceed proceed
+        * @param throwable 抛出
+        * @param invocation invocation
+        * @param startTime 启动时间
          */
         createOperateLogger(proceed, throwable, invocation, startTime);
         if (null != throwable) {
@@ -126,23 +126,23 @@ public abstract class AbstractLoggerPointcutAdvisor extends StaticMethodMatcherP
     }
 
     /**
-     * 创建操作日志
-     * <p>子类需要实现此方法来构建具体的日志信息对象并发布事件</p>
-     *
-     * @param proceed    方法执行结果
-     * @param throwable  方法执行异常，为空表示执行成功
-     * @param invocation 方法调用信息
-     * @param startTime  方法执行开始时间戳
+    * 创建操作日志
+    * <p>子类需要实现此方法来构建具体的日志信息对象并发布事件</p>
+    *
+    * @param proceed    方法执行结果
+    * @param throwable  方法执行异常，为空表示执行成功
+    * @param invocation 方法调用信息
+    * @param startTime  方法执行开始时间戳
      */
     protected abstract void createOperateLogger(Object proceed, Throwable throwable, MethodInvocation invocation, long startTime);
 
     /**
-     * 获取操作名称
-     * <p>优先级：注解name > Swagger 3.x Operation.summary > Swagger 2.x ApiOperation.value</p>
-     *
-     * @param annotationName 注解中指定的名称
-     * @param method         方法对象
-     * @return 操作名称，如果无法获取返回null
+    * 获取操作名称
+    * <p>优先级：注解name > Swagger 3.x Operation.summary > Swagger 2.x ApiOperation.value</p>
+    *
+    * @param annotationName 注解中指定的名称
+    * @param method         方法对象
+    * @return 操作名称，如果无法获取返回null
      */
     protected String getName(String annotationName, Method method) {
         if (StringUtils.isNotBlank(annotationName)) {
@@ -177,10 +177,10 @@ public abstract class AbstractLoggerPointcutAdvisor extends StaticMethodMatcherP
     }
 
     /**
-     * 根据方法名自动识别操作模块类型
-     *
-     * @param method 方法对象
-     * @return 操作模块名称
+    * 根据方法名自动识别操作模块类型
+    *
+    * @param method 方法对象
+    * @return 操作模块名称
      */
     protected String getModule(Method method) {
         String name = method.getName().toUpperCase();
@@ -200,10 +200,10 @@ public abstract class AbstractLoggerPointcutAdvisor extends StaticMethodMatcherP
     }
 
     /**
-     * 构建请求参数的JSON字符串
-     *
-     * @param invocation 方法调用信息
-     * @return 参数的JSON字符串，如果无参数或构建失败返回null
+    * 构建请求参数的JSON字符串
+    *
+    * @param invocation 方法调用信息
+    * @return 参数的JSON字符串，如果无参数或构建失败返回null
      */
     protected String buildParamJson(MethodInvocation invocation) {
         List<Object> params = new LinkedList<>();
@@ -231,12 +231,12 @@ public abstract class AbstractLoggerPointcutAdvisor extends StaticMethodMatcherP
     }
 
     /**
-      * 解析spel表达式内容
-     *
-     * @param content    表达式内容
-     * @param invocation 方法调用信息
-     * @param proceed    方法返回值
-     * @return 解析后的内容
+    * 解析spel表达式内容
+    *
+    * @param content    表达式内容
+    * @param invocation 方法调用信息
+    * @param proceed    方法返回值
+    * @return 解析后的内容
      */
     protected String getContent(String content, MethodInvocation invocation, Object proceed) {
         if (StringUtils.isEmpty(content)) {
@@ -260,55 +260,55 @@ public abstract class AbstractLoggerPointcutAdvisor extends StaticMethodMatcherP
     }
 
     /**
-     * 发布日志事件
-     *
-     * @param event 日志事件对象
+    * 发布日志事件
+    *
+    * @param event 日志事件对象
      */
     protected void publishEvent(Object event) {
         applicationContext.publishEvent(event);
     }
 
     /**
-      * 获取用户标识
-     *
-     * @return 用户ID
+    * 获取用户标识
+    *
+    * @return 用户ID
      */
     protected String getUserId() {
         return RequestUtils.getUserId();
     }
 
     /**
-     * 获取用户名
-     *
-     * @return 用户名
+    * 获取用户名
+    *
+    * @return 用户名
      */
     protected String getUsername() {
         return RequestUtils.getUsername();
     }
 
     /**
-     * 获取客户端IP
-     *
-     * @return 客户端IP
+    * 获取客户端IP
+    *
+    * @return 客户端IP
      */
     protected String getClientIp() {
         return RequestUtils.getIpAddress(request);
     }
 
     /**
-     * 获取请求URL
-     *
-     * @return 请求URL
+    * 获取请求URL
+    *
+    * @return 请求URL
      */
     protected String getRequestUrl() {
         return RequestUtils.getUrl(request);
     }
 
     /**
-     * 获取请求头
-     *
-     * @param name 头名称
-     * @return 头值
+    * 获取请求头
+    *
+    * @param name 头名称
+    * @return 头值
      */
     protected String getHeader(String name) {
         return RequestUtils.getHeader(request, name);

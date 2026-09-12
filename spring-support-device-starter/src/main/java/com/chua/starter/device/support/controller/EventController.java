@@ -14,10 +14,10 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
-   * 事件查询 控制器
- *
- * @since 4.0.0.42
- * @author CH
+* 事件查询 控制器
+*
+* @since 4.0.0.42
+* @author CH
  */
 @RestController
 @RequestMapping("/api/device/events")
@@ -25,18 +25,18 @@ import java.util.List;
 public class EventController {
 
     /**
-     * 事件服务
+    * 事件服务
      */
     private final DeviceEventService eventService;
 
     /**
-     * 查询事件
-     *
-     * @param deviceId 设备 标识
-     * @param type     事件类型，可选
-     * @param start    开始时间，可选
-     * @param end      结束时间，可选
-     * @return 事件列表
+    * 查询事件
+    *
+    * @param deviceId 设备 标识
+    * @param type     事件类型，可选
+    * @param start    开始时间，可选
+    * @param end      结束时间，可选
+    * @return 事件列表
      */
     @GetMapping
     public List<DeviceEventRecord> queryEvents(

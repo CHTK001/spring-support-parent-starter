@@ -6,10 +6,10 @@ import java.util.Set;
 import java.util.function.Supplier;
 
 /**
- * 角色选项
- *
- * @since 2024/12/31
- * @author CH
+* 角色选项
+*
+* @since 2024/12/31
+* @author CH
  */
 public class RoleOptional<T> {
     /** 角色 */
@@ -17,8 +17,8 @@ public class RoleOptional<T> {
     private final Map<String, Supplier<T>> condition = new LinkedHashMap<>(); // 条件
 
     /**
-      * 创建 角色期权 实例
-     * @param roles 角色
+    * 创建 角色期权 实例
+    * @param roles 角色
      */
     public RoleOptional(Set<String> roles) {
         this.roles = roles;
@@ -26,11 +26,11 @@ public class RoleOptional<T> {
 
 
     /**
-     * 是否包含
-     *
-     * @param role 角色
-     * @return this
-     * @param supplier 供应商
+    * 是否包含
+    *
+    * @param role 角色
+    * @return this
+    * @param supplier 供应商
      */
     public RoleOptional<T> withRole(String role, Supplier<T> supplier) {
         condition.put(role, supplier);
@@ -39,10 +39,10 @@ public class RoleOptional<T> {
 
 
     /**
-     * 默认为空
-     *
-     * @return this
-     * @param supplier 供应商
+    * 默认为空
+    *
+    * @return this
+    * @param supplier 供应商
      */
     public RoleOptional<T> withSafeOfNull(Supplier<T> supplier) {
         return withRole("", supplier);
@@ -50,9 +50,9 @@ public class RoleOptional<T> {
 
 
     /**
-     * 获取
-     *
-     * @return 获取的结果
+    * 获取
+    *
+    * @return 获取的结果
      */
     public T get() {
         for (String role : condition.keySet()) {

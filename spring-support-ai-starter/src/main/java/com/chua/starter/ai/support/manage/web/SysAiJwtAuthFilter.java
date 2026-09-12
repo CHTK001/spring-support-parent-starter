@@ -23,20 +23,20 @@ import java.util.Date;
 import java.util.Map;
 
 /**
- * nomifun 网关 JWT 认证过滤器。
- *
- * <p>三种模式（按优先级）：
- * <ol>
- *   <li><b>local-trust</b>：header {@code x-nomi-local-trust} 非空 → 放行（开发/本地模式）</li>
- *   <li><b>JWT Bearer</b>：header {@code Authorization: Bearer &lt;jwt&gt;} → 验证签名 + 过期时间</li>
- *   <li><b>anonymous</b>：无 token → 放行（允许未登录访问公开页面）</li>
- * </ol>
- *
- * <p>验证通过后，将 {@code sub} claim 写入请求属性 {@code nomifun.user.id}。
- * JWT secret 从系统属性 {@code nomifun.auth.jwt-secret} 读取，默认空（跳过验签，便于联调）。</p>
- *
- * @since 4.0.0.42
- * @author CH
+* nomifun 网关 JWT 认证过滤器。
+*
+* <p>三种模式（按优先级）：
+* <ol>
+*   <li><b>local-trust</b>：header {@code x-nomi-local-trust} 非空 → 放行（开发/本地模式）</li>
+*   <li><b>JWT Bearer</b>：header {@code Authorization: Bearer &lt;jwt&gt;} → 验证签名 + 过期时间</li>
+*   <li><b>anonymous</b>：无 token → 放行（允许未登录访问公开页面）</li>
+* </ol>
+*
+* <p>验证通过后，将 {@code sub} claim 写入请求属性 {@code nomifun.user.id}。
+* JWT secret 从系统属性 {@code nomifun.auth.jwt-secret} 读取，默认空（跳过验签，便于联调）。</p>
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Slf4j
 @Component
@@ -68,10 +68,10 @@ public class SysAiJwtAuthFilter extends OncePerRequestFilter {
                     JWSVerifier verifier = new MACVerifier(secret);
                     if (!signedJWT.verify(verifier)) {
                         /**
-                         * 发送json错误。
-                         * @param response 响应
-                         * @param 401 401
-                         * @param invalid" invalid"
+                        * 发送json错误。
+                        * @param response 响应
+                        * @param 401 401
+                        * @param invalid" invalid"
                          */
                         sendJsonError(response, 401, "JWT signature invalid");
                         return;
@@ -80,10 +80,10 @@ public class SysAiJwtAuthFilter extends OncePerRequestFilter {
                 JWTClaimsSet claims = signedJWT.getJWTClaimsSet();
                 if (claims.getExpirationTime() != null && claims.getExpirationTime().before(new Date())) {
                     /**
-                     * 发送json错误。
-                     * @param response 响应
-                     * @param 401 401
-                     * @param expired" expired"
+                    * 发送json错误。
+                    * @param response 响应
+                    * @param 401 401
+                    * @param expired" expired"
                      */
                     sendJsonError(response, 401, "JWT expired");
                     return;
@@ -96,10 +96,10 @@ public class SysAiJwtAuthFilter extends OncePerRequestFilter {
                 log.debug("[nomifun-auth] JWT ok user={} path={}", userId, request.getRequestURI());
             } catch (ParseException | JOSEException e) {
                 /**
-                 * 发送json错误。
-                 * @param response 响应
-                 * @param 401 401
-                 * @param e.getMessage( e.获取消息(
+                * 发送json错误。
+                * @param response 响应
+                * @param 401 401
+                * @param e.getMessage( e.获取消息(
                  */
                 sendJsonError(response, 401, "JWT invalid: " + e.getMessage());
                 return;
@@ -112,10 +112,10 @@ public class SysAiJwtAuthFilter extends OncePerRequestFilter {
     }
 
     /**
-     * 发送json错误。
-     * @param response 响应
-     * @param status 状态
-     * @param message 消息
+    * 发送json错误。
+    * @param response 响应
+    * @param status 状态
+    * @param message 消息
      */
     private void sendJsonError(HttpServletResponse response, int status, String message) throws IOException {
         response.setStatus(status);

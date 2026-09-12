@@ -23,13 +23,13 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * AI OCR 文字识别控制器。
- *
- * <p>提供图片文字识别执行能力（检测 → 裁剪 → 方向矫正 → 修复 → 识别），
- * 全部配置读取自 {@code ocr} 分组全局设置，配置变更实时生效。</p>
- *
- * @since 4.0.0.42
- * @author CH
+* AI OCR 文字识别控制器。
+*
+* <p>提供图片文字识别执行能力（检测 → 裁剪 → 方向矫正 → 修复 → 识别），
+* 全部配置读取自 {@code ocr} 分组全局设置，配置变更实时生效。</p>
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Slf4j
 @RestController
@@ -39,18 +39,18 @@ import java.util.stream.Collectors;
 public class OcrController {
 
     /**
-     * OCR 客户端管理器
+    * OCR 客户端管理器
      */
     private final OcrClientManager ocrClientManager;
 
     /**
-     * 图片文字识别（检测框 + 文本 + 置信度）。
-     *
-     * @param file 图片文件
-     * @return 识别结果（文本 + 明细 + 数量 + 耗时）
-     * @param @RequestParam("file" @请求参数("文件"
-     * @param @RequestParam("file" @请求参数("文件"
-     * @param @RequestParam("file" @RequestParam("file"
+    * 图片文字识别（检测框 + 文本 + 置信度）。
+    *
+    * @param file 图片文件
+    * @return 识别结果（文本 + 明细 + 数量 + 耗时）
+    * @param @RequestParam("file" @请求参数("文件"
+    * @param @RequestParam("file" @请求参数("文件"
+    * @param @RequestParam("file" @RequestParam("file"
      */
     @Permission("admin")
     @Operation(summary = "OCR 文字识别", description = "识别图片中全部文字块，返回拼接文本、明细（文本/置信度/位置/角度）与耗时")
@@ -79,13 +79,13 @@ public class OcrController {
     }
 
     /**
-     * OCR 检测标注图（旋转框 + 识别文字）。
-     *
-     * @param file 图片文件
-     * @return 标注后 JPEG 图片
-     * @param @RequestParam("file" @请求参数("文件"
-     * @param @RequestParam("file" @请求参数("文件"
-     * @param @RequestParam("file" @RequestParam("file"
+    * OCR 检测标注图（旋转框 + 识别文字）。
+    *
+    * @param file 图片文件
+    * @return 标注后 JPEG 图片
+    * @param @RequestParam("file" @请求参数("文件"
+    * @param @RequestParam("file" @请求参数("文件"
+    * @param @RequestParam("file" @RequestParam("file"
      */
     @Permission("admin")
     @Operation(summary = "OCR 检测标注图", description = "返回标注了检测框与识别文字的 JPEG 图片")
@@ -106,9 +106,9 @@ public class OcrController {
     }
 
     /**
-     * OCR 模型枚举（按能力分组）。
-     *
-     * @return 能力分组 → 模型 标识 列表
+    * OCR 模型枚举（按能力分组）。
+    *
+    * @return 能力分组 → 模型 标识 列表
      */
     @Permission("admin")
     @Operation(summary = "OCR 模型清单", description = "枚举可用的文字检测/识别/方向矫正/修复模型")

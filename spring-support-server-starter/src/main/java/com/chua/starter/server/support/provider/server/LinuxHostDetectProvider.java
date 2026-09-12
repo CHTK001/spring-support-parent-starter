@@ -13,14 +13,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
- * Linux 主机硬件探测提供者（SSH 采集）
- * <p>
- * 通过 SSH 连接目标 Linux 主机，执行系统命令采集 CPU/内存/磁盘/系统版本/架构/内网 IP，
- * 探测结果回写主机资产生成 {@link MsServerHost} 资产字段。
- * </p>
- *
- * @author CH
- * @since 4.0.0.42
+* Linux 主机硬件探测提供者（SSH 采集）
+* <p>
+* 通过 SSH 连接目标 Linux 主机，执行系统命令采集 CPU/内存/磁盘/系统版本/架构/内网 IP，
+* 探测结果回写主机资产生成 {@link MsServerHost} 资产字段。
+* </p>
+*
+* @author CH
+* @since 4.0.0.42
  */
 @Slf4j
 @Component
@@ -28,7 +28,7 @@ import org.springframework.stereotype.Component;
 public class LinuxHostDetectProvider implements HostDetectProvider {
 
     /**
-     * SSH 连接池管理器（负责借取/释放 SSH 连接）
+    * SSH 连接池管理器（负责借取/释放 SSH 连接）
      */
     private final ConnectionManager connectionManager;
 
@@ -89,11 +89,11 @@ public class LinuxHostDetectProvider implements HostDetectProvider {
     }
 
     /**
-     * 静默执行 SSH 命令并返回输出（失败返回 null，不抛出异常）
-     *
-     * @param handle  SSH 连接句柄，不能为 null
-     * @param command 待执行命令，不能为 null 或空
-     * @return 命令标准输出；执行失败返回 null
+    * 静默执行 SSH 命令并返回输出（失败返回 null，不抛出异常）
+    *
+    * @param handle  SSH 连接句柄，不能为 null
+    * @param command 待执行命令，不能为 null 或空
+    * @return 命令标准输出；执行失败返回 null
      */
     private String execQuiet(SshClients.Handle handle, String command) {
         try {

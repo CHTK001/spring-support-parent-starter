@@ -24,15 +24,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 /**
-   * osgi 真实测试（SSH Shell 模式）：Apache Felix + Gogo SSH Shell——
-   * 经 jsch 客户端连接 SSH Shell 执行 Gogo 命令（{@code bundle:install}/{@code bundle:list}/
- * {@code bundle:uninstall}）驱动**真实 bundle**（动态生成的合法 OSGi bundle jar）的安装/卸载生命周期。
- *
- * <p>本测试用测试属性**单独开启** OSGi（共享 yaml 默认关闭）：独立上下文，避免全量套件
-   * 每个上下文启动 Felix 框架（重）且 SSH Shell（8122）端口冲突。</p>
- *
- * @author CH
- * @since 2026/09/04
+* osgi 真实测试（SSH Shell 模式）：Apache Felix + Gogo SSH Shell——
+* 经 jsch 客户端连接 SSH Shell 执行 Gogo 命令（{@code bundle:install}/{@code bundle:list}/
+* {@code bundle:uninstall}）驱动**真实 bundle**（动态生成的合法 OSGi bundle jar）的安装/卸载生命周期。
+*
+* <p>本测试用测试属性**单独开启** OSGi（共享 yaml 默认关闭）：独立上下文，避免全量套件
+* 每个上下文启动 Felix 框架（重）且 SSH Shell（8122）端口冲突。</p>
+*
+* @author CH
+* @since 2026/09/04
  */
 @SpringBootTest(properties = {
         "plugin.osgi.enabled=true",
@@ -45,10 +45,10 @@ import static org.junit.jupiter.api.Assertions.fail;
         "plugin.osgi.shell.password=admin"
 })
 /**
- * osgisshshellreal测试类。
- *
- * @author CH
- * @since 4.0.0
+* osgisshshellreal测试类。
+*
+* @author CH
+* @since 4.0.0
  */
 class OsgiSshShellRealTest {
 
@@ -62,8 +62,8 @@ class OsgiSshShellRealTest {
 
     static {
         /**
-         * 尝试。
-         * @param FileOutputStream(BUNDLE_FILE 文件输出流(bundle文件
+        * 尝试。
+        * @param FileOutputStream(BUNDLE_FILE 文件输出流(bundle文件
          */
         try (JarOutputStream jos = new JarOutputStream(new FileOutputStream(BUNDLE_FILE))) {
             jos.putNextEntry(new JarEntry("META-INF/MANIFEST.MF"));
@@ -74,10 +74,10 @@ class OsgiSshShellRealTest {
             jos.closeEntry();
         } catch (Exception e) {
             /**
-             * illegal状态异常。
-             * @param 生成失败" 生成失败"
-             * @param e e
-             * @return illegal状态异常的结果
+            * illegal状态异常。
+            * @param 生成失败" 生成失败"
+            * @param e e
+            * @return illegal状态异常的结果
              */
             throw new IllegalStateException("测试 bundle 生成失败", e);
         }
@@ -85,7 +85,7 @@ class OsgiSshShellRealTest {
 
     @BeforeEach
     /**
-      * waitforsshshell。
+    * waitforsshshell。
      */
     void waitForSshShell() throws Exception {
  // SSH Shell 现为已交付能力（gogosshshell服务端 自动装配）——服务器起不来即为回归，硬失败
@@ -103,15 +103,15 @@ class OsgiSshShellRealTest {
             }
         }
         /**
-         * 失败。
-         * @param 装配回归" 装配回归"
+        * 失败。
+        * @param 装配回归" 装配回归"
          */
         fail("OSGi Gogo SSH shell 未在 60s 内就绪（127.0.0.1:" + SSH_PORT + "）——SSH shell 装配回归");
     }
 
     /**
-     * 打开会话。
-     * @return 打开会话的结果
+    * 打开会话。
+    * @return 打开会话的结果
      */
     private Session openSession() throws Exception {
         JSch jsch = new JSch();
@@ -123,10 +123,10 @@ class OsgiSshShellRealTest {
     }
 
     /**
-      * 经 SSH Shell 执行 Gogo 命令并读取输出（交互 Shell：写命令 + 读至命令回显后的提示符）。
-      * 单命令单连接（输入 EOF 后远端 Shell 退出，连接随之关闭）。
-     * @param command 命令
-     * @return shell的结果
+    * 经 SSH Shell 执行 Gogo 命令并读取输出（交互 Shell：写命令 + 读至命令回显后的提示符）。
+    * 单命令单连接（输入 EOF 后远端 Shell 退出，连接随之关闭）。
+    * @param command 命令
+    * @return shell的结果
      */
     private String shell(String command) throws Exception {
         Session session = openSession();
@@ -159,22 +159,22 @@ class OsgiSshShellRealTest {
         // 1) 经 SSH shell 安装真实 bundle
         String installOut = shell("bundle:install file:" + BUNDLE_FILE.getAbsolutePath());
         /**
-         * 断言true。
-         * @param ID" 标识"
+        * 断言true。
+        * @param ID" 标识"
          */
         assertTrue(installOut.contains("Bundle ID"), "bundle:install 应返回 Bundle ID，实际输出: " + installOut);
         long bundleId = parseBundleId(installOut);
         /**
-         * 断言true。
-         * @param installOut install出
+        * 断言true。
+        * @param installOut install出
          */
         assertTrue(bundleId > 0, "应解析出合法 bundle id: " + installOut);
 
  // 2) 列表确认 bundle 存在且状态正确（INSTALLED/RESOLVED/活跃 之一）
         String listOut = shell("bundle:list");
         /**
-         * 断言true。
-         * @param listOut.contains(BUNDLE_SYMBOLIC_NAME 列表出.contains(bundlesymbolic名称
+        * 断言true。
+        * @param listOut.contains(BUNDLE_SYMBOLIC_NAME 列表出.contains(bundlesymbolic名称
          */
         assertTrue(listOut.contains(BUNDLE_SYMBOLIC_NAME), "bundle:list 应包含目标 bundle，实际输出: " + listOut);
 
@@ -182,31 +182,31 @@ class OsgiSshShellRealTest {
         String startOut = shell("bundle:start " + bundleId);
         String listAfterStart = shell("bundle:list");
         /**
-         * 断言true。
-         * @param listAfterStart.contains(BUNDLE_SYMBOLIC_NAME 列表之后启动.contains(bundlesymbolic名称
+        * 断言true。
+        * @param listAfterStart.contains(BUNDLE_SYMBOLIC_NAME 列表之后启动.contains(bundlesymbolic名称
          */
         assertTrue(listAfterStart.contains(BUNDLE_SYMBOLIC_NAME), "启动后 bundle 仍应在列表中");
 
         // 4) 经 SSH shell 卸载 bundle
         /**
-          * Shell。
-         * @param bundleId bundleid
+        * Shell。
+        * @param bundleId bundleid
          */
         shell("bundle:uninstall " + bundleId);
         String listAfterUninstall = shell("bundle:list");
         /**
-         * 断言false。
-         * @param listAfterUninstall.contains(BUNDLE_SYMBOLIC_NAME 列表之后uninstall.contains(bundlesymbolic名称
+        * 断言false。
+        * @param listAfterUninstall.contains(BUNDLE_SYMBOLIC_NAME 列表之后uninstall.contains(bundlesymbolic名称
          */
         assertFalse(listAfterUninstall.contains(BUNDLE_SYMBOLIC_NAME),
                 "卸载后 bundle:list 不应包含目标 bundle，实际输出: " + listAfterUninstall);
     }
 
     /**
-      * 从 bundle:install 输出解析 Bundle 标识
-     *
-     * @param output 输出
-     * @return 解析bundleid的结果
+    * 从 bundle:install 输出解析 Bundle 标识
+    *
+    * @param output 输出
+    * @return 解析bundleid的结果
      */
     private static long parseBundleId(String output) {
         Matcher matcher = Pattern.compile("Bundle ID[:\\s]+(\\d+)").matcher(output);
@@ -238,14 +238,14 @@ class OsgiSshShellRealTest {
  // help 为 Gogo runtime 内置命令，不以 bundle: 开头，需走 命令处理器 反射执行
         String helpOut = shell("help");
         /**
-         * 断言false。
-         * @param helpOut.contains("命令执行失败" help出.contains("命令执行失败"
+        * 断言false。
+        * @param helpOut.contains("命令执行失败" help出.contains("命令执行失败"
          */
         assertFalse(helpOut.contains("命令执行失败"), "help 不应报命令执行失败，实际输出: " + helpOut);
         // 命令回显后的尾部提示符 g! 表示会话正常结束且命令已被处理
         /**
-         * 断言true。
-         * @param helpOut.contains("help" help出.contains("help"
+        * 断言true。
+        * @param helpOut.contains("help" help出.contains("help"
          */
         assertTrue(helpOut.contains("help") && helpOut.lastIndexOf("g!") > helpOut.indexOf("help"),
                 "help 输出应包含命令回显与尾部提示符，实际输出: " + helpOut);

@@ -14,14 +14,14 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * URL QPS 统计上报器
- * <p>
- * 收集 URL 请求统计数据并定时上报到服务端
- * </p>
- *
-   * @版本 1.0.0
- * @since 2025/01/17
- * @author CH
+* URL QPS 统计上报器
+* <p>
+* 收集 URL 请求统计数据并定时上报到服务端
+* </p>
+*
+* @版本 1.0.0
+* @since 2025/01/17
+* @author CH
  */
 @Slf4j
 public class UrlQpsReporter {
@@ -51,9 +51,9 @@ public class UrlQpsReporter {
     private long intervalSeconds = 30;
 
     /**
-     * URL 统计数据
-      * 钥匙: URL 模式
-      * 价值观: urlstats
+    * URL 统计数据
+    * 钥匙: URL 模式
+    * 价值观: urlstats
      */
     private final ConcurrentHashMap<String, UrlStats> urlStatsMap = new ConcurrentHashMap<>();
 
@@ -66,22 +66,22 @@ public class UrlQpsReporter {
     }
 
     /**
-     * 获取Instance
-     *
-     * @return 获取instance的结果
+    * 获取Instance
+    *
+    * @return 获取instance的结果
      */
     public static UrlQpsReporter getInstance() {
         return INSTANCE;
     }
 
     /**
-     * 记录请求
-     *
-     * @param url          请求 URL
-     * @param method       HTTP 方法
-     * @param duration     请求耗时（毫秒）
-     * @param success      是否成功
-     * @param statusCode   HTTP 状态码
+    * 记录请求
+    *
+    * @param url          请求 URL
+    * @param method       HTTP 方法
+    * @param duration     请求耗时（毫秒）
+    * @param success      是否成功
+    * @param statusCode   HTTP 状态码
      */
     public void recordRequest(String url, String method, long duration, boolean success, int statusCode) {
         if (!running) {
@@ -94,7 +94,7 @@ public class UrlQpsReporter {
     }
 
     /**
-     * 启动上报
+    * 启动上报
      */
     public synchronized void start() {
         if (running) {
@@ -114,7 +114,7 @@ public class UrlQpsReporter {
     }
 
     /**
-     * 停止上报
+    * 停止上报
      */
     public synchronized void stop() {
         if (!running) {
@@ -136,7 +136,7 @@ public class UrlQpsReporter {
 
         // 最后上报一次
         /**
-          * reportstats。
+        * reportstats。
          */
         reportStats();
         urlStatsMap.clear();
@@ -144,7 +144,7 @@ public class UrlQpsReporter {
     }
 
     /**
-     * 上报统计数据
+    * 上报统计数据
      */
     private void reportStats() {
         if (syncClient == null || !syncClient.isConnected()) {
@@ -190,9 +190,9 @@ public class UrlQpsReporter {
     }
 
     /**
-     * 获取当前统计快照（用于调试）
-     *
-     * @return 统计数据快照
+    * 获取当前统计快照（用于调试）
+    *
+    * @return 统计数据快照
      */
     public Map<String, Map<String, Object>> getStatsSnapshot() {
         Map<String, Map<String, Object>> snapshot = new HashMap<>();
@@ -203,9 +203,9 @@ public class UrlQpsReporter {
     }
 
     /**
-     * URL 统计数据
-     * @author CH
-     * @since 4.0.0
+    * URL 统计数据
+    * @author CH
+    * @since 4.0.0
      */
     private static class UrlStats {
         /** URL */
@@ -237,9 +237,9 @@ public class UrlQpsReporter {
         private final ConcurrentHashMap<Integer, AtomicLong> statusCodeCount = new ConcurrentHashMap<>();
 
         /**
-          * urlstats。
-         * @param url url
-         * @param method 方法
+        * urlstats。
+        * @param url url
+        * @param method 方法
          */
         UrlStats(String url, String method) {
             this.url = url;
@@ -247,10 +247,10 @@ public class UrlQpsReporter {
         }
 
         /**
-         * 记录请求
-         * @param duration 持续时间
-         * @param success 成功
-         * @param statusCode 状态编码
+        * 记录请求
+        * @param duration 持续时间
+        * @param success 成功
+        * @param statusCode 状态编码
          */
         void record(long duration, boolean success, int statusCode) {
             totalCount.incrementAndGet();
@@ -278,9 +278,9 @@ public class UrlQpsReporter {
         }
 
         /**
-         * 收集数据并重置当前周期计数
-         *
-         * @return 统计数据，如果无数据返回 空
+        * 收集数据并重置当前周期计数
+        *
+        * @return 统计数据，如果无数据返回 空
          */
         Map<String, Object> collectAndReset() {
             long count = totalCount.getAndSet(0);
@@ -327,8 +327,8 @@ public class UrlQpsReporter {
         }
 
         /**
-         * 获取快照（不重置）
-         * @return 获取snapshot的结果
+        * 获取快照（不重置）
+        * @return 获取snapshot的结果
          */
         Map<String, Object> getSnapshot() {
             Map<String, Object> data = new HashMap<>();

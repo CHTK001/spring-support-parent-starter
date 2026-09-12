@@ -10,10 +10,10 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
- * 监控网关实体(Guacamole)
- *
- * @since 2026/8/4
- * @author CH
+* 监控网关实体(Guacamole)
+*
+* @since 2026/8/4
+* @author CH
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -25,7 +25,7 @@ public class MsMonitorGateway extends SysBase {
     private static final long serialVersionUID = 1L;
 
     /**
-     * 主键
+    * 主键
      */
     @TableId(value = "id", type = IdType.AUTO)
     @Schema(description = "主键", example = "1")
@@ -33,7 +33,7 @@ public class MsMonitorGateway extends SysBase {
     private Long id;
 
     /**
-      * 关联监控资产 标识
+    * 关联监控资产 标识
      */
     @TableField("ms_monitor_gateway_monitor_id")
     @Schema(description = "关联监控资产 id", example = "1")
@@ -41,7 +41,7 @@ public class MsMonitorGateway extends SysBase {
     private Long monitorId;
 
     /**
-     * 网关名称
+    * 网关名称
      */
     @TableField("ms_monitor_gateway_name")
     @Schema(description = "网关名称", example = "guacamole-default")
@@ -49,7 +49,7 @@ public class MsMonitorGateway extends SysBase {
     private String gatewayName;
 
     /**
-     * 网关类型
+    * 网关类型
      */
     @TableField("ms_monitor_gateway_type")
     @Schema(description = "网关类型: GUACAMOLE / SSH / WEB", example = "GUACAMOLE")
@@ -57,7 +57,7 @@ public class MsMonitorGateway extends SysBase {
     private String gatewayType;
 
     /**
-     * 网关主机
+    * 网关主机
      */
     @TableField("ms_monitor_gateway_host")
     @Schema(description = "网关主机", example = "192.168.1.20")
@@ -65,7 +65,7 @@ public class MsMonitorGateway extends SysBase {
     private String gatewayHost;
 
     /**
-     * 网关端口
+    * 网关端口
      */
     @TableField("ms_monitor_gateway_port")
     @Schema(description = "网关端口", example = "4822")
@@ -73,7 +73,7 @@ public class MsMonitorGateway extends SysBase {
     private Integer gatewayPort;
 
     /**
-     * 连接配置 URL
+    * 连接配置 URL
      */
     @TableField("ms_monitor_gateway_config_url")
     @Schema(description = "连接配置 URL",
@@ -82,7 +82,7 @@ public class MsMonitorGateway extends SysBase {
     private String gatewayConfigUrl;
 
     /**
-     * 用户名
+    * 用户名
      */
     @TableField("ms_monitor_gateway_username")
     @Schema(description = "用户名", example = "guacadmin")
@@ -90,7 +90,7 @@ public class MsMonitorGateway extends SysBase {
     private String gatewayUsername;
 
     /**
-     * 密码密文
+    * 密码密文
      */
     @TableField("ms_monitor_gateway_password")
     @Schema(description = "密码密文", example = "***")
@@ -98,7 +98,7 @@ public class MsMonitorGateway extends SysBase {
     private String gatewayPassword;
 
     /**
-     * 是否启用
+    * 是否启用
      */
     @TableField("ms_monitor_gateway_enabled")
     @Schema(description = "是否启用 1启用 0禁用", example = "1")
@@ -106,7 +106,7 @@ public class MsMonitorGateway extends SysBase {
     private Integer gatewayEnabled;
 
     /**
-     * 备注
+    * 备注
      */
     @TableField("ms_monitor_gateway_remark")
     @Schema(description = "备注", example = "主机默认 Guacamole 网关")

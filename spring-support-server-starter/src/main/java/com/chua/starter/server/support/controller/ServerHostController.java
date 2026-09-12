@@ -21,13 +21,13 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
- * 服务器主机接口
- * <p>
- * 提供主机台账 CRUD、启停、连通性测试与身份绑定管理。
- * </p>
- *
- * @author CH
- * @since 4.0.0.42
+* 服务器主机接口
+* <p>
+* 提供主机台账 CRUD、启停、连通性测试与身份绑定管理。
+* </p>
+*
+* @author CH
+* @since 4.0.0.42
  */
 @Tag(name = "服务器资产-主机", description = "主机台账管理")
 @RestController
@@ -39,10 +39,10 @@ public class ServerHostController {
     private final ServerHostService serverHostService;
 
     /**
-     * 新增主机
-     *
-     * @param host 主机
-     * @return 结果
+    * 新增主机
+    *
+    * @param host 主机
+    * @return 结果
      */
     @Operation(summary = "新增主机")
     @PostMapping
@@ -51,11 +51,11 @@ public class ServerHostController {
     }
 
     /**
-     * 更新主机
-     *
-     * @param id   主键
-     * @param host 主机
-     * @return 结果
+    * 更新主机
+    *
+    * @param id   主键
+    * @param host 主机
+    * @return 结果
      */
     @Operation(summary = "更新主机")
     @PutMapping("/{id}")
@@ -64,10 +64,10 @@ public class ServerHostController {
     }
 
     /**
-     * 删除主机
-     *
-     * @param id 主键
-     * @return 结果
+    * 删除主机
+    *
+    * @param id 主键
+    * @return 结果
      */
     @Operation(summary = "删除主机")
     @DeleteMapping("/{id}")
@@ -76,10 +76,10 @@ public class ServerHostController {
     }
 
     /**
-     * 查询单个主机
-     *
-     * @param id 主键
-     * @return 结果
+    * 查询单个主机
+    *
+    * @param id 主键
+    * @return 结果
      */
     @Operation(summary = "查询单个主机")
     @GetMapping("/{id}")
@@ -88,13 +88,13 @@ public class ServerHostController {
     }
 
     /**
-     * 条件查询主机列表
-     *
-     * @param keyword 关键词，可为空
-     * @param groupId 分组 标识，可为空
-     * @param status  启用状态，可为空
-     * @return 主机列表
-     * @param false false
+    * 条件查询主机列表
+    *
+    * @param keyword 关键词，可为空
+    * @param groupId 分组 标识，可为空
+    * @param status  启用状态，可为空
+    * @return 主机列表
+    * @param false false
      */
     @Operation(summary = "条件查询主机")
     @PostMapping("/query")
@@ -105,16 +105,16 @@ public class ServerHostController {
     }
 
     /**
-      * 列表查询主机（获取，兼容前端列表页）
-     *
-     * <p>前端主机列表页使用 {@code GET /host} 并携带 {@code keyword/groupId/status} 过滤，
-     * 此处与 {@code POST /query} 行为一致，仅 HTTP 方法不同。</p>
-     *
-     * @param keyword 关键词，可为空
-     * @param groupId 分组 标识，可为空
-     * @param status  启用状态，可为空
-     * @return 主机列表
-     * @param false false
+    * 列表查询主机（获取，兼容前端列表页）
+    *
+    * <p>前端主机列表页使用 {@code GET /host} 并携带 {@code keyword/groupId/status} 过滤，
+    * 此处与 {@code POST /query} 行为一致，仅 HTTP 方法不同。</p>
+    *
+    * @param keyword 关键词，可为空
+    * @param groupId 分组 标识，可为空
+    * @param status  启用状态，可为空
+    * @return 主机列表
+    * @param false false
      */
     @Operation(summary = "列表查询主机（GET）")
     @GetMapping
@@ -125,11 +125,11 @@ public class ServerHostController {
     }
 
     /**
-     * 启停主机
-     *
-     * @param id      主键
-     * @param enabled 是否启用
-     * @return 结果
+    * 启停主机
+    *
+    * @param id      主键
+    * @param enabled 是否启用
+    * @return 结果
      */
     @Operation(summary = "启停主机")
     @PutMapping("/{id}/status")
@@ -138,10 +138,10 @@ public class ServerHostController {
     }
 
     /**
-     * 连通性测试
-     *
-     * @param id 主键
-     * @return 测试输出（uname 等）
+    * 连通性测试
+    *
+    * @param id 主键
+    * @return 测试输出（uname 等）
      */
     @Operation(summary = "连通性测试")
     @PostMapping("/{id}/test-connect")
@@ -150,13 +150,13 @@ public class ServerHostController {
     }
 
     /**
-     * 绑定身份
-     *
-     * @param id         主机 标识
-     * @param identityId 身份 标识
-     * @param sort       优先级，可为空
-     * @return 结果
-     * @param @PathVariable("id" @路径变量("标识"
+    * 绑定身份
+    *
+    * @param id         主机 标识
+    * @param identityId 身份 标识
+    * @param sort       优先级，可为空
+    * @return 结果
+    * @param @PathVariable("id" @路径变量("标识"
      */
     @Operation(summary = "绑定登录身份")
     @PostMapping("/{id}/identity/{identityId}")
@@ -167,12 +167,12 @@ public class ServerHostController {
     }
 
     /**
-     * 解除身份绑定
-     *
-     * @param id         主机 标识
-     * @param identityId 身份 标识
-     * @return 结果
-     * @param @PathVariable("id" @路径变量("标识"
+    * 解除身份绑定
+    *
+    * @param id         主机 标识
+    * @param identityId 身份 标识
+    * @return 结果
+    * @param @PathVariable("id" @路径变量("标识"
      */
     @Operation(summary = "解除登录身份")
     @DeleteMapping("/{id}/identity/{identityId}")
@@ -182,10 +182,10 @@ public class ServerHostController {
     }
 
     /**
-      * 查询已绑定身份 标识 列表
-     *
-     * @param id 主机 标识
-     * @return 身份 标识 列表（按优先级）
+    * 查询已绑定身份 标识 列表
+    *
+    * @param id 主机 标识
+    * @return 身份 标识 列表（按优先级）
      */
     @Operation(summary = "查询已绑定身份")
     @GetMapping("/{id}/identities")
@@ -194,10 +194,10 @@ public class ServerHostController {
     }
 
     /**
-     * 硬件探测：SSH 连上目标主机自动采集 CPU/内存/磁盘/系统版本/IP
-     *
-     * @param id 主机 标识
-     * @return 更新后的主机（含硬件信息）
+    * 硬件探测：SSH 连上目标主机自动采集 CPU/内存/磁盘/系统版本/IP
+    *
+    * @param id 主机 标识
+    * @return 更新后的主机（含硬件信息）
      */
     @Operation(summary = "硬件探测")
     @PostMapping("/{id}/detect")
@@ -206,10 +206,10 @@ public class ServerHostController {
     }
 
     /**
-     * 刷新公网 IP：探测目标主机出口公网 IP 并回写
-     *
-     * @param id 主机 标识
-     * @return 刷新后的公网 IP
+    * 刷新公网 IP：探测目标主机出口公网 IP 并回写
+    *
+    * @param id 主机 标识
+    * @return 刷新后的公网 IP
      */
     @Operation(summary = "刷新公网IP")
     @PostMapping("/{id}/refresh-public-ip")
@@ -218,14 +218,14 @@ public class ServerHostController {
     }
 
     /**
-     * 批量同步主机资产（虚拟线程并发 SSH 探测，主机/硬件/IP 信息同步回资产表）
-     * <p>
-     * 仅当探测到的公网 IP 或内网 IP 与库中不一致时触发更新并记录变更明细；
-     * 未变化的主机跳过，不重复回写。
-     * </p>
-     *
-     * @param hostIds 目标主机 ID 列表（可选；为空则同步全部启用主机）
-     * @return 同步结果概要（total/updated/unchanged/failed/changes）
+    * 批量同步主机资产（虚拟线程并发 SSH 探测，主机/硬件/IP 信息同步回资产表）
+    * <p>
+    * 仅当探测到的公网 IP 或内网 IP 与库中不一致时触发更新并记录变更明细；
+    * 未变化的主机跳过，不重复回写。
+    * </p>
+    *
+    * @param hostIds 目标主机 ID 列表（可选；为空则同步全部启用主机）
+    * @return 同步结果概要（total/updated/unchanged/failed/changes）
      */
     @Operation(summary = "批量同步主机资产")
     @PostMapping("/sync")
@@ -234,10 +234,10 @@ public class ServerHostController {
     }
 
     /**
-     * 端口扫描：依赖本机 nmap 对目标主机做 TCP 连接扫描，解析开放端口并回写资产表
-     *
-     * @param id 主机 标识
-     * @return 更新后的主机（含端口扫描结果）
+    * 端口扫描：依赖本机 nmap 对目标主机做 TCP 连接扫描，解析开放端口并回写资产表
+    *
+    * @param id 主机 标识
+    * @return 更新后的主机（含端口扫描结果）
      */
     @Operation(summary = "端口扫描")
     @PostMapping("/{id}/scan-ports")
@@ -246,12 +246,12 @@ public class ServerHostController {
     }
 
     /**
-     * 导出主机列表（CSV 下载）
-     *
-     * @param keyword 关键词，可为空
-     * @param groupId 分组 标识，可为空
-     * @return CSV 文件流
-     * @param false false
+    * 导出主机列表（CSV 下载）
+    *
+    * @param keyword 关键词，可为空
+    * @param groupId 分组 标识，可为空
+    * @return CSV 文件流
+    * @param false false
      */
     @Operation(summary = "导出主机列表(CSV)")
     @GetMapping("/export")
@@ -292,10 +292,10 @@ public class ServerHostController {
     }
 
     /**
-     * CSV 字段转义（含逗号/引号/换行时加引号）
-     *
-     * @param value 字段值
-     * @return 转义后的 CSV 字段
+    * CSV 字段转义（含逗号/引号/换行时加引号）
+    *
+    * @param value 字段值
+    * @return 转义后的 CSV 字段
      */
     private String joinCsv(Object value) {
         if (value == null) {

@@ -21,14 +21,14 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Skills 配置控制器，枚举本地/在线 SkillProvider 并支持开关。
- *
- * <p>本地 Provider 通过 {@link SkillOfflineProvider} SPI 加载；
- * 在线市场源通过 {@link SkillMarketSourceProvider} SPI 加载。
- * 开关状态持久化在 {@code sys_ai_global_setting} 的 skills 分组。</p>
- *
- * @since 4.0.0
- * @author CH
+* Skills 配置控制器，枚举本地/在线 SkillProvider 并支持开关。
+*
+* <p>本地 Provider 通过 {@link SkillOfflineProvider} SPI 加载；
+* 在线市场源通过 {@link SkillMarketSourceProvider} SPI 加载。
+* 开关状态持久化在 {@code sys_ai_global_setting} 的 skills 分组。</p>
+*
+* @since 4.0.0
+* @author CH
  */
 @Slf4j
 @RestController
@@ -42,9 +42,9 @@ public class AiSkillsConfigController {
     private final SysAiGlobalSettingService globalSettingService;
 
     /**
-     * 获取所有 Skills Provider 配置（本地 + 在线）。
-     *
-     * @return Provider 列表，每项含 key/name/type/enabled
+    * 获取所有 Skills Provider 配置（本地 + 在线）。
+    *
+    * @return Provider 列表，每项含 key/name/type/enabled
      */
     @Permission("admin")
     @Operation(summary = "获取 Skills Provider 配置列表")
@@ -105,10 +105,10 @@ public class AiSkillsConfigController {
     }
 
     /**
-     * 更新 Skills Provider 开关状态。
-     *
-     * @param config 配置 Map，key 为 provider key，value 为 boolean
-     * @return 更新后的配置
+    * 更新 Skills Provider 开关状态。
+    *
+    * @param config 配置 Map，key 为 provider key，value 为 boolean
+    * @return 更新后的配置
      */
     @Permission("admin")
     @Operation(summary = "更新 Skills Provider 开关")

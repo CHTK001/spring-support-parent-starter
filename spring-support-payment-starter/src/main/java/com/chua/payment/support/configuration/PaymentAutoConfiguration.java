@@ -15,10 +15,10 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
 /**
-   * 支付模块自动配置类，注册 MyBatis Plus 拦截器、默认 打开标识 解析器与线程池调度器。
- *
- * @author CH
- * @since 4.0.0.50
+* 支付模块自动配置类，注册 MyBatis Plus 拦截器、默认 打开标识 解析器与线程池调度器。
+*
+* @author CH
+* @since 4.0.0.50
  */
 @AutoConfiguration
 @MapperScan("com.chua.payment.support.mapper")
@@ -28,9 +28,9 @@ public class PaymentAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean(MybatisPlusInterceptor.class)
     /**
-     * 薪酬mybatisplus拦截器
-     *
-     * @return 薪酬mybatisplus拦截器的结果
+    * 薪酬mybatisplus拦截器
+    *
+    * @return 薪酬mybatisplus拦截器的结果
      */
     public MybatisPlusInterceptor paymentMybatisPlusInterceptor() {
         MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
@@ -41,9 +41,9 @@ public class PaymentAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean(UserOpenIdResolver.class)
     /**
-      * 默认用户打开标识解析器
-     *
-     * @return 默认用户打开id解析器的结果
+    * 默认用户打开标识解析器
+    *
+    * @return 默认用户打开id解析器的结果
      */
     public UserOpenIdResolver defaultUserOpenIdResolver() {
         return (merchantId, userId, channelType) -> null;
@@ -54,9 +54,9 @@ public class PaymentAutoConfiguration {
     @ConditionalOnProperty(prefix = "plugin.payment.scheduler", name = "enabled", havingValue = "true", matchIfMissing = true)
     @ConditionalOnProperty(prefix = "plugin.payment.scheduler", name = "engine", havingValue = "internal", matchIfMissing = true)
     /**
-     * 薪酬thread游泳池任务调度器
-     *
-     * @return 薪酬thread游泳池任务调度器的结果
+    * 薪酬thread游泳池任务调度器
+    *
+    * @return 薪酬thread游泳池任务调度器的结果
      */
     public ThreadPoolTaskScheduler paymentThreadPoolTaskScheduler() {
         ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
@@ -69,9 +69,9 @@ public class PaymentAutoConfiguration {
 
     @Bean
     /**
-     * 薪酬服务信息contributor
-     *
-     * @return 薪酬服务信息contributor的结果
+    * 薪酬服务信息contributor
+    *
+    * @return 薪酬服务信息contributor的结果
      */
     public ServiceInfoContributor paymentServiceInfoContributor() {
         return registry -> {

@@ -9,10 +9,10 @@ import com.chua.starter.ai.support.service.ServerAiAnalyzeService;
 import org.springframework.stereotype.Service;
 
 /**
- * 服务器 AI 分析服务空实现
- *
- * @since 2026/7/30
- * @author CH
+* 服务器 AI 分析服务空实现
+*
+* @since 2026/7/30
+* @author CH
  */
 @Service
 public class ServerAiAnalyzeServiceImpl implements ServerAiAnalyzeService {

@@ -15,53 +15,53 @@ import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * 数据源文档服务
- * <p>
- * 提供两种取数据方式：
- * <ul>
- *     <li>{@link #apply()} —— 强制重新读取数据库元数据并刷新缓存</li>
- *     <li>{@link #preview()} —— 优先返回缓存，缓存为空才重新读取</li>
- * </ul>
- * 通过复用 {@link DocumentParser} SPI（{@code DatabaseDocumentParser}），
- * 无三方模板引擎依赖。
- * </p>
- *
- * @since 2026/8/5
- * @author CH
+* 数据源文档服务
+* <p>
+* 提供两种取数据方式：
+* <ul>
+*     <li>{@link #apply()} —— 强制重新读取数据库元数据并刷新缓存</li>
+*     <li>{@link #preview()} —— 优先返回缓存，缓存为空才重新读取</li>
+* </ul>
+* 通过复用 {@link DocumentParser} SPI（{@code DatabaseDocumentParser}），
+* 无三方模板引擎依赖。
+* </p>
+*
+* @since 2026/8/5
+* @author CH
  */
 @Slf4j
 public class DataSourceDocumentService {
 
     /**
-     * 数据源
+    * 数据源
      */
     private final DataSource dataSource;
 
     /**
-     * 文档配置
+    * 文档配置
      */
     private final DocumentProperties properties;
 
     /**
-     * 缓存：上一次解析结果
+    * 缓存：上一次解析结果
      */
     private volatile DocumentData cached;
 
     /**
-     * 缓存生成时间戳
+    * 缓存生成时间戳
      */
     private volatile long cachedAt;
 
     /**
-     * 防止并发重复解析的写锁
+    * 防止并发重复解析的写锁
      */
     private final ReentrantLock lock = new ReentrantLock();
 
     /**
-      * 创建 数据源文档服务 实例
-     * @param dataSource 数据源
-     * @param properties 文档属性
-     * @param properties 属性
+    * 创建 数据源文档服务 实例
+    * @param dataSource 数据源
+    * @param properties 文档属性
+    * @param properties 属性
      */
     public DataSourceDocumentService(DataSource dataSource, DocumentProperties properties) {
         this.dataSource = dataSource;
@@ -69,10 +69,10 @@ public class DataSourceDocumentService {
     }
 
     /**
-     * 强制重新读取数据库结构（每次拿最新）
-     * <p>用于 {@code /apply} 接口</p>
-     *
-     * @return 文档数据
+    * 强制重新读取数据库结构（每次拿最新）
+    * <p>用于 {@code /apply} 接口</p>
+    *
+    * @return 文档数据
      */
     public DocumentData apply() {
         lock.lock();
@@ -90,10 +90,10 @@ public class DataSourceDocumentService {
     }
 
     /**
-     * 优先返回缓存；缓存不存在则生成
-     * <p>用于 {@code /preview} 接口</p>
-     *
-     * @return 文档数据
+    * 优先返回缓存；缓存不存在则生成
+    * <p>用于 {@code /preview} 接口</p>
+    *
+    * @return 文档数据
      */
     public DocumentData preview() {
         if (properties.isCacheable() && cached != null) {
@@ -104,16 +104,16 @@ public class DataSourceDocumentService {
     }
 
     /**
-     * 上一次刷新时间戳
-     * @return 获取缓存at的结果
+    * 上一次刷新时间戳
+    * @return 获取缓存at的结果
      */
     public long getCachedAt() {
         return cachedAt;
     }
 
     /**
-     * 当前是否已有缓存
-     * @return 是否包含缓存的结果
+    * 当前是否已有缓存
+    * @return 是否包含缓存的结果
      */
     public boolean hasCache() {
         return cached != null;
@@ -122,9 +122,9 @@ public class DataSourceDocumentService {
     // ====================== 私有 ======================
 
     /**
-     * 执行解析
-     *
-     * @return 执行解析的结果
+    * 执行解析
+    *
+    * @return 执行解析的结果
      */
     private DocumentData doParse() {
         DocumentParser parser;
@@ -179,9 +179,9 @@ public class DataSourceDocumentService {
     }
 
     /**
-     * 按白/黑名单过滤表
-     * @param source 源
-     * @return 过滤器tables的结果
+    * 按白/黑名单过滤表
+    * @param source 源
+    * @return 过滤器tables的结果
      */
     private List<TableData> filterTables(List<TableData> source) {
         if (source == null || source.isEmpty()) {
@@ -208,16 +208,16 @@ public class DataSourceDocumentService {
     }
 
     /**
-      * 从 数据源 读取连接信息（url/用户名/密码）
-     * <p>注：JDBC 不暴露密码，通过反射读取常见连接池字段；拿不到也不致命，
-      * 因为用户可能使用 XA 包装、分库分表 路由等，url 本身已足够解析元数据。</p>
-     * @return 读取connection信息的结果
+    * 从 数据源 读取连接信息（url/用户名/密码）
+    * <p>注：JDBC 不暴露密码，通过反射读取常见连接池字段；拿不到也不致命，
+    * 因为用户可能使用 XA 包装、分库分表 路由等，url 本身已足够解析元数据。</p>
+    * @return 读取connection信息的结果
      */
     private ConnectionInfo readConnectionInfo() {
         ConnectionInfo info = new ConnectionInfo();
         /**
-         * 尝试。
-         * @param dataSource.getConnection( 数据源.getconnection(
+        * 尝试。
+        * @param dataSource.getConnection( 数据源.getconnection(
          */
         try (Connection conn = dataSource.getConnection()) {
             info.url = conn.getMetaData().getURL();
@@ -225,10 +225,10 @@ public class DataSourceDocumentService {
             info.password = readPassword();
         } catch (SQLException e) {
             /**
-             * illegal状态异常。
-             * @param 连接信息" 连接信息"
-             * @param e e
-             * @return illegal状态异常的结果
+            * illegal状态异常。
+            * @param 连接信息" 连接信息"
+            * @param e e
+            * @return illegal状态异常的结果
              */
             throw new IllegalStateException("无法读取 DataSource 连接信息", e);
         }
@@ -236,8 +236,8 @@ public class DataSourceDocumentService {
     }
 
     /**
-     * 通过反射常见字段读取数据库密码
-     * @return 读取密码的结果
+    * 通过反射常见字段读取数据库密码
+    * @return 读取密码的结果
      */
     private String readPassword() {
         if (!(dataSource instanceof javax.sql.DataSource ds)) {
@@ -272,11 +272,11 @@ public class DataSourceDocumentService {
     }
 
     /**
-     * 查找字段
-     *
-     * @param clazz clazz
-     * @param names 名称
-     * @return find字段的结果
+    * 查找字段
+    *
+    * @param clazz clazz
+    * @param names 名称
+    * @return find字段的结果
      */
     private static java.lang.reflect.Field findField(Class<?> clazz, String... names) {
         for (Class<?> c = clazz; c != null && c != Object.class; c = c.getSuperclass()) {
@@ -292,7 +292,7 @@ public class DataSourceDocumentService {
     }
 
     /**
-     * 连接信息封装
+    * 连接信息封装
      */
     private static final class ConnectionInfo {
         String url;

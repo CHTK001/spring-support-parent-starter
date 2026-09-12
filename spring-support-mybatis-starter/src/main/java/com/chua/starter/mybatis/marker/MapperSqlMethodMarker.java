@@ -6,10 +6,10 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * 方法构建器
- *
- * @author CH
- * @since 4.0.0
+* 方法构建器
+*
+* @author CH
+* @since 4.0.0
  */
 public class MapperSqlMethodMarker implements SqlMethodMarker {
 
@@ -17,10 +17,10 @@ public class MapperSqlMethodMarker implements SqlMethodMarker {
     private int timeout;
 
     /**
-       * 创建 映射器SQL方法记号笔 实例
-     * @param timeout 超时
-     * @param watchdog 布尔值
-     * @param watchdog watchdog
+    * 创建 映射器SQL方法记号笔 实例
+    * @param timeout 超时
+    * @param watchdog 布尔值
+    * @param watchdog watchdog
      */
     public MapperSqlMethodMarker(int timeout, boolean watchdog) {
         this.timeout = timeout;

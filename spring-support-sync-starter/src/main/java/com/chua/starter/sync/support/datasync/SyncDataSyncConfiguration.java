@@ -18,15 +18,15 @@ import org.springframework.core.env.Environment;
 import java.util.function.Function;
 
 /**
-   * 数据同步 数据同步桥接自动配置
- * <p>
-   * 将 Spring 同步 的消息能力桥接到 数据同步 框架：
-   * - Spring 同步 网络消息通过 {@link DataSyncMessageBridge} 转换为 数据同步 可识别的数据
-   * - 数据同步 处理后的结果通过 {@link DataSyncMessagePublisher} 回传到 Spring 同步 网络层
- * </p>
- *
- * @since 2026/01/15
- * @author CH
+* 数据同步 数据同步桥接自动配置
+* <p>
+* 将 Spring 同步 的消息能力桥接到 数据同步 框架：
+* - Spring 同步 网络消息通过 {@link DataSyncMessageBridge} 转换为 数据同步 可识别的数据
+* - 数据同步 处理后的结果通过 {@link DataSyncMessagePublisher} 回传到 Spring 同步 网络层
+* </p>
+*
+* @since 2026/01/15
+* @author CH
  */
 @AutoConfiguration
 @ConditionalOnProperty(prefix = "plugin.sync.datasync", name = "enabled", havingValue = "true", matchIfMissing = true)
@@ -38,43 +38,43 @@ public class SyncDataSyncConfiguration {
     private static final Logger log = LoggerFactory.getLogger(SyncDataSyncConfiguration.class);
 
     /**
-     * 环境变量工具
+    * 环境变量工具
      */
     private final Environment environment;
 
     /**
-      * 同步客户端 提供器
+    * 同步客户端 提供器
      */
     private final ObjectProvider<SyncClient> syncClientProvider;
 
     /**
-      * 同步服务端 提供器
+    * 同步服务端 提供器
      */
     private final ObjectProvider<SyncServer> syncServerProvider;
 
     /**
-      * 同步属性 提供器
+    * 同步属性 提供器
      */
     private final ObjectProvider<SyncProperties> syncPropertiesProvider;
 
     /**
-      * 数据同步服务端 提供器
+    * 数据同步服务端 提供器
      */
     private final ObjectProvider<com.chua.starter.datasync.DataSyncServer> dataSyncServerProvider;
 
     /**
-      * 数据同步智能体服务端 提供器
+    * 数据同步智能体服务端 提供器
      */
     private final ObjectProvider<com.chua.starter.datasync.agent.DataSyncAgentServer> dataSyncAgentServerProvider;
 
     /**
-      * 创建 同步数据同步配置 实例
-     * @param environment 环境
-     * @param syncClientProvider 同步客户端提供者
-     * @param syncServerProvider 同步服务端提供者
-     * @param syncPropertiesProvider 同步属性提供者
-     * @param dataSyncServerProvider 数据同步服务端提供者
-     * @param dataSyncAgentServerProvider 数据同步智能体服务端提供者
+    * 创建 同步数据同步配置 实例
+    * @param environment 环境
+    * @param syncClientProvider 同步客户端提供者
+    * @param syncServerProvider 同步服务端提供者
+    * @param syncPropertiesProvider 同步属性提供者
+    * @param dataSyncServerProvider 数据同步服务端提供者
+    * @param dataSyncAgentServerProvider 数据同步智能体服务端提供者
      */
     public SyncDataSyncConfiguration(Environment environment,
                                      ObjectProvider<SyncClient> syncClientProvider,
@@ -105,24 +105,24 @@ public class SyncDataSyncConfiguration {
     }
 
     /**
-      * 创建 Spring 同步 -> 数据同步 数据桥接
-     *
-     * @return 数据桥接函数
+    * 创建 Spring 同步 -> 数据同步 数据桥接
+    *
+    * @return 数据桥接函数
      */
     @Bean
     @ConditionalOnProperty(prefix = "plugin.sync.datasync", name = "enabled", havingValue = "true", matchIfMissing = true)
     public DataSyncMessageBridge dataSyncMessageBridge() {
         /**
-         * 数据同步消息bridge。
-         * @return 数据同步消息bridge的结果
+        * 数据同步消息bridge。
+        * @return 数据同步消息bridge的结果
          */
         return new DataSyncMessageBridge();
     }
 
     /**
-      * 创建 数据同步 -> Spring 同步 消息发布器
-     *
-     * @return 消息发布器
+    * 创建 数据同步 -> Spring 同步 消息发布器
+    *
+    * @return 消息发布器
      */
     @Bean
     @ConditionalOnProperty(prefix = "plugin.sync.datasync", name = "enabled", havingValue = "true", matchIfMissing = true)
@@ -137,21 +137,21 @@ public class SyncDataSyncConfiguration {
     // ==================== 内部类 ====================
 
     /**
-      * 数据同步 消息桥接函数
-     * <p>
-      * 负责将 Spring 同步 网络消息转换为 数据同步 框架可处理的数据格式
-     * </p>
-     *
-     * @since 2026/01/15
-     * @author CH
+    * 数据同步 消息桥接函数
+    * <p>
+    * 负责将 Spring 同步 网络消息转换为 数据同步 框架可处理的数据格式
+    * </p>
+    *
+    * @since 2026/01/15
+    * @author CH
      */
     public static class DataSyncMessageBridge implements Function<Object, Object> {
 
         /**
-          * 将输入数据转换为 数据同步 可识别的格式
-         *
-         * @param input 输入数据（通常为 映射 结构）
-         * @return 转换后的数据
+        * 将输入数据转换为 数据同步 可识别的格式
+        *
+        * @param input 输入数据（通常为 映射 结构）
+        * @return 转换后的数据
          */
         @Override
         public Object apply(Object input) {
@@ -170,37 +170,37 @@ public class SyncDataSyncConfiguration {
     }
 
     /**
-      * 数据同步 消息发布器
-     * <p>
-      * 负责将 数据同步 处理后的结果通过 Spring 同步 网络层发布出去
-     * </p>
-     *
-     * @since 2026/01/15
-     * @author CH
+    * 数据同步 消息发布器
+    * <p>
+    * 负责将 数据同步 处理后的结果通过 Spring 同步 网络层发布出去
+    * </p>
+    *
+    * @since 2026/01/15
+    * @author CH
      */
     public static class DataSyncMessagePublisher {
 
         /**
-          * 同步客户端 提供器
+        * 同步客户端 提供器
          */
         private final ObjectProvider<SyncClient> syncClientProvider;
 
         /**
-          * 同步服务端 提供器
+        * 同步服务端 提供器
          */
         private final ObjectProvider<SyncServer> syncServerProvider;
 
         /**
-          * 同步属性 提供器
+        * 同步属性 提供器
          */
         private final ObjectProvider<SyncProperties> syncPropertiesProvider;
 
         /**
-          * 构造 数据同步 消息发布器
-         *
-         * @param syncClientProvider    同步客户端 提供器
-         * @param syncServerProvider    同步服务端 提供器
-         * @param syncPropertiesProvider 同步属性 提供器
+        * 构造 数据同步 消息发布器
+        *
+        * @param syncClientProvider    同步客户端 提供器
+        * @param syncServerProvider    同步服务端 提供器
+        * @param syncPropertiesProvider 同步属性 提供器
          */
         public DataSyncMessagePublisher(ObjectProvider<SyncClient> syncClientProvider,
                                         ObjectProvider<SyncServer> syncServerProvider,
@@ -211,10 +211,10 @@ public class SyncDataSyncConfiguration {
         }
 
         /**
-         * 发布消息到指定通道
-         *
-         * @param channel 通道名称
-         * @param payload 消息负载
+        * 发布消息到指定通道
+        *
+        * @param channel 通道名称
+        * @param payload 消息负载
          */
     public void publish(String channel, Object payload) {
         SyncProperties syncProperties = syncPropertiesProvider.getIfAvailable();
@@ -231,10 +231,10 @@ public class SyncDataSyncConfiguration {
     }
 
     /**
-     * 广播消息到所有客户端
-     *
-     * @param channel 通道名称
-     * @param payload 消息负载
+    * 广播消息到所有客户端
+    *
+    * @param channel 通道名称
+    * @param payload 消息负载
      */
     public void broadcast(String channel, Object payload) {
         SyncProperties syncProperties = syncPropertiesProvider.getIfAvailable();
@@ -251,11 +251,11 @@ public class SyncDataSyncConfiguration {
     }
 
         /**
-         * 解析通道名称
-         *
-         * @param channel        原始通道名称
-         * @param syncProperties 同步配置
-         * @return 解析后的通道名称
+        * 解析通道名称
+        *
+        * @param channel        原始通道名称
+        * @param syncProperties 同步配置
+        * @return 解析后的通道名称
          */
         private String resolveChannel(String channel, SyncProperties syncProperties) {
             if (channel == null || channel.isBlank()) {

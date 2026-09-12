@@ -18,11 +18,11 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.Map;
 
 /**
- * 邮箱账号(MAILBOX) SSE 连接与临时邮箱管理
- * <p>提供邮箱推送连接注册/注销、临时邮箱地址创建。前端通过 /sse/connect 建立 SSE 连接后注册到本控制器。</p>
- *
- * @author CH
- * @since 4.0.0.42
+* 邮箱账号(MAILBOX) SSE 连接与临时邮箱管理
+* <p>提供邮箱推送连接注册/注销、临时邮箱地址创建。前端通过 /sse/connect 建立 SSE 连接后注册到本控制器。</p>
+*
+* @author CH
+* @since 4.0.0.42
  */
 @Tag(name = "服务器资产-邮箱账号SSE", description = "MAILBOX 身份邮件箱推送与临时邮箱")
 @RestController
@@ -35,11 +35,11 @@ public class MailboxConnectionController {
     private final MailboxSseService mailboxSseService;
 
     /**
-     * 注册邮箱推送(前端打开邮件箱时调用)。
-     *
-     * @param identityId 邮箱身份 标识
-     * @param clientId  前端 SSE 连接 客户端标识
-     * @return 结果
+    * 注册邮箱推送(前端打开邮件箱时调用)。
+    *
+    * @param identityId 邮箱身份 标识
+    * @param clientId  前端 SSE 连接 客户端标识
+    * @return 结果
      */
     @Operation(summary = "注册邮箱推送连接")
     @PostMapping("/{identityId}/mailbox/register")
@@ -49,10 +49,10 @@ public class MailboxConnectionController {
     }
 
     /**
-     * 注销邮箱推送(前端关闭邮件箱时调用)。
-     *
-     * @param clientId 前端 SSE 连接 客户端标识
-     * @return 结果
+    * 注销邮箱推送(前端关闭邮件箱时调用)。
+    *
+    * @param clientId 前端 SSE 连接 客户端标识
+    * @return 结果
      */
     @Operation(summary = "注销邮箱推送连接")
     @DeleteMapping("/mailbox/unregister")
@@ -62,10 +62,10 @@ public class MailboxConnectionController {
     }
 
     /**
-     * 创建临时邮箱地址(TEMP 来源)。
-     *
-     * @param provider 服务商名(fce/luckmail/mailnest/mailtm)
-     * @return 临时邮箱地址
+    * 创建临时邮箱地址(TEMP 来源)。
+    *
+    * @param provider 服务商名(fce/luckmail/mailnest/mailtm)
+    * @return 临时邮箱地址
      */
     @Operation(summary = "创建临时邮箱地址")
     @PostMapping("/mailbox/temp-create")

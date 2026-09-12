@@ -15,10 +15,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 /**
- * 登录身份服务实现
- *
- * @author CH
- * @since 4.0.0.42
+* 登录身份服务实现
+*
+* @author CH
+* @since 4.0.0.42
  */
 @Service
 @RequiredArgsConstructor
@@ -34,9 +34,9 @@ public class ServerIdentityServiceImpl implements ServerIdentityService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-     * 创建。
-     * @param identity identity
-     * @return 创建的结果
+    * 创建。
+    * @param identity identity
+    * @return 创建的结果
      */
     public ReturnResult<MsServerIdentity> create(MsServerIdentity identity) {
         if (identity.getMsServerIdentityName() == null || identity.getMsServerIdentityName().isEmpty()) {
@@ -77,10 +77,10 @@ public class ServerIdentityServiceImpl implements ServerIdentityService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-     * 更新。
-     * @param id 标识
-     * @param identity identity
-     * @return 更新的结果
+    * 更新。
+    * @param id 标识
+    * @param identity identity
+    * @return 更新的结果
      */
     public ReturnResult<MsServerIdentity> update(Long id, MsServerIdentity identity) {
         MsServerIdentity exists = identityMapper.selectById(id);
@@ -116,9 +116,9 @@ public class ServerIdentityServiceImpl implements ServerIdentityService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-     * 删除。
-     * @param id 标识
-     * @return 删除的结果
+    * 删除。
+    * @param id 标识
+    * @return 删除的结果
      */
     public ReturnResult<Void> delete(Long id) {
         hostIdentityMapper.delete(new LambdaQueryWrapper<MsServerHostIdentity>()
@@ -136,10 +136,10 @@ public class ServerIdentityServiceImpl implements ServerIdentityService {
     }
 
     /**
-     * 脱敏：清除密码明文
-     *
-     * @param identity 身份
-     * @return 同一对象（已脱敏）
+    * 脱敏：清除密码明文
+    *
+    * @param identity 身份
+    * @return 同一对象（已脱敏）
      */
     private MsServerIdentity mask(MsServerIdentity identity) {
         identity.setMsServerIdentityPassword(null);

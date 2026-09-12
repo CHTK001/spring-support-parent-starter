@@ -20,18 +20,18 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * 远程主机（SSH）连接管理服务。
- *
- * <p>替代 {@code /api/ssh-hosts} 占位实现：基于 Apache MINA SSHD（
- * {@link SshClient}）提供真实的主机握手与状态机，并通过 {@code ssh.status}
-   * web套接字 事件把 {@code connecting → connected / dropped} 等阶段实时推送给前端，
-   * 使会话 头部 上的「远程主机」状态药丸（{@code SshHostStatusPill}）真实可见。</p>
- *
- * <p>状态模型对齐前端 {@code IApiSshStatus} 契约：每个字段恒存在，
-   * 未知用显式 空；{@code reaped} 仅 关闭 时有值、{@code retryable} 仅 dropped 时有值。</p>
- *
- * @since 4.0.0.42
- * @author CH
+* 远程主机（SSH）连接管理服务。
+*
+* <p>替代 {@code /api/ssh-hosts} 占位实现：基于 Apache MINA SSHD（
+* {@link SshClient}）提供真实的主机握手与状态机，并通过 {@code ssh.status}
+* web套接字 事件把 {@code connecting → connected / dropped} 等阶段实时推送给前端，
+* 使会话 头部 上的「远程主机」状态药丸（{@code SshHostStatusPill}）真实可见。</p>
+*
+* <p>状态模型对齐前端 {@code IApiSshStatus} 契约：每个字段恒存在，
+* 未知用显式 空；{@code reaped} 仅 关闭 时有值、{@code retryable} 仅 dropped 时有值。</p>
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Slf4j
 @Service
@@ -39,45 +39,45 @@ import java.util.concurrent.Executors;
 public class SshConnectionManager {
 
     /**
-      * 连接建立阶段：空闲 → 连接 → 连接 / dropped（/ 关闭）
-     * @author CH
-     * @since 4.0.0
+    * 连接建立阶段：空闲 → 连接 → 连接 / dropped（/ 关闭）
+    * @author CH
+    * @since 4.0.0
      */
     public enum SshLinkPhase {
         /**
-         * 空闲（无拨号记录）
+        * 空闲（无拨号记录）
          */
         idle,
         /**
-         * 拨号中
+        * 拨号中
          */
         connecting,
         /**
-         * 已连接
+        * 已连接
          */
         connected,
         /**
-         * 已断开（可重试）
+        * 已断开（可重试）
          */
         dropped,
         /**
-         * 已关闭
+        * 已关闭
          */
         closed
     }
 
     /**
-      * WS 事件推送服务（ssh.状态）
+    * WS 事件推送服务（ssh.状态）
      */
     private final ApiWebSocketPushService pushService;
 
     /**
-       * 每条链路最新状态：ssh_主机_标识 → 状态快照
+    * 每条链路最新状态：ssh_主机_标识 → 状态快照
      */
     private final Map<String, Map<String, Object>> linkStates = new ConcurrentHashMap<>();
 
     /**
-     * 异步拨号线程池（守护线程，避免阻塞请求线程）
+    * 异步拨号线程池（守护线程，避免阻塞请求线程）
      */
     private final ExecutorService dialExecutor = Executors.newSingleThreadExecutor(runnable -> {
         Thread thread = new Thread(runnable, "ssh-dial");
@@ -86,38 +86,38 @@ public class SshConnectionManager {
     });
 
     /**
-     * 默认连接超时（秒）
+    * 默认连接超时（秒）
      */
     private static final int CONNECT_TIMEOUT_SECONDS = 8;
 
     /**
-     * 私钥临时文件前缀
+    * 私钥临时文件前缀
      */
     private static final String TEMP_KEY_PREFIX = "ai-ssh-key-";
 
     /**
-     * 获取全部链路的实时状态快照（与 {@code ssh.status} 事件同一形状）。
-     *
-     * @return 状态列表
+    * 获取全部链路的实时状态快照（与 {@code ssh.status} 事件同一形状）。
+    *
+    * @return 状态列表
      */
     public List<Map<String, Object>> statuses() {
         return new ArrayList<>(linkStates.values());
     }
 
     /**
-      * 删除主机时移除其链路状态（前端按快照缺失置 空）。
-     *
-     * @param sshHostId 主机 标识
+    * 删除主机时移除其链路状态（前端按快照缺失置 空）。
+    *
+    * @param sshHostId 主机 标识
      */
     public void forgetHost(String sshHostId) {
         linkStates.remove(sshHostId);
     }
 
     /**
-     * 真实测试主机连通性：握手成功后执行 {@code uname} 探活。
-     *
-     * @param host 主机档案（含真实凭据）
-     * @return 测试结果 {@code {ok, message}}
+    * 真实测试主机连通性：握手成功后执行 {@code uname} 探活。
+    *
+    * @param host 主机档案（含真实凭据）
+    * @return 测试结果 {@code {ok, message}}
      */
     public Map<String, Object> testConnection(SysAiSshHost host) {
         Map<String, Object> result = new LinkedHashMap<>();
@@ -128,8 +128,8 @@ public class SshConnectionManager {
         }
         try {
             /**
-             * 尝试。
-             * @param buildConnectedClient(host 构建连接客户端(主机
+            * 尝试。
+            * @param buildConnectedClient(host 构建连接客户端(主机
              */
             try (SshClient client = buildConnectedClient(host)) {
                 var exec = client.exec().command("uname -s").execute();
@@ -151,8 +151,8 @@ public class SshConnectionManager {
             host.setStatus("error");
         }
         /**
-          * pushphase。
-         * @param host.getSshHostId( 主机.getssh主机标识(
+        * pushphase。
+        * @param host.getSshHostId( 主机.getssh主机标识(
          */
         pushPhase(host.getSshHostId(), null, SshLinkPhase.closed, 0, null,
                 "connection test", null, false);
@@ -160,29 +160,29 @@ public class SshConnectionManager {
     }
 
     /**
-     * 为绑定远程主机的会话发起异步拨号（会话创建时调用）。
-     *
-     * <p>拨号结果通过 {@code ssh.status} 事件推送，前端状态药丸据此呈现
-      * 连接 / 连接 / dropped 阶段。</p>
-     *
-     * @param host           主机档案（含真实凭据）
-     * @param conversationId 绑定的会话 标识（可能为空）
+    * 为绑定远程主机的会话发起异步拨号（会话创建时调用）。
+    *
+    * <p>拨号结果通过 {@code ssh.status} 事件推送，前端状态药丸据此呈现
+    * 连接 / 连接 / dropped 阶段。</p>
+    *
+    * @param host           主机档案（含真实凭据）
+    * @param conversationId 绑定的会话 标识（可能为空）
      */
     public void dial(SysAiSshHost host, String conversationId) {
         if (host == null || host.getSshHostId() == null) {
             return;
         }
         /**
-          * pushphase。
-         * @param host.getSshHostId( 主机.getssh主机标识(
+        * pushphase。
+        * @param host.getSshHostId( 主机.getssh主机标识(
          */
         pushPhase(host.getSshHostId(), conversationId, SshLinkPhase.connecting, 1, null,
                 "正在拨号连接", null, false);
         dialExecutor.execute(() -> {
             try {
                 /**
-                 * 尝试。
-                 * @param buildConnectedClient(host 构建连接客户端(主机
+                * 尝试。
+                * @param buildConnectedClient(host 构建连接客户端(主机
                  */
                 try (SshClient client = buildConnectedClient(host)) {
                     var exec = client.exec().command("uname -s").execute();
@@ -190,8 +190,8 @@ public class SshConnectionManager {
                         host.setStatus("ok");
                         host.setLastConnectedAt(System.currentTimeMillis());
                         /**
-                          * pushphase。
-                         * @param host.getSshHostId( 主机.getssh主机标识(
+                        * pushphase。
+                        * @param host.getSshHostId( 主机.getssh主机标识(
                          */
                         pushPhase(host.getSshHostId(), conversationId, SshLinkPhase.connected, 0, null,
                                 null, null, false);
@@ -199,8 +199,8 @@ public class SshConnectionManager {
                     }
                 }
                 /**
-                  * pushphase。
-                 * @param host.getSshHostId( 主机.getssh主机标识(
+                * pushphase。
+                * @param host.getSshHostId( 主机.getssh主机标识(
                  */
                 pushPhase(host.getSshHostId(), conversationId, SshLinkPhase.dropped, 1, null,
                         "探活命令执行失败", true, false);
@@ -208,8 +208,8 @@ public class SshConnectionManager {
                 log.warn("[Ssh] 拨号失败: {}@{}:{} - {}", host.getUsername(), host.getHost(),
                         host.getPort(), e.getMessage());
                 /**
-                  * pushphase。
-                 * @param host.getSshHostId( 主机.getssh主机标识(
+                * pushphase。
+                * @param host.getSshHostId( 主机.getssh主机标识(
                  */
                 pushPhase(host.getSshHostId(), conversationId, SshLinkPhase.dropped, 1, null,
                         sanitizeMessage(e.getMessage()), true, false);
@@ -218,9 +218,9 @@ public class SshConnectionManager {
     }
 
     /**
-     * 关闭某主机关联的全部链路（主机删除/连接断开时调用）。
-     *
-     * @param sshHostId 主机 标识
+    * 关闭某主机关联的全部链路（主机删除/连接断开时调用）。
+    *
+    * @param sshHostId 主机 标识
      */
     public void closeLinks(String sshHostId) {
         Map<String, Object> state = linkStates.get(sshHostId);
@@ -228,9 +228,9 @@ public class SshConnectionManager {
             return;
         }
         /**
-          * pushphase。
-         * @param sshHostId ssh主机标识
-         * @param (String (字符串
+        * pushphase。
+        * @param sshHostId ssh主机标识
+        * @param (String (字符串
          */
         pushPhase(sshHostId, (String) state.get("conversation_id"), SshLinkPhase.closed, 0, null,
                 "连接已关闭", null, true);
@@ -240,15 +240,15 @@ public class SshConnectionManager {
     // ==================== 私有方法 ====================
 
     /**
-     * 装配并建立真实 SSH 连接。
-     *
-     * <p>私钥内容经临时文件交给底层库（其 API 仅接受路径），关闭时清理，
-      * 确保密钥明文不在磁盘残留。认证方式：密码 / 钥匙 / 证书 均走
-      * 密码或私钥；智能体 暂不支持（按 密码 兜底，通常失败并给出提示）。</p>
-     *
-     * @param host 主机档案（含真实凭据）
-     * @return 已连接的客户端
-     * @throws Exception 连接或认证失败时抛出
+    * 装配并建立真实 SSH 连接。
+    *
+    * <p>私钥内容经临时文件交给底层库（其 API 仅接受路径），关闭时清理，
+    * 确保密钥明文不在磁盘残留。认证方式：密码 / 钥匙 / 证书 均走
+    * 密码或私钥；智能体 暂不支持（按 密码 兜底，通常失败并给出提示）。</p>
+    *
+    * @param host 主机档案（含真实凭据）
+    * @return 已连接的客户端
+    * @throws Exception 连接或认证失败时抛出
      */
     private SshClient buildConnectedClient(SysAiSshHost host) throws Exception {
         String authType = host.getAuthType() == null ? "password" : host.getAuthType();
@@ -291,16 +291,16 @@ public class SshConnectionManager {
     }
 
     /**
-      * 推送一次状态变更（写快照 + 广播 ssh.状态 事件）。
-     *
-     * @param sshHostId       主机 标识
-     * @param conversationId  会话 标识（可能为空）
-     * @param phase           阶段
-     * @param attempt         拨号尝试次数
-     * @param nextRetryInMs   下次重试等待（毫秒，当前无自动重试恒为 空）
-     * @param detail          诊断信息（不含凭据）
-     * @param retryable       dropped 时是否可重试
-     * @param reaped          关闭 时远端 Shell 是否已被证实退出
+    * 推送一次状态变更（写快照 + 广播 ssh.状态 事件）。
+    *
+    * @param sshHostId       主机 标识
+    * @param conversationId  会话 标识（可能为空）
+    * @param phase           阶段
+    * @param attempt         拨号尝试次数
+    * @param nextRetryInMs   下次重试等待（毫秒，当前无自动重试恒为 空）
+    * @param detail          诊断信息（不含凭据）
+    * @param retryable       dropped 时是否可重试
+    * @param reaped          关闭 时远端 Shell 是否已被证实退出
      */
     private void pushPhase(String sshHostId, String conversationId, SshLinkPhase phase,
                            int attempt, Long nextRetryInMs, String detail,
@@ -321,20 +321,20 @@ public class SshConnectionManager {
     }
 
     /**
-     * 非空判断
-     *
-     * @param value 待判断字符串
-     * @return 是否非空
+    * 非空判断
+    *
+    * @param value 待判断字符串
+    * @return 是否非空
      */
     private static boolean isNotBlank(String value) {
         return value != null && !value.isBlank();
     }
 
     /**
-     * 脱敏连接错误信息（避免异常堆栈里携带凭据或密钥明文）。
-     *
-     * @param message 原始错误信息
-     * @return 脱敏后的信息
+    * 脱敏连接错误信息（避免异常堆栈里携带凭据或密钥明文）。
+    *
+    * @param message 原始错误信息
+    * @return 脱敏后的信息
      */
     private static String sanitizeMessage(String message) {
         if (message == null || message.isBlank()) {
@@ -345,9 +345,9 @@ public class SshConnectionManager {
     }
 
     /**
-     * 生成链路追踪标识（调试用）
-     *
-     * @return 随机 UUID
+    * 生成链路追踪标识（调试用）
+    *
+    * @return 随机 UUID
      */
     static String newTraceId() {
         return UUID.randomUUID().toString();

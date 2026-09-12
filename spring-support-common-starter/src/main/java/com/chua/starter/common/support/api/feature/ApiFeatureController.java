@@ -13,15 +13,15 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * API 功能开关管理控制器
- * <p>
- * 提供功能开关的查询和管理接口。
-   * 此接口为内部接口，仅允许内网IP或白名单服务调用，不受 o认证 鉴权控制。
- * </p>
- *
- * @since 2024/12/08
-   * @版本 1.0.0
- * @author CH
+* API 功能开关管理控制器
+* <p>
+* 提供功能开关的查询和管理接口。
+* 此接口为内部接口，仅允许内网IP或白名单服务调用，不受 o认证 鉴权控制。
+* </p>
+*
+* @since 2024/12/08
+* @版本 1.0.0
+* @author CH
  */
 @RestController
 @RequestMapping("${plugin.api.feature.path:/api/features}")
@@ -34,18 +34,18 @@ public class ApiFeatureController {
     private final ApiFeatureManager featureManager;
 
     /**
-     * 构造函数
-     *
-     * @param featureManager api特征管理器
+    * 构造函数
+    *
+    * @param featureManager api特征管理器
      */
     public ApiFeatureController(ApiFeatureManager featureManager) {
         this.featureManager = featureManager;
     }
 
     /**
-     * 获取所有功能开关列表
-     *
-     * @return 功能开关列表
+    * 获取所有功能开关列表
+    *
+    * @return 功能开关列表
      */
     @GetMapping
     @Operation(summary = "获取所有功能开关")
@@ -54,10 +54,10 @@ public class ApiFeatureController {
     }
 
     /**
-     * 按分组获取功能开关
-     *
-     * @param group 分组名称
-     * @return 功能开关列表
+    * 按分组获取功能开关
+    *
+    * @param group 分组名称
+    * @return 功能开关列表
      */
     @GetMapping("/group/{group}")
     @Operation(summary = "按分组获取功能开关")
@@ -67,9 +67,9 @@ public class ApiFeatureController {
     }
 
     /**
-     * 获取所有分组
-     *
-     * @return 分组列表
+    * 获取所有分组
+    *
+    * @return 分组列表
      */
     @GetMapping("/groups")
     @Operation(summary = "获取所有分组")
@@ -78,10 +78,10 @@ public class ApiFeatureController {
     }
 
     /**
-     * 获取单个功能开关信息
-     *
-     * @param featureId 功能标识
-     * @return 功能开关信息
+    * 获取单个功能开关信息
+    *
+    * @param featureId 功能标识
+    * @return 功能开关信息
      */
     @GetMapping("/{featureId}")
     @Operation(summary = "获取功能开关详情")
@@ -95,11 +95,11 @@ public class ApiFeatureController {
     }
 
     /**
-     * 设置功能开关状态
-     *
-     * @param featureId 功能标识
-     * @param enabled   是否启用
-     * @return 操作结果
+    * 设置功能开关状态
+    *
+    * @param featureId 功能标识
+    * @param enabled   是否启用
+    * @return 操作结果
      */
     @PutMapping("/{featureId}")
     @Operation(summary = "设置功能开关状态")
@@ -114,10 +114,10 @@ public class ApiFeatureController {
     }
 
     /**
-     * 批量设置功能开关状态
-     *
-     * @param states 状态映射
-     * @return 操作结果
+    * 批量设置功能开关状态
+    *
+    * @param states 状态映射
+    * @return 操作结果
      */
     @PutMapping("/batch")
     @Operation(summary = "批量设置功能开关状态")
@@ -128,10 +128,10 @@ public class ApiFeatureController {
     }
 
     /**
-     * 重置功能开关到默认状态
-     *
-     * @param featureId 功能标识
-     * @return 操作结果
+    * 重置功能开关到默认状态
+    *
+    * @param featureId 功能标识
+    * @return 操作结果
      */
     @PostMapping("/{featureId}/reset")
     @Operation(summary = "重置功能开关到默认状态")
@@ -142,9 +142,9 @@ public class ApiFeatureController {
     }
 
     /**
-     * 重置所有功能开关到默认状态
-     *
-     * @return 操作结果
+    * 重置所有功能开关到默认状态
+    *
+    * @return 操作结果
      */
     @PostMapping("/reset-all")
     @Operation(summary = "重置所有功能开关")
@@ -154,9 +154,9 @@ public class ApiFeatureController {
     }
 
     /**
-     * 获取功能开关统计
-     *
-     * @return 统计信息
+    * 获取功能开关统计
+    *
+    * @return 统计信息
      */
     @GetMapping("/stats")
     @Operation(summary = "获取功能开关统计")

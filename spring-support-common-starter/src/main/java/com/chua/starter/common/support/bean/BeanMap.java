@@ -7,9 +7,9 @@ import java.util.Collections;
 import java.util.Map;
 
 /**
-   * Bean 转 映射 工具。
- * @author CH
- * @since 4.0.0
+* Bean 转 映射 工具。
+* @author CH
+* @since 4.0.0
  */
 public final class BeanMap {
 
@@ -19,11 +19,11 @@ public final class BeanMap {
 
     @SuppressWarnings("unchecked")
     /**
-     * 的
-     *
-     * @param bean Bean
-     * @param ignoreNull ignore空
-     * @return 的的结果
+    * 的
+    *
+    * @param bean Bean
+    * @param ignoreNull ignore空
+    * @return 的的结果
      */
     public static Map<String, Object> of(Object bean, boolean ignoreNull) {
         if (bean == null) {
