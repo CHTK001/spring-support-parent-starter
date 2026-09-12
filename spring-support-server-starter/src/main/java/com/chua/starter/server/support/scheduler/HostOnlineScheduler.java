@@ -64,6 +64,10 @@ public class HostOnlineScheduler {
     @Setter
     private Consumer<MsServerHost> onlineHook; // onlinehook
 
+    /** 采集完成钩子（监控 侧注册；每次定时采集落库后回调，含最新硬件/使用率数据） */
+    @Setter
+    private Consumer<MsServerHost> collectHook; // collecthook
+
     /** TCP 连接超时(毫秒) */
     private static final int CONNECT_TIMEOUT_MS = 3000;
 
@@ -300,6 +304,14 @@ public class HostOnlineScheduler {
         try {
             host.setServerHostLastCollectTime(LocalDateTime.now());
             hostMapper.updateById(host);
+            // 采集完成回调（监控 侧注册：评估 CPU/内存/磁盘使用率告警规则）
+            if (collectHook != null) {
+                try {
+                    collectHook.accept(host);
+                } catch (Exception hookEx) {
+                    log.debug("[collect] 采集钩子异常 hostId={}: {}", host.getId(), hookEx.getMessage());
+                }
+            }
         } catch (Exception e) {
             log.warn("[collect] 回写采集时间失败 hostId={}", host.getId(), e);
         }
