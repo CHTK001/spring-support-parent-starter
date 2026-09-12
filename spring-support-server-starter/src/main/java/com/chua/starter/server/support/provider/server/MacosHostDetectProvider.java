@@ -55,6 +55,39 @@ public class MacosHostDetectProvider implements HostDetectProvider {
             if (NumberUtils.isNumber(disk)) {
                 host.setServerHostDiskGb(NumberUtils.toLong(disk));
             }
+            // GPU 卡数（system_profiler 统计 Chipset Model 出现次数）
+            String gpuCount = execQuiet(handle, "system_profiler SPDisplaysDataType 2>/dev/null | grep -c 'Chipset Model'");
+            if (NumberUtils.isNumber(gpuCount)) {
+                int gpu = NumberUtils.toInt(gpuCount);
+                if (gpu > 0) {
+                    host.setServerHostGpuCount(gpu);
+                    // GPU 型号（首个 Chipset Model 值）
+                    String gpuModel = execQuiet(handle, "system_profiler SPDisplaysDataType 2>/dev/null | grep -m1 'Chipset Model' | sed 's/^.*: //'");
+                    if (StringUtils.isNotBlank(gpuModel)) {
+                        host.setServerHostGpuModel(gpuModel.trim());
+                    }
+                }
+            }
+            // 网卡信息（JSON 数组：[{"name":"en0","ip":"10.0.0.3"}]，ifconfig 全局 IPv4）
+            String networks = execQuiet(handle, "ifconfig 2>/dev/null | awk '/^[a-z]/{n=$1; sub(\":\",\"\",n)} /inet /{split($2,a,\".\"); if(a[1]!=\"127\" && a[1]!=\"169\"){printf \"{\\\"name\\\":\\\"\"n\"\\\",\\\"ip\\\":\\\"\"$2\"\\\"} \"}}' | tr ' ' ',' | sed 's/^,/[/;s/,$/]/'");
+            if (StringUtils.isNotBlank(networks) && networks.startsWith("[")) {
+                host.setServerHostNetworks(networks);
+            }
+            // CPU 使用率（%）（top 空闲百分比换算）
+            String cpuUsage = execQuiet(handle, "top -l 1 -n 0 2>/dev/null | grep 'CPU usage' | awk '{print 100-$7}'");
+            if (StringUtils.isNotBlank(cpuUsage) && isRatio(cpuUsage)) {
+                host.setServerHostCpuUsage(toRatio(cpuUsage));
+            }
+            // 内存使用率（%）（vm_stat 活跃/无线换算）
+            String memUsage = execQuiet(handle, "vm_stat 2>/dev/null | awk 'BEGIN{total=0;used=0} /page size/{ps=$8} /Pages free/{free=$3} /Pages active/{active=$3} /Pages inactive/{inactive=$3} /Pages wired/{wired=$4} END{used=(active+inactive+wired)*ps; total=used+free*ps; printf \"%.2f\", used/total*100}'");
+            if (StringUtils.isNotBlank(memUsage) && isRatio(memUsage)) {
+                host.setServerHostMemUsage(toRatio(memUsage));
+            }
+            // 磁盘使用率（%）（df 根分区已用/总容量）
+            String diskUsage = execQuiet(handle, "df -k / | awk 'NR==2{printf \"%.2f\", $3/$2*100}'");
+            if (StringUtils.isNotBlank(diskUsage) && isRatio(diskUsage)) {
+                host.setServerHostDiskUsage(toRatio(diskUsage));
+            }
             // 系统版本（sw_vers 优先，回退 uname -sr）
             String os = execQuiet(handle, "sw_vers -productVersion 2>/dev/null");
             if (StringUtils.isBlank(os)) {
@@ -82,6 +115,33 @@ public class MacosHostDetectProvider implements HostDetectProvider {
             if (handle != null) {
                 connectionManager.release(host.getId());
             }
+        }
+    }
+
+    /**
+    * 判断字符串是否为可解析的百分比数字（非空且为数字或小数）
+    *
+    * @param value 待判断字符串
+    * @return 是否可解析
+     */
+    private boolean isRatio(String value) {
+        return StringUtils.isNotBlank(value) && NumberUtils.isNumber(value);
+    }
+
+    /**
+    * 将百分比字符串转为 Double（四舍五入保留两位小数），解析失败返回 null
+    *
+    * @param value 百分比字符串
+    * @return Double 或 null
+     */
+    private Double toRatio(String value) {
+        if (StringUtils.isBlank(value)) {
+            return null;
+        }
+        try {
+            return Double.parseDouble(value.trim());
+        } catch (NumberFormatException e) {
+            return null;
         }
     }
 

@@ -108,6 +108,28 @@ public class HostAgentController {
         if (payload.get("osArch") != null) {
             host.setServerHostOsArch(String.valueOf(payload.get("osArch")));
         }
+        Integer gpuCount = toInteger(payload.get("gpuCount"));
+        if (gpuCount != null) {
+            host.setServerHostGpuCount(gpuCount);
+        }
+        if (payload.get("gpuModel") != null) {
+            host.setServerHostGpuModel(String.valueOf(payload.get("gpuModel")));
+        }
+        if (payload.get("networks") != null) {
+            host.setServerHostNetworks(String.valueOf(payload.get("networks")));
+        }
+        Double cpuUsage = toDouble(payload.get("cpuUsage"));
+        if (cpuUsage != null) {
+            host.setServerHostCpuUsage(cpuUsage);
+        }
+        Double memUsage = toDouble(payload.get("memUsage"));
+        if (memUsage != null) {
+            host.setServerHostMemUsage(memUsage);
+        }
+        Double diskUsage = toDouble(payload.get("diskUsage"));
+        if (diskUsage != null) {
+            host.setServerHostDiskUsage(diskUsage);
+        }
         if (payload.get("publicIp") != null) {
             host.setServerHostPublicIp(String.valueOf(payload.get("publicIp")));
         }
@@ -154,6 +176,27 @@ public class HostAgentController {
             }
             String s = String.valueOf(value).trim();
             return s.isEmpty() ? null : Long.valueOf(s);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+    * 安全转为 Double（空/非数字返回 空）
+    *
+    * @param value 原始值
+    * @return Double 或 空
+     */
+    private Double toDouble(Object value) {
+        if (value == null) {
+            return null;
+        }
+        try {
+            if (value instanceof Number n) {
+                return n.doubleValue();
+            }
+            String s = String.valueOf(value).trim();
+            return s.isEmpty() ? null : Double.valueOf(s);
         } catch (Exception e) {
             return null;
         }

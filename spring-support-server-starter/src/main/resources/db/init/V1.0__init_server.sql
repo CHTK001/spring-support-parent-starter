@@ -279,6 +279,16 @@ ALTER TABLE ms_server_host ADD COLUMN IF NOT EXISTS ms_server_host_ports TEXT NU
 ALTER TABLE ms_server_host ADD COLUMN IF NOT EXISTS ms_server_host_last_port_scan_time DATETIME NULL COMMENT '最近端口扫描时间';
 
 -- ---------------------------------------------------------------------
+-- 主机扩展采集字段（GPU/网卡/CPU使用率/内存使用率/磁盘使用率，幂等 IF NOT EXISTS）
+-- ---------------------------------------------------------------------
+ALTER TABLE ms_server_host ADD COLUMN IF NOT EXISTS ms_server_host_gpu_count INT NULL COMMENT 'GPU卡数(探测结果)';
+ALTER TABLE ms_server_host ADD COLUMN IF NOT EXISTS ms_server_host_gpu_model VARCHAR(256) NULL COMMENT 'GPU型号(探测结果)';
+ALTER TABLE ms_server_host ADD COLUMN IF NOT EXISTS ms_server_host_networks TEXT NULL COMMENT '网卡信息(JSON数组)';
+ALTER TABLE ms_server_host ADD COLUMN IF NOT EXISTS ms_server_host_cpu_usage DECIMAL(5,2) NULL COMMENT 'CPU使用率%(探测结果)';
+ALTER TABLE ms_server_host ADD COLUMN IF NOT EXISTS ms_server_host_mem_usage DECIMAL(5,2) NULL COMMENT '内存使用率%(探测结果)';
+ALTER TABLE ms_server_host ADD COLUMN IF NOT EXISTS ms_server_host_disk_usage DECIMAL(5,2) NULL COMMENT '磁盘使用率%(探测结果)';
+
+-- ---------------------------------------------------------------------
 -- 系统配置初始化数据（原 V1.0__initdata_server.sql，INSERT IGNORE 幂等）
 -- ---------------------------------------------------------------------
 INSERT IGNORE INTO ms_server_config (ms_server_config_key, ms_server_config_value, ms_server_config_desc)

@@ -33,6 +33,7 @@ public class FileStorageSetting {
     /** 是否开启目录文件列表页面（true 时 获取 /{bucket} 返回 HTML 文件列表；false 时目录访问直接 404） */
     private boolean layout;
     /** 文件列表布局类型：简单-简单文件列表树 / 系统-资源管理器风格，默认 简单 */
+    @Builder.Default
     private String layoutType = LayoutType.SIMPLE.name();
     /** 是否显示"类型"列（SYSTEM 布局详情视图） */
     @Builder.Default
@@ -43,7 +44,7 @@ public class FileStorageSetting {
     /** 是否显示"修改时间"列（SYSTEM 布局详情视图） */
     @Builder.Default
     private boolean showTime = true;
-    /** 图片滤镜名称（对应 SPI {@code FileStorageImageFilterProvider#getName()}，默认原图） */
+    /** 图片滤镜名称（对应 {@code com.chua.common.support.image.filter.ImageFilter} SPI 扩展名，NONE 表示原图） */
     @Builder.Default
     private String imageFilter = "NONE";
 
