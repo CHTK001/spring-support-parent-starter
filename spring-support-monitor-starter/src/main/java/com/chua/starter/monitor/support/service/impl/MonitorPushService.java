@@ -58,6 +58,14 @@ public class MonitorPushService {
     /** tshark 会话状态变更事件名（启动/停止/结束） */
     public static final String EVENT_TSHARK_SESSION = "tshark-session";
 
+    /** 主机实时延迟推送事件名（前端 subscribe("monitor", "host-delay") 接收；
+     *  data = { hostId, hostName, address, port, delayMs, online }，delayMs=-1 表示不可达） */
+    public static final String EVENT_HOST_DELAY = "host-delay";
+
+    /** 主机在线状态变更事件名（前端 subscribe("monitor", "host-online") 接收；
+     *  data = { hostId, hostName, online }） */
+    public static final String EVENT_HOST_ONLINE = "host-online";
+
     /** SocketQueueBridge 订阅的统一 topic */
     public static final String SOCKET_PUSH_TOPIC = "socket:push";
 
@@ -110,6 +118,41 @@ public class MonitorPushService {
      */
     public void pushTsharkSession(Serializable payload, Long sessionId) {
         broadcast(EVENT_TSHARK_SESSION, payload, sessionId == null ? null : String.valueOf(sessionId));
+    }
+
+    /**
+     * 广播主机实时延迟（前端 subscribe("monitor", "host-delay") 接收）
+     *
+     * @param hostId   主机 ID
+     * @param hostName 主机名
+     * @param address  地址
+     * @param port     端口
+     * @param delayMs  延迟毫秒（-1 表示不可达）
+     */
+    public void pushHostDelay(Long hostId, String hostName, String address, Integer port, Long delayMs) {
+        Map<String, Object> payload = new LinkedHashMap<>(8);
+        payload.put("hostId", hostId);
+        payload.put("hostName", hostName == null ? "" : hostName);
+        payload.put("address", address == null ? "" : address);
+        payload.put("port", port);
+        payload.put("delayMs", delayMs);
+        payload.put("online", delayMs != null && delayMs >= 0);
+        broadcast(EVENT_HOST_DELAY, payload, hostId == null ? null : String.valueOf(hostId));
+    }
+
+    /**
+     * 广播主机在线状态变更（前端 subscribe("monitor", "host-online") 接收）
+     *
+     * @param hostId   主机 ID
+     * @param hostName 主机名
+     * @param online   是否在线
+     */
+    public void pushHostOnline(Long hostId, String hostName, boolean online) {
+        Map<String, Object> payload = new LinkedHashMap<>(4);
+        payload.put("hostId", hostId);
+        payload.put("hostName", hostName == null ? "" : hostName);
+        payload.put("online", online);
+        broadcast(EVENT_HOST_ONLINE, payload, hostId == null ? null : String.valueOf(hostId));
     }
 
     /**
