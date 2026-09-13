@@ -14,10 +14,10 @@ spring:
     generate:
       enabled: false
 
-  # 建表脚本（独立联调）：FlywayLike 禁用后，由 spring.sql.init 加载各模块 DDL
+  # 建表脚本（独立联调）：FlywayLike 禁用后，由 spring.sql.init 加载各模块 DDL。
+  #  V*__*.sql 脚本已统一归口 datasource-starter，classpath 路径保持 db/init/* 不变：
   #  - monitor 自身：classpath:db/init/V1.0__init_monitor.sql
-  #  - server-starter（依赖 jar 内）：V1.0__init_server.sql（资产台账表）
-  #  - project-starter（依赖 jar 内）：V1.0__init_project.sql / V1.1__project_extend.sql
+  #  - datasource-starter（依赖 jar 内）：V1.0__init_server.sql（资产台账表）、V1.0__init_project.sql
   # 均纯 H2 兼容（IF NOT EXISTS 幂等），MODE=MySQL 下自动建表
   sql:
     init:
@@ -28,7 +28,7 @@ spring:
         - classpath:db/init/V1.0__init_server.sql
         - classpath:db/init/V1.0__init_project.sql
         # AI 模块 H2 兼容建表脚本（纯 CREATE TABLE，无 MySQL-only 语法）
-        - classpath:db/h2-test-schema.sql
+        - classpath:db/h2-local-schema.sql
 
   datasource:
     url: jdbc:h2:mem:monitordb;DB_CLOSE_DELAY=-1;MODE=MySQL;DATABASE_TO_UPPER=false;NON_KEYWORDS=VALUE

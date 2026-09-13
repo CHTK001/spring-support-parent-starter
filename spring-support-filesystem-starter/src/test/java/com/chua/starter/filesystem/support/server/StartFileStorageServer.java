@@ -65,8 +65,10 @@ public class StartFileStorageServer {
                 .host("127.0.0.1")
                 .port(port)
                 .build();
- // Vue 静态资源（类路径 静态/assets/ → /assets/）
+        // Vue 静态资源（类路径 static/assets/ → /assets/）
         server.addFilter(new StaticResourceServerFilter("/assets", "static/assets"));
+        // 文件预览第三方依赖（Univer、PDF.js、highlight.js，类路径 static/preview-vendor/ → /preview-vendor/）
+        server.addFilter(new StaticResourceServerFilter("/preview-vendor", "static/preview-vendor"));
         server.addFilter(filter);
         server.start();
 

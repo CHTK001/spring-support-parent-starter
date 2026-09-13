@@ -82,8 +82,23 @@ public class DeployServiceImpl implements DeployService {
     /** 实时推送 */
     private final ProjectPushService pushService;
 
+    /** 模块配置 */
+    private final com.chua.starter.project.support.config.ProjectProperties projectProperties;
+
     /** Jackson */
     private final ObjectMapper objectMapper;
+
+    /** 项目部署互斥锁（防止同项目并发部署互相清目录） */
+    private final java.util.concurrent.ConcurrentHashMap<Long, java.util.concurrent.atomic.AtomicBoolean>
+            projectDeployLocks = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** 命令执行超时控制用线程池（单线程串行，仅用于 Future.get 超时） */
+    private final java.util.concurrent.ExecutorService execCommandPool =
+            java.util.concurrent.Executors.newSingleThreadExecutor(r -> {
+                Thread t = new Thread(r, "project-exec-cmd");
+                t.setDaemon(true);
+                return t;
+            });
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -102,6 +117,50 @@ public class DeployServiceImpl implements DeployService {
         if (file == null || file.isEmpty()) {
             return ReturnResult.error("部署包不能为空");
         }
+        // 生产级：上传包校验（大小 + 扩展名白名单）
+        ReturnResult<String> fileCheck = validateUpload(file);
+        if (fileCheck != null) {
+            return ReturnResult.error(fileCheck.getMsg());
+        }
+        // 生产级：同项目并发部署互斥
+        java.util.concurrent.atomic.AtomicBoolean lock =
+                projectDeployLocks.computeIfAbsent(projectId, k -> new java.util.concurrent.atomic.AtomicBoolean(false));
+        if (!lock.compareAndSet(false, true)) {
+            return ReturnResult.error("该项目正在部署中，请勿并发操作");
+        }
+        try {
+            return doDeploy(project, action, file);
+        } finally {
+            lock.set(false);
+            projectDeployLocks.remove(projectId);
+        }
+    }
+
+    /**
+     * 生产级：上传包校验
+     *
+     * @param file 上传文件
+     * @return 校验失败的错误结果，合法返回 null
+     */
+    private ReturnResult<String> validateUpload(MultipartFile file) {
+        if (projectProperties.getMaxUploadBytes() > 0 && file.getSize() > projectProperties.getMaxUploadBytes()) {
+            return ReturnResult.error("部署包超过大小限制 " + (projectProperties.getMaxUploadBytes() / 1024 / 1024) + "MB");
+        }
+        String name = safeFileName(file.getOriginalFilename());
+        String lower = name.toLowerCase(Locale.ROOT);
+        for (String ext : projectProperties.getAllowedExtensions()) {
+            if (lower.endsWith(ext)) {
+                return null;
+            }
+        }
+        return ReturnResult.error("不支持的文件类型: " + name + "（允许 " + String.join(",", projectProperties.getAllowedExtensions()) + "）");
+    }
+
+    /**
+     * 部署内部执行（已被并发锁保护）
+     */
+    private ReturnResult<List<MsProjectDeployLog>> doDeploy(MsProject project, String action, MultipartFile file) {
+        Long projectId = project.getId();
         final String act = normalizeAction(action);
         final List<Long> hostIds = parseHostIds(project.getMsProjectHostIds());
         if (hostIds.isEmpty()) {
@@ -149,32 +208,39 @@ public class DeployServiceImpl implements DeployService {
 
             boolean anySuccess = logs.stream().anyMatch(
                     l -> ProjectConstants.LOG_STATUS_SUCCESS.equals(l.getMsProjectDeployLogStatus()));
-            if (anySuccess) {
-                /**
-                * 保存archives。
-                * @param deployProject deployproject
-                * @param logs 日志
-                * @param version 版本
-                * @param archived archived
-                 */
+            // 生产级语义：全部主机成功才视为本次版本生效；部分成功不更新版本号，状态置 UNKNOWN
+            boolean allSuccess = logs.stream().allMatch(
+                    l -> ProjectConstants.LOG_STATUS_SUCCESS.equals(l.getMsProjectDeployLogStatus()));
+            if (allSuccess) {
                 saveArchives(deployProject, logs, version, archived);
                 MsProject update = new MsProject();
                 update.setId(project.getId());
                 update.setMsProjectCurrentVersion(version);
                 update.setMsProjectRuntimeStatus(ProjectConstants.RUNTIME_UNKNOWN);
                 projectMapper.updateById(update);
+            } else if (anySuccess) {
+                // 部分成功：保留旧版本号，仅记录状态
+                MsProject update = new MsProject();
+                update.setId(project.getId());
+                update.setMsProjectRuntimeStatus(ProjectConstants.RUNTIME_UNKNOWN);
+                projectMapper.updateById(update);
+                log.warn("[project] 项目 {} 部分主机部署成功({}/{})，版本号保持 {}",
+                        project.getMsProjectName(),
+                        logs.stream().filter(l -> ProjectConstants.LOG_STATUS_SUCCESS.equals(l.getMsProjectDeployLogStatus())).count(),
+                        logs.size(), project.getMsProjectCurrentVersion());
             }
             for (MsProjectDeployLog logItem : logs) {
                 deployLogMapper.insert(logItem);
             }
             pushService.pushProgress(projectId, null, act, "FINISH",
-                    anySuccess ? "SUCCESS" : "FAIL", anySuccess ? "部署完成" : "部署失败", version);
+                    allSuccess ? "SUCCESS" : "FAIL",
+                    allSuccess ? "部署完成" : (anySuccess ? "部分主机部署失败" : "部署失败"), version);
             /**
             * 之后deploy。
             * @param project project
             * @param anySuccess 任意成功
              */
-            afterDeploy(project, anySuccess);
+            afterDeploy(project, allSuccess);
 
             // 存在失败主机时：按配置自动回滚到上一版本
             boolean anyFail = logs.stream().anyMatch(
@@ -459,8 +525,20 @@ public class DeployServiceImpl implements DeployService {
         SshClients.Handle handle = null;
         try {
             handle = connectionManager.borrow(host, credential);
-            var result = handle.client().exec().command(command).execute();
-            return result.exitCode() == 0;
+            // 生产级：Future 超时控制，避免远端命令挂起导致整个部署卡死
+            final SshClients.Handle borrowed = handle;
+            java.util.concurrent.Future<Boolean> future = execCommandPool.submit(() -> {
+                var result = borrowed.client().exec().command(command).execute();
+                return result.exitCode() == 0;
+            });
+            int t = timeout > 0 ? timeout : projectProperties.getScriptTimeoutSeconds();
+            try {
+                return future.get(t, java.util.concurrent.TimeUnit.SECONDS);
+            } catch (java.util.concurrent.TimeoutException te) {
+                future.cancel(true);
+                borrowed.client().close();
+                throw new IllegalStateException("命令执行超时(>" + t + "s): " + command);
+            }
         } finally {
             if (handle != null) {
                 connectionManager.release(host.getId());
@@ -569,7 +647,7 @@ public class DeployServiceImpl implements DeployService {
         if (hostIds.isEmpty()) {
             return ReturnResult.error("项目未绑定目标服务器");
         }
-        String command = renderScript(script, project.getMsProjectDeployDir());
+        String command = renderScript(script, project.getMsProjectDeployDir(), isLinuxHostOs(project.getMsProjectHostOs()));
         List<MsProjectDeployLog> logs = new ArrayList<>();
         for (Long hostId : hostIds) {
             MsServerHost host = serverHostMapper.selectById(hostId);
@@ -788,8 +866,7 @@ public class DeployServiceImpl implements DeployService {
     * @throws IOException 归档失败时抛出
      */
     private Path archivePackage(Long projectId, String version, Path localFile) throws IOException {
-        Path archiveDir = Path.of(System.getProperty("user.dir"), "project-archives",
-                String.valueOf(projectId));
+        Path archiveDir = Path.of(projectProperties.getArchiveDir(), String.valueOf(projectId));
         Files.createDirectories(archiveDir);
         String fileName = safeFileName(version);
         Path target = archiveDir.resolve(fileName);
@@ -1092,11 +1169,27 @@ public class DeployServiceImpl implements DeployService {
     * @param dir dir
     * @return renderScript的结果
      */
-    private String renderScript(String script, String dir) {
+    private String renderScript(String script, String dir, boolean linux) {
         if (script == null) {
             return "";
         }
-        return script.replace("{{dir}}", dir == null ? "" : dir);
+        // 生产级：{{dir}} 按目标 OS 转义，防止目录含空格/特殊字符导致命令注入
+        String safeDir;
+        if (dir == null || dir.isBlank()) {
+            safeDir = "";
+        } else if (linux) {
+            safeDir = quote(dir);
+        } else {
+            safeDir = "\"" + dir.replace("\"", "\\\"") + "\"";
+        }
+        return script.replace("{{dir}}", safeDir);
+    }
+
+    /**
+     * 根据项目配置的主机 OS 判断是否为 Linux
+     */
+    private boolean isLinuxHostOs(String os) {
+        return os != null && os.trim().toUpperCase(Locale.ROOT).startsWith("LINUX");
     }
 
     /**

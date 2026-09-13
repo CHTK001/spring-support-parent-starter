@@ -243,16 +243,16 @@ public class EduKnowledgeDocServiceImpl extends ServiceImpl<EduKnowledgeDocMappe
      */
     private KnowledgeDocVO toVO(EduKnowledgeDoc entity) {
         KnowledgeDocVO vo = new KnowledgeDocVO();
-        vo.setId(entity.getKnowledgeDocId());
-        vo.setName(entity.getKnowledgeDocName());
-        vo.setType(entity.getKnowledgeDocType());
-        vo.setFilePath(entity.getKnowledgeDocFilePath());
-        vo.setFileSize(entity.getKnowledgeDocFileSize());
-        vo.setVectorStoreId(entity.getKnowledgeDocVectorStoreId());
-        vo.setSubject(entity.getKnowledgeDocSubject());
-        vo.setGradeLevel(entity.getKnowledgeDocGradeLevel());
-        vo.setStatus(entity.getKnowledgeDocStatus());
-        vo.setCreateTime(entity.getKnowledgeDocCreateTime());
+        vo.setKnowledgeDocId(entity.getKnowledgeDocId());
+        vo.setKnowledgeDocName(entity.getKnowledgeDocName());
+        vo.setKnowledgeDocType(entity.getKnowledgeDocType());
+        vo.setKnowledgeDocFilePath(entity.getKnowledgeDocFilePath());
+        vo.setKnowledgeDocFileSize(entity.getKnowledgeDocFileSize());
+        vo.setKnowledgeDocVectorStoreId(entity.getKnowledgeDocVectorStoreId());
+        vo.setKnowledgeDocSubject(entity.getKnowledgeDocSubject());
+        vo.setKnowledgeDocGradeLevel(entity.getKnowledgeDocGradeLevel());
+        vo.setKnowledgeDocStatus(entity.getKnowledgeDocStatus());
+        vo.setKnowledgeDocCreateTime(entity.getKnowledgeDocCreateTime());
         return vo;
     }
 }

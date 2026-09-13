@@ -93,30 +93,30 @@ public class EduQuestionServiceImpl extends ServiceImpl<EduQuestionMapper, EduQu
      */
     public Long saveQuestion(QuestionSaveDTO dto) {
         EduQuestion entity = new EduQuestion();
-        entity.setQuestionType(dto.getType());
-        entity.setQuestionSubject(dto.getSubject());
-        entity.setQuestionGradeLevel(dto.getGradeLevel());
-        entity.setQuestionGrade(dto.getGrade());
-        entity.setQuestionYear(dto.getYear());
-        entity.setQuestionDifficulty(dto.getDifficulty());
-        entity.setQuestionKnowledgePointIds(dto.getKnowledgePointIds());
-        entity.setQuestionStem(dto.getStem());
-        entity.setQuestionStemImages(dto.getStemImages());
-        entity.setQuestionOptions(dto.getOptions());
-        entity.setQuestionAnswer(dto.getAnswer());
-        entity.setQuestionAnalysis(dto.getAnalysis());
-        entity.setQuestionSource(dto.getSource());
-        entity.setQuestionSourceType(dto.getSourceType());
-        entity.setQuestionAuditStatus(dto.getAuditStatus() != null ? dto.getAuditStatus() : 0);
-        entity.setQuestionStatus(dto.getStatus() != null ? dto.getStatus() : 1);
+        entity.setQuestionType(dto.getQuestionType());
+        entity.setQuestionSubject(dto.getQuestionSubject());
+        entity.setQuestionGradeLevel(dto.getQuestionGradeLevel());
+        entity.setQuestionGrade(dto.getQuestionGrade());
+        entity.setQuestionYear(dto.getQuestionYear());
+        entity.setQuestionDifficulty(dto.getQuestionDifficulty());
+        entity.setQuestionKnowledgePointIds(dto.getQuestionKnowledgePointIds());
+        entity.setQuestionStem(dto.getQuestionStem());
+        entity.setQuestionStemImages(dto.getQuestionStemImages());
+        entity.setQuestionOptions(dto.getQuestionOptions());
+        entity.setQuestionAnswer(dto.getQuestionAnswer());
+        entity.setQuestionAnalysis(dto.getQuestionAnalysis());
+        entity.setQuestionSource(dto.getQuestionSource());
+        entity.setQuestionSourceType(dto.getQuestionSourceType());
+        entity.setQuestionAuditStatus(dto.getQuestionAuditStatus() != null ? dto.getQuestionAuditStatus() : 0);
+        entity.setQuestionStatus(dto.getQuestionStatus() != null ? dto.getQuestionStatus() : 1);
 
-        if (dto.getId() != null && dto.getId() > 0) {
+        if (dto.getQuestionId() != null && dto.getQuestionId() > 0) {
             // 更新
-            entity.setQuestionId(dto.getId());
+            entity.setQuestionId(dto.getQuestionId());
             entity.setQuestionUpdateTime(LocalDateTime.now());
             baseMapper.updateById(entity);
-            log.info("更新题目成功，ID: {}", dto.getId());
-            return dto.getId();
+            log.info("更新题目成功，ID: {}", dto.getQuestionId());
+            return dto.getQuestionId();
         } else {
             // 新增
             entity.setQuestionUseCount(0);

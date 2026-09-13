@@ -5,7 +5,6 @@ import com.chua.starter.ai.support.entity.settings.SysAiGroup;
 import com.chua.starter.ai.support.mapper.settings.AiGroupMapper;
 import com.chua.starter.ai.support.model.AiGroupDTO;
 import com.chua.starter.ai.support.service.settings.AiGroupService;
-import com.chua.common.support.converter.Converter;
 import com.chua.common.support.lang.json.Json;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -149,7 +148,19 @@ public class AiGroupServiceImpl implements AiGroupService {
     * @return 字符串列表
      */
     private List<String> parseStringList(String content) {
-        return Converter.convertIfListNecessary(content, String.class);
+        if (content == null || content.isBlank()) {
+            return new java.util.ArrayList<>();
+        }
+        try {
+            if (content.trim().startsWith("[")) {
+                @SuppressWarnings("unchecked")
+                List<String> list = Json.fromJson(content, List.class);
+                return list != null ? list : new java.util.ArrayList<>();
+            }
+            return java.util.Arrays.stream(content.split(",")).map(String::trim).filter(s -> !s.isEmpty()).toList();
+        } catch (Exception e) {
+            return java.util.Arrays.stream(content.split(",")).map(String::trim).filter(s -> !s.isEmpty()).toList();
+        }
     }
 
     /**
@@ -159,6 +170,18 @@ public class AiGroupServiceImpl implements AiGroupService {
     * @return Long 列表
      */
     private List<Long> parseLongList(String content) {
-        return Converter.convertIfListNecessary(content, Long.class);
+        if (content == null || content.isBlank()) {
+            return new java.util.ArrayList<>();
+        }
+        try {
+            if (content.trim().startsWith("[")) {
+                @SuppressWarnings("unchecked")
+                List<Long> list = Json.fromJson(content, List.class);
+                return list != null ? list : new java.util.ArrayList<>();
+            }
+            return java.util.Arrays.stream(content.split(",")).map(String::trim).filter(s -> !s.isEmpty()).map(Long::parseLong).toList();
+        } catch (Exception e) {
+            return java.util.Arrays.stream(content.split(",")).map(String::trim).filter(s -> !s.isEmpty()).map(Long::parseLong).toList();
+        }
     }
 }

@@ -9,7 +9,6 @@ import com.chua.starter.ai.support.mapper.SysAiManufacturerMapper;
 import com.chua.starter.ai.support.mapper.settings.AiModelMapper;
 import com.chua.starter.ai.support.model.AiModelDTO;
 import com.chua.starter.ai.support.service.settings.AiModelService;
-import com.chua.common.support.converter.Converter;
 import com.chua.common.support.lang.json.Json;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -237,7 +236,19 @@ public class AiModelServiceImpl implements AiModelService {
     }
 
     private List<String> parseList(String content) {
-        return Converter.convertIfListNecessary(content, String.class);
+        if (content == null || content.isBlank()) {
+            return new java.util.ArrayList<>();
+        }
+        try {
+            if (content.trim().startsWith("[")) {
+                @SuppressWarnings("unchecked")
+                List<String> list = Json.fromJson(content, List.class);
+                return list != null ? list : new java.util.ArrayList<>();
+            }
+            return java.util.Arrays.stream(content.split(",")).map(String::trim).filter(s -> !s.isEmpty()).toList();
+        } catch (Exception e) {
+            return java.util.Arrays.stream(content.split(",")).map(String::trim).filter(s -> !s.isEmpty()).toList();
+        }
     }
 
     private String toJsonArray(List<String> values) {

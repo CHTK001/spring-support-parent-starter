@@ -23,7 +23,7 @@ spring:
   sql:
     init:
       mode: always
-      schema-locations: classpath:db/h2-test-schema.sql
+      schema-locations: classpath:db/h2-local-schema.sql
   h2:
     console:
       enabled: true

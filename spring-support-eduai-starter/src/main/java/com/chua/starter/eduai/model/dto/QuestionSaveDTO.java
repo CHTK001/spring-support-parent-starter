@@ -14,85 +14,85 @@ public class QuestionSaveDTO {
     /**
     * 题目标识（更新时必填）
      */
-    private Long id;
+    private Long questionId;
 
     /**
     * 题型
      */
-    private String type;
+    private String questionType;
 
     /**
     * 学科
      */
-    private String subject;
+    private String questionSubject;
 
     /**
     * 年段
      */
-    private String gradeLevel;
+    private String questionGradeLevel;
 
     /**
     * 年级
      */
-    private String grade;
+    private String questionGrade;
 
     /**
     * 年份
      */
-    private String year;
+    private String questionYear;
 
     /**
     * 难度（1-5）
      */
-    private Integer difficulty;
+    private Integer questionDifficulty;
 
     /**
     * 知识点标识列表（逗号分隔）
      */
-    private String knowledgePointIds;
+    private String questionKnowledgePointIds;
 
     /**
     * 题干
      */
-    private String stem;
+    private String questionStem;
 
     /**
     * 题干图片URL（逗号分隔）
      */
-    private String stemImages;
+    private String questionStemImages;
 
     /**
     * 选项JSON
      */
-    private String options;
+    private String questionOptions;
 
     /**
     * 标准答案
      */
-    private String answer;
+    private String questionAnswer;
 
     /**
     * 解析
      */
-    private String analysis;
+    private String questionAnalysis;
 
     /**
     * 来源
      */
-    private String source;
+    private String questionSource;
 
     /**
     * 来源类型（MANUAL/导入/CRAWL）
      */
-    private String sourceType;
+    private String questionSourceType;
 
     /**
     * 审核状态（0-待审核 1-通过 2-驳回）
      */
-    private Integer auditStatus;
+    private Integer questionAuditStatus;
 
     /**
     * 状态（0-停用 1-启用）
      */
-    private Integer status;
+    private Integer questionStatus;
 }

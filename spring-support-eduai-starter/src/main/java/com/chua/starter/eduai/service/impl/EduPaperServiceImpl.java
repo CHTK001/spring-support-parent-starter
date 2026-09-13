@@ -266,17 +266,17 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
      */
     private PaperVO toVO(EduPaper paper) {
         PaperVO vo = new PaperVO();
-        vo.setId(paper.getPaperId());
-        vo.setName(paper.getPaperName());
-        vo.setSubject(paper.getPaperSubject());
-        vo.setGradeLevel(paper.getPaperGradeLevel());
-        vo.setGrade(paper.getPaperGrade());
-        vo.setTotalScore(paper.getPaperTotalScore());
-        vo.setDuration(paper.getPaperDuration());
-        vo.setQuestionCount(paper.getPaperQuestionCount());
-        vo.setStatus(paper.getPaperStatus());
-        vo.setSource(paper.getPaperSource());
-        vo.setCreateTime(paper.getPaperCreateTime());
+        vo.setPaperId(paper.getPaperId());
+        vo.setPaperName(paper.getPaperName());
+        vo.setPaperSubject(paper.getPaperSubject());
+        vo.setPaperGradeLevel(paper.getPaperGradeLevel());
+        vo.setPaperGrade(paper.getPaperGrade());
+        vo.setPaperTotalScore(paper.getPaperTotalScore());
+        vo.setPaperDuration(paper.getPaperDuration());
+        vo.setPaperQuestionCount(paper.getPaperQuestionCount());
+        vo.setPaperStatus(paper.getPaperStatus());
+        vo.setPaperSource(paper.getPaperSource());
+        vo.setPaperCreateTime(paper.getPaperCreateTime());
         return vo;
     }
 }
