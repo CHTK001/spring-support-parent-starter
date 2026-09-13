@@ -25,15 +25,19 @@ spring:
 
 # APM 数据源与 Agent 自注入开关
 hotsport:
-  agent:
-    enabled: true
-    shell-port: 4567
-    options: ""
   # 静态存储后端：inmemory / sqlite / noop
   apm:
     storage:
       type: inmemory
       retention-ms: 604800000
+
+# Agent 自注入（spring-support-agent-starter 自动配置，前缀 runtime.agent）
+runtime:
+  agent:
+    enabled: true
+    shell-port: 4567
+    options: ""
+    async: true
 
 logging:
   level:

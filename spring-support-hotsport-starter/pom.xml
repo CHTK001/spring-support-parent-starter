@@ -67,7 +67,7 @@
             <version>${utils.version}</version>
         </dependency>
 
-        <!-- 运行时 Starter（RuntimeBoot.attachSelf 自注入） -->
+        <!-- 运行时 Starter（RuntimeBoot.attachSelf 自注入入口） -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-runtime-starter</artifactId>

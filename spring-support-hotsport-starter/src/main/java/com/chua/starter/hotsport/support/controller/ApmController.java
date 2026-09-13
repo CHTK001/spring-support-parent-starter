@@ -149,6 +149,80 @@ public class ApmController {
         return ReturnResult.ok(status);
     }
 
+    /**
+     * 按 traceId 查询整条链路的全部 span（Trace 详情抽屉数据源）。
+     *
+     * @param traceId 链路 ID
+     * @return span 列表（按开始时间升序）
+     */
+    @GetMapping("/trace/{traceId}")
+    public ReturnResult<List<Map<String, Object>>> traceDetail(
+            @org.springframework.web.bind.annotation.PathVariable String traceId) {
+        return ReturnResult.ok(apmQueryService.traceDetail(traceId));
+    }
+
+    // ------------------------------------------------------------------
+    // 全量 CSV 导出（增强）— 直接下载文件，不受分页限制
+    // ------------------------------------------------------------------
+
+    /**
+     * 全量导出传输记录 CSV。
+     */
+    @GetMapping("/export/transmissions")
+    public void exportTransmissions(
+            @RequestParam(required = false) String source,
+            @RequestParam(required = false) String target,
+            @RequestParam(required = false) String protocol,
+            @RequestParam(required = false) Boolean errorOnly,
+            @RequestParam(required = false) Long startTime,
+            @RequestParam(required = false) Long endTime,
+            jakarta.servlet.http.HttpServletResponse response) throws IOException {
+        String csv = apmQueryService.exportTransmissionsCsv(source, target, protocol, errorOnly, startTime, endTime);
+        writeCsvAttachment(response, "transmissions-" + System.currentTimeMillis() + ".csv", csv);
+    }
+
+    /**
+     * 全量导出资源泄漏 CSV。
+     */
+    @GetMapping("/export/leaks")
+    public void exportLeaks(
+            @RequestParam(required = false) String resourceType,
+            @RequestParam(required = false) Long minAgeMs,
+            @RequestParam(required = false) Long startTime,
+            @RequestParam(required = false) Long endTime,
+            jakarta.servlet.http.HttpServletResponse response) throws IOException {
+        String csv = apmQueryService.exportLeaksCsv(resourceType, minAgeMs, startTime, endTime);
+        writeCsvAttachment(response, "leaks-" + System.currentTimeMillis() + ".csv", csv);
+    }
+
+    /**
+     * 全量导出日志 CSV。
+     */
+    @GetMapping("/export/logs")
+    public void exportLogs(@RequestParam(required = false) String level,
+                           jakarta.servlet.http.HttpServletResponse response) throws IOException {
+        String csv = apmQueryService.exportLogsCsv(level);
+        writeCsvAttachment(response, "logs-" + System.currentTimeMillis() + ".csv", csv);
+    }
+
+    /**
+     * 直接写 CSV 下载响应（绕过消息转换器；UTF-8 BOM 保证 Excel 中文不乱码）。
+     */
+    private static void writeCsvAttachment(jakarta.servlet.http.HttpServletResponse response,
+                                           String filename, String csv) throws IOException {
+        response.setStatus(200);
+        response.setContentType("text/csv;charset=UTF-8");
+        response.setHeader("Content-Disposition", "attachment; filename=\"" + filename + "\"");
+        byte[] bom = {(byte) 0xEF, (byte) 0xBB, (byte) 0xBF};
+        byte[] body = csv.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        response.setContentLength(bom.length + body.length);
+        try (java.io.OutputStream os = response.getOutputStream()) {
+            os.write(bom);
+            os.write(body);
+            os.flush();
+        }
+    }
+
     // ------------------------------------------------------------------
     // SSE 实时流（增强）
     // ------------------------------------------------------------------
