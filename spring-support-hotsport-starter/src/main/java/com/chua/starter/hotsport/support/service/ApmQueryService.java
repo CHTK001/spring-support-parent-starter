@@ -1,20 +1,20 @@
 package com.chua.starter.hotsport.support.service;
 
-import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.runtime.apm.storage.ApmStorage;
 import com.chua.runtime.apm.storage.LeakRecord;
 import com.chua.runtime.apm.storage.LogRecord;
 import com.chua.runtime.apm.storage.Query;
 import com.chua.runtime.apm.storage.TransmissionEvent;
 import com.chua.runtime.protocol.DependencyEdge;
-import com.chua.starter.hotsport.support.config.HotsportProperties;
 import com.chua.runtime.protocol.Endpoint;
+import com.chua.starter.hotsport.support.config.HotsportProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-
 import jakarta.annotation.PostConstruct;
 import java.nio.file.Path;
+import java.util.concurrent.atomic.AtomicBoolean;
+import org.springframework.stereotype.Service;
+
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
@@ -22,44 +22,44 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
-* APM 数据查询服务 — 统一门面，对 {@link StorageManager} 读操作做降级兜底。
-*
-* <p>设计原则：APM 数据"能 attach 就读实时，不能 attach 就返回空 + 明确标记"，
-* 保证前端无论 智能体 是否成功注入，页面始终可演示、不报错。</p>
-*
-* @author CH
-* @since 4.0.0.42
+ * APM 数据查询服务 — 统一门面，对 {@link StorageManager} 读操作做降级兜底。
+ *
+ * <p>设计原则：APM 数据"能 attach 就读实时，不能 attach 就返回空 + 明确标记"，
+ * 保证前端无论 agent 是否成功注入，页面始终可演示、不报错。</p>
+ *
+ * <p>Agent 自注入由 {@code spring-support-agent-starter} 自动配置完成
+ * （引入依赖即注入），本服务仅读取其注入状态做降级标记。</p>
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 @Slf4j
 @Service
 public class ApmQueryService {
 
-    /** 是否已尝试自注入 智能体。 */
+    /** 是否已尝试自注入 Agent。 */
     private final AtomicBoolean attachAttempted = new AtomicBoolean(false);
 
-    /** 智能体 自注入是否成功。 */
+    /** Agent 自注入是否成功。 */
     private volatile boolean agentActive = false;
 
     @Value("${hotsport.agent.enabled:true}")
-    private boolean agentEnabled; // 智能体已启用
+    private boolean agentEnabled;
 
     @Value("${hotsport.agent.shell-port:4567}")
-    private int shellPort; // Shell端口
+    private int shellPort;
 
     @Value("${hotsport.agent.options:}")
-    private String agentOptions; // 智能体期权
+    private String agentOptions;
 
-    /** 时间格式：轮次 毫秒 → 前端可读 ISO 字符串。 */
+    /** 时间格式：epoch 毫秒 → 前端可读字符串。 */
     private static final DateTimeFormatter ISO_FMT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneOffset.systemDefault());
 
     /**
-    * 启动时尝试自注入 智能体。
-    * 失败仅告警，不阻断应用（前端走降级路径）。
+     * 启动时异步自注入 Agent（虚拟线程，不阻塞 Spring 主线程）。
      */
     @PostConstruct
     public void attachAgent() {
@@ -67,7 +67,6 @@ public class ApmQueryService {
             log.info("[Hotsport] Agent 自注入被配置禁用 (hotsport.agent.enabled=false)");
             return;
         }
-        // 异步执行：agentmain 涉及字节码 retransform（大量类），阻塞主线程会拖慢 Spring 上下文启动
         Thread.ofVirtual().name("hotsport-agent-attach").start(this::doAttachAgent);
     }
 
@@ -78,7 +77,7 @@ public class ApmQueryService {
         }
         try {
             Path agentJar = resolveAgentJarFromBootInf();
-            var boot = com.chua.runtime.starter.RuntimeBoot.create()
+            com.chua.runtime.starter.RuntimeBoot.create()
                     .withAgent(agentJar)
                     .withAgentOptions(agentOptions.isEmpty() ? "port=" + shellPort : agentOptions)
                     .attachSelf();
@@ -91,15 +90,11 @@ public class ApmQueryService {
     }
 
     /**
-    * 从 Spring Boot fat jar 的 {@code BOOT-INF/lib/} 中定位 agent jar 并解压到临时目录。
-    *
-    * <p>{@code RuntimeBoot.resolveSelfAgentPath()} 依赖 System.getProperty("java.class.path")，
-    * 但 Spring Boot fat jar 的 LaunchedClassLoader 不会回填该属性，导致探测失败。
-    * 此方法直接解析外层 jar 文件作为兜底方案。</p>
-    *
-    * @return agent jar 物理路径；找不到返回 null
+     * 从 Spring Boot fat jar 的 BOOT-INF/lib/ 中定位 agent jar 并解压到临时目录。
+     *
+     * @return agent jar 物理路径；找不到返回 null
      */
-    private static Path resolveAgentJarFromBootInf() {
+    private static Path resolveAgentJarFromBootInf() throws java.io.IOException {
         String[] jars = System.getProperty("java.class.path").split(java.io.File.pathSeparator);
         for (String entry : jars) {
             Path candidate = Path.of(entry);
@@ -129,19 +124,12 @@ public class ApmQueryService {
                 }
                 log.info("[Hotsport] Agent jar 提取自 fat jar {} -> {}", target.get().getName(), dest.getAbsolutePath());
                 return dest.toPath();
-            } catch (Exception e) {
-                log.debug("[Hotsport] 检查 {} 失败: {}", candidate, e.getMessage());
             }
         }
-        log.warn("[Hotsport] 未找到 agent jar，使用默认路径");
         return null;
     }
 
-    /**
-    * 智能体 是否已激活。
-    *
-    * @return 是否智能体活跃的结果
-     */
+    /** Agent 是否已激活。 */
     public boolean isAgentActive() {
         return agentActive;
     }
@@ -151,9 +139,9 @@ public class ApmQueryService {
     // ------------------------------------------------------------------
 
     /**
-    * 概览统计（各类型总量 + 智能体 状态）。
-    *
-    * @return 统计 映射
+     * 概览统计（各类型总量 + agent 状态）。
+     *
+     * @return 统计 Map
      */
     public Map<String, Object> stats() {
         Map<String, Object> result = new LinkedHashMap<>();
@@ -212,7 +200,7 @@ public class ApmQueryService {
             q.setEndTime(endTime);
         }
         List<TransmissionEvent> all = queryAll(q, storage -> storage.queryTransmissions(q));
- // 源/Target 在 transmission事件 里是 源主机/Target主机，做内存过滤
+        // source/target 在 TransmissionEvent 里是 sourceHost/targetHost，做内存过滤
         List<Map<String, Object>> items = new ArrayList<>();
         for (TransmissionEvent e : all) {
             if (source != null && !source.isBlank()
@@ -234,9 +222,7 @@ public class ApmQueryService {
     }
 
     /**
-    * transmissiondto。
-    * @param e e
-    * @return transmissionDto的结果
+     * 传输记录 DTO。
      */
     private Map<String, Object> transmissionDto(TransmissionEvent e) {
         Map<String, Object> m = new LinkedHashMap<>();
@@ -268,10 +254,10 @@ public class ApmQueryService {
     // ------------------------------------------------------------------
 
     /**
-    * 查询依赖边（源 → Target 聚合）。
-    *
-    * @param size 上限
-    * @return 依赖边列表
+     * 查询依赖边（source → target 聚合）。
+     *
+     * @param size 上限
+     * @return 依赖边列表
      */
     public List<Map<String, Object>> dependencies(int size) {
         Query q = new Query().setLimit(size);
@@ -355,12 +341,12 @@ public class ApmQueryService {
     // ------------------------------------------------------------------
 
     /**
-    * 分页查询日志。
-    *
-    * @param page  页码
-    * @param size  每页条数
-    * @param level 级别过滤（可空）
-    * @return 分页结果
+     * 分页查询日志。
+     *
+     * @param page  页码
+     * @param size  每页条数
+     * @param level 级别过滤（可空）
+     * @return 分页结果
      */
     public Map<String, Object> logs(int page, int size, String level) {
         Query q = new Query().setLimit(size).setOffset(Math.max(0, (page - 1) * size));
@@ -390,26 +376,189 @@ public class ApmQueryService {
         return result;
     }
 
+    /**
+     * 按 traceId 查询整条链路的全部 span（Trace 详情抽屉数据源）。
+     *
+     * @param traceId 链路 ID
+     * @return 该 trace 下所有传输记录 DTO（按开始时间升序）
+     */
+    public List<Map<String, Object>> traceDetail(String traceId) {
+        if (traceId == null || traceId.isBlank()) {
+            return new ArrayList<>();
+        }
+        Query q = new Query().setLimit(500).setTraceId(traceId);
+        List<TransmissionEvent> all = queryAll(q, storage -> storage.queryTransmissions(q));
+        List<Map<String, Object>> items = new ArrayList<>();
+        for (TransmissionEvent e : all) {
+            items.add(transmissionDto(e));
+        }
+        items.sort((a, b) -> String.valueOf(a.get("startTime")).compareTo(String.valueOf(b.get("startTime"))));
+        return items;
+    }
+
+    // ------------------------------------------------------------------
+    // 全量导出（不受分页限制）
+    // ------------------------------------------------------------------
+
+    /** 单次导出上限 — 防止全量拉爆内存。 */
+    private static final int EXPORT_CAP = 50000;
+
+    /**
+     * 全量导出传输记录为 CSV 文本。
+     */
+    public String exportTransmissionsCsv(String source, String target, String protocol,
+                                         Boolean errorOnly, Long startTime, Long endTime) {
+        Query q = new Query().setLimit(EXPORT_CAP);
+        if (protocol != null && !protocol.isBlank()) {
+            q.setProtocol(protocol);
+        }
+        if (Boolean.TRUE.equals(errorOnly)) {
+            q.setErrorOnly(true);
+        }
+        if (startTime != null) {
+            q.setStartTime(startTime);
+        }
+        if (endTime != null) {
+            q.setEndTime(endTime);
+        }
+        List<TransmissionEvent> all = queryAll(q, storage -> storage.queryTransmissions(q));
+        String[] header = {"id", "traceId", "spanId", "source", "target", "protocol", "operation",
+                "status", "statusCode", "startTime", "durationMs", "bytesOut", "bytesIn", "errorType", "errorMessage"};
+        List<Map<String, Object>> rows = new ArrayList<>();
+        for (TransmissionEvent e : all) {
+            if (source != null && !source.isBlank() && !containsIgnoreCase(e.getSourceHost(), source)) {
+                continue;
+            }
+            if (target != null && !target.isBlank() && !containsIgnoreCase(e.getTargetHost(), target)) {
+                continue;
+            }
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", e.getId());
+            m.put("traceId", e.getTraceId());
+            m.put("spanId", e.getSpanId());
+            m.put("source", endpointLabel(e.getSourceProtocol(), e.getSourceSoftware(),
+                    e.getSourceHost(), e.getSourcePort(), e.getSourcePath()));
+            m.put("target", endpointLabel(e.getTargetProtocol(), e.getTargetSoftware(),
+                    e.getTargetHost(), e.getTargetPort(), e.getTargetPath()));
+            m.put("protocol", e.getProtocol());
+            m.put("operation", e.getOperation());
+            m.put("status", e.getStatus() != null ? e.getStatus().name() : "OK");
+            m.put("statusCode", e.getStatusCode());
+            m.put("startTime", toIso(e.getStartTime()));
+            m.put("durationMs", e.getDuration());
+            m.put("bytesOut", e.getBytesOut());
+            m.put("bytesIn", e.getBytesIn());
+            m.put("errorType", e.getErrorType());
+            m.put("errorMessage", e.getErrorMessage());
+            rows.add(m);
+        }
+        return toCsv(header, rows);
+    }
+
+    /**
+     * 全量导出资源泄漏为 CSV 文本。
+     */
+    public String exportLeaksCsv(String resourceType, Long minAgeMs, Long startTime, Long endTime) {
+        Query q = new Query().setLimit(EXPORT_CAP);
+        if (startTime != null) {
+            q.setStartTime(startTime);
+        }
+        if (endTime != null) {
+            q.setEndTime(endTime);
+        }
+        List<LeakRecord> all = queryAll(q, storage -> storage.queryLeaks(q));
+        String[] header = {"id", "handleId", "resourceType", "resourceName", "thread", "active", "ageMs", "detectedAt"};
+        long now = System.currentTimeMillis();
+        List<Map<String, Object>> rows = new ArrayList<>();
+        for (LeakRecord l : all) {
+            if (resourceType != null && !resourceType.isBlank()
+                    && !resourceType.equalsIgnoreCase(l.getKind())) {
+                continue;
+            }
+            long age = l.isActive() ? (now - l.getCreatedAt()) : (l.getClosedAt() - l.getCreatedAt());
+            if (minAgeMs != null && age < minAgeMs) {
+                continue;
+            }
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", l.getId());
+            m.put("handleId", l.getHandleId());
+            m.put("resourceType", l.getKind());
+            m.put("resourceName", l.getName());
+            m.put("thread", l.getThread());
+            m.put("active", l.isActive());
+            m.put("ageMs", age);
+            m.put("detectedAt", toIso(l.getCreatedAt()));
+            rows.add(m);
+        }
+        return toCsv(header, rows);
+    }
+
+    /**
+     * 全量导出日志为 CSV 文本。
+     */
+    public String exportLogsCsv(String level) {
+        Query q = new Query().setLimit(EXPORT_CAP);
+        List<LogRecord> all = queryAll(q, storage -> storage.queryLogs(q));
+        String[] header = {"id", "timestamp", "level", "logger", "className", "methodName", "message", "traceId"};
+        List<Map<String, Object>> rows = new ArrayList<>();
+        for (LogRecord r : all) {
+            if (level != null && !level.isBlank() && !level.equalsIgnoreCase(r.getLevel())) {
+                continue;
+            }
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", r.getId());
+            m.put("timestamp", toIso(r.getTimestamp()));
+            m.put("level", r.getLevel());
+            m.put("logger", r.getLogger());
+            m.put("className", r.getClassName());
+            m.put("methodName", r.getMethodName());
+            m.put("message", r.getMessage());
+            m.put("traceId", r.getTraceId());
+            rows.add(m);
+        }
+        return toCsv(header, rows);
+    }
+
+    /**
+     * Map 列表 → CSV 文本（RFC 4180）。
+     */
+    private static String toCsv(String[] header, List<Map<String, Object>> rows) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < header.length; i++) {
+            if (i > 0) {
+                sb.append(',');
+            }
+            sb.append(header[i]);
+        }
+        sb.append("\r\n");
+        for (Map<String, Object> row : rows) {
+            for (int i = 0; i < header.length; i++) {
+                if (i > 0) {
+                    sb.append(',');
+                }
+                Object v = row.get(header[i]);
+                String s = v == null ? "" : String.valueOf(v);
+                if (s.contains(",") || s.contains("\"") || s.contains("\n") || s.contains("\r")) {
+                    sb.append('"').append(s.replace("\"", "\"\"")).append('"');
+                } else {
+                    sb.append(s);
+                }
+            }
+            sb.append("\r\n");
+        }
+        return sb.toString();
+    }
+
     // ------------------------------------------------------------------
     // 内部工具
     // ------------------------------------------------------------------
 
-    /**
-    * 当前 APM 存储（兜底 Noop，永不为 空）。
-    *
-    * @return 当前storage的结果
-     */
+    /** 当前 APM 存储（兜底 Noop，永不为 null）。 */
     private ApmStorage currentStorage() {
         return HotsportProperties.storage();
     }
 
-    /**
-    * 取存储并执行查询；存储不可用返回空列表。
-    *
-    * @param q q
-    * @param fn fn
-    * @return 查询全部的结果
-     */
+    /** 取存储并执行查询；存储不可用返回空列表。 */
     private <T> List<T> queryAll(Query q, java.util.function.Function<ApmStorage, List<T>> fn) {
         ApmStorage storage = currentStorage();
         if (storage == null) {
@@ -424,32 +573,15 @@ public class ApmQueryService {
         }
     }
 
-    /**
-    * containsignore大小写。
-    * @param haystack haystack
-    * @param needle needle
-    * @return containsignore大小写的结果
-     */
     private static boolean containsIgnoreCase(String haystack, String needle) {
         return haystack != null && needle != null
                 && haystack.toLowerCase().contains(needle.toLowerCase());
     }
 
-    /**
-    * 端点标签。
-    * @param edge edge
-    * @return 端点标签的结果
-     */
     private static String endpointLabel(DependencyEdge edge) {
         return edge.getSource() != null ? edge.getSource().displayLabel() : "?";
     }
 
-    /**
-    * 端点标签。
-    * @param edge edge
-    * @param target Target
-    * @return 端点标签的结果
-     */
     private static String endpointLabel(DependencyEdge edge, boolean target) {
         Endpoint t = target ? edge.getTarget() : edge.getSource();
         return t != null ? t.displayLabel() : "?";
@@ -476,11 +608,6 @@ public class ApmQueryService {
         return sb.length() == 0 ? "?" : sb.toString();
     }
 
-    /**
-    * 转为iso。
-    * @param epochMillis 轮次millis
-    * @return 转为iso的结果
-     */
     private static String toIso(long epochMillis) {
         if (epochMillis <= 0) {
             return "";
