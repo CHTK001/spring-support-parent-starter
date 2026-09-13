@@ -2,6 +2,7 @@ package com.chua.starter.monitor.support.server.filter;
 
 import com.chua.common.support.network.server.ServerSetting;
 import com.chua.common.support.network.server.filter.ServerFilter;
+import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.monitor.support.server.model.ServerFilterDescriptor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -138,7 +139,39 @@ public class ServerFilterFactory {
         if (FILE_STORAGE_ALIAS.equalsIgnoreCase(type) || FILE_STORAGE_FILTER_CLASS.equals(type)) {
             return createFileStorageFilter(descriptor);
         }
+        // 非全限定类名(不含点)时, 先尝试按 SPI 名称实例化, 失败回退 FQCN
+        if (type.indexOf('.') == -1) {
+            ServerFilter spiFilter = createSpiFilter(type, descriptor, setting);
+            if (spiFilter != null) {
+                return spiFilter;
+            }
+        }
         return createGenericFilter(type, descriptor, setting);
+    }
+
+    /**
+    * 按 ServerFilter SPI 名称实例化过滤器。
+    *
+    * @param type       SPI 名称(如 url-mapping/shell-url-mapping)
+    * @param descriptor 插件描述
+    * @param setting    所属服务器配置
+    * @return 过滤器实例, SPI 未注册或实例化失败返回 空
+     */
+    private ServerFilter createSpiFilter(String type, ServerFilterDescriptor descriptor, ServerSetting setting) {
+        try {
+            ServerFilter filter = ServiceProvider.of(ServerFilter.class).getNewExtension(type, setting);
+            if (filter == null) {
+                filter = ServiceProvider.of(ServerFilter.class).getNewExtension(type);
+            }
+            if (filter == null) {
+                return null;
+            }
+            log.info("[ServerFilterFactory] SPI 过滤器已创建: name={}, type={}", descriptor.getName(), type);
+            return filter;
+        } catch (Exception e) {
+            log.debug("[ServerFilterFactory] SPI 过滤器实例化失败, 回退 FQCN: {} - {}", type, e.getMessage());
+            return null;
+        }
     }
 
     /**
