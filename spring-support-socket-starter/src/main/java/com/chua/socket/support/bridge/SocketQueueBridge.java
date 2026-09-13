@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
@@ -31,12 +32,13 @@ import java.util.Map;
 * </pre>
 *
 * @author CH
-* @since 4.0.0.42
- */
+ * @since 4.0.0.42
+  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
 @ConditionalOnProperty(prefix = "plugin.queue", name = "enable", havingValue = "true")
+@ConditionalOnMissingBean(name = "monitorSocketQueueBridge")
 public class SocketQueueBridge {
 
     /** 固定订阅 topic：业务方统一向此 topic 发送 套接字 广播消息 */
