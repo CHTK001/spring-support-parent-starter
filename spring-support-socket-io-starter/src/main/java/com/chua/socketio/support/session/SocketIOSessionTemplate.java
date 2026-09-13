@@ -118,6 +118,11 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
                 }
             }
         }
+        // 诊断：登记 session 数（会话登记断点排查）
+        if (log.isDebugEnabled()) {
+            int n = sessionCache.values().stream().mapToInt(List::size).sum();
+            log.debug("[SocketIO] 广播完成 event={}, 已登记 session={}", event, n);
+        }
     }
 
     @Override

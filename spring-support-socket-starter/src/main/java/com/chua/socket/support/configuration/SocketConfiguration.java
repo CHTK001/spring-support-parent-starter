@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import static com.chua.starter.common.support.logger.ModuleLog.*;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -95,10 +96,13 @@ public class SocketConfiguration {
      */
     @Bean
     @Primary
-    @ConditionalOnMissingBean(SocketSessionTemplate.class)
     @ConditionalOnProperty(prefix = SocketProperties.PRE, name = "enable", havingValue = "true")
     public SocketSessionTemplate socketSessionTemplate(
-            Map<String, SocketSessionTemplate> templates) {
+            @Qualifier("socketSessionTemplates") Map<String, SocketSessionTemplate> templates) {
+        if (templates == null || templates.isEmpty()) {
+            throw new IllegalStateException(
+                    "[Socket] 未注册任何 SocketSessionTemplate，请配置 plugin.socket 协议（如 socketio）");
+        }
         return templates.values().iterator().next();
     }
 

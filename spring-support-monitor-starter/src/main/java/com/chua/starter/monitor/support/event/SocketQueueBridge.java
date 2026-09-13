@@ -67,6 +67,8 @@ public class SocketQueueBridge {
                     if (ack != null) ack.acknowledge();
                     return;
                 }
+                // 诊断：确认广播实际使用的会话模板实现类型
+                log.debug("[socket-bridge] 广播模板类型: {}", socketTemplate.getClass().getName());
                 socketTemplate.broadcast("message", json);
                 log.debug("[socket-bridge] 已广播 {} 字节到前端", json.length());
             } catch (Exception e) {
