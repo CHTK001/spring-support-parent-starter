@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Spring Support Agent Starter - Java Agent 自动注入模块
+
+    引入本依赖即自动向当前 JVM 自注入 Runtime Agent（字节码插桩 + APM 采集）：
+    通过 Spring Boot 自动配置（AutoConfiguration.imports）在单例初始化完成后，
+    于虚拟线程中调用 RuntimeBoot.attachSelf()，零启动参数、零代码侵入。
+
+    配置项（前缀 runtime.agent）：
+      enabled     是否启用自注入（默认 true）
+      options     agent 参数（如 port=4567）
+      async       是否异步注入（默认 true，避免阻塞启动）
+
+    @author CH
+    @version 4.0.0.42
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.chua</groupId>
+        <artifactId>spring-support-parent-starter</artifactId>
+        <version>4.0.0.42</version>
+    </parent>
+
+    <artifactId>spring-support-agent-starter</artifactId>
+    <description>Java Agent 自动注入：引入依赖即自动 RuntimeBoot.attachSelf 自注入当前 JVM</description>
+
+    <properties>
+        <utils.version>4.0.0.42</utils.version>
+    </properties>
+
+    <dependencies>
+        <!-- Spring Boot 自动配置基础 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter</artifactId>
+        </dependency>
+
+        <!-- 运行时 Starter（RuntimeBoot.attachSelf 自注入入口） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-runtime-starter</artifactId>
+            <version>${utils.version}</version>
+        </dependency>
+
+        <!-- 运行时 Agent（自 attach 的目标 jar，由 classpath / fat jar 探测） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-runtime-agent</artifactId>
+            <version>${utils.version}</version>
+        </dependency>
+
+        <!-- Lombok -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- 测试：自动配置契约测试 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>

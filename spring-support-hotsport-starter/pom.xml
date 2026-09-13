@@ -67,18 +67,12 @@
             <version>${utils.version}</version>
         </dependency>
 
-        <!-- 运行时 Starter（RuntimeBoot.attachSelf 自注入入口） -->
+        <!-- Agent 自动注入（RuntimeBoot.attachSelf 自注入，自动配置于 spring-support-agent-starter，
+             传递带入 utils-support-runtime-starter / utils-support-runtime-agent） -->
         <dependency>
             <groupId>com.chua</groupId>
-            <artifactId>utils-support-runtime-starter</artifactId>
-            <version>${utils.version}</version>
-        </dependency>
-
-        <!-- 运行时 Agent（自 attach 的目标 jar，由 classpath 探测） -->
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>utils-support-runtime-agent</artifactId>
-            <version>${utils.version}</version>
+            <artifactId>spring-support-agent-starter</artifactId>
+            <version>${project.version}</version>
         </dependency>
 
         <!-- Lombok -->
