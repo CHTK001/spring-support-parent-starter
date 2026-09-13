@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * APM 数据查询服务 — 统一门面，对 {@link StorageManager} 读操作做降级兜底。
@@ -179,11 +180,28 @@ public class ApmQueryService {
             }
         }
         result.putAll(raw);
-        result.putIfAbsent("transmissionCount", 0L);
-        result.putIfAbsent("leakCount", 0L);
-        result.putIfAbsent("errorCount", 0L);
+        // 键名映射：storage 原始复数键（transmissions/dependencies/leaks/logs）
+        // → 前端契约键（*Count），取原始值兜底而非恒 0
+        result.putIfAbsent("transmissionCount", raw.getOrDefault("transmissions", 0L));
+        result.putIfAbsent("dependencyCount", raw.getOrDefault("dependencies", 0L));
+        result.putIfAbsent("leakCount", raw.getOrDefault("leaks", 0L));
+        // traceCount / errorCount 从传输明细真实聚合（storage 不单独暴露）
+        if (!raw.containsKey("traces") || !raw.containsKey("errors")) {
+            try {
+                List<TransmissionEvent> all = currentStorage().queryTransmissions(new Query().setLimit(100000));
+                long traces = all.stream().map(TransmissionEvent::getTraceId)
+                        .filter(Objects::nonNull).distinct().count();
+                long errors = all.stream()
+                        .filter(e -> e.getStatus() == com.chua.runtime.protocol.StatusCode.ERROR)
+                        .count();
+                result.putIfAbsent("traceCount", traces);
+                result.putIfAbsent("errorCount", errors);
+            } catch (Exception e) {
+                log.debug("[Hotsport] trace/error 聚合失败: {}", e.getMessage());
+            }
+        }
         result.putIfAbsent("traceCount", 0L);
-        result.putIfAbsent("dependencyCount", 0L);
+        result.putIfAbsent("errorCount", 0L);
         return result;
     }
 
@@ -208,7 +226,9 @@ public class ApmQueryService {
                                               String protocol, Boolean errorOnly,
                                               Long startTime, Long endTime) {
         int offset = Math.max(0, (page - 1) * size);
-        Query q = new Query().setLimit(size).setOffset(offset);
+        // 全量拉取 + 内存过滤后再切片：total 必须是过滤后总数，
+        // 否则被 limit 截断导致前端分页器失效
+        Query q = new Query().setLimit(100000);
         if (protocol != null && !protocol.isBlank()) {
             q.setProtocol(protocol);
         }
@@ -239,7 +259,8 @@ public class ApmQueryService {
         result.put("total", items.size());
         result.put("offset", offset);
         result.put("limit", size);
-        result.put("items", items);
+        result.put("items", items.subList(Math.min(offset, items.size()),
+                Math.min(offset + size, items.size())));
         return result;
     }
 
@@ -319,7 +340,9 @@ public class ApmQueryService {
      */
     public Map<String, Object> leaks(int page, int size, String resourceType, Long minAgeMs,
                                      Long startTime, Long endTime) {
-        Query q = new Query().setLimit(size).setOffset(Math.max(0, (page - 1) * size));
+        int offset = Math.max(0, (page - 1) * size);
+        // 全量拉取 + 内存过滤后再切片（total 须为过滤后总数，避免分页器失效）
+        Query q = new Query().setLimit(100000);
         if (startTime != null) {
             q.setStartTime(startTime);
         }
@@ -352,9 +375,10 @@ public class ApmQueryService {
         }
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("total", items.size());
-        result.put("offset", Math.max(0, (page - 1) * size));
+        result.put("offset", offset);
         result.put("limit", size);
-        result.put("items", items);
+        result.put("items", items.subList(Math.min(offset, items.size()),
+                Math.min(offset + size, items.size())));
         return result;
     }
 
@@ -371,7 +395,9 @@ public class ApmQueryService {
      * @return 分页结果
      */
     public Map<String, Object> logs(int page, int size, String level) {
-        Query q = new Query().setLimit(size).setOffset(Math.max(0, (page - 1) * size));
+        int offset = Math.max(0, (page - 1) * size);
+        // 全量拉取 + 内存过滤后再切片（total 须为过滤后总数，避免分页器失效）
+        Query q = new Query().setLimit(100000);
         List<LogRecord> all = queryAll(q, storage -> storage.queryLogs(q));
         List<Map<String, Object>> items = new ArrayList<>();
         for (LogRecord r : all) {
@@ -392,9 +418,10 @@ public class ApmQueryService {
         }
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("total", items.size());
-        result.put("offset", Math.max(0, (page - 1) * size));
+        result.put("offset", offset);
         result.put("limit", size);
-        result.put("items", items);
+        result.put("items", items.subList(Math.min(offset, items.size()),
+                Math.min(offset + size, items.size())));
         return result;
     }
 
