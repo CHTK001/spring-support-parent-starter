@@ -109,4 +109,49 @@ class ApmControllerTest {
                     assertThat(ct).containsIgnoringCase("text/event-stream");
                 });
     }
+
+    @Test
+    void exportTransmissionsShouldReturnCsvAttachment() throws Exception {
+        mockMvc.perform(get("/api/apm/export/transmissions"))
+                .andExpect(request -> {
+                    int code = request.getResponse().getStatus();
+                    String ct = String.valueOf(request.getResponse().getContentType());
+                    String cd = String.valueOf(request.getResponse().getHeader("Content-Disposition"));
+                    assertThat(code).isEqualTo(200);
+                    assertThat(ct).containsIgnoringCase("text/csv");
+                    assertThat(cd).contains("attachment");
+                    // 响应体应有 UTF-8 BOM + 至少表头行
+                    byte[] body = request.getResponse().getContentAsByteArray();
+                    assertThat(body.length).isGreaterThan(3);
+                    assertThat(body[0]).isEqualTo((byte) 0xEF);
+                });
+    }
+
+    @Test
+    void exportLeaksShouldReturnCsvAttachment() throws Exception {
+        mockMvc.perform(get("/api/apm/export/leaks"))
+                .andExpect(request -> {
+                    assertThat(request.getResponse().getStatus()).isEqualTo(200);
+                    assertThat(String.valueOf(request.getResponse().getContentType()))
+                            .containsIgnoringCase("text/csv");
+                });
+    }
+
+    @Test
+    void exportLogsWithLevelFilterShouldReturnCsv() throws Exception {
+        mockMvc.perform(get("/api/apm/export/logs").param("level", "INFO"))
+                .andExpect(request -> {
+                    assertThat(request.getResponse().getStatus()).isEqualTo(200);
+                    assertThat(String.valueOf(request.getResponse().getContentType()))
+                            .containsIgnoringCase("text/csv");
+                });
+    }
+
+    @Test
+    void traceDetailShouldReturnListEvenForUnknownTrace() throws Exception {
+        mockMvc.perform(get("/api/apm/trace/nonexistent-trace-id"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("00000"))
+                .andExpect(jsonPath("$.data").isArray());
+    }
 }
