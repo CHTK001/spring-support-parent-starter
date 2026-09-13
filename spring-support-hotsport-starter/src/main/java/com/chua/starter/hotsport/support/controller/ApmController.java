@@ -2,11 +2,13 @@ package com.chua.starter.hotsport.support.controller;
 
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.hotsport.support.service.ApmQueryService;
+import com.chua.starter.hotsport.support.service.ApmInjectService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -38,6 +40,9 @@ public class ApmController {
 
     /** APM 查询服务。 */
     private final ApmQueryService apmQueryService;
+
+    /** APM 数据注入服务（页面操作产生数据）。 */
+    private final ApmInjectService apmInjectService;
 
     /** JSON 序列化（SSE data 事件）。 */
     private final ObjectMapper objectMapper;
@@ -150,6 +155,30 @@ public class ApmController {
     }
 
     /**
+     * Agent 实时 Trace Span 列表（前端 Traces 页数据源）。
+     *
+     * @param limit 返回上限，默认 200
+     * @return 传输记录 DTO 列表（含 traceId/spanId/className/methodName）
+     */
+    @GetMapping("/agent/traces")
+    public ReturnResult<List<Map<String, Object>>> agentTraces(
+            @RequestParam(defaultValue = "200") int limit) {
+        return ReturnResult.ok(apmQueryService.agentTraces(limit));
+    }
+
+    /**
+     * Agent 实时依赖边列表（前端 Traces/Dependencies 页数据源）。
+     *
+     * @param limit 返回上限，默认 50
+     * @return 依赖边 DTO 列表
+     */
+    @GetMapping("/agent/dependencies")
+    public ReturnResult<List<Map<String, Object>>> agentDependencies(
+            @RequestParam(defaultValue = "50") int limit) {
+        return ReturnResult.ok(apmQueryService.agentDependencies(limit));
+    }
+
+    /**
      * 按 traceId 查询整条链路的全部 span（Trace 详情抽屉数据源）。
      *
      * @param traceId 链路 ID
@@ -159,6 +188,70 @@ public class ApmController {
     public ReturnResult<List<Map<String, Object>>> traceDetail(
             @org.springframework.web.bind.annotation.PathVariable String traceId) {
         return ReturnResult.ok(apmQueryService.traceDetail(traceId));
+    }
+
+    // ------------------------------------------------------------------
+    // 数据注入（增强）— 页面操作产生真实数据
+    // ------------------------------------------------------------------
+
+    /**
+     * 注入一条传输记录（自动聚合进依赖拓扑图）。
+     *
+     * @param source    源端（host:port）
+     * @param target    目标端（host:port）
+     * @param protocol  协议（HTTP/REDIS/MYSQL/GRPC/KAFKA…）
+     * @param operation 操作描述
+     * @param error     是否为错误调用
+     * @return 注入结果
+     */
+    @PostMapping("/inject/transmission")
+    public ReturnResult<Map<String, Object>> injectTransmission(
+            @RequestParam(required = false) String source,
+            @RequestParam(required = false) String target,
+            @RequestParam(required = false) String protocol,
+            @RequestParam(required = false) String operation,
+            @RequestParam(defaultValue = "false") boolean error) {
+        return ReturnResult.ok(apmInjectService.injectTransmission(source, target, protocol, operation, error));
+    }
+
+    /**
+     * 批量注入随机调用（多条依赖边 + 传输记录）。
+     *
+     * @param count 条数（1~200）
+     * @return 注入结果
+     */
+    @PostMapping("/inject/batch")
+    public ReturnResult<Map<String, Object>> injectBatch(
+            @RequestParam(defaultValue = "10") int count) {
+        return ReturnResult.ok(apmInjectService.injectBatch(count));
+    }
+
+    /**
+     * 注入一条资源泄漏记录。
+     *
+     * @param resourceType 类型（File/Socket/Connection/Thread）
+     * @param resourceName 资源名
+     * @return 注入结果
+     */
+    @PostMapping("/inject/leak")
+    public ReturnResult<Map<String, Object>> injectLeak(
+            @RequestParam(required = false) String resourceType,
+            @RequestParam(required = false) String resourceName) {
+        return ReturnResult.ok(apmInjectService.injectLeak(resourceType, resourceName));
+    }
+
+    /**
+     * 注入一条日志记录。
+     *
+     * @param level   级别（INFO/WARN/ERROR/DEBUG）
+     * @param message 消息
+     * @return 注入结果
+     */
+    @PostMapping("/inject/log")
+    public ReturnResult<Map<String, Object>> injectLog(
+            @RequestParam(required = false) String level,
+            @RequestParam(required = false) String message) {
+        return ReturnResult.ok(apmInjectService.injectLog(level, message));
     }
 
     // ------------------------------------------------------------------

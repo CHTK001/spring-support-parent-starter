@@ -445,6 +445,63 @@ public class ApmQueryService {
         return items;
     }
 
+    /**
+     * Agent 实时 Trace Span 列表（Traces 页数据源，新事件在前）。
+     *
+     * <p>映射传输记录为 span 视图：traceId/spanId 直接取自事件；
+     * className/methodName 取自 attributes（插桩注入），缺省时退化为 operation。</p>
+     *
+     * @param limit 返回上限
+     * @return span DTO 列表
+     */
+    public List<Map<String, Object>> agentTraces(int limit) {
+        Query q = new Query().setLimit(Math.max(1, limit));
+        List<TransmissionEvent> all = queryAll(q, storage -> storage.queryTransmissions(q));
+        List<Map<String, Object>> items = new ArrayList<>();
+        for (int i = all.size() - 1; i >= 0 && items.size() < limit; i--) {
+            TransmissionEvent e = all.get(i);
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", e.getId());
+            m.put("traceId", e.getTraceId());
+            m.put("spanId", e.getSpanId());
+            String op = e.getOperation() != null ? e.getOperation() : "?";
+            m.put("className", attr(e, "class.name", op.split(" ")[0]));
+            m.put("methodName", attr(e, "method.name", op));
+            m.put("operation", op);
+            m.put("durationMs", e.getDuration());
+            m.put("status", e.getStatus() != null ? e.getStatus().name() : "OK");
+            m.put("startTime", toIso(e.getStartTime()));
+            items.add(m);
+        }
+        return items;
+    }
+
+    /**
+     * Agent 实时依赖边列表（Dependencies 页数据源）。
+     *
+     * @param limit 返回上限
+     * @return 依赖边 DTO 列表
+     */
+    public List<Map<String, Object>> agentDependencies(int limit) {
+        return dependencies(limit);
+    }
+
+    /**
+     * 读取事件 attribute（多级 key 回退）。
+     *
+     * @param e     事件
+     * @param key   主键
+     * @param fallback 兜底值
+     * @return 属性值
+     */
+    private static String attr(TransmissionEvent e, String key, String fallback) {
+        Map<String, String> attrs = e.getAttributes();
+        if (attrs != null && attrs.get(key) != null) {
+            return attrs.get(key);
+        }
+        return fallback;
+    }
+
     // ------------------------------------------------------------------
     // 全量导出（不受分页限制）
     // ------------------------------------------------------------------
