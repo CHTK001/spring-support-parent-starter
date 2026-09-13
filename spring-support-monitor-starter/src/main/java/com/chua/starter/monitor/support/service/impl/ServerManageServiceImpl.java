@@ -3,6 +3,7 @@ package com.chua.starter.monitor.support.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.network.server.Server;
+import com.chua.common.support.network.server.filter.ServerFilter;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.spi.definition.DescribeOptional;
 import com.chua.common.support.spi.definition.ServiceDefinition;
@@ -234,6 +235,7 @@ public class ServerManageServiceImpl implements ServerManageService {
     @Override
     public ReturnResult<List<Map<String, Object>>> filterTypes() {
         List<Map<String, Object>> result = new ArrayList<>();
+        // 1. 内置预设: 文件服务器(FileStorageServerFilter)
         Map<String, Object> fileStorage = new LinkedHashMap<>();
         fileStorage.put("type", "file-storage");
         fileStorage.put("desc", "文件服务器插件(FileStorageServerFilter), 将 HTTP 服务器变为文件服务器");
@@ -246,10 +248,31 @@ public class ServerManageServiceImpl implements ServerManageService {
                 "openWebjars", "是否开放 webjars(true/false)",
                 "watermark", "水印文本"));
         fileStorage.put("require", "classpath 需包含 spring-support-filesystem-starter; 存储桶自动取容器中的 FileStorage Bean");
+        fileStorage.put("spi", false);
         result.add(fileStorage);
+        // 2. SPI 动态发现的 ServerFilter(仅暴露带 @SpiDescribe 元数据的对外过滤器)
+        ServiceProvider.of(ServerFilter.class).forDefinitionEach(definition -> {
+            String describe = definition.getDescribe();
+            if (describe == null || describe.isBlank()) {
+                // 无元数据的同包内部过滤器(如 Ip/Cors/Gzip)不暴露
+                return;
+            }
+            String name = definition.getName();
+            if (name == null || name.isBlank()) {
+                return;
+            }
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("type", name);
+            item.put("desc", describe);
+            item.put("params", paramsOf(definition));
+            item.put("spi", true);
+            result.add(item);
+        });
+        // 3. 通用插件: ServerFilter 全限定类名
         Map<String, Object> custom = new LinkedHashMap<>();
         custom.put("type", "ServerFilter 全限定类名");
         custom.put("desc", "任意 ServerFilter 实现(优先无参构造, 其次 (ServerSetting) 构造); params 经 init(ServerFilterConfig) 注入");
+        custom.put("spi", false);
         result.add(custom);
         return ReturnResult.ok(result);
     }
