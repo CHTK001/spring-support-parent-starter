@@ -151,6 +151,10 @@ public class ServerTaskScheduler {
         * reschedule延迟。
          */
         rescheduleDelay();
+        /**
+        * rescheduleconnection。
+         */
+        rescheduleConnection();
         log.info("[task-scheduler] 配置变更已重排周期任务: {}", event.getKeys());
     }
 
