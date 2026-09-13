@@ -7,7 +7,7 @@ import com.chua.common.support.ai.chat.ChatMessage;
 import com.chua.common.support.ai.chat.ChatResponse;
 import com.chua.common.support.ai.chat.ChatSyncResponse;
 import com.chua.common.support.ai.chat.ModelDefinition;
-import com.chua.common.support.converter.Converter;
+import com.chua.common.support.lang.json.Json;
 import com.chua.common.support.ai.chat.aggregate.AggregateChatClient;
 import com.chua.common.support.ai.chat.aggregate.AggregateChatClientSetting;
 import com.chua.starter.ai.support.entity.SysAiGroup;
@@ -361,7 +361,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                     if (code == null || code.isBlank()) {
                         continue;
                     }
-                    List<String> aliases = Converter.convertIfListNecessary(m.getModelAliases(), String.class);
+                    List<String> aliases = parseAliases(m.getModelAliases());
                     if (aliases != null) {
                         for (String alias : aliases) {
                             if (alias != null && !alias.isBlank()) {
@@ -380,6 +380,22 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
             aliasCacheLoadedAt = now;
             log.info("[AiChat] 已加载模型别名映射 {} 条", map.size());
             return map;
+        }
+    }
+
+    private List<String> parseAliases(String content) {
+        if (content == null || content.isBlank()) {
+            return new java.util.ArrayList<>();
+        }
+        try {
+            if (content.trim().startsWith("[")) {
+                @SuppressWarnings("unchecked")
+                List<String> list = Json.fromJson(content, List.class);
+                return list != null ? list : new java.util.ArrayList<>();
+            }
+            return java.util.Arrays.stream(content.split(",")).map(String::trim).filter(s -> !s.isEmpty()).toList();
+        } catch (Exception e) {
+            return java.util.Arrays.stream(content.split(",")).map(String::trim).filter(s -> !s.isEmpty()).toList();
         }
     }
 

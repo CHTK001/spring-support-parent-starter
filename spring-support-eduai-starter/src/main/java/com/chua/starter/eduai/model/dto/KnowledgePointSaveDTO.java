@@ -14,50 +14,50 @@ public class KnowledgePointSaveDTO {
     /**
     * 知识点标识（更新时必填）
      */
-    private Long id;
+    private Long knowledgePointId;
 
     /**
     * 知识点名称
      */
-    private String name;
+    private String knowledgePointName;
 
     /**
     * 知识点编码
      */
-    private String code;
+    private String knowledgePointCode;
 
     /**
     * 父知识点标识，0表示根节点
      */
-    private Long parentId;
+    private Long knowledgePointParentId;
 
     /**
     * 所属学科
      */
-    private String subject;
+    private String knowledgePointSubject;
 
     /**
     * 学段
      */
-    private String gradeLevel;
+    private String knowledgePointGradeLevel;
 
     /**
     * 年级
      */
-    private String grade;
+    private String knowledgePointGrade;
 
     /**
     * 知识点描述
      */
-    private String description;
+    private String knowledgePointDescription;
 
     /**
     * 排序号
      */
-    private Integer sortOrder;
+    private Integer knowledgePointSortOrder;
 
     /**
     * 状态（0-停用 1-启用）
      */
-    private Integer status;
+    private Integer knowledgePointStatus;
 }

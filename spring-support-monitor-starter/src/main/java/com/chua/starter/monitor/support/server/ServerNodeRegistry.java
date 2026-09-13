@@ -129,12 +129,7 @@ public class ServerNodeRegistry {
      */
     public RuntimeServer start(MsServerNode node) throws Exception {
         ServerNodeProtocol protocol = ServerNodeProtocol.of(node.getProtocol());
-        if (protocol == null) {
-            /**
-            * illegal参数异常。
-            * @param node.getProtocol( 节点.获取协议(
-            * @return illegal参数异常的结果
-             */
+        if (protocol == null && !ServiceProvider.of(Server.class).isSupport(node.getProtocol())) {
             throw new IllegalArgumentException("未知协议类型: " + node.getProtocol());
         }
  // 幂等: 已存在且运行中的实例直接复用, 避免重复 bind 导致 bind异常 / 端口泄漏
@@ -158,7 +153,7 @@ public class ServerNodeRegistry {
             Server server = buildServer(node, protocol);
             server.start();
             runtime.setServer(server);
-            runtime.setServerUrl(buildServerUrl(node, protocol));
+            runtime.setServerUrl(protocol == null ? server.getServerUrl() : buildServerUrl(node, protocol));
             runtimes.put(node.getId(), runtime);
             return runtime;
         } catch (Exception e) {
@@ -234,6 +229,10 @@ public class ServerNodeRegistry {
         Map<String, Object> config = parseConfig(node);
         ServerSetting setting = buildSetting(node, protocol, config);
         List<ServerFilterDescriptor> descriptors = parseFilters(node);
+        if (protocol == null) {
+            // SPI 动态协议：直接按 SPI 名称实例化
+            return buildSpiServer(node, setting, descriptors);
+        }
         return switch (protocol) {
             case HTTP -> buildHttpServer(node, setting, descriptors);
             case HTTP_PROXY -> buildProxyServer(createProxyServer("http-proxy", setting, resolveBackend(config)), node, descriptors);
@@ -341,18 +340,38 @@ public class ServerNodeRegistry {
     }
 
     /**
+    * 通过 SPI 名称构建动态协议服务器。
+    *
+    * @param node        节点定义
+    * @param setting     通用配置
+    * @param descriptors 插件描述
+    * @return 服务器实例
+     */
+    private Server buildSpiServer(MsServerNode node, ServerSetting setting, List<ServerFilterDescriptor> descriptors) {
+        Server server = ServiceProvider.of(Server.class).getNewExtension(node.getProtocol(), setting);
+        if (server == null) {
+            throw new IllegalStateException("Server SPI 未注册: " + node.getProtocol());
+        }
+        for (com.chua.common.support.network.server.filter.ServerFilter filter : filterFactory.createFilters(descriptors, setting)) {
+            server.addFilter(filter);
+        }
+        return server;
+    }
+
+    /**
     * 构建通用 服务端setting。
     *
     * @param node     节点定义
-    * @param protocol 协议枚举
+    * @param protocol 协议枚举（SPI 动态协议为 空）
     * @param config   协议配置
     * @return 配置实例
      */
     private ServerSetting buildSetting(MsServerNode node, ServerNodeProtocol protocol, Map<String, Object> config) {
         ServerSetting setting = ServerSetting.defaults();
         setting.setHost(node.getHost() == null || node.getHost().isBlank() ? "0.0.0.0" : node.getHost());
-        setting.setPort(node.getPort() != null ? node.getPort() : protocol.getDefaultPort());
-        setting.setProtocol(protocol.getAlias());
+        setting.setPort(node.getPort() != null ? node.getPort()
+                : (protocol == null ? 0 : protocol.getDefaultPort()));
+        setting.setProtocol(protocol == null ? node.getProtocol() : protocol.getAlias());
         /**
         * apply通用期权。
         * @param setting setting

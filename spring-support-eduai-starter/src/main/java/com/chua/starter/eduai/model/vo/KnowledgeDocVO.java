@@ -16,50 +16,50 @@ public class KnowledgeDocVO {
     /**
     * 文档标识
      */
-    private Long id;
+    private Long knowledgeDocId;
 
     /**
     * 文档名称
      */
-    private String name;
+    private String knowledgeDocName;
 
     /**
     * 文档类型
      */
-    private String type;
+    private String knowledgeDocType;
 
     /**
     * 文件存储路径
      */
-    private String filePath;
+    private String knowledgeDocFilePath;
 
     /**
     * 文件大小（字节）
      */
-    private Long fileSize;
+    private Long knowledgeDocFileSize;
 
     /**
     * 向量存储标识
      */
-    private String vectorStoreId;
+    private String knowledgeDocVectorStoreId;
 
     /**
     * 学科
      */
-    private String subject;
+    private String knowledgeDocSubject;
 
     /**
     * 学段
      */
-    private String gradeLevel;
+    private String knowledgeDocGradeLevel;
 
     /**
     * 状态（0-处理中 1-已索引 2-失败）
      */
-    private Integer status;
+    private Integer knowledgeDocStatus;
 
     /**
     * 创建时间
      */
-    private LocalDateTime createTime;
+    private LocalDateTime knowledgeDocCreateTime;
 }

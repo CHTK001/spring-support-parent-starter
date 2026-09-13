@@ -14,29 +14,29 @@ import java.util.List;
 @Data
 public class PaperVO {
 
-    /** 标识 */
-    private Long id;
-    /** 名称 */
-    private String name;
-    /** 主题 */
-    private String subject;
-    /** Grade级别 */
-    private String gradeLevel;
-    /** Grade */
-    private String grade;
-    /** 总数分数 */
-    private Integer totalScore;
-    /** 持续时间 */
-    private Integer duration;
-    /** Question数量 */
-    private Integer questionCount;
+    /** 试卷标识 */
+    private Long paperId;
+    /** 试卷名称 */
+    private String paperName;
+    /** 学科 */
+    private String paperSubject;
+    /** 学段 */
+    private String paperGradeLevel;
+    /** 年级 */
+    private String paperGrade;
+    /** 总分 */
+    private Integer paperTotalScore;
+    /** 考试时长（分钟） */
+    private Integer paperDuration;
+    /** 题目数量 */
+    private Integer paperQuestionCount;
     /** 状态 */
-    private Integer status;
+    private Integer paperStatus;
     /** 来源 */
-    private String source;
+    private String paperSource;
     /** 创建时间 */
-    private LocalDateTime createTime;
+    private LocalDateTime paperCreateTime;
 
-    /** Questions */
+    /** 试卷内题目列表 */
     private List<QuestionVO> questions;
 }

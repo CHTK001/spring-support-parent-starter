@@ -55,7 +55,7 @@ public class EduKnowledgePointServiceImpl extends ServiceImpl<EduKnowledgePointM
         List<KnowledgePointVO> voList = list.stream().map(this::toVO).collect(Collectors.toList());
         // 按父节点分组
         Map<Long, List<KnowledgePointVO>> groupMap = voList.stream()
-                .collect(Collectors.groupingBy(vo -> vo.getParentId() == null ? 0L : vo.getParentId()));
+                .collect(Collectors.groupingBy(vo -> vo.getKnowledgePointParentId() == null ? 0L : vo.getKnowledgePointParentId()));
 
         List<KnowledgePointVO> tree = new ArrayList<>();
  // 构建树形结构，根节点 父标识 为 0
@@ -87,7 +87,7 @@ public class EduKnowledgePointServiceImpl extends ServiceImpl<EduKnowledgePointM
             * 构建children。
             * @param vo.getId( vo.获取标识(
              */
-            buildChildren(vo.getId(), groupMap, subChildren);
+            buildChildren(vo.getKnowledgePointId(), groupMap, subChildren);
             vo.setChildren(subChildren);
             target.add(vo);
         }
@@ -103,26 +103,26 @@ public class EduKnowledgePointServiceImpl extends ServiceImpl<EduKnowledgePointM
      */
     public Long saveKnowledgePoint(KnowledgePointSaveDTO dto) {
         EduKnowledgePoint entity = new EduKnowledgePoint();
-        entity.setKnowledgePointName(dto.getName());
-        entity.setKnowledgePointCode(dto.getCode());
-        entity.setKnowledgePointParentId(dto.getParentId() != null ? dto.getParentId() : 0L);
-        entity.setKnowledgePointSubject(dto.getSubject());
-        entity.setKnowledgePointGradeLevel(dto.getGradeLevel());
-        entity.setKnowledgePointGrade(dto.getGrade());
-        entity.setKnowledgePointDescription(dto.getDescription());
-        entity.setKnowledgePointSortOrder(dto.getSortOrder() != null ? dto.getSortOrder() : 0);
+        entity.setKnowledgePointName(dto.getKnowledgePointName());
+        entity.setKnowledgePointCode(dto.getKnowledgePointCode());
+        entity.setKnowledgePointParentId(dto.getKnowledgePointParentId() != null ? dto.getKnowledgePointParentId() : 0L);
+        entity.setKnowledgePointSubject(dto.getKnowledgePointSubject());
+        entity.setKnowledgePointGradeLevel(dto.getKnowledgePointGradeLevel());
+        entity.setKnowledgePointGrade(dto.getKnowledgePointGrade());
+        entity.setKnowledgePointDescription(dto.getKnowledgePointDescription());
+        entity.setKnowledgePointSortOrder(dto.getKnowledgePointSortOrder() != null ? dto.getKnowledgePointSortOrder() : 0);
 
-        if (dto.getId() != null && dto.getId() > 0) {
+        if (dto.getKnowledgePointId() != null && dto.getKnowledgePointId() > 0) {
             // 更新
-            entity.setKnowledgePointId(dto.getId());
-            entity.setKnowledgePointStatus(dto.getStatus() != null ? dto.getStatus() : 1);
+            entity.setKnowledgePointId(dto.getKnowledgePointId());
+            entity.setKnowledgePointStatus(dto.getKnowledgePointStatus() != null ? dto.getKnowledgePointStatus() : 1);
             entity.setKnowledgePointUpdateTime(LocalDateTime.now());
             baseMapper.updateById(entity);
-            log.info("更新知识点成功，ID: {}", dto.getId());
-            return dto.getId();
+            log.info("更新知识点成功，ID: {}", dto.getKnowledgePointId());
+            return dto.getKnowledgePointId();
         } else {
             // 新增
-            entity.setKnowledgePointStatus(dto.getStatus() != null ? dto.getStatus() : 1);
+            entity.setKnowledgePointStatus(dto.getKnowledgePointStatus() != null ? dto.getKnowledgePointStatus() : 1);
             entity.setKnowledgePointCreateTime(LocalDateTime.now());
             entity.setKnowledgePointUpdateTime(LocalDateTime.now());
             baseMapper.insert(entity);
@@ -178,17 +178,17 @@ public class EduKnowledgePointServiceImpl extends ServiceImpl<EduKnowledgePointM
      */
     private KnowledgePointVO toVO(EduKnowledgePoint entity) {
         KnowledgePointVO vo = new KnowledgePointVO();
-        vo.setId(entity.getKnowledgePointId());
-        vo.setName(entity.getKnowledgePointName());
-        vo.setCode(entity.getKnowledgePointCode());
-        vo.setParentId(entity.getKnowledgePointParentId());
-        vo.setSubject(entity.getKnowledgePointSubject());
-        vo.setGradeLevel(entity.getKnowledgePointGradeLevel());
-        vo.setGrade(entity.getKnowledgePointGrade());
-        vo.setDescription(entity.getKnowledgePointDescription());
-        vo.setSortOrder(entity.getKnowledgePointSortOrder());
-        vo.setStatus(entity.getKnowledgePointStatus());
-        vo.setCreateTime(entity.getKnowledgePointCreateTime());
+        vo.setKnowledgePointId(entity.getKnowledgePointId());
+        vo.setKnowledgePointName(entity.getKnowledgePointName());
+        vo.setKnowledgePointCode(entity.getKnowledgePointCode());
+        vo.setKnowledgePointParentId(entity.getKnowledgePointParentId());
+        vo.setKnowledgePointSubject(entity.getKnowledgePointSubject());
+        vo.setKnowledgePointGradeLevel(entity.getKnowledgePointGradeLevel());
+        vo.setKnowledgePointGrade(entity.getKnowledgePointGrade());
+        vo.setKnowledgePointDescription(entity.getKnowledgePointDescription());
+        vo.setKnowledgePointSortOrder(entity.getKnowledgePointSortOrder());
+        vo.setKnowledgePointStatus(entity.getKnowledgePointStatus());
+        vo.setKnowledgePointCreateTime(entity.getKnowledgePointCreateTime());
         return vo;
     }
 }

@@ -3,6 +3,7 @@ package com.chua.starter.project.support.config;
 import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
@@ -21,6 +22,7 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 @AutoConfiguration
 @ComponentScan(basePackages = "com.chua.starter.project.support")
 @MapperScan(basePackages = "com.chua.starter.project.support.mapper")
+@EnableConfigurationProperties(ProjectProperties.class)
 @EnableTransactionManagement
 public class ProjectAutoConfiguration {
 
