@@ -98,7 +98,7 @@ plugin:
 # 本地冒烟验证用 none（仅 MySQL 明细），生产按需切换
 monitor:
   timeseries:
-    engine: none
+    engine: redis
     url: http://172.16.0.40:8086
     database: monitor
 
