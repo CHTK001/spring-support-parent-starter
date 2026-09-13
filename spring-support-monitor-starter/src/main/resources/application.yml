@@ -60,6 +60,11 @@ plugin:
   api:
     request-decode:
       enable: false
+  # 本地联调免鉴权：monitor 全部 /ms/** 接口加入 OAuth 白名单（无远程鉴权服务时直接放行）
+  oauth:
+    enable: false
+    whitelist:
+      - /ms/**
   # 异步线程池（common-starter AsyncThreadPoolConfiguration 实现 AsyncConfigurer）：
   # 与 Spring Boot 4.1 自动装配的 TaskExecutionAutoConfiguration 存在 AsyncConfigurer 二选一冲突
   # （queue-starter ApplicationEventToQueueListener @Async 触发时 "Only one AsyncConfigurer may exist"）。

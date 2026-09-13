@@ -16,7 +16,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
 * 服务器分组接口
@@ -79,5 +84,56 @@ public class ServerGroupController {
     @GetMapping
     public ReturnResult<List<MsServerGroup>> list() {
         return serverGroupService.list();
+    }
+
+    /**
+    * 分组树（按 msServerGroupParentId 组装，根节点 parentId 为 null 或 0）
+    *
+    * @return 树结构列表
+     */
+    @Operation(summary = "分组树")
+    @GetMapping("/tree")
+    public ReturnResult<List<Map<String, Object>>> tree() {
+        ReturnResult<List<MsServerGroup>> result = serverGroupService.list();
+        List<MsServerGroup> all = result.getData();
+        if (all == null) {
+            all = new ArrayList<>();
+        }
+
+        // 按 parentId 分组；根节点 parentId 为 null 或 0
+        Map<Long, List<MsServerGroup>> childrenMap = all.stream()
+                .filter(g -> g.getMsServerGroupParentId() != null && g.getMsServerGroupParentId() != 0L)
+                .collect(Collectors.groupingBy(MsServerGroup::getMsServerGroupParentId));
+
+        List<Map<String, Object>> tree = new ArrayList<>();
+        for (MsServerGroup g : all) {
+            Long pid = g.getMsServerGroupParentId();
+            if (pid == null || pid == 0L) {
+                tree.add(toNode(g, childrenMap));
+            }
+        }
+        return ReturnResult.ok(tree);
+    }
+
+    /**
+    * 将实体转换为树节点并递归组装 children
+     */
+    private Map<String, Object> toNode(MsServerGroup g, Map<Long, List<MsServerGroup>> childrenMap) {
+        Map<String, Object> node = new LinkedHashMap<>();
+        node.put("id", g.getId());
+        node.put("name", g.getMsServerGroupName());
+        node.put("parentId", g.getMsServerGroupParentId());
+        node.put("sort", g.getMsServerGroupSort());
+        node.put("remark", g.getMsServerGroupRemark());
+        node.put("color", g.getMsServerGroupColor());
+        List<Map<String, Object>> children = new ArrayList<>();
+        List<MsServerGroup> subs = childrenMap.get(g.getId());
+        if (subs != null) {
+            for (MsServerGroup sub : subs) {
+                children.add(toNode(sub, childrenMap));
+            }
+        }
+        node.put("children", children);
+        return node;
     }
 }

@@ -89,14 +89,25 @@ CREATE TABLE IF NOT EXISTS sys_ai_usage (
 
 CREATE TABLE IF NOT EXISTS sys_ai_usage_daily (
   sys_ai_usage_daily_id BIGINT AUTO_INCREMENT PRIMARY KEY,
-  sys_ai_usage_daily_date DATE,
-  sys_ai_usage_daily_group VARCHAR(64),
+  sys_ai_usage_daily_stat_date DATE,
+  sys_ai_usage_daily_group_name VARCHAR(64),
   sys_ai_usage_daily_provider VARCHAR(64),
   sys_ai_usage_daily_model VARCHAR(128),
-  sys_ai_usage_daily_tokens INT,
-  sys_ai_usage_daily_cost DOUBLE,
-  sys_ai_usage_daily_count INT,
-  create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  sys_ai_usage_daily_total_calls BIGINT DEFAULT 0,
+  sys_ai_usage_daily_total_prompt_tokens BIGINT DEFAULT 0,
+  sys_ai_usage_daily_total_completion_tokens BIGINT DEFAULT 0,
+  sys_ai_usage_daily_total_tokens BIGINT DEFAULT 0,
+  sys_ai_usage_daily_total_cost DOUBLE DEFAULT 0,
+  sys_ai_usage_daily_total_cached_tokens BIGINT DEFAULT 0,
+  sys_ai_usage_daily_total_latency BIGINT DEFAULT 0,
+  sys_ai_usage_daily_total_first_token_latency BIGINT DEFAULT 0,
+  sys_ai_usage_daily_standard_cost DOUBLE DEFAULT 0,
+  create_name VARCHAR(64),
+  create_by VARCHAR(64),
+  create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  update_name VARCHAR(64),
+  update_by VARCHAR(64),
+  update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS sys_ai_pricing (
