@@ -142,14 +142,14 @@ public class EduWrongQuestionServiceImpl extends ServiceImpl<EduWrongQuestionMap
      */
     private WrongQuestionVO toVO(EduWrongQuestion entity) {
         WrongQuestionVO vo = new WrongQuestionVO();
-        vo.setId(entity.getWrongQuestionId());
-        vo.setStudentId(entity.getWrongQuestionStudentId());
-        vo.setQuestionId(entity.getWrongQuestionQuestionId());
-        vo.setWrongCount(entity.getWrongQuestionWrongCount());
-        vo.setMasteryLevel(entity.getWrongQuestionMasteryLevel());
-        vo.setLastWrongTime(entity.getWrongQuestionLastWrongTime());
-        vo.setLastReviewTime(entity.getWrongQuestionLastReviewTime());
-        vo.setReviewCount(entity.getWrongQuestionReviewCount());
+        vo.setWrongQuestionId(entity.getWrongQuestionId());
+        vo.setWrongQuestionStudentId(entity.getWrongQuestionStudentId());
+        vo.setWrongQuestionQuestionId(entity.getWrongQuestionQuestionId());
+        vo.setWrongQuestionWrongCount(entity.getWrongQuestionWrongCount());
+        vo.setWrongQuestionMasteryLevel(entity.getWrongQuestionMasteryLevel());
+        vo.setWrongQuestionLastWrongTime(entity.getWrongQuestionLastWrongTime());
+        vo.setWrongQuestionLastReviewTime(entity.getWrongQuestionLastReviewTime());
+        vo.setWrongQuestionReviewCount(entity.getWrongQuestionReviewCount());
         return vo;
     }
 }

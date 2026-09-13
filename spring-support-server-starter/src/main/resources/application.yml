@@ -5,11 +5,11 @@ spring:
   application:
     name: server-test
   # 独立联调模式: 启动时执行建表脚本(幂等, IF NOT EXISTS)
-  # 说明: V1.0__init_server.sql 全量建表（含延迟检测字段）; V1.1__add_host_delay_detect.sql 为存量库增量补列
+  # 说明: V1.0__init_server.sql 全量建表（含延迟检测字段），已归口 datasource-starter，classpath 路径不变
   sql:
     init:
       mode: always
-      schema-locations: classpath:db/init/V1.0__init_server.sql,classpath:db/init/V1.1__add_host_delay_detect.sql
+      schema-locations: classpath:db/init/V1.0__init_server.sql
   datasource:
     url: jdbc:h2:mem:serverdb;DB_CLOSE_DELAY=-1;MODE=MySQL;DATABASE_TO_UPPER=false
     driver-class-name: org.h2.Driver

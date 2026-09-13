@@ -236,6 +236,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         boolean allDone = true;
         for (EduMarkingResult r : results) {
             MarkingResultVO.QuestionResult qr = new MarkingResultVO.QuestionResult();
+            qr.setResultId(r.getMarkingResultId());
             qr.setQuestionId(r.getMarkingResultQuestionId());
             qr.setScore(r.getMarkingResultAiScore() == null ? 0 : r.getMarkingResultAiScore());
             qr.setTeacherScore(r.getMarkingResultTeacherScore());

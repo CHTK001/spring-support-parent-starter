@@ -17,57 +17,57 @@ public class KnowledgePointVO {
     /**
     * 知识点标识
      */
-    private Long id;
+    private Long knowledgePointId;
 
     /**
     * 知识点名称
      */
-    private String name;
+    private String knowledgePointName;
 
     /**
     * 知识点编码
      */
-    private String code;
+    private String knowledgePointCode;
 
     /**
     * 父知识点标识
      */
-    private Long parentId;
+    private Long knowledgePointParentId;
 
     /**
     * 所属学科
      */
-    private String subject;
+    private String knowledgePointSubject;
 
     /**
     * 学段
      */
-    private String gradeLevel;
+    private String knowledgePointGradeLevel;
 
     /**
     * 年级
      */
-    private String grade;
+    private String knowledgePointGrade;
 
     /**
     * 知识点描述
      */
-    private String description;
+    private String knowledgePointDescription;
 
     /**
     * 排序号
      */
-    private Integer sortOrder;
+    private Integer knowledgePointSortOrder;
 
     /**
     * 状态
      */
-    private Integer status;
+    private Integer knowledgePointStatus;
 
     /**
     * 创建时间
      */
-    private LocalDateTime createTime;
+    private LocalDateTime knowledgePointCreateTime;
 
     /**
     * 子知识点列表

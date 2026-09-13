@@ -2,6 +2,10 @@ package com.chua.starter.monitor.support.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.network.server.Server;
+import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.spi.definition.DescribeOptional;
+import com.chua.common.support.spi.definition.ServiceDefinition;
 import com.chua.starter.monitor.support.entity.MsServerNode;
 import com.chua.starter.monitor.support.enums.ServerNodeProtocol;
 import com.chua.starter.monitor.support.mapper.MsServerNodeMapper;
@@ -16,9 +20,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
 * 服务管理 —— 协议服务器节点管理服务实现。
@@ -179,9 +185,15 @@ public class ServerManageServiceImpl implements ServerManageService {
         }
     }
 
+    /** HTTP 引擎变体（SPI 注册但不应出现在协议下拉中） */
+    private static final Set<String> HTTP_ENGINE_ALIASES =
+            Set.of("jdk", "nio", "aio", "jdk-http", "nio-http", "aio-http");
+
     @Override
     public ReturnResult<List<Map<String, Object>>> protocols() {
         List<Map<String, Object>> result = new ArrayList<>();
+        Set<String> covered = new HashSet<>();
+        // 1. 内置四类基础协议（含默认端口/引擎等富元数据）
         for (ServerNodeProtocol protocol : ServerNodeProtocol.values()) {
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("code", protocol.getCode());
@@ -190,8 +202,32 @@ public class ServerManageServiceImpl implements ServerManageService {
             item.put("defaultPort", protocol.getDefaultPort());
             item.put("defaultEngine", protocol.getDefaultEngine());
             item.put("requiresBackend", protocol.isRequiresBackend());
+            item.put("spi", false);
             result.add(item);
+            covered.add(protocol.getAlias().toLowerCase());
         }
+        // 2. SPI 动态发现的其它 Server 实现（去重、剔除 HTTP 引擎变体）
+        ServiceProvider.of(Server.class).forDefinitionEach(definition -> {
+            String name = definition.getName();
+            if (name == null || name.isBlank()) {
+                return;
+            }
+            String alias = name.toLowerCase();
+            if (covered.contains(alias) || HTTP_ENGINE_ALIASES.contains(alias)) {
+                return;
+            }
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("code", name);
+            item.put("alias", alias);
+            item.put("desc", describeOf(definition, alias));
+            item.put("defaultPort", null);
+            item.put("defaultEngine", alias);
+            item.put("requiresBackend", alias.contains("proxy") && !alias.contains("socks"));
+            item.put("spi", true);
+            item.put("params", paramsOf(definition));
+            result.add(item);
+            covered.add(alias);
+        });
         return ReturnResult.ok(result);
     }
 
@@ -236,23 +272,20 @@ public class ServerManageServiceImpl implements ServerManageService {
     }
 
     /**
-    * 解析并校验协议类型。
-    *
-    * @param request 请求体
-    * @return 协议枚举
+     * 解析并校验协议类型。
+     *
+     * @param request 请求体
+     * @return 协议枚举（SPI 动态协议返回 空）
      */
     private ServerNodeProtocol requireProtocol(ServerNodeRequest request) {
         ServerNodeProtocol protocol = ServerNodeProtocol.of(request.getProtocol());
-        if (protocol == null) {
-            /**
-            * illegal参数异常。
-            * @param request.getProtocol( 请求.获取协议(
-            * @return illegal参数异常的结果
-             */
-            throw new IllegalArgumentException("不支持的协议类型: " + request.getProtocol()
-                    + " (支持: http / http-proxy / tcp-proxy / sip)");
+        if (protocol != null) {
+            return protocol;
         }
-        return protocol;
+        if (ServiceProvider.of(Server.class).isSupport(request.getProtocol())) {
+            return null; // SPI 动态协议
+        }
+        throw new IllegalArgumentException("不支持的协议类型: " + request.getProtocol());
     }
 
     /**
@@ -294,12 +327,13 @@ public class ServerManageServiceImpl implements ServerManageService {
      */
     private void applyRequest(MsServerNode node, ServerNodeRequest request, ServerNodeProtocol protocol) {
         node.setName(request.getName().trim());
-        node.setProtocol(protocol.getCode());
+        node.setProtocol(request.getProtocol().trim().toLowerCase());
         String engine = request.getEngine() == null || request.getEngine().isBlank()
-                ? protocol.getDefaultEngine() : request.getEngine().trim().toLowerCase();
+                ? (protocol == null ? request.getProtocol().trim().toLowerCase() : protocol.getDefaultEngine())
+                : request.getEngine().trim().toLowerCase();
         node.setEngine(engine);
         node.setHost(request.getHost() == null || request.getHost().isBlank() ? "0.0.0.0" : request.getHost().trim());
-        node.setPort(request.getPort() != null ? request.getPort() : protocol.getDefaultPort());
+        node.setPort(request.getPort() != null ? request.getPort() : (protocol == null ? null : protocol.getDefaultPort()));
         node.setEnabled(request.getEnabled() != null ? request.getEnabled() : 1);
         node.setRemark(request.getRemark());
         try {
@@ -329,7 +363,14 @@ public class ServerManageServiceImpl implements ServerManageService {
         view.setName(node.getName());
         view.setProtocol(node.getProtocol());
         ServerNodeProtocol protocol = ServerNodeProtocol.of(node.getProtocol());
-        view.setProtocolDesc(protocol == null ? node.getProtocol() : protocol.getDesc());
+        if (protocol != null) {
+            view.setProtocolDesc(protocol.getDesc());
+        } else {
+            // SPI 动态协议：取 @SpiDescribe 或类简单名
+            ServiceDefinition def = ServiceProvider.of(Server.class).getDefinition(node.getProtocol());
+            view.setProtocolDesc(def != null && def.getDescribe() != null
+                    ? def.getDescribe() : node.getProtocol());
+        }
         view.setEngine(node.getEngine());
         view.setHost(node.getHost());
         view.setPort(node.getPort());
@@ -348,5 +389,44 @@ public class ServerManageServiceImpl implements ServerManageService {
             view.setFilters(List.of());
         }
         return view;
+    }
+
+    /**
+     * SPI 定义的描述文案：优先 @SpiDescribe，其次类简单名。
+     *
+     * @param definition SPI 定义
+     * @param alias      小写别名
+     * @return 描述
+     */
+    private String describeOf(ServiceDefinition definition, String alias) {
+        String describe = definition.getDescribe();
+        if (describe != null && !describe.isBlank()) {
+            return describe;
+        }
+        Class<?> implClass = definition.getImplClass();
+        return implClass != null ? implClass.getSimpleName() : alias;
+    }
+
+    /**
+     * SPI 定义的配置模板（来自 @SpiDescribe.optional / @SpiParam）。
+     *
+     * @param definition SPI 定义
+     * @return 参数列表（name/defaultValue/desc/type）
+     */
+    private List<Map<String, String>> paramsOf(ServiceDefinition definition) {
+        List<Map<String, String>> params = new ArrayList<>();
+        List<DescribeOptional> optional = definition.getDescribeOptional();
+        if (optional == null || optional.isEmpty()) {
+            return params;
+        }
+        for (DescribeOptional o : optional) {
+            Map<String, String> item = new LinkedHashMap<>();
+            item.put("name", o.getName());
+            item.put("defaultValue", o.getDefaultValue());
+            item.put("desc", o.getDescribe());
+            item.put("type", o.getType());
+            params.add(item);
+        }
+        return params;
     }
 }

@@ -21,6 +21,7 @@ import com.chua.common.support.storage.result.ObjectResult;
 import com.chua.common.support.storage.result.PutObjectResult;
 import com.chua.filestorage.support.preview.FileStoragePreviewProvider;
 import com.chua.filestorage.support.preview.PreviewResult;
+import com.chua.filestorage.support.preview.provider.ArchivePreviewProvider;
 import com.chua.filestorage.support.spi.FileStorageFileSetting;
 import com.chua.filestorage.support.spi.FileStorageFilterSetting;
 import lombok.extern.slf4j.Slf4j;
@@ -2037,6 +2038,14 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
 
         // 显式 ?preview=true 时才尝试 SPI 预览（xlsx/docx/ppt 等 Office 文档转 HTML）
         if (!download && wantPreview) {
+            // 压缩包下钻：?preview&inner=包内路径 时提取条目并按条目类型预览
+            String innerPath = request.getParams().get("inner");
+            if (innerPath != null && !innerPath.isEmpty()) {
+                CompletionStage<Void> innerStage = writeInnerEntryPreview(data, fileName, innerPath, response);
+                if (innerStage != null) {
+                    return innerStage;
+                }
+            }
             byte[] previewPage = trySpiPreview(data, fileName);
             if (previewPage != null) {
                 response.setStatus(200)
@@ -3170,6 +3179,104 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
     }
 
     /**
+    * 压缩包条目下钻预览。
+    * <p>从压缩包字节中提取 {@code inner} 指定的条目，能走 SPI（代码/Markdown/CSV/Office 等）
+    * 的输出 HTML 预览页；其余条目按原始内容类型内联返回。条目不存在或路径非法时返回提示页。</p>
+    *
+    * @param archiveData 压缩包字节
+    * @param fileName    压缩包文件名
+    * @param innerPath   包内条目路径（已 URL 解码）
+    * @param response    响应对象
+    * @return 已完成的异步阶段（始终提交响应）
+    */
+    private CompletionStage<Void> writeInnerEntryPreview(byte[] archiveData, String fileName,
+                                                         String innerPath, ServerResponse response) {
+        // 安全校验：拒绝路径穿越、反斜杠、绝对路径与盘符
+        boolean safe = innerPath != null
+                && !innerPath.contains("..")
+                && !innerPath.contains("\\")
+                && !innerPath.startsWith("/")
+                && innerPath.indexOf(':') < 0;
+
+        byte[] entryBytes = null;
+        if (safe) {
+            String ext = simpleExtOf(fileName);
+            for (String candidate : buildExtCandidates(fileName, ext)) {
+                entryBytes = ArchivePreviewProvider.extractFile(archiveData, candidate, innerPath);
+                if (entryBytes != null) {
+                    break;
+                }
+            }
+        }
+
+        if (entryBytes == null) {
+            String html = buildInnerMessagePage("压缩包内条目不存在或不支持预览：" + innerPath);
+            response.setStatus(404)
+                    .setHeader("X-FileStorage-Preview", "inner-miss")
+                    .setContentType("text/html;charset=UTF-8")
+                    .setBody(html.getBytes(StandardCharsets.UTF_8))
+                    .end();
+            return CompletableFuture.completedFuture(null);
+        }
+
+        String entryName = innerPath;
+        int slash = entryName.lastIndexOf('/');
+        if (slash >= 0) {
+            entryName = entryName.substring(slash + 1);
+        }
+
+        byte[] previewPage = trySpiPreview(entryBytes, entryName);
+        if (previewPage != null) {
+            response.setStatus(200)
+                    .setHeader("X-FileStorage-Preview", "spi-inner")
+                    .setContentType("text/html;charset=UTF-8")
+                    .setBody(previewPage)
+                    .end();
+            return CompletableFuture.completedFuture(null);
+        }
+
+        response.setStatus(200)
+                .setHeader("X-FileStorage-Preview", "inner-raw")
+                .setHeader("Content-Disposition", buildDisposition(false, entryName))
+                .setContentType(resolveContentType(entryName))
+                .setBody(entryBytes)
+                .end();
+        return CompletableFuture.completedFuture(null);
+    }
+
+    /**
+    * 构建压缩包条目下钻失败提示页。
+    *
+    * @param message 提示信息
+    * @return 完整 HTML 页面
+    */
+    private String buildInnerMessagePage(String message) {
+        return "<!DOCTYPE html><html lang=\"zh-CN\"><head><meta charset=\"utf-8\">"
+                + "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
+                + "<style>body{margin:0;padding:48px 24px;background:#f8f9fa;color:#1a1a2e;"
+                + "font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;text-align:center}"
+                + ".box{display:inline-block;background:#fff;border:1px solid #e5e7eb;border-radius:12px;"
+                + "padding:28px 36px;max-width:560px}"
+                + ".msg{font-size:14px;color:#374151;margin-bottom:16px;word-break:break-all}"
+                + "a{color:#2563eb;text-decoration:none;font-size:14px}"
+                + "</style></head><body><div class=\"box\">"
+                + "<div class=\"msg\">" + escapeHtml(message) + "</div>"
+                + "<a href=\"javascript:history.back()\">返回压缩包列表</a>"
+                + "</div></body></html>";
+    }
+
+    /**
+    * 取文件名末段扩展名（小写、不含点）。
+    *
+    * @param fileName 文件名
+    * @return 扩展名；无扩展名时返回空串
+    */
+    private static String simpleExtOf(String fileName) {
+        return fileName.contains(".")
+                ? fileName.substring(fileName.lastIndexOf('.') + 1).toLowerCase(Locale.ROOT) : "";
+    }
+
+    /**
     * 尝试通过 SPI 预览提供者转换文件为 HTML 预览页（带并发去重）。
     *
     * <p>classpath 中存在 utils-support-filestorage-starter 时，可预览
@@ -3188,21 +3295,32 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         if (providers.isEmpty()) {
             return null;
         }
-        String ext = fileName.contains(".")
-                ? fileName.substring(fileName.lastIndexOf('.') + 1).toLowerCase() : "";
+        String ext = simpleExtOf(fileName);
+
+        // 扩展名候选：复合后缀（如 tar.gz）优先于单段后缀（如 gz）
+        List<String> extCandidates = buildExtCandidates(fileName, ext);
 
  // 构建去重 键：内容首 1KB + 长度 + 扩展名（兼顾性能与唯一性）
-        String dedupKey = buildDedupKey(content, ext);
+        String dedupKey = buildDedupKey(content, extCandidates.get(0));
 
         CompletableFuture<byte[]> future = inflightMap.computeIfAbsent(dedupKey, k -> {
             return CompletableFuture.supplyAsync(() -> {
                 try {
                     for (FileStoragePreviewProvider provider : providers) {
-                        if (!provider.supports(ext, "")) {
+                        PreviewResult result = null;
+                        String matchedExt = null;
+                        for (String candidate : extCandidates) {
+                            if (!provider.supports(candidate, "")) {
+                                continue;
+                            }
+                            matchedExt = candidate;
+                            break;
+                        }
+                        if (matchedExt == null) {
                             continue;
                         }
                         try {
-                            PreviewResult result = provider.preview(content, ext, "");
+                            result = provider.preview(content, matchedExt, "");
                             if (result == null) {
                                 continue;
                             }
@@ -3227,6 +3345,32 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
             inflightMap.remove(dedupKey);
             return null;
         }
+    }
+
+    /**
+    * 构建扩展名候选列表。
+    * <p>双段复合后缀（如 {@code tar.gz}、{@code tar.bz2}）排在前面，
+    * 末段单扩展名（如 {@code gz}）作为兜底，保证复合格式优先命中专属 Provider。</p>
+    *
+    * @param fileName 文件名
+    * @param simpleExt 末段扩展名（小写）
+    * @return 扩展名候选列表，至少包含末段扩展名
+    */
+    private List<String> buildExtCandidates(String fileName, String simpleExt) {
+        List<String> candidates = new ArrayList<>();
+        String lowerName = fileName.toLowerCase(Locale.ROOT);
+        int lastDot = lowerName.lastIndexOf('.');
+        if (lastDot > 0) {
+            int previousDot = lowerName.lastIndexOf('.', lastDot - 1);
+            if (previousDot >= 0) {
+                String compoundExt = lowerName.substring(previousDot + 1);
+                if (!compoundExt.equals(simpleExt)) {
+                    candidates.add(compoundExt);
+                }
+            }
+        }
+        candidates.add(simpleExt);
+        return candidates;
     }
 
     /**

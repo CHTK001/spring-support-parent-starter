@@ -13,20 +13,20 @@ import java.time.LocalDateTime;
 @Data
 public class WrongQuestionVO {
 
-    /** 标识 */
-    private Long id;
-    /** studentid */
-    private String studentId;
-    /** questionid */
-    private Long questionId;
-    /** Wrong数量 */
-    private Integer wrongCount;
-    /** Mastery级别 */
-    private Integer masteryLevel;
-    /** 最后wrong时间 */
-    private LocalDateTime lastWrongTime;
-    /** 最后评审时间 */
-    private LocalDateTime lastReviewTime;
-    /** 评审数量 */
-    private Integer reviewCount;
+    /** 错题标识 */
+    private Long wrongQuestionId;
+    /** 学生标识 */
+    private String wrongQuestionStudentId;
+    /** 题目标识 */
+    private Long wrongQuestionQuestionId;
+    /** 错误次数 */
+    private Integer wrongQuestionWrongCount;
+    /** 掌握度 */
+    private Integer wrongQuestionMasteryLevel;
+    /** 最近错误时间 */
+    private LocalDateTime wrongQuestionLastWrongTime;
+    /** 最近复习时间 */
+    private LocalDateTime wrongQuestionLastReviewTime;
+    /** 复习次数 */
+    private Integer wrongQuestionReviewCount;
 }

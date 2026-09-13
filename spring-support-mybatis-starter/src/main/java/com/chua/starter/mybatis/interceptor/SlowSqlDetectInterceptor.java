@@ -169,44 +169,12 @@ public class SlowSqlDetectInterceptor implements Interceptor {
     private static class SqlResolveResult {
         /** SQL */
         private final String sql;
-        /**
-        * 参数
-        *
-         /**
-        * sqlresolve结果。
-        * @param sql SQL
-        * @param parameters 参数
-          */
-         * @param obj obj
-         * @return 获取参数值的结果
-         * @param value 值
-         * @param maxLen 最大len
-         */
+        /** 参数 */
         private final List<String> parameters;
-/**
-* resolvesql。
-* @param configuration 配置
-* @param boundSql boundsql
-* @return resolveSql的结果
-* @param obj obj
-* @param value 值
- /**
-   * sqlresolve结果。
-   * @param sql sql
-   * @param parameters 参数
-  */
- * @param maxLen 最大len
- */
 
         private SqlResolveResult(String sql, List<String> parameters) {
             this.sql = sql;
             this.parameters = parameters;
-        /**
-        * resolveSql。
-        * @param configuration 配置
-        * @param boundSql boundSql
-        * @return resolveSql的结果
-         */
         }
     }
 
