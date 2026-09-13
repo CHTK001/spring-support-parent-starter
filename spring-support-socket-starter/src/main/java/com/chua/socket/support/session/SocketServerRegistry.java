@@ -300,12 +300,9 @@ public class SocketServerRegistry {
     }
 
      /**
-     * 获取database服务端。
-     * @return 获取database服务端的结果
-      */
-     * 获取数据库中的 套接字 服务器配置（默认为空）
-     *
-     * @return 获取服务端id的结果
+    * 获取数据库中的服务端
+    *
+    * @return 服务端标识
      */
     protected List<SocketServerInfo> getDatabaseServers() {
         return Collections.emptyList();
