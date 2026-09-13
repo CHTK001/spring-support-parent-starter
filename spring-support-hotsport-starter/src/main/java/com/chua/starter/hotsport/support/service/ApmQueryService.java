@@ -7,9 +7,12 @@ import com.chua.runtime.apm.storage.Query;
 import com.chua.runtime.apm.storage.TransmissionEvent;
 import com.chua.runtime.protocol.DependencyEdge;
 import com.chua.runtime.protocol.Endpoint;
-import com.chua.starter.agent.support.service.AgentAttachService;
 import com.chua.starter.hotsport.support.config.HotsportProperties;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import jakarta.annotation.PostConstruct;
+import java.nio.file.Path;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -36,25 +39,121 @@ import java.util.Map;
 @Service
 public class ApmQueryService {
 
-    /** Agent 自注入服务（spring-support-agent-starter 自动配置提供）。 */
-    private final AgentAttachService agentAttachService;
+    /** 是否已尝试自注入 Agent。 */
+    private final AtomicBoolean attachAttempted = new AtomicBoolean(false);
+
+    /** Agent 自注入是否成功。 */
+    private volatile boolean agentActive = false;
+
+    @Value("${hotsport.agent.enabled:true}")
+    private boolean agentEnabled;
+
+    @Value("${hotsport.agent.shell-port:4567}")
+    private int shellPort;
+
+    @Value("${hotsport.agent.options:}")
+    private String agentOptions;
 
     /** 时间格式：epoch 毫秒 → 前端可读字符串。 */
     private static final DateTimeFormatter ISO_FMT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneOffset.systemDefault());
 
     /**
-     * 创建查询服务。
+     * 启动时异步自注入 Agent 并在本进程启动 APM 引擎。
      *
-     * @param agentAttachService Agent 自注入服务
+     * <p>双通道：
+     * ① attachSelf —— agentmain 对已加载类做 retransform（拦截 JDK/Tomcat 等启动早期类）；
+     * ② 本进程直接 new ApmBootstrap().start() —— 与 host 同 classloader，
+     *    handler 写入的 StorageManager 与 stats() 读取的同源（绕开跨加载器静态隔离）。</p>
      */
-    public ApmQueryService(AgentAttachService agentAttachService) {
-        this.agentAttachService = agentAttachService;
+    @PostConstruct
+    public void attachAgent() {
+        if (!agentEnabled) {
+            log.info("[Hotsport] Agent 自注入被配置禁用 (hotsport.agent.enabled=false)");
+            return;
+        }
+        Thread.ofVirtual().name("hotsport-agent-attach").start(this::doAttachAgent);
+    }
+
+    /** 实际自注入 + 本进程 APM 启动（虚拟线程执行）。 */
+    private void doAttachAgent() {
+        if (!attachAttempted.compareAndSet(false, true)) {
+            return;
+        }
+        // ① 自 attach（retransform 已加载类）
+        try {
+            Path agentJar = resolveAgentJarFromBootInf();
+            com.chua.runtime.starter.RuntimeBoot.create()
+                    .withAgent(agentJar)
+                    .withAgentOptions(agentOptions.isEmpty() ? "port=" + shellPort : agentOptions)
+                    .attachSelf();
+            agentActive = true;
+            log.info("[Hotsport] Agent 自注入完成，Shell 端口 {}", shellPort);
+        } catch (Throwable t) {
+            log.warn("[Hotsport] Agent 自注入失败（转仅本进程 APM 模式）: {}", t.getMessage());
+        }
+        // ② 本进程 APM 引擎（与 stats() 同 classloader，数据同源）
+        try {
+            com.chua.runtime.apm.ApmBootstrap apm =
+                    new com.chua.runtime.apm.ApmBootstrap(java.nio.file.Paths.get(System.getProperty("java.io.tmpdir")));
+            apm.addHandler(new com.chua.runtime.apm.handler.LogHandler());
+            apm.addHandler(new com.chua.runtime.apm.handler.NetHandler());
+            apm.addHandler(new com.chua.runtime.apm.handler.TransmissionHandler());
+            apm.addHandler(new com.chua.runtime.apm.handler.DependencyGraphHandler());
+            apm.addHandler(new com.chua.runtime.apm.handler.HandleLeakHandler());
+            apm.addHandler(new com.chua.runtime.apm.handler.TraceHandler());
+            apm.addHandler(new com.chua.runtime.apm.handler.HttpClientHandler());
+            apm.addHandler(new com.chua.runtime.apm.handler.JdkHttpServerHandler());
+            apm.start();
+            log.info("[Hotsport] 本进程 APM 引擎已启动（inmemory 存储，与查询同源）");
+        } catch (Throwable t) {
+            log.warn("[Hotsport] 本进程 APM 启动失败: {}", t.getMessage());
+        }
+    }
+
+    /**
+     * 从 Spring Boot fat jar 的 BOOT-INF/lib/ 中定位 agent jar 并解压到临时目录。
+     *
+     * @return agent jar 物理路径；找不到返回 null
+     */
+    private static Path resolveAgentJarFromBootInf() throws java.io.IOException {
+        String[] jars = System.getProperty("java.class.path").split(java.io.File.pathSeparator);
+        for (String entry : jars) {
+            Path candidate = Path.of(entry);
+            if (!java.nio.file.Files.isRegularFile(candidate)) {
+                continue;
+            }
+            try (java.util.jar.JarFile outer = new java.util.jar.JarFile(candidate.toFile())) {
+                java.util.Optional<java.util.jar.JarEntry> target = java.util.Optional.empty();
+                java.util.Enumeration<java.util.jar.JarEntry> entries = outer.entries();
+                while (entries.hasMoreElements()) {
+                    java.util.jar.JarEntry e = entries.nextElement();
+                    String name = e.getName();
+                    if (name.startsWith("BOOT-INF/lib/")
+                            && name.contains("utils-support-runtime-agent")
+                            && name.endsWith(".jar")) {
+                        target = java.util.Optional.of(e);
+                        break;
+                    }
+                }
+                if (target.isEmpty()) {
+                    continue;
+                }
+                java.io.File dest = java.nio.file.Files.createTempFile("hotsport-agent-", ".jar").toFile();
+                try (java.io.InputStream is = outer.getInputStream(target.get());
+                     java.io.OutputStream os = java.nio.file.Files.newOutputStream(dest.toPath())) {
+                    is.transferTo(os);
+                }
+                log.info("[Hotsport] Agent jar 提取自 fat jar {} -> {}", target.get().getName(), dest.getAbsolutePath());
+                return dest.toPath();
+            }
+        }
+        return null;
     }
 
     /** Agent 是否已激活。 */
     public boolean isAgentActive() {
-        return agentAttachService.isAgentActive();
+        return agentActive;
     }
 
     // ------------------------------------------------------------------
@@ -68,8 +167,8 @@ public class ApmQueryService {
      */
     public Map<String, Object> stats() {
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("agentActive", agentAttachService.isAgentActive());
-        result.put("agentEnabled", agentAttachService.isEnabled());
+        result.put("agentActive", agentActive);
+        result.put("agentEnabled", agentEnabled);
         Map<String, Long> raw = new LinkedHashMap<>();
         ApmStorage storage = currentStorage();
         if (storage != null) {
