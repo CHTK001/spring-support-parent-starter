@@ -483,19 +483,29 @@ public class SystemManageController {
      */
     private String execCommand(String... cmd) {
         try {
-            ProcessBuilder pb = new ProcessBuilder(cmd);
+            // Windows: 确保 powershell 能被找到（Java CreateProcess 对 PATH 解析与 cmd 不同）
+            String[] actualCmd = cmd;
+            if (IS_WINDOWS && cmd.length > 0 && "powershell".equalsIgnoreCase(cmd[0])) {
+                String psPath = System.getenv("SystemRoot") + "\\System32\\WindowsPowerShell\\v1.0\\powershell.exe";
+                actualCmd = new String[cmd.length];
+                actualCmd[0] = psPath;
+                System.arraycopy(cmd, 1, actualCmd, 1, cmd.length - 1);
+            }
+            ProcessBuilder pb = new ProcessBuilder(actualCmd);
             pb.redirectErrorStream(true);
             Process process = pb.start();
             StringBuilder output = new StringBuilder();
             try (BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(process.getInputStream(), Charset.defaultCharset()))) {
+                    new InputStreamReader(process.getInputStream(), Charset.forName("UTF-8")))) {
                 String line;
                 while ((line = reader.readLine()) != null) {
                     output.append(line).append("\n");
                 }
             }
             process.waitFor();
-            return output.toString().trim();
+            String result = output.toString().trim();
+            log.info("执行命令: {} => 输出长度={}, 退出码={}", String.join(" ", actualCmd), result.length(), process.exitValue());
+            return result;
         } catch (Exception e) {
             log.error("执行命令失败: {}", String.join(" ", cmd), e);
             return "";
@@ -515,8 +525,11 @@ public class SystemManageController {
         for (Map<String, Object> p : list) {
             p.put("pid", p.get("Id"));
             p.put("name", p.get("ProcessName"));
-            p.put("cpu", p.getOrDefault("CPU", 0));
-            p.put("memory", ((Number) p.getOrDefault("WorkingSet64", 0)).longValue() / (1024.0 * 1024.0));
+            Object cpuVal = p.get("CPU");
+            p.put("cpu", cpuVal instanceof Number ? cpuVal : 0);
+            Object memVal = p.get("WorkingSet64");
+            double memMb = (memVal instanceof Number) ? ((Number) memVal).longValue() / (1024.0 * 1024.0) : 0;
+            p.put("memory", memMb);
             p.put("command", p.get("Path"));
             p.put("parentPid", p.get("ParentId"));
             p.put("threadCount", p.get("ThreadCount"));
@@ -597,17 +610,22 @@ public class SystemManageController {
     * @param json JSON 字符串
     * @return Map 列表
      */
+    private static final com.fasterxml.jackson.databind.ObjectMapper JACKSON = new com.fasterxml.jackson.databind.ObjectMapper();
+
     @SuppressWarnings("unchecked")
     private List<Map<String, Object>> parseJsonList(String json) {
         if (json == null || json.isBlank()) return new ArrayList<>();
         try {
-            // 简单的 JSON 解析，使用项目的 Json 工具
-            Object parsed = com.chua.common.support.lang.json.Json.parse(json);
-            if (parsed instanceof List) {
-                return (List<Map<String, Object>>) parsed;
-            } else if (parsed instanceof Map) {
+            com.fasterxml.jackson.databind.JsonNode root = JACKSON.readTree(json);
+            if (root.isArray()) {
+                List<Map<String, Object>> list = new ArrayList<>();
+                for (com.fasterxml.jackson.databind.JsonNode node : root) {
+                    list.add(JACKSON.convertValue(node, Map.class));
+                }
+                return list;
+            } else if (root.isObject()) {
                 List<Map<String, Object>> single = new ArrayList<>();
-                single.add((Map<String, Object>) parsed);
+                single.add(JACKSON.convertValue(root, Map.class));
                 return single;
             }
         } catch (Exception e) {

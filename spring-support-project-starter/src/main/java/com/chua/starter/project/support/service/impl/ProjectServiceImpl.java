@@ -8,6 +8,8 @@ import com.chua.starter.project.support.entity.MsProjectDeployLog;
 import com.chua.starter.project.support.mapper.MsProjectDeployLogMapper;
 import com.chua.starter.project.support.mapper.MsProjectMapper;
 import com.chua.starter.project.support.service.ProjectService;
+import com.chua.starter.project.support.scheduler.ProjectMetricWheel;
+import com.chua.starter.project.support.scheduler.ProjectWatchdogWheel;
 import com.chua.starter.server.support.entity.MsServerHost;
 import com.chua.starter.server.support.mapper.MsServerHostMapper;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -44,6 +46,12 @@ public class ProjectServiceImpl implements ProjectService {
     /** 服务器主机 映射器（来自 spring-支持-服务端-启动） */
     private final MsServerHostMapper serverHostMapper;
 
+    /** 守护时间轮（项目守护配置变更时重挂） */
+    private final ProjectWatchdogWheel watchdogWheel;
+
+    /** 指标采集时间轮（项目指标配置变更时重挂） */
+    private final ProjectMetricWheel metricWheel;
+
     /** Jackson */
     private final ObjectMapper objectMapper;
 
@@ -63,6 +71,8 @@ public class ProjectServiceImpl implements ProjectService {
         project.setMsProjectRuntimeStatus(ProjectConstants.RUNTIME_UNKNOWN);
         project.setMsProjectSort(project.getMsProjectSort() == null ? 100 : project.getMsProjectSort());
         projectMapper.insert(project);
+        watchdogWheel.reschedule(project.getId());
+        metricWheel.reschedule(project.getId());
         return ReturnResult.ok(project, "创建成功");
     }
 
@@ -84,6 +94,8 @@ public class ProjectServiceImpl implements ProjectService {
         }
         project.setId(id);
         projectMapper.updateById(project);
+        watchdogWheel.reschedule(id);
+        metricWheel.reschedule(id);
         return ReturnResult.ok(project, "更新成功");
     }
 
@@ -102,6 +114,8 @@ public class ProjectServiceImpl implements ProjectService {
         deployLogMapper.delete(new LambdaQueryWrapper<MsProjectDeployLog>()
                 .eq(MsProjectDeployLog::getMsProjectDeployLogProjectId, id));
         projectMapper.deleteById(id);
+        watchdogWheel.reschedule(id);
+        metricWheel.reschedule(id);
         return ReturnResult.ok(true, "删除成功");
     }
 

@@ -24,7 +24,18 @@ import javax.sql.DataSource;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.ServiceLoader;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Semaphore;
@@ -988,7 +999,7 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
                 return null;
             }
 
-            Map<String, Object> row = rows.get(0);
+            Map<String, Object> row = rows.getFirst();
             return new ScriptExecutionRecord(
                     Objects.toString(row.get("checksum"), null),
                     Objects.toString(row.get("success"), null));

@@ -124,7 +124,7 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
         List<FieldError> fieldErrors = e.getFieldErrors();
         if (returnDetailedErrors && !fieldErrors.isEmpty()) {
             Map<String, String> errors = buildFieldErrorMap(fieldErrors);
-            String firstError = fieldErrors.get(0).getDefaultMessage();
+            String firstError = fieldErrors.getFirst().getDefaultMessage();
             return buildValidationError("表单参数验证失败", firstError, errors);
         }
         
@@ -147,7 +147,7 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
         List<FieldError> fieldErrors = e.getBindingResult().getFieldErrors();
         if (returnDetailedErrors && !fieldErrors.isEmpty()) {
             Map<String, String> errors = buildFieldErrorMap(fieldErrors);
-            String firstError = fieldErrors.get(0).getDefaultMessage();
+            String firstError = fieldErrors.getFirst().getDefaultMessage();
             return buildValidationError("请求参数验证失败", firstError, errors);
         }
         
@@ -291,11 +291,11 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
             return ReturnResult.error("JSON语法错误：" + e.getOriginalMessage());
         } else if (e instanceof InvalidFormatException invalidFormatException) {
             return ReturnResult.error(String.format("字段'%s'格式错误，期望类型：%s",
-                    invalidFormatException.getPath().get(0).getFieldName(),
+                    invalidFormatException.getPath().isEmpty() ? "" : invalidFormatException.getPath().getFirst().getFieldName(),
                     getSimpleTypeName(invalidFormatException.getTargetType())));
         } else if (e instanceof MismatchedInputException mismatchedInputException) {
             return ReturnResult.error("JSON字段类型不匹配：" +
-                    mismatchedInputException.getPath().get(0).getFieldName());
+                    (mismatchedInputException.getPath().isEmpty() ? "" : mismatchedInputException.getPath().getFirst().getFieldName()));
         }
         return ReturnResult.error("JSON处理失败：" + e.getOriginalMessage());
     }
@@ -782,7 +782,7 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
 
     private <T> ReturnResult<T> handleJsonMappingException(JsonMappingException e) {
         if (e instanceof InvalidFormatException ife) {
-            String fieldName = ife.getPath().isEmpty() ? "未知字段" : ife.getPath().get(0).getFieldName();
+            String fieldName = ife.getPath().isEmpty() ? "未知字段" : ife.getPath().getFirst().getFieldName();
             String expectedType = getSimpleTypeName(ife.getTargetType());
             Object value = ife.getValue();
             String valueStr = value != null ? String.valueOf(value) : "空";
@@ -792,7 +792,7 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
             return ReturnResult.error(REQUEST_PARAM_FORMAT_ERROR.getCode(), 
                     String.format("'%s'格式错误，需要%s，收到：%s", fieldName, expectedType, valueStr));
         } else if (e instanceof MismatchedInputException mie) {
-            String fieldName = mie.getPath().isEmpty() ? "请求数据" : mie.getPath().get(0).getFieldName();
+            String fieldName = mie.getPath().isEmpty() ? "请求数据" : mie.getPath().getFirst().getFieldName();
             return ReturnResult.error(REQUEST_PARAM_FORMAT_ERROR.getCode(), String.format("'%s'格式不正确", fieldName));
         }
         return ReturnResult.error(REQUEST_PARAM_FORMAT_ERROR.getCode(), "请求数据格式错误");

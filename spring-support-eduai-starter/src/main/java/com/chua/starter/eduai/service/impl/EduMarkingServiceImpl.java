@@ -228,7 +228,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
 
         MarkingResultVO vo = new MarkingResultVO();
         vo.setTaskId(taskId);
-        vo.setStatus(results.get(0).getMarkingResultStatus());
+        vo.setStatus(results.getFirst().getMarkingResultStatus());
         vo.setTotal(results.size());
 
         List<MarkingResultVO.QuestionResult> list = new ArrayList<>();

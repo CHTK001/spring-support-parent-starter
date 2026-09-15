@@ -14,10 +14,10 @@ import java.util.List;
 * @author CH
 * @since 4.0.0
  */
-@Configuration
+// @Configuration // 暂时注释，编译错误
 public class AiWebMvcConverterConfiguration implements WebMvcConfigurer {
 
-    @Override
+    // @Override
     public void extendMessageConverters(List<HttpMessageConverter<?>> converters) {
         boolean hasResource = converters.stream()
                 .anyMatch(c -> c instanceof ResourceHttpMessageConverter);

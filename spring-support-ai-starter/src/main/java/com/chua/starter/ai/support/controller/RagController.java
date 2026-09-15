@@ -1,6 +1,7 @@
 package com.chua.starter.ai.support.controller;
 
 import com.chua.common.support.ai.rag.RagClient;
+import com.chua.common.support.ai.rag.RagClientSetting;
 import com.chua.common.support.ai.rag.RagDocument;
 import com.chua.common.support.ai.rag.RagResponse;
 import com.chua.common.support.ai.rag.VectorService;
@@ -378,11 +379,17 @@ public class RagController {
      */
     public ReturnResult<Map<String, Object>> status() {
         Map<String, Object> status = new LinkedHashMap<>();
+        RagClient client = ragClient();
+        RagClientSetting runtime = client != null ? client.getSetting() : null;
+        int topK = runtime != null ? runtime.getTopK() : ragProperties.getDefaultTopK();
+        double threshold = runtime != null ? runtime.getSimilarityThreshold() : ragProperties.getDefaultSimilarityThreshold();
+        String uploadDir = runtime != null ? runtime.getUploadDir() : ragProperties.getUploadDir();
         status.put("engine", ragProperties.getEmbeddingEngine());
         status.put("llmProvider", "global (使用全局 LLM 配置)");
-        status.put("uploadDir", ragProperties.getUploadDir());
-        status.put("defaultTopK", ragProperties.getDefaultTopK());
-        status.put("defaultSimilarityThreshold", ragProperties.getDefaultSimilarityThreshold());
+        status.put("uploadDir", uploadDir);
+        status.put("defaultTopK", topK);
+        status.put("defaultSimilarityThreshold", threshold);
+        status.put("clientType", client instanceof com.chua.common.support.ai.rag.RagPipeline ? "pipeline" : "memory");
         status.put("ragClientReady", ragClient() != null);
         status.put("documentCount", ragClient() != null ? ragClient().documentCount() : 0);
         return ReturnResult.ok(status);

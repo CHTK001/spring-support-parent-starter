@@ -1,5 +1,6 @@
 package com.chua.starter.common.support.jackson;
 
+import com.chua.common.support.converter.Converter;
 import com.chua.common.support.lang.json.Json;
 import com.fasterxml.jackson.core.JacksonException;
 import com.fasterxml.jackson.core.JsonParser;
@@ -11,7 +12,11 @@ import com.fasterxml.jackson.databind.JsonDeserializer;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.util.*;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 
 /**
 * 自定义json日期反序列化程序
@@ -84,19 +89,19 @@ public class ArrayToJsonStringJsonDeserializer extends JsonDeserializer<Object> 
         if(token.isNumeric()) {
             JsonParser.NumberType numberType = treeNode.numberType();
             if(numberType == JsonParser.NumberType.INT) {
-                return Integer.valueOf(treeNode.toString());
+                return Converter.convertIfNecessary(treeNode.toString(), Integer.class);
             }
 
             if(numberType == JsonParser.NumberType.LONG) {
-                return Long.valueOf(treeNode.toString());
+                return Converter.convertIfNecessary(treeNode.toString(), Long.class);
             }
 
             if(numberType == JsonParser.NumberType.FLOAT) {
-                return Float.valueOf(treeNode.toString());
+                return Converter.convertIfNecessary(treeNode.toString(), Float.class);
             }
 
             if(numberType == JsonParser.NumberType.DOUBLE) {
-                return Double.valueOf(treeNode.toString());
+                return Converter.convertIfNecessary(treeNode.toString(), Double.class);
             }
 
             if(numberType == JsonParser.NumberType.BIG_DECIMAL) {

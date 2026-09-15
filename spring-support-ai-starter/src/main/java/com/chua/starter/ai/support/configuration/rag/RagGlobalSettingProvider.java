@@ -40,7 +40,12 @@ public class RagGlobalSettingProvider implements GlobalSettingProvider {
                 new SettingItem("rag_system_prompt", "", "STRING", "RAG 问答系统提示词（可选）", 8),
                 new SettingItem("rag_splitter", "sentence", "STRING", "文本分割器（sentence / regex / paragraph）", 9),
                 new SettingItem("rag_default_top_k", "5", "NUMBER", "默认检索 Top-K", 10),
-                new SettingItem("rag_similarity_threshold", "0.7", "NUMBER", "相似度阈值", 11)
+                new SettingItem("rag_similarity_threshold", "0.7", "NUMBER", "相似度阈值", 11),
+                new SettingItem("rag_embedding_dimensions", "1536", "NUMBER", "向量维度（与 Embedding 模型输出维度一致）", 12),
+                new SettingItem("rag_embedding_base_url", "", "STRING", "Embedding API 基础地址（留空走 runtime 配置）", 14),
+                new SettingItem("rag_embedding_api_key", "", "STRING", "Embedding API 密钥（留空走 runtime 配置）", 15),
+                new SettingItem("rag_embedding_model_name", "", "STRING", "Embedding 模型标识（如 nvidia/nemotron-3-embed-1b:free）", 16),
+                new SettingItem("rag_client_provider", "pipeline", "STRING", "RAG 客户端类型（pipeline 管线 / memory 内存）", 13)
         );
     }
 }

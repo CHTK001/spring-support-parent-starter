@@ -13,7 +13,16 @@ import com.chua.starter.ai.support.manage.store.SysAiConversation;
 import com.chua.starter.ai.support.manage.store.SysAiConversationStore;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -60,7 +69,7 @@ public class ApiCompanionController {
     * @return 列表companions的结果
      */
     public ApiResult<List<Map<String, Object>>> listCompanions() {
-        List<Map<String, Object>> result = new ArrayList<>();
+        List<Map<String, Object>> result = new ArrayList<>(16); // 容量不可预估，按默认初值
         for (SysAiCompanion c : companionStore.listCompanions()) {
             result.add(withStatus(toProfile(c)));
         }
@@ -144,7 +153,7 @@ public class ApiCompanionController {
  // 记录 源_路径 到 appearance.习俗_figure（前端两阶段上传，此处简化记录）
         @SuppressWarnings("unchecked")
         Map<String, Object> appearance = toMapOrEmpty(companionStore.getCompanion(companionId).getAppearance());
-        Map<String, Object> customFigure = new HashMap<>();
+        Map<String, Object> customFigure = new HashMap<>(2);
         customFigure.put("source_path", body.get("source_path"));
         appearance.put("custom_figure", customFigure);
         SysAiCompanion updated = companionStore.patchCompanion(companionId, Map.of("appearance", appearance));
@@ -161,8 +170,7 @@ public class ApiCompanionController {
      */
     public ApiResult<Map<String, Object>> activeCompanion(@PathVariable String companionId) {
         SysAiCompanion companion = companionStore.getCompanion(companionId);
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("conversation_id", companion.getConversationId());
+        Map<String, Object> result = new LinkedHashMap<>(2);
         return ApiResult.ok(result);
     }
 
@@ -173,7 +181,7 @@ public class ApiCompanionController {
     * @return companionThreads的结果
      */
     public ApiResult<List<Map<String, Object>>> companionThreads(@PathVariable String companionId) {
-        List<Map<String, Object>> result = new ArrayList<>();
+        List<Map<String, Object>> result = new ArrayList<>(1);
         SysAiCompanion companion = companionStore.getCompanion(companionId);
         if (companion.getConversationId() != null) {
             result.add(threadOf(companion));
@@ -195,7 +203,7 @@ public class ApiCompanionController {
             conversation.setConversationId(conversationId);
             conversation.setType("nomi");
             conversation.setName(companion.getName() != null ? companion.getName() : "伙伴会话");
-            Map<String, Object> extra = new HashMap<>();
+            Map<String, Object> extra = new HashMap<>(2);
             extra.put("companion_id", companionId);
             conversation.setExtra(extra);
             long now = System.currentTimeMillis();
@@ -254,11 +262,11 @@ public class ApiCompanionController {
                                                      @RequestParam(required = false) String status,
                                                      @RequestParam(required = false) Integer limit,
                                                      @RequestParam(required = false) Integer offset) {
-        List<Map<String, Object>> items = new ArrayList<>();
+        List<Map<String, Object>> items = new ArrayList<>(16); // 数量不可预估，按默认初值
         for (SysAiCompanionSkill skill : companionStore.listSkills(companionId, limit, offset)) {
             items.add(toSkill(skill));
         }
-        Map<String, Object> result = new LinkedHashMap<>();
+        Map<String, Object> result = new LinkedHashMap<>(4);
         result.put("items", items);
         result.put("total", items.size());
         return ApiResult.ok(result);
@@ -282,7 +290,7 @@ public class ApiCompanionController {
     public ApiResult<Map<String, Object>> getSkillContent(@PathVariable String companionId,
                                                           @PathVariable String skillId) {
         SysAiCompanionSkill skill = companionStore.getSkill(skillId);
-        Map<String, Object> result = new LinkedHashMap<>();
+        Map<String, Object> result = new LinkedHashMap<>(2);
         result.put("skill", toSkill(skill));
         result.put("content", skill.getContent() != null ? skill.getContent() : "");
         return ApiResult.ok(result);
@@ -322,11 +330,11 @@ public class ApiCompanionController {
                                                        @RequestParam(required = false) Integer page,
                                                        @RequestParam(required = false) Integer page_size) {
         List<SysAiCompanionMemory> all = companionStore.listMemories(companion_id, null, null);
-        List<Map<String, Object>> items = new ArrayList<>();
+        List<Map<String, Object>> items = new ArrayList<>(16); // 数量不可预估，按默认初值
         for (SysAiCompanionMemory memory : all) {
             items.add(toMemory(memory));
         }
-        Map<String, Object> result = new LinkedHashMap<>();
+        Map<String, Object> result = new LinkedHashMap<>(2);
         result.put("items", items);
         result.put("total", items.size());
         return ApiResult.ok(result);
@@ -394,13 +402,13 @@ public class ApiCompanionController {
             return ApiResult.ok(List.of());
         }
         List<List<SysAiCompanionMemory>> groups = companionStore.suggestMemoryMerges(companionId);
-        List<Map<String, Object>> result = new ArrayList<>();
+        List<Map<String, Object>> result = new ArrayList<>(8); // 分组数量不可预估
         for (List<SysAiCompanionMemory> group : groups) {
-            List<Map<String, Object>> memories = new ArrayList<>();
+            List<Map<String, Object>> memories = new ArrayList<>(4); // 组内数量不可预估
             for (SysAiCompanionMemory memory : group) {
                 memories.add(toMemory(memory));
             }
-            Map<String, Object> entry = new LinkedHashMap<>();
+            Map<String, Object> entry = new LinkedHashMap<>(2);
             entry.put("memories", memories);
             result.add(entry);
         }
@@ -425,7 +433,7 @@ public class ApiCompanionController {
     * @return 列表figures的结果
      */
     public ApiResult<List<Map<String, Object>>> listFigures() {
-        List<Map<String, Object>> result = new ArrayList<>();
+        List<Map<String, Object>> result = new ArrayList<>(16); // 数量不可预估，按默认初值
         for (SysAiCompanionFigure figure : companionStore.listFigures()) {
             result.add(toFigure(figure));
         }
@@ -593,7 +601,7 @@ public class ApiCompanionController {
     * @return 转为配置文件的结果
      */
     private Map<String, Object> toProfile(SysAiCompanion c) {
-        Map<String, Object> profile = new LinkedHashMap<>();
+        Map<String, Object> profile = new LinkedHashMap<>(16);
         profile.put("companion_id", c.getCompanionId());
         profile.put("seq", c.getSeq() == null ? 0 : c.getSeq());
         profile.put("name", c.getName() != null ? c.getName() : "");
@@ -630,7 +638,7 @@ public class ApiCompanionController {
     * @return 状态的的结果
      */
     private Map<String, Object> statusOf(SysAiCompanion c) {
-        Map<String, Object> status = new LinkedHashMap<>();
+        Map<String, Object> status = new LinkedHashMap<>(8);
         status.put("companion_id", c.getCompanionId());
         status.put("xp", 0);
         status.put("level", 1);
@@ -660,7 +668,7 @@ public class ApiCompanionController {
     * @return 转为内存的结果
      */
     private Map<String, Object> toMemory(SysAiCompanionMemory memory) {
-        Map<String, Object> map = new LinkedHashMap<>();
+        Map<String, Object> map = new LinkedHashMap<>(16);
         map.put("memory_id", memory.getMemoryId());
         map.put("kind", memory.getKind() != null ? memory.getKind() : "knowledge");
         map.put("content", memory.getContent() != null ? memory.getContent() : "");
@@ -683,7 +691,7 @@ public class ApiCompanionController {
     * @return 转为skill的结果
      */
     private Map<String, Object> toSkill(SysAiCompanionSkill skill) {
-        Map<String, Object> map = new LinkedHashMap<>();
+        Map<String, Object> map = new LinkedHashMap<>(16);
         map.put("companion_skill_id", skill.getSkillId());
         map.put("skill_name", skill.getSkillName() != null ? skill.getSkillName() : "");
         map.put("companion_id", skill.getCompanionId());
@@ -709,7 +717,7 @@ public class ApiCompanionController {
     * @return 转为figure的结果
      */
     private Map<String, Object> toFigure(SysAiCompanionFigure figure) {
-        Map<String, Object> map = new LinkedHashMap<>();
+        Map<String, Object> map = new LinkedHashMap<>(8);
         map.put("figure_id", figure.getFigureId());
         map.put("name", figure.getName() != null ? figure.getName() : "");
         map.put("aspect", figure.getAspect() != null ? figure.getAspect() : 1);
@@ -726,7 +734,7 @@ public class ApiCompanionController {
     * @return thread的的结果
      */
     private Map<String, Object> threadOf(SysAiCompanion c) {
-        Map<String, Object> thread = new LinkedHashMap<>();
+        Map<String, Object> thread = new LinkedHashMap<>(6);
         thread.put("conversation_id", c.getConversationId());
         thread.put("companion_id", c.getCompanionId());
         thread.put("title", c.getName() != null ? c.getName() : "伙伴会话");
@@ -741,7 +749,7 @@ public class ApiCompanionController {
      */
     private Map<String, Object> sharedConfig() {
         String json = companionStore.getConfigValue("shared");
-        Map<String, Object> config = new LinkedHashMap<>();
+        Map<String, Object> config = new LinkedHashMap<>(8);
         if (json != null) {
             config.putAll(companionStore.fromJson(json));
         }
@@ -783,7 +791,7 @@ public class ApiCompanionController {
     * @return 映射
      */
     private static Map<String, Object> nullableMap(Object... kv) {
-        Map<String, Object> map = new LinkedHashMap<>();
+        Map<String, Object> map = new LinkedHashMap<>(8);
         for (int i = 0; i + 1 < kv.length; i += 2) {
             map.put(String.valueOf(kv[i]), kv[i + 1]);
         }
@@ -792,7 +800,7 @@ public class ApiCompanionController {
 
     @SuppressWarnings("unchecked")
     private static Map<String, Object> toMapOrEmpty(Map<String, Object> map) {
-        return map == null ? new LinkedHashMap<>() : map;
+        return map == null ? new LinkedHashMap<>(4) : map;
     }
 
     @SuppressWarnings("unchecked")

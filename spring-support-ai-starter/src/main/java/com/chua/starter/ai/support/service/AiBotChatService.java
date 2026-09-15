@@ -279,7 +279,7 @@ public class AiBotChatService {
                         .eq(SysAiBotMessage::getBotId, botId)
                         .eq(fromUser != null && !fromUser.isBlank(), SysAiBotMessage::getFromUser, fromUser));
         boolean hasMore = offset + window.size() < (total != null ? total : 0L);
-        Map<String, Object> data = new LinkedHashMap<>();
+        Map<String, Object> data = new LinkedHashMap<>(4);
         data.put("messages", window);
         data.put("hasMore", hasMore);
         data.put("page", safePage);
@@ -336,7 +336,7 @@ public class AiBotChatService {
         }
         // 只取最近 200 条，避免摘要输入过长
         int from = Math.max(0, messages.size() - 200);
-        StringBuilder transcript = new StringBuilder();
+        StringBuilder transcript = new StringBuilder(1024); // 摘要文本长度不可预估
         for (SysAiBotMessage m : messages.subList(from, messages.size())) {
             String role = "IN".equals(m.getDirection()) ? "用户" : "Bot";
             transcript.append("[").append(role).append("] ").append(m.getContent()).append("\n");
@@ -436,7 +436,7 @@ public class AiBotChatService {
      * @return 列表命令的结果
      */
     public List<Map<String, Object>> listCommands() {
-        List<Map<String, Object>> commands = new ArrayList<>();
+        List<Map<String, Object>> commands = new ArrayList<>(8); // 命令数量不可预估
         addCommand(commands, "/", "reset", "清空当前会话上下文");
         addCommand(commands, "/", "model", "切换对话模型");
         addCommand(commands, "/", "help", "查看可用命令");
@@ -446,7 +446,7 @@ public class AiBotChatService {
     }
 
     private void addCommand(List<Map<String, Object>> commands, String prefix, String name, String desc) {
-        Map<String, Object> cmd = new LinkedHashMap<>();
+        Map<String, Object> cmd = new LinkedHashMap<>(4);
         cmd.put("prefix", prefix);
         cmd.put("name", name);
         cmd.put("description", desc);
@@ -483,7 +483,7 @@ public class AiBotChatService {
         List<SysAiBotMessage> all = botMessageMapper.selectList(
                 Wrappers.<SysAiBotMessage>lambdaQuery()
                         .orderByAsc(SysAiBotMessage::getCreateTime));
-        Map<String, BotConversation> byKey = new LinkedHashMap<>();
+        Map<String, BotConversation> byKey = new LinkedHashMap<>(64); // 会话数量不可预估
         for (SysAiBotMessage m : all) {
             String key = m.getBotId() + "|" + (m.getFromUser() == null ? "" : m.getFromUser());
             BotConversation conv = byKey.computeIfAbsent(key, k -> {
@@ -570,7 +570,7 @@ public class AiBotChatService {
                         .eq(fromUser != null && !fromUser.isBlank(), SysAiBotMessage::getFromUser, fromUser));
         log.info("[BotChat] 删除会话 botId={} fromUser={} 共 {} 条消息", botId, fromUser, deleted);
         // 通知 IM 页刷新会话列表
-        Map<String, Object> push = new HashMap<>();
+            Map<String, Object> push = new HashMap<>(8);
         push.put("type", "bot.conversation-deleted");
         push.put("botId", botId);
         push.put("fromUser", fromUser);
@@ -596,7 +596,7 @@ public class AiBotChatService {
             msg.setCreateTime(LocalDateTime.now());
             botMessageMapper.insert(msg);
             // 广播到 IM 页（新消息 / 新会话实时刷新）
-            Map<String, Object> push = new HashMap<>();
+        Map<String, Object> push = new HashMap<>(4);
             push.put("type", "bot.message");
             push.put("botId", botId);
             push.put("direction", direction);
@@ -710,8 +710,8 @@ public class AiBotChatService {
             return null;
         }
         Object keys = credentials.get("api_keys");
-        if (keys instanceof List<?> list && !list.isEmpty() && list.get(0) != null) {
-            return list.get(0).toString();
+        if (keys instanceof List<?> list && !list.isEmpty() && list.getFirst() != null) {
+            return list.getFirst().toString();
         }
         Object key = credentials.get("apiKey");
         return key != null ? key.toString() : null;
@@ -731,7 +731,7 @@ public class AiBotChatService {
         }
         Object headers = extra.get("custom_headers");
         if (headers instanceof Map<?, ?> map) {
-            Map<String, String> result = new HashMap<>();
+            Map<String, String> result = new HashMap<>(8); // 自定义头部数量不可预估
             map.forEach((k, v) -> {
                 if (k != null && v != null) {
                     result.put(k.toString(), v.toString());

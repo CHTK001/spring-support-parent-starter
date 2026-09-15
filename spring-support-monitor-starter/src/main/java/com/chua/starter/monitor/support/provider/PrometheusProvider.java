@@ -153,7 +153,7 @@ public class PrometheusProvider implements MetricProvider {
             }
             Double value = m.getValue();
             if (value == null && m.getValues() != null && !m.getValues().isEmpty()) {
-                value = m.getValues().get(m.getValues().size() - 1).value();
+                value = m.getValues().getLast().value();
             }
             if (value == null) {
                 continue;

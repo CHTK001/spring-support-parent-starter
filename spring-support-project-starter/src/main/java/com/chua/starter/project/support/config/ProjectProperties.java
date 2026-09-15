@@ -29,4 +29,13 @@ public class ProjectProperties {
 
     /** 健康检查单次探测超时（秒，默认 15） */
     private int healthTimeoutSeconds = 15;
+
+    /** 指标持久化 JDBC 连接串（默认写宿主自身 H2/MySQL，前缀 project.support.metric-jdbc-url 可覆盖） */
+    private String metricJdbcUrl = "jdbc:h2:mem:project-metric;DB_CLOSE_DELAY=-1;MODE=MySQL;DATABASE_TO_UPPER=false;NON_KEYWORDS=VALUE";
+
+    /** 指标持久化 JDBC 用户名（H2 内存库可空） */
+    private String metricJdbcUser;
+
+    /** 指标持久化 JDBC 密码（H2 内存库可空） */
+    private String metricJdbcPassword;
 }

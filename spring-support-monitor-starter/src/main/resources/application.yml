@@ -10,6 +10,12 @@ spring:
       # filesystem-starter 自带的 web 分片上传链(auto-config 引用 monitor 未装配的 Service/Controller Bean), 排除之;
       # 我们只需其 FileStorageServerFilter/Setting/LocalFileStorage 类(file-storage 插件反射加载)
       - com.chua.starter.filesystem.support.config.FileSystemAutoConfiguration
+      # redis-starter 的 RedisConfiguration 在 Spring Boot 4 下出现 RedisProperties 重复注册冲突，本地联调排除
+      - com.chua.starter.redis.support.RedisConfiguration
+      # crypto-starter 密钥块完整性校验需口令，本地联调无密钥环境排除
+      - com.chua.crypto.support.spring.CryptoAutoConfiguration
+      # job-starter 依赖 JobMapper（mybatis 表映射），monitor 本地联调无该表排除
+      - com.chua.starter.job.support.JobAutoConfiguration
   ai:
     generate:
       enabled: false
@@ -31,11 +37,10 @@ spring:
         - classpath:db/h2-local-schema.sql
 
   datasource:
-    url: jdbc:h2:mem:monitordb;DB_CLOSE_DELAY=-1;MODE=MySQL;DATABASE_TO_UPPER=false;NON_KEYWORDS=VALUE
+    url: jdbc:h2:file:./data/monitordb;DB_CLOSE_DELAY=-1;MODE=MySQL;DATABASE_TO_UPPER=false;NON_KEYWORDS=VALUE
     driver-class-name: org.h2.Driver
     username: sa
     password:
-
   h2:
     console:
       enabled: true

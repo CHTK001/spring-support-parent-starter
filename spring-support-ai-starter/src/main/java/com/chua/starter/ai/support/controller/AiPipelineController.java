@@ -63,8 +63,9 @@ public class AiPipelineController {
         // 全局 Bean 设置分组（系统内部使用）
         result.add(globalBean("chat", "对话路由（ChatClient 会话）", "runtime",
                 "全局 ChatClient 会话：供应商、API Key、默认模型、温度与超时", "/settings/global-beans", "runtime"));
-        result.add(globalBean("rag", "RAG 检索增强", "rag",
-                "全局 RAG 客户端：嵌入模型、向量存储、分块参数", "/settings/global-beans", "rag"));
+        result.add(pipeline("rag", "RAG 检索增强", "rag", "rag",
+                List.of("rag"), List.of("ocr", "rerank", "layout"),
+                "文档入库+检索问答管线，入库 = 抽取→分块→向量化→入库，问答 = 检索→过滤→生成", "/capabilities/rag", "rag"));
         result.add(globalBean("input", "输入优化", "input",
                 "全局对话输入自动优化（压缩/改写）", "/settings/global-beans", "input"));
         result.add(globalBean("asr", "语音识别", "asr",

@@ -190,11 +190,38 @@ public class DeployServiceImpl implements DeployService {
         final MsProject deployProject = project;
         try {
             List<MsProjectDeployLog> logs = new ArrayList<>();
-            int size = Math.max(1, Math.min(hostIds.size(), 8));
+            // 部署前置门禁：开启时逐台校验主机在线状态与延迟，不可达主机直接拦截（区分网络故障 vs 部署失败）
+            List<Long> gateHostIds = hostIds;
+            if (isGateEnabled(project)) {
+                gateHostIds = new ArrayList<>();
+                for (Long hostId : hostIds) {
+                    MsServerHost host = serverHostMapper.selectById(hostId);
+                    if (host == null) {
+                        logs.add(lifecycleLog(project, null, act, "目标服务器不存在: " + hostId, version));
+                        continue;
+                    }
+                    String reject = preflightCheck(host);
+                    if (reject == null) {
+                        gateHostIds.add(hostId);
+                    } else {
+                        logs.add(lifecycleLog(project, host, act, reject, version));
+                        pushService.pushProgress(projectId, hostId, act, "GATE", "FAIL", reject, version);
+                    }
+                }
+                if (gateHostIds.isEmpty()) {
+                    for (MsProjectDeployLog g : logs) {
+                        deployLogMapper.insert(g);
+                    }
+                    pushService.pushProgress(projectId, null, act, "FINISH", "FAIL",
+                            "全部目标主机未通过前置门禁（网络不可达/已停用），部署取消", version);
+                    return ReturnResult.ok(logs);
+                }
+            }
+            int size = Math.max(1, Math.min(gateHostIds.size(), 8));
             ExecutorService pool = newPool(size);
             try {
                 List<java.util.concurrent.Future<MsProjectDeployLog>> futures = new ArrayList<>();
-                for (Long hostId : hostIds) {
+                for (Long hostId : gateHostIds) {
                     futures.add(pool.submit(() -> deployToHost(deployProject, hostId, artifact, version, act)));
                 }
                 for (java.util.concurrent.Future<MsProjectDeployLog> future : futures) {
@@ -261,11 +288,46 @@ public class DeployServiceImpl implements DeployService {
     }
 
     /**
-    * 部署失败自动回滚：项目开启 autoRollback 时，若存在失败主机，回滚到归档中最近的历史版本
-    *
-    * @param project 项目
-    * @param failedVersion 本次失败版本
-    * @param action 操作类型
+     * 部署前置门禁：校验目标主机在线状态与延迟
+     * <p>
+     * 依据主机台账 {@code serverHostOnline} / {@code serverHostDelayMs}（由
+     * server-starter 的 HostOnlineScheduler 周期探测写回）判定：
+     * 停用、探测离线、延迟不可达（-1）任一命中即拦截，返回拦截原因；
+     * 全部通过返回 空。
+     * </p>
+     *
+     * @param host 主机
+     * @return 拦截原因，通过返回 空
+     */
+    private String preflightCheck(MsServerHost host) {
+        if (host.getServerHostStatus() != null && host.getServerHostStatus() != 1) {
+            return "前置门禁：主机 " + host.getServerHostName() + " 已停用";
+        }
+        if (host.getServerHostOnline() != null && host.getServerHostOnline() == 0) {
+            return "前置门禁：主机 " + host.getServerHostName() + " 最近探测离线（网络不可达）";
+        }
+        if (host.getServerHostDelayMs() != null && host.getServerHostDelayMs() < 0) {
+            return "前置门禁：主机 " + host.getServerHostName() + " 最近延迟探测不可达";
+        }
+        return null;
+    }
+
+    /**
+     * 前置门禁是否开启
+     *
+     * @param project 项目
+     * @return 是否开启
+     */
+    private boolean isGateEnabled(MsProject project) {
+        return project.getMsProjectPreflightGate() != null && project.getMsProjectPreflightGate() == 1;
+    }
+
+    /**
+     * 部署失败自动回滚：项目开启 autoRollback 时，若存在失败主机，回滚到归档中最近的历史版本
+     *
+     * @param project 项目
+     * @param failedVersion 本次失败版本
+     * @param action 操作类型
      */
     private void autoRollbackOnFail(MsProject project, String failedVersion, String action) {
         if (project.getMsProjectAutoRollback() == null || project.getMsProjectAutoRollback() != 1) {
@@ -283,7 +345,7 @@ public class DeployServiceImpl implements DeployService {
             log.warn("[project] 项目 {} 开启自动回滚但无历史版本可回滚", project.getMsProjectName());
             return;
         }
-        MsProjectUploadArchive target = latest.get(0);
+        MsProjectUploadArchive target = latest.getFirst();
         Path archived = Path.of(target.getMsProjectUploadArchiveUploadPath());
         if (!Files.exists(archived)) {
             log.warn("[project] 自动回滚失败：归档文件缺失 {}", target.getMsProjectUploadArchiveUploadPath());

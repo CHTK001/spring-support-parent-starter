@@ -113,7 +113,7 @@ public class WechatPayScoreNotifyServiceImpl extends AbstractMerchantPaymentChan
              */
             throw new PaymentException("支付方式类型不匹配");
         }
-        if (!Integer.valueOf(ChannelStatus.ENABLED.getCode()).equals(channel.getStatus())) {
+        if (!ChannelStatus.ENABLED.getCode().equals(channel.getStatus())) {
             /**
             * 薪酬异常。
             * @param "支付方式未启用" "支付方式未启用"

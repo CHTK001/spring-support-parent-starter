@@ -12,6 +12,8 @@ import com.chua.starter.monitor.support.enums.ServerNodeProtocol;
 import com.chua.starter.monitor.support.mapper.MsServerNodeMapper;
 import com.chua.starter.monitor.support.server.ServerNodeRegistry;
 import com.chua.starter.monitor.support.server.ServerNodeRegistry.RuntimeServer;
+import com.chua.starter.monitor.support.server.model.ServerFilterDescriptor;
+import com.chua.starter.monitor.support.server.model.ServerHotUpdateResult;
 import com.chua.starter.monitor.support.server.model.ServerNodeRequest;
 import com.chua.starter.monitor.support.server.model.ServerNodeView;
 import com.chua.starter.monitor.support.service.ServerManageService;
@@ -21,6 +23,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -62,6 +65,37 @@ public class ServerManageServiceImpl implements ServerManageService {
         } catch (Exception e) {
             return ReturnResult.error(e.getMessage());
         }
+    }
+
+    @Override
+    public ReturnResult<List<ServerNodeView>> proxies() {
+        try {
+            List<MsServerNode> nodes = nodeMapper.selectList(
+                    new LambdaQueryWrapper<MsServerNode>().orderByAsc(MsServerNode::getId));
+            List<ServerNodeView> views = new ArrayList<>();
+            for (MsServerNode node : nodes) {
+                if (isProxyProtocol(node.getProtocol())) {
+                    views.add(toView(node));
+                }
+            }
+            return ReturnResult.ok(views);
+        } catch (Exception e) {
+            return ReturnResult.error(e.getMessage());
+        }
+    }
+
+    /**
+    * 判断协议是否属于代理类（反向代理 / TCP 代理 / socks 等）。
+    *
+    * @param protocol 协议编码
+    * @return 是代理类返回 真
+     */
+    private boolean isProxyProtocol(String protocol) {
+        if (protocol == null) {
+            return false;
+        }
+        String p = protocol.toLowerCase();
+        return p.contains("proxy") || p.contains("socks") || p.contains("tunnel");
     }
 
     @Override
@@ -186,6 +220,172 @@ public class ServerManageServiceImpl implements ServerManageService {
         }
     }
 
+    @Override
+    public ReturnResult<ServerHotUpdateResult> hotUpdate(Long id, ServerNodeRequest request) {
+        try {
+            MsServerNode exists = nodeMapper.selectById(id);
+            if (exists == null) {
+                return ReturnResult.error("节点不存在: " + id);
+            }
+            ServerNodeProtocol protocol = requireProtocol(request);
+            requireUniqueName(request.getName(), id);
+
+            boolean listeningChanged = listeningChanged(exists, request, protocol);
+            RuntimeServer current = nodeRegistry.get(id);
+            boolean wasRunning = current != null && current.isRunning();
+
+            MsServerNode node = new MsServerNode();
+            node.setId(id);
+            applyRequest(node, request, protocol);
+            node.setCreateName(exists.getCreateName());
+            node.setCreateBy(exists.getCreateBy());
+            node.setCreateTime(exists.getCreateTime());
+            nodeMapper.updateById(node);
+
+            ServerHotUpdateResult result = new ServerHotUpdateResult();
+            if (!wasRunning) {
+                // 未运行：仅持久化定义，等待下次启动
+                result.setHotApplied(false);
+                result.setRestarted(false);
+                result.addAppliedItem("定义已保存(节点未运行, 下次启动生效)");
+                result.setMessage("节点未运行, 配置已保存, 启动后生效");
+                result.setNode(toView(node));
+                return ReturnResult.ok(result);
+            }
+
+            if (listeningChanged) {
+                // 监听参数变更：先停后起
+                nodeRegistry.stop(id);
+                nodeRegistry.start(node);
+                result.setHotApplied(false);
+                result.setRestarted(true);
+                result.addAppliedItem("监听参数变更, 服务器已重启");
+                result.addAppliedItem("过滤器链已按新配置重建");
+                result.setMessage("监听地址/端口/引擎已变更, 服务器已按新配置重启");
+                result.setNode(toView(node));
+                return ReturnResult.ok(result);
+            }
+
+            // 监听参数未变：仅热更新过滤器链
+            nodeRegistry.hotUpdateFilters(node);
+            result.setHotApplied(true);
+            result.setRestarted(false);
+            result.addAppliedItem("过滤器链已热更新");
+            result.setMessage("监听参数未变, 仅热更新过滤器链");
+            result.setNode(toView(node));
+            return ReturnResult.ok(result);
+        } catch (Exception e) {
+            log.error("[ServerManage] 热更新失败: id={} - {}", id, e.getMessage(), e);
+            return ReturnResult.error("热更新失败: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public ReturnResult<ServerNodeView> hotToggleFilter(Long id, Integer index, Boolean enabled) {
+        try {
+            MsServerNode node = nodeMapper.selectById(id);
+            if (node == null) {
+                return ReturnResult.error("节点不存在: " + id);
+            }
+            if (index == null || index < 0) {
+                return ReturnResult.error("过滤器下标非法: " + index);
+            }
+            List<ServerFilterDescriptor> descriptors = nodeRegistry.parseFilters(node);
+            if (index >= descriptors.size()) {
+                return ReturnResult.error("过滤器下标越界: " + index);
+            }
+            boolean target = enabled == null || enabled;
+            descriptors.get(index).setEnabled(target);
+            node.setFilters(objectMapper.writeValueAsString(descriptors));
+            nodeMapper.updateById(node);
+            RuntimeServer runtime = nodeRegistry.get(id);
+            if (runtime != null && runtime.isRunning()) {
+                nodeRegistry.hotToggleFilter(node, index, target);
+            }
+            return ReturnResult.ok(toView(node));
+        } catch (Exception e) {
+            log.error("[ServerManage] 过滤器热启停失败: id={} index={} - {}", id, index, e.getMessage(), e);
+            return ReturnResult.error("过滤器热启停失败: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public ReturnResult<ServerNodeView> hotUpdateFilterParams(Long id, Integer index, Map<String, Object> params) {
+        try {
+            MsServerNode node = nodeMapper.selectById(id);
+            if (node == null) {
+                return ReturnResult.error("节点不存在: " + id);
+            }
+            if (index == null || index < 0) {
+                return ReturnResult.error("过滤器下标非法: " + index);
+            }
+            List<ServerFilterDescriptor> descriptors = nodeRegistry.parseFilters(node);
+            if (index >= descriptors.size()) {
+                return ReturnResult.error("过滤器下标越界: " + index);
+            }
+            ServerFilterDescriptor descriptor = descriptors.get(index);
+            Map<String, String> merged = new LinkedHashMap<>();
+            if (descriptor.getParams() != null) {
+                merged.putAll(descriptor.getParams());
+            }
+            if (params != null) {
+                params.forEach((k, v) -> merged.put(k, v == null ? null : String.valueOf(v)));
+            }
+            descriptor.setParams(merged);
+            node.setFilters(objectMapper.writeValueAsString(descriptors));
+            nodeMapper.updateById(node);
+            RuntimeServer runtime = nodeRegistry.get(id);
+            if (runtime != null && runtime.isRunning()) {
+                nodeRegistry.hotUpdateFilterParams(node, index, new LinkedHashMap<>(params == null ? Map.of() : params));
+            }
+            return ReturnResult.ok(toView(node));
+        } catch (Exception e) {
+            log.error("[ServerManage] 过滤器参数热更新失败: id={} index={} - {}", id, index, e.getMessage(), e);
+            return ReturnResult.error("过滤器参数热更新失败: " + e.getMessage());
+        }
+    }
+
+    /**
+    * 判断本次更新是否触发了监听参数变更（需要重启服务器）。
+    *
+    * @param exists   原实体
+    * @param request  新请求
+    * @param protocol 协议枚举
+    * @return 变更返回 真
+     */
+    private boolean listeningChanged(MsServerNode exists, ServerNodeRequest request, ServerNodeProtocol protocol) {
+        if (!equalsText(exists.getProtocol(), request.getProtocol())) {
+            return true;
+        }
+        String newEngine = request.getEngine() == null || request.getEngine().isBlank()
+                ? (protocol == null ? request.getProtocol().trim().toLowerCase() : protocol.getDefaultEngine())
+                : request.getEngine().trim().toLowerCase();
+        if (!equalsText(exists.getEngine(), newEngine)) {
+            return true;
+        }
+        String newHost = request.getHost() == null || request.getHost().isBlank()
+                ? "0.0.0.0" : request.getHost().trim();
+        if (!equalsText(exists.getHost(), newHost)) {
+            return true;
+        }
+        Integer newPort = request.getPort() != null ? request.getPort()
+                : (protocol == null ? null : protocol.getDefaultPort());
+        return exists.getPort() == null ? newPort != null : !exists.getPort().equals(newPort);
+    }
+
+    /**
+    * 忽略大小写的文本比较（双方均视为小写比较，避免仅大小写差异触发重启）。
+    *
+    * @param left  左值
+    * @param right 右值
+    * @return 相等返回 真
+     */
+    private boolean equalsText(String left, String right) {
+        String l = left == null ? null : left.trim().toLowerCase();
+        String r = right == null ? null : right.trim().toLowerCase();
+        return l == null ? r == null : l.equals(r);
+    }
+
     /** HTTP 引擎变体（SPI 注册但不应出现在协议下拉中） */
     private static final Set<String> HTTP_ENGINE_ALIASES =
             Set.of("jdk", "nio", "aio", "jdk-http", "nio-http", "aio-http");
@@ -232,6 +432,37 @@ public class ServerManageServiceImpl implements ServerManageService {
         return ReturnResult.ok(result);
     }
 
+    /**
+     * 过滤器类型 → 深度查看页路由（前端校验路由存在后才跳转）。
+     *
+     * <p>仅适用于「深度页面由当前宿主应用托管」的插件。file-storage 不在此列：
+     * 其 SYSTEM 布局由 FileStorageServerFilter 自身在 {@code /{bucket}} 上直接托管 Vue 独立构建，
+     * 与宿主应用无关，因此改走 {@link #FILTER_NODE_DETAIL_TYPES} 的节点地址直开。</p>
+     */
+    private static final Map<String, String> FILTER_DETAIL_PAGES = Map.of(
+            "service-discovery", "/discovery",
+            "reverse-proxy", "/proxy");
+    /**
+     * 过滤器类型 → 深度查看目标为「节点自身访问地址」。
+     *
+     * <p>这些插件的深度页面由插件自己的 HTTP 服务提供（FileStorageServerFilter 的 SYSTEM 布局
+     * 在 {@code {serverUrl}{bucket}} 上返回 classpath {@code static/index.html}），
+     * 因此前端应新窗口直开节点地址，而不是跳宿主路由——宿主未挂载该页时同样可用，不会死链。</p>
+     */
+    private static final Set<String> FILTER_NODE_DETAIL_TYPES = Set.of("file-storage");
+    /** 过滤器类型 → 深度查看入口文案 */
+    private static final Map<String, String> FILTER_DETAIL_LABELS = Map.of(
+            "file-storage", "打开文件管理器",
+            "service-discovery", "查看服务实例",
+            "reverse-proxy", "打开代理管理");
+    /** 过滤器类型 → 前端分组（左栏归类） */
+    private static final Map<String, String> FILTER_GROUPS = Map.of(
+            "file-storage", "storage",
+            "service-discovery", "discovery",
+            "reverse-proxy", "proxy",
+            "url-mapping", "routing",
+            "shell-url-mapping", "routing");
+
     @Override
     public ReturnResult<List<Map<String, Object>>> filterTypes() {
         List<Map<String, Object>> result = new ArrayList<>();
@@ -239,15 +470,12 @@ public class ServerManageServiceImpl implements ServerManageService {
         Map<String, Object> fileStorage = new LinkedHashMap<>();
         fileStorage.put("type", "file-storage");
         fileStorage.put("desc", "文件服务器插件(FileStorageServerFilter), 将 HTTP 服务器变为文件服务器");
-        fileStorage.put("params", Map.of(
-                "openPreview", "是否允许内联预览(true/false)",
-                "openDownload", "是否允许附件下载(true/false)",
-                "openRange", "是否支持 Range 分段(true/false)",
-                "openWatermark", "是否启用水印(true/false)",
-                "openRemoteFile", "是否允许远程文件透传(true/false)",
-                "openWebjars", "是否开放 webjars(true/false)",
-                "watermark", "水印文本"));
+        fileStorage.put("params", fileStorageParams());
         fileStorage.put("require", "classpath 需包含 spring-support-filesystem-starter; 存储桶自动取容器中的 FileStorage Bean");
+        fileStorage.put("group", groupOf(null, "file-storage"));
+        fileStorage.put("detailPage", detailPageOf("file-storage"));
+        fileStorage.put("detailKind", detailKindOf("file-storage"));
+        fileStorage.put("detailLabel", detailLabelOf("file-storage"));
         fileStorage.put("spi", false);
         result.add(fileStorage);
         // 2. SPI 动态发现的 ServerFilter(仅暴露带 @SpiDescribe 元数据的对外过滤器)
@@ -265,6 +493,10 @@ public class ServerManageServiceImpl implements ServerManageService {
             item.put("type", name);
             item.put("desc", describe);
             item.put("params", paramsOf(definition));
+            item.put("group", groupOf(definition, name));
+            item.put("detailPage", detailPageOf(name));
+            item.put("detailKind", detailKindOf(name));
+            item.put("detailLabel", detailLabelOf(name));
             item.put("spi", true);
             result.add(item);
         });
@@ -272,9 +504,151 @@ public class ServerManageServiceImpl implements ServerManageService {
         Map<String, Object> custom = new LinkedHashMap<>();
         custom.put("type", "ServerFilter 全限定类名");
         custom.put("desc", "任意 ServerFilter 实现(优先无参构造, 其次 (ServerSetting) 构造); params 经 init(ServerFilterConfig) 注入");
+        custom.put("params", List.of());
+        custom.put("group", "custom");
+        custom.put("detailPage", null);
+        custom.put("detailKind", null);
+        custom.put("detailLabel", null);
         custom.put("spi", false);
         result.add(custom);
         return ReturnResult.ok(result);
+    }
+
+    /**
+    * 文件服务器预设参数（含枚举选项，前端可直接渲染下拉）。
+    *
+    * @return 参数列表
+     */
+    private List<Map<String, Object>> fileStorageParams() {
+        List<Map<String, Object>> params = new ArrayList<>();
+        params.add(param("openPreview", "true", "是否允许内联预览", "boolean"));
+        params.add(param("openDownload", "true", "是否允许附件下载", "boolean"));
+        params.add(param("openRange", "true", "是否支持 Range 分段", "boolean"));
+        params.add(param("openWatermark", "false", "是否启用水印", "boolean"));
+        params.add(param("openRemoteFile", "false", "是否允许远程文件透传", "boolean"));
+        params.add(param("openWebjars", "true", "是否开放 webjars", "boolean"));
+        params.add(param("watermark", "", "水印文本", "string"));
+        params.add(param("showFormat", "true", "目录列表显示文件格式", "boolean"));
+        params.add(param("showSize", "true", "目录列表显示文件大小", "boolean"));
+        params.add(param("showTime", "true", "目录列表显示修改时间", "boolean"));
+        params.add(paramEnum("layoutType", "SIMPLE", "目录列表布局", "enum",
+                Arrays.asList("SIMPLE", "SYSTEM")));
+        params.add(paramEnum("imageFilter", "NONE", "图片处理滤镜", "enum",
+                Arrays.asList("NONE", "BLUR", "GRAYSCALE", "INVERT", "SATURATE", "SEPIA")));
+        return params;
+    }
+
+    /**
+    * 构造一个普通参数描述。
+    *
+    * @param name         参数名
+    * @param defaultValue 默认值
+    * @param desc         说明
+    * @param type         类型(boolean/string/number/enum)
+    * @return 参数描述
+     */
+    private Map<String, Object> param(String name, String defaultValue, String desc, String type) {
+        Map<String, Object> item = new LinkedHashMap<>();
+        item.put("name", name);
+        item.put("defaultValue", defaultValue);
+        item.put("desc", desc);
+        item.put("type", type);
+        return item;
+    }
+
+    /**
+    * 构造一个枚举参数描述（携带 options）。
+    *
+    * @param name         参数名
+    * @param defaultValue 默认值
+    * @param desc         说明
+    * @param type         类型
+    * @param options      可选项
+    * @return 参数描述
+     */
+    private Map<String, Object> paramEnum(String name, String defaultValue, String desc, String type,
+                                          List<String> options) {
+        Map<String, Object> item = param(name, defaultValue, desc, type);
+        item.put("options", options);
+        return item;
+    }
+
+    /**
+    * 过滤器类型 → 深度查看页路由。
+    *
+    * @param type 过滤器类型
+    * @return 路由，无则 空
+     */
+    private String detailPageOf(String type) {
+        return type == null ? null : FILTER_DETAIL_PAGES.get(normalizeType(type));
+    }
+
+    /**
+    * 过滤器类型 → 深度查看目标类型。
+    *
+    * <p>{@code node} 表示深度页面由插件自身 HTTP 服务提供，前端应新窗口直开节点访问地址；
+    * {@code route} 表示深度页面由宿主应用托管，前端应校验路由存在后跳转；
+    * 空 表示该插件没有深度查看入口。</p>
+    *
+    * @param type 过滤器类型
+    * @return node / route / 空
+     */
+    private String detailKindOf(String type) {
+        if (type == null) {
+            return null;
+        }
+        String key = normalizeType(type);
+        if (FILTER_NODE_DETAIL_TYPES.contains(key)) {
+            return "node";
+        }
+        return FILTER_DETAIL_PAGES.containsKey(key) ? "route" : null;
+    }
+
+    /**
+    * 过滤器类型 → 深度查看入口文案。
+    *
+    * @param type 过滤器类型
+    * @return 文案，无则 空
+     */
+    private String detailLabelOf(String type) {
+        return type == null ? null : FILTER_DETAIL_LABELS.get(normalizeType(type));
+    }
+
+    /**
+    * 过滤器类型 → 前端分组：优先内置映射，其次 @SpiDescribe.type，最后 other。
+    *
+    * @param definition SPI 定义（内置预设传 空）
+    * @param type       过滤器类型
+    * @return 分组标识
+     */
+    private String groupOf(ServiceDefinition definition, String type) {
+        String group = type == null ? null : FILTER_GROUPS.get(normalizeType(type));
+        if (group != null) {
+            return group;
+        }
+        if (definition != null) {
+            String describeType = definition.getDescribeType();
+            if (describeType != null && !describeType.isBlank()) {
+                return describeType;
+            }
+        }
+        return "other";
+    }
+
+    /**
+    * 归一化过滤器类型，用于映射查找。
+    *
+    * <p>SPI 框架会把 {@code @Spi} 别名统一转成大写
+    * （{@code ServiceDefinitionUtils} 中 {@code setName(alias.toUpperCase())}），
+    * 而内置预设别名是小写（如 {@code file-storage}），因此查找前统一转小写，
+    * 否则 SPI 发现的插件（SERVICE-DISCOVERY / REVERSE-PROXY 等）会全部匹配不上，
+    * 导致分组落到 other、深度查看入口直接消失。</p>
+    *
+    * @param type 过滤器类型
+    * @return 归一化后的类型
+     */
+    private static String normalizeType(String type) {
+        return type.trim().toLowerCase(java.util.Locale.ROOT);
     }
 
     /**
@@ -436,14 +810,14 @@ public class ServerManageServiceImpl implements ServerManageService {
      * @param definition SPI 定义
      * @return 参数列表（name/defaultValue/desc/type）
      */
-    private List<Map<String, String>> paramsOf(ServiceDefinition definition) {
-        List<Map<String, String>> params = new ArrayList<>();
+    private List<Map<String, Object>> paramsOf(ServiceDefinition definition) {
+        List<Map<String, Object>> params = new ArrayList<>();
         List<DescribeOptional> optional = definition.getDescribeOptional();
         if (optional == null || optional.isEmpty()) {
             return params;
         }
         for (DescribeOptional o : optional) {
-            Map<String, String> item = new LinkedHashMap<>();
+            Map<String, Object> item = new LinkedHashMap<>();
             item.put("name", o.getName());
             item.put("defaultValue", o.getDefaultValue());
             item.put("desc", o.getDescribe());

@@ -95,7 +95,7 @@ public class SchedulerSyncBinder {
  // 发送 单播路径在 客户端 已断但 映射 未清理时静默丢帧的 pre-existing bug)
                     syncServer.publish(JobSyncTopics.TASK_COMMAND, payload);
                     log.info("[job] cmd 已发 (单 client broadcast 兼容) topic={} clientId={} payload={}",
-                            JobSyncTopics.TASK_COMMAND, clients.get(0), payload);
+                            JobSyncTopics.TASK_COMMAND, clients.getFirst(), payload);
                     return;
                 }
  // 多 执行器 场景: sticky 单播 (#1 HA 去重的核心)

@@ -183,7 +183,7 @@ public class RedisMetricTimeSeriesProvider implements MetricTimeSeriesProvider {
              */
             throw new RuntimeException("查询失败: " + e.getMessage(), e);
         }
-        points.sort((a, b) -> Long.compare(((Number) a.get(0)).longValue(), ((Number) b.get(0)).longValue()));
+        points.sort((a, b) -> Long.compare(((Number) a.getFirst()).longValue(), ((Number) b.getFirst()).longValue()));
         // 等距抽样降采样（近似窗口聚合）
         if (points.size() > MAX_SERIES_POINTS) {
             int step = (int) Math.ceil((double) points.size() / MAX_SERIES_POINTS);

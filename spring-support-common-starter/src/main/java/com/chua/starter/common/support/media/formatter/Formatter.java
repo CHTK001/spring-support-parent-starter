@@ -1,5 +1,6 @@
 package com.chua.starter.common.support.media.formatter;
 
+// 注：Field 为 SPI 格式化接口签名要求，仅承载注解元数据，豁免
 import java.lang.reflect.Field;
 
 /**

@@ -185,7 +185,7 @@ public class SocketServerRegistry {
      */
     private int getActualPort() {
         if (properties.getRoom() != null && !properties.getRoom().isEmpty()) {
-            SocketProperties.Room room = properties.getRoom().get(0);
+            SocketProperties.Room room = properties.getRoom().getFirst();
             int port = room.getPort();
             return port > 0 ? port : 9000;
         }
@@ -198,7 +198,7 @@ public class SocketServerRegistry {
      */
     private String getPath() {
         if (properties.getRoom() != null && !properties.getRoom().isEmpty()) {
-            SocketProperties.Room room = properties.getRoom().get(0);
+            SocketProperties.Room room = properties.getRoom().getFirst();
             return room.getContextPath();
         }
         return "/socket.io";
@@ -218,7 +218,7 @@ public class SocketServerRegistry {
      */
     private String getServerName() {
         if (properties.getRoom() != null && !properties.getRoom().isEmpty()) {
-            SocketProperties.Room room = properties.getRoom().get(0);
+            SocketProperties.Room room = properties.getRoom().getFirst();
             return room.getClientId();
         }
         return "default";

@@ -36,9 +36,9 @@ public class DelegatingServerFilter implements ServerFilter, ReactiveServerFilte
      */
     private final Integer order;
     /**
-    * 描述级启用开关
+    * 描述级启用开关(支持热切换)
      */
-    private final boolean enabled;
+    private volatile boolean enabled;
 
     /**
     * 创建委托过滤器
@@ -52,6 +52,15 @@ public class DelegatingServerFilter implements ServerFilter, ReactiveServerFilte
         this.delegate = delegate;
         this.filterName = filterName;
         this.order = order;
+        this.enabled = enabled;
+    }
+
+    /**
+    * 热切换启用状态(不重建过滤器实例)。
+    *
+    * @param enabled 是否启用
+     */
+    public void setEnabled(boolean enabled) {
         this.enabled = enabled;
     }
 

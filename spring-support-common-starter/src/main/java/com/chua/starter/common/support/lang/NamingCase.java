@@ -1,10 +1,12 @@
 package com.chua.starter.common.support.lang;
 
+import com.chua.common.support.lang.bean.NamingStyle;
+
 /**
 * 命名转换工具。
 * @author CH
 * @since 4.0.0
- */
+  */
 public final class NamingCase {
 
     /** 创建 名称大小写 实例 */
@@ -13,6 +15,7 @@ public final class NamingCase {
 
     /**
     * 转为camel大小写
+    * <p>将下划线/连字符/空格分隔的命名统一归一为下划线后，委托 {@link NamingStyle#UNDERSCORE} 转换。</p>
     *
     * @param name 名称
     * @return 转为camel大小写的结果
@@ -21,18 +24,8 @@ public final class NamingCase {
         if (name == null || name.isEmpty()) {
             return name;
         }
-        String lower = name.toLowerCase();
-        StringBuilder sb = new StringBuilder();
-        boolean upperNext = false;
-        for (char c : lower.toCharArray()) {
-            if (c == '_' || c == '-' || c == ' ') {
-                upperNext = true;
-            } else {
-                sb.append(upperNext ? Character.toUpperCase(c) : c);
-                upperNext = false;
-            }
-        }
-        return sb.toString();
+        String normalized = name.toLowerCase().replace('-', '_').replace(' ', '_');
+        return NamingStyle.UNDERSCORE.toCamel(normalized);
     }
 
     /**

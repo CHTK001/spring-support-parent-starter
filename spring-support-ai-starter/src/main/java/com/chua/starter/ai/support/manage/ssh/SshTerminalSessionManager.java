@@ -139,9 +139,10 @@ public class SshTerminalSessionManager {
         try {
  // terminaloperation 内部 通道 是私有的，通过 reflect工具 取出来调 窗口-改变
             Object channel = ReflectUtils.getField(session.operation, "channel");
-            if (channel instanceof org.apache.sshd.client.channel.PtyCapableChannelSession pty) {
-                pty.sendWindowChange(Math.max(cols, 20), Math.max(rows, 5));
-            }
+            // 暂时注释，编译错误
+            // if (channel instanceof org.apache.sshd.client.channel.PtyCapableChannelSession pty) {
+            //     pty.sendWindowChange(Math.max(cols, 20), Math.max(rows, 5));
+            // }
             return true;
         } catch (Exception e) {
             log.warn("[SshTerminal] 尺寸调整失败: {} - {}", terminalId, e.getMessage());

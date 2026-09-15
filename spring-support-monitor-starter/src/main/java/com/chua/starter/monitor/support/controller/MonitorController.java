@@ -634,7 +634,7 @@ public class MonitorController {
     * @return 数据源列表
      */
     @Operation(summary = "获取所有数据源")
-    @GetMapping("/datasource/list")
+    @GetMapping({"/datasource", "/datasource/list"})
     public ReturnResult<java.util.List<Map<String, Object>>> listDataSources() {
         return ReturnResult.ok(new java.util.ArrayList<>(DATA_SOURCE_STORE.values()));
     }

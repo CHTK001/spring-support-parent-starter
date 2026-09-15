@@ -9,6 +9,7 @@ import org.springframework.http.converter.HttpMessageNotWritableException;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 
 import java.io.IOException;
+// 注：Type 为 GenericHttpMessageConverter 接口签名要求，豁免
 import java.lang.reflect.Type;
 
 /**

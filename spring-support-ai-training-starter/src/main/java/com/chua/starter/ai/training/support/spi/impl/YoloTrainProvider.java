@@ -173,7 +173,7 @@ public class YoloTrainProvider implements TrainProvider {
                     .sorted(Comparator.comparingInt(Path::getNameCount))
                     .collect(Collectors.toList());
         }
-        return found.isEmpty() ? null : found.get(0);
+        return found.isEmpty() ? null : found.getFirst();
     }
 
     /**

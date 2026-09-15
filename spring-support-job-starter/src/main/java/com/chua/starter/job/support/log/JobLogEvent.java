@@ -170,17 +170,7 @@ public record JobLogEvent(
     }
 
     /**
-    * 字段_模式
-    *
-     /**
-      * 读取字段。
-      * @param text 文本
-      * @param name 名称
-      * @return 读取字段的结果
-      */
-     * @param encoded encoded
-     * @return decode日志内容的结果
-     * @param content 内容
+     * 字段模式。
      */
     private static final Pattern FIELD_PATTERN = Pattern.compile("\\b([a-zA-Z]+)=([^,\\]]*)");
 
@@ -192,12 +182,6 @@ public record JobLogEvent(
      */
     private static String readField(String text, String name) {
         Matcher m = FIELD_PATTERN.matcher(text);
-        /**
-        * 读取long字段。
-        * @param text 文本
-        * @param name 名称
-        * @return 读取long字段的结果
-         */
         while (m.find()) {
             if (m.group(1).equals(name)) {
                 return m.group(2);
@@ -206,25 +190,29 @@ public record JobLogEvent(
         return null;
     }
 
+    /**
+     * 读取long字段。
+     * @param text 文本
+     * @param name 名称
+     * @return 读取long字段的结果
+     */
     private static long readLongField(String text, String name) {
         String v = readField(text, name);
         if (v == null || v.isEmpty() || "null".equals(v)) {
             return 0L;
         }
         try {
-            /**
-            * nvl。
-            * @param s s
-            * @return nvl的结果
-            * @param encoded encoded
-            * @param content 内容
-             */
             return Long.parseLong(v.trim());
         } catch (NumberFormatException ex) {
             return 0L;
         }
     }
 
+    /**
+     * nvl。
+     * @param s s
+     * @return nvl的结果
+     */
     private static String nvl(String s) {
         return s == null ? "null" : s;
     }

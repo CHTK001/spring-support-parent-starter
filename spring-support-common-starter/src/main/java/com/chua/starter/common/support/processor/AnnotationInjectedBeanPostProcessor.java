@@ -1,5 +1,6 @@
 package com.chua.starter.common.support.processor;
 
+import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.common.support.utils.ClassUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -26,7 +27,14 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -457,8 +465,7 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
         protected void inject(Object bean, String beanName, PropertyValues pvs) throws Throwable {
             Class<?> injectedType = this.field.getType();
             Object injectedObject = AnnotationInjectedBeanPostProcessor.this.getInjectedObject(this.annotation, bean, beanName, injectedType, this);
-            ReflectionUtils.makeAccessible(this.field);
-            this.field.set(bean, injectedObject);
+            ReflectUtils.setField(bean, this.field.getName(), injectedObject);
         }
     }
 
@@ -496,8 +503,7 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
         protected void inject(Object bean, String beanName, PropertyValues pvs) throws Throwable {
             Class<?> injectedType = this.pd.getPropertyType();
             Object injectedObject = AnnotationInjectedBeanPostProcessor.this.getInjectedObject(this.annotation, bean, beanName, injectedType, this);
-            ReflectionUtils.makeAccessible(this.method);
-            this.method.invoke(bean, injectedObject);
+            ReflectUtils.invoke(bean, this.method.getName(), this.method.getReturnType(), injectedObject);
         }
     }
 

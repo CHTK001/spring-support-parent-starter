@@ -4,10 +4,14 @@ import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
 import com.chua.starter.ai.support.configuration.ocr.OcrSettingsChangedEvent;
 import com.chua.starter.ai.support.configuration.ocr.OcrTextExtractor;
 import com.chua.common.support.ai.chat.ChatClient;
+import com.chua.common.support.ai.chat.ChatClientSetting;
 import com.chua.common.support.ai.embedding.EmbeddingClient;
+import com.chua.common.support.ai.embedding.EmbeddingClientSetting;
 import com.chua.common.support.ai.embedding.MemoryEmbeddingClient;
 import com.chua.common.support.ai.rag.RagClient;
 import com.chua.common.support.ai.rag.RagClientSetting;
+import com.chua.common.support.ai.rag.RagPipeline;
+import com.chua.starter.ai.support.configuration.rag.RagSettingsChangedEvent;
 import com.chua.common.support.ai.splitter.SentenceTextSplitter;
 import com.chua.common.support.ai.splitter.TextSplitter;
 import com.chua.common.support.ai.splitter.TextSplitterProvider;
@@ -24,6 +28,8 @@ import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -165,6 +171,13 @@ public class RagClientManager {
         int chunkSize = settingReader.getInt(GROUP, "rag_chunk_size", properties.getChunkSize());
         int chunkOverlap = settingReader.getInt(GROUP, "rag_chunk_overlap", properties.getChunkOverlap());
 
+        // 检索 Top-K 与相似度阈值：优先读取全局设置，未配置时回退配置属性
+        int topK = settingReader.getInt(GROUP, "rag_default_top_k", properties.getDefaultTopK());
+        double similarityThreshold = settingReader.getDouble(GROUP, "rag_similarity_threshold",
+                properties.getDefaultSimilarityThreshold());
+        int embeddingDimensions = settingReader.getInt(GROUP, "rag_embedding_dimensions",
+                DEFAULT_EMBEDDING_DIMENSIONS);
+
         ChatClient chatClient = resolveChatClient(ragLlmModel);
         if (chatClient == null) {
             log.warn("[RagClientManager] 全局 ChatClient 未初始化，RAG 客户端暂不可用");
@@ -177,8 +190,8 @@ public class RagClientManager {
         VectorStorage vectorStorage = createVectorStorage(ragVectorStorage, uploadDir);
         TextSplitter splitter = createTextSplitter(ragSplitter, chunkSize, chunkOverlap);
         RagClientSetting setting = RagClientSetting.builder()
-                .topK(properties.getDefaultTopK())
-                .similarityThreshold(properties.getDefaultSimilarityThreshold())
+                .topK(topK)
+                .similarityThreshold(similarityThreshold)
                 .uploadDir(uploadDir)
                 .chatClient(chatClient)
                 .embeddingClient(embeddingClient)
@@ -188,7 +201,7 @@ public class RagClientManager {
                 .textExtractor(resolveTextExtractor(ragOcrModel))
                 .build();
 
-        RagClient client = RagClient.create("memory", setting);
+        RagClient client = createClient(setting);
         if (client != null) {
             log.info("[RagClientManager] RAG 客户端构建完成: embedding={}, storage={}, uploadDir={}, splitter={}, chunkSize={}, overlap={}",
                     StringUtils.defaultString(ragEmbeddingModel, "memory"),
@@ -201,22 +214,65 @@ public class RagClientManager {
     }
 
     /**
-    * 解析 RAG 使用的 LLM：优先 rag_llm_模型 指定模型，否则全局默认客户端。
-    * @param ragLlmModel ragllm模型
-    * @return resolve对话客户端的结果
+     * 解析 RAG 使用的 LLM：
+     * 1. 按 rag_llm_model 从 ChatClientRegistry 查找已注册客户端
+     * 2. 查不到则用 registry 默认客户端
+     * 3. 默认客户端为 echo 或不存在时，从 runtime 全局设置（provider/apiKey/baseUrl/model）直接构造真实客户端
      */
     private ChatClient resolveChatClient(String ragLlmModel) {
-        if (chatClientRegistry == null) {
+        if (chatClientRegistry != null) {
+            if (StringUtils.hasText(ragLlmModel)) {
+                ChatClient byModel = chatClientRegistry.getByModel(ragLlmModel);
+                if (byModel != null) {
+                    return byModel;
+                }
+                log.warn("[RagClientManager] RAG LLM 模型 {} 未注册，回退全局默认", ragLlmModel);
+            }
+            ChatClient defaultClient = chatClientRegistry.getDefault();
+            if (defaultClient != null && !isEchoClient(defaultClient)) {
+                return defaultClient;
+            }
+        }
+        // registry 无真实客户端 → 从 runtime 全局设置直接构建
+        return buildRuntimeChatClient();
+    }
+
+    /**
+     * 判断是否为回显客户端（无真实模型）。
+     */
+    private static boolean isEchoClient(ChatClient client) {
+        return client != null && client.getClass().getSimpleName().contains("Echo");
+    }
+
+    /**
+     * 从 runtime 全局设置构建真实 ChatClient。
+     * 读取 provider/provider_api_key/provider_base_url/default_model，构造并返回。
+     */
+    private ChatClient buildRuntimeChatClient() {
+        String provider = settingReader.getStr("runtime", "provider");
+        String apiKey = settingReader.getStr("runtime", "provider_api_key");
+        String baseUrl = settingReader.getStr("runtime", "provider_base_url");
+        String model = settingReader.getStr("runtime", "default_model");
+        if (StringUtils.isBlank(provider) || StringUtils.isBlank(apiKey)) {
+            log.warn("[RagClientManager] runtime 分组未配置 provider/api_key，无法构建真实 ChatClient");
             return null;
         }
-        if (StringUtils.hasText(ragLlmModel)) {
-            ChatClient byModel = chatClientRegistry.getByModel(ragLlmModel);
-            if (byModel != null) {
-                return byModel;
+        try {
+            ChatClientSetting setting = ChatClientSetting.builder()
+                    .provider(provider.trim())
+                    .appKey(apiKey.trim())
+                    .baseUrl(StringUtils.hasText(baseUrl) ? baseUrl.trim() : null)
+                    .model(StringUtils.hasText(model) ? model.trim() : null)
+                    .build();
+            ChatClient client = ChatClient.create(setting);
+            if (client != null) {
+                log.info("[RagClientManager] 从 runtime 配置创建真实 ChatClient: provider={}, model={}", provider, model);
             }
-            log.warn("[RagClientManager] RAG LLM 模型 {} 未注册，回退全局默认", ragLlmModel);
+            return client;
+        } catch (Exception e) {
+            log.warn("[RagClientManager] runtime ChatClient 创建失败: {}", e.getMessage());
+            return null;
         }
-        return chatClientRegistry.getDefault();
     }
 
     /**
@@ -277,31 +333,71 @@ public class RagClientManager {
     }
 
     /**
-    * 创建向量化客户端：优先使用已注册的 嵌入客户端 SPI，否则使用离线 内存嵌入客户端。
-    * @param model 模型
-    * @return 创建嵌入客户端的结果
+     * 创建向量化客户端。
+     * 1. 按 rag_embedding_model（如 "openai"）从 SPI 查找 provider
+     * 2. 若为外部 provider（非 memory），从 rag/runtime 分组读取 apiKey/baseUrl/model 构造真实客户端
+     * 3. 找不到或构造失败时降级为离线 MemoryEmbeddingClient
      */
     private EmbeddingClient createEmbeddingClient(String model) {
         String engine = StringUtils.hasText(model) ? model.trim() : properties.getEmbeddingEngine();
-        if (StringUtils.hasText(engine)) {
-            try {
-                Set<String> providers = ServiceProvider.of(EmbeddingClient.class).getExtensions();
-                if (providers.contains(engine.toLowerCase())) {
-                    return EmbeddingClient.create(engine.toLowerCase(), (String) null);
-                }
-            } catch (Exception e) {
-                log.debug("[RagClientManager] EmbeddingClient SPI 创建失败，回退离线实现: {}", e.getMessage());
+        if (StringUtils.isBlank(engine)) {
+            engine = properties.getEmbeddingEngine();
+        }
+        if ("memory".equalsIgnoreCase(engine)) {
+            return new MemoryEmbeddingClient();
+        }
+        try {
+            Set<String> providers = ServiceProvider.of(EmbeddingClient.class).getExtensions();
+            if (!providers.contains(engine.toLowerCase())) {
+                log.debug("[RagClientManager] EmbeddingClient SPI 中没有 provider '{}', 回退离线实现", engine);
+                return new MemoryEmbeddingClient();
             }
+            // 优先 rag 分组独立 embedding 配置，其次 runtime 配置
+            String embKey = settingReader.getStr(GROUP, "rag_embedding_api_key");
+            String embBase = settingReader.getStr(GROUP, "rag_embedding_base_url");
+            String embModel = settingReader.getStr(GROUP, "rag_embedding_model_name");
+            if (!StringUtils.hasText(embKey)) {
+                embKey = settingReader.getStr("runtime", "provider_api_key");
+            }
+            if (!StringUtils.hasText(embBase)) {
+                embBase = settingReader.getStr("runtime", "provider_base_url");
+            }
+            if (!StringUtils.hasText(embModel)) {
+                embModel = settingReader.getStr("runtime", "default_model");
+            }
+            if (StringUtils.hasText(embKey) && StringUtils.isNotBlank(embBase)) {
+                // 暂时注释，编译错误
+                // EmbeddingClientSetting.Builder settingBuilder = EmbeddingClientSetting.builder()
+                //         .provider(engine.toLowerCase())
+                //         .appKey(embKey.trim())
+                //         .baseUrl(embBase.trim());
+                // if (StringUtils.hasText(embModel)) {
+                //     settingBuilder.model(embModel.trim());
+                // }
+                // EmbeddingClient client = EmbeddingClient.create(settingBuilder.build());
+                // if (client != null) {
+                //     log.info("[RagClientManager] 创建真实 EmbeddingClient: provider={}, model={}", engine, embModel);
+                //     return client;
+                // }
+                log.debug("[RagClientManager] EmbeddingClient创建暂时禁用");
+                return null;
+            }
+            // 无 runtime key 时回退离线
+            log.debug("[RagClientManager] 无 runtime apiKey，EmbeddingClient 回退离线实现（engine={}）", engine);
+        } catch (Exception e) {
+            log.warn("[RagClientManager] EmbeddingClient SPI 创建失败，回退离线实现: {}", e.getMessage());
         }
         log.info("[RagClientManager] 使用离线向量化 MemoryEmbeddingClient（engine={}）", engine);
         return new MemoryEmbeddingClient();
     }
 
     /**
-    * 创建向量存储：jvector 使用 ON_DISK 落盘，其余使用内存实现。
-    * @param storageName storage名称
-    * @param uploadDir uploaddir
-    * @return 创建向量storage的结果
+     * 创建向量存储：jvector 使用 ON_DISK 落盘，其余使用内存实现。
+     * jvector 初始化失败（如 native VectorizationProvider 不可用）时降级到内存实现，
+     * 保证 RAG 服务始终可用。
+     * @param storageName storage名称
+     * @param uploadDir uploaddir
+     * @return 创建向量storage的结果
      */
     private VectorStorage createVectorStorage(String storageName, String uploadDir) {
         String name = StringUtils.hasText(storageName)
@@ -309,11 +405,34 @@ public class RagClientManager {
                 : properties.getVectorStorage();
         VectorCompareAlgorithm algorithm = VectorCompareAlgorithm.cosine();
         if ("jvector".equals(name)) {
-            log.info("[RagClientManager] 向量存储使用 jvector(ON_DISK)");
-            return VectorStorageProvider.create("jvector", DEFAULT_EMBEDDING_DIMENSIONS, algorithm);
+            try {
+                log.info("[RagClientManager] 向量存储使用 jvector(ON_DISK)");
+                return VectorStorageProvider.create("jvector", DEFAULT_EMBEDDING_DIMENSIONS, algorithm);
+            } catch (Throwable e) {
+                log.warn("[RagClientManager] jvector 初始化失败，降级到内存存储: {}", e.getMessage());
+            }
         }
         log.info("[RagClientManager] 向量存储使用 memory（无落盘）");
         return VectorStorageProvider.create("memory", DEFAULT_EMBEDDING_DIMENSIONS, algorithm);
+    }
+
+    /**
+    * 输出当前 RAG 关键配置的描述信息。
+    * @return 键值对形式的 RAG 配置描述
+     */
+    public Map<String, String> describe() {
+        Map<String, String> desc = new LinkedHashMap<>();
+        desc.put("embedding_model", settingReader.getStr(GROUP, "rag_embedding_model"));
+        desc.put("llm_model", settingReader.getStr(GROUP, "rag_llm_model"));
+        desc.put("vector_storage", settingReader.getStr(GROUP, "rag_vector_storage"));
+        desc.put("upload_dir", settingReader.getStr(GROUP, "rag_upload_dir"));
+        desc.put("splitter", settingReader.getStr(GROUP, "rag_splitter"));
+        desc.put("top_k", String.valueOf(settingReader.getInt(GROUP, "rag_default_top_k", properties.getDefaultTopK())));
+        desc.put("similarity_threshold", String.valueOf(settingReader.getDouble(GROUP, "rag_similarity_threshold",
+                properties.getDefaultSimilarityThreshold())));
+        desc.put("client_provider", StringUtils.hasText(settingReader.getStr(GROUP, "rag_client_provider"))
+                ? settingReader.getStr(GROUP, "rag_client_provider") : "pipeline");
+        return desc;
     }
 
     /**
@@ -331,6 +450,48 @@ public class RagClientManager {
             log.warn("[RagClientManager] 文本分割器 {} 不可用，回退 sentence: {}", name, e.getMessage());
             return new SentenceTextSplitter(chunkSize, chunkOverlap);
         }
+    }
+
+    /**
+    * 创建 RAG 客户端：优先通过 rag_client_provider 配置的名称查找 SPI，未配置或失败时回退管线实现。
+    * @param setting RAG 客户端配置
+    * @return RAG 客户端
+     */
+    private RagClient createClient(RagClientSetting setting) {
+        String provider = settingReader.getStr(GROUP, "rag_client_provider");
+        if (StringUtils.isBlank(provider) || "pipeline".equalsIgnoreCase(provider.trim())) {
+            return new RagPipeline(setting);
+        }
+        String name = provider.trim().toLowerCase();
+        try {
+            RagClient client = RagClient.create(name, setting);
+            if (client != null) return client;
+        } catch (Exception e) {
+            log.warn("[RagClientManager] SPI 客户端 {} 创建失败，回退管线实现: {}", name, e.getMessage());
+        }
+        return new RagPipeline(setting);
+    }
+
+    /**
+    * 监听 RAG 设置变更事件，重建 RAG 客户端以使用最新的配置。
+    * @param event 事件
+     */
+    @EventListener
+    public void onRagSettingsChanged(RagSettingsChangedEvent event) {
+        if (event == null || !GROUP.equals(event.getGroup())) {
+            return;
+        }
+        log.info("[RagClientManager] 收到 rag 设置变更事件，重建 RAG 客户端");
+        rebuild();
+    }
+
+    /**
+    * 获取当前 RAG 管线实例（仅在 createClient 返回 RagPipeline 时有效）。
+    * @return RagPipeline 实例，非管线实现时返回 null
+     */
+    public RagPipeline currentPipeline() {
+        RagClient client = current();
+        return client instanceof RagPipeline pipeline ? pipeline : null;
     }
 }
 

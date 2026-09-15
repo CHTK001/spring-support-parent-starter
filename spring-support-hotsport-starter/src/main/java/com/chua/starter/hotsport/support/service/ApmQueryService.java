@@ -7,6 +7,7 @@ import com.chua.runtime.apm.storage.Query;
 import com.chua.runtime.apm.storage.TransmissionEvent;
 import com.chua.runtime.protocol.DependencyEdge;
 import com.chua.runtime.protocol.Endpoint;
+import com.chua.runtime.protocol.StatusCode;
 import com.chua.starter.hotsport.support.config.HotsportProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,10 +20,12 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * APM 数据查询服务 — 统一门面，对 {@link StorageManager} 读操作做降级兜底。
@@ -220,11 +223,17 @@ public class ApmQueryService {
      * @param errorOnly 仅看错误（可空）
      * @param startTime 开始时间毫秒（可空）
      * @param endTime   结束时间毫秒（可空）
+     * @param traceId   链路 ID 精确匹配（可空）
+     * @param durationMin 最小耗时毫秒（可空）
+     * @param durationMax 最大耗时毫秒（可空）
+     * @param operation 操作名模糊过滤（可空）
      * @return 分页结果
      */
     public Map<String, Object> transmissions(int page, int size, String source, String target,
                                               String protocol, Boolean errorOnly,
-                                              Long startTime, Long endTime) {
+                                              Long startTime, Long endTime,
+                                              String traceId, Long durationMin, Long durationMax,
+                                              String operation) {
         int offset = Math.max(0, (page - 1) * size);
         // 全量拉取 + 内存过滤后再切片：total 必须是过滤后总数，
         // 否则被 limit 截断导致前端分页器失效
@@ -251,6 +260,21 @@ public class ApmQueryService {
             }
             if (target != null && !target.isBlank()
                     && !containsIgnoreCase(e.getTargetHost(), target)) {
+                continue;
+            }
+            if (traceId != null && !traceId.isBlank()
+                    && !traceId.equals(e.getTraceId())) {
+                continue;
+            }
+            long duration = e.getDuration();
+            if (durationMin != null && duration < durationMin) {
+                continue;
+            }
+            if (durationMax != null && duration > durationMax) {
+                continue;
+            }
+            if (operation != null && !operation.isBlank()
+                    && !containsIgnoreCase(e.getOperation(), operation)) {
                 continue;
             }
             items.add(transmissionDto(e));
@@ -336,10 +360,14 @@ public class ApmQueryService {
      * @param minAgeMs     最小存活毫秒（可空）
      * @param startTime    开始时间毫秒（可空）
      * @param endTime      结束时间毫秒（可空）
+     * @param resourceName 资源名过滤（可空，包含匹配）
+     * @param thread       线程名过滤（可空，包含匹配）
+     * @param activeOnly   仅返回活跃泄漏（可空）
      * @return 分页结果
      */
     public Map<String, Object> leaks(int page, int size, String resourceType, Long minAgeMs,
-                                     Long startTime, Long endTime) {
+                                     Long startTime, Long endTime,
+                                     String resourceName, String thread, Boolean activeOnly) {
         int offset = Math.max(0, (page - 1) * size);
         // 全量拉取 + 内存过滤后再切片（total 须为过滤后总数，避免分页器失效）
         Query q = new Query().setLimit(100000);
@@ -355,6 +383,17 @@ public class ApmQueryService {
         for (LeakRecord l : all) {
             if (resourceType != null && !resourceType.isBlank()
                     && !resourceType.equalsIgnoreCase(l.getKind())) {
+                continue;
+            }
+            if (Boolean.TRUE.equals(activeOnly) && !l.isActive()) {
+                continue;
+            }
+            if (resourceName != null && !resourceName.isBlank()
+                    && !containsIgnoreCase(l.getName(), resourceName)) {
+                continue;
+            }
+            if (thread != null && !thread.isBlank()
+                    && !containsIgnoreCase(l.getThread(), thread)) {
                 continue;
             }
             long age = l.isActive() ? (now - l.getCreatedAt()) : (l.getClosedAt() - l.getCreatedAt());
@@ -389,20 +428,44 @@ public class ApmQueryService {
     /**
      * 分页查询日志。
      *
-     * @param page  页码
-     * @param size  每页条数
-     * @param level 级别过滤（可空）
+     * @param page      页码
+     * @param size      每页条数
+     * @param level     级别过滤（可空）
+     * @param keyword   关键字过滤（可空，同时匹配 message/logger）
+     * @param traceId   链路 ID 精确匹配（可空）
+     * @param startTime 开始时间毫秒（可空）
+     * @param endTime   结束时间毫秒（可空）
+     * @param className 类名过滤（可空，包含匹配）
      * @return 分页结果
      */
-    public Map<String, Object> logs(int page, int size, String level) {
+    public Map<String, Object> logs(int page, int size, String level, String keyword, String traceId,
+                                    Long startTime, Long endTime, String className) {
         int offset = Math.max(0, (page - 1) * size);
         // 全量拉取 + 内存过滤后再切片（total 须为过滤后总数，避免分页器失效）
         Query q = new Query().setLimit(100000);
+        if (startTime != null) {
+            q.setStartTime(startTime);
+        }
+        if (endTime != null) {
+            q.setEndTime(endTime);
+        }
+        if (traceId != null && !traceId.isBlank()) {
+            q.setTraceId(traceId);
+        }
         List<LogRecord> all = queryAll(q, storage -> storage.queryLogs(q));
         List<Map<String, Object>> items = new ArrayList<>();
         for (LogRecord r : all) {
             if (level != null && !level.isBlank()
                     && !level.equalsIgnoreCase(r.getLevel())) {
+                continue;
+            }
+            if (keyword != null && !keyword.isBlank()
+                    && !containsIgnoreCase(r.getMessage(), keyword)
+                    && !containsIgnoreCase(r.getLogger(), keyword)) {
+                continue;
+            }
+            if (className != null && !className.isBlank()
+                    && !containsIgnoreCase(r.getClassName(), className)) {
                 continue;
             }
             Map<String, Object> m = new LinkedHashMap<>();
@@ -513,7 +576,9 @@ public class ApmQueryService {
      * 全量导出传输记录为 CSV 文本。
      */
     public String exportTransmissionsCsv(String source, String target, String protocol,
-                                         Boolean errorOnly, Long startTime, Long endTime) {
+                                         Boolean errorOnly, Long startTime, Long endTime,
+                                         String traceId, Long durationMin, Long durationMax,
+                                         String operation) {
         Query q = new Query().setLimit(EXPORT_CAP);
         if (protocol != null && !protocol.isBlank()) {
             q.setProtocol(protocol);
@@ -536,6 +601,21 @@ public class ApmQueryService {
                 continue;
             }
             if (target != null && !target.isBlank() && !containsIgnoreCase(e.getTargetHost(), target)) {
+                continue;
+            }
+            if (traceId != null && !traceId.isBlank()
+                    && !traceId.equals(e.getTraceId())) {
+                continue;
+            }
+            long duration = e.getDuration();
+            if (durationMin != null && duration < durationMin) {
+                continue;
+            }
+            if (durationMax != null && duration > durationMax) {
+                continue;
+            }
+            if (operation != null && !operation.isBlank()
+                    && !containsIgnoreCase(e.getOperation(), operation)) {
                 continue;
             }
             Map<String, Object> m = new LinkedHashMap<>();
@@ -564,7 +644,8 @@ public class ApmQueryService {
     /**
      * 全量导出资源泄漏为 CSV 文本。
      */
-    public String exportLeaksCsv(String resourceType, Long minAgeMs, Long startTime, Long endTime) {
+    public String exportLeaksCsv(String resourceType, Long minAgeMs, Long startTime, Long endTime,
+                                 String resourceName, String thread, Boolean activeOnly) {
         Query q = new Query().setLimit(EXPORT_CAP);
         if (startTime != null) {
             q.setStartTime(startTime);
@@ -579,6 +660,17 @@ public class ApmQueryService {
         for (LeakRecord l : all) {
             if (resourceType != null && !resourceType.isBlank()
                     && !resourceType.equalsIgnoreCase(l.getKind())) {
+                continue;
+            }
+            if (Boolean.TRUE.equals(activeOnly) && !l.isActive()) {
+                continue;
+            }
+            if (resourceName != null && !resourceName.isBlank()
+                    && !containsIgnoreCase(l.getName(), resourceName)) {
+                continue;
+            }
+            if (thread != null && !thread.isBlank()
+                    && !containsIgnoreCase(l.getThread(), thread)) {
                 continue;
             }
             long age = l.isActive() ? (now - l.getCreatedAt()) : (l.getClosedAt() - l.getCreatedAt());
@@ -602,13 +694,28 @@ public class ApmQueryService {
     /**
      * 全量导出日志为 CSV 文本。
      */
-    public String exportLogsCsv(String level) {
+    public String exportLogsCsv(String level, String keyword, String traceId,
+                                Long startTime, Long endTime) {
         Query q = new Query().setLimit(EXPORT_CAP);
+        if (startTime != null) {
+            q.setStartTime(startTime);
+        }
+        if (endTime != null) {
+            q.setEndTime(endTime);
+        }
+        if (traceId != null && !traceId.isBlank()) {
+            q.setTraceId(traceId);
+        }
         List<LogRecord> all = queryAll(q, storage -> storage.queryLogs(q));
         String[] header = {"id", "timestamp", "level", "logger", "className", "methodName", "message", "traceId"};
         List<Map<String, Object>> rows = new ArrayList<>();
         for (LogRecord r : all) {
             if (level != null && !level.isBlank() && !level.equalsIgnoreCase(r.getLevel())) {
+                continue;
+            }
+            if (keyword != null && !keyword.isBlank()
+                    && !containsIgnoreCase(r.getMessage(), keyword)
+                    && !containsIgnoreCase(r.getLogger(), keyword)) {
                 continue;
             }
             Map<String, Object> m = new LinkedHashMap<>();
@@ -653,6 +760,746 @@ public class ApmQueryService {
             sb.append("\r\n");
         }
         return sb.toString();
+    }
+
+    // ==================================================================
+    // SkyWalking 风格增强：服务聚合 / 端点分析 / 瀑布 / 健康 / 链路树 / 拓扑
+    // ==================================================================
+
+    /** 服务聚合缓存（stats 窗口内复用）。 */
+    private volatile List<Map<String, Object>> serviceCache = new ArrayList<>();
+
+    /** 端点聚合缓存。 */
+    private volatile List<Map<String, Object>> endpointCache = new ArrayList<>();
+
+    /** 缓存时间戳。 */
+    private volatile long aggregateCacheAt;
+
+    /** 聚合缓存有效期（毫秒）。 */
+    private static final long AGGREGATE_CACHE_TTL_MS = 5000L;
+
+    /**
+     * 按 traceId 构建瀑布数据（SkyWalking trace waterfall）。
+     *
+     * <p>每条 span 计算 offsetMs（相对 trace 起点）、depth（父链深度）、
+     * percentWidth（占 trace 总时长比例）、spanKind（按方向推断）。</p>
+     *
+     * @param traceId 链路 ID
+     * @return 瀑布结构 { traceId, spans, totalMs, spanCount }
+     */
+    public Map<String, Object> traceWaterfall(String traceId) {
+        List<Map<String, Object>> detail = traceDetail(traceId);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("traceId", traceId);
+        result.put("spanCount", detail.size());
+        if (detail.isEmpty()) {
+            result.put("totalMs", 0L);
+            result.put("spans", new ArrayList<>());
+            return result;
+        }
+        long startMin = Long.MAX_VALUE;
+        long endMax = Long.MIN_VALUE;
+        for (Map<String, Object> s : detail) {
+            long start = parseEpochMillis(s.get("startTime"));
+            long end = parseEpochMillis(s.get("endTime"));
+            if (start > 0 && start < startMin) startMin = start;
+            if (end > 0 && end > endMax) endMax = end;
+        }
+        long totalMs = Math.max(1L, endMax - startMin);
+        Map<String, Integer> spanDepth = new ConcurrentHashMap<>();
+        Map<String, String> spanParent = new LinkedHashMap<>();
+        for (Map<String, Object> s : detail) {
+            spanParent.put(String.valueOf(s.get("spanId")),
+                    String.valueOf(s.get("parentSpanId")));
+        }
+        List<Map<String, Object>> spans = new ArrayList<>();
+        for (Map<String, Object> s : detail) {
+            String spanId = String.valueOf(s.get("spanId"));
+            int depth = computeDepth(spanId, spanParent, spanDepth, 0);
+            long startEpoch = parseEpochMillis(s.get("startTime"));
+            long endEpoch = parseEpochMillis(s.get("endTime"));
+            long duration = Math.max(0L, endEpoch - startEpoch);
+            Map<String, Object> w = new LinkedHashMap<>(s);
+            w.put("offsetMs", Math.max(0L, startEpoch - startMin));
+            w.put("durationMs", duration);
+            w.put("depth", depth);
+            w.put("percentWidth", Math.max(1.0, Math.round(10000.0 * duration / totalMs) / 100.0));
+            w.put("spanKind", resolveSpanKind(w));
+            w.put("attributes", s.get("attributes") instanceof Map<?, ?> am
+                    ? toStringMap(am) : new LinkedHashMap<String, String>());
+            spans.add(w);
+        }
+        spans.sort(Comparator.comparingLong(w -> ((Number) w.get("offsetMs")).longValue()));
+        result.put("totalMs", totalMs);
+        result.put("spans", spans);
+        return result;
+    }
+
+    /** 计算 span 深度（父链长度，上限 32 防环）。 */
+    private int computeDepth(String spanId, Map<String, String> parentOf,
+                             Map<String, Integer> cache, int guard) {
+        if (guard > 32 || spanId == null || "null".equals(spanId) || spanId.isBlank()) {
+            return 0;
+        }
+        Integer cached = cache.get(spanId);
+        if (cached != null) {
+            return cached;
+        }
+        String parent = parentOf.get(spanId);
+        int depth;
+        if (parent == null || "null".equals(parent) || parent.isBlank()) {
+            depth = 0;
+        } else {
+            depth = 1 + computeDepth(parent, parentOf, cache, guard + 1);
+        }
+        cache.put(spanId, depth);
+        return depth;
+    }
+
+    /**
+     * 推断 span 类型（客户端/服务端/生产者/消费者/内部）。
+     *
+     * @param s span DTO
+     * @return spanKind 字符串
+     */
+    private static String resolveSpanKind(Map<String, Object> s) {
+        String protocol = String.valueOf(s.get("protocol"));
+        String operation = String.valueOf(s.get("operation"));
+        String target = String.valueOf(s.get("target"));
+        if (protocol.contains("KAFKA") || operation.contains("publish") || operation.contains("send")) {
+            return "PRODUCER";
+        }
+        if (protocol.contains("KAFKA") && (operation.contains("consume") || operation.contains("receive"))) {
+            return "CONSUMER";
+        }
+        if (operation.startsWith("GET") || operation.startsWith("POST")
+                || operation.startsWith("PUT") || operation.startsWith("DELETE")
+                || operation.startsWith("PATCH") || target.contains(":8080")
+                || target.contains(":443")) {
+            return "SERVER";
+        }
+        if (protocol.contains("HTTP") || protocol.contains("DB") || protocol.contains("REDIS")) {
+            return "CLIENT";
+        }
+        return "INTERNAL";
+    }
+
+    /**
+     * 服务聚合（SkyWalking service 层：从传输记录提取 software@host 服务名）。
+     *
+     * @return 服务列表 { service, endpointCount, callCount, errorCount }
+     */
+    public List<Map<String, Object>> services() {
+        if (System.currentTimeMillis() - aggregateCacheAt < AGGREGATE_CACHE_TTL_MS) {
+            return serviceCache;
+        }
+        Query q = new Query().setLimit(100000);
+        List<TransmissionEvent> all = queryAll(q, storage -> storage.queryTransmissions(q));
+        Map<String, Map<String, Object>> svc = new LinkedHashMap<>();
+        for (TransmissionEvent e : all) {
+            String serviceName = serviceLabel(e.getTargetSoftware(), e.getTargetHost());
+            if (serviceName == null) {
+                continue;
+            }
+            Map<String, Object> m = svc.computeIfAbsent(serviceName, k -> {
+                Map<String, Object> x = new LinkedHashMap<>();
+                x.put("service", k);
+                x.put("endpointCount", 0L);
+                x.put("callCount", 0L);
+                x.put("errorCount", 0L);
+                return x;
+            });
+            m.put("callCount", (Long) m.get("callCount") + 1L);
+            m.put("endpointCount", (Long) m.get("endpointCount") + 1L);
+            if (e.getStatus() == StatusCode.ERROR) {
+                m.put("errorCount", (Long) m.get("errorCount") + 1L);
+            }
+        }
+        List<Map<String, Object>> out = new ArrayList<>(svc.values());
+        out.sort(Comparator.comparingLong(x -> -((Long) x.get("callCount"))));
+        serviceCache = out;
+        endpointCache = new ArrayList<>();
+        aggregateCacheAt = System.currentTimeMillis();
+        return out;
+    }
+
+    /** 服务名 = software@host（无 host 时仅 software）。 */
+    private static String serviceLabel(String software, String host) {
+        if ((software == null || software.isBlank()) && (host == null || host.isBlank())) {
+            return null;
+        }
+        if (software != null && !software.isBlank() && host != null && !host.isBlank()) {
+            return software + "@" + host;
+        }
+        return software != null ? software : host;
+    }
+
+    /**
+     * 端点聚合 + 分位数（SkyWalking endpoint 层）。
+     *
+     * @param limit   返回上限
+     * @param keyword 端点关键字过滤（可空，匹配 protocol+operation）
+     * @return 端点列表 { endpoint, callCount, errorCount, errorRate, avgMs, p95Ms, p99Ms, maxMs }
+     */
+    public List<Map<String, Object>> endpoints(int limit, String keyword) {
+        boolean filtered = keyword != null && !keyword.isBlank();
+        if (!filtered && System.currentTimeMillis() - aggregateCacheAt < AGGREGATE_CACHE_TTL_MS
+                && !endpointCache.isEmpty()) {
+            return endpointCache;
+        }
+        Query q = new Query().setLimit(100000);
+        List<TransmissionEvent> all = queryAll(q, storage -> storage.queryTransmissions(q));
+        Map<String, Map<String, Object>> ep = new LinkedHashMap<>();
+        for (TransmissionEvent e : all) {
+            String op = e.getOperation() != null ? e.getOperation() : "?";
+            String key = (e.getProtocol() != null ? e.getProtocol() : "?") + " " + op;
+            if (filtered && !containsIgnoreCase(key, keyword)) {
+                continue;
+            }
+            Map<String, Object> m = ep.computeIfAbsent(key, k -> {
+                Map<String, Object> x = new LinkedHashMap<>();
+                x.put("endpoint", k);
+                x.put("durations", new ArrayList<Long>());
+                x.put("callCount", 0L);
+                x.put("errorCount", 0L);
+                return x;
+            });
+            m.put("callCount", (Long) m.get("callCount") + 1L);
+            if (e.getStatus() == StatusCode.ERROR) {
+                m.put("errorCount", (Long) m.get("errorCount") + 1L);
+            }
+            ((List<Long>) m.get("durations")).add(e.getDuration());
+        }
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (Map<String, Object> m : ep.values()) {
+            @SuppressWarnings("unchecked")
+            List<Long> durations = (List<Long>) m.get("durations");
+            long callCount = (Long) m.get("callCount");
+            long errorCount = (Long) m.get("errorCount");
+            durations.sort(Comparator.naturalOrder());
+            long sum = durations.stream().mapToLong(Long::longValue).sum();
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("endpoint", m.get("endpoint"));
+            row.put("callCount", callCount);
+            row.put("errorCount", errorCount);
+            row.put("errorRate", callCount > 0
+                    ? Math.round(10000.0 * errorCount / callCount) / 100.0 : 0.0);
+            row.put("avgMs", callCount > 0 ? sum / callCount : 0L);
+            row.put("p95Ms", percentile(durations, 0.95));
+            row.put("p99Ms", percentile(durations, 0.99));
+            row.put("maxMs", durations.isEmpty() ? 0L : durations.get(durations.size() - 1));
+            out.add(row);
+        }
+        out.sort(Comparator.comparingLong(x -> -((Number) x.get("callCount")).longValue()));
+        if (out.size() > limit) {
+            out = out.subList(0, limit);
+        }
+        if (!filtered) {
+            endpointCache = out;
+            aggregateCacheAt = System.currentTimeMillis();
+            if (serviceCache.isEmpty()) {
+                serviceCache = services();
+            }
+        }
+        return out;
+    }
+
+    /** 排序列表取第 p 分位（线性内插近似，空列表返回 0）。 */
+    private static long percentile(List<Long> sorted, double p) {
+        if (sorted.isEmpty()) {
+            return 0L;
+        }
+        int idx = (int) Math.ceil(p * sorted.size()) - 1;
+        return sorted.get(Math.max(0, Math.min(idx, sorted.size() - 1)));
+    }
+
+    /**
+     * 依赖边聚合（按 edgeId 归并，修复每事件 callCount=1 的存储侧问题）。
+     *
+     * @param size 返回上限
+     * @return 聚合依赖边列表
+     */
+    public List<Map<String, Object>> dependenciesAggregated(int size) {
+        List<Map<String, Object>> raw = dependencies(size * 50);
+        Map<String, Map<String, Object>> merged = new LinkedHashMap<>();
+        Map<String, List<Long>> durations = new LinkedHashMap<>();
+        for (Map<String, Object> e : raw) {
+            String key = String.valueOf(e.get("edgeId"));
+            if ("null".equals(key)) {
+                key = e.get("source") + "→" + e.get("target");
+            }
+            Map<String, Object> m = merged.get(key);
+            if (m == null) {
+                m = new LinkedHashMap<>(e);
+                m.put("callCount", 0L);
+                m.put("errorCount", 0L);
+                m.put("p95Ms", 0L);
+                merged.put(key, m);
+                durations.put(key, new ArrayList<>());
+            }
+            long count = ((Number) e.getOrDefault("callCount", 0)).longValue();
+            m.put("callCount", (Long) m.get("callCount") + count);
+            m.put("errorCount", (Long) m.get("errorCount")
+                    + ((Number) e.getOrDefault("errorCount", 0)).longValue());
+            durations.get(key).add(((Number) e.getOrDefault("avgDurationMs", 0)).longValue());
+        }
+        for (Map.Entry<String, Map<String, Object>> entry : merged.entrySet()) {
+            Map<String, Object> m = entry.getValue();
+            List<Long> ds = durations.get(entry.getKey());
+            ds.sort(Comparator.naturalOrder());
+            long callCount = (Long) m.get("callCount");
+            m.put("avgDurationMs", ds.stream().mapToLong(Long::longValue).sum()
+                    / Math.max(1L, ds.size()));
+            m.put("p95Ms", percentile(ds, 0.95));
+            m.put("errorRate", callCount > 0
+                    ? Math.round(10000.0 * (Long) m.get("errorCount") / callCount) / 100.0 : 0.0);
+        }
+        List<Map<String, Object>> out = new ArrayList<>(merged.values());
+        out.sort(Comparator.comparingLong(x -> -((Number) x.get("callCount")).longValue()));
+        return out.size() > size ? new ArrayList<>(out.subList(0, size)) : out;
+    }
+
+    /**
+     * 系统健康状态（SkyWalking 饱和度派生指标）。
+     *
+     * <p>窗口内错误率 &gt; 10% 或堆 &gt; 90% → SATURATED；
+     * 错误率 &gt; 2% 或有活跃泄漏 → DEGRADED；否则 HEALTHY。</p>
+     *
+     * @return 健康 { health, qps, errorRate, activeLeaks, windowSeconds }
+     */
+    public Map<String, Object> health() {
+        long windowSeconds = 60L;
+        long cutoff = System.currentTimeMillis() - windowSeconds * 1000L;
+        Query q = new Query().setLimit(100000).setStartTime(cutoff);
+        List<TransmissionEvent> recent = queryAll(q, storage -> storage.queryTransmissions(q));
+        long total = recent.size();
+        long errors = recent.stream()
+                .filter(e -> e.getStatus() == StatusCode.ERROR).count();
+        double errorRate = total > 0
+                ? Math.round(10000.0 * errors / total) / 100.0 : 0.0;
+        double qps = total / (double) windowSeconds;
+        int activeLeaks = countActiveLeaks();
+        double heapPercent = lastJvmMemoryPercent();
+
+        String health;
+        if (heapPercent > 90.0 || errorRate > 10.0) {
+            health = "SATURATED";
+        } else if (heapPercent > 75.0 || errorRate > 2.0 || activeLeaks > 0) {
+            health = "DEGRADED";
+        } else {
+            health = "HEALTHY";
+        }
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("health", health);
+        result.put("qps", Math.round(qps * 100.0) / 100.0);
+        result.put("errorRate", errorRate);
+        result.put("activeLeaks", activeLeaks);
+        result.put("windowSeconds", windowSeconds);
+        return result;
+    }
+
+    /** 活跃泄漏计数（APM 存储兜底 0）。 */
+    private int countActiveLeaks() {
+        try {
+            ApmStorage storage = currentStorage();
+            if (storage == null) {
+                return 0;
+            }
+            List<LeakRecord> leaks = storage.queryLeaks(new Query().setLimit(100000));
+            int count = 0;
+            for (LeakRecord l : leaks != null ? leaks : List.<LeakRecord>of()) {
+                if (l.isActive()) {
+                    count++;
+                }
+            }
+            return count;
+        } catch (Exception e) {
+            log.debug("[Hotsport] 活跃泄漏统计失败: {}", e.getMessage());
+            return 0;
+        }
+    }
+
+    /** 当前堆使用百分比（PlatformMXBean 直读，失败返回 0）。 */
+    private static double lastJvmMemoryPercent() {
+        try {
+            java.lang.management.MemoryUsage heap =
+                    java.lang.management.ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
+            return heap.getMax() > 0 ? 100.0 * heap.getUsed() / heap.getMax() : 0.0;
+        } catch (Exception e) {
+            log.debug("[Hotsport] 堆使用率读取失败: {}", e.getMessage());
+            return 0.0;
+        }
+    }
+
+    /**
+     * Agent 链路树（trace → span 两级 ReTree 数据源）。
+     *
+     * @param limit trace 上限
+     * @return trace 节点列表（children = span 节点）
+     */
+    public List<Map<String, Object>> agentTracesTree(int limit) {
+        Query q = new Query().setLimit(100000);
+        List<TransmissionEvent> all = queryAll(q, storage -> storage.queryTransmissions(q));
+        Map<String, List<TransmissionEvent>> byTrace = new LinkedHashMap<>();
+        for (int i = all.size() - 1; i >= 0; i--) {
+            TransmissionEvent e = all.get(i);
+            String traceId = e.getTraceId() != null ? e.getTraceId() : "root";
+            byTrace.computeIfAbsent(traceId, k -> new ArrayList<>()).add(e);
+            if (byTrace.size() >= limit) {
+                break;
+            }
+        }
+        List<Map<String, Object>> tree = new ArrayList<>();
+        int built = 0;
+        for (Map.Entry<String, List<TransmissionEvent>> entry : byTrace.entrySet()) {
+            if (built >= limit) {
+                break;
+            }
+            built++;
+            List<TransmissionEvent> spans = entry.getValue();
+            long startMin = spans.stream().mapToLong(TransmissionEvent::getStartTime)
+                    .filter(t -> t > 0).min().orElse(0L);
+            long endMax = spans.stream().mapToLong(TransmissionEvent::getEndTime)
+                    .filter(t -> t > 0).max().orElse(0L);
+            long errors = spans.stream()
+                    .filter(e -> e.getStatus() == StatusCode.ERROR).count();
+            Map<String, Object> node = new LinkedHashMap<>();
+            node.put("id", entry.getKey());
+            node.put("traceId", entry.getKey());
+            node.put("label", "trace-" + entry.getKey().substring(0, Math.min(8, entry.getKey().length())));
+            node.put("spanCount", spans.size());
+            node.put("totalMs", Math.max(0L, endMax - startMin));
+            node.put("startTime", toIso(startMin));
+            node.put("status", errors > 0 ? "ERROR" : "OK");
+            node.put("error", errors > 0);
+            List<Map<String, Object>> children = new ArrayList<>();
+            for (TransmissionEvent e : spans) {
+                Map<String, Object> c = new LinkedHashMap<>();
+                c.put("id", e.getSpanId());
+                c.put("spanId", e.getSpanId());
+                c.put("traceId", e.getTraceId());
+                c.put("label", e.getOperation() != null ? e.getOperation() : e.getProtocol());
+                c.put("operation", e.getOperation());
+                c.put("durationMs", e.getDuration());
+                c.put("status", e.getStatus() != null ? e.getStatus().name() : "OK");
+                c.put("startTime", toIso(e.getStartTime()));
+                c.put("error", e.getStatus() == StatusCode.ERROR);
+                children.add(c);
+            }
+            node.put("children", children);
+            tree.add(node);
+        }
+        return tree;
+    }
+
+    // ------------------------------------------------------------------
+    // SkyWalking 风格增强：慢调用 / 错误排名 / SLA / 数据清理
+    // ------------------------------------------------------------------
+
+    /**
+     * 慢调用排行 — 按耗时降序取前 N 条传输记录。
+     *
+     * @param limit 返回上限
+     * @return 慢调用 DTO 列表
+     */
+    public List<Map<String, Object>> slowCalls(int limit) {
+        try {
+            Query q = new Query().setLimit(100000);
+            List<TransmissionEvent> all = queryAll(q, storage -> storage.queryTransmissions(q));
+            all.sort(Comparator.comparingLong(TransmissionEvent::getDuration).reversed());
+            List<Map<String, Object>> result = new ArrayList<>();
+            for (int i = 0; i < Math.min(limit, all.size()); i++) {
+                result.add(transmissionDto(all.get(i)));
+            }
+            return result;
+        } catch (Exception e) {
+            log.debug("[Hotsport] slowCalls 查询失败: {}", e.getMessage());
+            return new ArrayList<>();
+        }
+    }
+
+    /**
+     * 错误排行 — 按 errorType + errorMessage 分组聚合，取前 N 条。
+     *
+     * @param limit 返回上限
+     * @return 错误排行列表
+     */
+    public List<Map<String, Object>> errorRanking(int limit) {
+        try {
+            Query q = new Query().setLimit(100000);
+            List<TransmissionEvent> all = queryAll(q, storage -> storage.queryTransmissions(q));
+            java.util.Map<String, java.util.Map<String, Object>> groups = new java.util.LinkedHashMap<>();
+            java.util.Map<String, java.util.List<Long>> durations = new java.util.LinkedHashMap<>();
+            java.util.Map<String, java.util.List<Long>> timestamps = new java.util.LinkedHashMap<>();
+            for (TransmissionEvent e : all) {
+                String errType = e.getErrorType() != null ? e.getErrorType() : "";
+                String errMsg = e.getErrorMessage() != null ? e.getErrorMessage() : "";
+                String key = errType + "\0" + errMsg;
+                if (key.equals("\0")) {
+                    continue;
+                }
+                groups.computeIfAbsent(key, k -> {
+                    java.util.Map<String, Object> m = new java.util.LinkedHashMap<>();
+                    m.put("errorType", errType);
+                    m.put("errorMessage", errMsg);
+                    m.put("callCount", 0L);
+                    m.put("avgDurationMs", 0L);
+                    m.put("lastOccurrence", null);
+                    return m;
+                });
+                java.util.Map<String, Object> m = groups.get(key);
+                m.put("callCount", (Long) m.get("callCount") + 1L);
+                durations.computeIfAbsent(key, k -> new java.util.ArrayList<>()).add(e.getDuration());
+                timestamps.computeIfAbsent(key, k -> new java.util.ArrayList<>()).add(e.getStartTime());
+            }
+            List<Map<String, Object>> result = new ArrayList<>();
+            for (java.util.Map.Entry<String, java.util.Map<String, Object>> entry : groups.entrySet()) {
+                String key = entry.getKey();
+                java.util.Map<String, Object> m = entry.getValue();
+                java.util.List<Long> ds = durations.get(key);
+                long sum = ds.stream().mapToLong(Long::longValue).sum();
+                m.put("avgDurationMs", ds.isEmpty() ? 0L : sum / ds.size());
+                java.util.List<Long> ts = timestamps.get(key);
+                long maxTs = ts.stream().mapToLong(Long::longValue).max().orElse(0L);
+                m.put("lastOccurrence", toIso(maxTs));
+                result.add(m);
+            }
+            result.sort((a, b) -> Long.compare((Long) b.get("callCount"), (Long) a.get("callCount")));
+            if (result.size() > limit) {
+                result = new ArrayList<>(result.subList(0, limit));
+            }
+            return result;
+        } catch (Exception e) {
+            log.debug("[Hotsport] errorRanking 查询失败: {}", e.getMessage());
+            return new ArrayList<>();
+        }
+    }
+
+    /**
+     * SLA 统计 — 全量传输记录汇总。
+     *
+     * @return 包含 totalCount/errorCount/successCount/slaPercent/uptimeMs/qps
+     */
+    public Map<String, Object> slaStats() {
+        try {
+            Query q = new Query().setLimit(100000);
+            List<TransmissionEvent> all = queryAll(q, storage -> storage.queryTransmissions(q));
+            long totalCount = all.size();
+            long errorCount = all.stream()
+                    .filter(e -> e.getStatus() == com.chua.runtime.protocol.StatusCode.ERROR)
+                    .count();
+            long successCount = totalCount - errorCount;
+            double slaPercent = totalCount > 0 ? Math.round(10000.0 * successCount / totalCount) / 100.0 : 100.0;
+            long firstStart = all.stream()
+                    .mapToLong(TransmissionEvent::getStartTime)
+                    .filter(t -> t > 0).min().orElse(System.currentTimeMillis());
+            long uptimeMs = System.currentTimeMillis() - firstStart;
+            long oneMinCutoff = System.currentTimeMillis() - 60_000L;
+            long recentCount = all.stream()
+                    .filter(e -> e.getStartTime() >= oneMinCutoff).count();
+            double qps = recentCount / 60.0;
+            Map<String, Object> result = new java.util.LinkedHashMap<>();
+            result.put("totalCount", totalCount);
+            result.put("errorCount", errorCount);
+            result.put("successCount", successCount);
+            result.put("slaPercent", Math.round(slaPercent * 100.0) / 100.0);
+            result.put("uptimeMs", uptimeMs);
+            result.put("qps", Math.round(qps * 100.0) / 100.0);
+            return result;
+        } catch (Exception e) {
+            log.debug("[Hotsport] slaStats 查询失败: {}", e.getMessage());
+            return new java.util.LinkedHashMap<>();
+        }
+    }
+
+    /**
+     * 数据清理 — 按保留时长删除过期记录。
+     *
+     * @param retentionMs 保留毫秒数
+     * @return 清理统计
+     */
+    public Map<String, Object> cleanup(long retentionMs) {
+        Map<String, Object> result = new java.util.LinkedHashMap<>();
+        try {
+            ApmStorage storage = currentStorage();
+            if (storage != null) {
+                long cleaned = storage.cleanup(retentionMs);
+                result.put("cleanupMs", retentionMs);
+                result.put("cleanedCount", cleaned);
+            } else {
+                result.put("cleanupMs", retentionMs);
+                result.put("cleanedCount", 0L);
+            }
+            Map<String, Object> statsMap = new java.util.LinkedHashMap<>();
+            try {
+                if (storage != null) {
+                    Map<String, Long> raw = storage.stats();
+                    statsMap.putAll(raw);
+                }
+            } catch (Exception ex) {
+                log.debug("[Hotsport] cleanup stats 查询失败: {}", ex.getMessage());
+            }
+            result.put("stats", statsMap);
+        } catch (Exception e) {
+            log.debug("[Hotsport] cleanup 失败: {}", e.getMessage());
+            result.put("cleanupMs", retentionMs);
+            result.put("cleanedCount", 0L);
+        }
+        return result;
+    }
+
+    /**
+     * 系统拓扑（真实运行值：主机 / PID / 监听端口 / 网络接口 / 核心模块）。
+     *
+     * @return 拓扑 { center, jvmPid, modules, ports, connections, nodes, edges }
+     */
+    public Map<String, Object> systemTopology() {
+        Map<String, Object> t = new LinkedHashMap<>();
+        String hostname = "unknown";
+        try {
+            hostname = java.net.InetAddress.getLocalHost().getHostName();
+        } catch (Exception ignored) {
+            // 保留 unknown
+        }
+        t.put("center", hostname);
+        t.put("jvmPid", java.lang.management.ManagementFactory.getRuntimeMXBean().getPid());
+        List<Map<String, Object>> modules = new ArrayList<>();
+        String[] moduleNames = {"spring-boot", "spring-support-common-starter",
+                "utils-support-runtime-apm", "utils-support-runtime-protocol",
+                "utils-support-runtime-agent", "spring-support-hotsport-starter",
+                "spring-support-agent-starter", "common-starter"};
+        for (String mn : moduleNames) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", mn);
+            m.put("label", mn);
+            m.put("kind", "module");
+            modules.add(m);
+        }
+        t.put("modules", modules);
+        List<Map<String, Object>> ports = new ArrayList<>();
+        addPort(ports, "HTTP", "Tomcat/Spring Boot", 8890);
+        addPort(ports, "AGENT", "Hotsport Shell", shellPort);
+        t.put("ports", ports);
+        List<Map<String, Object>> connections = new ArrayList<>();
+        try {
+            java.util.Enumeration<java.net.NetworkInterface> en =
+                    java.net.NetworkInterface.getNetworkInterfaces();
+            while (en.hasMoreElements()) {
+                java.net.NetworkInterface ni = en.nextElement();
+                if (ni.isLoopback() || !ni.isUp()) {
+                    continue;
+                }
+                Map<String, Object> c = new LinkedHashMap<>();
+                c.put("iface", ni.getName());
+                c.put("local", ni.getHardwareAddress() != null
+                        ? bytesToHex(ni.getHardwareAddress()) : "?");
+                c.put("mac", ni.getHardwareAddress() != null
+                        ? bytesToHex(ni.getHardwareAddress()) : "?");
+                connections.add(c);
+            }
+        } catch (Exception e) {
+            log.debug("[Hotsport] 网络接口枚举失败: {}", e.getMessage());
+        }
+        t.put("connections", connections);
+        List<Map<String, Object>> nodes = new ArrayList<>();
+        Map<String, Object> centerNode = new LinkedHashMap<>();
+        centerNode.put("id", "center");
+        centerNode.put("label", hostname);
+        centerNode.put("symbolSize", 56);
+        nodes.add(centerNode);
+        List<Map<String, Object>> edges = new ArrayList<>();
+        for (Map<String, Object> p : ports) {
+            Map<String, Object> n = new LinkedHashMap<>();
+            n.put("id", "port-" + p.get("port"));
+            n.put("label", String.valueOf(p.get("port")));
+            n.put("symbolSize", 30);
+            nodes.add(n);
+            Map<String, Object> e = new LinkedHashMap<>();
+            e.put("source", "center");
+            e.put("target", "port-" + p.get("port"));
+            edges.add(e);
+        }
+        for (Map<String, Object> m : modules) {
+            Map<String, Object> n = new LinkedHashMap<>();
+            n.put("id", m.get("id"));
+            n.put("label", String.valueOf(m.get("label")));
+            n.put("symbolSize", 20);
+            nodes.add(n);
+        }
+        t.put("nodes", nodes);
+        t.put("edges", edges);
+        return t;
+    }
+
+    private static void addPort(List<Map<String, Object>> ports, String protocol,
+                                String software, int port) {
+        if (port <= 0) {
+            return;
+        }
+        Map<String, Object> p = new LinkedHashMap<>();
+        p.put("port", port);
+        p.put("label", software);
+        p.put("protocol", protocol);
+        p.put("software", software);
+        ports.add(p);
+    }
+
+    private static String bytesToHex(byte[] bytes) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < bytes.length; i++) {
+            if (i > 0) {
+                sb.append(':');
+            }
+            sb.append(String.format("%02x", bytes[i]));
+        }
+        return sb.toString();
+    }
+
+    /** 通用 long 解析（Number / 数字字符串 / null 兜底 0）。 */
+    private static long parseLong(Object v) {
+        if (v instanceof Number n) {
+            return n.longValue();
+        }
+        if (v != null) {
+            try {
+                return Long.parseLong(String.valueOf(v));
+            } catch (NumberFormatException ignored) {
+                // 保持 0
+            }
+        }
+        return 0L;
+    }
+
+    /** 从 toIso() 生成的 "yyyy-MM-dd HH:mm:ss" 字符串还原 epoch 毫秒（失败返回 0）。 */
+    private static long parseEpochMillis(Object v) {
+        if (v instanceof Number n) {
+            return n.longValue();
+        }
+        if (v == null) {
+            return 0L;
+        }
+        String s = String.valueOf(v);
+        if (s.isEmpty()) {
+            return 0L;
+        }
+        try {
+            java.time.format.DateTimeFormatter fmt =
+                    java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+            java.time.LocalDateTime ldt = java.time.LocalDateTime.parse(s, fmt);
+            java.time.Instant instant = ldt.atZone(java.time.ZoneId.systemDefault()).toInstant();
+            return instant.toEpochMilli();
+        } catch (Exception e2) {
+            return parseLong(v);
+        }
+    }
+
+    /** 将任意 Map 值转换为 String 键值 Map（缺省空 Map）。 */
+    private static Map<String, String> toStringMap(Map<?, ?> raw) {
+        Map<String, String> out = new LinkedHashMap<>();
+        if (raw != null) {
+            raw.forEach((k, v) -> out.put(String.valueOf(k), v == null ? "" : String.valueOf(v)));
+        }
+        return out;
     }
 
     // ------------------------------------------------------------------

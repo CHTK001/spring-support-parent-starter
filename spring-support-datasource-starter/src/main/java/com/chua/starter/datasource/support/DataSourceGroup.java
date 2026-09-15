@@ -83,7 +83,7 @@ public class DataSourceGroup {
             throw new IllegalStateException("数据源分组 '" + groupName + "' 中没有可用的数据源");
         }
         if (dataSources.size() == 1) {
-            return dataSources.get(0);
+            return dataSources.getFirst();
         }
         int index = strategy == LoadBalanceStrategy.ROUND_ROBIN
                 ? Math.floorMod(counter.getAndIncrement(), dataSources.size())

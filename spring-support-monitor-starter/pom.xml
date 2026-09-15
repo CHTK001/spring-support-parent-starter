@@ -14,6 +14,12 @@
     </description>
 
     <dependencies>
+        <!-- 工具基础：声明在首位，确保 javac 优先解析本模块对 utils-support-common-starter 的
+             最新 API（部分下游 fat jar 会内嵌同名类的旧副本，靠类路径顺序兜底） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-common-starter</artifactId>
+        </dependency>
         <!-- Spring 与基础 -->
         <dependency>
             <groupId>com.chua</groupId>
@@ -66,6 +72,16 @@
             <artifactId>spring-support-filesystem-starter</artifactId>
         </dependency>
 
+        <!-- 服务发现（可选）：为「服务管理」的 service-discovery 插件提供独立查询接口
+             （/ms/monitor/discovery）。声明为 optional，不向下游强制传递；
+             缺失时接口降级为「未启用发现服务」提示，不影响其它功能 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-discovery-starter</artifactId>
+            <version>${project.version}</version>
+            <optional>true</optional>
+        </dependency>
+
         <!-- 缓存 -->
         <dependency>
             <groupId>com.chua</groupId>
@@ -86,10 +102,6 @@
         </dependency>
 
         <!-- 工具 -->
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>utils-support-common-starter</artifactId>
-        </dependency>
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-metrics-starter</artifactId>

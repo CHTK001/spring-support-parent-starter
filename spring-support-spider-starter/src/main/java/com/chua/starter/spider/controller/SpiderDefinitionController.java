@@ -131,7 +131,7 @@ public class SpiderDefinitionController {
         if (list.isEmpty()) {
             return ReturnResult.ok(false);
         }
-        return ReturnResult.ok(definitionService.removeById(list.get(0).getId()));
+        return ReturnResult.ok(definitionService.removeById(list.getFirst().getId()));
     }
 
     /**
@@ -151,7 +151,7 @@ public class SpiderDefinitionController {
             return ReturnResult.ok(false);
         }
         SpiderDefinition update = new SpiderDefinition();
-        update.setId(list.get(0).getId());
+        update.setId(list.getFirst().getId());
         update.setEnabled(spiderStatus);
         return ReturnResult.ok(definitionService.updateById(update));
     }
