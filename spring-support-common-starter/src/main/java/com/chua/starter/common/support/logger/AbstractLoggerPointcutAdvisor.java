@@ -59,11 +59,11 @@ public abstract class AbstractLoggerPointcutAdvisor extends StaticMethodMatcherP
     @Autowired
     protected ApplicationContext applicationContext; // application上下文
 
-    @SuppressWarnings("unchecked")
     /**
-    * resolve注解类。
-    * @param className 类名称
-    * @return resolve注解类的结果
+     * 按类名解析注解类型。
+     *
+     * @param className 全限定类名，不能为 null
+     * @return 注解类型；类不存在时返回 null
      */
     @SuppressWarnings("unchecked")
     private static Class<? extends Annotation> resolveAnnotationClass(String className) {

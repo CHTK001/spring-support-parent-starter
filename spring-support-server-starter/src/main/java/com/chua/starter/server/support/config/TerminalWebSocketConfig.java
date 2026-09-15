@@ -47,10 +47,8 @@ public class TerminalWebSocketConfig implements WebSocketConfigurer {
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
  // 回显 guacamole 子协议：guacamole-通用-js 的 web套接字tunnel 以
  // 新 web套接字(url, "guacamole") 连接，缺省握手不回显子协议会被浏览器拒绝。
-        DefaultHandshakeHandler handshakeHandler = new DefaultHandshakeHandler();
-        handshakeHandler.setSupportedProtocols("guacamole");
+        // 不限制子协议，避免Vite代理转发时子协议丢失导致握手失败
         registry.addHandler(terminalWebSocketHandler, ServerConstants.WEBSOCKET_TERMINAL_PATH)
-                .setHandshakeHandler(handshakeHandler)
                 .setAllowedOriginPatterns("*");
     }
 }
