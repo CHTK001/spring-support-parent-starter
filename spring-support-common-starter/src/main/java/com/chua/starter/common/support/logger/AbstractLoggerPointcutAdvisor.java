@@ -1,7 +1,10 @@
 package com.chua.starter.common.support.logger;
 
 import com.chua.common.support.lang.json.Json;
-import com.chua.common.support.utils.*;
+import com.chua.common.support.reflection.ReflectUtils;
+import com.chua.common.support.utils.AnnotationUtils;
+import com.chua.common.support.utils.MapUtils;
+import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.utils.RequestUtils;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -24,7 +27,10 @@ import org.springframework.expression.spel.support.StandardEvaluationContext;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
-import java.util.*;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static com.chua.common.support.constant.NameConstant.*;
@@ -59,12 +65,13 @@ public abstract class AbstractLoggerPointcutAdvisor extends StaticMethodMatcherP
     * @param className 类名称
     * @return resolve注解类的结果
      */
+    @SuppressWarnings("unchecked")
     private static Class<? extends Annotation> resolveAnnotationClass(String className) {
-        try {
-            return (Class<? extends Annotation>) Class.forName(className).asSubclass(Annotation.class);
-        } catch (ClassNotFoundException e) {
+        Class<?> clazz = ReflectUtils.forName(className);
+        if (clazz == null) {
             return null;
         }
+        return (Class<? extends Annotation>) clazz.asSubclass(Annotation.class);
     }
 
     /**

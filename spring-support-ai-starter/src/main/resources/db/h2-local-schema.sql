@@ -248,8 +248,9 @@ CREATE TABLE IF NOT EXISTS sys_ai_bot_message (
 
 -- -------------------------------------------------------------------
 -- OCR 分组默认配置项（与 OcrGlobalSettingProvider 对齐，供演示/联调）
+-- 使用 MERGE 保证幂等：重复启动不触发唯一键冲突
 -- -------------------------------------------------------------------
-INSERT INTO sys_ai_global_setting (sys_ai_global_setting_group, sys_ai_global_setting_field, sys_ai_global_setting_value, sys_ai_global_setting_value_type, sys_ai_global_setting_description, sys_ai_global_setting_sort, sys_ai_global_setting_status) VALUES
+MERGE INTO sys_ai_global_setting (sys_ai_global_setting_group, sys_ai_global_setting_field, sys_ai_global_setting_value, sys_ai_global_setting_value_type, sys_ai_global_setting_description, sys_ai_global_setting_sort, sys_ai_global_setting_status) KEY(sys_ai_global_setting_group, sys_ai_global_setting_field) VALUES
 ('ocr','detector_model','paddleocrv6-det','STRING','文字检测模型（paddleocrv6-det / paddleocrv6-medium-det）',1,1),
 ('ocr','recognizer_model','paddleocrv6-rec','STRING','文字识别模型（paddleocrv6-rec / paddleocrv6-medium-rec / svtr-extractor / paddle-ocr-recognition / pp-word-extractor）',2,1),
 ('ocr','detector_threshold','0.5','NUMBER','OCR 检测置信度阈值（过滤低置信度文本框，0~1）',3,1),
@@ -303,25 +304,74 @@ CREATE TABLE IF NOT EXISTS sys_ai_role (
 );
 
 -- -------------------------------------------------------------------
+-- 角色分组管理 — /v2/role-groups
+-- -------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS sys_ai_role_group (
+  sys_ai_role_group_id      INT AUTO_INCREMENT PRIMARY KEY,
+  sys_ai_role_group_name    VARCHAR(255),
+  sys_ai_role_group_sort    INT DEFAULT 0,
+  sys_ai_role_group_status  INT DEFAULT 1,
+  sys_ai_role_group_delete  INT DEFAULT 0,
+  create_name               VARCHAR(255),
+  create_time               TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  update_time               TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- -------------------------------------------------------------------
 -- 模型供应商 — ChatClient 路由依赖此表
 -- -------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS sys_ai_provider (
-  sys_ai_provider_id        BIGINT AUTO_INCREMENT PRIMARY KEY,
+  sys_ai_provider_id        VARCHAR(64) PRIMARY KEY,
   sys_ai_provider_name      VARCHAR(255),
   sys_ai_provider_type      VARCHAR(64),
   sys_ai_provider_base_url  VARCHAR(512),
-  sys_ai_provider_api_key   VARCHAR(512),
+  sys_ai_provider_api_key   VARCHAR(1024),
   sys_ai_provider_logo      VARCHAR(512),
   sys_ai_provider_models    CLOB,
   sys_ai_provider_enabled   TINYINT DEFAULT 1,
   sys_ai_provider_deleted   INT DEFAULT 0,
-  create_name               VARCHAR(255),
-  create_by                 INT,
-  create_time               TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  update_time               TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  update_name               VARCHAR(255),
-  update_by                 INT
+  sys_ai_provider_platform  VARCHAR(64),
+  sys_ai_provider_protocol  VARCHAR(32),
+  sys_ai_provider_sort_order INT DEFAULT 0,
+  sys_ai_provider_attributes CLOB,
+  sys_ai_provider_extra     CLOB,
+  sys_ai_provider_proxy     VARCHAR(255),
+  sys_ai_provider_create_time BIGINT,
+  sys_ai_provider_update_time BIGINT
 );
+
+-- -------------------------------------------------------------------
+-- 提供商模型 — /api/providers 依赖此表
+-- -------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS sys_ai_provider_model (
+  sys_ai_provider_model_provider_id    VARCHAR(64)  NOT NULL,
+  sys_ai_provider_model_model          VARCHAR(255) NOT NULL,
+  sys_ai_provider_model_enabled        TINYINT      DEFAULT 1,
+  sys_ai_provider_model_sort_order     INT          DEFAULT 0,
+  sys_ai_provider_model_description    CLOB,
+  sys_ai_provider_model_capabilities   CLOB,
+  sys_ai_provider_model_metrics        CLOB,
+  sys_ai_provider_model_create_time    BIGINT,
+  sys_ai_provider_model_update_time    BIGINT,
+  PRIMARY KEY (sys_ai_provider_model_provider_id, sys_ai_provider_model_model)
+);
+
+-- -------------------------------------------------------------------
+-- 提供商连接 — /api/providers 依赖此表
+-- -------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS sys_ai_provider_connection (
+  sys_ai_provider_connection_id         VARCHAR(64)  NOT NULL PRIMARY KEY,
+  sys_ai_provider_connection_provider_id VARCHAR(64) NOT NULL,
+  sys_ai_provider_connection_role       VARCHAR(64)  NOT NULL,
+  sys_ai_provider_connection_label      VARCHAR(255),
+  sys_ai_provider_connection_base_url   VARCHAR(512),
+  sys_ai_provider_connection_auth_scheme VARCHAR(32),
+  sys_ai_provider_connection_credentials CLOB,
+  sys_ai_provider_connection_extra      CLOB,
+  sys_ai_provider_connection_create_time BIGINT,
+  sys_ai_provider_connection_update_time BIGINT
+);
+CREATE INDEX IF NOT EXISTS idx_ai_provider_conn_pid ON sys_ai_provider_connection(sys_ai_provider_connection_provider_id);
 
 -- -------------------------------------------------------------------
 -- 服务运行状态 — /v2/service-status 依赖此表
@@ -355,3 +405,57 @@ CREATE TABLE IF NOT EXISTS sys_ai_manufacturer (
   create_time                       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   update_time                       TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- -------------------------------------------------------------------
+-- 补充 sys_ai_provider 表缺失列（与 Mapper 对齐）
+-- -------------------------------------------------------------------
+ALTER TABLE sys_ai_provider ADD COLUMN IF NOT EXISTS sys_ai_provider_platform VARCHAR(128);
+ALTER TABLE sys_ai_provider ADD COLUMN IF NOT EXISTS sys_ai_provider_auth_scheme VARCHAR(64);
+ALTER TABLE sys_ai_provider ADD COLUMN IF NOT EXISTS sys_ai_provider_credentials CLOB;
+ALTER TABLE sys_ai_provider ADD COLUMN IF NOT EXISTS sys_ai_provider_bedrock_config CLOB;
+ALTER TABLE sys_ai_provider ADD COLUMN IF NOT EXISTS sys_ai_provider_extra CLOB;
+ALTER TABLE sys_ai_provider ADD COLUMN IF NOT EXISTS sys_ai_provider_proxy VARCHAR(255);
+ALTER TABLE sys_ai_provider ADD COLUMN IF NOT EXISTS sys_ai_provider_proxy_id BIGINT;
+ALTER TABLE sys_ai_provider ADD COLUMN IF NOT EXISTS sys_ai_provider_sort_order INT DEFAULT 0;
+ALTER TABLE sys_ai_provider ADD COLUMN IF NOT EXISTS sys_ai_provider_code VARCHAR(128);
+ALTER TABLE sys_ai_provider ADD COLUMN IF NOT EXISTS sys_ai_provider_status INT DEFAULT 1;
+ALTER TABLE sys_ai_provider ADD COLUMN IF NOT EXISTS sys_ai_provider_create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE sys_ai_provider ADD COLUMN IF NOT EXISTS sys_ai_provider_update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+CREATE TABLE IF NOT EXISTS sys_ai_connector (
+  sys_ai_connector_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  sys_ai_connector_key VARCHAR(128),
+  sys_ai_connector_name VARCHAR(128),
+  sys_ai_connector_description VARCHAR(512),
+  sys_ai_connector_type VARCHAR(64),
+  sys_ai_connector_category VARCHAR(64),
+  sys_ai_connector_icon VARCHAR(256),
+  sys_ai_connector_endpoint CLOB,
+  sys_ai_connector_params CLOB,
+  sys_ai_connector_builtin TINYINT DEFAULT 0,
+  sys_ai_connector_enabled TINYINT DEFAULT 1,
+  sys_ai_connector_last_test_status VARCHAR(32),
+  sys_ai_connector_last_tested_at TIMESTAMP,
+  sys_ai_connector_created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  sys_ai_connector_updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- -------------------------------------------------------------------
+-- 运行时 ChatClient 默认配置：智谱 GLM glm-4-flash（免费模型）
+-- -------------------------------------------------------------------
+MERGE INTO sys_ai_global_setting (sys_ai_global_setting_group, sys_ai_global_setting_field, sys_ai_global_setting_value, sys_ai_global_setting_value_type, sys_ai_global_setting_description, sys_ai_global_setting_sort, sys_ai_global_setting_status) KEY(sys_ai_global_setting_group, sys_ai_global_setting_field) VALUES
+('runtime','provider','openai','STRING','AI 服务商标识',1,1),
+('runtime','provider_base_url','https://open.bigmodel.cn/api/paas/v4','STRING','API 基础地址',2,1),
+('runtime','provider_api_key','29ed238f4660416cb2efe39aaaf71ed5.S2I2AfOu75HQwZ30','STRING','API 密钥（智谱 GLM）',3,1),
+('runtime','default_model','glm-4-flash','STRING','默认模型（glm-4-flash 免费）',4,1),
+('runtime','temperature','0.3','NUMBER','温度',5,1);
+
+-- -------------------------------------------------------------------
+-- RAG 知识库真实模型配置（LLM 用智谱 GLM；embedding 用 OpenRouter 免费模型）
+-- -------------------------------------------------------------------
+MERGE INTO sys_ai_global_setting (sys_ai_global_setting_group, sys_ai_global_setting_field, sys_ai_global_setting_value, sys_ai_global_setting_value_type, sys_ai_global_setting_description, sys_ai_global_setting_sort, sys_ai_global_setting_status) KEY(sys_ai_global_setting_group, sys_ai_global_setting_field) VALUES
+('rag','rag_llm_model','glm-4-flash','STRING','RAG 问答使用的 LLM 模型名',3,1),
+('rag','rag_embedding_model','openai','STRING','Embedding 模型（openai/SPI provider）',1,1),
+('rag','rag_embedding_dimensions','2048','NUMBER','向量维度',2,1),
+('rag','rag_embedding_base_url','https://openrouter.ai/api/v1','STRING','Embedding API 基础地址（OpenRouter）',4,1),
+('rag','rag_embedding_api_key','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','STRING','Embedding API 密钥（OpenRouter）',5,1),
+('rag','rag_embedding_model_name','nvidia/nemotron-3-embed-1b:free','STRING','Embedding 模型标识（如 nvidia/nemotron-3-embed-1b:free）',6,1);

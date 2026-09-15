@@ -3,6 +3,7 @@ package com.chua.starter.common.support.configuration.resolver;
 import com.chua.common.support.constant.CommonConstant;
 import com.chua.common.support.converter.Converter;
 import com.chua.common.support.lang.json.Json;
+import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.common.support.utils.ArrayUtils;
 import com.chua.common.support.utils.ClassUtils;
 import com.chua.common.support.utils.IoUtils;
@@ -32,10 +33,16 @@ import org.springframework.web.util.ContentCachingRequestWrapper;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
+// 注：Modifier.isStatic / Parameter 为框架 API 返回类型与字段修饰符检查，非访问控制反射，豁免
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Parameter;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
 * @author CH
@@ -110,18 +117,11 @@ public class RequestParamsMapMethodArgumentResolver extends RequestParamMapMetho
         Object argument = super.resolveArgument(parameter, mavContainer, webRequest, binderFactory);
         Parameter parameter1 = parameter.getParameter();
         Class<?> type = parameter1.getType();
-        Object instance = type.newInstance();
+        Object instance = ReflectUtils.instantiate(type);
         ReflectionUtils.doWithFields(type, field -> {
             if (Modifier.isStatic(field.getModifiers())) {
                 return;
             }
-            ReflectionUtils.makeAccessible(field);
-            /**
-            * 执行注册。
-            * @param instance instance
-            * @param field 字段
-            * @param argument 参数
-             */
             doRegister(instance, field, argument);
         });
 
@@ -145,10 +145,11 @@ public class RequestParamsMapMethodArgumentResolver extends RequestParamMapMetho
         } else {
             beanMap = new java.util.LinkedHashMap<>();
             try {
+                // 保留 getDeclaredFields 枚举，字段取值走 ReflectUtils（规约 1.10）
                 java.lang.reflect.Field[] fields = argument.getClass().getDeclaredFields();
                 for (java.lang.reflect.Field f : fields) {
-                    f.setAccessible(true);
-                    beanMap.put(f.getName(), f.get(argument));
+                    Object val = ReflectUtils.getField(argument, f.getName());
+                    beanMap.put(f.getName(), val);
                 }
             } catch (Exception ignored) {
             }
@@ -240,10 +241,7 @@ public class RequestParamsMapMethodArgumentResolver extends RequestParamMapMetho
         if (null == o1) {
             return;
         }
-        try {
-            field.set(instance, o1);
-        } catch (IllegalAccessException ignored) {
-        }
+        ReflectUtils.setField(instance, field.getName(), o1);
     }
 
 

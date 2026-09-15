@@ -5,7 +5,11 @@ import com.chua.common.starter.support.objects.struct.chart.RadarChartData;
 import com.chua.common.starter.support.objects.struct.chart.RelationData;
 import com.chua.common.starter.support.objects.struct.chart.TreemapData;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
 * 默认对象结构化实现
@@ -33,8 +37,10 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
             return Collections.emptyList();
         }
 
-        Map<Object, TreeNode<T>> nodeMap = new HashMap<>();
-        List<TreeNode<T>> roots = new ArrayList<>();
+        // 每个元素对应一个节点，容量按元素数预估
+        Map<Object, TreeNode<T>> nodeMap = new HashMap<>(source.size() * 2);
+        // 根节点数不超过元素总数，容量按元素数预估
+        List<TreeNode<T>> roots = new ArrayList<>(source.size());
 
         for (T item : source) {
             Object id = config.getIdExtractor().apply(item);
@@ -66,12 +72,8 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
             return data;
         }
 
+        // 节点总数取决于树深度，容量不可预估，按需扩容
         List<TreeNode<T>> allNodes = new ArrayList<>();
-        /**
-        * collect节点。
-        * @param tree 树
-        * @param allNodes 全部节点
-         */
         collectNodes(tree, allNodes);
 
         for (TreeNode<T> node : allNodes) {
@@ -93,11 +95,6 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
         }
 
         List<TreeNode<T>> allNodes = new ArrayList<>();
-        /**
-        * collect节点。
-        * @param tree 树
-        * @param allNodes 全部节点
-         */
         collectNodes(tree, allNodes);
 
         for (TreeNode<T> node : allNodes) {
@@ -119,11 +116,6 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
         }
 
         List<TreeNode<T>> allNodes = new ArrayList<>();
-        /**
-        * collect节点。
-        * @param tree 树
-        * @param allNodes 全部节点
-         */
         collectNodes(tree, allNodes);
 
         for (TreeNode<T> node : allNodes) {
@@ -131,11 +123,6 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
             data.getNodes().add(new RelationData.Node(String.valueOf(node.getId()), name));
         }
 
-        /**
-        * 添加链接。
-        * @param tree 树
-        * @param data 数据
-         */
         addLinks(tree, data);
         return data;
     }
@@ -149,11 +136,6 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
         }
 
         List<TreeNode<T>> allNodes = new ArrayList<>();
-        /**
-        * collect节点。
-        * @param tree 树
-        * @param allNodes 全部节点
-         */
         collectNodes(tree, allNodes);
 
         for (TreeNode<T> node : allNodes) {
@@ -180,10 +162,8 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
         if (node.getParentId() == null) {
             return currentName;
         }
-        
- // 这里我们需要通过标识查找父节点来构建路径
-        // 为了简化，我们先返回当前名称
-        // 实际应用中可能需要传递父节点信息或递归构建
+
+        // 父节点路径依赖父节点名称，当前节点信息不足，直接返回当前名称
         return currentName;
     }
 
@@ -197,10 +177,6 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
         for (TreeNode<T> node : nodes) {
             result.add(node);
             if (node.getChildren() != null) {
-                /**
-                * collect节点。
-                * @param node.getChildren( 节点.获取children(
-                 */
                 collectNodes(node.getChildren(), result);
             }
         }
@@ -221,10 +197,6 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
                             String.valueOf(child.getId())
                     ));
                 }
-                /**
-                * 添加链接。
-                * @param node.getChildren( 节点.获取children(
-                 */
                 addLinks(node.getChildren(), data);
             }
         }

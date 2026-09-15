@@ -67,7 +67,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
                         .isNull(SysAiAgent::getParentId)
                         .orderByAsc(SysAiAgent::getSortOrder)
                         .orderByAsc(SysAiAgent::getCreatedAt));
-        List<Map<String, Object>> result = new ArrayList<>();
+        List<Map<String, Object>> result = new ArrayList<>(8); // 主 Agent 数量不可预估
         for (SysAiAgent master : masters) {
             result.add(toResponse(master, true));
         }
@@ -295,7 +295,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
         } catch (Exception e) {
             log.warn("[Agent] 持久化编排图失败 agentId={}: {}", agentId, e.getMessage());
         }
-        Map<String, Object> result = new LinkedHashMap<>();
+        Map<String, Object> result = new LinkedHashMap<>(4);
         result.put("agentId", agentId);
         result.put("edgesCount", edges.size());
         result.put("nodesCount", nodes.size());
@@ -310,7 +310,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
         try {
             Optional<String> persistedNodes = globalSettingService.getValue("orchestration", "graph_" + agentId + "_nodes");
             if (persistedNodes.isPresent() && persistedNodes.get() != null && !persistedNodes.get().isBlank()) {
-                Map<String, Object> result = new LinkedHashMap<>();
+                Map<String, Object> result = new LinkedHashMap<>(6);
                 result.put("nodes", Json.fromJsonToList(persistedNodes.get(), Map.class));
                 Optional<String> persistedEdges = globalSettingService.getValue("orchestration", "graph_" + agentId + "_edges");
                 result.put("edges", persistedEdges.map(e -> Json.fromJsonToList(e, Map.class)).orElse(List.of()));
@@ -325,8 +325,8 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
         }
         List<SysAiAgent> subs = subAgentsOf(agentId);
 
-        List<Map<String, Object>> nodes = new ArrayList<>();
-        Map<String, Object> masterNode = new LinkedHashMap<>();
+        List<Map<String, Object>> nodes = new ArrayList<>(4); // 子 Agent 数量不可预估
+        Map<String, Object> masterNode = new LinkedHashMap<>(8);
         masterNode.put("id", master.getAgentId());
         masterNode.put("agent_id", master.getAgentId());
         masterNode.put("label", master.getName());
@@ -334,10 +334,10 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
         masterNode.put("position", Map.of("x", 400, "y", 100));
         nodes.add(masterNode);
 
-        List<Map<String, Object>> edges = new ArrayList<>();
+        List<Map<String, Object>> edges = new ArrayList<>(4); // 子 Agent 数量不可预估
         int idx = 0;
         for (SysAiAgent sub : subs) {
-            Map<String, Object> subNode = new LinkedHashMap<>();
+            Map<String, Object> subNode = new LinkedHashMap<>(8);
             subNode.put("id", sub.getAgentId());
             subNode.put("agent_id", sub.getAgentId());
             subNode.put("label", sub.getName());
@@ -345,7 +345,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
             subNode.put("position", Map.of("x", 200 + idx * 220, "y", 350));
             nodes.add(subNode);
 
-            Map<String, Object> edge = new LinkedHashMap<>();
+            Map<String, Object> edge = new LinkedHashMap<>(4);
             edge.put("id", master.getAgentId() + "-" + sub.getAgentId());
             edge.put("source", master.getAgentId());
             edge.put("target", sub.getAgentId());
@@ -354,7 +354,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
             idx++;
         }
 
-        Map<String, Object> result = new LinkedHashMap<>();
+        Map<String, Object> result = new LinkedHashMap<>(4);
         result.put("nodes", nodes);
         result.put("edges", edges);
         result.put("agentId", agentId);
@@ -371,13 +371,13 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
         List<SysAiAgent> subs = subAgentsOf(agentId).stream()
                 .filter(s -> Boolean.TRUE.equals(s.getEnabled()))
                 .toList();
-        Map<String, SysAiAgent> subById = new LinkedHashMap<>();
+        Map<String, SysAiAgent> subById = new LinkedHashMap<>(4); // 子 Agent 数量不可预估
         for (SysAiAgent sub : subs) {
             subById.put(sub.getAgentId(), sub);
         }
 
         // 读取持久化编排图，按边做拓扑排序；无图时按 sort 顺序串行。
-        List<String> order = new ArrayList<>();
+        List<String> order = new ArrayList<>(4); // 编排节点数量不可预估
         try {
             Optional<String> nodesJson = globalSettingService.getValue("orchestration", "graph_" + agentId + "_nodes");
             Optional<String> edgesJson = globalSettingService.getValue("orchestration", "graph_" + agentId + "_edges");
@@ -397,7 +397,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
             }
         }
 
-        Map<String, String> outputs = new LinkedHashMap<>();
+        Map<String, String> outputs = new LinkedHashMap<>(4); // 子 Agent 数量不可预估
         String current = input != null ? input : "";
         for (String subId : order) {
             SysAiAgent sub = subById.get(subId);
@@ -424,7 +424,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
             }
         }
 
-        Map<String, Object> result = new LinkedHashMap<>();
+        Map<String, Object> result = new LinkedHashMap<>(6);
         result.put("agentId", agentId);
         result.put("mode", mode);
         result.put("nodes", order.size());
@@ -438,8 +438,8 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
      */
     private static List<String> topologicalOrder(List<Map<String, Object>> nodes, List<Map<String, Object>> edges,
                                                  Set<String> validSubIds, String masterId) {
-        Map<String, Integer> indegree = new LinkedHashMap<>();
-        Map<String, List<String>> adj = new LinkedHashMap<>();
+        Map<String, Integer> indegree = new LinkedHashMap<>(4); // 节点数量不可预估
+        Map<String, List<String>> adj = new LinkedHashMap<>(4); // 节点数量不可预估
         for (Map<String, Object> node : nodes) {
             Object id = node.get("agent_id") != null ? node.get("agent_id") : node.get("id");
             if (id == null) {
@@ -450,7 +450,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
                 continue;
             }
             indegree.putIfAbsent(sid, 0);
-            adj.putIfAbsent(sid, new ArrayList<>());
+            adj.putIfAbsent(sid, new ArrayList<>(2));
         }
         for (Map<String, Object> edge : edges) {
             Object src = edge.get("source");
@@ -463,7 +463,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
             if (!validSubIds.contains(t) || t.equals(masterId)) {
                 continue;
             }
-            adj.putIfAbsent(s, new ArrayList<>());
+            adj.putIfAbsent(s, new ArrayList<>(2));
             if (!s.equals(masterId) && validSubIds.contains(s)) {
                 adj.get(s).add(t);
                 indegree.merge(t, 1, Integer::sum);
@@ -472,13 +472,13 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
             }
             indegree.putIfAbsent(t, indegree.getOrDefault(t, 0));
         }
-        List<String> queue = new ArrayList<>();
+        List<String> queue = new ArrayList<>(4);
         for (Map.Entry<String, Integer> e : indegree.entrySet()) {
             if (e.getValue() == 0) {
                 queue.add(e.getKey());
             }
         }
-        List<String> order = new ArrayList<>();
+        List<String> order = new ArrayList<>(4);
         while (!queue.isEmpty()) {
             String cur = queue.remove(0);
             order.add(cur);
@@ -529,7 +529,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
             log.warn("[Agent] Agent 运行时不可用，模型 {} 未注册到对话链路", resolvedModel);
         }
 
-        Map<String, Object> result = new LinkedHashMap<>();
+        Map<String, Object> result = new LinkedHashMap<>(4);
         result.put("agentId", agentId);
         result.put("agentName", agent.getName());
         result.put("modelName", resolvedModel);
@@ -550,7 +550,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
         SysAiAgent agent = requireAgent(agentId);
         String resolvedModel = "agent-" + agent.getName();
         boolean registered = chatClientRegistry.isAgentModelRegistered(resolvedModel);
-        Map<String, Object> info = new LinkedHashMap<>();
+        Map<String, Object> info = new LinkedHashMap<>(4);
         info.put("agentId", agentId);
         info.put("agentName", agent.getName());
         info.put("modelName", registered ? resolvedModel : null);
@@ -747,7 +747,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
     * @return 转为响应的结果
      */
     private Map<String, Object> toResponse(SysAiAgent agent, boolean includeSubs) {
-        Map<String, Object> map = new LinkedHashMap<>();
+        Map<String, Object> map = new LinkedHashMap<>(16);
         map.put("agent_id", agent.getAgentId());
         map.put("parent_id", agent.getParentId());
         map.put("name", agent.getName());
@@ -859,8 +859,8 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
             return null;
         }
         Object keys = credentials.get("api_keys");
-        if (keys instanceof List<?> list && !list.isEmpty() && list.get(0) != null) {
-            return list.get(0).toString();
+        if (keys instanceof List<?> list && !list.isEmpty() && list.getFirst() != null) {
+            return list.getFirst().toString();
         }
         Object key = credentials.get("apiKey");
         return key != null ? key.toString() : null;
@@ -878,7 +878,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
         }
         Object headers = extra.get("custom_headers");
         if (headers instanceof Map<?, ?> map) {
-            Map<String, String> result = new HashMap<>();
+            Map<String, String> result = new HashMap<>(8); // 自定义头部数量不可预估
             map.forEach((k, v) -> {
                 if (k != null && v != null) {
                     result.put(k.toString(), v.toString());
@@ -942,7 +942,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
         if (!(v instanceof List<?> list)) {
             return null;
         }
-        List<String> out = new ArrayList<>();
+        List<String> out = new ArrayList<>(4); // 元素数量不可预估
         for (Object o : list) {
             if (o != null) {
                 out.add(o.toString());

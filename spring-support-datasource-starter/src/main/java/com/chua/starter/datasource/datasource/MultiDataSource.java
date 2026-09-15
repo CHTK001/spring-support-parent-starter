@@ -143,7 +143,7 @@ public class MultiDataSource implements DataSource {
             if (dataSources.isEmpty()) {
                 return;
             }
-            DataSource primaryDs = dataSources.get(0);
+            DataSource primaryDs = dataSources.getFirst();
             PartitionAwareTableFactory factory = new PartitionAwareTableFactory(primaryDs);
             Map<String, PartitionRoutingTable> routingTables = factory.buildAllRoutingTables();
             if (routingTables.isEmpty()) {

@@ -6,7 +6,10 @@ import com.chua.starter.project.support.entity.MsProject;
 import com.chua.starter.project.support.entity.MsProjectDeployLog;
 import com.chua.starter.project.support.entity.MsProjectUploadArchive;
 import com.chua.starter.project.support.service.DeployService;
+import com.chua.starter.project.support.service.ProjectAiScriptService;
+import com.chua.starter.project.support.service.ProjectMetricService;
 import com.chua.starter.project.support.service.ProjectService;
+import com.chua.starter.project.support.service.WatchdogService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -44,6 +47,15 @@ public class ProjectController {
 
     /** 部署操作服务 */
     private final DeployService deployService;
+
+    /** AI 脚本生成服务 */
+    private final ProjectAiScriptService aiScriptService;
+
+    /** 守护进程服务 */
+    private final WatchdogService watchdogService;
+
+    /** 指标采集服务 */
+    private final ProjectMetricService metricService;
 
     /**
     * 新增项目
@@ -246,13 +258,13 @@ public class ProjectController {
     }
 
     /**
-    * 实时查看项目日志（tail）
-    *
-    * @param id     项目 标识
-    * @param hostId 目标主机 标识
-    * @param cursor 上次读取字节偏移，可为空
-    * @param lines  拉取行数，默认 500
-    * @return 日志内容
+     * 实时查看项目日志（tail）
+     *
+     * @param id     项目 标识
+     * @param hostId 目标主机 标识
+     * @param cursor 上次读取字节偏移，可为空
+     * @param lines  拉取行数，默认 500
+     * @return 日志内容
      */
     @Operation(summary = "实时查看项目日志")
     @GetMapping("/{id}/log")
@@ -261,6 +273,62 @@ public class ProjectController {
                                                      @RequestParam(required = false) Long cursor,
                                                      @RequestParam(required = false) Integer lines) {
         return deployService.tailLog(id, hostId, cursor, lines);
+    }
+
+    /**
+     * AI 生成运维脚本（启动/停止/重启/状态检测）
+     * <p>
+     * 依据项目上下文（类型/目录/OS/健康目标）调用 LLM 生成脚本，
+     * 供前端表单一键填充；宿主未装配 AI 时返回降级提示。
+     * </p>
+     *
+     * @param id   项目 标识（传 0 表示用请求体内项目上下文）
+     * @param kind 脚本类型 START/STOP/RESTART/CHECK
+     * @param body 项目上下文（表单未保存时直接传字段）
+     * @return 生成的脚本
+     */
+    @Operation(summary = "AI 生成运维脚本")
+    @PostMapping("/{id}/ai-gen-script")
+    public ReturnResult<String> aiGenScript(@PathVariable Long id,
+                                            @RequestParam(defaultValue = "START") String kind,
+                                            @RequestBody(required = false) MsProject body) {
+        MsProject context = body;
+        if (context == null || (context.getMsProjectType() == null && context.getMsProjectDeployDir() == null)) {
+            context = id == null || id == 0L ? new MsProject() : projectService.get(id).getData();
+        }
+        if (context == null) {
+            return ReturnResult.error("项目上下文不能为空: " + id);
+        }
+        return aiScriptService.generate(context, kind);
+    }
+
+    /**
+     * 守护进程状态（连续失败计数/最近检测时间/累计拉起次数）
+     *
+     * @param id 项目 标识
+     * @return 守护状态快照
+     */
+    @Operation(summary = "守护进程状态")
+    @GetMapping("/{id}/watchdog/status")
+    public ReturnResult<Map<String, Object>> watchdogStatus(@PathVariable Long id) {
+        return ReturnResult.ok(watchdogService.statusOf(id));
+    }
+
+    /**
+     * 项目指标时间序列（历史查询，供前端图表渲染）
+     *
+     * @param id         项目 标识
+     * @param metricName 指标名，可为空查全部
+     * @param limit      上限，默认 200
+     * @return 指标点列表（新→旧）
+     */
+    @Operation(summary = "项目指标时间序列")
+    @GetMapping("/{id}/metrics")
+    public ReturnResult<List<Map<String, Object>>> metrics(
+            @PathVariable Long id,
+            @RequestParam(required = false) String metricName,
+            @RequestParam(defaultValue = "200") int limit) {
+        return ReturnResult.ok(metricService.queryHistory(id, metricName, limit));
     }
 
     /**

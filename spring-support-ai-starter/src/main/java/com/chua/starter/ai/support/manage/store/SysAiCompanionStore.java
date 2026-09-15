@@ -211,12 +211,12 @@ public class SysAiCompanionStore {
      */
     public Map<String, Object> fromJson(String json) {
         if (json == null || json.isBlank()) {
-            return new HashMap<>();
+            return new HashMap<>(4);
         }
         try {
             return objectMapper.readValue(json, new TypeReference<Map<String, Object>>() {});
         } catch (Exception e) {
-            return new HashMap<>();
+            return new HashMap<>(4);
         }
     }
 
@@ -340,7 +340,7 @@ public class SysAiCompanionStore {
         Map<String, Object> patch = toMap(patchValue);
         Map<String, Object> current = getter.get();
         if (current == null) {
-            current = new HashMap<>();
+            current = new HashMap<>(4); // 补丁合并量不可预估
         }
         current.putAll(patch);
         setter.set(current);
@@ -379,7 +379,7 @@ public class SysAiCompanionStore {
         if (value instanceof Map<?, ?> m) {
             return (Map<String, Object>) m;
         }
-        return new HashMap<>();
+        return new HashMap<>(4); // 非 映射 默认空
     }
 
     // ==================== 记忆 CRUD ====================
@@ -530,9 +530,9 @@ public class SysAiCompanionStore {
             if (norm.isEmpty()) {
                 continue;
             }
-            byNormal.computeIfAbsent(norm, k -> new ArrayList<>()).add(memory);
+            byNormal.computeIfAbsent(norm, k -> new ArrayList<SysAiCompanionMemory>(2)).add(memory);
         }
-        List<List<SysAiCompanionMemory>> result = new ArrayList<>();
+        List<List<SysAiCompanionMemory>> result = new ArrayList<>(8); // 分组数量不可预估
         for (List<SysAiCompanionMemory> group : byNormal.values()) {
             if (group.size() >= 2) {
                 result.add(group);
@@ -540,8 +540,8 @@ public class SysAiCompanionStore {
         }
         // 按组内最早时间升序，保证输出稳定
         result.sort((a, b) -> {
-            long at = a.get(0).getCreatedAt() == null ? 0 : a.get(0).getCreatedAt();
-            long bt = b.get(0).getCreatedAt() == null ? 0 : b.get(0).getCreatedAt();
+            long at = a.getFirst().getCreatedAt() == null ? 0 : a.getFirst().getCreatedAt();
+            long bt = b.getFirst().getCreatedAt() == null ? 0 : b.getFirst().getCreatedAt();
             return Long.compare(at, bt);
         });
         return result;

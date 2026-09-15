@@ -152,24 +152,38 @@ public class ServerFilterFactory {
     /**
     * 按 ServerFilter SPI 名称实例化过滤器。
     *
-    * @param type       SPI 名称(如 url-mapping/shell-url-mapping)
+    * <p>优先尝试无参构造（插件自行在 {@code init} 阶段接收参数），
+    * 失败再尝试 {@code (ServerSetting)} 构造。</p>
+    *
+    * @param type       SPI 名称(如 url-mapping/shell-url-mapping/service-discovery/reverse-proxy)
     * @param descriptor 插件描述
     * @param setting    所属服务器配置
     * @return 过滤器实例, SPI 未注册或实例化失败返回 空
      */
     private ServerFilter createSpiFilter(String type, ServerFilterDescriptor descriptor, ServerSetting setting) {
+        ServerFilter filter = tryCreateSpi(type);
+        if (filter == null) {
+            filter = tryCreateSpi(type, setting);
+        }
+        if (filter == null) {
+            return null;
+        }
+        log.info("[ServerFilterFactory] SPI 过滤器已创建: name={}, type={}", descriptor.getName(), type);
+        return filter;
+    }
+
+    /**
+    * 尝试按 SPI 名称与构造参数实例化，异常时返回 空 以便上层回退。
+    *
+    * @param type 类型
+    * @param args 构造参数
+    * @return 过滤器实例或 空
+     */
+    private ServerFilter tryCreateSpi(String type, Object... args) {
         try {
-            ServerFilter filter = ServiceProvider.of(ServerFilter.class).getNewExtension(type, setting);
-            if (filter == null) {
-                filter = ServiceProvider.of(ServerFilter.class).getNewExtension(type);
-            }
-            if (filter == null) {
-                return null;
-            }
-            log.info("[ServerFilterFactory] SPI 过滤器已创建: name={}, type={}", descriptor.getName(), type);
-            return filter;
+            return ServiceProvider.of(ServerFilter.class).getNewExtension(type, args);
         } catch (Exception e) {
-            log.debug("[ServerFilterFactory] SPI 过滤器实例化失败, 回退 FQCN: {} - {}", type, e.getMessage());
+            log.debug("[ServerFilterFactory] SPI 过滤器实例化失败: {} - {}", type, e.getMessage());
             return null;
         }
     }

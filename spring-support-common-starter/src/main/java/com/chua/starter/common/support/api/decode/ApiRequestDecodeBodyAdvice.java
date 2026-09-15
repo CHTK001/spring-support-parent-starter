@@ -20,6 +20,7 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestBodyAdvice;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+// 注：Type 为 RequestBodyAdvice 接口签名要求的参数类型，非业务反射调用，豁免
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 
@@ -265,6 +266,7 @@ public class ApiRequestDecodeBodyAdvice implements RequestBodyAdvice  {
         }
 
         if (root.isArray() && root.size() > 0) {
+            // 注：JsonNode.get(int) 为 Jackson 数组下标访问，size()>0 已保证非空，豁免规约四十一
             JsonNode first = root.get(0);
             if (first != null && first.isObject()) {
                 JsonNode dataNode = first.get(ENCRYPTED_REQUEST_FIELD);

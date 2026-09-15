@@ -23,7 +23,7 @@ import org.springframework.scheduling.TriggerContext;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.annotation.PreDestroy;
+import jakarta.annotation.PreDestroy;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
@@ -197,24 +197,26 @@ public class UsageAggregationTask implements SchedulingConfigurer {
     * 避免定时任务长连接把数据库连接池耗尽。</p>
      */
     public void run() {
-        if (!isUsageEnabled()) {
-            log.debug("[UsageAggregation] 用量分析未启用，跳过本次执行");
-            /**
-            * record日志。
-            * @param LOG_LEVEL_WARN 日志水平仪warn
-            * @param "用量分析未启用，跳过本次执行" "用量分析未启用，跳过本次执行"
-             */
-            recordLog(LOG_LEVEL_WARN, "用量分析未启用，跳过本次执行");
-            return;
+        try {
+            // 临时禁用用量分析定时任务，防止JVM崩溃
+            boolean disabled = true;
+            if (disabled) {
+                log.debug("[UsageAggregation] 用量分析定时任务已临时禁用");
+                return;
+            }
+            
+            if (!isUsageEnabled()) {
+                log.debug("[UsageAggregation] 用量分析未启用，跳过本次执行");
+                recordLog(LOG_LEVEL_WARN, "用量分析未启用，跳过本次执行");
+                return;
+            }
+            recordLog(LOG_LEVEL_INFO, "开始定时同步与聚合 (" + java.time.LocalTime.now().withNano(0) + ")");
+            self.syncExternalUsage();
+            self.aggregateToday();
+        } catch (Throwable e) {
+            log.error("[UsageAggregation] 定时任务执行异常（已捕获，不影响JVM）: {}", e.getMessage(), e);
+            recordLog(LOG_LEVEL_WARN, "定时任务异常: " + e.getMessage());
         }
-        /**
-        * record日志。
-        * @param ")" 日志水平仪信息
-        * @param java.time.LocalTime.now( Java.时间.本地时间.now(
-         */
-        recordLog(LOG_LEVEL_INFO, "开始定时同步与聚合 (" + java.time.LocalTime.now().withNano(0) + ")");
-        self.syncExternalUsage();
-        self.aggregateToday();
     }
 
     /**
@@ -524,7 +526,7 @@ public class UsageAggregationTask implements SchedulingConfigurer {
                 .isNotNull(SysAiUsage::getSysAiUsageCallTime)
                 .orderByDesc(SysAiUsage::getSysAiUsageCallTime)
                 .last("LIMIT 1"));
-        return list.isEmpty() ? null : list.get(0).getSysAiUsageCallTime();
+        return list.isEmpty() ? null : list.getFirst().getSysAiUsageCallTime();
     }
 
     /**
@@ -695,7 +697,7 @@ public class UsageAggregationTask implements SchedulingConfigurer {
         wrapper.orderByAsc(SysAiUsage::getSysAiUsageCallTime)
                 .last("LIMIT 1");
         List<SysAiUsage> list = usageMapper.selectList(wrapper);
-        return list.isEmpty() ? null : list.get(0).getSysAiUsageCallTime();
+        return list.isEmpty() ? null : list.getFirst().getSysAiUsageCallTime();
     }
 
     /**

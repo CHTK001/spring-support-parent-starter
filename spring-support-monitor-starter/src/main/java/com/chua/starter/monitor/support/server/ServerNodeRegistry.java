@@ -4,12 +4,14 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.common.support.network.server.Server;
 import com.chua.common.support.network.server.ServerBuilder;
 import com.chua.common.support.network.server.ServerSetting;
+import com.chua.common.support.network.server.filter.ServerFilter;
 import com.chua.common.support.network.sip.SipConfig;
 import com.chua.common.support.network.sip.SipServer;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.monitor.support.entity.MsServerNode;
 import com.chua.starter.monitor.support.enums.ServerNodeProtocol;
 import com.chua.starter.monitor.support.mapper.MsServerNodeMapper;
+import com.chua.starter.monitor.support.server.filter.DelegatingServerFilter;
 import com.chua.starter.monitor.support.server.filter.ServerFilterFactory;
 import com.chua.starter.monitor.support.server.model.ServerFilterDescriptor;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -22,6 +24,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -149,10 +152,12 @@ public class ServerNodeRegistry {
         runtime.setId(node.getId());
         runtime.setName(node.getName());
         runtime.setProtocol(node.getProtocol());
+        List<ServerFilter> managed = new ArrayList<>();
         try {
-            Server server = buildServer(node, protocol);
+            Server server = buildServer(node, protocol, managed);
             server.start();
             runtime.setServer(server);
+            runtime.setManagedFilters(managed);
             runtime.setServerUrl(protocol == null ? server.getServerUrl() : buildServerUrl(node, protocol));
             runtimes.put(node.getId(), runtime);
             return runtime;
@@ -161,6 +166,117 @@ public class ServerNodeRegistry {
             runtimes.put(node.getId(), runtime);
             throw e;
         }
+    }
+
+    /**
+    * 热更新过滤器链（不重启服务器）。
+    *
+    * <p>仅替换本注册表托管的过滤器实例：逐个从运行中的 {@link Server} 上摘除并销毁旧实例，
+    * 再按新的 {@code filters} 描述重建挂载。服务器内置过滤器（Gzip/Tracing/AccessLog/Cors）
+    * 不受影响。节点未运行时不产生副作用，等待下次启动生效。</p>
+    *
+    * @param node 节点定义（filters 已是最新）
+    * @return 运行时快照
+    */
+    public RuntimeServer hotUpdateFilters(MsServerNode node) {
+        RuntimeServer runtime = runtimes.get(node.getId());
+        if (runtime == null || !runtime.isRunning()) {
+            return runtime;
+        }
+        Server server = runtime.getServer();
+        if (server == null) {
+            return runtime;
+        }
+        List<ServerFilterDescriptor> descriptors = parseFilters(node);
+        List<ServerFilter> created = filterFactory.createFilters(descriptors, server.getSetting());
+        // 先建后删：新插件构建失败时保持原链路可用，避免把服务打成无过滤器状态
+        for (ServerFilter old : runtime.getManagedFilters()) {
+            try {
+                server.removeFilter(old);
+            } catch (Exception e) {
+                log.warn("[ServerNodeRegistry] 摘除过滤器失败: {} - {}", old.getFilterId(), e.getMessage());
+            }
+            try {
+                old.destroy();
+            } catch (Exception e) {
+                log.warn("[ServerNodeRegistry] 销毁过滤器失败: {} - {}", old.getFilterId(), e.getMessage());
+            }
+        }
+        for (ServerFilter filter : created) {
+            server.addFilter(filter);
+        }
+        runtime.setManagedFilters(new ArrayList<>(created));
+        log.info("[ServerNodeRegistry] 过滤器链已热更新: node={} filters={}",
+                node.getName(), runtime.getManagedFilters().size());
+        return runtime;
+    }
+
+    /**
+    * 热更新单个过滤器的参数（不重启服务器、不重建实例）。
+    *
+    * <p>定位到托管链路上第 {@code index} 个过滤器，调用其
+    * {@code updateConfig(params)}；实现未覆写该方法时为无害空操作。</p>
+    *
+    * @param node   节点定义（用于报错定位）
+    * @param index  过滤器下标（与 {@code filters} 数组一致）
+    * @param params 新的参数键值
+    * @return 运行时快照
+    */
+    public RuntimeServer hotUpdateFilterParams(MsServerNode node, int index, Map<String, Object> params) {
+        RuntimeServer runtime = runtimes.get(node.getId());
+        if (runtime == null || !runtime.isRunning()) {
+            return runtime;
+        }
+        ServerFilter target = resolveManagedFilter(runtime, index);
+        if (target == null) {
+            throw new IllegalArgumentException("过滤器下标越界: " + index);
+        }
+        target.updateConfig(params);
+        log.info("[ServerNodeRegistry] 过滤器参数已热更新: node={} index={} params={}",
+                node.getName(), index, params);
+        return runtime;
+    }
+
+    /**
+    * 热切换单个过滤器的启用状态（不重启服务器、不重建实例）。
+    *
+    * @param node    节点定义（用于报错定位）
+    * @param index   过滤器下标
+    * @param enabled 是否启用
+    * @return 运行时快照
+    */
+    public RuntimeServer hotToggleFilter(MsServerNode node, int index, boolean enabled) {
+        RuntimeServer runtime = runtimes.get(node.getId());
+        if (runtime == null || !runtime.isRunning()) {
+            return runtime;
+        }
+        ServerFilter target = resolveManagedFilter(runtime, index);
+        if (target == null) {
+            throw new IllegalArgumentException("过滤器下标越界: " + index);
+        }
+        if (target instanceof DelegatingServerFilter delegating) {
+            delegating.setEnabled(enabled);
+        } else {
+            throw new IllegalStateException("过滤器不支持热切换启用状态: " + target.getFilterId());
+        }
+        log.info("[ServerNodeRegistry] 过滤器启停已热切换: node={} index={} enabled={}",
+                node.getName(), index, enabled);
+        return runtime;
+    }
+
+    /**
+    * 按下标定位托管链路上的过滤器。
+    *
+    * @param runtime 运行时
+    * @param index   下标
+    * @return 过滤器实例，越界返回 空
+     */
+    private ServerFilter resolveManagedFilter(RuntimeServer runtime, int index) {
+        List<ServerFilter> filters = runtime.getManagedFilters();
+        if (index < 0 || index >= filters.size()) {
+            return null;
+        }
+        return filters.get(index);
     }
 
     /**
@@ -222,22 +338,23 @@ public class ServerNodeRegistry {
     *
     * @param node     节点定义
     * @param protocol 协议枚举
+    * @param managed  收集本注册表托管的过滤器实例（用于热更新时精准摘除）
     * @return 服务器实例（未启动）
     * @throws Exception 构建失败
      */
-    private Server buildServer(MsServerNode node, ServerNodeProtocol protocol) throws Exception {
+    private Server buildServer(MsServerNode node, ServerNodeProtocol protocol, List<ServerFilter> managed) throws Exception {
         Map<String, Object> config = parseConfig(node);
         ServerSetting setting = buildSetting(node, protocol, config);
         List<ServerFilterDescriptor> descriptors = parseFilters(node);
         if (protocol == null) {
             // SPI 动态协议：直接按 SPI 名称实例化
-            return buildSpiServer(node, setting, descriptors);
+            return buildSpiServer(node, setting, descriptors, managed);
         }
         return switch (protocol) {
-            case HTTP -> buildHttpServer(node, setting, descriptors);
-            case HTTP_PROXY -> buildProxyServer(createProxyServer("http-proxy", setting, resolveBackend(config)), node, descriptors);
-            case TCP_PROXY -> buildProxyServer(createProxyServer("tcp-proxy", setting, resolveBackend(config)), node, descriptors);
-            case SIP -> buildSipServer(node, config, descriptors);
+            case HTTP -> buildHttpServer(node, setting, descriptors, managed);
+            case HTTP_PROXY -> buildProxyServer(createProxyServer("http-proxy", setting, resolveBackend(config)), node, descriptors, managed);
+            case TCP_PROXY -> buildProxyServer(createProxyServer("tcp-proxy", setting, resolveBackend(config)), node, descriptors, managed);
+            case SIP -> buildSipServer(node, config, descriptors, managed);
         };
     }
 
@@ -268,9 +385,11 @@ public class ServerNodeRegistry {
     * @param node        节点定义
     * @param setting     配置
     * @param descriptors 插件描述
+    * @param managed     托管过滤器收集器
     * @return 服务器实例
      */
-    private Server buildHttpServer(MsServerNode node, ServerSetting setting, List<ServerFilterDescriptor> descriptors) {
+    private Server buildHttpServer(MsServerNode node, ServerSetting setting,
+                                   List<ServerFilterDescriptor> descriptors, List<ServerFilter> managed) {
         String engine = node.getEngine() == null || node.getEngine().isBlank()
                 ? ServerNodeProtocol.HTTP.getDefaultEngine() : node.getEngine().trim().toLowerCase();
         if (!HTTP_ENGINES.contains(engine)) {
@@ -286,9 +405,7 @@ public class ServerNodeRegistry {
                 .host(setting.getHost())
                 .port(setting.getPort())
                 .build();
-        for (com.chua.common.support.network.server.filter.ServerFilter filter : filterFactory.createFilters(descriptors, setting)) {
-            server.addFilter(filter);
-        }
+        attachFilters(server, descriptors, setting, managed);
         return server;
     }
 
@@ -298,16 +415,13 @@ public class ServerNodeRegistry {
     * @param server      代理服务器
     * @param node        节点定义
     * @param descriptors 插件描述
+    * @param managed     托管过滤器收集器
     * @param <T>         代理类型
     * @return 服务器实例
      */
-    @SuppressWarnings("unchecked")
     private <T extends com.chua.common.support.network.server.Server> Server buildProxyServer(
-            T server, MsServerNode node, List<ServerFilterDescriptor> descriptors) {
-        ServerSetting setting = server.getSetting();
-        for (com.chua.common.support.network.server.filter.ServerFilter filter : filterFactory.createFilters(descriptors, setting)) {
-            server.addFilter(filter);
-        }
+            T server, MsServerNode node, List<ServerFilterDescriptor> descriptors, List<ServerFilter> managed) {
+        attachFilters(server, descriptors, server.getSetting(), managed);
         return server;
     }
 
@@ -317,9 +431,11 @@ public class ServerNodeRegistry {
     * @param node        节点定义
     * @param config      协议配置
     * @param descriptors 插件描述
+    * @param managed     托管过滤器收集器
     * @return 服务器实例
      */
-    private Server buildSipServer(MsServerNode node, Map<String, Object> config, List<ServerFilterDescriptor> descriptors) {
+    private Server buildSipServer(MsServerNode node, Map<String, Object> config,
+                                  List<ServerFilterDescriptor> descriptors, List<ServerFilter> managed) {
         SipConfig.Builder builder = SipConfig.builder()
                 .host(node.getHost())
                 .port(node.getPort());
@@ -332,10 +448,7 @@ public class ServerNodeRegistry {
             builder.dataPlaneMode(String.valueOf(dataPlaneMode));
         }
         SipServer server = new SipServer(builder.build());
-        ServerSetting setting = server.getSetting();
-        for (com.chua.common.support.network.server.filter.ServerFilter filter : filterFactory.createFilters(descriptors, setting)) {
-            server.addFilter(filter);
-        }
+        attachFilters(server, descriptors, server.getSetting(), managed);
         return server;
     }
 
@@ -345,17 +458,33 @@ public class ServerNodeRegistry {
     * @param node        节点定义
     * @param setting     通用配置
     * @param descriptors 插件描述
+    * @param managed     托管过滤器收集器
     * @return 服务器实例
      */
-    private Server buildSpiServer(MsServerNode node, ServerSetting setting, List<ServerFilterDescriptor> descriptors) {
+    private Server buildSpiServer(MsServerNode node, ServerSetting setting,
+                                  List<ServerFilterDescriptor> descriptors, List<ServerFilter> managed) {
         Server server = ServiceProvider.of(Server.class).getNewExtension(node.getProtocol(), setting);
         if (server == null) {
             throw new IllegalStateException("Server SPI 未注册: " + node.getProtocol());
         }
-        for (com.chua.common.support.network.server.filter.ServerFilter filter : filterFactory.createFilters(descriptors, setting)) {
-            server.addFilter(filter);
-        }
+        attachFilters(server, descriptors, setting, managed);
         return server;
+    }
+
+    /**
+    * 按描述构建过滤器并挂载到服务器，同时记录到托管集合。
+    *
+    * @param server      目标服务器
+    * @param descriptors 插件描述
+    * @param setting     服务器配置
+    * @param managed     托管过滤器收集器
+     */
+    private void attachFilters(Server server, List<ServerFilterDescriptor> descriptors,
+                               ServerSetting setting, List<ServerFilter> managed) {
+        for (ServerFilter filter : filterFactory.createFilters(descriptors, setting)) {
+            server.addFilter(filter);
+            managed.add(filter);
+        }
     }
 
     /**
@@ -577,6 +706,20 @@ public class ServerNodeRegistry {
         * 最近错误
          */
         private volatile String error;
+
+        /**
+        * 本注册表托管的过滤器实例（热更新时精准摘除，不影响服务器内置过滤器）
+         */
+        private volatile List<ServerFilter> managedFilters = new ArrayList<>();
+
+        /**
+        * 设置托管的过滤器实例集合。
+        *
+        * @param managedFilters 过滤器实例列表
+         */
+        public void setManagedFilters(List<ServerFilter> managedFilters) {
+            this.managedFilters = managedFilters == null ? new ArrayList<>() : managedFilters;
+        }
 
         /**
         * 设置节点 标识

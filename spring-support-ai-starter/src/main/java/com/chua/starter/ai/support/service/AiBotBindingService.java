@@ -518,7 +518,7 @@ public class AiBotBindingService {
                     }
                 }
  // 3. 保留第一行作为合并目标：更新为新 机器人标识/机器人令牌/online；其余删除
-                SysAiBotBinding target = candidates.get(0);
+                SysAiBotBinding target = candidates.getFirst();
                 target.setBotId(newBotId);
                 target.setBotToken(session.botToken);
                 target.setPlatform(platform);
@@ -544,7 +544,7 @@ public class AiBotBindingService {
  // 4. 启动新 机器人 的消息轮询
                 aiBotChatService.startBot(target);
                 log.info("[Bot] 重新扫码已合并绑定 id={} {} → {}", target.getId(),
-                        candidates.get(0).getBotId(), newBotId);
+                        target.getBotId(), newBotId);
                 return;
             }
 

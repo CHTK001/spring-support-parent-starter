@@ -59,10 +59,22 @@
             <artifactId>spring-support-swagger-starter</artifactId>
         </dependency>
 
+        <!-- AI 脚本生成不在此模块引入 spring-support-ai-starter（其打包产物为 fat-jar 不可作普通依赖）；
+             ProjectAiScriptService 通过运行时反射查找 ChatClientRegistry bean，宿主装配 AI starter 时
+             /ai-gen-script 自动可用，未装配时降级返回提示，不影响部署/守护主流程 -->
+
         <!-- 工具 -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-common-starter</artifactId>
+        </dependency>
+
+        <!-- SSH/SFTP 客户端（守护探测与部署执行直接引用 SshClient 类型，
+             经 spring-support-server-starter 传递依赖在部分构建链上缺失，显式声明） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-ssh-starter</artifactId>
+            <version>${project.version}</version>
         </dependency>
 
         <!-- 日志 -->

@@ -6,8 +6,8 @@ import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.ai.support.chat.ChatResponse;
 import com.chua.starter.ai.support.registry.ChatClientRegistry;
 import com.chua.starter.eduai.configuration.EduAiProperties;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -33,15 +33,20 @@ import java.util.Map;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class EduAiService {
 
     /** 对话客户端注册表 */
-    private final ChatClientRegistry chatClientRegistry;
+    @Autowired(required = false)
+    private ChatClientRegistry chatClientRegistry;
     /** 属性 */
     private final EduAiProperties properties;
     /** Objectmapper */
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    @Autowired
+    public EduAiService(EduAiProperties properties) {
+        this.properties = properties;
+    }
 
     /**
     * 是否启用 AI（总开关 + 对话客户端 是否可用）。
@@ -311,6 +316,9 @@ public class EduAiService {
     * @return resolve客户端的结果
      */
     private com.chua.common.support.ai.chat.ChatClient resolveClient() {
+        if (chatClientRegistry == null) {
+            return null;
+        }
         String provider = properties.getAi().getProvider();
         com.chua.common.support.ai.chat.ChatClient client = null;
         if (StringUtils.isNotBlank(provider)) {
@@ -420,7 +428,11 @@ public class EduAiService {
         info.put("provider", properties.getAi().getProvider());
         info.put("model", properties.getAi().getModel());
         info.put("available", isAvailable());
-        info.put("registeredProviders", chatClientRegistry.getProviders());
+        if (chatClientRegistry != null) {
+            info.put("registeredProviders", chatClientRegistry.getProviders());
+        } else {
+            info.put("registeredProviders", java.util.Collections.emptyList());
+        }
         return info;
     }
 }

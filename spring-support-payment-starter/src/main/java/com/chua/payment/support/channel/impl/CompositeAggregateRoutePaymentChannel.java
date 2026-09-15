@@ -171,7 +171,7 @@ public class CompositeAggregateRoutePaymentChannel extends AbstractMerchantPayme
              */
             throw new PaymentException("直营网关配置不能嵌套 COMPOSITE 渠道");
         }
-        if (!Integer.valueOf(ChannelStatus.ENABLED.getCode()).equals(targetChannel.getStatus())) {
+        if (!ChannelStatus.ENABLED.getCode().equals(targetChannel.getStatus())) {
             /**
             * 薪酬异常。
             * @param "直营网关目标渠道未启用" "直营网关目标渠道未启用"

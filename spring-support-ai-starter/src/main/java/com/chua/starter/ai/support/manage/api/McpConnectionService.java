@@ -46,7 +46,7 @@ public class McpConnectionService {
     *         {@code { success, tools?: [{name, description, input_schema}], error?, code? }}
      */
     public Map<String, Object> testConnection(String name, Map<String, Object> transport) {
-        Map<String, Object> result = new LinkedHashMap<>();
+        Map<String, Object> result = new LinkedHashMap<>(4);
         String type = transport == null ? "" : String.valueOf(transport.getOrDefault("type", ""));
         String url = transport == null ? "" : String.valueOf(transport.getOrDefault("url", ""));
         boolean isStdio = "stdio".equalsIgnoreCase(type);
@@ -90,9 +90,9 @@ public class McpConnectionService {
                     .build()) {
                 client.initialize();
                 McpSchema.ListToolsResult toolsResult = client.listTools();
-                List<Map<String, Object>> tools = new ArrayList<>();
+                List<Map<String, Object>> tools = new ArrayList<>(8); // MCP 工具数量不可预估
                 for (McpSchema.Tool tool : toolsResult.tools()) {
-                    Map<String, Object> toolMap = new LinkedHashMap<>();
+                    Map<String, Object> toolMap = new LinkedHashMap<>(4);
                     toolMap.put("name", tool.name());
                     toolMap.put("description", tool.description());
                     toolMap.put("input_schema", tool.inputSchema());
@@ -178,7 +178,7 @@ public class McpConnectionService {
 
         Object rawArgs = transport.get("args");
         if (rawArgs instanceof Iterable<?> iterable) {
-            List<String> args = new ArrayList<>();
+            List<String> args = new ArrayList<>(4); // CLI 参数数量不可预估
             for (Object a : iterable) {
                 args.add(String.valueOf(a));
             }
@@ -189,7 +189,7 @@ public class McpConnectionService {
 
         Object rawEnv = transport.get("env");
         if (rawEnv instanceof Map<?, ?> envMap) {
-            Map<String, String> env = new HashMap<>();
+            Map<String, String> env = new HashMap<>(8);
             for (Map.Entry<?, ?> e : envMap.entrySet()) {
                 if (e.getValue() != null) {
                     env.put(String.valueOf(e.getKey()), String.valueOf(e.getValue()));
@@ -215,7 +215,7 @@ public class McpConnectionService {
         if (headers == null || headers.isEmpty()) {
             return;
         }
-        Map<String, String> flat = new HashMap<>();
+        Map<String, String> flat = new HashMap<>(8);
         for (Map.Entry<String, Object> e : headers.entrySet()) {
             if (e.getValue() != null) {
                 flat.put(e.getKey(), String.valueOf(e.getValue()));
@@ -234,7 +234,7 @@ public class McpConnectionService {
         if (headers == null || headers.isEmpty()) {
             return;
         }
-        Map<String, String> flat = new HashMap<>();
+        Map<String, String> flat = new HashMap<>(8);
         for (Map.Entry<String, Object> e : headers.entrySet()) {
             if (e.getValue() != null) {
                 flat.put(e.getKey(), String.valueOf(e.getValue()));

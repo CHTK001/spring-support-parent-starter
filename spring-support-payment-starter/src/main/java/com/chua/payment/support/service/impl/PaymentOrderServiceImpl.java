@@ -1241,7 +1241,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
              */
             throw new PaymentException("商户不存在");
         }
-        if (!Integer.valueOf(MerchantStatus.ACTIVE.getCode()).equals(merchant.getStatus())) {
+        if (!MerchantStatus.ACTIVE.getCode().equals(merchant.getStatus())) {
             /**
             * 薪酬异常。
             * @param "商户未激活，不能创建订单" "商户未激活，不能创建订单"
@@ -1261,6 +1261,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
     private PaymentOrder requireOrder(Long id) {
         PaymentOrder order = orderMapper.selectById(id);
         if (order == null || Integer.valueOf(1).equals(order.getDeleted())) {
+            // Converter 未覆盖 Boolean→int 软删除标记比较场景，保留手写转换（规约四十二豁免）
             /**
             * 薪酬异常。
             * @param "订单不存在" "订单不存在"
@@ -1314,7 +1315,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
              */
             throw new PaymentException("支付方式不存在");
         }
-        if (!Integer.valueOf(ChannelStatus.ENABLED.getCode()).equals(channel.getStatus())) {
+        if (!ChannelStatus.ENABLED.getCode().equals(channel.getStatus())) {
             /**
             * 薪酬异常。
             * @param "支付方式未启用" "支付方式未启用"
@@ -1378,7 +1379,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
              */
             throw new PaymentException("订单商户和支付方式不匹配");
         }
-        if (!Integer.valueOf(ChannelStatus.ENABLED.getCode()).equals(channel.getStatus())) {
+        if (!ChannelStatus.ENABLED.getCode().equals(channel.getStatus())) {
             /**
             * 薪酬异常。
             * @param "支付方式未启用" "支付方式未启用"
@@ -1443,7 +1444,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
              */
             throw new PaymentException("直营网关配置不能嵌套 COMPOSITE 渠道");
         }
-        if (!Integer.valueOf(ChannelStatus.ENABLED.getCode()).equals(targetChannel.getStatus())) {
+        if (!ChannelStatus.ENABLED.getCode().equals(targetChannel.getStatus())) {
             /**
             * 薪酬异常。
             * @param "直营网关目标渠道未启用" "直营网关目标渠道未启用"

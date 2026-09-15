@@ -22,8 +22,19 @@ import org.springframework.beans.factory.BeanClassLoaderAware;
 import org.springframework.beans.factory.BeanDefinitionStoreException;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.AnnotatedBeanDefinition;
-import org.springframework.beans.factory.config.*;
-import org.springframework.beans.factory.support.*;
+import org.springframework.beans.factory.BeanFactory;
+import org.springframework.beans.factory.config.BeanDefinition;
+import org.springframework.beans.factory.config.BeanDefinitionHolder;
+import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
+import org.springframework.beans.factory.config.ConstructorArgumentValues;
+import org.springframework.beans.factory.config.PropertyValues;
+import org.springframework.beans.factory.config.SingletonBeanRegistry;
+import org.springframework.beans.factory.support.AbstractBeanDefinition;
+import org.springframework.beans.factory.support.BeanDefinitionBuilder;
+import org.springframework.beans.factory.support.BeanDefinitionRegistry;
+import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
+import org.springframework.beans.factory.support.BeanNameGenerator;
+import org.springframework.beans.factory.support.RootBeanDefinition;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -43,7 +54,14 @@ import org.springframework.util.ClassUtils;
 import org.springframework.util.StringUtils;
 
 import java.lang.annotation.Annotation;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 
 import static org.springframework.context.annotation.AnnotationConfigUtils.CONFIGURATION_BEAN_NAME_GENERATOR;
 import static org.springframework.core.annotation.AnnotationUtils.findAnnotation;
@@ -183,7 +201,7 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
         }
         List<RpcRegistryConfig> registryConfigs = rpcProperties.getRegistry();
         List<RpcProtocolConfig> protocolConfigs = rpcProperties.getProtocols();
-        RpcProtocolConfig protocolConfig = (protocolConfigs != null && !protocolConfigs.isEmpty()) ? protocolConfigs.get(0) : null;
+        RpcProtocolConfig protocolConfig = (protocolConfigs != null && !protocolConfigs.isEmpty()) ? protocolConfigs.getFirst() : null;
         String appName = environment.resolvePlaceholders(rpcProperties.getApplicationName());
         this.rpcServer = RpcServer.createService(rpcProperties.getType().name(), registryConfigs, protocolConfig, appName);
         RpcServerHolder.setRpcServer(this.rpcServer);

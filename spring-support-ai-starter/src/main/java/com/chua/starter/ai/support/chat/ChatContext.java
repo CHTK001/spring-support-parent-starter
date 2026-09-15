@@ -112,7 +112,7 @@ public class ChatContext {
      */
     public void attribute(String key, Object value) {
         if (attributes == null) {
-            attributes = new HashMap<>();
+            attributes = new HashMap<>(8);
         }
         attributes.put(key, value);
     }

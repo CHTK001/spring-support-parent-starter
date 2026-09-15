@@ -13,6 +13,7 @@ import org.springframework.web.servlet.mvc.condition.RequestCondition;
 import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
+// 注：Method 为 Spring RequestMappingHandlerMapping 覆写方法签名参数，豁免
 import java.lang.reflect.Method;
 
 /**

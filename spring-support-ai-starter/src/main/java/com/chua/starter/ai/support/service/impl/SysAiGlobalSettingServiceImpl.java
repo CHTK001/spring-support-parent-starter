@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.chua.starter.ai.support.configuration.face.FaceSettingsChangedEvent;
 import com.chua.starter.ai.support.configuration.ocr.OcrSettingsChangedEvent;
+import com.chua.starter.ai.support.configuration.rag.RagSettingsChangedEvent;
 import com.chua.starter.ai.support.entity.SysAiGlobalSetting;
 import com.chua.starter.ai.support.mapper.SysAiGlobalSettingMapper;
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
@@ -187,6 +188,9 @@ public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService 
             eventPublisher.publishEvent(new FaceSettingsChangedEvent(group));
             if ("ocr".equals(group)) {
                 eventPublisher.publishEvent(new OcrSettingsChangedEvent(group));
+            }
+            if ("rag".equals(group)) {
+                eventPublisher.publishEvent(new RagSettingsChangedEvent(group));
             }
         } catch (Exception e) {
             log.warn("[SysAiGlobalSetting] 发布配置变更事件失败: {}", e.getMessage());

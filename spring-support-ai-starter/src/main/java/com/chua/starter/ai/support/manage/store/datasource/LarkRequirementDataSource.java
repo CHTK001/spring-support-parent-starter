@@ -9,7 +9,11 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -229,12 +233,8 @@ public class LarkRequirementDataSource implements IRequirementDataSource {
         if (val instanceof String) {
             return (String) val;
         }
-        if (val instanceof List) {
-            List<?> list = (List<?>) val;
-            if (!list.isEmpty() && list.get(0) instanceof Map) {
-                Map<?, ?> m = (Map<?, ?>) list.get(0);
-                return (String) m.get("text");
-            }
+        if (val instanceof List<?> listVal && !listVal.isEmpty() && listVal.getFirst() instanceof Map<?, ?> m) {
+            return (String) m.get("text");
         }
         return String.valueOf(val);
     }

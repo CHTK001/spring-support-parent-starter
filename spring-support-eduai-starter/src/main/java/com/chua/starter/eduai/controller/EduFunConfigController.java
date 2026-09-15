@@ -1,0 +1,63 @@
+package com.chua.starter.eduai.controller;
+
+import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.starter.eduai.model.EduFunConfig;
+import com.chua.starter.eduai.service.IEduFunConfigService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+/**
+ * 趣味模块配置控制器
+ *
+ * @since 4.0.0.42
+ * @author CH
+ */
+@RestController
+@RequestMapping("/v2/edu/fun")
+@RequiredArgsConstructor
+@Tag(name = "趣味模块配置")
+public class EduFunConfigController {
+
+    private final IEduFunConfigService funConfigService;
+
+    @Operation(summary = "获取所有启用的趣味模块")
+    @GetMapping("/list")
+    public ReturnResult<List<EduFunConfig>> listEnabled() {
+        return ReturnResult.ok(funConfigService.listEnabled());
+    }
+
+    @Operation(summary = "获取所有趣味模块（含禁用）")
+    @GetMapping("/list-all")
+    public ReturnResult<List<EduFunConfig>> listAll() {
+        return ReturnResult.ok(funConfigService.list());
+    }
+
+    @Operation(summary = "根据模块编码获取配置")
+    @GetMapping("/detail/{moduleCode}")
+    public ReturnResult<EduFunConfig> detail(@PathVariable String moduleCode) {
+        return ReturnResult.ok(funConfigService.getByModuleCode(moduleCode));
+    }
+
+    @Operation(summary = "更新模块启用状态")
+    @PutMapping("/toggle/{moduleCode}")
+    public ReturnResult<Boolean> toggle(@PathVariable String moduleCode,
+                                         @RequestParam Integer enabled) {
+        return ReturnResult.ok(funConfigService.updateEnabled(moduleCode, enabled));
+    }
+
+    @Operation(summary = "保存趣味模块配置")
+    @PostMapping("/save")
+    public ReturnResult<Boolean> save(@RequestBody EduFunConfig config) {
+        return ReturnResult.ok(funConfigService.saveOrUpdate(config));
+    }
+
+    @Operation(summary = "删除趣味模块配置")
+    @DeleteMapping("/delete/{configId}")
+    public ReturnResult<Boolean> delete(@PathVariable Long configId) {
+        return ReturnResult.ok(funConfigService.removeById(configId));
+    }
+}

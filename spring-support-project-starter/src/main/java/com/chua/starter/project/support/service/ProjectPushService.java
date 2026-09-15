@@ -47,7 +47,7 @@ public class ProjectPushService {
     * @param version   版本标识，可为空
      */
     public void pushProgress(Long projectId, Long hostId, String action, String stage,
-                             String status, String message, String version) {
+                              String status, String message, String version) {
         SocketSessionTemplate template = socketTemplates.getIfAvailable();
         if (template == null) {
             return;
@@ -71,6 +71,41 @@ public class ProjectPushService {
             template.broadcastObject("message", payload);
         } catch (Exception e) {
             log.warn("[project] 推送部署进度失败: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 广播项目指标实时值（守护/指标采集专用通道）
+     *
+     * @param projectId  项目 标识
+     * @param hostId     主机 标识，可为空
+     * @param metricName 指标名（process.mem.mb / process.cpu / port.alive / http.code）
+     * @param value      指标值
+     * @param collectTime 采集时间
+     */
+    public void pushProjectMetric(Long projectId, Long hostId, String metricName, double value,
+                                   java.time.LocalDateTime collectTime) {
+        SocketSessionTemplate template = socketTemplates.getIfAvailable();
+        if (template == null) {
+            return;
+        }
+        Map<String, Object> data = new HashMap<>(8);
+        data.put("projectId", projectId);
+        data.put("hostId", hostId);
+        data.put("metricName", metricName);
+        data.put("value", value);
+        data.put("collectTime", collectTime == null ? null : collectTime.toString());
+        data.put("timestamp", System.currentTimeMillis());
+        Map<String, Object> payload = new HashMap<>(4);
+        payload.put("module", ProjectConstants.PUSH_MODULE);
+        payload.put("event", ProjectConstants.PUSH_EVENT_PROJECT_METRIC);
+        payload.put("data", data);
+        payload.put("dataId", projectId == null ? "" : String.valueOf(projectId));
+        payload.put("timestamp", System.currentTimeMillis());
+        try {
+            template.broadcastObject("message", payload);
+        } catch (Exception e) {
+            log.warn("[project] 推送项目指标失败: {}", e.getMessage());
         }
     }
 }

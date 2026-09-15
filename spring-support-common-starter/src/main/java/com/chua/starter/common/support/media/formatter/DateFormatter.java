@@ -4,6 +4,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 
 import com.chua.common.support.spi.annotations.Spi;
 
+// 注：Field 为 SPI 格式化接口签名要求，仅承载注解元数据，豁免
 import java.lang.reflect.Field;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;

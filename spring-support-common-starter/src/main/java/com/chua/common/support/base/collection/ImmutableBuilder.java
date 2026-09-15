@@ -14,6 +14,7 @@ public class ImmutableBuilder {
 
     /**
     * 内部持有的可变的字符串键值对映射
+    * <p>容量随构建器链式调用逐步填充，无法预估，按需扩容。</p>
      */
     private final Map<String, String> map = new HashMap<>();
 

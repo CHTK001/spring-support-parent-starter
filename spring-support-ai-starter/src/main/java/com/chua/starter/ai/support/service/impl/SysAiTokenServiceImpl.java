@@ -147,7 +147,7 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
             return null;
         }
         // 状态检查
-        if (!Integer.valueOf(STATUS_ENABLED).equals(token.getStatus())) {
+        if (token.getStatus() == null || token.getStatus() != STATUS_ENABLED) {
             return null;
         }
         // 过期检查

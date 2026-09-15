@@ -644,6 +644,7 @@ public class WalletAccountServiceImpl implements WalletAccountService {
             throw new PaymentException("钱包账户不存在");
         }
         if (!Integer.valueOf(STATUS_ENABLED).equals(account.getStatus())) {
+            // 规约四十二：状态为 int 类型常量，直接比较无需经过 Converter
             /**
             * 薪酬异常。
             * @param "钱包账户已冻结" "钱包账户已冻结"
@@ -673,6 +674,7 @@ public class WalletAccountServiceImpl implements WalletAccountService {
             throw new PaymentException("钱包账户不存在");
         }
         if (Integer.valueOf(STATUS_ENABLED).equals(account.getStatus())) {
+            // 规约四十二：状态为 int 类型常量，直接比较无需经过 Converter
             /**
             * 薪酬异常。
             * @param "钱包账户已启用" "钱包账户已启用"
@@ -946,6 +948,7 @@ public class WalletAccountServiceImpl implements WalletAccountService {
      */
     private void ensureAccountEnabled(WalletAccount account) {
         if (account == null || !Integer.valueOf(STATUS_ENABLED).equals(account.getStatus())) {
+            // 规约四十二：状态为 int 类型常量，直接比较无需经过 Converter
             /**
             * 薪酬异常。
             * @param "钱包账户未启用" "钱包账户未启用"
@@ -970,7 +973,7 @@ public class WalletAccountServiceImpl implements WalletAccountService {
              */
             throw new PaymentException("商户不存在");
         }
-        if (!Integer.valueOf(MerchantStatus.ACTIVE.getCode()).equals(merchant.getStatus())) {
+        if (!MerchantStatus.ACTIVE.getCode().equals(merchant.getStatus())) {
             /**
             * 薪酬异常。
             * @param "商户未激活" "商户未激活"

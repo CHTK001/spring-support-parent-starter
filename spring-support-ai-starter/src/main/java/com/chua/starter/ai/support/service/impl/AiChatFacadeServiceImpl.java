@@ -32,7 +32,16 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
@@ -144,7 +153,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         }
 
         ChatClient configured = configureClient(client, request);
-        StringBuilder fullResponse = new StringBuilder();
+        StringBuilder fullResponse = new StringBuilder(256); // 回复长度不可预估
         final com.chua.common.support.ai.AiUsage[] lastUsage = new com.chua.common.support.ai.AiUsage[1];
         final long start = System.currentTimeMillis();
         final long[] firstTokenAt = new long[] { 0L };
@@ -352,7 +361,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
             if (aliasToModelCache != null && (System.currentTimeMillis() - aliasCacheLoadedAt) < ALIAS_CACHE_TTL_MILLIS) {
                 return aliasToModelCache;
             }
-            Map<String, String> map = new HashMap<>();
+            Map<String, String> map = new HashMap<>(64); // 别名数量不可预估
             try {
                 List<SysAiModel> models = aiModelMapper.selectList(
                         new LambdaQueryWrapper<SysAiModel>().eq(SysAiModel::getModelEnabled, true));
@@ -450,7 +459,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
             if (keys.size() == 1) {
                 ChatClientSetting setting = ChatClientSetting.builder()
                         .provider(provider.getPlatform())
-                        .appKey(keys.get(0))
+                        .appKey(keys.getFirst())
                         .baseUrl(provider.getBaseUrl())
                         .extraHeaders(extraHeaders)
                         .proxy(provider.getProxy())
@@ -465,7 +474,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
             AggregateChatClientSetting agg = new AggregateChatClientSetting();
             String strategy = resolveLoadStrategy(provider);
             agg.setStrategy(strategy);
-            List<AggregateChatClientSetting.ClientConfig> clients = new ArrayList<>();
+            List<AggregateChatClientSetting.ClientConfig> clients = new ArrayList<>(4); // 密钥数量不可预估
             for (String key : keys) {
                 AggregateChatClientSetting.ClientConfig cc = new AggregateChatClientSetting.ClientConfig();
                 cc.setProvider(provider.getPlatform());
@@ -537,7 +546,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                             .eq(SysAiProviderConnection::getProviderId, provider.getProviderId()));
         } catch (Exception e) {
             log.debug("[AiChat] 查询 provider connections 失败: {}", e.getMessage());
-            connections = new ArrayList<>();
+            connections = new ArrayList<>(4); // 连接数量不可预估
         }
         for (SysAiProviderConnection conn : connections) {
             for (String k : extractApiKeys(conn.getCredentials())) {
@@ -554,9 +563,9 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
      */
     private static List<String> extractApiKeys(Map<String, Object> credentials) {
         if (credentials == null) {
-            return new ArrayList<>();
+            return new ArrayList<>(1);
         }
-        List<String> result = new ArrayList<>();
+        List<String> result = new ArrayList<>(2);
         Object keys = credentials.get("api_keys");
         if (keys instanceof List<?> list) {
             for (Object o : list) {
@@ -610,7 +619,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
             }
         }
         if (request.getMessages() != null && !request.getMessages().isEmpty()) {
-            List<ChatMessage> history = new ArrayList<>();
+            List<ChatMessage> history = new ArrayList<>(8); // 历史消息数量不可预估
             for (Map<String, Object> msg : request.getMessages()) {
                 String role = msg.get("role") != null ? msg.get("role").toString() : "user";
                 String content = msg.get("content") != null ? msg.get("content").toString() : "";
@@ -765,7 +774,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         }
         Object headers = extra.get("custom_headers");
         if (headers instanceof Map<?, ?> map) {
-            Map<String, String> result = new HashMap<>();
+            Map<String, String> result = new HashMap<>(8); // 自定义头部数量不可预估
             map.forEach((k, v) -> {
                 if (k != null && v != null) {
                     result.put(k.toString(), v.toString());
@@ -782,8 +791,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     * @return 构建结果的结果
      */
     private Map<String, Object> buildResult(ChatSyncResponse response) {
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("text", response.getText() != null ? response.getText() : "");
+        Map<String, Object> result = new LinkedHashMap<>(4);
         if (response.getUsage() != null) {
             result.put("promptTokens", response.getUsage().getInputTokens());
             result.put("completionTokens", response.getUsage().getOutputTokens());
@@ -802,7 +810,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     * @return 构建错误结果的结果
      */
     private Map<String, Object> buildErrorResult(Exception e) {
-        Map<String, Object> result = new LinkedHashMap<>();
+        Map<String, Object> result = new LinkedHashMap<>(4);
         result.put("text", "");
         result.put("error", Map.of("message", e.getMessage() != null ? e.getMessage() : "Chat failed"));
         result.put("promptTokens", 0);

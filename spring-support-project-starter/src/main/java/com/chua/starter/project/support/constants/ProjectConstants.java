@@ -29,6 +29,9 @@ public final class ProjectConstants {
     /** 部署操作类型：回滚 */
     public static final String ACTION_ROLLBACK = "ROLLBACK";
 
+    /** 部署操作类型：守护检测 */
+    public static final String ACTION_WATCHDOG = "WATCHDOG";
+
     /** 日志状态：成功 */
     public static final String LOG_STATUS_SUCCESS = "SUCCESS";
 
@@ -64,6 +67,9 @@ public final class ProjectConstants {
 
     /** 推送事件：部署进度 */
     public static final String PUSH_EVENT_DEPLOY_PROGRESS = "deploy-progress";
+
+    /** 推送事件：项目指标实时值 */
+    public static final String PUSH_EVENT_PROJECT_METRIC = "project-metric";
 
     /** 健康检查类型：端口 */
     public static final String HEALTH_TYPE_PORT = "PORT";

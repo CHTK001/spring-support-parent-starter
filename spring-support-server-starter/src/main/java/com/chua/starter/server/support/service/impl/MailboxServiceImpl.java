@@ -106,7 +106,7 @@ public class MailboxServiceImpl implements MailboxService {
                 }
             }
             if (hit == null && !emails.isEmpty()) {
-                hit = emails.get(0);
+                hit = emails.getFirst();
             }
             if (hit == null) {
                 return ReturnResult.error("邮箱为空或未找到邮件");
