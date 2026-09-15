@@ -397,9 +397,11 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
      */
     private void injectFieldValue(Object bean, Field field, String value) {
         try {
-            field.setAccessible(true);
             Object convertedValue = convertValue(value, field.getType());
-            field.set(bean, convertedValue);
+            boolean ok = ReflectUtils.setField(bean, field.getName(), convertedValue);
+            if (!ok) {
+                log.error("注入配置值失败: field={}", field.getName());
+            }
         } catch (Exception e) {
             log.error("注入配置值失败: field={}", field.getName(), e);
         }
@@ -414,9 +416,12 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
      */
     private void injectMethodValue(Object bean, Method method, String value) {
         try {
-            method.setAccessible(true);
             Object convertedValue = convertValue(value, method.getParameterTypes()[0]);
-            ReflectUtils.invoke(bean, method.getName(), method.getReturnType(), method.getParameterTypes(), convertedValue);
+            Object result = ReflectUtils.invoke(bean, method.getName(), method.getReturnType(),
+                    method.getParameterTypes(), convertedValue);
+            if (result == null) {
+                log.error("注入配置值失败: method={}", method.getName());
+            }
         } catch (Exception e) {
             log.error("注入配置值失败: method={}", method.getName(), e);
         }
@@ -605,12 +610,7 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
 
             // 获取旧值
             if (binding.field() != null) {
-                try {
-                    binding.field().setAccessible(true);
-                    oldConvertedValue = binding.field().get(binding.bean());
-                } catch (Exception e) {
-                    log.error("获取旧值失败", e);
-                }
+                oldConvertedValue = ReflectUtils.getField(binding.bean(), binding.field().getName());
             }
 
             // 更新值
@@ -657,11 +657,16 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
             }
 
             try {
-                Method callback = binding.bean().getClass().getDeclaredMethod(
+                // 预检方法是否存在（框架签名兼容，仅做存在性校验）
+                binding.bean().getClass().getDeclaredMethod(
                         callbackName, String.class, Object.class, Object.class);
-                callback.setAccessible(true);
                 Object convertedNewValue = convertValue(newValue, binding.targetType());
-                callback.invoke(binding.bean(), configKey, oldValue, convertedNewValue);
+                Object result = ReflectUtils.invoke(binding.bean(), callbackName,
+                        Object.class, new Class<?>[]{String.class, Object.class, Object.class},
+                        configKey, oldValue, convertedNewValue);
+                if (result == null) {
+                    log.warn("回调方法不存在: {}.{}", binding.beanName(), callbackName);
+                }
             } catch (NoSuchMethodException e) {
                 log.warn("回调方法不存在: {}.{}", binding.beanName(), callbackName);
             } catch (Exception e) {

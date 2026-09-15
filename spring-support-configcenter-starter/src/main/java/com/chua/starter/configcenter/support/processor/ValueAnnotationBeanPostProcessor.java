@@ -3,6 +3,7 @@ package com.chua.starter.configcenter.support.processor;
 import com.chua.common.support.config.center.ConfigCenter;
 import com.chua.common.support.config.center.ConfigListener;
 import com.chua.common.support.converter.Converter;
+import com.chua.common.support.reflection.ReflectUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanFactory;
@@ -373,9 +374,11 @@ public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, Envi
      */
     private void injectFieldValue(Object bean, Field field, String value) {
         try {
-            field.setAccessible(true);
             Object convertedValue = convertValue(value, field.getType());
-            field.set(bean, convertedValue);
+            boolean ok = ReflectUtils.setField(bean, field.getName(), convertedValue);
+            if (!ok) {
+                log.error("注入@Value配置值失败: field={}", field.getName());
+            }
         } catch (Exception e) {
             log.error("注入@Value配置值失败: field={}", field.getName(), e);
         }
@@ -390,9 +393,12 @@ public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, Envi
      */
     private void injectMethodValue(Object bean, Method method, String value) {
         try {
-            method.setAccessible(true);
             Object convertedValue = convertValue(value, method.getParameterTypes()[0]);
-            method.invoke(bean, convertedValue);
+            Object result = ReflectUtils.invoke(bean, method.getName(), method.getReturnType(),
+                    method.getParameterTypes(), convertedValue);
+            if (result == null) {
+                log.error("注入@Value配置值失败: method={}", method.getName());
+            }
         } catch (Exception e) {
             log.error("注入@Value配置值失败: method={}", method.getName(), e);
         }
@@ -580,12 +586,7 @@ public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, Envi
 
             // 获取旧值
             if (binding.field() != null) {
-                try {
-                    binding.field().setAccessible(true);
-                    oldConvertedValue = binding.field().get(binding.bean());
-                } catch (Exception e) {
-                    log.error("获取@Value旧值失败", e);
-                }
+                oldConvertedValue = ReflectUtils.getField(binding.bean(), binding.field().getName());
             }
 
             // 更新值
