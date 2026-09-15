@@ -154,6 +154,7 @@ public class HostAgentController {
                 return n.intValue();
             }
             String s = String.valueOf(value).trim();
+            // 规约四十二：异常兜底解析字符串数字，Converter 未覆盖该场景，保留手写转换
             return s.isEmpty() ? null : Integer.valueOf(s);
         } catch (Exception e) {
             return null;

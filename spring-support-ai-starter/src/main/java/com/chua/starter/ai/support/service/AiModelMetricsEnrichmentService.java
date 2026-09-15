@@ -360,7 +360,7 @@ public class AiModelMetricsEnrichmentService {
             }
         }
         if (list == null || list.isEmpty()) { return Map.of(); }
-        Map<String, MetricsRecord> idx = new HashMap<>();
+        Map<String, MetricsRecord> idx = new HashMap<>(256); // AA 模型数量较多，预留容量
         for (ModelDefinition md : list) {
             String key = normalize(md.getId());
             if (key.isEmpty()) { continue; }
@@ -436,7 +436,7 @@ public class AiModelMetricsEnrichmentService {
         try {
             java.nio.file.Path dir = java.nio.file.Path.of(CACHE_DIR);
             java.nio.file.Files.createDirectories(dir);
-            StringBuilder sb = new StringBuilder("[");
+            StringBuilder sb = new StringBuilder(512); // 快照 JSON 长度不可预估
             for (int i = 0; i < records.size(); i++) {
                 MetricsRecord r = records.get(i);
                 if (i > 0) { sb.append(','); }
@@ -557,7 +557,7 @@ public class AiModelMetricsEnrichmentService {
     * @return 归一化键 → 记录
      */
     private Map<String, MetricsRecord> indexOf(List<MetricsRecord> records) {
-        Map<String, MetricsRecord> idx = new HashMap<>();
+        Map<String, MetricsRecord> idx = new HashMap<>(256); // AA 模型数量较多，预留容量
         for (MetricsRecord r : records) {
             idx.putIfAbsent(r.normalizedKey(), r);
         }
@@ -594,7 +594,7 @@ public class AiModelMetricsEnrichmentService {
      */
     private Long lng(Object v) {
         if (v == null) { return null; }
-        try { return Long.valueOf(String.valueOf(v).split("\\.")[0]); }
+        try { return Long.parseLong(String.valueOf(v).split("\\.")[0]); }
         catch (NumberFormatException e) { return null; }
     }
 

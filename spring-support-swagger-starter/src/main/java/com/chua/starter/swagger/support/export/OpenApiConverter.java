@@ -106,7 +106,7 @@ public class OpenApiConverter {
         ep.setOperationId(op.getOperationId());
         ep.setDeprecated(Boolean.TRUE.equals(op.getDeprecated()));
         if (op.getTags() != null && !op.getTags().isEmpty()) {
-            ep.setTag(op.getTags().get(0));
+            ep.setTag(op.getTags().getFirst());
         }
 
         if (op.getParameters() != null) {
@@ -172,8 +172,8 @@ public class OpenApiConverter {
         if (ep.getRequestBody() != null && ep.getRequestBody().getExample() != null) {
             ep.setRequestSample(ep.getRequestBody().getExample());
         }
-        if (!ep.getResponses().isEmpty() && ep.getResponses().get(0).getExample() != null) {
-            ep.setResponseSample(ep.getResponses().get(0).getExample());
+        if (!ep.getResponses().isEmpty() && ep.getResponses().getFirst().getExample() != null) {
+            ep.setResponseSample(ep.getResponses().getFirst().getExample());
         }
 
         data.getEndpoints().add(ep);

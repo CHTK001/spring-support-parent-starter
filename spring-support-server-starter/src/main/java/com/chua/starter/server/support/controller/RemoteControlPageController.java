@@ -126,7 +126,9 @@ public class RemoteControlPageController {
                     // 尺寸
                     const resize = () => client.sendSize(window.innerWidth, window.innerHeight);
                     window.addEventListener('resize', resize);
-                    resize();
+                    // 延迟到布局完成后再发送初始尺寸
+                    setTimeout(resize, 100);
+                    setTimeout(resize, 500);
                     // 状态
                     tunnel.onstatechange = (state) => {
                       if (state === Guacamole.Tunnel.State.OPEN) statusEl.textContent = '已连接';

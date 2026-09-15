@@ -1,6 +1,7 @@
 package com.chua.starter.common.support.api.rule;
 
 import com.chua.common.support.lang.algorithm.cipher.Sm2Cipher;
+import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.api.annotations.ApiFieldCrypto;
 import com.chua.starter.common.support.api.annotations.ApiFieldCryptoKey;
@@ -13,7 +14,6 @@ import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.ser.ContextualSerializer;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.springframework.util.ConcurrentReferenceHashMap;
-import org.springframework.util.ReflectionUtils;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -173,11 +173,10 @@ public class ApiCryptoSerializer extends JsonSerializer<String> implements Conte
                 return key;
             }
             Field fields1 = fields[0];
-            ReflectionUtils.makeAccessible(fields1);
 
             try {
-                return String.valueOf(fields1.get(currentValue));
-            } catch (IllegalAccessException e) {
+                return String.valueOf(ReflectUtils.getField(currentValue, fields1.getName()));
+            } catch (RuntimeException e) {
                 return key;
             }
         });

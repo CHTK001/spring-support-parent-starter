@@ -164,7 +164,7 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
         if (dbAppKey == null) {
             return false;
         }
-        if (!Integer.valueOf(STATUS_ENABLED).equals(dbAppKey.getStatus())) {
+        if (dbAppKey.getStatus() == null || dbAppKey.getStatus() != STATUS_ENABLED) {
             return false;
         }
         if (isExpired(dbAppKey)) {

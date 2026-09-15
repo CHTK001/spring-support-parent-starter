@@ -74,7 +74,7 @@ public class DynamicSqlMethod extends AbstractMethod {
         } else {
             XPathParser parser = new XPathParser("<script>" + sql + "</script>", false, configuration.getVariables(), new XMLMapperEntityResolver());
  // x节点 x节点 = 新 x节点(parser, 新 , 新 属性());
-            sqlSource = languageDriver.createSqlSource(configuration, parser.evalNodes("*").get(0), modelClass);
+            sqlSource = languageDriver.createSqlSource(configuration, parser.evalNodes("*").getFirst(), modelClass);
         }
 
         return (mappedStatement = this.addSelectMappedStatementForTable(mapperClass, methodName, sqlSource, tableInfo));
@@ -103,7 +103,7 @@ public class DynamicSqlMethod extends AbstractMethod {
         } else {
             XPathParser parser = new XPathParser("<script>" + sql + "</script>", false, configuration.getVariables(), new XMLMapperEntityResolver());
  // x节点 x节点 = 新 x节点(parser, 新 , 新 属性());
-            sqlSource = languageDriver.createSqlSource(configuration, parser.evalNodes("*").get(0), modelClass);
+            sqlSource = languageDriver.createSqlSource(configuration, parser.evalNodes("*").getFirst(), modelClass);
         }
         ReflectionUtils.setField(this.sqlSource, mappedStatement, sqlSource);
     }

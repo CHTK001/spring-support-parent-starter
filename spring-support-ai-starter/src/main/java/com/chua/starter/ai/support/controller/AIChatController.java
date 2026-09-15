@@ -163,7 +163,7 @@ public class AIChatController extends BaseAiController {
             msgList.add(ctx);
             // 仅追加本轮最新的用户消息，保证当前问题被回答
             if (messages != null && !messages.isEmpty()) {
-                ChatMessage last = messages.get(messages.size() - 1);
+                ChatMessage last = messages.getLast();
                 if (last != null && last.getContent() != null && !last.getContent().isEmpty()) {
                     Map<String, Object> map = new LinkedHashMap<>();
                     map.put("role", last.getRole() != null ? last.getRole() : "user");

@@ -57,7 +57,7 @@ CREATE TABLE IF NOT EXISTS ms_project_deploy_log (
     ms_project_deploy_log_project_name VARCHAR(128) DEFAULT NULL COMMENT '项目名称(冗余)',
     ms_project_deploy_log_host_id    BIGINT       DEFAULT NULL COMMENT '目标主机ID',
     ms_project_deploy_log_host_name  VARCHAR(128) DEFAULT NULL COMMENT '主机名称(冗余)',
-    ms_project_deploy_log_action     VARCHAR(16)  NOT NULL COMMENT '操作类型: DEPLOY/UPGRADE/START/STOP/RESTART/ROLLBACK',
+    ms_project_deploy_log_action     VARCHAR(32)  NOT NULL COMMENT '操作类型: DEPLOY/UPGRADE/START/STOP/RESTART/ROLLBACK/WATCHDOG/WATCHDOG-CHECK/WATCHDOG-ALERT/METRIC',
     ms_project_deploy_log_version    VARCHAR(256) DEFAULT NULL COMMENT '版本标识(部署包文件名)',
     ms_project_deploy_log_status     VARCHAR(16)  NOT NULL COMMENT '执行状态: SUCCESS/FAIL/RUNNING',
     ms_project_deploy_log_output     LONGTEXT     DEFAULT NULL COMMENT '执行输出',
@@ -107,6 +107,7 @@ CREATE TABLE IF NOT EXISTS ms_project_upload_archive (
 
 -- ============================================================
 -- 兼容历史库的增量加列（幂等，新库以上建表已含全部列）
+ALTER TABLE ms_project_deploy_log MODIFY COLUMN ms_project_deploy_log_action VARCHAR(32) NOT NULL COMMENT '操作类型: DEPLOY/UPGRADE/START/STOP/RESTART/ROLLBACK/WATCHDOG/METRIC';
 -- ============================================================
 ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_log_dir VARCHAR(512) DEFAULT NULL COMMENT '日志目录' AFTER ms_project_restart_script;
 ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_log_file VARCHAR(256) DEFAULT NULL COMMENT '日志文件名(如 app.log)' AFTER ms_project_log_dir;
@@ -118,3 +119,28 @@ ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_health_timeout INT DE
 ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_auto_rollback TINYINT DEFAULT 0 COMMENT '失败自动回滚: 0否 1是' AFTER ms_project_health_timeout;
 ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_deploy_retry INT DEFAULT 0 COMMENT '单台失败重试次数' AFTER ms_project_auto_rollback;
 ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_archive_keep INT DEFAULT 0 COMMENT '归档保留数量(0不清理)' AFTER ms_project_deploy_retry;
+
+-- 守护进程（持续存活检测 + 自动拉起）+ 自定义状态检测脚本
+ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_watchdog_enabled TINYINT DEFAULT 0 COMMENT '守护进程开关: 0关闭 1开启(持续检测+挂了自动拉起)' AFTER ms_project_archive_keep;
+ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_watchdog_interval INT DEFAULT 30 COMMENT '守护检测间隔(秒,每项目独立设置,最小5秒)' AFTER ms_project_watchdog_enabled;
+ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_watchdog_max_fail INT DEFAULT 1 COMMENT '守护连续失败阈值: 连续N次不健康才自动重启(0=仅告警)' AFTER ms_project_watchdog_interval;
+ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_check_script TEXT DEFAULT NULL COMMENT '自定义状态检测脚本(exit 0=健康,为空时回退健康检查类型探测)' AFTER ms_project_watchdog_max_fail;
+
+-- 部署前置门禁 + 项目级指标采集（SSH 轮询，零 Agent）
+ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_preflight_gate TINYINT DEFAULT 0 COMMENT '部署前置门禁: 部署前校验主机在线/延迟,不可达直接拦截' AFTER ms_project_check_script;
+ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_metric_enabled TINYINT DEFAULT 0 COMMENT '指标采集开关: 0关闭 1开启(SSH 轮询采进程/端口/HTTP指标)' AFTER ms_project_preflight_gate;
+ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_metric_interval INT DEFAULT 60 COMMENT '指标采集间隔(秒,每项目独立设置,最小5秒)' AFTER ms_project_metric_enabled;
+ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_metric_host_ids VARCHAR(1024) DEFAULT NULL COMMENT '指标采集目标主机ID列表(JSON数组,为空时采集全部绑定主机)' AFTER ms_project_metric_interval;
+
+-- 项目指标时间序列（采集结果持久化，供前端图表拉历史；由采集器幂等建表兜底）
+CREATE TABLE IF NOT EXISTS ms_project_metric (
+    id           BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    project_id   BIGINT       NOT NULL COMMENT '关联项目ID',
+    host_id      BIGINT       DEFAULT NULL COMMENT '目标主机ID',
+    metric_name  VARCHAR(64)  NOT NULL COMMENT '指标名: project.process.mem.mb / project.process.cpu / project.port.alive / project.http.code',
+    metric_value DOUBLE       DEFAULT NULL COMMENT '指标值',
+    collect_time DATETIME     DEFAULT CURRENT_TIMESTAMP COMMENT '采集时间',
+    PRIMARY KEY (id),
+    KEY idx_pm_project (project_id),
+    KEY idx_pm_metric (metric_name)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '项目指标时间序列';

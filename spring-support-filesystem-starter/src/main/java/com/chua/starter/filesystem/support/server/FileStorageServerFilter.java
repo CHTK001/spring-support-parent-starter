@@ -303,7 +303,7 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         if (segments.isEmpty()) {
             return passthrough(request, response, chain);
         }
-        String bucket = segments.get(0);
+        String bucket = segments.getFirst();
 
         // 一次性访问链接：GET /ot/{token}（消费）/ POST /ot?bucket=&key=（创建）
         if ("ot".equalsIgnoreCase(bucket) && storageMap.get(bucket) == null) {
@@ -2589,7 +2589,7 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         List<String> sources = parseSources(params.get("sources"));
         String zipName;
         if (sources.size() == 1) {
-            String single = baseName(sources.get(0));
+            String single = baseName(sources.getFirst());
             int dot = single.lastIndexOf('.');
             String stem = dot > 0 ? single.substring(0, dot) : single;
             zipName = stem + ".zip";
@@ -3301,7 +3301,7 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         List<String> extCandidates = buildExtCandidates(fileName, ext);
 
  // 构建去重 键：内容首 1KB + 长度 + 扩展名（兼顾性能与唯一性）
-        String dedupKey = buildDedupKey(content, extCandidates.get(0));
+        String dedupKey = buildDedupKey(content, extCandidates.isEmpty() ? "" : extCandidates.getFirst());
 
         CompletableFuture<byte[]> future = inflightMap.computeIfAbsent(dedupKey, k -> {
             return CompletableFuture.supplyAsync(() -> {
@@ -3405,6 +3405,12 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
     * @return 完整 HTML 字符串
      */
     private String wrapPreviewPage(PreviewResult result) {
+        String htmlContent = result.getHtmlContent();
+        // 提供方已返回完整 HTML 文档（含 <!DOCTYPE html> 或 <html>）时，
+        // 不再套一层 <html>，而是把资源注入其 head/body，避免双层页面嵌套
+        if (htmlContent != null && isCompleteDocument(htmlContent)) {
+            return injectResourcesIntoDocument(htmlContent, result);
+        }
         StringBuilder sb = new StringBuilder();
         sb.append("<!DOCTYPE html><html lang=\"zh-CN\"><head><meta charset=\"utf-8\">")
                 .append("<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">");
@@ -3430,6 +3436,71 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         }
         sb.append("</body></html>");
         return sb.toString();
+    }
+
+    /**
+    * 判断字符串是否为完整 HTML 文档（以 {@code <!doctype html} 或 {@code <html} 开头）。
+    *
+    * @param html HTML 内容
+    * @return true 表示已是完整文档
+     */
+    private boolean isCompleteDocument(String html) {
+        String trimmed = html.trim();
+        String lower = trimmed.toLowerCase(Locale.ROOT);
+        return lower.startsWith("<!doctype html") || lower.startsWith("<html");
+    }
+
+    /**
+    * 将预览资源（CSS/JS）注入到已有的完整 HTML 文档中。
+    *
+    * <p>CSS 注入到 {@code </head>} 前，JS 注入到 {@code </body>} 前；
+    * 找不到对应标记时追加到文档末尾。</p>
+    *
+    * @param html   完整 HTML 文档
+    * @param result 预览结果（含资源）
+    * @return 注入后的 HTML
+     */
+    private String injectResourcesIntoDocument(String html, PreviewResult result) {
+        StringBuilder head = new StringBuilder();
+        if (result.getEmbeddedCss() != null) {
+            head.append("<style>").append(result.getEmbeddedCss()).append("</style>");
+        }
+        if (result.getCssUrls() != null) {
+            for (String url : result.getCssUrls()) {
+                head.append("<link rel=\"stylesheet\" href=\"").append(escapeAttr(url)).append("\">");
+            }
+        }
+        StringBuilder body = new StringBuilder();
+        if (result.getEmbeddedJs() != null) {
+            body.append("<script>").append(result.getEmbeddedJs()).append("</script>");
+        }
+        if (result.getJsUrls() != null) {
+            for (String url : result.getJsUrls()) {
+                body.append("<script src=\"").append(escapeAttr(url)).append("\"></script>");
+            }
+        }
+        String out = html;
+        String headStr = head.toString();
+        if (!headStr.isEmpty()) {
+            String headEnd = "</head>";
+            int idx = out.toLowerCase(Locale.ROOT).indexOf(headEnd);
+            if (idx >= 0) {
+                out = out.substring(0, idx) + headStr + out.substring(idx);
+            } else {
+                out = headStr + out;
+            }
+        }
+        String bodyStr = body.toString();
+        if (!bodyStr.isEmpty()) {
+            String bodyEnd = "</body>";
+            int idx = out.toLowerCase(Locale.ROOT).lastIndexOf(bodyEnd);
+            if (idx >= 0) {
+                out = out.substring(0, idx) + bodyStr + out.substring(idx);
+            } else {
+                out = out + bodyStr;
+            }
+        }
+        return out;
     }
 
     /**

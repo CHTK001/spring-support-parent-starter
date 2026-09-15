@@ -12,7 +12,14 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.stereotype.Component;
 
 import java.lang.reflect.Field;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
 * MyBatis Actuator 端点
@@ -120,7 +127,7 @@ public class MyBatisEndpoint {
                         statementInfo.put("methodName", id.substring(decodedMapperName.length() + 1));
                         statementInfo.put("sqlCommandType", ms.getSqlCommandType().name());
                         statementInfo.put("resultType", ms.getResultMaps().isEmpty() ? null
-                                : ms.getResultMaps().get(0).getType().getName());
+                                : ms.getResultMaps().getFirst().getType().getName());
                         statementInfo.put("resource", ms.getResource());
                         statements.add(statementInfo);
                     }

@@ -4,7 +4,7 @@ import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
-import com.chua.common.support.utils.IdUtils;
+import java.util.UUID;
 import com.chua.starter.ai.support.manage.common.ApiErrorCode;
 import com.chua.starter.ai.support.manage.common.ApiException;
 import com.chua.starter.ai.support.manage.common.ApiResult;
@@ -168,7 +168,7 @@ public class ApiProviderController {
                         .orderByAsc(SysAiProvider::getSortOrder)
                         .orderByAsc(SysAiProvider::getCreatedAt));
 
-        List<Map<String, Object>> items = new ArrayList<>();
+        List<Map<String, Object>> items = new ArrayList<>(8); // 提供者数量不可预估
         for (SysAiProvider p : providers) {
             List<SysAiProviderModel> models = modelMapper.selectList(
                     new LambdaQueryWrapper<SysAiProviderModel>()
@@ -221,7 +221,7 @@ public class ApiProviderController {
     public ApiResult<Map<String, Object>> createProvider(@RequestBody Map<String, Object> body) {
         String providerId = str(body, "provider_id");
         if (providerId == null || providerId.isBlank()) {
-            providerId = IdUtils.uuidv7();
+            providerId = String.valueOf(System.currentTimeMillis() + (int)(Math.random() * 1000));
         }
         if (providerMapper.selectById(providerId) != null) {
             /**
@@ -247,8 +247,8 @@ public class ApiProviderController {
         entity.setProxy(str(body, "proxy"));
         entity.setExtra(uncheckedCast(body.get("extra")));
         entity.setSortOrder(intv(body, "sort_order", providerMapper.selectCount(null).intValue()));
-        entity.setCreatedAt(now);
-        entity.setUpdatedAt(now);
+        entity.setCreatedAt(null);
+        entity.setUpdatedAt(null);
         providerMapper.insert(entity);
 
         // 初始模型（原子创建必须包含至少一条可用模型）
@@ -376,7 +376,7 @@ public class ApiProviderController {
                                                         @RequestBody(required = false) Map<String, Object> body) {
         SysAiProvider source = requireProvider(providerId);
         long now = System.currentTimeMillis();
-        String newId = IdUtils.uuidv7();
+        String newId = String.valueOf(System.currentTimeMillis() + (int)(Math.random() * 1000));
 
  // 克隆 提供者
         SysAiProvider clone = new SysAiProvider();
@@ -421,7 +421,7 @@ public class ApiProviderController {
                         .eq(SysAiProviderConnection::getProviderId, providerId));
         for (SysAiProviderConnection srcConn : sourceConns) {
             SysAiProviderConnection c = new SysAiProviderConnection();
-            c.setConnectionId(IdUtils.uuidv7());
+            c.setConnectionId(String.valueOf(System.currentTimeMillis() + (int)(Math.random() * 1000)));
             c.setProviderId(newId);
             c.setRole(srcConn.getRole());
             c.setLabel(srcConn.getLabel());
@@ -514,7 +514,7 @@ public class ApiProviderController {
         SysAiProvider entity = requireProvider(providerId);
         Map<String, Object> credentials = entity.getCredentials();
         List<String> keys = extractAllKeys(credentials);
-        List<Map<String, Object>> results = new ArrayList<>();
+        List<Map<String, Object>> results = new ArrayList<>(8); // 密钥数量不可预估
         int okCount = 0;
         for (int i = 0; i < keys.size(); i++) {
             Map<String, Object> r = testSingleKey(entity.getPlatform(), entity.getBaseUrl(),
@@ -524,7 +524,7 @@ public class ApiProviderController {
             }
             results.add(r);
         }
-        Map<String, Object> out = new LinkedHashMap<>();
+        Map<String, Object> out = new LinkedHashMap<>(4);
         out.put("provider_id", providerId);
         out.put("total", keys.size());
         out.put("ok_count", okCount);
@@ -533,9 +533,34 @@ public class ApiProviderController {
     }
 
     /** 用指定 钥匙 调上游 /模型，判定该 钥匙 是否有效（只读、不改库）。 */
+    @PostMapping("/providers/test-connection")
+    public ApiResult<Map<String, Object>> testConnection(@RequestBody Map<String, Object> body) {
+        String apiUrl = (String) body.get("apiUrl");
+        String apiKey = (String) body.get("apiKey");
+        String protocol = (String) body.getOrDefault("protocol", "openai");
+        String proxy = (String) body.get("proxy");
+        Map<String, Object> out = new LinkedHashMap<>(4);
+        if (apiUrl == null || apiUrl.isEmpty()) {
+            out.put("success", false);
+            out.put("message", "API地址不能为空");
+            return ApiResult.ok(out);
+        }
+        if (apiKey == null || apiKey.isEmpty()) {
+            out.put("success", false);
+            out.put("message", "API Key不能为空");
+            return ApiResult.ok(out);
+        }
+        Map<String, Object> result = testSingleKey(protocol, apiUrl, apiKey, "api_key", proxy, 0);
+        out.put("success", result.get("ok"));
+        out.put("message", result.getOrDefault("error", result.getOrDefault("message", "测试完成")));
+        out.put("latency", result.get("latency_ms"));
+        return ApiResult.ok(out);
+    }
+
+    /** 用指定 钥匙 调上游 /模型，判定该 钥匙 是否有效（只读、不改库）。 */
     private Map<String, Object> testSingleKey(String platform, String baseUrl, String apiKey,
                                               String authScheme, String proxy, int index) {
-        Map<String, Object> r = new LinkedHashMap<>();
+        Map<String, Object> r = new LinkedHashMap<>(6);
         r.put("index", index);
         r.put("key_mask", maskKey(apiKey));
         try {
@@ -544,7 +569,7 @@ public class ApiProviderController {
                 r.put("error", "base_url 未配置");
                 return r;
             }
-            Map<String, Object> fakeCreds = new LinkedHashMap<>();
+            Map<String, Object> fakeCreds = new LinkedHashMap<>(2);
             fakeCreds.put("api_key", apiKey);
             List<Map<String, Object>> models = requestUpstreamModels(baseUrl, apiKey,
                     (platform != null && platform.toLowerCase().contains("gemini")), proxy);
@@ -768,7 +793,7 @@ public class ApiProviderController {
         qw.orderByAsc(SysAiProviderModel::getCreatedAt);
 
         List<SysAiProviderModel> models = modelMapper.selectList(qw);
-        List<Map<String, Object>> items = new ArrayList<>();
+        List<Map<String, Object>> items = new ArrayList<>(8); // 模型数量不可预估
         for (SysAiProviderModel model : models) {
             SysAiProvider provider = providerMapper.selectById(model.getProviderId());
             if (provider != null) {
@@ -942,14 +967,43 @@ public class ApiProviderController {
     private Map<String, Object> toProviderResponse(SysAiProvider provider,
                                                    List<SysAiProviderModel> models,
                                                    List<SysAiProviderConnection> connections) {
-        Map<String, Object> map = new LinkedHashMap<>();
+        Map<String, Object> map = new LinkedHashMap<>(12);
         map.put("provider_id", provider.getProviderId());
         map.put("platform", provider.getPlatform());
         map.put("name", provider.getName());
         map.put("base_url", provider.getBaseUrl());
         map.put("auth_scheme", provider.getAuthScheme());
-        map.put("has_credentials", provider.getCredentials() != null && !provider.getCredentials().isEmpty());
-        List<Map<String, Object>> modelItems = new ArrayList<>();
+        boolean hasCreds = provider.getCredentials() != null && !provider.getCredentials().isEmpty();
+        map.put("has_credentials", hasCreds);
+        
+        // 返回key数量和掩码，方便前端显示"已配置N个key"
+        if (hasCreds) {
+            Map<String, Object> creds = provider.getCredentials();
+            int keyCount = 0;
+            String firstKeyMask = "";
+            
+            // 单个key
+            Object singleKey = creds.get("api_key");
+            if (singleKey != null && !singleKey.toString().isEmpty()) {
+                String[] keys = singleKey.toString().split(",");
+                keyCount = keys.length;
+                firstKeyMask = maskKey(keys[0].trim());
+            }
+            
+            // 多个key（list形式）
+            Object multiKeys = creds.get("api_keys");
+            if (multiKeys instanceof List) {
+                List<?> keys = (List<?>) multiKeys;
+                keyCount = keys.size();
+                if (!keys.isEmpty() && keys.getFirst() != null) {
+                    firstKeyMask = maskKey(keys.getFirst().toString().trim());
+                }
+            }
+            
+            map.put("api_key_count", keyCount);
+            map.put("api_key_mask", firstKeyMask);
+        }
+        List<Map<String, Object>> modelItems = new ArrayList<>(8); // 模型数量不可预估
         for (SysAiProviderModel model : models) {
             modelItems.add(toProviderModelResponse(provider, model));
         }
@@ -973,7 +1027,7 @@ public class ApiProviderController {
     * @return 转为提供者模型响应的结果
      */
     private Map<String, Object> toProviderModelResponse(SysAiProvider provider, SysAiProviderModel model) {
-        Map<String, Object> map = new LinkedHashMap<>();
+        Map<String, Object> map = new LinkedHashMap<>(12);
         map.put("provider_id", provider.getProviderId());
         map.put("model", model.getModel());
         map.put("enabled", model.getEnabled());
@@ -983,12 +1037,12 @@ public class ApiProviderController {
         }
         List<Map<String, Object>> caps = model.getCapabilities() != null
                 ? model.getCapabilities().stream().map(this::toCapabilityResponse).collect(Collectors.toList())
-                : new ArrayList<>();
+                : new ArrayList<>(1);
         map.put("capabilities", caps);
  // 模型指标：自身 指标 优先，再从缓存快照合并价格/延迟/智能/速度等
         Map<String, Object> metrics = model.getMetrics() != null
                 ? new LinkedHashMap<>(model.getMetrics())
-                : new LinkedHashMap<>();
+                : new LinkedHashMap<>(4);
         Map<String, Object> cached = metricIndex().get(provider.getProviderId() + "::" + model.getModel());
         if (cached != null) {
             for (String key : METRIC_KEYS) {
@@ -1023,7 +1077,7 @@ public class ApiProviderController {
             if (now - metricsIndexLoadedAt <= METRICS_INDEX_TTL_MILLIS && !metricsIndex.isEmpty()) {
                 return metricsIndex;
             }
-            Map<String, Map<String, Object>> index = new HashMap<>();
+            Map<String, Map<String, Object>> index = new HashMap<>(64); // 提供者模型索引不可预估
             try {
                 Map<String, Object> snapshot = metricsSnapshotService.latestSnapshot();
                 Object modelsObj = snapshot.get("models");
@@ -1056,7 +1110,7 @@ public class ApiProviderController {
     * @return 转为capability响应的结果
      */
     private Map<String, Object> toCapabilityResponse(Map<String, Object> cap) {
-        Map<String, Object> map = new LinkedHashMap<>();
+        Map<String, Object> map = new LinkedHashMap<>(14);
         map.put("task", cap.get("task"));
         map.put("traits", cap.get("traits") != null ? cap.get("traits") : List.of());
         map.put("protocol", cap.get("protocol"));
@@ -1100,7 +1154,7 @@ public class ApiProviderController {
     * @return 转为connection响应的结果
      */
     private Map<String, Object> toConnectionResponse(SysAiProviderConnection conn) {
-        Map<String, Object> map = new LinkedHashMap<>();
+        Map<String, Object> map = new LinkedHashMap<>(10);
         map.put("connection_id", conn.getConnectionId());
         map.put("provider_id", conn.getProviderId());
         map.put("role", conn.getRole());
@@ -1136,7 +1190,7 @@ public class ApiProviderController {
  // capabilities → 直接存原始 列表<Map>
         Object capsObj = input.get("capabilities");
         if (capsObj instanceof List<?> capsList) {
-            List<Map<String, Object>> caps = new ArrayList<>();
+            List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
             for (Object c : capsList) {
                 if (c instanceof Map<?, ?> m) {
                     caps.add((Map<String, Object>) m);
@@ -1144,7 +1198,7 @@ public class ApiProviderController {
             }
             e.setCapabilities(caps);
         } else {
-            e.setCapabilities(new ArrayList<>());
+            e.setCapabilities(new ArrayList<>(1));
         }
  // 指标 → 直接存原始 映射（延迟/智能/输出速度等）
         Object metricsObj = input.get("metrics");
@@ -1175,7 +1229,7 @@ public class ApiProviderController {
         if (input.containsKey("capabilities")) {
             Object capsObj = input.get("capabilities");
             if (capsObj instanceof List<?> capsList) {
-                List<Map<String, Object>> caps = new ArrayList<>();
+List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
                 for (Object c : capsList) {
                     if (c instanceof Map<?, ?> m) {
                         caps.add((Map<String, Object>) m);
@@ -1203,7 +1257,7 @@ public class ApiProviderController {
      */
     private SysAiProviderConnection toConnectionEntity(String providerId, Map<String, Object> input, long now) {
         SysAiProviderConnection e = new SysAiProviderConnection();
-        e.setConnectionId(IdUtils.uuidv7());
+        e.setConnectionId(String.valueOf(System.currentTimeMillis() + (int)(Math.random() * 1000)));
         e.setProviderId(providerId);
         e.setRole(requireStr(input, "role"));
         e.setLabel(str(input, "label"));
@@ -1233,7 +1287,7 @@ public class ApiProviderController {
         // 本地模型（Ollama/ONNX）无需鉴权
         boolean localModel = presetKey != null && (presetKey.contains("ollama") || presetKey.contains("onnx"));
         String defaultAuthScheme = localModel ? "none" : "api_key";
-        Map<String, Object> manifest = new LinkedHashMap<>();
+        Map<String, Object> manifest = new LinkedHashMap<>(8);
         manifest.put("tasks", ALL_TASKS);
         manifest.put("preset", preset);
         manifest.put("platform", pp.platform);
@@ -1243,7 +1297,7 @@ public class ApiProviderController {
         manifest.put("default_auth_scheme", defaultAuthScheme);
         manifest.put("auth_schemes", authSchemes());
 
-        Map<String, Object> recommendation = new LinkedHashMap<>();
+        Map<String, Object> recommendation = new LinkedHashMap<>(6);
         recommendation.put("protocol_id", pp.platform + "-openai-compat");
         recommendation.put("connection_role", "default");
         recommendation.put("default_base_url", pp.defaultBaseUrl);
@@ -1263,7 +1317,7 @@ public class ApiProviderController {
     * @return 构建协议的结果
      */
     private Map<String, Object> buildProtocol(ProtocolPreset pp, String task, String defaultAuthScheme) {
-        Map<String, Object> protocol = new LinkedHashMap<>();
+        Map<String, Object> protocol = new LinkedHashMap<>(8);
         protocol.put("protocol_id", pp.platform + "-openai-compat");
         protocol.put("supported_tasks", ALL_TASKS);
         protocol.put("executor", "model_invoke");
@@ -1272,7 +1326,7 @@ public class ApiProviderController {
         protocol.put("scopes", List.of("official_compat", "custom"));
         protocol.put("platforms", List.of(pp.platform));
 
-        Map<String, Object> dc = new LinkedHashMap<>();
+        Map<String, Object> dc = new LinkedHashMap<>(8);
         dc.put("preset", pp.platform);
         dc.put("platform", pp.platform);
         dc.put("connection_role", "default");
@@ -1326,8 +1380,7 @@ public class ApiProviderController {
     * @return 认证scheme的结果
      */
     private Map<String, Object> authScheme(String scheme, boolean parameterized) {
-        Map<String, Object> m = new LinkedHashMap<>();
-        m.put("scheme", scheme);
+        Map<String, Object> m = new LinkedHashMap<>(4);
         m.put("parameterized", parameterized);
         return m;
     }
@@ -1350,7 +1403,7 @@ public class ApiProviderController {
     private static final Map<String, ProtocolPreset> PROTOCOL_PRESETS; // 协议presets
 
     static {
-        Map<String, ProtocolPreset> m = new LinkedHashMap<>();
+        Map<String, ProtocolPreset> m = new LinkedHashMap<>(48);
         m.put("openai", new ProtocolPreset("openai", "https://api.openai.com/v1"));
         m.put("anthropic", new ProtocolPreset("anthropic", "https://api.anthropic.com/v1"));
         m.put("google", new ProtocolPreset("google", "https://generativelanguage.googleapis.com/v1beta"));
@@ -1430,8 +1483,8 @@ public class ApiProviderController {
  // ONNX 本地离线模型：基础_url 存的是模型文件路径，没有远程目录可拉，
         // 直接返回空列表（前端提示手输模型文件路径）
         if (platformLower.contains("onnx")) {
-            Map<String, Object> out = new LinkedHashMap<>();
-            out.put("models", new ArrayList<Map<String, Object>>());
+        Map<String, Object> out = new LinkedHashMap<>(4);
+            out.put("models", new ArrayList<Map<String, Object>>(1));
             return out;
         }
         // 基础地址缺失直接判参数错误
@@ -1474,7 +1527,7 @@ public class ApiProviderController {
              */
             throw new ApiException(ApiErrorCode.BAD_GATEWAY, "无法从供应商拉取模型列表，请检查 API 地址和 Key");
         }
-        Map<String, Object> out = new LinkedHashMap<>();
+        Map<String, Object> out = new LinkedHashMap<>(4);
         out.put("models", models);
         if (fixedBaseUrl != null) {
             out.put("fixed_base_url", fixedBaseUrl);
@@ -1501,7 +1554,7 @@ public class ApiProviderController {
             if (response.statusCode() < 200 || response.statusCode() >= 300) {
                 return null;
             }
-            List<Map<String, Object>> models = new ArrayList<>();
+            List<Map<String, Object>> models = new ArrayList<>(8); // 模型数量不可预估
             com.fasterxml.jackson.databind.JsonNode root = readJson(response.body());
             com.fasterxml.jackson.databind.JsonNode data = root == null ? null : root.get("models");
             if (data != null && data.isArray()) {
@@ -1511,7 +1564,7 @@ public class ApiProviderController {
                     if (name == null || name.isBlank()) {
                         continue;
                     }
-                    Map<String, Object> m = new LinkedHashMap<>();
+                    Map<String, Object> m = new LinkedHashMap<>(4);
                     m.put("id", name);
                     m.put("name", name);
                     m.put("tasks", inferTasks(name));
@@ -1629,7 +1682,7 @@ public class ApiProviderController {
     * @return 模型条目列表
      */
     private List<Map<String, Object>> parseOpenAiModels(String body) {
-        List<Map<String, Object>> models = new ArrayList<>();
+        List<Map<String, Object>> models = new ArrayList<>(8); // 模型数量不可预估
         com.fasterxml.jackson.databind.JsonNode root = readJson(body);
  // 响应格式：{"数据": [{"id": "glm-4-flash", ...}, ...]}
         com.fasterxml.jackson.databind.JsonNode data = root == null ? null : root.get("data");
@@ -1640,7 +1693,7 @@ public class ApiProviderController {
                 if (id == null || id.isBlank()) {
                     continue;
                 }
-                Map<String, Object> m = new LinkedHashMap<>();
+                Map<String, Object> m = new LinkedHashMap<>(4);
                 m.put("id", id);
                 m.put("name", item.path("name").asText(id));
                 m.put("tasks", inferTasks(id));
@@ -1658,7 +1711,7 @@ public class ApiProviderController {
     * @return 模型条目列表
      */
     private List<Map<String, Object>> parseGoogleModels(String body) {
-        List<Map<String, Object>> models = new ArrayList<>();
+        List<Map<String, Object>> models = new ArrayList<>(8); // 模型数量不可预估
         com.fasterxml.jackson.databind.JsonNode root = readJson(body);
         com.fasterxml.jackson.databind.JsonNode data = root == null ? null : root.get("models");
         if (data != null && data.isArray()) {
@@ -1669,7 +1722,7 @@ public class ApiProviderController {
                 if (id == null || id.isBlank()) {
                     continue;
                 }
-                Map<String, Object> m = new LinkedHashMap<>();
+                Map<String, Object> m = new LinkedHashMap<>(4);
                 m.put("id", id);
                 m.put("name", item.path("displayName").asText(id));
                 m.put("tasks", inferTasks(id));
@@ -1744,10 +1797,10 @@ public class ApiProviderController {
         }
         Object multi = credentials.get("api_keys");
  // 多 钥匙 数组取第一个作为拉取凭证
-        if (multi instanceof List && !((List<?>) multi).isEmpty()) {
-            Object first = ((List<?>) multi).get(0);
-            if (first instanceof String && !((String) first).isBlank()) {
-                return (String) first;
+        if (multi instanceof List<?> list && !list.isEmpty()) {
+            Object first = list.getFirst();
+            if (first instanceof String s && !s.isBlank()) {
+                return s;
             }
         }
         return null;
@@ -1861,7 +1914,7 @@ public class ApiProviderController {
         if (!(v instanceof List<?> list)) {
             return List.of();
         }
-        List<String> out = new ArrayList<>();
+        List<String> out = new ArrayList<>(4); // 元素数量不可预估
         for (Object o : list) {
             if (o != null) {
                 out.add(String.valueOf(o));
@@ -1882,7 +1935,7 @@ public class ApiProviderController {
         if (!(v instanceof List<?> list)) {
             return List.of();
         }
-        List<Map<String, Object>> out = new ArrayList<>();
+        List<Map<String, Object>> out = new ArrayList<>(4); // 元素数量不可预估
         for (Object o : list) {
             if (o instanceof Map<?, ?> m) {
                 out.add((Map<String, Object>) m);
@@ -1968,15 +2021,15 @@ public class ApiProviderController {
      */
     private Map<String, Object> buildAgentProvider(List<String> modelNames) {
         long now = System.currentTimeMillis();
-        List<Map<String, Object>> models = new ArrayList<>();
+        List<Map<String, Object>> models = new ArrayList<>(8); // 模型数量不可预估
         for (String modelName : modelNames) {
-            Map<String, Object> model = new LinkedHashMap<>();
+            Map<String, Object> model = new LinkedHashMap<>(10);
             model.put("provider_id", "agent");
             model.put("model", modelName);
             model.put("enabled", true);
             model.put("sort_order", 0);
             model.put("description", "Agent: " + modelName.replace("agent-", ""));
-            Map<String, Object> capability = new LinkedHashMap<>();
+            Map<String, Object> capability = new LinkedHashMap<>(8);
             capability.put("task", "chat");
             capability.put("traits", List.of());
             capability.put("protocol", "agent");
@@ -1990,7 +2043,7 @@ public class ApiProviderController {
             model.put("updated_at", now);
             models.add(model);
         }
-        Map<String, Object> provider = new LinkedHashMap<>();
+        Map<String, Object> provider = new LinkedHashMap<>(10);
         provider.put("provider_id", "agent");
         provider.put("platform", "agent");
         provider.put("name", "Agent");

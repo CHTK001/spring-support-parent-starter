@@ -58,7 +58,7 @@ public class DistributedLockConfigRepository {
                 (rs, rowNum) -> mapRow(rs),
                 name
         );
-        return list.isEmpty() ? Optional.empty() : Optional.of(list.get(0));
+        return list.isEmpty() ? Optional.empty() : Optional.of(list.getFirst());
     }
 
     /**

@@ -182,11 +182,67 @@ public class MsProject extends SysBase {
     private Integer msProjectDeployRetry;
 
     /**
-    * 归档保留数量（0=不清理，超出自动清理旧版本）
+     * 归档保留数量（0=不清理，超出自动清理旧版本）
      */
     @TableField("ms_project_archive_keep")
     @Schema(description = "归档保留数量", example = "0")
     private Integer msProjectArchiveKeep; // msprojectauto启动
+
+    /**
+     * 守护进程开关：0=关闭 1=开启（持续存活检测 + 挂了自动拉起）
+     */
+    @TableField("ms_project_watchdog_enabled")
+    @Schema(description = "守护进程开关", example = "0")
+    private Integer msProjectWatchdogEnabled;
+
+    /**
+     * 守护检测间隔（秒，每个项目独立设置，最小 5 秒）
+     */
+    @TableField("ms_project_watchdog_interval")
+    @Schema(description = "守护检测间隔(秒)", example = "30")
+    private Integer msProjectWatchdogInterval;
+
+    /**
+     * 守护连续失败阈值：连续 N 次检测不健康才触发自动重启（0=不自动重启仅告警，1=立即重启）
+     */
+    @TableField("ms_project_watchdog_max_fail")
+    @Schema(description = "守护连续失败阈值", example = "1")
+    private Integer msProjectWatchdogMaxFail;
+
+    /**
+     * 自定义状态检测脚本（exit 0=健康；为空时回退健康检查类型探测）
+     */
+    @TableField("ms_project_check_script")
+    @Schema(description = "自定义状态检测脚本")
+    private String msProjectCheckScript;
+
+    /**
+     * 部署前置门禁：0=关闭 1=开启（部署前校验目标主机在线状态与延迟，不可达主机直接拦截）
+     */
+    @TableField("ms_project_preflight_gate")
+    @Schema(description = "部署前置门禁开关", example = "1")
+    private Integer msProjectPreflightGate;
+
+    /**
+     * 指标采集开关：0=关闭 1=开启（SSH 轮询采集进程 CPU/内存/端口存活）
+     */
+    @TableField("ms_project_metric_enabled")
+    @Schema(description = "指标采集开关", example = "0")
+    private Integer msProjectMetricEnabled;
+
+    /**
+     * 指标采集间隔（秒，每个项目独立设置，最小 5 秒）
+     */
+    @TableField("ms_project_metric_interval")
+    @Schema(description = "指标采集间隔(秒)", example = "60")
+    private Integer msProjectMetricInterval;
+
+    /**
+     * 指标采集目标主机 标识（JSON 数组，如 [1,2]；为空时采集全部绑定主机）
+     */
+    @TableField("ms_project_metric_host_ids")
+    @Schema(description = "指标采集目标主机ID列表(JSON数组)")
+    private String msProjectMetricHostIds;
 
     /**
     * 当前版本（最近一次部署包文件名/版本号，升级时更新）

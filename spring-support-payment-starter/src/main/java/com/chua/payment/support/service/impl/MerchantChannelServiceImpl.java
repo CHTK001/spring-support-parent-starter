@@ -193,7 +193,7 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
      */
     public boolean deleteChannel(Long id) {
         MerchantChannel channel = requireChannel(id);
-        if (Integer.valueOf(ChannelStatus.ENABLED.getCode()).equals(channel.getStatus())) {
+        if (ChannelStatus.ENABLED.getCode().equals(channel.getStatus())) {
             /**
             * 薪酬异常。
             * @param "启用中的支付方式不允许删除，请先禁用" "启用中的支付方式不允许删除，请先禁用"
@@ -370,7 +370,7 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
     * @param channel 通道
      */
     private void validateEnabledChannelSupport(MerchantChannel channel) {
-        if (channel == null || !Integer.valueOf(ChannelStatus.ENABLED.getCode()).equals(channel.getStatus())) {
+        if (channel == null || !ChannelStatus.ENABLED.getCode().equals(channel.getStatus())) {
             return;
         }
         if (!paymentChannelRegistry.supports(channel.getChannelType(), channel.getChannelSubType())) {

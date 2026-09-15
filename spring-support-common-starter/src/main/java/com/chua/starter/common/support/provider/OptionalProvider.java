@@ -23,7 +23,12 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 import static com.chua.starter.common.support.constant.CacheConstant.CACHE_MANAGER_FOR_SYSTEM;
 import static com.chua.starter.common.support.constant.CacheConstant.REDIS_CACHE_ALWAYS;
@@ -58,9 +63,8 @@ public class OptionalProvider {
     * 获取选项
     *
     * @param type 类型
+    * @param name 名称，可为空
     * @return 获取选项
-    * @param =false =false
-    * @param =false =false
      */
     @Operation(summary = "获取已经加载选项")
     @GetMapping("objects/get")
@@ -71,6 +75,7 @@ public class OptionalProvider {
         }
 
         Class<?> aClass = ClassUtils.toType(getType(type));
+        // 容量随 beanFactory 类型与注册 Bean 数量变化，无法预估，按需扩容
         Map<String, ?> beanOfTypes = new HashMap<>();
         if (beanFactory instanceof ListableBeanFactory listableBeanFactory) {
             beanOfTypes = listableBeanFactory.getBeansOfType(aClass);
@@ -137,9 +142,8 @@ public class OptionalProvider {
     * 获取选项
     *
     * @param type 类型
+    * @param name 名称，可为空
     * @return 获取选项
-    * @param =false =false
-    * @param =false =false
      */
     @Operation(summary = "获取选项")
     @GetMapping("get")
@@ -166,9 +170,8 @@ public class OptionalProvider {
     * 获取选项
     *
     * @param type 类型
+    * @param name 名称，可为空
     * @return 获取选项
-    * @param =false =false
-    * @param =false =false
      */
     @Operation(summary = "获取选项")
     @GetMapping("list")

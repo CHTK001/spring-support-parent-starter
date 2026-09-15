@@ -441,7 +441,7 @@ public class ApiSkillController {
         }
 
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("skill_name", importedNames.isEmpty() ? "" : importedNames.get(0));
+        result.put("skill_name", importedNames.isEmpty() ? "" : importedNames.getFirst());
         result.put("skill_names", importedNames);
         return ApiResult.ok(result);
     }
@@ -661,7 +661,7 @@ public class ApiSkillController {
         }
 
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("skill_name", importedNames.isEmpty() ? "" : importedNames.get(0));
+        result.put("skill_name", importedNames.isEmpty() ? "" : importedNames.getFirst());
         result.put("skill_names", importedNames);
         return ApiResult.ok(result);
     }

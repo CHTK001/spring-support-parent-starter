@@ -15,7 +15,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
-import java.util.*;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.Stack;
+import java.util.UUID;
 
 /**
 * 切面
@@ -153,9 +162,7 @@ public class WatchPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor imp
          */
         refix(spans1);
         if (spans1.size() == 1) {
-            if ("java.lang.Object".equals(spans1.get(0).getType())) {
-                //
-            } else {
+            if ("java.lang.Object".equals(spans1.getFirst().getType())) {
             }
         } else {
  // 集合.reverse(spans1);
@@ -165,8 +172,8 @@ public class WatchPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor imp
             }
 
             List<Span> result = new LinkedList<>(rs);
-            Span span1 = result.get(0);
-            Span span2 = result.get(result.size() - 1);
+            Span span1 = result.getFirst();
+            Span span2 = result.getLast();
             if (null == span1.getEx()) {
                 span1.setEx(span2.getEx());
             }
@@ -183,7 +190,7 @@ public class WatchPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor imp
     * @return 发送span的结果
      */
     private static List<Span> sendSpan(List<Span> result) {
-        Span span1 = result.get(0);
+        Span span1 = result.getFirst();
         if(StringUtils.isNullOrEmpty(span1.getEx())) {
             return result;
         }

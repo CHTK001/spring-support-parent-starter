@@ -50,7 +50,7 @@ public class CalciteMaterializedSqlRouter implements MaterializedSqlDataSourceRo
             return MaterializedSqlRoute.notRouted();
         }
 
-        String targetDataSource = buildCacheDataSourceName(request.getDefinition(), request.getTables().get(0));
+        String targetDataSource = buildCacheDataSourceName(request.getDefinition(), request.getTables().getFirst());
         DataSource resolved = resolveByName(targetDataSource);
         if (resolved == null) {
             return MaterializedSqlRoute.notRouted();

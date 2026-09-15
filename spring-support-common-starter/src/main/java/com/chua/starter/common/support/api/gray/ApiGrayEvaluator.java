@@ -235,6 +235,8 @@ public class ApiGrayEvaluator {
 
         // 注册方法
         try {
+            // 注：StandardEvaluationContext.registerFunction 要求 java.lang.reflect.Method 参数，
+            //     属于 SpEL 框架 API 签名约束，无法用 ReflectUtils 替代，豁免
             context.registerFunction("header",
                     ApiGrayEvaluator.class.getDeclaredMethod("getHeader", HttpServletRequest.class, String.class));
             context.registerFunction("param",
@@ -285,6 +287,7 @@ public class ApiGrayEvaluator {
     * @return 构建哈希钥匙的结果
      */
     private String buildHashKey(Object userId, String username, String clientIp) {
+        // 内容长度取决于实际使用的用户标识，无法预估，按需扩容
         StringBuilder sb = new StringBuilder();
         if (userId != null) {
             sb.append(userId);

@@ -5,7 +5,11 @@ import com.chua.starter.datasource.util.ClassUtils;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.sql.DataSource;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -184,7 +188,7 @@ public class DataSourcePropertyProviderFactory {
      */
     public static Class<? extends DataSource> getPreferredDataSourceType() {
         if (!PROVIDERS.isEmpty()) {
-            return PROVIDERS.get(0).getDataSourceType();
+            return PROVIDERS.getFirst().getDataSourceType();
         }
         return null;
     }

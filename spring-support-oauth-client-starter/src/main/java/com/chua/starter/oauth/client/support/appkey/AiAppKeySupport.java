@@ -131,7 +131,7 @@ public class AiAppKeySupport {
                 log.debug("[AiAppKey] AppKey 校验失败: 无匹配记录");
                 return null;
             }
-            return rows.get(0);
+            return rows.getFirst();
         } catch (Exception e) {
             log.warn("[AiAppKey] AppKey 校验异常: {}", e.getMessage());
             return null;

@@ -555,16 +555,12 @@ public class DatalakeSubscriberProbe {
     }
 
     // ━━━━━━━━━━━━━━━ 辅助类 ━━━━━━━━━━━━━━━
-     /**
+    /**
      * capturingsink类。
      *
      * @author CH
      * @since 4.0.0
-      */
-     * 失败sink类。
-     *
      */
-
     public static class CapturingSink implements DataSink {
         private final String type;
         private final AtomicInteger count = new AtomicInteger(0);
@@ -608,6 +604,12 @@ public class DatalakeSubscriberProbe {
         public EngineDataSource<?> getDataSource() { return null; }
     }
 
+    /**
+     * 失败sink类。
+     *
+     * @author CH
+     * @since 4.0.0
+     */
     public static class FailingSink implements DataSink {
         private final AtomicInteger count = new AtomicInteger(0);
         /**

@@ -433,28 +433,11 @@ public class DatalakeAdvancedProbe {
 
     // ━━━━━━━━━━━━━━━ 辅助 ━━━━━━━━━━━━━━━
     /**
-    * 探针检查接口。
-    *
-    * @author CH
-    * @since 4.0.0
-    * @param name 名称
-    * @param check 检查
-     /**
-      * 构建env。
-      * @param pipelineId pipelineid
-      * @param traceTag 追踪标签
-      * @return 构建env的结果
-      */
-      * @param name 名称
-      * @param check 检查
-     /**
      * 构建env。
      * @param pipelineId pipelineId
      * @param traceTag 追踪标签
      * @return 构建env的结果
-      */
      */
-
     private static DataEnvelope buildEnv(String pipelineId, String traceTag) {
         return DataEnvelope.builder()
                 .parsed(Map.of("tag", traceTag, "ts", System.currentTimeMillis()))
@@ -483,22 +466,24 @@ public class DatalakeAdvancedProbe {
         }
     }
 
+    /**
+     * 探针检查接口。
+     *
+     * @author CH
+     * @since 4.0.0
+     */
     @FunctionalInterface
     interface ProbeCheck {
         boolean check() throws Exception;
     }
 
     // ━━━━━━━━━━━━━━━ 模拟 Sink ━━━━━━━━━━━━━━━
-     /**
+    /**
      * capturingsink类。
      *
      * @author CH
      * @since 4.0.0
-      */
-     * 失败sink类。
-     *
      */
-
     public static class CapturingSink implements DataSink {
         private final String type; // 类型
         private final AtomicInteger count = new AtomicInteger(0); // 数量
@@ -543,6 +528,12 @@ public class DatalakeAdvancedProbe {
         public EngineDataSource<?> getDataSource() { return null; }
     }
 
+    /**
+     * 失败sink类。
+     *
+     * @author CH
+     * @since 4.0.0
+     */
     public static class FailingSink implements DataSink {
         private final AtomicInteger count = new AtomicInteger(0);
 

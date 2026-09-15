@@ -1,6 +1,7 @@
 package com.chua.starter.monitor.support.service;
 
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.starter.monitor.support.server.model.ServerHotUpdateResult;
 import com.chua.starter.monitor.support.server.model.ServerNodeRequest;
 import com.chua.starter.monitor.support.server.model.ServerNodeView;
 
@@ -75,6 +76,42 @@ public interface ServerManageService {
     ReturnResult<ServerNodeView> stop(Long id);
 
     /**
+    * 热更新节点（配置与过滤器链）。
+    *
+    * <p>语义：</p>
+    * <ul>
+    *   <li>监听地址/端口/引擎未变 → 不重启，仅按新 filters 重建过滤器链</li>
+    *   <li>监听地址/端口/引擎变更 → 先停后起，按新配置重启</li>
+    *   <li>节点未运行 → 仅持久化定义，等待下次启动生效</li>
+    * </ul>
+    *
+    * @param id      节点 标识
+    * @param request 请求体
+    * @return 热更新结果
+     */
+    ReturnResult<ServerHotUpdateResult> hotUpdate(Long id, ServerNodeRequest request);
+
+    /**
+    * 热切换单个过滤器的启用状态（不重启服务器）。
+    *
+    * @param id      节点 标识
+    * @param index   过滤器下标（与 filters 数组一致）
+    * @param enabled 是否启用
+    * @return 节点视图
+     */
+    ReturnResult<ServerNodeView> hotToggleFilter(Long id, Integer index, Boolean enabled);
+
+    /**
+    * 热更新单个过滤器的参数（不重启服务器、不重建实例）。
+    *
+    * @param id     节点 标识
+    * @param index  过滤器下标（与 filters 数组一致）
+    * @param params 新的参数键值（与现有参数合并）
+    * @return 节点视图
+     */
+    ReturnResult<ServerNodeView> hotUpdateFilterParams(Long id, Integer index, Map<String, Object> params);
+
+    /**
     * 支持的协议类型元数据。
     *
     * @return 协议描述列表
@@ -87,4 +124,14 @@ public interface ServerManageService {
     * @return 插件描述列表
      */
     ReturnResult<List<Map<String, Object>>> filterTypes();
+
+    /**
+    * 反向代理类节点视图（HTTP_PROXY / TCP_PROXY / socks 等）。
+    *
+    * <p>代理服务需要独立的运维视图：它不提供页面，而是转发流量，
+    * 因此单独列出便于排查上游后端与负载情况。</p>
+    *
+    * @return 代理节点视图列表
+     */
+    ReturnResult<List<ServerNodeView>> proxies();
 }

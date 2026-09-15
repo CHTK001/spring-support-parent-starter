@@ -606,7 +606,7 @@ public class ApiAgentController {
             return s;
         }
         Object multi = credentials.get("api_keys");
-        if (multi instanceof List<?> list && !list.isEmpty() && list.get(0) instanceof String s && !s.isBlank()) {
+        if (multi instanceof List<?> list && !list.isEmpty() && list.getFirst() instanceof String s && !s.isBlank()) {
             return s;
         }
         return null;

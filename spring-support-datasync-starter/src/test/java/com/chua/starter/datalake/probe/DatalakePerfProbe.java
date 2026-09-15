@@ -326,21 +326,11 @@ public class DatalakePerfProbe {
 
  // ── 助手 ────────────────────────────────────────────────────
     /**
-    * capturingsink类。
-    *
-    * @author CH
-    * @since 4.0.0
-    * @param n n
-    * @return fmt数量的结果
-     /**
-      * 构建env。
-      * @param pipeId 管道标识
-      * @param i i
-      * @return 构建env的结果
-      */
-      * @param n n
+     * 构建env。
+     * @param pipeId 管道标识
+     * @param i i
+     * @return 构建env的结果
      */
-
     private static DataEnvelope buildEnv(String pipeId, int i) {
         return DataEnvelope.builder()
                 .parsed(Map.of("i", i, "v", "bench", "ts", System.currentTimeMillis()))
@@ -350,6 +340,11 @@ public class DatalakePerfProbe {
                 .build();
     }
 
+    /**
+     * 格式化数量为 K/M 缩写。
+     * @param n 数量
+     * @return 格式化后的数量
+     */
     private static String fmtCount(int n) {
         if (n >= 1_000_000) {
             return (n / 1_000_000) + "M";
@@ -360,6 +355,12 @@ public class DatalakePerfProbe {
         return String.valueOf(n);
     }
 
+    /**
+     * capturingsink类。
+     *
+     * @author CH
+     * @since 4.0.0
+     */
     public static class CapturingSink implements DataSink {
         private final String type; // 类型
         private final AtomicInteger count = new AtomicInteger(0); // 数量

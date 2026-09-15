@@ -107,6 +107,18 @@
       <groupId>com.chua</groupId>
       <artifactId>utils-support-jvector-starter</artifactId>
     </dependency>
+    <!-- jvector 核心库：确保 fat-jar 运行时含 native VectorizationProvider（ON_DISK 向量存储依赖） -->
+    <dependency>
+      <groupId>io.github.jbellis</groupId>
+      <artifactId>jvector</artifactId>
+      <version>4.0.0-rc.9</version>
+    </dependency>
+    <!-- jvector 传递依赖 agrona：缺省会 ClassNotFoundException org.agrona.collections.IntArrayList -->
+    <dependency>
+      <groupId>org.agrona</groupId>
+      <artifactId>agrona</artifactId>
+      <version>1.20.0</version>
+    </dependency>
     <!-- 用量数据同步（datasearch UsageProvider 外部工具用量拉取） -->
     <dependency>
       <groupId>com.chua</groupId>

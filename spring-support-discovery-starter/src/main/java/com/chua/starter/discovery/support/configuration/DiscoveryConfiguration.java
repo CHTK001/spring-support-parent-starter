@@ -1,7 +1,11 @@
 package com.chua.starter.discovery.support.configuration;
 
-import com.chua.common.support.network.discovery.*;
+import com.chua.common.support.network.discovery.DefaultServiceDiscovery;
+import com.chua.common.support.network.discovery.Discovery;
+import com.chua.common.support.network.discovery.DiscoveryOption;
 import com.chua.common.support.network.discovery.Event;
+import com.chua.common.support.network.discovery.ServiceDiscovery;
+import com.chua.common.support.network.discovery.ServiceDiscoveryListener;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.DigestUtils;
 import com.chua.common.support.utils.StringUtils;
@@ -32,7 +36,11 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.core.env.Environment;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 
 /**
 * 发现服务

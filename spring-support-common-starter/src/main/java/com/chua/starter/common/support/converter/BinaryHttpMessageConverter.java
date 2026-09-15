@@ -9,6 +9,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.http.converter.HttpMessageNotWritableException;
 
 import java.io.IOException;
+// 注：Type 为 HttpMessageConverter 接口签名要求，豁免
 import java.lang.reflect.Type;
 import java.util.List;
 

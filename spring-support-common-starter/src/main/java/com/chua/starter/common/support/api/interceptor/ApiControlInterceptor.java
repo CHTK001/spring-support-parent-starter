@@ -2,6 +2,7 @@ package com.chua.starter.common.support.api.interceptor;
 import com.chua.common.support.lang.json.Json;
 import com.chua.common.support.lang.version.Version;
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.common.support.utils.ArrayUtils;
 import com.chua.common.support.utils.IoUtils;
 import com.chua.common.support.utils.StringUtils;
@@ -89,7 +90,7 @@ public class ApiControlInterceptor implements HandlerInterceptor  {
         if (override == null) {
             return apiGray;
         }
-        return (ApiGray) java.lang.reflect.Proxy.newProxyInstance(
+        return ReflectUtils.newProxy(
                 apiGray.getClass().getClassLoader(), new Class<?>[]{ApiGray.class},
                 (proxy, method, args) -> {
                     switch (method.getName()) {
@@ -104,7 +105,7 @@ public class ApiControlInterceptor implements HandlerInterceptor  {
                         case "rule":
                             return StringUtils.hasText(override.rule()) ? override.rule() : apiGray.rule();
                         default:
-                            return method.invoke(apiGray, args);
+                            return ReflectUtils.invoke(apiGray, method.getName(), Object.class, args);
                     }
                 });
     }

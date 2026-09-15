@@ -28,10 +28,18 @@ public class RagProperties {
      */
     private String embeddingEngine = "memory";
 
-    /**
-    * 默认向量数据库（jvector / milvus / MySQL / 内存）
+/**
+     * 默认向量数据库（jvector / milvus / MySQL / 内存）
+     *
+     * <p>默认 {@code jvector}；当运行环境缺少 jvector 核心依赖（native VectorizationProvider）时，
+     * {@link com.chua.starter.ai.support.configuration.rag.RagClientManager} 会自动降级为内存存储。</p>
      */
     private String vectorStorage = "jvector";
+
+    /**
+    * 向量维度（默认与 内存嵌入客户端 输出维度一致）
+     */
+    private int embeddingDimensions = 1536;
 
     /**
     * 默认文本切片大小（字符）

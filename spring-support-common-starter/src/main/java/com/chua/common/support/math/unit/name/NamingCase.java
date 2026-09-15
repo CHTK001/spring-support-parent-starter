@@ -1,11 +1,13 @@
 package com.chua.common.support.math.unit.name;
 
+import com.chua.common.support.lang.bean.NamingStyle;
+
 /**
 * 命名格式转换工具类，提供驼峰命名等多种命名格式转换功能
 *
 * @author CH
 * @since 4.0.0
- */
+  */
 public class NamingCase {
 
     /**
@@ -25,24 +27,12 @@ public class NamingCase {
         if (name == null || name.isEmpty()) {
             return name;
         }
-        StringBuilder sb = new StringBuilder();
-        boolean nextUpper = false;
-        for (int i = 0; i < name.length(); i++) {
-            char c = name.charAt(i);
-            if (c == '_' || c == '-' || c == ' ') {
-                nextUpper = true;
-            } else if (nextUpper) {
-                sb.append(Character.toUpperCase(c));
-                nextUpper = false;
-            } else {
-                if (sb.length() == 0) {
-                    sb.append(Character.toLowerCase(c));
-                } else {
-                    sb.append(c);
-                }
-            }
+        // 将连字符/空格统一归一为下划线，首字母大写归一为小写首字母后委托 NamingStyle
+        String normalized = name.replace('-', '_').replace(' ', '_');
+        if (!normalized.isEmpty() && Character.isUpperCase(normalized.charAt(0))) {
+            normalized = Character.toLowerCase(normalized.charAt(0)) + normalized.substring(1);
         }
-        return sb.toString();
+        return NamingStyle.UNDERSCORE.toCamel(normalized);
     }
 
     /**

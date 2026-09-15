@@ -587,7 +587,7 @@ public class FaceClientManager {
     * @return 配置摘要
      */
     public Map<String, String> describe() {
-        Map<String, String> desc = new HashMap<>();
+        Map<String, String> desc = new HashMap<>(8);
         desc.put("detector_model", settingReader.getStr(GROUP, "detector_model"));
         desc.put("feature_model", settingReader.getStr(GROUP, "feature_model"));
         desc.put("vector_storage", settingReader.getStr(GROUP, "vector_storage"));
