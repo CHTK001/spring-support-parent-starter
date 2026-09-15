@@ -41,6 +41,7 @@ spring:
     driver-class-name: org.h2.Driver
     username: sa
     password:
+
   h2:
     console:
       enabled: true
@@ -53,6 +54,14 @@ spring:
       port: 6379
       # password: xxx
       timeout: 3s
+
+  # guacd 远控隧道：本地 8082 连接 8080 服务器上的 guacd（124.221.230.112:4822 已开放）
+  support:
+    guacd:
+      host: 124.221.230.112
+      port: 4822
+      # 浏览器回连本机的 WS 隧道端点（guacamole 客户端 -> 8082 /ws/ms/server/terminal）
+      client-host: 127.0.0.1:8848
 
 mybatis-plus:
   mapper-locations: classpath:/mapper/**/*.xml
@@ -83,7 +92,7 @@ plugin:
   datasource:
     script:
       enable: false
-# 实时推送通道：socketio(29181)
+  # 实时推送通道：socketio(29181)
   # tshark 抓包逐包/会话状态广播（前端 subscribe("monitor","tshark-packet"/"tshark-session")）
   socket:
     enable: true
