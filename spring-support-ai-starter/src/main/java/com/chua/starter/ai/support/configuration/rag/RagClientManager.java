@@ -217,7 +217,7 @@ public class RagClientManager {
      * 解析 RAG 使用的 LLM：
      * 1. 按 rag_llm_model 从 ChatClientRegistry 查找已注册客户端
      * 2. 查不到则用 registry 默认客户端
-     * 3. 默认客户端为 echo 或不存在时，从 runtime 全局设置（provider/apiKey/baseUrl/model）直接构造真实客户端
+     * 3. 都没有时，从 runtime 全局设置（provider/apiKey/baseUrl/model）直接构造真实客户端
      */
     private ChatClient resolveChatClient(String ragLlmModel) {
         if (chatClientRegistry != null) {
@@ -229,19 +229,12 @@ public class RagClientManager {
                 log.warn("[RagClientManager] RAG LLM 模型 {} 未注册，回退全局默认", ragLlmModel);
             }
             ChatClient defaultClient = chatClientRegistry.getDefault();
-            if (defaultClient != null && !isEchoClient(defaultClient)) {
+            if (defaultClient != null) {
                 return defaultClient;
             }
         }
-        // registry 无真实客户端 → 从 runtime 全局设置直接构建
+        // registry 无客户端 → 从 runtime 全局设置直接构建
         return buildRuntimeChatClient();
-    }
-
-    /**
-     * 判断是否为回显客户端（无真实模型）。
-     */
-    private static boolean isEchoClient(ChatClient client) {
-        return client != null && client.getClass().getSimpleName().contains("Echo");
     }
 
     /**
