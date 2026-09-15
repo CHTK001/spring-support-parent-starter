@@ -104,32 +104,12 @@ public class AiConfiguration {
     }
 
     /**
-    * 本地回显 对话客户端 兜底 —— 无外部 AI 服务时保证会话链路可用。
-    *
-    * <p>当用户自行定义了名为 {@code echoChatClient} 的 Bean 时本兜底自动退避；
-    * 未配置真实 对话客户端 时，{@link #defaultChatClient} 仍会聚合本兜底，
-    * 使 对话 会话链路（POST → WS 流式 → turn.完成）在无模型环境下可联调，
-    * 生产环境应自行配置真实提供商客户端覆盖。</p>
-    * @return echo对话客户端的结果
-     */
-    @Bean
-    @ConditionalOnMissingBean(name = "echoChatClient")
-    public EchoChatClient echoChatClient() {
-        log.info("[AiConfiguration] 注册本地 Echo ChatClient（无真实模型时的兜底）");
-        /**
-        * echo对话客户端。
-        * @return echo对话客户端的结果
-         */
-        return new EchoChatClient();
-    }
-
-    /**
-    * 默认 对话客户端 — 聚合客户端。
-    *
-    * <p>通过 SPI 发现 ChatClient 实现，聚合为 AggregateChatClient。
-    * 如果找不到任何实现，返回 空（业务层自行处理兜底）。
-    * @param applicationContext application上下文
-    * @return 默认对话客户端的结果
+     * 默认 对话客户端 — 聚合客户端。
+     *
+     * <p>通过 SPI 发现 ChatClient 实现，聚合为 AggregateChatClient。
+     * 如果找不到任何实现，返回 空（业务层自行处理兜底）。
+     * @param applicationContext application上下文
+     * @return 默认对话客户端的结果
      */
     @Bean
     @ConditionalOnMissingBean
