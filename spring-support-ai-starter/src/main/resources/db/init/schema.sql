@@ -2993,11 +2993,16 @@ SELECT * FROM (
     '内置本地 ONNX BiRefNet Swin-T 512 轻量级图像抠图模块'
   UNION ALL
   SELECT '本地 ONNX 抠图 (BiRefNet 大 1024)', 'local-onnx-matting-birefnet-large',
-    'birefnet-large', 'MATTING',
+     'birefnet-large', 'MATTING',
     'local-onnx', 'onnx', 1, 1, 69,
     '内置本地 ONNX BiRefNet Swin-L 1024 高精度图像抠图模块'
-  UNION ALL
-  SELECT '本地 ONNX 图像特征 (CLIP ViT-B-32)', 'local-onnx-image-feature-clip-b32',
+   UNION ALL
+   SELECT '本地 ONNX 抠图 (MiGAN)', 'local-onnx-inpaint-migan',
+     'migan-perf', 'MATTING',
+     'local-onnx', 'onnx', 1, 1, 69,
+    '内置本地 ONNX MiGAN 动态尺寸图像修复模块'
+   UNION ALL
+   SELECT '本地 ONNX 图像特征 (CLIP ViT-B-32)', 'local-onnx-image-feature-clip-b32',
     'CLIP-ViT-B-32-IMAGE', 'IMAGE_FEATURE',
     'local-onnx', 'onnx', 1, 1, 70,
     '内置本地 ONNX CLIP ViT-B-32 图像特征提取模块�?12维，用于以图搜图�?
