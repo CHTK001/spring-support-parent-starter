@@ -410,3 +410,46 @@ WHERE NOT EXISTS (SELECT 1 FROM `ms_monitor_config` WHERE `ms_monitor_config_key
 INSERT INTO `ms_monitor_config` (`ms_monitor_config_key`, `ms_monitor_config_value`, `ms_monitor_config_desc`)
 SELECT 'monitor.cleanup.cron', '0 0 3 * * ?', '数据清理任务 cron'
 WHERE NOT EXISTS (SELECT 1 FROM `ms_monitor_config` WHERE `ms_monitor_config_key` = 'monitor.cleanup.cron');
+
+-- ============================================================
+-- 项目守护/指标告警策略与规则种子（由 spring-support-project-starter 喂指标）
+-- ============================================================
+INSERT INTO ms_monitor_alarm_policy (`ms_monitor_alarm_policy_name`, `ms_monitor_alarm_policy_enabled`, `ms_monitor_alarm_policy_remark`)
+SELECT '项目守护与指标', 1, '项目守护失败自动拉起与指标采集相关告警'
+WHERE NOT EXISTS (SELECT 1 FROM ms_monitor_alarm_policy WHERE `ms_monitor_alarm_policy_name` = '项目守护与指标');
+
+INSERT INTO ms_monitor_alarm_rule
+(`ms_monitor_alarm_rule_policy_id`, `ms_monitor_alarm_rule_metric_name`, `ms_monitor_alarm_rule_condition`,
+ `ms_monitor_alarm_rule_threshold`, `ms_monitor_alarm_rule_consecutive_count`, `ms_monitor_alarm_rule_silence_minutes`,
+ `ms_monitor_alarm_rule_level`, `ms_monitor_alarm_rule_enabled`)
+SELECT p.id, 'project.watchdog.fail', 'GT', 1, 1, 10, 'P2', 1
+FROM ms_monitor_alarm_policy p
+WHERE p.`ms_monitor_alarm_policy_name` = '项目守护与指标'
+  AND NOT EXISTS (SELECT 1 FROM ms_monitor_alarm_rule r WHERE r.`ms_monitor_alarm_rule_metric_name` = 'project.watchdog.fail');
+
+INSERT INTO ms_monitor_alarm_rule
+(`ms_monitor_alarm_rule_policy_id`, `ms_monitor_alarm_rule_metric_name`, `ms_monitor_alarm_rule_condition`,
+ `ms_monitor_alarm_rule_threshold`, `ms_monitor_alarm_rule_consecutive_count`, `ms_monitor_alarm_rule_silence_minutes`,
+ `ms_monitor_alarm_rule_level`, `ms_monitor_alarm_rule_enabled`)
+SELECT p.id, 'project.watchdog.restart.fail', 'GT', 1, 1, 10, 'P1', 1
+FROM ms_monitor_alarm_policy p
+WHERE p.`ms_monitor_alarm_policy_name` = '项目守护与指标'
+  AND NOT EXISTS (SELECT 1 FROM ms_monitor_alarm_rule r WHERE r.`ms_monitor_alarm_rule_metric_name` = 'project.watchdog.restart.fail');
+
+INSERT INTO ms_monitor_alarm_rule
+(`ms_monitor_alarm_rule_policy_id`, `ms_monitor_alarm_rule_metric_name`, `ms_monitor_alarm_rule_condition`,
+ `ms_monitor_alarm_rule_threshold`, `ms_monitor_alarm_rule_consecutive_count`, `ms_monitor_alarm_rule_silence_minutes`,
+ `ms_monitor_alarm_rule_level`, `ms_monitor_alarm_rule_enabled`)
+SELECT p.id, 'project.port.alive', 'LE', 0, 2, 10, 'P1', 1
+FROM ms_monitor_alarm_policy p
+WHERE p.`ms_monitor_alarm_policy_name` = '项目守护与指标'
+  AND NOT EXISTS (SELECT 1 FROM ms_monitor_alarm_rule r WHERE r.`ms_monitor_alarm_rule_metric_name` = 'project.port.alive');
+
+INSERT INTO ms_monitor_alarm_rule
+(`ms_monitor_alarm_rule_policy_id`, `ms_monitor_alarm_rule_metric_name`, `ms_monitor_alarm_rule_condition`,
+ `ms_monitor_alarm_rule_threshold`, `ms_monitor_alarm_rule_consecutive_count`, `ms_monitor_alarm_rule_silence_minutes`,
+ `ms_monitor_alarm_rule_level`, `ms_monitor_alarm_rule_enabled`)
+SELECT p.id, 'project.collect.fail', 'GT', 0, 3, 30, 'P3', 1
+FROM ms_monitor_alarm_policy p
+WHERE p.`ms_monitor_alarm_policy_name` = '项目守护与指标'
+  AND NOT EXISTS (SELECT 1 FROM ms_monitor_alarm_rule r WHERE r.`ms_monitor_alarm_rule_metric_name` = 'project.collect.fail');

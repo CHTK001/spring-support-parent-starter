@@ -121,8 +121,13 @@ public class ProjectMetricServiceImpl implements ProjectMetricService {
         if (!resolved.isOk()) {
             pushService.pushProgress(project.getId(), hostId, "METRIC", "COLLECT", "FAIL",
                     "凭据解析失败: " + resolved.getMsg(), project.getMsProjectCurrentVersion());
-            if (collectFailState.putIfAbsent(collectFailKey(project, host), Boolean.TRUE) == null) {
+            boolean wasFailed = Boolean.TRUE.equals(collectFailState.get(collectFailKey(project, host)));
+            if (!wasFailed) {
+                collectFailState.put(collectFailKey(project, host), Boolean.TRUE);
                 persistOne(project, host, ProjectAlarmHook.METRIC_COLLECT_FAIL, 1);
+            } else {
+                pushService.pushProjectMetric(project.getId(), hostId, ProjectAlarmHook.METRIC_COLLECT_FAIL, 1, java.time.LocalDateTime.now());
+                alarmHook.evaluateProjectMetric(project, ProjectAlarmHook.METRIC_COLLECT_FAIL, 1.0);
             }
             return;
         }
@@ -169,15 +174,25 @@ public class ProjectMetricServiceImpl implements ProjectMetricService {
         }
         if (metrics.isEmpty()) {
             // 全部命令执行失败（SSH 不可达/认证失败/命令异常）：
-            // 只在状态翻转时落一条采集失败占位指标（连续失败不重复刷屏），
-            // 恢复后由下一轮正常指标覆盖
-            if (collectFailState.putIfAbsent(collectFailKey(project, host), Boolean.TRUE) == null) {
+            // DB 只在状态翻转时落点（去刷屏）；但 alarm 引擎每周期都喂值（让 consecutiveCount 正常累计）
+            boolean wasFailed = Boolean.TRUE.equals(collectFailState.get(collectFailKey(project, host)));
+            if (!wasFailed) {
+                // 翻转：首次失败 → 落 DB + 推 socket + 喂告警
+                collectFailState.put(collectFailKey(project, host), Boolean.TRUE);
                 persistOne(project, host, ProjectAlarmHook.METRIC_COLLECT_FAIL, 1);
+            } else {
+                // 仍在失败：DB 不重复写，但每周期喂告警引擎（让连续触发计数器递增）
+                pushService.pushProjectMetric(project.getId(), hostId, ProjectAlarmHook.METRIC_COLLECT_FAIL, 1, java.time.LocalDateTime.now());
+                alarmHook.evaluateProjectMetric(project, ProjectAlarmHook.METRIC_COLLECT_FAIL, 1.0);
             }
             return;
         }
-        // 采集恢复正常：清除失败标记（下一轮再失败会重新翻转落点）
-        collectFailState.remove(collectFailKey(project, host));
+        // 采集恢复正常：清除失败标记
+        boolean wasFailedRecovery = Boolean.TRUE.equals(collectFailState.remove(collectFailKey(project, host)));
+        if (wasFailedRecovery) {
+            // 翻转恢复：落一条 collect.fail=0 表明恢复，推给 alarm 引擎归零连续计数
+            persistOne(project, host, ProjectAlarmHook.METRIC_COLLECT_FAIL, 0);
+        }
         persistMetrics(project, host, metrics);
         java.time.LocalDateTime collectTime = java.time.LocalDateTime.now();
         for (Map.Entry<String, Double> entry : metrics.entrySet()) {
