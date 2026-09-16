@@ -158,9 +158,9 @@ class ShardingRealTest {
         /**
         * 断言equals。
         * @param "order-2" "订单-2"
-        * @param names.get(0 名称.获取(0
+        * @param names.getFirst 名称.获取(0
          */
-        assertEquals("order-2", names.get(0), "分片路由应返回正确数据");
+        assertEquals("order-2", names.getFirst(), "分片路由应返回正确数据");
     }
 
     /**

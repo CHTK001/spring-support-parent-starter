@@ -208,7 +208,7 @@ public final class DatalakeAllInOneProbe {
             env.addTrace("step-1");
             env.addTrace("step-2");
             return env.getTrace().size() == 2
-                    && env.getTrace().get(0).equals("step-1");
+                    && env.getTrace().getFirst().equals("step-1");
         });
 
  // ━━━━━━━━ 12. 数据envelope 是否日志 判定 ━━━━━━━━

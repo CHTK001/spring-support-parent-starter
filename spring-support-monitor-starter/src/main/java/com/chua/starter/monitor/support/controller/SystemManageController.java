@@ -1,9 +1,13 @@
 package com.chua.starter.monitor.support.controller;
 
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.starter.monitor.support.service.LocalSystemInfoService;
+import com.chua.starter.server.support.entity.MsServerHost;
+import com.chua.starter.server.support.mapper.MsServerHostMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -43,6 +47,52 @@ public class SystemManageController {
     /** 是否 Windows 系统 */
     private static final boolean IS_WINDOWS = System.getProperty("os.name").toLowerCase(Locale.ROOT).contains("win");
 
+    @Autowired
+    private LocalSystemInfoService localSystemInfoService;
+
+    @Autowired
+    private MsServerHostMapper hostMapper;
+
+    /** 远程执行命令（通过 SSH） */
+    private String execRemoteCommand(Long hostId, String command) {
+        if (hostId == null) return execCommand(command.split(" "));
+        MsServerHost host = hostMapper.selectById(hostId);
+        if (host == null) return "";
+        try {
+            com.chua.common.support.network.protocol.ClientSetting setting = com.chua.common.support.network.protocol.ClientSetting.builder()
+                    .host(host.getServerHostAddress())
+                    .port(host.getServerHostPort() != null ? host.getServerHostPort() : 22)
+                    .username("root")
+                    .password("lvzhou2011")
+                    .connectTimeout(10_000L)
+                    .build();
+            try (com.chua.ssh.support.client.LinuxExecClient client = new com.chua.ssh.support.client.LinuxExecClient(setting)) {
+                client.connect();
+                com.chua.ssh.support.client.SshClient.ExecResult exec = client.executeCommand(command, 30_000);
+                return exec.stdout() != null ? exec.stdout().trim() : "";
+            }
+        } catch (Exception e) {
+            log.error("SSH 远程执行失败 host={} cmd={}", hostId, command, e);
+            return "";
+        }
+    }
+
+    // ==================== 主机基础信息（OSHI SPI） ====================
+
+    @Operation(summary = "获取本机基础信息", description = "通过 OSHI SPI 获取 CPU/内存/OS/网络接口/包管理器")
+    @GetMapping("/host-info")
+    public Mono<ReturnResult<Map<String, Object>>> hostInfo() {
+        return Mono.fromCallable(() -> ReturnResult.ok(localSystemInfoService.getHostInfo()))
+                .subscribeOn(Schedulers.boundedElastic());
+    }
+
+    @Operation(summary = "获取环境变量")
+    @GetMapping("/env")
+    public Mono<ReturnResult<List<Map<String, String>>>> envVars() {
+        return Mono.fromCallable(() -> ReturnResult.ok(localSystemInfoService.getEnvVars()))
+                .subscribeOn(Schedulers.boundedElastic());
+    }
+
     // ==================== 进程管理 ====================
 
     /**
@@ -60,9 +110,17 @@ public class SystemManageController {
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false, defaultValue = "cpu") String sortBy,
             @RequestParam(required = false, defaultValue = "desc") String sortOrder,
-            @RequestParam(required = false, defaultValue = "50") int limit) {
+            @RequestParam(required = false, defaultValue = "50") int limit,
+            @RequestParam(required = false) Long hostId) {
         return Mono.fromCallable(() -> {
-            List<Map<String, Object>> processes = IS_WINDOWS ? listProcessesWindows() : listProcessesLinux();
+            List<Map<String, Object>> processes;
+            if (hostId != null) {
+                // 远程 Linux: 通过 SSH 执行 ps
+                String output = execRemoteCommand(hostId, "ps -eo pid,ppid,pcpu,pmem,rss,comm,args --no-headers");
+                processes = parsePsOutput(output);
+            } else {
+                processes = IS_WINDOWS ? listProcessesWindows() : listProcessesLinux();
+            }
             // 搜索过滤
             if (keyword != null && !keyword.isBlank()) {
                 String kw = keyword.toLowerCase(Locale.ROOT);
@@ -489,7 +547,10 @@ public class SystemManageController {
                 String psPath = System.getenv("SystemRoot") + "\\System32\\WindowsPowerShell\\v1.0\\powershell.exe";
                 actualCmd = new String[cmd.length];
                 actualCmd[0] = psPath;
-                System.arraycopy(cmd, 1, actualCmd, 1, cmd.length - 1);
+                // 强制 PowerShell 输出 UTF-8，避免中文乱码
+                String psBody = cmd[1] != null ? cmd[1] : "";
+                actualCmd[1] = "[Console]::OutputEncoding=[Text.Encoding]::UTF8;" + psBody;
+                System.arraycopy(cmd, 2, actualCmd, 2, cmd.length - 2);
             }
             ProcessBuilder pb = new ProcessBuilder(actualCmd);
             pb.redirectErrorStream(true);
@@ -644,5 +705,27 @@ public class SystemManageController {
 
     private double parseDouble(String s) {
         try { return Double.parseDouble(s.trim()); } catch (Exception e) { return 0.0; }
+    }
+
+    /** 解析 ps 输出 */
+    private List<Map<String, Object>> parsePsOutput(String output) {
+        List<Map<String, Object>> list = new ArrayList<>();
+        if (output == null || output.isBlank()) return list;
+        for (String line : output.split("\\r?\\n")) {
+            if (line.isBlank()) continue;
+            String[] parts = line.trim().split("\\s+", 9);
+            if (parts.length >= 6) {
+                Map<String, Object> p = new LinkedHashMap<>();
+                p.put("pid", parseInt(parts[0]));
+                p.put("parentPid", parseInt(parts[1]));
+                p.put("cpu", parseDouble(parts[2]));
+                p.put("memory", parseDouble(parts[3]));
+                p.put("memoryBytes", parseLong(parts[4]) * 1024L);
+                p.put("name", parts[5]);
+                p.put("command", parts.length > 6 ? parts[6] : "");
+                list.add(p);
+            }
+        }
+        return list;
     }
 }

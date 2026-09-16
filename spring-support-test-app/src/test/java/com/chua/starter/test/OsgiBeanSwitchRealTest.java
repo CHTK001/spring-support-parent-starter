@@ -313,9 +313,9 @@ class OsgiBeanSwitchRealTest {
         /**
         * 断言equals。
         * @param "2.0.0" "2.0.0"
-        * @param remaining.get(0 remaining.获取(0
+        * @param remaining.getFirst remaining.获取(0
          */
-        assertEquals("2.0.0", remaining.get(0).getVersion(), "剩余 bundle 应为 v2");
+        assertEquals("2.0.0", remaining.getFirst().getVersion(), "剩余 bundle 应为 v2");
 
         List<GreetService> after = osgiLauncher.getServices(GreetService.class);
         /**
@@ -327,9 +327,9 @@ class OsgiBeanSwitchRealTest {
         /**
         * 断言equals。
         * @param "v2:world" "v2:world"
-        * @param after.get(0 之后.获取(0
+        * @param after.getFirst 之后.获取(0
          */
-        assertEquals("v2:world", after.get(0).greet("world"), "剩余服务应返回 v2 结果");
+        assertEquals("v2:world", after.getFirst().greet("world"), "剩余服务应返回 v2 结果");
 
  // 一致性：卸载 v1 后 对象上下文 也只应查到 v2
         Collection<GreetService> afterContext = objectContext.getBeanOfTypeCollection(GreetService.class);
@@ -348,7 +348,7 @@ class OsgiBeanSwitchRealTest {
                 "卸载 v1 后 ObjectContext 剩余服务应返回 v2 结果");
 
         // 6) 清理：主动基于 bundle 对象卸载 v2
-        remaining.get(0).uninstall();
+        remaining.getFirst().uninstall();
         /**
         * 断言空。
         * @param osgiLauncher.getService(GreetService.class osgilauncher.获取服务(greet服务.类

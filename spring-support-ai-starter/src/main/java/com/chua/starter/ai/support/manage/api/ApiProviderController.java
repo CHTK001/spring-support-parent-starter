@@ -251,19 +251,12 @@ public class ApiProviderController {
         entity.setUpdatedAt(null);
         providerMapper.insert(entity);
 
-        // 初始模型（原子创建必须包含至少一条可用模型）
+        // 初始模型（可选，用户可以后续手动添加）
         Map<String, Object> initialModel = uncheckedCast(body.get("initial_model"));
-        if (initialModel == null) {
-            /**
-            * api异常。
-            * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
-            * @param 不能为空" 不能为空"
-            * @return api异常的结果
-             */
-            throw new ApiException(ApiErrorCode.INVALID_PARAM, "initial_model 不能为空");
+        if (initialModel != null) {
+            SysAiProviderModel modelEntity = toModelEntity(providerId, initialModel, now);
+            modelMapper.insert(modelEntity);
         }
-        SysAiProviderModel modelEntity = toModelEntity(providerId, initialModel, now);
-        modelMapper.insert(modelEntity);
 
  // 初始连接（按 角色 建表）
         List<Map<String, Object>> connections = listOfMap(body, "connections");
@@ -462,6 +455,36 @@ public class ApiProviderController {
         boolean tryFix = body != null && Boolean.TRUE.equals(body.get("try_fix"));
         return ApiResult.ok(fetchModelsFromUpstream(entity.getPlatform(), entity.getBaseUrl(),
                 entity.getCredentials(), entity.getAuthScheme(), entity.getProxy(), tryFix));
+    }
+
+    /**
+     * 从提供商远程获取模型列表（GET接口，兼容前端调用）。
+     *
+     * <p>前端guada版本调用的是 GET /providers/{id}/remote_models，
+     * 这里提供兼容的GET接口，内部调用同样的逻辑，
+     * 并将返回格式转换成前端期望的 items[].modelName 格式。</p>
+     *
+     * @param providerId 提供者 标识
+     * @return FetchModelsResponse
+     */
+    @GetMapping("/providers/{provider_id}/remote_models")
+    public ApiResult<Map<String, Object>> fetchRemoteModels(@PathVariable("provider_id") String providerId) {
+        SysAiProvider entity = requireProvider(providerId);
+        Map<String, Object> upstreamResult = fetchModelsFromUpstream(entity.getPlatform(), entity.getBaseUrl(),
+                entity.getCredentials(), entity.getAuthScheme(), entity.getProxy(), false);
+
+        // 转换格式：data.models[].name → data.items[].modelName
+        List<Map<String, Object>> models = (List<Map<String, Object>>) upstreamResult.get("models");
+        List<Map<String, Object>> items = new ArrayList<>();
+        if (models != null) {
+            for (Map<String, Object> m : models) {
+                Map<String, Object> item = new LinkedHashMap<>(m);
+                item.put("modelName", m.get("name") != null ? m.get("name") : m.get("id"));
+                items.add(item);
+            }
+        }
+        upstreamResult.put("items", items);
+        return ApiResult.ok(upstreamResult);
     }
 
     /**
@@ -1002,6 +1025,21 @@ public class ApiProviderController {
             
             map.put("api_key_count", keyCount);
             map.put("api_key_mask", firstKeyMask);
+
+            // 返回完整的key列表，方便前端编辑时显示
+            List<String> allKeys = new ArrayList<>();
+            if (singleKey != null && !singleKey.toString().isEmpty()) {
+                for (String k : singleKey.toString().split(",")) {
+                    String trimmed = k.trim();
+                    if (!trimmed.isEmpty()) allKeys.add(trimmed);
+                }
+            }
+            if (multiKeys instanceof List) {
+                for (Object k : (List<?>) multiKeys) {
+                    if (k != null && !k.toString().isEmpty()) allKeys.add(k.toString().trim());
+                }
+            }
+            map.put("api_keys", allKeys);
         }
         List<Map<String, Object>> modelItems = new ArrayList<>(8); // 模型数量不可预估
         for (SysAiProviderModel model : models) {

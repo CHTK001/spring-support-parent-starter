@@ -750,6 +750,30 @@ public class DeployServiceImpl implements DeployService {
         if (isBlank(script)) {
             return ReturnResult.error("项目未配置" + action + "脚本");
         }
+        // 项目级互斥锁：防止同项目 start/stop/restart 并发操作互相踩目录
+        java.util.concurrent.atomic.AtomicBoolean lock =
+                projectDeployLocks.computeIfAbsent(projectId, k -> new java.util.concurrent.atomic.AtomicBoolean(false));
+        if (!lock.compareAndSet(false, true)) {
+            return ReturnResult.error("该项目正在操作中（" + action + "），请勿并发操作");
+        }
+        try {
+            return lifecycleInternal(project, action, targetStatus);
+        } finally {
+            lock.set(false);
+            projectDeployLocks.remove(projectId);
+        }
+    }
+
+    private ReturnResult<List<MsProjectDeployLog>> lifecycleInternal(MsProject project, String action, String targetStatus) {
+        String script = switch (action) {
+            case ProjectConstants.ACTION_START -> project.getMsProjectStartScript();
+            case ProjectConstants.ACTION_STOP -> project.getMsProjectStopScript();
+            case ProjectConstants.ACTION_RESTART -> project.getMsProjectRestartScript();
+            default -> null;
+        };
+        if (isBlank(script)) {
+            return ReturnResult.error("项目未配置" + action + "脚本");
+        }
         List<Long> hostIds = parseHostIds(project.getMsProjectHostIds());
         if (hostIds.isEmpty()) {
             return ReturnResult.error("项目未绑定目标服务器");
