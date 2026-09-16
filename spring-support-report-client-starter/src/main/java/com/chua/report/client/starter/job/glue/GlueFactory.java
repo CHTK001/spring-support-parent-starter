@@ -1,6 +1,7 @@
 package com.chua.report.client.starter.job.glue;
 
 
+import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.report.client.starter.job.handler.JobHandler;
 import groovy.lang.GroovyClassLoader;
 
@@ -60,7 +61,8 @@ public class GlueFactory {
         if (codeSource!=null && codeSource.trim().length()>0) {
             Class<?> clazz = getCodeSourceClass(codeSource);
             if (clazz != null) {
-                Object instance = clazz.newInstance();
+                // [P3C 1.10] clazz.newInstance() 已在 JDK9+ 弃用，改走 ReflectUtils.instantiate
+                Object instance = ReflectUtils.instantiate(clazz);
                 if (instance!=null) {
                     if (instance instanceof JobHandler) {
                         this.injectService(instance);

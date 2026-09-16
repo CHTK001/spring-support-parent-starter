@@ -6,8 +6,8 @@ import com.chua.starter.eduai.service.impl.EduMarkingServiceImpl;
 import com.chua.starter.queue.MessageTemplate;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -26,14 +26,20 @@ import java.util.Map;
 @Slf4j
 @RestController
 @RequestMapping("/v2/edu/debug")
-@RequiredArgsConstructor
 @Tag(name = "教育AI-调试")
 public class EduAiDebugController {
 
     /** EDUAI服务 */
     private final EduAiService eduAiService;
-    /** 消息模板 */
+    /** 消息模板（队列未启用时为null） */
     private final MessageTemplate messageTemplate;
+
+    @Autowired
+    public EduAiDebugController(EduAiService eduAiService,
+            @Autowired(required = false) MessageTemplate messageTemplate) {
+        this.eduAiService = eduAiService;
+        this.messageTemplate = messageTemplate;
+    }
 
     /**
     * AI 健康检查。
@@ -44,8 +50,13 @@ public class EduAiDebugController {
     public ReturnResult<Map<String, Object>> aiHealth() {
         Map<String, Object> info = new HashMap<>();
         info.putAll(eduAiService.debugInfo());
-        info.put("queueType", messageTemplate.getType());
-        info.put("queueConnected", messageTemplate.isConnected());
+        if (messageTemplate != null) {
+            info.put("queueType", messageTemplate.getType());
+            info.put("queueConnected", messageTemplate.isConnected());
+        } else {
+            info.put("queueType", "none");
+            info.put("queueConnected", false);
+        }
         return ReturnResult.ok(info);
     }
 
@@ -56,6 +67,9 @@ public class EduAiDebugController {
     @Operation(summary = "队列连通性测试")
     @GetMapping("/queue-echo")
     public ReturnResult<String> queueEcho() {
+        if (messageTemplate == null) {
+            return ReturnResult.error("queue not enabled");
+        }
         try {
             String echoTopic = "edu.marking.echo";
             messageTemplate.send(echoTopic, "ping");

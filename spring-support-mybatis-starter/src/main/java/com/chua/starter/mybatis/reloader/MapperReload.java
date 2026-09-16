@@ -2,6 +2,7 @@ package com.chua.starter.mybatis.reloader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.common.support.utils.ClassUtils;
 import com.chua.common.support.utils.ThreadUtils;
 import com.chua.starter.mybatis.properties.MybatisPlusProperties;
@@ -614,18 +615,20 @@ public class MapperReload implements Reload, DisposableBean {
     }
 
     /**
-    * 根据反射获取配置对象中属性值
-    *
-    * @param targetConfiguration 配置对象
-    * @param aClass 目标类型
-    * @param field 字段名
-    * @return 字段值
-    * @throws Exception 反射异常
-     */
-    public static Object getFieldValue(Configuration targetConfiguration, Class<?> aClass, String field) throws Exception {
-        Field resultMapsField = aClass.getDeclaredField(field);
-        ClassUtils.setAccessible(resultMapsField);
-        return resultMapsField.get(targetConfiguration);
+     * 根据反射获取配置对象中属性值
+     *
+     * @param targetConfiguration 配置对象
+     * @param aClass 目标类型
+     * @param field 字段名
+     * @return 字段值
+      */
+    public static Object getFieldValue(Configuration targetConfiguration, Class<?> aClass, String field) {
+        // [P3C 1.10] 改走 ReflectUtils.getField，底层已处理 setAccessible
+        Object value = ReflectUtils.getField(targetConfiguration, field);
+        if (value == null) {
+            log.error("反射获取字段失败: {}.{}", aClass.getSimpleName(), field);
+        }
+        return value;
     }
 
     /**

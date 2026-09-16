@@ -1,5 +1,5 @@
 server:
-  port: 8081
+  port: 8082
 
 spring:
   application:
@@ -50,7 +50,7 @@ spring:
   # Redis（告警静默期 + 可选时序引擎 monitor.timeseries.engine=redis）
   data:
     redis:
-      host: 127.0.0.1
+      host: 172.16.0.40
       port: 6379
       # password: xxx
       timeout: 3s

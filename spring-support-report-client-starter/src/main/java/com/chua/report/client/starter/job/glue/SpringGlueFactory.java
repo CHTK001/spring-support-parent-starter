@@ -1,5 +1,6 @@
 package com.chua.report.client.starter.job.glue;
 
+import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.spring.support.configuration.SpringBeanUtils;
 import jakarta.annotation.Resource;
 import org.slf4j.Logger;
@@ -62,14 +63,10 @@ public class SpringGlueFactory extends GlueFactory{
                         }
 
                         if (fieldBean != null) {
-                            field.setAccessible(true);
-
-                            try {
-                                field.set(instance, fieldBean);
-                            } catch (IllegalArgumentException var9) {
-                                log.error(var9.getMessage(), var9);
-                            } catch (IllegalAccessException var10) {
-                                log.error(var10.getMessage(), var10);
+                            // [P3C 1.10] 改走 ReflectUtils.setField
+                            boolean ok = ReflectUtils.setField(instance, field.getName(), fieldBean);
+                            if (!ok) {
+                                log.error("注入字段失败: {}.{}", instance.getClass().getSimpleName(), field.getName());
                             }
                         }
                     }

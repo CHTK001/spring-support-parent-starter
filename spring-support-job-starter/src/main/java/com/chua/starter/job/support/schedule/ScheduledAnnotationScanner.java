@@ -96,7 +96,7 @@ public class ScheduledAnnotationScanner implements BeanPostProcessor, SmartIniti
             throw new IllegalStateException("@Scheduled 方法必须无参, target="
                     + targetClass.getName() + "#" + method.getName());
         }
-        method.setAccessible(true);
+        // [P3C 1.10] ReflectUtils.invoke 内部使用 privateLookupIn，无需 setAccessible
         String beanName = targetClass.getSimpleName();
         String methodName = method.getName();
         Runnable task = () -> {

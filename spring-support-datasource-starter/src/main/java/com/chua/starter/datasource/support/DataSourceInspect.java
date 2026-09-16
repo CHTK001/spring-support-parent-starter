@@ -1,5 +1,6 @@
 package com.chua.starter.datasource.support;
 
+import com.chua.common.support.lang.bean.NamingStyle;
 import com.chua.starter.datasource.properties.HikariDataSourceProperties;
 import com.chua.starter.datasource.properties.MultiDataSourceProperties;
 import com.chua.starter.datasource.properties.MultiDataSourceSettingProperties;
@@ -451,8 +452,8 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
             String key = entry.getKey();
             if (key.startsWith(stripPrefix)) {
                 String prop = key.substring(stripPrefix.length());
- // kebab-大小写 → camel大小写
-                prop = kebabToCamelCase(prop);
+                // kebab-大小写 → camel大小写
+                prop = NamingStyle.ROMAN.toCamel(prop);
                 toSet.put(prop, entry.getValue());
             }
         }
@@ -460,29 +461,6 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
             provider.setProperties(hikari, toSet);
             log.info("[Datasource] 应用 HikariCP 属性: {}", toSet);
         }
-    }
-
-    /**
-    * kebab转为camel大小写
-    *
-    * @param kebab kebab
-    * @return kebab转为camel大小写的结果
-     */
-    private static String kebabToCamelCase(String kebab) {
-        StringBuilder sb = new StringBuilder(kebab.length());
-        boolean nextUpper = false;
-        for (int i = 0; i < kebab.length(); i++) {
-            char ch = kebab.charAt(i);
-            if (ch == '-') {
-                nextUpper = true;
-            } else if (nextUpper) {
-                sb.append(Character.toUpperCase(ch));
-                nextUpper = false;
-            } else {
-                sb.append(ch);
-            }
-        }
-        return sb.toString();
     }
 
     /**
