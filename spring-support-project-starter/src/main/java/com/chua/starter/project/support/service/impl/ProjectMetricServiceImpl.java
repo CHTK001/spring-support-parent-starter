@@ -80,8 +80,8 @@ public class ProjectMetricServiceImpl implements ProjectMetricService {
     /** 单主机指标采集超时（秒） */
     private static final int COLLECT_TIMEOUT_SECONDS = 20;
 
-    /** 指标采集专用线程池 */
-    private final ExecutorService collectExecutor = Executors.newSingleThreadExecutor(r -> {
+    /** 指标采集专用线程池（多项目并行采集，4 线程） */
+    private final ExecutorService collectExecutor = Executors.newFixedThreadPool(4, r -> {
         Thread t = new Thread(r, "project-metric-collect");
         t.setDaemon(true);
         return t;

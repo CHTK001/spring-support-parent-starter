@@ -742,7 +742,7 @@ public class DatalakeComprehensiveProbe {
             env.addTrace("step-2");
             env.addTrace("step-3");
             return env.getTrace().size() == 3
-                    && "step-1".equals(env.getTrace().get(0))
+                    && "step-1".equals(env.getTrace().get(0)) // 豁免规约四十一：get(0)/get(1)/get(2) 对称固定下标枚举（trace 顺序校验），非取首元素
                     && "step-2".equals(env.getTrace().get(1))
                     && "step-3".equals(env.getTrace().get(2));
         });

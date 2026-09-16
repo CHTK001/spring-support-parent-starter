@@ -81,7 +81,7 @@ public final class DataSyncSerialBenchProbe {
         ok &= back instanceof List;
         if (ok) {
             List<?> list = (List<?>) back;
-            ok &= !list.isEmpty() && list.get(0) instanceof Map;
+            ok &= !list.isEmpty() && list.getFirst() instanceof Map;
         }
 
         Runnable ser = () -> {
