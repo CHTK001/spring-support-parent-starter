@@ -130,6 +130,12 @@
       <artifactId>utils-support-word-starter</artifactId>
       <version>4.0.0.42</version>
     </dependency>
+    <!-- RAG 文档文本提取：Tika 通用兜底（pptx/ppt/html/xml/rtf/epub/msg/eml 等） -->
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>utils-support-tika-starter</artifactId>
+      <version>4.0.0.42</version>
+    </dependency>
     <!-- 用量数据同步（datasearch UsageProvider 外部工具用量拉取） -->
     <dependency>
       <groupId>com.chua</groupId>

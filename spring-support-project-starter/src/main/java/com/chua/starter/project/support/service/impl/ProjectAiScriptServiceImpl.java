@@ -67,11 +67,54 @@ public class ProjectAiScriptServiceImpl implements ProjectAiScriptService {
             if (text == null || text.isBlank()) {
                 return ReturnResult.error("AI 返回为空，请重试");
             }
-            return ReturnResult.ok(stripFence(text));
+            String script = stripFence(text);
+            String danger = auditScript(script, linux);
+            if (danger != null) {
+                log.warn("[project-ai] 生成脚本含高危命令，已拦截回填: {}", danger);
+                return ReturnResult.error("AI 生成的脚本包含高危操作，已拦截（" + danger + "），请手动编写或重新生成");
+            }
+            return ReturnResult.ok(script);
         } catch (Exception e) {
             log.warn("[project-ai] 脚本生成失败: {}", e.getMessage());
             return ReturnResult.error("AI 生成失败: " + rootMsg(e));
         }
+    }
+
+    /**
+     * 高危命令模式（命中即拦截回填，前端改为手动编写）
+     */
+    private static final java.util.List<java.util.regex.Pattern> DANGEROUS_PATTERNS = java.util.List.of(
+            // 递归删除根/系统目录
+            java.util.regex.Pattern.compile("(?i)\\brm\\s+(-[a-z]*r[a-z]*|--recursive)\\s+[^\\n]*\\s/(\\s|$|;)"),
+            java.util.regex.Pattern.compile("(?i)\\brm\\s+-rf?\\s+/(\\s|$|;|&&|\\|\\|)"),
+            java.util.regex.Pattern.compile("(?i):\\(\\)\\s*\\{\\s*:\\s*\\|\\s*:\\s*&\\s*\\}"), // fork 炸弹
+            java.util.regex.Pattern.compile("(?i)\\bmkfs\\b|\\bdd\\s+.*of=/dev/(sd|hd|vd|nvme)"),
+            java.util.regex.Pattern.compile("(?i)\\bshutdown\\b|\\breboot\\b|\\bpoweroff\\b|\\binit\\s+[06]\\b"),
+            java.util.regex.Pattern.compile("(?i)chmod\\s+-R\\s+777\\s+/"),
+            java.util.regex.Pattern.compile("(?i)curl\\s+.*\\|\\s*(sh|bash)\\b"), // curl 管道执行
+            java.util.regex.Pattern.compile("(?i)wget\\s+.*\\|\\s*(sh|bash)\\b"));
+
+    /**
+     * 脚本安全审计：高危命令拦截
+     *
+     * @param script 脚本
+     * @param linux  是否 Linux
+     * @return 拦截原因，通过返回 空
+     */
+    private String auditScript(String script, boolean linux) {
+        if (script == null || script.isBlank()) {
+            return null;
+        }
+        for (java.util.regex.Pattern pattern : DANGEROUS_PATTERNS) {
+            java.util.regex.Matcher matcher = pattern.matcher(script);
+            if (matcher.find()) {
+                return "疑似危险命令: " + matcher.group().trim().substring(0, Math.min(40, matcher.group().trim().length()));
+            }
+        }
+        if (script.length() > 8000) {
+            return "脚本过长(>" + script.length() + "字符)，建议分拆后手动编写";
+        }
+        return null;
     }
 
     /**
