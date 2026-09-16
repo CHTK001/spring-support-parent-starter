@@ -92,8 +92,8 @@ public class WatchdogServiceImpl implements WatchdogService {
     /** 项目最近一次检测结果（HEALTHY/UNHEALTHY/RESTARTED） */
     private final ConcurrentHashMap<Long, String> lastResultMap = new ConcurrentHashMap<>();
 
-    /** 守护探测专用线程池（单主机探测超时控制） */
-    private final ExecutorService probeExecutor = Executors.newSingleThreadExecutor(r -> {
+    /** 守护探测专用线程池（多项目并行探测，4 线程） */
+    private final ExecutorService probeExecutor = Executors.newFixedThreadPool(4, r -> {
         Thread t = new Thread(r, "project-watchdog-probe");
         t.setDaemon(true);
         return t;

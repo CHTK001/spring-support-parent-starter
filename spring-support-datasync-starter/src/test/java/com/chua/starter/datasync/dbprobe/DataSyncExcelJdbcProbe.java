@@ -218,7 +218,7 @@ public final class DataSyncExcelJdbcProbe {
         long rows = drive(name, source, sink);
         List<Map<String, Object>> readBack = new ExcelFileSource("rb-src", "rb-input", out.toString())
                 .readAll();
-        Map<String, Object> head = readBack.get(0);
+        Map<String, Object> head = readBack.getFirst();
         if (!(head.get("id") instanceof Number) || ((Number) head.get("id")).longValue() != 0L
                 || !"user0".equals(head.get("name"))) {
             System.out.println("[EXCEL-JDBC-PROBE] excel 内容抽检失败(首行): " + head);
@@ -330,7 +330,7 @@ public final class DataSyncExcelJdbcProbe {
         long rows = drive(name, source, sink);
         List<Map<String, Object>> readBack = new ExcelFileSource("rb-csv", "rb-input", excelOut.toString())
                 .readAll();
-        Map<String, Object> head = readBack.get(0);
+        Map<String, Object> head = readBack.getFirst();
         Map<String, Object> tail = readBack.get(readBack.size() - 1);
         boolean headOk = readBack.size() == rows
                 && "user0".equals(head.get("name"))
@@ -388,12 +388,12 @@ public final class DataSyncExcelJdbcProbe {
         List<Map<String, Object>> sheet1 = src.readAll(1);
         List<Map<String, Object>> sheetByName = src.readAll("sheet1");
         boolean ok = sheet0.size() == 100 && sheet1.size() == 50
-                && "user0".equals(sheet0.get(0).get("name"))
-                && "bob0".equals(sheet1.get(0).get("name"))
+                && "user0".equals(sheet0.getFirst().get("name"))
+                && "bob0".equals(sheet1.getFirst().get("name"))
                 && sheet1.size() == sheetByName.size();
         System.out.println("[EXCEL-JDBC-PROBE] 多sheet抽检: sheet0=" + sheet0.size()
                 + ", sheet1(索引)=" + sheet1.size() + ", sheet1(名称)=" + sheetByName.size()
-                + ", 首行=" + sheet0.get(0).get("name") + "/" + sheet1.get(0).get("name")
+                + ", 首行=" + sheet0.getFirst().get("name") + "/" + sheet1.getFirst().get("name")
                 + " => " + (ok ? "PASS" : "FAIL"));
         if (!ok) {
             System.out.println("[EXCEL-JDBC-PROBE] 场景失败: " + name);
@@ -429,7 +429,7 @@ public final class DataSyncExcelJdbcProbe {
         List<Map<String, Object>> readBack = new ExcelFileSource("big-src", "big-input", excel.toString())
                 .readAll();
         long readMs = System.currentTimeMillis() - start;
-        boolean ok = readBack.size() == big && "user0".equals(readBack.get(0).get("name"));
+        boolean ok = readBack.size() == big && "user0".equals(readBack.getFirst().get("name"));
         System.out.println("[EXCEL-JDBC-PROBE] 10万行: 写出=" + writeMs + "ms, 读回=" + readMs
                 + "ms, 行数=" + readBack.size() + " => " + (ok ? "PASS" : "FAIL"));
         return ok ? 0 : 1;
@@ -484,7 +484,7 @@ public final class DataSyncExcelJdbcProbe {
  // 幂等校验：按 标识 去重后比对（chronicledispatcher提供者 tailer 存在重复投递 ~1.8x，为已知问题待专项修复；
         // 数据完整性以「唯一 id 数 == 源行数」为准，重复不影响下游幂等写入场景）
         long unique = received.stream().map(m -> m.get("id")).distinct().count();
-        boolean ok = unique == ROWS && "user0".equals(received.get(0).get("name"));
+        boolean ok = unique == ROWS && "user0".equals(received.getFirst().get("name"));
         System.out.println("[EXCEL-JDBC-PROBE] chronicle 收到=" + received.size() + "/" + ROWS
                 + " 唯一=" + unique + (received.size() > ROWS ? " [存在重复投递,已知问题]" : "")
                 + " => " + (ok ? "PASS(幂等)" : "FAIL"));
@@ -722,7 +722,7 @@ public final class DataSyncExcelJdbcProbe {
         System.out.println("[EXCEL-JDBC-PROBE] 单元格类型种子已生成: " + excel);
 
         List<Map<String, Object>> rows = new ExcelFileSource("types-src", "in", excel.toString()).readAll();
-        Map<String, Object> r = rows.get(0);
+        Map<String, Object> r = rows.getFirst();
         boolean ok = "text".equals(r.get("str"))
                 && r.get("num") instanceof Number && ((Number) r.get("num")).doubleValue() == 42.5d
                 && Boolean.TRUE.equals(r.get("bool"));

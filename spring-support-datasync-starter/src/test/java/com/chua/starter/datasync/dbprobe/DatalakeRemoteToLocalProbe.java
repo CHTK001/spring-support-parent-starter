@@ -215,7 +215,7 @@ public final class DatalakeRemoteToLocalProbe {
             if (LOG_WRITES.isEmpty()) {
                 return false;
             }
-            String first = LOG_WRITES.get(0);
+            String first = LOG_WRITES.getFirst();
             String last = LOG_WRITES.get(LOG_WRITES.size() - 1);
             boolean firstOk = first.contains("user_1") || first.contains("id=1");
             boolean lastOk = first.contains("user_50") || last.contains("user_50") || last.contains("id=50");
