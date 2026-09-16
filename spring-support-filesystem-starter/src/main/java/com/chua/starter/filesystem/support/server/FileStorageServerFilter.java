@@ -8,6 +8,7 @@ import com.chua.common.support.network.server.request.ServerRequest;
 import com.chua.common.support.network.server.response.ServerResponse;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.spi.annotations.SpiDescribe;
+import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.common.support.storage.FileStorage;
 import com.chua.common.support.storage.metadata.Metadata;
 import com.chua.common.support.storage.request.ExistObjectRequest;
@@ -1078,11 +1079,13 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         Set<String> seenFilters = new LinkedHashSet<>();
         for (String spiClassName : IMAGE_FILTER_SPI_CLASSES) {
             try {
-                Class<?> spiType = Class.forName(spiClassName);
+                Class<?> spiType = ReflectUtils.forName(spiClassName);
+                if (spiType == null) {
+                    log.debug("图片滤镜 SPI 接口未找到[{}]", spiClassName);
+                    continue;
+                }
                 ServiceProvider provider = ServiceProvider.of((Class) spiType);
                 seenFilters.addAll(provider.getExtensions());
-            } catch (ClassNotFoundException e) {
-                log.debug("图片滤镜 SPI 接口未找到[{}]: {}", spiClassName, e.getMessage());
             } catch (Throwable t) {
                 log.warn("图片滤镜 SPI 实现加载失败[{}]: {}", spiClassName, t.getMessage());
             }
@@ -1101,7 +1104,10 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
     private String resolveFilterLabel(String name) {
         for (String spiClassName : IMAGE_FILTER_SPI_CLASSES) {
             try {
-                Class<?> spiType = Class.forName(spiClassName);
+                Class<?> spiType = ReflectUtils.forName(spiClassName);
+                if (spiType == null) {
+                    continue;
+                }
                 ServiceProvider provider = ServiceProvider.of((Class) spiType);
                 Object instance = provider.getExtension(name);
                 if (instance != null) {

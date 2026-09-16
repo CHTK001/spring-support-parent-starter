@@ -1,5 +1,6 @@
 package com.chua.starter.datasource.util;
 
+import com.chua.common.support.reflection.ReflectUtils;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import lombok.extern.slf4j.Slf4j;
@@ -206,7 +207,10 @@ public class ClassUtils {
         }
 
         try {
-            return (T) name.newInstance();
+            // [P3C 1.10] clazz.newInstance() 已在 JDK9+ 弃用，改走 ReflectUtils.instantiate
+            @SuppressWarnings("unchecked")
+            Class<T> typed = (Class<T>) name;
+            return ReflectUtils.instantiate(typed);
         } catch (Throwable e) {
             log.error("", e);
         }

@@ -1,5 +1,6 @@
 package com.chua.starter.oauth.client.support.configuration;
 
+import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.lang.NamingCase;
@@ -193,9 +194,9 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
         }
         if (null == convert) {
             Object newInstance = null;
-            try {
-                newInstance = parameterType.getDeclaredConstructor().newInstance();
-            } catch (Exception e) {
+            // [P3C 1.10] 改走 ReflectUtils.instantiate，失败时返回 null 语义保持一致
+            newInstance = ReflectUtils.instantiate(parameterType);
+            if (newInstance == null) {
                 return null;
             }
             BeanMap beanMap = BeanMap.create(newInstance);

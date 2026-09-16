@@ -70,8 +70,8 @@ public class EventListenerProcessor {
         for (Method method : clazz.getDeclaredMethods()) {
             OnEvent onEvent = method.getAnnotation(OnEvent.class);
             if (onEvent != null) {
+                // [P3C 1.10] ReflectUtils.invoke 内部使用 privateLookupIn，无需 setAccessible
                 String eventName = onEvent.value();
-                method.setAccessible(true);
                 
                 EventHandler handler = new EventHandler(listener, method);
                 eventHandlers.computeIfAbsent(eventName, k -> new CopyOnWriteArrayList<>()).add(handler);

@@ -41,6 +41,9 @@ public class ProjectMetricWheel {
     /** 指标采集服务 */
     private final ProjectMetricService metricService;
 
+    /** 模块配置（超期指标保留/清理间隔） */
+    private final com.chua.starter.project.support.config.ProjectProperties projectProperties;
+
     /** 槽位：每个槽位挂该 tick 到期的项目 ID */
     private final List<List<Long>> slots = newSlotArray();
 
@@ -78,6 +81,17 @@ public class ProjectMetricWheel {
         });
         scheduleAllEnabled();
         wheelExecutor.scheduleAtFixedRate(this::onTick, TICK_MS, TICK_MS, TimeUnit.MILLISECONDS);
+        // 超期指标定期清理（保留天数外删除）
+        int cleanupSec = projectProperties.getMetricCleanupIntervalSeconds();
+        if (cleanupSec > 0 && projectProperties.getMetricRetentionDays() > 0) {
+            runExecutor.scheduleWithFixedDelay(() -> {
+                try {
+                    metricService.cleanupExpired();
+                } catch (Exception e) {
+                    log.warn("[project-metric] 指标定期清理异常: {}", e.getMessage());
+                }
+            }, cleanupSec, cleanupSec, TimeUnit.SECONDS);
+        }
         log.info("[project-metric] 时间轮已启动：{} 槽 × {}ms tick，入轮项目 {} 个",
                 SLOT_COUNT, TICK_MS, scheduled.size());
     }

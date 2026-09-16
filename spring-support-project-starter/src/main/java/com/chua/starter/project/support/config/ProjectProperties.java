@@ -38,4 +38,10 @@ public class ProjectProperties {
 
     /** 指标持久化 JDBC 密码（H2 内存库可空） */
     private String metricJdbcPassword;
+
+    /** 指标保留天数（默认 7 天，超过自动清理；0=不清理） */
+    private int metricRetentionDays = 7;
+
+    /** 指标清理执行间隔（秒，默认 3600=每小时扫一次） */
+    private int metricCleanupIntervalSeconds = 3600;
 }

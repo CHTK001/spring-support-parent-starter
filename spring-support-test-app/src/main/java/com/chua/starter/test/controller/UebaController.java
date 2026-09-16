@@ -1,5 +1,6 @@
 package com.chua.starter.test.controller;
 
+import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.ueba.support.dto.UebaResult;
 import com.chua.ueba.support.engine.UebaEngine;
 import lombok.extern.slf4j.Slf4j;
@@ -149,6 +150,7 @@ public class UebaController {
     * @return 获取prop的结果
      */
     private static Object getProp(Object obj, String name) {
+        // [P3C 1.10 豁免] 演示 app 动态读取任意 getter，保持原生反射
         try {
             java.lang.reflect.Method m = obj.getClass().getMethod("get" + capitalize(name));
             return m.invoke(obj);

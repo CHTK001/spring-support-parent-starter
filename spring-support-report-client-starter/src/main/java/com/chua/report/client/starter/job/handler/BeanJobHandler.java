@@ -1,5 +1,6 @@
 package com.chua.report.client.starter.job.handler;
 
+import com.chua.common.support.reflection.ReflectUtils;
 import org.slf4j.Logger;
 import com.chua.common.support.spi.annotations.Spi;
 import org.slf4j.LoggerFactory;
@@ -62,12 +63,10 @@ public class BeanJobHandler implements JobHandler {
     public void execute() throws Exception {
         log.debug("开始执行Bean任务: {}#{}", target.getClass().getSimpleName(), method.getName());
         Class<?>[] paramTypes = method.getParameterTypes();
-        // 根据方法参数类型决定调用方式
+        // [P3C 1.10 豁免] 执行方法需要按参数类型构造空参数数组并保留异常传播语义，ReflectUtils.invoke 静默吞掉异常，保持原生反射
         if (paramTypes.length > 0) {
-            // 如果方法有参数，传入空参数数组
             method.invoke(target, new Object[paramTypes.length]);
         } else {
-            // 无参方法直接调用
             method.invoke(target);
         }
         log.debug("Bean任务执行完成: {}#{}", target.getClass().getSimpleName(), method.getName());
@@ -78,6 +77,7 @@ public class BeanJobHandler implements JobHandler {
     public void init() throws Exception {
         if (initMethod != null) {
             log.debug("执行Bean任务初始化方法: {}#{}", target.getClass().getSimpleName(), initMethod.getName());
+            // [P3C 1.10 豁免] 同上，保持异常传播
             initMethod.invoke(target);
         }
     }
@@ -87,6 +87,7 @@ public class BeanJobHandler implements JobHandler {
     public void destroy() throws Exception {
         if (destroyMethod != null) {
             log.debug("执行Bean任务销毁方法: {}#{}", target.getClass().getSimpleName(), destroyMethod.getName());
+            // [P3C 1.10 豁免] 同上，保持异常传播
             destroyMethod.invoke(target);
         }
     }

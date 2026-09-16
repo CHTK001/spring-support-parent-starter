@@ -1,5 +1,6 @@
 package com.chua.starter.rpc.support.configuration;
 
+import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.starter.rpc.support.attrbute.RpcAttribute;
 import org.slf4j.Logger;
@@ -476,11 +477,12 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
             Object injectedObject = getInjectedObject(attributes, bean, beanName, getInjectedType(), this);
 
             if (member instanceof Field field) {
-                ReflectionUtils.makeAccessible(field);
-                field.set(bean, injectedObject);
+                // [P3C 1.10] 改走 ReflectUtils.setField
+                ReflectUtils.setField(bean, field.getName(), injectedObject);
             } else if (member instanceof Method method) {
-                ReflectionUtils.makeAccessible(method);
-                method.invoke(bean, injectedObject);
+                // [P3C 1.10] 改走 ReflectUtils.invoke
+                ReflectUtils.invoke(bean, method.getName(), method.getReturnType(),
+                        new Class<?>[]{getInjectedType()}, injectedObject);
             }
         }
 
