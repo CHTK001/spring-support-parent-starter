@@ -2,6 +2,7 @@ package com.chua.starter.osgi.configuration;
 
 import com.chua.common.support.objects.ObjectContext;
 import com.chua.common.support.osgi.OsgiLauncher;
+import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.osgi.support.FelixOsgiLauncher;
 import com.chua.osgi.support.register.impl.OsgiBeanDefinitionRegister;
 import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
@@ -304,13 +305,14 @@ public class OsgiAutoConfiguration {
      */
     private String findJarUrl(String className) {
         try {
-            Class<?> clazz = Class.forName(className);
+            Class<?> clazz = ReflectUtils.forName(className);
+            if (clazz == null) {
+                return null;
+            }
             URL location = clazz.getProtectionDomain().getCodeSource().getLocation();
             if (location != null && "file".equals(location.getProtocol())) {
                 return location.toExternalForm();
             }
-        } catch (ClassNotFoundException e) {
-            return null;
         } catch (Exception e) {
             log.warn("[OSGi] 无法定位 bundle 类 {}: {}", className, e.getMessage());
         }
@@ -318,17 +320,12 @@ public class OsgiAutoConfiguration {
     }
 
     /**
-    * 检查类是否在 类路径 中。
-    * @param className 类名称
-    * @return 是否类可用的结果
-     */
+     * 检查类是否在 类路径 中。
+     * @param className 类名称
+     * @return 是否类可用的结果
+      */
     private boolean isClassAvailable(String className) {
-        try {
-            Class.forName(className);
-            return true;
-        } catch (ClassNotFoundException e) {
-            return false;
-        }
+        return ReflectUtils.forName(className) != null;
     }
 
     /**

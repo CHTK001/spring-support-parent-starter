@@ -303,13 +303,58 @@ public class DeployServiceImpl implements DeployService {
         if (host.getServerHostStatus() != null && host.getServerHostStatus() != 1) {
             return "前置门禁：主机 " + host.getServerHostName() + " 已停用";
         }
+        // 优先用 HostOnlineScheduler 填的探测结果
         if (host.getServerHostOnline() != null && host.getServerHostOnline() == 0) {
             return "前置门禁：主机 " + host.getServerHostName() + " 最近探测离线（网络不可达）";
         }
         if (host.getServerHostDelayMs() != null && host.getServerHostDelayMs() < 0) {
             return "前置门禁：主机 " + host.getServerHostName() + " 最近延迟探测不可达";
         }
+        // HostOnlineScheduler 未填充（delay 探测未开）时，做一次实时 TCP 探测兜底
+        if (host.getServerHostDelayMs() == null) {
+            boolean reachable = isTcpReachable(host);
+            if (!reachable) {
+                return "前置门禁：主机 " + host.getServerHostName() + " 实时 TCP 探测不可达（"
+                        + (host.getServerHostAddress() == null ? "?" : host.getServerHostAddress())
+                        + ":" + (host.getServerHostPort() != null ? host.getServerHostPort() : 22) + "）";
+            }
+        }
         return null;
+    }
+
+    /**
+     * TCP 连通探测（异步，超时 3 秒）
+     *
+     * @param host 主机
+     * @return 是否可达
+     */
+    private boolean isTcpReachable(MsServerHost host) {
+        if (host.getServerHostAddress() == null || host.getServerHostAddress().isBlank()) {
+            return false;
+        }
+        int port = host.getServerHostPort() != null && host.getServerHostPort() > 0
+                ? host.getServerHostPort() : 22;
+        java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.atomic.AtomicBoolean reachable = new java.util.concurrent.atomic.AtomicBoolean(false);
+        try {
+            // 用新线程做 3 秒 TCP connect
+            Thread probe = new Thread(() -> {
+                try (java.net.Socket s = new java.net.Socket()) {
+                    s.connect(new java.net.InetSocketAddress(host.getServerHostAddress(), port), 3000);
+                    reachable.set(true);
+                } catch (Exception ignored) {
+                    // 连接失败 = 不可达
+                } finally {
+                    latch.countDown();
+                }
+            }, "gate-tcp-probe-" + host.getId());
+            probe.setDaemon(true);
+            probe.start();
+            latch.await(4, java.util.concurrent.TimeUnit.SECONDS);
+        } catch (InterruptedException ignored) {
+            Thread.currentThread().interrupt();
+        }
+        return reachable.get();
     }
 
     /**

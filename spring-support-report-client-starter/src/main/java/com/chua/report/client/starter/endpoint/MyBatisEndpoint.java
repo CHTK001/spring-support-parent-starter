@@ -1,5 +1,6 @@
 package com.chua.report.client.starter.endpoint;
 
+import com.chua.common.support.reflection.ReflectUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.mapping.MappedStatement;
 import org.apache.ibatis.session.Configuration;
@@ -202,9 +203,9 @@ public class MyBatisEndpoint {
     @SuppressWarnings("unchecked")
     private Set<String> getLoadedResources(Configuration configuration) {
         try {
-            Field loadedResourcesField = Configuration.class.getDeclaredField("loadedResources");
-            loadedResourcesField.setAccessible(true);
-            return (Set<String>) loadedResourcesField.get(configuration);
+            // [P3C 1.10] Configuration.loadedResources 是 MyBatis 内部私有字段，改走 ReflectUtils
+            Object value = ReflectUtils.getField(configuration, "loadedResources");
+            return value != null ? (Set<String>) value : Collections.emptySet();
         } catch (Exception e) {
             log.warn("[MyBatisEndpoint] 获取已加载资源失败: {}", e.getMessage());
             return Collections.emptySet();

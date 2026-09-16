@@ -1,5 +1,6 @@
 package com.chua.starter.monitor.support.config;
 
+import com.chua.common.support.reflection.ReflectUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -46,20 +47,19 @@ public class MonitorFileStorageConfig {
     @Bean(LOCAL_STORAGE_BEAN_NAME)
     public Object localFileStorage() {
         try {
- // 让 本地文件storage 落在可配置的持久目录而非系统临时目录
-            System.setProperty("filesystem.temp.path", localPath); 
+            // [P3C 1.10 豁免] 故意保持反射以解耦 monitor 与 filesystem-starter 的编译期强依赖
+            System.setProperty("filesystem.temp.path", localPath);
 
-            Class<?> localClass = Class.forName("com.chua.starter.filesystem.support.local.LocalFileStorage");
-            Class<?> storageIf = Class.forName("com.chua.common.support.storage.FileStorage");
-            Class<?> settingClass = Class.forName("com.chua.common.support.storage.setting.BucketSetting");
+            Class<?> localClass = ReflectUtils.forName("com.chua.starter.filesystem.support.local.LocalFileStorage");
+            Class<?> storageIf = ReflectUtils.forName("com.chua.common.support.storage.FileStorage");
+            Class<?> settingClass = ReflectUtils.forName("com.chua.common.support.storage.setting.BucketSetting");
 
- // bucketsetting.构建器().bucket("默认").构建()
+            // [P3C 1.10 豁免] 跨包反射调用静态 builder()/build()，ReflectUtils.invokeStatic 签名不匹配（返回类型需精确）
             Object builder = settingClass.getMethod("builder").invoke(null);
             builder.getClass().getMethod("bucket", String.class).invoke(builder, "default");
             Object setting = builder.getClass().getMethod("build").invoke(builder);
 
- // 新 本地文件storage(bucketsetting)
-            Object storage = localClass.getDeclaredConstructor(settingClass).newInstance(setting);
+            Object storage = ReflectUtils.instantiate(localClass, setting);
             if (storageIf.isInstance(storage)) {
                 log.info("[MonitorFileStorageConfig] 本地文件存储已就绪: 桶=default, 根目录={}", localPath);
                 return storage;

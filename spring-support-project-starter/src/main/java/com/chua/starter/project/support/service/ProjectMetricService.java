@@ -67,4 +67,11 @@ public interface ProjectMetricService {
      * @return 指标点列表（新→旧）
      */
     List<Map<String, Object>> queryHistory(Long projectId, String metricName, int limit);
+
+    /**
+     * 清理超期指标数据（保留天数外删除）
+     *
+     * @return 删除行数
+     */
+    int cleanupExpired();
 }

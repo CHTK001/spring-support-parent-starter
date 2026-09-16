@@ -5,6 +5,7 @@ import com.chua.common.support.task.flow.FlowContext;
 import com.chua.common.support.task.flow.FlowNode;
 import com.chua.common.support.task.flow.FlowNodeField;
 import com.chua.common.support.task.flow.FlowProps;
+import com.chua.common.support.utils.ClassUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
@@ -184,36 +185,13 @@ public class SpiderFunctionNode implements FlowNode {
     }
 
     /**
-    * 将原始类型包装为其对应的包装类型。
-    *
-    * @param primitive 原始类型
-    * @return 包装类型
-     */
+     * 将原始类型包装为其对应的包装类型。
+     *
+     * @param primitive 原始类型
+     * @return 包装类型
+      */
     private Class<?> wrapPrimitive(Class<?> primitive) {
-        if (primitive == boolean.class) {
-            return Boolean.class;
-        }
-        if (primitive == byte.class) {
-            return Byte.class;
-        }
-        if (primitive == char.class) {
-            return Character.class;
-        }
-        if (primitive == short.class) {
-            return Short.class;
-        }
-        if (primitive == int.class) {
-            return Integer.class;
-        }
-        if (primitive == long.class) {
-            return Long.class;
-        }
-        if (primitive == float.class) {
-            return Float.class;
-        }
-        if (primitive == double.class) {
-            return Double.class;
-        }
-        return primitive;
+        // [P3C 四十二] 改走 ClassUtils.fromPrimitive，删除手写 9 个 if 分支
+        return ClassUtils.fromPrimitive(primitive);
     }
 }

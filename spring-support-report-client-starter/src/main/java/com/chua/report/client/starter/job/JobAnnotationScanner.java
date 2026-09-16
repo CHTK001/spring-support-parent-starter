@@ -125,6 +125,7 @@ public class JobAnnotationScanner implements BeanPostProcessor {
         }
 
         // 确保方法可访问
+        // [P3C 1.10 豁免] 框架基础设施：setAccessible 用于后续 BeanJobHandler 原生反射调用，保持原样
         method.setAccessible(true);
 
         // 获取初始化方法
@@ -132,6 +133,7 @@ public class JobAnnotationScanner implements BeanPostProcessor {
         if (StringUtils.hasText(job.init())) {
             try {
                 initMethod = bean.getClass().getDeclaredMethod(job.init());
+                // [P3C 1.10 豁免] 同上
                 initMethod.setAccessible(true);
             } catch (NoSuchMethodException e) {
                 log.warn("[JobScanner] Bean[{}]的初始化方法[{}]不存在", beanName, job.init());
@@ -143,6 +145,7 @@ public class JobAnnotationScanner implements BeanPostProcessor {
         if (StringUtils.hasText(job.destroy())) {
             try {
                 destroyMethod = bean.getClass().getDeclaredMethod(job.destroy());
+                // [P3C 1.10 豁免] 同上
                 destroyMethod.setAccessible(true);
             } catch (NoSuchMethodException e) {
                 log.warn("[JobScanner] Bean[{}]的销毁方法[{}]不存在", beanName, job.destroy());

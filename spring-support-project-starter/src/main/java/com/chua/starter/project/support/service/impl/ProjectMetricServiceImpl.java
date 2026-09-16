@@ -121,56 +121,101 @@ public class ProjectMetricServiceImpl implements ProjectMetricService {
         if (!resolved.isOk()) {
             pushService.pushProgress(project.getId(), hostId, "METRIC", "COLLECT", "FAIL",
                     "凭据解析失败: " + resolved.getMsg(), project.getMsProjectCurrentVersion());
+            if (collectFailState.putIfAbsent(collectFailKey(project, host), Boolean.TRUE) == null) {
+                persistOne(project, host, ProjectAlarmHook.METRIC_COLLECT_FAIL, 1);
+            }
             return;
         }
         boolean linux = isLinux(host);
         Map<String, Double> metrics = new LinkedHashMap<>();
         String target = project.getMsProjectHealthTarget();
+        // 单轮采集 SSH 失败短路：连接失败后不再逐条命令重连（每条命令都有连接超时开销）
+        java.util.concurrent.atomic.AtomicBoolean sshBroken = new java.util.concurrent.atomic.AtomicBoolean(false);
         if (isNotBlank(target)) {
             // 进程内存（RSS MB）：按关键字精确匹配，避免整机误采
             String key = target.trim();
-            String memOut = execQuiet(host, resolved.getData(), buildProcessMemCommand(key, linux));
+            String memOut = execQuiet(host, resolved.getData(), buildProcessMemCommand(key, linux), sshBroken);
             if (memOut != null) {
                 metrics.put(ProjectAlarmHook.METRIC_PROCESS_MEM_MB, parseDouble(memOut, -1));
             }
             // 进程 CPU（%）
-            String cpuOut = execQuiet(host, resolved.getData(), buildProcessCpuCommand(key, linux));
+            String cpuOut = execQuiet(host, resolved.getData(), buildProcessCpuCommand(key, linux), sshBroken);
             if (cpuOut != null) {
                 metrics.put(ProjectAlarmHook.METRIC_PROCESS_CPU, parseDouble(cpuOut, -1));
             }
         }
         String healthType = project.getMsProjectHealthType();
-        if (ProjectConstants.HEALTH_TYPE_PORT.equals(healthType) && isNotBlank(target)) {
+        if (ProjectConstants.HEALTH_TYPE_PORT.equals(healthType) && isNotBlank(target) && !sshBroken.get()) {
             String port = portOf(target);
             if (port != null) {
                 String aliveCmd = linux
                         ? "ss -tln 2>/dev/null | grep -q ':" + port + "' && echo 1 || echo 0"
                         : "netstat -ano 2>nul | findstr :" + port + " >nul 2>&1 && echo 1 || echo 0";
-                String aliveOut = execQuiet(host, resolved.getData(), aliveCmd);
+                String aliveOut = execQuiet(host, resolved.getData(), aliveCmd, sshBroken);
                 if (aliveOut != null) {
                     metrics.put(ProjectAlarmHook.METRIC_PORT_ALIVE, parseDouble(aliveOut, -1));
                 }
             }
         }
-        if (ProjectConstants.HEALTH_TYPE_HTTP.equals(healthType) && isNotBlank(target)) {
+        if (ProjectConstants.HEALTH_TYPE_HTTP.equals(healthType) && isNotBlank(target) && !sshBroken.get()) {
             String codeCmd = linux
                     ? "curl -s -o /dev/null -w '%{http_code}' --max-time 8 http://" + target + " 2>/dev/null || echo 000"
                     : "powershell -NoProfile -Command \"try { (Invoke-WebRequest -Uri 'http://"
                     + target + "' -UseBasicParsing -TimeoutSec 8).StatusCode } catch { 0 }\"";
-            String codeOut = execQuiet(host, resolved.getData(), codeCmd);
+            String codeOut = execQuiet(host, resolved.getData(), codeCmd, sshBroken);
             if (codeOut != null) {
                 metrics.put("project.http.code", parseDouble(codeOut, -1));
             }
         }
         if (metrics.isEmpty()) {
+            // 全部命令执行失败（SSH 不可达/认证失败/命令异常）：
+            // 只在状态翻转时落一条采集失败占位指标（连续失败不重复刷屏），
+            // 恢复后由下一轮正常指标覆盖
+            if (collectFailState.putIfAbsent(collectFailKey(project, host), Boolean.TRUE) == null) {
+                persistOne(project, host, ProjectAlarmHook.METRIC_COLLECT_FAIL, 1);
+            }
             return;
         }
+        // 采集恢复正常：清除失败标记（下一轮再失败会重新翻转落点）
+        collectFailState.remove(collectFailKey(project, host));
         persistMetrics(project, host, metrics);
         java.time.LocalDateTime collectTime = java.time.LocalDateTime.now();
         for (Map.Entry<String, Double> entry : metrics.entrySet()) {
             pushService.pushProjectMetric(project.getId(), hostId, entry.getKey(), entry.getValue(), collectTime);
             alarmHook.evaluateProjectMetric(project, entry.getKey(), entry.getValue());
         }
+    }
+
+    /** 采集失败状态（项目:主机 → 是否已落点），用于去刷屏 */
+    private final java.util.concurrent.ConcurrentHashMap<String, Boolean> collectFailState =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
+    /**
+     * 采集失败状态键
+     *
+     * @param project 项目
+     * @param host    主机
+     * @return 键
+     */
+    private String collectFailKey(MsProject project, MsServerHost host) {
+        return project.getId() + ":" + host.getId();
+    }
+
+    /**
+     * 持久化单个指标点（采集失败占位等场景）
+     *
+     * @param project    项目
+     * @param host       主机
+     * @param metricName 指标名
+     * @param value      值
+     */
+    private void persistOne(MsProject project, MsServerHost host, String metricName, double value) {
+        Map<String, Double> metrics = new LinkedHashMap<>(1);
+        metrics.put(metricName, value);
+        persistMetrics(project, host, metrics);
+        java.time.LocalDateTime collectTime = java.time.LocalDateTime.now();
+        pushService.pushProjectMetric(project.getId(), host.getId(), metricName, value, collectTime);
+        alarmHook.evaluateProjectMetric(project, metricName, value);
     }
 
     /**
@@ -269,26 +314,53 @@ public class ProjectMetricServiceImpl implements ProjectMetricService {
         }
     }
 
+    @Override
+    public int cleanupExpired() {
+        int retentionDays = projectProperties.getMetricRetentionDays();
+        if (retentionDays <= 0) {
+            return 0;
+        }
+        try {
+            int deleted = jdbcTemplate.update(
+                    "DELETE FROM ms_project_metric WHERE collect_time < ?",
+                    java.time.LocalDateTime.now().minusDays(retentionDays));
+            if (deleted > 0) {
+                log.info("[project-metric] 清理超期指标 {} 行（保留 {} 天）", deleted, retentionDays);
+            }
+            return deleted;
+        } catch (Exception e) {
+            log.debug("[project-metric] 指标清理失败: {}", e.getMessage());
+            return 0;
+        }
+    }
+
     /**
      * 静默执行 SSH 命令（采集专用，失败返回 空 不抛异常）
      *
      * @param host       主机
      * @param credential 凭据
      * @param command    命令
+     * @param sshBroken  短路标记：连接失败置 true，后续命令跳过
      * @return 标准输出（trim 后），失败返回 空
      */
-    private String execQuiet(MsServerHost host, SshCredential credential, String command) {
+    private String execQuiet(MsServerHost host, SshCredential credential, String command,
+                             java.util.concurrent.atomic.AtomicBoolean sshBroken) {
+        if (sshBroken != null && sshBroken.get()) {
+            return null;
+        }
         SshClients.Handle handle = null;
         try {
             handle = connectionManager.borrow(host, credential);
-            final SshClients.Handle borrowed = handle;
-            Future<String> future = collectExecutor.submit(() -> {
+            final SshClients.Handle borrowed = handle;            Future<String> future = collectExecutor.submit(() -> {
                 var result = borrowed.client().exec().command(command).execute();
                 return result.stdout() == null ? "" : result.stdout().trim();
             });
             return future.get(COLLECT_TIMEOUT_SECONDS, TimeUnit.SECONDS);
         } catch (Exception e) {
             log.debug("[project-metric] 命令执行失败 host={}: {}", host.getServerHostName(), e.getMessage());
+            if (sshBroken != null) {
+                sshBroken.set(true);
+            }
             return null;
         } finally {
             if (handle != null) {

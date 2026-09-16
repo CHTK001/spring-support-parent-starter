@@ -119,6 +119,17 @@
       <artifactId>agrona</artifactId>
       <version>1.20.0</version>
     </dependency>
+    <!-- RAG 文档文本提取：PDF / Word（按扩展名自动分发） -->
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>utils-support-pdf-starter</artifactId>
+      <version>4.0.0.42</version>
+    </dependency>
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>utils-support-word-starter</artifactId>
+      <version>4.0.0.42</version>
+    </dependency>
     <!-- 用量数据同步（datasearch UsageProvider 外部工具用量拉取） -->
     <dependency>
       <groupId>com.chua</groupId>

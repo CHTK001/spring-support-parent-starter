@@ -1,5 +1,6 @@
 package com.chua.starter.project.support.service.impl;
 
+import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.starter.project.support.constants.ProjectConstants;
 import com.chua.starter.project.support.entity.MsProject;
 import com.chua.starter.project.support.service.ProjectAlarmHook;
@@ -45,6 +46,7 @@ public class ProjectAlarmHookImpl implements ProjectAlarmHook {
             return;
         }
         try {
+            // [P3C 1.10 豁免] 跨模块解耦反射调用，保持原生反射以避免编译期强依赖
             Method evaluate = engine.getClass().getMethod("evaluate", Long.class, String.class, String.class, double.class);
             evaluate.invoke(engine, project.getId(), project.getMsProjectName(), metricName, value);
         } catch (Exception e) {
@@ -58,15 +60,16 @@ public class ProjectAlarmHookImpl implements ProjectAlarmHook {
      * @return 引擎实例，未装配返回 空
      */
     private Object findAlarmEngine() {
+        Class<?> engineClass = ReflectUtils.forName(ALARM_ENGINE_CLASS);
+        if (engineClass == null) {
+            return null;
+        }
         try {
-            Class<?> engineClass = Class.forName(ALARM_ENGINE_CLASS);
             String[] names = applicationContext.getBeanNamesForType(engineClass);
             if (names.length == 0) {
                 return null;
             }
             return applicationContext.getBean(names[0]);
-        } catch (ClassNotFoundException e) {
-            return null;
         } catch (Exception e) {
             log.debug("[project-alarm] 查找告警引擎 bean 失败: {}", e.getMessage());
             return null;

@@ -70,13 +70,7 @@ public class BeanJobHandler implements JobHandler {
         this.method = method;
         this.initMethod = initMethod;
         this.destroyMethod = destroyMethod;
-        method.setAccessible(true);
-        if (initMethod != null) {
-            initMethod.setAccessible(true);
-        }
-        if (destroyMethod != null) {
-            destroyMethod.setAccessible(true);
-        }
+        // [P3C 1.10] ReflectUtils.invoke 内部使用 privateLookupIn，无需 setAccessible
     }
 
     @Override

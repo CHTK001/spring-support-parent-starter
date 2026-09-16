@@ -1907,9 +1907,14 @@ SELECT * FROM (
   SELECT ' ONNX  (BiRefNet 大 1024)', 'local-onnx-matting-birefnet-large',
     'birefnet-large', 'MATTING',
     'local-onnx', 'onnx', 1, 1, 69,
-    ' ONNX BiRefNet Swin-L 1024 高精度抠图 '
-  UNION ALL
-  SELECT ' ONNX  (CLIP ViT-B-32)', 'local-onnx-image-feature-clip-b32',
+     ' ONNX BiRefNet Swin-L 1024 高精度抠图 '
+   UNION ALL
+   SELECT ' ONNX  (MiGAN)', 'local-onnx-inpaint-migan',
+     'migan-perf', 'MATTING',
+     'local-onnx', 'onnx', 1, 1, 69,
+     ' ONNX MiGAN 动态尺寸图像修复 '
+   UNION ALL
+   SELECT ' ONNX  (CLIP ViT-B-32)', 'local-onnx-image-feature-clip-b32',
     'CLIP-ViT-B-32-IMAGE', 'IMAGE_FEATURE',
     'local-onnx', 'onnx', 1, 1, 70,
     ' ONNX CLIP ViT-B-32 512'

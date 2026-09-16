@@ -164,11 +164,13 @@ public class GuacdConnectionFactory {
         if (notBlank(credential.password())) {
             tunnel.setParameter(GuacdConst.PASSWORD, credential.password());
         }
+        // 显式空域名，防止 guacd 自动用 Windows 机器名作为域前缀（如 SAGE4\administrator）
+        tunnel.setParameter("domain", "");
         // 分辨率
         tunnel.size(RDP_WIDTH, RDP_HEIGHT);
         tunnel.dpi(RDP_DPI);
-        // 安全与认证
-        tunnel.setParameter(GuacdConst.SECURITY, GuacdConst.SECURITY_ANY);
+        // 安全与认证：强制 NLA，Windows 默认要求
+        tunnel.setParameter(GuacdConst.SECURITY, "nla");
         tunnel.setParameter(GuacdConst.IGNORE_CERT, true);
         tunnel.setParameter(GuacdConst.DISABLE_AUTH, false);
         // 剪贴板/时区/布局
@@ -196,8 +198,8 @@ public class GuacdConnectionFactory {
         tunnel.setParameter(GuacdConst.DISABLE_AUDIO_OUTPUT, false);
         // 客户端标识 + RDP 磁盘映射（文件传输驱动）
         tunnel.setParameter(GuacdConst.CLIENT_NAME, "spring-support");
-        tunnel.setParameter(GuacdConst.ENABLE_DRIVE, true);
-        tunnel.setParameter(GuacdConst.CREATE_DRIVE_PATH, true);
+        tunnel.setParameter(GuacdConst.ENABLE_DRIVE, false);
+        tunnel.setParameter(GuacdConst.CREATE_DRIVE_PATH, false);
         tunnel.setParameter(GuacdConst.DRIVE_NAME, GuacdConst.DRIVE_DRIVE_NAME);
         String drivePath = properties.getGuacd().getDrivePath();
         if (notBlank(drivePath)) {

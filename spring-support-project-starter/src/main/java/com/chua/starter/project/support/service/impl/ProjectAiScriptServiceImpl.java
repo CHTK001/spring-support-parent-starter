@@ -1,6 +1,7 @@
 package com.chua.starter.project.support.service.impl;
 
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.starter.project.support.entity.MsProject;
 import com.chua.starter.project.support.service.ProjectAiScriptService;
 import lombok.RequiredArgsConstructor;
@@ -54,6 +55,7 @@ public class ProjectAiScriptServiceImpl implements ProjectAiScriptService {
         }
         boolean linux = isLinux(project);
         try {
+            // [P3C 1.10 豁免] 跨模块解耦反射调用 AI 注册表 API
             Method getDefault = registry.getClass().getMethod("getDefault");
             Object client = getDefault.invoke(registry);
             if (client == null) {
@@ -78,15 +80,16 @@ public class ProjectAiScriptServiceImpl implements ProjectAiScriptService {
      * @return 注册表实例，未装配返回 空
      */
     private Object findRegistryBean() {
+        Class<?> registryClass = ReflectUtils.forName(REGISTRY_CLASS);
+        if (registryClass == null) {
+            return null;
+        }
         try {
-            Class<?> registryClass = Class.forName(REGISTRY_CLASS);
             String[] names = applicationContext.getBeanNamesForType(registryClass);
             if (names.length == 0) {
                 return null;
             }
             return applicationContext.getBean(names[0]);
-        } catch (ClassNotFoundException e) {
-            return null;
         } catch (Exception e) {
             log.warn("[project-ai] 查找 AI 注册表 bean 失败: {}", e.getMessage());
             return null;
@@ -103,6 +106,7 @@ public class ProjectAiScriptServiceImpl implements ProjectAiScriptService {
      * @throws Exception 反射调用异常
      */
     private Object invokeClient(Object client, String system, String prompt) throws Exception {
+        // [P3C 1.10 豁免] 跨模块解耦反射调用 AI 客户端 API，保持原生反射以避免编译期强依赖
         Method systemMethod = client.getClass().getMethod("system", String.class);
         Object configured = systemMethod.invoke(client, system);
         Method tempMethod = configured.getClass().getMethod("temperature", double.class);
@@ -122,6 +126,7 @@ public class ProjectAiScriptServiceImpl implements ProjectAiScriptService {
         if (response instanceof String s) {
             return s;
         }
+        // [P3C 1.10 豁免] 同上，跨模块解耦反射调用
         Method getText = response.getClass().getMethod("getText");
         Object text = getText.invoke(response);
         return text == null ? null : text.toString();

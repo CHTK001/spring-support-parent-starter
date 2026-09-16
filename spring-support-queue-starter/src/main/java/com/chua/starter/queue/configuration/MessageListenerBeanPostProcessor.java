@@ -121,7 +121,7 @@ public class MessageListenerBeanPostProcessor implements BeanPostProcessor {
             return;
         }
 
-        method.setAccessible(true);
+        // [P3C 1.10] ReflectUtils.invoke 内部使用 privateLookupIn，无需 setAccessible
         MessageHandler handler = createHandler(bean, method, payloadType, autoAck);
 
         // 使用支持 concurrency 的方法
@@ -245,7 +245,7 @@ public class MessageListenerBeanPostProcessor implements BeanPostProcessor {
             return;
         }
 
-        method.setAccessible(true);
+        // [P3C 1.10] ReflectUtils.invoke 内部使用 privateLookupIn，无需 setAccessible
         MessageHandler handler = createEventHandler(bean, method, eventType, autoAck, republish);
 
         // 使用支持 concurrency 的方法

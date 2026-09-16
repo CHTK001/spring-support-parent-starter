@@ -32,6 +32,9 @@ public interface ProjectAlarmHook {
     /** 指标：端口存活（0/1） */
     String METRIC_PORT_ALIVE = "project.port.alive";
 
+    /** 指标：采集失败占位（SSH/凭据异常时=1，保证前端面板有数据可展示） */
+    String METRIC_COLLECT_FAIL = "project.collect.fail";
+
     /**
      * 评估项目指标（命中告警规则时由 monitor 引擎产出事件并通知）
      *
