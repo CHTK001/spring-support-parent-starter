@@ -42,11 +42,13 @@ import java.util.Map;
 import java.util.Set;
 
 /**
-* RAG REST 控制器——基于 common-starter 的 rag客户端 + rag文档life循环 真实实现。
-* <p>使用 {@link RagClientManager} 获取当前全局 RAG 客户端，支持配置热更新。</p>
-*
-* @author CH
-* @since 4.0.0
+ * RAG REST 控制器。
+ *
+ * <p>基于 common-starter 的 {@link RagClient} / {@link RagDocument} 实现文档全生命周期管理，
+ * 并借助 {@link RagClientManager} 获取当前全局 RAG 客户端，支持配置热更新。</p>
+ *
+ * @author CH
+ * @since 4.0.0
  */
 @Slf4j
 @RestController
@@ -54,21 +56,17 @@ import java.util.Set;
 @Tag(name = "RAG 知识库", description = "RAG 文档管理、问答和配置接口")
 public class RagController {
 
-    /**
-    * 全局 RAG 客户端管理器
-     */
+    /** 全局 RAG 客户端管理器 */
     private final RagClientManager ragClientManager;
 
-    /**
-    * RAG 配置属性
-     */
+    /** RAG 配置属性 */
     private final RagProperties ragProperties;
 
     /**
-    * 创建 rag控制器 实例
-    * @param ragClientManager rag客户端管理器
-    * @param ragProperties rag属性
-    * @param ragProperties rag属性
+     * 创建 RAG 控制器实例。
+     *
+     * @param ragClientManager 全局 RAG 客户端管理器
+     * @param ragProperties    RAG 配置属性
      */
     public RagController(RagClientManager ragClientManager, RagProperties ragProperties) {
         this.ragClientManager = ragClientManager;
@@ -76,8 +74,9 @@ public class RagController {
     }
 
     /**
-    * 获取当前全局 RAG 客户端（可能为 空）。
-    * @return rag客户端的结果
+     * 获取当前全局 RAG 客户端。
+     *
+     * @return 当前 RAG 客户端；尚未初始化时为 null
      */
     private RagClient ragClient() {
         return ragClientManager.current();
@@ -85,69 +84,18 @@ public class RagController {
 
     // ── 文档管理 ─────────────────────────────────────────
 
+    /**
+     * 上传文档并自动索引到知识库。
+     *
+     * <p>先做非空与 MIME 白名单校验，再交由 RAG 客户端解析、切分并写入向量存储。</p>
+     *
+     * @param file      上传的文件
+     * @param libraryId 目标知识库 ID，为空时使用默认知识库
+     * @return 索引结果；校验或索引失败时返回错误信息
+     */
     @Permission("admin")
     @Operation(summary = "上传文档", description = "上传文件并自动索引到知识库")
     @PostMapping(value = "/document/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    /**
-    * upload文档
-    * @param file 文件
-    * @param libraryId 图书馆标识
-    * @param e e
-    * @param page page
-    * @param pageSize page大小
-    * @param libraryId 图书馆标识
-    * @param 1 1
-    * @param 1 1
-    * @param 100 100
-    * @param pageSize page大小
-    * @param docs docs
-    * @param page page
-    * @param pageSize page大小
-    * @param id 标识
-    * @param id 标识
-    * @param body 主体
-    * @param topK topk
-    * @param threshold 阈值
-    * @param e e
-    * @param 配置 配置
-    * @param e e
-    * @param name 名称
-    * @param name 名称
-    * @param page page
-    * @param pageSize page大小
-    * @param 1 1
-    * @param 1 1
-    * @param 100 100
-    * @param 0 0
-    * @param page page
-    * @param pageSize page大小
-    * @param e e
-    * @param query 查询
-    * @param topK topk
-    * @param topK topk
-    * @param threshold 阈值
-    * @param e e
-    * @param request 请求
-    * @param e e
-    * @param URL_CONTENT_MAX_LENGTH URL_内容_最大_长度
-    * @param URL_CONTENT_MAX_LENGTH URL_内容_最大_长度
-    * @param e e
-    * @param url url
-    * @param address 地址
-    * @param Inet4Address Inet4地址
-    * @param Inet6Address Inet6地址
-    * @param value 值
-    * @param defVal defval
-    * @param num num
-    * @param e e
-    * @param value 值
-    * @param value 值
-    * @param defVal defval
-    * @param num num
-    * @param 1 1
-    * @param e e
-    * @param value 值
-     */
     public ReturnResult<RagDocument> uploadDocument(
             @RequestParam("file") MultipartFile file,
             @RequestParam(required = false) String libraryId) {
@@ -175,66 +123,20 @@ public class RagController {
         }
     }
 
+    /**
+     * 分页查询已上传文档。
+     *
+     * <p>分页参数做上下界收敛（page ≥ 1，1 ≤ pageSize ≤ 100）；总数取
+     * {@code documentCount} 而非当前页条数，保证前端分页正确。</p>
+     *
+     * @param page      页码，从 1 开始
+     * @param pageSize  每页条数，最大 100
+     * @param libraryId 知识库 ID，为空时查询全部
+     * @return 含 records / total / page / pageSize 的分页结果
+     */
     @Permission("admin")
     @Operation(summary = "文档列表", description = "分页查询已上传文档")
     @GetMapping("/document/list")
-    /**
-    * 列表文档
-    * @param page page
-    * @param pageSize page大小
-    * @param libraryId 图书馆标识
-    * @param 1 1
-    * @param 1 1
-    * @param 100 100
-    * @param pageSize page大小
-    * @param docs docs
-    * @param page page
-    * @param pageSize page大小
-    * @param id 标识
-    * @param id 标识
-    * @param body 主体
-    * @param topK topk
-    * @param threshold 阈值
-    * @param e e
-    * @param 配置 配置
-    * @param e e
-    * @param name 名称
-    * @param name 名称
-    * @param page page
-    * @param pageSize page大小
-    * @param 1 1
-    * @param 1 1
-    * @param 100 100
-    * @param 0 0
-    * @param page page
-    * @param pageSize page大小
-    * @param e e
-    * @param query 查询
-    * @param topK topk
-    * @param topK topk
-    * @param threshold 阈值
-    * @param e e
-    * @param request 请求
-    * @param e e
-    * @param URL_CONTENT_MAX_LENGTH URL_内容_最大_长度
-    * @param URL_CONTENT_MAX_LENGTH URL_内容_最大_长度
-    * @param e e
-    * @param url url
-    * @param address 地址
-    * @param Inet4Address Inet4地址
-    * @param Inet6Address Inet6地址
-    * @param value 值
-    * @param defVal defval
-    * @param num num
-    * @param e e
-    * @param value 值
-    * @param value 值
-    * @param defVal defval
-    * @param num num
-    * @param 1 1
-    * @param e e
-    * @param value 值
-     */
     public ReturnResult<Map<String, Object>> listDocuments(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int pageSize,
@@ -259,87 +161,94 @@ public class RagController {
         return ReturnResult.ok(result);
     }
 
+    /**
+     * 删除文档及其向量索引。
+     *
+     * @param id 文档 ID
+     * @return 删除成功返回 true；文档不存在时返回错误信息
+     */
     @Permission("admin")
     @Operation(summary = "删除文档", description = "删除文档及其向量索引")
     @DeleteMapping("/document/{id}")
-    /**
-    * 删除文档
-    *
-    * @param id 标识
-    * @return 删除文档的结果
-     */
     public ReturnResult<Boolean> deleteDocument(@PathVariable String id) {
         boolean deleted = ragClient().deleteDocument(id);
         return deleted ? ReturnResult.ok(true) : ReturnResult.error("文档不存在");
     }
 
+    /**
+     * 预览文档原始文本内容（仅限文本文件）。
+     *
+     * @param id 文档 ID
+     * @return 文档文本内容；不可读取时返回错误信息
+     */
     @Permission("admin")
     @Operation(summary = "文档内容预览", description = "读取文档原始文本内容（仅限文本文件）")
     @GetMapping("/document/{id}/content")
-    /**
-    * 获取文档内容
-    *
-    * @param id 标识
-    * @return 获取文档内容的结果
-     */
     public ReturnResult<String> getDocumentContent(@PathVariable String id) {
         String content = ragClient().readDocumentContent(id);
-        if (content == null) {
+        if (content == null || content.isEmpty()) {
             return ReturnResult.error("文档内容不可读取或文件不存在");
         }
         return ReturnResult.ok(content);
     }
 
+    /**
+     * 读取来源图片的原始字节（供前端渲染缩略图 / 预览）。
+     * <p>图片类文档入库后，查询响应的 {@code sources[].imageUrl} 指向本端点，
+     * 前端据此展示命中来源的原图。文本类文档访问本端点返回 404。</p>
+     *
+     * @param id 文档 ID（图片类文档）
+     * @return 图片字节流，Content-Type 按扩展名设置；非图片或不存在时返回 404
+     */
+    @Permission("admin")
+    @Operation(summary = "来源图片", description = "读取图片类文档的原始字节（供 RAG 查询来源渲染）")
+    @GetMapping("/document/{id}/image")
+    public org.springframework.http.ResponseEntity<byte[]> getDocumentImage(@PathVariable String id) {
+        byte[] data = ragClient().readDocumentBytes(id);
+        if (data == null || data.length == 0) {
+            return org.springframework.http.ResponseEntity.notFound().build();
+        }
+        String contentType = resolveImageContentType(id);
+        org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType(contentType));
+        headers.setContentLength(data.length);
+        return new org.springframework.http.ResponseEntity<>(data, headers, 200);
+    }
+
+    /**
+     * 按文档 ID 前缀推断图片 Content-Type。
+     *
+     * @param docId 文档 ID
+     * @return MIME 类型（默认 image/png）
+     */
+    private String resolveImageContentType(String docId) {
+        String lower = docId == null ? "" : docId.toLowerCase();
+        if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) {
+            return "image/jpeg";
+        }
+        if (lower.endsWith(".gif")) {
+            return "image/gif";
+        }
+        if (lower.endsWith(".webp")) {
+            return "image/webp";
+        }
+        if (lower.endsWith(".bmp")) {
+            return "image/bmp";
+        }
+        return "image/png";
+    }
+
     // ── 问答 ─────────────────────────────────────────────
 
+    /**
+     * 基于已索引文档进行 RAG 问答。
+     *
+     * @param body 请求体，包含 query（必填）、topK（可选）、threshold（可选，0~1）
+     * @return 含 answer 与 sources（documentId / content / score）的响应
+     */
     @Permission("admin")
     @Operation(summary = "RAG 问答", description = "基于已索引文档进行问答，返回答案和引用来源")
     @PostMapping("/query")
-    /**
-    * 查询
-    * @param body 主体
-    * @param topK topk
-    * @param threshold 阈值
-    * @param e e
-    * @param 配置 配置
-    * @param e e
-    * @param name 名称
-    * @param name 名称
-    * @param page page
-    * @param pageSize page大小
-    * @param 1 1
-    * @param 1 1
-    * @param 100 100
-    * @param 0 0
-    * @param page page
-    * @param pageSize page大小
-    * @param e e
-    * @param query 查询
-    * @param topK topk
-    * @param topK topk
-    * @param threshold 阈值
-    * @param e e
-    * @param request 请求
-    * @param e e
-    * @param URL_CONTENT_MAX_LENGTH URL_内容_最大_长度
-    * @param URL_CONTENT_MAX_LENGTH URL_内容_最大_长度
-    * @param e e
-    * @param url url
-    * @param address 地址
-    * @param Inet4Address Inet4地址
-    * @param Inet6Address Inet6地址
-    * @param value 值
-    * @param defVal defval
-    * @param num num
-    * @param e e
-    * @param value 值
-    * @param value 值
-    * @param defVal defval
-    * @param num num
-    * @param 1 1
-    * @param e e
-    * @param value 值
-     */
     public ReturnResult<Map<String, Object>> query(
             @RequestBody Map<String, Object> body) {
         String query = body.getOrDefault("query", "").toString();
@@ -356,11 +265,18 @@ public class RagController {
             RagResponse response = ragClient().query(query, topK, threshold);
             Map<String, Object> resp = new LinkedHashMap<>();
             resp.put("answer", response.answer());
-            resp.put("sources", response.sources().stream().map(s -> Map.of(
-                    "documentId", s.documentId(),
-                    "content", s.content(),
-                    "score", s.score()
-            )).toList());
+            resp.put("sources", response.sources().stream().map(s -> {
+                Map<String, Object> item = new LinkedHashMap<>();
+                item.put("documentId", s.documentId());
+                item.put("content", s.content());
+                item.put("score", s.score());
+                // 图片来源标记 + 图片回读地址（前端据此渲染缩略图 / 预览）
+                item.put("isImage", s.isImage());
+                if (s.isImage()) {
+                    item.put("imageUrl", "/v2/rag/document/" + s.documentId() + "/content");
+                }
+                return item;
+            }).toList());
             return ReturnResult.ok(resp);
         } catch (Exception e) {
             log.error("[RagController] 问答失败: {}", e.getMessage());
@@ -370,13 +286,13 @@ public class RagController {
 
     // ── 状态与管理 ───────────────────────────────────────
 
+    /**
+     * 获取 RAG 服务运行状态。
+     *
+     * @return 含引擎、上传目录、默认 topK / 阈值、客户端类型与文档数的状态信息
+     */
     @Operation(summary = "服务状态", description = "获取 RAG 服务运行状态")
     @GetMapping("/status")
-    /**
-    * 状态
-    *
-    * @return 状态的结果
-     */
     public ReturnResult<Map<String, Object>> status() {
         Map<String, Object> status = new LinkedHashMap<>();
         RagClient client = ragClient();
@@ -395,14 +311,14 @@ public class RagController {
         return ReturnResult.ok(status);
     }
 
+    /**
+     * 清空向量存储并重新索引全部文档。
+     *
+     * @return 重新索引的文档数量；失败时返回错误信息
+     */
     @Permission("admin")
     @Operation(summary = "重置索引", description = "清空向量存储并重新索引所有文档")
     @PostMapping("/reset")
-    /**
-    * 重置
-    *
-    * @return reset的结果
-     */
     public ReturnResult<Integer> reset() {
         try {
             int count = ragClient().reindex();
@@ -414,13 +330,13 @@ public class RagController {
 
  // ── 嵌入 引擎发现 ─────────────────────────────────
 
+    /**
+     * 列出所有可用的 Embedding 引擎。
+     *
+     * @return VectorService SPI 扩展名列表（value / label 形式）
+     */
     @Operation(summary = "Embedding 引擎列表", description = "获取所有可用的 Embedding 引擎（VectorService SPI 实现）")
     @GetMapping("/embedding-engines")
-    /**
-    * 列表嵌入engines
-    *
-    * @return 列表嵌入engines的结果
-     */
     public ReturnResult<List<Map<String, String>>> listEmbeddingEngines() {
         Set<String> engines = ServiceProvider.of(VectorService.class).getExtensions();
         List<Map<String, String>> result = engines.stream().map(name -> {
@@ -434,45 +350,15 @@ public class RagController {
 
     // ── 向量浏览 ───────────────────────────────────────────
 
+    /**
+     * 分页查看已存储的向量数据（不返回原始向量值）。
+     *
+     * @param page     页码，从 1 开始
+     * @param pageSize 每页条数，最大 100
+     * @return 含 records / total / page / pageSize 的分页结果
+     */
     @Operation(summary = "向量列表", description = "分页查看已存储的向量数据（不含原始向量值）")
     @GetMapping("/vector/list")
-    /**
-    * 列表向量
-    * @param page page
-    * @param pageSize page大小
-    * @param 1 1
-    * @param 1 1
-    * @param 100 100
-    * @param 0 0
-    * @param page page
-    * @param pageSize page大小
-    * @param e e
-    * @param query 查询
-    * @param topK topk
-    * @param topK topk
-    * @param threshold 阈值
-    * @param e e
-    * @param request 请求
-    * @param e e
-    * @param URL_CONTENT_MAX_LENGTH URL_内容_最大_长度
-    * @param URL_CONTENT_MAX_LENGTH URL_内容_最大_长度
-    * @param e e
-    * @param url url
-    * @param address 地址
-    * @param Inet4Address Inet4地址
-    * @param Inet6Address Inet6地址
-    * @param value 值
-    * @param defVal defval
-    * @param num num
-    * @param e e
-    * @param value 值
-    * @param value 值
-    * @param defVal defval
-    * @param num num
-    * @param 1 1
-    * @param e e
-    * @param value 值
-     */
     public ReturnResult<Map<String, Object>> listVectors(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int pageSize) {
@@ -498,36 +384,15 @@ public class RagController {
         }
     }
 
+    /**
+     * 按文本检索相似向量（仅做向量检索，不调用 LLM）。
+     *
+     * @param query 检索文本，不能为空
+     * @param topK  返回条数
+     * @return 命中的向量条目（documentId / score / content）
+     */
     @Operation(summary = "向量搜索", description = "按文本检索相似向量（仅搜索，不走 LLM）")
     @GetMapping("/vector/search")
-    /**
-    * 搜索向量
-    * @param query 查询
-    * @param topK topk
-    * @param topK topk
-    * @param threshold 阈值
-    * @param e e
-    * @param request 请求
-    * @param e e
-    * @param URL_CONTENT_MAX_LENGTH URL_内容_最大_长度
-    * @param URL_CONTENT_MAX_LENGTH URL_内容_最大_长度
-    * @param e e
-    * @param url url
-    * @param address 地址
-    * @param Inet4Address Inet4地址
-    * @param Inet6Address Inet6地址
-    * @param value 值
-    * @param defVal defval
-    * @param num num
-    * @param e e
-    * @param value 值
-    * @param value 值
-    * @param defVal defval
-    * @param num num
-    * @param 1 1
-    * @param e e
-    * @param value 值
-     */
     public ReturnResult<List<Map<String, Object>>> searchVectors(
             @RequestParam String query,
             @RequestParam(defaultValue = "10") int topK) {
@@ -551,15 +416,17 @@ public class RagController {
         }
     }
 
+    /**
+     * 从指定 URL 抓取网页内容并添加为 RAG 文档。
+     *
+     * <p>先做 SSRF 防护校验（协议白名单 + 内网地址拦截），抓取后去除 HTML 标签并按上限截断。</p>
+     *
+     * @param request URL 抓取请求，包含目标 url
+     * @return 索引结果；URL 非法或抓取失败时返回错误信息
+     */
     @Permission("admin")
     @Operation(summary = "URL 抓取文档", description = "从指定 URL 抓取网页内容并添加为 RAG 文档")
     @PostMapping("/document/url")
-    /**
-    * 添加文档byurl
-    *
-    * @param request 请求
-    * @return 添加文档byurl的结果
-     */
     public ReturnResult<RagDocument> addDocumentByUrl(@RequestBody com.chua.starter.ai.support.model.UrlDocumentRequest request) {
         String url = request.getUrl();
         if (StringUtils.isBlank(url)) {
