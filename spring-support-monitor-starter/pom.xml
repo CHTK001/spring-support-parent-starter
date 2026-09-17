@@ -164,6 +164,13 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- OSHI 本地硬件/操作系统信息采集 -->
+        <dependency>
+            <groupId>com.github.oshi</groupId>
+            <artifactId>oshi-core</artifactId>
+            <version>6.6.5</version>
+        </dependency>
+
         <!-- 日志 -->
         <dependency>
             <groupId>org.projectlombok</groupId>

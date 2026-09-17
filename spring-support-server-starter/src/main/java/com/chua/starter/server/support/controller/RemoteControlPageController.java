@@ -48,7 +48,7 @@ public class RemoteControlPageController {
     * @param identityId 登录身份 标识（可选）
     * @param targetPort 目标端口（可选——空 按协议默认）
     * @return 远程控制页面 HTML
-     */
+    */
     @GetMapping("/connect")
     public void connect(@RequestParam Long hostId,
                         @RequestParam String protocol,
@@ -71,7 +71,7 @@ public class RemoteControlPageController {
     * @param identityId identityid
     * @param targetPort Target端口
     * @return renderPage的结果
-     */
+    */
     private String renderPage(Long hostId, String protocol, Long identityId, Integer targetPort) {
         String idParam = identityId == null ? "" : String.valueOf(identityId);
         String portParam = targetPort == null ? "" : String.valueOf(targetPort);

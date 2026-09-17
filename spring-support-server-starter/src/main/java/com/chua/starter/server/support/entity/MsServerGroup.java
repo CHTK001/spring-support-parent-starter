@@ -31,42 +31,42 @@ public class MsServerGroup extends SysBase {
 
     /**
     * 主键
-     */
+    */
     @TableId(value = "id", type = IdType.AUTO)
     @Schema(description = "主键", example = "1")
     private Long id; // 标识
 
     /**
     * 父分组 标识（0 表示根）
-     */
+    */
     @TableField("ms_server_group_parent_id")
     @Schema(description = "父分组ID,0为根", example = "0")
     private Long msServerGroupParentId; // ms服务端群体父标识
 
     /**
     * 分组名称
-     */
+    */
     @TableField("ms_server_group_name")
     @Schema(description = "分组名称", example = "生产环境")
     private String msServerGroupName; // ms服务端群体名称
 
     /**
     * 排序号
-     */
+    */
     @TableField("ms_server_group_sort")
     @Schema(description = "排序号", example = "1")
     private Integer msServerGroupSort; // ms服务端群体排序
 
     /**
     * 备注
-     */
+    */
     @TableField("ms_server_group_remark")
     @Schema(description = "备注", example = "生产环境服务器")
     private String msServerGroupRemark; // ms服务端群体评论
 
     /**
     * 分组颜色（十六进制，如 #6d5dfc），用于标记/徽标底色
-     */
+    */
     @TableField("ms_server_group_color")
     @Schema(description = "分组颜色(十六进制)", example = "#6d5dfc")
     private String msServerGroupColor; // ms服务端群体color

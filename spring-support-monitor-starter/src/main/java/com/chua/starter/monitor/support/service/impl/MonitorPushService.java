@@ -52,18 +52,24 @@ public class MonitorPushService {
     /** 采集任务执行状态事件名 */
     public static final String EVENT_TASK = "task";
 
-    /** tshark 数据包实时推送事件名（前端 订阅("监控", "tshark-数据包") 接收） */
+    /**
+    * tshark 数据包实时推送事件名（前端 订阅("监控", "tshark-数据包") 接收）
+    */
     public static final String EVENT_TSHARK_PACKET = "tshark-packet";
 
     /** tshark 会话状态变更事件名（启动/停止/结束） */
     public static final String EVENT_TSHARK_SESSION = "tshark-session";
 
-    /** 主机实时延迟推送事件名（前端 订阅("监控", "主机-延迟") 接收；
-    * 数据 = { 主机标识, 主机名称, 地址, 端口, 延迟ms, online }，延迟ms=-1 表示不可达） */
+    /**
+    * 主机实时延迟推送事件名（前端 订阅("监控", "主机-延迟") 接收；
+    * 数据 = { 主机标识, 主机名称, 地址, 端口, 延迟ms, online }，延迟ms=-1 表示不可达
+    */
     public static final String EVENT_HOST_DELAY = "host-delay";
 
-    /** 主机在线状态变更事件名（前端 订阅("监控", "主机-online") 接收；
-    * 数据 = { 主机标识, 主机名称, online }） */
+    /**
+    * 主机在线状态变更事件名（前端 订阅("监控", "主机-online") 接收；
+    * 数据 = { 主机标识, 主机名称, online }
+    */
     public static final String EVENT_HOST_ONLINE = "host-online";
 
     /** 套接字队列bridge 订阅的统一 topic */
@@ -76,14 +82,14 @@ public class MonitorPushService {
     * 广播告警事件
     *
     * @param payload 事件数据
-     */
+    */
     public void pushAlarm(Map<String, Object> payload) {
         /**
         * broadcast。
         * @param EVENT_ALARM 事件报警器
         * @param payload payload
         * @param null 空
-         */
+        */
         broadcast(EVENT_ALARM, payload, null);
     }
 
@@ -92,14 +98,14 @@ public class MonitorPushService {
     *
     * @param payload   事件数据
     * @param monitorId 监控 标识（用于前端按目标过滤）
-     */
+    */
     public void pushMetric(Map<String, Object> payload, Long monitorId) {
         /**
         * broadcast。
         * @param String.valueOf(monitorId) 事件指标
         * @param payload payload
         * @param String.valueOf(monitorId 字符串.值的(监控标识
-         */
+        */
         broadcast(EVENT_METRIC, payload, monitorId == null ? null : String.valueOf(monitorId));
     }
 
@@ -107,14 +113,14 @@ public class MonitorPushService {
     * 广播采集任务执行状态
     *
     * @param payload 事件数据
-     */
+    */
     public void pushTask(Map<String, Object> payload) {
         /**
         * broadcast。
         * @param EVENT_TASK 事件任务
         * @param payload payload
         * @param null 空
-         */
+        */
         broadcast(EVENT_TASK, payload, null);
     }
 
@@ -123,14 +129,14 @@ public class MonitorPushService {
     *
     * @param payload   数据包实体
     * @param sessionId 抓包会话 标识（用于前端按会话过滤）
-     */
+    */
     public void pushTsharkPacket(Serializable payload, Long sessionId) {
         /**
         * broadcast。
         * @param String.valueOf(sessionId) 事件tshark数据包
         * @param payload payload
         * @param String.valueOf(sessionId 字符串.值的(会话标识
-         */
+        */
         broadcast(EVENT_TSHARK_PACKET, payload, sessionId == null ? null : String.valueOf(sessionId));
     }
 
@@ -139,14 +145,14 @@ public class MonitorPushService {
     *
     * @param payload   会话实体
     * @param sessionId 抓包会话 标识
-     */
+    */
     public void pushTsharkSession(Serializable payload, Long sessionId) {
         /**
         * broadcast。
         * @param String.valueOf(sessionId) 事件tshark会话
         * @param payload payload
         * @param String.valueOf(sessionId 字符串.值的(会话标识
-         */
+        */
         broadcast(EVENT_TSHARK_SESSION, payload, sessionId == null ? null : String.valueOf(sessionId));
     }
 
@@ -159,14 +165,14 @@ public class MonitorPushService {
     * @param port     端口
     * @param delayMs  延迟毫秒（-1 表示不可达）
     * @return 主机延迟的结果
-     */
+    */
     public record HostDelay(Long hostId, String hostName, String address, Integer port, Long delayMs) {
 
         /**
         * 转为 套接字 广播用的 映射 载荷
         *
         * @return 载荷 映射
-         */
+        */
         public Map<String, Object> toMap() {
             Map<String, Object> payload = new LinkedHashMap<>(6);
             payload.put("hostId", hostId);
@@ -187,13 +193,13 @@ public class MonitorPushService {
     * @param address  地址
     * @param port     端口
     * @param delayMs  延迟毫秒（-1 表示不可达）
-     */
+    */
     public void pushHostDelay(Long hostId, String hostName, String address, Integer port, Long delayMs) {
         /**
         * broadcast。
         * @param delayMs).toMap() 事件主机延迟
         * @param delayMs 延迟ms
-         */
+        */
         broadcast(EVENT_HOST_DELAY, new HostDelay(hostId, hostName, address, port, delayMs).toMap(),
                 hostId == null ? null : String.valueOf(hostId));
     }
@@ -204,7 +210,7 @@ public class MonitorPushService {
     * @param hostId   主机 标识
     * @param hostName 主机名
     * @param online   是否在线
-     */
+    */
     public void pushHostOnline(Long hostId, String hostName, boolean online) {
         Map<String, Object> payload = new LinkedHashMap<>(4);
         payload.put("hostId", hostId);
@@ -215,7 +221,7 @@ public class MonitorPushService {
         * @param String.valueOf(hostId) 事件主机online
         * @param payload payload
         * @param String.valueOf(hostId 字符串.值的(主机标识
-         */
+        */
         broadcast(EVENT_HOST_ONLINE, payload, hostId == null ? null : String.valueOf(hostId));
     }
 
@@ -230,7 +236,7 @@ public class MonitorPushService {
     * @param event  事件名
     * @param data   数据
     * @param dataId 数据 标识（可用于前端按维度过滤）
-     */
+    */
     private void broadcast(String event, Object data, String dataId) {
         try {
             MessageTemplate template = messageTemplateProvider.getIfAvailable();
@@ -261,7 +267,7 @@ public class MonitorPushService {
     * @param threshold   阈值
     * @param level       级别 P0~P4，空 时按 P2 处理
     * @param status      状态 新/处理/FALSE_报警器，空 时按 新 处理
-     */
+    */
     public record AlarmPayload(Long monitorId, String monitorName, String metricName,
                                double alarmValue, double threshold, String level, String status) {
 
@@ -276,7 +282,7 @@ public class MonitorPushService {
         * @param level       级别
         * @param status      状态
         * @return 载荷
-         */
+        */
         public static AlarmPayload of(Long monitorId, String monitorName, String metricName,
                                       double alarmValue, double threshold, String level, String status) {
             /**
@@ -289,7 +295,7 @@ public class MonitorPushService {
             * @param level 水平仪
             * @param status 状态
             * @return 报警器payload的结果
-             */
+            */
             return new AlarmPayload(monitorId, monitorName, metricName, alarmValue, threshold, level, status);
         }
 
@@ -297,7 +303,7 @@ public class MonitorPushService {
         * 转为 套接字 广播用的 映射 载荷（对齐前端 ws消息 字段名）
         *
         * @return 载荷 映射
-         */
+        */
         public Map<String, Object> toMap() {
             Map<String, Object> payload = new LinkedHashMap<>(8);
             payload.put("monitorId", monitorId);
@@ -323,7 +329,7 @@ public class MonitorPushService {
     * @param level       级别
     * @param status      状态
     * @return 载荷
-     */
+    */
     public static Map<String, Object> buildAlarmPayload(Long monitorId, String monitorName, String metricName,
                                                         double alarmValue, double threshold, String level, String status) {
         return AlarmPayload.of(monitorId, monitorName, metricName, alarmValue, threshold, level, status).toMap();

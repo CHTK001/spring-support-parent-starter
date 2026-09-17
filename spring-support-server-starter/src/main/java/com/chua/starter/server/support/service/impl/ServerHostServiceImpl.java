@@ -105,7 +105,7 @@ public class ServerHostServiceImpl implements ServerHostService {
     * 创建。
     * @param host 主机
     * @return 创建的结果
-     */
+    */
     public ReturnResult<MsServerHost> create(MsServerHost host) {
         // 参数校验前置
         if (host == null || isBlank(host.getServerHostName()) || isBlank(host.getServerHostAddress())) {
@@ -159,7 +159,7 @@ public class ServerHostServiceImpl implements ServerHostService {
         /**
         * auto创建identity。
         * @param host 主机
-         */
+        */
         autoCreateIdentity(host);
         return ReturnResult.ok(hostMapper.selectById(host.getId()));
     }
@@ -171,7 +171,7 @@ public class ServerHostServiceImpl implements ServerHostService {
     * @param id 标识
     * @param host 主机
     * @return 更新的结果
-     */
+    */
     public ReturnResult<MsServerHost> update(Long id, MsServerHost host) {
         MsServerHost exists = hostMapper.selectById(id);
         if (exists == null) {
@@ -243,7 +243,7 @@ public class ServerHostServiceImpl implements ServerHostService {
         /**
         * auto创建identity。
         * @param exists exists
-         */
+        */
         autoCreateIdentity(exists);
         return ReturnResult.ok(hostMapper.selectById(id));
     }
@@ -254,7 +254,7 @@ public class ServerHostServiceImpl implements ServerHostService {
     * 删除。
     * @param id 标识
     * @return 删除的结果
-     */
+    */
     public ReturnResult<Void> delete(Long id) {
         // 先解除身份绑定再删除主机，避免遗留孤儿关联
         hostIdentityMapper.delete(new LambdaQueryWrapper<MsServerHostIdentity>()
@@ -298,7 +298,7 @@ public class ServerHostServiceImpl implements ServerHostService {
     * @param id 标识
     * @param enabled 已启用
     * @return 更新状态的结果
-     */
+    */
     public ReturnResult<Void> updateStatus(Long id, boolean enabled) {
         MsServerHost host = hostMapper.selectById(id);
         if (host == null) {
@@ -338,14 +338,14 @@ public class ServerHostServiceImpl implements ServerHostService {
             /**
             * markonline。
             * @param host.getId( 主机.获取标识(
-             */
+            */
             markOnline(host.getId(), true);
             return ReturnResult.ok(banner, "测试成功");
         } catch (Exception e) {
             /**
             * markonline。
             * @param host.getId( 主机.获取标识(
-             */
+            */
             markOnline(host.getId(), false);
             log.warn("[server] 连通性测试失败 hostId={} address={}: {}", id, host.getServerHostAddress(), e.getMessage());
             return ReturnResult.error("连接失败: " + e.getMessage());
@@ -364,7 +364,7 @@ public class ServerHostServiceImpl implements ServerHostService {
     * @param identityId identityid
     * @param sort 排序
     * @return bindIdentity的结果
-     */
+    */
     public ReturnResult<Void> bindIdentity(Long hostId, Long identityId, Integer sort) {
         if (hostId == null || identityId == null) {
             return ReturnResult.error("主机ID与身份ID不能为空");
@@ -396,7 +396,7 @@ public class ServerHostServiceImpl implements ServerHostService {
     * @param hostId 主机标识
     * @param identityId identityid
     * @return unbindIdentity的结果
-     */
+    */
     public ReturnResult<Void> unbindIdentity(Long hostId, Long identityId) {
         if (hostId == null || identityId == null) {
             return ReturnResult.error("主机ID与身份ID不能为空");
@@ -508,7 +508,7 @@ public class ServerHostServiceImpl implements ServerHostService {
     *
     * @param ports 端口列表
     * @return JSON 字符串
-     */
+    */
     private String toPortsJson(List<NmapScanner.PortInfo> ports) {
         if (ports == null || ports.isEmpty()) {
             return "[]";
@@ -565,7 +565,7 @@ public class ServerHostServiceImpl implements ServerHostService {
     * @param host       目标主机，不能为 null
     * @param credential 登录凭据，不能为 null
     * @return 探测结果；探测成功返回包含已回写硬件字段的主机
-     */
+    */
     private ReturnResult<MsServerHost> detectByProvider(MsServerHost host, SshCredential credential) {
         String osType = host.getServerHostOsType();
         var providerOpt = detectProviderRegistry.resolve(osType);
@@ -593,7 +593,9 @@ public class ServerHostServiceImpl implements ServerHostService {
         return ReturnResult.ok(publicIp, "公网 IP 已刷新");
     }
 
-    /** 批量同步虚拟线程执行器（SSH 探测为阻塞 IO，虚拟线程并发最合适） */
+    /**
+    * 批量同步虚拟线程执行器（SSH 探测为阻塞 IO，虚拟线程并发最合适）
+    */
     private static final java.util.concurrent.ExecutorService SYNC_EXECUTOR =
             java.util.concurrent.Executors.newThreadPerTaskExecutor(
                     Thread.ofVirtual().name("host-sync-").factory());
@@ -658,7 +660,7 @@ public class ServerHostServiceImpl implements ServerHostService {
     * @param target  目标主机
     * @param changes 变更明细收集器
     * @return true=有字段更新，false=无变化跳过
-     */
+    */
     private boolean syncSingleHost(MsServerHost target, java.util.List<java.util.Map<String, Object>> changes) {
         // 保存探测前 IP 快照（用于判断是否发生变更）
         String oldPublicIp = target.getServerHostPublicIp();
@@ -745,7 +747,7 @@ public class ServerHostServiceImpl implements ServerHostService {
     *
     * @param url 地址
     * @return 响应文本，失败返回空串
-     */
+    */
     private String fetchViaHttp(String url) {
         try {
             java.net.HttpURLConnection conn = (java.net.HttpURLConnection) new java.net.URL(url).openConnection();
@@ -755,13 +757,13 @@ public class ServerHostServiceImpl implements ServerHostService {
             /**
             * 尝试。
             * @param conn.getInputStream( conn.获取输入流(
-             */
+            */
             try (var in = conn.getInputStream()) {
                 /**
                 * 字符串。
                 * @param in.readAllBytes( 入.读取全部bytes(
                 * @return 字符串的结果
-                 */
+                */
                 return new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8).trim();
             }
         } catch (Exception e) {
@@ -774,7 +776,7 @@ public class ServerHostServiceImpl implements ServerHostService {
     *
     * @param value 字符串
     * @return 是否为 IP
-     */
+    */
     private boolean isIp(String value) {
         if (value == null) {
             return false;
@@ -855,7 +857,7 @@ public class ServerHostServiceImpl implements ServerHostService {
     *
     * @param privateKey PEM 私钥
     * @return RSA / ED25519 / ECDSA
-     */
+    */
     private String detectKeyType(String privateKey) {
         String t = privateKey == null ? "" : privateKey;
         if (t.contains("ED25519")) {
@@ -873,7 +875,7 @@ public class ServerHostServiceImpl implements ServerHostService {
     * @param handle  SSH 句柄
     * @param command 命令
     * @return 标准输出，异常返回空串
-     */
+    */
     private String execQuiet(SshClients.Handle handle, String command) {
         try {
             return handle.client().exec().command(command).executeAndGetOutput();
@@ -887,7 +889,7 @@ public class ServerHostServiceImpl implements ServerHostService {
     *
     * @param value 字符串
     * @return 是否纯数字
-     */
+    */
     private boolean isNumeric(String value) {
         if (value == null) {
             return false;
@@ -909,7 +911,7 @@ public class ServerHostServiceImpl implements ServerHostService {
     *
     * @param hostId 主机 标识
     * @param online 是否在线
-     */
+    */
     private void markOnline(Long hostId, boolean online) {
         try {
             MsServerHost host = hostMapper.selectById(hostId);
@@ -929,7 +931,7 @@ public class ServerHostServiceImpl implements ServerHostService {
     *
     * @param hostId 主机 标识
     * @return 下一个优先级值
-     */
+    */
     private int nextSort(Long hostId) {
         List<MsServerHostIdentity> relations = hostIdentityMapper.selectList(
                 new LambdaQueryWrapper<MsServerHostIdentity>()
@@ -947,7 +949,7 @@ public class ServerHostServiceImpl implements ServerHostService {
     * 生成 32 位十六进制探针标识
     *
     * @return agentKey
-     */
+    */
     private String generateAgentKey() {
         byte[] bytes = new byte[AGENT_KEY_BYTES];
         secureRandom.nextBytes(bytes);
@@ -959,7 +961,7 @@ public class ServerHostServiceImpl implements ServerHostService {
     *
     * @param value 待判断字符串
     * @return 是否为空
-     */
+    */
     private boolean isBlank(String value) {
         return value == null || value.isBlank();
     }

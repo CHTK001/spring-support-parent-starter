@@ -22,7 +22,7 @@ public class CollectOutcome {
     *
     * @param success 是否成功
     * @param message 消息
-     */
+    */
     public CollectOutcome(boolean success, String message) {
         this.success = success;
         this.message = message;
@@ -33,13 +33,13 @@ public class CollectOutcome {
     *
     * @param message 消息
     * @return 结果
-     */
+    */
     public static CollectOutcome ok(String message) {
         /**
         * collectoutcome。
         * @param true true
         * @param message 消息
-         */
+        */
         return new CollectOutcome(true, message);
     }
 
@@ -48,13 +48,13 @@ public class CollectOutcome {
     *
     * @param message 消息
     * @return 结果
-     */
+    */
     public static CollectOutcome fail(String message) {
         /**
         * collectoutcome。
         * @param false false
         * @param message 消息
-         */
+        */
         return new CollectOutcome(false, message);
     }
 }

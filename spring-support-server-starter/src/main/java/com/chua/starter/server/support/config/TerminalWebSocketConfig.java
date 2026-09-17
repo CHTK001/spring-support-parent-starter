@@ -29,7 +29,7 @@ public class TerminalWebSocketConfig implements WebSocketConfigurer {
     * 构造注入
     *
     * @param terminalWebSocketHandler 终端处理器
-     */
+    */
     public TerminalWebSocketConfig(TerminalWebSocketHandler terminalWebSocketHandler) {
         this.terminalWebSocketHandler = terminalWebSocketHandler;
     }
@@ -42,7 +42,7 @@ public class TerminalWebSocketConfig implements WebSocketConfigurer {
     * </p>
     *
     * @param registry 注册器
-     */
+    */
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
  // 回显 guacamole 子协议：guacamole-通用-js 的 web套接字tunnel 以

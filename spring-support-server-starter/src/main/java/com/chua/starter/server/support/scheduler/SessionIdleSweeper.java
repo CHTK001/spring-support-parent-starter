@@ -29,7 +29,7 @@ public class SessionIdleSweeper {
 
     /**
     * 执行空闲扫描
-     */
+    */
     public void sweep() {
         int closed = sessionRegistry.sweepIdle(properties.getSessionIdleMinutes());
         if (closed > 0) {

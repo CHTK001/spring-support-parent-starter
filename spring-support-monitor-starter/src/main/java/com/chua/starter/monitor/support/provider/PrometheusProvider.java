@@ -42,17 +42,17 @@ public class PrometheusProvider implements MetricProvider {
 
     /**
     * Prometheus 地址配置项
-     */
+    */
     private static final String CONFIG_KEY_URL = "monitor.prometheus.url";
 
     /**
     * Prometheus 客户端提供者
-     */
+    */
     private final ObjectProvider<PrometheusClient> clientProvider;
 
     /**
     * 全局配置 服务
-     */
+    */
     private final MonitorConfigService configService;
 
     /**
@@ -60,7 +60,7 @@ public class PrometheusProvider implements MetricProvider {
     *
     * @param clientProvider Prometheus 客户端提供者
     * @param configService  全局配置 服务
-     */
+    */
     @Autowired
     public PrometheusProvider(ObjectProvider<PrometheusClient> clientProvider,
                               MonitorConfigService configService) {
@@ -93,7 +93,7 @@ public class PrometheusProvider implements MetricProvider {
     *
     * @param context 采集上下文
     * @return 采集结果
-     */
+    */
 
     private CollectResult doCollect(CollectContext context) {
         CollectResult result = new CollectResult();
@@ -123,7 +123,7 @@ public class PrometheusProvider implements MetricProvider {
                 * @param queryResult 查询结果
                 * @param promql promql
                 * @param result 结果
-                 */
+                */
                 parseQueryResult(queryResult, promql, result);
             });
             result.setSuccess(true);
@@ -140,7 +140,7 @@ public class PrometheusProvider implements MetricProvider {
     * @param queryResult 查询结果
     * @param promql      promql 语句
     * @param result      采集结果
-     */
+    */
     private void parseQueryResult(QueryResult queryResult, String promql, CollectResult result) {
         if (queryResult == null || !queryResult.hasData()) {
             return;

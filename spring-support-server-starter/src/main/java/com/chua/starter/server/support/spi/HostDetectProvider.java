@@ -22,7 +22,7 @@ public interface HostDetectProvider {
     * 支持的操作系统类型（与 MsServerHost.serverHostOsType 对齐，如 LINUX/MACOS/WINDOWS）
     *
     * @return 系统类型标识（全大写）
-     */
+    */
     String osType();
 
     /**
@@ -31,6 +31,6 @@ public interface HostDetectProvider {
     * @param host       目标主机（已存在，含地址/端口/系统类型）
     * @param credential 解密后的登录凭据（SSH 或 WinRM 共用）
     * @return 更新后的主机
-     */
+    */
     ReturnResult<MsServerHost> detect(MsServerHost host, SshCredential credential);
 }

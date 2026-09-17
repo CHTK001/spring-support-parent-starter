@@ -43,7 +43,7 @@ public class ServerHostController {
     *
     * @param host 主机
     * @return 结果
-     */
+    */
     @Operation(summary = "新增主机")
     @PostMapping
     public ReturnResult<MsServerHost> create(@RequestBody MsServerHost host) {
@@ -56,7 +56,7 @@ public class ServerHostController {
     * @param id   主键
     * @param host 主机
     * @return 结果
-     */
+    */
     @Operation(summary = "更新主机")
     @PutMapping("/{id}")
     public ReturnResult<MsServerHost> update(@PathVariable Long id, @RequestBody MsServerHost host) {
@@ -68,7 +68,7 @@ public class ServerHostController {
     *
     * @param id 主键
     * @return 结果
-     */
+    */
     @Operation(summary = "删除主机")
     @DeleteMapping("/{id}")
     public ReturnResult<Void> delete(@PathVariable Long id) {
@@ -80,7 +80,7 @@ public class ServerHostController {
     *
     * @param id 主键
     * @return 结果
-     */
+    */
     @Operation(summary = "查询单个主机")
     @GetMapping("/{id}")
     public ReturnResult<MsServerHost> get(@PathVariable Long id) {
@@ -95,7 +95,7 @@ public class ServerHostController {
     * @param status  启用状态，可为空
     * @return 主机列表
     * @param false false
-     */
+    */
     @Operation(summary = "条件查询主机")
     @PostMapping("/query")
     public ReturnResult<List<MsServerHost>> query(@RequestParam(required = false) String keyword,
@@ -115,7 +115,7 @@ public class ServerHostController {
     * @param status  启用状态，可为空
     * @return 主机列表
     * @param false false
-     */
+    */
     @Operation(summary = "列表查询主机（GET）")
     @GetMapping
     public ReturnResult<List<MsServerHost>> list(@RequestParam(required = false) String keyword,
@@ -130,7 +130,7 @@ public class ServerHostController {
     * @param id      主键
     * @param enabled 是否启用
     * @return 结果
-     */
+    */
     @Operation(summary = "启停主机")
     @PutMapping("/{id}/status")
     public ReturnResult<Void> updateStatus(@PathVariable Long id, @RequestParam boolean enabled) {
@@ -142,7 +142,7 @@ public class ServerHostController {
     *
     * @param id 主键
     * @return 测试输出（uname 等）
-     */
+    */
     @Operation(summary = "连通性测试")
     @PostMapping("/{id}/test-connect")
     public ReturnResult<String> testConnect(@PathVariable Long id) {
@@ -157,7 +157,7 @@ public class ServerHostController {
     * @param sort       优先级，可为空
     * @return 结果
     * @param @PathVariable("id" @路径变量("标识"
-     */
+    */
     @Operation(summary = "绑定登录身份")
     @PostMapping("/{id}/identity/{identityId}")
     public ReturnResult<Void> bindIdentity(@PathVariable("id") Long id,
@@ -173,7 +173,7 @@ public class ServerHostController {
     * @param identityId 身份 标识
     * @return 结果
     * @param @PathVariable("id" @路径变量("标识"
-     */
+    */
     @Operation(summary = "解除登录身份")
     @DeleteMapping("/{id}/identity/{identityId}")
     public ReturnResult<Void> unbindIdentity(@PathVariable("id") Long id,
@@ -186,7 +186,7 @@ public class ServerHostController {
     *
     * @param id 主机 标识
     * @return 身份 标识 列表（按优先级）
-     */
+    */
     @Operation(summary = "查询已绑定身份")
     @GetMapping("/{id}/identities")
     public ReturnResult<List<Long>> listIdentities(@PathVariable Long id) {
@@ -198,7 +198,7 @@ public class ServerHostController {
     *
     * @param id 主机 标识
     * @return 更新后的主机（含硬件信息）
-     */
+    */
     @Operation(summary = "硬件探测")
     @PostMapping("/{id}/detect")
     public ReturnResult<MsServerHost> detect(@PathVariable Long id) {
@@ -210,7 +210,7 @@ public class ServerHostController {
     *
     * @param id 主机 标识
     * @return 刷新后的公网 IP
-     */
+    */
     @Operation(summary = "刷新公网IP")
     @PostMapping("/{id}/refresh-public-ip")
     public ReturnResult<String> refreshPublicIp(@PathVariable Long id) {
@@ -226,7 +226,7 @@ public class ServerHostController {
     *
     * @param hostIds 目标主机 ID 列表（可选；为空则同步全部启用主机）
     * @return 同步结果概要（total/updated/unchanged/failed/changes）
-     */
+    */
     @Operation(summary = "批量同步主机资产")
     @PostMapping("/sync")
     public ReturnResult<java.util.Map<String, Object>> syncHosts(@RequestBody(required = false) java.util.List<Long> hostIds) {
@@ -238,7 +238,7 @@ public class ServerHostController {
     *
     * @param id 主机 标识
     * @return 更新后的主机（含端口扫描结果）
-     */
+    */
     @Operation(summary = "端口扫描")
     @PostMapping("/{id}/scan-ports")
     public ReturnResult<MsServerHost> scanPorts(@PathVariable Long id) {
@@ -252,7 +252,7 @@ public class ServerHostController {
     * @param groupId 分组 标识，可为空
     * @return CSV 文件流
     * @param false false
-     */
+    */
     @Operation(summary = "导出主机列表(CSV)")
     @GetMapping("/export")
     public ResponseEntity<byte[]> export(@RequestParam(required = false) String keyword,
@@ -296,7 +296,7 @@ public class ServerHostController {
     *
     * @param value 字段值
     * @return 转义后的 CSV 字段
-     */
+    */
     private String joinCsv(Object value) {
         if (value == null) {
             return "";

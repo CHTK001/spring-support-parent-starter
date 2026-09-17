@@ -35,7 +35,7 @@ public class ServerAutoConfiguration {
     *
     * @param properties 配置属性
     * @return ServiceInfoContributor
-     */
+    */
     @Bean
     public ServiceInfoContributor serverServiceInfoContributor(ServerProperties properties) {
         return registry -> registry.registerFlag("server", "服务器资产", properties.isEnabled(),

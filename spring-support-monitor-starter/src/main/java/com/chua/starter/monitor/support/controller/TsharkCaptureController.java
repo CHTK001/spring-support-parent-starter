@@ -34,7 +34,7 @@ public class TsharkCaptureController {
     /**
     * tsharkcapture控制器。
     * @param tsharkCaptureService tsharkcapture服务
-     */
+    */
     public TsharkCaptureController(TsharkCaptureService tsharkCaptureService) {
         this.tsharkCaptureService = tsharkCaptureService;
     }
@@ -44,7 +44,7 @@ public class TsharkCaptureController {
     /**
     * 检查。
     * @return 检查的结果
-     */
+    */
     public ReturnResult<Boolean> check() {
         return this.tsharkCaptureService.checkTshark();
     }
@@ -54,7 +54,7 @@ public class TsharkCaptureController {
     /**
     * 接口。
     * @return 接口的结果
-     */
+    */
     public ReturnResult<List<String>> interfaces() {
         return this.tsharkCaptureService.listInterfaces();
     }
@@ -65,7 +65,7 @@ public class TsharkCaptureController {
     * 启动。
     * @param body 主体
     * @return 启动的结果
-     */
+    */
     public ReturnResult<MsTsharkSession> start(@RequestBody Map<String, Object> body) {
         String name = str(body.get("name"));
         String iface = str(body.get("captureInterface"));
@@ -81,7 +81,7 @@ public class TsharkCaptureController {
     * 停止。
     * @param id 标识
     * @return 停止的结果
-     */
+    */
     public ReturnResult<Void> stop(@PathVariable Long id) {
         return this.tsharkCaptureService.stopCapture(id);
     }
@@ -92,7 +92,7 @@ public class TsharkCaptureController {
     * 删除。
     * @param id 标识
     * @return 删除的结果
-     */
+    */
     public ReturnResult<Void> delete(@PathVariable Long id) {
         return this.tsharkCaptureService.deleteSession(id);
     }
@@ -103,7 +103,7 @@ public class TsharkCaptureController {
     * 会话。
     * @param "1" "1"
     * @return 会话的结果
-     */
+    */
     public ReturnResult<IPage<MsTsharkSession>> sessions(@RequestParam(defaultValue = "1") int page,
                                                          @RequestParam(defaultValue = "10") int size) {
         return this.tsharkCaptureService.pageSessions(page, size);
@@ -123,7 +123,7 @@ public class TsharkCaptureController {
     * 数据包。
     * @param id 标识
     * @return 数据包的结果
-     */
+    */
     public ReturnResult<MsTsharkPacket> packet(@PathVariable Long id) {
         return this.tsharkCaptureService.getPacket(id);
     }
@@ -134,7 +134,7 @@ public class TsharkCaptureController {
     * 协议stats。
     * @param id 标识
     * @return 协议stats的结果
-     */
+    */
     public ReturnResult<List<Map<String, Object>>> protocolStats(@PathVariable Long id) {
         return this.tsharkCaptureService.protocolStats(id);
     }
@@ -150,7 +150,7 @@ public class TsharkCaptureController {
     * str。
     * @param o o
     * @return str的结果
-     */
+    */
     private String str(Object o) {
         return o == null ? null : String.valueOf(o);
     }
@@ -159,7 +159,7 @@ public class TsharkCaptureController {
     * int的。
     * @param o o
     * @return int的的结果
-     */
+    */
     private Integer intOf(Object o) {
         if (o == null) {
             return null;

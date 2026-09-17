@@ -18,7 +18,7 @@ public interface ServerKeyService {
     *
     * @param key 密钥
     * @return 结果
-     */
+    */
     ReturnResult<MsServerKey> create(MsServerKey key);
 
     /**
@@ -27,7 +27,7 @@ public interface ServerKeyService {
     * @param id  主键
     * @param key 密钥
     * @return 结果
-     */
+    */
     ReturnResult<MsServerKey> update(Long id, MsServerKey key);
 
     /**
@@ -35,7 +35,7 @@ public interface ServerKeyService {
     *
     * @param id 主键
     * @return 结果
-     */
+    */
     ReturnResult<Void> delete(Long id);
 
 /**
@@ -53,6 +53,6 @@ public interface ServerKeyService {
     * @param password Կڣɿ
     * @param remark   עɿ
     * @return ԿϢֻԿ
-     */
+    */
     ReturnResult<MsServerKey> generate(String name, String type, String password, String remark);
 }

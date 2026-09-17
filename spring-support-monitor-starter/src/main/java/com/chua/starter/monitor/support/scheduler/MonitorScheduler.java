@@ -91,7 +91,7 @@ public class MonitorScheduler {
 
     /**
     * 调度入口, 每 10 秒扫描一次, 根据配置的间隔决定是否执行采集
-     */
+    */
     @Scheduled(fixedRate = 10_000)
     public void tick() {
         long intervalMs = configService.getLong(CONFIG_KEY_INTERVAL, DEFAULT_INTERVAL_MS);
@@ -120,7 +120,7 @@ public class MonitorScheduler {
 
     /**
     * 小时聚合, 每小时执行一次
-     */
+    */
     @Scheduled(cron = "0 0 * * * ?")
     public void aggregateHourly() {
         metricService.aggregateHourly();
@@ -128,7 +128,7 @@ public class MonitorScheduler {
 
     /**
     * 数据保留清理, 每天凌晨 3 点执行
-     */
+    */
     @Scheduled(cron = "0 0 3 * * ?")
     public void cleanupOldData() {
         int retentionDays = configService.getInt("monitor.data.retention.days", 30);
@@ -141,7 +141,7 @@ public class MonitorScheduler {
     * @param task 任务
     * @param now  当前时间
     * @return true 表示应触发
-     */
+    */
     private boolean isTriggered(MsMonitorTask task, LocalDateTime now) {
         String cron = task.getMonitorTaskCron();
         if (cron == null || cron.isEmpty()) {
@@ -170,7 +170,7 @@ public class MonitorScheduler {
     *
     * @param task 任务
     * @return 响应式采集结果
-     */
+    */
     private reactor.core.publisher.Mono<CollectResult> execute(MsMonitorTask task) {
         ServiceType serviceType = ServiceType.of(task.getServiceType());
         ProviderType providerType = ProviderType.of(task.getProvider());
@@ -199,7 +199,7 @@ public class MonitorScheduler {
                     /**
                     * apply解析rules。
                     * @param task.getId( 任务.获取标识(
-                     */
+                    */
                     applyParseRules(task.getId(), result);
                     metricService.writeCollectResult(result);
                 })
@@ -221,7 +221,7 @@ public class MonitorScheduler {
     *
     * @param taskId 任务 标识
     * @param result 采集结果
-     */
+    */
     private void applyParseRules(Long taskId, CollectResult result) {
         try {
             List<MsMonitorMetricConfig> rules = metricConfigService.listByTask(taskId).getData();
@@ -246,7 +246,7 @@ public class MonitorScheduler {
     * @param rule      解析规则
     * @param rawOutput 原始输出
     * @return 指标点列表
-     */
+    */
     private List<MetricPoint> parseByRule(MsMonitorMetricConfig rule, String rawOutput) {
         String parseRule = rule.getParseRule();
         if (parseRule == null || parseRule.isEmpty()) {
@@ -283,7 +283,7 @@ public class MonitorScheduler {
     * @param rawOutput  原始输出
     * @param expression json路径 表达式, 如 "$.cpu.usage"
     * @return 指标点列表
-     */
+    */
     private List<MetricPoint> parseJsonPath(MsMonitorMetricConfig rule, String rawOutput, String expression) {
         try {
             String path = expression;
@@ -328,7 +328,7 @@ public class MonitorScheduler {
     * @param rawOutput  原始输出
     * @param expression 正则表达式, 必须包含捕获组
     * @return 指标点列表
-     */
+    */
     private List<MetricPoint> parseRegex(MsMonitorMetricConfig rule, String rawOutput, String expression) {
         try {
             Pattern pattern = Pattern.compile(expression, Pattern.MULTILINE);
@@ -370,7 +370,7 @@ public class MonitorScheduler {
     * @param rawOutput  原始输出
     * @param expression 逗号分隔的字段路径, 如 "cpu.usage,mem.used"
     * @return 指标点列表
-     */
+    */
     private List<MetricPoint> parseJsonFields(MsMonitorMetricConfig rule, String rawOutput, String expression) {
         try {
             Map<String, Object> root = objectMapper.readValue(rawOutput,
@@ -401,7 +401,7 @@ public class MonitorScheduler {
     * @param root 根 映射
     * @param path 点号分隔路径, 如 "cpu.usage"
     * @return 路径对应的值, 不存在返回 空
-     */
+    */
     @SuppressWarnings("unchecked")
     private Object resolveJsonPath(Map<String, Object> root, String path) {
         String[] parts = path.split("\\.");

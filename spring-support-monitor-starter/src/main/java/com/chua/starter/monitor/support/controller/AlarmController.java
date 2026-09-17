@@ -42,7 +42,7 @@ public class AlarmController {
     *
     * @param policy 策略
     * @return 结果
-     */
+    */
     @Operation(summary = "新增告警策略")
     @PostMapping("/policy")
     public ReturnResult<MsMonitorAlarmPolicy> createPolicy(@RequestBody MsMonitorAlarmPolicy policy) {
@@ -55,7 +55,7 @@ public class AlarmController {
     * @param id     主键
     * @param policy 策略
     * @return 结果
-     */
+    */
     @Operation(summary = "更新告警策略")
     @PutMapping("/policy/{id}")
     public ReturnResult<MsMonitorAlarmPolicy> updatePolicy(@PathVariable Long id,
@@ -68,7 +68,7 @@ public class AlarmController {
     *
     * @param id 主键
     * @return 结果
-     */
+    */
     @Operation(summary = "删除告警策略")
     @DeleteMapping("/policy/{id}")
     public ReturnResult<Void> deletePolicy(@PathVariable Long id) {
@@ -79,7 +79,7 @@ public class AlarmController {
     * 策略列表
     *
     * @return 列表
-     */
+    */
     @Operation(summary = "策略列表")
     @GetMapping("/policy")
     public ReturnResult<List<MsMonitorAlarmPolicy>> listPolicies() {
@@ -91,7 +91,7 @@ public class AlarmController {
     *
     * @param rule 规则
     * @return 结果
-     */
+    */
     @Operation(summary = "新增告警规则")
     @PostMapping("/rule")
     public ReturnResult<MsMonitorAlarmRule> createRule(@RequestBody MsMonitorAlarmRule rule) {
@@ -104,7 +104,7 @@ public class AlarmController {
     * @param id   主键
     * @param rule 规则
     * @return 结果
-     */
+    */
     @Operation(summary = "更新告警规则")
     @PutMapping("/rule/{id}")
     public ReturnResult<MsMonitorAlarmRule> updateRule(@PathVariable Long id,
@@ -117,7 +117,7 @@ public class AlarmController {
     *
     * @param id 主键
     * @return 结果
-     */
+    */
     @Operation(summary = "删除告警规则")
     @DeleteMapping("/rule/{id}")
     public ReturnResult<Void> deleteRule(@PathVariable Long id) {
@@ -130,7 +130,7 @@ public class AlarmController {
     * @param policyId 策略过滤，可为空
     * @return 规则列表
     * @param false false
-     */
+    */
     @Operation(summary = "规则列表")
     @GetMapping("/rule")
     public ReturnResult<List<MsMonitorAlarmRule>> listRules(@RequestParam(required = false) Long policyId) {
@@ -143,7 +143,7 @@ public class AlarmController {
     * @param status 状态过滤，可为空
     * @return 事件列表
     * @param false false
-     */
+    */
     @Operation(summary = "事件列表")
     @GetMapping("/event")
     public ReturnResult<List<MsMonitorAlarmEvent>> listEvents(@RequestParam(required = false) String status) {
@@ -157,7 +157,7 @@ public class AlarmController {
     * @param remark     处理备注
     * @param falseAlarm 是否误报
     * @return 结果
-     */
+    */
     @Operation(summary = "处理事件")
     @PostMapping("/event/{id}/handle")
     public ReturnResult<Void> handleEvent(@PathVariable Long id,
@@ -174,7 +174,7 @@ public class AlarmController {
     * @param metricName 指标名
     * @param value     指标值
     * @return 是否触发
-     */
+    */
     @Operation(summary = "测试告警规则")
     @GetMapping("/rule/{ruleId}/test")
     public ReturnResult<Boolean> testRule(@PathVariable Long ruleId,
@@ -191,7 +191,7 @@ public class AlarmController {
     *
     * @param window 维护窗口
     * @return 结果
-     */
+    */
     @Operation(summary = "新增维护窗口")
     @PostMapping("/maintenance-window")
     public ReturnResult<MsMonitorAlarmMaintenanceWindow> createMaintenanceWindow(
@@ -205,7 +205,7 @@ public class AlarmController {
     * @param id     主键
     * @param window 维护窗口
     * @return 结果
-     */
+    */
     @Operation(summary = "更新维护窗口")
     @PutMapping("/maintenance-window/{id}")
     public ReturnResult<MsMonitorAlarmMaintenanceWindow> updateMaintenanceWindow(@PathVariable Long id,
@@ -218,7 +218,7 @@ public class AlarmController {
     *
     * @param id 主键
     * @return 结果
-     */
+    */
     @Operation(summary = "删除维护窗口")
     @DeleteMapping("/maintenance-window/{id}")
     public ReturnResult<Void> deleteMaintenanceWindow(@PathVariable Long id) {
@@ -230,7 +230,7 @@ public class AlarmController {
     *
     * @param policyId 策略 标识 过滤（可选）
     * @return 列表
-     */
+    */
     @Operation(summary = "维护窗口列表")
     @GetMapping("/maintenance-window")
     public ReturnResult<List<MsMonitorAlarmMaintenanceWindow>> listMaintenanceWindows(

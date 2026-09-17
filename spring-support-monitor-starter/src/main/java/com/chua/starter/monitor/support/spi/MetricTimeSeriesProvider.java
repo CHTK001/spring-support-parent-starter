@@ -20,21 +20,21 @@ public interface MetricTimeSeriesProvider {
     * 引擎标识（与配置 监控.timeseries.engine 对应）
     *
     * @return 引擎名，如 influxdb / Redis
-     */
+    */
     String engine();
 
     /**
     * 是否可用（依赖装配成功且服务可达）
     *
     * @return true 表示可写入/可查询
-     */
+    */
     boolean isAvailable();
 
     /**
     * 写入整批采集结果
     *
     * @param result 采集结果
-     */
+    */
     void write(CollectResult result);
 
     /**
@@ -43,7 +43,7 @@ public interface MetricTimeSeriesProvider {
     * @param monitorId 目标 标识
     * @param point     指标点
     * @param timestamp 时间戳（毫秒）
-     */
+    */
     void writePoint(Long monitorId, MetricPoint point, long timestamp);
 
     /**
@@ -55,6 +55,6 @@ public interface MetricTimeSeriesProvider {
     * @param window    聚合窗口，如 1m/5m/1h
     * @return [[ts,value],...] 升序
     * @throws IllegalArgumentException 当 Target 或 窗口 格式非法时
-     */
+    */
     List<List<Object>> series(String target, Long monitorId, int hours, String window);
 }

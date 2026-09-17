@@ -20,7 +20,7 @@ public class MonitorApplication {
     * Main
     *
     * @param args 参数
-     */
+    */
     public static void main(String[] args) {
         SpringApplication.run(MonitorApplication.class, args);
     }

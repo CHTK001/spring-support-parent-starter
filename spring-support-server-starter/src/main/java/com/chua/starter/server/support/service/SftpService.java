@@ -26,7 +26,7 @@ public interface SftpService {
     * @param identityId 指定身份 标识，可为空取默认绑定身份
     * @param path       目录路径，空时取用户主目录
     * @return 文件条目列表（name/path/directory/file/size 等键）
-     */
+    */
     ReturnResult<List<Map<String, Object>>> list(Long hostId, Long identityId, String path);
 
     /**
@@ -36,7 +36,7 @@ public interface SftpService {
     * @param identityId 身份 标识
     * @param path       文件路径
     * @return 内容结果：content（可能被截断）/ truncated / 大小
-     */
+    */
     ReturnResult<Map<String, Object>> readContent(Long hostId, Long identityId, String path);
 
     /**
@@ -47,7 +47,7 @@ public interface SftpService {
     * @param path       文件路径
     * @param content    新内容
     * @return 结果
-     */
+    */
     ReturnResult<Void> writeContent(Long hostId, Long identityId, String path, String content);
 
     /**
@@ -58,7 +58,7 @@ public interface SftpService {
     * @param directory  目标目录
     * @param file       上传的文件
     * @return 结果（含远端完整路径）
-     */
+    */
     ReturnResult<String> upload(Long hostId, Long identityId, String directory, MultipartFile file);
 
     /**
@@ -68,7 +68,7 @@ public interface SftpService {
     * @param identityId 身份 标识
     * @param path       远端文件路径
     * @return 临时文件句柄（使用方负责 关闭 删除）
-     */
+    */
     ReturnResult<TempFile> download(Long hostId, Long identityId, String path);
 
     /**
@@ -78,7 +78,7 @@ public interface SftpService {
     * @param identityId 身份 标识
     * @param path       新目录路径
     * @return 结果
-     */
+    */
     ReturnResult<Void> mkdir(Long hostId, Long identityId, String path);
 
     /**
@@ -89,7 +89,7 @@ public interface SftpService {
     * @param path       路径
     * @param recursive  目录是否递归删除
     * @return 结果
-     */
+    */
     ReturnResult<Void> delete(Long hostId, Long identityId, String path, boolean recursive);
 
     /**
@@ -100,6 +100,6 @@ public interface SftpService {
     * @param fromPath   原路径
     * @param toPath     新路径
     * @return 结果
-     */
+    */
     ReturnResult<Void> rename(Long hostId, Long identityId, String fromPath, String toPath);
 }

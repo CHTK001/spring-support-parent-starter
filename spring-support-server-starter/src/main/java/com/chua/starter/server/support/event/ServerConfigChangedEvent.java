@@ -22,7 +22,7 @@ public class ServerConfigChangedEvent {
     * 构造
     *
     * @param keys 变更的配置键
-     */
+    */
     public ServerConfigChangedEvent(java.util.Set<String> keys) {
         this.keys = keys == null ? java.util.Collections.emptySet() : keys;
     }
@@ -32,7 +32,7 @@ public class ServerConfigChangedEvent {
     *
     * @param prefix 前缀
     * @return 是否命中
-     */
+    */
     public boolean containsPrefix(String prefix) {
         if (prefix == null) {
             return false;

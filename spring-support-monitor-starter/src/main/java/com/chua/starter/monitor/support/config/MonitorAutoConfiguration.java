@@ -31,7 +31,7 @@ public class MonitorAutoConfiguration {
     *
     * @param properties Influx 配置
     * @return ServiceInfoContributor
-     */
+    */
     @Bean
     public ServiceInfoContributor monitorServiceInfoContributor(MonitorInfluxProperties properties) {
         return registry -> registry.registerFlag("monitor", "监控", true,

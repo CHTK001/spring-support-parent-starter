@@ -16,7 +16,7 @@ public record SshCredential(String username, String password, String privateKey)
     * 判断是否为公钥认证
     *
     * @return 是否携带私钥
-     */
+    */
     public boolean hasKey() {
         return privateKey != null && !privateKey.isEmpty();
     }

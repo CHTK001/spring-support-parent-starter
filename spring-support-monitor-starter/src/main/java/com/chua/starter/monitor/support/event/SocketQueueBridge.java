@@ -47,7 +47,7 @@ public class SocketQueueBridge {
 
     /**
     * 初始化：订阅 socket:push 推送 topic
-     */
+    */
     @PostConstruct
     public void init() {
         MessageTemplate messageTemplate = messageTemplateProvider.getIfAvailable();
@@ -82,7 +82,7 @@ public class SocketQueueBridge {
 
     /**
     * 销毁：桥不持有长生命周期资源（订阅由 MessageTemplate 管理），留空占位。
-     */
+    */
     @PreDestroy
     public void destroy() {
         // 无资源需显式释放

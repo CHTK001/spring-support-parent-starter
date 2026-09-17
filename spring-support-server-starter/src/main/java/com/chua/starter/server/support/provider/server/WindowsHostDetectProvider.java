@@ -72,7 +72,7 @@ public class WindowsHostDetectProvider implements HostDetectProvider {
     *
     * @param output 原始输出，可为 null
     * @param host   待回写的主机，不能为 null
-     */
+    */
     private void parseWinrmOutput(String output, MsServerHost host) {
         if (StringUtils.isBlank(output)) {
             return;
@@ -167,7 +167,7 @@ public class WindowsHostDetectProvider implements HostDetectProvider {
     *
     * @param value 网卡字符串，如 "以太网:10.0.0.3,WLAN:192.168.1.5"
     * @return JSON 数组字符串，解析失败返回 null
-     */
+    */
     private String toNetworksJson(String value) {
         try {
             StringBuilder sb = new StringBuilder("[");
@@ -200,7 +200,7 @@ public class WindowsHostDetectProvider implements HostDetectProvider {
     *
     * @param value 原始字符串
     * @return 转义后的字符串
-     */
+    */
     private String escapeJson(String value) {
         return value.replace("\\", "\\\\").replace("\"", "\\\"");
     }
@@ -210,7 +210,7 @@ public class WindowsHostDetectProvider implements HostDetectProvider {
     *
     * @param value 百分比字符串
     * @return Double，非法返回 -1
-     */
+    */
     private double parseRatio(String value) {
         try {
             double d = Double.parseDouble(value.trim());

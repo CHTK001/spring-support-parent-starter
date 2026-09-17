@@ -48,7 +48,7 @@ public class MailboxSseService {
     * @param sseSocketSessionTemplateProvider SSE 会话模板提供器
     * @param identityMapper                  身份 映射器
     * @param cipher                          凭据加解密器
-     */
+    */
     public MailboxSseService(ObjectProvider<SseSocketSessionTemplate> sseSocketSessionTemplateProvider,
                              MsServerIdentityMapper identityMapper,
                              CredentialCipher cipher) {
@@ -72,7 +72,7 @@ public class MailboxSseService {
     *
     * @param clientId   前端 SSE 连接 客户端标识
     * @param identityId 邮箱身份 标识
-     */
+    */
     public void register(String clientId, Long identityId) {
         if (clientId == null || identityId == null) {
             return;
@@ -86,7 +86,7 @@ public class MailboxSseService {
     * 注销邮箱 SSE 连接(前端关闭邮件箱时调用)。
     *
     * @param clientId 前端 SSE 连接 客户端标识
-     */
+    */
     public void unregister(String clientId) {
         if (clientId == null) {
             return;
@@ -99,7 +99,7 @@ public class MailboxSseService {
 
     /**
     * 定时轮询所有已注册的邮箱身份，检测新邮件并推送到对应前端。
-     */
+    */
     @Scheduled(fixedDelay = POLL_INTERVAL_MS)
     public void pollAndPush() {
         if (clientIdentityMap.isEmpty()) {
@@ -113,7 +113,7 @@ public class MailboxSseService {
                 * push新emails。
                 * @param clientId 客户端标识
                 * @param identityId identityid
-                 */
+                */
                 pushNewEmails(clientId, identityId);
             } catch (Exception e) {
                 log.warn("[mailbox-sse] 轮询推送异常 identityId={} - {}", identityId, e.getMessage());
@@ -125,7 +125,7 @@ public class MailboxSseService {
     * 推送指定身份的新邮件到对应前端。
     * @param clientId 客户端标识
     * @param identityId identityid
-     */
+    */
     private void pushNewEmails(String clientId, Long identityId) {
         MsServerIdentity identity = identityMapper.selectById(identityId);
         if (identity == null || !"MAILBOX".equals(identity.getMsServerIdentityAuthType())) {
@@ -154,7 +154,7 @@ public class MailboxSseService {
     * @param identity identity
     * @param email email
     * @return 获取新emails的结果
-     */
+    */
     private List<Map<String, Object>> fetchNewEmails(MsServerIdentity identity, String email) {
         String source = identity.getMsServerIdentityEmailSource();
         List<Map<String, Object>> emails;
@@ -193,7 +193,7 @@ public class MailboxSseService {
     * @param provider 提供者
     * @param email email
     * @return 获取tempemails的结果
-     */
+    */
     private List<Map<String, Object>> fetchTempEmails(String provider, String email) {
         if (provider == null || provider.isBlank()) {
             return List.of();
@@ -220,7 +220,7 @@ public class MailboxSseService {
     * @param identity identity
     * @param email email
     * @return 获取imapemails的结果
-     */
+    */
     private List<Map<String, Object>> fetchImapEmails(MsServerIdentity identity, String email) {
         try {
             String authCode = cipher.decrypt(identity.getMsServerIdentityPassword());
@@ -242,7 +242,7 @@ public class MailboxSseService {
     * 序列化邮件列表为 JSON 字符串。
     * @param emails emails
     * @return serializeEmails的结果
-     */
+    */
     private String serializeEmails(List<Map<String, Object>> emails) {
         try {
             return new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(emails);
@@ -255,7 +255,7 @@ public class MailboxSseService {
     * 获取当前注册的连接数。
     *
     * @return 连接数
-     */
+    */
     public int getConnectionCount() {
         return clientIdentityMap.size();
     }

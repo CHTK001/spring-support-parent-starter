@@ -26,7 +26,9 @@ import java.util.Optional;
 @Service
 public class RemoteTokenService {
 
-    /** 配置键：web 前端地址（令牌 会话 URL 的 主机 部分，供 iframe/跳转使用；空=不生成 URL） */
+    /**
+    * 配置键：web 前端地址（令牌会话 URL 的主机部分，供 iframe/跳转使用；空 = 不生成 URL）
+    */
     private static final String KEY_WEB_HOST = "guacd.client.host";
 
     /** 配置键：web 前端端口 */
@@ -38,14 +40,18 @@ public class RemoteTokenService {
     /** 默认短令牌有效期（分钟） */
     private static final int DEFAULT_TOKEN_TTL_MINUTES = 60;
 
-    /** guacamole客户端 单例（令牌 登记表必须全局唯一，签发与解析才对得上） */
+    /**
+    * guacamole客户端 单例（令牌 登记表必须全局唯一，签发与解析才对得上）
+    */
     @Getter
     private GuacamoleClient client; // 客户端
 
     /** 服务属性（guacd 地址回落值） */
     private final ServerProperties properties;
 
-    /** 系统配置服务（guacd 地址/令牌 TTL 动态化——配置表优先） */
+    /**
+    * 系统配置服务（guacd 地址/令牌 TTL 动态化——配置表优先）
+    */
     private final ServerConfigService configService;
 
     /**
@@ -53,7 +59,7 @@ public class RemoteTokenService {
     *
     * @param properties     服务属性
     * @param configService  系统配置服务
-     */
+    */
     public RemoteTokenService(ServerProperties properties, ServerConfigService configService) {
         this.properties = properties;
         this.configService = configService;
@@ -62,7 +68,7 @@ public class RemoteTokenService {
 
     /**
     * 重建客户端（guacd 地址等基础配置变更后调用；注意旧 令牌 全部失效）
-     */
+    */
     public void resetClient() {
         synchronized (this) {
             log.info("[remote-token] 重建 GuacamoleClient（旧 token 失效）");
@@ -79,7 +85,7 @@ public class RemoteTokenService {
     * @param username 登录用户名（可 空）
     * @param password 登录密码（可 空）
     * @return 短令牌（随机串）
-     */
+    */
     public String issueToken(String protocol, String host, Integer port, String username, String password) {
         var op = client.issue().protocol(protocol).host(host);
         if (port != null) {
@@ -101,7 +107,7 @@ public class RemoteTokenService {
     *
     * @param token 短令牌
     * @return 连接参数集
-     */
+    */
     public Optional<GuacamoleClient.RemoteSpec> resolve(String token) {
         return client.resolve(token);
     }
@@ -114,7 +120,7 @@ public class RemoteTokenService {
     *
     * @param token 短令牌
     * @return 形如 {@code http://host:port/guacamole/#token=xxx}；未配置 web 前端时为 空
-     */
+    */
     public String buildSessionUrl(String token) {
         String host = configService.getString(KEY_WEB_HOST, "");
         if (host == null || host.isBlank()) {
@@ -133,7 +139,7 @@ public class RemoteTokenService {
     /**
     * 当前生效的 guacd 地址（配置表优先，回落 application.yml）
     * @return 当前guacd主机的结果
-     */
+    */
     public String currentGuacdHost() {
         return configService.getString("guacd.host", properties.getGuacd().getHost());
     }
@@ -141,7 +147,7 @@ public class RemoteTokenService {
     /**
     * 当前生效的 guacd 端口
     * @return 当前guacd端口的结果
-     */
+    */
     public int currentGuacdPort() {
         return configService.getInt("guacd.port", properties.getGuacd().getPort());
     }
@@ -149,7 +155,7 @@ public class RemoteTokenService {
     /**
     * 当前短令牌有效期（分钟，配置表优先）
     * @return 令牌ttlminutes的结果
-     */
+    */
     public int tokenTtlMinutes() {
         return configService.getInt(KEY_TOKEN_TTL_MINUTES, DEFAULT_TOKEN_TTL_MINUTES);
     }

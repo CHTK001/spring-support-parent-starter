@@ -45,7 +45,7 @@ public class RemoteTokenController {
     * @param identityId 登录身份 标识，可空（空时取主机默认凭据）
     * @param targetPort 目标端口覆盖，可空（空=协议默认端口/主机配置端口）
     * @return token + 会话 URL（未配置 web 前端时 url 为 空，前端走 WS 直连）
-     */
+    */
     @GetMapping("/token")
     public ReturnResult<Map<String, Object>> issueToken(@RequestParam Long hostId,
                                                         @RequestParam(defaultValue = "ssh") String protocol,

@@ -61,7 +61,7 @@ public class ConnectionManager {
     * @param credential 解密后的凭据
     * @return 借出的句柄（使用方负责 {@link #release} 归还，禁止自行 关闭）
     * @throws IOException 连接失败时抛出
-     */
+    */
     public SshClients.Handle borrow(MsServerHost host, SshCredential credential) throws IOException {
         if (host == null || host.getId() == null) {
             return SshClients.open(host == null ? "unknown" : host.getServerHostAddress(),
@@ -83,7 +83,7 @@ public class ConnectionManager {
     * 归还借出的连接（减少引用计数，不关闭）
     *
     * @param hostId 主机 标识
-     */
+    */
     public void release(Long hostId) {
         if (hostId == null) {
             return;
@@ -99,7 +99,7 @@ public class ConnectionManager {
     *
     * @param idleTimeoutSeconds 空闲超时(秒)，<=0 时跳过空闲清理
     * @return 清理的连接数
-     */
+    */
     public int sweep(long idleTimeoutSeconds) {
         int closed = 0;
         long now = System.nanoTime();
@@ -125,7 +125,7 @@ public class ConnectionManager {
     * 主动关闭并移除指定主机连接
     *
     * @param hostId 主机 标识
-     */
+    */
     public void invalidate(Long hostId) {
         if (hostId == null) {
             return;
@@ -136,7 +136,7 @@ public class ConnectionManager {
             * 关闭entry。
             * @param hostId 主机标识
             * @param entry entry
-             */
+            */
             closeEntry(hostId, entry);
         }
     }
@@ -145,7 +145,7 @@ public class ConnectionManager {
     * 当前缓存连接数
     *
     * @return 连接数
-     */
+    */
     public int size() {
         return cache.size();
     }
@@ -159,7 +159,7 @@ public class ConnectionManager {
     * @param fp fp
     * @param now now
     * @return rebuild的结果
-     */
+    */
     private Entry rebuild(MsServerHost host, SshCredential credential, String fp, long now) throws IOException {
         Long hostId = host.getId();
         Entry old = cache.remove(hostId);
@@ -168,7 +168,7 @@ public class ConnectionManager {
             * 关闭entry。
             * @param hostId 主机标识
             * @param old 旧
-             */
+            */
             closeEntry(hostId, old);
         }
         try {
@@ -188,7 +188,7 @@ public class ConnectionManager {
     * 判断缓存连接是否已关闭
     * @param entry entry
     * @return 是否关闭的结果
-     */
+    */
     private boolean isClosed(Entry entry) {
         return !entry.handle.client().isConnected();
     }
@@ -197,7 +197,7 @@ public class ConnectionManager {
     * 健康探测（ECHO 保活）
     * @param entry entry
     * @return 是否healthy的结果
-     */
+    */
     private boolean isHealthy(Entry entry) {
         try {
             var result = entry.handle.client().exec().command(HEALTH_PROBE_CMD).execute();
@@ -213,7 +213,7 @@ public class ConnectionManager {
     * @param hostId 主机 标识
     * @param entry  缓存项
     * @return 是否关闭成功
-     */
+    */
     private boolean closeEntry(Long hostId, Entry entry) {
         boolean removed = cache.remove(hostId, entry);
         try {
@@ -229,7 +229,7 @@ public class ConnectionManager {
     * 凭据指纹（主机@用户:认证类型，用于检测凭据变化）
     * @param credential credential
     * @return fingerprint的结果
-     */
+    */
     private String fingerprint(SshCredential credential) {
         if (credential == null) {
             return "";

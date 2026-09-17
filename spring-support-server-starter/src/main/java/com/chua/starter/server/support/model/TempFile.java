@@ -22,7 +22,7 @@ public record TempFile(Path path, String fileName) implements AutoCloseable {
 
     /**
     * 关闭并删除临时文件（幂等）
-     */
+    */
     @Override
     public void close() {
         try {

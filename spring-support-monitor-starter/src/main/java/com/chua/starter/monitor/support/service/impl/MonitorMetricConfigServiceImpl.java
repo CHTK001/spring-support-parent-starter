@@ -32,7 +32,7 @@ public class MonitorMetricConfigServiceImpl implements MonitorMetricConfigServic
     *
     * @param entity 实体
     * @return 创建的结果
-     */
+    */
     public ReturnResult<MsMonitorMetricConfig> create(MsMonitorMetricConfig entity) {
         try {
             if (entity.getId() == null) {
@@ -54,7 +54,7 @@ public class MonitorMetricConfigServiceImpl implements MonitorMetricConfigServic
     *
     * @param entity 实体
     * @return 更新的结果
-     */
+    */
     public ReturnResult<MsMonitorMetricConfig> update(MsMonitorMetricConfig entity) {
         try {
             mapper.updateById(entity);
@@ -73,7 +73,7 @@ public class MonitorMetricConfigServiceImpl implements MonitorMetricConfigServic
     *
     * @param id 标识
     * @return 删除的结果
-     */
+    */
     public ReturnResult<Void> delete(Long id) {
         try {
             mapper.deleteById(id);
@@ -91,7 +91,7 @@ public class MonitorMetricConfigServiceImpl implements MonitorMetricConfigServic
     *
     * @param taskId 任务标识
     * @return 列表by任务的结果
-     */
+    */
     public ReturnResult<List<MsMonitorMetricConfig>> listByTask(Long taskId) {
         try {
             return ReturnResult.ok(mapper.selectList(

@@ -24,7 +24,7 @@ public enum ProtocolType {
     * 判断是否为 guacd 承载的图形协议
     *
     * @return 是否经 guacd
-     */
+    */
     public boolean isGuacdProtocol() {
         return this == SSH || this == RDP || this == VNC;
     }

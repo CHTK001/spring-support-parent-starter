@@ -63,7 +63,7 @@ public class ServerDiscoveryController {
     * 实际使用的发现源名称。</p>
     *
     * @return 协议名列表
-     */
+    */
     @Operation(summary = "已启用的发现协议", description = "SPI 实现名 + 运行中节点实际使用的发现源")
     @GetMapping("/protocols")
     public ReturnResult<List<String>> protocols() {
@@ -98,7 +98,7 @@ public class ServerDiscoveryController {
     * @param protocol 发现协议（SPI 名，可为空表示不限）
     * @param uriSpec  服务标识（注册时使用的服务路径）
     * @return 实例列表与说明
-     */
+    */
     @Operation(summary = "查询服务实例", description = "按发现协议与/或服务标识查询实时实例；复用运行中节点的发现连接")
     @GetMapping("/services")
     public ReturnResult<Map<String, Object>> services(@RequestParam(required = false) String protocol,
@@ -172,7 +172,7 @@ public class ServerDiscoveryController {
     * 发现服务状态摘要。
     *
     * @return 状态
-     */
+    */
     @Operation(summary = "发现服务状态", description = "运行中的发现插件数量、可用协议数、容器内是否装配 DiscoveryService")
     @GetMapping("/status")
     public ReturnResult<Map<String, Object>> status() {
@@ -200,7 +200,7 @@ public class ServerDiscoveryController {
     *
     * @param protocol 发现协议过滤（SPI 名，可为空表示不限）
     * @return 发现过滤器列表
-     */
+    */
     private List<ServiceDiscoveryServerFilter> liveDiscoveryFilters(String protocol) {
         List<ServiceDiscoveryServerFilter> result = new ArrayList<>();
         Collection<RuntimeServer> runtimes;
@@ -247,7 +247,7 @@ public class ServerDiscoveryController {
     *
     * @param d 发现信息
     * @return 实例视图
-     */
+    */
     private Map<String, Object> toInstance(Discovery d) {
         Map<String, Object> item = new LinkedHashMap<>();
         item.put("id", d.getId());

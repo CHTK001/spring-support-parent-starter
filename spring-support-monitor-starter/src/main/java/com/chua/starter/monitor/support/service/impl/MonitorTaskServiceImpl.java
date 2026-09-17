@@ -37,7 +37,7 @@ public class MonitorTaskServiceImpl implements MonitorTaskService {
     * 创建。
     * @param task 任务
     * @return 创建的结果
-     */
+    */
     public ReturnResult<MsMonitorTask> create(MsMonitorTask task) {
         try {
             if (task.getMonitorTaskEnabled() == null) {
@@ -60,7 +60,7 @@ public class MonitorTaskServiceImpl implements MonitorTaskService {
     * 更新。
     * @param task 任务
     * @return 更新的结果
-     */
+    */
     public ReturnResult<MsMonitorTask> update(MsMonitorTask task) {
         try {
             taskMapper.updateById(task);
@@ -77,7 +77,7 @@ public class MonitorTaskServiceImpl implements MonitorTaskService {
     * 删除。
     * @param id 标识
     * @return 删除的结果
-     */
+    */
     public ReturnResult<Void> delete(Long id) {
         try {
             taskMapper.deleteById(id);
@@ -93,7 +93,7 @@ public class MonitorTaskServiceImpl implements MonitorTaskService {
     * findbyid。
     * @param id 标识
     * @return findById的结果
-     */
+    */
     public ReturnResult<MsMonitorTask> findById(Long id) {
         try {
             return ReturnResult.ok(taskMapper.selectById(id));
@@ -107,7 +107,7 @@ public class MonitorTaskServiceImpl implements MonitorTaskService {
     /**
     * 列表已启用。
     * @return 列表已启用的结果
-     */
+    */
     public ReturnResult<List<MsMonitorTask>> listEnabled() {
         try {
             LambdaQueryWrapper<MsMonitorTask> w = new LambdaQueryWrapper<>();
@@ -124,7 +124,7 @@ public class MonitorTaskServiceImpl implements MonitorTaskService {
     * 列表by监控。
     * @param monitorId 监控标识
     * @return 列表by监控的结果
-     */
+    */
     public ReturnResult<List<MsMonitorTask>> listByMonitor(Long monitorId) {
         try {
             LambdaQueryWrapper<MsMonitorTask> w = new LambdaQueryWrapper<>();
@@ -143,7 +143,7 @@ public class MonitorTaskServiceImpl implements MonitorTaskService {
     * @param id 标识
     * @param enabled 已启用
     * @return 设置已启用的结果
-     */
+    */
     public ReturnResult<Void> setEnabled(Long id, Integer enabled) {
         try {
             MsMonitorTask t = new MsMonitorTask();
@@ -162,7 +162,7 @@ public class MonitorTaskServiceImpl implements MonitorTaskService {
     * mark最后一个运行时间。
     * @param id 标识
     * @return mark最后一个运行时间的结果
-     */
+    */
     public ReturnResult<Void> markLastRunTime(Long id) {
         try {
             MsMonitorTask t = new MsMonitorTask();

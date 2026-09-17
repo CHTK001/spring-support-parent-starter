@@ -21,7 +21,7 @@ public class LogNotifySender implements NotifySender {
     * 渠道名称
     *
     * @return 渠道标识
-     */
+    */
     @Override
     public String channel() {
         return "log";
@@ -33,7 +33,7 @@ public class LogNotifySender implements NotifySender {
     * @param title    标题
     * @param content  内容
     * @param eventUrl 事件详情地址
-     */
+    */
     @Override
     public void send(String title, String content, String eventUrl) {
         log.warn("[alarm] {} | {} | {}", title, content, eventUrl == null ? "-" : eventUrl);

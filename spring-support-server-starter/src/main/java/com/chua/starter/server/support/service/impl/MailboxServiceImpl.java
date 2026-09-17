@@ -128,7 +128,7 @@ public class MailboxServiceImpl implements MailboxService {
     * 解析邮箱身份 → IMAP 连接信息。
     * @param identityId identityid
     * @return resolve的结果
-     */
+    */
     private ResolvedMail resolve(Long identityId) {
         if (identityId == null) {
             return null;
@@ -155,7 +155,7 @@ public class MailboxServiceImpl implements MailboxService {
         * @param imapHost imap主机
         * @param port 端口
         * @return ResolvedMail的结果
-         */
+        */
         return new ResolvedMail(email, authCode, imapHost, port);
     }
 
@@ -164,7 +164,7 @@ public class MailboxServiceImpl implements MailboxService {
     *
     * @param e 异常
     * @return 消息(XxxException 取后半段)
-     */
+    */
     private static String safeMsg(Exception e) {
         String msg = e.getMessage();
         if (msg == null || msg.isBlank()) {
@@ -181,7 +181,7 @@ public class MailboxServiceImpl implements MailboxService {
     * @param imapHost imap主机
     * @param imapPort imap端口
     * @return ResolvedMail的结果
-     */
+    */
     private record ResolvedMail(String email, String authCode, String imapHost, int imapPort) {
     }
 }

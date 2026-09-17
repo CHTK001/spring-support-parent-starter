@@ -31,7 +31,7 @@ public class HostCollectProviderRegistry {
     * 构造：注册全部 提供者
     *
     * @param providers 提供者 列表
-     */
+    */
     @Autowired
     public HostCollectProviderRegistry(List<HostCollectProvider> providers) {
         if (providers == null || providers.isEmpty()) {
@@ -53,7 +53,7 @@ public class HostCollectProviderRegistry {
     *
     * @param type 采集方式
     * @return Optional，可能为空
-     */
+    */
     public Optional<HostCollectProvider> resolve(HostCollectType type) {
         if (type == null) {
             return Optional.empty();
@@ -65,7 +65,7 @@ public class HostCollectProviderRegistry {
     * 所有已注册采集方式
     *
     * @return 不可变视图
-     */
+    */
     public Map<HostCollectType, String> describe() {
         Map<HostCollectType, String> out = new EnumMap<>(HostCollectType.class);
         index.forEach((t, p) -> out.put(t, p.getClass().getSimpleName()));

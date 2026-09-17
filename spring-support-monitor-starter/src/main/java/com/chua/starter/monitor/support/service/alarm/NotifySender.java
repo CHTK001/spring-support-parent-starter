@@ -16,7 +16,7 @@ public interface NotifySender {
     * 渠道名称（用于日志与扩展注册）
     *
     * @return 渠道标识
-     */
+    */
     String channel();
 
     /**
@@ -25,6 +25,6 @@ public interface NotifySender {
     * @param title    标题
     * @param content  内容（含目标/指标/实际值/阈值）
     * @param eventUrl 事件详情地址，可为空
-     */
+    */
     void send(String title, String content, String eventUrl);
 }

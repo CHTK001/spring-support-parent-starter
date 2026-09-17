@@ -28,13 +28,13 @@ public class MonitorSseCompatibilityConfiguration {
     * SSE 会话模板（无连接的空实现，仅供 mailboxsse服务 构造注入）
     *
     * @return SseSocketSessionTemplate 实例
-     */
+    */
     @Bean
     public SseSocketSessionTemplate sseSocketSessionTemplate() {
         /**
         * sse套接字会话template。
         * @return sse套接字会话template的结果
-         */
+        */
         return new SseSocketSessionTemplate();
     }
 }

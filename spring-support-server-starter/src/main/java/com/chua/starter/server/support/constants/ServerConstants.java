@@ -37,7 +37,7 @@ public final class ServerConstants {
 
     /**
     * 工具类禁止实例化
-     */
+    */
     private ServerConstants() {
     }
 }

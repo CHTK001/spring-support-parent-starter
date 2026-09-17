@@ -28,7 +28,7 @@ public class MsMonitorMetricStatistics implements Serializable {
 
     /**
     * 主键
-     */
+    */
     @TableId(value = "id", type = IdType.AUTO)
     @Schema(description = "主键", example = "1")
     /** 标识 */
@@ -36,7 +36,7 @@ public class MsMonitorMetricStatistics implements Serializable {
 
     /**
     * 监控主机 标识
-     */
+    */
     @TableField("ms_monitor_metric_statistics_monitor_id")
     @Schema(description = "监控主机 id", example = "1")
     /** 监控标识 */
@@ -44,7 +44,7 @@ public class MsMonitorMetricStatistics implements Serializable {
 
     /**
     * 指标名
-     */
+    */
     @TableField("ms_monitor_metric_statistics_metric_name")
     @Schema(description = "指标名", example = "cpu_usage")
     /** 指标名称 */
@@ -52,7 +52,7 @@ public class MsMonitorMetricStatistics implements Serializable {
 
     /**
     * 小时桶
-     */
+    */
     @TableField("ms_monitor_metric_statistics_hour_bucket")
     @Schema(description = "小时桶(整点)", example = "2026-08-04T10:00:00")
     /** Hour存储桶 */
@@ -60,7 +60,7 @@ public class MsMonitorMetricStatistics implements Serializable {
 
     /**
     * 平均值
-     */
+    */
     @TableField("ms_monitor_metric_statistics_avg_value")
     @Schema(description = "平均值", example = "23.5")
     /** AVG值 */
@@ -68,7 +68,7 @@ public class MsMonitorMetricStatistics implements Serializable {
 
     /**
     * 最小值
-     */
+    */
     @TableField("ms_monitor_metric_statistics_min_value")
     @Schema(description = "最小值", example = "5.0")
     /** 最小值值 */
@@ -76,7 +76,7 @@ public class MsMonitorMetricStatistics implements Serializable {
 
     /**
     * 最大值
-     */
+    */
     @TableField("ms_monitor_metric_statistics_max_value")
     @Schema(description = "最大值", example = "78.2")
     /** 最大值值 */
@@ -84,7 +84,7 @@ public class MsMonitorMetricStatistics implements Serializable {
 
     /**
     * 样本数
-     */
+    */
     @TableField("ms_monitor_metric_statistics_count_value")
     @Schema(description = "样本数", example = "360")
     /** 数量值 */

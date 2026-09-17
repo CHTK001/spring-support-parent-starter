@@ -43,17 +43,17 @@ public class ServerLocalProvider implements MetricProvider {
 
     /**
     * macOS 跳过配置项
-     */
+    */
     private static final String CONFIG_KEY_SKIP_MACOS = "monitor.local.skip.macos";
 
     /**
     * 指标服务 提供者(可能未启用)
-     */
+    */
     private final ObjectProvider<MetricsService> metricsServiceProvider;
 
     /**
     * 全局配置 服务
-     */
+    */
     private final MonitorConfigService configService;
 
     /**
@@ -61,7 +61,7 @@ public class ServerLocalProvider implements MetricProvider {
     *
     * @param metricsServiceProvider 指标服务 提供者
     * @param configService          全局配置 服务
-     */
+    */
     @Autowired
     public ServerLocalProvider(ObjectProvider<MetricsService> metricsServiceProvider,
                                MonitorConfigService configService) {
@@ -93,7 +93,7 @@ public class ServerLocalProvider implements MetricProvider {
     *
     * @param context 采集上下文
     * @return 采集结果
-     */
+    */
 
     private CollectResult doCollect(CollectContext context) {
         CollectResult result = new CollectResult();
@@ -123,37 +123,37 @@ public class ServerLocalProvider implements MetricProvider {
             * collectcpu。
             * @param snapshot snapshot
             * @param result 结果
-             */
+            */
             collectCpu(snapshot, result);
             /**
             * collect内存。
             * @param snapshot snapshot
             * @param result 结果
-             */
+            */
             collectMemory(snapshot, result);
             /**
             * collectdisk。
             * @param snapshot snapshot
             * @param result 结果
-             */
+            */
             collectDisk(snapshot, result);
             /**
             * collectdiskio。
             * @param snapshot snapshot
             * @param result 结果
-             */
+            */
             collectDiskIo(snapshot, result);
             /**
             * collectnetwork。
             * @param snapshot snapshot
             * @param result 结果
-             */
+            */
             collectNetwork(snapshot, result);
             /**
             * collect系统加载。
             * @param snapshot snapshot
             * @param result 结果
-             */
+            */
             collectSystemLoad(snapshot, result);
 
             result.setSuccess(true);
@@ -169,7 +169,7 @@ public class ServerLocalProvider implements MetricProvider {
     *
     * @param snapshot 指标快照
     * @param result   采集结果
-     */
+    */
     private void collectCpu(MetricsSnapshot snapshot, CollectResult result) {
         List<CpuCore> cpuCores = snapshot.getCpuCores();
         if (cpuCores == null || cpuCores.isEmpty()) {
@@ -206,7 +206,7 @@ public class ServerLocalProvider implements MetricProvider {
     *
     * @param snapshot 指标快照
     * @param result   采集结果
-     */
+    */
     private void collectMemory(MetricsSnapshot snapshot, CollectResult result) {
         long total = snapshot.getSwapTotal();
         long used = snapshot.getSwapUsed();
@@ -242,7 +242,7 @@ public class ServerLocalProvider implements MetricProvider {
     *
     * @param snapshot 指标快照
     * @param result   采集结果
-     */
+    */
     private void collectDisk(MetricsSnapshot snapshot, CollectResult result) {
         List<DiskInfo> disks = snapshot.getDisks();
         if (disks == null || disks.isEmpty()) {
@@ -282,7 +282,7 @@ public class ServerLocalProvider implements MetricProvider {
     *
     * @param snapshot 指标快照
     * @param result   采集结果
-     */
+    */
     private void collectDiskIo(MetricsSnapshot snapshot, CollectResult result) {
         List<DiskIo> ioList = snapshot.getDiskIo();
         if (ioList == null || ioList.isEmpty()) {
@@ -315,7 +315,7 @@ public class ServerLocalProvider implements MetricProvider {
     *
     * @param snapshot 指标快照
     * @param result   采集结果
-     */
+    */
     private void collectNetwork(MetricsSnapshot snapshot, CollectResult result) {
         List<NetworkInterface> nets = snapshot.getNetworks();
         if (nets == null || nets.isEmpty()) {
@@ -348,7 +348,7 @@ public class ServerLocalProvider implements MetricProvider {
     *
     * @param snapshot 指标快照
     * @param result   采集结果
-     */
+    */
     private void collectSystemLoad(MetricsSnapshot snapshot, CollectResult result) {
         SystemLoad load = snapshot.getLoad();
         if (load == null) {
@@ -390,7 +390,7 @@ public class ServerLocalProvider implements MetricProvider {
     * 检测是否为 macOS
     *
     * @return 是否
-     */
+    */
     private boolean isMacOs() {
         String os = System.getProperty("os.name");
         return os != null && os.toLowerCase().contains("mac");

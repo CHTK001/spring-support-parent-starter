@@ -26,7 +26,7 @@ public final class SshClients {
 
     /**
     * 工具类禁止实例化
-     */
+    */
     private SshClients() {
     }
 
@@ -49,7 +49,7 @@ public final class SshClients {
     * @param credential 解密后的凭据
     * @return 客户端句柄
     * @throws IOException 私钥临时文件写入失败时抛出
-     */
+    */
     public static Handle open(String address, Integer port, SshCredential credential) throws IOException {
         var builder = SshClient.builder()
                 .host(address)
@@ -73,7 +73,7 @@ public final class SshClients {
         * 把手。
         * @param builder.build( 构建器.构建(
         * @return 把手的结果
-         */
+        */
         return new Handle(builder.build(), tempKeyPath);
     }
 
@@ -82,7 +82,7 @@ public final class SshClients {
     *
     * @param value 待判断字符串
     * @return 是否非空
-     */
+    */
     private static boolean notBlank(String value) {
         return value != null && !value.isBlank();
     }
@@ -93,12 +93,12 @@ public final class SshClients {
     * @param client      SSH 客户端
     * @param tempKeyPath 私钥临时文件路径，密码认证时为 空
     * @return 把手的结果
-     */
+    */
     public record Handle(SshClient client, Path tempKeyPath) implements AutoCloseable {
 
         /**
         * 关闭客户端并清理临时私钥文件
-         */
+        */
         @Override
         public void close() {
             try {

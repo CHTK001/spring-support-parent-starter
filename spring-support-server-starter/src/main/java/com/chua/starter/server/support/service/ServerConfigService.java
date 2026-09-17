@@ -17,14 +17,14 @@ public interface ServerConfigService {
     * 查询全部配置
     *
     * @return 配置列表
-     */
+    */
     ReturnResult<List<MsServerConfig>> listAll();
 
     /**
     * 读取全部配置为扁平 映射（缺省合并默认值）
     *
     * @return key -> 价值观 映射
-     */
+    */
     ReturnResult<Map<String, Object>> getConfigMap();
 
     /**
@@ -32,7 +32,7 @@ public interface ServerConfigService {
     *
     * @param map 配置键值
     * @return 结果
-     */
+    */
     ReturnResult<Void> saveConfig(Map<String, Object> map);
 
     /**
@@ -41,7 +41,7 @@ public interface ServerConfigService {
     * @param key      配置键
     * @param defValue 默认值
     * @return 配置值
-     */
+    */
     String getString(String key, String defValue);
 
     /**
@@ -50,7 +50,7 @@ public interface ServerConfigService {
     * @param key      配置键
     * @param defValue 默认值
     * @return 布尔值
-     */
+    */
     boolean getBoolean(String key, boolean defValue);
 
     /**
@@ -59,6 +59,6 @@ public interface ServerConfigService {
     * @param key      配置键
     * @param defValue 默认值
     * @return 整数值
-     */
+    */
     int getInt(String key, int defValue);
 }

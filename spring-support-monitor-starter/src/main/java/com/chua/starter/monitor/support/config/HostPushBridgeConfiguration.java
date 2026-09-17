@@ -38,7 +38,7 @@ public class HostPushBridgeConfiguration {
     * 将 {@link #onDelayDetected(MsServerHost)} / {@link #onOnlineChanged(MsServerHost)}
     * 注册到 {@link HostOnlineScheduler} 的检测钩子上。
     * </p>
-     */
+    */
     @jakarta.annotation.PostConstruct
     public void bridge() {
         onlineScheduler.setDelayHook(this::onDelayDetected);
@@ -50,7 +50,7 @@ public class HostPushBridgeConfiguration {
     * 延迟检测结果回调 → 广播实时延迟
     *
     * @param host 完成一次延迟探测的主机（服务端主机延迟ms 已回写，-1 表不可达）
-     */
+    */
     private void onDelayDetected(MsServerHost host) {
         pushService.pushHostDelay(
                 host.getId(),
@@ -65,7 +65,7 @@ public class HostPushBridgeConfiguration {
     * 在线状态翻转回调 → 广播在线状态
     *
     * @param host 在线状态发生翻转的主机（服务端主机online 已更新，1 在线 / 0 离线）
-     */
+    */
     private void onOnlineChanged(MsServerHost host) {
         pushService.pushHostOnline(
                 host.getId(),

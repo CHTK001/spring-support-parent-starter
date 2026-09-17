@@ -25,19 +25,19 @@ public class DelegatingServerFilter implements ServerFilter, ReactiveServerFilte
 
     /**
     * 底层过滤器实例
-     */
+    */
     private final ServerFilter delegate;
     /**
     * 描述名
-     */
+    */
     private final String filterName;
     /**
     * 覆盖顺序(空 则沿用底层实现)
-     */
+    */
     private final Integer order;
     /**
     * 描述级启用开关(支持热切换)
-     */
+    */
     private volatile boolean enabled;
 
     /**
@@ -47,7 +47,7 @@ public class DelegatingServerFilter implements ServerFilter, ReactiveServerFilte
     * @param filterName 描述名
     * @param order      覆盖顺序(空 则沿用底层实现)
     * @param enabled    描述级启用开关
-     */
+    */
     public DelegatingServerFilter(ServerFilter delegate, String filterName, Integer order, boolean enabled) {
         this.delegate = delegate;
         this.filterName = filterName;
@@ -59,7 +59,7 @@ public class DelegatingServerFilter implements ServerFilter, ReactiveServerFilte
     * 热切换启用状态(不重建过滤器实例)。
     *
     * @param enabled 是否启用
-     */
+    */
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
     }
@@ -68,7 +68,7 @@ public class DelegatingServerFilter implements ServerFilter, ReactiveServerFilte
     * 获取底层过滤器实例
     *
     * @return 底层过滤器
-     */
+    */
     public ServerFilter getDelegate() {
         return delegate;
     }

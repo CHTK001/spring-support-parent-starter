@@ -18,7 +18,7 @@ public interface ServerGroupService {
     *
     * @param group 分组
     * @return 结果
-     */
+    */
     ReturnResult<MsServerGroup> create(MsServerGroup group);
 
     /**
@@ -27,7 +27,7 @@ public interface ServerGroupService {
     * @param id    主键
     * @param group 分组
     * @return 结果
-     */
+    */
     ReturnResult<MsServerGroup> update(Long id, MsServerGroup group);
 
     /**
@@ -35,13 +35,13 @@ public interface ServerGroupService {
     *
     * @param id 主键
     * @return 结果
-     */
+    */
     ReturnResult<Void> delete(Long id);
 
     /**
     * 查询全部分组（平铺，前端组装树）
     *
     * @return 分组列表
-     */
+    */
     ReturnResult<List<MsServerGroup>> list();
 }
