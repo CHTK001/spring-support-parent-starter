@@ -27,7 +27,7 @@ public class MsMonitorMetric implements Serializable {
 
     /**
     * 主键
-     */
+    */
     @TableId(value = "id", type = IdType.AUTO)
     @Schema(description = "主键", example = "1")
     /** 标识 */
@@ -35,7 +35,7 @@ public class MsMonitorMetric implements Serializable {
 
     /**
     * 监控主机 标识
-     */
+    */
     @TableField("ms_monitor_metric_monitor_id")
     @Schema(description = "监控主机 id", example = "1")
     /** 监控标识 */
@@ -43,7 +43,7 @@ public class MsMonitorMetric implements Serializable {
 
     /**
     * 指标名
-     */
+    */
     @TableField("ms_monitor_metric_metric_name")
     @Schema(description = "指标名", example = "cpu_usage")
     /** 指标名称 */
@@ -51,7 +51,7 @@ public class MsMonitorMetric implements Serializable {
 
     /**
     * 指标值
-     */
+    */
     @TableField("ms_monitor_metric_metric_value")
     @Schema(description = "指标值", example = "23.5")
     /** 指标值 */
@@ -59,7 +59,7 @@ public class MsMonitorMetric implements Serializable {
 
     /**
     * 标签 JSON
-     */
+    */
     @TableField("ms_monitor_metric_metric_tags")
     @Schema(description = "标签 JSON", example = "{\"core\":\"0\"}")
     /** 指标标签 */
@@ -67,7 +67,7 @@ public class MsMonitorMetric implements Serializable {
 
     /**
     * 采集时间
-     */
+    */
     @TableField("ms_monitor_metric_collect_time")
     @Schema(description = "采集时间", example = "2026-08-04T10:00:00")
     /** Collect时间 */

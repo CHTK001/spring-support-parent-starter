@@ -20,14 +20,14 @@ public interface MetricProvider {
     * 该 提供者 对应的采集方式
     *
     * @return Provider 类型
-     */
+    */
     ProviderType providerType();
 
     /**
     * 该 提供者 支持的服务类型集合
     *
     * @return 支持的服务类型集合
-     */
+    */
     java.util.Set<ServiceType> supportServiceTypes();
 
     /**
@@ -35,7 +35,7 @@ public interface MetricProvider {
     *
     * @param context 采集上下文
     * @return 响应式采集结果
-     */
+    */
     Mono<CollectResult> collect(CollectContext context);
 
     /**
@@ -43,7 +43,7 @@ public interface MetricProvider {
     *
     * @param context 采集上下文
     * @return true 表示支持
-     */
+    */
     default boolean supports(CollectContext context) {
         if (context == null || context.getTask() == null) {
             return false;

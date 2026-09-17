@@ -33,12 +33,12 @@ public class ServerTerminalProvider implements MetricProvider {
 
     /**
     * 默认 SSH 端口
-     */
+    */
     private static final int DEFAULT_SSH_PORT = 22;
 
     /**
     * 默认命令超时(毫秒)
-     */
+    */
     private static final int DEFAULT_TIMEOUT_MS = 5_000;
 
     @Override
@@ -66,7 +66,7 @@ public class ServerTerminalProvider implements MetricProvider {
     *
     * @param context 采集上下文
     * @return 采集结果
-     */
+    */
 
     private CollectResult doCollect(CollectContext context) {
         CollectResult result = new CollectResult();
@@ -94,7 +94,7 @@ public class ServerTerminalProvider implements MetricProvider {
         /**
         * 尝试。
         * @param password 密码
-         */
+        */
         try (LinuxExecClient client = buildClient(host, port, username, password)) {
             client.connect();
             SshClient.ExecResult exec = client.executeCommand(command, timeout);
@@ -119,7 +119,7 @@ public class ServerTerminalProvider implements MetricProvider {
     * @param username 用户名
     * @param password 密码
     * @return 客户端实例
-     */
+    */
     private LinuxExecClient buildClient(String host, Integer port, String username, String password) {
         ClientSetting setting = ClientSetting.builder()
                 .host(host)
@@ -134,7 +134,7 @@ public class ServerTerminalProvider implements MetricProvider {
         * Linux执行客户端。
         * @param setting setting
         * @return Linux执行客户端的结果
-         */
+        */
         return new LinuxExecClient(setting);
     }
 
@@ -143,7 +143,7 @@ public class ServerTerminalProvider implements MetricProvider {
     *
     * @param o 对象
     * @return 字符串, 空 时返回 空
-     */
+    */
     private static String str(Object o) {
         return o == null ? null : String.valueOf(o);
     }
@@ -153,7 +153,7 @@ public class ServerTerminalProvider implements MetricProvider {
     *
     * @param o 对象
     * @return Integer, 转换失败返回 空
-     */
+    */
     private static Integer intOrNull(Object o) {
         if (o == null) {
             return null;

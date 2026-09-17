@@ -29,7 +29,7 @@ public class ProxyController {
     * 获取免费代理（抓取→清空→录入——较慢——前端加载等待动画）
     *
     * @return free的结果
-     */
+    */
     @GetMapping("/free")
     public ReturnResult<List<MsProxy>> free() {
         return ReturnResult.ok(proxyService.fetchFreeProxies());
@@ -39,7 +39,7 @@ public class ProxyController {
     * 免费代理列表（从数据表读取——快）
     *
     * @return 列表的结果
-     */
+    */
     @GetMapping("/list")
     public ReturnResult<List<MsProxy>> list() {
         return ReturnResult.ok(proxyService.listProxies());
@@ -49,7 +49,7 @@ public class ProxyController {
     * 当前代理（自动——表内第一个——业务无需手动指定）
     *
     * @return 当前的结果
-     */
+    */
     @GetMapping("/current")
     public ReturnResult<Map<String, String>> current() {
         return ReturnResult.ok(Map.of("proxy",

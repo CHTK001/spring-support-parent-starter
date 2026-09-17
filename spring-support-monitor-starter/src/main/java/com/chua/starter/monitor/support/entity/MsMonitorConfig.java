@@ -26,7 +26,7 @@ public class MsMonitorConfig extends SysBase {
 
     /**
     * 主键
-     */
+    */
     @TableId(value = "id", type = IdType.AUTO)
     @Schema(description = "主键", example = "1")
     /** 标识 */
@@ -34,7 +34,7 @@ public class MsMonitorConfig extends SysBase {
 
     /**
     * 配置项 钥匙
-     */
+    */
     @TableField("ms_monitor_config_key")
     @Schema(description = "配置项 key", example = "monitor.data.retention.days")
     /** 监控配置密钥 */
@@ -42,7 +42,7 @@ public class MsMonitorConfig extends SysBase {
 
     /**
     * 配置项 价值观
-     */
+    */
     @TableField("ms_monitor_config_value")
     @Schema(description = "配置项 value", example = "30")
     /** 监控配置值 */
@@ -50,7 +50,7 @@ public class MsMonitorConfig extends SysBase {
 
     /**
     * 配置项描述
-     */
+    */
     @TableField("ms_monitor_config_desc")
     @Schema(description = "配置项描述", example = "历史数据保留天数")
     /** 监控配置desc */

@@ -42,7 +42,7 @@ public class WebhookNotifySender implements NotifySender {
     * 渠道名称
     *
     * @return 渠道标识
-     */
+    */
     @Override
     public String channel() {
         return "webhook";
@@ -54,7 +54,7 @@ public class WebhookNotifySender implements NotifySender {
     * @param title    标题
     * @param content  内容
     * @param eventUrl 事件详情地址
-     */
+    */
     @Override
     public void send(String title, String content, String eventUrl) {
         String url = monitorConfigService.getString(CONFIG_KEY, "");

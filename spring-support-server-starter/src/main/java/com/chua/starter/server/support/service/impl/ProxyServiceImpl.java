@@ -29,7 +29,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ProxyServiceImpl implements ProxyService {
 
-    /** 免费代理源（databay——JSON：数据[].ip/端口/协议） */
+    /**
+    * 免费代理源（databay——JSON：数据[].ip/端口/协议）
+    */
     private static final String SOURCE_URL = "https://databay.com/api/v1/proxy-list";
     private static final String SOURCE_NAME = "databay"; // 源名称
     private static final ObjectMapper MAPPER = new ObjectMapper(); // 映射器
@@ -67,7 +69,7 @@ public class ProxyServiceImpl implements ProxyService {
     * 自研抓取（databay JSON——数据[].ip/端口/协议）
     *
     * @return 获取从源的结果
-     */
+    */
     private List<MsProxy> fetchFromSource() {
         List<MsProxy> result = new ArrayList<>();
         try {

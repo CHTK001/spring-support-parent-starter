@@ -26,7 +26,7 @@ public class CredentialCipher {
     * 构造注入（密钥取自服务属性）
     *
     * @param properties 服务属性
-     */
+    */
     public CredentialCipher(ServerProperties properties) {
         String key = properties == null ? null : properties.getCredentialKey();
         this.codec = new AesCodec((key == null ? "" : key).getBytes(StandardCharsets.UTF_8));
@@ -37,7 +37,7 @@ public class CredentialCipher {
     *
     * @param plain 明文
     * @return 密文（hex），入参为空时原样返回
-     */
+    */
     public String encrypt(String plain) {
         if (plain == null || plain.isEmpty()) {
             return plain;
@@ -50,7 +50,7 @@ public class CredentialCipher {
     *
     * @param hex 密文（hex）
     * @return 明文，入参为空时原样返回
-     */
+    */
     public String decrypt(String hex) {
         if (hex == null || hex.isEmpty()) {
             return hex;
@@ -63,7 +63,7 @@ public class CredentialCipher {
             * @param 配置是否与加密时一致" 配置是否与加密时一致"
             * @param e e
             * @return illegal状态异常的结果
-             */
+            */
             throw new IllegalStateException("凭据解密失败，请检查 server.support.credential-key 配置是否与加密时一致", e);
         }
     }

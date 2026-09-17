@@ -18,7 +18,7 @@ public interface MonitorMetricConfigService {
     *
     * @param entity 实体
     * @return 创建结果
-     */
+    */
     ReturnResult<MsMonitorMetricConfig> create(MsMonitorMetricConfig entity);
 
     /**
@@ -26,7 +26,7 @@ public interface MonitorMetricConfigService {
     *
     * @param entity 实体
     * @return 更新结果
-     */
+    */
     ReturnResult<MsMonitorMetricConfig> update(MsMonitorMetricConfig entity);
 
     /**
@@ -34,7 +34,7 @@ public interface MonitorMetricConfigService {
     *
     * @param id 主键
     * @return 删除结果
-     */
+    */
     ReturnResult<Void> delete(Long id);
 
     /**
@@ -42,6 +42,6 @@ public interface MonitorMetricConfigService {
     *
     * @param taskId 任务 标识
     * @return 列表
-     */
+    */
     ReturnResult<List<MsMonitorMetricConfig>> listByTask(Long taskId);
 }

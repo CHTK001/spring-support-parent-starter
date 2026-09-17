@@ -59,7 +59,7 @@ public class HostRealtimePushConfiguration {
     *
     * @param onlineSchedulerProvider 在离线/延迟/采集调度器（server-starter，可能未装配）
     * @return 启动时执行的注册器
-     */
+    */
     @Bean
     @ConditionalOnBean(HostOnlineScheduler.class)
     public ApplicationRunner hostRealtimePushBinder(ObjectProvider<HostOnlineScheduler> onlineSchedulerProvider) {

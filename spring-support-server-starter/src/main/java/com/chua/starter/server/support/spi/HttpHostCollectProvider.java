@@ -47,7 +47,7 @@ public class HttpHostCollectProvider implements HostCollectProvider {
     *
     * @param context 上下文
     * @return 结果
-     */
+    */
     private CollectOutcome doCollect(HostCollectContext context) {
         MsServerHost host = context == null ? null : context.getHost();
         if (host == null || host.getId() == null) {
@@ -72,7 +72,7 @@ public class HttpHostCollectProvider implements HostCollectProvider {
             /**
             * 尝试。
             * @param conn.getInputStream( conn.获取输入流(
-             */
+            */
             try (var in = conn.getInputStream()) {
                 body = new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
             }
@@ -80,7 +80,7 @@ public class HttpHostCollectProvider implements HostCollectProvider {
             * applypayload。
             * @param host 主机
             * @param body 主体
-             */
+            */
             applyPayload(host, body);
             hostMapper.updateById(host);
             return CollectOutcome.ok("HTTP 采集成功");
@@ -95,7 +95,7 @@ public class HttpHostCollectProvider implements HostCollectProvider {
     *
     * @param host 主机
     * @param body 响应体
-     */
+    */
     private void applyPayload(MsServerHost host, String body) {
         try {
             com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();

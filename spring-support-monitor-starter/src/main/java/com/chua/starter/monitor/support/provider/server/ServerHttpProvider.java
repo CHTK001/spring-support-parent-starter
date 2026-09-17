@@ -39,7 +39,7 @@ public class ServerHttpProvider implements MetricProvider {
 
     /**
     * 默认超时(毫秒)
-     */
+    */
     private static final int DEFAULT_TIMEOUT_MS = 5_000;
 
     @Override
@@ -66,7 +66,7 @@ public class ServerHttpProvider implements MetricProvider {
     *
     * @param context 采集上下文
     * @return 采集结果
-     */
+    */
 
     private CollectResult doCollect(CollectContext context) {
         CollectResult result = new CollectResult();
@@ -124,7 +124,7 @@ public class ServerHttpProvider implements MetricProvider {
                 * 解析json字段。
                 * @param responseBody 响应主体
                 * @param result 结果
-                 */
+                */
                 parseJsonFields(responseBody, result);
             }
             result.setSuccess(true);
@@ -143,7 +143,7 @@ public class ServerHttpProvider implements MetricProvider {
     *
     * @param json   JSON 字符串
     * @param result 采集结果
-     */
+    */
     private void parseJsonFields(String json, CollectResult result) {
         JsonObject obj = Json.getJsonObject(json);
         for (Map.Entry<String, Object> entry : obj.entrySet()) {
@@ -164,7 +164,7 @@ public class ServerHttpProvider implements MetricProvider {
     *
     * @param body 响应体
     * @return true 表示为 JSON
-     */
+    */
     private boolean isJson(String body) {
         if (body == null) {
             return false;
@@ -179,7 +179,7 @@ public class ServerHttpProvider implements MetricProvider {
     *
     * @param o 对象
     * @return 字符串
-     */
+    */
     private static String str(Object o) {
         return o == null ? null : String.valueOf(o);
     }
@@ -189,7 +189,7 @@ public class ServerHttpProvider implements MetricProvider {
     *
     * @param o 对象
     * @return Integer, 转换失败返回 空
-     */
+    */
     private static Integer intOrNull(Object o) {
         if (o == null) {
             return null;

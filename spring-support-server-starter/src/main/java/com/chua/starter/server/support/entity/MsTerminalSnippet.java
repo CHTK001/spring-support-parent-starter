@@ -28,28 +28,28 @@ public class MsTerminalSnippet extends SysBase {
 
     /**
     * 主键
-     */
+    */
     @TableId(value = "id", type = IdType.AUTO)
     @Schema(description = "主键", example = "1")
     private Long id; // 标识
 
     /**
     * 片段名称
-     */
+    */
     @TableField("ms_terminal_snippet_name")
     @Schema(description = "片段名称", example = "查看磁盘占用")
     private String msTerminalSnippetName; // msterminalsnippet名称
 
     /**
     * 片段内容
-     */
+    */
     @TableField("ms_terminal_snippet_content")
     @Schema(description = "片段内容", example = "df -h")
     private String msTerminalSnippetContent; // msterminalsnippet内容
 
     /**
     * 备注
-     */
+    */
     @TableField("ms_terminal_snippet_remark")
     @Schema(description = "备注")
     private String msTerminalSnippetRemark; // msterminalsnippet评论

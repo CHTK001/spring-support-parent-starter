@@ -21,7 +21,7 @@ public interface HostCollectProvider {
     * 该 提供者 对应的采集方式
     *
     * @return 采集方式类型
-     */
+    */
     com.chua.starter.server.support.enums.HostCollectType type();
 
     /**
@@ -29,7 +29,7 @@ public interface HostCollectProvider {
     *
     * @param context 采集上下文（含目标主机）
     * @return 采集结果 Mono
-     */
+    */
     Mono<CollectOutcome> collect(HostCollectContext context);
 
     /**
@@ -37,7 +37,7 @@ public interface HostCollectProvider {
     *
     * @param context 采集上下文
     * @return true 表示支持
-     */
+    */
     default boolean supports(HostCollectContext context) {
         if (context == null || context.getHost() == null) {
             return false;

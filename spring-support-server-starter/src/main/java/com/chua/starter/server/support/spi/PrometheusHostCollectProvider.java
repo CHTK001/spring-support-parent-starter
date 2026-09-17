@@ -79,7 +79,7 @@ public class PrometheusHostCollectProvider implements HostCollectProvider {
     *
     * @param context 上下文
     * @return 结果
-     */
+    */
     private CollectOutcome doCollect(HostCollectContext context) {
         MsServerHost host = context == null ? null : context.getHost();
         if (host == null || host.getId() == null) {
@@ -97,7 +97,7 @@ public class PrometheusHostCollectProvider implements HostCollectProvider {
             * apply指标。
             * @param host 主机
             * @param body 主体
-             */
+            */
             applyMetrics(host, body);
             hostMapper.updateById(host);
             return CollectOutcome.ok("Prometheus 采集成功");
@@ -112,7 +112,7 @@ public class PrometheusHostCollectProvider implements HostCollectProvider {
     *
     * @param url 端点
     * @return 指标文本
-     */
+    */
     private String fetchBody(String url) throws Exception {
         java.net.HttpURLConnection conn = (java.net.HttpURLConnection) new java.net.URL(url).openConnection();
         conn.setConnectTimeout(5000);
@@ -124,7 +124,7 @@ public class PrometheusHostCollectProvider implements HostCollectProvider {
             * illegal状态异常。
             * @param code 编码
             * @return illegal状态异常的结果
-             */
+            */
             throw new IllegalStateException("metrics 端点返回 " + code);
         }
         StringBuilder sb = new StringBuilder();
@@ -143,7 +143,7 @@ public class PrometheusHostCollectProvider implements HostCollectProvider {
     *
     * @param host 主机
     * @param body 指标文本
-     */
+    */
     private void applyMetrics(MsServerHost host, String body) {
         double idleSum = sumGroup(CPU_IDLE, body);
         double totalSum = sumGroup(CPU_TOTAL, body);
@@ -177,7 +177,7 @@ public class PrometheusHostCollectProvider implements HostCollectProvider {
     * @param pattern 正则
     * @param body    文本
     * @return 求和结果，无匹配返回 -1
-     */
+    */
     private double sumGroup(Pattern pattern, String body) {
         Matcher m = pattern.matcher(body);
         double sum = 0;
@@ -198,7 +198,7 @@ public class PrometheusHostCollectProvider implements HostCollectProvider {
     * @param pattern 正则
     * @param body    文本
     * @return 值，无匹配返回 -1
-     */
+    */
     private double firstDouble(Pattern pattern, String body) {
         Matcher m = pattern.matcher(body);
         if (m.find()) {

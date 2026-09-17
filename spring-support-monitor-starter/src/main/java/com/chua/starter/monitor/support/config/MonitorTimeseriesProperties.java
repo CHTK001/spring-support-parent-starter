@@ -23,16 +23,16 @@ public class MonitorTimeseriesProperties {
 
     /**
     * 时序引擎（influxdb / Redis / 无），默认 influxdb（向后兼容）
-     */
+    */
     private String engine = "influxdb";
 
     /**
     * influxdb 地址（v1 兼容端点，如 http://127.0.0.1:8086）
-     */
+    */
     private String url = "http://127.0.0.1:8086";
 
     /**
     * 数据库名
-     */
+    */
     private String database = "monitor";
 }

@@ -51,7 +51,7 @@ public class RedisMetricTimeSeriesProvider implements MetricTimeSeriesProvider {
     * 构造
     *
     * @param redisTemplate Redis 模板
-     */
+    */
     public RedisMetricTimeSeriesProvider(StringRedisTemplate redisTemplate) {
         this.redisTemplate = redisTemplate;
         boolean ok = false;
@@ -93,7 +93,7 @@ public class RedisMetricTimeSeriesProvider implements MetricTimeSeriesProvider {
             * @param monitorId 监控标识
             * @param point point
             * @param timestamp 时间戳
-             */
+            */
             writePoint(monitorId, point, timestamp);
         }
     }
@@ -133,7 +133,7 @@ public class RedisMetricTimeSeriesProvider implements MetricTimeSeriesProvider {
             * illegal参数异常。
             * @param target" Target"
             * @return illegal参数异常的结果
-             */
+            */
             throw new IllegalArgumentException("非法 target");
         }
         long nowMs = System.currentTimeMillis();
@@ -180,7 +180,7 @@ public class RedisMetricTimeSeriesProvider implements MetricTimeSeriesProvider {
             * runtime异常。
             * @param e.getMessage( e.获取消息(
             * @return runtime异常的结果
-             */
+            */
             throw new RuntimeException("查询失败: " + e.getMessage(), e);
         }
         points.sort((a, b) -> Long.compare(((Number) a.getFirst()).longValue(), ((Number) b.getFirst()).longValue()));
@@ -203,7 +203,7 @@ public class RedisMetricTimeSeriesProvider implements MetricTimeSeriesProvider {
     * @param monitorId 监控 标识
     * @param metric    指标名
     * @return key
-     */
+    */
     private String key(String target, Long monitorId, String metric) {
         return KEY_PREFIX + target + ":" + monitorId + ":" + metric;
     }

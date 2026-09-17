@@ -37,7 +37,7 @@ public class MonitorGatewayServiceImpl implements MonitorGatewayService {
     * 创建。
     * @param entity 实体
     * @return 创建的结果
-     */
+    */
     public ReturnResult<MsMonitorGateway> create(MsMonitorGateway entity) {
         try {
             if (entity.getId() == null) {
@@ -64,7 +64,7 @@ public class MonitorGatewayServiceImpl implements MonitorGatewayService {
     * 更新。
     * @param entity 实体
     * @return 更新的结果
-     */
+    */
     public ReturnResult<MsMonitorGateway> update(MsMonitorGateway entity) {
         try {
             gatewayMapper.updateById(entity);
@@ -82,7 +82,7 @@ public class MonitorGatewayServiceImpl implements MonitorGatewayService {
     * 删除。
     * @param id 标识
     * @return 删除的结果
-     */
+    */
     public ReturnResult<Void> delete(Long id) {
         try {
             gatewayMapper.deleteById(id);
@@ -99,7 +99,7 @@ public class MonitorGatewayServiceImpl implements MonitorGatewayService {
     * 列表by监控。
     * @param monitorId 监控标识
     * @return 列表by监控的结果
-     */
+    */
     public ReturnResult<List<MsMonitorGateway>> listByMonitor(Long monitorId) {
         try {
             LambdaQueryWrapper<MsMonitorGateway> wrapper = new LambdaQueryWrapper<>();

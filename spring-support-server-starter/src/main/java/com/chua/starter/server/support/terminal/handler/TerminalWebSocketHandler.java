@@ -72,7 +72,7 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
     *
     * @param wsSession 浏览器 WS 会话
     * @throws Exception 参数非法或 guacd 握手失败时抛出，框架将关闭连接
-     */
+    */
     @Override
     public void afterConnectionEstablished(WebSocketSession wsSession) throws Exception {
         wsSession.setTextMessageSizeLimit(MAX_TEXT_BUFFER);
@@ -131,7 +131,7 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
             * reject。
             * @param wsSession ws会话
             * @param 参数" 参数"
-             */
+            */
             reject(wsSession, "缺少 hostId 参数");
             return;
         }
@@ -143,7 +143,7 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
             * reject。
             * @param wsSession ws会话
             * @param protocolName 协议名称
-             */
+            */
             reject(wsSession, "未知协议: " + protocolName);
             return;
         }
@@ -152,7 +152,7 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
             * reject。
             * @param wsSession ws会话
             * @param protocolName 协议名称
-             */
+            */
             reject(wsSession, "协议不支持经 guacd 连接: " + protocolName);
             return;
         }
@@ -164,7 +164,7 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
             * reject。
             * @param wsSession ws会话
             * @param resolved.getMsg( resolved.获取msg(
-             */
+            */
             reject(wsSession, resolved.getMsg());
             return;
         }
@@ -174,7 +174,7 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
             * reject。
             * @param wsSession ws会话
             * @param hostResult.getMsg( 主机结果.getmsg(
-             */
+            */
             reject(wsSession, hostResult.getMsg());
             return;
         }
@@ -191,7 +191,7 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
             * reject。
             * @param wsSession ws会话
             * @param e.getMessage( e.获取消息(
-             */
+            */
             reject(wsSession, "guacd 握手失败: " + e.getMessage());
             return;
         }
@@ -219,7 +219,7 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
     *
     * @param wsSession WS 会话
     * @param message   文本消息（一条或多条 guacd 指令）
-     */
+    */
     @Override
     protected void handleTextMessage(WebSocketSession wsSession, TextMessage message) {
         GuacdSession session = sessionRegistry.findByWsSessionId(wsSession.getId());
@@ -252,7 +252,7 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
     *
     * @param wsSession  WS 会话
     * @param status     关闭状态
-     */
+    */
     @Override
     public void afterConnectionClosed(WebSocketSession wsSession, CloseStatus status) {
         GuacdSession session = sessionRegistry.findByWsSessionId(wsSession.getId());
@@ -269,7 +269,7 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
     *
     * @param wsSession WS 会话
     * @param exception 异常
-     */
+    */
     @Override
     public void handleTransportError(WebSocketSession wsSession, Throwable exception) {
         log.warn("[terminal] WS 传输异常 sessionId={} {}",
@@ -291,7 +291,7 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
     * </p>
     *
     * @param session 会话
-     */
+    */
     private void pumpGuacdToBrowser(GuacdSession session) {
         try {
             while (true) {
@@ -322,7 +322,7 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
     *
     * @param wsSession WS 会话
     * @param reason    原因
-     */
+    */
     private void reject(WebSocketSession wsSession, String reason) {
         log.warn("[terminal] 拒绝终端连接 sessionId={} reason={}", wsSession.getId(), reason);
         try {
@@ -343,7 +343,7 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
     *
     * @param wsSession WS 会话
     * @return 参数表
-     */
+    */
     private Map<String, String> parseQuery(WebSocketSession wsSession) throws IOException {
         URI uri = wsSession.getUri();
         Map<String, String> params = new java.util.HashMap<>();
@@ -366,7 +366,7 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
     *
     * @param wsSession WS 会话
     * @return IP 字符串
-     */
+    */
     private String resolveClientIp(WebSocketSession wsSession) {
         var remoteAddress = wsSession.getRemoteAddress();
         return remoteAddress == null ? "unknown" : remoteAddress.getAddress().getHostAddress();
@@ -377,7 +377,7 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
     *
     * @param value 原始字符串
     * @return 长整型或 空
-     */
+    */
     private Long parseLong(String value) {
         if (value == null || value.isBlank()) {
             return null;
@@ -394,7 +394,7 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
     *
     * @param value 原始字符串
     * @return 整型或 空
-     */
+    */
     private Integer parseInteger(String value) {
         if (value == null || value.isBlank()) {
             return null;

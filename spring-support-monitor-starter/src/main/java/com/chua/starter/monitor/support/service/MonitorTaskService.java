@@ -18,7 +18,7 @@ public interface MonitorTaskService {
     *
     * @param task 任务实体
     * @return 创建结果
-     */
+    */
     ReturnResult<MsMonitorTask> create(MsMonitorTask task);
 
     /**
@@ -26,7 +26,7 @@ public interface MonitorTaskService {
     *
     * @param task 任务实体
     * @return 更新结果
-     */
+    */
     ReturnResult<MsMonitorTask> update(MsMonitorTask task);
 
     /**
@@ -34,7 +34,7 @@ public interface MonitorTaskService {
     *
     * @param id 主键
     * @return 删除结果
-     */
+    */
     ReturnResult<Void> delete(Long id);
 
     /**
@@ -42,14 +42,14 @@ public interface MonitorTaskService {
     *
     * @param id 主键
     * @return 查询结果
-     */
+    */
     ReturnResult<MsMonitorTask> findById(Long id);
 
     /**
     * 查询已启用的任务列表
     *
     * @return 任务列表
-     */
+    */
     ReturnResult<List<MsMonitorTask>> listEnabled();
 
     /**
@@ -57,7 +57,7 @@ public interface MonitorTaskService {
     *
     * @param monitorId 主机 标识
     * @return 任务列表
-     */
+    */
     ReturnResult<List<MsMonitorTask>> listByMonitor(Long monitorId);
 
     /**
@@ -66,7 +66,7 @@ public interface MonitorTaskService {
     * @param id      主键
     * @param enabled 启用状态
     * @return 操作结果
-     */
+    */
     ReturnResult<Void> setEnabled(Long id, Integer enabled);
 
     /**
@@ -74,6 +74,6 @@ public interface MonitorTaskService {
     *
     * @param id 主键
     * @return 操作结果
-     */
+    */
     ReturnResult<Void> markLastRunTime(Long id);
 }

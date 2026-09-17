@@ -59,7 +59,9 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
     /** 事件查询条数上限 */
     private static final int EVENT_LIMIT = 200;
 
-    /** 连续触发计数的 Redis 前缀（跨重启保留静默窗口外的语义无需持久化） */
+    /**
+    * 连续触发计数的 Redis 前缀（跨重启保留静默窗口外的语义无需持久化）
+    */
     private static final String SILENCE_KEY_PREFIX = "monitor:alarm:silence:";
 
     /** 策略 映射器 */
@@ -93,7 +95,7 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
     * Redis 不可用时的内存静默期降级表：silence钥匙 → 静默截止 轮次 毫秒。
     * <p>独立部署(无 Redis)或 Redis 短暂不可用时, 以此表完成 SETNX+TTL 的等价语义,
     * 保证告警事件仍能落库, 而非被异常吞掉导致一条告警都不记录。</p>
-     */
+    */
     private final Map<String, Long> memorySilence = new ConcurrentHashMap<>();
 
     /** 维护窗口 映射器 */
@@ -101,12 +103,12 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
 
     /**
     * 启动时加载规则缓存
-     */
+    */
     @PostConstruct
     public void init() {
         /**
         * reload。
-         */
+        */
         reload();
     }
 
@@ -152,7 +154,7 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
                 * @param monitorName 监控名称
                 * @param metricName 指标名称
                 * @param current 当前
-                 */
+                */
                 fireIfNotSilent(rule, monitorId, monitorName, metricName, current);
             } catch (Exception e) {
                 // 静默期 Redis 异常或通知失败不阻断指标写入主链路
@@ -195,7 +197,7 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
     * 创建policy。
     * @param policy policy
     * @return 创建policy的结果
-     */
+    */
     public ReturnResult<MsMonitorAlarmPolicy> createPolicy(MsMonitorAlarmPolicy policy) {
         if (policy == null || isBlank(policy.getMsMonitorAlarmPolicyName())) {
             return ReturnResult.error("策略名称不能为空");
@@ -213,7 +215,7 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
     * @param id 标识
     * @param policy policy
     * @return 更新policy的结果
-     */
+    */
     public ReturnResult<MsMonitorAlarmPolicy> updatePolicy(Long id, MsMonitorAlarmPolicy policy) {
         MsMonitorAlarmPolicy exists = policyMapper.selectById(id);
         if (exists == null) {
@@ -231,7 +233,7 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
         policyMapper.updateById(exists);
         /**
         * reload。
-         */
+        */
         reload();
         return ReturnResult.ok(exists);
     }
@@ -243,14 +245,14 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
     * 删除policy。
     * @param id 标识
     * @return 删除policy的结果
-     */
+    */
     public ReturnResult<Void> deletePolicy(Long id) {
         ruleMapper.delete(new LambdaQueryWrapper<MsMonitorAlarmRule>()
                 .eq(MsMonitorAlarmRule::getMsMonitorAlarmRulePolicyId, id));
         policyMapper.deleteById(id);
         /**
         * reload。
-         */
+        */
         reload();
         return ReturnResult.success();
     }
@@ -260,7 +262,7 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
     /**
     * 列表policies。
     * @return 列表policies的结果
-     */
+    */
     public ReturnResult<List<MsMonitorAlarmPolicy>> listPolicies() {
         return ReturnResult.list(policyMapper.selectList(
                 new LambdaQueryWrapper<MsMonitorAlarmPolicy>().orderByDesc(MsMonitorAlarmPolicy::getId)));
@@ -274,7 +276,7 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
     * 创建rule。
     * @param rule rule
     * @return 创建rule的结果
-     */
+    */
     public ReturnResult<MsMonitorAlarmRule> createRule(MsMonitorAlarmRule rule) {
         var error = validateRule(rule);
         if (error != null) {
@@ -286,7 +288,7 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
         ruleMapper.insert(rule);
         /**
         * reload。
-         */
+        */
         reload();
         return ReturnResult.ok(rule);
     }
@@ -298,7 +300,7 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
     * @param id 标识
     * @param rule rule
     * @return 更新rule的结果
-     */
+    */
     public ReturnResult<MsMonitorAlarmRule> updateRule(Long id, MsMonitorAlarmRule rule) {
         MsMonitorAlarmRule exists = ruleMapper.selectById(id);
         if (exists == null) {
@@ -328,7 +330,7 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
         ruleMapper.updateById(exists);
         /**
         * reload。
-         */
+        */
         reload();
         return ReturnResult.ok(exists);
     }
@@ -339,12 +341,12 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
     * 删除rule。
     * @param id 标识
     * @return 删除rule的结果
-     */
+    */
     public ReturnResult<Void> deleteRule(Long id) {
         ruleMapper.deleteById(id);
         /**
         * reload。
-         */
+        */
         reload();
         return ReturnResult.success();
     }
@@ -355,7 +357,7 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
     * 列表rules。
     * @param policyId policyid
     * @return 列表rules的结果
-     */
+    */
     public ReturnResult<List<MsMonitorAlarmRule>> listRules(Long policyId) {
         LambdaQueryWrapper<MsMonitorAlarmRule> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(policyId != null, MsMonitorAlarmRule::getMsMonitorAlarmRulePolicyId, policyId);
@@ -408,7 +410,7 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
     * @param silenceKey    静默键(rule:监控)
     * @param silenceMinutes 静默分钟
     * @return true=首次触发(放行); false=静默期内(跳过)或获取失败(保守跳过)
-     */
+    */
     private Boolean acquireSilence(String silenceKey, int silenceMinutes) {
         // 1) 优先 Redis：可用时返回其 SETNX 结果
         try {
@@ -441,7 +443,7 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
     * @param monitorName 目标名
     * @param metricName  指标名
     * @param value       实际值
-     */
+    */
 private void fireIfNotSilent(MsMonitorAlarmRule rule, Long monitorId, String monitorName,
                              String metricName, BigDecimal value) {            // ---- 新增：维护窗口检查 ----
             // 如果当前时间在活跃的维护窗口内，则跳过告警（不受静默期影响）
@@ -558,7 +560,7 @@ private void fireIfNotSilent(MsMonitorAlarmRule rule, Long monitorId, String mon
     *
     * @param rule 规则
     * @return 快照 JSON，异常时返回 空
-     */
+    */
     private String buildRuleSnapshot(MsMonitorAlarmRule rule) {
         try {
             var map = new java.util.LinkedHashMap<String, Object>();
@@ -583,7 +585,7 @@ private void fireIfNotSilent(MsMonitorAlarmRule rule, Long monitorId, String mon
     *
     * @param rule 规则
     * @return 校验失败结果，合法返回 空
-     */
+    */
     private ReturnResult<MsMonitorAlarmRule> validateRule(MsMonitorAlarmRule rule) {
         if (rule == null || isBlank(rule.getMsMonitorAlarmRuleMetricName())
                 || isBlank(rule.getMsMonitorAlarmRuleCondition())
@@ -605,7 +607,7 @@ private void fireIfNotSilent(MsMonitorAlarmRule rule, Long monitorId, String mon
     * @param condition 条件串
     * @param cmp       compare转为 结果
     * @return 是否命中
-     */
+    */
     private boolean conditionHit(String condition, int cmp) {
         return switch (condition == null ? "" : condition) {
             case "GT" -> cmp > 0;
@@ -623,7 +625,7 @@ private void fireIfNotSilent(MsMonitorAlarmRule rule, Long monitorId, String mon
     * @param ruleId   规则 标识
     * @param monitorId 目标 标识
     * @return 键
-     */
+    */
     private String counterKey(Long ruleId, Long monitorId) {
         return ruleId + ":" + monitorId;
     }

@@ -18,7 +18,7 @@ public interface ServerIdentityService {
     *
     * @param identity 身份
     * @return 结果
-     */
+    */
     ReturnResult<MsServerIdentity> create(MsServerIdentity identity);
 
     /**
@@ -27,7 +27,7 @@ public interface ServerIdentityService {
     * @param id       主键
     * @param identity 身份
     * @return 结果
-     */
+    */
     ReturnResult<MsServerIdentity> update(Long id, MsServerIdentity identity);
 
     /**
@@ -35,13 +35,13 @@ public interface ServerIdentityService {
     *
     * @param id 主键
     * @return 结果
-     */
+    */
     ReturnResult<Void> delete(Long id);
 
     /**
     * 查询身份列表（脱敏）
     *
     * @return 身份列表
-     */
+    */
     ReturnResult<List<MsServerIdentity>> list();
 }

@@ -19,7 +19,7 @@ public interface MonitorService {
     *
     * @param monitor 监控实体
     * @return 创建结果
-     */
+    */
     ReturnResult<MsMonitor> create(MsMonitor monitor);
 
     /**
@@ -27,7 +27,7 @@ public interface MonitorService {
     *
     * @param monitor 监控实体
     * @return 更新结果
-     */
+    */
     ReturnResult<MsMonitor> update(MsMonitor monitor);
 
     /**
@@ -35,7 +35,7 @@ public interface MonitorService {
     *
     * @param id 主键
     * @return 删除结果
-     */
+    */
     ReturnResult<Void> delete(Long id);
 
     /**
@@ -43,14 +43,14 @@ public interface MonitorService {
     *
     * @param id 主键
     * @return 查询结果
-     */
+    */
     ReturnResult<MsMonitor> findById(Long id);
 
     /**
     * 查询全部
     *
     * @return 列表
-     */
+    */
     ReturnResult<List<MsMonitor>> listAll();
 
     /**
@@ -58,7 +58,7 @@ public interface MonitorService {
     *
     * @param serviceType 服务类型
     * @return 列表
-     */
+    */
     ReturnResult<List<MsMonitor>> listByServiceType(String serviceType);
 
     /**
@@ -68,6 +68,6 @@ public interface MonitorService {
     * @param pageSize 每页大小
     * @param keyword  关键词
     * @return 分页结果
-     */
+    */
     ReturnResult<Page<MsMonitor>> page(long pageNum, long pageSize, String keyword);
 }

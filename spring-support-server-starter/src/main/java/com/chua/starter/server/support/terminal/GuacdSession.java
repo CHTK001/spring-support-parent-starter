@@ -42,9 +42,11 @@ public class GuacdSession {
     /** 协议名（小写：ssh/vnc/rdp） */
     private final String protocol;
 
-    /** 读线程（guacd -> 浏览器方向泵），在 之后connectionestablished 中创建后写回 */
+    /**
+    * 读线程（guacd → 浏览器方向泵），在 connectionEstablished 回调中创建后写回
+    */
     @Setter
-    private Thread readerThread; // 读取thread
+    private Thread readerThread;
 
     /** 关闭标记，防止重复关闭 */
     private final AtomicBoolean closed = new AtomicBoolean(false);
@@ -63,7 +65,7 @@ public class GuacdSession {
     * @param sessionId         审计记录 标识
     * @param protocol          协议名
     * @param readerThread      读线程
-     */
+    */
     public GuacdSession(String tunnelId, WebSocketSession webSocketSession, GuacdTunnel tunnel,
                         Long hostId, Long sessionId, String protocol, Thread readerThread) {
         this.tunnelId = tunnelId;
@@ -83,7 +85,7 @@ public class GuacdSession {
     *
     * @param instruction guacd 指令文本
     * @throws IOException 发送失败时抛出
-     */
+    */
     public void sendToBrowser(String instruction) throws IOException {
         synchronized (sendLock) {
             if (webSocketSession.isOpen()) {
@@ -99,7 +101,7 @@ public class GuacdSession {
     * 获取发送锁对象
     *
     * @return 锁
-     */
+    */
     public Object getSendLock() {
         return sendLock;
     }
@@ -108,7 +110,7 @@ public class GuacdSession {
     * 标记会话已关闭（幂等）
     *
     * @return true 表示本次调用完成了状态翻转
-     */
+    */
     public boolean markClosed() {
         return closed.compareAndSet(false, true);
     }

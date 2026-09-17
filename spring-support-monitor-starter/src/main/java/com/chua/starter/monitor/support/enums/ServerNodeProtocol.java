@@ -25,7 +25,7 @@ public enum ServerNodeProtocol {
     * @param false false
     * @param 插件 插件
     * @return HTTP的结果
-     */
+    */
     HTTP("HTTP", "http", 18080, "jdk", false, "HTTP 服务器(可挂 ServerFilter 插件)"),
 
     /**
@@ -37,7 +37,7 @@ public enum ServerNodeProtocol {
     * @param true true
     * @param 反向代理服务器" 反向代理服务器"
     * @return http代理的结果
-     */
+    */
     HTTP_PROXY("HTTP_PROXY", "http-proxy", 18081, "jdk", true, "HTTP 反向代理服务器"),
 
     /**
@@ -49,7 +49,7 @@ public enum ServerNodeProtocol {
     * @param true true
     * @param 端口代理服务器" 端口代理服务器"
     * @return tcp代理的结果
-     */
+    */
     TCP_PROXY("TCP_PROXY", "tcp-proxy", 18082, "jdk", true, "TCP 端口代理服务器"),
 
     /**
@@ -61,32 +61,32 @@ public enum ServerNodeProtocol {
     * @param false false
     * @param 隧道服务器" 隧道服务器"
     * @return SIP的结果
-     */
+    */
     SIP("SIP", "sip", 19460, "sip", false, "SIP 隧道服务器");
 
     /**
     * 存储编码
-     */
+    */
     private final String code;
     /**
     * 别名（请求可传）
-     */
+    */
     private final String alias;
     /**
     * 默认端口
-     */
+    */
     private final int defaultPort;
     /**
     * 默认引擎
-     */
+    */
     private final String defaultEngine;
     /**
     * 是否要求后端地址
-     */
+    */
     private final boolean requiresBackend;
     /**
     * 描述
-     */
+    */
     private final String desc;
 
     /**
@@ -98,7 +98,7 @@ public enum ServerNodeProtocol {
     * @param defaultEngine   默认引擎
     * @param requiresBackend 是否要求后端地址
     * @param desc            描述
-     */
+    */
     ServerNodeProtocol(String code, String alias, int defaultPort, String defaultEngine,
                        boolean requiresBackend, String desc) {
         this.code = code;
@@ -117,7 +117,7 @@ public enum ServerNodeProtocol {
     *
     * @param code 编码或别名
     * @return 枚举值，未匹配返回 空
-     */
+    */
     public static ServerNodeProtocol of(String code) {
         if (code == null || code.isBlank()) {
             return null;
@@ -136,7 +136,7 @@ public enum ServerNodeProtocol {
     *
     * @param value 原始值
     * @return 归一化结果
-     */
+    */
     private static String normalize(String value) {
         return value.trim().toLowerCase().replace("-", "_");
     }

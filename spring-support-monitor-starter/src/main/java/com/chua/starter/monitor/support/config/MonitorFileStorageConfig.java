@@ -30,12 +30,12 @@ public class MonitorFileStorageConfig {
 
     /**
     * 本地文件存储 Bean 名称（服务端过滤器工厂 通过 获取Bean名称for类型 发现并注册为文件服务器存储桶）
-     */
+    */
     public static final String LOCAL_STORAGE_BEAN_NAME = "localFileStorage";
 
     /**
     * 录制本地存储根目录
-     */
+    */
     @Value("${monitor.file-storage.local-path:${user.dir}/.data/filesystem-local}")
     private String localPath; // 本地路径
 
@@ -43,7 +43,7 @@ public class MonitorFileStorageConfig {
     * 注册本地磁盘存储后端。
     *
     * @return FileStorage 实例（反射创建；空 时注入失败被过滤）
-     */
+    */
     @Bean(LOCAL_STORAGE_BEAN_NAME)
     public Object localFileStorage() {
         try {

@@ -56,7 +56,9 @@ public class HostOnlineScheduler {
     /** 采集 提供者 注册中心（SPI 按 mode 路由） */
     private final HostCollectProviderRegistry collectRegistry;
 
-    /** 延迟检测结果钩子（监控 侧注册，推送 套接字 实时延迟；未注册时不推送） */
+    /**
+    * 延迟检测结果钩子（监控 侧注册，推送 套接字 实时延迟；未注册时不推送）
+    */
     @Setter
     private Consumer<MsServerHost> delayHook; // 延迟hook
 
@@ -64,7 +66,9 @@ public class HostOnlineScheduler {
     @Setter
     private Consumer<MsServerHost> onlineHook; // onlinehook
 
-    /** 采集完成钩子（监控 侧注册；每次定时采集落库后回调，含最新硬件/使用率数据） */
+    /**
+    * 采集完成钩子（监控 侧注册；每次定时采集落库后回调，含最新硬件/使用率数据）
+    */
     @Setter
     private Consumer<MsServerHost> collectHook; // collecthook
 
@@ -94,12 +98,12 @@ public class HostOnlineScheduler {
     /**
     * 存在仅用于占位的统一入口（兼容旧调用）：
     * 拆分的 tick / delayTick / collectTick 由时间轮分别调度。
-     */
+    */
 
     /**
     * 在离线检测：扫描所有启用主机，按各自开关/间隔决定是否探测
     * <p>使用虚拟线程批量并发 TCP 探测，避免大量主机串行阻塞时间轮 tick。</p>
-     */
+    */
     public void tick() {
         try {
             List<MsServerHost> hosts = hostMapper.selectList(
@@ -146,7 +150,7 @@ public class HostOnlineScheduler {
 
     /**
     * 硬件定时采集：扫描所有启用主机，按各自开关/间隔/方式经 SPI 采集
-     */
+    */
     public void collectTick() {
         try {
             List<MsServerHost> hosts = hostMapper.selectList(
@@ -174,7 +178,7 @@ public class HostOnlineScheduler {
                         * @param mode mode
                         * @param host 主机
                         * @return 主机collect上下文的结果
-                         */
+                        */
                         return new HostCollectContext(mode, host);
                     })
                     .filter(ctx -> ctx.getMode() != null)
@@ -185,7 +189,7 @@ public class HostOnlineScheduler {
                             /**
                             * markcollected。
                             * @param context.getHost( 上下文.获取主机(
-                             */
+                            */
                             markCollected(context.getHost());
                             return Mono.empty();
                         }
@@ -214,7 +218,7 @@ public class HostOnlineScheduler {
     /**
     * 延迟检测：扫描启用主机，按各自开关/间隔 TCP 连接测 RTT 毫秒并回写
     * <p>使用虚拟线程批量并发探测，避免大量主机串行阻塞时间轮 tick。</p>
-     */
+    */
     public void delayTick() {
         try {
             List<MsServerHost> hosts = hostMapper.selectList(
@@ -246,7 +250,7 @@ public class HostOnlineScheduler {
     * TCP 连接测 RTT 延迟并回写（连不上则置 -1）
     *
     * @param hostId 主机 标识
-     */
+    */
     private void updateDelay(Long hostId) {
         try {
             MsServerHost host = hostMapper.selectById(hostId);
@@ -274,7 +278,7 @@ public class HostOnlineScheduler {
     *
     * @param host 主机
     * @return 延迟毫秒或 -1
-     */
+    */
     private long measureDelayMs(MsServerHost host) {
         String address = host.getServerHostAddress();
         if (address == null || "127.0.0.1".equals(address.trim()) || "localhost".equalsIgnoreCase(address.trim())) {
@@ -284,7 +288,7 @@ public class HostOnlineScheduler {
         /**
         * 尝试。
         * @param Socket( 套接字(
-         */
+        */
         try (Socket socket = new Socket()) {
             long start = System.nanoTime();
             socket.connect(new InetSocketAddress(address, port), CONNECT_TIMEOUT_MS);
@@ -299,7 +303,7 @@ public class HostOnlineScheduler {
     * 回写最近采集时间（无论成功失败，防止每次扫描重复采集同一主机）
     *
     * @param host 主机
-     */
+    */
     private void markCollected(MsServerHost host) {
         try {
             host.setServerHostLastCollectTime(LocalDateTime.now());
@@ -322,7 +326,7 @@ public class HostOnlineScheduler {
     *
     * @param hostId   主机 标识
     * @param reachable 是否可达
-     */
+    */
     private void updateOnline(Long hostId, boolean reachable) {
         try {
             MsServerHost host = hostMapper.selectById(hostId);
@@ -345,7 +349,7 @@ public class HostOnlineScheduler {
     *
     * @param host 主机
     * @return 是否可达
-     */
+    */
     private boolean isReachable(MsServerHost host) {
         String address = host.getServerHostAddress();
         if (address == null || "127.0.0.1".equals(address.trim()) || "localhost".equalsIgnoreCase(address.trim())) {
@@ -366,7 +370,7 @@ public class HostOnlineScheduler {
     *
     * @param host 主机
     * @return 探测端口
-     */
+    */
     private int getDetectPort(MsServerHost host) {
         String osType = host.getServerHostOsType();
         if (osType != null && osType.toUpperCase().contains("WINDOWS")) {
@@ -383,7 +387,7 @@ public class HostOnlineScheduler {
     *
     * @param flag 开关值
     * @return 是否启用
-     */
+    */
     private boolean isEnabled(Integer flag) {
         return flag == null || flag == ENABLED;
     }
@@ -395,7 +399,7 @@ public class HostOnlineScheduler {
     * @param interval 间隔（秒）
     * @param now      当前时间
     * @return 是否到期
-     */
+    */
     private boolean isDue(LocalDateTime lastTime, int interval, LocalDateTime now) {
         if (lastTime == null) {
             return true;
@@ -408,7 +412,7 @@ public class HostOnlineScheduler {
     *
     * @param interval 间隔（秒）
     * @return 归一化间隔
-     */
+    */
     private int normalizeInterval(int interval) {
         return interval < MIN_INTERVAL ? MIN_INTERVAL : interval;
     }

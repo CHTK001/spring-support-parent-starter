@@ -33,7 +33,7 @@ public class MonitorConfigServiceImpl implements MonitorConfigService {
     *
     * @param key 键
     * @return findby键的结果
-     */
+    */
     public ReturnResult<MsMonitorConfig> findByKey(String key) {
         try {
             LambdaQueryWrapper<MsMonitorConfig> w = new LambdaQueryWrapper<>();
@@ -76,7 +76,7 @@ public class MonitorConfigServiceImpl implements MonitorConfigService {
     * 获取全部
     *
     * @return 获取全部的结果
-     */
+    */
     public ReturnResult<Map<String, String>> getAll() {
         try {
             Map<String, String> map = new HashMap<>();
@@ -99,7 +99,7 @@ public class MonitorConfigServiceImpl implements MonitorConfigService {
     *
     * @param entity 实体
     * @return upsert的结果
-     */
+    */
     public ReturnResult<MsMonitorConfig> upsert(MsMonitorConfig entity) {
         try {
             ReturnResult<MsMonitorConfig> existing = findByKey(entity.getMonitorConfigKey());
@@ -123,7 +123,7 @@ public class MonitorConfigServiceImpl implements MonitorConfigService {
     *
     * @param entities 实体
     * @return upsert全部的结果
-     */
+    */
     public ReturnResult<Integer> upsertAll(List<MsMonitorConfig> entities) {
         if (entities == null || entities.isEmpty()) {
             return ReturnResult.ok(0);

@@ -18,7 +18,7 @@ public interface MonitorGatewayService {
     *
     * @param entity 实体
     * @return 创建结果
-     */
+    */
     ReturnResult<MsMonitorGateway> create(MsMonitorGateway entity);
 
     /**
@@ -26,7 +26,7 @@ public interface MonitorGatewayService {
     *
     * @param entity 实体
     * @return 更新结果
-     */
+    */
     ReturnResult<MsMonitorGateway> update(MsMonitorGateway entity);
 
     /**
@@ -34,7 +34,7 @@ public interface MonitorGatewayService {
     *
     * @param id 主键
     * @return 删除结果
-     */
+    */
     ReturnResult<Void> delete(Long id);
 
     /**
@@ -42,6 +42,6 @@ public interface MonitorGatewayService {
     *
     * @param monitorId 主机 标识
     * @return 列表
-     */
+    */
     ReturnResult<List<MsMonitorGateway>> listByMonitor(Long monitorId);
 }

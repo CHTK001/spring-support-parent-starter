@@ -59,7 +59,7 @@ public class AgentEndpointController {
     *
     * @param agentKey 探针标识
     * @return 服务端时间
-     */
+    */
     @Operation(summary = "Agent 心跳")
     @GetMapping("/heartbeat")
     public ReturnResult<Map<String, Object>> heartbeat(
@@ -77,7 +77,7 @@ public class AgentEndpointController {
     * 探针在线状态列表（心跳上下文快照）
     *
     * @return 每个目标的最后心跳时间与在线标记
-     */
+    */
     @Operation(summary = "探针在线状态")
     @GetMapping("/status")
     public ReturnResult<List<Map<String, Object>>> status() {
@@ -111,7 +111,7 @@ public class AgentEndpointController {
     * @param agentKey 探针标识
     * @param body     指标载荷
     * @return 结果
-     */
+    */
     @Operation(summary = "Agent 指标推送")
     @PostMapping("/metrics")
     public ReturnResult<Void> pushMetrics(
@@ -142,7 +142,7 @@ public class AgentEndpointController {
     *
     * @param agentKey 探针标识
     * @return 目标实体，未命中返回 空
-     */
+    */
     private MsMonitor requireByAgentKey(String agentKey) {
         if (agentKey == null || agentKey.isBlank()) {
             return null;
@@ -158,7 +158,7 @@ public class AgentEndpointController {
     *
     * @param raw 原始 JSON 数组对象
     * @return 指标点列表（非法项跳过）
-     */
+    */
     @SuppressWarnings("unchecked")
     private List<MetricPoint> parsePoints(Object raw) {
         List<MetricPoint> points = new java.util.ArrayList<>();

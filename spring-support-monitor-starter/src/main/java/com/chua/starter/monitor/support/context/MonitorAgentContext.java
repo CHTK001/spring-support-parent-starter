@@ -36,7 +36,7 @@ public class MonitorAgentContext {
     * 标记目标心跳活跃
     *
     * @param monitorId 目标 标识
-     */
+    */
     public void markActive(Long monitorId) {
         if (monitorId == null) {
             return;
@@ -50,7 +50,7 @@ public class MonitorAgentContext {
     *
     * @param monitorId 目标 标识
     * @return true 表示在超时窗口内有心跳
-     */
+    */
     public boolean isOnline(Long monitorId) {
         LocalDateTime last = lastHeartbeatMap.get(monitorId);
         return last != null && ChronoUnit.MINUTES.between(last, LocalDateTime.now()) < DEFAULT_OFFLINE_MINUTES;
@@ -60,7 +60,7 @@ public class MonitorAgentContext {
     * 扫描并翻转离线状态（由定时任务调用）
     *
     * @return 本轮新转为离线的目标 标识 列表
-     */
+    */
     public List<Long> sweepOffline() {
         List<Long> newlyOffline = new ArrayList<>();
         for (Map.Entry<Long, LocalDateTime> entry : lastHeartbeatMap.entrySet()) {
@@ -78,7 +78,7 @@ public class MonitorAgentContext {
     * 全量状态快照
     *
     * @return monitorId -> [最后一个心跳, online]
-     */
+    */
     public List<AgentStatus> snapshot() {
         List<AgentStatus> list = new ArrayList<>(lastHeartbeatMap.size());
         for (Map.Entry<Long, LocalDateTime> entry : lastHeartbeatMap.entrySet()) {
@@ -95,7 +95,7 @@ public class MonitorAgentContext {
     * @param lastHeartbeat 最后心跳时间
     * @param online        是否在线
     * @return 智能体状态的结果
-     */
+    */
     public record AgentStatus(Long monitorId, LocalDateTime lastHeartbeat, boolean online) {
     }
 }

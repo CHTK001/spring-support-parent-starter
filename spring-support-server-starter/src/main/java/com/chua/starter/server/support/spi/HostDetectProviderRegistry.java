@@ -30,7 +30,7 @@ public class HostDetectProviderRegistry {
     * 构造：注册全部探测提供者
     *
     * @param providers 探测提供者列表
-     */
+    */
     @Autowired
     public HostDetectProviderRegistry(List<HostDetectProvider> providers) {
         if (providers == null || providers.isEmpty()) {
@@ -52,7 +52,7 @@ public class HostDetectProviderRegistry {
     *
     * @param osType 系统类型（LINUX/MACOS/WINDOWS）
     * @return Optional，可能为空
-     */
+    */
     public Optional<HostDetectProvider> resolve(String osType) {
         if (osType == null || osType.isBlank()) {
             return Optional.empty();
@@ -65,7 +65,7 @@ public class HostDetectProviderRegistry {
     *
     * @param osType 系统类型
     * @return 是否支持
-     */
+    */
     public boolean supports(String osType) {
         return resolve(osType).isPresent();
     }

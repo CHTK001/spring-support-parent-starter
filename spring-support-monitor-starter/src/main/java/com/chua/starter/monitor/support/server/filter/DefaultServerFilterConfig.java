@@ -19,15 +19,15 @@ public class DefaultServerFilterConfig implements ServerFilterConfig {
 
     /**
     * 过滤器名称
-     */
+    */
     private final String filterName;
     /**
     * 初始化参数
-     */
+    */
     private final Map<String, String> initParameters;
     /**
     * 所属服务器配置
-     */
+    */
     private final ServerSetting serverSetting;
 
     /**
@@ -36,7 +36,7 @@ public class DefaultServerFilterConfig implements ServerFilterConfig {
     * @param filterName     过滤器名称
     * @param initParameters 初始化参数
     * @param serverSetting  所属服务器配置
-     */
+    */
     public DefaultServerFilterConfig(String filterName, Map<String, String> initParameters, ServerSetting serverSetting) {
         this.filterName = filterName;
         this.initParameters = initParameters == null ? Collections.emptyMap() : initParameters;

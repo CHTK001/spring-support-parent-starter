@@ -65,7 +65,7 @@ public class GuacdConnectionFactory {
     * @param credential   解密后的凭据
     * @param sessionId    会话标识
     * @return 已配置隧道（使用方负责 关闭）
-     */
+    */
     public GuacdTunnel create(ProtocolType protocolType, String address,
                               Integer targetPort, SshCredential credential, String sessionId) {
         var guacd = properties.getGuacd();
@@ -91,7 +91,7 @@ public class GuacdConnectionFactory {
             * runtime异常。
             * @param e.getMessage( e.获取消息(
             * @return runtime异常的结果
-             */
+            */
             throw new RuntimeException("guacd 握手失败: " + e.getMessage(), e);
         }
         return tunnel;
@@ -103,7 +103,7 @@ public class GuacdConnectionFactory {
     * @param address 地址
     * @param targetPort Target端口
     * @param credential credential
-     */
+    */
     private void buildSshConfig(GuacdTunnel tunnel, String address, Integer targetPort, SshCredential credential) {
         tunnel.remote(address, targetPort == null ? DEFAULT_SSH_PORT : targetPort);
         if (notBlank(credential.username())) {
@@ -132,7 +132,7 @@ public class GuacdConnectionFactory {
     * @param address 地址
     * @param targetPort Target端口
     * @param credential credential
-     */
+    */
     private void buildVncConfig(GuacdTunnel tunnel, String address, Integer targetPort, SshCredential credential) {
         tunnel.remote(address, targetPort == null ? DEFAULT_VNC_PORT : targetPort);
         if (notBlank(credential.password())) {
@@ -155,7 +155,7 @@ public class GuacdConnectionFactory {
     * @param address 地址
     * @param targetPort Target端口
     * @param credential credential
-     */
+    */
     private void buildRdpConfig(GuacdTunnel tunnel, String address, Integer targetPort, SshCredential credential) {
         tunnel.remote(address, targetPort == null ? DEFAULT_RDP_PORT : targetPort);
         if (notBlank(credential.username())) {
@@ -215,7 +215,7 @@ public class GuacdConnectionFactory {
     *
     * @param value 待判断字符串
     * @return 是否非空
-     */
+    */
     private boolean notBlank(String value) {
         return value != null && !value.isBlank();
     }
