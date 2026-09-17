@@ -22,7 +22,7 @@ import java.util.Map;
 /**
 * 服务器资产 智能体 上报接口
 * <p>
-* 目标主机上的 智能体 按 智能体钥匙 主动推送硬件/状态数据，
+* 目标主机上的 智能体 按 智能体键 主动推送硬件/状态数据，
 * 由 {@link AgentHostCollectProvider} 处理回写。用于 NAT / 防火墙下
 * 服务端无法直连的主机采集。
 * </p>
@@ -43,7 +43,7 @@ public class HostAgentController {
     private final MsServerHostMapper hostMapper;
 
     /**
-    * 智能体 推送数据（按 智能体钥匙 定位主机）
+    * 智能体 推送数据（按 智能体键 定位主机）
     *
     * @param agentKey 探针标识
     * @param payload  上报数据（cpu核心/内存mb/diskgb/os版本/公共ip/私募ip 等）

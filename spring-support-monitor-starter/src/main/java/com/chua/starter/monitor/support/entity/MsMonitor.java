@@ -116,7 +116,7 @@ public class MsMonitor extends SysBase {
     */
     @TableField("ms_monitor_agent_key")
     @Schema(description = "探针标识(Agent推送鉴权)", example = "8f14e45fceea167a5a36dedd4bea2543")
-    private String monitorAgentKey; // 监控智能体钥匙
+    private String monitorAgentKey; // 监控智能体键
 
     /**
     * 关联服务器主机 标识（ms_服务端_主机.标识，用于联动服务器台账配置）

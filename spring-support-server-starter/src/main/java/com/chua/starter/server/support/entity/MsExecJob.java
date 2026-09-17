@@ -78,7 +78,7 @@ public class MsExecJob extends SysBase {
     */
     @TableField("ms_exec_job_enabled")
     @Schema(description = "启用状态 1启用 0停用", example = "1")
-    private Integer msExecJobEnabled; // ms执行作业已启用
+    private Integer msExecJobEnabled; // ms执行作业启用
 
     /**
     * 上次运行时间

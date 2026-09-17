@@ -324,28 +324,22 @@ public class SftpServiceImpl implements SftpService {
             // 认证已完成, 私钥明文即刻从磁盘清除
             /**
             * cleanupquietly。
-            * @param tempKey temp钥匙
+            * @param tempKey temp键
             */
             cleanupQuietly(tempKey);
             return client;
         } catch (IOException e) {
             /**
             * cleanupquietly。
-            * @param tempKey temp钥匙
+            * @param tempKey temp键
             */
             cleanupQuietly(tempKey);
-            /**
-            * illegal状态异常。
-            * @param "写入私钥临时文件失败" "写入私钥临时文件失败"
-            * @param e e
-            * @return illegal状态异常的结果
-            */
             throw new IllegalStateException("写入私钥临时文件失败", e);
         } catch (RuntimeException e) {
             // 连接/认证失败同样清理临时私钥
             /**
             * cleanupquietly。
-            * @param tempKey temp钥匙
+            * @param tempKey temp键
             */
             cleanupQuietly(tempKey);
             throw e;
@@ -425,11 +419,6 @@ public class SftpServiceImpl implements SftpService {
     private com.chua.starter.server.support.entity.MsServerHost requireHost(Long hostId) {
         var result = serverHostService.get(hostId);
         if (!result.isOk()) {
-            /**
-            * illegal参数异常。
-            * @param result.getMsg( 结果.获取msg(
-            * @return illegal参数异常的结果
-            */
             throw new IllegalArgumentException(result.getMsg());
         }
         return result.getData();

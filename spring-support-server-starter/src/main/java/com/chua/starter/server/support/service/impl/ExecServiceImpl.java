@@ -474,7 +474,7 @@ public class ExecServiceImpl implements ExecService {
         } finally {
             /**
             * cleanupquietly。
-            * @param tempKey temp钥匙
+            * @param tempKey temp键
             */
             cleanupQuietly(tempKey);
         }

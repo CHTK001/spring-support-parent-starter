@@ -199,7 +199,7 @@ public class ServerConfigServiceImpl implements ServerConfigService {
 
     /**
     * 配置键默认描述
-    * @param key 钥匙
+    * @param key 键
     * @return 默认desc的结果
     */
     private String defaultDesc(String key) {

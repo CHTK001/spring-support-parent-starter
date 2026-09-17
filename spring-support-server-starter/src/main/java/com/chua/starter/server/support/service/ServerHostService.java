@@ -19,7 +19,7 @@ import java.util.List;
 public interface ServerHostService {
 
     /**
-    * 新增主机（自动生成探针标识 智能体钥匙）
+    * 新增主机（自动生成探针标识 智能体键）
     *
     * @param host 主机
     * @return 结果
@@ -150,7 +150,7 @@ public interface ServerHostService {
     * 未携带时回退为第一顺位已绑定身份（保证可测连）。
     * </p>
     *
-    * @param host 主机（含 服务端主机账户/密码/私募钥匙 瞬态字段）
+    * @param host 主机（含 服务端主机账户/密码/私募键 瞬态字段）
     * @return 处理后的主机
     */
     MsServerHost autoCreateIdentity(MsServerHost host);

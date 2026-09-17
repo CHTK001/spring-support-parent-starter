@@ -393,11 +393,6 @@ public class ServerNodeRegistry {
         String engine = node.getEngine() == null || node.getEngine().isBlank()
                 ? ServerNodeProtocol.HTTP.getDefaultEngine() : node.getEngine().trim().toLowerCase();
         if (!HTTP_ENGINES.contains(engine)) {
-            /**
-            * illegal参数异常。
-            * @param engine engine
-            * @return illegal参数异常的结果
-            */
             throw new IllegalArgumentException("HTTP 服务器引擎仅支持 jdk/nio/aio: " + engine);
         }
         Server server = ServerBuilder.create()
@@ -541,11 +536,6 @@ public class ServerNodeRegistry {
         Object backendPort = config.get("backendPort");
         if (backendHost == null || String.valueOf(backendHost).isBlank()
                 || backendPort == null || String.valueOf(backendPort).isBlank()) {
-            /**
-            * illegal参数异常。
-            * @param backendPort" backend端口"
-            * @return illegal参数异常的结果
-            */
             throw new IllegalArgumentException("代理服务器必须在 config 中提供 backendHost 与 backendPort");
         }
         /**
@@ -571,11 +561,6 @@ public class ServerNodeRegistry {
             return objectMapper.readValue(json, new TypeReference<LinkedHashMap<String, Object>>() {
             });
         } catch (Exception e) {
-            /**
-            * illegal参数异常。
-            * @param node.getName( 节点.获取名称(
-            * @return illegal参数异常的结果
-            */
             throw new IllegalArgumentException("节点 [" + node.getName() + "] config JSON 解析失败: " + e.getMessage(), e);
         }
     }
@@ -595,11 +580,6 @@ public class ServerNodeRegistry {
             return objectMapper.readValue(json, new TypeReference<List<ServerFilterDescriptor>>() {
             });
         } catch (Exception e) {
-            /**
-            * illegal参数异常。
-            * @param node.getName( 节点.获取名称(
-            * @return illegal参数异常的结果
-            */
             throw new IllegalArgumentException("节点 [" + node.getName() + "] filters JSON 解析失败: " + e.getMessage(), e);
         }
     }
@@ -625,7 +605,7 @@ public class ServerNodeRegistry {
     * apply字符串。
     * @param setter setter
     * @param config 配置
-    * @param key 钥匙
+    * @param key 键
     */
     private void applyString(java.util.function.Consumer<String> setter, Map<String, Object> config, String key) {
         Object v = config.get(key);
@@ -638,7 +618,7 @@ public class ServerNodeRegistry {
     * applyint。
     * @param setter setter
     * @param config 配置
-    * @param key 钥匙
+    * @param key 键
     */
     private void applyInt(java.util.function.IntConsumer setter, Map<String, Object> config, String key) {
         Object v = config.get(key);
@@ -651,7 +631,7 @@ public class ServerNodeRegistry {
     * applylong。
     * @param setter setter
     * @param config 配置
-    * @param key 钥匙
+    * @param key 键
     */
     private void applyLong(java.util.function.LongConsumer setter, Map<String, Object> config, String key) {
         Object v = config.get(key);
@@ -664,7 +644,7 @@ public class ServerNodeRegistry {
     * apply布尔值。
     * @param setter setter
     * @param config 配置
-    * @param key 钥匙
+    * @param key 键
     */
     private void applyBoolean(java.util.function.Consumer<Boolean> setter, Map<String, Object> config, String key) {
         Object v = config.get(key);

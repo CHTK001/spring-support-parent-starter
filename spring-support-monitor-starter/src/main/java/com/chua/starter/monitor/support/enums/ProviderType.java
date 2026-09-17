@@ -17,30 +17,18 @@ public enum ProviderType {
 
     /**
     * 本地采集(oshi) - 仅 服务端 可用, macOS 跳过
-    * @param "LOCAL" "本地"
-    * @param "本地采集" "本地采集"
-    * @return 本地的结果
     */
     LOCAL("LOCAL", "本地采集"),
     /**
     * SSH/终端执行自定义命令
-    * @param "TERMINAL" "TERMINAL"
-    * @param "终端命令" "终端命令"
-    * @return TERMINAL的结果
     */
     TERMINAL("TERMINAL", "终端命令"),
     /**
     * HTTP 接口拉取
-    * @param "HTTP" "HTTP"
-    * @param 接口" 接口"
-    * @return HTTP的结果
     */
     HTTP("HTTP", "HTTP 接口"),
     /**
     * Prometheus 拉取
-    * @param "PROMETHEUS" "Prometheus"
-    * @param "Prometheus" "Prometheus"
-    * @return PROMETHEUS的结果
     */
     PROMETHEUS("PROMETHEUS", "Prometheus");
 

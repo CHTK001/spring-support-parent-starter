@@ -47,7 +47,7 @@ public class ServerNodeView {
 
     /** 是否启用: 1 启用（随应用自动拉起） */
     @Schema(description = "是否启用: 1 启用，0 停用")
-    private Integer enabled; // 已启用
+    private Integer enabled; // 启用
 
     /** 备注 */
     @Schema(description = "备注")

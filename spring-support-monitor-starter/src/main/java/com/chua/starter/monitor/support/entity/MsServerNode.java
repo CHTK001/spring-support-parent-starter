@@ -71,7 +71,7 @@ public class MsServerNode extends SysBase {
     /** 是否启用(1 启用：启动期自动拉起；0 停用) */
     @TableField("ms_server_node_enabled")
     @Schema(description = "是否启用: 1 启用并随应用启动自动拉起，0 停用", example = "1")
-    private Integer enabled; // 已启用
+    private Integer enabled; // 启用
 
     /** 备注 */
     @TableField("ms_server_node_remark")

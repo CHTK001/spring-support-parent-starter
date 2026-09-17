@@ -296,7 +296,7 @@ public class ServerHostServiceImpl implements ServerHostService {
     /**
     * 更新状态。
     * @param id 标识
-    * @param enabled 已启用
+    * @param enabled 启用
     * @return 更新状态的结果
     */
     public ReturnResult<Void> updateStatus(Long id, boolean enabled) {

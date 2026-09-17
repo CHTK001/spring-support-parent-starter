@@ -119,7 +119,7 @@ public class MsServerHost extends SysBase {
     */
     @TableField("ms_server_host_agent_key")
     @Schema(description = "探针标识(32位)", example = "8f14e45fceea167a5a36dedd4bea2543")
-    private String serverHostAgentKey; // 服务端主机智能体钥匙
+    private String serverHostAgentKey; // 服务端主机智能体键
 
     /**
     * 描述
@@ -217,7 +217,7 @@ public class MsServerHost extends SysBase {
     */
     @TableField("ms_server_host_online_enabled")
     @Schema(description = "在离线检测开关(主机级)", example = "1")
-    private Integer serverHostOnlineEnabled; // 服务端主机online已启用
+    private Integer serverHostOnlineEnabled; // 服务端主机online启用
 
     /**
     * 在离线检测间隔(秒)（主机级）
@@ -231,7 +231,7 @@ public class MsServerHost extends SysBase {
     */
     @TableField("ms_server_host_collect_enabled")
     @Schema(description = "硬件采集开关(主机级)", example = "0")
-    private Integer serverHostCollectEnabled; // 服务端主机collect已启用
+    private Integer serverHostCollectEnabled; // 服务端主机collect启用
 
     /**
     * 采集方式（主机级）
@@ -259,21 +259,21 @@ public class MsServerHost extends SysBase {
     */
     @TableField("ms_server_host_agent_enabled")
     @Schema(description = "Agent上报开关(主机级)", example = "0")
-    private Integer serverHostAgentEnabled; // 服务端主机智能体已启用
+    private Integer serverHostAgentEnabled; // 服务端主机智能体启用
 
     /**
     * 远控开关（主机级）
     */
     @TableField("ms_server_host_remote_enabled")
     @Schema(description = "远控开关(主机级)", example = "1")
-    private Integer serverHostRemoteEnabled; // 服务端主机远程已启用
+    private Integer serverHostRemoteEnabled; // 服务端主机远程启用
 
     /**
     * 延迟检测开关（主机级）
     */
     @TableField("ms_server_host_delay_enabled")
     @Schema(description = "延迟检测开关(主机级)", example = "0")
-    private Integer serverHostDelayEnabled; // 服务端主机延迟已启用
+    private Integer serverHostDelayEnabled; // 服务端主机延迟启用
 
     /**
     * 延迟检测间隔(秒)（主机级）
@@ -332,5 +332,5 @@ public class MsServerHost extends SysBase {
     @TableField(exist = false)
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     @Schema(description = "PEM私钥(瞬态)")
-    private String serverHostPrivateKey; // 服务端主机私募钥匙
+    private String serverHostPrivateKey; // 服务端主机私募键
 }

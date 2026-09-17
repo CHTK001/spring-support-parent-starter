@@ -107,11 +107,6 @@ public class ServerFilterFactory {
                 filter.init(new DefaultServerFilterConfig(
                         descriptor.getName(), descriptor.getParams(), setting));
             } catch (Exception e) {
-                /**
-                * illegal参数异常。
-                * @param descriptor.getName( descriptor.获取名称(
-                * @return illegal参数异常的结果
-                */
                 throw new IllegalArgumentException("过滤器 [" + descriptor.getName() + "] 初始化失败: " + e.getMessage(), e);
             }
             filters.add(filter);
@@ -130,11 +125,6 @@ public class ServerFilterFactory {
     private ServerFilter instantiate(ServerFilterDescriptor descriptor, ServerSetting setting) {
         String type = descriptor.resolveType();
         if (type == null || type.isBlank()) {
-            /**
-            * illegal参数异常。
-            * @param descriptor descriptor
-            * @return illegal参数异常的结果
-            */
             throw new IllegalArgumentException("ServerFilter 描述缺少 name/type: " + descriptor);
         }
         if (FILE_STORAGE_ALIAS.equalsIgnoreCase(type) || FILE_STORAGE_FILTER_CLASS.equals(type)) {
@@ -224,11 +214,6 @@ public class ServerFilterFactory {
         } catch (IllegalArgumentException e) {
             throw e;
         } catch (Exception e) {
-            /**
-            * illegal参数异常。
-            * @param e.getMessage( e.获取消息(
-            * @return illegal参数异常的结果
-            */
             throw new IllegalArgumentException("file-storage 插件实例化失败: " + e.getMessage(), e);
         }
     }
@@ -341,11 +326,6 @@ public class ServerFilterFactory {
         try {
             Object instance = newInstance(clazz, setting);
             if (!(instance instanceof ServerFilter filter)) {
-                /**
-                * illegal参数异常。
-                * @param type 类型
-                * @return illegal参数异常的结果
-                */
                 throw new IllegalArgumentException("类型不是 ServerFilter 实现: " + type);
             }
             return filter;
@@ -376,11 +356,6 @@ public class ServerFilterFactory {
         try {
             return clazz.getDeclaredConstructor(ServerSetting.class).newInstance(setting);
         } catch (NoSuchMethodException e) {
-            /**
-            * illegal参数异常。
-            * @param clazz.getName( clazz.获取名称(
-            * @return illegal参数异常的结果
-            */
             throw new IllegalArgumentException(clazz.getName() + " 缺少无参或 (ServerSetting) 构造器");
         }
     }
