@@ -31,7 +31,7 @@ import java.util.Set;
 * 服务管理 —— 服务发现的独立查询接口。
 *
 * <p>「服务发现」不只是 ServerFilter 的配置项，还需要独立接口对外暴露运行态：
-* 已启用的发现协议、按服务标识实时查询实例列表、以及整体状态摘要。前端
+* 启用的发现协议、按服务标识实时查询实例列表、以及整体状态摘要。前端
 * {@code ScFilterConfigPanel} 的「服务实例（实时查询）」分区即消费本接口。</p>
 *
 * <p>实例来源按优先级解析：</p>
@@ -57,14 +57,14 @@ public class ServerDiscoveryController {
     private final ObjectProvider<DiscoveryService> discoveryServiceProvider;
 
     /**
-    * 已启用的发现协议列表。
+    * 启用的发现协议列表。
     *
     * <p>由两部分合并：SPI 注册的 {@link ServiceDiscovery} 实现名，以及运行中节点
     * 实际使用的发现源名称。</p>
     *
     * @return 协议名列表
     */
-    @Operation(summary = "已启用的发现协议", description = "SPI 实现名 + 运行中节点实际使用的发现源")
+    @Operation(summary = "启用的发现协议", description = "SPI 实现名 + 运行中节点实际使用的发现源")
     @GetMapping("/protocols")
     public ReturnResult<List<String>> protocols() {
         Set<String> names = new LinkedHashSet<>();

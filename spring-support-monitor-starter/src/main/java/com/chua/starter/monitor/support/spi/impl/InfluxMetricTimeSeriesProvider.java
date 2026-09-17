@@ -203,19 +203,9 @@ public class InfluxMetricTimeSeriesProvider implements MetricTimeSeriesProvider 
             return List.of();
         }
         if (target == null || !target.matches("[a-zA-Z0-9_]+")) {
-            /**
-            * illegal参数异常。
-            * @param target" Target"
-            * @return illegal参数异常的结果
-            */
             throw new IllegalArgumentException("非法 target");
         }
         if (window == null || !window.matches("\\d+[smhd]")) {
-            /**
-            * illegal参数异常。
-            * @param window" 窗口"
-            * @return illegal参数异常的结果
-            */
             throw new IllegalArgumentException("非法 window");
         }
         int safeHours = Math.max(1, Math.min(hours, 24 * 7));

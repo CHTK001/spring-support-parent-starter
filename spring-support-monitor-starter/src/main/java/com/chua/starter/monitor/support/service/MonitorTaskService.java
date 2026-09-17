@@ -46,7 +46,7 @@ public interface MonitorTaskService {
     ReturnResult<MsMonitorTask> findById(Long id);
 
     /**
-    * 查询已启用的任务列表
+    * 查询启用的任务列表
     *
     * @return 任务列表
     */

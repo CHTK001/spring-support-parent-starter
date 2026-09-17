@@ -33,7 +33,7 @@ public class MsMonitorConfig extends SysBase {
     private Long id;
 
     /**
-    * 配置项 钥匙
+    * 配置项 键
     */
     @TableField("ms_monitor_config_key")
     @Schema(description = "配置项 key", example = "monitor.data.retention.days")

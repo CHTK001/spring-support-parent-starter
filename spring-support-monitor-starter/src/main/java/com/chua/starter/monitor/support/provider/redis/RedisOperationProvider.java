@@ -22,7 +22,7 @@ import java.util.List;
 /**
 * Redis 操作 提供者
 * <p>
-* 支持 Redis 钥匙 的扫描、读取、写入、删除、过期设置等操作。
+* 支持 Redis 键 的扫描、读取、写入、删除、过期设置等操作。
 * 连接参数从任务配置 {@code collect_config} 中获取。
 * </p>
 *
@@ -51,7 +51,7 @@ public class RedisOperationProvider implements OperationProvider {
     }
 
     @Override
-    /** 扫描钥匙 */
+    /** 扫描键 */
     public Mono<ScanResult> scanKeys(CollectContext ctx, String pattern, String cursor, int count) {
         return Mono.fromCallable(() -> doScanKeys(ctx, pattern, cursor, count))
                 .subscribeOn(Schedulers.boundedElastic());
@@ -91,7 +91,7 @@ public class RedisOperationProvider implements OperationProvider {
     }
 
     @Override
-    /** 删除钥匙 */
+    /** 删除键 */
     public Mono<Long> deleteKeys(CollectContext ctx, List<String> keys) {
         return Mono.fromCallable(() -> {
             if (!configService.getBoolean(CONFIG_KEY_ALLOW_DELETE, false)) {
@@ -163,7 +163,7 @@ public class RedisOperationProvider implements OperationProvider {
     }
 
     /**
-    * 同步执行 钥匙 扫描 (使用 Jedis 扫描 游标迭代, 避免 钥匙 阻塞)
+    * 同步执行 键 扫描 (使用 Jedis 扫描 游标迭代, 避免 键 阻塞)
     *
     * @param ctx     操作上下文
     * @param pattern 匹配模式

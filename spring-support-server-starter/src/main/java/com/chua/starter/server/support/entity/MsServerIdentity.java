@@ -66,11 +66,11 @@ public class MsServerIdentity extends SysBase {
     private String msServerIdentityPassword; // ms服务端identity密码
 
     /**
-    * 引用密钥 标识（仅 公共_钥匙 类型）
+    * 引用密钥 标识（仅 公共_键 类型）
     */
     @TableField("ms_server_identity_key_id")
     @Schema(description = "引用密钥ID", example = "1")
-    private Long msServerIdentityKeyId; // ms服务端identity钥匙标识
+    private Long msServerIdentityKeyId; // ms服务端identity键标识
 
     /**
     * 邮箱来源（仅 MAILBOX 类型）：IMAP(真实邮箱) / TEMP(临时邮箱API)

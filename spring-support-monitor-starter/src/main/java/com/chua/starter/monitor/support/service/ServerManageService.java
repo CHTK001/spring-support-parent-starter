@@ -35,7 +35,7 @@ public interface ServerManageService {
     ReturnResult<ServerNodeView> detail(Long id);
 
     /**
-    * 创建节点（已启用=1 时立即拉起）。
+    * 创建节点（启用=1 时立即拉起）。
     *
     * @param request 请求体
     * @return 节点视图
@@ -43,7 +43,7 @@ public interface ServerManageService {
     ReturnResult<ServerNodeView> create(ServerNodeRequest request);
 
     /**
-    * 更新节点（全量替换；若运行中先停止，已启用=1 时按新配置重新拉起）。
+    * 更新节点（全量替换；若运行中先停止，启用=1 时按新配置重新拉起）。
     *
     * @param id      节点 标识
     * @param request 请求体

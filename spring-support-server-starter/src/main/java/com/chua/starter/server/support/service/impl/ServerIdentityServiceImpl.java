@@ -46,7 +46,7 @@ public class ServerIdentityServiceImpl implements ServerIdentityService {
         if (authType == null || authType.isBlank()) {
             return ReturnResult.error("认证类型不能为空");
         }
- // 特定类型保留额外校验；其他类型（令牌/API_钥匙/OAuth2/Cookie/账户/自定义）自由入库
+ // 特定类型保留额外校验；其他类型（令牌/API_键/OAuth2/Cookie/账户/自定义）自由入库
         if ("PUBLIC_KEY".equals(authType)) {
             if (identity.getMsServerIdentityKeyId() == null) {
                 return ReturnResult.error("公钥认证必须引用密钥库条目");

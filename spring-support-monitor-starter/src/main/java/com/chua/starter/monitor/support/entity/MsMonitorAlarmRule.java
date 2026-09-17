@@ -98,5 +98,5 @@ public class MsMonitorAlarmRule implements Serializable {
     */
     @TableField("ms_monitor_alarm_rule_enabled")
     @Schema(description = "启用状态 1启用 0停用", example = "1")
-    private Integer msMonitorAlarmRuleEnabled; // ms监控报警器rule已启用
+    private Integer msMonitorAlarmRuleEnabled; // ms监控报警器rule启用
 }
