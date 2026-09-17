@@ -35,7 +35,7 @@ import java.util.Set;
 *
 * <p>定义持久化到 {@code ms_server_node}（MyBatis-Plus），运行期实例托管在
 * {@link ServerNodeRegistry}。更新语义：先停运行实例 → 全量替换定义 →
-* 已启用=1 时按新配置重新拉起。</p>
+* 启用=1 时按新配置重新拉起。</p>
 *
 * @author CH
 * @since 4.0.0.42
@@ -652,7 +652,7 @@ public class ServerManageServiceImpl implements ServerManageService {
     }
 
     /**
-    * 已启用=1 时按定义拉起节点并返回视图。
+    * 启用=1 时按定义拉起节点并返回视图。
     *
     * @param node 节点定义
     * @return 节点视图
@@ -693,11 +693,6 @@ public class ServerManageServiceImpl implements ServerManageService {
     */
     private void requireUniqueName(String name, Long excludeId) {
         if (name == null || name.isBlank()) {
-            /**
-            * illegal参数异常。
-            * @param "节点名称不能为空" "节点名称不能为空"
-            * @return illegal参数异常的结果
-            */
             throw new IllegalArgumentException("节点名称不能为空");
         }
         LambdaQueryWrapper<MsServerNode> wrapper = new LambdaQueryWrapper<>();
@@ -706,11 +701,6 @@ public class ServerManageServiceImpl implements ServerManageService {
             wrapper.ne(MsServerNode::getId, excludeId);
         }
         if (nodeMapper.selectCount(wrapper) > 0) {
-            /**
-            * illegal参数异常。
-            * @param name 名称
-            * @return illegal参数异常的结果
-            */
             throw new IllegalArgumentException("节点名称已存在: " + name);
         }
     }
@@ -739,11 +729,6 @@ public class ServerManageServiceImpl implements ServerManageService {
             node.setFilters(objectMapper.writeValueAsString(
                     request.getFilters() == null ? List.of() : request.getFilters()));
         } catch (Exception e) {
-            /**
-            * illegal参数异常。
-            * @param e.getMessage( e.获取消息(
-            * @return illegal参数异常的结果
-            */
             throw new IllegalArgumentException("config/filters JSON 序列化失败: " + e.getMessage(), e);
         }
     }

@@ -139,7 +139,7 @@ public class RedisLocalProvider implements MetricProvider {
             }
             String key = trimmed.substring(0, idx).trim();
             String value = trimmed.substring(idx + 1).trim();
- // keyspace 段：db0:钥匙=123,expires=2,avg_ttl=0 —— 累加各 db 的 钥匙 总数
+ // keyspace 段：db0:键=123,expires=2,avg_ttl=0 —— 累加各 db 的 键 总数
             if (key.startsWith("db") && value.contains("keys=")) {
                 int ks = value.indexOf("keys=");
                 int comma = value.indexOf(',', ks);
@@ -158,164 +158,32 @@ public class RedisLocalProvider implements MetricProvider {
         }
 
         // 关键指标
-        /**
-        * 添加指标。
-        * @param result 结果
-        * @param "redis_connected_clients" "Redis连接客户端"
-        * @param metrics.get("connected_clients" 指标.获取("连接_客户端"
-        */
         addMetric(result, "redis_connected_clients", metrics.get("connected_clients"));
-        /**
-        * 添加指标。
-        * @param result 结果
-        * @param "redis_used_memory_bytes" "redisused内存bytes"
-        * @param metrics.get("used_memory" 指标.获取("used_内存"
-        */
         addMetric(result, "redis_used_memory_bytes", metrics.get("used_memory"));
-        /**
-        * 添加指标。
-        * @param result 结果
-        * @param "redis_used_memory_peak_bytes" "redisused内存peakbytes"
-        * @param metrics.get("used_memory_peak" 指标.获取("used内存peak"
-        */
         addMetric(result, "redis_used_memory_peak_bytes", metrics.get("used_memory_peak"));
-        /**
-        * 添加指标。
-        * @param result 结果
-        * @param "redis_maxmemory_bytes" "Redis_maxmemory_bytes"
-        * @param metrics.get("maxmemory" 指标.获取("maxmemory"
-        */
         addMetric(result, "redis_maxmemory_bytes", metrics.get("maxmemory"));
-        /**
-        * 添加指标。
-        * @param result 结果
-        * @param "redis_total_keys" "Redis_total_键"
-        * @param metrics.get("total_keys" 指标.获取("total_键"
-        */
         addMetric(result, "redis_total_keys", metrics.get("total_keys"));
-        /**
-        * 添加指标。
-        * @param result 结果
-        * @param "redis_expired_keys" "Redis_expired_键"
-        * @param metrics.get("expired_keys" 指标.获取("expired_键"
-        */
         addMetric(result, "redis_expired_keys", metrics.get("expired_keys"));
-        /**
-        * 添加指标。
-        * @param result 结果
-        * @param "redis_hits" "Redis_hits"
-        * @param metrics.get("keyspace_hits" 指标.获取("keyspace_hits"
-        */
         addMetric(result, "redis_hits", metrics.get("keyspace_hits"));
-        /**
-        * 添加指标。
-        * @param result 结果
-        * @param "redis_misses" "Redis_misses"
-        * @param metrics.get("keyspace_misses" 指标.获取("keyspace_misses"
-        */
         addMetric(result, "redis_misses", metrics.get("keyspace_misses"));
-        /**
-        * 添加指标。
-        * @param result 结果
-        * @param "redis_evicted_keys" "Redis_evicted_键"
-        * @param metrics.get("evicted_keys" 指标.获取("evicted_键"
-        */
         addMetric(result, "redis_evicted_keys", metrics.get("evicted_keys"));
-        /**
-        * 添加指标。
-        * @param result 结果
-        * @param "redis_total_commands" "Redis_total_命令"
-        * @param metrics.get("total_commands_processed" 指标.获取("total命令处理"
-        */
         addMetric(result, "redis_total_commands", metrics.get("total_commands_processed"));
-        /**
-        * 添加指标。
-        * @param result 结果
-        * @param "redis_total_connections" "Redis_total_connections"
-        * @param metrics.get("total_connections_received" 指标.获取("total_connections_接收"
-        */
         addMetric(result, "redis_total_connections", metrics.get("total_connections_received"));
-        /**
-        * 添加指标。
-        * @param result 结果
-        * @param "redis_uptime_seconds" "Redis_uptime_seconds"
-        * @param metrics.get("uptime_in_seconds" 指标.获取("uptime入seconds"
-        */
         addMetric(result, "redis_uptime_seconds", metrics.get("uptime_in_seconds"));
-        /**
-        * 添加指标。
-        * @param result 结果
-        * @param "redis_blocked_clients" "Redis_blocked_客户端"
-        * @param metrics.get("blocked_clients" 指标.获取("blocked_客户端"
-        */
         addMetric(result, "redis_blocked_clients", metrics.get("blocked_clients"));
-        /**
-        * 添加指标。
-        * @param result 结果
-        * @param "redis_rejected_connections" "Redis_rejected_connections"
-        * @param metrics.get("rejected_connections" 指标.获取("rejected_connections"
-        */
         addMetric(result, "redis_rejected_connections", metrics.get("rejected_connections"));
-        /**
-        * 添加指标。
-        * @param result 结果
-        * @param "redis_instaneous_ops" "Redis_instaneous_ops"
-        * @param metrics.get("instantaneous_ops_per_sec" 指标.获取("instantaneous_ops_per_sec"
-        */
         addMetric(result, "redis_instaneous_ops", metrics.get("instantaneous_ops_per_sec"));
-        /**
-        * 添加指标。
-        * @param result 结果
-        * @param "redis_connected_slaves" "Redis连接slaves"
-        * @param metrics.get("connected_slaves" 指标.获取("连接_slaves"
-        */
         addMetric(result, "redis_connected_slaves", metrics.get("connected_slaves"));
-        /**
-        * 添加指标。
-        * @param result 结果
-        * @param "redis_aof_enabled" "Redis_aof_已启用"
-        * @param metrics.get("aof_enabled" 指标.获取("aof_已启用"
-        */
         addMetric(result, "redis_aof_enabled", metrics.get("aof_enabled"));
-        /**
-        * 添加指标。
-        * @param result 结果
-        * @param "redis_cpu_user" "Redis_cpu_用户"
-        * @param metrics.get("used_cpu_user" 指标.获取("used_cpu_用户"
-        */
         addMetric(result, "redis_cpu_user", metrics.get("used_cpu_user"));
-        /**
-        * 添加指标。
-        * @param result 结果
-        * @param "redis_cpu_sys" "Redis_cpu_sys"
-        * @param metrics.get("used_cpu_sys" 指标.获取("used_cpu_sys"
-        */
         addMetric(result, "redis_cpu_sys", metrics.get("used_cpu_sys"));
-        /**
-        * 添加指标。
-        * @param result 结果
-        * @param "redis_rdb_last_save" "redisrdb最后一个保存"
-        * @param metrics.get("rdb_last_save" 指标.获取("rdb最后一个保存"
-        */
         addMetric(result, "redis_rdb_last_save", metrics.get("rdb_last_save"));
-        /**
-        * 添加指标。
-        * @param result 结果
-        * @param "redis_db_keys_total" "redisdb钥匙total"
-        * @param metrics.get("_db_keys_total" 指标.获取("db钥匙total"
-        */
         addMetric(result, "redis_db_keys_total", metrics.get("_db_keys_total"));
 
         // 命中率
         Double hits = metrics.get("keyspace_hits");
         Double misses = metrics.get("keyspace_misses");
         if (hits != null && misses != null && (hits + misses) > 0) {
-            /**
-            * 添加指标。
-            * @param result 结果
-            * @param "redis_hit_rate" "Redis_hit_rate"
-            * @param misses misses
-            */
             addMetric(result, "redis_hit_rate", hits * 100.0 / (hits + misses));
         }
     }
@@ -397,3 +265,4 @@ public class RedisLocalProvider implements MetricProvider {
         }
     }
 }
+

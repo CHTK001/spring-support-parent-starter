@@ -49,7 +49,7 @@ public class ServerNodeRequest {
 
     /** 是否启用: 1 启动并随应用拉起，0 停用（默认 1） */
     @Schema(description = "是否启用: 1 启动并随应用拉起，0 停用（默认 1）", example = "1")
-    private Integer enabled; // 已启用
+    private Integer enabled; // 启用
 
     /** 备注 */
     @Schema(description = "备注")

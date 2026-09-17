@@ -105,8 +105,8 @@ public class MonitorTaskServiceImpl implements MonitorTaskService {
     @Override
     @Cacheable(cacheNames = "monitorTask", key = "'monitor.task:enabled'")
     /**
-    * 列表已启用。
-    * @return 列表已启用的结果
+    * 列表启用。
+    * @return 列表启用的结果
     */
     public ReturnResult<List<MsMonitorTask>> listEnabled() {
         try {
@@ -139,10 +139,10 @@ public class MonitorTaskServiceImpl implements MonitorTaskService {
     @Transactional(rollbackFor = Exception.class)
     @CacheEvict(allEntries = true, cacheNames = "monitorTask")
     /**
-    * 设置已启用。
+    * 设置启用。
     * @param id 标识
-    * @param enabled 已启用
-    * @return 设置已启用的结果
+    * @param enabled 启用
+    * @return 设置启用的结果
     */
     public ReturnResult<Void> setEnabled(Long id, Integer enabled) {
         try {

@@ -36,7 +36,7 @@ public class ServerKeyServiceImpl implements ServerKeyService {
     @Transactional(rollbackFor = Exception.class)
     /**
     * 创建。
-    * @param key 钥匙
+    * @param key 键
     * @return 创建的结果
     */
     public ReturnResult<MsServerKey> create(MsServerKey key) {
@@ -58,7 +58,7 @@ public class ServerKeyServiceImpl implements ServerKeyService {
     /**
     * 更新。
     * @param id 标识
-    * @param key 钥匙
+    * @param key 键
     * @return 更新的结果
     */
     public ReturnResult<MsServerKey> update(Long id, MsServerKey key) {

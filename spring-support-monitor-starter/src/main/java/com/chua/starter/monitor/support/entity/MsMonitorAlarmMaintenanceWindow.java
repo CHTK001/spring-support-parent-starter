@@ -79,7 +79,7 @@ public class MsMonitorAlarmMaintenanceWindow implements Serializable {
     */
     @TableField("ms_monitor_alarm_maintenance_window_enabled")
     @Schema(description = "是否启用", example = "1")
-    private Integer msMonitorAlarmMaintenanceWindowEnabled; // ms监控报警器maintenance窗口已启用
+    private Integer msMonitorAlarmMaintenanceWindowEnabled; // ms监控报警器maintenance窗口启用
 
     /**
     * 备注

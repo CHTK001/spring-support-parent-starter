@@ -10,7 +10,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
-* 服务器资产系统配置（钥匙-价值观）
+* 服务器资产系统配置（键-价值观）
 * @author CH
 * @since 4.0.0
  */
@@ -28,7 +28,7 @@ public class MsServerConfig extends SysBase {
 
     @TableField("ms_server_config_key")
     @Schema(description = "配置键", example = "guacd.host")
-    private String configKey; // 配置钥匙
+    private String configKey; // 配置键
 
     @TableField("ms_server_config_value")
     @Schema(description = "配置值(JSON 字符串)", example = "\"true\"")

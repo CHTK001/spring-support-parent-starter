@@ -140,11 +140,6 @@ public class GuacdSessionRegistry {
             }
         }
         for (GuacdSession session : idleSessions) {
-            /**
-            * 关闭。
-            * @param session 会话
-            * @param "空闲超时" "空闲超时"
-            */
             close(session, "空闲超时");
         }
         return idleSessions.size();

@@ -60,7 +60,7 @@ public class MonitorScheduler {
     /** Concurrency */
     private static final int CONCURRENCY = 50;
     /** 调度间隔配置键 */
-    /** 配置_钥匙_间隔 */
+    /** 配置_键_间隔 */
     private static final String CONFIG_KEY_INTERVAL = "monitor.collect.interval.ms";
 
     /** 任务 服务 */

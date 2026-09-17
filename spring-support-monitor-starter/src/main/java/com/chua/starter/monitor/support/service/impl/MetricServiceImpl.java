@@ -352,7 +352,7 @@ public class MetricServiceImpl implements MetricService {
     * 统计聚合唯一键（监控标识 + 指标名称）
     * @param monitorId 监控标识
     * @param metricName 指标名称
-    * @return statistics钥匙的结果
+    * @return statistics键的结果
     */
     private record StatisticsKey(Long monitorId, String metricName) {
     }

@@ -1,9 +1,8 @@
--- V1.1__init_monitor_host.sql
--- 监控模块：主机画像新增字段
--- 兼容 H2(MySQL模式) / MySQL 8 / PostgreSQL 12
--- 说明: MySQL 不支持 ALTER TABLE ADD COLUMN IF NOT EXISTS，
---       此处用 information_schema 条件判断 + PREPARE/EXECUTE 动态执行，
---       H2/PostgreSQL 执行到 PREPARE 段失败时由 continue-on-error 跳过。
+-- =====================================================================
+-- V1.0__init_all.sql - spring-support-monitor-starter 全量 DDL
+-- 通道: INIT 同步执行；老库 ms_server_host 缺列由 information_schema +
+--       PREPARE 段幂等补齐（来源: V1.1__init_monitor_host.sql）。
+-- =====================================================================
 
 -- 公网IP
 SET @h1 = (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'ms_server_host' AND column_name = 'server_host_public_ip');

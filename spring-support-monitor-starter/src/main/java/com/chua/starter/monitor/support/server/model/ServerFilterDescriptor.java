@@ -50,7 +50,7 @@ public class ServerFilterDescriptor {
     * 是否启用（缺省 true）
     */
     @Schema(description = "是否启用（缺省 true）", example = "true")
-    private Boolean enabled; // 已启用
+    private Boolean enabled; // 启用
 
     /**
     * 过滤器初始化参数（初始化 注入或映射到 文件storagesetting）

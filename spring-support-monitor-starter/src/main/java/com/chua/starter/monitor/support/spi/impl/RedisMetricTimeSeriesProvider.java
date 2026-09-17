@@ -32,7 +32,7 @@ import java.util.Set;
 @ConditionalOnProperty(prefix = "monitor.timeseries", name = "engine", havingValue = "redis")
 public class RedisMetricTimeSeriesProvider implements MetricTimeSeriesProvider {
 
-    /** ZSET 钥匙 前缀 */
+    /** ZSET 键 前缀 */
     private static final String KEY_PREFIX = "monitor:metric:";
 
     /** 单条 ZSET 上限（防止无限增长，保留最近 N 点） */
@@ -129,11 +129,6 @@ public class RedisMetricTimeSeriesProvider implements MetricTimeSeriesProvider {
             return List.of();
         }
         if (target == null || !target.matches("[a-zA-Z0-9_]+")) {
-            /**
-            * illegal参数异常。
-            * @param target" Target"
-            * @return illegal参数异常的结果
-            */
             throw new IllegalArgumentException("非法 target");
         }
         long nowMs = System.currentTimeMillis();
@@ -197,7 +192,7 @@ public class RedisMetricTimeSeriesProvider implements MetricTimeSeriesProvider {
     }
 
     /**
-    * 构造 ZSET 钥匙
+    * 构造 ZSET 键
     *
     * @param target    目标表
     * @param monitorId 监控 标识

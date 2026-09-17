@@ -17,51 +17,31 @@ public enum ServiceType {
 
     /**
     * 服务器(物理机/虚拟机/JVM本地)
-    * @param "SERVER" "服务端"
-    * @param "服务器" "服务器"
-    * @return 服务端的结果
     */
     SERVER("SERVER", "服务器"),
     /**
     * Redis 实例
-    * @param "REDIS" "Redis"
-    * @param "Redis" "Redis"
-    * @return REDIS的结果
     */
     REDIS("REDIS", "Redis"),
     /**
     * MySQL 实例
-    * @param "MYSQL" "MySQL"
-    * @param "MySQL" "MySQL"
-    * @return MYSQL的结果
     */
     MYSQL("MYSQL", "MySQL"),
     /**
     * PostgreSQL 实例
-    * @param "PG" "PG"
-    * @param "PostgreSQL" "PostgreSQL"
-    * @return PG的结果
     */
     PG("PG", "PostgreSQL"),
     /**
     * Oracle 实例
-    * @param "ORACLE" "ORACLE"
-    * @param "Oracle" "Oracle"
-    * @return ORACLE的结果
     */
     ORACLE("ORACLE", "Oracle"),
     /**
     * SQL 服务端 实例
-    * @param "MSSQL" "MSSQL"
     * @param Server" 服务端"
-    * @return MSSQL的结果
     */
     MSSQL("MSSQL", "SQL Server"),
     /**
     * 消息队列(Kafka / RabbitMQ 等)
-    * @param "MQ" "MQ"
-    * @param "消息队列" "消息队列"
-    * @return MQ的结果
     */
     MQ("MQ", "消息队列");
 
