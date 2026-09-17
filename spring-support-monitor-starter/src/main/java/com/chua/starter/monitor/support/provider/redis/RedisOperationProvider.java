@@ -36,12 +36,12 @@ public class RedisOperationProvider implements OperationProvider {
 
     /**
     * 允许删除的配置键
-     */
+    */
     private static final String CONFIG_KEY_ALLOW_DELETE = "monitor.redis.allowDelete";
 
     /**
     * 全局配置 服务
-     */
+    */
     private final MonitorConfigService configService;
 
     @Override
@@ -64,7 +64,7 @@ public class RedisOperationProvider implements OperationProvider {
             /**
             * 尝试。
             * @param buildClient(ctx 构建客户端(ctx
-             */
+            */
             try (RedisClient client = buildClient(ctx)) {
                 return client.get(key);
             }
@@ -78,7 +78,7 @@ public class RedisOperationProvider implements OperationProvider {
             /**
             * 尝试。
             * @param buildClient(ctx 构建客户端(ctx
-             */
+            */
             try (RedisClient client = buildClient(ctx)) {
                 if (ttl != null) {
                     client.put(key, value, Duration.ofSeconds(ttl.getSeconds()));
@@ -99,13 +99,13 @@ public class RedisOperationProvider implements OperationProvider {
                 * illegal状态异常。
                 * @param monitor.redis.allowDelete=true" 监控.Redis.allow删除=true"
                 * @return illegal状态异常的结果
-                 */
+                */
                 throw new IllegalStateException("Redis 删除操作已禁用，请设置 monitor.redis.allowDelete=true");
             }
             /**
             * 尝试。
             * @param buildClient(ctx 构建客户端(ctx
-             */
+            */
             try (RedisClient client = buildClient(ctx)) {
                 long count = 0;
                 for (String key : keys) {
@@ -125,7 +125,7 @@ public class RedisOperationProvider implements OperationProvider {
             /**
             * 尝试。
             * @param buildClient(ctx 构建客户端(ctx
-             */
+            */
             try (RedisClient client = buildClient(ctx)) {
                 client.expire(key, ttl.getSeconds());
                 return true;
@@ -140,7 +140,7 @@ public class RedisOperationProvider implements OperationProvider {
             /**
             * 尝试。
             * @param buildClient(ctx 构建客户端(ctx
-             */
+            */
             try (RedisClient client = buildClient(ctx)) {
                 return client.ttl(key);
             }
@@ -154,7 +154,7 @@ public class RedisOperationProvider implements OperationProvider {
             /**
             * 尝试。
             * @param buildClient(ctx 构建客户端(ctx
-             */
+            */
             try (RedisClient client = buildClient(ctx)) {
                 Object result = client.reactiveExecCommand("TYPE " + key).block();
                 return result != null ? result.toString() : "none";
@@ -170,12 +170,12 @@ public class RedisOperationProvider implements OperationProvider {
     * @param cursor  游标
     * @param count   期望返回条数
     * @return 扫描结果
-     */
+    */
     private OperationProvider.ScanResult doScanKeys(CollectContext ctx, String pattern, String cursor, int count) {
         /**
         * 尝试。
         * @param buildClient(ctx 构建客户端(ctx
-         */
+        */
         try (RedisClient client = buildClient(ctx)) {
             String match = pattern != null ? pattern : "*";
             List<String> keys = new ArrayList<>();
@@ -198,7 +198,7 @@ public class RedisOperationProvider implements OperationProvider {
     *
     * @param ctx 操作上下文
     * @return Redis 客户端
-     */
+    */
     private RedisClient buildClient(CollectContext ctx) {
         JsonObject config = Json.getJsonObject(ctx.getTask().getCollectConfig());
         String host = str(config.getObject("redis_host"));
@@ -220,7 +220,7 @@ public class RedisOperationProvider implements OperationProvider {
     *
     * @param o 对象
     * @return 字符串
-     */
+    */
     private static String str(Object o) {
         return StringUtils.toString(o);
     }

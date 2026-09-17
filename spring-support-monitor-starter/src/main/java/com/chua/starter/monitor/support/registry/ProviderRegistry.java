@@ -43,12 +43,12 @@ public class ProviderRegistry {
 
     /**
     * 指标 提供者 索引
-     */
+    */
     private final Map<ServiceType, Map<ProviderType, MetricProvider>> metricIndex = new EnumMap<>(ServiceType.class);
 
     /**
     * 操作 提供者 索引
-     */
+    */
     private final Map<ServiceType, OperationProvider> operationIndex = new ConcurrentHashMap<>();
 
     /**
@@ -56,18 +56,18 @@ public class ProviderRegistry {
     *
     * @param metricProviders 指标 提供者 列表
     * @param operationProviders 操作 提供者 列表
-     */
+    */
     @Autowired
     public ProviderRegistry(List<MetricProvider> metricProviders, List<OperationProvider> operationProviders) {
         /**
         * 注册指标。
         * @param metricProviders 指标提供者
-         */
+        */
         registerMetric(metricProviders);
         /**
         * 注册operation。
         * @param operationProviders operation提供者
-         */
+        */
         registerOperation(operationProviders);
     }
 
@@ -75,7 +75,7 @@ public class ProviderRegistry {
     * 注册指标 提供者
     *
     * @param providers 提供者 列表
-     */
+    */
     private void registerMetric(List<MetricProvider> providers) {
         if (providers == null || providers.isEmpty()) {
             log.warn("[ProviderRegistry] 未发现 MetricProvider 实现, 采集调度将无实现可用");
@@ -95,7 +95,7 @@ public class ProviderRegistry {
     * 注册操作 提供者
     *
     * @param providers 提供者 列表
-     */
+    */
     private void registerOperation(List<OperationProvider> providers) {
         if (providers == null || providers.isEmpty()) {
             log.warn("[ProviderRegistry] 未发现 OperationProvider 实现, Redis/DB 操作将无实现可用");
@@ -115,7 +115,7 @@ public class ProviderRegistry {
     * @param serviceType 服务类型
     * @param providerType 采集方式
     * @return Optional, 可能为空
-     */
+    */
     public Optional<MetricProvider> resolveMetric(ServiceType serviceType, ProviderType providerType) {
         Map<ProviderType, MetricProvider> inner = metricIndex.get(serviceType);
         if (inner == null) {
@@ -129,7 +129,7 @@ public class ProviderRegistry {
     *
     * @param serviceType 服务类型
     * @return Optional, 可能为空
-     */
+    */
     public Optional<OperationProvider> resolveOperation(ServiceType serviceType) {
         return Optional.ofNullable(operationIndex.get(serviceType));
     }
@@ -138,7 +138,7 @@ public class ProviderRegistry {
     * 列出所有已注册的指标 提供者 组合
     *
     * @return 不可变视图
-     */
+    */
     public Set<ServiceType> metricServices() {
         return Collections.unmodifiableSet(metricIndex.keySet());
     }
@@ -147,7 +147,7 @@ public class ProviderRegistry {
     * 用于测试与文档展示
     *
     * @return 已注册 提供者 描述 映射
-     */
+    */
     public Map<String, String> describe() {
         Map<String, String> out = new HashMap<>();
         metricIndex.forEach((st, inner) -> inner.forEach((pt, p) ->

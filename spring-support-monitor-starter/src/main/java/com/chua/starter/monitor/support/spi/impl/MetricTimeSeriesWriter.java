@@ -37,7 +37,7 @@ public class MetricTimeSeriesWriter {
     * 按配置选择可用 提供者
     *
     * @return 可用的实现或 空
-     */
+    */
     private MetricTimeSeriesProvider resolve() {
         String engine = properties.getEngine() == null ? "" : properties.getEngine().trim().toLowerCase();
         if (engine.isEmpty() || "none".equals(engine)) {
@@ -56,7 +56,7 @@ public class MetricTimeSeriesWriter {
     * 是否可用
     *
     * @return true 表示当前配置引擎可用
-     */
+    */
     public boolean isAvailable() {
         return resolve() != null;
     }
@@ -65,7 +65,7 @@ public class MetricTimeSeriesWriter {
     * 写入整批采集结果
     *
     * @param result 采集结果
-     */
+    */
     public void write(CollectResult result) {
         MetricTimeSeriesProvider provider = resolve();
         if (provider == null) {
@@ -86,7 +86,7 @@ public class MetricTimeSeriesWriter {
     * @param hours     回溯小时数
     * @param window    聚合窗口
     * @return [[ts,value],...] 升序
-     */
+    */
     public List<List<Object>> series(String target, Long monitorId, int hours, String window) {
         MetricTimeSeriesProvider provider = resolve();
         if (provider == null) {

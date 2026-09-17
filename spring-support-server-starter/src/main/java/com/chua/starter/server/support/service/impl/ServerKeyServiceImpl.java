@@ -38,7 +38,7 @@ public class ServerKeyServiceImpl implements ServerKeyService {
     * 创建。
     * @param key 钥匙
     * @return 创建的结果
-     */
+    */
     public ReturnResult<MsServerKey> create(MsServerKey key) {
         if (key.getMsServerKeyName() == null || key.getMsServerKeyName().isEmpty()) {
             return ReturnResult.error("密钥名称不能为空");
@@ -60,7 +60,7 @@ public class ServerKeyServiceImpl implements ServerKeyService {
     * @param id 标识
     * @param key 钥匙
     * @return 更新的结果
-     */
+    */
     public ReturnResult<MsServerKey> update(Long id, MsServerKey key) {
         MsServerKey exists = keyMapper.selectById(id);
         if (exists == null) {
@@ -89,7 +89,7 @@ public class ServerKeyServiceImpl implements ServerKeyService {
     * 删除。
     * @param id 标识
     * @return 删除的结果
-     */
+    */
     public ReturnResult<Void> delete(Long id) {
         Long refCount = identityMapper.selectCount(
                 new LambdaQueryWrapper<MsServerIdentity>().eq(MsServerIdentity::getMsServerIdentityKeyId, id));
@@ -151,7 +151,7 @@ public class ServerKeyServiceImpl implements ServerKeyService {
     *
     * @param key 密钥
     * @return 同一对象（已脱敏）
-     */
+    */
     private MsServerKey mask(MsServerKey key) {
         key.setMsServerKeyPrivateKey(null);
         key.setMsServerKeyPassword(null);

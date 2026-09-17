@@ -28,12 +28,12 @@ public interface AlarmEngineService {
     * @param monitorName 目标名称（冗余入事件）
     * @param metricName  指标名
     * @param value       指标值
-     */
+    */
     void evaluate(Long monitorId, String monitorName, String metricName, double value);
 
     /**
     * 重新加载规则缓存（策略/规则 CRUD 后调用）
-     */
+    */
     void reload();
 
     /**
@@ -44,7 +44,7 @@ public interface AlarmEngineService {
     * @param metricName 指标名
     * @param value     指标值
     * @return 是否触发告警
-     */
+    */
     ReturnResult<Boolean> testRule(Long ruleId, Long monitorId, String metricName, Double value);
 
     // ==================== 维护窗口 ====================
@@ -54,7 +54,7 @@ public interface AlarmEngineService {
     *
     * @param window 维护窗口
     * @return 结果
-     */
+    */
     ReturnResult<MsMonitorAlarmMaintenanceWindow> createMaintenanceWindow(
             MsMonitorAlarmMaintenanceWindow window);
 
@@ -64,7 +64,7 @@ public interface AlarmEngineService {
     * @param id     主键
     * @param window 维护窗口
     * @return 结果
-     */
+    */
     ReturnResult<MsMonitorAlarmMaintenanceWindow> updateMaintenanceWindow(Long id,
                                                                         MsMonitorAlarmMaintenanceWindow window);
 
@@ -73,7 +73,7 @@ public interface AlarmEngineService {
     *
     * @param id 主键
     * @return 结果
-     */
+    */
     ReturnResult<Void> deleteMaintenanceWindow(Long id);
 
     /**
@@ -81,7 +81,7 @@ public interface AlarmEngineService {
     *
     * @param policyId 策略 标识 过滤（可选）
     * @return 列表
-     */
+    */
     ReturnResult<List<MsMonitorAlarmMaintenanceWindow>> listMaintenanceWindows(Long policyId);
 
     // ==================== 策略 CRUD ====================
@@ -91,7 +91,7 @@ public interface AlarmEngineService {
     *
     * @param policy 策略
     * @return 结果
-     */
+    */
     ReturnResult<MsMonitorAlarmPolicy> createPolicy(MsMonitorAlarmPolicy policy);
 
     /**
@@ -100,7 +100,7 @@ public interface AlarmEngineService {
     * @param id     主键
     * @param policy 策略
     * @return 结果
-     */
+    */
     ReturnResult<MsMonitorAlarmPolicy> updatePolicy(Long id, MsMonitorAlarmPolicy policy);
 
     /**
@@ -108,14 +108,14 @@ public interface AlarmEngineService {
     *
     * @param id 主键
     * @return 结果
-     */
+    */
     ReturnResult<Void> deletePolicy(Long id);
 
     /**
     * 策略列表
     *
     * @return 列表
-     */
+    */
     ReturnResult<List<MsMonitorAlarmPolicy>> listPolicies();
 
     // ==================== 规则 CRUD ====================
@@ -125,7 +125,7 @@ public interface AlarmEngineService {
     *
     * @param rule 规则
     * @return 结果
-     */
+    */
     ReturnResult<MsMonitorAlarmRule> createRule(MsMonitorAlarmRule rule);
 
     /**
@@ -134,7 +134,7 @@ public interface AlarmEngineService {
     * @param id   主键
     * @param rule 规则
     * @return 结果
-     */
+    */
     ReturnResult<MsMonitorAlarmRule> updateRule(Long id, MsMonitorAlarmRule rule);
 
     /**
@@ -142,7 +142,7 @@ public interface AlarmEngineService {
     *
     * @param id 主键
     * @return 结果
-     */
+    */
     ReturnResult<Void> deleteRule(Long id);
 
     /**
@@ -150,7 +150,7 @@ public interface AlarmEngineService {
     *
     * @param policyId 策略 标识，可为空
     * @return 规则列表
-     */
+    */
     ReturnResult<List<MsMonitorAlarmRule>> listRules(Long policyId);
 
     // ==================== 事件管理 ====================
@@ -160,7 +160,7 @@ public interface AlarmEngineService {
     *
     * @param status 状态过滤，可为空
     * @return 事件列表
-     */
+    */
     ReturnResult<List<MsMonitorAlarmEvent>> listEvents(String status);
 
     /**
@@ -170,6 +170,6 @@ public interface AlarmEngineService {
     * @param remark  处理备注
     * @param falseAlarm 是否标记为误报
     * @return 结果
-     */
+    */
     ReturnResult<Void> handleEvent(Long id, String remark, boolean falseAlarm);
 }

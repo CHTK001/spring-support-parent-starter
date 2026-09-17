@@ -23,7 +23,9 @@ public class ServerNodeView {
     @Schema(description = "节点名称")
     private String name; // 名称
 
-    /** 协议编码: HTTP / HTTP_代理 / TCP_代理 / SIP */
+    /**
+    * 协议编码: HTTP / HTTP_代理 / TCP_代理 / SIP
+    */
     @Schema(description = "协议编码: HTTP / HTTP_PROXY / TCP_PROXY / SIP")
     private String protocol; // 协议
 

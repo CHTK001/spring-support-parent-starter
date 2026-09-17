@@ -58,7 +58,7 @@ public class GuacdTunnel {
     * @param uuid          会话标识
     * @param serverAddress guacd 地址
     * @param serverPort    guacd 端口
-     */
+    */
     public GuacdTunnel(String protocol, String uuid, String serverAddress, int serverPort) {
         this.protocol = protocol;
         this.uuid = uuid;
@@ -74,7 +74,7 @@ public class GuacdTunnel {
     * 连接 guacd 并完成握手
     *
     * @throws GuacamoleException 连接或握手失败
-     */
+    */
     public void connect() throws GuacamoleException {
         this.socket = new ConfiguredGuacamoleSocket(new InetGuacamoleSocket(serverAddress, serverPort), serverConfig, clientConfig);
     }
@@ -84,7 +84,7 @@ public class GuacdTunnel {
     *
     * @param address 地址
     * @param port    端口
-     */
+    */
     public void remote(String address, int port) {
         this.setParameter("hostname", address);
         this.setParameter("port", port);
@@ -95,7 +95,7 @@ public class GuacdTunnel {
     *
     * @param username 用户名
     * @param password 密码
-     */
+    */
     public void auth(String username, String password) {
         this.setParameter("username", username);
         this.setParameter("password", password);
@@ -106,7 +106,7 @@ public class GuacdTunnel {
     *
     * @param width  宽
     * @param height 高
-     */
+    */
     public void size(int width, int height) {
         clientConfig.setOptimalScreenWidth(width);
         clientConfig.setOptimalScreenHeight(height);
@@ -118,7 +118,7 @@ public class GuacdTunnel {
     * 设置 dpi
     *
     * @param dpi dpi
-     */
+    */
     public void dpi(int dpi) {
         clientConfig.setOptimalResolution(dpi);
         this.setParameter("dpi", dpi);
@@ -128,7 +128,7 @@ public class GuacdTunnel {
     * 设置时区
     *
     * @param timezone 时区
-     */
+    */
     public void timezone(String timezone) {
         clientConfig.setTimezone(timezone);
         this.setParameter("timezone", timezone);
@@ -139,7 +139,7 @@ public class GuacdTunnel {
     *
     * @param key   参数名
     * @param value 参数值
-     */
+    */
     public void setParameter(String key, Object value) {
         if (value != null) {
             serverConfig.setParameter(key, String.valueOf(value));
@@ -152,7 +152,7 @@ public class GuacdTunnel {
     * 批量设置协议参数
     *
     * @param params 参数表
-     */
+    */
     public void setParameter(Map<String, Object> params) {
         params.forEach(this::setParameter);
     }
@@ -161,7 +161,7 @@ public class GuacdTunnel {
     * 设置音频 MIME 类型
     *
     * @param mimeTypes 类型列表
-     */
+    */
     public void setAudioMimeTypes(java.util.List<String> mimeTypes) {
         if (mimeTypes == null || mimeTypes.isEmpty()) {
             return;
@@ -174,7 +174,7 @@ public class GuacdTunnel {
     *
     * @param data 指令文本
     * @throws GuacamoleException 写入失败
-     */
+    */
     public void write(String data) throws GuacamoleException {
         this.write(data.toCharArray());
     }
@@ -184,7 +184,7 @@ public class GuacdTunnel {
     *
     * @param data 指令字节
     * @throws GuacamoleException 写入失败
-     */
+    */
     public void write(byte[] data) throws GuacamoleException {
         this.write(new String(data));
     }
@@ -194,7 +194,7 @@ public class GuacdTunnel {
     *
     * @param data 指令字符
     * @throws GuacamoleException 写入失败
-     */
+    */
     public void write(char[] data) throws GuacamoleException {
         GuacamoleWriter writer = socket.getWriter();
         writer.write(data);
@@ -206,7 +206,7 @@ public class GuacdTunnel {
     * @param opcode 操作码
     * @param args   参数
     * @throws GuacamoleException 写入失败
-     */
+    */
     public void writeInstruction(String opcode, String... args) throws GuacamoleException {
         socket.getWriter().writeInstruction(new GuacamoleInstruction(opcode, args));
     }
@@ -216,7 +216,7 @@ public class GuacdTunnel {
     *
     * @return 读取到的字符数组，EOF 返回 空
     * @throws GuacamoleException 读取失败
-     */
+    */
     public char[] read() throws GuacamoleException {
         GuacamoleReader reader = socket.getReader();
         return reader.read();
@@ -226,14 +226,14 @@ public class GuacdTunnel {
     * 是否打开
     *
     * @return 是否打开
-     */
+    */
     public boolean isOpen() {
         return socket != null && socket.isOpen();
     }
 
     /**
     * 关闭隧道
-     */
+    */
     public void close() {
         if (closed) {
             return;
@@ -251,7 +251,7 @@ public class GuacdTunnel {
     * 获取连接 标识
     *
     * @return 连接 标识
-     */
+    */
     public String getConnectionId() {
         return serverConfig.getConnectionID();
     }

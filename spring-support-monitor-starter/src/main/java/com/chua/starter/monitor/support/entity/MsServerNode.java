@@ -44,12 +44,16 @@ public class MsServerNode extends SysBase {
     @Schema(description = "节点名称（唯一）", example = "fileserver-01")
     private String name; // 名称
 
-    /** 协议类型: HTTP / HTTP_代理 / TCP_代理 / SIP */
+    /**
+    * 协议类型: HTTP / HTTP_代理 / TCP_代理 / SIP
+    */
     @TableField("ms_server_node_protocol")
     @Schema(description = "协议类型: HTTP / HTTP_PROXY / TCP_PROXY / SIP", example = "HTTP")
     private String protocol; // 协议
 
-    /** 传输引擎: http= jdk/nio/aio，代理= jdk，sip= sip */
+    /**
+    * 传输引擎: http= jdk/nio/aio，代理= jdk，sip= sip
+    */
     @TableField("ms_server_node_engine")
     @Schema(description = "传输引擎: http= jdk/nio/aio，代理= jdk，sip= sip", example = "jdk")
     private String engine; // engine
@@ -74,7 +78,9 @@ public class MsServerNode extends SysBase {
     @Schema(description = "备注")
     private String remark; // 评论
 
-    /** 协议专属配置(JSON 映射)：sip.令牌、代理.backend主机/backend端口 等 */
+    /**
+    * 协议专属配置(JSON 映射)：sip.令牌、代理.backend主机/backend端口 等
+    */
     @TableField("ms_server_node_config")
     @Schema(description = "协议专属配置(JSON): sip.token、proxy.backendHost/backendPort、ssl 等")
     private String config; // 配置

@@ -31,28 +31,28 @@ public class MsMonitorAlarmPolicy implements Serializable {
 
     /**
     * 主键
-     */
+    */
     @TableId(value = "id", type = IdType.AUTO)
     @Schema(description = "主键", example = "1")
     private Long id; // 标识
 
     /**
     * 策略名称
-     */
+    */
     @TableField("ms_monitor_alarm_policy_name")
     @Schema(description = "策略名称", example = "服务器基础告警")
     private String msMonitorAlarmPolicyName; // ms监控报警器policy名称
 
     /**
     * 启用状态 1启用 0停用
-     */
+    */
     @TableField("ms_monitor_alarm_policy_enabled")
     @Schema(description = "启用状态 1启用 0停用", example = "1")
     private Integer msMonitorAlarmPolicyEnabled; // ms监控报警器policy已启用
 
     /**
     * 备注
-     */
+    */
     @TableField("ms_monitor_alarm_policy_remark")
     @Schema(description = "备注")
     private String msMonitorAlarmPolicyRemark; // ms监控报警器policy评论

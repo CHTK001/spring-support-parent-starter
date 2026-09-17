@@ -103,7 +103,7 @@ public class SystemManageController {
     * @param sortOrder 排序方向：asc/desc，默认 desc
     * @param limit     返回条数，默认 50
     * @return 进程列表
-     */
+    */
     @Operation(summary = "获取进程列表", description = "支持搜索、排序、限制条数；默认按 CPU 降序返回前 50 条")
     @GetMapping("/processes")
     public Mono<ReturnResult<List<Map<String, Object>>>> listProcesses(
@@ -157,7 +157,7 @@ public class SystemManageController {
     *
     * @param pid 进程 ID
     * @return 操作结果
-     */
+    */
     @Operation(summary = "关闭进程")
     @PostMapping("/process/{pid}/kill")
     public Mono<ReturnResult<String>> killProcess(@PathVariable int pid) {
@@ -176,7 +176,7 @@ public class SystemManageController {
     *
     * @param pid 进程 ID
     * @return 子进程列表
-     */
+    */
     @Operation(summary = "获取进程的子进程")
     @GetMapping("/process/{pid}/children")
     public Mono<ReturnResult<List<Map<String, Object>>>> listProcessChildren(@PathVariable int pid) {
@@ -195,7 +195,7 @@ public class SystemManageController {
     *
     * @param pid 进程 ID
     * @return 线程列表
-     */
+    */
     @Operation(summary = "获取进程的线程列表")
     @GetMapping("/process/{pid}/threads")
     public Mono<ReturnResult<List<Map<String, Object>>>> listProcessThreads(@PathVariable int pid) {
@@ -238,7 +238,7 @@ public class SystemManageController {
     *
     * @param keyword 搜索关键词，空表示不过滤
     * @return 服务列表
-     */
+    */
     @Operation(summary = "获取系统服务列表")
     @GetMapping("/services")
     public Mono<ReturnResult<List<Map<String, Object>>>> listServices(
@@ -265,7 +265,7 @@ public class SystemManageController {
     *
     * @param name 服务名称
     * @return 操作结果
-     */
+    */
     @Operation(summary = "启动服务")
     @PostMapping("/service/{name}/start")
     public Mono<ReturnResult<String>> startService(@PathVariable String name) {
@@ -284,7 +284,7 @@ public class SystemManageController {
     *
     * @param name 服务名称
     * @return 操作结果
-     */
+    */
     @Operation(summary = "停止服务")
     @PostMapping("/service/{name}/stop")
     public Mono<ReturnResult<String>> stopService(@PathVariable String name) {
@@ -303,7 +303,7 @@ public class SystemManageController {
     *
     * @param name 服务名称
     * @return 操作结果
-     */
+    */
     @Operation(summary = "重启服务")
     @PostMapping("/service/{name}/restart")
     public Mono<ReturnResult<String>> restartService(@PathVariable String name) {
@@ -323,7 +323,7 @@ public class SystemManageController {
     * 获取网络接口列表。
     *
     * @return 网络接口列表
-     */
+    */
     @Operation(summary = "获取网络接口列表")
     @GetMapping("/network/interfaces")
     public Mono<ReturnResult<List<Map<String, Object>>>> listNetworkInterfaces() {
@@ -348,7 +348,7 @@ public class SystemManageController {
     *
     * @param state 连接状态过滤（LISTEN/ESTABLISHED 等），空表示不过滤
     * @return 网络连接列表
-     */
+    */
     @Operation(summary = "获取网络连接列表")
     @GetMapping("/network/connections")
     public Mono<ReturnResult<List<Map<String, Object>>>> listNetworkConnections(
@@ -393,7 +393,7 @@ public class SystemManageController {
     * 获取磁盘列表。
     *
     * @return 磁盘列表
-     */
+    */
     @Operation(summary = "获取磁盘列表")
     @GetMapping("/disks")
     public Mono<ReturnResult<List<Map<String, Object>>>> listDisks() {
@@ -417,7 +417,7 @@ public class SystemManageController {
     * 获取磁盘分区列表。
     *
     * @return 磁盘分区列表
-     */
+    */
     @Operation(summary = "获取磁盘分区列表")
     @GetMapping("/partitions")
     public Mono<ReturnResult<List<Map<String, Object>>>> listPartitions() {
@@ -457,7 +457,7 @@ public class SystemManageController {
     * 获取防火墙规则列表。
     *
     * @return 防火墙规则列表
-     */
+    */
     @Operation(summary = "获取防火墙规则列表")
     @GetMapping("/firewall/rules")
     public Mono<ReturnResult<List<Map<String, Object>>>> listFirewallRules() {
@@ -500,7 +500,7 @@ public class SystemManageController {
     * 获取驱动列表。
     *
     * @return 驱动列表
-     */
+    */
     @Operation(summary = "获取驱动列表")
     @GetMapping("/drivers")
     public Mono<ReturnResult<List<Map<String, Object>>>> listDrivers() {
@@ -538,7 +538,7 @@ public class SystemManageController {
     *
     * @param cmd 命令及参数
     * @return 命令输出
-     */
+    */
     private String execCommand(String... cmd) {
         try {
             // Windows: 确保 powershell 能被找到（Java CreateProcess 对 PATH 解析与 cmd 不同）
@@ -577,7 +577,7 @@ public class SystemManageController {
     * Windows 进程列表。
     *
     * @return 进程列表
-     */
+    */
     private List<Map<String, Object>> listProcessesWindows() {
         String output = execCommand("powershell", "-Command",
                 "Get-Process | Select-Object Id, ProcessName, CPU, WorkingSet64, StartTime, Path, " +
@@ -603,7 +603,7 @@ public class SystemManageController {
     * Linux 进程列表。
     *
     * @return 进程列表
-     */
+    */
     private List<Map<String, Object>> listProcessesLinux() {
         String output = execCommand("ps", "-eo", "pid,ppid,pcpu,pmem,rss,comm,args,etime,lwp", "--no-headers");
         List<Map<String, Object>> list = new ArrayList<>();
@@ -632,7 +632,7 @@ public class SystemManageController {
     * Windows 服务列表。
     *
     * @return 服务列表
-     */
+    */
     private List<Map<String, Object>> listServicesWindows() {
         String output = execCommand("powershell", "-Command",
                 "Get-Service | Select-Object Name, DisplayName, Status, StartType, ServiceType | ConvertTo-Json -Depth 3");
@@ -643,7 +643,7 @@ public class SystemManageController {
     * Linux 服务列表。
     *
     * @return 服务列表
-     */
+    */
     private List<Map<String, Object>> listServicesLinux() {
         String output = execCommand("systemctl", "list-units", "--type=service", "--all", "--no-pager", "--no-legend");
         List<Map<String, Object>> list = new ArrayList<>();
@@ -670,7 +670,7 @@ public class SystemManageController {
     *
     * @param json JSON 字符串
     * @return Map 列表
-     */
+    */
     private static final com.fasterxml.jackson.databind.ObjectMapper JACKSON = new com.fasterxml.jackson.databind.ObjectMapper();
 
     @SuppressWarnings("unchecked")

@@ -42,7 +42,7 @@ public class ScheduledHostCollectProvider implements HostCollectProvider {
     *
     * @param context 上下文
     * @return 结果
-     */
+    */
     private CollectOutcome doCollect(HostCollectContext context) {
         if (context == null || context.getHost() == null || context.getHost().getId() == null) {
             return CollectOutcome.fail("主机数据不完整");

@@ -15,16 +15,16 @@ public class MonitorInfluxProperties {
 
     /**
     * 是否启用 influxdb 时序写入与查询
-     */
+    */
     private boolean enabled = false;
 
     /**
     * influxdb 地址（v1 兼容端点，如 http://127.0.0.1:8086）
-     */
+    */
     private String url = "http://127.0.0.1:8086";
 
     /**
     * 数据库名
-     */
+    */
     private String database = "monitor";
 }

@@ -56,7 +56,7 @@ public class AssetLinkageService {
     *
     * @param hostId 主机 标识
     * @return 资产聚合详情；主机不存在返回 数据=空（编码 仍 00000）
-     */
+    */
     public ReturnResult<AssetDetailView> assetDetail(Long hostId) {
         try {
             ReturnResult<MsServerHost> hostResult = serverHostService.get(hostId);
@@ -76,7 +76,7 @@ public class AssetLinkageService {
     *
     * @param keyword 关键字（名称/IP 模糊，可空）
     * @return 资产简表列表
-     */
+    */
     public ReturnResult<List<Map<String, Object>>> searchAssets(String keyword) {
         try {
             ReturnResult<List<MsServerHost>> q = serverHostService.query(keyword, null, null);
@@ -109,7 +109,7 @@ public class AssetLinkageService {
     *
     * @param host 主机台账
     * @return 聚合视图
-     */
+    */
     private AssetDetailView buildView(MsServerHost host) {
         AssetDetailView view = new AssetDetailView()
                 .setHostId(host.getId())
@@ -143,7 +143,7 @@ public class AssetLinkageService {
         * aggregate监控和报警器。
         * @param view view
         * @param host 主机
-         */
+        */
         aggregateMonitorsAndAlarms(view, host);
         return view;
     }
@@ -153,7 +153,7 @@ public class AssetLinkageService {
     *
     * @param view 资产视图（就地填充）
     * @param host 主机台账
-     */
+    */
     private void aggregateMonitorsAndAlarms(AssetDetailView view, MsServerHost host) {
         List<MsMonitor> monitors = loadMonitorsForHost(host);
         if (monitors.isEmpty()) {
@@ -197,7 +197,7 @@ public class AssetLinkageService {
     *
     * @param host 主机
     * @return 监控项列表
-     */
+    */
     private List<MsMonitor> loadMonitorsForHost(MsServerHost host) {
  // 首选 ms_服务端_主机_标识 精确关联
         if (host.getId() != null) {
@@ -220,7 +220,7 @@ public class AssetLinkageService {
     *
     * @param alarm 告警事件
     * @return true 已处理
-     */
+    */
     private static boolean isProcessed(MsMonitorAlarmEvent alarm) {
         String s = alarm.getMsMonitorAlarmEventStatus();
         return s != null && !"NEW".equalsIgnoreCase(s) && !"ACTIVE".equalsIgnoreCase(s);
@@ -231,7 +231,7 @@ public class AssetLinkageService {
     *
     * @param alarms 未处理告警
     * @return 最高级别；无则 空
-     */
+    */
     private static String maxLevel(List<MsMonitorAlarmEvent> alarms) {
         if (alarms == null || alarms.isEmpty()) {
             return null;
@@ -254,7 +254,7 @@ public class AssetLinkageService {
     *
     * @param level 级别
     * @return 严重度数字
-     */
+    */
     private static int severity(String level) {
         try {
             String digit = level.trim().substring(1);
@@ -270,7 +270,7 @@ public class AssetLinkageService {
     *
     * @param host 主机
     * @return 节点列表
-     */
+    */
     private List<MsServerNode> loadNodesForHost(MsServerHost host) {
         String address = host.getServerHostAddress();
         if (address == null || address.isBlank()) {
@@ -295,7 +295,7 @@ public class AssetLinkageService {
     *
     * @param node 节点定义
     * @return 通道摘要
-     */
+    */
     private NodeChannel toChannel(MsServerNode node) {
         NodeChannel ch = new NodeChannel()
                 .setNodeId(node.getId())
@@ -318,7 +318,7 @@ public class AssetLinkageService {
     *
     * @param node 节点
     * @return 访问地址；未知协议返回 空
-     */
+    */
     private String buildUrl(MsServerNode node) {
         if (node.getPort() == null) {
             return null;
@@ -336,7 +336,7 @@ public class AssetLinkageService {
     *
     * @param flag 原始整型开关
     * @return 布尔；null 视为 false
-     */
+    */
     private static Boolean toBoolean(Integer flag) {
         return flag != null && flag == 1;
     }

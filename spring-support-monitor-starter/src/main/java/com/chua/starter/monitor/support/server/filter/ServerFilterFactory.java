@@ -39,42 +39,42 @@ public class ServerFilterFactory {
 
     /**
     * 文件服务器预设别名
-     */
+    */
     public static final String FILE_STORAGE_ALIAS = "file-storage";
     /**
     * 文件storage服务端过滤器 全限定类名（spring-支持-filesystem-启动）
-     */
+    */
     public static final String FILE_STORAGE_FILTER_CLASS = "com.chua.starter.filesystem.support.server.FileStorageServerFilter";
     /**
     * 文件storagesetting 全限定类名（spring-支持-filesystem-启动）
-     */
+    */
     private static final String FILE_STORAGE_SETTING_CLASS = "com.chua.starter.filesystem.support.server.FileStorageSetting";
     /**
     * 文件storage 全限定类名（common-starter）
-     */
+    */
     private static final String FILE_STORAGE_CLASS = "com.chua.common.support.storage.FileStorage";
 
     /**
     * 文件storagesetting 布尔开关映射的参数名
-     */
+    */
     private static final List<String> SETTING_BOOLEAN_KEYS = List.of(
             "openPreview", "openDownload", "openRange", "openWatermark", "openRemoteFile", "openWebjars", "layout");
 
     /**
     * 文件storagesetting 字符串参数映射的参数名
-     */
+    */
     private static final List<String> SETTING_STRING_KEYS = List.of("watermark", "layoutType");
 
     /**
     * 应用上下文
-     */
+    */
     private final ApplicationContext applicationContext;
 
     /**
     * 创建插件工厂
     *
     * @param applicationContext 应用上下文
-     */
+    */
     @Autowired
     public ServerFilterFactory(ApplicationContext applicationContext) {
         this.applicationContext = applicationContext;
@@ -87,7 +87,7 @@ public class ServerFilterFactory {
     * @param setting     所属服务器配置
     * @return 过滤器实例列表
     * @throws IllegalArgumentException 某插件无法实例化时抛出（携带明确原因）
-     */
+    */
     public List<ServerFilter> createFilters(List<ServerFilterDescriptor> descriptors, ServerSetting setting) {
         List<ServerFilter> filters = new ArrayList<>();
         if (descriptors == null || descriptors.isEmpty()) {
@@ -111,7 +111,7 @@ public class ServerFilterFactory {
                 * illegal参数异常。
                 * @param descriptor.getName( descriptor.获取名称(
                 * @return illegal参数异常的结果
-                 */
+                */
                 throw new IllegalArgumentException("过滤器 [" + descriptor.getName() + "] 初始化失败: " + e.getMessage(), e);
             }
             filters.add(filter);
@@ -126,7 +126,7 @@ public class ServerFilterFactory {
     * @param descriptor 插件描述
     * @param setting    所属服务器配置
     * @return 过滤器实例
-     */
+    */
     private ServerFilter instantiate(ServerFilterDescriptor descriptor, ServerSetting setting) {
         String type = descriptor.resolveType();
         if (type == null || type.isBlank()) {
@@ -134,7 +134,7 @@ public class ServerFilterFactory {
             * illegal参数异常。
             * @param descriptor descriptor
             * @return illegal参数异常的结果
-             */
+            */
             throw new IllegalArgumentException("ServerFilter 描述缺少 name/type: " + descriptor);
         }
         if (FILE_STORAGE_ALIAS.equalsIgnoreCase(type) || FILE_STORAGE_FILTER_CLASS.equals(type)) {
@@ -160,7 +160,7 @@ public class ServerFilterFactory {
     * @param descriptor 插件描述
     * @param setting    所属服务器配置
     * @return 过滤器实例, SPI 未注册或实例化失败返回 空
-     */
+    */
     private ServerFilter createSpiFilter(String type, ServerFilterDescriptor descriptor, ServerSetting setting) {
         ServerFilter filter = tryCreateSpi(type);
         if (filter == null) {
@@ -179,7 +179,7 @@ public class ServerFilterFactory {
     * @param type 类型
     * @param args 构造参数
     * @return 过滤器实例或 空
-     */
+    */
     private ServerFilter tryCreateSpi(String type, Object... args) {
         try {
             return ServiceProvider.of(ServerFilter.class).getNewExtension(type, args);
@@ -194,7 +194,7 @@ public class ServerFilterFactory {
     *
     * @param descriptor 插件描述
     * @return 过滤器实例
-     */
+    */
     private ServerFilter createFileStorageFilter(ServerFilterDescriptor descriptor) {
         Class<?> filterClass = ReflectUtils.forName(FILE_STORAGE_FILTER_CLASS);
         Class<?> settingClass = ReflectUtils.forName(FILE_STORAGE_SETTING_CLASS);
@@ -209,14 +209,14 @@ public class ServerFilterFactory {
             * applysetting参数。
             * @param storageSetting storagesetting
             * @param descriptor.getParams( descriptor.获取参数(
-             */
+            */
             applySettingParams(storageSetting, descriptor.getParams());
             Object filter = ReflectUtils.instantiate(filterClass, storageSetting);
             /**
             * wirestorages。
             * @param filterClass 过滤器类
             * @param filter 过滤器
-             */
+            */
             wireStorages(filterClass, filter);
             log.info("[ServerFilterFactory] file-storage 插件已创建: name={}, params={}",
                     descriptor.getName(), descriptor.getParams());
@@ -228,7 +228,7 @@ public class ServerFilterFactory {
             * illegal参数异常。
             * @param e.getMessage( e.获取消息(
             * @return illegal参数异常的结果
-             */
+            */
             throw new IllegalArgumentException("file-storage 插件实例化失败: " + e.getMessage(), e);
         }
     }
@@ -238,7 +238,7 @@ public class ServerFilterFactory {
     *
     * @param storageSetting 文件storagesetting 实例
     * @param params         参数
-     */
+    */
     private void applySettingParams(Object storageSetting, Map<String, String> params) {
         if (params == null || params.isEmpty()) {
             return;
@@ -265,13 +265,15 @@ public class ServerFilterFactory {
                 throw new IllegalArgumentException("file-storage 参数映射失败: " + key + "=" + value
                         + " (" + e.getMessage() + ")", e);
             }
+        }
+    }
 
     /**
     * 自动发现 Spring 容器中的 文件storage Bean 并注册为存储桶。
     *
     * @param filterClass 过滤器类
     * @param filter      过滤器实例
-     */
+    */
     private void wireStorages(Class<?> filterClass, Object filter) {
         try {
             Class<?> storageClass = ReflectUtils.forName(FILE_STORAGE_CLASS);
@@ -328,7 +330,7 @@ public class ServerFilterFactory {
     * @param descriptor 插件描述
     * @param setting    所属服务器配置
     * @return 过滤器实例
-     */
+    */
     private ServerFilter createGenericFilter(String type, ServerFilterDescriptor descriptor, ServerSetting setting) {
         Class<?> clazz = ReflectUtils.forName(type);
         if (clazz == null) {
@@ -343,7 +345,7 @@ public class ServerFilterFactory {
                 * illegal参数异常。
                 * @param type 类型
                 * @return illegal参数异常的结果
-                 */
+                */
                 throw new IllegalArgumentException("类型不是 ServerFilter 实现: " + type);
             }
             return filter;
@@ -356,14 +358,14 @@ public class ServerFilterFactory {
     }
 
     /**
-     * 按构造器优先级实例化：无参构造 → (服务端setting) 构造。
-     *
-     * @param clazz   目标类
-     * @param setting 服务器配置
-     * @return 实例
-     * @throws Exception 反射异常
-      */
-    private Object newInstance(Class<?> clazz, ServerSetting setting) {
+    * 按构造器优先级实例化：无参构造 → (服务端setting) 构造。
+    *
+    * @param clazz   目标类
+    * @param setting 服务器配置
+    * @return 实例
+    * @throws Exception 反射异常
+    */
+    private Object newInstance(Class<?> clazz, ServerSetting setting) throws Exception {
         // [P3C 1.10 豁免] 先试无参构造、再试 (ServerSetting) 构造的优先级探测，
         // ReflectUtils.instantiate 失败时静默返回 null，无法区分"无该构造器"与"实例化失败"，保持原生反射
         try {
@@ -375,10 +377,10 @@ public class ServerFilterFactory {
             return clazz.getDeclaredConstructor(ServerSetting.class).newInstance(setting);
         } catch (NoSuchMethodException e) {
             /**
-             * illegal参数异常。
-             * @param clazz.getName( clazz.获取名称(
-             * @return illegal参数异常的结果
-              */
+            * illegal参数异常。
+            * @param clazz.getName( clazz.获取名称(
+            * @return illegal参数异常的结果
+            */
             throw new IllegalArgumentException(clazz.getName() + " 缺少无参或 (ServerSetting) 构造器");
         }
     }
@@ -388,7 +390,7 @@ public class ServerFilterFactory {
     *
     * @param value 原始值
     * @return 布尔结果
-     */
+    */
     private boolean parseBoolean(String value) {
         String v = value.trim().toLowerCase();
         return v.isEmpty() || "true".equals(v) || "1".equals(v) || "yes".equals(v) || "on".equals(v);

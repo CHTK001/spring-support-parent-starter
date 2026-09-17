@@ -45,7 +45,7 @@ public class MetricSeriesController {
     * @param hours     回溯小时数，默认 1
     * @param window    聚合窗口，如 1m/5m/1h，默认 1m
     * @return data 为 [[ts,价值观],...]
-     */
+    */
     @GetMapping("/series")
     public ReturnResult<List<List<Object>>> series(
             @RequestParam(defaultValue = "ms_monitor_metric") String target,

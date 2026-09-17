@@ -23,7 +23,7 @@ public interface ServerManageService {
     * 查询全部节点（含运行状态）。
     *
     * @return 节点视图列表
-     */
+    */
     ReturnResult<List<ServerNodeView>> list();
 
     /**
@@ -31,7 +31,7 @@ public interface ServerManageService {
     *
     * @param id 节点 标识
     * @return 节点视图
-     */
+    */
     ReturnResult<ServerNodeView> detail(Long id);
 
     /**
@@ -39,7 +39,7 @@ public interface ServerManageService {
     *
     * @param request 请求体
     * @return 节点视图
-     */
+    */
     ReturnResult<ServerNodeView> create(ServerNodeRequest request);
 
     /**
@@ -48,7 +48,7 @@ public interface ServerManageService {
     * @param id      节点 标识
     * @param request 请求体
     * @return 节点视图
-     */
+    */
     ReturnResult<ServerNodeView> update(Long id, ServerNodeRequest request);
 
     /**
@@ -56,7 +56,7 @@ public interface ServerManageService {
     *
     * @param id 节点 标识
     * @return 空数据
-     */
+    */
     ReturnResult<Void> delete(Long id);
 
     /**
@@ -64,7 +64,7 @@ public interface ServerManageService {
     *
     * @param id 节点 标识
     * @return 节点视图
-     */
+    */
     ReturnResult<ServerNodeView> start(Long id);
 
     /**
@@ -72,7 +72,7 @@ public interface ServerManageService {
     *
     * @param id 节点 标识
     * @return 节点视图
-     */
+    */
     ReturnResult<ServerNodeView> stop(Long id);
 
     /**
@@ -88,7 +88,7 @@ public interface ServerManageService {
     * @param id      节点 标识
     * @param request 请求体
     * @return 热更新结果
-     */
+    */
     ReturnResult<ServerHotUpdateResult> hotUpdate(Long id, ServerNodeRequest request);
 
     /**
@@ -98,7 +98,7 @@ public interface ServerManageService {
     * @param index   过滤器下标（与 filters 数组一致）
     * @param enabled 是否启用
     * @return 节点视图
-     */
+    */
     ReturnResult<ServerNodeView> hotToggleFilter(Long id, Integer index, Boolean enabled);
 
     /**
@@ -108,21 +108,21 @@ public interface ServerManageService {
     * @param index  过滤器下标（与 filters 数组一致）
     * @param params 新的参数键值（与现有参数合并）
     * @return 节点视图
-     */
+    */
     ReturnResult<ServerNodeView> hotUpdateFilterParams(Long id, Integer index, Map<String, Object> params);
 
     /**
     * 支持的协议类型元数据。
     *
     * @return 协议描述列表
-     */
+    */
     ReturnResult<List<Map<String, Object>>> protocols();
 
     /**
     * 支持的 服务端过滤器 插件类型元数据。
     *
     * @return 插件描述列表
-     */
+    */
     ReturnResult<List<Map<String, Object>>> filterTypes();
 
     /**
@@ -132,6 +132,6 @@ public interface ServerManageService {
     * 因此单独列出便于排查上游后端与负载情况。</p>
     *
     * @return 代理节点视图列表
-     */
+    */
     ReturnResult<List<ServerNodeView>> proxies();
 }

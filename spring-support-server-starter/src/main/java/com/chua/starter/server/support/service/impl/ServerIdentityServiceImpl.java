@@ -37,7 +37,7 @@ public class ServerIdentityServiceImpl implements ServerIdentityService {
     * 创建。
     * @param identity identity
     * @return 创建的结果
-     */
+    */
     public ReturnResult<MsServerIdentity> create(MsServerIdentity identity) {
         if (identity.getMsServerIdentityName() == null || identity.getMsServerIdentityName().isEmpty()) {
             return ReturnResult.error("身份名称不能为空");
@@ -81,7 +81,7 @@ public class ServerIdentityServiceImpl implements ServerIdentityService {
     * @param id 标识
     * @param identity identity
     * @return 更新的结果
-     */
+    */
     public ReturnResult<MsServerIdentity> update(Long id, MsServerIdentity identity) {
         MsServerIdentity exists = identityMapper.selectById(id);
         if (exists == null) {
@@ -119,7 +119,7 @@ public class ServerIdentityServiceImpl implements ServerIdentityService {
     * 删除。
     * @param id 标识
     * @return 删除的结果
-     */
+    */
     public ReturnResult<Void> delete(Long id) {
         hostIdentityMapper.delete(new LambdaQueryWrapper<MsServerHostIdentity>()
                 .eq(MsServerHostIdentity::getMsServerHostIdentityIdentityId, id));
@@ -140,7 +140,7 @@ public class ServerIdentityServiceImpl implements ServerIdentityService {
     *
     * @param identity 身份
     * @return 同一对象（已脱敏）
-     */
+    */
     private MsServerIdentity mask(MsServerIdentity identity) {
         identity.setMsServerIdentityPassword(null);
         return identity;

@@ -38,7 +38,7 @@ public class AssetLinkageController {
     *
     * @param hostId 主机 标识
     * @return 资产聚合视图
-     */
+    */
     @Operation(summary = "资产聚合详情")
     @GetMapping("/{hostId}")
     public ReturnResult<AssetDetailView> assetDetail(@PathVariable Long hostId) {
@@ -51,7 +51,7 @@ public class AssetLinkageController {
     * @param keyword 关键字（可空，空则返回全部）
     * @return 资产简表列表
     * @param false false
-     */
+    */
     @Operation(summary = "资产检索")
     @GetMapping("/search")
     public ReturnResult<List<Map<String, Object>>> search(@RequestParam(required = false) String keyword) {

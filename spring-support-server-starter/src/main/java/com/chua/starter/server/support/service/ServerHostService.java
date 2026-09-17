@@ -23,7 +23,7 @@ public interface ServerHostService {
     *
     * @param host 主机
     * @return 结果
-     */
+    */
     ReturnResult<MsServerHost> create(MsServerHost host);
 
     /**
@@ -32,7 +32,7 @@ public interface ServerHostService {
     * @param id   主键
     * @param host 主机
     * @return 结果
-     */
+    */
     ReturnResult<MsServerHost> update(Long id, MsServerHost host);
 
     /**
@@ -40,7 +40,7 @@ public interface ServerHostService {
     *
     * @param id 主键
     * @return 结果
-     */
+    */
     ReturnResult<Void> delete(Long id);
 
     /**
@@ -48,7 +48,7 @@ public interface ServerHostService {
     *
     * @param id 主键
     * @return 结果
-     */
+    */
     ReturnResult<MsServerHost> get(Long id);
 
     /**
@@ -58,7 +58,7 @@ public interface ServerHostService {
     * @param groupId 分组 标识，可为空表示不过滤
     * @param status  启用状态 1/0，可为空表示不过滤
     * @return 主机列表
-     */
+    */
     ReturnResult<List<MsServerHost>> query(String keyword, Long groupId, Integer status);
 
     /**
@@ -67,7 +67,7 @@ public interface ServerHostService {
     * @param id      主键
     * @param enabled 是否启用
     * @return 结果
-     */
+    */
     ReturnResult<Void> updateStatus(Long id, boolean enabled);
 
     /**
@@ -75,7 +75,7 @@ public interface ServerHostService {
     *
     * @param id 主键
     * @return 测试结果（message 含 uname 输出或失败原因）
-     */
+    */
     ReturnResult<String> testConnect(Long id);
 
     /**
@@ -85,7 +85,7 @@ public interface ServerHostService {
     * @param identityId 身份 标识
     * @param sort       优先级，越小越优先；为空默认取当前最大值加一
     * @return 结果
-     */
+    */
     ReturnResult<Void> bindIdentity(Long hostId, Long identityId, Integer sort);
 
     /**
@@ -94,7 +94,7 @@ public interface ServerHostService {
     * @param hostId     主机 标识
     * @param identityId 身份 标识
     * @return 结果
-     */
+    */
     ReturnResult<Void> unbindIdentity(Long hostId, Long identityId);
 
     /**
@@ -102,7 +102,7 @@ public interface ServerHostService {
     *
     * @param hostId 主机 标识
     * @return 身份 标识 列表
-     */
+    */
     ReturnResult<List<Long>> listBoundIdentityIds(Long hostId);
 
     /**
@@ -115,7 +115,7 @@ public interface ServerHostService {
     * @param hostId     主机 标识
     * @param identityId 指定身份 标识，可为空
     * @return 凭据结果，data 为解密后的凭据
-     */
+    */
     ReturnResult<SshCredential> resolveCredential(Long hostId, Long identityId);
 
     /**
@@ -123,7 +123,7 @@ public interface ServerHostService {
     *
     * @param hostId 主机 标识
     * @return 更新后的主机（含硬件信息）
-     */
+    */
     ReturnResult<MsServerHost> detectHardware(Long hostId);
 
     /**
@@ -131,7 +131,7 @@ public interface ServerHostService {
     *
     * @param hostId 主机 标识
     * @return 刷新后的公网 IP
-     */
+    */
     ReturnResult<String> refreshPublicIp(Long hostId);
 
     /**
@@ -140,7 +140,7 @@ public interface ServerHostService {
     *
     * @param hostId 主机 标识
     * @return 更新后的主机（含端口扫描结果）
-     */
+    */
     ReturnResult<MsServerHost> scanPorts(Long hostId);
 
     /**
@@ -152,7 +152,7 @@ public interface ServerHostService {
     *
     * @param host 主机（含 服务端主机账户/密码/私募钥匙 瞬态字段）
     * @return 处理后的主机
-     */
+    */
     MsServerHost autoCreateIdentity(MsServerHost host);
 
     /**
@@ -163,6 +163,6 @@ public interface ServerHostService {
     *
     * @param hostIds 目标主机 ID 列表；为空则同步全部启用主机
     * @return 同步结果概要（成功数 / 跳过数 / 失败数 / 变更明细）
-     */
+    */
     ReturnResult<java.util.Map<String, Object>> syncHosts(java.util.List<Long> hostIds);
 }

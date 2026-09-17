@@ -25,28 +25,28 @@ public class MetricPoint {
 
     /**
     * 指标名(如 cpu_usage / mem_total)
-     */
+    */
     private String metricName;
 
     /**
     * 指标值
-     */
+    */
     private Double value;
 
     /**
     * 单位
-     */
+    */
     private String unit;
 
     /**
     * 标签维度(如 核心=0, mount=/)
-     */
+    */
     @Builder.Default
     private Map<String, String> tags = new HashMap<>(); // 标签
 
     /**
     * 目标子表(可选): ms_监控_指标_cpu / ms_监控_指标_内存 / ...
     * <p>为空时写入通用 ms_monitor_metric</p>
-     */
+    */
     private String targetTable;
 }

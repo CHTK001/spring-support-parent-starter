@@ -24,11 +24,11 @@ public class HostCollectContext {
 
     /**
     * 采集方式
-     */
+    */
     private HostCollectType mode;
 
     /**
     * 目标主机
-     */
+    */
     private MsServerHost host;
 }

@@ -135,7 +135,7 @@ public class ExecServiceImpl implements ExecService {
             /**
             * cleanupquietly。
             * @param tempFile temp文件
-             */
+            */
             cleanupQuietly(tempFile);
         }
     }
@@ -233,7 +233,7 @@ public class ExecServiceImpl implements ExecService {
     * 扫描到期任务并触发执行（由 执行作业调度器 定时调用）
     *
     * @return 本次触发的任务数
-     */
+    */
     @Override
     public int tickDueJobs() {
         List<MsExecJob> jobs = jobMapper.selectList(new LambdaQueryWrapper<MsExecJob>()
@@ -249,7 +249,7 @@ public class ExecServiceImpl implements ExecService {
             /**
             * trigger作业。
             * @param job 作业
-             */
+            */
             triggerJob(job);
         }
         return fired;
@@ -259,7 +259,7 @@ public class ExecServiceImpl implements ExecService {
     * 触发单个计划任务：执行命令并回写运行时间
     *
     * @param job 任务
-     */
+    */
     private void triggerJob(MsExecJob job) {
         try {
             List<Long> hostIds = parseHostIds(job.getMsExecJobHostIds());
@@ -268,7 +268,7 @@ public class ExecServiceImpl implements ExecService {
             * 运行命令。
             * @param hostIds 主机标识
             * @param job.getMsExecJobCommand( 作业.getms执行作业命令(
-             */
+            */
             runCommand(hostIds, job.getMsExecJobCommand(), job.getMsExecJobTimeout(), job.getId());
         } catch (Exception e) {
             log.warn("[exec] 计划任务执行异常 jobId={}: {}", job.getId(), e.getMessage());
@@ -292,7 +292,7 @@ public class ExecServiceImpl implements ExecService {
     * @param timeoutSeconds 超时（秒）
     * @param localFile      分发的本地文件，命令场景为 空
     * @return 各主机执行日志
-     */
+    */
     private List<MsExecLog> executeParallel(List<MsServerHost> hosts, String type, Long jobId,
                                             String commandOrPath, int timeoutSeconds, Path localFile) {
         ExecutorService pool = newPool(Math.min(properties.getExecConcurrency(), Math.max(1, hosts.size())));
@@ -328,7 +328,7 @@ public class ExecServiceImpl implements ExecService {
     * @param timeoutSeconds 超时（秒）
     * @param localFile      本地文件（文件分发场景）
     * @return 执行日志
-     */
+    */
     private MsExecLog executeSingle(MsServerHost host, String type, Long jobId,
                                     String commandOrPath, int timeoutSeconds, Path localFile) {
         long startMs = System.currentTimeMillis();
@@ -349,14 +349,14 @@ public class ExecServiceImpl implements ExecService {
                 * uploadviasftp。
                 * @param host 主机
                 * @param resolved.getData( resolved.获取数据(
-                 */
+                */
                 uploadViaSftp(host, resolved.getData(), commandOrPath, localFile);
             } else {
                 /**
                 * 执行viassh。
                 * @param host 主机
                 * @param resolved.getData( resolved.获取数据(
-                 */
+                */
                 execViaSsh(host, resolved.getData(), commandOrPath, timeoutSeconds, item);
             }
             item.setMsExecLogStatus(ServerConstants.EXEC_STATUS_SUCCESS);
@@ -368,12 +368,12 @@ public class ExecServiceImpl implements ExecService {
         * fillcost。
         * @param item item
         * @param startMs 启动ms
-         */
+        */
         fillCost(item, startMs);
         /**
         * persistquietly。
         * @param item item
-         */
+        */
         persistQuietly(item);
         return item;
     }
@@ -387,7 +387,7 @@ public class ExecServiceImpl implements ExecService {
     * @param timeout    超时（秒）
     * @param item       待填充日志
     * @throws Exception 连接或执行失败时抛出
-     */
+    */
     private void execViaSsh(MsServerHost host, SshCredential credential, String command,
                             int timeout, MsExecLog item) throws Exception {
         SshClients.Handle handle = null;
@@ -401,7 +401,7 @@ public class ExecServiceImpl implements ExecService {
                 * illegal状态异常。
                 * @param result.exitCode( 结果.exit编码(
                 * @return illegal状态异常的结果
-                 */
+                */
                 throw new IllegalStateException("退出码非 0: " + result.exitCode());
             }
             if (result.exitCode() != 0) {
@@ -409,7 +409,7 @@ public class ExecServiceImpl implements ExecService {
                 * illegal状态异常。
                 * @param result.stderr( 结果.stderr(
                 * @return illegal状态异常的结果
-                 */
+                */
                 throw new IllegalStateException(result.stderr());
             }
         } finally {
@@ -427,7 +427,7 @@ public class ExecServiceImpl implements ExecService {
     * @param remotePath 远端完整路径
     * @param localFile  本地文件
     * @throws Exception 上传失败时抛出
-     */
+    */
     private void uploadViaSftp(MsServerHost host, SshCredential credential,
                                String remotePath, Path localFile) throws Exception {
         var client = buildConnectedSftp(host, credential);
@@ -448,7 +448,7 @@ public class ExecServiceImpl implements ExecService {
     * @param credential 凭据
     * @return 已连接客户端
     * @throws IOException 临时私钥写入失败时抛出
-     */
+    */
     private com.chua.ssh.support.client.SftpClient buildConnectedSftp(MsServerHost host,
                                                                       SshCredential credential) throws IOException {
         var builder = com.chua.ssh.support.client.SftpClient.builder()
@@ -475,7 +475,7 @@ public class ExecServiceImpl implements ExecService {
             /**
             * cleanupquietly。
             * @param tempKey temp钥匙
-             */
+            */
             cleanupQuietly(tempKey);
         }
     }
@@ -485,7 +485,7 @@ public class ExecServiceImpl implements ExecService {
     *
     * @param hostIds 主机 标识 集合
     * @return 存在的主机列表
-     */
+    */
     private List<MsServerHost> loadHosts(List<Long> hostIds) {
         List<MsServerHost> hosts = new ArrayList<>(hostIds.size());
         for (Long id : hostIds) {
@@ -502,7 +502,7 @@ public class ExecServiceImpl implements ExecService {
     *
     * @param json JSON 字符串
     * @return ID 列表，解析失败返回空列表
-     */
+    */
     private List<Long> parseHostIds(String json) {
         if (isBlank(json)) {
             return List.of();
@@ -520,7 +520,7 @@ public class ExecServiceImpl implements ExecService {
     *
     * @param job 任务
     * @return 校验失败的错误结果，合法返回 空
-     */
+    */
     private ReturnResult<MsExecJob> validateJob(MsExecJob job) {
         if (job == null || isBlank(job.getMsExecJobName()) || isBlank(job.getMsExecJobCron())
                 || isBlank(job.getMsExecJobCommand())) {
@@ -534,7 +534,7 @@ public class ExecServiceImpl implements ExecService {
             /**
             * 下一个fire时间。
             * @param job.getMsExecJobCron( 作业.getms执行作业cron(
-             */
+            */
             nextFireTime(job.getMsExecJobCron(), LocalDateTime.now());
         } catch (IllegalArgumentException e) {
             return ReturnResult.error("cron 表达式非法: " + job.getMsExecJobCron());
@@ -548,7 +548,7 @@ public class ExecServiceImpl implements ExecService {
     * @param cron cron 表达式
     * @param base 时间基准
     * @return 下次运行时间，计算失败返回 空
-     */
+    */
     private LocalDateTime nextFireTime(String cron, LocalDateTime base) {
         Instant baseInstant = base.atZone(ZoneId.systemDefault()).toInstant();
         var context = new SimpleTriggerContext(baseInstant.minusSeconds(60), baseInstant.minusSeconds(60), baseInstant);
@@ -565,7 +565,7 @@ public class ExecServiceImpl implements ExecService {
     *
     * @param size 线程数
     * @return 线程池
-     */
+    */
     private ExecutorService newPool(int size) {
         AtomicInteger counter = new AtomicInteger();
         ThreadFactory factory = runnable -> {
@@ -586,7 +586,7 @@ public class ExecServiceImpl implements ExecService {
     * @param target 命令/路径
     * @param reason 失败原因
     * @return 日志对象
-     */
+    */
     private MsExecLog buildFailureLog(String type, MsServerHost host, String target, String reason) {
         MsExecLog item = new MsExecLog();
         item.setMsExecLogType(type);
@@ -599,12 +599,12 @@ public class ExecServiceImpl implements ExecService {
         * fillcost。
         * @param item item
         * @param System.currentTimeMillis( 系统.当前时间millis(
-         */
+        */
         fillCost(item, System.currentTimeMillis());
         /**
         * persistquietly。
         * @param item item
-         */
+        */
         persistQuietly(item);
         return item;
     }
@@ -616,7 +616,7 @@ public class ExecServiceImpl implements ExecService {
     * @param reason  原因
     * @param startMs 开始毫秒
     * @return 同一日志对象
-     */
+    */
     private MsExecLog fail(MsExecLog item, String reason, long startMs) {
         item.setMsExecLogStatus(ServerConstants.EXEC_STATUS_FAIL);
         item.setMsExecLogError(reason);
@@ -624,12 +624,12 @@ public class ExecServiceImpl implements ExecService {
         * fillcost。
         * @param item item
         * @param startMs 启动ms
-         */
+        */
         fillCost(item, startMs);
         /**
         * persistquietly。
         * @param item item
-         */
+        */
         persistQuietly(item);
         return item;
     }
@@ -639,7 +639,7 @@ public class ExecServiceImpl implements ExecService {
     *
     * @param item    日志
     * @param startMs 开始毫秒
-     */
+    */
     private void fillCost(MsExecLog item, long startMs) {
         long endMs = System.currentTimeMillis();
         item.setMsExecLogEndTime(LocalDateTime.now());
@@ -650,7 +650,7 @@ public class ExecServiceImpl implements ExecService {
     * 静默落库（审计不阻断主流程）
     *
     * @param item 日志
-     */
+    */
     private void persistQuietly(MsExecLog item) {
         try {
             logMapper.insert(item);
@@ -664,7 +664,7 @@ public class ExecServiceImpl implements ExecService {
     *
     * @param output 原始输出
     * @return 截断后输出
-     */
+    */
     private String truncate(String output) {
         if (output == null || output.length() <= OUTPUT_TRUNCATE) {
             return output;
@@ -677,7 +677,7 @@ public class ExecServiceImpl implements ExecService {
     *
     * @param original 原始名
     * @return 安全名
-     */
+    */
     private String sanitize(String original) {
         String name = original == null ? "file" : original.replace("\\", "_").replace("/", "_");
         return name.isEmpty() ? "file" : name;
@@ -687,7 +687,7 @@ public class ExecServiceImpl implements ExecService {
     * 静默清理临时文件
     *
     * @param path 文件路径
-     */
+    */
     private void cleanupQuietly(Path path) {
         if (path == null) {
             return;
@@ -704,7 +704,7 @@ public class ExecServiceImpl implements ExecService {
     *
     * @param value 待判断字符串
     * @return 是否为空
-     */
+    */
     private boolean isBlank(String value) {
         return value == null || value.isBlank();
     }

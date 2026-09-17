@@ -107,7 +107,7 @@ public class FreebsdHostDetectProvider implements HostDetectProvider {
     *
     * @param value 待判断字符串
     * @return 是否可解析
-     */
+    */
     private boolean isRatio(String value) {
         return StringUtils.isNotBlank(value) && NumberUtils.isNumber(value);
     }
@@ -117,7 +117,7 @@ public class FreebsdHostDetectProvider implements HostDetectProvider {
     *
     * @param value 百分比字符串
     * @return Double 或 null
-     */
+    */
     private Double toRatio(String value) {
         if (StringUtils.isBlank(value)) {
             return null;
@@ -135,7 +135,7 @@ public class FreebsdHostDetectProvider implements HostDetectProvider {
     * @param handle  SSH 连接句柄，不能为 null
     * @param command 待执行命令，不能为 null 或空
     * @return 命令标准输出；执行失败返回 null
-     */
+    */
     private String execQuiet(SshClients.Handle handle, String command) {
         try {
             return handle.client().exec().command(command).executeAndGetOutput();

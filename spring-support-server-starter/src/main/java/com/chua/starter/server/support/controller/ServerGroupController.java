@@ -43,7 +43,7 @@ public class ServerGroupController {
     *
     * @param group 分组
     * @return 结果
-     */
+    */
     @Operation(summary = "新增分组")
     @PostMapping
     public ReturnResult<MsServerGroup> create(@RequestBody MsServerGroup group) {
@@ -56,7 +56,7 @@ public class ServerGroupController {
     * @param id    主键
     * @param group 分组
     * @return 结果
-     */
+    */
     @Operation(summary = "更新分组")
     @PutMapping("/{id}")
     public ReturnResult<MsServerGroup> update(@PathVariable Long id, @RequestBody MsServerGroup group) {
@@ -68,7 +68,7 @@ public class ServerGroupController {
     *
     * @param id 主键
     * @return 结果
-     */
+    */
     @Operation(summary = "删除分组")
     @DeleteMapping("/{id}")
     public ReturnResult<Void> delete(@PathVariable Long id) {
@@ -79,7 +79,7 @@ public class ServerGroupController {
     * 分组列表（平铺，前端组树）
     *
     * @return 列表
-     */
+    */
     @Operation(summary = "分组列表")
     @GetMapping
     public ReturnResult<List<MsServerGroup>> list() {
@@ -90,7 +90,7 @@ public class ServerGroupController {
     * 分组树（按 msServerGroupParentId 组装，根节点 parentId 为 null 或 0）
     *
     * @return 树结构列表
-     */
+    */
     @Operation(summary = "分组树")
     @GetMapping("/tree")
     public ReturnResult<List<Map<String, Object>>> tree() {
@@ -117,7 +117,7 @@ public class ServerGroupController {
 
     /**
     * 将实体转换为树节点并递归组装 children
-     */
+    */
     private Map<String, Object> toNode(MsServerGroup g, Map<Long, List<MsServerGroup>> childrenMap) {
         Map<String, Object> node = new LinkedHashMap<>();
         node.put("id", g.getId());

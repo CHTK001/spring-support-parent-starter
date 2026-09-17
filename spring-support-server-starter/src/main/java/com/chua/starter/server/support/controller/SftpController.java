@@ -50,7 +50,7 @@ public class SftpController {
     * @param identityId 身份 标识，可为空
     * @param path       目录路径，可为空取主目录
     * @return 条目列表
-     */
+    */
     @Operation(summary = "列出目录")
     @GetMapping
     public ReturnResult<List<Map<String, Object>>> list(@PathVariable Long hostId,
@@ -66,7 +66,7 @@ public class SftpController {
     * @param identityId 身份 标识，可为空
     * @param path       文件路径
     * @return 内容结果
-     */
+    */
     @Operation(summary = "读取文本内容")
     @GetMapping("/content")
     public ReturnResult<Map<String, Object>> readContent(@PathVariable Long hostId,
@@ -83,7 +83,7 @@ public class SftpController {
     * @param path       文件路径（查询 参数）
     * @param content    新内容
     * @return 结果
-     */
+    */
     @Operation(summary = "写入文本内容")
     @PutMapping("/content")
     public ReturnResult<Void> writeContent(@PathVariable Long hostId,
@@ -102,7 +102,7 @@ public class SftpController {
     * @param path       目标目录，可为空取根（前端实际使用的参数名，优先于 目录）
     * @param file       文件
     * @return 远端路径
-     */
+    */
     @Operation(summary = "上传文件")
     @PostMapping("/upload")
     public ReturnResult<String> upload(@PathVariable Long hostId,
@@ -125,7 +125,7 @@ public class SftpController {
     * @param identityId 身份 标识，可为空
     * @param path       远端路径
     * @return 文件字节响应
-     */
+    */
     @Operation(summary = "下载文件")
     @GetMapping("/download")
     public ResponseEntity<byte[]> download(@PathVariable Long hostId,
@@ -139,7 +139,7 @@ public class SftpController {
         /**
         * 尝试。
         * @param result.getData( 结果.获取数据(
-         */
+        */
         try (TempFile temp = result.getData()) {
             var headers = new HttpHeaders();
             headers.set(HttpHeaders.CONTENT_DISPOSITION,
@@ -161,7 +161,7 @@ public class SftpController {
     * @param identityId 身份 标识，可为空
     * @param path       新目录
     * @return 结果
-     */
+    */
     @Operation(summary = "创建目录")
     @PostMapping("/mkdir")
     public ReturnResult<Void> mkdir(@PathVariable Long hostId,
@@ -178,7 +178,7 @@ public class SftpController {
     * @param path       目标路径
     * @param recursive  目录递归删除
     * @return 结果
-     */
+    */
     @Operation(summary = "删除文件或目录")
     @DeleteMapping
     public ReturnResult<Void> delete(@PathVariable Long hostId,
@@ -195,7 +195,7 @@ public class SftpController {
     * @param identityId 身份 标识，可为空
     * @param body       从路径 + 转为路径
     * @return 结果
-     */
+    */
     @Operation(summary = "重命名或移动")
     @PutMapping("/rename")
     public ReturnResult<Void> rename(@PathVariable Long hostId,

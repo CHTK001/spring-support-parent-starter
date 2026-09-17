@@ -31,14 +31,16 @@ public class GuacdSessionRegistry {
     /** 在线会话表：tunnelid -> 会话 */
     private final Map<String, GuacdSession> sessions = new ConcurrentHashMap<>();
 
-    /** 审计记录 标识 -> tunnelid 索引（供管理端按记录强制关闭） */
+    /**
+    * 审计记录 标识 -> tunnelid 索引（供管理端按记录强制关闭）
+    */
     private final Map<Long, String> sessionRecordIndex = new ConcurrentHashMap<>();
 
     /**
     * 注册会话
     *
     * @param session 会话
-     */
+    */
     public void register(GuacdSession session) {
         sessions.put(session.getTunnelId(), session);
         if (session.getSessionId() != null) {
@@ -51,7 +53,7 @@ public class GuacdSessionRegistry {
     *
     * @param wsSessionId 浏览器 WS 会话 标识
     * @return 会话，不存在时返回 空
-     */
+    */
     public GuacdSession findByWsSessionId(String wsSessionId) {
         for (GuacdSession session : sessions.values()) {
             if (session.getWebSocketSession().getId().equals(wsSessionId)) {
@@ -67,7 +69,7 @@ public class GuacdSessionRegistry {
     * @param recordId 审计记录 标识
     * @param reason   关闭原因
     * @return true 表示存在会话并已触发关闭
-     */
+    */
     public boolean closeByRecordId(Long recordId, String reason) {
         String tunnelId = sessionRecordIndex.get(recordId);
         if (tunnelId == null) {
@@ -82,7 +84,7 @@ public class GuacdSessionRegistry {
         * 关闭。
         * @param session 会话
         * @param reason ReasonMLmlml
-         */
+        */
         close(session, reason);
         return true;
     }
@@ -95,7 +97,7 @@ public class GuacdSessionRegistry {
     *
     * @param session 会话
     * @param reason  关闭原因（写入审计）
-     */
+    */
     public void close(GuacdSession session, String reason) {
         if (!session.markClosed()) {
             return;
@@ -128,7 +130,7 @@ public class GuacdSessionRegistry {
     *
     * @param idleMinutes 最大空闲分钟数
     * @return 本次关闭的会话数
-     */
+    */
     public int sweepIdle(int idleMinutes) {
         List<GuacdSession> idleSessions = new ArrayList<>();
         for (GuacdSession session : sessions.values()) {
@@ -142,7 +144,7 @@ public class GuacdSessionRegistry {
             * 关闭。
             * @param session 会话
             * @param "空闲超时" "空闲超时"
-             */
+            */
             close(session, "空闲超时");
         }
         return idleSessions.size();
@@ -152,7 +154,7 @@ public class GuacdSessionRegistry {
     * 当前在线会话列表快照
     *
     * @return 会话集合
-     */
+    */
     public List<GuacdSession> snapshot() {
         return new ArrayList<>(sessions.values());
     }
@@ -161,7 +163,7 @@ public class GuacdSessionRegistry {
     * 当前在线会话数量
     *
     * @return 数量
-     */
+    */
     public int size() {
         return sessions.size();
     }
@@ -171,7 +173,7 @@ public class GuacdSessionRegistry {
     *
     * @param wsSession WS 会话
     * @return 是否活跃
-     */
+    */
     public boolean isTracked(WebSocketSession wsSession) {
         return findByWsSessionId(wsSession.getId()) != null;
     }

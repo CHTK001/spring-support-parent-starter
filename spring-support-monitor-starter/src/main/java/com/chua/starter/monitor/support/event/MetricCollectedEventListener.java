@@ -44,7 +44,7 @@ public class MetricCollectedEventListener {
     * 采集完成后的告警评估与实时推送
     *
     * @param event 采集完成事件
-     */
+    */
     @EventListener
     public void onCollected(MetricCollectedEvent event) {
         CollectResult result = event.result();

@@ -33,7 +33,7 @@ public class ServerConfigController {
     /**
     * 查询全部配置
     * @return 列表的结果
-     */
+    */
     @Operation(summary = "查询全部配置")
     @GetMapping
     public ReturnResult<List<MsServerConfig>> list() {
@@ -43,7 +43,7 @@ public class ServerConfigController {
     /**
     * 读取配置为扁平 映射（含默认值）
     * @return 映射的结果
-     */
+    */
     @Operation(summary = "读取配置Map")
     @GetMapping("/map")
     public ReturnResult<Map<String, Object>> map() {
@@ -54,7 +54,7 @@ public class ServerConfigController {
     * 保存配置
     * @param body 主体
     * @return 保存的结果
-     */
+    */
     @Operation(summary = "保存配置")
     @PostMapping
     public ReturnResult<Void> save(@RequestBody Map<String, Object> body) {

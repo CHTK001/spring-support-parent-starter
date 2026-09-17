@@ -38,7 +38,7 @@ public class MailboxController {
     * @param folder     文件夹(默认 INBOX)
     * @param limit      最大条数(默认 20)
     * @return 邮件列表
-     */
+    */
     @Operation(summary = "邮箱收件箱列表")
     @GetMapping("/{identityId}/mailbox/list")
     public ReturnResult<List<Map<String, Object>>> list(@PathVariable Long identityId,
@@ -54,7 +54,7 @@ public class MailboxController {
     * @param folder     文件夹(默认 INBOX)
     * @param subject    邮件主题关键字(定位，可空默认最新)
     * @return 邮件详情
-     */
+    */
     @Operation(summary = "邮件正文详情")
     @GetMapping("/{identityId}/mailbox/message")
     public ReturnResult<Map<String, Object>> detail(@PathVariable Long identityId,

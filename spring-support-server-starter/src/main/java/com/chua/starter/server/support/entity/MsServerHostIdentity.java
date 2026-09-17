@@ -33,28 +33,28 @@ public class MsServerHostIdentity implements Serializable {
 
     /**
     * 主键
-     */
+    */
     @TableId(value = "id", type = IdType.AUTO)
     @Schema(description = "主键", example = "1")
     private Long id; // 标识
 
     /**
     * 主机 标识
-     */
+    */
     @TableField("ms_server_host_identity_host_id")
     @Schema(description = "主机ID", example = "1")
     private Long msServerHostIdentityHostId; // ms服务端主机identity主机标识
 
     /**
     * 身份 标识
-     */
+    */
     @TableField("ms_server_host_identity_identity_id")
     @Schema(description = "身份ID", example = "1")
     private Long msServerHostIdentityIdentityId; // ms服务端主机identityidentityid
 
     /**
     * 优先级（越小越优先）
-     */
+    */
     @TableField("ms_server_host_identity_sort")
     @Schema(description = "优先级", example = "1")
     private Integer msServerHostIdentitySort; // ms服务端主机identity排序

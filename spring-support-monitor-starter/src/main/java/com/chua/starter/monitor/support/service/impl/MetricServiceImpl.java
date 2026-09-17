@@ -41,65 +41,65 @@ public class MetricServiceImpl implements MetricService {
 
     /**
     * 通用指标 映射器
-     */
+    */
     private final MsMonitorMetricMapper metricMapper;
     /**
     * 通用指标统计 映射器
-     */
+    */
     private final MsMonitorMetricStatisticsMapper statisticsMapper;
     /**
     * CPU 指标 映射器
-     */
+    */
     private final MsMonitorMetricCpuMapper cpuMapper;
     /**
     * 内存指标 映射器
-     */
+    */
     private final MsMonitorMetricMemoryMapper memoryMapper;
     /**
     * 磁盘指标 映射器
-     */
+    */
     private final MsMonitorMetricDiskMapper diskMapper;
     /**
     * 网络指标 映射器
-     */
+    */
     private final MsMonitorMetricNetworkMapper networkMapper;
     /**
     * JVM 指标 映射器
-     */
+    */
     private final MsMonitorMetricJvmMapper jvmMapper;
     /**
     * Redis 指标 映射器
-     */
+    */
     private final MsMonitorRedisMetricMapper redisMetricMapper;
     /**
     * Redis 指标统计 映射器
-     */
+    */
     private final MsMonitorRedisMetricStatisticsMapper redisMetricStatsMapper;
     /**
     * JDBC 模板
-     */
+    */
     private final JdbcTemplate jdbcTemplate;
     /**
     * JSON 序列化器
-     */
+    */
     private final ObjectMapper objectMapper;
     /**
     * 时序存储门面（influxdb / Redis / 无，按配置选择）
-     */
+    */
     private final MetricTimeSeriesWriter timeSeriesWriter;
     /**
     * 告警引擎（写入链路尾部评估）
-     */
+    */
     private final AlarmEngineService alarmEngineService;
 
     /**
     * Spring 事件发布器（采集入库后发布，解耦告警评估与实时推送）
-     */
+    */
     private final ApplicationEventPublisher eventPublisher;
 
     /**
     * 默认批量插入大小
-     */
+    */
     private static final int BATCH_SIZE = 200;
 
     @Override
@@ -116,7 +116,7 @@ public class MetricServiceImpl implements MetricService {
     *
     * @param result 结果
     * @return 写入collect结果的结果
-     */
+    */
     public ReturnResult<Void> writeCollectResult(CollectResult result) {
         try {
             if (result == null || result.getPoints() == null || result.getPoints().isEmpty()) {
@@ -155,37 +155,37 @@ public class MetricServiceImpl implements MetricService {
             /**
             * 批量插入generic。
             * @param genericBatch genericbatch
-             */
+            */
             batchInsertGeneric(genericBatch);
             /**
             * 批量插入cpu。
             * @param cpuBatch cpubatch
-             */
+            */
             batchInsertCpu(cpuBatch);
             /**
             * 批量插入内存。
             * @param memBatch membatch
-             */
+            */
             batchInsertMemory(memBatch);
             /**
             * 批量插入disk。
             * @param diskBatch diskbatch
-             */
+            */
             batchInsertDisk(diskBatch);
             /**
             * 批量插入network。
             * @param netBatch netbatch
-             */
+            */
             batchInsertNetwork(netBatch);
             /**
             * 批量插入jvm。
             * @param jvmBatch jvmbatch
-             */
+            */
             batchInsertJvm(jvmBatch);
             /**
             * 批量插入Redis。
             * @param redisBatch redisbatch
-             */
+            */
             batchInsertRedis(redisBatch);
  // 时序明细同步写入（按 监控.timeseries.engine 选择 influxdb/Redis，未配置时跳过），失败不阻断主链路
             timeSeriesWriter.write(result);
@@ -213,7 +213,7 @@ public class MetricServiceImpl implements MetricService {
     * @param points points
     * @param collectTime collect时间
     * @return 写入points的结果
-     */
+    */
     public ReturnResult<Void> writePoints(Long monitorId, List<MetricPoint> points, LocalDateTime collectTime) {
         try {
             if (points == null || points.isEmpty()) {
@@ -227,7 +227,7 @@ public class MetricServiceImpl implements MetricService {
             /**
             * 批量插入generic。
             * @param genericBatch genericbatch
-             */
+            */
             batchInsertGeneric(genericBatch);
             return ReturnResult.ok();
         } catch (Exception e) {
@@ -242,7 +242,7 @@ public class MetricServiceImpl implements MetricService {
     * aggregate时薪
     *
     * @return aggregate时薪的结果
-     */
+    */
     public ReturnResult<Void> aggregateHourly() {
         try {
             LocalDateTime hourEnd = LocalDateTime.now().truncatedTo(ChronoUnit.HOURS);
@@ -353,7 +353,7 @@ public class MetricServiceImpl implements MetricService {
     * @param monitorId 监控标识
     * @param metricName 指标名称
     * @return statistics钥匙的结果
-     */
+    */
     private record StatisticsKey(Long monitorId, String metricName) {
     }
 
@@ -386,7 +386,7 @@ public class MetricServiceImpl implements MetricService {
     *
     * @param monitorId 监控标识
     * @return 获取latestcpu的结果
-     */
+    */
     public ReturnResult<MsMonitorMetricCpu> getLatestCpu(Long monitorId) {
         return ReturnResult.ok(cpuMapper.selectOne(
                 new LambdaQueryWrapper<MsMonitorMetricCpu>()
@@ -402,7 +402,7 @@ public class MetricServiceImpl implements MetricService {
     *
     * @param monitorId 监控标识
     * @return 获取latest内存的结果
-     */
+    */
     public ReturnResult<MsMonitorMetricMemory> getLatestMemory(Long monitorId) {
         return ReturnResult.ok(memoryMapper.selectOne(
                 new LambdaQueryWrapper<MsMonitorMetricMemory>()
@@ -418,7 +418,7 @@ public class MetricServiceImpl implements MetricService {
     *
     * @param monitorId 监控标识
     * @return 获取latestdisk的结果
-     */
+    */
     public ReturnResult<List<MsMonitorMetricDisk>> getLatestDisk(Long monitorId) {
         return ReturnResult.ok(diskMapper.selectList(
                 new LambdaQueryWrapper<MsMonitorMetricDisk>()
@@ -434,7 +434,7 @@ public class MetricServiceImpl implements MetricService {
     *
     * @param monitorId 监控标识
     * @return 获取latestnetwork的结果
-     */
+    */
     public ReturnResult<MsMonitorMetricNetwork> getLatestNetwork(Long monitorId) {
         return ReturnResult.ok(networkMapper.selectOne(
                 new LambdaQueryWrapper<MsMonitorMetricNetwork>()
@@ -450,7 +450,7 @@ public class MetricServiceImpl implements MetricService {
     *
     * @param monitorId 监控标识
     * @return 获取latestjvm的结果
-     */
+    */
     public ReturnResult<MsMonitorMetricJvm> getLatestJvm(Long monitorId) {
         return ReturnResult.ok(jvmMapper.selectOne(
                 new LambdaQueryWrapper<MsMonitorMetricJvm>()
@@ -656,7 +656,7 @@ public class MetricServiceImpl implements MetricService {
     * 批量插入通用指标
     *
     * @param batch 指标列表
-     */
+    */
     private void batchInsertGeneric(List<MsMonitorMetric> batch) {
         if (batch.isEmpty()) {
             return;
@@ -671,7 +671,7 @@ public class MetricServiceImpl implements MetricService {
     * 批量插入 CPU 指标
     *
     * @param batch CPU 指标列表
-     */
+    */
     private void batchInsertCpu(List<MsMonitorMetricCpu> batch) {
         if (batch.isEmpty()) {
             return;
@@ -685,7 +685,7 @@ public class MetricServiceImpl implements MetricService {
     * 批量插入内存指标
     *
     * @param batch 内存指标列表
-     */
+    */
     private void batchInsertMemory(List<MsMonitorMetricMemory> batch) {
         if (batch.isEmpty()) {
             return;
@@ -699,7 +699,7 @@ public class MetricServiceImpl implements MetricService {
     * 批量插入磁盘指标
     *
     * @param batch 磁盘指标列表
-     */
+    */
     private void batchInsertDisk(List<MsMonitorMetricDisk> batch) {
         if (batch.isEmpty()) {
             return;
@@ -713,7 +713,7 @@ public class MetricServiceImpl implements MetricService {
     * 批量插入网络指标
     *
     * @param batch 网络指标列表
-     */
+    */
     private void batchInsertNetwork(List<MsMonitorMetricNetwork> batch) {
         if (batch.isEmpty()) {
             return;
@@ -727,7 +727,7 @@ public class MetricServiceImpl implements MetricService {
     * 批量插入 JVM 指标
     *
     * @param batch JVM 指标列表
-     */
+    */
     private void batchInsertJvm(List<MsMonitorMetricJvm> batch) {
         if (batch.isEmpty()) {
             return;
@@ -741,7 +741,7 @@ public class MetricServiceImpl implements MetricService {
     * 批量插入 Redis 指标
     *
     * @param batch Redis 指标列表
-     */
+    */
     private void batchInsertRedis(List<MsMonitorRedisMetric> batch) {
         if (batch.isEmpty()) {
             return;
@@ -758,7 +758,7 @@ public class MetricServiceImpl implements MetricService {
     * @param point       指标点
     * @param collectTime 采集时间
     * @return 通用指标实体
-     */
+    */
     private MsMonitorMetric buildGenericMetric(Long monitorId, MetricPoint point, LocalDateTime collectTime) {
         MsMonitorMetric metric = new MsMonitorMetric();
         metric.setId(IdUtils.createSnowflakeId());
@@ -782,7 +782,7 @@ public class MetricServiceImpl implements MetricService {
     * @param point       指标点
     * @param collectTime 采集时间
     * @return CPU 指标实体
-     */
+    */
     private MsMonitorMetricCpu buildCpuMetric(Long monitorId, MetricPoint point, LocalDateTime collectTime) {
         MsMonitorMetricCpu cpu = new MsMonitorMetricCpu();
         cpu.setId(IdUtils.createSnowflakeId());
@@ -805,7 +805,7 @@ public class MetricServiceImpl implements MetricService {
     * @param point       指标点
     * @param collectTime 采集时间
     * @return 内存指标实体
-     */
+    */
     private MsMonitorMetricMemory buildMemoryMetric(Long monitorId, MetricPoint point, LocalDateTime collectTime) {
         MsMonitorMetricMemory mem = new MsMonitorMetricMemory();
         mem.setId(IdUtils.createSnowflakeId());
@@ -826,7 +826,7 @@ public class MetricServiceImpl implements MetricService {
     * @param point       指标点
     * @param collectTime 采集时间
     * @return 磁盘指标实体
-     */
+    */
     private MsMonitorMetricDisk buildDiskMetric(Long monitorId, MetricPoint point, LocalDateTime collectTime) {
         MsMonitorMetricDisk disk = new MsMonitorMetricDisk();
         disk.setId(IdUtils.createSnowflakeId());
@@ -849,7 +849,7 @@ public class MetricServiceImpl implements MetricService {
     * @param point       指标点
     * @param collectTime 采集时间
     * @return 网络指标实体
-     */
+    */
     private MsMonitorMetricNetwork buildNetworkMetric(Long monitorId, MetricPoint point, LocalDateTime collectTime) {
         MsMonitorMetricNetwork net = new MsMonitorMetricNetwork();
         net.setId(IdUtils.createSnowflakeId());
@@ -893,7 +893,7 @@ public class MetricServiceImpl implements MetricService {
     * @param point       指标点
     * @param collectTime 采集时间
     * @return JVM 指标实体
-     */
+    */
     private MsMonitorMetricJvm buildJvmMetric(Long monitorId, MetricPoint point, LocalDateTime collectTime) {
         MsMonitorMetricJvm jvm = new MsMonitorMetricJvm();
         jvm.setId(IdUtils.createSnowflakeId());
@@ -917,7 +917,7 @@ public class MetricServiceImpl implements MetricService {
     * @param point       指标点
     * @param collectTime 采集时间
     * @return Redis 指标实体
-     */
+    */
     private MsMonitorRedisMetric buildRedisMetric(Long monitorId, MetricPoint point, LocalDateTime collectTime) {
         MsMonitorRedisMetric redis = new MsMonitorRedisMetric();
         redis.setId(IdUtils.createSnowflakeId());

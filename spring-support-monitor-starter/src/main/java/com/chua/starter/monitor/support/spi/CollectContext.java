@@ -24,11 +24,11 @@ public class CollectContext {
 
     /**
     * 采集任务
-     */
+    */
     private MsMonitorTask task;
 
     /**
     * 关联资产
-     */
+    */
     private MsMonitor monitor;
 }

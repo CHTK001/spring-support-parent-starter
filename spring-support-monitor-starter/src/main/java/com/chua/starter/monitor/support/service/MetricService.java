@@ -21,7 +21,7 @@ public interface MetricService {
     *
     * @param result 采集结果
     * @return 操作结果
-     */
+    */
     ReturnResult<Void> writeCollectResult(CollectResult result);
 
     /**
@@ -31,14 +31,14 @@ public interface MetricService {
     * @param points      指标点列表
     * @param collectTime 采集时间
     * @return 操作结果
-     */
+    */
     ReturnResult<Void> writePoints(Long monitorId, List<MetricPoint> points, LocalDateTime collectTime);
 
     /**
     * 执行小时级聚合
     *
     * @return 操作结果
-     */
+    */
     ReturnResult<Void> aggregateHourly();
 
     /**
@@ -46,7 +46,7 @@ public interface MetricService {
     *
     * @param retentionDays 保留天数
     * @return 操作结果
-     */
+    */
     ReturnResult<Void> cleanupOldData(int retentionDays);
 
     // ===== 查询方法 =====
@@ -56,7 +56,7 @@ public interface MetricService {
     *
     * @param monitorId 监控 标识
     * @return CPU 指标
-     */
+    */
     ReturnResult<MsMonitorMetricCpu> getLatestCpu(Long monitorId);
 
     /**
@@ -64,7 +64,7 @@ public interface MetricService {
     *
     * @param monitorId 监控 标识
     * @return 内存指标
-     */
+    */
     ReturnResult<MsMonitorMetricMemory> getLatestMemory(Long monitorId);
 
     /**
@@ -72,7 +72,7 @@ public interface MetricService {
     *
     * @param monitorId 监控 标识
     * @return 磁盘指标列表
-     */
+    */
     ReturnResult<List<MsMonitorMetricDisk>> getLatestDisk(Long monitorId);
 
     /**
@@ -80,7 +80,7 @@ public interface MetricService {
     *
     * @param monitorId 监控 标识
     * @return 网络指标
-     */
+    */
     ReturnResult<MsMonitorMetricNetwork> getLatestNetwork(Long monitorId);
 
     /**
@@ -88,7 +88,7 @@ public interface MetricService {
     *
     * @param monitorId 监控 标识
     * @return JVM 指标
-     */
+    */
     ReturnResult<MsMonitorMetricJvm> getLatestJvm(Long monitorId);
 
     /**
@@ -98,7 +98,7 @@ public interface MetricService {
     * @param startTime 起始时间
     * @param endTime   结束时间
     * @return CPU 历史指标列表
-     */
+    */
     ReturnResult<List<MsMonitorMetricCpu>> getCpuHistory(Long monitorId, LocalDateTime startTime, LocalDateTime endTime);
 
     /**
@@ -108,7 +108,7 @@ public interface MetricService {
     * @param startTime 起始时间
     * @param endTime   结束时间
     * @return 内存历史指标列表
-     */
+    */
     ReturnResult<List<MsMonitorMetricMemory>> getMemoryHistory(Long monitorId, LocalDateTime startTime, LocalDateTime endTime);
 
     /**
@@ -118,7 +118,7 @@ public interface MetricService {
     * @param startTime 起始时间
     * @param endTime   结束时间
     * @return JVM 历史指标列表
-     */
+    */
     ReturnResult<List<MsMonitorMetricJvm>> getJvmHistory(Long monitorId, LocalDateTime startTime, LocalDateTime endTime);
 
     /**
@@ -128,7 +128,7 @@ public interface MetricService {
     * @param startTime 起始时间
     * @param endTime   结束时间
     * @return 网络历史指标列表
-     */
+    */
     ReturnResult<List<MsMonitorMetricNetwork>> getNetworkHistory(Long monitorId, LocalDateTime startTime, LocalDateTime endTime);
 
     /**
@@ -138,7 +138,7 @@ public interface MetricService {
     * @param startTime 起始时间
     * @param endTime   结束时间
     * @return 磁盘历史指标列表
-     */
+    */
     ReturnResult<List<MsMonitorMetricDisk>> getDiskHistory(Long monitorId, LocalDateTime startTime, LocalDateTime endTime);
 
     /**
@@ -146,7 +146,7 @@ public interface MetricService {
     *
     * @param monitorId 监控 标识
     * @return Redis 指标
-     */
+    */
     ReturnResult<MsMonitorRedisMetric> getLatestRedisMetric(Long monitorId);
 
     /**
@@ -156,7 +156,7 @@ public interface MetricService {
     * @param startTime 起始时间
     * @param endTime   结束时间
     * @return Redis 历史指标列表
-     */
+    */
     ReturnResult<List<MsMonitorRedisMetric>> getRedisMetricHistory(Long monitorId, LocalDateTime startTime, LocalDateTime endTime);
 
     /**
@@ -167,7 +167,7 @@ public interface MetricService {
     * @param startTime  起始时间
     * @param endTime    结束时间
     * @return 通用指标列表
-     */
+    */
     ReturnResult<List<MsMonitorMetric>> getGenericMetricHistory(Long monitorId, String metricName, LocalDateTime startTime, LocalDateTime endTime);
 
     /**
@@ -178,7 +178,7 @@ public interface MetricService {
     * @param startTime  起始时间
     * @param endTime    结束时间
     * @return 聚合统计列表
-     */
+    */
     ReturnResult<List<MsMonitorMetricStatistics>> getMetricStatistics(Long monitorId, String metricName, LocalDateTime startTime, LocalDateTime endTime);
 
     /**
@@ -189,7 +189,7 @@ public interface MetricService {
     * @param startTime  起始时间
     * @param endTime    结束时间
     * @return Redis 聚合统计列表
-     */
+    */
     ReturnResult<List<MsMonitorRedisMetricStatistics>> getRedisMetricStatistics(Long monitorId, String metricName, LocalDateTime startTime, LocalDateTime endTime);
 
     /**
@@ -200,6 +200,6 @@ public interface MetricService {
     * @param startTime  起始时间
     * @param endTime    结束时间
     * @return 操作结果，包含文件下载链接
-     */
+    */
     ReturnResult<String> exportMetricHistory(Long monitorId, String metricName, LocalDateTime startTime, LocalDateTime endTime);
 }
