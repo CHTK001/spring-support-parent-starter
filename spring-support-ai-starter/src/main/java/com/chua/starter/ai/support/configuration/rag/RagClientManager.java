@@ -21,6 +21,7 @@ import com.chua.common.support.utils.StringUtils;
 import com.chua.common.support.vector.VectorCompareAlgorithm;
 import com.chua.common.support.vector.VectorStorage;
 import com.chua.common.support.vector.VectorStorageProvider;
+import com.chua.jvector.support.configuration.JVectorStorageProperties;
 import com.chua.starter.ai.support.registry.ChatClientRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -130,7 +131,8 @@ public class RagClientManager {
         if (old != null) {
             try {
                 old.close();
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                log.warn("[RagClientManager] 关闭旧 RAG 客户端失败: {}", e.getMessage());
             }
         }
         if (next != null) {
@@ -186,8 +188,8 @@ public class RagClientManager {
 
         String uploadDir = StringUtils.hasText(ragUploadDir) ? ragUploadDir : properties.getUploadDir();
 
-        EmbeddingClient embeddingClient = createEmbeddingClient(ragEmbeddingModel);
-        VectorStorage vectorStorage = createVectorStorage(ragVectorStorage, uploadDir);
+        EmbeddingClient embeddingClient = createEmbeddingClient(ragEmbeddingModel, embeddingDimensions);
+        VectorStorage vectorStorage = createVectorStorage(ragVectorStorage, uploadDir, embeddingDimensions);
         TextSplitter splitter = createTextSplitter(ragSplitter, chunkSize, chunkOverlap);
         RagClientSetting setting = RagClientSetting.builder()
                 .topK(topK)
@@ -309,10 +311,10 @@ public class RagClientManager {
     }
 
     /**
-    * 安全解析 float，失败返回默认值。
-    * @param s s
-    * @param def def
-    * @return 解析floatsafe的结果
+     * 安全解析 float，失败返回默认值。
+     * @param s 待解析字符串，null 或空白时直接返回默认值
+     * @param def 解析失败时的默认值
+     * @return 解析出的 float；解析失败或输入为空时返回 def
      */
     private static float parseFloatSafe(String s, float def) {
         if (!StringUtils.hasText(s)) {
@@ -330,20 +332,24 @@ public class RagClientManager {
      * 1. 按 rag_embedding_model（如 "openai"）从 SPI 查找 provider
      * 2. 若为外部 provider（非 memory），从 rag/runtime 分组读取 apiKey/baseUrl/model 构造真实客户端
      * 3. 找不到或构造失败时降级为离线 MemoryEmbeddingClient
+     *
+     * @param model               嵌入引擎名称（如 "openai" / "siliconflow" / "memory"，留空取属性默认）
+     * @param embeddingDimensions 向量维度，透传给真实嵌入客户端保证输出维度一致
+     * @return EmbeddingClient 实例（失败时降级为离线内存实现）
      */
-    private EmbeddingClient createEmbeddingClient(String model) {
+    private EmbeddingClient createEmbeddingClient(String model, int embeddingDimensions) {
         String engine = StringUtils.hasText(model) ? model.trim() : properties.getEmbeddingEngine();
         if (StringUtils.isBlank(engine)) {
             engine = properties.getEmbeddingEngine();
         }
         if ("memory".equalsIgnoreCase(engine)) {
-            return new MemoryEmbeddingClient();
+            return new MemoryEmbeddingClient().dimensions(embeddingDimensions);
         }
         try {
             Set<String> providers = ServiceProvider.of(EmbeddingClient.class).getExtensions();
             if (!providers.contains(engine.toLowerCase())) {
                 log.debug("[RagClientManager] EmbeddingClient SPI 中没有 provider '{}', 回退离线实现", engine);
-                return new MemoryEmbeddingClient();
+                return new MemoryEmbeddingClient().dimensions(embeddingDimensions);
             }
             // 优先 rag 分组独立 embedding 配置，其次 runtime 配置
             String embKey = settingReader.getStr(GROUP, "rag_embedding_api_key");
@@ -359,54 +365,61 @@ public class RagClientManager {
                 embModel = settingReader.getStr("runtime", "default_model");
             }
             if (StringUtils.hasText(embKey) && StringUtils.isNotBlank(embBase)) {
-                // 暂时注释，编译错误
-                // EmbeddingClientSetting.Builder settingBuilder = EmbeddingClientSetting.builder()
-                //         .provider(engine.toLowerCase())
-                //         .appKey(embKey.trim())
-                //         .baseUrl(embBase.trim());
-                // if (StringUtils.hasText(embModel)) {
-                //     settingBuilder.model(embModel.trim());
-                // }
-                // EmbeddingClient client = EmbeddingClient.create(settingBuilder.build());
-                // if (client != null) {
-                //     log.info("[RagClientManager] 创建真实 EmbeddingClient: provider={}, model={}", engine, embModel);
-                //     return client;
-                // }
-                log.debug("[RagClientManager] EmbeddingClient创建暂时禁用");
-                return null;
+                EmbeddingClientSetting setting = EmbeddingClientSetting.builder()
+                        .provider(engine.toLowerCase())
+                        .appKey(embKey.trim())
+                        .baseUrl(embBase.trim())
+                        .model(StringUtils.hasText(embModel) ? embModel.trim() : null)
+                        .dimensions(embeddingDimensions)
+                        .build();
+                EmbeddingClient client = EmbeddingClient.create(setting);
+                if (client != null) {
+                    log.info("[RagClientManager] 创建真实 EmbeddingClient: provider={}, model={}, dim={}",
+                            engine, embModel, embeddingDimensions);
+                    return client;
+                }
             }
             // 无 runtime key 时回退离线
             log.debug("[RagClientManager] 无 runtime apiKey，EmbeddingClient 回退离线实现（engine={}）", engine);
         } catch (Exception e) {
             log.warn("[RagClientManager] EmbeddingClient SPI 创建失败，回退离线实现: {}", e.getMessage());
         }
-        log.info("[RagClientManager] 使用离线向量化 MemoryEmbeddingClient（engine={}）", engine);
-        return new MemoryEmbeddingClient();
+        log.info("[RagClientManager] 使用离线向量化 MemoryEmbeddingClient（engine={}, dim={}）", engine, embeddingDimensions);
+        return new MemoryEmbeddingClient().dimensions(embeddingDimensions);
     }
 
     /**
      * 创建向量存储：jvector 使用 ON_DISK 落盘，其余使用内存实现。
      * jvector 初始化失败（如 native VectorizationProvider 不可用）时降级到内存实现，
      * 保证 RAG 服务始终可用。
-     * @param storageName storage名称
-     * @param uploadDir uploaddir
-     * @return 创建向量storage的结果
+     *
+     * <p>生产默认 ON_DISK 模式 + 持久化索引路径（uploadDir 下的 jvector-index），
+     * 重启后向量数据不丢失；开发测试可配 memory 模式快速验证。</p>
+     *
+     * @param storageName 存储名称（jvector / memory / milvus 等，留空取属性默认）
+     * @param uploadDir   上传根目录，jvector 索引文件存放于其下
+     * @return VectorStorage 实例（jvector 失败时降级 memory）
      */
-    private VectorStorage createVectorStorage(String storageName, String uploadDir) {
+    private VectorStorage createVectorStorage(String storageName, String uploadDir, int embeddingDimensions) {
         String name = StringUtils.hasText(storageName)
                 ? storageName.trim().toLowerCase()
                 : properties.getVectorStorage();
         VectorCompareAlgorithm algorithm = VectorCompareAlgorithm.cosine();
+        int dim = embeddingDimensions > 0 ? embeddingDimensions : properties.getEmbeddingDimensions();
         if ("jvector".equals(name)) {
             try {
-                log.info("[RagClientManager] 向量存储使用 jvector(ON_DISK)");
-                return VectorStorageProvider.create("jvector", DEFAULT_EMBEDDING_DIMENSIONS, algorithm);
+                JVectorStorageProperties props = new JVectorStorageProperties();
+                // 生产持久化：ON_DISK 模式，索引文件落在 uploadDir 下，重启不丢失
+                props.setMode(JVectorStorageProperties.Mode.ON_DISK);
+                props.setIndexPath(uploadDir + "/jvector-index");
+                log.info("[RagClientManager] 向量存储使用 jvector(ON_DISK), indexPath={}", props.getIndexPath());
+                return VectorStorageProvider.create("jvector", dim, algorithm, props);
             } catch (Throwable e) {
                 log.warn("[RagClientManager] jvector 初始化失败，降级到内存存储: {}", e.getMessage());
             }
         }
         log.info("[RagClientManager] 向量存储使用 memory（无落盘）");
-        return VectorStorageProvider.create("memory", DEFAULT_EMBEDDING_DIMENSIONS, algorithm);
+        return VectorStorageProvider.create("memory", dim, algorithm);
     }
 
     /**
@@ -429,11 +442,11 @@ public class RagClientManager {
     }
 
     /**
-    * 创建文本分割器：按全局配置的切片 SPI 名称解析，未配置或不可用时回退 sentence。
-    * @param splitterName splitter名称
-    * @param chunkSize chunk大小
-    * @param chunkOverlap chunkoverlap
-    * @return 创建文本splitter的结果
+     * 创建文本分割器：按全局配置的切片 SPI 名称解析，未配置或不可用时回退 sentence。
+     * @param splitterName 分割器 SPI 扩展名，null 或空时默认 sentence
+     * @param chunkSize 分块大小（字符）
+     * @param chunkOverlap 相邻分块重叠字符数
+     * @return 文本分块器实例，不为 null
      */
     private TextSplitter createTextSplitter(String splitterName, int chunkSize, int chunkOverlap) {
         String name = StringUtils.hasText(splitterName) ? splitterName.trim().toLowerCase() : "sentence";
@@ -458,7 +471,9 @@ public class RagClientManager {
         String name = provider.trim().toLowerCase();
         try {
             RagClient client = RagClient.create(name, setting);
-            if (client != null) return client;
+            if (client != null) {
+                return client;
+            }
         } catch (Exception e) {
             log.warn("[RagClientManager] SPI 客户端 {} 创建失败，回退管线实现: {}", name, e.getMessage());
         }
