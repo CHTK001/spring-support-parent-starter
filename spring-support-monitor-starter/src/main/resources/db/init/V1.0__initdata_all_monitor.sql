@@ -1,5 +1,5 @@
 -- =====================================================================
--- V1.0__initdata_all.sql - spring-support-monitor-starter 全量种子
+-- V1.0__initdata_all_monitor.sql - spring-support-monitor-starter 全量种子
 -- 通道: INITDATA 虚拟线程异步；本模块无种子数据（占位文件，避免加载器
 --       找不到 initdata 通道时告警）。
 -- =====================================================================

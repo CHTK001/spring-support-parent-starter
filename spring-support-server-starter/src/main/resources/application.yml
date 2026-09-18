@@ -5,11 +5,11 @@ spring:
   application:
     name: server-test
   # 独立联调模式: 启动时执行建表脚本(幂等, IF NOT EXISTS)
-  # 说明: V1.0__init_server.sql 全量建表（含延迟检测字段），已归口 datasource-starter，classpath 路径不变
+  # 说明: 全量建表脚本归口本模块 db/init/（含延迟检测与 Agent/远控列），datasource-starter 不再保留副本
   sql:
     init:
       mode: always
-      schema-locations: classpath:db/init/V1.0__init_server.sql
+      schema-locations: classpath:db/init/V1.0__init_all_server.sql
   datasource:
     url: jdbc:h2:mem:serverdb;DB_CLOSE_DELAY=-1;MODE=MySQL;DATABASE_TO_UPPER=false
     driver-class-name: org.h2.Driver

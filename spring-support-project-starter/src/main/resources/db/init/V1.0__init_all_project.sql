@@ -44,6 +44,14 @@ CREATE TABLE IF NOT EXISTS ms_project (
     update_name             VARCHAR(64)   DEFAULT NULL COMMENT '更新人姓名',
     update_by               INT           DEFAULT NULL COMMENT '更新人',
     update_time             DATETIME      DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+    `ms_project_watchdog_enabled` TINYINT DEFAULT 0 COMMENT '守护进程开关: 0关闭 1开启(持续检测+挂了自动拉起)',
+    `ms_project_watchdog_interval` INT DEFAULT 30 COMMENT '守护检测间隔(秒,每项目独立设置,最小5秒)',
+    `ms_project_watchdog_max_fail` INT DEFAULT 1 COMMENT '守护连续失败阈值: 连续N次不健康才自动重启(0=仅告警)',
+    `ms_project_check_script` TEXT DEFAULT NULL COMMENT '自定义状态检测脚本(exit 0=健康,为空时回退健康检查类型探测)',
+    `ms_project_preflight_gate` TINYINT DEFAULT 0 COMMENT '部署前置门禁: 部署前校验主机在线/延迟,不可达直接拦截',
+    `ms_project_metric_enabled` TINYINT DEFAULT 0 COMMENT '指标采集开关: 0关闭 1开启(SSH轮询采集CPU/内存/磁盘)',
+    `ms_project_metric_interval` INT DEFAULT 60 COMMENT '指标采集间隔秒(最小10秒)',
+    `ms_project_metric_host_ids` VARCHAR(512) COMMENT '指标采集目标主机ID集合(JSON数组,空=项目绑定主机)',
     PRIMARY KEY (id),
     UNIQUE KEY uk_project_code (ms_project_code),
     KEY idx_project_name (ms_project_name),
@@ -108,32 +116,18 @@ CREATE TABLE IF NOT EXISTS ms_project_upload_archive (
 -- ============================================================
 -- 兼容历史库的增量加列（幂等，新库以上建表已含全部列）
 -- ============================================================
-ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_log_dir VARCHAR(512) DEFAULT NULL COMMENT '日志目录' AFTER ms_project_restart_script;
-ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_log_file VARCHAR(256) DEFAULT NULL COMMENT '日志文件名(如 app.log)' AFTER ms_project_log_dir;
-ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_auto_start TINYINT DEFAULT 0 COMMENT '部署成功后是否自动执行启动脚本: 0否 1是' AFTER ms_project_auto_extract;
-ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_health_enabled TINYINT DEFAULT 0 COMMENT '部署后健康检查: 0否 1是' AFTER ms_project_auto_start;
-ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_health_type VARCHAR(16) DEFAULT 'PORT' COMMENT '健康检查类型: PORT/HTTP/PROCESS' AFTER ms_project_health_enabled;
-ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_health_target VARCHAR(512) DEFAULT NULL COMMENT '健康检查目标(端口/URL/进程)' AFTER ms_project_health_type;
-ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_health_timeout INT DEFAULT 30 COMMENT '健康检查超时(秒)' AFTER ms_project_health_target;
-ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_auto_rollback TINYINT DEFAULT 0 COMMENT '失败自动回滚: 0否 1是' AFTER ms_project_health_timeout;
-ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_deploy_retry INT DEFAULT 0 COMMENT '单台失败重试次数' AFTER ms_project_auto_rollback;
-ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_archive_keep INT DEFAULT 0 COMMENT '归档保留数量(0不清理)' AFTER ms_project_deploy_retry;
 -- 守护进程（持续存活检测 + 自动拉起）+ 自定义状态检测脚本
-ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_watchdog_enabled TINYINT DEFAULT 0 COMMENT '守护进程开关: 0关闭 1开启(持续检测+挂了自动拉起)' AFTER ms_project_archive_keep;
-
-ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_watchdog_interval INT DEFAULT 30 COMMENT '守护检测间隔(秒,每项目独立设置,最小5秒)' AFTER ms_project_watchdog_enabled;
-
-ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_watchdog_max_fail INT DEFAULT 1 COMMENT '守护连续失败阈值: 连续N次不健康才自动重启(0=仅告警)' AFTER ms_project_watchdog_interval;
-
-ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_check_script TEXT DEFAULT NULL COMMENT '自定义状态检测脚本(exit 0=健康,为空时回退健康检查类型探测)' AFTER ms_project_watchdog_max_fail;
-
-
 -- 部署前置门禁 + 项目级指标采集（SSH 轮询，零 Agent）
-ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_preflight_gate TINYINT DEFAULT 0 COMMENT '部署前置门禁: 部署前校验主机在线/延迟,不可达直接拦截' AFTER ms_project_check_script;
 
-ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_metric_enabled TINYINT DEFAULT 0 COMMENT '指标采集开关: 0关闭 1开启(SSH轮询采集CPU/内存/磁盘)';
-
-ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_metric_interval INT DEFAULT 60 COMMENT '指标采集间隔秒(最小10秒)';
-
-ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_metric_host_ids VARCHAR(512) COMMENT '指标采集目标主机ID集合(JSON数组,空=项目绑定主机)';
-
+-- 项目指标时间序列（由 ProjectMetricServiceImpl 用 JdbcTemplate 直接读写）
+CREATE TABLE IF NOT EXISTS ms_project_metric (
+    id           BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    project_id   BIGINT       NOT NULL COMMENT '关联项目ID',
+    host_id      BIGINT       DEFAULT NULL COMMENT '目标主机ID',
+    metric_name  VARCHAR(64)  NOT NULL COMMENT '指标名: project.process.mem.mb / project.process.cpu / project.port.alive / project.http.code',
+    metric_value DOUBLE       DEFAULT NULL COMMENT '指标值',
+    collect_time DATETIME     DEFAULT CURRENT_TIMESTAMP COMMENT '采集时间',
+    PRIMARY KEY (id),
+    KEY idx_pm_project (project_id),
+    KEY idx_pm_metric (metric_name)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '项目指标时间序列';
