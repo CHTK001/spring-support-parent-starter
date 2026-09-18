@@ -937,6 +937,14 @@ ALTER TABLE `sys_ai_provider` ADD COLUMN IF NOT EXISTS `sys_ai_provider_api_key`
 ALTER TABLE `sys_ai_provider` ADD COLUMN IF NOT EXISTS `sys_ai_provider_logo` VARCHAR(1024) NULL COMMENT 'Logo 图片地址';
 ALTER TABLE `sys_ai_provider` ADD COLUMN IF NOT EXISTS `sys_ai_provider_models` TEXT NULL COMMENT '可用模型列表（JSON 字符串）';
 ALTER TABLE `sys_ai_provider` ADD COLUMN IF NOT EXISTS `sys_ai_provider_deleted` INT NOT NULL DEFAULT 0 COMMENT '逻辑删除标记';
+ALTER TABLE `sys_ai_provider` ADD COLUMN IF NOT EXISTS `create_name` VARCHAR(64) NULL COMMENT '创建人姓名';
+ALTER TABLE `sys_ai_provider` ADD COLUMN IF NOT EXISTS `create_by` INT NULL COMMENT '创建人';
+ALTER TABLE `sys_ai_provider` ADD COLUMN IF NOT EXISTS `create_time` DATETIME NULL COMMENT '创建时间';
+ALTER TABLE `sys_ai_provider` ADD COLUMN IF NOT EXISTS `update_name` VARCHAR(64) NULL COMMENT '更新人姓名';
+ALTER TABLE `sys_ai_provider` ADD COLUMN IF NOT EXISTS `update_by` INT NULL COMMENT '更新人';
+ALTER TABLE `sys_ai_provider` ADD COLUMN IF NOT EXISTS `update_time` DATETIME NULL COMMENT '更新时间';
+ALTER TABLE `sys_ai_bot_binding` ADD COLUMN IF NOT EXISTS `sys_ai_bot_binding_record_usage` TINYINT NOT NULL DEFAULT 1 COMMENT '是否记录AI用量（令牌/费用）';
+ALTER TABLE `sys_ai_session` ADD COLUMN IF NOT EXISTS `is_archived` TINYINT NOT NULL DEFAULT 0 COMMENT '是否已归档';
 INSERT IGNORE INTO `sys_ai_face_group` (`sys_ai_face_group_name`, `sys_ai_face_group_sort`)
 VALUES ('default', 0);
 UPDATE `sys_ai_manufacturer`
@@ -2214,3 +2222,57 @@ CREATE TABLE IF NOT EXISTS `sys_ai_usage_sync_log` (
     PRIMARY KEY (`sys_ai_usage_sync_log_id`),
     KEY `sys_ai_usage_sync_log_create_time` (`create_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI 用量同步日志';
+
+-- ---------------------------------------------------------------------
+-- 增量并入：实体已存在但库中缺表的四张表
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `sys_ai_role_group` (
+    `sys_ai_role_group_id`     INT          NOT NULL AUTO_INCREMENT COMMENT '分组ID',
+    `sys_ai_role_group_name`   VARCHAR(128) NOT NULL                COMMENT '分组名称',
+    `sys_ai_role_group_sort`   INT          NOT NULL DEFAULT 0      COMMENT '排序序号',
+    `sys_ai_role_group_status` INT          NOT NULL DEFAULT 1      COMMENT '状态 0禁用 1启用',
+    `sys_ai_role_group_delete` INT          NOT NULL DEFAULT 0      COMMENT '逻辑删除 0未删除 1已删除',
+    `create_name`              VARCHAR(64)  NULL                    COMMENT '创建人姓名',
+    `create_time`              DATETIME     NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time`              DATETIME     NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`sys_ai_role_group_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI 角色分组';
+
+CREATE TABLE IF NOT EXISTS `sys_ai_session_group` (
+    `id`          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '分组ID',
+    `name`        VARCHAR(128) NOT NULL                COMMENT '分组名称',
+    `sort_order`  INT          NOT NULL DEFAULT 0      COMMENT '排序序号',
+    `create_time` DATETIME     NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` DATETIME     NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI 会话分组';
+
+CREATE TABLE IF NOT EXISTS `sys_ai_companion_shared_config` (
+    `sys_ai_companion_shared_config_key`      VARCHAR(64) NOT NULL COMMENT '配置键',
+    `sys_ai_companion_shared_config_value`    TEXT        NULL     COMMENT '配置值（JSON）',
+    `sys_ai_companion_shared_config_updated_at` BIGINT    NOT NULL COMMENT '更新时间（毫秒）',
+    PRIMARY KEY (`sys_ai_companion_shared_config_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI 伴生共享配置';
+
+CREATE TABLE IF NOT EXISTS `workshop_asset` (
+    `asset_id`           VARCHAR(64)   NOT NULL COMMENT '资产ID（UUIDv7）',
+    `asset_kind`         VARCHAR(32)   NULL     COMMENT '资产类型',
+    `asset_title`        VARCHAR(512)  NULL     COMMENT '标题',
+    `asset_collection`   VARCHAR(255)  NULL     COMMENT '所属集合',
+    `asset_tags`         TEXT          NULL     COMMENT '标签JSON数组',
+    `asset_mime`         VARCHAR(128)  NULL     COMMENT 'MIME类型',
+    `asset_width`        INT           NULL     COMMENT '宽度',
+    `asset_height`       INT           NULL     COMMENT '高度',
+    `asset_bytes`        BIGINT        NULL     COMMENT '字节数',
+    `asset_in_library`   TINYINT       NOT NULL DEFAULT 0 COMMENT '是否入库',
+    `asset_text_content` LONGTEXT      NULL     COMMENT '文本内容',
+    `asset_origin`       VARCHAR(512)  NULL     COMMENT '来源',
+    `asset_file_path`    VARCHAR(1024) NULL     COMMENT '文件路径',
+    `asset_thumb_path`   VARCHAR(1024) NULL     COMMENT '缩略图路径',
+    `asset_created_at`   BIGINT        NOT NULL COMMENT '创建时间（毫秒）',
+    `asset_updated_at`   BIGINT        NOT NULL COMMENT '更新时间（毫秒）',
+    PRIMARY KEY (`asset_id`),
+    KEY `workshop_asset_collection` (`asset_collection`),
+    KEY `workshop_asset_kind` (`asset_kind`),
+    KEY `workshop_asset_in_library` (`asset_in_library`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='工坊资产';
