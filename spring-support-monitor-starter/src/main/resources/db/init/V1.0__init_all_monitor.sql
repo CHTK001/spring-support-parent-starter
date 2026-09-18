@@ -30,9 +30,12 @@ CREATE TABLE IF NOT EXISTS `ms_monitor` (
     `update_name`           VARCHAR(64)     DEFAULT NULL            COMMENT '更新人姓名',
     `update_by`             VARCHAR(64)     DEFAULT NULL            COMMENT '更新人',
     `update_time`           DATETIME        DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    `ms_monitor_agent_key` VARCHAR(64) NULL COMMENT '探针标识(Agent推送鉴权)',
+    `ms_server_host_id` BIGINT NULL COMMENT '关联服务器主机 ID(ms_server_host.id, 资产联动)',
     PRIMARY KEY (`id`),
     KEY `ms_monitor_ms_monitor_service` (`ms_monitor_service_type`),
-    KEY `ms_monitor_ms_monitor_enabled` (`ms_monitor_enabled`)
+    KEY `ms_monitor_ms_monitor_enabled` (`ms_monitor_enabled`),
+    KEY `idx_ms_monitor_server_host` (`ms_server_host_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='监控资产';
 
 -- ----------------------------------------------------------
@@ -153,7 +156,7 @@ CREATE TABLE IF NOT EXISTS `ms_monitor_metric_statistics` (
     `ms_monitor_metric_statistics_max_value` DOUBLE DEFAULT NULL,
     `ms_monitor_metric_statistics_count_value` BIGINT DEFAULT 0     COMMENT '样本数',
     PRIMARY KEY (`id`),
-    UNIQUE KEY `ms_monitor_metric_statistics_ms_monitor_metric_statistics_bucket` (`ms_monitor_metric_statistics_monitor_id`, `ms_monitor_metric_statistics_metric_name`, `ms_monitor_metric_statistics_hour_bucket`)
+    UNIQUE KEY `ms_monitor_metric_statistics_uk_bucket` (`ms_monitor_metric_statistics_monitor_id`, `ms_monitor_metric_statistics_metric_name`, `ms_monitor_metric_statistics_hour_bucket`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='监控小时聚合';
 
 -- ----------------------------------------------------------
@@ -264,7 +267,7 @@ CREATE TABLE IF NOT EXISTS `ms_monitor_redis_metric_statistics` (
     `ms_monitor_redis_metric_statistics_max_value` DOUBLE DEFAULT NULL,
     `ms_monitor_redis_metric_statistics_count_value` BIGINT DEFAULT 0,
     PRIMARY KEY (`id`),
-    UNIQUE KEY `ms_monitor_redis_metric_statistics_ms_monitor_redis_metric_statistics_bucket` (`ms_monitor_redis_metric_statistics_monitor_id`, `ms_monitor_redis_metric_statistics_metric_name`, `ms_monitor_redis_metric_statistics_hour_bucket`)
+    UNIQUE KEY `ms_monitor_redis_metric_statistics_uk_bucket` (`ms_monitor_redis_metric_statistics_monitor_id`, `ms_monitor_redis_metric_statistics_metric_name`, `ms_monitor_redis_metric_statistics_hour_bucket`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='监控 Redis 小时聚合';
 
 -- ----------------------------------------------------------
@@ -367,17 +370,10 @@ CREATE TABLE IF NOT EXISTS ms_server_node (
 -- ============================================================
 
 -- MsMonitor 追加探针标识列(Agent 推送鉴权)
-ALTER TABLE ms_monitor ADD COLUMN IF NOT EXISTS ms_monitor_agent_key VARCHAR(64) NULL COMMENT '探针标识(Agent推送鉴权)';
-
 -- ms_monitor 追加关联服务器主机 ID 列(ms_server_host.id, 资产联动)
-ALTER TABLE ms_monitor ADD COLUMN IF NOT EXISTS ms_server_host_id BIGINT NULL COMMENT '关联服务器主机 ID(ms_server_host.id, 资产联动)';
-
 -- 便于按资产查询监控项
-CREATE INDEX IF NOT EXISTS idx_ms_monitor_server_host ON ms_monitor (ms_server_host_id);
 
 -- MsMonitorAlarmEvent 追加触发时规则配置快照列
-ALTER TABLE ms_monitor_alarm_event ADD COLUMN IF NOT EXISTS ms_monitor_alarm_event_rule_snapshot VARCHAR(1024) NULL COMMENT '触发时规则配置快照(JSON)';
-
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- ============================================================
@@ -410,3 +406,46 @@ WHERE NOT EXISTS (SELECT 1 FROM `ms_monitor_config` WHERE `ms_monitor_config_key
 INSERT INTO `ms_monitor_config` (`ms_monitor_config_key`, `ms_monitor_config_value`, `ms_monitor_config_desc`)
 SELECT 'monitor.cleanup.cron', '0 0 3 * * ?', '数据清理任务 cron'
 WHERE NOT EXISTS (SELECT 1 FROM `ms_monitor_config` WHERE `ms_monitor_config_key` = 'monitor.cleanup.cron');
+
+-- ============================================================
+-- 项目守护/指标告警策略与规则种子（由 spring-support-project-starter 喂指标）
+-- ============================================================
+INSERT INTO ms_monitor_alarm_policy (`ms_monitor_alarm_policy_name`, `ms_monitor_alarm_policy_enabled`, `ms_monitor_alarm_policy_remark`)
+SELECT '项目守护与指标', 1, '项目守护失败自动拉起与指标采集相关告警'
+WHERE NOT EXISTS (SELECT 1 FROM ms_monitor_alarm_policy WHERE `ms_monitor_alarm_policy_name` = '项目守护与指标');
+
+INSERT INTO ms_monitor_alarm_rule
+(`ms_monitor_alarm_rule_policy_id`, `ms_monitor_alarm_rule_metric_name`, `ms_monitor_alarm_rule_condition`,
+ `ms_monitor_alarm_rule_threshold`, `ms_monitor_alarm_rule_consecutive_count`, `ms_monitor_alarm_rule_silence_minutes`,
+ `ms_monitor_alarm_rule_level`, `ms_monitor_alarm_rule_enabled`)
+SELECT p.id, 'project.watchdog.fail', 'GT', 1, 1, 10, 'P2', 1
+FROM ms_monitor_alarm_policy p
+WHERE p.`ms_monitor_alarm_policy_name` = '项目守护与指标'
+  AND NOT EXISTS (SELECT 1 FROM ms_monitor_alarm_rule r WHERE r.`ms_monitor_alarm_rule_metric_name` = 'project.watchdog.fail');
+
+INSERT INTO ms_monitor_alarm_rule
+(`ms_monitor_alarm_rule_policy_id`, `ms_monitor_alarm_rule_metric_name`, `ms_monitor_alarm_rule_condition`,
+ `ms_monitor_alarm_rule_threshold`, `ms_monitor_alarm_rule_consecutive_count`, `ms_monitor_alarm_rule_silence_minutes`,
+ `ms_monitor_alarm_rule_level`, `ms_monitor_alarm_rule_enabled`)
+SELECT p.id, 'project.watchdog.restart.fail', 'GT', 1, 1, 10, 'P1', 1
+FROM ms_monitor_alarm_policy p
+WHERE p.`ms_monitor_alarm_policy_name` = '项目守护与指标'
+  AND NOT EXISTS (SELECT 1 FROM ms_monitor_alarm_rule r WHERE r.`ms_monitor_alarm_rule_metric_name` = 'project.watchdog.restart.fail');
+
+INSERT INTO ms_monitor_alarm_rule
+(`ms_monitor_alarm_rule_policy_id`, `ms_monitor_alarm_rule_metric_name`, `ms_monitor_alarm_rule_condition`,
+ `ms_monitor_alarm_rule_threshold`, `ms_monitor_alarm_rule_consecutive_count`, `ms_monitor_alarm_rule_silence_minutes`,
+ `ms_monitor_alarm_rule_level`, `ms_monitor_alarm_rule_enabled`)
+SELECT p.id, 'project.port.alive', 'LE', 0, 2, 10, 'P1', 1
+FROM ms_monitor_alarm_policy p
+WHERE p.`ms_monitor_alarm_policy_name` = '项目守护与指标'
+  AND NOT EXISTS (SELECT 1 FROM ms_monitor_alarm_rule r WHERE r.`ms_monitor_alarm_rule_metric_name` = 'project.port.alive');
+
+INSERT INTO ms_monitor_alarm_rule
+(`ms_monitor_alarm_rule_policy_id`, `ms_monitor_alarm_rule_metric_name`, `ms_monitor_alarm_rule_condition`,
+ `ms_monitor_alarm_rule_threshold`, `ms_monitor_alarm_rule_consecutive_count`, `ms_monitor_alarm_rule_silence_minutes`,
+ `ms_monitor_alarm_rule_level`, `ms_monitor_alarm_rule_enabled`)
+SELECT p.id, 'project.collect.fail', 'GT', 0, 3, 30, 'P3', 1
+FROM ms_monitor_alarm_policy p
+WHERE p.`ms_monitor_alarm_policy_name` = '项目守护与指标'
+  AND NOT EXISTS (SELECT 1 FROM ms_monitor_alarm_rule r WHERE r.`ms_monitor_alarm_rule_metric_name` = 'project.collect.fail');

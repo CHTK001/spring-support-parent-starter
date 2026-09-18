@@ -112,12 +112,27 @@ CREATE TABLE IF NOT EXISTS ms_server_host (
     ms_server_host_last_delay_time   DATETIME NULL           COMMENT '最近延迟检测时间(主机级)',
     ms_server_host_ports             TEXT NULL               COMMENT '端口扫描结果(JSON数组)',
     ms_server_host_last_port_scan_time DATETIME NULL         COMMENT '最近端口扫描时间',
+    ms_server_host_agent_installed INT NULL DEFAULT 0       COMMENT 'Agent 是否已安装(0否 1是)',
+    ms_server_host_agent_port      INT NULL DEFAULT 19876  COMMENT 'Agent HTTP端口(画像与生命周期共用)',
+    ms_server_host_agent_version   VARCHAR(32) NULL        COMMENT 'Agent版本号(/health回读)',
+    ms_server_host_agent_time      DATETIME NULL           COMMENT '最近一次Agent采集成功时间',
+    ms_server_host_agent_error     VARCHAR(512) NULL       COMMENT '最近一次Agent失败原因',
     create_by                   INT          NULL                    COMMENT '创建人',
     create_name                 VARCHAR(64)  NULL                    COMMENT '创建人名称',
     create_time                 DATETIME     NULL                    COMMENT '创建时间',
      update_name             VARCHAR(64)  NULL                    COMMENT '更新人名称',
     update_by                   INT          NULL                    COMMENT '更新人',
     update_time                 DATETIME     NULL                    COMMENT '更新时间',
+    `ms_server_host_gpu_count` INT NULL COMMENT 'GPU卡数(探测结果)',
+    `ms_server_host_gpu_model` VARCHAR(256) NULL COMMENT 'GPU型号(探测结果)',
+    `ms_server_host_networks` TEXT NULL COMMENT '网卡信息(JSON数组)',
+    `ms_server_host_cpu_usage` DECIMAL(5,2) NULL COMMENT 'CPU使用率%(探测结果)',
+    `ms_server_host_mem_usage` DECIMAL(5,2) NULL COMMENT '内存使用率%(探测结果)',
+    `ms_server_host_disk_usage` DECIMAL(5,2) NULL COMMENT '磁盘使用率%(探测结果)',
+    ms_server_host_remote_protocol VARCHAR(16) NULL DEFAULT NULL COMMENT '远控协议: SSH/RDP/VNC, 空则按操作系统类型推断',
+    ms_server_host_remote_port     INT          NULL DEFAULT NULL COMMENT '远控端口, 空则取协议默认端口(SSH 22/RDP 3389/VNC 5900)',
+    ms_server_host_remote_mode     VARCHAR(16)  NULL DEFAULT 'GUACD' COMMENT '远控模式: GUACD 经 guacd 中继 / DIRECT 平台原生客户端直连',
+    ms_server_host_vnc_password    VARCHAR(512) NULL DEFAULT NULL COMMENT 'VNC 口令(AES 密文)',
     PRIMARY KEY (id),
     UNIQUE KEY uk_server_host_agent (ms_server_host_agent_key),
     KEY idx_server_host_group (ms_server_group_id),
@@ -257,6 +272,9 @@ CREATE TABLE IF NOT EXISTS ms_proxy (
     port             INT          NOT NULL COMMENT '代理端口',
     protocol         VARCHAR(16)  NULL COMMENT '协议（Http/Https/Socks4/Socks5）',
     source           VARCHAR(64)  NULL COMMENT '来源',
+    delay            BIGINT       NULL COMMENT '延迟（毫秒），探测结果',
+    reachable        INT          NULL DEFAULT 0 COMMENT '是否可达（0否 1是）',
+    check_time       BIGINT       NULL COMMENT '最近一次探测时间（毫秒时间戳）',
     create_by        INT          NULL COMMENT '创建人',
     create_name      VARCHAR(64)  NULL COMMENT '创建人名称',
     create_time      DATETIME     NULL COMMENT '创建时间',
@@ -271,23 +289,9 @@ CREATE TABLE IF NOT EXISTS ms_proxy (
 -- 主机延迟检测字段（原 V1.1__add_host_delay_detect，老库补列；新库已由
 -- ms_server_host 全量建表包含，此处幂等 IF NOT EXISTS）
 -- ---------------------------------------------------------------------
-ALTER TABLE ms_server_host ADD COLUMN IF NOT EXISTS ms_server_host_delay_enabled INT NULL DEFAULT 0 COMMENT '延迟检测开关(主机级)';
-ALTER TABLE ms_server_host ADD COLUMN IF NOT EXISTS ms_server_host_delay_interval INT NULL DEFAULT 60 COMMENT '延迟检测间隔秒(主机级)';
-ALTER TABLE ms_server_host ADD COLUMN IF NOT EXISTS ms_server_host_delay_ms BIGINT NULL COMMENT '最近延迟毫秒(检测结果)';
-ALTER TABLE ms_server_host ADD COLUMN IF NOT EXISTS ms_server_host_last_delay_time DATETIME NULL COMMENT '最近延迟检测时间(主机级)';
-ALTER TABLE ms_server_host ADD COLUMN IF NOT EXISTS ms_server_host_ports TEXT NULL COMMENT '端口扫描结果(JSON数组)';
-ALTER TABLE ms_server_host ADD COLUMN IF NOT EXISTS ms_server_host_last_port_scan_time DATETIME NULL COMMENT '最近端口扫描时间';
-
 -- ---------------------------------------------------------------------
 -- 主机扩展采集字段（GPU/网卡/CPU使用率/内存使用率/磁盘使用率，幂等 IF NOT EXISTS）
 -- ---------------------------------------------------------------------
-ALTER TABLE ms_server_host ADD COLUMN IF NOT EXISTS ms_server_host_gpu_count INT NULL COMMENT 'GPU卡数(探测结果)';
-ALTER TABLE ms_server_host ADD COLUMN IF NOT EXISTS ms_server_host_gpu_model VARCHAR(256) NULL COMMENT 'GPU型号(探测结果)';
-ALTER TABLE ms_server_host ADD COLUMN IF NOT EXISTS ms_server_host_networks TEXT NULL COMMENT '网卡信息(JSON数组)';
-ALTER TABLE ms_server_host ADD COLUMN IF NOT EXISTS ms_server_host_cpu_usage DECIMAL(5,2) NULL COMMENT 'CPU使用率%(探测结果)';
-ALTER TABLE ms_server_host ADD COLUMN IF NOT EXISTS ms_server_host_mem_usage DECIMAL(5,2) NULL COMMENT '内存使用率%(探测结果)';
-ALTER TABLE ms_server_host ADD COLUMN IF NOT EXISTS ms_server_host_disk_usage DECIMAL(5,2) NULL COMMENT '磁盘使用率%(探测结果)';
-
 -- ---------------------------------------------------------------------
 -- 系统配置初始化数据（原 V1.0__initdata_server.sql，INSERT IGNORE 幂等）
 -- ---------------------------------------------------------------------
