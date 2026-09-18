@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.ai.support.chat.ChatResponse;
-import com.chua.starter.ai.support.chat.ChatClientRegistry;
+import com.chua.starter.ai.support.registry.ChatClientRegistry;
 import com.chua.starter.eduai.configuration.EduAiProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,6 +43,11 @@ public class EduAiService {
     /** Objectmapper */
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    /**
+     * 构造方法，创建 EduAi服务 实例。
+     *
+     * @param properties 属性，不允许为 null
+     */
     @Autowired
     public EduAiService(EduAiProperties properties) {
         this.properties = properties;
@@ -292,11 +297,6 @@ public class EduAiService {
     private ChatResponse call(String systemPrompt, String userPrompt) {
         com.chua.common.support.ai.chat.ChatClient commonClient = resolveClient();
         if (commonClient == null) {
-            /**
-            * 对话响应。
-            * @param "" ""
-            * @return 对话响应的结果
-            */
             return new ChatResponse("");
         }
 

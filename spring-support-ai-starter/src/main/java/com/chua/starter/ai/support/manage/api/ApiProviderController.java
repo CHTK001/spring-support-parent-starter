@@ -224,12 +224,6 @@ public class ApiProviderController {
             providerId = String.valueOf(System.currentTimeMillis() + (int)(Math.random() * 1000));
         }
         if (providerMapper.selectById(providerId) != null) {
-            /**
-            * api异常。
-            * @param ApiErrorCode.CONFLICT api错误编码.conflict
-            * @param providerId 提供者标识
-            * @return api异常的结果
-            */
             throw new ApiException(ApiErrorCode.CONFLICT, "provider_id 已存在: " + providerId);
         }
         long now = System.currentTimeMillis();
@@ -342,10 +336,6 @@ public class ApiProviderController {
     @DeleteMapping("/providers/{provider_id}")
     @Transactional
     public ApiResult<Void> deleteProvider(@PathVariable("provider_id") String providerId) {
-        /**
-        * require提供者。
-        * @param providerId 提供者标识
-        */
         requireProvider(providerId);
         providerMapper.deleteById(providerId);
         modelMapper.delete(new LambdaQueryWrapper<SysAiProviderModel>()
@@ -502,12 +492,6 @@ public class ApiProviderController {
  // ONNX 本地离线模型的 基础_url 存的是模型文件路径，创建前预览阶段允许为空
         String baseUrl = str(body, "base_url");
         if ((baseUrl == null || baseUrl.isBlank()) && !(platform != null && platform.toLowerCase().contains("onnx"))) {
-            /**
-            * api异常。
-            * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
-            * @param 不能为空" 不能为空"
-            * @return api异常的结果
-            */
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "base_url 不能为空");
         }
         @SuppressWarnings("unchecked")
@@ -555,7 +539,11 @@ public class ApiProviderController {
         return ApiResult.ok(out);
     }
 
-    /** 用指定 Key 调上游 /模型，判定该 Key 是否有效（只读、不改库）。 */
+    /**
+     * 用指定 Key 调上游 /模型，判定该 Key 是否有效（只读、不改库）。
+     * @param body 请求体，不允许为 null
+     * @return Api结果 对象
+     */
     @PostMapping("/providers/test-connection")
     public ApiResult<Map<String, Object>> testConnection(@RequestBody Map<String, Object> body) {
         String apiUrl = (String) body.get("apiUrl");
@@ -661,10 +649,6 @@ public class ApiProviderController {
     */
     @GetMapping("/providers/{provider_id}/connections")
     public ApiResult<List<Map<String, Object>>> listConnections(@PathVariable("provider_id") String providerId) {
-        /**
-        * require提供者。
-        * @param providerId 提供者标识
-        */
         requireProvider(providerId);
         List<SysAiProviderConnection> conns = connectionMapper.selectList(
                 new LambdaQueryWrapper<SysAiProviderConnection>()
@@ -687,22 +671,12 @@ public class ApiProviderController {
     @GetMapping("/providers/{provider_id}/connections/{role}")
     public ApiResult<Map<String, Object>> getConnection(@PathVariable("provider_id") String providerId,
                                                         @PathVariable("role") String role) {
-        /**
-        * require提供者。
-        * @param providerId 提供者标识
-        */
         requireProvider(providerId);
         SysAiProviderConnection conn = connectionMapper.selectOne(
                 new LambdaQueryWrapper<SysAiProviderConnection>()
                         .eq(SysAiProviderConnection::getProviderId, providerId)
                         .eq(SysAiProviderConnection::getRole, role));
         if (conn == null) {
-            /**
-            * api异常。
-            * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
-            * @param role 角色
-            * @return api异常的结果
-            */
             throw new ApiException(ApiErrorCode.NOT_FOUND, "connection 不存在: " + role);
         }
         return ApiResult.ok(toConnectionResponse(conn));
@@ -731,12 +705,6 @@ public class ApiProviderController {
         if (existing == null) {
             // 新建：凭证为必填
             if (body.get("credentials") == null) {
-                /**
-                * api异常。
-                * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
-                * @param 必填" 必填"
-                * @return api异常的结果
-                */
                 throw new ApiException(ApiErrorCode.INVALID_PARAM, "新建连接时 credentials 必填");
             }
             SysAiProviderConnection conn = toConnectionEntity(providerId, body, System.currentTimeMillis());
@@ -777,22 +745,12 @@ public class ApiProviderController {
     @Transactional
     public ApiResult<Void> deleteConnection(@PathVariable("provider_id") String providerId,
                                             @PathVariable("role") String role) {
-        /**
-        * require提供者。
-        * @param providerId 提供者标识
-        */
         requireProvider(providerId);
         int deleted = connectionMapper.delete(
                 new LambdaQueryWrapper<SysAiProviderConnection>()
                         .eq(SysAiProviderConnection::getProviderId, providerId)
                         .eq(SysAiProviderConnection::getRole, role));
         if (deleted == 0) {
-            /**
-            * api异常。
-            * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
-            * @param role 角色
-            * @return api异常的结果
-            */
             throw new ApiException(ApiErrorCode.NOT_FOUND, "connection 不存在: " + role);
         }
         return ApiResult.ok();
@@ -839,12 +797,6 @@ public class ApiProviderController {
         SysAiProvider provider = requireProvider(providerId);
         Map<String, Object> modelInput = uncheckedCast(body.get("model"));
         if (modelInput == null) {
-            /**
-            * api异常。
-            * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
-            * @param 不能为空" 不能为空"
-            * @return api异常的结果
-            */
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "model 不能为空");
         }
         String modelName = requireStr(modelInput, "model");
@@ -889,12 +841,6 @@ public class ApiProviderController {
         String newName = requireStr(body, "new_model");
  // 新 标识 非法或与旧 标识 相同直接拒绝
         if (newName.equals(oldName)) {
-            /**
-            * api异常。
-            * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
-            * @param 相同" 相同"
-            * @return api异常的结果
-            */
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "新模型 ID 不能与原 ID 相同");
         }
         SysAiProviderModel existing = modelMapper.selectOne(
@@ -902,12 +848,6 @@ public class ApiProviderController {
                         .eq(SysAiProviderModel::getProviderId, providerId)
                         .eq(SysAiProviderModel::getModel, oldName));
         if (existing == null) {
-            /**
-            * api异常。
-            * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
-            * @param oldName 旧名称
-            * @return api异常的结果
-            */
             throw new ApiException(ApiErrorCode.NOT_FOUND, "provider model 不存在: " + oldName);
         }
  // 目标 标识 已被占用则冲突
@@ -916,12 +856,6 @@ public class ApiProviderController {
                         .eq(SysAiProviderModel::getProviderId, providerId)
                         .eq(SysAiProviderModel::getModel, newName));
         if (dup != null) {
-            /**
-            * api异常。
-            * @param ApiErrorCode.CONFLICT api错误编码.conflict
-            * @param newName 新名称
-            * @return api异常的结果
-            */
             throw new ApiException(ApiErrorCode.CONFLICT, "模型 ID 已存在: " + newName);
         }
  // 复制到新 标识 并删除旧行（同事务原子生效）
@@ -946,22 +880,12 @@ public class ApiProviderController {
     @Transactional
     public ApiResult<Void> deleteProviderModel(@RequestParam("provider_id") String providerId,
                                                @RequestParam("model") String model) {
-        /**
-        * require提供者。
-        * @param providerId 提供者标识
-        */
         requireProvider(providerId);
         int deleted = modelMapper.delete(
                 new LambdaQueryWrapper<SysAiProviderModel>()
                         .eq(SysAiProviderModel::getProviderId, providerId)
                         .eq(SysAiProviderModel::getModel, model));
         if (deleted == 0) {
-            /**
-            * api异常。
-            * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
-            * @param model 模型
-            * @return api异常的结果
-            */
             throw new ApiException(ApiErrorCode.NOT_FOUND, "provider model 不存在: " + model);
         }
         return ApiResult.ok();
@@ -1031,12 +955,16 @@ public class ApiProviderController {
             if (singleKey != null && !singleKey.toString().isEmpty()) {
                 for (String k : singleKey.toString().split(",")) {
                     String trimmed = k.trim();
-                    if (!trimmed.isEmpty()) allKeys.add(trimmed);
+                    if (!trimmed.isEmpty()) {
+                        allKeys.add(trimmed);
+                    }
                 }
             }
             if (multiKeys instanceof List) {
                 for (Object k : (List<?>) multiKeys) {
-                    if (k != null && !k.toString().isEmpty()) allKeys.add(k.toString().trim());
+                    if (k != null && !k.toString().isEmpty()) {
+                        allKeys.add(k.toString().trim());
+                    }
                 }
             }
             map.put("api_keys", allKeys);
@@ -1529,12 +1457,6 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
         }
         // 基础地址缺失直接判参数错误
         if (baseUrl == null || baseUrl.isBlank()) {
-            /**
-            * api异常。
-            * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
-            * @param 未配置，无法拉取模型列表" 未配置，无法拉取模型列表"
-            * @return api异常的结果
-            */
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "base_url 未配置，无法拉取模型列表");
         }
         String apiKey = extractApiKey(credentials);
@@ -1559,12 +1481,6 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
         }
         // 仍然失败则按无法连接处理
         if (models == null) {
-            /**
-            * api异常。
-            * @param ApiErrorCode.BAD_GATEWAY api错误编码.badgateway
-            * @param Key" 键"
-            * @return api异常的结果
-            */
             throw new ApiException(ApiErrorCode.BAD_GATEWAY, "无法从供应商拉取模型列表，请检查 API 地址和 Key");
         }
         Map<String, Object> out = new LinkedHashMap<>(4);
@@ -1647,30 +1563,12 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
             int status = response.statusCode();
             // 按前端契约映射错误码
             if (status == 401) {
-                /**
-                * api异常。
-                * @param ApiErrorCode.UNAUTHORIZED api错误编码.unauthorized
-                * @param 无效或已过期" 无效或已过期"
-                * @return api异常的结果
-                */
                 throw new ApiException(ApiErrorCode.UNAUTHORIZED, "API Key 无效或已过期");
             }
             if (status == 403) {
-                /**
-                * api异常。
-                * @param ApiErrorCode.FORBIDDEN api错误编码.forbidden
-                * @param 没有读取模型列表的权限" 没有读取模型列表的权限"
-                * @return api异常的结果
-                */
                 throw new ApiException(ApiErrorCode.FORBIDDEN, "该 API Key 没有读取模型列表的权限");
             }
             if (status == 429) {
-                /**
-                * api异常。
-                * @param ApiErrorCode.RATE_LIMITED api错误编码.rate限制
-                * @param "供应商请求过于频繁，请稍后重试" "供应商请求过于频繁，请稍后重试"
-                * @return api异常的结果
-                */
                 throw new ApiException(ApiErrorCode.RATE_LIMITED, "供应商请求过于频繁，请稍后重试");
             }
             if (status == 404) {
@@ -1678,12 +1576,6 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
                 return null;
             }
             if (status < 200 || status >= 300) {
-                /**
-                * api异常。
-                * @param ApiErrorCode.BAD_GATEWAY api错误编码.badgateway
-                * @param status 状态
-                * @return api异常的结果
-                */
                 throw new ApiException(ApiErrorCode.BAD_GATEWAY, "供应商模型接口返回 " + status);
             }
             /**
@@ -1696,12 +1588,6 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
             // 业务异常直接向上抛出
             throw e;
         } catch (java.net.http.HttpTimeoutException e) {
-            /**
-            * api异常。
-            * @param ApiErrorCode.TIMEOUT api错误编码.超时
-            * @param "供应商模型接口请求超时" "供应商模型接口请求超时"
-            * @return api异常的结果
-            */
             throw new ApiException(ApiErrorCode.TIMEOUT, "供应商模型接口请求超时");
         } catch (Exception e) {
             // 网络层异常统一按网关错误处理
@@ -1856,12 +1742,6 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
     private SysAiProvider requireProvider(String providerId) {
         SysAiProvider e = providerMapper.selectById(providerId);
         if (e == null) {
-            /**
-            * api异常。
-            * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
-            * @param providerId 提供者标识
-            * @return api异常的结果
-            */
             throw new ApiException(ApiErrorCode.NOT_FOUND, "provider 不存在: " + providerId);
         }
         return e;
@@ -1891,12 +1771,6 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
     private String requireStr(Map<String, Object> map, String key) {
         String s = str(map, key);
         if (s == null) {
-            /**
-            * api异常。
-            * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
-            * @param 不能为空" 不能为空"
-            * @return api异常的结果
-            */
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "字段 " + key + " 不能为空");
         }
         return s;

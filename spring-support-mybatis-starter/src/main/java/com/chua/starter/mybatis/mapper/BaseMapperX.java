@@ -35,6 +35,7 @@ public interface BaseMapperX<T> extends MPJBaseMapper<T> {
     * @param pageParam page参数
     * @param @Param("ew" @参数("ew"
     * @return 选择page的结果
+    * @param queryWrapper 查询Wrapper，不允许为 null
     */
     default PageResult<T> selectPage(Query<T> pageParam, @Param("ew") Wrapper<T> queryWrapper) {
         // 特殊：不分页，直接查询全部

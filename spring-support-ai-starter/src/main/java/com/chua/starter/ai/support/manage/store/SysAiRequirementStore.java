@@ -191,17 +191,39 @@ public class SysAiRequirementStore {
         String oldStatus = existing.getStatus();
         LambdaUpdateWrapper<SysAiRequirement> update = new LambdaUpdateWrapper<>();
         update.eq(SysAiRequirement::getRequirementId, requirementId);
-        if (body.containsKey("title"))        update.set(SysAiRequirement::getTitle,        getString(body, "title"));
-        if (body.containsKey("content"))      update.set(SysAiRequirement::getContent,      getString(body, "content"));
-        if (body.containsKey("tag"))          update.set(SysAiRequirement::getTag,          getString(body, "tag"));
-        if (body.containsKey("order_key"))    update.set(SysAiRequirement::getOrderKey,     getString(body, "order_key"));
-        if (body.containsKey("status"))       update.set(SysAiRequirement::getStatus,       getString(body, "status"));
-        if (body.containsKey("completion_note")) update.set(SysAiRequirement::getCompletionNote, getString(body, "completion_note"));
-        if (body.containsKey("origin"))       update.set(SysAiRequirement::getOrigin,       getString(body, "origin"));
-        if (body.containsKey("started_at"))   update.set(SysAiRequirement::getStartedAt,    getLong(body, "started_at"));
-        if (body.containsKey("completed_at")) update.set(SysAiRequirement::getCompletedAt,  getLong(body, "completed_at"));
-        if (body.containsKey("attempt_count")) update.set(SysAiRequirement::getAttemptCount, getInt(body, "attempt_count"));
-        if (body.containsKey("extra"))        update.set(SysAiRequirement::getExtra,        body.get("extra"));
+        if (body.containsKey("title")) {
+            update.set(SysAiRequirement::getTitle,        getString(body, "title"));
+        }
+        if (body.containsKey("content")) {
+            update.set(SysAiRequirement::getContent,      getString(body, "content"));
+        }
+        if (body.containsKey("tag")) {
+            update.set(SysAiRequirement::getTag,          getString(body, "tag"));
+        }
+        if (body.containsKey("order_key")) {
+            update.set(SysAiRequirement::getOrderKey,     getString(body, "order_key"));
+        }
+        if (body.containsKey("status")) {
+            update.set(SysAiRequirement::getStatus,       getString(body, "status"));
+        }
+        if (body.containsKey("completion_note")) {
+            update.set(SysAiRequirement::getCompletionNote, getString(body, "completion_note"));
+        }
+        if (body.containsKey("origin")) {
+            update.set(SysAiRequirement::getOrigin,       getString(body, "origin"));
+        }
+        if (body.containsKey("started_at")) {
+            update.set(SysAiRequirement::getStartedAt,    getLong(body, "started_at"));
+        }
+        if (body.containsKey("completed_at")) {
+            update.set(SysAiRequirement::getCompletedAt,  getLong(body, "completed_at"));
+        }
+        if (body.containsKey("attempt_count")) {
+            update.set(SysAiRequirement::getAttemptCount, getInt(body, "attempt_count"));
+        }
+        if (body.containsKey("extra")) {
+            update.set(SysAiRequirement::getExtra,        body.get("extra"));
+        }
         update.set(SysAiRequirement::getUpdateTime, System.currentTimeMillis());
         requirementMapper.update(null, update);
         SysAiRequirement refreshed = requirementMapper.selectById(requirementId);
@@ -435,10 +457,18 @@ public class SysAiRequirementStore {
         }
         LambdaUpdateWrapper<SysAiDataSource> update = new LambdaUpdateWrapper<>();
         update.eq(SysAiDataSource::getId, id);
-        if (body.containsKey("name"))         update.set(SysAiDataSource::getName,         getString(body, "name"));
-        if (body.containsKey("enabled"))      update.set(SysAiDataSource::getEnabled,       body.containsKey("enabled") ? Boolean.parseBoolean(body.get("enabled").toString()) : null);
-        if (body.containsKey("config"))       update.set(SysAiDataSource::getConfig,        body.get("config"));
-        if (body.containsKey("sync_cron"))    update.set(SysAiDataSource::getSyncCron,      getString(body, "sync_cron"));
+        if (body.containsKey("name")) {
+            update.set(SysAiDataSource::getName,         getString(body, "name"));
+        }
+        if (body.containsKey("enabled")) {
+            update.set(SysAiDataSource::getEnabled,       body.containsKey("enabled") ? Boolean.parseBoolean(body.get("enabled").toString()) : null);
+        }
+        if (body.containsKey("config")) {
+            update.set(SysAiDataSource::getConfig,        body.get("config"));
+        }
+        if (body.containsKey("sync_cron")) {
+            update.set(SysAiDataSource::getSyncCron,      getString(body, "sync_cron"));
+        }
         update.set(SysAiDataSource::getUpdateTime, System.currentTimeMillis());
         dataSourceMapper.update(null, update);
         return toDataSourceMap(dataSourceMapper.selectById(id));
@@ -527,7 +557,9 @@ public class SysAiRequirementStore {
         int synced = 0;
         for (Map<String, Object> row : remoteRecords) {
             String remoteId = (String) row.get("requirement_id");
-            if (remoteId == null || remoteId.isEmpty()) continue;
+            if (remoteId == null || remoteId.isEmpty()) {
+                continue;
+            }
             try {
                 Map<String, Object> existing = get(remoteId);
                 if (existing == null) {
@@ -586,6 +618,12 @@ public class SysAiRequirementStore {
         return registry.list();
     }
 
+    /**
+     * 转为数据来源映射。
+     *
+     * @param ds 方法入参 ds
+     * @return 结果映射，无数据时为空映射
+     */
     private Map<String, Object> toDataSourceMap(SysAiDataSource ds) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("id", ds.getId());
@@ -603,6 +641,12 @@ public class SysAiRequirementStore {
 
     // ======================== 私有工具 ========================
 
+    /**
+     * 转为映射。
+     *
+     * @param r 方法入参 r
+     * @return 结果映射，无数据时为空映射
+     */
     @SuppressWarnings("unchecked")
     private Map<String, Object> toMap(SysAiRequirement r) {
         Map<String, Object> m = new LinkedHashMap<>();
@@ -626,21 +670,50 @@ public class SysAiRequirementStore {
         return m;
     }
 
+    /**
+     * 获取字符串。
+     *
+     * @param map 映射，不允许为 null
+     * @param key 键，不允许为 null
+     * @return 结果字符串
+     */
     private String getString(Map<String, Object> map, String key) {
         Object v = map.get(key);
         return v != null ? v.toString() : null;
     }
 
+    /**
+     * 获取字符串。
+     *
+     * @param map 映射，不允许为 null
+     * @param key 键，不允许为 null
+     * @param defaultValue default值，不允许为 null
+     * @return 结果字符串
+     */
     private String getString(Map<String, Object> map, String key, String defaultValue) {
         Object v = map.get(key);
         return v != null ? v.toString() : defaultValue;
     }
 
+    /**
+     * 获取Long。
+     *
+     * @param map 映射，不允许为 null
+     * @param key 键，不允许为 null
+     * @return Long 对象
+     */
     private Long getLong(Map<String, Object> map, String key) {
         Object v = map.get(key);
         return v instanceof Number ? ((Number) v).longValue() : null;
     }
 
+    /**
+     * 获取Int。
+     *
+     * @param map 映射，不允许为 null
+     * @param key 键，不允许为 null
+     * @return Integer 对象
+     */
     private Integer getInt(Map<String, Object> map, String key) {
         Object v = map.get(key);
         return v instanceof Number ? ((Number) v).intValue() : null;
@@ -648,13 +721,16 @@ public class SysAiRequirementStore {
 
     /**
     * 获取所有 AutoWork 标签绑定，按 tag 分组。
+    * @return 结果列表，无数据时为空列表
     */
     @SuppressWarnings("unchecked")
     public List<Map<String, Object>> getTagBindings() {
         Map<String, List<Map<String, Object>>> byTag = new LinkedHashMap<>();
         for (Map<String, Object> binding : autoworkBindings.values()) {
             String tag = (String) binding.get("tag");
-            if (tag == null || tag.isBlank()) continue;
+            if (tag == null || tag.isBlank()) {
+                continue;
+            }
             byTag.computeIfAbsent(tag, k -> new ArrayList<>()).add(binding);
         }
         List<Map<String, Object>> result = new ArrayList<>();

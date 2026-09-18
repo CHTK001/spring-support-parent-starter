@@ -381,7 +381,10 @@ public class DatalakePerfProbe {
         @Override public String type() { return type; }
         @Override public void start() {}
         @Override public void stop() {}
-        @Override public boolean write(DataEnvelope env, Map<String, Object> config) { count.incrementAndGet(); return true; }
+        @Override public boolean write(DataEnvelope env, Map<String, Object> config) {
+            count.incrementAndGet();
+            return true;
+        }
         @Override public EngineDataSource<?> getDataSource() { return null; }
     }
 }

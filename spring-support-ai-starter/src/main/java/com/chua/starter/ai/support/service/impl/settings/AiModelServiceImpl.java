@@ -174,6 +174,13 @@ public class AiModelServiceImpl implements AiModelService {
         return toDto(model, resolveProviderName(model.getModelProviderId(), null));
     }
 
+    /**
+     * 解析提供者名称。
+     *
+     * @param providerId 提供者ID，不允许为 null
+     * @param providerNames 提供者Names，不允许为 null
+     * @return 结果字符串
+     */
     private String resolveProviderName(Long providerId, Map<Long, String> providerNames) {
         if (providerId == null) {
             return null;
@@ -191,6 +198,13 @@ public class AiModelServiceImpl implements AiModelService {
         return manufacturer != null ? manufacturer.getName() : null;
     }
 
+    /**
+     * 转为Dto。
+     *
+     * @param entity 实体，不允许为 null
+     * @param providerName 提供者名称，不允许为 null
+     * @return Ai模型DTO 对象
+     */
     private AiModelDTO toDto(SysAiModel entity, String providerName) {
         if (entity == null) {
             return null;
@@ -217,6 +231,12 @@ public class AiModelServiceImpl implements AiModelService {
         return dto;
     }
 
+    /**
+     * 转为实体。
+     *
+     * @param dto 方法入参 dto
+     * @return SysAi模型 对象
+     */
     private SysAiModel toEntity(AiModelDTO dto) {
         SysAiModel entity = new SysAiModel();
         entity.setModelName(dto.getName());
@@ -235,6 +255,12 @@ public class AiModelServiceImpl implements AiModelService {
         return entity;
     }
 
+    /**
+     * 解析列出。
+     *
+     * @param content 内容，不允许为 null
+     * @return 结果列表，无数据时为空列表
+     */
     private List<String> parseList(String content) {
         if (content == null || content.isBlank()) {
             return new java.util.ArrayList<>();
@@ -251,6 +277,12 @@ public class AiModelServiceImpl implements AiModelService {
         }
     }
 
+    /**
+     * 转为Json数组。
+     *
+     * @param values 方法入参 values
+     * @return 结果字符串
+     */
     private String toJsonArray(List<String> values) {
         if (values == null || values.isEmpty()) {
             return "[]";

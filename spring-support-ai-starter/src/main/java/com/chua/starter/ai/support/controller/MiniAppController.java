@@ -500,13 +500,21 @@ public class MiniAppController {
         );
     }
 
+    /**
+     * 删除Recursively。
+     *
+     * @param p 方法入参 p
+     */
     private static void deleteRecursively(Path p) {
         if (p == null) {
             return;
         }
         try (Stream<Path> s = Files.walk(p)) {
             s.sorted(Comparator.reverseOrder()).forEach(q -> {
-                try { Files.deleteIfExists(q); } catch (IOException ignored) {}
+                try {
+                    Files.deleteIfExists(q);
+                } catch (IOException ignored) {
+                }
             });
         } catch (IOException ignored) {}
     }

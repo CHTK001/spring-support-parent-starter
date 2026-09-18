@@ -61,6 +61,8 @@ public class SoftConfigController {
     * @return 保存的结果
     * @param @Validated(AddGroup.class @校验(添加群体.类
     * @param @Validated(AddGroup.class @Validated(AddGroup.class
+    * @param config 配置，不允许为 null
+    * @param bindingResult binding结果，不允许为 null
     */
     public ReturnResult<SoftConfig> save(@Validated(AddGroup.class) @RequestBody SoftConfig config, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
@@ -79,6 +81,8 @@ public class SoftConfigController {
     * @return 更新的结果
     * @param @Validated(UpdateGroup.class @校验(更新群体.类
     * @param @Validated(UpdateGroup.class @Validated(UpdateGroup.class
+    * @param config 配置，不允许为 null
+    * @param bindingResult binding结果，不允许为 null
     */
     public ReturnResult<SoftConfig> update(@Validated(UpdateGroup.class) @RequestBody SoftConfig config, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {

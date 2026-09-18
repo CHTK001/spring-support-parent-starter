@@ -602,54 +602,60 @@ public class MetricServiceImpl implements MetricService {
             }
             List<MsMonitorRedisMetric> redisMetrics = redisMetricMapper.selectList(redisWrapper);
 
-            // 3. 生成 CSV 内容
+            // 3. 生成 CSV：通用指标与 Redis 指标共用一套固定列，避免行长度不一致
             StringBuilder csv = new StringBuilder();
-            csv.append("monitorId,metricName,metricValue,collectTime,metricTags");
-            // 添加 Redis 列前缀
-            csv.append(",redisMetricName,redisMetricValue,redisCollectTime,redisMetricTags");
-
-            // 写入通用指标行
+            csv.append("source,monitorId,metricName,metricValue,collectTime,metricTags\n");
             for (MsMonitorMetric m : metrics) {
-                csv.append("\n");
-                csv.append(m.getMonitorId() != null ? m.getMonitorId() : "");
-                csv.append(",");
-                csv.append(m.getMetricName() != null ? m.getMetricName() : "");
-                csv.append(",");
-                csv.append(m.getMetricValue() != null ? String.valueOf(m.getMetricValue()) : "");
-                csv.append(",");
-                csv.append(m.getCollectTime() != null ? m.getCollectTime().toString() : "");
-                csv.append(",");
-                csv.append(m.getMetricTags() != null ? m.getMetricTags() : "");
-                // 填充 Redis 列（空值）
-                csv.append(",,,");
-
-                // 追加 Redis 指标 (如果存在同名)
-                for (MsMonitorRedisMetric r : redisMetrics) {
-                    if (r.getMetricName().equals(m.getMetricName())) {
-                        csv.append(",");
-                        csv.append(r.getMetricName() != null ? r.getMetricName() : "");
-                        csv.append(",");
-                        csv.append(r.getMetricValue() != null ? String.valueOf(r.getMetricValue()) : "");
-                        csv.append(",");
-                        csv.append(r.getCollectTime() != null ? r.getCollectTime().toString() : "");
-                        csv.append(",");
-                        csv.append(r.getMetricTags() != null ? r.getMetricTags() : "");
-                        break; // 每条通用指标只匹配第一个 Redis
-                    }
-                }
+                appendCsvRow(csv, "GENERIC", m.getMonitorId(), m.getMetricName(),
+                        m.getMetricValue(), m.getCollectTime(), m.getMetricTags());
             }
-
-            // 4. 生成 Excel (使用 Apache POI) - 这里先返回 CSV 下载路径
-            // TODO: 实际项目中可使用 POI 生成 .xlsx 文件
-            String fileName = "monitor_metrics_" + System.currentTimeMillis() + ".csv";
- // 这里应该写入文件系统或返回 基础64，此处简化返回文件名
- // 实际可调用 excelutil 或 apachepoi 写入
-
-            return ReturnResult.ok(fileName);
+            for (MsMonitorRedisMetric r : redisMetrics) {
+                appendCsvRow(csv, "REDIS", r.getMonitorId(), r.getMetricName(),
+                        r.getMetricValue(), r.getCollectTime(), r.getMetricTags());
+            }
+            return ReturnResult.ok(csv.toString());
         } catch (Exception e) {
             log.error("指标导出失败", e);
             return ReturnResult.error(e.getMessage());
         }
+    }
+
+    /**
+    * 追加一行 CSV（固定 6 列）
+    *
+    * @param csv        目标缓冲
+    * @param source     指标来源: GENERIC / REDIS
+    * @param monitorId  监控资产 ID
+    * @param metricName 指标名
+    * @param value      指标值
+    * @param collectTime 采集时间
+    * @param tags       标签 JSON
+    */
+    private void appendCsvRow(StringBuilder csv, String source, Long monitorId, String metricName,
+                              Object value, LocalDateTime collectTime, String tags) {
+        csv.append(source).append(',')
+                .append(monitorId == null ? "" : monitorId).append(',')
+                .append(escapeCsv(metricName)).append(',')
+                .append(escapeCsv(value == null ? "" : String.valueOf(value))).append(',')
+                .append(collectTime == null ? "" : collectTime).append(',')
+                .append(escapeCsv(tags)).append('\n');
+    }
+
+    /**
+    * CSV 字段转义（RFC4180：含引号/逗号/换行时用双引号包裹，内部引号翻倍）
+    *
+    * @param raw 原始值
+    * @return 转义后的值
+    */
+    private String escapeCsv(String raw) {
+        if (raw == null || raw.isEmpty()) {
+            return "";
+        }
+        if (raw.indexOf('"') < 0 && raw.indexOf(',') < 0
+                && raw.indexOf('\n') < 0 && raw.indexOf('\r') < 0) {
+            return raw;
+        }
+        return '"' + raw.replace("\"", "\"\"") + '"';
     }
 
     /**

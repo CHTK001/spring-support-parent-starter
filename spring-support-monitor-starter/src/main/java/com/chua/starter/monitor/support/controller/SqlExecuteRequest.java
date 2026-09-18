@@ -10,6 +10,7 @@ package com.chua.starter.monitor.support.controller;
  * @param datasourceId 数据源 ID，可为 null（null 或 0 表示默认主数据源）
  * @since 2026/8/4
  * @author CH
+ * @return 结果值
  */
 public record SqlExecuteRequest(String sql, Long datasourceId) {
 }

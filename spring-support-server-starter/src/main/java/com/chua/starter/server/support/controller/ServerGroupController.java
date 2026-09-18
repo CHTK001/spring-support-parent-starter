@@ -117,6 +117,9 @@ public class ServerGroupController {
 
     /**
     * 将实体转换为树节点并递归组装 children
+    * @param g 方法入参 g
+    * @param childrenMap children映射，不允许为 null
+    * @return 结果映射，无数据时为空映射
     */
     private Map<String, Object> toNode(MsServerGroup g, Map<Long, List<MsServerGroup>> childrenMap) {
         Map<String, Object> node = new LinkedHashMap<>();

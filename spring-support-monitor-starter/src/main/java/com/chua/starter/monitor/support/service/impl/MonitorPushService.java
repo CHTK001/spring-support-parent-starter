@@ -72,6 +72,12 @@ public class MonitorPushService {
     */
     public static final String EVENT_HOST_ONLINE = "host-online";
 
+    /**
+    * 主机实时指标事件名（前端 订阅("监控", "host-metrics") 接收；
+    * 数据 = { 主机标识, 主机名称, cpu, mem, disk }，单位 %
+    */
+    public static final String EVENT_HOST_METRICS = "host-metrics";
+
     /** Socket队列bridge 订阅的统一 topic */
     public static final String SOCKET_PUSH_TOPIC = "socket:push";
 
@@ -84,12 +90,6 @@ public class MonitorPushService {
     * @param payload 事件数据
     */
     public void pushAlarm(Map<String, Object> payload) {
-        /**
-        * broadcast。
-        * @param EVENT_ALARM 事件报警器
-        * @param payload payload
-        * @param null 空
-        */
         broadcast(EVENT_ALARM, payload, null);
     }
 
@@ -100,12 +100,6 @@ public class MonitorPushService {
     * @param monitorId 监控 标识（用于前端按目标过滤）
     */
     public void pushMetric(Map<String, Object> payload, Long monitorId) {
-        /**
-        * broadcast。
-        * @param String.valueOf(monitorId) 事件指标
-        * @param payload payload
-        * @param String.valueOf(monitorId 字符串.值的(监控标识
-        */
         broadcast(EVENT_METRIC, payload, monitorId == null ? null : String.valueOf(monitorId));
     }
 
@@ -115,12 +109,6 @@ public class MonitorPushService {
     * @param payload 事件数据
     */
     public void pushTask(Map<String, Object> payload) {
-        /**
-        * broadcast。
-        * @param EVENT_TASK 事件任务
-        * @param payload payload
-        * @param null 空
-        */
         broadcast(EVENT_TASK, payload, null);
     }
 
@@ -131,12 +119,6 @@ public class MonitorPushService {
     * @param sessionId 抓包会话 标识（用于前端按会话过滤）
     */
     public void pushTsharkPacket(Serializable payload, Long sessionId) {
-        /**
-        * broadcast。
-        * @param String.valueOf(sessionId) 事件tshark数据包
-        * @param payload payload
-        * @param String.valueOf(sessionId 字符串.值的(会话标识
-        */
         broadcast(EVENT_TSHARK_PACKET, payload, sessionId == null ? null : String.valueOf(sessionId));
     }
 
@@ -147,12 +129,6 @@ public class MonitorPushService {
     * @param sessionId 抓包会话 标识
     */
     public void pushTsharkSession(Serializable payload, Long sessionId) {
-        /**
-        * broadcast。
-        * @param String.valueOf(sessionId) 事件tshark会话
-        * @param payload payload
-        * @param String.valueOf(sessionId 字符串.值的(会话标识
-        */
         broadcast(EVENT_TSHARK_SESSION, payload, sessionId == null ? null : String.valueOf(sessionId));
     }
 
@@ -195,11 +171,6 @@ public class MonitorPushService {
     * @param delayMs  延迟毫秒（-1 表示不可达）
     */
     public void pushHostDelay(Long hostId, String hostName, String address, Integer port, Long delayMs) {
-        /**
-        * broadcast。
-        * @param delayMs).toMap() 事件主机延迟
-        * @param delayMs 延迟ms
-        */
         broadcast(EVENT_HOST_DELAY, new HostDelay(hostId, hostName, address, port, delayMs).toMap(),
                 hostId == null ? null : String.valueOf(hostId));
     }
@@ -226,6 +197,25 @@ public class MonitorPushService {
     }
 
     /**
+    * 广播主机实时指标（CPU/内存/磁盘使用率 %，前端 订阅("监控", "host-metrics") 接收）
+    *
+    * @param hostId   主机 标识
+    * @param hostName 主机名
+    * @param cpu      CPU 使用率 %
+    * @param mem      内存使用率 %
+    * @param disk     磁盘使用率 %
+    */
+    public void pushHostMetrics(Long hostId, String hostName, Number cpu, Number mem, Number disk) {
+        Map<String, Object> payload = new LinkedHashMap<>(6);
+        payload.put("hostId", hostId);
+        payload.put("hostName", hostName == null ? "" : hostName);
+        payload.put("cpu", cpu == null ? 0 : cpu);
+        payload.put("mem", mem == null ? 0 : mem);
+        payload.put("disk", disk == null ? 0 : disk);
+        broadcast(EVENT_HOST_METRICS, payload, hostId == null ? null : String.valueOf(hostId));
+    }
+
+    /**
     * 统一广播：经 队列 发送到 Socket:push topic（队列 未启用或发送异常时静默跳过）
     * <p>
     * 事件协议对齐前端 ws消息（包/核心 Sockettemplate）：
@@ -237,7 +227,7 @@ public class MonitorPushService {
     * @param data   数据
     * @param dataId 数据 标识（可用于前端按维度过滤）
     */
-    private void broadcast(String event, Object data, String dataId) {
+    public void broadcast(String event, Object data, String dataId) {
         try {
             MessageTemplate template = messageTemplateProvider.getIfAvailable();
             if (template == null) {
@@ -285,17 +275,6 @@ public class MonitorPushService {
         */
         public static AlarmPayload of(Long monitorId, String monitorName, String metricName,
                                       double alarmValue, double threshold, String level, String status) {
-            /**
-            * 报警器payload。
-            * @param monitorId 监控标识
-            * @param monitorName 监控名称
-            * @param metricName 指标名称
-            * @param alarmValue 报警器值
-            * @param threshold 阈值
-            * @param level 水平仪
-            * @param status 状态
-            * @return 报警器payload的结果
-            */
             return new AlarmPayload(monitorId, monitorName, metricName, alarmValue, threshold, level, status);
         }
 

@@ -389,7 +389,12 @@ public class AiBotBindingService {
             long waitStart = System.currentTimeMillis();
             while (session.qrImageUrl == null && "pending".equals(session.status)
                     && System.currentTimeMillis() - waitStart < 8_000L) {
-                try { Thread.sleep(100); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); break; }
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
             }
         } catch (Exception e) {
             session.status = "error";
@@ -420,15 +425,6 @@ public class AiBotBindingService {
         var session = qrSessions.get(key);
  // 会话不存在（已 confirmed 移除 / 已过期 / Key 无效）：返回 expired，避免前端轮询报错
         if (session == null) {
-            /**
-            * qr状态。
-            * @param "expired" "expired"
-            * @param null 空
-            * @param null 空
-            * @param null 空
-            * @param null 空
-            * @return qr状态的结果
-            */
             return new QrStatus("expired", null, null, null, null);
         }
  // 懒清理过期 会话
@@ -437,15 +433,6 @@ public class AiBotBindingService {
             qrSessions.remove(key);
         }
         if ("confirmed".equals(session.status) && session.botId != null) {
-            /**
-            * qr状态。
-            * @param "confirmed" "confirmed"
-            * @param session.qrImageUrl 会话.qr镜像url
-            * @param session.botId 会话.机器人标识
-            * @param session.botToken 会话.机器人令牌
-            * @param session.expireAt 会话.expireat
-            * @return qr状态的结果
-            */
             return new QrStatus("confirmed", session.qrImageUrl, session.botId, session.botToken, session.expireAt);
         }
         /**
@@ -596,22 +583,12 @@ public class AiBotBindingService {
     */
     public Long bindFeishu(String appId, String appSecret, String ownerKey) {
         if (appId == null || appId.isBlank() || appSecret == null || appSecret.isBlank()) {
-            /**
-            * IllegalArgumentException。
-            * @param 必填" 必填"
-            * @return IllegalArgumentException的结果
-            */
             throw new IllegalArgumentException("飞书 appId 与 appSecret 必填");
         }
         // 通过 SPI 构建并校验
         try {
             BotClient auto = BotClient.auto("feishu");
             if (!(auto instanceof FeishuBotClient feishu)) {
-                /**
-                * illegal状态异常。
-                * @param FeishuBotClient" feishu机器人客户端"
-                * @return illegal状态异常的结果
-                */
                 throw new IllegalStateException("feishu SPI 未返回 FeishuBotClient");
             }
             feishu.configure(appId, appSecret, null).start();

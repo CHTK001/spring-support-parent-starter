@@ -137,25 +137,32 @@ public class McpServerStore {
         return m;
     }
 
+    /**
+     * 字符串。
+     *
+     * @param v 方法入参 v
+     * @return 结果字符串
+     */
     private String str(Object v) {
-        /**
-        * bool。
-        * @param v v
-        * @return bool的结果
-        */
         return v == null ? null : String.valueOf(v);
     }
 
+    /**
+     * bool。
+     *
+     * @param v 方法入参 v
+     * @return Boolean 对象
+     */
     private Boolean bool(Object v) {
-        /**
-        * longval。
-        * @param v v
-        * @return longVal的结果
-        * @param json json
-        */
         return v instanceof Boolean ? (Boolean) v : (v == null ? null : Boolean.parseBoolean(String.valueOf(v)));
     }
 
+    /**
+     * longVal。
+     *
+     * @param v 方法入参 v
+     * @return Long 对象
+     */
     private Long longVal(Object v) {
         if (v == null) {
             return null;
@@ -170,6 +177,12 @@ public class McpServerStore {
         }
     }
 
+    /**
+     * 写入Json。
+     *
+     * @param v 方法入参 v
+     * @return 结果字符串
+     */
     private String writeJson(Object v) {
         if (v == null) {
             return "{}";
@@ -182,6 +195,12 @@ public class McpServerStore {
         }
     }
 
+    /**
+     * 解析Json。
+     *
+     * @param json 方法入参 json
+     * @return 对象 对象
+     */
     private Object parseJson(String json) {
         if (json == null || json.isBlank()) {
             return new LinkedHashMap<>();

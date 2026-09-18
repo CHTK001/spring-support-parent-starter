@@ -32,18 +32,34 @@ public class EduFunConfigController {
 
     private final IEduFunConfigService funConfigService;
 
+    /**
+     * 列出Enabled。
+     *
+     * @return Return结果 对象
+     */
     @Operation(summary = "获取所有启用的趣味模块")
     @GetMapping("/list")
     public ReturnResult<List<EduFunConfig>> listEnabled() {
         return ReturnResult.ok(funConfigService.listEnabled());
     }
 
+    /**
+     * 列出全部。
+     *
+     * @return Return结果 对象
+     */
     @Operation(summary = "获取所有趣味模块（含禁用）")
     @GetMapping("/list-all")
     public ReturnResult<List<EduFunConfig>> listAll() {
         return ReturnResult.ok(funConfigService.list());
     }
 
+    /**
+     * detail。
+     *
+     * @param moduleCode module编码，不允许为 null
+     * @return Return结果 对象
+     */
     @Operation(summary = "根据模块编码获取配置")
     @GetMapping("/detail/{moduleCode}")
     public ReturnResult<EduFunConfig> detail(@PathVariable String moduleCode) {
@@ -57,12 +73,24 @@ public class EduFunConfigController {
         return ReturnResult.ok(funConfigService.updateEnabled(moduleCode, enabled));
     }
 
+    /**
+     * 保存。
+     *
+     * @param config 配置，不允许为 null
+     * @return Return结果 对象
+     */
     @Operation(summary = "保存趣味模块配置")
     @PostMapping("/save")
     public ReturnResult<Boolean> save(@RequestBody EduFunConfig config) {
         return ReturnResult.ok(funConfigService.saveOrUpdate(config));
     }
 
+    /**
+     * 删除。
+     *
+     * @param configId 配置ID，不允许为 null
+     * @return Return结果 对象
+     */
     @Operation(summary = "删除趣味模块配置")
     @DeleteMapping("/delete/{configId}")
     public ReturnResult<Boolean> delete(@PathVariable Long configId) {

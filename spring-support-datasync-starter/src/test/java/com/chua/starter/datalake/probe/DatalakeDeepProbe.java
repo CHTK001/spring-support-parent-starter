@@ -274,7 +274,10 @@ public class DatalakeDeepProbe {
             Map<String, DataSink> reg = new ConcurrentHashMap<>();
             reg.put("log", new CapturingSink("log") {
                 @Override
-                public void start() { startCount.incrementAndGet(); super.start(); }
+                public void start() {
+                    startCount.incrementAndGet();
+                    super.start();
+                }
             });
             reg.put("realtime", new CapturingSink("realtime"));
             String path = System.getProperty("java.io.tmpdir") + "/dl-server-test-09";
@@ -605,7 +608,10 @@ public class DatalakeDeepProbe {
         /**
         * reset。
          */
-        public void reset() { count.set(0); lastConfig = null; }
+        public void reset() {
+            count.set(0);
+            lastConfig = null;
+        }
         /**
         * 获取数量。
         * @return 获取数量的结果

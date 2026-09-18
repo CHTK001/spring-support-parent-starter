@@ -120,10 +120,6 @@ public class LocalModuleDefinition {
     * @return 建造器实例
     */
     public static LocalModuleDefinitionBuilder builder() {
-        /**
-        * 本地moduledefinition构建器。
-        * @return 本地moduledefinition构建器的结果
-        */
         return new LocalModuleDefinitionBuilder();
     }
 
@@ -165,35 +161,50 @@ public class LocalModuleDefinition {
         * @param code 编码
         * @return 编码的结果
         */
-        public LocalModuleDefinitionBuilder code(String code) { this.code = code; return this; }
+        public LocalModuleDefinitionBuilder code(String code) {
+            this.code = code;
+            return this;
+        }
         /**
         * 名称
         *
         * @param name 名称
         * @return 名称的结果
         */
-        public LocalModuleDefinitionBuilder name(String name) { this.name = name; return this; }
+        public LocalModuleDefinitionBuilder name(String name) {
+            this.name = name;
+            return this;
+        }
         /**
         * Description
         *
         * @param description description
         * @return description的结果
         */
-        public LocalModuleDefinitionBuilder description(String description) { this.description = description; return this; }
+        public LocalModuleDefinitionBuilder description(String description) {
+            this.description = description;
+            return this;
+        }
         /**
         * 类型
         *
         * @param type 类型
         * @return 类型的结果
         */
-        public LocalModuleDefinitionBuilder type(String type) { this.type = type; return this; }
+        public LocalModuleDefinitionBuilder type(String type) {
+            this.type = type;
+            return this;
+        }
         /**
         * 已启用
         *
         * @param enabled 已启用
         * @return 已启用的结果
         */
-        public LocalModuleDefinitionBuilder enabled(boolean enabled) { this.enabled = enabled; return this; }
+        public LocalModuleDefinitionBuilder enabled(boolean enabled) {
+            this.enabled = enabled;
+            return this;
+        }
 
         /**
         * 构造 本地moduledefinition 实例。
@@ -201,15 +212,6 @@ public class LocalModuleDefinition {
         * @return LocalModuleDefinition 实例
         */
         public LocalModuleDefinition build() {
-            /**
-            * 本地moduledefinition。
-            * @param code 编码
-            * @param name 名称
-            * @param description description
-            * @param type 类型
-            * @param enabled 已启用
-            * @return 本地moduledefinition的结果
-            */
             return new LocalModuleDefinition(code, name, description, type, enabled);
         }
     }

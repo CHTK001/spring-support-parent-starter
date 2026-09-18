@@ -199,7 +199,7 @@ public interface MetricService {
     * @param metricName 指标名（可选，为空则导出所有）
     * @param startTime  起始时间
     * @param endTime    结束时间
-    * @return 操作结果，包含文件下载链接
+    * @return 操作结果，data 为 CSV 文本内容
     */
     ReturnResult<String> exportMetricHistory(Long monitorId, String metricName, LocalDateTime startTime, LocalDateTime endTime);
 }

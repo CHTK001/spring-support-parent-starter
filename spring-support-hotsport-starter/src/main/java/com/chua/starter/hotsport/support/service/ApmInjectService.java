@@ -102,7 +102,12 @@ public class ApmInjectService {
                 "durationMs", duration, "status", error ? "ERROR" : "OK");
     }
 
-    /** 注入一条资源泄漏记录。 */
+    /**
+     * 注入一条资源泄漏记录。
+     * @param resourceType resource类型，不允许为 null
+     * @param resourceName resource名称，不允许为 null
+     * @return 结果映射，无数据时为空映射
+     */
     public Map<String, Object> injectLeak(String resourceType, String resourceName) {
         long now = System.currentTimeMillis();
         String kind = resourceType != null && !resourceType.isBlank() ? resourceType : "File";
@@ -123,7 +128,12 @@ public class ApmInjectService {
         return Map.of("injected", "leak", "resourceType", kind, "resourceName", name);
     }
 
-    /** 注入一条日志记录。 */
+    /**
+     * 注入一条日志记录。
+     * @param level 级别，不允许为 null
+     * @param message 消息，不允许为 null
+     * @return 结果映射，无数据时为空映射
+     */
     public Map<String, Object> injectLog(String level, String message) {
         long now = System.currentTimeMillis();
         String lv = level != null && !level.isBlank() ? level.toUpperCase() : "INFO";
@@ -142,7 +152,11 @@ public class ApmInjectService {
         return Map.of("injected", "log", "level", lv, "message", msg);
     }
 
-    /** 批量注入一批随机调用（产生多样依赖边）。 */
+    /**
+     * 批量注入一批随机调用（产生多样依赖边）。
+     * @param count 数量，不允许为 null
+     * @return 结果映射，无数据时为空映射
+     */
     public Map<String, Object> injectBatch(int count) {
         int n = Math.max(1, Math.min(200, count));
         String[][] routes = {
@@ -161,7 +175,10 @@ public class ApmInjectService {
         return Map.of("injected", "batch", "count", n);
     }
 
-    /** 清空全部 APM 数据（依赖边/传输/泄漏/日志）。 */
+    /**
+     * 清空全部 APM 数据（依赖边/传输/泄漏/日志）。
+     * @return 结果映射，无数据时为空映射
+     */
     public Map<String, Object> clearAll() {
         ApmStorage s = storage();
         long cleaned = 0;
@@ -176,11 +193,20 @@ public class ApmInjectService {
         return Map.of("cleared", true, "cleaned", cleaned);
     }
 
+    /**
+     * storage。
+     *
+     * @return ApmStorage 对象
+     */
     private static ApmStorage storage() {
         return HotsportProperties.storage();
     }
 
-    /** 协议枚举安全解析（不匹配返回 null，跳过依赖边聚合）。 */
+    /**
+     * 协议枚举安全解析（不匹配返回 null，跳过依赖边聚合）。
+     * @param name 名称，不允许为 null
+     * @return Protocol 对象
+     */
     private static Protocol safeProtocol(String name) {
         try {
             return Protocol.valueOf(name);
@@ -197,7 +223,11 @@ public class ApmInjectService {
             "MYSQL", "MYSQL_DRIVER",
             "GRPC", "NETTY");
 
-    /** 软件枚举安全解析：先按协议名直取，失败走映射表，均失败返回 null。 */
+    /**
+     * 软件枚举安全解析：先按协议名直取，失败走映射表，均失败返回 null。
+     * @param name 名称，不允许为 null
+     * @return Software 对象
+     */
     private static Software safeSoftware(String name) {
         try {
             return Software.valueOf(name);
@@ -214,7 +244,11 @@ public class ApmInjectService {
         }
     }
 
-    /** "host:port" → [host, port]；无端口默认 80。 */
+    /**
+     * "host:port" → [host, port]；无端口默认 80。
+     * @param hostPort 主机端口，不允许为 null
+     * @return 字符串 对象
+     */
     private static String[] splitHostPort(String hostPort) {
         int idx = hostPort.lastIndexOf(':');
         if (idx > 0) {

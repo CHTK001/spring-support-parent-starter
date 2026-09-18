@@ -47,6 +47,11 @@ public class AgentSystemInfo {
         return json.writeValueAsString(m);
     }
 
+    /**
+     * 获取PrimaryIP。
+     *
+     * @return 结果字符串
+     */
     private String getPrimaryIp() {
         try {
             for (NetworkIF nif : hal.getNetworkIFs()) {
@@ -58,6 +63,11 @@ public class AgentSystemInfo {
         return "127.0.0.1";
     }
 
+    /**
+     * 获取PrimaryMac。
+     *
+     * @return 结果字符串
+     */
     private String getPrimaryMac() {
         try {
             for (NetworkIF nif : hal.getNetworkIFs()) {
@@ -97,6 +107,14 @@ public class AgentSystemInfo {
         return json.writeValueAsString(Map.of("list", list, "total", procs.size()));
     }
 
+    /**
+     * services。
+     *
+     * @param page 页，不允许为 null
+     * @param pageSize 页大小，不允许为 null
+     * @return 结果字符串
+     * @throws Exception 当执行过程不满足前置条件时
+     */
     public String services(int page, int pageSize) throws Exception {
         List<OSService> services = os.getServices();
         List<Map<String, Object>> list = new ArrayList<>();
@@ -113,6 +131,12 @@ public class AgentSystemInfo {
         return json.writeValueAsString(Map.of("list", list, "total", services.size()));
     }
 
+    /**
+     * disks。
+     *
+     * @return 结果字符串
+     * @throws Exception 当执行过程不满足前置条件时
+     */
     public String disks() throws Exception {
         List<Map<String, Object>> list = new ArrayList<>();
         for (OSFileStore store : os.getFileSystem().getFileStores()) {
@@ -130,6 +154,12 @@ public class AgentSystemInfo {
         return json.writeValueAsString(list);
     }
 
+    /**
+     * network。
+     *
+     * @return 结果字符串
+     * @throws Exception 当执行过程不满足前置条件时
+     */
     public String network() throws Exception {
         List<Map<String, Object>> list = new ArrayList<>();
         for (NetworkIF nif : hal.getNetworkIFs()) {
@@ -144,6 +174,12 @@ public class AgentSystemInfo {
         return json.writeValueAsString(list);
     }
 
+    /**
+     * netProc。
+     *
+     * @return 结果字符串
+     * @throws Exception 当执行过程不满足前置条件时
+     */
     public String netProc() throws Exception {
         List<Map<String, Object>> list = new ArrayList<>();
         for (NetworkIF nif : hal.getNetworkIFs()) {
@@ -156,6 +192,12 @@ public class AgentSystemInfo {
         return json.writeValueAsString(list);
     }
 
+    /**
+     * metrics。
+     *
+     * @return 结果字符串
+     * @throws Exception 当执行过程不满足前置条件时
+     */
     public String metrics() throws Exception {
         Map<String, Object> m = new LinkedHashMap<>();
         GlobalMemory mem = hal.getMemory();
@@ -167,6 +209,12 @@ public class AgentSystemInfo {
         return json.writeValueAsString(m);
     }
 
+    /**
+     * 格式化字节数组。
+     *
+     * @param b 方法入参 b
+     * @return 结果字符串
+     */
     private String formatBytes(long b) {
         if (b < 1024) {
             return b + " B";

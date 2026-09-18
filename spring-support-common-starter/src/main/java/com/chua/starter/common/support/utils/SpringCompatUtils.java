@@ -1,4 +1,5 @@
 package com.chua.starter.common.support.utils;
+import com.chua.common.support.reflection.ReflectUtils;
 import org.springframework.beans.factory.annotation.AnnotatedBeanDefinition;
 import org.springframework.core.type.MethodMetadata;
 import org.springframework.core.type.StandardMethodMetadata;
@@ -109,17 +110,12 @@ public class SpringCompatUtils {
     */
     public static boolean isFactoryMethodMetadataEnabled() {
         if (factoryMethodMetadataEnabled == null) {
-            try {
  // 检查 annotatedBeandefinition.获取工厂方法metadata() 自 spring 4.1
-                AnnotatedBeanDefinition.class.getMethod("getFactoryMethodMetadata");
-
+            boolean factoryMethodMetadata = ReflectUtils.findMethod(AnnotatedBeanDefinition.class,
+                    "getFactoryMethodMetadata") != null;
  // 检查 方法metadata.获取申报类型名称() 自 spring 4.2
-                MethodMetadata.class.getMethod("getReturnTypeName");
-
-                factoryMethodMetadataEnabled = true;
-            } catch (NoSuchMethodException e) {
-                factoryMethodMetadataEnabled = false;
-            }
+            boolean returnTypeName = ReflectUtils.findMethod(MethodMetadata.class, "getReturnTypeName") != null;
+            factoryMethodMetadataEnabled = factoryMethodMetadata && returnTypeName;
         }
         return factoryMethodMetadataEnabled;
     }

@@ -205,7 +205,10 @@ public class SipTunnel {
             } catch (IOException e) {
                 log.warn("[SIP-Provider] 连接断开，5秒后重连: {}", e.getMessage());
             }
-            try { Thread.sleep(5000); } catch (InterruptedException ignored) {}
+            try {
+                Thread.sleep(5000);
+            } catch (InterruptedException ignored) {
+            }
         }
     }
 
@@ -270,8 +273,18 @@ public class SipTunnel {
             InputStream bIn = b.getInputStream();
             OutputStream bOut = b.getOutputStream();
 
-            POOL.submit(() -> { try { copy(aIn, bOut); } catch (IOException ignored) {} });
-            POOL.submit(() -> { try { copy(bIn, aOut); } catch (IOException ignored) {} });
+            POOL.submit(() -> {
+                try {
+                    copy(aIn, bOut);
+                } catch (IOException ignored) {
+                }
+            });
+            POOL.submit(() -> {
+                try {
+                    copy(bIn, aOut);
+                } catch (IOException ignored) {
+                }
+            });
         } catch (IOException e) {
             log.error("[SIP] 桥接失败", e);
         }

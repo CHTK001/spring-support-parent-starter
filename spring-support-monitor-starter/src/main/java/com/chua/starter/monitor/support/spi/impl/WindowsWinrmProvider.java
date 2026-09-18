@@ -8,6 +8,12 @@ import org.springframework.stereotype.Component;
 import java.io.InputStream;
 import java.util.*;
 
+/**
+ * WindowsWinrm提供者类，提供相关能力。
+ *
+ * @author CH
+ * @since 1.0.0
+ */
 @Slf4j
 @Component
 public class WindowsWinrmProvider implements SystemInfoProvider {
@@ -15,6 +21,13 @@ public class WindowsWinrmProvider implements SystemInfoProvider {
     private static final String HDR = "\"";
     private static final String SEP = "|||";
 
+    /**
+     * ps。
+     *
+     * @param host 主机，不允许为 null
+     * @param cmd 方法入参 cmd
+     * @return 结果字符串
+     */
     private String ps(MsServerHost host, String cmd) {
         try (com.chua.winrm.support.client.WinRmExecClient client = com.chua.winrm.support.client.WinRmExecClient.builder()
                 .host(host.getServerHostAddress())
@@ -33,12 +46,20 @@ public class WindowsWinrmProvider implements SystemInfoProvider {
         }
     }
 
+    /**
+     * quote。
+     *
+     * @param s 方法入参 s
+     * @return 结果字符串
+     */
     private String quote(String s) {
         return "'" + s.replace("'", "''") + "'";
     }
 
     /**
     * 按 CSV 规则拆分行，支持带引号字段
+    * @param line 方法入参 line
+    * @return 结果列表，无数据时为空列表
     */
     private List<String> csvSplit(String line) {
         List<String> out = new ArrayList<>();
@@ -46,9 +67,17 @@ public class WindowsWinrmProvider implements SystemInfoProvider {
         boolean inQ = false;
         for (int i = 0; i < line.length(); i++) {
             char c = line.charAt(i);
-            if (c == '"') { inQ = !inQ; continue; }
-            if (c == ',' && !inQ) { out.add(cur.toString()); cur.setLength(0); }
-            else cur.append(c);
+            if (c == '"') {
+                inQ = !inQ;
+                continue;
+            }
+            if (c == ',' && !inQ) {
+                out.add(cur.toString());
+                cur.setLength(0);
+            }
+            else {
+                cur.append(c);
+            }
         }
         out.add(cur.toString());
         return out;
@@ -70,7 +99,10 @@ public class WindowsWinrmProvider implements SystemInfoProvider {
         m.put("mac", ps(host, "(Get-WmiObject Win32_NetworkAdapterConfiguration | Where-Object {$_.IPEnabled}).MACAddress[0]"));
         m.put("gpu", ps(host, "(Get-WmiObject Win32_VideoController).Name -join ', '"));
         // CPU usage
-        try { m.put("cpuPercent", Double.parseDouble(ps(host, "(Get-WmiObject Win32_Processor).LoadPercentage"))); } catch (Exception ignored) {}
+        try {
+            m.put("cpuPercent", Double.parseDouble(ps(host, "(Get-WmiObject Win32_Processor).LoadPercentage")));
+        } catch (Exception ignored) {
+        }
         // Memory used
         try {
             long total = Long.parseLong(ps(host, "[math]::Round((Get-WmiObject Win32_ComputerSystem).TotalPhysicalMemory/1KB)"));
@@ -86,9 +118,13 @@ public class WindowsWinrmProvider implements SystemInfoProvider {
         double totalCpu = 0;
         List<double[]> cpuTimes = new ArrayList<>();
         for (String line : out.split("\\r?\\n")) {
-            if (line.startsWith(HDR + "ProcessId") || line.isBlank()) continue;
+            if (line.startsWith(HDR + "ProcessId") || line.isBlank()) {
+                continue;
+            }
             List<String> p = csvSplit(line);
-            if (p.size() < 7) continue;
+            if (p.size() < 7) {
+                continue;
+            }
             try {
                 long ws = Long.parseLong(p.get(2));
                 double kt = Double.parseDouble(p.get(3));
@@ -97,13 +133,20 @@ public class WindowsWinrmProvider implements SystemInfoProvider {
             } catch (Exception ignored) {}
         }
         for (String line : out.split("\\r?\\n")) {
-            if (line.startsWith(HDR + "ProcessId") || line.isBlank()) continue;
+            if (line.startsWith(HDR + "ProcessId") || line.isBlank()) {
+                continue;
+            }
             List<String> p = csvSplit(line);
-            if (p.size() < 7) continue;
+            if (p.size() < 7) {
+                continue;
+            }
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("pid", p.get(0));
             m.put("ppid", p.get(1));
-            try { m.put("rss", Long.parseLong(p.get(2)) / 1024 / 1024); } catch (Exception ignored) {}
+            try {
+                m.put("rss", Long.parseLong(p.get(2)) / 1024 / 1024);
+            } catch (Exception ignored) {
+            }
             m.put("name", p.get(5));
             m.put("args", p.get(6));
             list.add(m);
@@ -122,11 +165,17 @@ public class WindowsWinrmProvider implements SystemInfoProvider {
         String out = ps(host, "Get-Service | Select Name,DisplayName,Status | ConvertTo-Csv -NoTypeInformation");
         List<Map<String, Object>> list = new ArrayList<>();
         for (String line : out.split("\\r?\\n")) {
-            if (line.startsWith(HDR + "Name") || line.isBlank()) continue;
+            if (line.startsWith(HDR + "Name") || line.isBlank()) {
+                continue;
+            }
             List<String> p = csvSplit(line);
-            if (p.size() < 3) continue;
+            if (p.size() < 3) {
+                continue;
+            }
             Map<String, Object> m = new LinkedHashMap<>();
-            m.put("name", p.get(0)); m.put("displayName", p.get(1)); m.put("status", p.get(2));
+            m.put("name", p.get(0));
+            m.put("displayName", p.get(1));
+            m.put("status", p.get(2));
             list.add(m);
         }
         return paginate(list, page, sz);
@@ -136,15 +185,23 @@ public class WindowsWinrmProvider implements SystemInfoProvider {
         String out = ps(host, "Get-WmiObject Win32_LogicalDisk | Where-Object {$_.DriveType -eq 3} | Select DeviceID,Size,FreeSpace,VolumeName | ConvertTo-Csv -NoTypeInformation");
         List<Map<String, Object>> list = new ArrayList<>();
         for (String line : out.split("\\r?\\n")) {
-            if (line.startsWith(HDR + "DeviceID") || line.isBlank()) continue;
+            if (line.startsWith(HDR + "DeviceID") || line.isBlank()) {
+                continue;
+            }
             List<String> p = csvSplit(line);
-            if (p.size() < 4) continue;
+            if (p.size() < 4) {
+                continue;
+            }
             Map<String, Object> m = new LinkedHashMap<>();
             String volName = p.get(3);
             m.put("mount", p.get(0));
             m.put("name", volName.isEmpty() ? p.get(0) + "\\" : volName + " (" + p.get(0) + ")");
             long size = 0, free = 0;
-            try { size = Long.parseLong(p.get(1)); free = Long.parseLong(p.get(2)); } catch (Exception ignored) {}
+            try {
+                size = Long.parseLong(p.get(1));
+                free = Long.parseLong(p.get(2));
+            } catch (Exception ignored) {
+            }
             m.put("size", String.format("%.2f G", size / 1073741824.0));
             m.put("avail", String.format("%.2f G", free / 1073741824.0));
             m.put("use%", size > 0 ? (int)((size - free) * 100 / size) + "%" : "0%");
@@ -157,11 +214,18 @@ public class WindowsWinrmProvider implements SystemInfoProvider {
         String out = ps(host, "Get-WmiObject Win32_NetworkAdapterConfiguration | Where {$_.IPEnabled} | Select Description,MACAddress,IPAddress,MTU | ConvertTo-Csv -NoTypeInformation");
         List<Map<String, Object>> list = new ArrayList<>();
         for (String line : out.split("\\r?\\n")) {
-            if (line.startsWith(HDR + "Description") || line.isBlank()) continue;
+            if (line.startsWith(HDR + "Description") || line.isBlank()) {
+                continue;
+            }
             List<String> p = csvSplit(line);
-            if (p.size() < 4) continue;
+            if (p.size() < 4) {
+                continue;
+            }
             Map<String, Object> m = new LinkedHashMap<>();
-            m.put("ifname", p.get(0)); m.put("mac", p.get(1)); m.put("ipv4", p.get(2)); m.put("mtu", p.get(3));
+            m.put("ifname", p.get(0));
+            m.put("mac", p.get(1));
+            m.put("ipv4", p.get(2));
+            m.put("mtu", p.get(3));
             list.add(m);
         }
         return list;
@@ -171,11 +235,17 @@ public class WindowsWinrmProvider implements SystemInfoProvider {
         String out = ps(host, "Get-NetTCPConnection | Select LocalAddress,LocalPort,OwningProcess,State | ConvertTo-Csv -NoTypeInformation");
         List<Map<String, Object>> list = new ArrayList<>();
         for (String line : out.split("\\r?\\n")) {
-            if (line.startsWith(HDR + "LocalAddress") || line.isBlank()) continue;
+            if (line.startsWith(HDR + "LocalAddress") || line.isBlank()) {
+                continue;
+            }
             List<String> p = csvSplit(line);
-            if (p.size() < 4) continue;
+            if (p.size() < 4) {
+                continue;
+            }
             Map<String, Object> m = new LinkedHashMap<>();
-            m.put("local", p.get(0) + ":" + p.get(1)); m.put("pid", p.get(2)); m.put("state", p.get(3));
+            m.put("local", p.get(0) + ":" + p.get(1));
+            m.put("pid", p.get(2));
+            m.put("state", p.get(3));
             list.add(m);
         }
         return list;
@@ -185,11 +255,17 @@ public class WindowsWinrmProvider implements SystemInfoProvider {
         String out = ps(host, "Get-ChildItem -Force '" + path.replace("'", "''") + "' | Select Name,Length,LastWriteTime,Mode | ConvertTo-Csv -NoTypeInformation");
         List<Map<String, Object>> list = new ArrayList<>();
         for (String line : out.split("\\r?\\n")) {
-            if (line.startsWith(HDR + "Name") || line.isBlank()) continue;
+            if (line.startsWith(HDR + "Name") || line.isBlank()) {
+                continue;
+            }
             List<String> p = csvSplit(line);
-            if (p.size() < 4) continue;
+            if (p.size() < 4) {
+                continue;
+            }
             Map<String, Object> m = new LinkedHashMap<>();
-            m.put("name", p.get(0)); m.put("size", p.get(1)); m.put("modified", p.get(2));
+            m.put("name", p.get(0));
+            m.put("size", p.get(1));
+            m.put("modified", p.get(2));
             m.put("isDir", p.get(3).contains("d"));
             list.add(m);
         }
@@ -225,16 +301,29 @@ public class WindowsWinrmProvider implements SystemInfoProvider {
         String out = ps(host, "Get-ChildItem env: | Select Name,Value | ConvertTo-Csv -NoTypeInformation");
         List<Map<String, Object>> list = new ArrayList<>();
         for (String line : out.split("\\r?\\n")) {
-            if (line.startsWith(HDR + "Name") || line.isBlank()) continue;
+            if (line.startsWith(HDR + "Name") || line.isBlank()) {
+                continue;
+            }
             String[] p = line.replace(HDR, "").split(",", 2);
-            if (p.length < 2) continue;
+            if (p.length < 2) {
+                continue;
+            }
             Map<String, Object> m = new LinkedHashMap<>();
-            m.put("name", p[0]); m.put("value", p[1]);
+            m.put("name", p[0]);
+            m.put("value", p[1]);
             list.add(m);
         }
         return list;
     }
 
+    /**
+     * paginate。
+     *
+     * @param all 全部，不允许为 null
+     * @param page 页，不允许为 null
+     * @param sz 方法入参 sz
+     * @return 结果列表，无数据时为空列表
+     */
     private List<Map<String, Object>> paginate(List<Map<String, Object>> all, int page, int sz) {
         int from = (page - 1) * sz;
         return from >= all.size() ? Collections.emptyList() : all.subList(from, Math.min(from + sz, all.size()));

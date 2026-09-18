@@ -61,6 +61,8 @@ public class SoftSourceController {
     * @return 保存的结果
     * @param @Validated(AddGroup.class @校验(添加群体.类
     * @param @Validated(AddGroup.class @Validated(AddGroup.class
+    * @param source 来源，不允许为 null
+    * @param bindingResult binding结果，不允许为 null
     */
     public ReturnResult<SoftSource> save(@Validated(AddGroup.class) @RequestBody SoftSource source, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
@@ -79,6 +81,8 @@ public class SoftSourceController {
     * @return 更新的结果
     * @param @Validated(UpdateGroup.class @校验(更新群体.类
     * @param @Validated(UpdateGroup.class @Validated(UpdateGroup.class
+    * @param source 来源，不允许为 null
+    * @param bindingResult binding结果，不允许为 null
     */
     public ReturnResult<SoftSource> update(@Validated(UpdateGroup.class) @RequestBody SoftSource source, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {

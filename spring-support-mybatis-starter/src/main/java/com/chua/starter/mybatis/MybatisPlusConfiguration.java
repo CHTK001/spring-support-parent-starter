@@ -123,10 +123,6 @@ public class MybatisPlusConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public PaginationInnerInterceptor paginationInnerInterceptor() {
-        /**
-        * pagination内部拦截器。
-        * @return pagination内部拦截器的结果
-        */
         return new PaginationInnerInterceptor();
     }
 
@@ -158,11 +154,6 @@ public class MybatisPlusConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public DeleteOnlySelfInterceptor deleteOnlySelfInterceptor(AuthService authService) {
-        /**
-        * 删除onlyself拦截器。
-        * @param authService 认证服务
-        * @return 删除onlyself拦截器的结果
-        */
         return new DeleteOnlySelfInterceptor(authService);
     }
     /**
@@ -204,10 +195,6 @@ public class MybatisPlusConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public OptimisticLockerInnerInterceptor optimisticLockerInnerInterceptor() {
-        /**
-        * optimistic锁内部拦截器。
-        * @return optimistic锁内部拦截器的结果
-        */
         return new OptimisticLockerInnerInterceptor();
     }
     /**
@@ -218,10 +205,6 @@ public class MybatisPlusConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public CryptoInterceptor cryptoInterceptor() {
-        /**
-        * 加密货币拦截器。
-        * @return 加密货币拦截器的结果
-        */
         return new CryptoInterceptor();
     }
 
@@ -262,12 +245,6 @@ public class MybatisPlusConfiguration {
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = MybatisPlusProperties.PRE, name = "open-xml-reload", havingValue = "true", matchIfMissing = false)
     public Reload xmlReload(List<SqlSessionFactory> sqlSessionFactory, MybatisPlusProperties mybatisProperties) {
-        /**
-        * 映射器reload。
-        * @param sqlSessionFactory SQL会话工厂
-        * @param mybatisProperties MyBatis属性
-        * @return 映射器reload的结果
-        */
         return new MapperReload(sqlSessionFactory, mybatisProperties);
     }
     /**
@@ -279,11 +256,6 @@ public class MybatisPlusConfiguration {
     @Bean
     @ConditionalOnMissingBean(name = {"supportInjector"})
     public SupportInjector supportInjector(MybatisPlusProperties mybatisProperties) {
-        /**
-        * 支持injector。
-        * @param mybatisProperties MyBatis属性
-        * @return 支持injector的结果
-        */
         return new SupportInjector(mybatisProperties);
     }
 
@@ -333,12 +305,6 @@ public class MybatisPlusConfiguration {
     @ConditionalOnProperty(prefix = MybatisPlusProperties.PRE + ".slow-sql", name = "enabled", havingValue = "true", matchIfMissing = true)
     public SlowSqlDetectInterceptor slowSqlDetectInterceptor(org.springframework.context.ApplicationEventPublisher eventPublisher,
                                                             MybatisSlowSqlProperties properties) {
-        /**
-        * slowsqldetect拦截器。
-        * @param eventPublisher 事件发布
-        * @param properties 属性
-        * @return slowsqldetect拦截器的结果
-        */
         return new SlowSqlDetectInterceptor(eventPublisher, properties);
     }
     /**
@@ -348,17 +314,12 @@ public class MybatisPlusConfiguration {
     * @param reload reload
     * @param sqlSessionFactory SQL会话工厂
     * @param false false
+    * @param supportInjector 方法入参 supportInjector
     */
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnBean(name = {"mapper-reload", "supportInjector"})
     public MybatisEndpoint mybatisEndpoint(Reload reload, SqlSessionFactory sqlSessionFactory, @Autowired(required = false) SupportInjector supportInjector ) {
-        /**
-        * MyBatis端点。
-        * @param reload reload
-        * @param sqlSessionFactory.getConfiguration( SQL会话工厂.getconfiguration(
-        * @return mybatis端点的结果
-        */
         return new MybatisEndpoint(reload, sqlSessionFactory.getConfiguration(), supportInjector);
     }
 
@@ -403,20 +364,11 @@ public class MybatisPlusConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public SqlSessionTemplate sqlSessionTemplate(SqlSessionFactory sqlSessionFactory) {
-        /**
-        * SQL会话template。
-        * @param sqlSessionFactory SQL会话工厂
-        * @return sql会话template的结果
-        */
         return new SqlSessionTemplate(sqlSessionFactory);
     }
 
     /** 同步encryptor属性 */
     private void syncEncryptorProperties() {
-        /**
-    * 同步系统财产。
-    * @param ENCRYPTOR_PASSWORD_PROPERTY encryptor密码财产
-    */
         syncSystemProperty(ENCRYPTOR_PASSWORD_PROPERTY);
         /**
         * 同步系统财产。

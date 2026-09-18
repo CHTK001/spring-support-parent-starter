@@ -66,10 +66,6 @@ public class DetectionConfiguration {
     * @return 建造器实例
     */
     public static DetectionConfigurationBuilder builder() {
-        /**
-        * detection配置构建器。
-        * @return detection配置构建器的结果
-        */
         return new DetectionConfigurationBuilder();
     }
 
@@ -114,14 +110,20 @@ public class DetectionConfiguration {
         * @param engine engine
         * @return engine的结果
         */
-        public DetectionConfigurationBuilder engine(String engine) { this.engine = engine; return this; }
+        public DetectionConfigurationBuilder engine(String engine) {
+            this.engine = engine;
+            return this;
+        }
         /**
         * 期权
         *
         * @param options 期权
         * @return 期权的结果
         */
-        public DetectionConfigurationBuilder options(Map<String, Object> options) { this.options = options; return this; }
+        public DetectionConfigurationBuilder options(Map<String, Object> options) {
+            this.options = options;
+            return this;
+        }
 
         /**
         * 构造 detection配置 实例。
@@ -129,12 +131,6 @@ public class DetectionConfiguration {
         * @return DetectionConfiguration 实例
         */
         public DetectionConfiguration build() {
-            /**
-            * detection配置。
-            * @param engine engine
-            * @param options 期权
-            * @return detection配置的结果
-            */
             return new DetectionConfiguration(engine, options);
         }
     }

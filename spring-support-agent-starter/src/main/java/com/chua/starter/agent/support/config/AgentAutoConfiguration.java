@@ -20,6 +20,12 @@ import org.springframework.context.annotation.Bean;
 @EnableConfigurationProperties(AgentAttachProperties.class)
 @ConditionalOnProperty(prefix = "runtime.agent", name = "enabled",
         havingValue = "true", matchIfMissing = true)
+/**
+ * AgentAuto配置类，提供相关能力。
+ *
+ * @author CH
+ * @since 1.0.0
+ */
 public class AgentAutoConfiguration {
 
     /**

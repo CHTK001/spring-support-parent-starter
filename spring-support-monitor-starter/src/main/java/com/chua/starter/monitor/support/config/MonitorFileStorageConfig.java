@@ -54,10 +54,16 @@ public class MonitorFileStorageConfig {
             Class<?> storageIf = ReflectUtils.forName("com.chua.common.support.storage.FileStorage");
             Class<?> settingClass = ReflectUtils.forName("com.chua.common.support.storage.setting.BucketSetting");
 
-            // [P3C 1.10 豁免] 跨包反射调用静态 builder()/build()，ReflectUtils.invokeStatic 签名不匹配（返回类型需精确）
-            Object builder = settingClass.getMethod("builder").invoke(null);
-            builder.getClass().getMethod("bucket", String.class).invoke(builder, "default");
-            Object setting = builder.getClass().getMethod("build").invoke(builder);
+ // 跨模块反射调用静态 builder()：ReflectUtils.invokeStatic 要求精确返回类型，
+ // 而 Builder 实际类型不在本模块编译类路径上（filesystem-starter 为可选依赖），无法收敛
+            Object builder = settingClass.getMethod("builder").invoke(null); // [P3C 1.10 豁免] 见上：静态 builder() 返回类型不可知，保留直接反射
+            if (builder == null) {
+                log.warn("[MonitorFileStorageConfig] BucketSetting.builder() 反射创建失败, 跳过本地文件存储");
+                return null;
+            }
+ // 实例方法调用统一走 ReflectUtils（其内部按实际返回类型容错查找方法句柄）
+            ReflectUtils.invoke(builder, "bucket", Object.class, new Class<?>[]{String.class}, "default");
+            Object setting = ReflectUtils.invoke(builder, "build", Object.class);
 
             Object storage = ReflectUtils.instantiate(localClass, setting);
             if (storageIf.isInstance(storage)) {

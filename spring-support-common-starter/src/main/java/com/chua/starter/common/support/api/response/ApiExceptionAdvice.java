@@ -798,6 +798,12 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
         return ReturnResult.error(REQUEST_PARAM_FORMAT_ERROR.getCode(), "请求数据格式错误");
     }
 
+    /**
+     * 转换JsonError消息。
+     *
+     * @param throwable 方法入参 throwable
+     * @return 结果字符串
+     */
     private String convertJsonErrorMessage(Throwable throwable) {
         String error = throwable.toString();
         Matcher matcher = CONVERTER_PATTERN.matcher(error);

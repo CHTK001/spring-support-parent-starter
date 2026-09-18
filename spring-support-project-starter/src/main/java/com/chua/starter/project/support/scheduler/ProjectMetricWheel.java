@@ -62,6 +62,7 @@ public class ProjectMetricWheel {
     /** 采集执行线程 */
     private ScheduledExecutorService runExecutor;
 
+    /** cursor */
     private int cursor = 0;
 
     /**

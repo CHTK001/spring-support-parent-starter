@@ -1,6 +1,7 @@
 package com.chua.starter.monitor.support.service.alarm.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.monitor.support.entity.MsMonitor;
 import com.chua.starter.monitor.support.entity.MsMonitorAlarmEvent;
@@ -26,10 +27,15 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -58,6 +64,12 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
 
     /** 事件查询条数上限 */
     private static final int EVENT_LIMIT = 200;
+
+    /** 趋势统计最大回溯小时数 */
+    private static final int MAX_TREND_HOURS = 720;
+
+    /** 趋势跨度不超过该小时数时，横轴标签省略日期 */
+    private static final int DAY_SPAN_HOURS = 24;
 
     /**
     * 连续触发计数的 Redis 前缀（跨重启保留静默窗口外的语义无需持久化）
@@ -725,12 +737,23 @@ private void fireIfNotSilent(MsMonitorAlarmRule rule, Long monitorId, String mon
             int cmp = current.compareTo(rule.getMsMonitorAlarmRuleThreshold());
             boolean conditionHit = false;
             switch (rule.getMsMonitorAlarmRuleCondition()) {
-                case "GT": conditionHit = cmp > 0; break;
-                case "GE": conditionHit = cmp >= 0; break;
-                case "EQ": conditionHit = cmp == 0; break;
-                case "LE": conditionHit = cmp <= 0; break;
-                case "LT": conditionHit = cmp < 0; break;
-                default: conditionHit = false;
+                case "GT":
+                    conditionHit = cmp > 0;
+                    break;
+                case "GE":
+                    conditionHit = cmp >= 0;
+                    break;
+                case "EQ":
+                    conditionHit = cmp == 0;
+                    break;
+                case "LE":
+                    conditionHit = cmp <= 0;
+                    break;
+                case "LT":
+                    conditionHit = cmp < 0;
+                    break;
+                default:
+                    conditionHit = false;
             }
 
             // 4. 在测试模式下，仅判断阈值条件是否命中（不计入连续计数）
@@ -744,5 +767,74 @@ private void fireIfNotSilent(MsMonitorAlarmRule rule, Long monitorId, String mon
             log.error("告警规则测试失败", e);
             return ReturnResult.error(e.getMessage());
         }
+    }
+
+    @Override
+    public ReturnResult<Map<String, Object>> statsSummary() {
+        Map<String, Object> summary = new LinkedHashMap<>();
+        summary.put("todayTotal", eventMapper.selectCount(new LambdaQueryWrapper<MsMonitorAlarmEvent>()
+                .ge(MsMonitorAlarmEvent::getMsMonitorAlarmEventTriggerTime, LocalDate.now().atStartOfDay())));
+        summary.put("unprocessed", countByStatus("NEW"));
+        summary.put("processed", countByStatus("PROCESSED"));
+        summary.put("falseAlarm", countByStatus("FALSE_ALARM"));
+
+        Map<String, Object> levelDistribution = new LinkedHashMap<>();
+        for (Map<String, Object> row : eventMapper.selectMaps(new QueryWrapper<MsMonitorAlarmEvent>()
+                .select("ms_monitor_alarm_event_level AS lvl", "COUNT(1) AS cnt")
+                .groupBy("ms_monitor_alarm_event_level"))) {
+            // H2 返回未加引号的别名为大写，用大小写无关视图读取以兼容 MySQL
+            Map<String, Object> ci = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+            ci.putAll(row);
+            Object level = ci.get("lvl");
+            if (level != null) {
+                levelDistribution.put(String.valueOf(level), ci.get("cnt"));
+            }
+        }
+        summary.put("levelDistribution", levelDistribution);
+        return ReturnResult.ok(summary);
+    }
+
+    @Override
+    public ReturnResult<List<Map<String, Object>>> statsTrend(int hours, String interval) {
+        int span = hours <= 0 ? 24 : Math.min(hours, MAX_TREND_HOURS);
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime first = now.minusHours(span).truncatedTo(ChronoUnit.HOURS).plusHours(1);
+        List<MsMonitorAlarmEvent> events = eventMapper.selectList(new LambdaQueryWrapper<MsMonitorAlarmEvent>()
+                .select(MsMonitorAlarmEvent::getMsMonitorAlarmEventTriggerTime)
+                .ge(MsMonitorAlarmEvent::getMsMonitorAlarmEventTriggerTime, first));
+
+        Map<LocalDateTime, Long> buckets = new LinkedHashMap<>();
+        for (LocalDateTime cursor = first; !cursor.isAfter(now); cursor = cursor.plusHours(1)) {
+            buckets.put(cursor, 0L);
+        }
+        for (MsMonitorAlarmEvent event : events) {
+            LocalDateTime triggered = event.getMsMonitorAlarmEventTriggerTime();
+            if (triggered != null) {
+                buckets.computeIfPresent(triggered.truncatedTo(ChronoUnit.HOURS), (key, count) -> count + 1);
+            }
+        }
+
+        DateTimeFormatter label = span <= DAY_SPAN_HOURS
+                ? DateTimeFormatter.ofPattern("HH:00")
+                : DateTimeFormatter.ofPattern("MM-dd HH:00");
+        List<Map<String, Object>> series = new ArrayList<>(buckets.size());
+        for (Map.Entry<LocalDateTime, Long> bucket : buckets.entrySet()) {
+            Map<String, Object> point = new LinkedHashMap<>();
+            point.put("time", label.format(bucket.getKey()));
+            point.put("count", bucket.getValue());
+            series.add(point);
+        }
+        return ReturnResult.list(series);
+    }
+
+    /**
+    * 按状态统计事件数量
+    *
+    * @param status 事件状态
+    * @return 数量
+    */
+    private long countByStatus(String status) {
+        return eventMapper.selectCount(new LambdaQueryWrapper<MsMonitorAlarmEvent>()
+                .eq(MsMonitorAlarmEvent::getMsMonitorAlarmEventStatus, status));
     }
 }

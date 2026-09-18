@@ -574,7 +574,10 @@ public class DatalakeSubscriberProbe {
         /**
         * reset。
          */
-        public void reset() { count.set(0); lastConfig = null; }
+        public void reset() {
+            count.set(0);
+            lastConfig = null;
+        }
         /**
         * 获取数量。
         * @return 获取数量的结果

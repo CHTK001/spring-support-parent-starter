@@ -199,7 +199,13 @@ public class AlertMonitorService {
         log.info("[Hotsport] 告警触发 [{}] {}: {}", rule.severity, rule.metric, event.message);
     }
 
-    /** 构建人类可读告警消息。 */
+    /**
+     * 构建人类可读告警消息。
+     * @param metric 方法入参 metric
+     * @param current 当前，不允许为 null
+     * @param threshold 方法入参 threshold
+     * @return 结果字符串
+     */
     private static String buildMessage(String metric, double current, double threshold) {
         switch (metric) {
             case "heap_percent":
@@ -213,7 +219,10 @@ public class AlertMonitorService {
         }
     }
 
-    /** 错误率 = 最近 1 分钟传输错误数 / 总数 * 100（无数据返回 0）。 */
+    /**
+     * 错误率 = 最近 1 分钟传输错误数 / 总数 * 100（无数据返回 0）。
+     * @return 结果数值
+     */
     private double computeErrorRate() {
         try {
             ApmStorage storage = HotsportProperties.storage();

@@ -20,6 +20,7 @@ import com.chua.starter.monitor.support.entity.MsMonitorRedisMetricStatistics;
 import com.chua.starter.monitor.support.entity.MsMonitorTask;
 import com.chua.starter.monitor.support.enums.ServiceType;
 import com.chua.starter.monitor.support.registry.ProviderRegistry;
+import com.chua.starter.monitor.support.scheduler.MonitorScheduler;
 import com.chua.starter.monitor.support.service.MonitorConfigService;
 import com.chua.starter.monitor.support.service.MonitorGatewayService;
 import com.chua.starter.monitor.support.service.MonitorMetricConfigService;
@@ -97,6 +98,11 @@ public class MonitorController {
     * 提供者注册表（SPI 操作路由）
     */
     private final ProviderRegistry providerRegistry;
+
+    /**
+    * 采集调度器（手动触发复用其采集管道）
+    */
+    private final MonitorScheduler scheduler;
 
     /**
     * 服务器主机服务（资产联动，服务端主机查询）
@@ -238,6 +244,8 @@ public class MonitorController {
     * @param task 任务
     * @return 创建任务的结果
     */
+    @Operation(summary = "新增任务")
+    @PostMapping("/task")
     public ReturnResult<MsMonitorTask> createTask(@RequestBody MsMonitorTask task) {
         return taskService.create(task);
     }
@@ -248,6 +256,8 @@ public class MonitorController {
     * @param task 任务请求体，含需更新的字段，不能为 null
     * @return 更新结果，data 为更新后的任务
     */
+    @Operation(summary = "更新任务")
+    @PutMapping("/task/{id}")
     public ReturnResult<MsMonitorTask> updateTask(@PathVariable Long id, @RequestBody MsMonitorTask task) {
         task.setId(id);
         return taskService.update(task);
@@ -258,6 +268,8 @@ public class MonitorController {
     * @param id 任务 ID，路径参数，不能为 null
     * @return 删除结果，data 为 null
     */
+    @Operation(summary = "删除任务")
+    @DeleteMapping("/task/{id}")
     public ReturnResult<Void> deleteTask(@PathVariable Long id) {
         return taskService.delete(id);
     }
@@ -267,6 +279,8 @@ public class MonitorController {
     * @param id 任务 ID，路径参数，不能为 null
     * @return 任务详情；ID 不存在时 data 为 null
     */
+    @Operation(summary = "查询单个任务")
+    @GetMapping("/task/{id}")
     public ReturnResult<MsMonitorTask> getTask(@PathVariable Long id) {
         return taskService.findById(id);
     }
@@ -274,11 +288,13 @@ public class MonitorController {
     /**
     * 设置任务启用或禁用。
     * @param id 任务 ID，路径参数，不能为 null
-    * @param enabled 启用状态：1 表示启用，0 表示禁用
+    * @param enabled 启用状态，前端以 true/false 传参
     * @return 设置结果，data 为 null
     */
-    public ReturnResult<Void> setTaskEnabled(@PathVariable Long id, @RequestParam Integer enabled) {
-        return taskService.setEnabled(id, enabled);
+    @Operation(summary = "启用/禁用任务")
+    @PutMapping("/task/{id}/enabled")
+    public ReturnResult<Void> setTaskEnabled(@PathVariable Long id, @RequestParam Boolean enabled) {
+        return taskService.setEnabled(id, Boolean.TRUE.equals(enabled) ? 1 : 0);
     }
 
     /**
@@ -286,11 +302,29 @@ public class MonitorController {
     * @param monitorId 监控资产 ID，可选；非 null 时返回该资产下的任务，null 时返回全部启用任务
     * @return 任务列表
     */
+    @Operation(summary = "查询任务列表")
+    @GetMapping("/task")
     public ReturnResult<List<MsMonitorTask>> listTask(@RequestParam(required = false) Long monitorId) {
         if (monitorId != null) {
             return taskService.listByMonitor(monitorId);
         }
         return taskService.listEnabled();
+    }
+
+    /**
+    * 手动触发一次采集。
+    * @param id 任务 ID，路径参数，不能为 null
+    * @return 受理结果；采集本身异步执行
+    */
+    @Operation(summary = "手动触发采集")
+    @PostMapping("/task/{id}/trigger")
+    public ReturnResult<Void> triggerTask(@PathVariable Long id) {
+        MsMonitorTask task = taskService.findById(id).getData();
+        if (task == null) {
+            return ReturnResult.error("任务不存在: " + id);
+        }
+        scheduler.triggerNow(task);
+        return ReturnResult.success();
     }
 
     // ==================== 解析规则 ====================
@@ -300,6 +334,8 @@ public class MonitorController {
     * @param config 配置
     * @return 创建指标配置的结果
     */
+    @Operation(summary = "新增解析规则")
+    @PostMapping("/metric-config")
     public ReturnResult<MsMonitorMetricConfig> createMetricConfig(@RequestBody MsMonitorMetricConfig config) {
         return metricConfigService.create(config);
     }
@@ -310,6 +346,8 @@ public class MonitorController {
     * @param config 配置
     * @return 更新指标配置的结果
     */
+    @Operation(summary = "更新解析规则")
+    @PutMapping("/metric-config/{id}")
     public ReturnResult<MsMonitorMetricConfig> updateMetricConfig(@PathVariable Long id, @RequestBody MsMonitorMetricConfig config) {
         config.setId(id);
         return metricConfigService.update(config);
@@ -320,6 +358,8 @@ public class MonitorController {
     * @param id id ID，路径参数
     * @return 删除指标配置的结果
     */
+    @Operation(summary = "删除解析规则")
+    @DeleteMapping("/metric-config/{id}")
     public ReturnResult<Void> deleteMetricConfig(@PathVariable Long id) {
         return metricConfigService.delete(id);
     }
@@ -329,6 +369,8 @@ public class MonitorController {
     * @param taskId 任务 ID
     * @return 列表指标配置的结果
     */
+    @Operation(summary = "按任务查询解析规则")
+    @GetMapping("/metric-config")
     public ReturnResult<List<MsMonitorMetricConfig>> listMetricConfig(@RequestParam Long taskId) {
         return metricConfigService.listByTask(taskId);
     }
@@ -385,6 +427,8 @@ public class MonitorController {
     * @param gateway gateway
     * @return 创建gateway的结果
     */
+    @Operation(summary = "新增网关")
+    @PostMapping("/gateway")
     public ReturnResult<MsMonitorGateway> createGateway(@RequestBody MsMonitorGateway gateway) {
         return gatewayService.create(gateway);
     }
@@ -394,6 +438,8 @@ public class MonitorController {
     * @param id id ID，路径参数
     * @return 删除gateway的结果
     */
+    @Operation(summary = "删除网关")
+    @DeleteMapping("/gateway/{id}")
     public ReturnResult<Void> deleteGateway(@PathVariable Long id) {
         return gatewayService.delete(id);
     }
@@ -404,6 +450,8 @@ public class MonitorController {
     * @param gateway gateway
     * @return 更新gateway的结果
     */
+    @Operation(summary = "更新网关")
+    @PutMapping("/gateway/{id}")
     public ReturnResult<MsMonitorGateway> updateGateway(@PathVariable Long id, @RequestBody MsMonitorGateway gateway) {
         gateway.setId(id);
         return gatewayService.update(gateway);
@@ -414,6 +462,8 @@ public class MonitorController {
     * @param monitorId 监控资产 ID
     * @return 列表gateway的结果
     */
+    @Operation(summary = "按资产查询网关")
+    @GetMapping("/gateway")
     public ReturnResult<List<MsMonitorGateway>> listGateway(@RequestParam Long monitorId) {
         return gatewayService.listByMonitor(monitorId);
     }
@@ -425,6 +475,8 @@ public class MonitorController {
     * @param monitorId 监控资产 ID
     * @return 获取latestcpu的结果
     */
+    @Operation(summary = "获取 CPU 最新指标")
+    @GetMapping("/metric/cpu/{monitorId}")
     public ReturnResult<MsMonitorMetricCpu> getLatestCpu(@PathVariable Long monitorId) {
         return metricService.getLatestCpu(monitorId);
     }
@@ -434,6 +486,8 @@ public class MonitorController {
     * @param monitorId 监控资产 ID
     * @return 获取latest内存的结果
     */
+    @Operation(summary = "获取内存最新指标")
+    @GetMapping("/metric/memory/{monitorId}")
     public ReturnResult<MsMonitorMetricMemory> getLatestMemory(@PathVariable Long monitorId) {
         return metricService.getLatestMemory(monitorId);
     }
@@ -443,6 +497,8 @@ public class MonitorController {
     * @param monitorId 监控资产 ID
     * @return 获取latestdisk的结果
     */
+    @Operation(summary = "获取磁盘最新指标")
+    @GetMapping("/metric/disk/{monitorId}")
     public ReturnResult<List<MsMonitorMetricDisk>> getLatestDisk(@PathVariable Long monitorId) {
         return metricService.getLatestDisk(monitorId);
     }
@@ -452,6 +508,8 @@ public class MonitorController {
     * @param monitorId 监控资产 ID
     * @return 获取latestnetwork的结果
     */
+    @Operation(summary = "获取网络最新指标")
+    @GetMapping("/metric/network/{monitorId}")
     public ReturnResult<MsMonitorMetricNetwork> getLatestNetwork(@PathVariable Long monitorId) {
         return metricService.getLatestNetwork(monitorId);
     }
@@ -461,6 +519,8 @@ public class MonitorController {
     * @param monitorId 监控资产 ID
     * @return 获取latestjvm的结果
     */
+    @Operation(summary = "获取 JVM 最新指标")
+    @GetMapping("/metric/jvm/{monitorId}")
     public ReturnResult<MsMonitorMetricJvm> getLatestJvm(@PathVariable Long monitorId) {
         return metricService.getLatestJvm(monitorId);
     }
@@ -522,6 +582,8 @@ public class MonitorController {
     * @param monitorId 监控资产 ID
     * @return 获取latestredis指标的结果
     */
+    @Operation(summary = "获取 Redis 最新指标")
+    @GetMapping("/metric/redis/{monitorId}")
     public ReturnResult<MsMonitorRedisMetric> getLatestRedisMetric(@PathVariable Long monitorId) {
         return metricService.getLatestRedisMetric(monitorId);
     }
@@ -590,21 +652,34 @@ public class MonitorController {
     }
 
     /**
-    * 导出指标历史数据
+    * 导出指标历史数据 CSV（直接写文件流，前端以 blob 下载）
     *
-    * @param monitorId monitorId ID，路径参数
+    * @param monitorId  监控资产 ID，可缺省表示导出全部
     * @param metricName 指标名（可选，为空则导出所有）
     * @param hours      过去 N 小时（可选）
-    * @return 操作结果，包含文件名
+    * @param response   HTTP 响应
     */
     @Operation(summary = "导出指标历史数据")
-    @GetMapping("/metric/export/{monitorId}")
-    public ReturnResult<String> exportMetricHistory(
-            @PathVariable Long monitorId,
+    @GetMapping({"/metric/export", "/metric/export/{monitorId}"})
+    public void exportMetricHistory(
+            @PathVariable(required = false) Long monitorId,
             @RequestParam(required = false) String metricName,
-            @RequestParam(required = false, defaultValue = "24") Long hours) {
+            @RequestParam(required = false, defaultValue = "24") Long hours,
+            jakarta.servlet.http.HttpServletResponse response) throws java.io.IOException {
         java.time.LocalDateTime start = hours != null ? java.time.LocalDateTime.now().minusHours(hours) : null;
-        return metricService.exportMetricHistory(monitorId, metricName, start, null);
+        ReturnResult<String> result = metricService.exportMetricHistory(monitorId, metricName, start, null);
+        response.setCharacterEncoding("UTF-8");
+        if (!result.isOk()) {
+            response.setStatus(jakarta.servlet.http.HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            response.setContentType("text/plain;charset=UTF-8");
+            response.getWriter().write(result.getMsg() == null ? "导出失败" : result.getMsg());
+            return;
+        }
+        response.setContentType("text/csv;charset=UTF-8");
+        response.setHeader("Content-Disposition",
+                "attachment; filename=\"monitor_metrics_" + (monitorId == null ? "all" : monitorId) + ".csv\"");
+        response.getWriter().write(result.getData() == null ? "" : result.getData());
+        response.getWriter().flush();
     }
 
     // ==================== 数据源管理（内存存储，支持 jdbc/redis/influxdb/neo4j/nacos/zookeeper） ====================
@@ -732,17 +807,25 @@ public class MonitorController {
     /**
     * 根据数据源 ID 获取数据库连接。
     * datasourceId 为 null 或 0 时使用默认主数据源。
+    * @param datasourceId datasourceID，不允许为 null
+    * @return 结果值
     */
     private java.sql.Connection getDbConnection(Long datasourceId) throws Exception {
         if (datasourceId == null || datasourceId == 0) {
             javax.sql.DataSource ds = dataSourceProvider.getIfAvailable();
-            if (ds == null) throw new RuntimeException("未配置默认数据源");
+            if (ds == null) {
+                throw new RuntimeException("未配置默认数据源");
+            }
             return ds.getConnection();
         }
         Map<String, Object> dsConfig = DATA_SOURCE_STORE.get(datasourceId);
-        if (dsConfig == null) throw new RuntimeException("数据源不存在: " + datasourceId);
+        if (dsConfig == null) {
+            throw new RuntimeException("数据源不存在: " + datasourceId);
+        }
         String type = String.valueOf(dsConfig.get("type"));
-        if (!"jdbc".equals(type)) throw new RuntimeException("非 JDBC 数据源类型: " + type);
+        if (!"jdbc".equals(type)) {
+            throw new RuntimeException("非 JDBC 数据源类型: " + type);
+        }
         String host = String.valueOf(dsConfig.get("host"));
         Object portObj = dsConfig.get("port");
         int port = portObj != null ? Integer.parseInt(String.valueOf(portObj)) : 3306;
@@ -758,6 +841,8 @@ public class MonitorController {
 
     /**
     * 获取数据库列表。
+    * @param datasourceId datasourceID，不允许为 null
+    * @return Return结果 对象
     */
     @Operation(summary = "获取数据库列表")
     @GetMapping("/db/databases")
@@ -825,7 +910,9 @@ public class MonitorController {
             // 查询主键
             try (java.sql.ResultSet pkRs = conn.getMetaData().getPrimaryKeys(database != null ? database : conn.getCatalog(), null, tableName)) {
                 java.util.Set<String> pkCols = new java.util.HashSet<>();
-                while (pkRs.next()) pkCols.add(pkRs.getString("COLUMN_NAME"));
+                while (pkRs.next()) {
+                    pkCols.add(pkRs.getString("COLUMN_NAME"));
+                }
                 for (Map<String, Object> col : columns) {
                     col.put("isPrimaryKey", pkCols.contains(col.get("name")));
                 }
@@ -861,17 +948,23 @@ public class MonitorController {
             java.sql.ResultSetMetaData meta = rs.getMetaData();
             int colCount = meta.getColumnCount();
             java.util.List<String> columns = new java.util.ArrayList<>();
-            for (int i = 1; i <= colCount; i++) columns.add(meta.getColumnLabel(i));
+            for (int i = 1; i <= colCount; i++) {
+                columns.add(meta.getColumnLabel(i));
+            }
             java.util.List<Map<String, Object>> rows = new java.util.ArrayList<>();
             while (rs.next()) {
                 Map<String, Object> row = new java.util.LinkedHashMap<>();
-                for (int i = 1; i <= colCount; i++) row.put(columns.get(i - 1), rs.getObject(i));
+                for (int i = 1; i <= colCount; i++) {
+                    row.put(columns.get(i - 1), rs.getObject(i));
+                }
                 rows.add(row);
             }
             // 查询总数
             long total = 0;
             try (java.sql.ResultSet countRs = stmt.executeQuery(countSql)) {
-                if (countRs.next()) total = countRs.getLong(1);
+                if (countRs.next()) {
+                    total = countRs.getLong(1);
+                }
             }
             Map<String, Object> result = new java.util.LinkedHashMap<>();
             result.put("columns", columns);
@@ -887,13 +980,17 @@ public class MonitorController {
 
     /**
     * 执行 SQL（支持 SELECT/INSERT/UPDATE/DELETE/CREATE/ALTER/DROP）。
+    * @param request 请求，不允许为 null
+    * @return Return结果 对象
     */
     @Operation(summary = "执行 SQL")
     @PostMapping("/db/execute")
     public ReturnResult<Map<String, Object>> executeDbSql(@RequestBody Map<String, Object> request) {
         String sql = String.valueOf(request.get("sql"));
         Long datasourceId = request.get("datasourceId") != null ? Long.valueOf(String.valueOf(request.get("datasourceId"))) : null;
-        if (sql == null || sql.trim().isEmpty()) return ReturnResult.error("SQL 不能为空");
+        if (sql == null || sql.trim().isEmpty()) {
+            return ReturnResult.error("SQL 不能为空");
+        }
         String trimmed = sql.trim().toUpperCase();
         boolean isQuery = trimmed.startsWith("SELECT") || trimmed.startsWith("SHOW") || trimmed.startsWith("DESC") || trimmed.startsWith("EXPLAIN");
         try (java.sql.Connection conn = getDbConnection(datasourceId);
@@ -904,13 +1001,17 @@ public class MonitorController {
                     java.sql.ResultSetMetaData meta = rs.getMetaData();
                     int colCount = meta.getColumnCount();
                     java.util.List<String> columns = new java.util.ArrayList<>();
-                    for (int i = 1; i <= colCount; i++) columns.add(meta.getColumnLabel(i));
+                    for (int i = 1; i <= colCount; i++) {
+                        columns.add(meta.getColumnLabel(i));
+                    }
                     java.util.List<Map<String, Object>> rows = new java.util.ArrayList<>();
                     int rowCount = 0;
                     int maxRows = 1000;
                     while (rs.next() && rowCount < maxRows) {
                         Map<String, Object> row = new java.util.LinkedHashMap<>();
-                        for (int i = 1; i <= colCount; i++) row.put(columns.get(i - 1), rs.getObject(i));
+                        for (int i = 1; i <= colCount; i++) {
+                            row.put(columns.get(i - 1), rs.getObject(i));
+                        }
                         rows.add(row);
                         rowCount++;
                     }
@@ -1241,13 +1342,12 @@ public class MonitorController {
     * 获取 Redis Key 的当前值。
     * @param taskId 任务 ID，路径参数，不能为 null
     * @param key 配置键名，路径参数，不能为 null
-    * @return 键值；Key 不存在时 data 为 null
+    * @return 键值结构 {key, value, ttl, type, size}；Key 不存在时 value 为空串
     */
-    public Mono<String> getValue(@PathVariable Long taskId, @PathVariable String key) {
-        return resolveOperation(taskId).flatMap(op -> {
-            CollectContext ctx = buildContext(taskId);
-            return op.getValue(ctx, key);
-        });
+    @Operation(summary = "读取 Redis Key")
+    @GetMapping("/operation/redis/{taskId}/kv/{key}")
+    public Mono<Map<String, Object>> getValue(@PathVariable Long taskId, @PathVariable String key) {
+        return getKeyDetail(taskId, key);
     }
 
     @Operation(summary = "写入 Redis Key")
@@ -1268,6 +1368,8 @@ public class MonitorController {
     * @param keys 待删除的 Redis Key 列表，不能为 null 或空
     * @return 实际删除的 Key 数量
     */
+    @Operation(summary = "批量删除 Redis Key")
+    @DeleteMapping("/operation/redis/{taskId}/keys")
     public Mono<Long> deleteKeys(@PathVariable Long taskId, @RequestBody List<String> keys) {
         return resolveOperation(taskId).flatMap(op -> {
             CollectContext ctx = buildContext(taskId);
@@ -1396,8 +1498,53 @@ public class MonitorController {
         return CollectContext.builder().task(task).monitor(monitor).build();
     }
 
+    // ==================== 全局概览 ====================
+
+    /**
+    * 全局概览统计。
+    * @return 资产总数、启用/停用数与服务器/Redis/数据库分类计数
+    */
+    @Operation(summary = "全局概览统计")
+    @GetMapping("/dashboard/overview")
+    public ReturnResult<Map<String, Object>> dashboardOverview() {
+        List<MsMonitor> monitors = monitorService.listAll().getData();
+        int total = monitors == null ? 0 : monitors.size();
+        int enabled = 0;
+        int serverCount = 0;
+        int redisCount = 0;
+        int dbCount = 0;
+        if (monitors != null) {
+            for (MsMonitor monitor : monitors) {
+                if (Integer.valueOf(1).equals(monitor.getMonitorEnabled())) {
+                    enabled++;
+                }
+                switch (ServiceType.of(monitor.getServiceType())) {
+                    case SERVER -> serverCount++;
+                    case REDIS -> redisCount++;
+                    case MYSQL, PG, ORACLE, MSSQL -> dbCount++;
+                    default -> {
+                        // MQ 等类型不计入三类卡片
+                    }
+                }
+            }
+        }
+        Map<String, Object> overview = new java.util.LinkedHashMap<>();
+        overview.put("total", total);
+        overview.put("enabled", enabled);
+        overview.put("disabled", total - enabled);
+        overview.put("serverCount", serverCount);
+        overview.put("redisCount", redisCount);
+        overview.put("dbCount", dbCount);
+        return ReturnResult.ok(overview);
+    }
+
     // ==================== AI 智能分析 ====================
 
+     /**
+      * 获取Ai状态。
+      *
+      * @return Return结果 对象
+      */
      @Operation(summary = "查询 AI 分析是否启用")
      @GetMapping("/ai/status")
      public ReturnResult<Map<String, Object>> getAiStatus() {
@@ -1411,6 +1558,12 @@ public class MonitorController {
          return ReturnResult.ok(result);
      }
 
+     /**
+      * aiAnalyze。
+      *
+      * @param request 请求，不允许为 null
+      * @return Mono 对象
+      */
      @Operation(summary = "通用 AI 分析")
      @PostMapping("/ai/analyze")
      public Mono<ReturnResult<Map<String, Object>>> aiAnalyze(@RequestBody Map<String, Object> request) {
@@ -1427,8 +1580,12 @@ public class MonitorController {
          return Mono.fromCallable(() -> {
              com.chua.starter.ai.support.chat.ChatScope scope = new com.chua.starter.ai.support.chat.ChatScope();
              scope.setInput(prompt);
-             if (systemPrompt != null && !systemPrompt.isBlank()) scope.setSystemPrompt(systemPrompt);
-             if (model != null && !model.isBlank()) scope.setModel(model);
+             if (systemPrompt != null && !systemPrompt.isBlank()) {
+                 scope.setSystemPrompt(systemPrompt);
+             }
+             if (model != null && !model.isBlank()) {
+                 scope.setModel(model);
+             }
              com.chua.common.support.ai.chat.ChatResponse response = chatClient.chat(scope);
              Map<String, Object> result = new java.util.LinkedHashMap<>();
              result.put("content", response != null ? response.getContent() : "");
@@ -1438,6 +1595,13 @@ public class MonitorController {
          }).onErrorResume(e -> Mono.just(ReturnResult.error("AI 分析失败: " + e.getMessage())));
      }
 
+     /**
+      * aiAnalyze主机。
+      *
+      * @param id ID，不允许为 null
+      * @param request 请求，不允许为 null
+      * @return Mono 对象
+      */
      @Operation(summary = "主机指标智能分析")
      @PostMapping("/ai/host/{id}/analyze")
      public Mono<ReturnResult<Map<String, Object>>> aiAnalyzeHost(@PathVariable Long id, @RequestBody(required = false) Map<String, Object> request) {

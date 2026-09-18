@@ -1,5 +1,6 @@
 package com.chua.report.client.starter.job;
 
+import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.report.client.starter.job.handler.BeanJobHandler;
 import com.chua.report.client.starter.job.handler.JobHandlerFactory;
 import com.chua.starter.job.support.annotation.Job;
@@ -131,24 +132,26 @@ public class JobAnnotationScanner implements BeanPostProcessor {
         // 获取初始化方法
         Method initMethod = null;
         if (StringUtils.hasText(job.init())) {
-            try {
-                initMethod = bean.getClass().getDeclaredMethod(job.init());
-                // [P3C 1.10 豁免] 同上
-                initMethod.setAccessible(true);
-            } catch (NoSuchMethodException e) {
+ // 方法定位统一经 ReflectUtils.findDeclaredMethod
+            initMethod = ReflectUtils.findDeclaredMethod(bean.getClass(), job.init());
+            if (initMethod == null) {
                 log.warn("[JobScanner] Bean[{}]的初始化方法[{}]不存在", beanName, job.init());
+            } else {
+ // 框架基础设施：setAccessible 供 BeanJobHandler 后续原生反射调用
+                initMethod.setAccessible(true);
             }
         }
 
         // 获取销毁方法
         Method destroyMethod = null;
         if (StringUtils.hasText(job.destroy())) {
-            try {
-                destroyMethod = bean.getClass().getDeclaredMethod(job.destroy());
-                // [P3C 1.10 豁免] 同上
-                destroyMethod.setAccessible(true);
-            } catch (NoSuchMethodException e) {
+ // 方法定位统一经 ReflectUtils.findDeclaredMethod
+            destroyMethod = ReflectUtils.findDeclaredMethod(bean.getClass(), job.destroy());
+            if (destroyMethod == null) {
                 log.warn("[JobScanner] Bean[{}]的销毁方法[{}]不存在", beanName, job.destroy());
+            } else {
+ // 框架基础设施：setAccessible 供 BeanJobHandler 后续原生反射调用
+                destroyMethod.setAccessible(true);
             }
         }
 

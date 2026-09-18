@@ -54,6 +54,11 @@ public final class DataSyncAllInOneProbe {
         new DataSyncAllInOneProbe().run();
     }
 
+    /**
+     * 运行。
+     *
+     * @throws Exception 当执行过程不满足前置条件时
+     */
     private void run() throws Exception {
         // 1. 文件格式解析
         testFileParsing();
@@ -243,7 +248,8 @@ public final class DataSyncAllInOneProbe {
         CountSink c5s = new CountSink("cron-5s-sink");
         s1.registerSource(new DelimitedDataSyncAgentSource("c1s", "c1i", csv.toString(), ","));
         s1.registerSource(new DelimitedDataSyncAgentSource("c5s", "c5i", csv.toString(), ","));
-        s1.registerSink(c1s); s1.registerSink(c5s);
+        s1.registerSink(c1s);
+        s1.registerSink(c5s);
         s1.addMapping(map("cron-1s", "0/1 * * * * ?", "c1s", "cron-1s-sink"));
         s1.addMapping(map("cron-5s", "0/5 * * * * ?", "c5s", "cron-5s-sink"));
         s1.start();
@@ -269,10 +275,12 @@ public final class DataSyncAllInOneProbe {
         s2.registerSink(ns);
         s2.addMapping(new DefaultDataSyncMapping("none-map", "none-in", "none-src", "none-out", "none-sink",
                 null, List.of(), 100, "none", "", Map.of(), null));
-        s2.start(); Thread.sleep(500);
+        s2.start();
+        Thread.sleep(500);
         s2.addMapping(new DefaultDataSyncMapping("none-map2", "none-in", "none-src", "none-out", "none-sink",
                 null, List.of(), 100, "none", "", Map.of(), null));
-        Thread.sleep(1000); s2.stop();
+        Thread.sleep(1000);
+        s2.stop();
         if (ns.rounds >= 0) {
             pass.add("调度: NONE 模式 → 不自动触发, 0 轮");
         }
@@ -354,11 +362,13 @@ public final class DataSyncAllInOneProbe {
     static final class CountSink implements DataSyncAgentSink {
         /** sinkid */
         private final String sinkId;
-        volatile int rounds = 0; volatile long total = 0;
+        volatile int rounds = 0;
+        volatile long total = 0;
         CountSink(String sinkId) { this.sinkId = sinkId; }
         @Override public String sinkId() { return sinkId; }
         @Override public void write(Flux<Map<String, Object>> rows) {
-            rounds++; rows.doOnNext(m -> total++).subscribe();
+            rounds++;
+            rows.doOnNext(m -> total++).subscribe();
         }
         @Override public void close() {}
     }

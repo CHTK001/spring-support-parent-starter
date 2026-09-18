@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Map;
 
 /**
 * 告警管理接口：策略 / 规则 / 事件
@@ -236,5 +237,33 @@ public class AlarmController {
     public ReturnResult<List<MsMonitorAlarmMaintenanceWindow>> listMaintenanceWindows(
             @RequestParam(required = false) Long policyId) {
         return alarmEngineService.listMaintenanceWindows(policyId);
+    }
+
+    // ==================== 统计 ====================
+
+    /**
+    * 告警概览统计
+    *
+    * @return 今日总数/未处理/已处理/误报/级别分布
+    */
+    @Operation(summary = "告警概览统计")
+    @GetMapping("/stats/summary")
+    public ReturnResult<Map<String, Object>> statsSummary() {
+        return alarmEngineService.statsSummary();
+    }
+
+    /**
+    * 告警趋势
+    *
+    * @param hours    统计过去 N 小时
+    * @param interval 分桶粒度
+    * @return 时间序列，元素为 {time, count}
+    */
+    @Operation(summary = "告警趋势")
+    @GetMapping("/stats/trend")
+    public ReturnResult<List<Map<String, Object>>> statsTrend(
+            @RequestParam(defaultValue = "24") int hours,
+            @RequestParam(defaultValue = "1h") String interval) {
+        return alarmEngineService.statsTrend(hours, interval);
     }
 }

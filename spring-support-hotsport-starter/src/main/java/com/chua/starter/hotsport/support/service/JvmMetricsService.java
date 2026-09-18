@@ -196,7 +196,10 @@ public class JvmMetricsService {
         onSample = null;
     }
 
-    /** 当前活跃泄漏数（告警巡检用，读 APM 存储兜底 0）。 */
+    /**
+     * 当前活跃泄漏数（告警巡检用，读 APM 存储兜底 0）。
+     * @return 结果数值
+     */
     public int activeLeakCount() {
         try {
             ApmStorage storage = HotsportProperties.storage();

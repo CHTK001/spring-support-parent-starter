@@ -91,6 +91,12 @@ public record JobLogEvent(
                 executedAtMs, nodeId, Instant.now(), logContent);
     }
 
+    /**
+     * extract消息。
+     *
+     * @param throwable 方法入参 throwable
+     * @return 结果字符串
+     */
     private static String extractMessage(Throwable throwable) {
         if (throwable == null) {
             return null;
@@ -217,6 +223,12 @@ public record JobLogEvent(
         return s == null ? "null" : s;
     }
 
+    /**
+     * 编码Log内容。
+     *
+     * @param content 内容，不允许为 null
+     * @return 结果字符串
+     */
     private static String encodeLogContent(String content) {
         if (content == null) {
             return "null";
@@ -224,6 +236,12 @@ public record JobLogEvent(
         return Base64.getEncoder().encodeToString(content.getBytes(java.nio.charset.StandardCharsets.UTF_8));
     }
 
+    /**
+     * 解码Log内容。
+     *
+     * @param encoded 方法入参 encoded
+     * @return 结果字符串
+     */
     private static String decodeLogContent(String encoded) {
         if (encoded == null || encoded.isEmpty()) {
             return null;

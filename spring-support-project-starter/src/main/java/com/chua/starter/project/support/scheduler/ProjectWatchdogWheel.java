@@ -60,6 +60,7 @@ public class ProjectWatchdogWheel {
     /** 守护任务执行线程（与轮转线程分离，避免检测阻塞整个时间轮） */
     private ScheduledExecutorService runExecutor;
 
+    /** cursor */
     private int cursor = 0;
 
     /**

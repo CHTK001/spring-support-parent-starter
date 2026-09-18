@@ -1,4 +1,4 @@
-package com.chua.starter.server.support.enums;
+﻿package com.chua.starter.server.support.enums;
 
 import lombok.Getter;
 
@@ -35,7 +35,15 @@ public enum HostCollectType {
     /**
     * Prometheus 拉取：从 /指标 端点抓取指标
     */
-    PROMETHEUS("PROMETHEUS", "Prometheus拉取");
+    PROMETHEUS("PROMETHEUS", "Prometheus拉取"),
+    /**
+    * 本机自采集：monitor 所在本机，经 OSHI 直接读取本机硬件/系统信息，无需 Agent/SSH
+    */
+    LOCAL("LOCAL", "本机自采集(OSHI)"),
+    /**
+    * 不采集：关闭自动采集，不进行任何数据采集
+    */
+    NONE("NONE", "不采集");
 
     /**
     * 方式编码

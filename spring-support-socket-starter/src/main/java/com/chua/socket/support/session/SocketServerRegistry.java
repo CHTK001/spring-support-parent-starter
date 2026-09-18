@@ -82,6 +82,9 @@ public class SocketServerRegistry {
         }
     }
 
+    /**
+     * 响应ApplicationReady。
+     */
     @EventListener(ApplicationReadyEvent.class)
     public void onApplicationReady() {
         if (!enable) {
@@ -308,10 +311,20 @@ public class SocketServerRegistry {
         return Collections.emptyList();
     }
 
+    /**
+     * 获取最后一个Heartbeat。
+     *
+     * @return 结果数值
+     */
     public long getLastHeartbeat() {
         return lastHeartbeat;
     }
 
+    /**
+     * 获取服务端ID。
+     *
+     * @return 结果字符串
+     */
     public String getServerId() {
         return serverId;
     }

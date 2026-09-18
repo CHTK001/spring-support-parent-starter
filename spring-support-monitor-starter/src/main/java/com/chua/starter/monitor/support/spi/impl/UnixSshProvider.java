@@ -27,6 +27,12 @@ public class UnixSshProvider implements SystemInfoProvider {
         return "LINUX".equalsIgnoreCase(os) || "MAC".equalsIgnoreCase(os);
     }
 
+    /**
+     * 是否Mac。
+     *
+     * @param host 主机，不允许为 null
+     * @return 是否成功（true 表示成功）
+     */
     private boolean isMac(MsServerHost host) {
         return "MAC".equalsIgnoreCase(host.getServerHostOsType());
     }
@@ -53,8 +59,12 @@ public class UnixSshProvider implements SystemInfoProvider {
         String memOut = sshCache.exec(host, memCmd, 10000);
         try {
             long bytes = Long.parseLong(memOut.trim());
-            if (memOut.trim().length() > 8) info.put("memoryMb", bytes / 1024 / 1024);
-            else info.put("memoryMb", bytes / 1024);
+            if (memOut.trim().length() > 8) {
+                info.put("memoryMb", bytes / 1024 / 1024);
+            }
+            else {
+                info.put("memoryMb", bytes / 1024);
+            }
         } catch (Exception ignored) {}
         info.put("publicIp", sshCache.exec(host, "curl -s --connect-timeout 5 ifconfig.me 2>/dev/null", 10000));
         // CPU usage (idle from top, 1 sample)
@@ -79,13 +89,22 @@ public class UnixSshProvider implements SystemInfoProvider {
     public List<Map<String, Object>> processes(MsServerHost host, int page, int pageSize) {
         String out = sshCache.exec(host, "ps -eo pid,ppid,pcpu,pmem,rss,comm,args --no-headers", 30000);
         List<Map<String, Object>> all = new ArrayList<>();
-        if (out == null || out.isBlank()) return all;
+        if (out == null || out.isBlank()) {
+            return all;
+        }
         for (String line : out.split("\\r?\\n")) {
             String[] p = line.trim().split("\\s+", 8);
-            if (p.length < 8) continue;
+            if (p.length < 8) {
+                continue;
+            }
             Map<String, Object> m = new LinkedHashMap<>();
-            m.put("pid", p[0]); m.put("ppid", p[1]); m.put("cpu", p[2]);
-            m.put("mem", p[3]); m.put("rss", p[4]); m.put("name", p[5]); m.put("args", p[7]);
+            m.put("pid", p[0]);
+            m.put("ppid", p[1]);
+            m.put("cpu", p[2]);
+            m.put("mem", p[3]);
+            m.put("rss", p[4]);
+            m.put("name", p[5]);
+            m.put("args", p[7]);
             all.add(m);
         }
         int from = (page - 1) * pageSize;
@@ -98,15 +117,23 @@ public class UnixSshProvider implements SystemInfoProvider {
         String cmd = mac ? "launchctl list" : "systemctl list-units --type=service --no-pager --no-legend";
         String out = sshCache.exec(host, cmd, 30000);
         List<Map<String, Object>> all = new ArrayList<>();
-        if (out == null || out.isBlank()) return all;
+        if (out == null || out.isBlank()) {
+            return all;
+        }
         for (String line : out.split("\\r?\\n")) {
             String[] p = line.trim().split("\\s+");
-            if (p.length < 2) continue;
+            if (p.length < 2) {
+                continue;
+            }
             Map<String, Object> m = new LinkedHashMap<>();
             if (mac) {
-                m.put("name", p[2]); m.put("status", p[0].equals("-") ? "stopped" : "running"); m.put("pid", p[0]);
+                m.put("name", p[2]);
+                m.put("status", p[0].equals("-") ? "stopped" : "running");
+                m.put("pid", p[0]);
             } else {
-                m.put("name", p[0]); m.put("load", p[1]); m.put("status", p[2]);
+                m.put("name", p[0]);
+                m.put("load", p[1]);
+                m.put("status", p[2]);
             }
             all.add(m);
         }
@@ -118,18 +145,37 @@ public class UnixSshProvider implements SystemInfoProvider {
     public List<Map<String, Object>> disks(MsServerHost host) {
         String out = sshCache.exec(host, "df -Pk", 15000);
         List<Map<String, Object>> list = new ArrayList<>();
-        if (out == null || out.isBlank()) return list;
+        if (out == null || out.isBlank()) {
+            return list;
+        }
         for (String line : out.split("\\r?\\n")) {
-            if (line.startsWith("Filesystem") || line.isBlank()) continue;
+            if (line.startsWith("Filesystem") || line.isBlank()) {
+                continue;
+            }
             String[] p = line.trim().split("\\s+");
-            if (p.length < 6) continue;
+            if (p.length < 6) {
+                continue;
+            }
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("filesystem", p[0]);
             // df -Pk gives 1K-blocks; convert to bytes
-            try { m.put("size", Long.parseLong(p[1]) * 1024); } catch (Exception e) { m.put("size", 0L); }
-            try { m.put("used", Long.parseLong(p[2]) * 1024); } catch (Exception e) { m.put("used", 0L); }
-            try { m.put("avail", Long.parseLong(p[3]) * 1024); } catch (Exception e) { m.put("avail", 0L); }
-            m.put("use%", p[4]); m.put("mount", p[5]);
+            try {
+                m.put("size", Long.parseLong(p[1]) * 1024);
+            } catch (Exception e) {
+                m.put("size", 0L);
+            }
+            try {
+                m.put("used", Long.parseLong(p[2]) * 1024);
+            } catch (Exception e) {
+                m.put("used", 0L);
+            }
+            try {
+                m.put("avail", Long.parseLong(p[3]) * 1024);
+            } catch (Exception e) {
+                m.put("avail", 0L);
+            }
+            m.put("use%", p[4]);
+            m.put("mount", p[5]);
             list.add(m);
         }
         return list;
@@ -141,7 +187,9 @@ public class UnixSshProvider implements SystemInfoProvider {
         String cmd = mac ? "ifconfig" : "ip -j addr";
         String out = sshCache.exec(host, cmd, 15000);
         List<Map<String, Object>> list = new ArrayList<>();
-        if (out == null || out.isBlank()) return list;
+        if (out == null || out.isBlank()) {
+            return list;
+        }
         if (!mac) {
             // JSON 输出，简单解析
             list.add(Map.of("ifname", "eth0", "raw", out));
@@ -157,9 +205,13 @@ public class UnixSshProvider implements SystemInfoProvider {
         String cmd = mac ? "lsof -i -n -P" : "ss -tulnp";
         String out = sshCache.exec(host, cmd, 15000);
         List<Map<String, Object>> list = new ArrayList<>();
-        if (out == null || out.isBlank()) return list;
+        if (out == null || out.isBlank()) {
+            return list;
+        }
         for (String line : out.split("\\r?\\n")) {
-            if (line.startsWith("State") || line.startsWith("COMMAND") || line.isBlank()) continue;
+            if (line.startsWith("State") || line.startsWith("COMMAND") || line.isBlank()) {
+                continue;
+            }
             list.add(Map.of("raw", line));
         }
         return list;
@@ -169,13 +221,19 @@ public class UnixSshProvider implements SystemInfoProvider {
     public List<Map<String, Object>> files(MsServerHost host, String path) {
         String out = sshCache.exec(host, "ls -la --time-style=long-iso \"" + path.replace("\"", "") + "\"", 15000);
         List<Map<String, Object>> list = new ArrayList<>();
-        if (out == null || out.isBlank()) return list;
+        if (out == null || out.isBlank()) {
+            return list;
+        }
         String[] lines = out.split("\\r?\\n");
         for (int i = 1; i < lines.length; i++) {
             String line = lines[i];
-            if (line.isBlank()) continue;
+            if (line.isBlank()) {
+                continue;
+            }
             String[] p = line.split("\\s+", 8);
-            if (p.length < 8) continue;
+            if (p.length < 8) {
+                continue;
+            }
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("name", p[7].split(" -> ")[0]);
             m.put("isDir", p[0].startsWith("d"));
@@ -230,7 +288,9 @@ public class UnixSshProvider implements SystemInfoProvider {
     public List<Map<String, Object>> env(MsServerHost host) {
         String out = sshCache.exec(host, "env", 10000);
         List<Map<String, Object>> list = new ArrayList<>();
-        if (out == null) return list;
+        if (out == null) {
+            return list;
+        }
         for (String line : out.split("\\r?\\n")) {
             int eq = line.indexOf('=');
             if (eq > 0) {

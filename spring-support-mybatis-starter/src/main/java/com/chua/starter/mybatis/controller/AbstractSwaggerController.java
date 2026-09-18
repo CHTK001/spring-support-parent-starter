@@ -36,6 +36,7 @@ public abstract class AbstractSwaggerController<S extends IService<T>, T> extend
     * @param @Validated(SelectGroup.class @校验(选择群体.类
     * @param @Validated(SelectGroup.class @校验(选择群体.类
     * @param @Validated(SelectGroup.class @Validated(SelectGroup.class
+    * @param bindingResult binding结果，不允许为 null
     */
     @ResponseBody
     @Operation(summary = "分页查询基础数据")
@@ -67,6 +68,7 @@ public abstract class AbstractSwaggerController<S extends IService<T>, T> extend
     * @param @Validated(SelectGroup.class @校验(选择群体.类
     * @param @Validated(SelectGroup.class @校验(选择群体.类
     * @param @Validated(SelectGroup.class @Validated(SelectGroup.class
+    * @param bindingResult binding结果，不允许为 null
     */
     @ResponseBody
     @Operation(summary = "查询基础数据")

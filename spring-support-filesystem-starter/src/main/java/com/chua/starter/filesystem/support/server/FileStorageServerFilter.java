@@ -1646,8 +1646,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',Robot
 var list=document.getElementById('list');if(!list)return;
 var menu=document.getElementById('ctxMenu');
 var cur=null;
-function findParent(el){while(el&&!el.classList.contains('lrow'))el=el.parentElement;return el;}
-function pickRow(el){var r=findParent(el);if(r)showMenu(r);}
+function findParent(el) {
+    while(el&&!el.classList.contains('lrow'))el=el.parentElement;
+    return el;
+}
+function pickRow(el) {
+    var r=findParent(el);
+    if(r)showMenu(r);
+}
 function rowHref(r){return r.dataset?r.dataset.href:'';}
 function rowName(r){return r.dataset?r.dataset.name:'';}
 function rowKey(r){return r.dataset?r.dataset.key:'';}
@@ -1671,24 +1677,42 @@ menu.innerHTML=html;
 menu.style.display='block';
 var mw=menu.offsetWidth,mh=menu.offsetHeight;
 var x=window.event.clientX||0,y=window.event.clientY||0;
-if(x+mw>window.innerWidth)x=window.innerWidth-mw-8;
-if(y+mh>window.innerHeight)y=window.innerHeight-mh-8;
+if(x+mw>window.innerWidth) {
+    x=window.innerWidth-mw-8;
+}
+if(y+mh>window.innerHeight) {
+    y=window.innerHeight-mh-8;
+}
 menu.style.left=x+'px';menu.style.top=y+'px';}
 document.addEventListener('contextmenu',function(e){
 var r=findParent(e.target);
 if(r&&!(r.dataset&&r.dataset.nav==='parent')){
   e.preventDefault();showMenu(r);return false;}});
 document.addEventListener('click',function(e){
-if(e.target.closest('.ctx'))return;
-if(e.target.closest('.pv-mask'))return;
+if(e.target.closest('.ctx')) {
+    return;
+}
+if(e.target.closest('.pv-mask')) {
+    return;
+}
 menu.style.display='none';});
 document.addEventListener('keydown',function(e){if(e.key==='Escape'){menu.style.display='none';closePv();closeOt();}});
 function kindOf(name){var ext=(name.split('.').pop()||'').toLowerCase();
-if(['png','jpg','jpeg','gif','svg','webp','bmp','ico'].indexOf(ext)>=0)return 'image';
-if(['mp4','webm','ogg','mov','avi','mkv','flv','wmv','m4v','3gp'].indexOf(ext)>=0)return 'video';
-if(['mp3','wav','flac','m4a'].indexOf(ext)>=0)return 'audio';
-if(['pdf'].indexOf(ext)>=0)return 'pdf';
-if(['txt','md','log','json','xml','csv','html','js','ts','java','py','c','cpp','go','sql'].indexOf(ext)>=0)return 'text';
+if(['png','jpg','jpeg','gif','svg','webp','bmp','ico'].indexOf(ext)>=0) {
+    return 'image';
+}
+if(['mp4','webm','ogg','mov','avi','mkv','flv','wmv','m4v','3gp'].indexOf(ext)>=0) {
+    return 'video';
+}
+if(['mp3','wav','flac','m4a'].indexOf(ext)>=0) {
+    return 'audio';
+}
+if(['pdf'].indexOf(ext)>=0) {
+    return 'pdf';
+}
+if(['txt','md','log','json','xml','csv','html','js','ts','java','py','c','cpp','go','sql'].indexOf(ext)>=0) {
+    return 'text';
+}
 return 'other';}
 function openPreview(href,name){
 var body=document.getElementById('pvBody'),title=document.getElementById('pvTitle');
@@ -1704,7 +1728,10 @@ else if(kind==='text'){
   var sep=href.indexOf('?')<0?'?':'&';
   body.innerHTML='<iframe src="'+href+sep+'preview=true"></iframe>';
 }}
-function closePv(){document.getElementById('pvMask').classList.remove('show');document.getElementById('pvBody').innerHTML='';}
+function closePv() {
+    document.getElementById('pvMask').classList.remove('show');
+    document.getElementById('pvBody').innerHTML='';
+}
 function closeOt(){document.getElementById('otMask').classList.remove('show');}
 function copyOt(){var i=document.getElementById('otUrl');i.select();try{document.execCommand('copy');}catch(e){}
 var b=document.getElementById('otCopyBtn');if(b){b.textContent='已复制';setTimeout(function(){b.textContent='复制';},1500);}}
@@ -1756,6 +1783,13 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
                 + "</svg>";
     }
 
+    /**
+     * 渲染Breadcrumb。
+     *
+     * @param sb 方法入参 sb
+     * @param bucket 方法入参 bucket
+     * @param dir 目录，不允许为 null
+     */
     private void renderBreadcrumb(StringBuilder sb, String bucket, String dir) {
         sb.append("<div class=\"topbar\">");
         sb.append("<span class=\"logo\">\uD83D\uDCC1 文件存储</span>");
@@ -1792,6 +1826,14 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
     */
     }
 
+    /**
+     * 渲染EntriesSimple。
+     *
+     * @param sb 方法入参 sb
+     * @param bucket 方法入参 bucket
+     * @param dir 目录，不允许为 null
+     * @param items 方法入参 items
+     */
     private void renderEntriesSimple(StringBuilder sb, String bucket, String dir, List<Metadata> items) {
         sb.append("<div class=\"panel\">");
         if (dir != null && !dir.isEmpty()) {
@@ -1831,6 +1873,14 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         sb.append("</div>");
     }
 
+    /**
+     * 构建Href。
+     *
+     * @param bucket 方法入参 bucket
+     * @param dir 目录，不允许为 null
+     * @param m 方法入参 m
+     * @return 结果字符串
+     */
     private String buildHref(String bucket, String dir, Metadata m) {
         StringBuilder sb = new StringBuilder("/");
         sb.append(encodePathSeg(bucket));
@@ -1849,6 +1899,12 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         return sb.toString();
     }
 
+    /**
+     * 文件Icon。
+     *
+     * @param m 方法入参 m
+     * @return 结果字符串
+     */
     private String fileIcon(Metadata m) {
         if (m.isDirectory()) {
             return "\uD83D\uDCC1";
@@ -1884,6 +1940,12 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         return "\uD83D\uDCC4";
     }
 
+    /**
+     * 格式化大小。
+     *
+     * @param bytes 字节数组，不允许为 null
+     * @return 结果字符串
+     */
     private String formatSize(long bytes) {
         if (bytes < 1024) {
             return bytes + " B";
@@ -1898,6 +1960,12 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         return String.format("%.1f %s", size, units[i]);
     }
 
+    /**
+     * 格式化时间。
+     *
+     * @param millis 毫秒数，不允许为 null
+     * @return 结果字符串
+     */
     private String formatTime(long millis) {
         java.time.Instant instant = java.time.Instant.ofEpochMilli(millis);
         java.time.ZoneId zone = java.time.ZoneId.systemDefault();
@@ -1913,6 +1981,12 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
                 dt.getHour(), dt.getMinute());
     }
 
+    /**
+     * 编码路径Seg。
+     *
+     * @param s 方法入参 s
+     * @return 结果字符串
+     */
     private String encodePathSeg(String s) {
         try {
             return java.net.URLEncoder.encode(s, StandardCharsets.UTF_8).replace("+", "%20");
@@ -1921,6 +1995,12 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         }
     }
 
+    /**
+     * 编码路径Full。
+     *
+     * @param path 路径，不允许为 null
+     * @return 结果字符串
+     */
     private String encodePathFull(String path) {
         String[] parts = path.split("/", -1);
         StringBuilder sb = new StringBuilder();
@@ -1935,6 +2015,12 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         return sb.toString();
     }
 
+    /**
+     * escapeHtml。
+     *
+     * @param s 方法入参 s
+     * @return 结果字符串
+     */
     private String escapeHtml(String s) {
         if (s == null) {
             return "";
