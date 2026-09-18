@@ -1,7 +1,6 @@
 package com.chua.common.starter.support.network.quality;
 
 import com.ip2proxy.IP2Proxy;
-import com.ip2proxy.ProxyResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -12,91 +11,112 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 /**
-* IP2代理 LITE 离线 IP 质量检测器（基于 IP2代理 Java 库）
-*
-* @since 4.0.0.42
-* @author CH
+ * IP2Proxy LITE 离线 IP 质量检测器（基于 IP2Proxy Java 库）。
+ * <p>
+ * 该检测器使用本地的 IP2PROXY-LITE-PX2.BIN 离线数据库判断 IP 的代理 / VPN /
+ * 数据中心等特征。BIN 文件从 classpath 下读取，若不存在则直接降级返回空
+ * 检测结果（不抛异常），保证在没有 BIN 的环境下系统仍可正常启动。
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 public class IP2ProxyLiteIpQualityDetector implements IpQualityDetector {
 
     /** 日志记录器 */
     private static final Logger logger = LoggerFactory.getLogger(IP2ProxyLiteIpQualityDetector.class);
 
-    /** 默认_bin */
+    /** 默认 BIN 文件名（从 classpath 读取） */
     private static final String DEFAULT_BIN = "IP2PROXY-LITE-PX2.BIN";
 
-    /** Ip2代理 */
+    /** IP2Proxy 实例；BIN 缺失时为 null，表示不可用 */
     private final IP2Proxy ip2Proxy;
 
-    /** 创建 IP2代理liteipqualitydetector 实例 */
-    public IP2ProxyLiteIpQualityDetector() {
-        /**
-    * this。
-    * @param findDefaultResource( 查找默认resource(
+    /**
+    * 从默认 classpath 资源创建实例。BIN 缺失时降级为不可用（不抛异常）。
     */
-        this(findDefaultResource());
+    public IP2ProxyLiteIpQualityDetector() {
+        Path bin = findDefaultResource();
+        if (bin == null) {
+            // 缺少 BIN：降级为不可用，detect 将返回空结果
+            this.ip2Proxy = null;
+            return;
+        }
+        this.ip2Proxy = open(bin, null);
     }
 
     /**
-    * 创建 IP2代理liteipqualitydetector 实例
-    * @param binPath bin路径
+    * 从指定 BIN 文件创建实例。
+    *
+    * @param binPath BIN 文件路径
     */
     public IP2ProxyLiteIpQualityDetector(Path binPath) {
-        try {
-            this.ip2Proxy = new IP2Proxy();
-            int result = ip2Proxy.Open(binPath.toString());
-            if (result != 0) {
-                /**
-                * illegal状态异常。
-                * @param result 结果
-                * @return illegal状态异常的结果
-                */
-                throw new IllegalStateException("初始化 IP2Proxy LITE 失败，打开文件: " + binPath + "，错误码: " + result);
-            }
-        } catch (IOException e) {
-            /**
-            * illegal状态异常。
-            * @param binPath bin路径
-            * @param e e
-            * @return illegal状态异常的结果
-            */
-            throw new IllegalStateException("初始化 IP2Proxy LITE 失败: " + binPath, e);
-        }
+        this.ip2Proxy = open(binPath, null);
     }
 
     /**
-    * 创建 IP2代理liteipqualitydetector 实例
-    * @param binStream bin流
+    * 从 BIN 输入流创建实例。
+    *
+    * @param binStream BIN 输入流
+    * @throws IOException 读取流失败时抛出
     */
     public IP2ProxyLiteIpQualityDetector(InputStream binStream) throws IOException {
         try {
-            this.ip2Proxy = new IP2Proxy();
             byte[] bytes = binStream.readAllBytes();
-            int result = ip2Proxy.Open(bytes);
-            if (result != 0) {
-                /**
-                * illegal状态异常。
-                * @param result 结果
-                * @return illegal状态异常的结果
-                */
-                throw new IllegalStateException("初始化 IP2Proxy LITE InputStream 失败，错误码: " + result);
-            }
+            this.ip2Proxy = open(null, bytes);
         } catch (IOException e) {
-            /**
-            * io异常。
-            * @param 失败" 失败"
-            * @param e e
-            * @return io异常的结果
-            */
             throw new IOException("初始化 IP2Proxy LITE 失败", e);
         }
     }
 
+    /**
+    * 打开 BIN（文件或字节），失败时返回 null 并记录日志（降级）。
+    *
+    * @param path     BIN 文件路径（与 bytes 二选一）
+    * @param bytes    BIN 字节（与 path 二选一）
+    * @return 打开成功返回 IP2Proxy，失败返回 null
+    */
+    private static IP2Proxy open(Path path, byte[] bytes) {
+        try {
+            IP2Proxy proxy = new IP2Proxy();
+            int result = (bytes != null) ? proxy.Open(bytes) : proxy.Open(path.toString());
+            if (result != 0) {
+                logger.warn("IP2Proxy LITE 打开失败，错误码={}，路径={}", result,
+                        bytes != null ? "InputStream" : path);
+                return null;
+            }
+            return proxy;
+        } catch (IOException e) {
+            logger.warn("IP2Proxy LITE 打开异常: {}", path, e);
+            return null;
+        }
+    }
+
+    /**
+    * 查找默认 classpath BIN 资源，缺失时返回 null（不抛异常）。
+    *
+    * @return BIN 路径；不存在返回 null
+    */
+    private static Path findDefaultResource() {
+        URL resource = IP2ProxyLiteIpQualityDetector.class.getClassLoader().getResource(DEFAULT_BIN);
+        if (resource == null) {
+            return null;
+        }
+        try {
+            return Path.of(resource.toURI());
+        } catch (Exception e) {
+            logger.warn("解析 IP2Proxy LITE BIN 路径失败", e);
+            return null;
+        }
+    }
+
     @Override
-    /** Detect */
     public IpQuality detect(String ip) {
         if (ip == null || ip.isEmpty()) {
             return null;
+        }
+        if (ip2Proxy == null) {
+            // BIN 缺失降级：返回空检测结果
+            return emptyQuality(ip);
         }
         try {
             IP2ProxyResult result = new IP2ProxyResult(ip2Proxy, ip);
@@ -111,7 +131,6 @@ public class IP2ProxyLiteIpQualityDetector implements IpQualityDetector {
     }
 
     @Override
-    /** Detect */
     public IpQuality[] detect(String[] ips) {
         if (ips == null || ips.length == 0) {
             return new IpQuality[0];
@@ -124,35 +143,10 @@ public class IP2ProxyLiteIpQualityDetector implements IpQualityDetector {
     }
 
     /**
-    * 查找默认resource
+    * 构造空检测结果。
     *
-    * @return find默认resource的结果
-    */
-    private static Path findDefaultResource() {
-        URL resource = IP2ProxyLiteIpQualityDetector.class.getClassLoader()
-                .getResource(DEFAULT_BIN);
-        if (resource == null) {
-            throw new IllegalStateException(
-                    "未找到 IP2PROXY-LITE-PX2.BIN，请将 IP2PROXY-LITE-PX2.BIN 放置于 classpath 下");
-        }
-        try {
-            return Path.of(resource.toURI());
-        } catch (Exception e) {
-            /**
-            * illegal状态异常。
-            * @param 数据库路径失败" 数据库路径失败"
-            * @param e e
-            * @return illegal状态异常的结果
-            */
-            throw new IllegalStateException("解析 IP2Proxy LITE 数据库路径失败", e);
-        }
-    }
-
-    /**
-    * 空quality
-    *
-    * @param ip ip
-    * @return 空quality的结果
+    * @param ip IP
+    * @return 空结果
     */
     private static IpQuality emptyQuality(String ip) {
         IpQuality q = new IpQuality();
@@ -161,11 +155,11 @@ public class IP2ProxyLiteIpQualityDetector implements IpQualityDetector {
     }
 
     /**
-    * 映射结果
+    * 将 IP2Proxy 结果映射为 IpQuality。
     *
-    * @param ip ip
-    * @param r r
-    * @return 映射结果的结果
+    * @param ip 原始 IP
+    * @param r  IP2Proxy 结果
+    * @return IpQuality
     */
     private static IpQuality mapResult(String ip, IP2ProxyResult r) {
         IpQuality q = new IpQuality();
