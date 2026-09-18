@@ -38,6 +38,8 @@ spring:
         - classpath:db/init/V1.5__init_tshark.sql
         # 资产表补列 ms_server_host_agent_installed（server-starter 实体已有、建表脚本缺失）
         - classpath:db/init/V1.6__alter_server_host_agent_installed.sql
+        # 资产表补列主机级远控配置（协议/端口/模式/VNC 口令，同上：实体已有、建表脚本缺失）
+        - classpath:db/init/V1.7__alter_server_host_remote_config.sql
         # AI 模块 H2 兼容建表脚本（纯 CREATE TABLE，无 MySQL-only 语法）
         - classpath:db/h2-local-schema.sql
 
@@ -69,7 +71,7 @@ spring:
       client-host: 127.0.0.1:8848
 
 mybatis-plus:
-  mapper-locations: classpath:/mapper/**/*.xml
+  mapper-locations: classpath*:/mapper/**/*.xml
   type-aliases-package: com.chua.starter.monitor.support.entity
   configuration:
     map-underscore-to-camel-case: true
