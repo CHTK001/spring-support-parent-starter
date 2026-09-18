@@ -1,6 +1,9 @@
 package com.chua.starter.hotsport.support.controller;
 
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.starter.hotsport.support.model.LeakQuery;
+import com.chua.starter.hotsport.support.model.LogQuery;
+import com.chua.starter.hotsport.support.model.TransmissionQuery;
 import com.chua.starter.hotsport.support.service.ApmQueryService;
 import com.chua.starter.hotsport.support.service.ApmInjectService;
 import com.chua.starter.hotsport.support.service.JvmMetricsService;
@@ -9,7 +12,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -17,7 +22,10 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import jakarta.annotation.PreDestroy;
+import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,6 +33,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * APM 热点观测 REST 接口。
@@ -65,54 +74,32 @@ public class ApmController {
             });
 
     /**
-    * 概览统计。
-    *
-    * @return 各类型总量 + agent 状态
-    */
+     * 概览统计。
+     *
+     * @return 各类型总量 + agent 状态
+     */
     @GetMapping("/stats")
     public ReturnResult<Map<String, Object>> stats() {
         return ReturnResult.ok(apmQueryService.stats());
     }
 
     /**
-    * 分页查询传输记录。
-    *
-    * @param page        页码，默认 1
-    * @param size        每页条数，默认 20
-    * @param source      源端过滤
-    * @param target      目标端过滤
-    * @param protocol    协议过滤
-    * @param errorOnly   仅看错误
-    * @param startTime   开始时间（epoch 毫秒）
-    * @param endTime     结束时间（epoch 毫秒）
-    * @param traceId     链路 ID 精确匹配
-    * @param durationMin 最小耗时（毫秒）
-    * @param durationMax 最大耗时（毫秒）
-    * @return 分页数据
-    */
+     * 分页查询传输记录。
+     *
+     * @param query 查询参数对象（字段与 HTTP 查询参数一一对应）
+     * @return 分页数据
+     */
     @GetMapping("/transmissions")
-    public ReturnResult<Map<String, Object>> transmissions(
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "20") int size,
-            @RequestParam(required = false) String source,
-            @RequestParam(required = false) String target,
-            @RequestParam(required = false) String protocol,
-            @RequestParam(required = false) Boolean errorOnly,
-            @RequestParam(required = false) Long startTime,
-            @RequestParam(required = false) Long endTime,
-            @RequestParam(required = false) String traceId,
-            @RequestParam(required = false) Long durationMin,
-            @RequestParam(required = false) Long durationMax,
-            @RequestParam(required = false) String operation) {
-        return ReturnResult.ok(apmQueryService.transmissions(page, size, source, target, protocol, errorOnly, startTime, endTime, traceId, durationMin, durationMax, operation));
+    public ReturnResult<Map<String, Object>> transmissions(TransmissionQuery query) {
+        return ReturnResult.ok(apmQueryService.transmissions(query));
     }
 
     /**
-    * 查询依赖边。
-    *
-    * @param size 上限，默认 100
-    * @return 依赖边列表
-    */
+     * 查询依赖边。
+     *
+     * @param size 上限，默认 100
+     * @return 依赖边列表
+     */
     @GetMapping("/dependencies")
     public ReturnResult<Map<String, Object>> dependencies(
             @RequestParam(defaultValue = "100") int size) {
@@ -122,64 +109,32 @@ public class ApmController {
     }
 
     /**
-    * 分页查询资源泄漏。
-    *
-    * @param page         页码，默认 1
-    * @param size         每页条数，默认 20
-    * @param resourceType 类型过滤
-    * @param minAgeMs     最小存活毫秒
-    * @param startTime    开始时间（epoch 毫秒）
-    * @param endTime      结束时间（epoch 毫秒）
-    * @param resourceName 资源名过滤
-    * @param thread       线程名过滤
-    * @param activeOnly   仅返回活跃泄漏
-    * @return 分页数据
-    */
+     * 分页查询资源泄漏。
+     *
+     * @param query 查询参数对象（字段与 HTTP 查询参数一一对应）
+     * @return 分页数据
+     */
     @GetMapping("/leaks")
-    public ReturnResult<Map<String, Object>> leaks(
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "20") int size,
-            @RequestParam(required = false) String resourceType,
-            @RequestParam(required = false) Long minAgeMs,
-            @RequestParam(required = false) Long startTime,
-            @RequestParam(required = false) Long endTime,
-            @RequestParam(required = false) String resourceName,
-            @RequestParam(required = false) String thread,
-            @RequestParam(required = false) Boolean activeOnly) {
-        return ReturnResult.ok(apmQueryService.leaks(page, size, resourceType, minAgeMs, startTime, endTime, resourceName, thread, activeOnly));
+    public ReturnResult<Map<String, Object>> leaks(LeakQuery query) {
+        return ReturnResult.ok(apmQueryService.leaks(query));
     }
 
     /**
-    * 分页查询日志。
-    *
-    * @param page      页码，默认 1
-    * @param size      每页条数，默认 20
-    * @param level     级别过滤
-    * @param keyword   关键字过滤（匹配 message/logger）
-    * @param traceId   链路 ID 精确匹配
-    * @param startTime 开始时间（epoch 毫秒）
-    * @param endTime   结束时间（epoch 毫秒）
-    * @param className 类名过滤
-    * @return 分页数据
-    */
+     * 分页查询日志。
+     *
+     * @param query 查询参数对象（字段与 HTTP 查询参数一一对应）
+     * @return 分页数据
+     */
     @GetMapping("/logs")
-    public ReturnResult<Map<String, Object>> logs(
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "20") int size,
-            @RequestParam(required = false) String level,
-            @RequestParam(required = false) String keyword,
-            @RequestParam(required = false) String traceId,
-            @RequestParam(required = false) Long startTime,
-            @RequestParam(required = false) Long endTime,
-            @RequestParam(required = false) String className) {
-        return ReturnResult.ok(apmQueryService.logs(page, size, level, keyword, traceId, startTime, endTime, className));
+    public ReturnResult<Map<String, Object>> logs(LogQuery query) {
+        return ReturnResult.ok(apmQueryService.logs(query));
     }
 
     /**
-    * Agent 实时状态。
-    *
-    * @return agent 是否激活 + Shell 端口等
-    */
+     * Agent 实时状态。
+     *
+     * @return agent 是否激活 + Shell 端口等
+     */
     @GetMapping("/agent/status")
     public ReturnResult<Map<String, Object>> agentStatus() {
         Map<String, Object> status = apmQueryService.stats();
@@ -187,11 +142,11 @@ public class ApmController {
     }
 
     /**
-    * Agent 实时 Trace Span 列表（前端 Traces 页数据源）。
-    *
-    * @param limit 返回上限，默认 200
-    * @return 传输记录 DTO 列表（含 traceId/spanId/className/methodName）
-    */
+     * Agent 实时 Trace Span 列表（前端 Traces 页数据源）。
+     *
+     * @param limit 返回上限，默认 200
+     * @return 传输记录 DTO 列表（含 traceId/spanId/className/methodName）
+     */
     @GetMapping("/agent/traces")
     public ReturnResult<List<Map<String, Object>>> agentTraces(
             @RequestParam(defaultValue = "200") int limit) {
@@ -199,11 +154,11 @@ public class ApmController {
     }
 
     /**
-    * Agent 实时依赖边列表（前端 Traces/Dependencies 页数据源）。
-    *
-    * @param limit 返回上限，默认 50
-    * @return 依赖边 DTO 列表
-    */
+     * Agent 实时依赖边列表（前端 Traces/Dependencies 页数据源）。
+     *
+     * @param limit 返回上限，默认 50
+     * @return 依赖边 DTO 列表
+     */
     @GetMapping("/agent/dependencies")
     public ReturnResult<List<Map<String, Object>>> agentDependencies(
             @RequestParam(defaultValue = "50") int limit) {
@@ -211,46 +166,46 @@ public class ApmController {
     }
 
     /**
-    * 按 traceId 查询整条链路的全部 span（Trace 详情抽屉数据源）。
-    *
-    * @param traceId 链路 ID
-    * @return span 列表（按开始时间升序）
-    */
+     * 按 traceId 查询整条链路的全部 span（Trace 详情抽屉数据源）。
+     *
+     * @param traceId 链路 ID
+     * @return span 列表（按开始时间升序）
+     */
     @GetMapping("/trace/{traceId}")
     public ReturnResult<List<Map<String, Object>>> traceDetail(
-            @org.springframework.web.bind.annotation.PathVariable String traceId) {
+            @PathVariable String traceId) {
         return ReturnResult.ok(apmQueryService.traceDetail(traceId));
     }
 
     /**
-    * 按 traceId 查询瀑布数据（SkyWalking 风格横向时间轴）。
-    *
-    * @param traceId 链路 ID
-    * @return 瀑布结构 { traceId, spans, totalMs, spanCount }
-    */
+     * 按 traceId 查询瀑布数据（SkyWalking 风格横向时间轴）。
+     *
+     * @param traceId 链路 ID
+     * @return 瀑布结构 { traceId, spans, totalMs, spanCount }
+     */
     @GetMapping("/trace/{traceId}/waterfall")
     public ReturnResult<Map<String, Object>> traceWaterfall(
-            @org.springframework.web.bind.annotation.PathVariable String traceId) {
+            @PathVariable String traceId) {
         return ReturnResult.ok(apmQueryService.traceWaterfall(traceId));
     }
 
     /**
-    * 服务聚合（SkyWalking service 层）。
-    *
-    * @return 服务列表
-    */
+     * 服务聚合（SkyWalking service 层）。
+     *
+     * @return 服务列表
+     */
     @GetMapping("/services")
     public ReturnResult<List<Map<String, Object>>> services() {
         return ReturnResult.ok(apmQueryService.services());
     }
 
     /**
-    * 端点聚合 + 分位数（SkyWalking endpoint 层）。
-    *
-    * @param limit   返回上限
-    * @param keyword 端点关键字过滤（可空）
-    * @return 端点列表
-    */
+     * 端点聚合 + 分位数（SkyWalking endpoint 层）。
+     *
+     * @param limit   返回上限
+     * @param keyword 端点关键字过滤（可空）
+     * @return 端点列表
+     */
     @GetMapping("/endpoints")
     public ReturnResult<List<Map<String, Object>>> endpoints(
             @RequestParam(defaultValue = "50") int limit,
@@ -259,11 +214,11 @@ public class ApmController {
     }
 
     /**
-    * 依赖边聚合（按 edgeId 归并，修复每事件 callCount=1 的存储侧问题）。
-    *
-    * @param size 返回上限
-    * @return 聚合依赖边列表
-    */
+     * 依赖边聚合（按 edgeId 归并，修复每事件 callCount=1 的存储侧问题）。
+     *
+     * @param size 返回上限
+     * @return 聚合依赖边列表
+     */
     @GetMapping("/dependencies/aggregated")
     public ReturnResult<List<Map<String, Object>>> dependenciesAggregated(
             @RequestParam(defaultValue = "100") int size) {
@@ -271,31 +226,31 @@ public class ApmController {
     }
 
     /**
-    * 系统健康状态（SkyWalking 饱和度派生指标）。
-    *
-    * @return 健康 { health, qps, errorRate, activeLeaks, windowSeconds }
-    */
+     * 系统健康状态（SkyWalking 饱和度派生指标）。
+     *
+     * @return 健康 { health, qps, errorRate, activeLeaks, windowSeconds }
+     */
     @GetMapping("/health")
     public ReturnResult<Map<String, Object>> health() {
         return ReturnResult.ok(apmQueryService.health());
     }
 
     /**
-    * JVM 指标实时快照。
-    *
-    * @return JVM 快照 Map
-    */
+     * JVM 指标实时快照。
+     *
+     * @return JVM 快照 Map
+     */
     @GetMapping("/jvm/snapshot")
     public ReturnResult<Map<String, Object>> jvmSnapshot() {
         return ReturnResult.ok(jvmMetricsService.snapshot());
     }
 
     /**
-    * JVM 指标时序（最近 N 分钟）。
-    *
-    * @param minutes 时间窗（分钟），默认 30
-    * @return 时序点列表
-    */
+     * JVM 指标时序（最近 N 分钟）。
+     *
+     * @param minutes 时间窗（分钟），默认 30
+     * @return 时序点列表
+     */
     @GetMapping("/jvm/metrics")
     public ReturnResult<List<Map<String, Object>>> jvmMetrics(
             @RequestParam(defaultValue = "30") int minutes) {
@@ -303,21 +258,21 @@ public class ApmController {
     }
 
     /**
-    * 系统拓扑（真实运行值）。
-    *
-    * @return 拓扑结构
-    */
+     * 系统拓扑（真实运行值）。
+     *
+     * @return 拓扑结构
+     */
     @GetMapping("/system/topology")
     public ReturnResult<Map<String, Object>> systemTopology() {
         return ReturnResult.ok(apmQueryService.systemTopology());
     }
 
     /**
-    * 链路树（trace → span 两级 ReTree 数据源）。
-    *
-    * @param limit trace 上限
-    * @return trace 节点列表
-    */
+     * 链路树（trace → span 两级 ReTree 数据源）。
+     *
+     * @param limit trace 上限
+     * @return trace 节点列表
+     */
     @GetMapping("/agent/traces/tree")
     public ReturnResult<List<Map<String, Object>>> agentTracesTree(
             @RequestParam(defaultValue = "50") int limit) {
@@ -325,11 +280,11 @@ public class ApmController {
     }
 
     /**
-    * 告警事件（新事件在前）。
-    *
-    * @param limit 返回上限
-    * @return 告警事件列表
-    */
+     * 告警事件（新事件在前）。
+     *
+     * @param limit 返回上限
+     * @return 告警事件列表
+     */
     @GetMapping("/alerts")
     public ReturnResult<List<Map<String, Object>>> alerts(
             @RequestParam(defaultValue = "100") int limit) {
@@ -337,10 +292,10 @@ public class ApmController {
     }
 
     /**
-    * 告警规则列表。
-    *
-    * @return 规则列表
-    */
+     * 告警规则列表。
+     *
+     * @return 规则列表
+     */
     @GetMapping("/alerts/rules")
     public ReturnResult<List<Map<String, Object>>> alertRules() {
         return ReturnResult.ok(alertMonitorService.listRules().stream().map(r -> {
@@ -352,19 +307,19 @@ public class ApmController {
             m.put("debounceMs", r.debounceMs);
             m.put("enabled", r.enabled);
             return m;
-        }).collect(java.util.stream.Collectors.toList()));
+        }).collect(Collectors.toList()));
     }
 
     /**
-    * 新增告警规则。
-    *
-    * @param metric     指标键
-    * @param threshold  阈值
-    * @param severity   严重级别（CRITICAL / WARNING）
-    * @param debounceMs 去抖毫秒
-    * @param enabled    是否启用
-    * @return 保存后的规则
-    */
+     * 新增告警规则。
+     *
+     * @param metric     指标键
+     * @param threshold  阈值
+     * @param severity   严重级别（CRITICAL / WARNING）
+     * @param debounceMs 去抖毫秒
+     * @param enabled    是否启用
+     * @return 保存后的规则
+     */
     @PostMapping("/alerts/rules")
     public ReturnResult<Map<String, Object>> addAlertRule(
             @RequestParam String metric, @RequestParam double threshold,
@@ -385,11 +340,11 @@ public class ApmController {
     }
 
     /**
-    * 启停告警规则。
-    *
-    * @param metric  指标键
-    * @param enabled 是否启用
-    */
+     * 启停告警规则。
+     *
+     * @param metric  指标键
+     * @param enabled 是否启用
+     */
     @PostMapping("/alerts/rules/toggle")
     public ReturnResult<Void> toggleAlertRule(
             @RequestParam String metric, @RequestParam boolean enabled) {
@@ -398,59 +353,59 @@ public class ApmController {
     }
 
     /**
-    * 删除告警规则。
-    *
-    * @param metric 指标键
-    */
-    @org.springframework.web.bind.annotation.DeleteMapping("/alerts/rules/{metric}")
+     * 删除告警规则。
+     *
+     * @param metric 指标键
+     */
+    @DeleteMapping("/alerts/rules/{metric}")
     public ReturnResult<Void> deleteAlertRule(
-            @org.springframework.web.bind.annotation.PathVariable String metric) {
+            @PathVariable String metric) {
         alertMonitorService.deleteRule(metric);
         return ReturnResult.ok(null);
     }
 
     /**
-    * 确认告警事件（OPEN → ACKNOWLEDGED）。
-    *
-    * @param id 事件 ID
-    * @return 是否处置成功
-    */
+     * 确认告警事件（OPEN → ACKNOWLEDGED）。
+     *
+     * @param id 事件 ID
+     * @return 是否处置成功
+     */
     @PostMapping("/alerts/{id}/acknowledge")
     public ReturnResult<Boolean> acknowledgeAlert(
-            @org.springframework.web.bind.annotation.PathVariable long id) {
+            @PathVariable long id) {
         return ReturnResult.ok(alertMonitorService.acknowledgeEvent(id, "ACKNOWLEDGED"));
     }
 
     /**
-    * 静默告警事件（OPEN → MUTED）。
-    *
-    * @param id 事件 ID
-    * @return 是否处置成功
-    */
+     * 静默告警事件（OPEN → MUTED）。
+     *
+     * @param id 事件 ID
+     * @return 是否处置成功
+     */
     @PostMapping("/alerts/{id}/mute")
     public ReturnResult<Boolean> muteAlert(
-            @org.springframework.web.bind.annotation.PathVariable long id) {
+            @PathVariable long id) {
         return ReturnResult.ok(alertMonitorService.acknowledgeEvent(id, "MUTED"));
     }
 
     /**
-    * 忽略告警事件（OPEN → IGNORED）。
-    *
-    * @param id 事件 ID
-    * @return 是否处置成功
-    */
+     * 忽略告警事件（OPEN → IGNORED）。
+     *
+     * @param id 事件 ID
+     * @return 是否处置成功
+     */
     @PostMapping("/alerts/{id}/ignore")
     public ReturnResult<Boolean> ignoreAlert(
-            @org.springframework.web.bind.annotation.PathVariable long id) {
+            @PathVariable long id) {
         return ReturnResult.ok(alertMonitorService.acknowledgeEvent(id, "IGNORED"));
     }
 
     /**
-    * 慢调用排行（按耗时降序）。
-    *
-    * @param limit 返回上限
-    * @return 慢调用列表
-    */
+     * 慢调用排行（按耗时降序）。
+     *
+     * @param limit 返回上限
+     * @return 慢调用列表
+     */
     @GetMapping("/slow-calls")
     public ReturnResult<List<Map<String, Object>>> slowCalls(
             @RequestParam(defaultValue = "20") int limit) {
@@ -458,11 +413,11 @@ public class ApmController {
     }
 
     /**
-    * 错误排行（按错误类型 + 消息聚合）。
-    *
-    * @param limit 返回上限
-    * @return 错误排行列表
-    */
+     * 错误排行（按错误类型 + 消息聚合）。
+     *
+     * @param limit 返回上限
+     * @return 错误排行列表
+     */
     @GetMapping("/error-ranking")
     public ReturnResult<List<Map<String, Object>>> errorRanking(
             @RequestParam(defaultValue = "20") int limit) {
@@ -470,21 +425,21 @@ public class ApmController {
     }
 
     /**
-    * SLA 统计。
-    *
-    * @return SLA 统计 Map
-    */
+     * SLA 统计。
+     *
+     * @return SLA 统计 Map
+     */
     @GetMapping("/sla")
     public ReturnResult<Map<String, Object>> sla() {
         return ReturnResult.ok(apmQueryService.slaStats());
     }
 
     /**
-    * 数据清理（按保留时长删除过期记录）。
-    *
-    * @param retentionMs 保留时长（毫秒）
-    * @return 清理统计
-    */
+     * 数据清理（按保留时长删除过期记录）。
+     *
+     * @param retentionMs 保留时长（毫秒）
+     * @return 清理统计
+     */
     @PostMapping("/cleanup")
     public ReturnResult<Map<String, Object>> cleanup(
             @RequestParam(defaultValue = "86400000") long retentionMs) {
@@ -496,15 +451,15 @@ public class ApmController {
     // ------------------------------------------------------------------
 
     /**
-    * 注入一条传输记录（自动聚合进依赖拓扑图）。
-    *
-    * @param source    源端（host:port）
-    * @param target    目标端（host:port）
-    * @param protocol  协议（HTTP/REDIS/MYSQL/GRPC/KAFKA…）
-    * @param operation 操作描述
-    * @param error     是否为错误调用
-    * @return 注入结果
-    */
+     * 注入一条传输记录（自动聚合进依赖拓扑图）。
+     *
+     * @param source    源端（host:port）
+     * @param target    目标端（host:port）
+     * @param protocol  协议（HTTP/REDIS/MYSQL/GRPC/KAFKA…）
+     * @param operation 操作描述
+     * @param error     是否为错误调用
+     * @return 注入结果
+     */
     @PostMapping("/inject/transmission")
     public ReturnResult<Map<String, Object>> injectTransmission(
             @RequestParam(required = false) String source,
@@ -516,11 +471,11 @@ public class ApmController {
     }
 
     /**
-    * 批量注入随机调用（多条依赖边 + 传输记录）。
-    *
-    * @param count 条数（1~200）
-    * @return 注入结果
-    */
+     * 批量注入随机调用（多条依赖边 + 传输记录）。
+     *
+     * @param count 条数（1~200）
+     * @return 注入结果
+     */
     @PostMapping("/inject/batch")
     public ReturnResult<Map<String, Object>> injectBatch(
             @RequestParam(defaultValue = "10") int count) {
@@ -528,12 +483,12 @@ public class ApmController {
     }
 
     /**
-    * 注入一条资源泄漏记录。
-    *
-    * @param resourceType 类型（File/Socket/Connection/Thread）
-    * @param resourceName 资源名
-    * @return 注入结果
-    */
+     * 注入一条资源泄漏记录。
+     *
+     * @param resourceType 类型（File/Socket/Connection/Thread）
+     * @param resourceName 资源名
+     * @return 注入结果
+     */
     @PostMapping("/inject/leak")
     public ReturnResult<Map<String, Object>> injectLeak(
             @RequestParam(required = false) String resourceType,
@@ -542,12 +497,12 @@ public class ApmController {
     }
 
     /**
-    * 注入一条日志记录。
-    *
-    * @param level   级别（INFO/WARN/ERROR/DEBUG）
-    * @param message 消息
-    * @return 注入结果
-    */
+     * 注入一条日志记录。
+     *
+     * @param level   级别（INFO/WARN/ERROR/DEBUG）
+     * @param message 消息
+     * @return 注入结果
+     */
     @PostMapping("/inject/log")
     public ReturnResult<Map<String, Object>> injectLog(
             @RequestParam(required = false) String level,
@@ -560,69 +515,59 @@ public class ApmController {
     // ------------------------------------------------------------------
 
     /**
-    * 全量导出传输记录 CSV。
-    */
+     * 全量导出传输记录 CSV。
+     *
+     * @param query    过滤条件参数对象（分页字段忽略）
+     * @param response HTTP 响应（直写 CSV 下载流）
+     * @throws IOException 响应流写出失败时
+     */
     @GetMapping("/export/transmissions")
-    public void exportTransmissions(
-            @RequestParam(required = false) String source,
-            @RequestParam(required = false) String target,
-            @RequestParam(required = false) String protocol,
-            @RequestParam(required = false) Boolean errorOnly,
-            @RequestParam(required = false) Long startTime,
-            @RequestParam(required = false) Long endTime,
-            @RequestParam(required = false) String traceId,
-            @RequestParam(required = false) Long durationMin,
-            @RequestParam(required = false) Long durationMax,
-            @RequestParam(required = false) String operation,
-            jakarta.servlet.http.HttpServletResponse response) throws IOException {
-        String csv = apmQueryService.exportTransmissionsCsv(source, target, protocol, errorOnly, startTime, endTime, traceId, durationMin, durationMax, operation);
+    public void exportTransmissions(TransmissionQuery query,
+                                    HttpServletResponse response) throws IOException {
+        String csv = apmQueryService.exportTransmissionsCsv(query);
         writeCsvAttachment(response, "transmissions-" + System.currentTimeMillis() + ".csv", csv);
     }
 
     /**
-    * 全量导出资源泄漏 CSV。
-    */
+     * 全量导出资源泄漏 CSV。
+     *
+     * @param query    过滤条件参数对象（分页字段忽略）
+     * @param response HTTP 响应（直写 CSV 下载流）
+     * @throws IOException 响应流写出失败时
+     */
     @GetMapping("/export/leaks")
-    public void exportLeaks(
-            @RequestParam(required = false) String resourceType,
-            @RequestParam(required = false) Long minAgeMs,
-            @RequestParam(required = false) Long startTime,
-            @RequestParam(required = false) Long endTime,
-            @RequestParam(required = false) String resourceName,
-            @RequestParam(required = false) String thread,
-            @RequestParam(required = false) Boolean activeOnly,
-            jakarta.servlet.http.HttpServletResponse response) throws IOException {
-        String csv = apmQueryService.exportLeaksCsv(resourceType, minAgeMs, startTime, endTime, resourceName, thread, activeOnly);
+    public void exportLeaks(LeakQuery query,
+                            HttpServletResponse response) throws IOException {
+        String csv = apmQueryService.exportLeaksCsv(query);
         writeCsvAttachment(response, "leaks-" + System.currentTimeMillis() + ".csv", csv);
     }
 
     /**
-    * 全量导出日志 CSV。
-    */
+     * 全量导出日志 CSV。
+     *
+     * @param query    过滤条件参数对象（分页字段忽略）
+     * @param response HTTP 响应（直写 CSV 下载流）
+     * @throws IOException 响应流写出失败时
+     */
     @GetMapping("/export/logs")
-    public void exportLogs(
-            @RequestParam(required = false) String level,
-            @RequestParam(required = false) String keyword,
-            @RequestParam(required = false) String traceId,
-            @RequestParam(required = false) Long startTime,
-            @RequestParam(required = false) Long endTime,
-            jakarta.servlet.http.HttpServletResponse response) throws IOException {
-        String csv = apmQueryService.exportLogsCsv(level, keyword, traceId, startTime, endTime);
+    public void exportLogs(LogQuery query,
+                           HttpServletResponse response) throws IOException {
+        String csv = apmQueryService.exportLogsCsv(query);
         writeCsvAttachment(response, "logs-" + System.currentTimeMillis() + ".csv", csv);
     }
 
     /**
-    * 直接写 CSV 下载响应（绕过消息转换器；UTF-8 BOM 保证 Excel 中文不乱码）。
-    */
-    private static void writeCsvAttachment(jakarta.servlet.http.HttpServletResponse response,
+     * 直接写 CSV 下载响应（绕过消息转换器；UTF-8 BOM 保证 Excel 中文不乱码）。
+     */
+    private static void writeCsvAttachment(HttpServletResponse response,
                                            String filename, String csv) throws IOException {
         response.setStatus(200);
         response.setContentType("text/csv;charset=UTF-8");
         response.setHeader("Content-Disposition", "attachment; filename=\"" + filename + "\"");
         byte[] bom = {(byte) 0xEF, (byte) 0xBB, (byte) 0xBF};
-        byte[] body = csv.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        byte[] body = csv.getBytes(StandardCharsets.UTF_8);
         response.setContentLength(bom.length + body.length);
-        try (java.io.OutputStream os = response.getOutputStream()) {
+        try (OutputStream os = response.getOutputStream()) {
             os.write(bom);
             os.write(body);
             os.flush();
@@ -634,14 +579,14 @@ public class ApmController {
     // ------------------------------------------------------------------
 
     /**
-    * SSE 实时统计流。
-    *
-    * <p>每 {@code intervalMs} 毫秒推送一次 {@code data} 事件（stats 快照），
-    * 前端用 EventSource 接收并实时刷新看板，替代 HTTP 轮询。</p>
-    *
-    * @param intervalMs 推送间隔（毫秒），默认 3000，钳制到 [1000, 60000]
-    * @return SSE 流
-    */
+     * SSE 实时统计流。
+     *
+     * <p>每 {@code intervalMs} 毫秒推送一次 {@code data} 事件（stats 快照），
+     * 前端用 EventSource 接收并实时刷新看板，替代 HTTP 轮询。</p>
+     *
+     * @param intervalMs 推送间隔（毫秒），默认 3000，钳制到 [1000, 60000]
+     * @return SSE 流
+     */
     @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter stream(@RequestParam(defaultValue = "3000") long intervalMs) {
         long effective = Math.max(1000, Math.min(60000, intervalMs));

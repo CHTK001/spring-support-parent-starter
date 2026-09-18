@@ -21,14 +21,14 @@ import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
-* 演示数据种子 — 通过 {@code hotsport.demo.seed=true} 开启。
-*
-* <p>用途：验收/演示环境下向 {@link ApmStorage} 写入一批真实结构的
-* 传输/依赖/泄漏/日志记录，走的是产品真实的存储与查询链路（仅数据来源
-* 是模拟的，查询、筛选、分页、导出全部为生产逻辑）。生产环境默认关闭。</p>
-*
-* @author CH
-* @since 4.0.0.42
+ * 演示数据种子 — 通过 {@code hotsport.demo.seed=true} 开启。
+ *
+ * <p>用途：验收/演示环境下向 {@link ApmStorage} 写入一批真实结构的
+ * 传输/依赖/泄漏/日志记录，走的是产品真实的存储与查询链路（仅数据来源
+ * 是模拟的，查询、筛选、分页、导出全部为生产逻辑）。生产环境默认关闭。</p>
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 @Slf4j
 @Component
@@ -39,10 +39,10 @@ public class DemoSeedRunner implements ApplicationRunner {
     private boolean enabled;
 
     /**
-    * 启动完成后按开关写入演示数据。
-    *
-    * @param args 启动参数
-    */
+     * 启动完成后按开关写入演示数据。
+     *
+     * @param args 启动参数
+     */
     @Override
     public void run(ApplicationArguments args) {
         if (!enabled) {
@@ -77,11 +77,11 @@ public class DemoSeedRunner implements ApplicationRunner {
     }
 
     /**
-    * 写入传输记录（多协议、含错误、覆盖最近 30 分钟）。
-    *
-    * @param storage 存储实例
-    * @param now 当前毫秒
-    */
+     * 写入传输记录（多协议、含错误、覆盖最近 30 分钟）。
+     *
+     * @param storage 存储实例
+     * @param now 当前毫秒
+     */
     private void seedTransmissions(ApmStorage storage, long now) {
         String[][] routes = {
                 {"HTTP", "TOMCAT", "GET /api/apm/stats", "gateway:8086", "hotsport:8086"},
@@ -133,11 +133,11 @@ public class DemoSeedRunner implements ApplicationRunner {
     }
 
     /**
-    * 写入依赖边（源 → 目标聚合）。
-    *
-    * @param storage 存储实例
-    * @param now 当前毫秒
-    */
+     * 写入依赖边（源 → 目标聚合）。
+     *
+     * @param storage 存储实例
+     * @param now 当前毫秒
+     */
     private void seedDependencies(ApmStorage storage, long now) {
         Object[][] edges = {
                 {Protocol.HTTP, Software.TOMCAT, "gateway", 8086, Protocol.HTTP, Software.TOMCAT, "hotsport", 8086, 420L, 3L},
@@ -175,11 +175,11 @@ public class DemoSeedRunner implements ApplicationRunner {
     }
 
     /**
-    * 写入资源泄漏记录（部分仍活跃）。
-    *
-    * @param storage 存储实例
-    * @param now 当前毫秒
-    */
+     * 写入资源泄漏记录（部分仍活跃）。
+     *
+     * @param storage 存储实例
+     * @param now 当前毫秒
+     */
     private void seedLeaks(ApmStorage storage, long now) {
         Object[][] leaks = {
                 {"socket", "SocketChannel[demo-legacy:8443]", "pool-3-thread-2", true},
@@ -205,11 +205,11 @@ public class DemoSeedRunner implements ApplicationRunner {
     }
 
     /**
-    * 写入日志记录（多级别）。
-    *
-    * @param storage 存储实例
-    * @param now 当前毫秒
-    */
+     * 写入日志记录（多级别）。
+     *
+     * @param storage 存储实例
+     * @param now 当前毫秒
+     */
     private void seedLogs(ApmStorage storage, long now) {
         String[][] logs = {
                 {"INFO", "c.c.s.h.support.service.ApmQueryService", "ApmQueryService", "stats 查询完成，耗时 12ms"},

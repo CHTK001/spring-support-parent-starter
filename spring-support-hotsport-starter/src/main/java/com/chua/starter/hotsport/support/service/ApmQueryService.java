@@ -9,6 +9,9 @@ import com.chua.runtime.protocol.DependencyEdge;
 import com.chua.runtime.protocol.Endpoint;
 import com.chua.runtime.protocol.StatusCode;
 import com.chua.starter.hotsport.support.config.HotsportProperties;
+import com.chua.starter.hotsport.support.model.LeakQuery;
+import com.chua.starter.hotsport.support.model.LogQuery;
+import com.chua.starter.hotsport.support.model.TransmissionQuery;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import jakarta.annotation.PostConstruct;
@@ -66,13 +69,13 @@ public class ApmQueryService {
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneOffset.systemDefault());
 
     /**
-    * 启动时异步自注入 Agent 并在本进程启动 APM 引擎。
-    *
-    * <p>双通道：
-    * ① attachSelf —— agentmain 对已加载类做 retransform（拦截 JDK/Tomcat 等启动早期类）；
-    * ② 本进程直接 new ApmBootstrap().start() —— 与 host 同 classloader，
-    *    handler 写入的 StorageManager 与 stats() 读取的同源（绕开跨加载器静态隔离）。</p>
-    */
+     * 启动时异步自注入 Agent 并在本进程启动 APM 引擎。
+     *
+     * <p>双通道：
+     * ① attachSelf —— agentmain 对已加载类做 retransform（拦截 JDK/Tomcat 等启动早期类）；
+     * ② 本进程直接 new ApmBootstrap().start() —— 与 host 同 classloader，
+     *    handler 写入的 StorageManager 与 stats() 读取的同源（绕开跨加载器静态隔离）。</p>
+     */
     @PostConstruct
     public void attachAgent() {
         if (!agentEnabled) {
@@ -119,10 +122,10 @@ public class ApmQueryService {
     }
 
     /**
-    * 从 Spring Boot fat jar 的 BOOT-INF/lib/ 中定位 agent jar 并解压到临时目录。
-    *
-    * @return agent jar 物理路径；找不到返回 null
-    */
+     * 从 Spring Boot fat jar 的 BOOT-INF/lib/ 中定位 agent jar 并解压到临时目录。
+     *
+     * @return agent jar 物理路径；找不到返回 null
+     */
     private static Path resolveAgentJarFromBootInf() throws java.io.IOException {
         String[] jars = System.getProperty("java.class.path").split(java.io.File.pathSeparator);
         for (String entry : jars) {
@@ -171,10 +174,10 @@ public class ApmQueryService {
     // ------------------------------------------------------------------
 
     /**
-    * 概览统计（各类型总量 + agent 状态）。
-    *
-    * @return 统计 Map
-    */
+     * 概览统计（各类型总量 + agent 状态）。
+     *
+     * @return 统计 Map
+     */
     public Map<String, Object> stats() {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("agentActive", agentActive);
@@ -219,27 +222,24 @@ public class ApmQueryService {
     // ------------------------------------------------------------------
 
     /**
-    * 分页查询传输记录。
-    *
-    * @param page      页码（从 1 起）
-    * @param size      每页条数
-    * @param source    源端过滤（可空）
-    * @param target    目标端过滤（可空）
-    * @param protocol  协议过滤（可空）
-    * @param errorOnly 仅看错误（可空）
-    * @param startTime 开始时间毫秒（可空）
-    * @param endTime   结束时间毫秒（可空）
-    * @param traceId   链路 ID 精确匹配（可空）
-    * @param durationMin 最小耗时毫秒（可空）
-    * @param durationMax 最大耗时毫秒（可空）
-    * @param operation 操作名模糊过滤（可空）
-    * @return 分页结果
-    */
-    public Map<String, Object> transmissions(int page, int size, String source, String target,
-                                              String protocol, Boolean errorOnly,
-                                              Long startTime, Long endTime,
-                                              String traceId, Long durationMin, Long durationMax,
-                                              String operation) {
+     * 分页查询传输记录。
+     *
+     * @param query 查询参数对象（分页 + 过滤条件，均可空字段走缺省）
+     * @return 分页结果
+     */
+    public Map<String, Object> transmissions(TransmissionQuery query) {
+        int page = defaultInt(query.getPage(), 1);
+        int size = defaultInt(query.getSize(), 20);
+        String source = query.getSource();
+        String target = query.getTarget();
+        String protocol = query.getProtocol();
+        Boolean errorOnly = query.getErrorOnly();
+        Long startTime = query.getStartTime();
+        Long endTime = query.getEndTime();
+        String traceId = query.getTraceId();
+        Long durationMin = query.getDurationMin();
+        Long durationMax = query.getDurationMax();
+        String operation = query.getOperation();
         int offset = Math.max(0, (page - 1) * size);
         // 全量拉取 + 内存过滤后再切片：total 必须是过滤后总数，
         // 否则被 limit 截断导致前端分页器失效
@@ -295,10 +295,10 @@ public class ApmQueryService {
     }
 
     /**
-    * 传输记录 DTO。
-    * @param e 方法入参 e
-    * @return 结果映射，无数据时为空映射
-    */
+     * 传输记录 DTO。
+     * @param e 方法入参 e
+     * @return 结果映射，无数据时为空映射
+     */
     private Map<String, Object> transmissionDto(TransmissionEvent e) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("id", e.getId());
@@ -329,11 +329,11 @@ public class ApmQueryService {
     // ------------------------------------------------------------------
 
     /**
-    * 查询依赖边（source → target 聚合）。
-    *
-    * @param size 上限
-    * @return 依赖边列表
-    */
+     * 查询依赖边（source → target 聚合）。
+     *
+     * @param size 上限
+     * @return 依赖边列表
+     */
     public List<Map<String, Object>> dependencies(int size) {
         Query q = new Query().setLimit(size);
         List<DependencyEdge> all = queryAll(q, storage -> storage.queryDependencies(q));
@@ -360,22 +360,21 @@ public class ApmQueryService {
     // ------------------------------------------------------------------
 
     /**
-    * 分页查询资源泄漏。
-    *
-    * @param page         页码
-    * @param size         每页条数
-    * @param resourceType 类型过滤（可空）
-    * @param minAgeMs     最小存活毫秒（可空）
-    * @param startTime    开始时间毫秒（可空）
-    * @param endTime      结束时间毫秒（可空）
-    * @param resourceName 资源名过滤（可空，包含匹配）
-    * @param thread       线程名过滤（可空，包含匹配）
-    * @param activeOnly   仅返回活跃泄漏（可空）
-    * @return 分页结果
-    */
-    public Map<String, Object> leaks(int page, int size, String resourceType, Long minAgeMs,
-                                     Long startTime, Long endTime,
-                                     String resourceName, String thread, Boolean activeOnly) {
+     * 分页查询资源泄漏。
+     *
+     * @param query 查询参数对象（分页 + 过滤条件，均可空字段走缺省）
+     * @return 分页结果
+     */
+    public Map<String, Object> leaks(LeakQuery query) {
+        int page = defaultInt(query.getPage(), 1);
+        int size = defaultInt(query.getSize(), 20);
+        String resourceType = query.getResourceType();
+        Long minAgeMs = query.getMinAgeMs();
+        Long startTime = query.getStartTime();
+        Long endTime = query.getEndTime();
+        String resourceName = query.getResourceName();
+        String thread = query.getThread();
+        Boolean activeOnly = query.getActiveOnly();
         int offset = Math.max(0, (page - 1) * size);
         // 全量拉取 + 内存过滤后再切片（total 须为过滤后总数，避免分页器失效）
         Query q = new Query().setLimit(100000);
@@ -434,20 +433,20 @@ public class ApmQueryService {
     // ------------------------------------------------------------------
 
     /**
-    * 分页查询日志。
-    *
-    * @param page      页码
-    * @param size      每页条数
-    * @param level     级别过滤（可空）
-    * @param keyword   关键字过滤（可空，同时匹配 message/logger）
-    * @param traceId   链路 ID 精确匹配（可空）
-    * @param startTime 开始时间毫秒（可空）
-    * @param endTime   结束时间毫秒（可空）
-    * @param className 类名过滤（可空，包含匹配）
-    * @return 分页结果
-    */
-    public Map<String, Object> logs(int page, int size, String level, String keyword, String traceId,
-                                    Long startTime, Long endTime, String className) {
+     * 分页查询日志。
+     *
+     * @param query 查询参数对象（分页 + 过滤条件，均可空字段走缺省）
+     * @return 分页结果
+     */
+    public Map<String, Object> logs(LogQuery query) {
+        int page = defaultInt(query.getPage(), 1);
+        int size = defaultInt(query.getSize(), 20);
+        String level = query.getLevel();
+        String keyword = query.getKeyword();
+        String traceId = query.getTraceId();
+        Long startTime = query.getStartTime();
+        Long endTime = query.getEndTime();
+        String className = query.getClassName();
         int offset = Math.max(0, (page - 1) * size);
         // 全量拉取 + 内存过滤后再切片（total 须为过滤后总数，避免分页器失效）
         Query q = new Query().setLimit(100000);
@@ -497,11 +496,11 @@ public class ApmQueryService {
     }
 
     /**
-    * 按 traceId 查询整条链路的全部 span（Trace 详情抽屉数据源）。
-    *
-    * @param traceId 链路 ID
-    * @return 该 trace 下所有传输记录 DTO（按开始时间升序）
-    */
+     * 按 traceId 查询整条链路的全部 span（Trace 详情抽屉数据源）。
+     *
+     * @param traceId 链路 ID
+     * @return 该 trace 下所有传输记录 DTO（按开始时间升序）
+     */
     public List<Map<String, Object>> traceDetail(String traceId) {
         if (traceId == null || traceId.isBlank()) {
             return new ArrayList<>();
@@ -517,14 +516,14 @@ public class ApmQueryService {
     }
 
     /**
-    * Agent 实时 Trace Span 列表（Traces 页数据源，新事件在前）。
-    *
-    * <p>映射传输记录为 span 视图：traceId/spanId 直接取自事件；
-    * className/methodName 取自 attributes（插桩注入），缺省时退化为 operation。</p>
-    *
-    * @param limit 返回上限
-    * @return span DTO 列表
-    */
+     * Agent 实时 Trace Span 列表（Traces 页数据源，新事件在前）。
+     *
+     * <p>映射传输记录为 span 视图：traceId/spanId 直接取自事件；
+     * className/methodName 取自 attributes（插桩注入），缺省时退化为 operation。</p>
+     *
+     * @param limit 返回上限
+     * @return span DTO 列表
+     */
     public List<Map<String, Object>> agentTraces(int limit) {
         Query q = new Query().setLimit(Math.max(1, limit));
         List<TransmissionEvent> all = queryAll(q, storage -> storage.queryTransmissions(q));
@@ -548,23 +547,23 @@ public class ApmQueryService {
     }
 
     /**
-    * Agent 实时依赖边列表（Dependencies 页数据源）。
-    *
-    * @param limit 返回上限
-    * @return 依赖边 DTO 列表
-    */
+     * Agent 实时依赖边列表（Dependencies 页数据源）。
+     *
+     * @param limit 返回上限
+     * @return 依赖边 DTO 列表
+     */
     public List<Map<String, Object>> agentDependencies(int limit) {
         return dependencies(limit);
     }
 
     /**
-    * 读取事件 attribute（多级 key 回退）。
-    *
-    * @param e     事件
-    * @param key   主键
-    * @param fallback 兜底值
-    * @return 属性值
-    */
+     * 读取事件 attribute（多级 key 回退）。
+     *
+     * @param e     事件
+     * @param key   主键
+     * @param fallback 兜底值
+     * @return 属性值
+     */
     private static String attr(TransmissionEvent e, String key, String fallback) {
         Map<String, String> attrs = e.getAttributes();
         if (attrs != null && attrs.get(key) != null) {
@@ -581,12 +580,33 @@ public class ApmQueryService {
     private static final int EXPORT_CAP = 50000;
 
     /**
-    * 全量导出传输记录为 CSV 文本。
-    */
-    public String exportTransmissionsCsv(String source, String target, String protocol,
-                                         Boolean errorOnly, Long startTime, Long endTime,
-                                         String traceId, Long durationMin, Long durationMax,
-                                         String operation) {
+     * 分页参数归一：null 或小于 1 时取缺省值。
+     *
+     * @param value      原始值（可空）
+     * @param defaultVal 缺省值
+     * @return 归一后的分页值
+     */
+    private static int defaultInt(Integer value, int defaultVal) {
+        return value == null || value < 1 ? defaultVal : value;
+    }
+
+    /**
+     * 全量导出传输记录为 CSV 文本。
+     *
+     * @param query 过滤条件参数对象（分页字段忽略，全量导出）
+     * @return CSV 文本
+     */
+    public String exportTransmissionsCsv(TransmissionQuery query) {
+        String source = query.getSource();
+        String target = query.getTarget();
+        String protocol = query.getProtocol();
+        Boolean errorOnly = query.getErrorOnly();
+        Long startTime = query.getStartTime();
+        Long endTime = query.getEndTime();
+        String traceId = query.getTraceId();
+        Long durationMin = query.getDurationMin();
+        Long durationMax = query.getDurationMax();
+        String operation = query.getOperation();
         Query q = new Query().setLimit(EXPORT_CAP);
         if (protocol != null && !protocol.isBlank()) {
             q.setProtocol(protocol);
@@ -650,10 +670,19 @@ public class ApmQueryService {
     }
 
     /**
-    * 全量导出资源泄漏为 CSV 文本。
-    */
-    public String exportLeaksCsv(String resourceType, Long minAgeMs, Long startTime, Long endTime,
-                                 String resourceName, String thread, Boolean activeOnly) {
+     * 全量导出资源泄漏为 CSV 文本。
+     *
+     * @param query 过滤条件参数对象（分页字段忽略，全量导出）
+     * @return CSV 文本
+     */
+    public String exportLeaksCsv(LeakQuery query) {
+        String resourceType = query.getResourceType();
+        Long minAgeMs = query.getMinAgeMs();
+        Long startTime = query.getStartTime();
+        Long endTime = query.getEndTime();
+        String resourceName = query.getResourceName();
+        String thread = query.getThread();
+        Boolean activeOnly = query.getActiveOnly();
         Query q = new Query().setLimit(EXPORT_CAP);
         if (startTime != null) {
             q.setStartTime(startTime);
@@ -700,10 +729,17 @@ public class ApmQueryService {
     }
 
     /**
-    * 全量导出日志为 CSV 文本。
-    */
-    public String exportLogsCsv(String level, String keyword, String traceId,
-                                Long startTime, Long endTime) {
+     * 全量导出日志为 CSV 文本。
+     *
+     * @param query 过滤条件参数对象（分页字段忽略，全量导出）
+     * @return CSV 文本
+     */
+    public String exportLogsCsv(LogQuery query) {
+        String level = query.getLevel();
+        String keyword = query.getKeyword();
+        String traceId = query.getTraceId();
+        Long startTime = query.getStartTime();
+        Long endTime = query.getEndTime();
         Query q = new Query().setLimit(EXPORT_CAP);
         if (startTime != null) {
             q.setStartTime(startTime);
@@ -741,11 +777,11 @@ public class ApmQueryService {
     }
 
     /**
-    * Map 列表 → CSV 文本（RFC 4180）。
-    * @param header 请求头，不允许为 null
-    * @param rows 方法入参 rows
-    * @return 结果字符串
-    */
+     * Map 列表 → CSV 文本（RFC 4180）。
+     * @param header 请求头，不允许为 null
+     * @param rows 方法入参 rows
+     * @return 结果字符串
+     */
     private static String toCsv(String[] header, List<Map<String, Object>> rows) {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < header.length; i++) {
@@ -790,14 +826,14 @@ public class ApmQueryService {
     private static final long AGGREGATE_CACHE_TTL_MS = 5000L;
 
     /**
-    * 按 traceId 构建瀑布数据（SkyWalking trace waterfall）。
-    *
-    * <p>每条 span 计算 offsetMs（相对 trace 起点）、depth（父链深度）、
-    * percentWidth（占 trace 总时长比例）、spanKind（按方向推断）。</p>
-    *
-    * @param traceId 链路 ID
-    * @return 瀑布结构 { traceId, spans, totalMs, spanCount }
-    */
+     * 按 traceId 构建瀑布数据（SkyWalking trace waterfall）。
+     *
+     * <p>每条 span 计算 offsetMs（相对 trace 起点）、depth（父链深度）、
+     * percentWidth（占 trace 总时长比例）、spanKind（按方向推断）。</p>
+     *
+     * @param traceId 链路 ID
+     * @return 瀑布结构 { traceId, spans, totalMs, spanCount }
+     */
     public Map<String, Object> traceWaterfall(String traceId) {
         List<Map<String, Object>> detail = traceDetail(traceId);
         Map<String, Object> result = new LinkedHashMap<>();
@@ -872,11 +908,11 @@ public class ApmQueryService {
     }
 
     /**
-    * 推断 span 类型（客户端/服务端/生产者/消费者/内部）。
-    *
-    * @param s span DTO
-    * @return spanKind 字符串
-    */
+     * 推断 span 类型（客户端/服务端/生产者/消费者/内部）。
+     *
+     * @param s span DTO
+     * @return spanKind 字符串
+     */
     private static String resolveSpanKind(Map<String, Object> s) {
         String protocol = String.valueOf(s.get("protocol"));
         String operation = String.valueOf(s.get("operation"));
@@ -900,10 +936,10 @@ public class ApmQueryService {
     }
 
     /**
-    * 服务聚合（SkyWalking service 层：从传输记录提取 software@host 服务名）。
-    *
-    * @return 服务列表 { service, endpointCount, callCount, errorCount }
-    */
+     * 服务聚合（SkyWalking service 层：从传输记录提取 software@host 服务名）。
+     *
+     * @return 服务列表 { service, endpointCount, callCount, errorCount }
+     */
     public List<Map<String, Object>> services() {
         if (System.currentTimeMillis() - aggregateCacheAt < AGGREGATE_CACHE_TTL_MS) {
             return serviceCache;
@@ -955,12 +991,12 @@ public class ApmQueryService {
     }
 
     /**
-    * 端点聚合 + 分位数（SkyWalking endpoint 层）。
-    *
-    * @param limit   返回上限
-    * @param keyword 端点关键字过滤（可空，匹配 protocol+operation）
-    * @return 端点列表 { endpoint, callCount, errorCount, errorRate, avgMs, p95Ms, p99Ms, maxMs }
-    */
+     * 端点聚合 + 分位数（SkyWalking endpoint 层）。
+     *
+     * @param limit   返回上限
+     * @param keyword 端点关键字过滤（可空，匹配 protocol+operation）
+     * @return 端点列表 { endpoint, callCount, errorCount, errorRate, avgMs, p95Ms, p99Ms, maxMs }
+     */
     public List<Map<String, Object>> endpoints(int limit, String keyword) {
         boolean filtered = keyword != null && !keyword.isBlank();
         if (!filtered && System.currentTimeMillis() - aggregateCacheAt < AGGREGATE_CACHE_TTL_MS
@@ -1039,11 +1075,11 @@ public class ApmQueryService {
     }
 
     /**
-    * 依赖边聚合（按 edgeId 归并，修复每事件 callCount=1 的存储侧问题）。
-    *
-    * @param size 返回上限
-    * @return 聚合依赖边列表
-    */
+     * 依赖边聚合（按 edgeId 归并，修复每事件 callCount=1 的存储侧问题）。
+     *
+     * @param size 返回上限
+     * @return 聚合依赖边列表
+     */
     public List<Map<String, Object>> dependenciesAggregated(int size) {
         List<Map<String, Object>> raw = dependencies(size * 50);
         Map<String, Map<String, Object>> merged = new LinkedHashMap<>();
@@ -1085,13 +1121,13 @@ public class ApmQueryService {
     }
 
     /**
-    * 系统健康状态（SkyWalking 饱和度派生指标）。
-    *
-    * <p>窗口内错误率 &gt; 10% 或堆 &gt; 90% → SATURATED；
-    * 错误率 &gt; 2% 或有活跃泄漏 → DEGRADED；否则 HEALTHY。</p>
-    *
-    * @return 健康 { health, qps, errorRate, activeLeaks, windowSeconds }
-    */
+     * 系统健康状态（SkyWalking 饱和度派生指标）。
+     *
+     * <p>窗口内错误率 &gt; 10% 或堆 &gt; 90% → SATURATED；
+     * 错误率 &gt; 2% 或有活跃泄漏 → DEGRADED；否则 HEALTHY。</p>
+     *
+     * @return 健康 { health, qps, errorRate, activeLeaks, windowSeconds }
+     */
     public Map<String, Object> health() {
         long windowSeconds = 60L;
         long cutoff = System.currentTimeMillis() - windowSeconds * 1000L;
@@ -1163,11 +1199,11 @@ public class ApmQueryService {
     }
 
     /**
-    * Agent 链路树（trace → span 两级 ReTree 数据源）。
-    *
-    * @param limit trace 上限
-    * @return trace 节点列表（children = span 节点）
-    */
+     * Agent 链路树（trace → span 两级 ReTree 数据源）。
+     *
+     * @param limit trace 上限
+     * @return trace 节点列表（children = span 节点）
+     */
     public List<Map<String, Object>> agentTracesTree(int limit) {
         Query q = new Query().setLimit(100000);
         List<TransmissionEvent> all = queryAll(q, storage -> storage.queryTransmissions(q));
@@ -1228,11 +1264,11 @@ public class ApmQueryService {
     // ------------------------------------------------------------------
 
     /**
-    * 慢调用排行 — 按耗时降序取前 N 条传输记录。
-    *
-    * @param limit 返回上限
-    * @return 慢调用 DTO 列表
-    */
+     * 慢调用排行 — 按耗时降序取前 N 条传输记录。
+     *
+     * @param limit 返回上限
+     * @return 慢调用 DTO 列表
+     */
     public List<Map<String, Object>> slowCalls(int limit) {
         try {
             Query q = new Query().setLimit(100000);
@@ -1250,11 +1286,11 @@ public class ApmQueryService {
     }
 
     /**
-    * 错误排行 — 按 errorType + errorMessage 分组聚合，取前 N 条。
-    *
-    * @param limit 返回上限
-    * @return 错误排行列表
-    */
+     * 错误排行 — 按 errorType + errorMessage 分组聚合，取前 N 条。
+     *
+     * @param limit 返回上限
+     * @return 错误排行列表
+     */
     public List<Map<String, Object>> errorRanking(int limit) {
         try {
             Query q = new Query().setLimit(100000);
@@ -1307,10 +1343,10 @@ public class ApmQueryService {
     }
 
     /**
-    * SLA 统计 — 全量传输记录汇总。
-    *
-    * @return 包含 totalCount/errorCount/successCount/slaPercent/uptimeMs/qps
-    */
+     * SLA 统计 — 全量传输记录汇总。
+     *
+     * @return 包含 totalCount/errorCount/successCount/slaPercent/uptimeMs/qps
+     */
     public Map<String, Object> slaStats() {
         try {
             Query q = new Query().setLimit(100000);
@@ -1344,11 +1380,11 @@ public class ApmQueryService {
     }
 
     /**
-    * 数据清理 — 按保留时长删除过期记录。
-    *
-    * @param retentionMs 保留毫秒数
-    * @return 清理统计
-    */
+     * 数据清理 — 按保留时长删除过期记录。
+     *
+     * @param retentionMs 保留毫秒数
+     * @return 清理统计
+     */
     public Map<String, Object> cleanup(long retentionMs) {
         Map<String, Object> result = new java.util.LinkedHashMap<>();
         try {
@@ -1380,10 +1416,10 @@ public class ApmQueryService {
     }
 
     /**
-    * 系统拓扑（真实运行值：主机 / PID / 监听端口 / 网络接口 / 核心模块）。
-    *
-    * @return 拓扑 { center, jvmPid, modules, ports, connections, nodes, edges }
-    */
+     * 系统拓扑（真实运行值：主机 / PID / 监听端口 / 网络接口 / 核心模块）。
+     *
+     * @return 拓扑 { center, jvmPid, modules, ports, connections, nodes, edges }
+     */
     public Map<String, Object> systemTopology() {
         Map<String, Object> t = new LinkedHashMap<>();
         String hostname = "unknown";
