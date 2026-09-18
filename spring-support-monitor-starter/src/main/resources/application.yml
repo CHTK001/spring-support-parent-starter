@@ -20,29 +20,23 @@ spring:
     generate:
       enabled: false
 
-  # 建表脚本（独立联调）：FlywayLike 禁用后，由 spring.sql.init 加载各模块 DDL。
-  #  V*__*.sql 脚本已统一归口 datasource-starter，classpath 路径保持 db/init/* 不变：
-  #  - monitor 自身：classpath:db/init/V1.0__init_monitor.sql
-  #  - datasource-starter（依赖 jar 内）：V1.0__init_server.sql（资产台账表）、V1.0__init_project.sql
-  # 均纯 H2 兼容（IF NOT EXISTS 幂等），MODE=MySQL 下自动建表
+  # 建表脚本（独立联调）：本模块的 FlywayLike 已禁用（H2 下脚本语法错会阻断启动），
+  #  由 spring.sql.init 逐个加载各模块本体的全量建表脚本（脚本归口各自 starter jar 的 db/init/）：
+  #  - monitor 自身：V1.0__init_all_monitor.sql、V1.5__init_tshark.sql
+  #  - 依赖 jar 内：V1.0__init_all_server.sql（资产台账）、V1.0__init_all_project.sql、V1.0__init_all_ai.sql
+  # 均为 MySQL/H2 双库可执行子集（IF NOT EXISTS 幂等），存量老库补列脚本（db/upgrade/）不在此加载
   sql:
     init:
       mode: always
       encoding: UTF-8
       continue-on-error: true
       schema-locations:
-        - classpath:db/init/V1.0__init_monitor.sql
-        - classpath:db/init/V1.0__init_server.sql
-        - classpath:db/init/V1.0__init_project.sql
-        # TShark 抓包两张表（本模块自有，原合并脚本未包含）
+        - classpath:db/init/V1.0__init_all_monitor.sql
+        - classpath:db/init/V1.0__init_all_server.sql
+        - classpath:db/init/V1.0__init_all_project.sql
+        - classpath:db/init/V1.0__init_all_ai.sql
+        # TShark 抓包两张表（本模块自有，全量脚本未包含）
         - classpath:db/init/V1.5__init_tshark.sql
-        # 资产表补列 ms_server_host_agent_installed（server-starter 实体已有、建表脚本缺失）
-        - classpath:db/init/V1.6__alter_server_host_agent_installed.sql
-        # 资产表补列主机级远控配置（协议/端口/模式/VNC 口令，同上：实体已有、建表脚本缺失）
-        # optional：脚本尚未入库（在 server-starter/db/upgrade 规划中），缺失时跳过不阻断启动
-        - optional:classpath:db/upgrade/V1.7__alter_server_host_remote_config.sql
-        # AI 模块 H2 兼容建表脚本（纯 CREATE TABLE，无 MySQL-only 语法）
-        - classpath:db/h2-local-schema.sql
 
   datasource:
     url: jdbc:h2:file:./data/monitordb;DB_CLOSE_DELAY=-1;MODE=MySQL;DATABASE_TO_UPPER=false;NON_KEYWORDS=VALUE
