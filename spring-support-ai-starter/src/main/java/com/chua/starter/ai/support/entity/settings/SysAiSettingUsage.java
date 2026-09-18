@@ -28,7 +28,7 @@ public class SysAiSettingUsage implements Serializable {
     /**
     * 用量主键 标识
     */
-    @TableId(value = "id", type = IdType.AUTO)
+    @TableId(value = "sys_ai_usage_id", type = IdType.AUTO)
     @Schema(description = "用量主键 ID")
     /** usageid */
     private Long usageId;
@@ -39,7 +39,7 @@ public class SysAiSettingUsage implements Serializable {
     /**
     * 模型名称
     */
-    @TableField("model")
+    @TableField("sys_ai_usage_model")
     @Schema(description = "模型名称")
     /** Usage模型 */
     private String usageModel;
@@ -61,7 +61,7 @@ public class SysAiSettingUsage implements Serializable {
     /**
     * 提示 令牌
     */
-    @TableField("prompt_tokens")
+    @TableField("sys_ai_usage_prompt_tokens")
     @Schema(description = "提示 tokens")
     /** Usageprompttokens */
     private Long usagePromptTokens;
@@ -72,7 +72,7 @@ public class SysAiSettingUsage implements Serializable {
     /**
     * 生成 令牌
     */
-    @TableField("completion_tokens")
+    @TableField("sys_ai_usage_completion_tokens")
     @Schema(description = "生成 tokens")
     /** Usagecompletiontokens */
     private Long usageCompletionTokens;
@@ -83,7 +83,7 @@ public class SysAiSettingUsage implements Serializable {
     /**
     * 总 令牌
     */
-    @TableField("total_tokens")
+    @TableField("sys_ai_usage_total_tokens")
     @Schema(description = "总 tokens")
     /** Usage总数令牌 */
     private Long usageTotalTokens;
@@ -94,7 +94,7 @@ public class SysAiSettingUsage implements Serializable {
     /**
     * 统计时间戳
     */
-    @TableField("call_time")
+    @TableField("sys_ai_usage_call_time")
     @Schema(description = "统计时间戳")
     /** Usage时间戳 */
     private LocalDateTime usageTimestamp;
