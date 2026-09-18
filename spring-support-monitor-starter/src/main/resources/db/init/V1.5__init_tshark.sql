@@ -22,6 +22,12 @@ CREATE TABLE IF NOT EXISTS `ms_tshark_session` (
     `ms_tshark_session_duration`    INT          DEFAULT NULL            COMMENT '抓包时长(秒)',
     `ms_tshark_session_start_time`  DATETIME     DEFAULT NULL            COMMENT '开始时间',
     `ms_tshark_session_end_time`    DATETIME     DEFAULT NULL            COMMENT '结束时间',
+    `create_name`                   VARCHAR(64)  NULL                    COMMENT '创建人姓名',
+    `create_by`                     INT          NULL                    COMMENT '创建人',
+    `create_time`                   DATETIME     NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_name`                   VARCHAR(64)  NULL                    COMMENT '更新人姓名',
+    `update_by`                     INT          NULL                    COMMENT '更新人',
+    `update_time`                   DATETIME     NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (`id`),
     KEY `idx_ms_tshark_session_status` (`ms_tshark_session_status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='TShark 抓包会话';
@@ -42,6 +48,12 @@ CREATE TABLE IF NOT EXISTS `ms_tshark_packet` (
     `ms_tshark_packet_info`      VARCHAR(1024) DEFAULT NULL           COMMENT '摘要信息',
     `ms_tshark_packet_raw`       LONGTEXT     DEFAULT NULL            COMMENT '解码后的 JSON 原文',
     `ms_tshark_packet_restored`  LONGTEXT     DEFAULT NULL            COMMENT '还原出的载荷文本',
+    `create_name`                VARCHAR(64)  NULL                    COMMENT '创建人姓名',
+    `create_by`                  INT          NULL                    COMMENT '创建人',
+    `create_time`                DATETIME     NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_name`                VARCHAR(64)  NULL                    COMMENT '更新人姓名',
+    `update_by`                  INT          NULL                    COMMENT '更新人',
+    `update_time`                DATETIME     NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (`id`),
     KEY `idx_ms_tshark_packet_session` (`ms_tshark_packet_session_id`, `id`),
     KEY `idx_ms_tshark_packet_protocol` (`ms_tshark_packet_protocol`)
