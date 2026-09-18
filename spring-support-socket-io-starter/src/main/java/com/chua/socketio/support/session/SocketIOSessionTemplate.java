@@ -46,7 +46,7 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
     
     /**
     * 多服务器实例：客户端标识 -> 服务端
-     */
+    */
     private final Map<String, DelegateSocketIOServer> servers = new ConcurrentHashMap<>();
 
     /**
@@ -54,7 +54,7 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
     * @param properties 属性
     * @param listeners 列表
     * @param listeners 监听器
-     */
+    */
     public SocketIOSessionTemplate(SocketProperties properties, List<SocketListener> listeners) {
         this.properties = properties;
         this.listeners = listeners;
@@ -240,12 +240,12 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
             log.info("[SocketIO] 启动服务: 客户端ID={}, 地址={}, 端口={}, 上下文={}", 
                     clientId, host, port, contextPath);
             /**
-            * 启动服务端。
-            * @param clientId 客户端标识
-            * @param host 主机
-            * @param port 端口
-            * @param contextPath 上下文路径
-             */
+    * 启动服务端。
+    * @param clientId 客户端标识
+    * @param host 主机
+    * @param port 端口
+    * @param contextPath 上下文路径
+    */
             startServer(clientId, host, port, contextPath);
         }
         log.info("[SocketIO] 服务启动完成 [{}]", enabled());
@@ -258,7 +258,7 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
     * @param host        主机地址
     * @param port        端口
     * @param contextPath 上下文路径
-     */
+    */
     private void startServer(String clientId, String host, int port, String contextPath) {
         try {
             Configuration configuration = createConfiguration(host, port, contextPath);
@@ -273,7 +273,7 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
                 * 保存。
                 * @param clientId 客户端标识
                 * @param session 会话
-                 */
+                */
                 save(clientId, session);
                 log.debug("[SocketIO] 客户端连接: clientId={}, sessionId={}", clientId, client.getSessionId());
             });
@@ -287,7 +287,7 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
                     * 移除。
                     * @param clientId 客户端标识
                     * @param session 会话
-                     */
+                    */
                     remove(clientId, session);
                 }
                 log.debug("[SocketIO] 客户端断开: clientId={}, sessionId={}", clientId, sessionId);
@@ -298,7 +298,7 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
             * @param server 服务端
             * @param clientId 客户端标识
             * @param contextPath 上下文路径
-             */
+            */
             registerEventListeners(server, clientId, contextPath);
 
             server.start();
@@ -313,7 +313,7 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
             * @param clientId 客户端标识
             * @param e e
             * @return runtime异常的结果
-             */
+            */
             throw new RuntimeException("Socket.IO 服务启动失败: " + clientId, e);
         }
     }
@@ -324,7 +324,7 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
     * @param server 服务端
     * @param clientId 客户端标识
     * @param contextPath 上下文路径
-     */
+    */
     private void registerEventListeners(DelegateSocketIOServer server, String clientId, String contextPath) {
         for (String eventName : eventListenerProcessor.getRegisteredEvents()) {
             server.addEventListener(eventName, String.class, (client, data, ackSender) -> {
@@ -337,7 +337,7 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
                     * 保存。
                     * @param clientId 客户端标识
                     * @param ioSession io会话
-                     */
+                    */
                     save(clientId, ioSession);
                     session = ioSession;
                 }
@@ -371,7 +371,7 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
     *
     * @param clientId 客户端标识
     * @return 服务器实例，不存在返回 空
-     */
+    */
     public DelegateSocketIOServer getServer(String clientId) {
         return servers.get(clientId);
     }
@@ -380,7 +380,7 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
     * 获取所有服务器实例
     *
     * @return 服务器实例映射
-     */
+    */
     public Map<String, DelegateSocketIOServer> getServers() {
         return servers;
     }
@@ -392,7 +392,7 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
     * @param port        端口
     * @param contextPath 上下文路径
     * @return 配置对象
-     */
+    */
     private Configuration createConfiguration(String host, int port, String contextPath) {
         Configuration configuration = new Configuration();
 

@@ -27,7 +27,7 @@ public class Splitter {
     * 构造拆分器
     *
     * @param separator 分隔符
-     */
+    */
     public Splitter(String separator) {
         this.separator = separator;
     }
@@ -37,12 +37,12 @@ public class Splitter {
     *
     * @param separator 分隔符
     * @return Splitter 实例
-     */
+    */
     public static Splitter on(String separator) {
         /**
         * Splitter。
         * @param separator separator
-         */
+        */
         return new Splitter(separator);
     }
 
@@ -50,7 +50,7 @@ public class Splitter {
     * 设置去除结果中的空白字符
     *
     * @return 当前 Splitter 实例
-     */
+    */
     public Splitter trimResults() {
         this.trimResults = true;
         return this;
@@ -60,7 +60,7 @@ public class Splitter {
     * 设置忽略空字符串
     *
     * @return 当前 Splitter 实例
-     */
+    */
     public Splitter omitEmptyStrings() {
         this.omitEmptyStrings = true;
         return this;
@@ -71,7 +71,7 @@ public class Splitter {
     *
     * @param input 输入字符串
     * @return 拆分后的列表
-     */
+    */
     public List<String> splitToList(String input) {
         List<String> result = new ArrayList<>();
         if (input == null || input.isEmpty()) {
@@ -92,7 +92,7 @@ public class Splitter {
     *
     * @param input 输入字符串
     * @return 拆分后的 设置
-     */
+    */
     public Set<String> splitToSet(String input) {
         return new HashSet<>(splitToList(input));
     }

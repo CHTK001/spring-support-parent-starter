@@ -16,22 +16,22 @@ public final class KeyGenerator {
 
     /**
     * 密钥字节长度（36 字节 → 48 基础64 字符）
-     */
+    */
     private static final int KEY_BYTE_LENGTH = 36;
 
     /**
     * 密钥前缀
-     */
+    */
     private static final String KEY_PREFIX = "sk-";
 
     /**
     * 密钥截取长度（不含前缀）
-     */
+    */
     private static final int KEY_BODY_LENGTH = 48;
 
     /**
     * 安全随机数生成器
-     */
+    */
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     /** 创建 钥匙生成器 实例 */
@@ -46,7 +46,7 @@ public final class KeyGenerator {
     * 经 URL 安全 基础64 编码后截取前 48 字符，加 {@code sk-} 前缀返回。</p>
     *
     * @return 密钥字符串，格式如 {@code sk-AbCdEfGhIjKlMnOpQrStUvWxYz1234567890}
-     */
+    */
     public static String generateKey() {
         byte[] bytes = new byte[KEY_BYTE_LENGTH];
         SECURE_RANDOM.nextBytes(bytes);

@@ -12,12 +12,12 @@ public class RpcProxyCreationException extends RuntimeException {
     /**
     * 创建 rpc代理创建异常 实例
     * @param message 消息
-     */
+    */
     public RpcProxyCreationException(String message) {
         /**
         * 父。
         * @param message 消息
-         */
+        */
         super(message);
     }
 
@@ -26,13 +26,13 @@ public class RpcProxyCreationException extends RuntimeException {
     * @param message 消息
     * @param cause Throwable
     * @param cause cause
-     */
+    */
     public RpcProxyCreationException(String message, Throwable cause) {
         /**
         * 父。
         * @param message 消息
         * @param cause cause
-         */
+        */
         super(message, cause);
     }
 }

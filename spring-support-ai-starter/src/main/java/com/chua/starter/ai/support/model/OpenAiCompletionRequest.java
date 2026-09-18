@@ -13,31 +13,31 @@ public class OpenAiCompletionRequest {
 
     /**
     * 模型名称
-     */
+    */
     private String model;
 
     /**
     * 输入提示
-     */
+    */
     private String prompt;
 
     /**
     * 采样温度
-     */
+    */
     private Double temperature;
 
     /**
     * 最大生成 令牌
-     */
+    */
     private Integer maxTokens;
 
     /**
     * 核采样参数
-     */
+    */
     private Integer topP;
 
     /**
     * 是否流式输出
-     */
+    */
     private Boolean stream;
 }

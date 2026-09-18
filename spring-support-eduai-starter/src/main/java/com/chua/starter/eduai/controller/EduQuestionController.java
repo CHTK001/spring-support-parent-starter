@@ -41,7 +41,7 @@ public class EduQuestionController {
     *
     * @param query 查询条件
     * @return 分页结果
-     */
+    */
     @Operation(summary = "分页查询题目")
     @GetMapping("/page")
     public ReturnResult<PageResult<EduQuestion>> page(QuestionQueryDTO query) {
@@ -54,7 +54,7 @@ public class EduQuestionController {
     *
     * @param id 题目标识
     * @return 题目详情
-     */
+    */
     @Operation(summary = "获取题目详情")
     @GetMapping("/{id}")
     public ReturnResult<EduQuestion> detail(@PathVariable Long id) {
@@ -67,7 +67,7 @@ public class EduQuestionController {
     *
     * @param dto 题目数据
     * @return 题目ID
-     */
+    */
     @Operation(summary = "新增或更新题目")
     @PostMapping("/save")
     public ReturnResult<Long> save(@RequestBody QuestionSaveDTO dto) {
@@ -80,7 +80,7 @@ public class EduQuestionController {
     *
     * @param list 题目列表
     * @return 导入数量
-     */
+    */
     @Operation(summary = "批量导入题目")
     @PostMapping("/import")
     public ReturnResult<Integer> importQuestions(@RequestBody List<QuestionSaveDTO> list) {
@@ -93,7 +93,7 @@ public class EduQuestionController {
     *
     * @param id 题目标识
     * @return 是否成功
-     */
+    */
     @Operation(summary = "删除题目")
     @DeleteMapping("/{id}")
     public ReturnResult<Boolean> delete(@PathVariable Long id) {

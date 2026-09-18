@@ -23,7 +23,7 @@ public interface MessageFilter {
     *
     * @param message 消息
     * @return true表示通过过滤，false表示拒绝该消息
-     */
+    */
     boolean filter(Message message);
 
     /**
@@ -33,7 +33,7 @@ public interface MessageFilter {
     * </p>
     *
     * @return 优先级
-     */
+    */
     default int getOrder() {
         return 0;
     }

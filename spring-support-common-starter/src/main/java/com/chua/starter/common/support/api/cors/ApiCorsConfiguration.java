@@ -59,7 +59,7 @@ public class ApiCorsConfiguration  {
     /**
     * 创建 apicors配置 实例
     * @param corsProperties 跨域资源共享属性
-     */
+    */
     public ApiCorsConfiguration(ApiCorsProperties corsProperties) {
         this.corsProperties = corsProperties;
     }
@@ -68,7 +68,7 @@ public class ApiCorsConfiguration  {
     * 跨域过滤器
     *
     * @return CorsFilter 过滤器注册Bean
-     */
+    */
     @Bean("apiCorsFilterRegistrationBean")
     public FilterRegistrationBean<CorsFilter> corsFilterFilterRegistrationBean() {
  // 1. 添加 跨域资源共享 配置信息

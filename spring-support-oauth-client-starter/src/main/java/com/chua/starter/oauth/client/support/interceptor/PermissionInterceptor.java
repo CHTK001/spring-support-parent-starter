@@ -107,10 +107,10 @@ public class PermissionInterceptor extends StaticMethodMatcherPointcutAdvisor im
                     if (request != null && !isSafeMethod(request.getMethod())) {
                         log.warn("[权限拦截器]只读角色禁止写操作 - 用户: {}, 方法: {}", userInfo.getUsername(), methodName);
                         /**
-                        * OAuth异常。
-                        * @param "只读角色不允许执行写操作!" "只读角色不允许执行写操作!"
-                        * @return oauth异常的结果
-                         */
+    * OAuth异常。
+    * @param "只读角色不允许执行写操作!" "只读角色不允许执行写操作!"
+    * @return oauth异常的结果
+    */
                         throw new OauthException("只读角色不允许执行写操作!");
                     }
                 }
@@ -131,7 +131,7 @@ public class PermissionInterceptor extends StaticMethodMatcherPointcutAdvisor im
                         * @param "您的账号没有权限 "您的账号没有权限
                         * @param 请联系管理员分配!" 请联系管理员分配!"
                         * @return oauth异常的结果
-                         */
+                        */
                         throw new OauthException("您的账号没有权限, 请联系管理员分配!");
                     }
                     log.info("[权限拦截器]管理员放行 - 用户: {}, 方法: {}", userInfo.getUsername(), methodName);
@@ -147,7 +147,7 @@ public class PermissionInterceptor extends StaticMethodMatcherPointcutAdvisor im
                     * @param "您的账号没有权限 "您的账号没有权限
                     * @param 请联系管理员分配!" 请联系管理员分配!"
                     * @return oauth异常的结果
-                     */
+                    */
                     throw new OauthException("您的账号没有权限, 请联系管理员分配!");
                 }
                 log.debug("[权限拦截器]角色检查通过 - 用户: {}", userInfo.getUsername());
@@ -162,7 +162,7 @@ public class PermissionInterceptor extends StaticMethodMatcherPointcutAdvisor im
                     * @param "您的账号没有权限 "您的账号没有权限
                     * @param 请联系管理员分配!" 请联系管理员分配!"
                     * @return oauth异常的结果
-                     */
+                    */
                     throw new OauthException("您的账号没有权限, 请联系管理员分配!");
                 }
                 log.debug("[权限拦截器]权限检查通过 - 用户: {}", userInfo.getUsername());
@@ -181,7 +181,7 @@ public class PermissionInterceptor extends StaticMethodMatcherPointcutAdvisor im
     * 是否Admin
     *
     * @return 是否admin的结果
-     */
+    */
     private boolean isAdmin() {
         UserResume userInfo = com.chua.starter.oauth.client.support.execute.AuthSessionUtils.getUserInfo(UserResume.class);
         if(null == userInfo) {
@@ -196,7 +196,7 @@ public class PermissionInterceptor extends StaticMethodMatcherPointcutAdvisor im
     *
     * @param permission 权限
     * @return 是否权限匹配的结果
-     */
+    */
     private boolean isPermissionMatch(Permission permission) {
         String[] permissions = permission.value();
         if(ArrayUtils.isEmpty(permissions)) {
@@ -224,7 +224,7 @@ public class PermissionInterceptor extends StaticMethodMatcherPointcutAdvisor im
     *
     * @param permission 权限
     * @return 是否包含父adminand匹配的结果
-     */
+    */
     private boolean hasSuperAdminAndMatch(Permission permission) {
         String[] role = permission.role();
         if (ArrayUtils.isEmpty(role)) {
@@ -239,7 +239,7 @@ public class PermissionInterceptor extends StaticMethodMatcherPointcutAdvisor im
     * @param permission 权限
     * @param roles 角色
     * @return 是否角色匹配的结果
-     */
+    */
     private boolean isRoleMatch(Permission permission, Set<String> roles) {
         String[] role = permission.role();
         if(ArrayUtils.isEmpty(role)) {
@@ -259,7 +259,7 @@ public class PermissionInterceptor extends StaticMethodMatcherPointcutAdvisor im
     /**
     * @param invocation
     * @return {@link 权限}
-     */
+    */
     private Permission getAnnotation(MethodInvocation invocation) {
         Method method = invocation.getMethod();
         Permission permission = method.getDeclaredAnnotation(Permission.class);
@@ -273,7 +273,7 @@ public class PermissionInterceptor extends StaticMethodMatcherPointcutAdvisor im
     * 获取当前 HTTP 请求；无请求上下文（非 HTTP 调用）返回 空
     *
     * @return 当前请求的结果
-     */
+    */
     private static HttpServletRequest currentRequest() {
         try {
             ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
@@ -288,7 +288,7 @@ public class PermissionInterceptor extends StaticMethodMatcherPointcutAdvisor im
     *
     * @param method 方法
     * @return 是否safe方法的结果
-     */
+    */
     private static boolean isSafeMethod(String method) {
         return method != null && SAFE_METHODS.contains(method.toUpperCase());
     }

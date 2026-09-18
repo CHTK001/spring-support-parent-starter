@@ -92,7 +92,7 @@ final class ServiceInfoBanner {
     *
     * @param registry 注册表
     * @return 待输出的文本 (首行含前导换行); 无任何端点与开关时返回空串
-     */
+    */
     static String render(ServiceInfoRegistry registry) {
         List<ServiceInfoRegistry.EndpointInfo> endpoints = dedupeEndpoints(registry.getEndpoints().values());
         Map<String, List<ServiceInfoRegistry.FlagInfo>> groups = dedupeFlags(registry.getFlags().values());
@@ -121,7 +121,7 @@ final class ServiceInfoBanner {
     /**
     * 端点去重: 同一路径只保留一条, 重复时保留 URL 更完整的那条
     * (例如 {@code /doc.html} 与 {@code http://host/doc.html} 由不同 启动 重复注册, 视为同一端点)。
-     */
+    */
     private static List<ServiceInfoRegistry.EndpointInfo> dedupeEndpoints(
             Collection<ServiceInfoRegistry.EndpointInfo> source) {
         Map<String, ServiceInfoRegistry.EndpointInfo> byPath = new LinkedHashMap<>();
@@ -141,7 +141,7 @@ final class ServiceInfoBanner {
     * (例如 {@code Knife4j接口文档} 与 {@code Knife4j 接口文档} 由不同 启动 重复注册)。
     *
     * <p>取值不同的同名开关不会被合并, 以便暴露配置冲突。</p>
-     */
+    */
     private static Map<String, List<ServiceInfoRegistry.FlagInfo>> dedupeFlags(
             Collection<ServiceInfoRegistry.FlagInfo> source) {
         Map<String, List<ServiceInfoRegistry.FlagInfo>> byGroup = new LinkedHashMap<>();
@@ -162,7 +162,7 @@ final class ServiceInfoBanner {
     *
     * @param endpoint 端点
     * @return 端点标签的结果
-     */
+    */
     private static String endpointLabel(ServiceInfoRegistry.EndpointInfo endpoint) {
         String group = nullToEmpty(endpoint.getGroup());
         return group.isEmpty() ? nullToEmpty(endpoint.getName()) : group + "/" + nullToEmpty(endpoint.getName());
@@ -173,7 +173,7 @@ final class ServiceInfoBanner {
     *
     * @param flag flag
     * @return flag标签的结果
-     */
+    */
     private static String flagLabel(ServiceInfoRegistry.FlagInfo flag) {
         return hasText(flag.getDescription()) ? flag.getDescription() : nullToEmpty(flag.getName());
     }
@@ -183,7 +183,7 @@ final class ServiceInfoBanner {
     *
     * @param flag flag
     * @return 状态block的结果
-     */
+    */
     private static String statusBlock(ServiceInfoRegistry.FlagInfo flag) {
         if (!hasText(flag.getSuffix())) {
             return AnsiStyle.cnLabel(flag.getValue());
@@ -231,10 +231,10 @@ final class ServiceInfoBanner {
         }
 
         /**
-        * 框体内容宽度: 所有行自然宽度的最大值 + 右边距, 夹在上下限之间
-        *
-        * @return 内部width的结果
-         */
+    * 框体内容宽度: 所有行自然宽度的最大值 + 右边距, 夹在上下限之间
+    *
+    * @return 内部width的结果
+    */
         int innerWidth() {
             int inner = MIN_INNER;
             if (!endpoints.isEmpty()) {
@@ -254,7 +254,7 @@ final class ServiceInfoBanner {
         *
         * @param inner 内部
         * @return 构建rows的结果
-         */
+        */
         List<Row> buildRows(int inner) {
             List<Row> rows = new ArrayList<>();
             if (!endpoints.isEmpty()) {
@@ -299,11 +299,11 @@ final class ServiceInfoBanner {
     /** 横幅中的一行 (渲染结果已包含左右边框) */
     private interface Row {
         /**
-        * 按指定内容宽度渲染整行, 可见宽度恒为 内部 + 2
-        *
-        * @param inner 内部
-        * @return render的结果
-         */
+    * 按指定内容宽度渲染整行, 可见宽度恒为 内部 + 2
+    *
+    * @param inner 内部
+    * @return render的结果
+    */
         String render(int inner);
     }
 
@@ -312,9 +312,9 @@ final class ServiceInfoBanner {
         private final Line line;
 
         /**
-        * 文本row。
-        * @param line 线
-         */
+    * 文本row。
+    * @param line 线
+    */
         TextRow(Line line) {
             this.line = line;
         }
@@ -332,9 +332,9 @@ final class ServiceInfoBanner {
         private final String label;
 
         /**
-        * dividerrow。
-        * @param label 标签
-         */
+    * dividerrow。
+    * @param label 标签
+    */
         DividerRow(String label) {
             this.label = label;
         }
@@ -350,7 +350,7 @@ final class ServiceInfoBanner {
 
     /**
     * 一行内容: 由若干文本片段与"可伸缩间隙"组成, 渲染时按目标宽度展开间隙。
-     */
+    */
     private static final class Line {
         /** 可伸缩间隙标记 */
         private static final Object FILL = new Object();
@@ -364,7 +364,7 @@ final class ServiceInfoBanner {
         *
         * @param text 文本
         * @return 添加的结果
-         */
+        */
         Line add(String text) {
             if (text == null || text.isEmpty()) {
                 return this;
@@ -380,27 +380,27 @@ final class ServiceInfoBanner {
         * @param text 文本
         * @param columnWidth columnwidth
         * @return 添加padded的结果
-         */
+        */
         Line addPadded(String text, int columnWidth) {
             int textWidth = visibleWidth(text);
             if (textWidth > columnWidth) {
                 /**
                 * 添加。
                 * @param columnWidth columnwidth
-                 */
+                */
                 add(clip(text, columnWidth));
                 return this;
             }
             /**
             * 添加。
             * @param text 文本
-             */
+            */
             add(text);
             if (textWidth < columnWidth) {
                 /**
                 * 添加。
                 * @param textWidth 文本width
-                 */
+                */
                 add(" ".repeat(columnWidth - textWidth));
             }
             return this;
@@ -410,7 +410,7 @@ final class ServiceInfoBanner {
         * 追加一个可伸缩间隙 (渲染时独占剩余空间)
         *
         * @return fill的结果
-         */
+        */
         Line fill() {
             segments.add(FILL);
             fills++;
@@ -423,7 +423,7 @@ final class ServiceInfoBanner {
         * @param fillTarget 可伸缩间隙的展开目标列宽 (内容区宽度)
         * @param total      行内容总列宽 (含右侧留白)
         * @return render的结果
-         */
+        */
         String render(int fillTarget, int total) {
             int each = 0;
             int extra = 0;
@@ -460,7 +460,7 @@ final class ServiceInfoBanner {
     * @param right right
     * @param inner 内部
     * @return 帧的结果
-     */
+    */
     private static String frame(String left, String line, String right, int inner) {
         return color(AnsiStyle.CYAN) + left + line.repeat(inner) + right + reset();
     }
@@ -471,7 +471,7 @@ final class ServiceInfoBanner {
     * @param text 文本
     * @param inner 内部
     * @return center的结果
-     */
+    */
     private static String center(String text, int inner) {
         int pad = inner - visibleWidth(text);
         if (pad <= 0) {
@@ -487,7 +487,7 @@ final class ServiceInfoBanner {
     * @param text 文本
     * @param maxVisible 最大visible
     * @return clip的结果
-     */
+    */
     private static String clip(String text, int maxVisible) {
         if (visibleWidth(text) <= maxVisible) {
             return text;
@@ -523,7 +523,7 @@ final class ServiceInfoBanner {
     *
     * @param text 文本
     * @return visibleWidth的结果
-     */
+    */
     private static int visibleWidth(String text) {
         if (text == null) {
             return 0;
@@ -548,7 +548,7 @@ final class ServiceInfoBanner {
     * @param text 文本
     * @param index 索引
     * @return 是否ansi启动的结果
-     */
+    */
     private static boolean isAnsiStart(String text, int index) {
         return text.charAt(index) == '\u001B' && index + 1 < text.length() && text.charAt(index + 1) == '[';
     }
@@ -559,7 +559,7 @@ final class ServiceInfoBanner {
     * @param text 文本
     * @param index 索引
     * @return 跳过ansi的结果
-     */
+    */
     private static int skipAnsi(String text, int index) {
         int i = index + 2;
         while (i < text.length() && !Character.isLetter(text.charAt(i))) {
@@ -573,7 +573,7 @@ final class ServiceInfoBanner {
     *
     * @param code 编码
     * @return color的结果
-     */
+    */
     private static String color(String code) {
         return AnsiStyle.isEnabled() ? code : "";
     }
@@ -582,7 +582,7 @@ final class ServiceInfoBanner {
     * 颜色复位码 (遵循 {@link AnsiStyle#isEnabled()})
     *
     * @return reset的结果
-     */
+    */
     private static String reset() {
         return AnsiStyle.isEnabled() ? AnsiStyle.RESET : "";
     }
@@ -592,7 +592,7 @@ final class ServiceInfoBanner {
     *
     * @param codePoint 编码point
     * @return 是否wide的结果
-     */
+    */
     private static boolean isWide(int codePoint) {
         return (codePoint >= 0x1100 && codePoint <= 0x115F)
                 || (codePoint >= 0x2E80 && codePoint <= 0xA4CF)
@@ -609,7 +609,7 @@ final class ServiceInfoBanner {
     *
     * @param text 文本
     * @return squash的结果
-     */
+    */
     private static String squash(String text) {
         return text == null ? "" : text.replaceAll("\\s+", "");
     }
@@ -619,7 +619,7 @@ final class ServiceInfoBanner {
     *
     * @param url url
     * @return 路径的的结果
-     */
+    */
     private static String pathOf(String url) {
         String path = nullToEmpty(url).trim();
         int scheme = path.indexOf("://");
@@ -639,7 +639,7 @@ final class ServiceInfoBanner {
     *
     * @param text 文本
     * @return 是否包含文本的结果
-     */
+    */
     private static boolean hasText(String text) {
         return text != null && !text.trim().isEmpty();
     }
@@ -649,7 +649,7 @@ final class ServiceInfoBanner {
     *
     * @param text 文本
     * @return 空转为空的结果
-     */
+    */
     private static String nullToEmpty(String text) {
         return text == null ? "" : text;
     }

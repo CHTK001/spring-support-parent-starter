@@ -28,12 +28,12 @@ public class UsageGlobalSettingProvider implements GlobalSettingProvider {
 
     /**
     * 配置分组标识
-     */
+    */
     private static final String GROUP = "global";
 
     /**
     * 分组显示名称
-     */
+    */
     private static final String GROUP_NAME = "用量配置";
 
     @Override

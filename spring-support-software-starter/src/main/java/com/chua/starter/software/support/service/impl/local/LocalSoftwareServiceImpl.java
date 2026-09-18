@@ -62,7 +62,7 @@ public class LocalSoftwareServiceImpl implements LocalSoftwareService {
     * @param softSoftwareMapper softsoftware映射器
     * @param localSoftwareSource 本地software源
     * @param softwareSources software源
-     */
+    */
     public LocalSoftwareServiceImpl(TransactionTemplate transactionTemplate,
                                     SoftSourceService softSourceService,
                                     SoftSoftwareService softSoftwareService,

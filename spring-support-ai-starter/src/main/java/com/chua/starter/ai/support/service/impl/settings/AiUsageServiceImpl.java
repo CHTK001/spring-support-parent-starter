@@ -26,12 +26,12 @@ public class AiUsageServiceImpl implements AiUsageService {
 
     /**
     * 时间格式化器
-     */
+    */
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     /**
     * 用量 映射器
-     */
+    */
     private final AiUsageMapper usageMapper;
 
     /**
@@ -39,7 +39,7 @@ public class AiUsageServiceImpl implements AiUsageService {
     *
     * @param model 模型名称（可选）
     * @return 用量 DTO 列表
-     */
+    */
     @Override
     public List<AiUsageDTO> query(String model) {
         LambdaQueryWrapper<SysAiSettingUsage> wrapper = new LambdaQueryWrapper<SysAiSettingUsage>()
@@ -58,7 +58,7 @@ public class AiUsageServiceImpl implements AiUsageService {
     *
     * @param entity 用量实体
     * @return 用量 DTO
-     */
+    */
     private AiUsageDTO toDto(SysAiSettingUsage entity) {
         AiUsageDTO dto = new AiUsageDTO();
         dto.setModel(entity.getUsageModel());

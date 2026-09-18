@@ -28,14 +28,14 @@ public class AiSkillCatalogController {
 
     /**
     * 技能控制器（本地文件系统扫描）
-     */
+    */
     private final ApiSkillController apiSkillController;
 
     /**
     * 查询可用技能名目录。
     *
     * @return 技能名列表（去重）
-     */
+    */
     @Operation(summary = "查询技能名目录")
     @GetMapping("/catalog")
     public List<String> catalog() {

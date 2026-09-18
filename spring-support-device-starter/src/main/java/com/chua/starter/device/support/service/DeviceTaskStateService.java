@@ -18,7 +18,7 @@ public interface DeviceTaskStateService {
     *
     * @param taskName 任务名称
     * @return 是否应该运行
-     */
+    */
     boolean shouldRun(String taskName);
 
     /**
@@ -26,14 +26,14 @@ public interface DeviceTaskStateService {
     *
     * @param taskName 任务名称
     * @return 是否成功获取执行权
-     */
+    */
     boolean markRunning(String taskName);
 
     /**
     * 标记任务运行结束
     *
     * @param taskName 任务名称
-     */
+    */
     void markFinished(String taskName);
 
     /**
@@ -41,7 +41,7 @@ public interface DeviceTaskStateService {
     *
     * @param taskName 任务名称
     * @return 任务状态实体
-     */
+    */
     DeviceTaskState getState(String taskName);
 
     /**
@@ -49,6 +49,6 @@ public interface DeviceTaskStateService {
     *
     * @param taskName 任务名称
     * @param interval 间隔（秒）
-     */
+    */
     void updateInterval(String taskName, int interval);
 }

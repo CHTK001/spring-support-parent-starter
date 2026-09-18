@@ -25,24 +25,24 @@ public class InMemoryJobRepository implements JobRepository {
 
     /**
     * 任务存储表
-     */
+    */
     private final Map<String, JobDefinition> table = new HashMap<>();
 
     /**
     * 触发器缓存, 钥匙 为任务名
-     */
+    */
     private final Map<String, Trigger> triggerCache = new HashMap<>();
 
     /**
     * 最近一次触发时间, 钥匙 为任务名
-     */
+    */
     private final Map<String, Long> lastFireMs = new HashMap<>();
 
     /**
     * 注册任务。
     *
     * @param definition 任务定义
-     */
+    */
     public void upsert(JobDefinition definition) {
         if (definition == null || definition.getName() == null) {
             return;
@@ -60,7 +60,7 @@ public class InMemoryJobRepository implements JobRepository {
     * @param preReadMs    预读时间窗
     * @param preReadCount 最大返回数
     * @return 任务列表
-     */
+    */
     @Override
     public List<JobDefinition> findDue(long now, long preReadMs, int preReadCount) {
         List<JobDefinition> due = new ArrayList<>();

@@ -52,12 +52,12 @@ public class UserResult extends UserResume implements Serializable {
     * 构造函数（用于创建错误消息）
     *
     * @param message 错误消息
-     */
+    */
     public UserResult(String message) {
         /**
         * 父。
         * @param message 消息
-         */
+        */
         super(message);
     }
 
@@ -67,7 +67,7 @@ public class UserResult extends UserResume implements Serializable {
     * 访问令牌
     * <p>用于API认证，每次请求需携带此Token</p>
     * <p>格式：AT{uid}{randomHex}，前缀AT表示Access Token</p>
-     */
+    */
     @Schema(description = "访问令牌")
     /** 令牌 */
     private String token;
@@ -76,7 +76,7 @@ public class UserResult extends UserResume implements Serializable {
     * 刷新令牌
     * <p>用于获取新的访问令牌，当访问令牌过期时使用</p>
     * <p>格式：RT{uid}{randomHex}，前缀RT表示Refresh Token</p>
-     */
+    */
     @Schema(description = "刷新令牌")
     /** Refresh令牌 */
     private String refreshToken;
@@ -84,51 +84,51 @@ public class UserResult extends UserResume implements Serializable {
     /**
     * 刷新令牌过期时间（秒）
     * <p>刷新令牌失效的时间戳</p>
-     */
+    */
     @Schema(description = "刷新令牌过期时间（秒）")
     /** Refreshexpire时间 */
     private Long refreshExpireTime;
 
     /**
     * 登录类型
-     */
+    */
     private String loginType;
 
     /**
     * 用户UID
-     */
+    */
     private String uid;
 
     /**
     * 打开标识
-     */
+    */
     private String openId;
 
     /**
     * unionid
-     */
+    */
     private String unionId;
 
     /**
     * 过期时间（秒）
-     */
+    */
     private Long expireTime;
 
     /**
     * 手机号
-     */
+    */
     private String phone;
 
     /**
     * 地址
-     */
+    */
     private String address;
 
     /**
     * 获取空用户结果
     *
     * @return 空用户结果
-     */
+    */
     public static UserResult emptyUserResult() {
         return _EMPTY;
     }
@@ -142,7 +142,7 @@ public class UserResult extends UserResume implements Serializable {
     *
     * @param userResume 用户简历
     * @return 用户认证结果
-     */
+    */
     public static UserResult fromResume(UserResume userResume) {
         if (null == userResume) {
             return null;

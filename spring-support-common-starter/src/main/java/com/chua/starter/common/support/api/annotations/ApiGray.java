@@ -72,14 +72,14 @@ public @interface ApiGray {
     * </p>
     *
     * @return 版本标识
-     */
+    */
     String value() default "";
 
     /**
     * 灰度描述
     *
     * @return 描述信息
-     */
+    */
     String description() default "";
 
     /**
@@ -90,7 +90,7 @@ public @interface ApiGray {
     * </p>
     *
     * @return 百分比，默认 0
-     */
+    */
     int percentage() default 0;
 
     /**
@@ -109,7 +109,7 @@ public @interface ApiGray {
     * </p>
     *
     * @return SpEL 表达式
-     */
+    */
     String rule() default "";
 
     /**
@@ -119,7 +119,7 @@ public @interface ApiGray {
     * </p>
     *
     * @return 用户名列表
-     */
+    */
     String[] users() default {};
 
     /**
@@ -129,7 +129,7 @@ public @interface ApiGray {
     * </p>
     *
     * @return IP列表
-     */
+    */
     String[] ips() default {};
 
     /**
@@ -139,7 +139,7 @@ public @interface ApiGray {
     * </p>
     *
     * @return 角色列表
-     */
+    */
     String[] roles() default {};
 
     /**
@@ -150,7 +150,7 @@ public @interface ApiGray {
     * </p>
     *
     * @return 请求头配置
-     */
+    */
     String[] headers() default {};
 
     /**
@@ -161,21 +161,21 @@ public @interface ApiGray {
     * </p>
     *
     * @return 降级接口路径
-     */
+    */
     String fallback() default "";
 
     /**
     * 未命中灰度时的响应消息
     *
     * @return 响应消息
-     */
+    */
     String notInGrayMessage() default "您暂未被邀请体验此功能";
 
     /**
     * 未命中灰度时的响应状态码
     *
     * @return HTTP 状态码
-     */
+    */
     int notInGrayStatus() default 200;
 
     /**
@@ -186,7 +186,7 @@ public @interface ApiGray {
     * </p>
     *
     * @return 是否强制灰度
-     */
+    */
     boolean forceGray() default false;
 
     /**
@@ -196,6 +196,6 @@ public @interface ApiGray {
     * </p>
     *
     * @return 分组名称
-     */
+    */
     String group() default "default";
 }

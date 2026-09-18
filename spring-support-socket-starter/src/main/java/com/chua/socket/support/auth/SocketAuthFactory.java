@@ -19,7 +19,7 @@ public interface SocketAuthFactory {
     *
     * @param handshakeData 握手数据
     * @return 是否授权
-     */
+    */
     boolean isAuthorized(Map<String, Object> handshakeData);
 
     /**
@@ -27,6 +27,6 @@ public interface SocketAuthFactory {
     *
     * @param handshakeData 握手数据
     * @return 用户信息
-     */
+    */
     SocketUser getUser(Map<String, Object> handshakeData);
 }

@@ -16,7 +16,7 @@ import static com.chua.starter.mybatis.properties.MybatisPlusProperties.PRE;
 public class MybatisPlusProperties {
     /**
     * 是否启用
-     */
+    */
     private boolean enable = true;
 
 
@@ -26,34 +26,34 @@ public class MybatisPlusProperties {
 
     /**
     * xml是否可热加载
-     */
+    */
     private boolean openXmlReload = true;
 
     /**
     * 是否开启只读模式
     * 开启后所有更新、插入、删除操作都会抛出只读异常
-     */
+    */
     private boolean readOnly = false;
 
     /**
     * 是否开启只读模式
     *
     * @return 是否只读
-     */
+    */
     public boolean isReadOnly() {
         return readOnly;
     }
 
     /**
     * 映射器加载源
-     */
+    */
     private List<SqlMethodProperties> sqlMethod;
 
     /**
     * 获取SQL方法配置列表
     *
     * @return SQL方法配置列表
-     */
+    */
     public List<SqlMethodProperties> getSqlMethod() {
         return sqlMethod;
     }
@@ -62,7 +62,7 @@ public class MybatisPlusProperties {
     * 获取重载类型
     *
     * @return 重载类型
-     */
+    */
     public ReloadType getReloadType() {
         return reloadType;
     }
@@ -71,7 +71,7 @@ public class MybatisPlusProperties {
     * 获取重载目录列表
     *
     * @return 重载目录列表
-     */
+    */
     public List<ReloadDirectory> getReloadDirectories() {
         return reloadDirectories;
     }
@@ -80,17 +80,17 @@ public class MybatisPlusProperties {
     * 获取重载时间
     *
     * @return 重载时间
-     */
+    */
     public int getReloadTime() {
         return reloadTime;
     }
     /**
     * 自动热加载方式
-     */
+    */
     private ReloadType reloadType = ReloadType.AUTO;
     /**
     * 自动热加载时间
-     */
+    */
     private int reloadTime = 3_000;
 
     /**
@@ -98,7 +98,7 @@ public class MybatisPlusProperties {
     * 支持本地文件系统路径和类路径路径
     * 本地路径示例: /路径/转为/映射器, D:/映射器
     * 类路径路径示例: 类路径:映射器, 类路径*:映射器/**
-     */
+    */
     private List<ReloadDirectory> reloadDirectories;
 
 
@@ -108,11 +108,11 @@ public class MybatisPlusProperties {
     *
     * @author CH
     * @since 4.0.0
-     */
+    */
     public static class SqlMethodProperties {
         /**
         * SQL来源
-         */
+        */
         private SqlMethodType type;
 
         /**
@@ -120,22 +120,22 @@ public class MybatisPlusProperties {
         *
         * @see SqlMethodType#FILE 文件路径
         * @see SqlMethodType#MYSQL mysql datasource bean
-         */
+        */
         private String source;
         /**
         * watchdog超时时间
-         */
+        */
         private int timeout = 3_000;
         /**
         * 是否开启检测
-         */
+        */
         private boolean watchdog;
 
         /**
         * 获取源信息
         *
         * @return 源信息
-         */
+        */
         public String getSource() {
             return source;
         }
@@ -144,7 +144,7 @@ public class MybatisPlusProperties {
         * 获取类型
         *
         * @return 类型
-         */
+        */
         public SqlMethodType getType() {
             return type;
         }
@@ -153,7 +153,7 @@ public class MybatisPlusProperties {
         * 获取超时时间
         *
         * @return 超时时间
-         */
+        */
         public int getTimeout() {
             return timeout;
         }
@@ -162,7 +162,7 @@ public class MybatisPlusProperties {
         * 是否开启watchdog
         *
         * @return 是否开启watchdog
-         */
+        */
         public boolean isWatchdog() {
             return watchdog;
         }
@@ -172,15 +172,15 @@ public class MybatisPlusProperties {
     * 方法类型
     * @author CH
     * @since 4.0.0
-     */
+    */
     public enum SqlMethodType {
         /**
         * 文件
-         */
+        */
         FILE,
         /**
         * MySQL
-         */
+        */
         MYSQL
     }
 
@@ -188,15 +188,15 @@ public class MybatisPlusProperties {
     * 类型
     * @author CH
     * @since 4.0.0
-     */
+    */
     public enum ReloadType {
         /**
         * 不刷新
-         */
+        */
         NONE,
         /**
         * 自动刷新
-         */
+        */
         AUTO
     }
 
@@ -204,7 +204,7 @@ public class MybatisPlusProperties {
     * 热重载目录配置
     * @author CH
     * @since 4.0.0
-     */
+    */
     @Data
     public static class ReloadDirectory {
         /**
@@ -212,26 +212,26 @@ public class MybatisPlusProperties {
         * 支持格式：
         * - 本地文件系统路径: /路径/转为/映射器, D:/映射器
         * - 类路径路径: 类路径:映射器, 类路径*:映射器/**
-         */
+        */
         private String path;
 
         /**
         * 是否启用监听
         * 本地路径默认启用，类路径路径在jar包中无法监听
-         */
+        */
         private boolean watchEnabled = true;
 
         /**
         * 文件匹配模式
         * 默认为双星号斜杠星号 映射器.xml
-         */
+        */
         private String pattern = "**/*Mapper.xml";
 
         /**
         * 获取目录路径
         *
         * @return 目录路径
-         */
+        */
         public String getPath() {
             return path;
         }
@@ -240,7 +240,7 @@ public class MybatisPlusProperties {
         * 获取文件匹配模式
         *
         * @return 文件匹配模式
-         */
+        */
         public String getPattern() {
             return pattern;
         }
@@ -249,7 +249,7 @@ public class MybatisPlusProperties {
         * 是否启用监听
         *
         * @return 是否启用监听
-         */
+        */
         public boolean isWatchEnabled() {
             return watchEnabled;
         }

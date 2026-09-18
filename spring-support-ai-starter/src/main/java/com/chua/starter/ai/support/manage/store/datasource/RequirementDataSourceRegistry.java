@@ -41,7 +41,7 @@ public class RequirementDataSourceRegistry implements ApplicationRunner {
     *
     * @param type 数据源类型（lark / generic / jira / 概念 等）
     * @return 对应的 提供者，未找到返回 空
-     */
+    */
     public IRequirementDataSource getDataSource(String type) {
         return registry.get(type);
     }
@@ -50,7 +50,7 @@ public class RequirementDataSourceRegistry implements ApplicationRunner {
     * 获取所有已注册的数据源类型列表。
     *
     * @return 已注册类型（升序），如 ["GENERIC","LARK","本地"]
-     */
+    */
     public List<String> list() {
         return Collections.unmodifiableList(
                 registry.keySet().stream().sorted().collect(Collectors.toList())
@@ -61,7 +61,7 @@ public class RequirementDataSourceRegistry implements ApplicationRunner {
     * 获取所有已注册的数据源提供方。
     *
     * @return 提供方列表，按 类型 升序
-     */
+    */
     public List<IRequirementDataSource> allProviders() {
         return Collections.unmodifiableList(
                 registry.values().stream()
@@ -75,7 +75,7 @@ public class RequirementDataSourceRegistry implements ApplicationRunner {
     *
     * @param type 数据源类型（大写，如 "LARK"）
     * @return 对应的提供方；未注册返回 空
-     */
+    */
     public IRequirementDataSource getProvider(String type) {
         return registry.get(type);
     }
@@ -84,7 +84,7 @@ public class RequirementDataSourceRegistry implements ApplicationRunner {
     * 应用启动时通过自定义 SPI 自动注册所有数据源提供方。
     *
     * @param args 启动参数（本方法不读取）
-     */
+    */
     @Override
     public void run(ApplicationArguments args) {
         ServiceProvider.of(IRequirementDataSource.class).forEach((name, provider) -> {

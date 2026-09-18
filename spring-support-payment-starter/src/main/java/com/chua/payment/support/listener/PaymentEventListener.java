@@ -24,7 +24,7 @@ public class PaymentEventListener {
     /**
     * 监听订单创建事件
     * @param event 事件
-     */
+    */
     @org.springframework.context.event.EventListener
     public void handleOrderCreated(OrderCreatedEvent event) {
         log.info("订单创建事件: orderNo={}, userId={}, amount={}",
@@ -34,7 +34,7 @@ public class PaymentEventListener {
     /**
     * 监听支付成功事件
     * @param event 事件
-     */
+    */
     @org.springframework.context.event.EventListener
     public void handlePaymentSuccess(PaymentSuccessEvent event) {
         log.info("支付成功事件: orderNo={}, userId={}, paidAmount={}",
@@ -44,7 +44,7 @@ public class PaymentEventListener {
     /**
     * 监听退款成功事件
     * @param event 事件
-     */
+    */
     @org.springframework.context.event.EventListener
     public void handleRefundSuccess(RefundSuccessEvent event) {
         log.info("退款成功事件: orderNo={}, refundNo={}, refundAmount={}",
@@ -54,7 +54,7 @@ public class PaymentEventListener {
     /**
     * 监听支付回调接收事件
     * @param event 事件
-     */
+    */
     @org.springframework.context.event.EventListener
     public void handlePaymentNotifyReceived(PaymentNotifyReceivedEvent event) {
         log.info("支付回调接收事件: notifyType={}, orderNo={}, refundNo={}, signVerified={}",
@@ -64,7 +64,7 @@ public class PaymentEventListener {
     /**
     * 监听支付回调失败事件
     * @param event 事件
-     */
+    */
     @org.springframework.context.event.EventListener
     public void handlePaymentNotifyFailed(PaymentNotifyFailedEvent event) {
         log.error("支付回调失败事件: notifyType={}, orderNo={}, refundNo={}, errorType={}, errorMessage={}",

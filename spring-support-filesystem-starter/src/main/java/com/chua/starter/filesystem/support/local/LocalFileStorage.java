@@ -44,23 +44,23 @@ public class LocalFileStorage extends AbstractFileStorage {
 
     /**
     * 本地存储根目录
-     */
+    */
     private final Path rootPath;
 
     /**
     * uploadid → 分片路径 映射
-     */
+    */
     private final Map<String, Map<Integer, Path>> multipartMap = new ConcurrentHashMap<>();
 
     /**
     * 创建 本地文件storage 实例
     * @param setting setting
-     */
+    */
     public LocalFileStorage(BucketSetting setting) {
         /**
         * 父。
         * @param setting setting
-         */
+        */
         super(setting);
         String baseDir = Optional.ofNullable(System.getProperty("filesystem.temp.path"))
                 .orElse(System.getProperty("java.io.tmpdir"))
@@ -75,7 +75,7 @@ public class LocalFileStorage extends AbstractFileStorage {
             * @param baseDir basedir
             * @param e e
             * @return runtime异常的结果
-             */
+            */
             throw new RuntimeException("创建本地存储根目录失败: " + baseDir, e);
         }
     }
@@ -84,9 +84,9 @@ public class LocalFileStorage extends AbstractFileStorage {
     /** 创建multipartstorage */
     public MultipartStorage createMultipartStorage() {
         /**
-        * 本地multipartstorage。
-        * @return 本地multipartstorage的结果
-         */
+    * 本地multipartstorage。
+    * @return 本地multipartstorage的结果
+    */
         return new LocalMultipartStorage();
     }
 
@@ -201,9 +201,9 @@ public class LocalFileStorage extends AbstractFileStorage {
             }
             int limit = request.getLimit() > 0 ? request.getLimit() : 10;
             /**
-            * 尝试。
-            * @param Files.list(targetDir 文件.列表(Targetdir
-             */
+    * 尝试。
+    * @param Files.list(targetDir 文件.列表(Targetdir
+    */
             try (java.util.stream.Stream<Path> stream = Files.list(targetDir)) {
                 stream.sorted(java.util.Comparator.comparing(p -> p.getFileName().toString()))
                         .limit(limit)
@@ -240,7 +240,7 @@ public class LocalFileStorage extends AbstractFileStorage {
     * @param filePath 文件路径
     * @param fileName 文件名称
     * @return resolve钥匙的结果
-     */
+    */
     private String resolveKey(String filePath, String fileName) {
         if (filePath == null || filePath.isEmpty()) {
             return fileName;
@@ -252,7 +252,7 @@ public class LocalFileStorage extends AbstractFileStorage {
     * 本地分片上传会话。
     * @author CH
     * @since 4.0.0
-     */
+    */
     private class LocalMultipartStorage implements MultipartStorage {
 
         @Override
@@ -306,9 +306,9 @@ public class LocalFileStorage extends AbstractFileStorage {
             }
             Path finalFile = rootPath.resolve(uploadId + "_final");
             /**
-            * 尝试。
-            * @param Files.newOutputStream(finalFile 文件.新输出流(最终文件
-             */
+        * 尝试。
+        * @param Files.newOutputStream(finalFile 文件.新输出流(最终文件
+        */
             try (OutputStream out = Files.newOutputStream(finalFile)) {
                 for (int i = 1; i <= parts.size(); i++) {
                     Path p = partMap.get(i);

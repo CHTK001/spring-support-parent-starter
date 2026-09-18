@@ -21,6 +21,6 @@ public interface SysAiGroupMapper extends BaseMapper<SysAiGroup> {
     *
     * @param params 查询参数（可包含 sysAI群体名称、sysAI群体状态）
     * @return 分组列表
-     */
+    */
     List<Map<String, Object>> group(Map<String, Object> params);
 }

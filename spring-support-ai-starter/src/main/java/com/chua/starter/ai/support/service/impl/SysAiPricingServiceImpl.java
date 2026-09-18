@@ -34,12 +34,12 @@ public class SysAiPricingServiceImpl implements SysAiPricingService {
 
     /**
     * 定价 映射器
-     */
+    */
     private final SysAiPricingMapper pricingMapper;
 
     /**
     * AA 模型指标服务（含定价缓存）
-     */
+    */
     private final AiModelMetricsEnrichmentService metricsEnrichment;
 
     /**
@@ -49,7 +49,7 @@ public class SysAiPricingServiceImpl implements SysAiPricingService {
     * @param provider 服务商标识，如 openai、deepseek，不能为 空
     * @param model    模型标识，如 gpt-4o、deepseek-对话，不能为 空
     * @return 最新定价记录，未找到时返回 空
-     */
+    */
     @Override
     @Cacheable(cacheNames = CACHE_NAME, key = "#provider + ':' + #model", unless = "#result == null")
     public SysAiPricing getLatestPricing(String provider, String model) {
@@ -84,7 +84,7 @@ public class SysAiPricingServiceImpl implements SysAiPricingService {
     * 同步官方定价数据到数据库。
     * <p>从 datasearch-starter 的 JSON 定价文件加载全量数据，每次同步前清空旧数据，
     * 全量插入到 sys_ai_pricing 表。同步完成后清除定价缓存。</p>
-     */
+    */
     @Override
     @Transactional(rollbackFor = Exception.class)
     @CacheEvict(cacheNames = CACHE_NAME, allEntries = true)

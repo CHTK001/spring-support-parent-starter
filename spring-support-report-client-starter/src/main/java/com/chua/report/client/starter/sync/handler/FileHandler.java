@@ -90,7 +90,7 @@ public class FileHandler implements SyncMessageHandler {
     * 列出目录内容
     * @param data 数据
     * @return 处理列表的结果
-     */
+    */
     private Object handleList(Map<String, Object> data) throws IOException {
         String path = getString(data, "path");
         boolean includeHidden = getBoolean(data, "includeHidden", false);
@@ -117,7 +117,7 @@ public class FileHandler implements SyncMessageHandler {
     * 获取文件树
     * @param data 数据
     * @return 处理树的结果
-     */
+    */
     private Object handleTree(Map<String, Object> data) throws IOException {
         String path = getString(data, "path");
         int maxDepth = getInt(data, "maxDepth", 3);
@@ -136,7 +136,7 @@ public class FileHandler implements SyncMessageHandler {
     * 获取文件信息
     * @param data 数据
     * @return 处理信息的结果
-     */
+    */
     private Object handleInfo(Map<String, Object> data) throws IOException {
         String path = getString(data, "path");
         File file = new File(path);
@@ -152,7 +152,7 @@ public class FileHandler implements SyncMessageHandler {
     * 读取文件内容
     * @param data 数据
     * @return 处理读取的结果
-     */
+    */
     private Object handleRead(Map<String, Object> data) throws IOException {
         String path = getString(data, "path");
         long offset = getLong(data, "offset", 0);
@@ -189,7 +189,7 @@ public class FileHandler implements SyncMessageHandler {
     * 写入文件内容
     * @param data 数据
     * @return 处理写入的结果
-     */
+    */
     private Object handleWrite(Map<String, Object> data) throws IOException {
         String path = getString(data, "path");
         String contentBase64 = getString(data, "content");
@@ -221,7 +221,7 @@ public class FileHandler implements SyncMessageHandler {
     * 删除文件或目录
     * @param data 数据
     * @return 处理删除的结果
-     */
+    */
     private Object handleDelete(Map<String, Object> data) throws IOException {
         String path = getString(data, "path");
         boolean recursive = getBoolean(data, "recursive", false);
@@ -245,7 +245,7 @@ public class FileHandler implements SyncMessageHandler {
     * 创建目录
     * @param data 数据
     * @return 处理mkdir的结果
-     */
+    */
     private Object handleMkdir(Map<String, Object> data) throws IOException {
         String path = getString(data, "path");
         boolean recursive = getBoolean(data, "recursive", true);
@@ -260,7 +260,7 @@ public class FileHandler implements SyncMessageHandler {
     * 重命名文件
     * @param data 数据
     * @return 处理rename的结果
-     */
+    */
     private Object handleRename(Map<String, Object> data) throws IOException {
         String oldPath = getString(data, "oldPath");
         String newName = getString(data, "newName");
@@ -280,7 +280,7 @@ public class FileHandler implements SyncMessageHandler {
     * 复制文件
     * @param data 数据
     * @return 处理副本的结果
-     */
+    */
     private Object handleCopy(Map<String, Object> data) throws IOException {
         String sourcePath = getString(data, "sourcePath");
         String targetPath = getString(data, "targetPath");
@@ -311,7 +311,7 @@ public class FileHandler implements SyncMessageHandler {
     * 移动文件
     * @param data 数据
     * @return 处理move的结果
-     */
+    */
     private Object handleMove(Map<String, Object> data) throws IOException {
         String sourcePath = getString(data, "sourcePath");
         String targetPath = getString(data, "targetPath");
@@ -336,7 +336,7 @@ public class FileHandler implements SyncMessageHandler {
     * 检查文件是否存在
     * @param data 数据
     * @return 处理exists的结果
-     */
+    */
     private Object handleExists(Map<String, Object> data) {
         String path = getString(data, "path");
         File file = new File(path);
@@ -347,7 +347,7 @@ public class FileHandler implements SyncMessageHandler {
     * 获取磁盘使用情况
     * @param data 数据
     * @return 处理diskusage的结果
-     */
+    */
     private Object handleDiskUsage(Map<String, Object> data) {
         String path = getString(data, "path");
         File file = new File(path);
@@ -372,7 +372,7 @@ public class FileHandler implements SyncMessageHandler {
     *
     * @param file 文件
     * @return 文件转为映射的结果
-     */
+    */
     private Map<String, Object> fileToMap(File file) {
         Map<String, Object> map = new HashMap<>();
         map.put("name", file.getName());
@@ -396,7 +396,7 @@ public class FileHandler implements SyncMessageHandler {
     * @param includeHidden includehidden
     * @param currentDepth 当前深度
     * @return 构建文件树的结果
-     */
+    */
     private Map<String, Object> buildFileTree(File file, int maxDepth, boolean includeHidden, int currentDepth) {
         Map<String, Object> node = fileToMap(file);
 
@@ -420,7 +420,7 @@ public class FileHandler implements SyncMessageHandler {
     *
     * @param file 文件
     * @return 删除recursively的结果
-     */
+    */
     private boolean deleteRecursively(File file) {
         if (file.isDirectory()) {
             File[] children = file.listFiles();
@@ -438,7 +438,7 @@ public class FileHandler implements SyncMessageHandler {
     *
     * @param source 源
     * @param target Target
-     */
+    */
     private void copyDirectory(File source, File target) throws IOException {
         if (!target.exists()) {
             target.mkdirs();
@@ -462,7 +462,7 @@ public class FileHandler implements SyncMessageHandler {
     * @param data 数据
     * @param key 键
     * @return 获取字符串的结果
-     */
+    */
     private String getString(Map<String, Object> data, String key) {
         Object v = data.get(key);
         return v != null ? v.toString() : null;
@@ -475,7 +475,7 @@ public class FileHandler implements SyncMessageHandler {
     * @param key 键
     * @param defaultValue 默认值
     * @return 获取int的结果
-     */
+    */
     private int getInt(Map<String, Object> data, String key, int defaultValue) {
         Object v = data.get(key);
         if (v instanceof Number) {
@@ -497,7 +497,7 @@ public class FileHandler implements SyncMessageHandler {
     * @param key 键
     * @param defaultValue 默认值
     * @return 获取long的结果
-     */
+    */
     private long getLong(Map<String, Object> data, String key, long defaultValue) {
         Object v = data.get(key);
         if (v instanceof Number) {
@@ -519,7 +519,7 @@ public class FileHandler implements SyncMessageHandler {
     * @param key 键
     * @param defaultValue 默认值
     * @return 获取布尔值的结果
-     */
+    */
     private boolean getBoolean(Map<String, Object> data, String key, boolean defaultValue) {
         Object v = data.get(key);
         if (v instanceof Boolean) {

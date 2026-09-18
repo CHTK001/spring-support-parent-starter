@@ -59,11 +59,11 @@ public class StaticProtocolExecutor implements ProtocolExecutor {
             CookieUtil.remove(RequestUtils.getRequest(), ResponseUtils.getResponse(), "x-oauth-cookie");
         }
         /**
-        * login认证结果。
-        * @param 200 200
-        * @param "" ""
-        * @return login认证结果的结果
-         */
+    * login认证结果。
+    * @param 200 200
+    * @param "" ""
+    * @return login认证结果的结果
+    */
         return new LoginAuthResult(200, "");
     }
 
@@ -73,7 +73,7 @@ public class StaticProtocolExecutor implements ProtocolExecutor {
     * @param username 用户名
     * @param password 暗语
     * @return {@link login认证结果}
-     */
+    */
     private LoginAuthResult newLoginAuthResult(String username, String password) {
         AuthClientProperties.TempUser temp = authClientProperties.getTemp();
         LoginAuthResult loginAuthResult = new LoginAuthResult();
@@ -138,7 +138,7 @@ public class StaticProtocolExecutor implements ProtocolExecutor {
     * @param username        用户名
     * @param password        密码
     * @return 是否匹配
-     */
+    */
     private boolean isMatch(List<String> userAndPassword, String username, String password) {
         if (userAndPassword.isEmpty()) {
             return false;

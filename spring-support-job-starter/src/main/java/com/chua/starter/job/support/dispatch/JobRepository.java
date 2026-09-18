@@ -20,7 +20,7 @@ public interface JobRepository {
     * @param preReadMs   预读时间窗 (毫秒)
     * @param preReadCount 最大返回数
     * @return 任务列表
-     */
+    */
     List<JobDefinition> findDue(long now, long preReadMs, int preReadCount);
 
     /**
@@ -31,7 +31,7 @@ public interface JobRepository {
     * MyBatis 实现需写入持久化表)。</p>
     *
     * @param definition 任务定义
-     */
+    */
     default void upsert(JobDefinition definition) {
         // no-op: 不支持 upsert 的实现 (例如只读远端仓库) 直接忽略
     }

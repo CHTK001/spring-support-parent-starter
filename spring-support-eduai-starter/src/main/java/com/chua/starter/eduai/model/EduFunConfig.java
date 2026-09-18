@@ -18,58 +18,58 @@ import java.time.LocalDateTime;
 public class EduFunConfig {
 
     /**
-     * 配置标识
-     */
+    * 配置标识
+    */
     @TableId(type = IdType.AUTO)
     private Long configId;
 
     /**
-     * 模块编码（如 INSECT, IDIOM, IDIOM_GAME）
-     */
+    * 模块编码（如 INSECT, IDIOM, IDIOM_GAME）
+    */
     private String moduleCode;
 
     /**
-     * 模块名称
-     */
+    * 模块名称
+    */
     private String moduleName;
 
     /**
-     * 模块描述
-     */
+    * 模块描述
+    */
     private String moduleDesc;
 
     /**
-     * 模块图标
-     */
+    * 模块图标
+    */
     private String moduleIcon;
 
     /**
-     * 模块路径（前端路由或iframe URL）
-     */
+    * 模块路径（前端路由或iframe URL）
+    */
     private String modulePath;
 
     /**
-     * 是否启用（1=启用, 0=禁用）
-     */
+    * 是否启用（1=启用, 0=禁用）
+    */
     private Integer enabled;
 
     /**
-     * 排序
-     */
+    * 排序
+    */
     private Integer sortOrder;
 
     /**
-     * 配置JSON（扩展配置）
-     */
+    * 配置JSON（扩展配置）
+    */
     private String configJson;
 
     /**
-     * 创建时间
-     */
+    * 创建时间
+    */
     private LocalDateTime createTime;
 
     /**
-     * 更新时间
-     */
+    * 更新时间
+    */
     private LocalDateTime updateTime;
 }

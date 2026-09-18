@@ -21,7 +21,7 @@ public class UsageRecorderInterceptor {
 
     /**
     * 用量服务
-     */
+    */
     private final SysAiUsageService usageService;
 
     /**
@@ -34,7 +34,7 @@ public class UsageRecorderInterceptor {
     * @param usage 用量信息
     * @param requestId 请求标识
     * @param userId 用户标识
-     */
+    */
     @Async
     public void record(String groupName, String provider, String model, String callType,
                        AiUsage usage, String requestId, String userId) {

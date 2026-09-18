@@ -31,14 +31,14 @@ public class SpiderExecutionLogController {
 
     /**
     * 执行日志服务
-     */
+    */
     private final SpiderExecutionLogService executionLogService;
 
     /**
     * 构造方法。
     *
     * @param executionLogService 执行日志服务
-     */
+    */
     public SpiderExecutionLogController(SpiderExecutionLogService executionLogService) {
         this.executionLogService = executionLogService;
     }
@@ -48,7 +48,7 @@ public class SpiderExecutionLogController {
     *
     * @param executionNo 执行号（追踪标识）
     * @return 节点日志列表
-     */
+    */
     @GetMapping("/logs")
     @Operation(summary = "按执行号查询全链路节点日志")
     public ReturnResult<List<SpiderExecutionLog>> logs(@RequestParam String executionNo) {
@@ -63,7 +63,7 @@ public class SpiderExecutionLogController {
     * @param definitionCode 爬虫编码（可选）
     * @param status        执行状态（可选）
     * @return 分页结果
-     */
+    */
     @GetMapping("/records")
     @Operation(summary = "执行历史分页查询")
     public ReturnResult<PageResultVO<ExecutionRecordVO>> records(
@@ -78,7 +78,7 @@ public class SpiderExecutionLogController {
     * 按爬虫编码聚合执行统计。
     *
     * @return 统计列表
-     */
+    */
     @GetMapping("/stats")
     @Operation(summary = "执行统计聚合")
     public ReturnResult<List<DefinitionStatsVO>> stats() {

@@ -90,9 +90,9 @@ public class ENCEnvironmentPostProcessor implements EnvironmentPostProcessor, Or
             PropertySource<?> source = iterator.next();
             if (source instanceof MapPropertySource mapSource) {
                 /**
-                * 扫描anddecrypt。
-                * @param mapSource.getSource( 映射源.getsource(
-                 */
+    * 扫描anddecrypt。
+    * @param mapSource.getSource( 映射源.getsource(
+    */
                 scanAndDecrypt(mapSource.getSource(), decryptedProperties);
             } else {
  // 通过反射尝试 enumerable财产源（Spring 内部类，避免编译依赖）
@@ -100,7 +100,7 @@ public class ENCEnvironmentPostProcessor implements EnvironmentPostProcessor, Or
                 * 扫描by反射。
                 * @param source 源
                 * @param decryptedProperties decrypted属性
-                 */
+                */
                 scanByReflection(source, decryptedProperties);
             }
         }
@@ -117,7 +117,7 @@ public class ENCEnvironmentPostProcessor implements EnvironmentPostProcessor, Or
     * 创建密码解密器
     * @param environment 环境
     * @return 创建decryptor的结果
-     */
+    */
     private PasswordDecryptor createDecryptor(ConfigurableEnvironment environment) {
         String secretKey = environment.getProperty(SECRET_KEY_PROP);
         if (secretKey != null && !secretKey.isEmpty()) {
@@ -126,7 +126,7 @@ public class ENCEnvironmentPostProcessor implements EnvironmentPostProcessor, Or
             * aes密码decryptor。
             * @param secretKey secret钥匙
             * @return aes密码decryptor的结果
-             */
+            */
             return new AesPasswordDecryptor(secretKey);
         }
         log.warn("[ENC] 未配置自定义密钥 ({}), 使用默认密钥。请在生产环境中配置自定义密钥以提高安全性！",
@@ -134,7 +134,7 @@ public class ENCEnvironmentPostProcessor implements EnvironmentPostProcessor, Or
         /**
         * aes密码decryptor。
         * @return aes密码decryptor的结果
-         */
+        */
         return new AesPasswordDecryptor();
     }
 
@@ -142,7 +142,7 @@ public class ENCEnvironmentPostProcessor implements EnvironmentPostProcessor, Or
     * 扫描 映射财产源 并解密 ENC 值
     * @param source 源
     * @param result 结果
-     */
+    */
     private void scanAndDecrypt(Map<String, Object> source, Map<String, Object> result) {
         for (Map.Entry<String, Object> entry : source.entrySet()) {
             String key = entry.getKey();
@@ -162,7 +162,7 @@ public class ENCEnvironmentPostProcessor implements EnvironmentPostProcessor, Or
     * </p>
     * @param source 源
     * @param result 结果
-     */
+    */
     private void scanByReflection(PropertySource<?> source, Map<String, Object> result) {
         try {
             if (!ReflectUtils.forName("org.springframework.core.env.EnumerablePropertySource").isInstance(source)) {
@@ -188,7 +188,7 @@ public class ENCEnvironmentPostProcessor implements EnvironmentPostProcessor, Or
     * 判断值是否为 ENC 加密格式
     * @param value 价值观
     * @return 是否enc价值观的结果
-     */
+    */
     static boolean isEncValue(String value) {
         if (value == null || value.isEmpty()) {
             return false;
@@ -201,7 +201,7 @@ public class ENCEnvironmentPostProcessor implements EnvironmentPostProcessor, Or
     *
     * @param encValue ENC 格式的值
     * @return 解密后的明文
-     */
+    */
     String resolveEncValue(String encValue) {
         if (!isEncValue(encValue)) {
             return encValue;
@@ -235,7 +235,7 @@ public class ENCEnvironmentPostProcessor implements EnvironmentPostProcessor, Or
     * 检查配置键是否敏感（需要优先解密）
     * @param key 钥匙
     * @return 是否sensitive钥匙的结果
-     */
+    */
     @SuppressWarnings("unused")
     private boolean isSensitiveKey(String key) {
         if (key == null) {

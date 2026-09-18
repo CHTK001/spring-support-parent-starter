@@ -16,36 +16,36 @@ public class DataIndicator {
 
     /**
     * 指标名称
-     */
+    */
     private String indicator;
 
     /**
     * 时间戳
-     */
+    */
     private long timestamp;
 
     /**
     * 指标值（字符串形式）
-     */
+    */
     private String value;
 
     /**
     * 是否持久化
-     */
+    */
     private boolean persistence;
 
     /**
     * 构造函数
     *
     * @param indicator 指标名称
-     */
+    */
     public DataIndicator(String indicator) {
         this.indicator = indicator;
     }
 
     /**
     * 无参构造函数
-     */
+    */
     public DataIndicator() {
     }
 }

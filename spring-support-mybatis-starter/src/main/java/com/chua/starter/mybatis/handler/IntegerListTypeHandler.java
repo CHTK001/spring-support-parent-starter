@@ -60,7 +60,7 @@ public class IntegerListTypeHandler extends BaseTypeHandler<List<Integer>> {
     *
     * @param string 字符串
     * @return 解析列表的结果
-     */
+    */
     private List<Integer> parseList(String string) {
         List<Integer> result = new ArrayList<>();
         if (string == null || string.isEmpty()) {

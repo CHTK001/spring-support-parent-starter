@@ -39,7 +39,7 @@ public class ReadOnlyInterceptor implements Interceptor {
     * 构造函数
     *
     * @param mybatisPlusProperties MyBatis配置属性
-     */
+    */
     public ReadOnlyInterceptor(MybatisPlusProperties mybatisPlusProperties) {
         this.mybatisPlusProperties = mybatisPlusProperties;
     }
@@ -51,7 +51,7 @@ public class ReadOnlyInterceptor implements Interceptor {
     * @param invocation MyBatis调用上下文对象
     * @return 原始方法的执行结果
     * @throws Throwable 当只读模式下执行写操作时抛出读取only异常
-     */
+    */
     @Override
     public Object intercept(Invocation invocation) throws Throwable {
         // 检查是否开启只读模式

@@ -35,32 +35,32 @@ public class SpiderScheduler {
 
     /**
     * 定时执行类型标识
-     */
+    */
     private static final String SCHEDULE = "SCHEDULE";
 
     /**
     * 一次性执行类型标识
-     */
+    */
     private static final String ONCE = "ONCE";
 
     /**
     * 日志记录器
-     */
+    */
     private static final Logger log = LoggerFactory.getLogger(SpiderScheduler.class);
 
     /**
     * spawn 时间容差（毫秒），防止时钟抖动
-     */
+    */
     private static final long TOLERANCE_MS = 1000;
 
     /**
     * 爬虫定义服务
-     */
+    */
     private final SpiderDefinitionService definitionService;
 
     /**
     * 流程执行器
-     */
+    */
     private final SpiderFlowRunner flowRunner;
 
     /**
@@ -68,7 +68,7 @@ public class SpiderScheduler {
     *
     * @param definitionService 爬虫定义服务
     * @param flowRunner        流程执行器
-     */
+    */
     public SpiderScheduler(SpiderDefinitionService definitionService, SpiderFlowRunner flowRunner) {
         this.definitionService = definitionService;
         this.flowRunner = flowRunner;
@@ -76,7 +76,7 @@ public class SpiderScheduler {
 
     /**
     * 每秒触发一次，扫描启用定义并按 cron 命中执行。
-     */
+    */
     @Scheduled(fixedRate = 1000)
     public void tick() {
         List<SpiderDefinition> enabled = definitionService.listEnabled();
@@ -88,7 +88,7 @@ public class SpiderScheduler {
                 /**
                 * trigger。
                 * @param definition definition
-                 */
+                */
                 trigger(definition);
             }
         }
@@ -105,7 +105,7 @@ public class SpiderScheduler {
     *
     * @param definition 爬虫定义
     * @return 参与调度返回 true
-     */
+    */
     private boolean shouldSchedule(SpiderDefinition definition) {
         if (ONCE.equalsIgnoreCase(definition.getExecutorType())) {
             return definition.getLastRunAt() == null;
@@ -122,7 +122,7 @@ public class SpiderScheduler {
     *
     * @param definition 爬虫定义
     * @return 到期返回 true；cron 解析失败或从未执行时首秒放行一次
-     */
+    */
     private boolean isDue(SpiderDefinition definition) {
         if (ONCE.equalsIgnoreCase(definition.getExecutorType())) {
             return definition.getLastRunAt() == null;
@@ -142,7 +142,7 @@ public class SpiderScheduler {
     * 触发执行一次，成功或失败均回写 最后一个_运行_at，防止同一 cron 周期内重复触发。
     *
     * @param definition 爬虫定义
-     */
+    */
     private void trigger(SpiderDefinition definition) {
         try {
             log.info("爬虫 [{}] 定时器触发执行", definition.getCode());
@@ -153,7 +153,7 @@ public class SpiderScheduler {
             /**
             * mark运行at。
             * @param definition definition
-             */
+            */
             markRunAt(definition);
         }
     }
@@ -162,7 +162,7 @@ public class SpiderScheduler {
     * 回写 最后一个_运行_at，确保该 cron 周期不再重复触发。
     *
     * @param definition 爬虫定义
-     */
+    */
     private void markRunAt(SpiderDefinition definition) {
         try {
             definitionService.markRunAtOnly(definition.getId(), java.time.LocalDateTime.now());
@@ -176,14 +176,14 @@ public class SpiderScheduler {
     *
     * @param value 时间值
     * @return Date
-     */
+    */
     private Date toDate(LocalDateTime value) {
         if (value == null) {
             /**
             * 日期。
             * @param 0 0
             * @return 日期的结果
-             */
+            */
             return new Date(0);
         }
         Date date = Date.from(value.atZone(java.time.ZoneId.systemDefault()).toInstant());

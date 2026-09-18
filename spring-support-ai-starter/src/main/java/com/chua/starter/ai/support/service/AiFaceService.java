@@ -33,7 +33,7 @@ public interface AiFaceService {
     *
     * @param imageData 图片字节
     * @return 检测命中列表
-     */
+    */
     List<FaceDetectionHit> detect(byte[] imageData);
 
     /**
@@ -41,7 +41,7 @@ public interface AiFaceService {
     *
     * @param imageData 图片字节
     * @return 最大人脸命中，无则 空
-     */
+    */
     FaceDetectionHit detectLargest(byte[] imageData);
 
     /**
@@ -49,7 +49,7 @@ public interface AiFaceService {
     *
     * @param imageData 图片字节
     * @return 检测命中列表
-     */
+    */
     List<FaceDetectionHit> detectPipeline(byte[] imageData);
 
     /**
@@ -57,7 +57,7 @@ public interface AiFaceService {
     *
     * @param imageData 图片字节
     * @return 特征向量
-     */
+    */
     float[] extractFeature(byte[] imageData);
 
     /**
@@ -65,7 +65,7 @@ public interface AiFaceService {
     *
     * @param imageData 图片字节
     * @return 特征管线结果（检测框/裁剪/对齐/活体/特征/耗时），无人脸返回 空
-     */
+    */
     com.chua.deeplearning.support.face.FaceFeaturePipelineResult extractFeaturePipeline(byte[] imageData);
 
     /**
@@ -73,7 +73,7 @@ public interface AiFaceService {
     *
     * @param imageData 图片字节
     * @return 对齐结果（检测框/裁剪/对齐/活体/耗时），无人脸返回 空
-     */
+    */
     com.chua.deeplearning.support.face.FaceAlignResult align(byte[] imageData);
 
     /**
@@ -82,7 +82,7 @@ public interface AiFaceService {
     * @param imageA 图片 A 字节
     * @param imageB 图片 B 字节
     * @return 相似度（0~1，越高越相似）
-     */
+    */
     double compare(byte[] imageA, byte[] imageB);
 
     /**
@@ -93,7 +93,7 @@ public interface AiFaceService {
     * @param imageA 图片 A 字节
     * @param imageB 图片 B 字节
     * @return 比对结果（相似度 + A/B 特征管线结果）
-     */
+    */
     FaceCompareResult compareWithMeta(byte[] imageA, byte[] imageB);
 
     /**
@@ -102,7 +102,7 @@ public interface AiFaceService {
     * @param featureA 特征向量 A
     * @param featureB 特征向量 B
     * @return 相似度（0~1，越高越相似）
-     */
+    */
     double compareFeature(float[] featureA, float[] featureB);
 
     /**
@@ -112,7 +112,7 @@ public interface AiFaceService {
     * @param imageData 图片字节
     * @param metadata  附加元数据
     * @return 是否登记成功
-     */
+    */
     boolean enroll(String id, byte[] imageData, Map<String, Object> metadata);
 
     /**
@@ -122,7 +122,7 @@ public interface AiFaceService {
     * @param imageData 图片字节
     * @param metadata  元数据
     * @return 是否登记成功
-     */
+    */
     boolean enrollPipeline(String id, byte[] imageData, Map<String, Object> metadata);
 
     /**
@@ -135,7 +135,7 @@ public interface AiFaceService {
     * @param feature   特征向量（维度需与 向量storage 一致）
     * @param metadata  元数据
     * @return 是否成功
-     */
+    */
     boolean enrollFeature(String id, float[] feature, Map<String, Object> metadata);
 
     /**
@@ -143,7 +143,7 @@ public interface AiFaceService {
     *
     * @param imageData 图片字节
     * @return 识别命中（TopK）
-     */
+    */
     FaceIdentifyHit identify(byte[] imageData);
 
     /**
@@ -151,7 +151,7 @@ public interface AiFaceService {
     *
     * @param imageData 图片字节
     * @return 识别命中（TopK）
-     */
+    */
     FaceIdentifyHit identifyPipeline(byte[] imageData);
 
     /**
@@ -160,7 +160,7 @@ public interface AiFaceService {
     * @param feature 特征向量
     * @param topK    返回条数
     * @return 检索命中列表
-     */
+    */
     List<FaceSearchHit> search(float[] feature, int topK);
 
     /**
@@ -169,7 +169,7 @@ public interface AiFaceService {
     * @param id       人脸 标识
     * @param imageData 图片字节
     * @return 是否匹配
-     */
+    */
     boolean verify(String id, byte[] imageData);
 
     /**
@@ -177,7 +177,7 @@ public interface AiFaceService {
     *
     * @param imageData 裁剪后人脸图片字节
     * @return 是否活体
-     */
+    */
     boolean isLive(byte[] imageData);
 
     /**
@@ -185,7 +185,7 @@ public interface AiFaceService {
     *
     * @param imageData 裁剪后人脸图片字节
     * @return 活体分数
-     */
+    */
     float liveScore(byte[] imageData);
 
     /**
@@ -193,7 +193,7 @@ public interface AiFaceService {
     *
     * @param imageData 图片字节
     * @return 检测信息列表
-     */
+    */
     List<DetectionInfo> animeDetect(byte[] imageData);
 
     /**
@@ -201,7 +201,7 @@ public interface AiFaceService {
     *
     * @param imageData 图片字节
     * @return 超分后图片字节
-     */
+    */
     byte[] superResolution(byte[] imageData);
 
     /**
@@ -209,7 +209,7 @@ public interface AiFaceService {
     *
     * @param imageData 图片字节
     * @return 修复后图片字节
-     */
+    */
     byte[] restore(byte[] imageData);
 
     /**
@@ -217,7 +217,7 @@ public interface AiFaceService {
     *
     * @param imageData 图片字节
     * @return 分类结果标签
-     */
+    */
     String analyzeAttributes(byte[] imageData);
 
     /**
@@ -225,7 +225,7 @@ public interface AiFaceService {
     *
     * @param imageData 图片字节
     * @return 表情标签
-     */
+    */
     String analyzeEmotion(byte[] imageData);
 
     /**
@@ -233,7 +233,7 @@ public interface AiFaceService {
     *
     * @param imageData 图片字节
     * @return 关键点坐标
-     */
+    */
     float[] landmark(byte[] imageData);
 
     /**
@@ -241,7 +241,7 @@ public interface AiFaceService {
     *
     * @param imageData 图片字节
     * @return 质量信息
-     */
+    */
     FaceQualityInfo quality(byte[] imageData);
 
     /**
@@ -249,7 +249,7 @@ public interface AiFaceService {
     *
     * @param imageData 图片字节
     * @return 是否疑似换脸
-     */
+    */
     boolean isDeepfake(byte[] imageData);
 
     /**
@@ -257,13 +257,13 @@ public interface AiFaceService {
     *
     * @param imageData 图片字节
     * @return 人脸框列表
-     */
+    */
     List<PredictRectangle> detectBoxes(byte[] imageData);
 
     /**
     * 枚举可用人脸模型。
     *
     * @return 模型清单（模型 标识 + 说明）
-     */
+    */
     Map<String, List<String>> listModels();
 }

@@ -71,9 +71,9 @@ public class MessageAuditInterceptor implements MessageInterceptor, ApplicationE
 
             // 持久化审计日志（发布事件，由监听方写入数据库或其他存储）
             /**
-            * 发布审计日志。
-            * @param auditLog 审计日志
-             */
+    * 发布审计日志。
+    * @param auditLog 审计日志
+    */
             publishAuditLog(auditLog);
 
             // 无论大小都清理对应记录，避免内存泄漏
@@ -113,9 +113,9 @@ public class MessageAuditInterceptor implements MessageInterceptor, ApplicationE
 
             // 持久化审计日志（发布事件，由监听方写入数据库或其他存储）
             /**
-            * 发布审计日志。
-            * @param auditLog 审计日志
-             */
+    * 发布审计日志。
+    * @param auditLog 审计日志
+    */
             publishAuditLog(auditLog);
 
             // 无论大小都清理对应记录，避免内存泄漏
@@ -128,7 +128,7 @@ public class MessageAuditInterceptor implements MessageInterceptor, ApplicationE
     * @param message 消息
     * @param operation operation
     * @return 创建审计日志的结果
-     */
+    */
     private MessageAuditLog createAuditLog(Message message, String operation) {
         MessageAuditLog auditLog = new MessageAuditLog();
         auditLog.setId(UUID.randomUUID().toString());
@@ -170,7 +170,7 @@ public class MessageAuditInterceptor implements MessageInterceptor, ApplicationE
     /**
     * 发布审计日志事件，由外部监听器持久化
     * @param auditLog 审计日志
-     */
+    */
     private void publishAuditLog(MessageAuditLog auditLog) {
         log.info("[Audit] 消息审计: operation={}, destination={}, status={}, duration={}ms, messageId={}",
             auditLog.getOperation(), auditLog.getDestination(), auditLog.getStatus(),
@@ -186,7 +186,7 @@ public class MessageAuditInterceptor implements MessageInterceptor, ApplicationE
     * 获取异常堆栈
     * @param error 错误
     * @return 获取stack追踪的结果
-     */
+    */
     private String getStackTrace(Throwable error) {
         if (error == null) {
             return null;
@@ -207,14 +207,14 @@ public class MessageAuditInterceptor implements MessageInterceptor, ApplicationE
     * 获取审计日志
     * @param messageId 消息标识
     * @return 获取审计日志的结果
-     */
+    */
     public MessageAuditLog getAuditLog(String messageId) {
         return auditLogs.get(messageId);
     }
 
     /**
     * 清理审计日志
-     */
+    */
     public void clearAuditLogs() {
         auditLogs.clear();
         startTimes.clear();

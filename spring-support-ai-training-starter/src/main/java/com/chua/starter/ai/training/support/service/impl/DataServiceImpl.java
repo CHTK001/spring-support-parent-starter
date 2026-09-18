@@ -38,10 +38,10 @@ public class DataServiceImpl implements DataService {
         if (data == null || data.length < 4 || data[0] != 'P' || data[1] != 'K'
                 || (data[2] != 3 && data[2] != 5 && data[2] != 7)) {
             /**
-            * illegal参数异常。
-            * @param 格式" 格式"
-            * @return illegal参数异常的结果
-             */
+    * illegal参数异常。
+    * @param 格式" 格式"
+    * @return illegal参数异常的结果
+    */
             throw new IllegalArgumentException("文件内容不是有效的 ZIP 格式");
         }
         Path uploadDir = Path.of(properties.getUploadPath());
@@ -64,7 +64,7 @@ public class DataServiceImpl implements DataService {
     *
     * @param name 客户端原始文件名（可为 空）
     * @return 安全文件名（不含任何路径分隔符/非法字符）
-     */
+    */
     static String sanitizeFileName(String name) {
         if (name == null) {
             return DEFAULT_FILE_NAME;
@@ -86,7 +86,7 @@ public class DataServiceImpl implements DataService {
             * illegal参数异常。
             * @param zipFilePath 压缩文件路径
             * @return illegal参数异常的结果
-             */
+            */
             throw new IllegalArgumentException("ZIP 文件不存在: " + zipFilePath);
         }
 
@@ -98,7 +98,7 @@ public class DataServiceImpl implements DataService {
         /**
         * 尝试。
         * @param ZipFile(zipFile 压缩文件(压缩文件
-         */
+        */
         try (ZipFile zip = new ZipFile(zipFile)) {
             Enumeration<? extends ZipArchiveEntry> entries = zip.getEntries();
             while (entries.hasMoreElements()) {
@@ -112,7 +112,7 @@ public class DataServiceImpl implements DataService {
                     * 安全性异常。
                     * @param entry.getName( entry.获取名称(
                     * @return 安全性异常的结果
-                     */
+                    */
                     throw new SecurityException("ZIP 路径越界: " + entry.getName());
                 }
                 if (entry.isDirectory()) {
@@ -122,7 +122,7 @@ public class DataServiceImpl implements DataService {
                     /**
                     * 尝试。
                     * @param FileOutputStream(outFile 文件输出流(出文件
-                     */
+                    */
                     try (OutputStream os = new FileOutputStream(outFile)) {
                         zip.getInputStream(entry).transferTo(os);
                     }

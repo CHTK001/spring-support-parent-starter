@@ -21,7 +21,7 @@ public final class Joiner {
     * @param omitEmpty 布尔值
     * @param omitEmpty omit空
     * @param trimResults 修剪结果
-     */
+    */
     private Joiner(String separator, boolean omitEmpty, boolean trimResults) {
         this.separator = separator == null ? "" : separator;
         this.omitEmpty = omitEmpty;
@@ -31,11 +31,11 @@ public final class Joiner {
     /** 创建 Joiner 实例 */
     private Joiner() {
         /**
-        * this。
-        * @param "" ""
-        * @param false false
-        * @param false false
-         */
+    * this。
+    * @param "" ""
+    * @param false false
+    * @param false false
+    */
         this("", false, false);
     }
 
@@ -44,14 +44,14 @@ public final class Joiner {
     *
     * @param separator separator
     * @return on的结果
-     */
+    */
     public static Joiner on(String separator) {
         /**
         * 连接。
         * @param separator separator
         * @param false false
         * @param false false
-         */
+        */
         return new Joiner(separator, false, false);
     }
 
@@ -59,14 +59,14 @@ public final class Joiner {
     * omit空字符串
     *
     * @return omit空字符串的结果
-     */
+    */
     public Joiner omitEmptyStrings() {
         /**
         * 连接。
         * @param this.separator this.separator
         * @param true true
         * @param this.trimResults this.修剪结果
-         */
+        */
         return new Joiner(this.separator, true, this.trimResults);
     }
 
@@ -74,14 +74,14 @@ public final class Joiner {
     * 去空格结果
     *
     * @return 修剪结果的结果
-     */
+    */
     public Joiner trimResults() {
         /**
         * 连接。
         * @param this.separator this.separator
         * @param this.omitEmpty this.omit空
         * @param true true
-         */
+        */
         return new Joiner(this.separator, this.omitEmpty, true);
     }
 
@@ -90,7 +90,7 @@ public final class Joiner {
     *
     * @param parts parts
     * @return 连接的结果
-     */
+    */
     public String join(Iterable<?> parts) {
         if (parts == null) {
             return "";
@@ -119,7 +119,7 @@ public final class Joiner {
     *
     * @param parts parts
     * @return 连接的结果
-     */
+    */
     public String join(Object[] parts) {
         if (parts == null) {
             return "";

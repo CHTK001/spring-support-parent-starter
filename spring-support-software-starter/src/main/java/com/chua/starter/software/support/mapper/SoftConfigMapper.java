@@ -22,7 +22,7 @@ public interface SoftConfigMapper extends BaseMapperX<SoftConfig> {
     * @param page 分页参数
     * @param request 查询条件
     * @return 分页结果
-     */
+    */
     Page<SoftConfig> selectPageFor(
             @Param("page") Page<SoftConfig> page,
             @Param("request") SoftConfig request

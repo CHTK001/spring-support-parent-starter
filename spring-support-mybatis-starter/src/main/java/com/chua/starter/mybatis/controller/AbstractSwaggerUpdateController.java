@@ -35,7 +35,7 @@ public abstract class AbstractSwaggerUpdateController<S extends IService<T>, T> 
 
     /**
     * 事务模板，用于执行事务操作
-     */
+    */
     @Autowired(required = false)
     /** Transaction模板 */
     protected TransactionTemplate transactionTemplate;
@@ -48,7 +48,7 @@ public abstract class AbstractSwaggerUpdateController<S extends IService<T>, T> 
     * @param "主键" "主键"
     * @param "主键" "主键"
     * @param "主键" "主键"
-     */
+    */
     @ResponseBody
     @Operation(summary = "删除数据")
     @DeleteMapping("delete")
@@ -78,7 +78,7 @@ public abstract class AbstractSwaggerUpdateController<S extends IService<T>, T> 
     * @param @Validated(UpdateGroup.class @校验(更新群体.类
     * @param @Validated(UpdateGroup.class @校验(更新群体.类
     * @param @Validated(UpdateGroup.class @Validated(UpdateGroup.class
-     */
+    */
     @ResponseBody
     @Operation(summary = "更新/保存数据")
     @PutMapping("saveOrUpdateBatch")
@@ -100,7 +100,7 @@ public abstract class AbstractSwaggerUpdateController<S extends IService<T>, T> 
     * @param @Validated(UpdateGroup.class @校验(更新群体.类
     * @param @Validated(UpdateGroup.class @校验(更新群体.类
     * @param @Validated(UpdateGroup.class @Validated(UpdateGroup.class
-     */
+    */
     @ResponseBody
     @Operation(summary = "更新/保存数据")
     @PutMapping("saveOrUpdate")
@@ -116,7 +116,7 @@ public abstract class AbstractSwaggerUpdateController<S extends IService<T>, T> 
             /**
             * 保存或更新之后。
             * @param t t
-             */
+            */
             saveOrUpdateAfter(t);
             return ReturnResult.of(saveOrUpdate);
         }
@@ -128,13 +128,13 @@ public abstract class AbstractSwaggerUpdateController<S extends IService<T>, T> 
                 * runtime异常。
                 * @param "保存失败" "保存失败"
                 * @return runtime异常的结果
-                 */
+                */
                 throw new RuntimeException("保存失败");
             }
             /**
             * 保存或更新之后。
             * @param t t
-             */
+            */
             saveOrUpdateAfter(t);
             return ReturnResult.of(saveOrUpdate);
         });
@@ -148,7 +148,7 @@ public abstract class AbstractSwaggerUpdateController<S extends IService<T>, T> 
     * @param @Validated(UpdateGroup.class @校验(更新群体.类
     * @param @Validated(UpdateGroup.class @校验(更新群体.类
     * @param @Validated(UpdateGroup.class @Validated(UpdateGroup.class
-     */
+    */
     @ResponseBody
     @Operation(summary = "更新数据")
     @PutMapping("update")
@@ -166,7 +166,7 @@ public abstract class AbstractSwaggerUpdateController<S extends IService<T>, T> 
     * @param @Validated(AddGroup.class @校验(添加群体.类
     * @param @Validated(AddGroup.class @校验(添加群体.类
     * @param @Validated(AddGroup.class @Validated(AddGroup.class
-     */
+    */
     @ResponseBody
     @Operation(summary = "添加数据")
     @PostMapping("save")
@@ -174,7 +174,7 @@ public abstract class AbstractSwaggerUpdateController<S extends IService<T>, T> 
         if(bindingResult.hasErrors()) { return ReturnResult.error(REQUEST_PARAM_ERROR.getCode(), bindingResult.getAllErrors().getFirst().getDefaultMessage()); }
         /**
         * 获取服务。
-         */
+        */
         getService().save(render(t));
         return ReturnResult.ok(t);
     }
@@ -185,14 +185,14 @@ public abstract class AbstractSwaggerUpdateController<S extends IService<T>, T> 
     * 这是一个抽象方法，需要在具体实现类中进行定义。
     *
     * @return S 返回服务的实例。这里的S是泛型，代表了服务的类型。
-     */
+    */
     abstract public S getService();
     /**
     * 渲染实体
     *
     * @param t 实体
     * @return 分页结果
-     */
+    */
     public T render(T t) {
         return t;
     }
@@ -201,7 +201,7 @@ public abstract class AbstractSwaggerUpdateController<S extends IService<T>, T> 
     * 保存或更新后
     *
     * @param t 实体
-     */
+    */
     public void saveOrUpdateAfter(T t) {
     }
 }

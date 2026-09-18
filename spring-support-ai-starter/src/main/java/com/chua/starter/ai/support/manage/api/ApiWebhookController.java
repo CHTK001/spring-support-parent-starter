@@ -42,29 +42,29 @@ public class ApiWebhookController {
 
     /**
     * 主键生成与基础存储工具
-     */
+    */
     private final SysAiConversationStore conversationStore;
 
     /**
     * WS 事件推送服务
-     */
+    */
     private final ApiWebSocketPushService pushService;
 
     /**
     * Webhook 端点：webhook_标识 → 端点
-     */
+    */
     private final Map<String, Map<String, Object>> webhooks = new ConcurrentHashMap<>();
 
     /**
     * 标签通知设置：标签 → 设置
-     */
+    */
     private final Map<String, Map<String, Object>> tagSettings = new ConcurrentHashMap<>();
 
     @GetMapping("/webhooks")
     /**
     * 列表。
     * @return 列表的结果
-     */
+    */
     public ApiResult<List<Map<String, Object>>> list() {
         return ApiResult.ok(new ArrayList<>(webhooks.values()));
     }
@@ -74,7 +74,7 @@ public class ApiWebhookController {
     * 获取。
     * @param webhookId webhookid
     * @return 获取的结果
-     */
+    */
     public ApiResult<Map<String, Object>> get(@PathVariable String webhookId) {
         return ApiResult.ok(requireWebhook(webhookId));
     }
@@ -84,7 +84,7 @@ public class ApiWebhookController {
     * 创建。
     * @param body 主体
     * @return 创建的结果
-     */
+    */
     public ApiResult<Map<String, Object>> create(@RequestBody Map<String, Object> body) {
         String webhookId = conversationStore.newId();
         long now = System.currentTimeMillis();
@@ -135,12 +135,12 @@ public class ApiWebhookController {
     * 移除。
     * @param webhookId webhookid
     * @return 移除的结果
-     */
+    */
     public ApiResult<Void> remove(@PathVariable String webhookId) {
         /**
         * requirewebhook。
         * @param webhookId webhookid
-         */
+        */
         requireWebhook(webhookId);
         webhooks.remove(webhookId);
         pushService.push("webhook.removed", Map.of("webhook_id", webhookId));
@@ -152,12 +152,12 @@ public class ApiWebhookController {
     * 测试。
     * @param webhookId webhookid
     * @return 测试的结果
-     */
+    */
     public ApiResult<Void> test(@PathVariable String webhookId) {
         /**
         * requirewebhook。
         * @param webhookId webhookid
-         */
+        */
         requireWebhook(webhookId);
         return ApiResult.ok();
     }
@@ -167,7 +167,7 @@ public class ApiWebhookController {
     * 获取标签setting。
     * @param tag 标签
     * @return 获取标签setting的结果
-     */
+    */
     public ApiResult<Map<String, Object>> getTagSetting(@PathVariable String tag) {
         return ApiResult.ok(tagSettings.computeIfAbsent(tag, k -> {
             Map<String, Object> s = new LinkedHashMap<>();
@@ -200,7 +200,7 @@ public class ApiWebhookController {
     * requirewebhook。
     * @param webhookId webhookid
     * @return requireWebhook的结果
-     */
+    */
     private Map<String, Object> requireWebhook(String webhookId) {
         Map<String, Object> wh = webhooks.get(webhookId);
         if (wh == null) {
@@ -209,7 +209,7 @@ public class ApiWebhookController {
             * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
             * @param webhookId webhookid
             * @return api异常的结果
-             */
+            */
             throw new ApiException(ApiErrorCode.NOT_FOUND, "Webhook 不存在: " + webhookId);
         }
         return wh;

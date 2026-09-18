@@ -10,18 +10,18 @@ public enum UpgradeType {
 
     /**
     * 表示基于版本号的升级。(升级账号信息)
-     */
+    */
     VERSION,
 
     /**
     * 表示基于时间戳的升级。(升级账号信息， 并重置时长)
-     */
+    */
     TIMESTAMP,
 
 
     /**
     * 表示刷新升级。返回新令牌
-     */
+    */
     REFRESH,
 
     ;
@@ -34,7 +34,7 @@ public enum UpgradeType {
     * @param upgradeType 给定的升级类型字符串
     * @return 对应的 upgrade类型 枚举值
     * @since 2024/5/29
-     */
+    */
     public static UpgradeType getUpgradeType(String upgradeType) {
         if (upgradeType == null) {
             return TIMESTAMP;

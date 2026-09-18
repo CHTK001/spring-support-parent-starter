@@ -59,7 +59,7 @@ public class IntegerListTypeHandler implements TypeHandler<List<Integer>> {
     *
     * @param value 价值观
     * @return 获取结果的结果
-     */
+    */
     private List<Integer> getResult(String value) {
         if (value == null) {
             return null;

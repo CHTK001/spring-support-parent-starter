@@ -47,19 +47,19 @@ public class TenantedKeyGenerator implements KeyGenerator, ApplicationContextAwa
 
     /**
     * 租户标识提供者（由 缓存配置 自动注入）
-     */
+    */
     private TenantIdProvider tenantIdProvider;
 
     /**
     * 缓存键配置（由 缓存配置 注入）
-     */
+    */
     private CacheProperties.KeyProperties keyProperties;
 
     /**
     * 设置缓存键配置
     *
     * @param keyProperties 缓存键配置
-     */
+    */
     public void setKeyProperties(CacheProperties.KeyProperties keyProperties) {
         this.keyProperties = keyProperties;
     }
@@ -68,7 +68,7 @@ public class TenantedKeyGenerator implements KeyGenerator, ApplicationContextAwa
     * 设置租户标识提供者
     *
     * @param tenantIdProvider 租户标识提供者
-     */
+    */
     public void setTenantIdProvider(TenantIdProvider tenantIdProvider) {
         this.tenantIdProvider = tenantIdProvider;
     }
@@ -102,7 +102,7 @@ public class TenantedKeyGenerator implements KeyGenerator, ApplicationContextAwa
     * 获取当前租户标识
     *
     * @return 租户ID，由 {@link TenantIdProvider} 提供；若未设置则返回 {@code "0"}
-     */
+    */
     private String resolveTenantId() {
         if (tenantIdProvider != null) {
             String tenantId = tenantIdProvider.getCurrentTenantId();
@@ -154,7 +154,7 @@ public class TenantedKeyGenerator implements KeyGenerator, ApplicationContextAwa
     * @param method   目标方法
     * @param params   方法参数
     * @return 完整的缓存键字符串
-     */
+    */
     public String generateWithTenant(String tenantId, Object target, Method method, Object... params) {
         StringBuilder keyBuilder = new StringBuilder();
 
@@ -179,7 +179,7 @@ public class TenantedKeyGenerator implements KeyGenerator, ApplicationContextAwa
     * 获取当前租户标识（供外部使用）
     *
     * @return 当前租户ID
-     */
+    */
     public String getCurrentTenantId() {
         return resolveTenantId();
     }
@@ -188,7 +188,7 @@ public class TenantedKeyGenerator implements KeyGenerator, ApplicationContextAwa
     * 获取当前应用名（供外部使用）
     *
     * @return 应用名
-     */
+    */
     public String getApplicationName() {
         return applicationName;
     }
@@ -197,7 +197,7 @@ public class TenantedKeyGenerator implements KeyGenerator, ApplicationContextAwa
     * 获取当前平台名（供外部使用）
     *
     * @return 平台名
-     */
+    */
     public String getPlatformName() {
         return platformName;
     }

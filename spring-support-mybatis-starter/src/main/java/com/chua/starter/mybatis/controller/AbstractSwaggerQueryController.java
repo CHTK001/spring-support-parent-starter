@@ -28,7 +28,7 @@ public abstract class AbstractSwaggerQueryController<S extends IService<T>, T> e
     * @param entity 结果
     * @return 分页结果
     * @param page page
-     */
+    */
     @ResponseBody
     @Operation(summary = "分页查询基础数据")
     @GetMapping("page")
@@ -42,7 +42,7 @@ public abstract class AbstractSwaggerQueryController<S extends IService<T>, T> e
     *
     * @param entity 结果
     * @return 分页结果
-     */
+    */
     @ResponseBody
     @Operation(summary = "查询基础数据")
     @GetMapping("list")
@@ -53,7 +53,7 @@ public abstract class AbstractSwaggerQueryController<S extends IService<T>, T> e
     * 查询详细信息
     * @param id 标识
     * @return 结果
-     */
+    */
     @Operation(summary = "查询详细信息")
     @GetMapping("get")
     public ReturnResult<T> get(String id) {
@@ -67,7 +67,7 @@ public abstract class AbstractSwaggerQueryController<S extends IService<T>, T> e
     *
     * @param entity 实体
     * @return 详细信息
-     */
+    */
 
     abstract public Wrapper<T> createWrapper(T entity);
 }

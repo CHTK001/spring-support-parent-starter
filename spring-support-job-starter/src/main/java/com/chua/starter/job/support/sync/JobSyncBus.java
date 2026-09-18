@@ -26,7 +26,7 @@ public class JobSyncBus {
 
     /**
     * 按 topic 的本地监听器, 钥匙 为 topic
-     */
+    */
     private final Map<String, CopyOnWriteArrayList<BiConsumer<String, Object>>> listeners = new ConcurrentHashMap<>();
 
     /**
@@ -35,7 +35,7 @@ public class JobSyncBus {
     * @param topic   topic 名
     * @param source  来源标识 (本地为 本地, 远端为节点 标识)
     * @param payload 业务负载
-     */
+    */
     public void publish(String topic, String source, Object payload) {
         CopyOnWriteArrayList<BiConsumer<String, Object>> list = listeners.get(topic);
         if (list == null) {
@@ -55,7 +55,7 @@ public class JobSyncBus {
     *
     * @param topic    topic 名
     * @param listener 监听器
-     */
+    */
     public void subscribe(String topic, BiConsumer<String, Object> listener) {
         listeners.computeIfAbsent(topic, key -> new CopyOnWriteArrayList<>()).add(listener);
     }
@@ -65,7 +65,7 @@ public class JobSyncBus {
     *
     * @param topic    topic 名
     * @param listener 监听器
-     */
+    */
     public void unsubscribe(String topic, BiConsumer<String, Object> listener) {
         CopyOnWriteArrayList<BiConsumer<String, Object>> list = listeners.get(topic);
         if (list != null) {

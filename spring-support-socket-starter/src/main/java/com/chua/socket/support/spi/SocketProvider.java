@@ -23,7 +23,7 @@ public interface SocketProvider {
     * 获取协议类型
     *
     * @return 协议类型
-     */
+    */
     SocketProtocol getProtocol();
 
     /**
@@ -32,7 +32,7 @@ public interface SocketProvider {
     * @param properties 配置属性
     * @param listeners  监听器列表
     * @return 会话模板实例
-     */
+    */
     SocketSessionTemplate createSessionTemplate(
             SocketProperties properties,
             List<SocketListener> listeners
@@ -42,14 +42,14 @@ public interface SocketProvider {
     * 启动服务
     *
     * @param template 会话模板
-     */
+    */
     void start(SocketSessionTemplate template);
 
     /**
     * 停止服务
     *
     * @param template 会话模板
-     */
+    */
     void stop(SocketSessionTemplate template);
 
     /**
@@ -57,7 +57,7 @@ public interface SocketProvider {
     *
     * @param protocol 协议类型
     * @return 是否支持
-     */
+    */
     default boolean supports(SocketProtocol protocol) {
         return getProtocol() == protocol;
     }

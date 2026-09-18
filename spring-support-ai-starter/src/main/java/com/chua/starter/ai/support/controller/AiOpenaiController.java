@@ -60,7 +60,7 @@ public class AiOpenaiController extends BaseAiController {
 
     /**
     * AI 对话/补全服务（绑定所有聊天模型）
-     */
+    */
     private final AiChatFacadeService aiChatFacadeService;
 
     /** AI 模型指标富化服务 */
@@ -71,7 +71,7 @@ public class AiOpenaiController extends BaseAiController {
 
     /**
     * SSE 超时时间（毫秒）
-     */
+    */
     private static final long SSE_TIMEOUT_MILLIS = 30_000L;
 
     /**
@@ -85,7 +85,7 @@ public class AiOpenaiController extends BaseAiController {
     * @param request        聊天补全请求体
     * @param servletRequest HTTP 请求
     * @return 同步模式下返回 {@link ResponseEntity}，流式模式下返回 {@link SseEmitter}
-     */
+    */
     @Operation(summary = "OpenAI Chat Completions", description = "OpenAI 标准协议聊天补全接口")
     @PostMapping("/v1/chat/completions")
     public Object chatCompletions(@RequestBody OpenAiChatRequest request,
@@ -129,7 +129,7 @@ public class AiOpenaiController extends BaseAiController {
     * @param request        文本补全请求体
     * @param servletRequest HTTP 请求
     * @return 补全响应
-     */
+    */
     @Operation(summary = "OpenAI Completions", description = "OpenAI 标准协议补全接口")
     @PostMapping("/v1/completions")
     public ResponseEntity<Map<String, Object>> completions(@RequestBody OpenAiCompletionRequest request,
@@ -161,7 +161,7 @@ public class AiOpenaiController extends BaseAiController {
     *
     * @param servletRequest HTTP 请求
     * @return 模型列表响应
-     */
+    */
     @Operation(summary = "OpenAI Models", description = "获取支持的模型列表")
     @GetMapping("/v1/models")
     public ResponseEntity<Map<String, Object>> models(HttpServletRequest servletRequest) {
@@ -215,12 +215,12 @@ public class AiOpenaiController extends BaseAiController {
     * CC Switch 全局设置键前缀。
     *
     * <p>完整键格式为 {@code cc.model[.groupId]}，无分组时为 {@code cc.model}。</p>
-     */
+    */
     private static final String CC_MODEL_KEY_PREFIX = "cc.model";
 
     /**
     * CC Switch 全局设置分组。
-     */
+    */
     private static final String CC_SETTING_GROUP = "runtime";
 
     /**
@@ -230,7 +230,7 @@ public class AiOpenaiController extends BaseAiController {
     *
     * @param servletRequest HTTP 请求
     * @return 可用模型列表
-     */
+    */
     @Operation(summary = "CC Switch - 获取可用模型列表", description = "获取支持切换的模型列表")
     @GetMapping("/v1/cc/switch/models")
     public ResponseEntity<Map<String, Object>> ccSwitchModels(HttpServletRequest servletRequest) {
@@ -261,7 +261,7 @@ public class AiOpenaiController extends BaseAiController {
     * @param request        切换请求体，包含目标模型名称
     * @param servletRequest HTTP 请求
     * @return 切换结果
-     */
+    */
     @Operation(summary = "CC Switch - 切换模型", description = "切换当前使用的模型")
     @PostMapping("/v1/cc/switch")
     public ResponseEntity<Map<String, Object>> ccSwitch(@RequestBody CcSwitchRequest request,
@@ -287,7 +287,7 @@ public class AiOpenaiController extends BaseAiController {
             * persistcc模型。
             * @param key 钥匙
             * @param model 模型
-             */
+            */
             persistCcModel(key, model);
             log.info("CC Switch 模型切换成功: groupId={}, model={}", groupId, model);
             return ResponseEntity.ok(Map.of(
@@ -308,7 +308,7 @@ public class AiOpenaiController extends BaseAiController {
     *
     * @param servletRequest HTTP 请求
     * @return 模型状态
-     */
+    */
     @Operation(summary = "CC Switch - 获取当前模型状态", description = "获取当前模型配置状态")
     @GetMapping("/v1/cc/switch/status")
     public ResponseEntity<Map<String, Object>> ccSwitchStatus(HttpServletRequest servletRequest) {
@@ -345,7 +345,7 @@ public class AiOpenaiController extends BaseAiController {
     * @param request        批量配置请求体
     * @param servletRequest HTTP 请求
     * @return 批量配置结果
-     */
+    */
     @Operation(summary = "CC Switch - 批量模型配置", description = "批量配置多个模型的优先级和权重")
     @PostMapping("/v1/cc/switch/batch")
     public ResponseEntity<Map<String, Object>> ccSwitchBatch(@RequestBody CcBatchSwitchRequest request,
@@ -377,7 +377,7 @@ public class AiOpenaiController extends BaseAiController {
     *
     * @param servletRequest HTTP 请求
     * @return 健康检查结果
-     */
+    */
     @Operation(summary = "CC Switch - 健康检查", description = "检查 CC Switch 服务健康状态")
     @GetMapping("/v1/cc/switch/health")
     public ResponseEntity<Map<String, Object>> ccSwitchHealth(HttpServletRequest servletRequest) {
@@ -402,7 +402,7 @@ public class AiOpenaiController extends BaseAiController {
     * {@link AiModelCatalogService} 聚合（本地 ModelRegistry + 云端 SPI 客户端），
     * 返回每个能力类目下已加载的模型 标识 列表。</p>
     * @return 模型capabilities的结果
-     */
+    */
     @Operation(summary = "按能力类目返回模型", description = "返回每个能力类目下已注册的模型 ID 列表")
     @GetMapping("/v2/ai/models/capabilities")
     public Map<String, List<String>> modelCapabilities() {
@@ -417,7 +417,7 @@ public class AiOpenaiController extends BaseAiController {
     *
     * @param groupId 分组 标识，可能为 {@code null}
     * @return 存储键
-     */
+    */
     private static String buildCcModelKey(Integer groupId) {
         if (groupId != null) {
             return CC_MODEL_KEY_PREFIX + "." + groupId;
@@ -433,7 +433,7 @@ public class AiOpenaiController extends BaseAiController {
     *
     * @param key   存储键（如 {@code cc.model} 或 {@code cc.model.2}）
     * @param model 模型名称
-     */
+    */
     @SuppressWarnings("unchecked")
     private void persistCcModel(String key, String model) {
         sysAiGlobalSettingService.upsertValue(CC_SETTING_GROUP, key, model, "CC Switch 选中模型");
@@ -447,7 +447,7 @@ public class AiOpenaiController extends BaseAiController {
     * @param result 对话结果，可能为 {@code null}
     * @param model  模型名称
     * @return OpenAI 标准格式的聊天补全响应
-     */
+    */
     private Map<String, Object> buildOpenAiChatResponse(Map<String, Object> result, String model) {
         String id = "chatcmpl-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12);
         String text = result != null ? (String) result.get("text") : "";
@@ -500,7 +500,7 @@ public class AiOpenaiController extends BaseAiController {
     * @param model        模型名称
     * @param errorMessage 错误描述
     * @return OpenAI 标准格式的错误响应
-     */
+    */
     private Map<String, Object> buildOpenAiChatError(String model, String errorMessage) {
         String id = "chatcmpl-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12);
         Map<String, Object> message = new LinkedHashMap<>();
@@ -526,7 +526,7 @@ public class AiOpenaiController extends BaseAiController {
     * @param model  模型名称
     * @param prompt 用户提示词
     * @return OpenAI 标准格式的补全响应
-     */
+    */
     private Map<String, Object> buildOpenAiCompletionResponse(Map<String, Object> result, String model, String prompt) {
         String id = "cmpl-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12);
         String text = result != null ? (String) result.get("text") : "";
@@ -568,7 +568,7 @@ public class AiOpenaiController extends BaseAiController {
     * @param prompt       用户提示词
     * @param errorMessage 错误描述
     * @return OpenAI 标准格式的错误响应
-     */
+    */
     private Map<String, Object> buildOpenAiCompletionError(String model, String prompt, String errorMessage) {
         String id = "cmpl-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12);
         Map<String, Object> choice = new LinkedHashMap<>();
@@ -595,7 +595,7 @@ public class AiOpenaiController extends BaseAiController {
     * @param groupId 分组 标识，用于模型隔离
     * @param appKey  app钥匙，用于 令牌 配额累计
     * @return 内部对话请求对象
-     */
+    */
     private AiChatRequest convertToChatRequest(OpenAiChatRequest request, Integer groupId, String appKey) {
         AiChatRequest chatRequest = new AiChatRequest();
         chatRequest.setModel(request.getModel());
@@ -634,7 +634,7 @@ public class AiOpenaiController extends BaseAiController {
     *
     * @param request 打开AI 格式的补全请求
     * @return 内部对话请求对象
-     */
+    */
     private AiChatRequest convertCompletionToChatRequest(OpenAiCompletionRequest request) {
         AiChatRequest chatRequest = new AiChatRequest();
         chatRequest.setModel(request.getModel());
@@ -649,78 +649,78 @@ public class AiOpenaiController extends BaseAiController {
     *
     * @since 4.0.0.42
     * @author CH
-     */
+    */
     @Data
     public static class OpenAiChatRequest {
 
         /**
         * 模型名称
-         */
+        */
         private String model;
 
         /**
         * 消息列表
-         */
+        */
         private List<OpenAiMessage> messages;
 
         /**
         * 采样温度
-         */
+        */
         private Double temperature;
 
         /**
         * 最大输出 令牌 数
-         */
+        */
         private Integer maxTokens;
 
         /**
         * Top-P 采样参数
-         */
+        */
         private Double topP;
 
         /**
         * 生成候选项数
-         */
+        */
         private Integer n;
 
         /**
         * 是否启用流式响应
-         */
+        */
         private Boolean stream;
 
         /**
         * 停止序列
-         */
+        */
         private String stop;
 
         /**
         * 频率惩罚系数
-         */
+        */
         private Double frequencyPenalty;
 
         /**
         * 存在惩罚系数
-         */
+        */
         private Double presencePenalty;
 
         /**
         * 工具调用定义
-         */
+        */
         private Map<String, Object> tools;
 
         /**
         * 工具选择策略
-         */
+        */
         private String toolChoice;
 
         /**
         * 深度思考开关（非 打开AI 标准字段，由前端 对话客户端 透传）
-         */
+        */
         private Boolean think;
 
         /**
         * 智能搜索开关（非 打开AI 标准字段，由前端 对话客户端 透传）
-         */
+        */
         private Boolean search;
     }
 
@@ -729,23 +729,23 @@ public class AiOpenaiController extends BaseAiController {
     *
     * @since 4.0.0.42
     * @author CH
-     */
+    */
     @Data
     public static class OpenAiMessage {
 
         /**
         * 角色（系统 / 用户 / assistant）
-         */
+        */
         private String role;
 
         /**
         * 消息内容
-         */
+        */
         private String content;
 
         /**
         * 消息作者名称
-         */
+        */
         private String name;
     }
 
@@ -754,73 +754,73 @@ public class AiOpenaiController extends BaseAiController {
     *
     * @since 4.0.0.42
     * @author CH
-     */
+    */
     @Data
     public static class OpenAiCompletionRequest {
 
         /**
         * 模型名称
-         */
+        */
         private String model;
 
         /**
         * 提示词
-         */
+        */
         private String prompt;
 
         /**
         * 后缀
-         */
+        */
         private String suffix;
 
         /**
         * 最大输出 令牌 数
-         */
+        */
         private Integer maxTokens;
 
         /**
         * 采样温度
-         */
+        */
         private Double temperature;
 
         /**
         * Top-P 采样参数
-         */
+        */
         private Double topP;
 
         /**
         * 生成候选项数
-         */
+        */
         private Integer n;
 
         /**
         * 是否启用流式响应
-         */
+        */
         private Boolean stream;
 
         /**
         * Logprobs 返回数量
-         */
+        */
         private Integer logprobs;
 
         /**
         * 是否回显提示词
-         */
+        */
         private String echo;
 
         /**
         * 停止序列
-         */
+        */
         private String stop;
 
         /**
         * 频率惩罚系数
-         */
+        */
         private Double frequencyPenalty;
 
         /**
         * 存在惩罚系数
-         */
+        */
         private Double presencePenalty;
     }
 
@@ -829,23 +829,23 @@ public class AiOpenaiController extends BaseAiController {
     *
     * @since 4.0.0.42
     * @author CH
-     */
+    */
     @Data
     public static class CcSwitchRequest {
 
         /**
         * 目标模型名称
-         */
+        */
         private String model;
 
         /**
         * 提供商标识
-         */
+        */
         private String provider;
 
         /**
         * 额外配置
-         */
+        */
         private Map<String, Object> config;
     }
 
@@ -854,13 +854,13 @@ public class AiOpenaiController extends BaseAiController {
     *
     * @since 4.0.0.42
     * @author CH
-     */
+    */
     @Data
     public static class CcBatchSwitchRequest {
 
         /**
         * 模型配置列表
-         */
+        */
         private List<ModelConfig> configs;
     }
 
@@ -869,33 +869,33 @@ public class AiOpenaiController extends BaseAiController {
     *
     * @since 4.0.0.42
     * @author CH
-     */
+    */
     @Data
     public static class ModelConfig {
 
         /**
         * 模型名称
-         */
+        */
         private String model;
 
         /**
         * 提供商标识
-         */
+        */
         private String provider;
 
         /**
         * 优先级
-         */
+        */
         private Integer priority;
 
         /**
         * 权重
-         */
+        */
         private Double weight;
 
         /**
         * 是否启用
-         */
+        */
         private Boolean enabled;
     }
 }

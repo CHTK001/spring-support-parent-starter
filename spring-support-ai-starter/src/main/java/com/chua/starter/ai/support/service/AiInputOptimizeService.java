@@ -19,6 +19,6 @@ public interface AiInputOptimizeService {
     *
     * @param request 优化请求（原始输入与可选覆盖项）
     * @return 优化结果（优化后文本、实际使用模型与耗时）
-     */
+    */
     InputOptimizeResponse optimize(InputOptimizeRequest request);
 }

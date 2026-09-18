@@ -23,47 +23,47 @@ public class ReturnPreconditioning<T> {
 
     /**
     * 非空判断条件：对象不为 空 时满足条件
-     */
+    */
     public static final Predicate<Object> NOT_NULL = data -> null != data;
 
     /**
     * 布尔判断条件：值为 true 时满足条件
-     */
+    */
     public static final Predicate<Boolean> BOOLEAN = data -> null != data && data;
 
     /**
     * 数值判断条件：数值不为 空 且大于 0 时满足条件
-     */
+    */
     public static final Predicate<Number> NUMBER = data -> null != data && data.intValue() > 0;
 
     /**
     * 待判断的数据
-     */
+    */
     private final T data;
 
     /**
     * 判断条件
-     */
+    */
     private Predicate<T> condition;
 
     /**
     * 成功时的提示消息
-     */
+    */
     private String successMessage;
 
     /**
     * 失败时的错误消息，默认为 "服务器异常, 请稍后重试!"
-     */
+    */
     private String errorMessage = "服务器异常, 请稍后重试!";
 
     /**
     * 导致的异常信息
-     */
+    */
     private Throwable throwable;
 
     /**
     * 错误码
-     */
+    */
     private ResultCode errorCode;
 
     /**
@@ -71,7 +71,7 @@ public class ReturnPreconditioning<T> {
     *
     * @param data      待判断的数据
     * @param condition 判断条件
-     */
+    */
     protected ReturnPreconditioning(T data, Predicate<T> condition) {
         this.data = data;
         this.condition = condition;
@@ -88,7 +88,7 @@ public class ReturnPreconditioning<T> {
     * @param <T>  数据类型
     * @param data 待判断的数据
     * @return ReturnPreconditioning 实例
-     */
+    */
     @SuppressWarnings("unchecked")
     public static <T> ReturnPreconditioning<T> of(T data) {
         Predicate<T> condition;
@@ -108,7 +108,7 @@ public class ReturnPreconditioning<T> {
     * @param <T>      数据类型
     * @param supplier 数据提供者
     * @return ReturnPreconditioning 实例
-     */
+    */
     public static <T> ReturnPreconditioning<T> of(Supplier<T> supplier) {
         return of(null == supplier ? null : supplier.get());
     }
@@ -120,7 +120,7 @@ public class ReturnPreconditioning<T> {
     * @param callable 可调用任务
     * @return ReturnPreconditioning 实例
     * @throws RuntimeException 如果 callable 执行抛出异常
-     */
+    */
     public static <T> ReturnPreconditioning<T> ofCallable(Callable<T> callable) {
         try {
             return of(null == callable ? null : callable.call());
@@ -129,7 +129,7 @@ public class ReturnPreconditioning<T> {
             * runtime异常。
             * @param e e
             * @return runtime异常的结果
-             */
+            */
             throw new RuntimeException(e);
         }
     }
@@ -139,7 +139,7 @@ public class ReturnPreconditioning<T> {
     *
     * @param condition 判断条件
     * @return 当前实例，支持链式调用
-     */
+    */
     public ReturnPreconditioning<T> withCondition(Predicate<T> condition) {
         this.condition = condition;
         return this;
@@ -150,7 +150,7 @@ public class ReturnPreconditioning<T> {
     *
     * @param message 成功消息
     * @return 当前实例，支持链式调用
-     */
+    */
     public ReturnPreconditioning<T> withSuccessMessage(String message) {
         this.successMessage = message;
         return this;
@@ -161,7 +161,7 @@ public class ReturnPreconditioning<T> {
     *
     * @param message 错误消息
     * @return 当前实例，支持链式调用
-     */
+    */
     public ReturnPreconditioning<T> withErrorMessage(String message) {
         this.errorMessage = message;
         return this;
@@ -173,7 +173,7 @@ public class ReturnPreconditioning<T> {
     * @param <R>      目标数据类型
     * @param function 转换函数
     * @return 新的 申报preconditioning 实例
-     */
+    */
     public <R> ReturnPreconditioning<R> withConverter(Function<T, R> function) {
         return of(function.apply(data));
     }
@@ -183,7 +183,7 @@ public class ReturnPreconditioning<T> {
     *
     * @param throwable 异常对象
     * @return 当前实例，支持链式调用
-     */
+    */
     public ReturnPreconditioning<T> withThrowable(Throwable throwable) {
         this.throwable = throwable;
         return this;
@@ -194,7 +194,7 @@ public class ReturnPreconditioning<T> {
     *
     * @param errorCode 错误码
     * @return 当前实例，支持链式调用
-     */
+    */
     public ReturnPreconditioning<T> withErrorCode(ResultCode errorCode) {
         this.errorCode = errorCode;
         return this;
@@ -207,7 +207,7 @@ public class ReturnPreconditioning<T> {
     * @param onSuccess 条件满足时执行的回调
     * @param onFailure 条件不满足时执行的回调
     * @return 执行对应回调后的结果
-     */
+    */
     public <R> R when(Function<T, R> onSuccess, Supplier<R> onFailure) {
         if (isSuccessful()) {
             return onSuccess.apply(data);
@@ -222,7 +222,7 @@ public class ReturnPreconditioning<T> {
     * @param <R>       返回值类型
     * @param onSuccess 条件满足时对数据的转换函数
     * @return ReturnResult 实例
-     */
+    */
     public <R> ReturnResult<R> then(Function<T, R> onSuccess) {
         if (isSuccessful()) {
             return ReturnResult.ok(onSuccess.apply(data), successMessage);
@@ -235,7 +235,7 @@ public class ReturnPreconditioning<T> {
     *
     * @param other 备选值
     * @return 满足条件时返回原数据，否则返回备选值
-     */
+    */
     public T otherwise(T other) {
         return isSuccessful() ? data : other;
     }
@@ -245,7 +245,7 @@ public class ReturnPreconditioning<T> {
     *
     * @param supplier 备选值的提供者
     * @return 满足条件时返回原数据，否则从 供应商 获取
-     */
+    */
     public T otherwiseGet(Supplier<T> supplier) {
         return isSuccessful() ? data : supplier.get();
     }
@@ -254,7 +254,7 @@ public class ReturnPreconditioning<T> {
     * 判断当前条件是否满足
     *
     * @return 条件满足返回 true，否则 false
-     */
+    */
     public boolean isSuccessful() {
         return null != condition && condition.test(data);
     }
@@ -264,7 +264,7 @@ public class ReturnPreconditioning<T> {
     * <p>成功时包含数据和成功消息；失败时根据异常、错误码或默认错误码构造错误响应。</p>
     *
     * @return ReturnResult 实例
-     */
+    */
     public ReturnResult<T> asResult() {
         if (isSuccessful()) {
             return ReturnResult.ok(data, successMessage);
@@ -283,7 +283,7 @@ public class ReturnPreconditioning<T> {
     * {@link #asResult()} 的别名方法
     *
     * @return ReturnResult 实例
-     */
+    */
     public ReturnResult<T> toResult() {
         return asResult();
     }
@@ -292,7 +292,7 @@ public class ReturnPreconditioning<T> {
     * 获取内容类型，当前实现固定返回 空
     *
     * @return 内容类型，始终为 空
-     */
+    */
     public ContentType getContentType() {
         return null;
     }
@@ -301,7 +301,7 @@ public class ReturnPreconditioning<T> {
     * 获取内容分发描述，当前实现固定返回 空
     *
     * @return 内容分发描述，始终为 空
-     */
+    */
     public ContentDisposition getContentDisposition() {
         return null;
     }
@@ -310,7 +310,7 @@ public class ReturnPreconditioning<T> {
     * 判断是否需要解包
     *
     * @return 始终返回 false
-     */
+    */
     public boolean hasUnpack() {
         return false;
     }
@@ -319,7 +319,7 @@ public class ReturnPreconditioning<T> {
     * 判断是否为异步操作
     *
     * @return 始终返回 false
-     */
+    */
     public boolean isAsync() {
         return false;
     }
@@ -328,7 +328,7 @@ public class ReturnPreconditioning<T> {
     * 获取超时时间（毫秒）
     *
     * @return 始终返回 0，表示不超时
-     */
+    */
     public long getTimeoutMillis() {
         return 0;
     }

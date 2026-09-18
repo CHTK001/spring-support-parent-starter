@@ -29,13 +29,13 @@ public class NonceSignProperties {
     /**
     * 默认签名密钥，与前端 默认_SECRET_钥匙 保持一致。
     * 仅用于开发或未显式配置时的兜底，生产环境请通过配置覆盖。
-     */
+    */
     public static final String DEFAULT_SECRET = "aP9xL3sV7mQ2zT5kB8nR1cY4wH6eD0fJ";
 
     /**
     * 签名密钥，需与前端 获取配置().secret钥匙 一致。
     * 优先读取环境变量 PLUGIN_NONCE_标志_SECRET_钥匙，未设置时使用开发兜底值 默认_SECRET。
-     */
+    */
     private String secretKey = System.getenv("PLUGIN_NONCE_SIGN_SECRET_KEY") != null
         ? System.getenv("PLUGIN_NONCE_SIGN_SECRET_KEY") : DEFAULT_SECRET;
 
@@ -44,7 +44,7 @@ public class NonceSignProperties {
     *
     * @param env 环境
     * @return 解析到的密钥，无则返回当前 secret钥匙
-     */
+    */
     public String resolveSecretKey(Environment env) {
         if (env == null) {
             return secretKey;

@@ -24,12 +24,12 @@ public final class SpiderConverter {
 
     /**
     * JSON 解析器
-     */
+    */
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     /**
     * 私有构造方法。
-     */
+    */
     private SpiderConverter() {
     }
 
@@ -38,7 +38,7 @@ public final class SpiderConverter {
     *
     * @param entity 爬虫定义实体
     * @return 定义视图对象
-     */
+    */
     public static SpiderDefinitionVO toDefinitionVO(SpiderDefinition entity) {
         if (entity == null) {
             return null;
@@ -67,7 +67,7 @@ public final class SpiderConverter {
     *
     * @param vo 定义视图对象
     * @return 爬虫定义实体
-     */
+    */
     public static SpiderDefinition toDefinition(SpiderDefinitionVO vo) {
         if (vo == null) {
             return null;
@@ -94,7 +94,7 @@ public final class SpiderConverter {
     *
     * @param entities 实体列表
     * @return 视图列表
-     */
+    */
     public static List<SpiderDefinitionVO> toDefinitionVOList(List<SpiderDefinition> entities) {
         List<SpiderDefinitionVO> result = new ArrayList<>();
         if (entities != null) {
@@ -110,7 +110,7 @@ public final class SpiderConverter {
     *
     * @param log 执行日志实体
     * @return 节点日志视图
-     */
+    */
     public static FlowNodeLogVO toNodeLogVO(SpiderExecutionLog log) {
         if (log == null) {
             return null;
@@ -130,7 +130,7 @@ public final class SpiderConverter {
     *
     * @param logs 执行日志实体列表
     * @return 节点日志视图列表
-     */
+    */
     public static List<FlowNodeLogVO> toNodeLogVOList(List<SpiderExecutionLog> logs) {
         List<FlowNodeLogVO> result = new ArrayList<>();
         if (logs != null) {
@@ -146,7 +146,7 @@ public final class SpiderConverter {
     *
     * @param record 采集记录实体
     * @return 采集记录视图
-     */
+    */
     public static DataRecordVO toDataRecordVO(SpiderDataRecord record) {
         if (record == null) {
             return null;
@@ -168,7 +168,7 @@ public final class SpiderConverter {
     *
     * @param records 采集记录实体列表
     * @return 视图列表
-     */
+    */
     public static List<DataRecordVO> toDataRecordVOList(List<SpiderDataRecord> records) {
         List<DataRecordVO> result = new ArrayList<>();
         if (records != null) {
@@ -184,7 +184,7 @@ public final class SpiderConverter {
     *
     * @param flow 流程实体
     * @return 流程视图
-     */
+    */
     public static SpiderFlowVO toFlowVO(SpiderFlow flow) {
         if (flow == null) {
             return null;
@@ -204,7 +204,7 @@ public final class SpiderConverter {
     *
     * @param flows 流程实体列表
     * @return 视图列表
-     */
+    */
     public static List<SpiderFlowVO> toFlowVOList(List<SpiderFlow> flows) {
         List<SpiderFlowVO> result = new ArrayList<>();
         if (flows != null) {
@@ -220,7 +220,7 @@ public final class SpiderConverter {
     *
     * @param nodesJson 节点 JSON 数组
     * @return 节点数量
-     */
+    */
     private static int countNodes(String nodesJson) {
         if (nodesJson == null || nodesJson.isBlank()) {
             return 0;
@@ -238,7 +238,7 @@ public final class SpiderConverter {
     *
     * @param log 执行日志
     * @return 耗时，无结束时间返回 空
-     */
+    */
     private static Long costMs(SpiderExecutionLog log) {
         if (log.getStartAt() == null || log.getEndAt() == null) {
             return null;

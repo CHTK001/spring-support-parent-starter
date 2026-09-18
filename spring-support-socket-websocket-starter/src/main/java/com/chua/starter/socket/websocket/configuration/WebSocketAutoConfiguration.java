@@ -60,12 +60,12 @@ public class WebSocketAutoConfiguration implements WebSocketConfigurer {
     * web套接字会话管理器
     *
     * @return web套接字会话管理器的结果
-     */
+    */
     public WebSocketSessionManager webSocketSessionManager() {
         /**
         * web套接字会话管理器。
         * @return web套接字会话管理器的结果
-         */
+        */
         return new WebSocketSessionManager();
     }
 
@@ -76,13 +76,13 @@ public class WebSocketAutoConfiguration implements WebSocketConfigurer {
     *
     * @param sessionManager 会话管理器
     * @return web套接字template的结果
-     */
+    */
     public WebSocketTemplate webSocketTemplate(WebSocketSessionManager sessionManager) {
         /**
         * web套接字template。
         * @param sessionManager 会话管理器
         * @return web套接字template的结果
-         */
+        */
         return new WebSocketTemplate(sessionManager);
     }
 
@@ -93,14 +93,14 @@ public class WebSocketAutoConfiguration implements WebSocketConfigurer {
     *
     * @param sessionManager 会话管理器
     * @return delegatingweb套接字处理器的结果
-     */
+    */
     public DelegatingWebSocketHandler delegatingWebSocketHandler(WebSocketSessionManager sessionManager) {
         /**
         * delegatingweb套接字处理器。
         * @param sessionManager 会话管理器
         * @param handlers 处理器
         * @return delegatingweb套接字处理器的结果
-         */
+        */
         return new DelegatingWebSocketHandler(sessionManager, handlers);
     }
 
@@ -109,7 +109,7 @@ public class WebSocketAutoConfiguration implements WebSocketConfigurer {
     * 创建web套接字容器
     *
     * @return 创建web套接字容器的结果
-     */
+    */
     public ServletServerContainerFactoryBean createWebSocketContainer() {
         ServletServerContainerFactoryBean container = new ServletServerContainerFactoryBean();
         container.setMaxTextMessageBufferSize(properties.getMaxMessageSize());
@@ -147,7 +147,7 @@ public class WebSocketAutoConfiguration implements WebSocketConfigurer {
     * web套接字服务信息contributor
     *
     * @return web套接字服务信息contributor的结果
-     */
+    */
     public ServiceInfoContributor webSocketServiceInfoContributor() {
         return registry -> {
             registry.registerFlag("websocket", "WebSocket", true, "WebSocket模块");

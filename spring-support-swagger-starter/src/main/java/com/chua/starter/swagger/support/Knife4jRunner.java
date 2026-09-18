@@ -16,7 +16,7 @@ public class Knife4jRunner implements CommandLineRunner {
     /**
     * 刀4jrunner。
     * @param environment 环境
-     */
+    */
     public Knife4jRunner(org.springframework.core.env.Environment environment) {
         this.environment = environment;
     }

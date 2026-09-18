@@ -78,7 +78,7 @@ public class MyBatisConfigHandler implements SyncMessageHandler, ApplicationCont
     *
     * @param data 请求数据，包含 resource路径
     * @return 刷新结果
-     */
+    */
     private Object handleRefreshXml(Map<String, Object> data) {
         String resourcePath = MapUtils.getString(data, "resourcePath");
 
@@ -120,7 +120,7 @@ public class MyBatisConfigHandler implements SyncMessageHandler, ApplicationCont
     *
     * @param data 请求数据
     * @return 刷新结果
-     */
+    */
     private Object handleRefreshAllXml(Map<String, Object> data) {
         try {
             SqlSessionFactory sqlSessionFactory = getSqlSessionFactory();
@@ -165,7 +165,7 @@ public class MyBatisConfigHandler implements SyncMessageHandler, ApplicationCont
     * 获取 SQL会话工厂
     *
     * @return SqlSessionFactory 实例，未找到返回 空
-     */
+    */
     private SqlSessionFactory getSqlSessionFactory() {
         if (applicationContext == null) {
             return null;
@@ -183,7 +183,7 @@ public class MyBatisConfigHandler implements SyncMessageHandler, ApplicationCont
     *
     * @param configuration MyBatis 配置
     * @return 资源路径集合
-     */
+    */
     @SuppressWarnings("unchecked")
     private Set<String> getLoadedResources(Configuration configuration) {
         Set<String> loadedResources = (Set<String>) ReflectUtils.getField(configuration, "loadedResources");
@@ -200,7 +200,7 @@ public class MyBatisConfigHandler implements SyncMessageHandler, ApplicationCont
     * @param configuration  MyBatis 配置
     * @param resourcePath   资源路径
     * @return 是否刷新成功
-     */
+    */
     private boolean refreshMapperXml(Configuration configuration, String resourcePath) {
         try {
             // 查找资源文件
@@ -223,7 +223,7 @@ public class MyBatisConfigHandler implements SyncMessageHandler, ApplicationCont
             * clearmapped对账单。
             * @param configuration 配置
             * @param resourcePath resource路径
-             */
+            */
             clearMappedStatements(configuration, resourcePath);
 
             // 重新加载 XML
@@ -231,7 +231,7 @@ public class MyBatisConfigHandler implements SyncMessageHandler, ApplicationCont
                 /**
                 * 尝试。
                 * @param resource.getInputStream( resource.获取输入流(
-                 */
+                */
                 try (InputStream inputStream = resource.getInputStream()) {
                     XMLMapperBuilder xmlMapperBuilder = new XMLMapperBuilder(
                             inputStream,
@@ -257,7 +257,7 @@ public class MyBatisConfigHandler implements SyncMessageHandler, ApplicationCont
     *
     * @param configuration MyBatis 配置
     * @param resourcePath  资源路径
-     */
+    */
     @SuppressWarnings("unchecked")
     private void clearMappedStatements(Configuration configuration, String resourcePath) {
         try {

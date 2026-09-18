@@ -19,7 +19,7 @@ public record ClusterLeaderState(
     * 当前节点是否为 Leader。
     *
     * @return 是返回 true
-     */
+    */
     public boolean isCurrentLeader() {
         return currentLeader;
     }

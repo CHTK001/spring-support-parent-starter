@@ -22,7 +22,7 @@ public interface MessageRouter {
     *
     * @param message 消息
     * @return 目标队列地址，返回null表示使用原始目标
-     */
+    */
     String route(Message message);
 
     /**
@@ -30,7 +30,7 @@ public interface MessageRouter {
     *
     * @param message 消息
     * @return 是否支持
-     */
+    */
     default boolean supports(Message message) {
         return true;
     }
@@ -39,7 +39,7 @@ public interface MessageRouter {
     * 路由器优先级
     *
     * @return 优先级
-     */
+    */
     default int getOrder() {
         return 0;
     }

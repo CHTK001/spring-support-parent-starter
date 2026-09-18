@@ -16,31 +16,31 @@ public class TimeIndicator {
 
     /**
     * 指标名称
-     */
+    */
     private String indicator;
 
     /**
     * 时间戳
-     */
+    */
     private long timestamp;
 
     /**
     * 指标值
-     */
+    */
     private double value;
 
     /**
     * 构造函数
     *
     * @param indicator 指标名称
-     */
+    */
     public TimeIndicator(String indicator) {
         this.indicator = indicator;
     }
 
     /**
     * 无参构造函数
-     */
+    */
     public TimeIndicator() {
     }
 }

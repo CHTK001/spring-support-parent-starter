@@ -11,14 +11,14 @@ public interface SpiOption {
     * 获取 SPI 扩展的名称
     *
     * @return 扩展名称
-     */
+    */
     String name();
 
     /**
     * 获取该 SPI 扩展支持的类型列表
     *
     * @return 支持的类型数组，默认返回空数组
-     */
+    */
     default String[] supportedTypes() {
         return new String[0];
     }

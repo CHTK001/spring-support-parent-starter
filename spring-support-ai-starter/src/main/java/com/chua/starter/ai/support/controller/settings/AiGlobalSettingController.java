@@ -26,14 +26,14 @@ public class AiGlobalSettingController {
 
     /**
     * 全局设置服务
-     */
+    */
     private final AiGlobalSettingService settingService;
 
     /**
     * 获取全局设置。
     *
     * @return 全局设置 DTO
-     */
+    */
     @Permission("admin")
     @Operation(summary = "获取全局设置")
     @GetMapping
@@ -46,7 +46,7 @@ public class AiGlobalSettingController {
     *
     * @param setting 全局设置 DTO
     * @return 更新后的全局设置 DTO
-     */
+    */
     @Permission("admin")
     @Operation(summary = "更新全局设置")
     @PutMapping

@@ -19,7 +19,7 @@ public class MetaObjectHandlerConfig implements MetaObjectHandler {
 
     /**
     * 插入时自动填充
-     */
+    */
     @Override
     public void insertFill(MetaObject metaObject) {
         this.strictInsertFill(metaObject, "createdAt", LocalDateTime.class, LocalDateTime.now());
@@ -28,7 +28,7 @@ public class MetaObjectHandlerConfig implements MetaObjectHandler {
 
     /**
     * 更新时自动填充
-     */
+    */
     @Override
     public void updateFill(MetaObject metaObject) {
         this.strictUpdateFill(metaObject, "updatedAt", LocalDateTime.class, LocalDateTime.now());

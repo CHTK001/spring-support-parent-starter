@@ -29,28 +29,28 @@ public class HikvisionSecurePlatformSession extends AbstractOpenApiSession {
 
     /**
     * 海康安防平台默认 baseurl（按官方文档配置）
-     */
+    */
     private static final String DEFAULT_BASE_URL = "https://artemis.hikvision.com";
 
     /**
     * 视频取流接口
-     */
+    */
     private static final String PATH_VIDEO_STREAM = "/api/video/v1/cameras/previewURLs";
 
     /**
     * 云台控制接口
-     */
+    */
     private static final String PATH_PTZ_CONTROL = "/api/video/v1/ptz/channels/controllable";
 
     /**
     * 门禁控制接口
-     */
+    */
     private static final String PATH_DOOR_CONTROL = "/api/access/v1/door/control";
 
     /**
     * 创建 hikvisionsecureplatform会话 实例
     * @param info 信息
-     */
+    */
     public HikvisionSecurePlatformSession(DeviceConnectInfo info) {
         super(info, DEFAULT_BASE_URL);
  // 安防平台通常无独立登录，app键/appsecret 通过签名头传递
@@ -64,7 +64,7 @@ public class HikvisionSecurePlatformSession extends AbstractOpenApiSession {
     * @param path 路径
     * @param headers 头部
     * @return Artemis标志的结果
-     */
+    */
     private String artemisSign(String method, String path, Map<String, String> headers) {
         String stringToSign = method + "\n"
                 + headers.getOrDefault("x-ca-key", "") + "\n"
@@ -121,7 +121,7 @@ public class HikvisionSecurePlatformSession extends AbstractOpenApiSession {
     * 获取摄像头预览 URL（HLS/RTSP 等）
     * @param channel 通道
     * @return 获取previewurl的结果
-     */
+    */
     public JsonNode getPreviewUrl(int channel) {
         Map<String, Object> params = new HashMap<>();
         params.put("cameraIndexCode", info.getDeviceSerial());
@@ -168,7 +168,7 @@ public class HikvisionSecurePlatformSession extends AbstractOpenApiSession {
     *
     * @param cmd CMD
     * @return 映射Artemisdirection的结果
-     */
+    */
     private int mapArtemisDirection(com.chua.starter.device.spi.model.PtzCommand cmd) {
         switch (cmd) {
             case UP: return 0;

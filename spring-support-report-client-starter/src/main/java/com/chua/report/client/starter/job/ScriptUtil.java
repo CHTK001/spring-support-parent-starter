@@ -30,7 +30,7 @@ public class ScriptUtil {
     * @param scriptFileName
     * @param content
     * @throws IOException
-     */
+    */
     public static void markScriptFile(String scriptFileName, String content) throws IOException {
  // make 文件,   文件路径/gluesource/666-123456789.py
         FileOutputStream fileOutputStream = null;
@@ -56,7 +56,7 @@ public class ScriptUtil {
     * @param params
     * @return
     * @throws IOException
-     */
+    */
     public static int execToFile(String command, String scriptFile, String logFile, String... params) throws IOException {
 
         FileOutputStream fileOutputStream = null;
@@ -85,7 +85,7 @@ public class ScriptUtil {
                     /**
                     * 副本。
                     * @param process.getInputStream( 处理.获取输入流(
-                     */
+                    */
                     copy(process.getInputStream(), finalFileOutputStream, new byte[1024]);
                 } catch (IOException e) {
                     DefaultJobLog.log(e.getMessage());
@@ -96,7 +96,7 @@ public class ScriptUtil {
                     /**
                     * 副本。
                     * @param process.getErrorStream( 处理.获取错误流(
-                     */
+                    */
                     copy(process.getErrorStream(), finalFileOutputStream, new byte[1024]);
                 } catch (IOException e) {
                     DefaultJobLog.log(e.getMessage());
@@ -142,7 +142,7 @@ public class ScriptUtil {
     * @param buffer
     * @return
     * @throws IOException
-     */
+    */
     private static long copy(InputStream inputStream, OutputStream outputStream, byte[] buffer) throws IOException {
         try {
             long total = 0;

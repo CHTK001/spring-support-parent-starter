@@ -36,11 +36,11 @@ public interface ProjectAlarmHook {
     String METRIC_COLLECT_FAIL = "project.collect.fail";
 
     /**
-     * 评估项目指标（命中告警规则时由 monitor 引擎产出事件并通知）
-     *
-     * @param project    项目
-     * @param metricName 指标名
-     * @param value      指标值
-     */
+    * 评估项目指标（命中告警规则时由 monitor 引擎产出事件并通知）
+    *
+    * @param project    项目
+    * @param metricName 指标名
+    * @param value      指标值
+    */
     void evaluateProjectMetric(MsProject project, String metricName, double value);
 }

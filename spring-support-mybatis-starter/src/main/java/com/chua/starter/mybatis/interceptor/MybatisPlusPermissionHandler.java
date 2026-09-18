@@ -50,7 +50,7 @@ public class MybatisPlusPermissionHandler implements SelectDataPermissionHandler
     * 构造函数
     *
     * @param metaDataScopeProperties 数据权限配置属性
-     */
+    */
     public MybatisPlusPermissionHandler(MybatisPlusDataScopeProperties metaDataScopeProperties) {
         this.metaDataScopeProperties = metaDataScopeProperties;
     }
@@ -63,7 +63,7 @@ public class MybatisPlusPermissionHandler implements SelectDataPermissionHandler
     * @param where           当前查询条件
     * @param mappedStatementId 映射器 方法全限定名
     * @param currentUser     当前登录用户
-     */
+    */
     @Override
     public void processSelect(PlainSelect plainSelect, Expression where, String mappedStatementId, CurrentUser currentUser) {
         try {
@@ -92,7 +92,7 @@ public class MybatisPlusPermissionHandler implements SelectDataPermissionHandler
                         * @param metaDataScopeProperties meta数据scope属性
                         * @param where where
                         * @param permission 权限
-                         */
+                        */
                         dataScopeFilter(plainSelect, currentUser, metaDataScopeProperties, where, permission);
                     }
                     return;
@@ -106,7 +106,7 @@ public class MybatisPlusPermissionHandler implements SelectDataPermissionHandler
             * @param metaDataScopeProperties meta数据scope属性
             * @param where where
             * @param currentUser.getDataPermission( 当前用户.获取数据权限(
-             */
+            */
             dataScopeFilter(plainSelect, currentUser, metaDataScopeProperties, where, currentUser.getDataPermission());
         } catch (Exception e) {
             log.error("处理数据权限时发生异常: mappedStatementId={}", mappedStatementId, e);
@@ -120,7 +120,7 @@ public class MybatisPlusPermissionHandler implements SelectDataPermissionHandler
     * @param user              当前登录用户
     * @param where             当前查询条件
     * @param dataPermission    数据权限
-     */
+    */
     public void dataScopeFilter(PlainSelect plainSelect,
                                 CurrentUser user,
                                 MybatisPlusDataScopeProperties dataScopeProperties,

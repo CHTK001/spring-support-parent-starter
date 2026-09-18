@@ -36,14 +36,14 @@ public class AiAppKeyController {
 
     /**
     * app钥匙 服务
-     */
+    */
     private final AiAppKeyService appKeyService;
 
     /**
     * 查询所有 app钥匙。
     *
     * @return 操作结果
-     */
+    */
     @Permission("admin")
     @Operation(summary = "查询所有 AppKey")
     @GetMapping
@@ -56,7 +56,7 @@ public class AiAppKeyController {
     *
     * @param appKey app钥匙 DTO
     * @return 操作结果
-     */
+    */
     @Permission("admin")
     @Operation(summary = "新建 AppKey")
     @PostMapping
@@ -71,7 +71,7 @@ public class AiAppKeyController {
     * @param appKey   app钥匙 DTO
     * @return 操作结果
     * @param ID" 标识"
-     */
+    */
     @Permission("admin")
     @Operation(summary = "更新 AppKey")
     @PutMapping("/{appKeyId}")
@@ -88,7 +88,7 @@ public class AiAppKeyController {
     * @param ID" 标识"
     * @param ID" 标识"
     * @param ID" ID"
-     */
+    */
     @Permission("admin")
     @Operation(summary = "删除 AppKey")
     @DeleteMapping("/{appKeyId}")
@@ -103,7 +103,7 @@ public class AiAppKeyController {
     * @param enabled  是否启用
     * @return 操作结果
     * @param ID" 标识"
-     */
+    */
     @Permission("admin")
     @Operation(summary = "切换 AppKey 启用状态")
     @PutMapping("/{appKeyId}/toggle")

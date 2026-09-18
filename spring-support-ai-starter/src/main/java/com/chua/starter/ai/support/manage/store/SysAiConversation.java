@@ -37,67 +37,67 @@ public class SysAiConversation implements Serializable {
 
     /**
     * 会话主键（uuidv7 字符串），由后端 {@code newId()} 生成并填充
-     */
+    */
     @TableId(value = "sys_ai_conversation_id", type = IdType.INPUT)
     private String conversationId; // conversationid
 
     /**
     * 会话类型（当前仅 nomi）
-     */
+    */
     @TableField("sys_ai_conversation_type")
     private String type = "nomi"; // 类型
 
     /**
     * 会话名称
-     */
+    */
     @TableField("sys_ai_conversation_name")
     private String name; // 名称
 
     /**
     * 绑定的模型信息：{提供者_标识, 模型, use_模型?}，JSON 序列化存储
-     */
+    */
     @TableField(value = "sys_ai_conversation_model", typeHandler = JacksonTypeHandler.class)
     private Map<String, Object> model; // 模型
 
     /**
     * 扩展字段（合并语义，前端 extra 字段透传存储），JSON 序列化存储
-     */
+    */
     @TableField(value = "sys_ai_conversation_extra", typeHandler = JacksonTypeHandler.class)
     private Map<String, Object> extra; // extra
 
     /**
     * 是否置顶
-     */
+    */
     @TableField("sys_ai_conversation_pinned")
     private boolean pinned = false; // pinned
 
     /**
     * 置顶时间（轮次 毫秒，未置顶为 空）
-     */
+    */
     @TableField("sys_ai_conversation_pinned_at")
     private Long pinnedAt; // pinnedat
 
     /**
     * 创建时间（轮次 毫秒）
-     */
+    */
     @TableField("sys_ai_conversation_created_at")
     private Long createdAt; // 创建at
 
     /**
     * 修改时间（轮次 毫秒）
-     */
+    */
     @TableField("sys_ai_conversation_modified_at")
     private Long modifiedAt; // modifiedat
 
     /**
     * 关联的执行模板 标识
-     */
+    */
     @TableField("sys_ai_conversation_execution_template_id")
     private String executionTemplateId; // 执行templateid
 
     /**
     * 运行时状态（如 活跃_turn_标识），仅内存使用，不持久化
-     */
+    */
     @TableField(exist = false)
     private Map<String, Object> runtime; // runtime
 }

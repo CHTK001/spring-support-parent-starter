@@ -52,9 +52,9 @@ public class SftpServiceImpl implements SftpService {
         }
         var host = requireHost(hostId);
         /**
-        * 尝试。
-        * @param openSftpClient(host.getServerHostAddress( 打开sftpclient(主机.获取服务端主机地址(
-        */
+    * 尝试。
+    * @param openSftpClient(host.getServerHostAddress( 打开sftpclient(主机.获取服务端主机地址(
+    */
         try (var client = openSftpClient(host.getServerHostAddress(), host.getServerHostPort(), resolved.getData())) {
             var entries = client.ls().path(normalizeDir(path)).exec();
  // 归一化为前端契约: 名称/路径/目录/文件/大小

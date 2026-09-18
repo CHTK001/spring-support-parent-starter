@@ -34,22 +34,22 @@ public class AiInputOptimizeServiceImpl implements AiInputOptimizeService {
 
     /**
     * 输入优化配置分组
-     */
+    */
     private static final String GROUP = "input";
 
     /**
     * runtime 分组（全局对话路由配置）
-     */
+    */
     private static final String RUNTIME_GROUP = "runtime";
 
     /**
     * 默认优化温度
-     */
+    */
     private static final double DEFAULT_OPTIMIZE_TEMPERATURE = 0.3;
 
     /**
     * 内置默认优化提示词
-     */
+    */
     private static final String DEFAULT_OPTIMIZE_PROMPT = """
             你是一个输入优化助手。
             在不改变用户真实意图的前提下，将用户输入改写为更清晰、更准确、更适合模型理解的版本。
@@ -61,12 +61,12 @@ public class AiInputOptimizeServiceImpl implements AiInputOptimizeService {
 
     /**
     * 全局设置读取器
-     */
+    */
     private final GlobalSettingReader globalSettingReader;
 
     /**
     * 全局 对话客户端 注册中心
-     */
+    */
     private final ChatClientRegistry chatClientRegistry;
 
     /**
@@ -74,7 +74,7 @@ public class AiInputOptimizeServiceImpl implements AiInputOptimizeService {
     *
     * @param request 优化请求
     * @return 优化结果
-     */
+    */
     @Override
     public InputOptimizeResponse optimize(InputOptimizeRequest request) {
         String input = StringUtils.defaultString(request.getInput(), "");
@@ -140,7 +140,7 @@ public class AiInputOptimizeServiceImpl implements AiInputOptimizeService {
     *
     * @param model 配置的模型名（可能为空）
     * @return ChatClient 实例；不可用时返回 空
-     */
+    */
     private ChatClient resolveChatClient(String model) {
         String effectiveModel = model;
         if (StringUtils.isBlank(effectiveModel)) {

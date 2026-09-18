@@ -69,18 +69,18 @@ public class JobAutoConfiguration {
     * 映射器 接口所在包常量。
     * <p>业务方主启动类上需添加 {@code @MapperScan(JobAutoConfiguration.MAPPER_PACKAGE)}
     * 让 MyBatis-Plus 接管本模块的 映射器 接口。</p>
-     */
+    */
     public static final String MAPPER_PACKAGE = "com.chua.starter.job.support.store";
 
     /**
     * 配置属性
-     */
+    */
     private final JobProperties properties;
 
     /**
     * 当前节点 标识 Bean, 缺省时按 主机名称-pid 推导。
     * @return 作业节点id的结果
-     */
+    */
     @Bean
     @ConditionalOnMissingBean(name = "jobNodeId")
     public String jobNodeId() {
@@ -95,7 +95,7 @@ public class JobAutoConfiguration {
     /**
     * Spring 上下文任务调度器 (供 Spring 原生 @Scheduled 使用)。
     * @return 作业任务调度器的结果
-     */
+    */
     @Bean
     @ConditionalOnMissingBean
     public TaskScheduler jobTaskScheduler() {
@@ -110,7 +110,7 @@ public class JobAutoConfiguration {
     * @Scheduled 注解扫描器。
     * @param jobTaskScheduler 作业任务调度器
     * @return 作业调度注解scanner的结果
-     */
+    */
     @Bean
     @ConditionalOnMissingBean
     public ScheduledAnnotationScanner jobScheduledAnnotationScanner(TaskScheduler jobTaskScheduler) {
@@ -118,14 +118,14 @@ public class JobAutoConfiguration {
         * 调度注解scanner。
         * @param jobTaskScheduler 作业任务调度器
         * @return 调度注解scanner的结果
-         */
+        */
         return new ScheduledAnnotationScanner(jobTaskScheduler);
     }
 
     /**
     * 处理器注册表。
     * @return 作业处理器工厂的结果
-     */
+    */
     @Bean
     @ConditionalOnMissingBean
     public JobHandlerFactory jobHandlerFactory() {
@@ -135,35 +135,35 @@ public class JobAutoConfiguration {
     /**
     * @作业 注解扫描器。
     * @return 作业注解scanner的结果
-     */
+    */
     @Bean
     @ConditionalOnMissingBean
     public JobAnnotationScanner jobAnnotationScanner() {
         /**
         * 作业注解scanner。
         * @return 作业注解scanner的结果
-         */
+        */
         return new JobAnnotationScanner();
     }
 
     /**
     * 进程内事件总线。
     * @return 作业同步bus的结果
-     */
+    */
     @Bean
     @ConditionalOnMissingBean
     public JobSyncBus jobSyncBus() {
         /**
         * 作业同步bus。
         * @return 作业同步bus的结果
-         */
+        */
         return new JobSyncBus();
     }
 
     /**
     * 任务仓库默认实现 (入内存 兜底), MyBatis-Plus 存在时被 MyBatis 版覆盖。
     * @return 入内存作业仓库的结果
-     */
+    */
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnMissingClass("com.baomidou.mybatisplus.core.mapper.BaseMapper")
@@ -171,7 +171,7 @@ public class JobAutoConfiguration {
         /**
         * 入内存作业仓库。
         * @return 入内存作业仓库的结果
-         */
+        */
         return new InMemoryJobRepository();
     }
 
@@ -179,7 +179,7 @@ public class JobAutoConfiguration {
     * 铅 选举器 (CAS 占位)。
     * @param jobNodeId 作业节点标识
     * @return 作业铅elector的结果
-     */
+    */
     @Bean
     @ConditionalOnMissingBean
     public LeaderElector jobLeaderElector(String jobNodeId) {
@@ -187,14 +187,14 @@ public class JobAutoConfiguration {
         * 铅elector。
         * @param jobNodeId 作业节点标识
         * @return 铅elector的结果
-         */
+        */
         return new LeaderElector(jobNodeId);
     }
 
     /**
     * 日志落库默认实现 (stdout 兜底), MyBatis-Plus 存在时被 MyBatis 版覆盖。
     * @return stdout作业日志sink的结果
-     */
+    */
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnMissingClass("com.baomidou.mybatisplus.core.mapper.BaseMapper")
@@ -202,7 +202,7 @@ public class JobAutoConfiguration {
         /**
         * stdout作业日志sink。
         * @return stdout作业日志sink的结果
-         */
+        */
         return new StdoutJobLogSink();
     }
 
@@ -213,7 +213,7 @@ public class JobAutoConfiguration {
     * 业务侧无需自行声明 作业仓库。</p>
     * @param jobMapper 作业映射器
     * @return mybatis作业仓库的结果
-     */
+    */
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnClass(name = "com.baomidou.mybatisplus.core.mapper.BaseMapper")
@@ -227,7 +227,7 @@ public class JobAutoConfiguration {
     * 当 {@code plugin.job.log.enabled=true} 时额外启用文件日志和异步写入。
     * @param jobLogMapper 作业日志映射器
     * @return mybatis作业日志sink的结果
-     */
+    */
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnClass(name = "com.baomidou.mybatisplus.core.mapper.BaseMapper")
@@ -259,7 +259,7 @@ public class JobAutoConfiguration {
     /**
     * 铅 选举解析器默认实现: 本地 CAS 占位, 适用于单机或无 MyBatis 场景。
     * @return 入内存铅election解析器的结果
-     */
+    */
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnMissingClass("com.baomidou.mybatisplus.core.mapper.BaseMapper")
@@ -269,7 +269,7 @@ public class JobAutoConfiguration {
 
     /**
     * MyBatis-Plus 行锁版 铅 选举 (依赖 MyBatis-Plus 时覆盖默认)。
-     */
+    */
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnClass(name = "com.baomidou.mybatisplus.core.mapper.BaseMapper")
@@ -287,7 +287,7 @@ public class JobAutoConfiguration {
     * 调度器 端: 注册到仓库公共 同步服务端。
     * <p>SPI 未发现实现时 (精简部署或单元测试),自动 fallback 到 {@link InMemorySyncServer}。</p>
     * @return 作业同步服务端的结果
-     */
+    */
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = JobProperties.PRE, name = "role", havingValue = "SCHEDULER")
@@ -297,7 +297,7 @@ public class JobAutoConfiguration {
             /**
             * 入内存同步服务端。
             * @return 入内存同步服务端的结果
-             */
+            */
             return new InMemorySyncServer();
         }
         ServiceProvider<SyncServer> sp = ServiceProvider.of(SyncServer.class);
@@ -332,7 +332,7 @@ public class JobAutoConfiguration {
             /**
             * 入内存同步服务端。
             * @return 入内存同步服务端的结果
-             */
+            */
             return new InMemorySyncServer();
         }
  // 注入配置的监听 主机/端口, 使 tcp同步服务端 等真实实现绑定到目标端口
@@ -352,7 +352,7 @@ public class JobAutoConfiguration {
 
     /**
     * 调度器 角色: bind 同步, 把 bus 的 CMD 推到远端, 并落库 任务-日志。
-     */
+    */
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = JobProperties.PRE, name = "role", havingValue = "SCHEDULER")
@@ -367,7 +367,7 @@ public class JobAutoConfiguration {
         * @param jobLogSink 作业日志sink
         * @param jobNodeId 作业节点标识
         * @return 调度器同步binder的结果
-         */
+        */
         return new SchedulerSyncBinder(jobSyncServer, jobSyncBus, jobLogSink, jobNodeId);
     }
 
@@ -380,7 +380,7 @@ public class JobAutoConfiguration {
     *   <li>抢占成功时 {@link ClusterElectionHeartbeat} 注册为 Spring Bean 持续续约;</li>
     *   <li>{@link JobLeaderLoop} 启动单秒扫描循环。</li>
     * </ol>
-     */
+    */
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = JobProperties.PRE, name = "role", havingValue = "SCHEDULER")
@@ -403,13 +403,13 @@ public class JobAutoConfiguration {
         * @param jobRepository 作业仓库
         * @param jobSyncBus 作业同步bus
         * @return 作业铅循环的结果
-         */
+        */
         return new JobLeaderLoop(properties, jobLeaderElector, jobNodeId, jobRepository, jobSyncBus);
     }
 
     /**
     * 调度器 角色: 铅 续约心跳守护线程。
-     */
+    */
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = JobProperties.PRE, name = "role", havingValue = "SCHEDULER")
@@ -438,7 +438,7 @@ public class JobAutoConfiguration {
     * 当 SPI 未命中或指向 入内存 时, 直接以配置的 服务端-url 构造真实 {@link TcpSyncClient}。
     * </p>
     * @return 作业同步客户端的结果
-     */
+    */
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = JobProperties.PRE, name = "role", havingValue = "EXECUTOR")
@@ -448,7 +448,7 @@ public class JobAutoConfiguration {
             /**
             * 入内存同步客户端。
             * @return 入内存同步客户端的结果
-             */
+            */
             return new InMemorySyncClient();
         }
         SyncClient spiClient = ServiceProvider.of(SyncClient.class)
@@ -464,13 +464,13 @@ public class JobAutoConfiguration {
         * tcp同步客户端。
         * @param serverUrl 服务端url
         * @return tcp同步客户端的结果
-         */
+        */
         return new TcpSyncClient(serverUrl);
     }
 
     /**
     * 执行器 角色: 绑定 同步客户端 与本地事件总线。
-     */
+    */
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = JobProperties.PRE, name = "role", havingValue = "EXECUTOR")
@@ -484,13 +484,13 @@ public class JobAutoConfiguration {
         * @param properties 属性
         * @param jobNodeId 作业节点标识
         * @return 执行器同步binder的结果
-         */
+        */
         return new ExecutorSyncBinder(jobSyncClient, jobSyncBus, properties, jobNodeId);
     }
 
     /**
     * 执行器 角色: 任务执行器。
-     */
+    */
     @Bean(destroyMethod = "shutdown")
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = JobProperties.PRE, name = "role", havingValue = "EXECUTOR")
@@ -504,7 +504,7 @@ public class JobAutoConfiguration {
         * @param jobNodeId 作业节点标识
         * @param buildExecutor( 构建执行器(
         * @return 作业执行器的结果
-         */
+        */
         return new JobExecutor(jobHandlerFactory, jobSyncBus, jobNodeId, buildExecutor());
     }
 
@@ -514,7 +514,7 @@ public class JobAutoConfiguration {
 
     /**
     * 单个 角色: 本机自认 铅, 通过本地 CAS 解析器 (MyBatis 未启用时)。
-     */
+    */
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = JobProperties.PRE, name = "role", havingValue = "SINGLE", matchIfMissing = true)
@@ -537,13 +537,13 @@ public class JobAutoConfiguration {
         * @param jobRepository 作业仓库
         * @param jobSyncBus 作业同步bus
         * @return 作业铅循环的结果
-         */
+        */
         return new JobLeaderLoop(properties, jobLeaderElector, jobNodeId, jobRepository, jobSyncBus);
     }
 
     /**
     * 单个 角色心跳守护线程 (与 调度器 共享同一实现)。
-     */
+    */
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = JobProperties.PRE, name = "role", havingValue = "SINGLE", matchIfMissing = true)
@@ -562,7 +562,7 @@ public class JobAutoConfiguration {
 
     /**
     * 单个 角色: 本地执行器, 消费本地 bus CMD 事件并执行。
-     */
+    */
     @Bean(destroyMethod = "shutdown")
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = JobProperties.PRE, name = "role", havingValue = "SINGLE", matchIfMissing = true)
@@ -576,7 +576,7 @@ public class JobAutoConfiguration {
         * @param jobNodeId 作业节点标识
         * @param buildExecutor( 构建执行器(
         * @return 作业执行器的结果
-         */
+        */
         return new JobExecutor(jobHandlerFactory, jobSyncBus, jobNodeId, buildExecutor());
     }
 
@@ -589,7 +589,7 @@ public class JobAutoConfiguration {
     * @param jobRepository 作业仓库
     * @param jobHandlerFactory 作业处理器工厂
     * @return 作业样本seeder的结果
-     */
+    */
     @Bean
     @ConditionalOnMissingBean
     public JobSampleSeeder jobSampleSeeder(JobRepository jobRepository, JobHandlerFactory jobHandlerFactory) {
@@ -598,7 +598,7 @@ public class JobAutoConfiguration {
         * @param jobRepository 作业仓库
         * @param jobHandlerFactory 作业处理器工厂
         * @return 作业样本seeder的结果
-         */
+        */
         return new JobSampleSeeder(jobRepository, jobHandlerFactory);
     }
 
@@ -607,17 +607,17 @@ public class JobAutoConfiguration {
     * 仅当仓库为 {@link InMemoryJobRepository} 时生效, 否则跳过。
     *
     * @since 4.0.0.42
-     */
+    */
     public static final class JobSampleSeeder {
 
         /**
         * 仓库
-         */
+        */
         private final JobRepository repository;
 
         /**
         * 处理器注册表
-         */
+        */
         private final JobHandlerFactory factory;
 
         /**
@@ -626,7 +626,7 @@ public class JobAutoConfiguration {
         * @param repository 任务仓库
         * @param factory    处理器注册表
         * @return 作业样本seeder的结果
-         */
+        */
         public JobSampleSeeder(JobRepository repository, JobHandlerFactory factory) {
             this.repository = repository;
             this.factory = factory;
@@ -636,12 +636,12 @@ public class JobAutoConfiguration {
         * Spring 上下文刷新完成后回调 (此时所有 smart初始化单例 已跑完, @作业 处理器已注册)。
         * 仅根上下文 refresh 时触发 (排除子容器)。
         * @param event 事件
-         */
+        */
         @org.springframework.context.event.EventListener
         public void onContextRefreshed(org.springframework.context.event.ContextRefreshedEvent event) {
             /**
             * 参见。
-             */
+            */
             seed();
         }
 
@@ -665,8 +665,8 @@ public class JobAutoConfiguration {
     }
 
     /**
-    * 启动期声明。
-     */
+        * 启动期声明。
+        */
     @PostConstruct
     public void describeOnStart() {
         com.chua.starter.common.support.serviceinfo.ServiceInfoRegistry.getInstance().registerFlag(
@@ -692,7 +692,7 @@ public class JobAutoConfiguration {
     * </ul>
     *
     * @return 执行器
-     */
+    */
     private ExecutorService buildExecutor() {
         if (properties.getPool().isVirtual()) {
             log.info("[job] 已启用虚拟线程执行器 pool.virtual=true (per-task 虚拟线程)");

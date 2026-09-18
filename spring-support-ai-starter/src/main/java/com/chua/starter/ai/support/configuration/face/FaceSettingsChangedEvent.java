@@ -14,14 +14,14 @@ public class FaceSettingsChangedEvent {
 
     /**
     * 变更的分组
-     */
+    */
     private final String group;
 
     /**
     * 构造事件。
     *
     * @param group 变更的分组
-     */
+    */
     public FaceSettingsChangedEvent(String group) {
         this.group = group;
     }
@@ -30,7 +30,7 @@ public class FaceSettingsChangedEvent {
     * 获取变更分组。
     *
     * @return 分组
-     */
+    */
     public String getGroup() {
         return group;
     }

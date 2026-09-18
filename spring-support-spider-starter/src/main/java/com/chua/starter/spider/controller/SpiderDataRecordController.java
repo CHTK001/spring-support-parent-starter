@@ -33,7 +33,7 @@ public class SpiderDataRecordController {
     /**
     * 创建 蜘蛛数据record控制器 实例
     * @param recordService record服务
-     */
+    */
     public SpiderDataRecordController(SpiderDataRecordService recordService) {
         this.recordService = recordService;
     }
@@ -55,7 +55,7 @@ public class SpiderDataRecordController {
     * @param spiderId 蜘蛛标识
     * @param executionNo 执行no
     * @param executionNo 执行no
-     */
+    */
     public ReturnResult<PageResultVO<DataRecordVO>> page(
             @RequestParam(defaultValue = "1") long pageNo,
             @RequestParam(defaultValue = "20") long pageSize,
@@ -90,7 +90,7 @@ public class SpiderDataRecordController {
     *
     * @param spiderId 蜘蛛标识
     * @return detail的结果
-     */
+    */
     public ReturnResult<DataRecordVO> detail(@RequestParam Long spiderId) {
         SpiderDataRecord record = recordService.getById(spiderId);
         return ReturnResult.ok(SpiderConverter.toDataRecordVO(record));
@@ -103,7 +103,7 @@ public class SpiderDataRecordController {
     *
     * @param spiderId 蜘蛛标识
     * @return 删除的结果
-     */
+    */
     public ReturnResult<Boolean> delete(@PathVariable Long spiderId) {
         return ReturnResult.ok(recordService.removeById(spiderId));
     }
@@ -115,7 +115,7 @@ public class SpiderDataRecordController {
     *
     * @param executionNo 执行no
     * @return by执行的结果
-     */
+    */
     public ReturnResult<List<DataRecordVO>> byExecution(@RequestParam String executionNo) {
         List<SpiderDataRecord> list = recordService.lambdaQuery()
                 .eq(SpiderDataRecord::getExecutionNo, executionNo)

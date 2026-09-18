@@ -17,7 +17,7 @@ public interface SyncClientInfoCustomizer {
     * 定制顺序，值越小越先执行。
     *
     * @return 顺序
-     */
+    */
     default int getOrder() {
         return 0;
     }
@@ -26,6 +26,6 @@ public interface SyncClientInfoCustomizer {
     * 定制客户端信息。
     *
     * @param clientInfo 客户端信息
-     */
+    */
     void customize(ClientInfo clientInfo);
 }

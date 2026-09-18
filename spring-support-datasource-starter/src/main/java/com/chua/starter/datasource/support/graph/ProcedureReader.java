@@ -34,7 +34,7 @@ public class ProcedureReader {
     /**
     * 创建 procedure读取 实例
     * @param dialect dialect
-     */
+    */
     public ProcedureReader(TriggerReader.DatabaseDialect dialect) {
         this.dialect = dialect;
     }
@@ -43,7 +43,7 @@ public class ProcedureReader {
     * 读取存储过程 + 函数
     * @param conn conn
     * @return 读取全部的结果
-     */
+    */
     public List<ProcedureInfo> readAll(Connection conn) {
         List<ProcedureInfo> result = readViaJdbc(conn);
         if (result != null && !result.isEmpty()) {
@@ -76,7 +76,7 @@ public class ProcedureReader {
     *
     * @param conn conn
     * @return 读取viajdbc的结果
-     */
+    */
     private List<ProcedureInfo> readViaJdbc(Connection conn) {
         try {
             DatabaseMetaData meta = conn.getMetaData();
@@ -86,7 +86,7 @@ public class ProcedureReader {
             /**
             * 尝试。
             * @param "%" "%"
-             */
+            */
             try (ResultSet rs = meta.getProcedures(catalog, schema, "%")) {
                 while (rs.next()) {
                     ProcedureInfo p = new ProcedureInfo();
@@ -102,7 +102,7 @@ public class ProcedureReader {
             /**
             * 尝试。
             * @param "%" "%"
-             */
+            */
             try (ResultSet rs = meta.getFunctions(catalog, schema, "%")) {
                 while (rs.next()) {
                     ProcedureInfo p = new ProcedureInfo();
@@ -126,7 +126,7 @@ public class ProcedureReader {
     * 读取mysqllike。
     * @param conn conn
     * @return 读取mysqllike的结果
-     */
+    */
     private List<ProcedureInfo> readMysqlLike(Connection conn) throws SQLException {
         String sql = "SELECT ROUTINE_NAME, ROUTINE_TYPE, ROUTINE_SCHEMA, ROUTINE_COMMENT " +
                 "FROM information_schema.ROUTINES";
@@ -134,7 +134,7 @@ public class ProcedureReader {
         /**
         * 尝试。
         * @param conn.createStatement( conn.创建对账单(
-         */
+        */
         try (var stmt = conn.createStatement(); var rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
                 ProcedureInfo p = new ProcedureInfo();
@@ -153,7 +153,7 @@ public class ProcedureReader {
     *
     * @param conn conn
     * @return 读取postgresql的结果
-     */
+    */
     private List<ProcedureInfo> readPostgresql(Connection conn) throws SQLException {
         String sql = "SELECT routine_name, routine_type, specific_schema " +
                 "FROM information_schema.routines";
@@ -161,7 +161,7 @@ public class ProcedureReader {
         /**
         * 尝试。
         * @param conn.createStatement( conn.创建对账单(
-         */
+        */
         try (var stmt = conn.createStatement(); var rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
                 ProcedureInfo p = new ProcedureInfo();
@@ -179,7 +179,7 @@ public class ProcedureReader {
     *
     * @param conn conn
     * @return 读取oracle的结果
-     */
+    */
     private List<ProcedureInfo> readOracle(Connection conn) throws SQLException {
         String sql = "SELECT OBJECT_NAME, OBJECT_TYPE FROM ALL_OBJECTS " +
                 "WHERE OBJECT_TYPE IN ('PROCEDURE','FUNCTION') AND OWNER = USER";
@@ -187,7 +187,7 @@ public class ProcedureReader {
         /**
         * 尝试。
         * @param conn.createStatement( conn.创建对账单(
-         */
+        */
         try (var stmt = conn.createStatement(); var rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
                 ProcedureInfo p = new ProcedureInfo();
@@ -205,7 +205,7 @@ public class ProcedureReader {
     *
     * @param conn conn
     * @return 读取sql服务端的结果
-     */
+    */
     private List<ProcedureInfo> readSqlServer(Connection conn) throws SQLException {
         String sql = "SELECT o.name, o.type_desc FROM sys.objects o " +
                 "WHERE o.type IN ('P','FN','IF','TF')";
@@ -213,7 +213,7 @@ public class ProcedureReader {
         /**
         * 尝试。
         * @param conn.createStatement( conn.创建对账单(
-         */
+        */
         try (var stmt = conn.createStatement(); var rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
                 ProcedureInfo p = new ProcedureInfo();

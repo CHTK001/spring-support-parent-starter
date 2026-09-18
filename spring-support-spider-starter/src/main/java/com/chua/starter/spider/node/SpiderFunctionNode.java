@@ -41,7 +41,7 @@ public class SpiderFunctionNode implements FlowNode {
 
     /**
     * Spring 容器
-     */
+    */
     @Resource
     /** Application上下文 */
     private ApplicationContext applicationContext;
@@ -50,7 +50,7 @@ public class SpiderFunctionNode implements FlowNode {
     * 节点类型标识。
     *
     * @return 节点类型
-     */
+    */
     @Override
     public String type() {
         return "spider.function";
@@ -60,7 +60,7 @@ public class SpiderFunctionNode implements FlowNode {
     * 节点配置表单元信息。
     *
     * @return 表单元信息列表
-     */
+    */
     @Override
     public List<FlowNodeField> configSchema() {
         List<FlowNodeField> schema = new ArrayList<>();
@@ -75,7 +75,7 @@ public class SpiderFunctionNode implements FlowNode {
     * 执行函数调用节点。
     *
     * @param context 当前流程上下文
-     */
+    */
     @Override
     public void execute(FlowContext context) {
         FlowProps props = context.currentNodeProps();
@@ -104,7 +104,7 @@ public class SpiderFunctionNode implements FlowNode {
     * @param paramsText 属性名列表（逗号分隔）
     * @param context    当前流程上下文
     * @return 参数值列表
-     */
+    */
     private List<Object> resolveParams(String paramsText, FlowContext context) {
         List<Object> result = new ArrayList<>();
         if (paramsText == null || paramsText.trim().isEmpty()) {
@@ -131,7 +131,7 @@ public class SpiderFunctionNode implements FlowNode {
     * @param methodName 方法名
     * @param args       实参列表
     * @return 方法返回值
-     */
+    */
     private Object invokeMethod(Object bean, String methodName, List<Object> args) {
         Class<?> clazz = bean.getClass();
         Method[] methods = clazz.getMethods();
@@ -185,11 +185,11 @@ public class SpiderFunctionNode implements FlowNode {
     }
 
     /**
-     * 将原始类型包装为其对应的包装类型。
-     *
-     * @param primitive 原始类型
-     * @return 包装类型
-      */
+    * 将原始类型包装为其对应的包装类型。
+    *
+    * @param primitive 原始类型
+    * @return 包装类型
+    */
     private Class<?> wrapPrimitive(Class<?> primitive) {
         // [P3C 四十二] 改走 ClassUtils.fromPrimitive，删除手写 9 个 if 分支
         return ClassUtils.fromPrimitive(primitive);

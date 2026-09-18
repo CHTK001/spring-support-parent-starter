@@ -15,14 +15,14 @@ public interface JobHandler {
     * 处理器唯一名称
     *
     * @return 名称
-     */
+    */
     String name();
 
     /**
     * 任务描述
     *
     * @return 描述, 默认空字符串
-     */
+    */
     default String desc() {
         return "";
     }
@@ -31,14 +31,14 @@ public interface JobHandler {
     * 执行任务
     *
     * @throws Exception 执行失败时抛出
-     */
+    */
     void execute() throws Exception;
 
     /**
     * 初始化钩子, 首次执行前调用一次
     *
     * @throws Exception 初始化失败时抛出
-     */
+    */
     default void init() throws Exception {
     }
 
@@ -46,7 +46,7 @@ public interface JobHandler {
     * 销毁钩子, 注销时调用一次
     *
     * @throws Exception 销毁失败时抛出
-     */
+    */
     default void destroy() throws Exception {
     }
 }

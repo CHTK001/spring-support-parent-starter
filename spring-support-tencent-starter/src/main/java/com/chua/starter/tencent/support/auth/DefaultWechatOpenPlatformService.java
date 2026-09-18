@@ -18,7 +18,7 @@ public class DefaultWechatOpenPlatformService implements WechatOpenPlatformServi
     * @param componentAppId 字符串
     * @param componentAppSecret 组件appsecret
     * @param storagePath storage路径
-     */
+    */
     public DefaultWechatOpenPlatformService(String componentAppId, String componentAppSecret, String storagePath) {
         log.info("初始化默认微信开放平台服务: componentAppId={}, storagePath={}", componentAppId, storagePath);
     }

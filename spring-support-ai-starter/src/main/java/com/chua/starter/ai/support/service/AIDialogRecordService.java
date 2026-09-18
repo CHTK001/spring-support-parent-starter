@@ -20,21 +20,21 @@ public interface AIDialogRecordService {
     *
     * @param name 会话名称
     * @return 创建的会话
-     */
+    */
     AIDialog createDialog(String name);
 
     /**
     * 删除指定会话及其所有消息。
     *
     * @param dialogId 会话 标识
-     */
+    */
     void deleteDialog(Long dialogId);
 
     /**
     * 获取所有会话列表。
     *
     * @return 会话列表
-     */
+    */
     List<AIDialog> listDialog();
 
     /**
@@ -42,7 +42,7 @@ public interface AIDialogRecordService {
     *
     * @param dialogId 会话 标识
     * @return 消息列表
-     */
+    */
     List<ChatMessage> getDialogMessages(Long dialogId);
 
     /**
@@ -50,6 +50,6 @@ public interface AIDialogRecordService {
     *
     * @param dialogId 会话 标识
     * @param message  消息
-     */
+    */
     void addMessage(Long dialogId, ChatMessage message);
 }

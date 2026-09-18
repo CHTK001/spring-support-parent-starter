@@ -41,7 +41,7 @@ public class EduExamController {
     * @param page     页码
     * @param pageSize 每页条数
     * @return 分页结果
-     */
+    */
     @Operation(summary = "分页查询考试")
     @GetMapping("/page")
     public ReturnResult<PageResult<EduExam>> page(EduExam exam,
@@ -55,7 +55,7 @@ public class EduExamController {
     *
     * @param id 考试标识
     * @return 考试详情
-     */
+    */
     @Operation(summary = "获取考试详情")
     @GetMapping("/{id}")
     public ReturnResult<EduExam> detail(@PathVariable Long id) {
@@ -67,7 +67,7 @@ public class EduExamController {
     *
     * @param exam 考试信息
     * @return 考试ID
-     */
+    */
     @Operation(summary = "创建考试")
     @PostMapping("/create")
     public ReturnResult<Long> create(@RequestBody EduExam exam) {
@@ -79,7 +79,7 @@ public class EduExamController {
     *
     * @param exam 考试信息
     * @return 是否成功
-     */
+    */
     @Operation(summary = "更新考试")
     @PutMapping("/update")
     public ReturnResult<Boolean> update(@RequestBody EduExam exam) {
@@ -91,7 +91,7 @@ public class EduExamController {
     *
     * @param id 考试标识
     * @return 是否成功
-     */
+    */
     @Operation(summary = "删除考试")
     @DeleteMapping("/{id}")
     public ReturnResult<Boolean> delete(@PathVariable Long id) {

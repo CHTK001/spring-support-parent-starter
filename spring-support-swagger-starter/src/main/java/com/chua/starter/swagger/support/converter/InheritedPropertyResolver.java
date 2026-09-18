@@ -25,7 +25,7 @@ public class InheritedPropertyResolver implements ModelConverter {
     *
     * @param clazz 类
     * @param schema 模式对象
-     */
+    */
     private void addParentProperties(Class<?> clazz, Schema schema) {
         Class<?> superClass = clazz.getSuperclass();
         if (superClass != null && !superClass.equals(Object.class)) {
@@ -34,7 +34,7 @@ public class InheritedPropertyResolver implements ModelConverter {
             * 添加父属性。
             * @param superClass 父类
             * @param schema 模式
-             */
+            */
             addParentProperties(superClass, schema);
 
             // 添加父类属性
@@ -56,7 +56,7 @@ public class InheritedPropertyResolver implements ModelConverter {
     * @param context 模型转换器上下文
     * @param chain 转换器链
     * @return 解析后的Schema
-     */
+    */
     @Override
     public Schema resolve(AnnotatedType type, ModelConverterContext context, Iterator<ModelConverter> chain) {
         ResolvedSchema resolvedSchema = ModelConverters.getInstance()
@@ -69,7 +69,7 @@ public class InheritedPropertyResolver implements ModelConverter {
             * 添加父属性。
             * @param clazz clazz
             * @param resolvedSchema.schema resolved模式.模式
-             */
+            */
             addParentProperties(clazz, resolvedSchema.schema);
         }
         return resolvedSchema.schema;

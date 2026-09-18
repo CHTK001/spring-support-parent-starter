@@ -19,7 +19,7 @@ public interface SelectDataPermissionHandler extends DataPermissionHandler {
     * @param where             where
     * @param mappedStatementId 片段标识
     * @param currentUser       用户信息
-     */
+    */
     void processSelect(PlainSelect plainSelect, Expression where, String mappedStatementId, CurrentUser currentUser);
 
 }

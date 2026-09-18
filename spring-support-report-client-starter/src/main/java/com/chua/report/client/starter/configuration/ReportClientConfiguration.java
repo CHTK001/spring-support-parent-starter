@@ -70,7 +70,7 @@ public class ReportClientConfiguration implements ApplicationContextAware {
     * @param environment 环境
     * @param reportProperties report属性
     * @param featureManagerProvider 特征管理器提供者
-     */
+    */
     public ReportClientConfiguration(SyncClient syncClient, Environment environment,
                                       ReportProperties reportProperties,
                                       ObjectProvider<ApiFeatureManager> featureManagerProvider) {
@@ -206,14 +206,14 @@ public class ReportClientConfiguration implements ApplicationContextAware {
     * </p>
     *
     * @return JobAnnotationScanner
-     */
+    */
     @Bean
     @ConditionalOnMissingBean
     public JobAnnotationScanner jobAnnotationScanner() {
         /**
         * 作业注解scanner。
         * @return 作业注解scanner的结果
-         */
+        */
         return new JobAnnotationScanner();
     }
 
@@ -222,7 +222,7 @@ public class ReportClientConfiguration implements ApplicationContextAware {
     * report客户端服务信息contributor
     *
     * @return report客户端服务信息contributor的结果
-     */
+    */
     public ServiceInfoContributor reportClientServiceInfoContributor() {
         return registry -> {
             registry.registerFlag("report-client", "上报客户端",

@@ -40,7 +40,7 @@ public class ActuatorAuthenticationFilter implements Filter  {
     /**
     * 创建 actuator认证过滤器 实例
     * @param actuatorProperties actuator属性
-     */
+    */
     public ActuatorAuthenticationFilter(ActuatorProperties actuatorProperties) {
         this.actuatorProperties = actuatorProperties;
     }
@@ -102,7 +102,7 @@ public class ActuatorAuthenticationFilter implements Filter  {
     *
     * @param ip IP地址
     * @return 是否在白名单中
-     */
+    */
     private boolean isIpWhitelisted(String ip) {
         if (actuatorProperties.getIpWhitelist().isEmpty()) {
             return false;
@@ -116,7 +116,7 @@ public class ActuatorAuthenticationFilter implements Filter  {
     *
     * @param path 请求路径
     * @return 是否在排除列表中
-     */
+    */
     private boolean isExcludedPath(String path) {
         if (actuatorProperties.getExcludePaths().isEmpty()) {
             return false;
@@ -135,7 +135,7 @@ public class ActuatorAuthenticationFilter implements Filter  {
     * @param username 用户名
     * @param password 密码
     * @return Basic认证头字符串
-     */
+    */
     public static String getKey(String username, String password) {
         String credentials = username + CommonConstant.SYMBOL_COLON + password;
         return BASIC + Base64.getEncoder().encodeToString(credentials.getBytes(StandardCharsets.UTF_8));

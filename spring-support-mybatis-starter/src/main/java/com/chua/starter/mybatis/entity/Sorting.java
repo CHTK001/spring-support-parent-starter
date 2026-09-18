@@ -14,29 +14,29 @@ public class Sorting {
 
     /**
     * 排序方向 - 升序
-     */
+    */
     public static final String ORDER_ASC = "asc";
 
     /**
     * 排序方向 - 降序
-     */
+    */
     public static final String ORDER_DESC = "desc";
 
     /**
     * 排序字段名
-     */
+    */
     private String field;
 
     /**
     * 排序方向（asc 或 desc）
-     */
+    */
     private String order;
 
     /**
     * 获取排序方向
     *
     * @return 排序方向
-     */
+    */
     public String getOrder() {
         return order;
     }
@@ -45,7 +45,7 @@ public class Sorting {
     * 获取排序字段名
     *
     * @return 排序字段名
-     */
+    */
     public String getField() {
         return field;
     }

@@ -22,7 +22,7 @@ public class MethodPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor {
     /**
     * 创建 方法pointcutadvisor 实例
     * @param applicationContext application上下文
-     */
+    */
     public MethodPointcutAdvisor(ApplicationContext applicationContext) {
         MultiDataSourceSettingProperties multiDataSourceSettingProperties = Binder.get(applicationContext.getEnvironment()).bindOrCreate(MultiDataSourceSettingProperties.PRE, MultiDataSourceSettingProperties.class);
         this.setAdvice(new MethodInterceptor() {

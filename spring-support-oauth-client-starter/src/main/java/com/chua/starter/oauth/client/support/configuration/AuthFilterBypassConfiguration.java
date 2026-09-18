@@ -40,7 +40,7 @@ public class AuthFilterBypassConfiguration {
     * 提供一个不进行任何校验的 {@link AuthFilter} 占位实现，
     * 绕过真实的 o认证 远程调用，让所有请求直接通过。
     * @return 认证过滤器bypass的结果
-     */
+    */
     @Bean
     @ConditionalOnMissingBean(AuthFilter.class)
     public AuthFilter authFilterBypass() {
@@ -49,7 +49,7 @@ public class AuthFilterBypassConfiguration {
         * @param null 空
         * @param null 空
         * @return 认证过滤器的结果
-         */
+        */
         return new AuthFilter(null, null) {
             @Override
             public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
@@ -62,7 +62,7 @@ public class AuthFilterBypassConfiguration {
     /**
     * 同时注册 过滤器registrationBean 让 认证过滤器 拦截链生效（但内部 执行过滤器 直接放行）。
     * @return 认证过滤器bypassregistration的结果
-     */
+    */
     @Bean
     @ConditionalOnMissingBean(name = "authFilterFilterRegistrationBean")
     public FilterRegistrationBean<AuthFilter> authFilterBypassRegistration() {

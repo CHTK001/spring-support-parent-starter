@@ -41,43 +41,43 @@ public abstract class BaseAiController {
 
     /**
     * Bearer 令牌 前缀
-     */
+    */
     protected static final String BEARER_PREFIX = "Bearer ";
 
     /**
     * Bearer 令牌 前缀长度
-     */
+    */
     protected static final int BEARER_PREFIX_LENGTH = BEARER_PREFIX.length();
 
     /**
     * SSE 事件流超时时间（毫秒）
-     */
+    */
     protected static final long SSE_TIMEOUT_MILLIS = 30_000L;
 
     /**
     * 访问守卫服务，提供 app钥匙 与 Bearer 令牌 校验能力
-     */
+    */
     @Autowired
     /** aiaccessguard服务 */
     protected AiAccessGuardService aiAccessGuardService;
 
     /**
     * app钥匙 服务，提供分组 标识 查询等能力
-     */
+    */
     @Autowired
     /** SYSAIAPP密钥服务 */
     protected SysAiAppKeyService sysAiAppKeyService;
 
     /**
     * 全局设置服务，提供运行时开关读写能力
-     */
+    */
     @Autowired
     /** SYSAI全局设置服务 */
     protected SysAiGlobalSettingService sysAiGlobalSettingService;
 
     /**
     * Jackson JSON 序列化器，用于响应构建
-     */
+    */
     @Autowired
     /** Objectmapper */
     protected ObjectMapper objectMapper;
@@ -90,7 +90,7 @@ public abstract class BaseAiController {
     *
     * @param request HTTP 请求
     * @return 校验通过返回 {@code true}，否则返回 {@code false}
-     */
+    */
     protected boolean authCheck(HttpServletRequest request) {
  // Tauri / 本地开发模式：本地信任认证过滤器 已置位 nomifun.本地.信任=true，直接放行
         Object trusted = request.getAttribute(LocalTrustAuthFilter.TRUSTED_ATTR);
@@ -106,7 +106,7 @@ public abstract class BaseAiController {
     *
     * @param request HTTP 请求
     * @return Bearer 令牌，无法提取时返回 {@code null}
-     */
+    */
     private String extractBearerToken(HttpServletRequest request) {
         String auth = request.getHeader("Authorization");
         if (StringUtils.isBlank(auth) || !auth.startsWith(BEARER_PREFIX)) {
@@ -127,7 +127,7 @@ public abstract class BaseAiController {
     *
     * @param request HTTP 请求
     * @return 分组 标识，若无法解析则返回 {@code null}
-     */
+    */
     protected Integer resolveGroupId(HttpServletRequest request) {
         String token = extractBearerToken(request);
         if (token == null) {
@@ -146,7 +146,7 @@ public abstract class BaseAiController {
     *
     * @param request HTTP 请求
     * @return Bearer 令牌 字符串，无法提取时返回 {@code null}
-     */
+    */
     protected String resolveAppKey(HttpServletRequest request) {
         return extractBearerToken(request);
     }
@@ -158,7 +158,7 @@ public abstract class BaseAiController {
     * 未配置时默认启用。</p>
     *
     * @return 启用返回 {@code true}，禁用返回 {@code false}
-     */
+    */
     protected boolean restEnabled() {
         return sysAiGlobalSettingService.getBoolean("runtime", "openaiRestEnabled", true);
     }
@@ -170,7 +170,7 @@ public abstract class BaseAiController {
     *
     * @param message 禁用原因描述
     * @return SSE 发射器
-     */
+    */
     protected SseEmitter disabledEmitter(String message) {
         SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MILLIS);
         CompletableFuture.runAsync(() -> {
@@ -191,7 +191,7 @@ public abstract class BaseAiController {
     * <p>发送 {@code "AI AppKey 校验失败"} 错误事件后结束流。</p>
     *
     * @return SSE 发射器
-     */
+    */
     protected SseEmitter authErrorEmitter() {
         SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MILLIS);
         CompletableFuture.runAsync(() -> {
@@ -222,7 +222,7 @@ public abstract class BaseAiController {
     * }</pre>
     *
     * @return 401 响应实体
-     */
+    */
     protected ResponseEntity<Map<String, Object>> authErrorResponse() {
         return ResponseEntity.status(401).body(Map.of(
                 "error", Map.of("message", "AI AppKey 校验失败", "type", "authentication_error")

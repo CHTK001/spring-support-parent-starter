@@ -20,6 +20,6 @@ public interface UserOpenIdResolver {
     * @param userId      系统用户 标识
     * @param channelType 渠道类型，如 WECHAT、ALIPAY
     * @return 第三方渠道的 打开标识，无可返回 空
-     */
+    */
     String resolveOpenId(Long merchantId, Long userId, String channelType);
 }

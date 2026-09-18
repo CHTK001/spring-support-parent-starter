@@ -15,7 +15,7 @@ public class AliyunAlipayNotifyRequest {
 
     /**
     * 回调请求参数
-     */
+    */
     private Map<String, String> params;
 }
 

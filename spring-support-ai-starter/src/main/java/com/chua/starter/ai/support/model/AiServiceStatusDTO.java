@@ -18,28 +18,28 @@ public class AiServiceStatusDTO implements Serializable {
 
     /**
     * 服务名称
-     */
+    */
     @Schema(description = "服务名称")
     /** 名称 */
     private String name;
 
     /**
     * 是否运行中
-     */
+    */
     @Schema(description = "是否运行中")
     /** Running */
     private Boolean running;
 
     /**
     * 进程 PID
-     */
+    */
     @Schema(description = "进程 PID")
     /** PID */
     private Long pid;
 
     /**
     * 运行时长(秒)
-     */
+    */
     @Schema(description = "运行时长(秒)")
     /** Uptime */
     private Long uptime;

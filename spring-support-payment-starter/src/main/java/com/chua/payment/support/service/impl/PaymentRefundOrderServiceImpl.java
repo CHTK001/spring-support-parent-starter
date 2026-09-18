@@ -55,14 +55,14 @@ public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService 
     * @param requestPayload 请求payload
     * @param dto dto
     * @return 创建退税订单的结果
-     */
+    */
     public PaymentRefundOrder createRefundOrder(CreateRefundOrderDTO dto) {
         if (dto.order() == null || dto.order().getId() == null) {
             /**
             * 薪酬异常。
             * @param "退款订单不存在" "退款订单不存在"
             * @return 薪酬异常的结果
-             */
+            */
             throw new PaymentException("退款订单不存在");
         }
         if (!StringUtils.hasText(dto.refundNo())) {
@@ -70,7 +70,7 @@ public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService 
             * 薪酬异常。
             * @param "退款单号不能为空" "退款单号不能为空"
             * @return 薪酬异常的结果
-             */
+            */
             throw new PaymentException("退款单号不能为空");
         }
         PaymentRefundOrder entity = new PaymentRefundOrder();
@@ -97,10 +97,10 @@ public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService 
         PaymentRefundOrder entity = paymentRefundOrderMapper.selectById(id);
         if (entity == null) {
             /**
-            * 薪酬异常。
-            * @param "退款单不存在" "退款单不存在"
-            * @return 薪酬异常的结果
-             */
+    * 薪酬异常。
+    * @param "退款单不存在" "退款单不存在"
+    * @return 薪酬异常的结果
+    */
             throw new PaymentException("退款单不存在");
         }
         return entity;
@@ -138,10 +138,10 @@ public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService 
     public Page<RefundOrderVO> page(RefundOrderQueryRequest request) {
         if (request == null) {
             /**
-            * 薪酬异常。
-            * @param "查询参数不能为空" "查询参数不能为空"
-            * @return 薪酬异常的结果
-             */
+    * 薪酬异常。
+    * @param "查询参数不能为空" "查询参数不能为空"
+    * @return 薪酬异常的结果
+    */
             throw new PaymentException("查询参数不能为空");
         }
         Page<PaymentRefundOrder> page = new Page<>(request.pageNum(), request.pageSize());
@@ -228,7 +228,7 @@ public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService 
     * @param thirdPartyRefundNo thirdparty退税no
     * @param responsePayload 响应payload
     * @param remark 评论
-     */
+    */
     public PaymentRefundOrder markProcessing(String refundNo,
                                              String thirdPartyRefundNo,
                                              String responsePayload,
@@ -260,7 +260,7 @@ public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService 
     * @param remark 评论
     * @param dto dto
     * @return mark退税的结果
-     */
+    */
     public PaymentRefundOrder markRefunded(MarkRefundedDTO dto) {
         PaymentRefundOrder entity = requireRefundOrder(dto.refundNo());
         entity.setStatus(RefundOrderStatus.REFUNDED.name());
@@ -292,7 +292,7 @@ public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService 
     * @param responsePayload 响应payload
     * @param operator 操作符
     * @param remark 评论
-     */
+    */
     public PaymentRefundOrder markFailed(String refundNo,
                                          String responsePayload,
                                          String operator,
@@ -317,7 +317,7 @@ public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService 
     *
     * @param refundNo 退税no
     * @return require退税订单的结果
-     */
+    */
     private PaymentRefundOrder requireRefundOrder(String refundNo) {
         PaymentRefundOrder entity = getByRefundNo(refundNo);
         if (entity == null) {
@@ -325,7 +325,7 @@ public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService 
             * 薪酬异常。
             * @param refundNo 退税no
             * @return 薪酬异常的结果
-             */
+            */
             throw new PaymentException("退款单不存在: " + refundNo);
         }
         return entity;
@@ -336,7 +336,7 @@ public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService 
     *
     * @param entity 实体
     * @return 转换转为vo的结果
-     */
+    */
     private RefundOrderVO convertToVO(PaymentRefundOrder entity) {
         RefundOrderVO vo = new RefundOrderVO();
         BeanUtils.copyProperties(entity, vo);

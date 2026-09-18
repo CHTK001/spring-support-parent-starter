@@ -44,7 +44,7 @@ public @interface ApiMock {
     * </p>
     *
     * @return 环境列表，默认 dev
-     */
+    */
     String[] profile() default {"dev"};
 
     /**
@@ -54,7 +54,7 @@ public @interface ApiMock {
     * </p>
     *
     * @return 文件路径
-     */
+    */
     String responseFile() default "";
 
     /**
@@ -64,21 +64,21 @@ public @interface ApiMock {
     * </p>
     *
     * @return JSON 响应内容
-     */
+    */
     String response() default "";
 
     /**
     * 响应状态码
     *
     * @return HTTP 状态码
-     */
+    */
     int status() default 200;
 
     /**
     * 响应 内容-类型
     *
     * @return Content-Type
-     */
+    */
     String contentType() default "application/json;charset=UTF-8";
 
     /**
@@ -88,13 +88,13 @@ public @interface ApiMock {
     * </p>
     *
     * @return 延迟毫秒数
-     */
+    */
     long delay() default 0;
 
     /**
     * Mock 描述
     *
     * @return 描述信息
-     */
+    */
     String description() default "";
 }

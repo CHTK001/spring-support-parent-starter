@@ -23,19 +23,19 @@ public class BotGlobalSettingProvider implements GlobalSettingProvider {
 
     /**
     * 配置分组标识
-     */
+    */
     private static final String GROUP = "bot";
 
     /**
     * 分组显示名称
-     */
+    */
     private static final String GROUP_NAME = "Bot";
 
     /**
     * 配置分组标识。
     *
     * @return bot
-     */
+    */
     @Override
     public String group() {
         return GROUP;
@@ -45,7 +45,7 @@ public class BotGlobalSettingProvider implements GlobalSettingProvider {
     * 配置分组显示名称。
     *
     * @return Bot
-     */
+    */
     @Override
     public String groupName() {
         return GROUP_NAME;
@@ -55,7 +55,7 @@ public class BotGlobalSettingProvider implements GlobalSettingProvider {
     * 机器人 模块全部配置项。
     *
     * @return 配置项列表
-     */
+    */
     @Override
     public List<SettingItem> getItems() {
         return List.of(

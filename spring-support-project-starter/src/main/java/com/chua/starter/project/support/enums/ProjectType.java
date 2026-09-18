@@ -16,7 +16,7 @@ public enum ProjectType {
     *
     * @param "springboot单体jar" "springboot单体jar"
     * @return SPRINGBOOT_MONO的结果
-     */
+    */
     SPRINGBOOT_MONO("springboot单体jar"),
 
     /**
@@ -24,7 +24,7 @@ public enum ProjectType {
     *
     * @param war包" war包"
     * @return SPRINGBOOT_WAR的结果
-     */
+    */
     SPRINGBOOT_WAR("springboot war包"),
 
     /**
@@ -32,7 +32,7 @@ public enum ProjectType {
     *
     * @param "前后端分离" "前后端分离"
     * @return springboot分割的结果
-     */
+    */
     SPRINGBOOT_SPLIT("前后端分离"),
 
     /**
@@ -40,7 +40,7 @@ public enum ProjectType {
     *
     * @param "nodejs" "nodejs"
     * @return NODEJS的结果
-     */
+    */
     NODEJS("nodejs"),
 
     /**
@@ -48,7 +48,7 @@ public enum ProjectType {
     *
     * @param "静态资源" "静态资源"
     * @return 静态的结果
-     */
+    */
     STATIC("静态资源"),
 
     /**
@@ -56,7 +56,7 @@ public enum ProjectType {
     *
     * @param "自定义" "自定义"
     * @return 习俗的结果
-     */
+    */
     CUSTOM("自定义");
 
     /** 描述 */
@@ -65,7 +65,7 @@ public enum ProjectType {
     /**
     * project类型。
     * @param desc desc
-     */
+    */
     ProjectType(String desc) {
         this.desc = desc;
     }
@@ -74,7 +74,7 @@ public enum ProjectType {
     * 描述
     *
     * @return 描述
-     */
+    */
     public String desc() {
         return desc;
     }

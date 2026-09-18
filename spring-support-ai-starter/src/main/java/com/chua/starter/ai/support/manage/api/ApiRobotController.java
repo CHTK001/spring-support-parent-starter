@@ -42,29 +42,29 @@ public class ApiRobotController {
 
     /**
     * 主键生成与基础存储工具
-     */
+    */
     private final SysAiConversationStore conversationStore;
 
     /**
     * WS 事件推送服务
-     */
+    */
     private final ApiWebSocketPushService pushService;
 
     /**
     * 设备档案：robot_标识 → 设备
-     */
+    */
     private final Map<String, Map<String, Object>> robots = new ConcurrentHashMap<>();
 
     /**
     * 设备状态快照：robot_标识 → 状态
-     */
+    */
     private final Map<String, Map<String, Object>> robotStatus = new ConcurrentHashMap<>();
 
     @GetMapping
     /**
     * 列表。
     * @return 列表的结果
-     */
+    */
     public ApiResult<Map<String, Object>> list() {
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("robots", new ArrayList<>(robots.values()));
@@ -76,7 +76,7 @@ public class ApiRobotController {
     * claim。
     * @param body 主体
     * @return claim的结果
-     */
+    */
     public ApiResult<Map<String, Object>> claim(@RequestBody Map<String, Object> body) {
         String code = (String) body.get("code");
         String companionId = (String) body.get("companion_id");
@@ -86,7 +86,7 @@ public class ApiRobotController {
             * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
             * @param "设备码不能为空" "设备码不能为空"
             * @return api异常的结果
-             */
+            */
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "设备码不能为空");
         }
         String robotId = conversationStore.newId();
@@ -104,7 +104,7 @@ public class ApiRobotController {
         * @param robotId robotid
         * @param companionId companionid
         * @param "claimed" "claimed"
-         */
+        */
         updateStatus(robotId, companionId, "claimed");
         return ApiResult.ok(robot);
     }
@@ -123,7 +123,7 @@ public class ApiRobotController {
             * 更新状态。
             * @param robotId robotid
             * @param companionId.toString( companionid.转为字符串(
-             */
+            */
             updateStatus(robotId, companionId == null ? null : companionId.toString(), "updated");
         }
         return ApiResult.ok(robot);
@@ -134,12 +134,12 @@ public class ApiRobotController {
     * 移除。
     * @param robotId robotid
     * @return 移除的结果
-     */
+    */
     public ApiResult<Void> remove(@PathVariable String robotId) {
         /**
         * requirerobot。
         * @param robotId robotid
-         */
+        */
         requireRobot(robotId);
         robots.remove(robotId);
         robotStatus.remove(robotId);
@@ -150,7 +150,7 @@ public class ApiRobotController {
     /**
     * 状态。
     * @return 状态的结果
-     */
+    */
     public ApiResult<Map<String, Object>> statuses() {
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("statuses", new ArrayList<>(robotStatus.values()));
@@ -161,7 +161,7 @@ public class ApiRobotController {
     /**
     * 端点。
     * @return 端点的结果
-     */
+    */
     public ApiResult<Map<String, Object>> endpoints() {
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("ota_urls", new ArrayList<String>());
@@ -174,7 +174,7 @@ public class ApiRobotController {
     * @param robotId robotid
     * @param companionId companionid
     * @param phase phase
-     */
+    */
     private void updateStatus(String robotId, String companionId, String phase) {
         Map<String, Object> status = robotStatus.computeIfAbsent(robotId, k -> new LinkedHashMap<>());
         status.put("robot_id", robotId);
@@ -188,7 +188,7 @@ public class ApiRobotController {
     * requirerobot。
     * @param robotId robotid
     * @return requireRobot的结果
-     */
+    */
     private Map<String, Object> requireRobot(String robotId) {
         Map<String, Object> robot = robots.get(robotId);
         if (robot == null) {
@@ -197,7 +197,7 @@ public class ApiRobotController {
             * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
             * @param robotId robotid
             * @return api异常的结果
-             */
+            */
             throw new ApiException(ApiErrorCode.NOT_FOUND, "设备不存在: " + robotId);
         }
         return robot;

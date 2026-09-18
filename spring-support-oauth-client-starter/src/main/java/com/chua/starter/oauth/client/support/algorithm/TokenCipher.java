@@ -21,17 +21,17 @@ public final class TokenCipher {
 
     /**
     * SM4 加密密钥，与登录侧保持一致
-     */
+    */
     private static final byte[] KEY = AuthClientExecute.DEFAULT_KEY.getBytes(StandardCharsets.UTF_8);
 
     /**
     * SM4 加密解密器（线程安全、单例初始化）
-     */
+    */
     private static volatile Sm4Cipher SM4;
 
     /**
     * 私有构造函数，防止实例化
-     */
+    */
     private TokenCipher() {
     }
 
@@ -39,7 +39,7 @@ public final class TokenCipher {
     * 获取 SM4 加密解密器
     *
     * @return SM4 加密解密器
-     */
+    */
     private static Sm4Cipher cipher() {
         if (null == SM4) {
             synchronized (TokenCipher.class) {
@@ -56,7 +56,7 @@ public final class TokenCipher {
     *
     * @param userResult 用户信息
     * @return 加密后的 令牌，失败返回 空
-     */
+    */
     public static String encrypt(UserResult userResult) {
         if (null == userResult) {
             return null;
@@ -69,7 +69,7 @@ public final class TokenCipher {
     *
     * @param plainText 明文
     * @return 加密后的 令牌，失败返回 空
-     */
+    */
     public static String encrypt(String plainText) {
         if (null == plainText) {
             return null;
@@ -86,7 +86,7 @@ public final class TokenCipher {
     *
     * @param hexToken 加密后的 令牌
     * @return 解密后的明文，失败返回 空
-     */
+    */
     public static String decrypt(String hexToken) {
         if (null == hexToken || hexToken.isEmpty()) {
             return null;
@@ -96,7 +96,7 @@ public final class TokenCipher {
             * 字符串。
             * @param cipher( cipher(
             * @return 字符串的结果
-             */
+            */
             return new String(cipher().decrypt(KEY, Hex.decodeHex(hexToken)), StandardCharsets.UTF_8);
         } catch (Exception e) {
             return null;
@@ -108,7 +108,7 @@ public final class TokenCipher {
     *
     * @param hexToken 加密后的 令牌
     * @return 用户信息，解密或解析失败返回 空
-     */
+    */
     public static UserResult decryptToUser(String hexToken) {
         String source = decrypt(hexToken);
         if (null == source) {

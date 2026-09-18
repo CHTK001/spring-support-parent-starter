@@ -54,7 +54,7 @@ public class SocketQueueBridge {
     * 监听 套接字:push topic，解析 payload 后广播到所有前端会话
     *
     * @param message 队列消息（payload 为 JSON 字符串）
-     */
+    */
     @QueueListener(TOPIC)
     public void onSocketMessage(Message message) {
         SocketSessionTemplate template = socketTemplateProvider.getIfAvailable();
@@ -85,7 +85,7 @@ public class SocketQueueBridge {
     *
     * @param payload 载荷字符串
     * @return Map 或 空（载荷为空或非法 JSON 时）
-     */
+    */
     @SuppressWarnings("unchecked")
     private Map<String, Object> parsePayload(String payload) {
         if (payload == null || payload.isBlank()) {

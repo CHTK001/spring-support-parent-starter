@@ -47,7 +47,7 @@ public interface UserInfoService {
     * @param address    客户端地址
     * @param ext        扩展参数，可包含额外的登录信息
     * @return 用户认证结果
-     */
+    */
     UserResume checkLogin(String principal, String credential, String address, Object ext);
 
     /**
@@ -56,6 +56,6 @@ public interface UserInfoService {
     *
     * @param userResult 基础用户信息
     * @return 升级后的用户认证结果
-     */
+    */
     UserResume upgrade(UserResult userResult);
 }

@@ -43,7 +43,7 @@ public class UsageAutoConfiguration {
     * @param usageMapper usage映射器
     * @param dailyMapper daily映射器
     * @param pricingService pricing服务
-     */
+    */
     public SysAiUsageService sysAiUsageService(SysAiUsageMapper usageMapper,
                                                SysAiUsageDailyMapper dailyMapper,
                                                SysAiPricingService pricingService,
@@ -55,7 +55,7 @@ public class UsageAutoConfiguration {
         * @param pricingService pricing服务
         * @param iptablesService iptables服务
         * @return sysAIusage服务impl的结果
-         */
+        */
         return new SysAiUsageServiceImpl(usageMapper, dailyMapper, pricingService, iptablesService);
     }
 
@@ -65,7 +65,7 @@ public class UsageAutoConfiguration {
     * sysaipricing服务
     * @param pricingMapper     定价 映射器
     * @param metricsEnrichment AA 模型指标服务（含定价缓存）
-     */
+    */
     public SysAiPricingService sysAiPricingService(SysAiPricingMapper pricingMapper,
                                                    AiModelMetricsEnrichmentService metricsEnrichment) {
         /**
@@ -73,7 +73,7 @@ public class UsageAutoConfiguration {
         * @param pricingMapper pricing映射器
         * @param metricsEnrichment 指标enrichment
         * @return sysAIpricing服务impl的结果
-         */
+        */
         return new SysAiPricingServiceImpl(pricingMapper, metricsEnrichment);
     }
 
@@ -84,13 +84,13 @@ public class UsageAutoConfiguration {
     *
     * @param usageService usage服务
     * @return usagerecorder拦截器的结果
-     */
+    */
     public UsageRecorderInterceptor usageRecorderInterceptor(SysAiUsageService usageService) {
         /**
         * usagerecorder拦截器。
         * @param usageService usage服务
         * @return usagerecorder拦截器的结果
-         */
+        */
         return new UsageRecorderInterceptor(usageService);
     }
 
@@ -103,7 +103,7 @@ public class UsageAutoConfiguration {
     * @param settingReader setting读取
     * @param pricingService pricing服务
     * @param syncLogMapper 用量同步日志 映射器
-     */
+    */
     public UsageAggregationTask usageAggregationTask(SysAiUsageMapper usageMapper,
                                                      SysAiUsageDailyMapper dailyMapper,
                                                      GlobalSettingReader settingReader,
@@ -117,7 +117,7 @@ public class UsageAutoConfiguration {
         * @param pricingService pricing服务
         * @param syncLogMapper 同步日志映射器
         * @return usageaggregation任务的结果
-         */
+        */
         return new UsageAggregationTask(settingReader, usageMapper, dailyMapper, pricingService, syncLogMapper);
     }
 }

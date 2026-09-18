@@ -41,22 +41,22 @@ public class AiManufacturerFacadeServiceImpl implements AiManufacturerFacadeServ
 
     /**
     * HTTP 请求超时时间（秒）
-     */
+    */
     private static final int HTTP_TIMEOUT_SECONDS = 15;
 
     /**
     * 厂商 映射器
-     */
+    */
     private final SysAiManufacturerMapper sysAiManufacturerMapper;
 
     /**
     * 模型 映射器
-     */
+    */
     private final AiModelMapper aiModelMapper;
 
     /**
     * HTTP 客户端
-     */
+    */
     private final HttpClient httpClient = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(HTTP_TIMEOUT_SECONDS))
             .build();
@@ -68,7 +68,7 @@ public class AiManufacturerFacadeServiceImpl implements AiManufacturerFacadeServ
     * 列表
     *
     * @return 列表的结果
-     */
+    */
     public List<SysAiManufacturer> list() {
         return sysAiManufacturerMapper.selectList(null);
     }
@@ -81,7 +81,7 @@ public class AiManufacturerFacadeServiceImpl implements AiManufacturerFacadeServ
     *
     * @param manufacturer manufacturer
     * @return 保存的结果
-     */
+    */
     public SysAiManufacturer save(SysAiManufacturer manufacturer) {
         manufacturer.setStatus(
                 manufacturer.getStatus() == null ? 1 : manufacturer.getStatus());
@@ -101,7 +101,7 @@ public class AiManufacturerFacadeServiceImpl implements AiManufacturerFacadeServ
     *
     * @param manufacturer manufacturer
     * @return 更新的结果
-     */
+    */
     public boolean update(SysAiManufacturer manufacturer) {
         if (manufacturer == null || manufacturer.getId() == null) {
             log.warn("[AiManufacturerFacade] update 失败: ID 为空");
@@ -130,7 +130,7 @@ public class AiManufacturerFacadeServiceImpl implements AiManufacturerFacadeServ
     *
     * @param id 标识
     * @return 删除的结果
-     */
+    */
     public boolean delete(Integer id) {
         return deleteById(id);
     }
@@ -143,7 +143,7 @@ public class AiManufacturerFacadeServiceImpl implements AiManufacturerFacadeServ
     *
     * @param id 标识
     * @return 删除byid的结果
-     */
+    */
     public boolean deleteById(Integer id) {
         if (id == null) {
             return false;
@@ -163,7 +163,7 @@ public class AiManufacturerFacadeServiceImpl implements AiManufacturerFacadeServ
     *
     * @param code 厂商编码
     * @return 同步的模型数量
-     */
+    */
     @Override
     public int syncModels(String code) {
         if (code == null || code.isBlank()) {
@@ -215,7 +215,7 @@ public class AiManufacturerFacadeServiceImpl implements AiManufacturerFacadeServ
     * @param url    模型 接口地址
     * @param apiKey 厂商 API 钥匙（可能为 空）
     * @return 模型 标识 列表
-     */
+    */
     private List<String> fetchModels(String url, String apiKey) {
         try {
             HttpRequest.Builder builder = HttpRequest.newBuilder()
@@ -242,7 +242,7 @@ public class AiManufacturerFacadeServiceImpl implements AiManufacturerFacadeServ
     *
     * @param body 响应体
     * @return 模型 标识 列表
-     */
+    */
     private List<String> parseModelIds(String body) {
         try {
             ObjectMapper mapper = new ObjectMapper();

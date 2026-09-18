@@ -30,7 +30,7 @@ public class AiProtocolServerConfiguration {
     * 收集所有 AI 协议服务器过滤器。
     *
     * @return 过滤器列表
-     */
+    */
     @Bean("aiProtocolServerFilters")
     public List<AiProtocolServerFilter> aiProtocolServerFilters() {
         List<AiProtocolServerFilter> filters = ServiceProvider.of(AiProtocolServerFilter.class).collect();

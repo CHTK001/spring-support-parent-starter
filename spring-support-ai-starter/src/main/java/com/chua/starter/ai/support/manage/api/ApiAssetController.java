@@ -30,7 +30,7 @@ public class ApiAssetController {
     * 返回 Resource/byte[] 会报 "No 转换器 ... preset 内容-类型"。
     * @param request 请求
     * @param response 响应
-     */
+    */
     @GetMapping("/logos/**")
     public void getLogo(jakarta.servlet.http.HttpServletRequest request, jakarta.servlet.http.HttpServletResponse response) throws java.io.IOException {
         String uri = request.getRequestURI();
@@ -60,7 +60,7 @@ public class ApiAssetController {
                     * 写入SVG。
                     * @param response 响应
                     * @param resource.getContentAsByteArray( resource.获取内容asbytearray(
-                     */
+                    */
                     writeSvg(response, resource.getContentAsByteArray());
                     return;
                 }
@@ -80,7 +80,7 @@ public class ApiAssetController {
         * 写入SVG。
         * @param response 响应
         * @param buildDefaultSvg(displayName 构建默认SVG(display名称
-         */
+        */
         writeSvg(response, buildDefaultSvg(displayName).getBytes());
     }
 
@@ -88,7 +88,7 @@ public class ApiAssetController {
     * 写入SVG。
     * @param response 响应
     * @param bytes bytes
-     */
+    */
     private void writeSvg(jakarta.servlet.http.HttpServletResponse response, byte[] bytes) throws java.io.IOException {
         response.setContentType("image/svg+xml");
         response.setContentLength(bytes.length);
@@ -99,7 +99,7 @@ public class ApiAssetController {
     * 构建默认SVG。
     * @param name 名称
     * @return 构建默认SVG的结果
-     */
+    */
     private String buildDefaultSvg(String name) {
         String initial = name.substring(0, Math.min(2, name.length())).toUpperCase();
         // 按名称稳定取色，兜底图标也有可区分的品牌感

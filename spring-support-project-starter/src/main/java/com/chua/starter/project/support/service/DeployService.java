@@ -32,7 +32,7 @@ public interface DeployService {
     * @param action     操作类型 DEPLOY / UPGRADE
     * @param file       部署包文件（压缩/焦油.gz/jar 等）
     * @return 每台主机的部署日志
-     */
+    */
     ReturnResult<List<MsProjectDeployLog>> deploy(Long projectId, String action, MultipartFile file);
 
     /**
@@ -40,7 +40,7 @@ public interface DeployService {
     *
     * @param projectId 项目 标识
     * @return 每台主机的执行日志
-     */
+    */
     ReturnResult<List<MsProjectDeployLog>> start(Long projectId);
 
     /**
@@ -48,7 +48,7 @@ public interface DeployService {
     *
     * @param projectId 项目 标识
     * @return 每台主机的执行日志
-     */
+    */
     ReturnResult<List<MsProjectDeployLog>> stop(Long projectId);
 
     /**
@@ -56,7 +56,7 @@ public interface DeployService {
     *
     * @param projectId 项目 标识
     * @return 每台主机的执行日志
-     */
+    */
     ReturnResult<List<MsProjectDeployLog>> restart(Long projectId);
 
     /**
@@ -65,7 +65,7 @@ public interface DeployService {
     * @param projectId 项目 标识，可为空查询全部
     * @param action    操作类型，可为空
     * @return 日志列表（最新在前，上限 200）
-     */
+    */
     ReturnResult<List<MsProjectDeployLog>> listLogs(Long projectId, String action);
 
     /**
@@ -74,7 +74,7 @@ public interface DeployService {
     * @param projectId 项目 标识
     * @param hostId    主机 标识，可为空
     * @return 归档记录（版本去重后倒序，供回滚选择）
-     */
+    */
     ReturnResult<List<MsProjectUploadArchive>> listArchives(Long projectId, Long hostId);
 
     /**
@@ -87,7 +87,7 @@ public interface DeployService {
     * @param projectId 项目 标识
     * @param archiveId 归档记录 标识（指定版本来源）
     * @return 每台主机的部署日志
-     */
+    */
     ReturnResult<List<MsProjectDeployLog>> rollback(Long projectId, Long archiveId);
 
     /**
@@ -102,6 +102,6 @@ public interface DeployService {
     * @param cursor    上次读取的字节偏移，可为空
     * @param lines     拉取行数，默认 500
     * @return 日志内容（content / Cursor / eof）
-     */
+    */
     ReturnResult<Map<String, Object>> tailLog(Long projectId, Long hostId, Long cursor, Integer lines);
 }

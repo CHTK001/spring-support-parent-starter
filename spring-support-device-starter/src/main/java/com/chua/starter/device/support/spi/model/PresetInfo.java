@@ -13,11 +13,11 @@ public class PresetInfo {
 
     /**
     * 预置位编号
-     */
+    */
     private int presetId;
 
     /**
     * 预置位名称
-     */
+    */
     private String name;
 }

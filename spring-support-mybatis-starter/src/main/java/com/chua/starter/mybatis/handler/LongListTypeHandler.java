@@ -37,7 +37,7 @@ public class LongListTypeHandler extends BaseTypeHandler<List<Long>> {
 
     /**
     * 列表元素分隔符（英文逗号）
-     */
+    */
     private static final String SEPARATOR = ",";
 
     /**
@@ -48,7 +48,7 @@ public class LongListTypeHandler extends BaseTypeHandler<List<Long>> {
     * @param parameter 待写入的 Long 列表，不为 空
     * @param jdbcType  JDBC 类型，本实现固定为 VARCHAR
     * @throws SQLException 当 JDBC 绑定失败时抛出
-     */
+    */
     @Override
     public void setNonNullParameter(PreparedStatement ps,
                                     int i,
@@ -66,7 +66,7 @@ public class LongListTypeHandler extends BaseTypeHandler<List<Long>> {
     * @param columnName 列名
     * @return 解析后的 Long 列表；列为 空 或空字符串时返回空列表
     * @throws SQLException 当 JDBC 读取失败时抛出
-     */
+    */
     @Override
     public List<Long> getNullableResult(ResultSet rs, String columnName) throws SQLException {
         return parseList(rs.getString(columnName));
@@ -79,7 +79,7 @@ public class LongListTypeHandler extends BaseTypeHandler<List<Long>> {
     * @param columnIndex 列下标（从 1 开始）
     * @return 解析后的 Long 列表；列为 空 或空字符串时返回空列表
     * @throws SQLException 当 JDBC 读取失败时抛出
-     */
+    */
     @Override
     public List<Long> getNullableResult(ResultSet rs, int columnIndex) throws SQLException {
         return parseList(rs.getString(columnIndex));
@@ -92,7 +92,7 @@ public class LongListTypeHandler extends BaseTypeHandler<List<Long>> {
     * @param columnIndex 列下标（从 1 开始）
     * @return 解析后的 Long 列表；列为 空 或空字符串时返回空列表
     * @throws SQLException 当 JDBC 读取失败时抛出
-     */
+    */
     @Override
     public List<Long> getNullableResult(CallableStatement cs, int columnIndex) throws SQLException {
         return parseList(cs.getString(columnIndex));
@@ -103,7 +103,7 @@ public class LongListTypeHandler extends BaseTypeHandler<List<Long>> {
     *
     * @param value 待解析的字符串，可能为 空 或空
     * @return 解析后的 Long 列表；非法元素被忽略；空入参返回空列表
-     */
+    */
     private List<Long> parseList(String value) {
         if (StringUtils.isEmpty(value)) {
             return Collections.emptyList();

@@ -26,7 +26,7 @@ public class SpringGlueFactory extends GlueFactory{
     * inject服务
     *
     * @param instance instance
-     */
+    */
     public void injectService(Object instance) {
         if (instance != null) {
             ApplicationContext applicationContext = SpringBeanUtils.getApplicationContext();

@@ -29,23 +29,23 @@ public class CalciteDataSourceProperties {
 
     /**
     * 是否启用Calcite数据源合并
-     */
+    */
     private boolean enabled = false;
 
     /**
     * 连接池最大大小
-     */
+    */
     private int maxPoolSize = 10;
 
     /**
     * 模式名称映射
     * 钥匙: 原数据源名称
     * 价值观: Calcite中的模式名称
-     */
+    */
     private Map<String, String> schemaMapping;
 
     /**
     * 默认模式名称
-     */
+    */
     private String defaultSchema;
 }

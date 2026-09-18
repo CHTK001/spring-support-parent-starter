@@ -17,7 +17,7 @@ public interface DataService {
     * @param name  原始文件名
     * @return 保存后的文件路径
     * @throws Exception 保存失败
-     */
+    */
     String saveUploadedFile(byte[] data, String name) throws Exception;
 
     /**
@@ -26,7 +26,7 @@ public interface DataService {
     * @param zipFilePath 压缩 文件路径
     * @return 解压后的数据根目录路径
     * @throws Exception 解压失败
-     */
+    */
     String unzip(String zipFilePath) throws Exception;
 
     /**
@@ -34,6 +34,6 @@ public interface DataService {
     *
     * @param fileName 文件名
     * @return 是否 压缩
-     */
+    */
     boolean isZipFile(String fileName);
 }

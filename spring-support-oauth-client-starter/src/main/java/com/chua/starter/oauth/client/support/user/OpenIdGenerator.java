@@ -86,22 +86,22 @@ public final class OpenIdGenerator {
 
     /**
     * 打开标识 前缀
-     */
+    */
     private static final String OPEN_ID_PREFIX = "o_";
 
     /**
     * unionid 前缀
-     */
+    */
     private static final String UNION_ID_PREFIX = "u_";
 
     /**
     * 默认盐值
-     */
+    */
     private static final String DEFAULT_SALT = "oauth_salt_2025";
 
     /**
     * 打开标识生成器。
-     */
+    */
     private OpenIdGenerator() {
         // 工具类禁止实例化
     }
@@ -117,7 +117,7 @@ public final class OpenIdGenerator {
     * @param appId    应用标识（如：wx123456, app_001）
     * @param userId   用户唯一标识（如：数据库主键、手机号等）
     * @return OpenID，格式：o_{32位MD5}
-     */
+    */
     public static String generateOpenId(String platform, String appId, String userId) {
         if (StringUtils.isAnyBlank(platform, appId, userId)) {
             return null;
@@ -137,7 +137,7 @@ public final class OpenIdGenerator {
     * @param platformKey 平台密钥（开放平台的唯一标识，同一开放平台下所有应用共享）
     * @param userId      用户唯一标识（如：数据库主键、手机号等）
     * @return UnionID，格式：u_{32位MD5}
-     */
+    */
     public static String generateUnionId(String platform, String platformKey, String userId) {
         if (StringUtils.isAnyBlank(platform, platformKey, userId)) {
             return null;
@@ -155,7 +155,7 @@ public final class OpenIdGenerator {
     * @param platform 平台标识
     * @param userId   用户唯一标识
     * @return OpenID
-     */
+    */
     public static String generateOpenId(String platform, String userId) {
         return generateOpenId(platform, platform, userId);
     }
@@ -169,7 +169,7 @@ public final class OpenIdGenerator {
     * @param platform 平台标识
     * @param userId   用户唯一标识
     * @return UnionID
-     */
+    */
     public static String generateUnionId(String platform, String userId) {
         return generateUnionId(platform, platform, userId);
     }
@@ -182,7 +182,7 @@ public final class OpenIdGenerator {
     *
     * @param userId 用户标识
     * @return 包含 打开标识 和 unionid 的数组 [打开标识, unionid]
-     */
+    */
     public static String[] generateSystemIds(String userId) {
         return generateSystemIds("system", userId);
     }
@@ -193,7 +193,7 @@ public final class OpenIdGenerator {
     * @param appId  应用标识
     * @param userId 用户标识
     * @return 包含 打开标识 和 unionid 的数组 [打开标识, unionid]
-     */
+    */
     public static String[] generateSystemIds(String appId, String userId) {
         String openId = generateOpenId("system", appId, userId);
         String unionId = generateUnionId("system", "default", userId);
@@ -205,7 +205,7 @@ public final class OpenIdGenerator {
     *
     * @param openId 打开标识
     * @return 是否有效
-     */
+    */
     public static boolean isValidOpenId(String openId) {
         return StringUtils.isNotBlank(openId) && openId.startsWith(OPEN_ID_PREFIX) && openId.length() == 34;
     }
@@ -215,7 +215,7 @@ public final class OpenIdGenerator {
     *
     * @param unionId unionid
     * @return 是否有效
-     */
+    */
     public static boolean isValidUnionId(String unionId) {
         return StringUtils.isNotBlank(unionId) && unionId.startsWith(UNION_ID_PREFIX) && unionId.length() == 34;
     }
@@ -224,7 +224,7 @@ public final class OpenIdGenerator {
     * 平台枚举
     * @author CH
     * @since 4.0.0
-     */
+    */
     public static class Platform {
         /** 微信 */
         /** Wechat */
@@ -255,7 +255,7 @@ public final class OpenIdGenerator {
 
         /**
         * Platform。
-         */
+        */
         private Platform() {
         }
     }

@@ -24,7 +24,7 @@ public class RelationData implements Serializable {
     /**
     * 获取节点。
     * @return 获取节点的结果
-     */
+    */
     public List<Node> getNodes() {
         return nodes;
     }
@@ -32,7 +32,7 @@ public class RelationData implements Serializable {
     /**
     * 设置节点。
     * @param nodes 节点
-     */
+    */
     public void setNodes(List<Node> nodes) {
         this.nodes = nodes;
     }
@@ -40,7 +40,7 @@ public class RelationData implements Serializable {
     /**
     * 获取链接。
     * @return 获取链接的结果
-     */
+    */
     public List<Link> getLinks() {
         return links;
     }
@@ -48,7 +48,7 @@ public class RelationData implements Serializable {
     /**
     * 设置链接。
     * @param links 链接
-     */
+    */
     public void setLinks(List<Link> links) {
         this.links = links;
     }
@@ -58,7 +58,7 @@ public class RelationData implements Serializable {
     *
     * @author CH
     * @since 4.0.0
-     */
+    */
     public static class Node implements Serializable {
         private static final long serialVersionUID = 1L; // 串行版本uid
         /** 标识 */
@@ -70,7 +70,7 @@ public class RelationData implements Serializable {
         * 节点。
         * @param id 标识
         * @param name 名称
-         */
+        */
         public Node(String id, String name) {
             this.id = id;
             this.name = name;
@@ -79,7 +79,7 @@ public class RelationData implements Serializable {
         /**
         * 获取标识。
         * @return 获取id的结果
-         */
+        */
         public String getId() {
             return id;
         }
@@ -87,7 +87,7 @@ public class RelationData implements Serializable {
         /**
         * 设置标识。
         * @param id 标识
-         */
+        */
         public void setId(String id) {
             this.id = id;
         }
@@ -95,7 +95,7 @@ public class RelationData implements Serializable {
         /**
         * 获取名称。
         * @return 获取名称的结果
-         */
+        */
         public String getName() {
             return name;
         }
@@ -103,7 +103,7 @@ public class RelationData implements Serializable {
         /**
         * 设置名称。
         * @param name 名称
-         */
+        */
         public void setName(String name) {
             this.name = name;
         }
@@ -114,7 +114,7 @@ public class RelationData implements Serializable {
     *
     * @author CH
     * @since 4.0.0
-     */
+    */
     public static class Link implements Serializable {
         private static final long serialVersionUID = 1L; // 串行版本uid
         /** 来源 */
@@ -126,7 +126,7 @@ public class RelationData implements Serializable {
         * 链接。
         * @param source 源
         * @param target Target
-         */
+        */
         public Link(String source, String target) {
             this.source = source;
             this.target = target;
@@ -135,7 +135,7 @@ public class RelationData implements Serializable {
         /**
         * 获取源。
         * @return 获取源的结果
-         */
+        */
         public String getSource() {
             return source;
         }
@@ -143,7 +143,7 @@ public class RelationData implements Serializable {
         /**
         * 设置源。
         * @param source 源
-         */
+        */
         public void setSource(String source) {
             this.source = source;
         }
@@ -151,7 +151,7 @@ public class RelationData implements Serializable {
         /**
         * 获取Target。
         * @return 获取Target的结果
-         */
+        */
         public String getTarget() {
             return target;
         }
@@ -159,7 +159,7 @@ public class RelationData implements Serializable {
         /**
         * 设置Target。
         * @param target Target
-         */
+        */
         public void setTarget(String target) {
             this.target = target;
         }

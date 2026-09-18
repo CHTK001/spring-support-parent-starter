@@ -48,14 +48,14 @@ public class LogConfiguration {
     * 构造函数
     *
     * @param logProperties 日志属性
-     */
+    */
     public LogConfiguration(LogProperties logProperties) {
         this.logProperties = logProperties;
     }
 
     /**
     * 注册日志配置到全局环境
-     */
+    */
     @PostConstruct
     public void registerEnvironment() {
         new ModuleEnvironmentRegistration("plugin.log", logProperties, logProperties.isEnable());
@@ -76,7 +76,7 @@ public class LogConfiguration {
     *
     * @param applicationContext Spring 应用上下文
     * @return FilterRegistrationBean 过滤器注册 Bean
-     */
+    */
     @Bean
     @ConditionalOnMissingBean(name = "parameterLogFilterRegistration")
     @ConditionalOnProperty(name = "plugin.log.enable", havingValue = "true", matchIfMissing = false)
@@ -104,7 +104,7 @@ public class LogConfiguration {
     * 注册为全局过滤器, 订单 为 {@link Integer#MIN_VALUE} (过滤链最前), 永久开启无需配置。</p>
     *
     * @return ServiceInfoContributor
-     */
+    */
     @Bean
     public ServiceInfoContributor logServiceInfoContributor() {
         return registry -> {

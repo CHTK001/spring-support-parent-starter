@@ -14,7 +14,7 @@ public interface AiGlobalSettingService {
     * 获取全局设置。
     *
     * @return 全局设置 DTO
-     */
+    */
     AiGlobalSettingDTO get();
 
     /**
@@ -22,6 +22,6 @@ public interface AiGlobalSettingService {
     *
     * @param setting 全局设置 DTO
     * @return 更新后的全局设置 DTO
-     */
+    */
     AiGlobalSettingDTO update(AiGlobalSettingDTO setting);
 }

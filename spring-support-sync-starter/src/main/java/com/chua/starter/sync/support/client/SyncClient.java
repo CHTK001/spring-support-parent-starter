@@ -21,7 +21,7 @@ public interface SyncClient extends com.chua.common.support.network.sync.SyncCli
     * 批量订阅主题。
     *
     * @param topics 主题列表
-     */
+    */
     void subscribe(String... topics);
 
     /**
@@ -29,7 +29,7 @@ public interface SyncClient extends com.chua.common.support.network.sync.SyncCli
     *
     * @param topic   主题
     * @param handler 处理器
-     */
+    */
     void registerHandler(String topic, SyncMessageHandler handler);
 
     /**
@@ -37,6 +37,6 @@ public interface SyncClient extends com.chua.common.support.network.sync.SyncCli
     *
     * @param topic 主题
     * @param data  数据
-     */
+    */
     void publish(String topic, Map<String, Object> data);
 }

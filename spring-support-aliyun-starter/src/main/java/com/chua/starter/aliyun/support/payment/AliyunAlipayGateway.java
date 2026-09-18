@@ -23,7 +23,7 @@ public interface AliyunAlipayGateway {
     * @param properties 属性
     * @param request 请求
     * @return page薪酬的结果
-     */
+    */
     AliyunAlipayPayResponse pagePay(AliyunAlipayProperties properties, AliyunAlipayPayRequest request);
 
     /**
@@ -31,7 +31,7 @@ public interface AliyunAlipayGateway {
     * @param properties 属性
     * @param request 请求
     * @return wap薪酬的结果
-     */
+    */
     AliyunAlipayPayResponse wapPay(AliyunAlipayProperties properties, AliyunAlipayPayRequest request);
 
     /**
@@ -39,7 +39,7 @@ public interface AliyunAlipayGateway {
     * @param properties 属性
     * @param orderNo 订单no
     * @return 查询订单的结果
-     */
+    */
     AliyunAlipayTradeQueryResponse queryOrder(AliyunAlipayProperties properties, String orderNo);
 
     /**
@@ -47,7 +47,7 @@ public interface AliyunAlipayGateway {
     * @param properties 属性
     * @param orderNo 订单no
     * @return 关闭订单的结果
-     */
+    */
     boolean closeOrder(AliyunAlipayProperties properties, String orderNo);
 
     /**
@@ -55,7 +55,7 @@ public interface AliyunAlipayGateway {
     * @param properties 属性
     * @param request 请求
     * @return 退税的结果
-     */
+    */
     AliyunAlipayRefundResponse refund(AliyunAlipayProperties properties, AliyunAlipayRefundRequest request);
 
     /**
@@ -63,7 +63,7 @@ public interface AliyunAlipayGateway {
     * @param properties 属性
     * @param request 请求
     * @return 查询退税的结果
-     */
+    */
     AliyunAlipayRefundResponse queryRefund(AliyunAlipayProperties properties, AliyunAlipayRefundRequest request);
 
     AliyunAlipayPayNotifyPayload verifyAndParsePayNotify(AliyunAlipayProperties properties,
@@ -74,7 +74,7 @@ public interface AliyunAlipayGateway {
     * @param properties 属性
     * @param request 请求
     * @return app薪酬的结果
-     */
+    */
     AliyunAlipayPayResponse appPay(AliyunAlipayProperties properties, AliyunAlipayPayRequest request);
 
     /**
@@ -83,7 +83,7 @@ public interface AliyunAlipayGateway {
     * @param properties 支付宝配置
     * @param request    转账请求
     * @return 转账结果
-     */
+    */
     AliyunAlipayTransferResponse transfer(AliyunAlipayProperties properties, AliyunAlipayTransferRequest request);
 }
 

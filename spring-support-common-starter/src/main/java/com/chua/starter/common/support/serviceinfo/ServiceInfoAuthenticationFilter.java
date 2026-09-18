@@ -51,7 +51,7 @@ public class ServiceInfoAuthenticationFilter implements Filter {
     /**
     * 创建 服务信息认证过滤器 实例
     * @param properties 属性
-     */
+    */
     public ServiceInfoAuthenticationFilter(ServiceInfoProperties properties) {
         this.properties = properties;
     }
@@ -89,7 +89,7 @@ public class ServiceInfoAuthenticationFilter implements Filter {
     *
     * @param request 请求
     * @return 检查basic认证的结果
-     */
+    */
     private boolean checkBasicAuth(HttpServletRequest request) {
         String authHeader = request.getHeader(AUTHORIZATION);
         if (authHeader == null || !authHeader.startsWith(BASIC)) {
@@ -114,7 +114,7 @@ public class ServiceInfoAuthenticationFilter implements Filter {
     *
     * @param ip ip
     * @return 是否ipwhitelisted的结果
-     */
+    */
     private boolean isIpWhitelisted(String ip) {
         Set<String> whitelist = properties.getAuthIpWhitelist();
         if (whitelist == null || whitelist.isEmpty() || ip == null) {
@@ -128,7 +128,7 @@ public class ServiceInfoAuthenticationFilter implements Filter {
     *
     * @param request 请求
     * @return resolve客户端ip的结果
-     */
+    */
     private String resolveClientIp(HttpServletRequest request) {
         String forwarded = request.getHeader("X-Forwarded-For");
         if (forwarded != null && !forwarded.isBlank()) {

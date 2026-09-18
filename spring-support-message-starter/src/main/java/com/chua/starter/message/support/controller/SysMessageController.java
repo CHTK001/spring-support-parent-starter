@@ -59,7 +59,7 @@ public class SysMessageController {
     * @param page     页码
     * @param pageSize 每页条数
     * @return 分页结果
-     */
+    */
     @Operation(summary = "提供商分页查询")
     @GetMapping("/provider/page")
     @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
@@ -73,7 +73,7 @@ public class SysMessageController {
     * 提供商列表查询
     *
     * @return 提供商列表
-     */
+    */
     @Operation(summary = "提供商列表查询")
     @GetMapping("/provider/list")
     @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
@@ -88,7 +88,7 @@ public class SysMessageController {
     * </p>
     *
     * @return 渠道信息列表
-     */
+    */
     @Operation(summary = "已注册消息渠道列表")
     @GetMapping("/channel/list")
     @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
@@ -101,7 +101,7 @@ public class SysMessageController {
     *
     * @param provider 提供商信息
     * @return 保存结果
-     */
+    */
     @Operation(summary = "新增提供商")
     @PostMapping("/provider/save")
     @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
@@ -114,7 +114,7 @@ public class SysMessageController {
     *
     * @param provider 提供商信息
     * @return 更新结果
-     */
+    */
     @Operation(summary = "更新提供商")
     @PutMapping("/provider/update")
     @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
@@ -127,7 +127,7 @@ public class SysMessageController {
     *
     * @param providerId 提供商标识
     * @return 删除结果
-     */
+    */
     @Operation(summary = "删除提供商")
     @DeleteMapping("/provider/delete")
     @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
@@ -142,7 +142,7 @@ public class SysMessageController {
     * @param page     页码
     * @param pageSize 每页条数
     * @return 分页结果
-     */
+    */
     @Operation(summary = "模板分页查询")
     @GetMapping("/template/page")
     @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
@@ -156,7 +156,7 @@ public class SysMessageController {
     * 模板列表查询
     *
     * @return 模板列表
-     */
+    */
     @Operation(summary = "模板列表查询")
     @GetMapping("/template/list")
     @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
@@ -169,7 +169,7 @@ public class SysMessageController {
     *
     * @param template 模板信息
     * @return 保存结果
-     */
+    */
     @Operation(summary = "新增模板")
     @PostMapping("/template/save")
     @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
@@ -182,7 +182,7 @@ public class SysMessageController {
     *
     * @param template 模板信息
     * @return 更新结果
-     */
+    */
     @Operation(summary = "更新模板")
     @PutMapping("/template/update")
     @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
@@ -195,7 +195,7 @@ public class SysMessageController {
     *
     * @param templateId 模板标识
     * @return 删除结果
-     */
+    */
     @Operation(summary = "删除模板")
     @DeleteMapping("/template/delete")
     @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
@@ -208,7 +208,7 @@ public class SysMessageController {
     *
     * @param request 发送请求
     * @return 发送结果
-     */
+    */
     @Operation(summary = "按模板发送消息")
     @PostMapping("/send")
     @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
@@ -221,7 +221,7 @@ public class SysMessageController {
     *
     * @param request 按内容发送请求
     * @return 发送结果
-     */
+    */
     @Operation(summary = "按内容发送消息")
     @PostMapping("/send/content")
     @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
@@ -234,7 +234,7 @@ public class SysMessageController {
     *
     * @param providerId 提供商标识
     * @return 同步结果
-     */
+    */
     @Operation(summary = "手动同步模板")
     @PostMapping("/template/sync")
     @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
@@ -247,7 +247,7 @@ public class SysMessageController {
     *
     * @param request 预览请求（模板标识 + 参数）
     * @return 渲染结果
-     */
+    */
     @Operation(summary = "模板内容渲染预览")
     @PostMapping("/template/preview")
     @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
@@ -261,7 +261,7 @@ public class SysMessageController {
     * @param beforeTime 截止时间（ISO 时间串，如 2026-01-01T00:00:00）
     * @return 删除条数
     * @param false false
-     */
+    */
     @Operation(summary = "清理推送日志")
     @PostMapping("/log/clean")
     @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
@@ -276,7 +276,7 @@ public class SysMessageController {
     * @param page     页码
     * @param pageSize 每页条数
     * @return 分页结果
-     */
+    */
     @Operation(summary = "推送日志分页查询")
     @GetMapping("/log/page")
     @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
@@ -296,7 +296,7 @@ public class SysMessageController {
     * @param pageSize 每页条数
     * @return 分页结果
     * @param "1" "1"
-     */
+    */
     @Operation(summary = "当前用户站内消息分页查询")
     @GetMapping("/sys-message/page")
     public ReturnPageResult<SysMessageStationItem> pageForStationMessage(@RequestParam(value = "page", defaultValue = "1") long page,
@@ -308,7 +308,7 @@ public class SysMessageController {
     * 当前用户站内消息未读数
     *
     * @return 未读数
-     */
+    */
     @Operation(summary = "当前用户站内消息未读数")
     @GetMapping("/sys-message/unread-count")
     public ReturnResult<Long> countStationMessageUnread() {
@@ -324,7 +324,7 @@ public class SysMessageController {
     * @param lastId 已读游标（消息标识），可空
     * @return 是否已更新
     * @param false false
-     */
+    */
     @Operation(summary = "当前用户站内消息标记已读")
     @PutMapping("/sys-message/read")
     public ReturnResult<Boolean> markStationMessageRead(@RequestParam(required = false) Integer lastId) {
@@ -340,7 +340,7 @@ public class SysMessageController {
     *
     * @param token 追踪标识
     * @return 1x1 透明 GIF 图片字节
-     */
+    */
     @Operation(summary = "邮件阅读追踪接口")
     @GetMapping(value = "/track/{token}", produces = MediaType.IMAGE_GIF_VALUE)
     public byte[] track(@PathVariable String token) {

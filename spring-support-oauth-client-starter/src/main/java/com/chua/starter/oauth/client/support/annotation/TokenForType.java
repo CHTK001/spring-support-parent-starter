@@ -23,7 +23,7 @@ public @interface TokenForType {
     * 示例: @令牌for类型(价值观 = {认证类型.WEB, 认证类型.令牌})
     *
     * @return 认证类型数组
-     */
+    */
     AuthType[] value() default {};
     
     /**
@@ -32,6 +32,6 @@ public @interface TokenForType {
     * 示例: @令牌for类型(群体 = {"admin", "用户"})
     *
     * @return 分组信息数组
-     */
+    */
     String[] group() default {};
 }

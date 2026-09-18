@@ -27,42 +27,42 @@ public class RateLimitService {
 
     /**
     * 滑动窗口最大键数量，超过后触发清理
-     */
+    */
     private static final int MAX_WINDOW_KEYS = 10000;
 
     /**
     * 窗口键空闲清理时间（毫秒），超过视为可回收
-     */
+    */
     private static final long MAX_KEY_IDLE_MILLIS = 10 * 60 * 1000L;
 
     /**
     * 账号锁定/失败计数最大键数量，超过后触发清理
-     */
+    */
     private static final int MAX_ACCOUNT_KEYS = 10000;
 
     /**
     * 单例实例
-     */
+    */
     private static final RateLimitService INSTANCE = new RateLimitService();
 
     /**
     * IP 滑动窗口计数：钥匙 = "ip:类型"，价值观 = 时间戳队列
-     */
+    */
     private final Map<String, Deque<Long>> ipWindows = new ConcurrentHashMap<>();
 
     /**
     * 账号失败计数：钥匙 = 账号，价值观 = 连续失败次数
-     */
+    */
     private final Map<String, Integer> failCounts = new ConcurrentHashMap<>();
 
     /**
     * 账号锁定截止时间：钥匙 = 账号，价值观 = 解锁时间戳
-     */
+    */
     private final Map<String, Long> lockedUntil = new ConcurrentHashMap<>();
 
     /**
     * 私有构造函数（单例）
-     */
+    */
     private RateLimitService() {
     }
 
@@ -70,7 +70,7 @@ public class RateLimitService {
     * 获取单例实例
     *
     * @return 限流服务实例
-     */
+    */
     public static RateLimitService getInstance() {
         return INSTANCE;
     }
@@ -80,7 +80,7 @@ public class RateLimitService {
     *
     * @param ip 客户端 IP
     * @return true-放行，false-拒绝
-     */
+    */
     public boolean checkApiLimit(String ip) {
         AuthClientProperties.RateLimit.ApiLimit api = getApiLimitConfig();
         if (api == null || !api.isEnable()) {
@@ -94,7 +94,7 @@ public class RateLimitService {
     *
     * @param ip 客户端 IP
     * @return true-放行，false-拒绝
-     */
+    */
     public boolean checkLoginIpLimit(String ip) {
         AuthClientProperties.RateLimit.LoginLimit login = getLoginLimitConfig();
         if (login == null || !login.isEnable()) {
@@ -108,14 +108,14 @@ public class RateLimitService {
     *
     * @param username 账号
     * @return true-已锁定，false-未锁定
-     */
+    */
     public boolean isAccountLocked(String username) {
         if (StringUtils.isBlank(username)) {
             return false;
         }
         /**
         * cleanup账户ifneeded。
-         */
+        */
         cleanupAccountIfNeeded();
         Long until = lockedUntil.get(username);
         if (until == null) {
@@ -134,7 +134,7 @@ public class RateLimitService {
     * 记录一次登录失败，达到阈值后锁定账号
     *
     * @param username 账号
-     */
+    */
     public void recordLoginFailure(String username) {
         if (StringUtils.isBlank(username)) {
             return;
@@ -156,7 +156,7 @@ public class RateLimitService {
     * 登录成功，清除账号失败计数与锁定状态
     *
     * @param username 账号
-     */
+    */
     public void resetAccount(String username) {
         if (StringUtils.isBlank(username)) {
             return;
@@ -172,14 +172,14 @@ public class RateLimitService {
     * @param windowMs 窗口大小（毫秒）
     * @param limit    窗口内上限
     * @return true-放行，false-拒绝
-     */
+    */
     private boolean acquire(String key, long windowMs, int limit) {
         if (limit <= 0) {
             return false;
         }
         /**
         * cleanupifneeded。
-         */
+        */
         cleanupIfNeeded();
         long now = System.currentTimeMillis();
         Deque<Long> queue = ipWindows.computeIfAbsent(key, k -> new ConcurrentLinkedDeque<>());
@@ -198,7 +198,7 @@ public class RateLimitService {
 
     /**
     * 窗口键数量超限时清理长期空闲的键，防止海量随机 IP 导致内存泄漏
-     */
+    */
     private void cleanupIfNeeded() {
         if (ipWindows.size() <= MAX_WINDOW_KEYS) {
             return;
@@ -213,7 +213,7 @@ public class RateLimitService {
 
     /**
     * 账号锁定/失败计数键数量超限时清理已过期的锁定记录，防止长期运行内存缓慢增长
-     */
+    */
     private void cleanupAccountIfNeeded() {
         if (lockedUntil.size() <= MAX_ACCOUNT_KEYS) {
             return;
@@ -229,7 +229,7 @@ public class RateLimitService {
     * 获取全局接口限流配置
     *
     * @return 配置，未启用或未初始化返回 空
-     */
+    */
     private AuthClientProperties.RateLimit.ApiLimit getApiLimitConfig() {
         AuthClientProperties.RateLimit rateLimit = getRateLimitConfig();
         return rateLimit == null ? null : rateLimit.getApi();
@@ -239,7 +239,7 @@ public class RateLimitService {
     * 获取登录限流配置
     *
     * @return 配置，未启用或未初始化返回 空
-     */
+    */
     private AuthClientProperties.RateLimit.LoginLimit getLoginLimitConfig() {
         AuthClientProperties.RateLimit rateLimit = getRateLimitConfig();
         return rateLimit == null ? null : rateLimit.getLogin();
@@ -249,7 +249,7 @@ public class RateLimitService {
     * 获取限流总配置
     *
     * @return 总配置，未启用返回 空
-     */
+    */
     private AuthClientProperties.RateLimit getRateLimitConfig() {
         AuthClientProperties properties = OauthClientRuntimeContext.getAuthClientProperties();
         if (properties == null) {

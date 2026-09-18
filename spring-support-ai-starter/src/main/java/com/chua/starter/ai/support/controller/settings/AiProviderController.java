@@ -20,8 +20,8 @@ import java.util.Map;
 public class AiProviderController {
 
     /**
-     * 获取可添加的供应商模板
-     */
+    * 获取可添加的供应商模板
+    */
     @Operation(summary = "获取可添加的供应商模板")
     @GetMapping("/templates")
     public List<Map<String, Object>> templates() {
@@ -175,8 +175,8 @@ public class AiProviderController {
     }
 
     /**
-     * 获取已添加的供应商列表
-     */
+    * 获取已添加的供应商列表
+    */
     @Operation(summary = "获取已添加的供应商列表")
     @GetMapping
     public List<Map<String, Object>> list() {

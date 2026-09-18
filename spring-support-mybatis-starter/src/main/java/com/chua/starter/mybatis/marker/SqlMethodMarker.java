@@ -18,18 +18,18 @@ public interface SqlMethodMarker extends DisposableBean {
     *
     * @param source 配置
     * @return 解析器
-     */
+    */
     List<AbstractMethod> analysis(String source);
 
     /**
     * 刷新映射器
     *
     * @param name 名称
-     */
+    */
     void refresh(String name);
 
     /**
     * 全部刷新
-     */
+    */
     void refreshAll();
 }

@@ -19,7 +19,7 @@ public class BlurImageFilterProvider implements FileStorageImageFilterProvider {
     * 获取滤镜唯一名称。
     *
     * @return 滤镜名称 BLUR
-     */
+    */
     @Override
     public String getName() {
         return "BLUR";
@@ -29,7 +29,7 @@ public class BlurImageFilterProvider implements FileStorageImageFilterProvider {
     * 获取滤镜展示名。
     *
     * @return 展示名 模糊
-     */
+    */
     @Override
     public String getLabel() {
         return "模糊";
@@ -39,7 +39,7 @@ public class BlurImageFilterProvider implements FileStorageImageFilterProvider {
     * 获取前端应用的 CSS filter 值。
     *
     * @return CSS filter 值 blur(3px)
-     */
+    */
     @Override
     public String getCssFilter() {
         return "blur(3px)";

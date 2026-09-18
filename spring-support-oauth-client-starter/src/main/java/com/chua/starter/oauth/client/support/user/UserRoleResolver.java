@@ -23,6 +23,6 @@ public interface UserRoleResolver {
     * @param userId   用户标识（OAuth /验证 返回的 用户标识）
     * @param username 用户名
     * @return 角色编码集合；无角色或失败时返回 空
-     */
+    */
     Set<String> resolve(String userId, String username);
 }

@@ -41,7 +41,7 @@ public class EduWrongQuestionServiceImpl extends ServiceImpl<EduWrongQuestionMap
     * @param studentId studentid
     * @param questionId questionid
     * @param examId examid
-     */
+    */
     public void recordWrongQuestion(String studentId, Long questionId, Long examId) {
         LambdaQueryWrapper<EduWrongQuestion> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(EduWrongQuestion::getWrongQuestionStudentId, studentId)
@@ -119,7 +119,7 @@ public class EduWrongQuestionServiceImpl extends ServiceImpl<EduWrongQuestionMap
     * @param wrongId wrongid
     * @param masteryLevel mastery水平仪
     * @return 更新mastery的结果
-     */
+    */
     public boolean updateMastery(Long wrongId, Integer masteryLevel) {
         EduWrongQuestion entity = baseMapper.selectById(wrongId);
         if (entity == null) {
@@ -139,7 +139,7 @@ public class EduWrongQuestionServiceImpl extends ServiceImpl<EduWrongQuestionMap
     *
     * @param entity 实体
     * @return 转为vo的结果
-     */
+    */
     private WrongQuestionVO toVO(EduWrongQuestion entity) {
         WrongQuestionVO vo = new WrongQuestionVO();
         vo.setWrongQuestionId(entity.getWrongQuestionId());

@@ -24,7 +24,7 @@ public class RadarChartData implements Serializable {
     /**
     * 获取indicators。
     * @return 获取indicators的结果
-     */
+    */
     public List<String> getIndicators() {
         return indicators;
     }
@@ -32,7 +32,7 @@ public class RadarChartData implements Serializable {
     /**
     * 设置indicators。
     * @param indicators indicators
-     */
+    */
     public void setIndicators(List<String> indicators) {
         this.indicators = indicators;
     }
@@ -40,7 +40,7 @@ public class RadarChartData implements Serializable {
     /**
     * 获取价值观。
     * @return 获取价值观的结果
-     */
+    */
     public List<Number> getValues() {
         return values;
     }
@@ -48,7 +48,7 @@ public class RadarChartData implements Serializable {
     /**
     * 设置价值观。
     * @param values 价值观
-     */
+    */
     public void setValues(List<Number> values) {
         this.values = values;
     }

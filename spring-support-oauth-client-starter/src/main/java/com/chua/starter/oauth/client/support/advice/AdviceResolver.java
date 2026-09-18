@@ -15,7 +15,7 @@ public interface AdviceResolver {
     * 类型
     *
     * @return 类型
-     */
+    */
     String type();
 
     /**
@@ -26,14 +26,14 @@ public interface AdviceResolver {
     * @param message  错误消息
     * @return 结果
     * @throws IOException ex
-     */
+    */
     Object resolve(HttpServletResponse response, Integer status, String message) throws IOException;
 
     /**
     * 是否是HTML
     *
     * @return html
-     */
+    */
     default boolean isHtml() {
         return false;
     }

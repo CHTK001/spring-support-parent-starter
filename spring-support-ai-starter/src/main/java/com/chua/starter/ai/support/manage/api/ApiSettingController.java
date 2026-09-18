@@ -32,7 +32,7 @@ public class ApiSettingController {
     * 默认配置（登录页字段），当前实现返回空列表。
     *
     * @return 空配置项列表
-     */
+    */
     @GetMapping("/default")
     public ApiResult<List<Map<String, Object>>> getDefaultSetting() {
         return ApiResult.ok(List.of());

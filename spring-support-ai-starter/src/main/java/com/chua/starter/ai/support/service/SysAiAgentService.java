@@ -22,7 +22,7 @@ public interface SysAiAgentService {
     * 查询全部主 智能体（含子 智能体）。
     *
     * @return 主 智能体 列表
-     */
+    */
     List<Map<String, Object>> listAgents();
 
     /**
@@ -30,7 +30,7 @@ public interface SysAiAgentService {
     *
     * @param agentId 智能体 标识
     * @return Agent 详情（含子 智能体 列表）
-     */
+    */
     Map<String, Object> getAgent(String agentId);
 
     /**
@@ -38,7 +38,7 @@ public interface SysAiAgentService {
     *
     * @param body 创建请求
     * @return 创建后的 智能体
-     */
+    */
     Map<String, Object> createAgent(Map<String, Object> body);
 
     /**
@@ -47,14 +47,14 @@ public interface SysAiAgentService {
     * @param agentId 智能体 标识
     * @param body    更新请求
     * @return 更新后的 智能体
-     */
+    */
     Map<String, Object> updateAgent(String agentId, Map<String, Object> body);
 
     /**
     * 删除主 智能体（级联删除子 智能体）。
     *
     * @param agentId 智能体 标识
-     */
+    */
     void deleteAgent(String agentId);
 
     /**
@@ -63,7 +63,7 @@ public interface SysAiAgentService {
     * @param agentId 主 智能体 标识
     * @param body    子 智能体 请求
     * @return 创建后的子 智能体
-     */
+    */
     Map<String, Object> createSubAgent(String agentId, Map<String, Object> body);
 
     /**
@@ -73,7 +73,7 @@ public interface SysAiAgentService {
     * @param subId   子 智能体 标识
     * @param body    更新请求
     * @return 更新后的子 智能体
-     */
+    */
     Map<String, Object> updateSubAgent(String agentId, String subId, Map<String, Object> body);
 
     /**
@@ -81,7 +81,7 @@ public interface SysAiAgentService {
     *
     * @param agentId 主 智能体 标识
     * @param subId   子 智能体 标识
-     */
+    */
     void deleteSubAgent(String agentId, String subId);
 
     /**
@@ -90,7 +90,7 @@ public interface SysAiAgentService {
     * @param agentId 智能体 标识
     * @param body    { 节点, edges }
     * @return 保存结果
-     */
+    */
     Map<String, Object> saveOrchestration(String agentId, Map<String, Object> body);
 
     /**
@@ -98,7 +98,7 @@ public interface SysAiAgentService {
     *
     * @param agentId 智能体 标识
     * @return { 节点, edges, mode }
-     */
+    */
     Map<String, Object> getOrchestration(String agentId);
 
     /**
@@ -107,7 +107,7 @@ public interface SysAiAgentService {
     * @param agentId 主 智能体 标识
     * @param input   初始输入
     * @return 各子 Agent 输出与最终汇总输出
-     */
+    */
     Map<String, Object> runOrchestration(String agentId, String input);
 
     /**
@@ -116,14 +116,14 @@ public interface SysAiAgentService {
     * @param agentId   智能体 标识
     * @param modelName 模型名（可选，缺省 {@code agent-<name>}）
     * @return 注册结果
-     */
+    */
     Map<String, Object> registerAsModel(String agentId, String modelName);
 
     /**
     * 取消注册 智能体 模型，从对话注册中心移除。
     *
     * @param agentId 智能体 标识
-     */
+    */
     void unregisterModel(String agentId);
 
     /**
@@ -131,27 +131,27 @@ public interface SysAiAgentService {
     *
     * @param agentId 智能体 标识
     * @return 注册状态（含 模型名称，未注册时 模型_名称 为 空）
-     */
+    */
     Map<String, Object> getRegisteredModelInfo(String agentId);
 
     /**
     * 获取所有已注册的 智能体 模型名称。
     *
     * @return 模型名称集合
-     */
+    */
     Set<String> getRegisteredAgentModelNames();
 
     /**
     * 构建并注册 智能体 到 智能体registry（重建运行时）。
     *
     * @param agent DB 智能体 配置
-     */
+    */
     void rebuildAgent(SysAiAgent agent);
 
     /**
     * 按主 智能体 名从运行时重建（供编排保存后热更新）。
     *
     * @param agentId 智能体 标识
-     */
+    */
     void rebuildAgentById(String agentId);
 }

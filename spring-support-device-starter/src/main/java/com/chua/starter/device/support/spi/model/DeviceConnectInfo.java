@@ -16,56 +16,56 @@ public class DeviceConnectInfo {
 
     /**
     * 厂商标识，例如 hikvision、dahua
-     */
+    */
     private String vendor;
 
     /**
     * 认证类型，可选值：SDK（局域网直连）、PLATFORM（云平台接入）
-     */
+    */
     private String authType;
 
     /**
     * 设备 IP 地址（SDK 模式）
-     */
+    */
     private String ip;
 
     /**
     * 设备端口（SDK 模式）
-     */
+    */
     private Integer port;
 
     /**
     * 用户名（SDK 模式）
-     */
+    */
     private String username;
 
     /**
     * 密码（SDK 模式）
-     */
+    */
     private String password;
 
     /**
     * 平台类型，例如 isup、ezviz、dahua-cloud
-     */
+    */
     private String platformType;
 
     /**
     * 应用 钥匙（平台模式）
-     */
+    */
     private String appKey;
 
     /**
     * 应用密钥（平台模式）
-     */
+    */
     private String appSecret;
 
     /**
     * 设备序列号（平台模式）
-     */
+    */
     private String deviceSerial;
 
     /**
     * 扩展字段
-     */
+    */
     private Map<String, Object> extra;
 }

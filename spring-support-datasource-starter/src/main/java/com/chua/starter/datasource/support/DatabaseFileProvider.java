@@ -54,7 +54,7 @@ public interface DatabaseFileProvider {
     * </p>
     *
     * @return true-支持/启用，false-不支持/禁用
-     */
+    */
     boolean isSupported();
 
     /**
@@ -65,7 +65,7 @@ public interface DatabaseFileProvider {
     * </p>
     *
     * @return 脚本资源列表，不能为null（可返回空列表）
-     */
+    */
     List<Resource> getResources();
 
     /**
@@ -81,7 +81,7 @@ public interface DatabaseFileProvider {
     * </p>
     *
     * @return 优先级值，默认100
-     */
+    */
     default int getOrder() {
         return 100;
     }
@@ -93,7 +93,7 @@ public interface DatabaseFileProvider {
     * </p>
     *
     * @return 提供者名称
-     */
+    */
     default String getName() {
         return this.getClass().getSimpleName();
     }

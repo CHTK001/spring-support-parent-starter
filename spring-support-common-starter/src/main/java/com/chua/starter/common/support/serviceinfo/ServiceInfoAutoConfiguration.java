@@ -55,12 +55,12 @@ public class ServiceInfoAutoConfiguration {
     * 服务信息控制器
     *
     * @return 服务信息控制器的结果
-     */
+    */
     public ServiceInfoController serviceInfoController() {
         /**
         * 服务信息控制器。
         * @return 服务信息控制器的结果
-         */
+        */
         return new ServiceInfoController();
     }
 
@@ -70,10 +70,10 @@ public class ServiceInfoAutoConfiguration {
     public ServiceInfoEndpointDetector serviceInfoEndpointDetector(
             Environment environment, ServiceInfoProperties properties) {
         /**
-        * 服务信息端点detector。
-        * @param environment 环境
-        * @return 服务信息端点detector的结果
-         */
+    * 服务信息端点detector。
+    * @param environment 环境
+    * @return 服务信息端点detector的结果
+    */
         return new ServiceInfoEndpointDetector(environment)
                 .infrastructureEnabled(properties.isInfrastructure());
     }
@@ -83,7 +83,7 @@ public class ServiceInfoAutoConfiguration {
     * 服务信息banner监听器
     * @param detector detector
     * @param properties 属性
-     */
+    */
     public ServiceInfoBannerListener serviceInfoBannerListener(
             ServiceInfoEndpointDetector detector, ServiceInfoProperties properties) {
         /**
@@ -91,7 +91,7 @@ public class ServiceInfoAutoConfiguration {
         * @param detector detector
         * @param properties 属性
         * @return 服务信息banner监听器的结果
-         */
+        */
         return new ServiceInfoBannerListener(detector, properties);
     }
 
@@ -99,7 +99,7 @@ public class ServiceInfoAutoConfiguration {
     * 注册 服务信息 认证过滤器 (可选)。
     *
     * <p>当 {@code plugin.service-info.auth.enable=true} 时注册, 否则不创建。</p>
-     */
+    */
     @Bean
     @ConditionalOnProperty(name = "plugin.service-info.auth.enable", havingValue = "true")
     @ConditionalOnMissingBean(name = "serviceInfoAuthenticationFilterRegistration")
@@ -122,7 +122,7 @@ public class ServiceInfoAutoConfiguration {
     * 公网访问请通过 {@code plugin.service-info.auth.enable=true} 启用认证。</p>
     * @author CH
     * @since 4.0.0
-     */
+    */
     @RestController
     @RequestMapping("/service-info")
     public static class ServiceInfoController {
@@ -131,7 +131,7 @@ public class ServiceInfoAutoConfiguration {
         * 信息
         *
         * @return 信息的结果
-         */
+        */
         public Map<String, Object> info() {
             return ServiceInfoRegistry.getInstance().getInfo();
         }
@@ -146,7 +146,7 @@ public class ServiceInfoAutoConfiguration {
     * <p>由 {@link ServiceInfoBannerListener} 调用, package-private 静态方法,
     * 避免业务 starter 误用。</p>
     * @param registry registry
-     */
+    */
     static void printBanner(ServiceInfoRegistry registry) {
         String banner = ServiceInfoBanner.render(registry);
         if (banner.isEmpty()) {

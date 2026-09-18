@@ -26,7 +26,7 @@ public class PartitionAwareTableFactory {
     /**
     * 创建 分区awaretable工厂 实例
     * @param dataSource 数据源
-     */
+    */
     public PartitionAwareTableFactory(DataSource dataSource) {
         this.dataSource = dataSource;
         this.jdbcTemplate = new JdbcTemplate(dataSource);
@@ -36,7 +36,7 @@ public class PartitionAwareTableFactory {
     * 读取支付分表配置并创建对应的路由表。
     *
     * @return 路由表 映射，钥匙 为源表名（如 薪酬_订单），价值观 为路由表实例
-     */
+    */
     public Map<String, PartitionRoutingTable> buildAllRoutingTables() {
         Map<String, PartitionRoutingTable> result = new java.util.LinkedHashMap<>();
         List<Map<String, Object>> configs = queryPartitionConfigs();
@@ -63,7 +63,7 @@ public class PartitionAwareTableFactory {
     * @param sourceTable      源表名
     * @param partitionPrefix  分区表前缀
     * @return 路由表实例
-     */
+    */
     public PartitionRoutingTable buildRoutingTable(String sourceTable, String partitionPrefix) {
         String cacheKey = sourceTable + "|" + partitionPrefix;
         return cache.computeIfAbsent(cacheKey, key -> {
@@ -77,7 +77,7 @@ public class PartitionAwareTableFactory {
             * @param allTables 全部tables
             * @param jdbcTemplate jdbctemplate
             * @return 分区routingtable的结果
-             */
+            */
             return new PartitionRoutingTable(sourceTable, allTables, jdbcTemplate);
         });
     }
@@ -86,7 +86,7 @@ public class PartitionAwareTableFactory {
     * 刷新指定路由表的分区列表（发现新建的分区表）。
     * @param routingTable routingtable
     * @param partitionPrefix 分区前缀
-     */
+    */
     public void refreshRoutingTable(PartitionRoutingTable routingTable, String partitionPrefix) {
         List<String> discovered = PartitionRoutingService.discoverPartitionTables(
                 jdbcTemplate, partitionPrefix, routingTable.getSourceTable());
@@ -97,7 +97,7 @@ public class PartitionAwareTableFactory {
     * 查询分区配置
     *
     * @return 查询分区配置的结果
-     */
+    */
     private List<Map<String, Object>> queryPartitionConfigs() {
         try {
  // 优先使用 薪酬_分区_配置 表
@@ -113,7 +113,7 @@ public class PartitionAwareTableFactory {
     * 查询从系统tables
     *
     * @return 查询从系统tables的结果
-     */
+    */
     private List<Map<String, Object>> queryFromSystemTables() {
         try {
  // 扫描 信息_模式 中匹配分区模式的所有表
@@ -133,7 +133,7 @@ public class PartitionAwareTableFactory {
     *
     * @param value 价值观
     * @return str的结果
-     */
+    */
     private static String str(Object value) {
         return value instanceof String s ? s : null;
     }

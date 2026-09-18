@@ -21,7 +21,7 @@ public @interface TokenValue {
     * <p>例如: \@TokenValue("userId") String userId</p>
     *
     * @return 参数名称
-     */
+    */
     String value() default "";
 
     /**
@@ -31,7 +31,7 @@ public @interface TokenValue {
     * <p>注意：提供默认值会隐式将{@link #required()}设置为false</p>
     *
     * @return 默认值
-     */
+    */
     String defaultValue() default "";
 
 }

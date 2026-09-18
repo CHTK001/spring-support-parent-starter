@@ -18,6 +18,6 @@ public interface AiModelMapper extends BaseMapper<SysAiModel> {
     * @param providerId 厂商 标识
     * @return 删除的行数
     * @param @Param("providerId" @参数("提供者标识"
-     */
+    */
     int physicalDeleteByProviderId(@Param("providerId") Long providerId);
 }

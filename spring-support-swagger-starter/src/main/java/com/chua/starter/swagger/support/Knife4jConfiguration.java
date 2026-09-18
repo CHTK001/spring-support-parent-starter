@@ -52,7 +52,7 @@ public class Knife4jConfiguration implements BeanDefinitionRegistryPostProcessor
 
     /**
     * 刀4j配置属性
-     */
+    */
     private Knife4jProperties knife4jProperties;
 
     /**
@@ -60,7 +60,7 @@ public class Knife4jConfiguration implements BeanDefinitionRegistryPostProcessor
     *
     * @param registry Bean定义注册表
     * @throws BeansException Bean异常
-     */
+    */
     @Override
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
         List<Knife4jProperties.Knife4j> knife4jList = knife4jProperties.getKnife4j();
@@ -83,7 +83,7 @@ public class Knife4jConfiguration implements BeanDefinitionRegistryPostProcessor
     *
     * @param applicationContext 应用上下文
     * @throws BeansException Bean异常
-     */
+    */
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         knife4jProperties = Binder.get(applicationContext.getEnvironment())
@@ -99,7 +99,7 @@ public class Knife4jConfiguration implements BeanDefinitionRegistryPostProcessor
     * @param webEndpointProperties Web端点属性
     * @param environment 环境变量
     * @return WebMvc端点处理器映射
-     */
+    */
     @Bean
     public WebMvcEndpointHandlerMapping webEndpointServletHandlerMapping(
             WebEndpointsSupplier webEndpointsSupplier,
@@ -129,7 +129,7 @@ public class Knife4jConfiguration implements BeanDefinitionRegistryPostProcessor
     * @param environment 环境变量
     * @param basePath 基础路径
     * @return 是否应该注册
-     */
+    */
     private boolean shouldRegisterLinksMapping(WebEndpointProperties webEndpointProperties, 
                                                Environment environment, 
                                                String basePath) {
@@ -145,13 +145,13 @@ public class Knife4jConfiguration implements BeanDefinitionRegistryPostProcessor
     * {@code ServiceInfoEndpointDetector} 统一探测注册, 此处不再重复注册, 否则横幅会出现两行 doc.html。</p>
     *
     * @return ServiceInfoContributor
-     */
+    */
     @Bean
     /**
     * knifej服务信息contributor
     *
     * @return knife4j服务信息contributor的结果
-     */
+    */
     public ServiceInfoContributor knife4jServiceInfoContributor() {
         return registry -> registry.registerFlag("knife4j", "文档", true, "Knife4j接口文档");
     }

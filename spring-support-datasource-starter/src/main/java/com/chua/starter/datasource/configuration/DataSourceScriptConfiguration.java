@@ -61,17 +61,17 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
 
     /**
     * 已处理的 数据源 Bean 名称集合，避免重复执行
-     */
+    */
     private final Set<String> processedDataSources = Collections.synchronizedSet(new HashSet<>());
     /**
     * 已提示过禁用状态的 数据源 Bean 名称集合，避免重复打印日志
-     */
+    */
     private final Set<String> skippedDataSources = Collections.synchronizedSet(new HashSet<>());
 
     /**
     * 创建 数据源script配置 实例
     * @param dataSourceScriptProperties 数据源script属性
-     */
+    */
     public DataSourceScriptConfiguration(DataSourceScriptProperties dataSourceScriptProperties) {
         this.dataSourceScriptProperties = dataSourceScriptProperties;
     }
@@ -106,11 +106,11 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
                     log.warn("执行数据库脚本失败: {}", beanName, e);
                     if (!dataSourceScriptProperties.isContinueOnError()) {
                         /**
-                        * illegal状态异常。
-                        * @param beanName Bean名称
-                        * @param e e
-                        * @return illegal状态异常的结果
-                         */
+    * illegal状态异常。
+    * @param beanName Bean名称
+    * @param e e
+    * @return illegal状态异常的结果
+    */
                         throw new IllegalStateException("执行数据库脚本失败: " + beanName, e);
                     }
                 }
@@ -127,7 +127,7 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
     * @param ds       数据源
     * @param beanName Bean 名称
     * @return true 表示已由 SPI Flyway 完成迁移
-     */
+    */
     private boolean tryMigrateWithSpiFlyway(DataSource ds, String beanName) {
         try {
             List<Flyway> extensions = ServiceProvider.of(Flyway.class)
@@ -154,7 +154,7 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
     *
     * @param scriptPath 脚本路径配置（可逗号分隔多个 类路径 目录）
     * @return location 列表
-     */
+    */
     private List<String> splitLocations(String scriptPath) {
         if (scriptPath == null || scriptPath.isBlank()) {
             return List.of();
@@ -173,7 +173,7 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
     *
     * @param location 原始 位置
     * @return 目录形式 位置
-     */
+    */
     private String stripWildcard(String location) {
         String result = location.trim();
         if (result.startsWith("classpath*:")) {
@@ -224,7 +224,7 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
     * @版本 1.2.0
     * @since 2025/9/3 9:07
     * @author CH
-     */
+    */
     @Slf4j
     static class FlywayLikePopulator {
 
@@ -240,7 +240,7 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         *
         * @param ds                         数据源对象
         * @param dataSourceScriptProperties 数据源脚本配置属性
-         */
+        */
         FlywayLikePopulator(DataSource ds, DataSourceScriptProperties dataSourceScriptProperties) {
             this.ds = ds;
             this.jdbc = new JdbcTemplate(ds);
@@ -251,7 +251,7 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         * 执行数据库脚本迁移
         *
         * @throws SQLException SQL异常
-         */
+        */
         public void populate() throws SQLException {
             try {
                 DataSourceScriptProperties.ScanMode schemaScanMode = dataSourceScriptProperties.getEffectiveSchemaScanMode();
@@ -287,13 +287,13 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
                 // 1. 创建版本记录表（兼容多种数据库）
                 /**
                 * 创建版本table。
-                 */
+                */
                 createVersionTable();
 
                 // 2. 如果启用基线且表为空，插入基线记录
                 /**
                 * 插入baselineifneeded。
-                 */
+                */
                 insertBaselineIfNeeded();
 
  // 3. 扫描脚本（包括db/初始化、db/migration、db/同步和配置的脚本路径）
@@ -437,7 +437,7 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
                             * @param tablePrefix table前缀
                             * @param fileName 文件名称
                             * @param version 版本
-                             */
+                            */
                             findScriptExecutionRecord(tableName, tablePrefix, fileName, version);
                     if (needsExecution(executionRecord)) {
                         actualScriptsToExecute++;
@@ -470,7 +470,7 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
                                 * @param tablePrefix table前缀
                                 * @param fileName 文件名称
                                 * @param version 版本
-                                 */
+                                */
                                 findScriptExecutionRecord(tableName, tablePrefix, fileName, version);
 
                         if (hasSuccessfulExecution(executionRecord)) {
@@ -480,7 +480,7 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
                             * @param currentChecksum 当前校验和
                             * @param fileName 文件名称
                             * @param version 版本
-                             */
+                            */
                             validateChecksumIfNecessary(executionRecord, currentChecksum, fileName, version);
 
                             if (dataSourceScriptProperties.isVerbose()) {
@@ -515,7 +515,7 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
                             /**
                             * 尝试。
                             * @param ds.getConnection( ds.获取connection(
-                             */
+                            */
                             try (Connection scriptConnection = ds.getConnection()) {
                                 // 禁用自动提交以提高性能
                                 boolean originalAutoCommit = scriptConnection.getAutoCommit();
@@ -606,7 +606,7 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
                                 * @param fileName 文件名称
                                 * @param e e
                                 * @return sql异常的结果
-                                 */
+                                */
                                 throw new SQLException("脚本迁移失败: " + fileName, e);
                             }
                         }
@@ -624,7 +624,7 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
                     * @param initDataScriptsToExecute 初始化数据script转为执行
                     * @param tableName table名称
                     * @param tablePrefix table前缀
-                     */
+                    */
                     executeInitDataScriptsAsync(initDataScriptsToExecute, tableName, tablePrefix);
                 }
             } catch (IOException e) {
@@ -633,7 +633,7 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
                 * @param "读取脚本资源失败" "读取脚本资源失败"
                 * @param e e
                 * @return runtime异常的结果
-                 */
+                */
                 throw new RuntimeException("读取脚本资源失败", e);
             }
         }
@@ -647,7 +647,7 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         * @param scripts     待执行的 INITDATA 脚本列表
         * @param tableName   版本记录表名
         * @param tablePrefix 表字段前缀
-         */
+        */
         private void executeInitDataScriptsAsync(List<Resource> scripts, String tableName, String tablePrefix) {
             int parallelism = dataSourceScriptProperties.getInitdataParallelism();
             int timeoutMinutes = dataSourceScriptProperties.getInitdataTimeoutMinutes();
@@ -695,7 +695,7 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
                                 * @param tablePrefix table前缀
                                 * @param fileName 文件名称
                                 * @param version 版本
-                                 */
+                                */
                                 findScriptExecutionRecord(tableName, tablePrefix, fileName, version);
                         if (hasSuccessfulExecution(executionRecord)) {
                             if (dataSourceScriptProperties.isVerbose()) {
@@ -714,7 +714,7 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
                         /**
                         * 尝试。
                         * @param ds.getConnection( ds.获取connection(
-                         */
+                        */
                         try (Connection scriptConnection = ds.getConnection()) {
                             boolean originalAutoCommit = scriptConnection.getAutoCommit();
                             scriptConnection.setAutoCommit(false);
@@ -726,7 +726,7 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
                                 * @param scriptConnection scriptconnection
                                 * @param encodedResource encodedresource
                                 * @param fileName 文件名称
-                                 */
+                                */
                                 executeScriptWithProgress(scriptConnection, encodedResource, fileName);
                                 scriptConnection.commit();
                                 success = "true";
@@ -816,7 +816,7 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         * @param resource 脚本资源
         * @param fileName 文件名（用于日志）
         * @throws SQLException SQL执行异常
-         */
+        */
         private void executeScriptWithProgress(
                 Connection connection,
                 EncodedResource resource,
@@ -838,7 +838,7 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         *
         * @param executionRecord 执行record
         * @return needs执行的结果
-         */
+        */
         private boolean needsExecution(ScriptExecutionRecord executionRecord) {
             return executionRecord == null || !executionRecord.isSuccess();
         }
@@ -848,7 +848,7 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         *
         * @param executionRecord 执行record
         * @return 是否包含成功执行的结果
-         */
+        */
         private boolean hasSuccessfulExecution(ScriptExecutionRecord executionRecord) {
             return executionRecord != null && executionRecord.isSuccess();
         }
@@ -985,7 +985,7 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         * @param originalPath 原始路径
         * @param databaseType database类型
         * @param lastDotIndex 最后一个dot索引
-         */
+        */
         private ScriptExecutionRecord findScriptExecutionRecord(
                 String tableName,
                 String tablePrefix,
@@ -1123,7 +1123,7 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         * @param originalPath 原始路径
         * @param databaseType database类型
         * @param lastDotIndex 最后一个dot索引
-         */
+        */
         private void validateChecksumIfNecessary(
                 ScriptExecutionRecord executionRecord,
                 String currentChecksum,
@@ -1146,7 +1146,7 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
                 * SQL异常。
                 * @param errorMsg 错误msg
                 * @return sql异常的结果
-                 */
+                */
                 throw new SQLException(errorMsg);
             }
         }
@@ -1260,7 +1260,7 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         * @param originalPath 原始路径
         * @param databaseType database类型
         * @param lastDotIndex 最后一个dot索引
-         */
+        */
         private void saveScriptExecutionRecord(
                 String tableName,
                 String tablePrefix,
@@ -1292,13 +1292,13 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         * @param checksum 字符串
         * @param success 成功
         * @return script执行record的结果
-         */
+        */
         private record ScriptExecutionRecord(String checksum, String success) {
             /**
             * 是否成功
             *
             * @return 是否成功的结果
-             */
+            */
             private boolean isSuccess() {
                 return "true".equalsIgnoreCase(success);
             }
@@ -1375,7 +1375,7 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         * @param originalPath 原始路径
         * @param databaseType database类型
         * @param lastDotIndex 最后一个dot索引
-         */
+        */
         private List<Resource> filterSchemaScripts(
                 Collection<Resource> scripts,
                 DataSourceScriptProperties.ScanMode scanMode,
@@ -1465,7 +1465,7 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         * @param originalPath 原始路径
         * @param databaseType database类型
         * @param lastDotIndex 最后一个dot索引
-         */
+        */
         private List<Resource> filterMigrationScripts(
                 Collection<Resource> scripts,
                 DataSourceScriptProperties.RepeatableScanMode scanMode) {
@@ -1544,7 +1544,7 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         * @param originalPath 原始路径
         * @param databaseType database类型
         * @param lastDotIndex 最后一个dot索引
-         */
+        */
         private List<Resource> filterDataScripts(
                 Collection<Resource> scripts,
                 DataSourceScriptProperties.ScanMode scanMode,
@@ -1577,12 +1577,12 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         * </p>
         *
         * @return true-空库, false-已有表, 空-无法判断
-         */
+        */
         private Boolean isDatabaseEmpty() {
             /**
             * 尝试。
             * @param ds.getConnection( ds.获取connection(
-             */
+            */
             try (Connection connection = ds.getConnection()) {
                 String catalog = connection.getCatalog();
                 String schema = connection.getSchema();
@@ -1592,7 +1592,7 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
                 /**
                 * 尝试。
                 * @param connection.getMetaData( connection.获取meta数据(
-                 */
+                */
                 try (var tables = connection.getMetaData().getTables(catalog, schema, "%", new String[]{"TABLE"})) {
                     tableLoop:
                     while (tables.next()) {
@@ -1629,7 +1629,7 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         * </p>
         *
         * @return true-已有数据, false-无数据, 空-无法判断
-         */
+        */
         private Boolean hasBusinessData() {
             String versionTableName = extractTablePrefix(dataSourceScriptProperties.getVersionTable());
             boolean isTableScope = "table".equals(dataSourceScriptProperties.getScope());
@@ -1638,7 +1638,7 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
             /**
             * 尝试。
             * @param ds.getConnection( ds.获取connection(
-             */
+            */
             try (Connection connection = ds.getConnection();
                  var tables = connection.getMetaData().getTables(
                          connection.getCatalog(),
@@ -1664,7 +1664,7 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
                     /**
                     * 尝试。
                     * @param connection.createStatement( connection.创建对账单(
-                     */
+                    */
                     try (var statement = connection.createStatement();
                          var rows = statement.executeQuery("SELECT 1 FROM " + tableName + " LIMIT 1")) {
                         if (rows.next()) {
@@ -1686,7 +1686,7 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         * MySQL/PostgreSQL 保持原语法 (含 评论 列注释);
         * sqlite/H2 不支持列注释和 UNIQUE 钥匙, 自动降级为方言兼容语法。
         * </p>
-         */
+        */
         private void createVersionTable() {
             String tableName = dataSourceScriptProperties.getVersionTable();
  // 提取表名作为字段前缀（去掉可能的模式前缀）
@@ -1711,7 +1711,7 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
                         * @param %s_script_name %sscript名称
                         * @param %s_version %s版本
                         * @return UNIQUE的结果
-                         */
+                        */
                         CONSTRAINT uk_script_name_version UNIQUE (%s_script_name, %s_version)
                     )
                     """, tableName, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix);
@@ -1731,7 +1731,7 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
                         * @param %s_script_name %sscript名称
                         * @param %s_version %s版本
                         * @return ukscript名称版本的结果
-                         */
+                        */
                         UNIQUE KEY uk_script_name_version (%s_script_name, %s_version)
                     )
                     """, tableName, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix);
@@ -1751,12 +1751,12 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         * 判断当前数据源是否 sqlite。
         *
         * @return 是否 sqlite
-         */
+        */
         private boolean isSqliteDatabase() {
             /**
             * 尝试。
             * @param ds.getConnection( ds.获取connection(
-             */
+            */
             try (java.sql.Connection connection = ds.getConnection()) {
                 String productName = connection.getMetaData().getDatabaseProductName();
                 if (productName == null) {
@@ -1771,7 +1771,7 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
 
         /**
         * 插入基线版本记录（如果需要）
-         */
+        */
         private void insertBaselineIfNeeded() {
             if (!dataSourceScriptProperties.isBaselineOnMigrate()) {
                 return;
@@ -1810,7 +1810,7 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         * </p>
         *
         * @return 所有模块提供的脚本资源列表
-         */
+        */
         private List<Resource> loadResourcesFromProviders() {
             List<Resource> resources = new ArrayList<>();
             ServiceLoader<DatabaseFileProvider> providers = ServiceLoader.load(DatabaseFileProvider.class);
@@ -1855,7 +1855,7 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         * @param paths    脚本路径列表
         * @return 脚本资源列表
         * @throws IOException IO异常
-         */
+        */
         private List<Resource> scanScripts(PathMatchingResourcePatternResolver resolver, String... paths)
                 throws IOException {
             List<Resource> allResources = new ArrayList<>();
@@ -1881,7 +1881,7 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         *
         * @param rawPaths raw路径
         * @return 分割script路径的结果
-         */
+        */
         private List<String> splitScriptPaths(String rawPaths) {
             if (!StringUtils.hasText(rawPaths)) {
                 return List.of(DataSourceScriptProperties.DEFAULT_SCRIPT_PATH.split(","));
@@ -1913,7 +1913,7 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         *
         * @param fileName 文件名
         * @return 脚本类型：INIT、INITDATA、ADD、NORMAL 或 空（不符合格式）
-         */
+        */
         private String getScriptType(String fileName) {
             String separator = dataSourceScriptProperties.getVersionSeparator();
             
@@ -1949,7 +1949,7 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         *
         * @param fileName 文件名
         * @return 是否允许执行
-         */
+        */
         private boolean isReleaseTypeAllowed(String fileName) {
             // 解析版本号
             String versionStr = versionOf(fileName);
@@ -1979,7 +1979,7 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         *
         * @param fileName 文件名
         * @return 版本号
-         */
+        */
         private String versionOf(String fileName) {
             String prefix = dataSourceScriptProperties.getScriptPrefix();
             String suffix = dataSourceScriptProperties.getScriptSuffix();
@@ -2003,7 +2003,7 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         *
         * @param fileName 文件名
         * @return 描述信息
-         */
+        */
         private String descriptionOf(String fileName) {
             String suffix = dataSourceScriptProperties.getScriptSuffix();
             String separator = dataSourceScriptProperties.getVersionSeparator();
@@ -2033,7 +2033,7 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         * @param res 资源文件
         * @return MD5校验和
         * @throws IOException 读取资源文件时发生IO异常
-         */
+        */
         private String checksum(Resource res) throws IOException {
             return DigestUtils.md5DigestAsHex(res.getInputStream());
         }
@@ -2045,7 +2045,7 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         *
         * @param tableName 表名（可能包含模式）
         * @return 表名前缀
-         */
+        */
         private String extractTablePrefix(String tableName) {
  // 如果包含模式前缀（如 模式.table），只取表名部分
             if (tableName.contains(".")) {
@@ -2062,7 +2062,7 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         * @param originalPath 原始路径
         * @param databaseType 数据库类型
         * @return 数据库特定的路径
-         */
+        */
         private String buildDatabaseSpecificPath(String originalPath, String databaseType) {
             // 查找文件扩展名的位置
             int lastDotIndex = originalPath.lastIndexOf('.');

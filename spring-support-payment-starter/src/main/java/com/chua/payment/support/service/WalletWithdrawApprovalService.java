@@ -16,7 +16,7 @@ public interface WalletWithdrawApprovalService {
     * 创建approval。
     * @param dto dto
     * @return 创建approval的结果
-     */
+    */
     WalletWithdrawApproval createApproval(CreateApprovalDTO dto);
 
     /**
@@ -25,21 +25,21 @@ public interface WalletWithdrawApprovalService {
     * @param pageSize page大小
     * @param status 状态
     * @return pageApprovals的结果
-     */
+    */
     Page<WalletWithdrawApproval> pageApprovals(int pageNum, int pageSize, String status);
 
     /**
     * 获取byid。
     * @param id 标识
     * @return 获取byid的结果
-     */
+    */
     WalletWithdrawApproval getById(Long id);
 
     /**
     * approve。
     * @param id 标识
     * @param operator 操作符
-     */
+    */
     void approve(Long id, String operator);
 
     /**
@@ -47,7 +47,7 @@ public interface WalletWithdrawApprovalService {
     * @param id 标识
     * @param operator 操作符
     * @param reason ReasonMLmlml
-     */
+    */
     void reject(Long id, String operator, String reason);
 }
 

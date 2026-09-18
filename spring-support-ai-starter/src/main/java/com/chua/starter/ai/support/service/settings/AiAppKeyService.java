@@ -17,7 +17,7 @@ public interface AiAppKeyService {
     * 查询所有 app钥匙。
     *
     * @return 操作结果（data 为 app钥匙 DTO 列表）
-     */
+    */
     ReturnResult<List<AiAppKeyDTO>> list();
 
     /**
@@ -25,7 +25,7 @@ public interface AiAppKeyService {
     *
     * @param appKey app钥匙 DTO
     * @return 操作结果（data 为创建后的 app钥匙 DTO）
-     */
+    */
     ReturnResult<AiAppKeyDTO> create(AiAppKeyDTO appKey);
 
     /**
@@ -34,7 +34,7 @@ public interface AiAppKeyService {
     * @param appKeyId app钥匙 主键
     * @param appKey   app钥匙 DTO
     * @return 操作结果（data 为更新后的 app钥匙 DTO）
-     */
+    */
     ReturnResult<AiAppKeyDTO> update(Long appKeyId, AiAppKeyDTO appKey);
 
     /**
@@ -42,7 +42,7 @@ public interface AiAppKeyService {
     *
     * @param appKeyId app钥匙 主键
     * @return 操作结果
-     */
+    */
     ReturnResult<Void> delete(Long appKeyId);
 
     /**
@@ -51,6 +51,6 @@ public interface AiAppKeyService {
     * @param appKeyId app钥匙 主键
     * @param enabled  是否启用
     * @return 操作结果（data 为更新后的 app钥匙 DTO）
-     */
+    */
     ReturnResult<AiAppKeyDTO> toggle(Long appKeyId, Boolean enabled);
 }

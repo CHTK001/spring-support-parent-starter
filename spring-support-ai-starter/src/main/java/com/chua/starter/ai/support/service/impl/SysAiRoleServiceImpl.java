@@ -24,24 +24,24 @@ public class SysAiRoleServiceImpl implements SysAiRoleService {
 
     /**
     * 启用状态值：1
-     */
+    */
     private static final int STATUS_ENABLED = 1;
 
     /**
     * 未删除标记值：0
-     */
+    */
     private static final int DELETE_NOT_DELETED = 0;
 
     /**
     * 角色 映射器
-     */
+    */
     private final SysAiRoleMapper sysAiRoleMapper;
 
     /**
     * 查询所有未删除的角色列表，按排序值升序。
     *
     * @return 角色列表
-     */
+    */
     @Override
     public List<SysAiRole> list() {
         return sysAiRoleMapper.selectList(
@@ -54,7 +54,7 @@ public class SysAiRoleServiceImpl implements SysAiRoleService {
     * 查询所有启用状态的角色列表，按排序值升序。
     *
     * @return 启用角色列表
-     */
+    */
     @Override
     public List<SysAiRole> listEnabled() {
         return sysAiRoleMapper.selectList(
@@ -69,7 +69,7 @@ public class SysAiRoleServiceImpl implements SysAiRoleService {
     *
     * @param id 角色主键
     * @return 角色实体
-     */
+    */
     @Override
     public SysAiRole getById(Integer id) {
         if (id == null) {
@@ -83,7 +83,7 @@ public class SysAiRoleServiceImpl implements SysAiRoleService {
     *
     * @param code 角色编码
     * @return 角色实体
-     */
+    */
     @Override
     public SysAiRole getByCode(String code) {
         if (StringUtils.isBlank(code)) {
@@ -101,7 +101,7 @@ public class SysAiRoleServiceImpl implements SysAiRoleService {
     *
     * @param role 角色实体
     * @return 保存后的角色
-     */
+    */
     @Override
     public SysAiRole save(SysAiRole role) {
         if (role.getStatus() == null) {
@@ -124,7 +124,7 @@ public class SysAiRoleServiceImpl implements SysAiRoleService {
     *
     * @param role 角色实体
     * @return 是否成功
-     */
+    */
     @Override
     public boolean update(SysAiRole role) {
         if (role == null || role.getId() == null) {
@@ -138,7 +138,7 @@ public class SysAiRoleServiceImpl implements SysAiRoleService {
     *
     * @param id 角色主键
     * @return 是否成功
-     */
+    */
     @Override
     public boolean deleteById(Integer id) {
         if (id == null) {

@@ -45,7 +45,7 @@ public class AiSkillsConfigController {
     * 获取所有 Skills Provider 配置（本地 + 在线）。
     *
     * @return Provider 列表，每项含 key/name/type/enabled
-     */
+    */
     @Permission("admin")
     @Operation(summary = "获取 Skills Provider 配置列表")
     @GetMapping
@@ -109,7 +109,7 @@ public class AiSkillsConfigController {
     *
     * @param config 配置 Map，key 为 provider key，value 为 boolean
     * @return 更新后的配置
-     */
+    */
     @Permission("admin")
     @Operation(summary = "更新 Skills Provider 开关")
     @PutMapping

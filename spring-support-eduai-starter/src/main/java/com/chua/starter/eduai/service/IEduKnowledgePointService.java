@@ -22,7 +22,7 @@ public interface IEduKnowledgePointService extends IService<EduKnowledgePoint> {
     * @param gradeLevel 学段
     * @param grade      年级
     * @return 知识点树
-     */
+    */
     List<KnowledgePointVO> listTree(String subject, String gradeLevel, String grade);
 
     /**
@@ -30,7 +30,7 @@ public interface IEduKnowledgePointService extends IService<EduKnowledgePoint> {
     *
     * @param dto 知识点数据
     * @return 知识点ID
-     */
+    */
     Long saveKnowledgePoint(KnowledgePointSaveDTO dto);
 
     /**
@@ -38,6 +38,6 @@ public interface IEduKnowledgePointService extends IService<EduKnowledgePoint> {
     *
     * @param id 知识点标识
     * @return 是否成功
-     */
+    */
     boolean deleteKnowledgePoint(Long id);
 }

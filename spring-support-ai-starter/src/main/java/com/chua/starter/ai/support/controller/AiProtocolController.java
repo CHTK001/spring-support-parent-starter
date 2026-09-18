@@ -53,12 +53,12 @@ public class AiProtocolController extends BaseAiController {
 
     /**
     * AI 对话门面服务，负责模型路由与对话执行
-     */
+    */
     private final AiChatFacadeService aiChatFacadeService;
 
     /**
     * SSE 超时时间（毫秒）
-     */
+    */
     private static final long SSE_TIMEOUT_MILLIS = 30_000L;
 
  // ==================== Claude 消息 ====================
@@ -82,7 +82,7 @@ public class AiProtocolController extends BaseAiController {
     * @param servletRequest HTTP 请求
     * @return Claude 消息 响应
     * @param false false
-     */
+    */
     @Operation(summary = "Claude Messages", description = "Anthropic Claude Messages 标准协议入口")
     @PostMapping("/v1/messages")
     public Object messages(@RequestBody(required = false) Map<String, Object> body,
@@ -132,7 +132,7 @@ public class AiProtocolController extends BaseAiController {
     * @param model          模型名称
     * @param servletRequest HTTP 请求
     * @return SSE 发射器
-     */
+    */
     private SseEmitter claudeStream(Map<String, Object> body, String model, HttpServletRequest servletRequest) {
         SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MILLIS);
         CompletableFuture.runAsync(() -> {
@@ -196,7 +196,7 @@ public class AiProtocolController extends BaseAiController {
     * @param servletRequest HTTP 请求
     * @return Responses 响应
     * @param false false
-     */
+    */
     @Operation(summary = "OpenAI Responses", description = "OpenAI Responses API（Codex CLI 兼容）入口")
     @PostMapping("/v1/responses")
     public Object responses(@RequestBody(required = false) Map<String, Object> body,
@@ -252,7 +252,7 @@ public class AiProtocolController extends BaseAiController {
     * @param model          模型名称
     * @param servletRequest HTTP 请求
     * @return SSE 发射器
-     */
+    */
     private SseEmitter responsesStream(Map<String, Object> body, String model, HttpServletRequest servletRequest) {
         SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MILLIS);
         CompletableFuture.runAsync(() -> {
@@ -335,7 +335,7 @@ public class AiProtocolController extends BaseAiController {
     * @param request HTTP 请求（路径以 {@code request.getRequestURI()} 解析）
     * @param body    请求体
     * @return Gemini 响应
-     */
+    */
     @Operation(summary = "Gemini", description = "Google Gemini 1beta 协议入口")
     @PostMapping("/v1beta/models/**")
     public Object gemini(HttpServletRequest request,
@@ -366,7 +366,7 @@ public class AiProtocolController extends BaseAiController {
     * @param body            请求体
     * @param servletRequest  HTTP 请求
     * @return Gemini 响应
-     */
+    */
     private Object handleGemini(String fullPath, Map<String, Object> body, HttpServletRequest servletRequest) {
         String suffix = "/v1beta/models/";
         int idx = fullPath.lastIndexOf(suffix);
@@ -427,7 +427,7 @@ public class AiProtocolController extends BaseAiController {
     * @param body           请求体
     * @param servletRequest HTTP 请求
     * @return 对话请求
-     */
+    */
     private AiChatRequest buildChatRequest(Map<String, Object> body, HttpServletRequest servletRequest) {
         AiChatRequest request = new AiChatRequest();
         request.setModel(toString(body.get("model")));
@@ -438,7 +438,7 @@ public class AiProtocolController extends BaseAiController {
         * apply群体。
         * @param request 请求
         * @param servletRequest servlet请求
-         */
+        */
         applyGroup(request, servletRequest);
         return request;
     }
@@ -449,7 +449,7 @@ public class AiProtocolController extends BaseAiController {
     * @param body           请求体
     * @param servletRequest HTTP 请求
     * @return 对话请求
-     */
+    */
     private AiChatRequest buildResponsesChatRequest(Map<String, Object> body, HttpServletRequest servletRequest) {
         AiChatRequest request = new AiChatRequest();
         request.setModel(toString(body.get("model")));
@@ -459,7 +459,7 @@ public class AiProtocolController extends BaseAiController {
         * apply群体。
         * @param request 请求
         * @param servletRequest servlet请求
-         */
+        */
         applyGroup(request, servletRequest);
         return request;
     }
@@ -470,7 +470,7 @@ public class AiProtocolController extends BaseAiController {
     * @param body           请求体
     * @param servletRequest HTTP 请求
     * @return 对话请求
-     */
+    */
     private AiChatRequest buildGeminiChatRequest(Map<String, Object> body, HttpServletRequest servletRequest) {
         AiChatRequest request = new AiChatRequest();
         request.setModel(toString(body.get("model")));
@@ -479,7 +479,7 @@ public class AiProtocolController extends BaseAiController {
         * apply群体。
         * @param request 请求
         * @param servletRequest servlet请求
-         */
+        */
         applyGroup(request, servletRequest);
         return request;
     }
@@ -489,7 +489,7 @@ public class AiProtocolController extends BaseAiController {
     *
     * @param request         对话请求
     * @param servletRequest  HTTP 请求
-     */
+    */
     private void applyGroup(AiChatRequest request, HttpServletRequest servletRequest) {
         Integer groupId = resolveGroupId(servletRequest);
         String appKey = resolveAppKey(servletRequest);
@@ -509,7 +509,7 @@ public class AiProtocolController extends BaseAiController {
     *
     * @param body 请求体
     * @return 组合提示词
-     */
+    */
     private String extractClaudePrompt(Map<String, Object> body) {
         StringBuilder sb = new StringBuilder();
         String system = toString(body.get("system"));
@@ -535,7 +535,7 @@ public class AiProtocolController extends BaseAiController {
     *
     * @param body 请求体
     * @return 系统提示词
-     */
+    */
     private String extractSystem(Map<String, Object> body) {
         return toString(body.get("system"));
     }
@@ -545,7 +545,7 @@ public class AiProtocolController extends BaseAiController {
     *
     * @param body 请求体
     * @return 组合提示词
-     */
+    */
     private String extractResponsesPrompt(Map<String, Object> body) {
         StringBuilder sb = new StringBuilder();
         String instructions = toString(body.get("instructions"));
@@ -577,7 +577,7 @@ public class AiProtocolController extends BaseAiController {
     *
     * @param body 请求体
     * @return 组合提示词
-     */
+    */
     private String extractGeminiPrompt(Map<String, Object> body) {
         StringBuilder sb = new StringBuilder();
         Object systemInstruction = body.get("systemInstruction");
@@ -606,7 +606,7 @@ public class AiProtocolController extends BaseAiController {
     *
     * @param obj 对象
     * @return 文本内容
-     */
+    */
     private String extractPartsText(Map<?, ?> obj) {
         Object parts = obj.get("parts");
         if (parts instanceof List<?> list) {
@@ -627,7 +627,7 @@ public class AiProtocolController extends BaseAiController {
     *
     * @param value 内容对象
     * @return 文本
-     */
+    */
     private String extractText(Object value) {
         if (value == null) {
             return null;
@@ -672,7 +672,7 @@ public class AiProtocolController extends BaseAiController {
     *
     * @param model 模型名称
     * @return 起始响应体
-     */
+    */
     private Map<String, Object> buildClaudeStartResponse(String model) {
         String id = "msg_" + UUID.randomUUID().toString().replace("-", "");
         Map<String, Object> body = new LinkedHashMap<>();
@@ -693,7 +693,7 @@ public class AiProtocolController extends BaseAiController {
     * @param result 对话结果
     * @param model  模型名称
     * @return Claude 响应体
-     */
+    */
     private Map<String, Object> buildClaudeResponse(Map<String, Object> result, String model) {
         String id = "msg_" + UUID.randomUUID().toString().replace("-", "");
         String text = result != null ? toString(result.get("text")) : "";
@@ -715,7 +715,7 @@ public class AiProtocolController extends BaseAiController {
     * @param model        模型名称
     * @param errorMessage 错误消息
     * @return 错误响应体
-     */
+    */
     private Map<String, Object> buildClaudeError(String model, String errorMessage) {
         String id = "msg_" + UUID.randomUUID().toString().replace("-", "");
         Map<String, Object> body = new LinkedHashMap<>();
@@ -731,7 +731,7 @@ public class AiProtocolController extends BaseAiController {
     * @param result 对话结果
     * @param model  模型名称
     * @return Responses 响应体
-     */
+    */
     private Map<String, Object> buildResponsesResponse(Map<String, Object> result, String model) {
         String responseId = "resp_" + UUID.randomUUID().toString().replace("-", "");
         String messageId = "msg_" + UUID.randomUUID().toString().replace("-", "");
@@ -745,7 +745,7 @@ public class AiProtocolController extends BaseAiController {
     * @param model        模型名称
     * @param errorMessage 错误消息
     * @return 错误响应体
-     */
+    */
     private Map<String, Object> buildResponsesError(String model, String errorMessage) {
         String responseId = "resp_" + UUID.randomUUID().toString().replace("-", "");
         String messageId = "msg_" + UUID.randomUUID().toString().replace("-", "");
@@ -763,7 +763,7 @@ public class AiProtocolController extends BaseAiController {
     * @param text       文本内容
     * @param status     状态
     * @return 响应体
-     */
+    */
     private Map<String, Object> buildCcsResponse(String responseId, String messageId, String model, String text, String status) {
         String resolvedModel = StringUtils.isNotBlank(model) ? model : "unknown";
         Map<String, Object> body = new LinkedHashMap<>();
@@ -786,7 +786,7 @@ public class AiProtocolController extends BaseAiController {
     * @param text      文本
     * @param status    状态
     * @return 消息体
-     */
+    */
     private Map<String, Object> buildCcsMessage(String messageId, String text, String status) {
         Map<String, Object> message = new LinkedHashMap<>();
         message.put("id", messageId);
@@ -807,7 +807,7 @@ public class AiProtocolController extends BaseAiController {
     * @param model 模型名称
     * @param text  文本
     * @return candidate 体
-     */
+    */
     private Map<String, Object> buildGeminiCandidate(String model, String text) {
         Map<String, Object> content = new LinkedHashMap<>();
         content.put("role", "model");
@@ -826,7 +826,7 @@ public class AiProtocolController extends BaseAiController {
     *
     * @param value 对象
     * @return 字符串
-     */
+    */
     private String toString(Object value) {
         if (value == null) {
             return null;
@@ -842,7 +842,7 @@ public class AiProtocolController extends BaseAiController {
     *
     * @param result call 返回结果
     * @return 文本内容（错误时返回错误信息）
-     */
+    */
     private String resolveResultText(Map<String, Object> result) {
         if (result == null) {
             return "";
@@ -863,7 +863,7 @@ public class AiProtocolController extends BaseAiController {
     *
     * @param value 对象
     * @return JSON 字符串
-     */
+    */
     private String toJson(Object value) {
         try {
             return objectMapper.writeValueAsString(value);

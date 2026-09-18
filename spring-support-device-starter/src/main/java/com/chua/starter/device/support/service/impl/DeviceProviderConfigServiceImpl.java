@@ -30,7 +30,7 @@ public class DeviceProviderConfigServiceImpl implements DeviceProviderConfigServ
 
     /**
     * 厂商默认离线检测阈值（秒）
-     */
+    */
     private static final Map<String, Integer> VENDOR_THRESHOLDS = new ConcurrentHashMap<>();
 
     static {
@@ -42,12 +42,12 @@ public class DeviceProviderConfigServiceImpl implements DeviceProviderConfigServ
 
     /**
     * 设备 映射器
-     */
+    */
     private final DeviceInfoMapper deviceInfoMapper;
 
     /**
     * 设备会话管理器
-     */
+    */
     private final DeviceSessionManager sessionManager;
 
     @Override

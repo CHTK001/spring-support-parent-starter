@@ -13,7 +13,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class NoticeProperties {
     /**
     * 是否启用
-     */
+    */
     private boolean enable = false;
 
 
@@ -29,28 +29,28 @@ public class NoticeProperties {
     *
     * @author CH
     * @since 4.0.0
-     */
+    */
     public static class Email {
         /**
         * 发送者
-         */
+        */
         private String from;
         /**
         * 主机
-         */
+        */
         private String smtpHost = "smtp.qq.com";
         /**
         * ssl smtp端口
-         */
+        */
         private String sslSmtpPort = "465";
         /**
         * 授权码
-         */
+        */
         private String password;
 
         /**
         * smtp端口
-         */
+        */
         private int smtpPort = 25;
     }
 }

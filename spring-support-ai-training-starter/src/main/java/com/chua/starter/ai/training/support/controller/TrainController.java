@@ -56,7 +56,7 @@ public class TrainController {
     * @param @RequestParam("file" @请求参数("文件"
     * @param @RequestParam("file" @请求参数("文件"
     * @param @RequestParam("file" @RequestParam("file"
-     */
+    */
     @Permission("admin")
     @Operation(summary = "上传训练数据", description = "上传 ZIP 格式训练数据并创建训练任务")
     @PostMapping("/upload")
@@ -92,7 +92,7 @@ public class TrainController {
     *
     * @param request 请求体
     * @return 启动结果
-     */
+    */
     @Permission("admin")
     @Operation(summary = "启动训练", description = "启动异步训练；type 缺省 resnet50(DL4J 图像分类)，可选 yolo(python 检测)；可传 resumeModelPath 从已有模型继续微调")
     @PostMapping("/trigger")
@@ -119,7 +119,7 @@ public class TrainController {
     * @param @RequestParam("taskId" @请求参数("任务标识"
     * @param @RequestParam("taskId" @请求参数("任务id"
     * @param @RequestParam("taskId" @RequestParam("taskId"
-     */
+    */
     @Permission("admin")
     @Operation(summary = "查询训练进度", description = "实时查询训练任务的进度、当前 epoch、F1 等信息")
     @GetMapping("/status")
@@ -135,7 +135,7 @@ public class TrainController {
     * 列出所有训练任务。
     *
     * @return 任务摘要列表
-     */
+    */
     @Permission("admin")
     @Operation(summary = "任务列表", description = "列出所有训练任务及其当前状态")
     @GetMapping("/list")
@@ -149,7 +149,7 @@ public class TrainController {
     *
     * @param request 超参数更新请求
     * @return 更新结果
-     */
+    */
     @Permission("admin")
     @Operation(summary = "配置超参数", description = "修改训练超参数（仅非空字段生效），仅 PENDING 状态可修改")
     @PostMapping("/argument")

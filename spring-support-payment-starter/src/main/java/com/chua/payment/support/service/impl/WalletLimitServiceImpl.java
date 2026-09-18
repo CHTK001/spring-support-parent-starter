@@ -51,10 +51,10 @@ public class WalletLimitServiceImpl implements WalletLimitService {
     public void saveOrUpdate(MerchantWalletLimit limit) {
         if (limit == null || limit.getMerchantId() == null) {
             /**
-            * 薪酬异常。
-            * @param "限额配置不能为空" "限额配置不能为空"
-            * @return 薪酬异常的结果
-             */
+    * 薪酬异常。
+    * @param "限额配置不能为空" "限额配置不能为空"
+    * @return 薪酬异常的结果
+    */
             throw new PaymentException("限额配置不能为空");
         }
         MerchantWalletLimit existing = getLimit(limit.getMerchantId());
@@ -82,10 +82,10 @@ public class WalletLimitServiceImpl implements WalletLimitService {
 
         if (limit.getSingleRechargeLimit() != null && amount.compareTo(limit.getSingleRechargeLimit()) > 0) {
             /**
-            * 薪酬异常。
-            * @param limit.getSingleRechargeLimit( 限制.获取单个rechargelimit(
-            * @return 薪酬异常的结果
-             */
+    * 薪酬异常。
+    * @param limit.getSingleRechargeLimit( 限制.获取单个rechargelimit(
+    * @return 薪酬异常的结果
+    */
             throw new PaymentException("充值金额超过单笔限额: " + limit.getSingleRechargeLimit());
         }
 
@@ -96,7 +96,7 @@ public class WalletLimitServiceImpl implements WalletLimitService {
                 * 薪酬异常。
                 * @param limit.getDailyRechargeLimit( 限制.获取dailyrecharge限制(
                 * @return 薪酬异常的结果
-                 */
+                */
                 throw new PaymentException("充值金额超过日累计限额: " + limit.getDailyRechargeLimit());
             }
         }
@@ -112,10 +112,10 @@ public class WalletLimitServiceImpl implements WalletLimitService {
 
         if (limit.getSingleWithdrawLimit() != null && amount.compareTo(limit.getSingleWithdrawLimit()) > 0) {
             /**
-            * 薪酬异常。
-            * @param limit.getSingleWithdrawLimit( 限制.获取单个withdrawlimit(
-            * @return 薪酬异常的结果
-             */
+    * 薪酬异常。
+    * @param limit.getSingleWithdrawLimit( 限制.获取单个withdrawlimit(
+    * @return 薪酬异常的结果
+    */
             throw new PaymentException("提现金额超过单笔限额: " + limit.getSingleWithdrawLimit());
         }
 
@@ -126,7 +126,7 @@ public class WalletLimitServiceImpl implements WalletLimitService {
                 * 薪酬异常。
                 * @param limit.getDailyWithdrawLimit( 限制.获取dailywithdraw限制(
                 * @return 薪酬异常的结果
-                 */
+                */
                 throw new PaymentException("提现金额超过日累计限额: " + limit.getDailyWithdrawLimit());
             }
         }
@@ -142,10 +142,10 @@ public class WalletLimitServiceImpl implements WalletLimitService {
 
         if (limit.getSingleTransferLimit() != null && amount.compareTo(limit.getSingleTransferLimit()) > 0) {
             /**
-            * 薪酬异常。
-            * @param limit.getSingleTransferLimit( 限制.获取单个调动限制(
-            * @return 薪酬异常的结果
-             */
+    * 薪酬异常。
+    * @param limit.getSingleTransferLimit( 限制.获取单个调动限制(
+    * @return 薪酬异常的结果
+    */
             throw new PaymentException("转账金额超过单笔限额: " + limit.getSingleTransferLimit());
         }
 
@@ -156,7 +156,7 @@ public class WalletLimitServiceImpl implements WalletLimitService {
                 * 薪酬异常。
                 * @param limit.getDailyTransferLimit( 限制.getdaily调动限制(
                 * @return 薪酬异常的结果
-                 */
+                */
                 throw new PaymentException("转账金额超过日累计限额: " + limit.getDailyTransferLimit());
             }
         }
@@ -173,10 +173,10 @@ public class WalletLimitServiceImpl implements WalletLimitService {
         BigDecimal afterBalance = currentBalance.add(addAmount);
         if (afterBalance.compareTo(limit.getBalanceLimit()) > 0) {
             /**
-            * 薪酬异常。
-            * @param limit.getBalanceLimit( 限制.获取balance限制(
-            * @return 薪酬异常的结果
-             */
+    * 薪酬异常。
+    * @param limit.getBalanceLimit( 限制.获取balance限制(
+    * @return 薪酬异常的结果
+    */
             throw new PaymentException("余额将超过上限: " + limit.getBalanceLimit());
         }
     }
@@ -188,7 +188,7 @@ public class WalletLimitServiceImpl implements WalletLimitService {
     * @param userId 用户标识
     * @param bizType biz类型
     * @return 获取todayamount的结果
-     */
+    */
     private BigDecimal getTodayAmount(Long merchantId, Long userId, String bizType) {
         LocalDateTime startOfDay = LocalDateTime.of(LocalDate.now(), LocalTime.MIN);
         LocalDateTime endOfDay = LocalDateTime.of(LocalDate.now(), LocalTime.MAX);

@@ -36,7 +36,7 @@ public class LockTemplateConfiguration {
     * {@link NoopLockTemplate}（不持锁，仅用于无 Redis 环境下的降级）。</p>
     *
     * @return 分布式锁模板实例
-     */
+    */
     @Bean("customLockTemplate")
     @ConditionalOnMissingBean
     public LockTemplate lockTemplate() {

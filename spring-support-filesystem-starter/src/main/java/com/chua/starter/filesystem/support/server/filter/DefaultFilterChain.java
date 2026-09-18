@@ -26,7 +26,7 @@ public class DefaultFilterChain implements FilterChain {
     *
     * @param filters       过滤器列表，可为空
     * @param finalHandler  终态处理器，不能为 空
-     */
+    */
     public DefaultFilterChain(List<ServerFilter> filters, ServerFilter finalHandler) {
         this.filters = filters;
         this.finalHandler = finalHandler;
@@ -37,7 +37,7 @@ public class DefaultFilterChain implements FilterChain {
     *
     * @param exchange HTTP 请求/响应上下文
     * @throws Exception 过滤器执行异常
-     */
+    */
     @Override
     public void doFilter(HttpExchange exchange) throws Exception {
         if (index < filters.size()) {

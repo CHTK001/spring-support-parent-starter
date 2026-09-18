@@ -20,28 +20,28 @@ public interface WechatPayScoreOrderService {
     * 创建订单。
     * @param request 请求
     * @return 创建订单的结果
-     */
+    */
     WechatPayScoreOrder createOrder(WechatPayScoreCreateDTO request);
 
     /**
     * 获取by出订单no。
     * @param outOrderNo 出订单no
     * @return 获取by出订单no的结果
-     */
+    */
     WechatPayScoreOrder getByOutOrderNo(String outOrderNo);
 
     /**
     * page。
     * @param request 请求
     * @return page的结果
-     */
+    */
     Page<WechatPayScoreOrder> page(WechatPayScoreOrderQueryRequest request);
 
     /**
     * 同步订单。
     * @param outOrderNo 出订单no
     * @return 同步订单的结果
-     */
+    */
     WechatPayScoreOrder syncOrder(String outOrderNo);
 
     /**
@@ -49,7 +49,7 @@ public interface WechatPayScoreOrderService {
     * @param outOrderNo 出订单no
     * @param request 请求
     * @return 完成订单的结果
-     */
+    */
     WechatPayScoreOrder completeOrder(String outOrderNo, WechatPayScoreCompleteDTO request);
 
     /**
@@ -57,7 +57,7 @@ public interface WechatPayScoreOrderService {
     * @param outOrderNo 出订单no
     * @param request 请求
     * @return cancel订单的结果
-     */
+    */
     WechatPayScoreOrder cancelOrder(String outOrderNo, WechatPayScoreCancelDTO request);
 
     /**
@@ -66,7 +66,7 @@ public interface WechatPayScoreOrderService {
     * @param outOrderNo 出订单no
     * @param payload payload
     * @param responsePayload 响应payload
-     */
+    */
     void handleNotify(Long channelId, String outOrderNo, TencentWechatPayScoreNotifyPayload payload, String responsePayload);
 }
 

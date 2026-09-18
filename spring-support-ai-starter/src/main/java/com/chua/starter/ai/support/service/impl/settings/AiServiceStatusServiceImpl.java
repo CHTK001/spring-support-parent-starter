@@ -29,14 +29,14 @@ public class AiServiceStatusServiceImpl implements AiServiceStatusService {
 
     /**
     * 服务状态 映射器
-     */
+    */
     private final AiServiceStatusMapper statusMapper;
 
     /**
     * 查询所有服务运行状态，并实时计算运行时长。
     *
     * @return 服务状态 DTO 列表
-     */
+    */
     @Override
     public List<AiServiceStatusDTO> list() {
         List<SysAiServiceStatus> statuses = statusMapper.selectList(
@@ -51,7 +51,7 @@ public class AiServiceStatusServiceImpl implements AiServiceStatusService {
     * 启动指定服务，不存在则新建记录。
     *
     * @param serviceName 服务名称
-     */
+    */
     @Override
     @Transactional
     public void start(String serviceName) {
@@ -83,7 +83,7 @@ public class AiServiceStatusServiceImpl implements AiServiceStatusService {
     * 停止指定服务。
     *
     * @param serviceName 服务名称
-     */
+    */
     @Override
     @Transactional
     public void stop(String serviceName) {
@@ -97,7 +97,7 @@ public class AiServiceStatusServiceImpl implements AiServiceStatusService {
         /**
         * refreshuptime。
         * @param exist exist
-         */
+        */
         refreshUptime(exist);
         LambdaUpdateWrapper<SysAiServiceStatus> wrapper = new LambdaUpdateWrapper<SysAiServiceStatus>()
                 .eq(SysAiServiceStatus::getStatusServiceName, serviceName)
@@ -113,7 +113,7 @@ public class AiServiceStatusServiceImpl implements AiServiceStatusService {
     *
     * @param status 服务状态实体
     * @return 刷新后的服务状态实体
-     */
+    */
     private SysAiServiceStatus refreshUptime(SysAiServiceStatus status) {
         if (status.getStatusRunning() != null && status.getStatusRunning()
                 && status.getStatusStartTime() != null) {
@@ -128,7 +128,7 @@ public class AiServiceStatusServiceImpl implements AiServiceStatusService {
     *
     * @param entity 服务状态实体
     * @return 服务状态 DTO
-     */
+    */
     private AiServiceStatusDTO toDto(SysAiServiceStatus entity) {
         AiServiceStatusDTO dto = new AiServiceStatusDTO();
         dto.setName(entity.getStatusServiceName());

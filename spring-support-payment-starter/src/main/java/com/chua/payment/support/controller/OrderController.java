@@ -48,7 +48,7 @@ public class OrderController {
     *
     * @param dto dto
     * @return 创建订单的结果
-     */
+    */
     public Result<OrderVO> createOrder(@RequestBody OrderCreateDTO dto) {
         return Result.success(orderService.createOrder(dto));
     }
@@ -60,7 +60,7 @@ public class OrderController {
     *
     * @param id 标识
     * @return 获取订单的结果
-     */
+    */
     public Result<OrderVO> getOrder(@PathVariable Long id) {
         return Result.success(orderService.getOrder(id));
     }
@@ -72,7 +72,7 @@ public class OrderController {
     *
     * @param "1" "1"
     * @return 列表订单的结果
-     */
+    */
     public Result<PageResult<OrderVO>> listOrders(@RequestParam(defaultValue = "1") int page,
                                                   @RequestParam(defaultValue = "10") int size,
                                                   @RequestParam(required = false) Long merchantId,
@@ -90,7 +90,7 @@ public class OrderController {
     * @param page page
     * @param size 大小
     * @param status 状态
-     */
+    */
     public Result<PageResult<OrderVO>> listMerchantOrders(@PathVariable Long merchantId,
                                                           @RequestParam(defaultValue = "1") int page,
                                                           @RequestParam(defaultValue = "10") int size,
@@ -105,7 +105,7 @@ public class OrderController {
     *
     * @param id 标识
     * @return 列表订单日志的结果
-     */
+    */
     public Result<List<OrderStateLogVO>> listOrderLogs(@PathVariable Long id) {
         return Result.success(orderService.listOrderLogs(id));
     }
@@ -116,7 +116,7 @@ public class OrderController {
     * 薪酬订单
     * @param id 标识
     * @param dto dto
-     */
+    */
     public Result<PaymentResult> payOrder(@PathVariable Long id,
                                           @RequestBody(required = false) OrderPayDTO dto) {
         return Result.success(orderService.payOrder(id, dto));
@@ -129,7 +129,7 @@ public class OrderController {
     *
     * @param id 标识
     * @return 同步订单的结果
-     */
+    */
     public Result<OrderVO> syncOrder(@PathVariable Long id) {
         return Result.success(orderService.syncOrder(id));
     }
@@ -140,7 +140,7 @@ public class OrderController {
     * 开始薪酬
     * @param id 标识
     * @param dto dto
-     */
+    */
     public Result<Boolean> startPay(@PathVariable Long id,
                                     @RequestBody(required = false) OrderOperateDTO dto) {
         return Result.success(orderService.startPay(id, dto != null ? dto.getOperator() : null));
@@ -152,7 +152,7 @@ public class OrderController {
     * 薪酬成功
     * @param id 标识
     * @param dto dto
-     */
+    */
     public Result<Boolean> paySuccess(@PathVariable Long id,
                                       @RequestBody(required = false) OrderOperateDTO dto) {
         return Result.success(orderService.paySuccess(
@@ -168,7 +168,7 @@ public class OrderController {
     * 薪酬失败
     * @param id 标识
     * @param dto dto
-     */
+    */
     public Result<Boolean> payFail(@PathVariable Long id,
                                    @RequestBody(required = false) OrderOperateDTO dto) {
         return Result.success(orderService.payFail(id, dto != null ? dto.getRemark() : null, dto != null ? dto.getOperator() : null));
@@ -181,7 +181,7 @@ public class OrderController {
     * @param id 标识
     * @param refund 退税
     * @param dto dto
-     */
+    */
     public Result<Boolean> cancelOrder(@PathVariable Long id,
                                        @RequestParam(defaultValue = "false") boolean refund,
                                        @RequestBody(required = false) OrderOperateDTO dto) {
@@ -197,7 +197,7 @@ public class OrderController {
     * 完成订单
     * @param id 标识
     * @param dto dto
-     */
+    */
     public Result<Boolean> completeOrder(@PathVariable Long id,
                                          @RequestBody(required = false) OrderOperateDTO dto) {
         return Result.success(orderService.completeOrder(id, dto != null ? dto.getOperator() : null));
@@ -209,7 +209,7 @@ public class OrderController {
     * 退税订单
     * @param id 标识
     * @param dto dto
-     */
+    */
     public Result<Boolean> refundOrder(@PathVariable Long id,
                                        @RequestBody RefundApplyDTO dto) {
         return Result.success(orderService.refundOrder(id, dto));
@@ -221,7 +221,7 @@ public class OrderController {
     * 退税成功
     * @param id 标识
     * @param dto dto
-     */
+    */
     public Result<Boolean> refundSuccess(@PathVariable Long id,
                                          @RequestBody(required = false) OrderOperateDTO dto) {
         return Result.success(orderService.refundSuccess(id, dto != null ? dto.getRefundAmount() : null, dto != null ? dto.getOperator() : null));
@@ -233,7 +233,7 @@ public class OrderController {
     * 退税失败
     * @param id 标识
     * @param dto dto
-     */
+    */
     public Result<Boolean> refundFail(@PathVariable Long id,
                                       @RequestBody(required = false) OrderOperateDTO dto) {
         return Result.success(orderService.refundFail(id, dto != null ? dto.getRemark() : null, dto != null ? dto.getOperator() : null));
@@ -246,7 +246,7 @@ public class OrderController {
     *
     * @param id 标识
     * @return 删除订单的结果
-     */
+    */
     public Result<Boolean> deleteOrder(@PathVariable Long id) {
         return Result.success(orderService.deleteOrder(id));
     }

@@ -33,7 +33,7 @@ public class MarkingMessageListener {
     *
     * @param job    阅卷任务载荷（由 {@link com.chua.starter.queue.MessageTemplate} 反序列化得到）
     * @param message 原始消息，用于失败日志
-     */
+    */
     @QueueListener(EduMarkingServiceImpl.QUEUE_NAME)
     public void onMessage(MarkingJob job, Message message) {
         if (job == null || job.getTaskId() == null) {

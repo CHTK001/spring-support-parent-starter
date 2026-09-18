@@ -44,44 +44,44 @@ public class SpiderOutputNode implements FlowNode {
 
     /**
     * 日志记录器
-     */
+    */
     private static final Logger log = LoggerFactory.getLogger(SpiderOutputNode.class);
 
     /**
     * 来源数据：当前数据
-     */
+    */
     private static final String SOURCE_CURRENT = "current";
 
     /**
     * 落库记录 标识 属性键
-     */
+    */
     private static final String ATTR_RECORD_ID = "spider.output.recordId";
 
     /**
     * 默认标题字段名
-     */
+    */
     private static final String DEFAULT_TITLE_FIELD = "title";
 
     /**
     * 默认内容字段名
-     */
+    */
     private static final String DEFAULT_CONTENT_FIELD = "content";
 
     /**
     * 默认来源 URL 字段名
-     */
+    */
     private static final String DEFAULT_URL_FIELD = "source_url";
 
     /**
     * 数据记录服务
-     */
+    */
     private final SpiderDataRecordService dataRecordService;
 
     /**
     * 通过构造器注入数据记录服务。
     *
     * @param dataRecordService 数据记录服务
-     */
+    */
     public SpiderOutputNode(SpiderDataRecordService dataRecordService) {
         this.dataRecordService = dataRecordService;
     }
@@ -90,7 +90,7 @@ public class SpiderOutputNode implements FlowNode {
     * 节点类型标识。
     *
     * @return 节点类型
-     */
+    */
     @Override
     public String type() {
         return "spider.output";
@@ -100,7 +100,7 @@ public class SpiderOutputNode implements FlowNode {
     * 节点配置表单元信息。
     *
     * @return 表单元信息列表
-     */
+    */
     @Override
     public List<FlowNodeField> configSchema() {
         List<FlowNodeField> schema = new ArrayList<>();
@@ -119,7 +119,7 @@ public class SpiderOutputNode implements FlowNode {
     * 写入成功后记录 标识 放入上下文属性。</p>
     *
     * @param context 当前流程上下文
-     */
+    */
     @Override
     public void execute(FlowContext context) {
         FlowProps props = context.currentNodeProps();
@@ -154,7 +154,7 @@ public class SpiderOutputNode implements FlowNode {
     * @param source  来源标识
     * @param context 当前流程上下文
     * @return 来源映射，非映射类型时包一层 钥匙 为 价值观 的映射
-     */
+    */
     @SuppressWarnings("unchecked")
     private Map<String, Object> resolveMap(String source, FlowContext context) {
         Object value;
@@ -183,7 +183,7 @@ public class SpiderOutputNode implements FlowNode {
     *
     * @param sourceMap 来源映射
     * @return JSON 字符串
-     */
+    */
     private String serialize(Map<String, Object> sourceMap) {
         try {
             return com.chua.common.support.lang.json.Json.toJson(sourceMap);

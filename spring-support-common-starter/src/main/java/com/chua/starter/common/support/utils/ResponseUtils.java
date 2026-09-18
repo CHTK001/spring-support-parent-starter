@@ -15,7 +15,7 @@ public class ResponseUtils {
 
     /**
     * 私有构造函数，防止实例化
-     */
+    */
     private ResponseUtils() {
     }
 
@@ -31,7 +31,7 @@ public class ResponseUtils {
     * </pre>
     *
     * @return {@link httpservlet响应} 当前请求的响应对象，如果无法获取则返回空
-     */
+    */
     public static HttpServletResponse getResponse() {
         ServletRequestAttributes attributes = null;
         try {

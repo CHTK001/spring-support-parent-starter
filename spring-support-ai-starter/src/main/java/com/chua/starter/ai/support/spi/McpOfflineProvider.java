@@ -19,13 +19,13 @@ public interface McpOfflineProvider {
     * 离线源名称。
     *
     * @return 源名称
-     */
+    */
     String name();
 
     /**
     * 列出该来源提供的 MCP 服务器列表。
     *
     * @return MCP 服务器列表
-     */
+    */
     List<Map<String, Object>> listMcpServers();
 }

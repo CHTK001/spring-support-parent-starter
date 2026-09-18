@@ -23,7 +23,7 @@ public class AlipayAppPaymentChannel extends AlipayWebPaymentChannel implements 
     * @param merchantChannelService merchant通道服务
     * @param objectMapper 对象映射器
     * @param providerGatewayRegistry 提供者gatewayregistry
-     */
+    */
     public AlipayAppPaymentChannel(MerchantChannelService merchantChannelService,
                                    ObjectMapper objectMapper,
                                    PaymentProviderGatewayRegistry providerGatewayRegistry) {
@@ -32,7 +32,7 @@ public class AlipayAppPaymentChannel extends AlipayWebPaymentChannel implements 
         * @param merchantChannelService merchant通道服务
         * @param objectMapper 对象映射器
         * @param providerGatewayRegistry 提供者gatewayregistry
-         */
+        */
         super(merchantChannelService, objectMapper, providerGatewayRegistry);
     }
 
@@ -47,9 +47,9 @@ public class AlipayAppPaymentChannel extends AlipayWebPaymentChannel implements 
     public PaymentResult pay(MerchantChannel channel, PaymentRequest request) {
         AliyunAlipayPayResponse response = gateway(providerSpi(channel, null)).appPay(
                 /**
-                * 构建客户端属性。
-                * @param channel 通道
-                 */
+    * 构建客户端属性。
+    * @param channel 通道
+    */
                 buildClientProperties(channel),
                 buildPayRequest(request, "QUICK_MSECURITY_PAY"));
 

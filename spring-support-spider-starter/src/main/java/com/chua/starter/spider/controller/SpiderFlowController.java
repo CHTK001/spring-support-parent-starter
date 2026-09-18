@@ -57,44 +57,44 @@ public class SpiderFlowController {
 
     /**
     * JSON 解析器
-     */
+    */
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     /**
     * 开始节点类型标识
-     */
+    */
     private static final String NODE_TYPE_START = "start";
 
     /**
     * 结束节点类型标识
-     */
+    */
     private static final String NODE_TYPE_END = "stop";
 
     /**
     * 支持的节点类型集合（与执行器映射保持一致）
-     */
+    */
     private static final Set<String> SUPPORTED_NODE_TYPES = Set.of(
             "start", "stop", "request", "extract", "loop", "output",
             "transform", "condition", "map", "script", "db", "function");
 
     /**
     * 流程编排服务
-     */
+    */
     private final SpiderFlowService flowService;
 
     /**
     * 爬虫定义服务
-     */
+    */
     private final SpiderDefinitionService definitionService;
 
     /**
     * 流程执行器
-     */
+    */
     private final SpiderFlowRunner flowRunner;
 
     /**
     * 执行日志服务
-     */
+    */
     private final SpiderExecutionLogService executionLogService;
 
     /**
@@ -104,7 +104,7 @@ public class SpiderFlowController {
     * @param definitionService   爬虫定义服务
     * @param flowRunner          流程执行器
     * @param executionLogService 执行日志服务
-     */
+    */
     public SpiderFlowController(SpiderFlowService flowService,
                                 SpiderDefinitionService definitionService,
                                 SpiderFlowRunner flowRunner,
@@ -122,7 +122,7 @@ public class SpiderFlowController {
     * @param pageSize 每页条数
     * @param keyword  关键字（编码/名称）
     * @return 分页结果
-     */
+    */
     @GetMapping("/page")
     @Operation(summary = "流程分页列表")
     public ReturnResult<PageResultVO<SpiderFlowVO>> page(
@@ -157,7 +157,7 @@ public class SpiderFlowController {
     *
     * @param flowCode 流程编码
     * @return 流程聚合
-     */
+    */
     @GetMapping("/detail")
     @Operation(summary = "完整加载流程")
     public ReturnResult<FlowAggregateDTO> detail(@RequestParam String flowCode) {
@@ -177,7 +177,7 @@ public class SpiderFlowController {
     *
     * @param aggregate 流程聚合
     * @return 保存成功返回流程版本号
-     */
+    */
     @PostMapping("/save")
     @Operation(summary = "保存流程")
     public ReturnResult<Integer> save(@RequestBody FlowAggregateDTO aggregate) {
@@ -217,7 +217,7 @@ public class SpiderFlowController {
     * @param flowCode 流程编码
     * @param status   目标状态
     * @return 是否成功
-     */
+    */
     @PostMapping("/status")
     @Operation(summary = "启用/禁用流程")
     public ReturnResult<Boolean> status(@RequestParam String flowCode,
@@ -237,7 +237,7 @@ public class SpiderFlowController {
     *
     * @param flowCode 流程编码
     * @return 是否成功
-     */
+    */
     @DeleteMapping("/{flowCode}")
     @Operation(summary = "删除流程")
     public ReturnResult<Boolean> remove(@PathVariable String flowCode) {
@@ -253,7 +253,7 @@ public class SpiderFlowController {
     *
     * @param flowCode 流程编码
     * @return 执行号
-     */
+    */
     @PostMapping("/run")
     @Operation(summary = "执行流程")
     public ReturnResult<String> run(@RequestParam String flowCode) {
@@ -275,7 +275,7 @@ public class SpiderFlowController {
     *
     * @param flowCode 流程编码
     * @return 节点日志列表
-     */
+    */
     @PostMapping("/debug")
     @Operation(summary = "调试执行流程")
     public ReturnResult<List<FlowNodeLogVO>> debug(@RequestParam String flowCode) {
@@ -293,7 +293,7 @@ public class SpiderFlowController {
     *
     * @param flowCode 流程编码
     * @return 历史快照列表
-     */
+    */
     @GetMapping("/history")
     @Operation(summary = "流程历史版本")
     public ReturnResult<List<Map<String, Object>>> history(@RequestParam String flowCode) {
@@ -319,7 +319,7 @@ public class SpiderFlowController {
     * @param flowCode 流程编码
     * @param version  目标版本
     * @return 当前版本号
-     */
+    */
     @PostMapping("/rollback")
     @Operation(summary = "回滚流程版本")
     public ReturnResult<Integer> rollback(@RequestParam String flowCode,
@@ -331,7 +331,7 @@ public class SpiderFlowController {
     * 节点类型清单。
     *
     * @return 节点类型元信息
-     */
+    */
     @GetMapping("/node-types")
     @Operation(summary = "节点类型清单")
     public ReturnResult<List<FlowNodeMetadata>> nodeTypes() {
@@ -344,7 +344,7 @@ public class SpiderFlowController {
     * @param executionNo 执行号，可空
     * @param flowId      流程 标识，可空
     * @return 节点日志列表
-     */
+    */
     @GetMapping("/node-logs")
     @Operation(summary = "节点执行日志")
     public ReturnResult<List<FlowNodeLogVO>> nodeLogs(
@@ -374,7 +374,7 @@ public class SpiderFlowController {
     * @param nodes    节点列表
     * @param edges    连线列表
     * @return 校验通过返回成功；否则返回错误信息
-     */
+    */
     private ReturnResult<Integer> validateFlow(String flowCode,
                                                List<FlowNodeEntityVO> nodes,
                                                List<FlowEdgeEntityVO> edges) {
@@ -432,7 +432,7 @@ public class SpiderFlowController {
     *
     * @param flowCode 流程编码
     * @return 流程实体
-     */
+    */
     private SpiderFlow findByCode(String flowCode) {
         if (!StringUtils.hasText(flowCode)) {
             return null;
@@ -445,7 +445,7 @@ public class SpiderFlowController {
     *
     * @param nodes 节点视图列表
     * @return JSON 字符串
-     */
+    */
     private String serializeNodes(List<FlowNodeEntityVO> nodes) {
         if (nodes == null) {
             return "[]";
@@ -462,7 +462,7 @@ public class SpiderFlowController {
     *
     * @param edges 连线视图列表
     * @return JSON 字符串
-     */
+    */
     private String serializeEdges(List<FlowEdgeEntityVO> edges) {
         if (edges == null) {
             return "[]";
@@ -479,7 +479,7 @@ public class SpiderFlowController {
     *
     * @param json JSON 数组字符串
     * @return 节点视图列表
-     */
+    */
     private List<FlowNodeEntityVO> parseNodeEntities(String json) {
         if (!StringUtils.hasText(json)) {
             return new ArrayList<>();
@@ -497,7 +497,7 @@ public class SpiderFlowController {
     *
     * @param json JSON 数组字符串
     * @return 连线视图列表
-     */
+    */
     private List<FlowEdgeEntityVO> parseEdgeEntities(String json) {
         if (!StringUtils.hasText(json)) {
             return new ArrayList<>();

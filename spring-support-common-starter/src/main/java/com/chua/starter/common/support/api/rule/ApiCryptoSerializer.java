@@ -29,17 +29,17 @@ public class ApiCryptoSerializer extends JsonSerializer<String> implements Conte
 
     /**
     * 公钥
-     */
+    */
     private final String publicKeyHex;
 
     /**
     * 加密类型
-     */
+    */
     private final ApiFieldCrypto.ApiCryptoType cryptoType;
 
     /**
     * 密钥
-     */
+    */
     private final String key;
 
     /**
@@ -48,7 +48,7 @@ public class ApiCryptoSerializer extends JsonSerializer<String> implements Conte
     * @param publicKeyHex 公钥HEX
     * @param cryptoType  加密类型
     * @param key         密钥
-     */
+    */
     public ApiCryptoSerializer(String publicKeyHex, ApiFieldCrypto.ApiCryptoType cryptoType, String key) {
         this.publicKeyHex = publicKeyHex;
         this.cryptoType = cryptoType;
@@ -70,7 +70,7 @@ public class ApiCryptoSerializer extends JsonSerializer<String> implements Conte
     * @param origin origin
     * @param jsonGenerator json生成器
     * @param serializerProvider 序列化器提供者
-     */
+    */
     public void serialize(final String origin, final JsonGenerator jsonGenerator,
                           final SerializerProvider serializerProvider) throws IOException {
 
@@ -102,7 +102,7 @@ public class ApiCryptoSerializer extends JsonSerializer<String> implements Conte
     * @param data 数据
     * @param publicKeyHex 公共钥匙hex
     * @return sm2Encrypt的结果
-     */
+    */
     private String sm2Encrypt(String data, String publicKeyHex) {
         try {
             Sm2Cipher sm2Cipher = Sm2Cipher.create("bc");
@@ -120,7 +120,7 @@ public class ApiCryptoSerializer extends JsonSerializer<String> implements Conte
     *
     * @param hex hex
     * @return hex转为bytes的结果
-     */
+    */
     private static byte[] hexToBytes(String hex) {
         int len = hex.length();
         byte[] data = new byte[len / 2];
@@ -135,7 +135,7 @@ public class ApiCryptoSerializer extends JsonSerializer<String> implements Conte
     *
     * @param bytes bytes
     * @return bytes转为hex的结果
-     */
+    */
     private static String bytesToHex(byte[] bytes) {
         StringBuilder sb = new StringBuilder(bytes.length * 2);
         for (byte b : bytes) {
@@ -149,7 +149,7 @@ public class ApiCryptoSerializer extends JsonSerializer<String> implements Conte
     * @param key 钥匙
     * @param key1 键1
     * @return 是否equals的结果
-     */
+    */
     private boolean isEquals(String key, String key1) {
         return StringUtils.equals(key, key1);
     }
@@ -159,7 +159,7 @@ public class ApiCryptoSerializer extends JsonSerializer<String> implements Conte
     *
     * @param jsonGenerator json生成器
     * @return 获取dynamic钥匙的结果
-     */
+    */
     private String getDynamicKey(JsonGenerator jsonGenerator) {
         Object currentValue = jsonGenerator.getCurrentValue();
         if (null == currentValue) {
@@ -197,7 +197,7 @@ public class ApiCryptoSerializer extends JsonSerializer<String> implements Conte
                     * api加密货币序列化器。
                     * @param null 空
                     * @param crypto.cryptoType( 加密货币.加密货币类型(
-                     */
+                    */
                     return new ApiCryptoSerializer(null, crypto.cryptoType(), key);
                 }
             }

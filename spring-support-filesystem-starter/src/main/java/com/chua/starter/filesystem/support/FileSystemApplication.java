@@ -24,14 +24,14 @@ public class FileSystemApplication {
 
     /**
     * 临时目录系统属性键
-     */
+    */
     private static final String TEMP_PATH_KEY = "filesystem.temp.path";
 
     /**
     * 程序入口。
     *
     * @param args 命令行参数
-     */
+    */
     public static void main(String[] args) {
         SpringApplication app = new SpringApplication(FileSystemApplication.class);
         app.addInitializers(ctx -> {
@@ -48,13 +48,13 @@ public class FileSystemApplication {
     * 配置嵌入式 H2 数据源并加载 模式 脚本。
     *
     * @return H2 嵌入式数据源
-     */
+    */
     @Bean
     public DataSource dataSource() {
         /**
         * embeddeddatabase构建器。
         * @return embeddeddatabase构建器的结果
-         */
+        */
         return new EmbeddedDatabaseBuilder()
                 .setType(EmbeddedDatabaseType.H2)
                 .addScript("classpath:schema.sql")

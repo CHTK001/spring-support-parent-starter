@@ -75,9 +75,9 @@ public class MapperDataSourceInterceptor implements Interceptor {
             throw ex;
         } finally {
             /**
-            * restore数据源。
-            * @param originalDataSource 原始数据源
-             */
+    * restore数据源。
+    * @param originalDataSource 原始数据源
+    */
             restoreDataSource(originalDataSource);
         }
     }
@@ -85,7 +85,7 @@ public class MapperDataSourceInterceptor implements Interceptor {
     /**
     * restore数据源。
     * @param originalDataSource 原始数据源
-     */
+    */
     private void restoreDataSource(String originalDataSource) {
         if (StringUtils.hasText(originalDataSource)) {
             DataSourceContextSupport.setDbType(originalDataSource);
@@ -99,7 +99,7 @@ public class MapperDataSourceInterceptor implements Interceptor {
     * resolve映射器数据源。
     * @param statementId 对账单标识
     * @return resolve映射器数据源的结果
-     */
+    */
     private String resolveMapperDataSource(String statementId) {
         int lastDot = statementId.lastIndexOf('.');
         if (lastDot < 0) {

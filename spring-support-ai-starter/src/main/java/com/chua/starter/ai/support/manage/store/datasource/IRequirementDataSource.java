@@ -26,7 +26,7 @@ public interface IRequirementDataSource {
     * 数据源类型标识（对应 sys_AI_数据_源.sys_AI_数据_源_类型）。
     *
     * @return 类型字符串，如 {@code "lark"} / {@code "jira"} / {@code "notion"} / {@code "generic"}
-     */
+    */
     String type();
 
     /**
@@ -35,7 +35,7 @@ public interface IRequirementDataSource {
     * @param config     数据源配置（从 sys_AI_数据_源.sys_AI_数据_源_配置 JSON 反序列化）
     * @param lastSyncAt 上次同步时间戳（轮次 ms），提供者 可用于增量同步
     * @return 本次同步新增/更新的需求数量
-     */
+    */
     int sync(Map<String, Object> config, long lastSyncAt);
 
     /**
@@ -44,7 +44,7 @@ public interface IRequirementDataSource {
     * @param config   数据源配置
     * @param event    外部系统推送的原始事件 JSON
     * @return true = 已消费并处理，false = 未处理（忽略）
-     */
+    */
     default boolean handleWebhook(Map<String, Object> config, Map<String, Object> event) {
         return false;
     }
@@ -54,7 +54,7 @@ public interface IRequirementDataSource {
     *
     * @param config 数据源配置
     * @return true = 配置有效且可连通，false = 配置无效或连接失败
-     */
+    */
     boolean testConnection(Map<String, Object> config);
 
     /**
@@ -64,7 +64,7 @@ public interface IRequirementDataSource {
     * @param requirementId 本地需求 标识
     * @param remoteId      外部系统中的对应 标识（首次同步时由 同步() 返回并缓存）
     * @param changes       变更字段
-     */
+    */
     default void writeBack(Map<String, Object> config, String requirementId, String remoteId, Map<String, Object> changes) {
         // 默认不实现：单向同步
     }

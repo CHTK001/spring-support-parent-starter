@@ -16,72 +16,72 @@ public class ChatClientSettings {
 
     /**
     * 厂商工厂类型
-     */
+    */
     private String factory;
 
     /**
     * 厂商提供者
-     */
+    */
     private String provider;
 
     /**
     * 默认模型
-     */
+    */
     private String defaultModel;
 
     /**
     * 上下文压缩模型
-     */
+    */
     private String compressionModel;
 
     /**
     * 系统提示词
-     */
+    */
     private String systemPrompt;
 
     /**
     * 采样温度
-     */
+    */
     private Double temperature;
 
     /**
     * 最大生成 令牌
-     */
+    */
     private Integer maxTokens;
 
     /**
     * 请求超时时间（毫秒）
-     */
+    */
     private Long timeoutMillis;
 
     /**
     * 是否启用输入优化
-     */
+    */
     private boolean inputOptimizationEnabled;
 
     /**
     * 是否启用上下文压缩
-     */
+    */
     private boolean contextCompressionEnabled;
 
     /**
     * 上下文压缩触发阈值
-     */
+    */
     private int contextCompressionThreshold;
 
     /**
     * 上下文压缩保留消息条数
-     */
+    */
     private int contextCompressionRetainMessages;
 
     /**
     * 基础连接设置
-     */
+    */
     private ChatClientSetting baseSetting;
 
     /**
     * 空参构造。
-     */
+    */
     public ChatClientSettings() {
     }
 
@@ -101,7 +101,7 @@ public class ChatClientSettings {
     * @param contextCompressionThreshold       上下文压缩触发阈值
     * @param contextCompressionRetainMessages  上下文压缩保留消息条数
     * @param baseSetting                       基础连接设置
-     */
+    */
     public ChatClientSettings(String factory, String provider, String defaultModel, String compressionModel,
                               String systemPrompt, Double temperature, Integer maxTokens, Long timeoutMillis,
                               boolean inputOptimizationEnabled, boolean contextCompressionEnabled,
@@ -126,12 +126,12 @@ public class ChatClientSettings {
     * 创建 构建器。
     *
     * @return Builder 实例
-     */
+    */
     public static ChatClientSettingsBuilder builder() {
         /**
         * 对话客户端settings构建器。
         * @return 对话客户端settings构建器的结果
-         */
+        */
         return new ChatClientSettingsBuilder();
     }
 
@@ -140,7 +140,7 @@ public class ChatClientSettings {
     *
     * @param mcpEnabled 是否启用 MCP
     * @return 连接设置
-     */
+    */
     public ChatClientSetting createSetting(boolean mcpEnabled) {
         if (baseSetting == null) {
             return ChatClientSetting.builder().build();
@@ -159,72 +159,72 @@ public class ChatClientSettings {
     *
     * @since 4.0.0.42
     * @author CH
-     */
+    */
     public static class ChatClientSettingsBuilder {
 
         /**
         * 厂商工厂类型
-         */
+        */
         private String factory;
 
         /**
         * 厂商提供者
-         */
+        */
         private String provider;
 
         /**
         * 默认模型
-         */
+        */
         private String defaultModel;
 
         /**
         * 上下文压缩模型
-         */
+        */
         private String compressionModel;
 
         /**
         * 系统提示词
-         */
+        */
         private String systemPrompt;
 
         /**
         * 采样温度
-         */
+        */
         private Double temperature;
 
         /**
         * 最大生成 令牌
-         */
+        */
         private Integer maxTokens;
 
         /**
         * 请求超时时间（毫秒）
-         */
+        */
         private Long timeoutMillis;
 
         /**
         * 是否启用输入优化
-         */
+        */
         private boolean inputOptimizationEnabled;
 
         /**
         * 是否启用上下文压缩
-         */
+        */
         private boolean contextCompressionEnabled;
 
         /**
         * 上下文压缩触发阈值
-         */
+        */
         private int contextCompressionThreshold;
 
         /**
         * 上下文压缩保留消息条数
-         */
+        */
         private int contextCompressionRetainMessages;
 
         /**
         * 基础连接设置
-         */
+        */
         private ChatClientSetting baseSetting;
 
         /**
@@ -232,7 +232,7 @@ public class ChatClientSettings {
         *
         * @param factory 厂商工厂类型
         * @return 当前 构建器
-         */
+        */
         public ChatClientSettingsBuilder factory(String factory) {
             this.factory = factory;
             return this;
@@ -243,7 +243,7 @@ public class ChatClientSettings {
         *
         * @param provider 厂商提供者
         * @return 当前 构建器
-         */
+        */
         public ChatClientSettingsBuilder provider(String provider) {
             this.provider = provider;
             return this;
@@ -254,7 +254,7 @@ public class ChatClientSettings {
         *
         * @param defaultModel 默认模型
         * @return 当前 构建器
-         */
+        */
         public ChatClientSettingsBuilder defaultModel(String defaultModel) {
             this.defaultModel = defaultModel;
             return this;
@@ -265,7 +265,7 @@ public class ChatClientSettings {
         *
         * @param compressionModel 上下文压缩模型
         * @return 当前 构建器
-         */
+        */
         public ChatClientSettingsBuilder compressionModel(String compressionModel) {
             this.compressionModel = compressionModel;
             return this;
@@ -276,7 +276,7 @@ public class ChatClientSettings {
         *
         * @param systemPrompt 系统提示词
         * @return 当前 构建器
-         */
+        */
         public ChatClientSettingsBuilder systemPrompt(String systemPrompt) {
             this.systemPrompt = systemPrompt;
             return this;
@@ -287,7 +287,7 @@ public class ChatClientSettings {
         *
         * @param temperature 采样温度
         * @return 当前 构建器
-         */
+        */
         public ChatClientSettingsBuilder temperature(Double temperature) {
             this.temperature = temperature;
             return this;
@@ -298,7 +298,7 @@ public class ChatClientSettings {
         *
         * @param maxTokens 最大生成 令牌
         * @return 当前 构建器
-         */
+        */
         public ChatClientSettingsBuilder maxTokens(Integer maxTokens) {
             this.maxTokens = maxTokens;
             return this;
@@ -309,7 +309,7 @@ public class ChatClientSettings {
         *
         * @param timeoutMillis 请求超时时间（毫秒）
         * @return 当前 构建器
-         */
+        */
         public ChatClientSettingsBuilder timeoutMillis(Long timeoutMillis) {
             this.timeoutMillis = timeoutMillis;
             return this;
@@ -320,7 +320,7 @@ public class ChatClientSettings {
         *
         * @param inputOptimizationEnabled 是否启用输入优化
         * @return 当前 构建器
-         */
+        */
         public ChatClientSettingsBuilder inputOptimizationEnabled(boolean inputOptimizationEnabled) {
             this.inputOptimizationEnabled = inputOptimizationEnabled;
             return this;
@@ -331,7 +331,7 @@ public class ChatClientSettings {
         *
         * @param contextCompressionEnabled 是否启用上下文压缩
         * @return 当前 构建器
-         */
+        */
         public ChatClientSettingsBuilder contextCompressionEnabled(boolean contextCompressionEnabled) {
             this.contextCompressionEnabled = contextCompressionEnabled;
             return this;
@@ -342,7 +342,7 @@ public class ChatClientSettings {
         *
         * @param contextCompressionThreshold 上下文压缩触发阈值
         * @return 当前 构建器
-         */
+        */
         public ChatClientSettingsBuilder contextCompressionThreshold(int contextCompressionThreshold) {
             this.contextCompressionThreshold = contextCompressionThreshold;
             return this;
@@ -353,7 +353,7 @@ public class ChatClientSettings {
         *
         * @param contextCompressionRetainMessages 上下文压缩保留消息条数
         * @return 当前 构建器
-         */
+        */
         public ChatClientSettingsBuilder contextCompressionRetainMessages(int contextCompressionRetainMessages) {
             this.contextCompressionRetainMessages = contextCompressionRetainMessages;
             return this;
@@ -364,7 +364,7 @@ public class ChatClientSettings {
         *
         * @param baseSetting 基础连接设置
         * @return 当前 构建器
-         */
+        */
         public ChatClientSettingsBuilder baseSetting(ChatClientSetting baseSetting) {
             this.baseSetting = baseSetting;
             return this;
@@ -374,7 +374,7 @@ public class ChatClientSettings {
         * 构建 对话客户端settings 实例。
         *
         * @return ChatClientSettings 实例
-         */
+        */
         public ChatClientSettings build() {
             return new ChatClientSettings(factory, provider, defaultModel, compressionModel, systemPrompt,
                     temperature, maxTokens, timeoutMillis, inputOptimizationEnabled, contextCompressionEnabled,

@@ -52,7 +52,7 @@ public class UserAuthController {
     *
     * @param body 请求体（含 用户名 / 密码）
     * @return 登录结果（成功含 access令牌 / refresh令牌 / 用户信息 / 角色 / expires）
-     */
+    */
     @TokenForIgnore
     @PostMapping("/login")
     public ReturnResult<Map<String, Object>> login(@RequestBody Map<String, String> body) {
@@ -100,7 +100,7 @@ public class UserAuthController {
     * <p>调用 oauth 客户端登出当前用户，清除本地会话。</p>
     *
     * @return 登出结果
-     */
+    */
     @TokenForIgnore
     @PostMapping("/logout")
     public ReturnResult<Void> logout() {
@@ -121,7 +121,7 @@ public class UserAuthController {
     *
     * @param request HTTP 请求
     * @return 当前用户信息（userId / 用户名 / nickname / 角色）
-     */
+    */
     @TokenForIgnore
     @GetMapping("/me")
     public ReturnResult<Map<String, Object>> me(HttpServletRequest request) {
@@ -172,7 +172,7 @@ public class UserAuthController {
     * @param body 请求体（含 refresh令牌）
     * @return 刷新后的令牌结果
     * @param false false
-     */
+    */
     @TokenForIgnore
     @PostMapping("/refresh-token")
     public ReturnResult<Map<String, Object>> refreshToken(@RequestBody(required = false) Map<String, String> body) {
@@ -191,7 +191,7 @@ public class UserAuthController {
     *
     * @param request HTTP 请求
     * @return Token 字符串，无法解析时返回 {@code null}
-     */
+    */
     private String resolveToken(HttpServletRequest request) {
         String auth = request.getHeader("Authorization");
         if (StringUtils.isNotBlank(auth) && auth.startsWith(BEARER_PREFIX)) {
@@ -210,7 +210,7 @@ public class UserAuthController {
     * <p>格式：xxxxxxxx-xxxx-7xxx-yxxx-xxxxxxxxxxxx（y ∈ {8,9,a,b}）</p>
     *
     * @return UUIDv7 字符串
-     */
+    */
     private static String generateUuidV7() {
         UUID uuid = UUID.randomUUID();
         long ms = System.currentTimeMillis();

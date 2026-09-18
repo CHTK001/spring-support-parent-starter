@@ -18,42 +18,42 @@ public class AiUsageDTO implements Serializable {
 
     /**
     * 模型名称
-     */
+    */
     @Schema(description = "模型名称")
     /** 模型 */
     private String model;
 
     /**
     * 请求次数
-     */
+    */
     @Schema(description = "请求次数")
     /** Requests */
     private Long requests;
 
     /**
     * 提示 令牌
-     */
+    */
     @Schema(description = "提示 tokens")
     /** Prompttokens */
     private Long promptTokens;
 
     /**
     * 生成 令牌
-     */
+    */
     @Schema(description = "生成 tokens")
     /** Completiontokens */
     private Long completionTokens;
 
     /**
     * 总 令牌
-     */
+    */
     @Schema(description = "总 tokens")
     /** 总数令牌 */
     private Long totalTokens;
 
     /**
     * 统计时间戳
-     */
+    */
     @Schema(description = "统计时间戳")
     /** 时间戳 */
     private String timestamp;

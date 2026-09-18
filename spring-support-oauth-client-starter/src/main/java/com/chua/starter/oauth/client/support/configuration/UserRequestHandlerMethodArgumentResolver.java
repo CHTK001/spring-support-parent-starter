@@ -51,7 +51,7 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
     /**
     * 创建 用户请求处理器方法参数解析器 实例
     * @param webRequest web请求
-     */
+    */
     public UserRequestHandlerMethodArgumentResolver(WebRequest webRequest) {
         this.webRequest = webRequest;
     }
@@ -60,7 +60,7 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
     * 设置configurableBean工厂
     *
     * @param configurableBeanFactory configurableBean工厂
-     */
+    */
     public void setConfigurableBeanFactory(ConfigurableBeanFactory configurableBeanFactory) {
         this.configurableBeanFactory = configurableBeanFactory;
         if (configurableBeanFactory == null) {
@@ -84,7 +84,7 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
     * @param mavContainer mav容器
     * @param webRequest web请求
     * @param binderFactory binder工厂
-     */
+    */
     public Object resolveArgument(MethodParameter methodParameter,
                                   ModelAndViewContainer mavContainer,
                                   NativeWebRequest webRequest,
@@ -113,7 +113,7 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
     * @param webRequest      请求
     * @param binderFactory   工厂
     * @return 结果
-     */
+    */
 
     public Object resolveEmbeddedValuesAndExpressions(MethodParameter methodParameter,
                                                       ModelAndViewContainer mavContainer,
@@ -133,7 +133,7 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
             * 角色judge。
             * @param userResume.getRoles( 用户resume.getroles(
             * @return 角色judge的结果
-             */
+            */
             return new RoleJudge(userResume.getRoles());
         }
 
@@ -214,7 +214,7 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
     * @param returnResult 结果
     * @param webRequest
     * @return 结果
-     */
+    */
     @SuppressWarnings("ALL")
     protected Map<String, Object> asMap(NativeWebRequest webRequest, UserResume returnResult) {
         Map<String, Object> rs = new LinkedHashMap<>();
@@ -232,7 +232,7 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
     *
     * @param value 价值观
     * @return resolveembedded价值观andexpressions的结果
-     */
+    */
     protected Object resolveEmbeddedValuesAndExpressions(String value) {
         if (this.configurableBeanFactory == null || this.expressionContext == null) {
             return value;
@@ -250,7 +250,7 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
     *
     * @param webRequest 请求参数
     * @return 结果
-     */
+    */
     protected UserResume analysis(WebRequest webRequest) {
         AuthenticationInformation authentication = webRequest.authentication();
         return authentication.getReturnResult();
@@ -263,7 +263,7 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
     * @param annotationType 注解类型
     * @return 结果
     * @param methodParameter 方法参数
-     */
+    */
     protected boolean supportsParameter(MethodParameter methodParameter, Class<? extends Annotation> annotationType) {
         if (null == configurableBeanFactory) {
             return false;

@@ -13,7 +13,7 @@ public interface IpQualityDetector {
     *
     * @param ip IP 地址
     * @return IP 质量信息
-     */
+    */
     IpQuality detect(String ip);
 
     /**
@@ -21,6 +21,6 @@ public interface IpQualityDetector {
     *
     * @param ips IP 地址列表
     * @return IP 质量信息列表
-     */
+    */
     IpQuality[] detect(String[] ips);
 }

@@ -19,7 +19,7 @@ public interface DeviceEventService {
     * 保存事件
     *
     * @param event 事件对象
-     */
+    */
     void saveEvent(DeviceEvent event);
 
     /**
@@ -30,12 +30,12 @@ public interface DeviceEventService {
     * @param start    开始时间，空 表示不限
     * @param end      结束时间，空 表示不限
     * @return 事件列表
-     */
+    */
     List<DeviceEventRecord> queryEvents(String deviceId, EventType type, LocalDateTime start, LocalDateTime end);
 
     /**
     * 轮询所有在线设备的事件
     * <p>由 Spring 定时任务驱动，每个厂商可独立配置轮询间隔。</p>
-     */
+    */
     void pollAllDevices();
 }

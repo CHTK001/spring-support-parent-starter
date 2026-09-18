@@ -20,16 +20,16 @@ public class JobCat implements Serializable {
 
     /**
     * 日志标识
-     */
+    */
     private Integer logId;
 
     /**
     * 起始行号
-     */
+    */
     private Integer fromLineNum;
 
     /**
     * 触发时间
-     */
+    */
     private Date date;
 }

@@ -47,28 +47,28 @@ public class ApiSystemController {
 
     /**
     * WS 事件推送服务
-     */
+    */
     private final ApiWebSocketPushService pushService;
 
     /**
     * Spring 环境（用于读取 活跃 配置文件）
-     */
+    */
     private final Environment environment;
 
     /**
     * 客户端设置内存存储（键: notification已启用|cronnotification已启用|keepawake|
     * 保存upload转为workspace|autopreview办公室文件，值: 是否开启）
-     */
+    */
     private final Map<String, Boolean> clientSettings = new ConcurrentHashMap<>();
 
     /**
     * 伙伴远程访问令牌内存存储（companionid → 令牌 明文，仅生成一次，再次查询返回已配置）
-     */
+    */
     private final Map<String, String> companionAccessTokens = new ConcurrentHashMap<>();
 
     /**
     * 客户端设置支持的键集合
-     */
+    */
     private static final java.util.Set<String> CLIENT_SETTING_KEYS = java.util.Set.of(
             "notificationEnabled",
             "cronNotificationEnabled",
@@ -91,7 +91,7 @@ public class ApiSystemController {
     * 返回运行时真实系统信息。
     *
     * @return 系统信息（缓存目录 / 工作目录 / 日志目录 / 存储代际 / 平台 / 架构）
-     */
+    */
     @TokenForIgnore
     @GetMapping("/system/info")
     public ApiResult<Map<String, Object>> systemInfo() {
@@ -110,7 +110,7 @@ public class ApiSystemController {
     * 触发出厂重置（纯后端无副作用实现，返回成功信封）。
     *
     * @return 成功信封
-     */
+    */
     @PostMapping("/system/factory-reset")
     public ApiResult<Void> factoryReset() {
         log.info("收到出厂重置请求（占位实现，重启后由宿主进程执行实际擦除）");
@@ -124,7 +124,7 @@ public class ApiSystemController {
     *
     * @param body 请求体（含 work_dir / 缓存_dir / 日志_dir）
     * @return 成功信封
-     */
+    */
     @Permission(role = {"admin", "superadmin"})
     @PostMapping("/system/work-dir")
     public ApiResult<Void> workDir(@RequestBody Map<String, Object> body) {
@@ -157,7 +157,7 @@ public class ApiSystemController {
     * @param key 设置键（如 notification已启用）
     * @return 布尔值
     * @param false false
-     */
+    */
     @GetMapping("/settings/client")
     public ApiResult<Object> getClientSetting(@RequestParam(required = false) String key) {
         if (key == null || key.isBlank()) {
@@ -171,7 +171,7 @@ public class ApiSystemController {
     *
     * @param body 设置键值对
     * @return 成功信封
-     */
+    */
     @PutMapping("/settings/client")
     public ApiResult<Void> putClientSetting(@RequestBody Map<String, Object> body) {
         for (Map.Entry<String, Object> entry : body.entrySet()) {
@@ -186,7 +186,7 @@ public class ApiSystemController {
     *
     * @param body 请求体（含 language）
     * @return 成功信封
-     */
+    */
     @PatchMapping("/settings")
     public ApiResult<Void> patchSettings(@RequestBody Map<String, Object> body) {
         Object language = body.get("language");
@@ -206,7 +206,7 @@ public class ApiSystemController {
     *
     * @param body 请求体（含 新_密码）
     * @return 成功信封
-     */
+    */
     @PostMapping("/webui/change-password")
     public ApiResult<Void> webuiChangePassword(@RequestBody Map<String, Object> body) {
         if (body.get("new_password") == null || body.get("new_password").toString().isBlank()) {
@@ -221,7 +221,7 @@ public class ApiSystemController {
     *
     * @param body 请求体（含 新_用户名）
     * @return 新用户名
-     */
+    */
     @PostMapping("/webui/change-username")
     public ApiResult<Map<String, Object>> webuiChangeUsername(@RequestBody Map<String, Object> body) {
         Object newUsername = body.get("new_username");
@@ -237,7 +237,7 @@ public class ApiSystemController {
     * 生成用于移动端配对的二维码令牌。
     *
     * @return 令牌与过期时间戳
-     */
+    */
     @PostMapping("/webui/generate-qr-token")
     public ApiResult<Map<String, Object>> generateQrToken() {
         Map<String, Object> result = new LinkedHashMap<>();
@@ -252,7 +252,7 @@ public class ApiSystemController {
     *
     * @param companionId 伙伴 标识
     * @return 是否已配置
-     */
+    */
     @GetMapping("/webui/companions/{companionId}/access-token")
     public ApiResult<Map<String, Object>> getCompanionAccessToken(@PathVariable String companionId) {
         Map<String, Object> result = new LinkedHashMap<>();
@@ -265,7 +265,7 @@ public class ApiSystemController {
     *
     * @param companionId 伙伴 标识
     * @return 令牌 / 伙伴 标识 / 可选告警
-     */
+    */
     @PostMapping("/webui/companions/{companionId}/access-token")
     public ApiResult<Map<String, Object>> mintCompanionAccessToken(@PathVariable String companionId) {
         String token = UUID.randomUUID().toString().replace("-", "");
@@ -281,7 +281,7 @@ public class ApiSystemController {
     *
     * @param companionId 伙伴 标识
     * @return 是否已配置（吊销后恒为 false）
-     */
+    */
     @DeleteMapping("/webui/companions/{companionId}/access-token")
     public ApiResult<Map<String, Object>> revokeCompanionAccessToken(@PathVariable String companionId) {
         companionAccessTokens.remove(companionId);
@@ -298,7 +298,7 @@ public class ApiSystemController {
     * 返回当前认证状态（桌面模式免登录，直接返回已认证且无需 setup）。
     *
     * @return 认证状态
-     */
+    */
     @TokenForIgnore
     @GetMapping("/auth/status")
     public ApiResult<Map<String, Object>> authStatus() {
@@ -312,7 +312,7 @@ public class ApiSystemController {
     * 返回当前登录用户信息（桌面模式返回默认管理员）。
     *
     * @return 用户信息
-     */
+    */
     @TokenForIgnore
     @GetMapping("/auth/user")
     public ApiResult<Map<String, Object>> authUser() {
@@ -332,7 +332,7 @@ public class ApiSystemController {
     *
     * @param body 请求体（含 当前_密码 / 新_密码）
     * @return 成功信封
-     */
+    */
     @PostMapping("/auth/change-password")
     public ApiResult<Void> authChangePassword(@RequestBody Map<String, Object> body) {
         if (body.get("current_password") == null || body.get("current_password").toString().isBlank()) {
@@ -350,7 +350,7 @@ public class ApiSystemController {
     *
     * @param body 请求体（含 当前_密码 / 新_用户名）
     * @return 新用户名
-     */
+    */
     @PostMapping("/auth/change-username")
     public ApiResult<Map<String, Object>> authChangeUsername(@RequestBody Map<String, Object> body) {
         if (body.get("current_password") == null || body.get("current_password").toString().isBlank()) {
@@ -373,7 +373,7 @@ public class ApiSystemController {
     * 返回当前进程的辅助功能 / 屏幕录制授权状态（占位：非 macOS 返回 空）。
     *
     * @return 权限状态
-     */
+    */
     @GetMapping("/computer/permissions")
     public ApiResult<Map<String, Object>> computerPermissions() {
         return ApiResult.ok(buildPermissionStatus());
@@ -384,7 +384,7 @@ public class ApiSystemController {
     *
     * @param body 请求体（含 种类）
     * @return 权限状态
-     */
+    */
     @PostMapping("/computer/permissions/request")
     public ApiResult<Map<String, Object>> requestComputerPermission(@RequestBody Map<String, Object> body) {
         if (body.get("kind") == null || body.get("kind").toString().isBlank()) {
@@ -399,7 +399,7 @@ public class ApiSystemController {
     *
     * @param body 请求体（含 种类）
     * @return 成功信封
-     */
+    */
     @PostMapping("/computer/permissions/open-settings")
     public ApiResult<Void> openComputerPermissionSettings(@RequestBody Map<String, Object> body) {
         if (body.get("kind") == null || body.get("kind").toString().isBlank()) {
@@ -416,7 +416,7 @@ public class ApiSystemController {
         /**
         * resolvestoragegeneration。
         * @return resolveStorageGeneration的结果
-         */
+        */
         private String resolveStorageGeneration() {
         String env = System.getenv("STORAGE_GENERATION");
         if (env != null && !env.isBlank()) {
@@ -462,7 +462,7 @@ public class ApiSystemController {
     * 探测运行平台。
     *
     * @return macos / 窗口 / Linux / other
-     */
+    */
     private String detectPlatform() {
         String os = System.getProperty("os.name", "").toLowerCase();
         if (os.contains("win")) {
@@ -481,7 +481,7 @@ public class ApiSystemController {
     * 解析缓存目录（优先环境变量，回退到系统临时目录）。
     *
     * @return 缓存目录真实路径
-     */
+    */
     private String resolveCacheDir() {
         String env = System.getenv("NOMIFUN_CACHE_DIR");
         if (env != null && !env.isBlank()) {
@@ -494,7 +494,7 @@ public class ApiSystemController {
     * 解析日志目录（优先环境变量，回退到用户主目录下的隐藏目录）。
     *
     * @return 日志目录真实路径
-     */
+    */
     private String resolveLogDir() {
         String env = System.getenv("NOMIFUN_LOG_DIR");
         if (env != null && !env.isBlank()) {
@@ -507,14 +507,14 @@ public class ApiSystemController {
     * 解析存储代际（优先环境变量，回退常量 1）。
     *
     * @return 存储代际字符串
-     */
+    */
     
 
     /**
     * 解析应用显示名（优先环境变量，回退默认值）。
     *
     * @return 应用标签
-     */
+    */
     private String resolveAppLabel() {
         String env = System.getenv("NOMIFUN_APP_LABEL");
         return env != null && !env.isBlank() ? env : "Nomifun";
@@ -523,7 +523,7 @@ public class ApiSystemController {
     /**
     * 返回当前激活的 Spring 配置文件（用于前端 dev 模式判断）。
     * @return resolve活跃配置文件的结果
-     */
+    */
     private String resolveActiveProfile() {
         String[] profiles = environment.getActiveProfiles();
         return profiles.length > 0 ? profiles[0] : "default";

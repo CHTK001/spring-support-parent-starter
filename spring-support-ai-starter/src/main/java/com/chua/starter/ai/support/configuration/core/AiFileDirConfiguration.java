@@ -27,14 +27,14 @@ public class AiFileDirConfiguration {
     *
     * @param properties 文件存储配置（含 dir-列表 开关）
     * @return 目录浏览控制器
-     */
+    */
     @Bean
     public FileDirController fileDirController(FileStorageProperties properties) {
         /**
         * 文件dir控制器。
         * @param properties 属性
         * @return 文件dir控制器的结果
-         */
+        */
         return new FileDirController(properties);
     }
 }

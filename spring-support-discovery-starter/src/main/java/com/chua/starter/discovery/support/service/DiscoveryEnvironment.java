@@ -15,13 +15,13 @@ public interface DiscoveryEnvironment {
     * 获取环境名称
     *
     * @return 环境名称
-     */
+    */
     String getName();
 
     /**
     * 获取环境属性配置
     *
     * @return 属性配置对象
-     */
+    */
     Properties getProperties();
 }

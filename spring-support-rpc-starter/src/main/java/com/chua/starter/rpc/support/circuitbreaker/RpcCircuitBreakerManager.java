@@ -25,7 +25,7 @@ public class RpcCircuitBreakerManager {
     *
     * @param serviceName 服务名称
     * @return 熔断器
-     */
+    */
     public RpcCircuitBreaker getOrCreate(String serviceName) {
         return circuitBreakers.computeIfAbsent(serviceName, RpcCircuitBreaker::new);
     }
@@ -35,7 +35,7 @@ public class RpcCircuitBreakerManager {
     *
     * @param serviceName 服务名称
     * @return 熔断器
-     */
+    */
     public RpcCircuitBreaker get(String serviceName) {
         return circuitBreakers.get(serviceName);
     }
@@ -44,21 +44,21 @@ public class RpcCircuitBreakerManager {
     * 移除熔断器
     *
     * @param serviceName 服务名称
-     */
+    */
     public void remove(String serviceName) {
         circuitBreakers.remove(serviceName);
     }
 
     /**
     * 重置所有熔断器
-     */
+    */
     public void resetAll() {
         circuitBreakers.values().forEach(RpcCircuitBreaker::reset);
     }
 
     /**
     * 获取所有熔断器状态
-     */
+    */
     public void printStatus() {
         log.info("[RPC] 熔断器状态:");
         circuitBreakers.forEach((name, breaker) -> {

@@ -20,12 +20,12 @@ public final class NetUtils {
     *
     * @param port 端口号
     * @return 如果端口被占用返回 true，否则返回 false
-     */
+    */
     public static boolean isPortInUsed(int port) {
         /**
         * 尝试。
         * @param port 端口
-         */
+        */
         try (Socket socket = new Socket("localhost", port)) {
             return true;
         } catch (IOException e) {

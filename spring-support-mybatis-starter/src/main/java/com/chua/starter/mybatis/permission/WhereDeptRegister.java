@@ -34,7 +34,7 @@ public class WhereDeptRegister extends AbstractDeptRegister {
     * @param dataPermission 数据权限
     * @param scopeProperties scope属性
     * @param currentTable 当前table
-     */
+    */
     public WhereDeptRegister(PlainSelect plainSelect,
                              Expression where,
                              CurrentUser user,
@@ -48,7 +48,7 @@ public class WhereDeptRegister extends AbstractDeptRegister {
         * @param user 用户
         * @param dataPermission 数据权限
         * @param scopeProperties scope属性
-         */
+        */
         super(plainSelect, where, user, dataPermission, scopeProperties);
         this.currentTable = currentTable;
         deptTable = currentTable;
@@ -58,7 +58,7 @@ public class WhereDeptRegister extends AbstractDeptRegister {
     * 注册
     *
     * @return 注册的结果
-     */
+    */
     public Expression register() {
         return registerDataScope();
     }
@@ -67,7 +67,7 @@ public class WhereDeptRegister extends AbstractDeptRegister {
     * 创建入表达式
     *
     * @return
-     */
+    */
     private Expression createInExpression() {
         return new InExpression(
                 new Column(currentTable, deptIdColumn),

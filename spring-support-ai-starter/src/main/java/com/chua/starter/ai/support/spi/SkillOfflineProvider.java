@@ -20,13 +20,13 @@ public interface SkillOfflineProvider {
     * 离线源名称（用于前端展示与开关 key）。
     *
     * @return 源名称
-     */
+    */
     String name();
 
     /**
     * 列出该来源提供的技能列表。
     *
     * @return 技能列表（每项为可序列化 Map，含 code/name/description 等）
-     */
+    */
     List<Map<String, Object>> listSkills();
 }

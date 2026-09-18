@@ -27,17 +27,17 @@ public class EduGrade {
 
     /**
     * 学段：PRIMARY / JUNIOR / SENIOR / UNIVERSITY
-     */
+    */
     private String gradeLevel;
 
     /**
     * 年级名：1-12 或 大一-大四
-     */
+    */
     private String gradeName;
 
     /**
     * 学段内的顺序 (1..N)
-     */
+    */
     private Integer gradeOrder;
 
     @TableField(value = "create_time", fill = com.baomidou.mybatisplus.annotation.FieldFill.INSERT)

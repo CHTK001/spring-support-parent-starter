@@ -31,24 +31,24 @@ public class RateLimitFilter implements Filter {
 
     /**
     * 限流拒绝状态码
-     */
+    */
     private static final int HTTP_TOO_MANY_REQUESTS = 429;
 
     /**
     * 登录路径匹配正则：URI 路径段以 login 结尾（排除 login编码 等含 login 的非登录接口）
-     */
+    */
     private static final Pattern LOGIN_PATH_PATTERN = Pattern.compile("(^|/)login$");
 
     /**
     * 客户端配置
-     */
+    */
     private final AuthClientProperties authClientProperties;
 
     /**
     * 构造函数
     *
     * @param authClientProperties 客户端配置
-     */
+    */
     public RateLimitFilter(AuthClientProperties authClientProperties) {
         this.authClientProperties = authClientProperties;
     }
@@ -76,10 +76,10 @@ public class RateLimitFilter implements Filter {
         // 全局接口 QPS 限流（未认证流量同样受限）
         if (rateLimit.getApi().isEnable() && !rateLimitService.checkApiLimit(ip)) {
             /**
-            * 写入rejected。
-            * @param response 响应
-            * @param "请求过于频繁，请稍后再试" "请求过于频繁，请稍后再试"
-             */
+    * 写入rejected。
+    * @param response 响应
+    * @param "请求过于频繁，请稍后再试" "请求过于频繁，请稍后再试"
+    */
             writeRejected(response, "请求过于频繁，请稍后再试");
             return;
         }
@@ -90,7 +90,7 @@ public class RateLimitFilter implements Filter {
             * 写入rejected。
             * @param response 响应
             * @param "登录尝试过于频繁，请稍后再试" "登录尝试过于频繁，请稍后再试"
-             */
+            */
             writeRejected(response, "登录尝试过于频繁，请稍后再试");
             return;
         }
@@ -103,7 +103,7 @@ public class RateLimitFilter implements Filter {
     *
     * @param request 请求
     * @return true-是登录请求
-     */
+    */
     private boolean isLoginRequest(HttpServletRequest request) {
         String uri = request.getRequestURI();
         return uri != null && LOGIN_PATH_PATTERN.matcher(uri).find();
@@ -114,7 +114,7 @@ public class RateLimitFilter implements Filter {
     *
     * @param response 响应
     * @param message  提示信息
-     */
+    */
     private void writeRejected(HttpServletResponse response, String message) throws IOException {
         response.setStatus(HTTP_TOO_MANY_REQUESTS);
         response.setContentType("application/json;charset=UTF-8");

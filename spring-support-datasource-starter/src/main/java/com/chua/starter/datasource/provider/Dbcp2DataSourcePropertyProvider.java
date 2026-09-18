@@ -128,7 +128,7 @@ public class Dbcp2DataSourcePropertyProvider implements DataSourcePropertyProvid
     *
     * @param value 价值观
     * @return 转为int的结果
-     */
+    */
     private int toInt(Object value) {
         if (value instanceof Number) {
             return ((Number) value).intValue();
@@ -141,7 +141,7 @@ public class Dbcp2DataSourcePropertyProvider implements DataSourcePropertyProvid
     *
     * @param value 价值观
     * @return 转为long的结果
-     */
+    */
     private long toLong(Object value) {
         if (value instanceof Number) {
             return ((Number) value).longValue();
@@ -154,7 +154,7 @@ public class Dbcp2DataSourcePropertyProvider implements DataSourcePropertyProvid
     *
     * @param value 价值观
     * @return 转为布尔值的结果
-     */
+    */
     private boolean toBoolean(Object value) {
         if (value instanceof Boolean) {
             return (Boolean) value;

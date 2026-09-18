@@ -16,19 +16,19 @@ public class BusinessException extends RuntimeException {
 
     /**
     * 业务错误码
-     */
+    */
     private ResultCode resultCode;
 
     /**
     * 根据错误码构造业务异常
     *
     * @param errorCode 错误码对象
-     */
+    */
     public BusinessException(ResultCode errorCode) {
         /**
         * 父。
         * @param errorCode.getMsg( 错误编码.getmsg(
-         */
+        */
         super(errorCode.getMsg());
         this.resultCode = errorCode;
     }
@@ -37,12 +37,12 @@ public class BusinessException extends RuntimeException {
     * 根据错误消息构造业务异常
     *
     * @param message 错误消息
-     */
+    */
     public BusinessException(String message) {
         /**
         * 父。
         * @param message 消息
-         */
+        */
         super(message);
     }
 
@@ -51,13 +51,13 @@ public class BusinessException extends RuntimeException {
     *
     * @param message 错误消息
     * @param cause   原始异常
-     */
+    */
     public BusinessException(String message, Throwable cause) {
         /**
         * 父。
         * @param message 消息
         * @param cause cause
-         */
+        */
         super(message, cause);
     }
 
@@ -65,19 +65,19 @@ public class BusinessException extends RuntimeException {
     * 根据原因构造业务异常
     *
     * @param cause 原始异常
-     */
+    */
     public BusinessException(Throwable cause) {
         /**
         * 父。
         * @param cause cause
-         */
+        */
         super(cause);
     }
     /**
     * 获取 结果编码
     *
     * @return resultCode
-     */
+    */
     public ResultCode getResultCode() {
         return resultCode;
     }

@@ -32,7 +32,7 @@ public class TransactionController {
     *
     * @param id 标识
     * @return 获取byid的结果
-     */
+    */
     public Result<TransactionRecord> getById(@PathVariable Long id) {
         TransactionRecord record = transactionRecordService.getById(id);
         return record != null ? Result.success(record) : Result.error("流水记录不存在");
@@ -44,7 +44,7 @@ public class TransactionController {
     * @param orderNo 订单no
     * @param pageNum pagenum
     * @param pageSize page大小
-     */
+    */
     public Result<PageResult<TransactionRecord>> listByOrderNo(@PathVariable String orderNo,
                                                                @RequestParam(defaultValue = "1") int pageNum,
                                                                @RequestParam(defaultValue = "10") int pageSize) {
@@ -57,7 +57,7 @@ public class TransactionController {
     * @param merchantId merchantid
     * @param pageNum pagenum
     * @param pageSize page大小
-     */
+    */
     public Result<PageResult<TransactionRecord>> listByMerchantId(@PathVariable Long merchantId,
                                                                   @RequestParam(defaultValue = "1") int pageNum,
                                                                   @RequestParam(defaultValue = "10") int pageSize) {
@@ -70,7 +70,7 @@ public class TransactionController {
     *
     * @param "1" "1"
     * @return page的结果
-     */
+    */
     public Result<PageResult<TransactionRecord>> page(@RequestParam(defaultValue = "1") int pageNum,
                                                       @RequestParam(defaultValue = "10") int pageSize,
                                                       @RequestParam(required = false) Long merchantId,

@@ -21,7 +21,7 @@ public class AppKeyFingerprintConfig {
     * @param fingerprintWhitelist 指纹白名单（多个指纹用逗号分隔）
     * @param fingerprint 待检查的指纹
     * @return true 如果在白名单中或白名单为空，false 如果不在白名单中
-     */
+    */
     public static boolean isFingerprintAllowed(Integer enableFingerprint, String fingerprintWhitelist, String fingerprint) {
         // 如果未启用指纹检测，允许所有指纹
         if (enableFingerprint == null || enableFingerprint != 1) {

@@ -22,17 +22,17 @@ public class ConfigCenterProperties {
 
     /**
     * 是否启用配置中心
-     */
+    */
     private boolean enable = false;
 
     /**
     * 连接超时（毫秒）
-     */
+    */
     private int connectTimeout = 5000;
 
     /**
     * 读取超时（毫秒）
-     */
+    */
     private int readTimeout = 5000;
 
     /**
@@ -40,22 +40,22 @@ public class ConfigCenterProperties {
     * <p>
     * 支持：nacos, apollo, consul, ZooKeeper 等
     * </p>
-     */
+    */
     private String protocol;
 
     /**
     * 配置中心地址
-     */
+    */
     private String address;
 
     /**
     * 账号
-     */
+    */
     private String username;
 
     /**
     * 密码
-     */
+    */
     private String password;
 
     /**
@@ -63,19 +63,19 @@ public class ConfigCenterProperties {
     * <p>
     * 不填写默认为 spring.配置文件.活跃
     * </p>
-     */
+    */
     private String namespaceId;
 
     /**
     * 热更新配置
-     */
+    */
     private HotReload hotReload = new HotReload();
 
     /**
     * 热更新配置
     * @author CH
     * @since 4.0.0
-     */
+    */
     @Data
     public static class HotReload {
 
@@ -84,7 +84,7 @@ public class ConfigCenterProperties {
         * <p>
         * 启用后，配置中心的配置变更会自动同步到应用
         * </p>
-         */
+        */
         private boolean enabled = true;
 
         /**
@@ -93,7 +93,7 @@ public class ConfigCenterProperties {
         * 启用后，使用 @价值观 注解的字段也能实现热更新。
         * 注意：需要配合 @refreshscope 使用，或者使用 @配置价值观 注解。
         * </p>
-         */
+        */
         private boolean valueAnnotationEnabled = true;
 
         /**
@@ -102,7 +102,7 @@ public class ConfigCenterProperties {
         * 启用后，使用 @配置价值观 注解的字段支持热更新，
         * 无需 @refreshscope。
         * </p>
-         */
+        */
         private boolean configValueAnnotationEnabled = true;
 
         /**
@@ -110,12 +110,12 @@ public class ConfigCenterProperties {
         * <p>
         * 防止配置频繁变更导致应用抖动
         * </p>
-         */
+        */
         private long refreshDelayMs = 100;
 
         /**
         * 是否在配置变更时打印日志
-         */
+        */
         private boolean logOnChange = true;
     }
 }

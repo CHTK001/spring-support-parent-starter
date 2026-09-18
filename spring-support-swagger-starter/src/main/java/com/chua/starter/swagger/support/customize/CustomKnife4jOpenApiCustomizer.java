@@ -59,12 +59,12 @@ public class CustomKnife4jOpenApiCustomizer implements GlobalOpenApiCustomizer {
     
     /**
     * 刀4j配置属性
-     */
+    */
     private final Knife4jProperties knife4jProperties;
     
     /**
     * springdoc配置属性
-     */
+    */
     private final SpringDocConfigProperties properties;
 
     /**
@@ -72,7 +72,7 @@ public class CustomKnife4jOpenApiCustomizer implements GlobalOpenApiCustomizer {
     *
     * @param knife4jProperties 刀4j配置属性
     * @param properties springdoc配置属性
-     */
+    */
     public CustomKnife4jOpenApiCustomizer(Knife4jProperties knife4jProperties, SpringDocConfigProperties properties) {
         this.knife4jProperties = knife4jProperties;
         this.properties = properties;
@@ -82,7 +82,7 @@ public class CustomKnife4jOpenApiCustomizer implements GlobalOpenApiCustomizer {
     * 定制打开api
     *
     * @param openApi 打开api对象
-     */
+    */
     @Override
     public void customise(OpenAPI openApi) {
         log.debug("Knife4j OpenApiCustomizer");
@@ -98,7 +98,7 @@ public class CustomKnife4jOpenApiCustomizer implements GlobalOpenApiCustomizer {
             /**
             * 添加订单延伸。
             * @param openApi 打开api
-             */
+            */
             addOrderExtension(openApi);
         }
     }
@@ -107,7 +107,7 @@ public class CustomKnife4jOpenApiCustomizer implements GlobalOpenApiCustomizer {
     * 往打开api内标签字段添加x-订单属性
     *
     * @param openApi 打开api对象
-     */
+    */
     private void addOrderExtension(OpenAPI openApi) {
         if (CollectionUtils.isEmpty(properties.getGroupConfigs())) {
             return;
@@ -160,7 +160,7 @@ public class CustomKnife4jOpenApiCustomizer implements GlobalOpenApiCustomizer {
     *
     * @param clazz 类
     * @return Tag注解
-     */
+    */
     private Tag getTag(Class<?> clazz) {
         // 从类上获取
         Tag tag = clazz.getAnnotation(Tag.class);
@@ -186,7 +186,7 @@ public class CustomKnife4jOpenApiCustomizer implements GlobalOpenApiCustomizer {
     * @param packageName 包名
     * @param annotationClass 注解类
     * @return 类集合
-     */
+    */
     private Set<Class<?>> scanPackageByAnnotation(
             String packageName, final Class<? extends Annotation> annotationClass) {
         ClassPathScanningCandidateComponentProvider scanner =

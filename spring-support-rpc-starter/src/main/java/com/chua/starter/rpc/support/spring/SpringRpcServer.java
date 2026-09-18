@@ -41,7 +41,7 @@ public class SpringRpcServer implements RpcServer, ApplicationContextAware {
     * @param registryConfigs registry配置
     * @param protocolConfig 协议配置
     * @param appName app名称
-     */
+    */
     public SpringRpcServer(List<RpcRegistryConfig> registryConfigs,
                           RpcProtocolConfig protocolConfig,
                           String appName) {
@@ -107,7 +107,7 @@ public class SpringRpcServer implements RpcServer, ApplicationContextAware {
     * 获取已注册的服务
     * @param name 名称
     * @return 获取服务的结果
-     */
+    */
     public Object getService(String name) {
         return serviceRegistry.get(name);
     }
@@ -115,7 +115,7 @@ public class SpringRpcServer implements RpcServer, ApplicationContextAware {
     /**
     * 获取所有已注册的服务
     * @return 获取全部服务的结果
-     */
+    */
     public Map<String, Object> getAllServices() {
         return new ConcurrentHashMap<>(serviceRegistry);
     }

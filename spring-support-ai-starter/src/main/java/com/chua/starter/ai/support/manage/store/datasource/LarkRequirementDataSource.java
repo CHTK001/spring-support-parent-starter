@@ -106,7 +106,7 @@ public class LarkRequirementDataSource implements IRequirementDataSource {
     *
     * @param config 数据源配置
     * @return 连接成功返回 true
-     */
+    */
     @Override
     public boolean testConnection(Map<String, Object> config) {
         try {
@@ -130,7 +130,7 @@ public class LarkRequirementDataSource implements IRequirementDataSource {
     * 使用 app_标识 + app_secret 获取 tenant_access_令牌。
     * @param config 配置
     * @return 获取access令牌的结果
-     */
+    */
     private String getAccessToken(Map<String, Object> config) {
         String appId = getString(config, "app_id");
         String appSecret = getString(config, "app_secret");
@@ -173,7 +173,7 @@ public class LarkRequirementDataSource implements IRequirementDataSource {
     * @param accessToken 访问令牌
     * @param tableId     多维表格 ID
     * @return 记录列表
-     */
+    */
     @SuppressWarnings("unchecked")
     private List<Map<String, Object>> fetchRecords(String accessToken, String tableId) {
         try {
@@ -242,7 +242,7 @@ public class LarkRequirementDataSource implements IRequirementDataSource {
     * extract字段映射。
     * @param record record
     * @return extract字段映射的结果
-     */
+    */
     private Map<String, Object> extractFieldMap(Map<String, Object> record) {
         /**
         * 映射状态。
@@ -250,14 +250,14 @@ public class LarkRequirementDataSource implements IRequirementDataSource {
         * @return 映射状态的结果
         * @param map 映射
         * @param key 键
-         */
+        */
         Object fields = record.get("fields");
         return fields instanceof Map ? (Map<String, Object>) fields : new LinkedHashMap<>();
     /**
     * 映射状态。
     * @param raw raw
     * @return 映射状态的结果
-     */
+    */
     }
 
     private String mapStatus(String raw) {
@@ -284,7 +284,7 @@ public class LarkRequirementDataSource implements IRequirementDataSource {
     * @param key 键
     * @param defaultValue 默认值
     * @return 获取字符串的结果
-     */
+    */
     }
 
     private String getString(Map<String, Object> map, String key, String defaultValue) {
@@ -295,7 +295,7 @@ public class LarkRequirementDataSource implements IRequirementDataSource {
     * @param s s
     * @return escapeJson的结果
     * @param json json
-     */
+    */
     }
 
     private String escapeJson(String s) {

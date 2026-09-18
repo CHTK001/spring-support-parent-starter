@@ -40,7 +40,7 @@ public class SseSocketProvider implements SocketProvider {
     * @param template template
     * @param template template
     * @param protocol 协议
-     */
+    */
     public SocketSessionTemplate createSessionTemplate(
             SocketProperties properties,
             List<SocketListener> listeners) {

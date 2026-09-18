@@ -24,7 +24,7 @@ public class StreamUtils {
 
     /**
     * 私有构造函数，防止实例化
-     */
+    */
     private StreamUtils() {
     }
 
@@ -34,7 +34,7 @@ public class StreamUtils {
     * @param data         数据
     * @param idFunction   流名称
     * @return {@link T}
-     */
+    */
     public static <R, T> Map<R, T> toMap(Collection<T> data, Function<T, R> idFunction) {
         if(null == data || null == idFunction) {
             return Collections.emptyMap();
@@ -62,7 +62,7 @@ public class StreamUtils {
     * @param data         数据
     * @param idFunction   流名称
     * @return {@link T}
-     */
+    */
     public static <R, T> Map<R, List<T>> tpMultiMap(Collection<T> data, Function<T, R> idFunction) {
         if(null == data || null == idFunction) {
             return Collections.emptyMap();
@@ -88,7 +88,7 @@ public class StreamUtils {
     * @param operatorType 运算符类型
     * @param value        值
     * @return {@link T}
-     */
+    */
     public static <T>T getFirst(Collection<T> data, Function<T, String> streamName, OperatorType operatorType, String value) {
         List<T> ts = get(data, streamName, operatorType, value);
         return CollectionUtils.findFirst(ts);
@@ -101,7 +101,7 @@ public class StreamUtils {
     * @param operatorType 运算符类型
     * @param value        值
     * @return {@link T}
-     */
+    */
     public static <T>List<T> get(Collection<T> data, Function<T, String> streamName, OperatorType operatorType, String value) {
         return CollectionUtils.isEmpty(data) ? null :
                 data.stream()

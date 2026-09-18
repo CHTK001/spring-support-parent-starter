@@ -34,7 +34,7 @@ public class WalletAccountController {
     * 获取账户
     * @param merchantId merchantid
     * @param userId 用户标识
-     */
+    */
     public Result<WalletAccountVO> getAccount(@RequestParam Long merchantId,
                                               @RequestParam Long userId) {
         return Result.success(walletAccountService.getAccount(merchantId, userId));
@@ -46,7 +46,7 @@ public class WalletAccountController {
     *
     * @param dto dto
     * @return recharge的结果
-     */
+    */
     public Result<WalletAccountVO> recharge(@RequestBody WalletRechargeDTO dto) {
         return Result.success(walletAccountService.recharge(dto));
     }
@@ -56,7 +56,7 @@ public class WalletAccountController {
     * page日志。
     * @param "1" "1"
     * @return page日志的结果
-     */
+    */
     public Result<PageResult<WalletAccountLog>> pageLogs(@RequestParam(defaultValue = "1") int pageNum,
                                                           @RequestParam(defaultValue = "10") int pageSize,
                                                           @RequestParam(required = false) Long merchantId,

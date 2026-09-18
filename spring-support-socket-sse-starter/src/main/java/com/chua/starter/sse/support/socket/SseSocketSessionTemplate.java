@@ -31,34 +31,34 @@ public class SseSocketSessionTemplate implements SocketSessionTemplate {
 
     /**
     * SSE 连接超时时间（毫秒），默认30分钟
-     */
+    */
     private final long timeout;
 
     /**
     * 客户端连接映射
     * 钥匙: 客户端标识, 价值观: sse套接字会话
-     */
+    */
     private final Map<String, SseSocketSession> sessions = new ConcurrentHashMap<>();
 
     /**
     * 用户到会话的映射
     * 钥匙: 用户标识, 价值观: 客户端标识
-     */
+    */
     private final Map<String, String> userSessionMap = new ConcurrentHashMap<>();
 
     /** 创建 sse套接字会话template 实例 */
     public SseSocketSessionTemplate() {
         /**
-        * this。
-        * @param 1000L 1000L
-         */
+    * this。
+    * @param 1000L 1000L
+    */
         this(30 * 60 * 1000L);
     }
 
     /**
     * 创建 sse套接字会话template 实例
     * @param timeout 超时
-     */
+    */
     public SseSocketSessionTemplate(long timeout) {
         this.timeout = timeout;
     }
@@ -68,7 +68,7 @@ public class SseSocketSessionTemplate implements SocketSessionTemplate {
     *
     * @param clientId 客户端标识，如果为空则自动生成
     * @return SseEmitter
-     */
+    */
     public SseEmitter createConnection(String clientId) {
         if (clientId == null || clientId.isEmpty()) {
             clientId = UUID.randomUUID().toString().replace("-", "");
@@ -80,7 +80,7 @@ public class SseSocketSessionTemplate implements SocketSessionTemplate {
             * 移除。
             * @param clientId 客户端标识
             * @param sessions.get(clientId 会话.获取(客户端标识
-             */
+            */
             remove(clientId, sessions.get(clientId));
         }
 
@@ -185,11 +185,11 @@ public class SseSocketSessionTemplate implements SocketSessionTemplate {
         String clientId = userSessionMap.get(userId);
         if (clientId != null) {
             /**
-            * 发送。
-            * @param clientId 客户端标识
-            * @param event 事件
-            * @param msg msg
-             */
+    * 发送。
+    * @param clientId 客户端标识
+    * @param event 事件
+    * @param msg msg
+    */
             send(clientId, event, msg);
         }
     }
@@ -248,7 +248,7 @@ public class SseSocketSessionTemplate implements SocketSessionTemplate {
     *
     * @param userId   用户标识
     * @param clientId 客户端标识
-     */
+    */
     public void bindUser(String userId, String clientId) {
         userSessionMap.put(userId, clientId);
         SseSocketSession session = sessions.get(clientId);
@@ -263,7 +263,7 @@ public class SseSocketSessionTemplate implements SocketSessionTemplate {
     * 解绑用户
     *
     * @param userId 用户标识
-     */
+    */
     public void unbindUser(String userId) {
         userSessionMap.remove(userId);
     }
@@ -272,7 +272,7 @@ public class SseSocketSessionTemplate implements SocketSessionTemplate {
     * 获取所有连接状态
     *
     * @return 连接状态信息
-     */
+    */
     public Map<String, Object> getConnectionStatus() {
         return Map.of(
                 "totalConnections", sessions.size(),

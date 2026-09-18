@@ -19,16 +19,16 @@ public class TrainUploadView implements Serializable {
 
     /**
     * 训练任务 标识。
-     */
+    */
     private String taskId;
 
     /**
     * 上传的 压缩 原始文件名。
-     */
+    */
     private String fileName;
 
     /**
     * 解压后的数据目录路径。
-     */
+    */
     private String dataPath;
 }

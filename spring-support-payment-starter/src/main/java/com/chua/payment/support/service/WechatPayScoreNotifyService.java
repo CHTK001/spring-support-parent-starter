@@ -15,7 +15,7 @@ public interface WechatPayScoreNotifyService {
     * 把手通知。
     * @param dto dto
     * @return 把手通知的结果
-     */
+    */
     TencentWechatPayScoreNotifyPayload handleNotify(WechatPayScoreNotifyDTO dto);
 }
 

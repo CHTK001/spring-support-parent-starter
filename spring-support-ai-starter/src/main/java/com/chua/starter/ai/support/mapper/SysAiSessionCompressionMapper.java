@@ -20,6 +20,6 @@ public interface SysAiSessionCompressionMapper extends BaseMapper<SysAiSessionCo
     * @param sessionId 会话 标识
     * @return 压缩上下文实体，不存在时返回 {@code null}
     * @param @Param("sessionId" @参数("会话标识"
-     */
+    */
     SysAiSessionCompression selectBySessionId(@Param("sessionId") Long sessionId);
 }

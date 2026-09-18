@@ -18,7 +18,7 @@ public interface MessageHandler {
     *
     * @param message 消息
     * @param ack    消息确认对象（如果 autoACK=false，需要手动确认）
-     */
+    */
     void handle(Message message, Acknowledgment ack);
 
     /**
@@ -29,7 +29,7 @@ public interface MessageHandler {
     *
     * @param message 消息
     * @deprecated 使用 handle(Message message, Acknowledgment ack) 替代
-     */
+    */
     @Deprecated
     default void handle(Message message) {
         // 为了向后兼容，自动确认
@@ -37,7 +37,7 @@ public interface MessageHandler {
         * 把手。
         * @param message 消息
         * @param AutoAcknowledgment( auto承认(
-         */
+        */
         handle(message, new AutoAcknowledgment());
     }
 
@@ -45,7 +45,7 @@ public interface MessageHandler {
     * 自动确认实现（用于向后兼容）
     * @author CH
     * @since 4.0.0
-     */
+    */
     class AutoAcknowledgment implements Acknowledgment {
         @Override
         /** Acknowledge */
@@ -58,8 +58,8 @@ public interface MessageHandler {
         public void nack(boolean requeue) {
  // 自动确认模式下，nack 等同于 ACK
             /**
-            * acknowledge。
-             */
+        * acknowledge。
+        */
             acknowledge();
         }
 

@@ -47,14 +47,14 @@ public class FileStorageTemplate implements AutoCloseable {
     /**
     * 创建 文件storagetemplate 实例
     * @param properties 属性
-     */
+    */
     public FileStorageTemplate(FileStorageProperties properties) {
         this.properties = properties;
     }
 
     /**
     * 初始化所有 提供者。
-     */
+    */
     public void initialize() {
         if (properties.getProviders() == null || properties.getProviders().isEmpty()) {
             log.warn("未配置任何 Provider");
@@ -87,7 +87,7 @@ public class FileStorageTemplate implements AutoCloseable {
     *
     * @param config 配置
     * @return 创建文件storage的结果
-     */
+    */
     private FileStorage createFileStorage(ProviderConfig config) {
         BucketSetting setting = BucketSetting.builder()
                 .bucket(config.getBucket())
@@ -103,7 +103,7 @@ public class FileStorageTemplate implements AutoCloseable {
     * 推断 提供者 的 SPI 类型。
     * @param config 配置
     * @return infer类型的结果
-     */
+    */
     private String inferType(ProviderConfig config) {
         if (config.getType() != null && !config.getType().isEmpty()) {
             return config.getType();
@@ -135,7 +135,7 @@ public class FileStorageTemplate implements AutoCloseable {
     *
     * @param name 名称
     * @return 获取storage的结果
-     */
+    */
     public FileStorage getStorage(String name) {
         return storageMap.get(name);
     }
@@ -144,7 +144,7 @@ public class FileStorageTemplate implements AutoCloseable {
     * 获取默认storage
     *
     * @return 获取默认storage的结果
-     */
+    */
     public FileStorage getDefaultStorage() {
         return defaultStorageName != null ? storageMap.get(defaultStorageName) : null;
     }
@@ -153,7 +153,7 @@ public class FileStorageTemplate implements AutoCloseable {
     * 获取默认storage名称
     *
     * @return 获取默认storage名称的结果
-     */
+    */
     public String getDefaultStorageName() {
         return defaultStorageName;
     }
@@ -163,7 +163,7 @@ public class FileStorageTemplate implements AutoCloseable {
     *
     * @param name 名称
     * @param storage storage
-     */
+    */
     public void addStorage(String name, FileStorage storage) {
         storageMap.put(name, storage);
         log.info("动态添加存储: {}", highlight(name));
@@ -173,7 +173,7 @@ public class FileStorageTemplate implements AutoCloseable {
     * 移除Storage
     *
     * @param name 名称
-     */
+    */
     public void removeStorage(String name) {
         FileStorage storage = storageMap.remove(name);
         if (storage != null) {
@@ -186,7 +186,7 @@ public class FileStorageTemplate implements AutoCloseable {
     * 获取storage名称
     *
     * @return 获取storage名称的结果
-     */
+    */
     public List<String> getStorageNames() {
         return List.copyOf(storageMap.keySet());
     }
@@ -195,7 +195,7 @@ public class FileStorageTemplate implements AutoCloseable {
     * 获取Storages
     *
     * @return 获取storages的结果
-     */
+    */
     public List<FileStorage> getStorages() {
         return List.copyOf(storageMap.values());
     }
@@ -207,7 +207,7 @@ public class FileStorageTemplate implements AutoCloseable {
     *
     * @param request 请求
     * @return 放入对象的结果
-     */
+    */
     public PutObjectResult putObject(PutObjectRequest request) {
         FileStorage storage = getDefaultStorage();
         if (storage == null) {
@@ -224,7 +224,7 @@ public class FileStorageTemplate implements AutoCloseable {
     *
     * @param file 文件
     * @return 放入对象的结果
-     */
+    */
     public PutObjectResult putObject(File file) {
         FileStorage storage = getDefaultStorage();
         if (storage == null) {
@@ -241,7 +241,7 @@ public class FileStorageTemplate implements AutoCloseable {
     *
     * @param key 键
     * @return 获取对象的结果
-     */
+    */
     public GetObjectResult getObject(String key) {
         FileStorage storage = getDefaultStorage();
         if (storage == null) {
@@ -258,7 +258,7 @@ public class FileStorageTemplate implements AutoCloseable {
     *
     * @param request 请求
     * @return 获取对象的结果
-     */
+    */
     public GetObjectResult getObject(GetObjectRequest request) {
         FileStorage storage = getDefaultStorage();
         if (storage == null) {
@@ -275,7 +275,7 @@ public class FileStorageTemplate implements AutoCloseable {
     *
     * @param key 键
     * @return 删除对象的结果
-     */
+    */
     public DeleteObjectResult deleteObject(String key) {
         FileStorage storage = getDefaultStorage();
         if (storage == null) {
@@ -292,7 +292,7 @@ public class FileStorageTemplate implements AutoCloseable {
     *
     * @param request 请求
     * @return 列表对象的结果
-     */
+    */
     public ListObjectResult listObject(ListObjectRequest request) {
         FileStorage storage = getDefaultStorage();
         if (storage == null) {
@@ -312,7 +312,7 @@ public class FileStorageTemplate implements AutoCloseable {
     * @param providerName 提供者名称
     * @param request 请求
     * @return 放入对象的结果
-     */
+    */
     public PutObjectResult putObject(String providerName, PutObjectRequest request) {
         FileStorage storage = getStorage(providerName);
         if (storage == null) {
@@ -330,7 +330,7 @@ public class FileStorageTemplate implements AutoCloseable {
     * @param providerName 提供者名称
     * @param key 键
     * @return 获取对象的结果
-     */
+    */
     public GetObjectResult getObject(String providerName, String key) {
         FileStorage storage = getStorage(providerName);
         if (storage == null) {
@@ -348,7 +348,7 @@ public class FileStorageTemplate implements AutoCloseable {
     * @param providerName 提供者名称
     * @param key 键
     * @return 删除对象的结果
-     */
+    */
     public DeleteObjectResult deleteObject(String providerName, String key) {
         FileStorage storage = getStorage(providerName);
         if (storage == null) {

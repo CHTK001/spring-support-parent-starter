@@ -26,17 +26,17 @@ public class SignUtils {
 
     /**
     * 默认的参数连接符
-     */
+    */
     private static final String DEFAULT_SEPARATOR = "&";
 
     /**
     * 默认的键值连接符
-     */
+    */
     private static final String DEFAULT_KEY_VALUE_SEPARATOR = "=";
 
     /**
     * 需要排除的参数名称
-     */
+    */
     private static final Set<String> DEFAULT_EXCLUDE_KEYS = Set.of("sign", "signature");
 
     /** 创建 标志工具 实例 */
@@ -51,7 +51,7 @@ public class SignUtils {
     *
     * @return MD5签名字符串
     * @param params 参数
-     */
+    */
     public static String calculateMd5Sign(Map<String, Object> params) {
         return calculateMd5Sign(params, null);
     }
@@ -63,7 +63,7 @@ public class SignUtils {
     * @param secretKey 密钥（可选，会追加到参数字符串末尾）
     * @return MD5签名字符串
     * @param params 参数
-     */
+    */
     public static String calculateMd5Sign(Map<String, Object> params, String secretKey) {
         return com.chua.common.support.utils.SignUtils.signDirectKey(params, secretKey,
                 DEFAULT_KEY_VALUE_SEPARATOR, DEFAULT_SEPARATOR, DEFAULT_EXCLUDE_KEYS);
@@ -76,7 +76,7 @@ public class SignUtils {
     *
     * @return SHA256签名字符串
     * @param params 参数
-     */
+    */
     public static String calculateSha256Sign(Map<String, Object> params) {
         return calculateSha256Sign(params, null);
     }
@@ -87,7 +87,7 @@ public class SignUtils {
     * @param secretKey 密钥（可选，会追加到参数字符串末尾）
     * @return SHA256签名字符串
     * @param params 参数
-     */
+    */
     public static String calculateSha256Sign(Map<String, Object> params, String secretKey) {
         return com.chua.common.support.utils.SignUtils.signSha256(params, secretKey,
                 DEFAULT_KEY_VALUE_SEPARATOR, DEFAULT_SEPARATOR, DEFAULT_EXCLUDE_KEYS);
@@ -100,7 +100,7 @@ public class SignUtils {
     *
     * @param jsonObject JSON对象参数
     * @return MD5签名字符串
-     */
+    */
     public static String generateSignFromMap(com.chua.common.support.lang.json.JsonObject jsonObject) {
         return calculateMd5Sign(jsonObject);
     }
@@ -113,7 +113,7 @@ public class SignUtils {
     * @param expectedSign 期望的签名值
     * @return 验证结果
     * @param params 参数
-     */
+    */
     public static boolean verifyMd5Sign(Map<String, Object> params, String expectedSign) {
         return verifyMd5Sign(params, expectedSign, null);
     }
@@ -125,7 +125,7 @@ public class SignUtils {
     * @param secretKey    密钥
     * @return 验证结果
     * @param params 参数
-     */
+    */
     public static boolean verifyMd5Sign(Map<String, Object> params, String expectedSign, String secretKey) {
         if (StringUtils.isEmpty(expectedSign)) {
             return false;
@@ -139,7 +139,7 @@ public class SignUtils {
     * @param expectedSign 期望的签名值
     * @return 验证结果
     * @param params 参数
-     */
+    */
     public static boolean verifySha256Sign(Map<String, Object> params, String expectedSign) {
         return verifySha256Sign(params, expectedSign, null);
     }
@@ -151,7 +151,7 @@ public class SignUtils {
     * @param secretKey    密钥
     * @return 验证结果
     * @param params 参数
-     */
+    */
     public static boolean verifySha256Sign(Map<String, Object> params, String expectedSign, String secretKey) {
         if (StringUtils.isEmpty(expectedSign)) {
             return false;
@@ -167,7 +167,7 @@ public class SignUtils {
     *
     * @return 排序后的参数字符串
     * @param params 参数
-     */
+    */
     public static String buildSortedParamString(Map<String, Object> params) {
         return buildSortedParamString(params, DEFAULT_EXCLUDE_KEYS);
     }
@@ -178,7 +178,7 @@ public class SignUtils {
     * @param excludeKeys 需要排除的钥匙集合
     * @return 排序后的参数字符串
     * @param params 参数
-     */
+    */
     public static String buildSortedParamString(Map<String, Object> params, Set<String> excludeKeys) {
         return buildSortedParamString(params, excludeKeys, DEFAULT_SEPARATOR, DEFAULT_KEY_VALUE_SEPARATOR);
     }
@@ -189,7 +189,7 @@ public class SignUtils {
     * @param excludeKeys       需要排除的钥匙集合
     * @param keyValueSeparator 键值对的分隔符
     * @return 排序后的参数字符串
-     */
+    */
     public static String buildSortedParamString(Map<String, Object> params,
                                                 Set<String> excludeKeys,
                                                 String separator,
@@ -205,7 +205,7 @@ public class SignUtils {
     * @param params    原始参数映射
     * @param secretKey 密钥
     * @return 包含签名的参数Map
-     */
+    */
     public static Map<String, Object> buildSignedParams(Map<String, Object> params, String secretKey) {
         return com.chua.common.support.utils.SignUtils.buildSignedParams(params, secretKey);
     }
@@ -217,7 +217,7 @@ public class SignUtils {
     * @param secretKey 密钥
     * @param signKey   签名字段名称
     * @return 包含签名的参数Map
-     */
+    */
     public static Map<String, Object> buildSignedParams(Map<String, Object> params, String secretKey, String signKey) {
         return com.chua.common.support.utils.SignUtils.buildSignedParams(params, secretKey, signKey);
     }
@@ -228,7 +228,7 @@ public class SignUtils {
     * @param params    原始参数映射
     * @param secretKey 密钥
     * @return 包含签名的参数Map
-     */
+    */
     public static Map<String, Object> buildSha256SignedParams(Map<String, Object> params, String secretKey) {
         return com.chua.common.support.utils.SignUtils.buildSha256SignedParams(params, secretKey);
     }
@@ -241,7 +241,7 @@ public class SignUtils {
     * @param params    包含签名的参数映射
     * @param secretKey 密钥
     * @return 验证结果
-     */
+    */
     public static boolean extractAndVerifySign(Map<String, Object> params, String secretKey) {
         return extractAndVerifySign(params, secretKey, "sign");
     }
@@ -253,7 +253,7 @@ public class SignUtils {
     * @param secretKey 密钥
     * @param signKey   签名字段名称
     * @return 验证结果
-     */
+    */
     public static boolean extractAndVerifySign(Map<String, Object> params, String secretKey, String signKey) {
         if (params == null || !params.containsKey(signKey)) {
             log.warn("签名参数不存在： {}", signKey);
@@ -277,7 +277,7 @@ public class SignUtils {
     *
     * @param secretKey 密钥
     * @param params 参数
-     */
+    */
     public static void debugSign(Map<String, Object> params, String secretKey) {
         String paramString = buildSortedParamString(params);
         String fullString = StringUtils.isNotEmpty(secretKey) ? paramString + secretKey : paramString;

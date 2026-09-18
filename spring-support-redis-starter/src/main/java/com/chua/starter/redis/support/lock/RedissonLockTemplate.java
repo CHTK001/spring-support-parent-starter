@@ -39,7 +39,7 @@ public class RedissonLockTemplate implements LockTemplate {
     *
     * @param lockKey 锁的唯一标识
     * @return 完整的锁key
-     */
+    */
     private String getLockKey(String lockKey) {
         return LOCK_PREFIX + lockKey;
     }
@@ -49,7 +49,7 @@ public class RedissonLockTemplate implements LockTemplate {
     *
     * @param lockKey 锁的唯一标识
     * @return RLock 对象
-     */
+    */
     private RLock getLock(String lockKey) {
         return redissonClient.getLock(getLockKey(lockKey));
     }
@@ -144,11 +144,11 @@ public class RedissonLockTemplate implements LockTemplate {
     /** 锁 */
     public void lock(String lockKey, Runnable action) {
         /**
-        * 锁。
-        * @param lockKey 锁钥匙
-        * @param DEFAULT_LEASE_TIME 默认lease时间
-        * @param action 动作
-         */
+    * 锁。
+    * @param lockKey 锁钥匙
+    * @param DEFAULT_LEASE_TIME 默认lease时间
+    * @param action 动作
+    */
         lock(lockKey, DEFAULT_LEASE_TIME, action);
     }
 

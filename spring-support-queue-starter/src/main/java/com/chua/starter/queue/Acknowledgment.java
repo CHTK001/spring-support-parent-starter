@@ -16,7 +16,7 @@ public interface Acknowledgment {
     * <p>
     * 表示消息已成功处理，可以从队列中移除。
     * </p>
-     */
+    */
     void acknowledge();
 
     /**
@@ -28,7 +28,7 @@ public interface Acknowledgment {
     * @param requeue 是否重新入队
     *                 - true: 消息重新入队，可以被其他消费者处理
     *                 - false: 消息被丢弃或发送到死信队列
-     */
+    */
     void nack(boolean requeue);
 
     /**
@@ -36,12 +36,12 @@ public interface Acknowledgment {
     * <p>
     * 等同于 nack(false)
     * </p>
-     */
+    */
     default void nack() {
         /**
         * nack。
         * @param false false
-         */
+        */
         nack(false);
     }
 
@@ -53,13 +53,13 @@ public interface Acknowledgment {
     *
     * @param deadLetterQueue 死信队列名称（如果为 空 或空，则使用默认死信队列）
     * @param reason          失败原因（可选）
-     */
+    */
     default void nackToDeadLetter(String deadLetterQueue, String reason) {
         // 默认实现：调用 nack(false)，由具体实现类决定如何处理死信队列
         /**
         * nack。
         * @param false false
-         */
+        */
         nack(false);
     }
 
@@ -70,13 +70,13 @@ public interface Acknowledgment {
     * </p>
     *
     * @param deadLetterQueue 死信队列名称
-     */
+    */
     default void nackToDeadLetter(String deadLetterQueue) {
         /**
         * nack转为deadletter。
         * @param deadLetterQueue deadletter队列
         * @param null 空
-         */
+        */
         nackToDeadLetter(deadLetterQueue, null);
     }
 
@@ -84,7 +84,7 @@ public interface Acknowledgment {
     * 检查消息是否已确认
     *
     * @return 是否已确认
-     */
+    */
     default boolean isAcknowledged() {
         return false;
     }

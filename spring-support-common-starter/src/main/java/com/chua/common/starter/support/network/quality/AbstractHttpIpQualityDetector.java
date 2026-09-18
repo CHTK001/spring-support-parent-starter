@@ -38,16 +38,16 @@ public abstract class AbstractHttpIpQualityDetector implements IpQualityDetector
     /** 创建 抽象httpipqualitydetector 实例 */
     protected AbstractHttpIpQualityDetector() {
         /**
-        * this。
-        * @param Duration.ofSeconds(10 持续时间.的seconds(10
-         */
+    * this。
+    * @param Duration.ofSeconds(10 持续时间.的seconds(10
+    */
         this(Duration.ofSeconds(10));
     }
 
     /**
     * 创建 抽象httpipqualitydetector 实例
     * @param timeout 超时
-     */
+    */
     protected AbstractHttpIpQualityDetector(Duration timeout) {
         this.objectMapper = new ObjectMapper();
         this.httpClient = new OkHttpClient.Builder()
@@ -70,16 +70,16 @@ public abstract class AbstractHttpIpQualityDetector implements IpQualityDetector
             }
             Request request = buildRequest(url, ip);
             /**
-            * 尝试。
-            * @param httpClient.newCall(request HTTP客户端.新call(请求
-             */
+    * 尝试。
+    * @param httpClient.newCall(request HTTP客户端.新call(请求
+    */
             try (Response response = httpClient.newCall(request).execute()) {
                 if (!response.isSuccessful()) {
                     /**
                     * io异常。
                     * @param response 响应
                     * @return io异常的结果
-                     */
+                    */
                     throw new IOException("Unexpected response: " + response);
                 }
                 ResponseBody body = response.body();
@@ -88,7 +88,7 @@ public abstract class AbstractHttpIpQualityDetector implements IpQualityDetector
                     * io异常。
                     * @param body" 主体"
                     * @return io异常的结果
-                     */
+                    */
                     throw new IOException("Empty response body");
                 }
                 String json = body.string();
@@ -120,7 +120,7 @@ public abstract class AbstractHttpIpQualityDetector implements IpQualityDetector
     *
     * @param ip IP 地址
     * @return URL
-     */
+    */
     protected abstract String buildUrl(String ip);
 
     /**
@@ -129,7 +129,7 @@ public abstract class AbstractHttpIpQualityDetector implements IpQualityDetector
     * @param url URL
     * @param ip  IP
     * @return 请求
-     */
+    */
     protected Request buildRequest(String url, String ip) {
         return new Request.Builder()
                 .url(url)
@@ -144,7 +144,7 @@ public abstract class AbstractHttpIpQualityDetector implements IpQualityDetector
     * @param json 响应 JSON
     * @return IP 质量信息
     * @throws IOException 解析异常
-     */
+    */
     protected abstract IpQuality parseResult(String json) throws IOException;
 
     /**
@@ -152,7 +152,7 @@ public abstract class AbstractHttpIpQualityDetector implements IpQualityDetector
     * @param node 节点
     * @param field 字段
     * @return opt字符串的结果
-     */
+    */
     protected String optString(JsonNode node, String field) {
         if (node == null) {
             return CommonConstant.EMPTY_STRING;

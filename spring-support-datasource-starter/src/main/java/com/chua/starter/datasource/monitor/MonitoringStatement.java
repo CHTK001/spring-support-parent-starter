@@ -25,29 +25,29 @@ public class MonitoringStatement implements InvocationHandler {
 
     /**
     * 执行方法集合
-     */
+    */
     private static final String[] EXECUTE_METHODS = {
             "execute", "executeQuery", "executeUpdate", "executeLargeUpdate", "executeBatch", "executeLargeBatch"
     };
 
     /**
     * 目标 对账单
-     */
+    */
     private final Statement delegate;
 
     /**
     * 数据源名称
-     */
+    */
     private final String dataSourceName;
 
     /**
     * 监控门面
-     */
+    */
     private final DataSourceSqlMonitor monitor;
 
     /**
     * SQL 文本（prepared对账单 时为模板 SQL，无法拿到绑定参数）
-     */
+    */
     private final String sql;
 
     /**
@@ -57,7 +57,7 @@ public class MonitoringStatement implements InvocationHandler {
     * @param dataSourceName 数据源名称
     * @param monitor        监控门面
     * @param sql            SQL 文本
-     */
+    */
     private MonitoringStatement(Statement delegate, String dataSourceName, DataSourceSqlMonitor monitor, String sql) {
         this.delegate = delegate;
         this.dataSourceName = dataSourceName;
@@ -72,7 +72,7 @@ public class MonitoringStatement implements InvocationHandler {
     * @param dataSourceName 数据源名称
     * @param monitor        监控门面
     * @return 代理后的 对账单
-     */
+    */
     public static Statement wrap(Statement statement, String dataSourceName, DataSourceSqlMonitor monitor) {
         return wrap(statement, dataSourceName, monitor, null);
     }
@@ -85,7 +85,7 @@ public class MonitoringStatement implements InvocationHandler {
     * @param monitor        监控门面
     * @param sql            SQL 文本
     * @return 代理后的 对账单
-     */
+    */
     public static Statement wrap(Statement statement, String dataSourceName, DataSourceSqlMonitor monitor, String sql) {
         if (statement == null) {
             return null;
@@ -157,7 +157,7 @@ public class MonitoringStatement implements InvocationHandler {
     *
     * @param args 方法参数
     * @return SQL 文本
-     */
+    */
     private String resolveSql(Object[] args) {
  // 显式传入的 SQL（执行(sql) / 执行查询(sql) / 执行更新(sql)）
         if (args != null && args.length > 0 && args[0] instanceof String s) {
@@ -174,7 +174,7 @@ public class MonitoringStatement implements InvocationHandler {
     * @param args   参数
     * @return 方法返回值
     * @throws Throwable 目标 对账单 抛出的异常
-     */
+    */
     private Object invokeTarget(Method method, Object[] args) throws Throwable {
         try {
             return method.invoke(delegate, args);

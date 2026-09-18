@@ -23,12 +23,12 @@ public class DelegateSocketIOServer extends SocketIOServer implements Initializi
     /**
     * 创建 delegate套接字io服务端 实例
     * @param configuration 配置
-     */
+    */
     public DelegateSocketIOServer(Configuration configuration) {
         /**
         * 父。
         * @param configuration 配置
-         */
+        */
         super(configuration);
     }
 

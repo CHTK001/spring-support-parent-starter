@@ -15,12 +15,12 @@ public class FindAllSqlMethod extends AbstractMethod {
     /**
     * @param methodName 方法名
     * @since 3.5.0
-     */
+    */
     protected FindAllSqlMethod(String methodName) {
         /**
         * 父。
         * @param methodName 方法名称
-         */
+        */
         super(methodName);
     }
 

@@ -20,7 +20,7 @@ public interface PluginMyBatisMapperRegistry {
     *
     * @param sqlSessionFactory SQL会话工厂 实例
     * @param mapperClasses     映射器 接口类
-     */
+    */
     void registerMappers(SqlSessionFactory sqlSessionFactory, Class<?>... mapperClasses);
 
     /**
@@ -29,7 +29,7 @@ public interface PluginMyBatisMapperRegistry {
     * @param sqlSessionFactory SQL会话工厂 实例
     * @param classLoader       插件 类加载
     * @param mapperXmlPath     映射器 XML 路径(例如: {@code mapper})
-     */
+    */
     void registerMapperXmls(SqlSessionFactory sqlSessionFactory,
                             ClassLoader classLoader,
                             String mapperXmlPath);
@@ -39,7 +39,7 @@ public interface PluginMyBatisMapperRegistry {
     *
     * @param sqlSessionFactory SQL会话工厂 实例
     * @param mapperXmlUrl      映射器 XML 资源地址
-     */
+    */
     void registerMapperXml(SqlSessionFactory sqlSessionFactory, URL mapperXmlUrl);
 }
 

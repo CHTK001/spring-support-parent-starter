@@ -18,13 +18,13 @@ public class TypeResolverBuilder  extends ObjectMapper.DefaultTypeResolverBuilde
     *
     * @param mapper 映射器
     * @return forEverything的结果
-     */
+    */
     public static TypeResolverBuilder forEverything(ObjectMapper mapper) {
         /**
         * 类型解析器构建器。
         * @param ObjectMapper.DefaultTyping.EVERYTHING 对象映射器.defaulttyping.everything
         * @param mapper.getPolymorphicTypeValidator( 映射器.getpolymorphic类型validator(
-         */
+        */
         return new TypeResolverBuilder(ObjectMapper.DefaultTyping.EVERYTHING, mapper.getPolymorphicTypeValidator());
     }
 
@@ -33,13 +33,13 @@ public class TypeResolverBuilder  extends ObjectMapper.DefaultTypeResolverBuilde
     * @param typing typing
     * @param polymorphicTypeValidator polymorphic类型validator
     * @param polymorphicTypeValidator polymorphic类型validator
-     */
+    */
     public TypeResolverBuilder(ObjectMapper.DefaultTyping typing, PolymorphicTypeValidator polymorphicTypeValidator) {
         /**
         * 父。
         * @param typing 类型
         * @param polymorphicTypeValidator polymorphic类型validator
-         */
+        */
         super(typing, polymorphicTypeValidator);
     }
 
@@ -55,7 +55,7 @@ public class TypeResolverBuilder  extends ObjectMapper.DefaultTypeResolverBuilde
     * actual 序列化器 和 反序列化器 will also ignore 任意 尝试 转为 enforce 类型.
     * @param javaType Java类型
     * @return usefor类型的结果
-     */
+    */
     public boolean useForType(JavaType javaType) {
 
         if (javaType.isJavaLangObject()) {
@@ -82,7 +82,7 @@ public class TypeResolverBuilder  extends ObjectMapper.DefaultTypeResolverBuilde
     *
     * @param type 类型
     * @return resolvearrayor包装器的结果
-     */
+    */
     private JavaType resolveArrayOrWrapper(JavaType type) {
 
         while (type.isArrayType()) {

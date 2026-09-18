@@ -47,7 +47,7 @@ public class TrainServiceImpl implements TrainService {
 
     /**
     * 内存任务存储（钥匙=任务标识）。
-     */
+    */
     private final Map<String, TrainTask> taskStore = new ConcurrentHashMap<>();
 
     @Override
@@ -58,7 +58,7 @@ public class TrainServiceImpl implements TrainService {
         /**
         * 发布事件。
         * @param task.getId( 任务.获取标识(
-         */
+        */
         publishEvent(task.getId(), TrainStage.TASK_CREATED, task.getProgress(), null, null);
         return task;
     }
@@ -71,7 +71,7 @@ public class TrainServiceImpl implements TrainService {
             * illegal参数异常。
             * @param taskId 任务标识
             * @return illegal参数异常的结果
-             */
+            */
             throw new IllegalArgumentException("任务不存在: " + taskId);
         }
 
@@ -99,7 +99,7 @@ public class TrainServiceImpl implements TrainService {
                 * @param taskId 任务标识
                 * @param TrainStage.TRAIN_STARTED trainstage.train启动
                 * @param task.getProgress( 任务.获取进步(
-                 */
+                */
                 publishEvent(taskId, TrainStage.TRAIN_STARTED, task.getProgress(), null, null);
 
                 TrainResult result = provider.train(task.getArgument(), ctx, wired);
@@ -111,7 +111,7 @@ public class TrainServiceImpl implements TrainService {
                     * @param taskId 任务标识
                     * @param TrainStage.TRAIN_SUCCEEDED trainStage.TRAIN_SUCCEEDED
                     * @param task.getProgress( 任务.获取进步(
-                     */
+                    */
                     publishEvent(taskId, TrainStage.TRAIN_SUCCEEDED, task.getProgress(),
                             "F1=" + result.getBestScore() + ", 耗时=" + result.getElapsedMs() + "ms", null);
                     log.info("[Train] 训练完成: taskId={}, F1={}, 耗时={}ms",
@@ -123,7 +123,7 @@ public class TrainServiceImpl implements TrainService {
                     * @param taskId 任务标识
                     * @param TrainStage.TRAIN_FAILED trainstage.train失败
                     * @param task.getProgress( 任务.获取进步(
-                     */
+                    */
                     publishEvent(taskId, TrainStage.TRAIN_FAILED, task.getProgress(),
                             result.getErrorMessage(), null);
                     log.error("[Train] 训练失败: taskId={}, error={}", taskId, result.getErrorMessage());
@@ -136,7 +136,7 @@ public class TrainServiceImpl implements TrainService {
                 * @param taskId 任务标识
                 * @param TrainStage.TRAIN_CANCELLED trainStage.TRAIN_CANCELLED
                 * @param task.getProgress( 任务.获取进步(
-                 */
+                */
                 publishEvent(taskId, TrainStage.TRAIN_CANCELLED, task.getProgress(), "训练被中断", e);
                 log.warn("[Train] 训练被中断: taskId={}", taskId);
             } catch (Exception e) {
@@ -146,7 +146,7 @@ public class TrainServiceImpl implements TrainService {
                 * @param taskId 任务标识
                 * @param TrainStage.TRAIN_FAILED trainstage.train失败
                 * @param task.getProgress( 任务.获取进步(
-                 */
+                */
                 publishEvent(taskId, TrainStage.TRAIN_FAILED, task.getProgress(), "训练异常", e);
                 log.error("[Train] 训练异常: taskId={}", taskId, e);
             }
@@ -175,7 +175,7 @@ public class TrainServiceImpl implements TrainService {
             * illegal参数异常。
             * @param taskId 任务标识
             * @return illegal参数异常的结果
-             */
+            */
             throw new IllegalArgumentException("任务不存在: " + taskId);
         }
  // 仅 PENDING 可修改（与领域 选择类型 同语义）：RUNNING 修改会污染进行中训练，
@@ -192,7 +192,7 @@ public class TrainServiceImpl implements TrainService {
         * @param taskId 任务标识
         * @param TrainStage.ARGUMENT_UPDATED trainstage.参数更新
         * @param task.getProgress( 任务.获取进步(
-         */
+        */
         publishEvent(taskId, TrainStage.ARGUMENT_UPDATED, task.getProgress(),
                 "epoch=" + merged.getEpoch() + ", batchSize=" + merged.getBatchSize()
                         + ", nClasses=" + merged.getNClasses()
@@ -210,12 +210,12 @@ public class TrainServiceImpl implements TrainService {
     * @param task         训练任务
     * @param taskListener 任务领域监听器（负责更新 进步/状态 字段）
     * @return 组合后的监听器
-     */
+    */
     private TrainListener wire(TrainTask task, TrainListener taskListener) {
         /**
         * train监听器。
         * @return train监听器的结果
-         */
+        */
         return new TrainListener() {
             @Override
             public void onStarted(TrainProgress p) {
@@ -228,7 +228,7 @@ public class TrainServiceImpl implements TrainService {
                 /**
                 * 发布事件。
                 * @param task.getId( 任务.获取标识(
-                 */
+                */
                 publishEvent(task.getId(), TrainStage.EPOCH_PROGRESS, p, null, null);
             }
 
@@ -252,7 +252,7 @@ public class TrainServiceImpl implements TrainService {
     * @param progress 进度快照（可为 空）
     * @param message  附加消息（可为 空）
     * @param cause    异常原因（可为 空）
-     */
+    */
     private void publishEvent(String taskId, TrainStage stage, TrainProgress progress,
                               String message, Throwable cause) {
         try {

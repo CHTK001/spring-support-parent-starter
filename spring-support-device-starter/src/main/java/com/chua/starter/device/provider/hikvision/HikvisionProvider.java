@@ -37,43 +37,43 @@ public class HikvisionProvider implements DeviceProvider {
 
     /**
     * 厂商标识
-     */
+    */
     private static final String VENDOR = "hikvision";
 
     /**
     * 平台接入模式
-     */
+    */
     private static final String AUTH_PLATFORM = "PLATFORM";
 
     /**
     * 局域网 SDK 直连
-     */
+    */
     private static final String AUTH_SDK = "SDK";
 
     /**
     * 海康云耀
-     */
+    */
     private static final String PLATFORM_CLOUD_YAO = "cloud-yao";
 
     /**
     * 海康云眸
-     */
+    */
     private static final String PLATFORM_CLOUD_EYE = "cloud-eye";
 
     /**
     * 海康安防平台（isecure Center / 综合安防管理平台）
-     */
+    */
     private static final String PLATFORM_SECURE = "secure-platform";
 
     /**
     * 是否允许回退到模拟会话（默认 false：严格真实对接）
-     */
+    */
     private final boolean fallbackMock;
 
     /**
     * 创建 hikvision提供者 实例
     * @param environment 环境
-     */
+    */
     public HikvisionProvider(Environment environment) {
         this.fallbackMock = environment.getProperty("plugin.device.provider.fallback-mock", boolean.class, false);
         if (fallbackMock) {
@@ -104,10 +104,10 @@ public class HikvisionProvider implements DeviceProvider {
             try {
                 if (PLATFORM_CLOUD_YAO.equalsIgnoreCase(platform)) {
                     /**
-                    * hikvisioncloudyao会话。
-                    * @param info 信息
-                    * @return hikvisioncloudyao会话的结果
-                     */
+    * hikvisioncloudyao会话。
+    * @param info 信息
+    * @return hikvisioncloudyao会话的结果
+    */
                     return new HikvisionCloudYaoSession(info);
                 }
                 if (PLATFORM_CLOUD_EYE.equalsIgnoreCase(platform)) {
@@ -115,7 +115,7 @@ public class HikvisionProvider implements DeviceProvider {
                     * hikvisioncloudeye会话。
                     * @param info 信息
                     * @return hikvisioncloudeye会话的结果
-                     */
+                    */
                     return new HikvisionCloudEyeSession(info);
                 }
                 if (PLATFORM_SECURE.equalsIgnoreCase(platform)) {
@@ -123,7 +123,7 @@ public class HikvisionProvider implements DeviceProvider {
                     * hikvisionsecureplatform会话。
                     * @param info 信息
                     * @return hikvisionsecureplatform会话的结果
-                     */
+                    */
                     return new HikvisionSecurePlatformSession(info);
                 }
                 throw new IllegalArgumentException("海康平台类型不支持: " + platform
@@ -135,14 +135,14 @@ public class HikvisionProvider implements DeviceProvider {
                     * hikvision会话。
                     * @param info 信息
                     * @return hikvision会话的结果
-                     */
+                    */
                     return new HikvisionSession(info);
                 }
                 /**
                 * illegal状态异常。
                 * @param e.getMessage( e.获取消息(
                 * @return illegal状态异常的结果
-                 */
+                */
                 throw new IllegalStateException("海康平台连接失败 [" + platform + "]: " + e.getMessage(), e);
             }
         }
@@ -153,7 +153,7 @@ public class HikvisionProvider implements DeviceProvider {
                 * hikvisionreal会话。
                 * @param info 信息
                 * @return hikvisionreal会话的结果
-                 */
+                */
                 return new HikvisionRealSession(info);
             } catch (Exception e) {
                 if (fallbackMock) {
@@ -162,14 +162,14 @@ public class HikvisionProvider implements DeviceProvider {
                     * hikvision会话。
                     * @param info 信息
                     * @return hikvision会话的结果
-                     */
+                    */
                     return new HikvisionSession(info);
                 }
                 /**
                 * illegal状态异常。
                 * @param e.getMessage( e.获取消息(
                 * @return illegal状态异常的结果
-                 */
+                */
                 throw new IllegalStateException("海康 SDK 直连失败: " + e.getMessage(), e);
             }
         }
@@ -178,7 +178,7 @@ public class HikvisionProvider implements DeviceProvider {
         * illegal参数异常。
         * @param info.getAuthType( 信息.获取认证类型(
         * @return illegal参数异常的结果
-         */
+        */
         throw new IllegalArgumentException("不支持的海康认证类型: " + info.getAuthType());
     }
 

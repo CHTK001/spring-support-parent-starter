@@ -31,12 +31,12 @@ public class LocalTrustAuthFilter extends OncePerRequestFilter {
 
     /**
     * 本地信任请求头
-     */
+    */
     public static final String LOCAL_TRUST_HEADER = "x-nomi-local-trust";
 
     /**
     * 受信标记属性（供后续鉴权链读取）
-     */
+    */
     public static final String TRUSTED_ATTR = "nomifun.local.trusted";
 
     @Override

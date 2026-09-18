@@ -46,7 +46,7 @@ public class RedisCacheManagerConfiguration {
     * @param connectionFactory Redis 连接工厂
     * @param objectMapper      JSON 序列化器
     * @return Redis 缓存管理器
-     */
+    */
     @Bean(name = CacheProperties.REDIS_BEAN_NAME)
     @ConditionalOnMissingBean(name = CacheProperties.REDIS_BEAN_NAME)
     @ConditionalOnBean(RedisConnectionFactory.class)

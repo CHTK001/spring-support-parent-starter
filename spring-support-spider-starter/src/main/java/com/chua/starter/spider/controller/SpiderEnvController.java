@@ -33,14 +33,14 @@ public class SpiderEnvController {
 
     /**
     * 环境变量服务
-     */
+    */
     private final SpiderEnvService envService;
 
     /**
     * 构造方法。
     *
     * @param envService 环境变量服务
-     */
+    */
     public SpiderEnvController(SpiderEnvService envService) {
         this.envService = envService;
     }
@@ -49,7 +49,7 @@ public class SpiderEnvController {
     * 查询全部环境变量。
     *
     * @return 环境变量列表
-     */
+    */
     @GetMapping("/list")
     @Operation(summary = "查询全部环境变量")
     public ReturnResult<List<SpiderEnv>> list() {
@@ -60,7 +60,7 @@ public class SpiderEnvController {
     * 查询已启用环境变量映射。
     *
     * @return 环境变量 k-v 映射
-     */
+    */
     @GetMapping("/map-enabled")
     @Operation(summary = "查询已启用环境变量映射")
     public ReturnResult<Map<String, String>> mapEnabled() {
@@ -72,7 +72,7 @@ public class SpiderEnvController {
     *
     * @param entity 环境变量
     * @return 是否成功
-     */
+    */
     @PostMapping
     @Operation(summary = "新增环境变量")
     public ReturnResult<Boolean> save(@RequestBody SpiderEnv entity) {
@@ -84,7 +84,7 @@ public class SpiderEnvController {
     *
     * @param entity 环境变量
     * @return 是否成功
-     */
+    */
     @PutMapping
     @Operation(summary = "更新环境变量")
     public ReturnResult<Boolean> update(@RequestBody SpiderEnv entity) {
@@ -96,7 +96,7 @@ public class SpiderEnvController {
     *
     * @param id 主键 标识
     * @return 是否成功
-     */
+    */
     @DeleteMapping("/{id}")
     @Operation(summary = "删除环境变量")
     public ReturnResult<Boolean> remove(@PathVariable Long id) {

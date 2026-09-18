@@ -25,7 +25,7 @@ public interface AgentBrowserTabMapper extends BaseMapper<AgentBrowserTab> {
     *
     * @param laneId Lane 标识
     * @return 该 Lane 下的 Tab 列表
-     */
+    */
     List<AgentBrowserTab> selectByLaneId(String laneId);
 
     /**
@@ -34,7 +34,7 @@ public interface AgentBrowserTabMapper extends BaseMapper<AgentBrowserTab> {
     * <p>在切换活跃 Tab 时，先将当前 Lane 的所有 Tab 设置为非活跃，再激活目标 Tab。</p>
     *
     * @param laneId Lane 标识
-     */
+    */
     void deactivateAllByLaneId(String laneId);
 
     /**
@@ -43,6 +43,6 @@ public interface AgentBrowserTabMapper extends BaseMapper<AgentBrowserTab> {
     * <p>在关闭 Lane 时联动删除其关联的所有 Tab。</p>
     *
     * @param laneId Lane 标识
-     */
+    */
     void deleteByLaneId(String laneId);
 }

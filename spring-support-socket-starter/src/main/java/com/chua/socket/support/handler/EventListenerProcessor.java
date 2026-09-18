@@ -26,35 +26,35 @@ public class EventListenerProcessor {
     /**
     * 事件处理器映射
     * 钥匙: 事件名称, 价值观: 处理器列表
-     */
+    */
     private final Map<String, List<EventHandler>> eventHandlers = new ConcurrentHashMap<>();
 
     /**
     * 监听器列表
-     */
+    */
     private final List<SocketListener> listeners;
 
     /**
     * 创建 事件监听器处理器 实例
     * @param listeners 监听器
-     */
+    */
     public EventListenerProcessor(List<SocketListener> listeners) {
         this.listeners = listeners != null ? listeners : List.of();
         /**
         * 扫描监听器。
-         */
+        */
         scanListeners();
     }
 
     /**
     * 扫描所有监听器，注册 @on事件 方法
-     */
+    */
     private void scanListeners() {
         for (SocketListener listener : listeners) {
             /**
             * 扫描监听器。
             * @param listener 监听器
-             */
+            */
             scanListener(listener);
         }
         log.info("[EventProcessor] 扫描完成，共注册 {} 个事件", eventHandlers.size());
@@ -64,7 +64,7 @@ public class EventListenerProcessor {
     * 扫描单个监听器
     *
     * @param listener 监听器
-     */
+    */
     private void scanListener(SocketListener listener) {
         Class<?> clazz = listener.getClass();
         for (Method method : clazz.getDeclaredMethods()) {
@@ -88,7 +88,7 @@ public class EventListenerProcessor {
     * @param eventName 事件名称
     * @param session   会话
     * @param data      数据
-     */
+    */
     public void fireEvent(String eventName, SocketSession session, Object data) {
         List<EventHandler> handlers = eventHandlers.get(eventName);
         if (handlers == null || handlers.isEmpty()) {
@@ -111,7 +111,7 @@ public class EventListenerProcessor {
     *
     * @param eventName 事件名称
     * @return 是否存在处理器
-     */
+    */
     public boolean hasHandler(String eventName) {
         List<EventHandler> handlers = eventHandlers.get(eventName);
         return handlers != null && !handlers.isEmpty();
@@ -121,7 +121,7 @@ public class EventListenerProcessor {
     * 获取所有已注册的事件名称
     *
     * @return 事件名称集合
-     */
+    */
     public java.util.Set<String> getRegisteredEvents() {
         return eventHandlers.keySet();
     }
@@ -130,7 +130,7 @@ public class EventListenerProcessor {
     * 事件处理器封装
     * @author CH
     * @since 4.0.0
-     */
+    */
     private static class EventHandler {
         /** 监听器 */
         private final SocketListener listener;
@@ -142,7 +142,7 @@ public class EventListenerProcessor {
         * @param listener 监听器
         * @param method 方法
         * @param method 方法
-         */
+        */
         public EventHandler(SocketListener listener, Method method) {
             this.listener = listener;
             this.method = method;
@@ -153,7 +153,7 @@ public class EventListenerProcessor {
         *
         * @param session 会话
         * @param data 数据
-         */
+        */
         public void invoke(SocketSession session, Object data) throws Exception {
             Class<?>[] paramTypes = method.getParameterTypes();
             
@@ -181,7 +181,7 @@ public class EventListenerProcessor {
         * 获取方法名称
         *
         * @return 获取方法名称的结果
-         */
+        */
         public String getMethodName() {
             return listener.getClass().getSimpleName() + "." + method.getName();
         }

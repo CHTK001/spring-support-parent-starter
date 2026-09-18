@@ -43,7 +43,7 @@ public class WebResponse {
     * @param chain chain
     * @param request 请求
     * @param response 响应
-     */
+    */
     public WebResponse(AuthClientProperties authProperties, FilterChain chain, HttpServletRequest request, HttpServletResponse response) {
         this.authProperties = authProperties;
         this.chain = chain;
@@ -55,7 +55,7 @@ public class WebResponse {
     * 执行失败chain
     *
     * @param information 信息
-     */
+    */
     public void doFailureChain(Information information) {
         if (null != information) {
             response.setStatus(information.getCode());
@@ -85,7 +85,7 @@ public class WebResponse {
     * 是否Localhost
     *
     * @return 是否localhost的结果
-     */
+    */
     private boolean isLocalhost() {
         String ipAddress = RequestUtils.getIpAddress(request);
         return null == ipAddress || "localhost".equalsIgnoreCase(ipAddress) || "127.0.0.1".equalsIgnoreCase(ipAddress);

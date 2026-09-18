@@ -23,16 +23,16 @@ public class MarkingJob {
 
     /**
     * 阅卷任务 标识（与 {@code edu_marking_result.marking_result_task_id} 对应）。
-     */
+    */
     private String taskId;
 
     /**
     * 答题卡 标识。
-     */
+    */
     private Long answerSheetId;
 
     /**
     * 学生答案列表。
-     */
+    */
     private List<MarkingSubmitDTO.AnswerItem> items;
 }

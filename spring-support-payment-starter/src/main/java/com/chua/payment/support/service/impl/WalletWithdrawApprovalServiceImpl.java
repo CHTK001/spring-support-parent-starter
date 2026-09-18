@@ -49,7 +49,7 @@ public class WalletWithdrawApprovalServiceImpl implements WalletWithdrawApproval
     * @param remark 评论
     * @param dto dto
     * @return 创建approval的结果
-     */
+    */
     public WalletWithdrawApproval createApproval(CreateApprovalDTO dto) {
         WalletWithdrawApproval approval = new WalletWithdrawApproval();
         approval.setMerchantId(dto.merchantId());
@@ -82,10 +82,10 @@ public class WalletWithdrawApprovalServiceImpl implements WalletWithdrawApproval
         WalletWithdrawApproval approval = approvalMapper.selectById(id);
         if (approval == null) {
             /**
-            * 薪酬异常。
-            * @param "提现审批记录不存在" "提现审批记录不存在"
-            * @return 薪酬异常的结果
-             */
+    * 薪酬异常。
+    * @param "提现审批记录不存在" "提现审批记录不存在"
+    * @return 薪酬异常的结果
+    */
             throw new PaymentException("提现审批记录不存在");
         }
         return approval;
@@ -98,7 +98,7 @@ public class WalletWithdrawApprovalServiceImpl implements WalletWithdrawApproval
     *
     * @param id 标识
     * @param operator 操作符
-     */
+    */
     public void approve(Long id, String operator) {
         String lockKey = LOCK_PREFIX + id;
         if (!idempotentTemplate.tryAcquire(lockKey, 30, TimeUnit.SECONDS)) {
@@ -106,7 +106,7 @@ public class WalletWithdrawApprovalServiceImpl implements WalletWithdrawApproval
             * 薪酬异常。
             * @param "操作过于频繁，请稍后重试" "操作过于频繁，请稍后重试"
             * @return 薪酬异常的结果
-             */
+            */
             throw new PaymentException("操作过于频繁，请稍后重试");
         }
         try {
@@ -116,7 +116,7 @@ public class WalletWithdrawApprovalServiceImpl implements WalletWithdrawApproval
                 * 薪酬异常。
                 * @param "仅待审批的记录可以审批通过" "仅待审批的记录可以审批通过"
                 * @return 薪酬异常的结果
-                 */
+                */
                 throw new PaymentException("仅待审批的记录可以审批通过");
             }
             approval.setStatus("APPROVED");
@@ -136,7 +136,7 @@ public class WalletWithdrawApprovalServiceImpl implements WalletWithdrawApproval
     * @param id 标识
     * @param operator 操作符
     * @param reason ReasonMLmlml
-     */
+    */
     public void reject(Long id, String operator, String reason) {
         String lockKey = LOCK_PREFIX + id;
         if (!idempotentTemplate.tryAcquire(lockKey, 30, TimeUnit.SECONDS)) {
@@ -144,7 +144,7 @@ public class WalletWithdrawApprovalServiceImpl implements WalletWithdrawApproval
             * 薪酬异常。
             * @param "操作过于频繁，请稍后重试" "操作过于频繁，请稍后重试"
             * @return 薪酬异常的结果
-             */
+            */
             throw new PaymentException("操作过于频繁，请稍后重试");
         }
         try {
@@ -154,7 +154,7 @@ public class WalletWithdrawApprovalServiceImpl implements WalletWithdrawApproval
                 * 薪酬异常。
                 * @param "仅待审批的记录可以拒绝" "仅待审批的记录可以拒绝"
                 * @return 薪酬异常的结果
-                 */
+                */
                 throw new PaymentException("仅待审批的记录可以拒绝");
             }
             approval.setStatus("REJECTED");

@@ -44,19 +44,19 @@ public class ApiSshController {
 
     /**
     * 主机簿持久化存储
-     */
+    */
     private final SysAiSshHostStore sshHostStore;
 
     /**
     * SSH 连接管理（真实握手 / 状态机 / WS 推送）
-     */
+    */
     private final SshConnectionManager connectionManager;
 
     /**
     * 查询全部主机。
     *
     * @return 主机列表（密钥字段脱敏）
-     */
+    */
     @GetMapping
     public ApiResult<List<Map<String, Object>>> list() {
         return ApiResult.ok(sshHostStore.listAll().stream().map(this::toResponse).toList());
@@ -67,7 +67,7 @@ public class ApiSshController {
     *
     * @param sshHostId 主机 标识
     * @return 主机（密钥字段脱敏）
-     */
+    */
     @GetMapping("/{sshHostId}")
     public ApiResult<Map<String, Object>> get(@PathVariable String sshHostId) {
         return ApiResult.ok(toResponse(sshHostStore.get(sshHostId)));
@@ -78,7 +78,7 @@ public class ApiSshController {
     *
     * @param body 请求体（camel大小写，密钥为明文）
     * @return 创建的主机（密钥字段脱敏）
-     */
+    */
     @PostMapping
     public ApiResult<Map<String, Object>> create(@RequestBody Map<String, Object> body) {
         SysAiSshHost host = new SysAiSshHost();
@@ -107,7 +107,7 @@ public class ApiSshController {
     * @param sshHostId 主机 标识
     * @param body      请求体（camel大小写，密钥为明文或掩码哨兵）
     * @return 更新后的主机（密钥字段脱敏）
-     */
+    */
     @PutMapping("/{sshHostId}")
     public ApiResult<Map<String, Object>> update(@PathVariable String sshHostId,
                                                  @RequestBody Map<String, Object> body) {
@@ -150,7 +150,7 @@ public class ApiSshController {
     *
     * @param sshHostId 主机 标识
     * @return 空结果
-     */
+    */
     @DeleteMapping("/{sshHostId}")
     public ApiResult<Void> delete(@PathVariable String sshHostId) {
         sshHostStore.delete(sshHostId);
@@ -163,7 +163,7 @@ public class ApiSshController {
     *
     * @param sshHostId 主机 标识
     * @return 测试结果 {@code {ok, message}}
-     */
+    */
     @PostMapping("/{sshHostId}/test-connection")
     public ApiResult<Map<String, Object>> testConnection(@PathVariable String sshHostId) {
         SysAiSshHost host = sshHostStore.get(sshHostId);
@@ -174,7 +174,7 @@ public class ApiSshController {
     * 查询全部链路实时状态快照（与 {@code ssh.status} 事件同一形状）。
     *
     * @return 状态列表（camelCase）
-     */
+    */
     @GetMapping("/statuses")
     public ApiResult<List<Map<String, Object>>> statuses() {
         return ApiResult.ok(connectionManager.statuses());
@@ -184,7 +184,7 @@ public class ApiSshController {
     * 扫描本机 {@code ~/.ssh/config} 提供的候选主机（当前返回空占位）。
     *
     * @return 扫描结果
-     */
+    */
     @GetMapping("/import-candidates")
     public ApiResult<Map<String, Object>> importCandidates() {
         Map<String, Object> result = new LinkedHashMap<>();
@@ -198,7 +198,7 @@ public class ApiSshController {
     *
     * @param body 请求体：aliases
     * @return 导入结果
-     */
+    */
     @PostMapping("/import")
     public ApiResult<Map<String, Object>> importHosts(@RequestBody Map<String, Object> body) {
         Map<String, Object> result = new LinkedHashMap<>();
@@ -212,7 +212,7 @@ public class ApiSshController {
     *
     * @param host 主机实体
     * @return camelCase 响应 映射
-     */
+    */
     private Map<String, Object> toResponse(SysAiSshHost host) {
         Map<String, Object> map = new LinkedHashMap<>();
         map.put("sshHostId", host.getSshHostId());
@@ -239,7 +239,7 @@ public class ApiSshController {
     *
     * @param value 原始值
     * @return 脱敏值
-     */
+    */
     private static String mask(String value) {
         return (value == null || value.isEmpty()) ? null : "***";
     }
@@ -250,7 +250,7 @@ public class ApiSshController {
     * @param value        原始值
     * @param defaultValue 缺失或空时的默认值
     * @return 字符串值
-     */
+    */
     private static String asString(Object value, String defaultValue) {
         if (value == null) {
             return defaultValue;

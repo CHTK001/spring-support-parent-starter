@@ -31,7 +31,7 @@ public interface SysFileSystemUploadService extends IService<SysFileSystemUpload
     * @param key          对象 钥匙
     * @param contentType  内容类型
     * @return 创建后的任务实体
-     */
+    */
     SysFileSystemUpload createTask(String uploadId, String fileName, String originalName,
                                    Long fileSize, Long chunkSize, Integer totalChunks,
                                    String storageType, String bucket, String key, String contentType);
@@ -42,7 +42,7 @@ public interface SysFileSystemUploadService extends IService<SysFileSystemUpload
     * @param uploadId       上传任务 标识
     * @param uploadedChunks 已上传分片数
     * @return 是否更新成功
-     */
+    */
     boolean updateUploadedChunks(String uploadId, Integer uploadedChunks);
 
     /**
@@ -51,7 +51,7 @@ public interface SysFileSystemUploadService extends IService<SysFileSystemUpload
     * @param uploadId 上传任务 标识
     * @param status   目标状态
     * @return 是否更新成功
-     */
+    */
     boolean updateStatus(String uploadId, Integer status);
 
     /**
@@ -60,7 +60,7 @@ public interface SysFileSystemUploadService extends IService<SysFileSystemUpload
     * @param uploadId 上传任务 标识
     * @param stage    目标阶段
     * @return 是否更新成功
-     */
+    */
     boolean updateStage(String uploadId, Integer stage);
 
     /**
@@ -68,7 +68,7 @@ public interface SysFileSystemUploadService extends IService<SysFileSystemUpload
     *
     * @param uploadId 上传任务 标识
     * @return 是否更新成功
-     */
+    */
     boolean resetRetryCount(String uploadId);
 
     /**
@@ -77,7 +77,7 @@ public interface SysFileSystemUploadService extends IService<SysFileSystemUpload
     * @param uploadId 上传任务 标识
     * @param retry    新的重试次数
     * @return 是否更新成功
-     */
+    */
     boolean updateRetryCount(String uploadId, int retry);
 
     /**
@@ -86,7 +86,7 @@ public interface SysFileSystemUploadService extends IService<SysFileSystemUpload
     * @param uploadId 上传任务 标识
     * @param fileUrl  最终文件 URL
     * @return 是否更新成功
-     */
+    */
     boolean markCompleted(String uploadId, String fileUrl);
 
     /**
@@ -95,7 +95,7 @@ public interface SysFileSystemUploadService extends IService<SysFileSystemUpload
     * @param uploadId     上传任务 标识
     * @param errorMessage 错误信息
     * @return 是否更新成功
-     */
+    */
     boolean markFailed(String uploadId, String errorMessage);
 
     /**
@@ -103,7 +103,7 @@ public interface SysFileSystemUploadService extends IService<SysFileSystemUpload
     *
     * @param uploadId 上传任务 标识
     * @return 任务实体；不存在返回 空
-     */
+    */
     SysFileSystemUpload getByUploadId(String uploadId);
 
     /**
@@ -111,27 +111,27 @@ public interface SysFileSystemUploadService extends IService<SysFileSystemUpload
     *
     * @param beforeTime 截止时间
     * @return 受影响行数（0 或 1）
-     */
+    */
     int cleanTimeoutTasks(LocalDateTime beforeTime);
 
     /**
     * 查询待合并任务列表。
     *
     * @return 待合并任务列表
-     */
+    */
     List<SysFileSystemUpload> listPendingMerge();
 
     /**
     * 查询待上传 对象存储 任务列表。
     *
     * @return 待上传 对象存储 任务列表
-     */
+    */
     List<SysFileSystemUpload> listPendingUpload();
 
     /**
     * 查询可重试的失败任务列表。
     *
     * @return 可重试任务列表
-     */
+    */
     List<SysFileSystemUpload> listFailedRetryable();
 }

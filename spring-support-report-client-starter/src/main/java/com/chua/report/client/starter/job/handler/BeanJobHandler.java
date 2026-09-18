@@ -25,22 +25,22 @@ public class BeanJobHandler implements JobHandler {
 
     /**
     * 目标Bean对象
-     */
+    */
     private final Object target;
 
     /**
     * 执行方法
-     */
+    */
     private final Method method;
 
     /**
     * 初始化方法
-     */
+    */
     private final Method initMethod;
 
     /**
     * 销毁方法
-     */
+    */
     private final Method destroyMethod;
 
     /**
@@ -50,7 +50,7 @@ public class BeanJobHandler implements JobHandler {
     * @param method        执行方法
     * @param initMethod    初始化方法，可为空
     * @param destroyMethod 销毁方法，可为空
-     */
+    */
     public BeanJobHandler(Object target, Method method, Method initMethod, Method destroyMethod) {
         this.target = target;
         this.method = method;

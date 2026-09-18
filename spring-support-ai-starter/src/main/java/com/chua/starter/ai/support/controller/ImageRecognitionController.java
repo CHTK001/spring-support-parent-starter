@@ -41,7 +41,7 @@ public class ImageRecognitionController {
 
     /**
     * 图片识别客户端管理器
-     */
+    */
     private final ImageRecognitionClientManager recognitionClientManager;
 
     /**
@@ -51,7 +51,7 @@ public class ImageRecognitionController {
     * @param topK 分类返回类别数
     * @return 综合分析结果
     * @param @RequestParam("file" @请求参数("文件"
-     */
+    */
     @Permission("admin")
     @Operation(summary = "图片综合分析", description = "按已配置能力执行图像分类/目标检测/图像描述，未配置的能力返回 null")
     @PostMapping("/analyze")
@@ -86,7 +86,7 @@ public class ImageRecognitionController {
     * @param @RequestParam("file" @请求参数("文件"
     * @param @RequestParam("file" @请求参数("文件"
     * @param @RequestParam("file" @RequestParam("file"
-     */
+    */
     @Permission("admin")
     @Operation(summary = "图像超分修复", description = "对图片执行超分辨率修复，需先在设置启用 image 分组的超分能力")
     @PostMapping(value = "/super-resolution", produces = MediaType.IMAGE_PNG_VALUE)
@@ -113,7 +113,7 @@ public class ImageRecognitionController {
     * 图片识别模型枚举（按能力分组）。
     *
     * @return 能力分组 → 模型 标识 列表
-     */
+    */
     @Permission("admin")
     @Operation(summary = "图片识别模型清单", description = "枚举可用的图像分类/目标检测/描述/超分模型")
     @GetMapping("/models")

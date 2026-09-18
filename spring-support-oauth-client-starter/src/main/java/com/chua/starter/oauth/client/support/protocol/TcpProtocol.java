@@ -55,12 +55,12 @@ public class TcpProtocol extends AbstractProtocol {
     * 构造函数
     *
     * @param authClientProperties 认证客户端配置
-     */
+    */
     public TcpProtocol(AuthClientProperties authClientProperties) {
         /**
         * 父。
         * @param authClientProperties 认证客户端属性
-         */
+        */
         super(authClientProperties);
         this.resilience = new OAuthClientResilience(authClientProperties);
     }
@@ -118,7 +118,7 @@ public class TcpProtocol extends AbstractProtocol {
                     /**
                     * clear认证信息。
                     * @param cacheKey 缓存钥匙
-                     */
+                    */
                     clearAuthenticationInformation(cacheKey);
                 }
             } else if (upgradeType == UpgradeType.REFRESH) {
@@ -127,13 +127,13 @@ public class TcpProtocol extends AbstractProtocol {
                     /**
                     * clear认证信息。
                     * @param cacheKey 缓存钥匙
-                     */
+                    */
                     clearAuthenticationInformation(cacheKey);
                 }
                 /**
                 * invalidate缓存。
                 * @param token 令牌
-                 */
+                */
                 invalidateCache(token);
             }
         }
@@ -186,7 +186,7 @@ public class TcpProtocol extends AbstractProtocol {
         * 认证异常。
         * @param information.getInformation( 信息.获取信息(
         * @return 认证异常的结果
-         */
+        */
         throw new AuthException(information.getInformation().getMessage());
     }
 
@@ -308,7 +308,7 @@ public class TcpProtocol extends AbstractProtocol {
     * @param jsonObject json对象
     * @param upgradeType upgrade类型
     * @return 发送请求的结果
-     */
+    */
     protected AuthenticationInformation sendRequest(String route, JsonObject jsonObject, UpgradeType upgradeType) {
         return resilience.executeWithResilience(
                 () -> doRequest(route, jsonObject, upgradeType),
@@ -323,7 +323,7 @@ public class TcpProtocol extends AbstractProtocol {
     * @param jsonObject json对象
     * @param upgradeType upgrade类型
     * @return 执行请求的结果
-     */
+    */
     private AuthenticationInformation doRequest(String route, JsonObject jsonObject, UpgradeType upgradeType) {
         String selectedUrl = selectUrl();
         if (selectedUrl == null) {
@@ -390,7 +390,7 @@ public class TcpProtocol extends AbstractProtocol {
     * 从 URL 提取主机名
     * @param url url
     * @return extract主机的结果
-     */
+    */
     private String extractHost(String url) {
         if (url.startsWith("tcp://")) {
             url = url.substring(6);
@@ -415,7 +415,7 @@ public class TcpProtocol extends AbstractProtocol {
     * @param url url
     * @param defaultPort 默认端口
     * @return extract端口的结果
-     */
+    */
     private int extractPort(String url, int defaultPort) {
         if (url.startsWith("tcp://")) {
             url = url.substring(6);
@@ -442,7 +442,7 @@ public class TcpProtocol extends AbstractProtocol {
     *
     * @param resultMap 结果映射
     * @return 解析online用户结果的结果
-     */
+    */
     private OnlineUserResult parseOnlineUserResult(Map<String, Object> resultMap) {
         OnlineUserResult result = new OnlineUserResult();
         result.setTotal(getIntValue(resultMap, "total", 0));
@@ -484,7 +484,7 @@ public class TcpProtocol extends AbstractProtocol {
     * @param key 钥匙
     * @param defaultValue 默认价值观
     * @return 获取int价值观的结果
-     */
+    */
     private int getIntValue(Map<String, Object> map, String key, int defaultValue) {
         Object value = map.get(key);
         if (value instanceof Number) {
@@ -499,7 +499,7 @@ public class TcpProtocol extends AbstractProtocol {
     * @param key 钥匙
     * @param defaultValue 默认价值观
     * @return 获取字符串价值观的结果
-     */
+    */
     private String getStringValue(Map<String, Object> map, String key, String defaultValue) {
         Object value = map.get(key);
         return value != null ? value.toString() : defaultValue;

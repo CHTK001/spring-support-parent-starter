@@ -61,7 +61,7 @@ public class AiConfiguration {
     /**
     * 全局 对话客户端 注册中心。
     * @return 对话客户端registry的结果
-     */
+    */
     @Bean
     @ConditionalOnMissingBean
     public ChatClientRegistry chatClientRegistry() {
@@ -69,14 +69,14 @@ public class AiConfiguration {
         /**
         * 对话客户端registry。
         * @return 对话客户端registry的结果
-         */
+        */
         return new ChatClientRegistry();
     }
 
     /**
     * 全局 智能体 注册中心。
     * @return 智能体registry的结果
-     */
+    */
     @Bean
     @ConditionalOnMissingBean
     public AgentRegistry agentRegistry() {
@@ -84,14 +84,14 @@ public class AiConfiguration {
         /**
         * 智能体registry。
         * @return 智能体registry的结果
-         */
+        */
         return new AgentRegistry();
     }
 
     /**
     * 对话记录服务——默认使用内存实现。
     * @return AIdialogrecord服务的结果
-     */
+    */
     @Bean
     @ConditionalOnMissingBean
     public AIDialogRecordService aiDialogRecordService() {
@@ -99,18 +99,18 @@ public class AiConfiguration {
         /**
         * aidialog本地record服务。
         * @return AIdialog本地record服务的结果
-         */
+        */
         return new AIDialogLocalRecordService();
     }
 
     /**
-     * 默认 对话客户端 — 聚合客户端。
-     *
-     * <p>通过 SPI 发现 ChatClient 实现，聚合为 AggregateChatClient。
-     * 如果找不到任何实现，返回 空（业务层自行处理兜底）。
-     * @param applicationContext application上下文
-     * @return 默认对话客户端的结果
-     */
+    * 默认 对话客户端 — 聚合客户端。
+    *
+    * <p>通过 SPI 发现 ChatClient 实现，聚合为 AggregateChatClient。
+    * 如果找不到任何实现，返回 空（业务层自行处理兜底）。
+    * @param applicationContext application上下文
+    * @return 默认对话客户端的结果
+    */
     @Bean
     @ConditionalOnMissingBean
     public ChatClient defaultChatClient(ApplicationContext applicationContext) {
@@ -132,7 +132,7 @@ public class AiConfiguration {
             * aggregate对话客户端。
             * @param config 配置
             * @return aggregate对话客户端的结果
-             */
+            */
             return new AggregateChatClient(config);
         }
 
@@ -143,7 +143,7 @@ public class AiConfiguration {
     /**
     * 容器就绪后初始化注册中心。
     * @param event 事件
-     */
+    */
     @EventListener(ApplicationReadyEvent.class)
     @Order(Ordered.HIGHEST_PRECEDENCE)
     public void onApplicationReady(ApplicationReadyEvent event) {
@@ -198,7 +198,7 @@ public class AiConfiguration {
     * AI服务信息contributor
     *
     * @return AI服务信息contributor的结果
-     */
+    */
     public ServiceInfoContributor aiServiceInfoContributor() {
         return registry -> {
             registry.registerEndpoint("AI", "AI接口", "/ai/**", "AI接口");

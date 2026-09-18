@@ -19,7 +19,7 @@ public interface IEduExamService extends IService<EduExam> {
     * @param page    页码
     * @param pageSize 每页条数
     * @return 分页结果
-     */
+    */
     PageResult<EduExam> pageQuery(EduExam exam, long page, long pageSize);
 
     /**
@@ -27,7 +27,7 @@ public interface IEduExamService extends IService<EduExam> {
     *
     * @param exam 考试信息
     * @return 考试ID
-     */
+    */
     Long createExam(EduExam exam);
 
     /**
@@ -35,7 +35,7 @@ public interface IEduExamService extends IService<EduExam> {
     *
     * @param exam 考试信息
     * @return 是否成功
-     */
+    */
     boolean updateExam(EduExam exam);
 
     /**
@@ -43,6 +43,6 @@ public interface IEduExamService extends IService<EduExam> {
     *
     * @param id 考试标识
     * @return 是否成功
-     */
+    */
     boolean deleteExam(Long id);
 }

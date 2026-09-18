@@ -64,7 +64,7 @@ public class GenericApiRequirementDataSource implements IRequirementDataSource {
     * @return 类型的结果
     * @param config 配置
     * @param lastSyncAt 最后一个同步at
-     */
+    */
     private static final com.fasterxml.jackson.databind.ObjectMapper JSON = new com.fasterxml.jackson.databind.ObjectMapper();
 /**
 * 类型。
@@ -191,7 +191,7 @@ public class GenericApiRequirementDataSource implements IRequirementDataSource {
     *
     * @param config 数据源配置
     * @return 连接成功返回 true
-     */
+    */
     @Override
     public boolean testConnection(Map<String, Object> config) {
         try {
@@ -218,7 +218,7 @@ public class GenericApiRequirementDataSource implements IRequirementDataSource {
     * 从 API 响应中提取记录列表，兼容多种常见格式。
     * @param resp resp
     * @return extractRecords的结果
-     */
+    */
     @SuppressWarnings("unchecked")
     private List<Map<String, Object>> extractRecords(Map<String, Object> resp) {
         // 常见格式1: { "data": [...] }
@@ -258,7 +258,7 @@ public class GenericApiRequirementDataSource implements IRequirementDataSource {
     * @param raw raw
     * @param fieldMapping 字段mapping
     * @return 映射字段的结果
-     */
+    */
     private Map<String, Object> mapFields(Map<String, Object> raw, Map<String, String> fieldMapping) {
         Map<String, Object> mapped = new LinkedHashMap<>();
         if (fieldMapping == null) {
@@ -282,7 +282,7 @@ public class GenericApiRequirementDataSource implements IRequirementDataSource {
     * @param map 映射
     * @param path 点分路径
     * @return 路径处的值（不存在返回 null）
-     */
+    */
     @SuppressWarnings("unchecked")
     private Object getByDotPath(Map<String, Object> map, String path) {
         if (map == null || path == null) {
@@ -313,7 +313,7 @@ public class GenericApiRequirementDataSource implements IRequirementDataSource {
         * @param json json
         * @return 解析json的结果
         * @param obj obj
-         */
+        */
         Object v = map.get(key);
         return v != null ? v.toString() : defaultValue;
     }

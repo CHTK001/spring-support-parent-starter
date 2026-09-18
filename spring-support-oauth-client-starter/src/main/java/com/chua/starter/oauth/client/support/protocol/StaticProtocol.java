@@ -43,12 +43,12 @@ public class StaticProtocol extends AbstractProtocol {
     * 构造函数
     *
     * @param authClientProperties 认证客户端配置属性
-     */
+    */
     public StaticProtocol(AuthClientProperties authClientProperties) {
         /**
         * 父。
         * @param authClientProperties 认证客户端属性
-         */
+        */
         super(authClientProperties);
     }
 
@@ -59,7 +59,7 @@ public class StaticProtocol extends AbstractProtocol {
     * @param token       认证令牌
     * @param subProtocol 子协议
     * @return 认证信息对象
-     */
+    */
     @Override
     protected AuthenticationInformation approve(Cookie cookie, String token, String subProtocol) {
         try {
@@ -86,7 +86,7 @@ public class StaticProtocol extends AbstractProtocol {
     * @param upgradeType  升级类型
     * @param refreshToken 刷新令牌
     * @return 认证信息对象
-     */
+    */
     @Override
     protected AuthenticationInformation upgradeInformation(Cookie cookie, String token, UpgradeType upgradeType, String refreshToken) {
         return newAuthenticationInformation(token, new Cookie[]{cookie});
@@ -98,7 +98,7 @@ public class StaticProtocol extends AbstractProtocol {
     * @param token  认证令牌
     * @param cookie Cookie数组
     * @return 认证信息对象
-     */
+    */
     private AuthenticationInformation newAuthenticationInformation(String token, Cookie[] cookie) {
         UserResume userResume = new UserResume();
         UserResult userResult = null;
@@ -165,7 +165,7 @@ public class StaticProtocol extends AbstractProtocol {
         * @param Information.OK 信息.OK
         * @param userResume 用户resume
         * @return 认证信息的结果
-         */
+        */
         return new AuthenticationInformation(Information.OK, userResume);
     }
 
@@ -177,7 +177,7 @@ public class StaticProtocol extends AbstractProtocol {
     * @param upgradeType   升级类型
     * @param refreshToken  刷新令牌
     * @return 登录结果对象
-     */
+    */
     @Override
     public LoginResult upgrade(Cookie[] cookie, String token, UpgradeType upgradeType, String refreshToken) {
         String sourceToken = StringUtils.isNotBlank(refreshToken) ? refreshToken : token;
@@ -227,7 +227,7 @@ public class StaticProtocol extends AbstractProtocol {
         * @param refreshedToken refreshed令牌
         * @param userResume.getFingerprint( 用户resume.getfingerprint(
         * @return login结果的结果
-         */
+        */
         return new LoginResult(refreshedToken, refreshedToken, userResume.getFingerprint(), userResult);
     }
 
@@ -243,7 +243,7 @@ public class StaticProtocol extends AbstractProtocol {
     * @param authType  认证类型
     * @param ext       扩展信息
     * @return 登录认证结果对象
-     */
+    */
     @Override
     public LoginAuthResult getAccessToken(String username, String password, AuthType authType, Map<String, Object> ext) {
         try {
@@ -318,7 +318,7 @@ public class StaticProtocol extends AbstractProtocol {
     * @param logoutType   登出类型
     * @param userResult   用户结果对象
     * @return 登录认证结果对象
-     */
+    */
     @Override
     public LoginAuthResult logout(String uid, LogoutType logoutType, UserResult userResult) {
         return null;

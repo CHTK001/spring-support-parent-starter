@@ -46,17 +46,17 @@ public class NodeControlHandler implements SyncMessageHandler, ApplicationContex
 
     /**
     * 默认健康检查超时时间（秒）
-     */
+    */
     private static final int DEFAULT_HEALTH_CHECK_TIMEOUT = 120;
 
     /**
     * 健康检查间隔（秒）
-     */
+    */
     private static final int HEALTH_CHECK_INTERVAL = 5;
 
     /**
     * 延迟执行器
-     */
+    */
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
         Thread t = new Thread(r, "node-control-scheduler");
         t.setDaemon(true);
@@ -100,7 +100,7 @@ public class NodeControlHandler implements SyncMessageHandler, ApplicationContex
     *
     * @param data 请求数据
     * @return 响应结果
-     */
+    */
     private Object handleRestart(Map<String, Object> data) {
         try {
             // 获取延迟时间，默认 3 秒
@@ -146,7 +146,7 @@ public class NodeControlHandler implements SyncMessageHandler, ApplicationContex
     *
     * @param data 请求数据
     * @return 响应结果
-     */
+    */
     private Object handleShutdown(Map<String, Object> data) {
         try {
             // 获取延迟时间，默认 3 秒
@@ -182,7 +182,7 @@ public class NodeControlHandler implements SyncMessageHandler, ApplicationContex
     * <p>
     * 使用 Spring Boot 的优雅关闭机制，然后通过退出码触发重启
     * </p>
-     */
+    */
     private void restartApplication() {
         if (applicationContext instanceof ConfigurableApplicationContext ctx) {
  // 使用退出码 0 触发重启（需要配合外部进程管理器如 systemd、Docker 等）
@@ -210,7 +210,7 @@ public class NodeControlHandler implements SyncMessageHandler, ApplicationContex
     * <p>
     * 使用 Spring Boot 的优雅关闭机制
     * </p>
-     */
+    */
     private void shutdownApplication() {
         if (applicationContext instanceof ConfigurableApplicationContext ctx) {
             int exitCode = SpringApplication.exit(ctx, () -> 0);
@@ -233,7 +233,7 @@ public class NodeControlHandler implements SyncMessageHandler, ApplicationContex
     *
     * @param timeoutSeconds 超时时间（秒）
     * @return 脚本文件路径
-     */
+    */
     private Path generateWatchdogScript(int timeoutSeconds) {
         try {
             Environment env = applicationContext.getEnvironment();
@@ -292,7 +292,7 @@ public class NodeControlHandler implements SyncMessageHandler, ApplicationContex
     * @param timeoutSeconds 超时时间
     * @param appName        应用名称
     * @return 脚本内容
-     */
+    */
     private String generateWindowsScript(String healthUrl, int timeoutSeconds, String appName) {
         return """
                 @echo off
@@ -351,7 +351,7 @@ public class NodeControlHandler implements SyncMessageHandler, ApplicationContex
     * @param timeoutSeconds 超时时间
     * @param appName        应用名称
     * @return 脚本内容
-     */
+    */
     private String generateLinuxScript(String healthUrl, int timeoutSeconds, String appName) {
         return """
                 #!/bin/bash
@@ -396,7 +396,7 @@ public class NodeControlHandler implements SyncMessageHandler, ApplicationContex
     * 启动守护脚本
     *
     * @param scriptPath 脚本路径
-     */
+    */
     private void startWatchdogScript(Path scriptPath) {
         try {
             boolean isWindows = System.getProperty("os.name").toLowerCase().contains("win");

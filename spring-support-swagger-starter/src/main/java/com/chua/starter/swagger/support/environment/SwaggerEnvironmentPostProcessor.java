@@ -25,7 +25,7 @@ public class SwaggerEnvironmentPostProcessor implements EnvironmentPostProcessor
     
     /**
     * 属性源名称
-     */
+    */
     private static final String PROPERTY_SOURCE_NAME = "knife4j-extension";
 
     /**
@@ -33,7 +33,7 @@ public class SwaggerEnvironmentPostProcessor implements EnvironmentPostProcessor
     *
     * @param environment 可配置环境
     * @param application Spring应用
-     */
+    */
     @Override
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
         Properties properties = new Properties();
@@ -78,7 +78,7 @@ public class SwaggerEnvironmentPostProcessor implements EnvironmentPostProcessor
     * @param array 字符串数组
     * @param delimiter 分隔符
     * @return 连接后的字符串
-     */
+    */
     private String joinArray(String[] array, String delimiter) {
         if (ArrayUtils.isEmpty(array)) {
             return "";

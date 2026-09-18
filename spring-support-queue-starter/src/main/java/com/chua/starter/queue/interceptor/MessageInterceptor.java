@@ -27,7 +27,7 @@ public interface MessageInterceptor {
     *
     * @param message 原始消息
     * @return 处理后的消息，返回null表示拦截该消息不发送
-     */
+    */
     default Message beforeSend(Message message) {
         return message;
     }
@@ -41,7 +41,7 @@ public interface MessageInterceptor {
     * @param message 已发送的消息
     * @param success 是否发送成功
     * @param error   发送失败时的异常（成功时为空）
-     */
+    */
     default void afterSend(Message message, boolean success, Throwable error) {
         // 默认不处理
     }
@@ -54,7 +54,7 @@ public interface MessageInterceptor {
     *
     * @param message 接收到的消息
     * @return 处理后的消息，返回null表示拦截该消息不处理
-     */
+    */
     default Message beforeReceive(Message message) {
         return message;
     }
@@ -68,7 +68,7 @@ public interface MessageInterceptor {
     * @param message 已处理的消息
     * @param success 是否处理成功
     * @param error   处理失败时的异常（成功时为空）
-     */
+    */
     default void afterReceive(Message message, boolean success, Throwable error) {
         // 默认不处理
     }
@@ -80,7 +80,7 @@ public interface MessageInterceptor {
     * </p>
     *
     * @return 优先级
-     */
+    */
     default int getOrder() {
         return 0;
     }

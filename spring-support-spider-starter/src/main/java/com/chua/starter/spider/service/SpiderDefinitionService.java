@@ -21,7 +21,7 @@ public interface SpiderDefinitionService extends SpiderBaseService<SpiderDefinit
     * <p>命中 {@code spider:definitions:enabled} 缓存；写操作后缓存整体失效。</p>
     *
     * @return 已启用定义列表
-     */
+    */
     List<SpiderDefinition> listEnabled();
 
     /**
@@ -33,6 +33,6 @@ public interface SpiderDefinitionService extends SpiderBaseService<SpiderDefinit
     * @param id        主键
     * @param lastRunAt 最近执行时间
     * @return 是否成功
-     */
+    */
     boolean markRunAtOnly(Long id, java.time.LocalDateTime lastRunAt);
 }

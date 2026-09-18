@@ -16,6 +16,6 @@ public @interface Extension {
     * 扩展点类型值
     *
     * @return 扩展点类型，例如："userService"、"orderService" 等
-     */
+    */
     String value();
 }

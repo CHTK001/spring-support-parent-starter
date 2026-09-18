@@ -32,7 +32,7 @@ public class TreeNode<T> {
     * @param data 数据
     * @param id 标识
     * @param parentId 父标识
-     */
+    */
     public TreeNode(T data, Object id, Object parentId) {
         this.data = data;
         this.id = id;
@@ -42,7 +42,7 @@ public class TreeNode<T> {
     /**
     * 获取数据。
     * @return 获取数据的结果
-     */
+    */
     public T getData() {
         return data;
     }
@@ -50,7 +50,7 @@ public class TreeNode<T> {
     /**
     * 设置数据。
     * @param data 数据
-     */
+    */
     public void setData(T data) {
         this.data = data;
     }
@@ -58,7 +58,7 @@ public class TreeNode<T> {
     /**
     * 获取标识。
     * @return 获取id的结果
-     */
+    */
     public Object getId() {
         return id;
     }
@@ -66,7 +66,7 @@ public class TreeNode<T> {
     /**
     * 设置标识。
     * @param id 标识
-     */
+    */
     public void setId(Object id) {
         this.id = id;
     }
@@ -74,7 +74,7 @@ public class TreeNode<T> {
     /**
     * 获取父标识。
     * @return 获取父id的结果
-     */
+    */
     public Object getParentId() {
         return parentId;
     }
@@ -82,7 +82,7 @@ public class TreeNode<T> {
     /**
     * 设置父标识。
     * @param parentId 父标识
-     */
+    */
     public void setParentId(Object parentId) {
         this.parentId = parentId;
     }
@@ -90,7 +90,7 @@ public class TreeNode<T> {
     /**
     * 获取children。
     * @return 获取children的结果
-     */
+    */
     public List<TreeNode<T>> getChildren() {
         return children;
     }
@@ -98,7 +98,7 @@ public class TreeNode<T> {
     /**
     * 设置children。
     * @param children children
-     */
+    */
     public void setChildren(List<TreeNode<T>> children) {
         this.children = children;
     }
@@ -107,7 +107,7 @@ public class TreeNode<T> {
     * 添加子节点
     *
     * @param child 子节点
-     */
+    */
     public void addChild(TreeNode<T> child) {
         if (children == null) {
             children = new ArrayList<>();
@@ -119,7 +119,7 @@ public class TreeNode<T> {
     * 判断是否为叶子节点
     *
     * @return 是否叶子节点
-     */
+    */
     public boolean isLeaf() {
         return children == null || children.isEmpty();
     }

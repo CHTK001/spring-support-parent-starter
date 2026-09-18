@@ -23,11 +23,11 @@ public class ShardingDataSourceBuilder {
     * 创建构建器实例
     *
     * @return 构建器实例
-     */
+    */
     public static ShardingDataSourceBuilder newBuilder() {
         /**
         * 分库分表数据源构建器。
-         */
+        */
         return new ShardingDataSourceBuilder();
     }
 
@@ -36,7 +36,7 @@ public class ShardingDataSourceBuilder {
     *
     * @param dataSources 数据源名称到实例的映射
     * @return 当前构建器实例
-     */
+    */
     public ShardingDataSourceBuilder dataSources(Map<String, DataSource> dataSources) {
         this.dataSources = dataSources;
         return this;
@@ -47,7 +47,7 @@ public class ShardingDataSourceBuilder {
     *
     * @param database 数据库名称
     * @return 当前构建器实例
-     */
+    */
     public ShardingDataSourceBuilder shardingDatabase(String database) {
         return this;
     }
@@ -57,7 +57,7 @@ public class ShardingDataSourceBuilder {
     *
     * @param showSql 是否显示 SQL
     * @return 当前构建器实例
-     */
+    */
     public ShardingDataSourceBuilder showSql(boolean showSql) {
         this.showSql = showSql;
         return this;
@@ -68,12 +68,12 @@ public class ShardingDataSourceBuilder {
     *
     * @param logicTable 逻辑表名
     * @return 分表规则构建器
-     */
+    */
     public TableShardingBuilder shardingTable(String logicTable) {
         /**
         * table分库分表构建器。
         * @return table分库分表构建器的结果
-         */
+        */
         return new TableShardingBuilder();
     }
 
@@ -81,7 +81,7 @@ public class ShardingDataSourceBuilder {
     * 构建分片数据源
     *
     * @return 数据源实例
-     */
+    */
     public DataSource build() {
         return null;
     }
@@ -90,7 +90,7 @@ public class ShardingDataSourceBuilder {
     * 分表规则构建器
     * @author CH
     * @since 4.0.0
-     */
+    */
     public static class TableShardingBuilder {
 
         /**
@@ -98,7 +98,7 @@ public class ShardingDataSourceBuilder {
         *
         * @param shardingColumn 分片列名
         * @return 当前构建器实例
-         */
+        */
         public TableShardingBuilder shardingColumn(String shardingColumn) {
             return this;
         }
@@ -107,7 +107,7 @@ public class ShardingDataSourceBuilder {
         * 按年分片
         *
         * @return 当前构建器实例
-         */
+        */
         public TableShardingBuilder shardByYear() {
             return this;
         }
@@ -116,7 +116,7 @@ public class ShardingDataSourceBuilder {
         * 按季度分片
         *
         * @return 当前构建器实例
-         */
+        */
         public TableShardingBuilder shardByQuarter() {
             return this;
         }
@@ -125,7 +125,7 @@ public class ShardingDataSourceBuilder {
         * 按月分片
         *
         * @return 当前构建器实例
-         */
+        */
         public TableShardingBuilder shardByMonth() {
             return this;
         }
@@ -134,7 +134,7 @@ public class ShardingDataSourceBuilder {
         * 按周分片
         *
         * @return 当前构建器实例
-         */
+        */
         public TableShardingBuilder shardByWeek() {
             return this;
         }
@@ -143,7 +143,7 @@ public class ShardingDataSourceBuilder {
         * 按天分片
         *
         * @return 当前构建器实例
-         */
+        */
         public TableShardingBuilder shardByDay() {
             return this;
         }
@@ -152,14 +152,14 @@ public class ShardingDataSourceBuilder {
         * 按小时分片
         *
         * @return 当前构建器实例
-         */
+        */
         public TableShardingBuilder shardByHour() {
             return this;
         }
 
         /**
         * 完成分表规则配置
-         */
+        */
         public void done() {
         }
     }

@@ -26,79 +26,79 @@ public class SysAiCompanionMemory implements Serializable {
 
     /**
     * 记忆主键（uuidv7 字符串）
-     */
+    */
     @TableId(value = "sys_ai_companion_memory_id", type = IdType.INPUT)
     private String memoryId; // 内存标识
 
     /**
     * 所属伙伴 标识（空=legacy legacy row）
-     */
+    */
     @TableField("sys_ai_companion_memory_companion_id")
     private String companionId; // companionid
 
     /**
     * 记忆类型：配置文件/preference/知识/episode/任务/情感
-     */
+    */
     @TableField("sys_ai_companion_memory_kind")
     private String kind; // 种类
 
     /**
     * 记忆内容
-     */
+    */
     @TableField("sys_ai_companion_memory_content")
     private String content; // 内容
 
     /**
     * 标签（JSON 数组）
-     */
+    */
     @TableField(value = "sys_ai_companion_memory_tags", typeHandler = JacksonTypeHandler.class)
     private List<String> tags; // 标签
 
     /**
     * 重要性
-     */
+    */
     @TableField("sys_ai_companion_memory_importance")
     private Double importance; // importance
 
     /**
     * 强度
-     */
+    */
     @TableField("sys_ai_companion_memory_strength")
     private Double strength; // strength
 
     /**
     * 是否置顶
-     */
+    */
     @TableField("sys_ai_companion_memory_pinned")
     private Boolean pinned; // pinned
 
     /**
     * 来源
-     */
+    */
     @TableField("sys_ai_companion_memory_source")
     private String source; // 源
 
     /**
     * 状态：活跃/archived
-     */
+    */
     @TableField("sys_ai_companion_memory_status")
     private String status; // 状态
 
     /**
     * 创建时间（轮次 毫秒）
-     */
+    */
     @TableField("sys_ai_companion_memory_created_at")
     private Long createdAt; // 创建at
 
     /**
     * 更新时间（轮次 毫秒）
-     */
+    */
     @TableField("sys_ai_companion_memory_updated_at")
     private Long updatedAt; // 更新at
 
     /**
     * 最后强化时间（轮次 毫秒）
-     */
+    */
     @TableField("sys_ai_companion_memory_last_reinforced_at")
     private Long lastReinforcedAt; // 最后一个reinforcedat
 }

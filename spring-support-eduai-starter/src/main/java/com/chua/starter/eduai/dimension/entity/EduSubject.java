@@ -27,27 +27,27 @@ public class EduSubject {
 
     /**
     * 学科编码（业务唯一，如 chinese/math/english）
-     */
+    */
     private String subjectCode;
 
     /**
     * 学科名（如 语文/数学/英语）
-     */
+    */
     private String subjectName;
 
     /**
     * 适用学段，逗号分隔 PRIMARY/JUNIOR/SENIOR/UNIVERSITY
-     */
+    */
     private String subjectGradeLevels;
 
     /**
     * 排序
-     */
+    */
     private Integer subjectSortOrder;
 
     /**
     * 状态：0 停用 / 1 启用
-     */
+    */
     private Integer subjectStatus;
 
     @TableField(value = "create_time", fill = com.baomidou.mybatisplus.annotation.FieldFill.INSERT)

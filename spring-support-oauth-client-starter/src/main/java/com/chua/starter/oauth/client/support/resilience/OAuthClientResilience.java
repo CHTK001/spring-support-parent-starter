@@ -33,7 +33,7 @@ public class OAuthClientResilience {
     * 熔断器状态
     * @author CH
     * @since 4.0.0
-     */
+    */
     private enum CircuitState {
         CLOSED,      // 关闭状态（正常）
         OPEN,        // 打开状态（熔断中）
@@ -56,7 +56,7 @@ public class OAuthClientResilience {
     * 创建 o认证客户端韧性 实例
     * @param authClientProperties 认证客户端属性
     * @return o认证客户端韧性的结果
-     */
+    */
     public OAuthClientResilience(AuthClientProperties authClientProperties) {
         this.retryConfig = authClientProperties.getRetry();
         this.circuitBreakerConfig = authClientProperties.getCircuitBreaker();
@@ -70,7 +70,7 @@ public class OAuthClientResilience {
     * @param supplier    认证操作
     * @param fallback    降级响应
     * @return 认证信息
-     */
+    */
     public AuthenticationInformation executeWithResilience(
             Supplier<AuthenticationInformation> supplier,
             Supplier<AuthenticationInformation> fallback) {
@@ -89,7 +89,7 @@ public class OAuthClientResilience {
             /**
             * record结果。
             * @param result 结果
-             */
+            */
             recordResult(result);
         }
 
@@ -100,7 +100,7 @@ public class OAuthClientResilience {
     * 带重试的执行
     * @param supplier 供应商
     * @return 执行with重试的结果
-     */
+    */
     private AuthenticationInformation executeWithRetry(Supplier<AuthenticationInformation> supplier) {
         if (!retryConfig.isEnabled()) {
             return supplier.get();
@@ -163,7 +163,7 @@ public class OAuthClientResilience {
     /**
     * 检查熔断器是否打开
     * @return 是否熔断打开的结果
-     */
+    */
     private boolean isCircuitOpen() {
         if (state == CircuitState.CLOSED) {
             return false;
@@ -193,7 +193,7 @@ public class OAuthClientResilience {
     /**
     * 记录请求结果，更新熔断器状态
     * @param result 结果
-     */
+    */
     private void recordResult(AuthenticationInformation result) {
         requestCount.incrementAndGet();
 
@@ -209,7 +209,7 @@ public class OAuthClientResilience {
                 if (successCount.get() >= circuitBreakerConfig.getPermittedCallsInHalfOpenState()) {
                     /**
                     * reset。
-                     */
+                    */
                     reset();
                     log.info("[熔断器]服务恢复，熔断器关闭");
                 }
@@ -242,7 +242,7 @@ public class OAuthClientResilience {
 
     /**
     * 重置熔断器状态
-     */
+    */
     private void reset() {
         state = CircuitState.CLOSED;
         failureCount.set(0);
@@ -254,7 +254,7 @@ public class OAuthClientResilience {
     /**
     * 获取当前熔断器状态
     * @return 获取熔断状态的结果
-     */
+    */
     public String getCircuitState() {
         return state.name();
     }
@@ -262,7 +262,7 @@ public class OAuthClientResilience {
     /**
     * 获取统计信息
     * @return 获取stats的结果
-     */
+    */
     public String getStats() {
         return String.format("state=%s, requests=%d, failures=%d, successes=%d",
                 state, requestCount.get(), failureCount.get(), successCount.get());
@@ -272,7 +272,7 @@ public class OAuthClientResilience {
     * 创建降级响应
     * @param message 消息
     * @return 创建降级响应的结果
-     */
+    */
     public static AuthenticationInformation createFallbackResponse(String message) {
         log.warn("[降级处理]返回降级响应: {}", message);
         /**
@@ -280,7 +280,7 @@ public class OAuthClientResilience {
         * @param Information.AUTHENTICATION_SERVER_EXCEPTION 信息.认证服务端异常
         * @param null 空
         * @return 认证信息的结果
-         */
+        */
         return new AuthenticationInformation(Information.AUTHENTICATION_SERVER_EXCEPTION, null);
     }
 }

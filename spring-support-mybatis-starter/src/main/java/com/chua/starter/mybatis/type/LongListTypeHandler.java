@@ -60,7 +60,7 @@ public class LongListTypeHandler implements TypeHandler<List<Long>> {
     *
     * @param value 价值观
     * @return 获取结果的结果
-     */
+    */
     private List<Long> getResult(String value) {
         if (value == null) {
             return null;

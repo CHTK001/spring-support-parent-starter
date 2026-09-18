@@ -1,0 +1,2 @@
+-- V4.0.0.44 内容已并入 db/init/schema.sql（is_archived 列老库补列动态段，
+-- information_schema + PREPARE 幂等），本文件仅作历史兼容占位，避免已执行版本漂移。

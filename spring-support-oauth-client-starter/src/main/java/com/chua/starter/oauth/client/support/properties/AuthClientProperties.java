@@ -20,7 +20,7 @@ public class AuthClientProperties {
 
     /**
     * 是否启用
-     */
+    */
     private boolean enable = true;
 
     /** PRE */
@@ -28,7 +28,7 @@ public class AuthClientProperties {
 
     /**
     * 内置默认白名单（不会被 yaml 配置覆盖）
-     */
+    */
     private static final List<String> DEFAULT_WHITELIST = List.of(
             "/**/captcha",
             "/**/login",
@@ -75,7 +75,7 @@ public class AuthClientProperties {
     /**
     * 获取完整白名单（内置默认 + yaml 自定义 + 动态添加）
     * @return 获取effectivewhitelist的结果
-     */
+    */
     public List<String> getEffectiveWhitelist() {
         List<String> effective = new java.util.ArrayList<>(DEFAULT_WHITELIST);
         if (whitelist != null) {
@@ -87,14 +87,14 @@ public class AuthClientProperties {
 
     /**
     * 动态白名单（运行时可增删，线程安全）
-     */
+    */
     private final java.util.Set<String> dynamicWhitelist = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
     /**
     * 动态添加白名单规则
     *
     * @param pattern URL 模式，支持 Ant 风格，例如 /v2/face/**
-     */
+    */
     public void addWhitelist(String pattern) {
         if (null != pattern && !pattern.isBlank()) {
             dynamicWhitelist.add(pattern.trim());
@@ -105,40 +105,40 @@ public class AuthClientProperties {
     * 动态删除白名单规则
     *
     * @param pattern 已添加的 URL 模式
-     */
+    */
     public void removeWhitelist(String pattern) {
         dynamicWhitelist.remove(pattern);
     }
 
     /**
     * 清空动态白名单
-     */
+    */
     public void clearDynamicWhitelist() {
         dynamicWhitelist.clear();
     }
     /**
     * 连接超时时间（毫秒）
-     */
+    */
     private long connectTimeout = 5000;
 
     /**
     * 读取超时时间（毫秒）
-     */
+    */
     private long readTimeout = 10000;
 
     /**
     * 请求超时时间（毫秒）
-     */
+    */
     private long requestTimeout = 15000;
 
     /**
     * 重试配置
-     */
+    */
     private RetryConfig retry = new RetryConfig();
 
     /**
     * 熔断配置
-     */
+    */
     private CircuitBreakerConfig circuitBreaker = new CircuitBreakerConfig();
 
     /**
@@ -146,43 +146,43 @@ public class AuthClientProperties {
     * <p>
     * o认证 客户端限流能力，支持接口 QPS 限流与登录防暴力破解限流。
     * </p>
-     */
+    */
     private RateLimit rateLimit = new RateLimit();
 
     /**
     * 客户端缓存鉴权信息(用于提高访问效率)(s)
-     */
+    */
     private long cacheTimeout =  6 * 60 * 60;
     /**
     * 是否开启客户端缓存冷热备份
-     */
+    */
     private boolean cacheHotColdBackup = true;
     /**
     * 鉴权地址
-     */
+    */
     private String address;
     /**
     * 登录地址
-     */
+    */
     private String loginAddress = "${plugin.oauth.auth-address:}";
     /**
     * 加密方式
-     */
+    */
     private String encryption = "aes";
 
     /**
     * 是否启用数据加密
-     */
+    */
     private boolean enableEncryption = true;
 
     /**
     * 拦截地址
-     */
+    */
     private Set<String> blockAddress = Sets.newHashSet("/*");
 
     /**
     * 白名单
-     */
+    */
     private List<String> whitelist = new LinkedList<>();
 
     /**
@@ -191,7 +191,7 @@ public class AuthClientProperties {
     * 支持动态加载和热更新，文件变更后自动重新加载。
     * 文件格式：每行一个URL 模式，支持 # 注释
     * </p>
-     */
+    */
     private String whitelistFile = "config/oauth.whitelist";
 
     /**
@@ -204,62 +204,62 @@ public class AuthClientProperties {
     * <li><strong>static</strong> - 静态协议，用于测试</li>
     * </ul>
     * </p>
-     */
+    */
     private String protocol = "static";
     /**
     * 令牌-名称
-     */
+    */
     private String tokenName = "x-oauth-token";
     /**
     * Cookie-名称
-     */
+    */
     private String cookieName = "x-oauth-cookie";
     /**
     * 令牌 别名
-     */
+    */
     private String alias = "Boren-Token";
     /**
     * 登录页
-     */
+    */
     private String loginPage = "/login";
     /**
     * 登出页
-     */
+    */
     private String logoutPage = "/logout";
     /**
     * 临时令牌页
-     */
+    */
     private String temporaryTokenPage = "/temporary-token";
     /**
     * 升级页
-     */
+    */
     private String upgradePage = "/upgrade";
     /**
     * 鉴权地址
-     */
+    */
     private String oauthUrl = "/verify";
     /**
     * 均衡模式
-     */
+    */
     private String balance = "polling";
 
     /**
     * 无权限页面
-     */
+    */
     private String noPermissionPage = "/oauth-page";
 
     /**
     * 密钥
-     */
+    */
     private Aksk key = new Aksk();
     /**
     * 临时用户
-     */
+    */
     private TempUser temp = new TempUser();
 
     /**
     * 指纹验证配置
-     */
+    */
     private Fingerprint fingerprint = new Fingerprint();
 
     /**
@@ -269,45 +269,45 @@ public class AuthClientProperties {
     * （通过 {@link com.chua.datasource.support.engine.JdbcEngine} 动态查表，无需 映射器）。
     * 用于单机部署或外部 o认证 服务不可达时的 AI app钥匙 认证。
     * </p>
-     */
+    */
     private AiAppKey aiAppKey = new AiAppKey();
 
     /**
     * AI app钥匙 本地认证配置
     * @author CH
     * @since 4.0.0
-     */
+    */
     @Data
     public static class AiAppKey {
 
         /**
         * 是否启用 AI app钥匙 本地认证
-         */
+        */
         private boolean enabled = false;
 
         /**
         * app钥匙 表名（动态表，默认 AI 模块的 sys_AI_app_钥匙）
-         */
+        */
         private String tableName = "sys_ai_app_key";
 
         /**
         * app钥匙 列名（默认 sys_AI_app_钥匙_app_钥匙）
-         */
+        */
         private String appKeyColumn = "sys_ai_app_key_app_key";
 
         /**
         * 状态列名（1 启用 / 0 停用，默认 sys_AI_app_钥匙_状态）
-         */
+        */
         private String statusColumn = "sys_ai_app_key_status";
 
         /**
         * 过期时间列名（默认 sys_AI_app_钥匙_expire_datetime，可为空）
-         */
+        */
         private String expireTimeColumn = "sys_ai_app_key_expire_datetime";
 
         /**
         * 用户名列（返回给认证结果使用，默认取 app钥匙column）
-         */
+        */
         private String usernameColumn;
     }
 
@@ -319,20 +319,20 @@ public class AuthClientProperties {
     * </p>
     * @author CH
     * @since 4.0.0
-     */
+    */
     @Data
     public static class Aksk {
         /**
         * 是否启用AK/SK加密
-         */
+        */
         private boolean enabled = false;
         /**
         * access钥匙 (用于标识客户端)
-         */
+        */
         private String accessKey;
         /**
         * secret钥匙 (用于加密数据)
-         */
+        */
         private String secretKey;
     }
 
@@ -342,12 +342,12 @@ public class AuthClientProperties {
     *
     * @author CH
     * @since 4.0.0
-     */
+    */
     public static class TempUser {
 
         /**
         * 菜单文件
-         */
+        */
         private String menuPath;
         /**
         * 临时账号配置(只用于账号类型为Embed)
@@ -355,7 +355,7 @@ public class AuthClientProperties {
         * [安全警告]生产环境禁止启用临时账号功能！
         * 格式: 用户名:密码;用户名2:密码2
         * </p>
-         */
+        */
         private String user = "admin:admin@123!456";
     }
 
@@ -366,7 +366,7 @@ public class AuthClientProperties {
     * </p>
     * @author CH
     * @since 4.0.0
-     */
+    */
     @Data
     public static class Fingerprint {
         /**
@@ -378,7 +378,7 @@ public class AuthClientProperties {
         * <p>
         * 默认关闭，只有标记了 @验证fingerprint 注解的接口才会验证指纹。
         * </p>
-         */
+        */
         private boolean globalVerification = false;
         
         /**
@@ -390,7 +390,7 @@ public class AuthClientProperties {
         * <p>
         * 默认关闭，指纹校验由服务端完成。
         * </p>
-         */
+        */
         private boolean enableClientVerification = false;
         
         /**
@@ -399,7 +399,7 @@ public class AuthClientProperties {
         * 客户端会缓存从服务端获取的 app钥匙 指纹配置，此配置控制缓存的有效期。
         * 默认 1 小时（3600 秒）。
         * </p>
-         */
+        */
         private long configCacheTimeout = 3600;
         
         /**
@@ -422,7 +422,7 @@ public class AuthClientProperties {
         *           enableFingerprint: 0
         * </pre>
         * </p>
-         */
+        */
         private java.util.Map<String, AppKeyFingerprintConfig> appKeyConfigs = new java.util.HashMap<>();
     }
     
@@ -430,7 +430,7 @@ public class AuthClientProperties {
     * app钥匙 指纹配置
     * @author CH
     * @since 4.0.0
-     */
+    */
     @Data
     public static class AppKeyFingerprintConfig {
         /**
@@ -438,12 +438,12 @@ public class AuthClientProperties {
         * <p>
         * 0: 不启用, 1: 启用
         * </p>
-         */
+        */
         private Integer enableFingerprint = 0;
         
         /**
         * 指纹白名单（多个指纹用逗号分隔）
-         */
+        */
         private String fingerprintWhitelist;
     }
 
@@ -451,32 +451,32 @@ public class AuthClientProperties {
     * 重试配置
     * @author CH
     * @since 4.0.0
-     */
+    */
     @Data
     public static class RetryConfig {
         /**
         * 是否启用重试
-         */
+        */
         private boolean enabled = true;
 
         /**
         * 最大重试次数
-         */
+        */
         private int maxAttempts = 3;
 
         /**
         * 重试间隔（毫秒）
-         */
+        */
         private long delay = 1000;
 
         /**
         * 重试间隔倍数（指数退避）
-         */
+        */
         private double multiplier = 1.5;
 
         /**
         * 最大重试间隔（毫秒）
-         */
+        */
         private long maxDelay = 5000;
     }
 
@@ -484,47 +484,47 @@ public class AuthClientProperties {
     * 熔断配置
     * @author CH
     * @since 4.0.0
-     */
+    */
     @Data
     public static class CircuitBreakerConfig {
         /**
         * 是否启用熔断
-         */
+        */
         private boolean enabled = true;
 
         /**
         * 失败率阈值（百分比），超过则触发熔断
-         */
+        */
         private int failureRateThreshold = 50;
 
         /**
         * 慢调用率阈值（百分比）
-         */
+        */
         private int slowCallRateThreshold = 80;
 
         /**
         * 慢调用时间阈值（毫秒）
-         */
+        */
         private long slowCallDurationThreshold = 3000;
 
         /**
         * 滑动窗口大小
-         */
+        */
         private int slidingWindowSize = 10;
 
         /**
         * 熔断器打开后等待时间（秒）
-         */
+        */
         private int waitDurationInOpenState = 30;
 
         /**
         * 半开状态允许的请求数
-         */
+        */
         private int permittedCallsInHalfOpenState = 5;
 
         /**
         * 降级响应消息
-         */
+        */
         private String fallbackMessage = "认证服务暂时不可用，请稍后重试";
     }
 
@@ -535,7 +535,7 @@ public class AuthClientProperties {
     * </p>
     * @author CH
     * @since 4.0.0
-     */
+    */
     @Data
     public static class RateLimit {
 
@@ -544,24 +544,24 @@ public class AuthClientProperties {
         * <p>
         * 默认值：false
         * </p>
-         */
+        */
         private boolean enable = false;
 
         /**
         * 登录限流配置
-         */
+        */
         private LoginLimit login = new LoginLimit();
 
         /**
         * 全局接口限流配置
-         */
+        */
         private ApiLimit api = new ApiLimit();
 
         /**
         * 登录限流配置类（防暴力破解）
         * @author CH
         * @since 4.0.0
-         */
+        */
         @Data
         public static class LoginLimit {
 
@@ -570,7 +570,7 @@ public class AuthClientProperties {
             * <p>
             * 默认值：true（在总开关 enable=true 前提下）
             * </p>
-             */
+            */
             private boolean enable = true;
 
             /**
@@ -578,7 +578,7 @@ public class AuthClientProperties {
             * <p>
             * 默认值：30 次
             * </p>
-             */
+            */
             private int ipLimit = 30;
 
             /**
@@ -586,7 +586,7 @@ public class AuthClientProperties {
             * <p>
             * 默认值：60 秒
             * </p>
-             */
+            */
             private long ipWindowSeconds = 60;
 
             /**
@@ -594,7 +594,7 @@ public class AuthClientProperties {
             * <p>
             * 默认值：5 次
             * </p>
-             */
+            */
             private int accountFailLimit = 5;
 
             /**
@@ -602,7 +602,7 @@ public class AuthClientProperties {
             * <p>
             * 默认值：5 分钟
             * </p>
-             */
+            */
             private long accountLockMinutes = 5;
         }
 
@@ -610,7 +610,7 @@ public class AuthClientProperties {
         * 全局接口限流配置类（防刷/防 执行s）
         * @author CH
         * @since 4.0.0
-         */
+        */
         @Data
         public static class ApiLimit {
 
@@ -619,7 +619,7 @@ public class AuthClientProperties {
             * <p>
             * 默认值：true（在总开关 enable=true 前提下）
             * </p>
-             */
+            */
             private boolean enable = true;
 
             /**
@@ -627,7 +627,7 @@ public class AuthClientProperties {
             * <p>
             * 默认值：200 次/秒
             * </p>
-             */
+            */
             private int qps = 200;
 
             /**
@@ -635,7 +635,7 @@ public class AuthClientProperties {
             * <p>
             * 默认值：1 秒
             * </p>
-             */
+            */
             private long windowSeconds = 1;
         }
     }

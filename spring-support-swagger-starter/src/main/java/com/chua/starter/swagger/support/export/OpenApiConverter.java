@@ -44,7 +44,7 @@ public class OpenApiConverter {
     * 将 springdoc 收集的 {@link OpenAPI} 转换为通用文档模型。
     * @param openAPI 打开api
     * @return 从打开api的结果
-     */
+    */
     public static OpenApiDocumentData fromOpenApi(OpenAPI openAPI) {
         if (openAPI == null) {
             return new OpenApiDocumentData();
@@ -93,7 +93,7 @@ public class OpenApiConverter {
     * @param op op
     * @param method 方法
     * @param data 数据
-     */
+    */
     private static void eachHttpMethod(String path, Operation op, String method, OpenApiDocumentData data) {
         if (op == null) {
             return;
@@ -184,7 +184,7 @@ public class OpenApiConverter {
     *
     * @param s s
     * @return 前缀的结果
-     */
+    */
     private static String prefix(String s) {
         return s == null ? "" : s;
     }
@@ -194,7 +194,7 @@ public class OpenApiConverter {
     *
     * @param schema 模式
     * @return 模式类型的结果
-     */
+    */
     private static String schemaType(Schema<?> schema) {
         if (schema == null) {
             return "";
@@ -212,7 +212,7 @@ public class OpenApiConverter {
     * @param schema 模式
     * @param out 出
     * @return examplefor模式的结果
-     */
+    */
     private static Map<String, Object> exampleForSchema(Schema<?> schema, Map<String, Object> out) {
         if (schema == null) {
             return out;
@@ -235,7 +235,7 @@ public class OpenApiConverter {
     *
     * @param schema 模式
     * @return exampleFor的结果
-     */
+    */
     private static Object exampleFor(Schema<?> schema) {
         if (schema == null) {
             return null;
@@ -264,7 +264,7 @@ public class OpenApiConverter {
     * @param schema 模式
     * @param out 出
     * @return flatten模式的结果
-     */
+    */
     private static Map<String, Object> flattenSchema(String prefix, Schema<?> schema, Map<String, Object> out) {
         if (schema == null) {
             return out;

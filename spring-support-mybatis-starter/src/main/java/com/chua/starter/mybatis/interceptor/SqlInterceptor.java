@@ -69,7 +69,7 @@ public class SqlInterceptor implements Interceptor {
 
     /**
     * SQL 格式化器
-     */
+    */
     static final Formatter FORMATTER = new DmlFormatter();
 
     /**
@@ -77,7 +77,7 @@ public class SqlInterceptor implements Interceptor {
     *
     * @param invocation 调用
     * @return Object
-     */
+    */
     @Override
     public Object intercept(Invocation invocation) throws Throwable {
         Object returnValue;
@@ -134,13 +134,13 @@ public class SqlInterceptor implements Interceptor {
     * @param result        结果
     * @param name          SQL操作类型
     * @return String
-     */
+    */
     public static String getSql(Configuration configuration, BoundSql boundSql, String sqlId, long time, Object result, String name) {
         /**
         * showsql。
         * @param configuration 配置
         * @param boundSql boundsql
-         */
+        */
         showSql(configuration, boundSql);
         String traceId = MDC.get(TRACE_ID);
         String message = "[SqlInterceptor] 执行 [" + name + "] 时间 [" + formatter.format(System.currentTimeMillis()) + "] sql耗时 [" + (double) time / 1000 + "] s";
@@ -182,7 +182,7 @@ public class SqlInterceptor implements Interceptor {
     *
     * @return String
     * @param obj obj
-     */
+    */
     private static String getParameterValue(Object obj) {
         String value;
         if (obj instanceof String) {
@@ -205,7 +205,7 @@ public class SqlInterceptor implements Interceptor {
     * @param configuration 配置
     * @param boundSql      boundsql
     * @return void
-     */
+    */
     public static void showSql(Configuration configuration, BoundSql boundSql) {
         // 获取参数
         Object parameterObject = boundSql.getParameterObject();

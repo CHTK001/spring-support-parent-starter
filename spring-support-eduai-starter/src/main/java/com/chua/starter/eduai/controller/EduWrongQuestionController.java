@@ -41,7 +41,7 @@ public class EduWrongQuestionController {
     *
     * @param query 查询条件
     * @return 分页结果
-     */
+    */
     @Operation(summary = "分页查询错题")
     @GetMapping("/page")
     public ReturnResult<PageResult<WrongQuestionVO>> page(WrongQueryDTO query) {
@@ -53,7 +53,7 @@ public class EduWrongQuestionController {
     *
     * @param dto 复习卷配置
     * @return 题目ID列表
-     */
+    */
     @Operation(summary = "生成复习卷")
     @PostMapping("/review")
     public ReturnResult<List<Long>> generateReview(@RequestBody ReviewPaperDTO dto) {
@@ -66,7 +66,7 @@ public class EduWrongQuestionController {
     * @param wrongId      错题记录标识
     * @param masteryLevel 掌握度
     * @return 是否成功
-     */
+    */
     @Operation(summary = "更新掌握度")
     @PutMapping("/mastery")
     public ReturnResult<Boolean> updateMastery(@RequestParam Long wrongId, @RequestParam Integer masteryLevel) {

@@ -20,7 +20,7 @@ public interface IEduPaperService extends IService<EduPaper> {
     *
     * @param query 查询条件
     * @return 分页结果
-     */
+    */
     PageResult<PaperVO> pageQuery(PaperQueryDTO query);
 
     /**
@@ -28,7 +28,7 @@ public interface IEduPaperService extends IService<EduPaper> {
     *
     * @param paperId 试卷标识
     * @return 试卷详情
-     */
+    */
     PaperVO getPaperDetail(Long paperId);
 
     /**
@@ -36,7 +36,7 @@ public interface IEduPaperService extends IService<EduPaper> {
     *
     * @param dto 组卷配置
     * @return 试卷ID
-     */
+    */
     Long generatePaper(PaperGenerateDTO dto);
 
     /**
@@ -46,6 +46,6 @@ public interface IEduPaperService extends IService<EduPaper> {
     * @param oldQuestionId 旧题目标识
     * @param newQuestionId 新题目标识
     * @return 是否成功
-     */
+    */
     boolean replaceQuestion(Long paperId, Long oldQuestionId, Long newQuestionId);
 }

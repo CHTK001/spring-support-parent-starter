@@ -55,20 +55,20 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
 
     /**
     * 阅卷队列名称。
-     */
+    */
     public static final String QUEUE_NAME = "edu.marking";
 
     /**
     * 阅卷结果状态：待批改
-     */
+    */
     private static final int STATUS_PENDING = 0;
     /**
     * 阅卷结果状态：AI 已批改
-     */
+    */
     private static final int STATUS_AI_DONE = 1;
     /**
     * 阅卷结果状态：教师已确认
-     */
+    */
     private static final int STATUS_TEACHER_DONE = 2;
 
     /** Answersheetmapper */
@@ -91,7 +91,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
     *
     * @param dto dto
     * @return submitAnswerSheet的结果
-     */
+    */
     public String submitAnswerSheet(MarkingSubmitDTO dto) {
         // 1. 持久化答题卡
         EduAnswerSheet sheet = new EduAnswerSheet();
@@ -122,14 +122,14 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
             * dispatch异步。
             * @param taskId 任务标识
             * @param sheet.getAnswerSheetId( sheet.获取answersheetid(
-             */
+            */
             dispatchAsync(taskId, sheet.getAnswerSheetId(), dto.getAnswers());
         } else {
             /**
             * mark同步。
             * @param taskId 任务标识
             * @param dto.getAnswers( dto.获取answers(
-             */
+            */
             markSync(taskId, dto.getAnswers());
         }
 
@@ -143,7 +143,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
     * @param taskId 任务标识
     * @param answerSheetId answersheetid
     * @param answers answers
-     */
+    */
     private void dispatchAsync(String taskId, Long answerSheetId, List<MarkingSubmitDTO.AnswerItem> answers) {
         MarkingJob job = new MarkingJob();
         job.setTaskId(taskId);
@@ -159,7 +159,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
             * mark同步。
             * @param taskId 任务标识
             * @param answers answers
-             */
+            */
             markSync(taskId, answers);
         }
     }
@@ -168,7 +168,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
     * 同步阅卷：阻塞直到全部题目批改完成。
     * @param taskId 任务标识
     * @param answers answers
-     */
+    */
     public void markSync(String taskId, List<MarkingSubmitDTO.AnswerItem> answers) {
         int maxScore = properties.getMarking().getMaxScore();
         for (MarkingSubmitDTO.AnswerItem item : answers) {
@@ -188,7 +188,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
             * @param taskId 任务标识
             * @param question question
             * @param outcome outcome
-             */
+            */
             applyOutcome(taskId, question, outcome);
         }
     }
@@ -198,7 +198,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
     * @param taskId 任务标识
     * @param question question
     * @param outcome outcome
-     */
+    */
     public void applyOutcome(String taskId, EduQuestion question, EduAiService.MarkingOutcome outcome) {
         LambdaUpdateWrapper<EduMarkingResult> wrapper = new LambdaUpdateWrapper<>();
         wrapper.eq(EduMarkingResult::getMarkingResultTaskId, taskId)
@@ -219,10 +219,10 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
 
         if (results.isEmpty()) {
             /**
-            * 业务异常。
-            * @param "任务不存在" "任务不存在"
-            * @return 业务异常的结果
-             */
+    * 业务异常。
+    * @param "任务不存在" "任务不存在"
+    * @return 业务异常的结果
+    */
             throw new BusinessException("任务不存在");
         }
 
@@ -261,7 +261,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
     *
     * @param dto dto
     * @return confirmMarking的结果
-     */
+    */
     public boolean confirmMarking(MarkingConfirmDTO dto) {
         for (MarkingConfirmDTO.ScoreAdjustment adj : dto.getAdjustments()) {
             EduMarkingResult result = markingResultMapper.selectById(adj.getResultId());

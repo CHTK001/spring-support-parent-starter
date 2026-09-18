@@ -141,7 +141,7 @@ public class SoftSoftware implements Serializable {
     /**
     * 获取softwareid。
     * @return 获取softwareid的结果
-     */
+    */
     public String getSoftwareId() {
         return softwareId;
     }
@@ -149,7 +149,7 @@ public class SoftSoftware implements Serializable {
     /**
     * 设置softwareid。
     * @param softwareId softwareid
-     */
+    */
     public void setSoftwareId(String softwareId) {
         this.softwareId = softwareId;
     }
@@ -157,7 +157,7 @@ public class SoftSoftware implements Serializable {
     /**
     * 获取software名称。
     * @return 获取software名称的结果
-     */
+    */
     public String getSoftwareName() {
         return softwareName;
     }
@@ -165,7 +165,7 @@ public class SoftSoftware implements Serializable {
     /**
     * 设置software名称。
     * @param softwareName software名称
-     */
+    */
     public void setSoftwareName(String softwareName) {
         this.softwareName = softwareName;
     }
@@ -173,7 +173,7 @@ public class SoftSoftware implements Serializable {
     /**
     * 获取software编码。
     * @return 获取software编码的结果
-     */
+    */
     public String getSoftwareCode() {
         return softwareCode;
     }
@@ -181,7 +181,7 @@ public class SoftSoftware implements Serializable {
     /**
     * 设置software编码。
     * @param softwareCode software编码
-     */
+    */
     public void setSoftwareCode(String softwareCode) {
         this.softwareCode = softwareCode;
     }
@@ -189,7 +189,7 @@ public class SoftSoftware implements Serializable {
     /**
     * 获取software版本。
     * @return 获取software版本的结果
-     */
+    */
     public String getSoftwareVersion() {
         return softwareVersion;
     }
@@ -197,7 +197,7 @@ public class SoftSoftware implements Serializable {
     /**
     * 设置software版本。
     * @param softwareVersion software版本
-     */
+    */
     public void setSoftwareVersion(String softwareVersion) {
         this.softwareVersion = softwareVersion;
     }
@@ -205,7 +205,7 @@ public class SoftSoftware implements Serializable {
     /**
     * 获取softwarelatest版本。
     * @return 获取softwarelatest版本的结果
-     */
+    */
     public String getSoftwareLatestVersion() {
         return softwareLatestVersion;
     }
@@ -213,7 +213,7 @@ public class SoftSoftware implements Serializable {
     /**
     * 设置softwarelatest版本。
     * @param softwareLatestVersion softwarelatest版本
-     */
+    */
     public void setSoftwareLatestVersion(String softwareLatestVersion) {
         this.softwareLatestVersion = softwareLatestVersion;
     }
@@ -221,7 +221,7 @@ public class SoftSoftware implements Serializable {
     /**
     * 获取softwaredescription。
     * @return 获取softwaredescription的结果
-     */
+    */
     public String getSoftwareDescription() {
         return softwareDescription;
     }
@@ -229,7 +229,7 @@ public class SoftSoftware implements Serializable {
     /**
     * 设置softwaredescription。
     * @param softwareDescription softwaredescription
-     */
+    */
     public void setSoftwareDescription(String softwareDescription) {
         this.softwareDescription = softwareDescription;
     }
@@ -237,7 +237,7 @@ public class SoftSoftware implements Serializable {
     /**
     * 获取softwareicon。
     * @return 获取softwareicon的结果
-     */
+    */
     public String getSoftwareIcon() {
         return softwareIcon;
     }
@@ -245,7 +245,7 @@ public class SoftSoftware implements Serializable {
     /**
     * 设置softwareicon。
     * @param softwareIcon softwareicon
-     */
+    */
     public void setSoftwareIcon(String softwareIcon) {
         this.softwareIcon = softwareIcon;
     }
@@ -253,7 +253,7 @@ public class SoftSoftware implements Serializable {
     /**
     * 获取software分类。
     * @return 获取software分类的结果
-     */
+    */
     public String getSoftwareCategory() {
         return softwareCategory;
     }
@@ -261,7 +261,7 @@ public class SoftSoftware implements Serializable {
     /**
     * 设置software分类。
     * @param softwareCategory software分类
-     */
+    */
     public void setSoftwareCategory(String softwareCategory) {
         this.softwareCategory = softwareCategory;
     }
@@ -269,7 +269,7 @@ public class SoftSoftware implements Serializable {
     /**
     * 获取software标签。
     * @return 获取software标签的结果
-     */
+    */
     public String getSoftwareTags() {
         return softwareTags;
     }
@@ -277,7 +277,7 @@ public class SoftSoftware implements Serializable {
     /**
     * 设置software标签。
     * @param softwareTags software标签
-     */
+    */
     public void setSoftwareTags(String softwareTags) {
         this.softwareTags = softwareTags;
     }
@@ -285,7 +285,7 @@ public class SoftSoftware implements Serializable {
     /**
     * 获取softwaredownloadurl。
     * @return 获取softwaredownloadurl的结果
-     */
+    */
     public String getSoftwareDownloadUrl() {
         return softwareDownloadUrl;
     }
@@ -293,7 +293,7 @@ public class SoftSoftware implements Serializable {
     /**
     * 设置softwaredownloadurl。
     * @param softwareDownloadUrl softwaredownloadurl
-     */
+    */
     public void setSoftwareDownloadUrl(String softwareDownloadUrl) {
         this.softwareDownloadUrl = softwareDownloadUrl;
     }
@@ -301,7 +301,7 @@ public class SoftSoftware implements Serializable {
     /**
     * 获取software文件大小。
     * @return 获取software文件大小的结果
-     */
+    */
     public Long getSoftwareFileSize() {
         return softwareFileSize;
     }
@@ -309,7 +309,7 @@ public class SoftSoftware implements Serializable {
     /**
     * 设置software文件大小。
     * @param softwareFileSize software文件大小
-     */
+    */
     public void setSoftwareFileSize(Long softwareFileSize) {
         this.softwareFileSize = softwareFileSize;
     }
@@ -317,7 +317,7 @@ public class SoftSoftware implements Serializable {
     /**
     * 获取softwaremd5。
     * @return 获取softwaremd5的结果
-     */
+    */
     public String getSoftwareMd5() {
         return softwareMd5;
     }
@@ -325,7 +325,7 @@ public class SoftSoftware implements Serializable {
     /**
     * 设置softwaremd5。
     * @param softwareMd5 softwaremd5
-     */
+    */
     public void setSoftwareMd5(String softwareMd5) {
         this.softwareMd5 = softwareMd5;
     }
@@ -333,7 +333,7 @@ public class SoftSoftware implements Serializable {
     /**
     * 获取softwaresha256。
     * @return 获取softwaresha256的结果
-     */
+    */
     public String getSoftwareSha256() {
         return softwareSha256;
     }
@@ -341,7 +341,7 @@ public class SoftSoftware implements Serializable {
     /**
     * 设置softwaresha256。
     * @param softwareSha256 softwaresha256
-     */
+    */
     public void setSoftwareSha256(String softwareSha256) {
         this.softwareSha256 = softwareSha256;
     }
@@ -349,7 +349,7 @@ public class SoftSoftware implements Serializable {
     /**
     * 获取software最小os版本。
     * @return 获取software最小os版本的结果
-     */
+    */
     public String getSoftwareMinOsVersion() {
         return softwareMinOsVersion;
     }
@@ -357,7 +357,7 @@ public class SoftSoftware implements Serializable {
     /**
     * 设置software最小os版本。
     * @param softwareMinOsVersion software最小os版本
-     */
+    */
     public void setSoftwareMinOsVersion(String softwareMinOsVersion) {
         this.softwareMinOsVersion = softwareMinOsVersion;
     }
@@ -365,7 +365,7 @@ public class SoftSoftware implements Serializable {
     /**
     * 获取softwarecpuArch Linux Linux Linux。
     * @return 获取softwarecpuArch Linux的结果
-     */
+    */
     public String getSoftwareCpuArch() {
         return softwareCpuArch;
     }
@@ -373,7 +373,7 @@ public class SoftSoftware implements Serializable {
     /**
     * 设置softwarecpuArch Linux Linux Linux。
     * @param softwareCpuArch softwarecpuArch Linux Linux Linux
-     */
+    */
     public void setSoftwareCpuArch(String softwareCpuArch) {
         this.softwareCpuArch = softwareCpuArch;
     }
@@ -381,7 +381,7 @@ public class SoftSoftware implements Serializable {
     /**
     * 获取software源标识。
     * @return 获取software源id的结果
-     */
+    */
     public String getSoftwareSourceId() {
         return softwareSourceId;
     }
@@ -389,7 +389,7 @@ public class SoftSoftware implements Serializable {
     /**
     * 设置software源标识。
     * @param softwareSourceId software源标识
-     */
+    */
     public void setSoftwareSourceId(String softwareSourceId) {
         this.softwareSourceId = softwareSourceId;
     }
@@ -397,7 +397,7 @@ public class SoftSoftware implements Serializable {
     /**
     * 获取softwareinstall数量。
     * @return 获取softwareinstall数量的结果
-     */
+    */
     public Integer getSoftwareInstallCount() {
         return softwareInstallCount;
     }
@@ -405,7 +405,7 @@ public class SoftSoftware implements Serializable {
     /**
     * 设置softwareinstall数量。
     * @param softwareInstallCount softwareinstall数量
-     */
+    */
     public void setSoftwareInstallCount(Integer softwareInstallCount) {
         this.softwareInstallCount = softwareInstallCount;
     }
@@ -413,7 +413,7 @@ public class SoftSoftware implements Serializable {
     /**
     * 获取software状态。
     * @return 获取software状态的结果
-     */
+    */
     public Integer getSoftwareStatus() {
         return softwareStatus;
     }
@@ -421,7 +421,7 @@ public class SoftSoftware implements Serializable {
     /**
     * 设置software状态。
     * @param softwareStatus software状态
-     */
+    */
     public void setSoftwareStatus(Integer softwareStatus) {
         this.softwareStatus = softwareStatus;
     }
@@ -429,7 +429,7 @@ public class SoftSoftware implements Serializable {
     /**
     * 获取software创建时间。
     * @return 获取software创建时间的结果
-     */
+    */
     public LocalDateTime getSoftwareCreateTime() {
         return softwareCreateTime;
     }
@@ -437,7 +437,7 @@ public class SoftSoftware implements Serializable {
     /**
     * 设置software创建时间。
     * @param softwareCreateTime software创建时间
-     */
+    */
     public void setSoftwareCreateTime(LocalDateTime softwareCreateTime) {
         this.softwareCreateTime = softwareCreateTime;
     }
@@ -445,7 +445,7 @@ public class SoftSoftware implements Serializable {
     /**
     * 获取software更新时间。
     * @return 获取software更新时间的结果
-     */
+    */
     public LocalDateTime getSoftwareUpdateTime() {
         return softwareUpdateTime;
     }
@@ -453,7 +453,7 @@ public class SoftSoftware implements Serializable {
     /**
     * 设置software更新时间。
     * @param softwareUpdateTime software更新时间
-     */
+    */
     public void setSoftwareUpdateTime(LocalDateTime softwareUpdateTime) {
         this.softwareUpdateTime = softwareUpdateTime;
     }
@@ -461,7 +461,7 @@ public class SoftSoftware implements Serializable {
     /**
     * 获取software创建by。
     * @return 获取software创建by的结果
-     */
+    */
     public String getSoftwareCreateBy() {
         return softwareCreateBy;
     }
@@ -469,7 +469,7 @@ public class SoftSoftware implements Serializable {
     /**
     * 设置software创建by。
     * @param softwareCreateBy software创建by
-     */
+    */
     public void setSoftwareCreateBy(String softwareCreateBy) {
         this.softwareCreateBy = softwareCreateBy;
     }
@@ -477,7 +477,7 @@ public class SoftSoftware implements Serializable {
     /**
     * 获取software更新by。
     * @return 获取software更新by的结果
-     */
+    */
     public String getSoftwareUpdateBy() {
         return softwareUpdateBy;
     }
@@ -485,7 +485,7 @@ public class SoftSoftware implements Serializable {
     /**
     * 设置software更新by。
     * @param softwareUpdateBy software更新by
-     */
+    */
     public void setSoftwareUpdateBy(String softwareUpdateBy) {
         this.softwareUpdateBy = softwareUpdateBy;
     }

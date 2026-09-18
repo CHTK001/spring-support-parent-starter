@@ -18,32 +18,32 @@ public class RpcRetryPolicy {
 
     /**
     * 最大重试次数
-     */
+    */
     private int maxRetries = 3;
 
     /**
     * 初始重试延迟
-     */
+    */
     private Duration initialDelay = Duration.ofMillis(100);
 
     /**
     * 最大重试延迟
-     */
+    */
     private Duration maxDelay = Duration.ofSeconds(10);
 
     /**
     * 延迟倍数（指数退避）
-     */
+    */
     private double multiplier = 2.0;
 
     /**
     * 是否启用重试
-     */
+    */
     private boolean enabled = true;
 
     /**
     * 可重试的异常类型
-     */
+    */
     private Class<? extends Throwable>[] retryableExceptions = new Class[]{
         java.net.SocketTimeoutException.class,
         java.net.ConnectException.class,
@@ -56,7 +56,7 @@ public class RpcRetryPolicy {
     *
     * @param retryCount 当前重试次数（从0开始）
     * @return 延迟时间
-     */
+    */
     public Duration calculateDelay(int retryCount) {
         if (retryCount <= 0) {
             return initialDelay;
@@ -73,7 +73,7 @@ public class RpcRetryPolicy {
     *
     * @param retryCount 当前重试次数
     * @return 是否应该重试
-     */
+    */
     public boolean shouldRetry(int retryCount) {
         return enabled && retryCount < maxRetries;
     }
@@ -83,7 +83,7 @@ public class RpcRetryPolicy {
     *
     * @param throwable 异常
     * @return 是否可重试
-     */
+    */
     public boolean isRetryableException(Throwable throwable) {
         if (!enabled || retryableExceptions == null) {
             return false;
@@ -100,18 +100,18 @@ public class RpcRetryPolicy {
     /**
     * 创建默认重试策略
     * @return 默认policy的结果
-     */
+    */
     public static RpcRetryPolicy defaultPolicy() {
         /**
         * rpc重试policy。
-         */
+        */
         return new RpcRetryPolicy();
     }
 
     /**
     * 创建快速重试策略
     * @return fast重试的结果
-     */
+    */
     public static RpcRetryPolicy fastRetry() {
         RpcRetryPolicy policy = new RpcRetryPolicy();
         policy.setMaxRetries(5);
@@ -124,7 +124,7 @@ public class RpcRetryPolicy {
     /**
     * 创建慢速重试策略
     * @return slow重试的结果
-     */
+    */
     public static RpcRetryPolicy slowRetry() {
         RpcRetryPolicy policy = new RpcRetryPolicy();
         policy.setMaxRetries(10);
@@ -137,7 +137,7 @@ public class RpcRetryPolicy {
     /**
     * 创建无重试策略
     * @return no重试的结果
-     */
+    */
     public static RpcRetryPolicy noRetry() {
         RpcRetryPolicy policy = new RpcRetryPolicy();
         policy.setEnabled(false);

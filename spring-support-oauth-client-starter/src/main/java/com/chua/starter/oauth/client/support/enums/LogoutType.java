@@ -10,22 +10,22 @@ package com.chua.starter.oauth.client.support.enums;
 public enum LogoutType {
     /**
     * 会话
-     */
+    */
     NONE,
     /**
     * 令牌
-     */
+    */
     LOGOUT,
     /**
     * 令牌
-     */
+    */
     LOGOUT_ALL,
     /**
     * 注销
-     */
+    */
     UN_REGISTER,
     /**
     * 踢下线
-     */
+    */
     KICK
 }

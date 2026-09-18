@@ -22,34 +22,34 @@ public class MessageBatchProcessor {
 
     /**
     * 批量大小
-     */
+    */
     private int batchSize = 100;
 
     /**
     * 批量超时时间
-     */
+    */
     private Duration batchTimeout = Duration.ofSeconds(5);
 
     /**
     * 当前批次
-     */
+    */
     private final List<Message> currentBatch = new ArrayList<>();
 
     /**
     * 最后一次添加时间
-     */
+    */
     private long lastAddTime = System.currentTimeMillis();
 
     /**
     * 批量处理器
-     */
+    */
     private Consumer<List<Message>> batchHandler;
 
     /**
     * 添加消息到批次
     *
     * @param message 消息
-     */
+    */
     public synchronized void add(Message message) {
         currentBatch.add(message);
         lastAddTime = System.currentTimeMillis();
@@ -57,7 +57,7 @@ public class MessageBatchProcessor {
         if (shouldFlush()) {
             /**
             * flush。
-             */
+            */
             flush();
         }
     }
@@ -65,7 +65,7 @@ public class MessageBatchProcessor {
     /**
     * 是否应该刷新批次
     * @return shouldFlush的结果
-     */
+    */
     private boolean shouldFlush() {
         if (currentBatch.size() >= batchSize) {
             return true;
@@ -77,7 +77,7 @@ public class MessageBatchProcessor {
 
     /**
     * 刷新批次
-     */
+    */
     public synchronized void flush() {
         if (currentBatch.isEmpty()) {
             return;
@@ -94,7 +94,7 @@ public class MessageBatchProcessor {
     /**
     * 获取当前批次大小
     * @return 获取当前batch大小的结果
-     */
+    */
     public synchronized int getCurrentBatchSize() {
         return currentBatch.size();
     }

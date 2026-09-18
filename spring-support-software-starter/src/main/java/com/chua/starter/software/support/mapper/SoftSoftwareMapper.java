@@ -23,7 +23,7 @@ public interface SoftSoftwareMapper extends BaseMapperX<SoftSoftware> {
     * @param request 查询条件
     * @param installedIds 已安装软件标识集合
     * @return 分页结果
-     */
+    */
     Page<SoftSoftware> selectPageFor(
             @Param("page") Page<SoftSoftware> page,
             @Param("request") SoftSoftware request,
@@ -37,6 +37,6 @@ public interface SoftSoftwareMapper extends BaseMapperX<SoftSoftware> {
     * @param status   新状态
     * @return 更新行数
     * @param @Param("sourceId" @参数("源标识"
-     */
+    */
     int updateStatusBySourceId(@Param("sourceId") String sourceId, @Param("status") Integer status);
 }

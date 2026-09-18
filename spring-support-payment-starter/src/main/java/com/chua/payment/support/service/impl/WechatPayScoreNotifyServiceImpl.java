@@ -41,7 +41,7 @@ public class WechatPayScoreNotifyServiceImpl extends AbstractMerchantPaymentChan
     * @param merchantChannelMapper merchant通道映射器
     * @param providerGatewayRegistry 提供者gatewayregistry
     * @param wechatPayScoreOrderService wechat薪酬score订单服务
-     */
+    */
     public WechatPayScoreNotifyServiceImpl(MerchantChannelService merchantChannelService,
                                            ObjectMapper objectMapper,
                                            MerchantChannelMapper merchantChannelMapper,
@@ -51,7 +51,7 @@ public class WechatPayScoreNotifyServiceImpl extends AbstractMerchantPaymentChan
         * 父。
         * @param merchantChannelService merchant通道服务
         * @param objectMapper 对象映射器
-         */
+        */
         super(merchantChannelService, objectMapper);
         this.merchantChannelMapper = merchantChannelMapper;
         this.providerGatewayRegistry = providerGatewayRegistry;
@@ -72,7 +72,7 @@ public class WechatPayScoreNotifyServiceImpl extends AbstractMerchantPaymentChan
     * @param body 主体
     * @param dto dto
     * @return 把手通知的结果
-     */
+    */
     public TencentWechatPayScoreNotifyPayload handleNotify(WechatPayScoreNotifyDTO dto) {
         MerchantChannel channel = requireEnabledWechatChannel(dto.channelId());
         TencentWechatPayScoreNotifyPayload payload = providerGatewayRegistry.tencentWechatPayGateway(providerSpi(channel, null))
@@ -82,7 +82,7 @@ public class WechatPayScoreNotifyServiceImpl extends AbstractMerchantPaymentChan
             * 薪酬异常。
             * @param "微信支付分回调路径订单号和报文订单号不一致" "微信支付分回调路径订单号和报文订单号不一致"
             * @return 薪酬异常的结果
-             */
+            */
             throw new PaymentException("微信支付分回调路径订单号和报文订单号不一致");
         }
         wechatPayScoreOrderService.handleNotify(dto.channelId(), dto.outOrderNo(), payload, dto.body());
@@ -94,7 +94,7 @@ public class WechatPayScoreNotifyServiceImpl extends AbstractMerchantPaymentChan
     *
     * @param channelId 通道标识
     * @return require已启用wechat通道的结果
-     */
+    */
     private MerchantChannel requireEnabledWechatChannel(Long channelId) {
         MerchantChannel channel = merchantChannelMapper.selectById(channelId);
         if (channel == null) {
@@ -102,7 +102,7 @@ public class WechatPayScoreNotifyServiceImpl extends AbstractMerchantPaymentChan
             * 薪酬异常。
             * @param "支付方式不存在" "支付方式不存在"
             * @return 薪酬异常的结果
-             */
+            */
             throw new PaymentException("支付方式不存在");
         }
         if (!"WECHAT".equalsIgnoreCase(channel.getChannelType())) {
@@ -110,7 +110,7 @@ public class WechatPayScoreNotifyServiceImpl extends AbstractMerchantPaymentChan
             * 薪酬异常。
             * @param "支付方式类型不匹配" "支付方式类型不匹配"
             * @return 薪酬异常的结果
-             */
+            */
             throw new PaymentException("支付方式类型不匹配");
         }
         if (!ChannelStatus.ENABLED.getCode().equals(channel.getStatus())) {
@@ -118,7 +118,7 @@ public class WechatPayScoreNotifyServiceImpl extends AbstractMerchantPaymentChan
             * 薪酬异常。
             * @param "支付方式未启用" "支付方式未启用"
             * @return 薪酬异常的结果
-             */
+            */
             throw new PaymentException("支付方式未启用");
         }
         return channel;
@@ -132,7 +132,7 @@ public class WechatPayScoreNotifyServiceImpl extends AbstractMerchantPaymentChan
     * @param signature 签名
     * @param signType 标志类型
     * @param body 主体
-     */
+    */
     private TencentWechatNotifyRequest buildWechatNotifyRequest(String serialNumber,
                                                                 String timestamp,
                                                                 String nonce,
@@ -154,7 +154,7 @@ public class WechatPayScoreNotifyServiceImpl extends AbstractMerchantPaymentChan
     *
     * @param channel 通道
     * @return 构建wechat属性的结果
-     */
+    */
     private TencentWechatPayProperties buildWechatProperties(MerchantChannel channel) {
         TencentWechatPayProperties properties = new TencentWechatPayProperties();
         properties.setAppId(requiredText(channel.getAppId(), "微信 AppId 不能为空"));

@@ -21,7 +21,7 @@ public interface SysFileSystemUploadMergeLogService extends IService<SysFileSyst
     * @param message    记录信息
     * @param retryCount 第几次尝试
     * @return 是否写入成功
-     */
+    */
     boolean record(String uploadId, boolean success, String message, int retryCount);
 
     /**
@@ -29,7 +29,7 @@ public interface SysFileSystemUploadMergeLogService extends IService<SysFileSyst
     *
     * @param uploadId 上传任务 标识
     * @return 合并记录列表（按时间升序）
-     */
+    */
     List<SysFileSystemUploadMergeLog> listByUploadId(String uploadId);
 
     /**
@@ -37,6 +37,6 @@ public interface SysFileSystemUploadMergeLogService extends IService<SysFileSyst
     *
     * @param uploadId 上传任务 标识
     * @return 是否删除成功
-     */
+    */
     boolean deleteByUploadId(String uploadId);
 }

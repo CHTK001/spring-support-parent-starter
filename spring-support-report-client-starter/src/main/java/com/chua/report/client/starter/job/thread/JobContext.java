@@ -19,62 +19,62 @@ public class JobContext {
 
     /**
     * 线程本地存储，使用inheritablethread本地支持子线程继承
-     */
+    */
     private static final InheritableThreadLocal<JobContext> CONTEXT_HOLDER = new InheritableThreadLocal<>();
 
     /**
     * 处理成功状态码
-     */
+    */
     public static final int HANDLE_CODE_SUCCESS = 200;
 
     /**
     * 处理失败状态码
-     */
+    */
     public static final int HANDLE_CODE_FAIL = 500;
 
     /**
     * 处理超时状态码
-     */
+    */
     public static final int HANDLE_CODE_TIMEOUT = 502;
 
     /**
     * 任务标识
-     */
+    */
     @Getter
     /** 作业标识 */
     private final long jobId;
 
     /**
     * 任务执行参数
-     */
+    */
     private final String jobParam;
 
     /**
     * 获取任务执行参数
     *
     * @return 任务执行参数
-     */
+    */
     public String getJobParam() {
         return jobParam;
     }
 
     /**
     * 日志文件名
-     */
+    */
     @Getter
     /** 作业日志文件名称 */
     private final String jobLogFileName;
 
     /**
     * 分片索引（从0开始）
-     */
+    */
     @Getter
     /** Shard索引 */
     private final int shardIndex;
 
     /**
     * 分片总数
-     */
+    */
     @Getter
     /** Shard总数 */
     private final int shardTotal;
@@ -84,12 +84,12 @@ public class JobContext {
     * 200: 成功
     * 500: 失败
     * 502: 超时
-     */
+    */
     private int handleCode;
 
     /**
     * 处理结果消息
-     */
+    */
     private String handleMsg;
 
     /**
@@ -100,7 +100,7 @@ public class JobContext {
     * @param jobLogFileName 日志文件名
     * @param shardIndex     分片索引
     * @param shardTotal     分片总数
-     */
+    */
     public JobContext(long jobId, String jobParam, String jobLogFileName, int shardIndex, int shardTotal) {
         this.jobId = jobId;
         this.jobParam = jobParam;
@@ -114,7 +114,7 @@ public class JobContext {
     * 设置当前线程的任务上下文
     *
     * @param jobContext 任务上下文
-     */
+    */
     public static void setJobContext(JobContext jobContext) {
         CONTEXT_HOLDER.set(jobContext);
     }
@@ -123,14 +123,14 @@ public class JobContext {
     * 获取当前线程的任务上下文
     *
     * @return 任务上下文，如果不存在返回null
-     */
+    */
     public static JobContext getXxlJobContext() {
         return CONTEXT_HOLDER.get();
     }
 
     /**
     * 清除当前线程的任务上下文
-     */
+    */
     public static void removeJobContext() {
         CONTEXT_HOLDER.remove();
     }
@@ -139,7 +139,7 @@ public class JobContext {
     * 设置任务执行成功
     *
     * @param msg 成功消息
-     */
+    */
     public void setSuccess(String msg) {
         this.handleCode = HANDLE_CODE_SUCCESS;
         this.handleMsg = msg;
@@ -149,7 +149,7 @@ public class JobContext {
     * 设置任务执行失败
     *
     * @param msg 失败消息
-     */
+    */
     public void setFail(String msg) {
         this.handleCode = HANDLE_CODE_FAIL;
         this.handleMsg = msg;
@@ -159,7 +159,7 @@ public class JobContext {
     * 设置任务执行超时
     *
     * @param msg 超时消息
-     */
+    */
     public void setTimeout(String msg) {
         this.handleCode = HANDLE_CODE_TIMEOUT;
         this.handleMsg = msg;
@@ -169,7 +169,7 @@ public class JobContext {
     * 获取处理状态码
     *
     * @return 处理状态码
-     */
+    */
     public int getHandleCode() {
         return handleCode;
     }
@@ -178,7 +178,7 @@ public class JobContext {
     * 获取处理结果消息
     *
     * @return 处理结果消息
-     */
+    */
     public String getHandleMsg() {
         return handleMsg;
     }
@@ -187,7 +187,7 @@ public class JobContext {
     * 设置处理结果消息
     *
     * @param handleMsg 处理结果消息
-     */
+    */
     public void setHandleMsg(String handleMsg) {
         this.handleMsg = handleMsg;
     }

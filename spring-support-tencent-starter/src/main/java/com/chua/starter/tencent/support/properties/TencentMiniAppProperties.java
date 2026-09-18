@@ -18,21 +18,21 @@ public class TencentMiniAppProperties {
 
     /**
     * 是否启用
-     */
+    */
     private boolean enable = false;
 
     /**
     * 是否启用（兼容字段）
-     */
+    */
     private boolean enabled = false;
 
     /**
     * 小程序appid
-     */
+    */
     private String appId;
 
     /**
     * 小程序appsecret
-     */
+    */
     private String appSecret;
 }

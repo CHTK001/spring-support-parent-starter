@@ -17,12 +17,12 @@ public class InMemoryLeaderElectionResolver implements LeaderElectionResolver {
 
     /**
     * 本地内存中的 铅 记录, 钥匙 = 群体
-     */
+    */
     private final ConcurrentMap<String, String> leaderMap = new ConcurrentHashMap<>();
 
     /**
     * 本地内存中的租约到期时间戳, 钥匙 = 群体
-     */
+    */
     private final ConcurrentMap<String, Long> leaseMap = new ConcurrentHashMap<>();
 
     @Override

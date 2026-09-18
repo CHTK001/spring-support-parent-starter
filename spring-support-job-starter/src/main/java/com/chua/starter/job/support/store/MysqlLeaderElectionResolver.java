@@ -31,7 +31,7 @@ public class MysqlLeaderElectionResolver implements LeaderElectionResolver {
 
     /**
     * sys_作业_cluster 映射器
-     */
+    */
     private final ClusterMapper clusterMapper;
 
     @Override
@@ -86,7 +86,7 @@ public class MysqlLeaderElectionResolver implements LeaderElectionResolver {
     * @param nodeId       节点 标识
     * @param leaseSeconds 租约时长
     * @return 续约成功返回 true
-     */
+    */
     public boolean renew(String group, String nodeId, int leaseSeconds) {
         long now = System.currentTimeMillis();
         long leaseUntil = now + leaseSeconds * 1000L;

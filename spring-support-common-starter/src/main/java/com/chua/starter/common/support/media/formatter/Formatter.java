@@ -16,7 +16,7 @@ public interface Formatter {
     * @param value 值
     * @param field
     * @return 結果
-     */
+    */
     Object format(Object value, Field field);
 }
 

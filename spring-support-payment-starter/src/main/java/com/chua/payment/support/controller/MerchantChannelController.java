@@ -41,7 +41,7 @@ public class MerchantChannelController {
     *
     * @param dto dto
     * @return 创建通道的结果
-     */
+    */
     public Result<MerchantChannelVO> createChannel(@RequestBody ChannelConfigDTO dto) {
         return Result.success(channelService.createChannel(dto));
     }
@@ -54,7 +54,7 @@ public class MerchantChannelController {
     * @param id 标识
     * @param dto dto
     * @return 更新通道的结果
-     */
+    */
     public Result<MerchantChannelVO> updateChannel(@PathVariable Long id, @RequestBody ChannelConfigDTO dto) {
         return Result.success(channelService.updateChannel(id, dto));
     }
@@ -66,7 +66,7 @@ public class MerchantChannelController {
     *
     * @param id 标识
     * @return 获取通道的结果
-     */
+    */
     public Result<MerchantChannelVO> getChannel(@PathVariable Long id) {
         return Result.success(channelService.getChannel(id));
     }
@@ -78,7 +78,7 @@ public class MerchantChannelController {
     * @param merchantId merchantid
     * @param channelType 通道类型
     * @param status 状态
-     */
+    */
     public Result<List<MerchantChannelVO>> listChannels(@PathVariable Long merchantId,
                                                         @RequestParam(required = false) String channelType,
                                                         @RequestParam(required = false) Integer status) {
@@ -92,7 +92,7 @@ public class MerchantChannelController {
     *
     * @param false false
     * @return 列表全部通道的结果
-     */
+    */
     public Result<List<MerchantChannelVO>> listAllChannels(@RequestParam(required = false) Long merchantId,
                                                            @RequestParam(required = false) String channelType,
                                                            @RequestParam(required = false) Integer status) {
@@ -105,7 +105,7 @@ public class MerchantChannelController {
     * 列表catalog
     *
     * @return 列表catalog的结果
-     */
+    */
     public Result<List<PaymentMethodGuideVO>> listCatalog() {
         return Result.success(channelService.listCatalog());
     }
@@ -117,7 +117,7 @@ public class MerchantChannelController {
     *
     * @param id 标识
     * @return enable通道的结果
-     */
+    */
     public Result<Boolean> enableChannel(@PathVariable Long id) {
         return Result.success(channelService.enableChannel(id));
     }
@@ -129,7 +129,7 @@ public class MerchantChannelController {
     *
     * @param id 标识
     * @return disable通道的结果
-     */
+    */
     public Result<Boolean> disableChannel(@PathVariable Long id) {
         return Result.success(channelService.disableChannel(id));
     }
@@ -141,7 +141,7 @@ public class MerchantChannelController {
     *
     * @param id 标识
     * @return 删除通道的结果
-     */
+    */
     public Result<Boolean> deleteChannel(@PathVariable Long id) {
         return Result.success(channelService.deleteChannel(id));
     }

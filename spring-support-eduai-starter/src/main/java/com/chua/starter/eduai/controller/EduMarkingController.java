@@ -38,7 +38,7 @@ public class EduMarkingController {
     *
     * @param dto 答题卡数据
     * @return 任务ID
-     */
+    */
     @Operation(summary = "提交答题卡")
     @PostMapping("/submit")
     public ReturnResult<String> submit(@RequestBody MarkingSubmitDTO dto) {
@@ -50,7 +50,7 @@ public class EduMarkingController {
     *
     * @param taskId 任务标识
     * @return 阅卷结果
-     */
+    */
     @Operation(summary = "轮询阅卷结果")
     @GetMapping("/result/{taskId}")
     public ReturnResult<MarkingResultVO> result(@PathVariable String taskId) {
@@ -62,7 +62,7 @@ public class EduMarkingController {
     *
     * @param dto 确认数据
     * @return 是否成功
-     */
+    */
     @Operation(summary = "教师确认评分")
     @PutMapping("/confirm")
     public ReturnResult<Boolean> confirm(@RequestBody MarkingConfirmDTO dto) {

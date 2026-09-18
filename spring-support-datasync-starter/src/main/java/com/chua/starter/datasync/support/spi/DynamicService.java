@@ -40,7 +40,7 @@ public interface DynamicService {
     /**
     * 获取服务名称。
     * @return 获取名称的结果
-     */
+    */
     String getName();
 
     /**
@@ -48,6 +48,6 @@ public interface DynamicService {
     *
     * @param input 输入参数
     * @return 执行结果
-     */
+    */
     String execute(String input);
 }

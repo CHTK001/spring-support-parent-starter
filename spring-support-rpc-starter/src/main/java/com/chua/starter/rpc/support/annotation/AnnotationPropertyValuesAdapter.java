@@ -30,7 +30,7 @@ public class AnnotationPropertyValuesAdapter implements PropertyValues {
     * @param propertyResolver
     * @param ignoreAttributeNames
     * @since 2.7.3
-     */
+    */
     public AnnotationPropertyValuesAdapter(
             Map<String, Object> attributes, PropertyResolver propertyResolver, String... ignoreAttributeNames) {
         this.delegate = new MutablePropertyValues(attributes);
@@ -53,7 +53,7 @@ public class AnnotationPropertyValuesAdapter implements PropertyValues {
     * @param propertyName 财产名称
     * @param old 旧
     * @param propertyName 财产名称
-     */
+    */
     public AnnotationPropertyValuesAdapter(
             Annotation annotation,
             PropertyResolver propertyResolver,
@@ -74,7 +74,7 @@ public class AnnotationPropertyValuesAdapter implements PropertyValues {
     * @param propertyName 财产名称
     * @param old 旧
     * @param propertyName 财产名称
-     */
+    */
     public AnnotationPropertyValuesAdapter(
             Annotation annotation, PropertyResolver propertyResolver, String... ignoreAttributeNames) {
         /**
@@ -83,7 +83,7 @@ public class AnnotationPropertyValuesAdapter implements PropertyValues {
         * @param propertyResolver 财产解析器
         * @param true true
         * @param ignoreAttributeNames ignoreattribute名称
-         */
+        */
         this(annotation, propertyResolver, true, ignoreAttributeNames);
     }
 

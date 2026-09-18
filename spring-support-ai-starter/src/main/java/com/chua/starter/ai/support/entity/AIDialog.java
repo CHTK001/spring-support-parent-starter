@@ -13,22 +13,22 @@ public class AIDialog {
 
     /**
     * 会话 标识
-     */
+    */
     private Long id;
 
     /**
     * 会话名称
-     */
+    */
     private String name;
 
     /**
     * 会话时间戳（毫秒）
-     */
+    */
     private Long timestamp;
 
     /**
     * 空参构造。
-     */
+    */
     public AIDialog() {
     }
 
@@ -37,7 +37,7 @@ public class AIDialog {
     *
     * @param id   会话 标识
     * @param name 会话名称
-     */
+    */
     public AIDialog(Long id, String name) {
         this.id = id;
         this.name = name;

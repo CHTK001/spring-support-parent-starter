@@ -69,111 +69,111 @@ public class SysFileSystemUploadMergeLog extends SysBase implements Serializable
     * 获取filesystemupload合并记录日志标识
     *
     * @return 获取filesystemupload合并日志id的结果
-     */
+    */
     public Long getFilesystemUploadMergeLogId() { return filesystemUploadMergeLogId; }
     /**
     * 设置filesystemupload合并记录日志标识
     *
     * @param v v
-     */
+    */
     public void setFilesystemUploadMergeLogId(Long v) { this.filesystemUploadMergeLogId = v; }
 
     /**
     * 获取filesystemupload合并记录日志uploadid
     *
     * @return 获取filesystemupload合并日志uploadid的结果
-     */
+    */
     public String getFilesystemUploadMergeLogUploadId() { return filesystemUploadMergeLogUploadId; }
     /**
     * 设置filesystemupload合并记录日志uploadid
     *
     * @param v v
-     */
+    */
     public void setFilesystemUploadMergeLogUploadId(String v) { this.filesystemUploadMergeLogUploadId = v; }
 
     /**
     * 获取filesystemupload合并记录日志Stage
     *
     * @return 获取filesystemupload合并日志Stage的结果
-     */
+    */
     public Integer getFilesystemUploadMergeLogStage() { return filesystemUploadMergeLogStage; }
     /**
     * 设置filesystemupload合并记录日志Stage
     *
     * @param v v
-     */
+    */
     public void setFilesystemUploadMergeLogStage(Integer v) { this.filesystemUploadMergeLogStage = v; }
 
     /**
     * 获取filesystemupload合并记录日志状态
     *
     * @return 获取filesystemupload合并日志状态的结果
-     */
+    */
     public Integer getFilesystemUploadMergeLogStatus() { return filesystemUploadMergeLogStatus; }
     /**
     * 设置filesystemupload合并记录日志状态
     *
     * @param v v
-     */
+    */
     public void setFilesystemUploadMergeLogStatus(Integer v) { this.filesystemUploadMergeLogStatus = v; }
 
     /**
     * 获取filesystemupload合并记录日志消息
     *
     * @return 获取filesystemupload合并日志消息的结果
-     */
+    */
     public String getFilesystemUploadMergeLogMessage() { return filesystemUploadMergeLogMessage; }
     /**
     * 设置filesystemupload合并记录日志消息
     *
     * @param v v
-     */
+    */
     public void setFilesystemUploadMergeLogMessage(String v) { this.filesystemUploadMergeLogMessage = v; }
 
     /**
     * 获取filesystemupload合并记录日志重试计算数量
     *
     * @return 获取filesystemupload合并日志重试数量的结果
-     */
+    */
     public Integer getFilesystemUploadMergeLogRetryCount() { return filesystemUploadMergeLogRetryCount; }
     /**
     * 设置filesystemupload合并记录日志重试计算数量
     *
     * @param v v
-     */
+    */
     public void setFilesystemUploadMergeLogRetryCount(Integer v) { this.filesystemUploadMergeLogRetryCount = v; }
 
     /**
     * 获取filesystemupload合并记录日志开始时间
     *
     * @return 获取filesystemupload合并日志启动时间的结果
-     */
+    */
     public LocalDateTime getFilesystemUploadMergeLogStartTime() { return filesystemUploadMergeLogStartTime; }
     /**
     * 设置filesystemupload合并记录日志开始时间
     *
     * @param v v
-     */
+    */
     public void setFilesystemUploadMergeLogStartTime(LocalDateTime v) { this.filesystemUploadMergeLogStartTime = v; }
 
     /**
     * 获取filesystemupload合并记录日志结束时间
     *
     * @return 获取filesystemupload合并日志结束时间的结果
-     */
+    */
     public LocalDateTime getFilesystemUploadMergeLogEndTime() { return filesystemUploadMergeLogEndTime; }
     /**
     * 设置filesystemupload合并记录日志结束时间
     *
     * @param v v
-     */
+    */
     public void setFilesystemUploadMergeLogEndTime(LocalDateTime v) { this.filesystemUploadMergeLogEndTime = v; }
 
     /**
     * 合并结果状态常量。
     * @author CH
     * @since 4.0.0
-     */
+    */
     public static class Result {
         /** 成功 */
         public static final int SUCCESS = 1;
@@ -182,10 +182,10 @@ public class SysFileSystemUploadMergeLog extends SysBase implements Serializable
     }
 
     /**
-    * 阶段标识常量。
-    * @author CH
-    * @since 4.0.0
-     */
+        * 阶段标识常量。
+        * @author CH
+        * @since 4.0.0
+        */
     public static class Stage {
         /** 合并 */
         public static final int MERGE = 1;

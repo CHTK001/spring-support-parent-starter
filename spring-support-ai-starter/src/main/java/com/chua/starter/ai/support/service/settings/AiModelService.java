@@ -16,7 +16,7 @@ public interface AiModelService {
     * 查询所有模型列表。
     *
     * @return 模型 DTO 列表
-     */
+    */
     List<AiModelDTO> list();
 
     /**
@@ -24,7 +24,7 @@ public interface AiModelService {
     *
     * @param model 模型 DTO
     * @return 创建后的模型 DTO
-     */
+    */
     AiModelDTO create(AiModelDTO model);
 
     /**
@@ -33,14 +33,14 @@ public interface AiModelService {
     * @param modelId 模型主键
     * @param model   模型 DTO
     * @return 更新后的模型 DTO
-     */
+    */
     AiModelDTO update(Long modelId, AiModelDTO model);
 
     /**
     * 删除模型（逻辑删除）。
     *
     * @param modelId 模型主键
-     */
+    */
     void delete(Long modelId);
 
     /**
@@ -51,6 +51,6 @@ public interface AiModelService {
     *
     * @param modelId 模型主键
     * @return 测试结果 DTO（含延迟毫秒数和状态）
-     */
+    */
     AiModelDTO testLatency(Long modelId);
 }

@@ -27,7 +27,7 @@ public class GlobalApiExceptionHandler {
     *
     * @param ex 业务异常
     * @return 错误信封与对应 HTTP 状态码
-     */
+    */
     @ExceptionHandler(ApiException.class)
     public ResponseEntity<ApiResult<Void>> handleApiException(ApiException ex) {
         ApiErrorCode code = ex.getErrorCode();
@@ -41,7 +41,7 @@ public class GlobalApiExceptionHandler {
     *
     * @param ex 异常
     * @return 内部错误信封（HTTP 500）
-     */
+    */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResult<Void>> handleException(Exception ex) {
         log.error("[api-ex] 未预期异常: {}", ex.getMessage(), ex);

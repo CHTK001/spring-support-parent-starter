@@ -24,13 +24,13 @@ public class MybatisUtils {
 
     /**
     * MyBatis工具。
-     */
+    */
     private MybatisUtils() {
     }
 
     /**
     * MySQL 转义字符
-     */
+    */
     private static final String MYSQL_ESCAPE_CHARACTER = "`";
 
     /**
@@ -39,7 +39,7 @@ public class MybatisUtils {
     * @param pageParam 分页参数
     * @param <T>       实体类型
     * @return 分页对象
-     */
+    */
     public static <T> Page<T> buildPage(Query pageParam) {
         return buildPage(pageParam, null);
     }
@@ -51,7 +51,7 @@ public class MybatisUtils {
     * @param sortingFields 排序字段集合
     * @param <T>           实体类型
     * @return 分页对象
-     */
+    */
     public static <T> Page<T> buildPage(Query pageParam, Collection<Sorting> sortingFields) {
         Page<T> page = new Page<>(pageParam.getPage(), pageParam.getPageSize());
         if (!CollectionUtils.isEmpty(sortingFields)) {
@@ -73,7 +73,7 @@ public class MybatisUtils {
     * @param type   目标类型
     * @param <T>    目标类型
     * @return 目标类型的分页对象
-     */
+    */
     public static <T> Page<T> copy(Page<?> result, Class<T> type) {
         Page<T> page = new Page<>();
         BeanUtils.copyProperties(result, page);
@@ -92,12 +92,12 @@ public class MybatisUtils {
     * @param params            参数对象
     * @param <T>               返回类型
     * @return 查询结果列表
-     */
+    */
     public static <T> List<T> selectList(SqlSessionFactory sqlSessionFactory, String statementId, Object params) {
         /**
         * 尝试。
         * @param sqlSessionFactory.openSession(true SQL会话工厂.opensession(true
-         */
+        */
         try (SqlSession session = sqlSessionFactory.openSession(true)) {
             return session.selectList(statementId, params);
         }
@@ -111,12 +111,12 @@ public class MybatisUtils {
     * @param params            参数对象
     * @param <T>               返回类型
     * @return 查询结果
-     */
+    */
     public static <T> T selectOne(SqlSessionFactory sqlSessionFactory, String statementId, Object params) {
         /**
         * 尝试。
         * @param sqlSessionFactory.openSession(true SQL会话工厂.opensession(true
-         */
+        */
         try (SqlSession session = sqlSessionFactory.openSession(true)) {
             return session.selectOne(statementId, params);
         }
@@ -130,12 +130,12 @@ public class MybatisUtils {
     * @param params            参数数组
     * @param <T>               返回类型
     * @return 查询结果列表
-     */
+    */
     public static <T> List<T> query(SqlSessionFactory sqlSessionFactory, String sql, Object... params) {
         /**
         * 尝试。
         * @param sqlSessionFactory.openSession(true SQL会话工厂.opensession(true
-         */
+        */
         try (SqlSession session = sqlSessionFactory.openSession(true)) {
             return session.selectList(sql, params);
         }
@@ -148,12 +148,12 @@ public class MybatisUtils {
     * @param sql               SQL 语句
     * @param params            参数数组
     * @return 影响行数
-     */
+    */
     public static int execute(SqlSessionFactory sqlSessionFactory, String sql, Object... params) {
         /**
         * 尝试。
         * @param sqlSessionFactory.openSession(true SQL会话工厂.opensession(true
-         */
+        */
         try (SqlSession session = sqlSessionFactory.openSession(true)) {
             return session.update(sql, params);
         }

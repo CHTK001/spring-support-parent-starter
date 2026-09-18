@@ -27,27 +27,27 @@ public class EduTeacher {
 
     /**
     * 系统用户 用户标识
-     */
+    */
     private Long teacherUserId;
 
     /**
     * 工号
-     */
+    */
     private String teacherNo;
 
     /**
     * 教师姓名（冗余展示）
-     */
+    */
     private String teacherName;
 
     /**
     * 任教学科编码（关联 edu_主题.主题_编码）
-     */
+    */
     private String teacherSubjectCode;
 
     /**
     * 状态：0 离职 / 1 在职
-     */
+    */
     private Integer teacherStatus;
 
     @TableField(value = "create_time", fill = com.baomidou.mybatisplus.annotation.FieldFill.INSERT)

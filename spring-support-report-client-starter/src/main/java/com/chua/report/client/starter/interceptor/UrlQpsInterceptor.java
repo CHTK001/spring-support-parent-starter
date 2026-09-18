@@ -38,7 +38,7 @@ public class UrlQpsInterceptor implements HandlerInterceptor {
     * @param response 响应
     * @param handler 处理器
     * @param ex ex
-     */
+    */
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response, 
                                  Object handler, Exception ex) {
         try {
@@ -70,7 +70,7 @@ public class UrlQpsInterceptor implements HandlerInterceptor {
     *
     * @param request HTTP 请求
     * @return 处理后的 URL
-     */
+    */
     private String getRequestUrl(HttpServletRequest request) {
         String uri = request.getRequestURI();
         String contextPath = request.getContextPath();

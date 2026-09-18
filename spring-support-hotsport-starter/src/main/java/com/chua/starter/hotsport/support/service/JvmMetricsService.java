@@ -59,10 +59,10 @@ public class JvmMetricsService {
     private volatile Runnable onSample;
 
     /**
-     * 注册采样后钩子（告警监控巡检）。
-     *
-     * @param hook 钩子
-     */
+    * 注册采样后钩子（告警监控巡检）。
+    *
+    * @param hook 钩子
+    */
     public void registerSampleHook(Runnable hook) {
         this.onSample = hook;
     }
@@ -93,10 +93,10 @@ public class JvmMetricsService {
     }
 
     /**
-     * 实时 JVM 快照（PlatformMXBean）。
-     *
-     * @return 快照 Map（memory/gc/cpu/threads/network/process）
-     */
+    * 实时 JVM 快照（PlatformMXBean）。
+    *
+    * @return 快照 Map（memory/gc/cpu/threads/network/process）
+    */
     public Map<String, Object> snapshot() {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("ts", System.currentTimeMillis());
@@ -154,11 +154,11 @@ public class JvmMetricsService {
     }
 
     /**
-     * 最近 N 分钟时序（堆百分比 / GC 次数 / GC 时间 / 线程数）。
-     *
-     * @param minutes 时间窗（分钟），&lt;=0 时返回全部缓冲
-     * @return 时序点列表（按时间升序）
-     */
+    * 最近 N 分钟时序（堆百分比 / GC 次数 / GC 时间 / 线程数）。
+    *
+    * @param minutes 时间窗（分钟），&lt;=0 时返回全部缓冲
+    * @return 时序点列表（按时间升序）
+    */
     public List<Map<String, Object>> metrics(int minutes) {
         long cutoff = minutes > 0 ? System.currentTimeMillis() - minutes * 60_000L : Long.MIN_VALUE;
         List<Map<String, Object>> out = new ArrayList<>();
@@ -180,17 +180,17 @@ public class JvmMetricsService {
     }
 
     /**
-     * 最近一次采样（告警巡检读 QPS / 活跃泄漏）。
-     *
-     * @return 采样 Map（永不为 null）
-     */
+    * 最近一次采样（告警巡检读 QPS / 活跃泄漏）。
+    *
+    * @return 采样 Map（永不为 null）
+    */
     public Map<String, Object> lastSample() {
         return lastSample.get();
     }
 
     /**
-     * 关闭清理。
-     */
+    * 关闭清理。
+    */
     @PreDestroy
     public void shutdown() {
         onSample = null;

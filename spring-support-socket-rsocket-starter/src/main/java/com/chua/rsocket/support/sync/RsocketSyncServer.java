@@ -16,14 +16,14 @@ public class RsocketSyncServer extends AbstractSyncServer {
 
     /**
     * r套接字 会话模板
-     */
+    */
     private final RSocketSessionTemplateImpl sessionTemplate;
 
     /**
     * 构造 r套接字 同步服务端。
     *
     * @param sessionTemplate r套接字 会话模板
-     */
+    */
     public RsocketSyncServer(RSocketSessionTemplateImpl sessionTemplate) {
         this.sessionTemplate = sessionTemplate;
         this.protocol = "rsocket";
@@ -50,13 +50,13 @@ public class RsocketSyncServer extends AbstractSyncServer {
     * r套接字 连接建立时回调。
     *
     * @param sessionId 会话标识
-     */
+    */
     public void onRsocketConnect(String sessionId) {
         SyncSession syncSession = new SyncSession(sessionId);
         /**
         * fireconnectionestablished。
         * @param syncSession 同步会话
-         */
+        */
         fireConnectionEstablished(syncSession);
     }
 
@@ -64,14 +64,14 @@ public class RsocketSyncServer extends AbstractSyncServer {
     * r套接字 连接断开时回调。
     *
     * @param sessionId 会话标识
-     */
+    */
     public void onRsocketDisconnect(String sessionId) {
         SyncSession syncSession = sessions.get(sessionId);
         if (syncSession != null) {
             /**
             * fireconnection关闭。
             * @param syncSession 同步会话
-             */
+            */
             fireConnectionClosed(syncSession);
         }
     }
@@ -82,7 +82,7 @@ public class RsocketSyncServer extends AbstractSyncServer {
     * @param sessionId 会话标识
     * @param topic     消息主题
     * @param data      消息数据
-     */
+    */
     public void onRsocketMessage(String sessionId, String topic, Object data) {
         SyncSession syncSession = sessions.get(sessionId);
         if (syncSession == null) {
@@ -94,7 +94,7 @@ public class RsocketSyncServer extends AbstractSyncServer {
         * @param syncSession 同步会话
         * @param topic topic
         * @param data 数据
-         */
+        */
         fireMessageReceived(syncSession, topic, data);
     }
 }

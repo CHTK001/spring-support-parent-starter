@@ -20,26 +20,26 @@ public class TencentWechatOpenPlatformProperties {
 
     /**
     * 是否启用
-     */
+    */
     private boolean enable = false;
 
     /**
     * 第三方平台appid
-     */
+    */
     private String componentAppId;
 
     /**
     * 第三方平台appsecret
-     */
+    */
     private String componentAppSecret;
 
     /**
     * 默认小程序appid（可选，调用转换接口时可省略miniappid参数）
-     */
+    */
     private String defaultMiniAppId;
 
     /**
     * 数据存储路径（JSON文件），用于持久化openid映射关系
-     */
+    */
     private String storagePath = "wechat-openid-mapping.json";
 }

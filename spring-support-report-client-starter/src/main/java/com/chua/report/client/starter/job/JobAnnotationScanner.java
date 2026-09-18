@@ -91,12 +91,12 @@ public class JobAnnotationScanner implements BeanPostProcessor {
             Method method = entry.getKey();
             Job job = entry.getValue();
             /**
-            * 注册作业处理器。
-            * @param bean Bean
-            * @param beanName Bean名称
-            * @param method 方法
-            * @param job 作业
-             */
+    * 注册作业处理器。
+    * @param bean Bean
+    * @param beanName Bean名称
+    * @param method 方法
+    * @param job 作业
+    */
             registerJobHandler(bean, beanName, method, job);
         }
 
@@ -110,7 +110,7 @@ public class JobAnnotationScanner implements BeanPostProcessor {
     * @param beanName Bean 名称
     * @param method   方法
     * @param job      作业 注解
-     */
+    */
     private void registerJobHandler(Object bean, String beanName, Method method, Job job) {
         String jobName = job.value();
         if (!StringUtils.hasText(jobName)) {

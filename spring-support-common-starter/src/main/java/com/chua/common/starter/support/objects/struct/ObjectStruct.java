@@ -20,7 +20,7 @@ public interface ObjectStruct<T> {
     *
     * @param source 对象列表
     * @return 树形节点列表
-     */
+    */
     List<TreeNode<T>> toTree(List<T> source);
 
     /**
@@ -28,7 +28,7 @@ public interface ObjectStruct<T> {
     *
     * @param tree 树形节点列表
     * @return 柱状图数据
-     */
+    */
     BarChartData toBarChartData(List<TreeNode<T>> tree);
 
     /**
@@ -36,7 +36,7 @@ public interface ObjectStruct<T> {
     *
     * @param tree 树形节点列表
     * @return 雷达图数据
-     */
+    */
     RadarChartData toRadarChartData(List<TreeNode<T>> tree);
 
     /**
@@ -44,7 +44,7 @@ public interface ObjectStruct<T> {
     *
     * @param tree 树形节点列表
     * @return 关系图数据
-     */
+    */
     RelationData toRelationData(List<TreeNode<T>> tree);
 
     /**
@@ -52,6 +52,6 @@ public interface ObjectStruct<T> {
     *
     * @param tree 树形节点列表
     * @return 矩形树图数据
-     */
+    */
     TreemapData toTreemapData(List<TreeNode<T>> tree);
 }

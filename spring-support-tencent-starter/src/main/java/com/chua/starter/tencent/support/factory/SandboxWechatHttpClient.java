@@ -29,7 +29,7 @@ public class SandboxWechatHttpClient implements HttpClient {
     /**
     * 创建 sandboxwechathttp客户端 实例
     * @param delegate delegate
-     */
+    */
     public SandboxWechatHttpClient(HttpClient delegate) {
         this.delegate = delegate;
     }
@@ -81,7 +81,7 @@ public class SandboxWechatHttpClient implements HttpClient {
     *
     * @param request 请求
     * @return rewrite请求的结果
-     */
+    */
     private HttpRequest rewriteRequest(HttpRequest request) {
         String originalUrl = request.getUrl().toString();
         String newUrl = rewriteUrl(originalUrl);
@@ -101,7 +101,7 @@ public class SandboxWechatHttpClient implements HttpClient {
     *
     * @param url url
     * @return rewriteUrl的结果
-     */
+    */
     private String rewriteUrl(String url) {
         if (url == null || url.contains(SANDBOX_PATH)) {
             return url;

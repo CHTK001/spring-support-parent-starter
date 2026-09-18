@@ -34,19 +34,19 @@ public class SpiderMapNode implements FlowNode {
 
     /**
     * 日志记录器
-     */
+    */
     private static final Logger log = LoggerFactory.getLogger(SpiderMapNode.class);
 
     /**
     * 来源数据：当前数据
-     */
+    */
     private static final String SOURCE_CURRENT = "current";
 
     /**
     * 节点类型标识。
     *
     * @return 节点类型
-     */
+    */
     @Override
     public String type() {
         return "spider.map";
@@ -56,7 +56,7 @@ public class SpiderMapNode implements FlowNode {
     * 节点配置表单元信息。
     *
     * @return 表单元信息列表
-     */
+    */
     @Override
     public List<FlowNodeField> configSchema() {
         List<FlowNodeField> schema = new ArrayList<>();
@@ -71,7 +71,7 @@ public class SpiderMapNode implements FlowNode {
     * 执行映射节点。
     *
     * @param context 当前流程上下文
-     */
+    */
     @Override
     public void execute(FlowContext context) {
         FlowProps props = context.currentNodeProps();
@@ -94,7 +94,7 @@ public class SpiderMapNode implements FlowNode {
     *
     * @param raw 原始映射配置
     * @return 映射规则列表
-     */
+    */
     @SuppressWarnings("unchecked")
     private List<Map<String, Object>> parseMappings(Object raw) {
         List<Map<String, Object>> result = new ArrayList<>();
@@ -118,7 +118,7 @@ public class SpiderMapNode implements FlowNode {
     * @param source  来源标识
     * @param context 当前流程上下文
     * @return 来源值
-     */
+    */
     private Object resolveSource(String source, FlowContext context) {
         if (SOURCE_CURRENT.equals(source)) {
             return context.getData();
@@ -132,7 +132,7 @@ public class SpiderMapNode implements FlowNode {
     * @param sourceValue 来源值
     * @param mappings    映射规则
     * @return 映射结果
-     */
+    */
     @SuppressWarnings("unchecked")
     private Map<String, Object> applyMappings(Object sourceValue, List<Map<String, Object>> mappings) {
         Map<String, Object> sourceMap = new LinkedHashMap<>();

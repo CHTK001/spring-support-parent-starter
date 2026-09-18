@@ -17,7 +17,7 @@ public class PaymentCallbackProperties {
 
     /**
     * 对外可访问的支付服务根地址，例如 https://pay.example.com
-     */
+    */
     private String baseUrl;
 }
 

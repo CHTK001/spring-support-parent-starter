@@ -20,7 +20,7 @@ public class Validator {
 
     /**
     * Validator。
-     */
+    */
     private Validator() {
     }
 
@@ -29,7 +29,7 @@ public class Validator {
     *
     * @param phone 手机号
     * @return 格式正确返回 true，否则返回 false
-     */
+    */
     public static boolean isMobile(String phone) {
         if (phone == null) {
             return false;
@@ -42,7 +42,7 @@ public class Validator {
     *
     * @param email 邮箱地址
     * @return 格式正确返回 true，否则返回 false
-     */
+    */
     public static boolean isEmail(String email) {
         if (email == null) {
             return false;
@@ -55,7 +55,7 @@ public class Validator {
     *
     * @param idCard 身份证号
     * @return 格式正确返回 true，否则返回 false
-     */
+    */
     public static boolean isIdCard(String idCard) {
         if (idCard == null) {
             return false;
@@ -68,7 +68,7 @@ public class Validator {
     *
     * @param ip IP 地址
     * @return 格式正确返回 true，否则返回 false
-     */
+    */
     public static boolean isIp(String ip) {
         if (ip == null) {
             return false;
@@ -81,7 +81,7 @@ public class Validator {
     *
     * @param str 字符串
     * @return 全部为数字返回 true，否则返回 false
-     */
+    */
     public static boolean isNumeric(String str) {
         if (str == null || str.isEmpty()) {
             return false;
@@ -99,7 +99,7 @@ public class Validator {
     *
     * @param str 字符串
     * @return 全部为字母返回 true，否则返回 false
-     */
+    */
     public static boolean isAlpha(String str) {
         if (str == null || str.isEmpty()) {
             return false;
@@ -117,7 +117,7 @@ public class Validator {
     *
     * @param str 字符串
     * @return 全部为字母或数字返回 true，否则返回 false
-     */
+    */
     public static boolean isAlphanumeric(String str) {
         if (str == null || str.isEmpty()) {
             return false;
@@ -135,7 +135,7 @@ public class Validator {
     *
     * @param url URL 字符串
     * @return 格式正确返回 true，否则返回 false
-     */
+    */
     public static boolean isUrl(String url) {
         if (url == null) {
             return false;
@@ -149,7 +149,7 @@ public class Validator {
     *
     * @param str 字符串
     * @return 包含中文字符返回 true，否则返回 false
-     */
+    */
     public static boolean hasChinese(String str) {
         if (str == null) {
             return false;

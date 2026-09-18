@@ -10,7 +10,7 @@ public class NamingCase {
 
     /**
     * 私有构造函数，防止实例化
-     */
+    */
     private NamingCase() {
     }
 
@@ -20,7 +20,7 @@ public class NamingCase {
     *
     * @param name 原始字符串，允许为 空 或空
     * @return 首字母大写后的字符串，若入参为 空 或空则原样返回
-     */
+    */
     public static String toFirstUpperCase(String name) {
         if (name == null || name.isEmpty()) {
             return name;

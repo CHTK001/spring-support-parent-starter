@@ -45,7 +45,7 @@ public class IdempotentTemplate {
     * @param timeout 超时时间
     * @param unit    时间单位
     * @return true 表示获取成功，false 表示已存在或获取失败
-     */
+    */
     public boolean tryAcquire(String key, long timeout, TimeUnit unit) {
         if (key == null || key.isBlank()) {
             return true;
@@ -67,7 +67,7 @@ public class IdempotentTemplate {
     * 释放幂等锁。
     *
     * @param key 幂等键
-     */
+    */
     public void release(String key) {
         if (key == null || key.isBlank()) {
             return;
@@ -80,7 +80,7 @@ public class IdempotentTemplate {
     *
     * @param key     幂等键
     * @param success 是否成功
-     */
+    */
     public void complete(String key, boolean success) {
         if (key == null || key.isBlank()) {
             return;

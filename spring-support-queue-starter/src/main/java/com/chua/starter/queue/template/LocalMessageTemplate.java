@@ -45,53 +45,53 @@ public class LocalMessageTemplate implements MessageTemplate {
 
     /**
     * 事件bus容器，每个目标对应一个事件bus
-     */
+    */
     private final ConcurrentHashMap<String, EventBus> eventBuses = new ConcurrentHashMap<>();
 
     /**
     * 异步事件bus容器，每个目标对应一个异步事件bus
-     */
+    */
     private final ConcurrentHashMap<String, AsyncEventBus> asyncEventBuses = new ConcurrentHashMap<>();
 
     /**
     * 异步事件bus使用的线程池容器，用于关闭时清理资源
-     */
+    */
     private final ConcurrentHashMap<String, ExecutorService> asyncExecutors = new ConcurrentHashMap<>();
 
     /**
     * 订阅者容器，每个目标对应一组处理器
-     */
+    */
     private final ConcurrentHashMap<String, CopyOnWriteArrayList<MessageHandler>> subscribers = new ConcurrentHashMap<>();
 
     /**
     * 事件bus订阅者容器，用于管理订阅者对象
-     */
+    */
     private final ConcurrentHashMap<String, CopyOnWriteArrayList<EventBusSubscriber>> eventBusSubscribers = new ConcurrentHashMap<>();
 
     /**
     * 是否运行中
-     */
+    */
     private volatile boolean running = true;
 
     /**
     * 配置
-     */
+    */
     private final QueueProperties.LocalConfig config;
 
     /**
     * 延迟消息调度器（使用平台线程，因为虚拟线程不适合精确的定时调度）
-     */
+    */
     private final ScheduledExecutorService delayScheduler;
 
     /**
     * 虚拟线程执行器，用于执行延迟消息的实际发送
-     */
+    */
     private final ExecutorService virtualExecutor;
 
     /**
     * 创建 本地消息template 实例
     * @param config 配置
-     */
+    */
     public LocalMessageTemplate(QueueProperties.LocalConfig config) {
         this.config = config;
         // 延迟消息调度器使用平台线程（虚拟线程不适合精确的定时调度）
@@ -122,7 +122,7 @@ public class LocalMessageTemplate implements MessageTemplate {
 
     /**
     * 异步发送带头部的消息
-     */
+    */
     @Override
     public CompletableFuture<SendResult> sendAsync(String destination, Object payload, Map<String, Object> headers) {
         String messageId = UUID.randomUUID().toString();
@@ -257,11 +257,11 @@ public class LocalMessageTemplate implements MessageTemplate {
     public void subscribe(String destination, String group, MessageHandler handler, boolean autoAck) {
         // 本地队列不支持消费组，直接订阅
         /**
-        * 订阅。
-        * @param destination 目标
-        * @param handler 处理器
-        * @param autoAck autoACK
-         */
+    * 订阅。
+    * @param destination 目标
+    * @param handler 处理器
+    * @param autoAck autoACK
+    */
         subscribe(destination, handler, autoAck);
     }
 
@@ -270,11 +270,11 @@ public class LocalMessageTemplate implements MessageTemplate {
     public void subscribe(String destination, MessageHandler handler, boolean autoAck, int concurrency) {
         if (concurrency <= 1) {
             /**
-            * 订阅。
-            * @param destination 目标
-            * @param handler 处理器
-            * @param autoAck autoACK
-             */
+    * 订阅。
+    * @param destination 目标
+    * @param handler 处理器
+    * @param autoAck autoACK
+    */
             subscribe(destination, handler, autoAck);
             return;
         }
@@ -336,12 +336,12 @@ public class LocalMessageTemplate implements MessageTemplate {
     public void subscribe(String destination, String group, MessageHandler handler, boolean autoAck, int concurrency) {
         // 本地队列不支持消费组，直接订阅
         /**
-        * 订阅。
-        * @param destination 目标
-        * @param handler 处理器
-        * @param autoAck autoACK
-        * @param concurrency concurrency
-         */
+    * 订阅。
+    * @param destination 目标
+    * @param handler 处理器
+    * @param autoAck autoACK
+    * @param concurrency concurrency
+    */
         subscribe(destination, handler, autoAck, concurrency);
     }
 
@@ -387,10 +387,10 @@ public class LocalMessageTemplate implements MessageTemplate {
             ExecutorService executor = asyncExecutors.remove(destination);
             if (executor != null) {
                 /**
-                * 关闭执行器。
-                * @param executor 执行器
-                * @param destination 目标
-                 */
+    * 关闭执行器。
+    * @param executor 执行器
+    * @param destination 目标
+    */
                 shutdownExecutor(executor, destination);
             }
             
@@ -401,7 +401,7 @@ public class LocalMessageTemplate implements MessageTemplate {
                 * 关闭执行器。
                 * @param concurrentExecutor 并发执行器
                 * @param "-concurrent" "-并发"
-                 */
+                */
                 shutdownExecutor(concurrentExecutor, destination + "-concurrent");
             }
         }
@@ -451,9 +451,9 @@ public class LocalMessageTemplate implements MessageTemplate {
  // 关闭所有异步事件bus和并发执行器使用的线程池
         for (Map.Entry<String, ExecutorService> entry : asyncExecutors.entrySet()) {
             /**
-            * 关闭执行器。
-            * @param entry.getValue( entry.获取值(
-             */
+    * 关闭执行器。
+    * @param entry.getValue( entry.获取值(
+    */
             shutdownExecutor(entry.getValue(), entry.getKey());
         }
 
@@ -471,7 +471,7 @@ public class LocalMessageTemplate implements MessageTemplate {
     * 安全关闭执行器
     * @param executor 执行器
     * @param name 名称
-     */
+    */
     private void shutdownExecutor(ExecutorService executor, String name) {
         if (executor == null) {
             return;
@@ -492,7 +492,7 @@ public class LocalMessageTemplate implements MessageTemplate {
     * 获取或创建同步事件bus
     * @param destination 目标
     * @return 获取or创建事件bus的结果
-     */
+    */
     private EventBus getOrCreateEventBus(String destination) {
         return eventBuses.computeIfAbsent(destination, k -> new EventBus(destination));
     }
@@ -501,7 +501,7 @@ public class LocalMessageTemplate implements MessageTemplate {
     * 获取或创建异步事件bus（使用虚拟线程）
     * @param destination 目标
     * @return 获取or创建Async事件bus的结果
-     */
+    */
     private AsyncEventBus getOrCreateAsyncEventBus(String destination) {
         return asyncEventBuses.computeIfAbsent(destination, k -> {
  // 为每个目标创建独立的虚拟线程执行器
@@ -513,7 +513,7 @@ public class LocalMessageTemplate implements MessageTemplate {
             * @param destination 目标
             * @param executor 执行器
             * @return Async事件bus的结果
-             */
+            */
             return new AsyncEventBus(destination, executor);
         });
     }
@@ -522,7 +522,7 @@ public class LocalMessageTemplate implements MessageTemplate {
     * 事件bus订阅者包装类
     * @author CH
     * @since 4.0.0
-     */
+    */
     private class EventBusSubscriber {
         /** 日志 */
         private final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(EventBusSubscriber.class);
@@ -538,7 +538,7 @@ public class LocalMessageTemplate implements MessageTemplate {
         * @param destination 目标
         * @param handler 处理器
         * @param autoAck autoACK
-         */
+        */
         EventBusSubscriber(String destination, MessageHandler handler, boolean autoAck) {
             this.destination = destination;
             this.handler = handler;
@@ -550,7 +550,7 @@ public class LocalMessageTemplate implements MessageTemplate {
         * 处理消息
         *
         * @param message 消息
-         */
+        */
         public void handleMessage(Message message) {
             try {
  // 创建承认对象
@@ -580,7 +580,7 @@ public class LocalMessageTemplate implements MessageTemplate {
     * 本地队列的ACK实现
     * @author CH
     * @since 4.0.0
-     */
+    */
     private static class LocalAcknowledgment implements Acknowledgment {
         private volatile boolean acknowledged = false; // acknowledged
 
@@ -605,10 +605,10 @@ public class LocalMessageTemplate implements MessageTemplate {
     }
 
     /**
-    * 序列化消息内容
-    * @param payload payload
-    * @return serializePayload的结果
-     */
+        * 序列化消息内容
+        * @param payload payload
+        * @return serializePayload的结果
+        */
     private byte[] serializePayload(Object payload) {
         if (payload == null) {
             return new byte[0];

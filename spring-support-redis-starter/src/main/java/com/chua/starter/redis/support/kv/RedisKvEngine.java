@@ -53,19 +53,19 @@ public class RedisKvEngine implements KvEngine {
 
     /**
     * 底层 Spring 数据 Redis 字符串操作模板
-     */
+    */
     private final StringRedisTemplate redisTemplate;
 
     /**
     * 扫描 命令每次扫描的批次大小
-     */
+    */
     private static final int SCAN_BATCH_SIZE = 1000;
 
     /**
     * 构造基于指定 {@link StringRedisTemplate} 的 KV 引擎。
     *
     * @param redisTemplate 不可为 空
-     */
+    */
     public RedisKvEngine(StringRedisTemplate redisTemplate) {
         this.redisTemplate = redisTemplate;
     }
@@ -124,7 +124,7 @@ public class RedisKvEngine implements KvEngine {
     *
     * @param prefix 键前缀，不可为 空
     * @return 匹配前缀的键值对映射；无匹配时返回空 映射
-     */
+    */
     @Override
     public Map<String, String> findAllByPrefix(String prefix) {
         if (prefix == null || prefix.isEmpty()) {
@@ -139,7 +139,7 @@ public class RedisKvEngine implements KvEngine {
         /**
         * 尝试。
         * @param redisTemplate.scan(options redistemplate.扫描(期权
-         */
+        */
         try (var cursor = redisTemplate.scan(options)) {
             while (cursor.hasNext()) {
                 String key = cursor.next();

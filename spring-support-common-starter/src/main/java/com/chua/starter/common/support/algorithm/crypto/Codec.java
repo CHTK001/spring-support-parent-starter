@@ -15,12 +15,12 @@ public class Codec {
 
     /**
     * 加密类型
-     */
+    */
     private final String type;
 
     /**
     * 密钥
-     */
+    */
     private final String key;
 
     /**
@@ -29,13 +29,13 @@ public class Codec {
     * @param type 加密类型，aes 表示 AES 加解密，其他为 Hex 编解码
     * @param key  密钥
     * @return 编解码器
-     */
+    */
     public static Codec build(String type, String key) {
         /**
         * Codec。
         * @param type 类型
         * @param key 钥匙
-         */
+        */
         return new Codec(type, key);
     }
 
@@ -44,7 +44,7 @@ public class Codec {
     *
     * @param type 加密类型
     * @param key  密钥
-     */
+    */
     private Codec(String type, String key) {
         this.type = type;
         this.key = key;
@@ -55,7 +55,7 @@ public class Codec {
     *
     * @param data 原始数据
     * @return 编码结果
-     */
+    */
     public String encodeHex(String data) {
         if (data == null) {
             return null;
@@ -65,7 +65,7 @@ public class Codec {
             * aescodec。
             * @param key.getBytes(StandardCharsets.UTF_8 键.获取bytes(标准字符集.UTF_8
             * @return AesCodec的结果
-             */
+            */
             return new AesCodec(key.getBytes(StandardCharsets.UTF_8)).encodeHex(data);
         }
         byte[] bytes = data.getBytes(StandardCharsets.UTF_8);
@@ -77,7 +77,7 @@ public class Codec {
     *
     * @param hex 编码数据
     * @return 解码结果
-     */
+    */
     public String decodeHex(String hex) {
         if (hex == null) {
             return null;
@@ -87,7 +87,7 @@ public class Codec {
             * aescodec。
             * @param key.getBytes(StandardCharsets.UTF_8 键.获取bytes(标准字符集.UTF_8
             * @return AesCodec的结果
-             */
+            */
             return new AesCodec(key.getBytes(StandardCharsets.UTF_8)).decodeHex(hex);
         }
         byte[] bytes = Hex.decodeHex(hex);
@@ -96,7 +96,7 @@ public class Codec {
         * @param bytes bytes
         * @param StandardCharsets.UTF_8 标准字符集.utf8
         * @return 字符串的结果
-         */
+        */
         return new String(bytes, StandardCharsets.UTF_8);
     }
 
@@ -104,7 +104,7 @@ public class Codec {
     * 是否为 AES 加解密。
     *
     * @return 是否使用 AES
-     */
+    */
     private boolean isAes() {
         return type != null && type.toLowerCase().contains("aes");
     }

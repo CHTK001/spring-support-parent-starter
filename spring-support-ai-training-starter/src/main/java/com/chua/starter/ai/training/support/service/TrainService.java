@@ -19,7 +19,7 @@ public interface TrainService {
     * @param originalFileName 上传文件名
     * @param dataPath         解压后的数据目录路径
     * @return 创建的任务
-     */
+    */
     TrainTask createTask(String originalFileName, String dataPath);
 
     /**
@@ -28,7 +28,7 @@ public interface TrainService {
     * @param taskId 任务 标识
     * @param type   训练类型（resnet50 / yolo）；空 视为默认 resnet50
     * @throws Exception 训练启动失败（任务不存在或已在运行）
-     */
+    */
     void startTraining(String taskId, String type) throws Exception;
 
     /**
@@ -36,14 +36,14 @@ public interface TrainService {
     *
     * @param taskId 任务 标识
     * @return 任务详情（含进度）
-     */
+    */
     TrainTask getTask(String taskId);
 
     /**
     * 列出所有训练任务。
     *
     * @return 任务列表
-     */
+    */
     List<TrainTask> listTasks();
 
     /**
@@ -51,6 +51,6 @@ public interface TrainService {
     *
     * @param taskId   任务 标识
     * @param argument 新的超参数
-     */
+    */
     void updateArgument(String taskId, TrainArgument argument);
 }

@@ -14,7 +14,7 @@ public final class NetUtils {
 
     /**
     * 私有构造函数，防止实例化
-     */
+    */
     private NetUtils() {
     }
 
@@ -22,7 +22,7 @@ public final class NetUtils {
     * 获取本地主机
     *
     * @return 获取本地主机的结果
-     */
+    */
     public static String getLocalHost() {
         try {
             return InetAddress.getLocalHost().getHostAddress();
@@ -35,7 +35,7 @@ public final class NetUtils {
     * 获取本地ipv
     *
     * @return 获取本地ipv4的结果
-     */
+    */
     public static String getLocalIpv4() {
         try {
             Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();

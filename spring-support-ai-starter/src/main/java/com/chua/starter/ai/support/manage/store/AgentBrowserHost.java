@@ -32,7 +32,7 @@ public class AgentBrowserHost implements Serializable {
     * 主机 唯一标识。
     *
     * <p>由后端自动生成，用于在系统中唯一标识一个浏览器宿主进程。</p>
-     */
+    */
     @TableId(type = IdType.INPUT)
     @Schema(description = "Host 唯一标识", example = "default-host")
     private String hostId; // 主机标识
@@ -49,7 +49,7 @@ public class AgentBrowserHost implements Serializable {
     *   <li>{@code stopping} - 正在关闭</li>
     *   <li>{@code failed} - 启动或运行失败</li>
     * </ul>
-     */
+    */
     @TableField("state")
     @Schema(description = "Host 生命周期状态", example = "running")
     private String state; // 状态
@@ -60,7 +60,7 @@ public class AgentBrowserHost implements Serializable {
     * <p>每次 Host 重启后递增。Lane 通过此值判断自己是否仍属于当前活跃的 Host。
     * 如果 Lane 的 browser_轮次 与 主机 的 轮次 不匹配，说明 主机 已重启，
     * Lane 需要重新初始化。</p>
-     */
+    */
     @TableField("epoch")
     @Schema(description = "Host 纪元，重启后递增", example = "1")
     private Long epoch; // 轮次
@@ -70,7 +70,7 @@ public class AgentBrowserHost implements Serializable {
     *
     * <p>{@code true} 表示 Host 以可见窗口模式运行，{@code false} 表示无头模式。
     * 此字段反映 主机 的实际运行模式，而非配置策略。</p>
-     */
+    */
     @TableField("headful")
     @Schema(description = "是否以有头模式运行", example = "false")
     private Boolean headful; // headful
@@ -85,7 +85,7 @@ public class AgentBrowserHost implements Serializable {
     *   <li>{@code authenticated_replica} - 认证副本，复制主身份的登录状态</li>
     *   <li>{@code isolated} - 隔离模式，独立的浏览器配置</li>
     * </ul>
-     */
+    */
     @TableField("identity_mode")
     @Schema(description = "身份模式", example = "anonymous")
     private String identityMode; // identitymode
@@ -94,7 +94,7 @@ public class AgentBrowserHost implements Serializable {
     * 当前承载的 Lane 数量。
     *
     * <p>实时统计此 Host 上正在运行的 Lane 数量，用于容量管理和调度决策。</p>
-     */
+    */
     @TableField("lane_count")
     @Schema(description = "当前承载的 Lane 数量", example = "0")
     private Integer laneCount; // lane数量
@@ -103,7 +103,7 @@ public class AgentBrowserHost implements Serializable {
     * 常驻内存大小（RSS, Resident 设置 大小），单位：字节。
     *
     * <p>记录 Host 进程的实际内存占用，用于全局资源压力评估和调度决策。</p>
-     */
+    */
     @TableField("rss_bytes")
     @Schema(description = "常驻内存大小（字节）", example = "0")
     private Long rssBytes; // rssbytes
@@ -112,7 +112,7 @@ public class AgentBrowserHost implements Serializable {
     * 创建时间（毫秒级时间戳）。
     *
     * <p>记录 Host 的创建时间，用于排序和生命周期管理。</p>
-     */
+    */
     @TableField("created_at")
     @Schema(description = "创建时间（毫秒级时间戳）")
     private Long createdAt; // 创建at
@@ -121,7 +121,7 @@ public class AgentBrowserHost implements Serializable {
     * 更新时间（毫秒级时间戳）。
     *
     * <p>记录 Host 最后一次更新的时间，用于乐观锁和缓存刷新。</p>
-     */
+    */
     @TableField("updated_at")
     @Schema(description = "更新时间（毫秒级时间戳）")
     private Long updatedAt; // 更新at

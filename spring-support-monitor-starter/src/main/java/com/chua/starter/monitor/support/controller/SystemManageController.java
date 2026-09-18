@@ -54,6 +54,8 @@ public class SystemManageController {
     @Autowired
     private MsServerHostMapper hostMapper;
 
+    @Autowired
+    private com.chua.starter.monitor.support.spi.SystemInfoProviderRouter providerRouter;
     /** 远程执行命令（通过 SSH） */
     private String execRemoteCommand(Long hostId, String command) {
         if (hostId == null) return execCommand(command.split(" "));
@@ -80,13 +82,29 @@ public class SystemManageController {
 
     // ==================== 主机基础信息（OSHI SPI） ====================
 
-    @Operation(summary = "获取本机基础信息", description = "通过 OSHI SPI 获取 CPU/内存/OS/网络接口/包管理器")
+    @Operation(summary = "获取主机信息")
     @GetMapping("/host-info")
-    public Mono<ReturnResult<Map<String, Object>>> hostInfo() {
-        return Mono.fromCallable(() -> ReturnResult.ok(localSystemInfoService.getHostInfo()))
-                .subscribeOn(Schedulers.boundedElastic());
+    public Mono<ReturnResult<?>> hostInfo(@RequestParam(required = false) Long hostId,
+                                          @RequestParam(required = false, defaultValue = "false") boolean refresh) {
+        return Mono.fromCallable(() -> {
+            if (hostId == null) {
+                return (ReturnResult<Map<String, Object>>)(ReturnResult<?>) ReturnResult.ok(localSystemInfoService.getHostInfo());
+            }
+            MsServerHost host = hostMapper.selectById(hostId);
+            if (host == null) return ReturnResult.error("主机不存在: " + hostId);
+            try {
+                Map<String, Object> info = providerRouter.route(host).hostInfo(host);
+                host.setServerHostName((String) info.getOrDefault("hostname", host.getServerHostName()));
+                Object cpuObj = info.get("cpuCores");
+                if (cpuObj instanceof Number) host.setServerHostCpuCores(((Number) cpuObj).intValue());
+                hostMapper.updateById(host);
+                return ReturnResult.ok(info);
+            } catch (Exception e) {
+                log.error("刷新主机信息失败 host={}", hostId, e);
+                return ReturnResult.error("刷新主机信息失败: " + e.getMessage());
+            }
+        }).subscribeOn(Schedulers.boundedElastic());
     }
-
     @Operation(summary = "获取环境变量")
     @GetMapping("/env")
     public Mono<ReturnResult<List<Map<String, String>>>> envVars() {

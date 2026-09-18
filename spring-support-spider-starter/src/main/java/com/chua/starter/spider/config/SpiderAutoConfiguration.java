@@ -47,62 +47,62 @@ public class SpiderAutoConfiguration {
 
     /**
     * 追踪标识 过滤器注册顺序
-     */
+    */
     private static final int TRACE_FILTER_ORDER = 0;
 
     /**
     * 请求节点
-     */
+    */
     private final SpiderRequestNode requestNode;
 
     /**
     * 提取节点
-     */
+    */
     private final SpiderExtractNode extractNode;
 
     /**
     * 转换节点
-     */
+    */
     private final SpiderTransformNode transformNode;
 
     /**
     * 循环节点
-     */
+    */
     private final SpiderSubLoopNode subLoopNode;
 
     /**
     * 映射节点
-     */
+    */
     private final SpiderMapNode mapNode;
 
     /**
     * 落库节点
-     */
+    */
     private final SpiderOutputNode outputNode;
 
     /**
     * 条件节点
-     */
+    */
     private final SpiderConditionNode conditionNode;
 
     /**
     * 脚本节点
-     */
+    */
     private final SpiderScriptNode scriptNode;
 
     /**
     * 数据库节点
-     */
+    */
     private final SpiderDbNode dbNode;
 
     /**
     * 函数调用节点
-     */
+    */
     private final SpiderFunctionNode functionNode;
 
     /**
     * 占位节点（兜底，用于未识别类型或后续扩展）
-     */
+    */
     private final SpiderNoopNode noopNode;
 
     /**
@@ -119,7 +119,7 @@ public class SpiderAutoConfiguration {
     * @param dbNode        数据库节点
     * @param functionNode  函数调用节点
     * @param noopNode      占位节点
-     */
+    */
     public SpiderAutoConfiguration(SpiderRequestNode requestNode,
                                    SpiderExtractNode extractNode,
                                    SpiderTransformNode transformNode,
@@ -149,7 +149,7 @@ public class SpiderAutoConfiguration {
     *
     * <p>节点统一使用 {@code spider.} 前缀注册，供前端节点清单展示与流程 JSON 导入匹配；
     * script/db/function 已绑定到真实节点实现，{@link SpiderNoopNode} 仅作为兜底。</p>
-     */
+    */
     @PostConstruct
     public void registerSpiderNodes() {
         FlowNodeRegistry.register(requestNode.type(), requestNode, "HTTP 请求");
@@ -171,7 +171,7 @@ public class SpiderAutoConfiguration {
     * <p>覆盖所有路径，为请求注入 traceId 到 MDC 与响应头。</p>
     *
     * @return 过滤器注册 Bean
-     */
+    */
     @Bean
     @ConditionalOnWebApplication
     public FilterRegistrationBean<Filter> spiderTraceFilter() {

@@ -22,7 +22,7 @@ public class SoftStarterApplication {
     * Main
     *
     * @param args 参数
-     */
+    */
     public static void main(String[] args) {
         SpringApplication.run(SoftStarterApplication.class, args);
     }

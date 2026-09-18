@@ -22,7 +22,7 @@ public @interface UserValue {
     * <p>例如: \@UserValue("userId") String userId</p>
     *
     * @return 参数名称
-     */
+    */
     @AliasFor("name")
     String value() default "";
 
@@ -33,7 +33,7 @@ public @interface UserValue {
     *
     * @since 4.2
     * @return 参数名称
-     */
+    */
     @AliasFor("value")
     String name() default "";
 
@@ -45,7 +45,7 @@ public @interface UserValue {
     * <p>例如: \@UserValue(name = "age", required = false) Integer age</p>
     *
     * @return 是否必需
-     */
+    */
     boolean required() default true;
 
     /**
@@ -55,7 +55,7 @@ public @interface UserValue {
     * <p>注意：提供默认值会隐式将{@link #required()}设置为false</p>
     *
     * @return 默认值
-     */
+    */
     String defaultValue() default "";
 
 }

@@ -16,11 +16,11 @@ public class SysAiGlobalSettingSaveRequest {
 
     /**
     * 设置分组
-     */
+    */
     private String sysAiGlobalSettingGroup;
 
     /**
     * 设置项列表
-     */
+    */
     private List<SysAiGlobalSetting> settings;
 }

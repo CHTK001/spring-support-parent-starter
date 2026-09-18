@@ -48,44 +48,44 @@ public class SpiderRequestNode implements FlowNode {
 
     /**
     * 请求失败占位信息
-     */
+    */
     private static final Logger log = LoggerFactory.getLogger(SpiderRequestNode.class);
 
     /**
     * 响应体属性键
-     */
+    */
     private static final String ATTR_BODY = "spider.request.body";
 
     /**
     * 响应状态码属性键
-     */
+    */
     private static final String ATTR_STATUS = "spider.request.status";
 
     /**
     * 响应头属性键
-     */
+    */
     private static final String ATTR_HEADERS = "spider.request.headers";
 
     /**
     * 默认请求方法
-     */
+    */
     private static final String DEFAULT_METHOD = "GET";
 
     /**
     * 默认超时时间（毫秒）
-     */
+    */
     private static final int DEFAULT_TIMEOUT_MS = 30000;
 
     /**
     * 环境变量解析器
-     */
+    */
     private final SpiderEnvResolver envResolver;
 
     /**
     * 通过构造器注入环境变量解析器。
     *
     * @param envResolver 环境变量解析器
-     */
+    */
     public SpiderRequestNode(SpiderEnvResolver envResolver) {
         this.envResolver = envResolver;
     }
@@ -94,7 +94,7 @@ public class SpiderRequestNode implements FlowNode {
     * 节点类型标识。
     *
     * @return 节点类型
-     */
+    */
     @Override
     public String type() {
         return "spider.request";
@@ -104,7 +104,7 @@ public class SpiderRequestNode implements FlowNode {
     * 节点配置表单元信息。
     *
     * @return 表单元信息列表
-     */
+    */
     @Override
     public List<FlowNodeField> configSchema() {
         List<FlowNodeField> schema = new ArrayList<>();
@@ -126,7 +126,7 @@ public class SpiderRequestNode implements FlowNode {
     * <p>根据配置构造请求并发送，将响应体、状态码、响应头写入上下文属性。</p>
     *
     * @param context 当前流程上下文
-     */
+    */
     @Override
     public void execute(FlowContext context) {
         FlowProps props = context.currentNodeProps();
@@ -136,7 +136,7 @@ public class SpiderRequestNode implements FlowNode {
             * illegal参数异常。
             * @param 参数" 参数"
             * @return illegal参数异常的结果
-             */
+            */
             throw new IllegalArgumentException("spider.request 节点缺少 url 参数");
         }
         String method = props.getString("method", DEFAULT_METHOD).toUpperCase();
@@ -163,7 +163,7 @@ public class SpiderRequestNode implements FlowNode {
     * @param body      请求体
     * @param timeoutMs 超时时间（毫秒）
     * @return 响应结果
-     */
+    */
     private HttpResponse<String> send(String url, String method,
                                       Map<String, Object> headers, String body,
                                       long timeoutMs) {
@@ -190,7 +190,7 @@ public class SpiderRequestNode implements FlowNode {
             * @param url url
             * @param e e
             * @return illegal状态异常的结果
-             */
+            */
             throw new IllegalStateException("spider.request 请求被中断: " + url, e);
         } catch (Exception e) {
             /**
@@ -198,7 +198,7 @@ public class SpiderRequestNode implements FlowNode {
             * @param url url
             * @param e e
             * @return illegal状态异常的结果
-             */
+            */
             throw new IllegalStateException("spider.request 请求失败: " + url, e);
         }
     }

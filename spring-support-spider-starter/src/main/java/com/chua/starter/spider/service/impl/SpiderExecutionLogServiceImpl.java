@@ -37,15 +37,15 @@ public class SpiderExecutionLogServiceImpl
 
     /**
     * 状态：成功
-     */
+    */
     private static final String STATUS_SUCCESS = "SUCCESS";
     /**
     * 状态：失败
-     */
+    */
     private static final String STATUS_FAIL = "FAIL";
     /**
     * 状态：运行中
-     */
+    */
     private static final String STATUS_RUNNING = "RUNNING";
 
     @Override
@@ -67,11 +67,11 @@ public class SpiderExecutionLogServiceImpl
                 .isNotNull(SpiderExecutionLog::getExecutionNo)
                 .ne(SpiderExecutionLog::getExecutionNo, "");
         /**
-        * apply过滤器。
-        * @param countQuery 数量查询
-        * @param definitionCode definition编码
-        * @param status 状态
-         */
+    * apply过滤器。
+    * @param countQuery 数量查询
+    * @param definitionCode definition编码
+    * @param status 状态
+    */
         applyFilters(countQuery, definitionCode, status);
         List<SpiderExecutionLog> distinctLogs = baseMapper.selectList(countQuery);
         long total = distinctLogs == null ? 0L : distinctLogs.size();
@@ -189,7 +189,7 @@ public class SpiderExecutionLogServiceImpl
     *
     * @param row 聚合行
     * @return 状态字符串
-     */
+    */
     private String deriveOverallStatus(Map<String, Object> row) {
         long fail = NumberUtils.toLong(ObjectUtils.defaultIfStringNull(row.get("fail_cnt"), "0"), 0L);
         long running = NumberUtils.toLong(ObjectUtils.defaultIfStringNull(row.get("running_cnt"), "0"), 0L);
@@ -208,7 +208,7 @@ public class SpiderExecutionLogServiceImpl
     * @param wrapper        查询条件
     * @param definitionCode 爬虫编码（可选）
     * @param status         执行状态（可选）
-     */
+    */
     private void applyFilters(LambdaQueryWrapper<SpiderExecutionLog> wrapper, String definitionCode, String status) {
         if (definitionCode != null && !definitionCode.isEmpty()) {
             wrapper.eq(SpiderExecutionLog::getDefinitionCode, definitionCode);

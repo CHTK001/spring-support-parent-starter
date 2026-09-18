@@ -24,52 +24,52 @@ public class TrainTask {
 
     /**
     * 任务 标识（UUID）。
-     */
+    */
     private final String id;
 
     /**
     * 上传的 压缩 原始文件名。
-     */
+    */
     private final String originalFileName;
 
     /**
     * 解压后的数据目录路径。
-     */
+    */
     private final String dataPath;
 
     /**
     * 任务创建时间。
-     */
+    */
     private final Instant createdAt;
 
     /**
     * 训练状态。
-     */
+    */
     private volatile TrainStatus status;
 
     /**
     * 训练超参数。
-     */
+    */
     private volatile TrainArgument argument;
 
     /**
     * 训练进度快照（实时更新，供轮询）。
-     */
+    */
     private volatile TrainProgress progress;
 
     /**
     * 训练开始时间。
-     */
+    */
     private volatile Instant startedAt;
 
     /**
     * 训练完成/失败时间。
-     */
+    */
     private volatile Instant finishedAt;
 
     /**
     * 错误信息（失败时填充）。
-     */
+    */
     private volatile String errorMessage;
 
     /**
@@ -77,7 +77,7 @@ public class TrainTask {
     * 启动训练前可经 {@link #selectType(String)} 显式指定（仅 PENDING 可改）。
     * 注意：类型变更必须走 {@link #selectType(String)}（含 PENDING-only 守卫），
     * 不提供公开 setter，避免绕开状态机直接改写类型。
-     */
+    */
     private volatile String type = TrainProviders.DEFAULT_TYPE;
 
     /**
@@ -86,7 +86,7 @@ public class TrainTask {
     * @param originalFileName 上传文件名
     * @param dataPath         解压后数据目录
     * @return 新任务（PENDING + 默认超参数）
-     */
+    */
     public static TrainTask create(String originalFileName, String dataPath) {
         TrainTask task = new TrainTask(
                 java.util.UUID.randomUUID().toString(),
@@ -105,7 +105,7 @@ public class TrainTask {
     * @param originalFileName 原始文件名称
     * @param dataPath 数据路径
     * @param createdAt 创建at
-     */
+    */
     private TrainTask(String id, String originalFileName, String dataPath, Instant createdAt) {
         this.id = id;
         this.originalFileName = originalFileName;
@@ -118,14 +118,14 @@ public class TrainTask {
     * 同一任务只允许一次成功流转（后到者看到 RUNNING 即抛）。
     *
     * @throws IllegalStateException 非 PENDING 状态时抛出
-     */
+    */
     public synchronized void start() {
         if (status != TrainStatus.PENDING) {
             /**
             * illegal状态异常。
             * @param 可启动）" 可启动）"
             * @return illegal状态异常的结果
-             */
+            */
             throw new IllegalStateException("任务状态为 " + status + "，不可启动（仅 PENDING 可启动）");
         }
         this.status = TrainStatus.RUNNING;
@@ -141,14 +141,14 @@ public class TrainTask {
     * @param type 训练类型（resnet50 / yolo ...）；空 视为未指定
     * @return 本次实际生效的类型
     * @throws IllegalStateException 已启动后不可再改类型
-     */
+    */
     public synchronized String selectType(String type) {
         if (status != TrainStatus.PENDING) {
             /**
             * illegal状态异常。
             * @param 可指定）" 可指定）"
             * @return illegal状态异常的结果
-             */
+            */
             throw new IllegalStateException("任务状态为 " + status + "，不可再改训练类型（仅 PENDING 可指定）");
         }
         this.type = (type == null || type.isBlank()) ? TrainProviders.DEFAULT_TYPE : type;
@@ -159,7 +159,7 @@ public class TrainTask {
     * 标记训练成功。
     *
     * @param result 训练结果（含 bestscore、elapsedms、标签）
-     */
+    */
     public synchronized void succeed(TrainResult result) {
         this.status = TrainStatus.SUCCESS;
         this.finishedAt = Instant.now();
@@ -178,7 +178,7 @@ public class TrainTask {
     * 标记训练失败。
     *
     * @param errorMessage 错误描述
-     */
+    */
     public synchronized void fail(String errorMessage) {
         this.status = TrainStatus.FAILED;
         this.finishedAt = Instant.now();
@@ -190,7 +190,7 @@ public class TrainTask {
     *
     * @param errorMessage 错误描述
     * @param cause        原始异常
-     */
+    */
     public synchronized void fail(String errorMessage, Throwable cause) {
         this.status = TrainStatus.FAILED;
         this.finishedAt = Instant.now();
@@ -202,7 +202,7 @@ public class TrainTask {
 
     /**
     * 标记训练被取消。
-     */
+    */
     public synchronized void cancel() {
         this.status = TrainStatus.CANCELLED;
         this.finishedAt = Instant.now();
@@ -213,7 +213,7 @@ public class TrainTask {
     * 合并超参数更新（部分更新语义，仅非空字段覆盖，领域行为封装）。
     *
     * @param incoming 新超参数
-     */
+    */
     public void mergeArgument(TrainArgument incoming) {
         this.argument = argument == null ? incoming : argument.merge(incoming);
     }
@@ -222,12 +222,12 @@ public class TrainTask {
     * 返回绑定到当前任务的训练监听器（观察者模式，由任务自身生产）。
     *
     * @return TrainListener
-     */
+    */
     public TrainListener createListener() {
         /**
         * train监听器。
         * @return train监听器的结果
-         */
+        */
         return new TrainListener() {
             @Override
             public void onStarted(TrainProgress p) {

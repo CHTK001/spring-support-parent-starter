@@ -32,13 +32,13 @@ public class TriggerReader {
 
     /**
     * 数据库方言
-     */
+    */
     private final DatabaseDialect dialect;
 
     /**
     * 创建 trigger读取 实例
     * @param dialect dialect
-     */
+    */
     public TriggerReader(DatabaseDialect dialect) {
         this.dialect = dialect;
     }
@@ -48,7 +48,7 @@ public class TriggerReader {
     *
     * @param conn 活跃连接（调用方负责关闭）
     * @return 触发器列表
-     */
+    */
     public List<TriggerInfo> readAll(Connection conn) {
         try {
             switch (dialect) {
@@ -83,7 +83,7 @@ public class TriggerReader {
     * 读取mysqllike。
     * @param conn conn
     * @return 读取mysqllike的结果
-     */
+    */
     private List<TriggerInfo> readMysqlLike(Connection conn) throws SQLException {
         String sql = "SELECT TRIGGER_NAME, EVENT_MANIPULATION, EVENT_OBJECT_TABLE, " +
                 "ACTION_TIMING, STATUS, ACTION_ORIENTATION " +
@@ -92,7 +92,7 @@ public class TriggerReader {
         /**
         * 尝试。
         * @param conn.createStatement( conn.创建对账单(
-         */
+        */
         try (var stmt = conn.createStatement(); var rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
                 TriggerInfo t = new TriggerInfo();
@@ -113,7 +113,7 @@ public class TriggerReader {
     *
     * @param conn conn
     * @return 读取postgresql的结果
-     */
+    */
     private List<TriggerInfo> readPostgresql(Connection conn) throws SQLException {
         String sql = "SELECT trigger_name, event_manipulation, event_object_table, " +
                 "action_timing, action_orientation " +
@@ -122,7 +122,7 @@ public class TriggerReader {
         /**
         * 尝试。
         * @param conn.createStatement( conn.创建对账单(
-         */
+        */
         try (var stmt = conn.createStatement(); var rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
                 TriggerInfo t = new TriggerInfo();
@@ -142,7 +142,7 @@ public class TriggerReader {
     *
     * @param conn conn
     * @return 读取oracle的结果
-     */
+    */
     private List<TriggerInfo> readOracle(Connection conn) throws SQLException {
         String sql = "SELECT TRIGGER_NAME, TABLE_NAME, STATUS, TRIGGER_TYPE, TRIGGERING_EVENT " +
                 "FROM ALL_TRIGGERS WHERE OWNER = USER OR OWNER = SYS_CONTEXT('USERENV','CURRENT_SCHEMA')";
@@ -150,7 +150,7 @@ public class TriggerReader {
         /**
         * 尝试。
         * @param conn.createStatement( conn.创建对账单(
-         */
+        */
         try (var stmt = conn.createStatement(); var rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
                 TriggerInfo t = new TriggerInfo();
@@ -170,7 +170,7 @@ public class TriggerReader {
     *
     * @param conn conn
     * @return 读取sql服务端的结果
-     */
+    */
     private List<TriggerInfo> readSqlServer(Connection conn) throws SQLException {
         String sql = "SELECT t.name AS trigger_name, " +
                 "       OBJECT_NAME(t.parent_id) AS table_name, " +
@@ -181,7 +181,7 @@ public class TriggerReader {
         /**
         * 尝试。
         * @param conn.createStatement( conn.创建对账单(
-         */
+        */
         try (var stmt = conn.createStatement(); var rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
                 TriggerInfo t = new TriggerInfo();
@@ -195,7 +195,7 @@ public class TriggerReader {
         /**
         * 尝试。
         * @param conn.createStatement( conn.创建对账单(
-         */
+        */
         try (var stmt = conn.createStatement(); var rs = stmt.executeQuery(
                 "SELECT OBJECT_NAME(object_id) AS name, " +
                         "STRING_AGG(type_desc, ',') AS events " +
@@ -215,14 +215,14 @@ public class TriggerReader {
     *
     * @param conn conn
     * @return 读取sqlite的结果
-     */
+    */
     private List<TriggerInfo> readSqlite(Connection conn) throws SQLException {
         String sql = "SELECT name, tbl_name FROM sqlite_master WHERE type = 'trigger'";
         List<TriggerInfo> list = new ArrayList<>();
         /**
         * 尝试。
         * @param conn.createStatement( conn.创建对账单(
-         */
+        */
         try (var stmt = conn.createStatement(); var rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
                 TriggerInfo t = new TriggerInfo();
@@ -238,14 +238,14 @@ public class TriggerReader {
     * 通用 信息_模式 兜底
     * @param conn conn
     * @return 读取generic信息模式的结果
-     */
+    */
     private List<TriggerInfo> readGenericInfoSchema(Connection conn) throws SQLException {
         String sql = "SELECT * FROM information_schema.TRIGGERS";
         List<TriggerInfo> list = new ArrayList<>();
         /**
         * 尝试。
         * @param conn.createStatement( conn.创建对账单(
-         */
+        */
         try (var stmt = conn.createStatement(); var rs = stmt.executeQuery(sql)) {
             var meta = rs.getMetaData();
             Map<String, Integer> cols = new HashMap<>();
@@ -273,7 +273,7 @@ public class TriggerReader {
     * @param cols cols
     * @param name 名称
     * @return 获取by名称的结果
-     */
+    */
     private static String getByName(ResultSet rs, Map<String, Integer> cols, String name) {
         Integer idx = cols.get(name);
         if (idx == null) {
@@ -290,7 +290,7 @@ public class TriggerReader {
     * 数据库方言枚举
     * @author CH
     * @since 4.0.0
-     */
+    */
     public enum DatabaseDialect {
         MYSQL, MARIADB, POSTGRESQL, ORACLE, SQLSERVER, H2, SQLITE, KINGBASE, DM, UNKNOWN; // UNKNOWN
 
@@ -298,7 +298,7 @@ public class TriggerReader {
         * 从 {@link DatabaseMetaData} 解析方言
         * @param meta meta
         * @return resolve的结果
-         */
+        */
         public static DatabaseDialect resolve(DatabaseMetaData meta) throws SQLException {
             String name = meta.getDatabaseProductName();
             if (name == null) {

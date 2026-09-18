@@ -49,11 +49,11 @@ public class TokenForTypeInterceptor extends StaticMethodMatcherPointcutAdvisor 
                 UserResume userResume = com.chua.starter.oauth.client.support.execute.AuthSessionUtils.getUserInfo(UserResume.class);
                 if (null == userResume) {
                     /**
-                    * OAuth异常。
-                    * @param "您的账号没有权限 "您的账号没有权限
-                    * @param 请联系管理员分配!" 请联系管理员分配!"
-                    * @return oauth异常的结果
-                     */
+    * OAuth异常。
+    * @param "您的账号没有权限 "您的账号没有权限
+    * @param 请联系管理员分配!" 请联系管理员分配!"
+    * @return oauth异常的结果
+    */
                     throw new OauthException("您的账号没有权限, 请联系管理员分配!");
                 }
 
@@ -79,7 +79,7 @@ public class TokenForTypeInterceptor extends StaticMethodMatcherPointcutAdvisor 
     * @param authTypes 认证类型
     * @param loginType login类型
     * @return 是否equals的结果
-     */
+    */
     private boolean isEquals(AuthType[] authTypes, String loginType) {
         if(null == authTypes) {
             return true;
@@ -98,7 +98,7 @@ public class TokenForTypeInterceptor extends StaticMethodMatcherPointcutAdvisor 
     *
     * @param authTypes 认证类型数组
     * @return 是否匹配所有
-     */
+    */
     private boolean isAll(AuthType[] authTypes) {
         return authTypes == null || authTypes.length == 0;
     }
@@ -108,7 +108,7 @@ public class TokenForTypeInterceptor extends StaticMethodMatcherPointcutAdvisor 
     * 获取注解
     * @param invocation 方法调用
     * @return {@link 令牌for类型}
-     */
+    */
     private TokenForType getAnnotation(MethodInvocation invocation) {
         Method method = invocation.getMethod();
         TokenForType permission = method.getDeclaredAnnotation(TokenForType.class);

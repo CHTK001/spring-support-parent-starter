@@ -62,7 +62,7 @@ public class SyncAutoConfiguration {
     * @param syncProperties 同步配置属性
     * @return 同步服务端实例，如果未启用则返回 空
     * @since 1.0.0
-     */
+    */
     @Bean
     @ConditionalOnMissingBean
     @Conditional(SyncServerCondition.class)
@@ -72,7 +72,7 @@ public class SyncAutoConfiguration {
         * 同步服务端。
         * @param syncProperties 同步属性
         * @return 同步服务端的结果
-         */
+        */
         return new SyncServer(syncProperties);
     }
 
@@ -85,7 +85,7 @@ public class SyncAutoConfiguration {
     * @param syncProperties 同步配置属性
     * @return 同步客户端实例，如果未启用则返回 空
     * @since 1.0.0
-     */
+    */
     @Bean
     @ConditionalOnMissingBean
     @Conditional(SyncClientCondition.class)
@@ -108,7 +108,7 @@ public class SyncAutoConfiguration {
     * @param syncServerProvider 同步服务端提供器
     * @param syncProperties     同步配置
     * @return 数据同步交换服务
-     */
+    */
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = "plugin.sync.data-sync", name = "enabled", havingValue = "true", matchIfMissing = true)
@@ -122,7 +122,7 @@ public class SyncAutoConfiguration {
         * @param syncServerProvider 同步服务端提供者
         * @param syncProperties 同步属性
         * @return 同步数据exchange服务的结果
-         */
+        */
         return new SyncDataExchangeService(syncClientProvider, syncServerProvider, syncProperties);
     }
 
@@ -130,7 +130,7 @@ public class SyncAutoConfiguration {
     * 注册同步模块服务信息。
     *
     * @return 服务信息贡献器
-     */
+    */
     @Bean
     public ServiceInfoContributor syncServiceInfoContributor() {
         return registry -> registry.registerFlag("sync", "数据同步", true, "数据同步模块");

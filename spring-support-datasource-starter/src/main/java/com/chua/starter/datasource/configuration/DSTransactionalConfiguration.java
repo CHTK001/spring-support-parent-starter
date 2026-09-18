@@ -24,14 +24,14 @@ public class DSTransactionalConfiguration {
     * 注册 {@code @DSTransactional} 事务切面 Bean
     *
     * @return 事务切面实例
-     */
+    */
     @Bean
     @ConditionalOnMissingBean(DSTransactionalAspect.class)
     public DSTransactionalAspect dsTransactionalAspect() {
         /**
         * dstransactionalaspect。
         * @return DSTransactionalAspect的结果
-         */
+        */
         return new DSTransactionalAspect();
     }
 }

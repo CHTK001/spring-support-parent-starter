@@ -39,7 +39,7 @@ public class SpringRpcClient implements RpcClient, ApplicationContextAware {
 
     /**
     * 真实协议客户端委托（懒初始化），避免 SPI 构造阶段触发注册中心连接
-     */
+    */
     private volatile RpcClient delegate;
 
     /**
@@ -47,7 +47,7 @@ public class SpringRpcClient implements RpcClient, ApplicationContextAware {
     * @param registryConfigs registry配置
     * @param consumerConfig consumer配置
     * @param appName app名称
-     */
+    */
     public SpringRpcClient(List<RpcRegistryConfig> registryConfigs,
                           RpcConsumerConfig consumerConfig,
                           String appName) {
@@ -69,7 +69,7 @@ public class SpringRpcClient implements RpcClient, ApplicationContextAware {
     *
     * @param targetType Target类型
     * @return 获取的结果
-     */
+    */
     public <T> T get(Class<T> targetType) {
         return (T) proxyCache.computeIfAbsent(targetType, this::createProxy);
     }
@@ -79,7 +79,7 @@ public class SpringRpcClient implements RpcClient, ApplicationContextAware {
     * 否则回退 JSON-RPC（纯 JDK HTTP 实现，无需额外依赖）。
     *
     * @return SPI 协议名
-     */
+    */
     private String resolveProtocol() {
         if (registryConfigs != null) {
             for (RpcRegistryConfig config : registryConfigs) {
@@ -100,7 +100,7 @@ public class SpringRpcClient implements RpcClient, ApplicationContextAware {
     * 懒创建真实协议客户端委托
     *
     * @return 真实 RPC 客户端
-     */
+    */
     private RpcClient delegate() {
         RpcClient current = delegate;
         if (current == null) {
@@ -119,7 +119,7 @@ public class SpringRpcClient implements RpcClient, ApplicationContextAware {
     * 创建代理对象，底层委托真实 RPC 客户端发起网络调用
     * @param targetType Target类型
     * @return 创建代理的结果
-     */
+    */
     private <T> Object createProxy(Class<T> targetType) {
         return ReflectUtils.newProxy(
             targetType.getClassLoader(),

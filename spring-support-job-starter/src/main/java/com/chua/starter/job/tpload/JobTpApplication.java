@@ -21,7 +21,7 @@ public class JobTpApplication {
     * 启动入口。
     *
     * @param args 命令行参数
-     */
+    */
     public static void main(String[] args) {
         SpringApplication.run(JobTpApplication.class, args);
         // 吞吐量压测不需要任何 Web/常驻线程, main 返回会导致 JVM 直接退出;
