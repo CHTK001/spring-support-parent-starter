@@ -141,6 +141,7 @@ public class AiSessionController {
             @PathVariable("id") String id,
             @RequestParam(required = false) Integer limit) {
 
+        log.info("[Messages] Loading messages for sessionId: {}", id);
         Long sessionId;
         // 如果是数字，直接解析
         if (id.matches("\\d+")) {
@@ -176,6 +177,7 @@ public class AiSessionController {
             }
         }
 
+        log.info("[Messages] Querying messages for sessionId (Long): {}", sessionId);
         LambdaQueryWrapper<SysAiMessage> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(SysAiMessage::getSysAiSessionId, sessionId);
         wrapper.orderByDesc(SysAiMessage::getCreateTime);
