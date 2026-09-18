@@ -34,11 +34,11 @@ public class ApiIgnoreSerializer extends JsonSerializer<Object> implements Conte
     /**
     * 创建 apiignore序列化器 实例
     * @param group 群体
-     */
+    */
     public ApiIgnoreSerializer(Class<?>[] group) {
         /**
         * this。
-         */
+        */
         this();
         this.group = group;
     }
@@ -63,9 +63,9 @@ public class ApiIgnoreSerializer extends JsonSerializer<Object> implements Conte
             }
             if (apiFieldIgnore != null&& isMatch(apiFieldIgnore)) {
                 /**
-                * apiignore序列化器。
-                * @param apiFieldIgnore.value( api字段ignore.值(
-                 */
+    * apiignore序列化器。
+    * @param apiFieldIgnore.value( api字段ignore.值(
+    */
                 return new ApiIgnoreSerializer(apiFieldIgnore.value());
             }
             return serializerProvider.findValueSerializer(beanProperty.getType(), beanProperty);
@@ -78,7 +78,7 @@ public class ApiIgnoreSerializer extends JsonSerializer<Object> implements Conte
     *
     * @param apiFieldIgnore api字段ignore
     * @return 是否匹配的结果
-     */
+    */
     private boolean isMatch(ApiFieldIgnore apiFieldIgnore) {
         Class<?>[] value = apiFieldIgnore.value();
         if(value.length == 0) {
@@ -119,7 +119,7 @@ public class ApiIgnoreSerializer extends JsonSerializer<Object> implements Conte
     * @param value 价值观
     * @param group 群体
     * @return 是否匹配
-     */
+    */
     private boolean isMatch(Class<?>[] value, Class<?>[] group) {
         for (Class<?> aClass : group) {
             if(ArrayUtils.contains(value, aClass)) {

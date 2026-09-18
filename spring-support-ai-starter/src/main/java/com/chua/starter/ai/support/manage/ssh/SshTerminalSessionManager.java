@@ -33,17 +33,17 @@ public class SshTerminalSessionManager {
 
     /**
     * WS 事件推送服务
-     */
+    */
     private final ApiWebSocketPushService pushService;
 
     /**
     * 活跃 SSH 终端会话：terminal_标识 → 会话包装
-     */
+    */
     private final Map<String, SshTerminalSession> sessions = new ConcurrentHashMap<>();
 
     /**
     * scrollback 缓冲上限（字符），超出后丢弃旧输出，避免内存膨胀。
-     */
+    */
     private static final int MAX_SCROLLBACK_CHARS = 64 * 1024;
 
     /**
@@ -54,7 +54,7 @@ public class SshTerminalSessionManager {
     * @param cols     初始列数
     * @param rows     初始行数
     * @return 会话包装；连接失败抛异常
-     */
+    */
     public SshTerminalSession open(SysAiSshHost host, String terminalId, int cols, int rows) throws Exception {
         SshClient client = buildConnectedClient(host);
         StringBuilder scrollback = new StringBuilder();
@@ -107,7 +107,7 @@ public class SshTerminalSessionManager {
     * @param terminalId 终端 标识
     * @param dataB64    基础64 编码的输入字节
     * @return 是否成功
-     */
+    */
     public boolean input(String terminalId, String dataB64) {
         SshTerminalSession session = sessions.get(terminalId);
         if (session == null || session.operation == null || !session.operation.isConnected()) {
@@ -130,7 +130,7 @@ public class SshTerminalSessionManager {
     * @param cols       列数
     * @param rows       行数
     * @return 是否成功
-     */
+    */
     public boolean resize(String terminalId, int cols, int rows) {
         SshTerminalSession session = sessions.get(terminalId);
         if (session == null || session.operation == null) {
@@ -154,7 +154,7 @@ public class SshTerminalSessionManager {
     * 关闭 SSH 终端会话（断开远端连接并清理）。
     *
     * @param terminalId 终端 标识
-     */
+    */
     public void close(String terminalId) {
         SshTerminalSession session = sessions.remove(terminalId);
         if (session == null) {
@@ -182,7 +182,7 @@ public class SshTerminalSessionManager {
     *
     * @param terminalId 终端 标识
     * @return 会话包装，不存在返回 空
-     */
+    */
     public SshTerminalSession get(String terminalId) {
         return sessions.get(terminalId);
     }
@@ -191,7 +191,7 @@ public class SshTerminalSessionManager {
     * 会话是否存在且运行中。
     * @param terminalId terminalid
     * @return 是否running的结果
-     */
+    */
     public boolean isRunning(String terminalId) {
         SshTerminalSession session = sessions.get(terminalId);
         return session != null && session.operation != null && session.operation.isConnected();
@@ -203,45 +203,45 @@ public class SshTerminalSessionManager {
     * 单个 SSH 终端会话的运行时载体。
     * @author CH
     * @since 4.0.0
-     */
+    */
     public static class SshTerminalSession {
         /**
         * 终端 标识
-         */
+        */
         public String terminalId;
         /**
         * 关联主机 标识
-         */
+        */
         public String sshHostId;
         /**
         * 显示名称
-         */
+        */
         public String name;
         /**
         * 底层 SSH 客户端
-         */
+        */
         public SshClient client;
         /**
         * 伪终端 终端操作
-         */
+        */
         public SshClient.TerminalOperation operation;
         /**
         * scrollback 缓冲（同步访问）
-         */
+        */
         public StringBuilder scrollback;
         /**
         * 当前状态
-         */
+        */
         public String lastStatus = "running";
         /**
         * 最后更新时间
-         */
+        */
         public long updatedAt = System.currentTimeMillis();
 
         /**
         * 以 基础64 返回 scrollback 快照。
         * @return scrollbackB64的结果
-         */
+        */
         public String scrollbackB64() {
             synchronized (scrollback) {
                 if (scrollback.length() == 0) {
@@ -258,7 +258,7 @@ public class SshTerminalSessionManager {
     * 装配并建立真实 SSH 连接（与 sshconnection管理器 一致：密码 / 钥匙 / 证书）。
     * @param host 主机
     * @return 构建连接客户端的结果
-     */
+    */
     private SshClient buildConnectedClient(SysAiSshHost host) throws Exception {
         String authType = host.getAuthType() == null ? "password" : host.getAuthType();
         String address = host.getHost();

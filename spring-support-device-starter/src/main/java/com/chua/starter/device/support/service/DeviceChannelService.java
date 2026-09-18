@@ -17,7 +17,7 @@ public interface DeviceChannelService {
     *
     * @param channel 通道实体
     * @return 通道实体
-     */
+    */
     DeviceChannel addChannel(DeviceChannel channel);
 
     /**
@@ -25,14 +25,14 @@ public interface DeviceChannelService {
     *
     * @param id      通道 标识
     * @param channel 通道实体
-     */
+    */
     void updateChannel(String id, DeviceChannel channel);
 
     /**
     * 删除通道
     *
     * @param id 通道 标识
-     */
+    */
     void deleteChannel(String id);
 
     /**
@@ -40,7 +40,7 @@ public interface DeviceChannelService {
     *
     * @param id 通道 标识
     * @return 通道实体
-     */
+    */
     DeviceChannel getChannel(String id);
 
     /**
@@ -48,7 +48,7 @@ public interface DeviceChannelService {
     *
     * @param deviceId 设备 标识
     * @return 通道列表
-     */
+    */
     List<DeviceChannel> listChannels(String deviceId);
 
     /**
@@ -56,6 +56,6 @@ public interface DeviceChannelService {
     *
     * @param id     通道 标识
     * @param status 状态：已启用、已禁用
-     */
+    */
     void toggleStatus(String id, String status);
 }

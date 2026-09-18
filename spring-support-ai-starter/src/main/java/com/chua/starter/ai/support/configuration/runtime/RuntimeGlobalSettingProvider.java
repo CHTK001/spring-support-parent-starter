@@ -24,19 +24,19 @@ public class RuntimeGlobalSettingProvider implements GlobalSettingProvider {
 
     /**
     * 配置分组标识
-     */
+    */
     private static final String GROUP = "runtime";
 
     /**
     * 分组显示名称
-     */
+    */
     private static final String GROUP_NAME = "对话路由";
 
     /**
     * 配置分组标识。
     *
     * @return runtime
-     */
+    */
     @Override
     public String group() {
         return GROUP;
@@ -46,7 +46,7 @@ public class RuntimeGlobalSettingProvider implements GlobalSettingProvider {
     * 配置分组显示名称。
     *
     * @return 对话路由
-     */
+    */
     @Override
     public String groupName() {
         return GROUP_NAME;
@@ -59,7 +59,7 @@ public class RuntimeGlobalSettingProvider implements GlobalSettingProvider {
     * 辅助配置（选填）：超时、温度、最大令牌、输入优化、上下文压缩等。</p>
     *
     * @return 配置项列表
-     */
+    */
     @Override
     public List<SettingItem> getItems() {
         return List.of(

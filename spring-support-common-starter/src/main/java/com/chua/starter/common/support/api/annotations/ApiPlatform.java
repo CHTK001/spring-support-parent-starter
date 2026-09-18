@@ -79,7 +79,7 @@ public @interface ApiPlatform {
     * </p>
     *
     * @return 平台名称数组
-     */
+    */
     String[] value();
 }
 

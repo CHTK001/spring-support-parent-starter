@@ -22,7 +22,7 @@ public class Knife4jEnumModelPropertyPlugin implements PropertyCustomizer {
     * @param property 属性模式
     * @param type 注解类型
     * @return 定制后的属性Schema
-     */
+    */
     @Override
     public Schema customize(Schema property, AnnotatedType type) {
         if (type.getType() instanceof Class clazz && clazz.isEnum() && SwaggerEnum.class.isAssignableFrom(clazz)) {
@@ -41,7 +41,7 @@ public class Knife4jEnumModelPropertyPlugin implements PropertyCustomizer {
     *
     * @param e 枚举对象
     * @return 枚举的描述
-     */
+    */
     private String getEnumDescription(SwaggerEnum e) {
         return e.getCode() +":" + e.getName();
     }

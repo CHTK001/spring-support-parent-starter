@@ -58,14 +58,14 @@ public @interface ApiFeature {
     * </p>
     *
     * @return 功能标识
-     */
+    */
     String value();
 
     /**
     * 功能描述
     *
     * @return 描述信息
-     */
+    */
     String description() default "";
 
     /**
@@ -75,27 +75,27 @@ public @interface ApiFeature {
     * </p>
     *
     * @return 分组名称
-     */
+    */
     String group() default "default";
 
     /**
     * 默认开关状态
     *
     * @return 默认是否开启
-     */
+    */
     boolean defaultEnabled() default true;
 
     /**
     * 关闭时的响应消息
     *
     * @return 响应消息
-     */
+    */
     String disabledMessage() default "此功能暂未开放";
 
     /**
     * 关闭时的响应状态码
     *
     * @return HTTP 状态码
-     */
+    */
     int disabledStatus() default 503;
 }

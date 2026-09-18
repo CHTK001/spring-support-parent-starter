@@ -34,7 +34,7 @@ public class SpiderExecutionController {
     * @param definitionService definition服务
     * @param executionLogService 执行日志服务
     * @param flowRunner 流runner
-     */
+    */
     public SpiderExecutionController(SpiderDefinitionService definitionService,
                                      SpiderExecutionLogService executionLogService,
                                      SpiderFlowRunner flowRunner) {
@@ -50,7 +50,7 @@ public class SpiderExecutionController {
     *
     * @param spiderCode 蜘蛛编码
     * @return 启动的结果
-     */
+    */
     public ReturnResult<String> start(@RequestParam String spiderCode) {
         SpiderDefinition definition = definitionService.lambdaQuery()
                 .eq(SpiderDefinition::getCode, spiderCode).one();
@@ -67,7 +67,7 @@ public class SpiderExecutionController {
     *
     * @param executionNo 执行no
     * @return 停止的结果
-     */
+    */
     public ReturnResult<Boolean> stop(@RequestParam String executionNo) {
         return ReturnResult.ok(Boolean.TRUE);
     }
@@ -79,7 +79,7 @@ public class SpiderExecutionController {
     *
     * @param executionNo 执行no
     * @return 状态的结果
-     */
+    */
     public ReturnResult<ExecutionStatusVO> status(@RequestParam String executionNo) {
         ExecutionStatusVO vo = new ExecutionStatusVO();
         vo.setStatus("COMPLETED");
@@ -96,7 +96,7 @@ public class SpiderExecutionController {
     * Running
     *
     * @return running的结果
-     */
+    */
     public ReturnResult<List<ExecutionStatusVO>> running() {
         return ReturnResult.ok(List.of());
     }

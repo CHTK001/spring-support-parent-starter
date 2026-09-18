@@ -40,19 +40,19 @@ public class GenerateConfigController {
 
     /**
     * 生成配置分组
-     */
+    */
     private static final String GROUP = "generate";
 
     /**
     * 全局设置服务
-     */
+    */
     private final SysAiGlobalSettingService settingService;
 
     /**
     * 获取生成配置项定义与当前值。
     *
     * @return 配置列表（field/value/valueType/description/sort）
-     */
+    */
     @Permission("admin")
     @Operation(summary = "获取文生图/文生视频全局配置", description = "返回 generate 分组全部配置项及当前值")
     @GetMapping
@@ -89,7 +89,7 @@ public class GenerateConfigController {
     *
     * @param body 配置请求（群体 + 字段）
     * @return 更新结果
-     */
+    */
     @Permission("admin")
     @Operation(summary = "更新文生图/文生视频全局配置", description = "整组替换 generate 配置")
     @PutMapping
@@ -107,7 +107,7 @@ public class GenerateConfigController {
     *
     * @param obj obj
     * @return 转为int的结果
-     */
+    */
     private static int toInt(Object obj) {
         if (obj instanceof Number n) {
             return n.intValue();

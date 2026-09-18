@@ -15,22 +15,22 @@ public class MarkingSubmitDTO {
 
     /**
     * 考试标识
-     */
+    */
     private Long examId;
 
     /**
     * 学生标识
-     */
+    */
     private String studentId;
 
     /**
     * 答题内容JSON
-     */
+    */
     private String content;
 
     /**
     * 答题列表
-     */
+    */
     private List<AnswerItem> answers;
 
     @Data
@@ -39,7 +39,7 @@ public class MarkingSubmitDTO {
     *
     * @author CH
     * @since 4.0.0
-     */
+    */
     public static class AnswerItem {
         /** questionid */
         private Long questionId;

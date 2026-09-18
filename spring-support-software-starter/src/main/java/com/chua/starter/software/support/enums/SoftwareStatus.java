@@ -12,21 +12,21 @@ public enum SoftwareStatus {
     *
     * @param 0 0
     * @return NORMAL的结果
-     */
+    */
     NORMAL(0),
     /**
     * 已删除
     *
     * @param 1 1
     * @return 删除的结果
-     */
+    */
     DELETED(1),
     /**
     * 已禁用
     *
     * @param 2 2
     * @return 已禁用的结果
-     */
+    */
     DISABLED(2);
 
     /** 值 */
@@ -35,7 +35,7 @@ public enum SoftwareStatus {
     /**
     * software状态。
     * @param value 价值观
-     */
+    */
     SoftwareStatus(int value) {
         this.value = value;
     }
@@ -44,7 +44,7 @@ public enum SoftwareStatus {
     * 获取价值观
     *
     * @return 获取价值观的结果
-     */
+    */
     public int getValue() {
         return value;
     }

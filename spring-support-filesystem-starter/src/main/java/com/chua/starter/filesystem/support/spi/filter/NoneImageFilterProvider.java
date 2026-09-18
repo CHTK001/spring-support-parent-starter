@@ -19,7 +19,7 @@ public class NoneImageFilterProvider implements FileStorageImageFilterProvider {
     * 获取滤镜唯一名称。
     *
     * @return 滤镜名称 NONE
-     */
+    */
     @Override
     public String getName() {
         return "NONE";
@@ -29,7 +29,7 @@ public class NoneImageFilterProvider implements FileStorageImageFilterProvider {
     * 获取滤镜展示名。
     *
     * @return 展示名 原图
-     */
+    */
     @Override
     public String getLabel() {
         return "原图";
@@ -39,7 +39,7 @@ public class NoneImageFilterProvider implements FileStorageImageFilterProvider {
     * 获取前端应用的 CSS filter 值。
     *
     * @return 空字符串（无滤镜）
-     */
+    */
     @Override
     public String getCssFilter() {
         return "";

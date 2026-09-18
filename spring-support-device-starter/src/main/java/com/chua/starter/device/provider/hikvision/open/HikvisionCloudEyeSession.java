@@ -27,49 +27,49 @@ public class HikvisionCloudEyeSession extends AbstractOpenApiSession {
 
     /**
     * 海康云眸默认 baseurl（按官方文档配置）
-     */
+    */
     private static final String DEFAULT_BASE_URL = "https://api.hik-cloud-eye.com";
 
     /**
     * 登录换取 令牌 接口
-     */
+    */
     private static final String PATH_LOGIN = "/api/v1/auth/login";
 
     /**
     * 视频取流地址接口
-     */
+    */
     private static final String PATH_VIDEO_URL = "/api/v1/video/url";
 
     /**
     * 云台控制接口
-     */
+    */
     private static final String PATH_PTZ_CONTROL = "/api/v1/ptz/control";
 
     /**
     * 门禁控制接口
-     */
+    */
     private static final String PATH_DOOR_CONTROL = "/api/v1/door/control";
 
     /**
     * 创建 hikvisioncloudeye会话 实例
     * @param info 信息
-     */
+    */
     public HikvisionCloudEyeSession(DeviceConnectInfo info) {
         /**
         * 父。
         * @param info 信息
         * @param DEFAULT_BASE_URL 默认baseurl
-         */
+        */
         super(info, DEFAULT_BASE_URL);
         /**
         * login。
-         */
+        */
         login();
     }
 
     /**
     * 登录换取 会话标识 / 令牌
-     */
+    */
     private void login() {
         Map<String, Object> params = new LinkedHashMap<>();
         params.put("appKey", info.getAppKey());
@@ -84,14 +84,14 @@ public class HikvisionCloudEyeSession extends AbstractOpenApiSession {
                 * illegal状态异常。
                 * @param 为空" 为空"
                 * @return illegal状态异常的结果
-                 */
+                */
                 throw new IllegalStateException("海康云眸 token 为空");
             }
             /**
             * 缓存令牌。
             * @param token 令牌
             * @param expires expires
-             */
+            */
             cacheToken(token, expires);
             log.info("海康云眸登录成功: deviceSerial={}", info.getDeviceSerial());
         } catch (Exception e) {
@@ -99,7 +99,7 @@ public class HikvisionCloudEyeSession extends AbstractOpenApiSession {
             * illegal状态异常。
             * @param e.getMessage( e.获取消息(
             * @return illegal状态异常的结果
-             */
+            */
             throw new IllegalStateException("海康云眸登录失败: " + e.getMessage(), e);
         }
     }
@@ -108,7 +108,7 @@ public class HikvisionCloudEyeSession extends AbstractOpenApiSession {
     * 海康云眸签名：参数按字典序排序后拼接 + appsecret，SHA-256。
     * @param params 参数
     * @return 标志的结果
-     */
+    */
     private String sign(Map<String, Object> params) {
         String sorted = params.entrySet().stream()
                 .filter(e -> e.getValue() != null)
@@ -129,7 +129,7 @@ public class HikvisionCloudEyeSession extends AbstractOpenApiSession {
             * @param "海康云眸签名失败" "海康云眸签名失败"
             * @param e e
             * @return illegal状态异常的结果
-             */
+            */
             throw new IllegalStateException("海康云眸签名失败", e);
         }
     }
@@ -139,8 +139,8 @@ public class HikvisionCloudEyeSession extends AbstractOpenApiSession {
     protected JsonNode doRequest(String method, String path, Map<String, Object> params) {
         if (!tokenValid() && !PATH_LOGIN.equals(path)) {
             /**
-            * login。
-             */
+    * login。
+    */
             login();
         }
         Map<String, Object> realParams = new LinkedHashMap<>();
@@ -164,7 +164,7 @@ public class HikvisionCloudEyeSession extends AbstractOpenApiSession {
     * 获取视频取流 URL
     * @param channel 通道
     * @return 获取视频url的结果
-     */
+    */
     public JsonNode getVideoUrl(int channel) {
         Map<String, Object> params = new HashMap<>();
         params.put("deviceSerial", info.getDeviceSerial());
@@ -204,10 +204,10 @@ public class HikvisionCloudEyeSession extends AbstractOpenApiSession {
         params.put("action", mapAction(cmd));
         params.put("speed", Math.max(1, Math.min(255, Math.round(speed * 255))));
         /**
-        * post。
-        * @param PATH_PTZ_CONTROL 路径ptzcontrol
-        * @param params 参数
-         */
+    * post。
+    * @param PATH_PTZ_CONTROL 路径ptzcontrol
+    * @param params 参数
+    */
         post(PATH_PTZ_CONTROL, params);
     }
 
@@ -216,7 +216,7 @@ public class HikvisionCloudEyeSession extends AbstractOpenApiSession {
     *
     * @param cmd CMD
     * @return 映射动作的结果
-     */
+    */
     private String mapAction(com.chua.starter.device.spi.model.PtzCommand cmd) {
         switch (cmd) {
             case UP: return "UP";
@@ -241,10 +241,10 @@ public class HikvisionCloudEyeSession extends AbstractOpenApiSession {
         params.put("doorId", doorId);
         params.put("action", "OPEN");
         /**
-        * post。
-        * @param PATH_DOOR_CONTROL 路径门control
-        * @param params 参数
-         */
+    * post。
+    * @param PATH_DOOR_CONTROL 路径门control
+    * @param params 参数
+    */
         post(PATH_DOOR_CONTROL, params);
     }
 }

@@ -18,7 +18,7 @@ public final class TrackContext {
     * 设置链接标识
     *
     * @param linkId 链接标识
-     */
+    */
     public static void setLinkId(String linkId) {
         LINK_ID.set(linkId);
     }
@@ -27,7 +27,7 @@ public final class TrackContext {
     * 获取链接标识
     *
     * @return 获取链接id的结果
-     */
+    */
     public static String getLinkId() {
         return LINK_ID.get();
     }

@@ -34,7 +34,7 @@ public class AlipayWebPaymentChannel extends AbstractMerchantPaymentChannel impl
     * @param merchantChannelService merchant通道服务
     * @param objectMapper 对象映射器
     * @param providerGatewayRegistry 提供者gatewayregistry
-     */
+    */
     public AlipayWebPaymentChannel(MerchantChannelService merchantChannelService,
                                    ObjectMapper objectMapper,
                                    PaymentProviderGatewayRegistry providerGatewayRegistry) {
@@ -42,7 +42,7 @@ public class AlipayWebPaymentChannel extends AbstractMerchantPaymentChannel impl
         * 父。
         * @param merchantChannelService merchant通道服务
         * @param objectMapper 对象映射器
-         */
+        */
         super(merchantChannelService, objectMapper);
         this.providerGatewayRegistry = providerGatewayRegistry;
     }
@@ -128,7 +128,7 @@ public class AlipayWebPaymentChannel extends AbstractMerchantPaymentChannel impl
     *
     * @param channel 通道
     * @return 构建客户端属性的结果
-     */
+    */
     protected AliyunAlipayProperties buildClientProperties(MerchantChannel channel) {
         AliyunAlipayProperties properties = new AliyunAlipayProperties();
         properties.setAppId(requiredText(channel.getAppId(), "支付宝应用ID不能为空"));
@@ -146,7 +146,7 @@ public class AlipayWebPaymentChannel extends AbstractMerchantPaymentChannel impl
     * Gateway
     *
     * @return gateway的结果
-     */
+    */
     protected AliyunAlipayGateway gateway() {
         return providerGatewayRegistry.aliyunAlipayGateway();
     }
@@ -156,7 +156,7 @@ public class AlipayWebPaymentChannel extends AbstractMerchantPaymentChannel impl
     *
     * @param extension 延伸
     * @return gateway的结果
-     */
+    */
     protected AliyunAlipayGateway gateway(String extension) {
         return providerGatewayRegistry.aliyunAlipayGateway(extension);
     }
@@ -167,7 +167,7 @@ public class AlipayWebPaymentChannel extends AbstractMerchantPaymentChannel impl
     * @param request 请求
     * @param productCode product编码
     * @return 构建薪酬请求的结果
-     */
+    */
     protected AliyunAlipayPayRequest buildPayRequest(PaymentRequest request, String productCode) {
         AliyunAlipayPayRequest payRequest = new AliyunAlipayPayRequest();
         payRequest.setOrderNo(request.getOrderNo());
@@ -185,7 +185,7 @@ public class AlipayWebPaymentChannel extends AbstractMerchantPaymentChannel impl
     *
     * @param request 请求
     * @return 构建退税请求的结果
-     */
+    */
     protected AliyunAlipayRefundRequest buildRefundRequest(RefundRequest request) {
         AliyunAlipayRefundRequest refundRequest = new AliyunAlipayRefundRequest();
         refundRequest.setOrderNo(request.getOrderNo());
@@ -200,7 +200,7 @@ public class AlipayWebPaymentChannel extends AbstractMerchantPaymentChannel impl
     *
     * @param tradeStatus 贸易状态
     * @return normalize贸易状态的结果
-     */
+    */
     protected String normalizeTradeStatus(String tradeStatus) {
         if (!StringUtils.hasText(tradeStatus)) {
             return "FAILED";
@@ -218,7 +218,7 @@ public class AlipayWebPaymentChannel extends AbstractMerchantPaymentChannel impl
     *
     * @param refundStatus 退税状态
     * @return normalize退税状态的结果
-     */
+    */
     protected String normalizeRefundStatus(String refundStatus) {
         if (!StringUtils.hasText(refundStatus)) {
             return "FAILED";

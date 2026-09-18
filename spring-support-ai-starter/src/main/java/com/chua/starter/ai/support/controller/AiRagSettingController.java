@@ -50,14 +50,14 @@ public class AiRagSettingController {
 
     /**
     * AI 模型服务
-     */
+    */
     private final AiModelService aiModelService;
 
     /**
     * 获取 RAG 配置选项。
     *
     * @return 五类下拉数据源
-     */
+    */
     @Permission("admin")
     @Operation(summary = "获取 RAG 配置选项", description = "向量模型、OCR 模型、LLM 模型、向量数据库、文本切片策略选项")
     @GetMapping("/options")
@@ -75,7 +75,7 @@ public class AiRagSettingController {
     * 向量模型列表：嵌入客户端 SPI 提供商 + deeplearning 向量模型。
     *
     * @return 模型名列表
-     */
+    */
     private List<String> listEmbeddingModels() {
         TreeSet<String> names = new TreeSet<>();
 
@@ -115,7 +115,7 @@ public class AiRagSettingController {
     * OCR 模型列表：deeplearning 模型registry 中文字识别类模型。
     *
     * @return 模型名列表
-     */
+    */
     private List<String> listOcrModels() {
         TreeSet<String> names = new TreeSet<>();
         try {
@@ -140,7 +140,7 @@ public class AiRagSettingController {
     * LLM 模型列表：AI_模型 表，能力含 对话。
     *
     * @return 模型名列表
-     */
+    */
     private List<String> listLlmModels() {
         try {
             List<AiModelDTO> models = aiModelService.list();
@@ -161,7 +161,7 @@ public class AiRagSettingController {
     * 向量数据库列表：向量storage提供者 SPI。
     *
     * @return 提供者名称列表
-     */
+    */
     private List<String> listVectorStorages() {
         try {
             return VectorStorageProvider.providers().stream()
@@ -177,7 +177,7 @@ public class AiRagSettingController {
     * 文本切片策略列表：文本splitter提供者 SPI。
     *
     * @return 提供者名称列表
-     */
+    */
     private List<String> listSplitters() {
         try {
             return TextSplitterProvider.providers().stream()

@@ -11,14 +11,14 @@ import lombok.Getter;
 public enum SseMessageStatus {
     /**
     * 成功
-     */
+    */
     SUCCESS,
     /**
     * 异常
-     */
+    */
     ERROR,
     /**
     * 警告
-     */
+    */
     WARN
 }

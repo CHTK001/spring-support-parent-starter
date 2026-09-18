@@ -18,7 +18,7 @@ public class ConsoleOverrideProvider implements ApiSwitchOverrideProvider {
     /**
     * 控制台override提供者。
     * @param store 存储
-     */
+    */
     public ConsoleOverrideProvider(ConsoleSqliteStore store) {
         this.store = store;
     }
@@ -32,7 +32,7 @@ public class ConsoleOverrideProvider implements ApiSwitchOverrideProvider {
         /**
         * 特征override。
         * @return 特征override的结果
-         */
+        */
         return new FeatureOverride() {
             @Override
             public boolean isEnabled() {
@@ -60,7 +60,7 @@ public class ConsoleOverrideProvider implements ApiSwitchOverrideProvider {
         /**
         * grayoverride。
         * @return GrayOverride的结果
-         */
+        */
         return new GrayOverride() {
             @Override
             public Integer percentage() {

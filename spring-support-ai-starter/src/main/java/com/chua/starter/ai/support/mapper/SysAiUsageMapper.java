@@ -30,7 +30,7 @@ public interface SysAiUsageMapper extends BaseMapper<SysAiUsage> {
     * @param standardCost        标准费用（官方价格计算，未折扣）
     * @param totalLatency        总耗时（ms）
     * @param totalFirstTokenLatency 总首字延迟（ms）
-     */
+    */
     record UsageStatsRow(
             Integer totalCalls,
             Integer totalPromptTokens,
@@ -52,7 +52,7 @@ public interface SysAiUsageMapper extends BaseMapper<SysAiUsage> {
     * @param startTime 开始时间（可为空，不传则不限起始时间）
     * @param endTime   结束时间（可为空，不传则不限截止时间）
     * @return 聚合统计行，所有字段可能为 空（无数据时）
-     */
+    */
     UsageStatsRow selectStatistics(
             @Param("groupName") String groupName,
             @Param("provider") String provider,
@@ -76,7 +76,7 @@ public interface SysAiUsageMapper extends BaseMapper<SysAiUsage> {
     * @param totalCachedTokens 缓存读取 令牌
     * @param totalLatency 总耗时（ms）
     * @param totalFirstTokenLatency 总首字延迟（ms）
-     */
+    */
     record DailyAggregateRow(
             LocalDate statDate,
             String groupName,
@@ -98,7 +98,7 @@ public interface SysAiUsageMapper extends BaseMapper<SysAiUsage> {
     * @param startTime 开始时间（含），不能为 空
     * @param endTime   结束时间（不含），不能为 空
     * @return 按天分组的聚合行列表，无数据时为空列表
-     */
+    */
     List<DailyAggregateRow> selectDailyAggregate(
             @Param("startTime") LocalDateTime startTime,
             @Param("endTime") LocalDateTime endTime

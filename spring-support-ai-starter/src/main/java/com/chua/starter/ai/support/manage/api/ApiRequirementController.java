@@ -75,7 +75,7 @@ public class ApiRequirementController {
     /**
     * 标签。
     * @return 标签的结果
-     */
+    */
     public ApiResult<List<Map<String, Object>>> tags() {
         return ApiResult.ok(requirementStore.tags());
     }
@@ -84,7 +84,7 @@ public class ApiRequirementController {
     /**
     * 标签bindings。
     * @return 标签bindings的结果
-     */
+    */
     public ApiResult<List<Map<String, Object>>> tagBindings() {
         return ApiResult.ok(requirementStore.getTagBindings());
     }
@@ -94,7 +94,7 @@ public class ApiRequirementController {
     * board。
     * @param tag 标签
     * @return board的结果
-     */
+    */
     public ApiResult<Map<String, Object>> board(@RequestParam String tag) {
         return ApiResult.ok(requirementStore.board(tag));
     }
@@ -104,7 +104,7 @@ public class ApiRequirementController {
     * 获取。
     * @param requirementId requirementid
     * @return 获取的结果
-     */
+    */
     public ApiResult<Map<String, Object>> get(@PathVariable String requirementId) {
         Map<String, Object> req = requirementStore.get(requirementId);
         if (req == null) {
@@ -118,7 +118,7 @@ public class ApiRequirementController {
     * 创建。
     * @param body 主体
     * @return 创建的结果
-     */
+    */
     public ApiResult<Map<String, Object>> create(@RequestBody Map<String, Object> body) {
         Map<String, Object> req = requirementStore.create(body);
         pushService.push("requirement.created", req);
@@ -145,7 +145,7 @@ public class ApiRequirementController {
     * 移除。
     * @param requirementId requirementid
     * @return 移除的结果
-     */
+    */
     public ApiResult<Void> remove(@PathVariable String requirementId) {
         if (!requirementStore.remove(requirementId)) {
             throw new ApiException(ApiErrorCode.NOT_FOUND, "需求不存在: " + requirementId);
@@ -159,7 +159,7 @@ public class ApiRequirementController {
     * 批量删除。
     * @param body 主体
     * @return batch删除的结果
-     */
+    */
     public ApiResult<Map<String, Object>> batchDelete(@RequestBody Map<String, Object> body) {
         @SuppressWarnings("unchecked")
         List<String> ids = (List<String>) body.get("requirement_ids");
@@ -179,7 +179,7 @@ public class ApiRequirementController {
     * 设置autowork。
     * @param body 主体
     * @return 设置autowork的结果
-     */
+    */
     public ApiResult<Map<String, Object>> setAutoWork(@RequestBody Map<String, Object> body) {
         String kind = body.getOrDefault("kind", "conversation").toString();
         String targetId = body.get("target_id") != null ? body.get("target_id").toString() : null;
@@ -197,7 +197,7 @@ public class ApiRequirementController {
     * @param kind 种类
     * @param targetId Targetid
     * @return 获取autowork的结果
-     */
+    */
     public ApiResult<Map<String, Object>> getAutoWork(@PathVariable String kind, @PathVariable String targetId) {
         Map<String, Object> state = new LinkedHashMap<>();
         state.put("kind", kind);
@@ -221,7 +221,7 @@ public class ApiRequirementController {
     /**
     * 获取所有数据源列表。
     * @return 列表数据源的结果
-     */
+    */
     @GetMapping("/data-sources")
     public ApiResult<List<Map<String, Object>>> listDataSources() {
         return ApiResult.ok(requirementStore.listDataSources());
@@ -230,7 +230,7 @@ public class ApiRequirementController {
     /**
     * 获取可用的数据源类型列表。
     * @return 数据源类型的结果
-     */
+    */
     @GetMapping("/data-sources/types")
     public ApiResult<List<String>> dataSourceTypes() {
         return ApiResult.ok(requirementStore.availableTypes());
@@ -240,7 +240,7 @@ public class ApiRequirementController {
     * 创建数据源。
     * @param body 主体
     * @return 创建数据源的结果
-     */
+    */
     @PostMapping("/data-sources")
     public ApiResult<Map<String, Object>> createDataSource(@RequestBody Map<String, Object> body) {
         Map<String, Object> ds = requirementStore.createDataSource(body);
@@ -252,7 +252,7 @@ public class ApiRequirementController {
 
     /**
     * 更新数据源。
-     */
+    */
     @PutMapping("/data-sources/{id}")
     public ApiResult<Map<String, Object>> updateDataSource(@PathVariable String id,
                                                             @RequestBody Map<String, Object> body) {
@@ -267,7 +267,7 @@ public class ApiRequirementController {
     * 删除数据源。
     * @param id 标识
     * @return 移除数据源的结果
-     */
+    */
     @DeleteMapping("/data-sources/{id}")
     public ApiResult<Void> removeDataSource(@PathVariable String id) {
         if (!requirementStore.removeDataSource(id)) {
@@ -280,7 +280,7 @@ public class ApiRequirementController {
     * 测试数据源连接。
     * @param id 标识
     * @return 测试数据源的结果
-     */
+    */
     @PostMapping("/data-sources/{id}/test")
     public ApiResult<Map<String, Object>> testDataSource(@PathVariable String id) {
         boolean ok = requirementStore.testDataSource(id);
@@ -294,7 +294,7 @@ public class ApiRequirementController {
     * 触发数据源同步。
     * @param id 标识
     * @return 同步数据源的结果
-     */
+    */
     @PostMapping("/data-sources/{id}/sync")
     public ApiResult<Map<String, Object>> syncDataSource(@PathVariable String id) {
         Map<String, Object> result = requirementStore.syncDataSource(id);

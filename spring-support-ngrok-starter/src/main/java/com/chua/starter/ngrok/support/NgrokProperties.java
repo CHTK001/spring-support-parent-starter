@@ -73,45 +73,45 @@ public class NgrokProperties {
 
     /**
     * 总开关。【选填】默认 {@code true}；设为 false 完全禁用。
-     */
+    */
     private boolean enable = true;
 
     /**
     * ngrok authtoken。【必填】为空时自动读取环境变量 {@code NGROK_AUTHTOKEN}；
     * 两者都为空且未禁用时启动期报错。
-     */
+    */
     private String authtoken;
 
     /**
     * 会话元数据。【选填】默认无；ngrok 控制台可见。
-     */
+    */
     private String metadata;
 
     /**
     * 私有部署 ngrok 服务端地址。【选填】默认无；公有云可不填。
     * 形如 {@code tunnel.example.com:443}。
-     */
+    */
     private String serverAddr;
 
     /**
     * 私有部署 CA 证书路径。【选填】默认无；类路径 资源路径，
     * 例如 {@code classpath:ngrok-ca.crt}。
-     */
+    */
     private String caCert;
 
     /**
     * 心跳间隔。【选填】默认 ngrok 默认值。
-     */
+    */
     private Duration heartbeatInterval;
 
     /**
     * 心跳容忍。【选填】默认 ngrok 默认值。
-     */
+    */
     private Duration heartbeatTolerance;
 
     /**
     * 隧道类型。【选填】默认 {@code http}；可选 {@code http} / {@code tcp} / {@code tls}。
-     */
+    */
     private String type = "http";
 
     /**
@@ -120,49 +120,49 @@ public class NgrokProperties {
     *   <li>{@code forward} — 自动把本机 server.port 的流量通过 ngrok 暴露</li>
     *   <li>{@code listen} — 仅暴露公网 URL，连接建立后由调用方处理</li>
     * </ul>
-     */
+    */
     private String mode = "forward";
 
     /**
     * 自定义域名。【选填】默认无；http/tls 模式生效，需 ngrok 面板预留。
-     */
+    */
     private String domain;
 
     /**
     * 子域名。【选填】默认无；http/tls 模式生效，部分套餐已下线该能力。
-     */
+    */
     private String subdomain;
 
     /**
     * TCP 远程地址。【tcp 模式必填】默认无；形如 {@code 1.tcp.ngrok.io:20000}。
-     */
+    */
     private String remoteAddress;
 
     /**
     * 协议方案（http 模式）。【选填】默认 {@code HTTPS}；可选 {@code HTTP} / {@code HTTPS}。
-     */
+    */
     private String scheme = "HTTPS";
 
     /**
     * 启用 HTTP 响应压缩。【选填】默认 {@code false}。
-     */
+    */
     private boolean compression = false;
 
     /**
     * HTTP 基础认证 凭据。【选填】默认无；格式 {@code user:password}；
     * 与 {@link #basicAuthUsername}/{@link #basicAuthPassword} 二选一，
     * 同时配置时优先使用本字段。
-     */
+    */
     private String basicAuth;
 
     /**
     * 基础认证 用户名。【选填】默认无；与 {@link #basicAuthPassword} 配合使用。
-     */
+    */
     private String basicAuthUsername;
 
     /**
     * 基础认证 密码。【选填】默认无；与 {@link #basicAuthUsername} 配合使用。
-     */
+    */
     private String basicAuthPassword;
 
     /**
@@ -173,13 +173,13 @@ public class NgrokProperties {
     * </ul>
     * 注意：仅 ngrok 会话 连接失败 / 启动失败时生效；
     * authtoken 为空导致的硬错误无论 失败fast 设置如何都会中断启动（必填项）。
-     */
+    */
     private boolean failFast = false;
 
     /**
     * 额外本地端口列表。【选填】默认无；逗号分隔，例如 {@code 8081,8082}。
     * 为空时只转发 {@code server.port}；非空时会同时为这些端口建立 http 转发隧道。
     * 仅在 {@link #mode} = {@code forward} 且 {@link #type} = {@code http} 时生效。
-     */
+    */
     private String extraLocalPorts;
 }

@@ -21,19 +21,19 @@ public class FaceGlobalSettingProvider implements GlobalSettingProvider {
 
     /**
     * 配置分组标识
-     */
+    */
     private static final String GROUP = "face";
 
     /**
     * 分组显示名称
-     */
+    */
     private static final String GROUP_NAME = "人脸识别";
 
     /**
     * 配置分组标识。
     *
     * @return face
-     */
+    */
     @Override
     public String group() {
         return GROUP;
@@ -43,7 +43,7 @@ public class FaceGlobalSettingProvider implements GlobalSettingProvider {
     * 配置分组显示名称。
     *
     * @return 人脸识别
-     */
+    */
     @Override
     public String groupName() {
         return GROUP_NAME;
@@ -56,7 +56,7 @@ public class FaceGlobalSettingProvider implements GlobalSettingProvider {
     * 辅助能力（选填）：活体 / 质量 / 动漫 / 超分 / 修复 / 属性 / 表情 / 关键点 / 换脸检测。</p>
     *
     * @return 配置项列表
-     */
+    */
     @Override
     public List<SettingItem> getItems() {
         return List.of(

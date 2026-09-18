@@ -46,7 +46,7 @@ public class MerchantSettingController {
     *
     * @param merchantId merchantid
     * @return 获取薪酬配置的结果
-     */
+    */
     public Result<MerchantPaymentConfigVO> getPaymentConfig(@PathVariable Long merchantId) {
         merchantService.getMerchant(merchantId);
         return Result.success(toPaymentConfigVO(merchantId, merchantPaymentConfigService.getConfig(merchantId)));
@@ -58,7 +58,7 @@ public class MerchantSettingController {
     * 保存薪酬配置
     * @param merchantId merchantid
     * @param dto dto
-     */
+    */
     public Result<MerchantPaymentConfigVO> savePaymentConfig(@PathVariable Long merchantId,
                                                              @RequestBody MerchantPaymentConfigDTO dto) {
         merchantService.getMerchant(merchantId);
@@ -76,7 +76,7 @@ public class MerchantSettingController {
     *
     * @param merchantId merchantid
     * @return 获取wallet限制的结果
-     */
+    */
     public Result<MerchantWalletLimitVO> getWalletLimit(@PathVariable Long merchantId) {
         merchantService.getMerchant(merchantId);
         return Result.success(toWalletLimitVO(merchantId, walletLimitService.getLimit(merchantId)));
@@ -88,7 +88,7 @@ public class MerchantSettingController {
     * 保存wallet限制
     * @param merchantId merchantid
     * @param dto dto
-     */
+    */
     public Result<MerchantWalletLimitVO> saveWalletLimit(@PathVariable Long merchantId,
                                                          @RequestBody MerchantWalletLimitDTO dto) {
         merchantService.getMerchant(merchantId);
@@ -105,7 +105,7 @@ public class MerchantSettingController {
     * @param merchantId merchantid
     * @param config 配置
     * @return 转为薪酬配置vo的结果
-     */
+    */
     private MerchantPaymentConfigVO toPaymentConfigVO(Long merchantId, MerchantPaymentConfig config) {
         MerchantPaymentConfigVO vo = new MerchantPaymentConfigVO();
         if (config != null) {
@@ -121,7 +121,7 @@ public class MerchantSettingController {
     * @param merchantId merchantid
     * @param limit 限制
     * @return 转为wallet限制vo的结果
-     */
+    */
     private MerchantWalletLimitVO toWalletLimitVO(Long merchantId, MerchantWalletLimit limit) {
         MerchantWalletLimitVO vo = new MerchantWalletLimitVO();
         if (limit != null) {

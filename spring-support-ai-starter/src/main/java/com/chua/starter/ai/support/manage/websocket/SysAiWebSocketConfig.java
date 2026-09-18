@@ -23,7 +23,7 @@ public class SysAiWebSocketConfig implements WebSocketConfigurer {
 
     /**
     * WS 处理器（已通过 sub协议capable 声明支持的子协议）
-     */
+    */
     private final SysAiWebSocketHandler handler;
 
     @Override

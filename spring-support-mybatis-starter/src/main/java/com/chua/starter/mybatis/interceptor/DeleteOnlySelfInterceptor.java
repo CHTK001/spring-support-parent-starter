@@ -48,7 +48,7 @@ public class DeleteOnlySelfInterceptor implements Interceptor {
     /**
     * 删除onlyself拦截器。
     * @param authService 认证服务
-     */
+    */
     public DeleteOnlySelfInterceptor(AuthService authService) {
         this.authService = authService;
     }
@@ -61,7 +61,7 @@ public class DeleteOnlySelfInterceptor implements Interceptor {
     * invocation.获取参数()[1] 为 方法参数对象，可能为实体对象或映射
     * @return 原始方法的执行结果
     * @throws Throwable 当反射操作或方法执行出现异常时抛出
-     */
+    */
     @Override
     public Object intercept(Invocation invocation) throws Throwable {
  // 获取mapped对账单对象，包含SQL相关信息
@@ -102,7 +102,7 @@ public class DeleteOnlySelfInterceptor implements Interceptor {
         * @param boundSql boundsql
         * @param newSql 新SQL
         * @param loginUserId login用户标识
-         */
+        */
         updateBoundSql(ms, boundSql, newSql, loginUserId);
 
         return invocation.proceed();
@@ -114,7 +114,7 @@ public class DeleteOnlySelfInterceptor implements Interceptor {
     * @param ms mapped对账单对象，包含SQL的唯一标识标识
     * 例如：标识为"com.example.映射器.用户映射器.删除用户"
     * @return 对应的Mapper接口方法，如果未找到则返回null
-     */
+    */
     private Method getMapperMethod(MappedStatement ms) {
         try {
             String id = ms.getId();
@@ -145,7 +145,7 @@ public class DeleteOnlySelfInterceptor implements Interceptor {
     * @param newSql   新的SQL语句，包含参数占位符
     * 例如："删除 从 login WHERE 标识 = ? 和 创建_by = ?"
     * @param userId   用户标识参数值
-     */
+    */
     private void updateBoundSql(MappedStatement ms, BoundSql boundSql, String newSql, String userId) {
         try {
  // 通过 reflect工具 访问 boundsql 私有字段
@@ -184,7 +184,7 @@ public class DeleteOnlySelfInterceptor implements Interceptor {
             * @param "更新BoundSql失败" "更新boundsql失败"
             * @param e e
             * @return runtime异常的结果
-             */
+            */
             throw new RuntimeException("更新BoundSql失败", e);
         }
     }

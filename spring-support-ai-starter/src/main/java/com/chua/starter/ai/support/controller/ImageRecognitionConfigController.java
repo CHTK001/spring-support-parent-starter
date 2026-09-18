@@ -20,18 +20,18 @@ public class ImageRecognitionConfigController extends AbstractCapabilityConfigCo
 
     /**
     * 图片识别配置分组
-     */
+    */
     private static final String GROUP = "image";
 
     /**
     * 镜像认可配置控制器。
     * @param settingService setting服务
-     */
+    */
     public ImageRecognitionConfigController(SysAiGlobalSettingService settingService) {
         /**
         * 父。
         * @param settingService setting服务
-         */
+        */
         super(settingService);
     }
 

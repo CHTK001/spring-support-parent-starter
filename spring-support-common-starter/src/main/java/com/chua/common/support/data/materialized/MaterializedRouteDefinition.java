@@ -18,7 +18,7 @@ public class MaterializedRouteDefinition {
     *
     * @param threshold 阈值
     * @param dataSource 数据源
-     */
+    */
     public MaterializedRouteDefinition(long threshold, String dataSource) {
         this.threshold = threshold;
         this.dataSource = dataSource;
@@ -28,7 +28,7 @@ public class MaterializedRouteDefinition {
     * 获取阈值
     *
     * @return 阈值
-     */
+    */
     public long getThreshold() {
         return threshold;
     }
@@ -37,7 +37,7 @@ public class MaterializedRouteDefinition {
     * 获取数据源
     *
     * @return 数据源
-     */
+    */
     public String getDataSource() {
         return dataSource;
     }

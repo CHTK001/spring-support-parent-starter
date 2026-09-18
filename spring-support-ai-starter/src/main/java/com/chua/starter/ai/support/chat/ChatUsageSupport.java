@@ -16,7 +16,7 @@ public abstract class ChatUsageSupport {
     *
     * @param response 对话响应
     * @return AgentUsage 实例
-     */
+    */
     public static AgentUsage from(ChatResponse response) {
         if (response == null || response.getUsage() == null) {
             return AgentUsage.builder()
@@ -38,7 +38,7 @@ public abstract class ChatUsageSupport {
     * @param a a
     * @param b b
     * @return 合并的结果
-     */
+    */
     public static AgentUsage merge(AgentUsage a, AgentUsage b) {
         if (a == null) {
             return b;

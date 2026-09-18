@@ -63,33 +63,33 @@ public class ProfileEnvironmentPostProcessor implements EnvironmentPostProcessor
     /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(ProfileEnvironmentPostProcessor.class);
         /**
-        * 目录前缀
-     */
+    * 目录前缀
+    */
     private static final String DIR_PREFIX = "ops-";
 
     /**
     * 兜底配置目录名
-     */
+    */
     private static final String DEFAULT_PROFILE_DIR = DIR_PREFIX + "default";
 
     /**
     * 启用开关配置键
-     */
+    */
     private static final String ENABLED_KEY = "plugin.ops-config.enabled";
 
     /**
     * 支持的配置文件扩展名
-     */
+    */
     private static final Set<String> SUPPORTED_EXTENSIONS = Set.of("yml", "yaml", "properties");
 
     /**
     * YAML配置加载器
-     */
+    */
     private final YamlPropertySourceLoader yamlLoader = new YamlPropertySourceLoader();
 
     /**
     * 属性配置加载器
-     */
+    */
     private final PropertiesPropertySourceLoader propertiesLoader = new PropertiesPropertySourceLoader();
 
     @Override
@@ -158,13 +158,13 @@ public class ProfileEnvironmentPostProcessor implements EnvironmentPostProcessor
         for (var dir : directories) {
             if (DEFAULT_PROFILE_DIR.equals(dir)) {
                 /**
-                * 加载配置转为映射。
-                * @param resolver 解析器
-                * @param dir dir
-                * @param mergedConfigs 合并配置
-                * @param defaultLoadedConfigs 默认加载配置
-                * @param includeProfiles include配置文件
-                 */
+    * 加载配置转为映射。
+    * @param resolver 解析器
+    * @param dir dir
+    * @param mergedConfigs 合并配置
+    * @param defaultLoadedConfigs 默认加载配置
+    * @param includeProfiles include配置文件
+    */
                 loadConfigsToMap(resolver, dir, mergedConfigs, defaultLoadedConfigs, includeProfiles);
             } else {
                 /**
@@ -174,7 +174,7 @@ public class ProfileEnvironmentPostProcessor implements EnvironmentPostProcessor
                 * @param mergedConfigs 合并配置
                 * @param profileLoadedConfigs 配置文件加载配置
                 * @param includeProfiles include配置文件
-                 */
+                */
                 loadConfigsToMap(resolver, dir, mergedConfigs, profileLoadedConfigs, includeProfiles);
             }
         }
@@ -213,7 +213,7 @@ public class ProfileEnvironmentPostProcessor implements EnvironmentPostProcessor
     * @param profileDir    目录名
     * @param mergedConfigs 合并后的配置 映射
     * @param loadedConfigs 已加载的配置列表（用于日志）
-     */
+    */
     private void loadConfigsToMap(PathMatchingResourcePatternResolver resolver,
                                   String profileDir,
                                   Map<String, Map<String, Object>> mergedConfigs,
@@ -265,7 +265,7 @@ public class ProfileEnvironmentPostProcessor implements EnvironmentPostProcessor
                         * deep合并。
                         * @param existing existing
                         * @param props props
-                         */
+                        */
                         deepMerge(existing, props);
                         return existing;
                     });
@@ -287,7 +287,7 @@ public class ProfileEnvironmentPostProcessor implements EnvironmentPostProcessor
     * @param resource 资源文件
     * @return 属性 映射
     * @throws IOException 加载失败时抛出
-     */
+    */
     private Map<String, Object> loadResourceAsMap(Resource resource) throws IOException {
         String filename = resource.getFilename();
         if (filename == null) {
@@ -325,7 +325,7 @@ public class ProfileEnvironmentPostProcessor implements EnvironmentPostProcessor
     * @param filename       文件名
     * @param includeProfiles include 列表
     * @return 是否需要加载
-     */
+    */
     private boolean isIncludedConfig(String filename, Set<String> includeProfiles) {
         if (includeProfiles == null || includeProfiles.isEmpty()) {
             return false;
@@ -346,7 +346,7 @@ public class ProfileEnvironmentPostProcessor implements EnvironmentPostProcessor
     *
     * @param target 目标 映射
     * @param source 源 映射
-     */
+    */
     @SuppressWarnings("unchecked")
     private void deepMerge(Map<String, Object> target, Map<String, Object> source) {
         for (Map.Entry<String, Object> entry : source.entrySet()) {
@@ -359,7 +359,7 @@ public class ProfileEnvironmentPostProcessor implements EnvironmentPostProcessor
                 /**
                 * deep合并。
                 * @param Object> 对象>
-                 */
+                */
                 deepMerge((Map<String, Object>) oldValue, (Map<String, Object>) newValue);
             } else {
                 // 直接覆盖
@@ -373,7 +373,7 @@ public class ProfileEnvironmentPostProcessor implements EnvironmentPostProcessor
     *
     * @param value 原始值
     * @return 解包后的值
-     */
+    */
     private Object unwrapValue(Object value) {
         if (value instanceof OriginTrackedValue) {
             return ((OriginTrackedValue) value).getValue();
@@ -386,7 +386,7 @@ public class ProfileEnvironmentPostProcessor implements EnvironmentPostProcessor
     *
     * @param filename 文件名
     * @return 是否支持
-     */
+    */
     private boolean isSupportedFile(String filename) {
         int dotIndex = filename.lastIndexOf('.');
         if (dotIndex < 0) {

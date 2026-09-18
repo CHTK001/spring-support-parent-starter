@@ -24,14 +24,14 @@ public interface FileStorageImageFilterProvider {
     * <p>写入 {@code FileStorageSetting#imageFilter} 持久化，需全局唯一。</p>
     *
     * @return 滤镜名称（如 {@code GRAYSCALE}）
-     */
+    */
     String getName();
 
     /**
     * 获取滤镜展示名。
     *
     * @return 展示名（如 {@code 灰度}）
-     */
+    */
     String getLabel();
 
     /**
@@ -40,6 +40,6 @@ public interface FileStorageImageFilterProvider {
     * <p>返回空字符串表示无滤镜（原图）。</p>
     *
     * @return CSS filter 值（如 {@code grayscale(1)}）
-     */
+    */
     String getCssFilter();
 }

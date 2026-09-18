@@ -63,8 +63,8 @@ public class ProjectWatchdogWheel {
     private int cursor = 0;
 
     /**
-     * 应用就绪后启动时间轮
-     */
+    * 应用就绪后启动时间轮
+    */
     @EventListener(ApplicationReadyEvent.class)
     public void start() {
         wheelExecutor = Executors.newSingleThreadScheduledExecutor(r -> {
@@ -84,8 +84,8 @@ public class ProjectWatchdogWheel {
     }
 
     /**
-     * 单 tick：轮转游标，执行该槽位到期的项目，并把项目重新挂回对应槽位
-     */
+    * 单 tick：轮转游标，执行该槽位到期的项目，并把项目重新挂回对应槽位
+    */
     private void onTick() {
         cursor = (cursor + 1) % SLOT_COUNT;
         List<Long> due = slots.get(cursor);
@@ -107,10 +107,10 @@ public class ProjectWatchdogWheel {
     }
 
     /**
-     * 执行单个项目一轮检测，完成后按项目间隔重新入轮
-     *
-     * @param projectId 项目 标识
-     */
+    * 执行单个项目一轮检测，完成后按项目间隔重新入轮
+    *
+    * @param projectId 项目 标识
+    */
     private void runOnce(Long projectId) {
         if (running.containsKey(projectId)) {
             // 上一轮未跑完，仅重挂不重复执行
@@ -139,10 +139,10 @@ public class ProjectWatchdogWheel {
     }
 
     /**
-     * 按项目当前间隔重新挂入时间轮
-     *
-     * @param projectId 项目 标识
-     */
+    * 按项目当前间隔重新挂入时间轮
+    *
+    * @param projectId 项目 标识
+    */
     private void rearm(Long projectId) {
         int intervalSec = watchdogService.watchdogIntervalOf(projectId);
         long totalMs = intervalSec * 1000L;
@@ -155,8 +155,8 @@ public class ProjectWatchdogWheel {
     }
 
     /**
-     * 全量启用守护的项目入轮（启动时 + 外部触发重载）
-     */
+    * 全量启用守护的项目入轮（启动时 + 外部触发重载）
+    */
     public void scheduleAllEnabled() {
         List<MsProject> projects = watchdogService.enabledProjects();
         for (MsProject p : projects) {
@@ -171,10 +171,10 @@ public class ProjectWatchdogWheel {
     }
 
     /**
-     * 新增/变更项目守护配置后调用：先摘除旧槽位再按新间隔入轮
-     *
-     * @param projectId 项目 标识
-     */
+    * 新增/变更项目守护配置后调用：先摘除旧槽位再按新间隔入轮
+    *
+    * @param projectId 项目 标识
+    */
     public void reschedule(Long projectId) {
         for (List<Long> slot : slots) {
             slot.remove(projectId);
@@ -188,10 +188,10 @@ public class ProjectWatchdogWheel {
     }
 
     /**
-     * 创建槽位数组
-     *
-     * @return 新槽位数组
-     */
+    * 创建槽位数组
+    *
+    * @return 新槽位数组
+    */
     private static List<List<Long>> newSlotArray() {
         List<List<Long>> array = new ArrayList<>(SLOT_COUNT);
         for (int i = 0; i < SLOT_COUNT; i++) {

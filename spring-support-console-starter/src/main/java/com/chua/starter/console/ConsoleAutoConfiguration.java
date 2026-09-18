@@ -38,7 +38,7 @@ public class ConsoleAutoConfiguration {
         * 注解switchscanner。
         * @param requestMappingHandlerMapping 请求mapping处理器mapping
         * @return 注解switchscanner的结果
-         */
+        */
         return new AnnotationSwitchScanner(requestMappingHandlerMapping);
     }
 
@@ -47,13 +47,13 @@ public class ConsoleAutoConfiguration {
     * 控制台sqlite存储。
     * @param properties 属性
     * @return 控制台sqlite存储的结果
-     */
+    */
     public ConsoleSqliteStore consoleSqliteStore(ConsoleProperties properties) {
         /**
         * 控制台sqlite存储。
         * @param properties 属性
         * @return 控制台sqlite存储的结果
-         */
+        */
         return new ConsoleSqliteStore(properties);
     }
 
@@ -62,13 +62,13 @@ public class ConsoleAutoConfiguration {
     * 控制台override提供者。
     * @param consoleSqliteStore 控制台sqlite存储
     * @return 控制台override提供者的结果
-     */
+    */
     public ConsoleOverrideProvider consoleOverrideProvider(ConsoleSqliteStore consoleSqliteStore) {
         /**
         * 控制台override提供者。
         * @param consoleSqliteStore 控制台sqlite存储
         * @return 控制台override提供者的结果
-         */
+        */
         return new ConsoleOverrideProvider(consoleSqliteStore);
     }
 
@@ -80,7 +80,7 @@ public class ConsoleAutoConfiguration {
         * @param annotationSwitchScanner 注解switchscanner
         * @param consoleSqliteStore 控制台sqlite存储
         * @return 控制台startupresetter的结果
-         */
+        */
         return new ConsoleStartupResetter(annotationSwitchScanner, consoleSqliteStore);
     }
 
@@ -89,7 +89,7 @@ public class ConsoleAutoConfiguration {
     *
     * @param properties 控制台配置
     * @return ServiceInfoContributor
-     */
+    */
     @Bean
     public ServiceInfoContributor consoleServiceInfoContributor(ConsoleProperties properties) {
         return registry -> registry.registerFlag("console", "管理控制台", properties.isEnable(),

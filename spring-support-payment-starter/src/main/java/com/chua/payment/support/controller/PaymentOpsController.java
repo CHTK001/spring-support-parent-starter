@@ -63,7 +63,7 @@ public class PaymentOpsController {
     * @param paymentNotifyLogMapper 薪酬通知日志映射器
     * @param paymentNotifyErrorMapper 薪酬通知错误映射器
     * @param paymentNotifyProcessService 薪酬通知处理服务
-     */
+    */
     public PaymentOpsController(PaymentSchedulerTaskOpsService paymentSchedulerTaskOpsService,
                                 PaymentDashboardService paymentDashboardService,
                                 PaymentNotifyLogMapper paymentNotifyLogMapper,
@@ -82,7 +82,7 @@ public class PaymentOpsController {
     *
     * @param false false
     * @return dashboardSummary的结果
-     */
+    */
     public PaymentDashboardSummaryVO dashboardSummary(@RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
                                                       @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate) {
         return paymentDashboardService.summary(startDate, endDate);
@@ -93,7 +93,7 @@ public class PaymentOpsController {
     * Overview
     *
     * @return overview的结果
-     */
+    */
     public PaymentOpsOverviewVO overview() {
         PaymentOpsOverviewVO overview = new PaymentOpsOverviewVO();
         overview.setCallbackAudits(callbackAudits());
@@ -106,7 +106,7 @@ public class PaymentOpsController {
     * 列表任务
     *
     * @return 列表任务的结果
-     */
+    */
     public List<PaymentSchedulerTaskVO> listTasks() {
         return paymentSchedulerTaskOpsService.listTasks();
     }
@@ -116,7 +116,7 @@ public class PaymentOpsController {
     * 更新任务
     * @param taskKey 任务钥匙
     * @param dto dto
-     */
+    */
     public PaymentSchedulerTaskVO updateTask(@PathVariable String taskKey,
                                              @RequestBody PaymentSchedulerTaskUpdateDTO dto) {
         return paymentSchedulerTaskOpsService.updateTask(taskKey, dto);
@@ -128,7 +128,7 @@ public class PaymentOpsController {
     *
     * @param taskKey 任务钥匙
     * @return trigger任务的结果
-     */
+    */
     public PaymentSchedulerTaskVO triggerTask(@PathVariable String taskKey) {
         return paymentSchedulerTaskOpsService.triggerTask(taskKey);
     }
@@ -139,7 +139,7 @@ public class PaymentOpsController {
     *
     * @param "1" "1"
     * @return page通知日志的结果
-     */
+    */
     public PageResult<PaymentNotifyLog> pageNotifyLogs(@RequestParam(defaultValue = "1") int pageNum,
                                                        @RequestParam(defaultValue = "10") int pageSize,
                                                        @RequestParam(required = false) String notifyType,
@@ -172,7 +172,7 @@ public class PaymentOpsController {
     *
     * @param "1" "1"
     * @return page通知错误的结果
-     */
+    */
     public PageResult<PaymentNotifyError> pageNotifyErrors(@RequestParam(defaultValue = "1") int pageNum,
                                                            @RequestParam(defaultValue = "10") int pageSize,
                                                            @RequestParam(required = false) String notifyType,
@@ -205,7 +205,7 @@ public class PaymentOpsController {
     *
     * @param id 标识
     * @return 重试通知错误的结果
-     */
+    */
     public Boolean retryNotifyError(@PathVariable Long id) {
         paymentNotifyProcessService.retryFailedNotify(id);
         return true;
@@ -215,7 +215,7 @@ public class PaymentOpsController {
     * callback审计
     *
     * @return callback审计的结果
-     */
+    */
     private List<PaymentCallbackAuditVO> callbackAudits() {
         return List.of(
                 callbackAudit(
@@ -264,7 +264,7 @@ public class PaymentOpsController {
     * 订单数字strategies
     *
     * @return 订单数字strategies的结果
-     */
+    */
     private List<PaymentOrderNumberStrategyVO> orderNumberStrategies() {
         return List.of(
                 orderNumberStrategy(
@@ -299,7 +299,7 @@ public class PaymentOpsController {
     * @param strictScoped strictscoped
     * @param effectivePriority effectivepriority
     * @param notes 笔记
-     */
+    */
     private PaymentCallbackAuditVO callbackAudit(String callbackType,
                                                 String callbackName,
                                                 String recommendedPattern,
@@ -326,7 +326,7 @@ public class PaymentOpsController {
     * @param callerOverrideField calleroverride字段
     * @param idempotentRule 幂等rule
     * @param notes 笔记
-     */
+    */
     private PaymentOrderNumberStrategyVO orderNumberStrategy(String businessType,
                                                              String fieldName,
                                                              String generationRule,

@@ -49,7 +49,7 @@ public class GogoSshShellServer {
     * @param username 用户名
     * @param password 密码
     * @param bundleContext bundle上下文
-     */
+    */
     public GogoSshShellServer(String host, int port, String username, String password, BundleContext bundleContext) {
         this.host = host == null ? "127.0.0.1" : host;
         this.port = port;
@@ -92,7 +92,7 @@ public class GogoSshShellServer {
     * 按名查找 Gogo 命令处理器 服务（规避 bundle/应用类加载器类身份差异）
     *
     * @return lookup命令处理器的结果
-     */
+    */
     private Object lookupCommandProcessor() {
         if (bundleContext == null) {
             return null;
@@ -162,10 +162,10 @@ public class GogoSshShellServer {
         }
 
         /**
-        * 读取行 -> 回显 -> bundle: 命令直通框架 API（其他命令按需走 Gogo），输出提示符
-        *
-        * @param console 控制台
-         */
+    * 读取行 -> 回显 -> bundle: 命令直通框架 API（其他命令按需走 Gogo），输出提示符
+    *
+    * @param console 控制台
+    */
         private void runLoop(PrintStream console) {
             try {
                 StringBuilder line = new StringBuilder();
@@ -184,7 +184,7 @@ public class GogoSshShellServer {
                                 * 执行viagogo。
                                 * @param command 命令
                                 * @param console 控制台
-                                 */
+                                */
                                 executeViaGogo(command, console);
                             }
                             console.print("g! ");
@@ -213,7 +213,7 @@ public class GogoSshShellServer {
         *
         * @param command 命令
         * @param console 控制台
-         */
+        */
         private void executeViaGogo(String command, PrintStream console) {
             try {
                 Object processor = commandProcessor != null ? commandProcessor : lookupCommandProcessor();
@@ -240,7 +240,7 @@ public class GogoSshShellServer {
         * @return true 表示已处理（无需走 Gogo）
         * @param command 命令
         * @param console 控制台
-         */
+        */
         private boolean handleBundleCommand(String command, PrintStream console) {
             try {
                 if (command.startsWith("bundle:install ")) {
@@ -294,7 +294,7 @@ public class GogoSshShellServer {
         *
         * @param state 状态
         * @return 状态名称的结果
-         */
+        */
         private static String stateName(int state) {
             switch (state) {
                 case Bundle.INSTALLED: return "INSTALLED";

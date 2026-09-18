@@ -39,22 +39,22 @@ public class EduAiProperties {
 
     /**
     * 阅卷配置
-     */
+    */
     private Marking marking = new Marking();
 
     /**
     * 组卷配置
-     */
+    */
     private Paper paper = new Paper();
 
     /**
     * 知识库配置
-     */
+    */
     private Knowledge knowledge = new Knowledge();
 
     /**
     * AI 引擎配置
-     */
+    */
     private Ai ai = new Ai();
 
     @Data
@@ -63,21 +63,21 @@ public class EduAiProperties {
     *
     * @author CH
     * @since 4.0.0
-     */
+    */
     public static class Marking {
         /**
         * 是否异步阅卷
-         */
+        */
         private boolean async = true;
 
         /**
         * 阅卷超时（秒），由调用方在 对话scope.超时millis 中体现
-         */
+        */
         private int timeout = 300;
 
         /**
         * 单题最大分（兜底值）
-         */
+        */
         private int maxScore = 5;
     }
 
@@ -87,21 +87,21 @@ public class EduAiProperties {
     *
     * @author CH
     * @since 4.0.0
-     */
+    */
     public static class Paper {
         /**
         * 试卷最高总分
-         */
+        */
         private int maxTotalScore = 100;
 
         /**
         * 默认题目数量
-         */
+        */
         private int defaultQuestionCount = 20;
 
         /**
         * 默认每题分值
-         */
+        */
         private int defaultScorePerQuestion = 5;
     }
 
@@ -111,11 +111,11 @@ public class EduAiProperties {
     *
     * @author CH
     * @since 4.0.0
-     */
+    */
     public static class Knowledge {
         /**
         * 向量维度
-         */
+        */
         private int vectorDim = 768;
     }
 
@@ -125,26 +125,26 @@ public class EduAiProperties {
     *
     * @author CH
     * @since 4.0.0
-     */
+    */
     public static class Ai {
         /**
         * 是否启用 AI（关闭后回退到本地启发式逻辑）
-         */
+        */
         private boolean enabled = true;
 
         /**
         * AI 服务商（与 对话客户端registry 中的 提供者 一致）
-         */
+        */
         private String provider;
 
         /**
         * 模型名
-         */
+        */
         private String model;
 
         /**
         * 温度参数
-         */
+        */
         private Double temperature = 0.3;
     }
 }

@@ -21,7 +21,7 @@ public interface AiTemplateFacadeService {
     * @param name         名称
     * @param remark       备注
     * @return 模板列表
-     */
+    */
     List<SysAiTemplate> list(Integer moduleId, String templateType, String category, String name, String remark);
 
     /**
@@ -29,7 +29,7 @@ public interface AiTemplateFacadeService {
     *
     * @param template 模板实体
     * @return 保存后的模板
-     */
+    */
     SysAiTemplate save(SysAiTemplate template);
 
     /**
@@ -37,7 +37,7 @@ public interface AiTemplateFacadeService {
     *
     * @param template 模板实体
     * @return 是否成功
-     */
+    */
     boolean update(SysAiTemplate template);
 
     /**
@@ -45,6 +45,6 @@ public interface AiTemplateFacadeService {
     *
     * @param id 模板 标识
     * @return 是否成功
-     */
+    */
     boolean deleteById(Integer id);
 }

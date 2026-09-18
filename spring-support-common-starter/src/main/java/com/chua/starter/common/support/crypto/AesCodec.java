@@ -20,7 +20,7 @@ public class AesCodec {
     /**
     * 创建 aescodec 实例
     * @param keyBytes 键bytes
-     */
+    */
     public AesCodec(byte[] keyBytes) {
         this.keyBytes = keyBytes;
     }
@@ -30,7 +30,7 @@ public class AesCodec {
     *
     * @param data 数据
     * @return encodeHex的结果
-     */
+    */
     public String encodeHex(String data) {
         if (data == null) {
             return null;
@@ -48,7 +48,7 @@ public class AesCodec {
     *
     * @param hex hex
     * @return decodeHex的结果
-     */
+    */
     public String decodeHex(String hex) {
         if (hex == null) {
             return null;
@@ -65,7 +65,7 @@ public class AesCodec {
     *
     * @param plain plain
     * @return encrypt的结果
-     */
+    */
     private byte[] encrypt(byte[] plain) throws Exception {
         SecretKeySpec keySpec = generateKey();
         IvParameterSpec iv = generateIv();
@@ -79,7 +79,7 @@ public class AesCodec {
     *
     * @param encrypted encrypted
     * @return decrypt的结果
-     */
+    */
     private byte[] decrypt(byte[] encrypted) throws Exception {
         SecretKeySpec keySpec = generateKey();
         IvParameterSpec iv = generateIv();
@@ -92,7 +92,7 @@ public class AesCodec {
     * generate键
     *
     * @return generate键的结果
-     */
+    */
     private SecretKeySpec generateKey() throws Exception {
         MessageDigest md = MessageDigest.getInstance("SHA-256");
         md.update(keyBytes);
@@ -103,7 +103,7 @@ public class AesCodec {
     * generateiv
     *
     * @return generateIv的结果
-     */
+    */
     private IvParameterSpec generateIv() throws Exception {
         MessageDigest md = MessageDigest.getInstance("SHA-256");
         md.update(keyBytes);
@@ -116,7 +116,7 @@ public class AesCodec {
     *
     * @param bytes bytes
     * @return bytes转为hex的结果
-     */
+    */
     private String bytesToHex(byte[] bytes) {
         StringBuilder sb = new StringBuilder();
         for (byte b : bytes) {
@@ -130,7 +130,7 @@ public class AesCodec {
     *
     * @param hex hex
     * @return hex转为bytes的结果
-     */
+    */
     private byte[] hexToBytes(String hex) {
         int len = hex.length();
         byte[] data = new byte[len / 2];

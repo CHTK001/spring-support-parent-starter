@@ -19,43 +19,43 @@ public class EduAnswerSheet {
 
     /**
     * 答题卡标识
-     */
+    */
     @TableId(type = IdType.AUTO)
     /** answersheetid */
     private Long answerSheetId;
 
     /**
     * 考试标识
-     */
+    */
     private Long answerSheetExamId;
 
     /**
     * 学生标识
-     */
+    */
     private String answerSheetStudentId;
 
     /**
     * 答题内容JSON
-     */
+    */
     private String answerSheetContent;
 
     /**
     * 提交时间
-     */
+    */
     private LocalDateTime answerSheetSubmitTime;
 
     /**
     * 状态
-     */
+    */
     private Integer answerSheetStatus;
 
     /**
     * 创建时间
-     */
+    */
     private LocalDateTime answerSheetCreateTime;
 
     /**
     * 更新时间
-     */
+    */
     private LocalDateTime answerSheetUpdateTime;
 }

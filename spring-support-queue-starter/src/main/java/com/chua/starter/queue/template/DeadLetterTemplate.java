@@ -38,67 +38,67 @@ public class DeadLetterTemplate implements MessageTemplate {
 
     /**
     * 死信队列前缀
-     */
+    */
     private static final String DLQ_PREFIX = "dlq:";
 
     /**
     * 重试队列前缀
-     */
+    */
     private static final String RETRY_PREFIX = "retry:";
 
     /**
     * 重试次数头部键
-     */
+    */
     public static final String HEADER_RETRY_COUNT = "X-Retry-Count";
 
     /**
     * 原始目标头部键
-     */
+    */
     public static final String HEADER_ORIGINAL_DESTINATION = "X-Original-Destination";
 
     /**
     * 失败原因头部键
-     */
+    */
     public static final String HEADER_FAILURE_REASON = "X-Failure-Reason";
 
     /**
     * 失败时间头部键
-     */
+    */
     public static final String HEADER_FAILURE_TIME = "X-Failure-Time";
 
     /**
     * 原始消息标识 头部键（用于重试时跟踪消息）
-     */
+    */
     public static final String HEADER_ORIGINAL_MESSAGE_ID = "X-Original-Message-Id";
 
     /**
     * 主消息模板
-     */
+    */
     private final MessageTemplate messageTemplate;
 
     /**
     * 死信队列消息模板（可独立配置）
-     */
+    */
     private final MessageTemplate dlqMessageTemplate;
 
     /**
     * 配置
-     */
+    */
     private final DeadLetterConfig config;
 
     /**
     * 重试计数器
-     */
+    */
     private final ConcurrentMap<String, AtomicInteger> retryCounters = new ConcurrentHashMap<>();
 
     /**
     * 死信回调
-     */
+    */
     private final CopyOnWriteArrayList<BiConsumer<Message, Throwable>> deadLetterCallbacks = new CopyOnWriteArrayList<>();
 
     /**
     * 延迟调度器
-     */
+    */
     private final ScheduledExecutorService scheduler;
 
     /**
@@ -106,14 +106,14 @@ public class DeadLetterTemplate implements MessageTemplate {
     *
     * @param messageTemplate 消息模板
     * @param config          配置
-     */
+    */
     public DeadLetterTemplate(MessageTemplate messageTemplate, DeadLetterConfig config) {
         /**
         * this。
         * @param messageTemplate 消息template
         * @param messageTemplate 消息template
         * @param config 配置
-         */
+        */
         this(messageTemplate, messageTemplate, config);
     }
 
@@ -123,14 +123,14 @@ public class DeadLetterTemplate implements MessageTemplate {
     * @param messageTemplate    主消息模板
     * @param dlqMessageTemplate 死信队列消息模板
     * @param config             配置
-     */
+    */
     public DeadLetterTemplate(MessageTemplate messageTemplate, MessageTemplate dlqMessageTemplate, DeadLetterConfig config) {
         if (messageTemplate == null) {
             /**
             * illegal参数异常。
             * @param null" 空"
             * @return illegal参数异常的结果
-             */
+            */
             throw new IllegalArgumentException("MessageTemplate cannot be null");
         }
         if (dlqMessageTemplate == null) {
@@ -138,7 +138,7 @@ public class DeadLetterTemplate implements MessageTemplate {
             * illegal参数异常。
             * @param null" 空"
             * @return illegal参数异常的结果
-             */
+            */
             throw new IllegalArgumentException("DLQ MessageTemplate cannot be null");
         }
         if (config == null) {
@@ -146,7 +146,7 @@ public class DeadLetterTemplate implements MessageTemplate {
             * illegal参数异常。
             * @param null" 空"
             * @return illegal参数异常的结果
-             */
+            */
             throw new IllegalArgumentException("DeadLetterConfig cannot be null");
         }
         
@@ -154,7 +154,7 @@ public class DeadLetterTemplate implements MessageTemplate {
         /**
         * 校验配置。
         * @param config 配置
-         */
+        */
         validateConfig(config);
         
         this.messageTemplate = messageTemplate;
@@ -172,7 +172,7 @@ public class DeadLetterTemplate implements MessageTemplate {
     /**
     * 验证配置参数
     * @param config 配置
-     */
+    */
     private void validateConfig(DeadLetterConfig config) {
         if (config.getMaxRetries() <= 0) {
             /**
@@ -180,7 +180,7 @@ public class DeadLetterTemplate implements MessageTemplate {
             * @param 0 0
             * @param config.getMaxRetries( 配置.获取最大重试(
             * @return illegal参数异常的结果
-             */
+            */
             throw new IllegalArgumentException("maxRetries must be greater than 0, got: " + config.getMaxRetries());
         }
         if (config.getRetryDelay() == null || config.getRetryDelay().isNegative() || config.getRetryDelay().isZero()) {
@@ -189,7 +189,7 @@ public class DeadLetterTemplate implements MessageTemplate {
             * @param positive positive
             * @param config.getRetryDelay( 配置.获取重试延迟(
             * @return illegal参数异常的结果
-             */
+            */
             throw new IllegalArgumentException("retryDelay must be positive, got: " + config.getRetryDelay());
         }
         if (config.getMaxRetryDelay() != null && config.getMaxRetryDelay().isNegative()) {
@@ -198,7 +198,7 @@ public class DeadLetterTemplate implements MessageTemplate {
             * @param non-negative non-negative
             * @param config.getMaxRetryDelay( 配置.获取最大重试延迟(
             * @return illegal参数异常的结果
-             */
+            */
             throw new IllegalArgumentException("maxRetryDelay must be non-negative, got: " + config.getMaxRetryDelay());
         }
         if (config.getBackoffMultiplier() <= 0) {
@@ -207,7 +207,7 @@ public class DeadLetterTemplate implements MessageTemplate {
             * @param 0 0
             * @param config.getBackoffMultiplier( 配置.获取退避multiplier(
             * @return illegal参数异常的结果
-             */
+            */
             throw new IllegalArgumentException("backoffMultiplier must be greater than 0, got: " + config.getBackoffMultiplier());
         }
     }
@@ -346,14 +346,14 @@ public class DeadLetterTemplate implements MessageTemplate {
     *
     * @param destination 目标地址
     * @param handler     消息处理器
-     */
+    */
     public void subscribeWithRetry(String destination, MessageHandler handler) {
         if (destination == null || handler == null) {
             /**
             * illegal参数异常。
             * @param null" 空"
             * @return illegal参数异常的结果
-             */
+            */
             throw new IllegalArgumentException("Destination and handler cannot be null");
         }
         
@@ -391,7 +391,7 @@ public class DeadLetterTemplate implements MessageTemplate {
                     * @param messageId 消息标识
                     * @param retryCount 重试数量
                     * @param e e
-                     */
+                    */
                     scheduleRetry(destination, message, messageId, retryCount, e);
                     // 重试时确认原消息，避免重复消费
                     try {
@@ -427,14 +427,14 @@ public class DeadLetterTemplate implements MessageTemplate {
     * @param destination 目标地址
     * @param group       消费组
     * @param handler     消息处理器
-     */
+    */
     public void subscribeWithRetry(String destination, String group, MessageHandler handler) {
         if (destination == null || handler == null) {
             /**
             * illegal参数异常。
             * @param null" 空"
             * @return illegal参数异常的结果
-             */
+            */
             throw new IllegalArgumentException("Destination and handler cannot be null");
         }
         if (group == null) {
@@ -442,7 +442,7 @@ public class DeadLetterTemplate implements MessageTemplate {
             * illegal参数异常。
             * @param null" 空"
             * @return illegal参数异常的结果
-             */
+            */
             throw new IllegalArgumentException("Group cannot be null");
         }
         
@@ -479,7 +479,7 @@ public class DeadLetterTemplate implements MessageTemplate {
                     * @param messageId 消息标识
                     * @param retryCount 重试数量
                     * @param e e
-                     */
+                    */
                     scheduleRetry(destination, message, messageId, retryCount, e);
                     // 重试时确认原消息，避免重复消费
                     try {
@@ -516,14 +516,14 @@ public class DeadLetterTemplate implements MessageTemplate {
     * @param message             消息
     * @param reason              失败原因
     * @return 发送结果
-     */
+    */
     public SendResult sendToDeadLetter(String originalDestination, Message message, String reason) {
         if (originalDestination == null) {
             /**
             * illegal参数异常。
             * @param null" 空"
             * @return illegal参数异常的结果
-             */
+            */
             throw new IllegalArgumentException("Original destination cannot be null");
         }
         if (message == null) {
@@ -531,7 +531,7 @@ public class DeadLetterTemplate implements MessageTemplate {
             * illegal参数异常。
             * @param null" 空"
             * @return illegal参数异常的结果
-             */
+            */
             throw new IllegalArgumentException("Message cannot be null");
         }
         
@@ -555,14 +555,14 @@ public class DeadLetterTemplate implements MessageTemplate {
     *
     * @param originalDestination 原始目标地址
     * @param handler             死信处理器
-     */
+    */
     public void subscribeDeadLetter(String originalDestination, MessageHandler handler) {
         if (originalDestination == null) {
             /**
             * illegal参数异常。
             * @param null" 空"
             * @return illegal参数异常的结果
-             */
+            */
             throw new IllegalArgumentException("Original destination cannot be null");
         }
         if (handler == null) {
@@ -570,7 +570,7 @@ public class DeadLetterTemplate implements MessageTemplate {
             * illegal参数异常。
             * @param null" 空"
             * @return illegal参数异常的结果
-             */
+            */
             throw new IllegalArgumentException("Handler cannot be null");
         }
         
@@ -588,14 +588,14 @@ public class DeadLetterTemplate implements MessageTemplate {
     * @param originalDestination 原始目标地址
     * @param message             死信消息
     * @return 发送结果
-     */
+    */
     public SendResult reprocessDeadLetter(String originalDestination, Message message) {
         if (originalDestination == null) {
             /**
             * illegal参数异常。
             * @param null" 空"
             * @return illegal参数异常的结果
-             */
+            */
             throw new IllegalArgumentException("Original destination cannot be null");
         }
         if (message == null) {
@@ -603,7 +603,7 @@ public class DeadLetterTemplate implements MessageTemplate {
             * illegal参数异常。
             * @param null" 空"
             * @return illegal参数异常的结果
-             */
+            */
             throw new IllegalArgumentException("Message cannot be null");
         }
         
@@ -630,7 +630,7 @@ public class DeadLetterTemplate implements MessageTemplate {
     * @param originalDestination 原始目标地址
     * @param maxCount            最大处理数量
     * @param handler             处理器，返回true表示重新发送，false表示丢弃
-     */
+    */
     public void reprocessDeadLetters(String originalDestination, int maxCount,
                                      java.util.function.Predicate<Message> handler) {
         if (originalDestination == null) {
@@ -638,7 +638,7 @@ public class DeadLetterTemplate implements MessageTemplate {
             * illegal参数异常。
             * @param null" 空"
             * @return illegal参数异常的结果
-             */
+            */
             throw new IllegalArgumentException("Original destination cannot be null");
         }
         if (maxCount <= 0) {
@@ -647,7 +647,7 @@ public class DeadLetterTemplate implements MessageTemplate {
             * @param 0 0
             * @param maxCount 最大数量
             * @return illegal参数异常的结果
-             */
+            */
             throw new IllegalArgumentException("Max count must be greater than 0, got: " + maxCount);
         }
         if (handler == null) {
@@ -655,7 +655,7 @@ public class DeadLetterTemplate implements MessageTemplate {
             * illegal参数异常。
             * @param null" 空"
             * @return illegal参数异常的结果
-             */
+            */
             throw new IllegalArgumentException("Handler cannot be null");
         }
         
@@ -699,7 +699,7 @@ public class DeadLetterTemplate implements MessageTemplate {
                     * reprocessdeadletter。
                     * @param originalDestination 原始目标
                     * @param message 消息
-                     */
+                    */
                     reprocessDeadLetter(originalDestination, message);
                 } else {
                     log.info("[Queue] 死信消息已丢弃: {}", message.getId());
@@ -735,14 +735,14 @@ public class DeadLetterTemplate implements MessageTemplate {
     * 注册死信回调
     *
     * @param callback 回调函数（消息, 异常）
-     */
+    */
     public void onDeadLetter(BiConsumer<Message, Throwable> callback) {
         if (callback == null) {
             /**
             * illegal参数异常。
             * @param null" 空"
             * @return illegal参数异常的结果
-             */
+            */
             throw new IllegalArgumentException("Callback cannot be null");
         }
         deadLetterCallbacks.add(callback);
@@ -753,14 +753,14 @@ public class DeadLetterTemplate implements MessageTemplate {
     *
     * @param originalDestination 原始目标地址
     * @return 死信队列名称
-     */
+    */
     public String getDlqDestination(String originalDestination) {
         if (originalDestination == null) {
             /**
             * illegal参数异常。
             * @param null" 空"
             * @return illegal参数异常的结果
-             */
+            */
             throw new IllegalArgumentException("Original destination cannot be null");
         }
         return DLQ_PREFIX + originalDestination;
@@ -771,14 +771,14 @@ public class DeadLetterTemplate implements MessageTemplate {
     *
     * @param originalDestination 原始目标地址
     * @return 重试队列名称
-     */
+    */
     public String getRetryDestination(String originalDestination) {
         if (originalDestination == null) {
             /**
             * illegal参数异常。
             * @param null" 空"
             * @return illegal参数异常的结果
-             */
+            */
             throw new IllegalArgumentException("Original destination cannot be null");
         }
         return RETRY_PREFIX + originalDestination;
@@ -791,7 +791,7 @@ public class DeadLetterTemplate implements MessageTemplate {
     * @param originalMessageId 原始消息标识
     * @param retryCount 重试数量
     * @param cause cause
-     */
+    */
     private void scheduleRetry(String destination, Message message, String originalMessageId, int retryCount, Exception cause) {
         Duration delay = calculateRetryDelay(retryCount);
 
@@ -825,7 +825,7 @@ public class DeadLetterTemplate implements MessageTemplate {
                     * @param destination 目标
                     * @param message 消息
                     * @param e e
-                     */
+                    */
                     moveToDeadLetter(destination, message, e);
                     retryCounters.remove(originalMessageId);
                 }
@@ -839,7 +839,7 @@ public class DeadLetterTemplate implements MessageTemplate {
             * @param destination 目标
             * @param message 消息
             * @param cause cause
-             */
+            */
             moveToDeadLetter(destination, message, new RuntimeException("Scheduler is shutdown", cause));
             retryCounters.remove(originalMessageId);
         }
@@ -849,7 +849,7 @@ public class DeadLetterTemplate implements MessageTemplate {
     * 计算重试延迟（指数退避）
     * @param retryCount 重试数量
     * @return calculate重试延迟的结果
-     */
+    */
     private Duration calculateRetryDelay(int retryCount) {
         if (!config.isExponentialBackoff()) {
             return config.getRetryDelay();
@@ -896,7 +896,7 @@ public class DeadLetterTemplate implements MessageTemplate {
     * @param destination 目标
     * @param message 消息
     * @param cause cause
-     */
+    */
     private SendResult moveToDeadLetter(String destination, Message message, Exception cause) {
         String dlqDestination = getDlqDestination(destination);
 
@@ -934,34 +934,34 @@ public class DeadLetterTemplate implements MessageTemplate {
     * 死信队列配置
     * @author CH
     * @since 4.0.0
-     */
+    */
     @lombok.Data
     @lombok.NoArgsConstructor
     @lombok.AllArgsConstructor
     public static class DeadLetterConfig {
         /**
         * 最大重试次数
-         */
+        */
         private int maxRetries = 3;
 
         /**
         * 重试延迟
-         */
+        */
         private Duration retryDelay = Duration.ofSeconds(5);
 
         /**
         * 最大重试延迟
-         */
+        */
         private Duration maxRetryDelay = Duration.ofMinutes(5);
 
         /**
         * 是否启用指数退避
-         */
+        */
         private boolean exponentialBackoff = true;
 
         /**
         * 退避乘数
-         */
+        */
         private double backoffMultiplier = 2.0;
     }
 }

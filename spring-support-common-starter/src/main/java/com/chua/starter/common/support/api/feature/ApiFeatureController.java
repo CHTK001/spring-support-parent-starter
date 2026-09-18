@@ -37,7 +37,7 @@ public class ApiFeatureController {
     * 构造函数
     *
     * @param featureManager api特征管理器
-     */
+    */
     public ApiFeatureController(ApiFeatureManager featureManager) {
         this.featureManager = featureManager;
     }
@@ -46,7 +46,7 @@ public class ApiFeatureController {
     * 获取所有功能开关列表
     *
     * @return 功能开关列表
-     */
+    */
     @GetMapping
     @Operation(summary = "获取所有功能开关")
     public ReturnResult<List<ApiFeatureInfo>> getAllFeaturesForApi() {
@@ -58,7 +58,7 @@ public class ApiFeatureController {
     *
     * @param group 分组名称
     * @return 功能开关列表
-     */
+    */
     @GetMapping("/group/{group}")
     @Operation(summary = "按分组获取功能开关")
     public ReturnResult<List<ApiFeatureInfo>> getFeaturesByGroupForApi(
@@ -70,7 +70,7 @@ public class ApiFeatureController {
     * 获取所有分组
     *
     * @return 分组列表
-     */
+    */
     @GetMapping("/groups")
     @Operation(summary = "获取所有分组")
     public ReturnResult<Set<String>> getAllGroupsForApi() {
@@ -82,7 +82,7 @@ public class ApiFeatureController {
     *
     * @param featureId 功能标识
     * @return 功能开关信息
-     */
+    */
     @GetMapping("/{featureId}")
     @Operation(summary = "获取功能开关详情")
     public ReturnResult<ApiFeatureInfo> getFeatureInfoForApi(
@@ -100,7 +100,7 @@ public class ApiFeatureController {
     * @param featureId 功能标识
     * @param enabled   是否启用
     * @return 操作结果
-     */
+    */
     @PutMapping("/{featureId}")
     @Operation(summary = "设置功能开关状态")
     public ReturnResult<Boolean> setFeatureEnabledForApi(
@@ -118,7 +118,7 @@ public class ApiFeatureController {
     *
     * @param states 状态映射
     * @return 操作结果
-     */
+    */
     @PutMapping("/batch")
     @Operation(summary = "批量设置功能开关状态")
     public ReturnResult<Boolean> setFeatureEnabledBatchForApi(
@@ -132,7 +132,7 @@ public class ApiFeatureController {
     *
     * @param featureId 功能标识
     * @return 操作结果
-     */
+    */
     @PostMapping("/{featureId}/reset")
     @Operation(summary = "重置功能开关到默认状态")
     public ReturnResult<Boolean> resetFeatureForApi(
@@ -145,7 +145,7 @@ public class ApiFeatureController {
     * 重置所有功能开关到默认状态
     *
     * @return 操作结果
-     */
+    */
     @PostMapping("/reset-all")
     @Operation(summary = "重置所有功能开关")
     public ReturnResult<Boolean> resetAllFeaturesForApi() {
@@ -157,7 +157,7 @@ public class ApiFeatureController {
     * 获取功能开关统计
     *
     * @return 统计信息
-     */
+    */
     @GetMapping("/stats")
     @Operation(summary = "获取功能开关统计")
     public ReturnResult<Map<String, Object>> getFeatureStatsForApi() {

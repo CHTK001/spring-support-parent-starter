@@ -16,14 +16,14 @@ public class SocketioSyncServer extends AbstractSyncServer {
 
     /**
     * 套接字.IO 会话模板
-     */
+    */
     private final SocketIOSessionTemplate sessionTemplate;
 
     /**
     * 构造 套接字.IO 同步服务端。
     *
     * @param sessionTemplate 套接字.IO 会话模板
-     */
+    */
     public SocketioSyncServer(SocketIOSessionTemplate sessionTemplate) {
         this.sessionTemplate = sessionTemplate;
         this.protocol = "socketio";
@@ -50,13 +50,13 @@ public class SocketioSyncServer extends AbstractSyncServer {
     * 套接字.IO 连接建立时回调。
     *
     * @param sessionId 会话标识
-     */
+    */
     public void onSocketioConnect(String sessionId) {
         SyncSession syncSession = new SyncSession(sessionId);
         /**
         * fireconnectionestablished。
         * @param syncSession 同步会话
-         */
+        */
         fireConnectionEstablished(syncSession);
     }
 
@@ -64,14 +64,14 @@ public class SocketioSyncServer extends AbstractSyncServer {
     * 套接字.IO 连接断开时回调。
     *
     * @param sessionId 会话标识
-     */
+    */
     public void onSocketioDisconnect(String sessionId) {
         SyncSession syncSession = sessions.get(sessionId);
         if (syncSession != null) {
             /**
             * fireconnection关闭。
             * @param syncSession 同步会话
-             */
+            */
             fireConnectionClosed(syncSession);
         }
     }
@@ -82,7 +82,7 @@ public class SocketioSyncServer extends AbstractSyncServer {
     * @param sessionId 会话标识
     * @param topic     消息主题
     * @param data      消息数据
-     */
+    */
     public void onSocketioMessage(String sessionId, String topic, Object data) {
         SyncSession syncSession = sessions.get(sessionId);
         if (syncSession == null) {
@@ -94,7 +94,7 @@ public class SocketioSyncServer extends AbstractSyncServer {
         * @param syncSession 同步会话
         * @param topic topic
         * @param data 数据
-         */
+        */
         fireMessageReceived(syncSession, topic, data);
     }
 }

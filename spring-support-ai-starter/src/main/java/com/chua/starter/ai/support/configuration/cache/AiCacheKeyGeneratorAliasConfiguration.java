@@ -23,7 +23,7 @@ public class AiCacheKeyGeneratorAliasConfiguration {
     * <p>生成格式：{@code ai:cache:{model}:{provider}:{hash}}</p>
     *
     * @return KeyGenerator 实例
-     */
+    */
     @Bean("aiCacheKeyGenerator")
     public KeyGenerator aiCacheKeyGenerator() {
         return (target, method, params) -> {

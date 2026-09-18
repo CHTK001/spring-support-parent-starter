@@ -105,8 +105,8 @@ public class AiModelPriceSyncServiceImpl implements AiModelPriceSyncService {
     public void syncPrices(String code) {
         if (code == null || code.isBlank()) {
             /**
-            * 同步prices。
-             */
+    * 同步prices。
+    */
             syncPrices();
             return;
         }

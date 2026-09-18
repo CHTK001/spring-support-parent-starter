@@ -55,7 +55,7 @@ public @interface DSTransactional {
     * 事务名称（用于日志和监控）
     *
     * @return 事务名称
-     */
+    */
     @AliasFor("name")
     String value() default "";
 
@@ -63,7 +63,7 @@ public @interface DSTransactional {
     * 事务名称
     *
     * @return 事务名称
-     */
+    */
     @AliasFor("value")
     String name() default "";
 
@@ -73,6 +73,6 @@ public @interface DSTransactional {
     * 如果为 false，嵌套调用时创建一个独立的数据源上下文（调用结束后恢复）。</p>
     *
     * @return 是否传播
-     */
+    */
     boolean propagate() default true;
 }

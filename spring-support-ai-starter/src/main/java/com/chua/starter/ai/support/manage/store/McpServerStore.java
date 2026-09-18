@@ -33,7 +33,7 @@ public class McpServerStore {
     /**
     * 列出全部 MCP 服务器（按创建时间升序）
     * @return 列表全部的结果
-     */
+    */
     public List<Map<String, Object>> listAll() {
         List<SysAiMcpServer> entities = mcpServerMapper.selectList(
                 new LambdaQueryWrapper<SysAiMcpServer>()
@@ -49,7 +49,7 @@ public class McpServerStore {
     * 按 标识 查询
     * @param serverId 服务端标识
     * @return 获取的结果
-     */
+    */
     public Map<String, Object> get(String serverId) {
         SysAiMcpServer entity = mcpServerMapper.selectById(serverId);
         return entity == null ? null : toContract(entity);
@@ -59,7 +59,7 @@ public class McpServerStore {
     * 新增（由调用方预先填充 标识 与时间戳）
     * @param contract contract
     * @return 插入的结果
-     */
+    */
     public Map<String, Object> insert(Map<String, Object> contract) {
         SysAiMcpServer entity = fromContract(contract);
         mcpServerMapper.insert(entity);
@@ -70,7 +70,7 @@ public class McpServerStore {
     * 更新（按 标识，非 空 字段覆盖）
     * @param contract contract
     * @return 更新的结果
-     */
+    */
     public Map<String, Object> update(Map<String, Object> contract) {
         SysAiMcpServer entity = fromContract(contract);
         mcpServerMapper.updateById(entity);
@@ -80,7 +80,7 @@ public class McpServerStore {
     /**
     * 删除
     * @param serverId 服务端标识
-     */
+    */
     public void delete(String serverId) {
         mcpServerMapper.deleteById(serverId);
     }
@@ -89,7 +89,7 @@ public class McpServerStore {
     * 契约 映射 → 实体
     * @param c c
     * @return 从contract的结果
-     */
+    */
     private SysAiMcpServer fromContract(Map<String, Object> c) {
         SysAiMcpServer e = new SysAiMcpServer();
         e.setMcpServerId(str(c.get("mcp_server_id")));
@@ -111,7 +111,7 @@ public class McpServerStore {
     *
     * @param e 实体
     * @return 契约 Map
-     */
+    */
     private Map<String, Object> toContract(SysAiMcpServer e) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("mcp_server_id", e.getMcpServerId());
@@ -133,7 +133,7 @@ public class McpServerStore {
         * str。
         * @param v v
         * @return str的结果
-         */
+        */
         return m;
     }
 
@@ -142,7 +142,7 @@ public class McpServerStore {
         * bool。
         * @param v v
         * @return bool的结果
-         */
+        */
         return v == null ? null : String.valueOf(v);
     }
 
@@ -152,7 +152,7 @@ public class McpServerStore {
         * @param v v
         * @return longVal的结果
         * @param json json
-         */
+        */
         return v instanceof Boolean ? (Boolean) v : (v == null ? null : Boolean.parseBoolean(String.valueOf(v)));
     }
 

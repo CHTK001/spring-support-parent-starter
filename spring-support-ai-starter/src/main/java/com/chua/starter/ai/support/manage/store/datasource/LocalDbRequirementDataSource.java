@@ -56,10 +56,10 @@ public class LocalDbRequirementDataSource implements IRequirementDataSource {
     private static final String COUNT_SQL =
             """
             /**
-            * 数量。
-            * @param * *
-            * @return 数量的结果
-             */
+    * 数量。
+    * @param * *
+    * @return 数量的结果
+    */
             SELECT COUNT(*) FROM `%s`
             """;
 
@@ -89,7 +89,7 @@ public class LocalDbRequirementDataSource implements IRequirementDataSource {
     * @param config 配置
     * @param lastSyncAt 最后一个同步at
     * @return 同步的结果
-     */
+    */
     @Override
     @SuppressWarnings("unchecked")
     public int sync(Map<String, Object> config, long lastSyncAt) {
@@ -110,7 +110,7 @@ public class LocalDbRequirementDataSource implements IRequirementDataSource {
             /**
             * 尝试。
             * @param ds.getConnection( ds.获取connection(
-             */
+            */
             try (Connection conn = ds.getConnection();
                  PreparedStatement ps = conn.prepareStatement(sql);
                  ResultSet rs = ps.executeQuery()) {
@@ -132,7 +132,7 @@ public class LocalDbRequirementDataSource implements IRequirementDataSource {
     *
     * @return 远程需求记录列表
     * @param config 配置
-     */
+    */
     @SuppressWarnings("unchecked")
     public List<Map<String, Object>> fetchRemoteRequirements(Map<String, Object> config) {
         HikariDataSource ds = buildDataSource(config);
@@ -151,7 +151,7 @@ public class LocalDbRequirementDataSource implements IRequirementDataSource {
             /**
             * 尝试。
             * @param ds.getConnection( ds.获取connection(
-             */
+            */
             try (Connection conn = ds.getConnection();
                  PreparedStatement ps = conn.prepareStatement(sql);
                  ResultSet rs = ps.executeQuery()) {
@@ -192,7 +192,7 @@ public class LocalDbRequirementDataSource implements IRequirementDataSource {
         /**
         * 尝试。
         * @param ds.getConnection( ds.获取connection(
-         */
+        */
         try (Connection conn = ds.getConnection()) {
             return conn.isValid(3);
         } catch (Exception e) {
@@ -207,7 +207,7 @@ public class LocalDbRequirementDataSource implements IRequirementDataSource {
     * 构建数据源。
     * @param config 配置
     * @return 构建数据源的结果
-     */
+    */
     private HikariDataSource buildDataSource(Map<String, Object> config) {
         String host = getString(config, "host", "127.0.0.1");
         int port = getInt(config, "port", 3306);
@@ -235,7 +235,7 @@ public class LocalDbRequirementDataSource implements IRequirementDataSource {
             * hikari数据源。
             * @param hc hc
             * @return hikari数据源的结果
-             */
+            */
             return new HikariDataSource(hc);
         } catch (Exception e) {
             log.error("[LocalDbDS] 数据源构建失败: {}", e.getMessage(), e);
@@ -248,7 +248,7 @@ public class LocalDbRequirementDataSource implements IRequirementDataSource {
     *
     * @param raw 原始表名
     * @return 校验通过的表名，非法时返回 空
-     */
+    */
     private String validateTableName(String raw) {
         if (raw == null || raw.isBlank()) {
             return null;
@@ -264,7 +264,7 @@ public class LocalDbRequirementDataSource implements IRequirementDataSource {
     * @param map 映射
     * @param key 钥匙
     * @return 获取字符串的结果
-     */
+    */
     private String getString(Map<String, Object> map, String key) {
         Object v = map.get(key);
         return v != null ? v.toString() : null;
@@ -276,7 +276,7 @@ public class LocalDbRequirementDataSource implements IRequirementDataSource {
     * @param key 钥匙
     * @param defaultValue 默认价值观
     * @return 获取字符串的结果
-     */
+    */
     private String getString(Map<String, Object> map, String key, String defaultValue) {
         Object v = map.get(key);
         return v != null ? v.toString() : defaultValue;
@@ -288,7 +288,7 @@ public class LocalDbRequirementDataSource implements IRequirementDataSource {
     * @param key 钥匙
     * @param defaultValue 默认价值观
     * @return 获取int的结果
-     */
+    */
     private int getInt(Map<String, Object> map, String key, int defaultValue) {
         Object v = map.get(key);
         if (v instanceof Number) {

@@ -13,17 +13,17 @@ public class Version implements Comparable<Version> {
 
     /**
     * 主版本号
-     */
+    */
     private final int major;
 
     /**
     * 次版本号
-     */
+    */
     private final int minor;
 
     /**
     * 修订号
-     */
+    */
     private final int patch;
 
     /**
@@ -32,7 +32,7 @@ public class Version implements Comparable<Version> {
     * @param major 主版本号
     * @param minor 次版本号
     * @param patch 修订号
-     */
+    */
     public Version(int major, int minor, int patch) {
         this.major = major;
         this.minor = minor;
@@ -45,14 +45,14 @@ public class Version implements Comparable<Version> {
     * @param version 版本号字符串，如 "1.2.3"
     * @return Version 对象
     * @throws IllegalArgumentException 格式不正确时抛出
-     */
+    */
     public static Version parse(String version) {
         if (version == null || version.isEmpty()) {
             /**
             * illegal参数异常。
             * @param "版本号不能为空" "版本号不能为空"
             * @return illegal参数异常的结果
-             */
+            */
             throw new IllegalArgumentException("版本号不能为空");
         }
         String[] parts = version.split("\\.");
@@ -75,7 +75,7 @@ public class Version implements Comparable<Version> {
             * @param version 版本
             * @param e e
             * @return illegal参数异常的结果
-             */
+            */
             throw new IllegalArgumentException("版本号格式不正确: " + version, e);
         }
         /**
@@ -83,7 +83,7 @@ public class Version implements Comparable<Version> {
         * @param major major
         * @param minor minor
         * @param patch patch
-         */
+        */
         return new Version(major, minor, patch);
     }
 
@@ -91,7 +91,7 @@ public class Version implements Comparable<Version> {
     * 获取主版本号
     *
     * @return major
-     */
+    */
     public int getMajor() {
         return major;
     }
@@ -100,7 +100,7 @@ public class Version implements Comparable<Version> {
     * 获取次版本号
     *
     * @return minor
-     */
+    */
     public int getMinor() {
         return minor;
     }
@@ -109,7 +109,7 @@ public class Version implements Comparable<Version> {
     * 获取修订号
     *
     * @return patch
-     */
+    */
     public int getPatch() {
         return patch;
     }
@@ -120,7 +120,7 @@ public class Version implements Comparable<Version> {
     *
     * @param other 要比较的另一个版本对象
     * @return 负数表示小于、零表示等于、正数表示大于
-     */
+    */
     @Override
     public int compareTo(Version other) {
         if (this.major != other.major) {
@@ -136,7 +136,7 @@ public class Version implements Comparable<Version> {
     * 返回格式化的版本号字符串，格式为 "主版本号.次版本号.修订号"
     *
     * @return 版本号字符串，例如 "1.2.3"
-     */
+    */
     @Override
     public String toString() {
         return major + "." + minor + "." + patch;
@@ -148,7 +148,7 @@ public class Version implements Comparable<Version> {
     *
     * @param o 待比较的对象
     * @return 如果版本号完全相同则返回 true，否则返回 false
-     */
+    */
     @Override
     public boolean equals(Object o) {
         if (this == o) {
@@ -165,7 +165,7 @@ public class Version implements Comparable<Version> {
     * 计算版本对象的哈希码，基于主版本号、次版本号和修订号
     *
     * @return 哈希码值
-     */
+    */
     @Override
     public int hashCode() {
         return java.util.Objects.hash(major, minor, patch);

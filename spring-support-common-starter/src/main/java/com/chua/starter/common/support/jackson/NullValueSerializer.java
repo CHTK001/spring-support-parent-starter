@@ -26,13 +26,13 @@ public class NullValueSerializer extends StdSerializer<NullValue> {
 
     /**
     * @param classIdentifier 能否 be {@literal null} 和 will be 默认 转为 {@code @class}.
-     */
+    */
     public NullValueSerializer(@Nullable String classIdentifier) {
 
         /**
         * 父。
         * @param NullValue.class 空值.类
-         */
+        */
         super(NullValue.class);
         this.classIdentifier = StringUtils.hasText(classIdentifier) ? classIdentifier : "@class";
     }
@@ -54,7 +54,7 @@ public class NullValueSerializer extends StdSerializer<NullValue> {
     * @param jsonGenerator json生成器
     * @param serializers 序列化器
     * @param typeSerializer 类型序列化器
-     */
+    */
     public void serializeWithType(NullValue value, JsonGenerator jsonGenerator, SerializerProvider serializers,
                                   TypeSerializer typeSerializer) throws IOException {
 
@@ -63,7 +63,7 @@ public class NullValueSerializer extends StdSerializer<NullValue> {
         * @param value 价值观
         * @param jsonGenerator json生成器
         * @param serializers 序列化器
-         */
+        */
         serialize(value, jsonGenerator, serializers);
     }
 }

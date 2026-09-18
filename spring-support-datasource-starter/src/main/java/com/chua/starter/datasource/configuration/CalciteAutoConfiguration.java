@@ -44,20 +44,20 @@ public class CalciteAutoConfiguration {
     /**
     * 注册 Calcite 数据源转换器 Bean
     * @return calcite数据源转换的结果
-     */
+    */
     @Bean
     @ConditionalOnMissingBean(name = "calciteDataSourceConversion")
     public DataSourceConversion calciteDataSourceConversion() {
         /**
         * calcite数据源转换。
         * @return calcite数据源转换的结果
-         */
+        */
         return new CalciteDataSourceConversion();
     }
 
     /**
     * 创建 Calcite 聚合数据源 Bean
-     */
+    */
     @Bean
     @ConditionalOnMissingBean(name = "calciteDataSource")
     public DataSource calciteDataSource(
@@ -86,7 +86,7 @@ public class CalciteAutoConfiguration {
     /**
     * 收集所有已注册的数据源（过滤动态路由数据源和监控包装数据源）
     * @return collect数据源的结果
-     */
+    */
     private List<DataSource> collectDataSources() {
         Map<String, DataSource> allDataSources = DataSourceContextSupport.getAllDataSources();
         List<DataSource> result = new ArrayList<>();

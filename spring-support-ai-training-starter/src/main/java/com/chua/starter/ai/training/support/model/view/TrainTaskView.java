@@ -21,57 +21,57 @@ public class TrainTaskView implements Serializable {
 
     /**
     * 任务 标识。
-     */
+    */
     private String taskId;
 
     /**
     * 训练状态。
-     */
+    */
     private TrainStatus status;
 
     /**
     * 上传的 压缩 原始文件名。
-     */
+    */
     private String fileName;
 
     /**
     * 训练进度。
-     */
+    */
     private TrainProgressView progress;
 
     /**
     * 模型保存路径（训练完成时填充）。
-     */
+    */
     private String modelPath;
 
     /**
     * 类别标签串（训练完成后填充）。
-     */
+    */
     private String classLabels;
 
     /**
     * 实际使用的基模型路径。
-     */
+    */
     private String baseModelPath;
 
     /**
     * 任务创建时间。
-     */
+    */
     private Instant createdAt;
 
     /**
     * 训练开始时间。
-     */
+    */
     private Instant startedAt;
 
     /**
     * 训练完成/失败时间。
-     */
+    */
     private Instant finishedAt;
 
     /**
     * 错误信息（失败时填充）。
-     */
+    */
     private String errorMessage;
 
     /**
@@ -79,7 +79,7 @@ public class TrainTaskView implements Serializable {
     *
     * @param task 训练任务领域对象
     * @return 视图对象
-     */
+    */
     public static TrainTaskView from(TrainTask task) {
         TrainTaskView view = new TrainTaskView();
         view.setTaskId(task.getId());
@@ -100,7 +100,7 @@ public class TrainTaskView implements Serializable {
     * 内部进度视图。
     * @author CH
     * @since 4.0.0
-     */
+    */
     @Data
     public static class TrainProgressView implements Serializable {
 
@@ -108,27 +108,27 @@ public class TrainTaskView implements Serializable {
 
         /**
         * 当前 轮次。
-         */
+        */
         private int currentEpoch;
 
         /**
         * 总 轮次 数。
-         */
+        */
         private int totalEpochs;
 
         /**
         * 当前训练阶段描述。
-         */
+        */
         private String stage;
 
         /**
         * 进度百分比（0~100）。
-         */
+        */
         private double progress;
 
         /**
         * 当前最优 F1 值。
-         */
+        */
         private double bestScore;
 
         /**
@@ -136,7 +136,7 @@ public class TrainTaskView implements Serializable {
         *
         * @param progress 训练进度领域对象
         * @return 进度视图
-         */
+        */
         public static TrainProgressView from(TrainProgress progress) {
             TrainProgressView view = new TrainProgressView();
             view.setCurrentEpoch(progress.getCurrentEpoch());

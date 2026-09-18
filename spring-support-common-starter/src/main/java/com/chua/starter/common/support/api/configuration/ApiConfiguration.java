@@ -111,7 +111,7 @@ public class ApiConfiguration implements EnvironmentAware  {
     *
     * @param apiResponseEncodeRegister 编码注册器
     * @return 响应编码处理器
-     */
+    */
     @Bean("apiResponseEncodeResponseBodyAdvice")
     @ConditionalOnMissingBean
     @ConditionalOnProperty(name = "plugin.api.encode.enable", havingValue = "true", matchIfMissing = true)
@@ -120,7 +120,7 @@ public class ApiConfiguration implements EnvironmentAware  {
         * api响应encode响应主体advice。
         * @param apiResponseEncodeRegister api响应encode注册
         * @return api响应encode响应主体advice的结果
-         */
+        */
         return new ApiResponseEncodeResponseBodyAdvice(apiResponseEncodeRegister);
     }
 
@@ -128,7 +128,7 @@ public class ApiConfiguration implements EnvironmentAware  {
     * 响应编码注册器
     *
     * @return 编码注册器
-     */
+    */
     @Bean("apiResponseEncodeRegister")
     @Lazy
     @ConditionalOnMissingBean
@@ -138,7 +138,7 @@ public class ApiConfiguration implements EnvironmentAware  {
         * api响应encode注册。
         * @param apiProperties.getEncode( api属性.获取encode(
         * @return api响应encode注册的结果
-         */
+        */
         return new ApiResponseEncodeRegister(apiProperties.getEncode());
     }
 
@@ -149,7 +149,7 @@ public class ApiConfiguration implements EnvironmentAware  {
     *
     * @param apiRequestDecodeRegister 解码注册器
     * @return 请求解码处理器
-     */
+    */
     @Bean("apiRequestDecodeBodyAdvice")
     @ConditionalOnMissingBean
     @ConditionalOnProperty(name = "plugin.api.decode.enable", havingValue = "true", matchIfMissing = true)
@@ -158,7 +158,7 @@ public class ApiConfiguration implements EnvironmentAware  {
         * api请求decode主体advice。
         * @param apiRequestDecodeRegister api请求decode注册
         * @return api请求decode主体advice的结果
-         */
+        */
         return new ApiRequestDecodeBodyAdvice(apiRequestDecodeRegister);
     }
 
@@ -166,7 +166,7 @@ public class ApiConfiguration implements EnvironmentAware  {
     * 请求解码注册器
     *
     * @return 解码注册器
-     */
+    */
     @Bean("apiRequestDecodeRegister")
     @Lazy
     @ConditionalOnMissingBean
@@ -176,7 +176,7 @@ public class ApiConfiguration implements EnvironmentAware  {
         * api请求decode注册。
         * @param apiProperties.getDecode( api属性.获取decode(
         * @return api请求decode注册的结果
-         */
+        */
         return new ApiRequestDecodeRegister(apiProperties.getDecode());
     }
 
@@ -193,7 +193,7 @@ public class ApiConfiguration implements EnvironmentAware  {
     * @param apiProperties api 配置
     * @param environment   环境
     * @return 版本路由注册器
-     */
+    */
     @Bean
     @ConditionalOnMissingBean(WebMvcRegistrations.class)
     @ConditionalOnProperty(name = "plugin.api.version.enable", havingValue = "true", matchIfMissing = true)
@@ -201,7 +201,7 @@ public class ApiConfiguration implements EnvironmentAware  {
         /**
         * webmvcregistrations。
         * @return WebMvcRegistrations的结果
-         */
+        */
         return new WebMvcRegistrations() {
             @Override
             public RequestMappingHandlerMapping getRequestMappingHandlerMapping() {
@@ -210,7 +210,7 @@ public class ApiConfiguration implements EnvironmentAware  {
                 * @param apiProperties api属性
                 * @param environment 环境
                 * @return api版本请求mapping处理器mapping的结果
-                 */
+                */
                 return new ApiVersionRequestMappingHandlerMapping(apiProperties, environment);
             }
         };
@@ -228,7 +228,7 @@ public class ApiConfiguration implements EnvironmentAware  {
     * &#64;Autowired
     * private UniformResponseBodyAdvice uniformResponseBodyAdvice;
     * </pre>
-     */
+    */
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(name = "plugin.api.uniform", havingValue = "true", matchIfMissing = true)
@@ -236,7 +236,7 @@ public class ApiConfiguration implements EnvironmentAware  {
         /**
         * apiuniform响应主体advice。
         * @return apiuniform响应主体advice的结果
-         */
+        */
         return new ApiUniformResponseBodyAdvice();
     }
     /**
@@ -251,7 +251,7 @@ public class ApiConfiguration implements EnvironmentAware  {
     * &#64;Qualifier("uniform")
     * private ExecutorService executorService;
     * </pre>
-     */
+    */
     @Bean("uniform")
     public ExecutorService executor() {
         return Executors.newThreadPerTaskExecutor(Thread.ofVirtual().name("uniform-pool").factory());
@@ -263,14 +263,14 @@ public class ApiConfiguration implements EnvironmentAware  {
     * 统一异常处理
     *
     * @return 异常处理器
-     */
+    */
     @Bean
     @ConditionalOnMissingBean
     public ApiExceptionAdvice apiExceptionAdvice() {
         /**
         * api异常advice。
         * @return api异常advice的结果
-         */
+        */
         return new ApiExceptionAdvice();
     }
 
@@ -294,7 +294,7 @@ public class ApiConfiguration implements EnvironmentAware  {
     * 保证 {@code plugin.api.*} 相关开关始终出现在服务信息横幅中。</p>
     *
     * @return ServiceInfoContributor
-     */
+    */
     @Bean
     public ServiceInfoContributor apiServiceInfoContributor() {
         return registry -> logControlStatus();

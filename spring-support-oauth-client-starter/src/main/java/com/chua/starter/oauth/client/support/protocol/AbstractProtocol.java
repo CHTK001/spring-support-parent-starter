@@ -49,7 +49,7 @@ public abstract class AbstractProtocol implements Protocol {
 
     /**
     * 认证信息缓存（线程安全的单例初始化）
-     */
+    */
     protected static volatile CacheProvider CACHEABLE;
     /** 缓存_锁 */
     private static final Object CACHE_LOCK = new Object();
@@ -64,7 +64,7 @@ public abstract class AbstractProtocol implements Protocol {
     /**
     * 创建 抽象协议 实例
     * @param authClientProperties 认证客户端属性
-     */
+    */
     public AbstractProtocol(AuthClientProperties authClientProperties) {
         this.authClientProperties = authClientProperties;
         this.encryption = authClientProperties.getEncryption();
@@ -87,7 +87,7 @@ public abstract class AbstractProtocol implements Protocol {
     * 清除指定用户的缓存（用于用户权限变更时调用）
     *
     * @param token 用户令牌
-     */
+    */
     public static void invalidateCache(String token) {
         if (CACHEABLE != null && token != null) {
             String cacheKey = DigestUtils.sha256(token);
@@ -99,7 +99,7 @@ public abstract class AbstractProtocol implements Protocol {
     
     /**
     * 清除所有缓存
-     */
+    */
     public static void invalidateAllCache() {
         if (CACHEABLE != null) {
             CACHEABLE.clear();
@@ -115,7 +115,7 @@ public abstract class AbstractProtocol implements Protocol {
     * @param token       令牌
     * @param subProtocol 认证协议
     * @return 认证信息
-     */
+    */
     protected abstract AuthenticationInformation approve(Cookie cookies, String token, String subProtocol);
     /**
     * 根据用户编码获取认证信息
@@ -126,7 +126,7 @@ public abstract class AbstractProtocol implements Protocol {
     * 示例: 认证信息{信息=OK, 申报结果=用户resume{用户标识='1', 用户名='admin'}}
     *
     * @since 2023-01-01
-     */
+    */
     protected abstract AuthenticationInformation authenticationUserCode(AppKeySecret appKeySecret);
 
     /**
@@ -137,7 +137,7 @@ public abstract class AbstractProtocol implements Protocol {
     * @param upgradeType  升级类型
     * @param refreshToken 刷新令牌
     * @return 认证信息
-     */
+    */
     protected abstract AuthenticationInformation upgradeInformation(Cookie cookie, String token, UpgradeType upgradeType, String refreshToken);
 
 
@@ -145,7 +145,7 @@ public abstract class AbstractProtocol implements Protocol {
     * 是否加密
     *
     * @return 是否加密
-     */
+    */
     protected boolean isEncode() {
         return enableEncryption;
     }
@@ -155,7 +155,7 @@ public abstract class AbstractProtocol implements Protocol {
     * @param value 值
     * @param key   密钥
     * @return 数据
-     */
+    */
     protected String createData(String value, String key) {
         if (!enableEncryption) {
             return value;
@@ -175,7 +175,7 @@ public abstract class AbstractProtocol implements Protocol {
     * @param jsonObject json对象
     * @param key        密钥
     * @return 数据
-     */
+    */
     protected String createData(JsonObject jsonObject, String key) {
         String jsonObjectJSONString = jsonObject.toJSONString();
         if (!enableEncryption) {
@@ -201,7 +201,7 @@ public abstract class AbstractProtocol implements Protocol {
     *
     * @param appKeySecret app钥匙 参数
     * @return 请求体
-     */
+    */
     protected JsonObject createAppKeyAuthenticationData(AppKeySecret appKeySecret) {
         JsonObject jsonObject = new JsonObject();
         if (appKeySecret == null) {
@@ -227,7 +227,7 @@ public abstract class AbstractProtocol implements Protocol {
         * 合并app钥匙请求主体。
         * @param jsonObject json对象
         * @param appKeySecret.getBody( app钥匙secret.getbody(
-         */
+        */
         mergeAppKeyRequestBody(jsonObject, appKeySecret.getBody());
         return jsonObject;
     }
@@ -237,7 +237,7 @@ public abstract class AbstractProtocol implements Protocol {
     *
     * @param target 目标请求体
     * @param body   原始 主体
-     */
+    */
     protected void mergeAppKeyRequestBody(JsonObject target, String body) {
         if (target == null || StringUtils.isBlank(body)) {
             return;
@@ -265,7 +265,7 @@ public abstract class AbstractProtocol implements Protocol {
     * 获取 access钥匙（用于请求头）
     *
     * @return AccessKey，未启用返回 空
-     */
+    */
     protected String getAccessKey() {
         AuthClientProperties.Aksk aksk = authClientProperties.getKey();
         if (aksk != null && aksk.isEnabled()) {
@@ -278,7 +278,7 @@ public abstract class AbstractProtocol implements Protocol {
     * 选择地址
     *
     * @return 地址
-     */
+    */
     protected String selectUrl() {
         LoadBalance balance = ServiceProvider.of(LoadBalance.class).getExtension(authClientProperties.getBalance());
         LoadBalance stringRobin = balance.create();
@@ -310,10 +310,10 @@ public abstract class AbstractProtocol implements Protocol {
         AuthenticationInformation authenticationInformation = approve(cookie, token, subProtocol);
 
         /**
-        * 写入认证信息。
-        * @param cacheKey 缓存钥匙
-        * @param authenticationInformation 认证信息
-         */
+    * 写入认证信息。
+    * @param cacheKey 缓存钥匙
+    * @param authenticationInformation 认证信息
+    */
         writeAuthenticationInformation(cacheKey, authenticationInformation);
         return authenticationInformation;
     }
@@ -323,7 +323,7 @@ public abstract class AbstractProtocol implements Protocol {
     *
     * @param appKeySecret 用户编码
     * @return 缓存key
-     */
+    */
     @Override
     public AuthenticationInformation authentication(AppKeySecret appKeySecret) {
         if (null == appKeySecret) {
@@ -343,7 +343,7 @@ public abstract class AbstractProtocol implements Protocol {
         * 写入认证信息。
         * @param cacheKey 缓存钥匙
         * @param authenticationInformation 认证信息
-         */
+        */
         writeAuthenticationInformation(cacheKey, authenticationInformation);
         return authenticationInformation;
     }
@@ -353,7 +353,7 @@ public abstract class AbstractProtocol implements Protocol {
     * @param cookie Cookie
     * @param token  令牌
     * @return 是否有效
-     */
+    */
     private boolean hasValid(Cookie cookie, String token) {
         return null != cookie || StringUtils.isNotBlank(token);
     }
@@ -366,10 +366,10 @@ public abstract class AbstractProtocol implements Protocol {
         boolean isRefresh = upgradeType == UpgradeType.REFRESH && refreshToken != null && !refreshToken.isEmpty();
         if (!isRefresh && !hasValid(cookie, token)) {
             /**
-            * illegal参数异常。
-            * @param "认证失败" "认证失败"
-            * @return illegal参数异常的结果
-             */
+    * illegal参数异常。
+    * @param "认证失败" "认证失败"
+    * @return illegal参数异常的结果
+    */
             throw new IllegalArgumentException("认证失败");
         }
         AuthenticationInformation authenticationInformation = upgradeInformation(cookie, token, upgradeType, refreshToken);
@@ -378,14 +378,14 @@ public abstract class AbstractProtocol implements Protocol {
             * illegal参数异常。
             * @param "升级失败" "升级失败"
             * @return illegal参数异常的结果
-             */
+            */
             throw new IllegalArgumentException("升级失败");
         }
         /**
         * login结果。
         * @param authenticationInformation.getToken( 认证信息.gettoken(
         * @return login结果的结果
-         */
+        */
         return new LoginResult(authenticationInformation.getToken(), authenticationInformation.getRefreshToken(), null, authenticationInformation.getReturnResult());
     }
 
@@ -394,7 +394,7 @@ public abstract class AbstractProtocol implements Protocol {
     *
     * @return 是否有缓存
     * @param cacheKey 缓存钥匙
-     */
+    */
     protected boolean hasCache(String cacheKey) {
         if (null == cacheKey) {
             return false;
@@ -415,7 +415,7 @@ public abstract class AbstractProtocol implements Protocol {
     * @param key 缓存钥匙
     * @return 缓存信息
     * @param returnResult 申报结果
-     */
+    */
     protected LoginResult createUpgradeResponse(ReturnResult returnResult, String key) {
         var code = returnResult.getCode();
         if (RESOURCE_OAUTH_ERROR.getCode().equals(code)) {
@@ -428,7 +428,7 @@ public abstract class AbstractProtocol implements Protocol {
             * illegal参数异常。
             * @param "OSS服务器不存在" "对象存储服务器不存在"
             * @return illegal参数异常的结果
-             */
+            */
             throw new IllegalArgumentException("OSS服务器不存在");
         }
         Object data = returnResult.getData();
@@ -437,7 +437,7 @@ public abstract class AbstractProtocol implements Protocol {
             * illegal参数异常。
             * @param "OSS服务器不存在" "对象存储服务器不存在"
             * @return illegal参数异常的结果
-             */
+            */
             throw new IllegalArgumentException("OSS服务器不存在");
 
         }
@@ -459,7 +459,7 @@ public abstract class AbstractProtocol implements Protocol {
         * illegal参数异常。
         * @param "OSS服务器不存在" "对象存储服务器不存在"
         * @return illegal参数异常的结果
-         */
+        */
         throw new IllegalArgumentException("OSS服务器不存在");
 
     }
@@ -471,7 +471,7 @@ public abstract class AbstractProtocol implements Protocol {
     * @param key          密钥
     * @return 认证信息
     * @param path 路径
-     */
+    */
     protected AuthenticationInformation createAuthenticationInformation(ReturnResult returnResult, String key, String path) {
         String code = returnResult.getCode();
         HttpServletRequest servletRequest = RequestUtils.getRequest();
@@ -480,7 +480,7 @@ public abstract class AbstractProtocol implements Protocol {
                 /**
                 * 注销从请求。
                 * @param servletRequest servlet请求
-                 */
+                */
                 unregisterFromRequest(servletRequest);
             }
             log.warn("认证失败 ==> {}", returnResult.getMsg());
@@ -489,7 +489,7 @@ public abstract class AbstractProtocol implements Protocol {
             * @param AUTHENTICATION_FAILURE 认证失败
             * @param null 空
             * @return 认证信息的结果
-             */
+            */
             return new AuthenticationInformation(AUTHENTICATION_FAILURE, null);
         }
 
@@ -498,7 +498,7 @@ public abstract class AbstractProtocol implements Protocol {
             /**
             * 注销从请求。
             * @param servletRequest servlet请求
-             */
+            */
             unregisterFromRequest(servletRequest);
             log.warn("认证失败 ==> {}", returnResult.getMsg());
             // 透传服务端的真实错误消息（如"账号/密码不正确"），而非固定的"鉴权服务器异常"
@@ -530,7 +530,7 @@ public abstract class AbstractProtocol implements Protocol {
                 /**
                 * 注册转为请求。
                 * @param userResume 用户resume
-                 */
+                */
                 registerToRequest(userResume);
                 AuthenticationInformation authenticationInformation = new AuthenticationInformation(OK, userResume);
                 authenticationInformation.setRefreshToken(loginResult.getRefreshToken());
@@ -542,14 +542,14 @@ public abstract class AbstractProtocol implements Protocol {
                 /**
                 * 注销从请求。
                 * @param servletRequest servlet请求
-                 */
+                */
                 unregisterFromRequest(servletRequest);
                 /**
                 * 认证信息。
                 * @param Information.OK 信息.OK
                 * @param null 空
                 * @return 认证信息的结果
-                 */
+                */
                 return new AuthenticationInformation(Information.OK, null);
             }
 
@@ -565,7 +565,7 @@ public abstract class AbstractProtocol implements Protocol {
             /**
             * supplement角色。
             * @param userResume 用户resume
-             */
+            */
             supplementRoles(userResume);
             AuthenticationInformation authenticationInformation = new AuthenticationInformation(OK, userResume);
             authenticationInformation.setToken(userResume.getToken());
@@ -579,7 +579,7 @@ public abstract class AbstractProtocol implements Protocol {
         * @param OTHER OTHER
         * @param null 空
         * @return 认证信息的结果
-         */
+        */
         return new AuthenticationInformation(OTHER, null);
     }
 
@@ -587,7 +587,7 @@ public abstract class AbstractProtocol implements Protocol {
     * 删除hook
     *
     * @param servletRequest servlet请求
-     */
+    */
     private void unregisterFromRequest(HttpServletRequest servletRequest) {
         com.chua.starter.oauth.client.support.execute.AuthSessionUtils.removeUsername();
         com.chua.starter.oauth.client.support.execute.AuthSessionUtils.removeUserInfo();
@@ -608,12 +608,12 @@ public abstract class AbstractProtocol implements Protocol {
     *
     * @return void
     * @param userResume 用户resume
-     */
+    */
     public static void registerToRequest(UserResume userResume) {
         /**
         * supplement角色。
         * @param userResume 用户resume
-         */
+        */
         supplementRoles(userResume);
         com.chua.starter.oauth.client.support.execute.AuthSessionUtils.setUsername(userResume.getUsername());
         var request = com.chua.starter.oauth.client.support.execute.AuthSessionUtils.getRequest();
@@ -636,7 +636,7 @@ public abstract class AbstractProtocol implements Protocol {
     * </p>
     *
     * @param userResume 用户信息
-     */
+    */
     private static void supplementRoles(UserResume userResume) {
         if (userResume == null) {
             return;
@@ -671,7 +671,7 @@ public abstract class AbstractProtocol implements Protocol {
     * </p>
     *
     * @return 用户角色解析器，未找到时返回 空
-     */
+    */
     private static UserRoleResolver resolveUserRoleResolver() {
         ApplicationContext context = null;
         try {
@@ -708,7 +708,7 @@ public abstract class AbstractProtocol implements Protocol {
     * 清除缓存信息
     *
     * @param cacheKey 缓存钥匙
-     */
+    */
     protected void clearAuthenticationInformation(String cacheKey) {
         if (null == cacheKey) {
             return;
@@ -727,7 +727,7 @@ public abstract class AbstractProtocol implements Protocol {
     *
     * @param cacheKey 缓存钥匙
     * @return 认证信息，未命中或无效返回 空
-     */
+    */
     protected AuthenticationInformation readAuthenticationInformation(String cacheKey) {
         if (null == cacheKey) {
             return null;
@@ -754,7 +754,7 @@ public abstract class AbstractProtocol implements Protocol {
             /**
             * clear认证信息。
             * @param cacheKey 缓存钥匙
-             */
+            */
             clearAuthenticationInformation(cacheKey);
             return null;
         }
@@ -764,7 +764,7 @@ public abstract class AbstractProtocol implements Protocol {
             /**
             * clear认证信息。
             * @param cacheKey 缓存钥匙
-             */
+            */
             clearAuthenticationInformation(cacheKey);
             return null;
         }
@@ -774,7 +774,7 @@ public abstract class AbstractProtocol implements Protocol {
             /**
             * clear认证信息。
             * @param cacheKey 缓存钥匙
-             */
+            */
             clearAuthenticationInformation(cacheKey);
             return null;
         }
@@ -801,7 +801,7 @@ public abstract class AbstractProtocol implements Protocol {
     *
     * @param cacheKey                 缓存钥匙
     * @param authenticationInformation 认证信息
-     */
+    */
     protected void writeAuthenticationInformation(String cacheKey, AuthenticationInformation authenticationInformation) {
         if (null == cacheKey || null == authenticationInformation) {
             return;
@@ -821,7 +821,7 @@ public abstract class AbstractProtocol implements Protocol {
     * @param cookies Cookie
     * @param token   令牌
     * @return 缓存key
-     */
+    */
     protected String getCacheKey(Cookie[] cookies, String token) {
         if (StringUtils.isNotBlank(token)) {
             return DigestUtils.sha256(token);

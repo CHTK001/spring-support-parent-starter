@@ -21,7 +21,7 @@ public @interface SysLog {
     * <p>
     * 为空时，会尝试读取 {Swagger 名称()} 属性
     * @return module的结果
-     */
+    */
     String module() default "";
 
     /**
@@ -29,7 +29,7 @@ public @interface SysLog {
     * <p>
     * 为空时，会尝试读取 {Swagger  summary()} 属性
     * @return 名称的结果
-     */
+    */
     String name() default "";
 
     /**
@@ -39,7 +39,7 @@ public @interface SysLog {
     * {$方法} 方法
     * {$结果} 返回值
     * @return 内容的结果
-     */
+    */
     String content() default "";
 
     // ========== 开关字段 ==========
@@ -47,19 +47,19 @@ public @interface SysLog {
     /**
     * 是否记录操作日志
     * @return enable的结果
-     */
+    */
     boolean enable() default true;
 
     /**
     * 是否记录方法参数
     * @return 日志参数的结果
-     */
+    */
     boolean logArgs() default true;
 
     /**
     * 是否记录方法结果的数据
     * @return 日志结果数据的结果
-     */
+    */
     boolean logResultData() default true;
 
 }

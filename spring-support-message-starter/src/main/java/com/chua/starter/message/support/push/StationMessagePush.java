@@ -55,39 +55,39 @@ public class StationMessagePush implements MessagePush {
 
     /**
     * 渠道标识
-     */
+    */
     private static final String PROVIDER = "station";
 
     /**
     * 套接字 事件名（与前端监听保持一致）
-     */
+    */
     private static final String SOCKET_EVENT = "message";
 
     /**
     * 站内消息模块标识
-     */
+    */
     private static final String MODULE = "message";
 
     /**
     * 站内消息推送事件
-     */
+    */
     private static final String PUSH_EVENT = "push";
 
     /**
     * 时间格式
-     */
+    */
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     /**
     * 站内推送执行器（由 Spring 环境注入，未注入时推送失败）
-     */
+    */
     private static volatile StationPusher pusher;
 
     /**
     * 注入站内推送执行器
     *
     * @param pusher 推送执行器
-     */
+    */
     public static void setPusher(StationPusher pusher) {
         StationMessagePush.pusher = pusher;
     }
@@ -96,7 +96,7 @@ public class StationMessagePush implements MessagePush {
     * 站内推送执行器
     * @author CH
     * @since 4.0.0
-     */
+    */
     @FunctionalInterface
     public interface StationPusher {
 
@@ -105,7 +105,7 @@ public class StationMessagePush implements MessagePush {
         *
         * @param userId  目标用户 标识
         * @param payload 消息体（JSON 字符串）
-         */
+        */
         void push(String userId, String payload);
     }
 

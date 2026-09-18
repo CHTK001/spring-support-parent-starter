@@ -28,7 +28,7 @@ public class SoftConfigServiceImpl extends ServiceImpl<SoftConfigMapper, SoftCon
 
     /**
     * 事务模板
-     */
+    */
     private final TransactionTemplate transactionTemplate;
 
     @Override

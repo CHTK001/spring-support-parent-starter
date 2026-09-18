@@ -30,7 +30,7 @@ public class PaymentProviderGatewayRegistry {
     /**
     * 创建 薪酬提供者gatewayregistry 实例
     * @param properties 属性
-     */
+    */
     public PaymentProviderGatewayRegistry(PaymentProviderProperties properties) {
         this.properties = properties;
     }
@@ -39,7 +39,7 @@ public class PaymentProviderGatewayRegistry {
     * aliyunalipaygateway
     *
     * @return aliyunAlipayGateway的结果
-     */
+    */
     public AliyunAlipayGateway aliyunAlipayGateway() {
         return aliyunAlipayGateway(null);
     }
@@ -48,7 +48,7 @@ public class PaymentProviderGatewayRegistry {
     * tencentwechat薪酬gateway
     *
     * @return tencentwechat薪酬gateway的结果
-     */
+    */
     public TencentWechatPayGateway tencentWechatPayGateway() {
         return tencentWechatPayGateway(null);
     }
@@ -58,7 +58,7 @@ public class PaymentProviderGatewayRegistry {
     *
     * @param extension 延伸
     * @return aliyunAlipayGateway的结果
-     */
+    */
     public AliyunAlipayGateway aliyunAlipayGateway(String extension) {
         return required(ALIYUN_ALIPAY_GATEWAY, resolveAliyunExtension(extension), "Aliyun Alipay");
     }
@@ -68,7 +68,7 @@ public class PaymentProviderGatewayRegistry {
     *
     * @param extension 延伸
     * @return tencentwechat薪酬gateway的结果
-     */
+    */
     public TencentWechatPayGateway tencentWechatPayGateway(String extension) {
         return required(TENCENT_WECHAT_PAY_GATEWAY, resolveWechatExtension(extension), "Tencent Wechat Pay");
     }
@@ -77,7 +77,7 @@ public class PaymentProviderGatewayRegistry {
     * 可用阿里云延伸
     *
     * @return 可用aliyun延伸的结果
-     */
+    */
     public Set<String> availableAliyunExtensions() {
         return availableExtensions(ALIYUN_ALIPAY_GATEWAY);
     }
@@ -86,7 +86,7 @@ public class PaymentProviderGatewayRegistry {
     * 可用wechat延伸
     *
     * @return 可用wechat延伸的结果
-     */
+    */
     public Set<String> availableWechatExtensions() {
         return availableExtensions(TENCENT_WECHAT_PAY_GATEWAY);
     }
@@ -96,7 +96,7 @@ public class PaymentProviderGatewayRegistry {
     *
     * @param extension 延伸
     * @return resolvealiyun延伸的结果
-     */
+    */
     public String resolveAliyunExtension(String extension) {
         return normalizeExtension(extension, properties.resolveForChannelType("ALIPAY"));
     }
@@ -106,7 +106,7 @@ public class PaymentProviderGatewayRegistry {
     *
     * @param extension 延伸
     * @return resolvewechat延伸的结果
-     */
+    */
     public String resolveWechatExtension(String extension) {
         return normalizeExtension(extension, properties.resolveForChannelType("WECHAT"));
     }
@@ -115,7 +115,7 @@ public class PaymentProviderGatewayRegistry {
     * 默认阿里云延伸
     *
     * @return 默认aliyun延伸的结果
-     */
+    */
     public String defaultAliyunExtension() {
         return properties.resolveForChannelType("ALIPAY");
     }
@@ -124,7 +124,7 @@ public class PaymentProviderGatewayRegistry {
     * 默认wechat延伸
     *
     * @return 默认wechat延伸的结果
-     */
+    */
     public String defaultWechatExtension() {
         return properties.resolveForChannelType("WECHAT");
     }
@@ -135,7 +135,7 @@ public class PaymentProviderGatewayRegistry {
     * @param extensionName 延伸名称
     * @param fallback 降级
     * @return normalize延伸的结果
-     */
+    */
     private String normalizeExtension(String extensionName, String fallback) {
         if (extensionName == null || extensionName.isBlank()) {
             return fallback;
@@ -148,7 +148,7 @@ public class PaymentProviderGatewayRegistry {
     *
     * @param typeName 类型名称
     * @return 可用延伸的结果
-     */
+    */
     private Set<String> availableExtensions(String typeName) {
         Class<Object> type = loadType(typeName, false, typeName);
         if (type == null) {
@@ -164,7 +164,7 @@ public class PaymentProviderGatewayRegistry {
     * @param extensionName 延伸名称
     * @param providerName 提供者名称
     * @return required的结果
-     */
+    */
     private <T> T required(String typeName, String extensionName, String providerName) {
         String targetExtension = normalizeExtension(extensionName, properties.getDefaultSpi());
         Class<T> type = loadType(typeName, true, providerName);
@@ -190,7 +190,7 @@ public class PaymentProviderGatewayRegistry {
     * @param required required
     * @param providerName 提供者名称
     * @return 加载类型的结果
-     */
+    */
     private <T> Class<T> loadType(String typeName, boolean required, String providerName) {
         try {
             ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
@@ -204,7 +204,7 @@ public class PaymentProviderGatewayRegistry {
                 * 薪酬异常。
                 * @param " "
                 * @return 薪酬异常的结果
-                 */
+                */
                 throw new PaymentException("未找到支付 provider 依赖: " + providerName + " (" + typeName + ")", e);
             }
             return null;

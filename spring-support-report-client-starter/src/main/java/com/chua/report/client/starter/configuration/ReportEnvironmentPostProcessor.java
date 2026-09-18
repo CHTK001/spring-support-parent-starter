@@ -71,10 +71,10 @@ public class ReportEnvironmentPostProcessor implements EnvironmentPostProcessor 
 
         // 串联客户端配置
         /**
-        * 链接客户端配置。
-        * @param environment 环境
-        * @param syncProperties 同步属性
-         */
+    * 链接客户端配置。
+    * @param environment 环境
+    * @param syncProperties 同步属性
+    */
         linkClientConfig(environment, syncProperties);
 
  // 添加配置源（使用 添加第一个 确保优先级高于默认配置）
@@ -89,7 +89,7 @@ public class ReportEnvironmentPostProcessor implements EnvironmentPostProcessor 
     * 串联客户端配置
     * @param environment 环境
     * @param syncProperties 同步属性
-     */
+    */
     private void linkClientConfig(ConfigurableEnvironment environment, Map<String, Object> syncProperties) {
         // 服务端连接配置
         String serverHost = environment.getProperty(REPORT_CLIENT_PREFIX + "host", "localhost");

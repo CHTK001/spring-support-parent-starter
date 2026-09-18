@@ -26,7 +26,7 @@ final class CommonChatClientFactoryResolver {
     * @param factoryName 工厂名称
     * @param setting     大模型设置
     * @return common 对话客户端
-     */
+    */
     static ChatClient create(String factoryName, ChatClientSetting setting) {
         com.chua.common.support.ai.chat.ChatClient raw = createRaw(factoryName, setting);
         return (ChatClient) raw;
@@ -38,7 +38,7 @@ final class CommonChatClientFactoryResolver {
     * @param factoryName 工厂名称
     * @param setting setting
     * @return 创建raw的结果
-     */
+    */
     private static com.chua.common.support.ai.chat.ChatClient createRaw(String factoryName, ChatClientSetting setting) {
         String provider = setting != null && StringUtils.isNotBlank(setting.getProvider())
                 ? setting.getProvider()

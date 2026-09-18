@@ -27,7 +27,7 @@ public class SysAiUsageSyncLog implements Serializable {
 
     /**
     * 日志主键
-     */
+    */
     @TableId(value = "sys_ai_usage_sync_log_id", type = IdType.AUTO)
     @Schema(description = "日志主键")
     /** 日志标识 */
@@ -35,7 +35,7 @@ public class SysAiUsageSyncLog implements Serializable {
 
     /**
     * 日志级别：信息 / WARN / 错误
-     */
+    */
     @TableField("sys_ai_usage_sync_log_level")
     @Schema(description = "日志级别：INFO / WARN / ERROR")
     /** 日志级别 */
@@ -43,7 +43,7 @@ public class SysAiUsageSyncLog implements Serializable {
 
     /**
     * 日志来源：调度 / manual / parser
-     */
+    */
     @TableField("sys_ai_usage_sync_log_source")
     @Schema(description = "日志来源：schedule / manual / parser")
     /** 日志来源 */
@@ -51,7 +51,7 @@ public class SysAiUsageSyncLog implements Serializable {
 
     /**
     * 日志内容
-     */
+    */
     @TableField("sys_ai_usage_sync_log_message")
     @Schema(description = "日志内容")
     /** 日志内容 */
@@ -59,7 +59,7 @@ public class SysAiUsageSyncLog implements Serializable {
 
     /**
     * 创建时间
-     */
+    */
     @TableField("create_time")
     @Schema(description = "创建时间")
     /** 创建时间 */

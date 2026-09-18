@@ -54,7 +54,7 @@ public class JsonArrayToStringDeserialize extends JsonDeserializer<String> {
     *
     * @param treeNode1 树节点1
     * @return analysis价值观的结果
-     */
+    */
     public static Object analysisValue(TreeNode treeNode1) {
         if (treeNode1 instanceof IntNode) {
             return ((IntNode) treeNode1).asInt();
@@ -77,7 +77,7 @@ public class JsonArrayToStringDeserialize extends JsonDeserializer<String> {
             * bigdecimal。
             * @param ((DecimalNode ((decimal节点
             * @return BigDecimal的结果
-             */
+            */
             return new BigDecimal(((DecimalNode) treeNode1).asText());
         }
 

@@ -39,7 +39,7 @@ public class PaymentGlobalConfigController {
     *
     * @param request 请求
     * @return 获取配置的结果
-     */
+    */
     public Result<PaymentGlobalConfigVO> getConfig(HttpServletRequest request) {
         Result<PaymentGlobalConfigVO> denied = denyIfNecessary(request);
         return denied != null ? denied : Result.success(paymentGlobalConfigService.getConfig());
@@ -53,7 +53,7 @@ public class PaymentGlobalConfigController {
     * @param dto dto
     * @param request 请求
     * @return 保存配置的结果
-     */
+    */
     public Result<PaymentGlobalConfigVO> saveConfig(@RequestBody PaymentGlobalConfigDTO dto, HttpServletRequest request) {
         Result<PaymentGlobalConfigVO> denied = denyIfNecessary(request);
         return denied != null ? denied : Result.success(paymentGlobalConfigService.saveOrUpdate(dto));
@@ -64,7 +64,7 @@ public class PaymentGlobalConfigController {
     *
     * @param request 请求
     * @return denyIfNecessary的结果
-     */
+    */
     private <T> Result<T> denyIfNecessary(HttpServletRequest request) {
         UserResume userResume = principalResolver.resolve(request);
         if (userResume == null) {

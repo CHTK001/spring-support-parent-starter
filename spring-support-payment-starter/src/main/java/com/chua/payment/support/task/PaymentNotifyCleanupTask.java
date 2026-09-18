@@ -74,8 +74,8 @@ public class PaymentNotifyCleanupTask implements PaymentManagedTask {
     /** 执行 */
     public void execute() {
         /**
-        * cleanresolved错误。
-         */
+    * cleanresolved错误。
+    */
         cleanResolvedErrors();
     }
 }

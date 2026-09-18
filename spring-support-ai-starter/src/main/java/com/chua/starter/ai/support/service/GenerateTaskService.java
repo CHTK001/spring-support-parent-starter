@@ -21,7 +21,7 @@ public interface GenerateTaskService {
     * @param style    风格（可选）
     * @param quality  质量（可选）
     * @return 生成任务
-     */
+    */
     GenerateTask createImageTask(String prompt, String model, String size, String style, String quality);
 
     /**
@@ -33,7 +33,7 @@ public interface GenerateTaskService {
     * @param size     尺寸（可选）
     * @param style    风格（可选）
     * @return 生成任务
-     */
+    */
     GenerateTask createVideoTask(String prompt, String model, Integer duration, String size, String style);
 
     /**
@@ -41,7 +41,7 @@ public interface GenerateTaskService {
     *
     * @param taskId 任务 标识
     * @return 生成任务，不存在时返回 {@code null}
-     */
+    */
     GenerateTask getTask(String taskId);
 
     /**
@@ -50,6 +50,6 @@ public interface GenerateTaskService {
     * @param type  任务类型（镜像/视频），可为 {@code null}
     * @param limit 数量限制
     * @return 任务列表
-     */
+    */
     java.util.List<GenerateTask> listRecent(String type, int limit);
 }

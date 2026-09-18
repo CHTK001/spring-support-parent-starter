@@ -47,7 +47,7 @@ public abstract class AbstractLoggerPointcutAdvisor extends StaticMethodMatcherP
 
     /**
     * 请求指纹头
-     */
+    */
     public static final String X_REQ_FINGERPRINT = "x-req-fingerprint";
 
     @Autowired
@@ -60,11 +60,11 @@ public abstract class AbstractLoggerPointcutAdvisor extends StaticMethodMatcherP
     protected ApplicationContext applicationContext; // application上下文
 
     /**
-     * 按类名解析注解类型。
-     *
-     * @param className 全限定类名，不能为 null
-     * @return 注解类型；类不存在时返回 null
-     */
+    * 按类名解析注解类型。
+    *
+    * @param className 全限定类名，不能为 null
+    * @return 注解类型；类不存在时返回 null
+    */
     @SuppressWarnings("unchecked")
     private static Class<? extends Annotation> resolveAnnotationClass(String className) {
         Class<?> clazz = ReflectUtils.forName(className);
@@ -76,17 +76,17 @@ public abstract class AbstractLoggerPointcutAdvisor extends StaticMethodMatcherP
 
     /**
     * Swagger 3.x Operation 注解类
-     */
+    */
     private static final Class<? extends Annotation> OPERATION = resolveAnnotationClass("io.swagger.v3.oas.annotations.Operation");
 
     /**
     * Swagger 2.x apioperation 注解类
-     */
+    */
     private static final Class<? extends Annotation> API_OPERATION = resolveAnnotationClass("io.swagger.annotations.ApiOperation");
 
     /**
     * spel 表达式缓存，避免每次调用都重新解析
-     */
+    */
     private static final ConcurrentHashMap<String, Expression> EXPRESSION_CACHE = new ConcurrentHashMap<>();
     private static final ExpressionParser EXPRESSION_PARSER = new SpelExpressionParser(); // EXPRESSION_PARSER
     private static final ParserContext TEMPLATE_PARSER_CONTEXT = new TemplateParserContext(); // templateparser上下文
@@ -108,7 +108,7 @@ public abstract class AbstractLoggerPointcutAdvisor extends StaticMethodMatcherP
     * @param invocation 方法调用
     * @return 方法返回值
     * @throws Throwable 方法执行异常
-     */
+    */
     protected Object invokeValue(MethodInvocation invocation) throws Throwable {
         Object proceed = null;
         Throwable throwable = null;
@@ -124,7 +124,7 @@ public abstract class AbstractLoggerPointcutAdvisor extends StaticMethodMatcherP
         * @param throwable 抛出
         * @param invocation invocation
         * @param startTime 启动时间
-         */
+        */
         createOperateLogger(proceed, throwable, invocation, startTime);
         if (null != throwable) {
             throw throwable;
@@ -140,7 +140,7 @@ public abstract class AbstractLoggerPointcutAdvisor extends StaticMethodMatcherP
     * @param throwable  方法执行异常，为空表示执行成功
     * @param invocation 方法调用信息
     * @param startTime  方法执行开始时间戳
-     */
+    */
     protected abstract void createOperateLogger(Object proceed, Throwable throwable, MethodInvocation invocation, long startTime);
 
     /**
@@ -150,7 +150,7 @@ public abstract class AbstractLoggerPointcutAdvisor extends StaticMethodMatcherP
     * @param annotationName 注解中指定的名称
     * @param method         方法对象
     * @return 操作名称，如果无法获取返回null
-     */
+    */
     protected String getName(String annotationName, Method method) {
         if (StringUtils.isNotBlank(annotationName)) {
             return annotationName;
@@ -188,7 +188,7 @@ public abstract class AbstractLoggerPointcutAdvisor extends StaticMethodMatcherP
     *
     * @param method 方法对象
     * @return 操作模块名称
-     */
+    */
     protected String getModule(Method method) {
         String name = method.getName().toUpperCase();
         if (name.contains(SAVE) || name.contains(INSERT) || name.contains(ADD)) {
@@ -211,7 +211,7 @@ public abstract class AbstractLoggerPointcutAdvisor extends StaticMethodMatcherP
     *
     * @param invocation 方法调用信息
     * @return 参数的JSON字符串，如果无参数或构建失败返回null
-     */
+    */
     protected String buildParamJson(MethodInvocation invocation) {
         List<Object> params = new LinkedList<>();
         for (Object argument : invocation.getArguments()) {
@@ -244,7 +244,7 @@ public abstract class AbstractLoggerPointcutAdvisor extends StaticMethodMatcherP
     * @param invocation 方法调用信息
     * @param proceed    方法返回值
     * @return 解析后的内容
-     */
+    */
     protected String getContent(String content, MethodInvocation invocation, Object proceed) {
         if (StringUtils.isEmpty(content)) {
             return "";
@@ -270,7 +270,7 @@ public abstract class AbstractLoggerPointcutAdvisor extends StaticMethodMatcherP
     * 发布日志事件
     *
     * @param event 日志事件对象
-     */
+    */
     protected void publishEvent(Object event) {
         applicationContext.publishEvent(event);
     }
@@ -279,7 +279,7 @@ public abstract class AbstractLoggerPointcutAdvisor extends StaticMethodMatcherP
     * 获取用户标识
     *
     * @return 用户ID
-     */
+    */
     protected String getUserId() {
         return RequestUtils.getUserId();
     }
@@ -288,7 +288,7 @@ public abstract class AbstractLoggerPointcutAdvisor extends StaticMethodMatcherP
     * 获取用户名
     *
     * @return 用户名
-     */
+    */
     protected String getUsername() {
         return RequestUtils.getUsername();
     }
@@ -297,7 +297,7 @@ public abstract class AbstractLoggerPointcutAdvisor extends StaticMethodMatcherP
     * 获取客户端IP
     *
     * @return 客户端IP
-     */
+    */
     protected String getClientIp() {
         return RequestUtils.getIpAddress(request);
     }
@@ -306,7 +306,7 @@ public abstract class AbstractLoggerPointcutAdvisor extends StaticMethodMatcherP
     * 获取请求URL
     *
     * @return 请求URL
-     */
+    */
     protected String getRequestUrl() {
         return RequestUtils.getUrl(request);
     }
@@ -316,7 +316,7 @@ public abstract class AbstractLoggerPointcutAdvisor extends StaticMethodMatcherP
     *
     * @param name 头名称
     * @return 头值
-     */
+    */
     protected String getHeader(String name) {
         return RequestUtils.getHeader(request, name);
     }

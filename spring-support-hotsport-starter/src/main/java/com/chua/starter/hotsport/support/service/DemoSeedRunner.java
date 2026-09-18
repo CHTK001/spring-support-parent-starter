@@ -42,7 +42,7 @@ public class DemoSeedRunner implements ApplicationRunner {
     * 启动完成后按开关写入演示数据。
     *
     * @param args 启动参数
-     */
+    */
     @Override
     public void run(ApplicationArguments args) {
         if (!enabled) {
@@ -81,7 +81,7 @@ public class DemoSeedRunner implements ApplicationRunner {
     *
     * @param storage 存储实例
     * @param now 当前毫秒
-     */
+    */
     private void seedTransmissions(ApmStorage storage, long now) {
         String[][] routes = {
                 {"HTTP", "TOMCAT", "GET /api/apm/stats", "gateway:8086", "hotsport:8086"},
@@ -137,7 +137,7 @@ public class DemoSeedRunner implements ApplicationRunner {
     *
     * @param storage 存储实例
     * @param now 当前毫秒
-     */
+    */
     private void seedDependencies(ApmStorage storage, long now) {
         Object[][] edges = {
                 {Protocol.HTTP, Software.TOMCAT, "gateway", 8086, Protocol.HTTP, Software.TOMCAT, "hotsport", 8086, 420L, 3L},
@@ -179,7 +179,7 @@ public class DemoSeedRunner implements ApplicationRunner {
     *
     * @param storage 存储实例
     * @param now 当前毫秒
-     */
+    */
     private void seedLeaks(ApmStorage storage, long now) {
         Object[][] leaks = {
                 {"socket", "SocketChannel[demo-legacy:8443]", "pool-3-thread-2", true},
@@ -209,7 +209,7 @@ public class DemoSeedRunner implements ApplicationRunner {
     *
     * @param storage 存储实例
     * @param now 当前毫秒
-     */
+    */
     private void seedLogs(ApmStorage storage, long now) {
         String[][] logs = {
                 {"INFO", "c.c.s.h.support.service.ApmQueryService", "ApmQueryService", "stats 查询完成，耗时 12ms"},

@@ -39,8 +39,8 @@ public class ApiFilterConfiguration  {
     /** Sc_nonce_reject */
     private static final int SC_NONCE_REJECT = 400;
         /**
-        * 响应头中的版本字段名
-     */
+    * 响应头中的版本字段名
+    */
     private static final String X_HEADER_VERSION = "x-response-version";
 
     /**
@@ -51,7 +51,7 @@ public class ApiFilterConfiguration  {
     *
     * @param versionArgumentResolver 版本参数解析器（可选）
     * @return FilterRegistrationBean 过滤器注册 Bean
-     */
+    */
     @Bean("apiVersionFilterRegistration")
     @ConditionalOnMissingBean(name = "apiVersionFilterRegistration")
     public FilterRegistrationBean<ApiVersionFilter> apiVersionFilterRegistration(
@@ -72,7 +72,7 @@ public class ApiFilterConfiguration  {
     * 校验失败返回 403。
     * </p>
     * @return noncexhr过滤器registration的结果
-     */
+    */
     @Bean("nonceXhrFilterRegistration")
     @ConditionalOnMissingBean(name = "nonceXhrFilterRegistration")
     public FilterRegistrationBean<NonceXhrFilter> nonceXhrFilterRegistration() {
@@ -92,7 +92,7 @@ public class ApiFilterConfiguration  {
     * </p>
     * @author CH
     * @since 4.0.0
-     */
+    */
     public static class ApiVersionFilter implements Filter {
 
         /** 版本参数解析器 */
@@ -101,7 +101,7 @@ public class ApiFilterConfiguration  {
         /**
         * 创建 api版本过滤器 实例
         * @param versionArgumentResolver 版本参数解析器
-         */
+        */
         public ApiVersionFilter(VersionArgumentResolver versionArgumentResolver) {
             this.versionArgumentResolver = versionArgumentResolver;
         }
@@ -121,11 +121,11 @@ public class ApiFilterConfiguration  {
     }
 
     /**
-    * XHR Nonce 防重放过滤器
-    * 对携带完整签名头的请求做 x-nonce 重放校验及签名校验
-    * @author CH
-    * @since 4.0.0
-     */
+        * XHR Nonce 防重放过滤器
+        * 对携带完整签名头的请求做 x-nonce 重放校验及签名校验
+        * @author CH
+        * @since 4.0.0
+        */
     public static class NonceXhrFilter implements Filter {
         /** 日志 */
         private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(NonceXhrFilter.class);

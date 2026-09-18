@@ -34,12 +34,12 @@ public class BinaryHttpMessageConverter extends AbstractGenericHttpMessageConver
     * @param apiResponseEncodeRegister api响应encode注册
     * @param messageConverters 列表
     * @param messageConverters 消息转换器
-     */
+    */
     public BinaryHttpMessageConverter(ApiResponseEncodeRegister apiResponseEncodeRegister, List<HttpMessageConverter<?>> messageConverters) {
         /**
         * 父。
         * @param MediaType.parseMediaType("application/encrypted-data" media类型.解析media类型("application/encrypted-数据"
-         */
+        */
         super(MediaType.parseMediaType("application/encrypted-data"));
         this.apiResponseEncodeRegister = apiResponseEncodeRegister;
         this.messageConverters = messageConverters;
@@ -64,10 +64,10 @@ public class BinaryHttpMessageConverter extends AbstractGenericHttpMessageConver
                 log.trace("[消息转换器]处理 ResponseEntity, 状态码: {}", entity.getStatusCode());
             }
             /**
-            * 注册响应实体。
-            * @param entity 实体
-            * @param outputMessage 输出消息
-             */
+    * 注册响应实体。
+    * @param entity 实体
+    * @param outputMessage 输出消息
+    */
             registerResponseEntity(entity, outputMessage);
             return;
         }
@@ -96,7 +96,7 @@ public class BinaryHttpMessageConverter extends AbstractGenericHttpMessageConver
             * 注册accept。
             * @param outputMessage 输出消息
             * @param o o
-             */
+            */
             registerAccept(outputMessage, o);
             return;
         }
@@ -107,7 +107,7 @@ public class BinaryHttpMessageConverter extends AbstractGenericHttpMessageConver
     *
     * @param outputMessage 输出消息
     * @param o o
-     */
+    */
     private void registerAccept(HttpOutputMessage outputMessage, Object o) throws IOException {
         Class<?> aClass = o.getClass();
         if (log.isTraceEnabled()) {
@@ -138,7 +138,7 @@ public class BinaryHttpMessageConverter extends AbstractGenericHttpMessageConver
     *
     * @param entity 实体
     * @param outputMessage 输出消息
-     */
+    */
     private void registerResponseEntity(ResponseEntity<?> entity, HttpOutputMessage outputMessage) throws IOException {
         Object body = entity.getBody();
         if (body == null) {

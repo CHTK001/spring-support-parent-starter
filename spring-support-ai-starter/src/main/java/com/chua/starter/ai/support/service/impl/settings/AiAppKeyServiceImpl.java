@@ -41,12 +41,12 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
 
     /**
     * 时间格式化器
-     */
+    */
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     /**
     * app钥匙 映射器（与协议层共用）
-     */
+    */
     private final SysAiAppKeyMapper appKeyMapper;
     /** 提供者映射器 */
     private final AiProviderMapper providerMapper;
@@ -57,7 +57,7 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
     * 查询所有 app钥匙。
     *
     * @return 操作结果
-     */
+    */
     @Override
     public ReturnResult<List<AiAppKeyDTO>> list() {
         List<SysAiAppKey> keys = appKeyMapper.selectList(
@@ -79,7 +79,7 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
     * 解析全部分组名称映射。
     *
     * @return groupId → 群体名称 映射
-     */
+    */
     private Map<Integer, String> resolveGroupNames() {
         return groupMapper.selectList(null).stream()
                 .collect(Collectors.toMap(g -> g.getGroupId().intValue(), SysAiGroup::getGroupName, (a, b) -> a));
@@ -90,7 +90,7 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
     *
     * @param dto app钥匙 DTO
     * @return 操作结果
-     */
+    */
     @Override
     @Transactional
     @CacheEvict(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS, allEntries = true)
@@ -121,7 +121,7 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
     * @param appKeyId app钥匙 主键
     * @param dto      app钥匙 DTO
     * @return 操作结果
-     */
+    */
     @Override
     @Transactional
     public ReturnResult<AiAppKeyDTO> update(Long appKeyId, AiAppKeyDTO dto) {
@@ -146,7 +146,7 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
     *
     * @param appKeyId app钥匙 主键
     * @return 操作结果
-     */
+    */
     @Override
     @Transactional
     public ReturnResult<Void> delete(Long appKeyId) {
@@ -164,7 +164,7 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
     * @param appKeyId app钥匙 主键
     * @param enabled  是否启用
     * @return 操作结果
-     */
+    */
     @Override
     @Transactional
     public ReturnResult<AiAppKeyDTO> toggle(Long appKeyId, Boolean enabled) {
@@ -186,7 +186,7 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
     *
     * @param providerId 供应商 标识
     * @return 供应商名称
-     */
+    */
     private String resolveProvider(Long providerId) {
         if (providerId == null) {
             return null;
@@ -201,7 +201,7 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
     *
     * @param groupId 分组 标识
     * @return 分组名称
-     */
+    */
     private String resolveGroup(Integer groupId) {
         if (groupId == null) {
             return null;
@@ -218,7 +218,7 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
     * @param providerName 供应商名称
     * @param groupName    分组名称
     * @return AppKey DTO
-     */
+    */
     private AiAppKeyDTO toDto(SysAiAppKey entity, String providerName, String groupName) {
         if (entity == null) {
             return null;
@@ -248,7 +248,7 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
     *
     * @param dto app钥匙 DTO
     * @return AppKey 实体
-     */
+    */
     private SysAiAppKey toEntity(AiAppKeyDTO dto) {
         SysAiAppKey entity = new SysAiAppKey();
         entity.setName(dto.getName());

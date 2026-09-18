@@ -12,7 +12,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class IpProperties {
     /**
     * 是否启用
-     */
+    */
     private boolean enable = false;
 
 
@@ -22,19 +22,19 @@ public class IpProperties {
 
     /**
     * 数据库文件路径
-     */
+    */
     private String databaseFile = "classpath:qqwry.dat";
 
     /**
     * ip翻译实现方式
-     */
+    */
     private String ipType = "qqwry";
 
     /**
     * 获取 enable
     *
     * @return enable
-     */
+    */
     public boolean getEnable() {
         return enable;
     }
@@ -43,7 +43,7 @@ public class IpProperties {
     * 设置 enable
     *
     * @param enable enable
-     */
+    */
     public void setEnable(boolean enable) {
         this.enable = enable;
     }
@@ -52,7 +52,7 @@ public class IpProperties {
     * 获取 database文件
     *
     * @return databaseFile
-     */
+    */
     public String getDatabaseFile() {
         return databaseFile;
     }
@@ -61,7 +61,7 @@ public class IpProperties {
     * 设置 database文件
     *
     * @param databaseFile database文件
-     */
+    */
     public void setDatabaseFile(String databaseFile) {
         this.databaseFile = databaseFile;
     }
@@ -70,7 +70,7 @@ public class IpProperties {
     * 获取 ip类型
     *
     * @return ipType
-     */
+    */
     public String getIpType() {
         return ipType;
     }
@@ -79,7 +79,7 @@ public class IpProperties {
     * 设置 ip类型
     *
     * @param ipType ip类型
-     */
+    */
     public void setIpType(String ipType) {
         this.ipType = ipType;
     }

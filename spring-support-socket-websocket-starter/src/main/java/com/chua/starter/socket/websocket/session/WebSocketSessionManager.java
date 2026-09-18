@@ -25,23 +25,23 @@ public class WebSocketSessionManager {
 
     /**
     * 所有会话：会话标识 -> 会话
-     */
+    */
     private final Map<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
 
     /**
     * 用户会话映射：用户标识 -> 会话标识
-     */
+    */
     private final Map<String, String> userSessions = new ConcurrentHashMap<>();
 
     /**
     * 会话用户映射：会话标识 -> 用户标识
-     */
+    */
     private final Map<String, String> sessionUsers = new ConcurrentHashMap<>();
 
     /**
     * 添加会话
     * @param session 会话
-     */
+    */
     public void addSession(WebSocketSession session) {
         sessions.put(session.getId(), session);
         log.debug("[WebSocket] 会话已添加: {}", session.getId());
@@ -50,7 +50,7 @@ public class WebSocketSessionManager {
     /**
     * 移除会话
     * @param session 会话
-     */
+    */
     public void removeSession(WebSocketSession session) {
         String sessionId = session.getId();
         sessions.remove(sessionId);
@@ -67,7 +67,7 @@ public class WebSocketSessionManager {
     * 绑定用户
     * @param sessionId 会话标识
     * @param userId 用户标识
-     */
+    */
     public void bindUser(String sessionId, String userId) {
         // 移除旧绑定
         String oldSessionId = userSessions.get(userId);
@@ -83,7 +83,7 @@ public class WebSocketSessionManager {
     /**
     * 解绑用户
     * @param userId 用户标识
-     */
+    */
     public void unbindUser(String userId) {
         String sessionId = userSessions.remove(userId);
         if (sessionId != null) {
@@ -95,7 +95,7 @@ public class WebSocketSessionManager {
     * 获取会话
     * @param sessionId 会话标识
     * @return 获取会话的结果
-     */
+    */
     public WebSocketSession getSession(String sessionId) {
         return sessions.get(sessionId);
     }
@@ -104,7 +104,7 @@ public class WebSocketSessionManager {
     * 获取用户会话
     * @param userId 用户标识
     * @return 获取会话by用户id的结果
-     */
+    */
     public WebSocketSession getSessionByUserId(String userId) {
         String sessionId = userSessions.get(userId);
         return sessionId != null ? sessions.get(sessionId) : null;
@@ -114,7 +114,7 @@ public class WebSocketSessionManager {
     * 获取会话绑定的用户
     * @param sessionId 会话标识
     * @return 获取用户id的结果
-     */
+    */
     public String getUserId(String sessionId) {
         return sessionUsers.get(sessionId);
     }
@@ -122,7 +122,7 @@ public class WebSocketSessionManager {
     /**
     * 获取所有会话
     * @return 获取全部会话的结果
-     */
+    */
     public Collection<WebSocketSession> getAllSessions() {
         return sessions.values();
     }
@@ -130,7 +130,7 @@ public class WebSocketSessionManager {
     /**
     * 获取在线会话数
     * @return 获取会话数量的结果
-     */
+    */
     public int getSessionCount() {
         return sessions.size();
     }
@@ -139,7 +139,7 @@ public class WebSocketSessionManager {
     * 关闭会话
     * @param sessionId 会话标识
     * @param status 状态
-     */
+    */
     public void closeSession(String sessionId, CloseStatus status) {
         WebSocketSession session = sessions.get(sessionId);
         if (session != null && session.isOpen()) {
@@ -154,7 +154,7 @@ public class WebSocketSessionManager {
     /**
     * 关闭所有会话
     * @param status 状态
-     */
+    */
     public void closeAllSessions(CloseStatus status) {
         sessions.values().forEach(session -> {
             try {

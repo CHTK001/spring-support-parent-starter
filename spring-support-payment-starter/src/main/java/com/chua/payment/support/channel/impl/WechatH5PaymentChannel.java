@@ -23,7 +23,7 @@ public class WechatH5PaymentChannel extends WechatJsapiPaymentChannel implements
     * @param merchantChannelService merchant通道服务
     * @param objectMapper 对象映射器
     * @param providerGatewayRegistry 提供者gatewayregistry
-     */
+    */
     public WechatH5PaymentChannel(MerchantChannelService merchantChannelService,
                                   ObjectMapper objectMapper,
                                   PaymentProviderGatewayRegistry providerGatewayRegistry) {
@@ -32,7 +32,7 @@ public class WechatH5PaymentChannel extends WechatJsapiPaymentChannel implements
         * @param merchantChannelService merchant通道服务
         * @param objectMapper 对象映射器
         * @param providerGatewayRegistry 提供者gatewayregistry
-         */
+        */
         super(merchantChannelService, objectMapper, providerGatewayRegistry);
     }
 

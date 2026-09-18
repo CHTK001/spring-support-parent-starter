@@ -57,7 +57,7 @@ public class WechatPayScoreOrderServiceImpl extends AbstractMerchantPaymentChann
     * @param merchantChannelMapper merchant通道映射器
     * @param providerGatewayRegistry 提供者gatewayregistry
     * @param paymentCallbackUrlResolver 薪酬callbackurl解析器
-     */
+    */
     public WechatPayScoreOrderServiceImpl(MerchantChannelService merchantChannelService,
                                           ObjectMapper objectMapper,
                                           WechatPayScoreOrderMapper wechatPayScoreOrderMapper,
@@ -68,7 +68,7 @@ public class WechatPayScoreOrderServiceImpl extends AbstractMerchantPaymentChann
         * 父。
         * @param merchantChannelService merchant通道服务
         * @param objectMapper 对象映射器
-         */
+        */
         super(merchantChannelService, objectMapper);
         this.wechatPayScoreOrderMapper = wechatPayScoreOrderMapper;
         this.merchantChannelMapper = merchantChannelMapper;
@@ -83,14 +83,14 @@ public class WechatPayScoreOrderServiceImpl extends AbstractMerchantPaymentChann
     *
     * @param request 请求
     * @return 创建订单的结果
-     */
+    */
     public WechatPayScoreOrder createOrder(WechatPayScoreCreateDTO request) {
         if (request == null) {
             /**
             * 薪酬异常。
             * @param "微信支付分下单请求不能为空" "微信支付分下单请求不能为空"
             * @return 薪酬异常的结果
-             */
+            */
             throw new PaymentException("微信支付分下单请求不能为空");
         }
         MerchantChannel channel = requireEnabledWechatChannel(request.getChannelId());
@@ -99,7 +99,7 @@ public class WechatPayScoreOrderServiceImpl extends AbstractMerchantPaymentChann
             * 薪酬异常。
             * @param "微信支付分商户和渠道归属不一致" "微信支付分商户和渠道归属不一致"
             * @return 薪酬异常的结果
-             */
+            */
             throw new PaymentException("微信支付分商户和渠道归属不一致");
         }
         String outOrderNo = StringUtils.hasText(request.getOutOrderNo()) ? request.getOutOrderNo() : generateOutOrderNo();
@@ -119,13 +119,13 @@ public class WechatPayScoreOrderServiceImpl extends AbstractMerchantPaymentChann
                 * ext文本。
                 * @param channel 通道
                 * @param "payScoreNotifyUrl" "payscore通知url"
-                 */
+                */
                 extText(channel, "payScoreNotifyUrl"),
                 /**
                 * ext文本。
                 * @param channel 通道
                 * @param "paymentPointNotifyUrl" "paymentpoint通知url"
-                 */
+                */
                 extText(channel, "paymentPointNotifyUrl"),
                 paymentCallbackUrlResolver.defaultWechatPayScoreNotifyUrl(channel.getId(), outOrderNo)),
                 "微信支付分回调地址不能为空"));
@@ -169,7 +169,7 @@ public class WechatPayScoreOrderServiceImpl extends AbstractMerchantPaymentChann
         /**
         * 更新terminal状态。
         * @param order 订单
-         */
+        */
         updateTerminalState(order);
         wechatPayScoreOrderMapper.insert(order);
         return order;
@@ -190,10 +190,10 @@ public class WechatPayScoreOrderServiceImpl extends AbstractMerchantPaymentChann
     public Page<WechatPayScoreOrder> page(WechatPayScoreOrderQueryRequest request) {
         if (request == null) {
             /**
-            * 薪酬异常。
-            * @param "查询参数不能为空" "查询参数不能为空"
-            * @return 薪酬异常的结果
-             */
+    * 薪酬异常。
+    * @param "查询参数不能为空" "查询参数不能为空"
+    * @return 薪酬异常的结果
+    */
             throw new PaymentException("查询参数不能为空");
         }
         LambdaQueryWrapper<WechatPayScoreOrder> wrapper = new LambdaQueryWrapper<WechatPayScoreOrder>()
@@ -220,7 +220,7 @@ public class WechatPayScoreOrderServiceImpl extends AbstractMerchantPaymentChann
     *
     * @param outOrderNo 出订单no
     * @return 同步订单的结果
-     */
+    */
     public WechatPayScoreOrder syncOrder(String outOrderNo) {
         WechatPayScoreOrder order = requireOrder(outOrderNo);
         MerchantChannel channel = requireEnabledWechatChannel(order.getChannelId());
@@ -231,7 +231,7 @@ public class WechatPayScoreOrderServiceImpl extends AbstractMerchantPaymentChann
         * 合并响应。
         * @param order 订单
         * @param response 响应
-         */
+        */
         mergeResponse(order, response);
         wechatPayScoreOrderMapper.updateById(order);
         return order;
@@ -245,7 +245,7 @@ public class WechatPayScoreOrderServiceImpl extends AbstractMerchantPaymentChann
     * @param outOrderNo 出订单no
     * @param request 请求
     * @return 完成订单的结果
-     */
+    */
     public WechatPayScoreOrder completeOrder(String outOrderNo, WechatPayScoreCompleteDTO request) {
         WechatPayScoreOrder order = requireOrder(outOrderNo);
         MerchantChannel channel = requireEnabledWechatChannel(order.getChannelId());
@@ -274,7 +274,7 @@ public class WechatPayScoreOrderServiceImpl extends AbstractMerchantPaymentChann
         * 合并响应。
         * @param order 订单
         * @param response 响应
-         */
+        */
         mergeResponse(order, response);
         wechatPayScoreOrderMapper.updateById(order);
         return order;
@@ -288,7 +288,7 @@ public class WechatPayScoreOrderServiceImpl extends AbstractMerchantPaymentChann
     * @param outOrderNo 出订单no
     * @param request 请求
     * @return cancel订单的结果
-     */
+    */
     public WechatPayScoreOrder cancelOrder(String outOrderNo, WechatPayScoreCancelDTO request) {
         WechatPayScoreOrder order = requireOrder(outOrderNo);
         MerchantChannel channel = requireEnabledWechatChannel(order.getChannelId());
@@ -307,7 +307,7 @@ public class WechatPayScoreOrderServiceImpl extends AbstractMerchantPaymentChann
         * 合并响应。
         * @param order 订单
         * @param response 响应
-         */
+        */
         mergeResponse(order, response);
         wechatPayScoreOrderMapper.updateById(order);
         return order;
@@ -322,14 +322,14 @@ public class WechatPayScoreOrderServiceImpl extends AbstractMerchantPaymentChann
     * @param outOrderNo 出订单no
     * @param payload payload
     * @param responsePayload 响应payload
-     */
+    */
     public void handleNotify(Long channelId, String outOrderNo, TencentWechatPayScoreNotifyPayload payload, String responsePayload) {
         if (payload == null) {
             /**
             * 薪酬异常。
             * @param "微信支付分回调内容不能为空" "微信支付分回调内容不能为空"
             * @return 薪酬异常的结果
-             */
+            */
             throw new PaymentException("微信支付分回调内容不能为空");
         }
         if (StringUtils.hasText(outOrderNo) && StringUtils.hasText(payload.getOutOrderNo()) && !outOrderNo.equals(payload.getOutOrderNo())) {
@@ -337,7 +337,7 @@ public class WechatPayScoreOrderServiceImpl extends AbstractMerchantPaymentChann
             * 薪酬异常。
             * @param "微信支付分回调路径订单号和报文订单号不一致" "微信支付分回调路径订单号和报文订单号不一致"
             * @return 薪酬异常的结果
-             */
+            */
             throw new PaymentException("微信支付分回调路径订单号和报文订单号不一致");
         }
         WechatPayScoreOrder order = requireOrder(firstNonBlank(payload.getOutOrderNo(), outOrderNo));
@@ -346,7 +346,7 @@ public class WechatPayScoreOrderServiceImpl extends AbstractMerchantPaymentChann
             * 薪酬异常。
             * @param "微信支付分回调渠道与订单渠道不一致" "微信支付分回调渠道与订单渠道不一致"
             * @return 薪酬异常的结果
-             */
+            */
             throw new PaymentException("微信支付分回调渠道与订单渠道不一致");
         }
         order.setServiceOrderNo(firstNonBlank(payload.getServiceOrderNo(), order.getServiceOrderNo()));
@@ -359,7 +359,7 @@ public class WechatPayScoreOrderServiceImpl extends AbstractMerchantPaymentChann
         /**
         * 更新terminal状态。
         * @param order 订单
-         */
+        */
         updateTerminalState(order);
         wechatPayScoreOrderMapper.updateById(order);
     }
@@ -369,7 +369,7 @@ public class WechatPayScoreOrderServiceImpl extends AbstractMerchantPaymentChann
     *
     * @param outOrderNo 出订单no
     * @return require订单的结果
-     */
+    */
     private WechatPayScoreOrder requireOrder(String outOrderNo) {
         WechatPayScoreOrder order = getByOutOrderNo(outOrderNo);
         if (order == null) {
@@ -377,7 +377,7 @@ public class WechatPayScoreOrderServiceImpl extends AbstractMerchantPaymentChann
             * 薪酬异常。
             * @param outOrderNo 出订单no
             * @return 薪酬异常的结果
-             */
+            */
             throw new PaymentException("微信支付分订单不存在: " + outOrderNo);
         }
         return order;
@@ -388,14 +388,14 @@ public class WechatPayScoreOrderServiceImpl extends AbstractMerchantPaymentChann
     *
     * @param channelId 通道标识
     * @return require已启用wechat通道的结果
-     */
+    */
     private MerchantChannel requireEnabledWechatChannel(Long channelId) {
         if (channelId == null) {
             /**
             * 薪酬异常。
             * @param 不能为空" 不能为空"
             * @return 薪酬异常的结果
-             */
+            */
             throw new PaymentException("微信支付分 channelId 不能为空");
         }
         MerchantChannel channel = merchantChannelMapper.selectById(channelId);
@@ -404,7 +404,7 @@ public class WechatPayScoreOrderServiceImpl extends AbstractMerchantPaymentChann
             * 薪酬异常。
             * @param "支付方式不存在" "支付方式不存在"
             * @return 薪酬异常的结果
-             */
+            */
             throw new PaymentException("支付方式不存在");
         }
         if (!"WECHAT".equalsIgnoreCase(channel.getChannelType())) {
@@ -412,7 +412,7 @@ public class WechatPayScoreOrderServiceImpl extends AbstractMerchantPaymentChann
             * 薪酬异常。
             * @param "支付方式类型不匹配" "支付方式类型不匹配"
             * @return 薪酬异常的结果
-             */
+            */
             throw new PaymentException("支付方式类型不匹配");
         }
         if (!ChannelStatus.ENABLED.getCode().equals(channel.getStatus())) {
@@ -420,7 +420,7 @@ public class WechatPayScoreOrderServiceImpl extends AbstractMerchantPaymentChann
             * 薪酬异常。
             * @param "支付方式未启用" "支付方式未启用"
             * @return 薪酬异常的结果
-             */
+            */
             throw new PaymentException("支付方式未启用");
         }
         return channel;
@@ -431,7 +431,7 @@ public class WechatPayScoreOrderServiceImpl extends AbstractMerchantPaymentChann
     *
     * @param channel 通道
     * @return 构建wechat属性的结果
-     */
+    */
     private TencentWechatPayProperties buildWechatProperties(MerchantChannel channel) {
         TencentWechatPayProperties properties = new TencentWechatPayProperties();
         properties.setAppId(requiredText(channel.getAppId(), "微信 AppId 不能为空"));
@@ -448,7 +448,7 @@ public class WechatPayScoreOrderServiceImpl extends AbstractMerchantPaymentChann
     *
     * @param order 订单
     * @return base请求的结果
-     */
+    */
     private TencentWechatPayScoreRequest baseRequest(WechatPayScoreOrder order) {
         TencentWechatPayScoreRequest request = new TencentWechatPayScoreRequest();
         request.setAppId(order.getAppId());
@@ -471,7 +471,7 @@ public class WechatPayScoreOrderServiceImpl extends AbstractMerchantPaymentChann
     *
     * @param order 订单
     * @param response 响应
-     */
+    */
     private void mergeResponse(WechatPayScoreOrder order, TencentWechatPayScoreResponse response) {
         order.setServiceOrderNo(firstNonBlank(response.getServiceOrderNo(), order.getServiceOrderNo()));
         order.setState(firstNonBlank(response.getState(), order.getState()));
@@ -480,7 +480,7 @@ public class WechatPayScoreOrderServiceImpl extends AbstractMerchantPaymentChann
         /**
         * 更新terminal状态。
         * @param order 订单
-         */
+        */
         updateTerminalState(order);
     }
 
@@ -488,7 +488,7 @@ public class WechatPayScoreOrderServiceImpl extends AbstractMerchantPaymentChann
     * 更新terminal状态
     *
     * @param order 订单
-     */
+    */
     private void updateTerminalState(WechatPayScoreOrder order) {
         String state = upper(order.getState());
         if (!StringUtils.hasText(state)) {
@@ -513,7 +513,7 @@ public class WechatPayScoreOrderServiceImpl extends AbstractMerchantPaymentChann
     * @param channel 通道
     * @param requestServiceId 请求服务标识
     * @return resolve服务id的结果
-     */
+    */
     private String resolveServiceId(MerchantChannel channel, String requestServiceId) {
         return requiredText(firstNonBlank(
                 requestServiceId,
@@ -521,19 +521,19 @@ public class WechatPayScoreOrderServiceImpl extends AbstractMerchantPaymentChann
                 * ext文本。
                 * @param channel 通道
                 * @param "payScoreServiceId" "payscore服务标识"
-                 */
+                */
                 extText(channel, "payScoreServiceId"),
                 /**
                 * ext文本。
                 * @param channel 通道
                 * @param "serviceId" "服务标识"
-                 */
+                */
                 extText(channel, "serviceId"),
                 /**
                 * ext文本。
                 * @param channel 通道
                 * @param "wechatPayScoreServiceId" "wechat薪酬score服务标识"
-                 */
+                */
                 extText(channel, "wechatPayScoreServiceId"),
                 extText(channel, "payMerchantConfigWechatPaymentPointServiceId")),
                 "微信支付分服务ID不能为空");
@@ -544,7 +544,7 @@ public class WechatPayScoreOrderServiceImpl extends AbstractMerchantPaymentChann
     *
     * @param amount amount
     * @return amount转为fen的结果
-     */
+    */
     private Integer amountToFen(BigDecimal amount) {
         return amount == null ? null : (int) yuanToFen(amount);
     }
@@ -553,7 +553,7 @@ public class WechatPayScoreOrderServiceImpl extends AbstractMerchantPaymentChann
     * generate出订单no
     *
     * @return generate出订单no的结果
-     */
+    */
     private String generateOutOrderNo() {
         return "PS" + System.currentTimeMillis() + UUID.randomUUID().toString().substring(0, 6).toUpperCase(Locale.ROOT);
     }
@@ -563,7 +563,7 @@ public class WechatPayScoreOrderServiceImpl extends AbstractMerchantPaymentChann
     *
     * @param value 价值观
     * @return 大写的结果
-     */
+    */
     private String upper(String value) {
         return value == null ? null : value.toUpperCase(Locale.ROOT);
     }

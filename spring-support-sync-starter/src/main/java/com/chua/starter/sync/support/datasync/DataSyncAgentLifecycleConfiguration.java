@@ -33,7 +33,7 @@ public class DataSyncAgentLifecycleConfiguration {
 
     /**
     * 客户端能力标识：数据同步 智能体
-     */
+    */
     private static final String CAPABILITY_DATASYNC = "datasync";
 
     /** 同步服务器提供者 */
@@ -45,7 +45,7 @@ public class DataSyncAgentLifecycleConfiguration {
     * 创建 数据同步智能体lifecycle配置 实例
     * @param syncServerProvider 同步服务端提供者
     * @param dataSyncAgentServerProvider 数据同步智能体服务端提供者
-     */
+    */
     public DataSyncAgentLifecycleConfiguration(ObjectProvider<SyncServer> syncServerProvider,
                                                ObjectProvider<DataSyncAgentServer> dataSyncAgentServerProvider) {
         this.syncServerProvider = syncServerProvider;
@@ -57,7 +57,7 @@ public class DataSyncAgentLifecycleConfiguration {
     *
     * @param clientInfo 客户端信息
     * @return 是否包含 datasync 能力标识
-     */
+    */
     private boolean hasDatasyncCapability(ClientInfo clientInfo) {
         String[] capabilities = clientInfo.getClientCapabilities();
         if (capabilities == null) {

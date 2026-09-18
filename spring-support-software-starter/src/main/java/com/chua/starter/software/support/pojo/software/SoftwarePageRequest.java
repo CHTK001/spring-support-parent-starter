@@ -20,7 +20,7 @@ public class SoftwarePageRequest extends SoftSoftware {
 
     /**
     * 已安装的软件标识集合，用于排序（已安装的排在前面）
-     */
+    */
     @Schema(description = "已安装的软件ID集合，用于排序（已安装的排前面）")
     /** installedsoftware标识 */
     private java.util.Collection<String> installedSoftwareIds;
@@ -29,7 +29,7 @@ public class SoftwarePageRequest extends SoftSoftware {
     * 获取installedsoftware标识
     *
     * @return 获取installedsoftware标识的结果
-     */
+    */
     public java.util.Collection<String> getInstalledSoftwareIds() {
         return installedSoftwareIds;
     }
@@ -38,7 +38,7 @@ public class SoftwarePageRequest extends SoftSoftware {
     * 设置installedsoftware标识
     *
     * @param installedSoftwareIds installedsoftware标识
-     */
+    */
     public void setInstalledSoftwareIds(java.util.Collection<String> installedSoftwareIds) {
         this.installedSoftwareIds = installedSoftwareIds;
     }

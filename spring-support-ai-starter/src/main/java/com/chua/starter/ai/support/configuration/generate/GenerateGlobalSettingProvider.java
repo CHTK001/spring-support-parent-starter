@@ -23,12 +23,12 @@ public class GenerateGlobalSettingProvider implements GlobalSettingProvider {
 
     /**
     * 配置分组标识
-     */
+    */
     private static final String GROUP = "generate";
 
     /**
     * 分组显示名称
-     */
+    */
     private static final String GROUP_NAME = "文生图 / 文生视频";
 
     @Override

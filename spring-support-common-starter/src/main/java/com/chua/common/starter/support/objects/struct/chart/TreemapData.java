@@ -20,7 +20,7 @@ public class TreemapData implements Serializable {
     /**
     * 获取blocks。
     * @return 获取blocks的结果
-     */
+    */
     public List<Block> getBlocks() {
         return blocks;
     }
@@ -28,7 +28,7 @@ public class TreemapData implements Serializable {
     /**
     * 设置blocks。
     * @param blocks blocks
-     */
+    */
     public void setBlocks(List<Block> blocks) {
         this.blocks = blocks;
     }
@@ -38,7 +38,7 @@ public class TreemapData implements Serializable {
     *
     * @author CH
     * @since 4.0.0
-     */
+    */
     public static class Block implements Serializable {
         private static final long serialVersionUID = 1L; // 串行版本uid
         /** 名称 */
@@ -54,7 +54,7 @@ public class TreemapData implements Serializable {
         * @param name 名称
         * @param value 价值观
         * @param path 路径
-         */
+        */
         public Block(String name, Number value, String path) {
             this.name = name;
             this.value = value;
@@ -64,7 +64,7 @@ public class TreemapData implements Serializable {
         /**
         * 获取名称。
         * @return 获取名称的结果
-         */
+        */
         public String getName() {
             return name;
         }
@@ -72,7 +72,7 @@ public class TreemapData implements Serializable {
         /**
         * 设置名称。
         * @param name 名称
-         */
+        */
         public void setName(String name) {
             this.name = name;
         }
@@ -80,7 +80,7 @@ public class TreemapData implements Serializable {
         /**
         * 获取价值观。
         * @return 获取价值观的结果
-         */
+        */
         public Number getValue() {
             return value;
         }
@@ -88,7 +88,7 @@ public class TreemapData implements Serializable {
         /**
         * 设置价值观。
         * @param value 价值观
-         */
+        */
         public void setValue(Number value) {
             this.value = value;
         }
@@ -96,7 +96,7 @@ public class TreemapData implements Serializable {
         /**
         * 获取路径。
         * @return 获取路径的结果
-         */
+        */
         public String getPath() {
             return path;
         }
@@ -104,7 +104,7 @@ public class TreemapData implements Serializable {
         /**
         * 设置路径。
         * @param path 路径
-         */
+        */
         public void setPath(String path) {
             this.path = path;
         }

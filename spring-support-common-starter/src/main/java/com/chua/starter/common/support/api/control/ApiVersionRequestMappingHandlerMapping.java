@@ -43,7 +43,7 @@ public class ApiVersionRequestMappingHandlerMapping extends RequestMappingHandle
     * @param apiProperties api属性
     * @param environment 环境
     * @param environment 环境
-     */
+    */
     public ApiVersionRequestMappingHandlerMapping(ApiProperties apiProperties, Environment environment) {
         this.apiProperties = apiProperties;
         this.activeProfiles = environment.getActiveProfiles();
@@ -58,7 +58,7 @@ public class ApiVersionRequestMappingHandlerMapping extends RequestMappingHandle
     *
     * @param handlerType 处理器类型
     * @return 版本条件
-     */
+    */
     @Override
     protected RequestCondition<?> getCustomTypeCondition(Class<?> handlerType) {
         if (!versionOpen) {
@@ -68,7 +68,7 @@ public class ApiVersionRequestMappingHandlerMapping extends RequestMappingHandle
         * api版本条件。
         * @param ApiVersion.class api版本.类
         * @return api版本条件的结果
-         */
+        */
         return new ApiVersionCondition(AnnotationUtils.findAnnotation(handlerType, ApiVersion.class));
     }
 
@@ -78,7 +78,7 @@ public class ApiVersionRequestMappingHandlerMapping extends RequestMappingHandle
     * @param method      方法
     * @param handlerType 处理器类型
     * @return 映射信息
-     */
+    */
     @Override
     @Nullable
     protected RequestMappingInfo getMappingForMethod(Method method, Class<?> handlerType) {
@@ -115,7 +115,7 @@ public class ApiVersionRequestMappingHandlerMapping extends RequestMappingHandle
     * @param method      方法
     * @param handlerType 处理器类型
     * @return 是否匹配
-     */
+    */
     private boolean isMatchProfile(Method method, Class<?> handlerType) {
         ApiProfile apiProfile = AnnotationUtils.findAnnotation(method, ApiProfile.class);
         if (null == apiProfile) {
@@ -140,7 +140,7 @@ public class ApiVersionRequestMappingHandlerMapping extends RequestMappingHandle
     *
     * @param method 方法
     * @return 版本条件
-     */
+    */
     @Override
     protected RequestCondition<?> getCustomMethodCondition(Method method) {
         if (!versionOpen) {
@@ -150,7 +150,7 @@ public class ApiVersionRequestMappingHandlerMapping extends RequestMappingHandle
         * api版本条件。
         * @param ApiVersion.class api版本.类
         * @return api版本条件的结果
-         */
+        */
         return new ApiVersionCondition(AnnotationUtils.findAnnotation(method, ApiVersion.class));
     }
 }

@@ -16,7 +16,7 @@ public interface AiManufacturerFacadeService {
     * 查询全部厂商。
     *
     * @return 厂商列表
-     */
+    */
     List<SysAiManufacturer> list();
 
     /**
@@ -24,7 +24,7 @@ public interface AiManufacturerFacadeService {
     *
     * @param manufacturer 厂商实体
     * @return 保存后的厂商
-     */
+    */
     SysAiManufacturer save(SysAiManufacturer manufacturer);
 
     /**
@@ -32,7 +32,7 @@ public interface AiManufacturerFacadeService {
     *
     * @param manufacturer 厂商实体
     * @return 是否成功
-     */
+    */
     boolean update(SysAiManufacturer manufacturer);
 
     /**
@@ -40,7 +40,7 @@ public interface AiManufacturerFacadeService {
     *
     * @param id 厂商 标识
     * @return 是否成功
-     */
+    */
     boolean delete(Integer id);
 
     /**
@@ -48,7 +48,7 @@ public interface AiManufacturerFacadeService {
     *
     * @param id 厂商 标识
     * @return 是否成功
-     */
+    */
     boolean deleteById(Integer id);
 
     /**
@@ -56,6 +56,6 @@ public interface AiManufacturerFacadeService {
     *
     * @param code 厂商编码
     * @return 同步的模型数量
-     */
+    */
     int syncModels(String code);
 }

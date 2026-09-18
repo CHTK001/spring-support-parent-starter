@@ -13,7 +13,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class JacksonProperties {
     /**
     * 是否启用
-     */
+    */
     private boolean enable = false;
 
 
@@ -22,14 +22,14 @@ public class JacksonProperties {
 
     /**
     * 是否包含空值
-     */
+    */
     private boolean includeNull = false;
 
     /**
     * 获取 enable
     *
     * @return enable
-     */
+    */
     public boolean getEnable() {
         return enable;
     }
@@ -38,7 +38,7 @@ public class JacksonProperties {
     * 设置 enable
     *
     * @param enable enable
-     */
+    */
     public void setEnable(boolean enable) {
         this.enable = enable;
     }
@@ -47,7 +47,7 @@ public class JacksonProperties {
     * 获取 include空
     *
     * @return includeNull
-     */
+    */
     public boolean getIncludeNull() {
         return includeNull;
     }
@@ -56,7 +56,7 @@ public class JacksonProperties {
     * 判断是否包含空值
     *
     * @return includeNull
-     */
+    */
     public boolean isIncludeNull() {
         return includeNull;
     }
@@ -65,7 +65,7 @@ public class JacksonProperties {
     * 设置 include空
     *
     * @param includeNull include空
-     */
+    */
     public void setIncludeNull(boolean includeNull) {
         this.includeNull = includeNull;
     }

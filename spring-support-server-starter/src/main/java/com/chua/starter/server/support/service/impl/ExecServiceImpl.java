@@ -133,9 +133,9 @@ public class ExecServiceImpl implements ExecService {
             return ReturnResult.ok(logs, "分发成功");
         } finally {
             /**
-            * cleanupquietly。
-            * @param tempFile temp文件
-            */
+    * cleanupquietly。
+    * @param tempFile temp文件
+    */
             cleanupQuietly(tempFile);
         }
     }

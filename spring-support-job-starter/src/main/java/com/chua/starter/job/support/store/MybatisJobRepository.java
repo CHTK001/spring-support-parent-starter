@@ -37,17 +37,17 @@ public class MybatisJobRepository implements JobRepository {
 
     /**
     * 单实例内存记录每个 作业 上一次已发布的 下一个firems (用于 misfire 去重与补跳决策).
-     */
+    */
     private final ConcurrentMap<String, Long> lastFireMs = new ConcurrentHashMap<>();
 
     /**
     * 触发器缓存, 钥匙 为 执行Bean/名称 (复用固定序列推进)
-     */
+    */
     private final ConcurrentMap<String, com.chua.common.support.task.scheduler.Trigger> triggerCache = new ConcurrentHashMap<>();
 
     /**
     * 任务 映射器
-     */
+    */
     private final JobMapper jobMapper;
 
     @Override
@@ -102,7 +102,7 @@ public class MybatisJobRepository implements JobRepository {
     /**
     * 将注解扫描出的任务定义同步到 {@code sys_job} 表 (按 {@code sys_job_execute_bean} 唯一。
     * 已存在则更新调度配置, 不存在则新建触发状态=启用 的本地任务行)。
-     */
+    */
     @Override
     public void upsert(JobDefinition definition) {
         if (definition == null || definition.getName() == null) {
@@ -145,7 +145,7 @@ public class MybatisJobRepository implements JobRepository {
     *
     * @param definition 任务定义
     * @return 实体
-     */
+    */
     private JobEntity toEntity(JobDefinition definition) {
         JobEntity entity = new JobEntity();
         entity.setSysJobNo(definition.getName());
@@ -178,7 +178,7 @@ public class MybatisJobRepository implements JobRepository {
     * @param key    唯一 钥匙 (执行Bean/名称), 用于缓存触发器
     * @param now    当前时间戳
     * @return 下次触发时间, 未配置或计算失败返回 -1
-     */
+    */
     private long nextFireMs(JobEntity entity, String key, long now) {
         JobDefinition definition = toDefinition(entity);
         com.chua.common.support.task.scheduler.Trigger trigger = triggerCache.get(key);
@@ -199,7 +199,7 @@ public class MybatisJobRepository implements JobRepository {
     *
     * @param entity 实体
     * @return 定义
-     */
+    */
     private JobDefinition toDefinition(JobEntity entity) {
         JobDefinition definition = new JobDefinition();
         definition.setName(entity.getSysJobExecuteBean() != null
@@ -229,7 +229,7 @@ public class MybatisJobRepository implements JobRepository {
     *
     * @param value 字串
     * @return 毫秒数
-     */
+    */
     private long parseMs(String value) {
         if (!isNotBlank(value)) {
             return 0L;
@@ -246,7 +246,7 @@ public class MybatisJobRepository implements JobRepository {
     *
     * @param value 文本
     * @return 非空返回 true
-     */
+    */
     private boolean isNotBlank(String value) {
         return value != null && !value.isBlank();
     }

@@ -17,19 +17,19 @@ public class OptionalProperties {
 
     /**
     * 配置前缀
-     */
+    */
     public static final String PRE = "plugin.optional";
 
     /**
     *  是否打开
-     */
+    */
     private boolean enable = true;
 
     /**
     * 获取 enable
     *
     * @return enable
-     */
+    */
     public boolean getEnable() {
         return enable;
     }
@@ -38,7 +38,7 @@ public class OptionalProperties {
     * 设置 enable
     *
     * @param enable enable
-     */
+    */
     public void setEnable(boolean enable) {
         this.enable = enable;
     }

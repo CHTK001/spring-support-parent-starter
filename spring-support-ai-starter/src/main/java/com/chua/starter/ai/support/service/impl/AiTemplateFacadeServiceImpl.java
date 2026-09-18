@@ -33,7 +33,7 @@ public class AiTemplateFacadeServiceImpl implements AiTemplateFacadeService {
     * @param name        模板名称模糊匹配（可选）
     * @param remark      备注模糊匹配（可选）
     * @return 启用的模板列表，按排序字段升序、创建时间降序排列
-     */
+    */
     @Override
     public List<SysAiTemplate> list(Integer moduleId, String templateType, String category, String name, String remark) {
         return sysAiTemplateMapper.selectList(
@@ -54,7 +54,7 @@ public class AiTemplateFacadeServiceImpl implements AiTemplateFacadeService {
     *
     * @param template 待保存的模板对象
     * @return 保存后的模板对象（含生成的ID）
-     */
+    */
     @Override
     public SysAiTemplate save(SysAiTemplate template) {
         template.setId(null);
@@ -71,7 +71,7 @@ public class AiTemplateFacadeServiceImpl implements AiTemplateFacadeService {
     *
     * @param template 待更新的模板对象
     * @return 是否更新成功
-     */
+    */
     @Override
     public boolean update(SysAiTemplate template) {
         template.setUpdateTime(LocalDateTime.now());
@@ -83,7 +83,7 @@ public class AiTemplateFacadeServiceImpl implements AiTemplateFacadeService {
     *
     * @param templateId 模板标识
     * @return 是否删除成功
-     */
+    */
     @Override
     public boolean deleteById(Integer templateId) {
         return templateId != null && sysAiTemplateMapper.deleteById(templateId) > 0;

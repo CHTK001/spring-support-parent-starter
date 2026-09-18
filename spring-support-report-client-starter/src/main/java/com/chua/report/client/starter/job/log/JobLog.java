@@ -15,7 +15,7 @@ public interface JobLog{
     * 获取默认值
     *
     * @return 获取默认的结果
-     */
+    */
     static JobLog getDefault() {
         return INSTANCE;
     }

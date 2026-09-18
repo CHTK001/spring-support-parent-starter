@@ -40,7 +40,7 @@ public class EduDimensionController {
     /**
     * 全量字典下拉（学段 + 学科 + 年级）。
     * @return dropdown的结果
-     */
+    */
     @Operation(summary = "全量字典下拉")
     @GetMapping("/dropdown")
     public ReturnResult<EduDimensionService.DimensionDropdown> dropdown() {
@@ -56,7 +56,7 @@ public class EduDimensionController {
     *
     * @param false false
     * @return 列表主题的结果
-     */
+    */
     public ReturnResult<List<EduSubject>> listSubjects(@RequestParam(required = false) String gradeLevel) {
         return ReturnResult.ok(dimensionService.listSubjects(gradeLevel));
     }
@@ -68,7 +68,7 @@ public class EduDimensionController {
     *
     * @param entity 实体
     * @return 保存主题的结果
-     */
+    */
     public ReturnResult<Long> saveSubject(@RequestBody EduSubject entity) {
         return ReturnResult.ok(dimensionService.saveSubject(entity));
     }
@@ -80,7 +80,7 @@ public class EduDimensionController {
     *
     * @param id 标识
     * @return 删除主题的结果
-     */
+    */
     public ReturnResult<Boolean> deleteSubject(@PathVariable Long id) {
         return ReturnResult.ok(dimensionService.deleteSubject(id));
     }
@@ -94,7 +94,7 @@ public class EduDimensionController {
     *
     * @param false false
     * @return 列表grades的结果
-     */
+    */
     public ReturnResult<List<EduGrade>> listGrades(@RequestParam(required = false) String gradeLevel) {
         return ReturnResult.ok(dimensionService.listGrades(gradeLevel));
     }
@@ -120,7 +120,7 @@ public class EduDimensionController {
     * @param subjectCode 主题编码
     * @param entity 实体
     * @param id 标识
-     */
+    */
     public ReturnResult<List<EduClass>> listClasses(
             @RequestParam(required = false) String gradeLevel,
             @RequestParam(required = false) Long teacherId) {
@@ -134,7 +134,7 @@ public class EduDimensionController {
     *
     * @param entity 实体
     * @return 保存类的结果
-     */
+    */
     public ReturnResult<Long> saveClass(@RequestBody EduClass entity) {
         return ReturnResult.ok(dimensionService.saveClass(entity));
     }
@@ -146,7 +146,7 @@ public class EduDimensionController {
     *
     * @param id 标识
     * @return 删除类的结果
-     */
+    */
     public ReturnResult<Boolean> deleteClass(@PathVariable Long id) {
         return ReturnResult.ok(dimensionService.deleteClass(id));
     }
@@ -167,7 +167,7 @@ public class EduDimensionController {
     * @param subjectCode 主题编码
     * @param entity 实体
     * @param id 标识
-     */
+    */
     public ReturnResult<List<EduStudent>> listStudents(
             @RequestParam(required = false) Long classId,
             @RequestParam(required = false) String gradeLevel,
@@ -182,7 +182,7 @@ public class EduDimensionController {
     *
     * @param entity 实体
     * @return 保存student的结果
-     */
+    */
     public ReturnResult<Long> saveStudent(@RequestBody EduStudent entity) {
         return ReturnResult.ok(dimensionService.saveStudent(entity));
     }
@@ -194,7 +194,7 @@ public class EduDimensionController {
     *
     * @param id 标识
     * @return 删除student的结果
-     */
+    */
     public ReturnResult<Boolean> deleteStudent(@PathVariable Long id) {
         return ReturnResult.ok(dimensionService.deleteStudent(id));
     }
@@ -208,7 +208,7 @@ public class EduDimensionController {
     *
     * @param false false
     * @return 列表teachers的结果
-     */
+    */
     public ReturnResult<List<EduTeacher>> listTeachers(@RequestParam(required = false) String subjectCode) {
         return ReturnResult.ok(dimensionService.listTeachers(subjectCode));
     }
@@ -220,7 +220,7 @@ public class EduDimensionController {
     *
     * @param entity 实体
     * @return 保存teacher的结果
-     */
+    */
     public ReturnResult<Long> saveTeacher(@RequestBody EduTeacher entity) {
         return ReturnResult.ok(dimensionService.saveTeacher(entity));
     }
@@ -232,7 +232,7 @@ public class EduDimensionController {
     *
     * @param id 标识
     * @return 删除teacher的结果
-     */
+    */
     public ReturnResult<Boolean> deleteTeacher(@PathVariable Long id) {
         return ReturnResult.ok(dimensionService.deleteTeacher(id));
     }

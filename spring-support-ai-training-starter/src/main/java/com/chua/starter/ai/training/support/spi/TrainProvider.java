@@ -27,14 +27,14 @@ public interface TrainProvider {
     * 训练类型标识（与前端传入的 类型 对齐，如 resnet50 / yolo）。
     *
     * @return 训练类型
-     */
+    */
     String type();
 
     /**
     * 承载引擎标识（如 dl4j / Python-http），仅作描述与监控用途。
     *
     * @return 引擎标识
-     */
+    */
     String engine();
 
     /**
@@ -45,6 +45,6 @@ public interface TrainProvider {
     * @param listener 进度回调（可为 {@link TrainListener#NOOP}）
     * @return 训练结果
     * @throws Exception 训练过程中发生异常
-     */
+    */
     TrainResult train(TrainArgument argument, TrainContext ctx, TrainListener listener) throws Exception;
 }

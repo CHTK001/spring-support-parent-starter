@@ -30,7 +30,7 @@ public class ProjectPushService {
     * 构造器注入
     *
     * @param socketTemplates 套接字 模板
-     */
+    */
     public ProjectPushService(ObjectProvider<SocketSessionTemplate> socketTemplates) {
         this.socketTemplates = socketTemplates;
     }
@@ -45,7 +45,7 @@ public class ProjectPushService {
     * @param status    状态 RUNNING/成功/失败
     * @param message   描述
     * @param version   版本标识，可为空
-     */
+    */
     public void pushProgress(Long projectId, Long hostId, String action, String stage,
                               String status, String message, String version) {
         SocketSessionTemplate template = socketTemplates.getIfAvailable();
@@ -75,14 +75,14 @@ public class ProjectPushService {
     }
 
     /**
-     * 广播项目指标实时值（守护/指标采集专用通道）
-     *
-     * @param projectId  项目 标识
-     * @param hostId     主机 标识，可为空
-     * @param metricName 指标名（process.mem.mb / process.cpu / port.alive / http.code）
-     * @param value      指标值
-     * @param collectTime 采集时间
-     */
+    * 广播项目指标实时值（守护/指标采集专用通道）
+    *
+    * @param projectId  项目 标识
+    * @param hostId     主机 标识，可为空
+    * @param metricName 指标名（process.mem.mb / process.cpu / port.alive / http.code）
+    * @param value      指标值
+    * @param collectTime 采集时间
+    */
     public void pushProjectMetric(Long projectId, Long hostId, String metricName, double value,
                                    java.time.LocalDateTime collectTime) {
         SocketSessionTemplate template = socketTemplates.getIfAvailable();

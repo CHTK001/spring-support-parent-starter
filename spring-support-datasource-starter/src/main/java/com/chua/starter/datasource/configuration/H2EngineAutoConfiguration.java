@@ -57,7 +57,7 @@ public class H2EngineAutoConfiguration {
     /**
     * h2engineauto配置。
     * @param properties 属性
-     */
+    */
     public H2EngineAutoConfiguration(H2DataSourceProperties properties) {
         this.properties = properties;
     }
@@ -65,7 +65,7 @@ public class H2EngineAutoConfiguration {
     /**
     * 注册 H2 Engine Bean，通过 SPI "h2" 获取。
     * @return h2Engine的结果
-     */
+    */
     @Bean
     @ConditionalOnMissingBean
     @Order(Ordered.LOWEST_PRECEDENCE)
@@ -79,7 +79,7 @@ public class H2EngineAutoConfiguration {
     /**
     * 注册 H2 数据源 Bean（供 Spring jdbctemplate /@Transactional 使用）。
     * @return h2数据源的结果
-     */
+    */
     @Bean
     @ConditionalOnMissingBean(DataSource.class)
     public DataSource h2DataSource() {
@@ -98,7 +98,7 @@ public class H2EngineAutoConfiguration {
             * runtime异常。
             * @param e.getMessage( e.获取消息(
             * @return runtime异常的结果
-             */
+            */
             throw new RuntimeException("[h2] H2 DataSource 创建失败: " + e.getMessage(), e);
         }
     }
@@ -110,7 +110,7 @@ public class H2EngineAutoConfiguration {
     * </p>
     * @param h2Engine h2Engine
     * @return h2Flyway的结果
-     */
+    */
     @Bean
     @ConditionalOnMissingBean
     @Order(Ordered.LOWEST_PRECEDENCE + 1)
@@ -128,7 +128,7 @@ public class H2EngineAutoConfiguration {
     * 注册 H2 清理插件（可选）。
     * @param engine engine
     * @return h2CleanupPlugin的结果
-     */
+    */
     @Bean
     @ConditionalOnMissingBean
     public H2CleanupPlugin h2CleanupPlugin(H2Engine engine) {
@@ -136,7 +136,7 @@ public class H2EngineAutoConfiguration {
         * H2cleanupplugin。
         * @param engine engine
         * @return H2CleanupPlugin的结果
-         */
+        */
         return new H2CleanupPlugin(engine);
     }
 }

@@ -21,7 +21,7 @@ public interface IEduKnowledgeDocService extends IService<EduKnowledgeDoc> {
     * @return 分页结果
     * @param page page
     * @param pageSize page大小
-     */
+    */
     PageResult<KnowledgeDocVO> pageQuery(EduKnowledgeDoc query, long page, long pageSize);
 
     /**
@@ -29,7 +29,7 @@ public interface IEduKnowledgeDocService extends IService<EduKnowledgeDoc> {
     *
     * @param dto 文档上传数据
     * @return 文档ID
-     */
+    */
     Long uploadDoc(KnowledgeDocUploadDTO dto);
 
     /**
@@ -39,7 +39,7 @@ public interface IEduKnowledgeDocService extends IService<EduKnowledgeDoc> {
     * @param subject 学科
     * @param limit   返回数量
     * @return 检索结果
-     */
+    */
     PageResult<KnowledgeDocVO> search(String keyword, String subject, int limit);
 
     /**
@@ -47,6 +47,6 @@ public interface IEduKnowledgeDocService extends IService<EduKnowledgeDoc> {
     *
     * @param id 文档标识
     * @return 是否成功
-     */
+    */
     boolean deleteDoc(Long id);
 }

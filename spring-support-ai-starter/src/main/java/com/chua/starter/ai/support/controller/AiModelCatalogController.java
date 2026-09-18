@@ -30,14 +30,14 @@ public class AiModelCatalogController {
 
     /**
     * 统一能力模型清单服务
-     */
+    */
     private final AiModelCatalogService aiModelCatalogService;
 
     /**
     * 获取按能力分组的所有模型清单。
     *
     * @return 能力 → 模型 标识 列表
-     */
+    */
     @Permission("admin")
     @Operation(summary = "按能力分组的所有模型清单", description = "聚合本地 + 云端全部能力门面的模型")
     @GetMapping("/capabilities")
@@ -50,7 +50,7 @@ public class AiModelCatalogController {
     *
     * @param capability 能力标签（如 detect / 特征 / 对话 / 文本-转为-镜像）
     * @return 模型 标识 列表
-     */
+    */
     @Permission("admin")
     @Operation(summary = "指定能力的模型清单")
     @GetMapping("/capability/{capability}")
@@ -62,7 +62,7 @@ public class AiModelCatalogController {
     * 获取全部能力标签。
     *
     * @return 能力标签列表
-     */
+    */
     @Permission("admin")
     @Operation(summary = "全部能力标签")
     @GetMapping("/capability-names")

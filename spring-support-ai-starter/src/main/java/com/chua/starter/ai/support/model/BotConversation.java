@@ -18,41 +18,41 @@ public class BotConversation {
 
     /**
     * 机器人 唯一标识
-     */
+    */
     private String botId;
 
     /**
     * 微信用户 标识
-     */
+    */
     private String fromUser;
 
     /**
     * 展示昵称（绑定记录 nickname，缺失回退 从用户）
-     */
+    */
     private String nickname;
 
     /**
     * 平台类型（wechat / wecom / feishu，来自绑定记录）
-     */
+    */
     private String platform;
 
     /**
     * 最后一条消息内容
-     */
+    */
     private String lastContent;
 
     /**
     * 最后一条消息时间
-     */
+    */
     private LocalDateTime lastTime;
 
     /**
     * 未读消息数（入 方向且未读；当前简化实现恒为 0，供后续扩展）
-     */
+    */
     private long unread;
 
     /**
     * 绑定记录状态（online / offline / expired）
-     */
+    */
     private String status;
 }

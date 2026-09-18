@@ -34,14 +34,14 @@ public class AiGroupController {
 
     /**
     * 分组服务
-     */
+    */
     private final AiGroupService groupService;
 
     /**
     * 查询所有分组。
     *
     * @return 分组 DTO 列表
-     */
+    */
     @Permission("admin")
     @Operation(summary = "查询所有分组")
     @GetMapping
@@ -54,7 +54,7 @@ public class AiGroupController {
     *
     * @param group 分组 DTO
     * @return 创建后的分组 DTO
-     */
+    */
     @Permission("admin")
     @Operation(summary = "新建分组")
     @PostMapping
@@ -69,7 +69,7 @@ public class AiGroupController {
     * @param group   分组 DTO
     * @return 更新后的分组 DTO
     * @param ID" 标识"
-     */
+    */
     @Permission("admin")
     @Operation(summary = "更新分组")
     @PutMapping("/{groupId}")
@@ -85,7 +85,7 @@ public class AiGroupController {
     * @param ID" 标识"
     * @param ID" 标识"
     * @param ID" ID"
-     */
+    */
     @Permission("admin")
     @Operation(summary = "删除分组")
     @DeleteMapping("/{groupId}")

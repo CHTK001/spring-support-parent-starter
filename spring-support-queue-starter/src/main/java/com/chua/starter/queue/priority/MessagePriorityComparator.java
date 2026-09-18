@@ -20,17 +20,17 @@ public class MessagePriorityComparator implements Comparator<Message> {
 
     /**
     * 默认优先级
-     */
+    */
     public static final int DEFAULT_PRIORITY = 5;
 
     /**
     * 最高优先级
-     */
+    */
     public static final int HIGHEST_PRIORITY = 0;
 
     /**
     * 最低优先级
-     */
+    */
     public static final int LOWEST_PRIORITY = 10;
 
     @Override
@@ -54,7 +54,7 @@ public class MessagePriorityComparator implements Comparator<Message> {
     * 获取消息优先级
     * @param message 消息
     * @return 获取priority的结果
-     */
+    */
     public static int getPriority(Message message) {
         Object priority = message.getHeader(PRIORITY_HEADER);
         if (priority instanceof Integer) {
@@ -74,7 +74,7 @@ public class MessagePriorityComparator implements Comparator<Message> {
     * 设置消息优先级
     * @param message 消息
     * @param priority priority
-     */
+    */
     public static void setPriority(Message message, int priority) {
         if (priority < HIGHEST_PRIORITY) {
             priority = HIGHEST_PRIORITY;
@@ -88,26 +88,26 @@ public class MessagePriorityComparator implements Comparator<Message> {
     /**
     * 设置为高优先级
     * @param message 消息
-     */
+    */
     public static void setHighPriority(Message message) {
         /**
         * 设置priority。
         * @param message 消息
         * @param 1 1
-         */
+        */
         setPriority(message, 1);
     }
 
     /**
     * 设置为低优先级
     * @param message 消息
-     */
+    */
     public static void setLowPriority(Message message) {
         /**
         * 设置priority。
         * @param message 消息
         * @param 9 9
-         */
+        */
         setPriority(message, 9);
     }
 
@@ -115,7 +115,7 @@ public class MessagePriorityComparator implements Comparator<Message> {
     * 是否为高优先级消息
     * @param message 消息
     * @return 是否highpriority的结果
-     */
+    */
     public static boolean isHighPriority(Message message) {
         return getPriority(message) <= 2;
     }
@@ -124,7 +124,7 @@ public class MessagePriorityComparator implements Comparator<Message> {
     * 是否为低优先级消息
     * @param message 消息
     * @return 是否lowpriority的结果
-     */
+    */
     public static boolean isLowPriority(Message message) {
         return getPriority(message) >= 8;
     }

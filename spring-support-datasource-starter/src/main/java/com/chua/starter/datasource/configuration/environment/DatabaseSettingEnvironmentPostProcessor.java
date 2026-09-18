@@ -116,34 +116,34 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
         }
 
         /**
-        * 尝试。
-        * @param openConnection(connectionInfo 打开connection(connection信息
-         */
+    * 尝试。
+    * @param openConnection(connectionInfo 打开connection(connection信息
+    */
         try (Connection connection = openConnection(connectionInfo)) {
             /**
             * ensure群体table。
             * @param connection connection
-             */
+            */
             ensureGroupTable(connection);
             /**
             * ensuresettingtable。
             * @param connection connection
-             */
+            */
             ensureSettingTable(connection);
             /**
             * 参见默认群体。
             * @param connection connection
-             */
+            */
             seedDefaultGroups(connection);
             /**
             * 参见默认settings。
             * @param connection connection
-             */
+            */
             seedDefaultSettings(connection);
             /**
             * 注册财产源。
             * @param environment.getPropertySources( 环境.获取财产源(
-             */
+            */
             registerPropertySource(environment.getPropertySources(), loadStartupSettings(connection));
         } catch (Exception e) {
             log.warn("[数据库配置]初始化失败: {}", e.getMessage(), e);
@@ -155,7 +155,7 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
     *
     * @param environment 环境
     * @return resolveconnection信息的结果
-     */
+    */
     private ConnectionInfo resolveConnectionInfo(ConfigurableEnvironment environment) {
         String url = environment.getProperty("spring.datasource.url");
         if (!StringUtils.hasText(url)) {
@@ -173,7 +173,7 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
     *
     * @param connectionInfo connection信息
     * @return 打开connection的结果
-     */
+    */
     private Connection openConnection(ConnectionInfo connectionInfo) throws Exception {
         if (StringUtils.hasText(connectionInfo.driverClassName())) {
             ReflectUtils.forName(connectionInfo.driverClassName());
@@ -191,7 +191,7 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
     * Ensure分组Table
     *
     * @param connection connection
-     */
+    */
     private void ensureGroupTable(Connection connection) throws SQLException {
         if (tableExists(connection, GROUP_TABLE)) {
             return;
@@ -199,7 +199,7 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
         /**
         * 尝试。
         * @param connection.createStatement( connection.创建对账单(
-         */
+        */
         try (Statement statement = connection.createStatement()) {
             statement.execute(createGroupTableSql(connection));
         }
@@ -210,7 +210,7 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
     * ensuresettingtable
     *
     * @param connection connection
-     */
+    */
     private void ensureSettingTable(Connection connection) throws SQLException {
         if (tableExists(connection, SETTING_TABLE)) {
             return;
@@ -218,7 +218,7 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
         /**
         * 尝试。
         * @param connection.createStatement( connection.创建对账单(
-         */
+        */
         try (Statement statement = connection.createStatement()) {
             statement.execute(createSettingTableSql(connection));
         }
@@ -231,7 +231,7 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
     * @param connection connection
     * @param tableName table名称
     * @return tableExists的结果
-     */
+    */
     private boolean tableExists(Connection connection, String tableName) throws SQLException {
         DatabaseMetaData metaData = connection.getMetaData();
         String catalog = connection.getCatalog();
@@ -240,7 +240,7 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
             /**
             * 尝试。
             * @param String[]{"TABLE"} 字符串[]{"TABLE"}
-             */
+            */
             try (ResultSet resultSet = metaData.getTables(catalog, schema, candidate, new String[]{"TABLE"})) {
                 while (resultSet.next()) {
                     String current = resultSet.getString("TABLE_NAME");
@@ -257,7 +257,7 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
     * 参见默认群体
     *
     * @param connection connection
-     */
+    */
     private void seedDefaultGroups(Connection connection) throws SQLException {
         String sql = """
                 INSERT INTO sys_setting_group (
@@ -284,7 +284,7 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
                 /**
                 * 尝试。
                 * @param exists.executeQuery( exists.执行查询(
-                 */
+                */
                 try (ResultSet resultSet = exists.executeQuery()) {
                     if (resultSet.next() && resultSet.getInt(1) > 0) {
                         continue;
@@ -317,7 +317,7 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
     * 参见默认settings
     *
     * @param connection connection
-     */
+    */
     private void seedDefaultSettings(Connection connection) throws SQLException {
         String sql = """
                 INSERT INTO sys_setting (
@@ -351,7 +351,7 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
                 /**
                 * 尝试。
                 * @param exists.executeQuery( exists.执行查询(
-                 */
+                */
                 try (ResultSet resultSet = exists.executeQuery()) {
                     if (resultSet.next() && resultSet.getInt(1) > 0) {
                         continue;
@@ -391,7 +391,7 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
     *
     * @param connection connection
     * @return 加载startupsettings的结果
-     */
+    */
     private Map<String, Object> loadStartupSettings(Connection connection) throws SQLException {
         String sql = """
                 SELECT sys_setting_name, sys_setting_value
@@ -405,7 +405,7 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
         /**
         * 尝试。
         * @param connection.prepareStatement(sql connection.prepare对账单(SQL
-         */
+        */
         try (PreparedStatement statement = connection.prepareStatement(sql);
              ResultSet resultSet = statement.executeQuery()) {
             while (resultSet.next()) {
@@ -420,7 +420,7 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
     *
     * @param propertySources 财产源
     * @param settings settings
-     */
+    */
     private void registerPropertySource(MutablePropertySources propertySources, Map<String, Object> settings) {
         if (settings.isEmpty() || propertySources.contains(PROPERTY_SOURCE_NAME)) {
             return;
@@ -440,7 +440,7 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
     *
     * @param propertySources 财产源
     * @return find第一个ops源的结果
-     */
+    */
     private String findFirstOpsSource(MutablePropertySources propertySources) {
         for (PropertySource<?> propertySource : propertySources) {
             if (propertySource.getName().startsWith(OPS_SOURCE_PREFIX)) {
@@ -455,7 +455,7 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
     *
     * @param connection connection
     * @return 创建群体tablesql的结果
-     */
+    */
     private String createGroupTableSql(Connection connection) throws SQLException {
         String idColumn = autoIncrementColumn(connection, "sys_setting_group_id");
         return """
@@ -465,26 +465,26 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
                     * VARCHAR。
                     * @param 255 255
                     * @return VARCHAR的结果
-                     */
+                    */
                     sys_setting_group_name VARCHAR(255),
                     /**
                     * VARCHAR。
                     * @param 255 255
                     * @return VARCHAR的结果
-                     */
+                    */
                     sys_setting_group_code VARCHAR(255),
                     /**
                     * VARCHAR。
                     * @param 255 255
                     * @return VARCHAR的结果
-                     */
+                    */
                     sys_setting_group_icon VARCHAR(255),
                     sys_setting_group_enable BOOLEAN,
                     /**
                     * VARCHAR。
                     * @param 1000 1000
                     * @return VARCHAR的结果
-                     */
+                    */
                     sys_setting_group_remark VARCHAR(1000),
                     sys_setting_group_sort INT,
                     sys_setting_group_use_project_interface BOOLEAN,
@@ -492,7 +492,7 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
                     * VARCHAR。
                     * @param 255 255
                     * @return VARCHAR的结果
-                     */
+                    */
                     create_name VARCHAR(255),
                     create_by INT,
                     create_time TIMESTAMP,
@@ -500,7 +500,7 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
                     * VARCHAR。
                     * @param 255 255
                     * @return VARCHAR的结果
-                     */
+                    */
                     update_name VARCHAR(255),
                     update_by INT,
                     update_time TIMESTAMP,
@@ -508,7 +508,7 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
                     * UNIQUE。
                     * @param sys_setting_group_code syssetting群体编码
                     * @return UNIQUE的结果
-                     */
+                    */
                     CONSTRAINT uk_sys_setting_group_code UNIQUE (sys_setting_group_code)
                 )
                 """.formatted(idColumn);
@@ -519,7 +519,7 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
     *
     * @param connection connection
     * @return 创建settingtablesql的结果
-     */
+    */
     private String createSettingTableSql(Connection connection) throws SQLException {
         String idColumn = autoIncrementColumn(connection, "sys_setting_id");
         return """
@@ -529,25 +529,25 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
                     * VARCHAR。
                     * @param 255 255
                     * @return VARCHAR的结果
-                     */
+                    */
                     sys_setting_name VARCHAR(255),
                     /**
                     * VARCHAR。
                     * @param 255 255
                     * @return VARCHAR的结果
-                     */
+                    */
                     sys_setting_value VARCHAR(255),
                     /**
                     * VARCHAR。
                     * @param 255 255
                     * @return VARCHAR的结果
-                     */
+                    */
                     sys_setting_config VARCHAR(255),
                     /**
                     * VARCHAR。
                     * @param 255 255
                     * @return VARCHAR的结果
-                     */
+                    */
                     sys_setting_remark VARCHAR(255),
                     sys_setting_sort INT,
                     sys_setting_version INT,
@@ -557,13 +557,13 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
                     * VARCHAR。
                     * @param 255 255
                     * @return VARCHAR的结果
-                     */
+                    */
                     sys_setting_value_type VARCHAR(255),
                     /**
                     * VARCHAR。
                     * @param 255 255
                     * @return VARCHAR的结果
-                     */
+                    */
                     sys_setting_group VARCHAR(255),
                     sys_setting_collect INT,
                     sys_setting_in_system INT,
@@ -572,7 +572,7 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
                     * VARCHAR。
                     * @param 255 255
                     * @return VARCHAR的结果
-                     */
+                    */
                     create_name VARCHAR(255),
                     create_by INT,
                     create_time TIMESTAMP,
@@ -580,7 +580,7 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
                     * VARCHAR。
                     * @param 255 255
                     * @return VARCHAR的结果
-                     */
+                    */
                     update_name VARCHAR(255),
                     update_by INT,
                     update_time TIMESTAMP,
@@ -589,7 +589,7 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
                     * @param sys_setting_name syssetting名称
                     * @param sys_setting_group syssetting群体
                     * @return UNIQUE的结果
-                     */
+                    */
                     CONSTRAINT uk_sys_setting_name_group UNIQUE (sys_setting_name, sys_setting_group)
                 )
                 """.formatted(idColumn);
@@ -601,7 +601,7 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
     * @param connection connection
     * @param columnName column名称
     * @return autoIncrementColumn的结果
-     */
+    */
     private String autoIncrementColumn(Connection connection, String columnName) throws SQLException {
         String database = connection.getMetaData().getDatabaseProductName().toLowerCase(Locale.ROOT);
         if (database.contains("sqlite")) {
@@ -627,7 +627,7 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
     * @param password 密码
     * @param driverClassName driver类名称
     * @return connection信息的结果
-     */
+    */
     private record ConnectionInfo(String url, String username, String password, String driverClassName) {
     }
 
@@ -640,7 +640,7 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
     * @param remark 评论
     * @param sort 排序
     * @return 群体definition的结果
-     */
+    */
     private record GroupDefinition(String code, String name, String icon, String remark, int sort) {
     }
 
@@ -653,7 +653,7 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
     * @param sort 排序
     * @param config 配置
     * @param remark 评论
-     */
+    */
     private record SettingDefinition(
             String name,
             String defaultValue,

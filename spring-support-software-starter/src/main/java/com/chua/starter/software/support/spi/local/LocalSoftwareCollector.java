@@ -18,13 +18,13 @@ public interface LocalSoftwareCollector {
     * 判断是否支持当前操作系统
     *
     * @return true 表示当前采集器可用
-     */
+    */
     boolean support();
 
     /**
     * 采集已安装软件列表
     *
     * @return 软件信息列表（仅包含名称、版本、安装路径、图标路径等基础信息）
-     */
+    */
     List<SoftSoftware> collect();
 }

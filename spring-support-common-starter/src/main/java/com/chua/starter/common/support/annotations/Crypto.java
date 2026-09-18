@@ -24,13 +24,13 @@ public @interface Crypto {
     /**
     * 密钥
     * @return 钥匙的结果
-     */
+    */
     String key();
 
     /**
     * 密钥类型
     * @return 钥匙类型的结果
-     */
+    */
     KeyType keyType() default KeyType.NONE;
 
     /**
@@ -38,16 +38,16 @@ public @interface Crypto {
     *
     * @author CH
     * @since 4.0.0
-     */
+    */
     public static enum KeyType {
         /**
         * 不使用
-         */
+        */
         NONE,
 
         /**
         * spel
-         */
+        */
         SPEL
     }
 }

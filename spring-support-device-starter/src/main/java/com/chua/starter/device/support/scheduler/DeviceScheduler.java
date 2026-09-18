@@ -43,53 +43,53 @@ public class DeviceScheduler {
 
     /**
     * 离线检测任务名
-     */
+    */
     private static final String TASK_OFFLINE_CHECK = "deviceOfflineCheck";
 
     /**
     * 调度触发间隔（秒）
-     */
+    */
     private static final long SCHEDULE_INTERVAL_SEC = 1;
 
     /**
     * 任务状态服务
-     */
+    */
     private final DeviceTaskStateService taskStateService;
 
     /**
     * 提供商配置服务
-     */
+    */
     private final DeviceProviderConfigService providerConfigService;
 
     /**
     * 设备信息 映射器
-     */
+    */
     private final DeviceInfoMapper deviceInfoMapper;
 
     /**
     * 事件服务
-     */
+    */
     private final DeviceEventService eventService;
 
     /**
     * 设备会话管理器
-     */
+    */
     private final DeviceSessionManager sessionManager;
 
     /**
     * 时间调度器（复用公共模块）
-     */
+    */
     private TimeScheduler timeScheduler;
 
     /**
     * 离线检测定时任务
-     */
+    */
     private ScheduledTask offlineCheckTask;
 
     /**
     * 启动调度器：每秒触发一次离线检测 Trigger 判断。
     * <p>事件轮询由 {@link DeviceEventService#pollAllDevices()} 的 {@code @Scheduled} 调度，本类不再重复注册。</p>
-     */
+    */
     @PostConstruct
     public void start() {
         timeScheduler = TimeScheduler.of();
@@ -100,7 +100,7 @@ public class DeviceScheduler {
 
     /**
     * 停止调度器
-     */
+    */
     @PreDestroy
     public void stop() {
         if (timeScheduler != null) {
@@ -111,7 +111,7 @@ public class DeviceScheduler {
 
     /**
     * 离线检测 Trigger 判断
-     */
+    */
     private void executeOfflineCheck() {
         if (!taskStateService.shouldRun(TASK_OFFLINE_CHECK)) {
             return;
@@ -122,7 +122,7 @@ public class DeviceScheduler {
         try {
             /**
             * 执行offline检查。
-             */
+            */
             doOfflineCheck();
         } finally {
             taskStateService.markFinished(TASK_OFFLINE_CHECK);
@@ -132,7 +132,7 @@ public class DeviceScheduler {
     /**
     * 执行离线检测
     * <p>遍历所有在线设备，按设备自身阈值（回退厂商默认值）检测在线状态。</p>
-     */
+    */
     private void doOfflineCheck() {
         List<DeviceInfo> devices = providerConfigService.listCheckableDevices();
         for (DeviceInfo device : devices) {
@@ -157,7 +157,7 @@ public class DeviceScheduler {
     *
     * @param device 设备信息
     * @return 连接信息
-     */
+    */
     private DeviceConnectInfo buildConnectInfo(DeviceInfo device) {
         DeviceConnectInfo info = new DeviceConnectInfo();
         info.setVendor(device.getDeviceInfoVendor());

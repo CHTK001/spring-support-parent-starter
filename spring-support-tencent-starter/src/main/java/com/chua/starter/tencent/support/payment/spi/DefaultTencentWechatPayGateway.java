@@ -318,53 +318,53 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
     public TencentWechatPayScoreResponse createPayScoreOrder(TencentWechatPayProperties properties, TencentWechatPayScoreRequest request) {
         Map<String, Object> body = new LinkedHashMap<>();
         /**
-        * 放入if是否包含文本。
-        * @param body 主体
-        * @param "appid" "appid"
-        * @param firstNonBlank(request.getAppId( 第一个nonblank(请求.getappid(
-         */
+    * 放入if是否包含文本。
+    * @param body 主体
+    * @param "appid" "appid"
+    * @param firstNonBlank(request.getAppId( 第一个nonblank(请求.getappid(
+    */
         putIfHasText(body, "appid", firstNonBlank(request.getAppId(), properties.getAppId()));
         /**
         * 放入if是否包含文本。
         * @param body 主体
         * @param "service_id" "服务_标识"
         * @param request.getServiceId( 请求.获取服务标识(
-         */
+        */
         putIfHasText(body, "service_id", request.getServiceId());
         /**
         * 放入if是否包含文本。
         * @param body 主体
         * @param "out_order_no" "出订单no"
         * @param request.getOutOrderNo( 请求.获取出订单no(
-         */
+        */
         putIfHasText(body, "out_order_no", request.getOutOrderNo());
         /**
         * 放入if是否包含文本。
         * @param body 主体
         * @param "openid" "openid"
         * @param request.getOpenId( 请求.获取打开标识(
-         */
+        */
         putIfHasText(body, "openid", request.getOpenId());
         /**
         * 放入if是否包含文本。
         * @param body 主体
         * @param "notify_url" "通知_url"
         * @param firstNonBlank(request.getNotifyUrl( 第一个nonblank(请求.获取通知url(
-         */
+        */
         putIfHasText(body, "notify_url", firstNonBlank(request.getNotifyUrl(), properties.getNotifyUrl()));
         /**
         * 放入if是否包含文本。
         * @param body 主体
         * @param "service_introduction" "服务_introduction"
         * @param request.getServiceIntroduction( 请求.获取服务introduction(
-         */
+        */
         putIfHasText(body, "service_introduction", request.getServiceIntroduction());
         /**
         * 放入if是否包含文本。
         * @param body 主体
         * @param "attach" "attach"
         * @param request.getAttach( 请求.获取attach(
-         */
+        */
         putIfHasText(body, "attach", request.getAttach());
         if (request.getNeedUserConfirm() != null) {
             body.put("need_user_confirm", request.getNeedUserConfirm());
@@ -386,7 +386,7 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
         * 合并extra参数。
         * @param body 主体
         * @param request.getExtraParams( 请求.获取extra参数(
-         */
+        */
         mergeExtraParams(body, request.getExtraParams());
         return callPayScoreApi(properties, "/v3/payscore/serviceorder", body, request.getOutOrderNo(), "微信支付分创建成功");
     }
@@ -409,32 +409,32 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
     public TencentWechatPayScoreResponse completePayScoreOrder(TencentWechatPayProperties properties, TencentWechatPayScoreRequest request) {
         Map<String, Object> body = new LinkedHashMap<>();
         /**
-        * 放入if是否包含文本。
-        * @param body 主体
-        * @param "appid" "appid"
-        * @param firstNonBlank(request.getAppId( 第一个nonblank(请求.getappid(
-         */
+    * 放入if是否包含文本。
+    * @param body 主体
+    * @param "appid" "appid"
+    * @param firstNonBlank(request.getAppId( 第一个nonblank(请求.getappid(
+    */
         putIfHasText(body, "appid", firstNonBlank(request.getAppId(), properties.getAppId()));
         /**
         * 放入if是否包含文本。
         * @param body 主体
         * @param "service_id" "服务_标识"
         * @param request.getServiceId( 请求.获取服务标识(
-         */
+        */
         putIfHasText(body, "service_id", request.getServiceId());
         /**
         * 放入if是否包含文本。
         * @param body 主体
         * @param "finish_type" "饰面_类型"
         * @param request.getFinishType( 请求.获取饰面类型(
-         */
+        */
         putIfHasText(body, "finish_type", request.getFinishType());
         /**
         * 放入if是否包含文本。
         * @param body 主体
         * @param "reason" "ReasonMLML"
         * @param request.getReason( 请求.获取ReasonMLML(
-         */
+        */
         putIfHasText(body, "reason", request.getReason());
         Map<String, Object> timeRange = buildTimeRange(request);
         if (!timeRange.isEmpty()) {
@@ -453,7 +453,7 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
         * 合并extra参数。
         * @param body 主体
         * @param request.getExtraParams( 请求.获取extra参数(
-         */
+        */
         mergeExtraParams(body, request.getExtraParams());
         return callPayScoreApi(properties,
                 "/v3/payscore/serviceorder/" + urlEncode(request.getOutOrderNo()) + "/complete",
@@ -467,31 +467,31 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
     public TencentWechatPayScoreResponse cancelPayScoreOrder(TencentWechatPayProperties properties, TencentWechatPayScoreRequest request) {
         Map<String, Object> body = new LinkedHashMap<>();
         /**
-        * 放入if是否包含文本。
-        * @param body 主体
-        * @param "appid" "appid"
-        * @param firstNonBlank(request.getAppId( 第一个nonblank(请求.getappid(
-         */
+    * 放入if是否包含文本。
+    * @param body 主体
+    * @param "appid" "appid"
+    * @param firstNonBlank(request.getAppId( 第一个nonblank(请求.getappid(
+    */
         putIfHasText(body, "appid", firstNonBlank(request.getAppId(), properties.getAppId()));
         /**
         * 放入if是否包含文本。
         * @param body 主体
         * @param "service_id" "服务_标识"
         * @param request.getServiceId( 请求.获取服务标识(
-         */
+        */
         putIfHasText(body, "service_id", request.getServiceId());
         /**
         * 放入if是否包含文本。
         * @param body 主体
         * @param "reason" "ReasonMLML"
         * @param request.getReason( 请求.获取ReasonMLML(
-         */
+        */
         putIfHasText(body, "reason", request.getReason());
         /**
         * 合并extra参数。
         * @param body 主体
         * @param request.getExtraParams( 请求.获取extra参数(
-         */
+        */
         mergeExtraParams(body, request.getExtraParams());
         return callPayScoreApi(properties,
                 "/v3/payscore/serviceorder/" + urlEncode(request.getOutOrderNo()) + "/cancel",
@@ -586,7 +586,7 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
     *
     * @param properties 属性
     * @return 创建notificationparser的结果
-     */
+    */
     private NotificationParser createNotificationParser(TencentWechatPayProperties properties) {
         return clientFactory.createNotificationParser(clientFactory.createAutoCertificateConfig(properties));
     }
@@ -596,7 +596,7 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
     *
     * @param request 请求
     * @return 转为请求参数的结果
-     */
+    */
     private RequestParam toRequestParam(TencentWechatNotifyRequest request) {
         return new RequestParam.Builder()
                 .serialNumber(requiredText(request.getSerialNumber(), "微信支付通知缺少证书序列号"))
@@ -613,7 +613,7 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
     *
     * @param response 响应
     * @return 转为订单响应的结果
-     */
+    */
     private TencentWechatOrderResponse toOrderResponse(Transaction response) {
         TencentWechatOrderResponse result = new TencentWechatOrderResponse();
         result.setSuccess(true);
@@ -635,7 +635,7 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
     * @param refundNo 退税no
     * @param fallbackRefundAmountFen 降级退税amountfen
     * @return 转为退税响应的结果
-     */
+    */
     private TencentWechatRefundResponse toRefundResponse(Refund response, String refundNo, Long fallbackRefundAmountFen) {
         TencentWechatRefundResponse result = new TencentWechatRefundResponse();
         result.setSuccess(true);
@@ -648,7 +648,7 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
                 * long价值观。
                 * @param response.getAmount( 响应.获取amount(
                 * @return long价值观的结果
-                 */
+                */
                 ? longValue(response.getAmount().getRefund())
                 : fallbackRefundAmountFen);
         result.setRawResponse(String.valueOf(response));
@@ -660,7 +660,7 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
     *
     * @param value 价值观
     * @return long价值观的结果
-     */
+    */
     private Long longValue(Number value) {
         return value == null ? null : value.longValue();
     }
@@ -672,7 +672,7 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
     * @param body 主体
     * @param outOrderNo 出订单no
     * @param successMessage 成功消息
-     */
+    */
     private TencentWechatPayScoreResponse callPayScoreApi(TencentWechatPayProperties properties,
                                                           String path,
                                                           Map<String, Object> body,
@@ -695,7 +695,7 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
     * @param body 主体
     * @param fallbackOutOrderNo 降级出订单no
     * @param successMessage 成功消息
-     */
+    */
     private TencentWechatPayScoreResponse toPayScoreResponse(Map<String, Object> body,
                                                              String fallbackOutOrderNo,
                                                              String successMessage) {
@@ -716,7 +716,7 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
     *
     * @param request 请求
     * @return 构建时间范围的结果
-     */
+    */
     private Map<String, Object> buildTimeRange(TencentWechatPayScoreRequest request) {
         Map<String, Object> timeRange = new LinkedHashMap<>();
         /**
@@ -724,14 +724,14 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
         * @param timeRange 时间范围
         * @param "start_time" "启动_时间"
         * @param request.getStartTime( 请求.获取启动时间(
-         */
+        */
         putIfHasText(timeRange, "start_time", request.getStartTime());
         /**
         * 放入if是否包含文本。
         * @param timeRange 时间范围
         * @param "end_time" "结束_时间"
         * @param request.getEndTime( 请求.获取结束时间(
-         */
+        */
         putIfHasText(timeRange, "end_time", request.getEndTime());
         return timeRange;
     }
@@ -741,7 +741,7 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
     *
     * @param body 主体
     * @param extraParams extra参数
-     */
+    */
     private void mergeExtraParams(Map<String, Object> body, Map<String, Object> extraParams) {
         if (extraParams != null && !extraParams.isEmpty()) {
             body.putAll(extraParams);
@@ -754,7 +754,7 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
     * @param body 主体
     * @param key 钥匙
     * @param value 价值观
-     */
+    */
     private void putIfHasText(Map<String, Object> body, String key, String value) {
         if (StringUtils.hasText(value)) {
             body.put(key, value);
@@ -767,7 +767,7 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
     * @param body 主体
     * @param keys 钥匙
     * @return 第一个文本的结果
-     */
+    */
     private String firstText(Map<String, Object> body, String... keys) {
         if (keys == null) {
             return null;
@@ -792,7 +792,7 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
     *
     * @param value 价值观
     * @return urlEncode的结果
-     */
+    */
     private String urlEncode(String value) {
         return URLEncoder.encode(requiredText(value, "微信支付分缺少必要参数"), StandardCharsets.UTF_8);
     }
@@ -802,7 +802,7 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
     *
     * @param value 价值观
     * @return 转为json的结果
-     */
+    */
     private String toJson(Object value) {
         try {
             return objectMapper.writeValueAsString(value);
@@ -816,7 +816,7 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
     *
     * @param values 价值观
     * @return 第一个nonblank的结果
-     */
+    */
     private String firstNonBlank(String... values) {
         for (String value : values) {
             if (StringUtils.hasText(value)) {
@@ -832,14 +832,14 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
     * @param value 价值观
     * @param message 消息
     * @return required文本的结果
-     */
+    */
     private String requiredText(String value, String message) {
         if (!StringUtils.hasText(value)) {
             /**
             * illegal状态异常。
             * @param message 消息
             * @return illegal状态异常的结果
-             */
+            */
             throw new IllegalStateException(message);
         }
         return value;

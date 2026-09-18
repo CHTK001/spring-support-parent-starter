@@ -17,7 +17,7 @@ public interface ApiSwitchOverrideProvider {
     *
     * @param featureId 功能标识
     * @return 覆盖值或 空
-     */
+    */
     default FeatureOverride featureOverride(String featureId) {
         return null;
     }
@@ -27,7 +27,7 @@ public interface ApiSwitchOverrideProvider {
     *
     * @param pattern 灰度标识
     * @return 覆盖值或 空
-     */
+    */
     default GrayOverride grayOverride(String pattern) {
         return null;
     }
@@ -36,17 +36,17 @@ public interface ApiSwitchOverrideProvider {
     interface FeatureOverride {
 
         /**
-        * 覆盖后的开关状态
-        *
-        * @return 是否启用
-         */
+    * 覆盖后的开关状态
+    *
+    * @return 是否启用
+    */
         boolean isEnabled();
 
         /**
         * 覆盖后的禁用提示（空 表示沿用注解）
         *
         * @return 禁用提示
-         */
+        */
         default String disabledMessage() {
             return null;
         }
@@ -55,7 +55,7 @@ public interface ApiSwitchOverrideProvider {
         * 覆盖后的禁用状态码（<=0 表示沿用注解）
         *
         * @return 状态码
-         */
+        */
         default int disabledStatus() {
             return -1;
         }
@@ -65,10 +65,10 @@ public interface ApiSwitchOverrideProvider {
     interface GrayOverride {
 
         /**
-        * 覆盖后的灰度比例（空 表示沿用注解）
-        *
-        * @return 灰度比例
-         */
+    * 覆盖后的灰度比例（空 表示沿用注解）
+    *
+    * @return 灰度比例
+    */
         default Integer percentage() {
             return null;
         }
@@ -77,7 +77,7 @@ public interface ApiSwitchOverrideProvider {
         * 覆盖后的角色白名单（空 表示沿用注解）
         *
         * @return 角色列表
-         */
+        */
         default String[] roles() {
             return null;
         }
@@ -86,7 +86,7 @@ public interface ApiSwitchOverrideProvider {
         * 覆盖后的用户白名单（空 表示沿用注解）
         *
         * @return 用户列表
-         */
+        */
         default String[] users() {
             return null;
         }
@@ -95,7 +95,7 @@ public interface ApiSwitchOverrideProvider {
         * 覆盖后的请求头白名单（空 表示沿用注解）
         *
         * @return 请求头列表
-         */
+        */
         default String[] headers() {
             return null;
         }
@@ -104,7 +104,7 @@ public interface ApiSwitchOverrideProvider {
         * 覆盖后的 spel 规则（空 表示沿用注解）
         *
         * @return 规则表达式
-         */
+        */
         default String rule() {
             return null;
         }

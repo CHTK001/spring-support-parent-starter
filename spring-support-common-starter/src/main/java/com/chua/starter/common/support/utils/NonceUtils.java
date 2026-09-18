@@ -35,7 +35,7 @@ public class NonceUtils {
 
     /**
     * nonce工具。
-     */
+    */
     private NonceUtils() {
     }
 
@@ -73,7 +73,7 @@ public class NonceUtils {
     * @param request 请求（需包含 x-nonce、x-标志、x-时间戳）
     * @param maxAge  最大有效时间（毫秒）
     * @return 验证结果
-     */
+    */
     public static NonceValidationResult validateNonce(HttpServletRequest request, long maxAge) {
         String nonceStr = request.getHeader("x-nonce");
         String sign = request.getHeader("x-sign");
@@ -86,7 +86,7 @@ public class NonceUtils {
             * @param "" ""
             * @param "" ""
             * @return nonce校验结果的结果
-             */
+            */
             return new NonceValidationResult(false, 0, sign != null ? sign : "", nonceStr != null ? nonceStr : "");
         }
         try {
@@ -100,7 +100,7 @@ public class NonceUtils {
                 * @param sign 标志
                 * @param nonceStr noncestr
                 * @return nonce校验结果的结果
-                 */
+                */
                 return new NonceValidationResult(false, 0, sign, nonceStr);
             }
             if (!isValidSignFormat(sign)) {
@@ -112,7 +112,7 @@ public class NonceUtils {
                 * @param sign 标志
                 * @param nonceStr noncestr
                 * @return nonce校验结果的结果
-                 */
+                */
                 return new NonceValidationResult(false, 0, sign, nonceStr);
             }
             long currentTime = System.currentTimeMillis();
@@ -125,7 +125,7 @@ public class NonceUtils {
                 * @param sign 标志
                 * @param nonceStr noncestr
                 * @return nonce校验结果的结果
-                 */
+                */
                 return new NonceValidationResult(false, timestamp, sign, nonceStr);
             }
             /**
@@ -135,7 +135,7 @@ public class NonceUtils {
             * @param sign 标志
             * @param nonceStr noncestr
             * @return nonce校验结果的结果
-             */
+            */
             return new NonceValidationResult(true, timestamp, sign, nonceStr);
         } catch (Exception e) {
             log.error("解析 Nonce 异常 nonce={}, sign={}", nonceStr, sign, e);
@@ -146,7 +146,7 @@ public class NonceUtils {
             * @param sign 标志
             * @param nonceStr noncestr
             * @return nonce校验结果的结果
-             */
+            */
             return new NonceValidationResult(false, 0, sign, nonceStr);
         }
     }
@@ -155,7 +155,7 @@ public class NonceUtils {
     * 解析并验证 Nonce（使用默认 5 分钟有效期）
     * @param request 请求
     * @return 校验nonce的结果
-     */
+    */
     public static NonceValidationResult validateNonce(HttpServletRequest request) {
         return validateNonce(request, DEFAULT_MAX_AGE_MS);
     }
@@ -167,7 +167,7 @@ public class NonceUtils {
     * @param sign     前端传递的签名
     * @param maxAge   最大有效时间（毫秒）
     * @return 验证结果
-     */
+    */
     public static NonceValidationResult validateNonce(String nonceStr, String sign, long maxAge) {
         if (!StringUtils.hasText(nonceStr) || !StringUtils.hasText(sign)) {
             /**
@@ -177,7 +177,7 @@ public class NonceUtils {
             * @param sign 标志
             * @param nonceStr noncestr
             * @return nonce校验结果的结果
-             */
+            */
             return new NonceValidationResult(false, 0, sign, nonceStr);
         }
         try {
@@ -190,7 +190,7 @@ public class NonceUtils {
                 * @param sign 标志
                 * @param nonceStr noncestr
                 * @return nonce校验结果的结果
-                 */
+                */
                 return new NonceValidationResult(false, 0, sign, nonceStr);
             }
             if (!isValidSignFormat(sign)) {
@@ -202,7 +202,7 @@ public class NonceUtils {
                 * @param sign 标志
                 * @param nonceStr noncestr
                 * @return nonce校验结果的结果
-                 */
+                */
                 return new NonceValidationResult(false, 0, sign, nonceStr);
             }
             long timestamp = extractTimestamp(nonceStr);
@@ -214,7 +214,7 @@ public class NonceUtils {
                 * @param sign 标志
                 * @param nonceStr noncestr
                 * @return nonce校验结果的结果
-                 */
+                */
                 return new NonceValidationResult(false, 0, sign, nonceStr);
             }
             long currentTime = System.currentTimeMillis();
@@ -226,7 +226,7 @@ public class NonceUtils {
                 * @param sign 标志
                 * @param nonceStr noncestr
                 * @return nonce校验结果的结果
-                 */
+                */
                 return new NonceValidationResult(false, timestamp, sign, nonceStr);
             }
             /**
@@ -236,7 +236,7 @@ public class NonceUtils {
             * @param sign 标志
             * @param nonceStr noncestr
             * @return nonce校验结果的结果
-             */
+            */
             return new NonceValidationResult(true, timestamp, sign, nonceStr);
         } catch (Exception e) {
             log.error("解析 Nonce 异常 nonce={}, sign={}", nonceStr, sign, e);
@@ -247,7 +247,7 @@ public class NonceUtils {
             * @param sign 标志
             * @param nonceStr noncestr
             * @return nonce校验结果的结果
-             */
+            */
             return new NonceValidationResult(false, 0, sign, nonceStr);
         }
     }
@@ -258,7 +258,7 @@ public class NonceUtils {
     * @param nonceStr 前端传递的nonce字符串
     * @param sign     前端传递的签名
     * @return 验证结果
-     */
+    */
     public static NonceValidationResult validateNonce(String nonceStr, String sign) {
         return validateNonce(nonceStr, sign, 5 * 60 * 1000L); // 默认5分钟
     }
@@ -268,7 +268,7 @@ public class NonceUtils {
     *
     * @param sign 签名
     * @return 是否有效格式
-     */
+    */
     private static boolean isValidSignFormat(String sign) {
         // 简单验证签名格式（32位十六进制字符串）
         return Pattern.matches("^[a-fA-F0-9]{32}$", sign);
@@ -279,7 +279,7 @@ public class NonceUtils {
     *
     * @param nonceStr nonce字符串
     * @return 时间戳
-     */
+    */
     private static long extractTimestamp(String nonceStr) {
         try {
             // 简化实现：假设时间戳在nonce的前13位是时间戳
@@ -305,7 +305,7 @@ public class NonceUtils {
     *
     * @param request 请求
     * @return 是否包含 x-nonce、x-标志、x-时间戳、x-req-fingerprint
-     */
+    */
     public static boolean hasSignHeaders(HttpServletRequest request) {
         return StringUtils.hasText(request.getHeader("x-nonce"))
                 && StringUtils.hasText(request.getHeader("x-sign"))
@@ -318,7 +318,7 @@ public class NonceUtils {
     *
     * @param nonce x-nonce 值
     * @return true 表示已使用（重放），false 表示未使用
-     */
+    */
     public static boolean isNonceReplayed(String nonce) {
         if (!StringUtils.hasText(nonce)) {
             return true;
@@ -331,7 +331,7 @@ public class NonceUtils {
     *
     * @param nonce    x-nonce 值
     * @param expireAt 过期时间戳（毫秒）
-     */
+    */
     public static void recordNonce(String nonce, long expireAt) {
         if (StringUtils.hasText(nonce)) {
             USED_NONCE_CACHE.put(nonce, Boolean.TRUE);
@@ -344,7 +344,7 @@ public class NonceUtils {
     *
     * @param request 请求
     * @return true 校验通过，false 校验失败
-     */
+    */
     public static boolean validateXhrRequest(HttpServletRequest request) {
         if (!hasSignHeaders(request)) {
             return false;
@@ -366,7 +366,7 @@ public class NonceUtils {
         * recordnonce。
         * @param nonce nonce
         * @param result.getTimestamp( 结果.获取时间戳(
-         */
+        */
         recordNonce(nonce, result.getTimestamp() + DEFAULT_MAX_AGE_MS);
         return true;
     }
@@ -378,7 +378,7 @@ public class NonceUtils {
     * @param request httpservlet请求
     * @param sign    前端传递的签名
     * @return 是否验证通过
-     */
+    */
     public static boolean verifySign(HttpServletRequest request, String sign) {
         if (!hasSignHeaders(request)) {
             return false;
@@ -406,7 +406,7 @@ public class NonceUtils {
     * @param fingerprint x-req-fingerprint
     * @param timestamp  时间戳
     * @return 期望的签名
-     */
+    */
     public static String generateSign(HttpServletRequest request, String nonce, String fingerprint, long timestamp) {
         try {
             Map<String, String> filteredParams = collectParams(request);
@@ -427,7 +427,7 @@ public class NonceUtils {
     * 收集请求参数（排除 文件/文件，自然排序）
     * @param request 请求
     * @return collect参数的结果
-     */
+    */
     private static Map<String, String> collectParams(HttpServletRequest request) {
         Map<String, String> result = new TreeMap<>();
         Map<String, String[]> parameterMap = request.getParameterMap();
@@ -448,7 +448,7 @@ public class NonceUtils {
     * 设置签名密钥（与前端 secret钥匙 一致）
     *
     * @param key 密钥
-     */
+    */
     public static void setSecretKey(String key) {
         secretKey = key;
     }
@@ -457,7 +457,7 @@ public class NonceUtils {
     * 生成复杂的Nonce（与前端对应）
     *
     * @return 生成的nonce
-     */
+    */
     public static String generateNonce() {
         long timestamp = System.currentTimeMillis();
 
@@ -510,7 +510,7 @@ public class NonceUtils {
     *
     * @param length 长度
     * @return 随机字符串
-     */
+    */
     private static String generateRandomString(int length) {
         byte[] randomBytes = new byte[length];
         SECURE_RANDOM.nextBytes(randomBytes);
@@ -525,7 +525,7 @@ public class NonceUtils {
     * Nonce验证结果
     * @author CH
     * @since 4.0.0
-     */
+    */
     public static class NonceValidationResult {
         /** 是否有效 */
         private boolean valid;
@@ -542,7 +542,7 @@ public class NonceUtils {
         * @param timestamp 时间戳
         * @param sign 标志
         * @param nonce nonce
-         */
+        */
         public NonceValidationResult(boolean valid, long timestamp, String sign, String nonce) {
             this.valid = valid;
             this.timestamp = timestamp;
@@ -554,7 +554,7 @@ public class NonceUtils {
         /**
         * 是否valid。
         * @return 是否valid的结果
-         */
+        */
         public boolean isValid() {
             return valid;
         }
@@ -562,7 +562,7 @@ public class NonceUtils {
         /**
         * 获取时间戳。
         * @return 获取时间戳的结果
-         */
+        */
         public long getTimestamp() {
             return timestamp;
         }
@@ -570,7 +570,7 @@ public class NonceUtils {
         /**
         * 获取标志。
         * @return 获取标志的结果
-         */
+        */
         public String getSign() {
             return sign;
         }
@@ -578,7 +578,7 @@ public class NonceUtils {
         /**
         * 获取nonce。
         * @return 获取nonce的结果
-         */
+        */
         public String getNonce() {
             return nonce;
         }

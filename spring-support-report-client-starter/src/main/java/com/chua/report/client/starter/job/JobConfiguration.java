@@ -20,7 +20,7 @@ public class JobConfiguration implements SchedulingConfigurer {
     /**
     * 用线程池执行任务
     * @return
-     */
+    */
     @Bean
     @ConditionalOnMissingBean
     public ThreadPoolTaskScheduler threadPoolTaskScheduler(){

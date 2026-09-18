@@ -11,7 +11,7 @@ public interface Upgrade<T> {
     /**
     * upgrade。
     * @param t t
-     */
+    */
     void upgrade(T t);
 }
 

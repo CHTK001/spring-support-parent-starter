@@ -22,6 +22,6 @@ public interface SysAiManufacturerKeyMapper extends BaseMapper<SysAiManufacturer
     * @param manufacturerCode 厂商编码
     * @return API 钥匙 列表
     * @param @Param("manufacturerCode" @参数("manufacturer编码"
-     */
+    */
     List<SysAiManufacturerKey> selectByManufacturerCode(@Param("manufacturerCode") String manufacturerCode);
 }

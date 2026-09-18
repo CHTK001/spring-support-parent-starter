@@ -41,87 +41,87 @@ public class DeviceMetricsReporter {
 
     /**
     * 单例实例
-     */
+    */
     private static final DeviceMetricsReporter INSTANCE = new DeviceMetricsReporter();
 
     /**
     * CPU 采样间隔（毫秒）
-     */
+    */
     private static final long CPU_SAMPLING_MILLIS = 1000L;
 
     /**
     * 启动延迟（秒）— 设备信息上报
-     */
+    */
     private static final long INITIAL_DELAY_DEVICE_INFO_SECONDS = 20L;
 
     /**
     * 启动延迟（秒）— 指标上报
-     */
+    */
     private static final long INITIAL_DELAY_METRICS_SECONDS = 10L;
 
     /**
     * CPU 采集启动延迟（秒）
-     */
+    */
     private static final long INITIAL_DELAY_CPU_SECONDS = 5L;
 
     /**
     * 同步客户端 实例
-     */
+    */
     @Setter
     /** 同步客户端 */
     private SyncClient syncClient;
 
     /**
     * 应用名称
-     */
+    */
     @Setter
     /** APP名称 */
     private String appName;
 
     /**
     * 主机地址
-     */
+    */
     @Setter
     /** 主机 */
     private String host;
 
     /**
     * 主调度器
-     */
+    */
     private ScheduledExecutorService scheduler;
 
     /**
     * CPU 采集线程（单独维护）
-     */
+    */
     private ScheduledExecutorService cpuScheduler;
 
     /**
     * 运行标志
-     */
+    */
     private volatile boolean running = false;
 
     /**
     * 上报间隔（秒）
-     */
+    */
     @Setter
     /** 间隔秒 */
     private long intervalSeconds = 30;
 
     /**
     * 要上报的指标类型（默认全部）
-     */
+    */
     @Setter
     /** 是否启用指标 */
     private Set<MetricType> enabledMetrics = Set.of(MetricType.values());
 
     /**
     * 系统信息采集器（OSHI 统一入口）
-     */
+    */
     private final OshiSystemMonitor monitor = new OshiSystemMonitor();
 
     /**
     * CPU 使用率缓存（由单独线程更新）
-     */
+    */
     private final AtomicReference<Map<String, Object>> cpuCache = new AtomicReference<>(new HashMap<>());
 
     /** 创建 device指标reporter 实例 */
@@ -132,14 +132,14 @@ public class DeviceMetricsReporter {
     * 获取单例实例
     *
     * @return 单例
-     */
+    */
     public static DeviceMetricsReporter getInstance() {
         return INSTANCE;
     }
 
     /**
     * 启动定时上报
-     */
+    */
     public synchronized void start() {
         if (running) {
             return;
@@ -188,7 +188,7 @@ public class DeviceMetricsReporter {
 
     /**
     * 停止上报
-     */
+    */
     public synchronized void stop() {
         if (!running) {
             return;
@@ -208,7 +208,7 @@ public class DeviceMetricsReporter {
 
     /**
     * CPU 采集（单独线程执行，因需停顿）
-     */
+    */
     private void collectCpu() {
         try {
             Map<String, Object> cpuData = monitor.cpuSnapshot(CPU_SAMPLING_MILLIS);
@@ -221,7 +221,7 @@ public class DeviceMetricsReporter {
 
     /**
     * 采集并上报指标
-     */
+    */
     private void reportMetrics() {
         try {
             // 采集启用的指标
@@ -245,7 +245,7 @@ public class DeviceMetricsReporter {
 
     /**
     * 上报设备基本信息
-     */
+    */
     private void reportDeviceInfo() {
         try {
             Map<String, Object> info = collectDeviceInfo();
@@ -260,7 +260,7 @@ public class DeviceMetricsReporter {
     * 采集设备基本信息（只在启动时上报一次）
     *
     * @return 设备信息
-     */
+    */
     private Map<String, Object> collectDeviceInfo() {
         Map<String, Object> info = new HashMap<>();
         try {
@@ -280,7 +280,7 @@ public class DeviceMetricsReporter {
     *
     * @param types 要采集的指标类型
     * @return 指标数据
-     */
+    */
     private Map<String, Object> collectMetrics(Set<MetricType> types) {
         Map<String, Object> metrics = new HashMap<>();
 

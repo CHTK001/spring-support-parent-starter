@@ -26,7 +26,7 @@ public class DefaultConfigureObjectContext implements ConfigureObjectContext {
     * <p>当前实现为空操作，子类可根据配置进行初始化。</p>
     *
     * @param setting 对象上下文配置
-     */
+    */
     public DefaultConfigureObjectContext(ObjectContextSetting setting) {
     }
 
@@ -37,7 +37,7 @@ public class DefaultConfigureObjectContext implements ConfigureObjectContext {
     * @param type Bean 类型
     * @param <T>  目标类型泛型
     * @return null
-     */
+    */
     @Override
     public <T> T getBean(String name, Class<T> type) {
         return null;
@@ -49,7 +49,7 @@ public class DefaultConfigureObjectContext implements ConfigureObjectContext {
     * @param type Bean 类型
     * @param <T>  目标类型泛型
     * @return null
-     */
+    */
     @Override
     public <T> T getBeanOfType(Class<T> type) {
         return null;
@@ -61,7 +61,7 @@ public class DefaultConfigureObjectContext implements ConfigureObjectContext {
     * @param type Bean 类型
     * @param <T>  目标类型泛型
     * @return null
-     */
+    */
     @Override
     public <T> T getBeanOfTypeSafely(Class<T> type) {
         return null;
@@ -73,7 +73,7 @@ public class DefaultConfigureObjectContext implements ConfigureObjectContext {
     * @param type Bean 类型
     * @param <T>  目标类型泛型
     * @return null
-     */
+    */
     @Override
     public <T> Map<String, T> getBeanOfTypes(Class<T> type) {
         return null;
@@ -85,7 +85,7 @@ public class DefaultConfigureObjectContext implements ConfigureObjectContext {
     * @param type Bean 类型
     * @param <T>  目标类型泛型
     * @return null
-     */
+    */
     @Override
     public <T> Collection<T> getBeanOfTypeCollection(Class<T> type) {
         return null;
@@ -96,7 +96,7 @@ public class DefaultConfigureObjectContext implements ConfigureObjectContext {
     *
     * @param annotationType 注解类型
     * @return null
-     */
+    */
     @Override
     public Map<String, Object> getBeansWithAnnotation(Class<? extends Annotation> annotationType) {
         return null;
@@ -107,7 +107,7 @@ public class DefaultConfigureObjectContext implements ConfigureObjectContext {
     *
     * @param name Bean 名称
     * @return false
-     */
+    */
     @Override
     public boolean containsBean(String name) {
         return false;
@@ -118,7 +118,7 @@ public class DefaultConfigureObjectContext implements ConfigureObjectContext {
     *
     * @param name Bean 名称
     * @return false
-     */
+    */
     @Override
     public boolean isSingleton(String name) {
         return false;
@@ -128,7 +128,7 @@ public class DefaultConfigureObjectContext implements ConfigureObjectContext {
     * 获取所有已注册的 Bean 定义名称集合（当前实现始终返回 空）
     *
     * @return null
-     */
+    */
     @Override
     public Collection<String> getBeanDefinitionNames() {
         return null;
@@ -138,7 +138,7 @@ public class DefaultConfigureObjectContext implements ConfigureObjectContext {
     * 获取已注册的 Bean 定义总数（当前实现始终返回 0）
     *
     * @return 0
-     */
+    */
     @Override
     public int getBeanDefinitionCount() {
         return 0;
@@ -150,7 +150,7 @@ public class DefaultConfigureObjectContext implements ConfigureObjectContext {
     * @param type Bean 类型
     * @param <T>  目标类型泛型
     * @return false
-     */
+    */
     @Override
     public <T> boolean hasBeanOfType(Class<T> type) {
         return false;
@@ -161,7 +161,7 @@ public class DefaultConfigureObjectContext implements ConfigureObjectContext {
     *
     * @param type Bean 类型
     * @return null
-     */
+    */
     @Override
     public Collection<String> getBeanNames(Class<?> type) {
         return null;
@@ -173,7 +173,7 @@ public class DefaultConfigureObjectContext implements ConfigureObjectContext {
     * @param requiredType 所需的 Bean 类型
     * @param <T>          目标类型泛型
     * @return null
-     */
+    */
     @Override
     public <T> ObjectProvider<T> getBeanProvider(Class<T> requiredType) {
         return null;
@@ -183,7 +183,7 @@ public class DefaultConfigureObjectContext implements ConfigureObjectContext {
     * 获取当前上下文的环境配置接口（当前实现始终返回 空）
     *
     * @return null
-     */
+    */
     @Override
     public Environment getEnvironment() {
         return null;
@@ -194,7 +194,7 @@ public class DefaultConfigureObjectContext implements ConfigureObjectContext {
     *
     * @param event 事件对象
     * @return null
-     */
+    */
     @Override
     public int publish(Object event) {
         return 0;
@@ -214,7 +214,7 @@ public class DefaultConfigureObjectContext implements ConfigureObjectContext {
         /**
         * 事件发布。
         * @return 事件发布的结果
-         */
+        */
         return new EventPublisher();
     }
 }

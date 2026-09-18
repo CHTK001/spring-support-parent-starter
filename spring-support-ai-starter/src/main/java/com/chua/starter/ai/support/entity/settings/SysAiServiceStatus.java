@@ -25,10 +25,10 @@ public class SysAiServiceStatus implements Serializable {
 
     /**
     * 状态记录 标识
-     */
+    */
     /**
     * 状态记录 标识
-     */
+    */
     @TableId(value = "sys_ai_service_status_id", type = IdType.AUTO)
     @Schema(description = "状态记录 ID")
     /** 状态标识 */
@@ -36,10 +36,10 @@ public class SysAiServiceStatus implements Serializable {
 
     /**
     * 服务名称
-     */
+    */
     /**
     * 服务名称
-     */
+    */
     @TableField("sys_ai_service_status_service_name")
     @Schema(description = "服务名称")
     /** 状态服务名称 */
@@ -47,10 +47,10 @@ public class SysAiServiceStatus implements Serializable {
 
     /**
     * 是否运行中
-     */
+    */
     /**
     * 是否运行中
-     */
+    */
     @TableField("sys_ai_service_status_running")
     @Schema(description = "是否运行中")
     /** 状态running */
@@ -58,10 +58,10 @@ public class SysAiServiceStatus implements Serializable {
 
     /**
     * 进程 PID
-     */
+    */
     /**
     * 进程 PID
-     */
+    */
     @TableField("sys_ai_service_status_pid")
     @Schema(description = "进程 PID")
     /** 状态PID */
@@ -69,10 +69,10 @@ public class SysAiServiceStatus implements Serializable {
 
     /**
     * 启动时间
-     */
+    */
     /**
     * 启动时间
-     */
+    */
     @TableField("sys_ai_service_status_start_time")
     @Schema(description = "启动时间")
     /** 状态开始时间 */
@@ -80,10 +80,10 @@ public class SysAiServiceStatus implements Serializable {
 
     /**
     * 运行时长（秒）
-     */
+    */
     /**
     * 运行时长(秒)
-     */
+    */
     @TableField("sys_ai_service_status_uptime_sec")
     @Schema(description = "运行时长(秒)")
     /** 状态uptimesec */
@@ -91,10 +91,10 @@ public class SysAiServiceStatus implements Serializable {
 
     /**
     * 更新时间
-     */
+    */
     /**
     * 更新时间
-     */
+    */
     @TableField(value = "sys_ai_service_status_update_time", fill = FieldFill.INSERT_UPDATE)
     @Schema(description = "更新时间")
     /** 状态更新时间 */

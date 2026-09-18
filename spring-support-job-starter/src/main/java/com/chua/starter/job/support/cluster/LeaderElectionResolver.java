@@ -18,7 +18,7 @@ public interface LeaderElectionResolver {
     * @param nodeId       当前节点标识
     * @param leaseSeconds 租约时长
     * @return 抢占成功返回 true
-     */
+    */
     boolean tryAcquire(String group, String nodeId, int leaseSeconds);
 
     /**
@@ -26,6 +26,6 @@ public interface LeaderElectionResolver {
     *
     * @param group  命名空间
     * @param nodeId 当前节点标识
-     */
+    */
     void release(String group, String nodeId);
 }

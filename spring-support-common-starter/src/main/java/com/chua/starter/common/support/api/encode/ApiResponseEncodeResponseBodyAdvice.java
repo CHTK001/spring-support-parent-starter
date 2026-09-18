@@ -41,7 +41,7 @@ public class ApiResponseEncodeResponseBodyAdvice implements ResponseBodyAdvice<O
     /**
     * 创建 api响应encode响应主体advice 实例
     * @param apiResponseEncodeRegister api响应encode注册
-     */
+    */
     public ApiResponseEncodeResponseBodyAdvice(ApiResponseEncodeRegister apiResponseEncodeRegister) {
         this.apiResponseEncodeRegister = apiResponseEncodeRegister;
     }
@@ -122,7 +122,7 @@ public class ApiResponseEncodeResponseBodyAdvice implements ResponseBodyAdvice<O
     * 将字符串转换为字节数组（使用更真实的二进制转换方法）
     * @param str 字符串
     * @return 字节数组
-     */
+    */
     private byte[] convertToBinary(String str) {
         if (str == null || str.isEmpty()) {
             return new byte[0];

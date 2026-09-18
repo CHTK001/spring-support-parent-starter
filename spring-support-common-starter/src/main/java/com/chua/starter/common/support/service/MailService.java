@@ -40,7 +40,7 @@ public class MailService {
     * @param subject 邮件主题
     * @param content 邮件正文
     * @return 结果
-     */
+    */
     public ReturnResult<Void> sendSimpleMail(String to, String subject, String content) {
         try {
             SimpleMailMessage message = new SimpleMailMessage();
@@ -67,7 +67,7 @@ public class MailService {
     * @param content 邮件正文（HTML格式）
     * @param files   附件文件路径列表
     * @return 结果
-     */
+    */
     public ReturnResult<Void> sendHtmlMail(String to, String subject, String content, List<String> files) {
         try {
             MimeMessage mimeMessage = mailSender.createMimeMessage();
@@ -103,7 +103,7 @@ public class MailService {
     * @param title   邮件标题
     * @param content 邮件正文
     * @return 结果
-     */
+    */
     public ReturnResult<Void> sendNoticeMail(String to, String title, String content) {
         try {
             MimeMessage mimeMessage = mailSender.createMimeMessage();

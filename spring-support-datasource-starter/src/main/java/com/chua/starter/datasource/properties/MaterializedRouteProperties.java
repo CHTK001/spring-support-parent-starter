@@ -23,29 +23,29 @@ public class MaterializedRouteProperties {
 
     /**
     * 是否启用。
-     */
+    */
     private boolean enabled = false;
 
     /**
     * 默认表行数阈值。
-     */
+    */
     private long defaultThreshold = 1000L;
 
     /**
     * 内存副本自动刷新间隔，单位秒。
     * 小于等于 0 时表示关闭自动刷新。
-     */
+    */
     private long refreshIntervalSeconds = 0L;
 
     /**
     * 事务中是否跳过查询物理化。
     * 默认跳过，避免与事务连接绑定冲突。
-     */
+    */
     private boolean skipQueryInTransaction = true;
 
     /**
     * 物理化数据源名称前缀。
-     */
+    */
     private String cacheDataSourcePrefix = "materialized#";
 
     /**
@@ -53,7 +53,7 @@ public class MaterializedRouteProperties {
     *
     * @param environment 环境
     * @return bind的结果
-     */
+    */
     public static MaterializedRouteProperties bind(Environment environment) {
         MaterializedRouteProperties current = Binder.get(environment).bindOrCreate(PRE, MaterializedRouteProperties.class);
         MaterializedRouteProperties legacy = Binder.get(environment).bindOrCreate(LEGACY_PRE, MaterializedRouteProperties.class);
@@ -79,7 +79,7 @@ public class MaterializedRouteProperties {
     * @param legacyKey legacy钥匙
     * @param currentValue 当前价值观
     * @param legacyValue legacy价值观
-     */
+    */
     private static boolean readBoolean(Environment environment,
                                        String currentKey,
                                        String legacyKey,
@@ -101,7 +101,7 @@ public class MaterializedRouteProperties {
     * @param legacyKey legacy钥匙
     * @param currentValue 当前价值观
     * @param legacyValue legacy价值观
-     */
+    */
     private static long readLong(Environment environment,
                                  String currentKey,
                                  String legacyKey,
@@ -123,7 +123,7 @@ public class MaterializedRouteProperties {
     * @param legacyKey legacy钥匙
     * @param currentValue 当前价值观
     * @param legacyValue legacy价值观
-     */
+    */
     private static String readString(Environment environment,
                                      String currentKey,
                                      String legacyKey,
@@ -142,7 +142,7 @@ public class MaterializedRouteProperties {
     * 转为期权
     *
     * @return 转为期权的结果
-     */
+    */
     public MaterializedSqlOptions toOptions() {
         MaterializedSqlOptions options = new MaterializedSqlOptions();
         options.setDefaultThreshold(defaultThreshold);

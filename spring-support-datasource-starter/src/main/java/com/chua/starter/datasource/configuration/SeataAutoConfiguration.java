@@ -75,14 +75,14 @@ public class SeataAutoConfiguration {
     * </p>
     *
     * @return 数据源代理初始化器
-     */
+    */
     @Bean
     @ConditionalOnMissingBean(name = "seataDataSourcePostProcessor")
     public SeataDataSourcePostProcessor seataDataSourcePostProcessor() {
         /**
         * Seata数据源post处理器。
         * @return seata数据源post处理器的结果
-         */
+        */
         return new SeataDataSourcePostProcessor();
     }
 
@@ -95,7 +95,7 @@ public class SeataAutoConfiguration {
     * </p>
     * @author CH
     * @since 4.0.0
-     */
+    */
     @Slf4j
     public static class SeataDataSourcePostProcessor {
 
@@ -106,7 +106,7 @@ public class SeataAutoConfiguration {
         * Seata {@code DataSourceProxy}，支持 AT/XA 分布式事务模式。
         * 使用反射避免编译期对 Seata 的强制依赖。
         * </p>
-         */
+        */
         @PostConstruct
         public void wrapDataSources() {
             // 对当前已注册的数据源做快照，避免并发修改问题
@@ -145,7 +145,7 @@ public class SeataAutoConfiguration {
         * 通过反射创建 Seata 数据源代理
         * @param dataSource 数据源
         * @return 创建数据源代理的结果
-         */
+        */
         @SuppressWarnings("unchecked")
         private DataSource createDataSourceProxy(DataSource dataSource) throws Exception {
             Class<?> proxyClass = ReflectUtils.forName("io.seata.rm.datasource.DataSourceProxy");
@@ -156,7 +156,7 @@ public class SeataAutoConfiguration {
         * 检查数据源是否已经被 Seata 代理
         * @param dataSource 数据源
         * @return 是否alreadyproxied的结果
-         */
+        */
         private boolean isAlreadyProxied(DataSource dataSource) {
             Class<?> proxyClass = ReflectUtils.forName("io.seata.rm.datasource.DataSourceProxy");
             if (proxyClass == null) {

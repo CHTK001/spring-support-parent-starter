@@ -48,49 +48,49 @@ public class ApiFeatureConfiguration implements WebMvcConfigurer, SmartInitializ
 
     /**
     * 全路径拦截模式：拦截所有 HTTP 请求
-     */
+    */
     private static final String PATH_PATTERN_ALL = "/**";
 
     /**
     * 排除路径：Spring Boot 默认错误页
-     */
+    */
     private static final String PATH_PATTERN_ERROR = "/error";
 
     /**
     * 排除路径：Spring Boot Actuator 全部端点
-     */
+    */
     private static final String PATH_PATTERN_ACTUATOR = "/actuator/**";
 
     /**
     * 日志横幅：上边框
-     */
+    */
     private static final String LOG_BANNER_TOP =
             "╔══════════════════════════════════════════════════════════════════════════════";
 
     /**
     * 日志横幅：下边框
-     */
+    */
     private static final String LOG_BANNER_BOTTOM =
             "╚══════════════════════════════════════════════════════════════════════════════";
 
     /**
     * 日志横幅：中间内容模板（带一个占位符用于注册数量）
-     */
+    */
     private static final String LOG_BANNER_MIDDLE_TEMPLATE = "║ [功能开关]已扫描注册 {} 个 @ApiFeature 功能开关";
 
     /**
     * API 配置属性
-     */
+    */
     private final ApiProperties apiProperties;
 
     /**
     * Spring 环境对象，用于读取运行时配置
-     */
+    */
     private final Environment environment;
 
     /**
     * Spring MVC 请求映射处理器，用于枚举所有 控制器 方法
-     */
+    */
     private final RequestMappingHandlerMapping requestMappingHandlerMapping;
 
     /**
@@ -100,7 +100,7 @@ public class ApiFeatureConfiguration implements WebMvcConfigurer, SmartInitializ
     * @param environment                   Spring 环境对象
     * @param requestMappingHandlerMapping  Spring MVC 请求映射处理器（@Lazy 打破
     * webmvcconfigurer 与自定义版本映射 Bean 的装配环）
-     */
+    */
     public ApiFeatureConfiguration(ApiProperties apiProperties,
                                    Environment environment,
                                    @Lazy RequestMappingHandlerMapping requestMappingHandlerMapping) {
@@ -113,13 +113,13 @@ public class ApiFeatureConfiguration implements WebMvcConfigurer, SmartInitializ
     * 创建 {@link ApiFeatureManager} Bean，统一管理所有 @api特征 功能开关。
     *
     * @return 功能开关管理器实例
-     */
+    */
     @Bean
     public ApiFeatureManager apiFeatureManager() {
         /**
         * api特征管理器。
         * @return api特征管理器的结果
-         */
+        */
         return new ApiFeatureManager();
     }
 
@@ -131,7 +131,7 @@ public class ApiFeatureConfiguration implements WebMvcConfigurer, SmartInitializ
     *
     * @param featureManager 功能开关管理器
     * @return API 控制拦截器实例
-     */
+    */
     @Bean
     public ApiControlInterceptor apiControlInterceptor(ApiFeatureManager featureManager) {
         /**
@@ -141,7 +141,7 @@ public class ApiFeatureConfiguration implements WebMvcConfigurer, SmartInitializ
         * @param featureManager 特征管理器
         * @param overrideProvider override提供者
         * @return apicontrol拦截器的结果
-         */
+        */
         return new ApiControlInterceptor(apiProperties, environment, featureManager, overrideProvider);
     }
 
@@ -149,7 +149,7 @@ public class ApiFeatureConfiguration implements WebMvcConfigurer, SmartInitializ
     * 注册 API 控制拦截器，覆盖全部路径，排除错误页与 Actuator 端点。
     *
     * @param registry Spring MVC 拦截器注册表
-     */
+    */
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(apiControlInterceptor(apiFeatureManager()))
@@ -167,18 +167,18 @@ public class ApiFeatureConfiguration implements WebMvcConfigurer, SmartInitializ
     *
     * <p>查找顺序：先方法级注解，再类级注解。同一功能开关 value 重复注册时，
     * 后注册的会覆盖前者。</p>
-     */
+    */
     @Override
     public void afterSingletonsInstantiated() {
         /**
         * 扫描api特征。
-         */
+        */
         scanApiFeatures();
     }
 
     /**
     * 扫描api特征。
-     */
+    */
     private void scanApiFeatures() {
         Map<RequestMappingInfo, HandlerMethod> handlerMethods = requestMappingHandlerMapping.getHandlerMethods();
         ApiFeatureManager featureManager = apiFeatureManager();

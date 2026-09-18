@@ -27,7 +27,7 @@ public class AgentAttachProperties {
     * 是否启用自注入。
     *
     * @return 是否启用的结果
-     */
+    */
     public boolean isEnabled() {
         return enabled;
     }
@@ -36,7 +36,7 @@ public class AgentAttachProperties {
     * 设置是否启用。
     *
     * @param enabled 是否启用
-     */
+    */
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
     }
@@ -45,7 +45,7 @@ public class AgentAttachProperties {
     * 获取 agent 参数。
     *
     * @return agent 参数的结果
-     */
+    */
     public String getOptions() {
         return options;
     }
@@ -54,7 +54,7 @@ public class AgentAttachProperties {
     * 设置 agent 参数。
     *
     * @param options agent 参数
-     */
+    */
     public void setOptions(String options) {
         this.options = options;
     }
@@ -63,7 +63,7 @@ public class AgentAttachProperties {
     * 获取 Shell 端口。
     *
     * @return Shell端口的结果
-     */
+    */
     public int getShellPort() {
         return shellPort;
     }
@@ -72,7 +72,7 @@ public class AgentAttachProperties {
     * 设置 Shell 端口。
     *
     * @param shellPort Shell 端口
-     */
+    */
     public void setShellPort(int shellPort) {
         this.shellPort = shellPort;
     }
@@ -81,7 +81,7 @@ public class AgentAttachProperties {
     * 是否异步注入。
     *
     * @return 是否异步注入的结果
-     */
+    */
     public boolean isAsync() {
         return async;
     }
@@ -90,7 +90,7 @@ public class AgentAttachProperties {
     * 设置是否异步注入。
     *
     * @param async 是否异步注入
-     */
+    */
     public void setAsync(boolean async) {
         this.async = async;
     }

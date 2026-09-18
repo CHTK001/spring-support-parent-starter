@@ -56,7 +56,7 @@ public class WalletNotifyController {
     * @param params 参数
     * @param body 主体
     * @param request 请求
-     */
+    */
     public String handleWalletNotify(@PathVariable String orderType,
                                      @PathVariable String orderNo,
                                      @RequestParam Map<String, String> params,
@@ -69,7 +69,7 @@ public class WalletNotifyController {
                         /**
                         * wallet通知类型。
                         * @param orderType 订单类型
-                         */
+                        */
                         walletNotifyType(orderType),
                         walletOrder != null ? walletOrder.getMerchantId() : null,
                         null,
@@ -77,7 +77,7 @@ public class WalletNotifyController {
                         /**
                         * normalize订单类型。
                         * @param orderType 订单类型
-                         */
+                        */
                         normalizeOrderType(orderType),
                         orderNo,
                         null,
@@ -97,7 +97,7 @@ public class WalletNotifyController {
                             * @param "trade_no" "贸易_no"
                             * @param "transactionId" "transactionid"
                             * @param "transaction_id" "transaction_标识"
-                             */
+                            */
                             firstText(merged, "thirdPartyOrderNo", "tradeNo", "trade_no", "transactionId", "transaction_id"),
                             /**
                             * 第一个文本。
@@ -109,7 +109,7 @@ public class WalletNotifyController {
                             * @param "resultStatus" "结果状态"
                             * @param "result_status" "结果_状态"
                             * @param "code" "编码"
-                             */
+                            */
                             firstText(merged, "status", "tradeStatus", "trade_status", "state", "resultStatus", "result_status", "code"),
                             payload,
                             firstText(merged, "reason", "message", "msg", "error", "errorMessage", "error_message", "errMsg")));
@@ -131,7 +131,7 @@ public class WalletNotifyController {
     *
     * @param orderType 订单类型
     * @return wallet通知类型的结果
-     */
+    */
     private String walletNotifyType(String orderType) {
         String normalized = normalizeOrderType(orderType);
         if ("TRANSFER".equals(normalized)) {
@@ -148,7 +148,7 @@ public class WalletNotifyController {
     *
     * @param orderType 订单类型
     * @return normalize订单类型的结果
-     */
+    */
     private String normalizeOrderType(String orderType) {
         if (!StringUtils.hasText(orderType)) {
             return null;
@@ -162,7 +162,7 @@ public class WalletNotifyController {
     * @param params 参数
     * @param body 主体
     * @return 构建payload的结果
-     */
+    */
     private String buildPayload(Map<String, String> params, String body) {
         if (StringUtils.hasText(body)) {
             return body;
@@ -180,7 +180,7 @@ public class WalletNotifyController {
     * @param params 参数
     * @param body 主体
     * @return 合并payload的结果
-     */
+    */
     private Map<String, Object> mergePayload(Map<String, String> params, String body) {
         Map<String, Object> result = new LinkedHashMap<>();
         if (params != null) {
@@ -204,7 +204,7 @@ public class WalletNotifyController {
     * @param source 源
     * @param keys 钥匙
     * @return 第一个文本的结果
-     */
+    */
     private String firstText(Map<String, Object> source, String... keys) {
         if (source == null || keys == null) {
             return null;
@@ -226,7 +226,7 @@ public class WalletNotifyController {
     *
     * @param throwable 抛出
     * @return stack追踪的结果
-     */
+    */
     private String stackTrace(Throwable throwable) {
         java.io.StringWriter sw = new java.io.StringWriter();
         java.io.PrintWriter pw = new java.io.PrintWriter(sw);

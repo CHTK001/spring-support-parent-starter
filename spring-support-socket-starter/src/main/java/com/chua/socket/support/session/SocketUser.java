@@ -22,18 +22,18 @@ public class SocketUser implements Serializable {
 
     /**
     * room
-     */
+    */
     private String roomId;
     /**
     * 用户标识
-     */
+    */
     private String userId;
 
     /**
     * 获取用户标识
     *
     * @return 用户ID
-     */
+    */
     public String getUserId() {
         return userId;
     }
@@ -42,29 +42,29 @@ public class SocketUser implements Serializable {
     * 设置用户标识
     *
     * @param userId 用户标识
-     */
+    */
     public void setUserId(String userId) {
         this.userId = userId;
     }
 
     /**
     * 用户名
-     */
+    */
     private String username;
 
     /**
     * 用户类型
-     */
+    */
     private String type;
 
     /**
     * 租户标识
-     */
+    */
     private String tenantId;
 
     /**
     * 额外属性
-     */
+    */
     private Map<String, Object> extras = new ConcurrentHashMap<>();
 
     /** 创建 套接字用户 实例 */
@@ -74,7 +74,7 @@ public class SocketUser implements Serializable {
     /**
     * 创建 套接字用户 实例
     * @param userId 用户标识
-     */
+    */
     public SocketUser(String userId) {
         this.userId = userId;
     }
@@ -84,7 +84,7 @@ public class SocketUser implements Serializable {
     * @param userId 用户标识
     * @param userId 字符串
     * @param username 用户名
-     */
+    */
     public SocketUser(String userId, String username) {
         this.userId = userId;
         this.username = username;
@@ -95,7 +95,7 @@ public class SocketUser implements Serializable {
     *
     * @param key   属性键
     * @param value 属性值
-     */
+    */
     public void setExtra(String key, Object value) {
         extras.put(key, value);
     }
@@ -106,7 +106,7 @@ public class SocketUser implements Serializable {
     * @param key 属性键
     * @param <T> 属性类型
     * @return 属性值
-     */
+    */
     @SuppressWarnings("unchecked")
     public <T> T getExtra(String key) {
         return (T) extras.get(key);

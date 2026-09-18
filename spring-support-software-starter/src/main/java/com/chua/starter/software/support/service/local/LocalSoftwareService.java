@@ -23,7 +23,7 @@ public interface LocalSoftwareService {
     *
     * @param sourceId 软件源标识（可选，为空时使用默认本地源）
     * @return 扫描到的软件数量
-     */
+    */
     int scanLocalSoftware(String sourceId);
 
     /**
@@ -33,7 +33,7 @@ public interface LocalSoftwareService {
     *
     * @param sourceId 软件源标识
     * @return 是否成功
-     */
+    */
     boolean clearLocalSoftware(String sourceId);
 
     /**
@@ -41,7 +41,7 @@ public interface LocalSoftwareService {
     *
     * @param request 安装请求
     * @return 安装结果
-     */
+    */
     ReturnResult<Object> installLocalSoftware(InstallRequest request);
 
     /**
@@ -51,7 +51,7 @@ public interface LocalSoftwareService {
     * @param userId     用户标识
     * @param deviceId   设备标识（可选）
     * @return 卸载结果
-     */
+    */
     ReturnResult<Object> uninstallLocalSoftware(String softwareId, String userId, String deviceId);
 
     /**
@@ -60,7 +60,7 @@ public interface LocalSoftwareService {
     * * @申报 添加结果
     * @param software software
     * @return 添加本地software的结果
-     */
+    */
     ReturnResult<SoftSoftware> addLocalSoftware(SoftSoftware software);
 
     /**
@@ -68,13 +68,13 @@ public interface LocalSoftwareService {
     *
     * @param keyword 关键词过滤（可选）
     * @return 软件列表
-     */
+    */
     java.util.List<SoftSoftware> listLocalSoftware(String keyword);
 
     /**
     * 获取默认本地软件源标识
     *
     * @return 本地软件源ID
-     */
+    */
     String getLocalSourceId();
 }

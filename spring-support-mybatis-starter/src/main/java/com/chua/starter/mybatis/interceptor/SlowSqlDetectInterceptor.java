@@ -52,7 +52,7 @@ public class SlowSqlDetectInterceptor implements Interceptor {
 
     /**
     * 日期格式化器（仅用于参数格式化）。
-     */
+    */
     private static final SimpleDateFormat FORMATTER = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
     /** 事件publisher */
@@ -65,7 +65,7 @@ public class SlowSqlDetectInterceptor implements Interceptor {
     *
     * @param eventPublisher Spring 事件发布器
     * @param properties     慢 SQL 配置
-     */
+    */
     public SlowSqlDetectInterceptor(ApplicationEventPublisher eventPublisher,
                                    MybatisSlowSqlProperties properties) {
         this.eventPublisher = eventPublisher;
@@ -99,7 +99,7 @@ public class SlowSqlDetectInterceptor implements Interceptor {
     * @param invocation invocation
     * @param elapsedMs elapsedms
     * @param error 错误
-     */
+    */
     private void publishSlowSqlEvent(Invocation invocation, long elapsedMs, Throwable error) {
         Object[] args = invocation.getArgs();
         if (args == null || args.length == 0 || !(args[0] instanceof MappedStatement ms)) {
@@ -156,7 +156,7 @@ public class SlowSqlDetectInterceptor implements Interceptor {
     * @param args 参数
     * @param parameter 参数
     * @return resolveBoundSql的结果
-     */
+    */
     private BoundSql resolveBoundSql(MappedStatement ms, Object[] args, Object parameter) {
  // MyBatis 的 查询 重载中，boundsql 可能已在参数中传入
     /**
@@ -164,7 +164,7 @@ public class SlowSqlDetectInterceptor implements Interceptor {
     *
     * @author CH
     * @since 4.0.0
-     */
+    */
         if (args.length >= 6 && args[5] instanceof BoundSql bs) {
             return bs;
         }

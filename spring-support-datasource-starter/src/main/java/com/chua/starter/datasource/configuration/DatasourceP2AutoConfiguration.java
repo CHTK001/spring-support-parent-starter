@@ -34,7 +34,7 @@ public class DatasourceP2AutoConfiguration {
     /**
     * 注册默认 AES 密码解密器
     * @return 密码decryptor的结果
-     */
+    */
     @Bean
     @ConditionalOnMissingBean(PasswordDecryptor.class)
     @ConditionalOnProperty(prefix = "plugin.datasource.enc", name = "enabled", havingValue = "true", matchIfMissing = false)
@@ -42,7 +42,7 @@ public class DatasourceP2AutoConfiguration {
         /**
         * aes密码decryptor。
         * @return aes密码decryptor的结果
-         */
+        */
         return new AesPasswordDecryptor();
     }
 
@@ -54,7 +54,7 @@ public class DatasourceP2AutoConfiguration {
     * 仅在类路径存在 Spring Boot Actuator 及 {@code HealthIndicator} 时注册。
     * </p>
     * @return 数据源健康indicator的结果
-     */
+    */
     @Bean
     @ConditionalOnClass(name = "org.springframework.boot.health.contributor.HealthIndicator")
     @ConditionalOnProperty(prefix = "plugin.datasource.health", name = "enabled", havingValue = "true", matchIfMissing = true)
@@ -62,7 +62,7 @@ public class DatasourceP2AutoConfiguration {
         /**
         * 数据源健康indicator。
         * @return 数据源健康indicator的结果
-         */
+        */
         return new DataSourceHealthIndicator();
     }
 
@@ -75,7 +75,7 @@ public class DatasourceP2AutoConfiguration {
     * 遍历所有已注册数据源并关闭其连接池。
     * </p>
     * @return graceful关闭监听器的结果
-     */
+    */
     @Bean
     @ConditionalOnMissingBean(GracefulShutdownListener.class)
     @ConditionalOnProperty(prefix = "plugin.datasource.graceful-shutdown", name = "enabled", havingValue = "true", matchIfMissing = true)
@@ -83,7 +83,7 @@ public class DatasourceP2AutoConfiguration {
         /**
         * graceful关闭监听器。
         * @return graceful关闭监听器的结果
-         */
+        */
         return new GracefulShutdownListener();
     }
 
@@ -92,7 +92,7 @@ public class DatasourceP2AutoConfiguration {
     * datasource服务信息contributor
     *
     * @return datasource服务信息contributor的结果
-     */
+    */
     public ServiceInfoContributor datasourceServiceInfoContributor() {
         return registry -> {
             registry.registerFlag("datasource", "多数据源", true, "多数据源与连接池管理模块");

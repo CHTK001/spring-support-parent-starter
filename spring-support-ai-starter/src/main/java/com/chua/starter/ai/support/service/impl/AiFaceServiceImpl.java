@@ -35,7 +35,7 @@ public class AiFaceServiceImpl implements AiFaceService {
 
     /**
     * 人脸客户端管理器（懒加载 + 热重建）
-     */
+    */
     private final FaceClientManager faceClientManager;
 
     /**
@@ -43,7 +43,7 @@ public class AiFaceServiceImpl implements AiFaceService {
     *
     * @param imageData 图片字节
     * @return 检测命中列表
-     */
+    */
     @Override
     public List<FaceDetectionHit> detect(byte[] imageData) {
         return faceClientManager.currentPipeline().detect(imageData);
@@ -54,7 +54,7 @@ public class AiFaceServiceImpl implements AiFaceService {
     *
     * @param imageData 图片字节
     * @return 最大人脸命中，无则 空
-     */
+    */
     @Override
     public FaceDetectionHit detectLargest(byte[] imageData) {
         return faceClientManager.currentPipeline().detectLargest(imageData);
@@ -65,7 +65,7 @@ public class AiFaceServiceImpl implements AiFaceService {
     *
     * @param imageData 图片字节
     * @return 检测命中列表
-     */
+    */
     @Override
     public List<FaceDetectionHit> detectPipeline(byte[] imageData) {
         return faceClientManager.currentPipeline().detectPipeline(imageData);
@@ -76,7 +76,7 @@ public class AiFaceServiceImpl implements AiFaceService {
     *
     * @param imageData 图片字节
     * @return 特征向量
-     */
+    */
     @Override
     public float[] extractFeature(byte[] imageData) {
         FaceFeaturePipelineResult r = faceClientManager.currentPipeline().extractFeatureWithMeta(imageData);
@@ -101,7 +101,7 @@ public class AiFaceServiceImpl implements AiFaceService {
     * @param imageA 图片 A 字节
     * @param imageB 图片 B 字节
     * @return 相似度（0~1）
-     */
+    */
     @Override
     public double compare(byte[] imageA, byte[] imageB) {
  // 走完整管线（detect→crop→liveness→align→特征）提取两侧特征后余弦比对
@@ -125,7 +125,7 @@ public class AiFaceServiceImpl implements AiFaceService {
     * @param featureA 特征向量 A
     * @param featureB 特征向量 B
     * @return 相似度（0~1）
-     */
+    */
     @Override
     public double compareFeature(float[] featureA, float[] featureB) {
         return cosineSimilarity(featureA, featureB);
@@ -138,7 +138,7 @@ public class AiFaceServiceImpl implements AiFaceService {
     * @param imageData 图片字节
     * @param metadata  附加元数据
     * @return 是否登记成功
-     */
+    */
     @Override
     public boolean enroll(String id, byte[] imageData, Map<String, Object> metadata) {
         float[] feature = extractFeature(imageData);
@@ -152,7 +152,7 @@ public class AiFaceServiceImpl implements AiFaceService {
     * @param imageData 图片字节
     * @param metadata  附加元数据
     * @return 是否登记成功
-     */
+    */
     @Override
     public boolean enrollPipeline(String id, byte[] imageData, Map<String, Object> metadata) {
         return faceClientManager.currentPipeline().enrollPipeline(id, imageData, metadata);
@@ -169,7 +169,7 @@ public class AiFaceServiceImpl implements AiFaceService {
     *
     * @param imageData 图片字节
     * @return 识别命中（TopK）
-     */
+    */
     @Override
     public FaceIdentifyHit identify(byte[] imageData) {
         return faceClientManager.currentPipeline().identifyPipelineLargest(imageData);
@@ -180,7 +180,7 @@ public class AiFaceServiceImpl implements AiFaceService {
     *
     * @param imageData 图片字节
     * @return 识别命中（TopK）
-     */
+    */
     @Override
     public FaceIdentifyHit identifyPipeline(byte[] imageData) {
         return faceClientManager.currentPipeline().identifyPipelineLargest(imageData);
@@ -192,7 +192,7 @@ public class AiFaceServiceImpl implements AiFaceService {
     * @param feature 特征向量
     * @param topK    返回条数
     * @return 检索命中列表
-     */
+    */
     @Override
     public List<FaceSearchHit> search(float[] feature, int topK) {
         return faceClientManager.currentVectorStorage().search(feature, topK)
@@ -202,7 +202,7 @@ public class AiFaceServiceImpl implements AiFaceService {
                         /**
                         * score的。
                         * @param v v
-                         */
+                        */
                         scoreOf(v),
                         v.data(),
                         v.metadata() == null ? Map.of() : v.metadata(),
@@ -216,7 +216,7 @@ public class AiFaceServiceImpl implements AiFaceService {
     * @param id        人脸 标识
     * @param imageData 图片字节
     * @return 是否匹配
-     */
+    */
     @Override
     public boolean verify(String id, byte[] imageData) {
         FaceIdentifyHit hit = faceClientManager.currentPipeline().identifyPipelineLargest(imageData);
@@ -232,7 +232,7 @@ public class AiFaceServiceImpl implements AiFaceService {
     *
     * @param imageData 裁剪后人脸图片字节
     * @return 是否活体
-     */
+    */
     @Override
     public boolean isLive(byte[] imageData) {
         if (faceClientManager.currentLiveness() == null) {
@@ -246,7 +246,7 @@ public class AiFaceServiceImpl implements AiFaceService {
     *
     * @param imageData 裁剪后人脸图片字节
     * @return 活体分数
-     */
+    */
     @Override
     public float liveScore(byte[] imageData) {
         if (faceClientManager.currentLiveness() == null) {
@@ -264,7 +264,7 @@ public class AiFaceServiceImpl implements AiFaceService {
     *
     * @param imageData 图片字节
     * @return 检测信息列表
-     */
+    */
     @Override
     public List<DetectionInfo> animeDetect(byte[] imageData) {
         return faceClientManager.currentAnimeDetector().detectInfo(imageData);
@@ -275,7 +275,7 @@ public class AiFaceServiceImpl implements AiFaceService {
     *
     * @param imageData 图片字节
     * @return 超分后图片字节
-     */
+    */
     @Override
     public byte[] superResolution(byte[] imageData) {
         return faceClientManager.currentSuperResolution().enhance(imageData);
@@ -286,7 +286,7 @@ public class AiFaceServiceImpl implements AiFaceService {
     *
     * @param imageData 图片字节
     * @return 修复后图片字节
-     */
+    */
     @Override
     public byte[] restore(byte[] imageData) {
         return faceClientManager.currentRestorer().enhance(imageData);
@@ -297,7 +297,7 @@ public class AiFaceServiceImpl implements AiFaceService {
     *
     * @param imageData 图片字节
     * @return 分类结果标签
-     */
+    */
     @Override
     public String analyzeAttributes(byte[] imageData) {
         return faceClientManager.currentAttributeClassifier().classify(imageData);
@@ -308,7 +308,7 @@ public class AiFaceServiceImpl implements AiFaceService {
     *
     * @param imageData 图片字节
     * @return 表情标签
-     */
+    */
     @Override
     public String analyzeEmotion(byte[] imageData) {
         return faceClientManager.currentEmotionClassifier().classify(imageData);
@@ -319,7 +319,7 @@ public class AiFaceServiceImpl implements AiFaceService {
     *
     * @param imageData 图片字节
     * @return 关键点坐标
-     */
+    */
     @Override
     public float[] landmark(byte[] imageData) {
         return faceClientManager.currentLandmarkExtractor().extract(imageData);
@@ -330,7 +330,7 @@ public class AiFaceServiceImpl implements AiFaceService {
     *
     * @param imageData 图片字节
     * @return 质量信息
-     */
+    */
     @Override
     public FaceQualityInfo quality(byte[] imageData) {
         if (faceClientManager.currentQualityAssessor() == null) {
@@ -344,7 +344,7 @@ public class AiFaceServiceImpl implements AiFaceService {
     *
     * @param imageData 图片字节
     * @return 是否疑似换脸
-     */
+    */
     @Override
     public boolean isDeepfake(byte[] imageData) {
         String result = faceClientManager.currentDeepfakeClassifier().classify(imageData);
@@ -360,7 +360,7 @@ public class AiFaceServiceImpl implements AiFaceService {
     *
     * @param imageData 图片字节
     * @return 人脸框列表
-     */
+    */
     @Override
     public List<PredictRectangle> detectBoxes(byte[] imageData) {
         return faceClientManager.currentPipeline().detectBoxes(imageData);
@@ -370,7 +370,7 @@ public class AiFaceServiceImpl implements AiFaceService {
     * 枚举可用人脸模型。
     *
     * @return 模型清单（能力分组 → 模型 标识 列表）
-     */
+    */
     @Override
     public Map<String, List<String>> listModels() {
         return faceClientManager.currentPipeline().listModels();
@@ -382,7 +382,7 @@ public class AiFaceServiceImpl implements AiFaceService {
     * @param a 向量 A
     * @param b 向量 B
     * @return 相似度
-     */
+    */
     private static double cosineSimilarity(float[] a, float[] b) {
         if (a == null || b == null || a.length == 0 || a.length != b.length) {
             return 0d;
@@ -409,7 +409,7 @@ public class AiFaceServiceImpl implements AiFaceService {
     *
     * @param v 检索结果向量
     * @return 相似度
-     */
+    */
     private static double scoreOf(com.chua.common.support.vector.Vector v) {
         if (v.metadata() != null && v.metadata().get("score") instanceof Number n) {
             return n.doubleValue();

@@ -30,7 +30,7 @@ public interface ProtocolExecutor {
     * @param authType 认证类型，定义了使用的认证协议和流程
     * @param ext      额外参数，以键值对形式提供，用于支持特定认证类型的额外需求
     * @return LoginAuthResult 对象，包含获取的访问令牌和其他相关信息
-     */
+    */
     LoginAuthResult getAccessToken(String username, String password, AuthType authType, Map<String, Object> ext);
 
     /**
@@ -43,6 +43,6 @@ public interface ProtocolExecutor {
     * @param logoutType 登出类型。定义了登出操作的范围，例如仅登出当前设备或全局登出。
     * @param userResult 用户信息
     * @return LoginAuthResult 登出操作的结果。可能包含操作是否成功、失败原因等信息。
-     */
+    */
     LoginAuthResult logout(String uid, LogoutType logoutType, UserResult userResult);
 }

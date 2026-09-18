@@ -27,27 +27,27 @@ public class TrainLifecycleEvent extends ApplicationEvent {
 
     /**
     * 任务 标识。
-     */
+    */
     private final String taskId;
 
     /**
     * 生命周期阶段。
-     */
+    */
     private final TrainStage stage;
 
     /**
     * 当前进度快照（任务创建/参数更新等无训练进度的阶段为 空）。
-     */
+    */
     private final TrainProgress progress;
 
     /**
     * 附加消息（可选）。
-     */
+    */
     private final String message;
 
     /**
     * 异常原因（失败/取消时携带，可为 空）。
-     */
+    */
     private final Throwable cause;
 
     /**
@@ -58,13 +58,13 @@ public class TrainLifecycleEvent extends ApplicationEvent {
     * @param progress 进度快照（可为 空）
     * @param message  附加消息（可为 空）
     * @param cause    异常原因（可为 空）
-     */
+    */
     public TrainLifecycleEvent(String taskId, TrainStage stage, TrainProgress progress,
                                String message, Throwable cause) {
         /**
         * 父。
         * @param taskId 任务标识
-         */
+        */
         super(taskId);
         this.taskId = taskId;
         this.stage = stage;

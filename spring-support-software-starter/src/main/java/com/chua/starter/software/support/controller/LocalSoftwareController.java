@@ -55,7 +55,7 @@ public class LocalSoftwareController {
     *
     * @param sourceId 软件源标识（可选，为空时使用默认本地源）
     * @return 扫描结果，包含扫描数量
-     */
+    */
     @Operation(summary = "扫描本地软件")
     @PostMapping("/scan")
     @Permission(value = "sys:soft:local:scan", role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
@@ -72,7 +72,7 @@ public class LocalSoftwareController {
     *
     * @param sourceId 软件源标识
     * @return 操作结果
-     */
+    */
     @Operation(summary = "清空本地软件")
     @DeleteMapping("/clear")
     @Permission(value = "sys:soft:local:delete", role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
@@ -90,7 +90,7 @@ public class LocalSoftwareController {
     * @param query   分页参数
     * @param request 查询条件
     * @return 分页结果
-     */
+    */
     @Operation(summary = "本地软件列表")
     @GetMapping("/page")
     @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
@@ -106,7 +106,7 @@ public class LocalSoftwareController {
     *
     * @param softwareId 软件标识
     * @return 软件详情
-     */
+    */
     @Operation(summary = "本地软件详情")
     @GetMapping("/detail")
     @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
@@ -122,7 +122,7 @@ public class LocalSoftwareController {
     *
     * @param request 安装请求
     * @return 安装结果
-     */
+    */
     @Operation(summary = "安装本地软件")
     @PostMapping("/install")
     @Permission(value = "sys:soft:local:install", role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
@@ -144,7 +144,7 @@ public class LocalSoftwareController {
     * @param userId     用户标识
     * @param deviceId   设备标识
     * @return 卸载结果
-     */
+    */
     @Operation(summary = "卸载本地软件")
     @DeleteMapping("/uninstall")
     @Permission(value = "sys:soft:local:uninstall", role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
@@ -162,7 +162,7 @@ public class LocalSoftwareController {
     *
     * @param software 软件信息
     * @return 添加结果
-     */
+    */
     @Operation(summary = "添加本地软件")
     @PostMapping("/add")
     @Permission(value = "sys:soft:local:add", role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
@@ -175,7 +175,7 @@ public class LocalSoftwareController {
     * 批量获取本地软件（用于下拉选择等）
     *
     * @return 软件列表
-     */
+    */
     @Operation(summary = "本地软件列表（不分页）")
     @GetMapping("/list")
     @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})

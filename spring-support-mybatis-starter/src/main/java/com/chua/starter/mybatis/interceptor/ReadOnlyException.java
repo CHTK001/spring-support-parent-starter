@@ -14,12 +14,12 @@ public class ReadOnlyException extends RuntimeException {
 
     /**
     * 构造函数
-     */
+    */
     public ReadOnlyException() {
         /**
         * 父。
         * @param "数据库当前处于只读模式，禁止执行写入操作" "数据库当前处于只读模式，禁止执行写入操作"
-         */
+        */
         super("数据库当前处于只读模式，禁止执行写入操作");
     }
 
@@ -27,12 +27,12 @@ public class ReadOnlyException extends RuntimeException {
     * 构造函数
     *
     * @param message 异常信息
-     */
+    */
     public ReadOnlyException(String message) {
         /**
         * 父。
         * @param message 消息
-         */
+        */
         super(message);
     }
 
@@ -41,13 +41,13 @@ public class ReadOnlyException extends RuntimeException {
     *
     * @param message 异常信息
     * @param cause   原因
-     */
+    */
     public ReadOnlyException(String message, Throwable cause) {
         /**
         * 父。
         * @param message 消息
         * @param cause cause
-         */
+        */
         super(message, cause);
     }
 }

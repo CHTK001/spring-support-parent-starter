@@ -22,7 +22,7 @@ public @interface Permission {
     * <p>示例：{@code @Permission({"login:create", "admin"})}</p>
     *
     * @return 权限标识数组
-     */
+    */
     @AliasFor("permission")
     String[] value() default {};
 
@@ -32,7 +32,7 @@ public @interface Permission {
     * <p>示例：{@code @Permission(permission = {"login:create", "admin"})}</p>
     *
     * @return 权限标识数组
-     */
+    */
     @AliasFor("value")
     String[] permission() default {};
     
@@ -42,7 +42,7 @@ public @interface Permission {
     * <p>示例：{@code @Permission(role = {"ADMIN", "USER"})}</p>
     *
     * @return 角色标识数组
-     */
+    */
     String[] role() default {};
 }
 

@@ -30,7 +30,7 @@ public class RedissonLockProvider implements LockProvider {
     /**
     * 创建 redisson锁提供者 实例
     * @param key 钥匙
-     */
+    */
     public RedissonLockProvider(String key) {
         this.key = key;
     }
@@ -44,11 +44,11 @@ public class RedissonLockProvider implements LockProvider {
         //没有拿到锁说明已经有了请求了
         if (!isLocked) {
             /**
-            * runtime异常。
-            * @param "您的操作太快了 "您的操作太快了
-            * @param 请稍后重试" 请稍后重试"
-            * @return runtime异常的结果
-             */
+    * runtime异常。
+    * @param "您的操作太快了 "您的操作太快了
+    * @param 请稍后重试" 请稍后重试"
+    * @return runtime异常的结果
+    */
             throw new RuntimeException("您的操作太快了,请稍后重试");
         }
         //拿到锁后设置过期时间

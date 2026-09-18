@@ -13,14 +13,14 @@ public class Preconditions {
     *
     * @param expression 表达式
     * @param message 错误消息
-     */
+    */
     public static void checkArgument(boolean expression, String message) {
         if (!expression) {
             /**
             * illegal参数异常。
             * @param message 消息
             * @return illegal参数异常的结果
-             */
+            */
             throw new IllegalArgumentException(message);
         }
     }
@@ -30,14 +30,14 @@ public class Preconditions {
     *
     * @param reference 对象
     * @param message 错误消息
-     */
+    */
     public static void checkNotNull(Object reference, String message) {
         if (reference == null) {
             /**
             * 空pointer异常。
             * @param message 消息
             * @return 空pointer异常的结果
-             */
+            */
             throw new NullPointerException(message);
         }
     }
@@ -47,14 +47,14 @@ public class Preconditions {
     *
     * @param expression 表达式
     * @param message 错误消息
-     */
+    */
     public static void checkState(boolean expression, String message) {
         if (!expression) {
             /**
             * illegal状态异常。
             * @param message 消息
             * @return illegal状态异常的结果
-             */
+            */
             throw new IllegalStateException(message);
         }
     }
@@ -66,14 +66,14 @@ public class Preconditions {
     * @param message 消息
     * @param errorCode 错误编码
     * @return not空的结果
-     */
+    */
     public static <T> T notEmpty(T reference, String message, String errorCode) {
         if (reference == null || (reference instanceof String && ((String) reference).isEmpty())) {
             /**
             * illegal参数异常。
             * @param message 消息
             * @return illegal参数异常的结果
-             */
+            */
             throw new IllegalArgumentException("[" + errorCode + "] " + message);
         }
         return reference;

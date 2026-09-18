@@ -18,7 +18,7 @@ public class SepiaImageFilterProvider implements FileStorageImageFilterProvider 
     * 获取滤镜唯一名称。
     *
     * @return 滤镜名称 SEPIA
-     */
+    */
     @Override
     public String getName() {
         return "SEPIA";
@@ -28,7 +28,7 @@ public class SepiaImageFilterProvider implements FileStorageImageFilterProvider 
     * 获取滤镜展示名。
     *
     * @return 展示名 怀旧
-     */
+    */
     @Override
     public String getLabel() {
         return "怀旧";
@@ -38,7 +38,7 @@ public class SepiaImageFilterProvider implements FileStorageImageFilterProvider 
     * 获取前端应用的 CSS filter 值。
     *
     * @return CSS filter 值 sepia(0.9)
-     */
+    */
     @Override
     public String getCssFilter() {
         return "sepia(0.9)";

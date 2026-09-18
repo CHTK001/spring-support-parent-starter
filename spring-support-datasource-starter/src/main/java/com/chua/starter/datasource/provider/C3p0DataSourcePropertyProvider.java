@@ -129,7 +129,7 @@ public class C3p0DataSourcePropertyProvider implements DataSourcePropertyProvide
     *
     * @param value 价值观
     * @return 转为int的结果
-     */
+    */
     private int toInt(Object value) {
         if (value instanceof Number) {
             return ((Number) value).intValue();
@@ -142,7 +142,7 @@ public class C3p0DataSourcePropertyProvider implements DataSourcePropertyProvide
     *
     * @param value 价值观
     * @return 转为布尔值的结果
-     */
+    */
     private boolean toBoolean(Object value) {
         if (value instanceof Boolean) {
             return (Boolean) value;

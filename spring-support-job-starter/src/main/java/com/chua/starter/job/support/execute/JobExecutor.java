@@ -34,63 +34,63 @@ public class JobExecutor {
 
     /**
     * 默认线程名前缀
-     */
+    */
     public static final String DEFAULT_THREAD_NAME_PREFIX = "job-exec-";
 
     /**
     * 默认核心线程数
-     */
+    */
     public static final int DEFAULT_CORE_SIZE = 8;
 
     /**
     * 默认最大线程数
-     */
+    */
     public static final int DEFAULT_MAX_SIZE = 32;
 
     /**
     * 默认队列容量
-     */
+    */
     public static final int DEFAULT_QUEUE_CAPACITY = 1000;
 
     /**
     * 任务处理器注册表
-     */
+    */
     private final JobHandlerFactory factory;
 
     /**
     * 事件总线
-     */
+    */
     private final JobSyncBus bus;
 
     /**
     * 当前节点标识
-     */
+    */
     private final String nodeId;
 
     /**
     * 执行器 (可为平台线程池或虚拟线程执行器)
-     */
+    */
     private final ExecutorService executor;
 
     /**
     * 已处理任务计数
-     */
+    */
     private final AtomicLong processed = new AtomicLong(0L);
 
     /**
     * 已丢弃任务计数
-     */
+    */
     private final AtomicLong dropped = new AtomicLong(0L);
 
     /**
     * 已执行 初始化 生命周期钩子的 处理器 名称集合 (惰性, 每 处理器 仅一次)
-     */
+    */
     private final java.util.Set<String> initializedHandlers =
             java.util.concurrent.ConcurrentHashMap.newKeySet();
 
     /**
     * CMD 监听器引用 (持有, 用于注销)
-     */
+    */
     private final java.util.function.BiConsumer<String, Object> cmdListener = (topic, payload) -> onCommand(topic, payload);
 
     /**
@@ -99,7 +99,7 @@ public class JobExecutor {
     * @param factory 处理器注册表
     * @param bus     进程内总线
     * @param nodeId  当前节点标识
-     */
+    */
     public JobExecutor(JobHandlerFactory factory, JobSyncBus bus, String nodeId) {
         this(factory, bus, nodeId, defaultExecutor());
     }
@@ -111,7 +111,7 @@ public class JobExecutor {
     * @param bus      进程内总线
     * @param nodeId   当前节点标识
     * @param executor 自定义执行器
-     */
+    */
     public JobExecutor(JobHandlerFactory factory, JobSyncBus bus, String nodeId,
                        ExecutorService executor) {
         this.factory = factory;
@@ -127,7 +127,7 @@ public class JobExecutor {
     * @param topic   topic 名 (固定为 任务_命令)
     * @param payload 业务负载 (任务名)
     * @param source 源
-     */
+    */
     private void onCommand(String source, Object payload) {
         log.info("[job] 收到 cmd source={} payload={}", source, payload);
         if (!(payload instanceof String jobName)) {
@@ -154,7 +154,7 @@ public class JobExecutor {
     *
     * @param jobName 任务名
     * @param handler 处理器
-     */
+    */
     private void invoke(String jobName, JobHandler handler) {
         log.info("[job] invoke start job={} handler={}", jobName, handler.getClass().getSimpleName());
         long start = System.currentTimeMillis();
@@ -187,7 +187,7 @@ public class JobExecutor {
     *
     * @param handler 处理器
     * @throws Exception 初始化 钩子异常
-     */
+    */
     private void lazyInit(JobHandler handler) throws Exception {
         if (!initializedHandlers.add(handler.name())) {
             return;
@@ -198,7 +198,7 @@ public class JobExecutor {
 
     /**
     * 关闭执行器, 释放线程池, 并回调所有已 初始化 处理器 的 销毁 生命周期钩子。
-     */
+    */
     public void shutdown() {
         bus.unsubscribe(JobSyncTopics.TASK_COMMAND, cmdListener);
         executor.shutdown();
@@ -228,7 +228,7 @@ public class JobExecutor {
     * 已处理任务计数。
     *
     * @return 累计数量
-     */
+    */
     public long processedCount() {
         return processed.get();
     }
@@ -237,7 +237,7 @@ public class JobExecutor {
     * 已丢弃任务计数。
     *
     * @return 累计数量
-     */
+    */
     public long droppedCount() {
         return dropped.get();
     }
@@ -246,7 +246,7 @@ public class JobExecutor {
     * 默认线程池工厂。
     *
     * @return ThreadFactory
-     */
+    */
     public static ThreadFactory namedThreadFactory() {
         return new ThreadFactory() {
             /** 计数器 */
@@ -263,10 +263,10 @@ public class JobExecutor {
     }
 
     /**
-    * 默认执行器: 虚拟线程执行器 (每任务一个虚拟线程, 阻塞型任务吞吐优势显著)。
-    *
-    * @return ExecutorService
-     */
+            * 默认执行器: 虚拟线程执行器 (每任务一个虚拟线程, 阻塞型任务吞吐优势显著)。
+            *
+            * @return ExecutorService
+            */
     public static ExecutorService defaultExecutor() {
         return java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor();
     }
@@ -278,7 +278,7 @@ public class JobExecutor {
     * 默认 队列=1000 下线程数恒等于 核心。</p>
     *
     * @return ThreadPoolExecutor
-     */
+    */
     public static ThreadPoolExecutor platformExecutor() {
         return new ThreadPoolExecutor(
                 DEFAULT_CORE_SIZE,

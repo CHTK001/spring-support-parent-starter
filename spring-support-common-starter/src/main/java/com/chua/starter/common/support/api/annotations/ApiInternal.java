@@ -59,7 +59,7 @@ public @interface ApiInternal {
     * </p>
     *
     * @return IP白名单列表
-     */
+    */
     String[] allowedIps() default {};
 
     /**
@@ -69,7 +69,7 @@ public @interface ApiInternal {
     * </p>
     *
     * @return 服务名白名单列表
-     */
+    */
     String[] allowedServices() default {};
 
     /**
@@ -79,21 +79,21 @@ public @interface ApiInternal {
     * </p>
     *
     * @return 是否允许内网IP
-     */
+    */
     boolean allowPrivateNetwork() default true;
 
     /**
     * 拒绝访问时的响应消息
     *
     * @return 响应消息
-     */
+    */
     String message() default "此接口仅供内部调用";
 
     /**
     * 拒绝访问时的响应状态码
     *
     * @return HTTP 状态码
-     */
+    */
     int status() default 403;
 
     /**
@@ -103,13 +103,13 @@ public @interface ApiInternal {
     * </p>
     *
     * @return 是否跳过鉴权
-     */
+    */
     boolean skipAuth() default true;
 
     /**
     * 接口描述
     *
     * @return 描述信息
-     */
+    */
     String description() default "";
 }

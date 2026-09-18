@@ -19,16 +19,16 @@ public class AccessSecret {
 
     /**
     * ak
-     */
+    */
     private String accessKey;
 
     /**
     * sk
-     */
+    */
     private String secretKey;
     /**
     * 钥匙
-     */
+    */
     private String uKey;
 
     /** 密码 */
@@ -38,7 +38,7 @@ public class AccessSecret {
 
     /**
     * 缓存时间（用于性能优化）
-     */
+    */
     private transient long cacheTime;
 
 }

@@ -35,23 +35,23 @@ public class ApiRequestDecodeRegister implements Upgrade<ApiRequestDecodeSetting
     /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(ApiRequestDecodeRegister.class);
         /**
-        * 请求时间戳有效期(毫秒) - 默认10分钟
-     */
+    * 请求时间戳有效期(毫秒) - 默认10分钟
+    */
     private static final long REQUEST_TIMESTAMP_TTL_MS = 10 * 60 * 1000L;
 
     /**
     * 请求时间戳最大存储数量
-     */
+    */
     private static final int REQUEST_TIMESTAMP_MAX_SIZE = 50000;
 
     /**
     * 请求时间戳存储 - 用于防止重放攻击
-     */
+    */
     private final ConcurrentHashMap<String, Long> requestTimestampStore = new ConcurrentHashMap<>();
     
     /**
     * 路径匹配器
-     */
+    */
     private static final PathMatcher PATH_MATCHER = new AntPathMatcher();
 
     /** 全局设置工厂 */
@@ -72,7 +72,7 @@ public class ApiRequestDecodeRegister implements Upgrade<ApiRequestDecodeSetting
     * 构造函数
     *
     * @param decodeConfig 解码配置
-     */
+    */
     public ApiRequestDecodeRegister(ApiProperties.RequestDecodeProperties decodeConfig) {
         this.decodeConfig = decodeConfig;
         this.whiteList = decodeConfig.getWhiteList() != null 
@@ -90,11 +90,11 @@ public class ApiRequestDecodeRegister implements Upgrade<ApiRequestDecodeSetting
     * 请求解密是否开启
     *
     * @return 是否开启
-     */
+    */
     public boolean requestDecodeOpen() {
         /**
         * 检查。
-         */
+        */
         check();
         return null != decodeSetting && decodeSetting.isEnable();
     }
@@ -117,7 +117,7 @@ public class ApiRequestDecodeRegister implements Upgrade<ApiRequestDecodeSetting
     * 获取或创建Setting
     *
     * @return 获取or创建setting的结果
-     */
+    */
     private ApiRequestDecodeSetting getOrCreateSetting() {
         ApiRequestDecodeSetting setting = globalSettingFactory.get("config", ApiRequestDecodeSetting.class);
         if (setting == null) {
@@ -132,7 +132,7 @@ public class ApiRequestDecodeRegister implements Upgrade<ApiRequestDecodeSetting
     *
     * @param requestPath 请求路径
     * @return 是否在白名单中
-     */
+    */
     public boolean isWhiteListed(String requestPath) {
         if (whiteList.isEmpty() || StringUtils.isEmpty(requestPath)) {
             return false;
@@ -150,7 +150,7 @@ public class ApiRequestDecodeRegister implements Upgrade<ApiRequestDecodeSetting
     * 获取密钥头
     *
     * @return 密钥头名称
-     */
+    */
     public String getKeyHeader() {
         return "access-control-origin-key";
     }
@@ -159,11 +159,11 @@ public class ApiRequestDecodeRegister implements Upgrade<ApiRequestDecodeSetting
     * 获取请求钥匙
     *
     * @return 请求key
-     */
+    */
     public String getRequestKey() {
         /**
         * 检查。
-         */
+        */
         check();
         return decodeSetting != null ? decodeSetting.getCodecRequestKey() : null;
     }
@@ -173,7 +173,7 @@ public class ApiRequestDecodeRegister implements Upgrade<ApiRequestDecodeSetting
     *
     * @param data 加密数据
     * @return 解密后的字节数组
-     */
+    */
     public byte[] decodeRequest(String data) {
         try {
             if (requestCodec == null) {
@@ -181,7 +181,7 @@ public class ApiRequestDecodeRegister implements Upgrade<ApiRequestDecodeSetting
                 * runtime异常。
                 * @param "解密器未初始化" "解密器未初始化"
                 * @return runtime异常的结果
-                 */
+                */
                 throw new RuntimeException("解密器未初始化");
             }
             String decoded = requestCodec.decodeHex(data);
@@ -191,7 +191,7 @@ public class ApiRequestDecodeRegister implements Upgrade<ApiRequestDecodeSetting
             * runtime异常。
             * @param e.getMessage( e.获取消息(
             * @return runtime异常的结果
-             */
+            */
             throw new RuntimeException("请求解析失败: " + e.getMessage());
         }
     }
@@ -202,7 +202,7 @@ public class ApiRequestDecodeRegister implements Upgrade<ApiRequestDecodeSetting
     * @param timestamp 请求时间戳
     * @param nonce     随机数
     * @return 是否通过验证
-     */
+    */
     public boolean validateAntiReplay(String timestamp, String nonce) {
         if (!StringUtils.hasText(timestamp) || !StringUtils.hasText(nonce)) {
             log.warn("[AntiReplay] 时间戳或nonce为空");
@@ -228,7 +228,7 @@ public class ApiRequestDecodeRegister implements Upgrade<ApiRequestDecodeSetting
             requestTimestampStore.put(requestId, currentTime);
             /**
             * cleanupexpiredRequests。
-             */
+            */
             cleanupExpiredRequests();
 
             log.debug("[AntiReplay] 请求验证通过，请求ID: {}", requestId);
@@ -272,7 +272,7 @@ public class ApiRequestDecodeRegister implements Upgrade<ApiRequestDecodeSetting
 
     /**
     * 清理过期的请求记录
-     */
+    */
     private void cleanupExpiredRequests() {
         try {
             long currentTime = System.currentTimeMillis();

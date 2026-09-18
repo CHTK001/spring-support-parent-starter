@@ -44,20 +44,20 @@ public class ShardingAutoConfiguration {
     /**
     * 注册 分库分表v5 数据源转换器 Bean
     * @return 分库分表v5转换的结果
-     */
+    */
     @Bean
     @ConditionalOnMissingBean(name = "shardingV5Conversion")
     public DataSourceConversion shardingV5Conversion() {
         /**
         * 分库分表v5转换。
         * @return 分库分表v5转换的结果
-         */
+        */
         return new ShardingV5Conversion();
     }
 
     /**
     * 创建 分库分表sphere 分片数据源 Bean
-     */
+    */
     @Bean
     @ConditionalOnMissingBean(name = "shardingDataSource")
     public DataSource shardingDataSource(
@@ -89,14 +89,14 @@ public class ShardingAutoConfiguration {
     * @param conversion 转换
     * @param properties 属性
     * @return configure分库分表的结果
-     */
+    */
     private ShardingV5Conversion configureSharding(DataSourceConversion conversion, ShardingDataSourceProperties properties) {
         if (!(conversion instanceof ShardingV5Conversion)) {
             log.warn("[Sharding] 转换器不是 ShardingV5Conversion 类型，使用默认配置");
             /**
             * 分库分表v5转换。
             * @return 分库分表v5转换的结果
-             */
+            */
             return new ShardingV5Conversion();
         }
 
@@ -157,7 +157,7 @@ public class ShardingAutoConfiguration {
     * 根据时间单位返回分片模式
     * @param timeUnit 时间unit
     * @return 获取时间分区模式的结果
-     */
+    */
     private String getTimePartitionPattern(String timeUnit) {
         switch (timeUnit.toUpperCase()) {
             case "YEAR":
@@ -180,7 +180,7 @@ public class ShardingAutoConfiguration {
     /**
     * 收集所有已注册的数据源（过滤动态路由数据源和分片数据源）
     * @return collect数据源的结果
-     */
+    */
     private List<DataSource> collectDataSources() {
         Map<String, DataSource> allDataSources = DataSourceContextSupport.getAllDataSources();
         List<DataSource> result = new ArrayList<>();

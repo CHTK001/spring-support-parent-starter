@@ -26,7 +26,7 @@ public class GlobalSettingInitializer implements ApplicationRunner {
 
     /**
     * 全局设置服务
-     */
+    */
     private final SysAiGlobalSettingService globalSettingService;
 
     /**
@@ -36,7 +36,7 @@ public class GlobalSettingInitializer implements ApplicationRunner {
     * 不覆盖用户已配置的值；分组为空时全量注册。</p>
     *
     * @param args 启动参数
-     */
+    */
     @Override
     public void run(ApplicationArguments args) {
         ServiceProvider<GlobalSettingProvider> provider = ServiceProvider.of(GlobalSettingProvider.class);

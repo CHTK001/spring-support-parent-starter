@@ -26,12 +26,12 @@ public class SpiderTraceFilter implements Filter {
 
     /**
     * 追踪标识 请求头 / 响应头名称
-     */
+    */
     private static final String TRACE_ID_HEADER = "X-Trace-Id";
 
     /**
     * MDC 中 追踪标识 的 钥匙（与 流-启动 引擎使用的 钥匙 保持一致）
-     */
+    */
     private static final String TRACE_ID_MDC_KEY = "traceId";
 
     @Override

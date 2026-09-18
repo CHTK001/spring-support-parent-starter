@@ -48,22 +48,22 @@ public class NgrokAutoConfiguration {
 
     /**
     * ngrok authtoken 环境变量名
-     */
+    */
     private static final String ENV_AUTHTOKEN = "NGROK_AUTHTOKEN";
 
     /**
     * 解析后的 authtoken（带环境变量回退）
-     */
+    */
     private final NgrokProperties properties;
 
     /**
     * 资源加载器，用于读取 CA 证书
-     */
+    */
     private final ResourceLoader resourceLoader;
 
     /**
     * Ngrok 客户端 实例
-     */
+    */
     private NgrokClient client;
 
     /**
@@ -71,7 +71,7 @@ public class NgrokAutoConfiguration {
     * @param properties 属性
     * @param resourceLoader 对象提供者
     * @param resourceLoader resource加载
-     */
+    */
     public NgrokAutoConfiguration(NgrokProperties properties, ObjectProvider<ResourceLoader> resourceLoader) {
         this.properties = properties;
         this.resourceLoader = resourceLoader.getIfAvailable();
@@ -84,7 +84,7 @@ public class NgrokAutoConfiguration {
     * （后者在 Spring Boot 4.x 已移除），应用就绪时 服务端.端口 已确定。</p>
     *
     * @param event 应用就绪事件
-     */
+    */
     @EventListener
     public void onApplicationReady(ApplicationReadyEvent event) {
         if (client != null) {
@@ -99,13 +99,13 @@ public class NgrokAutoConfiguration {
             /**
             * 启动tunnels。
             * @param localPort 本地端口
-             */
+            */
             startTunnels(localPort);
         } catch (Exception e) {
             /**
             * 把手startup失败。
             * @param e e
-             */
+            */
             handleStartupFailure(e);
         }
     }
@@ -114,23 +114,23 @@ public class NgrokAutoConfiguration {
     * Spring 上下文关闭时关闭 ngrok。
     *
     * @param event 上下文关闭事件
-     */
+    */
     @EventListener
     public void onContextClosed(ContextClosedEvent event) {
         /**
         * 关闭客户端。
-         */
+        */
         closeClient();
     }
 
     /**
     * Bean 销毁兜底关闭（保证 尝试-with-resources 风格的容器关闭）。
-     */
+    */
     @PreDestroy
     public void destroy() {
         /**
         * 关闭客户端。
-         */
+        */
         closeClient();
     }
 
@@ -139,7 +139,7 @@ public class NgrokAutoConfiguration {
     *
     * @param event 应用就绪事件
     * @return resolve本地端口的结果
-     */
+    */
     private int resolveLocalPort(ApplicationReadyEvent event) {
  // 优先从 服务端.端口 属性解析
         String portStr = event.getApplicationContext().getEnvironment().getProperty("server.port");
@@ -155,7 +155,7 @@ public class NgrokAutoConfiguration {
     /**
     * 启动隧道。
     * @param localPort 本地端口
-     */
+    */
     private void startTunnels(int localPort) throws IOException {
         String authtoken = resolveAuthtoken();
         if (authtoken == null) {
@@ -178,7 +178,7 @@ public class NgrokAutoConfiguration {
 
         /**
         * 日志公共urls。
-         */
+        */
         logPublicUrls();
     }
 
@@ -186,7 +186,7 @@ public class NgrokAutoConfiguration {
     * 启动 HTTP 转发 / 监听。
     * @param localPort 本地端口
     * @param mode mode
-     */
+    */
     private void startHttpTunnels(int localPort, String mode) throws IOException {
         boolean forward = "forward".equalsIgnoreCase(mode);
 
@@ -196,7 +196,7 @@ public class NgrokAutoConfiguration {
         * @param localPort 本地端口
         * @param "main" "main"
         * @param forward 远期
-         */
+        */
         startHttpTunnel(localPort, "main", forward);
 
         // 额外端口
@@ -215,7 +215,7 @@ public class NgrokAutoConfiguration {
                     * @param port 端口
                     * @param port 端口
                     * @param forward 远期
-                     */
+                    */
                     startHttpTunnel(port, "extra-" + port, forward);
                 } catch (NumberFormatException e) {
                     log.warn("[Ngrok] 忽略非法端口: {}", trimmed);
@@ -230,7 +230,7 @@ public class NgrokAutoConfiguration {
     * @param localPort 本地端口
     * @param tag 标签
     * @param forward 远期
-     */
+    */
     private void startHttpTunnel(int localPort, String tag, boolean forward) throws IOException {
         NgrokClient.HttpBuilderStage stage = client.http()
                 .metadata(buildMetadata("http-" + tag));
@@ -252,7 +252,7 @@ public class NgrokAutoConfiguration {
         /**
         * applybasic认证。
         * @param stage Stage
-         */
+        */
         applyBasicAuth(stage);
 
         if (forward) {
@@ -269,7 +269,7 @@ public class NgrokAutoConfiguration {
     * 启动 TLS 转发 / 监听。
     * @param localPort 本地端口
     * @param mode mode
-     */
+    */
     private void startTlsTunnels(int localPort, String mode) throws IOException {
         boolean forward = "forward".equalsIgnoreCase(mode);
         NgrokClient.TlsBuilderStage stage = client.tls()
@@ -286,14 +286,14 @@ public class NgrokAutoConfiguration {
 
     /**
     * 启动 TCP 监听。
-     */
+    */
     private void startTcpTunnels() throws IOException {
         if (!StringUtils.hasText(properties.getRemoteAddress())) {
             /**
             * illegal状态异常。
             * @param plugin.ngrok.remote-address" plugin.ngrok.远程-地址"
             * @return illegal状态异常的结果
-             */
+            */
             throw new IllegalStateException("[Ngrok] tcp 模式必须配置 plugin.ngrok.remote-address");
         }
         client.listenTcp(client.tcp()
@@ -305,7 +305,7 @@ public class NgrokAutoConfiguration {
     /**
     * 应用 基础认证 配置。
     * @param stage Stage
-     */
+    */
     private void applyBasicAuth(NgrokClient.HttpBuilderStage stage) {
         String user = null;
         String pass = null;
@@ -326,7 +326,7 @@ public class NgrokAutoConfiguration {
     * 构建 ngrok客户端，注入所有可选项。
     * @param authtoken authtoken
     * @return 构建客户端的结果
-     */
+    */
     private NgrokClient buildClient(String authtoken) throws IOException {
         NgrokClient c = NgrokClient.create(authtoken);
         if (StringUtils.hasText(properties.getMetadata())) {
@@ -350,7 +350,7 @@ public class NgrokAutoConfiguration {
     /**
     * 解析 authtoken（优先配置，其次环境变量）。
     * @return resolveAuthtoken的结果
-     */
+    */
     private String resolveAuthtoken() {
         if (StringUtils.hasText(properties.getAuthtoken())) {
             return properties.getAuthtoken().trim();
@@ -370,14 +370,14 @@ public class NgrokAutoConfiguration {
     * 加载 类路径 资源形式的 CA 证书。
     * @param location 位置
     * @return 加载cacert的结果
-     */
+    */
     private byte[] loadCaCert(String location) throws IOException {
         if (resourceLoader == null) {
             /**
             * illegal状态异常。
             * @param ResourceLoader，但当前环境未提供" resource加载，但当前环境未提供"
             * @return illegal状态异常的结果
-             */
+            */
             throw new IllegalStateException("[Ngrok] ca-cert 配置需要 ResourceLoader，但当前环境未提供");
         }
         Resource resource = resourceLoader.getResource(location);
@@ -386,7 +386,7 @@ public class NgrokAutoConfiguration {
             * illegal状态异常。
             * @param location 位置
             * @return illegal状态异常的结果
-             */
+            */
             throw new IllegalStateException("[Ngrok] CA 证书资源不存在: " + location);
         }
         try {
@@ -404,7 +404,7 @@ public class NgrokAutoConfiguration {
     * 构造 metadata。
     * @param suffix 后缀
     * @return 构建metadata的结果
-     */
+    */
     private String buildMetadata(String suffix) {
         String base = StringUtils.hasText(properties.getMetadata())
                 ? properties.getMetadata()
@@ -414,7 +414,7 @@ public class NgrokAutoConfiguration {
 
     /**
     * 输出公网 URL banner。
-     */
+    */
     private void logPublicUrls() {
         if (client == null) {
             return;
@@ -441,12 +441,12 @@ public class NgrokAutoConfiguration {
     /**
     * 启动失败处理（根据 失败fast 决定行为）。
     * @param e e
-     */
+    */
     private void handleStartupFailure(Exception e) {
         log.error("[Ngrok] 隧道启动失败: {}", e.getMessage(), e);
         /**
         * 关闭客户端。
-         */
+        */
         closeClient();
         if (properties.isFailFast()) {
             /**
@@ -454,14 +454,14 @@ public class NgrokAutoConfiguration {
             * @param 启动" 启动"
             * @param e e
             * @return illegal状态异常的结果
-             */
+            */
             throw new IllegalStateException("[Ngrok] failFast=true，终止 Spring 启动", e);
         }
     }
 
     /**
     * 关闭 Ngrok 客户端。
-     */
+    */
     private void closeClient() {
         if (client != null) {
             try {
@@ -479,7 +479,7 @@ public class NgrokAutoConfiguration {
     * @param value 价值观
     * @param defaultValue 默认价值观
     * @return normalize的结果
-     */
+    */
     private static String normalize(String value, String defaultValue) {
         if (value == null || value.isBlank()) {
             return defaultValue;
@@ -489,7 +489,7 @@ public class NgrokAutoConfiguration {
 
     /**
     * 监听器 句柄占位（保留扩展点；当前由 ngrok客户端 内部持有所有 监听器）。
-     */
+    */
     private static final class ListenerHandle {
         @SuppressWarnings("unused")
         boolean listen;
@@ -500,7 +500,7 @@ public class NgrokAutoConfiguration {
     * ngrok服务信息contributor
     *
     * @return ngrok服务信息contributor的结果
-     */
+    */
     public ServiceInfoContributor ngrokServiceInfoContributor() {
         return registry -> {
             registry.registerFlag("ngrok", "内网穿透", true, "ngrok隧道模块");

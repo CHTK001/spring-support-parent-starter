@@ -19,6 +19,6 @@ public interface JobLogMapper extends BaseMapper<JobLogEntity> {
     * @param beforeTime 截止时间 (Oracle 日期 列)
     * @return 删除记录数
     * @param @Param("beforeTime" @参数("之前时间"
-     */
+    */
     int deleteByTriggerTimeBefore(@Param("beforeTime") Date beforeTime);
 }

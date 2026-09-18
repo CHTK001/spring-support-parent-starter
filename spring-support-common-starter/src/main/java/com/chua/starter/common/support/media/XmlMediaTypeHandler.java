@@ -27,15 +27,15 @@ public class XmlMediaTypeHandler implements MediaTypeHandler {
     /** asbytearray */
     public byte[] asByteArray(Object o) {
         /**
-        * 尝试。
-        * @param ByteArrayOutputStream( bytearray输出流(
-         */
+    * 尝试。
+    * @param ByteArrayOutputStream( bytearray输出流(
+    */
         try (ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();) {
             /**
             * 导出。
             * @param byteArrayOutputStream bytearray输出流
             * @param o o
-             */
+            */
             export(byteArrayOutputStream, o);
             return byteArrayOutputStream.toByteArray();
         } catch (Exception ignored) {
@@ -48,7 +48,7 @@ public class XmlMediaTypeHandler implements MediaTypeHandler {
     *
     * @param outputStream 输出流
     * @param data 数据
-     */
+    */
     public void export(OutputStream outputStream, Object data) {
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
@@ -67,7 +67,7 @@ public class XmlMediaTypeHandler implements MediaTypeHandler {
     *
     * @param data 数据
     * @return analysis的结果
-     */
+    */
     public StringBuilder analysis(Object data) {
         if (data instanceof Collection) {
             return analysis((Collection) data);
@@ -85,7 +85,7 @@ public class XmlMediaTypeHandler implements MediaTypeHandler {
     *
     * @param data 数据
     * @return analysis对象的结果
-     */
+    */
     public StringBuilder analysisObject(Object data) {
         StringBuilder buffer = new StringBuilder();
         Class<?> aClass = data.getClass();
@@ -122,7 +122,7 @@ public class XmlMediaTypeHandler implements MediaTypeHandler {
     * @param aClass a类
     * @param field 字段
     * @return formatter的结果
-     */
+    */
     private Object formatter(Object value, Class<?> aClass, Field field) {
         if (null == value) {
             return "";
@@ -136,7 +136,7 @@ public class XmlMediaTypeHandler implements MediaTypeHandler {
     *
     * @param data 数据
     * @return analysis的结果
-     */
+    */
     public StringBuilder analysis(Map data) {
         StringBuilder buffer = new StringBuilder();
         data.forEach((name, value) -> {
@@ -155,7 +155,7 @@ public class XmlMediaTypeHandler implements MediaTypeHandler {
     *
     * @param data 数据
     * @return analysis的结果
-     */
+    */
     public StringBuilder analysis(Collection data) {
         StringBuilder buffer = new StringBuilder();
         buffer.append("<items>");

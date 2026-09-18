@@ -29,7 +29,7 @@ public class PaymentProviderProperties {
     * 获取默认spi
     *
     * @return 获取默认spi的结果
-     */
+    */
     public String getDefaultSpi() {
         return defaultSpi;
     }
@@ -38,7 +38,7 @@ public class PaymentProviderProperties {
     * 设置默认spi
     *
     * @param defaultSpi 默认spi
-     */
+    */
     public void setDefaultSpi(String defaultSpi) {
         this.defaultSpi = defaultSpi;
     }
@@ -47,7 +47,7 @@ public class PaymentProviderProperties {
     * 获取alipayspi
     *
     * @return 获取alipayspi的结果
-     */
+    */
     public String getAlipaySpi() {
         return alipaySpi;
     }
@@ -56,7 +56,7 @@ public class PaymentProviderProperties {
     * 设置alipayspi
     *
     * @param alipaySpi alipayspi
-     */
+    */
     public void setAlipaySpi(String alipaySpi) {
         this.alipaySpi = alipaySpi;
     }
@@ -65,7 +65,7 @@ public class PaymentProviderProperties {
     * 获取wechatspi
     *
     * @return 获取wechatspi的结果
-     */
+    */
     public String getWechatSpi() {
         return wechatSpi;
     }
@@ -74,7 +74,7 @@ public class PaymentProviderProperties {
     * 设置wechatspi
     *
     * @param wechatSpi wechatspi
-     */
+    */
     public void setWechatSpi(String wechatSpi) {
         this.wechatSpi = wechatSpi;
     }
@@ -83,7 +83,7 @@ public class PaymentProviderProperties {
     * 获取epayspi
     *
     * @return 获取epayspi的结果
-     */
+    */
     public String getEpaySpi() {
         return epaySpi;
     }
@@ -92,7 +92,7 @@ public class PaymentProviderProperties {
     * 设置epayspi
     *
     * @param epaySpi epayspi
-     */
+    */
     public void setEpaySpi(String epaySpi) {
         this.epaySpi = epaySpi;
     }
@@ -102,7 +102,7 @@ public class PaymentProviderProperties {
     *
     * @param channelType 通道类型
     * @return resolvefor通道类型的结果
-     */
+    */
     public String resolveForChannelType(String channelType) {
         String fallback = StringUtils.hasText(defaultSpi)
                 ? defaultSpi

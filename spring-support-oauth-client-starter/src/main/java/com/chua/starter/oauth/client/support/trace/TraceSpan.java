@@ -16,37 +16,37 @@ public class TraceSpan {
 
     /**
     * Span 标识
-     */
+    */
     private final String spanId;
 
     /**
     * 父 Span 标识
-     */
+    */
     private final String parentSpanId;
 
     /**
     * Span 名称
-     */
+    */
     private final String spanName;
 
     /**
     * 开始时间（毫秒）
-     */
+    */
     private final long startTime;
 
     /**
     * 结束时间（毫秒）
-     */
+    */
     private long endTime;
 
     /**
     * 是否已结束
-     */
+    */
     private boolean finished;
 
     /**
     * 附加信息
-     */
+    */
     private String extra;
 
     /**
@@ -55,7 +55,7 @@ public class TraceSpan {
     * @param spanId       Span 标识
     * @param parentSpanId 父 Span 标识
     * @param spanName     Span 名称
-     */
+    */
     public TraceSpan(String spanId, String parentSpanId, String spanName) {
         this.spanId = spanId;
         this.parentSpanId = parentSpanId;
@@ -66,7 +66,7 @@ public class TraceSpan {
 
     /**
     * 结束 Span
-     */
+    */
     public void end() {
         if (!finished) {
             this.endTime = System.currentTimeMillis();
@@ -79,7 +79,7 @@ public class TraceSpan {
     *
     * @param extra 附加信息
     * @return this
-     */
+    */
     public TraceSpan extra(String extra) {
         this.extra = extra;
         return this;
@@ -89,7 +89,7 @@ public class TraceSpan {
     * 获取耗时（毫秒）
     *
     * @return 耗时
-     */
+    */
     public long getCostMs() {
         if (finished) {
             return endTime - startTime;
@@ -101,7 +101,7 @@ public class TraceSpan {
     * 转换为 JSON 字符串
     *
     * @return JSON 字符串
-     */
+    */
     public String toJson() {
         StringBuilder sb = new StringBuilder("{");
         sb.append("\"spanId\":\"").append(spanId).append("\"");

@@ -38,14 +38,14 @@ public class CaptchaConfiguration {
     * captcha提供者
     *
     * @return captcha提供者的结果
-     */
+    */
     public CaptchaProvider captchaProvider() {
         ServiceInfoRegistry.getInstance().registerFlag(
                 "captcha", "校验码", true, "图形验证码接口", null);
         /**
         * captcha提供者。
         * @return captcha提供者的结果
-         */
+        */
         return new CaptchaProvider();
     }
 }

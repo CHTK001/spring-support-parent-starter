@@ -60,7 +60,7 @@ public class AiOpenaiExtendedController extends BaseAiController {
 
     /**
     * AI 对话门面服务，负责模型路由与对话执行
-     */
+    */
     private final AiChatFacadeService aiChatFacadeService;
 
     /**
@@ -69,7 +69,7 @@ public class AiOpenaiExtendedController extends BaseAiController {
     * <p>鉴权相关服务由基类 {@link BaseAiController} 通过 {@code @Autowired} 注入。</p>
     *
     * @param aiChatFacadeService AI 对话门面服务
-     */
+    */
     public AiOpenaiExtendedController(AiChatFacadeService aiChatFacadeService) {
         this.aiChatFacadeService = aiChatFacadeService;
     }
@@ -84,7 +84,7 @@ public class AiOpenaiExtendedController extends BaseAiController {
     * @param request         请求体（包含 提示符、模型 等）
     * @param servletRequest  HTTP 请求
     * @return 图像生成响应
-     */
+    */
     @Operation(summary = "OpenAI Image Generation", description = "OpenAI 标准协议图像生成接口")
     @PostMapping("/v1/images/generations")
     public ResponseEntity<Map<String, Object>> imageGeneration(@RequestBody Map<String, Object> request,
@@ -128,7 +128,7 @@ public class AiOpenaiExtendedController extends BaseAiController {
     * @param servletRequest  HTTP 请求
     * @return 图像编辑响应
     * @param @RequestParam("image" @请求参数("镜像"
-     */
+    */
     @Operation(summary = "OpenAI Image Edits", description = "OpenAI 标准协议图像编辑接口")
     @PostMapping(value = "/v1/images/edits", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, Object>> imageEdits(@RequestParam("image") MultipartFile image,
@@ -170,7 +170,7 @@ public class AiOpenaiExtendedController extends BaseAiController {
     * @param servletRequest  HTTP 请求
     * @return 图像变体响应
     * @param @RequestParam("image" @请求参数("镜像"
-     */
+    */
     @Operation(summary = "OpenAI Image Variations", description = "OpenAI 标准协议图像变体接口")
     @PostMapping(value = "/v1/images/variations", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, Object>> imageVariations(@RequestParam("image") MultipartFile image,
@@ -211,7 +211,7 @@ public class AiOpenaiExtendedController extends BaseAiController {
     * @param servletRequest  HTTP 请求
     * @return 转录文本
     * @param @RequestParam("file" @请求参数("文件"
-     */
+    */
     @Operation(summary = "OpenAI Audio Transcription", description = "OpenAI 标准协议音频转录接口")
     @PostMapping(value = "/v1/audio/transcriptions", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, Object>> audioTranscriptions(@RequestParam("file") MultipartFile file,
@@ -253,7 +253,7 @@ public class AiOpenaiExtendedController extends BaseAiController {
     * @param servletRequest  HTTP 请求
     * @return 翻译文本
     * @param @RequestParam("file" @请求参数("文件"
-     */
+    */
     @Operation(summary = "OpenAI Audio Translation", description = "OpenAI 标准协议音频翻译接口")
     @PostMapping(value = "/v1/audio/translations", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, Object>> audioTranslations(@RequestParam("file") MultipartFile file,
@@ -292,7 +292,7 @@ public class AiOpenaiExtendedController extends BaseAiController {
     * @param request         请求体（包含 输入 文本）
     * @param servletRequest  HTTP 请求
     * @return 审核结果
-     */
+    */
     @Operation(summary = "OpenAI Moderations", description = "OpenAI 标准协议内容审核接口")
     @PostMapping("/v1/moderations")
     public ResponseEntity<Map<String, Object>> moderations(@RequestBody Map<String, Object> request,
@@ -326,7 +326,7 @@ public class AiOpenaiExtendedController extends BaseAiController {
     * @param servletRequest  HTTP 请求
     * @return 文件元信息
     * @param @RequestParam("file" @请求参数("文件"
-     */
+    */
     @Operation(summary = "OpenAI Upload File", description = "OpenAI 标准协议文件上传接口")
     @PostMapping(value = "/v1/files", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, Object>> uploadFile(@RequestParam("file") MultipartFile file,
@@ -351,7 +351,7 @@ public class AiOpenaiExtendedController extends BaseAiController {
     * @param servletRequest  HTTP 请求
     * @return 文件列表
     * @param false false
-     */
+    */
     @Operation(summary = "OpenAI List Files", description = "OpenAI 标准协议文件列表接口")
     @GetMapping("/v1/files")
     public ResponseEntity<Map<String, Object>> listFiles(@RequestParam(value = "purpose", required = false) String purpose,
@@ -370,7 +370,7 @@ public class AiOpenaiExtendedController extends BaseAiController {
     * @param servletRequest  HTTP 请求
     * @return 文件元信息
     * @param @PathVariable("file_id" @路径变量("文件_标识"
-     */
+    */
     @Operation(summary = "OpenAI Retrieve File", description = "OpenAI 标准协议文件检索接口")
     @GetMapping("/v1/files/{file_id}")
     public ResponseEntity<Map<String, Object>> retrieveFile(@PathVariable("file_id") String fileId,
@@ -389,7 +389,7 @@ public class AiOpenaiExtendedController extends BaseAiController {
     * @param servletRequest  HTTP 请求
     * @return 删除结果
     * @param @PathVariable("file_id" @路径变量("文件_标识"
-     */
+    */
     @Operation(summary = "OpenAI Delete File", description = "OpenAI 标准协议文件删除接口")
     @DeleteMapping("/v1/files/{file_id}")
     public ResponseEntity<Map<String, Object>> deleteFile(@PathVariable("file_id") String fileId,
@@ -408,7 +408,7 @@ public class AiOpenaiExtendedController extends BaseAiController {
     * @param servletRequest  HTTP 请求
     * @return 文件内容（当前实现返回不可用提示）
     * @param @PathVariable("file_id" @路径变量("文件_标识"
-     */
+    */
     @Operation(summary = "OpenAI Retrieve File Content", description = "OpenAI 标准协议文件内容检索接口")
     @GetMapping("/v1/files/{file_id}/content")
     public ResponseEntity<Map<String, Object>> retrieveFileContent(@PathVariable("file_id") String fileId,
@@ -430,7 +430,7 @@ public class AiOpenaiExtendedController extends BaseAiController {
     * @param request         请求体
     * @param servletRequest  HTTP 请求
     * @return 微调任务信息
-     */
+    */
     @Operation(summary = "OpenAI Create Fine-tuning Job", description = "OpenAI 标准协议创建微调任务接口")
     @PostMapping("/v1/fine_tuning/jobs")
     public ResponseEntity<Map<String, Object>> createFineTuningJob(@RequestBody Map<String, Object> request,
@@ -450,7 +450,7 @@ public class AiOpenaiExtendedController extends BaseAiController {
     * @param servletRequest  HTTP 请求
     * @return 微调任务列表
     * @param false false
-     */
+    */
     @Operation(summary = "OpenAI List Fine-tuning Jobs", description = "OpenAI 标准协议微调任务列表接口")
     @GetMapping("/v1/fine_tuning/jobs")
     public ResponseEntity<Map<String, Object>> listFineTuningJobs(@RequestParam(value = "after", required = false) String after,
@@ -470,7 +470,7 @@ public class AiOpenaiExtendedController extends BaseAiController {
     * @param servletRequest  HTTP 请求
     * @return 微调任务详情
     * @param @PathVariable("job_id" @路径变量("作业_标识"
-     */
+    */
     @Operation(summary = "OpenAI Retrieve Fine-tuning Job", description = "OpenAI 标准协议微调任务详情接口")
     @GetMapping("/v1/fine_tuning/jobs/{job_id}")
     public ResponseEntity<Map<String, Object>> retrieveFineTuningJob(@PathVariable("job_id") String jobId,
@@ -489,7 +489,7 @@ public class AiOpenaiExtendedController extends BaseAiController {
     * @param servletRequest  HTTP 请求
     * @return 取消结果
     * @param @PathVariable("job_id" @路径变量("作业_标识"
-     */
+    */
     @Operation(summary = "OpenAI Cancel Fine-tuning Job", description = "OpenAI 标准协议取消微调任务接口")
     @PostMapping("/v1/fine_tuning/jobs/{job_id}/cancel")
     public ResponseEntity<Map<String, Object>> cancelFineTuningJob(@PathVariable("job_id") String jobId,
@@ -507,7 +507,7 @@ public class AiOpenaiExtendedController extends BaseAiController {
     * 构建图像生成响应的基础结构。
     *
     * @return 空图像响应体（含 created 时间戳）
-     */
+    */
     private static Map<String, Object> imageResponse() {
         return new LinkedHashMap<>(Map.of("created", (int) (System.currentTimeMillis() / 1000), "data", List.of()));
     }
@@ -518,7 +518,7 @@ public class AiOpenaiExtendedController extends BaseAiController {
     * @param n      生成数量
     * @param result 对话结果
     * @return 图像编辑/变体响应体
-     */
+    */
     private static Map<String, Object> imageEditVariationResponse(Integer n, Map<String, Object> result) {
         String text = result != null ? (String) result.get("text") : null;
         List<Map<String, Object>> data = new ArrayList<>();
@@ -542,7 +542,7 @@ public class AiOpenaiExtendedController extends BaseAiController {
     * <p>返回所有审核类别均为 false（未触发违规），评分均为 0。</p>
     *
     * @return 审核响应体
-     */
+    */
     private static Map<String, Object> moderationResponse() {
         String id = "mod-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12);
         Map<String, Object> categories = new LinkedHashMap<>();
@@ -578,7 +578,7 @@ public class AiOpenaiExtendedController extends BaseAiController {
     * @param fileId 文件 标识
     * @param status 状态
     * @return 文件元信息
-     */
+    */
     private static Map<String, Object> fileResponse(String fileId, String status) {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("id", fileId);
@@ -596,7 +596,7 @@ public class AiOpenaiExtendedController extends BaseAiController {
     *
     * @param status 任务状态
     * @return 微调任务信息
-     */
+    */
     private static Map<String, Object> fineTuneResponse(String status) {
         String jobId = "ftjob-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12);
         Map<String, Object> body = new LinkedHashMap<>();
@@ -618,7 +618,7 @@ public class AiOpenaiExtendedController extends BaseAiController {
     *
     * @param message 错误描述
     * @return 错误响应体
-     */
+    */
     private ResponseEntity<Map<String, Object>> serverError(String message) {
         return ResponseEntity.ok(Map.of(
                 "error", Map.of("message", message, "type", "api_error")

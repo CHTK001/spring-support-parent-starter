@@ -32,19 +32,19 @@ public class SoftSourceServiceImpl extends ServiceImpl<SoftSourceMapper, SoftSou
 
     /**
     * 软件服务 - 通过 Setter 注入，断开循环依赖
-     */
+    */
     private SoftSoftwareService softwareService;
 
     /**
     * 事务模板
-     */
+    */
     private final TransactionTemplate transactionTemplate;
 
     /**
     * 通过 Setter 注入，打断与 software服务 的循环依赖
     *
     * @param softwareService 软件服务
-     */
+    */
     @Autowired
     public void setSoftwareService(@Lazy SoftSoftwareService softwareService) {
         this.softwareService = softwareService;
@@ -156,7 +156,7 @@ public class SoftSourceServiceImpl extends ServiceImpl<SoftSourceMapper, SoftSou
     *
     * @param sourceId 源标识
     * @return enable源的结果
-     */
+    */
     public ReturnResult<Boolean> enableSource(String sourceId) {
         if (sourceId == null) {
             return ReturnResult.illegal("源ID不能为空");
@@ -169,7 +169,7 @@ public class SoftSourceServiceImpl extends ServiceImpl<SoftSourceMapper, SoftSou
         /**
         * 更新源。
         * @param source 源
-         */
+        */
         updateSource(source);
         return ReturnResult.ok(true);
     }
@@ -186,9 +186,9 @@ public class SoftSourceServiceImpl extends ServiceImpl<SoftSourceMapper, SoftSou
         }
         source.setSourceIsEnabled(false);
         /**
-        * 更新源。
-        * @param source 源
-         */
+    * 更新源。
+    * @param source 源
+    */
         updateSource(source);
         return ReturnResult.ok(true);
     }

@@ -26,7 +26,7 @@ import java.util.Map;
 public class Project {
     /**
     * 无参构造函数
-     */
+    */
     public Project() {
     }
 
@@ -37,78 +37,78 @@ public class Project {
     private static final Project INSTANCE = new Project();
     /**
     * 应用名称
-     */
+    */
     private String applicationName;
 
     /**
     * 应用端口
-     */
+    */
     private Integer applicationPort;
 
     /**
     * 应用地址
-     */
+    */
     private String applicationHost;
 
     /**
     * 应用环境
-     */
+    */
     private String applicationActive;
 
     /**
     * 应用环境
-     */
+    */
     private String applicationActiveInclude;
     /**
     * 上下文路径
-     */
+    */
     private String contextPath;
     /**
     * 端点地址
-     */
+    */
     private String endpointsUrl;
 
     /**
     * 端点
-     */
+    */
     private String endpoints;
 
     /**
     * 数据库地址
-     */
+    */
     private String dataSourceUrl;
 
     /**
     * 驱动
-     */
+    */
     private String dataSourceDriver;
     /**
     * 用户名
-     */
+    */
     private String dataSourceUsername;
     /**
     * 密码
-     */
+    */
     private String dataSourcePassword;
     /**
     * 环境
-     */
+    */
     private Environment environment;
     /**
     * 客户端绑定的服务端口
-     */
+    */
     private String clientProtocolEndpointPort;
 
     /**
     * 客户端绑定的服务协议
-     */
+    */
     private String clientProtocolEndpointProtocol;
 
     /**
     * 创建 Project 实例
     * @param metadata 字符串
     * @param metadata metadata
-     */
+    */
     public Project(Map<String, String> metadata) {
         this.applicationName = MapUtils.getString(metadata, "applicationName");
         this.applicationPort = NumberUtils.toInt(MapUtils.getString(metadata, "applicationPort"));
@@ -130,7 +130,7 @@ public class Project {
     * 设置环境
     *
     * @param environment 环境
-     */
+    */
     public void setEnvironment(Environment environment) {
         this.environment = environment;
         this.applicationName = environment.getProperty("spring.application.name");
@@ -160,7 +160,7 @@ public class Project {
     * 获取Instance
     *
     * @return 获取instance的结果
-     */
+    */
     public static Project getInstance() {
         return INSTANCE;
     }
@@ -168,7 +168,7 @@ public class Project {
     /**
     * 计算应用uuid
     * @return uuid
-     */
+    */
     public String calcApplicationUuid() {
         NetAddress netAddress = NetAddress.of(dataSourceUrl);
         return DigestUtils.md5(dataSourceDriver + netAddress.getAddress() + dataSourceUsername + dataSourcePassword);
@@ -178,7 +178,7 @@ public class Project {
     * 获取Project
     *
     * @return 获取project的结果
-     */
+    */
     public Map<String, String> getProject() {
         java.util.Map<String, String> project = new java.util.LinkedHashMap<>();
         project.put("applicationName", applicationName);
@@ -205,7 +205,7 @@ public class Project {
     * 获取 application名称
     *
     * @return applicationName
-     */
+    */
     public String getApplicationName() {
         return applicationName;
     }
@@ -214,7 +214,7 @@ public class Project {
     * 设置 application名称
     *
     * @param applicationName application名称
-     */
+    */
     public void setApplicationName(String applicationName) {
         this.applicationName = applicationName;
     }
@@ -223,7 +223,7 @@ public class Project {
     * 获取 application端口
     *
     * @return applicationPort
-     */
+    */
     public Integer getApplicationPort() {
         return applicationPort;
     }
@@ -232,7 +232,7 @@ public class Project {
     * 设置 application端口
     *
     * @param applicationPort application端口
-     */
+    */
     public void setApplicationPort(Integer applicationPort) {
         this.applicationPort = applicationPort;
     }
@@ -241,7 +241,7 @@ public class Project {
     * 获取 application主机
     *
     * @return applicationHost
-     */
+    */
     public String getApplicationHost() {
         return applicationHost;
     }
@@ -250,7 +250,7 @@ public class Project {
     * 设置 application主机
     *
     * @param applicationHost application主机
-     */
+    */
     public void setApplicationHost(String applicationHost) {
         this.applicationHost = applicationHost;
     }
@@ -259,7 +259,7 @@ public class Project {
     * 获取 application活跃
     *
     * @return applicationActive
-     */
+    */
     public String getApplicationActive() {
         return applicationActive;
     }
@@ -268,7 +268,7 @@ public class Project {
     * 设置 application活跃
     *
     * @param applicationActive application活跃
-     */
+    */
     public void setApplicationActive(String applicationActive) {
         this.applicationActive = applicationActive;
     }
@@ -277,7 +277,7 @@ public class Project {
     * 获取 application活跃include
     *
     * @return applicationActiveInclude
-     */
+    */
     public String getApplicationActiveInclude() {
         return applicationActiveInclude;
     }
@@ -286,7 +286,7 @@ public class Project {
     * 设置 application活跃include
     *
     * @param applicationActiveInclude application活跃include
-     */
+    */
     public void setApplicationActiveInclude(String applicationActiveInclude) {
         this.applicationActiveInclude = applicationActiveInclude;
     }
@@ -295,7 +295,7 @@ public class Project {
     * 获取 上下文路径
     *
     * @return contextPath
-     */
+    */
     public String getContextPath() {
         return contextPath;
     }
@@ -304,7 +304,7 @@ public class Project {
     * 设置 上下文路径
     *
     * @param contextPath 上下文路径
-     */
+    */
     public void setContextPath(String contextPath) {
         this.contextPath = contextPath;
     }
@@ -313,7 +313,7 @@ public class Project {
     * 获取 端点url
     *
     * @return endpointsUrl
-     */
+    */
     public String getEndpointsUrl() {
         return endpointsUrl;
     }
@@ -322,7 +322,7 @@ public class Project {
     * 设置 端点url
     *
     * @param endpointsUrl 端点url
-     */
+    */
     public void setEndpointsUrl(String endpointsUrl) {
         this.endpointsUrl = endpointsUrl;
     }
@@ -331,7 +331,7 @@ public class Project {
     * 获取 端点
     *
     * @return endpoints
-     */
+    */
     public String getEndpoints() {
         return endpoints;
     }
@@ -340,7 +340,7 @@ public class Project {
     * 设置 端点
     *
     * @param endpoints 端点
-     */
+    */
     public void setEndpoints(String endpoints) {
         this.endpoints = endpoints;
     }
@@ -349,7 +349,7 @@ public class Project {
     * 获取 数据源url
     *
     * @return dataSourceUrl
-     */
+    */
     public String getDataSourceUrl() {
         return dataSourceUrl;
     }
@@ -358,7 +358,7 @@ public class Project {
     * 设置 数据源url
     *
     * @param dataSourceUrl 数据源url
-     */
+    */
     public void setDataSourceUrl(String dataSourceUrl) {
         this.dataSourceUrl = dataSourceUrl;
     }
@@ -367,7 +367,7 @@ public class Project {
     * 获取 数据源driver
     *
     * @return dataSourceDriver
-     */
+    */
     public String getDataSourceDriver() {
         return dataSourceDriver;
     }
@@ -376,7 +376,7 @@ public class Project {
     * 设置 数据源driver
     *
     * @param dataSourceDriver 数据源driver
-     */
+    */
     public void setDataSourceDriver(String dataSourceDriver) {
         this.dataSourceDriver = dataSourceDriver;
     }
@@ -385,7 +385,7 @@ public class Project {
     * 获取 数据源用户名
     *
     * @return dataSourceUsername
-     */
+    */
     public String getDataSourceUsername() {
         return dataSourceUsername;
     }
@@ -394,7 +394,7 @@ public class Project {
     * 设置 数据源用户名
     *
     * @param dataSourceUsername 数据源用户名
-     */
+    */
     public void setDataSourceUsername(String dataSourceUsername) {
         this.dataSourceUsername = dataSourceUsername;
     }
@@ -403,7 +403,7 @@ public class Project {
     * 获取 数据源密码
     *
     * @return dataSourcePassword
-     */
+    */
     public String getDataSourcePassword() {
         return dataSourcePassword;
     }
@@ -412,7 +412,7 @@ public class Project {
     * 设置 数据源密码
     *
     * @param dataSourcePassword 数据源密码
-     */
+    */
     public void setDataSourcePassword(String dataSourcePassword) {
         this.dataSourcePassword = dataSourcePassword;
     }
@@ -421,7 +421,7 @@ public class Project {
     * 获取 环境
     *
     * @return environment
-     */
+    */
     public Environment getEnvironment() {
         return environment;
     }
@@ -430,7 +430,7 @@ public class Project {
     * 获取 客户端协议端点端口
     *
     * @return clientProtocolEndpointPort
-     */
+    */
     public String getClientProtocolEndpointPort() {
         return clientProtocolEndpointPort;
     }
@@ -439,7 +439,7 @@ public class Project {
     * 设置 客户端协议端点端口
     *
     * @param clientProtocolEndpointPort 客户端协议端点端口
-     */
+    */
     public void setClientProtocolEndpointPort(String clientProtocolEndpointPort) {
         this.clientProtocolEndpointPort = clientProtocolEndpointPort;
     }
@@ -448,7 +448,7 @@ public class Project {
     * 获取 客户端协议端点协议
     *
     * @return clientProtocolEndpointProtocol
-     */
+    */
     public String getClientProtocolEndpointProtocol() {
         return clientProtocolEndpointProtocol;
     }
@@ -457,7 +457,7 @@ public class Project {
     * 设置 客户端协议端点协议
     *
     * @param clientProtocolEndpointProtocol 客户端协议端点协议
-     */
+    */
     public void setClientProtocolEndpointProtocol(String clientProtocolEndpointProtocol) {
         this.clientProtocolEndpointProtocol = clientProtocolEndpointProtocol;
     }
@@ -468,7 +468,7 @@ public class Project {
     * @param content 内容
     * @param key 钥匙
     * @return aesEncrypt的结果
-     */
+    */
     private static String aesEncrypt(String content, String key) {
         if (content == null) {
             return null;
@@ -482,7 +482,7 @@ public class Project {
             * runtime异常。
             * @param e e
             * @return runtime异常的结果
-             */
+            */
             throw new RuntimeException(e);
         }
     }
@@ -493,7 +493,7 @@ public class Project {
     * @param content 内容
     * @param key 钥匙
     * @return aesDecrypt的结果
-     */
+    */
     private static String aesDecrypt(String content, String key) {
         if (content == null) {
             return null;
@@ -505,14 +505,14 @@ public class Project {
             * 字符串。
             * @param cipher.doFinal(Base64.getDecoder( cipher.执行最终(基础64.获取解码器(
             * @return 字符串的结果
-             */
+            */
             return new String(cipher.doFinal(Base64.getDecoder().decode(content)), java.nio.charset.StandardCharsets.UTF_8);
         } catch (Exception e) {
             /**
             * runtime异常。
             * @param e e
             * @return runtime异常的结果
-             */
+            */
             throw new RuntimeException(e);
         }
     }

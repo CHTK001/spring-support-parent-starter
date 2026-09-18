@@ -18,13 +18,13 @@ public @interface LoginType {
     * 登录类型值
     *
     * @return 登录类型，例如："oauth2"表示OAuth2登录，"ldap"表示LDAP登录，"local"表示本地登录
-     */
+    */
     String value();
 
     /**
     * 登录类型值
     *
     * @return 登录类型，例如："oauth2"表示OAuth2登录，"ldap"表示LDAP登录，"local"表示本地登录
-     */
+    */
     AuthType group() default AuthType.NONE;
 }

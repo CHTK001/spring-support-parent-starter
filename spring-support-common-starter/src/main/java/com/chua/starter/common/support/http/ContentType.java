@@ -13,7 +13,7 @@ public class ContentType {
     /**
     * 创建 内容类型 实例
     * @param mimeType mime类型
-     */
+    */
     public ContentType(String mimeType) {
         this.mimeType = mimeType;
     }
@@ -22,7 +22,7 @@ public class ContentType {
     * 获取mime类型
     *
     * @return 获取mime类型的结果
-     */
+    */
     public String getMimeType() {
         return mimeType;
     }

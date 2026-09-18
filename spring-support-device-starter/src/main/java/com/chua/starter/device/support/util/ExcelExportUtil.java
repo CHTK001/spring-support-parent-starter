@@ -25,7 +25,7 @@ public class ExcelExportUtil {
 
     /**
     * 表头字段数组
-     */
+    */
     private static final String[] HEADERS = {
         "设备ID", "设备名称", "厂商", "型号", "大类", "小类",
         "IP地址", "端口", "在线状态", "序列号", "固件版本", "通道数",
@@ -38,13 +38,13 @@ public class ExcelExportUtil {
     * @param response HTTP 响应对象
     * @param devices  设备列表
     * @throws Exception 导出异常
-     */
+    */
     public static void exportDevices(HttpServletResponse response, List<DeviceInfo> devices) throws Exception {
         XSSFWorkbook workbook = new XSSFWorkbook();
         /**
         * 尝试。
         * @param workbook workbook
-         */
+        */
         try (workbook) {
             Sheet sheet = workbook.createSheet("设备列表");
 
@@ -85,7 +85,7 @@ public class ExcelExportUtil {
             /**
             * 尝试。
             * @param response.getOutputStream( 响应.获取输出流(
-             */
+            */
             try (OutputStream os = response.getOutputStream()) {
                 workbook.write(os);
             }
@@ -98,7 +98,7 @@ public class ExcelExportUtil {
     *
     * @param value 输入值
     * @return 非空字符串
-     */
+    */
     private static String safeString(String value) {
         return value != null ? value : "";
     }

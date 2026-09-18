@@ -15,13 +15,13 @@ public final class TablePatternMatcher {
 
     /**
     * 编译后的模式
-     */
+    */
     private final String regex;
 
     /**
     * table模式匹配。
     * @param regex regex
-     */
+    */
     private TablePatternMatcher(String regex) {
         this.regex = regex;
     }
@@ -31,7 +31,7 @@ public final class TablePatternMatcher {
     *
     * @param csv 模式字符串
     * @return 匹配器列表（空列表表示无过滤）
-     */
+    */
     public static List<TablePatternMatcher.Matcher> build(String csv) {
         List<TablePatternMatcher.Matcher> list = new ArrayList<>();
         if (csv == null || csv.isBlank()) {
@@ -53,7 +53,7 @@ public final class TablePatternMatcher {
     * @param matchers matchers
     * @param name 名称
     * @return 任意匹配的结果
-     */
+    */
     public static boolean anyMatch(List<TablePatternMatcher.Matcher> matchers, String name) {
         for (Matcher m : matchers) {
             if (m.test(name)) {
@@ -67,7 +67,7 @@ public final class TablePatternMatcher {
     * 将通配符模式转为正则
     * @param pattern 模式
     * @return 转为regex的结果
-     */
+    */
     private static String toRegex(String pattern) {
         StringBuilder sb = new StringBuilder(pattern.length() + 4);
         for (int i = 0; i < pattern.length(); i++) {
@@ -87,14 +87,14 @@ public final class TablePatternMatcher {
     * 简单函数式匹配器
     * @author CH
     * @since 4.0.0
-     */
+    */
     @FunctionalInterface
     public interface Matcher {
         /**
         * 测试。
         * @param name 名称
         * @return 测试的结果
-         */
+        */
         boolean test(String name);
     }
 }

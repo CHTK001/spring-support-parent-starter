@@ -29,7 +29,7 @@ public class SimpleAppender implements MessageFormattingStrategy {
     * @param url          数据库连接地址
     * @return 格式化日志结果
     * @since 1.0.0
-     */
+    */
     @Override
     public String formatMessage(int connectionId, String now, long elapsed, String category, String prepared, String sql, String url) {
  // 使用内联判空，避免依赖外部 字符串工具（P6Spy 加载时外部类可能未加载）

@@ -17,7 +17,7 @@ public interface IEduMarkingService {
     *
     * @param dto 答题卡数据
     * @return 任务ID
-     */
+    */
     String submitAnswerSheet(MarkingSubmitDTO dto);
 
     /**
@@ -25,7 +25,7 @@ public interface IEduMarkingService {
     *
     * @param taskId 任务标识
     * @return 阅卷结果
-     */
+    */
     MarkingResultVO getResult(String taskId);
 
     /**
@@ -33,6 +33,6 @@ public interface IEduMarkingService {
     *
     * @param dto 修正数据
     * @return 是否成功
-     */
+    */
     boolean confirmMarking(MarkingConfirmDTO dto);
 }

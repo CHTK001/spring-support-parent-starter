@@ -24,7 +24,7 @@ public class BarChartData implements Serializable {
     /**
     * 获取分类。
     * @return 获取分类的结果
-     */
+    */
     public List<String> getCategories() {
         return categories;
     }
@@ -32,7 +32,7 @@ public class BarChartData implements Serializable {
     /**
     * 设置分类。
     * @param categories 分类
-     */
+    */
     public void setCategories(List<String> categories) {
         this.categories = categories;
     }
@@ -40,7 +40,7 @@ public class BarChartData implements Serializable {
     /**
     * 获取价值观。
     * @return 获取价值观的结果
-     */
+    */
     public List<Number> getValues() {
         return values;
     }
@@ -48,7 +48,7 @@ public class BarChartData implements Serializable {
     /**
     * 设置价值观。
     * @param values 价值观
-     */
+    */
     public void setValues(List<Number> values) {
         this.values = values;
     }

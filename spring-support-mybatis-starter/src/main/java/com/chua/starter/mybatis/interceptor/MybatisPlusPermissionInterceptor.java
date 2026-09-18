@@ -60,7 +60,7 @@ public class MybatisPlusPermissionInterceptor extends JsqlParserSupport implemen
     * @param mybatisPlusPermissionHandler mybatisplus权限处理器
     * @param methodSecurityInterceptor mybatisplus数据scope属性
     * @param methodSecurityInterceptor 方法安全性拦截器
-     */
+    */
     public MybatisPlusPermissionInterceptor(DataPermissionHandler mybatisPlusPermissionHandler, MybatisPlusDataScopeProperties methodSecurityInterceptor) {
         this(mybatisPlusPermissionHandler, methodSecurityInterceptor, () -> null);
     }
@@ -70,7 +70,7 @@ public class MybatisPlusPermissionInterceptor extends JsqlParserSupport implemen
     * @param mybatisPlusPermissionHandler mybatisplus权限处理器
     * @param methodSecurityInterceptor 方法安全性拦截器
     * @param authServiceSupplier 认证服务供应商
-     */
+    */
     public MybatisPlusPermissionInterceptor(DataPermissionHandler mybatisPlusPermissionHandler,
                                             MybatisPlusDataScopeProperties methodSecurityInterceptor,
                                             Supplier<AuthService> authServiceSupplier) {
@@ -86,7 +86,7 @@ public class MybatisPlusPermissionInterceptor extends JsqlParserSupport implemen
     * @param rowBounds    行边界
     * @param resultHandler 结果处理器
     * @param boundSql     boundsql对象
-     */
+    */
     @Override
     public void beforeQuery(Executor executor, MappedStatement ms, Object parameter, RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql) {
         // 通过MP插件拿到即将执行的SQL
@@ -106,7 +106,7 @@ public class MybatisPlusPermissionInterceptor extends JsqlParserSupport implemen
     * @param sh                  对账单处理器对象
     * @param connection          数据库连接
     * @param transactionTimeout 事务超时时间
-     */
+    */
     @Override
     public void beforePrepare(StatementHandler sh, Connection connection, Integer transactionTimeout) {
         InnerInterceptor.super.beforePrepare(sh, connection, transactionTimeout);
@@ -119,7 +119,7 @@ public class MybatisPlusPermissionInterceptor extends JsqlParserSupport implemen
     * @param index  索引
     * @param sql    SQL语句
     * @param obj    对象
-     */
+    */
     @Override
     protected void processDelete(Delete delete, int index, String sql, Object obj) {
         super.processDelete(delete, index, sql, obj);
@@ -132,7 +132,7 @@ public class MybatisPlusPermissionInterceptor extends JsqlParserSupport implemen
     * @param index  索引
     * @param sql    SQL语句
     * @param obj    对象
-     */
+    */
     @Override
     protected void processUpdate(Update update, int index, String sql, Object obj) {
         super.processUpdate(update, index, sql, obj);
@@ -145,7 +145,7 @@ public class MybatisPlusPermissionInterceptor extends JsqlParserSupport implemen
     * @param index  索引
     * @param sql    SQL语句
     * @param obj    对象
-     */
+    */
     @Override
     protected void processSelect(Select select, int index, String sql, Object obj) {
         CurrentUser currentUser = getCurrentUser();
@@ -185,7 +185,7 @@ public class MybatisPlusPermissionInterceptor extends JsqlParserSupport implemen
     * 获取当前用户
     *
     * @return 获取当前用户的结果
-     */
+    */
     private CurrentUser getCurrentUser() {
         if (authServiceSupplier == null) {
             return null;
@@ -200,7 +200,7 @@ public class MybatisPlusPermissionInterceptor extends JsqlParserSupport implemen
     * @param plainSelect plain选择对象
     * @param mapperId    映射器方法标识
     * @param currentUser 当前用户
-     */
+    */
     protected void setWhere(PlainSelect plainSelect, String mapperId, CurrentUser currentUser) {
         if (mybatisPlusPermissionHandler == null) {
             return;

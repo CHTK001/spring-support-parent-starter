@@ -38,7 +38,7 @@ public @interface DataScope {
     * <p>如果指定了具体类型且 useUserPermission=false，则强制使用指定的类型</p>
     *
     * @return 数据权限类型
-     */
+    */
     DataFilterTypeEnum value() default DataFilterTypeEnum.ALL;
 
     /**
@@ -46,7 +46,7 @@ public @interface DataScope {
     * <p>默认启用，设置为 false 可以禁用该方法的数据权限</p>
     *
     * @return 是否启用
-     */
+    */
     boolean enabled() default true;
 
     /**
@@ -54,7 +54,7 @@ public @interface DataScope {
     * <p>当设置为 true 时，忽略 value 属性，使用用户登录时的数据权限</p>
     *
     * @return 是否使用用户当前权限
-     */
+    */
     boolean useUserPermission() default true;
 
     /**
@@ -62,7 +62,7 @@ public @interface DataScope {
     * <p>用于指定 SQL 中部门ID字段的别名，默认使用全局配置</p>
     *
     * @return 部门字段别名
-     */
+    */
     String deptAlias() default "";
 
     /**
@@ -70,6 +70,6 @@ public @interface DataScope {
     * <p>用于指定 SQL 中用户ID字段的别名，默认使用全局配置</p>
     *
     * @return 用户字段别名
-     */
+    */
     String userAlias() default "";
 }

@@ -41,7 +41,7 @@ public class MyBatisEndpoint {
 
     /**
     * SQL会话工厂，可为 空（MyBatis 未启用时）
-     */
+    */
     @Autowired(required = false)
     private SqlSessionFactory sqlSessionFactory; // SQL会话工厂
 
@@ -50,7 +50,7 @@ public class MyBatisEndpoint {
     *
     * @return MyBatis 概览信息 映射，包含 已启用、映射器数量、mapped对账单数量 等字段
     * @throws Exception 获取信息失败时记录错误日志并返回 错误 字段
-     */
+    */
     @ReadOperation
     public Map<String, Object> overview() {
         Map<String, Object> result = new HashMap<>();
@@ -100,7 +100,7 @@ public class MyBatisEndpoint {
     * @param mapperName 映射器 全限定类名（URL 编码）
     * @return Mapper 详情 映射，包含 对账单、方法数量 等字段
     * @throws Exception 获取详情失败时记录错误日志并返回 错误 字段
-     */
+    */
     @ReadOperation
     public Map<String, Object> mapper(@Selector String mapperName) {
         Map<String, Object> result = new HashMap<>();
@@ -150,7 +150,7 @@ public class MyBatisEndpoint {
     * 获取 映射器 列表
     * @param configuration 配置
     * @return 获取映射器列表的结果
-     */
+    */
     private List<Map<String, Object>> getMapperList(Configuration configuration) {
         Collection<String> mappedStatementNames = configuration.getMappedStatementNames();
 
@@ -199,7 +199,7 @@ public class MyBatisEndpoint {
     * 获取已加载的资源列表
     * @param configuration 配置
     * @return 获取加载resources的结果
-     */
+    */
     @SuppressWarnings("unchecked")
     private Set<String> getLoadedResources(Configuration configuration) {
         try {

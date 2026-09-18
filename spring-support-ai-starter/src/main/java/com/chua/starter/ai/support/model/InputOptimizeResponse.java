@@ -13,22 +13,22 @@ public class InputOptimizeResponse {
 
     /**
     * 原始输入
-     */
+    */
     private String input;
 
     /**
     * 优化后的文本
-     */
+    */
     private String optimized;
 
     /**
     * 实际使用的优化模型
-     */
+    */
     private String model;
 
     /**
     * 优化耗时（毫秒）
-     */
+    */
     private Long elapsedMillis;
 
     /**
@@ -39,7 +39,7 @@ public class InputOptimizeResponse {
     * @param model         实际使用模型
     * @param elapsedMillis 耗时（毫秒）
     * @return 响应对象
-     */
+    */
     public static InputOptimizeResponse of(String input, String optimized, String model, Long elapsedMillis) {
         InputOptimizeResponse response = new InputOptimizeResponse();
         response.setInput(input);

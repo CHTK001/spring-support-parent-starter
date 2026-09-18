@@ -67,10 +67,10 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
             log.info("[Discovery] 服务状态 [{}]", disabled());
             registry.registerBeanDefinition("discoveryService#embedd", BeanDefinitionBuilder.rootBeanDefinition(DiscoveryService.class, () -> {
                         /**
-                        * discovery服务。
-                        * @param DefaultServiceDiscovery( 默认服务discovery(
-                        * @return discovery服务的结果
-                         */
+    * discovery服务。
+    * @param DefaultServiceDiscovery( 默认服务discovery(
+    * @return discovery服务的结果
+    */
                         return new DiscoveryService(new DefaultServiceDiscovery());
                     })
                     .setAutowireMode(AutowireCapableBeanFactory.AUTOWIRE_BY_TYPE)
@@ -114,7 +114,7 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
     * @param discoveryProperties 当前发现配置
     * @param primaryCandidate    是否作为首选实现
     * @return 是否成功注册 服务discovery Bean
-     */
+    */
     private boolean registryBean(BeanDefinitionRegistry registry, DiscoveryProperties discoveryProperties, boolean primaryCandidate) {
         DiscoveryOption discoveryOption = new DiscoveryOption();
         discoveryOption.setAddress(discoveryProperties.getAddress());
@@ -156,7 +156,7 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
     *
     * @param discoveryNodeProperties discovery节点属性
     * @return registry节点的结果
-     */
+    */
     private Discovery registryNode(DiscoveryNodeProperties discoveryNodeProperties) {
         Project project = Project.getInstance();
         String serverId = discoveryNodeProperties.getServerId();
@@ -204,7 +204,7 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
     * @param discovery        发现配置列表
     * @param primary          是否作为首选实现
     * @return BeanDefinition
-     */
+    */
     private BeanDefinition createBeanDefinitionDiscovery(ServiceDiscovery serviceDiscovery, List<Discovery> discovery, boolean primary) {
         BeanDefinitionBuilder beanDefinitionBuilder = BeanDefinitionBuilder.rootBeanDefinition(ServiceDiscovertyFactoryBean.class);
         beanDefinitionBuilder.addConstructorArgValue(serviceDiscovery);
@@ -222,7 +222,7 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
     *
     * @author CH
     * @since 4.0.0
-     */
+    */
     static class ServiceDiscovertyFactoryBean implements FactoryBean<ServiceDiscovery>, AutoCloseable{
 
         final ServiceDiscovery serviceDiscovery; // 服务discovery
@@ -234,7 +234,7 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
         * @param serviceDiscovery 服务discovery
         * @param discoveryList 列表
         * @param discoveryList discovery列表
-         */
+        */
         public ServiceDiscovertyFactoryBean(ServiceDiscovery serviceDiscovery, List<Discovery> discoveryList) {
             this.serviceDiscovery = serviceDiscovery;
             this.discoveryList = discoveryList;
@@ -278,10 +278,10 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
 
     @Bean
     /**
-    * discovery服务信息contributor
-    *
-    * @return discovery服务信息contributor的结果
-     */
+        * discovery服务信息contributor
+        *
+        * @return discovery服务信息contributor的结果
+        */
     public ServiceInfoContributor discoveryServiceInfoContributor() {
         return registry -> {
             registry.registerFlag("discovery", "服务发现", true, "服务发现模块");

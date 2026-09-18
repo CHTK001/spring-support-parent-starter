@@ -31,12 +31,12 @@ public class JobAnnotationScanner implements BeanPostProcessor, SmartInitializin
 
     /**
     * 收集到的 作业definition 列表 (在 post处理之后initialization 阶段累积)
-     */
+    */
     private final List<JobDefinition> collectedDefinitions = new ArrayList<>();
 
     /**
     * Spring 上下文 (用于 之后单例instantiated 阶段按类型查找 作业仓库)
-     */
+    */
     private ApplicationContext applicationContext;
 
     @Override
@@ -57,11 +57,11 @@ public class JobAnnotationScanner implements BeanPostProcessor, SmartInitializin
         }
         for (java.util.Map.Entry<Method, Job> entry : annotated.entrySet()) {
             /**
-            * 注册处理器。
-            * @param bean Bean
-            * @param targetClass Target类
-            * @param entry.getKey( entry.获取键(
-             */
+    * 注册处理器。
+    * @param bean Bean
+    * @param targetClass Target类
+    * @param entry.getKey( entry.获取键(
+    */
             registerHandler(bean, targetClass, entry.getKey(), entry.getValue());
         }
         return bean;
@@ -103,7 +103,7 @@ public class JobAnnotationScanner implements BeanPostProcessor, SmartInitializin
     * @param targetClass 业务类
     * @param method      执行 方法
     * @param job         {@link Job} 注解
-     */
+    */
     private void registerHandler(Object bean, Class<?> targetClass, Method method, Job job) {
         if (job == null) {
             return;
@@ -115,7 +115,7 @@ public class JobAnnotationScanner implements BeanPostProcessor, SmartInitializin
             * @param 不能为空 不能为空
             * @param targetClass.getName( Targetclass.getname(
             * @return illegal状态异常的结果
-             */
+            */
             throw new IllegalStateException("@Job value 不能为空, target=" + targetClass.getName());
         }
         if (method.getParameterCount() > 0) {
@@ -139,7 +139,7 @@ public class JobAnnotationScanner implements BeanPostProcessor, SmartInitializin
             * @param 名冲突 名冲突
             * @param name 名称
             * @return illegal状态异常的结果
-             */
+            */
             throw new IllegalStateException("@Job 名冲突, name=" + name);
         }
         JobHandlerFactory.getInstance().register(handler);
@@ -164,7 +164,7 @@ public class JobAnnotationScanner implements BeanPostProcessor, SmartInitializin
     * @param methodName  方法名
     * @param lifecycle   阶段名
     * @return 方法, 允许为 空
-     */
+    */
     private Method resolveLifecycleMethod(Class<?> targetClass, String methodName, String lifecycle) {
         if (!StringUtils.hasText(methodName)) {
             return null;

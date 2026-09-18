@@ -98,9 +98,9 @@ public class SysLoggerPointcutAdvisor extends AbstractLoggerPointcutAdvisor {
 
         // 发布日志事件
         /**
-        * 发布事件。
-        * @param sysLoggerInfo sys日志记录器信息
-         */
+    * 发布事件。
+    * @param sysLoggerInfo sys日志记录器信息
+    */
         publishEvent(sysLoggerInfo);
     }
 }

@@ -22,7 +22,7 @@ public interface SysAiAppKeyMapper extends BaseMapper<SysAiAppKey> {
     * @param groupId 分组 标识
     * @return AppKey 列表
     * @param @Param("groupId" @参数("群体标识"
-     */
+    */
     List<SysAiAppKey> selectByGroupId(@Param("groupId") Integer groupId);
 
     /**
@@ -31,7 +31,7 @@ public interface SysAiAppKeyMapper extends BaseMapper<SysAiAppKey> {
     * @param appKey app钥匙
     * @return AppKey 实体，不存在时返回 空
     * @param @Param("appKey" @参数("app键"
-     */
+    */
     SysAiAppKey selectByAppKey(@Param("appKey") String appKey);
 
     /**
@@ -41,7 +41,7 @@ public interface SysAiAppKeyMapper extends BaseMapper<SysAiAppKey> {
     *
     * @param appKey app钥匙 值
     * @param @Param("appKey" @参数("app键"
-     */
+    */
     void updateUseCount(@Param("appKey") String appKey);
 
     /**
@@ -52,6 +52,6 @@ public interface SysAiAppKeyMapper extends BaseMapper<SysAiAppKey> {
     * @param appKey  app钥匙 值
     * @param tokens  本次消耗的 令牌 数
     * @param @Param("appKey" @参数("app键"
-     */
+    */
     void addTokenQuota(@Param("appKey") String appKey, @Param("tokens") long tokens);
 }

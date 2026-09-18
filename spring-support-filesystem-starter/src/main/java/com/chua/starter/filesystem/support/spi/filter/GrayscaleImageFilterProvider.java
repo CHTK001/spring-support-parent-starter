@@ -18,7 +18,7 @@ public class GrayscaleImageFilterProvider implements FileStorageImageFilterProvi
     * 获取滤镜唯一名称。
     *
     * @return 滤镜名称 GRAYSCALE
-     */
+    */
     @Override
     public String getName() {
         return "GRAYSCALE";
@@ -28,7 +28,7 @@ public class GrayscaleImageFilterProvider implements FileStorageImageFilterProvi
     * 获取滤镜展示名。
     *
     * @return 展示名 灰度
-     */
+    */
     @Override
     public String getLabel() {
         return "灰度";
@@ -38,7 +38,7 @@ public class GrayscaleImageFilterProvider implements FileStorageImageFilterProvi
     * 获取前端应用的 CSS filter 值。
     *
     * @return CSS filter 值 grayscale(1)
-     */
+    */
     @Override
     public String getCssFilter() {
         return "grayscale(1)";

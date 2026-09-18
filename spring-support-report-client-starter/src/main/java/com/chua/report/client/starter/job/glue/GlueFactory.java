@@ -26,7 +26,7 @@ public class GlueFactory {
     * 获取Instance
     *
     * @return 获取instance的结果
-     */
+    */
     public static GlueFactory getInstance(){
         return glueFactory;
     }
@@ -34,7 +34,7 @@ public class GlueFactory {
     * refreshinstance
     *
     * @param type 类型
-     */
+    */
     public static void refreshInstance(int type){
         if (type == 0) {
             glueFactory = new GlueFactory();
@@ -46,7 +46,7 @@ public class GlueFactory {
 
     /**
     * Groovy 类 加载
-     */
+    */
     private final GroovyClassLoader groovyClassLoader = new GroovyClassLoader();
     private final ConcurrentMap<String, Class<?>> CLASS_CACHE = new ConcurrentHashMap<>(); // 类缓存
 
@@ -56,7 +56,7 @@ public class GlueFactory {
     * @param codeSource
     * @return
     * @throws Exception
-     */
+    */
     public JobHandler loadNewInstance(String codeSource) throws Exception{
         if (codeSource!=null && codeSource.trim().length()>0) {
             Class<?> clazz = getCodeSourceClass(codeSource);
@@ -78,14 +78,14 @@ public class GlueFactory {
         * illegal参数异常。
         * @param null" 空"
         * @return illegal参数异常的结果
-         */
+        */
         throw new IllegalArgumentException(">>>>>>>>>>> xxl-glue, loadNewInstance error, instance is null");
     }
     /**
     * 获取编码源类。
     * @param codeSource 编码源
     * @return 获取编码源类的结果
-     */
+    */
     private Class<?> getCodeSourceClass(String codeSource){
         try {
             // md5
@@ -107,7 +107,7 @@ public class GlueFactory {
     * inject 服务 的 Bean 字段
     *
     * @param instance
-     */
+    */
     public void injectService(Object instance) {
  // 执行 something
     }

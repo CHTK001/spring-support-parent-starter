@@ -25,7 +25,7 @@ public class Joiner {
     * 构造连接器
     *
     * @param separator 分隔符
-     */
+    */
     public Joiner(String separator) {
         this.separator = separator;
     }
@@ -35,12 +35,12 @@ public class Joiner {
     *
     * @param separator 分隔符
     * @return Joiner 实例
-     */
+    */
     public static Joiner on(String separator) {
         /**
         * 连接。
         * @param separator separator
-         */
+        */
         return new Joiner(separator);
     }
 
@@ -48,7 +48,7 @@ public class Joiner {
     * 设置忽略空字符串
     *
     * @return 当前 Joiner 实例
-     */
+    */
     public Joiner omitEmptyStrings() {
         this.omitEmptyStrings = true;
         return this;
@@ -58,7 +58,7 @@ public class Joiner {
     * 设置去除元素中的空白字符
     *
     * @return 当前 Joiner 实例
-     */
+    */
     public Joiner trimResults() {
         this.trimResults = true;
         return this;
@@ -69,7 +69,7 @@ public class Joiner {
     *
     * @param parts 元素集合
     * @return 连接后的字符串
-     */
+    */
     public String join(Collection<?> parts) {
         if (parts == null || parts.isEmpty()) {
             return "";
@@ -98,7 +98,7 @@ public class Joiner {
     *
     * @param type 类型
     * @return with类型的结果
-     */
+    */
     public <T> Joiner withType(Class<T> type) {
         return this;
     }

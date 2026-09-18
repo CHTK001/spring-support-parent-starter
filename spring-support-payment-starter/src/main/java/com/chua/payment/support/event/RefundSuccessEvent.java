@@ -45,7 +45,7 @@ public class RefundSuccessEvent extends PaymentEvent {
     * @param thirdPartyRefundNo thirdparty退税no
     * @param channelType 通道类型
     * @param channelSubType 通道sub类型
-     */
+    */
     public RefundSuccessEvent(Object source, Long tenantId, Long merchantId, Long orderId, String orderNo,
                               Long refundId, String refundNo, Long userId, BigDecimal refundAmount,
                               String thirdPartyRefundNo, String channelType, String channelSubType) {
@@ -55,7 +55,7 @@ public class RefundSuccessEvent extends PaymentEvent {
         * @param "REFUND_SUCCESS" "退税_成功"
         * @param tenantId tenantid
         * @param merchantId merchantid
-         */
+        */
         super(source, "REFUND_SUCCESS", tenantId, merchantId);
         this.orderId = orderId;
         this.orderNo = orderNo;

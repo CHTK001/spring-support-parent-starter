@@ -53,32 +53,32 @@ public class ApiChatController {
 
     /**
     * 会话存储
-     */
+    */
     private final SysAiConversationStore conversationStore;
 
     /**
     * AI 对话门面服务
-     */
+    */
     private final AiChatFacadeService aiChatFacadeService;
 
     /**
     * WS 事件推送服务
-     */
+    */
     private final ApiWebSocketPushService pushService;
 
     /**
     * 远程主机（SSH）连接管理服务
-     */
+    */
     private final SshConnectionManager sshConnectionManager;
 
     /**
     * 远程主机主机簿存储（校验绑定主机是否存在）
-     */
+    */
     private final SysAiSshHostStore sshHostStore;
 
     /**
     * 会话产物（artifacts）内存存储：conversationid → 产物列表（进程内占位实现）
-     */
+    */
     private final Map<String, List<Map<String, Object>>> artifacts = new ConcurrentHashMap<>();
 
     @PostMapping
@@ -86,7 +86,7 @@ public class ApiChatController {
     * 创建。
     * @param body 主体
     * @return 创建的结果
-     */
+    */
     public ApiResult<Map<String, Object>> create(@RequestBody Map<String, Object> body) {
         SysAiConversation c = new SysAiConversation();
         String id = conversationStore.newId();
@@ -112,7 +112,7 @@ public class ApiChatController {
             /**
             * dialboundssh主机。
             * @param String.valueOf(c.getExtra( 字符串.值的(C.获取extra(
-             */
+            */
             dialBoundSshHost(String.valueOf(c.getExtra().get("ssh_host_id")), id);
         }
         pushService.push("conversation.listChanged", Map.of("conversation_id", id, "action", "created"));
@@ -124,7 +124,7 @@ public class ApiChatController {
     *
     * @param sshHostId       主机 标识
     * @param conversationId  会话 标识
-     */
+    */
     private void dialBoundSshHost(String sshHostId, String conversationId) {
         try {
             SysAiSshHost host = sshHostStore.get(sshHostId);
@@ -139,7 +139,7 @@ public class ApiChatController {
     * 列表。
     * @param "1" "1"
     * @return 列表的结果
-     */
+    */
     public ApiResult<Map<String, Object>> list(@RequestParam(required = false, defaultValue = "1") int page,
                                                @RequestParam(required = false, defaultValue = "50") int page_size) {
         com.baomidou.mybatisplus.extension.plugins.pagination.Page<SysAiConversation> paging =
@@ -158,7 +158,7 @@ public class ApiChatController {
     * 获取。
     * @param conversationId conversationid
     * @return 获取的结果
-     */
+    */
     public ApiResult<Map<String, Object>> get(@PathVariable String conversationId) {
         SysAiConversation c = conversationStore.get(conversationId);
         return ApiResult.ok(toResponse(c));
@@ -170,7 +170,7 @@ public class ApiChatController {
     * @param conversationId conversationid
     * @param body 主体
     * @return patch的结果
-     */
+    */
     public ApiResult<Boolean> patch(@PathVariable String conversationId, @RequestBody Map<String, Object> body) {
         SysAiConversation patch = new SysAiConversation();
         if (body.containsKey("name")) {
@@ -201,7 +201,7 @@ public class ApiChatController {
     * 删除。
     * @param conversationId conversationid
     * @return 删除的结果
-     */
+    */
     public ApiResult<Void> delete(@PathVariable String conversationId) {
         conversationStore.delete(conversationId);
         pushService.push("conversation.listChanged", Map.of("conversation_id", conversationId, "action", "deleted"));
@@ -219,7 +219,7 @@ public class ApiChatController {
             * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
             * @param "消息内容不能为空" "消息内容不能为空"
             * @return api异常的结果
-             */
+            */
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "消息内容不能为空");
         }
 
@@ -387,7 +387,7 @@ public class ApiChatController {
     * clone。
     * @param body 主体
     * @return clone的结果
-     */
+    */
     public ApiResult<Map<String, Object>> clone(@RequestBody Map<String, Object> body) {
         Object convObj = body.get("conversation");
         if (!(convObj instanceof Map)) {
@@ -396,7 +396,7 @@ public class ApiChatController {
             * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
             * @param 字段" 字段"
             * @return api异常的结果
-             */
+            */
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "缺少 conversation 字段");
         }
         Map<String, Object> source = uncheckedCast(convObj);
@@ -427,13 +427,13 @@ public class ApiChatController {
     * reset。
     * @param conversationId conversationid
     * @return reset的结果
-     */
+    */
     public ApiResult<Void> reset(@PathVariable String conversationId) {
         conversationStore.get(conversationId);
         /**
         * clear消息内部。
         * @param conversationId conversationid
-         */
+        */
         clearMessagesInternal(conversationId);
         pushService.push("conversation.listChanged", Map.of("conversation_id", conversationId, "action", "updated"));
         return ApiResult.ok();
@@ -444,7 +444,7 @@ public class ApiChatController {
     * warmup。
     * @param conversationId conversationid
     * @return warmup的结果
-     */
+    */
     public ApiResult<Void> warmup(@PathVariable String conversationId) {
         conversationStore.get(conversationId);
         return ApiResult.ok();
@@ -455,7 +455,7 @@ public class ApiChatController {
     * cancel。
     * @param conversationId conversationid
     * @return cancel的结果
-     */
+    */
     public ApiResult<Void> cancel(@PathVariable String conversationId) {
         conversationStore.get(conversationId);
         String turnId = conversationStore.newId();
@@ -482,7 +482,7 @@ public class ApiChatController {
     * clear上下文。
     * @param conversationId conversationid
     * @return clear上下文的结果
-     */
+    */
     public ApiResult<Void> clearContext(@PathVariable String conversationId) {
         SysAiConversation c = conversationStore.get(conversationId);
         if (c.getExtra() != null) {
@@ -503,13 +503,13 @@ public class ApiChatController {
     * clear消息。
     * @param conversationId conversationid
     * @return clear消息的结果
-     */
+    */
     public ApiResult<Boolean> clearMessages(@PathVariable String conversationId) {
         conversationStore.get(conversationId);
         /**
         * clear消息内部。
         * @param conversationId conversationid
-         */
+        */
         clearMessagesInternal(conversationId);
         pushService.push("conversation.listChanged", Map.of("conversation_id", conversationId, "action", "updated"));
         return ApiResult.ok(true);
@@ -540,7 +540,7 @@ public class ApiChatController {
     * clearsummon。
     * @param conversationId conversationid
     * @return clearSummon的结果
-     */
+    */
     public ApiResult<Void> clearSummon(@PathVariable String conversationId) {
         SysAiConversation c = conversationStore.get(conversationId);
         if (c.getExtra() != null) {
@@ -554,7 +554,7 @@ public class ApiChatController {
     /**
     * 活跃数量。
     * @return 活跃数量的结果
-     */
+    */
     public ApiResult<Map<String, Object>> activeCount() {
         com.baomidou.mybatisplus.extension.plugins.pagination.Page<SysAiConversation> paging =
                 conversationStore.page(1, 500);
@@ -574,7 +574,7 @@ public class ApiChatController {
     * 获取associated。
     * @param conversationId conversationid
     * @return 获取associated的结果
-     */
+    */
     public ApiResult<List<Object>> getAssociated(@PathVariable String conversationId) {
         conversationStore.get(conversationId);
         return ApiResult.ok(new ArrayList<>());
@@ -585,7 +585,7 @@ public class ApiChatController {
     * 获取slash命令。
     * @param conversationId conversationid
     * @return 获取slash命令的结果
-     */
+    */
     public ApiResult<List<Map<String, Object>>> getSlashCommands(@PathVariable String conversationId) {
         conversationStore.get(conversationId);
         List<Map<String, Object>> commands = new ArrayList<>();
@@ -610,7 +610,7 @@ public class ApiChatController {
     * 列表artifacts。
     * @param conversationId conversationid
     * @return 列表artifacts的结果
-     */
+    */
     public ApiResult<List<Map<String, Object>>> listArtifacts(@PathVariable String conversationId) {
         conversationStore.get(conversationId);
         List<Map<String, Object>> list = artifacts.computeIfAbsent(conversationId, k -> new CopyOnWriteArrayList<>());
@@ -649,7 +649,7 @@ public class ApiChatController {
     * 获取mode。
     * @param conversationId conversationid
     * @return 获取mode的结果
-     */
+    */
     public ApiResult<Map<String, Object>> getMode(@PathVariable String conversationId) {
         SysAiConversation c = conversationStore.get(conversationId);
         Map<String, Object> extra = c.getExtra();
@@ -689,7 +689,7 @@ public class ApiChatController {
     * 列表confirmations。
     * @param conversationId conversationid
     * @return 列表confirmations的结果
-     */
+    */
     public ApiResult<List<Object>> listConfirmations(@PathVariable String conversationId) {
         conversationStore.get(conversationId);
         return ApiResult.ok(new ArrayList<>());
@@ -721,7 +721,7 @@ public class ApiChatController {
             * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
             * @param "消息内容不能为空" "消息内容不能为空"
             * @return api异常的结果
-             */
+            */
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "消息内容不能为空");
         }
         conversationStore.truncateAfter(conversationId, messageId);
@@ -742,7 +742,7 @@ public class ApiChatController {
     * @param conversationId conversationid
     * @param input 输入
     * @return 执行流turn的结果
-     */
+    */
     private ApiResult<Map<String, Object>> doStreamTurn(String conversationId, String input) {
         if (input == null || input.isBlank()) {
             /**
@@ -750,7 +750,7 @@ public class ApiChatController {
             * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
             * @param "消息内容不能为空" "消息内容不能为空"
             * @return api异常的结果
-             */
+            */
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "消息内容不能为空");
         }
 
@@ -893,7 +893,7 @@ public class ApiChatController {
     * @param artifactId artifactid
     * @param body 主体
     * @return 更新artifact内部的结果
-     */
+    */
     private Map<String, Object> updateArtifactInternal(String conversationId, String artifactId, Map<String, Object> body) {
         conversationStore.get(conversationId);
         List<Map<String, Object>> list = artifacts.computeIfAbsent(conversationId, k -> new CopyOnWriteArrayList<>());
@@ -910,7 +910,7 @@ public class ApiChatController {
     /**
     * clear消息内部。
     * @param conversationId conversationid
-     */
+    */
     private void clearMessagesInternal(String conversationId) {
         conversationStore.clearMessages(conversationId);
     }
@@ -923,7 +923,7 @@ public class ApiChatController {
     * @param role 角色
     * @param position 立场
     * @return 新sysAIconversation消息的结果
-     */
+    */
     private SysAiConversationMessage newSysAiConversationMessage(String conversationId, String type, String content, String role, String position) {
         SysAiConversationMessage m = new SysAiConversationMessage();
         String id = conversationStore.newId();
@@ -945,7 +945,7 @@ public class ApiChatController {
     * @param conversation conversation
     * @param userInput 用户输入
     * @return 构建请求的结果
-     */
+    */
     private AiChatRequest buildRequest(SysAiConversation conversation, String userInput) {
         AiChatRequest request = new AiChatRequest();
         String modelName = null;
@@ -985,7 +985,7 @@ public class ApiChatController {
     * 转为响应。
     * @param c c
     * @return 转为响应的结果
-     */
+    */
     private Map<String, Object> toResponse(SysAiConversation c) {
         Map<String, Object> map = new LinkedHashMap<>();
         map.put("conversation_id", c.getConversationId());
@@ -1005,7 +1005,7 @@ public class ApiChatController {
     * 转为消息响应。
     * @param m m
     * @return 转为消息响应的结果
-     */
+    */
     private Map<String, Object> toMessageResponse(SysAiConversationMessage m) {
         Map<String, Object> map = new LinkedHashMap<>();
         map.put("message_id", m.getMessageId());
@@ -1025,7 +1025,7 @@ public class ApiChatController {
     * uncheckedcast。
     * @param obj obj
     * @return uncheckedCast的结果
-     */
+    */
     private static Map<String, Object> uncheckedCast(Object obj) {
         return (Map<String, Object>) obj;
     }
@@ -1053,7 +1053,7 @@ class ApiMessageSearchController {
     * @param page_size 每页条数
     * @return 分页检索结果
     * @param false false
-     */
+    */
     @GetMapping("/search")
     public ApiResult<Map<String, Object>> search(@RequestParam(required = false) String keyword,
                                                  @RequestParam(required = false, defaultValue = "1") int page,

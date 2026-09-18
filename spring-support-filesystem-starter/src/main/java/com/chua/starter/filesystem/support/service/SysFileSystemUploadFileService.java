@@ -17,20 +17,20 @@ public interface SysFileSystemUploadFileService extends IService<SysFileSystemUp
     * @param url url
     * @param etag etag
     * @return 创建从任务的结果
-     */
+    */
     boolean createFromTask(String uploadId, String url, String etag);
 
     /**
     * 根据 uploadid 查询。
     * @param uploadId uploadid
     * @return 获取byuploadid的结果
-     */
+    */
     SysFileSystemUploadFile getByUploadId(String uploadId);
 
     /**
     * 删除主体记录。
     * @param uploadId uploadid
     * @return 删除byuploadid的结果
-     */
+    */
     boolean deleteByUploadId(String uploadId);
 }

@@ -20,12 +20,12 @@ public class ServicePackagesHolder {
 
     /**
     * 存储已扫描的包名集合
-     */
+    */
     private final Set<String> scannedPackages = new HashSet<>();
 
     /**
     * 存储已扫描的类名集合
-     */
+    */
     private final Set<String> scannedClasses = new HashSet<>();
 
     /** 默认 */
@@ -34,7 +34,7 @@ public class ServicePackagesHolder {
     /**
     * 获取服务包holder的单例实例。
     * @return ServicePackagesHolder的单例实例。
-     */
+    */
     public static ServicePackagesHolder getInstance() {
         return DEFAULT;
     }
@@ -42,7 +42,7 @@ public class ServicePackagesHolder {
     /**
     * 添加一个已扫描的包。
     * @param apackage 要添加的包名。
-     */
+    */
     public void addScannedPackage(String apackage) {
         apackage = normalizePackage(apackage);
         synchronized (scannedPackages) {
@@ -54,7 +54,7 @@ public class ServicePackagesHolder {
     * 检查一个包是否已被扫描。
     * @param packageName 要检查的包名。
     * @return 如果包或其子包已被扫描，则返回true；否则返回false。
-     */
+    */
     public boolean isPackageScanned(String packageName) {
         packageName = normalizePackage(packageName);
         synchronized (scannedPackages) {
@@ -74,7 +74,7 @@ public class ServicePackagesHolder {
     /**
     * 添加一个已扫描的类。
     * @param className 要添加的类名。
-     */
+    */
     public void addScannedClass(String className) {
         synchronized (scannedClasses) {
             scannedClasses.add(className);
@@ -85,7 +85,7 @@ public class ServicePackagesHolder {
     * 检查一个类是否已被扫描。
     * @param className 要检查的类名。
     * @return 如果类已被扫描，则返回true；否则返回false。
-     */
+    */
     public boolean isClassScanned(String className) {
         synchronized (scannedClasses) {
             return scannedClasses.contains(className);
@@ -97,7 +97,7 @@ public class ServicePackagesHolder {
     * @param testPkg 待测试的包名。
     * @param parent 父包名。
     * @return 如果测试包是父包的子包，则返回true；否则返回false。
-     */
+    */
     private boolean isSubPackage(String testPkg, String parent) {
         // 检查子包名是否以父包名为前缀
         return testPkg.startsWith(parent);
@@ -107,7 +107,7 @@ public class ServicePackagesHolder {
     * 标准化包名，确保其以点号结束。
     * @param apackage 要标准化的包名。
     * @return 标准化后的包名。
-     */
+    */
     private String normalizePackage(String apackage) {
         if (!apackage.endsWith(".")) {
             apackage += ".";

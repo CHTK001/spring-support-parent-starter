@@ -17,6 +17,6 @@ public interface AiUsageService {
     *
     * @param model 模型名称（可选）
     * @return 用量 DTO 列表
-     */
+    */
     List<AiUsageDTO> query(String model);
 }

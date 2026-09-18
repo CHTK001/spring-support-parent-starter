@@ -23,19 +23,19 @@ public class JobThreadFactory {
 
     /**
     * 单例实例
-     */
+    */
     private static final JobThreadFactory INSTANCE = new JobThreadFactory();
 
     /**
     * 作业线程仓库
     * 钥匙: 任务标识
     * 价值观: 作业thread实例
-     */
+    */
     private static final ConcurrentMap<Integer, JobThread> JOB_THREAD_REPOSITORY = new ConcurrentHashMap<>();
 
     /**
     * 私有构造函数
-     */
+    */
     private JobThreadFactory() {
     }
 
@@ -49,7 +49,7 @@ public class JobThreadFactory {
     * @param handler         任务处理器
     * @param removeOldReason 删除旧线程的原因
     * @return 新创建的JobThread实例
-     */
+    */
     public static JobThread registJobThread(int jobId, JobHandler handler, String removeOldReason) {
         JobThread newJobThread = new JobThread(jobId, handler);
         newJobThread.start();
@@ -75,7 +75,7 @@ public class JobThreadFactory {
     * @param jobId           任务标识
     * @param removeOldReason 删除原因
     * @return 被删除的JobThread实例，如果不存在返回null
-     */
+    */
     public static JobThread removeJobThread(int jobId, String removeOldReason) {
         JobThread oldJobThread = JOB_THREAD_REPOSITORY.remove(jobId);
         if (oldJobThread != null) {
@@ -92,7 +92,7 @@ public class JobThreadFactory {
     *
     * @param jobId 任务标识
     * @return JobThread实例，如果不存在返回null
-     */
+    */
     public static JobThread loadJobThread(int jobId) {
         return JOB_THREAD_REPOSITORY.get(jobId);
     }
@@ -101,7 +101,7 @@ public class JobThreadFactory {
     * 获取工厂单例实例
     *
     * @return JobThreadFactory实例
-     */
+    */
     public static JobThreadFactory getInstance() {
         return INSTANCE;
     }
@@ -110,7 +110,7 @@ public class JobThreadFactory {
     * 获取当前活跃的作业线程数量
     *
     * @return 线程数量
-     */
+    */
     public static int size() {
         return JOB_THREAD_REPOSITORY.size();
     }

@@ -19,7 +19,7 @@ public interface FilterChain {
     *
     * @param exchange HTTP 请求/响应上下文
     * @throws Exception 处理异常
-     */
+    */
     void doFilter(HttpExchange exchange) throws Exception;
 
     /**
@@ -28,7 +28,7 @@ public interface FilterChain {
     * @param filters      过滤器列表，可为空
     * @param finalHandler 终态处理器，不能为 空
     * @return 构建的过滤器链实例
-     */
+    */
     static FilterChain build(List<ServerFilter> filters, ServerFilter finalHandler) {
         if (filters == null || filters.isEmpty()) {
             return exchange -> finalHandler.doFilter(exchange, null);
@@ -38,7 +38,7 @@ public interface FilterChain {
         * @param filters 过滤器
         * @param finalHandler 最终处理器
         * @return 默认过滤器chain的结果
-         */
+        */
         return new DefaultFilterChain(filters, finalHandler);
     }
 }

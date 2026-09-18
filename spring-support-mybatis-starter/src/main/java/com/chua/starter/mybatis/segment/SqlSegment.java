@@ -12,6 +12,6 @@ public interface SqlSegment {
     * SQL片段
     * @param where where
     * @return 结果
-     */
+    */
     Expression getSqlSegment(Expression where);
 }

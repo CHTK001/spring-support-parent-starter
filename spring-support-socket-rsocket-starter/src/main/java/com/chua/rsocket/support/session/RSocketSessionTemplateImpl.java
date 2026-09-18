@@ -47,17 +47,17 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
 
     /**
     * 事件监听器处理器（扫描 @on事件 注解并分发事件）
-     */
+    */
     private final EventListenerProcessor eventListenerProcessor;
     
     /**
     * 会话缓存：客户端标识 -> 会话
-     */
+    */
     private final Map<String, List<RSocketSessionImpl>> sessionCache = new ConcurrentHashMap<>();
     
     /**
     * 会话标识到客户端标识的映射
-     */
+    */
     private final Map<String, String> sessionClientMap = new ConcurrentHashMap<>();
     
     private volatile boolean running = false; // running
@@ -67,7 +67,7 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
     * @param properties 属性
     * @param listeners 列表
     * @param listeners 监听器
-     */
+    */
     public RSocketSessionTemplateImpl(SocketProperties properties, List<SocketListener> listeners) {
         this.properties = properties;
         this.listeners = listeners;
@@ -113,7 +113,7 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
     * </p>
     * @param path 路径
     * @return extract客户端id的结果
-     */
+    */
     private String extractClientId(String path) {
         if (path == null || path.isEmpty() || "/".equals(path)) {
             return "default";
@@ -338,7 +338,7 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
     * @param event 事件
     * @param data 数据
     * @return 创建消息的结果
-     */
+    */
     private String createMessage(String event, Object data) {
         try {
             Map<String, Object> msg = Map.of(

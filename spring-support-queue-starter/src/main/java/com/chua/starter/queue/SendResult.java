@@ -19,32 +19,32 @@ public class SendResult {
 
     /**
     * 是否发送成功
-     */
+    */
     private boolean success;
 
     /**
     * 消息标识
-     */
+    */
     private String messageId;
 
     /**
     * 目标地址
-     */
+    */
     private String destination;
 
     /**
     * 发送时间戳
-     */
+    */
     private long timestamp;
 
     /**
     * 错误信息（如果失败）
-     */
+    */
     private Throwable error;
 
     /**
     * 额外信息
-     */
+    */
     private Object extra;
 
     /**
@@ -53,7 +53,7 @@ public class SendResult {
     * @param messageId   消息标识
     * @param destination 目标地址
     * @return 发送结果
-     */
+    */
     public static SendResult success(String messageId, String destination) {
         var result = new SendResult();
         result.success = true;
@@ -69,7 +69,7 @@ public class SendResult {
     * @param destination 目标地址
     * @param error       错误信息
     * @return 发送结果
-     */
+    */
     public static SendResult failure(String destination, Throwable error) {
         var result = new SendResult();
         result.success = false;
@@ -84,7 +84,7 @@ public class SendResult {
     * 是否成功
     *
     * @return 是否成功的结果
-     */
+    */
     public boolean isSuccess() {
         return success;
     }
@@ -93,7 +93,7 @@ public class SendResult {
     * 获取记录错误
     *
     * @return 获取错误的结果
-     */
+    */
     public Throwable getError() {
         return error;
     }

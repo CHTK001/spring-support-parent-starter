@@ -29,31 +29,31 @@ public class SwaggerExportProperties {
 
     /**
     * 是否启用导出。
-     */
+    */
     private boolean enabled = true;
 
     /**
     * 输出文件路径（相对当前工作目录）。
-     */
+    */
     private String output = "./swagger-export.html";
 
     /**
     * 顶部标题。
-     */
+    */
     private String title = "Open API 接口文档";
 
     /**
     * 版本号徽标。
-     */
+    */
     private String version = "1.0.0";
 
     /**
     * 启动后是否立即导出。
-     */
+    */
     private boolean downloadAfterStart = true;
 
     /**
     * 是否生成请求/响应示例代码块。
-     */
+    */
     private boolean includeRequestSample = true;
 }

@@ -26,7 +26,7 @@ public interface SoftSoftwareService extends IService<SoftSoftware> {
     * @param request 软件查询请求对象
     * @param installedSoftwareIds 已安装软件标识集合，用于排序（已安装的排前面）
     * @return 返回分页查询结果
-     */
+    */
     IPage<SoftSoftware> pageFor(Query<SoftSoftware> query, SoftwarePageRequest request, Collection<String> installedSoftwareIds);
 
     /**
@@ -34,7 +34,7 @@ public interface SoftSoftwareService extends IService<SoftSoftware> {
     *
     * @param software 软件信息
     * @return 返回保存结果
-     */
+    */
     ReturnResult<SoftSoftware> saveSoftware(SoftSoftware software);
 
     /**
@@ -42,7 +42,7 @@ public interface SoftSoftwareService extends IService<SoftSoftware> {
     *
     * @param software 软件信息
     * @return 返回更新结果
-     */
+    */
     ReturnResult<SoftSoftware> updateSoftware(SoftSoftware software);
 
     /**
@@ -50,7 +50,7 @@ public interface SoftSoftwareService extends IService<SoftSoftware> {
     *
     * @param softwareId 软件标识
     * @return 返回删除结果
-     */
+    */
     ReturnResult<Boolean> deleteSoftware(String softwareId);
 
     /**
@@ -58,7 +58,7 @@ public interface SoftSoftwareService extends IService<SoftSoftware> {
     *
     * @param code 软件编码
     * @return 软件信息
-     */
+    */
     SoftSoftware getByCode(String code);
 
     /**
@@ -66,7 +66,7 @@ public interface SoftSoftwareService extends IService<SoftSoftware> {
     *
     * @param sourceId 源标识
     * @return 软件列表
-     */
+    */
     java.util.List<SoftSoftware> listBySourceId(String sourceId);
 
     /**
@@ -74,28 +74,28 @@ public interface SoftSoftwareService extends IService<SoftSoftware> {
     *
     * @param sourceId 源标识
     * @return 返回同步数量
-     */
+    */
     ReturnResult<Integer> syncFromSource(String sourceId);
 
     /**
     * 将软件信息同步到 Elasticsearch
     *
     * @param software 软件信息
-     */
+    */
     void indexToElasticsearch(SoftSoftware software);
 
     /**
     * 批量将软件信息同步到 Elasticsearch
     *
     * @param softwareList 软件信息列表
-     */
+    */
     void indexBatchToElasticsearch(java.util.List<SoftSoftware> softwareList);
 
     /**
     * 从 Elasticsearch 中删除软件信息
     *
     * @param softwareId 软件标识
-     */
+    */
     void deleteFromElasticsearch(String softwareId);
 
     /**
@@ -103,7 +103,7 @@ public interface SoftSoftwareService extends IService<SoftSoftware> {
     *
     * @param keyword 搜索关键词
     * @return 软件列表
-     */
+    */
     java.util.List<SoftSoftware> searchFromElasticsearch(String keyword);
 
     /**
@@ -113,6 +113,6 @@ public interface SoftSoftwareService extends IService<SoftSoftware> {
     * @param from 开始位置
     * @param size 每页大小
     * @return 软件列表
-     */
+    */
     java.util.List<SoftSoftware> searchFromElasticsearch(String keyword, int from, int size);
 }

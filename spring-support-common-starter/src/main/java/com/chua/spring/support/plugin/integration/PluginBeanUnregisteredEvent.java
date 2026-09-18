@@ -15,22 +15,22 @@ public class PluginBeanUnregisteredEvent extends ApplicationEvent {
 
     /**
     * Bean 名称
-     */
+    */
     private final String beanName;
 
     /**
     * Bean 实例
-     */
+    */
     private final Object beanInstance;
 
     /**
     * Bean 名称集合
-     */
+    */
     private final Set<String> beanNames = new HashSet<>();
 
     /**
     * 插件文件路径
-     */
+    */
     private String pluginFilePath;
 
     /**
@@ -39,12 +39,12 @@ public class PluginBeanUnregisteredEvent extends ApplicationEvent {
     * @param source       事件源
     * @param beanName     Bean 名称
     * @param beanInstance Bean 实例
-     */
+    */
     public PluginBeanUnregisteredEvent(Object source, String beanName, Object beanInstance) {
         /**
         * 父。
         * @param source 源
-         */
+        */
         super(source);
         this.beanName = beanName;
         this.beanInstance = beanInstance;
@@ -54,7 +54,7 @@ public class PluginBeanUnregisteredEvent extends ApplicationEvent {
     * 获取 Bean 名称
     *
     * @return Bean 名称
-     */
+    */
     public String getBeanName() {
         return beanName;
     }
@@ -63,7 +63,7 @@ public class PluginBeanUnregisteredEvent extends ApplicationEvent {
     * 获取 Bean 实例
     *
     * @return Bean 实例
-     */
+    */
     public Object getBeanInstance() {
         return beanInstance;
     }
@@ -72,7 +72,7 @@ public class PluginBeanUnregisteredEvent extends ApplicationEvent {
     * 获取 Bean 名称集合
     *
     * @return Bean 名称集合
-     */
+    */
     public Set<String> getBeanNames() {
         return beanNames;
     }
@@ -81,7 +81,7 @@ public class PluginBeanUnregisteredEvent extends ApplicationEvent {
     * 添加 Bean 名称到集合
     *
     * @param name Bean 名称
-     */
+    */
     public void addBeanName(String name) {
         beanNames.add(name);
     }
@@ -90,7 +90,7 @@ public class PluginBeanUnregisteredEvent extends ApplicationEvent {
     * 获取插件文件路径
     *
     * @return 插件文件路径
-     */
+    */
     public String getPluginFilePath() {
         return pluginFilePath;
     }
@@ -99,7 +99,7 @@ public class PluginBeanUnregisteredEvent extends ApplicationEvent {
     * 设置插件文件路径
     *
     * @param pluginFilePath 插件文件路径
-     */
+    */
     public void setPluginFilePath(String pluginFilePath) {
         this.pluginFilePath = pluginFilePath;
     }

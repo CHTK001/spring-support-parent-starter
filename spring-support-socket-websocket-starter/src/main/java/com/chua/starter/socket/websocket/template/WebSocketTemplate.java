@@ -30,7 +30,7 @@ public class WebSocketTemplate {
     * 构造器
     *
     * @param sessionManager 会话管理器
-     */
+    */
     public WebSocketTemplate(WebSocketSessionManager sessionManager) {
         this.sessionManager = sessionManager;
     }
@@ -41,7 +41,7 @@ public class WebSocketTemplate {
     * @param sessionId 会话标识
     * @param message   消息内容
     * @return 是否发送成功
-     */
+    */
     public boolean send(String sessionId, String message) {
         WebSocketSession session = sessionManager.getSession(sessionId);
         return sendToSession(session, message);
@@ -53,7 +53,7 @@ public class WebSocketTemplate {
     * @param userId  用户标识
     * @param message 消息内容
     * @return 是否发送成功
-     */
+    */
     public boolean sendToUser(String userId, String message) {
         WebSocketSession session = sessionManager.getSessionByUserId(userId);
         return sendToSession(session, message);
@@ -64,7 +64,7 @@ public class WebSocketTemplate {
     *
     * @param message 消息内容
     * @return 成功发送的数量
-     */
+    */
     public int broadcast(String message) {
         Collection<WebSocketSession> sessions = sessionManager.getAllSessions();
         int count = 0;
@@ -81,7 +81,7 @@ public class WebSocketTemplate {
     *
     * @param sessionId 会话标识
     * @param userId    用户标识
-     */
+    */
     public void bindUser(String sessionId, String userId) {
         sessionManager.bindUser(sessionId, userId);
     }
@@ -90,7 +90,7 @@ public class WebSocketTemplate {
     * 解绑用户
     *
     * @param userId 用户标识
-     */
+    */
     public void unbindUser(String userId) {
         sessionManager.unbindUser(userId);
     }
@@ -99,7 +99,7 @@ public class WebSocketTemplate {
     * 获取在线会话数
     *
     * @return 会话数量
-     */
+    */
     public int getOnlineCount() {
         return sessionManager.getSessionCount();
     }
@@ -109,7 +109,7 @@ public class WebSocketTemplate {
     * @param session 会话
     * @param message 消息
     * @return 发送转为会话的结果
-     */
+    */
     private boolean sendToSession(WebSocketSession session, String message) {
         if (session == null || !session.isOpen()) {
             return false;

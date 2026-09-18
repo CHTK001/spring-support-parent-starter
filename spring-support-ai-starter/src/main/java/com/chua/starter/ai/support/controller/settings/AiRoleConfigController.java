@@ -46,7 +46,7 @@ public class AiRoleConfigController {
     * 获取所有 Roles Provider 配置（本地 + 在线）。
     *
     * @return Provider 列表
-     */
+    */
     @Permission("admin")
     @Operation(summary = "获取 Roles Provider 配置列表")
     @GetMapping
@@ -106,7 +106,7 @@ public class AiRoleConfigController {
     *
     * @param config 配置 Map，key 为 provider key，value 为 boolean
     * @return 更新后的配置
-     */
+    */
     @Permission("admin")
     @Operation(summary = "更新 Roles Provider 开关")
     @PutMapping

@@ -32,7 +32,7 @@ public class DelegatingWebSocketHandler extends TextWebSocketHandler {
     *
     * @param sessionManager 会话管理器
     * @param handlers       消息处理器列表
-     */
+    */
     public DelegatingWebSocketHandler(WebSocketSessionManager sessionManager, List<WebSocketMessageHandler> handlers) {
         this.sessionManager = sessionManager;
         this.handlers = handlers;

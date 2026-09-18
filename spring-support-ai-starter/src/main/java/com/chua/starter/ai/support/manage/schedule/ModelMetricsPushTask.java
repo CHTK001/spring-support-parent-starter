@@ -43,39 +43,39 @@ public class ModelMetricsPushTask implements SchedulingConfigurer {
 
     /**
     * 全局设置分组
-     */
+    */
     private static final String GROUP = "global";
 
     /**
     * 未配置时的默认执行间隔（秒）
-     */
+    */
     private static final long DEFAULT_INTERVAL_SEC = 300;
 
     /**
     * 最小执行间隔（秒），防止配置过小导致频繁聚合
-     */
+    */
     private static final long MIN_INTERVAL_SEC = 30;
 
     /**
     * 全局设置读取器
-     */
+    */
     private final GlobalSettingReader settingReader;
 
     /**
     * 模型价格/指标快照服务
-     */
+    */
     private final ModelMetricsSnapshotService snapshotService;
 
     /**
     * 官方定价同步服务（datasearch-starter 模型指标采集）
-     */
+    */
     private final SysAiPricingService pricingService;
 
     /**
     * 注册动态调度任务，每次执行后按配置间隔计算下次执行时间。
     *
     * @param taskRegistrar 调度任务注册器
-     */
+    */
     @Override
     public void configureTasks(ScheduledTaskRegistrar taskRegistrar) {
         Trigger trigger = this::nextTriggerTime;
@@ -85,7 +85,7 @@ public class ModelMetricsPushTask implements SchedulingConfigurer {
     /**
     * 调度入口：先校验开关，关闭时跳过。
     * 执行顺序：1) 指标快照推送 Redis  2) 官方定价同步到表（每次清空）
-     */
+    */
     public void run() {
         if (!isEnabled()) {
             log.debug("[ModelMetrics] 模型指标推送未启用，跳过本次执行");
@@ -112,7 +112,7 @@ public class ModelMetricsPushTask implements SchedulingConfigurer {
     *
     * @param triggerContext 触发器上下文
     * @return 下次执行时间
-     */
+    */
     private Instant nextTriggerTime(TriggerContext triggerContext) {
         long intervalSec = settingReader.getInt(GROUP, "model_metrics_push_interval_sec", (int) DEFAULT_INTERVAL_SEC);
         if (intervalSec < MIN_INTERVAL_SEC) {
@@ -129,7 +129,7 @@ public class ModelMetricsPushTask implements SchedulingConfigurer {
     * 判断模型指标推送是否启用（全局 分组 enable_model_metrics_push，默认启用）。
     *
     * @return true 表示启用
-     */
+    */
     private boolean isEnabled() {
         return settingReader.getBool(GROUP, "enable_model_metrics_push", true);
     }

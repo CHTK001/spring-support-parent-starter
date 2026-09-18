@@ -18,13 +18,13 @@ public @interface MaterializedRefresh {
     * 小于等于 0 时使用全局默认值。
     *
     * @return 阈值
-     */
+    */
     long threshold() default -1L;
 
     /**
     * 指定源数据源名称。
     *
     * @return 数据源名称
-     */
+    */
     String dataSource() default "";
 }

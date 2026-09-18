@@ -24,7 +24,7 @@ public class DeviceTaskStateServiceImpl implements DeviceTaskStateService {
 
     /**
     * 任务状态 映射器
-     */
+    */
     private final DeviceTaskStateMapper taskStateMapper;
 
     @Override

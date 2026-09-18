@@ -51,7 +51,7 @@ public class EduAiService {
     /**
     * 是否启用 AI（总开关 + 对话客户端 是否可用）。
     * @return 是否可用的结果
-     */
+    */
     public boolean isAvailable() {
         if (!properties.getAi().isEnabled()) {
             return false;
@@ -73,7 +73,7 @@ public class EduAiService {
     * @param count       期望生成多少题
     * @param fallbackIds AI 不可用或失败时使用的回退题目标识
     * @return 题目ID列表（来自 AI 或回退）
-     */
+    */
     public List<Long> generatePaperOutline(
             String subject,
             String gradeLevel,
@@ -101,12 +101,12 @@ public class EduAiService {
                 /**
                 * 题型。
                 * @param 逗号分隔 逗号分隔
-                 */
+                */
                 题型(逗号分隔): %s
                 /**
                 * 关联知识点ID。
                 * @param 逗号分隔 逗号分隔
-                 */
+                */
                 关联知识点ID(逗号分隔): %s
                 题目数量: %d
 
@@ -153,7 +153,7 @@ public class EduAiService {
     * @param studentAnswer  学生作答
     * @param maxScore       满分
     * @return 阅卷结果（包含 aiscore/AI评论/源 三个字段，源 = AI/降级）
-     */
+    */
     public MarkingOutcome markQuestion(
             String questionType,
             String questionStem,
@@ -183,7 +183,7 @@ public class EduAiService {
 
     /**
     * AI 阅卷 — 实际调用大模型，结果不可用时回退到 {@link #markQuestion} 的字符串比较结果。
-     */
+    */
     public MarkingOutcome markQuestionWithAi(
             String questionType,
             String questionStem,
@@ -225,17 +225,17 @@ public class EduAiService {
                 /**
                 * safe。
                 * @param questionStem questionstem
-                 */
+                */
                 safe(questionStem),
                 /**
                 * safe。
                 * @param standardAnswer 标准answer
-                 */
+                */
                 safe(standardAnswer),
                 /**
                 * safe。
                 * @param studentAnswer studentanswer
-                 */
+                */
                 safe(studentAnswer),
                 maxScore,
                 maxScore
@@ -269,7 +269,7 @@ public class EduAiService {
     * @param systemPrompt 系统提示词
     * @param userPrompt   用户提示词
     * @return 模型回答；不可用时返回固定文案
-     */
+    */
     public String answerQuestion(String systemPrompt, String userPrompt) {
         if (!isAvailable()) {
             return "AI 模块未启用，无法回答";
@@ -288,7 +288,7 @@ public class EduAiService {
     * @param systemPrompt 系统提示符
     * @param userPrompt 用户提示符
     * @return call的结果
-     */
+    */
     private ChatResponse call(String systemPrompt, String userPrompt) {
         com.chua.common.support.ai.chat.ChatClient commonClient = resolveClient();
         if (commonClient == null) {
@@ -296,7 +296,7 @@ public class EduAiService {
             * 对话响应。
             * @param "" ""
             * @return 对话响应的结果
-             */
+            */
             return new ChatResponse("");
         }
 
@@ -307,14 +307,14 @@ public class EduAiService {
         * 对话响应。
         * @param text 文本
         * @return 对话响应的结果
-         */
+        */
         return new ChatResponse(text);
     }
 
     /**
     * 解析 对话客户端：优先按 提供者 配置查找，再回退到默认（聚合）客户端。
     * @return resolve客户端的结果
-     */
+    */
     private com.chua.common.support.ai.chat.ChatClient resolveClient() {
         if (chatClientRegistry == null) {
             return null;
@@ -335,7 +335,7 @@ public class EduAiService {
     * @param json json
     * @param field 字段
     * @return 解析longarray的结果
-     */
+    */
     private List<Long> parseLongArray(String json, String field) {
         List<Long> result = new ArrayList<>();
         if (StringUtils.isBlank(json)) {
@@ -370,7 +370,7 @@ public class EduAiService {
     * 客观题判定：单选/多选/判断/填空走字符串匹配，不调 AI。
     * @param type 类型
     * @return 是否对象question的结果
-     */
+    */
     private boolean isObjectiveQuestion(String type) {
         if (type == null) {
             return false;
@@ -388,7 +388,7 @@ public class EduAiService {
     *
     * @param s s
     * @return safe的结果
-     */
+    */
     private String safe(String s) {
         return s == null ? "" : s;
     }
@@ -397,31 +397,31 @@ public class EduAiService {
     * 阅卷结果。
     * @author CH
     * @since 4.0.0
-     */
+    */
     @lombok.Data
     public static class MarkingOutcome {
         /**
         * 得分
-         */
+        */
         private int score;
         /**
         * 评语
-         */
+        */
         private String comment;
         /**
         * 来源：AI / 降级
-         */
+        */
         private String source;
         /**
         * 回退原因（仅 源=降级 时存在）
-         */
+        */
         private String fallbackReason;
     }
 
     /**
     * 用于返回拓展信息。
     * @return 调试信息的结果
-     */
+    */
     public Map<String, Object> debugInfo() {
         Map<String, Object> info = new LinkedHashMap<>();
         info.put("enabled", properties.getAi().isEnabled());

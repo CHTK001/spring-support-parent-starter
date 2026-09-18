@@ -16,7 +16,7 @@ public final class Validator {
     *
     * @param value 价值观
     * @return 是否包含chinese的结果
-     */
+    */
     public static boolean hasChinese(String value) {
         if (value == null || value.isEmpty()) {
             return false;

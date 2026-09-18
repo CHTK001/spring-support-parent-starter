@@ -29,7 +29,7 @@ public class CircuitBreakerConfigRepository {
     * 构造方法，注入 jdbctemplate。
     *
     * @param jdbcTemplate Spring 容器提供的 jdbctemplate Bean
-     */
+    */
     public CircuitBreakerConfigRepository(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
     }
@@ -38,7 +38,7 @@ public class CircuitBreakerConfigRepository {
     * 查询所有熔断器配置记录。
     *
     * @return 熔断器配置列表，按名称排序；无记录时返回空列表
-     */
+    */
     public List<ConcurrentCircuitBreakerConfig> findAll() {
         return jdbcTemplate.query(
                 "SELECT name, failure_threshold, success_threshold, wait_duration_ms, enabled FROM concurrent_circuit_breaker ORDER BY name",
@@ -51,7 +51,7 @@ public class CircuitBreakerConfigRepository {
     *
     * @param name 熔断器名称
     * @return 配置对象，不存在时返回 期权.空()
-     */
+    */
     public Optional<ConcurrentCircuitBreakerConfig> findByName(String name) {
         List<ConcurrentCircuitBreakerConfig> list = jdbcTemplate.query(
                 "SELECT name, failure_threshold, success_threshold, wait_duration_ms, enabled FROM concurrent_circuit_breaker WHERE name = ?",
@@ -69,7 +69,7 @@ public class CircuitBreakerConfigRepository {
     *
     * @param config 熔断器配置对象，名称 不能为 空 或空
     * @return 影响的行数
-     */
+    */
     public int save(ConcurrentCircuitBreakerConfig config) {
         return jdbcTemplate.update(
                 "INSERT OR REPLACE INTO concurrent_circuit_breaker "
@@ -90,7 +90,7 @@ public class CircuitBreakerConfigRepository {
     *
     * @param name 熔断器名称
     * @return 影响的行数（1 = 删除成功，0 = 记录不存在）
-     */
+    */
     public int delete(String name) {
         return jdbcTemplate.update(
                 "DELETE FROM concurrent_circuit_breaker WHERE name = ?",
@@ -104,7 +104,7 @@ public class CircuitBreakerConfigRepository {
     * @param rs JDBC 结果集，已定位到当前行
     * @return 映射后的配置对象
     * @throws java.sql.SQLException 读取列失败时抛出
-     */
+    */
     private ConcurrentCircuitBreakerConfig mapRow(java.sql.ResultSet rs) throws java.sql.SQLException {
         ConcurrentCircuitBreakerConfig c = new ConcurrentCircuitBreakerConfig();
         c.setName(rs.getString("name"));

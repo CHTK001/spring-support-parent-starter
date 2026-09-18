@@ -40,39 +40,39 @@ public class SpiderExtractNode implements FlowNode {
 
     /**
     * 日志记录器
-     */
+    */
     private static final Logger log = LoggerFactory.getLogger(SpiderExtractNode.class);
 
     /**
     * 数据来源：当前数据
-     */
+    */
     private static final String SOURCE_CURRENT = "current";
 
     /**
     * 解析方式：json路径
-     */
+    */
     private static final String PARSER_JSONPATH = "jsonpath";
 
     /**
     * 解析方式：正则
-     */
+    */
     private static final String PARSER_REGEX = "regex";
 
     /**
     * 解析方式：CSS 选择器
-     */
+    */
     private static final String PARSER_CSS = "css";
 
     /**
     * 环境变量解析器
-     */
+    */
     private final SpiderEnvResolver envResolver;
 
     /**
     * 通过构造器注入环境变量解析器。
     *
     * @param envResolver 环境变量解析器
-     */
+    */
     public SpiderExtractNode(SpiderEnvResolver envResolver) {
         this.envResolver = envResolver;
     }
@@ -81,7 +81,7 @@ public class SpiderExtractNode implements FlowNode {
     * 节点类型标识。
     *
     * @return 节点类型
-     */
+    */
     @Override
     public String type() {
         return "spider.extract";
@@ -91,7 +91,7 @@ public class SpiderExtractNode implements FlowNode {
     * 节点配置表单元信息。
     *
     * @return 表单元信息列表
-     */
+    */
     @Override
     public List<FlowNodeField> configSchema() {
         List<FlowNodeField> schema = new ArrayList<>();
@@ -112,7 +112,7 @@ public class SpiderExtractNode implements FlowNode {
     * <p>根据配置从数据源取值，按指定解析方式提取结果并写入上下文属性。</p>
     *
     * @param context 当前流程上下文
-     */
+    */
     @Override
     public void execute(FlowContext context) {
         FlowProps props = context.currentNodeProps();
@@ -124,7 +124,7 @@ public class SpiderExtractNode implements FlowNode {
             * illegal参数异常。
             * @param 参数" 参数"
             * @return illegal参数异常的结果
-             */
+            */
             throw new IllegalArgumentException("spider.extract 节点缺少 expression 参数");
         }
         String saveAs = props.getString("saveAs");
@@ -133,7 +133,7 @@ public class SpiderExtractNode implements FlowNode {
             * illegal参数异常。
             * @param 参数" 参数"
             * @return illegal参数异常的结果
-             */
+            */
             throw new IllegalArgumentException("spider.extract 节点缺少 saveAs 参数");
         }
         boolean isList = Boolean.TRUE.equals(props.getBoolean("isList"));
@@ -152,7 +152,7 @@ public class SpiderExtractNode implements FlowNode {
     * @param source  数据来源标识
     * @param context 当前流程上下文
     * @return 数据来源值
-     */
+    */
     private Object resolveSource(String source, FlowContext context) {
         if (SOURCE_CURRENT.equals(source)) {
             return context.getData();
@@ -168,7 +168,7 @@ public class SpiderExtractNode implements FlowNode {
     * @param expression 提取表达式
     * @param isList     是否提取列表
     * @return 提取结果
-     */
+    */
     private Object extract(Object sourceData, String parserType,
                            String expression, boolean isList) {
         switch (parserType) {
@@ -186,7 +186,7 @@ public class SpiderExtractNode implements FlowNode {
                 * illegal参数异常。
                 * @param parserType parser类型
                 * @return illegal参数异常的结果
-                 */
+                */
                 throw new IllegalArgumentException("不支持的解析方式: " + parserType);
             }
         }
@@ -198,7 +198,7 @@ public class SpiderExtractNode implements FlowNode {
     * @param sourceData 数据来源值
     * @param expression json路径 表达式
     * @return 提取结果，匹配失败返回 空
-     */
+    */
     private Object extractJsonPath(Object sourceData, String expression) {
         if (sourceData == null) {
             return null;
@@ -223,7 +223,7 @@ public class SpiderExtractNode implements FlowNode {
     * @param expression 正则表达式
     * @param isList     是否提取全部匹配
     * @return 提取结果
-     */
+    */
     private Object extractRegex(Object sourceData, String expression, boolean isList) {
         if (sourceData == null) {
             return null;
@@ -252,7 +252,7 @@ public class SpiderExtractNode implements FlowNode {
     * @param expression CSS 选择器
     * @param isList     是否提取全部匹配
     * @return 提取结果
-     */
+    */
     private Object extractCss(Object sourceData, String expression, boolean isList) {
         if (sourceData == null) {
             return null;

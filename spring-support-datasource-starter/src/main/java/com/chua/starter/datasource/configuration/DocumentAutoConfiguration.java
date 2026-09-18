@@ -50,7 +50,7 @@ public class DocumentAutoConfiguration {
     /**
     * 文档服务（解析 + 缓存）。
     * <p>若 classpath 缺 DocumentParser SPI 或 DataSource 不可用，返回 null</p>
-     */
+    */
     @Bean
     public DataSourceDocumentService dataSourceDocumentService(
             ObjectProvider<DataSource> dataSourceProvider, DocumentProperties properties) {
@@ -64,13 +64,13 @@ public class DocumentAutoConfiguration {
         * @param ds ds
         * @param properties 属性
         * @return 数据源文档服务的结果
-         */
+        */
         return new DataSourceDocumentService(ds, properties);
     }
 
     /**
     * 数据库关系图谱服务。
-     */
+    */
     @Bean
     public DatabaseGraphService databaseGraphService(
             ObjectProvider<DataSource> dataSourceProvider, DocumentProperties properties) {
@@ -84,13 +84,13 @@ public class DocumentAutoConfiguration {
         * @param ds ds
         * @param properties 属性
         * @return database图计算服务的结果
-         */
+        */
         return new DatabaseGraphService(ds, properties);
     }
 
     /**
     * 文档控制器（图谱服务可选）。
-     */
+    */
     @Bean
     public DataSourceDocumentController dataSourceDocumentController(
             ObjectProvider<DataSourceDocumentService> serviceProvider,
@@ -108,13 +108,13 @@ public class DocumentAutoConfiguration {
         * @param properties 属性
         * @param graphService 图计算服务
         * @return 数据源文档控制器的结果
-         */
+        */
         return new DataSourceDocumentController(service, properties, graphService);
     }
 
     /**
     * 注册器（把 控制器 方法挂到 Spring MVC）。
-     */
+    */
     @Bean
     public DataSourceDocumentHandler dataSourceDocumentHandler(
             ObjectProvider<DataSourceDocumentController> controllerProvider, DocumentProperties properties) {
@@ -128,7 +128,7 @@ public class DocumentAutoConfiguration {
         * @param controller 控制器
         * @param properties.getBasePath( 属性.获取基础路径(
         * @return 数据源文档处理器的结果
-         */
+        */
         return new DataSourceDocumentHandler(controller, properties.getBasePath());
     }
 
@@ -136,7 +136,7 @@ public class DocumentAutoConfiguration {
     * * 触发路径注册
     * @param context 上下文
     * @return 文档路径registrar的结果
- */
+    */
 @Bean
 public SmartInitializingSingleton documentPathRegistrar(ApplicationContext context) {
     return () -> {

@@ -32,7 +32,7 @@ public class RestTemplateTraceIdInterceptor implements ClientHttpRequestIntercep
     * @param request 请求
     * @param body 主体
     * @param execution execution
-     */
+    */
     public ClientHttpResponse intercept(@NonNull HttpRequest request, @NonNull byte[] body,
                                          @NonNull ClientHttpRequestExecution execution) throws IOException {
         String traceId = MDC.get(MdcConstant.TRACE_ID);

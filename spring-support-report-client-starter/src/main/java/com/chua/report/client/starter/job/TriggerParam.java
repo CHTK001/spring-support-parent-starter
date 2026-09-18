@@ -54,7 +54,7 @@ public class TriggerParam {
     * 获取执行器处理器
     *
     * @return 获取执行器处理器的结果
-     */
+    */
     public String getExecutorHandler() {
         return executorHandler;
     }
@@ -63,7 +63,7 @@ public class TriggerParam {
     * 获取胶水updatetime
     *
     * @return 获取胶水updatetime的结果
-     */
+    */
     public long getGlueUpdatetime() {
         return glueUpdatetime;
     }
@@ -72,7 +72,7 @@ public class TriggerParam {
     * 获取胶水源
     *
     * @return 获取胶水源的结果
-     */
+    */
     public String getGlueSource() {
         return glueSource;
     }
@@ -81,7 +81,7 @@ public class TriggerParam {
     * 获取作业标识
     *
     * @return 获取作业id的结果
-     */
+    */
     public int getJobId() {
         return jobId;
     }
@@ -90,7 +90,7 @@ public class TriggerParam {
     * 获取胶水类型
     *
     * @return 获取胶水类型的结果
-     */
+    */
     public String getGlueType() {
         return glueType;
     }
@@ -99,7 +99,7 @@ public class TriggerParam {
     * 获取记录日志标识
     *
     * @return 获取日志id的结果
-     */
+    */
     public long getLogId() {
         return logId;
     }
@@ -108,7 +108,7 @@ public class TriggerParam {
     * 获取记录日志日期时间
     *
     * @return 获取日志日期时间的结果
-     */
+    */
     public long getLogDateTime() {
         return logDateTime;
     }
@@ -117,7 +117,7 @@ public class TriggerParam {
     * 获取执行器参数
     *
     * @return 获取执行器参数的结果
-     */
+    */
     public String getExecutorParams() {
         return executorParams;
     }
@@ -126,7 +126,7 @@ public class TriggerParam {
     * 获取broadcast索引
     *
     * @return 获取broadcast索引的结果
-     */
+    */
     public int getBroadcastIndex() {
         return broadcastIndex;
     }
@@ -135,7 +135,7 @@ public class TriggerParam {
     * 获取Broadcast总计
     *
     * @return 获取broadcasttotal的结果
-     */
+    */
     public int getBroadcastTotal() {
         return broadcastTotal;
     }
@@ -144,7 +144,7 @@ public class TriggerParam {
     * 获取执行器超时
     *
     * @return 获取执行器超时的结果
-     */
+    */
     public int getExecutorTimeout() {
         return executorTimeout;
     }
@@ -153,7 +153,7 @@ public class TriggerParam {
     * 设置作业标识
     *
     * @param jobId 作业标识
-     */
+    */
     public void setJobId(int jobId) {
         this.jobId = jobId;
     }
@@ -162,7 +162,7 @@ public class TriggerParam {
     * 设置配置文件
     *
     * @param profile 配置文件
-     */
+    */
     public void setProfile(String profile) {
         this.profile = profile;
     }
@@ -171,7 +171,7 @@ public class TriggerParam {
     * 设置执行器处理器
     *
     * @param executorHandler 执行器处理器
-     */
+    */
     public void setExecutorHandler(String executorHandler) {
         this.executorHandler = executorHandler;
     }
@@ -180,7 +180,7 @@ public class TriggerParam {
     * 设置执行器参数
     *
     * @param executorParams 执行器参数
-     */
+    */
     public void setExecutorParams(String executorParams) {
         this.executorParams = executorParams;
     }
@@ -189,7 +189,7 @@ public class TriggerParam {
     * 设置执行器blockstrategy
     *
     * @param executorBlockStrategy 执行器blockstrategy
-     */
+    */
     public void setExecutorBlockStrategy(String executorBlockStrategy) {
         this.executorBlockStrategy = executorBlockStrategy;
     }
@@ -198,7 +198,7 @@ public class TriggerParam {
     * 设置执行器超时
     *
     * @param executorTimeout 执行器超时
-     */
+    */
     public void setExecutorTimeout(int executorTimeout) {
         this.executorTimeout = executorTimeout;
     }
@@ -207,7 +207,7 @@ public class TriggerParam {
     * 设置记录日志标识
     *
     * @param logId 日志标识
-     */
+    */
     public void setLogId(long logId) {
         this.logId = logId;
     }
@@ -216,7 +216,7 @@ public class TriggerParam {
     * 设置记录日志日期时间
     *
     * @param logDateTime 日志日期时间
-     */
+    */
     public void setLogDateTime(long logDateTime) {
         this.logDateTime = logDateTime;
     }
@@ -225,7 +225,7 @@ public class TriggerParam {
     * 设置胶水类型
     *
     * @param glueType 胶水类型
-     */
+    */
     public void setGlueType(String glueType) {
         this.glueType = glueType;
     }
@@ -234,7 +234,7 @@ public class TriggerParam {
     * 设置胶水源
     *
     * @param glueSource 胶水源
-     */
+    */
     public void setGlueSource(String glueSource) {
         this.glueSource = glueSource;
     }
@@ -243,7 +243,7 @@ public class TriggerParam {
     * 设置胶水updatetime
     *
     * @param glueUpdatetime 胶水updatetime
-     */
+    */
     public void setGlueUpdatetime(long glueUpdatetime) {
         this.glueUpdatetime = glueUpdatetime;
     }
@@ -252,7 +252,7 @@ public class TriggerParam {
     * 设置broadcast索引
     *
     * @param broadcastIndex broadcast索引
-     */
+    */
     public void setBroadcastIndex(int broadcastIndex) {
         this.broadcastIndex = broadcastIndex;
     }
@@ -261,7 +261,7 @@ public class TriggerParam {
     * 设置Broadcast总计
     *
     * @param broadcastTotal broadcasttotal
-     */
+    */
     public void setBroadcastTotal(int broadcastTotal) {
         this.broadcastTotal = broadcastTotal;
     }

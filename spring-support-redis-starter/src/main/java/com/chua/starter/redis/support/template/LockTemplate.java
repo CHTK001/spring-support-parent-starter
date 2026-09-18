@@ -29,7 +29,7 @@ public interface LockTemplate {
     * @param supplier 执行逻辑
     * @param <T>      返回类型
     * @return 执行结果
-     */
+    */
     <T> T lock(String lockKey, Supplier<T> supplier);
 
     /**
@@ -40,7 +40,7 @@ public interface LockTemplate {
     * @param supplier  执行逻辑
     * @param <T>       返回类型
     * @return 执行结果
-     */
+    */
     <T> T lock(String lockKey, Duration leaseTime, Supplier<T> supplier);
 
     /**
@@ -55,7 +55,7 @@ public interface LockTemplate {
     * @param supplier 执行逻辑
     * @param <T>      返回类型
     * @return 执行结果，如果获取锁失败则返回null
-     */
+    */
     <T> T tryLock(String lockKey, Duration waitTime, Supplier<T> supplier);
 
     /**
@@ -67,7 +67,7 @@ public interface LockTemplate {
     * @param supplier  执行逻辑
     * @param <T>       返回类型
     * @return 执行结果，如果获取锁失败则返回null
-     */
+    */
     <T> T tryLock(String lockKey, Duration waitTime, Duration leaseTime, Supplier<T> supplier);
 
     /**
@@ -79,7 +79,7 @@ public interface LockTemplate {
     * @param fallback 降级逻辑（获取锁失败时执行）
     * @param <T>      返回类型
     * @return 执行结果
-     */
+    */
     <T> T tryLock(String lockKey, Duration waitTime, Supplier<T> supplier, Supplier<T> fallback);
 
     /**
@@ -92,7 +92,7 @@ public interface LockTemplate {
     * @param fallback  降级逻辑（获取锁失败时执行）
     * @param <T>       返回类型
     * @return 执行结果
-     */
+    */
     <T> T tryLock(String lockKey, Duration waitTime, Duration leaseTime, Supplier<T> supplier, Supplier<T> fallback);
 
     /**
@@ -100,7 +100,7 @@ public interface LockTemplate {
     *
     * @param lockKey 锁的唯一标识
     * @param action  执行动作
-     */
+    */
     void lock(String lockKey, Runnable action);
 
     /**
@@ -109,7 +109,7 @@ public interface LockTemplate {
     * @param lockKey   锁的唯一标识
     * @param leaseTime 锁的持有时间
     * @param action    执行动作
-     */
+    */
     void lock(String lockKey, Duration leaseTime, Runnable action);
 
     /**
@@ -119,7 +119,7 @@ public interface LockTemplate {
     * @param waitTime 等待时间
     * @param action   执行动作
     * @return 是否执行成功
-     */
+    */
     boolean tryLock(String lockKey, Duration waitTime, Runnable action);
 
     /**
@@ -130,7 +130,7 @@ public interface LockTemplate {
     * @param leaseTime 锁的持有时间
     * @param action    执行动作
     * @return 是否执行成功
-     */
+    */
     boolean tryLock(String lockKey, Duration waitTime, Duration leaseTime, Runnable action);
 
     /**
@@ -141,7 +141,7 @@ public interface LockTemplate {
     *
     * @param lockKey 锁的唯一标识
     * @return 是否成功获取锁
-     */
+    */
     boolean acquire(String lockKey);
 
     /**
@@ -151,14 +151,14 @@ public interface LockTemplate {
     * @param waitTime  等待时间
     * @param leaseTime 锁的持有时间
     * @return 是否成功获取锁
-     */
+    */
     boolean acquire(String lockKey, Duration waitTime, Duration leaseTime);
 
     /**
     * 释放锁
     *
     * @param lockKey 锁的唯一标识
-     */
+    */
     void release(String lockKey);
 
     /**
@@ -166,7 +166,7 @@ public interface LockTemplate {
     *
     * @param lockKey 锁的唯一标识
     * @return 锁是否被持有
-     */
+    */
     boolean isLocked(String lockKey);
 
     /**
@@ -174,7 +174,7 @@ public interface LockTemplate {
     *
     * @param lockKey 锁的唯一标识
     * @return 当前线程是否持有锁
-     */
+    */
     boolean isHeldByCurrentThread(String lockKey);
 }
 

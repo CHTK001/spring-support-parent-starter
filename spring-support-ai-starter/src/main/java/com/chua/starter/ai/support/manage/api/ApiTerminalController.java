@@ -35,12 +35,12 @@ public class ApiTerminalController {
 
     /**
     * SSH 交互终端会话管理
-     */
+    */
     private final SshTerminalSessionManager sshTerminalManager;
 
     /**
     * SSH 主机存储
-     */
+    */
     private final SysAiSshHostStore sshHostStore;
 
     @TokenForIgnore
@@ -48,7 +48,7 @@ public class ApiTerminalController {
     /**
     * 列表。
     * @return 列表的结果
-     */
+    */
     public Map<String, Object> list() {
         return Map.of("success", true, "data", List.of());
     }
@@ -58,7 +58,7 @@ public class ApiTerminalController {
     /**
     * 列表ssh。
     * @return 列表ssh的结果
-     */
+    */
     public Map<String, Object> listSsh() {
         return Map.of("success", true, "data", List.of());
     }
@@ -69,7 +69,7 @@ public class ApiTerminalController {
     * 创建。
     * @param body 主体
     * @return 创建的结果
-     */
+    */
     public Map<String, Object> create(@RequestBody Map<String, Object> body) {
         Object sshHostId = body.get("ssh_host_id");
         if (sshHostId != null && !String.valueOf(sshHostId).isBlank()) {
@@ -101,7 +101,7 @@ public class ApiTerminalController {
     * 获取。
     * @param terminalId terminalid
     * @return 获取的结果
-     */
+    */
     public Map<String, Object> get(@PathVariable String terminalId) {
         SshTerminalSessionManager.SshTerminalSession session = sshTerminalManager.get(terminalId);
         if (session == null) {
@@ -120,7 +120,7 @@ public class ApiTerminalController {
     * @param terminalId terminalid
     * @param body 主体
     * @return 输入的结果
-     */
+    */
     public Map<String, Object> input(@PathVariable String terminalId, @RequestBody Map<String, String> body) {
         String dataB64 = body.get("data_b64");
         boolean ok = dataB64 != null && sshTerminalManager.input(terminalId, dataB64);
@@ -134,7 +134,7 @@ public class ApiTerminalController {
     * @param terminalId terminalid
     * @param body 主体
     * @return resize的结果
-     */
+    */
     public Map<String, Object> resize(@PathVariable String terminalId, @RequestBody Map<String, Object> body) {
         int cols = body.get("cols") instanceof Number n ? n.intValue() : 80;
         int rows = body.get("rows") instanceof Number m ? m.intValue() : 24;
@@ -148,7 +148,7 @@ public class ApiTerminalController {
     * kill。
     * @param terminalId terminalid
     * @return kill的结果
-     */
+    */
     public Map<String, Object> kill(@PathVariable String terminalId) {
         sshTerminalManager.close(terminalId);
         return Map.of("success", true, "data", true);
@@ -160,7 +160,7 @@ public class ApiTerminalController {
     * relaunch。
     * @param terminalId terminalid
     * @return relaunch的结果
-     */
+    */
     public Map<String, Object> relaunch(@PathVariable String terminalId) {
         return Map.of("success", true, "data", true);
     }
@@ -171,7 +171,7 @@ public class ApiTerminalController {
     * relaunchshell。
     * @param terminalId terminalid
     * @return relaunchShell的结果
-     */
+    */
     public Map<String, Object> relaunchShell(@PathVariable String terminalId) {
         return Map.of("success", true, "data", true);
     }
@@ -182,7 +182,7 @@ public class ApiTerminalController {
     * 删除。
     * @param terminalId terminalid
     * @return 删除的结果
-     */
+    */
     public Map<String, Object> delete(@PathVariable String terminalId) {
         sshTerminalManager.close(terminalId);
         return Map.of("success", true, "data", true);
@@ -193,7 +193,7 @@ public class ApiTerminalController {
     /**
     * mcp注册template。
     * @return mcp注册template的结果
-     */
+    */
     public Map<String, Object> mcpRegisterTemplate() {
         return Map.of("success", true, "data", Map.of());
     }
@@ -204,7 +204,7 @@ public class ApiTerminalController {
     * 注册知识。
     * @param body 主体
     * @return 注册知识的结果
-     */
+    */
     public Map<String, Object> registerKnowledge(@RequestBody Map<String, Object> body) {
         return Map.of("success", true, "data", true);
     }
@@ -215,7 +215,7 @@ public class ApiTerminalController {
     * 注册知识全局。
     * @param body 主体
     * @return 注册知识全局的结果
-     */
+    */
     public Map<String, Object> registerKnowledgeGlobal(@RequestBody Map<String, Object> body) {
         return Map.of("success", true, "data", true);
     }
@@ -226,7 +226,7 @@ public class ApiTerminalController {
     * 注销知识全局。
     * @param body 主体
     * @return 注销知识全局的结果
-     */
+    */
     public Map<String, Object> unregisterKnowledgeGlobal(@RequestBody Map<String, Object> body) {
         return Map.of("success", true, "data", true);
     }
@@ -236,7 +236,7 @@ public class ApiTerminalController {
     /**
     * 知识全局状态。
     * @return 知识全局状态的结果
-     */
+    */
     public Map<String, Object> knowledgeGlobalStatus() {
         return Map.of("success", true, "data", Map.of("registered", false));
     }
@@ -255,7 +255,7 @@ public class ApiTerminalController {
     * 将 SSH 会话包装为前端 iterminal会话 契约的响应 映射。
     * @param session 会话
     * @return 转为ssh响应的结果
-     */
+    */
     private Map<String, Object> toSshResponse(SshTerminalSessionManager.SshTerminalSession session) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("terminal_id", session.terminalId);
@@ -280,7 +280,7 @@ public class ApiTerminalController {
     * 脱敏错误信息（截断 + 压缩空白）。
     * @param message 消息
     * @return sanitize的结果
-     */
+    */
     private static String sanitize(String message) {
         if (message == null || message.isBlank()) {
             return "未知错误";

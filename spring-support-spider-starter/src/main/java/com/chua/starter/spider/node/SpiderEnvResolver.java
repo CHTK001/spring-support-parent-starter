@@ -28,29 +28,29 @@ public class SpiderEnvResolver {
 
     /**
     * 环境变量占位符前缀
-     */
+    */
     private static final String ENV_PREFIX = "{{env.";
 
     /**
     * 环境变量占位符后缀
-     */
+    */
     private static final String ENV_SUFFIX = "}}";
 
     /**
     * 环境变量占位符正则，分组 1 为变量 钥匙
-     */
+    */
     private static final String ENV_PATTERN = "\\{\\{env\\.([^}]+)\\}\\}";
 
     /**
     * 环境变量服务
-     */
+    */
     private final SpiderEnvService envService;
 
     /**
     * 通过构造器注入环境变量服务。
     *
     * @param envService 环境变量服务
-     */
+    */
     public SpiderEnvResolver(SpiderEnvService envService) {
         this.envService = envService;
     }
@@ -62,7 +62,7 @@ public class SpiderEnvResolver {
     *
     * @param template 原始模板字符串
     * @return 替换后的字符串，模板为 空 时返回空字符串
-     */
+    */
     public String resolve(String template) {
         if (template == null || template.isEmpty()) {
             return template != null ? template : "";

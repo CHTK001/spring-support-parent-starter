@@ -39,14 +39,14 @@ public class AiManufacturerKeyController {
 
     /**
     * 厂商 API 钥匙 服务
-     */
+    */
     private final SysAiManufacturerKeyService manufacturerKeyService;
 
     /**
     * 对 API 钥匙 与 Secret 进行脱敏，避免明文泄露。
     *
     * @param list 原始 钥匙 列表
-     */
+    */
     private void maskSecrets(List<SysAiManufacturerKey> list) {
         if (list == null) {
             return;
@@ -62,7 +62,7 @@ public class AiManufacturerKeyController {
     *
     * @param value 明文
     * @return 脱敏结果
-     */
+    */
     private String mask(String value) {
         if (StringUtils.isBlank(value)) {
             return value;
@@ -77,7 +77,7 @@ public class AiManufacturerKeyController {
     * 查询全部厂商 API 钥匙，钥匙 与 Secret 脱敏返回。
     *
     * @return API 钥匙 列表
-     */
+    */
     @Permission("admin")
     @Operation(summary = "查询全部厂商 API Key")
     @GetMapping("list")
@@ -86,7 +86,7 @@ public class AiManufacturerKeyController {
         /**
         * mask密钥。
         * @param list 列表
-         */
+        */
         maskSecrets(list);
         return ReturnResult.ok(list);
     }
@@ -96,7 +96,7 @@ public class AiManufacturerKeyController {
     *
     * @param manufacturerCode 厂商编码
     * @return API 钥匙 列表
-     */
+    */
     @Permission("admin")
     @Operation(summary = "按厂商编码查询 API Key")
     @GetMapping("list-by-code")
@@ -106,7 +106,7 @@ public class AiManufacturerKeyController {
         /**
         * mask密钥。
         * @param list 列表
-         */
+        */
         maskSecrets(list);
         return ReturnResult.ok(list);
     }
@@ -116,7 +116,7 @@ public class AiManufacturerKeyController {
     *
     * @param manufacturerKey API 钥匙 实体
     * @return 保存后的实体
-     */
+    */
     @Permission("admin")
     @Operation(summary = "新增厂商 API Key")
     @PostMapping("save")
@@ -130,7 +130,7 @@ public class AiManufacturerKeyController {
     *
     * @param manufacturerKey API 钥匙 实体
     * @return 是否成功
-     */
+    */
     @Permission("admin")
     @Operation(summary = "更新厂商 API Key")
     @PutMapping("update")
@@ -144,7 +144,7 @@ public class AiManufacturerKeyController {
     *
     * @param id 主键 标识
     * @return 是否成功
-     */
+    */
     @Permission("admin")
     @Operation(summary = "删除厂商 API Key")
     @DeleteMapping("delete")
@@ -159,7 +159,7 @@ public class AiManufacturerKeyController {
     * @param id      主键 标识
     * @param enabled 是否启用
     * @return 是否成功
-     */
+    */
     @Permission("admin")
     @Operation(summary = "切换 API Key 启停状态")
     @PutMapping("toggle")

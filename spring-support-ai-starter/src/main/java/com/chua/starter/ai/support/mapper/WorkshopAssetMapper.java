@@ -22,7 +22,7 @@ public interface WorkshopAssetMapper extends BaseMapper<WorkshopAsset> {
     * @param collection 原集合名称
     * @return 资产 标识 列表
     * @param @Param("collection" @参数("集合"
-     */
+    */
     List<String> selectIdsByCollection(@Param("collection") String collection);
 
     /**
@@ -31,7 +31,7 @@ public interface WorkshopAssetMapper extends BaseMapper<WorkshopAsset> {
     * @param query 关键字
     * @return 资产 标识 列表
     * @param @Param("query" @参数("查询"
-     */
+    */
     List<String> selectIdsByTags(@Param("query") String query);
 
     /**
@@ -47,7 +47,7 @@ public interface WorkshopAssetMapper extends BaseMapper<WorkshopAsset> {
     * @param offset     偏移量
     * @param pageSize   每页数量
     * @return 资产列表
-     */
+    */
     List<WorkshopAsset> selectPageByFilter(@Param("kind") String kind,
                                            @Param("collection") String collection,
                                            @Param("ungrouped") boolean ungrouped,
@@ -69,7 +69,7 @@ public interface WorkshopAssetMapper extends BaseMapper<WorkshopAsset> {
     * @param inLibrary  是否仅在库（1/0），空 = 全部
     * @return 资产总数
     * @param @Param("kind" @参数("种类"
-     */
+    */
     long countByFilter(@Param("kind") String kind,
                        @Param("collection") String collection,
                        @Param("ungrouped") boolean ungrouped,
@@ -81,7 +81,7 @@ public interface WorkshopAssetMapper extends BaseMapper<WorkshopAsset> {
     * 查询所有非空集合名称（去重、非空）。
     *
     * @return 集合名称列表
-     */
+    */
     List<String> selectDistinctCollections();
 
     /**
@@ -95,7 +95,7 @@ public interface WorkshopAssetMapper extends BaseMapper<WorkshopAsset> {
     * @param updatedAt  更新时间戳（轮次 ms）
     * @return 更新行数
     * @param @Param("assetId" @参数("assetid"
-     */
+    */
     int updateMeta(@Param("assetId") String assetId,
                    @Param("title") String title,
                    @Param("collection") String collection,
@@ -110,6 +110,6 @@ public interface WorkshopAssetMapper extends BaseMapper<WorkshopAsset> {
     * @param to   新集合名（空/空 = 移出分组）
     * @return 更新行数
     * @param @Param("from" @参数("从"
-     */
+    */
     int renameCollection(@Param("from") String from, @Param("to") String to);
 }

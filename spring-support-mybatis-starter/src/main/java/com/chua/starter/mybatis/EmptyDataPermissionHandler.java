@@ -19,7 +19,7 @@ public class EmptyDataPermissionHandler implements DataPermissionHandler {
     * @param where            当前查询条件
     * @param mappedStatementId 映射器 方法全限定名
     * @return 原始查询条件
-     */
+    */
     @Override
     public Expression getSqlSegment(Expression where, String mappedStatementId) {
         return where;

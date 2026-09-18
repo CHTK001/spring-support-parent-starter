@@ -40,7 +40,7 @@ public class AnnotationSwitchScanner {
     * 扫描全部处理器注解并计算指纹
     *
     * @return 开关清单
-     */
+    */
     public SwitchInventory scan() {
         List<SwitchInventory.FeatureDescriptor> features = new ArrayList<>();
         List<SwitchInventory.GrayDescriptor> grays = new ArrayList<>();
@@ -103,7 +103,7 @@ public class AnnotationSwitchScanner {
     * sha256。
     * @param input 输入
     * @return sha256的结果
-     */
+    */
     private static String sha256(String input) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
@@ -119,7 +119,7 @@ public class AnnotationSwitchScanner {
             * @param "指纹计算失败" "指纹计算失败"
             * @param e e
             * @return illegal状态异常的结果
-             */
+            */
             throw new IllegalStateException("指纹计算失败", e);
         }
     }

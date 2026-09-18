@@ -26,34 +26,34 @@ public class InterfaceLoggerInfo extends ApplicationEvent {
     final transient HttpServletRequest request; // 请求
     /**
     * 请求方法
-     */
+    */
     private String method;
     /**
     * 请求地址
-     */
+    */
     private String url;
     /**
     * 请求ip
-     */
+    */
     private String ip;
     /**
     * 请求参数
-     */
+    */
     private String queryParams;
     /**
     * 请求体
-     */
+    */
     private byte[] body = new byte[0];
 
     /**
     * 创建 接口日志记录器信息 实例
     * @param request 请求
-     */
+    */
     public InterfaceLoggerInfo(HttpServletRequest request) {
         /**
         * 父。
         * @param request 请求
-         */
+        */
         super(request);
         this.request = request;
         this.method = request.getMethod();
@@ -82,7 +82,7 @@ public class InterfaceLoggerInfo extends ApplicationEvent {
     * 获取 请求
     *
     * @return request
-     */
+    */
     public HttpServletRequest getRequest() {
         return request;
     }
@@ -91,7 +91,7 @@ public class InterfaceLoggerInfo extends ApplicationEvent {
     * 获取 方法
     *
     * @return method
-     */
+    */
     public String getMethod() {
         return method;
     }
@@ -100,7 +100,7 @@ public class InterfaceLoggerInfo extends ApplicationEvent {
     * 设置 方法
     *
     * @param method 方法
-     */
+    */
     public void setMethod(String method) {
         this.method = method;
     }
@@ -109,7 +109,7 @@ public class InterfaceLoggerInfo extends ApplicationEvent {
     * 获取 url
     *
     * @return url
-     */
+    */
     public String getUrl() {
         return url;
     }
@@ -118,7 +118,7 @@ public class InterfaceLoggerInfo extends ApplicationEvent {
     * 设置 url
     *
     * @param url url
-     */
+    */
     public void setUrl(String url) {
         this.url = url;
     }
@@ -127,7 +127,7 @@ public class InterfaceLoggerInfo extends ApplicationEvent {
     * 获取 ip
     *
     * @return ip
-     */
+    */
     public String getIp() {
         return ip;
     }
@@ -136,7 +136,7 @@ public class InterfaceLoggerInfo extends ApplicationEvent {
     * 设置 ip
     *
     * @param ip ip
-     */
+    */
     public void setIp(String ip) {
         this.ip = ip;
     }
@@ -145,7 +145,7 @@ public class InterfaceLoggerInfo extends ApplicationEvent {
     * 获取 查询参数
     *
     * @return queryParams
-     */
+    */
     public String getQueryParams() {
         return queryParams;
     }
@@ -154,7 +154,7 @@ public class InterfaceLoggerInfo extends ApplicationEvent {
     * 设置 查询参数
     *
     * @param queryParams 查询参数
-     */
+    */
     public void setQueryParams(String queryParams) {
         this.queryParams = queryParams;
     }
@@ -163,7 +163,7 @@ public class InterfaceLoggerInfo extends ApplicationEvent {
     * 获取 主体
     *
     * @return body
-     */
+    */
     public byte[] getBody() {
         return body;
     }
@@ -172,7 +172,7 @@ public class InterfaceLoggerInfo extends ApplicationEvent {
     * 设置 主体
     *
     * @param body 主体
-     */
+    */
     public void setBody(byte[] body) {
         this.body = body;
     }

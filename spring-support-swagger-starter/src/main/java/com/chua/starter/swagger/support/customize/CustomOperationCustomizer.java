@@ -32,7 +32,7 @@ public class CustomOperationCustomizer implements GlobalOperationCustomizer {
     * 构造函数
     *
     * @param knife4jProperties 刀4j配置属性
-     */
+    */
     public CustomOperationCustomizer(Knife4jProperties knife4jProperties) {
         this.knife4jProperties = knife4jProperties;
         this.defaultHeaders = Optional.ofNullable(knife4jProperties.getDefaultHeader())
@@ -47,7 +47,7 @@ public class CustomOperationCustomizer implements GlobalOperationCustomizer {
     * @param operation 操作对象
     * @param handlerMethod 处理器方法
     * @return 定制后的操作对象
-     */
+    */
     @Override
     public Operation customize(Operation operation, HandlerMethod handlerMethod) {
         ApiOperationSupport operationSupport = AnnotationUtils.findAnnotation(handlerMethod.getMethod(), ApiOperationSupport.class);

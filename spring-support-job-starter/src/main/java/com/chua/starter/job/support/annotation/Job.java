@@ -38,42 +38,42 @@ public @interface Job {
     /**
     * 任务处理器唯一名称
     * @return 价值观的结果
-     */
+    */
     String value();
 
     /**
     * 任务描述
     * @return desc的结果
-     */
+    */
     String desc() default "";
 
     /**
     * cron 表达式 (例如 {@code "0/3 * * * * ?"}). 三选一; 同时配置时优先级 cron > fixed延迟 > fixedrate。
     * @return cron的结果
-     */
+    */
     String cron() default "";
 
     /**
     * 固定间隔触发, 单位毫秒。
     * @return fixed延迟的结果
-     */
+    */
     long fixedDelay() default 0L;
 
     /**
     * 固定频率触发, 单位毫秒。
     * @return fixedRate的结果
-     */
+    */
     long fixedRate() default 0L;
 
     /**
     * 初始化方法名,与 执行 方法同处一个类, 无参
     * @return 初始化的结果
-     */
+    */
     String init() default "";
 
     /**
     * 销毁方法名,与 执行 方法同处一个类, 无参
     * @return 销毁的结果
-     */
+    */
     String destroy() default "";
 }

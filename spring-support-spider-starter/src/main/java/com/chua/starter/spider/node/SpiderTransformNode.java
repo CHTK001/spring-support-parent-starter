@@ -37,57 +37,57 @@ public class SpiderTransformNode implements FlowNode {
 
     /**
     * 日志记录器
-     */
+    */
     private static final Logger log = LoggerFactory.getLogger(SpiderTransformNode.class);
 
     /**
     * 取值来源：当前数据
-     */
+    */
     private static final String SOURCE_CURRENT = "current";
 
     /**
     * 格式：不转换
-     */
+    */
     private static final String FORMAT_NONE = "none";
 
     /**
     * 格式：转大写
-     */
+    */
     private static final String FORMAT_UPPER = "upper";
 
     /**
     * 格式：转小写
-     */
+    */
     private static final String FORMAT_LOWER = "lower";
 
     /**
     * 格式：去首尾空白
-     */
+    */
     private static final String FORMAT_TRIM = "trim";
 
     /**
     * 格式：日期转年月日
-     */
+    */
     private static final String FORMAT_YMD = "yMd";
 
     /**
     * 格式：日期转年月日时分秒
-     */
+    */
     private static final String FORMAT_YMD_HMS = "yMdHms";
 
     /**
     * 默认格式
-     */
+    */
     private static final String DEFAULT_FORMAT = FORMAT_NONE;
 
     /**
     * 年月日格式
-     */
+    */
     private static final DateTimeFormatter FORMATTER_YMD = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
     /**
     * 年月日时分秒格式
-     */
+    */
     private static final DateTimeFormatter FORMATTER_YMD_HMS =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
@@ -95,7 +95,7 @@ public class SpiderTransformNode implements FlowNode {
     * 节点配置表单元信息。
     *
     * @return 表单元信息列表
-     */
+    */
     @Override
     public List<FlowNodeField> configSchema() {
         List<FlowNodeField> schema = new ArrayList<>();
@@ -117,7 +117,7 @@ public class SpiderTransformNode implements FlowNode {
     * 节点类型标识。
     *
     * @return 节点类型
-     */
+    */
     @Override
     public String type() {
         return "spider.transform";
@@ -127,7 +127,7 @@ public class SpiderTransformNode implements FlowNode {
     * 执行转换节点。
     *
     * @param context 当前流程上下文
-     */
+    */
     @Override
     public void execute(FlowContext context) {
         FlowProps props = context.currentNodeProps();
@@ -141,7 +141,7 @@ public class SpiderTransformNode implements FlowNode {
             * illegal参数异常。
             * @param 参数" 参数"
             * @return illegal参数异常的结果
-             */
+            */
             throw new IllegalArgumentException("spider.transform 节点缺少 saveAs 参数");
         }
 
@@ -157,7 +157,7 @@ public class SpiderTransformNode implements FlowNode {
     * @param field   取值来源标识
     * @param context 当前流程上下文
     * @return 来源值
-     */
+    */
     private Object resolveValue(String field, FlowContext context) {
         if (SOURCE_CURRENT.equals(field)) {
             return context.getData();
@@ -173,7 +173,7 @@ public class SpiderTransformNode implements FlowNode {
     * @param regex       正则表达式
     * @param replacement 替换内容
     * @return 转换结果
-     */
+    */
     private Object transform(Object sourceValue, String format,
                              String regex, String replacement) {
         if (sourceValue == null) {
@@ -207,7 +207,7 @@ public class SpiderTransformNode implements FlowNode {
     * @param sourceValue 来源值
     * @param formatter   日期时间格式器
     * @return 格式化后的字符串，无法解析时返回原始值
-     */
+    */
     private Object formatDateTime(Object sourceValue, DateTimeFormatter formatter) {
         try {
             if (sourceValue instanceof LocalDateTime dateTime) {

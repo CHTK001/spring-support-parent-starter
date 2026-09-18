@@ -38,7 +38,7 @@ public class MybatisEndpoint {
     * @param supportInjector 支持injector
     * @param configuration 配置
     * @param supportInjector 支持injector
-     */
+    */
     public MybatisEndpoint(Reload reload, Configuration configuration, SupportInjector supportInjector) {
         this.reload = reload;
         this.configuration = configuration;
@@ -51,7 +51,7 @@ public class MybatisEndpoint {
     * @param name 映射器 XML文件名或路径
     * @param type 类型: 名称（映射器方法名）, 映射器（映射器 XML文件名）
     * @return 重载结果信息
-     */
+    */
     @WriteOperation
     public String reload(@Selector String name, @Selector String type) {
         if (reload == null) {
@@ -74,7 +74,7 @@ public class MybatisEndpoint {
     * 包含mapped对账单列表和可重载文件列表
     *
     * @return 端点信息
-     */
+    */
     @ReadOperation
     public Map<String, Object> info() {
         Map<String, Object> result = new HashMap<>();

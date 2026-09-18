@@ -45,7 +45,7 @@ public class ExternalCaptchaConfiguration {
     /**
     * captchasetting。
     * @return captchaSetting的结果
-     */
+    */
     public CaptchaSetting captchaSetting() {
         return CaptchaSetting.builder()
                 .apiToken(apiToken)
@@ -61,7 +61,7 @@ public class ExternalCaptchaConfiguration {
     * yescaptchaparser。
     * @param setting setting
     * @return yesCaptchaParser的结果
-     */
+    */
     public CaptchaParser yesCaptchaParser(CaptchaSetting setting) {
         log.info("[ExternalCaptcha] 初始化 YesCaptcha 客户端, apiUrl={}, apiToken={}",
                 setting.getApiUrl(),
@@ -70,7 +70,7 @@ public class ExternalCaptchaConfiguration {
         * yescaptcha客户端。
         * @param setting setting
         * @return yescaptcha客户端的结果
-         */
+        */
         return new YesCaptchaClient(setting);
     }
 
@@ -80,7 +80,7 @@ public class ExternalCaptchaConfiguration {
     * captcha运行parser。
     * @param setting setting
     * @return captcha运行parser的结果
-     */
+    */
     public CaptchaParser captchaRunParser(CaptchaSetting setting) {
         log.info("[ExternalCaptcha] 初始化 CaptchaRun 客户端, apiUrl={}, apiToken={}",
                 setting.getApiUrl(),
@@ -89,14 +89,14 @@ public class ExternalCaptchaConfiguration {
         * captcha运行客户端。
         * @param setting setting
         * @return captcha运行客户端的结果
-         */
+        */
         return new CaptchaRunClient(setting);
     }
 
     /**
     * resolvecaptchaparser。
     * @return resolveCaptchaParser的结果
-     */
+    */
     public static CaptchaParser resolveCaptchaParser() {
         try {
             return ServiceProvider.of(CaptchaParser.class).getDefault();

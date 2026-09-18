@@ -27,7 +27,7 @@ public class PaymentChannelRegistry {
     * 通道
     *
     * @return 通道的结果
-     */
+    */
     private List<PaymentChannel> channels() {
         if (channels == null) {
             synchronized (this) {
@@ -42,7 +42,7 @@ public class PaymentChannelRegistry {
     /**
     * 测试支持：注入测试渠道列表
     * @param channels 通道
-     */
+    */
     void setTestChannels(List<PaymentChannel> channels) {
         this.channels = channels;
     }
@@ -53,7 +53,7 @@ public class PaymentChannelRegistry {
     * @param channelType 通道类型
     * @param channelSubType 通道sub类型
     * @return 获取通道的结果
-     */
+    */
     public PaymentChannel getChannel(String channelType, String channelSubType) {
         return channels().stream()
                 .filter(channel -> channel.supports(channelType, channelSubType))
@@ -70,7 +70,7 @@ public class PaymentChannelRegistry {
     * @param channelType 通道类型
     * @param channelSubType 通道sub类型
     * @return 支持的结果
-     */
+    */
     public boolean supports(String channelType, String channelSubType) {
         return channels().stream().anyMatch(channel -> channel.supports(channelType, channelSubType));
     }

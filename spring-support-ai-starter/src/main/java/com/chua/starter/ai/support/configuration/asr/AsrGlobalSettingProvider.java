@@ -21,19 +21,19 @@ public class AsrGlobalSettingProvider implements GlobalSettingProvider {
 
     /**
     * 配置分组标识
-     */
+    */
     private static final String GROUP = "asr";
 
     /**
     * 分组显示名称
-     */
+    */
     private static final String GROUP_NAME = "语音识别";
 
     /**
     * 配置分组标识。
     *
     * @return asr
-     */
+    */
     @Override
     public String group() {
         return GROUP;
@@ -43,7 +43,7 @@ public class AsrGlobalSettingProvider implements GlobalSettingProvider {
     * 配置分组显示名称。
     *
     * @return 语音识别
-     */
+    */
     @Override
     public String groupName() {
         return GROUP_NAME;
@@ -53,7 +53,7 @@ public class AsrGlobalSettingProvider implements GlobalSettingProvider {
     * 语音识别模块全部配置项。
     *
     * @return 配置项列表
-     */
+    */
     @Override
     public List<SettingItem> getItems() {
         return List.of(

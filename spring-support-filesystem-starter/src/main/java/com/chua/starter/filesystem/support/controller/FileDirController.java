@@ -39,7 +39,7 @@ public class FileDirController {
 
     /**
     * 文件存储配置
-     */
+    */
     private final FileStorageProperties properties;
 
     /**
@@ -47,7 +47,7 @@ public class FileDirController {
     *
     * @param path 目录路径，为空时返回盘符/根目录
     * @return 子目录列表
-     */
+    */
     @Operation(summary = "目录列表", description = "浏览指定路径下的子目录")
     @GetMapping("/list")
     public ReturnResult<List<Map<String, Object>>> list(
@@ -72,7 +72,7 @@ public class FileDirController {
         /**
         * 尝试。
         * @param Files.newDirectoryStream(dir 文件.新目录流(dir
-         */
+        */
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir)) {
             for (Path entry : stream) {
                 if (!Files.isDirectory(entry)) {

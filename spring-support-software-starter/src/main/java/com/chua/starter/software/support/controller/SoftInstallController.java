@@ -49,7 +49,7 @@ public class SoftInstallController {
     * @return install的结果
     * @param @Validated(AddGroup.class @校验(添加群体.类
     * @param @Validated(AddGroup.class @Validated(AddGroup.class
-     */
+    */
     public ReturnResult<InstallDetailResponse> install(@Validated(AddGroup.class) @RequestBody InstallRequest request, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
             return ReturnResult.illegal(bindingResult.getAllErrors().getFirst().getDefaultMessage());
@@ -77,7 +77,7 @@ public class SoftInstallController {
     * @param recordId recordid
     * @param softwareId softwareid
     * @param userId 用户标识
-     */
+    */
     public ReturnResult<InstallDetailResponse> uninstall(
             @Parameter(description = "软件ID") String softwareId,
             @Parameter(description = "用户ID") String userId,
@@ -100,7 +100,7 @@ public class SoftInstallController {
     * @param recordId recordid
     * @param softwareId softwareid
     * @param userId 用户标识
-     */
+    */
     public ReturnResult<InstallDetailResponse> updateVersion(
             @Parameter(description = "软件ID") String softwareId,
             @Parameter(description = "用户ID") String userId,
@@ -117,7 +117,7 @@ public class SoftInstallController {
     *
     * @param recordId recordid
     * @return detail的结果
-     */
+    */
     public ReturnResult<InstallDetailResponse> detail(String recordId) {
         return installRecordService.getInstallDetail(recordId);
     }
@@ -130,7 +130,7 @@ public class SoftInstallController {
     *
     * @param softwareId softwareid
     * @return 列表bysoftware的结果
-     */
+    */
     public ReturnResult<List<SoftInstallRecord>> listBySoftware(String softwareId) {
         return ReturnResult.ok(installRecordService.listBySoftwareId(softwareId));
     }
@@ -143,7 +143,7 @@ public class SoftInstallController {
     *
     * @param userId 用户标识
     * @return 列表installed的结果
-     */
+    */
     public ReturnResult<List<SoftInstallRecord>> listInstalled(String userId) {
         return ReturnResult.ok(installRecordService.listInstalledByUserId(userId));
     }

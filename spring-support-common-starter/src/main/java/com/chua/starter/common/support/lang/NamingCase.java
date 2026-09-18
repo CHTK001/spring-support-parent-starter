@@ -19,7 +19,7 @@ public final class NamingCase {
     *
     * @param name 名称
     * @return 转为camel大小写的结果
-     */
+    */
     public static String toCamelCase(String name) {
         if (name == null || name.isEmpty()) {
             return name;
@@ -33,7 +33,7 @@ public final class NamingCase {
     *
     * @param name 名称
     * @return 转为第一个大写大小写的结果
-     */
+    */
     public static String toFirstUpperCase(String name) {
         if (name == null || name.isEmpty()) {
             return name;

@@ -31,16 +31,16 @@ public class IP2ProxyLiteIpQualityDetector implements IpQualityDetector {
     /** 创建 IP2代理liteipqualitydetector 实例 */
     public IP2ProxyLiteIpQualityDetector() {
         /**
-        * this。
-        * @param findDefaultResource( 查找默认resource(
-         */
+    * this。
+    * @param findDefaultResource( 查找默认resource(
+    */
         this(findDefaultResource());
     }
 
     /**
     * 创建 IP2代理liteipqualitydetector 实例
     * @param binPath bin路径
-     */
+    */
     public IP2ProxyLiteIpQualityDetector(Path binPath) {
         try {
             this.ip2Proxy = new IP2Proxy();
@@ -50,7 +50,7 @@ public class IP2ProxyLiteIpQualityDetector implements IpQualityDetector {
                 * illegal状态异常。
                 * @param result 结果
                 * @return illegal状态异常的结果
-                 */
+                */
                 throw new IllegalStateException("初始化 IP2Proxy LITE 失败，打开文件: " + binPath + "，错误码: " + result);
             }
         } catch (IOException e) {
@@ -59,7 +59,7 @@ public class IP2ProxyLiteIpQualityDetector implements IpQualityDetector {
             * @param binPath bin路径
             * @param e e
             * @return illegal状态异常的结果
-             */
+            */
             throw new IllegalStateException("初始化 IP2Proxy LITE 失败: " + binPath, e);
         }
     }
@@ -67,7 +67,7 @@ public class IP2ProxyLiteIpQualityDetector implements IpQualityDetector {
     /**
     * 创建 IP2代理liteipqualitydetector 实例
     * @param binStream bin流
-     */
+    */
     public IP2ProxyLiteIpQualityDetector(InputStream binStream) throws IOException {
         try {
             this.ip2Proxy = new IP2Proxy();
@@ -78,7 +78,7 @@ public class IP2ProxyLiteIpQualityDetector implements IpQualityDetector {
                 * illegal状态异常。
                 * @param result 结果
                 * @return illegal状态异常的结果
-                 */
+                */
                 throw new IllegalStateException("初始化 IP2Proxy LITE InputStream 失败，错误码: " + result);
             }
         } catch (IOException e) {
@@ -87,7 +87,7 @@ public class IP2ProxyLiteIpQualityDetector implements IpQualityDetector {
             * @param 失败" 失败"
             * @param e e
             * @return io异常的结果
-             */
+            */
             throw new IOException("初始化 IP2Proxy LITE 失败", e);
         }
     }
@@ -127,7 +127,7 @@ public class IP2ProxyLiteIpQualityDetector implements IpQualityDetector {
     * 查找默认resource
     *
     * @return find默认resource的结果
-     */
+    */
     private static Path findDefaultResource() {
         URL resource = IP2ProxyLiteIpQualityDetector.class.getClassLoader()
                 .getResource(DEFAULT_BIN);
@@ -143,7 +143,7 @@ public class IP2ProxyLiteIpQualityDetector implements IpQualityDetector {
             * @param 数据库路径失败" 数据库路径失败"
             * @param e e
             * @return illegal状态异常的结果
-             */
+            */
             throw new IllegalStateException("解析 IP2Proxy LITE 数据库路径失败", e);
         }
     }
@@ -153,7 +153,7 @@ public class IP2ProxyLiteIpQualityDetector implements IpQualityDetector {
     *
     * @param ip ip
     * @return 空quality的结果
-     */
+    */
     private static IpQuality emptyQuality(String ip) {
         IpQuality q = new IpQuality();
         q.setIp(ip);
@@ -166,7 +166,7 @@ public class IP2ProxyLiteIpQualityDetector implements IpQualityDetector {
     * @param ip ip
     * @param r r
     * @return 映射结果的结果
-     */
+    */
     private static IpQuality mapResult(String ip, IP2ProxyResult r) {
         IpQuality q = new IpQuality();
         q.setIp(ip);

@@ -35,7 +35,7 @@ public class ApiGrayEvaluator {
     
     /**
     * spel 表达式缓存
-     */
+    */
     private final Map<String, Expression> expressionCache = new ConcurrentHashMap<>();
 
     /**
@@ -47,7 +47,7 @@ public class ApiGrayEvaluator {
     * @param username 用户名
     * @param roles    当前用户角色集合（可为 空）
     * @return 是否命中灰度
-     */
+    */
     public boolean evaluate(ApiGray apiGray, HttpServletRequest request, Object userId, String username,
                             java.util.Collection<String> roles) {
         String clientIp = IpUtils.getClientIp(request);
@@ -102,7 +102,7 @@ public class ApiGrayEvaluator {
     * @param userId 用户标识
     * @param username 用户名
     * @return 评估的结果
-     */
+    */
     public boolean evaluate(ApiGray apiGray, HttpServletRequest request, Object userId, String username) {
         return evaluate(apiGray, request, userId, username, null);
     }
@@ -112,7 +112,7 @@ public class ApiGrayEvaluator {
     * @param users 用户
     * @param username 用户名
     * @return 匹配用户whitelist的结果
-     */
+    */
     private boolean matchUserWhitelist(String[] users, String username) {
         if (users == null || users.length == 0 || StringUtils.isBlank(username)) {
             return false;
@@ -130,7 +130,7 @@ public class ApiGrayEvaluator {
     * @param roles 角色
     * @param userRoles 用户角色
     * @return 匹配角色whitelist的结果
-     */
+    */
     private boolean matchRoleWhitelist(String[] roles, java.util.Collection<String> userRoles) {
         if (roles == null || roles.length == 0 || userRoles == null || userRoles.isEmpty()) {
             return false;
@@ -148,7 +148,7 @@ public class ApiGrayEvaluator {
     * @param ips ips
     * @param clientIp 客户端ip
     * @return 匹配ipwhitelist的结果
-     */
+    */
     private boolean matchIpWhitelist(String[] ips, String clientIp) {
         if (ips == null || ips.length == 0 || StringUtils.isBlank(clientIp)) {
             return false;
@@ -166,7 +166,7 @@ public class ApiGrayEvaluator {
     * @param clientIp 客户端ip
     * @param pattern 模式
     * @return 匹配ip的结果
-     */
+    */
     private boolean matchIp(String clientIp, String pattern) {
         return IpUtils.matchIp(clientIp, pattern);
     }
@@ -176,7 +176,7 @@ public class ApiGrayEvaluator {
     * @param headers 头部
     * @param request 请求
     * @return 匹配头部的结果
-     */
+    */
     private boolean matchHeaders(String[] headers, HttpServletRequest request) {
         if (headers == null || headers.length == 0) {
             return false;
@@ -203,7 +203,7 @@ public class ApiGrayEvaluator {
 
     /**
     * 评估spel表达式
-     */
+    */
     private boolean evaluateSpelRule(String rule, HttpServletRequest request,
                                      Object userId, String username, String clientIp,
                                      java.util.Collection<String> roles) {
@@ -220,7 +220,7 @@ public class ApiGrayEvaluator {
 
     /**
     * 创建spel评估上下文
-     */
+    */
     private EvaluationContext createEvaluationContext(HttpServletRequest request,
                                                        Object userId, String username, String clientIp,
                                                        java.util.Collection<String> roles) {
@@ -263,7 +263,7 @@ public class ApiGrayEvaluator {
     * @param username 用户名
     * @param clientIp 客户端ip
     * @return 匹配percentage的结果
-     */
+    */
     private boolean matchPercentage(int percentage, Object userId, String username, String clientIp) {
         if (percentage <= 0) {
             return false;
@@ -285,7 +285,7 @@ public class ApiGrayEvaluator {
     * @param username 用户名
     * @param clientIp 客户端ip
     * @return 构建哈希钥匙的结果
-     */
+    */
     private String buildHashKey(Object userId, String username, String clientIp) {
         // 内容长度取决于实际使用的用户标识，无法预估，按需扩容
         StringBuilder sb = new StringBuilder();
@@ -309,7 +309,7 @@ public class ApiGrayEvaluator {
     * @param request 请求
     * @param name 名称
     * @return 获取头部的结果
-     */
+    */
     public static String getHeader(HttpServletRequest request, String name) {
         return request.getHeader(name);
     }
@@ -319,7 +319,7 @@ public class ApiGrayEvaluator {
     * @param request 请求
     * @param name 名称
     * @return 获取参数的结果
-     */
+    */
     public static String getParam(HttpServletRequest request, String name) {
         return request.getParameter(name);
     }
@@ -329,7 +329,7 @@ public class ApiGrayEvaluator {
     * @param request 请求
     * @param name 名称
     * @return 获取Cookie的结果
-     */
+    */
     public static String getCookie(HttpServletRequest request, String name) {
         Cookie[] cookies = request.getCookies();
         if (cookies != null) {
@@ -344,7 +344,7 @@ public class ApiGrayEvaluator {
 
     /**
     * 灰度上下文（spel 根对象）
-     */
+    */
     public record GrayContext(HttpServletRequest request, Object userId, String username, String ip,
                               java.util.Collection<String> roles) {
 
@@ -353,7 +353,7 @@ public class ApiGrayEvaluator {
         *
         * @param name 名称
         * @return 头部的结果
-         */
+        */
         public String header(String name) {
             return request.getHeader(name);
         }
@@ -363,7 +363,7 @@ public class ApiGrayEvaluator {
         *
         * @param name 名称
         * @return 参数的结果
-         */
+        */
         public String param(String name) {
             return request.getParameter(name);
         }
@@ -373,7 +373,7 @@ public class ApiGrayEvaluator {
         *
         * @param name 名称
         * @return Cookie的结果
-         */
+        */
         public String cookie(String name) {
             return getCookie(request, name);
         }
@@ -383,7 +383,7 @@ public class ApiGrayEvaluator {
         *
         * @param role 角色
         * @return 是否包含角色的结果
-         */
+        */
         public boolean hasRole(String role) {
             return roles != null && roles.stream().anyMatch(r -> r.equalsIgnoreCase(role));
         }

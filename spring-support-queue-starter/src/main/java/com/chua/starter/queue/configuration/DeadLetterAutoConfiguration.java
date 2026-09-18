@@ -35,7 +35,7 @@ public class DeadLetterAutoConfiguration {
     * 死信队列消息模板
     * @param false false
     * @return deadLetterTemplate的结果
-     */
+    */
     @Bean(destroyMethod = "close")
     public DeadLetterTemplate deadLetterTemplate(@Autowired(required = false) MessageTemplate mainMessageTemplate) {
         // 创建死信队列底层存储
@@ -61,14 +61,14 @@ public class DeadLetterAutoConfiguration {
         * @param dlqStorage dlqstorage
         * @param config 配置
         * @return DeadLetterTemplate的结果
-         */
+        */
         return new DeadLetterTemplate(sourceTemplate, dlqStorage, config);
     }
 
     /**
     * 创建死信队列底层存储
     * @return 创建dlqstorage的结果
-     */
+    */
     private MessageTemplate createDlqStorage() {
         String type = deadLetterProperties.getType();
         return switch (type != null ? type.toLowerCase() : "chronicle-queue") {
@@ -79,7 +79,7 @@ public class DeadLetterAutoConfiguration {
                 * 本地消息template。
                 * @param localConfig 本地配置
                 * @return 本地消息template的结果
-                 */
+                */
                 yield new LocalMessageTemplate(localConfig);
             }
             default -> {
@@ -90,7 +90,7 @@ public class DeadLetterAutoConfiguration {
                 * 本地消息template。
                 * @param localConfig 本地配置
                 * @return 本地消息template的结果
-                 */
+                */
                 yield new LocalMessageTemplate(localConfig);
             }
         };

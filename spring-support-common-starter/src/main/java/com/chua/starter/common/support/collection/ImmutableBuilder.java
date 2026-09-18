@@ -19,12 +19,12 @@ public final class ImmutableBuilder {
     * 构建器的字符串字符串映射
     *
     * @return 构建器的字符串字符串映射的结果
-     */
+    */
     public static ImmutableStringStringMapBuilder builderOfStringStringMap() {
         /**
         * immutable字符串字符串映射构建器。
         * @return immutable字符串字符串映射构建器的结果
-         */
+        */
         return new ImmutableStringStringMapBuilder();
     }
 
@@ -38,7 +38,7 @@ public final class ImmutableBuilder {
         * @param key 钥匙
         * @param value 价值观
         * @return 放入的结果
-         */
+        */
         public ImmutableStringStringMapBuilder put(String key, String value) {
             map.put(key, value);
             return this;
@@ -48,7 +48,7 @@ public final class ImmutableBuilder {
         * as同步映射
         *
         * @return as同步映射的结果
-         */
+        */
         public Map<String, String> asSynchronizedMap() {
             return Collections.synchronizedMap(Collections.unmodifiableMap(new LinkedHashMap<>(map)));
         }

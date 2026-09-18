@@ -19,14 +19,14 @@ public interface RpcProxyFactory {
     * @param interfaces  接口列表
     * @param handler     调用处理器
     * @return 代理对象
-     */
+    */
     Object createProxy(ClassLoader classLoader, List<Class<?>> interfaces, java.lang.reflect.InvocationHandler handler);
 
     /**
     * 获取优先级，值越小优先级越高
     *
     * @return 优先级
-     */
+    */
     default int getOrder() {
         return 0;
     }

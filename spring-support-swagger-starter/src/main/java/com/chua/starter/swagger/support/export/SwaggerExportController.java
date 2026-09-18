@@ -48,7 +48,7 @@ public class SwaggerExportController {
     * 创建 Swagger导出控制器 实例
     * @param openAPIProvider 打开api提供者
     * @param properties 属性
-     */
+    */
     public SwaggerExportController(ObjectProvider<OpenAPI> openAPIProvider,
                                    SwaggerExportProperties properties) {
         this.openAPIProvider = openAPIProvider;
@@ -59,7 +59,7 @@ public class SwaggerExportController {
     * 下载 打开api 文档。默认 HTML，可通过 {@code format} 指定。
     * @param false false
     * @return download的结果
-     */
+    */
     @GetMapping
     public ResponseEntity<byte[]> download(@RequestParam(value = "format", required = false) String format) {
         OpenAPI openAPI = openAPIProvider.getIfAvailable();
@@ -91,7 +91,7 @@ public class SwaggerExportController {
     /**
     * 浏览器内嵌预览 (文本/HTML, inline 而非 attachment)。
     * @return preview的结果
-     */
+    */
     @GetMapping("/preview")
     public ResponseEntity<byte[]> preview() {
         OpenAPI openAPI = openAPIProvider.getIfAvailable();
@@ -119,7 +119,7 @@ public class SwaggerExportController {
     * @param provider 提供者
     * @param data 数据
     * @return render的结果
-     */
+    */
     private byte[] render(OpenApiDocumentProvider provider, OpenApiDocumentData data) throws Exception {
         if (provider instanceof com.chua.common.support.lang.document.OpenApiHtmlProvider html) {
             return html.render(data).getBytes(StandardCharsets.UTF_8);
@@ -140,7 +140,7 @@ public class SwaggerExportController {
     *
     * @param props props
     * @return resolve类型的结果
-     */
+    */
     private String resolveType(SwaggerExportProperties props) {
         String output = props.getOutput();
         if (output == null) {
@@ -161,7 +161,7 @@ public class SwaggerExportController {
     *
     * @param type 类型
     * @return media类型for的结果
-     */
+    */
     private MediaType mediaTypeFor(String type) {
         return switch (type) {
             case "markdown" -> MediaType.parseMediaType("text/markdown;charset=UTF-8");

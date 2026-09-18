@@ -19,42 +19,42 @@ public class SqlExecutionEvent extends ApplicationEvent {
 
     /**
     * 数据源名称
-     */
+    */
     private final String dataSourceName;
 
     /**
     * SQL 文本（可能被截断）
-     */
+    */
     private final String sql;
 
     /**
     * SQL 类型（选择/插入/更新/删除/其他）
-     */
+    */
     private final String sqlType;
 
     /**
     * 执行耗时（毫秒）
-     */
+    */
     private final long costMs;
 
     /**
     * 是否慢 SQL
-     */
+    */
     private final boolean slowSql;
 
     /**
     * 是否执行成功
-     */
+    */
     private final boolean success;
 
     /**
     * 失败原因（失败时不为空）
-     */
+    */
     private final String errorMessage;
 
     /**
     * 执行完成时间
-     */
+    */
     private final Instant finishedAt;
 
     /**
@@ -68,13 +68,13 @@ public class SqlExecutionEvent extends ApplicationEvent {
     * @param slowSql        是否慢 SQL
     * @param success        是否执行成功
     * @param errorMessage   失败原因
-     */
+    */
     public SqlExecutionEvent(Object source, String dataSourceName, String sql, String sqlType,
                              long costMs, boolean slowSql, boolean success, String errorMessage) {
         /**
         * 父。
         * @param source 源
-         */
+        */
         super(source);
         this.dataSourceName = dataSourceName;
         this.sql = sql;

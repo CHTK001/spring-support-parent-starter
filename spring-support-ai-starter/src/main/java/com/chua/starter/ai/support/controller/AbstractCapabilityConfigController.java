@@ -34,20 +34,20 @@ public abstract class AbstractCapabilityConfigController {
 
     /**
     * 全局设置服务
-     */
+    */
     protected final SysAiGlobalSettingService settingService;
 
     /**
     * 配置分组（如 ocr / face / 镜像 / layout）
     * @return 群体的结果
-     */
+    */
     protected abstract String group();
 
     /**
     * 获取配置项定义与当前值。
     *
     * @return 配置列表（field/value/valueType/description/sort）
-     */
+    */
     @Permission("admin")
     @GetMapping
     public ReturnResult<List<Map<String, Object>>> config() {
@@ -83,7 +83,7 @@ public abstract class AbstractCapabilityConfigController {
     *
     * @param body 配置请求（群体 + 字段）
     * @return 更新结果
-     */
+    */
     @Permission("admin")
     @PutMapping
     public ReturnResult<?> update(@RequestBody Map<String, Object> body) {
@@ -98,7 +98,7 @@ public abstract class AbstractCapabilityConfigController {
     * 安全转换整数。
     * @param obj obj
     * @return 转为int的结果
-     */
+    */
     private static int toInt(Object obj) {
         if (obj instanceof Number n) {
             return n.intValue();

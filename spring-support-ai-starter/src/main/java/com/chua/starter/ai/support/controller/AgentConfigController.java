@@ -64,7 +64,7 @@ public class AgentConfigController {
     *
     * @param body 主体
     * @return 注册智能体as模型的结果
-     */
+    */
     public ReturnResult<Map<String, Object>> registerAgentAsModel(@RequestBody Map<String, Object> body) {
         String agentName = (String) body.get("agentName");
         String modelName = (String) body.get("modelName");
@@ -120,7 +120,7 @@ public class AgentConfigController {
     *
     * @param modelName 模型名称
     * @return 注销智能体模型的结果
-     */
+    */
     public ReturnResult<Map<String, Object>> unregisterAgentModel(@PathVariable String modelName) {
         log.info("[AgentConfig] 注销 Agent 模型: modelName={}", modelName);
         // 从持久化配置中移除
@@ -147,7 +147,7 @@ public class AgentConfigController {
     *
     * @param agentName 智能体名称
     * @return 获取orchestration的结果
-     */
+    */
     public ReturnResult<Map<String, Object>> getOrchestration(@PathVariable String agentName) {
         var agent = agentRegistry.getByName(agentName);
         if (agent == null) {
@@ -209,7 +209,7 @@ public class AgentConfigController {
     *
     * @param body 主体
     * @return 保存orchestration的结果
-     */
+    */
     public ReturnResult<Map<String, Object>> saveOrchestration(@RequestBody Map<String, Object> body) {
         String agentName = (String) body.get("agentName");
         if (agentName == null || agentName.isBlank()) {
@@ -278,7 +278,7 @@ public class AgentConfigController {
     * 列表智能体模型
     *
     * @return 列表智能体模型的结果
-     */
+    */
     public ReturnResult<List<Map<String, Object>>> listAgentModels() {
         List<Map<String, Object>> result = new ArrayList<>();
         Set<String> models = chatClientRegistry.getModels();
@@ -304,7 +304,7 @@ public class AgentConfigController {
     *
     * @param agentName 智能体 名称
     * @return target → 标签 映射
-     */
+    */
     private Map<String, String> loadOrchestrationEdges(String agentName) {
         Map<String, String> edges = new LinkedHashMap<>();
         try {

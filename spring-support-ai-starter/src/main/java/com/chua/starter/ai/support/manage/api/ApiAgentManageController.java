@@ -46,14 +46,14 @@ public class ApiAgentManageController {
 
     /**
     * 智能体 管理服务
-     */
+    */
     private final SysAiAgentService agentService;
 
     /**
     * 列举全部主 智能体（含子 智能体）。
     *
     * @return 主 智能体 列表
-     */
+    */
     @GetMapping
     public ApiResult<List<Map<String, Object>>> listAgents() {
         return ApiResult.ok(agentService.listAgents());
@@ -67,7 +67,7 @@ public class ApiAgentManageController {
     * @param @PathVariable("agentId" @路径变量("智能体标识"
     * @param @PathVariable("agentId" @路径变量("智能体id"
     * @param @PathVariable("agentId" @PathVariable("agentId"
-     */
+    */
     @GetMapping("/{agentId}")
     public ApiResult<Map<String, Object>> getAgent(@PathVariable("agentId") String agentId) {
         return ApiResult.ok(agentService.getAgent(agentId));
@@ -78,7 +78,7 @@ public class ApiAgentManageController {
     *
     * @param body 创建请求
     * @return 创建后的 智能体
-     */
+    */
     @PostMapping
     public ApiResult<Map<String, Object>> createAgent(@RequestBody Map<String, Object> body) {
         return ApiResult.ok(agentService.createAgent(body));
@@ -91,7 +91,7 @@ public class ApiAgentManageController {
     * @param body    更新请求
     * @return 更新后的 智能体
     * @param @PathVariable("agentId" @路径变量("智能体标识"
-     */
+    */
     @PutMapping("/{agentId}")
     public ApiResult<Map<String, Object>> updateAgent(@PathVariable("agentId") String agentId,
                                                        @RequestBody Map<String, Object> body) {
@@ -106,7 +106,7 @@ public class ApiAgentManageController {
     * @param @PathVariable("agentId" @路径变量("智能体标识"
     * @param @PathVariable("agentId" @路径变量("智能体id"
     * @param @PathVariable("agentId" @PathVariable("agentId"
-     */
+    */
     @DeleteMapping("/{agentId}")
     public ApiResult<Void> deleteAgent(@PathVariable("agentId") String agentId) {
         agentService.deleteAgent(agentId);
@@ -120,7 +120,7 @@ public class ApiAgentManageController {
     * @param body    子 智能体 请求
     * @return 创建后的子 智能体
     * @param @PathVariable("agentId" @路径变量("智能体标识"
-     */
+    */
     @PostMapping("/{agentId}/sub-agents")
     public ApiResult<Map<String, Object>> createSubAgent(@PathVariable("agentId") String agentId,
                                                           @RequestBody Map<String, Object> body) {
@@ -135,7 +135,7 @@ public class ApiAgentManageController {
     * @param body    更新请求
     * @return 更新后的子 智能体
     * @param @PathVariable("agentId" @路径变量("智能体标识"
-     */
+    */
     @PutMapping("/{agentId}/sub-agents/{subId}")
     public ApiResult<Map<String, Object>> updateSubAgent(@PathVariable("agentId") String agentId,
                                                           @PathVariable("subId") String subId,
@@ -150,7 +150,7 @@ public class ApiAgentManageController {
     * @param subId   子 智能体 标识
     * @return 成功
     * @param @PathVariable("agentId" @路径变量("智能体标识"
-     */
+    */
     @DeleteMapping("/{agentId}/sub-agents/{subId}")
     public ApiResult<Void> deleteSubAgent(@PathVariable("agentId") String agentId,
                                            @PathVariable("subId") String subId) {
@@ -165,7 +165,7 @@ public class ApiAgentManageController {
     * @param body    { 节点, edges }
     * @return 保存结果
     * @param @PathVariable("agentId" @路径变量("智能体标识"
-     */
+    */
     @PostMapping("/{agentId}/orchestration")
     public ApiResult<Map<String, Object>> saveOrchestration(@PathVariable("agentId") String agentId,
                                                              @RequestBody Map<String, Object> body) {
@@ -180,7 +180,7 @@ public class ApiAgentManageController {
     * @param @PathVariable("agentId" @路径变量("智能体标识"
     * @param @PathVariable("agentId" @路径变量("智能体id"
     * @param @PathVariable("agentId" @PathVariable("agentId"
-     */
+    */
     @GetMapping("/{agentId}/orchestration")
     public ApiResult<Map<String, Object>> getOrchestration(@PathVariable("agentId") String agentId) {
         return ApiResult.ok(agentService.getOrchestration(agentId));
@@ -192,7 +192,7 @@ public class ApiAgentManageController {
     * @param agentId 智能体 标识
     * @param body    { input }
     * @return 各子 Agent 输出与最终汇总
-     */
+    */
     @PostMapping("/{agentId}/orchestration/run")
     public ApiResult<Map<String, Object>> runOrchestration(@PathVariable("agentId") String agentId,
                                                            @RequestBody(required = false) Map<String, Object> body) {
@@ -207,7 +207,7 @@ public class ApiAgentManageController {
     * @param modelName 模型名（可选）
     * @return 注册结果
     * @param @PathVariable("agentId" @路径变量("智能体标识"
-     */
+    */
     @PostMapping("/{agentId}/register")
     public ApiResult<Map<String, Object>> registerAsModel(@PathVariable("agentId") String agentId,
                                                             @RequestParam(required = false) String model_name) {
@@ -222,7 +222,7 @@ public class ApiAgentManageController {
     * @param @PathVariable("agentId" @路径变量("智能体标识"
     * @param @PathVariable("agentId" @路径变量("智能体id"
     * @param @PathVariable("agentId" @PathVariable("agentId"
-     */
+    */
     @DeleteMapping("/{agentId}/register")
     public ApiResult<Void> unregisterModel(@PathVariable("agentId") String agentId) {
         agentService.unregisterModel(agentId);
@@ -237,7 +237,7 @@ public class ApiAgentManageController {
     * @param @PathVariable("agentId" @路径变量("智能体标识"
     * @param @PathVariable("agentId" @路径变量("智能体id"
     * @param @PathVariable("agentId" @PathVariable("agentId"
-     */
+    */
     @GetMapping("/{agentId}/registered-model")
     public ApiResult<Map<String, Object>> getRegisteredModel(@PathVariable("agentId") String agentId) {
         return ApiResult.ok(agentService.getRegisteredModelInfo(agentId));
@@ -247,7 +247,7 @@ public class ApiAgentManageController {
     * 获取所有已注册为模型的 智能体 列表（供模型管理页展示）。
     *
     * @return { 模型_名称, 智能体_名称, 智能体_标识 } 列表
-     */
+    */
     @GetMapping("/registered-models")
     public ApiResult<List<Map<String, Object>>> listRegisteredModels() {
         Set<String> names = agentService.getRegisteredAgentModelNames();
@@ -270,7 +270,7 @@ public class ApiAgentManageController {
     * @param @PathVariable("agentId" @路径变量("智能体标识"
     * @param @PathVariable("agentId" @路径变量("智能体id"
     * @param @PathVariable("agentId" @PathVariable("agentId"
-     */
+    */
     @PostMapping("/{agentId}/rebuild")
     public ApiResult<Void> rebuild(@PathVariable("agentId") String agentId) {
         agentService.rebuildAgentById(agentId);

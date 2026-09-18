@@ -82,14 +82,14 @@ public class AppRegisterReporter {
     * 获取Instance
     *
     * @return 获取instance的结果
-     */
+    */
     public static AppRegisterReporter getInstance() {
         return INSTANCE;
     }
 
     /**
     * 启动定时上报
-     */
+    */
     public synchronized void start() {
         if (running) {
             return;
@@ -103,7 +103,7 @@ public class AppRegisterReporter {
         // 初始化网络信息
         /**
         * 初始化network信息。
-         */
+        */
         initNetworkInfo();
         this.startTime = System.currentTimeMillis();
 
@@ -122,7 +122,7 @@ public class AppRegisterReporter {
 
     /**
     * 停止上报
-     */
+    */
     public synchronized void stop() {
         if (!running) {
             return;
@@ -138,7 +138,7 @@ public class AppRegisterReporter {
 
     /**
     * 初始化网络信息
-     */
+    */
     private void initNetworkInfo() {
         try {
             InetAddress localHost = InetAddress.getLocalHost();
@@ -153,7 +153,7 @@ public class AppRegisterReporter {
 
     /**
     * 上报应用信息
-     */
+    */
     private void report() {
         try {
             Map<String, Object> info = collectAppInfo();
@@ -167,7 +167,7 @@ public class AppRegisterReporter {
     /**
     * 采集应用信息
     * @return collectapp信息的结果
-     */
+    */
     private Map<String, Object> collectAppInfo() {
         Map<String, Object> info = new HashMap<>();
 

@@ -29,14 +29,14 @@ public class AiServiceStatusController {
 
     /**
     * 服务状态服务
-     */
+    */
     private final AiServiceStatusService statusService;
 
     /**
     * 查询所有服务运行状态。
     *
     * @return 服务状态 DTO 列表
-     */
+    */
     @Operation(summary = "查询所有服务运行状态")
     @GetMapping("/status")
     public List<AiServiceStatusDTO> status() {
@@ -50,7 +50,7 @@ public class AiServiceStatusController {
     * @param "服务名称" "服务名称"
     * @param "服务名称" "服务名称"
     * @param "服务名称" "服务名称"
-     */
+    */
     @Permission("admin")
     @Operation(summary = "启动服务")
     @PostMapping("/{serviceName}/start")
@@ -65,7 +65,7 @@ public class AiServiceStatusController {
     * @param "服务名称" "服务名称"
     * @param "服务名称" "服务名称"
     * @param "服务名称" "服务名称"
-     */
+    */
     @Permission("admin")
     @Operation(summary = "停止服务")
     @PostMapping("/{serviceName}/stop")

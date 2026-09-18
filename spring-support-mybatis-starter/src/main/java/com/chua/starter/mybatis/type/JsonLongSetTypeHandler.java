@@ -25,12 +25,12 @@ public class JsonLongSetTypeHandler extends AbstractJsonTypeHandler<Object> {
     /**
     * 创建 jsonlong设置类型处理器 实例
     * @param type 类型
-     */
+    */
     public JsonLongSetTypeHandler(Class<?> type) {
         /**
         * 父。
         * @param type 类型
-         */
+        */
         super(type);
     }
 
@@ -39,13 +39,13 @@ public class JsonLongSetTypeHandler extends AbstractJsonTypeHandler<Object> {
     * @param type 类型
     * @param field 字段
     * @param field 字段
-     */
+    */
     public JsonLongSetTypeHandler(Class<?> type, Field field) {
         /**
         * 父。
         * @param type 类型
         * @param field 字段
-         */
+        */
         super(type, field);
     }
 

@@ -30,7 +30,7 @@ public class SqliteEngineEndpointAutoConfiguration {
     * 注册 sqlite 引擎 Actuator 端点。
     * @param engine engine
     * @return sqliteengine端点的结果
-     */
+    */
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnClass(name = "org.springframework.boot.actuate.endpoint.annotation.Endpoint")
@@ -39,7 +39,7 @@ public class SqliteEngineEndpointAutoConfiguration {
         * sqliteengine端点。
         * @param engine engine
         * @return sqliteengine端点的结果
-         */
+        */
         return new SqliteEngineEndpoint(engine);
     }
 }

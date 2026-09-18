@@ -16,7 +16,7 @@ public interface VersionArgumentResolver {
     * 获取当前版本
     *
     * @return 版本字符串
-     */
+    */
     String version();
 }
 

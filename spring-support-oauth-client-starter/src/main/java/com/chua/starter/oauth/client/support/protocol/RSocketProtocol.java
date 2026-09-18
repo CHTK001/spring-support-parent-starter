@@ -50,18 +50,18 @@ public class RSocketProtocol extends AbstractProtocol {
     * 构造函数
     *
     * @param authClientProperties 认证客户端配置
-     */
+    */
     public RSocketProtocol(AuthClientProperties authClientProperties) {
         /**
         * 父。
         * @param authClientProperties 认证客户端属性
-         */
+        */
         super(authClientProperties);
     }
 
     /**
     * 初始化 r套接字 连接
-     */
+    */
     private void initializeRSocket() {
         if (rSocket == null || rSocket.isDisposed()) {
             synchronized (this) {
@@ -72,7 +72,7 @@ public class RSocketProtocol extends AbstractProtocol {
                         * illegal状态异常。
                         * @param 服务器地址不存在" 服务器地址不存在"
                         * @return illegal状态异常的结果
-                         */
+                        */
                         throw new IllegalStateException("OAuth 服务器地址不存在");
                     }
 
@@ -134,7 +134,7 @@ public class RSocketProtocol extends AbstractProtocol {
     * @param token 令牌
     * @param upgradeType upgrade类型
     * @param refreshToken refresh令牌
-     */
+    */
     protected AuthenticationInformation upgradeInformation(Cookie cookie, String token, UpgradeType upgradeType,
             String refreshToken) {
         JsonObject jsonObject = new JsonObject();
@@ -154,7 +154,7 @@ public class RSocketProtocol extends AbstractProtocol {
                     /**
                     * clear认证信息。
                     * @param cacheKey 缓存钥匙
-                     */
+                    */
                     clearAuthenticationInformation(cacheKey);
                 }
             } else if (upgradeType == UpgradeType.REFRESH) {
@@ -163,13 +163,13 @@ public class RSocketProtocol extends AbstractProtocol {
                     /**
                     * clear认证信息。
                     * @param cacheKey 缓存钥匙
-                     */
+                    */
                     clearAuthenticationInformation(cacheKey);
                 }
                 /**
                 * invalidate缓存。
                 * @param token 令牌
-                 */
+                */
                 invalidateCache(token);
             }
         }
@@ -183,7 +183,7 @@ public class RSocketProtocol extends AbstractProtocol {
     * @param password 密码
     * @param authType 认证类型
     * @param ext ext
-     */
+    */
     public LoginAuthResult getAccessToken(String username, String password, AuthType authType,
             Map<String, Object> ext) {
         JsonObject jsonObject = new JsonObject();
@@ -225,10 +225,10 @@ public class RSocketProtocol extends AbstractProtocol {
             return LoginAuthResult.OK;
         }
         /**
-        * 认证异常。
-        * @param information.getInformation( 信息.获取信息(
-        * @return 认证异常的结果
-         */
+    * 认证异常。
+    * @param information.getInformation( 信息.获取信息(
+    * @return 认证异常的结果
+    */
         throw new AuthException(information.getInformation().getMessage());
     }
 
@@ -262,11 +262,11 @@ public class RSocketProtocol extends AbstractProtocol {
     * @param jsonObject  请求数据
     * @param upgradeType 升级类型
     * @return 认证信息
-     */
+    */
     protected AuthenticationInformation sendRSocketRequest(String route, JsonObject jsonObject, UpgradeType upgradeType) {
         /**
         * 初始化r套接字。
-         */
+        */
         initializeRSocket();
 
         try {
@@ -347,7 +347,7 @@ public class RSocketProtocol extends AbstractProtocol {
     * 提取主机名
     * @param url url
     * @return extract主机的结果
-     */
+    */
     private String extractHost(String url) {
         if (url.startsWith("rsocket://")) {
             url = url.substring(10);
@@ -375,7 +375,7 @@ public class RSocketProtocol extends AbstractProtocol {
     * @param url url
     * @param defaultPort 默认端口
     * @return extract端口的结果
-     */
+    */
     private int extractPort(String url, int defaultPort) {
         if (url.startsWith("rsocket://")) {
             url = url.substring(10);
@@ -401,7 +401,7 @@ public class RSocketProtocol extends AbstractProtocol {
 
     /**
     * 关闭 r套接字 连接
-     */
+    */
     public void shutdown() {
         if (rSocket != null && !rSocket.isDisposed()) {
             rSocket.dispose();

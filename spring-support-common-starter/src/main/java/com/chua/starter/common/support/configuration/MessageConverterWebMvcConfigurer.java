@@ -59,7 +59,7 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
     * 构造函数
     *
     * @param messageConverterProperties 消息转换器属性
-     */
+    */
     public MessageConverterWebMvcConfigurer(MessageConverterProperties messageConverterProperties) {
         this.messageConverterProperties = messageConverterProperties;
     }
@@ -113,7 +113,7 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
     * mdc处理器过滤
     *
     * @return mdc处理器过滤器的结果
-     */
+    */
     public FilterRegistrationBean<MdcHandlerFilter> mdcHandlerFilter() {
         FilterRegistrationBean<MdcHandlerFilter> filterRegistrationBean = new FilterRegistrationBean<>();
         filterRegistrationBean.setFilter(new MdcHandlerFilter());
@@ -126,7 +126,7 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
     * 消息转换器的 服务信息 贡献者。
     *
     * @return ServiceInfoContributor
-     */
+    */
     @Bean
     public ServiceInfoContributor messageConverterServiceInfoContributor() {
         return registry -> registry.registerFlag("message-converter", "消息转换",
@@ -308,7 +308,7 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
     * 使用 对象提供者 延迟获取，避免在初始化阶段获取导致循环依赖
     *
     * @return ApiResponseEncodeRegister 实例，如果不存在则返回 空
-     */
+    */
     private ApiResponseEncodeRegister getApiResponseEncodeRegister() {
         if (applicationContext == null) {
             return null;

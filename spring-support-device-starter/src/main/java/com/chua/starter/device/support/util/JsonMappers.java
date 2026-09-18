@@ -21,7 +21,7 @@ public final class JsonMappers {
 
     /**
     * 通用日期格式
-     */
+    */
     private static final DateTimeFormatter DTF = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     /** 创建 json映射器 实例 */
@@ -33,7 +33,7 @@ public final class JsonMappers {
     *
     * @param data JSON 节点
     * @return 预置位列表
-     */
+    */
     public static List<PresetInfo> parsePresets(JsonNode data) {
         if (data == null || data.isNull()) {
             return Collections.emptyList();
@@ -57,7 +57,7 @@ public final class JsonMappers {
     *
     * @param data JSON 节点
     * @return 录像列表
-     */
+    */
     public static List<RecordFile> parseRecordFiles(JsonNode data) {
         if (data == null || data.isNull()) {
             return Collections.emptyList();
@@ -84,7 +84,7 @@ public final class JsonMappers {
     *
     * @param data JSON 节点
     * @return 出入记录
-     */
+    */
     public static List<AccessRecord> parseAccessRecords(JsonNode data) {
         if (data == null || data.isNull()) {
             return Collections.emptyList();
@@ -111,7 +111,7 @@ public final class JsonMappers {
     *
     * @param s s
     * @return 解析日期的结果
-     */
+    */
     private static LocalDateTime parseDate(String s) {
         if (s == null || s.isEmpty()) {
             return null;

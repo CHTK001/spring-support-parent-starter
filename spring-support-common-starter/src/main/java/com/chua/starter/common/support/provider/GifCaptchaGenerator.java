@@ -17,7 +17,7 @@ public class GifCaptchaGenerator implements CaptchaGenerator {
     * SPI 扩展名。
     *
     * @return "gif"
-     */
+    */
     @Override
     public String name() {
         return "gif";
@@ -30,7 +30,7 @@ public class GifCaptchaGenerator implements CaptchaGenerator {
     * @param height 图片高度
     * @param length 验证码长度
     * @return 闪图验证码实例
-     */
+    */
     @Override
     public Captcha create(int width, int height, int length) {
         GifCaptcha captcha = new GifCaptcha(width, height);

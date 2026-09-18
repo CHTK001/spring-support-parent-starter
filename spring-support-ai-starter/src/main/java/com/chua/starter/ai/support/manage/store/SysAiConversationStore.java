@@ -37,22 +37,22 @@ public class SysAiConversationStore {
 
     /**
     * 会话表 映射器：提供会话增删改查
-     */
+    */
     private final SysAiConversationMapper conversationMapper;
 
     /**
     * 消息表 映射器：提供消息增删改查
-     */
+    */
     private final SysAiConversationMessageMapper messageMapper;
 
     /**
     * 分页单页最大条数，防止前端传入超大 page_大小 拖垮查询
-     */
+    */
     private static final int MAX_PAGE_SIZE = 200;
 
     /**
     * 列表返回最大条数，防止会话无限增长
-     */
+    */
     private static final int MAX_LIST_LIMIT = 500;
 
     /**
@@ -61,7 +61,7 @@ public class SysAiConversationStore {
     * @param conversationMapper 会话 映射器
     * @param messageMapper      消息 映射器
     * @param dataSource         数据源（用于启动时检查并补列）
-     */
+    */
     public SysAiConversationStore(SysAiConversationMapper conversationMapper,
                                    SysAiConversationMessageMapper messageMapper,
                                    DataSource dataSource) {
@@ -74,7 +74,7 @@ public class SysAiConversationStore {
     * 启动时检查 sys_AI_conversation 表是否缺少 extra 等列，自动 ALTER TABLE 补上。
     * 这样即使 MySQL 建表时遗漏了新列，重启后也能自动修复。
     * @param dataSource 数据源
-     */
+    */
     private void ensureColumns(DataSource dataSource) {
         String table = "sys_ai_conversation";
         String[][] neededColumns = {
@@ -110,7 +110,7 @@ public class SysAiConversationStore {
     * 生成 UUID 字符串（前端要求 UUID 格式主键，uuidv7 含时间前缀）。
     *
     * @return 36 位 uuidv7 字符串
-     */
+    */
     public String newId() {
         return generateUuidV7();
     }
@@ -126,7 +126,7 @@ public class SysAiConversationStore {
     * </ul>
     *
     * @return 36 位 uuidv7 字符串
-     */
+    */
     public static String generateUuidV7() {
         long millis = System.currentTimeMillis();
         byte[] bytes = new byte[16];
@@ -165,7 +165,7 @@ public class SysAiConversationStore {
     *
     * @param conversation 会话（须已填充主键与时间戳）
     * @return 创建的会话
-     */
+    */
     public SysAiConversation create(SysAiConversation conversation) {
         conversationMapper.insert(conversation);
         return conversation;
@@ -176,7 +176,7 @@ public class SysAiConversationStore {
     *
     * @param conversationId 会话 标识
     * @return 会话
-     */
+    */
     public SysAiConversation get(String conversationId) {
         SysAiConversation conversation = conversationMapper.selectById(conversationId);
         if (conversation == null) {
@@ -190,7 +190,7 @@ public class SysAiConversationStore {
     *
     * @param conversationId 会话 标识
     * @return 存在返回 true
-     */
+    */
     public boolean exists(String conversationId) {
         return conversationMapper.selectById(conversationId) != null;
     }
@@ -199,7 +199,7 @@ public class SysAiConversationStore {
     * 删除会话及其全部消息。
     *
     * @param conversationId 会话 标识
-     */
+    */
     public void delete(String conversationId) {
         conversationMapper.deleteById(conversationId);
         LambdaQueryWrapper<SysAiConversationMessage> wrapper = new LambdaQueryWrapper<SysAiConversationMessage>()
@@ -216,7 +216,7 @@ public class SysAiConversationStore {
     * @param conversationId 会话 标识
     * @param patch          部分更新内容（非 空 字段生效）
     * @return 更新后的会话
-     */
+    */
     public SysAiConversation patch(String conversationId, SysAiConversation patch) {
         SysAiConversation current = get(conversationId);
         if (patch.getName() != null) {
@@ -251,7 +251,7 @@ public class SysAiConversationStore {
     * @param page     页码，从 1 开始
     * @param pageSize 每页条数（默认 50，上限 500）
     * @return 分页结果（含 total/是否包含more）
-     */
+    */
     public com.baomidou.mybatisplus.extension.plugins.pagination.Page<SysAiConversation> page(int page, int pageSize) {
         long current = page <= 0 ? 1 : page;
         long size = pageSize <= 0 ? 50 : Math.min(pageSize, MAX_LIST_LIMIT);
@@ -268,7 +268,7 @@ public class SysAiConversationStore {
     * @param conversationId 会话 标识
     * @param message        消息（已填充主键与时间戳）
     * @return 追加后的消息
-     */
+    */
     public SysAiConversationMessage addMessage(String conversationId, SysAiConversationMessage message) {
         messageMapper.insert(message);
         return message;
@@ -281,7 +281,7 @@ public class SysAiConversationStore {
     * @param page          页号（从 1 开始）
     * @param pageSize      每页条数（默认 50，上限 200）
     * @return 分页结果（含 total）
-     */
+    */
     public com.baomidou.mybatisplus.extension.plugins.pagination.Page<SysAiConversationMessage> pageMessages(
             String conversationId, int page, int pageSize) {
         long current = page <= 0 ? 1 : page;
@@ -300,7 +300,7 @@ public class SysAiConversationStore {
     * @param conversationId 会话 标识
     * @param messageId      消息 标识
     * @return 消息
-     */
+    */
     public SysAiConversationMessage getMessage(String conversationId, String messageId) {
         LambdaQueryWrapper<SysAiConversationMessage> wrapper = new LambdaQueryWrapper<SysAiConversationMessage>()
                 .eq(SysAiConversationMessage::getConversationId, conversationId)
@@ -318,7 +318,7 @@ public class SysAiConversationStore {
     *
     * @param conversationId 会话 标识
     * @return 消息列表（升序）
-     */
+    */
     public List<SysAiConversationMessage> allMessages(String conversationId) {
         LambdaQueryWrapper<SysAiConversationMessage> wrapper = new LambdaQueryWrapper<SysAiConversationMessage>()
                 .eq(SysAiConversationMessage::getConversationId, conversationId)
@@ -330,7 +330,7 @@ public class SysAiConversationStore {
     * 清空指定会话的全部消息（保留会话行，不触碰记忆库）。
     *
     * @param conversationId 会话 标识
-     */
+    */
     public void clearMessages(String conversationId) {
         LambdaQueryWrapper<SysAiConversationMessage> wrapper = new LambdaQueryWrapper<SysAiConversationMessage>()
                 .eq(SysAiConversationMessage::getConversationId, conversationId);
@@ -342,7 +342,7 @@ public class SysAiConversationStore {
     *
     * @param conversationId 会话 标识
     * @param messageId      消息 标识
-     */
+    */
     public void removeMessage(String conversationId, String messageId) {
         LambdaQueryWrapper<SysAiConversationMessage> wrapper = new LambdaQueryWrapper<SysAiConversationMessage>()
                 .eq(SysAiConversationMessage::getConversationId, conversationId)
@@ -355,7 +355,7 @@ public class SysAiConversationStore {
     *
     * @param conversationId 会话 标识
     * @param messageId      锚点消息 标识
-     */
+    */
     public void truncateAfter(String conversationId, String messageId) {
         List<SysAiConversationMessage> all = allMessages(conversationId);
         if (all.isEmpty()) {

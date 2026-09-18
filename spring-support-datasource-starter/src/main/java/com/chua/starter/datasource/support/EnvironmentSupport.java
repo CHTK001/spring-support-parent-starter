@@ -19,7 +19,7 @@ import java.util.Map;
 public class EnvironmentSupport {
     /**
     * 环境变量
-     */
+    */
     public Environment environment;
 
     /** 路径matcher */
@@ -28,7 +28,7 @@ public class EnvironmentSupport {
     /**
     * 创建 环境支持 实例
     * @param environment 环境
-     */
+    */
     public EnvironmentSupport(Environment environment) {
         this.environment = environment;
     }
@@ -38,7 +38,7 @@ public class EnvironmentSupport {
     *
     * @param name 名称
     * @return 值
-     */
+    */
     public Map<String, Object> getProperties(String name) {
         if (null == name || null == environment) {
             return Collections.emptyMap();
@@ -56,7 +56,7 @@ public class EnvironmentSupport {
     *
     * @param name 名称
     * @return 配置项
-     */
+    */
     private Map<String, Object> getValueProperties(String name) {
         if (!(environment instanceof ConfigurableEnvironment)) {
             return Collections.emptyMap();
@@ -82,7 +82,7 @@ public class EnvironmentSupport {
     * @param source 配置
     * @param name   名稱
     * @return 配置
-     */
+    */
     private Map<String, Object> analysisPropertySource(Map source, String name) {
         Map<String, Object> result = new HashMap<>();
         source.forEach((key, value) -> {

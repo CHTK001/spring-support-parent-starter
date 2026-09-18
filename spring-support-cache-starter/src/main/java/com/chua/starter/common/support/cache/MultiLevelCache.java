@@ -34,7 +34,7 @@ public class MultiLevelCache implements Cache {
 
     /**
     * 空值占位符（用于防缓存穿透）
-     */
+    */
     static final Object NULL_VALUE_PLACEHOLDER = new Object() {
         @Override
         /** 转为字符串 */
@@ -49,8 +49,8 @@ public class MultiLevelCache implements Cache {
     private final List<Cache> caches;
 
     /**
-    * 缓存统计
-     */
+        * 缓存统计
+        */
     private final LongAdder hitCount = new LongAdder();
     /** Miss数量 */
     private final LongAdder missCount = new LongAdder();
@@ -59,7 +59,7 @@ public class MultiLevelCache implements Cache {
 
     /**
     * 是否缓存空值
-     */
+    */
     private final boolean cacheNullValues;
 
     /**
@@ -67,14 +67,14 @@ public class MultiLevelCache implements Cache {
     * @param name 名称
     * @param caches 列表
     * @param caches 缓存
-     */
+    */
     public MultiLevelCache(String name, List<Cache> caches) {
         /**
         * this。
         * @param name 名称
         * @param caches 缓存
         * @param false false
-         */
+        */
         this(name, caches, false);
     }
 
@@ -85,7 +85,7 @@ public class MultiLevelCache implements Cache {
     * @param caches 缓存
     * @param cacheNullValues 布尔值
     * @param cacheNullValues 缓存空价值观
-     */
+    */
     public MultiLevelCache(String name, List<Cache> caches, boolean cacheNullValues) {
         this.name = name;
         this.caches = Objects.requireNonNull(caches, "缓存层级不能为空");
@@ -120,7 +120,7 @@ public class MultiLevelCache implements Cache {
     * @param key 钥匙
     * @param typeIndexHint 类型索引hint
     * @return 获取内部的结果
-     */
+    */
     private ValueWrapper getInternal(Object key, Integer typeIndexHint) {
         for (int i = 0; i < caches.size(); i++) {
             Cache cache = caches.get(i);
@@ -152,7 +152,7 @@ public class MultiLevelCache implements Cache {
             * @param key 钥匙
             * @param value 价值观
             * @param 1 1
-             */
+            */
             backfill(key, value, i - 1);
             return wrapper;
         }
@@ -168,7 +168,7 @@ public class MultiLevelCache implements Cache {
     * @param key 钥匙
     * @param type 类型
     * @return 获取内部类型的结果
-     */
+    */
     private <T> T getInternalTyped(Object key, Class<T> type) {
         if (key == null || type == null) {
             missCount.increment();
@@ -196,7 +196,7 @@ public class MultiLevelCache implements Cache {
             * @param key 钥匙
             * @param value 价值观
             * @param 1 1
-             */
+            */
             backfill(key, value, i - 1);
             return value;
         }
@@ -220,7 +220,7 @@ public class MultiLevelCache implements Cache {
     * @param key 钥匙
     * @param valueLoader 价值观加载
     * @return 获取的结果
-     */
+    */
     public <T> T get(Object key, Callable<T> valueLoader) {
         if (key == null) {
             missCount.increment();
@@ -245,7 +245,7 @@ public class MultiLevelCache implements Cache {
                     * @param key 钥匙
                     * @param value 价值观
                     * @param 1 1
-                     */
+                    */
                     backfill(key, value, i - 1);
                     log.debug("缓存命中: cache={}, level={}, key={}", name, i, key);
                     return value;
@@ -269,14 +269,14 @@ public class MultiLevelCache implements Cache {
             * 放入。
             * @param key 钥匙
             * @param value 价值观
-             */
+            */
             put(key, value);
         } else if (cacheNullValues) {
             // 防缓存穿透：写入空值占位符
             /**
             * 放入空。
             * @param key 钥匙
-             */
+            */
             putNull(key);
         }
         return value;
@@ -287,7 +287,7 @@ public class MultiLevelCache implements Cache {
     * @param key 钥匙
     * @param value 价值观
     * @param toIndex 转为索引
-     */
+    */
     private void backfill(Object key, Object value, int toIndex) {
         if (value == null || toIndex < 0) {
             return;
@@ -329,7 +329,7 @@ public class MultiLevelCache implements Cache {
     * 写入空值占位符（防缓存穿透）。
     *
     * @param key 缓存键
-     */
+    */
     public void putNull(Object key) {
         if (key == null) {
             return;
@@ -375,7 +375,7 @@ public class MultiLevelCache implements Cache {
     *
     * @param pattern 模式字符串（不区分大小写 contains 匹配）
     * @return 受影响的缓存层级数量
-     */
+    */
     public int evictByPattern(String pattern) {
         if (pattern == null || pattern.isEmpty()) {
             return 0;
@@ -403,7 +403,7 @@ public class MultiLevelCache implements Cache {
     * 获取命中次数
     *
     * @return 命中次数
-     */
+    */
     public long getHitCount() {
         return hitCount.sum();
     }
@@ -412,7 +412,7 @@ public class MultiLevelCache implements Cache {
     * 获取未命中次数
     *
     * @return 未命中次数
-     */
+    */
     public long getMissCount() {
         return missCount.sum();
     }
@@ -421,7 +421,7 @@ public class MultiLevelCache implements Cache {
     * 获取命中率
     *
     * @return 命中率（0-1）
-     */
+    */
     public double getHitRate() {
         long hits = hitCount.sum();
         long total = hits + missCount.sum();
@@ -432,14 +432,14 @@ public class MultiLevelCache implements Cache {
     * 获取回填次数
     *
     * @return 回填次数
-     */
+    */
     public long getBackfillCount() {
         return backfillCount.sum();
     }
 
     /**
     * 重置统计
-     */
+    */
     public void resetStats() {
         hitCount.reset();
         missCount.reset();
@@ -450,7 +450,7 @@ public class MultiLevelCache implements Cache {
     * 获取缓存层级数
     *
     * @return 缓存层级数
-     */
+    */
     public int getLevelCount() {
         return caches.size();
     }
@@ -459,7 +459,7 @@ public class MultiLevelCache implements Cache {
     * 获取只读快照。
     *
     * @return 缓存层级快照
-     */
+    */
     public List<Cache> getCaches() {
         return List.copyOf(caches);
     }
@@ -468,11 +468,11 @@ public class MultiLevelCache implements Cache {
     * 空值包装器
     * @author CH
     * @since 4.0.0
-     */
+    */
     private enum NullValueWrapper implements ValueWrapper {
         /**
         * 单例空值包装器
-         */
+        */
         INSTANCE;
 
         @Override
@@ -483,17 +483,17 @@ public class MultiLevelCache implements Cache {
     }
 
     /**
-    * 支持按模式清除的缓存接口
-    * @author CH
-    * @since 4.0.0
-     */
+        * 支持按模式清除的缓存接口
+        * @author CH
+        * @since 4.0.0
+        */
     public interface PatternEvictable {
 
         /**
         * 按模式清除缓存
         *
         * @param pattern 模式字符串（小写）
-         */
+        */
         void evictByPattern(String pattern);
     }
 }

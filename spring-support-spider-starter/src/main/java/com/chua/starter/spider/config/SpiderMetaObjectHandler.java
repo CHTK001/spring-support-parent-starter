@@ -21,7 +21,7 @@ public class SpiderMetaObjectHandler implements MetaObjectHandler {
     * 插入时填充创建时间、更新时间。
     *
     * @param metaObject MyBatis 元对象
-     */
+    */
     @Override
     public void insertFill(MetaObject metaObject) {
         LocalDateTime now = LocalDateTime.now();
@@ -33,7 +33,7 @@ public class SpiderMetaObjectHandler implements MetaObjectHandler {
     * 更新时填充更新时间。
     *
     * @param metaObject MyBatis 元对象
-     */
+    */
     @Override
     public void updateFill(MetaObject metaObject) {
         this.strictUpdateFill(metaObject, "updateTime", LocalDateTime.class, LocalDateTime.now());

@@ -43,7 +43,7 @@ public interface PasswordDecryptor {
     * @param encryptedValue 加密后的字符串（不包含 ENC() 包裹）
     * @return 解密后的明文
     * @throws IllegalArgumentException 解密失败时抛出
-     */
+    */
     String decrypt(String encryptedValue);
 
     /**
@@ -51,7 +51,7 @@ public interface PasswordDecryptor {
     *
     * @param algorithm 算法标识，默认从 {@code ENC(algorithm:value)} 中提取
     * @return 是否支持
-     */
+    */
     default boolean supports(String algorithm) {
         return true;
     }
@@ -60,7 +60,7 @@ public interface PasswordDecryptor {
     * 获取解密器的优先级（数值越小优先级越高）
     *
     * @return 优先级
-     */
+    */
     default int getOrder() {
         return 0;
     }

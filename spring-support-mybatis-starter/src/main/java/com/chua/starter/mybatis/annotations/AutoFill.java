@@ -21,7 +21,7 @@ public @interface AutoFill {
     *
     * @return true-启用，false-禁用
     * @example @autofill(价值观 = true)
-     */
+    */
     boolean value() default true;
 
     /**
@@ -29,7 +29,7 @@ public @interface AutoFill {
     *
     * @return true-启用，false-禁用
     * @example @autofill(更新 = false) // 更新时不进行自动填充
-     */
+    */
     boolean update() default true;
 
     /**
@@ -37,6 +37,6 @@ public @interface AutoFill {
     *
     * @return true-启用，false-禁用
     * @example @autofill(插入 = false) // 插入时不进行自动填充
-     */
+    */
     boolean insert() default true;
 }

@@ -34,7 +34,7 @@ public class FileJobLogSink implements JobLogSink {
     * 构造文件日志落库。
     *
     * @param basePath 日志根目录
-     */
+    */
     public FileJobLogSink(String basePath) {
         this.basePath = Paths.get(basePath).toAbsolutePath().normalize();
         try {
@@ -73,7 +73,7 @@ public class FileJobLogSink implements JobLogSink {
     *
     * @param event 事件
     * @return 相对路径字符串
-     */
+    */
     public String resolveRelativePath(JobLogEvent event) {
         String dateDir = DATE_FMT.format(Instant.now());
         String jobName = sanitize(event.jobName() != null ? event.jobName() : "unknown");
@@ -85,7 +85,7 @@ public class FileJobLogSink implements JobLogSink {
     *
     * @param event 事件
     * @return 格式化日志的结果
-     */
+    */
     private String formatLog(JobLogEvent event) {
         StringBuilder sb = new StringBuilder(512);
         sb.append("=== JOB EXECUTION LOG ===\n");
@@ -112,7 +112,7 @@ public class FileJobLogSink implements JobLogSink {
     *
     * @param name 名称
     * @return sanitize的结果
-     */
+    */
     private static String sanitize(String name) {
         return name.replaceAll("[/\\\\:*?\"<>|]", "_");
     }

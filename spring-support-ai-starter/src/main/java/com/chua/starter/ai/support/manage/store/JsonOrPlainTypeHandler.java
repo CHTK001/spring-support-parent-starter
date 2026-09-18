@@ -28,7 +28,7 @@ public class JsonOrPlainTypeHandler extends BaseTypeHandler<Object> {
 
     /**
     * Jackson 对象映射器：负责结构化对象与 JSON 字符串的互转
-     */
+    */
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     /**
@@ -39,7 +39,7 @@ public class JsonOrPlainTypeHandler extends BaseTypeHandler<Object> {
     * @param parameter 待写入的值
     * @param jdbcType  JDBC 类型
     * @throws SQLException 参数绑定失败时抛出
-     */
+    */
     @Override
     public void setNonNullParameter(PreparedStatement ps, int i, Object parameter, JdbcType jdbcType) throws SQLException {
         if (parameter instanceof String text) {
@@ -54,7 +54,7 @@ public class JsonOrPlainTypeHandler extends BaseTypeHandler<Object> {
             * SQL异常。
             * @param e.getMessage( e.获取消息(
             * @return sql异常的结果
-             */
+            */
             throw new SQLException("无法序列化字段为 JSON: " + e.getMessage(), e);
         }
     }
@@ -66,7 +66,7 @@ public class JsonOrPlainTypeHandler extends BaseTypeHandler<Object> {
     * @param columnName 列名
     * @return 反序列化后的对象或原字符串
     * @throws SQLException 读取失败时抛出
-     */
+    */
     @Override
     public Object getNullableResult(ResultSet rs, String columnName) throws SQLException {
         String value = rs.getString(columnName);
@@ -80,7 +80,7 @@ public class JsonOrPlainTypeHandler extends BaseTypeHandler<Object> {
     * @param columnIndex 列下标
     * @return 反序列化后的对象或原字符串
     * @throws SQLException 读取失败时抛出
-     */
+    */
     @Override
     public Object getNullableResult(ResultSet rs, int columnIndex) throws SQLException {
         String value = rs.getString(columnIndex);
@@ -94,7 +94,7 @@ public class JsonOrPlainTypeHandler extends BaseTypeHandler<Object> {
     * @param columnIndex 列下标
     * @return 反序列化后的对象或原字符串
     * @throws SQLException 读取失败时抛出
-     */
+    */
     @Override
     public Object getNullableResult(CallableStatement cs, int columnIndex) throws SQLException {
         String value = cs.getString(columnIndex);
@@ -106,7 +106,7 @@ public class JsonOrPlainTypeHandler extends BaseTypeHandler<Object> {
     *
     * @param value 数据库列字符串
     * @return 结构化对象（JSON）或原字符串
-     */
+    */
     private Object parse(String value) {
         if (value == null || value.isEmpty()) {
             return value;

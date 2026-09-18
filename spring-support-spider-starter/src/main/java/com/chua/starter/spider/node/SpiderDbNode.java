@@ -41,12 +41,12 @@ public class SpiderDbNode implements FlowNode {
 
     /**
     * 查询类 SQL 关键字前缀
-     */
+    */
     private static final String SQL_SELECT = "select";
 
     /**
     * 数据源
-     */
+    */
     @Resource
     /** 数据来源 */
     private DataSource dataSource;
@@ -55,7 +55,7 @@ public class SpiderDbNode implements FlowNode {
     * 节点类型标识。
     *
     * @return 节点类型
-     */
+    */
     @Override
     public String type() {
         return "spider.db";
@@ -65,7 +65,7 @@ public class SpiderDbNode implements FlowNode {
     * 节点配置表单元信息。
     *
     * @return 表单元信息列表
-     */
+    */
     @Override
     public List<FlowNodeField> configSchema() {
         List<FlowNodeField> schema = new ArrayList<>();
@@ -79,7 +79,7 @@ public class SpiderDbNode implements FlowNode {
     * 执行数据库节点。
     *
     * @param context 当前流程上下文
-     */
+    */
     @Override
     public void execute(FlowContext context) {
         FlowProps props = context.currentNodeProps();
@@ -90,7 +90,7 @@ public class SpiderDbNode implements FlowNode {
             * illegal参数异常。
             * @param 参数" 参数"
             * @return illegal参数异常的结果
-             */
+            */
             throw new IllegalArgumentException("spider.db 节点缺少 sql 参数");
         }
         if (saveAs == null || saveAs.isEmpty()) {
@@ -98,7 +98,7 @@ public class SpiderDbNode implements FlowNode {
             * illegal参数异常。
             * @param 参数" 参数"
             * @return illegal参数异常的结果
-             */
+            */
             throw new IllegalArgumentException("spider.db 节点缺少 saveAs 参数");
         }
         List<Object> params = resolveParams(props.getString("params"), context);
@@ -109,7 +109,7 @@ public class SpiderDbNode implements FlowNode {
                 * @param sql SQL
                 * @param params 参数
                 * @return 查询for列表的结果
-                 */
+                */
                 ? queryForList(sql, params) : executeUpdate(sql, params);
         context.setAttribute(saveAs, result);
         log.info("spider.db 执行完成: saveAs={} rows={}", saveAs,
@@ -124,7 +124,7 @@ public class SpiderDbNode implements FlowNode {
     * @param paramsText 属性名列表文本
     * @param context    当前流程上下文
     * @return 参数值列表
-     */
+    */
     private List<Object> resolveParams(String paramsText, FlowContext context) {
         List<Object> result = new ArrayList<>();
         if (paramsText == null || paramsText.trim().isEmpty()) {
@@ -147,24 +147,24 @@ public class SpiderDbNode implements FlowNode {
     * @param sql    SQL 文本
     * @param params 占位参数值
     * @return 结果行列表（每行为列名到值的映射）
-     */
+    */
     private List<Map<String, Object>> queryForList(String sql, List<Object> params) {
         /**
         * 尝试。
         * @param dataSource.getConnection( 数据源.getconnection(
-         */
+        */
         try (Connection connection = dataSource.getConnection();
              PreparedStatement statement = connection.prepareStatement(sql)) {
             /**
             * bind参数。
             * @param statement 对账单
             * @param params 参数
-             */
+            */
             bindParams(statement, params);
             /**
             * 尝试。
             * @param statement.executeQuery( 对账单.执行查询(
-             */
+            */
             try (ResultSet resultSet = statement.executeQuery()) {
                 return toRows(resultSet);
             }
@@ -173,7 +173,7 @@ public class SpiderDbNode implements FlowNode {
             * illegal状态异常。
             * @param e.getMessage( e.获取消息(
             * @return illegal状态异常的结果
-             */
+            */
             throw new IllegalStateException("spider.db 查询失败: " + e.getMessage(), e);
         }
     }
@@ -184,19 +184,19 @@ public class SpiderDbNode implements FlowNode {
     * @param sql    SQL 文本
     * @param params 占位参数值
     * @return 受影响行数
-     */
+    */
     private int executeUpdate(String sql, List<Object> params) {
         /**
         * 尝试。
         * @param dataSource.getConnection( 数据源.getconnection(
-         */
+        */
         try (Connection connection = dataSource.getConnection();
              PreparedStatement statement = connection.prepareStatement(sql)) {
             /**
             * bind参数。
             * @param statement 对账单
             * @param params 参数
-             */
+            */
             bindParams(statement, params);
             return statement.executeUpdate();
         } catch (Exception e) {
@@ -204,7 +204,7 @@ public class SpiderDbNode implements FlowNode {
             * illegal状态异常。
             * @param e.getMessage( e.获取消息(
             * @return illegal状态异常的结果
-             */
+            */
             throw new IllegalStateException("spider.db 更新失败: " + e.getMessage(), e);
         }
     }
@@ -215,7 +215,7 @@ public class SpiderDbNode implements FlowNode {
     * @param statement 预编译语句
     * @param params    参数值列表
     * @throws Exception 绑定异常
-     */
+    */
     private void bindParams(PreparedStatement statement, List<Object> params) throws Exception {
         for (int i = 0; i < params.size(); i++) {
             statement.setObject(i + 1, params.get(i));
@@ -228,7 +228,7 @@ public class SpiderDbNode implements FlowNode {
     * @param resultSet 结果集
     * @return 行列表
     * @throws Exception 解析异常
-     */
+    */
     private List<Map<String, Object>> toRows(ResultSet resultSet) throws Exception {
         ResultSetMetaData metaData = resultSet.getMetaData();
         int columnCount = metaData.getColumnCount();

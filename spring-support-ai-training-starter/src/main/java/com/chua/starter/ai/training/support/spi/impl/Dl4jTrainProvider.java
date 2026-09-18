@@ -33,7 +33,7 @@ public class Dl4jTrainProvider implements TrainProvider {
         /**
         * Rnet50调动trainer。
         * @return Rnet50调动trainer的结果
-         */
+        */
         return new ResNet50TransferTrainer().train(
                 argument,
                 ctx.modelPath(),

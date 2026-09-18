@@ -25,7 +25,7 @@ public interface MessageConverter {
     *
     * @param message 原始消息
     * @return 转换后的消息
-     */
+    */
     Message convertBeforeSend(Message message);
 
     /**
@@ -36,7 +36,7 @@ public interface MessageConverter {
     *
     * @param message 接收到的消息
     * @return 转换后的消息
-     */
+    */
     Message convertAfterReceive(Message message);
 
     /**
@@ -44,7 +44,7 @@ public interface MessageConverter {
     *
     * @param message 消息
     * @return 是否支持
-     */
+    */
     default boolean supports(Message message) {
         return true;
     }
@@ -56,7 +56,7 @@ public interface MessageConverter {
     * </p>
     *
     * @return 优先级
-     */
+    */
     default int getOrder() {
         return 0;
     }

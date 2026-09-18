@@ -25,7 +25,7 @@ public class OrderStateMachineConfig extends EnumStateMachineConfigurerAdapter<O
 
     /**
     * 配置状态
-     */
+    */
     @Override
     public void configure(StateMachineStateConfigurer<OrderState, OrderEvent> states) throws Exception {
         states
@@ -38,7 +38,7 @@ public class OrderStateMachineConfig extends EnumStateMachineConfigurerAdapter<O
 
     /**
     * 配置状态转换
-     */
+    */
     @Override
     public void configure(StateMachineTransitionConfigurer<OrderState, OrderEvent> transitions) throws Exception {
         transitions

@@ -13,13 +13,13 @@ public interface MaterializedSqlRouter {
     *
     * @param request SQL 请求
     * @return 路由结果
-     */
+    */
     MaterializedSqlRoute route(MaterializedSqlRequest request);
 
     /**
     * 源库写成功后的副本同步。
     *
     * @param request SQL 请求
-     */
+    */
     void onWriteSuccess(MaterializedSqlRequest request);
 }

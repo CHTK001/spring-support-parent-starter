@@ -36,7 +36,7 @@ public class ServiceInfoContributorAutoConfiguration implements ApplicationListe
     /**
     * 创建 服务信息contributorauto配置 实例
     * @param applicationContext application上下文
-     */
+    */
     public ServiceInfoContributorAutoConfiguration(ApplicationContext applicationContext) {
         this.applicationContext = applicationContext;
     }
@@ -48,8 +48,8 @@ public class ServiceInfoContributorAutoConfiguration implements ApplicationListe
             return;
         }
         /**
-        * collect。
-         */
+    * collect。
+    */
         collect();
     }
 
@@ -57,7 +57,7 @@ public class ServiceInfoContributorAutoConfiguration implements ApplicationListe
     * 收集所有 {@link ServiceInfoContributor} 并注册到 {@link ServiceInfoRegistry}。
     *
     * <p>单个 contributor 抛异常不会影响其它 contributor 的注册。</p>
-     */
+    */
     void collect() {
         Map<String, ServiceInfoContributor> contributors;
         try {

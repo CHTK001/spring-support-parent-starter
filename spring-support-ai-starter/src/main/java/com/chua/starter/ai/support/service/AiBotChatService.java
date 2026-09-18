@@ -83,7 +83,7 @@ public class AiBotChatService {
     *
     * <p>使用 {@link ContextRefreshedEvent} 而非 {@code @PostConstruct}，
     * 确保 对话客户端registry 已初始化完成。</p>
-     */
+    */
     @EventListener(ContextRefreshedEvent.class)
     public void init() {
         log.info("[BotChat] 启动微信 Bot 聊天引擎，加载已绑定 Bot...");
@@ -104,7 +104,7 @@ public class AiBotChatService {
     * <p>若该 Bot 已在运行则先停止，避免重复轮询。</p>
     *
     * @param bot 机器人 绑定记录
-     */
+    */
     public void startBot(SysAiBotBinding bot) {
         if (bot == null || bot.getBotId() == null || bot.getBotToken() == null) {
             return;
@@ -142,7 +142,7 @@ public class AiBotChatService {
     *
     * @param botId 机器人 唯一标识
     * @return running=会话存活；stopped=未在运行（超时/停止），需重新扫码
-     */
+    */
     public String runtimeStatus(String botId) {
         ILinkBotClient client = runningBots.get(botId);
  // 只用对象存在判断不够：会话超时（-14）后 客户端 仍留在 映射 中，
@@ -161,7 +161,7 @@ public class AiBotChatService {
     * 停止指定 机器人 的消息轮询。
     *
     * @param botId 机器人 唯一标识
-     */
+    */
     public void stopBot(String botId) {
         ILinkBotClient client = runningBots.remove(botId);
         if (client != null) {
@@ -175,7 +175,7 @@ public class AiBotChatService {
     * @param bot 机器人
     * @param client 客户端
     * @param message 消息
-     */
+    */
     private void handleMessage(SysAiBotBinding bot, ILinkBotClient client, BotInboundMessage message) {
         String content = message.getContent();
         String fromUser = message.getFromUser();
@@ -216,7 +216,7 @@ public class AiBotChatService {
     * @param fromUser 目标微信用户 标识
     * @param content  消息内容
     * @return 发送结果
-     */
+    */
     public BotSendResult sendMessage(String botId, String fromUser, String content) {
         ILinkBotClient client = runningBots.get(botId);
         if (client == null) {
@@ -241,7 +241,7 @@ public class AiBotChatService {
     * @param botId    机器人 唯一标识
     * @param fromUser 目标微信用户 标识（可空，空则查询该 机器人 全部消息）
     * @return 聊天记录列表
-     */
+    */
     public List<SysAiBotMessage> listMessages(String botId, String fromUser) {
         return botMessageMapper.selectList(
                 Wrappers.<SysAiBotMessage>lambdaQuery()
@@ -261,7 +261,7 @@ public class AiBotChatService {
     * @param page     页码（从 0 开始，非法值按 0 处理）
     * @param pageSize 每页条数（非法值按 50 处理）
     * @return 分页结果：messages（升序）、hasMore、page、pageSize
-     */
+    */
     public Map<String, Object> listMessagesPaged(String botId, String fromUser, int page, int pageSize) {
         int safePage = Math.max(0, page);
         int safeSize = pageSize > 0 ? pageSize : 50;
@@ -295,7 +295,7 @@ public class AiBotChatService {
     * @param botId 机器人 唯一标识
     * @param text  待润色文本
     * @return 润色结果，模型未配置/调用失败时返回空字符串
-     */
+    */
     public String polishText(String botId, String text) {
         if (botId == null || botId.isBlank() || text == null || text.isBlank()) {
             return "";
@@ -325,7 +325,7 @@ public class AiBotChatService {
     * @param botId    机器人 唯一标识
     * @param fromUser 目标微信用户 标识（可空，空则总结该 机器人 全部消息）
     * @return 会话摘要，无消息/模型未配置/调用失败时返回空字符串
-     */
+    */
     public String summarizeConversation(String botId, String fromUser) {
         if (botId == null || botId.isBlank()) {
             return "";
@@ -361,7 +361,7 @@ public class AiBotChatService {
     *
     * @param botId 机器人 唯一标识
     * @return 绑定记录，未找到返回 空
-     */
+    */
     private SysAiBotBinding findBinding(String botId) {
         if (botId == null || botId.isBlank()) {
             return null;
@@ -377,7 +377,7 @@ public class AiBotChatService {
     *
     * @param bot 机器人 绑定记录（可为 空）
     * @return 模型名，无法解析时返回 空
-     */
+    */
     private String resolveModelName(SysAiBotBinding bot) {
         if (bot != null && bot.getModel() != null && !bot.getModel().isBlank()) {
             return bot.getModel();
@@ -393,7 +393,7 @@ public class AiBotChatService {
     *
     * @param modelName 模型名称
     * @return ChatClient，模型未配置/供应商不存在时返回 空
-     */
+    */
     private ChatClient buildModelChatClient(String modelName) {
         if (modelName == null || modelName.isBlank()) {
             return null;
@@ -432,9 +432,9 @@ public class AiBotChatService {
     * @return 命令列表（prefix / 名称 / description）
     * @param commands 命令
      /**
-     * 列表命令。
-     * @return 列表命令的结果
-     */
+    * 列表命令。
+    * @return 列表命令的结果
+    */
     public List<Map<String, Object>> listCommands() {
         List<Map<String, Object>> commands = new ArrayList<>(8); // 命令数量不可预估
         addCommand(commands, "/", "reset", "清空当前会话上下文");
@@ -458,7 +458,7 @@ public class AiBotChatService {
     *
     * @param botId 机器人 唯一标识
     * @return 联系人列表
-     */
+    */
     public List<String> listContacts(String botId) {
         List<SysAiBotMessage> messages = botMessageMapper.selectList(
                 Wrappers.<SysAiBotMessage>lambdaQuery()
@@ -478,7 +478,7 @@ public class AiBotChatService {
     * <p>供 IM 页左侧会话列表使用；昵称与状态取自绑定记录（按 botId 匹配）。</p>
     *
     * @return 会话列表（按最后消息时间降序）
-     */
+    */
     public List<BotConversation> listConversations() {
         List<SysAiBotMessage> all = botMessageMapper.selectList(
                 Wrappers.<SysAiBotMessage>lambdaQuery()
@@ -537,7 +537,7 @@ public class AiBotChatService {
     * @param oldBotId 原 机器人 唯一标识（允许为 空，为空时跳过）
     * @param newBotId 新 机器人 唯一标识（不能为空）
     * @return 迁移的消息条数
-     */
+    */
     public int migrateMessages(String oldBotId, String newBotId) {
         if (newBotId == null || newBotId.isBlank() || oldBotId == null || oldBotId.isBlank()
                 || oldBotId.equals(newBotId)) {
@@ -562,7 +562,7 @@ public class AiBotChatService {
     * @param botId    机器人 唯一标识
     * @param fromUser 微信用户 标识
     * @return 删除的消息条数
-     */
+    */
     public int deleteConversation(String botId, String fromUser) {
         int deleted = botMessageMapper.delete(
                 Wrappers.<SysAiBotMessage>lambdaQuery()
@@ -585,7 +585,7 @@ public class AiBotChatService {
     * @param direction 入（用户→机器人）/ 出（机器人→用户）
     * @param fromUser  微信用户 标识
     * @param content   消息内容
-     */
+    */
     private void recordMessage(String botId, String direction, String fromUser, String content) {
         try {
             SysAiBotMessage msg = new SysAiBotMessage();
@@ -618,7 +618,7 @@ public class AiBotChatService {
     * @param bot 机器人
     * @param userMsg 用户msg
     * @return AIreply的结果
-     */
+    */
     private String aiReply(SysAiBotBinding bot, String userMsg) {
  // 优先用 机器人 单独配置的模型，未配置则回退全局默认模型（机器人.默认_模型）
         String modelName = bot.getModel();
@@ -704,7 +704,7 @@ public class AiBotChatService {
     * 兼容 {@code apiKey} 键。</p>
     * @param credentials 凭证
     * @return extractapi键的结果
-     */
+    */
     private static String extractApiKey(Map<String, Object> credentials) {
         if (credentials == null) {
             return null;
@@ -723,7 +723,7 @@ public class AiBotChatService {
     * <p>extra 结构：{@code {"custom_headers": {"X-Key": "value", ...}}}</p>
     * @param extra extra
     * @return extractextra头部的结果
-     */
+    */
     @SuppressWarnings("unchecked")
     private static Map<String, String> extractExtraHeaders(Map<String, Object> extra) {
         if (extra == null) {

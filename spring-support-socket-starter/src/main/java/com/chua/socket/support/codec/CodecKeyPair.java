@@ -10,13 +10,13 @@ public interface CodecKeyPair {
     /**
     * 获取公钥（十六进制）
     * @return 获取公共钥匙hex的结果
-     */
+    */
     String getPublicKeyHex();
 
     /**
     * 获取私钥（十六进制）
     * @return 获取私募钥匙hex的结果
-     */
+    */
     String getPrivateKeyHex();
 
     /**
@@ -25,7 +25,7 @@ public interface CodecKeyPair {
     * @param data 待编码数据
     * @param key  密钥
     * @return 编码后的数据
-     */
+    */
     String encode(String data, String key);
 
     /**
@@ -34,6 +34,6 @@ public interface CodecKeyPair {
     * @param data 待解码数据
     * @param key  密钥
     * @return 解码后的数据
-     */
+    */
     String decode(String data, String key);
 }

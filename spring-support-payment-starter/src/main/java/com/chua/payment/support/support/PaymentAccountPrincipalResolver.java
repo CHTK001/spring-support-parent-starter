@@ -25,7 +25,7 @@ public class PaymentAccountPrincipalResolver {
     *
     * @param request 请求
     * @return resolve的结果
-     */
+    */
     public UserResume resolve(HttpServletRequest request) {
         if (request instanceof OAuthHttpServletRequestWrapper wrapper && wrapper.isAuthenticated()) {
             OAuthPrincipal principal = wrapper.getOAuthPrincipal();
@@ -43,7 +43,7 @@ public class PaymentAccountPrincipalResolver {
     *
     * @param request 请求
     * @return resolve用户id的结果
-     */
+    */
     public Long resolveUserId(HttpServletRequest request) {
         return parseUserId(resolve(request));
     }
@@ -53,7 +53,7 @@ public class PaymentAccountPrincipalResolver {
     *
     * @param userResume 用户resume
     * @return 解析用户id的结果
-     */
+    */
     public Long parseUserId(UserResume userResume) {
         if (userResume == null || !StringUtils.hasText(userResume.getUserId())) {
             return null;
@@ -70,7 +70,7 @@ public class PaymentAccountPrincipalResolver {
     *
     * @param userResume 用户resume
     * @return 是否admin的结果
-     */
+    */
     public boolean isAdmin(UserResume userResume) {
         if (userResume == null) {
             return false;

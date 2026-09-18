@@ -22,12 +22,12 @@ public class CryptoSerializer extends JsonSerializer<String> implements Contextu
 
     /**
     * 编解码器实例
-     */
+    */
     private final Codec codec;
 
     /**
     * 密钥
-     */
+    */
     private final String key;
 
     /** 密钥类型 */
@@ -35,7 +35,7 @@ public class CryptoSerializer extends JsonSerializer<String> implements Contextu
 
     /**
     * 无参构造函数
-     */
+    */
     public CryptoSerializer() {
         this.codec = null;
         this.key = null;
@@ -48,7 +48,7 @@ public class CryptoSerializer extends JsonSerializer<String> implements Contextu
     * @param codec    编解码器实例
     * @param key      密钥
     * @param keyType 密钥类型
-     */
+    */
     public CryptoSerializer(Codec codec, String key, Crypto.KeyType keyType) {
         this.codec = codec;
         this.key = key;
@@ -62,7 +62,7 @@ public class CryptoSerializer extends JsonSerializer<String> implements Contextu
     * @param origin origin
     * @param jsonGenerator json生成器
     * @param serializerProvider 序列化器提供者
-     */
+    */
     public void serialize(final String origin, final JsonGenerator jsonGenerator,
                           final SerializerProvider serializerProvider) throws IOException {
 
@@ -87,7 +87,7 @@ public class CryptoSerializer extends JsonSerializer<String> implements Contextu
                     /**
                     * 加密货币序列化器。
                     * @param key 钥匙
-                     */
+                    */
                     return new CryptoSerializer(Codec.build("sm4", key), key, crypto.keyType());
                 }
             }

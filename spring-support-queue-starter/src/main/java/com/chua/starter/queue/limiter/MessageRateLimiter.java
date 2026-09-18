@@ -21,7 +21,7 @@ public interface MessageRateLimiter {
     *
     * @param message 消息
     * @return 是否获取成功
-     */
+    */
     boolean tryAcquire(Message message);
 
     /**
@@ -31,14 +31,14 @@ public interface MessageRateLimiter {
     * </p>
     *
     * @param message 消息
-     */
+    */
     void acquire(Message message);
 
     /**
     * 释放许可
     *
     * @param message 消息
-     */
+    */
     default void release(Message message) {
         // 默认不需要释放
     }
@@ -47,11 +47,11 @@ public interface MessageRateLimiter {
     * 获取当前可用许可数
     *
     * @return 可用许可数
-     */
+    */
     int availablePermits();
 
     /**
     * 重置限流器
-     */
+    */
     void reset();
 }

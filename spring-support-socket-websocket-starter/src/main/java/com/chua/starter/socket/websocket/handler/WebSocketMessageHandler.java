@@ -17,7 +17,7 @@ public interface WebSocketMessageHandler {
     * 连接建立时调用
     *
     * @param session 会话
-     */
+    */
     default void onConnect(WebSocketSession session) {
     }
 
@@ -26,7 +26,7 @@ public interface WebSocketMessageHandler {
     *
     * @param session 会话
     * @param message 消息内容
-     */
+    */
     void onMessage(WebSocketSession session, String message);
 
     /**
@@ -35,7 +35,7 @@ public interface WebSocketMessageHandler {
     * @param session 会话
     * @param code    关闭码
     * @param reason  关闭原因
-     */
+    */
     default void onClose(WebSocketSession session, int code, String reason) {
     }
 
@@ -44,7 +44,7 @@ public interface WebSocketMessageHandler {
     *
     * @param session   会话
     * @param throwable 异常
-     */
+    */
     default void onError(WebSocketSession session, Throwable throwable) {
     }
 }

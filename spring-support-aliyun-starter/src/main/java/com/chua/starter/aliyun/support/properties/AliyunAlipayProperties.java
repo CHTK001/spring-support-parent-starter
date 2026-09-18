@@ -69,7 +69,7 @@ public class AliyunAlipayProperties {
     * 解析服务端url
     *
     * @return resolve服务端url的结果
-     */
+    */
     public String resolveServerUrl() {
         if (StringUtils.hasText(serverUrl)) {
             return serverUrl;

@@ -20,12 +20,12 @@ public class ModuleEnvironmentRegistration {
     * 使用配置对象类型作为分组标识，将配置注册到全局环境中。
     *
     * @param config 配置对象
-     */
+    */
     public ModuleEnvironmentRegistration(Object config) {
         /**
         * this。
         * @param config.getClass( 配置.获取类(
-         */
+        */
         this(config != null ? config.getClass().getName() : null, config, true);
     }
 
@@ -35,7 +35,7 @@ public class ModuleEnvironmentRegistration {
     * @param group   分组标识（例如配置前缀）
     * @param config  配置对象
     * @param enabled 是否启用
-     */
+    */
     public ModuleEnvironmentRegistration(String group, Object config, boolean enabled) {
         if (config == null || group == null || group.isEmpty()) {
             return;

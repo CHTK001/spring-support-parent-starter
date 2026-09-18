@@ -36,7 +36,7 @@ public class PaymentNotifyLogServiceImpl implements PaymentNotifyLogService {
     * @param channelId 通道标识
     * @param requestHeaders 请求头部
     * @param requestBody 请求主体
-     */
+    */
     public PaymentNotifyLog start(String notifyType,
                                   Long channelId,
                                   String requestHeaders,
@@ -72,7 +72,7 @@ public class PaymentNotifyLogServiceImpl implements PaymentNotifyLogService {
     * @param relatedOrderId related订单标识
     * @param relatedRefundId related退税标识
     * @param dto dto
-     */
+    */
     public void finish(FinishNotifyLogDTO dto) {
         if (dto.logId() == null) {
             return;

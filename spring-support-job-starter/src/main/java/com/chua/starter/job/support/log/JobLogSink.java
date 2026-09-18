@@ -15,6 +15,6 @@ public interface JobLogSink {
     * 写入单条日志。
     *
     * @param event 日志事件
-     */
+    */
     void write(JobLogEvent event);
 }

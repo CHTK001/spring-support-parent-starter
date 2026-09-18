@@ -52,10 +52,10 @@ public class AesPasswordDecryptor implements PasswordDecryptor {
             DEFAULT_SECRET_KEY = sha.digest("spring-support-datasource-default-key".getBytes(StandardCharsets.UTF_8));
         } catch (NoSuchAlgorithmException e) {
             /**
-            * 异常入initializer错误。
-            * @param available" 可用"
-            * @return 异常入initializer错误的结果
-             */
+    * 异常入initializer错误。
+    * @param available" 可用"
+    * @return 异常入initializer错误的结果
+    */
             throw new ExceptionInInitializerError("SHA-256 not available");
         }
     }
@@ -65,7 +65,7 @@ public class AesPasswordDecryptor implements PasswordDecryptor {
 
     /**
     * 使用默认密钥创建解密器
-     */
+    */
     public AesPasswordDecryptor() {
         this.secretKey = DEFAULT_SECRET_KEY;
     }
@@ -74,7 +74,7 @@ public class AesPasswordDecryptor implements PasswordDecryptor {
     * 使用指定密钥创建解密器
     *
     * @param secretKeyBytes 密钥字节数组（支持 16/24/32 字节）
-     */
+    */
     public AesPasswordDecryptor(byte[] secretKeyBytes) {
         this.secretKey = Arrays.copyOf(secretKeyBytes, 32);
     }
@@ -83,7 +83,7 @@ public class AesPasswordDecryptor implements PasswordDecryptor {
     * 从字符串密钥创建解密器
     *
     * @param secretKeyStr 密钥字符串（会通过 SHA-256 哈希到 32 字节）
-     */
+    */
     public AesPasswordDecryptor(String secretKeyStr) {
         try {
             MessageDigest sha = MessageDigest.getInstance("SHA-256");
@@ -94,7 +94,7 @@ public class AesPasswordDecryptor implements PasswordDecryptor {
             * @param available" 可用"
             * @param e e
             * @return illegal参数异常的结果
-             */
+            */
             throw new IllegalArgumentException("SHA-256 not available", e);
         }
     }
@@ -117,7 +117,7 @@ public class AesPasswordDecryptor implements PasswordDecryptor {
             * @param decrypted decrypted
             * @param StandardCharsets.UTF_8 标准字符集.utf8
             * @return 字符串的结果
-             */
+            */
             return new String(decrypted, StandardCharsets.UTF_8);
         } catch (Exception e) {
             log.error("AES 解密失败", e);
@@ -126,7 +126,7 @@ public class AesPasswordDecryptor implements PasswordDecryptor {
             * @param "密码解密失败，请检查密钥配置" "密码解密失败，请检查密钥配置"
             * @param e e
             * @return illegal参数异常的结果
-             */
+            */
             throw new IllegalArgumentException("密码解密失败，请检查密钥配置", e);
         }
     }

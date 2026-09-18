@@ -41,7 +41,7 @@ public class ConfigValueAutoConfiguration {
     * </p>
     *
     * @return 配置中心实例
-     */
+    */
     @Bean
     public ConfigCenter configCenter() {
         ConfigCenter configCenter = ConfigCenterHolder.getInstance();
@@ -63,7 +63,7 @@ public class ConfigValueAutoConfiguration {
     * @param configCenter 配置中心
     * @param properties   配置属性
     * @return Bean后置处理器
-     */
+    */
     @Bean
     public ConfigValueBeanPostProcessor configValueBeanPostProcessor(
             ConfigCenter configCenter, 
@@ -83,7 +83,7 @@ public class ConfigValueAutoConfiguration {
         * @param refreshDelayMs refresh延迟ms
         * @param properties.getHotReload( 属性.获取hotreload(
         * @return 配置价值观Beanpost处理器的结果
-         */
+        */
         return new ConfigValueBeanPostProcessor(configCenter, hotReloadEnabled, refreshDelayMs, properties.getHotReload().isLogOnChange());
     }
 
@@ -96,7 +96,7 @@ public class ConfigValueAutoConfiguration {
     * @param configCenter 配置中心
     * @param properties   配置属性
     * @return Bean后置处理器
-     */
+    */
     @Bean
     public ValueAnnotationBeanPostProcessor valueAnnotationBeanPostProcessor(
             ConfigCenter configCenter, 
@@ -115,7 +115,7 @@ public class ConfigValueAutoConfiguration {
         * @param hotReloadEnabled hotreload已启用
         * @param refreshDelayMs refresh延迟ms
         * @return 价值观注解Beanpost处理器的结果
-         */
+        */
         return new ValueAnnotationBeanPostProcessor(configCenter, hotReloadEnabled, refreshDelayMs);
     }
 
@@ -124,7 +124,7 @@ public class ConfigValueAutoConfiguration {
     *
     * @param properties 配置中心属性
     * @return 模块环境注册器
-     */
+    */
     @Bean
     public ModuleEnvironmentRegistration configCenterModuleEnvironment(ConfigCenterProperties properties) {
         /**
@@ -133,13 +133,13 @@ public class ConfigValueAutoConfiguration {
         * @param properties 属性
         * @param properties.isEnable( 属性.是否enable(
         * @return module环境registration的结果
-         */
+        */
         return new ModuleEnvironmentRegistration(ConfigCenterProperties.PRE, properties, properties.isEnable());
     }
 
     /**
     * 应用关闭时清理资源
-     */
+    */
     @PreDestroy
     public void destroy() {
         ConfigCenterHolder.shutdown();
@@ -150,7 +150,7 @@ public class ConfigValueAutoConfiguration {
     * 配置center服务信息contributor
     *
     * @return 配置center服务信息contributor的结果
-     */
+    */
     public ServiceInfoContributor configCenterServiceInfoContributor() {
         return registry -> {
             registry.registerFlag("configcenter", "配置中心", true, "配置中心模块");

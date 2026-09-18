@@ -23,7 +23,7 @@ public class JakartaValidationUtils {
 
     /**
     * jakarta校验工具。
-     */
+    */
     private JakartaValidationUtils() {
     }
 
@@ -32,9 +32,9 @@ public class JakartaValidationUtils {
 
     static {
         /**
-        * 尝试。
-        * @param Validation.buildDefaultValidatorFactory( 校验.构建默认validatorfactory(
-         */
+    * 尝试。
+    * @param Validation.buildDefaultValidatorFactory( 校验.构建默认validatorfactory(
+    */
         try (ValidatorFactory factory = Validation.buildDefaultValidatorFactory()) {
             VALIDATOR = factory.getValidator();
         }
@@ -49,7 +49,7 @@ public class JakartaValidationUtils {
     * @param addGroupClass    添加组类
     * @param <T>              对象类型
     * @return 验证错误
-     */
+    */
     public static <T> Errors validate(T object, Predicate<T> condition, Class<?> updateGroupClass, Class<?> addGroupClass) {
         BeanPropertyBindingResult errors = new BeanPropertyBindingResult(object, object.getClass().getSimpleName());
         
@@ -75,7 +75,7 @@ public class JakartaValidationUtils {
     * @param groups 验证组
     * @param <T>    对象类型
     * @return 验证错误
-     */
+    */
     public static <T> Errors validate(T object, Class<?>... groups) {
         BeanPropertyBindingResult errors = new BeanPropertyBindingResult(object, object.getClass().getSimpleName());
         
@@ -96,7 +96,7 @@ public class JakartaValidationUtils {
     * @param errors 验证错误
     * @param <T>    结果类型
     * @return ReturnResult
-     */
+    */
     public static <T> ReturnResult<T> toReturnResult(Errors errors) {
         if (errors == null || !errors.hasErrors()) {
             return ReturnResult.success();

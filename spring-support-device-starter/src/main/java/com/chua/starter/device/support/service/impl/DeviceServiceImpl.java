@@ -32,22 +32,22 @@ public class DeviceServiceImpl implements DeviceService {
 
     /**
     * 设备信息 映射器
-     */
+    */
     private final DeviceInfoMapper deviceInfoMapper;
 
     /**
     * 设备组织 映射器
-     */
+    */
     private final DeviceOrganizationMapper deviceOrganizationMapper;
 
     /**
     * 设备会话管理器
-     */
+    */
     private final DeviceSessionManager sessionManager;
 
     /**
     * 所有可用的设备 提供者（由 SPI 自动注入）
-     */
+    */
     private final List<DeviceProvider> providers;
 
     @Override
@@ -157,10 +157,10 @@ public class DeviceServiceImpl implements DeviceService {
         DeviceInfo device = deviceInfoMapper.selectById(id);
         if (device == null) {
             /**
-            * runtime异常。
-            * @param id 标识
-            * @return runtime异常的结果
-             */
+    * runtime异常。
+    * @param id 标识
+    * @return runtime异常的结果
+    */
             throw new RuntimeException("设备不存在: " + id);
         }
         DeviceInfo update = new DeviceInfo();
@@ -177,10 +177,10 @@ public class DeviceServiceImpl implements DeviceService {
         DeviceInfo device = deviceInfoMapper.selectById(id);
         if (device == null) {
             /**
-            * runtime异常。
-            * @param id 标识
-            * @return runtime异常的结果
-             */
+    * runtime异常。
+    * @param id 标识
+    * @return runtime异常的结果
+    */
             throw new RuntimeException("设备不存在: " + id);
         }
         // 关闭旧会话
@@ -202,7 +202,7 @@ public class DeviceServiceImpl implements DeviceService {
             * runtime异常。
             * @param id 标识
             * @return runtime异常的结果
-             */
+            */
             throw new RuntimeException("设备重连失败，无可用 Provider: " + id);
         }
         sessionManager.register(id, session);
@@ -220,10 +220,10 @@ public class DeviceServiceImpl implements DeviceService {
         DeviceInfo device = deviceInfoMapper.selectById(id);
         if (device == null) {
             /**
-            * runtime异常。
-            * @param id 标识
-            * @return runtime异常的结果
-             */
+    * runtime异常。
+    * @param id 标识
+    * @return runtime异常的结果
+    */
             throw new RuntimeException("设备不存在: " + id);
         }
         DeviceSession session = sessionManager.getSession(id);

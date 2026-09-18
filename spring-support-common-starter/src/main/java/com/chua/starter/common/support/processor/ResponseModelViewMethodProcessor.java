@@ -30,12 +30,12 @@ public class ResponseModelViewMethodProcessor extends RequestResponseBodyMethodP
     /**
     * 创建 响应模型view方法处理器 实例
     * @param converters 转换器
-     */
+    */
     public ResponseModelViewMethodProcessor(List<HttpMessageConverter<?>> converters) {
         /**
         * 父。
         * @param converters 转换器
-         */
+        */
         super(converters);
     }
 
@@ -67,12 +67,12 @@ public class ResponseModelViewMethodProcessor extends RequestResponseBodyMethodP
 
  // 尝试 even with 空 申报 价值观. 响应主体advice could 获取 involved.
             /**
-            * 写入with消息转换器。
-            * @param data 数据
-            * @param returnType 申报类型
-            * @param inputMessage 输入消息
-            * @param outputMessage 输出消息
-             */
+    * 写入with消息转换器。
+    * @param data 数据
+    * @param returnType 申报类型
+    * @param inputMessage 输入消息
+    * @param outputMessage 输出消息
+    */
             writeWithMessageConverters(data, returnType, inputMessage, outputMessage);
             return;
         }
@@ -96,7 +96,7 @@ public class ResponseModelViewMethodProcessor extends RequestResponseBodyMethodP
     * @param modelView 模型view
     * @param webRequest web请求
     * @return 获取accept的结果
-     */
+    */
     private String getAccept(ModelView modelView, NativeWebRequest webRequest) {
         MediaType mediaType = modelView.getMediaType();
         if (null != mediaType) {
@@ -114,7 +114,7 @@ public class ResponseModelViewMethodProcessor extends RequestResponseBodyMethodP
     * @param viewName the view 名称 转为 检查, 从不 {@code null}
     * @return "true" if the given view 名称 是否 recognized as a redirect view
     * 引用; "false" otherwise.
-     */
+    */
     protected boolean isRedirectViewName(String viewName) {
         return (PatternMatchUtils.simpleMatch(this.redirectPatterns, viewName) || viewName.startsWith("redirect:"));
     }

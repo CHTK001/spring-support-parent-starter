@@ -23,12 +23,12 @@ public class OcrGlobalSettingProvider implements GlobalSettingProvider {
 
     /**
     * 配置分组标识
-     */
+    */
     private static final String GROUP = "ocr";
 
     /**
     * 分组显示名称
-     */
+    */
     private static final String GROUP_NAME = "OCR 文字识别";
 
     @Override

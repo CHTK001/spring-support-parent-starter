@@ -27,32 +27,32 @@ public class EduClass {
 
     /**
     * 班级编码（业务唯一）
-     */
+    */
     private String classCode;
 
     /**
     * 班级名称（如 高一(3)班）
-     */
+    */
     private String className;
 
     /**
     * 所属学段
-     */
+    */
     private String classGradeLevel;
 
     /**
     * 年级（关联 edu_grade.grade_名称）
-     */
+    */
     private String classGrade;
 
     /**
     * 班主任 用户标识（来自 spring-支持 用户体系）
-     */
+    */
     private Long classTeacherId;
 
     /**
     * 状态：0 停用 / 1 启用
-     */
+    */
     private Integer classStatus;
 
     @TableField(value = "create_time", fill = com.baomidou.mybatisplus.annotation.FieldFill.INSERT)

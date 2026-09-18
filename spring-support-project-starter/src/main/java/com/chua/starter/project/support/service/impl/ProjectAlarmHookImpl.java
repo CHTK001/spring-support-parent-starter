@@ -55,10 +55,10 @@ public class ProjectAlarmHookImpl implements ProjectAlarmHook {
     }
 
     /**
-     * 反射查找告警引擎 bean
-     *
-     * @return 引擎实例，未装配返回 空
-     */
+    * 反射查找告警引擎 bean
+    *
+    * @return 引擎实例，未装配返回 空
+    */
     private Object findAlarmEngine() {
         Class<?> engineClass = ReflectUtils.forName(ALARM_ENGINE_CLASS);
         if (engineClass == null) {

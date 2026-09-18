@@ -20,7 +20,7 @@ public class SpringCompatUtils {
 
     /**
     * 私有构造函数，防止实例化
-     */
+    */
     private SpringCompatUtils() {
     }
 
@@ -33,7 +33,7 @@ public class SpringCompatUtils {
     *
     * @param annotatedBeanDefinition annotatedbeandefinition
     * @return 获取工厂方法申报类型的结果
-     */
+    */
     public static String getFactoryMethodReturnType(AnnotatedBeanDefinition annotatedBeanDefinition) {
         try {
             if (isFactoryMethodMetadataEnabled()) {
@@ -61,7 +61,7 @@ public class SpringCompatUtils {
     *
     * @param annotatedBeanDefinition annotatedbeandefinition
     * @return 获取工厂方法metadata的结果
-     */
+    */
     public static MethodMetadata getFactoryMethodMetadata(AnnotatedBeanDefinition annotatedBeanDefinition) {
         if (isFactoryMethodMetadataEnabled()) {
             return annotatedBeanDefinition.getFactoryMethodMetadata();
@@ -87,7 +87,7 @@ public class SpringCompatUtils {
     *
     * @param factoryMethodMetadata
     * @return
-     */
+    */
     public static Class getGenericTypeOfReturnType(MethodMetadata factoryMethodMetadata) {
         if (factoryMethodMetadata instanceof StandardMethodMetadata) {
             Method introspectedMethod = ((StandardMethodMetadata) factoryMethodMetadata).getIntrospectedMethod();
@@ -106,7 +106,7 @@ public class SpringCompatUtils {
     * 是否工厂方法metadata已启用
     *
     * @return 是否工厂方法metadata已启用的结果
-     */
+    */
     public static boolean isFactoryMethodMetadataEnabled() {
         if (factoryMethodMetadataEnabled == null) {
             try {

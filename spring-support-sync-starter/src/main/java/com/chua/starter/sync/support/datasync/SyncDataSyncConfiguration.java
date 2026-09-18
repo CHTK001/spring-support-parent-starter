@@ -39,32 +39,32 @@ public class SyncDataSyncConfiguration {
 
     /**
     * 环境变量工具
-     */
+    */
     private final Environment environment;
 
     /**
     * 同步客户端 提供器
-     */
+    */
     private final ObjectProvider<SyncClient> syncClientProvider;
 
     /**
     * 同步服务端 提供器
-     */
+    */
     private final ObjectProvider<SyncServer> syncServerProvider;
 
     /**
     * 同步属性 提供器
-     */
+    */
     private final ObjectProvider<SyncProperties> syncPropertiesProvider;
 
     /**
     * 数据同步服务端 提供器
-     */
+    */
     private final ObjectProvider<com.chua.starter.datasync.DataSyncServer> dataSyncServerProvider;
 
     /**
     * 数据同步智能体服务端 提供器
-     */
+    */
     private final ObjectProvider<com.chua.starter.datasync.agent.DataSyncAgentServer> dataSyncAgentServerProvider;
 
     /**
@@ -75,7 +75,7 @@ public class SyncDataSyncConfiguration {
     * @param syncPropertiesProvider 同步属性提供者
     * @param dataSyncServerProvider 数据同步服务端提供者
     * @param dataSyncAgentServerProvider 数据同步智能体服务端提供者
-     */
+    */
     public SyncDataSyncConfiguration(Environment environment,
                                      ObjectProvider<SyncClient> syncClientProvider,
                                      ObjectProvider<SyncServer> syncServerProvider,
@@ -108,14 +108,14 @@ public class SyncDataSyncConfiguration {
     * 创建 Spring 同步 -> 数据同步 数据桥接
     *
     * @return 数据桥接函数
-     */
+    */
     @Bean
     @ConditionalOnProperty(prefix = "plugin.sync.datasync", name = "enabled", havingValue = "true", matchIfMissing = true)
     public DataSyncMessageBridge dataSyncMessageBridge() {
         /**
         * 数据同步消息bridge。
         * @return 数据同步消息bridge的结果
-         */
+        */
         return new DataSyncMessageBridge();
     }
 
@@ -123,7 +123,7 @@ public class SyncDataSyncConfiguration {
     * 创建 数据同步 -> Spring 同步 消息发布器
     *
     * @return 消息发布器
-     */
+    */
     @Bean
     @ConditionalOnProperty(prefix = "plugin.sync.datasync", name = "enabled", havingValue = "true", matchIfMissing = true)
     public DataSyncMessagePublisher dataSyncMessagePublisher() {
@@ -144,7 +144,7 @@ public class SyncDataSyncConfiguration {
     *
     * @since 2026/01/15
     * @author CH
-     */
+    */
     public static class DataSyncMessageBridge implements Function<Object, Object> {
 
         /**
@@ -152,7 +152,7 @@ public class SyncDataSyncConfiguration {
         *
         * @param input 输入数据（通常为 映射 结构）
         * @return 转换后的数据
-         */
+        */
         @Override
         public Object apply(Object input) {
             if (input == null) {
@@ -177,22 +177,22 @@ public class SyncDataSyncConfiguration {
     *
     * @since 2026/01/15
     * @author CH
-     */
+    */
     public static class DataSyncMessagePublisher {
 
         /**
         * 同步客户端 提供器
-         */
+        */
         private final ObjectProvider<SyncClient> syncClientProvider;
 
         /**
         * 同步服务端 提供器
-         */
+        */
         private final ObjectProvider<SyncServer> syncServerProvider;
 
         /**
         * 同步属性 提供器
-         */
+        */
         private final ObjectProvider<SyncProperties> syncPropertiesProvider;
 
         /**
@@ -201,7 +201,7 @@ public class SyncDataSyncConfiguration {
         * @param syncClientProvider    同步客户端 提供器
         * @param syncServerProvider    同步服务端 提供器
         * @param syncPropertiesProvider 同步属性 提供器
-         */
+        */
         public DataSyncMessagePublisher(ObjectProvider<SyncClient> syncClientProvider,
                                         ObjectProvider<SyncServer> syncServerProvider,
                                         ObjectProvider<SyncProperties> syncPropertiesProvider) {
@@ -215,7 +215,7 @@ public class SyncDataSyncConfiguration {
         *
         * @param channel 通道名称
         * @param payload 消息负载
-         */
+        */
     public void publish(String channel, Object payload) {
         SyncProperties syncProperties = syncPropertiesProvider.getIfAvailable();
         if (syncProperties == null) {
@@ -235,7 +235,7 @@ public class SyncDataSyncConfiguration {
     *
     * @param channel 通道名称
     * @param payload 消息负载
-     */
+    */
     public void broadcast(String channel, Object payload) {
         SyncProperties syncProperties = syncPropertiesProvider.getIfAvailable();
         if (syncProperties == null) {
@@ -256,7 +256,7 @@ public class SyncDataSyncConfiguration {
         * @param channel        原始通道名称
         * @param syncProperties 同步配置
         * @return 解析后的通道名称
-         */
+        */
         private String resolveChannel(String channel, SyncProperties syncProperties) {
             if (channel == null || channel.isBlank()) {
                 return syncProperties.getDataSync().getDefaultChannel();

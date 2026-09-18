@@ -16,7 +16,7 @@ public class ApiException extends RuntimeException {
 
     /**
     * 机器可读错误码
-     */
+    */
     private final ApiErrorCode errorCode;
 
     /**
@@ -24,12 +24,12 @@ public class ApiException extends RuntimeException {
     *
     * @param errorCode 错误码
     * @param message   人类可读信息
-     */
+    */
     public ApiException(ApiErrorCode errorCode, String message) {
         /**
         * 父。
         * @param message 消息
-         */
+        */
         super(message);
         this.errorCode = errorCode;
     }
@@ -40,13 +40,13 @@ public class ApiException extends RuntimeException {
     * @param errorCode 错误码
     * @param message   人类可读信息
     * @param cause     根因
-     */
+    */
     public ApiException(ApiErrorCode errorCode, String message, Throwable cause) {
         /**
         * 父。
         * @param message 消息
         * @param cause cause
-         */
+        */
         super(message, cause);
         this.errorCode = errorCode;
     }

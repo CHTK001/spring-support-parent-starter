@@ -44,12 +44,12 @@ public class UserLoggerPointcutAdvisor extends AbstractLoggerPointcutAdvisor {
 
     /**
     * 日期格式化器，用于格式化日志时间
-     */
+    */
     private static final String DATE_FORMAT_PATTERN = "yyyy-MM-dd HH:mm:ss";
 
     /**
     * 匿名用户标识
-     */
+    */
     private static final String ANONYMOUS_USER = "匿名用户";
 
     @Override
@@ -92,11 +92,11 @@ public class UserLoggerPointcutAdvisor extends AbstractLoggerPointcutAdvisor {
         // 构建并输出格式化日志：[时间] 用户名 执行了 模块-操作名称
         String logMessage = buildLogMessage(formattedTime, displayUsername, logModule, name, costTime, statusText, throwable);
         /**
-        * 输出日志。
-        * @param isSuccess 是否成功
-        * @param logMessage 日志消息
-        * @param throwable 抛出
-         */
+    * 输出日志。
+    * @param isSuccess 是否成功
+    * @param logMessage 日志消息
+    * @param throwable 抛出
+    */
         outputLog(isSuccess, logMessage, throwable);
 
         // 构建日志信息对象
@@ -136,7 +136,7 @@ public class UserLoggerPointcutAdvisor extends AbstractLoggerPointcutAdvisor {
         /**
         * 发布事件。
         * @param userLoggerInfo 用户日志记录器信息
-         */
+        */
         publishEvent(userLoggerInfo);
     }
 
@@ -151,7 +151,7 @@ public class UserLoggerPointcutAdvisor extends AbstractLoggerPointcutAdvisor {
     * @param statusText    状态文本(成功/失败)
     * @param throwable     异常信息，可为空
     * @return 格式化后的日志消息
-     */
+    */
     private String buildLogMessage(String formattedTime, String username, String module, String name,
                                    long costTime, String statusText, Throwable throwable) {
         StringBuilder sb = new StringBuilder();
@@ -175,7 +175,7 @@ public class UserLoggerPointcutAdvisor extends AbstractLoggerPointcutAdvisor {
     * @param isSuccess  操作是否成功
     * @param logMessage 日志消息
     * @param throwable  异常信息，可为空
-     */
+    */
     private void outputLog(boolean isSuccess, String logMessage, Throwable throwable) {
         if (isSuccess) {
             log.info(logMessage);

@@ -62,7 +62,7 @@ public abstract class AbstractDeptRegister implements DeptRegister {
     * @param user 用户
     * @param dataPermission 数据权限
     * @param scopeProperties scope属性
-     */
+    */
     public AbstractDeptRegister(PlainSelect plainSelect,
                                 Expression where,
                                 CurrentUser user,
@@ -83,7 +83,7 @@ public abstract class AbstractDeptRegister implements DeptRegister {
     * 注册数据scope
     *
     * @return 注册数据scope的结果
-     */
+    */
     protected Expression registerDataScope() {
         if (DataFilterTypeEnum.DEPT_SETS == dataPermission) {
             if (StringUtils.isEmpty(user.getDataPermissionRule())) {
@@ -183,7 +183,7 @@ public abstract class AbstractDeptRegister implements DeptRegister {
     * 创建入表达式
     *
     * @return
-     */
+    */
     private Expression createInExpression() {
         return new InExpression(
                 new Column(deptTable, deptIdColumn),

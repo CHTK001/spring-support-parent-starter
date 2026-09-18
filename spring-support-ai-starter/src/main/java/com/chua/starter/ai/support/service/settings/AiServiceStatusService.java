@@ -16,20 +16,20 @@ public interface AiServiceStatusService {
     * 查询所有服务运行状态。
     *
     * @return 服务状态 DTO 列表
-     */
+    */
     List<AiServiceStatusDTO> list();
 
     /**
     * 启动指定服务。
     *
     * @param serviceName 服务名称
-     */
+    */
     void start(String serviceName);
 
     /**
     * 停止指定服务。
     *
     * @param serviceName 服务名称
-     */
+    */
     void stop(String serviceName);
 }

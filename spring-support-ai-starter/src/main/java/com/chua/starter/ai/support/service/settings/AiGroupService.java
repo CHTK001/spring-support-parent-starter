@@ -16,7 +16,7 @@ public interface AiGroupService {
     * 查询所有分组。
     *
     * @return 分组 DTO 列表
-     */
+    */
     List<AiGroupDTO> list();
 
     /**
@@ -24,7 +24,7 @@ public interface AiGroupService {
     *
     * @param group 分组 DTO
     * @return 创建后的分组 DTO
-     */
+    */
     AiGroupDTO create(AiGroupDTO group);
 
     /**
@@ -33,13 +33,13 @@ public interface AiGroupService {
     * @param groupId 分组主键
     * @param group   分组 DTO
     * @return 更新后的分组 DTO
-     */
+    */
     AiGroupDTO update(Long groupId, AiGroupDTO group);
 
     /**
     * 删除分组（逻辑删除）。
     *
     * @param groupId 分组主键
-     */
+    */
     void delete(Long groupId);
 }

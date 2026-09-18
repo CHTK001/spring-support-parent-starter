@@ -66,32 +66,32 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
 
     /**
     * Redis 连接 URL 协议前缀，用于拼接 Redisson 地址
-     */
+    */
     private static final String REDIS_PROTOCOL_PREFIX = "redis://";
 
     /**
     * Redis 地址 URL 后缀分隔符，用于拼接 database 部分
-     */
+    */
     private static final String REDIS_ADDRESS_SUFFIX = "/";
 
     /**
     * 默认命令执行超时时间（毫秒），当 Redis属性 未配置 超时 时使用
-     */
+    */
     private static final int DEFAULT_TIMEOUT_MILLIS = 10000;
 
     /**
     * 默认连接建立超时时间（毫秒），当 Redis属性 未配置 连接超时 时使用
-     */
+    */
     private static final int DEFAULT_CONNECT_TIMEOUT_MILLIS = 10000;
 
     /**
     * Jackson 日期序列化格式字符串，统一使用 yyyy-MM-dd HH:mm:ss
-     */
+    */
     private static final String DATE_FORMAT_PATTERN = "yyyy-MM-dd HH:mm:ss";
 
     /**
     * Redis 服务器配置属性，在应用上下文初始化阶段通过 Binder 绑定
-     */
+    */
     private RedisServerProperties redisServerProperties;
 
     /**
@@ -102,7 +102,7 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
     *
     * @param redisProperties Spring Boot 自动装配的 Redis 属性
     * @return 已配置完成的 redisson客户端 实例
-     */
+    */
     @Bean(destroyMethod = "shutdown")
     @ConditionalOnMissingBean
     public RedissonClient redissonClient(DataRedisProperties redisProperties) {
@@ -124,14 +124,14 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
     * 创建时间序列服务实例。
     *
     * @return 时间序列服务实现实例
-     */
+    */
     @Bean
     @ConditionalOnMissingBean
     public TimeSeriesService timeSeriesService() {
         /**
         * 时间series服务impl。
         * @return 时间series服务impl的结果
-         */
+        */
         return new TimeSeriesServiceImpl();
     }
 
@@ -139,14 +139,14 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
     * 创建 Redis 搜索服务实例，提供基于 Redis 的检索能力。
     *
     * @return Redis 搜索服务实现实例
-     */
+    */
     @Bean
     @ConditionalOnMissingBean
     public RedisSearchService redisSearchService() {
         /**
         * Redis搜索服务impl。
         * @return redis搜索服务impl的结果
-         */
+        */
         return new RedisSearchServiceImpl();
     }
 
@@ -154,14 +154,14 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
     * 创建简单 Redis 服务实例，提供指标自增/自减与 QPS 统计能力。
     *
     * @return 简单 Redis 服务实现实例
-     */
+    */
     @Bean
     @ConditionalOnMissingBean
     public SimpleRedisService simpleRedisService() {
         /**
         * 简单Redis服务impl。
         * @return 简单redis服务impl的结果
-         */
+        */
         return new SimpleRedisServiceImpl();
     }
 
@@ -171,7 +171,7 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
     *
     * @param stringRedisTemplate Spring 数据 Redis 字符串操作模板
     * @return KV 引擎实现实例
-     */
+    */
     @Bean
     @ConditionalOnMissingBean
     public KvEngine kvEngine(StringRedisTemplate stringRedisTemplate) {
@@ -179,7 +179,7 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
         * rediskvengine。
         * @param stringRedisTemplate 字符串redistemplate
         * @return RedisKvEngine的结果
-         */
+        */
         return new RedisKvEngine(stringRedisTemplate);
     }
 
@@ -188,7 +188,7 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
     *
     * @param applicationContext Spring 应用上下文
     * @throws BeansException 上下文初始化异常
-     */
+    */
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         redisServerProperties = Binder.get(applicationContext.getEnvironment()).bindOrCreate("plugin.redis.server", RedisServerProperties.class);
@@ -201,7 +201,7 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
     * <p>用于非 Redis 场景的通用 JSON 序列化/反序列化。</p>
     *
     * @return 配置完成的 对象映射器 实例
-     */
+    */
     public static ObjectMapper createObjectMapper() {
         ObjectMapper objectMapper = new ObjectMapper();
         // 忽略未知字段，避免反序列化失败
@@ -222,7 +222,7 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
     * @param connectionFactory Redis 连接工厂
     * @param listeners         已注册的所有 Redis 监听器列表
     * @return 配置完成的 Redis消息监听器容器 实例
-     */
+    */
     @Bean
     @ConditionalOnMissingBean
     RedisMessageListenerContainer container(RedisConnectionFactory connectionFactory, List<RedisListener> listeners) {
@@ -249,7 +249,7 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
     *
     * @param factory Redis 连接工厂
     * @return 配置完成的 redistemplate 实例
-     */
+    */
     @Bean
     @SuppressWarnings("all")
     public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory factory) {
@@ -283,7 +283,7 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
     *
     * @return 配置完成的 对象映射器 实例
     * @since 1.0.0
-     */
+    */
     private static ObjectMapper createRedisObjectMapper() {
         ObjectMapper om = new ObjectMapper();
         om.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
@@ -306,7 +306,7 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
     *
     * @param factory Redis 连接工厂
     * @return 配置完成的 字符串redistemplate 实例
-     */
+    */
     @Bean("stringRedisTemplate")
     public StringRedisTemplate stringRedisTemplate(RedisConnectionFactory factory) {
         StringRedisTemplate template = new StringRedisTemplate();
@@ -323,7 +323,7 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
     * 返回当前配置类的加载优先级，使用最高优先级确保 Redis 相关 Bean 优先初始化。
     *
     * @return 优先级常量 订单.HIGHEST_PRECEDENCE
-     */
+    */
     @Override
     public int getOrder() {
         return Ordered.HIGHEST_PRECEDENCE;
@@ -334,7 +334,7 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
     * Redis服务信息contributor
     *
     * @return redis服务信息contributor的结果
-     */
+    */
     public ServiceInfoContributor redisServiceInfoContributor() {
         return registry -> {
             registry.registerEndpoint("Redis", "Redis服务", "/redis/**", "Redis服务");

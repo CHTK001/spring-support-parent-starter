@@ -36,7 +36,7 @@ public class SshAutoConfiguration {
     *
     * @param properties SSH服务端配置属性
     * @return SSH服务端服务实例
-     */
+    */
     @Bean
     public SshServerService sshServerService(SshServerProperties properties) {
         log.info(" >>>>>>> 初始化SSH服务端服务，端口: {}", properties.getPort());
@@ -44,7 +44,7 @@ public class SshAutoConfiguration {
         * ssh服务端服务。
         * @param properties 属性
         * @return ssh服务端服务的结果
-         */
+        */
         return new SshServerService(properties);
     }
 
@@ -53,7 +53,7 @@ public class SshAutoConfiguration {
     * ssh服务信息contributor
     *
     * @return ssh服务信息contributor的结果
-     */
+    */
     public ServiceInfoContributor sshServiceInfoContributor() {
         return registry -> {
             registry.registerFlag("ssh", "SSH", true, "SSH服务端模块");

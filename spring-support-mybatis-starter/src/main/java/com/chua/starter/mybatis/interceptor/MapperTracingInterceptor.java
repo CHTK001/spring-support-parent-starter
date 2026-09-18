@@ -40,7 +40,7 @@ public class MapperTracingInterceptor implements Interceptor {
             /**
             * 尝试。
             * @param mapperMethod 映射器方法
-             */
+            */
             try (MDC.MDCCloseable closeable = MDC.putCloseable("mapper", mapperMethod)) {
                 return invocation.proceed();
             }

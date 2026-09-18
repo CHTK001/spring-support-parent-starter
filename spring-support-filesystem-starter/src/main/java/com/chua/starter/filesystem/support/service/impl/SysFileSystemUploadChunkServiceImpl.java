@@ -35,7 +35,7 @@ public class SysFileSystemUploadChunkServiceImpl
     * @param etag         分片 e标签
     * @param storagePath  存储路径
     * @return 是否保存成功
-     */
+    */
     @Override
     @Transactional
     public boolean saveChunk(String uploadId, Integer partNumber, Long chunkSize, String etag, String storagePath) {
@@ -61,7 +61,7 @@ public class SysFileSystemUploadChunkServiceImpl
     *
     * @param uploadId 上传任务 标识
     * @return 分片列表
-     */
+    */
     @Override
     public List<SysFileSystemUploadChunk> listByUploadId(String uploadId) {
         return list(new LambdaQueryWrapper<SysFileSystemUploadChunk>()
@@ -74,7 +74,7 @@ public class SysFileSystemUploadChunkServiceImpl
     *
     * @param uploadId 上传任务 标识
     * @return 已上传分片数
-     */
+    */
     @Override
     public int countUploaded(String uploadId) {
         Long count = count(new LambdaQueryWrapper<SysFileSystemUploadChunk>()
@@ -88,7 +88,7 @@ public class SysFileSystemUploadChunkServiceImpl
     *
     * @param uploadId 上传任务 标识
     * @return 是否更新成功
-     */
+    */
     @Override
     @Transactional
     public boolean markMerged(String uploadId) {
@@ -104,7 +104,7 @@ public class SysFileSystemUploadChunkServiceImpl
     *
     * @param uploadId 上传任务 标识
     * @return 是否删除成功
-     */
+    */
     @Override
     @Transactional
     public boolean deleteByUploadId(String uploadId) {

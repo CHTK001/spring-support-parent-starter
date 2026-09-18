@@ -18,14 +18,14 @@ public interface SysAiRoleService {
     * 查询所有未删除的角色列表。
     *
     * @return 角色列表
-     */
+    */
     List<SysAiRole> list();
 
     /**
     * 查询所有启用状态的角色列表。
     *
     * @return 启用角色列表
-     */
+    */
     List<SysAiRole> listEnabled();
 
     /**
@@ -33,7 +33,7 @@ public interface SysAiRoleService {
     *
     * @param id 角色主键
     * @return 角色实体
-     */
+    */
     SysAiRole getById(Integer id);
 
     /**
@@ -41,7 +41,7 @@ public interface SysAiRoleService {
     *
     * @param code 角色编码
     * @return 角色实体
-     */
+    */
     SysAiRole getByCode(String code);
 
     /**
@@ -49,7 +49,7 @@ public interface SysAiRoleService {
     *
     * @param role 角色实体
     * @return 保存后的角色
-     */
+    */
     SysAiRole save(SysAiRole role);
 
     /**
@@ -57,7 +57,7 @@ public interface SysAiRoleService {
     *
     * @param role 角色实体
     * @return 是否成功
-     */
+    */
     boolean update(SysAiRole role);
 
     /**
@@ -65,6 +65,6 @@ public interface SysAiRoleService {
     *
     * @param id 角色主键
     * @return 是否成功
-     */
+    */
     boolean deleteById(Integer id);
 }

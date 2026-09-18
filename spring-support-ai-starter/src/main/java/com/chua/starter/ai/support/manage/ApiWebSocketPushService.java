@@ -21,7 +21,7 @@ public class ApiWebSocketPushService {
 
     /**
     * WS 处理器（持有在线连接与广播能力）
-     */
+    */
     private final SysAiWebSocketHandler webSocketHandler;
 
     /**
@@ -29,7 +29,7 @@ public class ApiWebSocketPushService {
     *
     * @param event 事件名（如 消息.流）
     * @param data  事件数据
-     */
+    */
     public void push(String event, Object data) {
         webSocketHandler.broadcast(event, data);
     }

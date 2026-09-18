@@ -33,7 +33,7 @@ public class AiPipelineController {
     * 管线目录。
     *
     * @return 管线定义列表
-     */
+    */
     @Permission("admin")
     @Operation(summary = "AI 管线目录", description = "管线必填/非必填能力定义，驱动左侧菜单、能力页与模型管理")
     @GetMapping
@@ -78,7 +78,7 @@ public class AiPipelineController {
 
     /**
     * 构造管线定义。
-     */
+    */
     private static Map<String, Object> pipeline(String code, String name, String group, String tag,
                                                List<String> required, List<String> optional,
                                                String description, String route, String configGroup) {
@@ -98,7 +98,7 @@ public class AiPipelineController {
 
     /**
     * 构造全局 Bean 设置分组定义。
-     */
+    */
     private static Map<String, Object> globalBean(String code, String name, String group,
                                                   String description, String route, String configGroup) {
         Map<String, Object> item = new LinkedHashMap<>();

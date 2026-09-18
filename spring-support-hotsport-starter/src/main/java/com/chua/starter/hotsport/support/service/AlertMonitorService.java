@@ -46,8 +46,8 @@ public class AlertMonitorService {
     private static final int EVENT_CAPACITY = 100;
 
     /**
-     * 告警规则（可动态增删改）。
-     */
+    * 告警规则（可动态增删改）。
+    */
     public static class AlertRule {
 
         public long id;
@@ -72,8 +72,8 @@ public class AlertMonitorService {
     }
 
     /**
-     * 告警事件（带状态机）。
-     */
+    * 告警事件（带状态机）。
+    */
     public static class AlertEvent {
 
         public long id;
@@ -105,10 +105,10 @@ public class AlertMonitorService {
     private final JvmMetricsService jvmMetricsService;
 
     /**
-     * 构造器（@Lazy 打破 JvmMetricsService ← AlertMonitorService 循环依赖）。
-     *
-     * @param jvmMetricsService JVM 指标服务
-     */
+    * 构造器（@Lazy 打破 JvmMetricsService ← AlertMonitorService 循环依赖）。
+    *
+    * @param jvmMetricsService JVM 指标服务
+    */
     public AlertMonitorService(@Lazy JvmMetricsService jvmMetricsService) {
         this.jvmMetricsService = jvmMetricsService;
     }
@@ -127,12 +127,12 @@ public class AlertMonitorService {
     }
 
     /**
-     * 巡检一次（采样钩子调用）：遍历启用的规则，检查对应指标。
-     *
-     * <p>heap_percent → {@code lastSample().memory.heapUsedPercent}；
-     * error_rate → {@link #computeErrorRate()}；active_leaks →
-     * {@code jvmMetricsService.activeLeakCount()}。</p>
-     */
+    * 巡检一次（采样钩子调用）：遍历启用的规则，检查对应指标。
+    *
+    * <p>heap_percent → {@code lastSample().memory.heapUsedPercent}；
+    * error_rate → {@link #computeErrorRate()}；active_leaks →
+    * {@code jvmMetricsService.activeLeakCount()}。</p>
+    */
     public void check() {
         try {
             Map<String, Object> sample = jvmMetricsService.lastSample();
@@ -167,11 +167,11 @@ public class AlertMonitorService {
     }
 
     /**
-     * 阈值命中且过去规则 {@code debounceMs} 内未触发 → 记事件（状态 OPEN）。
-     *
-     * @param rule    命中的规则（threshold/debounceMs 取规则配置）
-     * @param current 当前值
-     */
+    * 阈值命中且过去规则 {@code debounceMs} 内未触发 → 记事件（状态 OPEN）。
+    *
+    * @param rule    命中的规则（threshold/debounceMs 取规则配置）
+    * @param current 当前值
+    */
     private void fireIfExceeded(AlertRule rule, double current) {
         if (current < rule.threshold) {
             return;
@@ -237,12 +237,12 @@ public class AlertMonitorService {
     }
 
     /**
-     * 事件状态机操作：OPEN → {@code toStatus}（ACKNOWLEDGED / MUTED / IGNORED）。
-     *
-     * @param eventId  事件 ID
-     * @param toStatus 目标状态
-     * @return 是否找到并更新
-     */
+    * 事件状态机操作：OPEN → {@code toStatus}（ACKNOWLEDGED / MUTED / IGNORED）。
+    *
+    * @param eventId  事件 ID
+    * @param toStatus 目标状态
+    * @return 是否找到并更新
+    */
     public boolean acknowledgeEvent(long eventId, String toStatus) {
         for (AlertEvent e : events) {
             if (e.id == eventId) {
@@ -255,11 +255,11 @@ public class AlertMonitorService {
     }
 
     /**
-     * 最近告警事件（新事件在前，转 Map 保持后端 API 兼容）。
-     *
-     * @param limit 返回上限
-     * @return 事件列表
-     */
+    * 最近告警事件（新事件在前，转 Map 保持后端 API 兼容）。
+    *
+    * @param limit 返回上限
+    * @return 事件列表
+    */
     public List<Map<String, Object>> alerts(int limit) {
         List<AlertEvent> sorted = new ArrayList<>(events);
         sorted.sort(Comparator.comparingLong((AlertEvent e) -> e.ts).reversed());
@@ -284,10 +284,10 @@ public class AlertMonitorService {
     }
 
     /**
-     * 最近 3 条告警（SSE 帧并入用）。
-     *
-     * @return 事件列表
-     */
+    * 最近 3 条告警（SSE 帧并入用）。
+    *
+    * @return 事件列表
+    */
     public List<Map<String, Object>> recentAlerts() {
         return alerts(3);
     }
@@ -297,20 +297,20 @@ public class AlertMonitorService {
     // ------------------------------------------------------------------
 
     /**
-     * 规则列表。
-     *
-     * @return 当前全部规则
-     */
+    * 规则列表。
+    *
+    * @return 当前全部规则
+    */
     public List<AlertRule> listRules() {
         return new ArrayList<>(rules.values());
     }
 
     /**
-     * 新增规则（自动分配 ID，同名 metric 覆盖旧规则）。
-     *
-     * @param rule 规则（id 忽略，可传 0）
-     * @return 保存后的规则
-     */
+    * 新增规则（自动分配 ID，同名 metric 覆盖旧规则）。
+    *
+    * @param rule 规则（id 忽略，可传 0）
+    * @return 保存后的规则
+    */
     public AlertRule addRule(AlertRule rule) {
         rule.id = ruleIdGen.getAndIncrement();
         rules.put(rule.metric, rule);
@@ -318,31 +318,31 @@ public class AlertMonitorService {
     }
 
     /**
-     * 更新规则（按 metric 覆盖）。
-     *
-     * @param rule 规则
-     * @return 保存后的规则
-     */
+    * 更新规则（按 metric 覆盖）。
+    *
+    * @param rule 规则
+    * @return 保存后的规则
+    */
     public AlertRule updateRule(AlertRule rule) {
         rules.put(rule.metric, rule);
         return rule;
     }
 
     /**
-     * 删除规则。
-     *
-     * @param metric 指标键
-     */
+    * 删除规则。
+    *
+    * @param metric 指标键
+    */
     public void deleteRule(String metric) {
         rules.remove(metric);
     }
 
     /**
-     * 启停规则。
-     *
-     * @param metric  指标键
-     * @param enabled 是否启用
-     */
+    * 启停规则。
+    *
+    * @param metric  指标键
+    * @param enabled 是否启用
+    */
     public void toggleRule(String metric, boolean enabled) {
         AlertRule r = rules.get(metric);
         if (r != null) {

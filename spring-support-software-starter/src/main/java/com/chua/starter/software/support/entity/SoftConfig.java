@@ -105,7 +105,7 @@ public class SoftConfig implements Serializable {
     /**
     * 获取配置标识。
     * @return 获取配置id的结果
-     */
+    */
     public String getConfigId() {
         return configId;
     }
@@ -113,7 +113,7 @@ public class SoftConfig implements Serializable {
     /**
     * 设置配置标识。
     * @param configId 配置标识
-     */
+    */
     public void setConfigId(String configId) {
         this.configId = configId;
     }
@@ -121,7 +121,7 @@ public class SoftConfig implements Serializable {
     /**
     * 获取配置softwareid。
     * @return 获取配置softwareid的结果
-     */
+    */
     public String getConfigSoftwareId() {
         return configSoftwareId;
     }
@@ -129,7 +129,7 @@ public class SoftConfig implements Serializable {
     /**
     * 设置配置softwareid。
     * @param configSoftwareId 配置softwareid
-     */
+    */
     public void setConfigSoftwareId(String configSoftwareId) {
         this.configSoftwareId = configSoftwareId;
     }
@@ -137,7 +137,7 @@ public class SoftConfig implements Serializable {
     /**
     * 获取配置用户标识。
     * @return 获取配置用户id的结果
-     */
+    */
     public String getConfigUserId() {
         return configUserId;
     }
@@ -145,7 +145,7 @@ public class SoftConfig implements Serializable {
     /**
     * 设置配置用户标识。
     * @param configUserId 配置用户标识
-     */
+    */
     public void setConfigUserId(String configUserId) {
         this.configUserId = configUserId;
     }
@@ -153,7 +153,7 @@ public class SoftConfig implements Serializable {
     /**
     * 获取配置deviceid。
     * @return 获取配置deviceid的结果
-     */
+    */
     public String getConfigDeviceId() {
         return configDeviceId;
     }
@@ -161,7 +161,7 @@ public class SoftConfig implements Serializable {
     /**
     * 设置配置deviceid。
     * @param configDeviceId 配置deviceid
-     */
+    */
     public void setConfigDeviceId(String configDeviceId) {
         this.configDeviceId = configDeviceId;
     }
@@ -169,7 +169,7 @@ public class SoftConfig implements Serializable {
     /**
     * 获取配置钥匙。
     * @return 获取配置钥匙的结果
-     */
+    */
     public String getConfigKey() {
         return configKey;
     }
@@ -177,7 +177,7 @@ public class SoftConfig implements Serializable {
     /**
     * 设置配置钥匙。
     * @param configKey 配置钥匙
-     */
+    */
     public void setConfigKey(String configKey) {
         this.configKey = configKey;
     }
@@ -185,7 +185,7 @@ public class SoftConfig implements Serializable {
     /**
     * 获取配置价值观。
     * @return 获取配置价值观的结果
-     */
+    */
     public String getConfigValue() {
         return configValue;
     }
@@ -193,7 +193,7 @@ public class SoftConfig implements Serializable {
     /**
     * 设置配置价值观。
     * @param configValue 配置价值观
-     */
+    */
     public void setConfigValue(String configValue) {
         this.configValue = configValue;
     }
@@ -201,7 +201,7 @@ public class SoftConfig implements Serializable {
     /**
     * 获取配置类型。
     * @return 获取配置类型的结果
-     */
+    */
     public String getConfigType() {
         return configType;
     }
@@ -209,7 +209,7 @@ public class SoftConfig implements Serializable {
     /**
     * 设置配置类型。
     * @param configType 配置类型
-     */
+    */
     public void setConfigType(String configType) {
         this.configType = configType;
     }
@@ -217,7 +217,7 @@ public class SoftConfig implements Serializable {
     /**
     * 获取配置标签。
     * @return 获取配置标签的结果
-     */
+    */
     public String getConfigLabel() {
         return configLabel;
     }
@@ -225,7 +225,7 @@ public class SoftConfig implements Serializable {
     /**
     * 设置配置标签。
     * @param configLabel 配置标签
-     */
+    */
     public void setConfigLabel(String configLabel) {
         this.configLabel = configLabel;
     }
@@ -233,7 +233,7 @@ public class SoftConfig implements Serializable {
     /**
     * 获取配置description。
     * @return 获取配置description的结果
-     */
+    */
     public String getConfigDescription() {
         return configDescription;
     }
@@ -241,7 +241,7 @@ public class SoftConfig implements Serializable {
     /**
     * 设置配置description。
     * @param configDescription 配置description
-     */
+    */
     public void setConfigDescription(String configDescription) {
         this.configDescription = configDescription;
     }
@@ -249,7 +249,7 @@ public class SoftConfig implements Serializable {
     /**
     * 获取配置群体。
     * @return 获取配置群体的结果
-     */
+    */
     public String getConfigGroup() {
         return configGroup;
     }
@@ -257,7 +257,7 @@ public class SoftConfig implements Serializable {
     /**
     * 设置配置群体。
     * @param configGroup 配置群体
-     */
+    */
     public void setConfigGroup(String configGroup) {
         this.configGroup = configGroup;
     }
@@ -265,7 +265,7 @@ public class SoftConfig implements Serializable {
     /**
     * 获取配置排序。
     * @return 获取配置排序的结果
-     */
+    */
     public Integer getConfigSort() {
         return configSort;
     }
@@ -273,7 +273,7 @@ public class SoftConfig implements Serializable {
     /**
     * 设置配置排序。
     * @param configSort 配置排序
-     */
+    */
     public void setConfigSort(Integer configSort) {
         this.configSort = configSort;
     }
@@ -281,7 +281,7 @@ public class SoftConfig implements Serializable {
     /**
     * 获取配置是否visible。
     * @return 获取配置是否visible的结果
-     */
+    */
     public Boolean getConfigIsVisible() {
         return configIsVisible;
     }
@@ -289,7 +289,7 @@ public class SoftConfig implements Serializable {
     /**
     * 设置配置是否visible。
     * @param configIsVisible 配置是否visible
-     */
+    */
     public void setConfigIsVisible(Boolean configIsVisible) {
         this.configIsVisible = configIsVisible;
     }
@@ -297,7 +297,7 @@ public class SoftConfig implements Serializable {
     /**
     * 获取配置是否editable。
     * @return 获取配置是否editable的结果
-     */
+    */
     public Boolean getConfigIsEditable() {
         return configIsEditable;
     }
@@ -305,7 +305,7 @@ public class SoftConfig implements Serializable {
     /**
     * 设置配置是否editable。
     * @param configIsEditable 配置是否editable
-     */
+    */
     public void setConfigIsEditable(Boolean configIsEditable) {
         this.configIsEditable = configIsEditable;
     }
@@ -313,7 +313,7 @@ public class SoftConfig implements Serializable {
     /**
     * 获取配置默认价值观。
     * @return 获取配置默认价值观的结果
-     */
+    */
     public String getConfigDefaultValue() {
         return configDefaultValue;
     }
@@ -321,7 +321,7 @@ public class SoftConfig implements Serializable {
     /**
     * 设置配置默认价值观。
     * @param configDefaultValue 配置默认价值观
-     */
+    */
     public void setConfigDefaultValue(String configDefaultValue) {
         this.configDefaultValue = configDefaultValue;
     }
@@ -329,7 +329,7 @@ public class SoftConfig implements Serializable {
     /**
     * 获取配置范围。
     * @return 获取配置范围的结果
-     */
+    */
     public String getConfigRange() {
         return configRange;
     }
@@ -337,7 +337,7 @@ public class SoftConfig implements Serializable {
     /**
     * 设置配置范围。
     * @param configRange 配置范围
-     */
+    */
     public void setConfigRange(String configRange) {
         this.configRange = configRange;
     }
@@ -345,7 +345,7 @@ public class SoftConfig implements Serializable {
     /**
     * 获取配置extra。
     * @return 获取配置extra的结果
-     */
+    */
     public String getConfigExtra() {
         return configExtra;
     }
@@ -353,7 +353,7 @@ public class SoftConfig implements Serializable {
     /**
     * 设置配置extra。
     * @param configExtra 配置extra
-     */
+    */
     public void setConfigExtra(String configExtra) {
         this.configExtra = configExtra;
     }
@@ -361,7 +361,7 @@ public class SoftConfig implements Serializable {
     /**
     * 获取配置创建时间。
     * @return 获取配置创建时间的结果
-     */
+    */
     public LocalDateTime getConfigCreateTime() {
         return configCreateTime;
     }
@@ -369,7 +369,7 @@ public class SoftConfig implements Serializable {
     /**
     * 设置配置创建时间。
     * @param configCreateTime 配置创建时间
-     */
+    */
     public void setConfigCreateTime(LocalDateTime configCreateTime) {
         this.configCreateTime = configCreateTime;
     }
@@ -377,7 +377,7 @@ public class SoftConfig implements Serializable {
     /**
     * 获取配置更新时间。
     * @return 获取配置更新时间的结果
-     */
+    */
     public LocalDateTime getConfigUpdateTime() {
         return configUpdateTime;
     }
@@ -385,7 +385,7 @@ public class SoftConfig implements Serializable {
     /**
     * 设置配置更新时间。
     * @param configUpdateTime 配置更新时间
-     */
+    */
     public void setConfigUpdateTime(LocalDateTime configUpdateTime) {
         this.configUpdateTime = configUpdateTime;
     }
@@ -393,7 +393,7 @@ public class SoftConfig implements Serializable {
     /**
     * 获取配置创建by。
     * @return 获取配置创建by的结果
-     */
+    */
     public String getConfigCreateBy() {
         return configCreateBy;
     }
@@ -401,7 +401,7 @@ public class SoftConfig implements Serializable {
     /**
     * 设置配置创建by。
     * @param configCreateBy 配置创建by
-     */
+    */
     public void setConfigCreateBy(String configCreateBy) {
         this.configCreateBy = configCreateBy;
     }
@@ -409,7 +409,7 @@ public class SoftConfig implements Serializable {
     /**
     * 获取配置更新by。
     * @return 获取配置更新by的结果
-     */
+    */
     public String getConfigUpdateBy() {
         return configUpdateBy;
     }
@@ -417,7 +417,7 @@ public class SoftConfig implements Serializable {
     /**
     * 设置配置更新by。
     * @param configUpdateBy 配置更新by
-     */
+    */
     public void setConfigUpdateBy(String configUpdateBy) {
         this.configUpdateBy = configUpdateBy;
     }

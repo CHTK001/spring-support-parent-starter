@@ -38,7 +38,7 @@ public final class JobTriggering {
     *
     * @param definition 任务定义
     * @return 任一调度配置有效返回 true
-     */
+    */
     public static boolean hasTrigger(JobDefinition definition) {
         if (definition == null) {
             return false;
@@ -55,7 +55,7 @@ public final class JobTriggering {
     *
     * @param definition 任务定义 (cron / fixed延迟 / fixedrate 三选一, 优先级 cron &gt; fixed延迟 &gt; fixedrate)
     * @return 触发器, 没有任何调度配置时返回 空
-     */
+    */
     public static Trigger createTrigger(JobDefinition definition) {
         if (definition == null) {
             return null;
@@ -65,7 +65,7 @@ public final class JobTriggering {
             * crontrigger。
             * @param definition.getCron( definition.获取cron(
             * @return CronTrigger的结果
-             */
+            */
             return new CronTrigger(definition.getCron());
         }
         if (definition.getFixedDelayMs() > 0L) {
@@ -73,7 +73,7 @@ public final class JobTriggering {
             * fixedtrigger。
             * @param definition.getFixedDelayMs( definition.getfixed延迟ms(
             * @return FixedTrigger的结果
-             */
+            */
             return new FixedTrigger(definition.getFixedDelayMs(), TimeUnit.MILLISECONDS);
         }
         if (definition.getFixedRateMs() > 0L) {
@@ -81,7 +81,7 @@ public final class JobTriggering {
             * fixedtrigger。
             * @param definition.getFixedRateMs( definition.获取fixedratems(
             * @return FixedTrigger的结果
-             */
+            */
             return new FixedTrigger(definition.getFixedRateMs(), TimeUnit.MILLISECONDS);
         }
         return null;
@@ -95,7 +95,7 @@ public final class JobTriggering {
     * @param lastFireMs 上一次触发时间戳, 无历史则为 0 / 任意参考值
     * @param now        当前时间戳
     * @return 下一次触发时间, 未配置或计算失败返回 -1
-     */
+    */
     public static long nextFireMs(JobDefinition definition, Trigger trigger, long lastFireMs, long now) {
         if (definition == null || trigger == null) {
             return -1L;
@@ -116,7 +116,7 @@ public final class JobTriggering {
     *
     * @param value 文本
     * @return 非空返回 true
-     */
+    */
     private static boolean notBlank(String value) {
         return value != null && !value.isBlank();
     }

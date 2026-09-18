@@ -39,7 +39,7 @@ public class OrderCreatedEvent extends PaymentEvent {
     * @param channelType 通道类型
     * @param channelSubType 通道sub类型
     * @param subject 主题
-     */
+    */
     public OrderCreatedEvent(Object source, Long tenantId, Long merchantId, Long orderId, String orderNo,
                              Long userId, BigDecimal orderAmount, String channelType, String channelSubType, String subject) {
         /**
@@ -48,7 +48,7 @@ public class OrderCreatedEvent extends PaymentEvent {
         * @param "ORDER_CREATED" "订单_创建"
         * @param tenantId tenantid
         * @param merchantId merchantid
-         */
+        */
         super(source, "ORDER_CREATED", tenantId, merchantId);
         this.orderId = orderId;
         this.orderNo = orderNo;

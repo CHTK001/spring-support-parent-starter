@@ -33,18 +33,18 @@ public class PluginMyBatisEventListener {
 
     /**
     * SQL会话工厂 列表
-     */
+    */
     @Autowired(required = false)
     private List<SqlSessionFactory> sqlSessionFactories; // SQL会话工厂
 
     /**
     * MyBatis 映射器 注册器
-     */
+    */
     private final PluginMyBatisMapperRegistry mapperRegistry;
 
     /**
     * pluginmybatis事件监听器。
-     */
+    */
     public PluginMyBatisEventListener() {
         this.mapperRegistry = ServiceProvider.of(PluginMyBatisMapperRegistry.class).getExtension();
     }
@@ -56,7 +56,7 @@ public class PluginMyBatisEventListener {
     * </p>
     *
     * @param event 插件 Bean 注册事件
-     */
+    */
     @EventListener
     public void onPluginBeanRegistered(PluginBeanRegisteredEvent event) {
         if (sqlSessionFactories == null || sqlSessionFactories.isEmpty()) {
@@ -101,7 +101,7 @@ public class PluginMyBatisEventListener {
     * </p>
     *
     * @param event 插件 Bean 卸载事件
-     */
+    */
     @EventListener
     public void onPluginBeanUnregistered(PluginBeanUnregisteredEvent event) {
         if (sqlSessionFactories == null || sqlSessionFactories.isEmpty()) {
@@ -136,7 +136,7 @@ public class PluginMyBatisEventListener {
                         * 注销映射器。
                         * @param sqlSessionFactory SQL会话工厂
                         * @param beanType Bean类型
-                         */
+                        */
                         unregisterMapper(sqlSessionFactory, beanType);
                         log.info("[PluginMyBatis][事件]插件 Mapper 接口卸载成功: {} 插件: {}", beanName, pluginFilePath);
                     } catch (Exception e) {
@@ -154,7 +154,7 @@ public class PluginMyBatisEventListener {
     *
     * @param beanName Bean 名称
     * @return Bean 类型
-     */
+    */
     private Class<?> getBeanType(String beanName) {
         try {
             // 首先尝试从 Spring 容器获取
@@ -182,7 +182,7 @@ public class PluginMyBatisEventListener {
     *
     * @param beanType Bean 类型
     * @return 是否为 映射器 接口
-     */
+    */
     private boolean isMapperInterface(Class<?> beanType) {
         if (beanType == null) {
             return false;
@@ -195,7 +195,7 @@ public class PluginMyBatisEventListener {
     *
     * @param sqlSessionFactory SQL会话工厂 实例
     * @param mapperClass       映射器 接口类
-     */
+    */
     private void unregisterMapper(SqlSessionFactory sqlSessionFactory, Class<?> mapperClass) {
         if (sqlSessionFactory == null || mapperClass == null) {
             return;

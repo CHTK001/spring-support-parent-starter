@@ -10,32 +10,32 @@ public class ChatMessage {
 
     /**
     * 消息 标识
-     */
+    */
     private Long id;
 
     /**
     * 所属对话 标识
-     */
+    */
     private Long dialogId;
 
     /**
     * 消息时间戳（毫秒）
-     */
+    */
     private Long timestamp;
 
     /**
     * 角色（系统 / 用户 / assistant / tool）
-     */
+    */
     private String role;
 
     /**
     * 消息内容
-     */
+    */
     private String content;
 
     /**
     * 空参构造。
-     */
+    */
     public ChatMessage() {
     }
 
@@ -44,7 +44,7 @@ public class ChatMessage {
     *
     * @param role    角色
     * @param content 消息内容
-     */
+    */
     public ChatMessage(String role, String content) {
         this.role = role;
         this.content = content;
@@ -58,7 +58,7 @@ public class ChatMessage {
     * @param dialogId 对话 标识
     * @param role     角色
     * @param content  消息内容
-     */
+    */
     public ChatMessage(Long id, Long dialogId, String role, String content) {
         this.id = id;
         this.dialogId = dialogId;
@@ -71,7 +71,7 @@ public class ChatMessage {
     * 获取消息 标识。
     *
     * @return 消息 标识
-     */
+    */
     public Long getId() {
         return id;
     }
@@ -80,7 +80,7 @@ public class ChatMessage {
     * 设置消息 标识。
     *
     * @param id 消息 标识
-     */
+    */
     public void setId(Long id) {
         this.id = id;
     }
@@ -89,7 +89,7 @@ public class ChatMessage {
     * 获取对话 标识。
     *
     * @return 对话 标识
-     */
+    */
     public Long getDialogId() {
         return dialogId;
     }
@@ -98,7 +98,7 @@ public class ChatMessage {
     * 设置对话 标识。
     *
     * @param dialogId 对话 标识
-     */
+    */
     public void setDialogId(Long dialogId) {
         this.dialogId = dialogId;
     }
@@ -107,7 +107,7 @@ public class ChatMessage {
     * 获取消息时间戳。
     *
     * @return 消息时间戳（毫秒）
-     */
+    */
     public Long getTimestamp() {
         return timestamp;
     }
@@ -116,7 +116,7 @@ public class ChatMessage {
     * 设置消息时间戳。
     *
     * @param timestamp 消息时间戳（毫秒）
-     */
+    */
     public void setTimestamp(Long timestamp) {
         this.timestamp = timestamp;
     }
@@ -125,7 +125,7 @@ public class ChatMessage {
     * 获取角色。
     *
     * @return 角色
-     */
+    */
     public String getRole() {
         return role;
     }
@@ -134,7 +134,7 @@ public class ChatMessage {
     * 设置角色。
     *
     * @param role 角色
-     */
+    */
     public void setRole(String role) {
         this.role = role;
     }
@@ -143,7 +143,7 @@ public class ChatMessage {
     * 获取消息内容。
     *
     * @return 消息内容
-     */
+    */
     public String getContent() {
         return content;
     }
@@ -152,7 +152,7 @@ public class ChatMessage {
     * 设置消息内容。
     *
     * @param content 消息内容
-     */
+    */
     public void setContent(String content) {
         this.content = content;
     }
@@ -163,13 +163,13 @@ public class ChatMessage {
     * @param role    角色
     * @param content 消息内容
     * @return 消息实例
-     */
+    */
     public static ChatMessage of(String role, String content) {
         /**
         * 对话消息。
         * @param role 角色
         * @param content 内容
-         */
+        */
         return new ChatMessage(role, content);
     }
 
@@ -178,13 +178,13 @@ public class ChatMessage {
     *
     * @param content 消息内容
     * @return 消息实例
-     */
+    */
     public static ChatMessage assistant(String content) {
         /**
         * 对话消息。
         * @param "assistant" "assistant"
         * @param content 内容
-         */
+        */
         return new ChatMessage("assistant", content);
     }
 }

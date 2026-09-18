@@ -29,7 +29,7 @@ public class DistributedLockConfigRepository {
     * 构造方法，注入 jdbctemplate。
     *
     * @param jdbcTemplate Spring 容器提供的 jdbctemplate Bean
-     */
+    */
     public DistributedLockConfigRepository(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
     }
@@ -38,7 +38,7 @@ public class DistributedLockConfigRepository {
     * 查询所有分布式锁配置记录。
     *
     * @return 锁配置列表，按名称排序；无记录时返回空列表
-     */
+    */
     public List<ConcurrentDistributedLockConfig> findAll() {
         return jdbcTemplate.query(
                 "SELECT name, lock_type, fair, wait_time_ms, lease_time_ms, enabled FROM concurrent_distributed_lock ORDER BY name",
@@ -51,7 +51,7 @@ public class DistributedLockConfigRepository {
     *
     * @param name 锁名称
     * @return 配置对象，不存在时返回 期权.空()
-     */
+    */
     public Optional<ConcurrentDistributedLockConfig> findByName(String name) {
         List<ConcurrentDistributedLockConfig> list = jdbcTemplate.query(
                 "SELECT name, lock_type, fair, wait_time_ms, lease_time_ms, enabled FROM concurrent_distributed_lock WHERE name = ?",
@@ -69,7 +69,7 @@ public class DistributedLockConfigRepository {
     *
     * @param config 锁配置对象，名称 不能为 空 或空
     * @return 影响的行数
-     */
+    */
     public int save(ConcurrentDistributedLockConfig config) {
         return jdbcTemplate.update(
                 "INSERT OR REPLACE INTO concurrent_distributed_lock "
@@ -91,7 +91,7 @@ public class DistributedLockConfigRepository {
     *
     * @param name 锁名称
     * @return 影响的行数（1 = 删除成功，0 = 记录不存在）
-     */
+    */
     public int delete(String name) {
         return jdbcTemplate.update(
                 "DELETE FROM concurrent_distributed_lock WHERE name = ?",
@@ -105,7 +105,7 @@ public class DistributedLockConfigRepository {
     * @param rs JDBC 结果集，已定位到当前行
     * @return 映射后的配置对象
     * @throws java.sql.SQLException 读取列失败时抛出
-     */
+    */
     private ConcurrentDistributedLockConfig mapRow(java.sql.ResultSet rs) throws java.sql.SQLException {
         ConcurrentDistributedLockConfig c = new ConcurrentDistributedLockConfig();
         c.setName(rs.getString("name"));

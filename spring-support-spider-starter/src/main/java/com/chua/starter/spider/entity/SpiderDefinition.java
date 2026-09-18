@@ -29,7 +29,7 @@ public class SpiderDefinition extends SysBase {
 
     /**
     * 主键 标识（自增）
-     */
+    */
     @TableId(type = IdType.AUTO)
     @Schema(description = "主键 ID")
     /** 标识 */
@@ -37,7 +37,7 @@ public class SpiderDefinition extends SysBase {
 
     /**
     * 爬虫唯一编码
-     */
+    */
     @TableField("code")
     @Schema(description = "爬虫唯一编码")
     /** 代码 */
@@ -45,7 +45,7 @@ public class SpiderDefinition extends SysBase {
 
     /**
     * 爬虫名称
-     */
+    */
     @TableField("name")
     @Schema(description = "爬虫名称")
     /** 名称 */
@@ -53,7 +53,7 @@ public class SpiderDefinition extends SysBase {
 
     /**
     * 描述
-     */
+    */
     @TableField("description")
     @Schema(description = "描述")
     /** 描述 */
@@ -61,7 +61,7 @@ public class SpiderDefinition extends SysBase {
 
     /**
     * 关联流程 标识（蜘蛛_流.标识）
-     */
+    */
     @TableField("flow_id")
     @Schema(description = "关联流程 ID")
     /** 流标识 */
@@ -69,7 +69,7 @@ public class SpiderDefinition extends SysBase {
 
     /**
     * 是否启用（1 启用 / 0 停用）
-     */
+    */
     @TableField("enabled")
     @Schema(description = "是否启用")
     /** 是否启用 */
@@ -77,7 +77,7 @@ public class SpiderDefinition extends SysBase {
 
     /**
     * 定时 cron 表达式，为空则不自动调度
-     */
+    */
     @TableField("cron_expression")
     @Schema(description = "定时 cron 表达式")
     /** Cron表达式 */
@@ -85,7 +85,7 @@ public class SpiderDefinition extends SysBase {
 
     /**
     * 执行类型（ONCE 一次 / 调度 定时），为空时按 cron 是否配置自动判定
-     */
+    */
     @TableField("executor_type")
     @Schema(description = "执行类型（ONCE 一次 / SCHEDULE 定时）")
     /** 执行器类型 */
@@ -93,7 +93,7 @@ public class SpiderDefinition extends SysBase {
 
     /**
     * 上次执行时间
-     */
+    */
     @TableField("last_run_at")
     @Schema(description = "上次执行时间")
     /** 最后RUNAT */
@@ -101,7 +101,7 @@ public class SpiderDefinition extends SysBase {
 
     /**
     * 上次执行状态（成功/失败/RUNNING）
-     */
+    */
     @TableField("last_status")
     @Schema(description = "上次执行状态")
     /** 最后状态 */
@@ -109,7 +109,7 @@ public class SpiderDefinition extends SysBase {
 
     /**
     * 上次执行消息
-     */
+    */
     @TableField("last_message")
     @Schema(description = "上次执行消息")
     /** 最后消息 */
@@ -117,7 +117,7 @@ public class SpiderDefinition extends SysBase {
 
     /**
     * 入口 URL
-     */
+    */
     @TableField("entry_url")
     @Schema(description = "入口 URL")
     /** entryurl */
@@ -125,7 +125,7 @@ public class SpiderDefinition extends SysBase {
 
     /**
     * 站点主机
-     */
+    */
     @TableField("site_host")
     @Schema(description = "站点主机")
     /** Site主机 */
@@ -133,7 +133,7 @@ public class SpiderDefinition extends SysBase {
 
     /**
     * 是否深度采集（1/0）
-     */
+    */
     @TableField("collect_deep_url")
     @Schema(description = "是否深度采集")
     /** collectdeepurl */
@@ -141,7 +141,7 @@ public class SpiderDefinition extends SysBase {
 
     /**
     * 最大深度
-     */
+    */
     @TableField("max_depth")
     @Schema(description = "最大深度")
     /** 最大值深度 */
@@ -149,7 +149,7 @@ public class SpiderDefinition extends SysBase {
 
     /**
     * 最大页数
-     */
+    */
     @TableField("max_pages")
     @Schema(description = "最大页数")
     /** 最大值pages */
@@ -157,7 +157,7 @@ public class SpiderDefinition extends SysBase {
 
     /**
     * 执行轮次
-     */
+    */
     @TableField("executor_rounds")
     @Schema(description = "执行轮次")
     /** 执行器rounds */
@@ -165,7 +165,7 @@ public class SpiderDefinition extends SysBase {
 
     /**
     * 备注
-     */
+    */
     @TableField("remark")
     @Schema(description = "备注")
     /** 评论 */
@@ -173,7 +173,7 @@ public class SpiderDefinition extends SysBase {
 
     /**
     * 逻辑删除标记（0 未删除 / 1 已删除）
-     */
+    */
     @TableField("sys_deleted")
     @TableLogic
     @Schema(description = "逻辑删除标记")

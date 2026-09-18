@@ -23,12 +23,12 @@ public class ImageRecognitionGlobalSettingProvider implements GlobalSettingProvi
 
     /**
     * 配置分组标识
-     */
+    */
     private static final String GROUP = "image";
 
     /**
     * 分组显示名称
-     */
+    */
     private static final String GROUP_NAME = "图片识别";
 
     @Override

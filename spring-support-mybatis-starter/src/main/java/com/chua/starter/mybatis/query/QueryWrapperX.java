@@ -26,7 +26,7 @@ public class QueryWrapperX<T> extends QueryWrapper<T> {
     * @param column column
     * @param val val
     * @return likeIfPresent的结果
-     */
+    */
     public QueryWrapperX<T> likeIfPresent(String column, String val) {
         if (StringUtils.hasText(val)) {
             return (QueryWrapperX<T>) super.like(column, val);
@@ -40,7 +40,7 @@ public class QueryWrapperX<T> extends QueryWrapper<T> {
     * @param column column
     * @param values 价值观
     * @return 入ifpresent的结果
-     */
+    */
     public QueryWrapperX<T> inIfPresent(String column, Collection<?> values) {
         if (!CollectionUtils.isEmpty(values)) {
             return (QueryWrapperX<T>) super.in(column, values);
@@ -54,7 +54,7 @@ public class QueryWrapperX<T> extends QueryWrapper<T> {
     * @param column column
     * @param values 价值观
     * @return 入ifpresent的结果
-     */
+    */
     public QueryWrapperX<T> inIfPresent(String column, Object... values) {
         if (!ArrayUtils.isEmpty(values)) {
             return (QueryWrapperX<T>) super.in(column, values);
@@ -68,7 +68,7 @@ public class QueryWrapperX<T> extends QueryWrapper<T> {
     * @param column column
     * @param val val
     * @return eqIfPresent的结果
-     */
+    */
     public QueryWrapperX<T> eqIfPresent(String column, Object val) {
         if (val != null) {
             return (QueryWrapperX<T>) super.eq(column, val);
@@ -82,7 +82,7 @@ public class QueryWrapperX<T> extends QueryWrapper<T> {
     * @param column column
     * @param val val
     * @return neIfPresent的结果
-     */
+    */
     public QueryWrapperX<T> neIfPresent(String column, Object val) {
         if (val != null) {
             return (QueryWrapperX<T>) super.ne(column, val);
@@ -96,7 +96,7 @@ public class QueryWrapperX<T> extends QueryWrapper<T> {
     * @param column column
     * @param val val
     * @return gtIfPresent的结果
-     */
+    */
     public QueryWrapperX<T> gtIfPresent(String column, Object val) {
         if (val != null) {
             return (QueryWrapperX<T>) super.gt(column, val);
@@ -110,7 +110,7 @@ public class QueryWrapperX<T> extends QueryWrapper<T> {
     * @param column column
     * @param val val
     * @return geIfPresent的结果
-     */
+    */
     public QueryWrapperX<T> geIfPresent(String column, Object val) {
         if (val != null) {
             return (QueryWrapperX<T>) super.ge(column, val);
@@ -124,7 +124,7 @@ public class QueryWrapperX<T> extends QueryWrapper<T> {
     * @param column column
     * @param val val
     * @return ltIfPresent的结果
-     */
+    */
     public QueryWrapperX<T> ltIfPresent(String column, Object val) {
         if (val != null) {
             return (QueryWrapperX<T>) super.lt(column, val);
@@ -138,7 +138,7 @@ public class QueryWrapperX<T> extends QueryWrapper<T> {
     * @param column column
     * @param val val
     * @return leIfPresent的结果
-     */
+    */
     public QueryWrapperX<T> leIfPresent(String column, Object val) {
         if (val != null) {
             return (QueryWrapperX<T>) super.le(column, val);
@@ -153,7 +153,7 @@ public class QueryWrapperX<T> extends QueryWrapper<T> {
     * @param val1 val1
     * @param val2 val2
     * @return betweenIfPresent的结果
-     */
+    */
     public QueryWrapperX<T> betweenIfPresent(String column, Object val1, Object val2) {
         if (val1 != null && val2 != null) {
             return (QueryWrapperX<T>) super.between(column, val1, val2);
@@ -173,7 +173,7 @@ public class QueryWrapperX<T> extends QueryWrapper<T> {
     * @param column column
     * @param values 价值观
     * @return betweenIfPresent的结果
-     */
+    */
     public QueryWrapperX<T> betweenIfPresent(String column, Object[] values) {
         if (values!= null && values.length != 0 && values[0] != null && values[1] != null) {
             return (QueryWrapperX<T>) super.between(column, values[0], values[1]);
@@ -231,7 +231,7 @@ public class QueryWrapperX<T> extends QueryWrapper<T> {
     *
     * @return this
     * @param n n
-     */
+    */
     public QueryWrapperX<T> limitN(int n) {
         Preconditions.checkNotNull(SqlConstants.DB_TYPE, "获取不到数据库的类型");
         switch (SqlConstants.DB_TYPE) {

@@ -37,7 +37,7 @@ public class SseSocketSession implements SocketSession {
     * @param id 标识
     * @param emitter sseemitter
     * @param emitter emitter
-     */
+    */
     public SseSocketSession(String id, SseEmitter emitter) {
         this.id = id;
         this.clientId = id;
@@ -92,7 +92,7 @@ public class SseSocketSession implements SocketSession {
     *
     * @param key 钥匙
     * @return 获取attribute的结果
-     */
+    */
     public <T> T getAttribute(String key) {
         return (T) attributes.get(key);
     }
@@ -146,7 +146,7 @@ public class SseSocketSession implements SocketSession {
     * 获取Connection
     *
     * @return 获取connection的结果
-     */
+    */
     public <T> T getConnection() {
         return (T) emitter;
     }
@@ -155,7 +155,7 @@ public class SseSocketSession implements SocketSession {
     * 获取 sseemitter
     *
     * @return SseEmitter
-     */
+    */
     public SseEmitter getEmitter() {
         return emitter;
     }

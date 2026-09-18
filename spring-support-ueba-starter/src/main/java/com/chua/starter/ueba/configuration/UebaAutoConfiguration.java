@@ -46,7 +46,7 @@ public class UebaAutoConfiguration {
     * @param properties UEBA 配置属性，不能为 空
     * @return 就绪的分析引擎
     * @throws IllegalStateException 当默认配置加载失败时
-     */
+    */
     @Bean(destroyMethod = "close")
     @ConditionalOnMissingBean
     public UebaEngine uebaEngine(UebaProperties properties) {
@@ -76,7 +76,7 @@ public class UebaAutoConfiguration {
     *
     * @param properties UEBA 配置属性
     * @return ServiceInfoContributor
-     */
+    */
     @Bean
     public ServiceInfoContributor uebaServiceInfoContributor(UebaProperties properties) {
         return registry -> registry.registerFlag("ueba", "UEBA", true,

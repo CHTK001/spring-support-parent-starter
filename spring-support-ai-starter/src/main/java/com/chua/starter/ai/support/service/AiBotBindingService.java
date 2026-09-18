@@ -56,7 +56,7 @@ public class AiBotBindingService {
     *
     * <p>使用 ConcurrentHashMap 避免高并发下 session 互相覆盖；
     * 生产环境替换为 Redis，钥匙 带前缀避免冲突。</p>
-     */
+    */
     private final ConcurrentHashMap<String, QrSession> qrSessions = new ConcurrentHashMap<>();
 
     // ==================== 绑定 CRUD ====================
@@ -64,7 +64,7 @@ public class AiBotBindingService {
     /**
     * 获取全部绑定列表（按创建时间降序）。
     * @return 列表全部的结果
-     */
+    */
     public List<SysAiBotBinding> listAll() {
         return botBindingMapper.selectList(
                 Wrappers.<SysAiBotBinding>lambdaQuery()
@@ -76,7 +76,7 @@ public class AiBotBindingService {
     *
     * @param userId 用户 标识（空 表示未绑定用户的全部记录）
     * @return 绑定列表（按创建时间降序）
-     */
+    */
     public List<SysAiBotBinding> listByUser(Long userId) {
         return botBindingMapper.selectList(
                 Wrappers.<SysAiBotBinding>lambdaQuery()
@@ -93,7 +93,7 @@ public class AiBotBindingService {
     *
     * @param ownerKey 归属标识（可为空）
     * @return 绑定列表（按创建时间降序）
-     */
+    */
     public List<SysAiBotBinding> listByOwnerKey(String ownerKey) {
         boolean blank = ownerKey == null || ownerKey.isBlank();
         return botBindingMapper.selectList(
@@ -107,7 +107,7 @@ public class AiBotBindingService {
     * 管理员视角的用户聚合列表：按 用户标识 分组统计每个用户绑定的 机器人 数与在线数。
     *
     * @return 用户摘要列表（含未分配用户组的记录）
-     */
+    */
     public List<BotUserSummary> listUserSummaries() {
         List<SysAiBotBinding> all = botBindingMapper.selectList(
                 Wrappers.<SysAiBotBinding>lambdaQuery()
@@ -137,7 +137,7 @@ public class AiBotBindingService {
     * @param userId 用户 标识（可空，表示未分配）
     * @param bots   该用户的绑定记录
     * @return 用户摘要
-     */
+    */
     private BotUserSummary summarize(Long userId, List<SysAiBotBinding> bots) {
         BotUserSummary summary = new BotUserSummary();
         summary.setOwner(userId != null ? String.valueOf(userId) : "unassigned");
@@ -164,7 +164,7 @@ public class AiBotBindingService {
     *
     * @param id 绑定记录 标识，不能为 空
     * @return 绑定记录，不存在时返回 空
-     */
+    */
     public SysAiBotBinding getById(Long id) {
         return botBindingMapper.selectById(id);
     }
@@ -174,7 +174,7 @@ public class AiBotBindingService {
     *
     * @param botId 机器人 唯一标识，不能为 空 或空字符串
     * @return 绑定记录，不存在时返回 空
-     */
+    */
     public SysAiBotBinding findByBotId(String botId) {
         return botBindingMapper.selectOne(
                 Wrappers.<SysAiBotBinding>lambdaQuery()
@@ -188,7 +188,7 @@ public class AiBotBindingService {
     * MyBatis Plus NOT_空 更新策略：空 字段不会覆盖数据库值（令牌 留空即保留原值）。</p>
     * @param binding binding
     * @return 保存or更新的结果
-     */
+    */
     public Long saveOrUpdate(SysAiBotBinding binding) {
         var existing = findByBotId(binding.getBotId());
         if (existing != null) {
@@ -213,7 +213,7 @@ public class AiBotBindingService {
     * 更新 机器人 在线状态（由内部同步任务调用，不对接前端）。
     * @param botId 机器人标识
     * @param status 状态
-     */
+    */
     public void updateStatus(String botId, String status) {
         var binding = findByBotId(botId);
         if (binding == null) {
@@ -234,7 +234,7 @@ public class AiBotBindingService {
     /**
     * 删除。
     * @param id 标识
-     */
+    */
     public void delete(Long id) {
         var binding = getById(id);
         botBindingMapper.deleteById(id);
@@ -257,7 +257,7 @@ public class AiBotBindingService {
     *
     * @param platform wechat / wecom
     * @return 会话 钥匙（前端传给 /qrcode/状态）+ qrcodeurl（轮询 状态=就绪 后从 qr状态 取）
-     */
+    */
     public QrResult generateQrCode(String platform) {
         return generateQrCode(platform, null, null);
     }
@@ -268,7 +268,7 @@ public class AiBotBindingService {
     * @param platform wechat / wecom
     * @param oldBotId 重新扫码场景下需合并的旧 机器人 唯一标识（可为空）
     * @return 会话 钥匙 + qrcodeurl
-     */
+    */
     public QrResult generateQrCode(String platform, String oldBotId) {
         return generateQrCode(platform, oldBotId, null);
     }
@@ -284,7 +284,7 @@ public class AiBotBindingService {
     * @param oldBotId 重新扫码场景下需合并的旧 机器人 唯一标识（可为空，表示全新绑定）
     * @return 会话 钥匙 + qrcodeurl
     * @param ownerKey owner钥匙
-     */
+    */
     public QrResult generateQrCode(String platform, String oldBotId, String ownerKey) {
  // 企业微信不支持 i链接 扫码，直接返回空 钥匙
         if ("wecom".equals(platform)) {
@@ -293,7 +293,7 @@ public class AiBotBindingService {
             * qr结果。
             * @param UUID.randomUUID( UUID.随机uuid(
             * @return qr结果的结果
-             */
+            */
             return new QrResult(UUID.randomUUID().toString(), "");
         }
 
@@ -318,7 +318,7 @@ public class AiBotBindingService {
                 * @param key 钥匙
                 * @param "" ""
                 * @return qr结果的结果
-                 */
+                */
                 return new QrResult(key, "");
             }
 
@@ -353,7 +353,7 @@ public class AiBotBindingService {
                         * @param key 钥匙
                         * @param session 会话
                         * @param userId 用户标识
-                         */
+                        */
                         saveBindingFromScan(key, session, userId);
                     }
  // 保留 会话 让前端轮询能读到 confirmed 状态后再关闭；
@@ -403,7 +403,7 @@ public class AiBotBindingService {
         * @param key 钥匙
         * @param "" ""
         * @return qr结果的结果
-         */
+        */
         return new QrResult(key, session.qrImageUrl != null ? session.qrImageUrl : "");
     }
 
@@ -415,7 +415,7 @@ public class AiBotBindingService {
     *
     * @param key 会话 钥匙
     * @return 状态 + 凭证（confirmed 时）
-     */
+    */
     public QrStatus checkQrCodeStatus(String key) {
         var session = qrSessions.get(key);
  // 会话不存在（已 confirmed 移除 / 已过期 / 钥匙 无效）：返回 expired，避免前端轮询报错
@@ -428,7 +428,7 @@ public class AiBotBindingService {
             * @param null 空
             * @param null 空
             * @return qr状态的结果
-             */
+            */
             return new QrStatus("expired", null, null, null, null);
         }
  // 懒清理过期 会话
@@ -445,7 +445,7 @@ public class AiBotBindingService {
             * @param session.botToken 会话.机器人令牌
             * @param session.expireAt 会话.expireat
             * @return qr状态的结果
-             */
+            */
             return new QrStatus("confirmed", session.qrImageUrl, session.botId, session.botToken, session.expireAt);
         }
         /**
@@ -456,7 +456,7 @@ public class AiBotBindingService {
         * @param null 空
         * @param session.expireAt 会话.expireat
         * @return qr状态的结果
-         */
+        */
         return new QrStatus(session.status != null ? session.status : "pending", session.qrImageUrl, null, null, session.expireAt);
     }
 
@@ -476,7 +476,7 @@ public class AiBotBindingService {
     * @param key 钥匙
     * @param session 会话
     * @param userId 用户标识
-     */
+    */
     private void saveBindingFromScan(String key, QrSession session, String userId) {
         try {
             String newBotId = session.botId;
@@ -562,7 +562,7 @@ public class AiBotBindingService {
             /**
             * 保存或更新。
             * @param binding binding
-             */
+            */
             saveOrUpdate(binding);
             log.info("[Bot] 绑定已写入 DB id={}", binding.getId());
         } catch (Exception e) {
@@ -581,7 +581,7 @@ public class AiBotBindingService {
     * @param appId     飞书开放平台应用 标识
     * @param appSecret 飞书开放平台应用密钥
     * @return 数据库 标识
-     */
+    */
     public Long bindFeishu(String appId, String appSecret) {
         return bindFeishu(appId, appSecret, null);
     }
@@ -593,14 +593,14 @@ public class AiBotBindingService {
     * @param appSecret 飞书开放平台应用密钥
     * @param ownerKey  归属标识（可空，空=公共/未归属）
     * @return 数据库 标识
-     */
+    */
     public Long bindFeishu(String appId, String appSecret, String ownerKey) {
         if (appId == null || appId.isBlank() || appSecret == null || appSecret.isBlank()) {
             /**
             * illegal参数异常。
             * @param 必填" 必填"
             * @return illegal参数异常的结果
-             */
+            */
             throw new IllegalArgumentException("飞书 appId 与 appSecret 必填");
         }
         // 通过 SPI 构建并校验
@@ -611,7 +611,7 @@ public class AiBotBindingService {
                 * illegal状态异常。
                 * @param FeishuBotClient" feishu机器人客户端"
                 * @return illegal状态异常的结果
-                 */
+                */
                 throw new IllegalStateException("feishu SPI 未返回 FeishuBotClient");
             }
             feishu.configure(appId, appSecret, null).start();
@@ -622,7 +622,7 @@ public class AiBotBindingService {
             * illegal参数异常。
             * @param e.getMessage( e.获取消息(
             * @return illegal参数异常的结果
-             */
+            */
             throw new IllegalArgumentException("飞书客户端初始化失败: " + e.getMessage());
         }
 
@@ -649,7 +649,7 @@ public class AiBotBindingService {
     * <p>状态流转：pending → ready（二维码就绪）→ scanned → confirmed / expired / error</p>
     * @author CH
     * @since 4.0.0
-     */
+    */
     @Data
     static class QrSession {
         /** 会话唯一 钥匙 */
@@ -675,11 +675,11 @@ public class AiBotBindingService {
     }
 
     /**
-    * 生成二维码响应（不可变，用 record）。
-    *
-    * @param key       轮询 钥匙（前端传给 /qrcode/状态?钥匙=）
-    * @param qrcodeUrl 二维码图片 URL（异步 模式即时返回空，前端轮询到 状态=就绪 后从 qr状态 取）
-     */
+        * 生成二维码响应（不可变，用 record）。
+        *
+        * @param key       轮询 钥匙（前端传给 /qrcode/状态?钥匙=）
+        * @param qrcodeUrl 二维码图片 URL（异步 模式即时返回空，前端轮询到 状态=就绪 后从 qr状态 取）
+        */
     public record QrResult(String key,
                            @JsonProperty("qrcodeUrl") String qrcodeUrl) {
     }
@@ -692,7 +692,7 @@ public class AiBotBindingService {
     * @param botId     绑定成功后回填
     * @param botToken  绑定成功后回填
     * @param expireAt  二维码过期时间戳（毫秒），前端据此展示倒计时并到期自动刷新
-     */
+    */
     public record QrStatus(String status,
                            String qrcodeUrl,
                            String botId,

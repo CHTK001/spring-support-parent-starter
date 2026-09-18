@@ -57,10 +57,10 @@ public class SwitchInventory {
         private List<String> patterns;
 
         /**
-        * 规范化描述（参与指纹计算）
-        *
-        * @return canonical的结果
-         */
+    * 规范化描述（参与指纹计算）
+    *
+    * @return canonical的结果
+    */
         public String canonical() {
             return "feature:" + featureId + ":enabled=" + defaultEnabled
                     + ":message=" + nvl(disabledMessage)
@@ -100,10 +100,10 @@ public class SwitchInventory {
         private List<String> patterns;
 
         /**
-        * 规范化描述（参与指纹计算）
-        *
-        * @return canonical的结果
-         */
+    * 规范化描述（参与指纹计算）
+    *
+    * @return canonical的结果
+    */
         public String canonical() {
             return "gray:" + pattern + ":percentage=" + percentage
                     + ":roles=" + join(roles) + ":users=" + join(users)
@@ -116,7 +116,7 @@ public class SwitchInventory {
     * nvl。
     * @param s s
     * @return nvl的结果
-     */
+    */
     private static String nvl(String s) {
         return s == null ? "" : s;
     }
@@ -125,7 +125,7 @@ public class SwitchInventory {
     * 连接。
     * @param arr arr
     * @return 连接的结果
-     */
+    */
     private static String join(String[] arr) {
         if (arr == null || arr.length == 0) {
             return "";

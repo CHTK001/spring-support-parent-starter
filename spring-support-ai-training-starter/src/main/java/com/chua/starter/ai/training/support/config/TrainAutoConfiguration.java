@@ -35,14 +35,14 @@ public class TrainAutoConfiguration {
     * 数据服务。
     * @param properties 属性
     * @return 数据服务的结果
-     */
+    */
     public DataService dataService(TrainProperties properties) {
         log.info("[Train] 注册 DataService");
         /**
         * 数据服务impl。
         * @param properties 属性
         * @return 数据服务impl的结果
-         */
+        */
         return new DataServiceImpl(properties);
     }
 
@@ -53,7 +53,7 @@ public class TrainAutoConfiguration {
     * @param properties 属性
     * @param eventPublisher 事件发布
     * @return train服务的结果
-     */
+    */
     public TrainService trainService(TrainProperties properties, ApplicationEventPublisher eventPublisher) {
         log.info("[Train] 注册 TrainService");
         /**
@@ -61,7 +61,7 @@ public class TrainAutoConfiguration {
         * @param properties 属性
         * @param eventPublisher 事件发布
         * @return train服务impl的结果
-         */
+        */
         return new TrainServiceImpl(properties, eventPublisher);
     }
 
@@ -71,7 +71,7 @@ public class TrainAutoConfiguration {
     * @param dataService 数据服务
     * @param trainService train服务
     * @return train控制器的结果
-     */
+    */
     @Bean
     @ConditionalOnMissingBean
     public TrainController trainController(DataService dataService, TrainService trainService) {
@@ -81,7 +81,7 @@ public class TrainAutoConfiguration {
         * @param dataService 数据服务
         * @param trainService train服务
         * @return train控制器的结果
-         */
+        */
         return new TrainController(dataService, trainService);
     }
 
@@ -90,7 +90,7 @@ public class TrainAutoConfiguration {
     *
     * @param properties 训练配置
     * @return ServiceInfoContributor
-     */
+    */
     @Bean
     public ServiceInfoContributor trainServiceInfoContributor(TrainProperties properties) {
         return registry -> registry.registerFlag("ai-training", "AI训练", properties.isEnabled(),

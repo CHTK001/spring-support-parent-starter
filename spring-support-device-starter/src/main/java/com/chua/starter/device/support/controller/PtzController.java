@@ -28,7 +28,7 @@ public class PtzController {
 
     /**
     * 设备会话管理器
-     */
+    */
     private final DeviceSessionManager sessionManager;
 
     /**
@@ -37,7 +37,7 @@ public class PtzController {
     * @param deviceId 设备 标识
     * @param cmd      控制指令
     * @param speed    速度（0-1）
-     */
+    */
     @PostMapping("/control")
     public void control(@RequestParam String deviceId,
                         @RequestParam PtzCommand cmd,
@@ -48,7 +48,7 @@ public class PtzController {
 
     /**
     * 设置预置位
-     */
+    */
     @PostMapping("/preset")
     public void setPreset(@RequestParam String deviceId,
                           @RequestParam int presetId,
@@ -56,33 +56,33 @@ public class PtzController {
         /**
         * requireonline。
         * @param deviceId deviceid
-         */
+        */
         requireOnline(deviceId).setPreset(presetId, name);
     }
 
     /**
     * 调用预置位
-     */
+    */
     @PostMapping("/preset/call")
     public void callPreset(@RequestParam String deviceId,
                            @RequestParam int presetId) {
         /**
         * requireonline。
         * @param deviceId deviceid
-         */
+        */
         requireOnline(deviceId).callPreset(presetId);
     }
 
     /**
     * 删除预置位
-     */
+    */
     @DeleteMapping("/preset")
     public void deletePreset(@RequestParam String deviceId,
                              @RequestParam int presetId) {
         /**
         * requireonline。
         * @param deviceId deviceid
-         */
+        */
         requireOnline(deviceId).deletePreset(presetId);
     }
 
@@ -90,7 +90,7 @@ public class PtzController {
     * 获取预置位列表
     * @param deviceId deviceid
     * @return 列表presets的结果
-     */
+    */
     @GetMapping("/preset/list")
     public List<PresetInfo> listPresets(@RequestParam String deviceId) {
         DeviceSession session = sessionManager.getSession(deviceId);
@@ -105,7 +105,7 @@ public class PtzController {
     *
     * @param deviceId deviceid
     * @return requireOnline的结果
-     */
+    */
     private DeviceSession requireOnline(String deviceId) {
         DeviceSession session = sessionManager.getSession(deviceId);
         if (session == null || !session.isOnline()) {
@@ -113,7 +113,7 @@ public class PtzController {
             * runtime异常。
             * @param deviceId deviceid
             * @return runtime异常的结果
-             */
+            */
             throw new RuntimeException("设备不在线: " + deviceId);
         }
         return session;

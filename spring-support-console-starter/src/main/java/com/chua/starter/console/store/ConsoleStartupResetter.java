@@ -24,7 +24,7 @@ public class ConsoleStartupResetter implements ApplicationRunner {
     * 控制台startupresetter。
     * @param scanner scanner
     * @param store 存储
-     */
+    */
     public ConsoleStartupResetter(AnnotationSwitchScanner scanner, ConsoleSqliteStore store) {
         this.scanner = scanner;
         this.store = store;

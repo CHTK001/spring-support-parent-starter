@@ -40,14 +40,14 @@ public class SqlMonitorAutoConfiguration implements EnvironmentAware {
 
     /**
     * Spring 环境
-     */
+    */
     private Environment environment;
 
     /**
     * 注入 Spring 环境
     *
     * @param environment Spring 环境
-     */
+    */
     @Override
     public void setEnvironment(Environment environment) {
         this.environment = environment;
@@ -60,7 +60,7 @@ public class SqlMonitorAutoConfiguration implements EnvironmentAware {
     * @param listeners      自定义 SQL 监听器
     * @param properties     监控配置
     * @return SQL 监控门面
-     */
+    */
     @Bean
     @ConditionalOnMissingBean
     public DataSourceSqlMonitor dataSourceSqlMonitor(ApplicationEventPublisher eventPublisher,
@@ -86,7 +86,7 @@ public class SqlMonitorAutoConfiguration implements EnvironmentAware {
     *
     * @param monitor 监控门面
     * @return SQL 监听端点
-     */
+    */
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnClass(name = "org.springframework.boot.actuate.endpoint.annotation.Endpoint")
@@ -95,7 +95,7 @@ public class SqlMonitorAutoConfiguration implements EnvironmentAware {
         * SQL监控端点。
         * @param monitor 监控
         * @return sql监控端点的结果
-         */
+        */
         return new SqlMonitorEndpoint(monitor);
     }
 }

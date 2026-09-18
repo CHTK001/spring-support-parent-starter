@@ -60,7 +60,7 @@ public class StringListTypeHandler implements TypeHandler<List<String>> {
     *
     * @param value 价值观
     * @return 获取结果的结果
-     */
+    */
     private List<String> getResult(String value) {
         if (value == null) {
             return null;

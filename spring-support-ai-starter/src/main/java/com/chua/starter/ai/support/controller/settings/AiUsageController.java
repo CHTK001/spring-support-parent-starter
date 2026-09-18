@@ -28,7 +28,7 @@ public class AiUsageController {
 
     /**
     * 用量服务
-     */
+    */
     private final AiUsageService usageService;
 
     /**
@@ -39,7 +39,7 @@ public class AiUsageController {
     * @param "模型名称" "模型名称"
     * @param "模型名称" "模型名称"
     * @param "模型名称" "模型名称"
-     */
+    */
     @Permission("admin")
     @Operation(summary = "查询用量统计")
     @GetMapping

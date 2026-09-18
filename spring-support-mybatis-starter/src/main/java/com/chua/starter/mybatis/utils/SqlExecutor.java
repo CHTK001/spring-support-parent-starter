@@ -25,7 +25,7 @@ public class SqlExecutor {
     * @param @Qualifier("sqlSessionFactory" @qualifier("SQL会话工厂"
     * @param @Qualifier("sqlSessionFactory" @Qualifier("sql会话工厂"
     * @param @Qualifier("sqlSessionFactory" @Qualifier("sqlSessionFactory"
-     */
+    */
     public SqlExecutor(@Qualifier("sqlSessionFactory") SqlSessionFactory sqlSessionFactory) {
         this.sqlSessionFactory = sqlSessionFactory;
     }
@@ -37,12 +37,12 @@ public class SqlExecutor {
     * @param params      参数对象
     * @param <T>         返回类型
     * @return 查询结果列表
-     */
+    */
     public <T> List<T> selectList(String statementId, Object params) {
         /**
         * 尝试。
         * @param sqlSessionFactory.openSession(true SQL会话工厂.opensession(true
-         */
+        */
         try (SqlSession session = sqlSessionFactory.openSession(true)) {
             return session.selectList(statementId, params);
         }
@@ -54,7 +54,7 @@ public class SqlExecutor {
     * @param statementId 映射语句标识
     * @param <T>         返回类型
     * @return 查询结果列表
-     */
+    */
     public <T> List<T> selectList(String statementId) {
         return selectList(statementId, null);
     }
@@ -66,12 +66,12 @@ public class SqlExecutor {
     * @param params      参数对象
     * @param <T>         返回类型
     * @return 查询结果
-     */
+    */
     public <T> T selectOne(String statementId, Object params) {
         /**
         * 尝试。
         * @param sqlSessionFactory.openSession(true SQL会话工厂.opensession(true
-         */
+        */
         try (SqlSession session = sqlSessionFactory.openSession(true)) {
             return session.selectOne(statementId, params);
         }
@@ -83,7 +83,7 @@ public class SqlExecutor {
     * @param statementId 映射语句标识
     * @param <T>         返回类型
     * @return 查询结果
-     */
+    */
     public <T> T selectOne(String statementId) {
         return selectOne(statementId, null);
     }
@@ -95,12 +95,12 @@ public class SqlExecutor {
     * @param params 参数数组
     * @param <T>   返回类型
     * @return 查询结果列表
-     */
+    */
     public <T> List<T> query(String sql, Object... params) {
         /**
         * 尝试。
         * @param sqlSessionFactory.openSession(true SQL会话工厂.opensession(true
-         */
+        */
         try (SqlSession session = sqlSessionFactory.openSession(true)) {
             return session.selectList(sql, params);
         }
@@ -112,7 +112,7 @@ public class SqlExecutor {
     * @param sql SQL 语句
     * @param <T> 返回类型
     * @return 查询结果列表
-     */
+    */
     public <T> List<T> query(String sql) {
         return query(sql, new Object[0]);
     }
@@ -123,12 +123,12 @@ public class SqlExecutor {
     * @param sql    SQL 语句
     * @param params 参数数组
     * @return 影响行数
-     */
+    */
     public int execute(String sql, Object... params) {
         /**
         * 尝试。
         * @param sqlSessionFactory.openSession(true SQL会话工厂.opensession(true
-         */
+        */
         try (SqlSession session = sqlSessionFactory.openSession(true)) {
             return session.update(sql, params);
         }
@@ -139,7 +139,7 @@ public class SqlExecutor {
     *
     * @param sql SQL 语句
     * @return 影响行数
-     */
+    */
     public int execute(String sql) {
         return execute(sql, new Object[0]);
     }
@@ -150,12 +150,12 @@ public class SqlExecutor {
     * @param statementId 映射语句标识
     * @param params      参数对象
     * @return 影响行数
-     */
+    */
     public int update(String statementId, Object params) {
         /**
         * 尝试。
         * @param sqlSessionFactory.openSession(true SQL会话工厂.opensession(true
-         */
+        */
         try (SqlSession session = sqlSessionFactory.openSession(true)) {
             return session.update(statementId, params);
         }
@@ -166,7 +166,7 @@ public class SqlExecutor {
     *
     * @param statementId 映射语句标识
     * @return 影响行数
-     */
+    */
     public int update(String statementId) {
         return update(statementId, null);
     }
