@@ -36,7 +36,7 @@ import java.util.function.BiConsumer;
 public class ExecutorSyncBinder {
 
     /**
-    * 同步客户端 SPI 钥匙, 由仓库公共服务端负责注入
+    * 同步客户端 SPI Key, 由仓库公共服务端负责注入
     */
     public static final String SPI_SYNC_CLIENT = "sync.client";
 

@@ -151,8 +151,8 @@ public class SyncDataExchangeService {
     /**
     * 发送转为metadata
     *
-    * @param metadataKey metadata钥匙
-    * @param metadataValue metadata价值观
+    * @param metadataKey metadataKey
+    * @param metadataValue metadata值
     * @param channel 通道
     * @param payload payload
     * @return 发送转为metadata的结果
@@ -163,8 +163,8 @@ public class SyncDataExchangeService {
 
     /**
     * 发送转为metadata
-    * @param metadataKey metadata钥匙
-    * @param metadataValue metadata价值观
+    * @param metadataKey metadataKey
+    * @param metadataValue metadata值
     * @param channel 通道
     * @param eventType 事件类型
     * @param payload payload

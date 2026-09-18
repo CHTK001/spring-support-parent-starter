@@ -235,11 +235,11 @@ public class LocalFileStorage extends AbstractFileStorage {
     }
 
     /**
-    * 解析钥匙
+    * 解析Key
     *
     * @param filePath 文件路径
     * @param fileName 文件名称
-    * @return resolve钥匙的结果
+    * @return resolveKey的结果
     */
     private String resolveKey(String filePath, String fileName) {
         if (filePath == null || filePath.isEmpty()) {

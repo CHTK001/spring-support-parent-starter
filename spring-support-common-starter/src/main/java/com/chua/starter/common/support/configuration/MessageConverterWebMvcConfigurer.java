@@ -70,7 +70,7 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
     private ApplicationContext applicationContext;
 
     @Override
-    /** 添加申报价值观处理器 */
+    /** 添加申报值处理器 */
     public void addReturnValueHandlers(List<HandlerMethodReturnValueHandler> handlers) {
         handlers.add(new ResponseModelViewMethodProcessor(messageConverters));
     }
@@ -202,8 +202,8 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
  // fastjson配置.设置读取特征(
  // json读取.特征.支持array转为Bean,
  // json读取.特征.ignoreauto类型not匹配,
- // json读取.特征.ignore空财产价值观,
- // json读取.特征.ignore设置空价值观,
+ // json读取.特征.ignore空财产值,
+ // json读取.特征.ignore设置空值,
  // json读取.特征.ignore无serializable
     private static final long serialVersionUID = 1L;
 //            );

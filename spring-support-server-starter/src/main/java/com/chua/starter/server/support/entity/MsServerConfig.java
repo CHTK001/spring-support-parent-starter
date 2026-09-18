@@ -10,7 +10,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
-* 服务器资产系统配置（键-价值观）
+* 服务器资产系统配置（键-值）
 * @author CH
 * @since 4.0.0
  */
@@ -32,7 +32,7 @@ public class MsServerConfig extends SysBase {
 
     @TableField("ms_server_config_value")
     @Schema(description = "配置值(JSON 字符串)", example = "\"true\"")
-    private String configValue; // 配置价值观
+    private String configValue; // 配置值
 
     @TableField("ms_server_config_desc")
     @Schema(description = "配置说明")

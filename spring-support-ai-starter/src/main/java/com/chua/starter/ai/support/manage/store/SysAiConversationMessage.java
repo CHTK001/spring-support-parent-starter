@@ -46,7 +46,7 @@ public class SysAiConversationMessage implements Serializable {
     private String msgId; // msgid
 
     /**
-    * 消息类型：文本|小费|tool_call|tool_群体|智能体_状态|权限|plan|thinking|可用_命令
+    * 消息类型：文本|小费|tool_call|tool_群体|Agent_状态|权限|plan|thinking|可用_命令
     */
     @TableField("sys_ai_conversation_message_type")
     private String type = "text"; // 类型

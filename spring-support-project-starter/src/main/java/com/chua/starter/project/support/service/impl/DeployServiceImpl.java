@@ -1426,7 +1426,7 @@ public class DeployServiceImpl implements DeployService {
 
     /**
     * 输出截断（上限 20000 字符）
-    * @param value 价值观
+    * @param value 值
     * @return truncate的结果
     */
     private String truncate(String value) {
@@ -1464,7 +1464,7 @@ public class DeployServiceImpl implements DeployService {
 
     /**
     * Shell 单引号包裹
-    * @param value 价值观
+    * @param value 值
     * @return 引述的结果
     */
     private String quote(String value) {
@@ -1476,7 +1476,7 @@ public class DeployServiceImpl implements DeployService {
 
     /**
     * 空串判断
-    * @param value 价值观
+    * @param value 值
     * @return 是否blank的结果
     */
     private boolean isBlank(String value) {
@@ -1485,7 +1485,7 @@ public class DeployServiceImpl implements DeployService {
 
     /**
     * 非空判断
-    * @param value 价值观
+    * @param value 值
     * @return notBlank的结果
     */
     private boolean notBlank(String value) {

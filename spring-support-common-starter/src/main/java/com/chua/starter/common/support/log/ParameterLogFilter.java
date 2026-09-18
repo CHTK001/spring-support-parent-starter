@@ -95,7 +95,7 @@ public class ParameterLogFilter implements Filter {
         
         String connection = requestWrapper.getHeader("upgrade");
         
- // web套接字 请求跳过日志记录
+ // webSocket 请求跳过日志记录
         if ("websocket".equalsIgnoreCase(connection)) {
             filterChain.doFilter(servletRequest, servletResponse);
             return;

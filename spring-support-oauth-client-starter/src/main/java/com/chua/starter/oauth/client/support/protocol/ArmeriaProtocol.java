@@ -163,9 +163,9 @@ public class ArmeriaProtocol extends AbstractProtocol {
     }
     
     /**
-    * 脱敏 app钥匙
-    * @param appKey app钥匙
-    * @return maskapp钥匙的结果
+    * 脱敏 appKey
+    * @param appKey appKey
+    * @return maskappKey的结果
     */
     private String maskAppKey(String appKey) {
         if (appKey == null || appKey.length() < 8) {
@@ -205,7 +205,7 @@ public class ArmeriaProtocol extends AbstractProtocol {
                 if (hasCache(cacheKey)) {
                     /**
     * clear认证信息。
-    * @param cacheKey 缓存钥匙
+    * @param cacheKey 缓存Key
     */
                     clearAuthenticationInformation(cacheKey);
                 }
@@ -215,7 +215,7 @@ public class ArmeriaProtocol extends AbstractProtocol {
                 if (hasCache(cacheKey)) {
                     /**
                     * clear认证信息。
-                    * @param cacheKey 缓存钥匙
+                    * @param cacheKey 缓存Key
                     */
                     clearAuthenticationInformation(cacheKey);
                 }
@@ -419,12 +419,12 @@ public class ArmeriaProtocol extends AbstractProtocol {
     }
 
     /**
-    * 获取int价值观
+    * 获取int值
     *
     * @param map 映射
-    * @param key 钥匙
-    * @param defaultValue 默认价值观
-    * @return 获取int价值观的结果
+    * @param key Key
+    * @param defaultValue 默认值
+    * @return 获取int值的结果
     */
     private int getIntValue(java.util.Map<String, Object> map, String key, int defaultValue) {
         Object value = map.get(key);
@@ -435,12 +435,12 @@ public class ArmeriaProtocol extends AbstractProtocol {
     }
 
     /**
-    * 获取字符串价值观
+    * 获取字符串值
     *
     * @param map 映射
-    * @param key 钥匙
-    * @param defaultValue 默认价值观
-    * @return 获取字符串价值观的结果
+    * @param key Key
+    * @param defaultValue 默认值
+    * @return 获取字符串值的结果
     */
     private String getStringValue(java.util.Map<String, Object> map, String key, String defaultValue) {
         Object value = map.get(key);

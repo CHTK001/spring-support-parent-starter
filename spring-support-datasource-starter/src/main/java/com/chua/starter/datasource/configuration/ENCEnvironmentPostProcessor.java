@@ -47,13 +47,13 @@ import java.util.regex.Pattern;
 @Slf4j
 public class ENCEnvironmentPostProcessor implements EnvironmentPostProcessor, Ordered {
 
-    /** ENC 正则：ENC(algorithm:价值观) 或 ENC(价值观) */
+    /** ENC 正则：ENC(algorithm:值) 或 ENC(值) */
     /** Enc_模式 */
     private static final Pattern ENC_PATTERN = Pattern.compile(
             "^ENC\\((?:([A-Za-z0-9]+):)?(.+)\\)$");
 
     /** 需要解密的配置键后缀 */
-    /** Sensitive_钥匙 */
+    /** Sensitive_Key */
     private static final String[] SENSITIVE_KEYS = {
             "password", "pwd", "secret", "token", "apikey", "api-key", "api_key",
             "private-key", "private_key"
@@ -64,7 +64,7 @@ public class ENCEnvironmentPostProcessor implements EnvironmentPostProcessor, Or
     private static final String ENC_ENABLED_PROP = "plugin.datasource.enc.enabled";
 
     /** 密钥配置前缀 */
-    /** Secret_钥匙_prop */
+    /** Secret_Key_prop */
     private static final String SECRET_KEY_PROP = "plugin.datasource.enc.secret-key";
 
     /** Decryptor */
@@ -124,7 +124,7 @@ public class ENCEnvironmentPostProcessor implements EnvironmentPostProcessor, Or
             log.info("[ENC] 使用自定义密钥（配置项: {}）", SECRET_KEY_PROP);
             /**
             * aes密码decryptor。
-            * @param secretKey secret钥匙
+            * @param secretKey secretKey
             * @return aes密码decryptor的结果
             */
             return new AesPasswordDecryptor(secretKey);
@@ -186,8 +186,8 @@ public class ENCEnvironmentPostProcessor implements EnvironmentPostProcessor, Or
 
     /**
     * 判断值是否为 ENC 加密格式
-    * @param value 价值观
-    * @return 是否enc价值观的结果
+    * @param value 值
+    * @return 是否enc值的结果
     */
     static boolean isEncValue(String value) {
         if (value == null || value.isEmpty()) {
@@ -233,8 +233,8 @@ public class ENCEnvironmentPostProcessor implements EnvironmentPostProcessor, Or
 
     /**
     * 检查配置键是否敏感（需要优先解密）
-    * @param key 钥匙
-    * @return 是否sensitive钥匙的结果
+    * @param key Key
+    * @return 是否sensitiveKey的结果
     */
     @SuppressWarnings("unused")
     private boolean isSensitiveKey(String key) {

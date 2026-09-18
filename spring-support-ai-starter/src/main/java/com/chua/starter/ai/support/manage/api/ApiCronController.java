@@ -287,7 +287,7 @@ public class ApiCronController {
     /**
     * 作业路径。
     * @param job 作业
-    * @param key 钥匙
+    * @param key Key
     * @return 作业路径的结果
     */
     private String jobPath(Map<String, Object> job, String key) {

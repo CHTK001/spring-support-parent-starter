@@ -13,10 +13,10 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
-* AI 厂商 API 钥匙 服务实现。
+* AI 厂商 API Key 服务实现。
 *
 * <p>基于 MyBatis Plus 操作 {@code sys_ai_manufacturer_key} 表，
-* 提供按厂商编码的多 钥匙 管理与启停切换。</p>
+* 提供按厂商编码的多 Key 管理与启停切换。</p>
 *
 * @since 4.0.0.42
 * @author CH
@@ -27,14 +27,14 @@ import java.util.List;
 public class SysAiManufacturerKeyServiceImpl implements SysAiManufacturerKeyService {
 
     /**
-    * 厂商 API 钥匙 映射器
+    * 厂商 API Key 映射器
     */
     private final SysAiManufacturerKeyMapper manufacturerKeyMapper;
 
     /**
-    * 查询全部厂商 API 钥匙。
+    * 查询全部厂商 API Key。
     *
-    * @return API 钥匙 列表
+    * @return API Key 列表
     */
     @Override
     public List<SysAiManufacturerKey> list() {
@@ -42,10 +42,10 @@ public class SysAiManufacturerKeyServiceImpl implements SysAiManufacturerKeyServ
     }
 
     /**
-    * 按厂商编码查询 API 钥匙 列表。
+    * 按厂商编码查询 API Key 列表。
     *
     * @param manufacturerCode 厂商编码
-    * @return API 钥匙 列表
+    * @return API Key 列表
     */
     @Override
     public List<SysAiManufacturerKey> listByManufacturerCode(String manufacturerCode) {
@@ -55,9 +55,9 @@ public class SysAiManufacturerKeyServiceImpl implements SysAiManufacturerKeyServ
     }
 
     /**
-    * 新增厂商 API 钥匙。
+    * 新增厂商 API Key。
     *
-    * @param manufacturerKey API 钥匙 实体
+    * @param manufacturerKey API Key 实体
     * @return 保存后的实体
     */
     @Override
@@ -73,9 +73,9 @@ public class SysAiManufacturerKeyServiceImpl implements SysAiManufacturerKeyServ
     }
 
     /**
-    * 更新厂商 API 钥匙。
+    * 更新厂商 API Key。
     *
-    * @param manufacturerKey API 钥匙 实体
+    * @param manufacturerKey API Key 实体
     * @return 是否成功
     */
     @Override
@@ -103,7 +103,7 @@ public class SysAiManufacturerKeyServiceImpl implements SysAiManufacturerKeyServ
     }
 
     /**
-    * 按 标识 删除厂商 API 钥匙。
+    * 按 标识 删除厂商 API Key。
     *
     * @param id 主键 标识
     * @return 是否成功
@@ -117,7 +117,7 @@ public class SysAiManufacturerKeyServiceImpl implements SysAiManufacturerKeyServ
     }
 
     /**
-    * 切换 API 钥匙 启停状态。
+    * 切换 API Key 启停状态。
     *
     * @param id      主键 标识
     * @param enabled 是否启用

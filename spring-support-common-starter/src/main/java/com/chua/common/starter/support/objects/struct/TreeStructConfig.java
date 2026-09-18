@@ -27,7 +27,7 @@ public class TreeStructConfig<T> {
     * @param idExtractor idextractor
     * @param parentIdExtractor 父idextractor
     * @param nameExtractor 名称extractor
-    * @param valueExtractor 价值观extractor
+    * @param valueExtractor 值extractor
     */
     public TreeStructConfig(Function<T, ?> idExtractor,
                             Function<T, ?> parentIdExtractor,
@@ -92,18 +92,18 @@ public class TreeStructConfig<T> {
     }
 
     /**
-    * 获取价值观extractor
+    * 获取值extractor
     *
-    * @return 获取价值观extractor的结果
+    * @return 获取值extractor的结果
     */
     public Function<T, Number> getValueExtractor() {
         return valueExtractor;
     }
 
     /**
-    * 设置价值观extractor
+    * 设置值extractor
     *
-    * @param valueExtractor 价值观extractor
+    * @param valueExtractor 值extractor
     */
     public void setValueExtractor(Function<T, Number> valueExtractor) {
         this.valueExtractor = valueExtractor;

@@ -122,9 +122,9 @@ public class PrivacySerializer extends JsonSerializer<String> implements Context
                     break;
                 default:
                     /**
-                    * illegal参数异常。
+                    * IllegalArgumentException。
                     * @param privacyTypeEnum 隐私类型enum
-                    * @return illegal参数异常的结果
+                    * @return IllegalArgumentException的结果
                     */
                     throw new IllegalArgumentException("unknown privacy type enum " + privacyTypeEnum);
             }

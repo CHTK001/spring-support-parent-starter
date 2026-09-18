@@ -86,7 +86,7 @@ public class ApiProviderController {
     private final ModelMetricsSnapshotService metricsSnapshotService;
 
     /**
-    * 智能体 模型注册中心（动态注入 智能体 虚拟 提供者）
+    * Agent 模型注册中心（动态注入 Agent 虚拟 提供者）
     */
     private final com.chua.starter.ai.support.registry.ChatClientRegistry chatClientRegistry;
 
@@ -141,7 +141,7 @@ public class ApiProviderController {
     * 获取 提供者 凭证明文（仅限本地可信客户端调用）。
     *
     * @param providerId 提供者 标识
-    * @return 凭证 映射（含 api_钥匙 明文）
+    * @return 凭证 映射（含 api_Key 明文）
     * @param @PathVariable("provider_id" @路径变量("提供者_标识"
     * @param @PathVariable("provider_id" @路径变量("提供者_标识"
     * @param @PathVariable("provider_id" @PathVariable("provider_id"
@@ -179,7 +179,7 @@ public class ApiProviderController {
             items.add(toProviderResponse(p, models, connections));
         }
 
- // 注入已注册的 智能体 模型作为虚拟 提供者
+ // 注入已注册的 Agent 模型作为虚拟 提供者
         List<String> registeredAgentModels = new ArrayList<>(chatClientRegistry.getRegisteredAgentModels());
         if (!registeredAgentModels.isEmpty()) {
             Map<String, Object> agentProvider = buildAgentProvider(registeredAgentModels);
@@ -519,15 +519,15 @@ public class ApiProviderController {
     }
 
     /**
-    * 逐个测试 提供者 凭证中的每个 API 钥匙（多 钥匙 有效标记）。
+    * 逐个测试 提供者 凭证中的每个 API Key（多 Key 有效标记）。
     *
     * <p>对 {@code credentials.api_keys} 中的每个 key 单独调用上游
     * {@code GET {base_url}/models}，返回每个 key 的连通性结果
-    * （{@code ok} / {@code error}），供前端标记「哪个 钥匙 有效、哪个无效」。
+    * （{@code ok} / {@code error}），供前端标记「哪个 Key 有效、哪个无效」。
     * 只读，不修改数据库。</p>
     *
     * @param providerId 提供者 标识
-    * @return 每个 钥匙 的测试结果列表 + 汇总
+    * @return 每个 Key 的测试结果列表 + 汇总
     * @param @PathVariable("provider_id" @路径变量("提供者_标识"
     * @param @PathVariable("provider_id" @路径变量("提供者_标识"
     * @param @PathVariable("provider_id" @PathVariable("provider_id"
@@ -555,7 +555,7 @@ public class ApiProviderController {
         return ApiResult.ok(out);
     }
 
-    /** 用指定 钥匙 调上游 /模型，判定该 钥匙 是否有效（只读、不改库）。 */
+    /** 用指定 Key 调上游 /模型，判定该 Key 是否有效（只读、不改库）。 */
     @PostMapping("/providers/test-connection")
     public ApiResult<Map<String, Object>> testConnection(@RequestBody Map<String, Object> body) {
         String apiUrl = (String) body.get("apiUrl");
@@ -580,7 +580,7 @@ public class ApiProviderController {
         return ApiResult.ok(out);
     }
 
-    /** 用指定 钥匙 调上游 /模型，判定该 钥匙 是否有效（只读、不改库）。 */
+    /** 用指定 Key 调上游 /模型，判定该 Key 是否有效（只读、不改库）。 */
     private Map<String, Object> testSingleKey(String platform, String baseUrl, String apiKey,
                                               String authScheme, String proxy, int index) {
         Map<String, Object> r = new LinkedHashMap<>(6);
@@ -611,10 +611,10 @@ public class ApiProviderController {
     }
 
     /**
-    * 脱敏 钥匙：仅保留前 6 位 + 后 4 位，避免明文回显。
+    * 脱敏 Key：仅保留前 6 位 + 后 4 位，避免明文回显。
     *
-    * @param key 钥匙
-    * @return mask钥匙的结果
+    * @param key Key
+    * @return maskKey的结果
     */
     private static String maskKey(String key) {
         if (key == null || key.length() <= 10) {
@@ -624,10 +624,10 @@ public class ApiProviderController {
     }
 
     /**
-    * 提取凭证中全部 钥匙（api_钥匙 数组 + api_钥匙 标量，去重保序）。
+    * 提取凭证中全部 Key（api_Key 数组 + api_Key 标量，去重保序）。
     *
     * @param credentials 凭证
-    * @return extract全部钥匙的结果
+    * @return extract全部Key的结果
     */
     private List<String> extractAllKeys(Map<String, Object> credentials) {
         java.util.LinkedHashSet<String> set = new java.util.LinkedHashSet<>();
@@ -1068,6 +1068,8 @@ public class ApiProviderController {
         Map<String, Object> map = new LinkedHashMap<>(12);
         map.put("provider_id", provider.getProviderId());
         map.put("model", model.getModel());
+        map.put("id", provider.getProviderId() + ":" + model.getModel());
+        map.put("modelType", "text");
         map.put("enabled", model.getEnabled());
         map.put("sort_order", model.getSortOrder());
         if (model.getDescription() != null) {
@@ -1507,8 +1509,8 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
     *
     * @param platform    平台标识（zhipu/openai/google/...）
     * @param baseUrl     供应商 API 基础地址
-    * @param credentials 凭证（兼容 api_钥匙 字符串与 api_钥匙 数组两种形态）
-    * @param authScheme  鉴权方式（api_钥匙 等）
+    * @param credentials 凭证（兼容 api_Key 字符串与 api_Key 数组两种形态）
+    * @param authScheme  鉴权方式（api_Key 等）
     * @param proxy       HTTP 代理地址（可为空）
     * @param tryFix      是否在 404 时尝试补全 /v1 后重试
     * @return FetchModelsResponse（models + 可选 fixed_基础_url）
@@ -1577,7 +1579,7 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
     * 请求 Ollama 原生 {@code GET {base}/api/标签} 模型列表。
     *
     * @param baseUrl 基础地址（不含 /v1）
-    * @param apiKey  API 钥匙（Ollama 通常无需鉴权，可为 空）
+    * @param apiKey  API Key（Ollama 通常无需鉴权，可为 空）
     * @param proxy   HTTP 代理地址（可为空）
     * @return 模型条目列表；请求失败返回 空
     */
@@ -1621,13 +1623,13 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
     * 请求上游模型列表接口。
     *
     * @param baseUrl        基础地址
-    * @param apiKey         API 钥匙（可能为 空，如 Ollama 本地实例）
+    * @param apiKey         API Key（可能为 空，如 Ollama 本地实例）
     * @param googleProtocol 是否使用 Gemini 协议
     * @param proxy          HTTP 代理地址（可为空）
     * @return 模型条目列表；请求失败返回 空（由调用方决定是否重试/报错）
     */
     private List<Map<String, Object>> requestUpstreamModels(String baseUrl, String apiKey, boolean googleProtocol, String proxy) {
- // 拼接模型列表 URL：打开AI 兼容为 {base}/模型，Gemini 为 {base}/模型?钥匙=xxx
+ // 拼接模型列表 URL：打开AI 兼容为 {base}/模型，Gemini 为 {base}/模型?Key=xxx
         StringBuilder url = new StringBuilder(baseUrl.endsWith("/") ? baseUrl + "models" : baseUrl + "/models");
         if (googleProtocol && apiKey != null && !apiKey.isBlank()) {
             url.append(url.indexOf("?") >= 0 ? "&" : "?").append("key=").append(apiKey);
@@ -1819,10 +1821,10 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
     }
 
     /**
-    * 从凭证 映射 中提取 API 钥匙，兼容 api_钥匙（字符串）与 api_钥匙（数组）两种形态。
+    * 从凭证 映射 中提取 API Key，兼容 api_Key（字符串）与 api_Key（数组）两种形态。
     *
     * @param credentials 凭证 映射（可能为 空）
-    * @return API 钥匙 或 空
+    * @return API Key 或 空
     */
     private String extractApiKey(Map<String, Object> credentials) {
  // 无凭证直接返回 空
@@ -1834,7 +1836,7 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
             return (String) single;
         }
         Object multi = credentials.get("api_keys");
- // 多 钥匙 数组取第一个作为拉取凭证
+ // 多 Key 数组取第一个作为拉取凭证
         if (multi instanceof List<?> list && !list.isEmpty()) {
             Object first = list.getFirst();
             if (first instanceof String s && !s.isBlank()) {
@@ -1868,7 +1870,7 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
     /**
     * str。
     * @param map 映射
-    * @param key 钥匙
+    * @param key Key
     * @return str的结果
     */
     private String str(Map<String, Object> map, String key) {
@@ -1883,7 +1885,7 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
     /**
     * requirestr。
     * @param map 映射
-    * @param key 钥匙
+    * @param key Key
     * @return requireStr的结果
     */
     private String requireStr(Map<String, Object> map, String key) {
@@ -1903,7 +1905,7 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
     /**
     * bool。
     * @param map 映射
-    * @param key 钥匙
+    * @param key Key
     * @param def def
     * @return bool的结果
     */
@@ -1921,7 +1923,7 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
     /**
     * intv。
     * @param map 映射
-    * @param key 钥匙
+    * @param key Key
     * @param def def
     * @return intv的结果
     */
@@ -1944,7 +1946,7 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
     /**
     * 列表的str。
     * @param map 映射
-    * @param key 钥匙
+    * @param key Key
     * @return 列表的str的结果
     */
     private List<String> listOfStr(Map<String, Object> map, String key) {
@@ -1965,7 +1967,7 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
     /**
     * 列表的映射。
     * @param map 映射
-    * @param key 钥匙
+    * @param key Key
     * @return 列表的映射的结果
     */
     private List<Map<String, Object>> listOfMap(Map<String, Object> map, String key) {
@@ -2053,9 +2055,9 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
     private final Map<String, HttpClient> proxyHttpClients = new java.util.concurrent.ConcurrentHashMap<>();
 
     /**
-    * 构建 智能体 虚拟 提供者（含已注册的 智能体 模型列表）。
+    * 构建 Agent 虚拟 提供者（含已注册的 Agent 模型列表）。
     * @param modelNames 模型名称
-    * @return 构建智能体提供者的结果
+    * @return 构建Agent提供者的结果
     */
     private Map<String, Object> buildAgentProvider(List<String> modelNames) {
         long now = System.currentTimeMillis();

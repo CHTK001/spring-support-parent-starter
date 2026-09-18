@@ -28,8 +28,8 @@ public class JobThreadFactory {
 
     /**
     * 作业线程仓库
-    * 钥匙: 任务标识
-    * 价值观: 作业thread实例
+    * Key: 任务标识
+    * 值: 作业thread实例
     */
     private static final ConcurrentMap<Integer, JobThread> JOB_THREAD_REPOSITORY = new ConcurrentHashMap<>();
 

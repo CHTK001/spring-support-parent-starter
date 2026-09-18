@@ -96,13 +96,13 @@ public final class IpUtils {
     }
 
     /**
-    * 根据 用户-智能体 字符串生成浏览器指纹（SHA-256 前 32 位十六进制）
+    * 根据 用户-Agent 字符串生成浏览器指纹（SHA-256 前 32 位十六进制）
     * <p>
     * 当客户端未上报真实指纹时，可用 UA 作为 降级 生成一个稳定的伪指纹。
     * 同一 UA 每次生成结果相同，可用于日志关联，但安全性低于真实指纹。
     * </p>
     *
-    * @param userAgent 用户-智能体 字符串
+    * @param userAgent 用户-Agent 字符串
     * @return 32 位十六进制指纹，UA 为空时返回 空
     */
     public static String fingerprintFromUserAgent(String userAgent) {

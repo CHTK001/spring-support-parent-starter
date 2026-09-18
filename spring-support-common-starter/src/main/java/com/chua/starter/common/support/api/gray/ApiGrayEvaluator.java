@@ -183,7 +183,7 @@ public class ApiGrayEvaluator {
         }
         for (String header : headers) {
             if (header.contains("=")) {
- // 头部名称=价值观 格式
+ // 头部名称=值 格式
                 String[] parts = header.split("=", 2);
                 String headerName = parts[0].trim();
                 String expectedValue = parts[1].trim();
@@ -284,7 +284,7 @@ public class ApiGrayEvaluator {
     * @param userId 用户标识
     * @param username 用户名
     * @param clientIp 客户端ip
-    * @return 构建哈希钥匙的结果
+    * @return 构建哈希Key的结果
     */
     private String buildHashKey(Object userId, String username, String clientIp) {
         // 内容长度取决于实际使用的用户标识，无法预估，按需扩容

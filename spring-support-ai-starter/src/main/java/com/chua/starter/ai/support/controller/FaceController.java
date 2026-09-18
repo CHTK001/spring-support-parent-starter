@@ -583,9 +583,9 @@ public class FaceController {
             return result;
         }
         /**
-        * illegal参数异常。
+        * IllegalArgumentException。
         * @param 数组" 数组"
-        * @return illegal参数异常的结果
+        * @return IllegalArgumentException的结果
         */
         throw new IllegalArgumentException("特征向量格式错误，应为 JSON 数组");
     }

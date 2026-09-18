@@ -28,8 +28,8 @@ public class JobHandlerFactory {
 
     /**
     * 作业处理器存储仓库
-    * 钥匙: 处理器名称
-    * 价值观: 作业处理器实例
+    * Key: 处理器名称
+    * 值: 作业处理器实例
     */
     private static final ConcurrentMap<String, JobHandler> JOB_HANDLER_REPOSITORY = new ConcurrentHashMap<>();
 

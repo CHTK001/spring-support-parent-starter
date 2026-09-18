@@ -26,8 +26,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
-* r套接字 会话模板实现
-* 基于 Spring web套接字 实现，支持多房间配置
+* rSocket 会话模板实现
+* 基于 Spring webSocket 实现，支持多房间配置
 *
 * @版本 1.0.0
 * @since 2024-12-04
@@ -63,7 +63,7 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
     private volatile boolean running = false; // running
 
     /**
-    * 创建 r套接字会话templateimpl 实例
+    * 创建 rSocket会话templateimpl 实例
     * @param properties 属性
     * @param listeners 列表
     * @param listeners 监听器

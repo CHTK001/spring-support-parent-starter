@@ -25,7 +25,7 @@ public class EventListenerProcessor {
 
     /**
     * 事件处理器映射
-    * 钥匙: 事件名称, 价值观: 处理器列表
+    * Key: 事件名称, 值: 处理器列表
     */
     private final Map<String, List<EventHandler>> eventHandlers = new ConcurrentHashMap<>();
 

@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
-* 套接字 会话操作模板接口
+* Socket 会话操作模板接口
 * 定义了会话管理与消息发送的方法
 *
 * @版本 1.0.0

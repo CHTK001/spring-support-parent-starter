@@ -64,7 +64,7 @@ public class EncryptTypeHandler extends BaseTypeHandler<String> {
     /**
     * Decrypt
     *
-    * @param value 价值观
+    * @param value 值
     * @return decrypt的结果
     */
     private static String decrypt(String value) {
@@ -95,7 +95,7 @@ public class EncryptTypeHandler extends BaseTypeHandler<String> {
     /**
     * Encrypt
     *
-    * @param rawValue raw价值观
+    * @param rawValue raw值
     * @return encrypt的结果
     */
     public static String encrypt(String rawValue) {

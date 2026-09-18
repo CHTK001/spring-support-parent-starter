@@ -160,9 +160,9 @@ public class DahuaProvider implements DeviceProvider {
         }
 
         /**
-        * illegal参数异常。
+        * IllegalArgumentException。
         * @param info.getAuthType( 信息.获取认证类型(
-        * @return illegal参数异常的结果
+        * @return IllegalArgumentException的结果
         */
         throw new IllegalArgumentException("不支持的大华认证类型: " + info.getAuthType());
     }

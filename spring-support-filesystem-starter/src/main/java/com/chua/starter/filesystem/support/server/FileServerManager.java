@@ -198,20 +198,20 @@ public class FileServerManager implements AutoCloseable {
         Class<?> clazz = ReflectUtils.forName(type);
         if (clazz == null) {
             /**
-            * illegal参数异常。
+            * IllegalArgumentException。
             * @param " "
             * @param JDK" JDK"
-            * @return illegal参数异常的结果
+            * @return IllegalArgumentException的结果
             */
             throw new IllegalArgumentException("Unknown server type: " + type + ", fallback to JDK");
         }
         Server created = (Server) ReflectUtils.instantiate(clazz, setting);
         if (created == null) {
             /**
-            * illegal参数异常。
+            * IllegalArgumentException。
             * @param " "
             * @param JDK" JDK"
-            * @return illegal参数异常的结果
+            * @return IllegalArgumentException的结果
             */
             throw new IllegalArgumentException("Unknown server type: " + type + ", fallback to JDK");
         }
@@ -323,13 +323,13 @@ public class FileServerManager implements AutoCloseable {
             forceDownload = true;
             parts.remove(1);
         }
- // parts[0] 为空（前导斜杠），真实段从 索引=1 开始: [bucket, 钥匙...]
+ // parts[0] 为空（前导斜杠），真实段从 索引=1 开始: [bucket, Key...]
         if (parts.size() < 3) {
             exchange.sendResponseHeaders(HttpURLConnection.HTTP_BAD_REQUEST, -1);
             return;
         }
         String bucket = URLDecoder.decode(parts.get(1), StandardCharsets.UTF_8.name());
- // 钥匙 = 去掉 bucket 段后的路径
+ // Key = 去掉 bucket 段后的路径
         String key = String.join("/", parts.subList(2, parts.size()));
         // 规范化，防目录穿越
         key = FilenameUtils.normalize(key, true);

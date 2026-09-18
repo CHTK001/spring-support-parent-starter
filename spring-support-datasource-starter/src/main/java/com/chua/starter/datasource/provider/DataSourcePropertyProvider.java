@@ -78,7 +78,7 @@ public interface DataSourcePropertyProvider<T extends DataSource> {
     * 获取属性名称映射
     * 用于处理不同数据源的属性名差异
     *
-    * @return 属性名映射 钥匙=通用名称, 价值观=实际属性名
+    * @return 属性名映射 Key=通用名称, 值=实际属性名
     */
     default Map<String, String> getPropertyNameMapping() {
         return Map.of();

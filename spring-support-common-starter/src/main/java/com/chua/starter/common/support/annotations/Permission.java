@@ -27,7 +27,7 @@ public @interface Permission {
     String[] value() default {};
 
     /**
-    * 权限标识列表(与价值观属性互为别名)
+    * 权限标识列表(与值属性互为别名)
     * <p>可配置多个权限标识，用户拥有其中任一权限即可访问该方法</p>
     * <p>示例：{@code @Permission(permission = {"login:create", "admin"})}</p>
     *

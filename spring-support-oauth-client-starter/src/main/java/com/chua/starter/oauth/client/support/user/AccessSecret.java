@@ -27,7 +27,7 @@ public class AccessSecret {
     */
     private String secretKey;
     /**
-    * 钥匙
+    * Key
     */
     private String uKey;
 

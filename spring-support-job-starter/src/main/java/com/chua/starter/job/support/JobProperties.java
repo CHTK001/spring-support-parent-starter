@@ -202,7 +202,7 @@ public class JobProperties {
     public static class SyncConfig {
 
         /**
-        * 是否强制使用内存 SPI 实现 (跳过真实 r套接字/HTTP 选取)。
+        * 是否强制使用内存 SPI 实现 (跳过真实 rSocket/HTTP 选取)。
         * <p>主要用于单元测试和精简部署,默认 false。</p>
         */
         private boolean inMemory = false;

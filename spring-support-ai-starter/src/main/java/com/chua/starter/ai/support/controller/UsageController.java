@@ -196,7 +196,7 @@ public class UsageController {
 
         List<Map<String, Object>> result = new ArrayList<>();
         for (Map.Entry<String, UsageParser> e : allParsers.entrySet()) {
- // SPI 扫描可能返回 价值观 为 空 的条目（声明存在但实现加载失败），跳过避免 NPE
+ // SPI 扫描可能返回 值 为 空 的条目（声明存在但实现加载失败），跳过避免 NPE
             if (e.getKey() == null || e.getValue() == null) {
                 continue;
             }

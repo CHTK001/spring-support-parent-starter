@@ -28,7 +28,7 @@ public class IdempotentTemplate {
         return t;
     });
 
-    /** 钥匙 -> 过期时间戳（毫秒） */
+    /** Key -> 过期时间戳（毫秒） */
     private static final ConcurrentHashMap<String, Long> ACQUIRED_KEYS = new ConcurrentHashMap<>();
 
     static {

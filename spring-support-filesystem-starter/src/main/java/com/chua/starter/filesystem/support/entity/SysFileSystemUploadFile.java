@@ -52,7 +52,7 @@ public class SysFileSystemUploadFile extends SysBase implements Serializable {
     /** Filesystem上传文件存储桶 */
     private String filesystemUploadFileBucket;
 
-    /** 文件钥匙 */
+    /** 文件Key */
     @TableField("filesystem_upload_file_key")
     /** Filesystem上传文件密钥 */
     private String filesystemUploadFileKey;
@@ -172,13 +172,13 @@ public class SysFileSystemUploadFile extends SysBase implements Serializable {
     public void setFilesystemUploadFileBucket(String v) { this.filesystemUploadFileBucket = v; }
 
     /**
-    * 获取filesystemupload文件钥匙
+    * 获取filesystemupload文件Key
     *
-    * @return 获取filesystemupload文件钥匙的结果
+    * @return 获取filesystemupload文件Key的结果
     */
     public String getFilesystemUploadFileKey() { return filesystemUploadFileKey; }
     /**
-    * 设置filesystemupload文件钥匙
+    * 设置filesystemupload文件Key
     *
     * @param v v
     */

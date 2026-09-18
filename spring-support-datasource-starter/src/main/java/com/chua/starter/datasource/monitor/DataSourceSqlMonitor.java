@@ -74,7 +74,7 @@ public class DataSourceSqlMonitor {
     private final Map<DataSource, DataSource> wrappedCache = new ConcurrentHashMap<>();
 
     /**
-    * 已包装数据源 钥匙 集合（有界去重，按策略淘汰）
+    * 已包装数据源 Key 集合（有界去重，按策略淘汰）
     */
     private final CircularLinkedSet<DataSource> trackedWrappedKeys;
 
@@ -201,7 +201,7 @@ public class DataSourceSqlMonitor {
             if (trackedWrappedKeys.add(dataSource)) {
                 wrappedCache.put(dataSource, wrapped);
             }
- // 容量满被淘汰的 钥匙 需同步清理缓存，避免 wrapped缓存 无限增长
+ // 容量满被淘汰的 Key 需同步清理缓存，避免 wrapped缓存 无限增长
             DataSource evicted = trackedWrappedKeys.lastEvicted();
             if (evicted != null) {
                 wrappedCache.remove(evicted);

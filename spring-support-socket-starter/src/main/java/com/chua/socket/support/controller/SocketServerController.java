@@ -11,8 +11,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
-* 套接字 服务器信息获取接口
-* 前端通过此接口获取所有在线 套接字 服务器地址列表
+* Socket 服务器信息获取接口
+* 前端通过此接口获取所有在线 Socket 服务器地址列表
 * @author CH
 * @since 4.0.0
  */
@@ -24,7 +24,7 @@ public class SocketServerController {
     private final SocketServerRegistry registry; // registry
 
     /**
-    * 套接字服务端控制器。
+    * Socket服务端控制器。
     * @param registry registry
     */
     public SocketServerController(SocketServerRegistry registry) {
@@ -32,7 +32,7 @@ public class SocketServerController {
     }
 
     /**
-    * 获取所有在线 套接字 服务器地址列表
+    * 获取所有在线 Socket 服务器地址列表
     * 返回合并了 Redis 动态注册和数据库配置的服务器列表
     * @return 获取online服务端的结果
     */
@@ -44,8 +44,8 @@ public class SocketServerController {
     }
 
     /**
-    * 获取统一格式的 套接字 地址列表（便于前端使用）
-    * @return 获取套接字地址的结果
+    * 获取统一格式的 Socket 地址列表（便于前端使用）
+    * @return 获取Socket地址的结果
     */
     @GetMapping("/addresses")
     public List<SocketAddressInfo> getSocketAddresses() {
@@ -73,10 +73,10 @@ public class SocketServerController {
     }
 
     /**
-    * 构建 套接字 URL（带 scheme 前缀）
+    * 构建 Socket URL（带 scheme 前缀）
     *
     * @param server 服务端
-    * @return 构建套接字url的结果
+    * @return 构建Socketurl的结果
     */
     private String buildSocketUrl(SocketServerInfo server) {
         String protocol = server.getProtocol();
@@ -92,7 +92,7 @@ public class SocketServerController {
             }
             return "sse://" + host + ":" + port + "/sse/connect";
         } else if ("socketio".equalsIgnoreCase(protocol)) {
- // 套接字://主机:端口/上下文
+ // Socket://主机:端口/上下文
             if (context != null && !context.isEmpty()) {
                 return "socket://" + host + ":" + port + context;
             }
@@ -110,7 +110,7 @@ public class SocketServerController {
     }
 
     /**
-    * 套接字地址信息类。
+    * Socket地址信息类。
     *
     * @author CH
     * @since 4.0.0

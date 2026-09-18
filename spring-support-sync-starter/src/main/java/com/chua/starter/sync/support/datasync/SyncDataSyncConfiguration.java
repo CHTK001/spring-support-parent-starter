@@ -63,7 +63,7 @@ public class SyncDataSyncConfiguration {
     private final ObjectProvider<com.chua.starter.datasync.DataSyncServer> dataSyncServerProvider;
 
     /**
-    * 数据同步智能体服务端 提供器
+    * 数据同步Agent服务端 提供器
     */
     private final ObjectProvider<com.chua.starter.datasync.agent.DataSyncAgentServer> dataSyncAgentServerProvider;
 
@@ -74,7 +74,7 @@ public class SyncDataSyncConfiguration {
     * @param syncServerProvider 同步服务端提供者
     * @param syncPropertiesProvider 同步属性提供者
     * @param dataSyncServerProvider 数据同步服务端提供者
-    * @param dataSyncAgentServerProvider 数据同步智能体服务端提供者
+    * @param dataSyncAgentServerProvider 数据同步Agent服务端提供者
     */
     public SyncDataSyncConfiguration(Environment environment,
                                      ObjectProvider<SyncClient> syncClientProvider,

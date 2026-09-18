@@ -11,10 +11,10 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 /**
-* AI 应用密钥实体——对应 sys_AI_app_钥匙 表。
+* AI 应用密钥实体——对应 sys_AI_app_Key 表。
 * <p>
-* app钥匙 用于 打开AI 兼容协议的身份认证（Bearer 令牌 / x-AI-app-钥匙 头部），
-* 每个 app钥匙 绑定到一个分组，通过分组控制可访问的模型范围。
+* appKey 用于 打开AI 兼容协议的身份认证（Bearer 令牌 / x-AI-app-Key 头部），
+* 每个 appKey 绑定到一个分组，通过分组控制可访问的模型范围。
 *
 * @author CH
 * @since 4.0.0
@@ -37,10 +37,10 @@ public class SysAiAppKey {
     private String appId; // appid
 
     /**
-    * 访问 钥匙
+    * 访问 Key
     */
     @TableField("sys_ai_app_key_app_key")
-    private String appKey; // app钥匙
+    private String appKey; // appKey
 
     /**
     * 访问 Secret
@@ -73,7 +73,7 @@ public class SysAiAppKey {
     private Integer delete; // 删除
 
     /**
-    * 分组 标识——令牌/app钥匙 绑定的分组
+    * 分组 标识——令牌/appKey 绑定的分组
     */
     @TableField("sys_ai_app_key_group_id")
     private Integer groupId; // 群体标识
@@ -139,7 +139,7 @@ public class SysAiAppKey {
     private Long maxUse; // 最大use
 
     /**
-    * 令牌 总量上限（空 表示不限），用于控制 app钥匙 累计消耗的 令牌 总数
+    * 令牌 总量上限（空 表示不限），用于控制 appKey 累计消耗的 令牌 总数
     */
     @TableField("sys_ai_app_key_max_tokens")
     private Long maxTokens; // 最大令牌

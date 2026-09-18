@@ -12,7 +12,7 @@ import java.io.IOException;
 import java.util.Collection;
 
 /**
-* web套接字 消息模板
+* webSocket 消息模板
 * <p>
 * 提供便捷的消息发送方法
 * </p>

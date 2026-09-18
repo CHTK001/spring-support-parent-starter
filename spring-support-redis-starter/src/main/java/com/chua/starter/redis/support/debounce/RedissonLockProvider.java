@@ -29,7 +29,7 @@ public class RedissonLockProvider implements LockProvider {
 
     /**
     * 创建 redisson锁提供者 实例
-    * @param key 钥匙
+    * @param key Key
     */
     public RedissonLockProvider(String key) {
         this.key = key;

@@ -11,7 +11,7 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 import java.util.List;
 
 /**
-* 委托 web套接字 处理器
+* 委托 webSocket 处理器
 * <p>
 * 管理会话并将事件委托给用户实现的 {@link WebSocketMessageHandler}
 * </p>

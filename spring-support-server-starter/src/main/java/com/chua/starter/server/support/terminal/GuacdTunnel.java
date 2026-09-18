@@ -44,9 +44,9 @@ public class GuacdTunnel {
     @Getter
     private final GuacamoleClientInformation clientConfig; // 客户端配置
 
-    /** guacd 套接字 */
+    /** guacd Socket */
     @Getter
-    private GuacamoleSocket socket; // 套接字
+    private GuacamoleSocket socket; // Socket
 
     /** 关闭标记 */
     private volatile boolean closed;

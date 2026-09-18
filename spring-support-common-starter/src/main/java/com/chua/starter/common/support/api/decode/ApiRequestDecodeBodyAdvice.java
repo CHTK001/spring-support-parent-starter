@@ -63,7 +63,7 @@ public class ApiRequestDecodeBodyAdvice implements RequestBodyAdvice  {
     /**
     * 判断是否支持
     * @param methodParameter 方法参数
-    * @param targetType Target类型
+    * @param targetType 目标类型
     * @param converterType 转换器类型
     */
     public boolean supports(MethodParameter methodParameter, Type targetType, Class<? extends HttpMessageConverter<?>> converterType) {
@@ -75,7 +75,7 @@ public class ApiRequestDecodeBodyAdvice implements RequestBodyAdvice  {
     * 之前主体读取
     * @param inputMessage 输入消息
     * @param parameter 参数
-    * @param targetType Target类型
+    * @param targetType 目标类型
     * @param converterType 转换器类型
     */
     public HttpInputMessage beforeBodyRead(HttpInputMessage inputMessage, MethodParameter parameter, Type targetType, Class<? extends HttpMessageConverter<?>> converterType) throws IOException {
@@ -135,7 +135,7 @@ public class ApiRequestDecodeBodyAdvice implements RequestBodyAdvice  {
     * @param body 主体
     * @param inputMessage 输入消息
     * @param parameter 参数
-    * @param targetType Target类型
+    * @param targetType 目标类型
     * @param converterType 转换器类型
     */
     public Object afterBodyRead(Object body, HttpInputMessage inputMessage, MethodParameter parameter, Type targetType, Class<? extends HttpMessageConverter<?>> converterType) {
@@ -148,7 +148,7 @@ public class ApiRequestDecodeBodyAdvice implements RequestBodyAdvice  {
     * @param body 主体
     * @param inputMessage 输入消息
     * @param parameter 参数
-    * @param targetType Target类型
+    * @param targetType 目标类型
     * @param converterType 转换器类型
     */
     public Object handleEmptyBody(Object body, HttpInputMessage inputMessage, MethodParameter parameter, Type targetType, Class<? extends HttpMessageConverter<?>> converterType) {

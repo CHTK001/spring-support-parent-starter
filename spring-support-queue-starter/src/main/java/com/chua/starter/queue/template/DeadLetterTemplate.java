@@ -127,25 +127,25 @@ public class DeadLetterTemplate implements MessageTemplate {
     public DeadLetterTemplate(MessageTemplate messageTemplate, MessageTemplate dlqMessageTemplate, DeadLetterConfig config) {
         if (messageTemplate == null) {
             /**
-            * illegal参数异常。
+            * IllegalArgumentException。
             * @param null" 空"
-            * @return illegal参数异常的结果
+            * @return IllegalArgumentException的结果
             */
             throw new IllegalArgumentException("MessageTemplate cannot be null");
         }
         if (dlqMessageTemplate == null) {
             /**
-            * illegal参数异常。
+            * IllegalArgumentException。
             * @param null" 空"
-            * @return illegal参数异常的结果
+            * @return IllegalArgumentException的结果
             */
             throw new IllegalArgumentException("DLQ MessageTemplate cannot be null");
         }
         if (config == null) {
             /**
-            * illegal参数异常。
+            * IllegalArgumentException。
             * @param null" 空"
-            * @return illegal参数异常的结果
+            * @return IllegalArgumentException的结果
             */
             throw new IllegalArgumentException("DeadLetterConfig cannot be null");
         }
@@ -176,37 +176,37 @@ public class DeadLetterTemplate implements MessageTemplate {
     private void validateConfig(DeadLetterConfig config) {
         if (config.getMaxRetries() <= 0) {
             /**
-            * illegal参数异常。
+            * IllegalArgumentException。
             * @param 0 0
             * @param config.getMaxRetries( 配置.获取最大重试(
-            * @return illegal参数异常的结果
+            * @return IllegalArgumentException的结果
             */
             throw new IllegalArgumentException("maxRetries must be greater than 0, got: " + config.getMaxRetries());
         }
         if (config.getRetryDelay() == null || config.getRetryDelay().isNegative() || config.getRetryDelay().isZero()) {
             /**
-            * illegal参数异常。
+            * IllegalArgumentException。
             * @param positive positive
             * @param config.getRetryDelay( 配置.获取重试延迟(
-            * @return illegal参数异常的结果
+            * @return IllegalArgumentException的结果
             */
             throw new IllegalArgumentException("retryDelay must be positive, got: " + config.getRetryDelay());
         }
         if (config.getMaxRetryDelay() != null && config.getMaxRetryDelay().isNegative()) {
             /**
-            * illegal参数异常。
+            * IllegalArgumentException。
             * @param non-negative non-negative
             * @param config.getMaxRetryDelay( 配置.获取最大重试延迟(
-            * @return illegal参数异常的结果
+            * @return IllegalArgumentException的结果
             */
             throw new IllegalArgumentException("maxRetryDelay must be non-negative, got: " + config.getMaxRetryDelay());
         }
         if (config.getBackoffMultiplier() <= 0) {
             /**
-            * illegal参数异常。
+            * IllegalArgumentException。
             * @param 0 0
             * @param config.getBackoffMultiplier( 配置.获取退避multiplier(
-            * @return illegal参数异常的结果
+            * @return IllegalArgumentException的结果
             */
             throw new IllegalArgumentException("backoffMultiplier must be greater than 0, got: " + config.getBackoffMultiplier());
         }
@@ -350,9 +350,9 @@ public class DeadLetterTemplate implements MessageTemplate {
     public void subscribeWithRetry(String destination, MessageHandler handler) {
         if (destination == null || handler == null) {
             /**
-            * illegal参数异常。
+            * IllegalArgumentException。
             * @param null" 空"
-            * @return illegal参数异常的结果
+            * @return IllegalArgumentException的结果
             */
             throw new IllegalArgumentException("Destination and handler cannot be null");
         }
@@ -431,17 +431,17 @@ public class DeadLetterTemplate implements MessageTemplate {
     public void subscribeWithRetry(String destination, String group, MessageHandler handler) {
         if (destination == null || handler == null) {
             /**
-            * illegal参数异常。
+            * IllegalArgumentException。
             * @param null" 空"
-            * @return illegal参数异常的结果
+            * @return IllegalArgumentException的结果
             */
             throw new IllegalArgumentException("Destination and handler cannot be null");
         }
         if (group == null) {
             /**
-            * illegal参数异常。
+            * IllegalArgumentException。
             * @param null" 空"
-            * @return illegal参数异常的结果
+            * @return IllegalArgumentException的结果
             */
             throw new IllegalArgumentException("Group cannot be null");
         }
@@ -520,17 +520,17 @@ public class DeadLetterTemplate implements MessageTemplate {
     public SendResult sendToDeadLetter(String originalDestination, Message message, String reason) {
         if (originalDestination == null) {
             /**
-            * illegal参数异常。
+            * IllegalArgumentException。
             * @param null" 空"
-            * @return illegal参数异常的结果
+            * @return IllegalArgumentException的结果
             */
             throw new IllegalArgumentException("Original destination cannot be null");
         }
         if (message == null) {
             /**
-            * illegal参数异常。
+            * IllegalArgumentException。
             * @param null" 空"
-            * @return illegal参数异常的结果
+            * @return IllegalArgumentException的结果
             */
             throw new IllegalArgumentException("Message cannot be null");
         }
@@ -559,17 +559,17 @@ public class DeadLetterTemplate implements MessageTemplate {
     public void subscribeDeadLetter(String originalDestination, MessageHandler handler) {
         if (originalDestination == null) {
             /**
-            * illegal参数异常。
+            * IllegalArgumentException。
             * @param null" 空"
-            * @return illegal参数异常的结果
+            * @return IllegalArgumentException的结果
             */
             throw new IllegalArgumentException("Original destination cannot be null");
         }
         if (handler == null) {
             /**
-            * illegal参数异常。
+            * IllegalArgumentException。
             * @param null" 空"
-            * @return illegal参数异常的结果
+            * @return IllegalArgumentException的结果
             */
             throw new IllegalArgumentException("Handler cannot be null");
         }
@@ -592,17 +592,17 @@ public class DeadLetterTemplate implements MessageTemplate {
     public SendResult reprocessDeadLetter(String originalDestination, Message message) {
         if (originalDestination == null) {
             /**
-            * illegal参数异常。
+            * IllegalArgumentException。
             * @param null" 空"
-            * @return illegal参数异常的结果
+            * @return IllegalArgumentException的结果
             */
             throw new IllegalArgumentException("Original destination cannot be null");
         }
         if (message == null) {
             /**
-            * illegal参数异常。
+            * IllegalArgumentException。
             * @param null" 空"
-            * @return illegal参数异常的结果
+            * @return IllegalArgumentException的结果
             */
             throw new IllegalArgumentException("Message cannot be null");
         }
@@ -635,26 +635,26 @@ public class DeadLetterTemplate implements MessageTemplate {
                                      java.util.function.Predicate<Message> handler) {
         if (originalDestination == null) {
             /**
-            * illegal参数异常。
+            * IllegalArgumentException。
             * @param null" 空"
-            * @return illegal参数异常的结果
+            * @return IllegalArgumentException的结果
             */
             throw new IllegalArgumentException("Original destination cannot be null");
         }
         if (maxCount <= 0) {
             /**
-            * illegal参数异常。
+            * IllegalArgumentException。
             * @param 0 0
             * @param maxCount 最大数量
-            * @return illegal参数异常的结果
+            * @return IllegalArgumentException的结果
             */
             throw new IllegalArgumentException("Max count must be greater than 0, got: " + maxCount);
         }
         if (handler == null) {
             /**
-            * illegal参数异常。
+            * IllegalArgumentException。
             * @param null" 空"
-            * @return illegal参数异常的结果
+            * @return IllegalArgumentException的结果
             */
             throw new IllegalArgumentException("Handler cannot be null");
         }
@@ -739,9 +739,9 @@ public class DeadLetterTemplate implements MessageTemplate {
     public void onDeadLetter(BiConsumer<Message, Throwable> callback) {
         if (callback == null) {
             /**
-            * illegal参数异常。
+            * IllegalArgumentException。
             * @param null" 空"
-            * @return illegal参数异常的结果
+            * @return IllegalArgumentException的结果
             */
             throw new IllegalArgumentException("Callback cannot be null");
         }
@@ -757,9 +757,9 @@ public class DeadLetterTemplate implements MessageTemplate {
     public String getDlqDestination(String originalDestination) {
         if (originalDestination == null) {
             /**
-            * illegal参数异常。
+            * IllegalArgumentException。
             * @param null" 空"
-            * @return illegal参数异常的结果
+            * @return IllegalArgumentException的结果
             */
             throw new IllegalArgumentException("Original destination cannot be null");
         }
@@ -775,9 +775,9 @@ public class DeadLetterTemplate implements MessageTemplate {
     public String getRetryDestination(String originalDestination) {
         if (originalDestination == null) {
             /**
-            * illegal参数异常。
+            * IllegalArgumentException。
             * @param null" 空"
-            * @return illegal参数异常的结果
+            * @return IllegalArgumentException的结果
             */
             throw new IllegalArgumentException("Original destination cannot be null");
         }

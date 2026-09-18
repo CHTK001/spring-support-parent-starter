@@ -27,8 +27,8 @@ import java.util.concurrent.TimeUnit;
 * <p>定时枚举全部已配置供应商与模型，用 {@link AiModelMetricsEnrichmentService}
 * （Artificial Analysis 指标源）匹配「输入价格/输出价格/缓存价格/智能/输出速度/首块延迟/
 * 深度思考/联网查询/图片识别/函数调用」，合并模型自身的 <code>指标</code> 实时字段
-* 与能力健康探测延迟，构建一份快照写入 Redis（钥匙 {@code nomifun:model-metrics:latest}，
-* TTL 12h），供查询接口按需读取。不再经 web套接字 定时推送，前端通过
+* 与能力健康探测延迟，构建一份快照写入 Redis（Key {@code nomifun:model-metrics:latest}，
+* TTL 12h），供查询接口按需读取。不再经 webSocket 定时推送，前端通过
 * {@code GET /api/model-metrics} 从缓存获取。</p>
 *
 * <p>快照行同时输出厂商 Logo（{@code provider_logo}）与模型 Logo（{@code icon_url}，
@@ -124,7 +124,7 @@ public class ModelMetricsSnapshotService {
     }
 
     /**
-    * Redis 快照 钥匙
+    * Redis 快照 Key
     */
     static final String REDIS_KEY = "nomifun:model-metrics:latest";
 
@@ -326,21 +326,21 @@ public class ModelMetricsSnapshotService {
             * 合并not空。
             * @param out 出
             * @param "latency_ms" "延迟_ms"
-            * @param metrics.get("latency_ms" 指标.获取("延迟_ms"
+            * @param metrics.get("latency_ms" 获取指标("延迟_ms"
             */
             mergeNotNull(out, "latency_ms", metrics.get("latency_ms"));
             /**
             * 合并not空。
             * @param out 出
             * @param "intelligence" "智能"
-            * @param metrics.get("intelligence" 指标.获取("智能"
+            * @param metrics.get("intelligence" 获取指标("智能"
             */
             mergeNotNull(out, "intelligence", metrics.get("intelligence"));
             /**
             * 合并not空。
             * @param out 出
             * @param "output_speed" "输出_速度"
-            * @param metrics.get("output_speed" 指标.获取("输出_速度"
+            * @param metrics.get("output_speed" 获取指标("输出_速度"
             */
             mergeNotNull(out, "output_speed", metrics.get("output_speed"));
         }
@@ -387,7 +387,7 @@ public class ModelMetricsSnapshotService {
     }
 
     /**
-    * 非空值合并（避免覆盖 enrich 已输出的 钥匙）。
+    * 非空值合并（避免覆盖 enrich 已输出的 Key）。
     *
     * @param out   目标行
     * @param key   键

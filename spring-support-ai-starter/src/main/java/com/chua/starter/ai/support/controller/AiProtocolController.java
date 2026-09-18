@@ -29,7 +29,7 @@ import java.util.concurrent.CompletableFuture;
 * AI 多协议标准网关控制器。
 *
 * <p>提供与 {@code AiProtocolServerFilter} 等价的 Spring MVC 路由映射，
-* 将 Claude、打开AI 响应、Gemini 等外部协议请求收敛到统一的 app钥匙 鉴权与对话链路。</p>
+* 将 Claude、打开AI 响应、Gemini 等外部协议请求收敛到统一的 appKey 鉴权与对话链路。</p>
 *
 * <h3>接口列表</h3>
 * <ul>

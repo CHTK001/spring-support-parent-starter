@@ -37,7 +37,7 @@ public @interface Job {
 
     /**
     * 任务处理器唯一名称
-    * @return 价值观的结果
+    * @return 值的结果
     */
     String value();
 

@@ -38,9 +38,9 @@ public class TencentWechatPayClientFactory {
     /**
     * 创建auto证书配置
     * @param merchantId merchantid
-    * @param privateKey 私募钥匙
+    * @param privateKey 私募Key
     * @param merchantSerialNumber merchant串行数字
-    * @param apiV3Key apiv3钥匙
+    * @param apiV3Key apiv3Key
     */
     public Config createAutoCertificateConfig(String merchantId,
                                               String privateKey,
@@ -142,9 +142,9 @@ public class TencentWechatPayClientFactory {
             return new NotificationParser(autoCertificateConfig);
         }
         /**
-        * illegal参数异常。
+        * IllegalArgumentException。
         * @param config.getClass( 配置.获取类(
-        * @return illegal参数异常的结果
+        * @return IllegalArgumentException的结果
         */
         throw new IllegalArgumentException("当前配置不支持自动证书回调解析: " + config.getClass().getName());
     }

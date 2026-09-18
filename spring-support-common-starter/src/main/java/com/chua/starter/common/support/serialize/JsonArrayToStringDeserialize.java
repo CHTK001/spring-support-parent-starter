@@ -50,10 +50,10 @@ public class JsonArrayToStringDeserialize extends JsonDeserializer<String> {
     }
 
     /**
-    * analysis价值观
+    * analysis值
     *
     * @param treeNode1 树节点1
-    * @return analysis价值观的结果
+    * @return analysis值的结果
     */
     public static Object analysisValue(TreeNode treeNode1) {
         if (treeNode1 instanceof IntNode) {

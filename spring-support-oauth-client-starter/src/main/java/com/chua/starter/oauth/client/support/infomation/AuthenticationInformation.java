@@ -47,7 +47,7 @@ public class AuthenticationInformation {
     public static AuthenticationInformation noEncryptKey() {
         /**
         * 认证信息。
-        * @param KEY_NO_EXIST 钥匙noexist
+        * @param KEY_NO_EXIST Keynoexist
         * @param null 空
         */
         return new AuthenticationInformation(KEY_NO_EXIST, null);

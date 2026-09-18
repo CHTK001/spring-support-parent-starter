@@ -83,7 +83,7 @@ public class SysAiRole {
     */
     @TableField("sys_ai_role_delete")
     @TableLogic
-    private Integer delete; // 删除
+    private Integer deleted; // 删除
 
     /**
     * 创建人名称

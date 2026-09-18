@@ -14,8 +14,8 @@ import java.util.Map;
 /**
 * 监控实时推送服务
 * <p>
-* 通过消息队列统一封装 套接字 广播能力（plugin.队列.类型 可选
-* 本地/Kafka/RabbitMQ/MQTT），由 套接字-启动 的
+* 通过消息队列统一封装 Socket 广播能力（plugin.队列.类型 可选
+* 本地/Kafka/RabbitMQ/MQTT），由 Socket-启动 的
 * {@code SocketQueueBridge} 订阅 socket:push topic 后广播到前端。
 * 队列 未启用时推送静默跳过，不影响主链路。
 * </p>
@@ -40,7 +40,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class MonitorPushService {
 
-    /** 套接字 模块标识 */
+    /** Socket 模块标识 */
     public static final String MODULE = "monitor";
 
     /** 告警事件名（前端 订阅("监控", "报警器") 接收） */
@@ -72,7 +72,7 @@ public class MonitorPushService {
     */
     public static final String EVENT_HOST_ONLINE = "host-online";
 
-    /** 套接字队列bridge 订阅的统一 topic */
+    /** Socket队列bridge 订阅的统一 topic */
     public static final String SOCKET_PUSH_TOPIC = "socket:push";
 
     /** 消息模板（队列 未启用时为空实现，推送静默跳过） */
@@ -157,7 +157,7 @@ public class MonitorPushService {
     }
 
     /**
-    * 主机延迟推送载荷（套接字 推送共用）
+    * 主机延迟推送载荷（Socket 推送共用）
     *
     * @param hostId   主机 标识
     * @param hostName 主机名
@@ -169,7 +169,7 @@ public class MonitorPushService {
     public record HostDelay(Long hostId, String hostName, String address, Integer port, Long delayMs) {
 
         /**
-        * 转为 套接字 广播用的 映射 载荷
+        * 转为 Socket 广播用的 映射 载荷
         *
         * @return 载荷 映射
         */
@@ -226,11 +226,11 @@ public class MonitorPushService {
     }
 
     /**
-    * 统一广播：经 队列 发送到 套接字:push topic（队列 未启用或发送异常时静默跳过）
+    * 统一广播：经 队列 发送到 Socket:push topic（队列 未启用或发送异常时静默跳过）
     * <p>
-    * 事件协议对齐前端 ws消息（包/核心 套接字template）：
-    * 套接字队列bridge 收到后以 套接字.io 事件 "消息" 广播，载荷含 {module, 事件, 数据, 数据标识, 时间戳}，
-    * 前端 套接字.订阅(module, 事件) 按 "module_事件" 分发。
+    * 事件协议对齐前端 ws消息（包/核心 Sockettemplate）：
+    * Socket队列bridge 收到后以 Socket.io 事件 "消息" 广播，载荷含 {module, 事件, 数据, 数据标识, 时间戳}，
+    * 前端 Socket.订阅(module, 事件) 按 "module_事件" 分发。
     * </p>
     *
     * @param event  事件名
@@ -258,7 +258,7 @@ public class MonitorPushService {
     }
 
     /**
-    * 告警事件载荷（套接字 推送 / 告警触发与处理共用）
+    * 告警事件载荷（Socket 推送 / 告警触发与处理共用）
     *
     * @param monitorId   监控 标识，可为 空
     * @param monitorName 监控名称，允许 空
@@ -290,7 +290,7 @@ public class MonitorPushService {
             * @param monitorId 监控标识
             * @param monitorName 监控名称
             * @param metricName 指标名称
-            * @param alarmValue 报警器价值观
+            * @param alarmValue 报警器值
             * @param threshold 阈值
             * @param level 水平仪
             * @param status 状态
@@ -300,7 +300,7 @@ public class MonitorPushService {
         }
 
         /**
-        * 转为 套接字 广播用的 映射 载荷（对齐前端 ws消息 字段名）
+        * 转为 Socket 广播用的 映射 载荷（对齐前端 ws消息 字段名）
         *
         * @return 载荷 映射
         */

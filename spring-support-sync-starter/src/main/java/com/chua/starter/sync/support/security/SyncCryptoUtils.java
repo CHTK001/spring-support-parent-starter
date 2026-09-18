@@ -128,9 +128,9 @@ public final class SyncCryptoUtils {
     }
 
     /**
-    * derive钥匙。
+    * deriveKey。
     * @param secret secret
-    * @return derive钥匙的结果
+    * @return deriveKey的结果
     */
     private static byte[] deriveKey(String secret) throws Exception {
         return MessageDigest.getInstance(SHA_256).digest(secret.getBytes(StandardCharsets.UTF_8));
@@ -138,7 +138,7 @@ public final class SyncCryptoUtils {
 
     /**
     * 是否包含文本。
-    * @param value 价值观
+    * @param value 值
     * @return 是否包含文本的结果
     */
     private static boolean hasText(String value) {

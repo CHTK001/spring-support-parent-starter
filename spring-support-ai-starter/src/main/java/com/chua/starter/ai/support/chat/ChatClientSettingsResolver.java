@@ -46,7 +46,7 @@ public final class ChatClientSettingsResolver {
 
         String provider = firstNonBlank(
                 /**
-                * 获取价值观。
+                * 获取值。
                 * @param sysAiGlobalSettingService sysAI全局setting服务
                 * @param "provider" "提供者"
                 */
@@ -55,7 +55,7 @@ public final class ChatClientSettingsResolver {
         );
         String factory = firstNonBlank(
                 /**
-                * 获取价值观。
+                * 获取值。
                 * @param sysAiGlobalSettingService sysAI全局setting服务
                 * @param "factory" "工厂"
                 */
@@ -69,13 +69,13 @@ public final class ChatClientSettingsResolver {
                 .provider(provider)
                 .baseUrl(firstNonBlank(
                         /**
-                        * 获取价值观。
+                        * 获取值。
                         * @param sysAiGlobalSettingService sysAI全局setting服务
                         * @param "provider_base_url" "提供者_基础_url"
                         */
                         getValue(sysAiGlobalSettingService, "provider_base_url"),
                         /**
-                        * 获取价值观。
+                        * 获取值。
                         * @param sysAiGlobalSettingService sysAI全局setting服务
                         * @param "provider_api_address" "提供者_api_地址"
                         */
@@ -83,13 +83,13 @@ public final class ChatClientSettingsResolver {
                 ))
                 .appKey(firstNonBlank(
                         /**
-                        * 获取价值观。
+                        * 获取值。
                         * @param sysAiGlobalSettingService sysAI全局setting服务
                         * @param "provider_api_key" "提供者_api_键"
                         */
                         getValue(sysAiGlobalSettingService, "provider_api_key"),
                         /**
-                        * 获取价值观。
+                        * 获取值。
                         * @param sysAiGlobalSettingService sysAI全局setting服务
                         * @param "provider_app_key" "提供者_app_键"
                         */
@@ -97,13 +97,13 @@ public final class ChatClientSettingsResolver {
                 ))
                 .appSecret(firstNonBlank(
                         /**
-                        * 获取价值观。
+                        * 获取值。
                         * @param sysAiGlobalSettingService sysAI全局setting服务
                         * @param "provider_app_secret" "提供者_app_secret"
                         */
                         getValue(sysAiGlobalSettingService, "provider_app_secret"),
                         /**
-                        * 获取价值观。
+                        * 获取值。
                         * @param sysAiGlobalSettingService sysAI全局setting服务
                         * @param "provider_secret_key" "提供者_secret_键"
                         */
@@ -131,11 +131,11 @@ public final class ChatClientSettingsResolver {
     }
 
     /**
-    * 获取价值观
+    * 获取值
     *
     * @param service 服务
     * @param field 字段
-    * @return 获取价值观的结果
+    * @return 获取值的结果
     */
     private static String getValue(SysAiGlobalSettingService service, String field) {
         return service.getValue(GROUP, field).orElse(null);
@@ -146,7 +146,7 @@ public final class ChatClientSettingsResolver {
     *
     * @param service 服务
     * @param field 字段
-    * @param defaultValue 默认价值观
+    * @param defaultValue 默认值
     * @return 获取布尔值的结果
     */
     private static boolean getBoolean(SysAiGlobalSettingService service, String field, boolean defaultValue) {
@@ -169,7 +169,7 @@ public final class ChatClientSettingsResolver {
     *
     * @param service 服务
     * @param field 字段
-    * @param defaultValue 默认价值观
+    * @param defaultValue 默认值
     * @return 获取integer的结果
     */
     private static Integer getInteger(SysAiGlobalSettingService service, String field, Integer defaultValue) {
@@ -208,7 +208,7 @@ public final class ChatClientSettingsResolver {
     *
     * @param service 服务
     * @param field 字段
-    * @param defaultValue 默认价值观
+    * @param defaultValue 默认值
     * @return 获取long的结果
     */
     private static Long getLong(SysAiGlobalSettingService service, String field, long defaultValue) {
@@ -226,7 +226,7 @@ public final class ChatClientSettingsResolver {
     /**
     * 第一个nonblank
     *
-    * @param values 价值观
+    * @param values 值
     * @return 第一个nonblank的结果
     */
     private static String firstNonBlank(String... values) {

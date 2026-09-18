@@ -598,7 +598,7 @@ public class PaymentNotifyServiceImpl extends AbstractMerchantPaymentChannel imp
     /**
     * 第一个non空
     *
-    * @param values 价值观
+    * @param values 值
     * @return 第一个non空的结果
     */
     private <T> T firstNonNull(T... values) {

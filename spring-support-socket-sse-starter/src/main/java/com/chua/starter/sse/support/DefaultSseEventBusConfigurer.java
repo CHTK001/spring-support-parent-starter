@@ -21,7 +21,7 @@ public class DefaultSseEventBusConfigurer {
 
     /**
     * 客户端连接缓存
-    * 钥匙: 客户端标识, 价值观: Emitter列表
+    * Key: 客户端标识, 值: Emitter列表
     */
     private static final Map<String, List<Emitter>> SSE_CACHE = new ConcurrentHashMap<>();
 

@@ -476,8 +476,8 @@ public class NgrokAutoConfiguration {
     /**
     * Normalize
     *
-    * @param value 价值观
-    * @param defaultValue 默认价值观
+    * @param value 值
+    * @param defaultValue 默认值
     * @return normalize的结果
     */
     private static String normalize(String value, String defaultValue) {

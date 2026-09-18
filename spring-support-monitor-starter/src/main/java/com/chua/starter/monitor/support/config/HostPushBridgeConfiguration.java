@@ -11,7 +11,7 @@ import org.springframework.context.annotation.Configuration;
 * 主机检测推送桥接（服务端-启动 ↔ 监控-启动）
 * <p>
 * 将 {@link HostOnlineScheduler} 的延迟检测 / 在线状态翻转结果
-* 桥接到 {@link MonitorPushService}，经 套接字:push topic 广播到前端
+* 桥接到 {@link MonitorPushService}，经 Socket:push topic 广播到前端
 * （前端 订阅("监控", "主机-延迟") / ("监控", "主机-online") 接收），
 * 实现资产表实时延迟列的秒级刷新。
 * 仅当 服务端-启动 与 监控-启动 同时装配时生效。
@@ -32,7 +32,7 @@ public class HostPushBridgeConfiguration {
     private final MonitorPushService pushService;
 
     /**
-    * 装配推送钩子：延迟结果 / 在线状态翻转 → 套接字 广播。
+    * 装配推送钩子：延迟结果 / 在线状态翻转 → Socket 广播。
     * <p>
     * 无入参；由容器在 Bean 初始化后（postconstruct）调用，
     * 将 {@link #onDelayDetected(MsServerHost)} / {@link #onOnlineChanged(MsServerHost)}

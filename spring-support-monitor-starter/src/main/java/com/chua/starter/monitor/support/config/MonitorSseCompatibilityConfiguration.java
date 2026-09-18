@@ -11,7 +11,7 @@ import org.springframework.context.annotation.Configuration;
 * <p>
 * 服务端-启动 的 {@code MailboxSseService}（邮箱 SSE 推送 @服务）构造注入
 * {@code ObjectProvider<SseSocketSessionTemplate>}。socketio 单协议模式下该具体类型
-* 无容器 Bean（套接字配置 仅按协议把 template 存入 映射），Spring 7 严格校验
+* 无容器 Bean（Socket配置 仅按协议把 template 存入 映射），Spring 7 严格校验
 * 会直接抛 Bean创建异常 导致整个应用启动失败。此处条件化补一个空实现 Bean，
 * 保证容器可启动；监控 业务不创建 SSE 连接，此 Bean 不参与任何推送。
 * </p>
@@ -32,8 +32,8 @@ public class MonitorSseCompatibilityConfiguration {
     @Bean
     public SseSocketSessionTemplate sseSocketSessionTemplate() {
         /**
-        * sse套接字会话template。
-        * @return sse套接字会话template的结果
+        * sseSocket会话template。
+        * @return sseSocket会话template的结果
         */
         return new SseSocketSessionTemplate();
     }

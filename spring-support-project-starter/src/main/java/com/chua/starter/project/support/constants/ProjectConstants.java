@@ -70,6 +70,8 @@ public final class ProjectConstants {
 
     /** 推送事件：项目指标实时值 */
     public static final String PUSH_EVENT_PROJECT_METRIC = "project-metric";
+    /** 推送事件：项目实时日志流 */
+    public static final String PUSH_EVENT_PROJECT_LOG = "project-log";
 
     /** 健康检查类型：端口 */
     public static final String HEALTH_TYPE_PORT = "PORT";

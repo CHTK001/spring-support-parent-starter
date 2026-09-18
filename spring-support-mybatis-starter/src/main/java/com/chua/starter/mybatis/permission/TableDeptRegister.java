@@ -493,7 +493,7 @@ public class TableDeptRegister implements DeptRegister {
     /**
     * normalizemanageddept树标识
     *
-    * @param value 价值观
+    * @param value 值
     * @return normalizemanageddept树id的结果
     */
     private String normalizeManagedDeptTreeId(Object value) {

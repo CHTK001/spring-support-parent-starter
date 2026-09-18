@@ -55,14 +55,14 @@ public abstract class BaseAiController {
     protected static final long SSE_TIMEOUT_MILLIS = 30_000L;
 
     /**
-    * 访问守卫服务，提供 app钥匙 与 Bearer 令牌 校验能力
+    * 访问守卫服务，提供 appKey 与 Bearer 令牌 校验能力
     */
     @Autowired
     /** aiaccessguard服务 */
     protected AiAccessGuardService aiAccessGuardService;
 
     /**
-    * app钥匙 服务，提供分组 标识 查询等能力
+    * appKey 服务，提供分组 标识 查询等能力
     */
     @Autowired
     /** SYSAIAPP密钥服务 */
@@ -120,7 +120,7 @@ public abstract class BaseAiController {
     }
 
     /**
-    * 从 授权 请求头中解析 app钥匙 所属的分组 标识。
+    * 从 授权 请求头中解析 appKey 所属的分组 标识。
     *
     * <p>提取 Bearer Token 后调用 {@link SysAiAppKeyService#getGroupIdByAppKey(String)}
     * 获取分组 标识，用于后续的模型隔离与限流。</p>
@@ -139,7 +139,7 @@ public abstract class BaseAiController {
     }
 
     /**
-    * 从 授权 请求头中提取 Bearer 令牌 值（即 app钥匙）。
+    * 从 授权 请求头中提取 Bearer 令牌 值（即 appKey）。
     *
     * <p>用于在 {@link com.chua.starter.ai.support.model.AiChatRequest} 的 parameters 中注入
     * {@code _appKey} 字段，供底层服务在用量记录时同步更新 AppKey 的 Token 配额。</p>

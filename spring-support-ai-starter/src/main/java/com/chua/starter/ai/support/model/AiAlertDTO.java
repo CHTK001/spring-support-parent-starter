@@ -31,7 +31,7 @@ public class AiAlertDTO implements Serializable {
     private String name;
 
     /**
-    * 关联 app钥匙 标识
+    * 关联 appKey 标识
     */
     @Schema(description = "关联 AppKey ID")
     /** APP密钥标识 */

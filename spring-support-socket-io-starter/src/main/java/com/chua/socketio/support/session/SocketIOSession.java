@@ -13,7 +13,7 @@ import java.util.Locale;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
-* 套接字.IO 会话实现
+* Socket.IO 会话实现
 *
 * @版本 1.0.0
 * @since 2024-12-04
@@ -38,9 +38,9 @@ public class SocketIOSession implements SocketSession {
     private SocketUser user;
 
     /**
-    * 创建 套接字io会话 实例
+    * 创建 Socketio会话 实例
     * @param client 客户端
-    * @param properties 套接字属性
+    * @param properties Socket属性
     * @param properties 属性
     */
     public SocketIOSession(SocketIOClient client, SocketProperties properties) {
@@ -99,7 +99,7 @@ public class SocketIOSession implements SocketSession {
     /**
     * 获取Attribute
     *
-    * @param key 钥匙
+    * @param key Key
     * @return 获取attribute的结果
     */
     public <T> T getAttribute(String key) {
@@ -152,7 +152,7 @@ public class SocketIOSession implements SocketSession {
     /** 发送Binary */
     public void sendBinary(String event, byte[] data) {
         if (client.isChannelOpen()) {
- // 套接字.IO 原生支持二进制数据传输
+ // Socket.IO 原生支持二进制数据传输
             client.sendEvent(event, data);
         }
     }
@@ -169,7 +169,7 @@ public class SocketIOSession implements SocketSession {
     }
 
     /**
-    * 获取原生 套接字.IO 客户端
+    * 获取原生 Socket.IO 客户端
     *
     * @return SocketIOClient
     */
@@ -217,7 +217,7 @@ public class SocketIOSession implements SocketSession {
     /**
     * 解析encrypt请求
     *
-    * @param value 价值观
+    * @param value 值
     * @return 解析encrypt请求的结果
     */
     private Boolean parseEncryptRequested(String value) {

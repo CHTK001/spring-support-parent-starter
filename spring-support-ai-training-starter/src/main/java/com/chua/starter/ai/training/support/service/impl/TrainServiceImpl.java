@@ -46,7 +46,7 @@ public class TrainServiceImpl implements TrainService {
     private final ApplicationEventPublisher eventPublisher; // 事件发布
 
     /**
-    * 内存任务存储（钥匙=任务标识）。
+    * 内存任务存储（Key=任务标识）。
     */
     private final Map<String, TrainTask> taskStore = new ConcurrentHashMap<>();
 
@@ -68,9 +68,9 @@ public class TrainServiceImpl implements TrainService {
         TrainTask task = taskStore.get(taskId);
         if (task == null) {
             /**
-            * illegal参数异常。
+            * IllegalArgumentException。
             * @param taskId 任务标识
-            * @return illegal参数异常的结果
+            * @return IllegalArgumentException的结果
             */
             throw new IllegalArgumentException("任务不存在: " + taskId);
         }
@@ -172,9 +172,9 @@ public class TrainServiceImpl implements TrainService {
         TrainTask task = taskStore.get(taskId);
         if (task == null) {
             /**
-            * illegal参数异常。
+            * IllegalArgumentException。
             * @param taskId 任务标识
-            * @return illegal参数异常的结果
+            * @return IllegalArgumentException的结果
             */
             throw new IllegalArgumentException("任务不存在: " + taskId);
         }

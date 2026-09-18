@@ -41,7 +41,7 @@ public class MPJLambdaWrapperX<T> extends MPJLambdaWrapper<T> {
     * 入ifpresent
     *
     * @param column column
-    * @param values 价值观
+    * @param values 值
     * @return 入ifpresent的结果
     */
     public MPJLambdaWrapperX<T> inIfPresent(SFunction<T, ?> column, Collection<?> values) {
@@ -55,7 +55,7 @@ public class MPJLambdaWrapperX<T> extends MPJLambdaWrapper<T> {
     * 入ifpresent
     *
     * @param column column
-    * @param values 价值观
+    * @param values 值
     * @return 入ifpresent的结果
     */
     public MPJLambdaWrapperX<T> inIfPresent(SFunction<T, ?> column, Object... values) {
@@ -174,7 +174,7 @@ public class MPJLambdaWrapperX<T> extends MPJLambdaWrapper<T> {
     * betweenifpresent
     *
     * @param column column
-    * @param values 价值观
+    * @param values 值
     * @return betweenIfPresent的结果
     */
     public MPJLambdaWrapperX<T> betweenIfPresent(SFunction<T, ?> column, Object[] values) {

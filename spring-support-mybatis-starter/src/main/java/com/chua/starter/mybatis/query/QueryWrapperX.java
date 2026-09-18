@@ -38,7 +38,7 @@ public class QueryWrapperX<T> extends QueryWrapper<T> {
     * 入ifpresent
     *
     * @param column column
-    * @param values 价值观
+    * @param values 值
     * @return 入ifpresent的结果
     */
     public QueryWrapperX<T> inIfPresent(String column, Collection<?> values) {
@@ -52,7 +52,7 @@ public class QueryWrapperX<T> extends QueryWrapper<T> {
     * 入ifpresent
     *
     * @param column column
-    * @param values 价值观
+    * @param values 值
     * @return 入ifpresent的结果
     */
     public QueryWrapperX<T> inIfPresent(String column, Object... values) {
@@ -171,7 +171,7 @@ public class QueryWrapperX<T> extends QueryWrapper<T> {
     * betweenifpresent
     *
     * @param column column
-    * @param values 价值观
+    * @param values 值
     * @return betweenIfPresent的结果
     */
     public QueryWrapperX<T> betweenIfPresent(String column, Object[] values) {

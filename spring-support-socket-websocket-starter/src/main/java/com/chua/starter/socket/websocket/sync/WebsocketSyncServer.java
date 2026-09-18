@@ -7,7 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.socket.WebSocketSession;
 
 /**
-* web套接字 同步服务端实现。
+* webSocket 同步服务端实现。
 *
 * <p>基于 ${@code spring-boot-starter-websocket} 的 {@link WebSocketSessionManager} 实现同步协议。</p>
 *
@@ -23,7 +23,7 @@ public class WebsocketSyncServer extends AbstractSyncServer {
     private final WebSocketSessionManager sessionManager;
 
     /**
-    * 构造 web套接字 同步服务端。
+    * 构造 webSocket 同步服务端。
     *
     * @param sessionManager 会话管理器
     */
@@ -37,7 +37,7 @@ public class WebsocketSyncServer extends AbstractSyncServer {
     protected void doStart() {
         for (WebSocketSession session : sessionManager.getAllSessions()) {
             /**
-    * onweb套接字连接。
+    * onwebSocket连接。
     * @param session 会话
     */
             onWebSocketConnect(session);
@@ -67,9 +67,9 @@ public class WebsocketSyncServer extends AbstractSyncServer {
     }
 
     /**
-    * web套接字 连接建立时回调。
+    * webSocket 连接建立时回调。
     *
-    * @param session Spring web套接字 会话
+    * @param session Spring webSocket 会话
     */
     public void onWebSocketConnect(WebSocketSession session) {
         SyncSession syncSession = new SyncSession(session.getId());
@@ -85,9 +85,9 @@ public class WebsocketSyncServer extends AbstractSyncServer {
     }
 
     /**
-    * web套接字 连接断开时回调。
+    * webSocket 连接断开时回调。
     *
-    * @param session Spring web套接字 会话
+    * @param session Spring webSocket 会话
     */
     public void onWebSocketDisconnect(WebSocketSession session) {
         SyncSession syncSession = sessions.get(session.getId());
@@ -101,9 +101,9 @@ public class WebsocketSyncServer extends AbstractSyncServer {
     }
 
     /**
-    * web套接字 消息到达时回调。
+    * webSocket 消息到达时回调。
     *
-    * @param session Spring web套接字 会话
+    * @param session Spring webSocket 会话
     * @param message 消息内容
     */
     public void onWebSocketMessage(WebSocketSession session, String message) {

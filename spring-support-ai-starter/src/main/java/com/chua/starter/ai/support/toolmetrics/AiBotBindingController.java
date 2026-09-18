@@ -598,7 +598,7 @@ public class AiBotBindingController {
     *
     * <p>前端每 3 秒调用一次；status 变为 confirmed 时表示绑定已完成，可刷新列表。</p>
     *
-    * @param key 会话 钥匙
+    * @param key 会话 Key
     * @return status + 机器人标识（confirmed 时回填）
     */
     @GetMapping("/qrcode/status")

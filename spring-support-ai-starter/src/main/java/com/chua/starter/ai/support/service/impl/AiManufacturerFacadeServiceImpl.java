@@ -213,7 +213,7 @@ public class AiManufacturerFacadeServiceImpl implements AiManufacturerFacadeServ
     * 调用 打开AI 兼容的 {@code /models} 接口拉取模型 标识 列表。
     *
     * @param url    模型 接口地址
-    * @param apiKey 厂商 API 钥匙（可能为 空）
+    * @param apiKey 厂商 API Key（可能为 空）
     * @return 模型 标识 列表
     */
     private List<String> fetchModels(String url, String apiKey) {

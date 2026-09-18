@@ -539,9 +539,9 @@ public class ServerNodeRegistry {
             throw new IllegalArgumentException("代理服务器必须在 config 中提供 backendHost 与 backendPort");
         }
         /**
-        * inet套接字地址。
+        * inetSocket地址。
         * @param String.valueOf(backendHost 字符串.valueof(backend主机
-        * @return inet套接字地址的结果
+        * @return inetSocket地址的结果
         */
         return new InetSocketAddress(String.valueOf(backendHost), Integer.parseInt(String.valueOf(backendPort).trim()));
     }

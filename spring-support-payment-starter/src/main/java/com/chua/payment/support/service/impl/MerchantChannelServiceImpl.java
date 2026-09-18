@@ -297,13 +297,13 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
     }
 
     @Override
-    /** encryptapi钥匙 */
+    /** encryptapiKey */
     public String encryptApiKey(String apiKey) {
         return paymentCipherService.encrypt(apiKey);
     }
 
     @Override
-    /** decryptapi钥匙 */
+    /** decryptapiKey */
     public String decryptApiKey(String encryptedKey) {
         return paymentCipherService.decrypt(encryptedKey);
     }
@@ -357,7 +357,7 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
     /**
     * encryptifpresent
     *
-    * @param value 价值观
+    * @param value 值
     * @return encryptIfPresent的结果
     */
     private String encryptIfPresent(String value) {
@@ -672,7 +672,7 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
     /**
     * 第一个文本
     *
-    * @param values 价值观
+    * @param values 值
     * @return 第一个文本的结果
     */
     private String firstText(Object... values) {
@@ -704,7 +704,7 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
     /**
     * 解析Long
     *
-    * @param values 价值观
+    * @param values 值
     * @return 解析long的结果
     */
     private Long parseLong(Object... values) {
@@ -738,7 +738,7 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
     /**
     * 大写
     *
-    * @param value 价值观
+    * @param value 值
     * @return 大写的结果
     */
     private String upper(String value) {
@@ -749,7 +749,7 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
     * ext文本
     *
     * @param extConfig ext配置
-    * @param key 钥匙
+    * @param key Key
     * @return ext文本的结果
     */
     private String extText(Map<String, Object> extConfig, String key) {
@@ -760,7 +760,7 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
     /**
     * require文本
     *
-    * @param value 价值观
+    * @param value 值
     * @param message 消息
     * @return require文本的结果
     */

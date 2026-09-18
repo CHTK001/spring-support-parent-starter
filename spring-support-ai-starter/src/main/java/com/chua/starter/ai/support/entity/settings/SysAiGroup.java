@@ -13,7 +13,7 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
-* 模型分组表，将模型与 app钥匙 按业务/团队维度聚合。
+* 模型分组表，将模型与 appKey 按业务/团队维度聚合。
 *
 * @since 2026-08-03
 * @author CH
@@ -69,10 +69,10 @@ public class SysAiGroup implements Serializable {
     private String groupModels;
 
     /**
-    * 绑定 app钥匙 标识 列表（JSON 数组字符串）
+    * 绑定 appKey 标识 列表（JSON 数组字符串）
     */
     /**
-    * 绑定 app钥匙 标识 列表(JSON)
+    * 绑定 appKey 标识 列表(JSON)
     */
     @TableField("sys_ai_group_app_key_ids")
     @Schema(description = "绑定 AppKey ID 列表(JSON)")

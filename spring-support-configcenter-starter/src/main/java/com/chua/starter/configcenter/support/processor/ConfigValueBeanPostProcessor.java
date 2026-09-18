@@ -29,9 +29,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
-* 配置价值观注解Bean后置处理器
+* 配置值注解Bean后置处理器
 * <p>
-* 在Bean初始化后扫描@配置价值观注解，注入配置值并支持热更新和配置推送。
+* 在Bean初始化后扫描@配置值注解，注入配置值并支持热更新和配置推送。
 * </p>
 *
 * <h3>功能</h3>
@@ -92,8 +92,8 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
 
     /**
     * 绑定信息映射
-    * 钥匙: 配置键
-    * 价值观: 绑定信息列表
+    * Key: 配置键
+    * 值: 绑定信息列表
     */
     private final Map<String, List<BindingInfo>> bindingsByKey = new ConcurrentHashMap<>();
 
@@ -104,15 +104,15 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
 
     /**
     * 配置值缓存
-    * 钥匙: 配置键
-    * 价值观: 缓存的配置值
+    * Key: 配置键
+    * 值: 缓存的配置值
     */
     private final Map<String, String> configValueCache = new ConcurrentHashMap<>();
 
     /**
     * 配置刷新时间缓存
-    * 钥匙: 配置键
-    * 价值观: 上次刷新时间戳
+    * Key: 配置键
+    * 值: 上次刷新时间戳
     */
     private final Map<String, Long> lastRefreshTimeByKey = new ConcurrentHashMap<>();
 
@@ -239,10 +239,10 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
             // 注入初始值
             String value = resolveValue(parsed.key(), parsed.defaultValue());
             /**
-            * inject字段价值观。
+            * inject字段值。
             * @param bean Bean
             * @param field 字段
-            * @param value 价值观
+            * @param value 值
             */
             injectFieldValue(bean, field, value);
 
@@ -290,10 +290,10 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
             // 注入初始值
             String value = resolveValue(parsed.key(), parsed.defaultValue());
             /**
-            * inject方法价值观。
+            * inject方法值。
             * @param bean Bean
             * @param method 方法
-            * @param value 价值观
+            * @param value 值
             */
             injectMethodValue(bean, method, value);
 
@@ -454,8 +454,8 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
             String defaultValue = matcher.group(2);
             /**
             * 解析expression。
-            * @param key 钥匙
-            * @param defaultValue 默认价值观
+            * @param key Key
+            * @param defaultValue 默认值
             * @return 解析expression的结果
             */
             return new ParsedExpression(key, defaultValue);
@@ -497,8 +497,8 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
         private final String configKey;
 
         /**
-        * 配置价值观监听器。
-        * @param configKey 配置钥匙
+        * 配置值监听器。
+        * @param configKey 配置Key
         */
         ConfigValueListener(String configKey) {
             this.configKey = configKey;
@@ -507,9 +507,9 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
         @Override
         /**
         * on改变
-        * @param key 钥匙
-        * @param oldValue 旧价值观
-        * @param newValue 新价值观
+        * @param key Key
+        * @param oldValue 旧值
+        * @param newValue 新值
         */
         public void onChange(String key, String oldValue, String newValue) {
  // 由 on更新 处理
@@ -518,8 +518,8 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
         @Override
         /**
         * On删除
-        * @param key 钥匙
-        * @param oldValue 旧价值观
+        * @param key Key
+        * @param oldValue 旧值
         */
         public void onDelete(String key, String oldValue) {
             List<BindingInfo> bindings = bindingsByKey.get(configKey);
@@ -530,7 +530,7 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
             // 更新缓存
             /**
             * 更新缓存。
-            * @param configKey 配置钥匙
+            * @param configKey 配置Key
             * @param null 空
             */
             updateCache(configKey, null);
@@ -540,7 +540,7 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
                 /**
                 * 更新binding。
                 * @param binding binding
-                * @param oldValue 旧价值观
+                * @param oldValue 旧值
                 * @param binding.defaultValue( binding.默认值(
                 */
                 updateBinding(binding, oldValue, binding.defaultValue());
@@ -550,9 +550,9 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
         @Override
         /**
         * On更新
-        * @param key 钥匙
-        * @param oldValue 旧价值观
-        * @param newValue 新价值观
+        * @param key Key
+        * @param oldValue 旧值
+        * @param newValue 新值
         */
         public void onUpdate(String key, String oldValue, String newValue) {
             List<BindingInfo> bindings = bindingsByKey.get(configKey);
@@ -573,8 +573,8 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
             // 更新缓存
             /**
             * 更新缓存。
-            * @param configKey 配置钥匙
-            * @param newValue 新价值观
+            * @param configKey 配置Key
+            * @param newValue 新值
             */
             updateCache(configKey, newValue);
 
@@ -591,8 +591,8 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
                 /**
                 * 更新binding。
                 * @param binding binding
-                * @param oldValue 旧价值观
-                * @param resolvedValue resolved价值观
+                * @param oldValue 旧值
+                * @param resolvedValue resolved值
                 */
                 updateBinding(binding, oldValue, resolvedValue);
             }
@@ -616,13 +616,13 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
             // 更新值
             if (binding.field() != null) {
                 /**
-                * inject字段价值观。
+                * inject字段值。
                 * @param binding.bean( binding.Bean(
                 */
                 injectFieldValue(binding.bean(), binding.field(), newValue);
             } else if (binding.method() != null) {
                 /**
-                * inject方法价值观。
+                * inject方法值。
                 * @param binding.bean( binding.Bean(
                 */
                 injectMethodValue(binding.bean(), binding.method(), newValue);
@@ -637,8 +637,8 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
             /**
             * invokecallback。
             * @param binding binding
-            * @param oldConvertedValue 旧转换价值观
-            * @param newValue 新价值观
+            * @param oldConvertedValue 旧转换值
+            * @param newValue 新值
             */
             invokeCallback(binding, oldConvertedValue, newValue);
         }
@@ -693,8 +693,8 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
 
     /**
     * 解析后的表达式
-    * @param key 钥匙
-    * @param defaultValue 默认价值观
+    * @param key Key
+    * @param defaultValue 默认值
     * @return 解析expression的结果
     */
     private record ParsedExpression(String key, String defaultValue) {

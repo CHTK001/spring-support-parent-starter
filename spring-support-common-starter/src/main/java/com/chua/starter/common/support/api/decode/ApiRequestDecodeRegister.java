@@ -156,7 +156,7 @@ public class ApiRequestDecodeRegister implements Upgrade<ApiRequestDecodeSetting
     }
 
     /**
-    * 获取请求钥匙
+    * 获取请求Key
     *
     * @return 请求key
     */

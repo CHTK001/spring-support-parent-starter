@@ -33,8 +33,8 @@ import java.time.Duration;
 import java.util.Map;
 
 /**
-* r套接字 协议实现
-* 使用 r套接字 进行 o认证 认证，支持响应式通信
+* rSocket 协议实现
+* 使用 rSocket 进行 o认证 认证，支持响应式通信
 *
 * @版本 1.0.0
 * @since 2025-12-02
@@ -44,7 +44,7 @@ import java.util.Map;
 @Slf4j
 public class RSocketProtocol extends AbstractProtocol {
 
-    private volatile RSocket rSocket; // r套接字
+    private volatile RSocket rSocket; // rSocket
 
     /**
     * 构造函数
@@ -60,7 +60,7 @@ public class RSocketProtocol extends AbstractProtocol {
     }
 
     /**
-    * 初始化 r套接字 连接
+    * 初始化 rSocket 连接
     */
     private void initializeRSocket() {
         if (rSocket == null || rSocket.isDisposed()) {
@@ -153,7 +153,7 @@ public class RSocketProtocol extends AbstractProtocol {
                 if (hasCache(cacheKey)) {
                     /**
                     * clear认证信息。
-                    * @param cacheKey 缓存钥匙
+                    * @param cacheKey 缓存Key
                     */
                     clearAuthenticationInformation(cacheKey);
                 }
@@ -162,7 +162,7 @@ public class RSocketProtocol extends AbstractProtocol {
                 if (hasCache(cacheKey)) {
                     /**
                     * clear认证信息。
-                    * @param cacheKey 缓存钥匙
+                    * @param cacheKey 缓存Key
                     */
                     clearAuthenticationInformation(cacheKey);
                 }
@@ -256,7 +256,7 @@ public class RSocketProtocol extends AbstractProtocol {
     }
 
     /**
-    * 发送 r套接字 请求
+    * 发送 rSocket 请求
     *
     * @param route       路由
     * @param jsonObject  请求数据
@@ -265,7 +265,7 @@ public class RSocketProtocol extends AbstractProtocol {
     */
     protected AuthenticationInformation sendRSocketRequest(String route, JsonObject jsonObject, UpgradeType upgradeType) {
         /**
-        * 初始化r套接字。
+        * 初始化rSocket。
         */
         initializeRSocket();
 
@@ -303,7 +303,7 @@ public class RSocketProtocol extends AbstractProtocol {
                     .fluentPut("data", createData(jsonObject, key))
                     .toJSONString();
 
- // 发送 r套接字 请求
+ // 发送 rSocket 请求
             Payload payload = DefaultPayload.create(requestBody, metadata.toJSONString());
             Payload responsePayload = rSocket.requestResponse(payload)
                     .block(Duration.ofSeconds(10));
@@ -400,7 +400,7 @@ public class RSocketProtocol extends AbstractProtocol {
     }
 
     /**
-    * 关闭 r套接字 连接
+    * 关闭 rSocket 连接
     */
     public void shutdown() {
         if (rSocket != null && !rSocket.isDisposed()) {

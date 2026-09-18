@@ -9,7 +9,7 @@ import org.springframework.context.annotation.ComponentScan;
 * AI 模块独立启动器
 *
 * <p>内置 H2 内存数据库，可直接运行 {@code mvn spring-boot:run} 启动测试。
-* 默认关闭 API 鉴权（app_钥匙_已启用=false），便于本地联调。</p>
+* 默认关闭 API 鉴权（app_Key_已启用=false），便于本地联调。</p>
 *
 * <p>{@code @MapperScan} 同时覆盖业务 Mapper（{@code ai.support.mapper}）与
 * nomifun 前端持久化 映射器（{@code ai.support.manage.mapper}）。</p>

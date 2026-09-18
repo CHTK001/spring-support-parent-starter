@@ -16,7 +16,7 @@ import java.util.Set;
 * Redis 时序存储实现（基于 ZSET 简化时序）
 * <p>
 * 由 {@code monitor.timeseries.engine=redis} 条件装配。
-* 每个指标一条 ZSET（member=时间戳, score=时间戳），价值观 存于 member，
+* 每个指标一条 ZSET（member=时间戳, score=时间戳），值 存于 member，
 * 以 {@code monitor:metric:<target>:<monitorId>:<metricName>} 为键。
 * 查询按时间范围 {@code ZRANGEBYSCORE} 取点，按窗口抽样返回（简化 mean 聚合）。
 * </p>
@@ -108,7 +108,7 @@ public class RedisMetricTimeSeriesProvider implements MetricTimeSeriesProvider {
                     ? "ms_monitor_metric" : point.getTargetTable();
             String metric = point.getMetricName() == null ? "value" : point.getMetricName();
             String key = key(measurement, monitorId, metric);
- // member = 价值观 + ":" + ts（避免同 ts 覆盖），score = ts
+ // member = 值 + ":" + ts（避免同 ts 覆盖），score = ts
             String member = point.getValue() + ":" + timestamp;
             redisTemplate.opsForZSet().add(key, member, timestamp);
             // 裁剪：删除最旧的超限记录
@@ -142,7 +142,7 @@ public class RedisMetricTimeSeriesProvider implements MetricTimeSeriesProvider {
                 return points;
             }
             for (String key : keys) {
- // score=ts, member=价值观:ts
+ // score=ts, member=值:ts
                 Set<org.springframework.data.redis.core.ZSetOperations.TypedTuple<String>> tuples =
                         redisTemplate.opsForZSet().rangeByScoreWithScores(key, startMs, nowMs);
                 if (tuples == null) {

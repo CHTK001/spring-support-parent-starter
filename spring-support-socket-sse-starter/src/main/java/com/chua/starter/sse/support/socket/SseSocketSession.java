@@ -10,8 +10,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
-* SSE 套接字 会话实现
-* 封装 sseemitter 为统一的 套接字会话 接口
+* SSE Socket 会话实现
+* 封装 sseemitter 为统一的 Socket会话 接口
 *
 * @版本 1.0.0
 * @since 2024-12-24
@@ -33,7 +33,7 @@ public class SseSocketSession implements SocketSession {
     private volatile boolean connected = true; // 连接
 
     /**
-    * 创建 sse套接字会话 实例
+    * 创建 sseSocket会话 实例
     * @param id 标识
     * @param emitter sseemitter
     * @param emitter emitter
@@ -90,7 +90,7 @@ public class SseSocketSession implements SocketSession {
     /**
     * 获取Attribute
     *
-    * @param key 钥匙
+    * @param key Key
     * @return 获取attribute的结果
     */
     public <T> T getAttribute(String key) {

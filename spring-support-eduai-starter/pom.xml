@@ -82,6 +82,12 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-ai-starter</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-starter-web</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <!-- OAuth 客户端权限注解 -->

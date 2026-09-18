@@ -6,7 +6,7 @@ import com.chua.starter.sync.support.SyncSession;
 import lombok.extern.slf4j.Slf4j;
 
 /**
-* r套接字 同步服务端实现。
+* rSocket 同步服务端实现。
 *
 * @since 4.0.0.41
 * @author CH
@@ -15,14 +15,14 @@ import lombok.extern.slf4j.Slf4j;
 public class RsocketSyncServer extends AbstractSyncServer {
 
     /**
-    * r套接字 会话模板
+    * rSocket 会话模板
     */
     private final RSocketSessionTemplateImpl sessionTemplate;
 
     /**
-    * 构造 r套接字 同步服务端。
+    * 构造 rSocket 同步服务端。
     *
-    * @param sessionTemplate r套接字 会话模板
+    * @param sessionTemplate rSocket 会话模板
     */
     public RsocketSyncServer(RSocketSessionTemplateImpl sessionTemplate) {
         this.sessionTemplate = sessionTemplate;
@@ -47,7 +47,7 @@ public class RsocketSyncServer extends AbstractSyncServer {
     }
 
     /**
-    * r套接字 连接建立时回调。
+    * rSocket 连接建立时回调。
     *
     * @param sessionId 会话标识
     */
@@ -61,7 +61,7 @@ public class RsocketSyncServer extends AbstractSyncServer {
     }
 
     /**
-    * r套接字 连接断开时回调。
+    * rSocket 连接断开时回调。
     *
     * @param sessionId 会话标识
     */
@@ -77,7 +77,7 @@ public class RsocketSyncServer extends AbstractSyncServer {
     }
 
     /**
-    * r套接字 消息到达时回调。
+    * rSocket 消息到达时回调。
     *
     * @param sessionId 会话标识
     * @param topic     消息主题

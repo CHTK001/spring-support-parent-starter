@@ -25,8 +25,8 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
-* 套接字 自动配置类
-* 通过 SPI 机制根据配置的协议类型创建对应的 套接字 服务
+* Socket 自动配置类
+* 通过 SPI 机制根据配置的协议类型创建对应的 Socket 服务
 *
 * @版本 1.0.0
 * @since 2024-12-04
@@ -38,7 +38,7 @@ import java.util.stream.Collectors;
 public class SocketConfiguration {
 
     /**
-    * 创建多协议 套接字 会话模板集合
+    * 创建多协议 Socket 会话模板集合
     * 根据配置的协议类型通过 SPI 获取对应的提供者
     *
     * @param properties 配置属性
@@ -61,7 +61,7 @@ public class SocketConfiguration {
             String protocolName = protocolConfig.getProtocol().getValue();
             log.info("[Socket] 使用协议: {}", highlight(protocolName));
 
- // 通过 SPI 获取对应的 套接字 提供者
+ // 通过 SPI 获取对应的 Socket 提供者
             SocketProvider provider = ServiceProvider.of(SocketProvider.class)
                     .getNewExtension(protocolName);
 
@@ -138,7 +138,7 @@ public class SocketConfiguration {
     }
 
     /**
-    * 套接字 生命周期管理
+    * Socket 生命周期管理
     *
     * @param templates  所有协议模板映射
     * @param properties 配置属性
@@ -150,16 +150,16 @@ public class SocketConfiguration {
             Map<String, SocketSessionTemplate> templates,
             SocketProperties properties) {
         /**
-        * 套接字lifecycle。
+        * Socketlifecycle。
         * @param templates templates
         * @param properties 属性
-        * @return 套接字lifecycle的结果
+        * @return Socketlifecycle的结果
         */
         return new SocketLifecycle(templates, properties);
     }
 
     /**
-    * 套接字 生命周期管理类
+    * Socket 生命周期管理类
     * 支持管理多个协议模板的启动和停止
     * @author CH
     * @since 4.0.0
@@ -171,10 +171,10 @@ public class SocketConfiguration {
         private final SocketProperties properties;
 
         /**
-        * 创建 套接字lifecycle 实例
-        * @param templates 套接字会话template
+        * 创建 Socketlifecycle 实例
+        * @param templates Socket会话template
         * @param templates templates
-        * @param properties 套接字属性
+        * @param properties Socket属性
         * @param properties 属性
         */
         public SocketLifecycle(Map<String, SocketSessionTemplate> templates, SocketProperties properties) {
@@ -216,9 +216,9 @@ public class SocketConfiguration {
 
     @Bean
     /**
-        * 套接字服务信息contributor
+        * Socket服务信息contributor
         *
-        * @return 套接字服务信息contributor的结果
+        * @return Socket服务信息contributor的结果
         */
     public ServiceInfoContributor socketServiceInfoContributor() {
         return registry -> {

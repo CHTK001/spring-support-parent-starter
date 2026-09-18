@@ -131,16 +131,16 @@ public class PartitionRoutingService {
 
     /**
     * SQL 注入防护：校验表名合法性。
-    * @param value 价值观
+    * @param value 值
     * @param label 标签
     * @return 校验table名称的结果
     */
     public static String validateTableName(String value, String label) {
         if (value == null || value.isEmpty() || !SAFE_TABLE.matcher(value).matches()) {
             /**
-            * illegal参数异常。
-            * @param value 价值观
-            * @return illegal参数异常的结果
+            * IllegalArgumentException。
+            * @param value 值
+            * @return IllegalArgumentException的结果
             */
             throw new IllegalArgumentException(label + " 不合法: " + value);
         }

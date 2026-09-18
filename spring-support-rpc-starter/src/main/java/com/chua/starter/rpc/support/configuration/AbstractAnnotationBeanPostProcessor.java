@@ -257,7 +257,7 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
     * @return findInjectionMetadata的结果
     */
     protected AnnotatedInjectionMetadata findInjectionMetadata(String beanName, Class<?> clazz, PropertyValues pvs) {
- // 下降 back 转为 类 名称 as 缓存 钥匙, for backwards compatibility with 习俗 callers.
+ // 下降 back 转为 类 名称 as 缓存 Key, for backwards compatibility with 习俗 callers.
         String cacheKey = (StringUtils.hasLength(beanName) ? beanName : clazz.getName());
  // Quick 检查 on the 并发 映射 第一个, with minimal 锁.
         AnnotatedInjectionMetadata metadata = this.injectionMetadataCache.get(cacheKey);
@@ -395,7 +395,7 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
     */
     protected static class AnnotatedInjectionMetadata extends InjectionMetadata {
 
-        private final Class<?> targetClass; // Target类
+        private final Class<?> targetClass; // 目标类
         /** Fieldelements */
         private final Collection<AnnotatedFieldElement> fieldElements;
 
@@ -406,7 +406,7 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
                                           Collection<AnnotatedMethodElement> methodElements) {
             /**
         * 父。
-        * @param targetClass Target类
+        * @param targetClass 目标类
         * @param methodElements 方法elements
         */
             super(targetClass, combine(fieldElements, methodElements));

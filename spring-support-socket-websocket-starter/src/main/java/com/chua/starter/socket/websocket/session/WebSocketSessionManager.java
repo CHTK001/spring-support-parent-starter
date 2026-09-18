@@ -12,7 +12,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
-* web套接字 会话管理器
+* webSocket 会话管理器
 *
 * @since 2025-12-25
 * @author CH

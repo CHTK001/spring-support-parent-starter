@@ -324,16 +324,16 @@ public class AuthClientConfiguration
     }
 
     /**
-    * AI app钥匙 本地认证支持
+    * AI appKey 本地认证支持
     * <p>
-    * 基于 {@link com.chua.datasource.support.engine.JdbcEngine} 动态查询 app钥匙 表，
-    * 无需编写 映射器，用于单机部署或外部 o认证 服务不可达时的 AI app钥匙 认证。
+    * 基于 {@link com.chua.datasource.support.engine.JdbcEngine} 动态查询 appKey 表，
+    * 无需编写 映射器，用于单机部署或外部 o认证 服务不可达时的 AI appKey 认证。
     * 仅在 {@code plugin.oauth.ai-app-key.enabled=true} 且存在 数据源 时装配。
     * </p>
     *
     * @param authClientProperties o认证 客户端配置
     * @param dataSource           应用数据源
-    * @return AI app钥匙 认证支持实例
+    * @return AI appKey 认证支持实例
     */
     @Bean
     @ConditionalOnProperty(prefix = "plugin.oauth.ai-app-key", name = "enabled", havingValue = "true")

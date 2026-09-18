@@ -30,7 +30,7 @@ public enum Information {
     * 400
     * @param 400 400
     * @param "令牌不存在" "令牌不存在"
-    * @return 钥匙noexist的结果
+    * @return Keynoexist的结果
     */
     KEY_NO_EXIST(400, "令牌不存在"),
     /**

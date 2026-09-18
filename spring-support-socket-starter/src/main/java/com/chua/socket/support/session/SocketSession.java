@@ -3,7 +3,7 @@ package com.chua.socket.support.session;
 import java.util.Map;
 
 /**
-* 套接字 会话接口
+* Socket 会话接口
 * 定义统一的会话操作方法
 *
 * @版本 1.0.0

@@ -40,7 +40,7 @@ public enum Position {
     }
 
     /**
-    * 获取 价值观
+    * 获取 值
     *
     * @return value
     */

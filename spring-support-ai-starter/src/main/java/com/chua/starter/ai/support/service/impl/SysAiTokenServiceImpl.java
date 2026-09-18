@@ -125,7 +125,7 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
     }
 
     @Override
-    /** 查找by令牌钥匙 */
+    /** 查找by令牌Key */
     public SysAiToken findByTokenKey(String tokenKey) {
         if (StringUtils.isBlank(tokenKey)) {
             return null;
@@ -163,7 +163,7 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
     }
 
     @Override
-    /** 获取分组idby令牌钥匙 */
+    /** 获取分组idby令牌Key */
     public Integer getGroupIdByTokenKey(String tokenKey) {
         SysAiToken token = findByTokenKey(tokenKey);
         return token != null ? token.getGroupId() : null;
@@ -174,7 +174,7 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
     /**
     * recordusage
     *
-    * @param tokenKey 令牌钥匙
+    * @param tokenKey 令牌Key
     * @param promptTokens 提示符令牌
     * @param completionTokens 完成令牌
     * @param cost cost
@@ -284,7 +284,7 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
     * 基于已加载的 令牌 实体检查限流，避免额外 DB 查询。
     *
     * <p>复用 {@link #listByGroupId(Integer)} 已加载的数据，直接检查限流计数器，
-    * 无需再按 令牌 钥匙 逐条查库。将原 N 次 DB 查询降为 1 次。</p>
+    * 无需再按 令牌 Key 逐条查库。将原 N 次 DB 查询降为 1 次。</p>
     *
     * @param token 令牌 实体（需包含 rate限制/rate数量/rate窗口启动 字段）
     * @return true 表示未触发限流，可以继续请求

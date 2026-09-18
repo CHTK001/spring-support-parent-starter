@@ -15,7 +15,7 @@ import lombok.Data;
 public class BotUserSummary {
 
     /**
-    * 用户归属 钥匙（优先 用户标识，缺失时用昵称；两者皆无则 "unassigned"）
+    * 用户归属 Key（优先 用户标识，缺失时用昵称；两者皆无则 "unassigned"）
     */
     private String owner;
 

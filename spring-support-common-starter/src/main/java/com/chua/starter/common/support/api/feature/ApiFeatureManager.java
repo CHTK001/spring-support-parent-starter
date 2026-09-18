@@ -31,15 +31,15 @@ public class ApiFeatureManager {
     private static final Logger log = LoggerFactory.getLogger(ApiFeatureManager.class);
         /**
     * 功能开关状态缓存
-    * 钥匙: 功能标识
-    * 价值观: 是否启用
+    * Key: 功能标识
+    * 值: 是否启用
     */
     private final Map<String, Boolean> featureStates = new ConcurrentHashMap<>();
 
     /**
     * 功能信息缓存
-    * 钥匙: 功能标识
-    * 价值观: 功能信息
+    * Key: 功能标识
+    * 值: 功能信息
     */
     private final Map<String, ApiFeatureInfo> featureInfoMap = new ConcurrentHashMap<>();
 

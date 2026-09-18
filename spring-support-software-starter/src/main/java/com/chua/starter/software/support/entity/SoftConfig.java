@@ -36,11 +36,11 @@ public class SoftConfig implements Serializable {
     /** 配置deviceid */
     private String configDeviceId;
 
-    /** 配置_钥匙 - 配置键 */
+    /** 配置_Key - 配置键 */
     /** 配置密钥 */
     private String configKey;
 
-    /** 配置_价值观 - 配置值 */
+    /** 配置_值 - 配置值 */
     /** 配置值 */
     private String configValue;
 
@@ -72,7 +72,7 @@ public class SoftConfig implements Serializable {
     /** 配置iseditable */
     private Boolean configIsEditable;
 
-    /** 配置_默认_价值观 - 默认值 */
+    /** 配置_默认_值 - 默认值 */
     /** 配置默认值 */
     private String configDefaultValue;
 
@@ -167,32 +167,32 @@ public class SoftConfig implements Serializable {
     }
 
     /**
-    * 获取配置钥匙。
-    * @return 获取配置钥匙的结果
+    * 获取配置Key。
+    * @return 获取配置Key的结果
     */
     public String getConfigKey() {
         return configKey;
     }
 
     /**
-    * 设置配置钥匙。
-    * @param configKey 配置钥匙
+    * 设置配置Key。
+    * @param configKey 配置Key
     */
     public void setConfigKey(String configKey) {
         this.configKey = configKey;
     }
 
     /**
-    * 获取配置价值观。
-    * @return 获取配置价值观的结果
+    * 获取配置值。
+    * @return 获取配置值的结果
     */
     public String getConfigValue() {
         return configValue;
     }
 
     /**
-    * 设置配置价值观。
-    * @param configValue 配置价值观
+    * 设置配置值。
+    * @param configValue 配置值
     */
     public void setConfigValue(String configValue) {
         this.configValue = configValue;
@@ -311,16 +311,16 @@ public class SoftConfig implements Serializable {
     }
 
     /**
-    * 获取配置默认价值观。
-    * @return 获取配置默认价值观的结果
+    * 获取配置默认值。
+    * @return 获取配置默认值的结果
     */
     public String getConfigDefaultValue() {
         return configDefaultValue;
     }
 
     /**
-    * 设置配置默认价值观。
-    * @param configDefaultValue 配置默认价值观
+    * 设置配置默认值。
+    * @param configDefaultValue 配置默认值
     */
     public void setConfigDefaultValue(String configDefaultValue) {
         this.configDefaultValue = configDefaultValue;

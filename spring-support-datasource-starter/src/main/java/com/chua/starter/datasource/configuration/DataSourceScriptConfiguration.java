@@ -928,7 +928,7 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         * @param e e
         * @param e e
         * @param 列注释 列注释
-        * @param KEY 钥匙
+        * @param KEY Key
         * @param AUTOINCREMENT AUTOINCREMENT
         * @param NULL 空
         * @param CURRENT_TIMESTAMP 当前_时间戳
@@ -1066,7 +1066,7 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         * @param e e
         * @param e e
         * @param 列注释 列注释
-        * @param KEY 钥匙
+        * @param KEY Key
         * @param AUTOINCREMENT AUTOINCREMENT
         * @param NULL 空
         * @param CURRENT_TIMESTAMP 当前_时间戳
@@ -1203,7 +1203,7 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         * @param e e
         * @param e e
         * @param 列注释 列注释
-        * @param KEY 钥匙
+        * @param KEY Key
         * @param AUTOINCREMENT AUTOINCREMENT
         * @param NULL 空
         * @param CURRENT_TIMESTAMP 当前_时间戳
@@ -1318,7 +1318,7 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         * @param e e
         * @param e e
         * @param 列注释 列注释
-        * @param KEY 钥匙
+        * @param KEY Key
         * @param AUTOINCREMENT AUTOINCREMENT
         * @param NULL 空
         * @param CURRENT_TIMESTAMP 当前_时间戳
@@ -1408,7 +1408,7 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         * @param e e
         * @param e e
         * @param 列注释 列注释
-        * @param KEY 钥匙
+        * @param KEY Key
         * @param AUTOINCREMENT AUTOINCREMENT
         * @param NULL 空
         * @param CURRENT_TIMESTAMP 当前_时间戳
@@ -1487,7 +1487,7 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         * @param e e
         * @param e e
         * @param 列注释 列注释
-        * @param KEY 钥匙
+        * @param KEY Key
         * @param AUTOINCREMENT AUTOINCREMENT
         * @param NULL 空
         * @param CURRENT_TIMESTAMP 当前_时间戳
@@ -1684,7 +1684,7 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         * <p>
         * 兼容多种数据库类型, 字段名使用表名前缀。
         * MySQL/PostgreSQL 保持原语法 (含 评论 列注释);
-        * sqlite/H2 不支持列注释和 UNIQUE 钥匙, 自动降级为方言兼容语法。
+        * sqlite/H2 不支持列注释和 UNIQUE Key, 自动降级为方言兼容语法。
         * </p>
         */
         private void createVersionTable() {

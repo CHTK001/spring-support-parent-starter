@@ -1,6 +1,6 @@
 package com.chua.starter.job;
 
-import com.chua.starter.job.example.DemoJobs;
+
 import com.chua.starter.job.support.JobAutoConfiguration;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
@@ -16,13 +16,13 @@ import org.springframework.context.annotation.Import;
 * </pre>
 *
 * <p>效果: 装配 {@link JobAutoConfiguration} 并以 SINGLE 角色启动,
-* 铅 自选 + 单秒扫描 + 本地执行, 观察 {@code DemoJobs} 的成功/失败/原生定时日志。</p>
+* 铅 自选 + 单秒扫描 + 本地执行, 观察 处理器 的成功/失败/原生定时日志。</p>
 *
 * @since 4.0.0.42
 * @author CH
  */
 @SpringBootApplication
-@Import({JobAutoConfiguration.class, DemoJobs.class})
+@Import(JobAutoConfiguration.class)
 @MapperScan(JobAutoConfiguration.MAPPER_PACKAGE)
 public class JobSingleApplication {
 

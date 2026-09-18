@@ -56,7 +56,7 @@ public class DataSyncAutoConfiguration {
     @ConditionalOnMissingBean
     /**
     * 数据同步服务端
-    * @param agentServerManager 智能体服务端管理器
+    * @param agentServerManager Agent服务端管理器
     * @param mappingManager mapping管理器
     */
     public com.chua.starter.datasync.DataSyncServer dataSyncServer(AgentServerManager agentServerManager,
@@ -69,17 +69,17 @@ public class DataSyncAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     /**
-    * 智能体服务端管理器
+    * Agent服务端管理器
     *
-    * @return 智能体服务端管理器的结果
+    * @return Agent服务端管理器的结果
     */
     public AgentServerManager agentServerManager() {
         /**
-        * 数据同步智能体服务端。
+        * 数据同步Agent服务端。
         * @param null 空
         * @param null 空
         * @param "default-server" "默认-服务端"
-        * @return 数据同步智能体服务端的结果
+        * @return 数据同步Agent服务端的结果
         */
         return new DataSyncAgentServer(null, null, "default-server");
     }

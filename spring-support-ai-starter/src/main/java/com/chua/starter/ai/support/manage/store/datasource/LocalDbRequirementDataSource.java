@@ -262,7 +262,7 @@ public class LocalDbRequirementDataSource implements IRequirementDataSource {
     /**
     * 获取字符串。
     * @param map 映射
-    * @param key 钥匙
+    * @param key Key
     * @return 获取字符串的结果
     */
     private String getString(Map<String, Object> map, String key) {
@@ -273,8 +273,8 @@ public class LocalDbRequirementDataSource implements IRequirementDataSource {
     /**
     * 获取字符串。
     * @param map 映射
-    * @param key 钥匙
-    * @param defaultValue 默认价值观
+    * @param key Key
+    * @param defaultValue 默认值
     * @return 获取字符串的结果
     */
     private String getString(Map<String, Object> map, String key, String defaultValue) {
@@ -285,8 +285,8 @@ public class LocalDbRequirementDataSource implements IRequirementDataSource {
     /**
     * 获取int。
     * @param map 映射
-    * @param key 钥匙
-    * @param defaultValue 默认价值观
+    * @param key Key
+    * @param defaultValue 默认值
     * @return 获取int的结果
     */
     private int getInt(Map<String, Object> map, String key, int defaultValue) {

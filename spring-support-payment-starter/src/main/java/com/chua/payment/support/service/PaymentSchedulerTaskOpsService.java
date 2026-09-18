@@ -21,7 +21,7 @@ public interface PaymentSchedulerTaskOpsService {
 
     /**
     * 更新任务。
-    * @param taskKey 任务钥匙
+    * @param taskKey 任务Key
     * @param dto dto
     * @return 更新任务的结果
     */
@@ -29,7 +29,7 @@ public interface PaymentSchedulerTaskOpsService {
 
     /**
     * trigger任务。
-    * @param taskKey 任务钥匙
+    * @param taskKey 任务Key
     * @return trigger任务的结果
     */
     PaymentSchedulerTaskVO triggerTask(String taskKey);

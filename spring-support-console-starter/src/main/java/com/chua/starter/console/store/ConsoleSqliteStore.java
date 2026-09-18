@@ -307,8 +307,8 @@ public class ConsoleSqliteStore implements AutoCloseable {
 
     /**
     * 设置kv。
-    * @param key 钥匙
-    * @param value 价值观
+    * @param key Key
+    * @param value 值
     */
     public synchronized void setKv(String key, String value) {
         /**
@@ -320,7 +320,7 @@ public class ConsoleSqliteStore implements AutoCloseable {
 
     /**
     * 获取kv。
-    * @param key 钥匙
+    * @param key Key
     * @return 获取kv的结果
     */
     public synchronized String getKv(String key) {
@@ -342,7 +342,7 @@ public class ConsoleSqliteStore implements AutoCloseable {
         } catch (SQLException e) {
             /**
             * illegal状态异常。
-            * @param key 钥匙
+            * @param key Key
             * @param e e
             * @return illegal状态异常的结果
             */
@@ -353,13 +353,13 @@ public class ConsoleSqliteStore implements AutoCloseable {
 
     /**
     * 删除kv。
-    * @param key 钥匙
+    * @param key Key
     */
     public synchronized void deleteKv(String key) {
         /**
         * 执行。
         * @param k=?" k=?"
-        * @param key 钥匙
+        * @param key Key
         */
         execute("DELETE FROM console_kv WHERE k=?", key);
     }

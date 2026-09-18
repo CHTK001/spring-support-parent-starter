@@ -46,7 +46,7 @@ public class AiGroupDTO implements Serializable {
     private List<String> models;
 
     /**
-    * 绑定 app钥匙 标识 列表
+    * 绑定 appKey 标识 列表
     */
     @Schema(description = "绑定 AppKey ID 列表")
     /** APP密钥标识 */

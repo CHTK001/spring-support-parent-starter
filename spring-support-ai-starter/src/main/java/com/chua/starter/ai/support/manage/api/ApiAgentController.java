@@ -37,12 +37,12 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
-* 智能体（智能体）控制器，替代 nomicore 的同名契约。
+* Agent（Agent）控制器，替代 nomicore 的同名契约。
 *
 * <p>负责三类资源：
 * <ul>
 *     <li>/api/agents —— 内置/自定义 Agent 元数据目录；</li>
-*     <li>/api/agent-executions —— 持久化智能体执行（含步骤、尝试、决策）；</li>
+*     <li>/api/agent-executions —— 持久化Agent执行（含步骤、尝试、决策）；</li>
 *     <li>/api/agent-execution-templates —— 执行模板（可一键创建执行）。</li>
 * </ul>
 * 全部为进程内内存实现，主键使用 {@link SysAiConversationStore#newId()} 生成的 UUID；
@@ -91,12 +91,12 @@ public class ApiAgentController {
             .build();
 
     /**
-    * 内置 智能体 元数据目录（进程启动时初始化）
+    * 内置 Agent 元数据目录（进程启动时初始化）
     */
     private final List<Map<String, Object>> builtinAgents = initBuiltinAgents();
 
     /**
-    * 自定义 智能体 元数据目录
+    * 自定义 Agent 元数据目录
     */
     private final Map<String, Map<String, Object>> customAgents = new ConcurrentHashMap<>();
 
@@ -121,13 +121,13 @@ public class ApiAgentController {
     private final Map<String, List<Map<String, Object>>> templateParticipants = new ConcurrentHashMap<>();
 
     // =====================================================================
- // 智能体
+ // Agent
     // =====================================================================
 
     @GetMapping("/agents")
     /**
-    * 列表智能体。
-    * @return 列表智能体的结果
+    * 列表Agent。
+    * @return 列表Agent的结果
     */
     public ApiResult<List<Map<String, Object>>> listAgents() {
         List<Map<String, Object>> all = new ArrayList<>(builtinAgents);
@@ -137,8 +137,8 @@ public class ApiAgentController {
 
     @PostMapping("/agents/refresh")
     /**
-    * refresh习俗智能体。
-    * @return refresh习俗智能体的结果
+    * refresh习俗Agent。
+    * @return refresh习俗Agent的结果
     */
     public ApiResult<Void> refreshCustomAgents() {
         // 内存实现：重新扫描自定义目录为幂等操作，无需实际 IO
@@ -147,7 +147,7 @@ public class ApiAgentController {
     }
 
     // =====================================================================
- // 模型 Failover 队列（故障转移队列，智能体.模型_failover 偏好）
+ // 模型 Failover 队列（故障转移队列，Agent.模型_failover 偏好）
     // =====================================================================
 
     /**
@@ -519,7 +519,7 @@ public class ApiAgentController {
     /**
     * 构建探测 HTTP 请求；获取 时 主体 为 空。
     * @param url url
-    * @param apiKey api钥匙
+    * @param apiKey apiKey
     * @param jsonBody json主体
     * @return 构建探针请求的结果
     */
@@ -593,9 +593,9 @@ public class ApiAgentController {
     }
 
     /**
-    * 从凭证中提取首个可用 API 钥匙（兼容 api_钥匙 与 api_钥匙 形态）。
+    * 从凭证中提取首个可用 API Key（兼容 api_Key 与 api_Key 形态）。
     * @param credentials 凭证
-    * @return extractapi钥匙的结果
+    * @return extractapiKey的结果
     */
     private String extractApiKey(Map<String, Object> credentials) {
         if (credentials == null || credentials.isEmpty()) {
@@ -614,7 +614,7 @@ public class ApiAgentController {
 
     /**
     * str。
-    * @param value 价值观
+    * @param value 值
     * @return str的结果
     */
     private static String str(Object value) {
@@ -634,7 +634,7 @@ public class ApiAgentController {
     }
 
     // =====================================================================
- // 智能体 Executions
+ // Agent Executions
     // =====================================================================
 
     @GetMapping("/agent-executions")
@@ -962,7 +962,7 @@ public class ApiAgentController {
     }
 
     // =====================================================================
- // 智能体 执行 Templates
+ // Agent 执行 Templates
     // =====================================================================
 
     @GetMapping("/agent-execution-templates")
@@ -1211,8 +1211,8 @@ public class ApiAgentController {
     }
 
     /**
-    * 初始化builtin智能体。
-    * @return 初始化builtin智能体的结果
+    * 初始化builtinAgent。
+    * @return 初始化builtinAgent的结果
     */
     private List<Map<String, Object>> initBuiltinAgents() {
         List<Map<String, Object>> list = new ArrayList<>();
@@ -1222,14 +1222,14 @@ public class ApiAgentController {
     }
 
     /**
-    * 构建智能体。
+    * 构建Agent。
     * @param id 标识
     * @param name 名称
     * @param type 类型
     * @param source 源
     * @param enabled 已启用
     * @param available 可用
-    * @return 构建智能体的结果
+    * @return 构建Agent的结果
     */
     private Map<String, Object> buildAgent(String id, String name, String type, String source, boolean enabled, boolean available) {
         Map<String, Object> agent = new LinkedHashMap<>();

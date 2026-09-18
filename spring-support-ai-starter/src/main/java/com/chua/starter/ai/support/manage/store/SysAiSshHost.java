@@ -63,7 +63,7 @@ public class SysAiSshHost implements Serializable {
     private String username; // 用户名
 
     /**
-    * 认证方式（密码 / 钥匙 / 证书 / 智能体）
+    * 认证方式（密码 / Key / 证书 / Agent）
     */
     @TableField("sys_ai_ssh_host_auth_type")
     private String authType; // 认证类型
@@ -78,7 +78,7 @@ public class SysAiSshHost implements Serializable {
     * 私钥内容（写入后不回显）
     */
     @TableField("sys_ai_ssh_host_private_key")
-    private String privateKey; // 私募钥匙
+    private String privateKey; // 私募Key
 
     /**
     * 私钥口令（passphrase，写入后不回显）

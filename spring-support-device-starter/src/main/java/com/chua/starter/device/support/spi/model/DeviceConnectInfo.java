@@ -50,7 +50,7 @@ public class DeviceConnectInfo {
     private String platformType;
 
     /**
-    * 应用 钥匙（平台模式）
+    * 应用 Key（平台模式）
     */
     private String appKey;
 

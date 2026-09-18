@@ -1,6 +1,6 @@
 package com.chua.starter.job;
 
-import com.chua.starter.job.example.DemoJobs;
+
 import com.chua.starter.job.support.JobAutoConfiguration;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
@@ -23,7 +23,7 @@ import org.springframework.context.annotation.Import;
 * @author CH
  */
 @SpringBootApplication
-@Import({JobAutoConfiguration.class, DemoJobs.class})
+@Import(JobAutoConfiguration.class)
 @MapperScan(JobAutoConfiguration.MAPPER_PACKAGE)
 public class JobExecutorApplication {
 

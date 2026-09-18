@@ -29,12 +29,12 @@ public class InMemoryJobRepository implements JobRepository {
     private final Map<String, JobDefinition> table = new HashMap<>();
 
     /**
-    * 触发器缓存, 钥匙 为任务名
+    * 触发器缓存, Key 为任务名
     */
     private final Map<String, Trigger> triggerCache = new HashMap<>();
 
     /**
-    * 最近一次触发时间, 钥匙 为任务名
+    * 最近一次触发时间, Key 为任务名
     */
     private final Map<String, Long> lastFireMs = new HashMap<>();
 

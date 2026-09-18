@@ -24,7 +24,7 @@ import java.util.concurrent.Executors;
 *
 * <p>替代 {@code /api/ssh-hosts} 占位实现：基于 Apache MINA SSHD（
 * {@link SshClient}）提供真实的主机握手与状态机，并通过 {@code ssh.status}
-* web套接字 事件把 {@code connecting → connected / dropped} 等阶段实时推送给前端，
+* webSocket 事件把 {@code connecting → connected / dropped} 等阶段实时推送给前端，
 * 使会话 头部 上的「远程主机」状态药丸（{@code SshHostStatusPill}）真实可见。</p>
 *
 * <p>状态模型对齐前端 {@code IApiSshStatus} 契约：每个字段恒存在，
@@ -243,8 +243,8 @@ public class SshConnectionManager {
     * 装配并建立真实 SSH 连接。
     *
     * <p>私钥内容经临时文件交给底层库（其 API 仅接受路径），关闭时清理，
-    * 确保密钥明文不在磁盘残留。认证方式：密码 / 钥匙 / 证书 均走
-    * 密码或私钥；智能体 暂不支持（按 密码 兜底，通常失败并给出提示）。</p>
+    * 确保密钥明文不在磁盘残留。认证方式：密码 / Key / 证书 均走
+    * 密码或私钥；Agent 暂不支持（按 密码 兜底，通常失败并给出提示）。</p>
     *
     * @param host 主机档案（含真实凭据）
     * @return 已连接的客户端

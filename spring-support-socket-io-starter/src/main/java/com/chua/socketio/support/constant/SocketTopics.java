@@ -1,7 +1,7 @@
 package com.chua.socketio.support.constant;
 
 /**
-* 套接字.IO 主题常量
+* Socket.IO 主题常量
 * <p>
 * 命名格式: 项目:模块:功能
 * 例如: 监控:Docker:拉手_进步, 系统:消息:push
@@ -12,7 +12,7 @@ package com.chua.socketio.support.constant;
  */
 public final class SocketTopics {
 
-    /** 创建 套接字topics 实例 */
+    /** 创建 Sockettopics 实例 */
     private SocketTopics() {
         // 私有构造函数，防止实例化
     }

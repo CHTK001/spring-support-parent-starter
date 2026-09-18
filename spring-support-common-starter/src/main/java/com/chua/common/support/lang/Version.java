@@ -49,9 +49,9 @@ public class Version implements Comparable<Version> {
     public static Version parse(String version) {
         if (version == null || version.isEmpty()) {
             /**
-            * illegal参数异常。
+            * IllegalArgumentException。
             * @param "版本号不能为空" "版本号不能为空"
-            * @return illegal参数异常的结果
+            * @return IllegalArgumentException的结果
             */
             throw new IllegalArgumentException("版本号不能为空");
         }
@@ -71,10 +71,10 @@ public class Version implements Comparable<Version> {
             }
         } catch (NumberFormatException e) {
             /**
-            * illegal参数异常。
+            * IllegalArgumentException。
             * @param version 版本
             * @param e e
-            * @return illegal参数异常的结果
+            * @return IllegalArgumentException的结果
             */
             throw new IllegalArgumentException("版本号格式不正确: " + version, e);
         }

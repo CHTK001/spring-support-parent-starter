@@ -52,7 +52,7 @@ public class SysAiProvider implements Serializable {
     private String baseUrl; // baseurl
 
     /**
-    * 认证方式（api_钥匙/bearer/OAuth/无）
+    * 认证方式（api_Key/bearer/OAuth/无）
     */
     @TableField("sys_ai_provider_auth_scheme")
     private String authScheme; // 认证scheme

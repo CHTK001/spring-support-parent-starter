@@ -24,8 +24,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
-* 套接字.IO 会话模板实现
-* 基于 Netty-套接字.IO 实现，支持多房间配置
+* Socket.IO 会话模板实现
+* 基于 Netty-Socket.IO 实现，支持多房间配置
 *
 * @版本 1.0.0
 * @since 2024-12-04
@@ -50,7 +50,7 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
     private final Map<String, DelegateSocketIOServer> servers = new ConcurrentHashMap<>();
 
     /**
-    * 创建 套接字io会话template 实例
+    * 创建 Socketio会话template 实例
     * @param properties 属性
     * @param listeners 列表
     * @param listeners 监听器
@@ -386,7 +386,7 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
     }
 
     /**
-    * 创建 套接字.IO 配置
+    * 创建 Socket.IO 配置
     *
     * @param host        主机地址
     * @param port        端口

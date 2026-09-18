@@ -35,7 +35,7 @@ public class RedissonLockTemplate implements LockTemplate {
     private final RedissonClient redissonClient;
 
     /**
-    * 获取锁的完整钥匙
+    * 获取锁的完整Key
     *
     * @param lockKey 锁的唯一标识
     * @return 完整的锁key
@@ -145,7 +145,7 @@ public class RedissonLockTemplate implements LockTemplate {
     public void lock(String lockKey, Runnable action) {
         /**
     * 锁。
-    * @param lockKey 锁钥匙
+    * @param lockKey 锁Key
     * @param DEFAULT_LEASE_TIME 默认lease时间
     * @param action 动作
     */

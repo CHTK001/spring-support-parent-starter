@@ -28,9 +28,9 @@ import java.util.List;
 import static com.chua.starter.common.support.logger.ModuleLog.highlight;
 
 /**
-* web套接字 自动配置
+* webSocket 自动配置
 * <p>
-* 基于 Spring Boot 原生 web套接字，与应用同端口运行
+* 基于 Spring Boot 原生 webSocket，与应用同端口运行
 * </p>
 *
 * @since 2025-12-25
@@ -57,14 +57,14 @@ public class WebSocketAutoConfiguration implements WebSocketConfigurer {
     @Bean
     @ConditionalOnMissingBean
     /**
-    * web套接字会话管理器
+    * webSocket会话管理器
     *
-    * @return web套接字会话管理器的结果
+    * @return webSocket会话管理器的结果
     */
     public WebSocketSessionManager webSocketSessionManager() {
         /**
-        * web套接字会话管理器。
-        * @return web套接字会话管理器的结果
+        * webSocket会话管理器。
+        * @return webSocket会话管理器的结果
         */
         return new WebSocketSessionManager();
     }
@@ -72,16 +72,16 @@ public class WebSocketAutoConfiguration implements WebSocketConfigurer {
     @Bean
     @ConditionalOnMissingBean
     /**
-    * web套接字template
+    * webSockettemplate
     *
     * @param sessionManager 会话管理器
-    * @return web套接字template的结果
+    * @return webSockettemplate的结果
     */
     public WebSocketTemplate webSocketTemplate(WebSocketSessionManager sessionManager) {
         /**
-        * web套接字template。
+        * webSockettemplate。
         * @param sessionManager 会话管理器
-        * @return web套接字template的结果
+        * @return webSockettemplate的结果
         */
         return new WebSocketTemplate(sessionManager);
     }
@@ -89,26 +89,26 @@ public class WebSocketAutoConfiguration implements WebSocketConfigurer {
     @Bean
     @ConditionalOnMissingBean
     /**
-    * delegatingweb套接字处理器
+    * delegatingwebSocket处理器
     *
     * @param sessionManager 会话管理器
-    * @return delegatingweb套接字处理器的结果
+    * @return delegatingwebSocket处理器的结果
     */
     public DelegatingWebSocketHandler delegatingWebSocketHandler(WebSocketSessionManager sessionManager) {
         /**
-        * delegatingweb套接字处理器。
+        * delegatingwebSocket处理器。
         * @param sessionManager 会话管理器
         * @param handlers 处理器
-        * @return delegatingweb套接字处理器的结果
+        * @return delegatingwebSocket处理器的结果
         */
         return new DelegatingWebSocketHandler(sessionManager, handlers);
     }
 
     @Bean
     /**
-    * 创建web套接字容器
+    * 创建webSocket容器
     *
-    * @return 创建web套接字容器的结果
+    * @return 创建webSocket容器的结果
     */
     public ServletServerContainerFactoryBean createWebSocketContainer() {
         ServletServerContainerFactoryBean container = new ServletServerContainerFactoryBean();
@@ -119,7 +119,7 @@ public class WebSocketAutoConfiguration implements WebSocketConfigurer {
     }
 
     @Override
-    /** 注册web套接字处理器 */
+    /** 注册webSocket处理器 */
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         WebSocketSessionManager sessionManager = webSocketSessionManager();
         DelegatingWebSocketHandler handler = delegatingWebSocketHandler(sessionManager);
@@ -144,9 +144,9 @@ public class WebSocketAutoConfiguration implements WebSocketConfigurer {
 
     @Bean
     /**
-    * web套接字服务信息contributor
+    * webSocket服务信息contributor
     *
-    * @return web套接字服务信息contributor的结果
+    * @return webSocket服务信息contributor的结果
     */
     public ServiceInfoContributor webSocketServiceInfoContributor() {
         return registry -> {

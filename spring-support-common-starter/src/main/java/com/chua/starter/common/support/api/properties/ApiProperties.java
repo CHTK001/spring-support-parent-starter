@@ -300,16 +300,16 @@ import java.util.Map;
 
         /**
         * platform类型。
-        * @param value 价值观
+        * @param value 值
         */
         PlatformType(String value) {
             this.value = value;
         }
 
         /**
-        * 获取价值观
+        * 获取值
         *
-        * @return 获取价值观的结果
+        * @return 获取值的结果
         */
         public String getValue() {
             return value;
@@ -624,18 +624,18 @@ import java.util.Map;
         }
 
         /**
-        * 获取codec请求钥匙
+        * 获取codec请求Key
         *
-        * @return 获取codec请求钥匙的结果
+        * @return 获取codec请求Key的结果
         */
         public String getCodecRequestKey() {
             return codecRequestKey;
         }
 
         /**
-        * 设置codec请求钥匙
+        * 设置codec请求Key
         *
-        * @param codecRequestKey codec请求钥匙
+        * @param codecRequestKey codec请求Key
         */
         public void setCodecRequestKey(String codecRequestKey) {
             this.codecRequestKey = codecRequestKey;

@@ -13,7 +13,7 @@ import java.io.Serializable;
 * 浏览器设置实体类。
 *
 * <p>以 Key-Value 形式存储浏览器平台的全局设置，包括显示模式、资源策略、
-* 登录状态等。每个设置项通过 setting_钥匙 唯一标识，setting_价值观 存储
+* 登录状态等。每个设置项通过 setting_Key 唯一标识，setting_值 存储
 * JSON 格式的配置内容。</p>
 *
 * <p>数据来源：{@code sys_agent_browser_setting} 表</p>
@@ -40,7 +40,7 @@ public class AgentBrowserSetting implements Serializable {
     */
     @TableId(type = IdType.INPUT)
     @Schema(description = "设置项键名", example = "display_mode")
-    private String settingKey; // setting钥匙
+    private String settingKey; // settingKey
 
     /**
     * 设置项值（JSON 格式）。
@@ -54,7 +54,7 @@ public class AgentBrowserSetting implements Serializable {
     */
     @TableField("setting_value")
     @Schema(description = "设置项值（JSON 格式）")
-    private String settingValue; // setting价值观
+    private String settingValue; // setting值
 
     /**
     * 更新时间（毫秒级时间戳）。

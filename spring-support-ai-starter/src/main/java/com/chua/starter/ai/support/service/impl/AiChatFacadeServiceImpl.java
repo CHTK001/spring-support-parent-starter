@@ -81,7 +81,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     private final AiModelMapper aiModelMapper; // 模型定义映射器（加载别名→主模型映射）
 
     /**
-    * DB 提供者 多 app钥匙 聚合客户端缓存（提供者标识::模型 → 客户端，5 分钟 TTL）。
+    * DB 提供者 多 appKey 聚合客户端缓存（提供者标识::模型 → 客户端，5 分钟 TTL）。
     * 避免每次对话都重建多客户端聚合实例；凭证变更后最多延迟 5 分钟生效。
     */
     private static final long DB_CLIENT_CACHE_TTL_MILLIS = 5 * 60 * 1000L;
@@ -446,7 +446,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
             List<String> keys = collectAllApiKeys(provider);
             Map<String, String> extraHeaders = extractExtraHeaders(provider.getExtra());
             if (keys.isEmpty()) {
- // 无任何可用密钥：保留原行为（app钥匙 为 空），由下游/兜底处理
+ // 无任何可用密钥：保留原行为（appKey 为 空），由下游/兜底处理
                 ChatClientSetting setting = ChatClientSetting.builder()
                         .provider(provider.getPlatform())
                         .baseUrl(provider.getBaseUrl())
@@ -470,7 +470,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                 }
                 return raw.model(model);
             }
- // 多 app钥匙：逐密钥构建客户端，按 提供者 负载均衡算法聚合（默认 failover = 首个 钥匙 优先）
+ // 多 appKey：逐密钥构建客户端，按 提供者 负载均衡算法聚合（默认 failover = 首个 Key 优先）
             AggregateChatClientSetting agg = new AggregateChatClientSetting();
             String strategy = resolveLoadStrategy(provider);
             agg.setStrategy(strategy);
@@ -501,7 +501,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     }
 
     /**
-    * 解析 提供者 的多 钥匙 负载均衡算法。
+    * 解析 提供者 的多 Key 负载均衡算法。
     *
     * <p>读 {@code extra.load_strategy}，缺省或非法时回退 {@code failover}（按序取第一个可用 key）。
     * 可选值：{@code failover} / {@code round_robin} / {@code weighted} / {@code latency} / {@code cost} / {@code hybrid}。</p>
@@ -528,7 +528,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     }
 
     /**
-    * 收集 提供者 全部可用 app钥匙（去重、保序）：
+    * 收集 提供者 全部可用 appKey（去重、保序）：
     * 提供者 级凭证（{@code api_keys} 数组 + {@code apiKey} 标量）+ 各 connection 级凭证。
     *
     * @param provider DB 提供者
@@ -557,9 +557,9 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     }
 
     /**
-    * 从凭证中提取全部 API 钥匙（兼容 {@code api_keys} 数组与 {@code apiKey} 键）。
+    * 从凭证中提取全部 API Key（兼容 {@code api_keys} 数组与 {@code apiKey} 键）。
     * @param credentials 凭证
-    * @return extractapi钥匙的结果
+    * @return extractapiKey的结果
     */
     private static List<String> extractApiKeys(Map<String, Object> credentials) {
         if (credentials == null) {

@@ -44,13 +44,13 @@ public class SysAiGlobalSetting {
     * 字段值
     */
     @TableField("sys_ai_global_setting_value")
-    private String value; // 价值观
+    private String value; // 值
 
     /**
     * 值类型（字符串 / 数字 / 布尔值）
     */
     @TableField("sys_ai_global_setting_value_type")
-    private String valueType; // 价值观类型
+    private String valueType; // 值类型
 
     /**
     * 字段描述

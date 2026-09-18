@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
 * AI 令牌实体——对应 sys_AI_令牌 表。
 * <p>
 * 每个 令牌 绑定到一个分组，具备费用统计、使用计数、限流和允许模型列表等完整能力。
-* app钥匙 用于身份认证，令牌 用于鉴权+计量。
+* appKey 用于身份认证，令牌 用于鉴权+计量。
 *
 * @author CH
 * @since 4.0.0
@@ -40,19 +40,19 @@ public class SysAiToken {
     * 令牌密钥（明文）
     */
     @TableField("sys_ai_token_key")
-    private String key; // 钥匙
+    private String key; // Key
 
     /**
     * 令牌密钥前缀（如 sk-）
     */
     @TableField("sys_ai_token_key_prefix")
-    private String keyPrefix; // 钥匙前缀
+    private String keyPrefix; // Key前缀
 
     /**
     * 令牌密钥哈希（用于快速查找）
     */
     @TableField("sys_ai_token_key_hash")
-    private String keyHash; // 钥匙哈希
+    private String keyHash; // Key哈希
 
     /**
     * 归属用户 标识
@@ -60,7 +60,7 @@ public class SysAiToken {
     private Integer sysUserId;
 
     /**
-    * 绑定 app钥匙 标识（可选，app钥匙 认证后关联 令牌 计量）
+    * 绑定 appKey 标识（可选，appKey 认证后关联 令牌 计量）
     */
     private Integer sysAiAppKeyId;
 

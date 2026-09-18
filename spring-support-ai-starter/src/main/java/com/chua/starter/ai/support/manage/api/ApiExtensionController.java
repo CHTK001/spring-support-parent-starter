@@ -53,8 +53,8 @@ public class ApiExtensionController {
     @TokenForIgnore
     @GetMapping("/agents")
     /**
-    * 获取智能体。
-    * @return 获取智能体的结果
+    * 获取Agent。
+    * @return 获取Agent的结果
     */
     public Map<String, Object> getAgents() {
         return Map.of("success", true, "data", List.of());
@@ -103,8 +103,8 @@ public class ApiExtensionController {
     @TokenForIgnore
     @GetMapping("/agent-activity")
     /**
-    * 获取智能体activity。
-    * @return 获取智能体activity的结果
+    * 获取Agentactivity。
+    * @return 获取Agentactivity的结果
     */
     public Map<String, Object> getAgentActivity() {
         return Map.of("success", true, "data", Map.of());

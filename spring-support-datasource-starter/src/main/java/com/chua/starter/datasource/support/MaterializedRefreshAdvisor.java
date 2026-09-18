@@ -61,7 +61,7 @@ public class MaterializedRefreshAdvisor extends StaticMethodMatcherPointcutAdvis
             * 解析Refresh
             *
             * @param method 方法
-            * @param targetClass Target类
+            * @param targetClass 目标类
             * @return resolveRefresh的结果
             */
     private MaterializedRefresh resolveRefresh(Method method, Class<?> targetClass) {

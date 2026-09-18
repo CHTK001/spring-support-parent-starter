@@ -185,7 +185,7 @@ public class CurrentUser {
     /**
     * 是否拥有权限
     *
-    * @param value 价值观
+    * @param value 值
     * @return 是否包含权限的结果
     */
     public boolean hasPermission(String[] value) {

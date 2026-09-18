@@ -62,7 +62,7 @@ public class ApiCryptoSerializer extends JsonSerializer<String> implements Conte
         this.key = null;
     }
 
-    private static final Map<Class<?>, String> KEY_MAP = new ConcurrentReferenceHashMap<>(512); // 钥匙映射
+    private static final Map<Class<?>, String> KEY_MAP = new ConcurrentReferenceHashMap<>(512); // Key映射
 
     @Override
     /**
@@ -100,7 +100,7 @@ public class ApiCryptoSerializer extends JsonSerializer<String> implements Conte
     * smencrypt
     *
     * @param data 数据
-    * @param publicKeyHex 公共钥匙hex
+    * @param publicKeyHex 公共Keyhex
     * @return sm2Encrypt的结果
     */
     private String sm2Encrypt(String data, String publicKeyHex) {
@@ -146,7 +146,7 @@ public class ApiCryptoSerializer extends JsonSerializer<String> implements Conte
 
     /**
     * 判断是否相同
-    * @param key 钥匙
+    * @param key Key
     * @param key1 键1
     * @return 是否equals的结果
     */
@@ -155,10 +155,10 @@ public class ApiCryptoSerializer extends JsonSerializer<String> implements Conte
     }
 
     /**
-    * 获取dynamic钥匙
+    * 获取dynamicKey
     *
     * @param jsonGenerator json生成器
-    * @return 获取dynamic钥匙的结果
+    * @return 获取dynamicKey的结果
     */
     private String getDynamicKey(JsonGenerator jsonGenerator) {
         Object currentValue = jsonGenerator.getCurrentValue();

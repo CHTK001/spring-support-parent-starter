@@ -199,7 +199,7 @@ public class CompositeAggregateRoutePaymentChannel extends AbstractMerchantPayme
     /**
     * 解析Long
     *
-    * @param values 价值观
+    * @param values 值
     * @return 解析long的结果
     */
     private Long parseLong(Object... values) {

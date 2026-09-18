@@ -116,7 +116,7 @@ public class ApiIgnoreSerializer extends JsonSerializer<Object> implements Conte
     /**
     * 是否匹配
     *
-    * @param value 价值观
+    * @param value 值
     * @param group 群体
     * @return 是否匹配
     */

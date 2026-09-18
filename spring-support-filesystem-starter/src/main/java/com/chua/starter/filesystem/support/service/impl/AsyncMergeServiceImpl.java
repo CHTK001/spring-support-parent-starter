@@ -455,10 +455,10 @@ public class AsyncMergeServiceImpl implements AsyncMergeService {
     }
 
     /**
-    * 从 钥匙 中提取文件名（最后一段）。
+    * 从 Key 中提取文件名（最后一段）。
     *
-    * @param key 对象 钥匙
-    * @return 文件名；若 钥匙 为 空/空 返回 空
+    * @param key 对象 Key
+    * @return 文件名；若 Key 为 空/空 返回 空
     */
     private String extractFileName(String key) {
         if (key == null || key.isEmpty()) {
@@ -469,9 +469,9 @@ public class AsyncMergeServiceImpl implements AsyncMergeService {
     }
 
     /**
-    * 从 钥匙 中提取目录前缀（不含文件名）。
+    * 从 Key 中提取目录前缀（不含文件名）。
     *
-    * @param key 对象 钥匙
+    * @param key 对象 Key
     * @return 目录前缀；若不含 "/" 返回 空
     */
     private String extractFilePath(String key) {

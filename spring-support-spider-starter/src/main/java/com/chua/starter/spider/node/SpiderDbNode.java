@@ -87,17 +87,17 @@ public class SpiderDbNode implements FlowNode {
         String saveAs = props.getString("saveAs");
         if (sql == null || sql.trim().isEmpty()) {
             /**
-            * illegal参数异常。
+            * IllegalArgumentException。
             * @param 参数" 参数"
-            * @return illegal参数异常的结果
+            * @return IllegalArgumentException的结果
             */
             throw new IllegalArgumentException("spider.db 节点缺少 sql 参数");
         }
         if (saveAs == null || saveAs.isEmpty()) {
             /**
-            * illegal参数异常。
+            * IllegalArgumentException。
             * @param 参数" 参数"
-            * @return illegal参数异常的结果
+            * @return IllegalArgumentException的结果
             */
             throw new IllegalArgumentException("spider.db 节点缺少 saveAs 参数");
         }

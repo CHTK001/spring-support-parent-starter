@@ -52,10 +52,10 @@ public class SyncServerInstance {
     public static final String TOPIC_CLIENT_OFFLINE = "sync/client/offline";
 
     /**
-    * 业务消息中注入的源客户端标识 钥匙
+    * 业务消息中注入的源客户端标识 Key
     * <p>
     * 新版 {@link SyncMessageHandler#handle(String, Object)} 不携带会话上下文，
-    * 服务端分发消息时将该 钥匙 写入消息体，处理器可据此反查源客户端信息。
+    * 服务端分发消息时将该 Key 写入消息体，处理器可据此反查源客户端信息。
     * </p>
     */
     public static final String SYNC_MESSAGE_SOURCE_CLIENT_ID = "__syncClientId__";
@@ -613,7 +613,7 @@ public class SyncServerInstance {
     /**
     * 将传输层收到的字符串消息解析为结构化对象（JSON -> 映射）。
     * <p>
-    * 底层协议（如 web套接字）按文本帧传输，消息体为 JSON 字符串，
+    * 底层协议（如 webSocket）按文本帧传输，消息体为 JSON 字符串，
     * 解析后方可与加密解密逻辑统一处理。
     * </p>
     *

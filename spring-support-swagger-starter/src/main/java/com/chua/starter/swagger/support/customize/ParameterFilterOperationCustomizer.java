@@ -22,7 +22,7 @@ import java.util.Optional;
 
 /**
 * 参数过滤操作定制器
-* 用于过滤隐藏参数、用户价值观参数等
+* 用于过滤隐藏参数、用户值参数等
 *
 * @since 2025/5/27 13:37
 * @author CH
@@ -30,12 +30,12 @@ import java.util.Optional;
 public class ParameterFilterOperationCustomizer implements GlobalOperationCustomizer {
 
     /**
-    * 用户价值观注解类（可选依赖）
+    * 用户值注解类（可选依赖）
     */
     private static final Class<?> USER_VALUE_CLASS = loadUserValueClass();
 
     /**
-    * 加载用户价值观注解类
+    * 加载用户值注解类
     *
     * @return UserValue注解类，如果不存在则返回null
     */
@@ -123,7 +123,7 @@ public class ParameterFilterOperationCustomizer implements GlobalOperationCustom
     * @return 是否跳过
     */
     private boolean shouldSkipParameter(MethodParameter methodParameter) {
- // 跳过用户价值观注解的参数
+ // 跳过用户值注解的参数
         if (USER_VALUE_CLASS != null && methodParameter.hasParameterAnnotation(getUserValueAnnotationClass())) {
             return true;
         }
@@ -145,7 +145,7 @@ public class ParameterFilterOperationCustomizer implements GlobalOperationCustom
     }
 
     /**
-    * 获取 用户价值观 注解类型
+    * 获取 用户值 注解类型
     *
     * @return UserValue 注解 类
     */

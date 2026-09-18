@@ -22,7 +22,7 @@ import org.springframework.util.StringUtils;
 @RequiredArgsConstructor
 public class PaymentGlobalConfigServiceImpl implements PaymentGlobalConfigService {
 
-    /** 默认_钥匙 */
+    /** 默认_Key */
     private static final String DEFAULT_KEY = "DEFAULT";
 
     /** 薪酬全局配置映射器 */
@@ -98,7 +98,7 @@ public class PaymentGlobalConfigServiceImpl implements PaymentGlobalConfigServic
     /**
     * Normalize
     *
-    * @param value 价值观
+    * @param value 值
     * @return normalize的结果
     */
     private String normalize(String value) {
