@@ -99,3 +99,29 @@ effective-pom
 **/run-monitor-*.bat
 **/start-*.bat
 **/start-backend-ps.ps1
+
+# 监控模块运行期/构建产物（不进 git）
+spring-support-monitor-starter/BOOT-INF/
+spring-support-monitor-starter/project-archives/
+spring-support-monitor-starter/lib/
+spring-support-monitor-starter/data/
+spring-support-monitor-starter/.data/
+spring-support-monitor-starter/runtime/
+spring-support-monitor-starter/jdbc-drivers/
+spring-support-monitor-starter/META-INF/
+spring-support-monitor-starter/org/
+spring-support-monitor-starter/.workbuddy/
+spring-support-monitor-starter/target.locked/
+spring-support-monitor-starter/*.log
+spring-support-monitor-starter/*.sqlite
+spring-support-monitor-starter/*.pid
+spring-support-monitor-starter/*.txt
+spring-support-monitor-starter/ssh-test-*
+spring-support-monitor-starter/test-deploy.bin
+spring-support-monitor-starter/deploy-resp.json
+spring-support-monitor-starter/*.ps1
+spring-support-monitor-starter/*.bat
+
+# 大 BIN 离线数据库（不进 git）
+spring-support-common-starter/src/main/resources/IP2PROXY-LITE-PX2.BIN
+spring-support-common-starter/src/main/resources/IP2PROXY-LITE-PX2.MMDB
