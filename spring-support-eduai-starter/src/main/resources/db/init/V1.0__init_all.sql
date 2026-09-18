@@ -296,6 +296,59 @@ CREATE TABLE IF NOT EXISTS edu_teacher (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='教师档案';
 
 -- ----------------------------
+-- 趣味模块配置表
+-- ----------------------------
+CREATE TABLE IF NOT EXISTS edu_fun_config (
+    config_id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '配置ID',
+    module_code VARCHAR(64) NOT NULL COMMENT '模块编码: INSECT/IDIOM/IDIOM_GAME',
+    module_name VARCHAR(100) COMMENT '模块名称',
+    module_desc VARCHAR(500) COMMENT '模块描述',
+    module_icon VARCHAR(255) COMMENT '模块图标',
+    module_path VARCHAR(255) COMMENT '模块路径',
+    enabled TINYINT DEFAULT 1 COMMENT '是否启用: 0-禁用 1-启用',
+    sort_order INT DEFAULT 0 COMMENT '排序号',
+    config_json TEXT COMMENT '扩展配置JSON',
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    UNIQUE KEY edu_fun_config_module_code (module_code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='趣味模块配置表';
+
+-- ----------------------------
+-- 成语表
+-- ----------------------------
+CREATE TABLE IF NOT EXISTS edu_idiom (
+    idiom_id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '成语ID',
+    idiom_content VARCHAR(64) NOT NULL COMMENT '成语内容',
+    idiom_pinyin VARCHAR(255) COMMENT '拼音',
+    idiom_meaning TEXT COMMENT '释义',
+    idiom_source VARCHAR(500) COMMENT '出处',
+    idiom_example TEXT COMMENT '例句',
+    idiom_synonyms VARCHAR(500) COMMENT '近义词，逗号分隔',
+    idiom_antonyms VARCHAR(500) COMMENT '反义词，逗号分隔',
+    idiom_difficulty INT DEFAULT 1 COMMENT '难度: 1-5',
+    idiom_tags VARCHAR(255) COMMENT '标签，逗号分隔',
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    KEY edu_idiom_content (idiom_content),
+    KEY edu_idiom_difficulty (idiom_difficulty)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='成语表';
+
+-- ----------------------------
+-- 成语学段映射表
+-- ----------------------------
+CREATE TABLE IF NOT EXISTS edu_idiom_grade (
+    map_id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '映射ID',
+    idiom_id BIGINT NOT NULL COMMENT '成语ID',
+    grade_level VARCHAR(20) COMMENT '学段: PRIMARY/JUNIOR/SENIOR',
+    `grade` VARCHAR(20) COMMENT '年级',
+    semester VARCHAR(10) COMMENT '学期: 上/下',
+    textbook_version VARCHAR(50) COMMENT '教材版本',
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    KEY edu_idiom_grade_idiom (idiom_id),
+    KEY edu_idiom_grade_level (grade_level)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='成语学段映射表';
+
+-- ----------------------------
 -- 初始数据 (种子)
 -- ----------------------------
 INSERT IGNORE INTO edu_subject (subject_code, subject_name, subject_grade_levels, subject_sort_order, subject_status) VALUES
