@@ -10,7 +10,7 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 /**
-* AI 厂商 API 钥匙 实体，对应表 {@code sys_ai_manufacturer_key}。
+* AI 厂商 API Key 实体，对应表 {@code sys_ai_manufacturer_key}。
 *
 * <p>每个厂商可配置多个 API Key，用于轮询与负载均衡（weight 权重、rate_limited_at 限流标记）。</p>
 *
@@ -22,7 +22,7 @@ import java.time.LocalDateTime;
 public class SysAiManufacturerKey {
 
     /**
-    * 厂商 钥匙 主键 标识
+    * 厂商 Key 主键 标识
     */
     @TableId(value = "sys_ai_manufacturer_key_id", type = IdType.AUTO)
     /** sysaimanufacturer密钥标识 */
@@ -43,10 +43,10 @@ public class SysAiManufacturerKey {
     private String sysAiManufacturerName;
 
     /**
-    * API 钥匙
+    * API Key
     */
     @TableField("sys_ai_manufacturer_key_value")
-    private String value; // 价值观
+    private String value; // 值
 
     /**
     * API Secret
@@ -61,7 +61,7 @@ public class SysAiManufacturerKey {
     private Integer status; // 状态
 
     /**
-    * 权重（用于多 钥匙 轮询）
+    * 权重（用于多 Key 轮询）
     */
     @TableField("sys_ai_manufacturer_key_weight")
     private Integer weight; // 权重

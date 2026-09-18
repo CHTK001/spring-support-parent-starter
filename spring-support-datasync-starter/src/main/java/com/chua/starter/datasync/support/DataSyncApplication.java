@@ -155,7 +155,7 @@ public class DataSyncApplication {
     * @param useMysql     是否使用真实 MySQL（false 时数据库模式走嵌入式 H2）
     */
     private static void registerSampleSourcesAndSinks(DefaultDataSyncServer server, boolean databaseMode, boolean useMysql) {
- // 确保 Sink 输出目录存在（delimited数据同步智能体sink 不会自动创建父目录）
+ // 确保 Sink 输出目录存在（delimited数据同步Agentsink 不会自动创建父目录）
         java.io.File outDir = new java.io.File("target/datasync-out");
         if (!outDir.exists() && !outDir.mkdirs()) {
             log.warn("[DATA-SYNC] 创建输出目录失败: {}", outDir.getAbsolutePath());

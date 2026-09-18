@@ -433,7 +433,7 @@ public class JobAutoConfiguration {
     /**
     * 执行器 端: 注册到仓库公共 同步客户端。
     * <p>
-    * 优先走仓库 SPI 获取网络协议客户端 (tcp/udp/WebSocket/http/套接字.IO)；
+    * 优先走仓库 SPI 获取网络协议客户端 (tcp/udp/WebSocket/http/Socket.IO)；
     * 由于 {@link TcpSyncClient} 无无参构造、其一键 SPI 实例化在部分 SPI 环境下返回 空,
     * 当 SPI 未命中或指向 入内存 时, 直接以配置的 服务端-url 构造真实 {@link TcpSyncClient}。
     * </p>

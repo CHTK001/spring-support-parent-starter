@@ -71,10 +71,10 @@ public class SysFileSystemUpload extends SysBase implements Serializable {
     @Schema(description = "存储桶")
     private String filesystemUploadTaskBucket; // filesystemupload任务bucket
 
-    /** 文件在存储中的 钥匙 */
+    /** 文件在存储中的 Key */
     @TableField("filesystem_upload_task_key")
     @Schema(description = "文件Key")
-    private String filesystemUploadTaskKey; // filesystemupload任务钥匙
+    private String filesystemUploadTaskKey; // filesystemupload任务Key
 
     /** 内容类型（MIME 类型） */
     @TableField("filesystem_upload_task_content_type")
@@ -290,16 +290,16 @@ public class SysFileSystemUpload extends SysBase implements Serializable {
     }
 
     /**
-    * 获取filesystemupload任务钥匙。
-    * @return 获取filesystemupload任务钥匙的结果
+    * 获取filesystemupload任务Key。
+    * @return 获取filesystemupload任务Key的结果
     */
     public String getFilesystemUploadTaskKey() {
         return filesystemUploadTaskKey;
     }
 
     /**
-    * 设置filesystemupload任务钥匙。
-    * @param filesystemUploadTaskKey filesystemupload任务钥匙
+    * 设置filesystemupload任务Key。
+    * @param filesystemUploadTaskKey filesystemupload任务Key
     */
     public void setFilesystemUploadTaskKey(String filesystemUploadTaskKey) {
         this.filesystemUploadTaskKey = filesystemUploadTaskKey;

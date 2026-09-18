@@ -16,7 +16,7 @@ import java.lang.reflect.Method;
 /**
 * 租户缓存键生成器
 * <p>
-* 在缓存键中自动追加应用名、平台名、租户标识，支持与 @缓存 的 钥匙 属性兼容。
+* 在缓存键中自动追加应用名、平台名、租户标识，支持与 @缓存 的 Key 属性兼容。
 * 开关配置由 {@link CacheProperties.KeyProperties} 控制。
 * </p>
 *

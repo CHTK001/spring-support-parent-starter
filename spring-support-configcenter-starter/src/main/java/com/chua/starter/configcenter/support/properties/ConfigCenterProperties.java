@@ -88,18 +88,18 @@ public class ConfigCenterProperties {
         private boolean enabled = true;
 
         /**
-        * 是否支持 @价值观 注解热更新
+        * 是否支持 @值 注解热更新
         * <p>
-        * 启用后，使用 @价值观 注解的字段也能实现热更新。
-        * 注意：需要配合 @refreshscope 使用，或者使用 @配置价值观 注解。
+        * 启用后，使用 @值 注解的字段也能实现热更新。
+        * 注意：需要配合 @refreshscope 使用，或者使用 @配置值 注解。
         * </p>
         */
         private boolean valueAnnotationEnabled = true;
 
         /**
-        * 是否支持 @配置价值观 注解热更新
+        * 是否支持 @配置值 注解热更新
         * <p>
-        * 启用后，使用 @配置价值观 注解的字段支持热更新，
+        * 启用后，使用 @配置值 注解的字段支持热更新，
         * 无需 @refreshscope。
         * </p>
         */

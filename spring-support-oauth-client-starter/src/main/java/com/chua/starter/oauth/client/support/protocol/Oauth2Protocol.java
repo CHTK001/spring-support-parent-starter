@@ -435,11 +435,11 @@ public class Oauth2Protocol extends AbstractProtocol {
     }
 
     /**
-    * 获取字符串价值观
+    * 获取字符串值
     *
     * @param map 映射
-    * @param key 钥匙
-    * @return 获取字符串价值观的结果
+    * @param key Key
+    * @return 获取字符串值的结果
     */
     private String getStringValue(Map<String, Object> map, String key) {
         if (map == null) {

@@ -180,10 +180,10 @@ public class Xml {
     }
 
     /**
-    * 查找价值观结束。
+    * 查找值结束。
     * @param json json
     * @param start 启动
-    * @return find价值观结束的结果
+    * @return find值结束的结果
     */
     private static int findValueEnd(String json, int start) {
         int i = start;
@@ -213,11 +213,11 @@ public class Xml {
     }
 
     /**
-    * 解析字符串价值观。
+    * 解析字符串值。
     * @param json json
     * @param start 启动
     * @param end 结束
-    * @return 解析字符串价值观的结果
+    * @return 解析字符串值的结果
     */
     private static String parseStringValue(String json, int start, int end) {
         String sub = json.substring(start, end).trim();

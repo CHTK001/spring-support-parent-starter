@@ -46,7 +46,7 @@ public class MaterializedSqlRoute {
     * Routed
     *
     * @param dataSource 数据源
-    * @param cacheKey 缓存钥匙
+    * @param cacheKey 缓存Key
     * @return routed的结果
     */
     public static MaterializedSqlRoute routed(String dataSource, String cacheKey) {

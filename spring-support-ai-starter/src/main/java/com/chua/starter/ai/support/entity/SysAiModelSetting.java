@@ -54,7 +54,7 @@ public class SysAiModelSetting {
     * 模型值（如 baseurl / 模型 标识）
     */
     @TableField("model_value")
-    private String value; // 价值观
+    private String value; // 值
 
     /**
     * 状态：1 启用，0 停用

@@ -57,7 +57,7 @@ public class MonitorServiceImpl implements MonitorService {
             if (monitor.getMonitorEnabled() == null) {
                 monitor.setMonitorEnabled(1);
             }
- // 智能体 探针标识：未显式提供时自动生成，供 智能体 上报（/ms/监控/智能体/指标）鉴权
+ // Agent 探针标识：未显式提供时自动生成，供 Agent 上报（/ms/监控/Agent/指标）鉴权
             if (StringUtils.isEmpty(monitor.getMonitorAgentKey())) {
                 monitor.setMonitorAgentKey(generateAgentKey());
             }

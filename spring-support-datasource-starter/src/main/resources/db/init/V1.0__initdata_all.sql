@@ -19,8 +19,20 @@ VALUES ('db-user-sync', 'user-input', 'user-source', 'user-output', 'user-sink',
 
 
 
+
+
+
+
+
+
 INSERT IGNORE INTO datasync_field_mapping (datasync_field_mapping_id, datasync_field_mapping_mapping_id, datasync_field_mapping_source_field, datasync_field_mapping_target_field, datasync_field_mapping_converter, datasync_field_mapping_sort)
 VALUES ('f1', 'db-user-sync', 'name', 'user_name', 'toString', 0);
+
+
+
+
+
+
 
 
 
@@ -48,9 +60,21 @@ WHERE NOT EXISTS (SELECT 1 FROM `ms_monitor_config` WHERE `ms_monitor_config_key
 
 
 
+
+
+
+
+
+
 INSERT INTO `ms_monitor_config` (`ms_monitor_config_key`, `ms_monitor_config_value`, `ms_monitor_config_desc`)
 SELECT 'monitor.aggregate.interval', '1h', '聚合粒度'
 WHERE NOT EXISTS (SELECT 1 FROM `ms_monitor_config` WHERE `ms_monitor_config_key` = 'monitor.aggregate.interval');
+
+
+
+
+
+
 
 
 
@@ -64,9 +88,21 @@ WHERE NOT EXISTS (SELECT 1 FROM `ms_monitor_config` WHERE `ms_monitor_config_key
 
 
 
+
+
+
+
+
+
 INSERT INTO `ms_monitor_config` (`ms_monitor_config_key`, `ms_monitor_config_value`, `ms_monitor_config_desc`)
 SELECT 'monitor.local.skip.macos', 'true', '本地采集在 macOS 下跳过(oshi 动态库不支持)'
 WHERE NOT EXISTS (SELECT 1 FROM `ms_monitor_config` WHERE `ms_monitor_config_key` = 'monitor.local.skip.macos');
+
+
+
+
+
+
 
 
 
@@ -80,9 +116,21 @@ WHERE NOT EXISTS (SELECT 1 FROM `ms_monitor_config` WHERE `ms_monitor_config_key
 
 
 
+
+
+
+
+
+
 INSERT INTO `ms_monitor_config` (`ms_monitor_config_key`, `ms_monitor_config_value`, `ms_monitor_config_desc`)
 SELECT 'monitor.prometheus.url', '', 'Prometheus 服务地址'
 WHERE NOT EXISTS (SELECT 1 FROM `ms_monitor_config` WHERE `ms_monitor_config_key` = 'monitor.prometheus.url');
+
+
+
+
+
+
 
 
 
@@ -96,12 +144,24 @@ WHERE NOT EXISTS (SELECT 1 FROM `ms_monitor_config` WHERE `ms_monitor_config_key
 
 
 
+
+
+
+
+
+
 -- ============================================================
 -- 项目守护/指标告警策略与规则种子（由 spring-support-project-starter 喂指标）
 -- ============================================================
 INSERT INTO ms_monitor_alarm_policy (`ms_monitor_alarm_policy_name`, `ms_monitor_alarm_policy_enabled`, `ms_monitor_alarm_policy_remark`)
 SELECT '项目守护与指标', 1, '项目守护失败自动拉起与指标采集相关告警'
 WHERE NOT EXISTS (SELECT 1 FROM ms_monitor_alarm_policy WHERE `ms_monitor_alarm_policy_name` = '项目守护与指标');
+
+
+
+
+
+
 
 
 
@@ -120,6 +180,12 @@ WHERE p.`ms_monitor_alarm_policy_name` = '项目守护与指标'
 
 
 
+
+
+
+
+
+
 INSERT INTO ms_monitor_alarm_rule
 (`ms_monitor_alarm_rule_policy_id`, `ms_monitor_alarm_rule_metric_name`, `ms_monitor_alarm_rule_condition`,
  `ms_monitor_alarm_rule_threshold`, `ms_monitor_alarm_rule_consecutive_count`, `ms_monitor_alarm_rule_silence_minutes`,
@@ -128,6 +194,12 @@ SELECT p.id, 'project.watchdog.restart.fail', 'GT', 1, 1, 10, 'P1', 1
 FROM ms_monitor_alarm_policy p
 WHERE p.`ms_monitor_alarm_policy_name` = '项目守护与指标'
   AND NOT EXISTS (SELECT 1 FROM ms_monitor_alarm_rule r WHERE r.`ms_monitor_alarm_rule_metric_name` = 'project.watchdog.restart.fail');
+
+
+
+
+
+
 
 
 
@@ -146,6 +218,12 @@ WHERE p.`ms_monitor_alarm_policy_name` = '项目守护与指标'
 
 
 
+
+
+
+
+
+
 INSERT INTO ms_monitor_alarm_rule
 (`ms_monitor_alarm_rule_policy_id`, `ms_monitor_alarm_rule_metric_name`, `ms_monitor_alarm_rule_condition`,
  `ms_monitor_alarm_rule_threshold`, `ms_monitor_alarm_rule_consecutive_count`, `ms_monitor_alarm_rule_silence_minutes`,
@@ -154,6 +232,12 @@ SELECT p.id, 'project.collect.fail', 'GT', 0, 3, 30, 'P3', 1
 FROM ms_monitor_alarm_policy p
 WHERE p.`ms_monitor_alarm_policy_name` = '项目守护与指标'
   AND NOT EXISTS (SELECT 1 FROM ms_monitor_alarm_rule r WHERE r.`ms_monitor_alarm_rule_metric_name` = 'project.collect.fail');
+
+
+
+
+
+
 
 
 
@@ -177,8 +261,20 @@ VALUES ('guacd.host', '"124.221.230.112"', 'guacd 网关地址（远控隧道）
 
 
 
+
+
+
+
+
+
 INSERT IGNORE INTO ms_server_config (ms_server_config_key, ms_server_config_value, ms_server_config_desc)
 VALUES ('guacd.port', '"4822"', 'guacd 网关端口（远控隧道）');
+
+
+
+
+
+
 
 
 
@@ -191,6 +287,12 @@ VALUES ('guacd.client.host', '""', 'guacd-client 网关地址（浏览器侧 WS 
 
 
 
+
+
+
+
+
+
 INSERT IGNORE INTO ms_server_config (ms_server_config_key, ms_server_config_value, ms_server_config_desc)
 VALUES ('connection.sweep.interval', '"60"', '连接缓存健康检查间隔(秒)');
 
@@ -198,8 +300,20 @@ VALUES ('connection.sweep.interval', '"60"', '连接缓存健康检查间隔(秒
 
 
 
+
+
+
+
+
+
 INSERT IGNORE INTO ms_server_config (ms_server_config_key, ms_server_config_value, ms_server_config_desc)
 VALUES ('connection.idle.timeout', '"300"', '连接空闲超时(秒)');
+
+
+
+
+
+
 
 
 
@@ -221,6 +335,12 @@ INSERT INTO device_task_state (device_task_state_id, device_task_state_name, dev
 VALUES
     (REPLACE(UUID(),'-',''), 'deviceOfflineCheck', 0, 30, '设备在离线检测任务'),
     (REPLACE(UUID(),'-',''), 'deviceEventPoll', 0, 30, '设备事件轮询任务');
+
+
+
+
+
+
 
 
 
@@ -254,6 +374,12 @@ INSERT IGNORE INTO edu_subject (subject_code, subject_name, subject_grade_levels
 
 
 
+
+
+
+
+
+
 -- ----------------------------
 -- 年级种子
 -- ----------------------------
@@ -263,6 +389,12 @@ INSERT IGNORE INTO edu_grade (grade_level, grade_name, grade_order) VALUES
     ('JUNIOR', '初一', 1),('JUNIOR', '初二', 2),('JUNIOR', '初三', 3),
     ('SENIOR', '高一', 1),('SENIOR', '高二', 2),('SENIOR', '高三', 3),
     ('UNIVERSITY', '大一', 1),('UNIVERSITY', '大二', 2),('UNIVERSITY', '大三', 3),('UNIVERSITY', '大四', 4);
+
+
+
+
+
+
 
 
 
@@ -285,6 +417,12 @@ INSERT IGNORE INTO edu_fun_config (module_code, module_name, module_desc, module
 ('INSECT', '昆虫识图', '交互式3D昆虫图鉴，认识63种昆虫的身体构造', 'Bug', '/edu/fun/insect', 1, 1, '{"url":"https://insect-world.pages.dev","width":"100%","height":"800px"}'),
 ('IDIOM_GAME', '成语消消乐', '根据学段生成的成语配对游戏', 'Trophy', '/edu/fun/idiom', 1, 2, '{"defaultCount":10,"showPinyin":true}'),
 ('IDIOM_BANK', '成语库', '管理成语数据和学段映射', 'Collection', '/edu/fun/idiom-bank', 1, 3, '{}');
+
+
+
+
+
+
 
 
 
@@ -322,6 +460,12 @@ INSERT IGNORE INTO edu_idiom (idiom_content, idiom_pinyin, idiom_meaning, idiom_
 
 
 
+
+
+
+
+
+
 -- ----------------------------
 -- 初始数据：成语学段映射（与 edu_idiom 同批插入，幂等同上）
 -- ----------------------------
@@ -339,6 +483,12 @@ INSERT IGNORE INTO edu_idiom_grade (idiom_id, grade_level, grade, semester, text
 
 
 
+
+
+
+
+
+
 -- ---------------------------------------------------------------------
 -- 来源: V1.0__init_monitor.sql / V1.0__init_server.sql 内嵌种子（幂等）
 -- ---------------------------------------------------------------------
@@ -350,9 +500,21 @@ VALUES ('db-user-sync', 'user-input', 'user-source', 'user-output', 'user-sink',
 
 
 
+
+
+
+
+
+
 V1.0.0__init_datasync_mapping.sql
 INSERT INTO datasync_field_mapping (datasync_field_mapping_id, datasync_field_mapping_mapping_id, datasync_field_mapping_source_field, datasync_field_mapping_target_field, datasync_field_mapping_converter, datasync_field_mapping_sort)
 VALUES ('f1', 'db-user-sync', 'name', 'user_name', 'toString', 0);
+
+
+
+
+
+
 
 
 
@@ -370,10 +532,22 @@ WHERE NOT EXISTS (SELECT 1 FROM `ms_monitor_config` WHERE `ms_monitor_config_key
 
 
 
+
+
+
+
+
+
 V1.0__init_monitor.sql
 INSERT INTO `ms_monitor_config` (`ms_monitor_config_key`, `ms_monitor_config_value`, `ms_monitor_config_desc`)
 SELECT 'monitor.aggregate.interval', '1h', '聚合粒度'
 WHERE NOT EXISTS (SELECT 1 FROM `ms_monitor_config` WHERE `ms_monitor_config_key` = 'monitor.aggregate.interval');
+
+
+
+
+
+
 
 
 
@@ -388,10 +562,22 @@ WHERE NOT EXISTS (SELECT 1 FROM `ms_monitor_config` WHERE `ms_monitor_config_key
 
 
 
+
+
+
+
+
+
 V1.0__init_monitor.sql
 INSERT INTO `ms_monitor_config` (`ms_monitor_config_key`, `ms_monitor_config_value`, `ms_monitor_config_desc`)
 SELECT 'monitor.local.skip.macos', 'true', '本地采集在 macOS 下跳过(oshi 动态库不支持)'
 WHERE NOT EXISTS (SELECT 1 FROM `ms_monitor_config` WHERE `ms_monitor_config_key` = 'monitor.local.skip.macos');
+
+
+
+
+
+
 
 
 
@@ -406,10 +592,22 @@ WHERE NOT EXISTS (SELECT 1 FROM `ms_monitor_config` WHERE `ms_monitor_config_key
 
 
 
+
+
+
+
+
+
 V1.0__init_monitor.sql
 INSERT INTO `ms_monitor_config` (`ms_monitor_config_key`, `ms_monitor_config_value`, `ms_monitor_config_desc`)
 SELECT 'monitor.prometheus.url', '', 'Prometheus 服务地址'
 WHERE NOT EXISTS (SELECT 1 FROM `ms_monitor_config` WHERE `ms_monitor_config_key` = 'monitor.prometheus.url');
+
+
+
+
+
+
 
 
 
@@ -424,6 +622,12 @@ WHERE NOT EXISTS (SELECT 1 FROM `ms_monitor_config` WHERE `ms_monitor_config_key
 
 
 
+
+
+
+
+
+
 V1.0__init_monitor.sql
 -- ============================================================
 -- 项目守护/指标告警策略与规则种子（由 spring-support-project-starter 喂指标）
@@ -431,6 +635,12 @@ V1.0__init_monitor.sql
 INSERT INTO ms_monitor_alarm_policy (`ms_monitor_alarm_policy_name`, `ms_monitor_alarm_policy_enabled`, `ms_monitor_alarm_policy_remark`)
 SELECT '项目守护与指标', 1, '项目守护失败自动拉起与指标采集相关告警'
 WHERE NOT EXISTS (SELECT 1 FROM ms_monitor_alarm_policy WHERE `ms_monitor_alarm_policy_name` = '项目守护与指标');
+
+
+
+
+
+
 
 
 
@@ -450,6 +660,12 @@ WHERE p.`ms_monitor_alarm_policy_name` = '项目守护与指标'
 
 
 
+
+
+
+
+
+
 V1.0__init_monitor.sql
 INSERT INTO ms_monitor_alarm_rule
 (`ms_monitor_alarm_rule_policy_id`, `ms_monitor_alarm_rule_metric_name`, `ms_monitor_alarm_rule_condition`,
@@ -459,6 +675,12 @@ SELECT p.id, 'project.watchdog.restart.fail', 'GT', 1, 1, 10, 'P1', 1
 FROM ms_monitor_alarm_policy p
 WHERE p.`ms_monitor_alarm_policy_name` = '项目守护与指标'
   AND NOT EXISTS (SELECT 1 FROM ms_monitor_alarm_rule r WHERE r.`ms_monitor_alarm_rule_metric_name` = 'project.watchdog.restart.fail');
+
+
+
+
+
+
 
 
 
@@ -478,6 +700,12 @@ WHERE p.`ms_monitor_alarm_policy_name` = '项目守护与指标'
 
 
 
+
+
+
+
+
+
 V1.0__init_monitor.sql
 INSERT INTO ms_monitor_alarm_rule
 (`ms_monitor_alarm_rule_policy_id`, `ms_monitor_alarm_rule_metric_name`, `ms_monitor_alarm_rule_condition`,
@@ -487,6 +715,12 @@ SELECT p.id, 'project.collect.fail', 'GT', 0, 3, 30, 'P3', 1
 FROM ms_monitor_alarm_policy p
 WHERE p.`ms_monitor_alarm_policy_name` = '项目守护与指标'
   AND NOT EXISTS (SELECT 1 FROM ms_monitor_alarm_rule r WHERE r.`ms_monitor_alarm_rule_metric_name` = 'project.collect.fail');
+
+
+
+
+
+
 
 
 
@@ -503,9 +737,21 @@ VALUES ('guacd.host', '"124.221.230.112"', 'guacd 网关地址（远控隧道）
 
 
 
+
+
+
+
+
+
 V1.0__init_server.sql
 INSERT IGNORE INTO ms_server_config (ms_server_config_key, ms_server_config_value, ms_server_config_desc)
 VALUES ('guacd.port', '"4822"', 'guacd 网关端口（远控隧道）');
+
+
+
+
+
+
 
 
 
@@ -519,6 +765,12 @@ VALUES ('guacd.client.host', '""', 'guacd-client 网关地址（浏览器侧 WS 
 
 
 
+
+
+
+
+
+
 V1.0__init_server.sql
 INSERT IGNORE INTO ms_server_config (ms_server_config_key, ms_server_config_value, ms_server_config_desc)
 VALUES ('connection.sweep.interval', '"60"', '连接缓存健康检查间隔(秒)');
@@ -527,9 +779,27 @@ VALUES ('connection.sweep.interval', '"60"', '连接缓存健康检查间隔(秒
 
 
 
+
+
+
+
+
+
 V1.0__init_server.sql
 INSERT IGNORE INTO ms_server_config (ms_server_config_key, ms_server_config_value, ms_server_config_desc)
 VALUES ('connection.idle.timeout', '"300"', '连接空闲超时(秒)');
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -15,7 +15,7 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 * 扫描资产/远控/批量执行全部组件与 MyBatis-Plus 映射器，
 * 开启事务管理。周期任务由 {@code ServerTaskScheduler} 基于
 * common-starter 哈希时间轮统一调度（在离线检测/定时采集/计划任务/会话清理）。
-* web套接字 端点由 {@link TerminalWebSocketConfig} 单独注册；
+* webSocket 端点由 {@link TerminalWebSocketConfig} 单独注册；
 * 凭据加解密器与会话注册表以 @组件 形式随包扫描装配。
 * </p>
 *

@@ -41,7 +41,7 @@ public class MsMonitorConfig extends SysBase {
     private String monitorConfigKey;
 
     /**
-    * 配置项 价值观
+    * 配置项 值
     */
     @TableField("ms_monitor_config_value")
     @Schema(description = "配置项 value", example = "30")

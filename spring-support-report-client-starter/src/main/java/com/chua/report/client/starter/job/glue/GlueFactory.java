@@ -75,9 +75,9 @@ public class GlueFactory {
             }
         }
         /**
-        * illegal参数异常。
+        * IllegalArgumentException。
         * @param null" 空"
-        * @return illegal参数异常的结果
+        * @return IllegalArgumentException的结果
         */
         throw new IllegalArgumentException(">>>>>>>>>>> xxl-glue, loadNewInstance error, instance is null");
     }

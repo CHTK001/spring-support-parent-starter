@@ -51,10 +51,10 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
             unless = "#result == null"
     )
     /**
-    * 获取byapp钥匙
+    * 获取byappKey
     *
-    * @param appKey app钥匙
-    * @return 获取byapp钥匙的结果
+    * @param appKey appKey
+    * @return 获取byappKey的结果
     */
     public SysAiAppKey getByAppKey(String appKey) {
         if (StringUtils.isBlank(appKey)) {
@@ -135,15 +135,15 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
     }
 
     @Override
-    /** 验证app钥匙only */
+    /** 验证appKeyonly */
     public boolean verifyAppKeyOnly(String appKey, String ip) {
         return isValidAppKey(queryAppKeyUncached(appKey), ip);
     }
 
     /**
-    * 绕过缓存实时查询 app钥匙（限流/配额检查需要最新 DB 值）。
+    * 绕过缓存实时查询 appKey（限流/配额检查需要最新 DB 值）。
     *
-    * @param appKey app钥匙
+    * @param appKey appKey
     * @return AppKey 记录；不存在返回 空
     */
     private SysAiAppKey queryAppKeyUncached(String appKey) {
@@ -154,9 +154,9 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
     }
 
     /**
-    * 校验 app钥匙 记录自身有效性（存在、启用、未过期、次数上限、令牌 配额、IP 白名单）。
+    * 校验 appKey 记录自身有效性（存在、启用、未过期、次数上限、令牌 配额、IP 白名单）。
     *
-    * @param dbAppKey app钥匙 记录
+    * @param dbAppKey appKey 记录
     * @param ip       客户端 IP
     * @return 是否有效
     */
@@ -205,9 +205,9 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
     @Override
     @Async("taskExecutor")
     /**
-    * 更新use信息byapp钥匙
+    * 更新use信息byappKey
     *
-    * @param appKey app钥匙
+    * @param appKey appKey
     */
     public void updateUseInfoByAppKey(String appKey) {
         if (StringUtils.isBlank(appKey)) {
@@ -233,9 +233,9 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
     @Override
     @Async("taskExecutor")
     /**
-    * 更新令牌配额byapp钥匙
+    * 更新令牌配额byappKey
     *
-    * @param appKey app钥匙
+    * @param appKey appKey
     * @param tokens 令牌
     */
     public void updateTokenQuotaByAppKey(String appKey, long tokens) {
@@ -259,10 +259,10 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
             unless = "#result == null"
     )
     /**
-    * 获取分组idbyapp钥匙
+    * 获取分组idbyappKey
     *
-    * @param appKey app钥匙
-    * @return 获取群体idbyapp钥匙的结果
+    * @param appKey appKey
+    * @return 获取群体idbyappKey的结果
     */
     public Integer getGroupIdByAppKey(String appKey) {
         if (StringUtils.isBlank(appKey)) {
@@ -282,7 +282,7 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
     /**
     * 是否Expired
     *
-    * @param appKey app钥匙
+    * @param appKey appKey
     * @return 是否expired的结果
     */
     private boolean isExpired(SysAiAppKey appKey) {
@@ -296,7 +296,7 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
     /**
     * 解析expire时间
     *
-    * @param appKey app钥匙
+    * @param appKey appKey
     * @return resolveexpire时间的结果
     */
     private Long resolveExpireTime(SysAiAppKey appKey) {

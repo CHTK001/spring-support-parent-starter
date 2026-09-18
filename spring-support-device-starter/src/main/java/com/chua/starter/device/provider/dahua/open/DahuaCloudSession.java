@@ -70,7 +70,7 @@ public class DahuaCloudSession extends AbstractOpenApiSession {
     }
 
     /**
-    * 大华云睿签名：标志 = MD5(appsecret + 时间 + nonce + app钥匙)。
+    * 大华云睿签名：标志 = MD5(appsecret + 时间 + nonce + appKey)。
     * @param time 时间
     * @param nonce nonce
     * @return 标志的结果

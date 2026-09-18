@@ -56,7 +56,7 @@ public class SysFileSystemUploadServiceImpl
     * @param totalChunks totalchunks
     * @param storageType storage类型
     * @param bucket bucket
-    * @param key 钥匙
+    * @param key Key
     * @param contentType 内容类型
     */
     public SysFileSystemUpload createTask(String uploadId, String fileName, String originalName,

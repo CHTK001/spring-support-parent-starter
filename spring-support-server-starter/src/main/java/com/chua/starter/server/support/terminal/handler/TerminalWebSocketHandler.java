@@ -27,7 +27,7 @@ import java.time.LocalDateTime;
 import java.util.Map;
 
 /**
-* 远程终端 web套接字 处理器
+* 远程终端 webSocket 处理器
 * <p>
 * 桥接浏览器（guacamole-通用-js）与 guacd 守护进程：
 * <ul>
@@ -307,10 +307,10 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
             }
         } catch (IOException | GuacamoleException e) {
  // 不预调 mark关闭()——统一由 关闭() 负责标记+清理，
- // 避免异常分支跳过 套接字 关闭和注册表移除导致泄漏
+ // 避免异常分支跳过 Socket 关闭和注册表移除导致泄漏
             log.info("[terminal] guacd 读通道结束 tunnelId={}: {}", session.getTunnelId(), e.getMessage());
         }
- // 关闭() 内部幂等：先标记 关闭，再关 套接字 / WS / 移除注册表
+ // 关闭() 内部幂等：先标记 关闭，再关 Socket / WS / 移除注册表
         sessionRegistry.close(session, "guacd 关闭或读取结束");
         if (session.getSessionId() != null) {
             terminalSessionService.closeRecord(session.getSessionId(), "远端关闭");

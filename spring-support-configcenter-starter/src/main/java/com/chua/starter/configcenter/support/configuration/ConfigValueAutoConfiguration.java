@@ -16,9 +16,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
-* 配置价值观自动配置
+* 配置值自动配置
 * <p>
-* 配置@配置价值观注解的自动处理和热更新功能。
+* 配置@配置值注解的自动处理和热更新功能。
 * 复用 环境post处理器 阶段创建的 配置center 实例，
 * 避免重复创建和资源浪费。
 * </p>
@@ -55,9 +55,9 @@ public class ConfigValueAutoConfiguration {
     }
 
     /**
-    * 创建 配置价值观 Bean 后置处理器
+    * 创建 配置值 Bean 后置处理器
     * <p>
-    * 负责扫描 @配置价值观 注解并注册热更新监听。
+    * 负责扫描 @配置值 注解并注册热更新监听。
     * </p>
     *
     * @param configCenter 配置中心
@@ -77,20 +77,20 @@ public class ConfigValueAutoConfiguration {
                 (hotReloadEnabled && supportListener) ? "已启用" : "未启用");
         
         /**
-        * 配置价值观Beanpost处理器。
+        * 配置值Beanpost处理器。
         * @param configCenter 配置center
         * @param hotReloadEnabled hotreload已启用
         * @param refreshDelayMs refresh延迟ms
         * @param properties.getHotReload( 属性.获取hotreload(
-        * @return 配置价值观Beanpost处理器的结果
+        * @return 配置值Beanpost处理器的结果
         */
         return new ConfigValueBeanPostProcessor(configCenter, hotReloadEnabled, refreshDelayMs, properties.getHotReload().isLogOnChange());
     }
 
     /**
-    * 创建 @价值观 注解 Bean 后置处理器
+    * 创建 @值 注解 Bean 后置处理器
     * <p>
-    * 负责扫描 @价值观 注解并注册热更新监听和配置缓存。
+    * 负责扫描 @值 注解并注册热更新监听和配置缓存。
     * </p>
     *
     * @param configCenter 配置中心
@@ -110,11 +110,11 @@ public class ConfigValueAutoConfiguration {
                 (hotReloadEnabled && supportListener) ? "已启用" : "未启用");
         
         /**
-        * 价值观注解Beanpost处理器。
+        * 值注解Beanpost处理器。
         * @param configCenter 配置center
         * @param hotReloadEnabled hotreload已启用
         * @param refreshDelayMs refresh延迟ms
-        * @return 价值观注解Beanpost处理器的结果
+        * @return 值注解Beanpost处理器的结果
         */
         return new ValueAnnotationBeanPostProcessor(configCenter, hotReloadEnabled, refreshDelayMs);
     }

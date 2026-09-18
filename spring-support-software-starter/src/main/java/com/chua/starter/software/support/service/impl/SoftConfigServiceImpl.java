@@ -82,7 +82,7 @@ public class SoftConfigServiceImpl extends ServiceImpl<SoftConfigMapper, SoftCon
     }
 
     @Override
-    /** 获取bysoftwareand钥匙 */
+    /** 获取bysoftwareandKey */
     public SoftConfig getBySoftwareAndKey(String softwareId, String key) {
         return baseMapper.selectOne(new LambdaQueryWrapper<SoftConfig>()
                 .eq(SoftConfig::getConfigSoftwareId, softwareId)

@@ -27,7 +27,6 @@ import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.BeanDefinitionHolder;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.config.ConstructorArgumentValues;
-import org.springframework.beans.factory.config.PropertyValues;
 import org.springframework.beans.factory.config.SingletonBeanRegistry;
 import org.springframework.beans.factory.support.AbstractBeanDefinition;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
@@ -296,7 +295,7 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
                 for (Class<? extends Annotation> annotationType : SERVICE_ANNOTATION_TYPES) {
                     if (factoryMethodMetadata.isAnnotated(annotationType.getName())) {
  // 自 Spring 5.2
- // 申报 工厂方法metadata.获取注解().获取(注解类型).过滤器默认价值观().as映射();
+ // 申报 工厂方法metadata.获取注解().获取(注解类型).过滤器默认值().as映射();
                         // Compatible with Spring 4.x
                         return factoryMethodMetadata.getAnnotationAttributes(annotationType.getName());
                     }
@@ -653,11 +652,11 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
     }
 
     /**
-    * 添加财产价值观
+    * 添加财产值
     *
     * @param builder 构建器
     * @param propertyName 财产名称
-    * @param value 价值观
+    * @param value 值
     */
     private void addPropertyValue(BeanDefinitionBuilder builder, String propertyName, String value) {
         String resolvedBeanName = environment.resolvePlaceholders(value);

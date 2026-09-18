@@ -112,9 +112,9 @@ public class RpcClassPathBeanDefinitionScanner extends ClassPathBeanDefinitionSc
         // 参数校验
         if (basePackage == null || basePackage.trim().isEmpty()) {
             /**
-            * illegal参数异常。
+            * IllegalArgumentException。
             * @param "基础包路径不能为空" "基础包路径不能为空"
-            * @return illegal参数异常的结果
+            * @return IllegalArgumentException的结果
             */
             throw new IllegalArgumentException("基础包路径不能为空");
         }

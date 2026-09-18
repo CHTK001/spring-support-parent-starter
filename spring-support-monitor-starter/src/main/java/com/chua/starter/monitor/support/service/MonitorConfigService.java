@@ -23,28 +23,28 @@ public interface MonitorConfigService {
     /**
     * 获取字符串。
     * @param key 键
-    * @param defaultValue 默认价值观
+    * @param defaultValue 默认值
     * @return 获取字符串的结果
     */
     String getString(String key, String defaultValue);
     /**
     * 获取int。
     * @param key 键
-    * @param defaultValue 默认价值观
+    * @param defaultValue 默认值
     * @return 获取int的结果
     */
     int getInt(String key, int defaultValue);
     /**
     * 获取long。
     * @param key 键
-    * @param defaultValue 默认价值观
+    * @param defaultValue 默认值
     * @return 获取long的结果
     */
     long getLong(String key, long defaultValue);
     /**
     * 获取布尔值。
     * @param key 键
-    * @param defaultValue 默认价值观
+    * @param defaultValue 默认值
     * @return 获取布尔值的结果
     */
     boolean getBoolean(String key, boolean defaultValue);

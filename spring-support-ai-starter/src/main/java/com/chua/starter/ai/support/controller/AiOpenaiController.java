@@ -104,7 +104,7 @@ public class AiOpenaiController extends BaseAiController {
             }
             return authErrorResponse();
         }
- // 解析分组 标识 与 app钥匙
+ // 解析分组 标识 与 appKey
         Integer groupId = resolveGroupId(servletRequest);
         String appKey = resolveAppKey(servletRequest);
         // 流式模式
@@ -285,7 +285,7 @@ public class AiOpenaiController extends BaseAiController {
             String key = buildCcModelKey(groupId);
             /**
             * persistcc模型。
-            * @param key 钥匙
+            * @param key Key
             * @param model 模型
             */
             persistCcModel(key, model);
@@ -429,7 +429,7 @@ public class AiOpenaiController extends BaseAiController {
     * 持久化 CC 模型 配置到全局设置表。
     *
     * <p>使用 {@link SysAiGlobalSettingService#upsertValue(String, String, String, String)}
-    * 增量写入指定键，避免 替换 先删后插清空 runtime 分组下 提供者/钥匙 等其它配置。</p>
+    * 增量写入指定键，避免 替换 先删后插清空 runtime 分组下 提供者/Key 等其它配置。</p>
     *
     * @param key   存储键（如 {@code cc.model} 或 {@code cc.model.2}）
     * @param model 模型名称
@@ -593,7 +593,7 @@ public class AiOpenaiController extends BaseAiController {
     *
     * @param request 打开AI 格式的聊天请求
     * @param groupId 分组 标识，用于模型隔离
-    * @param appKey  app钥匙，用于 令牌 配额累计
+    * @param appKey  appKey，用于 令牌 配额累计
     * @return 内部对话请求对象
     */
     private AiChatRequest convertToChatRequest(OpenAiChatRequest request, Integer groupId, String appKey) {

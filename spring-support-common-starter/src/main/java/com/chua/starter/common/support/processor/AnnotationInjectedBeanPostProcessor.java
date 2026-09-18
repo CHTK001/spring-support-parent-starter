@@ -521,14 +521,14 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
 
         /**
         * annotatedinjectionmetadata。
-        * @param targetClass Target类
+        * @param targetClass 目标类
         * @param fieldElements 字段elements
         * @param methodElements 方法elements
         */
         public AnnotatedInjectionMetadata(Class<?> targetClass, Collection<AnnotatedFieldElement> fieldElements, Collection<AnnotatedMethodElement> methodElements) {
             /**
             * 父。
-            * @param targetClass Target类
+            * @param targetClass 目标类
             * @param methodElements 方法elements
             */
             super(targetClass, AnnotationInjectedBeanPostProcessor.combine(fieldElements, methodElements));

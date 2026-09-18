@@ -241,8 +241,8 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
     }
 
     /**
-    * 创建 redistemplate，使用 字符串Redis序列化器 序列化 钥匙、
-    * genericjackson2jsonredis序列化器 序列化 价值观，支持复杂对象类型。
+    * 创建 redistemplate，使用 字符串Redis序列化器 序列化 Key、
+    * genericjackson2jsonredis序列化器 序列化 值，支持复杂对象类型。
     *
     * <p>源码 autoConfig 中默认为 {@code <Object, Object>}，开发中一般直接使用
     * {@code <String, Object>}，本方法按此约定进行配置。</p>
@@ -263,13 +263,13 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
  // 字符串 的序列化
         StringRedisSerializer stringRedisSerializer = new StringRedisSerializer();
 
- // 钥匙 采用 字符串 的序列化
+ // Key 采用 字符串 的序列化
         template.setKeySerializer(stringRedisSerializer);
- // 哈希 的 钥匙 采用 字符串 的序列化
+ // 哈希 的 Key 采用 字符串 的序列化
         template.setHashKeySerializer(stringRedisSerializer);
- // 价值观 序列化采用 genericjackson2jsonredis序列化器
+ // 值 序列化采用 genericjackson2jsonredis序列化器
         template.setValueSerializer(genericSerializer);
- // 哈希 的 价值观 序列化方式采用 genericjackson2jsonredis序列化器
+ // 哈希 的 值 序列化方式采用 genericjackson2jsonredis序列化器
         template.setHashValueSerializer(genericSerializer);
         template.afterPropertiesSet();
         return template;
@@ -299,7 +299,7 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
     }
 
     /**
-    * 创建 字符串redistemplate，钥匙/价值观 均使用 字符串Redis序列化器。
+    * 创建 字符串redistemplate，Key/值 均使用 字符串Redis序列化器。
     *
     * <p>StringRedisTemplate 的 key/value 必须使用 StringRedisSerializer，
     * 否则 获取() 返回类型不匹配。</p>
@@ -311,7 +311,7 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
     public StringRedisTemplate stringRedisTemplate(RedisConnectionFactory factory) {
         StringRedisTemplate template = new StringRedisTemplate();
         template.setConnectionFactory(factory);
- // 字符串redistemplate 的 钥匙/价值观 必须用 字符串redis序列化器，否则 获取() 返回类型不匹配
+ // 字符串redistemplate 的 Key/值 必须用 字符串redis序列化器，否则 获取() 返回类型不匹配
         template.setKeySerializer(new StringRedisSerializer());
         template.setValueSerializer(new StringRedisSerializer());
         template.setHashKeySerializer(new StringRedisSerializer());

@@ -33,7 +33,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
-* 智能体 Browser 管理控制器。
+* Agent Browser 管理控制器。
 *
 * <p>提供浏览器实例（Lane）、标签页（Tab）、宿主进程（Host）和全局设置的 CRUD 操作。
 * 对接前端 {@code /api/browser/*} 端点，替代原 Rust 后端的浏览器管理能力。</p>

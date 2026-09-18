@@ -54,7 +54,7 @@ public class MapperReload implements Reload, DisposableBean {
     final PathMatchingResourcePatternResolver patternResolver = new PathMatchingResourcePatternResolver();
     
     /**
-    * 文件资源映射表，钥匙为文件名，价值观为资源对象
+    * 文件资源映射表，Key为文件名，值为资源对象
     */
     private final Map<String, Resource> fileResources = new ConcurrentHashMap<>();
     
@@ -69,12 +69,12 @@ public class MapperReload implements Reload, DisposableBean {
     private final MybatisPlusProperties mybatisProperties;
 
     /**
-    * 文件监听服务映射表，钥匙为目录路径，价值观为watch服务
+    * 文件监听服务映射表，Key为目录路径，值为watch服务
     */
     private final Map<String, WatchService> watchServiceMap = new ConcurrentHashMap<>();
     
     /**
-    * 监听线程映射表，钥匙为目录路径，价值观为监听线程
+    * 监听线程映射表，Key为目录路径，值为监听线程
     */
     private final Map<String, Thread> watchThreadMap = new ConcurrentHashMap<>();
     

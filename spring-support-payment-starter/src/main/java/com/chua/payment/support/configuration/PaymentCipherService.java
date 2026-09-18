@@ -23,7 +23,7 @@ import java.util.Set;
 @Component
 public class PaymentCipherService {
 
-    static final String LEGACY_DEFAULT_KEY = "PaymentSystem16"; // legacy默认钥匙
+    static final String LEGACY_DEFAULT_KEY = "PaymentSystem16"; // legacy默认Key
 
     /** 环境 */
     private final Environment environment;
@@ -77,8 +77,8 @@ public class PaymentCipherService {
     }
 
     /**
-    * candidate解密钥匙。
-    * @return candidate解密钥匙的结果
+    * candidate解密Key。
+    * @return candidate解密Key的结果
     */
     List<String> candidateDecryptionKeys() {
         Set<String> keys = new LinkedHashSet<>();
@@ -95,8 +95,8 @@ public class PaymentCipherService {
     }
 
     /**
-    * required加密钥匙。
-    * @return required加密钥匙的结果
+    * required加密Key。
+    * @return required加密Key的结果
     */
     String requiredEncryptionKey() {
         String key = configuredEncryptionKey();
@@ -104,9 +104,9 @@ public class PaymentCipherService {
     }
 
     /**
-    * configured加密钥匙
+    * configured加密Key
     *
-    * @return configured加密钥匙的结果
+    * @return configured加密Key的结果
     */
     private String configuredEncryptionKey() {
         return property(
@@ -121,7 +121,7 @@ public class PaymentCipherService {
     /**
     * 财产
     *
-    * @param keys 钥匙
+    * @param keys Key
     * @return 财产的结果
     */
     private String property(String... keys) {
@@ -135,10 +135,10 @@ public class PaymentCipherService {
     }
 
     /**
-    * 分割钥匙
+    * 分割Key
     *
-    * @param value 价值观
-    * @return 分割钥匙的结果
+    * @param value 值
+    * @return 分割Key的结果
     */
     private List<String> splitKeys(String value) {
         if (!StringUtils.hasText(value)) {
@@ -156,8 +156,8 @@ public class PaymentCipherService {
     /**
     * 执行cipher
     *
-    * @param value 价值观
-    * @param keyText 钥匙文本
+    * @param value 值
+    * @param keyText Key文本
     * @param mode mode
     * @return 执行cipher的结果
     */
@@ -190,10 +190,10 @@ public class PaymentCipherService {
     }
 
     /**
-    * normalize钥匙
+    * normalizeKey
     *
-    * @param keyText 钥匙文本
-    * @return normalize钥匙的结果
+    * @param keyText Key文本
+    * @return normalizeKey的结果
     */
     private byte[] normalizeKey(String keyText) {
         if (!StringUtils.hasText(keyText)) {

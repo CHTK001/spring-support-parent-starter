@@ -61,7 +61,7 @@ public class MaterializedRouteAdvisor extends StaticMethodMatcherPointcutAdvisor
             * 解析Route
             *
             * @param method 方法
-            * @param targetClass Target类
+            * @param targetClass 目标类
             * @return resolveRoute的结果
             */
     private MaterializedRoute resolveRoute(Method method, Class<?> targetClass) {

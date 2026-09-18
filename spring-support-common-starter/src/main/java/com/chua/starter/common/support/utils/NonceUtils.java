@@ -21,8 +21,8 @@ import org.slf4j.LoggerFactory;
 /**
 * Nonce 与签名验证工具类
 * <p>
-* 前端算法：标志 = MD5(nonce + fingerprint + 时间戳 + 参数md5 + secret钥匙)
-* 参数md5 = MD5(请求参数自然排序、排除 文件、钥匙=价值观& 拼接)
+* 前端算法：标志 = MD5(nonce + fingerprint + 时间戳 + 参数md5 + secretKey)
+* 参数md5 = MD5(请求参数自然排序、排除 文件、Key=值& 拼接)
 * </p>
 * <p>
 * 防重放：x-nonce 仅可使用一次，已使用的 nonce 会被缓存并在有效期内拒绝
@@ -51,10 +51,10 @@ public class NonceUtils {
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     /** 排除的参数字段（与前端 collect参数 中 /^文件$/i 正则一致，仅排除 文件） */
-    /** Excluded_参数_钥匙 */
+    /** Excluded_参数_Key */
     private static final Set<String> EXCLUDED_PARAM_KEYS = Set.of("file");
 
-    /** 签名密钥，可通过 设置secret钥匙 或配置注入，默认与 nonce标志属性.默认_SECRET 保持一致 */
+    /** 签名密钥，可通过 设置secretKey 或配置注入，默认与 nonce标志属性.默认_SECRET 保持一致 */
     private static volatile String secretKey = NonceSignProperties.DEFAULT_SECRET;
 
     /** 默认有效期 5 分钟 */
@@ -373,7 +373,7 @@ public class NonceUtils {
 
     /**
     * 验证签名（仅当 是否包含标志头部 为 true 时调用）
-    * 算法：标志 = MD5(nonce + fingerprint + 时间戳 + 参数md5 + secret钥匙)
+    * 算法：标志 = MD5(nonce + fingerprint + 时间戳 + 参数md5 + secretKey)
     *
     * @param request httpservlet请求
     * @param sign    前端传递的签名
@@ -398,8 +398,8 @@ public class NonceUtils {
 
     /**
     * 生成签名（与前端算法一致）
-    * 参数md5 = MD5(请求参数自然排序、排除 文件、钥匙=价值观& 拼接)
-    * 标志 = MD5(nonce + fingerprint + 时间戳 + 参数md5 + secret钥匙)
+    * 参数md5 = MD5(请求参数自然排序、排除 文件、Key=值& 拼接)
+    * 标志 = MD5(nonce + fingerprint + 时间戳 + 参数md5 + secretKey)
     *
     * @param request    httpservlet请求
     * @param nonce      x-nonce
@@ -445,7 +445,7 @@ public class NonceUtils {
     }
 
     /**
-    * 设置签名密钥（与前端 secret钥匙 一致）
+    * 设置签名密钥（与前端 secretKey 一致）
     *
     * @param key 密钥
     */

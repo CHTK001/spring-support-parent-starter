@@ -994,7 +994,7 @@ public class WalletAccountServiceImpl implements WalletAccountService {
     /**
     * Scale
     *
-    * @param value 价值观
+    * @param value 值
     * @return scale的结果
     */
     private BigDecimal scale(BigDecimal value) {

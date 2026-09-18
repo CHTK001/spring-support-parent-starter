@@ -45,7 +45,7 @@ public class SpringRpcInvocationHandler<T> implements InvocationHandler {
 
     /**
     * 创建 springrpcinvocation处理器 实例
-    * @param targetType Target类型
+    * @param targetType 目标类型
     * @param rpcClient rpc客户端
     * @param applicationContext application上下文
     * @param consumerConfig consumer配置

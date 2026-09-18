@@ -30,7 +30,7 @@ import static com.chua.starter.common.support.constant.CacheConstant.REDIS_CACHE
 * <p>
 * 基于 MyBatis Plus 操作 sys_AI_全局_setting 表，
 * 支持按分组（群体_名称）和字段名（字段_名称）读写配置。
-* 提供缓存以降低高频读取（如认证守卫的 app_钥匙_已启用 开关）带来的 DB 压力。
+* 提供缓存以降低高频读取（如认证守卫的 app_Key_已启用 开关）带来的 DB 压力。
 *
 * @since 2026-08-03
 * @author CH
@@ -61,10 +61,10 @@ public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService 
     @Cacheable(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS,
             key = "'sys:ai:global:setting:' + #group + ':' + #field", unless = "#result == null || #result.isEmpty()")
     /**
-    * 获取价值观。
+    * 获取值。
     * @param group 群体
     * @param field 字段
-    * @return 获取价值观的结果
+    * @return 获取值的结果
     */
     public Optional<String> getValue(String group, String field) {
         LambdaQueryWrapper<SysAiGlobalSetting> wrapper = Wrappers.<SysAiGlobalSetting>lambdaQuery()
@@ -104,7 +104,7 @@ public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService 
     * 列出指定分组下所有启用的配置项，按 排序 排序。
     *
     * @param group 配置分组名
-    * @return 配置项列表，每项包含 群体、字段、价值观、价值观类型、description、排序 字段
+    * @return 配置项列表，每项包含 群体、字段、值、值类型、description、排序 字段
     */
     @Override
     public List<Map<String, Object>> list(String group) {
@@ -210,10 +210,10 @@ public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService 
             allEntries = true)
     @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
     /**
-    * upsert价值观。
+    * upsert值。
     * @param group 群体
     * @param field 字段
-    * @param value 价值观
+    * @param value 值
     * @param description description
     */
     public void upsertValue(String group, String field, String value, String description) {
@@ -267,8 +267,8 @@ public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService 
     * upsert字段。
     * @param group 群体
     * @param field 字段
-    * @param value 价值观
-    * @param valueType 价值观类型
+    * @param value 值
+    * @param valueType 值类型
     * @param description description
     * @param sort 排序
     */

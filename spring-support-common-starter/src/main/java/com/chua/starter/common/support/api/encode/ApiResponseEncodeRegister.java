@@ -128,9 +128,9 @@ public class ApiResponseEncodeRegister implements Upgrade<ApiResponseEncodeConfi
             String privateKeyHex = bytesToHex(keyPair.getPrivate().getEncoded());
             /**
             * codec结果。
-            * @param privateKeyHex 私募钥匙hex
+            * @param privateKeyHex 私募Keyhex
             * @param encryptedData encrypted数据
-            * @param String.valueOf(privateKeyHex.length( 字符串.valueof(私募钥匙hex.长度(
+            * @param String.valueOf(privateKeyHex.length( 字符串.valueof(私募Keyhex.长度(
             * @return codec结果的结果
             */
             return new CodecResult(privateKeyHex, encryptedData, String.valueOf(privateKeyHex.length()));
@@ -255,9 +255,9 @@ public class ApiResponseEncodeRegister implements Upgrade<ApiResponseEncodeConfi
         }
 
         /**
-        * 获取钥匙
+        * 获取Key
         *
-        * @return 获取钥匙的结果
+        * @return 获取Key的结果
         */
         public String getKey() {
             return key;

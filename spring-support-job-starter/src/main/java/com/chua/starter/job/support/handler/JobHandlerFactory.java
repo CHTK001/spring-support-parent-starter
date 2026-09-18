@@ -22,7 +22,7 @@ public final class JobHandlerFactory {
     private static final JobHandlerFactory INSTANCE = new JobHandlerFactory();
 
     /**
-    * 处理器存储, 钥匙 为处理器名称
+    * 处理器存储, Key 为处理器名称
     */
     private final ConcurrentMap<String, JobHandler> handlers = new ConcurrentHashMap<>(32);
 
@@ -48,9 +48,9 @@ public final class JobHandlerFactory {
     public JobHandler register(JobHandler handler) {
         if (handler == null) {
             /**
-            * illegal参数异常。
+            * IllegalArgumentException。
             * @param 不能为空" 不能为空"
-            * @return illegal参数异常的结果
+            * @return IllegalArgumentException的结果
             */
             throw new IllegalArgumentException("handler 不能为空");
         }

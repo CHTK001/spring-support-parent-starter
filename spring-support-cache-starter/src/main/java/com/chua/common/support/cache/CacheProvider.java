@@ -28,29 +28,29 @@ public interface CacheProvider {
 
     /**
     * 写入缓存
-    * @param key 钥匙
-    * @param value 价值观
+    * @param key Key
+    * @param value 值
     */
     void put(String key, Object value);
 
     /**
     * 写入缓存并设置 TTL（秒）
-    * @param key 钥匙
-    * @param value 价值观
+    * @param key Key
+    * @param value 值
     * @param ttlSeconds ttlseconds
     */
     default void put(String key, Object value, long ttlSeconds) {
         /**
         * 放入。
-        * @param key 钥匙
-        * @param value 价值观
+        * @param key Key
+        * @param value 值
         */
         put(key, value);
     }
 
     /**
     * 读取缓存
-    * @param key 钥匙
+    * @param key Key
     * @param type 类型
     * @return 获取的结果
     */
@@ -60,7 +60,7 @@ public interface CacheProvider {
 
     /**
     * 移除缓存
-    * @param key 钥匙
+    * @param key Key
     */
     default void remove(String key) {
     }
@@ -106,7 +106,7 @@ public interface CacheProvider {
 
             /**
             * 缓存entry。
-            * @param value 价值观
+            * @param value 值
             * @param ttlSeconds ttlseconds
             */
             CacheEntry(Object value, long ttlSeconds) {
@@ -134,8 +134,8 @@ public interface CacheProvider {
         public void put(String key, Object value) {
             /**
         * 放入。
-        * @param key 钥匙
-        * @param value 价值观
+        * @param key Key
+        * @param value 值
         * @param 0 0
         */
             put(key, value, 0);
@@ -194,7 +194,7 @@ public interface CacheProvider {
 
         /**
         * 创建 Redis缓存提供者 实例
-        * @param keyPrefix 钥匙前缀
+        * @param keyPrefix Key前缀
         * @param defaultTtl long
         * @param defaultTtl 默认ttl
         */
@@ -204,10 +204,10 @@ public interface CacheProvider {
         }
 
         /**
-        * 解析钥匙
+        * 解析Key
         *
-        * @param key 钥匙
-        * @return resolve钥匙的结果
+        * @param key Key
+        * @return resolveKey的结果
         */
         protected String resolveKey(String key) {
             return keyPrefix + key;
@@ -218,8 +218,8 @@ public interface CacheProvider {
         public void put(String key, Object value) {
             /**
         * 放入。
-        * @param key 钥匙
-        * @param value 价值观
+        * @param key Key
+        * @param value 值
         * @param defaultTtl 默认ttl
         */
             put(key, value, defaultTtl);

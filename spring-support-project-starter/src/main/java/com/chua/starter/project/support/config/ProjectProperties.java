@@ -44,4 +44,24 @@ public class ProjectProperties {
 
     /** 指标清理执行间隔（秒，默认 3600=每小时扫一次） */
     private int metricCleanupIntervalSeconds = 3600;
+    /** 部署日志保留天数（默认 7 天，超过自动清理；0=不清理） */
+    private int deployLogRetentionDays = 7;
+
+    /** 部署日志清理执行间隔（秒，默认 3600=每小时扫一次） */
+    private int deployLogCleanupIntervalSeconds = 3600;
+
+    /** 实时日志流数量上限（默认 16） */
+    private int logStreamMaxStreams = 16;
+
+    /** 实时日志流观察者空闲超时（毫秒，默认 300000=5分钟未续订即剔除） */
+    private long logStreamIdleMillis = 300_000L;
+
+    /** 实时日志流采集间隔（毫秒，默认 5000） */
+    private long logStreamIntervalMillis = 5_000L;
+
+    /** 实时日志流单帧最大字符数（默认 8192，超出截断保留最新部分） */
+    private int logStreamMaxChunkChars = 8192;
+
+    /** 实时日志流首帧拉取行数（默认 500） */
+    private int logStreamTailLines = 500;
 }

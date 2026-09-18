@@ -579,7 +579,7 @@ public class PaymentNotifyProcessServiceImpl implements PaymentNotifyProcessServ
     * 第一个文本
     *
     * @param source 源
-    * @param keys 钥匙
+    * @param keys Key
     * @return 第一个文本的结果
     */
     private String firstText(Map<String, Object> source, String... keys) {
@@ -612,7 +612,7 @@ public class PaymentNotifyProcessServiceImpl implements PaymentNotifyProcessServ
     /**
     * 大写
     *
-    * @param value 价值观
+    * @param value 值
     * @return 大写的结果
     */
     private String upper(String value) {
@@ -622,7 +622,7 @@ public class PaymentNotifyProcessServiceImpl implements PaymentNotifyProcessServ
     /**
     * 第一个nonblank
     *
-    * @param values 价值观
+    * @param values 值
     * @return 第一个nonblank的结果
     */
     private String firstNonBlank(String... values) {

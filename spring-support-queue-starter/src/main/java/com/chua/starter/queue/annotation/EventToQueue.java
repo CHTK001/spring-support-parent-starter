@@ -54,7 +54,7 @@ public @interface EventToQueue {
     boolean async() default true;
 
     /**
-    * 消息头（钥匙=价值观格式，多个用逗号分隔）
+    * 消息头（Key=值格式，多个用逗号分隔）
     * <p>
     * 例如: "priority=high,重试=3"
     * </p>

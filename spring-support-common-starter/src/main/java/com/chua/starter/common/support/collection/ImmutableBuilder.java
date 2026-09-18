@@ -35,8 +35,8 @@ public final class ImmutableBuilder {
         /**
         * 放入
         *
-        * @param key 钥匙
-        * @param value 价值观
+        * @param key Key
+        * @param value 值
         * @return 放入的结果
         */
         public ImmutableStringStringMapBuilder put(String key, String value) {

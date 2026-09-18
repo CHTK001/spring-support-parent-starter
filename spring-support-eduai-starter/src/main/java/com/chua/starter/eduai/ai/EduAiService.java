@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.ai.support.chat.ChatResponse;
-import com.chua.starter.ai.support.registry.ChatClientRegistry;
+import com.chua.starter.ai.support.chat.ChatClientRegistry;
 import com.chua.starter.eduai.configuration.EduAiProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;

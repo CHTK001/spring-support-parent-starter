@@ -14,7 +14,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import java.util.Map;
 
 /**
-* SSE 套接字 连接控制器
+* SSE Socket 连接控制器
 * 提供 SSE 协议的连接端点
 *
 * @版本 1.0.0
@@ -28,7 +28,7 @@ import java.util.Map;
 public class SseSocketController {
 
     @Autowired
-    /** sse套接字会话模板 */
+    /** sseSocket会话模板 */
     private SseSocketSessionTemplate sseSocketSessionTemplate;
 
     /**

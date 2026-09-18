@@ -6,7 +6,7 @@ import com.chua.starter.sync.support.SyncSession;
 import lombok.extern.slf4j.Slf4j;
 
 /**
-* 套接字.IO 同步服务端实现。
+* Socket.IO 同步服务端实现。
 *
 * @since 4.0.0.41
 * @author CH
@@ -15,14 +15,14 @@ import lombok.extern.slf4j.Slf4j;
 public class SocketioSyncServer extends AbstractSyncServer {
 
     /**
-    * 套接字.IO 会话模板
+    * Socket.IO 会话模板
     */
     private final SocketIOSessionTemplate sessionTemplate;
 
     /**
-    * 构造 套接字.IO 同步服务端。
+    * 构造 Socket.IO 同步服务端。
     *
-    * @param sessionTemplate 套接字.IO 会话模板
+    * @param sessionTemplate Socket.IO 会话模板
     */
     public SocketioSyncServer(SocketIOSessionTemplate sessionTemplate) {
         this.sessionTemplate = sessionTemplate;
@@ -47,7 +47,7 @@ public class SocketioSyncServer extends AbstractSyncServer {
     }
 
     /**
-    * 套接字.IO 连接建立时回调。
+    * Socket.IO 连接建立时回调。
     *
     * @param sessionId 会话标识
     */
@@ -61,7 +61,7 @@ public class SocketioSyncServer extends AbstractSyncServer {
     }
 
     /**
-    * 套接字.IO 连接断开时回调。
+    * Socket.IO 连接断开时回调。
     *
     * @param sessionId 会话标识
     */
@@ -77,7 +77,7 @@ public class SocketioSyncServer extends AbstractSyncServer {
     }
 
     /**
-    * 套接字.IO 消息到达时回调。
+    * Socket.IO 消息到达时回调。
     *
     * @param sessionId 会话标识
     * @param topic     消息主题

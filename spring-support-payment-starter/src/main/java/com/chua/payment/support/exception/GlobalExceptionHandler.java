@@ -66,7 +66,7 @@ public class GlobalExceptionHandler {
     /**
     * 处理非法参数异常
     * @param e e
-    * @return 把手illegal参数异常的结果
+    * @return 把手IllegalArgumentException的结果
     */
     @ExceptionHandler(IllegalArgumentException.class)
     public ReturnResult<Void> handleIllegalArgumentException(IllegalArgumentException e) {

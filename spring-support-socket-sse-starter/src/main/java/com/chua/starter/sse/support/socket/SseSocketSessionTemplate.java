@@ -16,8 +16,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
-* SSE 套接字 会话模板实现
-* 实现 套接字会话template 接口，提供统一的消息发送能力
+* SSE Socket 会话模板实现
+* 实现 Socket会话template 接口，提供统一的消息发送能力
 *
 * @版本 1.0.0
 * @since 2024-12-24
@@ -36,17 +36,17 @@ public class SseSocketSessionTemplate implements SocketSessionTemplate {
 
     /**
     * 客户端连接映射
-    * 钥匙: 客户端标识, 价值观: sse套接字会话
+    * Key: 客户端标识, 值: sseSocket会话
     */
     private final Map<String, SseSocketSession> sessions = new ConcurrentHashMap<>();
 
     /**
     * 用户到会话的映射
-    * 钥匙: 用户标识, 价值观: 客户端标识
+    * Key: 用户标识, 值: 客户端标识
     */
     private final Map<String, String> userSessionMap = new ConcurrentHashMap<>();
 
-    /** 创建 sse套接字会话template 实例 */
+    /** 创建 sseSocket会话template 实例 */
     public SseSocketSessionTemplate() {
         /**
     * this。
@@ -56,7 +56,7 @@ public class SseSocketSessionTemplate implements SocketSessionTemplate {
     }
 
     /**
-    * 创建 sse套接字会话template 实例
+    * 创建 sseSocket会话template 实例
     * @param timeout 超时
     */
     public SseSocketSessionTemplate(long timeout) {

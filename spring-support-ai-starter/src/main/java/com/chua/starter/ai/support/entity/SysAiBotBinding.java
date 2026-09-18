@@ -44,7 +44,7 @@ public class SysAiBotBinding extends SysBase {
     * 为空表示未归属（历史数据）。</p>
     */
     @TableField("sys_ai_bot_binding_owner_key")
-    private String ownerKey; // owner钥匙
+    private String ownerKey; // ownerKey
 
     /**
     * 机器人 唯一标识（i链接 分配的 机器人标识）

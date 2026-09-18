@@ -74,10 +74,10 @@ public class ArrayToJsonStringJsonDeserializer extends JsonDeserializer<Object> 
     }
 
     /**
-    * 树节点转为新价值观
+    * 树节点转为新值
     *
     * @param treeNode 树节点
-    * @return 树节点转为新价值观的结果
+    * @return 树节点转为新值的结果
     */
     private Object treeNodeToNewValue(TreeNode treeNode) {
         JsonToken token = treeNode.asToken();
@@ -128,10 +128,10 @@ public class ArrayToJsonStringJsonDeserializer extends JsonDeserializer<Object> 
     }
 
     /**
-    * 树节点转为对象价值观
+    * 树节点转为对象值
     *
     * @param treeNode 树节点
-    * @return 树节点转为对象价值观的结果
+    * @return 树节点转为对象值的结果
     */
     private Object treeNodeToObjectValue(TreeNode treeNode) {
         Iterator<String> stringIterator = treeNode.fieldNames();
@@ -143,10 +143,10 @@ public class ArrayToJsonStringJsonDeserializer extends JsonDeserializer<Object> 
     }
 
     /**
-    * 树节点转为array价值观
+    * 树节点转为array值
     *
     * @param treeNode 树节点
-    * @return 树节点转为array价值观的结果
+    * @return 树节点转为array值的结果
     */
     private Object treeNodeToArrayValue(TreeNode treeNode) {
         int size = treeNode.size();

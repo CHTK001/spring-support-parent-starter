@@ -42,7 +42,7 @@ public class SysFileSystemUploadChunk extends SysBase implements Serializable {
     /** Filesystem上传chunketag */
     private String filesystemUploadChunkEtag;
 
-    /** 分片存储路径（本地文件路径或对象存储钥匙） */
+    /** 分片存储路径（本地文件路径或对象存储Key） */
     @TableField("filesystem_upload_chunk_storage_path")
     /** Filesystem上传chunk存储路径 */
     private String filesystemUploadChunkStoragePath;

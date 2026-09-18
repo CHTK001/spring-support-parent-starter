@@ -384,8 +384,8 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
     * @param businessType 业务类型
     * @param sourceTable 源table
     * @param prefix 前缀
-    * @param createTaskKey 创建任务钥匙
-    * @param migrateTaskKey migrate任务钥匙
+    * @param createTaskKey 创建任务Key
+    * @param migrateTaskKey migrate任务Key
     * @return 构建默认的结果
     */
     private static OrderPartitionConfig buildDefault(String businessType, String sourceTable, String prefix, String createTaskKey, String migrateTaskKey) {
@@ -422,7 +422,7 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
     /**
     * 解析Granularity
     *
-    * @param value 价值观
+    * @param value 值
     * @return resolveGranularity的结果
     */
     private String resolveGranularity(String value) {
@@ -430,7 +430,7 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
         if (!"MONTH".equals(result) && !"DAY".equals(result)) {
             /**
             * 薪酬异常。
-            * @param value 价值观
+            * @param value 值
             * @return 薪酬异常的结果
             */
             throw new PaymentException("不支持的分表粒度: " + value);
@@ -441,7 +441,7 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
     /**
     * 解析Positive
     *
-    * @param value 价值观
+    * @param value 值
     * @param fallback 降级
     * @param label 标签
     * @return resolvePositive的结果
@@ -462,7 +462,7 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
     /**
     * 解析nonnegative
     *
-    * @param value 价值观
+    * @param value 值
     * @param fallback 降级
     * @param label 标签
     * @return resolveNonNegative的结果
@@ -483,7 +483,7 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
     /**
     * 校验table名称
     *
-    * @param value 价值观
+    * @param value 值
     * @param label 标签
     * @return 校验table名称的结果
     */
@@ -491,7 +491,7 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
         if (!StringUtils.hasText(value) || !SAFE_TABLE.matcher(value.trim()).matches()) {
             /**
             * 薪酬异常。
-            * @param value 价值观
+            * @param value 值
             * @return 薪酬异常的结果
             */
             throw new PaymentException(label + "不合法: " + value);
@@ -502,7 +502,7 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
     /**
     * 降级
     *
-    * @param value 价值观
+    * @param value 值
     * @param fallback 降级
     * @return 降级的结果
     */

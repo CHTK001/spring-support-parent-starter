@@ -13,7 +13,7 @@ package com.chua.starter.common.support.api.feature;
 public interface ApiSwitchOverrideProvider {
 
     /**
-    * 功能开关覆盖（按 @api特征.价值观 标识）；返回 空 表示无覆盖
+    * 功能开关覆盖（按 @api特征.值 标识）；返回 空 表示无覆盖
     *
     * @param featureId 功能标识
     * @return 覆盖值或 空
@@ -23,7 +23,7 @@ public interface ApiSwitchOverrideProvider {
     }
 
     /**
-    * 灰度规则覆盖（按 @apigray.价值观 标识）；返回 空 表示无覆盖
+    * 灰度规则覆盖（按 @apigray.值 标识）；返回 空 表示无覆盖
     *
     * @param pattern 灰度标识
     * @return 覆盖值或 空

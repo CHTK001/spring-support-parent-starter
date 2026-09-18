@@ -24,8 +24,8 @@ import java.util.stream.Collectors;
 * 邮箱账号(MAILBOX) SSE 实时推送服务
 * <p>
 * 管理邮箱身份的 SSE 连接：前端通过 /sse/连接 建立连接后，注册到本服务；
-* 服务定时轮询邮箱(IMAP 真实邮箱 / 临时邮箱 API)检测新邮件，通过 sse套接字会话template 推送到前端。
-* SSE 未启用（无 sse套接字会话template Bean）时推送静默跳过。
+* 服务定时轮询邮箱(IMAP 真实邮箱 / 临时邮箱 API)检测新邮件，通过 sseSocket会话template 推送到前端。
+* SSE 未启用（无 sseSocket会话template Bean）时推送静默跳过。
 * </p>
 *
 * @author CH
@@ -35,7 +35,7 @@ import java.util.stream.Collectors;
 @Service
 public class MailboxSseService {
 
-    /** SSE 会话模板(全局 套接字 基础设施；未启用 SSE 时为空) */
+    /** SSE 会话模板(全局 Socket 基础设施；未启用 SSE 时为空) */
     private final ObjectProvider<SseSocketSessionTemplate> sseSocketSessionTemplateProvider;
     /** 身份 映射器 */
     private final MsServerIdentityMapper identityMapper;

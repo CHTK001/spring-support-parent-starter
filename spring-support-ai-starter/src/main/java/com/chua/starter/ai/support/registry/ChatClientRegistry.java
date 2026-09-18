@@ -92,7 +92,7 @@ public class ChatClientRegistry {
     private final List<ChatClient> allClients = new CopyOnWriteArrayList<>();
 
     /**
-    * 已注册为 智能体 模型的名称集合（提供者="智能体" 时的专用追踪）
+    * 已注册为 Agent 模型的名称集合（提供者="Agent" 时的专用追踪）
     */
     private final Set<String> registeredAgentModelNames = ConcurrentHashMap.newKeySet();
 
@@ -146,7 +146,7 @@ public class ChatClientRegistry {
     }
 
     /**
-    * 注册 智能体 模型（提供者="智能体"），同时追踪到 注册智能体模型名称。
+    * 注册 Agent 模型（提供者="Agent"），同时追踪到 注册Agent模型名称。
     *
     * @param modelName    模型名称
     * @param client       对话客户端 实例
@@ -161,13 +161,13 @@ public class ChatClientRegistry {
         unregisterAgentModel(modelName);
         // 注册到通用索引
         register("agent", modelName, client, capabilities);
- // 追踪 智能体 模型名称
+ // 追踪 Agent 模型名称
         registeredAgentModelNames.add(modelName);
         log.info("[ChatClientRegistry] 注册 Agent 模型: {}", modelName);
     }
 
     /**
-    * 注销 智能体 模型（从所有索引 + 追踪集合中移除）。
+    * 注销 Agent 模型（从所有索引 + 追踪集合中移除）。
     *
     * @param modelName 模型名称
     */
@@ -190,9 +190,9 @@ public class ChatClientRegistry {
     }
 
     /**
-    * 判断某个模型名称是否已注册为 智能体 模型。
+    * 判断某个模型名称是否已注册为 Agent 模型。
     * @param modelName 模型名称
-    * @return 是否智能体模型注册的结果
+    * @return 是否Agent模型注册的结果
     */
     public boolean isAgentModelRegistered(String modelName) {
         if (modelName == null) {
@@ -202,8 +202,8 @@ public class ChatClientRegistry {
     }
 
     /**
-    * 获取所有已注册的 智能体 模型名称。
-    * @return 获取注册智能体模型的结果
+    * 获取所有已注册的 Agent 模型名称。
+    * @return 获取注册Agent模型的结果
     */
     public Set<String> getRegisteredAgentModels() {
         return Collections.unmodifiableSet(registeredAgentModelNames);

@@ -11,7 +11,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
-* 终端命令片段实体
+* 终端片段实体
 *
 * @author CH
 * @since 4.0.0.42

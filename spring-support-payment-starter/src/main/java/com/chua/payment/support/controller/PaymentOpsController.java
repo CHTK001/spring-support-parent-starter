@@ -114,7 +114,7 @@ public class PaymentOpsController {
     @PutMapping("/scheduler/tasks/{taskKey}")
     /**
     * 更新任务
-    * @param taskKey 任务钥匙
+    * @param taskKey 任务Key
     * @param dto dto
     */
     public PaymentSchedulerTaskVO updateTask(@PathVariable String taskKey,
@@ -126,7 +126,7 @@ public class PaymentOpsController {
     /**
     * trigger任务
     *
-    * @param taskKey 任务钥匙
+    * @param taskKey 任务Key
     * @return trigger任务的结果
     */
     public PaymentSchedulerTaskVO triggerTask(@PathVariable String taskKey) {

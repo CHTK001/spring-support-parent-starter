@@ -561,7 +561,7 @@ public class WechatPayScoreOrderServiceImpl extends AbstractMerchantPaymentChann
     /**
     * 大写
     *
-    * @param value 价值观
+    * @param value 值
     * @return 大写的结果
     */
     private String upper(String value) {

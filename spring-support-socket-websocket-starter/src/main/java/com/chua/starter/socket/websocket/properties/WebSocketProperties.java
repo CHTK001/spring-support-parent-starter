@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
-* web套接字 配置属性
+* webSocket 配置属性
 *
 * @since 2025-12-25
 * @author CH
@@ -25,7 +25,7 @@ public class WebSocketProperties {
     private boolean enable = false;
 
     /**
-    * web套接字 端点路径列表
+    * webSocket 端点路径列表
     */
     private List<String> endpoints = new ArrayList<>(List.of("/ws"));
 

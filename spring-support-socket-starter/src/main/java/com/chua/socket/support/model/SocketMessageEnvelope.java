@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 import java.io.Serializable;
 
 /**
-* 套接字 消息传输包装体
+* Socket 消息传输包装体
 *
 * @since 2026-04-08
 * @author CH

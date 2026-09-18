@@ -54,7 +54,7 @@ public class ResponseModelViewMethodProcessor extends RequestResponseBodyMethodP
     }
 
     @Override
-    /** 处理申报价值观 */
+    /** 处理申报值 */
     public void handleReturnValue(Object returnValue, MethodParameter returnType, ModelAndViewContainer mavContainer, NativeWebRequest webRequest) throws IOException, HttpMediaTypeNotAcceptableException, HttpMessageNotWritableException {
         ModelView modelView = (ModelView) returnValue;
         Object data = modelView.getData();
@@ -65,7 +65,7 @@ public class ResponseModelViewMethodProcessor extends RequestResponseBodyMethodP
             ServletServerHttpRequest inputMessage = createInputMessage(webRequest);
             ServletServerHttpResponse outputMessage = createOutputMessage(webRequest);
 
- // 尝试 even with 空 申报 价值观. 响应主体advice could 获取 involved.
+ // 尝试 even with 空 申报 值. 响应主体advice could 获取 involved.
             /**
     * 写入with消息转换器。
     * @param data 数据

@@ -58,7 +58,7 @@ public class RedisOperationProvider implements OperationProvider {
     }
 
     @Override
-    /** 获取价值观 */
+    /** 获取值 */
     public Mono<String> getValue(CollectContext ctx, String key) {
         return Mono.fromCallable(() -> {
             /**
@@ -72,7 +72,7 @@ public class RedisOperationProvider implements OperationProvider {
     }
 
     @Override
-    /** 设置价值观 */
+    /** 设置值 */
     public Mono<Boolean> setValue(CollectContext ctx, String key, String value, Duration ttl) {
         return Mono.fromCallable(() -> {
             /**

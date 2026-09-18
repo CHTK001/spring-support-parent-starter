@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
-* app钥匙 控制器，提供 app钥匙 的增删改查与启停切换。
+* appKey 控制器，提供 appKey 的增删改查与启停切换。
 *
 * <p>所有写接口均受 {@code @Permission("admin")} 保护，统一返回 {@link ReturnResult}。</p>
 *
@@ -35,12 +35,12 @@ import java.util.List;
 public class AiAppKeyController {
 
     /**
-    * app钥匙 服务
+    * appKey 服务
     */
     private final AiAppKeyService appKeyService;
 
     /**
-    * 查询所有 app钥匙。
+    * 查询所有 appKey。
     *
     * @return 操作结果
     */
@@ -52,9 +52,9 @@ public class AiAppKeyController {
     }
 
     /**
-    * 新建 app钥匙。
+    * 新建 appKey。
     *
-    * @param appKey app钥匙 DTO
+    * @param appKey appKey DTO
     * @return 操作结果
     */
     @Permission("admin")
@@ -65,10 +65,10 @@ public class AiAppKeyController {
     }
 
     /**
-    * 更新 app钥匙。
+    * 更新 appKey。
     *
-    * @param appKeyId app钥匙 主键
-    * @param appKey   app钥匙 DTO
+    * @param appKeyId appKey 主键
+    * @param appKey   appKey DTO
     * @return 操作结果
     * @param ID" 标识"
     */
@@ -81,9 +81,9 @@ public class AiAppKeyController {
     }
 
     /**
-    * 删除 app钥匙（逻辑删除）。
+    * 删除 appKey（逻辑删除）。
     *
-    * @param appKeyId app钥匙 主键
+    * @param appKeyId appKey 主键
     * @return 操作结果
     * @param ID" 标识"
     * @param ID" 标识"
@@ -97,9 +97,9 @@ public class AiAppKeyController {
     }
 
     /**
-    * 切换 app钥匙 启用状态。
+    * 切换 appKey 启用状态。
     *
-    * @param appKeyId app钥匙 主键
+    * @param appKeyId appKey 主键
     * @param enabled  是否启用
     * @return 操作结果
     * @param ID" 标识"

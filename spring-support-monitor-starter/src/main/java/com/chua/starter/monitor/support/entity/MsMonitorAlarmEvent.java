@@ -71,7 +71,7 @@ public class MsMonitorAlarmEvent implements Serializable {
     */
     @TableField("ms_monitor_alarm_event_alarm_value")
     @Schema(description = "实际值", example = "92.5")
-    private BigDecimal msMonitorAlarmEventAlarmValue; // ms监控报警器事件报警器价值观
+    private BigDecimal msMonitorAlarmEventAlarmValue; // ms监控报警器事件报警器值
 
     /**
     * 阈值

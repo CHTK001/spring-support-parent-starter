@@ -78,13 +78,13 @@ public class TableGraphReader {
                 */
                 fillColumns(meta, t);
                 /**
-                * fillprimary钥匙。
+                * fillprimaryKey。
                 * @param meta meta
                 * @param t t
                 */
                 fillPrimaryKeys(meta, t);
                 /**
-                * fill导入钥匙。
+                * fill导入Key。
                 * @param meta meta
                 * @param t t
                 * @param edges edges
@@ -142,7 +142,7 @@ public class TableGraphReader {
     }
 
     /**
-    * fillprimary钥匙
+    * fillprimaryKey
     *
     * @param meta meta
     * @param t t
@@ -162,7 +162,7 @@ public class TableGraphReader {
     }
 
     /**
-    * fill导入钥匙
+    * fill导入Key
     * @param meta meta
     * @param t t
     * @param edges edges

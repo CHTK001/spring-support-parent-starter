@@ -67,7 +67,7 @@ public class SpringRpcClient implements RpcClient, ApplicationContextAware {
     /**
     * 获取
     *
-    * @param targetType Target类型
+    * @param targetType 目标类型
     * @return 获取的结果
     */
     public <T> T get(Class<T> targetType) {
@@ -117,7 +117,7 @@ public class SpringRpcClient implements RpcClient, ApplicationContextAware {
 
     /**
     * 创建代理对象，底层委托真实 RPC 客户端发起网络调用
-    * @param targetType Target类型
+    * @param targetType 目标类型
     * @return 创建代理的结果
     */
     private <T> Object createProxy(Class<T> targetType) {

@@ -20,9 +20,9 @@ import reactor.core.publisher.Mono;
 import java.util.Map;
 
 /**
-* 服务器资产 智能体 上报接口
+* 服务器资产 Agent 上报接口
 * <p>
-* 目标主机上的 智能体 按 智能体键 主动推送硬件/状态数据，
+* 目标主机上的 Agent 按 Agent键 主动推送硬件/状态数据，
 * 由 {@link AgentHostCollectProvider} 处理回写。用于 NAT / 防火墙下
 * 服务端无法直连的主机采集。
 * </p>
@@ -36,14 +36,14 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class HostAgentController {
 
-    /** 智能体 采集 提供者 */
+    /** Agent 采集 提供者 */
     private final AgentHostCollectProvider agentProvider;
 
     /** 主机 映射器 */
     private final MsServerHostMapper hostMapper;
 
     /**
-    * 智能体 推送数据（按 智能体键 定位主机）
+    * Agent 推送数据（按 Agent键 定位主机）
     *
     * @param agentKey 探针标识
     * @param payload  上报数据（cpu核心/内存mb/diskgb/os版本/公共ip/私募ip 等）

@@ -9,13 +9,13 @@ package com.chua.socket.support.codec;
 public interface CodecKeyPair {
     /**
     * 获取公钥（十六进制）
-    * @return 获取公共钥匙hex的结果
+    * @return 获取公共Keyhex的结果
     */
     String getPublicKeyHex();
 
     /**
     * 获取私钥（十六进制）
-    * @return 获取私募钥匙hex的结果
+    * @return 获取私募Keyhex的结果
     */
     String getPrivateKeyHex();
 

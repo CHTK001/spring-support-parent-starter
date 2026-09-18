@@ -183,7 +183,7 @@ public class RequestParamsMapMethodArgumentResolver extends RequestParamMapMetho
         * 设置。
         * @param instance instance
         * @param field 字段
-        * @param value 价值观
+        * @param value 值
         */
         set(instance, field, value);
     }
@@ -216,7 +216,7 @@ public class RequestParamsMapMethodArgumentResolver extends RequestParamMapMetho
         * 设置。
         * @param instance instance
         * @param field 字段
-        * @param value 价值观
+        * @param value 值
         */
         set(instance, field, value);
     }
@@ -258,7 +258,7 @@ public class RequestParamsMapMethodArgumentResolver extends RequestParamMapMetho
         ResolvableType resolvableType = ResolvableType.forMethodParameter(parameter);
 
         if (MultiValueMap.class.isAssignableFrom(parameter.getParameterType())) {
- // multi价值观映射
+ // multi值映射
             Class<?> valueType = resolvableType.as(MultiValueMap.class).getGeneric(1).resolve();
             if (valueType == MultipartFile.class) {
                 MultipartRequest multipartRequest = MultipartResolutionDelegate.resolveMultipartRequest(webRequest);

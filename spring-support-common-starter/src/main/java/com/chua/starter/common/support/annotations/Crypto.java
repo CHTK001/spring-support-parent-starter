@@ -23,18 +23,18 @@ public @interface Crypto {
 
     /**
     * 密钥
-    * @return 钥匙的结果
+    * @return Key的结果
     */
     String key();
 
     /**
     * 密钥类型
-    * @return 钥匙类型的结果
+    * @return Key类型的结果
     */
     KeyType keyType() default KeyType.NONE;
 
     /**
-    * 钥匙类型枚举。
+    * Key类型枚举。
     *
     * @author CH
     * @since 4.0.0

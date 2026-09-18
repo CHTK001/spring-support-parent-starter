@@ -22,7 +22,7 @@ public class OrderPayDTO {
     /** deviceid */
     private String deviceId;
 
-    /** 用户智能体 */
+    /** 用户Agent */
     private String userAgent;
 }
 

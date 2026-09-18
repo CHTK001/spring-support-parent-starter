@@ -28,7 +28,7 @@ public class AiAccessGuardServiceImpl implements AiAccessGuardService {
     private static final String BEARER_PREFIX = "Bearer ";
 
     /**
-    * app_钥匙_已启用 开关缓存，5s TTL — 避免每次请求都查询远程 DB/Redis
+    * app_Key_已启用 开关缓存，5s TTL — 避免每次请求都查询远程 DB/Redis
     */
     private static final Cache<String, Boolean> APP_KEY_ENABLED_CACHE = Caffeine.newBuilder()
             .expireAfterWrite(5, TimeUnit.SECONDS)
@@ -36,7 +36,7 @@ public class AiAccessGuardServiceImpl implements AiAccessGuardService {
             .build();
 
     /**
-    * Bearer 令牌 校验缓存，2s TTL — 尽量缩短"禁用/删除 钥匙 后僵尸窗口"，
+    * Bearer 令牌 校验缓存，2s TTL — 尽量缩短"禁用/删除 Key 后僵尸窗口"，
     * 同时避免每次请求都查询远端 DB/Redis
     */
     private static final Cache<String, Boolean> BEARER_TOKEN_CACHE = Caffeine.newBuilder()
@@ -52,14 +52,14 @@ public class AiAccessGuardServiceImpl implements AiAccessGuardService {
     private final SysAiTokenService sysAiTokenService;
 
     @Override
-    /** 是否app钥匙已启用 */
+    /** 是否appKey已启用 */
     public boolean isAppKeyEnabled() {
         return APP_KEY_ENABLED_CACHE.get("app_key_enabled", k ->
                 sysAiGlobalSettingService.getBoolean("runtime", "app_key_enabled", true));
     }
 
     @Override
-    /** 验证app钥匙 */
+    /** 验证appKey */
     public boolean verifyAppKey(String appKey, String appSecret, String clientIp) {
         if (!isAppKeyEnabled()) {
             return true;
@@ -77,7 +77,7 @@ public class AiAccessGuardServiceImpl implements AiAccessGuardService {
     @Override
     /** 验证bearer令牌 */
     public boolean verifyBearerToken(String authorizationHeader, String clientIp) {
- // 与 验证app钥匙 保持一致：app_钥匙_已启用 关闭时免鉴权（仅当管理员显式关闭）
+ // 与 验证appKey 保持一致：app_Key_已启用 关闭时免鉴权（仅当管理员显式关闭）
         if (!isAppKeyEnabled()) {
             return true;
         }
@@ -102,9 +102,9 @@ public class AiAccessGuardServiceImpl implements AiAccessGuardService {
     }
 
     /**
-    * 按 app钥匙 绑定分组的 令牌 限流检查。
+    * 按 appKey 绑定分组的 令牌 限流检查。
     *
-    * @param appKey app钥匙
+    * @param appKey appKey
     * @return 未触发限流返回 true
     */
     private boolean isGroupRateLimited(String appKey) {

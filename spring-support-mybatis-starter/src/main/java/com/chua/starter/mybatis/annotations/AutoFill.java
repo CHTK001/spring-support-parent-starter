@@ -20,7 +20,7 @@ public @interface AutoFill {
     * 是否启用自动填充功能
     *
     * @return true-启用，false-禁用
-    * @example @autofill(价值观 = true)
+    * @example @autofill(值 = true)
     */
     boolean value() default true;
 

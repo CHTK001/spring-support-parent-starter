@@ -75,4 +75,15 @@ public interface ProjectService {
     * @return 结果（id/name/address/osType）
     */
     ReturnResult<List<Map<String, Object>>> hostOptions(String os);
+
+    /**
+    * 清理超期部署日志
+    * <p>
+    * 按 {@code project.support.deploy-log-retention-days} 保留天数删除
+    * {@code ms_project_deploy_log} 中过期的日志记录。
+    * </p>
+    *
+    * @return 删除的记录数
+    */
+    int cleanupDeployLogs();
 }

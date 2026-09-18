@@ -50,8 +50,8 @@ public class CacheTemplate {
     /**
     * 创建 缓存template 实例
     * @param cacheManager 缓存管理器
-    * @param keyGenerator tenanted钥匙生成器
-    * @param keyGenerator 钥匙生成器
+    * @param keyGenerator tenantedKey生成器
+    * @param keyGenerator Key生成器
     */
     public CacheTemplate(MultiLevelCacheManager cacheManager, TenantedKeyGenerator keyGenerator) {
         this.cacheManager = cacheManager;
@@ -59,7 +59,7 @@ public class CacheTemplate {
     }
 
     /**
-    * 根据业务键构建完整的缓存键（与 {@code @Cacheable} 注解生成的 钥匙 一致）
+    * 根据业务键构建完整的缓存键（与 {@code @Cacheable} 注解生成的 Key 一致）
     *
     * @param businessKey 业务键，例如 {@code "user:123"}
     * @return 完整缓存键，例如 {@code "cache:myapp:default:tenant-0:user:123"}
@@ -200,7 +200,7 @@ public class CacheTemplate {
 
     /**
     * 获取键生成器（供高级使用）
-    * @return 获取钥匙生成器的结果
+    * @return 获取Key生成器的结果
     */
     public TenantedKeyGenerator getKeyGenerator() {
         return keyGenerator;

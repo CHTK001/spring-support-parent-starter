@@ -83,17 +83,17 @@ public class SpiderScriptNode implements FlowNode {
         String saveAs = props.getString("saveAs");
         if (expression == null || expression.isEmpty()) {
             /**
-            * illegal参数异常。
+            * IllegalArgumentException。
             * @param 参数" 参数"
-            * @return illegal参数异常的结果
+            * @return IllegalArgumentException的结果
             */
             throw new IllegalArgumentException("spider.script 节点缺少 expression 参数");
         }
         if (saveAs == null || saveAs.isEmpty()) {
             /**
-            * illegal参数异常。
+            * IllegalArgumentException。
             * @param 参数" 参数"
-            * @return illegal参数异常的结果
+            * @return IllegalArgumentException的结果
             */
             throw new IllegalArgumentException("spider.script 节点缺少 saveAs 参数");
         }

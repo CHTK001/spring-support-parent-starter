@@ -12,7 +12,7 @@ import com.chua.common.support.ai.chat.ChatResponse;
 public abstract class ChatUsageSupport {
 
     /**
-    * 从 对话响应 提取 智能体usage。
+    * 从 对话响应 提取 Agentusage。
     *
     * @param response 对话响应
     * @return AgentUsage 实例

@@ -57,7 +57,7 @@ public class PaymentNotifyRetryTask implements PaymentManagedTask {
     }
 
     @Override
-    /** 任务钥匙 */
+    /** 任务Key */
     public String taskKey() {
         return "payment-notify-retry";
     }

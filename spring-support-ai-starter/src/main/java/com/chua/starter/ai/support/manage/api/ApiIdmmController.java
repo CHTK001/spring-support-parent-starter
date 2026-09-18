@@ -128,10 +128,10 @@ public class ApiIdmmController {
     }
 
     /**
-    * 钥匙的。
+    * Key的。
     * @param kind 种类
     * @param targetId Targetid
-    * @return 钥匙的的结果
+    * @return Key的的结果
     */
     private String keyOf(Object kind, Object targetId) {
         return kind + ":" + targetId;

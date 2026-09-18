@@ -67,10 +67,10 @@ public class SysAiProvider extends SysBase {
     private String providerBaseUrl;
 
     /**
-    * 提供商 API 钥匙
+    * 提供商 API Key
     */
     /**
-    * API 钥匙
+    * API Key
     */
     @TableField("sys_ai_provider_api_key")
     @Schema(description = "API Key")

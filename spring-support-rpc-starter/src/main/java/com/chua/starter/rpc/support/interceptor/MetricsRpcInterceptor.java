@@ -72,7 +72,7 @@ public class MetricsRpcInterceptor implements RpcInterceptor {
         lastResults.put(methodKey, RESULT_SUCCESS);
         /**
     * record持续时间。
-    * @param methodKey 方法钥匙
+    * @param methodKey 方法Key
     */
         recordDuration(methodKey);
         return result;
@@ -88,7 +88,7 @@ public class MetricsRpcInterceptor implements RpcInterceptor {
                 ? (error.getMessage() != null ? error.getMessage() : error.getClass().getSimpleName()) : "null");
         /**
     * record持续时间。
-    * @param methodKey 方法钥匙
+    * @param methodKey 方法Key
     */
         recordDuration(methodKey);
         throw error;
@@ -211,17 +211,17 @@ public class MetricsRpcInterceptor implements RpcInterceptor {
                     total,
                     /**
                     * 获取成功数量。
-                    * @param methodKey 方法钥匙
+                    * @param methodKey 方法Key
                     */
                     getSuccessCount(methodKey),
                     /**
                     * 获取失败数量。
-                    * @param methodKey 方法钥匙
+                    * @param methodKey 方法Key
                     */
                     getFailureCount(methodKey),
                     /**
                     * 获取average持续时间。
-                    * @param methodKey 方法钥匙
+                    * @param methodKey 方法Key
                     */
                     getAverageDuration(methodKey),
                     maxDurations.getOrDefault(methodKey, new AtomicLong()).get(),

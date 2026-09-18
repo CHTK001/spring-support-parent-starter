@@ -21,7 +21,7 @@ import java.util.Map;
 /**
 * 站内消息推送实现
 * <p>
-* 作为消息推送的站内渠道（SPI 标识 {@code station}），通过 套接字 将消息推送到
+* 作为消息推送的站内渠道（SPI 标识 {@code station}），通过 Socket 将消息推送到
 * 目标用户已登录的前端页面。推送执行器由 Spring 环境注入（见
 * {@code MessageAutoConfiguration}），未接入 Socket 服务时推送返回失败，不影响其他渠道。
 * </p>
@@ -59,7 +59,7 @@ public class StationMessagePush implements MessagePush {
     private static final String PROVIDER = "station";
 
     /**
-    * 套接字 事件名（与前端监听保持一致）
+    * Socket 事件名（与前端监听保持一致）
     */
     private static final String SOCKET_EVENT = "message";
 

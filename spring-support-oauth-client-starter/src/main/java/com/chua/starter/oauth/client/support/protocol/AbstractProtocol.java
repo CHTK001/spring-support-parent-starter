@@ -191,15 +191,15 @@ public abstract class AbstractProtocol implements Protocol {
     }
 
     /**
-    * 构建 app钥匙 鉴权请求体。
+    * 构建 appKey 鉴权请求体。
     * <p>
-    * 当前服务端将 x-OAuth-用户-编码 视为 app钥匙 字符串，并要求 编码 字段参与用户信息回填。
-    * app钥匙secret.主体 兼容两种形式：
+    * 当前服务端将 x-OAuth-用户-编码 视为 appKey 字符串，并要求 编码 字段参与用户信息回填。
+    * appKeysecret.主体 兼容两种形式：
     * 1. 纯字符串：按 编码 处理
     * 2. JSON 对象：展开并合并到请求体
     * </p>
     *
-    * @param appKeySecret app钥匙 参数
+    * @param appKeySecret appKey 参数
     * @return 请求体
     */
     protected JsonObject createAppKeyAuthenticationData(AppKeySecret appKeySecret) {
@@ -224,16 +224,16 @@ public abstract class AbstractProtocol implements Protocol {
             jsonObject.put("x-sign", appKeySecret.getXSign());
         }
         /**
-        * 合并app钥匙请求主体。
+        * 合并appKey请求主体。
         * @param jsonObject json对象
-        * @param appKeySecret.getBody( app钥匙secret.getbody(
+        * @param appKeySecret.getBody( appKeysecret.getbody(
         */
         mergeAppKeyRequestBody(jsonObject, appKeySecret.getBody());
         return jsonObject;
     }
 
     /**
-    * 合并 app钥匙 鉴权附加参数。
+    * 合并 appKey 鉴权附加参数。
     *
     * @param target 目标请求体
     * @param body   原始 主体
@@ -262,7 +262,7 @@ public abstract class AbstractProtocol implements Protocol {
     }
     
     /**
-    * 获取 access钥匙（用于请求头）
+    * 获取 accessKey（用于请求头）
     *
     * @return AccessKey，未启用返回 空
     */
@@ -311,7 +311,7 @@ public abstract class AbstractProtocol implements Protocol {
 
         /**
     * 写入认证信息。
-    * @param cacheKey 缓存钥匙
+    * @param cacheKey 缓存Key
     * @param authenticationInformation 认证信息
     */
         writeAuthenticationInformation(cacheKey, authenticationInformation);
@@ -319,7 +319,7 @@ public abstract class AbstractProtocol implements Protocol {
     }
 
     /**
-    * 获取缓存钥匙
+    * 获取缓存Key
     *
     * @param appKeySecret 用户编码
     * @return 缓存key
@@ -329,7 +329,7 @@ public abstract class AbstractProtocol implements Protocol {
         if (null == appKeySecret) {
             return AuthenticationInformation.noAuth();
         }
- // 优先使用用户编码作为缓存 钥匙，主体 可能为空导致无法命中缓存
+ // 优先使用用户编码作为缓存 Key，主体 可能为空导致无法命中缓存
         String cacheKey = StringUtils.isNotBlank(appKeySecret.getUserCode())
                 ? appKeySecret.getUserCode() : appKeySecret.getBody();
         AuthenticationInformation cached = readAuthenticationInformation(cacheKey);
@@ -341,7 +341,7 @@ public abstract class AbstractProtocol implements Protocol {
 
         /**
         * 写入认证信息。
-        * @param cacheKey 缓存钥匙
+        * @param cacheKey 缓存Key
         * @param authenticationInformation 认证信息
         */
         writeAuthenticationInformation(cacheKey, authenticationInformation);
@@ -366,18 +366,18 @@ public abstract class AbstractProtocol implements Protocol {
         boolean isRefresh = upgradeType == UpgradeType.REFRESH && refreshToken != null && !refreshToken.isEmpty();
         if (!isRefresh && !hasValid(cookie, token)) {
             /**
-    * illegal参数异常。
+    * IllegalArgumentException。
     * @param "认证失败" "认证失败"
-    * @return illegal参数异常的结果
+    * @return IllegalArgumentException的结果
     */
             throw new IllegalArgumentException("认证失败");
         }
         AuthenticationInformation authenticationInformation = upgradeInformation(cookie, token, upgradeType, refreshToken);
         if(authenticationInformation.getInformation() != OK) {
             /**
-            * illegal参数异常。
+            * IllegalArgumentException。
             * @param "升级失败" "升级失败"
-            * @return illegal参数异常的结果
+            * @return IllegalArgumentException的结果
             */
             throw new IllegalArgumentException("升级失败");
         }
@@ -393,7 +393,7 @@ public abstract class AbstractProtocol implements Protocol {
     * 是否有缓存
     *
     * @return 是否有缓存
-    * @param cacheKey 缓存钥匙
+    * @param cacheKey 缓存Key
     */
     protected boolean hasCache(String cacheKey) {
         if (null == cacheKey) {
@@ -412,7 +412,7 @@ public abstract class AbstractProtocol implements Protocol {
     /**
     * 缓存认证信息
     *
-    * @param key 缓存钥匙
+    * @param key 缓存Key
     * @return 缓存信息
     * @param returnResult 申报结果
     */
@@ -425,18 +425,18 @@ public abstract class AbstractProtocol implements Protocol {
             }
 
             /**
-            * illegal参数异常。
+            * IllegalArgumentException。
             * @param "OSS服务器不存在" "对象存储服务器不存在"
-            * @return illegal参数异常的结果
+            * @return IllegalArgumentException的结果
             */
             throw new IllegalArgumentException("OSS服务器不存在");
         }
         Object data = returnResult.getData();
         if (Objects.isNull(data)) {
             /**
-            * illegal参数异常。
+            * IllegalArgumentException。
             * @param "OSS服务器不存在" "对象存储服务器不存在"
-            * @return illegal参数异常的结果
+            * @return IllegalArgumentException的结果
             */
             throw new IllegalArgumentException("OSS服务器不存在");
 
@@ -444,7 +444,7 @@ public abstract class AbstractProtocol implements Protocol {
 
         String body;
         if (ReturnCode.OK.getCode().equals(code)) {
- // 根据加密配置决定是否解密（钥匙 为 空 时说明服务端未加密响应，直接用原始数据）
+ // 根据加密配置决定是否解密（Key 为 空 时说明服务端未加密响应，直接用原始数据）
             if (authClientProperties.isEnableEncryption() && key != null) {
                 body = Codec.build(encryption, key).decodeHex(data.toString());
             } else {
@@ -456,9 +456,9 @@ public abstract class AbstractProtocol implements Protocol {
         }
 
         /**
-        * illegal参数异常。
+        * IllegalArgumentException。
         * @param "OSS服务器不存在" "对象存储服务器不存在"
-        * @return illegal参数异常的结果
+        * @return IllegalArgumentException的结果
         */
         throw new IllegalArgumentException("OSS服务器不存在");
 
@@ -517,7 +517,7 @@ public abstract class AbstractProtocol implements Protocol {
 
         String body;
         if (ReturnCode.OK.getCode().equals(code)) {
- // 根据加密配置决定是否解密（钥匙 为 空 时说明服务端未加密响应，直接用原始数据）
+ // 根据加密配置决定是否解密（Key 为 空 时说明服务端未加密响应，直接用原始数据）
             if (authClientProperties.isEnableEncryption() && key != null) {
                 body = Codec.build(encryption, key).decodeHex(data.toString());
             } else {
@@ -707,7 +707,7 @@ public abstract class AbstractProtocol implements Protocol {
     /**
     * 清除缓存信息
     *
-    * @param cacheKey 缓存钥匙
+    * @param cacheKey 缓存Key
     */
     protected void clearAuthenticationInformation(String cacheKey) {
         if (null == cacheKey) {
@@ -725,7 +725,7 @@ public abstract class AbstractProtocol implements Protocol {
     * <p>单次读取，命中且有效时回填请求上下文，无效缓存自动清除；
     * 缓存读取异常时降级为未命中，不阻断鉴权主流程</p>
     *
-    * @param cacheKey 缓存钥匙
+    * @param cacheKey 缓存Key
     * @return 认证信息，未命中或无效返回 空
     */
     protected AuthenticationInformation readAuthenticationInformation(String cacheKey) {
@@ -742,7 +742,7 @@ public abstract class AbstractProtocol implements Protocol {
         if (null == value) {
             return null;
         }
- // 写入时使用 价值观 包装，读取时解包为实际认证信息
+ // 写入时使用 值 包装，读取时解包为实际认证信息
         if (value instanceof com.chua.common.support.value.Value<?> wrapper) {
             value = wrapper.getValue();
         }
@@ -753,7 +753,7 @@ public abstract class AbstractProtocol implements Protocol {
         } catch (Exception e) {
             /**
             * clear认证信息。
-            * @param cacheKey 缓存钥匙
+            * @param cacheKey 缓存Key
             */
             clearAuthenticationInformation(cacheKey);
             return null;
@@ -763,7 +763,7 @@ public abstract class AbstractProtocol implements Protocol {
                 || authenticationInformation.getInformation().getCode() != 200) {
             /**
             * clear认证信息。
-            * @param cacheKey 缓存钥匙
+            * @param cacheKey 缓存Key
             */
             clearAuthenticationInformation(cacheKey);
             return null;
@@ -773,7 +773,7 @@ public abstract class AbstractProtocol implements Protocol {
         if (null == userResume) {
             /**
             * clear认证信息。
-            * @param cacheKey 缓存钥匙
+            * @param cacheKey 缓存Key
             */
             clearAuthenticationInformation(cacheKey);
             return null;
@@ -799,7 +799,7 @@ public abstract class AbstractProtocol implements Protocol {
     * 写入缓存认证信息
     * <p>缓存写入失败不影响鉴权主流程</p>
     *
-    * @param cacheKey                 缓存钥匙
+    * @param cacheKey                 缓存Key
     * @param authenticationInformation 认证信息
     */
     protected void writeAuthenticationInformation(String cacheKey, AuthenticationInformation authenticationInformation) {
@@ -815,7 +815,7 @@ public abstract class AbstractProtocol implements Protocol {
     }
 
     /**
-    * 获取缓存钥匙
+    * 获取缓存Key
     * <p>对 token 进行 SHA-256 哈希，避免长字符串直接作为缓存 key 造成存储/带宽浪费</p>
     *
     * @param cookies Cookie

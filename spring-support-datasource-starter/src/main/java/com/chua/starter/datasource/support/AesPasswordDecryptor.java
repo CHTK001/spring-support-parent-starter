@@ -43,7 +43,7 @@ public class AesPasswordDecryptor implements PasswordDecryptor {
     private static final String CIPHER_TRANSFORMATION = "AES/ECB/PKCS5Padding";
 
     /** 默认密钥（32字节，用于没有配置密钥时的兼容） */
-    /** 默认_secret_钥匙 */
+    /** 默认_secret_Key */
     private static final byte[] DEFAULT_SECRET_KEY;
 
     static {
@@ -90,10 +90,10 @@ public class AesPasswordDecryptor implements PasswordDecryptor {
             this.secretKey = sha.digest(secretKeyStr.getBytes(StandardCharsets.UTF_8));
         } catch (NoSuchAlgorithmException e) {
             /**
-            * illegal参数异常。
+            * IllegalArgumentException。
             * @param available" 可用"
             * @param e e
-            * @return illegal参数异常的结果
+            * @return IllegalArgumentException的结果
             */
             throw new IllegalArgumentException("SHA-256 not available", e);
         }
@@ -122,10 +122,10 @@ public class AesPasswordDecryptor implements PasswordDecryptor {
         } catch (Exception e) {
             log.error("AES 解密失败", e);
             /**
-            * illegal参数异常。
+            * IllegalArgumentException。
             * @param "密码解密失败，请检查密钥配置" "密码解密失败，请检查密钥配置"
             * @param e e
-            * @return illegal参数异常的结果
+            * @return IllegalArgumentException的结果
             */
             throw new IllegalArgumentException("密码解密失败，请检查密钥配置", e);
         }

@@ -57,9 +57,9 @@ public class SyncClientWrapper implements com.chua.starter.sync.support.client.S
                     .getNewExtension(protocol, serverAddress);
             if (this.delegate == null) {
                 /**
-                * illegal参数异常。
+                * IllegalArgumentException。
                 * @param protocol 协议
-                * @return illegal参数异常的结果
+                * @return IllegalArgumentException的结果
                 */
                 throw new IllegalArgumentException("Unsupported sync client protocol: " + protocol);
             }

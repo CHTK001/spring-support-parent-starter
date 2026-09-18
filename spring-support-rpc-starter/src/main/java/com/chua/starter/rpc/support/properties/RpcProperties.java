@@ -35,11 +35,11 @@ public class RpcProperties {
     */
     private Set<String> scan;
     /**
-    * ak，从配置项 rpc.access-钥匙 注入，严禁硬编码
+    * ak，从配置项 rpc.access-Key 注入，严禁硬编码
     */
     private String accessKey = "";
     /**
-    * sk，从配置项 rpc.secret-钥匙 注入，严禁硬编码
+    * sk，从配置项 rpc.secret-Key 注入，严禁硬编码
     */
     private String secretKey = "";
     /**

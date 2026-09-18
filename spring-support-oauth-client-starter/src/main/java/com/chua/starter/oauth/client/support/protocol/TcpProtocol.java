@@ -32,7 +32,7 @@ import java.util.Map;
 /**
 * TCP 协议实现
 * <p>
-* 使用 JDK NIO 套接字通道 发送长度帧（4 字节大端长度头 + 消息体）与 o认证 认证服务端通信。
+* 使用 JDK NIO Socket通道 发送长度帧（4 字节大端长度头 + 消息体）与 o认证 认证服务端通信。
 * 帧格式为 {@code topic:body}，topic 对应服务端路由路径（如 login、OAuth、upgrade、logout、temporary-令牌），
 * 主体 为加密后的 JSON 请求体；服务端响应同样走长度帧，客户端解帧后解析 JSON。
 * </p>
@@ -117,7 +117,7 @@ public class TcpProtocol extends AbstractProtocol {
                 if (hasCache(cacheKey)) {
                     /**
                     * clear认证信息。
-                    * @param cacheKey 缓存钥匙
+                    * @param cacheKey 缓存Key
                     */
                     clearAuthenticationInformation(cacheKey);
                 }
@@ -126,7 +126,7 @@ public class TcpProtocol extends AbstractProtocol {
                 if (hasCache(cacheKey)) {
                     /**
                     * clear认证信息。
-                    * @param cacheKey 缓存钥匙
+                    * @param cacheKey 缓存Key
                     */
                     clearAuthenticationInformation(cacheKey);
                 }
@@ -479,11 +479,11 @@ public class TcpProtocol extends AbstractProtocol {
     }
 
     /**
-    * 获取int价值观。
+    * 获取int值。
     * @param map 映射
-    * @param key 钥匙
-    * @param defaultValue 默认价值观
-    * @return 获取int价值观的结果
+    * @param key Key
+    * @param defaultValue 默认值
+    * @return 获取int值的结果
     */
     private int getIntValue(Map<String, Object> map, String key, int defaultValue) {
         Object value = map.get(key);
@@ -494,11 +494,11 @@ public class TcpProtocol extends AbstractProtocol {
     }
 
     /**
-    * 获取字符串价值观。
+    * 获取字符串值。
     * @param map 映射
-    * @param key 钥匙
-    * @param defaultValue 默认价值观
-    * @return 获取字符串价值观的结果
+    * @param key Key
+    * @param defaultValue 默认值
+    * @return 获取字符串值的结果
     */
     private String getStringValue(Map<String, Object> map, String key, String defaultValue) {
         Object value = map.get(key);

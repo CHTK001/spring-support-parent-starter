@@ -29,7 +29,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
 * 客服（习俗 服务）控制器，替代 nomicore 的 {@code /api/customer-service/*} 契约。
 *
-* <p>维护客服智能体（{@code cs_agent_id}）、知识笔记（{@code cs_note_id}）、对话通道
+* <p>维护客服Agent（{@code cs_agent_id}）、知识笔记（{@code cs_note_id}）、对话通道
 * （{@code cs_dialogue_id}）与消息（{@code cs_message_id}）。当前为进程内内存实现。</p>
 *
 * @since 4.0.0.42
@@ -53,7 +53,7 @@ public class ApiCustomerController {
     private final ApiWebSocketPushService pushService;
 
     /**
-    * 客服智能体：C_智能体_标识 → 智能体
+    * 客服Agent：C_Agent_标识 → Agent
     */
     private final Map<String, Map<String, Object>> agents = new ConcurrentHashMap<>();
 
@@ -72,12 +72,12 @@ public class ApiCustomerController {
     */
     private final Map<String, List<Map<String, Object>>> messages = new ConcurrentHashMap<>();
 
- // ---- 智能体 ----
+ // ---- Agent ----
 
     @GetMapping("/agents")
     /**
-    * 列表智能体。
-    * @return 列表智能体的结果
+    * 列表Agent。
+    * @return 列表Agent的结果
     */
     public ApiResult<List<Map<String, Object>>> listAgents() {
         return ApiResult.ok(new ArrayList<>(agents.values()));
@@ -85,9 +85,9 @@ public class ApiCustomerController {
 
     @PostMapping("/agents")
     /**
-    * 创建智能体。
+    * 创建Agent。
     * @param body 主体
-    * @return 创建智能体的结果
+    * @return 创建Agent的结果
     */
     public ApiResult<Map<String, Object>> createAgent(@RequestBody Map<String, Object> body) {
         String agentId = conversationStore.newId();
@@ -112,9 +112,9 @@ public class ApiCustomerController {
 
     @GetMapping("/agents/{csAgentId}")
     /**
-    * 获取智能体。
-    * @param csAgentId C智能体标识
-    * @return 获取智能体的结果
+    * 获取Agent。
+    * @param csAgentId CAgent标识
+    * @return 获取Agent的结果
     */
     public ApiResult<Map<String, Object>> getAgent(@PathVariable String csAgentId) {
         return ApiResult.ok(requireAgent(csAgentId));
@@ -135,14 +135,14 @@ public class ApiCustomerController {
 
     @DeleteMapping("/agents/{csAgentId}")
     /**
-    * 移除智能体。
-    * @param csAgentId C智能体标识
-    * @return 移除智能体的结果
+    * 移除Agent。
+    * @param csAgentId CAgent标识
+    * @return 移除Agent的结果
     */
     public ApiResult<Void> removeAgent(@PathVariable String csAgentId) {
         /**
-        * require智能体。
-        * @param csAgentId C智能体标识
+        * requireAgent。
+        * @param csAgentId CAgent标识
         */
         requireAgent(csAgentId);
         agents.remove(csAgentId);
@@ -152,13 +152,13 @@ public class ApiCustomerController {
     @GetMapping("/agents/{csAgentId}/bindings")
     /**
     * 列表bindings。
-    * @param csAgentId C智能体标识
+    * @param csAgentId CAgent标识
     * @return 列表bindings的结果
     */
     public ApiResult<List<Map<String, Object>>> listBindings(@PathVariable String csAgentId) {
         /**
-        * require智能体。
-        * @param csAgentId C智能体标识
+        * requireAgent。
+        * @param csAgentId CAgent标识
         */
         requireAgent(csAgentId);
         return ApiResult.ok(new ArrayList<>());
@@ -168,8 +168,8 @@ public class ApiCustomerController {
     public ApiResult<List<Map<String, Object>>> replaceBindings(@PathVariable String csAgentId,
                                                                 @RequestBody Map<String, Object> body) {
         /**
-        * require智能体。
-        * @param csAgentId C智能体标识
+        * requireAgent。
+        * @param csAgentId CAgent标识
         */
         requireAgent(csAgentId);
         return ApiResult.ok(new ArrayList<>());
@@ -256,13 +256,13 @@ public class ApiCustomerController {
     @GetMapping("/dialogues")
     /**
     * 列表dialogues。
-    * @param cs_agent_id C智能体标识
+    * @param cs_agent_id CAgent标识
     * @return 列表dialogues的结果
     */
     public ApiResult<List<Map<String, Object>>> listDialogues(@RequestParam String cs_agent_id) {
         /**
-        * require智能体。
-        * @param cs_agent_id C智能体标识
+        * requireAgent。
+        * @param cs_agent_id CAgent标识
         */
         requireAgent(cs_agent_id);
         List<Map<String, Object>> result = new ArrayList<>();
@@ -290,9 +290,9 @@ public class ApiCustomerController {
     }
 
     /**
-    * require智能体。
-    * @param csAgentId C智能体标识
-    * @return require智能体的结果
+    * requireAgent。
+    * @param csAgentId CAgent标识
+    * @return requireAgent的结果
     */
     private Map<String, Object> requireAgent(String csAgentId) {
         Map<String, Object> agent = agents.get(csAgentId);
@@ -300,10 +300,10 @@ public class ApiCustomerController {
             /**
             * api异常。
             * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
-            * @param csAgentId C智能体标识
+            * @param csAgentId CAgent标识
             * @return api异常的结果
             */
-            throw new ApiException(ApiErrorCode.NOT_FOUND, "客服智能体不存在: " + csAgentId);
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "客服Agent不存在: " + csAgentId);
         }
         return agent;
     }

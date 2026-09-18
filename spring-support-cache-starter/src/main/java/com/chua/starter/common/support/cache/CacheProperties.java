@@ -161,12 +161,12 @@ public class CacheProperties {
         private boolean recordStats = true;
 
         /**
-        * 弱引用 钥匙
+        * 弱引用 Key
         */
         private boolean weakKeys = false;
 
         /**
-        * 弱引用 价值观
+        * 弱引用 值
         */
         private boolean weakValues = false;
     }
@@ -184,7 +184,7 @@ public class CacheProperties {
         private long ttl = 600;
 
         /**
-        * 钥匙 前缀
+        * Key 前缀
         */
         private String keyPrefix = "cache:";
 
@@ -199,12 +199,12 @@ public class CacheProperties {
         private boolean cacheNullValues = false;
 
         /**
-        * 钥匙 与 价值观 是否使用相同分隔符
+        * Key 与 值 是否使用相同分隔符
         */
         private String separator = ":";
 
         /**
-        * 是否在 钥匙 中携带应用名前缀
+        * 是否在 Key 中携带应用名前缀
         */
         private boolean useKeyPrefix = true;
     }
@@ -227,17 +227,17 @@ public class CacheProperties {
         private String separator = ":";
 
         /**
-        * 是否在 钥匙 中追加租户标识
+        * 是否在 Key 中追加租户标识
         */
         private boolean withTenant = true;
 
         /**
-        * 是否在 钥匙 中追加应用名
+        * 是否在 Key 中追加应用名
         */
         private boolean withApplication = true;
 
         /**
-        * 是否在 钥匙 中追加平台标识
+        * 是否在 Key 中追加平台标识
         */
         private boolean withPlatform = true;
     }

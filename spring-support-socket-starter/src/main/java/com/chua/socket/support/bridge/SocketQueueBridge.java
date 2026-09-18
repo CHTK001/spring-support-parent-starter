@@ -15,12 +15,12 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
-* 队列 → 套接字 桥接监听器
+* 队列 → Socket 桥接监听器
 * <p>
 * 监听固定 topic {@code socket:push}（业务方统一向此 topic 发送），
 * 从消息 payload 解析 {@code {module, event, data, dataId}} 后，
 * 通过 {@link SocketSessionTemplate} 广播到前端。
-* 业务模块（如监控）无需直接依赖 套接字，只向 队列 发消息即可。
+* 业务模块（如监控）无需直接依赖 Socket，只向 队列 发消息即可。
 * </p>
 *
 * <h3>协议</h3>
@@ -41,17 +41,17 @@ import java.util.Map;
 @ConditionalOnMissingBean(name = "monitorSocketQueueBridge")
 public class SocketQueueBridge {
 
-    /** 固定订阅 topic：业务方统一向此 topic 发送 套接字 广播消息 */
+    /** 固定订阅 topic：业务方统一向此 topic 发送 Socket 广播消息 */
     public static final String TOPIC = "socket:push";
 
-    /** 套接字 会话模板（套接字 未启用时为空实现） */
+    /** Socket 会话模板（Socket 未启用时为空实现） */
     private final ObjectProvider<SocketSessionTemplate> socketTemplateProvider;
 
     /** JSON 解析器 */
     private final ObjectMapper objectMapper;
 
     /**
-    * 监听 套接字:push topic，解析 payload 后广播到所有前端会话
+    * 监听 Socket:push topic，解析 payload 后广播到所有前端会话
     *
     * @param message 队列消息（payload 为 JSON 字符串）
     */

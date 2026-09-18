@@ -35,7 +35,7 @@ public class PartitionAwareTableFactory {
     /**
     * 读取支付分表配置并创建对应的路由表。
     *
-    * @return 路由表 映射，钥匙 为源表名（如 薪酬_订单），价值观 为路由表实例
+    * @return 路由表 映射，Key 为源表名（如 薪酬_订单），值 为路由表实例
     */
     public Map<String, PartitionRoutingTable> buildAllRoutingTables() {
         Map<String, PartitionRoutingTable> result = new java.util.LinkedHashMap<>();
@@ -131,7 +131,7 @@ public class PartitionAwareTableFactory {
     /**
     * Str
     *
-    * @param value 价值观
+    * @param value 值
     * @return str的结果
     */
     private static String str(Object value) {

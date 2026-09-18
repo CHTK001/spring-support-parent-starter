@@ -278,7 +278,7 @@ public class DynamicDataSourceAspect {
     }
 
     /**
-    * httpservlet请求 请求头包装器（使用 映射，支持 spel #头部['钥匙'] 和 #头部.钥匙 两种语法）
+    * httpservlet请求 请求头包装器（使用 映射，支持 spel #头部['Key'] 和 #头部.Key 两种语法）
     * @author CH
     * @since 4.0.0
     */
@@ -305,7 +305,7 @@ public class DynamicDataSourceAspect {
     }
 
     /**
-    * http会话 属性包装器（使用 映射，支持 spel #会话['钥匙'] 和 #会话.钥匙 两种语法）
+    * http会话 属性包装器（使用 映射，支持 spel #会话['Key'] 和 #会话.Key 两种语法）
     * @author CH
     * @since 4.0.0
     */

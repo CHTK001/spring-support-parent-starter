@@ -92,7 +92,7 @@ public class GuacdSessionRegistry {
     /**
     * 关闭指定会话并从注册表移除
     * <p>
-    * 幂等：重复调用无副作用。关闭顺序：guacd 套接字 -> 浏览器 WS。
+    * 幂等：重复调用无副作用。关闭顺序：guacd Socket -> 浏览器 WS。
     * </p>
     *
     * @param session 会话

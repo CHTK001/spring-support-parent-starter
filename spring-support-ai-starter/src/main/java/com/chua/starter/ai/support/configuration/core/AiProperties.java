@@ -43,7 +43,7 @@ public class AiProperties {
         private String provider = "openai";
 
         /**
-        * API 钥匙
+        * API Key
         */
         private String apiKey;
 
@@ -83,7 +83,7 @@ public class AiProperties {
         private String provider = "openai";
 
         /**
-        * API 钥匙
+        * API Key
         */
         private String apiKey;
 
@@ -118,7 +118,7 @@ public class AiProperties {
         private String provider = "openai";
 
         /**
-        * API 钥匙
+        * API Key
         */
         private String apiKey;
 

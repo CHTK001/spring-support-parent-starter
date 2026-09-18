@@ -111,9 +111,9 @@ public class OcrTextExtractor implements TextExtractor {
     public List<TextExtractResult> extractText(File file) {
         if (!isImage(file)) {
             /**
-            * illegal参数异常。
+            * IllegalArgumentException。
             * @param file.getName( 文件.获取名称(
-            * @return illegal参数异常的结果
+            * @return IllegalArgumentException的结果
             */
             throw new IllegalArgumentException("非图片文件，交由降级读取: " + file.getName());
         }
@@ -140,10 +140,10 @@ public class OcrTextExtractor implements TextExtractor {
             log.warn("[OcrTextExtractor] OCR 识别失败: file={}, model={}, error={}",
                     file.getName(), modelName, e.getMessage());
             /**
-            * illegal参数异常。
+            * IllegalArgumentException。
             * @param 识别失败，交由降级读取" 识别失败，交由降级读取"
             * @param e e
-            * @return illegal参数异常的结果
+            * @return IllegalArgumentException的结果
             */
             throw new IllegalArgumentException("OCR 识别失败，交由降级读取", e);
         }

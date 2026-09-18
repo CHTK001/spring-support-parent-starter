@@ -175,7 +175,7 @@ public class SignUtils {
     /**
     * 构建排序后的参数字符串
     *
-    * @param excludeKeys 需要排除的钥匙集合
+    * @param excludeKeys 需要排除的Key集合
     * @return 排序后的参数字符串
     * @param params 参数
     */
@@ -186,7 +186,7 @@ public class SignUtils {
     /**
     * 构建排序后的参数字符串
     *
-    * @param excludeKeys       需要排除的钥匙集合
+    * @param excludeKeys       需要排除的Key集合
     * @param keyValueSeparator 键值对的分隔符
     * @return 排序后的参数字符串
     */

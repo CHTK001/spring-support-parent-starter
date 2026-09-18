@@ -14,7 +14,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 /**
 * 同步服务端抽象基类，封装会话管理与事件分发通用逻辑。
 * <p>
-* 各协议（web套接字、套接字.IO、r套接字 等）的同步服务端实现继承该类，只需实现
+* 各协议（webSocket、Socket.IO、rSocket 等）的同步服务端实现继承该类，只需实现
 * {@link #doStart()}、{@link #doStop()}、{@link #doSend(String, String, Object)} 三个协议相关方法，
 * 并在合适时机调用 {@link #fireConnectionEstablished(SyncSession)}、
 * {@link #fireConnectionClosed(SyncSession)}、{@link #fireMessageReceived(SyncSession, String, Object)}
@@ -27,7 +27,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public abstract class AbstractSyncServer extends AbstractServer implements SyncServer {
 
     /**
-    * 协议名称（小写，如 WebSocket、套接字.IO、rsocket），由子类构造函数设置。
+    * 协议名称（小写，如 WebSocket、Socket.IO、rsocket），由子类构造函数设置。
     */
     protected String protocol;
 

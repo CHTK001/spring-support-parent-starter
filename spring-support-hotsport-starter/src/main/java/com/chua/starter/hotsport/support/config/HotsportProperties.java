@@ -23,23 +23,23 @@ import java.util.Map;
 @ConfigurationProperties(prefix = "hotsport")
 public class HotsportProperties {
 
-    /** 智能体 配置。 */
+    /** Agent 配置。 */
     private Agent agent = new Agent();
 
     /** APM 存储配置。 */
     private Apm apm = new Apm();
 
     /**
-    * 获取智能体。
-    * @return 获取智能体的结果
+    * 获取Agent。
+    * @return 获取Agent的结果
     */
     public Agent getAgent() {
         return agent;
     }
 
     /**
-    * 设置智能体。
-    * @param agent 智能体
+    * 设置Agent。
+    * @param agent Agent
     */
     public void setAgent(Agent agent) {
         this.agent = agent;
@@ -70,7 +70,7 @@ public class HotsportProperties {
         /** Shell 端口。 */
         private int shellPort = 4567;
 
-        /** 额外 智能体 参数（逗号分隔 钥匙=价值观）。 */
+        /** 额外 Agent 参数（逗号分隔 Key=值）。 */
         private String options = "";
 
         /**

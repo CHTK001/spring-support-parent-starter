@@ -8,7 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 
 /**
-* 套接字 消息编解码包装
+* Socket 消息编解码包装
 *
 * @since 2026-04-08
 * @author CH
@@ -33,7 +33,7 @@ public class SocketMessageCodec {
     private final String publicKeyHex;
 
     /**
-    * 创建 套接字消息codec 实例
+    * 创建 Socket消息codec 实例
     * @param properties 属性
     */
     public SocketMessageCodec(SocketProperties properties) {

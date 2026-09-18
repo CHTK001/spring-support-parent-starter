@@ -48,7 +48,7 @@ public class SysLoggerInfo extends ApplicationEvent {
     private String system;
 
     /**
-    * 用户-智能体信息
+    * 用户-Agent信息
     * <p>示例: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"</p>
     */
     private String ua;

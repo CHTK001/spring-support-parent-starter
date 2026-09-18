@@ -51,7 +51,7 @@ public class FileChunkUploadController {
     private static final double PERCENT_BASE = 100.0;
 
     /**
-    * 远端 钥匙 路径分隔符
+    * 远端 Key 路径分隔符
     */
     private static final String KEY_PATH_SEPARATOR = "/";
 
@@ -147,7 +147,7 @@ public class FileChunkUploadController {
             totalChunks = 1;
         }
 
- // 生成上传任务 标识 与默认 钥匙
+ // 生成上传任务 标识 与默认 Key
         String uploadId = UUID.randomUUID().toString().replace("-", "");
         String finalKey = "uploads/" + uploadId + "/" + fileName;
 

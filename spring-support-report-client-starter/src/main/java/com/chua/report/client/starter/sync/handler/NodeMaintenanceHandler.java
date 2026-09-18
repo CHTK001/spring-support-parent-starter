@@ -884,7 +884,7 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
     /**
     * 获取环境财产
     *
-    * @param key 钥匙
+    * @param key Key
     * @return 获取环境财产的结果
     */
     private String getEnvironmentProperty(String key) {
@@ -925,9 +925,9 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
         Path target = applicationHome.resolve(entryName).normalize();
         if (!target.startsWith(applicationHome)) {
             /**
-            * illegal参数异常。
+            * IllegalArgumentException。
             * @param entryName entry名称
-            * @return illegal参数异常的结果
+            * @return IllegalArgumentException的结果
             */
             throw new IllegalArgumentException("非法压缩包路径: " + entryName);
         }

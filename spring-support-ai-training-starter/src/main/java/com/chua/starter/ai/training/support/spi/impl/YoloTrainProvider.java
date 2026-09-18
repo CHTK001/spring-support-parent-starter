@@ -90,9 +90,9 @@ public class YoloTrainProvider implements TrainProvider {
         Path dataYaml = locateDataYaml(Path.of(ctx.dataRootPath()));
         if (dataYaml == null) {
             /**
-            * illegal参数异常。
+            * IllegalArgumentException。
             * @param buildMissingDataYamlMessage(Path.of(ctx.dataRootPath( 构建missing数据yamlmessage(路径.的(ctx.数据根路径(
-            * @return illegal参数异常的结果
+            * @return IllegalArgumentException的结果
             */
             throw new IllegalArgumentException(buildMissingDataYamlMessage(Path.of(ctx.dataRootPath())));
         }

@@ -27,6 +27,18 @@ CREATE TABLE IF NOT EXISTS datasync_mapping (
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 -- DataSync 数据库模式：datasync_field_mapping 字段映射表
 CREATE TABLE IF NOT EXISTS datasync_field_mapping (
  datasync_field_mapping_id VARCHAR(255) PRIMARY KEY,
@@ -37,6 +49,18 @@ CREATE TABLE IF NOT EXISTS datasync_field_mapping (
  datasync_field_mapping_sort INT,
  FOREIGN KEY (datasync_field_mapping_mapping_id) REFERENCES datasync_mapping(datasync_mapping_id)
 );
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -75,11 +99,18 @@ CREATE TABLE IF NOT EXISTS `spider_definition` (
  `update_by` BIGINT DEFAULT NULL COMMENT '更新人 ID',
  `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
  `sys_deleted` TINYINT NOT NULL DEFAULT 0 COMMENT '逻辑删除标记（0 未删除 / 1 已删除）',
- PRIMARY KEY (`id`),
- UNIQUE KEY `uk_code` (`code`),
- KEY `idx_enabled` (`enabled`),
- KEY `idx_flow_id` (`flow_id`)
+ PRIMARY KEY (`id`)
 ) ENGINE = InnoDB COMMENT '爬虫定义表';
+
+CREATE UNIQUE INDEX IF NOT EXISTS uk_code ON spider_definition (`code`);
+CREATE INDEX IF NOT EXISTS idx_enabled ON spider_definition (`enabled`);
+CREATE INDEX IF NOT EXISTS idx_flow_id ON spider_definition (`flow_id`);
+
+
+
+
+
+
 
 
 
@@ -101,10 +132,17 @@ CREATE TABLE IF NOT EXISTS `spider_flow` (
  `update_by` BIGINT DEFAULT NULL COMMENT '更新人 ID',
  `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
  `sys_deleted` TINYINT NOT NULL DEFAULT 0 COMMENT '逻辑删除标记（0 未删除 / 1 已删除）',
- PRIMARY KEY (`id`),
- UNIQUE KEY `uk_definition_id` (`definition_id`),
- KEY `idx_name` (`name`)
+ PRIMARY KEY (`id`)
 ) ENGINE = InnoDB COMMENT '流程编排表';
+
+CREATE UNIQUE INDEX IF NOT EXISTS uk_definition_id ON spider_flow (`definition_id`);
+CREATE INDEX IF NOT EXISTS idx_name ON spider_flow (`name`);
+
+
+
+
+
+
 
 
 
@@ -131,11 +169,18 @@ CREATE TABLE IF NOT EXISTS `spider_data_record` (
  `update_by` BIGINT DEFAULT NULL COMMENT '更新人 ID',
  `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
  `sys_deleted` TINYINT NOT NULL DEFAULT 0 COMMENT '逻辑删除标记（0 未删除 / 1 已删除）',
- PRIMARY KEY (`id`),
- KEY `idx_execution_no` (`execution_no`),
- KEY `idx_definition_code` (`definition_code`),
- KEY `idx_create_time` (`create_time`)
+ PRIMARY KEY (`id`)
 ) ENGINE = InnoDB COMMENT '采集数据记录表';
+
+CREATE INDEX IF NOT EXISTS idx_execution_no ON spider_data_record (`execution_no`);
+CREATE INDEX IF NOT EXISTS idx_definition_code ON spider_data_record (`definition_code`);
+CREATE INDEX IF NOT EXISTS idx_create_time ON spider_data_record (`create_time`);
+
+
+
+
+
+
 
 
 
@@ -165,11 +210,18 @@ CREATE TABLE IF NOT EXISTS `spider_execution_log` (
  `update_by` BIGINT DEFAULT NULL COMMENT '更新人 ID',
  `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
  `sys_deleted` TINYINT NOT NULL DEFAULT 0 COMMENT '逻辑删除标记（0 未删除 / 1 已删除）',
- PRIMARY KEY (`id`),
- KEY `idx_execution_no` (`execution_no`),
- KEY `idx_definition_code` (`definition_code`),
- KEY `idx_status` (`status`)
+ PRIMARY KEY (`id`)
 ) ENGINE = InnoDB COMMENT '执行日志表';
+
+CREATE INDEX IF NOT EXISTS idx_execution_no ON spider_execution_log (`execution_no`);
+CREATE INDEX IF NOT EXISTS idx_definition_code ON spider_execution_log (`definition_code`);
+CREATE INDEX IF NOT EXISTS idx_status ON spider_execution_log (`status`);
+
+
+
+
+
+
 
 
 
@@ -191,9 +243,16 @@ CREATE TABLE IF NOT EXISTS `spider_env` (
  `update_by` BIGINT DEFAULT NULL COMMENT '更新人 ID',
  `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
  `sys_deleted` TINYINT NOT NULL DEFAULT 0 COMMENT '逻辑删除标记（0 未删除 / 1 已删除）',
- PRIMARY KEY (`id`),
- UNIQUE KEY `uk_env_key` (`env_key`)
+ PRIMARY KEY (`id`)
 ) ENGINE = InnoDB COMMENT '环境变量表';
+
+CREATE UNIQUE INDEX IF NOT EXISTS uk_env_key ON spider_env (`env_key`);
+
+
+
+
+
+
 
 
 
@@ -220,6 +279,18 @@ CREATE TABLE IF NOT EXISTS device_organization (
  device_organization_path VARCHAR(500) COMMENT '路径，例 1/2/3',
  device_organization_vendor VARCHAR(20) COMMENT '所属厂商，例如 hikvision、dahua'
 ) COMMENT '设备组织树';
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -255,6 +326,18 @@ CREATE TABLE IF NOT EXISTS device_info (
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 -- 设备通道表
 CREATE TABLE IF NOT EXISTS device_channel (
  device_channel_id VARCHAR(32) PRIMARY KEY COMMENT '通道主键 ID',
@@ -271,6 +354,18 @@ CREATE TABLE IF NOT EXISTS device_channel (
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 -- 设备预置位表
 CREATE TABLE IF NOT EXISTS device_preset (
  device_preset_id VARCHAR(32) PRIMARY KEY COMMENT '预置位主键 ID',
@@ -278,6 +373,18 @@ CREATE TABLE IF NOT EXISTS device_preset (
  device_preset_no INT NOT NULL COMMENT '预置位编号',
  device_preset_name VARCHAR(100) COMMENT '预置位名称'
 ) COMMENT '设备云台预置位';
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -297,6 +404,18 @@ CREATE TABLE IF NOT EXISTS device_event_record (
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 -- 设备门禁表
 CREATE TABLE IF NOT EXISTS device_door (
  device_door_id VARCHAR(32) PRIMARY KEY COMMENT '门禁主键 ID',
@@ -305,6 +424,18 @@ CREATE TABLE IF NOT EXISTS device_door (
  device_door_name VARCHAR(100) COMMENT '门名称',
  device_door_status VARCHAR(20) COMMENT '门状态：locked 已锁、unlocked 已开'
 ) COMMENT '设备门禁';
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -320,61 +451,21 @@ CREATE TABLE IF NOT EXISTS device_task_state (
  device_task_state_updated_at DATETIME COMMENT '最后更新时间'
 ) COMMENT '设备后台定时任务状态';
 
-
-
-
-
--- 索引
 CREATE INDEX IF NOT EXISTS idx_device_info_org ON device_info(device_info_org_id);
-
-
-
-
-
 CREATE INDEX IF NOT EXISTS idx_device_info_category ON device_info(device_info_category);
-
-
-
-
-
 CREATE INDEX IF NOT EXISTS idx_device_channel_device ON device_channel(device_channel_device_id);
-
-
-
-
-
 CREATE INDEX IF NOT EXISTS idx_device_event_device ON device_event_record(device_event_record_device_id);
-
-
-
-
-
 CREATE INDEX IF NOT EXISTS idx_device_event_time ON device_event_record(device_event_record_occurred_at);
-
-
-
-
-
 CREATE INDEX IF NOT EXISTS idx_device_door_device ON device_door(device_door_device_id);
-
-
-
-
-
 CREATE INDEX IF NOT EXISTS idx_device_org_parent ON device_organization(device_organization_parent_id);
-
-
-
-
-
--- 地图位置索引 + 任务状态索引（并入自 V1.1__add_channel_and_location.sql / V1.1__initdata_device.sql）
 CREATE INDEX IF NOT EXISTS idx_device_info_location ON device_info(device_info_latitude, device_info_longitude);
-
-
-
-
-
 CREATE INDEX IF NOT EXISTS idx_device_task_state_name ON device_task_state(device_task_state_name);
+
+
+
+
+
+
 
 
 
@@ -485,20 +576,14 @@ CREATE TABLE sys_job (
     PRIMARY KEY (sys_job_id),
     CONSTRAINT uk_sys_job_no UNIQUE (sys_job_no)
 );
+CREATE INDEX IF NOT EXISTS idx_sys_job_trigger_status ON sys_job (sys_job_trigger_status);
+CREATE INDEX IF NOT EXISTS idx_sys_job_trigger_next_time ON sys_job (sys_job_trigger_next_time);
 
 
 
 
 
--- 任务状态索引: 用于按调度状态扫描任务
-CREATE INDEX idx_sys_job_trigger_status   ON sys_job (sys_job_trigger_status);
 
-
-
-
-
--- 下次触发时间索引: 用于调度器轮询到期任务
-CREATE INDEX idx_sys_job_trigger_next_time ON sys_job (sys_job_trigger_next_time);
 
 
 
@@ -560,26 +645,15 @@ CREATE TABLE sys_job_log (
  CONSTRAINT uk_sys_job_log_no UNIQUE (sys_job_log_no)
 );
 
-
-
-
-
--- 任务 ID 索引: 用于按任务查询日志
-CREATE INDEX idx_sys_job_log_job_id        ON sys_job_log (sys_job_id);
-
-
-
-
-
--- 节点 ID 索引: 用于按执行节点查询日志
-CREATE INDEX idx_sys_job_log_node_id       ON sys_job_log (sys_job_log_node_id);
+CREATE INDEX IF NOT EXISTS idx_sys_job_log_job_id ON sys_job_log (sys_job_id);
+CREATE INDEX IF NOT EXISTS idx_sys_job_log_node_id ON sys_job_log (sys_job_log_node_id);
+CREATE INDEX IF NOT EXISTS idx_sys_job_log_trigger_date ON sys_job_log (sys_job_log_trigger_date);
 
 
 
 
 
--- 触发日期索引: 用于按日期统计日志
-CREATE INDEX idx_sys_job_log_trigger_date  ON sys_job_log (sys_job_log_trigger_date);
+
 
 
 
@@ -617,6 +691,18 @@ CREATE TABLE sys_job_cluster (
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 -- ---------------------------------------------------------------------
 -- 来源: V1.0__init_message.sql
 -- ---------------------------------------------------------------------
@@ -641,7 +727,19 @@ SET NAMES utf8mb4;
 
 
 
+
+
+
+
+
+
 SET FOREIGN_KEY_CHECKS = 0;
+
+
+
+
+
+
 
 -- [通用化] 全量脚本禁止 DROP TABLE（数据丢失风险），老库重建走 DBA 流程；原语句：
 -- DROP TABLE IF EXISTS `sys_message_provider`;;
@@ -676,12 +774,25 @@ CREATE TABLE `sys_message_provider` (
  `update_time` datetime NULL DEFAULT NULL COMMENT '更新时间',
  `update_name` varchar(255) NULL DEFAULT NULL COMMENT '更新人姓名',
  `update_by` int NULL DEFAULT NULL COMMENT '更新人ID',
- PRIMARY KEY (`sys_message_provider_id`) USING BTREE,
- UNIQUE INDEX `uk_provider_code` (`sys_message_provider_code`) USING BTREE COMMENT '提供商编码唯一索引',
- INDEX `idx_provider_type` (`sys_message_provider_type`) USING BTREE COMMENT '提供商类型索引',
- INDEX `idx_provider_status` (`sys_message_provider_status`) USING BTREE COMMENT '状态索引'
-) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci
-COMMENT = '消息提供商表 - 管理短信、邮件、微信、钉钉等消息服务商配置' ROW_FORMAT = DYNAMIC;
+ PRIMARY KEY (`sys_message_provider_id`) ,
+ UNIQUE INDEX `uk_provider_code` (`sys_message_provider_code`) COMMENT '提供商编码唯一索引'
+) ENGINE = InnoDB AUTO_INCREMENT = 1 
+COMMENT = '消息提供商表 - 管理短信、邮件、微信、钉钉等消息服务商配置' ;
+
+
+
+
+
+
+
+
+
+
+
+-- [通用化] 行内索引拆出为独立语句（H2/MySQL 双兼容幂等）
+-- [通用化] 无法解析的行内索引定义（保留供 DBA）：INDEX `idx_provider_type` (`sys_message_provider_type`) COMMENT '提供商类型索引'
+-- [通用化] 无法解析的行内索引定义（保留供 DBA）：INDEX `idx_provider_status` (`sys_message_provider_status`) COMMENT '状态索引'
+
 
 -- [通用化] 全量脚本禁止 DROP TABLE（数据丢失风险），老库重建走 DBA 流程；原语句：
 -- DROP TABLE IF EXISTS `sys_message_template`;;
@@ -709,12 +820,25 @@ CREATE TABLE `sys_message_template` (
  `update_time` datetime NULL DEFAULT NULL COMMENT '更新时间',
  `update_name` varchar(255) NULL DEFAULT NULL COMMENT '更新人姓名',
  `update_by` int NULL DEFAULT NULL COMMENT '更新人ID',
- PRIMARY KEY (`sys_message_template_id`) USING BTREE,
- INDEX `idx_template_provider` (`sys_message_provider_id`) USING BTREE COMMENT '提供商ID索引',
- INDEX `idx_template_code` (`sys_message_template_code`) USING BTREE COMMENT '模板编码索引',
- INDEX `idx_template_status` (`sys_message_template_status`) USING BTREE COMMENT '状态索引'
-) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci
-COMMENT = '消息模板表 - 管理各渠道消息模板' ROW_FORMAT = DYNAMIC;
+ PRIMARY KEY (`sys_message_template_id`) 
+) ENGINE = InnoDB AUTO_INCREMENT = 1 
+COMMENT = '消息模板表 - 管理各渠道消息模板' ;
+
+
+
+
+
+
+
+
+
+
+
+-- [通用化] 行内索引拆出为独立语句（H2/MySQL 双兼容幂等）
+-- [通用化] 无法解析的行内索引定义（保留供 DBA）：INDEX `idx_template_provider` (`sys_message_provider_id`) COMMENT '提供商ID索引'
+-- [通用化] 无法解析的行内索引定义（保留供 DBA）：INDEX `idx_template_code` (`sys_message_template_code`) COMMENT '模板编码索引'
+-- [通用化] 无法解析的行内索引定义（保留供 DBA）：INDEX `idx_template_status` (`sys_message_template_status`) COMMENT '状态索引'
+
 
 -- [通用化] 全量脚本禁止 DROP TABLE（数据丢失风险），老库重建走 DBA 流程；原语句：
 -- DROP TABLE IF EXISTS `sys_message_log`;;
@@ -746,21 +870,40 @@ CREATE TABLE `sys_message_log` (
  `update_time` datetime NULL DEFAULT NULL COMMENT '更新时间',
  `update_name` varchar(255) NULL DEFAULT NULL COMMENT '更新人姓名',
  `update_by` int NULL DEFAULT NULL COMMENT '更新人ID',
- PRIMARY KEY (`sys_message_log_id`) USING BTREE,
- INDEX `idx_log_target` (`sys_message_log_target`) USING BTREE COMMENT '接收人索引',
- INDEX `idx_log_template` (`sys_message_template_id`) USING BTREE COMMENT '模板ID索引',
- INDEX `idx_log_provider` (`sys_message_provider_id`) USING BTREE COMMENT '提供商ID索引',
- INDEX `idx_log_create_time` (`create_time`) USING BTREE COMMENT '创建时间索引',
- INDEX `idx_log_track_token` (`sys_message_track_token`) USING BTREE COMMENT '追踪标识索引',
- INDEX `idx_log_batch` (`sys_message_batch_id`) USING BTREE COMMENT '批次号索引'
-) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci
-COMMENT = '消息推送日志表 - 记录消息推送历史' ROW_FORMAT = DYNAMIC;
+ PRIMARY KEY (`sys_message_log_id`) 
+) ENGINE = InnoDB AUTO_INCREMENT = 1 
+COMMENT = '消息推送日志表 - 记录消息推送历史' ;
+
+
+
+
+
+
+
+
+
+
+
+-- [通用化] 行内索引拆出为独立语句（H2/MySQL 双兼容幂等）
+-- [通用化] 无法解析的行内索引定义（保留供 DBA）：INDEX `idx_log_target` (`sys_message_log_target`) USING BTREE COMMENT '接收人索引'
+-- [通用化] 无法解析的行内索引定义（保留供 DBA）：INDEX `idx_log_template` (`sys_message_template_id`) USING BTREE COMMENT '模板ID索引'
+-- [通用化] 无法解析的行内索引定义（保留供 DBA）：INDEX `idx_log_provider` (`sys_message_provider_id`) USING BTREE COMMENT '提供商ID索引'
+-- [通用化] 无法解析的行内索引定义（保留供 DBA）：INDEX `idx_log_create_time` (`create_time`) USING BTREE COMMENT '创建时间索引'
+-- [通用化] 无法解析的行内索引定义（保留供 DBA）：INDEX `idx_log_track_token` (`sys_message_track_token`) USING BTREE COMMENT '追踪标识索引'
+-- [通用化] 无法解析的行内索引定义（保留供 DBA）：INDEX `idx_log_batch` (`sys_message_batch_id`) USING BTREE COMMENT '批次号索引'
+
 
 
 
 
 
 SET FOREIGN_KEY_CHECKS = 1;
+
+
+
+
+
+
 
 
 
@@ -795,10 +938,17 @@ CREATE TABLE IF NOT EXISTS `pay_merchant` (
  `pay_merchant_remark` VARCHAR(500) DEFAULT NULL COMMENT '备注',
  `pay_merchant_status` TINYINT DEFAULT 0 COMMENT '状态:0待审核 1已激活 2已停用 3已注销',
  `pay_merchant_created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
- `pay_merchant_updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
- INDEX `idx_pay_merchant_no` (`pay_merchant_no`),
- INDEX `idx_pay_merchant_status` (`pay_merchant_status`)
+ `pay_merchant_updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='支付商户表';
+
+CREATE INDEX IF NOT EXISTS idx_pay_merchant_no ON pay_merchant (`pay_merchant_no`);
+CREATE INDEX IF NOT EXISTS idx_pay_merchant_status ON pay_merchant (`pay_merchant_status`);
+
+
+
+
+
+
 
 
 
@@ -822,11 +972,18 @@ CREATE TABLE IF NOT EXISTS `pay_merchant_channel` (
  `pay_merchant_channel_status` TINYINT DEFAULT 0 COMMENT '状态:0禁用 1启用',
  `pay_merchant_channel_ext_config` TEXT DEFAULT NULL COMMENT '扩展配置JSON',
  `pay_merchant_channel_created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
- `pay_merchant_channel_updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
- INDEX `idx_pay_merchant_channel_merchant` (`pay_merchant_id`),
- INDEX `idx_pay_merchant_channel_type` (`pay_merchant_channel_channel_type`),
- INDEX `idx_pay_merchant_channel_status` (`pay_merchant_channel_status`)
+ `pay_merchant_channel_updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='商户支付方式配置表';
+
+CREATE INDEX IF NOT EXISTS idx_pay_merchant_channel_merchant ON pay_merchant_channel (`pay_merchant_id`);
+CREATE INDEX IF NOT EXISTS idx_pay_merchant_channel_type ON pay_merchant_channel (`pay_merchant_channel_channel_type`);
+CREATE INDEX IF NOT EXISTS idx_pay_merchant_channel_status ON pay_merchant_channel (`pay_merchant_channel_status`);
+
+
+
+
+
+
 
 
 
@@ -859,14 +1016,21 @@ CREATE TABLE IF NOT EXISTS `pay_order` (
  `pay_order_remark` VARCHAR(500) DEFAULT NULL COMMENT '备注',
  `pay_order_deleted` TINYINT DEFAULT 0 COMMENT '删除标记:0未删 1已删',
  `pay_order_created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
- `pay_order_updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
- INDEX `idx_pay_order_no` (`pay_order_order_no`),
- UNIQUE KEY `uk_pay_order_merchant_business_no` (`pay_order_merchant_id`, `pay_order_business_order_no`),
- INDEX `idx_pay_order_merchant_id` (`pay_order_merchant_id`),
- INDEX `idx_pay_order_status` (`pay_order_status`),
- INDEX `idx_pay_order_deleted` (`pay_order_deleted`),
- INDEX `idx_pay_order_timeout_scan` (`pay_order_status`, `pay_order_deleted`, `pay_order_expire_time`)
+ `pay_order_updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='支付订单表';
+
+CREATE INDEX IF NOT EXISTS idx_pay_order_no ON pay_order (`pay_order_order_no`);
+CREATE UNIQUE INDEX IF NOT EXISTS uk_pay_order_merchant_business_no ON pay_order (`pay_order_merchant_id`, `pay_order_business_order_no`);
+CREATE INDEX IF NOT EXISTS idx_pay_order_merchant_id ON pay_order (`pay_order_merchant_id`);
+CREATE INDEX IF NOT EXISTS idx_pay_order_status ON pay_order (`pay_order_status`);
+CREATE INDEX IF NOT EXISTS idx_pay_order_deleted ON pay_order (`pay_order_deleted`);
+CREATE INDEX IF NOT EXISTS idx_pay_order_timeout_scan ON pay_order (`pay_order_status`, `pay_order_deleted`, `pay_order_expire_time`);
+
+
+
+
+
+
 
 
 
@@ -880,9 +1044,16 @@ CREATE TABLE IF NOT EXISTS `pay_order_state_log` (
  `pay_order_state_log_event` VARCHAR(50) NOT NULL COMMENT '触发事件',
  `pay_order_state_log_operator` VARCHAR(100) DEFAULT NULL COMMENT '操作人',
  `pay_order_state_log_remark` VARCHAR(500) DEFAULT NULL COMMENT '备注',
- `pay_order_state_log_created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
- INDEX `idx_pay_order_state_log_order_id` (`pay_order_state_log_order_id`)
+ `pay_order_state_log_created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='订单状态流转日志表';
+
+CREATE INDEX IF NOT EXISTS idx_pay_order_state_log_order_id ON pay_order_state_log (`pay_order_state_log_order_id`);
+
+
+
+
+
+
 
 
 
@@ -903,11 +1074,18 @@ CREATE TABLE IF NOT EXISTS `pay_transaction_record` (
  `pay_transaction_record_request_payload` TEXT DEFAULT NULL COMMENT '请求快照',
  `pay_transaction_record_response_payload` TEXT DEFAULT NULL COMMENT '响应快照',
  `pay_transaction_record_remark` VARCHAR(500) DEFAULT NULL COMMENT '备注',
- `pay_transaction_record_created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
- INDEX `idx_pay_transaction_no` (`pay_transaction_record_transaction_no`),
- INDEX `idx_pay_transaction_order_no` (`pay_transaction_record_order_no`),
- INDEX `idx_pay_transaction_merchant_id` (`pay_transaction_record_merchant_id`)
+ `pay_transaction_record_created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='交易流水表';
+
+CREATE INDEX IF NOT EXISTS idx_pay_transaction_no ON pay_transaction_record (`pay_transaction_record_transaction_no`);
+CREATE INDEX IF NOT EXISTS idx_pay_transaction_order_no ON pay_transaction_record (`pay_transaction_record_order_no`);
+CREATE INDEX IF NOT EXISTS idx_pay_transaction_merchant_id ON pay_transaction_record (`pay_transaction_record_merchant_id`);
+
+
+
+
+
+
 
 
 
@@ -921,11 +1099,18 @@ CREATE TABLE IF NOT EXISTS `pay_wallet_account` (
  `pay_wallet_account_frozen_balance` DECIMAL(18,2) NOT NULL DEFAULT 0 COMMENT '冻结余额',
  `pay_wallet_account_status` TINYINT NOT NULL DEFAULT 1 COMMENT '状态:1启用 0禁用',
  `pay_wallet_account_created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
- `pay_wallet_account_updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
- UNIQUE KEY `uk_pay_wallet_account_merchant_user` (`pay_wallet_account_merchant_id`, `pay_wallet_account_user_id`),
- INDEX `idx_pay_wallet_account_merchant` (`pay_wallet_account_merchant_id`),
- INDEX `idx_pay_wallet_account_user` (`pay_wallet_account_user_id`)
+ `pay_wallet_account_updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='钱包账户表';
+
+CREATE UNIQUE INDEX IF NOT EXISTS uk_pay_wallet_account_merchant_user ON pay_wallet_account (`pay_wallet_account_merchant_id`, `pay_wallet_account_user_id`);
+CREATE INDEX IF NOT EXISTS idx_pay_wallet_account_merchant ON pay_wallet_account (`pay_wallet_account_merchant_id`);
+CREATE INDEX IF NOT EXISTS idx_pay_wallet_account_user ON pay_wallet_account (`pay_wallet_account_user_id`);
+
+
+
+
+
+
 
 
 
@@ -943,11 +1128,18 @@ CREATE TABLE IF NOT EXISTS `pay_wallet_account_log` (
  `pay_wallet_account_log_balance_after` DECIMAL(18,2) NOT NULL COMMENT '变动后余额',
  `pay_wallet_account_log_operator` VARCHAR(100) DEFAULT NULL COMMENT '操作人',
  `pay_wallet_account_log_remark` VARCHAR(500) DEFAULT NULL COMMENT '备注',
- `pay_wallet_account_log_created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
- UNIQUE KEY `uk_pay_wallet_log_merchant_user_biz` (`pay_wallet_account_log_merchant_id`, `pay_wallet_account_log_user_id`, `pay_wallet_account_log_biz_type`, `pay_wallet_account_log_biz_no`),
- INDEX `idx_pay_wallet_log_merchant_user` (`pay_wallet_account_log_merchant_id`, `pay_wallet_account_log_user_id`),
- INDEX `idx_pay_wallet_log_biz` (`pay_wallet_account_log_biz_type`, `pay_wallet_account_log_biz_no`)
+ `pay_wallet_account_log_created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='钱包账户流水表';
+
+CREATE UNIQUE INDEX IF NOT EXISTS uk_pay_wallet_log_merchant_user_biz ON pay_wallet_account_log (`pay_wallet_account_log_merchant_id`, `pay_wallet_account_log_user_id`, `pay_wallet_account_log_biz_type`, `pay_wallet_account_log_biz_no`);
+CREATE INDEX IF NOT EXISTS idx_pay_wallet_log_merchant_user ON pay_wallet_account_log (`pay_wallet_account_log_merchant_id`, `pay_wallet_account_log_user_id`);
+CREATE INDEX IF NOT EXISTS idx_pay_wallet_log_biz ON pay_wallet_account_log (`pay_wallet_account_log_biz_type`, `pay_wallet_account_log_biz_no`);
+
+
+
+
+
+
 
 
 
@@ -966,10 +1158,17 @@ CREATE TABLE IF NOT EXISTS `pay_merchant_payment_config` (
  `pay_merchant_payment_config_create_by` VARCHAR(64) DEFAULT NULL COMMENT '创建人',
  `pay_merchant_payment_config_update_by` VARCHAR(64) DEFAULT NULL COMMENT '更新人',
  `pay_merchant_payment_config_create_name` VARCHAR(64) DEFAULT NULL COMMENT '创建人姓名',
- `pay_merchant_payment_config_update_name` VARCHAR(64) DEFAULT NULL COMMENT '更新人姓名',
- UNIQUE KEY `uk_pay_merchant_payment_config_merchant` (`pay_merchant_payment_config_merchant_id`),
- INDEX `idx_pay_merchant_payment_config_tenant_merchant` (`pay_merchant_payment_config_tenant_id`, `pay_merchant_payment_config_merchant_id`)
+ `pay_merchant_payment_config_update_name` VARCHAR(64) DEFAULT NULL COMMENT '更新人姓名'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='商户支付配置表';
+
+CREATE UNIQUE INDEX IF NOT EXISTS uk_pay_merchant_payment_config_merchant ON pay_merchant_payment_config (`pay_merchant_payment_config_merchant_id`);
+CREATE INDEX IF NOT EXISTS idx_pay_merchant_payment_config_tenant_merchant ON pay_merchant_payment_config (`pay_merchant_payment_config_tenant_id`, `pay_merchant_payment_config_merchant_id`);
+
+
+
+
+
+
 
 
 
@@ -984,9 +1183,16 @@ CREATE TABLE IF NOT EXISTS `pay_global_config` (
  `pay_global_config_auto_refresh_seconds` INT DEFAULT 60 COMMENT '默认自动刷新秒数',
  `pay_global_config_remark` VARCHAR(500) DEFAULT NULL COMMENT '备注',
  `pay_global_config_created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
- `pay_global_config_updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
- UNIQUE KEY `uk_pay_global_config_key` (`pay_global_config_config_key`)
+ `pay_global_config_updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='支付全局配置表';
+
+CREATE UNIQUE INDEX IF NOT EXISTS uk_pay_global_config_key ON pay_global_config (`pay_global_config_config_key`);
+
+
+
+
+
+
 
 
 
@@ -1010,11 +1216,18 @@ CREATE TABLE IF NOT EXISTS `pay_refund_order` (
  `pay_refund_order_operator` VARCHAR(100) DEFAULT NULL COMMENT '操作人',
  `pay_refund_order_remark` VARCHAR(500) DEFAULT NULL COMMENT '备注',
  `pay_refund_order_created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
- `pay_refund_order_updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
- UNIQUE KEY `uk_pay_refund_order_refund_no` (`pay_refund_order_refund_no`),
- INDEX `idx_pay_refund_order_order` (`pay_refund_order_order_id`, `pay_refund_order_created_at`),
- INDEX `idx_pay_refund_order_status` (`pay_refund_order_status`, `pay_refund_order_updated_at`)
+ `pay_refund_order_updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='支付退款单表';
+
+CREATE UNIQUE INDEX IF NOT EXISTS uk_pay_refund_order_refund_no ON pay_refund_order (`pay_refund_order_refund_no`);
+CREATE INDEX IF NOT EXISTS idx_pay_refund_order_order ON pay_refund_order (`pay_refund_order_order_id`, `pay_refund_order_created_at`);
+CREATE INDEX IF NOT EXISTS idx_pay_refund_order_status ON pay_refund_order (`pay_refund_order_status`, `pay_refund_order_updated_at`);
+
+
+
+
+
+
 
 
 
@@ -1048,13 +1261,20 @@ CREATE TABLE IF NOT EXISTS `pay_notify_log` (
  `pay_notify_log_related_order_id` BIGINT DEFAULT NULL COMMENT '关联订单ID',
  `pay_notify_log_related_refund_id` BIGINT DEFAULT NULL COMMENT '关联退款单ID',
  `pay_notify_log_received_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '兼容旧字段-接收时间',
- `pay_notify_log_processed_time` DATETIME DEFAULT NULL COMMENT '兼容旧字段-处理时间',
- INDEX `idx_pay_notify_log_tenant_merchant` (`pay_notify_log_tenant_id`, `pay_notify_log_merchant_id`),
- INDEX `idx_pay_notify_log_order` (`pay_notify_log_order_no`),
- INDEX `idx_pay_notify_log_refund` (`pay_notify_log_refund_no`),
- INDEX `idx_pay_notify_log_status` (`pay_notify_log_process_status`),
- INDEX `idx_pay_notify_log_received` (`pay_notify_log_received_time`)
+ `pay_notify_log_processed_time` DATETIME DEFAULT NULL COMMENT '兼容旧字段-处理时间'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='支付回调日志表';
+
+CREATE INDEX IF NOT EXISTS idx_pay_notify_log_tenant_merchant ON pay_notify_log (`pay_notify_log_tenant_id`, `pay_notify_log_merchant_id`);
+CREATE INDEX IF NOT EXISTS idx_pay_notify_log_order ON pay_notify_log (`pay_notify_log_order_no`);
+CREATE INDEX IF NOT EXISTS idx_pay_notify_log_refund ON pay_notify_log (`pay_notify_log_refund_no`);
+CREATE INDEX IF NOT EXISTS idx_pay_notify_log_status ON pay_notify_log (`pay_notify_log_process_status`);
+CREATE INDEX IF NOT EXISTS idx_pay_notify_log_received ON pay_notify_log (`pay_notify_log_received_time`);
+
+
+
+
+
+
 
 
 
@@ -1080,12 +1300,19 @@ CREATE TABLE IF NOT EXISTS `pay_notify_error` (
  `pay_notify_error_resolved_by` VARCHAR(64) DEFAULT NULL COMMENT '解决人',
  `pay_notify_error_remark` VARCHAR(512) DEFAULT NULL COMMENT '备注',
  `pay_notify_error_create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
- `pay_notify_error_update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
- INDEX `idx_pay_notify_error_log` (`pay_notify_error_notify_log_id`),
- INDEX `idx_pay_notify_error_status` (`pay_notify_error_status`),
- INDEX `idx_pay_notify_error_retry` (`pay_notify_error_next_retry_time`),
- INDEX `idx_pay_notify_error_tenant_merchant` (`pay_notify_error_tenant_id`, `pay_notify_error_merchant_id`)
+ `pay_notify_error_update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='支付回调异常表';
+
+CREATE INDEX IF NOT EXISTS idx_pay_notify_error_log ON pay_notify_error (`pay_notify_error_notify_log_id`);
+CREATE INDEX IF NOT EXISTS idx_pay_notify_error_status ON pay_notify_error (`pay_notify_error_status`);
+CREATE INDEX IF NOT EXISTS idx_pay_notify_error_retry ON pay_notify_error (`pay_notify_error_next_retry_time`);
+CREATE INDEX IF NOT EXISTS idx_pay_notify_error_tenant_merchant ON pay_notify_error (`pay_notify_error_tenant_id`, `pay_notify_error_merchant_id`);
+
+
+
+
+
+
 
 
 
@@ -1115,14 +1342,21 @@ CREATE TABLE IF NOT EXISTS `pay_wallet_order` (
  `pay_wallet_order_create_by` VARCHAR(64) DEFAULT NULL COMMENT '创建人',
  `pay_wallet_order_update_by` VARCHAR(64) DEFAULT NULL COMMENT '更新人',
  `pay_wallet_order_create_name` VARCHAR(64) DEFAULT NULL COMMENT '创建人姓名',
- `pay_wallet_order_update_name` VARCHAR(64) DEFAULT NULL COMMENT '更新人姓名',
- UNIQUE KEY `uk_pay_wallet_order_no` (`pay_wallet_order_order_no`),
- INDEX `idx_pay_wallet_order_tenant_merchant` (`pay_wallet_order_tenant_id`, `pay_wallet_order_merchant_id`),
- INDEX `idx_pay_wallet_order_user` (`pay_wallet_order_user_id`),
- INDEX `idx_pay_wallet_order_type` (`pay_wallet_order_order_type`),
- INDEX `idx_pay_wallet_order_status` (`pay_wallet_order_status`),
- INDEX `idx_pay_wallet_order_create_time` (`pay_wallet_order_create_time`)
+ `pay_wallet_order_update_name` VARCHAR(64) DEFAULT NULL COMMENT '更新人姓名'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='钱包订单表';
+
+CREATE UNIQUE INDEX IF NOT EXISTS uk_pay_wallet_order_no ON pay_wallet_order (`pay_wallet_order_order_no`);
+CREATE INDEX IF NOT EXISTS idx_pay_wallet_order_tenant_merchant ON pay_wallet_order (`pay_wallet_order_tenant_id`, `pay_wallet_order_merchant_id`);
+CREATE INDEX IF NOT EXISTS idx_pay_wallet_order_user ON pay_wallet_order (`pay_wallet_order_user_id`);
+CREATE INDEX IF NOT EXISTS idx_pay_wallet_order_type ON pay_wallet_order (`pay_wallet_order_order_type`);
+CREATE INDEX IF NOT EXISTS idx_pay_wallet_order_status ON pay_wallet_order (`pay_wallet_order_status`);
+CREATE INDEX IF NOT EXISTS idx_pay_wallet_order_create_time ON pay_wallet_order (`pay_wallet_order_create_time`);
+
+
+
+
+
+
 
 
 
@@ -1144,10 +1378,17 @@ CREATE TABLE IF NOT EXISTS `pay_merchant_wallet_limit` (
  `pay_merchant_wallet_limit_create_by` VARCHAR(64) DEFAULT NULL COMMENT '创建人',
  `pay_merchant_wallet_limit_update_by` VARCHAR(64) DEFAULT NULL COMMENT '更新人',
  `pay_merchant_wallet_limit_create_name` VARCHAR(64) DEFAULT NULL COMMENT '创建人姓名',
- `pay_merchant_wallet_limit_update_name` VARCHAR(64) DEFAULT NULL COMMENT '更新人姓名',
- UNIQUE KEY `uk_pay_merchant_wallet_limit_merchant` (`pay_merchant_wallet_limit_merchant_id`),
- INDEX `idx_pay_merchant_wallet_limit_tenant_merchant` (`pay_merchant_wallet_limit_tenant_id`, `pay_merchant_wallet_limit_merchant_id`)
+ `pay_merchant_wallet_limit_update_name` VARCHAR(64) DEFAULT NULL COMMENT '更新人姓名'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='商户钱包限额配置表';
+
+CREATE UNIQUE INDEX IF NOT EXISTS uk_pay_merchant_wallet_limit_merchant ON pay_merchant_wallet_limit (`pay_merchant_wallet_limit_merchant_id`);
+CREATE INDEX IF NOT EXISTS idx_pay_merchant_wallet_limit_tenant_merchant ON pay_merchant_wallet_limit (`pay_merchant_wallet_limit_tenant_id`, `pay_merchant_wallet_limit_merchant_id`);
+
+
+
+
+
+
 
 
 
@@ -1180,13 +1421,20 @@ CREATE TABLE IF NOT EXISTS `pay_wechat_pay_score_order` (
  `pay_wechat_pay_score_order_completed_at` DATETIME DEFAULT NULL COMMENT '完成时间',
  `pay_wechat_pay_score_order_cancelled_at` DATETIME DEFAULT NULL COMMENT '取消时间',
  `pay_wechat_pay_score_order_create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
- `pay_wechat_pay_score_order_update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
- UNIQUE KEY `uk_pay_wechat_pay_score_order_no` (`pay_wechat_pay_score_order_out_order_no`),
- INDEX `idx_pay_wechat_pay_score_merchant` (`pay_wechat_pay_score_order_merchant_id`, `pay_wechat_pay_score_order_create_time`),
- INDEX `idx_pay_wechat_pay_score_channel` (`pay_wechat_pay_score_order_channel_id`, `pay_wechat_pay_score_order_create_time`),
- INDEX `idx_pay_wechat_pay_score_open` (`pay_wechat_pay_score_order_open_id`),
- INDEX `idx_pay_wechat_pay_score_state` (`pay_wechat_pay_score_order_state`, `pay_wechat_pay_score_order_update_time`)
+ `pay_wechat_pay_score_order_update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='微信支付分订单表';
+
+CREATE UNIQUE INDEX IF NOT EXISTS uk_pay_wechat_pay_score_order_no ON pay_wechat_pay_score_order (`pay_wechat_pay_score_order_out_order_no`);
+CREATE INDEX IF NOT EXISTS idx_pay_wechat_pay_score_merchant ON pay_wechat_pay_score_order (`pay_wechat_pay_score_order_merchant_id`, `pay_wechat_pay_score_order_create_time`);
+CREATE INDEX IF NOT EXISTS idx_pay_wechat_pay_score_channel ON pay_wechat_pay_score_order (`pay_wechat_pay_score_order_channel_id`, `pay_wechat_pay_score_order_create_time`);
+CREATE INDEX IF NOT EXISTS idx_pay_wechat_pay_score_open ON pay_wechat_pay_score_order (`pay_wechat_pay_score_order_open_id`);
+CREATE INDEX IF NOT EXISTS idx_pay_wechat_pay_score_state ON pay_wechat_pay_score_order (`pay_wechat_pay_score_order_state`, `pay_wechat_pay_score_order_update_time`);
+
+
+
+
+
+
 
 
 
@@ -1204,10 +1452,17 @@ CREATE TABLE IF NOT EXISTS `pay_scheduler_config` (
  `pay_scheduler_config_last_run_status` VARCHAR(32) DEFAULT NULL COMMENT '最近运行状态',
  `pay_scheduler_config_last_run_message` VARCHAR(512) DEFAULT NULL COMMENT '最近运行结果',
  `pay_scheduler_config_create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
- `pay_scheduler_config_update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
- UNIQUE KEY `uk_pay_scheduler_config_task_key` (`pay_scheduler_config_task_key`),
- INDEX `idx_pay_scheduler_config_enabled` (`pay_scheduler_config_enabled`)
+ `pay_scheduler_config_update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='支付调度任务配置表';
+
+CREATE UNIQUE INDEX IF NOT EXISTS uk_pay_scheduler_config_task_key ON pay_scheduler_config (`pay_scheduler_config_task_key`);
+CREATE INDEX IF NOT EXISTS idx_pay_scheduler_config_enabled ON pay_scheduler_config (`pay_scheduler_config_enabled`);
+
+
+
+
+
+
 
 
 
@@ -1235,9 +1490,16 @@ CREATE TABLE IF NOT EXISTS `pay_partition_config` (
  `pay_partition_config_last_migrate_at` DATETIME DEFAULT NULL COMMENT '最近迁移时间',
  `pay_partition_config_remark` VARCHAR(500) DEFAULT NULL COMMENT '备注',
  `pay_partition_config_created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
- `pay_partition_config_updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
- UNIQUE KEY `uk_pay_partition_config_business_type` (`pay_partition_config_business_type`)
+ `pay_partition_config_updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='订单与流水分表配置表';
+
+CREATE UNIQUE INDEX IF NOT EXISTS uk_pay_partition_config_business_type ON pay_partition_config (`pay_partition_config_business_type`);
+
+
+
+
+
+
 
 
 
@@ -1293,11 +1555,18 @@ CREATE TABLE IF NOT EXISTS ms_project (
  update_name VARCHAR(64) DEFAULT NULL COMMENT '更新人姓名',
  update_by INT DEFAULT NULL COMMENT '更新人',
  update_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
- PRIMARY KEY (id),
- UNIQUE KEY uk_project_code (ms_project_code),
- KEY idx_project_name (ms_project_name),
- KEY idx_project_type (ms_project_type)
+ PRIMARY KEY (id)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '发布项目台账';
+
+CREATE UNIQUE INDEX IF NOT EXISTS uk_project_code ON ms_project (ms_project_code);
+CREATE INDEX IF NOT EXISTS idx_project_name ON ms_project (ms_project_name);
+CREATE INDEX IF NOT EXISTS idx_project_type ON ms_project (ms_project_type);
+
+
+
+
+
+
 
 
 
@@ -1324,11 +1593,18 @@ CREATE TABLE IF NOT EXISTS ms_project_deploy_log (
  update_name VARCHAR(64) DEFAULT NULL COMMENT '更新人姓名',
  update_by INT DEFAULT NULL COMMENT '更新人',
  update_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
- PRIMARY KEY (id),
- KEY idx_deploy_log_project (ms_project_deploy_log_project_id),
- KEY idx_deploy_log_host (ms_project_deploy_log_host_id),
- KEY idx_deploy_log_action (ms_project_deploy_log_action)
+ PRIMARY KEY (id)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '部署日志';
+
+CREATE INDEX IF NOT EXISTS idx_deploy_log_project ON ms_project_deploy_log (ms_project_deploy_log_project_id);
+CREATE INDEX IF NOT EXISTS idx_deploy_log_host ON ms_project_deploy_log (ms_project_deploy_log_host_id);
+CREATE INDEX IF NOT EXISTS idx_deploy_log_action ON ms_project_deploy_log (ms_project_deploy_log_action);
+
+
+
+
+
+
 
 
 
@@ -1356,125 +1632,36 @@ CREATE TABLE IF NOT EXISTS ms_project_upload_archive (
  update_name VARCHAR(64) DEFAULT NULL COMMENT '更新人姓名',
  update_by INT DEFAULT NULL COMMENT '更新人',
  update_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
- PRIMARY KEY (id),
- KEY idx_archive_project (ms_project_upload_archive_project_id),
- KEY idx_archive_host (ms_project_upload_archive_host_id),
- KEY idx_archive_version (ms_project_upload_archive_version)
+ PRIMARY KEY (id)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '部署包归档';
 
+CREATE INDEX IF NOT EXISTS idx_archive_project ON ms_project_upload_archive (ms_project_upload_archive_project_id);
+CREATE INDEX IF NOT EXISTS idx_archive_host ON ms_project_upload_archive (ms_project_upload_archive_host_id);
+CREATE INDEX IF NOT EXISTS idx_archive_version ON ms_project_upload_archive (ms_project_upload_archive_version);
+ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_log_dir VARCHAR(512) NULL;
+ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_log_file VARCHAR(256) NULL;
+ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_auto_start TINYINT DEFAULT 0;
+ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_health_enabled TINYINT DEFAULT 0;
+ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_health_type VARCHAR(16) DEFAULT;
+ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_health_target VARCHAR(512) NULL;
+ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_health_timeout INT DEFAULT 30;
+ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_auto_rollback TINYINT DEFAULT 0;
+ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_deploy_retry INT DEFAULT 0;
+ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_archive_keep INT DEFAULT 0;
+ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_watchdog_enabled TINYINT DEFAULT 0;
+ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_watchdog_interval INT DEFAULT 30;
+ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_watchdog_max_fail INT DEFAULT 1;
+ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_check_script TEXT NULL;
+ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_preflight_gate TINYINT DEFAULT 0;
+ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_metric_enabled TINYINT DEFAULT 0;
+ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_metric_interval INT DEFAULT 60;
+ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_metric_host_ids VARCHAR(1024) NULL;
 
 
--- [通用化] MODIFY COLUMN 为 MySQL 专属，全量 DDL 已含目标列类型；
--- 老库扩列由 DBA 执行原语句：
--- ALTER TABLE ms_project_deploy_log MODIFY COLUMN ms_project_deploy_log_action VARCHAR(32) NOT NULL COMMENT '操作类型: DEPLOY/UPGRADE/START/STOP/RESTART/ROLLBACK/WATCHDOG/METRIC';;
 
 
--- ============================================================
-ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_log_dir VARCHAR(512) DEFAULT NULL COMMENT '日志目录' AFTER ms_project_restart_script;
 
 
-
-
-
-ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_log_file VARCHAR(256) DEFAULT NULL COMMENT '日志文件名(如 app.log)' AFTER ms_project_log_dir;
-
-
-
-
-
-ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_auto_start TINYINT DEFAULT 0 COMMENT '部署成功后是否自动执行启动脚本: 0否 1是' AFTER ms_project_auto_extract;
-
-
-
-
-
-ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_health_enabled TINYINT DEFAULT 0 COMMENT '部署后健康检查: 0否 1是' AFTER ms_project_auto_start;
-
-
-
-
-
-ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_health_type VARCHAR(16) DEFAULT 'PORT' COMMENT '健康检查类型: PORT/HTTP/PROCESS' AFTER ms_project_health_enabled;
-
-
-
-
-
-ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_health_target VARCHAR(512) DEFAULT NULL COMMENT '健康检查目标(端口/URL/进程)' AFTER ms_project_health_type;
-
-
-
-
-
-ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_health_timeout INT DEFAULT 30 COMMENT '健康检查超时(秒)' AFTER ms_project_health_target;
-
-
-
-
-
-ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_auto_rollback TINYINT DEFAULT 0 COMMENT '失败自动回滚: 0否 1是' AFTER ms_project_health_timeout;
-
-
-
-
-
-ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_deploy_retry INT DEFAULT 0 COMMENT '单台失败重试次数' AFTER ms_project_auto_rollback;
-
-
-
-
-
-ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_archive_keep INT DEFAULT 0 COMMENT '归档保留数量(0不清理)' AFTER ms_project_deploy_retry;
-
-
-
-
-
--- 守护进程（持续存活检测 + 自动拉起）+ 自定义状态检测脚本
-ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_watchdog_enabled TINYINT DEFAULT 0 COMMENT '守护进程开关: 0关闭 1开启(持续检测+挂了自动拉起)' AFTER ms_project_archive_keep;
-
-
-
-
-
-ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_watchdog_interval INT DEFAULT 30 COMMENT '守护检测间隔(秒,每项目独立设置,最小5秒)' AFTER ms_project_watchdog_enabled;
-
-
-
-
-
-ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_watchdog_max_fail INT DEFAULT 1 COMMENT '守护连续失败阈值: 连续N次不健康才自动重启(0=仅告警)' AFTER ms_project_watchdog_interval;
-
-
-
-
-
-ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_check_script TEXT DEFAULT NULL COMMENT '自定义状态检测脚本(exit 0=健康,为空时回退健康检查类型探测)' AFTER ms_project_watchdog_max_fail;
-
-
-
-
-
--- 部署前置门禁 + 项目级指标采集（SSH 轮询，零 Agent）
-ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_preflight_gate TINYINT DEFAULT 0 COMMENT '部署前置门禁: 部署前校验主机在线/延迟,不可达直接拦截' AFTER ms_project_check_script;
-
-
-
-
-
-ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_metric_enabled TINYINT DEFAULT 0 COMMENT '指标采集开关: 0关闭 1开启(SSH 轮询采进程/端口/HTTP指标)' AFTER ms_project_preflight_gate;
-
-
-
-
-
-ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_metric_interval INT DEFAULT 60 COMMENT '指标采集间隔(秒,每项目独立设置,最小5秒)' AFTER ms_project_metric_enabled;
-
-
-
-
-
-ALTER TABLE ms_project ADD COLUMN IF NOT EXISTS ms_project_metric_host_ids VARCHAR(1024) DEFAULT NULL COMMENT '指标采集目标主机ID列表(JSON数组,为空时采集全部绑定主机)' AFTER ms_project_metric_interval;
 
 
 
@@ -1488,10 +1675,17 @@ CREATE TABLE IF NOT EXISTS ms_project_metric (
  metric_name VARCHAR(64) NOT NULL COMMENT '指标名: project.process.mem.mb / project.process.cpu / project.port.alive / project.http.code',
  metric_value DOUBLE DEFAULT NULL COMMENT '指标值',
  collect_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '采集时间',
- PRIMARY KEY (id),
- KEY idx_pm_project (project_id),
- KEY idx_pm_metric (metric_name)
+ PRIMARY KEY (id)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '项目指标时间序列';
+
+CREATE INDEX IF NOT EXISTS idx_pm_project ON ms_project_metric (project_id);
+CREATE INDEX IF NOT EXISTS idx_pm_metric ON ms_project_metric (metric_name);
+
+
+
+
+
+
 
 
 
@@ -1516,7 +1710,19 @@ SET NAMES utf8mb4;
 
 
 
+
+
+
+
+
+
 SET FOREIGN_KEY_CHECKS = 0;
+
+
+
+
+
+
 
 
 
@@ -1542,10 +1748,17 @@ CREATE TABLE IF NOT EXISTS `ms_monitor` (
  `update_name` VARCHAR(64) DEFAULT NULL COMMENT '更新人姓名',
  `update_by` VARCHAR(64) DEFAULT NULL COMMENT '更新人',
  `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
- PRIMARY KEY (`id`),
- KEY `idx_ms_monitor_service` (`ms_monitor_service_type`),
- KEY `idx_ms_monitor_enabled` (`ms_monitor_enabled`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='监控资产';
+ PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='监控资产';
+
+CREATE INDEX IF NOT EXISTS idx_ms_monitor_service ON ms_monitor (`ms_monitor_service_type`);
+CREATE INDEX IF NOT EXISTS idx_ms_monitor_enabled ON ms_monitor (`ms_monitor_enabled`);
+
+
+
+
+
+
 
 
 
@@ -1565,9 +1778,16 @@ CREATE TABLE IF NOT EXISTS `ms_monitor_config` (
  `update_name` VARCHAR(64) DEFAULT NULL COMMENT '更新人姓名',
  `update_by` VARCHAR(64) DEFAULT NULL COMMENT '更新人',
  `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
- PRIMARY KEY (`id`),
- UNIQUE KEY `uk_ms_monitor_config_key` (`ms_monitor_config_key`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='监控全局配置';
+ PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='监控全局配置';
+
+CREATE UNIQUE INDEX IF NOT EXISTS uk_ms_monitor_config_key ON ms_monitor_config (`ms_monitor_config_key`);
+
+
+
+
+
+
 
 
 
@@ -1594,11 +1814,18 @@ CREATE TABLE IF NOT EXISTS `ms_monitor_task` (
  `update_name` VARCHAR(64) DEFAULT NULL,
  `update_by` VARCHAR(64) DEFAULT NULL,
  `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
- PRIMARY KEY (`id`),
- KEY `idx_ms_monitor_task_monitor` (`ms_monitor_task_monitor_id`),
- KEY `idx_ms_monitor_task_sp` (`ms_monitor_task_service_type`, `ms_monitor_task_provider`),
- KEY `idx_ms_monitor_task_enabled` (`ms_monitor_task_enabled`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='监控采集任务';
+ PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='监控采集任务';
+
+CREATE INDEX IF NOT EXISTS idx_ms_monitor_task_monitor ON ms_monitor_task (`ms_monitor_task_monitor_id`);
+CREATE INDEX IF NOT EXISTS idx_ms_monitor_task_sp ON ms_monitor_task (`ms_monitor_task_service_type`, `ms_monitor_task_provider`);
+CREATE INDEX IF NOT EXISTS idx_ms_monitor_task_enabled ON ms_monitor_task (`ms_monitor_task_enabled`);
+
+
+
+
+
+
 
 
 
@@ -1621,9 +1848,16 @@ CREATE TABLE IF NOT EXISTS `ms_monitor_metric_config` (
  `update_name` VARCHAR(64) DEFAULT NULL,
  `update_by` VARCHAR(64) DEFAULT NULL,
  `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
- PRIMARY KEY (`id`),
- KEY `idx_ms_monitor_metric_config_task` (`ms_monitor_metric_config_task_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='监控解析规则';
+ PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='监控解析规则';
+
+CREATE INDEX IF NOT EXISTS idx_ms_monitor_metric_config_task ON ms_monitor_metric_config (`ms_monitor_metric_config_task_id`);
+
+
+
+
+
+
 
 
 
@@ -1650,9 +1884,16 @@ CREATE TABLE IF NOT EXISTS `ms_monitor_gateway` (
  `update_name` VARCHAR(64) DEFAULT NULL,
  `update_by` VARCHAR(64) DEFAULT NULL,
  `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
- PRIMARY KEY (`id`),
- KEY `idx_ms_monitor_gateway_monitor` (`ms_monitor_gateway_monitor_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='监控网关';
+ PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='监控网关';
+
+CREATE INDEX IF NOT EXISTS idx_ms_monitor_gateway_monitor ON ms_monitor_gateway (`ms_monitor_gateway_monitor_id`);
+
+
+
+
+
+
 
 
 
@@ -1668,9 +1909,16 @@ CREATE TABLE IF NOT EXISTS `ms_monitor_metric` (
  `ms_monitor_metric_metric_value` DOUBLE NOT NULL COMMENT '指标值',
  `ms_monitor_metric_metric_tags` VARCHAR(1024) DEFAULT NULL COMMENT '标签 JSON',
  `ms_monitor_metric_collect_time` DATETIME NOT NULL COMMENT '采集时间',
- PRIMARY KEY (`id`),
- KEY `idx_ms_monitor_metric_sm` (`ms_monitor_metric_monitor_id`, `ms_monitor_metric_metric_name`, `ms_monitor_metric_collect_time`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='监控通用时序';
+ PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='监控通用时序';
+
+CREATE INDEX IF NOT EXISTS idx_ms_monitor_metric_sm ON ms_monitor_metric (`ms_monitor_metric_monitor_id`, `ms_monitor_metric_metric_name`, `ms_monitor_metric_collect_time`);
+
+
+
+
+
+
 
 
 
@@ -1688,9 +1936,16 @@ CREATE TABLE IF NOT EXISTS `ms_monitor_metric_statistics` (
  `ms_monitor_metric_statistics_min_value` DOUBLE DEFAULT NULL,
  `ms_monitor_metric_statistics_max_value` DOUBLE DEFAULT NULL,
  `ms_monitor_metric_statistics_count_value` BIGINT DEFAULT 0 COMMENT '样本数',
- PRIMARY KEY (`id`),
- UNIQUE KEY `uk_ms_monitor_metric_statistics_bucket` (`ms_monitor_metric_statistics_monitor_id`, `ms_monitor_metric_statistics_metric_name`, `ms_monitor_metric_statistics_hour_bucket`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='监控小时聚合';
+ PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='监控小时聚合';
+
+CREATE UNIQUE INDEX IF NOT EXISTS uk_ms_monitor_metric_statistics_bucket ON ms_monitor_metric_statistics (`ms_monitor_metric_statistics_monitor_id`, `ms_monitor_metric_statistics_metric_name`, `ms_monitor_metric_statistics_hour_bucket`);
+
+
+
+
+
+
 
 
 
@@ -1709,9 +1964,16 @@ CREATE TABLE IF NOT EXISTS `ms_monitor_metric_cpu` (
  `ms_monitor_metric_cpu_load5` DOUBLE DEFAULT NULL COMMENT '5 分钟平均负载',
  `ms_monitor_metric_cpu_load15` DOUBLE DEFAULT NULL COMMENT '15 分钟平均负载',
  `ms_monitor_metric_cpu_collect_time` DATETIME NOT NULL,
- PRIMARY KEY (`id`),
- KEY `idx_ms_monitor_metric_cpu_mt` (`ms_monitor_metric_cpu_monitor_id`, `ms_monitor_metric_cpu_collect_time`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='监控 CPU 明细';
+ PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='监控 CPU 明细';
+
+CREATE INDEX IF NOT EXISTS idx_ms_monitor_metric_cpu_mt ON ms_monitor_metric_cpu (`ms_monitor_metric_cpu_monitor_id`, `ms_monitor_metric_cpu_collect_time`);
+
+
+
+
+
+
 
 
 
@@ -1728,9 +1990,16 @@ CREATE TABLE IF NOT EXISTS `ms_monitor_metric_memory` (
  `ms_monitor_metric_memory_free_bytes` BIGINT DEFAULT NULL COMMENT '空闲(字节)',
  `ms_monitor_metric_memory_usage_percent` DOUBLE DEFAULT NULL COMMENT '使用率 0-100',
  `ms_monitor_metric_memory_collect_time` DATETIME NOT NULL,
- PRIMARY KEY (`id`),
- KEY `idx_ms_monitor_metric_memory_mt` (`ms_monitor_metric_memory_monitor_id`, `ms_monitor_metric_memory_collect_time`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='监控内存明细';
+ PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='监控内存明细';
+
+CREATE INDEX IF NOT EXISTS idx_ms_monitor_metric_memory_mt ON ms_monitor_metric_memory (`ms_monitor_metric_memory_monitor_id`, `ms_monitor_metric_memory_collect_time`);
+
+
+
+
+
+
 
 
 
@@ -1748,9 +2017,16 @@ CREATE TABLE IF NOT EXISTS `ms_monitor_metric_disk` (
  `ms_monitor_metric_disk_used_bytes` BIGINT DEFAULT NULL,
  `ms_monitor_metric_disk_usage_percent` DOUBLE DEFAULT NULL,
  `ms_monitor_metric_disk_collect_time` DATETIME NOT NULL,
- PRIMARY KEY (`id`),
- KEY `idx_ms_monitor_metric_disk_mt` (`ms_monitor_metric_disk_monitor_id`, `ms_monitor_metric_disk_collect_time`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='监控磁盘明细';
+ PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='监控磁盘明细';
+
+CREATE INDEX IF NOT EXISTS idx_ms_monitor_metric_disk_mt ON ms_monitor_metric_disk (`ms_monitor_metric_disk_monitor_id`, `ms_monitor_metric_disk_collect_time`);
+
+
+
+
+
+
 
 
 
@@ -1767,9 +2043,16 @@ CREATE TABLE IF NOT EXISTS `ms_monitor_metric_network` (
  `ms_monitor_metric_network_tx_bytes` BIGINT DEFAULT NULL COMMENT '发送字节数',
  `ms_monitor_metric_network_speed_bps` BIGINT DEFAULT NULL COMMENT '网卡速率(bps)',
  `ms_monitor_metric_network_collect_time` DATETIME NOT NULL,
- PRIMARY KEY (`id`),
- KEY `idx_ms_monitor_metric_network_mt` (`ms_monitor_metric_network_monitor_id`, `ms_monitor_metric_network_collect_time`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='监控网络明细';
+ PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='监控网络明细';
+
+CREATE INDEX IF NOT EXISTS idx_ms_monitor_metric_network_mt ON ms_monitor_metric_network (`ms_monitor_metric_network_monitor_id`, `ms_monitor_metric_network_collect_time`);
+
+
+
+
+
+
 
 
 
@@ -1789,9 +2072,16 @@ CREATE TABLE IF NOT EXISTS `ms_monitor_metric_jvm` (
  `ms_monitor_metric_jvm_threads` INT DEFAULT NULL,
  `ms_monitor_metric_jvm_daemon_threads` INT DEFAULT NULL,
  `ms_monitor_metric_jvm_collect_time` DATETIME NOT NULL,
- PRIMARY KEY (`id`),
- KEY `idx_ms_monitor_metric_jvm_mt` (`ms_monitor_metric_jvm_monitor_id`, `ms_monitor_metric_jvm_collect_time`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='监控 JVM 明细';
+ PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='监控 JVM 明细';
+
+CREATE INDEX IF NOT EXISTS idx_ms_monitor_metric_jvm_mt ON ms_monitor_metric_jvm (`ms_monitor_metric_jvm_monitor_id`, `ms_monitor_metric_jvm_collect_time`);
+
+
+
+
+
+
 
 
 
@@ -1807,9 +2097,16 @@ CREATE TABLE IF NOT EXISTS `ms_monitor_redis_metric` (
  `ms_monitor_redis_metric_metric_value` DOUBLE NOT NULL,
  `ms_monitor_redis_metric_metric_tags` VARCHAR(1024) DEFAULT NULL,
  `ms_monitor_redis_metric_collect_time` DATETIME NOT NULL,
- PRIMARY KEY (`id`),
- KEY `idx_ms_monitor_redis_metric_sm` (`ms_monitor_redis_metric_monitor_id`, `ms_monitor_redis_metric_metric_name`, `ms_monitor_redis_metric_collect_time`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='监控 Redis 时序';
+ PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='监控 Redis 时序';
+
+CREATE INDEX IF NOT EXISTS idx_ms_monitor_redis_metric_sm ON ms_monitor_redis_metric (`ms_monitor_redis_metric_monitor_id`, `ms_monitor_redis_metric_metric_name`, `ms_monitor_redis_metric_collect_time`);
+
+
+
+
+
+
 
 
 
@@ -1827,9 +2124,16 @@ CREATE TABLE IF NOT EXISTS `ms_monitor_redis_metric_statistics` (
  `ms_monitor_redis_metric_statistics_min_value` DOUBLE DEFAULT NULL,
  `ms_monitor_redis_metric_statistics_max_value` DOUBLE DEFAULT NULL,
  `ms_monitor_redis_metric_statistics_count_value` BIGINT DEFAULT 0,
- PRIMARY KEY (`id`),
- UNIQUE KEY `uk_ms_monitor_redis_metric_statistics_bucket` (`ms_monitor_redis_metric_statistics_monitor_id`, `ms_monitor_redis_metric_statistics_metric_name`, `ms_monitor_redis_metric_statistics_hour_bucket`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='监控 Redis 小时聚合';
+ PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='监控 Redis 小时聚合';
+
+CREATE UNIQUE INDEX IF NOT EXISTS uk_ms_monitor_redis_metric_statistics_bucket ON ms_monitor_redis_metric_statistics (`ms_monitor_redis_metric_statistics_monitor_id`, `ms_monitor_redis_metric_statistics_metric_name`, `ms_monitor_redis_metric_statistics_hour_bucket`);
+
+
+
+
+
+
 
 
 
@@ -1850,6 +2154,18 @@ CREATE TABLE IF NOT EXISTS ms_monitor_alarm_policy (
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 -- ----------------------------------------------------------
 -- 16. 告警规则
 -- ----------------------------------------------------------
@@ -1864,10 +2180,17 @@ CREATE TABLE IF NOT EXISTS ms_monitor_alarm_rule (
  ms_monitor_alarm_rule_silence_minutes INT NOT NULL DEFAULT 10 COMMENT '静默期(分钟)',
  ms_monitor_alarm_rule_level CHAR(2) NULL DEFAULT 'P2' COMMENT '级别: P0~P4',
  ms_monitor_alarm_rule_enabled TINYINT NOT NULL DEFAULT 1 COMMENT '启用状态 1启用 0停用',
- PRIMARY KEY (id),
- KEY idx_alarm_rule_policy (ms_monitor_alarm_rule_policy_id),
- KEY idx_alarm_rule_metric (ms_monitor_alarm_rule_metric_name)
+ PRIMARY KEY (id)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '告警规则';
+
+CREATE INDEX IF NOT EXISTS idx_alarm_rule_policy ON ms_monitor_alarm_rule (ms_monitor_alarm_rule_policy_id);
+CREATE INDEX IF NOT EXISTS idx_alarm_rule_metric ON ms_monitor_alarm_rule (ms_monitor_alarm_rule_metric_name);
+
+
+
+
+
+
 
 
 
@@ -1890,10 +2213,17 @@ CREATE TABLE IF NOT EXISTS ms_monitor_alarm_event (
  ms_monitor_alarm_event_trigger_time DATETIME NULL COMMENT '触发时间',
  ms_monitor_alarm_event_handle_time DATETIME NULL COMMENT '处理时间',
  ms_monitor_alarm_event_rule_snapshot VARCHAR(1024) NULL COMMENT '触发时规则配置快照(JSON)',
- PRIMARY KEY (id),
- KEY idx_alarm_event_monitor (ms_monitor_alarm_event_monitor_id),
- KEY idx_alarm_event_status (ms_monitor_alarm_event_status)
+ PRIMARY KEY (id)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '告警事件';
+
+CREATE INDEX IF NOT EXISTS idx_alarm_event_monitor ON ms_monitor_alarm_event (ms_monitor_alarm_event_monitor_id);
+CREATE INDEX IF NOT EXISTS idx_alarm_event_status ON ms_monitor_alarm_event (ms_monitor_alarm_event_status);
+
+
+
+
+
+
 
 
 
@@ -1914,9 +2244,16 @@ CREATE TABLE IF NOT EXISTS ms_monitor_alarm_maintenance_window (
  ms_monitor_alarm_maintenance_window_remark VARCHAR(255) NULL COMMENT '备注',
  ms_monitor_alarm_maintenance_window_create_time DATETIME NULL COMMENT '创建时间',
  ms_monitor_alarm_maintenance_window_update_time DATETIME NULL COMMENT '更新时间',
- PRIMARY KEY (id),
- KEY idx_alarm_mw_enabled (ms_monitor_alarm_maintenance_window_enabled)
+ PRIMARY KEY (id)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '告警维护窗口';
+
+CREATE INDEX IF NOT EXISTS idx_alarm_mw_enabled ON ms_monitor_alarm_maintenance_window (ms_monitor_alarm_maintenance_window_enabled);
+
+
+
+
+
+
 
 
 
@@ -1942,47 +2279,32 @@ CREATE TABLE IF NOT EXISTS ms_server_node (
  update_name VARCHAR(64) DEFAULT NULL COMMENT '更新人姓名',
  update_by INT DEFAULT NULL COMMENT '更新人',
  update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
- PRIMARY KEY (id),
- UNIQUE KEY uk_ms_server_node_name (ms_server_node_name)
+ PRIMARY KEY (id)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '服务管理-协议服务器节点';
 
-
-
-
-
--- ============================================================
--- 补列/索引（建表之后统一执行，幂等 IF NOT EXISTS）
--- ============================================================
-
--- MsMonitor 追加探针标识列(Agent 推送鉴权)
-ALTER TABLE ms_monitor ADD COLUMN IF NOT EXISTS ms_monitor_agent_key VARCHAR(64) NULL COMMENT '探针标识(Agent推送鉴权)';
-
-
-
-
-
--- ms_monitor 追加关联服务器主机 ID 列(ms_server_host.id, 资产联动)
-ALTER TABLE ms_monitor ADD COLUMN IF NOT EXISTS ms_server_host_id BIGINT NULL COMMENT '关联服务器主机 ID(ms_server_host.id, 资产联动)';
-
-
-
-
-
--- 便于按资产查询监控项
+CREATE UNIQUE INDEX IF NOT EXISTS uk_ms_server_node_name ON ms_server_node (ms_server_node_name);
+ALTER TABLE ms_monitor ADD COLUMN IF NOT EXISTS ms_monitor_agent_key VARCHAR(64) NULL;
+ALTER TABLE ms_monitor ADD COLUMN IF NOT EXISTS ms_server_host_id BIGINT NULL;
 CREATE INDEX IF NOT EXISTS idx_ms_monitor_server_host ON ms_monitor (ms_server_host_id);
+ALTER TABLE ms_monitor_alarm_event ADD COLUMN IF NOT EXISTS ms_monitor_alarm_event_rule_snapshot VARCHAR(1024) NULL;
 
 
 
 
 
--- MsMonitorAlarmEvent 追加触发时规则配置快照列
-ALTER TABLE ms_monitor_alarm_event ADD COLUMN IF NOT EXISTS ms_monitor_alarm_event_rule_snapshot VARCHAR(1024) NULL COMMENT '触发时规则配置快照(JSON)';
+
 
 
 
 
 
 SET FOREIGN_KEY_CHECKS = 1;
+
+
+
+
+
+
 
 
 
@@ -2019,9 +2341,16 @@ CREATE TABLE IF NOT EXISTS ms_server_group (
  update_name VARCHAR(64) NULL COMMENT '更新人名称',
  update_by INT NULL COMMENT '更新人',
  update_time DATETIME NULL COMMENT '更新时间',
- PRIMARY KEY (id),
- KEY idx_server_group_parent (ms_server_group_parent_id)
+ PRIMARY KEY (id)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '服务器分组';
+
+CREATE INDEX IF NOT EXISTS idx_server_group_parent ON ms_server_group (ms_server_group_parent_id);
+
+
+
+
+
+
 
 
 
@@ -2051,6 +2380,18 @@ CREATE TABLE IF NOT EXISTS ms_server_key (
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 -- ---------------------------------------------------------------------
 -- 3. 登录身份
 -- ---------------------------------------------------------------------
@@ -2072,9 +2413,16 @@ CREATE TABLE IF NOT EXISTS ms_server_identity (
  update_name VARCHAR(64) NULL COMMENT '更新人名称',
  update_by INT NULL COMMENT '更新人',
  update_time DATETIME NULL COMMENT '更新时间',
- PRIMARY KEY (id),
- KEY idx_server_identity_key (ms_server_identity_key_id)
+ PRIMARY KEY (id)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '登录身份';
+
+CREATE INDEX IF NOT EXISTS idx_server_identity_key ON ms_server_identity (ms_server_identity_key_id);
+
+
+
+
+
+
 
 
 
@@ -2124,11 +2472,18 @@ CREATE TABLE IF NOT EXISTS ms_server_host (
  update_name VARCHAR(64) NULL COMMENT '更新人名称',
  update_by INT NULL COMMENT '更新人',
  update_time DATETIME NULL COMMENT '更新时间',
- PRIMARY KEY (id),
- UNIQUE KEY uk_server_host_agent (ms_server_host_agent_key),
- KEY idx_server_host_group (ms_server_group_id),
- KEY idx_server_host_address (ms_server_host_address)
+ PRIMARY KEY (id)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '服务器主机';
+
+CREATE UNIQUE INDEX IF NOT EXISTS uk_server_host_agent ON ms_server_host (ms_server_host_agent_key);
+CREATE INDEX IF NOT EXISTS idx_server_host_group ON ms_server_host (ms_server_group_id);
+CREATE INDEX IF NOT EXISTS idx_server_host_address ON ms_server_host (ms_server_host_address);
+
+
+
+
+
+
 
 
 
@@ -2142,10 +2497,17 @@ CREATE TABLE IF NOT EXISTS ms_server_host_identity (
  ms_server_host_identity_host_id BIGINT NOT NULL COMMENT '主机ID',
  ms_server_host_identity_identity_id BIGINT NOT NULL COMMENT '身份ID',
  ms_server_host_identity_sort INT NOT NULL DEFAULT 1 COMMENT '优先级, 越小越优先',
- PRIMARY KEY (id),
- KEY idx_host_identity_host (ms_server_host_identity_host_id),
- KEY idx_host_identity_identity (ms_server_host_identity_identity_id)
+ PRIMARY KEY (id)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '主机身份关联';
+
+CREATE INDEX IF NOT EXISTS idx_host_identity_host ON ms_server_host_identity (ms_server_host_identity_host_id);
+CREATE INDEX IF NOT EXISTS idx_host_identity_identity ON ms_server_host_identity (ms_server_host_identity_identity_id);
+
+
+
+
+
+
 
 
 
@@ -2165,10 +2527,17 @@ CREATE TABLE IF NOT EXISTS ms_terminal_session (
  ms_terminal_session_close_time DATETIME NULL COMMENT '关闭时间',
  ms_terminal_session_status VARCHAR(8) NOT NULL DEFAULT 'OPEN' COMMENT '状态: OPEN/CLOSED',
  ms_terminal_session_close_reason VARCHAR(128) NULL COMMENT '关闭原因',
- PRIMARY KEY (id),
- KEY idx_terminal_session_host (ms_terminal_session_host_id),
- KEY idx_terminal_session_status (ms_terminal_session_status)
+ PRIMARY KEY (id)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '终端会话审计';
+
+CREATE INDEX IF NOT EXISTS idx_terminal_session_host ON ms_terminal_session (ms_terminal_session_host_id);
+CREATE INDEX IF NOT EXISTS idx_terminal_session_status ON ms_terminal_session (ms_terminal_session_status);
+
+
+
+
+
+
 
 
 
@@ -2195,6 +2564,18 @@ CREATE TABLE IF NOT EXISTS ms_terminal_snippet (
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 -- ---------------------------------------------------------------------
 -- 8. 终端路径书签
 -- ---------------------------------------------------------------------
@@ -2204,9 +2585,16 @@ CREATE TABLE IF NOT EXISTS ms_terminal_bookmark (
  ms_terminal_bookmark_name VARCHAR(64) NULL COMMENT '书签名称',
  ms_terminal_bookmark_path VARCHAR(255)NOT NULL COMMENT '书签路径',
  ms_terminal_bookmark_sort INT NOT NULL DEFAULT 0 COMMENT '排序号',
- PRIMARY KEY (id),
- KEY idx_terminal_bookmark_host (ms_terminal_bookmark_host_id)
+ PRIMARY KEY (id)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '终端路径书签';
+
+CREATE INDEX IF NOT EXISTS idx_terminal_bookmark_host ON ms_terminal_bookmark (ms_terminal_bookmark_host_id);
+
+
+
+
+
+
 
 
 
@@ -2239,6 +2627,18 @@ CREATE TABLE IF NOT EXISTS ms_exec_job (
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 -- ---------------------------------------------------------------------
 -- 10. 批量执行日志
 -- ---------------------------------------------------------------------
@@ -2256,11 +2656,18 @@ CREATE TABLE IF NOT EXISTS ms_exec_log (
  ms_exec_log_start_time DATETIME NULL COMMENT '开始时间',
  ms_exec_log_end_time DATETIME NULL COMMENT '结束时间',
  ms_exec_log_cost_ms BIGINT NULL COMMENT '耗时(毫秒)',
- PRIMARY KEY (id),
- KEY idx_exec_log_host (ms_exec_log_host_id),
- KEY idx_exec_log_job (ms_exec_log_job_id),
- KEY idx_exec_log_type (ms_exec_log_type)
+ PRIMARY KEY (id)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '批量执行日志';
+
+CREATE INDEX IF NOT EXISTS idx_exec_log_host ON ms_exec_log (ms_exec_log_host_id);
+CREATE INDEX IF NOT EXISTS idx_exec_log_job ON ms_exec_log (ms_exec_log_job_id);
+CREATE INDEX IF NOT EXISTS idx_exec_log_type ON ms_exec_log (ms_exec_log_type);
+
+
+
+
+
+
 
 
 
@@ -2280,9 +2687,16 @@ CREATE TABLE IF NOT EXISTS ms_server_config (
  update_name VARCHAR(64) NULL COMMENT '更新人名称',
  update_by INT NULL COMMENT '更新人',
  update_time DATETIME NULL COMMENT '更新时间',
- PRIMARY KEY (id),
- UNIQUE KEY uk_server_config_key (ms_server_config_key)
+ PRIMARY KEY (id)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '服务器系统配置';
+
+CREATE UNIQUE INDEX IF NOT EXISTS uk_server_config_key ON ms_server_config (ms_server_config_key);
+
+
+
+
+
+
 
 
 
@@ -2301,88 +2715,28 @@ CREATE TABLE IF NOT EXISTS ms_proxy (
  update_name VARCHAR(64) NULL COMMENT '更新人名称',
  update_by INT NULL COMMENT '更新人',
  update_time DATETIME NULL COMMENT '更新时间',
- PRIMARY KEY (id),
- KEY idx_proxy_host_port (host, port)
+ PRIMARY KEY (id)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '免费代理';
 
-
-
-
-
--- ---------------------------------------------------------------------
--- 主机延迟检测字段（原 V1.1__add_host_delay_detect，老库补列；新库已由
--- ms_server_host 全量建表包含，此处幂等 IF NOT EXISTS）
--- ---------------------------------------------------------------------
-ALTER TABLE ms_server_host ADD COLUMN IF NOT EXISTS ms_server_host_delay_enabled INT NULL DEFAULT 0 COMMENT '延迟检测开关(主机级)';
-
-
-
-
-
-ALTER TABLE ms_server_host ADD COLUMN IF NOT EXISTS ms_server_host_delay_interval INT NULL DEFAULT 60 COMMENT '延迟检测间隔秒(主机级)';
-
-
-
-
-
-ALTER TABLE ms_server_host ADD COLUMN IF NOT EXISTS ms_server_host_delay_ms BIGINT NULL COMMENT '最近延迟毫秒(检测结果)';
+CREATE INDEX IF NOT EXISTS idx_proxy_host_port ON ms_proxy (host, port);
+ALTER TABLE ms_server_host ADD COLUMN IF NOT EXISTS ms_server_host_delay_enabled INT NULL DEFAULT 0;
+ALTER TABLE ms_server_host ADD COLUMN IF NOT EXISTS ms_server_host_delay_interval INT NULL DEFAULT 60;
+ALTER TABLE ms_server_host ADD COLUMN IF NOT EXISTS ms_server_host_delay_ms BIGINT NULL;
+ALTER TABLE ms_server_host ADD COLUMN IF NOT EXISTS ms_server_host_last_delay_time DATETIME NULL;
+ALTER TABLE ms_server_host ADD COLUMN IF NOT EXISTS ms_server_host_ports TEXT NULL;
+ALTER TABLE ms_server_host ADD COLUMN IF NOT EXISTS ms_server_host_last_port_scan_time DATETIME NULL;
+ALTER TABLE ms_server_host ADD COLUMN IF NOT EXISTS ms_server_host_gpu_count INT NULL;
+ALTER TABLE ms_server_host ADD COLUMN IF NOT EXISTS ms_server_host_gpu_model VARCHAR(256) NULL;
+ALTER TABLE ms_server_host ADD COLUMN IF NOT EXISTS ms_server_host_networks TEXT NULL;
+ALTER TABLE ms_server_host ADD COLUMN IF NOT EXISTS ms_server_host_cpu_usage DECIMAL(5,2) NULL;
+ALTER TABLE ms_server_host ADD COLUMN IF NOT EXISTS ms_server_host_mem_usage DECIMAL(5,2) NULL;
+ALTER TABLE ms_server_host ADD COLUMN IF NOT EXISTS ms_server_host_disk_usage DECIMAL(5,2) NULL;
 
 
 
 
 
-ALTER TABLE ms_server_host ADD COLUMN IF NOT EXISTS ms_server_host_last_delay_time DATETIME NULL COMMENT '最近延迟检测时间(主机级)';
 
-
-
-
-
-ALTER TABLE ms_server_host ADD COLUMN IF NOT EXISTS ms_server_host_ports TEXT NULL COMMENT '端口扫描结果(JSON数组)';
-
-
-
-
-
-ALTER TABLE ms_server_host ADD COLUMN IF NOT EXISTS ms_server_host_last_port_scan_time DATETIME NULL COMMENT '最近端口扫描时间';
-
-
-
-
-
--- ---------------------------------------------------------------------
--- 主机扩展采集字段（GPU/网卡/CPU使用率/内存使用率/磁盘使用率，幂等 IF NOT EXISTS）
--- ---------------------------------------------------------------------
-ALTER TABLE ms_server_host ADD COLUMN IF NOT EXISTS ms_server_host_gpu_count INT NULL COMMENT 'GPU卡数(探测结果)';
-
-
-
-
-
-ALTER TABLE ms_server_host ADD COLUMN IF NOT EXISTS ms_server_host_gpu_model VARCHAR(256) NULL COMMENT 'GPU型号(探测结果)';
-
-
-
-
-
-ALTER TABLE ms_server_host ADD COLUMN IF NOT EXISTS ms_server_host_networks TEXT NULL COMMENT '网卡信息(JSON数组)';
-
-
-
-
-
-ALTER TABLE ms_server_host ADD COLUMN IF NOT EXISTS ms_server_host_cpu_usage DECIMAL(5,2) NULL COMMENT 'CPU使用率%(探测结果)';
-
-
-
-
-
-ALTER TABLE ms_server_host ADD COLUMN IF NOT EXISTS ms_server_host_mem_usage DECIMAL(5,2) NULL COMMENT '内存使用率%(探测结果)';
-
-
-
-
-
-ALTER TABLE ms_server_host ADD COLUMN IF NOT EXISTS ms_server_host_disk_usage DECIMAL(5,2) NULL COMMENT '磁盘使用率%(探测结果)';
 
 
 
@@ -2411,495 +2765,17 @@ CREATE TABLE IF NOT EXISTS `sys_ai_usage_sync_log` (
  `sys_ai_usage_sync_log_source` VARCHAR(64) NULL DEFAULT 'schedule' COMMENT '来源（schedule/manual/parser）',
  `sys_ai_usage_sync_log_message` TEXT NULL COMMENT '日志内容',
  `create_time` DATETIME NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
- PRIMARY KEY (`sys_ai_usage_sync_log_id`),
- KEY `idx_usage_sync_log_time` (`create_time`)
+ PRIMARY KEY (`sys_ai_usage_sync_log_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI 用量同步日志';
 
-
-
--- [通用化] 原动态块无法自动改写，保留为注释（MySQL 老库补列需 DBA 手工执行）：
---   -- 3. 模型别名列 SET @columnname = 'sys_ai_model_aliases';
---   SET @preparedStatement = (SELECT IF(   (     SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS     WHERE TABLE_SCHEMA = @dbname AND TABLE_NAME = @tablename AND COLUMN_NAME = @columnname   ) > 0,   'SELECT 1',   CONCAT('ALTER TABLE `', @tablename, '` ADD COLUMN `', @columnname, '` VARCHAR(512) DEFAULT NULL COMMENT ''模型别名(JSON数组)'' AFTER `sys_ai_model_cache_price`') ));
---   PREPARE alterIfNotExists FROM @preparedStatement;
---   EXECUTE alterIfNotExists;
---   DEALLOCATE PREPARE alterIfNotExists;
-
--- [通用化] 原动态块无法自动改写，保留为注释（MySQL 老库补列需 DBA 手工执行）：
---   -- 4. 连通性测试延迟字段 SET @columnname = 'sys_ai_model_last_latency';
---   SET @preparedStatement = (SELECT IF(   (     SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS     WHERE TABLE_SCHEMA = @dbname AND TABLE_NAME = @tablename AND COLUMN_NAME = @columnname   ) > 0,   'SELECT 1',   CONCAT('ALTER TABLE `', @tablename, '` ADD COLUMN `', @columnname, '` BIGINT DEFAULT NULL COMMENT ''最近一次连通性测试延迟(毫秒)'' AFTER `sys_ai_model_aliases`') ));
---   PREPARE alterIfNotExists FROM @preparedStatement;
---   EXECUTE alterIfNotExists;
---   DEALLOCATE PREPARE alterIfNotExists;
-
--- [通用化] 原动态块无法自动改写，保留为注释（MySQL 老库补列需 DBA 手工执行）：
---   SET @columnname = 'sys_ai_model_last_test_time';
---   SET @preparedStatement = (SELECT IF(   (     SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS     WHERE TABLE_SCHEMA = @dbname AND TABLE_NAME = @tablename AND COLUMN_NAME = @columnname   ) > 0,   'SELECT 1',   CONCAT('ALTER TABLE `', @tablename, '` ADD COLUMN `', @columnname, '` DATETIME DEFAULT NULL COMMENT ''最近一次连通性测试时间'' AFTER `sys_ai_model_last_latency`') ));
---   PREPARE alterIfNotExists FROM @preparedStatement;
---   EXECUTE alterIfNotExists;
---   DEALLOCATE PREPARE alterIfNotExists;
-
--- [通用化] 老库补索引（原 SET@+PREPARE 动态段改写）
-CREATE INDEX IF NOT EXISTS idx_sys_ai_usage_call_time ON sys_ai_usage (sys_ai_usage_call_time)',
-    'SELECT ''idx_sys_ai_usage_call_time already exists, skipped'''
-);;
-
-PREPARE idx_stmt FROM @create_idx_sql;;
-
-EXECUTE idx_stmt;;
-
-DEALLOCATE PREPARE idx_stmt;;
+CREATE INDEX IF NOT EXISTS idx_usage_sync_log_time ON sys_ai_usage_sync_log (`create_time`);
+CREATE INDEX IF NOT EXISTS idx_sys_ai_usage_call_time ON sys_ai_usage (sys_ai_usage_call_time);
 
 
 
--- ---------------------------------------------------------------------
--- 来源: V1.0__init_eduai.sql
--- ---------------------------------------------------------------------
--- ============================================
--- Spring Support EduAI Starter 建表脚本
--- 版本: V1.0
--- 说明: 教育AI模块数据库表
--- 已并入: V1.1__init_dimensions.sql（学科/年级/班级/学生/教师 五张维度表 DDL）
---         V1.2__add_fun_module.sql（趣味模块配置/成语/成语学段映射三张表 DDL）
--- 种子数据: 维度种子在 V1.1__initdata_dimensions.sql，趣味模块种子在
---           V1.2__initdata_fun_module.sql（异步执行，不阻塞启动）
--- ============================================
-
--- ----------------------------
--- 知识点表
--- ----------------------------
-CREATE TABLE IF NOT EXISTS edu_knowledge_point (
-    knowledge_point_id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '知识点ID',
-    knowledge_point_name VARCHAR(200) NOT NULL COMMENT '知识点名称',
-    knowledge_point_code VARCHAR(100) COMMENT '知识点编码',
-    knowledge_point_parent_id BIGINT DEFAULT 0 COMMENT '父知识点ID，0表示根节点',
-    knowledge_point_subject VARCHAR(50) COMMENT '所属学科',
-    knowledge_point_grade_level VARCHAR(20) COMMENT '学段: PRIMARY/JUNIOR/SENIOR/UNIVERSITY',
-    knowledge_point_grade VARCHAR(20) COMMENT '年级: 1-12 或 大一-大四',
-    knowledge_point_description VARCHAR(500) COMMENT '知识点描述',
-    knowledge_point_embedding TEXT COMMENT '向量嵌入（JSON数组）',
-    knowledge_point_sort_order INT DEFAULT 0 COMMENT '排序号',
-    knowledge_point_status TINYINT DEFAULT 1 COMMENT '状态: 0-停用 1-启用',
-    knowledge_point_create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    knowledge_point_update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    knowledge_point_create_by VARCHAR(64) COMMENT '创建人',
-    knowledge_point_update_by VARCHAR(64) COMMENT '更新人',
-    INDEX idx_parent_id (knowledge_point_parent_id),
-    INDEX idx_subject (knowledge_point_subject),
-    INDEX idx_grade_level (knowledge_point_grade_level),
-    INDEX idx_grade (knowledge_point_grade)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='知识点表';
-
-
--- ----------------------------
--- 题目库表
--- ----------------------------
-CREATE TABLE IF NOT EXISTS edu_question (
-    question_id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '题目ID',
-    question_type VARCHAR(30) NOT NULL COMMENT '题型: SINGLE_CHOICE/MULTIPLE_CHOICE/JUDGE/FILL/BLANK/SHORT_ANSWER/ESSAY',
-    question_subject VARCHAR(50) NOT NULL COMMENT '学科',
-    question_grade_level VARCHAR(20) NOT NULL COMMENT '学段: PRIMARY/JUNIOR/SENIOR/UNIVERSITY',
-    question_grade VARCHAR(20) NOT NULL COMMENT '年级: 1-12 或 大一-大四',
-    question_year VARCHAR(10) COMMENT '年份',
-    question_difficulty TINYINT DEFAULT 3 COMMENT '难度: 1-5，1最简单',
-    question_knowledge_point_ids VARCHAR(500) COMMENT '关联知识点ID列表，逗号分隔',
-    question_stem TEXT NOT NULL COMMENT '题干',
-    question_stem_images VARCHAR(1000) COMMENT '题干图片URL，逗号分隔',
-    question_options JSON COMMENT '选项（JSON数组）',
-    question_answer TEXT NOT NULL COMMENT '标准答案',
-    question_analysis TEXT COMMENT '答案解析',
-    question_source VARCHAR(200) COMMENT '来源（采集URL/手动录入）',
-    question_source_type VARCHAR(30) DEFAULT 'MANUAL' COMMENT '来源类型: MANUAL/IMPORT/CRAWL',
-    question_audit_status TINYINT DEFAULT 0 COMMENT '审核状态: 0-待审核 1-通过 2-驳回',
-    question_use_count INT DEFAULT 0 COMMENT '使用次数',
-    question_correct_rate DECIMAL(5,2) DEFAULT 0.00 COMMENT '正确率',
-    question_status TINYINT DEFAULT 1 COMMENT '状态: 0-停用 1-启用',
-    question_create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    question_update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    question_create_by VARCHAR(64) COMMENT '创建人',
-    question_update_by VARCHAR(64) COMMENT '更新人',
-    INDEX idx_type (question_type),
-    INDEX idx_subject (question_subject),
-    INDEX idx_grade_level (question_grade_level),
-    INDEX idx_grade (question_grade),
-    INDEX idx_year (question_year),
-    INDEX idx_difficulty (question_difficulty),
-    INDEX idx_audit_status (question_audit_status),
-    INDEX idx_status (question_status)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='题目库表';
-
-
--- ----------------------------
--- 试卷表
--- ----------------------------
-CREATE TABLE IF NOT EXISTS edu_paper (
-    paper_id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '试卷ID',
-    paper_name VARCHAR(200) NOT NULL COMMENT '试卷名称',
-    paper_subject VARCHAR(50) NOT NULL COMMENT '学科',
-    paper_grade_level VARCHAR(20) NOT NULL COMMENT '学段',
-    paper_grade VARCHAR(20) NOT NULL COMMENT '年级',
-    paper_total_score INT NOT NULL COMMENT '总分',
-    paper_duration INT COMMENT '考试时长（分钟）',
-    paper_question_count INT DEFAULT 0 COMMENT '题目总数',
-    paper_config JSON COMMENT '组卷配置（JSON）',
-    paper_status TINYINT DEFAULT 1 COMMENT '状态: 0-草稿 1-已发布 2-已归档',
-    paper_source VARCHAR(30) DEFAULT 'AI' COMMENT '来源: AI/MANUAL',
-    paper_create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    paper_update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    paper_create_by VARCHAR(64) COMMENT '创建人',
-    paper_update_by VARCHAR(64) COMMENT '更新人',
-    INDEX idx_subject (paper_subject),
-    INDEX idx_grade_level (paper_grade_level),
-    INDEX idx_status (paper_status)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='试卷表';
-
-
--- ----------------------------
--- 试卷-题目关联表
--- ----------------------------
-CREATE TABLE IF NOT EXISTS edu_paper_question (
-    paper_question_id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '关联ID',
-    paper_question_paper_id BIGINT NOT NULL COMMENT '试卷ID',
-    paper_question_question_id BIGINT NOT NULL COMMENT '题目ID',
-    paper_question_order INT DEFAULT 0 COMMENT '题目顺序',
-    paper_question_score INT DEFAULT 0 COMMENT '该题分值',
-    paper_question_create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    UNIQUE KEY uk_paper_question (paper_question_paper_id, paper_question_question_id),
-    INDEX idx_paper_id (paper_question_paper_id),
-    INDEX idx_question_id (paper_question_question_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='试卷-题目关联表';
-
-
--- ----------------------------
--- 考试表
--- ----------------------------
-CREATE TABLE IF NOT EXISTS edu_exam (
-    exam_id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '考试ID',
-    exam_paper_id BIGINT NOT NULL COMMENT '试卷ID',
-    exam_name VARCHAR(200) NOT NULL COMMENT '考试名称',
-    exam_class_id VARCHAR(100) COMMENT '班级ID',
-    exam_start_time DATETIME COMMENT '开始时间',
-    exam_end_time DATETIME COMMENT '结束时间',
-    exam_duration INT COMMENT '考试时长（分钟）',
-    exam_status TINYINT DEFAULT 1 COMMENT '状态: 0-未开始 1-进行中 2-已结束',
-    exam_create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    exam_update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    exam_create_by VARCHAR(64) COMMENT '创建人',
-    exam_update_by VARCHAR(64) COMMENT '更新人',
-    INDEX idx_paper_id (exam_paper_id),
-    INDEX idx_status (exam_status),
-    INDEX idx_start_time (exam_start_time)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='考试表';
-
-
--- ----------------------------
--- 答题卡表
--- ----------------------------
-CREATE TABLE IF NOT EXISTS edu_answer_sheet (
-    answer_sheet_id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '答题卡ID',
-    answer_sheet_exam_id BIGINT NOT NULL COMMENT '考试ID',
-    answer_sheet_student_id VARCHAR(64) NOT NULL COMMENT '学生ID',
-    answer_sheet_content JSON COMMENT '答题内容（JSON）',
-    answer_sheet_submit_time DATETIME COMMENT '提交时间',
-    answer_sheet_status TINYINT DEFAULT 0 COMMENT '状态: 0-未提交 1-已提交 2-已批改',
-    answer_sheet_create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    answer_sheet_update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    UNIQUE KEY uk_exam_student (answer_sheet_exam_id, answer_sheet_student_id),
-    INDEX idx_exam_id (answer_sheet_exam_id),
-    INDEX idx_student_id (answer_sheet_student_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='答题卡表';
-
-
--- ----------------------------
--- 阅卷结果表
--- ----------------------------
-CREATE TABLE IF NOT EXISTS edu_marking_result (
-    marking_result_id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '阅卷结果ID',
-    marking_result_answer_sheet_id BIGINT NOT NULL COMMENT '答题卡ID',
-    marking_result_question_id BIGINT NOT NULL COMMENT '题目ID',
-    marking_result_score INT COMMENT '得分',
-    marking_result_comment VARCHAR(500) COMMENT '评语',
-    marking_result_detail JSON COMMENT '批改详情（JSON）',
-    marking_result_ai_score INT COMMENT 'AI评分',
-    marking_result_ai_comment VARCHAR(500) COMMENT 'AI评语',
-    marking_result_teacher_score INT COMMENT '教师修正后评分',
-    marking_result_teacher_comment VARCHAR(500) COMMENT '教师评语',
-    marking_result_status TINYINT DEFAULT 0 COMMENT '状态: 0-待批改 1-AI已批改 2-教师已确认',
-    marking_result_task_id VARCHAR(64) COMMENT '异步任务ID',
-    marking_result_create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    marking_result_update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    INDEX idx_answer_sheet (marking_result_answer_sheet_id),
-    INDEX idx_question_id (marking_result_question_id),
-    INDEX idx_status (marking_result_status)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='阅卷结果表';
-
-
--- ----------------------------
--- 错题记录表
--- ----------------------------
-CREATE TABLE IF NOT EXISTS edu_wrong_question (
-    wrong_question_id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '错题记录ID',
-    wrong_question_student_id VARCHAR(64) NOT NULL COMMENT '学生ID',
-    wrong_question_question_id BIGINT NOT NULL COMMENT '题目ID',
-    wrong_question_exam_id BIGINT COMMENT '考试ID',
-    wrong_question_wrong_count INT DEFAULT 1 COMMENT '错误次数',
-    wrong_question_mastery_level TINYINT DEFAULT 0 COMMENT '掌握度: 0-未掌握 1-部分掌握 2-已掌握',
-    wrong_question_last_wrong_time DATETIME COMMENT '最近错误时间',
-    wrong_question_last_review_time DATETIME COMMENT '最近复习时间',
-    wrong_question_review_count INT DEFAULT 0 COMMENT '复习次数',
-    wrong_question_status TINYINT DEFAULT 1 COMMENT '状态: 0-已删除 1-有效',
-    wrong_question_create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    wrong_question_update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    UNIQUE KEY uk_student_question (wrong_question_student_id, wrong_question_question_id),
-    INDEX idx_student_id (wrong_question_student_id),
-    INDEX idx_question_id (wrong_question_question_id),
-    INDEX idx_mastery (wrong_question_mastery_level)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='错题记录表';
-
-
--- ----------------------------
--- 知识库文档表
--- ----------------------------
-CREATE TABLE IF NOT EXISTS edu_knowledge_doc (
-    knowledge_doc_id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '文档ID',
-    knowledge_doc_name VARCHAR(200) NOT NULL COMMENT '文档名称',
-    knowledge_doc_type VARCHAR(50) NOT NULL COMMENT '文档类型: PDF/WORD/TXT/MARKDOWN',
-    knowledge_doc_file_path VARCHAR(500) COMMENT '文件存储路径',
-    knowledge_doc_file_size BIGINT COMMENT '文件大小（字节）',
-    knowledge_doc_vector_store_id VARCHAR(200) COMMENT '向量存储ID',
-    knowledge_doc_subject VARCHAR(50) COMMENT '学科',
-    knowledge_doc_grade_level VARCHAR(20) COMMENT '学段',
-    knowledge_doc_status TINYINT DEFAULT 1 COMMENT '状态: 0-处理中 1-已索引 2-失败',
-    knowledge_doc_create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    knowledge_doc_update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    knowledge_doc_create_by VARCHAR(64) COMMENT '创建人',
-    knowledge_doc_update_by VARCHAR(64) COMMENT '更新人',
-    INDEX idx_subject (knowledge_doc_subject),
-    INDEX idx_status (knowledge_doc_status)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='知识库文档表';
-
-
--- =====================================================================
--- 维度表（并入自 V1.1__init_dimensions.sql）
--- =====================================================================
-
--- ----------------------------
--- 学科表
--- ----------------------------
-CREATE TABLE IF NOT EXISTS edu_subject (
-    subject_id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '学科ID',
-    subject_code VARCHAR(64) NOT NULL COMMENT '学科编码',
-    subject_name VARCHAR(100) NOT NULL COMMENT '学科名',
-    subject_grade_levels VARCHAR(100) COMMENT '适用学段(逗号分隔)',
-    subject_sort_order INT DEFAULT 0 COMMENT '排序',
-    subject_status TINYINT DEFAULT 1 COMMENT '状态: 0-停用 1-启用',
-    create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    UNIQUE KEY uk_subject_code (subject_code)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='学科维度';
-
-
--- ----------------------------
--- 年级表
--- ----------------------------
-CREATE TABLE IF NOT EXISTS edu_grade (
-    grade_id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '年级ID',
-    grade_level VARCHAR(20) NOT NULL COMMENT '学段 PRIMARY/JUNIOR/SENIOR/UNIVERSITY',
-    grade_name VARCHAR(20) NOT NULL COMMENT '年级名 1-12 或 大一-大四',
-    grade_order INT DEFAULT 0 COMMENT '学段内顺序',
-    create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    UNIQUE KEY uk_grade (grade_level, grade_name)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='年级维度';
-
-
--- ----------------------------
--- 班级表
--- ----------------------------
-CREATE TABLE IF NOT EXISTS edu_class (
-    class_id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '班级ID',
-    class_code VARCHAR(64) NOT NULL COMMENT '班级编码',
-    class_name VARCHAR(100) NOT NULL COMMENT '班级名',
-    class_grade_level VARCHAR(20) COMMENT '学段',
-    class_grade VARCHAR(20) COMMENT '年级',
-    class_teacher_id BIGINT COMMENT '班主任 userId',
-    class_status TINYINT DEFAULT 1 COMMENT '状态',
-    create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    UNIQUE KEY uk_class_code (class_code),
-    INDEX idx_teacher (class_teacher_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='班级维度';
-
-
--- ----------------------------
--- 学生表
--- ----------------------------
-CREATE TABLE IF NOT EXISTS edu_student (
-    student_id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '学生ID',
-    student_user_id BIGINT COMMENT '关联系统 userId',
-    student_no VARCHAR(64) NOT NULL COMMENT '学号',
-    student_name VARCHAR(100) COMMENT '姓名',
-    student_class_id BIGINT COMMENT '班级ID',
-    student_grade_level VARCHAR(20) COMMENT '学段',
-    student_grade VARCHAR(20) COMMENT '年级',
-    student_enroll_year INT COMMENT '入学年份',
-    student_status TINYINT DEFAULT 1 COMMENT '状态: 0-离校 1-在读',
-    create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    UNIQUE KEY uk_student_no (student_no),
-    INDEX idx_user (student_user_id),
-    INDEX idx_class (student_class_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='学生档案';
-
-
--- ----------------------------
--- 教师表
--- ----------------------------
-CREATE TABLE IF NOT EXISTS edu_teacher (
-    teacher_id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '教师ID',
-    teacher_user_id BIGINT COMMENT '关联系统 userId',
-    teacher_no VARCHAR(64) NOT NULL COMMENT '工号',
-    teacher_name VARCHAR(100) COMMENT '姓名',
-    teacher_subject_code VARCHAR(64) COMMENT '任教学科编码',
-    teacher_status TINYINT DEFAULT 1 COMMENT '状态: 0-离职 1-在职',
-    create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    UNIQUE KEY uk_teacher_no (teacher_no),
-    INDEX idx_user (teacher_user_id),
-    INDEX idx_subject (teacher_subject_code)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='教师档案';
-
-
--- =====================================================================
--- 趣味模块表（并入自 V1.2__add_fun_module.sql）
--- =====================================================================
-
--- ----------------------------
--- 趣味模块配置表
--- ----------------------------
-CREATE TABLE IF NOT EXISTS edu_fun_config (
-    config_id INT AUTO_INCREMENT PRIMARY KEY,
-    module_code VARCHAR(50) UNIQUE,
-    module_name VARCHAR(100),
-    module_desc VARCHAR(500),
-    module_icon VARCHAR(100),
-    module_path VARCHAR(500),
-    enabled INT DEFAULT 1,
-    sort_order INT DEFAULT 0,
-    config_json TEXT,
-    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-
--- ----------------------------
--- 成语表
--- ----------------------------
-CREATE TABLE IF NOT EXISTS edu_idiom (
-    idiom_id INT AUTO_INCREMENT PRIMARY KEY,
-    idiom_content VARCHAR(100),
-    idiom_pinyin VARCHAR(200),
-    idiom_meaning VARCHAR(1000),
-    idiom_source VARCHAR(500),
-    idiom_example VARCHAR(1000),
-    idiom_synonyms VARCHAR(500),
-    idiom_antonyms VARCHAR(500),
-    idiom_difficulty INT DEFAULT 1,
-    idiom_tags VARCHAR(200),
-    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-
--- ----------------------------
--- 成语学段映射表
--- ----------------------------
-CREATE TABLE IF NOT EXISTS edu_idiom_grade (
-    map_id INT AUTO_INCREMENT PRIMARY KEY,
-    idiom_id INT,
-    grade_level VARCHAR(50),
-    grade VARCHAR(50),
-    semester VARCHAR(10),
-    textbook_version VARCHAR(100),
-    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
 
 
 
--- ---------------------------------------------------------------------
--- 来源: V1.0__init_filesystem_upload.sql
--- ---------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS filesystem_upload_task (
-    filesystem_upload_task_id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    filesystem_upload_task_upload_id VARCHAR(64) NOT NULL UNIQUE,
-    filesystem_upload_task_file_name VARCHAR(255),
-    filesystem_upload_task_original_name VARCHAR(255),
-    filesystem_upload_task_file_size BIGINT,
-    filesystem_upload_task_chunk_size BIGINT,
-    filesystem_upload_task_total_chunks INT,
-    filesystem_upload_task_uploaded_chunks INT DEFAULT 0,
-    filesystem_upload_task_storage_type VARCHAR(50),
-    filesystem_upload_task_bucket VARCHAR(100),
-    filesystem_upload_task_key VARCHAR(255),
-    filesystem_upload_task_content_type VARCHAR(100),
-    filesystem_upload_task_status INT DEFAULT 0,
-    filesystem_upload_task_error_message VARCHAR(500),
-    filesystem_upload_task_file_url VARCHAR(500),
-    filesystem_upload_task_retry_count INT DEFAULT 0,
-    filesystem_upload_task_start_time TIMESTAMP,
-    filesystem_upload_task_complete_time TIMESTAMP,
-    -- 分片处理阶段（并入自 V1.2__add_stage_to_upload_task.sql）
-    filesystem_upload_task_stage INT DEFAULT 0,
-    create_time TIMESTAMP,
-    update_time TIMESTAMP,
-    create_by BIGINT,
-    create_name VARCHAR(50),
-    update_by BIGINT,
-    update_name VARCHAR(50)
-);
-
-
-CREATE TABLE IF NOT EXISTS filesystem_upload_chunk (
-    filesystem_upload_chunk_id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    filesystem_upload_chunk_upload_id VARCHAR(64) NOT NULL,
-    filesystem_upload_chunk_part_number INT NOT NULL,
-    filesystem_upload_chunk_size BIGINT,
-    filesystem_upload_chunk_etag VARCHAR(128),
-    filesystem_upload_chunk_storage_path VARCHAR(500),
-    filesystem_upload_chunk_status INT DEFAULT 0,
-    filesystem_upload_chunk_upload_time TIMESTAMP,
-    create_time TIMESTAMP,
-    update_time TIMESTAMP,
-    create_by BIGINT,
-    create_name VARCHAR(50),
-    update_by BIGINT,
-    update_name VARCHAR(50)
-);
-
-
-CREATE INDEX IF NOT EXISTS idx_filesystem_upload_chunk_upload_id ON filesystem_upload_chunk(filesystem_upload_chunk_upload_id);
-
-
--- =====================================================================
--- 上传合并/明细日志表（并入自 V1.3__create_merge_upload_log_tables.sql）
--- =====================================================================
-CREATE TABLE IF NOT EXISTS filesystem_upload_merge_log (
-    filesystem_upload_merge_log_id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    filesystem_upload_merge_log_upload_id VARCHAR(64) NOT NULL,
-    filesystem_upload_merge_log_stage INT DEFAULT 1,
-    filesystem_upload_merge_log_status INT NOT NULL,
-    filesystem_upload_merge_log_message VARCHAR(500),
-    filesystem_upload_merge_log_retry_count INT DEFAULT 0,
-    filesystem_upload_merge_log_start_time TIMESTAMP,
-    filesystem_upload_merge_log_end_time TIMESTAMP,
-    create_time TIMESTAMP,
-    update_time TIMESTAMP,
-    create_by BIGINT,
-    create_name VARCHAR(50),
-    update_by BIGINT,
-    update_name VARCHAR(50)
-);
--- [通用化] 老库补索引（原 SET@+PREPARE 动态段改写）
-CREATE INDEX IF NOT EXISTS idx_filesystem_upload_merge_log_upload_id ON filesystem_upload_merge_log(filesystem_upload_merge_log_upload_id)'
-);
 
 
 ;
@@ -2907,7 +2783,10 @@ CREATE INDEX IF NOT EXISTS idx_filesystem_upload_merge_log_upload_id ON filesyst
 
 
 
-PREPARE fs_stmt FROM @idx1;
+
+-- [通用化] 原动态段残留语句，已注释化（由上方通用 ALTER/CREATE INDEX 幂等语句取代）：
+-- PREPARE fs_stmt FROM @idx1;;
+
 
 
 ;
@@ -2915,7 +2794,21 @@ PREPARE fs_stmt FROM @idx1;
 
 
 
-EXECUTE fs_stmt;
+
+-- [通用化] 原动态段残留语句，已注释化（由上方通用 ALTER/CREATE INDEX 幂等语句取代）：
+-- EXECUTE fs_stmt;;
+
+
+
+;
+
+
+
+
+
+-- [通用化] 原动态段残留语句，已注释化（由上方通用 ALTER/CREATE INDEX 幂等语句取代）：
+-- DEALLOCATE PREPARE fs_stmt;;
+
 
 
 ;
@@ -2923,10 +2816,8 @@ EXECUTE fs_stmt;
 
 
 
-DEALLOCATE PREPARE fs_stmt;
 
 
-;
 
 
 
@@ -2949,20 +2840,13 @@ CREATE TABLE IF NOT EXISTS filesystem_upload_upload_log (
  update_name VARCHAR(50)
 );
 
+CREATE INDEX IF NOT EXISTS idx_filesystem_upload_upload_log_upload_id ON filesystem_upload_upload_log(filesystem_upload_upload_log_upload_id);
 
 
--- [通用化] 老库补索引（原 SET@+PREPARE 动态段改写）
-CREATE INDEX IF NOT EXISTS idx_filesystem_upload_upload_log_upload_id ON filesystem_upload_upload_log(filesystem_upload_upload_log_upload_id)'
-);;
 
-PREPARE fs_stmt FROM @idx2;;
 
-EXECUTE fs_stmt;;
 
-DEALLOCATE PREPARE fs_stmt;;
--- [通用化] 老库补列（原 SET@+PREPARE 动态段改写为 H2/MySQL 双兼容幂等 ALTER）
-ALTER TABLE filesystem_upload_task ADD COLUMN IF NOT EXISTS filesystem_upload_task_stage INT DEFAULT 0'
-);
+
 
 
 ;
@@ -2970,7 +2854,10 @@ ALTER TABLE filesystem_upload_task ADD COLUMN IF NOT EXISTS filesystem_upload_ta
 
 
 
-PREPARE fs_stage_stmt FROM @fs_stage_col_exists;
+
+-- [通用化] 原动态段残留语句，已注释化（由上方通用 ALTER/CREATE INDEX 幂等语句取代）：
+-- PREPARE fs_stage_stmt FROM @fs_stage_col_exists;;
+
 
 
 ;
@@ -2978,7 +2865,10 @@ PREPARE fs_stage_stmt FROM @fs_stage_col_exists;
 
 
 
-EXECUTE fs_stage_stmt;
+
+-- [通用化] 原动态段残留语句，已注释化（由上方通用 ALTER/CREATE INDEX 幂等语句取代）：
+-- EXECUTE fs_stage_stmt;;
+
 
 
 ;
@@ -2986,44 +2876,18 @@ EXECUTE fs_stage_stmt;
 
 
 
-DEALLOCATE PREPARE fs_stage_stmt;
+
+-- [通用化] 原动态段残留语句，已注释化（由上方通用 ALTER/CREATE INDEX 幂等语句取代）：
+-- DEALLOCATE PREPARE fs_stage_stmt;;
+
 
 
 ;
+ALTER TABLE filesystem_upload_task ADD COLUMN IF NOT EXISTS filesystem_upload_task_stage INT DEFAULT 0;
 
 
 
--- [通用化] 老库补列（原 SET@+PREPARE 动态段改写为 H2/MySQL 双兼容幂等 ALTER）
-ALTER TABLE filesystem_upload_task ADD COLUMN IF NOT EXISTS filesystem_upload_task_stage INT DEFAULT 0'
-);;
 
-PREPARE fs_stage_stmt FROM @fs_stage_col_exists;;
-
-EXECUTE fs_stage_stmt;;
-
-DEALLOCATE PREPARE fs_stage_stmt;;
-
-
-CREATE TABLE IF NOT EXISTS filesystem_upload_file (
-    filesystem_upload_file_id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    filesystem_upload_file_upload_id VARCHAR(64) NOT NULL UNIQUE,
-    filesystem_upload_file_name VARCHAR(255),
-    filesystem_upload_file_original_name VARCHAR(255),
-    filesystem_upload_file_size BIGINT,
-    filesystem_upload_file_storage_type VARCHAR(50),
-    filesystem_upload_file_bucket VARCHAR(100),
-    filesystem_upload_file_key VARCHAR(255),
-    filesystem_upload_file_url VARCHAR(500),
-    filesystem_upload_file_content_type VARCHAR(100),
-    filesystem_upload_file_etag VARCHAR(128),
-    filesystem_upload_file_complete_time TIMESTAMP,
-    create_time TIMESTAMP,
-    update_time TIMESTAMP,
-    create_by BIGINT,
-    create_name VARCHAR(50),
-    update_by BIGINT,
-    update_name VARCHAR(50)
-);
 
 
 

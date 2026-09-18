@@ -12,9 +12,9 @@ import reactor.core.scheduler.Schedulers;
 /**
 * HTTP 接口拉取采集 提供者（HTTP）
 * <p>
-* 目标主机暴露采集 HTTP 端点（如 /智能体/指标 返回 JSON），
+* 目标主机暴露采集 HTTP 端点（如 /Agent/指标 返回 JSON），
 * 服务端定时 获取 拉取并回写。适合安装了轻量采集端但不开 SSH 的主机。
-* 端点约定：{@code http://{address}:{端口}/智能体/指标}。
+* 端点约定：{@code http://{address}:{端口}/Agent/指标}。
 * </p>
 *
 * @author CH

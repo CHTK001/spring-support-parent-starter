@@ -82,7 +82,7 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
     /** 通知渠道集合（Spring 收集全部实现） */
     private final List<NotifySender> notifySenders;
 
-    /** 实时推送服务（套接字 未启用时静默跳过） */
+    /** 实时推送服务（Socket 未启用时静默跳过） */
     private final MonitorPushService monitorPushService;
 
     /** 规则缓存：指标名称 -> 启用中的规则列表 */
@@ -525,7 +525,7 @@ private void fireIfNotSilent(MsMonitorAlarmRule rule, Long monitorId, String mon
             event.setMsMonitorAlarmEventTriggerTime(LocalDateTime.now());
             event.setMsMonitorAlarmEventRuleSnapshot(buildRuleSnapshot(rule));
             eventMapper.insert(event);
- // 实时推送告警事件到前端（套接字 未启用时静默跳过）
+ // 实时推送告警事件到前端（Socket 未启用时静默跳过）
             try {
                 monitorPushService.pushAlarm(MonitorPushService.buildAlarmPayload(
                         event.getMsMonitorAlarmEventMonitorId(),

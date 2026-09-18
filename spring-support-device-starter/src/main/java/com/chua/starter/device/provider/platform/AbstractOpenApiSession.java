@@ -218,7 +218,7 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
     }
 
     /**
-    * 打印请求调试日志（脱敏 secret/app钥匙）
+    * 打印请求调试日志（脱敏 secret/appKey）
     * @param method 方法
     * @param path 路径
     * @param headers 头部
@@ -270,7 +270,7 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
     }
 
     /**
-    * 脱敏参数：将 appsecret/app钥匙 等敏感字段值替换。
+    * 脱敏参数：将 appsecret/appKey 等敏感字段值替换。
     * @param params 参数
     * @return mask参数的结果
     */

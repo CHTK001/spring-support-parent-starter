@@ -8,7 +8,7 @@ import org.apache.ibatis.annotations.Param;
 import java.util.List;
 
 /**
-* AI app钥匙 映射器。
+* AI appKey 映射器。
 *
 * @since 4.0.0.42
 * @author CH
@@ -17,7 +17,7 @@ import java.util.List;
 public interface SysAiAppKeyMapper extends BaseMapper<SysAiAppKey> {
 
     /**
-    * 按分组 标识 查询 app钥匙 列表。
+    * 按分组 标识 查询 appKey 列表。
     *
     * @param groupId 分组 标识
     * @return AppKey 列表
@@ -26,9 +26,9 @@ public interface SysAiAppKeyMapper extends BaseMapper<SysAiAppKey> {
     List<SysAiAppKey> selectByGroupId(@Param("groupId") Integer groupId);
 
     /**
-    * 按 app钥匙 查询。
+    * 按 appKey 查询。
     *
-    * @param appKey app钥匙
+    * @param appKey appKey
     * @return AppKey 实体，不存在时返回 空
     * @param @Param("appKey" @参数("app键"
     */
@@ -39,7 +39,7 @@ public interface SysAiAppKeyMapper extends BaseMapper<SysAiAppKey> {
     *
     * <p>对应 SQL：{@code SET sys_ai_app_key_use_count = COALESCE(sys_ai_app_key_use_count, 0) + 1}</p>
     *
-    * @param appKey app钥匙 值
+    * @param appKey appKey 值
     * @param @Param("appKey" @参数("app键"
     */
     void updateUseCount(@Param("appKey") String appKey);
@@ -49,7 +49,7 @@ public interface SysAiAppKeyMapper extends BaseMapper<SysAiAppKey> {
     *
     * <p>对应 SQL：{@code SET sys_ai_app_key_total_tokens = COALESCE(sys_ai_app_key_total_tokens, 0) + #{tokens}}</p>
     *
-    * @param appKey  app钥匙 值
+    * @param appKey  appKey 值
     * @param tokens  本次消耗的 令牌 数
     * @param @Param("appKey" @参数("app键"
     */

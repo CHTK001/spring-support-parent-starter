@@ -7,7 +7,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
-* 套接字 用户信息
+* Socket 用户信息
 * 封装连接用户的基本信息
 *
 * @版本 1.0.0
@@ -67,12 +67,12 @@ public class SocketUser implements Serializable {
     */
     private Map<String, Object> extras = new ConcurrentHashMap<>();
 
-    /** 创建 套接字用户 实例 */
+    /** 创建 Socket用户 实例 */
     public SocketUser() {
     }
 
     /**
-    * 创建 套接字用户 实例
+    * 创建 Socket用户 实例
     * @param userId 用户标识
     */
     public SocketUser(String userId) {
@@ -80,7 +80,7 @@ public class SocketUser implements Serializable {
     }
 
     /**
-    * 创建 套接字用户 实例
+    * 创建 Socket用户 实例
     * @param userId 用户标识
     * @param userId 字符串
     * @param username 用户名

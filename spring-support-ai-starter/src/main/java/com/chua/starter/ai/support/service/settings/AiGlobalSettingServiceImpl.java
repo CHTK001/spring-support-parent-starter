@@ -341,7 +341,7 @@ public class AiGlobalSettingServiceImpl implements AiGlobalSettingService {
     /**
     * 放入。
     * @param dtoField dto字段
-    * @param value 价值观
+    * @param value 值
     */
     private void put(String dtoField, Object value) {
         if (value == null) {

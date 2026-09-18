@@ -35,7 +35,7 @@ public class SwitchInventory {
     @Builder
     public static class FeatureDescriptor {
 
-        /** 功能标识（@api特征.价值观） */
+        /** 功能标识（@api特征.值） */
         private String featureId;
 
         /** 默认是否启用 */
@@ -75,7 +75,7 @@ public class SwitchInventory {
     @Builder
     public static class GrayDescriptor {
 
-        /** 灰度标识（@apigray.价值观） */
+        /** 灰度标识（@apigray.值） */
         private String pattern;
 
         /** 灰度比例 */

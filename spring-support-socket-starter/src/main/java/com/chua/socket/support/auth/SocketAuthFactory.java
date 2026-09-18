@@ -5,7 +5,7 @@ import com.chua.socket.support.session.SocketUser;
 import java.util.Map;
 
 /**
-* 套接字 认证工厂接口
+* Socket 认证工厂接口
 * 用于验证客户端连接的合法性
 *
 * @版本 1.0.0

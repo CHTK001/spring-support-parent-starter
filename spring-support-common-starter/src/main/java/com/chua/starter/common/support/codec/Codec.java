@@ -16,7 +16,7 @@ public final class Codec {
     * 构建
     *
     * @param type 类型
-    * @param key 钥匙
+    * @param key Key
     * @return 构建的结果
     */
     public static com.chua.starter.common.support.algorithm.crypto.Codec build(String type, String key) {

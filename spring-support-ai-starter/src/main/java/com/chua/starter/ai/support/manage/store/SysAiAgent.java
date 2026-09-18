@@ -11,11 +11,11 @@ import java.io.Serializable;
 import java.util.List;
 
 /**
-* AI 智能体 定义持久化实体。
+* AI Agent 定义持久化实体。
 *
 * <p>一行 = 一个 Agent（主 Agent 或子 Agent）。主 Agent 的
 * {@code parentId} 为空；子 Agent 的 {@code parentId} 指向主 Agent。
-* 每个 智能体 可独立配置模型（提供者 + 模型）、MCP（mcp标识）、
+* 每个 Agent 可独立配置模型（提供者 + 模型）、MCP（mcp标识）、
 * Skill（skill标识）、系统提示符（instruction / 系统提示符）与策略
 * （strategy JSON）。</p>
 *
@@ -31,31 +31,31 @@ public class SysAiAgent implements Serializable {
     private static final long serialVersionUID = 1L; // 串行版本uid
 
     /**
-    * 智能体 标识（uuidv7）
+    * Agent 标识（uuidv7）
     */
     @TableId(value = "sys_ai_agent_id", type = IdType.INPUT)
-    private String agentId; // 智能体标识
+    private String agentId; // Agent标识
 
     /**
-    * 所属主 智能体 标识（空表示主 智能体）
+    * 所属主 Agent 标识（空表示主 Agent）
     */
     @TableField("sys_ai_agent_parent_id")
     private String parentId; // 父标识
 
     /**
-    * 智能体 名称
+    * Agent 名称
     */
     @TableField("sys_ai_agent_name")
     private String name; // 名称
 
     /**
-    * 智能体 描述
+    * Agent 描述
     */
     @TableField("sys_ai_agent_description")
     private String description; // description
 
     /**
-    * 智能体 角色
+    * Agent 角色
     */
     @TableField("sys_ai_agent_role")
     private String role; // 角色

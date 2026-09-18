@@ -19,7 +19,7 @@ public class AuthConstant {
     /** Ops */
     public static final String OPS = "OPS";
 
-    /** Captcha_会话_钥匙 */
+    /** Captcha_会话_Key */
     public static final String CAPTCHA_SESSION_KEY = "captcha_session_key";
 
     /**

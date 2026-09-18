@@ -57,7 +57,7 @@ public class HostOnlineScheduler {
     private final HostCollectProviderRegistry collectRegistry;
 
     /**
-    * 延迟检测结果钩子（监控 侧注册，推送 套接字 实时延迟；未注册时不推送）
+    * 延迟检测结果钩子（监控 侧注册，推送 Socket 实时延迟；未注册时不推送）
     */
     @Setter
     private Consumer<MsServerHost> delayHook; // 延迟hook
@@ -287,7 +287,7 @@ public class HostOnlineScheduler {
         int port = host.getServerHostPort() == null || host.getServerHostPort() <= 0 ? 22 : host.getServerHostPort();
         /**
         * 尝试。
-        * @param Socket( 套接字(
+        * @param Socket( Socket(
         */
         try (Socket socket = new Socket()) {
             long start = System.nanoTime();

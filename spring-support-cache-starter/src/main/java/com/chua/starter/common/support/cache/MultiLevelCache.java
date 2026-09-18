@@ -84,7 +84,7 @@ public class MultiLevelCache implements Cache {
     * @param caches 列表
     * @param caches 缓存
     * @param cacheNullValues 布尔值
-    * @param cacheNullValues 缓存空价值观
+    * @param cacheNullValues 缓存空值
     */
     public MultiLevelCache(String name, List<Cache> caches, boolean cacheNullValues) {
         this.name = name;
@@ -117,7 +117,7 @@ public class MultiLevelCache implements Cache {
     /**
     * 获取内部
     *
-    * @param key 钥匙
+    * @param key Key
     * @param typeIndexHint 类型索引hint
     * @return 获取内部的结果
     */
@@ -149,8 +149,8 @@ public class MultiLevelCache implements Cache {
             // 回填到更低层级
             /**
             * backfill。
-            * @param key 钥匙
-            * @param value 价值观
+            * @param key Key
+            * @param value 值
             * @param 1 1
             */
             backfill(key, value, i - 1);
@@ -165,7 +165,7 @@ public class MultiLevelCache implements Cache {
     /**
     * 获取内部类型
     *
-    * @param key 钥匙
+    * @param key Key
     * @param type 类型
     * @return 获取内部类型的结果
     */
@@ -193,8 +193,8 @@ public class MultiLevelCache implements Cache {
             log.debug("缓存命中: cache={}, level={}, key={}", name, i, key);
             /**
             * backfill。
-            * @param key 钥匙
-            * @param value 价值观
+            * @param key Key
+            * @param value 值
             * @param 1 1
             */
             backfill(key, value, i - 1);
@@ -217,8 +217,8 @@ public class MultiLevelCache implements Cache {
     /**
     * 获取
     *
-    * @param key 钥匙
-    * @param valueLoader 价值观加载
+    * @param key Key
+    * @param valueLoader 值加载
     * @return 获取的结果
     */
     public <T> T get(Object key, Callable<T> valueLoader) {
@@ -227,7 +227,7 @@ public class MultiLevelCache implements Cache {
             return null;
         }
 
- // 先按普通 钥匙 查找各级缓存
+ // 先按普通 Key 查找各级缓存
         for (int i = 0; i < caches.size(); i++) {
             Cache cache = caches.get(i);
             try {
@@ -242,8 +242,8 @@ public class MultiLevelCache implements Cache {
                     T value = (T) cached;
                     /**
                     * backfill。
-                    * @param key 钥匙
-                    * @param value 价值观
+                    * @param key Key
+                    * @param value 值
                     * @param 1 1
                     */
                     backfill(key, value, i - 1);
@@ -255,7 +255,7 @@ public class MultiLevelCache implements Cache {
             }
         }
 
- // 所有层级均未命中，调用 价值观加载 加载并写入所有层级
+ // 所有层级均未命中，调用 值加载 加载并写入所有层级
         missCount.increment();
         T value;
         try {
@@ -267,15 +267,15 @@ public class MultiLevelCache implements Cache {
         if (value != null) {
             /**
             * 放入。
-            * @param key 钥匙
-            * @param value 价值观
+            * @param key Key
+            * @param value 值
             */
             put(key, value);
         } else if (cacheNullValues) {
             // 防缓存穿透：写入空值占位符
             /**
             * 放入空。
-            * @param key 钥匙
+            * @param key Key
             */
             putNull(key);
         }
@@ -284,8 +284,8 @@ public class MultiLevelCache implements Cache {
 
     /**
     * 回填缓存到指定层级及以下
-    * @param key 钥匙
-    * @param value 价值观
+    * @param key Key
+    * @param value 值
     * @param toIndex 转为索引
     */
     private void backfill(Object key, Object value, int toIndex) {
