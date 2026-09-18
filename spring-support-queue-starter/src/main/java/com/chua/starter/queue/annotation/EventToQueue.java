@@ -33,7 +33,7 @@ public @interface EventToQueue {
     * 目标队列地址（topic/队列）
     *
     * @return 目标地址
-     */
+    */
     String value();
 
     /**
@@ -43,14 +43,14 @@ public @interface EventToQueue {
     * </p>
     *
     * @return 消息队列类型
-     */
+    */
     String type() default "";
 
     /**
     * 是否异步发送
     *
     * @return 是否异步发送
-     */
+    */
     boolean async() default true;
 
     /**
@@ -60,6 +60,6 @@ public @interface EventToQueue {
     * </p>
     *
     * @return 消息头
-     */
+    */
     String[] headers() default {};
 }

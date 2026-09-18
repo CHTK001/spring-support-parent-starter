@@ -67,7 +67,7 @@ public class DefaultJobExecute implements JobExecute {
     * @param triggerParam 触发参数
     * @param glueTypeEnum 胶水类型
     * @return 处理器结果
-     */
+    */
     private HandlerResult getJobHandler(TriggerParam triggerParam, GlueTypeEnum glueTypeEnum) {
         // 加载已存在的任务线程
         JobThread jobThread = JobThreadFactory.loadJobThread(triggerParam.getJobId());
@@ -171,7 +171,7 @@ class HandlerResult {
     * @param removeOldReason 字符串
     * @param jobThread 作业thread
     * @param removeOldReason 移除旧ReasonMLmlml
-     */
+    */
     public HandlerResult(JobHandler jobHandler, JobThread jobThread, String removeOldReason) {
         this.jobHandler = jobHandler;
         this.jobThread = jobThread;
@@ -182,7 +182,7 @@ class HandlerResult {
     * 获取作业处理器
     *
     * @return 获取作业处理器的结果
-     */
+    */
     public JobHandler getJobHandler() {
         return jobHandler;
     }
@@ -191,7 +191,7 @@ class HandlerResult {
     * 设置作业处理器
     *
     * @param jobHandler 作业处理器
-     */
+    */
     public void setJobHandler(JobHandler jobHandler) {
         this.jobHandler = jobHandler;
     }
@@ -200,7 +200,7 @@ class HandlerResult {
     * 获取作业thread
     *
     * @return 获取作业thread的结果
-     */
+    */
     public JobThread getJobThread() {
         return jobThread;
     }
@@ -209,7 +209,7 @@ class HandlerResult {
     * 设置作业thread
     *
     * @param jobThread 作业thread
-     */
+    */
     public void setJobThread(JobThread jobThread) {
         this.jobThread = jobThread;
     }
@@ -218,7 +218,7 @@ class HandlerResult {
     * 获取移除旧ReasonMLmlml
     *
     * @return 获取移除旧ReasonML的结果
-     */
+    */
     public String getRemoveOldReason() {
         return removeOldReason;
     }
@@ -227,7 +227,7 @@ class HandlerResult {
     * 设置移除旧ReasonMLmlml
     *
     * @param removeOldReason 移除旧ReasonMLmlml
-     */
+    */
     public void setRemoveOldReason(String removeOldReason) {
         this.removeOldReason = removeOldReason;
     }

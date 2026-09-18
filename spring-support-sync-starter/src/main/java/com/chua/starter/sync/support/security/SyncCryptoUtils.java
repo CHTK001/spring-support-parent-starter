@@ -49,7 +49,7 @@ public final class SyncCryptoUtils {
 
     /**
     * 同步加密货币工具。
-     */
+    */
     private SyncCryptoUtils() {
     }
 
@@ -58,7 +58,7 @@ public final class SyncCryptoUtils {
     *
     * @param properties 同步配置
     * @return true=启用
-     */
+    */
     public static boolean isEnabled(SyncProperties properties) {
         return properties != null && hasText(properties.getCryptoSecret());
     }
@@ -69,7 +69,7 @@ public final class SyncCryptoUtils {
     * @param payload    明文消息（映射 或其它可 JSON 序列化对象）
     * @param properties 同步配置
     * @return 加密后的包装 映射，未启用时返回原对象
-     */
+    */
     public static Object encrypt(Object payload, SyncProperties properties) {
         if (!isEnabled(properties) || payload == null) {
             return payload;
@@ -100,7 +100,7 @@ public final class SyncCryptoUtils {
     * @param message    收到的消息对象
     * @param properties 同步配置
     * @return 解密后的 映射，未启用或不匹配时返回原对象
-     */
+    */
     public static Object decrypt(Object message, SyncProperties properties) {
         if (!isEnabled(properties) || message == null || !(message instanceof Map<?, ?> map)) {
             return message;
@@ -131,7 +131,7 @@ public final class SyncCryptoUtils {
     * derive钥匙。
     * @param secret secret
     * @return derive钥匙的结果
-     */
+    */
     private static byte[] deriveKey(String secret) throws Exception {
         return MessageDigest.getInstance(SHA_256).digest(secret.getBytes(StandardCharsets.UTF_8));
     }
@@ -140,7 +140,7 @@ public final class SyncCryptoUtils {
     * 是否包含文本。
     * @param value 价值观
     * @return 是否包含文本的结果
-     */
+    */
     private static boolean hasText(String value) {
         return value != null && !value.isBlank();
     }

@@ -38,22 +38,22 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
 
     /**
     * 用量 映射器
-     */
+    */
     private final SysAiUsageMapper usageMapper;
 
     /**
     * 日汇总 映射器
-     */
+    */
     private final SysAiUsageDailyMapper dailyMapper;
 
     /**
     * 定价服务
-     */
+    */
     private final SysAiPricingService pricingService;
 
     /**
     * IP 地址转物理地址服务（spring-支持-通用，带 Redis 缓存）
-     */
+    */
     private final IptablesService iptablesService;
 
     @Override
@@ -67,7 +67,7 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
     * @param usage usage
     * @param requestId 请求标识
     * @param userId 用户标识
-     */
+    */
     public void record(String groupName, String provider, String model, String callType,
                        AiUsage usage, String requestId, String userId) {
         if (usage == null) {
@@ -157,7 +157,7 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
     * @param endTime 结束时间
     * @param page page
     * @param size 大小
-     */
+    */
     public Page<SysAiUsage> list(String groupName, String provider, String model,
                                  LocalDateTime startTime, LocalDateTime endTime, int page, int size) {
         LambdaQueryWrapper<SysAiUsage> wrapper = new LambdaQueryWrapper<>();
@@ -193,7 +193,7 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
     * @param startTime 开始时间（可为空）
     * @param endTime   结束时间（可为空）
     * @return 聚合统计结果
-     */
+    */
     public UsageStatistics getStatistics(String groupName, String provider, String model,
                                           LocalDateTime startTime, LocalDateTime endTime) {
         LambdaQueryWrapper<SysAiUsageDaily> wrapper = new LambdaQueryWrapper<>();

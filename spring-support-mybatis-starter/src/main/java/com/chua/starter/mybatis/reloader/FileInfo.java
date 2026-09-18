@@ -22,7 +22,7 @@ public class FileInfo {
     * <p>
     * 例如：用户映射器.xml
     * </p>
-     */
+    */
     String name;
 
     /**
@@ -32,7 +32,7 @@ public class FileInfo {
     * 类路径资源：类路径:映射器/用户映射器.xml
     * jar包资源：jar:文件:/路径/转为.jar!/映射器/用户映射器.xml
     * </p>
-     */
+    */
     String path;
 
     /**
@@ -43,7 +43,7 @@ public class FileInfo {
     * JAR：jar包或war包中的资源，不可监听
     * UNKNOWN：未知类型，不可监听
     * </p>
-     */
+    */
     String type;
 
     /**
@@ -52,14 +52,14 @@ public class FileInfo {
     * true：文件在本地文件系统中，可以监听文件变化并自动重载
     * false：文件在jar包中或无法访问，无法监听
     * </p>
-     */
+    */
     boolean watchable;
 
     /**
     * 是否可监听
     *
     * @return 是否可监听
-     */
+    */
     public boolean isWatchable() {
         return watchable;
     }

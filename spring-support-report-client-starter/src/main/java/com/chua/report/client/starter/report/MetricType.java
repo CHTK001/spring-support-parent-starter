@@ -21,7 +21,7 @@ public enum MetricType {
     * @param "CPU使用率" "CPU使用率"
     * @param 30 30
     * @return CPU的结果
-     */
+    */
     CPU("cpu", "CPU使用率", 30),
 
     /**
@@ -30,7 +30,7 @@ public enum MetricType {
     * @param "内存使用率" "内存使用率"
     * @param 30 30
     * @return 内存的结果
-     */
+    */
     MEMORY("memory", "内存使用率", 30),
 
     /**
@@ -39,7 +39,7 @@ public enum MetricType {
     * @param "磁盘使用率" "磁盘使用率"
     * @param 60 60
     * @return DISK的结果
-     */
+    */
     DISK("disk", "磁盘使用率", 60),
 
     /**
@@ -48,7 +48,7 @@ public enum MetricType {
     * @param "网络流量" "网络流量"
     * @param 30 30
     * @return NETWORK的结果
-     */
+    */
     NETWORK("network", "网络流量", 30),
 
     /**
@@ -57,7 +57,7 @@ public enum MetricType {
     * @param "系统负载" "系统负载"
     * @param 30 30
     * @return 加载的结果
-     */
+    */
     LOAD("load", "系统负载", 30),
 
     /**
@@ -66,7 +66,7 @@ public enum MetricType {
     * @param "进程信息" "进程信息"
     * @param 60 60
     * @return 处理的结果
-     */
+    */
     PROCESS("process", "进程信息", 60),
 
     /**
@@ -75,22 +75,22 @@ public enum MetricType {
     * @param "温度信息" "温度信息"
     * @param 120 120
     * @return TEMPERATURE的结果
-     */
+    */
     TEMPERATURE("temperature", "温度信息", 120);
 
     /**
     * 指标代码
-     */
+    */
     private final String code;
 
     /**
     * 指标描述
-     */
+    */
     private final String description;
 
     /**
     * 默认上报间隔（秒）
-     */
+    */
     private final int defaultIntervalSeconds;
 
     /**
@@ -98,7 +98,7 @@ public enum MetricType {
     * @param code 编码
     * @param description description
     * @param defaultIntervalSeconds 默认间隔seconds
-     */
+    */
     MetricType(String code, String description, int defaultIntervalSeconds) {
         this.code = code;
         this.description = description;
@@ -110,7 +110,7 @@ public enum MetricType {
     *
     * @param code 指标代码
     * @return 枚举值，未找到返回 空
-     */
+    */
     public static MetricType fromCode(String code) {
         if (code == null) {
             return null;
@@ -127,7 +127,7 @@ public enum MetricType {
     * 获取指标代码
     *
     * @return 指标代码
-     */
+    */
     public String getCode() {
         return code;
     }

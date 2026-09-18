@@ -43,7 +43,7 @@ public class EduKnowledgePointController {
     * @param grade      年级
     * @return 知识点树
     * @param false false
-     */
+    */
     @Operation(summary = "查询知识点树")
     @GetMapping("/tree")
     public ReturnResult<List<KnowledgePointVO>> tree(@RequestParam(required = false) String subject,
@@ -57,7 +57,7 @@ public class EduKnowledgePointController {
     *
     * @param dto 知识点数据
     * @return 知识点ID
-     */
+    */
     @Operation(summary = "新增或更新知识点")
     @PostMapping("/save")
     public ReturnResult<Long> save(@RequestBody KnowledgePointSaveDTO dto) {
@@ -69,7 +69,7 @@ public class EduKnowledgePointController {
     *
     * @param id 知识点标识
     * @return 是否成功
-     */
+    */
     @Operation(summary = "删除知识点")
     @DeleteMapping("/{id}")
     public ReturnResult<Boolean> delete(@PathVariable Long id) {

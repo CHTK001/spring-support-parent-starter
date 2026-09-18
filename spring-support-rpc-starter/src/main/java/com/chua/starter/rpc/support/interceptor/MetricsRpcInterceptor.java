@@ -71,9 +71,9 @@ public class MetricsRpcInterceptor implements RpcInterceptor {
         successCounters.computeIfAbsent(methodKey, k -> new AtomicLong()).incrementAndGet();
         lastResults.put(methodKey, RESULT_SUCCESS);
         /**
-        * record持续时间。
-        * @param methodKey 方法钥匙
-         */
+    * record持续时间。
+    * @param methodKey 方法钥匙
+    */
         recordDuration(methodKey);
         return result;
     }
@@ -87,9 +87,9 @@ public class MetricsRpcInterceptor implements RpcInterceptor {
         lastErrors.put(methodKey, error != null
                 ? (error.getMessage() != null ? error.getMessage() : error.getClass().getSimpleName()) : "null");
         /**
-        * record持续时间。
-        * @param methodKey 方法钥匙
-         */
+    * record持续时间。
+    * @param methodKey 方法钥匙
+    */
         recordDuration(methodKey);
         throw error;
     }
@@ -98,7 +98,7 @@ public class MetricsRpcInterceptor implements RpcInterceptor {
     * 记录耗时与最近一次调用信息。
     *
     * @param methodKey 方法键
-     */
+    */
     private void recordDuration(String methodKey) {
         Long startTime = startTimes.get();
         if (startTime == null) {
@@ -125,7 +125,7 @@ public class MetricsRpcInterceptor implements RpcInterceptor {
     *
     * @param method 方法
     * @return 方法键
-     */
+    */
     private String getMethodKey(Method method) {
         return method.getDeclaringClass().getName() + "." + method.getName();
     }
@@ -135,7 +135,7 @@ public class MetricsRpcInterceptor implements RpcInterceptor {
     *
     * @param methodKey 方法键
     * @return 调用次数
-     */
+    */
     public long getCallCount(String methodKey) {
         AtomicLong counter = callCounters.get(methodKey);
         return counter != null ? counter.get() : 0;
@@ -146,7 +146,7 @@ public class MetricsRpcInterceptor implements RpcInterceptor {
     *
     * @param methodKey 方法键
     * @return 成功次数
-     */
+    */
     public long getSuccessCount(String methodKey) {
         AtomicLong counter = successCounters.get(methodKey);
         return counter != null ? counter.get() : 0;
@@ -157,7 +157,7 @@ public class MetricsRpcInterceptor implements RpcInterceptor {
     *
     * @param methodKey 方法键
     * @return 失败次数
-     */
+    */
     public long getFailureCount(String methodKey) {
         AtomicLong counter = failureCounters.get(methodKey);
         return counter != null ? counter.get() : 0;
@@ -168,7 +168,7 @@ public class MetricsRpcInterceptor implements RpcInterceptor {
     *
     * @param methodKey 方法键
     * @return 平均耗时（毫秒）
-     */
+    */
     public long getAverageDuration(String methodKey) {
         AtomicLong total = totalDurations.get(methodKey);
         AtomicLong count = callCounters.get(methodKey);
@@ -180,7 +180,7 @@ public class MetricsRpcInterceptor implements RpcInterceptor {
 
     /**
     * 重置统计。
-     */
+    */
     public void reset() {
         callCounters.clear();
         successCounters.clear();
@@ -198,7 +198,7 @@ public class MetricsRpcInterceptor implements RpcInterceptor {
     * 获取全部方法级统计快照（按调用次数降序）。
     *
     * @return 方法级统计列表
-     */
+    */
     public List<RpcMetrics.MethodStat> getMethodStats() {
         List<RpcMetrics.MethodStat> result = new ArrayList<>(callCounters.size());
         for (String methodKey : callCounters.keySet()) {
@@ -212,17 +212,17 @@ public class MetricsRpcInterceptor implements RpcInterceptor {
                     /**
                     * 获取成功数量。
                     * @param methodKey 方法钥匙
-                     */
+                    */
                     getSuccessCount(methodKey),
                     /**
                     * 获取失败数量。
                     * @param methodKey 方法钥匙
-                     */
+                    */
                     getFailureCount(methodKey),
                     /**
                     * 获取average持续时间。
                     * @param methodKey 方法钥匙
-                     */
+                    */
                     getAverageDuration(methodKey),
                     maxDurations.getOrDefault(methodKey, new AtomicLong()).get(),
                     minDuration,

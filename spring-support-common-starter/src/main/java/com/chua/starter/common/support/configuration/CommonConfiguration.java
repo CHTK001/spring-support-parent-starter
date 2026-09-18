@@ -46,7 +46,7 @@ public class CommonConfiguration {
     * &#64;Autowired
     * private AuthService authService;
     * </pre>
-     */
+    */
     @Bean(name = "defaultAuthService")
     @ConditionalOnMissingBean(AuthService.class)
     public AuthService authService() {
@@ -61,7 +61,7 @@ public class CommonConfiguration {
     * </p>
     * @param ipProperties ip属性
     * @return 认证服务的结果
-     */
+    */
     @Bean
     @ConditionalOnMissingBean
     public IptablesService authService(IpProperties ipProperties) {
@@ -69,7 +69,7 @@ public class CommonConfiguration {
         * iptables服务impl。
         * @param ipProperties ip属性
         * @return iptables服务impl的结果
-         */
+        */
         return new IptablesServiceImpl(ipProperties);
     }
 
@@ -79,7 +79,7 @@ public class CommonConfiguration {
     * @param props props
     * @param env env
     * @return nonce标志initializer的结果
-     */
+    */
     @Bean
     public Object nonceSignInitializer(NonceSignProperties props, Environment env) {
         var key = props.resolveSecretKey(env);
@@ -89,7 +89,7 @@ public class CommonConfiguration {
         /**
         * 对象。
         * @return 对象的结果
-         */
+        */
         return new Object();
     }
 
@@ -104,7 +104,7 @@ public class CommonConfiguration {
     * &#64;Autowired
     * private RestTemplate restTemplate;
     * </pre>
-     */
+    */
     @Bean
     @ConditionalOnMissingBean
     @Lazy
@@ -116,7 +116,7 @@ public class CommonConfiguration {
         * RestTemplate。
         * @param factory 工厂
         * @return RestTemplate的结果
-         */
+        */
         return new RestTemplate(factory);
     }
 
@@ -131,7 +131,7 @@ public class CommonConfiguration {
     * &#64;Autowired
     * private WatchPointcutAdvisor watchPointcutAdvisor;
     * </pre>
-     */
+    */
     @Bean
     @ConditionalOnMissingBean
     @Lazy
@@ -139,7 +139,7 @@ public class CommonConfiguration {
         /**
         * watchpointcutadvisor。
         * @return WatchPointcutAdvisor的结果
-         */
+        */
         return new WatchPointcutAdvisor();
     }
 

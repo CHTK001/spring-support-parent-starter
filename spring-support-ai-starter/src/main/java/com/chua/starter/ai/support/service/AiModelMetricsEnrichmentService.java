@@ -34,7 +34,7 @@ public class AiModelMetricsEnrichmentService {
 
     /**
     * 缓存刷新间隔（毫秒）：6 小时
-     */
+    */
     /** 磁盘快照目录 */
     private static final String CACHE_DIR =
             System.getProperty("user.home") + "/.nomifun/cache";
@@ -46,13 +46,13 @@ public class AiModelMetricsEnrichmentService {
 
     /**
     * 指标数据源名称
-     */
+    */
     private static final String SOURCE_NAME = "artificialanalysis";
 
     /**
     * 硬编码兜底定价（USD/百万 令牌）—— 用于不在 Artificial Analysis 数据库中的模型。
     * 键为归一化模型名，值为 {输入, 输出}。
-     */
+    */
     private static final Map<String, double[]> FALLBACK_PRICING = new java.util.HashMap<>();
 
     static {
@@ -93,7 +93,7 @@ public class AiModelMetricsEnrichmentService {
     * 需要显式调用 {@code Brotli4jLoader.ensureAvailability()} 才会加载；未加载时
     * 解压会抛 {@code UnsatisfiedLinkError}，导致在线指标同步失败。这里用反射调用
     * 以避免编译期硬依赖 brotli4j（运行时才在 类路径）。</p>
-     */
+    */
     static {
         try {
             Class<?> loader = ReflectUtils.forName("com.aayushatharva.brotli4j.Brotli4jLoader");
@@ -107,12 +107,12 @@ public class AiModelMetricsEnrichmentService {
 
     /**
     * 指标索引：归一化模型名 → 记录
-     */
+    */
     private final ConcurrentHashMap<String, MetricsRecord> index = new ConcurrentHashMap<>();
 
     /**
     * 上次加载时间戳
-     */
+    */
     private final AtomicLong lastLoadAt = new AtomicLong(0);
 
     /**
@@ -132,7 +132,7 @@ public class AiModelMetricsEnrichmentService {
     *
     * @param modelId 模型 标识（如 gpt-4o、deepseek-v4-flash）
     * @param row     模型行数据（原地追加）
-     */
+    */
     public void enrich(String modelId, Map<String, Object> row) {
         MetricsRecord rec = find(modelId);
         if (rec != null) {
@@ -142,91 +142,91 @@ public class AiModelMetricsEnrichmentService {
             * @param row row
             * @param "price_input_per_musd" "price输入permusd"
             * @param rec.inputPerMillion rec.输入permillion
-             */
+            */
             putIfNotNull(row, "price_input_per_musd", rec.inputPerMillion);
             /**
             * 放入ifnot空。
             * @param row row
             * @param "price_output_per_musd" "price输出permusd"
             * @param rec.outputPerMillion rec.输出permillion
-             */
+            */
             putIfNotNull(row, "price_output_per_musd", rec.outputPerMillion);
             /**
             * 放入ifnot空。
             * @param row row
             * @param "intelligence_index" "智能_索引"
             * @param rec.intelligenceIndex rec.智能索引
-             */
+            */
             putIfNotNull(row, "intelligence_index", rec.intelligenceIndex);
             /**
             * 放入ifnot空。
             * @param row row
             * @param "output_speed_tps" "输出速度tps"
             * @param rec.outputSpeedTps rec.输出速度tps
-             */
+            */
             putIfNotNull(row, "output_speed_tps", rec.outputSpeedTps);
             /**
             * 放入ifnot空。
             * @param row row
             * @param "latency_first_token_seconds" "延迟第一个令牌seconds"
             * @param rec.latencyFirstTokenSeconds rec.延迟第一个令牌seconds
-             */
+            */
             putIfNotNull(row, "latency_first_token_seconds", rec.latencyFirstTokenSeconds);
             /**
             * 放入ifnot空。
             * @param row row
             * @param "icon_url" "icon_url"
             * @param rec.iconUrl rec.iconurl
-             */
+            */
             putIfNotNull(row, "icon_url", rec.iconUrl);
             /**
             * 放入ifnot空。
             * @param row row
             * @param "reasoning_model" "ReasonMLML_模型"
             * @param rec.reasoning rec.ReasonMLML
-             */
+            */
             putIfNotNull(row, "reasoning_model", rec.reasoning);
             /**
             * 放入ifnot空。
             * @param row row
             * @param "web_search" "web_搜索"
             * @param rec.webSearch rec.web搜索
-             */
+            */
             putIfNotNull(row, "web_search", rec.webSearch);
             /**
             * 放入ifnot空。
             * @param row row
             * @param "image_input" "镜像_输入"
             * @param rec.imageInput rec.镜像输入
-             */
+            */
             putIfNotNull(row, "image_input", rec.imageInput);
             /**
             * 放入ifnot空。
             * @param row row
             * @param "function_calling" "function_calling"
             * @param rec.functionCalling rec.functioncalling
-             */
+            */
             putIfNotNull(row, "function_calling", rec.functionCalling);
             /**
             * 放入ifnot空。
             * @param row row
             * @param "price_cache_hit_per_musd" "price缓存hitpermusd"
             * @param rec.cacheHitPrice rec.缓存hitprice
-             */
+            */
             putIfNotNull(row, "price_cache_hit_per_musd", rec.cacheHitPrice);
             /**
             * 放入ifnot空。
             * @param row row
             * @param "price_cache_write_per_musd" "price缓存写入permusd"
             * @param rec.cacheWritePrice rec.缓存写入price
-             */
+            */
             putIfNotNull(row, "price_cache_write_per_musd", rec.cacheWritePrice);
             /**
             * 放入ifnot空。
             * @param row row
             * @param "context_window_tokens" "上下文窗口令牌"
             * @param rec.contextWindowTokens rec.上下文窗口令牌
-             */
+            */
             putIfNotNull(row, "context_window_tokens", rec.contextWindowTokens);
         } else {
             // AA 无数据，尝试硬编码兜底定价
@@ -234,7 +234,7 @@ public class AiModelMetricsEnrichmentService {
             * apply降级pricing。
             * @param modelId 模型标识
             * @param row row
-             */
+            */
             applyFallbackPricing(modelId, row);
         }
     }
@@ -243,7 +243,7 @@ public class AiModelMetricsEnrichmentService {
     * 应用硬编码兜底定价：只补充 price_输入/输出，其余指标保持 空。
     * @param modelId 模型标识
     * @param row row
-     */
+    */
     private void applyFallbackPricing(String modelId, Map<String, Object> row) {
         String key = normalize(modelId);
         double[] prices = FALLBACK_PRICING.get(key);
@@ -259,13 +259,13 @@ public class AiModelMetricsEnrichmentService {
     *
     * @param modelId 模型 标识
     * @return 命中的指标记录，未命中返回 空
-     */
+    */
     /**
     * 按模型标识查找 AA 定价记录（精确匹配优先，模糊匹配兜底）。
     *
     * @param modelId 模型标识，如 deepseek-v4-pro
     * @return 定价记录，未找到时返回 空
-     */
+    */
     public MetricsRecord getPricingRecord(String modelId) {
         return find(modelId);
     }
@@ -274,11 +274,11 @@ public class AiModelMetricsEnrichmentService {
     * 查找。
     * @param modelId 模型标识
     * @return find的结果
-     */
+    */
     private MetricsRecord find(String modelId) {
         /**
         * ensure加载。
-         */
+        */
         ensureLoaded();
         if (index.isEmpty()) { return null; }
         String key = normalize(modelId);
@@ -295,7 +295,7 @@ public class AiModelMetricsEnrichmentService {
 
     /**
     * 惰性加载并按 TTL 刷新指标索引。
-     */
+    */
     private void ensureLoaded() {
         long now = System.currentTimeMillis();
         long last = lastLoadAt.get();
@@ -320,7 +320,7 @@ public class AiModelMetricsEnrichmentService {
                 /**
                 * 保存转为disk。
                 * @param fresh fresh
-                 */
+                */
                 saveToDisk(fresh);
                 log.info("[AiModelMetrics] 在线指标已加载并持久化，共 {} 条", fresh.size());
                 return;
@@ -342,7 +342,7 @@ public class AiModelMetricsEnrichmentService {
     * <p>优先读取本地缓存；缓存为空时触发一次在线同步再读取。</p>
     *
     * @return 归一化键 → 指标记录
-     */
+    */
     private Map<String, MetricsRecord> loadIndex() {
         ModelMetricsProvider provider = ServiceProvider.of(ModelMetricsProvider.class)
                 .getExtension(SOURCE_NAME);
@@ -369,12 +369,12 @@ public class AiModelMetricsEnrichmentService {
                     /**
                     * scale。
                     * @param md.getInputUnitPrice( md.获取输入unitprice(
-                     */
+                    */
                     scale(md.getInputUnitPrice()),
                     /**
                     * scale。
                     * @param md.getOutputUnitPrice( md.获取输出unitprice(
-                     */
+                    */
                     scale(md.getOutputUnitPrice()),
                     md.getIntelligenceIndex(),
                     md.getOutputSpeedTokensPerSecond(),
@@ -396,7 +396,7 @@ public class AiModelMetricsEnrichmentService {
     *
     * @param id 原始模型 标识
     * @return 归一化键
-     */
+    */
     private String normalize(String id) {
         if (id == null) { return ""; }
         String t = id.toLowerCase();
@@ -411,7 +411,7 @@ public class AiModelMetricsEnrichmentService {
     * @param row 目标行
     * @param key 键
     * @param v   值
-     */
+    */
     private void putIfNotNull(Map<String, Object> row, String key, Object v) {
         if (v != null) { row.put(key, v); }
     }
@@ -421,7 +421,7 @@ public class AiModelMetricsEnrichmentService {
     *
     * @param v 原始值
     * @return 格式化值或 空
-     */
+    */
     private BigDecimal scale(BigDecimal v) {
         return v == null ? null : v.setScale(4, RoundingMode.HALF_UP).stripTrailingZeros();
     }
@@ -431,7 +431,7 @@ public class AiModelMetricsEnrichmentService {
     * 将指标列表持久化到磁盘快照文件。
     *
     * @param records 指标记录
-     */
+    */
     private void saveToDisk(List<MetricsRecord> records) {
         try {
             java.nio.file.Path dir = java.nio.file.Path.of(CACHE_DIR);
@@ -470,7 +470,7 @@ public class AiModelMetricsEnrichmentService {
     * 从磁盘快照恢复指标列表。
     *
     * @return 指标记录列表，文件缺失或损坏返回 空
-     */
+    */
     @SuppressWarnings("unchecked")
     private List<MetricsRecord> loadFromDisk() {
         try {
@@ -488,58 +488,58 @@ public class AiModelMetricsEnrichmentService {
                         /**
                         * dec。
                         * @param o.get("in" o.获取("入"
-                         */
+                        */
                         dec(o.get("in")),
                         /**
                         * dec。
                         * @param o.get("out" o.获取("出"
-                         */
+                        */
                         dec(o.get("out")),
                         /**
                         * dec。
                         * @param o.get("intel" o.获取("intel"
-                         */
+                        */
                         dec(o.get("intel")),
                         /**
                         * dec。
                         * @param o.get("spd" o.获取("spd"
-                         */
+                        */
                         dec(o.get("spd")),
                         /**
                         * dec。
                         * @param o.get("ttft" o.获取("ttft"
-                         */
+                        */
                         dec(o.get("ttft")),
                         o.get("icon") == null ? null : String.valueOf(o.get("icon")),
                         /**
                         * bool。
                         * @param o.get("reason" o.获取("ReasonMLML"
-                         */
+                        */
                         bool(o.get("reason")),
                         /**
                         * bool。
                         * @param o.get("wsrch" o.获取("wsrch"
-                         */
+                        */
                         bool(o.get("wsrch")),
                         /**
                         * bool。
                         * @param o.get("imgin" o.获取("imgin"
-                         */
+                        */
                         bool(o.get("imgin")),
                         /**
                         * bool。
                         * @param o.get("fncall" o.获取("fncall"
-                         */
+                        */
                         bool(o.get("fncall")),
                         /**
                         * dec。
                         * @param o.get("cachehit" o.获取("cachehit"
-                         */
+                        */
                         dec(o.get("cachehit")),
                         /**
                         * dec。
                         * @param o.get("cachewr" o.获取("cachewr"
-                         */
+                        */
                         dec(o.get("cachewr")),
                         lng(o.get("ctx"))));
             }
@@ -555,7 +555,7 @@ public class AiModelMetricsEnrichmentService {
     *
     * @param records 指标记录
     * @return 归一化键 → 记录
-     */
+    */
     private Map<String, MetricsRecord> indexOf(List<MetricsRecord> records) {
         Map<String, MetricsRecord> idx = new HashMap<>(256); // AA 模型数量较多，预留容量
         for (MetricsRecord r : records) {
@@ -569,7 +569,7 @@ public class AiModelMetricsEnrichmentService {
     *
     * @param v 原始值
     * @return 数值或 空
-     */
+    */
     private BigDecimal dec(Object v) {
         if (v == null) { return null; }
         try { return new BigDecimal(String.valueOf(v)).stripTrailingZeros(); }
@@ -581,7 +581,7 @@ public class AiModelMetricsEnrichmentService {
     *
     * @param v 原始值
     * @return 布尔或 空
-     */
+    */
     private Boolean bool(Object v) {
         return v == null ? null : Boolean.valueOf(String.valueOf(v));
     }
@@ -591,7 +591,7 @@ public class AiModelMetricsEnrichmentService {
     *
     * @param v 原始值
     * @return 数值或 空
-     */
+    */
     private Long lng(Object v) {
         if (v == null) { return null; }
         try { return Long.parseLong(String.valueOf(v).split("\\.")[0]); }
@@ -603,14 +603,14 @@ public class AiModelMetricsEnrichmentService {
     *
     * @param s 原始文本
     * @return 转义后的文本
-     */
+    */
     private String esc(String s) {
         if (s == null) { return ""; }
         return s.replace("\\", "\\\\").replace("\"", "\\\"");
     }
     /**
     * 单条模型指标记录。
-     */
+    */
     public record MetricsRecord(
             /** 归一化键 */
             String normalizedKey,
@@ -643,11 +643,11 @@ public class AiModelMetricsEnrichmentService {
     }
 
     /**
-    * 安全读取指标列表。
-    *
-    * @param provider 数据源
-    * @return 指标列表，异常时返回空列表
-     */
+            * 安全读取指标列表。
+            *
+            * @param provider 数据源
+            * @return 指标列表，异常时返回空列表
+            */
     private List<ModelDefinition> safeMetrics(ModelMetricsProvider provider) {
         try {
             List<ModelDefinition> list = provider.getMetrics();

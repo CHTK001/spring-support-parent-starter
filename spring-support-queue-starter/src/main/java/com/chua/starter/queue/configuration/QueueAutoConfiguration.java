@@ -42,7 +42,7 @@ public class QueueAutoConfiguration {
     * 当配置类型=本地时启用，基于Guava 事件bus实现。
     * </p>
     * @return 本地消息template的结果
-     */
+    */
     @Bean(destroyMethod = "close")
     @ConditionalOnMissingBean(MessageTemplate.class)
     @ConditionalOnProperty(prefix = QueueProperties.PREFIX, name = "type", havingValue = "local")
@@ -52,13 +52,13 @@ public class QueueAutoConfiguration {
         * 本地消息template。
         * @param queueProperties.getLocal( 队列属性.getlocal(
         * @return 本地消息template的结果
-         */
+        */
         return new LocalMessageTemplate(queueProperties.getLocal());
     }
 
     /**
     * 消息监听注解处理器
-     */
+    */
     @Bean
     @ConditionalOnMissingBean
     public MessageListenerBeanPostProcessor messageListenerBeanPostProcessor(
@@ -70,7 +70,7 @@ public class QueueAutoConfiguration {
         * @param queueProperties 队列属性
         * @param eventPublisher 事件发布
         * @return 消息监听器Beanpost处理器的结果
-         */
+        */
         return new MessageListenerBeanPostProcessor(messageTemplates, queueProperties, eventPublisher);
     }
 
@@ -79,7 +79,7 @@ public class QueueAutoConfiguration {
     * 队列服务信息contributor
     *
     * @return 队列服务信息contributor的结果
-     */
+    */
     public ServiceInfoContributor queueServiceInfoContributor() {
         return registry -> {
             registry.registerFlag("queue", "消息队列", true, "消息队列模块");

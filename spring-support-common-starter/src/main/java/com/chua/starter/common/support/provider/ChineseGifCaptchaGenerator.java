@@ -17,7 +17,7 @@ public class ChineseGifCaptchaGenerator implements CaptchaGenerator {
     * SPI 扩展名。
     *
     * @return "chinese_gif"
-     */
+    */
     @Override
     public String name() {
         return "chinese_gif";
@@ -30,7 +30,7 @@ public class ChineseGifCaptchaGenerator implements CaptchaGenerator {
     * @param height 图片高度
     * @param length 验证码长度
     * @return 中文闪图验证码实例
-     */
+    */
     @Override
     public Captcha create(int width, int height, int length) {
         ChineseGifCaptcha captcha = new ChineseGifCaptcha(width, height);

@@ -112,14 +112,14 @@ public class MessageTraceInterceptor implements MessageInterceptor {
     * 获取追踪上下文
     * @param messageId 消息标识
     * @return 获取追踪上下文的结果
-     */
+    */
     public MessageTraceContext getTraceContext(String messageId) {
         return traces.get(messageId);
     }
 
     /**
     * 清理追踪信息
-     */
+    */
     public void clearTraces() {
         traces.clear();
     }
@@ -127,7 +127,7 @@ public class MessageTraceInterceptor implements MessageInterceptor {
     /**
     * 生成追踪标识
     * @return generate追踪id的结果
-     */
+    */
     private String generateTraceId() {
         return UUID.randomUUID().toString().replace("-", "");
     }
@@ -135,7 +135,7 @@ public class MessageTraceInterceptor implements MessageInterceptor {
     /**
     * 生成跨度标识
     * @return generateSpanId的结果
-     */
+    */
     private String generateSpanId() {
         return UUID.randomUUID().toString().substring(0, 16);
     }

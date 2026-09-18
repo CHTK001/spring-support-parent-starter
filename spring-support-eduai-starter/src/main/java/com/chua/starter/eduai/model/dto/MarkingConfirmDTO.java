@@ -15,12 +15,12 @@ public class MarkingConfirmDTO {
 
     /**
     * 任务标识
-     */
+    */
     private String taskId;
 
     /**
     * 评分调整列表
-     */
+    */
     private List<ScoreAdjustment> adjustments;
 
     @Data
@@ -29,7 +29,7 @@ public class MarkingConfirmDTO {
     *
     * @author CH
     * @since 4.0.0
-     */
+    */
     public static class ScoreAdjustment {
         /** 结果标识 */
         private Long resultId;

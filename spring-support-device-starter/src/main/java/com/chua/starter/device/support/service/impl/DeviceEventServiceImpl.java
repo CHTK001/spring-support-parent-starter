@@ -31,12 +31,12 @@ public class DeviceEventServiceImpl implements DeviceEventService {
 
     /**
     * 事件记录 映射器
-     */
+    */
     private final DeviceEventRecordMapper eventRecordMapper;
 
     /**
     * 设备会话管理器
-     */
+    */
     private final DeviceSessionManager sessionManager;
 
     @Override

@@ -38,7 +38,7 @@ public class CacheCustomAnnotationParser implements CacheAnnotationParser, Seria
 
     /**
     * 默认的 钥匙生成器
-     */
+    */
     private static final String DEFAULT_KEY_GENERATOR = "tenantedKeyGenerator";
 
     @Override
@@ -54,7 +54,7 @@ public class CacheCustomAnnotationParser implements CacheAnnotationParser, Seria
     *
     * @param type 类型
     * @return 解析缓存注解的结果
-     */
+    */
     public Collection<CacheOperation> parseCacheAnnotations(Class<?> type) {
         DefaultCacheConfig defaultConfig = new DefaultCacheConfig(type);
         return parseCacheAnnotations(defaultConfig, type);
@@ -67,7 +67,7 @@ public class CacheCustomAnnotationParser implements CacheAnnotationParser, Seria
     *
     * @param method 方法
     * @return 解析缓存注解的结果
-     */
+    */
     public Collection<CacheOperation> parseCacheAnnotations(Method method) {
         DefaultCacheConfig defaultConfig = new DefaultCacheConfig(method.getDeclaringClass());
         return parseCacheAnnotations(defaultConfig, method);
@@ -80,7 +80,7 @@ public class CacheCustomAnnotationParser implements CacheAnnotationParser, Seria
     * @param cachingConfig 缓存配置
     * @param ae ae
     * @return 解析缓存注解的结果
-     */
+    */
     private Collection<CacheOperation> parseCacheAnnotations(DefaultCacheConfig cachingConfig, AnnotatedElement ae) {
         Collection<CacheOperation> ops = parseCacheAnnotations(cachingConfig, ae, false);
         if (ops != null && ops.size() > 1) {
@@ -130,7 +130,7 @@ public class CacheCustomAnnotationParser implements CacheAnnotationParser, Seria
     * @param cachePut 缓存放入
     * @param target Target
     * @param builder 构建器
-     */
+    */
     private Collection<CacheOperation> parseCacheAnnotations(
             DefaultCacheConfig cachingConfig, AnnotatedElement ae, boolean localOnly) {
 
@@ -176,7 +176,7 @@ public class CacheCustomAnnotationParser implements CacheAnnotationParser, Seria
     * @param cachePut 缓存放入
     * @param target Target
     * @param builder 构建器
-     */
+    */
     private CacheableOperation parseCacheableAnnotation(
             AnnotatedElement ae, DefaultCacheConfig defaultConfig, Cacheable cacheable) {
 
@@ -215,7 +215,7 @@ public class CacheCustomAnnotationParser implements CacheAnnotationParser, Seria
     * @param cachePut 缓存放入
     * @param target Target
     * @param builder 构建器
-     */
+    */
     private CacheEvictOperation parseEvictAnnotation(
             AnnotatedElement ae, DefaultCacheConfig defaultConfig, CacheEvict cacheEvict) {
 
@@ -251,7 +251,7 @@ public class CacheCustomAnnotationParser implements CacheAnnotationParser, Seria
     * @param cachePut 缓存放入
     * @param target Target
     * @param builder 构建器
-     */
+    */
     private CacheOperation parsePutAnnotation(
             AnnotatedElement ae, DefaultCacheConfig defaultConfig, CachePut cachePut) {
 
@@ -283,7 +283,7 @@ public class CacheCustomAnnotationParser implements CacheAnnotationParser, Seria
     * @param cachePut 缓存放入
     * @param target Target
     * @param builder 构建器
-     */
+    */
     private void parseCachingAnnotation(
             AnnotatedElement ae, DefaultCacheConfig defaultConfig, Caching caching, Collection<CacheOperation> ops) {
 
@@ -302,7 +302,7 @@ public class CacheCustomAnnotationParser implements CacheAnnotationParser, Seria
     * 默认缓存配置
     * @author CH
     * @since 4.0.0
-     */
+    */
     private static class DefaultCacheConfig {
 
         private final Class<?> target; // Target
@@ -329,7 +329,7 @@ public class CacheCustomAnnotationParser implements CacheAnnotationParser, Seria
         /**
         * 创建 默认缓存配置 实例
         * @param target Target
-         */
+        */
         public DefaultCacheConfig(Class<?> target) {
             this.target = target;
         }
@@ -338,7 +338,7 @@ public class CacheCustomAnnotationParser implements CacheAnnotationParser, Seria
         * 应用默认
         *
         * @param builder 构建器
-         */
+        */
         public void applyDefault(CacheOperation.Builder builder) {
             if (!this.initialized) {
                 CacheConfig annotation = AnnotatedElementUtils.findMergedAnnotation(this.target, CacheConfig.class);

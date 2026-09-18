@@ -39,7 +39,7 @@ public class AiGatewayController {
     *
     * @param body 包含 端口 字段
     * @return 操作结果
-     */
+    */
     @PostMapping("/start")
     public ReturnResult<String> start(@RequestBody Map<String, Object> body) {
         int port = Integer.parseInt(String.valueOf(body.get("port")));
@@ -68,7 +68,7 @@ public class AiGatewayController {
     * 停止独立 AI 端口。
     *
     * @return 操作结果
-     */
+    */
     @PostMapping("/stop")
     public ReturnResult<String> stop() {
         if (activeConnector == null) { return ReturnResult.ok("未在运行"); }
@@ -91,7 +91,7 @@ public class AiGatewayController {
     * 查询网关状态。
     *
     * @return running 与 端口 字段
-     */
+    */
     @GetMapping("/status")
     public ReturnResult<Map<String, Object>> status() {
         boolean running = activeConnector != null;

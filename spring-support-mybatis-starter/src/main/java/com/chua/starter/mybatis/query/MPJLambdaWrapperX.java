@@ -28,7 +28,7 @@ public class MPJLambdaWrapperX<T> extends MPJLambdaWrapper<T> {
     * @param column column
     * @param val val
     * @return likeIfPresent的结果
-     */
+    */
     public MPJLambdaWrapperX<T> likeIfPresent(SFunction<T, ?> column, String val) {
         MPJWrappers.lambdaJoin().like(column, val);
         if (StringUtils.hasText(val)) {
@@ -43,7 +43,7 @@ public class MPJLambdaWrapperX<T> extends MPJLambdaWrapper<T> {
     * @param column column
     * @param values 价值观
     * @return 入ifpresent的结果
-     */
+    */
     public MPJLambdaWrapperX<T> inIfPresent(SFunction<T, ?> column, Collection<?> values) {
         if (ObjectUtils.isAllNotEmpty(values) && !CollectionUtils.isEmpty(values)) {
             return (MPJLambdaWrapperX<T>) super.in(column, values);
@@ -57,7 +57,7 @@ public class MPJLambdaWrapperX<T> extends MPJLambdaWrapper<T> {
     * @param column column
     * @param values 价值观
     * @return 入ifpresent的结果
-     */
+    */
     public MPJLambdaWrapperX<T> inIfPresent(SFunction<T, ?> column, Object... values) {
         if (ObjectUtils.isAllNotEmpty(values) && !ArrayUtils.isEmpty(values)) {
             return (MPJLambdaWrapperX<T>) super.in(column, values);
@@ -71,7 +71,7 @@ public class MPJLambdaWrapperX<T> extends MPJLambdaWrapper<T> {
     * @param column column
     * @param val val
     * @return eqIfPresent的结果
-     */
+    */
     public MPJLambdaWrapperX<T> eqIfPresent(SFunction<T, ?> column, Object val) {
         if (ObjectUtils.isNotEmpty(val)) {
             return (MPJLambdaWrapperX<T>) super.eq(column, val);
@@ -85,7 +85,7 @@ public class MPJLambdaWrapperX<T> extends MPJLambdaWrapper<T> {
     * @param column column
     * @param val val
     * @return neIfPresent的结果
-     */
+    */
     public MPJLambdaWrapperX<T> neIfPresent(SFunction<T, ?> column, Object val) {
         if (ObjectUtils.isNotEmpty(val)) {
             return (MPJLambdaWrapperX<T>) super.ne(column, val);
@@ -99,7 +99,7 @@ public class MPJLambdaWrapperX<T> extends MPJLambdaWrapper<T> {
     * @param column column
     * @param val val
     * @return gtIfPresent的结果
-     */
+    */
     public MPJLambdaWrapperX<T> gtIfPresent(SFunction<T, ?> column, Object val) {
         if (val != null) {
             return (MPJLambdaWrapperX<T>) super.gt(column, val);
@@ -113,7 +113,7 @@ public class MPJLambdaWrapperX<T> extends MPJLambdaWrapper<T> {
     * @param column column
     * @param val val
     * @return geIfPresent的结果
-     */
+    */
     public MPJLambdaWrapperX<T> geIfPresent(SFunction<T, ?> column, Object val) {
         if (val != null) {
             return (MPJLambdaWrapperX<T>) super.ge(column, val);
@@ -127,7 +127,7 @@ public class MPJLambdaWrapperX<T> extends MPJLambdaWrapper<T> {
     * @param column column
     * @param val val
     * @return ltIfPresent的结果
-     */
+    */
     public MPJLambdaWrapperX<T> ltIfPresent(SFunction<T, ?> column, Object val) {
         if (val != null) {
             return (MPJLambdaWrapperX<T>) super.lt(column, val);
@@ -141,7 +141,7 @@ public class MPJLambdaWrapperX<T> extends MPJLambdaWrapper<T> {
     * @param column column
     * @param val val
     * @return leIfPresent的结果
-     */
+    */
     public MPJLambdaWrapperX<T> leIfPresent(SFunction<T, ?> column, Object val) {
         if (val != null) {
             return (MPJLambdaWrapperX<T>) super.le(column, val);
@@ -156,7 +156,7 @@ public class MPJLambdaWrapperX<T> extends MPJLambdaWrapper<T> {
     * @param val1 val1
     * @param val2 val2
     * @return betweenIfPresent的结果
-     */
+    */
     public MPJLambdaWrapperX<T> betweenIfPresent(SFunction<T, ?> column, Object val1, Object val2) {
         if (val1 != null && val2 != null) {
             return (MPJLambdaWrapperX<T>) super.between(column, val1, val2);
@@ -176,7 +176,7 @@ public class MPJLambdaWrapperX<T> extends MPJLambdaWrapper<T> {
     * @param column column
     * @param values 价值观
     * @return betweenIfPresent的结果
-     */
+    */
     public MPJLambdaWrapperX<T> betweenIfPresent(SFunction<T, ?> column, Object[] values) {
         Object val1 = ArrayUtils.getIndex(values, 0);
         Object val2 = ArrayUtils.getIndex(values, 1);

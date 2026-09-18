@@ -14,14 +14,14 @@ public class SqlConstants {
 
     /**
     * 数据库类型
-     */
+    */
     public static DbType DB_TYPE;
 
     /**
     * 初始化数据库类型
     *
     * @param dbType 数据库类型
-     */
+    */
     public static void init(DbType dbType) {
         DB_TYPE = dbType;
     }

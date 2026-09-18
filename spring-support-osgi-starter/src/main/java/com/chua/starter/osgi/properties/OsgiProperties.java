@@ -26,17 +26,17 @@ public class OsgiProperties {
 
     /**
     * 是否启用 osgi 集成（默认开启）。
-     */
+    */
     private boolean enabled = true;
 
     /**
     * Felix 框架持久化存储目录。
-     */
+    */
     private String storage = "./osgi-cache";
 
     /**
     * Felix 框架初始启动级别。
-     */
+    */
     private int startLevel = 4;
 
     /**
@@ -50,12 +50,12 @@ public class OsgiProperties {
     *       org.osgi.framework.system.packages.extra: com.example:api
     * }</pre>ges.extra: com.example:api
     * }</pre>
-     */
+    */
     private Map<String, Object> frameworkProperties = new HashMap<>();
 
     /**
     * 远程管理配置（SSH 或 Telnet，二选一）。
-     */
+    */
     private Shell shell = new Shell();
 
     /**
@@ -65,18 +65,18 @@ public class OsgiProperties {
     * 默认使用 SSH（端口 8122），安全性更高。</p>
     * @author CH
     * @since 4.0.0
-     */
+    */
     @Data
     public static class Shell {
 
         /**
         * 是否启用远程管理。
-         */
+        */
         private boolean enabled = false;
 
         /**
         * 协议类型：{@code ssh}（默认）或 {@code telnet}。
-         */
+        */
         private String protocol = "ssh";
 
         /**
@@ -85,22 +85,22 @@ public class OsgiProperties {
         *   <li>SSH 协议：默认 8122</li>
         *   <li>Telnet 协议：默认 6666</li>
         * </ul>
-         */
+        */
         private int port;
 
         /**
         * 绑定地址。
-         */
+        */
         private String host = "127.0.0.1";
 
         /**
         * 认证用户名（SSH 模式）。
-         */
+        */
         private String username = "";
 
         /**
         * 认证密码（SSH 模式）。
-         */
+        */
         private String password = "";
     }
 }

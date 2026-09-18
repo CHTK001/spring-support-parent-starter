@@ -23,17 +23,17 @@ public class ReturnPageResult<T> {
 
     /**
     * 返回状态码，0 表示成功
-     */
+    */
     private int code;
 
     /**
     * 返回消息描述
-     */
+    */
     private String msg;
 
     /**
     * 分页数据对象
-     */
+    */
     private PageResult<T> data;
 
     /**
@@ -41,7 +41,7 @@ public class ReturnPageResult<T> {
     *
     * @param <T> 数据类型
     * @return 空结果对象
-     */
+    */
     public static <T> ReturnPageResult<T> empty() {
         return ReturnPageResult.<T>builder()
                 .code(0)
@@ -56,7 +56,7 @@ public class ReturnPageResult<T> {
     * @param result 分页结果
     * @param <T>    数据类型
     * @return 返回对象
-     */
+    */
     public static <T> ReturnPageResult<T> of(PageResult<T> result) {
         return ReturnPageResult.<T>builder()
                 .code(0)
@@ -71,7 +71,7 @@ public class ReturnPageResult<T> {
     * @param result 分页结果
     * @param <T>    数据类型
     * @return 返回对象
-     */
+    */
     public static <T> ReturnPageResult<T> ok(PageResult<T> result) {
         return of(result);
     }
@@ -82,7 +82,7 @@ public class ReturnPageResult<T> {
     * @param message 错误消息
     * @param <T>     数据类型
     * @return 失败返回对象
-     */
+    */
     public static <T> ReturnPageResult<T> error(String message) {
         return ReturnPageResult.<T>builder()
                 .code(-1)
@@ -98,7 +98,7 @@ public class ReturnPageResult<T> {
     * @param message 错误消息
     * @param <T>     数据类型
     * @return 失败返回对象
-     */
+    */
     public static <T> ReturnPageResult<T> error(PageResult<T> data, String message) {
         return ReturnPageResult.<T>builder()
                 .code(-1)

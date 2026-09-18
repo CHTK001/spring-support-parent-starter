@@ -45,7 +45,7 @@ public class MerchantServiceImpl implements MerchantService {
     *
     * @param dto dto
     * @return 创建merchant的结果
-     */
+    */
     public MerchantVO createMerchant(MerchantDTO dto) {
         Merchant merchant = new Merchant();
         BeanUtils.copyProperties(dto, merchant);
@@ -69,7 +69,7 @@ public class MerchantServiceImpl implements MerchantService {
     * @param id 标识
     * @param dto dto
     * @return 更新merchant的结果
-     */
+    */
     public MerchantVO updateMerchant(Long id, MerchantDTO dto) {
         Merchant merchant = requireMerchant(id);
         BeanUtils.copyProperties(dto, merchant);
@@ -90,7 +90,7 @@ public class MerchantServiceImpl implements MerchantService {
     *
     * @param id 标识
     * @return 删除merchant的结果
-     */
+    */
     public boolean deleteMerchant(Long id) {
         Merchant merchant = requireMerchant(id);
         long channelCount = merchantChannelMapper.selectCount(new LambdaQueryWrapper<MerchantChannel>()
@@ -100,7 +100,7 @@ public class MerchantServiceImpl implements MerchantService {
             * 薪酬异常。
             * @param "商户下仍存在支付方式配置，不能删除" "商户下仍存在支付方式配置，不能删除"
             * @return 薪酬异常的结果
-             */
+            */
             throw new PaymentException("商户下仍存在支付方式配置，不能删除");
         }
         long orderCount = paymentOrderMapper.selectCount(new LambdaQueryWrapper<PaymentOrder>()
@@ -111,7 +111,7 @@ public class MerchantServiceImpl implements MerchantService {
             * 薪酬异常。
             * @param "商户下仍存在订单，不能删除" "商户下仍存在订单，不能删除"
             * @return 薪酬异常的结果
-             */
+            */
             throw new PaymentException("商户下仍存在订单，不能删除");
         }
         return merchantMapper.deleteById(merchant.getId()) > 0;
@@ -148,7 +148,7 @@ public class MerchantServiceImpl implements MerchantService {
     *
     * @param id 标识
     * @return activateMerchant的结果
-     */
+    */
     public boolean activateMerchant(Long id) {
         Merchant merchant = requireMerchant(id);
         merchant.setStatus(MerchantStatus.ACTIVE.getCode());
@@ -162,7 +162,7 @@ public class MerchantServiceImpl implements MerchantService {
     *
     * @param id 标识
     * @return deactivateMerchant的结果
-     */
+    */
     public boolean deactivateMerchant(Long id) {
         Merchant merchant = requireMerchant(id);
         merchant.setStatus(MerchantStatus.DISABLED.getCode());
@@ -174,7 +174,7 @@ public class MerchantServiceImpl implements MerchantService {
     *
     * @param id 标识
     * @return requireMerchant的结果
-     */
+    */
     private Merchant requireMerchant(Long id) {
         Merchant merchant = merchantMapper.selectById(id);
         if (merchant == null) {
@@ -182,7 +182,7 @@ public class MerchantServiceImpl implements MerchantService {
             * 薪酬异常。
             * @param "商户不存在" "商户不存在"
             * @return 薪酬异常的结果
-             */
+            */
             throw new PaymentException("商户不存在");
         }
         return merchant;
@@ -192,7 +192,7 @@ public class MerchantServiceImpl implements MerchantService {
     * generatemerchantno
     *
     * @return generateMerchantNo的结果
-     */
+    */
     private String generateMerchantNo() {
         return "M" + System.currentTimeMillis() + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
     }
@@ -202,7 +202,7 @@ public class MerchantServiceImpl implements MerchantService {
     *
     * @param merchant merchant
     * @return 转换转为vo的结果
-     */
+    */
     private MerchantVO convertToVO(Merchant merchant) {
         MerchantVO vo = new MerchantVO();
         BeanUtils.copyProperties(merchant, vo);

@@ -40,7 +40,7 @@ public class ConsolePageController {
     * 控制台page控制器。
     * @param scanner scanner
     * @param store 存储
-     */
+    */
     public ConsolePageController(AnnotationSwitchScanner scanner, ConsoleSqliteStore store) {
         this.scanner = scanner;
         this.store = store;
@@ -51,7 +51,7 @@ public class ConsolePageController {
     /**
     * 索引。
     * @return 索引的结果
-     */
+    */
     public String index() {
         return "redirect:/console/features";
     }
@@ -63,7 +63,7 @@ public class ConsolePageController {
     *
     * @param model 模型
     * @return 特征的结果
-     */
+    */
     @GetMapping("/features")
     @Permission(CONSOLE_PERMISSION)
     public String features(Model model) {
@@ -96,7 +96,7 @@ public class ConsolePageController {
     *
     * @param model 模型
     * @return grays的结果
-     */
+    */
     @GetMapping("/grays")
     @Permission(CONSOLE_PERMISSION)
     public String grays(Model model) {
@@ -131,7 +131,7 @@ public class ConsolePageController {
     *
     * @param model 模型
     * @return kv的结果
-     */
+    */
     @GetMapping("/kv")
     @Permission(CONSOLE_PERMISSION)
     public String kv(Model model) {
@@ -158,7 +158,7 @@ public class ConsolePageController {
     *
     * @param featureId 特征标识
     * @return 删除特征的结果
-     */
+    */
     @PostMapping("/api/features/delete")
     @Permission(CONSOLE_PERMISSION)
     public String deleteFeature(@RequestParam String featureId) {
@@ -185,7 +185,7 @@ public class ConsolePageController {
     *
     * @param pattern 模式
     * @return 删除gray的结果
-     */
+    */
     @PostMapping("/api/grays/delete")
     @Permission(CONSOLE_PERMISSION)
     public String deleteGray(@RequestParam String pattern) {
@@ -199,7 +199,7 @@ public class ConsolePageController {
     * @param key 钥匙
     * @param value 价值观
     * @return upsertKv的结果
-     */
+    */
     @PostMapping("/api/kv")
     @Permission(CONSOLE_PERMISSION)
     public String upsertKv(@RequestParam String key, @RequestParam String value) {
@@ -212,7 +212,7 @@ public class ConsolePageController {
     *
     * @param key 钥匙
     * @return 删除kv的结果
-     */
+    */
     @PostMapping("/api/kv/delete")
     @Permission(CONSOLE_PERMISSION)
     public String deleteKv(@RequestParam String key) {
@@ -226,7 +226,7 @@ public class ConsolePageController {
     * 连接。
     * @param arr arr
     * @return 连接的结果
-     */
+    */
     private static String join(String[] arr) {
         if (arr == null || arr.length == 0) {
             return "";
@@ -238,7 +238,7 @@ public class ConsolePageController {
     * 分割。
     * @param s s
     * @return 分割的结果
-     */
+    */
     private static String[] split(String s) {
         if (s == null || s.trim().isEmpty()) {
             return new String[0];

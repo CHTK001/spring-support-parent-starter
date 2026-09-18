@@ -29,19 +29,19 @@ public class AiAlertServiceImpl implements AiAlertService {
 
     /**
     * 时间格式化器
-     */
+    */
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     /**
     * 告警 映射器
-     */
+    */
     private final AiAlertMapper alertMapper;
 
     /**
     * 查询所有告警规则。
     *
     * @return 告警 DTO 列表
-     */
+    */
     @Override
     public List<AiAlertDTO> list() {
         return alertMapper.selectList(
@@ -57,7 +57,7 @@ public class AiAlertServiceImpl implements AiAlertService {
     *
     * @param alert 告警 DTO
     * @return 创建后的告警 DTO
-     */
+    */
     @Override
     @Transactional
     public AiAlertDTO create(AiAlertDTO alert) {
@@ -82,7 +82,7 @@ public class AiAlertServiceImpl implements AiAlertService {
     * @param alertId 告警主键
     * @param alert   告警 DTO
     * @return 更新后的告警 DTO
-     */
+    */
     @Override
     @Transactional
     public AiAlertDTO update(Long alertId, AiAlertDTO alert) {
@@ -97,7 +97,7 @@ public class AiAlertServiceImpl implements AiAlertService {
     * 删除告警规则（逻辑删除）。
     *
     * @param alertId 告警主键
-     */
+    */
     @Override
     @Transactional
     public void delete(Long alertId) {
@@ -111,7 +111,7 @@ public class AiAlertServiceImpl implements AiAlertService {
     * @param alertId 告警主键
     * @param enabled 是否启用
     * @return 更新后的告警 DTO
-     */
+    */
     @Override
     @Transactional
     public AiAlertDTO toggle(Long alertId, Boolean enabled) {
@@ -128,7 +128,7 @@ public class AiAlertServiceImpl implements AiAlertService {
     *
     * @param entity 告警实体
     * @return 告警 DTO
-     */
+    */
     private AiAlertDTO toDto(SysAiAlert entity) {
         if (entity == null) {
             return null;
@@ -150,7 +150,7 @@ public class AiAlertServiceImpl implements AiAlertService {
     *
     * @param dto 告警 DTO
     * @return 告警实体
-     */
+    */
     private SysAiAlert toEntity(AiAlertDTO dto) {
         SysAiAlert entity = new SysAiAlert();
         entity.setAlertName(dto.getName());

@@ -30,7 +30,7 @@ public class ProjectAutoConfiguration {
     * 发布项目管理模块的 服务信息 贡献者。
     *
     * @return ServiceInfoContributor
-     */
+    */
     @Bean
     public ServiceInfoContributor projectServiceInfoContributor() {
         return registry -> registry.registerFlag("project", "发布项目管理", true,

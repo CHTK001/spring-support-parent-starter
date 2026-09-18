@@ -41,7 +41,7 @@ public class ConsoleKvEnvironmentPostProcessor implements EnvironmentPostProcess
             /**
             * 尝试。
             * @param path 路径
-             */
+            */
             try (Connection connection = DriverManager.getConnection("jdbc:sqlite:" + path);
                  Statement statement = connection.createStatement();
                  ResultSet rs = statement.executeQuery("SELECT k, v FROM console_kv")) {

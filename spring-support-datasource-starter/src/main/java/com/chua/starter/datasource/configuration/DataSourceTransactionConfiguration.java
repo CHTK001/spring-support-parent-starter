@@ -61,7 +61,7 @@ public class DataSourceTransactionConfiguration implements
         ApplicationContextAware {
     /**
     * 写事务的超时时间为10秒
-     */
+    */
     private static final int TX_METHOD_TIMEOUT = 10;
     /** Advisor */
     private static final String ADVISOR = "_advisor";
@@ -72,29 +72,29 @@ public class DataSourceTransactionConfiguration implements
     private TransactionProperties transactionProperties;
     /**
     * 只读事务
-     */
+    */
     private final String[] readOnly = new String[]{"get*", "query*", "find*", "list*", "count*", "exist*", "search*", "fetch*"};
     /**
     * 写事务
-     */
+    */
     private final String[] writeOnly = new String[]{"add*", "save*", "insert*", "update*", "modify*", "delete*", "remove*"};
     /**
     * 无事务
-     */
+    */
     private final String[] noOnly = new String[]{"noTx*"};
     /**
     * 注入事务管理器
-     */
+    */
     public ApplicationContext applicationContext;
     /**
     * restful包下所有服务包或者服务的子包的任意类的任意方法
-     */
+    */
     private static final String AOP_POINTCUT_EXPRESSION = "execution (* com.jun.cloud.restful..*.service..*.*(..))";
 
     /**
     * 设置事务拦截器
     * @return springtransactionattribute源的结果
-     */
+    */
     public TransactionAttributeSource springTransactionAttributeSource() {
         String[] readTx = Splitter.on(',').omitEmptyStrings().trimResults().splitToList(transactionProperties.getReadOnly()).toArray(new String[0]);
         readTx = readTx.length == 0 ? readOnly : readTx;
@@ -182,7 +182,7 @@ public class DataSourceTransactionConfiguration implements
     *
     * @param mainPackage 文件包
     * @return 事务
-     */
+    */
     private String execute(String mainPackage) {
         return "execution (* " + mainPackage + "..*..*(..))";
     }
@@ -203,7 +203,7 @@ public class DataSourceTransactionConfiguration implements
     *
     * @param transactionManager 默认事务管理器（建议在多数据源里指定一个主事务管理器为 @Primary）
     * @return Spring transactiontemplate
-     */
+    */
     @Bean
     @ConditionalOnMissingBean(TransactionTemplate.class)
     public TransactionTemplate transactionTemplate(PlatformTransactionManager transactionManager) {
@@ -211,7 +211,7 @@ public class DataSourceTransactionConfiguration implements
         * transactiontemplate。
         * @param transactionManager transaction管理器
         * @return TransactionTemplate的结果
-         */
+        */
         return new TransactionTemplate(transactionManager);
     }
 
@@ -220,7 +220,7 @@ public class DataSourceTransactionConfiguration implements
     *
     * @param dataSource 默认事务管理器（建议在多数据源里指定一个主事务管理器为 @Primary）
     * @return Spring jdbctransaction管理器
-     */
+    */
     @Bean
     @ConditionalOnMissingBean(JdbcTransactionManager.class)
     public JdbcTransactionManager jdbcTransactionManager(DataSource dataSource) {
@@ -228,7 +228,7 @@ public class DataSourceTransactionConfiguration implements
         * jdbctransaction管理器。
         * @param dataSource 数据源
         * @return jdbctransaction管理器的结果
-         */
+        */
         return new JdbcTransactionManager(dataSource);
     }
     /**
@@ -236,7 +236,7 @@ public class DataSourceTransactionConfiguration implements
     *
     * @param dataSource 默认数据源
     * @return Spring jdbctemplate
-     */
+    */
     @Bean
     @ConditionalOnMissingBean(JdbcTemplate.class)
     public JdbcTemplate jdbcTemplate(DataSource dataSource) {
@@ -244,7 +244,7 @@ public class DataSourceTransactionConfiguration implements
         * jdbctemplate。
         * @param dataSource 数据源
         * @return JdbcTemplate的结果
-         */
+        */
         return new JdbcTemplate(dataSource);
     }
 }

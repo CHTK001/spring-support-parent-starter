@@ -35,47 +35,47 @@ public class SchedulerSyncBinder {
 
     /**
     * 同步服务端 SPI 钥匙
-     */
+    */
     public static final String SPI_SYNC_SERVER = "sync.server";
 
     /**
     * 调度服务端实例
-     */
+    */
     private final SyncServer syncServer;
 
     /**
     * 进程内事件总线
-     */
+    */
     private final JobSyncBus bus;
 
     /**
     * 日志落库实现
-     */
+    */
     private final JobLogSink logSink;
 
     /**
     * 当前节点标识
-     */
+    */
     private final String nodeId;
 
     /**
     * CMD 转发器 (持有, 用于注销)
-     */
+    */
     private BiConsumer<String, Object> cmdForwarder;
 
     /**
     * 日志 接收器
-     */
+    */
     private SyncMessageHandler logHandler;
 
     /**
     * 粘性轮询计数, 累加后取模 客户端 数, 保证每个 due 任务落在同一 执行器 直到 客户端 列表变化。
-     */
+    */
     private final AtomicLong stickyCounter = new AtomicLong(0L);
 
     /**
     * 启动绑定。
-     */
+    */
     @PostConstruct
     public void start() {
  // 本地 bus 上的 cmd 推给 <b>一个</b> 执行器 (粘性轮询)
@@ -162,8 +162,8 @@ public class SchedulerSyncBinder {
     }
 
     /**
-    * 关闭绑定。
-     */
+            * 关闭绑定。
+            */
     @PreDestroy
     public void shutdown() {
         if (cmdForwarder != null) {

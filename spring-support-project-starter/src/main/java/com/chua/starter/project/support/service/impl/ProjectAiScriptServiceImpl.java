@@ -81,8 +81,8 @@ public class ProjectAiScriptServiceImpl implements ProjectAiScriptService {
     }
 
     /**
-     * 高危命令模式（命中即拦截回填，前端改为手动编写）
-     */
+    * 高危命令模式（命中即拦截回填，前端改为手动编写）
+    */
     private static final java.util.List<java.util.regex.Pattern> DANGEROUS_PATTERNS = java.util.List.of(
             // 递归删除根/系统目录
             java.util.regex.Pattern.compile("(?i)\\brm\\s+(-[a-z]*r[a-z]*|--recursive)\\s+[^\\n]*\\s/(\\s|$|;)"),
@@ -95,12 +95,12 @@ public class ProjectAiScriptServiceImpl implements ProjectAiScriptService {
             java.util.regex.Pattern.compile("(?i)wget\\s+.*\\|\\s*(sh|bash)\\b"));
 
     /**
-     * 脚本安全审计：高危命令拦截
-     *
-     * @param script 脚本
-     * @param linux  是否 Linux
-     * @return 拦截原因，通过返回 空
-     */
+    * 脚本安全审计：高危命令拦截
+    *
+    * @param script 脚本
+    * @param linux  是否 Linux
+    * @return 拦截原因，通过返回 空
+    */
     private String auditScript(String script, boolean linux) {
         if (script == null || script.isBlank()) {
             return null;
@@ -118,10 +118,10 @@ public class ProjectAiScriptServiceImpl implements ProjectAiScriptService {
     }
 
     /**
-     * 反射查找 AI 注册表 bean
-     *
-     * @return 注册表实例，未装配返回 空
-     */
+    * 反射查找 AI 注册表 bean
+    *
+    * @return 注册表实例，未装配返回 空
+    */
     private Object findRegistryBean() {
         Class<?> registryClass = ReflectUtils.forName(REGISTRY_CLASS);
         if (registryClass == null) {
@@ -140,14 +140,14 @@ public class ProjectAiScriptServiceImpl implements ProjectAiScriptService {
     }
 
     /**
-     * 调用客户端阻塞生成
-     *
-     * @param client  客户端
-     * @param system  系统提示词
-     * @param prompt  用户提示词
-     * @return 同步响应对象
-     * @throws Exception 反射调用异常
-     */
+    * 调用客户端阻塞生成
+    *
+    * @param client  客户端
+    * @param system  系统提示词
+    * @param prompt  用户提示词
+    * @return 同步响应对象
+    * @throws Exception 反射调用异常
+    */
     private Object invokeClient(Object client, String system, String prompt) throws Exception {
         // [P3C 1.10 豁免] 跨模块解耦反射调用 AI 客户端 API，保持原生反射以避免编译期强依赖
         Method systemMethod = client.getClass().getMethod("system", String.class);
@@ -159,12 +159,12 @@ public class ProjectAiScriptServiceImpl implements ProjectAiScriptService {
     }
 
     /**
-     * 提取同步响应文本
-     *
-     * @param response 响应对象
-     * @return 文本
-     * @throws Exception 反射调用异常
-     */
+    * 提取同步响应文本
+    *
+    * @param response 响应对象
+    * @return 文本
+    * @throws Exception 反射调用异常
+    */
     private String extractText(Object response) throws Exception {
         if (response instanceof String s) {
             return s;
@@ -176,11 +176,11 @@ public class ProjectAiScriptServiceImpl implements ProjectAiScriptService {
     }
 
     /**
-     * 系统提示词：约束 LLM 只输出可执行脚本
-     *
-     * @param linux 是否 Linux
-     * @return 系统提示词
-     */
+    * 系统提示词：约束 LLM 只输出可执行脚本
+    *
+    * @param linux 是否 Linux
+    * @return 系统提示词
+    */
     private String systemPrompt(boolean linux) {
         return linux
                 ? "你是一名 Linux 系统运维专家。只输出可直接执行的 bash 脚本，不要输出任何解释、标题或 Markdown 围栏；脚本需支持 {{dir}} 占位符表示部署目录。"
@@ -188,12 +188,12 @@ public class ProjectAiScriptServiceImpl implements ProjectAiScriptService {
     }
 
     /**
-     * 构造用户提示词（携带项目上下文）
-     *
-     * @param project 项目
-     * @param kind    脚本类型
-     * @return 提示词
-     */
+    * 构造用户提示词（携带项目上下文）
+    *
+    * @param project 项目
+    * @param kind    脚本类型
+    * @return 提示词
+    */
     private String buildPrompt(MsProject project, String kind) {
         boolean linux = isLinux(project);
         String osName = linux ? "Linux" : "Windows";
@@ -219,11 +219,11 @@ public class ProjectAiScriptServiceImpl implements ProjectAiScriptService {
     }
 
     /**
-     * 去除 LLM 输出中的 Markdown 围栏
-     *
-     * @param text 原始文本
-     * @return 纯脚本文本
-     */
+    * 去除 LLM 输出中的 Markdown 围栏
+    *
+    * @param text 原始文本
+    * @return 纯脚本文本
+    */
     private String stripFence(String text) {
         String t = text.trim();
         if (t.startsWith("```")) {
@@ -239,22 +239,22 @@ public class ProjectAiScriptServiceImpl implements ProjectAiScriptService {
     }
 
     /**
-     * 项目目标 OS 是否 Linux
-     *
-     * @param project 项目
-     * @return 是否 Linux
-     */
+    * 项目目标 OS 是否 Linux
+    *
+    * @param project 项目
+    * @return 是否 Linux
+    */
     private boolean isLinux(MsProject project) {
         String os = project.getMsProjectHostOs() == null ? "LINUX" : project.getMsProjectHostOs();
         return os.trim().toUpperCase(Locale.ROOT).startsWith("LINUX");
     }
 
     /**
-     * 异常根因信息
-     *
-     * @param e 异常
-     * @return 根因消息
-     */
+    * 异常根因信息
+    *
+    * @param e 异常
+    * @return 根因消息
+    */
     private String rootMsg(Exception e) {
         Throwable cause = e;
         while (cause.getCause() != null && cause.getCause() != cause) {

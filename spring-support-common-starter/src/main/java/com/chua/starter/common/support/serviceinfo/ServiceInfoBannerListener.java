@@ -35,7 +35,7 @@ public class ServiceInfoBannerListener implements SmartApplicationListener {
     * @param detector detector
     * @param properties 服务信息属性
     * @param properties 属性
-     */
+    */
     public ServiceInfoBannerListener(ServiceInfoEndpointDetector detector, ServiceInfoProperties properties) {
         this.detector = detector;
         this.properties = properties;
@@ -53,15 +53,15 @@ public class ServiceInfoBannerListener implements SmartApplicationListener {
     public void onApplicationEvent(ApplicationEvent event) {
         if (event instanceof ApplicationReadyEvent) {
             /**
-            * on就绪。
-            * @param (ApplicationReadyEvent (application就绪事件
-             */
+    * on就绪。
+    * @param (ApplicationReadyEvent (application就绪事件
+    */
             onReady((ApplicationReadyEvent) event);
         } else if (event instanceof ApplicationFailedEvent) {
             /**
             * on失败。
             * @param (ApplicationFailedEvent (application失败事件
-             */
+            */
             onFailed((ApplicationFailedEvent) event);
         }
     }
@@ -70,7 +70,7 @@ public class ServiceInfoBannerListener implements SmartApplicationListener {
     * on就绪
     *
     * @param event 事件
-     */
+    */
     private void onReady(ApplicationReadyEvent event) {
         if (!properties.isBanner()) {
             return;
@@ -88,7 +88,7 @@ public class ServiceInfoBannerListener implements SmartApplicationListener {
     * on失败
     *
     * @param event 事件
-     */
+    */
     private void onFailed(ApplicationFailedEvent event) {
         if (bannerPrinted) {
             return;

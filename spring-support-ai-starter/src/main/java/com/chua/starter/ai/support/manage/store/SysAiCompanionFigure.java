@@ -26,43 +26,43 @@ public class SysAiCompanionFigure implements Serializable {
 
     /**
     * 形象主键（uuidv7 字符串）
-     */
+    */
     @TableId(value = "sys_ai_companion_figure_id", type = IdType.INPUT)
     private String figureId; // figureid
 
     /**
     * 形象名
-     */
+    */
     @TableField("sys_ai_companion_figure_name")
     private String name; // 名称
 
     /**
     * 宽高比
-     */
+    */
     @TableField("sys_ai_companion_figure_aspect")
     private Double aspect; // aspect
 
     /**
     * head_box JSON（x/y/w/h）
-     */
+    */
     @TableField(value = "sys_ai_companion_figure_head_box", typeHandler = JacksonTypeHandler.class)
     private Map<String, Object> headBox; // headbox
 
     /**
     * 尺寸档：s/m/l
-     */
+    */
     @TableField("sys_ai_companion_figure_size_tier")
     private String sizeTier; // 大小tier
 
     /**
     * 源图片路径（两阶段上传的临时路径）
-     */
+    */
     @TableField("sys_ai_companion_figure_source_path")
     private String sourcePath; // 源路径
 
     /**
     * 创建时间（轮次 毫秒）
-     */
+    */
     @TableField("sys_ai_companion_figure_created_at")
     private Long createdAt; // 创建at
 }

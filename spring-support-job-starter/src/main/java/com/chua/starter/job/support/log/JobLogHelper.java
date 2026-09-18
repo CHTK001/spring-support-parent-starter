@@ -31,7 +31,7 @@ public final class JobLogHelper {
     * 写入一行日志文本。
     *
     * @param msg 日志消息
-     */
+    */
     public static void log(String msg) {
         StringBuilder sb = LOG_BUFFER.get();
         if (sb == null) {
@@ -45,7 +45,7 @@ public final class JobLogHelper {
     * 获取并清空当前线程的日志缓冲区。
     *
     * @return 日志文本; 无日志时返回 空
-     */
+    */
     public static String getAndClear() {
         StringBuilder sb = LOG_BUFFER.get();
         if (sb == null || sb.isEmpty()) {
@@ -58,7 +58,7 @@ public final class JobLogHelper {
 
     /**
     * 清空当前线程的日志缓冲区（异常回滚时调用）。
-     */
+    */
     public static void clear() {
         LOG_BUFFER.remove();
     }

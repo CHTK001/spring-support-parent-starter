@@ -66,7 +66,7 @@ public @interface ApiFieldCrypto {
     * </p>
     *
     * @return 加密类型枚举值，默认AES
-     */
+    */
     ApiCryptoType cryptoType() default ApiCryptoType.AES;
 
     /**
@@ -77,31 +77,31 @@ public @interface ApiFieldCrypto {
     * </p>
     *
     * @return 加密密钥字符串
-     */
+    */
     String key();
 
     /**
     * 加密算法类型枚举
     * @author CH
     * @since 4.0.0
-     */
+    */
         enum ApiCryptoType {
         /**
         * AES对称加密算法
         * <p>高级加密标准(Advanced Encryption Standard)，密钥长度16/24/32字节</p>
-         */
+        */
         AES,
 
         /**
         * SM2非对称加密算法
         * <p>国家商用密码标准中的公钥密码算法</p>
-         */
+        */
         SM2,
 
         /**
         * SM4对称加密算法
         * <p>国家商用密码标准中的分组密码算法，密钥长度16字节</p>
-         */
+        */
         SM4
     }
 }

@@ -16,12 +16,12 @@ public final class RpcServerHolder {
 
     /**
     * 当前激活的 RPC 服务端实例，未启用 RPC 时为 {@code null}
-     */
+    */
     private static volatile RpcServer rpcServer;
 
     /**
     * rpc服务端holder。
-     */
+    */
     private RpcServerHolder() {
     }
 
@@ -29,7 +29,7 @@ public final class RpcServerHolder {
     * 获取当前激活的 RPC 服务端实例。
     *
     * @return RPC 服务端实例，未启用 RPC 时返回 {@code null}
-     */
+    */
     public static RpcServer getRpcServer() {
         return rpcServer;
     }
@@ -38,7 +38,7 @@ public final class RpcServerHolder {
     * 设置当前激活的 RPC 服务端实例。
     *
     * @param server RPC 服务端实例，可为 {@code null}
-     */
+    */
     public static void setRpcServer(RpcServer server) {
         rpcServer = server;
     }

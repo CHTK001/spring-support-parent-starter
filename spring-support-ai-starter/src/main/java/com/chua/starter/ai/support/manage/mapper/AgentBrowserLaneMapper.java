@@ -25,7 +25,7 @@ public interface AgentBrowserLaneMapper extends BaseMapper<AgentBrowserLane> {
     *
     * @param conversationId 对话 标识
     * @return 该对话关联的 Lane 列表
-     */
+    */
     List<AgentBrowserLane> selectByConversationId(String conversationId);
 
     /**
@@ -35,7 +35,7 @@ public interface AgentBrowserLaneMapper extends BaseMapper<AgentBrowserLane> {
     *
     * @param state 生命周期状态
     * @return 该状态的 Lane 数量
-     */
+    */
     int countByState(String state);
 
     /**
@@ -44,6 +44,6 @@ public interface AgentBrowserLaneMapper extends BaseMapper<AgentBrowserLane> {
     * <p>用于 close-all 操作，找到所有需要关闭的 Lane。</p>
     *
     * @return 非 失败 状态的 Lane 列表
-     */
+    */
     List<AgentBrowserLane> selectAllActive();
 }

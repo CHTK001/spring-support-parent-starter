@@ -26,7 +26,7 @@ public interface JacksonProblemHandler {
     * @param p JSON解析器，用于读取和解析JSON数据。
     * @param failureMsg 如果处理失败，提供一个描述性错误消息。
     * @return 反序列化后的对象，或者在处理失败时可能返回null或抛出异常。
-     */
+    */
     Object handle(DeserializationContext ctxt, JavaType targetType, JsonToken t, JsonParser p, String failureMsg);
 
 }

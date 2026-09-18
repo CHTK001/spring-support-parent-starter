@@ -33,7 +33,7 @@ public class MaterializedRouteAutoConfiguration {
     *
     * @param environment 环境
     * @return 物化route属性的结果
-     */
+    */
     public MaterializedRouteProperties materializedRouteProperties(Environment environment) {
         return MaterializedRouteProperties.bind(environment);
     }
@@ -44,7 +44,7 @@ public class MaterializedRouteAutoConfiguration {
     * 默认advisorauto代理creator
     *
     * @return 默认advisorauto代理creator的结果
-     */
+    */
     public DefaultAdvisorAutoProxyCreator defaultAdvisorAutoProxyCreator() {
         DefaultAdvisorAutoProxyCreator creator = new DefaultAdvisorAutoProxyCreator();
         creator.setProxyTargetClass(true);
@@ -58,13 +58,13 @@ public class MaterializedRouteAutoConfiguration {
     *
     * @param properties 属性
     * @return 物化routeadvisor的结果
-     */
+    */
     public MaterializedRouteAdvisor materializedRouteAdvisor(MaterializedRouteProperties properties) {
         /**
         * 物化routeadvisor。
         * @param properties 属性
         * @return 物化routeadvisor的结果
-         */
+        */
         return new MaterializedRouteAdvisor(properties);
     }
 
@@ -75,13 +75,13 @@ public class MaterializedRouteAutoConfiguration {
     *
     * @param properties 属性
     * @return 物化refreshadvisor的结果
-     */
+    */
     public MaterializedRefreshAdvisor materializedRefreshAdvisor(MaterializedRouteProperties properties) {
         /**
         * 物化refreshadvisor。
         * @param properties 属性
         * @return 物化refreshadvisor的结果
-         */
+        */
         return new MaterializedRefreshAdvisor(properties);
     }
 
@@ -93,7 +93,7 @@ public class MaterializedRouteAutoConfiguration {
     * @param properties 属性
     * @param dataSource 数据源
     * @return 物化sqlrouter的结果
-     */
+    */
     public MaterializedSqlDataSourceRouter materializedSqlRouter(MaterializedRouteProperties properties, DataSource dataSource) {
         return new CalciteMaterializedSqlRouter(
                 properties.toOptions(),

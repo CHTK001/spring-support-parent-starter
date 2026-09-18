@@ -17,7 +17,7 @@ public class MaterializedSqlRoute {
     * 获取数据源名称
     *
     * @return 数据源名称
-     */
+    */
     public String getDataSource() {
         return dataSourceName;
     }
@@ -26,7 +26,7 @@ public class MaterializedSqlRoute {
     * 设置数据源名称
     *
     * @param dataSourceName 数据源名称
-     */
+    */
     public void setDataSource(String dataSourceName) {
         this.dataSourceName = dataSourceName;
     }
@@ -35,7 +35,7 @@ public class MaterializedSqlRoute {
     * 判断是否已路由
     *
     * @return 已路由时返回 true
-     */
+    */
     public boolean isRouted() {
         return dataSourceName != null && !dataSourceName.isEmpty();
     }
@@ -44,7 +44,7 @@ public class MaterializedSqlRoute {
     * 获取数据源名称（与 获取数据源 相同）
     *
     * @return 数据源名称
-     */
+    */
     public String getDataSourceName() {
         return dataSourceName;
     }
@@ -53,7 +53,7 @@ public class MaterializedSqlRoute {
     * 设置数据源名称
     *
     * @param dataSourceName 数据源名称
-     */
+    */
     public void setDataSourceName(String dataSourceName) {
         this.dataSourceName = dataSourceName;
     }
@@ -62,7 +62,7 @@ public class MaterializedSqlRoute {
     * 获取表名
     *
     * @return 表名
-     */
+    */
     public String getTableName() {
         return tableName;
     }
@@ -71,7 +71,7 @@ public class MaterializedSqlRoute {
     * 设置表名
     *
     * @param tableName 表名
-     */
+    */
     public void setTableName(String tableName) {
         this.tableName = tableName;
     }

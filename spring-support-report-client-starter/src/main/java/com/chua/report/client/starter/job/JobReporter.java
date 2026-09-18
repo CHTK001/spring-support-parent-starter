@@ -32,7 +32,7 @@ public class JobReporter {
     * 获取Instance
     *
     * @return 获取instance的结果
-     */
+    */
     public static JobReporter getInstance() {
         return INSTANCE;
     }
@@ -43,7 +43,7 @@ public class JobReporter {
     * @param logId 日志标识
     * @param status 状态
     * @param message 消息
-     */
+    */
     public void report(int jobId, long logId, String status, String message) {
         if (syncClient == null || !syncClient.isConnected()) {
             log.warn("[JobReporter] SyncClient 未连接，无法上报结果: jobId={}", jobId);

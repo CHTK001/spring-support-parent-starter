@@ -30,7 +30,7 @@ public class WhereDeptChecker {
     * @param tableAlias 字符串
     * @param tableAlias table别名
     * @param columnName column名称
-     */
+    */
     public WhereDeptChecker(Expression where, String tableAlias, String columnName) {
         this.where = where;
         this.tableAlias = tableAlias;
@@ -41,7 +41,7 @@ public class WhereDeptChecker {
     * 是否包含部门标识
     *
     * @return 是否存在机构ID
-     */
+    */
     public boolean check() {
         if (where == null) {
             return false;
@@ -59,7 +59,7 @@ public class WhereDeptChecker {
     *
     * @param expression 表达式
     * @return 是否存在机构ID
-     */
+    */
     private boolean hasDeptId(BinaryExpression expression) {
         Expression leftExpression = expression.getLeftExpression();
         if (hasDeptId(leftExpression)) {
@@ -74,7 +74,7 @@ public class WhereDeptChecker {
     *
     * @param leftExpression 表达式
     * @return 是否存在机构ID
-     */
+    */
     private boolean hasDeptId(Expression leftExpression) {
         if (leftExpression instanceof Column column) {
             boolean equals = columnName.equals(column.getColumnName());
@@ -92,7 +92,7 @@ public class WhereDeptChecker {
     * 获取当前表
     *
     * @return 当前表
-     */
+    */
     public Table getCurrentTable() {
         return currentTable;
     }

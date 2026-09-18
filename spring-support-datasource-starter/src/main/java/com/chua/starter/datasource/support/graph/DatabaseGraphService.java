@@ -56,7 +56,7 @@ public class DatabaseGraphService {
     * @param dataSource 数据源
     * @param properties 文档属性
     * @param properties 属性
-     */
+    */
     public DatabaseGraphService(DataSource dataSource, DocumentProperties properties) {
         this.dataSource = dataSource;
         this.properties = properties;
@@ -66,7 +66,7 @@ public class DatabaseGraphService {
     * 应用
     *
     * @return apply的结果
-     */
+    */
     public GraphPayload apply() {
         lock.lock();
         try {
@@ -85,7 +85,7 @@ public class DatabaseGraphService {
     * Preview
     *
     * @return preview的结果
-     */
+    */
     public GraphPayload preview() {
         if (properties.isCacheable() && cached != null) {
             return cached;
@@ -97,7 +97,7 @@ public class DatabaseGraphService {
     * 获取缓存at
     *
     * @return 获取缓存at的结果
-     */
+    */
     public long getCachedAt() {
         return cachedAt;
     }
@@ -108,7 +108,7 @@ public class DatabaseGraphService {
     * 执行构建
     *
     * @return 执行构建的结果
-     */
+    */
     private GraphPayload doBuild() {
         // 1) 读取表 + FK 边
         TableGraphReader tableReader = new TableGraphReader(dataSource);
@@ -121,7 +121,7 @@ public class DatabaseGraphService {
             * @param "读取表结构失败" "读取表结构失败"
             * @param e e
             * @return illegal状态异常的结果
-             */
+            */
             throw new IllegalStateException("读取表结构失败", e);
         }
 
@@ -145,7 +145,7 @@ public class DatabaseGraphService {
         /**
         * 尝试。
         * @param dataSource.getConnection( 数据源.getconnection(
-         */
+        */
         try (Connection conn = dataSource.getConnection()) {
             TriggerReader.DatabaseDialect dialect = TriggerReader.DatabaseDialect.resolve(conn.getMetaData());
             triggers = new TriggerReader(dialect).readAll(conn);
@@ -269,7 +269,7 @@ public class DatabaseGraphService {
     * @param p p
     * @param tables tables
     * @return 匹配table的结果
-     */
+    */
     private static String matchTable(ProcedureInfo p, java.util.Set<String> tables) {
         if (p.getName() == null) {
             return null;
@@ -291,7 +291,7 @@ public class DatabaseGraphService {
     * 节点宽度：表名长度 + 是否有 FK 加宽
     * @param t t
     * @return 节点width的结果
-     */
+    */
     private static int nodeWidth(TableNodeInfo t) {
         int base = Math.max(120, t.getName().length() * 10 + 40);
         if (t.isHasForeignKey() || t.getInRefCount() > 0) {
@@ -304,7 +304,7 @@ public class DatabaseGraphService {
     * 节点高度：基础 60 + 触发器 * 16 + 存储过程 * 16（封顶）
     * @param t t
     * @return 节点height的结果
-     */
+    */
     private static int nodeHeight(TableNodeInfo t) {
         int h = 60;
         h += Math.min(t.getTriggers().size(), 5) * 16;
@@ -319,7 +319,7 @@ public class DatabaseGraphService {
     * relation-图计算 兼容的 payload
     * @author CH
     * @since 4.0.0
-     */
+    */
     public static class GraphPayload {
         /** 根级标识 */
         public String rootId;

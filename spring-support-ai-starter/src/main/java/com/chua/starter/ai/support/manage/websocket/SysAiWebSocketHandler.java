@@ -48,28 +48,28 @@ public class SysAiWebSocketHandler extends TextWebSocketHandler implements SubPr
 
     /**
     * 心跳间隔（毫秒），前端要求 ≤30s 至少一次
-     */
+    */
     private static final long HEARTBEAT_INTERVAL_MS = 20_000L;
 
     /**
     * JSON 工具
-     */
+    */
     private final ObjectMapper objectMapper;
 
     /**
     * 在线会话
-     */
+    */
     private final Map<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
 
     /**
     * 心跳调度器
-     */
+    */
     private ScheduledExecutorService heartbeatScheduler;
 
     @PostConstruct
     /**
     * 启动心跳。
-     */
+    */
     private void startHeartbeat() {
         heartbeatScheduler = Executors.newSingleThreadScheduledExecutor(r -> {
             Thread t = new Thread(r, "nomifun-ws-heartbeat");
@@ -84,7 +84,7 @@ public class SysAiWebSocketHandler extends TextWebSocketHandler implements SubPr
     @PreDestroy
     /**
     * 停止心跳。
-     */
+    */
     private void stopHeartbeat() {
         if (heartbeatScheduler != null && !heartbeatScheduler.isShutdown()) {
             heartbeatScheduler.shutdownNow();
@@ -122,7 +122,7 @@ public class SysAiWebSocketHandler extends TextWebSocketHandler implements SubPr
                 * 发送safe。
                 * @param session 会话
                 * @param response 响应
-                 */
+                */
                 sendSafe(session, response);
             }
         } catch (Exception e) {
@@ -136,7 +136,7 @@ public class SysAiWebSocketHandler extends TextWebSocketHandler implements SubPr
     * @param cmd         命令名（去掉 订阅- 前缀）
     * @param requestData 请求数据
     * @return 响应数据
-     */
+    */
     private Object dispatch(String cmd, JsonNode requestData) {
         log.debug("[nomifun-ws] 命令: {}", cmd);
         return "";
@@ -153,7 +153,7 @@ public class SysAiWebSocketHandler extends TextWebSocketHandler implements SubPr
     *
     * @param event 事件名（如 消息.流）
     * @param data  事件数据
-     */
+    */
     public void broadcast(String event, Object data) {
         String text;
         try {
@@ -168,14 +168,14 @@ public class SysAiWebSocketHandler extends TextWebSocketHandler implements SubPr
             * 发送safe。
             * @param session 会话
             * @param message 消息
-             */
+            */
             sendSafe(session, message);
         }
     }
 
     /**
     * 向所有在线连接发送心跳。
-     */
+    */
     private void pingAll() {
         Map<String, Object> ping = Map.of("name", "ping");
         try {
@@ -190,7 +190,7 @@ public class SysAiWebSocketHandler extends TextWebSocketHandler implements SubPr
                 * 发送safe。
                 * @param session 会话
                 * @param message 消息
-                 */
+                */
                 sendSafe(session, message);
             }
         } catch (Exception e) {
@@ -202,7 +202,7 @@ public class SysAiWebSocketHandler extends TextWebSocketHandler implements SubPr
     * 安全发送（会话关闭/异常时忽略）。
     * @param session 会话
     * @param payload payload
-     */
+    */
     private void sendSafe(WebSocketSession session, Object payload) {
         if (session == null || !session.isOpen()) {
             return;

@@ -33,13 +33,13 @@ public class TypeConverterRegisterConfiguration {
     *
     * @param conversionService 转换服务
     * @return 类型转换器registry的结果
-     */
+    */
     public TypeConverterRegistry typeConverterRegistry(ConfigurableConversionService conversionService) {
         /**
         * 类型转换器registry。
         * @param conversionService 转换服务
         * @return 类型转换器registry的结果
-         */
+        */
         return new TypeConverterRegistry(conversionService);
     }
 
@@ -48,14 +48,14 @@ public class TypeConverterRegisterConfiguration {
     *
     * @author CH
     * @since 4.0.0
-     */
+    */
     public static class TypeConverterRegistry {
 
         @SuppressWarnings({"unchecked", "rawtypes"})
         /**
         * 创建 类型转换器registry 实例
         * @param conversionService 转换服务
-         */
+        */
         public TypeConverterRegistry(ConfigurableConversionService conversionService) {
             conversionService.addConverter(new StringToLongTypeConverter());
             conversionService.addConverter(new StringToDateTypeConverter());

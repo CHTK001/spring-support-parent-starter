@@ -32,12 +32,12 @@ public class AIDialogDbRecordService implements AIDialogRecordService {
 
     /**
     * 会话 映射器
-     */
+    */
     private final SysAiSessionMapper sessionMapper;
 
     /**
     * 消息 映射器
-     */
+    */
     private final SysAiMessageMapper messageMapper;
 
     @Override
@@ -118,7 +118,7 @@ public class AIDialogDbRecordService implements AIDialogRecordService {
     *
     * @param session 数据库会话
     * @return 业务会话
-     */
+    */
     private AIDialog toDialog(SysAiSession session) {
         AIDialog dialog = new AIDialog();
         dialog.setId(session.getId());
@@ -134,7 +134,7 @@ public class AIDialogDbRecordService implements AIDialogRecordService {
     *
     * @param entity 数据库消息
     * @return 业务消息
-     */
+    */
     private ChatMessage toChatMessage(SysAiMessage entity) {
         ChatMessage message = new ChatMessage();
         message.setId(entity.getId());

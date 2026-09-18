@@ -42,7 +42,7 @@ public class SocketIOProvider implements SocketProvider {
     * @param listeners 监听器
     * @param template template
     * @param template template
-     */
+    */
     public SocketSessionTemplate createSessionTemplate(
             SocketProperties properties,
             List<SocketListener> listeners) {
@@ -52,7 +52,7 @@ public class SocketIOProvider implements SocketProvider {
         * @param properties 属性
         * @param listeners 监听器
         * @return 套接字io会话template的结果
-         */
+        */
         return new SocketIOSessionTemplate(properties, listeners);
     }
 

@@ -47,7 +47,7 @@ public class TaskDistributionAutoConfiguration {
     * @param properties 配置属性
     * @param mapper     数据库 映射器（存储类型 = db 时自动注入）
     * @return TaskStore 实例
-     */
+    */
     @Bean
     @ConditionalOnMissingBean
     public TaskStore taskStore(TaskDistributionProperties properties,
@@ -59,7 +59,7 @@ public class TaskDistributionAutoConfiguration {
             * 文件任务存储。
             * @param properties.getStorePath( 属性.获取存储路径(
             * @return 文件任务存储的结果
-             */
+            */
             return new FileTaskStore(properties.getStorePath());
         }
         if ("db".equalsIgnoreCase(storeType)) {
@@ -69,7 +69,7 @@ public class TaskDistributionAutoConfiguration {
                 * db任务存储。
                 * @param mapper 映射器
                 * @return db任务存储的结果
-                 */
+                */
                 return new DbTaskStore(mapper);
             }
             log.warn("storeType=db 但未引入 mybatis 依赖或未配置数据源，回退到内存存储");
@@ -77,7 +77,7 @@ public class TaskDistributionAutoConfiguration {
         /**
         * 入内存任务存储。
         * @return 入内存任务存储的结果
-         */
+        */
         return new InMemoryTaskStore();
     }
 
@@ -85,14 +85,14 @@ public class TaskDistributionAutoConfiguration {
     * 节点注册表 Bean。
     *
     * @return NodeTable 实例
-     */
+    */
     @Bean(destroyMethod = "destroy")
     @ConditionalOnMissingBean
     public NodeTable nodeTable() {
         /**
         * 节点table。
         * @return 节点table的结果
-         */
+        */
         return new NodeTable();
     }
 
@@ -101,7 +101,7 @@ public class TaskDistributionAutoConfiguration {
     *
     * @param store 持久化存储（可选，无则纯内存）
     * @return TaskManager 实例
-     */
+    */
     @Bean(destroyMethod = "destroy")
     @ConditionalOnMissingBean
     public TaskManager taskManager(TaskStore store) {
@@ -120,14 +120,14 @@ public class TaskDistributionAutoConfiguration {
     * 结果缓冲器 Bean。
     *
     * @return ResultBuffer 实例
-     */
+    */
     @Bean(destroyMethod = "close")
     @ConditionalOnMissingBean
     public ResultBuffer resultBuffer() {
         /**
         * 结果缓冲。
         * @return 结果缓冲的结果
-         */
+        */
         return new ResultBuffer();
     }
 
@@ -135,14 +135,14 @@ public class TaskDistributionAutoConfiguration {
     * 执行器注册中心 Bean。
     *
     * @return TaskExecutorRegistry 实例
-     */
+    */
     @Bean
     @ConditionalOnMissingBean
     public TaskExecutorRegistry taskExecutorRegistry() {
         /**
         * 任务执行器registry。
         * @return 任务执行器registry的结果
-         */
+        */
         return new TaskExecutorRegistry();
     }
 
@@ -151,7 +151,7 @@ public class TaskDistributionAutoConfiguration {
     *
     * @param properties 配置属性
     * @return DispatcherProvider 实例
-     */
+    */
     @Bean(destroyMethod = "close")
     @ConditionalOnMissingBean
     public DispatcherProvider dispatcherProvider(TaskDistributionProperties properties) {
@@ -170,7 +170,7 @@ public class TaskDistributionAutoConfiguration {
     * @param registry   执行器注册中心
     * @param nodeTable  节点注册表
     * @param executors  用户自定义 任务执行器 列表
-     */
+    */
     @Bean
     public ApplicationRunner taskDistributionInitializer(
             TaskDistributionProperties properties,
@@ -202,7 +202,7 @@ public class TaskDistributionAutoConfiguration {
     *
     * @param properties 配置属性
     * @return ServiceInfoContributor
-     */
+    */
     @Bean
     public ServiceInfoContributor taskDistributionServiceInfoContributor(TaskDistributionProperties properties) {
         return registry -> registry.registerFlag("taskdistribution", "任务分发", true,

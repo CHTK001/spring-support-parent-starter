@@ -21,38 +21,38 @@ public class SysTaskStore {
 
     /**
     * 任务 标识（主键）
-     */
+    */
     @TableId
     /** 任务标识 */
     private String taskId;
 
     /**
     * 任务类型
-     */
+    */
     private String taskType;
 
     /**
     * 任务状态
-     */
+    */
     private String taskStatus;
 
     /**
     * 任务 JSON（含 payload）
-     */
+    */
     private String taskJson;
 
     /**
     * 结果 JSON
-     */
+    */
     private String resultJson;
 
     /**
     * 创建时间
-     */
+    */
     private LocalDateTime createTime;
 
     /**
     * 更新时间
-     */
+    */
     private LocalDateTime updateTime;
 }

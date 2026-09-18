@@ -23,21 +23,21 @@ public class LogResult implements Serializable {
 
     /**
     * 起始行号
-     */
+    */
     private int fromLineNum;
 
     /**
     * 结束行号
-     */
+    */
     private int toLineNum;
 
     /**
     * 日志内容
-     */
+    */
     private String logContent;
 
     /**
     * 是否结束
-     */
+    */
     private boolean isEnd;
 }

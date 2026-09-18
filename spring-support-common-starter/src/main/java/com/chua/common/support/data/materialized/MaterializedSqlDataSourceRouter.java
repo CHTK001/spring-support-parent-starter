@@ -15,14 +15,14 @@ public interface MaterializedSqlDataSourceRouter extends MaterializedSqlRouter {
     *
     * @param route 路由信息
     * @return 数据源
-     */
+    */
     DataSource selectDataSource(MaterializedSqlRoute route);
 
     /**
     * 获取所有可用数据源
     *
     * @return 数据源映射
-     */
+    */
     java.util.Map<String, DataSource> getDataSources();
 
     /**
@@ -30,7 +30,7 @@ public interface MaterializedSqlDataSourceRouter extends MaterializedSqlRouter {
     *
     * @param request 物化 SQL 请求
     * @return 路由结果
-     */
+    */
     @Override
     default MaterializedSqlRoute route(MaterializedSqlRequest request) {
         return null;
@@ -41,7 +41,7 @@ public interface MaterializedSqlDataSourceRouter extends MaterializedSqlRouter {
     *
     * @param route 路由信息
     * @return 数据源
-     */
+    */
     @Override
     default DataSource resolveDataSource(MaterializedSqlRoute route) {
         return null;
@@ -51,7 +51,7 @@ public interface MaterializedSqlDataSourceRouter extends MaterializedSqlRouter {
     * 写操作成功回调
     *
     * @param request 物化 SQL 请求
-     */
+    */
     @Override
     default void onWriteSuccess(MaterializedSqlRequest request) {
     }

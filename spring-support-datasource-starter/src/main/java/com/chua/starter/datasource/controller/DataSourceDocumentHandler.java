@@ -39,19 +39,19 @@ public class DataSourceDocumentHandler {
 
     /**
     * 控制器
-     */
+    */
     private final DataSourceDocumentController controller;
 
     /**
     * 基础路径
-     */
+    */
     private final String basePath;
 
     /**
     * 数据源文档处理器。
     * @param controller 控制器
     * @param basePath 基础路径
-     */
+    */
     public DataSourceDocumentHandler(DataSourceDocumentController controller, String basePath) {
         this.controller = controller;
         this.basePath = trimTrailingSlash(basePath);
@@ -60,7 +60,7 @@ public class DataSourceDocumentHandler {
     /**
     * 注册到 Spring MVC 路径映射
     * @param mapping mapping
-     */
+    */
     public void register(RequestMappingHandlerMapping mapping) {
         /**
         * 注册路径。
@@ -69,7 +69,7 @@ public class DataSourceDocumentHandler {
         * @param "/preview" "/preview"
         * @param "preview" "preview"
         * @param HttpServletResponse.class httpservlet响应.类
-         */
+        */
         registerPath(mapping, "GET", "/preview", "preview", HttpServletResponse.class);
         /**
         * 注册路径。
@@ -78,7 +78,7 @@ public class DataSourceDocumentHandler {
         * @param "/apply" "/apply"
         * @param "apply" "apply"
         * @param HttpServletResponse.class httpservlet响应.类
-         */
+        */
         registerPath(mapping, "POST", "/apply", "apply", HttpServletResponse.class);
         /**
         * 注册路径。
@@ -87,7 +87,7 @@ public class DataSourceDocumentHandler {
         * @param "/list" "/列表"
         * @param "list" "列表"
         * @param HttpServletResponse.class httpservlet响应.类
-         */
+        */
         registerPath(mapping, "GET", "/list", "list", HttpServletResponse.class);
         /**
         * 注册路径。
@@ -97,7 +97,7 @@ public class DataSourceDocumentHandler {
         * @param "table" "table"
         * @param HttpServletRequest.class httpservlet请求.类
         * @param HttpServletResponse.class httpservlet响应.类
-         */
+        */
         registerPath(mapping, "GET", "/table/{name}", "table", HttpServletRequest.class, HttpServletResponse.class);
         /**
         * 注册路径。
@@ -106,7 +106,7 @@ public class DataSourceDocumentHandler {
         * @param "/relationship.json" "/relationship.json"
         * @param "relationshipJson" "relationshipjson"
         * @param HttpServletResponse.class httpservlet响应.类
-         */
+        */
         registerPath(mapping, "GET", "/relationship.json", "relationshipJson", HttpServletResponse.class);
         /**
         * 注册路径。
@@ -116,7 +116,7 @@ public class DataSourceDocumentHandler {
         * @param "graphJson" "图计算json"
         * @param HttpServletRequest.class httpservlet请求.类
         * @param HttpServletResponse.class httpservlet响应.类
-         */
+        */
         registerPath(mapping, "GET", "/graph.json", "graphJson", HttpServletRequest.class, HttpServletResponse.class);
         /**
         * 注册路径。
@@ -126,7 +126,7 @@ public class DataSourceDocumentHandler {
         * @param "graphHtml" "图计算HTML"
         * @param HttpServletRequest.class httpservlet请求.类
         * @param HttpServletResponse.class httpservlet响应.类
-         */
+        */
         registerPath(mapping, "GET", "/graph.html", "graphHtml", HttpServletRequest.class, HttpServletResponse.class);
         /**
         * 注册路径。
@@ -136,7 +136,7 @@ public class DataSourceDocumentHandler {
         * @param "graphTable" "图计算table"
         * @param HttpServletRequest.class httpservlet请求.类
         * @param HttpServletResponse.class httpservlet响应.类
-         */
+        */
         registerPath(mapping, "GET", "/graph/table/{name}.json", "graphTable", HttpServletRequest.class, HttpServletResponse.class);
         /**
         * 注册路径。
@@ -145,7 +145,7 @@ public class DataSourceDocumentHandler {
         * @param "/graph/apply" "/图计算/apply"
         * @param "graphApply" "图计算apply"
         * @param HttpServletResponse.class httpservlet响应.类
-         */
+        */
         registerPath(mapping, "POST", "/graph/apply", "graphApply", HttpServletResponse.class);
         log.info("[spring-support-datasource] 数据库文档预览与图谱已注册: basePath={}", basePath);
     }
@@ -168,7 +168,7 @@ public class DataSourceDocumentHandler {
     * 修剪trailingslash。
     * @param s s
     * @return 修剪trailingslash的结果
-     */
+    */
     private static String trimTrailingSlash(String s) {
         if (s == null || s.isEmpty()) {
             return "";

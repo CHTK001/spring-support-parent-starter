@@ -37,25 +37,25 @@ public class OcrTextExtractor implements TextExtractor {
 
     /**
     * OCR 模型名称（兼容旧构造）。
-     */
+    */
     private final String modelName;
 
     /**
     * 识别器（懒加载，单模型路径）。
-     */
+    */
     private volatile OcrRecognizer recognizer;
 
     /**
     * 完整管线（懒加载，detector+recognizer 路径）。
     * 为空时走单模型路径。
-     */
+    */
     private volatile OcrPipeline pipeline;
 
     /**
     * 兼容旧构造（单模型名作为 recognizer）。
     *
     * @param modelName OCR 模型名称（同时作为 detector/recognizer）
-     */
+    */
     public OcrTextExtractor(String modelName) {
         this.modelName = modelName;
         log.info("[OcrTextExtractor] OCR 提取器已创建（懒加载）: model={}", modelName);
@@ -70,7 +70,7 @@ public class OcrTextExtractor implements TextExtractor {
     * @param sortReadingOrder 是否按阅读顺序排序（先 y 后 x）
     * @param directionModel 方向矫正模型（空则关闭）
     * @param restorerModel  文字超分修复模型（空则关闭）
-     */
+    */
     public OcrTextExtractor(String detectorModel, String recognizerModel,
                             float minConfidence, boolean sortReadingOrder,
                             String directionModel, String restorerModel) {
@@ -88,7 +88,7 @@ public class OcrTextExtractor implements TextExtractor {
 
     /**
     * 完整管线参数（懒加载时用）。
-     */
+    */
     private String detectorModel;
     /** Recognizer模型 */
     private String recognizerModel;
@@ -106,7 +106,7 @@ public class OcrTextExtractor implements TextExtractor {
     *
     * @param file 待提取的文件
     * @return 结构化文本结果列表
-     */
+    */
     @Override
     public List<TextExtractResult> extractText(File file) {
         if (!isImage(file)) {
@@ -114,7 +114,7 @@ public class OcrTextExtractor implements TextExtractor {
             * illegal参数异常。
             * @param file.getName( 文件.获取名称(
             * @return illegal参数异常的结果
-             */
+            */
             throw new IllegalArgumentException("非图片文件，交由降级读取: " + file.getName());
         }
         try {
@@ -144,7 +144,7 @@ public class OcrTextExtractor implements TextExtractor {
             * @param 识别失败，交由降级读取" 识别失败，交由降级读取"
             * @param e e
             * @return illegal参数异常的结果
-             */
+            */
             throw new IllegalArgumentException("OCR 识别失败，交由降级读取", e);
         }
     }
@@ -153,7 +153,7 @@ public class OcrTextExtractor implements TextExtractor {
     * 懒加载识别器（兼容旧路径）。
     *
     * @return OCR 识别器
-     */
+    */
     private OcrRecognizer resolveRecognizer() {
         OcrRecognizer current = recognizer;
         if (current == null) {
@@ -171,7 +171,7 @@ public class OcrTextExtractor implements TextExtractor {
     * 懒加载 OCR 管线（detect→crop→recognize，含阈值过滤）。
     *
     * @return OCR 管线
-     */
+    */
     private OcrPipeline resolvePipeline() {
         OcrPipeline current = pipeline;
         if (current == null) {
@@ -201,7 +201,7 @@ public class OcrTextExtractor implements TextExtractor {
     *
     * @param file 文件
     * @return true 表示图片
-     */
+    */
     private static boolean isImage(File file) {
         String name = file.getName().toLowerCase();
         return name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".png")
@@ -212,7 +212,7 @@ public class OcrTextExtractor implements TextExtractor {
     * 获取提取器类型名称。
     *
     * @return 类型名称
-     */
+    */
     @Override
     public String type() {
         return "ocr";

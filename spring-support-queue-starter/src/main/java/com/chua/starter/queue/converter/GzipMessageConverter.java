@@ -38,9 +38,9 @@ public class GzipMessageConverter implements MessageConverter {
         try {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             /**
-            * 尝试。
-            * @param GZIPOutputStream(baos gzip输出流(baos
-             */
+    * 尝试。
+    * @param GZIPOutputStream(baos gzip输出流(baos
+    */
             try (GZIPOutputStream gzipOut = new GZIPOutputStream(baos)) {
                 gzipOut.write(payload);
             }
@@ -74,9 +74,9 @@ public class GzipMessageConverter implements MessageConverter {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
 
             /**
-            * 尝试。
-            * @param GZIPInputStream(bais gzip输入流(bais
-             */
+    * 尝试。
+    * @param GZIPInputStream(bais gzip输入流(bais
+    */
             try (GZIPInputStream gzipIn = new GZIPInputStream(bais)) {
                 byte[] buffer = new byte[4096];
                 int len;

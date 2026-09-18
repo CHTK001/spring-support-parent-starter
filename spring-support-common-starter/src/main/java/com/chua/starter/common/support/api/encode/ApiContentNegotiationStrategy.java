@@ -26,7 +26,7 @@ public class ApiContentNegotiationStrategy implements ContentNegotiationStrategy
     /**
     * 创建 api内容negotiationstrategy 实例
     * @param apiResponseEncodeRegister api响应encode注册
-     */
+    */
     public ApiContentNegotiationStrategy(ApiResponseEncodeRegister apiResponseEncodeRegister) {
         this.apiResponseEncodeRegister = apiResponseEncodeRegister;
     }

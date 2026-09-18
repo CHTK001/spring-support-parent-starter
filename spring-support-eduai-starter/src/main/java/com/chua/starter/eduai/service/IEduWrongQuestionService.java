@@ -23,7 +23,7 @@ public interface IEduWrongQuestionService extends IService<EduWrongQuestion> {
     * @param studentId  学生标识
     * @param questionId 题目标识
     * @param examId     考试标识
-     */
+    */
     void recordWrongQuestion(String studentId, Long questionId, Long examId);
 
     /**
@@ -31,7 +31,7 @@ public interface IEduWrongQuestionService extends IService<EduWrongQuestion> {
     *
     * @param query 查询条件
     * @return 分页结果
-     */
+    */
     PageResult<WrongQuestionVO> pageQuery(WrongQueryDTO query);
 
     /**
@@ -39,7 +39,7 @@ public interface IEduWrongQuestionService extends IService<EduWrongQuestion> {
     *
     * @param dto 复习卷配置
     * @return 题目ID列表
-     */
+    */
     List<Long> generateReviewPaper(ReviewPaperDTO dto);
 
     /**
@@ -48,6 +48,6 @@ public interface IEduWrongQuestionService extends IService<EduWrongQuestion> {
     * @param wrongId      错题记录标识
     * @param masteryLevel 掌握度
     * @return 是否成功
-     */
+    */
     boolean updateMastery(Long wrongId, Integer masteryLevel);
 }

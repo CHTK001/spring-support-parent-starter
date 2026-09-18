@@ -16,7 +16,7 @@ public interface DeptRegister {
     * 注册
     *
     * @return Expression
-     */
+    */
     Expression register();
 
 
@@ -25,7 +25,7 @@ public interface DeptRegister {
     *
     * @param tableName 表名
     * @return 表信息
-     */
+    */
     default TableInfo getTableInfo(String tableName) {
         return TableInfoHelper.getTableInfos().stream().filter(
                 it -> {

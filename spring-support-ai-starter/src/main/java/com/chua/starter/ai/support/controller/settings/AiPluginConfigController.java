@@ -46,7 +46,7 @@ public class AiPluginConfigController {
     * 获取所有 Plugins Provider 配置（本地 + 在线）。
     *
     * @return Provider 列表
-     */
+    */
     @Permission("admin")
     @Operation(summary = "获取 Plugins Provider 配置列表")
     @GetMapping
@@ -104,7 +104,7 @@ public class AiPluginConfigController {
     *
     * @param config 配置 Map
     * @return 更新后的配置
-     */
+    */
     @Permission("admin")
     @Operation(summary = "更新 Plugins Provider 开关")
     @PutMapping

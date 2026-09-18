@@ -28,27 +28,27 @@ public abstract class AbstractSyncServer extends AbstractServer implements SyncS
 
     /**
     * 协议名称（小写，如 WebSocket、套接字.IO、rsocket），由子类构造函数设置。
-     */
+    */
     protected String protocol;
 
     /**
     * 当前活跃会话（会话标识 -> 同步会话）。
-     */
+    */
     protected final Map<String, SyncSession> sessions = new ConcurrentHashMap<>();
 
     /**
     * 同步事件监听器列表。
-     */
+    */
     protected final List<SyncServerListener> listeners = new CopyOnWriteArrayList<>();
 
     /**
     * 构造函数，使用默认服务器配置。
-     */
+    */
     protected AbstractSyncServer() {
         /**
         * 父。
         * @param ServerSetting.defaults( 服务端setting.默认(
-         */
+        */
         super(ServerSetting.defaults());
     }
 
@@ -71,11 +71,11 @@ public abstract class AbstractSyncServer extends AbstractServer implements SyncS
     public void publish(String topic, Object message) {
         for (String sessionId : sessions.keySet()) {
             /**
-            * 执行发送。
-            * @param sessionId 会话标识
-            * @param topic topic
-            * @param message 消息
-             */
+    * 执行发送。
+    * @param sessionId 会话标识
+    * @param topic topic
+    * @param message 消息
+    */
             doSend(sessionId, topic, message);
         }
     }
@@ -84,11 +84,11 @@ public abstract class AbstractSyncServer extends AbstractServer implements SyncS
     /** 发送 */
     public void send(String clientId, String topic, Object message) {
         /**
-        * 执行发送。
-        * @param clientId 客户端标识
-        * @param topic topic
-        * @param message 消息
-         */
+    * 执行发送。
+    * @param clientId 客户端标识
+    * @param topic topic
+    * @param message 消息
+    */
         doSend(clientId, topic, message);
     }
 
@@ -125,14 +125,14 @@ public abstract class AbstractSyncServer extends AbstractServer implements SyncS
     * @param sessionId 会话标识
     * @param topic     消息主题
     * @param data      消息数据
-     */
+    */
     protected abstract void doSend(String sessionId, String topic, Object data);
 
     /**
     * 连接建立时触发，记录会话并通知监听器。
     *
     * @param session 同步会话
-     */
+    */
     protected void fireConnectionEstablished(SyncSession session) {
         sessions.put(session.getId(), session);
         for (SyncServerListener listener : listeners) {
@@ -144,7 +144,7 @@ public abstract class AbstractSyncServer extends AbstractServer implements SyncS
     * 连接断开时触发，移除会话并通知监听器。
     *
     * @param session 同步会话
-     */
+    */
     protected void fireConnectionClosed(SyncSession session) {
         sessions.remove(session.getId());
         for (SyncServerListener listener : listeners) {
@@ -158,7 +158,7 @@ public abstract class AbstractSyncServer extends AbstractServer implements SyncS
     * @param session 同步会话
     * @param topic   消息主题
     * @param data    消息数据
-     */
+    */
     protected void fireMessageReceived(SyncSession session, String topic, Object data) {
         for (SyncServerListener listener : listeners) {
             listener.onMessage(session.getId(), topic, data);

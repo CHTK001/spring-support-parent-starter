@@ -22,7 +22,7 @@ public interface AiChatFacadeService {
     *
     * @param request 对话请求
     * @return 对话结果
-     */
+    */
     Map<String, Object> call(AiChatRequest request);
 
     /**
@@ -30,7 +30,7 @@ public interface AiChatFacadeService {
     *
     * @param request 对话请求
     * @return SSE 发射器
-     */
+    */
     default SseEmitter stream(AiChatRequest request) {
         return stream(request, null);
     }
@@ -41,7 +41,7 @@ public interface AiChatFacadeService {
     * @param request    对话请求
     * @param onComplete 完成后回调（携带完整回复文本，可能为 空），可为 空
     * @return SSE 发射器
-     */
+    */
     default SseEmitter stream(AiChatRequest request, Consumer<String> onComplete) {
         return stream(request, null, onComplete);
     }
@@ -54,7 +54,7 @@ public interface AiChatFacadeService {
     * @param onChunk    每段增量文本回调（可为 空）
     * @param onComplete 完成后回调（携带完整回复文本，可能为 空），可为 空
     * @return SSE 发射器
-     */
+    */
     default SseEmitter stream(AiChatRequest request,
                               Consumer<String> onChunk,
                               Consumer<String> onComplete) {
@@ -70,7 +70,7 @@ public interface AiChatFacadeService {
     * @param onComplete 完成后回调（携带完整回复文本，可能为 空），可为 空
     * @param onError    失败回调（携带异常，仅在全链路失败时触发，与 on完成 互斥），可为 空
     * @return SSE 发射器
-     */
+    */
     SseEmitter stream(AiChatRequest request,
                       Consumer<String> onChunk,
                       Consumer<String> onComplete,
@@ -81,7 +81,7 @@ public interface AiChatFacadeService {
     *
     * @param groupId 分组 标识
     * @return 模型列表
-     */
+    */
     default List<String> models(Integer groupId) {
         return Collections.emptyList();
     }
@@ -95,7 +95,7 @@ public interface AiChatFacadeService {
     *
     * @param groupId 分组 标识（可为 空，表示系统内部调用）
     * @return 模型定义列表
-     */
+    */
     default List<ModelDefinition> modelDefinitions(Integer groupId) {
         return Collections.emptyList();
     }

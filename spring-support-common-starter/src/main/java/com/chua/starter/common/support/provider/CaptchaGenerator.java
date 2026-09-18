@@ -17,7 +17,7 @@ public interface CaptchaGenerator {
     * SPI 扩展名（小写类型名，如 arithmetic / chinese / chinese_gif / gif / spec）。
     *
     * @return 扩展名
-     */
+    */
     String name();
 
     /**
@@ -27,6 +27,6 @@ public interface CaptchaGenerator {
     * @param height 图片高度
     * @param length 验证码长度
     * @return 验证码实例
-     */
+    */
     Captcha create(int width, int height, int length);
 }

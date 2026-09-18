@@ -36,7 +36,7 @@ public abstract class AbstractMerchantPaymentChannel {
     *
     * @param channel 通道
     * @return ext配置的结果
-     */
+    */
     protected Map<String, Object> extConfig(MerchantChannel channel) {
         if (!StringUtils.hasText(channel.getExtConfig())) {
             return Collections.emptyMap();
@@ -50,7 +50,7 @@ public abstract class AbstractMerchantPaymentChannel {
             * @param "支付方式扩展配置格式错误" "支付方式扩展配置格式错误"
             * @param e e
             * @return 薪酬异常的结果
-             */
+            */
             throw new PaymentException("支付方式扩展配置格式错误", e);
         }
     }
@@ -61,7 +61,7 @@ public abstract class AbstractMerchantPaymentChannel {
     * @param channel 通道
     * @param key 钥匙
     * @return ext文本的结果
-     */
+    */
     protected String extText(MerchantChannel channel, String key) {
         Object value = extConfig(channel).get(key);
         return value == null ? null : String.valueOf(value);
@@ -72,7 +72,7 @@ public abstract class AbstractMerchantPaymentChannel {
     *
     * @param channel 通道
     * @return 提供者spi的结果
-     */
+    */
     protected String providerSpi(MerchantChannel channel) {
         return providerSpi(channel, DEFAULT_PROVIDER_SPI);
     }
@@ -83,26 +83,26 @@ public abstract class AbstractMerchantPaymentChannel {
     * @param channel 通道
     * @param fallback 降级
     * @return 提供者spi的结果
-     */
+    */
     protected String providerSpi(MerchantChannel channel, String fallback) {
         return firstNonBlank(
                 /**
                 * ext文本。
                 * @param channel 通道
                 * @param EXT_PROVIDER_SPI ext提供者spi
-                 */
+                */
                 extText(channel, EXT_PROVIDER_SPI),
                 /**
                 * ext文本。
                 * @param channel 通道
                 * @param "providerExtension" "提供者延伸"
-                 */
+                */
                 extText(channel, "providerExtension"),
                 /**
                 * ext文本。
                 * @param channel 通道
                 * @param "spi" "spi"
-                 */
+                */
                 extText(channel, "spi"),
                 channel != null && "EPAY".equalsIgnoreCase(channel.getChannelType()) ? "epay" : null,
                 fallback);
@@ -113,7 +113,7 @@ public abstract class AbstractMerchantPaymentChannel {
     *
     * @param encryptedValue encrypted价值观
     * @return decrypt价值观的结果
-     */
+    */
     protected String decryptValue(String encryptedValue) {
         if (!StringUtils.hasText(encryptedValue)) {
             return null;
@@ -130,7 +130,7 @@ public abstract class AbstractMerchantPaymentChannel {
     *
     * @param amount amount
     * @return yuan转为fen的结果
-     */
+    */
     protected long yuanToFen(BigDecimal amount) {
         if (amount == null) {
             return 0L;
@@ -145,7 +145,7 @@ public abstract class AbstractMerchantPaymentChannel {
     *
     * @param amount amount
     * @return fen转为yuan的结果
-     */
+    */
     protected BigDecimal fenToYuan(Number amount) {
         if (amount == null) {
             return BigDecimal.ZERO;
@@ -159,7 +159,7 @@ public abstract class AbstractMerchantPaymentChannel {
     *
     * @param values 价值观
     * @return 第一个nonblank的结果
-     */
+    */
     protected String firstNonBlank(String... values) {
         for (String value : values) {
             if (StringUtils.hasText(value)) {
@@ -175,14 +175,14 @@ public abstract class AbstractMerchantPaymentChannel {
     * @param value 价值观
     * @param message 消息
     * @return required文本的结果
-     */
+    */
     protected String requiredText(String value, String message) {
         if (!StringUtils.hasText(value)) {
             /**
             * 薪酬异常。
             * @param message 消息
             * @return 薪酬异常的结果
-             */
+            */
             throw new PaymentException(message);
         }
         return value;
@@ -193,7 +193,7 @@ public abstract class AbstractMerchantPaymentChannel {
     *
     * @param value 价值观
     * @return 转为json的结果
-     */
+    */
     protected String toJson(Object value) {
         try {
             return objectMapper.writeValueAsString(value);

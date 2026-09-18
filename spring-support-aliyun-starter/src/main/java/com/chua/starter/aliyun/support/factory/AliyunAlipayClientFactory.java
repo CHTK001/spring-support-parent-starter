@@ -19,7 +19,7 @@ public class AliyunAlipayClientFactory {
     *
     * @param properties 属性
     * @return 创建客户端的结果
-     */
+    */
     public AlipayClient createClient(AliyunAlipayProperties properties) {
         return createClient(createConfig(properties));
     }
@@ -29,14 +29,14 @@ public class AliyunAlipayClientFactory {
     *
     * @param config 配置
     * @return 创建客户端的结果
-     */
+    */
     public AlipayClient createClient(AlipayConfig config) {
         try {
             /**
             * 默认alipay客户端。
             * @param config 配置
             * @return 默认alipay客户端的结果
-             */
+            */
             return new DefaultAlipayClient(config);
         } catch (AlipayApiException e) {
             /**
@@ -44,7 +44,7 @@ public class AliyunAlipayClientFactory {
             * @param "创建支付宝客户端失败" "创建支付宝客户端失败"
             * @param e e
             * @return illegal状态异常的结果
-             */
+            */
             throw new IllegalStateException("创建支付宝客户端失败", e);
         }
     }
@@ -54,7 +54,7 @@ public class AliyunAlipayClientFactory {
     *
     * @param properties 属性
     * @return 创建配置的结果
-     */
+    */
     public AlipayConfig createConfig(AliyunAlipayProperties properties) {
         AlipayConfig config = new AlipayConfig();
         config.setServerUrl(properties.resolveServerUrl());

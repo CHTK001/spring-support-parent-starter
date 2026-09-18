@@ -49,7 +49,7 @@ public class RefundOrderController {
     *
     * @param id 标识
     * @return 获取byid的结果
-     */
+    */
     public Result<RefundOrderVO> getById(@PathVariable Long id) {
         return Result.success(paymentRefundOrderService.getDetail(id));
     }
@@ -62,7 +62,7 @@ public class RefundOrderController {
     *
     * @param orderId 订单标识
     * @return 列表by订单id的结果
-     */
+    */
     public Result<List<RefundOrderVO>> listByOrderId(@PathVariable Long orderId) {
         return Result.success(paymentRefundOrderService.listVoByOrderId(orderId));
     }
@@ -75,7 +75,7 @@ public class RefundOrderController {
     *
     * @param "1" "1"
     * @return page的结果
-     */
+    */
     public Result<PageResult<RefundOrderVO>> page(@RequestParam(defaultValue = "1") int pageNum,
                                                   @RequestParam(defaultValue = "10") int pageSize,
                                                   @RequestParam(required = false) Long merchantId,
@@ -93,7 +93,7 @@ public class RefundOrderController {
     * mark退税成功
     * @param id 标识
     * @param dto dto
-     */
+    */
     public Result<Boolean> markRefundSuccess(@PathVariable Long id,
                                              @RequestBody(required = false) RefundOperateDTO dto) {
         PaymentRefundOrder refundOrder = paymentRefundOrderService.getById(id);
@@ -113,7 +113,7 @@ public class RefundOrderController {
     * mark退税失败
     * @param id 标识
     * @param dto dto
-     */
+    */
     public Result<Boolean> markRefundFail(@PathVariable Long id,
                                           @RequestBody(required = false) RefundOperateDTO dto) {
         PaymentRefundOrder refundOrder = paymentRefundOrderService.getById(id);

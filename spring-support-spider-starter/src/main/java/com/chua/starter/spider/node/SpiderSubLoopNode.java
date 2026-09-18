@@ -34,24 +34,24 @@ public class SpiderSubLoopNode implements FlowNode {
 
     /**
     * 日志记录器
-     */
+    */
     private static final Logger log = LoggerFactory.getLogger(SpiderSubLoopNode.class);
 
     /**
     * 数组来源：当前数据
-     */
+    */
     private static final String SOURCE_CURRENT = "current";
 
     /**
     * 元素属性默认名称
-     */
+    */
     private static final String DEFAULT_AS = "item";
 
     /**
     * 节点类型标识。
     *
     * @return 节点类型
-     */
+    */
     @Override
     public String type() {
         return "spider.subLoop";
@@ -61,7 +61,7 @@ public class SpiderSubLoopNode implements FlowNode {
     * 节点配置表单元信息。
     *
     * @return 表单元信息列表
-     */
+    */
     @Override
     public List<FlowNodeField> configSchema() {
         List<FlowNodeField> schema = new ArrayList<>();
@@ -77,7 +77,7 @@ public class SpiderSubLoopNode implements FlowNode {
     * 遍历完成时以 {@link FlowContext#exit()} 结束循环。</p>
     *
     * @param context 当前流程上下文
-     */
+    */
     @Override
     public void execute(FlowContext context) {
         FlowProps props = context.currentNodeProps();
@@ -103,7 +103,7 @@ public class SpiderSubLoopNode implements FlowNode {
     * @param source  数组来源标识
     * @param context 当前流程上下文
     * @return 数组列表，为空时返回空列表
-     */
+    */
     private List<?> resolveList(String source, FlowContext context) {
         Object value;
         if (SOURCE_CURRENT.equals(source)) {
@@ -136,7 +136,7 @@ public class SpiderSubLoopNode implements FlowNode {
         * illegal参数异常。
         * @param source 源
         * @return illegal参数异常的结果
-         */
+        */
         throw new IllegalArgumentException("spider.subLoop 数据来源不是数组: " + source);
     }
 }

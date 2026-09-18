@@ -50,7 +50,7 @@ public class MpWalletController {
     * 获取Wallet
     * @param request 请求
     * @param merchantId merchantid
-     */
+    */
     public Result<WalletAccountVO> getWallet(HttpServletRequest request,
                                              @RequestParam Long merchantId) {
         Long userId = principalResolver.resolveUserId(request);
@@ -69,7 +69,7 @@ public class MpWalletController {
     * @param merchantId merchantid
     * @param bizType biz类型
     * @param bizNo bizno
-     */
+    */
     public Result<PageResult<WalletAccountLog>> listLogs(HttpServletRequest request,
                                                          @RequestParam(defaultValue = "1") int pageNum,
                                                          @RequestParam(defaultValue = "10") int pageSize,
@@ -93,7 +93,7 @@ public class MpWalletController {
     * @param merchantId merchantid
     * @param orderType 订单类型
     * @param status 状态
-     */
+    */
     public Result<PageResult<WalletOrder>> listOrders(HttpServletRequest request,
                                                       @RequestParam(defaultValue = "1") int pageNum,
                                                       @RequestParam(defaultValue = "10") int pageSize,
@@ -113,7 +113,7 @@ public class MpWalletController {
     * Withdraw
     * @param request 请求
     * @param dto dto
-     */
+    */
     public Result<WalletOrder> withdraw(HttpServletRequest request,
                                         @RequestBody WalletWithdrawDTO dto) {
         Long userId = principalResolver.resolveUserId(request);
@@ -158,7 +158,7 @@ public class MpWalletController {
     * 调动
     * @param request 请求
     * @param dto dto
-     */
+    */
     public Result<Void> transfer(HttpServletRequest request,
                                  @RequestBody WalletTransferDTO dto) {
         Long userId = principalResolver.resolveUserId(request);

@@ -108,7 +108,7 @@ public class DeployServiceImpl implements DeployService {
     * @param action 动作
     * @param file 文件
     * @return deploy的结果
-     */
+    */
     public ReturnResult<List<MsProjectDeployLog>> deploy(Long projectId, String action, MultipartFile file) {
         MsProject project = projectId == null ? null : projectMapper.selectById(projectId);
         if (project == null) {
@@ -137,11 +137,11 @@ public class DeployServiceImpl implements DeployService {
     }
 
     /**
-     * 生产级：上传包校验
-     *
-     * @param file 上传文件
-     * @return 校验失败的错误结果，合法返回 null
-     */
+    * 生产级：上传包校验
+    *
+    * @param file 上传文件
+    * @return 校验失败的错误结果，合法返回 null
+    */
     private ReturnResult<String> validateUpload(MultipartFile file) {
         if (projectProperties.getMaxUploadBytes() > 0 && file.getSize() > projectProperties.getMaxUploadBytes()) {
             return ReturnResult.error("部署包超过大小限制 " + (projectProperties.getMaxUploadBytes() / 1024 / 1024) + "MB");
@@ -157,8 +157,8 @@ public class DeployServiceImpl implements DeployService {
     }
 
     /**
-     * 部署内部执行（已被并发锁保护）
-     */
+    * 部署内部执行（已被并发锁保护）
+    */
     private ReturnResult<List<MsProjectDeployLog>> doDeploy(MsProject project, String action, MultipartFile file) {
         Long projectId = project.getId();
         final String act = normalizeAction(action);
@@ -177,7 +177,7 @@ public class DeployServiceImpl implements DeployService {
             /**
             * 尝试。
             * @param file.getInputStream( 文件.获取输入流(
-             */
+            */
             try (var in = file.getInputStream()) {
                 Files.copy(in, localFile, StandardCopyOption.REPLACE_EXISTING);
             }
@@ -266,7 +266,7 @@ public class DeployServiceImpl implements DeployService {
             * 之后deploy。
             * @param project project
             * @param anySuccess 任意成功
-             */
+            */
             afterDeploy(project, allSuccess);
 
             // 存在失败主机时：按配置自动回滚到上一版本
@@ -288,17 +288,17 @@ public class DeployServiceImpl implements DeployService {
     }
 
     /**
-     * 部署前置门禁：校验目标主机在线状态与延迟
-     * <p>
-     * 依据主机台账 {@code serverHostOnline} / {@code serverHostDelayMs}（由
-     * server-starter 的 HostOnlineScheduler 周期探测写回）判定：
-     * 停用、探测离线、延迟不可达（-1）任一命中即拦截，返回拦截原因；
-     * 全部通过返回 空。
-     * </p>
-     *
-     * @param host 主机
-     * @return 拦截原因，通过返回 空
-     */
+    * 部署前置门禁：校验目标主机在线状态与延迟
+    * <p>
+    * 依据主机台账 {@code serverHostOnline} / {@code serverHostDelayMs}（由
+    * server-starter 的 HostOnlineScheduler 周期探测写回）判定：
+    * 停用、探测离线、延迟不可达（-1）任一命中即拦截，返回拦截原因；
+    * 全部通过返回 空。
+    * </p>
+    *
+    * @param host 主机
+    * @return 拦截原因，通过返回 空
+    */
     private String preflightCheck(MsServerHost host) {
         if (host.getServerHostStatus() != null && host.getServerHostStatus() != 1) {
             return "前置门禁：主机 " + host.getServerHostName() + " 已停用";
@@ -323,11 +323,11 @@ public class DeployServiceImpl implements DeployService {
     }
 
     /**
-     * TCP 连通探测（异步，超时 3 秒）
-     *
-     * @param host 主机
-     * @return 是否可达
-     */
+    * TCP 连通探测（异步，超时 3 秒）
+    *
+    * @param host 主机
+    * @return 是否可达
+    */
     private boolean isTcpReachable(MsServerHost host) {
         if (host.getServerHostAddress() == null || host.getServerHostAddress().isBlank()) {
             return false;
@@ -358,22 +358,22 @@ public class DeployServiceImpl implements DeployService {
     }
 
     /**
-     * 前置门禁是否开启
-     *
-     * @param project 项目
-     * @return 是否开启
-     */
+    * 前置门禁是否开启
+    *
+    * @param project 项目
+    * @return 是否开启
+    */
     private boolean isGateEnabled(MsProject project) {
         return project.getMsProjectPreflightGate() != null && project.getMsProjectPreflightGate() == 1;
     }
 
     /**
-     * 部署失败自动回滚：项目开启 autoRollback 时，若存在失败主机，回滚到归档中最近的历史版本
-     *
-     * @param project 项目
-     * @param failedVersion 本次失败版本
-     * @param action 操作类型
-     */
+    * 部署失败自动回滚：项目开启 autoRollback 时，若存在失败主机，回滚到归档中最近的历史版本
+    *
+    * @param project 项目
+    * @param failedVersion 本次失败版本
+    * @param action 操作类型
+    */
     private void autoRollbackOnFail(MsProject project, String failedVersion, String action) {
         if (project.getMsProjectAutoRollback() == null || project.getMsProjectAutoRollback() != 1) {
             return;
@@ -409,7 +409,7 @@ public class DeployServiceImpl implements DeployService {
     * @param archive  归档记录
     * @param archived 归档文件路径
     * @param action   原操作类型
-     */
+    */
     private ReturnResult<List<MsProjectDeployLog>> rollbackInternal(MsProject project, MsProjectUploadArchive archive,
                                                                     Path archived, String action) {
         final List<Long> hostIds = parseHostIds(project.getMsProjectHostIds());
@@ -464,7 +464,7 @@ public class DeployServiceImpl implements DeployService {
     * 启动。
     * @param projectId projectid
     * @return 启动的结果
-     */
+    */
     public ReturnResult<List<MsProjectDeployLog>> start(Long projectId) {
         return lifecycle(projectId, ProjectConstants.ACTION_START, ProjectConstants.RUNTIME_RUNNING);
     }
@@ -475,7 +475,7 @@ public class DeployServiceImpl implements DeployService {
     * 停止。
     * @param projectId projectid
     * @return 停止的结果
-     */
+    */
     public ReturnResult<List<MsProjectDeployLog>> stop(Long projectId) {
         return lifecycle(projectId, ProjectConstants.ACTION_STOP, ProjectConstants.RUNTIME_STOPPED);
     }
@@ -486,7 +486,7 @@ public class DeployServiceImpl implements DeployService {
     * restart。
     * @param projectId projectid
     * @return restart的结果
-     */
+    */
     public ReturnResult<List<MsProjectDeployLog>> restart(Long projectId) {
         return lifecycle(projectId, ProjectConstants.ACTION_RESTART, ProjectConstants.RUNTIME_RUNNING);
     }
@@ -519,7 +519,7 @@ public class DeployServiceImpl implements DeployService {
     * @param projectId projectid
     * @param archiveId Arch Linux Linux Linuxid
     * @return rollback的结果
-     */
+    */
     public ReturnResult<List<MsProjectDeployLog>> rollback(Long projectId, Long archiveId) {
         MsProject project = projectId == null ? null : projectMapper.selectById(projectId);
         if (project == null) {
@@ -581,7 +581,7 @@ public class DeployServiceImpl implements DeployService {
     * @param lines 线
     * @param linux Linux
     * @return 构建tail命令的结果
-     */
+    */
     private String buildTailCommand(String file, Long cursor, int lines, boolean linux) {
         if (linux) {
             if (cursor != null && cursor > 0) {
@@ -604,7 +604,7 @@ public class DeployServiceImpl implements DeployService {
     * @param credential credential
     * @param command 命令
     * @return 执行输出的结果
-     */
+    */
     private String execOutput(MsServerHost host, SshCredential credential, String command) throws Exception {
         SshClients.Handle handle = null;
         try {
@@ -627,7 +627,7 @@ public class DeployServiceImpl implements DeployService {
     * @param timeout    超时（秒）
     * @return 退出码是否为 0
     * @throws Exception 连接失败时抛出
-     */
+    */
     private boolean execCommand(MsServerHost host, SshCredential credential, String command, int timeout) throws Exception {
         SshClients.Handle handle = null;
         try {
@@ -657,7 +657,7 @@ public class DeployServiceImpl implements DeployService {
     * 部署/回滚成功后处理：自动启动 → 健康检查
     * @param project project
     * @param anySuccess 任意成功
-     */
+    */
     private void afterDeploy(MsProject project, boolean anySuccess) {
         if (!anySuccess) return;
         // 自动启动
@@ -687,7 +687,7 @@ public class DeployServiceImpl implements DeployService {
 
     /**
     * 健康检查：对所有绑定主机执行探测
-     */
+    */
     private boolean healthCheck(MsProject project) {
         List<Long> hostIds = parseHostIds(project.getMsProjectHostIds());
         int timeout = project.getMsProjectHealthTimeout() != null ? project.getMsProjectHealthTimeout() : 30;
@@ -709,7 +709,7 @@ public class DeployServiceImpl implements DeployService {
 
     /**
     * 单主机健康检查
-     */
+    */
     private boolean doHealthCheck(MsServerHost host, SshCredential credential,
                                    MsProject project, int timeoutSec) throws Exception {
         String target = project.getMsProjectHealthTarget();
@@ -735,7 +735,7 @@ public class DeployServiceImpl implements DeployService {
     * @param action 动作
     * @param targetStatus Target状态
     * @return lifecycle的结果
-     */
+    */
     private ReturnResult<List<MsProjectDeployLog>> lifecycle(Long projectId, String action, String targetStatus) {
         MsProject project = projectId == null ? null : projectMapper.selectById(projectId);
         if (project == null) {
@@ -806,7 +806,7 @@ public class DeployServiceImpl implements DeployService {
     * @param action 动作
     * @param command 命令
     * @return 执行lifecycle的结果
-     */
+    */
     private MsProjectDeployLog execLifecycle(MsProject project, MsServerHost host, String action, String command) {
         long startMs = System.currentTimeMillis();
         MsProjectDeployLog item = newLog(project, host, action, null);
@@ -836,7 +836,7 @@ public class DeployServiceImpl implements DeployService {
         * fillcost。
         * @param item item
         * @param startMs 启动ms
-         */
+        */
         fillCost(item, startMs);
         return item;
     }
@@ -850,7 +850,7 @@ public class DeployServiceImpl implements DeployService {
     * @param version   版本标识
     * @param action    操作类型 DEPLOY/UPGRADE/ROLLBACK
     * @return 部署日志
-     */
+    */
     private MsProjectDeployLog deployToHost(MsProject project, Long hostId, Path localFile, String version, String action) {
         int retryTimes = project.getMsProjectDeployRetry() != null ? project.getMsProjectDeployRetry() : 0;
         MsProjectDeployLog last = deployOnce(project, hostId, localFile, version, action);
@@ -887,7 +887,7 @@ public class DeployServiceImpl implements DeployService {
     * @param version   版本标识
     * @param action    操作类型 DEPLOY/UPGRADE/ROLLBACK
     * @return 部署日志
-     */
+    */
     private MsProjectDeployLog deployOnce(MsProject project, Long hostId, Path localFile, String version, String action) {
         MsServerHost host = serverHostMapper.selectById(hostId);
         if (host == null) {
@@ -918,7 +918,7 @@ public class DeployServiceImpl implements DeployService {
                 * 执行ssh。
                 * @param host 主机
                 * @param resolved.getData( resolved.获取数据(
-                 */
+                */
                 execSsh(host, resolved.getData(), clearDirCommand(dir, linux), item);
             }
             boolean autoExtract = project.getMsProjectAutoExtract() != null
@@ -932,13 +932,13 @@ public class DeployServiceImpl implements DeployService {
                 * mkdir远程。
                 * @param host 主机
                 * @param resolved.getData( resolved.获取数据(
-                 */
+                */
                 mkdirRemote(host, resolved.getData(), tempDir);
                 /**
                 * uploadsftp。
                 * @param host 主机
                 * @param resolved.getData( resolved.获取数据(
-                 */
+                */
                 uploadSftp(host, resolved.getData(), remoteArchive, localFile);
                 pushService.pushProgress(project.getId(), hostId, action, "EXTRACT", "RUNNING",
                         "解压到部署目录", version);
@@ -946,13 +946,13 @@ public class DeployServiceImpl implements DeployService {
                 * 执行ssh。
                 * @param host 主机
                 * @param resolved.getData( resolved.获取数据(
-                 */
+                */
                 execSsh(host, resolved.getData(), extractCommand(fileName, remoteArchive, dir, linux), item);
                 /**
                 * 执行ssh。
                 * @param host 主机
                 * @param resolved.getData( resolved.获取数据(
-                 */
+                */
                 execSsh(host, resolved.getData(), rmRemote(remoteArchive), item);
             } else {
                 // 3. 单体文件（jar/war 等）：直接上传覆盖到部署目录
@@ -960,14 +960,14 @@ public class DeployServiceImpl implements DeployService {
                 * mkdir远程。
                 * @param host 主机
                 * @param resolved.getData( resolved.获取数据(
-                 */
+                */
                 mkdirRemote(host, resolved.getData(), dir);
                 String remotePath = dir.endsWith("/") ? dir + fileName : dir + "/" + fileName;
                 /**
                 * uploadsftp。
                 * @param host 主机
                 * @param resolved.getData( resolved.获取数据(
-                 */
+                */
                 uploadSftp(host, resolved.getData(), remotePath, localFile);
             }
             item.setMsProjectDeployLogStatus(ProjectConstants.LOG_STATUS_SUCCESS);
@@ -982,7 +982,7 @@ public class DeployServiceImpl implements DeployService {
         * fillcost。
         * @param item item
         * @param startMs 启动ms
-         */
+        */
         fillCost(item, startMs);
         return item;
     }
@@ -995,7 +995,7 @@ public class DeployServiceImpl implements DeployService {
     * @param localFile 临时部署包
     * @return 归档路径
     * @throws IOException 归档失败时抛出
-     */
+    */
     private Path archivePackage(Long projectId, String version, Path localFile) throws IOException {
         Path archiveDir = Path.of(projectProperties.getArchiveDir(), String.valueOf(projectId));
         Files.createDirectories(archiveDir);
@@ -1011,7 +1011,7 @@ public class DeployServiceImpl implements DeployService {
     * @param logs 日志
     * @param version 版本
     * @param archived archived
-     */
+    */
     private void saveArchives(MsProject project, List<MsProjectDeployLog> logs, String version, Path archived) {
         for (MsProjectDeployLog logItem : logs) {
             if (!ProjectConstants.LOG_STATUS_SUCCESS.equals(logItem.getMsProjectDeployLogStatus())) {
@@ -1047,7 +1047,7 @@ public class DeployServiceImpl implements DeployService {
     * 归档保留策略：保留最近 N 个版本，超出清理最旧（归档表 + 本地文件同步删除）
     *
     * @param project 项目
-     */
+    */
     private void cleanArchives(MsProject project) {
         Integer keep = project.getMsProjectArchiveKeep();
         if (keep == null || keep <= 0) {
@@ -1079,7 +1079,7 @@ public class DeployServiceImpl implements DeployService {
     * 计算文件 MD5
     * @param file 文件
     * @return md5的结果
-     */
+    */
     private String md5(Path file) throws IOException {
         MessageDigest digest;
         try {
@@ -1090,7 +1090,7 @@ public class DeployServiceImpl implements DeployService {
         /**
         * 尝试。
         * @param Files.newInputStream(file 文件.新输入流(文件
-         */
+        */
         try (InputStream in = Files.newInputStream(file)) {
             byte[] buffer = new byte[8192];
             int read;
@@ -1111,12 +1111,12 @@ public class DeployServiceImpl implements DeployService {
     * @param host 主机
     * @param credential credential
     * @param path 路径
-     */
+    */
     private void mkdirRemote(MsServerHost host, SshCredential credential, String path) throws Exception {
         /**
         * 尝试。
         * @param credential credential
-         */
+        */
         try (var client = buildConnectedSftp(host, credential)) {
             client.mkdir().path(path).recursive(true).exec();
         }
@@ -1128,12 +1128,12 @@ public class DeployServiceImpl implements DeployService {
     * @param credential credential
     * @param remotePath 远程路径
     * @param localFile 本地文件
-     */
+    */
     private void uploadSftp(MsServerHost host, SshCredential credential, String remotePath, Path localFile) throws Exception {
         /**
         * 尝试。
         * @param credential credential
-         */
+        */
         try (var client = buildConnectedSftp(host, credential)) {
             client.upload().local(localFile.toString()).remote(remotePath).exec();
         }
@@ -1144,7 +1144,7 @@ public class DeployServiceImpl implements DeployService {
     * @param host 主机
     * @param credential credential
     * @return 构建连接sftp的结果
-     */
+    */
     private SftpClient buildConnectedSftp(MsServerHost host, SshCredential credential) throws IOException {
         var builder = SftpClient.builder()
                 .host(host.getServerHostAddress())
@@ -1183,7 +1183,7 @@ public class DeployServiceImpl implements DeployService {
     * @param credential credential
     * @param command 命令
     * @param item item
-     */
+    */
     private void execSsh(MsServerHost host, SshCredential credential, String command, MsProjectDeployLog item) throws Exception {
         SshClients.Handle handle = null;
         try {
@@ -1200,7 +1200,7 @@ public class DeployServiceImpl implements DeployService {
                 * illegal状态异常。
                 * @param error 错误
                 * @return illegal状态异常的结果
-                 */
+                */
                 throw new IllegalStateException(error);
             }
         } finally {
@@ -1215,7 +1215,7 @@ public class DeployServiceImpl implements DeployService {
     * @param dir dir
     * @param linux Linux
     * @return cleardir命令的结果
-     */
+    */
     private String clearDirCommand(String dir, boolean linux) {
         if (linux) {
             return "mkdir -p " + quote(dir) + " && rm -rf " + quote(dir) + "/*";
@@ -1230,7 +1230,7 @@ public class DeployServiceImpl implements DeployService {
     * @param dir dir
     * @param linux Linux
     * @return extract命令的结果
-     */
+    */
     private String extractCommand(String fileName, String archivePath, String dir, boolean linux) {
         String name = fileName.toLowerCase(Locale.ROOT);
         if (linux) {
@@ -1258,7 +1258,7 @@ public class DeployServiceImpl implements DeployService {
     * 删除远端文件命令
     * @param path 路径
     * @return rm远程的结果
-     */
+    */
     private String rmRemote(String path) {
         return "rm -f " + quote(path);
     }
@@ -1268,7 +1268,7 @@ public class DeployServiceImpl implements DeployService {
     * @param host 主机
     * @param projectId projectid
     * @return tempDirFor的结果
-     */
+    */
     private String tempDirFor(MsServerHost host, Long projectId) {
         return isLinux(host) ? "/tmp/ms-project-" + projectId : "C:\\ms-project-" + projectId;
     }
@@ -1277,7 +1277,7 @@ public class DeployServiceImpl implements DeployService {
     * 是否 Linux 主机
     * @param host 主机
     * @return 是否Linux的结果
-     */
+    */
     private boolean isLinux(MsServerHost host) {
         return host.getServerHostOsType() != null
                 && host.getServerHostOsType().trim().toUpperCase(Locale.ROOT).startsWith("LINUX");
@@ -1287,7 +1287,7 @@ public class DeployServiceImpl implements DeployService {
     * 是否为可解压压缩包
     * @param fileName 文件名称
     * @return 是否Arch Linux的结果
-     */
+    */
     private boolean isArchive(String fileName) {
         String name = fileName.toLowerCase(Locale.ROOT);
         return name.endsWith(".zip") || name.endsWith(".tar.gz")
@@ -1299,7 +1299,7 @@ public class DeployServiceImpl implements DeployService {
     * @param script script
     * @param dir dir
     * @return renderScript的结果
-     */
+    */
     private String renderScript(String script, String dir, boolean linux) {
         if (script == null) {
             return "";
@@ -1317,8 +1317,8 @@ public class DeployServiceImpl implements DeployService {
     }
 
     /**
-     * 根据项目配置的主机 OS 判断是否为 Linux
-     */
+    * 根据项目配置的主机 OS 判断是否为 Linux
+    */
     private boolean isLinuxHostOs(String os) {
         return os != null && os.trim().toUpperCase(Locale.ROOT).startsWith("LINUX");
     }
@@ -1329,7 +1329,7 @@ public class DeployServiceImpl implements DeployService {
     * @param error 错误
     * @param startMs 启动ms
     * @return 失败的结果
-     */
+    */
     private MsProjectDeployLog fail(MsProjectDeployLog item, String error, long startMs) {
         item.setMsProjectDeployLogStatus(ProjectConstants.LOG_STATUS_FAIL);
         item.setMsProjectDeployLogError(truncate(error));
@@ -1337,7 +1337,7 @@ public class DeployServiceImpl implements DeployService {
         * fillcost。
         * @param item item
         * @param startMs 启动ms
-         */
+        */
         fillCost(item, startMs);
         return item;
     }
@@ -1350,7 +1350,7 @@ public class DeployServiceImpl implements DeployService {
     * @param error 错误
     * @param version 版本
     * @return lifecycle日志的结果
-     */
+    */
     private MsProjectDeployLog lifecycleLog(MsProject project, MsServerHost host, String action, String error, String version) {
         long startMs = System.currentTimeMillis();
         MsProjectDeployLog item = newLog(project, host, action, version);
@@ -1365,7 +1365,7 @@ public class DeployServiceImpl implements DeployService {
     * @param action 动作
     * @param version 版本
     * @return 新日志的结果
-     */
+    */
     private MsProjectDeployLog newLog(MsProject project, MsServerHost host, String action, String version) {
         MsProjectDeployLog item = new MsProjectDeployLog();
         item.setMsProjectDeployLogProjectId(project.getId());
@@ -1384,7 +1384,7 @@ public class DeployServiceImpl implements DeployService {
     * 填充耗时
     * @param item item
     * @param startMs 启动ms
-     */
+    */
     private void fillCost(MsProjectDeployLog item, long startMs) {
         item.setMsProjectDeployLogEndTime(LocalDateTime.now());
         item.setMsProjectDeployLogCostMs(System.currentTimeMillis() - startMs);
@@ -1394,7 +1394,7 @@ public class DeployServiceImpl implements DeployService {
     * 解析 主机标识 JSON 数组
     * @param json json
     * @return 解析主机标识的结果
-     */
+    */
     private List<Long> parseHostIds(String json) {
         if (isBlank(json)) {
             return List.of();
@@ -1412,7 +1412,7 @@ public class DeployServiceImpl implements DeployService {
     * 创建带命名线程的固定线程池
     * @param size 大小
     * @return 新游泳池的结果
-     */
+    */
     private ExecutorService newPool(int size) {
         AtomicInteger counter = new AtomicInteger();
         ThreadFactory factory = runnable -> {
@@ -1428,7 +1428,7 @@ public class DeployServiceImpl implements DeployService {
     * 输出截断（上限 20000 字符）
     * @param value 价值观
     * @return truncate的结果
-     */
+    */
     private String truncate(String value) {
         if (value == null) {
             return null;
@@ -1440,7 +1440,7 @@ public class DeployServiceImpl implements DeployService {
     * 文件名安全化（去除路径分隔符）
     * @param name 名称
     * @return safe文件名称的结果
-     */
+    */
     private String safeFileName(String name) {
         if (isBlank(name)) {
             return "deploy.bin";
@@ -1454,7 +1454,7 @@ public class DeployServiceImpl implements DeployService {
     * 归一化操作类型（DEPLOY 或 UPGRADE）
     * @param action 动作
     * @return normalize动作的结果
-     */
+    */
     private String normalizeAction(String action) {
         if (ProjectConstants.ACTION_UPGRADE.equalsIgnoreCase(action)) {
             return ProjectConstants.ACTION_UPGRADE;
@@ -1466,7 +1466,7 @@ public class DeployServiceImpl implements DeployService {
     * Shell 单引号包裹
     * @param value 价值观
     * @return 引述的结果
-     */
+    */
     private String quote(String value) {
         if (value == null) {
             return "''";
@@ -1478,7 +1478,7 @@ public class DeployServiceImpl implements DeployService {
     * 空串判断
     * @param value 价值观
     * @return 是否blank的结果
-     */
+    */
     private boolean isBlank(String value) {
         return value == null || value.isBlank();
     }
@@ -1487,7 +1487,7 @@ public class DeployServiceImpl implements DeployService {
     * 非空判断
     * @param value 价值观
     * @return notBlank的结果
-     */
+    */
     private boolean notBlank(String value) {
         return value != null && !value.isBlank();
     }

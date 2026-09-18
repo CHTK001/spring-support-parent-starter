@@ -19,7 +19,7 @@ public interface RpcLoadBalancer {
     * @param providers 服务提供者列表
     * @param <T>       提供者类型
     * @return 选中的提供者
-     */
+    */
     <T> T select(List<T> providers);
 
     /**
@@ -29,7 +29,7 @@ public interface RpcLoadBalancer {
     * @param context   上下文信息
     * @param <T>       提供者类型
     * @return 选中的提供者
-     */
+    */
     default <T> T select(List<T> providers, Object context) {
         return select(providers);
     }
@@ -38,6 +38,6 @@ public interface RpcLoadBalancer {
     * 获取负载均衡策略名称
     *
     * @return 策略名称
-     */
+    */
     String getName();
 }

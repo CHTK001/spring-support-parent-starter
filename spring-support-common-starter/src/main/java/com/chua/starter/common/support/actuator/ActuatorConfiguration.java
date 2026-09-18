@@ -49,7 +49,7 @@ public class ActuatorConfiguration  {
     * 构造函数
     *
     * @param actuatorProperties actuator属性
-     */
+    */
     public ActuatorConfiguration(ActuatorProperties actuatorProperties) {
         this.actuatorProperties = actuatorProperties;
     }
@@ -58,8 +58,8 @@ public class ActuatorConfiguration  {
         private final ActuatorProperties actuatorProperties;
 
     /**
-    * 注册 Actuator 配置到全局环境
-     */
+        * 注册 Actuator 配置到全局环境
+        */
     @PostConstruct
     public void registerEnvironment() {
         ServiceInfoRegistry registry = ServiceInfoRegistry.getInstance();
@@ -76,7 +76,7 @@ public class ActuatorConfiguration  {
     * </p>
     *
     * @return FilterRegistrationBean 过滤器注册 Bean
-     */
+    */
     @Bean
     @ConditionalOnMissingBean(name = "actuatorAuthenticationFilterRegistration")
     @ConditionalOnProperty(name = "plugin.actuator.enable-auth", havingValue = "true")

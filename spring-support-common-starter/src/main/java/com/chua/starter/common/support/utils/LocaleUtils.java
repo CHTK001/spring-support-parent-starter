@@ -18,7 +18,7 @@ public class LocaleUtils {
 
     /**
     * 区域工具。
-     */
+    */
     private LocaleUtils() {
     }
 
@@ -33,7 +33,7 @@ public class LocaleUtils {
     *
     * @param code 国际化钥匙
     * @return 国际化后内容信息
-     */
+    */
     public static String getMessage(String code) {
         Locale locale = getLocate();
         try {
@@ -47,7 +47,7 @@ public class LocaleUtils {
     * 获取Locate
     *
     * @return 获取locate的结果
-     */
+    */
     public static Locale getLocate() {
         HttpServletRequest request = RequestUtils.getRequest();
         if(null == request) {

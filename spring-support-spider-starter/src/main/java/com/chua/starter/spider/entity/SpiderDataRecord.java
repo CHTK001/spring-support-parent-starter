@@ -29,7 +29,7 @@ public class SpiderDataRecord extends SysBase {
 
     /**
     * 主键 标识（自增）
-     */
+    */
     @TableId(type = IdType.AUTO)
     @Schema(description = "主键 ID")
     /** 标识 */
@@ -37,7 +37,7 @@ public class SpiderDataRecord extends SysBase {
 
     /**
     * 执行号（追踪标识）
-     */
+    */
     @TableField("execution_no")
     @Schema(description = "执行号")
     /** 执行no */
@@ -45,7 +45,7 @@ public class SpiderDataRecord extends SysBase {
 
     /**
     * 爬虫编码
-     */
+    */
     @TableField("definition_code")
     @Schema(description = "爬虫编码")
     /** Definition代码 */
@@ -53,7 +53,7 @@ public class SpiderDataRecord extends SysBase {
 
     /**
     * 标题
-     */
+    */
     @TableField("title")
     @Schema(description = "标题")
     /** 标题 */
@@ -61,7 +61,7 @@ public class SpiderDataRecord extends SysBase {
 
     /**
     * 内容
-     */
+    */
     @TableField("content")
     @Schema(description = "内容")
     /** 内容 */
@@ -69,7 +69,7 @@ public class SpiderDataRecord extends SysBase {
 
     /**
     * 来源 URL
-     */
+    */
     @TableField("source_url")
     @Schema(description = "来源 URL")
     /** 来源URL */
@@ -77,7 +77,7 @@ public class SpiderDataRecord extends SysBase {
 
     /**
     * 原始采集数据（JSON）
-     */
+    */
     @TableField("raw_data")
     @Schema(description = "原始采集数据")
     /** RAW数据 */
@@ -85,7 +85,7 @@ public class SpiderDataRecord extends SysBase {
 
     /**
     * 状态（成功/失败）
-     */
+    */
     @TableField("status")
     @Schema(description = "状态")
     /** 状态 */
@@ -93,7 +93,7 @@ public class SpiderDataRecord extends SysBase {
 
     /**
     * 失败信息
-     */
+    */
     @TableField("error_message")
     @Schema(description = "失败信息")
     /** 错误消息 */
@@ -101,7 +101,7 @@ public class SpiderDataRecord extends SysBase {
 
     /**
     * 记录时间（写库时间）
-     */
+    */
     @TableField("record_time")
     @Schema(description = "记录时间")
     /** Record时间 */
@@ -109,7 +109,7 @@ public class SpiderDataRecord extends SysBase {
 
     /**
     * 逻辑删除标记（0 未删除 / 1 已删除）
-     */
+    */
     @TableField("sys_deleted")
     @TableLogic
     @Schema(description = "逻辑删除标记")

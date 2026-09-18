@@ -20,12 +20,12 @@ public final class TrainProviders {
 
     /**
     * 默认训练类型：Rnet50 迁移学习（既有语义，类型 缺省时的兼容值）。
-     */
+    */
     public static final String DEFAULT_TYPE = "resnet50";
 
     /**
     * train提供者。
-     */
+    */
     private TrainProviders() {
     }
 
@@ -35,7 +35,7 @@ public final class TrainProviders {
     * @param type 训练类型（resnet50 / yolo ...）
     * @return 匹配的引擎实现
     * @throws IllegalArgumentException 未接入该类型时抛出（附带已接入清单便于排查）
-     */
+    */
     public static TrainProvider require(String type) {
         Objects.requireNonNull(type, "type 不能为空");
         List<TrainProvider> providers = new ArrayList<>(ServiceProvider.of(TrainProvider.class).collect());

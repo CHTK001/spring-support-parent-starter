@@ -39,7 +39,7 @@ public class PaymentSuccessEvent extends PaymentEvent {
     * @param thirdPartyOrderNo thirdparty订单no
     * @param channelType 通道类型
     * @param channelSubType 通道sub类型
-     */
+    */
     public PaymentSuccessEvent(Object source, Long tenantId, Long merchantId, Long orderId, String orderNo,
                                Long userId, BigDecimal paidAmount, String thirdPartyOrderNo,
                                String channelType, String channelSubType) {
@@ -49,7 +49,7 @@ public class PaymentSuccessEvent extends PaymentEvent {
         * @param "PAYMENT_SUCCESS" "薪酬_成功"
         * @param tenantId tenantid
         * @param merchantId merchantid
-         */
+        */
         super(source, "PAYMENT_SUCCESS", tenantId, merchantId);
         this.orderId = orderId;
         this.orderNo = orderNo;

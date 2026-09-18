@@ -35,14 +35,14 @@ public class ApiPresetController {
 
     /**
     * 内存预设存储：preset_标识 → 预设数据
-     */
+    */
     private final Map<String, Map<String, Object>> presets = new ConcurrentHashMap<>();
 
     @GetMapping
     /**
     * 列表。
     * @return 列表的结果
-     */
+    */
     public ApiResult<List<Map<String, Object>>> list() {
         return ApiResult.ok(new ArrayList<>(presets.values()));
     }
@@ -52,7 +52,7 @@ public class ApiPresetController {
     * 获取。
     * @param presetId presetid
     * @return 获取的结果
-     */
+    */
     public ApiResult<Map<String, Object>> get(@PathVariable String presetId) {
         Map<String, Object> preset = presets.get(presetId);
         if (preset == null) {
@@ -61,7 +61,7 @@ public class ApiPresetController {
             * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
             * @param presetId presetid
             * @return api异常的结果
-             */
+            */
             throw new ApiException(ApiErrorCode.NOT_FOUND, "预设不存在: " + presetId);
         }
         return ApiResult.ok(preset);
@@ -72,7 +72,7 @@ public class ApiPresetController {
     * 创建。
     * @param body 主体
     * @return 创建的结果
-     */
+    */
     public ApiResult<Map<String, Object>> create(@RequestBody Map<String, Object> body) {
         String presetId = String.valueOf(body.getOrDefault("preset_id", conversationStore.newId()));
         body.put("preset_id", presetId);
@@ -97,7 +97,7 @@ public class ApiPresetController {
             * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
             * @param presetId presetid
             * @return api异常的结果
-             */
+            */
             throw new ApiException(ApiErrorCode.NOT_FOUND, "预设不存在: " + presetId);
         }
         body.forEach((k, v) -> {
@@ -114,7 +114,7 @@ public class ApiPresetController {
     * 删除。
     * @param presetId presetid
     * @return 删除的结果
-     */
+    */
     public ApiResult<Void> delete(@PathVariable String presetId) {
         Map<String, Object> preset = presets.remove(presetId);
         if (preset == null) {
@@ -123,7 +123,7 @@ public class ApiPresetController {
             * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
             * @param presetId presetid
             * @return api异常的结果
-             */
+            */
             throw new ApiException(ApiErrorCode.NOT_FOUND, "预设不存在: " + presetId);
         }
         return ApiResult.ok();
@@ -139,7 +139,7 @@ public class ApiPresetController {
             * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
             * @param presetId presetid
             * @return api异常的结果
-             */
+            */
             throw new ApiException(ApiErrorCode.NOT_FOUND, "预设不存在: " + presetId);
         }
         if (body.containsKey("enabled")) {
@@ -159,7 +159,7 @@ public class ApiPresetController {
             * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
             * @param presetId presetid
             * @return api异常的结果
-             */
+            */
             throw new ApiException(ApiErrorCode.NOT_FOUND, "预设不存在: " + presetId);
         }
         Map<String, Object> snapshot = new LinkedHashMap<>(preset);
@@ -172,7 +172,7 @@ public class ApiPresetController {
     * 导入presets。
     * @param body 主体
     * @return 导入presets的结果
-     */
+    */
     public ApiResult<Map<String, Object>> importPresets(@RequestBody Map<String, Object> body) {
         Object rawPresets = body.get("presets");
         int imported = 0;

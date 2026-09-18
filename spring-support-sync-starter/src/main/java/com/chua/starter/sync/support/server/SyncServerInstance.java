@@ -57,7 +57,7 @@ public class SyncServerInstance {
     * 新版 {@link SyncMessageHandler#handle(String, Object)} 不携带会话上下文，
     * 服务端分发消息时将该 钥匙 写入消息体，处理器可据此反查源客户端信息。
     * </p>
-     */
+    */
     public static final String SYNC_MESSAGE_SOURCE_CLIENT_ID = "__syncClientId__";
 
     /** 实例配置 */
@@ -87,7 +87,7 @@ public class SyncServerInstance {
     * @param instanceConfig instance配置
     * @param syncProperties 同步属性
     * @param syncProperties 同步属性
-     */
+    */
     public SyncServerInstance(SyncProperties.ServerInstance instanceConfig, SyncProperties syncProperties) {
         this.instanceConfig = SyncProperties.ServerInstance.copyOf(instanceConfig);
         this.syncProperties = SyncProperties.copyOf(syncProperties);
@@ -97,7 +97,7 @@ public class SyncServerInstance {
     * 获取instance配置
     *
     * @return 获取instance配置的结果
-     */
+    */
     public SyncProperties.ServerInstance getInstanceConfig() {
         return instanceConfig;
     }
@@ -106,7 +106,7 @@ public class SyncServerInstance {
     * 获取同步属性
     *
     * @return 获取同步属性的结果
-     */
+    */
     public SyncProperties getSyncProperties() {
         return syncProperties;
     }
@@ -115,7 +115,7 @@ public class SyncServerInstance {
     * 获取同步服务端
     *
     * @return 获取同步服务端的结果
-     */
+    */
     public SyncServer getSyncServer() {
         return syncServer;
     }
@@ -124,7 +124,7 @@ public class SyncServerInstance {
     * 获取客户端信息映射
     *
     * @return 获取客户端信息映射的结果
-     */
+    */
     public Map<String, ClientInfo> getClientInfoMap() {
         return clientInfoMap;
     }
@@ -133,7 +133,7 @@ public class SyncServerInstance {
     * 是否Running
     *
     * @return 是否running的结果
-     */
+    */
     public boolean isRunning() {
         return running;
     }
@@ -143,7 +143,7 @@ public class SyncServerInstance {
     *
     * @param topic topic
     * @param handler 处理器
-     */
+    */
     public void registerHandler(String topic, com.chua.common.support.network.sync.SyncMessageHandler handler) {
         if (topic == null || topic.isBlank() || handler == null) {
             return;
@@ -158,7 +158,7 @@ public class SyncServerInstance {
     * 添加连接监听器
     *
     * @param listener 监听器
-     */
+    */
     public void addConnectListener(BiConsumer<String, ClientInfo> listener) {
         connectListeners.add(listener);
     }
@@ -167,7 +167,7 @@ public class SyncServerInstance {
     * 添加断开监听器
     *
     * @param listener 监听器
-     */
+    */
     public void addDisconnectListener(BiConsumer<String, ClientInfo> listener) {
         disconnectListeners.add(listener);
     }
@@ -176,12 +176,12 @@ public class SyncServerInstance {
     * 设置同步服务端
     *
     * @param syncServer 同步服务端
-     */
+    */
     public void setSyncServer(SyncServer syncServer) {
         this.syncServer = syncServer;
         /**
         * attach监听器。
-         */
+        */
         attachListeners();
     }
 
@@ -203,9 +203,9 @@ public class SyncServerInstance {
         if (syncServer == null) {
             syncServer = createUnderlyingServer();
             /**
-            * 设置同步服务端。
-            * @param syncServer 同步服务端
-             */
+    * 设置同步服务端。
+    * @param syncServer 同步服务端
+    */
             setSyncServer(syncServer);
         }
         try {
@@ -223,7 +223,7 @@ public class SyncServerInstance {
     * 创建underlying服务端
     *
     * @return 创建underlying服务端的结果
-     */
+    */
     private SyncServer createUnderlyingServer() {
         String protocol = instanceConfig.getProtocol();
         String host = instanceConfig.getHost() != null ? instanceConfig.getHost() : "0.0.0.0";
@@ -262,7 +262,7 @@ public class SyncServerInstance {
     * @param sessionId 会话标识
     * @param topic topic
     * @param data 数据
-     */
+    */
     public void send(String sessionId, String topic, Object data) {
         if (syncServer == null || !running) {
             return;
@@ -275,7 +275,7 @@ public class SyncServerInstance {
     *
     * @param topic topic
     * @param data 数据
-     */
+    */
     public void broadcast(String topic, Object data) {
         if (syncServer == null || !running) {
             return;
@@ -289,7 +289,7 @@ public class SyncServerInstance {
     * @param excludeClientId exclude客户端标识
     * @param topic topic
     * @param data 数据
-     */
+    */
     public void broadcastToOthers(String excludeClientId, String topic, Object data) {
         if (syncServer == null || !running) {
             return;
@@ -307,7 +307,7 @@ public class SyncServerInstance {
     * 获取Connection计算数量
     *
     * @return 获取connection数量的结果
-     */
+    */
     public int getConnectionCount() {
         return syncServer != null ? syncServer.getConnectedClients().size() : 0;
     }
@@ -316,7 +316,7 @@ public class SyncServerInstance {
     * 获取会话标识
     *
     * @return 获取会话标识的结果
-     */
+    */
     public Set<String> getSessionIds() {
         return syncServer != null ? new HashSet<>(syncServer.getConnectedClients()) : new HashSet<>();
     }
@@ -326,7 +326,7 @@ public class SyncServerInstance {
     *
     * @param clientId 客户端标识
     * @return contains客户端的结果
-     */
+    */
     public boolean containsClient(String clientId) {
         return syncServer != null && clientId != null && syncServer.getConnectedClients().contains(clientId);
     }
@@ -336,7 +336,7 @@ public class SyncServerInstance {
     *
     * @author CH
     * @since 4.0.0
-     */
+    */
     private class InternalServerListener implements SyncServerListener {
         @Override
         /** on客户端连接 */
@@ -368,11 +368,11 @@ public class SyncServerInstance {
         /** on消息 */
         public void onMessage(String clientId, String topic, Object message) {
             /**
-            * 把手服务端消息。
-            * @param clientId 客户端标识
-            * @param topic topic
-            * @param message 消息
-             */
+        * 把手服务端消息。
+        * @param clientId 客户端标识
+        * @param topic topic
+        * @param message 消息
+        */
             handleServerMessage(clientId, topic, message);
         }
 
@@ -385,12 +385,12 @@ public class SyncServerInstance {
 
     @SuppressWarnings("unchecked")
     /**
-    * 处理服务端消息
-    *
-    * @param clientId 客户端标识
-    * @param topic topic
-    * @param data 数据
-     */
+        * 处理服务端消息
+        *
+        * @param clientId 客户端标识
+        * @param topic topic
+        * @param data 数据
+        */
     private void handleServerMessage(String clientId, String topic, Object data) {
         data = SyncCryptoUtils.decrypt(parseIfNeeded(data), syncProperties);
         log.info("[SyncServer:{}] 收到消息: clientId={}, topic={}, data={}",
@@ -434,7 +434,7 @@ public class SyncServerInstance {
     * @param topic topic
     * @param data 数据
     * @return 把手系统topic的结果
-     */
+    */
     private boolean handleSystemTopic(String clientId, String topic, Object data) {
         if (TOPIC_HEALTH.equals(topic)) {
             /**
@@ -442,7 +442,7 @@ public class SyncServerInstance {
             * @param clientId 客户端标识
             * @param TOPIC_HEALTH topic健康
             * @param instanceConfig.getName( instance配置.获取名称(
-             */
+            */
             send(clientId, TOPIC_HEALTH, Map.of("status", "UP", "instance", instanceConfig.getName(),
                     "connections", getConnectionCount(), "timestamp", System.currentTimeMillis()));
             return true;
@@ -452,7 +452,7 @@ public class SyncServerInstance {
             * 把手客户端注册。
             * @param clientId 客户端标识
             * @param data 数据
-             */
+            */
             handleClientRegister(clientId, data);
             return true;
         }
@@ -460,7 +460,7 @@ public class SyncServerInstance {
             /**
             * 把手客户端心跳。
             * @param clientId 客户端标识
-             */
+            */
             handleClientHeartbeat(clientId);
             return true;
         }
@@ -468,7 +468,7 @@ public class SyncServerInstance {
             /**
             * 把手客户端offline。
             * @param clientId 客户端标识
-             */
+            */
             handleClientOffline(clientId);
             return true;
         }
@@ -481,7 +481,7 @@ public class SyncServerInstance {
     *
     * @param clientId 客户端标识
     * @param data 数据
-     */
+    */
     private void handleClientRegister(String clientId, Object data) {
         try {
             ClientInfo clientInfo = new ClientInfo();
@@ -489,7 +489,7 @@ public class SyncServerInstance {
                 /**
                 * 副本映射转为客户端信息。
                 * @param Object> 对象>
-                 */
+                */
                 copyMapToClientInfo((Map<String, Object>) map, clientInfo);
             }
             clientInfoMap.put(clientId, clientInfo);
@@ -513,7 +513,7 @@ public class SyncServerInstance {
     *
     * @param map 映射
     * @param clientInfo 客户端信息
-     */
+    */
     private void copyMapToClientInfo(Map<String, Object> map, ClientInfo clientInfo) {
         if (map.containsKey("clientApplicationName")) {
             clientInfo.setClientApplicationName(String.valueOf(map.get("clientApplicationName")));
@@ -541,7 +541,7 @@ public class SyncServerInstance {
     * 处理客户端心跳
     *
     * @param clientId 客户端标识
-     */
+    */
     private void handleClientHeartbeat(String clientId) {
         ClientInfo clientInfo = clientInfoMap.get(clientId);
         if (clientInfo != null) {
@@ -554,7 +554,7 @@ public class SyncServerInstance {
     * 处理客户端offline
     *
     * @param clientId 客户端标识
-     */
+    */
     private void handleClientOffline(String clientId) {
         ClientInfo clientInfo = clientInfoMap.get(clientId);
         if (clientInfo != null) {
@@ -567,7 +567,7 @@ public class SyncServerInstance {
     *
     * @param topic topic
     * @return 是否客户端注册topic的结果
-     */
+    */
     private boolean isClientRegisterTopic(String topic) {
         return matchesClientTopic(topic, syncProperties.getClient().getRegisterTopic(), TOPIC_CLIENT_REGISTER);
     }
@@ -577,7 +577,7 @@ public class SyncServerInstance {
     *
     * @param topic topic
     * @return 是否客户端心跳topic的结果
-     */
+    */
     private boolean isClientHeartbeatTopic(String topic) {
         return matchesClientTopic(topic, syncProperties.getClient().getHeartbeatTopic(), TOPIC_CLIENT_HEARTBEAT);
     }
@@ -587,7 +587,7 @@ public class SyncServerInstance {
     *
     * @param topic topic
     * @return 是否客户端offlinetopic的结果
-     */
+    */
     private boolean isClientOfflineTopic(String topic) {
         return matchesClientTopic(topic, syncProperties.getClient().getOfflineTopic(), TOPIC_CLIENT_OFFLINE);
     }
@@ -599,7 +599,7 @@ public class SyncServerInstance {
     * @param configuredTopic configuredtopic
     * @param defaultTopic 默认topic
     * @return 匹配客户端topic的结果
-     */
+    */
     private boolean matchesClientTopic(String actualTopic, String configuredTopic, String defaultTopic) {
         if (actualTopic == null || actualTopic.isBlank()) {
             return false;
@@ -619,7 +619,7 @@ public class SyncServerInstance {
     *
     * @param message 收到的消息
     * @return 解析后的对象，无法解析时原样返回
-     */
+    */
     private Object parseIfNeeded(Object message) {
         if (!(message instanceof String text) || text.isBlank()) {
             return message;

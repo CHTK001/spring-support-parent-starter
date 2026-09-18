@@ -22,22 +22,22 @@ public class BeanMap extends HashMap<String, Object> {
     *
     * @param source 源对象，不可为 空
     * @return 包含源对象所有非空属性的 Bean映射 实例
-     */
+    */
     public static BeanMap of(Object source) {
         /**
         * Bean映射。
         * @param source 源
-         */
+        */
         return new BeanMap(source);
     }
 
     /**
     * 空参构造函数，创建一个空的 Bean映射 实例
-     */
+    */
     public BeanMap() {
         /**
         * 父。
-         */
+        */
         super();
     }
 
@@ -47,11 +47,11 @@ public class BeanMap extends HashMap<String, Object> {
     * 遍历所有属性描述器，通过 getter 方法获取属性值（非 空 值）放入 映射。</p>
     *
     * @param source 源对象，允许为 空（此时 映射 保持为空）
-     */
+    */
     public BeanMap(Object source) {
         /**
         * 父。
-         */
+        */
         super();
         if (null != source) {
             java.beans.BeanInfo beanInfo = null;
@@ -62,7 +62,7 @@ public class BeanMap extends HashMap<String, Object> {
                 * runtime异常。
                 * @param e e
                 * @return runtime异常的结果
-                 */
+                */
                 throw new RuntimeException(e);
             }
             java.beans.PropertyDescriptor[] propertyDescriptors = beanInfo.getPropertyDescriptors();
@@ -81,7 +81,7 @@ public class BeanMap extends HashMap<String, Object> {
                                 * 放入。
                                 * @param key 钥匙
                                 * @param value 价值观
-                                 */
+                                */
                                 put(key, value);
                             }
                         }

@@ -8,6 +8,6 @@ public interface EventListener {
     /**
     * on事件。
     * @param event 事件
-     */
+    */
     void onEvent(DeviceEvent event);
 }

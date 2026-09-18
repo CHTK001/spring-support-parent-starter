@@ -61,7 +61,7 @@ public class SoftConfigController {
     * @return 保存的结果
     * @param @Validated(AddGroup.class @校验(添加群体.类
     * @param @Validated(AddGroup.class @Validated(AddGroup.class
-     */
+    */
     public ReturnResult<SoftConfig> save(@Validated(AddGroup.class) @RequestBody SoftConfig config, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
             return ReturnResult.illegal(bindingResult.getAllErrors().getFirst().getDefaultMessage());
@@ -79,7 +79,7 @@ public class SoftConfigController {
     * @return 更新的结果
     * @param @Validated(UpdateGroup.class @校验(更新群体.类
     * @param @Validated(UpdateGroup.class @Validated(UpdateGroup.class
-     */
+    */
     public ReturnResult<SoftConfig> update(@Validated(UpdateGroup.class) @RequestBody SoftConfig config, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
             return ReturnResult.illegal(bindingResult.getAllErrors().getFirst().getDefaultMessage());
@@ -95,7 +95,7 @@ public class SoftConfigController {
     *
     * @param configId 配置标识
     * @return 删除的结果
-     */
+    */
     public ReturnResult<Boolean> delete(String configId) {
         return softConfigService.deleteConfig(configId);
     }
@@ -108,7 +108,7 @@ public class SoftConfigController {
     *
     * @param softwareId softwareid
     * @return 列表的结果
-     */
+    */
     public ReturnResult<java.util.List<SoftConfig>> list(String softwareId) {
         return ReturnResult.ok(softConfigService.listBySoftwareId(softwareId));
     }
@@ -121,7 +121,7 @@ public class SoftConfigController {
     *
     * @param configs 配置
     * @return batch保存的结果
-     */
+    */
     public ReturnResult<Boolean> batchSave(@RequestBody java.util.List<SoftConfig> configs) {
         return softConfigService.batchSaveOrUpdate(configs);
     }

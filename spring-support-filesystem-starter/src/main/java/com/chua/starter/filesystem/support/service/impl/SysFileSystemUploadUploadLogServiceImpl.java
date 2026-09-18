@@ -24,12 +24,12 @@ public class SysFileSystemUploadUploadLogServiceImpl
 
     /**
     * 系统默认操作人 标识
-     */
+    */
     private static final int SYSTEM_USER_ID = 0;
 
     /**
     * 系统默认操作人名称
-     */
+    */
     private static final String SYSTEM_USER_NAME = "system";
 
     @Override
@@ -42,7 +42,7 @@ public class SysFileSystemUploadUploadLogServiceImpl
     * @param message 消息
     * @param retryCount 重试数量
     * @return record的结果
-     */
+    */
     public boolean record(String uploadId, boolean success, String message, int retryCount) {
         SysFileSystemUploadUploadLog log = new SysFileSystemUploadUploadLog();
         LocalDateTime now = LocalDateTime.now();
@@ -79,7 +79,7 @@ public class SysFileSystemUploadUploadLogServiceImpl
     *
     * @param uploadId uploadid
     * @return 删除byuploadid的结果
-     */
+    */
     public boolean deleteByUploadId(String uploadId) {
         return remove(new LambdaQueryWrapper<SysFileSystemUploadUploadLog>()
                 .eq(SysFileSystemUploadUploadLog::getFilesystemUploadUploadLogUploadId, uploadId));

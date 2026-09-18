@@ -30,23 +30,23 @@ public class DahuaSession implements DeviceSession {
 
     /**
     * 设备连接信息
-     */
+    */
     private final DeviceConnectInfo info;
 
     /**
     * 在线状态
-     */
+    */
     private boolean online = true;
 
     /**
     * 事件订阅映射表
-     */
+    */
     private final Map<EventType, List<EventListener>> listeners = new ConcurrentHashMap<>();
 
     /**
     * 创建 dahua会话 实例
     * @param info 信息
-     */
+    */
     public DahuaSession(DeviceConnectInfo info) {
         this.info = info;
         log.info("大华设备连接成功: {}", info.getIp());

@@ -25,98 +25,98 @@ public class WorkshopAsset {
 
     /**
     * 资产主键 标识（uuidv7）
-     */
+    */
     @TableId
     @TableField("asset_id")
     private String assetId; // assetid
 
     /**
     * 资产类型（镜像 / 视频 / 文本）
-     */
+    */
     @TableField("asset_kind")
     private String kind; // 种类
 
     /**
     * 资产标题
-     */
+    */
     @TableField("asset_title")
     private String title; // title
 
     /**
     * 所属集合名称（空 表示未分组）
-     */
+    */
     @TableField("asset_collection")
     private String collection; // 集合
 
     /**
     * 标签 JSON 数组
-     */
+    */
     @TableField("asset_tags")
     private String tags; // 标签
 
     /**
     * MIME 类型
-     */
+    */
     @TableField("asset_mime")
     private String mime; // mime
 
     /**
     * 图片/视频宽度（像素）
-     */
+    */
     @TableField("asset_width")
     private Integer width; // width
 
     /**
     * 图片/视频高度（像素）
-     */
+    */
     @TableField("asset_height")
     private Integer height; // height
 
     /**
     * 文件大小（字节）
-     */
+    */
     @TableField("asset_bytes")
     private Long bytes; // bytes
 
     /**
     * 是否在资产库中（0=已移除，1=在库）
-     */
+    */
     @TableField("asset_in_library")
     private Boolean inLibrary; // 入图书馆
 
     /**
     * 文本资产正文（种类=文本 时有效）
-     */
+    */
     @TableField("asset_text_content")
     private String textContent; // 文本内容
 
     /**
     * 来源信息 JSON（提示符/模型/提供者_标识/Canvas_标识/节点_标识/创建_任务_标识）
-     */
+    */
     @TableField("asset_origin")
     private String origin; // origin
 
     /**
     * 物理文件路径（相对于 storage 根目录）
-     */
+    */
     @TableField("asset_file_path")
     private String filePath; // 文件路径
 
     /**
     * 缩略图路径（空 表示无缩略图）
-     */
+    */
     @TableField("asset_thumb_path")
     private String thumbPath; // thumb路径
 
     /**
     * 创建时间（毫秒时间戳）
-     */
+    */
     @TableField("asset_created_at")
     private Long createdAt; // 创建at
 
     /**
     * 最后更新时间（毫秒时间戳）
-     */
+    */
     @TableField("asset_updated_at")
     private Long updatedAt; // 更新at
 }

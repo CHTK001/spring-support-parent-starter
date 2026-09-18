@@ -55,7 +55,7 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
     *
     * @param appKey app钥匙
     * @return 获取byapp钥匙的结果
-     */
+    */
     public SysAiAppKey getByAppKey(String appKey) {
         if (StringUtils.isBlank(appKey)) {
             return null;
@@ -80,7 +80,7 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
     *
     * @param entity 实体
     * @return 保存的结果
-     */
+    */
     public SysAiAppKey save(SysAiAppKey entity) {
         // 自动生成 sk- 格式密钥
         if (StringUtils.isBlank(entity.getAppKey())) {
@@ -103,7 +103,7 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
     *
     * @param entity 实体
     * @return 更新的结果
-     */
+    */
     public boolean update(SysAiAppKey entity) {
         return sysAiAppKeyMapper.updateById(entity) > 0;
     }
@@ -115,7 +115,7 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
     *
     * @param id 标识
     * @return 删除byid的结果
-     */
+    */
     public boolean deleteById(Integer id) {
         if (id == null) {
             return false;
@@ -145,7 +145,7 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
     *
     * @param appKey app钥匙
     * @return AppKey 记录；不存在返回 空
-     */
+    */
     private SysAiAppKey queryAppKeyUncached(String appKey) {
         if (StringUtils.isBlank(appKey)) {
             return null;
@@ -159,7 +159,7 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
     * @param dbAppKey app钥匙 记录
     * @param ip       客户端 IP
     * @return 是否有效
-     */
+    */
     private boolean isValidAppKey(SysAiAppKey dbAppKey, String ip) {
         if (dbAppKey == null) {
             return false;
@@ -208,7 +208,7 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
     * 更新use信息byapp钥匙
     *
     * @param appKey app钥匙
-     */
+    */
     public void updateUseInfoByAppKey(String appKey) {
         if (StringUtils.isBlank(appKey)) {
             return;
@@ -237,7 +237,7 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
     *
     * @param appKey app钥匙
     * @param tokens 令牌
-     */
+    */
     public void updateTokenQuotaByAppKey(String appKey, long tokens) {
         if (StringUtils.isBlank(appKey) || tokens <= 0) {
             return;
@@ -263,7 +263,7 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
     *
     * @param appKey app钥匙
     * @return 获取群体idbyapp钥匙的结果
-     */
+    */
     public Integer getGroupIdByAppKey(String appKey) {
         if (StringUtils.isBlank(appKey)) {
             return null;
@@ -284,7 +284,7 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
     *
     * @param appKey app钥匙
     * @return 是否expired的结果
-     */
+    */
     private boolean isExpired(SysAiAppKey appKey) {
         Long expireTime = resolveExpireTime(appKey);
         if (expireTime == null) {
@@ -298,7 +298,7 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
     *
     * @param appKey app钥匙
     * @return resolveexpire时间的结果
-     */
+    */
     private Long resolveExpireTime(SysAiAppKey appKey) {
         if (appKey == null) {
             return null;

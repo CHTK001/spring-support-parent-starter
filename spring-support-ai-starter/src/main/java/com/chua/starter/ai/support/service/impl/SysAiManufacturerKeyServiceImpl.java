@@ -28,14 +28,14 @@ public class SysAiManufacturerKeyServiceImpl implements SysAiManufacturerKeyServ
 
     /**
     * 厂商 API 钥匙 映射器
-     */
+    */
     private final SysAiManufacturerKeyMapper manufacturerKeyMapper;
 
     /**
     * 查询全部厂商 API 钥匙。
     *
     * @return API 钥匙 列表
-     */
+    */
     @Override
     public List<SysAiManufacturerKey> list() {
         return manufacturerKeyMapper.selectList(null);
@@ -46,7 +46,7 @@ public class SysAiManufacturerKeyServiceImpl implements SysAiManufacturerKeyServ
     *
     * @param manufacturerCode 厂商编码
     * @return API 钥匙 列表
-     */
+    */
     @Override
     public List<SysAiManufacturerKey> listByManufacturerCode(String manufacturerCode) {
         LambdaQueryWrapper<SysAiManufacturerKey> wrapper = Wrappers.<SysAiManufacturerKey>lambdaQuery()
@@ -59,7 +59,7 @@ public class SysAiManufacturerKeyServiceImpl implements SysAiManufacturerKeyServ
     *
     * @param manufacturerKey API 钥匙 实体
     * @return 保存后的实体
-     */
+    */
     @Override
     public SysAiManufacturerKey save(SysAiManufacturerKey manufacturerKey) {
         manufacturerKey.setStatus(
@@ -77,7 +77,7 @@ public class SysAiManufacturerKeyServiceImpl implements SysAiManufacturerKeyServ
     *
     * @param manufacturerKey API 钥匙 实体
     * @return 是否成功
-     */
+    */
     @Override
     public boolean update(SysAiManufacturerKey manufacturerKey) {
         if (manufacturerKey == null || manufacturerKey.getId() == null) {
@@ -107,7 +107,7 @@ public class SysAiManufacturerKeyServiceImpl implements SysAiManufacturerKeyServ
     *
     * @param id 主键 标识
     * @return 是否成功
-     */
+    */
     @Override
     public boolean delete(Long id) {
         if (id == null) {
@@ -122,7 +122,7 @@ public class SysAiManufacturerKeyServiceImpl implements SysAiManufacturerKeyServ
     * @param id      主键 标识
     * @param enabled 是否启用
     * @return 是否成功
-     */
+    */
     @Override
     public boolean toggle(Long id, Boolean enabled) {
         SysAiManufacturerKey key = manufacturerKeyMapper.selectById(id);

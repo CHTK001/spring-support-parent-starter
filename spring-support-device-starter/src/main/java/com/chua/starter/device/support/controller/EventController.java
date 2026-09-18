@@ -26,7 +26,7 @@ public class EventController {
 
     /**
     * 事件服务
-     */
+    */
     private final DeviceEventService eventService;
 
     /**
@@ -37,7 +37,7 @@ public class EventController {
     * @param start    开始时间，可选
     * @param end      结束时间，可选
     * @return 事件列表
-     */
+    */
     @GetMapping
     public List<DeviceEventRecord> queryEvents(
             @RequestParam String deviceId,

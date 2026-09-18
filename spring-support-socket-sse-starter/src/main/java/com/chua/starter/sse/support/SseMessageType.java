@@ -14,18 +14,18 @@ import lombok.Getter;
 public enum SseMessageType {
     /**
     * 通知
-     */
+    */
     NOTIFY,
     /**
     * 通知
-     */
+    */
     NOTIFY_HTML,
     /**
     * 进度
-     */
+    */
     PROCESS,
     /**
     * 完成
-     */
+    */
     FINISH
 }

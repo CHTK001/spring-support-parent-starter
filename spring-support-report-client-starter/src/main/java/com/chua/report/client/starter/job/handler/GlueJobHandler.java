@@ -21,14 +21,14 @@ public class GlueJobHandler implements JobHandler {
 
     /**
     * 胶水代码更新时间戳
-     */
+    */
     @Getter
     /** Glueupdatetime */
     private final long glueUpdatetime;
 
     /**
     * 实际执行的作业处理器
-     */
+    */
     private final JobHandler jobHandler;
 
     /**
@@ -36,7 +36,7 @@ public class GlueJobHandler implements JobHandler {
     *
     * @param jobHandler     实际执行的作业处理器实例
     * @param glueUpdatetime 胶水代码更新时间戳
-     */
+    */
     public GlueJobHandler(JobHandler jobHandler, long glueUpdatetime) {
         this.jobHandler = jobHandler;
         this.glueUpdatetime = glueUpdatetime;

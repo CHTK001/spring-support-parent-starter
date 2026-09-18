@@ -39,7 +39,7 @@ public class RSocketSessionImpl implements SocketSession {
     /**
     * 创建 r套接字会话impl 实例
     * @param session 会话
-     */
+    */
     public RSocketSessionImpl(WebSocketSession session) {
         this.session = session;
     }
@@ -87,7 +87,7 @@ public class RSocketSessionImpl implements SocketSession {
     *
     * @param key 钥匙
     * @return 获取attribute的结果
-     */
+    */
     public <T> T getAttribute(String key) {
         return (T) attributes.get(key);
     }
@@ -140,7 +140,7 @@ public class RSocketSessionImpl implements SocketSession {
     * 发送原始消息
     *
     * @param message 消息内容
-     */
+    */
     public void sendRaw(String message) {
         if (!session.isOpen()) {
             return;
@@ -158,7 +158,7 @@ public class RSocketSessionImpl implements SocketSession {
     * 获取Connection
     *
     * @return 获取connection的结果
-     */
+    */
     public <T> T getConnection() {
         return (T) session;
     }
@@ -168,7 +168,7 @@ public class RSocketSessionImpl implements SocketSession {
     * @param event 事件
     * @param data 数据
     * @return 创建消息的结果
-     */
+    */
     private String createMessage(String event, Object data) {
         try {
             String dataStr = data instanceof String ? (String) data : objectMapper.writeValueAsString(data);

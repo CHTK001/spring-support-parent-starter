@@ -23,7 +23,7 @@ public class GlobalSettingReader {
 
     /**
     * 键值全局设置服务
-     */
+    */
     private final SysAiGlobalSettingService sysAiGlobalSettingService;
 
     /**
@@ -32,7 +32,7 @@ public class GlobalSettingReader {
     * @param group 分组
     * @param field 字段名
     * @return 值，未配置时返回 空
-     */
+    */
     public String getStr(String group, String field) {
         return sysAiGlobalSettingService.getValue(group, field).orElse(null);
     }
@@ -44,7 +44,7 @@ public class GlobalSettingReader {
     * @param field        字段名
     * @param defaultValue 未配置或解析失败时的默认值
     * @return 布尔值
-     */
+    */
     public boolean getBool(String group, String field, boolean defaultValue) {
         return sysAiGlobalSettingService.getBoolean(group, field, defaultValue);
     }
@@ -56,7 +56,7 @@ public class GlobalSettingReader {
     * @param field        字段名
     * @param defaultValue 未配置或解析失败时的默认值
     * @return 整数值
-     */
+    */
     public int getInt(String group, String field, int defaultValue) {
         String v = getStr(group, field);
         if (v == null || v.isBlank()) {
@@ -76,7 +76,7 @@ public class GlobalSettingReader {
     * @param group 分组
     * @param field 字段名
     * @return 整数值，未配置或解析失败时返回 空
-     */
+    */
     public Integer getIntOrNull(String group, String field) {
         String v = getStr(group, field);
         if (v == null || v.isBlank()) {
@@ -96,7 +96,7 @@ public class GlobalSettingReader {
     * @param group 分组
     * @param field 字段名
     * @return 长整数值，未配置或解析失败时返回 空
-     */
+    */
     public Long getLongOrNull(String group, String field) {
         String v = getStr(group, field);
         if (v == null || v.isBlank()) {
@@ -116,7 +116,7 @@ public class GlobalSettingReader {
     * @param group 分组
     * @param field 字段名
     * @return 小数值，未配置或解析失败时返回 空
-     */
+    */
     public BigDecimal getDecimalOrNull(String group, String field) {
         String v = getStr(group, field);
         if (v == null || v.isBlank()) {
@@ -127,7 +127,7 @@ public class GlobalSettingReader {
             * bigdecimal。
             * @param v.trim( v.修剪(
             * @return BigDecimal的结果
-             */
+            */
             return new BigDecimal(v.trim());
         } catch (NumberFormatException e) {
             log.debug("[GlobalSettingReader] 字段 {} 非小数: {}", field, v);
@@ -142,7 +142,7 @@ public class GlobalSettingReader {
     * @param field        字段名
     * @param defaultValue 默认值
     * @return 小数值
-     */
+    */
     public double getDouble(String group, String field, double defaultValue) {
         BigDecimal value = getDecimalOrNull(group, field);
         return value != null ? value.doubleValue() : defaultValue;

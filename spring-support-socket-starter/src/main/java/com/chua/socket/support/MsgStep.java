@@ -26,42 +26,42 @@ public class MsgStep implements Serializable {
 
     /**
     * 事件标识
-     */
+    */
     private String eventId;
 
     /**
     * 数据标识
-     */
+    */
     private String dataId;
 
     /**
     * 消息内容
-     */
+    */
     private String message;
 
     /**
     * 步骤
-     */
+    */
     private int step;
 
     /**
     * 总数
-     */
+    */
     private int total;
 
     /**
     * 百分比
-     */
+    */
     private int percentage;
 
     /**
     * 状态
-     */
+    */
     private String status;
 
     /**
     * 时间戳
-     */
+    */
     private long timestamp;
 
     @Override

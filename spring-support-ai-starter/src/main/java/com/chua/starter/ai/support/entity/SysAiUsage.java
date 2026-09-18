@@ -22,73 +22,73 @@ public class SysAiUsage extends SysBase {
 
     /**
     * 主键 标识
-     */
+    */
     @TableId(type = IdType.AUTO)
     private Long sysAiUsageId; // sysaiusageid
 
     /**
     * 分组：对话 / 镜像 / 视频 / colorize / vision / rag
-     */
+    */
     private String sysAiUsageGroupName;
 
     /**
     * 服务商：openai / zhipu / 百度云 等
-     */
+    */
     private String sysAiUsageProvider;
 
     /**
     * 模型名称
-     */
+    */
     private String sysAiUsageModel;
 
     /**
     * 调用类型：同步 / 异步
-     */
+    */
     private String sysAiUsageCallType;
 
     /**
     * 输入 令牌 数
-     */
+    */
     private Integer sysAiUsagePromptTokens;
 
     /**
     * 输出 令牌 数
-     */
+    */
     private Integer sysAiUsageCompletionTokens;
 
     /**
     * 总 令牌 数
-     */
+    */
     private Integer sysAiUsageTotalTokens;
 
     /**
     * 输入费用（单位：元）
-     */
+    */
     private Double sysAiUsageInputCost;
 
     /**
     * 输出费用（单位：元）
-     */
+    */
     private Double sysAiUsageOutputCost;
 
     /**
     * 总费用（单位：元）
-     */
+    */
     private Double sysAiUsageTotalCost;
 
     /**
     * 请求 标识（关联调用日志）
-     */
+    */
     private String sysAiUsageRequestId;
 
     /**
     * 用户标识（可选）
-     */
+    */
     private String sysAiUsageUserId;
 
     /**
     * 调用时间
-     */
+    */
     private LocalDateTime sysAiUsageCallTime;
 
     /** 推理强度 */
@@ -131,7 +131,7 @@ public class SysAiUsage extends SysBase {
     * 获取分组名称，为空时返回默认值"默认"，保证前端展示有兜底。
     *
     * @return 分组名称，null 时返回"默认"
-     */
+    */
     public String getSysAiUsageGroupName() {
         return sysAiUsageGroupName == null ? "默认" : sysAiUsageGroupName;
     }
@@ -140,7 +140,7 @@ public class SysAiUsage extends SysBase {
     * 获取推理强度，为空时返回默认值"默认"，保证前端展示有兜底。
     *
     * @return 推理强度，null 时返回"默认"
-     */
+    */
     public String getSysAiUsageInferenceStrength() {
         return sysAiUsageInferenceStrength == null ? "默认" : sysAiUsageInferenceStrength;
     }
@@ -149,7 +149,7 @@ public class SysAiUsage extends SysBase {
     * 获取端点 URL，为空时返回默认值 "/v1/对话/completions"。
     *
     * @return 端点 URL，空 时返回 "/v1/对话/completions"
-     */
+    */
     public String getSysAiUsageEndpoint() {
         return sysAiUsageEndpoint == null ? "/v1/chat/completions" : sysAiUsageEndpoint;
     }
@@ -158,7 +158,7 @@ public class SysAiUsage extends SysBase {
     * 获取请求 IP，为空时返回默认值 "127.0.0.1"。
     *
     * @return 请求 IP，空 时返回 "127.0.0.1"
-     */
+    */
     public String getSysAiUsageIp() {
         return sysAiUsageIp == null ? "127.0.0.1" : sysAiUsageIp;
     }
@@ -167,7 +167,7 @@ public class SysAiUsage extends SysBase {
     * 获取请求类型，为空时返回默认值"默认"。
     *
     * @return 请求类型，null 时返回"默认"
-     */
+    */
     public String getSysAiUsageType() {
         return sysAiUsageType == null ? "默认" : sysAiUsageType;
     }
@@ -176,7 +176,7 @@ public class SysAiUsage extends SysBase {
     * 获取计费模式，为空时返回默认值"默认"。
     *
     * @return 计费模式，null 时返回"默认"
-     */
+    */
     public String getSysAiUsageBillingMode() {
         return sysAiUsageBillingMode == null ? "默认" : sysAiUsageBillingMode;
     }

@@ -20,7 +20,7 @@ public interface SoftwareSource {
     *
     * @param source 软件源配置
     * @return true 表示支持，false 表示不支持
-     */
+    */
     boolean support(SoftSource source);
 
     /**
@@ -28,7 +28,7 @@ public interface SoftwareSource {
     *
     * @param source 软件源配置
     * @return 软件信息列表
-     */
+    */
     List<SoftSoftware> fetchSoftwareList(SoftSource source);
 
     /**
@@ -37,7 +37,7 @@ public interface SoftwareSource {
     * @param source 软件源配置
     * @param softwareCode 软件编码
     * @return 软件信息
-     */
+    */
     SoftSoftware fetchSoftwareDetail(SoftSource source, String softwareCode);
 
     /**
@@ -47,7 +47,7 @@ public interface SoftwareSource {
     * @param software 软件信息
     * @param installPath 安装路径
     * @return 安装结果
-     */
+    */
     SoftwareSourceResult install(SoftSource source, SoftSoftware software, String installPath);
 
     /**
@@ -57,7 +57,7 @@ public interface SoftwareSource {
     * @param software 软件信息
     * @param installPath 安装路径
     * @return 卸载结果
-     */
+    */
     SoftwareSourceResult uninstall(SoftSource source, SoftSoftware software, String installPath);
 
     /**
@@ -68,7 +68,7 @@ public interface SoftwareSource {
     * @param targetVersion 目标版本
     * @param installPath 安装路径
     * @return 更新结果
-     */
+    */
     SoftwareSourceResult update(SoftSource source, SoftSoftware software, String targetVersion, String installPath);
 
     /**
@@ -77,6 +77,6 @@ public interface SoftwareSource {
     * @param source 软件源配置
     * @param softwareCode 软件编码
     * @return 最新版本号
-     */
+    */
     String getLatestVersion(SoftSource source, String softwareCode);
 }

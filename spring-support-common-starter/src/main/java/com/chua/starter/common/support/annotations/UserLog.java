@@ -26,13 +26,13 @@ public @interface UserLog {
     /**
     * 操作动作类型
     * @return 动作的结果
-     */
+    */
     Action action() default Action.NONE;
 
     /**
     * 登录类型（如：密码, sms, OAuth等）
     * @return login类型的结果
-     */
+    */
     String loginType() default "";
     
     /**
@@ -40,7 +40,7 @@ public @interface UserLog {
     * <p>
     * 为空时，会尝试读取 {Swagger 名称()} 属性
     * @return module的结果
-     */
+    */
     String module() default "";
     
     /**
@@ -48,7 +48,7 @@ public @interface UserLog {
     * <p>
     * 为空时，会尝试读取 {Swagger summary()} 属性
     * @return 名称的结果
-     */
+    */
     String name() default "";
     
     /**
@@ -60,7 +60,7 @@ public @interface UserLog {
     *   <li>{$result} - 返回值</li>
     * </ul>
     * @return 内容的结果
-     */
+    */
     String content() default "";
 
     // ========== 开关字段 ==========
@@ -68,18 +68,18 @@ public @interface UserLog {
     /**
     * 是否记录操作日志
     * @return enable的结果
-     */
+    */
     boolean enable() default true;
     
     /**
     * 是否记录方法参数
     * @return 日志参数的结果
-     */
+    */
     boolean logArgs() default true;
     
     /**
     * 是否记录方法结果的数据
     * @return 日志结果数据的结果
-     */
+    */
     boolean logResultData() default true;
 }

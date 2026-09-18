@@ -20,21 +20,21 @@ public class ConsoleProperties {
 
     /**
     * 是否启用控制台（默认启用——模块按需引入）
-     */
+    */
     private boolean enable = true;
 
     /**
     * sqlite 持久化文件路径（相对运行目录，默认 控制台.sqlite）
-     */
+    */
     private String sqlitePath = "console.sqlite";
 
     /**
     * 页面访问所需权限码（页面方法标注 {@code @Permission(permissionCode)}）
-     */
+    */
     private String permissionCode = "console:manage";
 
     /**
     * 键值设置前缀过滤（为空表示管理全部键值）
-     */
+    */
     private String kvPrefix = "";
 }

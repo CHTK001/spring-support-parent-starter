@@ -16,27 +16,27 @@ public class MybatisSlowSqlEvent extends ApplicationEvent {
 
     /**
     * 映射器 方法标识（mapped对账单#标识）。
-     */
+    */
     private final String statementId;
     /**
     * SQL 命令类型（选择/更新/插入/删除）。
-     */
+    */
     private final String commandType;
     /**
     * 耗时（毫秒）。
-     */
+    */
     private final long elapsedMs;
     /**
     * 追踪标识（若存在）。
-     */
+    */
     private final String traceId;
     /**
     * SQL 文本（可选，可能被截断）。
-     */
+    */
     private final String sql;
     /**
     * 参数映射信息（可选）。
-     */
+    */
     private final List<String> parameters;
 
     /**
@@ -49,7 +49,7 @@ public class MybatisSlowSqlEvent extends ApplicationEvent {
     * @param traceId     追踪标识
     * @param sql         SQL 文本
     * @param parameters  参数映射信息
-     */
+    */
     public MybatisSlowSqlEvent(Object source,
                               String statementId,
                               String commandType,
@@ -60,7 +60,7 @@ public class MybatisSlowSqlEvent extends ApplicationEvent {
         /**
         * 父。
         * @param source 源
-         */
+        */
         super(source);
         this.statementId = statementId;
         this.commandType = commandType;
@@ -74,7 +74,7 @@ public class MybatisSlowSqlEvent extends ApplicationEvent {
     * 获取对账单标识
     *
     * @return 获取对账单id的结果
-     */
+    */
     public String getStatementId() {
         return statementId;
     }
@@ -83,7 +83,7 @@ public class MybatisSlowSqlEvent extends ApplicationEvent {
     * 获取命令类型
     *
     * @return 获取命令类型的结果
-     */
+    */
     public String getCommandType() {
         return commandType;
     }
@@ -92,7 +92,7 @@ public class MybatisSlowSqlEvent extends ApplicationEvent {
     * 获取elapsedms
     *
     * @return 获取elapsedms的结果
-     */
+    */
     public long getElapsedMs() {
         return elapsedMs;
     }
@@ -101,7 +101,7 @@ public class MybatisSlowSqlEvent extends ApplicationEvent {
     * 获取追踪标识
     *
     * @return 获取追踪id的结果
-     */
+    */
     public String getTraceId() {
         return traceId;
     }
@@ -110,7 +110,7 @@ public class MybatisSlowSqlEvent extends ApplicationEvent {
     * 获取SQL
     *
     * @return 获取sql的结果
-     */
+    */
     public String getSql() {
         return sql;
     }
@@ -119,7 +119,7 @@ public class MybatisSlowSqlEvent extends ApplicationEvent {
     * 获取参数
     *
     * @return 获取参数的结果
-     */
+    */
     public List<String> getParameters() {
         return parameters;
     }

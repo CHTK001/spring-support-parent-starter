@@ -26,7 +26,7 @@ public class SpringDocConfigPropertiesConfiguration {
     * 注册 springdoc配置属性 Bean（兜底）。
     *
     * @return SpringDoc 配置属性
-     */
+    */
     @Bean
     @Primary
     @ConditionalOnMissingBean(SpringDocConfigProperties.class)
@@ -34,7 +34,7 @@ public class SpringDocConfigPropertiesConfiguration {
         /**
         * springdoc配置属性。
         * @return springdoc配置属性的结果
-         */
+        */
         return new SpringDocConfigProperties();
     }
 }

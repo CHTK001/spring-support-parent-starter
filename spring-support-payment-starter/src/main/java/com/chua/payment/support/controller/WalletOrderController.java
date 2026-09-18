@@ -45,7 +45,7 @@ public class WalletOrderController {
     *
     * @param dto dto
     * @return 创建recharge的结果
-     */
+    */
     public Result<WalletOrderVO> createRecharge(@RequestBody WalletRechargeDTO dto) {
         RechargeRequest request = new RechargeRequest();
         BeanUtils.copyProperties(dto, request);
@@ -58,7 +58,7 @@ public class WalletOrderController {
     *
     * @param dto dto
     * @return 创建调动的结果
-     */
+    */
     public Result<WalletOrderVO> createTransfer(@RequestBody WalletTransferDTO dto) {
         TransferRequest request = new TransferRequest();
         BeanUtils.copyProperties(dto, request);
@@ -71,7 +71,7 @@ public class WalletOrderController {
     *
     * @param dto dto
     * @return 创建withdraw的结果
-     */
+    */
     public Result<WalletOrderVO> createWithdraw(@RequestBody WalletWithdrawDTO dto) {
         WithdrawRequest request = new WithdrawRequest();
         BeanUtils.copyProperties(dto, request);
@@ -84,7 +84,7 @@ public class WalletOrderController {
     *
     * @param orderNo 订单no
     * @return 获取by订单no的结果
-     */
+    */
     public Result<WalletOrderVO> getByOrderNo(@PathVariable String orderNo) {
         WalletOrder order = walletOrderService.getByOrderNo(orderNo);
         return order == null ? Result.error("钱包订单不存在") : Result.success(convert(order));
@@ -96,7 +96,7 @@ public class WalletOrderController {
     *
     * @param "1" "1"
     * @return page的结果
-     */
+    */
     public Result<PageResult<WalletOrderVO>> page(@RequestParam(defaultValue = "1") int pageNum,
                                                   @RequestParam(defaultValue = "10") int pageSize,
                                                   @RequestParam(required = false) Long merchantId,
@@ -114,7 +114,7 @@ public class WalletOrderController {
     *
     * @param order 订单
     * @return 转换的结果
-     */
+    */
     private WalletOrderVO convert(WalletOrder order) {
         WalletOrderVO vo = new WalletOrderVO();
         BeanUtils.copyProperties(order, vo);

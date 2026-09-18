@@ -19,7 +19,7 @@ public class UpdateRowsEventData implements EventData {
     * 创建更新行事件数据
     *
     * @param rows 更新的行数据，键为旧值，值为新值
-     */
+    */
     public UpdateRowsEventData(List<Map.Entry<Serializable[], Serializable[]>> rows) {
         this.rows = rows;
     }
@@ -28,7 +28,7 @@ public class UpdateRowsEventData implements EventData {
     * 获取更新的行数据
     *
     * @return 更新行数据列表
-     */
+    */
     public List<Map.Entry<Serializable[], Serializable[]>> getRows() {
         return rows;
     }

@@ -30,7 +30,7 @@ public class OrderStateLogServiceImpl implements OrderStateLogService {
     * 记录订单状态流转日志，将状态变更写入数据库。
     *
     * @param request 日志请求参数，包含订单标识、原状态、目标状态、事件描述、操作人和备注
-     */
+    */
     @Override
     public void log(OrderStateLogRequest request) {
         if (request == null) {
@@ -38,7 +38,7 @@ public class OrderStateLogServiceImpl implements OrderStateLogService {
             * illegal参数异常。
             * @param "订单状态日志参数不能为空" "订单状态日志参数不能为空"
             * @return illegal参数异常的结果
-             */
+            */
             throw new IllegalArgumentException("订单状态日志参数不能为空");
         }
         OrderStateLog stateLog = new OrderStateLog();

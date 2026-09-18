@@ -12,7 +12,7 @@ public interface AiAccessGuardService {
     * 是否启用 app钥匙 鉴权。
     *
     * @return 是否启用
-     */
+    */
     boolean isAppKeyEnabled();
 
     /**
@@ -22,7 +22,7 @@ public interface AiAccessGuardService {
     * @param appSecret  应用密钥
     * @param remoteAddr 客户端地址
     * @return 校验是否通过
-     */
+    */
     boolean verifyAppKey(String appKey, String appSecret, String remoteAddr);
 
     /**
@@ -31,6 +31,6 @@ public interface AiAccessGuardService {
     * @param auth       认证头
     * @param remoteAddr 客户端地址
     * @return 校验是否通过
-     */
+    */
     boolean verifyBearerToken(String auth, String remoteAddr);
 }

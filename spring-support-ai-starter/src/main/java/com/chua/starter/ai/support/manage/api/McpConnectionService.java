@@ -44,7 +44,7 @@ public class McpConnectionService {
     * @param transport transport 配置（类型 + url + 头部）
     * @return 前端约定的连接测试结果：
     *         {@code { success, tools?: [{name, description, input_schema}], error?, code? }}
-     */
+    */
     public Map<String, Object> testConnection(String name, Map<String, Object> transport) {
         Map<String, Object> result = new LinkedHashMap<>(4);
         String type = transport == null ? "" : String.valueOf(transport.getOrDefault("type", ""));
@@ -71,7 +71,7 @@ public class McpConnectionService {
                     /**
                     * 构建transport。
                     * @param transport transport
-                     */
+                    */
                     buildTransport(transport);
             if (clientTransport == null) {
                 result.put("success", false);
@@ -83,7 +83,7 @@ public class McpConnectionService {
             /**
             * 尝试。
             * @param McpClient.sync(clientTransport mcp客户端.同步(客户端transport
-             */
+            */
             try (McpSyncClient client = McpClient.sync(clientTransport)
                     .requestTimeout(CONNECT_TIMEOUT)
                     .initializationTimeout(CONNECT_TIMEOUT)
@@ -116,7 +116,7 @@ public class McpConnectionService {
     *
     * @param transport transport 配置（类型 + url/命令/参数/env + 头部）
     * @return 对应 transport，不支持的 类型 返回 空
-     */
+    */
     private io.modelcontextprotocol.spec.McpClientTransport buildTransport(Map<String, Object> transport) {
         String type = transport == null ? "" : String.valueOf(transport.getOrDefault("type", ""));
         String url = transport == null ? "" : String.valueOf(transport.getOrDefault("url", ""));
@@ -149,7 +149,7 @@ public class McpConnectionService {
         * apply头部。
         * @param builder 构建器
         * @param headers 头部
-         */
+        */
         applyHeaders(builder, headers);
         return builder.build();
     }
@@ -161,7 +161,7 @@ public class McpConnectionService {
         * apply头部。
         * @param builder 构建器
         * @param headers 头部
-         */
+        */
         applyHeaders(builder, headers);
         return builder.build();
     }
@@ -171,7 +171,7 @@ public class McpConnectionService {
     *
     * @param transport transport
     * @return 构建stdiotransport的结果
-     */
+    */
     private io.modelcontextprotocol.spec.McpClientTransport buildStdioTransport(Map<String, Object> transport) {
         String command = String.valueOf(transport.getOrDefault("command", ""));
         ServerParameters.Builder builder = ServerParameters.builder(command);
@@ -204,7 +204,7 @@ public class McpConnectionService {
         * stdio客户端transport。
         * @param builder.build( 构建器.构建(
         * @return stdio客户端transport的结果
-         */
+        */
         return new StdioClientTransport(builder.build(), McpJsonDefaults.getMapper());
     }
 

@@ -33,7 +33,7 @@ public class IptablesServiceImpl implements IptablesService  {
     * 构造方法，注入IP配置属性
     *
     * @param ipProperties IP配置属性对象，包含数据库文件路径和IP解析类型等配置信息
-     */
+    */
     public IptablesServiceImpl(IpProperties ipProperties) {
         this.ipProperties = ipProperties;
     }
@@ -46,7 +46,7 @@ public class IptablesServiceImpl implements IptablesService  {
     * @return 返回包含地理位置信息的封装结果
     * 成功时返回 {@code ReturnResult.ok(GeoCity)} 包含城市、省份、国家等信息
     * 失败时返回 {@code ReturnResult.failed("错误信息")} 包含具体的错误原因
-     */
+    */
     @Override
     public ReturnResult<GeoCity> transferAddress(String address) {
         if (StringUtils.isEmpty(address)) {

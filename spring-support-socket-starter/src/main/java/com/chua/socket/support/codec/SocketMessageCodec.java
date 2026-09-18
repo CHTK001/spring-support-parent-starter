@@ -35,7 +35,7 @@ public class SocketMessageCodec {
     /**
     * 创建 套接字消息codec 实例
     * @param properties 属性
-     */
+    */
     public SocketMessageCodec(SocketProperties properties) {
         String codecType = properties == null || properties.getCodecType() == null
                 ? "json"
@@ -68,7 +68,7 @@ public class SocketMessageCodec {
     *
     * @param payload payload
     * @return encode的结果
-     */
+    */
     public Object encode(String payload) {
         return encode(payload, null);
     }
@@ -79,7 +79,7 @@ public class SocketMessageCodec {
     * @param payload payload
     * @param encryptRequested encrypt请求
     * @return encode的结果
-     */
+    */
     public Object encode(String payload, Boolean encryptRequested) {
         if (!shouldEncrypt(payload, encryptRequested)) {
             return payload;
@@ -108,7 +108,7 @@ public class SocketMessageCodec {
     * @param payload payload
     * @param encryptRequested encrypt请求
     * @return shouldEncrypt的结果
-     */
+    */
     private boolean shouldEncrypt(String payload, Boolean encryptRequested) {
         return shouldEncryptForCurrentSession(encryptRequested)
                 && payload != null
@@ -122,7 +122,7 @@ public class SocketMessageCodec {
     *
     * @param encryptRequested encrypt请求
     * @return shouldencryptfor当前会话的结果
-     */
+    */
     private boolean shouldEncryptForCurrentSession(Boolean encryptRequested) {
         return switch (encryptMode) {
             case ENCRYPTED -> true;
@@ -136,7 +136,7 @@ public class SocketMessageCodec {
     *
     * @param payload payload
     * @return resolve数据id的结果
-     */
+    */
     private String resolveDataId(String payload) {
         try {
             JsonNode root = OBJECT_MAPPER.readTree(payload);

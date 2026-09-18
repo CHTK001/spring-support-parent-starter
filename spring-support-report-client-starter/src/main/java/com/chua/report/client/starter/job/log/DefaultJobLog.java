@@ -23,7 +23,7 @@ public class DefaultJobLog implements JobLog{
     *
     * @param appendLogPattern 追加日志模式
     * @return 日志的结果
-     */
+    */
     public static boolean log(String appendLogPattern) {
         StackTraceElement callInfo = new Throwable().getStackTrace()[1];
         return logDetail(callInfo, appendLogPattern);
@@ -34,7 +34,7 @@ public class DefaultJobLog implements JobLog{
     * @param callInfo call信息
     * @param appendLog 追加日志
     * @return 日志detail的结果
-     */
+    */
     private static boolean logDetail(StackTraceElement callInfo, String appendLog) {
         JobContext xxlJobContext = JobContext.getXxlJobContext();
         if (xxlJobContext == null) {

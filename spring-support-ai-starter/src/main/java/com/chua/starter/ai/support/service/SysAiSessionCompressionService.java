@@ -17,20 +17,20 @@ public interface SysAiSessionCompressionService {
     *
     * @param sessionId 会话 标识
     * @return 压缩上下文实体，不存在时返回 {@code null}
-     */
+    */
     SysAiSessionCompression getBySessionId(Long sessionId);
 
     /**
     * 保存（新增或更新）会话的压缩上下文。
     *
     * @param compression 压缩上下文实体
-     */
+    */
     void saveOrUpdate(SysAiSessionCompression compression);
 
     /**
     * 删除会话的压缩上下文。
     *
     * @param sessionId 会话 标识
-     */
+    */
     void deleteBySessionId(Long sessionId);
 }

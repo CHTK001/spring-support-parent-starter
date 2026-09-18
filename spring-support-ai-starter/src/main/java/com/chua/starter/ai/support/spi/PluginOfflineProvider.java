@@ -19,13 +19,13 @@ public interface PluginOfflineProvider {
     * 离线源名称。
     *
     * @return 源名称
-     */
+    */
     String name();
 
     /**
     * 列出该来源提供的插件列表。
     *
     * @return 插件列表
-     */
+    */
     List<Map<String, Object>> listPlugins();
 }

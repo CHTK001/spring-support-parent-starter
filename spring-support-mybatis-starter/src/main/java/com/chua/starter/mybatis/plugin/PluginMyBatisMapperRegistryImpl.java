@@ -41,7 +41,7 @@ public class PluginMyBatisMapperRegistryImpl implements PluginMyBatisMapperRegis
     *
     * @param sqlSessionFactory SQL会话工厂 实例
     * @param mapperClasses     映射器 接口类
-     */
+    */
     @Override
     public void registerMappers(SqlSessionFactory sqlSessionFactory, Class<?>... mapperClasses) {
         if (sqlSessionFactory == null || mapperClasses == null || mapperClasses.length == 0) {
@@ -76,7 +76,7 @@ public class PluginMyBatisMapperRegistryImpl implements PluginMyBatisMapperRegis
     * @param sqlSessionFactory SQL会话工厂 实例
     * @param classLoader       插件 类加载
     * @param mapperXmlPath     映射器 XML 路径(例如: {@code mapper})
-     */
+    */
     @Override
     public void registerMapperXmls(SqlSessionFactory sqlSessionFactory,
                                    ClassLoader classLoader,
@@ -104,7 +104,7 @@ public class PluginMyBatisMapperRegistryImpl implements PluginMyBatisMapperRegis
                 * 注册映射器xml内部。
                 * @param configuration 配置
                 * @param resourceUrl resourceurl
-                 */
+                */
                 registerMapperXmlInternal(configuration, resourceUrl);
             }
         } catch (Exception e) {
@@ -117,7 +117,7 @@ public class PluginMyBatisMapperRegistryImpl implements PluginMyBatisMapperRegis
     *
     * @param sqlSessionFactory SQL会话工厂 实例
     * @param mapperXmlUrl      映射器 XML 资源地址
-     */
+    */
     @Override
     public void registerMapperXml(SqlSessionFactory sqlSessionFactory, URL mapperXmlUrl) {
         if (sqlSessionFactory == null || mapperXmlUrl == null) {
@@ -130,7 +130,7 @@ public class PluginMyBatisMapperRegistryImpl implements PluginMyBatisMapperRegis
             * 注册映射器xml内部。
             * @param configuration 配置
             * @param mapperXmlUrl 映射器xmlurl
-             */
+            */
             registerMapperXmlInternal(configuration, mapperXmlUrl);
         } catch (Exception e) {
             log.error("[PluginMyBatis][注册]Mapper XML 注册失败: {}", mapperXmlUrl, e);
@@ -142,7 +142,7 @@ public class PluginMyBatisMapperRegistryImpl implements PluginMyBatisMapperRegis
     *
     * @param configuration MyBatis 配置
     * @param mapperXmlUrl  映射器 XML 资源地址
-     */
+    */
     private void registerMapperXmlInternal(Configuration configuration, URL mapperXmlUrl) {
         if (configuration == null || mapperXmlUrl == null) {
             return;
@@ -151,7 +151,7 @@ public class PluginMyBatisMapperRegistryImpl implements PluginMyBatisMapperRegis
         /**
         * 尝试。
         * @param mapperXmlUrl.openStream( 映射器xmlurl.openstream(
-         */
+        */
         try (InputStream inputStream = mapperXmlUrl.openStream()) {
             XMLMapperBuilder xmlMapperBuilder = new XMLMapperBuilder(
                     inputStream,

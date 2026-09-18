@@ -33,7 +33,7 @@ public class SysAiDataSource implements Serializable {
     /**
     * 类型标识，对应 {@link com.chua.starter.ai.support.manage.store.datasource.IRequirementDataSource#type()}。
     * 如 "lark"、"generic"。
-     */
+    */
     @TableField("sys_ai_data_source_type")
     private String type; // 类型
 

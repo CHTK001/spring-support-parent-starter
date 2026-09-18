@@ -85,7 +85,7 @@ public class PaymentGlobalConfigServiceImpl implements PaymentGlobalConfigServic
     *
     * @param entity 实体
     * @return 转为vo的结果
-     */
+    */
     private PaymentGlobalConfigVO toVO(PaymentGlobalConfig entity) {
         PaymentGlobalConfigVO vo = new PaymentGlobalConfigVO();
         BeanUtils.copyProperties(entity, vo);
@@ -100,7 +100,7 @@ public class PaymentGlobalConfigServiceImpl implements PaymentGlobalConfigServic
     *
     * @param value 价值观
     * @return normalize的结果
-     */
+    */
     private String normalize(String value) {
         if (!StringUtils.hasText(value)) {
             return null;

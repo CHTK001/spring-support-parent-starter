@@ -41,13 +41,13 @@ public class EduKnowledgeDocServiceImpl extends ServiceImpl<EduKnowledgeDocMappe
 
     /**
     * RAG 客户端管理器（可选注入，未引入 AI 模块时自动降级为直接入库）
-     */
+    */
     private final ObjectProvider<RagClientManager> ragClientManagerProvider;
 
     /**
     * 创建 edu知识doc服务impl 实例
     * @param ragClientManagerProvider rag客户端管理器提供者
-     */
+    */
     public EduKnowledgeDocServiceImpl(ObjectProvider<RagClientManager> ragClientManagerProvider) {
         this.ragClientManagerProvider = ragClientManagerProvider;
     }
@@ -92,14 +92,14 @@ public class EduKnowledgeDocServiceImpl extends ServiceImpl<EduKnowledgeDocMappe
     *
     * @param dto dto
     * @return uploadDoc的结果
-     */
+    */
     public Long uploadDoc(KnowledgeDocUploadDTO dto) {
         if (!StringUtils.hasText(dto.getFilePath())) {
             /**
             * 业务异常。
             * @param "文件路径不能为空" "文件路径不能为空"
             * @return 业务异常的结果
-             */
+            */
             throw new BusinessException("文件路径不能为空");
         }
         EduKnowledgeDoc entity = new EduKnowledgeDoc();
@@ -125,7 +125,7 @@ public class EduKnowledgeDocServiceImpl extends ServiceImpl<EduKnowledgeDocMappe
     *
     * @param dto 上传文档信息
     * @return 向量存储ID，未接入 RAG 或向量化失败时返回 空
-     */
+    */
     private String vectorize(KnowledgeDocUploadDTO dto) {
         RagClientManager manager = ragClientManagerProvider.getIfAvailable();
         if (manager == null) {
@@ -159,7 +159,7 @@ public class EduKnowledgeDocServiceImpl extends ServiceImpl<EduKnowledgeDocMappe
     *
     * @param path 文件路径或 URL
     * @return 文件字节，读取失败返回 空
-     */
+    */
     private byte[] readFile(String path) {
         if (!StringUtils.hasText(path)) {
             return null;
@@ -170,7 +170,7 @@ public class EduKnowledgeDocServiceImpl extends ServiceImpl<EduKnowledgeDocMappe
                 /**
                 * 尝试。
                 * @param URI.create(path URI.创建(路径
-                 */
+                */
                 try (InputStream in = URI.create(path).toURL().openStream()) {
                     return in.readAllBytes();
                 }
@@ -216,7 +216,7 @@ public class EduKnowledgeDocServiceImpl extends ServiceImpl<EduKnowledgeDocMappe
     *
     * @param id 标识
     * @return 删除doc的结果
-     */
+    */
     public boolean deleteDoc(Long id) {
         EduKnowledgeDoc exists = baseMapper.selectById(id);
         if (exists == null) {
@@ -224,7 +224,7 @@ public class EduKnowledgeDocServiceImpl extends ServiceImpl<EduKnowledgeDocMappe
             * 业务异常。
             * @param "文档不存在" "文档不存在"
             * @return 业务异常的结果
-             */
+            */
             throw new BusinessException("文档不存在");
         }
         // 逻辑删除：状态置为失败
@@ -240,7 +240,7 @@ public class EduKnowledgeDocServiceImpl extends ServiceImpl<EduKnowledgeDocMappe
     *
     * @param entity 实体
     * @return VO
-     */
+    */
     private KnowledgeDocVO toVO(EduKnowledgeDoc entity) {
         KnowledgeDocVO vo = new KnowledgeDocVO();
         vo.setKnowledgeDocId(entity.getKnowledgeDocId());

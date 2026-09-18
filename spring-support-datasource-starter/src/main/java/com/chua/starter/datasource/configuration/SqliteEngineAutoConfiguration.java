@@ -54,7 +54,7 @@ public class SqliteEngineAutoConfiguration {
     /**
     * sqliteengineauto配置。
     * @param properties 属性
-     */
+    */
     public SqliteEngineAutoConfiguration(SqliteDataSourceProperties properties) {
         this.properties = properties;
     }
@@ -66,7 +66,7 @@ public class SqliteEngineAutoConfiguration {
     * 之后初始化，但在需要 sqlite 作为默认数据源的场景下可优先于其他 Engine。
     * </p>
     * @return sqliteEngine的结果
-     */
+    */
     @Bean
     @ConditionalOnMissingBean
     @Order(Ordered.LOWEST_PRECEDENCE)
@@ -80,7 +80,7 @@ public class SqliteEngineAutoConfiguration {
     /**
     * 注册 sqlite 数据源 Bean（供 Spring jdbctemplate / @Transactional 使用）。
     * @return sqlite数据源的结果
-     */
+    */
     @Bean
     @ConditionalOnMissingBean(DataSource.class)
     public DataSource sqliteDataSource() {
@@ -102,7 +102,7 @@ public class SqliteEngineAutoConfiguration {
             * runtime异常。
             * @param e.getMessage( e.获取消息(
             * @return runtime异常的结果
-             */
+            */
             throw new RuntimeException("[sqlite] SQLite DataSource 创建失败: " + e.getMessage(), e);
         }
     }

@@ -26,7 +26,7 @@ public class AiStarterApplication {
     * Main
     *
     * @param args 参数
-     */
+    */
     public static void main(String[] args) {
         SpringApplication.run(AiStarterApplication.class, args);
     }

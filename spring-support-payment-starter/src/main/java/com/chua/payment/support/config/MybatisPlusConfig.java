@@ -31,7 +31,7 @@ public class MybatisPlusConfig {
     * 中按 Spring Bean 顺序组装，这样 作业 模块注入的动态表名拦截器也能一起生效。
     * </p>
     * @return 薪酬pagination内部拦截器的结果
-     */
+    */
     @Bean
     @ConditionalOnMissingBean(PaginationInnerInterceptor.class)
     public PaginationInnerInterceptor paymentPaginationInnerInterceptor() {
@@ -39,7 +39,7 @@ public class MybatisPlusConfig {
         * pagination内部拦截器。
         * @param DbType.MYSQL db类型.MySQL
         * @return pagination内部拦截器的结果
-         */
+        */
         return new PaginationInnerInterceptor(DbType.MYSQL);
     }
 
@@ -47,7 +47,7 @@ public class MybatisPlusConfig {
     * 支付模块 MyBatis Plus 拦截器链。
     * @param innerInterceptorProvider 内部拦截器提供者
     * @return mybatisplus拦截器的结果
-     */
+    */
     @Bean
     @ConditionalOnMissingBean(MybatisPlusInterceptor.class)
     public MybatisPlusInterceptor mybatisPlusInterceptor(ObjectProvider<List<InnerInterceptor>> innerInterceptorProvider) {

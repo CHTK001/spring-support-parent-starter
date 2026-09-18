@@ -24,7 +24,7 @@ public class MaterializedSqlRoute {
     * notrouted
     *
     * @return notRouted的结果
-     */
+    */
     public static MaterializedSqlRoute notRouted() {
         return MaterializedSqlRoute.builder().routed(false).build();
     }
@@ -34,7 +34,7 @@ public class MaterializedSqlRoute {
     *
     * @param dataSource 数据源
     * @return routed的结果
-     */
+    */
     public static MaterializedSqlRoute routed(String dataSource) {
         return MaterializedSqlRoute.builder()
                 .routed(true)
@@ -48,7 +48,7 @@ public class MaterializedSqlRoute {
     * @param dataSource 数据源
     * @param cacheKey 缓存钥匙
     * @return routed的结果
-     */
+    */
     public static MaterializedSqlRoute routed(String dataSource, String cacheKey) {
         return MaterializedSqlRoute.builder()
                 .routed(true)

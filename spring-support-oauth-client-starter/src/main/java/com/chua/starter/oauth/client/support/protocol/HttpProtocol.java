@@ -46,13 +46,13 @@ public class HttpProtocol extends AbstractProtocol {
 
     /**
     * 弹性处理器（熔断+重试）
-     */
+    */
     private final OAuthClientResilience resilience;
 
     /**
     * 创建 http协议 实例
     * @param authClientProperties 认证客户端属性
-     */
+    */
     public HttpProtocol(AuthClientProperties authClientProperties) {
         super(authClientProperties);
         this.resilience = new OAuthClientResilience(authClientProperties);
@@ -105,7 +105,7 @@ public class HttpProtocol extends AbstractProtocol {
     * 脱敏 app键
     * @param appKey app键
     * @return maskapp键的结果
-     */
+    */
     private String maskAppKey(String appKey) {
         if (appKey == null || appKey.length() < 8) {
             return "***";
@@ -117,7 +117,7 @@ public class HttpProtocol extends AbstractProtocol {
     * 脱敏指纹
     * @param fingerprint fingerprint
     * @return maskFingerprint的结果
-     */
+    */
     private String maskFingerprint(String fingerprint) {
         if (fingerprint == null || fingerprint.length() < 8) {
             return "***";
@@ -355,7 +355,7 @@ public class HttpProtocol extends AbstractProtocol {
     * 解析在线用户结果
     * @param resultMap 结果映射
     * @return 解析online用户结果的结果
-     */
+    */
     private OnlineUserResult parseOnlineUserResult(Map<String, Object> resultMap) {
         OnlineUserResult result = new OnlineUserResult();
         result.setTotal(getIntValue(resultMap, "total", 0));
@@ -398,7 +398,7 @@ public class HttpProtocol extends AbstractProtocol {
     * @param key 键
     * @param defaultValue 默认值
     * @return 获取int值的结果
-     */
+    */
     private int getIntValue(Map<String, Object> map, String key, int defaultValue) {
         Object value = map.get(key);
         if (value instanceof Number) {
@@ -414,7 +414,7 @@ public class HttpProtocol extends AbstractProtocol {
     * @param key 键
     * @param defaultValue 默认值
     * @return 获取字符串值的结果
-     */
+    */
     private String getStringValue(Map<String, Object> map, String key, String defaultValue) {
         Object value = map.get(key);
         return value != null ? value.toString() : defaultValue;
@@ -427,13 +427,13 @@ public class HttpProtocol extends AbstractProtocol {
     * @param jsonObject  包含认证所需参数的JSON对象
     * @param upgradeType 升级类型，用于指定升级策略（如基于版本号或时间戳）
     * @return AuthenticationInformation 返回认证结果，包含认证状态和用户信息
-     */
+    */
     /**
     * 大小写不敏感读取响应头
     * @param headers 头部
     * @param name 名称
     * @return 头部ignore大小写的结果
-     */
+    */
     private String headerIgnoreCase(com.chua.common.support.network.http.HttpHeader headers, String name) {
         if (headers == null) {
             return null;
@@ -455,7 +455,7 @@ public class HttpProtocol extends AbstractProtocol {
     * @param upgradeType upgrade类型
     * @param path 路径
     * @return 创建认证信息的结果
-     */
+    */
     protected AuthenticationInformation createAuthenticationInformation(JsonObject jsonObject, UpgradeType upgradeType, String path) {
         // 使用弹性处理器执行请求（含熔断和重试）
         return resilience.executeWithResilience(
@@ -471,7 +471,7 @@ public class HttpProtocol extends AbstractProtocol {
     * @param upgradeType upgrade类型
     * @param path 路径
     * @return 执行请求的结果
-     */
+    */
     private AuthenticationInformation doRequest(JsonObject jsonObject, UpgradeType upgradeType, String path) {
         // 创建或获取追踪上下文
         TraceContext traceContext = TraceContext.current();

@@ -43,7 +43,7 @@ public class DeviceAutoConfiguration {
     *
     * @param providers Spring 容器中所有 device提供者 实现
     * @return Provider 列表
-     */
+    */
     @Bean
     public List<DeviceProvider> deviceProviders(List<DeviceProvider> providers) {
         providers.forEach(p -> log.info("[Device] 注册 Provider: vendor={}", p.getVendor()));
@@ -53,7 +53,7 @@ public class DeviceAutoConfiguration {
     /**
     * 注册设备模块服务信息。
     * @return device服务信息contributor的结果
-     */
+    */
     @Bean
     public ServiceInfoContributor deviceServiceInfoContributor() {
         return registry -> {

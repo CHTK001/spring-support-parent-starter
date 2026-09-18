@@ -53,7 +53,7 @@ public class DSTransactionalAspect {
     * @param pjp 连接点
     * @return 方法执行结果
     * @throws Throwable 任何异常都会触发回滚
-     */
+    */
     @Around("execution(* *(..)) && " +
             "(@annotation(com.chua.starter.datasource.annotation.DSTransactional) || " +
             "@within(com.chua.starter.datasource.annotation.DSTransactional))")
@@ -62,7 +62,7 @@ public class DSTransactionalAspect {
     *
     * @param pjp pjp
     * @return around的结果
-     */
+    */
     public Object around(ProceedingJoinPoint pjp) throws Throwable {
         // 解析注解（方法优先 -> 类级别回退）
         DSTransactional dsTransactional = resolveAnnotation(pjp);
@@ -117,7 +117,7 @@ public class DSTransactionalAspect {
     * <p>方法级别优先级高于类级别。</p>
     * @param pjp pjp
     * @return resolve注解的结果
-     */
+    */
     private DSTransactional resolveAnnotation(ProceedingJoinPoint pjp) {
         // 方法级别
         MethodSignature signature = (MethodSignature) pjp.getSignature();
@@ -135,7 +135,7 @@ public class DSTransactionalAspect {
     * @param pjp pjp
     * @param dsTransactional dstransactional
     * @return 获取transaction名称的结果
-     */
+    */
     private String getTransactionName(ProceedingJoinPoint pjp, DSTransactional dsTransactional) {
         String name = dsTransactional.value();
         if (name == null || name.isEmpty()) {

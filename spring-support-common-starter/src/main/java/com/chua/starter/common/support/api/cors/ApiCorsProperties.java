@@ -31,7 +31,7 @@ public class ApiCorsProperties {
 
     /**
     * 开启跨域
-     */
+    */
     private boolean enable = false;
 
     /**
@@ -39,14 +39,14 @@ public class ApiCorsProperties {
     * <p>
     * 如果为空，默认匹配所有路径 /**
     * </p>
-     */
+    */
     private Set<String> pattern = new HashSet<>();
 
     /**
     * 获取 enable
     *
     * @return enable
-     */
+    */
     public boolean getEnable() {
         return enable;
     }
@@ -55,7 +55,7 @@ public class ApiCorsProperties {
     * 设置 enable
     *
     * @param enable enable
-     */
+    */
     public void setEnable(boolean enable) {
         this.enable = enable;
     }
@@ -64,7 +64,7 @@ public class ApiCorsProperties {
     * 获取 模式
     *
     * @return pattern
-     */
+    */
     public Set<String> getPattern() {
         return pattern;
     }
@@ -73,7 +73,7 @@ public class ApiCorsProperties {
     * 设置 模式
     *
     * @param pattern 模式
-     */
+    */
     public void setPattern(Set<String> pattern) {
         this.pattern = pattern;
     }

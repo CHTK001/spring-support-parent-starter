@@ -18,7 +18,7 @@ public interface SysAiManufacturerKeyService {
     * 查询全部厂商 API 钥匙。
     *
     * @return API 钥匙 列表
-     */
+    */
     List<SysAiManufacturerKey> list();
 
     /**
@@ -26,7 +26,7 @@ public interface SysAiManufacturerKeyService {
     *
     * @param manufacturerCode 厂商编码
     * @return API 钥匙 列表
-     */
+    */
     List<SysAiManufacturerKey> listByManufacturerCode(String manufacturerCode);
 
     /**
@@ -34,7 +34,7 @@ public interface SysAiManufacturerKeyService {
     *
     * @param manufacturerKey API 钥匙 实体
     * @return 保存后的实体
-     */
+    */
     SysAiManufacturerKey save(SysAiManufacturerKey manufacturerKey);
 
     /**
@@ -42,7 +42,7 @@ public interface SysAiManufacturerKeyService {
     *
     * @param manufacturerKey API 钥匙 实体
     * @return 是否成功
-     */
+    */
     boolean update(SysAiManufacturerKey manufacturerKey);
 
     /**
@@ -50,7 +50,7 @@ public interface SysAiManufacturerKeyService {
     *
     * @param id 主键 标识
     * @return 是否成功
-     */
+    */
     boolean delete(Long id);
 
     /**
@@ -59,6 +59,6 @@ public interface SysAiManufacturerKeyService {
     * @param id      主键 标识
     * @param enabled 是否启用
     * @return 是否成功
-     */
+    */
     boolean toggle(Long id, Boolean enabled);
 }

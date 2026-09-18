@@ -24,10 +24,10 @@ public class SysAiProvider extends SysBase {
 
     /**
     * 供应商主键 标识
-     */
+    */
     /**
     * 供应商主键 标识
-     */
+    */
     @TableId(value = "sys_ai_provider_id", type = IdType.AUTO)
     @Schema(description = "供应商主键 ID")
     /** 提供者标识 */
@@ -35,10 +35,10 @@ public class SysAiProvider extends SysBase {
 
     /**
     * 供应商名称（如 打开AI、Claude）
-     */
+    */
     /**
     * 供应商名称
-     */
+    */
     @TableField("sys_ai_provider_name")
     @Schema(description = "供应商名称")
     /** 提供者名称 */
@@ -46,10 +46,10 @@ public class SysAiProvider extends SysBase {
 
     /**
     * 供应商类型（openai / anthropic / gemini / 通义千问 / 习俗）
-     */
+    */
     /**
     * 供应商类型
-     */
+    */
     @TableField("sys_ai_provider_type")
     @Schema(description = "供应商类型")
     /** 提供者类型 */
@@ -57,10 +57,10 @@ public class SysAiProvider extends SysBase {
 
     /**
     * 接入 基础 URL
-     */
+    */
     /**
     * 接入 基础 URL
-     */
+    */
     @TableField("sys_ai_provider_base_url")
     @Schema(description = "接入 Base URL")
     /** 提供者baseurl */
@@ -68,10 +68,10 @@ public class SysAiProvider extends SysBase {
 
     /**
     * 提供商 API 钥匙
-     */
+    */
     /**
     * API 钥匙
-     */
+    */
     @TableField("sys_ai_provider_api_key")
     @Schema(description = "API Key")
     /** 提供者API密钥 */
@@ -79,10 +79,10 @@ public class SysAiProvider extends SysBase {
 
     /**
     * Logo 图片地址
-     */
+    */
     /**
     * Logo 图片地址
-     */
+    */
     @TableField("sys_ai_provider_logo")
     @Schema(description = "Logo 图片地址")
     /** 提供者logo */
@@ -90,10 +90,10 @@ public class SysAiProvider extends SysBase {
 
     /**
     * 可用模型列表（JSON 字符串）
-     */
+    */
     /**
     * 可用模型列表(JSON)
-     */
+    */
     @TableField("sys_ai_provider_models")
     @Schema(description = "可用模型列表(JSON)")
     /** 提供者模型 */
@@ -101,10 +101,10 @@ public class SysAiProvider extends SysBase {
 
     /**
     * 是否启用
-     */
+    */
     /**
     * 是否启用
-     */
+    */
     @TableField("sys_ai_provider_enabled")
     @Schema(description = "是否启用")
     /** 提供者是否启用 */
@@ -112,10 +112,10 @@ public class SysAiProvider extends SysBase {
 
     /**
     * 逻辑删除标记
-     */
+    */
     /**
     * 逻辑删除标记
-     */
+    */
     @TableField("sys_ai_provider_deleted")
     @TableLogic
     @Schema(description = "逻辑删除标记")

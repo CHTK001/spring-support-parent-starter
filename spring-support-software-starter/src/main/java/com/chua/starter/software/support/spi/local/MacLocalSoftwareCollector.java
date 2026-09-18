@@ -56,7 +56,7 @@ public class MacLocalSoftwareCollector implements LocalSoftwareCollector {
     *
     * @param app app
     * @return 读取app信息的结果
-     */
+    */
     private SoftSoftware readAppInfo(File app) {
         try {
             SoftSoftware software = new SoftSoftware();
@@ -86,7 +86,7 @@ public class MacLocalSoftwareCollector implements LocalSoftwareCollector {
     * @param app app
     * @param attribute attribute
     * @return 获取mdls的结果
-     */
+    */
     private String getMdls(File app, String attribute) {
         try {
             Process process = Runtime.getRuntime().exec(

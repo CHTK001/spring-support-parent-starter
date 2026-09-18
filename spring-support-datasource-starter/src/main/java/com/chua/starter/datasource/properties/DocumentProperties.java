@@ -40,29 +40,29 @@ public class DocumentProperties {
 
     /**
     * 配置前缀
-     */
+    */
     public static final String PRE = "plugin.datasource.document";
 
     /**
     * 是否启用
     * <p>默认 true；非 Web 环境（无 DispatcherServlet）会自动跳过装配</p>
-     */
+    */
     private boolean enable = true;
 
     /**
     * 暴露路径前缀
     * <p>默认 {@code /plugin/datasource/document}</p>
-     */
+    */
     private String basePath = "/plugin/datasource/document";
 
     /**
     * 文档标题
-     */
+    */
     private String title = "数据库设计文档";
 
     /**
     * 文档版本号
-     */
+    */
     private String version = "1.0.0";
 
     /**
@@ -73,33 +73,33 @@ public class DocumentProperties {
     *     <li>{@code SWAGGER}  —— Swagger 风格</li>
     * </ul>
     * 注意：实际可用模板由类路径下 {@code DocumentTemplate} SPI 决定；如未引入对应实现将回退到 {@code DEFAULT}
-     */
+    */
     private String template = "DEFAULT";
 
     /**
     * 表名白名单（逗号分隔，{@code *} 通配）
-     */
+    */
     private String includeTables;
 
     /**
     * 表名黑名单（逗号分隔，{@code *} 通配）
-     */
+    */
     private String excludeTables = "flyway_schema_history,sys_database_version";
 
     /**
     * 模式 白名单（逗号分隔，{@code *} 表示全部）
-     */
+    */
     private String includeSchemas;
 
     /**
     * 是否在请求时强制刷新（apply 接口始终刷新；preview 接口若缓存存在则不刷新）
-     */
+    */
     private boolean cacheable = true;
 
     /**
     * 透传给 文档parser 的扩展参数
     * <p>例如：{@code all=true} 表示跨 catalog 导出</p>
-     */
+    */
     private Map<String, Object> options = new LinkedHashMap<>();
 
     // Getter 方法（Lombok 在 Java 25 下可能不工作，手动添加）
@@ -108,7 +108,7 @@ public class DocumentProperties {
     * 是否启用
     *
     * @return 是否enable的结果
-     */
+    */
     public boolean isEnable() {
         return enable;
     }
@@ -117,7 +117,7 @@ public class DocumentProperties {
     * 获取基础路径
     *
     * @return 获取base路径的结果
-     */
+    */
     public String getBasePath() {
         return basePath;
     }
@@ -126,7 +126,7 @@ public class DocumentProperties {
     * 获取Title
     *
     * @return 获取title的结果
-     */
+    */
     public String getTitle() {
         return title;
     }
@@ -135,7 +135,7 @@ public class DocumentProperties {
     * 获取版本
     *
     * @return 获取版本的结果
-     */
+    */
     public String getVersion() {
         return version;
     }
@@ -144,7 +144,7 @@ public class DocumentProperties {
     * 获取Template
     *
     * @return 获取template的结果
-     */
+    */
     public String getTemplate() {
         return template;
     }
@@ -153,7 +153,7 @@ public class DocumentProperties {
     * 获取includetables
     *
     * @return 获取includetables的结果
-     */
+    */
     public String getIncludeTables() {
         return includeTables;
     }
@@ -162,7 +162,7 @@ public class DocumentProperties {
     * 获取excludetables
     *
     * @return 获取excludetables的结果
-     */
+    */
     public String getExcludeTables() {
         return excludeTables;
     }
@@ -171,7 +171,7 @@ public class DocumentProperties {
     * 获取include模式
     *
     * @return 获取include模式的结果
-     */
+    */
     public String getIncludeSchemas() {
         return includeSchemas;
     }
@@ -180,7 +180,7 @@ public class DocumentProperties {
     * 是否Cacheable
     *
     * @return 是否缓存的结果
-     */
+    */
     public boolean isCacheable() {
         return cacheable;
     }
@@ -189,7 +189,7 @@ public class DocumentProperties {
     * 获取期权
     *
     * @return 获取期权的结果
-     */
+    */
     public Map<String, Object> getOptions() {
         return options;
     }

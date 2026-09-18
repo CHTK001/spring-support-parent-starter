@@ -19,7 +19,7 @@ public interface SysAiTokenService {
     * 列出所有未删除的令牌。
     *
     * @return 令牌列表
-     */
+    */
     List<SysAiToken> list();
 
     /**
@@ -27,7 +27,7 @@ public interface SysAiTokenService {
     *
     * @param groupId 分组 标识
     * @return 令牌列表
-     */
+    */
     List<SysAiToken> listByGroupId(Integer groupId);
 
     /**
@@ -35,7 +35,7 @@ public interface SysAiTokenService {
     *
     * @param token 令牌实体
     * @return 保存后的令牌（含明文密钥）
-     */
+    */
     SysAiToken save(SysAiToken token);
 
     /**
@@ -43,7 +43,7 @@ public interface SysAiTokenService {
     *
     * @param token 令牌实体
     * @return 是否成功
-     */
+    */
     boolean update(SysAiToken token);
 
     /**
@@ -51,7 +51,7 @@ public interface SysAiTokenService {
     *
     * @param tokenId 令牌 标识
     * @return 是否成功
-     */
+    */
     boolean deleteById(Integer tokenId);
 
     /**
@@ -59,7 +59,7 @@ public interface SysAiTokenService {
     *
     * @param tokenKey 令牌密钥（sk-xxx）
     * @return 令牌实体（不存在返回 空）
-     */
+    */
     SysAiToken findByTokenKey(String tokenKey);
 
     /**
@@ -68,7 +68,7 @@ public interface SysAiTokenService {
     * @param tokenKey 令牌密钥
     * @param groupId  请求的分组 标识（空 表示不校验分组）
     * @return 有效的令牌，无效/过期返回 空
-     */
+    */
     SysAiToken verify(String tokenKey, Integer groupId);
 
     /**
@@ -76,7 +76,7 @@ public interface SysAiTokenService {
     *
     * @param tokenKey 令牌密钥
     * @return 分组 标识（不存在返回 空）
-     */
+    */
     Integer getGroupIdByTokenKey(String tokenKey);
 
     /**
@@ -86,7 +86,7 @@ public interface SysAiTokenService {
     * @param promptTokens   输入 令牌 数
     * @param completionTokens 输出 令牌 数
     * @param cost           费用
-     */
+    */
     void recordUsage(String tokenKey, int promptTokens, int completionTokens, BigDecimal cost);
 
     /**
@@ -94,7 +94,7 @@ public interface SysAiTokenService {
     *
     * @param tokenKey 令牌密钥
     * @return true 表示未触发限流，false 表示已触发
-     */
+    */
     boolean checkRateLimit(String tokenKey);
 
     /**
@@ -105,6 +105,6 @@ public interface SysAiTokenService {
     *
     * @param groupId 分组 标识（空 直接放行）
     * @return true 表示未触发限流，false 表示已触发
-     */
+    */
     boolean checkRateLimitByGroup(Integer groupId);
 }

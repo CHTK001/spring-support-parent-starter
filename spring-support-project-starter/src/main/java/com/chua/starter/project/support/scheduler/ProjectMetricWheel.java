@@ -65,8 +65,8 @@ public class ProjectMetricWheel {
     private int cursor = 0;
 
     /**
-     * 应用就绪后启动时间轮
-     */
+    * 应用就绪后启动时间轮
+    */
     @EventListener(ApplicationReadyEvent.class)
     public void start() {
         wheelExecutor = Executors.newSingleThreadScheduledExecutor(r -> {
@@ -97,8 +97,8 @@ public class ProjectMetricWheel {
     }
 
     /**
-     * 单 tick：轮转游标，执行该槽位到期的项目，并把项目重新挂回对应槽位
-     */
+    * 单 tick：轮转游标，执行该槽位到期的项目，并把项目重新挂回对应槽位
+    */
     private void onTick() {
         cursor = (cursor + 1) % SLOT_COUNT;
         List<Long> due = slots.get(cursor);
@@ -119,10 +119,10 @@ public class ProjectMetricWheel {
     }
 
     /**
-     * 执行单个项目一轮采集，完成后按项目间隔重新入轮
-     *
-     * @param projectId 项目 标识
-     */
+    * 执行单个项目一轮采集，完成后按项目间隔重新入轮
+    *
+    * @param projectId 项目 标识
+    */
     private void runOnce(Long projectId) {
         if (running.containsKey(projectId)) {
             rearm(projectId);
@@ -150,10 +150,10 @@ public class ProjectMetricWheel {
     }
 
     /**
-     * 按项目当前间隔重新挂入时间轮
-     *
-     * @param projectId 项目 标识
-     */
+    * 按项目当前间隔重新挂入时间轮
+    *
+    * @param projectId 项目 标识
+    */
     private void rearm(Long projectId) {
         int intervalSec = metricService.metricIntervalOf(projectId);
         int delayTicks = Math.max(1, intervalSec);
@@ -164,8 +164,8 @@ public class ProjectMetricWheel {
     }
 
     /**
-     * 全量启用指标采集的项目入轮
-     */
+    * 全量启用指标采集的项目入轮
+    */
     public void scheduleAllEnabled() {
         List<MsProject> projects = metricService.enabledProjects();
         for (MsProject p : projects) {
@@ -180,10 +180,10 @@ public class ProjectMetricWheel {
     }
 
     /**
-     * 新增/变更项目指标采集配置后调用：先摘除旧槽位再按新间隔入轮
-     *
-     * @param projectId 项目 标识
-     */
+    * 新增/变更项目指标采集配置后调用：先摘除旧槽位再按新间隔入轮
+    *
+    * @param projectId 项目 标识
+    */
     public void reschedule(Long projectId) {
         for (List<Long> slot : slots) {
             slot.remove(projectId);
@@ -197,10 +197,10 @@ public class ProjectMetricWheel {
     }
 
     /**
-     * 创建槽位数组
-     *
-     * @return 新槽位数组
-     */
+    * 创建槽位数组
+    *
+    * @return 新槽位数组
+    */
     private static List<List<Long>> newSlotArray() {
         List<List<Long>> array = new ArrayList<>(SLOT_COUNT);
         for (int i = 0; i < SLOT_COUNT; i++) {

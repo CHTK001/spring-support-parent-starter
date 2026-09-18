@@ -23,7 +23,7 @@ public class MethodPointcut implements ApplicationContextAware {
     * 注册拦截器
     *
     * @return 注册拦截器
-     */
+    */
     @Bean
     @ConditionalOnMissingBean
     public DefaultAdvisorAutoProxyCreator defaultAdvisorAutoProxyCreator() {

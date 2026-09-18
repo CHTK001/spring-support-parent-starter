@@ -21,7 +21,7 @@ public interface AccountPaymentQueryService {
     * 列表订单by用户。
     * @param request 请求
     * @return 列表订单by用户的结果
-     */
+    */
     Page<OrderVO> listOrdersByUser(UserOrderQueryRequest request);
 
     /**
@@ -29,7 +29,7 @@ public interface AccountPaymentQueryService {
     * @param userId 用户标识
     * @param id 标识
     * @return 获取订单by用户的结果
-     */
+    */
     OrderVO getOrderByUser(Long userId, Long id);
 
     /**
@@ -37,14 +37,14 @@ public interface AccountPaymentQueryService {
     * @param userId 用户标识
     * @param id 标识
     * @return 列表订单日志by用户的结果
-     */
+    */
     List<OrderStateLogVO> listOrderLogsByUser(Long userId, Long id);
 
     /**
     * 列表transactionsby用户。
     * @param request 请求
     * @return 列表transactionsby用户的结果
-     */
+    */
     Page<TransactionRecord> listTransactionsByUser(UserTransactionQueryRequest request);
 }
 

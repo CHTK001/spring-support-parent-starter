@@ -12,28 +12,28 @@ public enum UpdateType {
     *
     * @param 0 0
     * @return REGULAR的结果
-     */
+    */
     REGULAR(0),
     /**
     * 安全更新
     *
     * @param 1 1
     * @return 安全性的结果
-     */
+    */
     SECURITY(1),
     /**
     * 功能更新
     *
     * @param 2 2
     * @return 特征的结果
-     */
+    */
     FEATURE(2),
     /**
     * 紧急修复
     *
     * @param 3 3
     * @return HOTFIX的结果
-     */
+    */
     HOTFIX(3);
 
     /** 值 */
@@ -42,7 +42,7 @@ public enum UpdateType {
     /**
     * 更新类型。
     * @param value 价值观
-     */
+    */
     UpdateType(int value) {
         this.value = value;
     }
@@ -51,7 +51,7 @@ public enum UpdateType {
     * 获取价值观
     *
     * @return 获取价值观的结果
-     */
+    */
     public int getValue() {
         return value;
     }

@@ -42,12 +42,12 @@ public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService 
 
     /**
     * 全局设置 映射器
-     */
+    */
     private final SysAiGlobalSettingMapper sysAiGlobalSettingMapper;
 
     /**
     * Spring 应用事件发布器（配置变更后通知各能力模块热重建）
-     */
+    */
     private final ApplicationEventPublisher eventPublisher;
 
     /**
@@ -56,7 +56,7 @@ public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService 
     * @param group 配置分组名
     * @param field 配置字段名
     * @return 配置值，不存在或为空时返回 期权.空()
-     */
+    */
     @Override
     @Cacheable(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS,
             key = "'sys:ai:global:setting:' + #group + ':' + #field", unless = "#result == null || #result.isEmpty()")
@@ -65,7 +65,7 @@ public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService 
     * @param group 群体
     * @param field 字段
     * @return 获取价值观的结果
-     */
+    */
     public Optional<String> getValue(String group, String field) {
         LambdaQueryWrapper<SysAiGlobalSetting> wrapper = Wrappers.<SysAiGlobalSetting>lambdaQuery()
                 .eq(SysAiGlobalSetting::getSettingGroup, group)
@@ -89,7 +89,7 @@ public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService 
     * @param field          配置字段名
     * @param defaultValue   默认值（查询失败或字段不存在时返回）
     * @return 解析后的布尔值
-     */
+    */
     @Override
     public boolean getBoolean(String group, String field, boolean defaultValue) {
         return getValue(group, field)
@@ -105,7 +105,7 @@ public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService 
     *
     * @param group 配置分组名
     * @return 配置项列表，每项包含 群体、字段、价值观、价值观类型、description、排序 字段
-     */
+    */
     @Override
     public List<Map<String, Object>> list(String group) {
         LambdaQueryWrapper<SysAiGlobalSetting> wrapper = Wrappers.<SysAiGlobalSetting>lambdaQuery()
@@ -131,7 +131,7 @@ public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService 
     * 批量替换指定分组的配置：先删后插（事务内），并清除缓存。
     *
     * @param request 映射 对象，包含 群体（分组名）和 字段（配置项列表）
-     */
+    */
     @Override
     @CacheEvict(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS,
             allEntries = true)
@@ -139,7 +139,7 @@ public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService 
     /**
     * 替换。
     * @param request 请求
-     */
+    */
     public void replace(Object request) {
         if (!(request instanceof Map)) {
             log.warn("[SysAiGlobalSetting] replace 参数类型不支持: {}", request.getClass());
@@ -204,7 +204,7 @@ public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService 
     * @param field       配置字段名
     * @param value       配置值
     * @param description 配置描述（可为 空）
-     */
+    */
     @Override
     @CacheEvict(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS,
             allEntries = true)
@@ -215,7 +215,7 @@ public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService 
     * @param field 字段
     * @param value 价值观
     * @param description description
-     */
+    */
     public void upsertValue(String group, String field, String value, String description) {
         if (group == null || group.isBlank() || field == null || field.isBlank()) {
             log.warn("[SysAiGlobalSetting] upsertValue 缺少 group/field 参数");
@@ -258,7 +258,7 @@ public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService 
     * @param valueType   值类型（如 字符串、布尔值）
     * @param description 配置描述（可为 空）
     * @param sort        排序值
-     */
+    */
     @Override
     @CacheEvict(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS,
             allEntries = true)
@@ -271,7 +271,7 @@ public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService 
     * @param valueType 价值观类型
     * @param description description
     * @param sort 排序
-     */
+    */
     public void upsertField(String group, String field, String value, String valueType, String description, int sort) {
         if (group == null || group.isBlank() || field == null || field.isBlank()) {
             log.warn("[SysAiGlobalSetting] upsertField 缺少 group/field 参数");

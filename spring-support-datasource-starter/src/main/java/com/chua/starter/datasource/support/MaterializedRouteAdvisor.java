@@ -25,7 +25,7 @@ public class MaterializedRouteAdvisor extends StaticMethodMatcherPointcutAdvisor
     /**
     * 创建 物化routeadvisor 实例
     * @param properties 属性
-     */
+    */
     public MaterializedRouteAdvisor(MaterializedRouteProperties properties) {
         this.setAdvice(new MethodInterceptor() {
             @Nullable
@@ -58,12 +58,12 @@ public class MaterializedRouteAdvisor extends StaticMethodMatcherPointcutAdvisor
     }
 
     /**
-    * 解析Route
-    *
-    * @param method 方法
-    * @param targetClass Target类
-    * @return resolveRoute的结果
-     */
+            * 解析Route
+            *
+            * @param method 方法
+            * @param targetClass Target类
+            * @return resolveRoute的结果
+            */
     private MaterializedRoute resolveRoute(Method method, Class<?> targetClass) {
         MaterializedRoute route = AnnotatedElementUtils.findMergedAnnotation(method, MaterializedRoute.class);
         if (route != null) {

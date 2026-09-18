@@ -25,7 +25,7 @@ public class MaterializedRefreshAdvisor extends StaticMethodMatcherPointcutAdvis
     /**
     * 创建 物化refreshadvisor 实例
     * @param properties 属性
-     */
+    */
     public MaterializedRefreshAdvisor(MaterializedRouteProperties properties) {
         this.setAdvice(new MethodInterceptor() {
             @Nullable
@@ -58,12 +58,12 @@ public class MaterializedRefreshAdvisor extends StaticMethodMatcherPointcutAdvis
     }
 
     /**
-    * 解析Refresh
-    *
-    * @param method 方法
-    * @param targetClass Target类
-    * @return resolveRefresh的结果
-     */
+            * 解析Refresh
+            *
+            * @param method 方法
+            * @param targetClass Target类
+            * @return resolveRefresh的结果
+            */
     private MaterializedRefresh resolveRefresh(Method method, Class<?> targetClass) {
         MaterializedRefresh refresh = AnnotatedElementUtils.findMergedAnnotation(method, MaterializedRefresh.class);
         if (refresh != null) {

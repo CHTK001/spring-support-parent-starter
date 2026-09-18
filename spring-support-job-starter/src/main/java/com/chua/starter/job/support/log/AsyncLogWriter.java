@@ -31,7 +31,7 @@ public class AsyncLogWriter implements JobLogSink {
     * @param sinks     下游 sink 列表
     * @param queueSize 队列容量
     * @param threadName 后台线程名称
-     */
+    */
     public AsyncLogWriter(List<JobLogSink> sinks, int queueSize, String threadName) {
         this.sinks = sinks;
         this.queue = new LinkedBlockingQueue<>(queueSize);
@@ -55,7 +55,7 @@ public class AsyncLogWriter implements JobLogSink {
 
     /**
     * 关闭写入器，等待剩余日志写入完毕。
-     */
+    */
     public void shutdown() {
         running = false;
         worker.interrupt();
@@ -67,7 +67,7 @@ public class AsyncLogWriter implements JobLogSink {
         // 消费剩余
         /**
         * drain。
-         */
+        */
         drain();
     }
 
@@ -78,13 +78,13 @@ public class AsyncLogWriter implements JobLogSink {
                 JobLogEvent event = queue.poll(1, TimeUnit.SECONDS);
                 if (event != null) {
                     /**
-                    * 写入转为sinks。
-                    * @param event 事件
-                     */
+    * 写入转为sinks。
+    * @param event 事件
+    */
                     writeToSinks(event);
                     /**
                     * drain。
-                     */
+                    */
                     drain();
                 }
             } catch (InterruptedException e) {
@@ -94,7 +94,7 @@ public class AsyncLogWriter implements JobLogSink {
         }
         /**
         * drain。
-         */
+        */
         drain();
     }
 
@@ -103,9 +103,9 @@ public class AsyncLogWriter implements JobLogSink {
         JobLogEvent event;
         while ((event = queue.poll()) != null) {
             /**
-            * 写入转为sinks。
-            * @param event 事件
-             */
+    * 写入转为sinks。
+    * @param event 事件
+    */
             writeToSinks(event);
         }
     }
@@ -114,7 +114,7 @@ public class AsyncLogWriter implements JobLogSink {
     * 写入转为sinks
     *
     * @param event 事件
-     */
+    */
     private void writeToSinks(JobLogEvent event) {
         for (JobLogSink sink : sinks) {
             try {

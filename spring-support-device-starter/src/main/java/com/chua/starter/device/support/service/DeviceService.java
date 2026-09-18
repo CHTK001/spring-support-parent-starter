@@ -19,7 +19,7 @@ public interface DeviceService {
     *
     * @param info 设备连接信息
     * @return 设备信息实体
-     */
+    */
     DeviceInfo addDevice(DeviceConnectInfo info);
 
     /**
@@ -27,14 +27,14 @@ public interface DeviceService {
     *
     * @param id   设备 标识
     * @param info 设备信息
-     */
+    */
     void updateDevice(String id, DeviceInfo info);
 
     /**
     * 删除设备并断开连接
     *
     * @param id 设备 标识
-     */
+    */
     void deleteDevice(String id);
 
     /**
@@ -42,7 +42,7 @@ public interface DeviceService {
     *
     * @param id 设备 标识
     * @return 设备信息
-     */
+    */
     DeviceInfo getDevice(String id);
 
     /**
@@ -50,7 +50,7 @@ public interface DeviceService {
     *
     * @param orgId 组织 标识
     * @return 设备列表
-     */
+    */
     List<DeviceInfo> listDevices(String orgId);
 
     /**
@@ -58,13 +58,13 @@ public interface DeviceService {
     *
     * @param category 大类，例如 摄像头、accesscontrol
     * @return 设备列表
-     */
+    */
     List<DeviceInfo> listByCategory(String category);
 
     /**
     * 同步组织树
     * <p>从各厂商平台拉取最新组织树，更新本地数据库。</p>
-     */
+    */
     void syncOrganization();
 
     /**
@@ -72,7 +72,7 @@ public interface DeviceService {
     *
     * @param vendor 厂商，空 表示全部
     * @return 组织列表
-     */
+    */
     List<DeviceOrganization> getOrganizationTree(String vendor);
 
     /**
@@ -80,21 +80,21 @@ public interface DeviceService {
     *
     * @param id        设备 标识
     * @param threshold 阈值（秒）
-     */
+    */
     void updateOfflineThreshold(String id, int threshold);
 
     /**
     * 重新连接设备：关闭旧会话、按现有连接信息创建新会话并注册。
     *
     * @param id 设备 标识
-     */
+    */
     void reconnect(String id);
 
     /**
     * 刷新设备状态：探测会话并更新数据库 online 字段。
     *
     * @param id 设备 标识
-     */
+    */
     void refreshStatus(String id);
 
     /**
@@ -103,6 +103,6 @@ public interface DeviceService {
     *
     * @param info 设备连接信息
     * @return 是否可达
-     */
+    */
     boolean testConnection(DeviceConnectInfo info);
 }

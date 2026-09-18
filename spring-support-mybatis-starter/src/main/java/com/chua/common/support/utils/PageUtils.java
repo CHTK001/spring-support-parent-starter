@@ -19,7 +19,7 @@ public class PageUtils {
 
     /**
     * page工具。
-     */
+    */
     private PageUtils() {
     }
 
@@ -31,7 +31,7 @@ public class PageUtils {
     * @param size 页大小
     * @param <T>  数据元素类型
     * @return 包含数据的 ipage 实例
-     */
+    */
     public static <T> IPage<T> page(List<T> data, int page, int size) {
         Page<T> pageResult = new Page<>(page, size);
         pageResult.setRecords(data);

@@ -101,7 +101,7 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
     *
     * @param token 令牌
     * @return 更新的结果
-     */
+    */
     public boolean update(SysAiToken token) {
         return sysAiTokenMapper.updateById(token) > 0;
     }
@@ -113,7 +113,7 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
     *
     * @param tokenId 令牌标识
     * @return 删除byid的结果
-     */
+    */
     public boolean deleteById(Integer tokenId) {
         if (tokenId == null) {
             return false;
@@ -178,7 +178,7 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
     * @param promptTokens 提示符令牌
     * @param completionTokens 完成令牌
     * @param cost cost
-     */
+    */
     public void recordUsage(String tokenKey, int promptTokens, int completionTokens, BigDecimal cost) {
         SysAiToken token = findByTokenKey(tokenKey);
         if (token == null) {
@@ -288,7 +288,7 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
     *
     * @param token 令牌 实体（需包含 rate限制/rate数量/rate窗口启动 字段）
     * @return true 表示未触发限流，可以继续请求
-     */
+    */
     private boolean checkRateLimit(SysAiToken token) {
         Integer rateLimit = token.getRateLimit();
         if (rateLimit == null || rateLimit <= 0) {
@@ -306,7 +306,7 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
             /**
             * persistrate限制。
             * @param token 令牌
-             */
+            */
             persistRateLimit(token);
             return true;
         }
@@ -316,7 +316,7 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
             /**
             * persistrate限制。
             * @param token 令牌
-             */
+            */
             persistRateLimit(token);
             return true;
         }
@@ -332,7 +332,7 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
     * 确保限流状态在重启后仍可延续。</p>
     *
     * @param token 更新后的 令牌 实体
-     */
+    */
     private void persistRateLimit(SysAiToken token) {
         try {
             SysAiToken update = new SysAiToken();
@@ -349,7 +349,7 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
     * SHA-256 哈希，用于 令牌 安全存储。
     * @param input 输入
     * @return sha256的结果
-     */
+    */
     private static String sha256(String input) {
         try {
             MessageDigest md = MessageDigest.getInstance("SHA-256");
@@ -365,7 +365,7 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
             * @param available" 可用"
             * @param e e
             * @return runtime异常的结果
-             */
+            */
             throw new RuntimeException("SHA-256 not available", e);
         }
     }

@@ -27,22 +27,22 @@ public class SysFileSystemUploadServiceImpl
 
     /**
     * 最大重试次数
-     */
+    */
     private static final int MAX_RETRY = 3;
 
     /**
     * 系统默认操作人 标识
-     */
+    */
     private static final int SYSTEM_USER_ID = 0;
 
     /**
     * 系统默认操作人名称
-     */
+    */
     private static final String SYSTEM_USER_NAME = "system";
 
     /**
     * 初始已上传分片数
-     */
+    */
     private static final int INITIAL_UPLOADED_CHUNKS = 0;
 
     @Override
@@ -58,7 +58,7 @@ public class SysFileSystemUploadServiceImpl
     * @param bucket bucket
     * @param key 钥匙
     * @param contentType 内容类型
-     */
+    */
     public SysFileSystemUpload createTask(String uploadId, String fileName, String originalName,
                                           Long fileSize, Long chunkSize, Integer totalChunks,
                                           String storageType, String bucket, String key, String contentType) {
@@ -88,7 +88,7 @@ public class SysFileSystemUploadServiceImpl
         /**
         * 保存。
         * @param task 任务
-         */
+        */
         save(task);
         return task;
     }

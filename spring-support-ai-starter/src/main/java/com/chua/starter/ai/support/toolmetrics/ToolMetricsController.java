@@ -39,7 +39,7 @@ public class ToolMetricsController {
     * 触发一次本地工具用量同步。
     *
     * @return 扫描数与新增数
-     */
+    */
     @PostMapping("/sync")
     public ReturnResult<LocalToolUsageSyncService.SyncResult> sync() {
         return ReturnResult.ok(localToolUsageSyncService.syncAll());
@@ -49,7 +49,7 @@ public class ToolMetricsController {
     * 本地用量列表（最新 200 条）。
     *
     * @return 用量记录
-     */
+    */
     @GetMapping("/list")
     public ReturnResult<List<SysAiUsage>> list() {
         return ReturnResult.ok(sysAiUsageMapper.selectList(
@@ -63,7 +63,7 @@ public class ToolMetricsController {
     * 压缩上下文记录（最新 100 条）。
     *
     * @return 压缩记录
-     */
+    */
     @GetMapping("/compressions")
     public ReturnResult<List<SysAiSessionCompression>> compressions() {
         return ReturnResult.ok(compressionMapper.selectList(

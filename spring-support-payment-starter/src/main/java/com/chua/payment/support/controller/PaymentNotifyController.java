@@ -66,7 +66,7 @@ public class PaymentNotifyController {
     * @param body           微信通知报文
     * @param request        原始 HTTP 请求
     * @return 微信支付要求的不重复响应体（通常为空）
-     */
+    */
     @PostMapping("/wechat/pay/{channelId}")
     public ResponseEntity<String> handleWechatPayNotify(@PathVariable Long channelId,
                                                          @RequestHeader(value = "Wechatpay-Serial", required = false) String serialNumber,
@@ -96,7 +96,7 @@ public class PaymentNotifyController {
     * @param body           微信通知报文
     * @param request        原始 HTTP 请求
     * @return 微信支付要求的不重复响应体
-     */
+    */
     @PostMapping("/wechat/pay/{channelId}/{orderNo}")
     public ResponseEntity<String> handleWechatPayNotify(@PathVariable Long channelId,
                                                         @PathVariable String orderNo,
@@ -141,7 +141,7 @@ public class PaymentNotifyController {
     * @param body           微信通知报文
     * @param request        原始 HTTP 请求
     * @return 微信支付要求的不重复响应体
-     */
+    */
     @PostMapping("/wechat/pay/{orderNo}/{merchantId}")
     public ResponseEntity<String> handleWechatPayNotifyByMerchant(@PathVariable String orderNo,
                                                                   @PathVariable Long merchantId,
@@ -173,7 +173,7 @@ public class PaymentNotifyController {
     * @param body           微信通知报文
     * @param request        原始 HTTP 请求
     * @return 微信支付要求的不重复响应体
-     */
+    */
     @PostMapping("/wechat/refund/{channelId}")
     public ResponseEntity<String> handleWechatRefundNotify(@PathVariable Long channelId,
                                                            @RequestHeader(value = "Wechatpay-Serial", required = false) String serialNumber,
@@ -203,7 +203,7 @@ public class PaymentNotifyController {
     * @param body           微信通知报文
     * @param request        原始 HTTP 请求
     * @return 微信支付要求的不重复响应体
-     */
+    */
     @PostMapping("/wechat/refund/{channelId}/{refundNo}")
     public ResponseEntity<String> handleWechatRefundNotify(@PathVariable Long channelId,
                                                            @PathVariable String refundNo,
@@ -248,7 +248,7 @@ public class PaymentNotifyController {
     * @param body           微信通知报文
     * @param request        原始 HTTP 请求
     * @return 微信支付要求的不重复响应体
-     */
+    */
     @PostMapping("/wechat/refund/{refundNo}/{merchantId}")
     public ResponseEntity<String> handleWechatRefundNotifyByMerchant(@PathVariable String refundNo,
                                                                      @PathVariable Long merchantId,
@@ -281,7 +281,7 @@ public class PaymentNotifyController {
     * @param body           微信通知报文
     * @param request        原始 HTTP 请求
     * @return 微信支付要求的不重复响应体
-     */
+    */
     @PostMapping("/wechat/payscore/{channelId}/{outOrderNo}")
     public ResponseEntity<String> handleWechatPayScoreNotify(@PathVariable Long channelId,
                                                              @PathVariable String outOrderNo,
@@ -321,7 +321,7 @@ public class PaymentNotifyController {
     * @param params    支付宝回调参数 映射
     * @param request   原始 HTTP 请求
     * @return "success" 或 "失败"
-     */
+    */
     @PostMapping(value = "/alipay/pay/{channelId}", produces = MediaType.TEXT_PLAIN_VALUE)
     public String handleAlipayPayNotify(@PathVariable Long channelId,
                                         @RequestParam Map<String, String> params,
@@ -337,7 +337,7 @@ public class PaymentNotifyController {
     * @param params    支付宝回调参数 映射
     * @param request   原始 HTTP 请求
     * @return "success" 或 "失败"
-     */
+    */
     @PostMapping(value = "/alipay/pay/{channelId}/{orderNo}", produces = MediaType.TEXT_PLAIN_VALUE)
     public String handleAlipayPayNotify(@PathVariable Long channelId,
                                         @PathVariable String orderNo,
@@ -371,7 +371,7 @@ public class PaymentNotifyController {
     * @param params     支付宝回调参数 映射
     * @param request    原始 HTTP 请求
     * @return "success" 或 "失败"
-     */
+    */
     @PostMapping(value = "/alipay/pay/{orderNo}/{merchantId}", produces = MediaType.TEXT_PLAIN_VALUE)
     public String handleAlipayPayNotifyByMerchant(@PathVariable String orderNo,
                                                   @PathVariable Long merchantId,
@@ -393,7 +393,7 @@ public class PaymentNotifyController {
     * @param merchantId 商户标识
     * @return 支付订单实体
     * @throws IllegalArgumentException 订单不存在时抛出
-     */
+    */
     private PaymentOrder requireOrder(String orderNo, Long merchantId) {
         PaymentOrder order = paymentOrderMapper.selectOne(new LambdaQueryWrapper<PaymentOrder>()
                 .eq(PaymentOrder::getOrderNo, orderNo)
@@ -404,7 +404,7 @@ public class PaymentNotifyController {
             * illegal参数异常。
             * @param "订单不存在" "订单不存在"
             * @return illegal参数异常的结果
-             */
+            */
             throw new IllegalArgumentException("订单不存在");
         }
         return order;
@@ -417,7 +417,7 @@ public class PaymentNotifyController {
     * @param merchantId 商户标识
     * @return 退款订单实体
     * @throws IllegalArgumentException 退款单不存在时抛出
-     */
+    */
     private PaymentRefundOrder requireRefundOrder(String refundNo, Long merchantId) {
         PaymentRefundOrder refundOrder = paymentRefundOrderMapper.selectOne(new LambdaQueryWrapper<PaymentRefundOrder>()
                 .eq(PaymentRefundOrder::getRefundNo, refundNo)
@@ -428,7 +428,7 @@ public class PaymentNotifyController {
             * illegal参数异常。
             * @param "退款单不存在" "退款单不存在"
             * @return illegal参数异常的结果
-             */
+            */
             throw new IllegalArgumentException("退款单不存在");
         }
         return refundOrder;
@@ -439,7 +439,7 @@ public class PaymentNotifyController {
     *
     * @param message 失败原因说明
     * @return HTTP 500 响应，含错误 编码 与 消息
-     */
+    */
     private ResponseEntity<String> wechatFailure(String message) {
         try {
             String body = objectMapper.writeValueAsString(Map.of(

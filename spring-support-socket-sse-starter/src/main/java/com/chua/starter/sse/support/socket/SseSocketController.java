@@ -37,7 +37,7 @@ public class SseSocketController {
     * @param clientId 客户端标识（可选）
     * @return SseEmitter
     * @param false false
-     */
+    */
     @GetMapping(value = "/connect", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter connect(@RequestParam(required = false) String clientId) {
         log.info("[SSE] 连接请求: clientId={}", clientId);
@@ -48,7 +48,7 @@ public class SseSocketController {
     * 获取连接状态
     *
     * @return 连接状态信息
-     */
+    */
     @GetMapping("/status")
     public Map<String, Object> getStatus() {
         return sseSocketSessionTemplate.getConnectionStatus();
@@ -59,7 +59,7 @@ public class SseSocketController {
     *
     * @param userId   用户标识
     * @param clientId 客户端标识
-     */
+    */
     @PostMapping("/bind")
     public void bindUser(@RequestParam String userId, @RequestParam String clientId) {
         sseSocketSessionTemplate.bindUser(userId, clientId);
@@ -70,7 +70,7 @@ public class SseSocketController {
     * 断开连接
     *
     * @param clientId 客户端标识
-     */
+    */
     @PostMapping("/disconnect")
     public void disconnect(@RequestParam String clientId) {
         var session = sseSocketSessionTemplate.getSession(clientId);

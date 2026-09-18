@@ -33,7 +33,7 @@ public class MessageAutoConfiguration {
     * 注册消息模块的服务信息贡献者
     *
     * @return 服务信息贡献者
-     */
+    */
     @Bean
     public ServiceInfoContributor messageServiceInfoContributor() {
         return registry -> {
@@ -51,7 +51,7 @@ public class MessageAutoConfiguration {
     *
     * @param socketSessionTemplate 套接字 会话操作模板
     * @return 站内推送执行器初始化器
-     */
+    */
     @Bean
     @ConditionalOnClass(name = "com.chua.socket.support.session.SocketSessionTemplate")
     @ConditionalOnBean(SocketSessionTemplate.class)

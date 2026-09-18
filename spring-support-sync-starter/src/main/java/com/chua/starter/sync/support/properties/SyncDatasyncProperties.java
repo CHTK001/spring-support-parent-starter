@@ -18,19 +18,19 @@ public class SyncDatasyncProperties {
 
     /**
     * 配置前缀
-     */
+    */
     public static final String PRE = "plugin.sync.datasync";
 
     /**
     * 是否启用 数据同步 桥接
-     */
+    */
     private boolean enabled = true;
 
     /**
     * 是否已启用
     *
     * @return 是否已启用的结果
-     */
+    */
     public boolean isEnabled() {
         return enabled;
     }
@@ -39,7 +39,7 @@ public class SyncDatasyncProperties {
     * 设置已启用
     *
     * @param enabled 已启用
-     */
+    */
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
     }

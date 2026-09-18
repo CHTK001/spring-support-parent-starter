@@ -52,15 +52,15 @@ public class FileStorageSetting {
     * 文件列表布局类型。
     * @author CH
     * @since 4.0.0
-     */
+    */
     public enum LayoutType {
         /**
         * 简单文件列表树
-         */
+        */
         SIMPLE,
         /**
         * 类 窗口 资源管理器
-         */
+        */
         SYSTEM
     }
 }

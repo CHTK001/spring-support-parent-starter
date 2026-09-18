@@ -22,7 +22,7 @@ public interface ProjectService {
     *
     * @param project 项目
     * @return 结果
-     */
+    */
     ReturnResult<MsProject> create(MsProject project);
 
     /**
@@ -31,7 +31,7 @@ public interface ProjectService {
     * @param id      主键
     * @param project 项目
     * @return 结果
-     */
+    */
     ReturnResult<MsProject> update(Long id, MsProject project);
 
     /**
@@ -39,7 +39,7 @@ public interface ProjectService {
     *
     * @param id 主键
     * @return 结果
-     */
+    */
     ReturnResult<Boolean> delete(Long id);
 
     /**
@@ -47,7 +47,7 @@ public interface ProjectService {
     *
     * @param id 主键
     * @return 结果
-     */
+    */
     ReturnResult<MsProject> get(Long id);
 
     /**
@@ -56,7 +56,7 @@ public interface ProjectService {
     * @param keyword 关键字（名称/编码）
     * @param type    项目类型，可为空
     * @return 结果
-     */
+    */
     ReturnResult<List<MsProject>> query(String keyword, String type);
 
     /**
@@ -65,7 +65,7 @@ public interface ProjectService {
     * @param id      主键
     * @param enabled 是否启用
     * @return 结果
-     */
+    */
     ReturnResult<Boolean> updateEnabled(Long id, Boolean enabled);
 
     /**
@@ -73,6 +73,6 @@ public interface ProjectService {
     *
     * @param os 操作系统类型 Linux/窗口，可为空
     * @return 结果（id/name/address/osType）
-     */
+    */
     ReturnResult<List<Map<String, Object>>> hostOptions(String os);
 }

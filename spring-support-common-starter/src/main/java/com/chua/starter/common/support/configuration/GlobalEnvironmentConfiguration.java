@@ -23,7 +23,7 @@ public class GlobalEnvironmentConfiguration {
     * 全局环境工厂 Bean。
     *
     * @return 全局环境工厂
-     */
+    */
     @Bean
     public GlobalSettingFactory globalSettingFactory() {
         return GlobalSettingFactory.getInstance();

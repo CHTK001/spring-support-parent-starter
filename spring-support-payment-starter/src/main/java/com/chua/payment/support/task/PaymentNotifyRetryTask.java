@@ -89,8 +89,8 @@ public class PaymentNotifyRetryTask implements PaymentManagedTask {
     /** 执行 */
     public void execute() {
         /**
-        * 重试失败通知。
-         */
+    * 重试失败通知。
+    */
         retryFailedNotifies();
     }
 }

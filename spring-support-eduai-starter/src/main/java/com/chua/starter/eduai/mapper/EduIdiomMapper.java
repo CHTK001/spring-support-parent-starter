@@ -18,12 +18,12 @@ import java.util.List;
 public interface EduIdiomMapper extends BaseMapper<EduIdiom> {
 
     /**
-     * 根据学段获取成语列表
-     *
-     * @param gradeLevel 学段
-     * @param count      数量
-     * @return 成语列表
-     */
+    * 根据学段获取成语列表
+    *
+    * @param gradeLevel 学段
+    * @param count      数量
+    * @return 成语列表
+    */
     @Select("<script>" +
             "SELECT i.* FROM edu_idiom i " +
             "INNER JOIN edu_idiom_grade g ON i.idiom_id = g.idiom_id " +
@@ -37,11 +37,11 @@ public interface EduIdiomMapper extends BaseMapper<EduIdiom> {
                                        @Param("count") int count);
 
     /**
-     * 随机获取指定数量的成语
-     *
-     * @param count 数量
-     * @return 成语列表
-     */
+    * 随机获取指定数量的成语
+    *
+    * @param count 数量
+    * @return 成语列表
+    */
     @Select("SELECT * FROM edu_idiom ORDER BY RAND() LIMIT #{count}")
     List<EduIdiom> selectRandom(@Param("count") int count);
 }

@@ -39,34 +39,34 @@ public @interface DeadLetterListener {
     * 死信队列地址
     *
     * @return 死信队列地址
-     */
+    */
     String value();
 
     /**
     * 消费组
     *
     * @return 消费组名称
-     */
+    */
     String group() default "";
 
     /**
     * 消息队列类型
     *
     * @return 消息队列类型
-     */
+    */
     String type() default "";
 
     /**
     * 是否自动确认消息
     *
     * @return 是否自动确认
-     */
+    */
     boolean autoAck() default true;
 
     /**
     * 并发消费者数量
     *
     * @return 并发数
-     */
+    */
     int concurrency() default 1;
 }

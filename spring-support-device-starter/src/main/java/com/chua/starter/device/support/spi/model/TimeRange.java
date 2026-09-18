@@ -17,11 +17,11 @@ public class TimeRange {
 
     /**
     * 起始时间
-     */
+    */
     private LocalDateTime start;
 
     /**
     * 结束时间
-     */
+    */
     private LocalDateTime end;
 }

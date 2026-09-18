@@ -85,7 +85,7 @@ public class WebClientHttpClientExecutor implements HttpClientExecutor {
     *
     * @param request 请求
     * @return 构建spec的结果
-     */
+    */
     private WebClient.RequestBodySpec buildSpec(ClientRequest request) {
         WebClient.RequestBodySpec spec = webClient
                 .method(toHttpMethod(request.getMethod()))
@@ -106,7 +106,7 @@ public class WebClientHttpClientExecutor implements HttpClientExecutor {
     *
     * @param resp resp
     * @return 映射响应的结果
-     */
+    */
     private Mono<ClientResponse> mapResponse(org.springframework.web.reactive.function.client.ClientResponse resp) {
         ClientResponse cr = new ClientResponse();
         cr.setStatusCode(resp.statusCode().value());
@@ -130,7 +130,7 @@ public class WebClientHttpClientExecutor implements HttpClientExecutor {
     *
     * @param method 方法
     * @return 转为http方法的结果
-     */
+    */
     private static HttpMethod toHttpMethod(com.chua.common.support.network.http.HttpMethod method) {
         return switch (method) {
             case GET -> HttpMethod.GET;
@@ -148,7 +148,7 @@ public class WebClientHttpClientExecutor implements HttpClientExecutor {
     *
     * @param response 响应
     * @return 转为客户端响应的结果
-     */
+    */
     private static ClientResponse toClientResponse(ClientResponse response) {
         return response;
     }

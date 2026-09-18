@@ -30,17 +30,17 @@ public class InMemorySyncServer implements SyncServer {
 
     /**
     * 已发布的 topic 列表
-     */
+    */
     private final Map<String, List<Object>> published = new HashMap<>();
 
     /**
     * 监听器 列表
-     */
+    */
     private final List<SyncServerListener> listeners = new ArrayList<>();
 
     /**
     * 客户端列表
-     */
+    */
     private final List<String> clients = new ArrayList<>();
 
     @Override
@@ -176,7 +176,7 @@ public class InMemorySyncServer implements SyncServer {
     *
     * @param topic 主题
     * @return 消息列表
-     */
+    */
     public List<Object> getPublished(String topic) {
         return Collections.unmodifiableList(published.getOrDefault(topic, List.of()));
     }
@@ -185,7 +185,7 @@ public class InMemorySyncServer implements SyncServer {
     * 模拟一个客户端连入。
     *
     * @param clientId 客户端标识
-     */
+    */
     public void addClient(String clientId) {
         clients.add(clientId);
     }

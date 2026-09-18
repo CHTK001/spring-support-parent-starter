@@ -15,7 +15,7 @@ public class Event {
     * 创建事件
     *
     * @param data 事件数据
-     */
+    */
     public Event(EventData data) {
         this.data = data;
     }
@@ -24,7 +24,7 @@ public class Event {
     * 获取事件数据
     *
     * @return 事件数据
-     */
+    */
     public EventData getData() {
         return data;
     }

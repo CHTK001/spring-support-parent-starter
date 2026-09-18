@@ -29,7 +29,7 @@ public class AiAccessGuardServiceImpl implements AiAccessGuardService {
 
     /**
     * app_钥匙_已启用 开关缓存，5s TTL — 避免每次请求都查询远程 DB/Redis
-     */
+    */
     private static final Cache<String, Boolean> APP_KEY_ENABLED_CACHE = Caffeine.newBuilder()
             .expireAfterWrite(5, TimeUnit.SECONDS)
             .maximumSize(10)
@@ -38,7 +38,7 @@ public class AiAccessGuardServiceImpl implements AiAccessGuardService {
     /**
     * Bearer 令牌 校验缓存，2s TTL — 尽量缩短"禁用/删除 钥匙 后僵尸窗口"，
     * 同时避免每次请求都查询远端 DB/Redis
-     */
+    */
     private static final Cache<String, Boolean> BEARER_TOKEN_CACHE = Caffeine.newBuilder()
             .expireAfterWrite(2, TimeUnit.SECONDS)
             .maximumSize(1000)
@@ -106,7 +106,7 @@ public class AiAccessGuardServiceImpl implements AiAccessGuardService {
     *
     * @param appKey app钥匙
     * @return 未触发限流返回 true
-     */
+    */
     private boolean isGroupRateLimited(String appKey) {
         try {
             Integer groupId = sysAiAppKeyService.getGroupIdByAppKey(appKey);

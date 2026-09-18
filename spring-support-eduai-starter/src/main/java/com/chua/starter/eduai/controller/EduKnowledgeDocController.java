@@ -42,7 +42,7 @@ public class EduKnowledgeDocController {
     * @param page     页码
     * @param pageSize 每页条数
     * @return 分页结果
-     */
+    */
     @Operation(summary = "分页查询知识库文档")
     @GetMapping("/page")
     public ReturnResult<PageResult<KnowledgeDocVO>> page(EduKnowledgeDoc query,
@@ -56,7 +56,7 @@ public class EduKnowledgeDocController {
     *
     * @param dto 文档上传数据
     * @return 文档ID
-     */
+    */
     @Operation(summary = "上传文档")
     @PostMapping("/upload")
     public ReturnResult<Long> upload(@RequestBody KnowledgeDocUploadDTO dto) {
@@ -70,7 +70,7 @@ public class EduKnowledgeDocController {
     * @param subject 学科
     * @param limit   返回数量
     * @return 检索结果
-     */
+    */
     @Operation(summary = "语义检索")
     @GetMapping("/search")
     public ReturnResult<PageResult<KnowledgeDocVO>> search(@RequestParam String keyword,
@@ -84,7 +84,7 @@ public class EduKnowledgeDocController {
     *
     * @param id 文档标识
     * @return 是否成功
-     */
+    */
     @Operation(summary = "删除文档")
     @DeleteMapping("/{id}")
     public ReturnResult<Boolean> delete(@PathVariable Long id) {

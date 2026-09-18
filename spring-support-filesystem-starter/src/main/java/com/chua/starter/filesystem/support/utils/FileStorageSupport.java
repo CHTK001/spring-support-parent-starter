@@ -22,7 +22,7 @@ public final class FileStorageSupport {
     * @param name 存储类型名称
     * @param bucketSetting 存储配置
     * @return 文件存储实例
-     */
+    */
     public static FileStorage createStorage(String name, BucketSetting bucketSetting) {
         return ServiceProvider.of(FileStorage.class)
                 .getNewExtension(name, bucketSetting);
@@ -34,7 +34,7 @@ public final class FileStorageSupport {
     * @param bucket 存储桶名称
     * @param path 存储路径
     * @return 存储桶配置
-     */
+    */
     public static BucketSetting createLocalBucketSetting(String bucket) {
         return BucketSetting.builder()
                 .bucket(bucket)

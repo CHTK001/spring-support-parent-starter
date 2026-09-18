@@ -15,31 +15,31 @@ public enum CaptchaTypeEnum {
 
     /**
     * 随机字符验证码
-     */
+    */
     RANDOM,
 
     /**
     * 算数运算验证码（如：1+2=?）
-     */
+    */
     ARITHMETIC,
 
     /**
     * 中文字符验证码
-     */
+    */
     CHINESE,
 
     /**
     * 中文闪图验证码（GIF动画）
-     */
+    */
     CHINESE_GIF,
 
     /**
     * 普通闪图验证码（GIF动画）
-     */
+    */
     GIF,
 
     /**
     * 特殊类型验证码
-     */
+    */
     SPEC
 }

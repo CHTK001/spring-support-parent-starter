@@ -22,7 +22,7 @@ public interface SoftConfigService extends IService<SoftConfig> {
     * @param query 查询条件对象，用于分页和排序
     * @param request 软件配置查询请求对象
     * @return 返回分页查询结果
-     */
+    */
     IPage<SoftConfig> pageFor(Query<SoftConfig> query, SoftConfig request);
 
     /**
@@ -30,7 +30,7 @@ public interface SoftConfigService extends IService<SoftConfig> {
     *
     * @param config 配置信息
     * @return 返回保存结果
-     */
+    */
     ReturnResult<SoftConfig> saveConfig(SoftConfig config);
 
     /**
@@ -38,7 +38,7 @@ public interface SoftConfigService extends IService<SoftConfig> {
     *
     * @param config 配置信息
     * @return 返回更新结果
-     */
+    */
     ReturnResult<SoftConfig> updateConfig(SoftConfig config);
 
     /**
@@ -46,7 +46,7 @@ public interface SoftConfigService extends IService<SoftConfig> {
     *
     * @param configId 配置标识
     * @return 返回删除结果
-     */
+    */
     ReturnResult<Boolean> deleteConfig(String configId);
 
     /**
@@ -55,7 +55,7 @@ public interface SoftConfigService extends IService<SoftConfig> {
     * @param softwareId 软件标识
     * @param key 配置键
     * @return 配置信息
-     */
+    */
     SoftConfig getBySoftwareAndKey(String softwareId, String key);
 
     /**
@@ -63,7 +63,7 @@ public interface SoftConfigService extends IService<SoftConfig> {
     *
     * @param softwareId 软件标识
     * @return 配置列表
-     */
+    */
     List<SoftConfig> listBySoftwareId(String softwareId);
 
     /**
@@ -72,7 +72,7 @@ public interface SoftConfigService extends IService<SoftConfig> {
     * @param softwareId 软件标识
     * @param userId 用户标识
     * @return 配置列表
-     */
+    */
     List<SoftConfig> listBySoftwareIdAndUserId(String softwareId, String userId);
 
     /**
@@ -81,7 +81,7 @@ public interface SoftConfigService extends IService<SoftConfig> {
     * @param softwareId 软件标识
     * @param deviceId 设备标识
     * @return 配置列表
-     */
+    */
     List<SoftConfig> listBySoftwareIdAndDeviceId(String softwareId, String deviceId);
 
     /**
@@ -89,6 +89,6 @@ public interface SoftConfigService extends IService<SoftConfig> {
     *
     * @param configs 配置列表
     * @return 返回操作结果
-     */
+    */
     ReturnResult<Boolean> batchSaveOrUpdate(List<SoftConfig> configs);
 }

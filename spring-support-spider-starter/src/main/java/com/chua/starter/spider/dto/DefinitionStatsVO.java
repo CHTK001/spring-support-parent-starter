@@ -14,26 +14,26 @@ import lombok.Data;
 public class DefinitionStatsVO {
     /**
     * 爬虫编码
-     */
+    */
     private String definitionCode;
     /**
     * 总执行次数
-     */
+    */
     private long totalRuns;
     /**
     * 成功次数
-     */
+    */
     private long successCount;
     /**
     * 失败次数
-     */
+    */
     private long failCount;
     /**
     * 运行中次数
-     */
+    */
     private long runningCount;
     /**
     * 最近一次执行号
-     */
+    */
     private String latestExecutionNo;
 }

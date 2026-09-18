@@ -31,12 +31,12 @@ public class TencentConfiguration {
     * tencentwechat薪酬客户端工厂
     *
     * @return tencentwechat薪酬客户端工厂的结果
-     */
+    */
     public TencentWechatPayClientFactory tencentWechatPayClientFactory() {
         /**
         * tencentwechat薪酬客户端工厂。
         * @return tencentwechat薪酬客户端工厂的结果
-         */
+        */
         return new TencentWechatPayClientFactory();
     }
 
@@ -48,7 +48,7 @@ public class TencentConfiguration {
     *
     * @param properties 属性
     * @return wechat打开platform服务的结果
-     */
+    */
     public WechatOpenPlatformService wechatOpenPlatformService(TencentWechatOpenPlatformProperties properties) {
         log.info("初始化微信开放平台服务, componentAppId={}, storagePath={}", properties.getComponentAppId(), properties.getStoragePath());
         return new DefaultWechatOpenPlatformService(
@@ -66,7 +66,7 @@ public class TencentConfiguration {
     *
     * @param properties 属性
     * @return 打开id转换服务的结果
-     */
+    */
     public OpenIdConvertService openIdConvertService(TencentWechatOpenPlatformProperties properties) {
         log.info("初始化微信openid转换服务, componentAppId={}", properties.getComponentAppId());
         return new WechatOpenIdConvertService(
@@ -81,7 +81,7 @@ public class TencentConfiguration {
     * 腾讯云服务信息contributor
     *
     * @return tencent服务信息contributor的结果
-     */
+    */
     public ServiceInfoContributor tencentServiceInfoContributor() {
         return registry -> {
             registry.registerFlag("tencent", "腾讯", true, "腾讯服务模块");

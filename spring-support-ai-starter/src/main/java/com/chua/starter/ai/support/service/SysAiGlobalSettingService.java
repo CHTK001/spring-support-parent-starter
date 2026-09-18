@@ -21,7 +21,7 @@ public interface SysAiGlobalSettingService {
     * @param group 分组
     * @param field 字段名
     * @return 配置值，未配置时返回 {@link Optional#empty()}
-     */
+    */
     Optional<String> getValue(String group, String field);
 
     /**
@@ -31,7 +31,7 @@ public interface SysAiGlobalSettingService {
     * @param field        字段名
     * @param defaultValue 未配置时默认值
     * @return 布尔值
-     */
+    */
     boolean getBoolean(String group, String field, boolean defaultValue);
 
     /**
@@ -39,14 +39,14 @@ public interface SysAiGlobalSettingService {
     *
     * @param group 分组
     * @return 配置项列表
-     */
+    */
     List<Map<String, Object>> list(String group);
 
     /**
     * 批量替换指定分组的配置（先删后插，事务内）。
     *
     * @param request 替换请求（含 群体 与 字段）
-     */
+    */
     void replace(Object request);
 
     /**
@@ -56,7 +56,7 @@ public interface SysAiGlobalSettingService {
     * @param field 字段名
     * @param value 字段值
     * @param description 字段描述（可选）
-     */
+    */
     void upsertValue(String group, String field, String value, String description);
 
     /**
@@ -68,6 +68,6 @@ public interface SysAiGlobalSettingService {
     * @param valueType   值类型：字符串 / 数字 / 布尔值
     * @param description 字段描述（可选）
     * @param sort        排序序号
-     */
+    */
     void upsertField(String group, String field, String value, String valueType, String description, int sort);
 }

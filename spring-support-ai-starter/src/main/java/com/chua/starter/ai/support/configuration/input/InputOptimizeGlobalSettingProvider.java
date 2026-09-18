@@ -24,19 +24,19 @@ public class InputOptimizeGlobalSettingProvider implements GlobalSettingProvider
 
     /**
     * 配置分组标识
-     */
+    */
     private static final String GROUP = "input";
 
     /**
     * 分组显示名称
-     */
+    */
     private static final String GROUP_NAME = "输入优化";
 
     /**
     * 配置分组标识。
     *
     * @return input
-     */
+    */
     @Override
     public String group() {
         return GROUP;
@@ -46,7 +46,7 @@ public class InputOptimizeGlobalSettingProvider implements GlobalSettingProvider
     * 配置分组显示名称。
     *
     * @return 输入优化
-     */
+    */
     @Override
     public String groupName() {
         return GROUP_NAME;
@@ -59,7 +59,7 @@ public class InputOptimizeGlobalSettingProvider implements GlobalSettingProvider
     * 优化器_temperature（温度）。优化器_模型 为空时使用 {@code runtime} 分组的默认对话模型。</p>
     *
     * @return 配置项列表
-     */
+    */
     @Override
     public List<SettingItem> getItems() {
         return List.of(

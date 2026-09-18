@@ -54,12 +54,12 @@ public interface DahuaNetSDK extends Library {
     * @param cbConnectState 连接状态回调
     * @param user           用户数据
     * @return 是否成功
-     */
+    */
     boolean CLIENT_Init(ConnectStateCallback cbConnectState, Pointer user);
 
     /**
     * 清理 SDK
-     */
+    */
     void CLIENT_Cleanup();
 
     /**
@@ -69,7 +69,7 @@ public interface DahuaNetSDK extends Library {
     * @param lpDeviceInfo   设备信息（输出）
     * @param outLoginHandle 登录句柄（输出）
     * @return 会话句柄
-     */
+    */
     long CLIENT_LoginWithHighLevelSecurity(LOGIN_INFO pLoginInfo, DEVICEINFO deviceInfo,
                                            Pointer outLoginHandle);
 
@@ -77,14 +77,14 @@ public interface DahuaNetSDK extends Library {
     * 注销登录
     *
     * @param loginHandle 登录句柄
-     */
+    */
     void CLIENT_Logout(long loginHandle);
 
     /**
     * 获取最近错误码
     *
     * @return 错误码
-     */
+    */
     int CLIENT_GetLastError();
 
     /**
@@ -98,7 +98,7 @@ public interface DahuaNetSDK extends Library {
     * @param dwUser        用户数据
     * @param pReserved     保留
     * @return 预览句柄
-     */
+    */
     long CLIENT_RealPlay(long loginHandle, int channel, int streamType, Pointer hPlayWnd,
                          RealDataCallback cbRealData, long dwUser, Pointer pReserved);
 
@@ -106,7 +106,7 @@ public interface DahuaNetSDK extends Library {
     * 停止预览
     *
     * @param playHandle 预览句柄
-     */
+    */
     void CLIENT_StopPlay(long playHandle);
 
     /**
@@ -118,7 +118,7 @@ public interface DahuaNetSDK extends Library {
     * @param bStart       0 停止、1 开始
     * @param param        参数
     * @return 是否成功
-     */
+    */
     boolean CLIENT_DHPTZControl(long loginHandle, int channel, int cmd, int bStart, int param);
 
     /**
@@ -128,7 +128,7 @@ public interface DahuaNetSDK extends Library {
     * @param channel     通道号
     * @param presetIndex 预置位号
     * @return 是否成功
-     */
+    */
     boolean CLIENT_SetPreset(long loginHandle, int channel, int presetIndex);
 
     /**
@@ -138,7 +138,7 @@ public interface DahuaNetSDK extends Library {
     * @param channel     通道号
     * @param presetIndex 预置位号
     * @return 是否成功
-     */
+    */
     boolean CLIENT_GotoPreset(long loginHandle, int channel, int presetIndex);
 
     /**
@@ -148,7 +148,7 @@ public interface DahuaNetSDK extends Library {
     * @param channel     通道号
     * @param presetIndex 预置位号
     * @return 是否成功
-     */
+    */
     boolean CLIENT_DelPreset(long loginHandle, int channel, int presetIndex);
 
     /**
@@ -158,21 +158,21 @@ public interface DahuaNetSDK extends Library {
     * @param channel     通道号
     * @param command     命令
     * @return 是否成功
-     */
+    */
     boolean CLIENT_RemoteDoorOpen(long loginHandle, int channel, int command);
 
     /**
     * 连接状态回调
     * @author CH
     * @since 4.0.0
-     */
+    */
     interface ConnectStateCallback extends Callback {
         /**
         * 连接状态变化
         *
         * @param loginHandle 登录句柄
         * @param user        用户数据
-         */
+        */
         void invoke(long loginHandle, Pointer user);
     }
 
@@ -180,7 +180,7 @@ public interface DahuaNetSDK extends Library {
     * 实时码流回调
     * @author CH
     * @since 4.0.0
-     */
+    */
     interface RealDataCallback extends Callback {
         /**
         * 码流数据回调
@@ -190,13 +190,13 @@ public interface DahuaNetSDK extends Library {
         * @param pBuffer    数据缓冲
         * @param bufSize    数据长度
         * @param user       用户数据
-         */
+        */
         void invoke(long playHandle, int dataType, Pointer pBuffer, int bufSize, Pointer user);
     }
 
     /**
     * 登录信息结构体
-     */
+    */
     @Structure.FieldOrder({"szHost", "szUser", "szPassword", "nPort", "emType", "bUseSSL",
             "dwLoginType", "szDeviceID"})
     /**
@@ -204,7 +204,7 @@ public interface DahuaNetSDK extends Library {
     *
     * @author CH
     * @since 4.0.0
-     */
+    */
     class LOGIN_INFO extends Structure {
 
         /** 设备地址 */
@@ -246,7 +246,7 @@ public interface DahuaNetSDK extends Library {
         * @param port     端口
         * @param username 用户名
         * @param password 密码
-         */
+        */
         public void setLoginInfo(String ip, int port, String username, String password) {
             byte[] hostBytes = ip.getBytes(java.nio.charset.StandardCharsets.US_ASCII);
             System.arraycopy(hostBytes, 0, szHost, 0, Math.min(hostBytes.length, szHost.length));
@@ -267,7 +267,7 @@ public interface DahuaNetSDK extends Library {
 
     /**
     * 设备信息结构体
-     */
+    */
     @Structure.FieldOrder({"szSerialNumber", "byAlarmInPortNum", "byAlarmOutPortNum", "byDiskNum", "byDVRType",
             "byChanNum", "byStartChan", "byAudioChanNum", "byIPChanNum", "byZeroChanNum", "byMainProto",
             "bySubProto", "bySupport", "bySupport1", "bySupport2", "wDevType", "bySupport3",
@@ -278,7 +278,7 @@ public interface DahuaNetSDK extends Library {
     *
     * @author CH
     * @since 4.0.0
-     */
+    */
     class DEVICEINFO extends Structure {
 
         /** 设备序列号 */

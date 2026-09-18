@@ -31,7 +31,7 @@ public class LocalSoftwareSource implements SoftwareSource {
     /**
     * 创建 本地software源 实例
     * @param collectors collectors
-     */
+    */
     public LocalSoftwareSource(List<LocalSoftwareCollector> collectors) {
         this.collectors = collectors;
     }

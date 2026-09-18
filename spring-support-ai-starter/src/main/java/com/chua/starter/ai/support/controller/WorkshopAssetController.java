@@ -91,7 +91,7 @@ public class WorkshopAssetController {
     * 创建文本asset。
     * @param body 主体
     * @return 创建文本asset的结果
-     */
+    */
     public Map<String, Object> createTextAsset(@RequestBody Map<String, Object> body) {
         String title = (String) body.getOrDefault("title", "未命名文本");
         String content = (String) body.get("textContent");
@@ -128,7 +128,7 @@ public class WorkshopAssetController {
     * @param assetId assetid
     * @param body 主体
     * @return patchAsset的结果
-     */
+    */
     public Map<String, Object> patchAsset(@PathVariable String assetId, @RequestBody Map<String, Object> body) {
         String title = (String) body.get("title");
         Object collection = body.get("collection");
@@ -148,7 +148,7 @@ public class WorkshopAssetController {
     * 删除asset。
     * @param assetId assetid
     * @return 删除asset的结果
-     */
+    */
     public Map<String, Object> deleteAsset(@PathVariable String assetId) {
         assetService.deleteAsset(assetId);
         Map<String, Object> result = new LinkedHashMap<>();
@@ -163,7 +163,7 @@ public class WorkshopAssetController {
     /**
     * 列表集合。
     * @return 列表集合的结果
-     */
+    */
     public Map<String, Object> listCollections() {
         List<String> collections = assetService.listCollections();
         Map<String, Object> result = new LinkedHashMap<>();
@@ -180,7 +180,7 @@ public class WorkshopAssetController {
     * rename集合。
     * @param body 主体
     * @return rename集合的结果
-     */
+    */
     public Map<String, Object> renameCollection(@RequestBody Map<String, String> body) {
         String from = body.get("from");
         String to = body.get("to");
@@ -199,7 +199,7 @@ public class WorkshopAssetController {
     /**
     * 列表Canvas。
     * @return 列表Canvas的结果
-     */
+    */
     public Map<String, Object> listCanvases() {
         List<Map<String, Object>> items = new ArrayList<>(canvases.values());
         items.sort(Comparator.comparingLong(
@@ -215,7 +215,7 @@ public class WorkshopAssetController {
     * 创建Canvas。
     * @param false false
     * @return 创建Canvas的结果
-     */
+    */
     public Map<String, Object> createCanvas(@RequestBody(required = false) Map<String, Object> body) {
         String id = com.chua.common.support.utils.IdUtils.uuidv7();
         long now = System.currentTimeMillis();
@@ -242,7 +242,7 @@ public class WorkshopAssetController {
     * 获取Canvas。
     * @param canvasId Canvasid
     * @return 获取Canvas的结果
-     */
+    */
     public Map<String, Object> getCanvas(@PathVariable String canvasId) {
         Map<String, Object> canvas = canvases.get(canvasId);
         if (canvas == null) {
@@ -264,7 +264,7 @@ public class WorkshopAssetController {
     * @param canvasId Canvasid
     * @param body 主体
     * @return 放入Canvasdoc的结果
-     */
+    */
     public Map<String, Object> putCanvasDoc(@PathVariable String canvasId, @RequestBody Map<String, Object> body) {
         Map<String, Object> canvas = canvases.get(canvasId);
         if (canvas == null) {
@@ -296,7 +296,7 @@ public class WorkshopAssetController {
     * @param canvasId Canvasid
     * @param body 主体
     * @return patchCanvas的结果
-     */
+    */
     public Map<String, Object> patchCanvas(@PathVariable String canvasId, @RequestBody Map<String, Object> body) {
         Map<String, Object> canvas = canvases.get(canvasId);
         if (canvas == null) {
@@ -318,7 +318,7 @@ public class WorkshopAssetController {
     * 删除Canvas。
     * @param canvasId Canvasid
     * @return 删除Canvas的结果
-     */
+    */
     public Map<String, Object> deleteCanvas(@PathVariable String canvasId) {
         canvases.remove(canvasId);
         Map<String, Object> result = new LinkedHashMap<>();
@@ -330,7 +330,7 @@ public class WorkshopAssetController {
     * Canvasmeta。
     * @param canvas Canvas
     * @return Canvasmeta的结果
-     */
+    */
     private Map<String, Object> canvasMeta(Map<String, Object> canvas) {
         Map<String, Object> meta = new LinkedHashMap<>();
         meta.put("canvas_id", canvas.get("canvas_id"));
@@ -389,7 +389,7 @@ public class WorkshopAssetController {
     * wrapasset。
     * @param asset asset
     * @return wrapAsset的结果
-     */
+    */
     private Map<String, Object> wrapAsset(Object asset) {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("data", asset instanceof WorkshopAsset wa ? toContractMap(wa) : asset);
@@ -404,7 +404,7 @@ public class WorkshopAssetController {
     * 标签/origin 从 JSON 字符串解析为数组/对象，并补充 url / thumb_url 字段。
     * @param a a
     * @return 转为contract映射的结果
-     */
+    */
     private Map<String, Object> toContractMap(WorkshopAsset a) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("asset_id", a.getAssetId());
@@ -432,7 +432,7 @@ public class WorkshopAssetController {
     * @param raw raw
     * @param fallback 降级
     * @return 解析json值的结果
-     */
+    */
     private Object parseJsonValue(String raw, Object fallback) {
         if (raw == null || raw.isBlank()) {
             return fallback;

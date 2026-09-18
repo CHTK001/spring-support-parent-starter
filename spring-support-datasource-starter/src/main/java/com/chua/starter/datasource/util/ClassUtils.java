@@ -25,7 +25,7 @@ public class ClassUtils {
 
     /**
     * 类工具。
-     */
+    */
     private ClassUtils() {
     }
 
@@ -38,7 +38,7 @@ public class ClassUtils {
     *
     * @param s 类名
     * @return 类
-     */
+    */
     public static Class<?> forName(String s) {
         try {
             return org.springframework.util.ClassUtils.forName(s, org.springframework.util.ClassUtils.getDefaultClassLoader());
@@ -52,7 +52,7 @@ public class ClassUtils {
     *
     * @param s 字符串
     * @return 类
-     */
+    */
     public static Class<?> forNames(String... s) {
         for (String s1 : s) {
             Class<?> aClass = ClassUtils.forName(s1);
@@ -70,7 +70,7 @@ public class ClassUtils {
     *
     * @param parameterTypes 类型
     * @return 名称
-     */
+    */
     public static String[] toTypeName(Class<?>[] parameterTypes) {
         if (null == parameterTypes || parameterTypes.length == 0) {
             return EMPTY_STRING_ARRAY;
@@ -89,7 +89,7 @@ public class ClassUtils {
     *
     * @param caller 类
     * @return ClassLoader
-     */
+    */
     public static ClassLoader getCallerClassLoader(Class<?> caller) {
         Preconditions.checkNotNull(caller);
         ClassLoader classLoader = caller.getClassLoader();
@@ -104,7 +104,7 @@ public class ClassUtils {
     * @param value 类
     * @return 泛型类型
     * @param includes includes
-     */
+    */
     public static Type[] getActualTypeArguments(final Class<?> value, final Class<?>... includes) {
         return ACTUAL.computeIfAbsent(value, it -> {
             Type type = value.getGenericSuperclass();
@@ -140,7 +140,7 @@ public class ClassUtils {
     * @param type     类
     * @param includes 类集合
     * @return 包含返回true
-     */
+    */
     protected static boolean container(Type type, Class<?>[] includes) {
         if (null == type || null == includes || includes.length == 0) {
             return true;
@@ -166,7 +166,7 @@ public class ClassUtils {
     * @param classLoader 类加载器
     * @param <T>         类型
     * @return 对象
-     */
+    */
     public static <T> T getObject(String name, Class<T> type, ClassLoader classLoader) {
         try {
             return getObject(org.springframework.util.ClassUtils.forName(name, classLoader), type);
@@ -180,7 +180,7 @@ public class ClassUtils {
     * @param type 类型
     * @param <T>  类型
     * @return 对象
-     */
+    */
     public static <T> T getObject(Class<?> name, Class<T> type) {
         if (null == name || !type.isAssignableFrom(name)) {
             return null;
@@ -221,7 +221,7 @@ public class ClassUtils {
     * @param name 类
     * @param <T>  类型
     * @return 对象
-     */
+    */
     public static <T> T getObject(String name) {
         if (Strings.isNullOrEmpty(name)) {
             return null;
@@ -233,7 +233,7 @@ public class ClassUtils {
     * @param name 类
     * @param <T>  类型
     * @return 对象
-     */
+    */
     public static <T> T getObject(Class<T> name) {
         return getObject(name, name);
     }
@@ -242,7 +242,7 @@ public class ClassUtils {
     * @param name 类
     * @param <T>  类型
     * @return 对象
-     */
+    */
     public static <T> T forObject(Class<T> name) {
         return getObject(name, name);
     }
@@ -253,7 +253,7 @@ public class ClassUtils {
     * @param defaultObject 默认值
     * @param <T>           类型
     * @return 对象
-     */
+    */
     public static <T> T forObject(String name, Class<T> type, T defaultObject) {
         Object object = getObject(name);
         if (null == object || !type.isAssignableFrom(object.getClass())) {

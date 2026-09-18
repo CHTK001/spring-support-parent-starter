@@ -28,22 +28,22 @@ public class OAuthHttpServletRequestWrapper extends ContentCachingRequestWrapper
     /**
     * 内容缓存上限（字节）。Spring Boot 4.x 中 内容缓存请求包装器
     * 仅提供 (请求, 内容缓存限制) 双参构造，此处传 1MB 缓存请求体。
-     */
+    */
     private static final int DEFAULT_CONTENT_CACHE_LIMIT = 1024 * 1024;
 
     /**
     * o认证 Principal
-     */
+    */
     private final OAuthPrincipal principal;
 
     /**
     * 认证类型
-     */
+    */
     private final String authType;
 
     /**
     * 远程用户名
-     */
+    */
     private final String remoteUser;
 
     /**
@@ -52,13 +52,13 @@ public class OAuthHttpServletRequestWrapper extends ContentCachingRequestWrapper
     * @param request 原始请求
     * @param userResume 用户信息
     * @param authType 认证类型
-     */
+    */
     public OAuthHttpServletRequestWrapper(HttpServletRequest request, UserResume userResume, String authType) {
         /**
         * 父。
         * @param request 请求
         * @param DEFAULT_CONTENT_CACHE_LIMIT 默认内容缓存限制
-         */
+        */
         super(request, DEFAULT_CONTENT_CACHE_LIMIT);
         this.authType = authType;
         this.remoteUser = userResume != null ? userResume.getUsername() : null;
@@ -92,7 +92,7 @@ public class OAuthHttpServletRequestWrapper extends ContentCachingRequestWrapper
     * @param userResume 用户信息
     * @param authType 认证类型
     * @return 请求包装器
-     */
+    */
     public static OAuthHttpServletRequestWrapper authenticated(HttpServletRequest request, 
                                                               UserResume userResume, 
                                                               String authType) {
@@ -104,7 +104,7 @@ public class OAuthHttpServletRequestWrapper extends ContentCachingRequestWrapper
         * @param request 请求
         * @param userResume 用户resume
         * @param authType 认证类型
-         */
+        */
         return new OAuthHttpServletRequestWrapper(request, userResume, authType);
     }
 
@@ -113,7 +113,7 @@ public class OAuthHttpServletRequestWrapper extends ContentCachingRequestWrapper
     * 
     * @param request 原始请求
     * @return 请求包装器
-     */
+    */
     public static OAuthHttpServletRequestWrapper unauthenticated(HttpServletRequest request) {
         log.debug("[请求包装]创建未认证的请求包装器 - 请求URI: {}", request.getRequestURI());
         /**
@@ -121,7 +121,7 @@ public class OAuthHttpServletRequestWrapper extends ContentCachingRequestWrapper
         * @param request 请求
         * @param null 空
         * @param null 空
-         */
+        */
         return new OAuthHttpServletRequestWrapper(request, null, null);
     }
 
@@ -177,10 +177,10 @@ public class OAuthHttpServletRequestWrapper extends ContentCachingRequestWrapper
         if (principal != null && principal.isAuthenticated()) {
             log.warn("[Wrapper登录]登录失败 - 用户已经登录，无法重复登录 - 当前用户: {}, 尝试登录用户: {}", remoteUser, username);
             /**
-            * servlet异常。
-            * @param "用户已经登录，无法重复登录" "用户已经登录，无法重复登录"
-            * @return servlet异常的结果
-             */
+    * servlet异常。
+    * @param "用户已经登录，无法重复登录" "用户已经登录，无法重复登录"
+    * @return servlet异常的结果
+    */
             throw new ServletException("用户已经登录，无法重复登录");
         }
         
@@ -192,7 +192,7 @@ public class OAuthHttpServletRequestWrapper extends ContentCachingRequestWrapper
         * servlet异常。
         * @param "OAuth客户端不支持直接用户名密码登录，请使用OAuth认证流程" "OAuth客户端不支持直接用户名密码登录，请使用OAuth认证流程"
         * @return servlet异常的结果
-         */
+        */
         throw new ServletException("OAuth客户端不支持直接用户名密码登录，请使用OAuth认证流程");
     }
 
@@ -233,10 +233,10 @@ public class OAuthHttpServletRequestWrapper extends ContentCachingRequestWrapper
             log.error("[Wrapper登出]登出操作失败 - 用户: {}, 错误类型: {}, 错误信息: {}", 
                      remoteUser, e.getClass().getSimpleName(), e.getMessage(), e);
             /**
-            * servlet异常。
-            * @param e.getMessage( e.获取消息(
-            * @return servlet异常的结果
-             */
+    * servlet异常。
+    * @param e.getMessage( e.获取消息(
+    * @return servlet异常的结果
+    */
             throw new ServletException("登出操作失败: " + e.getMessage(), e);
         }
     }
@@ -246,7 +246,7 @@ public class OAuthHttpServletRequestWrapper extends ContentCachingRequestWrapper
     * 
     * @param roles 角色数组
     * @return 是否具有任意一个角色
-     */
+    */
     public boolean isUserInAnyRole(String... roles) {
         String rolesStr = Arrays.toString(roles);
         log.debug("[Wrapper多角色检查]开始检查 - 用户: {}, 检查角色列表: {}", remoteUser, rolesStr);
@@ -273,7 +273,7 @@ public class OAuthHttpServletRequestWrapper extends ContentCachingRequestWrapper
     * 
     * @param permission 权限名称
     * @return 是否具有该权限
-     */
+    */
     public boolean hasPermission(String permission) {
         boolean hasPermission = principal != null && principal.hasPermission(permission);
         
@@ -294,7 +294,7 @@ public class OAuthHttpServletRequestWrapper extends ContentCachingRequestWrapper
     * 
     * @param permissions 权限数组
     * @return 是否具有任意一个权限
-     */
+    */
     public boolean hasAnyPermission(String... permissions) {
         String permissionsStr = Arrays.toString(permissions);
         log.debug("[Wrapper多权限检查]开始检查 - 用户: {}, 检查权限列表: {}", remoteUser, permissionsStr);
@@ -319,7 +319,7 @@ public class OAuthHttpServletRequestWrapper extends ContentCachingRequestWrapper
     * 获取用户标识
     * 
     * @return 用户ID
-     */
+    */
     public String getUserId() {
         String userId = principal != null ? principal.getUserId() : null;
         log.debug("[Wrapper获取]获取用户ID: {}", userId);
@@ -330,7 +330,7 @@ public class OAuthHttpServletRequestWrapper extends ContentCachingRequestWrapper
     * 获取租户标识
     * 
     * @return 租户ID
-     */
+    */
     public String getTenantId() {
         String tenantId = principal != null ? principal.getTenantId() : null;
         log.debug("[Wrapper获取]获取租户ID: {}", tenantId);
@@ -341,7 +341,7 @@ public class OAuthHttpServletRequestWrapper extends ContentCachingRequestWrapper
     * 获取部门标识
     * 
     * @return 部门ID
-     */
+    */
     public String getDeptId() {
         String deptId = principal != null ? principal.getDeptId() : null;
         log.debug("[Wrapper获取]获取部门ID: {}", deptId);
@@ -352,7 +352,7 @@ public class OAuthHttpServletRequestWrapper extends ContentCachingRequestWrapper
     * 检查用户是否为管理员
     * 
     * @return 是否为管理员
-     */
+    */
     public boolean isAdmin() {
         boolean result = principal != null && principal.isAdmin();
         log.debug("[Wrapper管理员检查]用户: {}, 是否管理员: {}", remoteUser, result ? "是" : "否");
@@ -366,7 +366,7 @@ public class OAuthHttpServletRequestWrapper extends ContentCachingRequestWrapper
     * 获取o认证 Principal
     * 
     * @return OAuth Principal
-     */
+    */
     public OAuthPrincipal getOAuthPrincipal() {
         log.debug("[Wrapper获取]获取OAuthPrincipal - 用户: {}, 已认证: {}", 
                  principal != null ? principal.getName() : "null",
@@ -378,7 +378,7 @@ public class OAuthHttpServletRequestWrapper extends ContentCachingRequestWrapper
     * 检查用户是否已认证
     * 
     * @return 是否已认证
-     */
+    */
     public boolean isAuthenticated() {
         boolean result = principal != null && principal.isAuthenticated();
         log.debug("[Wrapper认证检查]用户: {}, 已认证: {}", remoteUser, result ? "是" : "否");

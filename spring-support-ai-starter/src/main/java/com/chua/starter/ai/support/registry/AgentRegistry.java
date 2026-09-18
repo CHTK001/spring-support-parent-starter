@@ -60,42 +60,42 @@ public class AgentRegistry {
 
     /**
     * 按名称索引的 智能体
-     */
+    */
     private final Map<String, Agent> agentIndex = new ConcurrentHashMap<>();
 
     /**
     * 按分组索引的 智能体 列表
-     */
+    */
     private final Map<String, List<Agent>> groupIndex = new ConcurrentHashMap<>();
 
     /**
     * 按能力索引的 智能体 列表
-     */
+    */
     private final Map<String, List<Agent>> capabilityIndex = new ConcurrentHashMap<>();
 
     /**
     * 主 智能体（Router/Auto 模式）
-     */
+    */
     private volatile Agent masterAgent;
 
     /**
     * 智能体 定义列表（延迟初始化）
-     */
+    */
     private final List<AgentDefinition> pendingDefinitions = new CopyOnWriteArrayList<>();
 
     /**
     * 所有已注册的 智能体 列表
-     */
+    */
     private final List<Agent> allAgents = new CopyOnWriteArrayList<>();
 
     /**
     * 全局 skill管理器（可选）
-     */
+    */
     private volatile SkillManager skillManager;
 
     /**
     * 全局 mcp管理器（可选）
-     */
+    */
     private volatile McpManager mcpManager;
 
     /**
@@ -109,7 +109,7 @@ public class AgentRegistry {
     * @param groups        分组标签
     * @param capabilities  能力标签
     * @return 注册后的 智能体 实例
-     */
+    */
     public Agent register(String name, String displayName, String description,
                           ChatClient chatClient, AgentDefinition definition,
                           String[] groups, String[] capabilities) {
@@ -159,7 +159,7 @@ public class AgentRegistry {
     * @param chatClient  关联的 对话客户端
     * @param definition  智能体 定义
     * @return 注册后的 智能体 实例
-     */
+    */
     public Agent register(String name, ChatClient chatClient, AgentDefinition definition) {
         return register(name, name, "", chatClient, definition, null, null);
     }
@@ -172,7 +172,7 @@ public class AgentRegistry {
     * @param groups       分组标签
     * @param capabilities 能力标签
     * @return 注册后的 智能体 实例
-     */
+    */
     public Agent registerInstance(String name, Agent agent, String[] groups, String[] capabilities) {
         if (name == null || agent == null) {
             log.warn("[AgentRegistry] 注册参数不完整: name={}, agent={}", name, agent);
@@ -217,7 +217,7 @@ public class AgentRegistry {
     * <p>在 ChatClient 就绪后统一初始化。</p>
     *
     * @param definitions 智能体 定义列表
-     */
+    */
     public void registerDefinitions(List<AgentDefinition> definitions) {
         if (definitions != null) {
             pendingDefinitions.addAll(definitions);
@@ -230,7 +230,7 @@ public class AgentRegistry {
     * <p>主 Agent 负责路由和分发，支持 Router/Auto/Pipeline/FanOut 等模式。</p>
     *
     * @param agent 主 智能体
-     */
+    */
     public void setMaster(Agent agent) {
         this.masterAgent = agent;
         log.info("[AgentRegistry] 设置主 Agent: {}", agent.getClass().getSimpleName());
@@ -240,7 +240,7 @@ public class AgentRegistry {
     * 设置全局 skill管理器。
     *
     * @param skillManager 技能管理器
-     */
+    */
     public void setSkillManager(SkillManager skillManager) {
         this.skillManager = skillManager;
  // 为所有已注册 智能体 注入 skill管理器
@@ -254,7 +254,7 @@ public class AgentRegistry {
     * 设置全局 mcp管理器。
     *
     * @param mcpManager MCP 管理器
-     */
+    */
     public void setMcpManager(McpManager mcpManager) {
         this.mcpManager = mcpManager;
         for (Agent agent : allAgents) {
@@ -269,7 +269,7 @@ public class AgentRegistry {
     * 获取主 智能体。
     *
     * @return 主 智能体，未设置时返回 空
-     */
+    */
     public Agent getMaster() {
         return masterAgent;
     }
@@ -279,7 +279,7 @@ public class AgentRegistry {
     *
     * @param name 智能体 名称
     * @return Agent，未找到返回 空
-     */
+    */
     public Agent getByName(String name) {
         return agentIndex.get(name);
     }
@@ -289,7 +289,7 @@ public class AgentRegistry {
     *
     * @param group 分组标签
     * @return Agent 列表，未找到返回空列表
-     */
+    */
     public List<Agent> getByGroup(String group) {
         return groupIndex.getOrDefault(group, Collections.emptyList());
     }
@@ -299,7 +299,7 @@ public class AgentRegistry {
     *
     * @param capability 能力标签
     * @return Agent 列表，未找到返回空列表
-     */
+    */
     public List<Agent> getByCapability(String capability) {
         return capabilityIndex.getOrDefault(capability, Collections.emptyList());
     }
@@ -308,7 +308,7 @@ public class AgentRegistry {
     * 获取所有已注册的 智能体。
     *
     * @return Agent 列表
-     */
+    */
     public List<Agent> getAll() {
         return Collections.unmodifiableList(allAgents);
     }
@@ -317,7 +317,7 @@ public class AgentRegistry {
     * 获取所有已注册的 提供者 名称。
     *
     * @return provider 名称集合
-     */
+    */
     public Set<String> getNames() {
         return Collections.unmodifiableSet(agentIndex.keySet());
     }
@@ -326,7 +326,7 @@ public class AgentRegistry {
     * 获取待初始化的 智能体 定义。
     *
     * @return Agent 定义列表
-     */
+    */
     public List<AgentDefinition> getPendingDefinitions() {
         return Collections.unmodifiableList(pendingDefinitions);
     }
@@ -336,7 +336,7 @@ public class AgentRegistry {
     *
     * @param name 智能体 名称
     * @return true 表示已注册
-     */
+    */
     public boolean hasAgent(String name) {
         return agentIndex.containsKey(name);
     }
@@ -346,7 +346,7 @@ public class AgentRegistry {
     *
     * @param name 智能体 名称
     * @return 是否注销成功（原已注册）
-     */
+    */
     public boolean unregister(String name) {
         Agent agent = agentIndex.remove(name);
         if (agent == null) {
@@ -371,7 +371,7 @@ public class AgentRegistry {
     * 获取已注册的 智能体 数量。
     *
     * @return 数量
-     */
+    */
     public int size() {
         return allAgents.size();
     }
@@ -380,7 +380,7 @@ public class AgentRegistry {
     * 获取全局 skill管理器。
     *
     * @return SkillManager，未设置返回 空
-     */
+    */
     public SkillManager getSkillManager() {
         return skillManager;
     }
@@ -389,7 +389,7 @@ public class AgentRegistry {
     * 获取全局 mcp管理器。
     *
     * @return McpManager，未设置返回 空
-     */
+    */
     public McpManager getMcpManager() {
         return mcpManager;
     }
@@ -398,7 +398,7 @@ public class AgentRegistry {
 
     /**
     * 关闭所有 智能体，释放资源。
-     */
+    */
     public void closeAll() {
         for (Agent agent : allAgents) {
             try {

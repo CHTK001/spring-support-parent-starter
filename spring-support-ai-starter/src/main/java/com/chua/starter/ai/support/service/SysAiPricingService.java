@@ -16,11 +16,11 @@ public interface SysAiPricingService {
     * @param provider 服务商
     * @param model 模型
     * @return 定价信息
-     */
+    */
     SysAiPricing getLatestPricing(String provider, String model);
 
     /**
     * 同步官方定价
-     */
+    */
     void syncOfficialPricing();
 }

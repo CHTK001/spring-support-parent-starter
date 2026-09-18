@@ -33,14 +33,14 @@ public interface SysMessageService {
     * @param page     页码
     * @param pageSize 每页条数
     * @return 分页结果
-     */
+    */
     IPage<SysMessageProvider> pageForProvider(SysMessageProvider provider, long page, long pageSize);
 
     /**
     * 提供商列表查询
     *
     * @return 提供商列表
-     */
+    */
     List<SysMessageProvider> listForProvider();
 
     /**
@@ -51,7 +51,7 @@ public interface SysMessageService {
     * </p>
     *
     * @return 渠道信息列表
-     */
+    */
     List<ChannelInfo> listChannels();
 
     /**
@@ -59,7 +59,7 @@ public interface SysMessageService {
     *
     * @param provider 提供商信息
     * @return 保存结果
-     */
+    */
     ReturnResult<SysMessageProvider> saveProvider(SysMessageProvider provider);
 
     /**
@@ -67,7 +67,7 @@ public interface SysMessageService {
     *
     * @param provider 提供商信息
     * @return 更新结果
-     */
+    */
     ReturnResult<Boolean> updateProvider(SysMessageProvider provider);
 
     /**
@@ -75,7 +75,7 @@ public interface SysMessageService {
     *
     * @param providerId 提供商标识
     * @return 删除结果
-     */
+    */
     ReturnResult<Boolean> deleteProvider(Integer providerId);
 
     /**
@@ -85,14 +85,14 @@ public interface SysMessageService {
     * @param page     页码
     * @param pageSize 每页条数
     * @return 分页结果
-     */
+    */
     IPage<SysMessageTemplate> pageForTemplate(SysMessageTemplate template, long page, long pageSize);
 
     /**
     * 模板列表查询
     *
     * @return 模板列表
-     */
+    */
     List<SysMessageTemplate> listForTemplate();
 
     /**
@@ -100,7 +100,7 @@ public interface SysMessageService {
     *
     * @param template 模板信息
     * @return 保存结果
-     */
+    */
     ReturnResult<SysMessageTemplate> saveTemplate(SysMessageTemplate template);
 
     /**
@@ -108,7 +108,7 @@ public interface SysMessageService {
     *
     * @param template 模板信息
     * @return 更新结果
-     */
+    */
     ReturnResult<Boolean> updateTemplate(SysMessageTemplate template);
 
     /**
@@ -116,7 +116,7 @@ public interface SysMessageService {
     *
     * @param templateId 模板标识
     * @return 删除结果
-     */
+    */
     ReturnResult<Boolean> deleteTemplate(Integer templateId);
 
     /**
@@ -124,7 +124,7 @@ public interface SysMessageService {
     *
     * @param request 发送请求
     * @return 发送结果
-     */
+    */
     ReturnResult<List<MessageResponse>> send(MessageSendRequest request);
 
     /**
@@ -135,7 +135,7 @@ public interface SysMessageService {
     *
     * @param request 按内容发送请求
     * @return 发送结果
-     */
+    */
     ReturnResult<List<MessageResponse>> sendContent(MessageContentSendRequest request);
 
     /**
@@ -146,7 +146,7 @@ public interface SysMessageService {
     *
     * @param providerId 提供商标识
     * @return 同步结果
-     */
+    */
     ReturnResult<Integer> syncTemplate(Integer providerId);
 
     /**
@@ -156,7 +156,7 @@ public interface SysMessageService {
     * @param page     页码
     * @param pageSize 每页条数
     * @return 分页结果
-     */
+    */
     IPage<SysMessageLog> pageForLog(SysMessageLog log, long page, long pageSize);
 
     /**
@@ -168,7 +168,7 @@ public interface SysMessageService {
     *
     * @param request 预览请求
     * @return 渲染结果
-     */
+    */
     ReturnResult<TemplatePreviewResponse> previewTemplate(TemplatePreviewRequest request);
 
     /**
@@ -179,7 +179,7 @@ public interface SysMessageService {
     *
     * @param beforeTime 截止时间（含该时间之前的日志将被清理）
     * @return 删除条数
-     */
+    */
     ReturnResult<Integer> cleanLog(java.time.LocalDateTime beforeTime);
 
     /**
@@ -190,7 +190,7 @@ public interface SysMessageService {
     *
     * @param token 追踪标识
     * @return 是否已更新
-     */
+    */
     ReturnResult<Boolean> markLogRead(String token);
 
     /**
@@ -202,14 +202,14 @@ public interface SysMessageService {
     * @param page     页码
     * @param pageSize 每页条数
     * @return 分页结果
-     */
+    */
     IPage<SysMessageStationItem> pageForStationMessage(long page, long pageSize);
 
     /**
     * 当前用户站内消息未读数
     *
     * @return 未读消息数
-     */
+    */
     ReturnResult<Long> countStationMessageUnread();
 
     /**
@@ -220,6 +220,6 @@ public interface SysMessageService {
     *
     * @param lastId 已读游标（消息标识）；为空表示全部已读
     * @return 是否已更新
-     */
+    */
     ReturnResult<Boolean> markStationMessageRead(Integer lastId);
 }

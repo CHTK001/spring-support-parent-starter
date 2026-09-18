@@ -28,7 +28,7 @@ public class OshiSystemMonitor {
     *
     * @param tickMillis 采样间隔（毫秒）
     * @return CPU 指标映射
-     */
+    */
     public Map<String, Object> cpuSnapshot(long tickMillis) {
         Cpu cpu = Oshi.newCpu(tickMillis);
         Map<String, Object> map = new HashMap<>();
@@ -45,7 +45,7 @@ public class OshiSystemMonitor {
     * 采集内存快照。
     *
     * @return 内存指标映射
-     */
+    */
     public Map<String, Object> memorySnapshot() {
         Mem mem = Oshi.newMem();
         Map<String, Object> map = new HashMap<>();
@@ -60,7 +60,7 @@ public class OshiSystemMonitor {
     * 采集磁盘快照列表。
     *
     * @return 每个磁盘的指标映射列表
-     */
+    */
     public List<Map<String, Object>> diskSnapshot() {
         List<Map<String, Object>> list = new ArrayList<>();
         for (SysFile sysFile : Oshi.newSysFile()) {
@@ -80,7 +80,7 @@ public class OshiSystemMonitor {
     * 采集网卡快照列表。
     *
     * @return 每个网卡的指标映射列表
-     */
+    */
     public List<Map<String, Object>> networkSnapshot() {
         List<Map<String, Object>> list = new ArrayList<>();
         for (Network network : Oshi.newNetwork()) {
@@ -100,7 +100,7 @@ public class OshiSystemMonitor {
     * 采集系统基本信息快照。
     *
     * @return 系统信息映射
-     */
+    */
     public Map<String, Object> systemSnapshot() {
         Sys sys = Oshi.newSys();
         Map<String, Object> map = new HashMap<>();

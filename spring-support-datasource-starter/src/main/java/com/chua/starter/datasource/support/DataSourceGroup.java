@@ -42,7 +42,7 @@ public class DataSourceGroup {
     /**
     * 数据源群体。
     * @param groupName 群体名称
-     */
+    */
     public DataSourceGroup(String groupName) {
         this.groupName = groupName;
     }
@@ -52,7 +52,7 @@ public class DataSourceGroup {
     *
     * @param dataSource     数据源实例
     * @param dataSourceName 数据源名称
-     */
+    */
     public void addMember(DataSource dataSource, String dataSourceName) {
         int index = dataSourceNames.indexOf(dataSourceName);
         if (index >= 0) {
@@ -72,14 +72,14 @@ public class DataSourceGroup {
     * 根据负载均衡策略选择一个数据源
     *
     * @return 选中的数据源
-     */
+    */
     public DataSource select() {
         if (dataSources.isEmpty()) {
             /**
             * illegal状态异常。
             * @param 中没有可用的数据源" 中没有可用的数据源"
             * @return illegal状态异常的结果
-             */
+            */
             throw new IllegalStateException("数据源分组 '" + groupName + "' 中没有可用的数据源");
         }
         if (dataSources.size() == 1) {
@@ -97,7 +97,7 @@ public class DataSourceGroup {
     * 获取组名
     *
     * @return 组名
-     */
+    */
     public String getGroupName() {
         return groupName;
     }
@@ -106,7 +106,7 @@ public class DataSourceGroup {
     * 获取组内数据源数量
     *
     * @return 数据源数量
-     */
+    */
     public int size() {
         return dataSources.size();
     }
@@ -115,7 +115,7 @@ public class DataSourceGroup {
     * 设置负载均衡策略
     *
     * @param strategy 策略
-     */
+    */
     public void setStrategy(LoadBalanceStrategy strategy) {
         this.strategy = strategy;
         log.info("[数据源分组] 分组 '{}' 切换策略为: {}", groupName, strategy);
@@ -125,7 +125,7 @@ public class DataSourceGroup {
     * 负载均衡策略
     * @author CH
     * @since 4.0.0
-     */
+    */
     public enum LoadBalanceStrategy {
         /** 轮询 */
         ROUND_ROBIN,

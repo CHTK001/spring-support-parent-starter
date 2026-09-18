@@ -27,13 +27,13 @@ public class MessageTrackProperties {
 
     /**
     * 配置属性前缀
-     */
+    */
     public static final String PRE = "plugin.message.track";
 
     /**
     * 是否开启阅读追踪
     * 默认值: false
-     */
+    */
     private boolean enabled = false;
 
     /**
@@ -41,6 +41,6 @@ public class MessageTrackProperties {
     * <p>
     * 用于拼接追踪图地址，缺省时自动回退为当前服务地址。
     * </p>
-     */
+    */
     private String baseUrl;
 }

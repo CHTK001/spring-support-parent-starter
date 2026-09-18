@@ -16,26 +16,26 @@ public interface LockProvider {
     * @param timeout  超时时间
     * @param timeUnit 时间单位
     * @return 是否成功获取锁
-     */
+    */
     boolean tryLock(int timeout, TimeUnit timeUnit);
 
     /**
     * 释放锁
-     */
+    */
     void unlock();
 
     /**
     * 获取锁提供者名称
     *
     * @return 名称
-     */
+    */
     String getName();
 
     /**
     * 获取锁提供者类型
     *
     * @return 类型
-     */
+    */
     String getType();
 }
 

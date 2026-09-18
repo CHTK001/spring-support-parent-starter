@@ -33,7 +33,7 @@ public abstract class AbstractSwaggerJoinQueryController<S extends IService<T>, 
     * @param @Validated(SelectGroup.class @校验(选择群体.类
     * @param @Validated(SelectGroup.class @校验(选择群体.类
     * @param @Validated(SelectGroup.class @Validated(SelectGroup.class
-     */
+    */
     @ResponseBody
     @Operation(summary = "分页查询基础数据")
     @GetMapping("page")
@@ -53,7 +53,7 @@ public abstract class AbstractSwaggerJoinQueryController<S extends IService<T>, 
     * @param @Validated(SelectGroup.class @校验(选择群体.类
     * @param @Validated(SelectGroup.class @校验(选择群体.类
     * @param @Validated(SelectGroup.class @Validated(SelectGroup.class
-     */
+    */
     @ResponseBody
     @Operation(summary = "查询基础数据")
     @GetMapping("list")
@@ -66,7 +66,7 @@ public abstract class AbstractSwaggerJoinQueryController<S extends IService<T>, 
     *
     * @param entity 实体
     * @return 详细信息
-     */
+    */
 
     abstract public MPJLambdaWrapper<T> createJoinWrapper(T entity);
 }

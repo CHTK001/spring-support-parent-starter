@@ -44,7 +44,7 @@ public class EduAiAutoConfiguration {
     /**
     * 注册教育AI模块的服务信息贡献者。
     * @return eduAI服务信息contributor的结果
-     */
+    */
     @Bean
     public ServiceInfoContributor eduAiServiceInfoContributor() {
         return registry -> {

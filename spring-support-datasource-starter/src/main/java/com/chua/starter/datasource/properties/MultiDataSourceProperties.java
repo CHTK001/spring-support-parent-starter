@@ -22,12 +22,12 @@ public class MultiDataSourceProperties {
 
     /**
     * 是否启用
-     */
+    */
     private boolean enable = false;
 
     /**
     * 数据源
-     */
+    */
     private List<DataSourceProperties> dataSource;
 
     // Getter 方法（Lombok 在 Java 25 下可能不工作，手动添加）
@@ -35,7 +35,7 @@ public class MultiDataSourceProperties {
     * 获取数据源
     *
     * @return 获取数据源的结果
-     */
+    */
     public List<DataSourceProperties> getDataSource() {
         return dataSource;
     }

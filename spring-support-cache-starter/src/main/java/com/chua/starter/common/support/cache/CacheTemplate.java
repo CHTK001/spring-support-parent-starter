@@ -52,7 +52,7 @@ public class CacheTemplate {
     * @param cacheManager 缓存管理器
     * @param keyGenerator tenanted钥匙生成器
     * @param keyGenerator 钥匙生成器
-     */
+    */
     public CacheTemplate(MultiLevelCacheManager cacheManager, TenantedKeyGenerator keyGenerator) {
         this.cacheManager = cacheManager;
         this.keyGenerator = keyGenerator;
@@ -63,7 +63,7 @@ public class CacheTemplate {
     *
     * @param businessKey 业务键，例如 {@code "user:123"}
     * @return 完整缓存键，例如 {@code "cache:myapp:default:tenant-0:user:123"}
-     */
+    */
     public String buildKey(String businessKey) {
         return keyGenerator.generate(null, null, businessKey).toString();
     }
@@ -74,7 +74,7 @@ public class CacheTemplate {
     * @param cacheName   缓存名（必须与 {@code @Cacheable(cacheNames = "...")} 一致）
     * @param businessKey 业务键
     * @param value       缓存值
-     */
+    */
     public void put(String cacheName, String businessKey, Object value) {
         Cache cache = cacheManager.getCache(cacheName);
         if (cache == null) {
@@ -94,7 +94,7 @@ public class CacheTemplate {
     * @param type        值类型
     * @param <T>         值泛型
     * @return 缓存值，未命中返回 {@code null}
-     */
+    */
     @SuppressWarnings("unchecked")
     public <T> T get(String cacheName, String businessKey, Class<T> type) {
         Cache cache = cacheManager.getCache(cacheName);
@@ -123,7 +123,7 @@ public class CacheTemplate {
     *
     * @param cacheName   缓存名
     * @param businessKey 业务键
-     */
+    */
     public void evict(String cacheName, String businessKey) {
         Cache cache = cacheManager.getCache(cacheName);
         if (cache == null) {
@@ -141,7 +141,7 @@ public class CacheTemplate {
     * @param cacheName 缓存名
     * @param pattern   模式字符串（例如 {@code "user:*"}）
     * @return 是否执行成功
-     */
+    */
     public boolean evictByPattern(String cacheName, String pattern) {
         Cache cache = cacheManager.getCache(cacheName);
         if (cache instanceof MultiLevelCache mlc) {
@@ -162,7 +162,7 @@ public class CacheTemplate {
     * 清空整个缓存区域
     *
     * @param cacheName 缓存名
-     */
+    */
     public void clear(String cacheName) {
         Cache cache = cacheManager.getCache(cacheName);
         if (cache == null) {
@@ -175,7 +175,7 @@ public class CacheTemplate {
 
     /**
     * 清空所有多级缓存
-     */
+    */
     public void clearAll() {
         cacheManager.clearAll();
         log.info("缓存模板清空所有缓存");
@@ -185,7 +185,7 @@ public class CacheTemplate {
     * 获取缓存管理器的统计信息
     *
     * @return 缓存名到统计的映射
-     */
+    */
     public java.util.Map<String, MultiLevelCacheManager.CacheStats> getStats() {
         return cacheManager.getStats();
     }
@@ -193,7 +193,7 @@ public class CacheTemplate {
     /**
     * 获取缓存管理器（供高级使用）
     * @return 获取缓存管理器的结果
-     */
+    */
     public MultiLevelCacheManager getCacheManager() {
         return cacheManager;
     }
@@ -201,7 +201,7 @@ public class CacheTemplate {
     /**
     * 获取键生成器（供高级使用）
     * @return 获取钥匙生成器的结果
-     */
+    */
     public TenantedKeyGenerator getKeyGenerator() {
         return keyGenerator;
     }

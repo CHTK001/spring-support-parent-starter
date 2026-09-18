@@ -34,7 +34,7 @@ public class SwaggerExportRunner implements CommandLineRunner {
     * 创建 Swagger导出runner 实例
     * @param openAPIProvider 打开api提供者
     * @param properties 属性
-     */
+    */
     public SwaggerExportRunner(org.springframework.beans.factory.ObjectProvider<OpenAPI> openAPIProvider,
                                SwaggerExportProperties properties) {
         this.openAPI = openAPIProvider.getIfAvailable();

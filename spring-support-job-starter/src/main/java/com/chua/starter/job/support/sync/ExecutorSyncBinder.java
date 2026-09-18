@@ -37,63 +37,63 @@ public class ExecutorSyncBinder {
 
     /**
     * 同步客户端 SPI 钥匙, 由仓库公共服务端负责注入
-     */
+    */
     public static final String SPI_SYNC_CLIENT = "sync.client";
 
     /**
     * 同步客户端实例
-     */
+    */
     private final SyncClient syncClient;
 
     /**
     * 进程内事件总线
-     */
+    */
     private final JobSyncBus bus;
 
     /**
     * 配置属性
-     */
+    */
     private final JobProperties properties;
 
     /**
     * 当前节点标识
-     */
+    */
     private final String nodeId;
 
     /**
     * 任务 CMD 监听器
-     */
+    */
     private SyncMessageHandler cmdHandler;
 
     /**
     * 日志 转发器 (持有, 用于注销)
-     */
+    */
     private BiConsumer<String, Object> logForwarder;
 
     /**
     * 重连守护调度
-     */
+    */
     private ScheduledExecutorService reconnectExecutor;
 
     /**
     * 标记是否已注册 (成功后置 true, 避免重复 日志)
-     */
+    */
     private final AtomicBoolean registered = new AtomicBoolean(false);
 
     /**
     * 最近一次 连接/注册 尝试时间戳 (毫秒), 用于周期性心跳式重连
-     */
+    */
     private final AtomicLong lastReconnectAttemptMs = new AtomicLong(0L);
 
     /**
     * 已注册后的心跳重连间隔 (毫秒), 在 tcp同步客户端.是否连接()
     * 永远返回 true 的 pre-existing bug 下作为唯一兜底
-     */
+    */
     private static final long HEARTBEAT_INTERVAL_MS = 30_000L;
 
     /**
     * 启动绑定。
-     */
+    */
     @PostConstruct
     public void start() {
         cmdHandler = (topic, payload) -> {
@@ -141,8 +141,8 @@ public class ExecutorSyncBinder {
 
         // 同步尝试一次, 失败后由守护线程周期重试
         /**
-        * 尝试连接和注册。
-         */
+            * 尝试连接和注册。
+            */
         tryConnectAndRegister();
 
         reconnectExecutor = Executors.newSingleThreadScheduledExecutor(r -> {
@@ -171,7 +171,7 @@ public class ExecutorSyncBinder {
                 }
                 /**
                 * 尝试连接和注册。
-                 */
+                */
                 tryConnectAndRegister();
             } catch (Throwable ex) {
                 log.debug("[job] reconnect 失败 cause={}", ex.getMessage());
@@ -181,7 +181,7 @@ public class ExecutorSyncBinder {
 
     /**
     * 同步尝试连接 + 注册 上行一次。
-     */
+    */
     private void tryConnectAndRegister() {
         try {
             syncClient.connect();
@@ -197,7 +197,7 @@ public class ExecutorSyncBinder {
 
     /**
     * 关闭绑定。
-     */
+    */
     @PreDestroy
     public void shutdown() {
         if (reconnectExecutor != null) {
@@ -221,7 +221,7 @@ public class ExecutorSyncBinder {
     * 构建注册上行 payload。
     *
     * @return 注册信息
-     */
+    */
     private Map<String, Object> buildRegisterPayload() {
         return Map.of(
                 "nodeId", nodeId,

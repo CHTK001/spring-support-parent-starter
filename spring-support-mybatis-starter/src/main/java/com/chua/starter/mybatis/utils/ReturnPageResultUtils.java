@@ -18,7 +18,7 @@ public class ReturnPageResultUtils {
 
     /**
     * 空分页实例
-     */
+    */
     private static final IPage<?> EMPTY = new Page<>();
 
     /** 创建 申报page结果工具 实例 */
@@ -29,7 +29,7 @@ public class ReturnPageResultUtils {
     * 获取空分页对象
     *
     * @return 空分页实例
-     */
+    */
     @SuppressWarnings("ALL")
     public static IPage<?> empty() {
         return EMPTY;
@@ -41,7 +41,7 @@ public class ReturnPageResultUtils {
     * @param type 元素类型
     * @param <T>  元素类型
     * @return 空分页实例
-     */
+    */
     @SuppressWarnings("all")
     public static <T> IPage<T> empty(Class<T> type) {
         return (IPage<T>) EMPTY;
@@ -55,7 +55,7 @@ public class ReturnPageResultUtils {
     * @param size  页大小
     * @param <T>   数据类型
     * @return 包装后的分页结果
-     */
+    */
     public static <T> ReturnPageResult<T> staticPage(List<T> data, int page, int size) {
         IPage<T> ipage = com.chua.common.support.utils.PageUtils.page(data, page, size);
         PageResult<T> pageResult = PageResult.<T>builder()
@@ -76,7 +76,7 @@ public class ReturnPageResultUtils {
     * @param size  页大小
     * @param <T>   数据类型
     * @return 填充数据的 ipage
-     */
+    */
     public static <T> IPage<T> page(List<T> list, int page, int size) {
         return com.chua.common.support.utils.PageUtils.page(list, page, size);
     }

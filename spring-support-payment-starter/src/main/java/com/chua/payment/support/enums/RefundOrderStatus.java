@@ -10,17 +10,17 @@ public enum RefundOrderStatus {
     /**
     * 处理。
     * @param "退款中" "退款中"
-     */
+    */
     PROCESSING("退款中"),
     /**
     * 退税。
     * @param "已退款" "已退款"
-     */
+    */
     REFUNDED("已退款"),
     /**
     * 失败。
     * @param "退款失败" "退款失败"
-     */
+    */
     FAILED("退款失败");
 
     /** 描述 */
@@ -29,7 +29,7 @@ public enum RefundOrderStatus {
     /**
     * 退税订单状态。
     * @param description description
-     */
+    */
     RefundOrderStatus(String description) {
         this.description = description;
     }
@@ -38,7 +38,7 @@ public enum RefundOrderStatus {
     * 获取Description
     *
     * @return 获取description的结果
-     */
+    */
     public String getDescription() {
         return description;
     }
@@ -48,7 +48,7 @@ public enum RefundOrderStatus {
     *
     * @param code 编码
     * @return description的的结果
-     */
+    */
     public static String descriptionOf(String code) {
         if (code == null) {
             return "";

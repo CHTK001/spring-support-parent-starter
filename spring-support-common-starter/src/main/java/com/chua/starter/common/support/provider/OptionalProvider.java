@@ -50,7 +50,7 @@ public class OptionalProvider {
     *
     * @param apiProperties api属性
     * @param beanFactory Bean工厂
-     */
+    */
     public OptionalProvider(ApiProperties apiProperties, BeanFactory beanFactory) {
         this.apiProperties = apiProperties;
         this.beanFactory = beanFactory;
@@ -65,7 +65,7 @@ public class OptionalProvider {
     * @param type 类型
     * @param name 名称，可为空
     * @return 获取选项
-     */
+    */
     @Operation(summary = "获取已经加载选项")
     @GetMapping("objects/get")
     @Cacheable(cacheManager = CACHE_MANAGER_FOR_SYSTEM, cacheNames = REDIS_CACHE_ALWAYS, key = "'OPTION:OBJECT_GET' + #type + '' + #name")
@@ -108,7 +108,7 @@ public class OptionalProvider {
     *
     * @param type 类型
     * @return 获取选项
-     */
+    */
     private String[] getTypes(String type) {
         ApiProperties.SpiConfig spi = apiProperties.getSpi();
         if (spi != null && spi.isEnable() && spi.getMapping() != null) {
@@ -129,7 +129,7 @@ public class OptionalProvider {
     *
     * @param type 类型
     * @return 获取选项
-     */
+    */
     private String getType(String type) {
         ApiProperties.SpiConfig spi = apiProperties.getSpi();
         if (spi != null && spi.isEnable() && spi.getMapping() != null) {
@@ -144,7 +144,7 @@ public class OptionalProvider {
     * @param type 类型
     * @param name 名称，可为空
     * @return 获取选项
-     */
+    */
     @Operation(summary = "获取选项")
     @GetMapping("get")
     @Cacheable(cacheManager = CACHE_MANAGER_FOR_SYSTEM, cacheNames = REDIS_CACHE_ALWAYS, key = "'OPTION:GET' + #type + '' + #name")
@@ -172,7 +172,7 @@ public class OptionalProvider {
     * @param type 类型
     * @param name 名称，可为空
     * @return 获取选项
-     */
+    */
     @Operation(summary = "获取选项")
     @GetMapping("list")
     @Cacheable(cacheManager = CACHE_MANAGER_FOR_SYSTEM, cacheNames = REDIS_CACHE_ALWAYS, key = "'OPTION:LIST' + #type + '' + #name")
@@ -208,7 +208,7 @@ public class OptionalProvider {
     *
     * @param raw 原始选项列表（运行时元素均为 {@link SpiOption}）
     * @return SpiOption 列表；入参为 null 时返回空列表
-     */
+    */
     @SuppressWarnings("unchecked")
     private static List<SpiOption> toSpiOptions(List<?> raw) {
         if (raw == null) {

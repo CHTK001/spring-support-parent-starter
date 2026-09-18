@@ -40,7 +40,7 @@ public final class ServiceInfoRegistry {
     /**
     * 映射 键 分隔符: 使用 NUL 字符避免与 {@code group} 或 {@code name} 中的
     * 常见字符 (如 '/'、'-') 冲突。
-     */
+    */
     private static final String KEY_SEP = "\u0000";
 
     private final Map<String, EndpointInfo> endpoints = new LinkedHashMap<>(); // 端点
@@ -53,7 +53,7 @@ public final class ServiceInfoRegistry {
     * 获取Instance
     *
     * @return 获取instance的结果
-     */
+    */
     public static ServiceInfoRegistry getInstance() {
         return INSTANCE;
     }
@@ -65,7 +65,7 @@ public final class ServiceInfoRegistry {
     * @param name        端点名 (例如 "分片上传")
     * @param url         端点 URL 或方法路径
     * @param description 描述
-     */
+    */
     public void registerEndpoint(String group, String name, String url, String description) {
         String key = keyOf(group, name);
         endpoints.put(key, new EndpointInfo(group, name, url, description));
@@ -78,7 +78,7 @@ public final class ServiceInfoRegistry {
     * @param group       分组
     * @param value       true / false / 空 (空 表示"未配置")
     * @param description 描述
-     */
+    */
     public void registerFlag(String name, String group, Boolean value, String description) {
         registerFlag(name, group, value, description, null);
     }
@@ -94,7 +94,7 @@ public final class ServiceInfoRegistry {
     * @param value       true / false / 空
     * @param description 描述
     * @param suffix      附加上下文 (例如 {@code "[平台: system]"}、{@code "[环境: dev,test]"}); 为 空 时不输出
-     */
+    */
     public void registerFlag(String name, String group, Boolean value, String description, String suffix) {
         String key = keyOf(group, name);
         flags.put(key, new FlagInfo(name, group, value, description, suffix));
@@ -106,7 +106,7 @@ public final class ServiceInfoRegistry {
     * @param group 群体
     * @param name 名称
     * @return 键的的结果
-     */
+    */
     private static String keyOf(String group, String name) {
         return (group == null ? "" : group) + KEY_SEP + (name == null ? "" : name);
     }
@@ -117,7 +117,7 @@ public final class ServiceInfoRegistry {
     * @param group 分组
     * @param name  开关名
     * @return 找到的 flag信息, 未找到返回 空
-     */
+    */
     public FlagInfo findFlag(String group, String name) {
         if (group == null || name == null) {
             return null;
@@ -131,7 +131,7 @@ public final class ServiceInfoRegistry {
     * @param group 分组
     * @param name  端点名
     * @return 找到的 端点信息, 未找到返回 空
-     */
+    */
     public EndpointInfo findEndpoint(String group, String name) {
         if (group == null || name == null) {
             return null;
@@ -143,7 +143,7 @@ public final class ServiceInfoRegistry {
     * 获取端点
     *
     * @return 获取端点的结果
-     */
+    */
     public Map<String, EndpointInfo> getEndpoints() {
         return endpoints;
     }
@@ -152,7 +152,7 @@ public final class ServiceInfoRegistry {
     * 获取Flags
     *
     * @return 获取flags的结果
-     */
+    */
     public Map<String, FlagInfo> getFlags() {
         return flags;
     }
@@ -160,7 +160,7 @@ public final class ServiceInfoRegistry {
     /**
     * 导出所有信息给 REST 端点。
     * @return 获取信息的结果
-     */
+    */
     public Map<String, Object> getInfo() {
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("endpoints", endpoints);
@@ -174,7 +174,7 @@ public final class ServiceInfoRegistry {
     * <p>仅供测试场景使用; 生产代码不应调用此方法。</p>
     * @author CH
     * @since 4.0.0
-     */
+    */
     public void reset() {
         endpoints.clear();
         flags.clear();
@@ -199,7 +199,7 @@ public final class ServiceInfoRegistry {
         * @param name 名称
         * @param url url
         * @param description description
-         */
+        */
         public EndpointInfo(String group, String name, String url, String description) {
             this.group = group;
             this.name = name;
@@ -211,25 +211,25 @@ public final class ServiceInfoRegistry {
         * 获取分组
         *
         * @return 获取群体的结果
-         */
+        */
         public String getGroup() { return group; }
         /**
         * 获取名称
         *
         * @return 获取名称的结果
-         */
+        */
         public String getName() { return name; }
         /**
         * 获取Url
         *
         * @return 获取url的结果
-         */
+        */
         public String getUrl() { return url; }
         /**
         * 获取Description
         *
         * @return 获取description的结果
-         */
+        */
         public String getDescription() { return description; }
 
         @Override
@@ -249,7 +249,7 @@ public final class ServiceInfoRegistry {
         * @return 哈希编码的结果
         * @author CH
         * @since 4.0.0
-         */
+        */
         public int hashCode() {
             return Objects.hash(group, name);
         }
@@ -278,7 +278,7 @@ public final class ServiceInfoRegistry {
         * @param value 值
         * @param description description
         * @param suffix 后缀
-         */
+        */
         public FlagInfo(String name, String group, Boolean value, String description, String suffix) {
             this.name = name;
             this.group = group;
@@ -291,31 +291,31 @@ public final class ServiceInfoRegistry {
         * 获取名称
         *
         * @return 获取名称的结果
-         */
+        */
         public String getName() { return name; }
         /**
         * 获取分组
         *
         * @return 获取群体的结果
-         */
+        */
         public String getGroup() { return group; }
         /**
         * 获取值
         *
         * @return 获取值的结果
-         */
+        */
         public Boolean getValue() { return value; }
         /**
         * 获取Description
         *
         * @return 获取description的结果
-         */
+        */
         public String getDescription() { return description; }
         /**
         * 获取后缀
         *
         * @return 获取后缀的结果
-         */
+        */
         public String getSuffix() { return suffix; }
 
         @Override

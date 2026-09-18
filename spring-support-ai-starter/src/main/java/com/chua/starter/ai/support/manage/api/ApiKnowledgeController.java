@@ -67,47 +67,47 @@ public class ApiKnowledgeController {
 
     /**
     * 会话存储（复用其 新标识 生成 UUID 主键）
-     */
+    */
     private final SysAiConversationStore conversationStore;
 
     /**
     * WS 事件推送服务
-     */
+    */
     private final ApiWebSocketPushService pushService;
 
     /**
     * 全局 RAG 客户端管理器（检索能力复用）
-     */
+    */
     private final RagClientManager ragClientManager;
 
     /**
     * RAG 配置属性（提供上传目录与检索默认值）
-     */
+    */
     private final RagProperties ragProperties;
 
     /**
     * 全局 对话客户端 注册中心（AI 生成类接口解析对话客户端）
-     */
+    */
     private final ChatClientRegistry chatClientRegistry;
 
     /**
     * 知识库元数据表：知识_基础_标识 → 元数据
-     */
+    */
     private final Map<String, Map<String, Object>> bases = new ConcurrentHashMap<>();
 
     /**
     * 标签表：钥匙 → 标签
-     */
+    */
     private final Map<String, Map<String, Object>> tags = new ConcurrentHashMap<>();
 
     /**
     * 绑定表："{种类}:{Target_标识}" → 绑定
-     */
+    */
     private final Map<String, Map<String, Object>> bindings = new ConcurrentHashMap<>();
 
     /**
     * 检索配置（嵌入 / rerank 两阶段）
-     */
+    */
     private final Map<String, Object> retrievalConfig = defaultRetrievalConfig();
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -118,7 +118,7 @@ public class ApiKnowledgeController {
     /**
     * 列表基础。
     * @return 列表基础的结果
-     */
+    */
     public ApiResult<List<Map<String, Object>>> listBases() {
         List<Map<String, Object>> items = bases.values().stream()
                 .map(this::toBaseResponse)
@@ -134,7 +134,7 @@ public class ApiKnowledgeController {
     * 创建基础。
     * @param body 主体
     * @return 创建base的结果
-     */
+    */
     public ApiResult<Map<String, Object>> createBase(@RequestBody Map<String, Object> body) {
         String name = (String) body.getOrDefault("name", "");
         if (StringUtils.isBlank(name)) {
@@ -143,7 +143,7 @@ public class ApiKnowledgeController {
             * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
             * @param "知识库名称不能为空" "知识库名称不能为空"
             * @return api异常的结果
-             */
+            */
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "知识库名称不能为空");
         }
         String baseId = conversationStore.newId();
@@ -181,7 +181,7 @@ public class ApiKnowledgeController {
                 * @param ApiErrorCode.INTERNAL_ERROR api错误编码.内部错误
                 * @param e.getMessage( e.获取消息(
                 * @return api异常的结果
-                 */
+                */
                 throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "创建知识库目录失败: " + e.getMessage());
             }
         }
@@ -212,7 +212,7 @@ public class ApiKnowledgeController {
         /**
         * refreshstats。
         * @param base 基础
-         */
+        */
         refreshStats(base);
         bases.put(baseId, base);
 
@@ -232,7 +232,7 @@ public class ApiKnowledgeController {
     * 获取基础。
     * @param knowledge_base_id 知识baseid
     * @return 获取base的结果
-     */
+    */
     public ApiResult<Map<String, Object>> getBase(@PathVariable String knowledge_base_id) {
         Map<String, Object> base = requireBase(knowledge_base_id);
         return ApiResult.ok(toBaseResponse(base));
@@ -268,7 +268,7 @@ public class ApiKnowledgeController {
             /**
             * 删除recursively。
             * @param root 根
-             */
+            */
             deleteRecursively(root);
         }
         bases.remove(knowledge_base_id);
@@ -290,7 +290,7 @@ public class ApiKnowledgeController {
     /**
     * 获取retrieval配置。
     * @return 获取retrieval配置的结果
-     */
+    */
     public ApiResult<Map<String, Object>> getRetrievalConfig() {
         return ApiResult.ok(new LinkedHashMap<>(retrievalConfig));
     }
@@ -300,7 +300,7 @@ public class ApiKnowledgeController {
     * 设置retrieval配置。
     * @param body 主体
     * @return 设置retrieval配置的结果
-     */
+    */
     public ApiResult<Map<String, Object>> setRetrievalConfig(@RequestBody Map<String, Object> body) {
         Map<String, Object> embedding = body.get("embedding") instanceof Map ? uncheckedCast(body.get("embedding")) : null;
         Map<String, Object> rerank = body.get("rerank") instanceof Map ? uncheckedCast(body.get("rerank")) : null;
@@ -310,7 +310,7 @@ public class ApiKnowledgeController {
             * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
             * @param mode" mode"
             * @return api异常的结果
-             */
+            */
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "embedding 配置缺失 mode");
         }
         if (rerank == null || StringUtils.isBlank(String.valueOf(rerank.get("mode")))) {
@@ -319,7 +319,7 @@ public class ApiKnowledgeController {
             * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
             * @param mode" mode"
             * @return api异常的结果
-             */
+            */
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "rerank 配置缺失 mode");
         }
         retrievalConfig.put("embedding", normalizeStage(embedding));
@@ -351,7 +351,7 @@ public class ApiKnowledgeController {
             * @param ApiErrorCode.UPSTREAM_ERROR api错误编码.upstream错误
             * @param 生成的简介为空" 生成的简介为空"
             * @return api异常的结果
-             */
+            */
             throw new ApiException(ApiErrorCode.UPSTREAM_ERROR, "AI 生成的简介为空");
         }
 
@@ -373,7 +373,7 @@ public class ApiKnowledgeController {
         /**
         * refreshstats。
         * @param base 基础
-         */
+        */
         refreshStats(base);
         Map<String, Object> outcome = new LinkedHashMap<>();
         outcome.put("description", description);
@@ -389,7 +389,7 @@ public class ApiKnowledgeController {
     * generatedescription。
     * @param body 主体
     * @return generateDescription的结果
-     */
+    */
     public ApiResult<Map<String, Object>> generateDescription(@RequestBody Map<String, Object> body) {
         String rootPath = body.get("root_path") == null ? null : String.valueOf(body.get("root_path")).trim();
         if (StringUtils.isBlank(rootPath)) {
@@ -398,7 +398,7 @@ public class ApiKnowledgeController {
             * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
             * @param 不能为空" 不能为空"
             * @return api异常的结果
-             */
+            */
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "root_path 不能为空");
         }
         Path root = Paths.get(rootPath);
@@ -408,7 +408,7 @@ public class ApiKnowledgeController {
             * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
             * @param rootPath 根路径
             * @return api异常的结果
-             */
+            */
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "路径不是有效目录: " + rootPath);
         }
         String name = body.get("name") == null ? "" : String.valueOf(body.get("name"));
@@ -425,7 +425,7 @@ public class ApiKnowledgeController {
             * @param ApiErrorCode.UPSTREAM_ERROR api错误编码.upstream错误
             * @param 生成的简介为空" 生成的简介为空"
             * @return api异常的结果
-             */
+            */
             throw new ApiException(ApiErrorCode.UPSTREAM_ERROR, "AI 生成的简介为空");
         }
         Map<String, Object> result = new LinkedHashMap<>();
@@ -438,7 +438,7 @@ public class ApiKnowledgeController {
     * polishdescription。
     * @param body 主体
     * @return polishDescription的结果
-     */
+    */
     public ApiResult<Map<String, Object>> polishDescription(@RequestBody Map<String, Object> body) {
         String draft = body.get("draft") == null ? "" : String.valueOf(body.get("draft"));
         if (StringUtils.isBlank(draft)) {
@@ -447,7 +447,7 @@ public class ApiKnowledgeController {
             * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
             * @param 不能为空" 不能为空"
             * @return api异常的结果
-             */
+            */
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "draft 不能为空");
         }
         String name = body.get("name") == null ? "" : String.valueOf(body.get("name"));
@@ -473,7 +473,7 @@ public class ApiKnowledgeController {
     * refresh源。
     * @param knowledge_base_id 知识baseid
     * @return refresh源的结果
-     */
+    */
     public ApiResult<Map<String, Object>> refreshSource(@PathVariable String knowledge_base_id) {
         Map<String, Object> base = requireBase(knowledge_base_id);
         Map<String, Object> source = base.get("source") instanceof Map ? uncheckedCast(base.get("source")) : null;
@@ -483,7 +483,7 @@ public class ApiKnowledgeController {
             * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
             * @param "该知识库未配置来源" "该知识库未配置来源"
             * @return api异常的结果
-             */
+            */
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "该知识库未配置来源");
         }
         Path root = resolveRoot(base);
@@ -512,7 +512,7 @@ public class ApiKnowledgeController {
                 * 获取源。
                 * @param src src
                 * @param resolveRoot(base resolve根(基础
-                 */
+                */
                 fetchSource(src, resolveRoot(base));
             }
         } else {
@@ -521,7 +521,7 @@ public class ApiKnowledgeController {
             * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
             * @param 字段格式非法" 字段格式非法"
             * @return api异常的结果
-             */
+            */
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "source 字段格式非法");
         }
         base.put("updated_at", System.currentTimeMillis());
@@ -544,14 +544,14 @@ public class ApiKnowledgeController {
             * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
             * @param path 路径
             * @return api异常的结果
-             */
+            */
             throw new ApiException(ApiErrorCode.NOT_FOUND, "目录不存在: " + path);
         }
         List<Map<String, Object>> files = new ArrayList<>();
         /**
         * 尝试。
         * @param 1 1
-         */
+        */
         try (Stream<Path> walk = Files.walk(dir, 1)) {
             for (Path p : (Iterable<Path>) walk.filter(Files::isRegularFile)::iterator) {
                 files.add(fileEntry(root, p));
@@ -562,7 +562,7 @@ public class ApiKnowledgeController {
             * @param ApiErrorCode.INTERNAL_ERROR api错误编码.内部错误
             * @param e.getMessage( e.获取消息(
             * @return api异常的结果
-             */
+            */
             throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "列举文件失败: " + e.getMessage());
         }
         files.sort(Comparator.comparing(m -> String.valueOf(m.get("rel_path"))));
@@ -580,7 +580,7 @@ public class ApiKnowledgeController {
             * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
             * @param path 路径
             * @return api异常的结果
-             */
+            */
             throw new ApiException(ApiErrorCode.NOT_FOUND, "目录不存在: " + path);
         }
         List<Map<String, Object>> tree = buildTree(root, dir, 4);
@@ -599,7 +599,7 @@ public class ApiKnowledgeController {
             * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
             * @param 不能为空" 不能为空"
             * @return api异常的结果
-             */
+            */
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "path 不能为空");
         }
         Path root = resolveRoot(requireBase(knowledge_base_id));
@@ -612,14 +612,14 @@ public class ApiKnowledgeController {
             * @param ApiErrorCode.INTERNAL_ERROR api错误编码.内部错误
             * @param e.getMessage( e.获取消息(
             * @return api异常的结果
-             */
+            */
             throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "创建目录失败: " + e.getMessage());
         }
         Map<String, Object> base = requireBase(knowledge_base_id);
         /**
         * refreshstats。
         * @param base 基础
-         */
+        */
         refreshStats(base);
         pushService.push("knowledge.base-updated", toBaseResponse(base));
         return ApiResult.ok(treeEntry(root, folder));
@@ -636,19 +636,19 @@ public class ApiKnowledgeController {
             * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
             * @param path 路径
             * @return api异常的结果
-             */
+            */
             throw new ApiException(ApiErrorCode.NOT_FOUND, "目录不存在: " + path);
         }
         /**
         * 删除recursively。
         * @param folder 文件夹
-         */
+        */
         deleteRecursively(folder);
         Map<String, Object> base = requireBase(knowledge_base_id);
         /**
         * refreshstats。
         * @param base 基础
-         */
+        */
         refreshStats(base);
         pushService.push("knowledge.base-updated", toBaseResponse(base));
         return ApiResult.ok();
@@ -665,7 +665,7 @@ public class ApiKnowledgeController {
             * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
             * @param 均不能为空" 均不能为空"
             * @return api异常的结果
-             */
+            */
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "path 与 new_name 均不能为空");
         }
         if (newName.contains("/") || newName.contains("\\")) {
@@ -674,7 +674,7 @@ public class ApiKnowledgeController {
             * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
             * @param "新名称不能包含路径分隔符" "新名称不能包含路径分隔符"
             * @return api异常的结果
-             */
+            */
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "新名称不能包含路径分隔符");
         }
         Path root = resolveRoot(requireBase(knowledge_base_id));
@@ -686,7 +686,7 @@ public class ApiKnowledgeController {
             * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
             * @param "不能重命名根目录" "不能重命名根目录"
             * @return api异常的结果
-             */
+            */
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "不能重命名根目录");
         }
         Path renamed = parent.resolve(newName);
@@ -698,14 +698,14 @@ public class ApiKnowledgeController {
             * @param ApiErrorCode.INTERNAL_ERROR api错误编码.内部错误
             * @param e.getMessage( e.获取消息(
             * @return api异常的结果
-             */
+            */
             throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "重命名失败: " + e.getMessage());
         }
         Map<String, Object> base = requireBase(knowledge_base_id);
         /**
         * refreshstats。
         * @param base 基础
-         */
+        */
         refreshStats(base);
         pushService.push("knowledge.base-updated", toBaseResponse(base));
         return ApiResult.ok(treeEntry(root, renamed));
@@ -722,7 +722,7 @@ public class ApiKnowledgeController {
             * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
             * @param path 路径
             * @return api异常的结果
-             */
+            */
             throw new ApiException(ApiErrorCode.NOT_FOUND, "文件不存在: " + path);
         }
         if (!isTextFile(file)) {
@@ -731,7 +731,7 @@ public class ApiKnowledgeController {
             * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
             * @param "仅支持读取文本文件" "仅支持读取文本文件"
             * @return api异常的结果
-             */
+            */
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "仅支持读取文本文件");
         }
         String content;
@@ -743,7 +743,7 @@ public class ApiKnowledgeController {
             * @param ApiErrorCode.INTERNAL_ERROR api错误编码.内部错误
             * @param e.getMessage( e.获取消息(
             * @return api异常的结果
-             */
+            */
             throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "读取文件失败: " + e.getMessage());
         }
         Map<String, Object> result = new LinkedHashMap<>();
@@ -764,7 +764,7 @@ public class ApiKnowledgeController {
             * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
             * @param 不能为空" 不能为空"
             * @return api异常的结果
-             */
+            */
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "path 不能为空");
         }
         Object rawContent = body.get("content");
@@ -781,7 +781,7 @@ public class ApiKnowledgeController {
             * @param ApiErrorCode.INTERNAL_ERROR api错误编码.内部错误
             * @param e.getMessage( e.获取消息(
             * @return api异常的结果
-             */
+            */
             throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "写入文件失败: " + e.getMessage());
         }
         /**
@@ -789,12 +789,12 @@ public class ApiKnowledgeController {
         * @param base 基础
         * @param rel rel
         * @param content 内容
-         */
+        */
         indexKnowledgeFile(base, rel, content);
         /**
         * refreshstats。
         * @param base 基础
-         */
+        */
         refreshStats(base);
         pushService.push("knowledge.base-updated", toBaseResponse(base));
         return ApiResult.ok();
@@ -811,7 +811,7 @@ public class ApiKnowledgeController {
             * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
             * @param path 路径
             * @return api异常的结果
-             */
+            */
             throw new ApiException(ApiErrorCode.NOT_FOUND, "文件不存在: " + path);
         }
         try {
@@ -822,14 +822,14 @@ public class ApiKnowledgeController {
             * @param ApiErrorCode.INTERNAL_ERROR api错误编码.内部错误
             * @param e.getMessage( e.获取消息(
             * @return api异常的结果
-             */
+            */
             throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "删除文件失败: " + e.getMessage());
         }
         Map<String, Object> base = requireBase(knowledge_base_id);
         /**
         * refreshstats。
         * @param base 基础
-         */
+        */
         refreshStats(base);
         pushService.push("knowledge.base-updated", toBaseResponse(base));
         return ApiResult.ok();
@@ -841,7 +841,7 @@ public class ApiKnowledgeController {
 
     /**
     * 获取绑定（通过路径变量，适用于无斜杠的 标识）。
-     */
+    */
     @GetMapping("/binding/{kind}/{target_id}")
     public ApiResult<Map<String, Object>> getBinding(@PathVariable String kind,
                                                       @PathVariable String target_id) {
@@ -850,7 +850,7 @@ public class ApiKnowledgeController {
 
     /**
     * 获取绑定（通过查询参数，支持 Target_标识 中包含斜杠的路径）。
-     */
+    */
     @GetMapping("/binding")
     public ApiResult<Map<String, Object>> getBindingByQuery(@RequestParam String kind,
                                                              @RequestParam String target_id) {
@@ -859,7 +859,7 @@ public class ApiKnowledgeController {
 
     /**
     * 设置绑定（通过查询参数，支持 Target_标识 中包含斜杠的路径）。
-     */
+    */
     @PostMapping("/binding")
     public ApiResult<Map<String, Object>> setBindingByQuery(@RequestParam String kind,
                                                              @RequestParam String target_id,
@@ -884,7 +884,7 @@ public class ApiKnowledgeController {
     * 列表consumers。
     * @param knowledge_base_id 知识baseid
     * @return 列表consumers的结果
-     */
+    */
     public ApiResult<List<Map<String, Object>>> listConsumers(@PathVariable String knowledge_base_id) {
         List<Map<String, Object>> consumers = new ArrayList<>();
         for (Map<String, Object> b : bindings.values()) {
@@ -916,7 +916,7 @@ public class ApiKnowledgeController {
             * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
             * @param 不能为空" 不能为空"
             * @return api异常的结果
-             */
+            */
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "dest_path 不能为空");
         }
         Path root = resolveRoot(base);
@@ -927,7 +927,7 @@ public class ApiKnowledgeController {
             * 压缩目录。
             * @param root 根
             * @param dest dest
-             */
+            */
             zipDirectory(root, dest);
         } catch (IOException e) {
             /**
@@ -935,7 +935,7 @@ public class ApiKnowledgeController {
             * @param ApiErrorCode.INTERNAL_ERROR api错误编码.内部错误
             * @param e.getMessage( e.获取消息(
             * @return api异常的结果
-             */
+            */
             throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "导出失败: " + e.getMessage());
         }
         Map<String, Object> result = new LinkedHashMap<>();
@@ -948,7 +948,7 @@ public class ApiKnowledgeController {
     * 导入基础。
     * @param body 主体
     * @return 导入base的结果
-     */
+    */
     public ApiResult<Map<String, Object>> importBase(@RequestBody Map<String, Object> body) {
         String srcPath = body.get("src_path") == null ? null : String.valueOf(body.get("src_path")).trim();
         if (StringUtils.isBlank(srcPath)) {
@@ -957,7 +957,7 @@ public class ApiKnowledgeController {
             * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
             * @param 不能为空" 不能为空"
             * @return api异常的结果
-             */
+            */
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "src_path 不能为空");
         }
         Path src = Paths.get(srcPath);
@@ -967,7 +967,7 @@ public class ApiKnowledgeController {
             * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
             * @param srcPath src路径
             * @return api异常的结果
-             */
+            */
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "源包不存在: " + srcPath);
         }
         String baseId = conversationStore.newId();
@@ -978,7 +978,7 @@ public class ApiKnowledgeController {
             * unzip。
             * @param src src
             * @param root 根
-             */
+            */
             unzip(src, root);
         } catch (IOException e) {
             /**
@@ -986,7 +986,7 @@ public class ApiKnowledgeController {
             * @param ApiErrorCode.INTERNAL_ERROR api错误编码.内部错误
             * @param e.getMessage( e.获取消息(
             * @return api异常的结果
-             */
+            */
             throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "导入解压失败: " + e.getMessage());
         }
         long now = System.currentTimeMillis();
@@ -1003,7 +1003,7 @@ public class ApiKnowledgeController {
         /**
         * refreshstats。
         * @param base 基础
-         */
+        */
         refreshStats(base);
         bases.put(baseId, base);
         pushService.push("knowledge.base-created", toBaseResponse(base));
@@ -1018,7 +1018,7 @@ public class ApiKnowledgeController {
     /**
     * 列表标签。
     * @return 列表标签的结果
-     */
+    */
     public ApiResult<List<Map<String, Object>>> listTags() {
         List<Map<String, Object>> items = tags.values().stream()
                 .sorted(Comparator.comparing(
@@ -1032,7 +1032,7 @@ public class ApiKnowledgeController {
     * 创建标签。
     * @param body 主体
     * @return 创建标签的结果
-     */
+    */
     public ApiResult<Map<String, Object>> createTag(@RequestBody Map<String, Object> body) {
         String label = body.get("label") == null ? null : String.valueOf(body.get("label")).trim();
         if (StringUtils.isBlank(label)) {
@@ -1041,7 +1041,7 @@ public class ApiKnowledgeController {
             * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
             * @param "标签名称不能为空" "标签名称不能为空"
             * @return api异常的结果
-             */
+            */
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "标签名称不能为空");
         }
         String key = "tag-" + conversationStore.newId();
@@ -1067,7 +1067,7 @@ public class ApiKnowledgeController {
             * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
             * @param key 钥匙
             * @return api异常的结果
-             */
+            */
             throw new ApiException(ApiErrorCode.NOT_FOUND, "标签不存在: " + key);
         }
         if (body.containsKey("label")) {
@@ -1088,7 +1088,7 @@ public class ApiKnowledgeController {
     * 删除标签。
     * @param key 钥匙
     * @return 删除标签的结果
-     */
+    */
     public ApiResult<Void> deleteTag(@PathVariable String key) {
         if (tags.remove(key) == null) {
             /**
@@ -1096,7 +1096,7 @@ public class ApiKnowledgeController {
             * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
             * @param key 钥匙
             * @return api异常的结果
-             */
+            */
             throw new ApiException(ApiErrorCode.NOT_FOUND, "标签不存在: " + key);
         }
         // 从所有知识库标签列表中移除
@@ -1120,7 +1120,7 @@ public class ApiKnowledgeController {
     * 搜索。
     * @param body 主体
     * @return 搜索的结果
-     */
+    */
     public ApiResult<List<Map<String, Object>>> search(@RequestBody Map<String, Object> body) {
         String query = body.get("query") == null ? "" : String.valueOf(body.get("query"));
         if (StringUtils.isBlank(query)) {
@@ -1129,7 +1129,7 @@ public class ApiKnowledgeController {
             * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
             * @param 不能为空" 不能为空"
             * @return api异常的结果
-             */
+            */
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "query 不能为空");
         }
         int limit = body.get("limit") == null ? 20 : ((Number) body.get("limit")).intValue();
@@ -1167,7 +1167,7 @@ public class ApiKnowledgeController {
     * 获取知识库元数据（不存在抛 NOT_FOUND）。
     * @param knowledgeBaseId 知识baseid
     * @return requireBase的结果
-     */
+    */
     private Map<String, Object> requireBase(String knowledgeBaseId) {
         Map<String, Object> base = bases.get(knowledgeBaseId);
         if (base == null) {
@@ -1176,7 +1176,7 @@ public class ApiKnowledgeController {
             * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
             * @param knowledgeBaseId 知识baseid
             * @return api异常的结果
-             */
+            */
             throw new ApiException(ApiErrorCode.NOT_FOUND, "知识库不存在: " + knowledgeBaseId);
         }
         return base;
@@ -1186,7 +1186,7 @@ public class ApiKnowledgeController {
     * 解析知识库根目录（目录缺失抛 NOT_FOUND）。
     * @param base 基础
     * @return resolve根的结果
-     */
+    */
     private Path resolveRoot(Map<String, Object> base) {
         Path root = Paths.get(String.valueOf(base.get("root_path")));
         if (!Files.exists(root)) {
@@ -1195,7 +1195,7 @@ public class ApiKnowledgeController {
             * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
             * @param root 根
             * @return api异常的结果
-             */
+            */
             throw new ApiException(ApiErrorCode.NOT_FOUND, "知识库目录不存在: " + root);
         }
         return root;
@@ -1206,7 +1206,7 @@ public class ApiKnowledgeController {
     * @param root 根
     * @param rel rel
     * @return safeResolve的结果
-     */
+    */
     private Path safeResolve(Path root, String rel) {
         Path normalizedRoot = root.normalize();
         Path resolved = rel == null || rel.isBlank()
@@ -1218,7 +1218,7 @@ public class ApiKnowledgeController {
             * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
             * @param rel rel
             * @return api异常的结果
-             */
+            */
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "非法路径: " + rel);
         }
         return resolved;
@@ -1227,7 +1227,7 @@ public class ApiKnowledgeController {
     /**
     * 重算文件数量、总大小与目录存在性，并写回元数据。
     * @param base 基础
-     */
+    */
     private void refreshStats(Map<String, Object> base) {
         Path root = Paths.get(String.valueOf(base.get("root_path")));
         long[] stats = computeStats(root);
@@ -1240,7 +1240,7 @@ public class ApiKnowledgeController {
     * 遍历目录统计文件数与总字节数。
     * @param root 根
     * @return computeStats的结果
-     */
+    */
     private long[] computeStats(Path root) {
         long[] s = {0L, 0L};
         if (!Files.exists(root) || !Files.isDirectory(root)) {
@@ -1249,7 +1249,7 @@ public class ApiKnowledgeController {
         /**
         * 尝试。
         * @param Files.walk(root 文件.walk(根
-         */
+        */
         try (Stream<Path> walk = Files.walk(root)) {
             for (Path p : (Iterable<Path>) walk.filter(Files::isRegularFile)::iterator) {
                 s[0]++;
@@ -1269,7 +1269,7 @@ public class ApiKnowledgeController {
     * 转换为前端响应形态（补充实时统计字段）。
     * @param base 基础
     * @return 转为base响应的结果
-     */
+    */
     private Map<String, Object> toBaseResponse(Map<String, Object> base) {
         return new LinkedHashMap<>(base);
     }
@@ -1277,7 +1277,7 @@ public class ApiKnowledgeController {
     /**
     * 默认检索配置（嵌入 本地、rerank 关闭）。
     * @return 默认retrieval配置的结果
-     */
+    */
     private static Map<String, Object> defaultRetrievalConfig() {
         Map<String, Object> m = new LinkedHashMap<>();
         Map<String, Object> emb = new LinkedHashMap<>();
@@ -1293,7 +1293,7 @@ public class ApiKnowledgeController {
     * 规整检索阶段配置（保留 mode / 提供者_标识 / 模型）。
     * @param stage Stage
     * @return normalizeStage的结果
-     */
+    */
     private Map<String, Object> normalizeStage(Map<String, Object> stage) {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("mode", String.valueOf(stage.get("mode")));
@@ -1311,7 +1311,7 @@ public class ApiKnowledgeController {
     * @param source 源
     * @param root 根
     * @return 获取源的结果
-     */
+    */
     private Map<String, Object> fetchSource(Map<String, Object> source, Path root) {
         Object rawEntries = source.get("entries");
         List<?> entries = rawEntries instanceof List ? (List<?>) rawEntries : new ArrayList<>();
@@ -1327,7 +1327,7 @@ public class ApiKnowledgeController {
             * @param ApiErrorCode.INTERNAL_ERROR api错误编码.内部错误
             * @param e.getMessage( e.获取消息(
             * @return api异常的结果
-             */
+            */
             throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "创建快照目录失败: " + e.getMessage());
         }
         int i = 0;
@@ -1385,7 +1385,7 @@ public class ApiKnowledgeController {
     * 文件名净化，去除非法字符与路径分隔符。
     * @param name 名称
     * @return sanitize的结果
-     */
+    */
     private String sanitize(String name) {
         return name.replaceAll("[\\\\/:*?\"<>|]", "_");
     }
@@ -1395,7 +1395,7 @@ public class ApiKnowledgeController {
     * @param root 根
     * @param maxFiles 最大文件
     * @return gather上下文的结果
-     */
+    */
     private String gatherContext(Path root, int maxFiles) {
         if (!Files.exists(root)) {
             return "";
@@ -1405,7 +1405,7 @@ public class ApiKnowledgeController {
         /**
         * 尝试。
         * @param 3 3
-         */
+        */
         try (Stream<Path> walk = Files.walk(root, 3)) {
             for (Path p : (Iterable<Path>) walk.filter(Files::isRegularFile).limit(maxFiles)::iterator) {
                 String rel = root.relativize(p).toString().replace('\\', '/');
@@ -1435,7 +1435,7 @@ public class ApiKnowledgeController {
     * @param providerId 提供者标识
     * @param model 模型
     * @return AIgenerate的结果
-     */
+    */
     private String aiGenerate(String prompt, String providerId, String model) {
         ChatClient client = resolveClient(providerId, model);
         if (client == null) {
@@ -1444,7 +1444,7 @@ public class ApiKnowledgeController {
             * @param ApiErrorCode.NO_COMPLETER api错误编码.nocompleter
             * @param 对话服务" 对话服务"
             * @return api异常的结果
-             */
+            */
             throw new ApiException(ApiErrorCode.NO_COMPLETER, "未配置可用的 AI 对话服务");
         }
         try {
@@ -1456,7 +1456,7 @@ public class ApiKnowledgeController {
             * @param ApiErrorCode.UPSTREAM_ERROR api错误编码.upstream错误
             * @param e.getMessage( e.获取消息(
             * @return api异常的结果
-             */
+            */
             throw new ApiException(ApiErrorCode.UPSTREAM_ERROR, "AI 生成失败: " + e.getMessage());
         }
     }
@@ -1466,7 +1466,7 @@ public class ApiKnowledgeController {
     * @param providerId 提供者标识
     * @param model 模型
     * @return resolve客户端的结果
-     */
+    */
     private ChatClient resolveClient(String providerId, String model) {
         if (StringUtils.hasText(providerId) && chatClientRegistry.getByProvider(providerId) != null) {
             return chatClientRegistry.getByProvider(providerId);
@@ -1482,7 +1482,7 @@ public class ApiKnowledgeController {
     * @param root 根
     * @param file 文件
     * @return 文件entry的结果
-     */
+    */
     private Map<String, Object> fileEntry(Path root, Path file) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("rel_path", root.relativize(file).toString().replace('\\', '/'));
@@ -1496,7 +1496,7 @@ public class ApiKnowledgeController {
     * @param root 根
     * @param entry entry
     * @return 树entry的结果
-     */
+    */
     private Map<String, Object> treeEntry(Path root, Path entry) {
         boolean isDir = Files.isDirectory(entry);
         Map<String, Object> m = new LinkedHashMap<>();
@@ -1515,13 +1515,13 @@ public class ApiKnowledgeController {
     * @param dir dir
     * @param depth 深度
     * @return 构建树的结果
-     */
+    */
     private List<Map<String, Object>> buildTree(Path root, Path dir, int depth) {
         List<Map<String, Object>> entries = new ArrayList<>();
         /**
         * 尝试。
         * @param Files.list(dir 文件.列表(dir
-         */
+        */
         try (Stream<Path> list = Files.list(dir)) {
             for (Path p : (Iterable<Path>) list.sorted()::iterator) {
                 Map<String, Object> e = treeEntry(root, p);
@@ -1541,7 +1541,7 @@ public class ApiKnowledgeController {
     * @param base 基础
     * @param relPath rel路径
     * @param content 内容
-     */
+    */
     private void indexKnowledgeFile(Map<String, Object> base, String relPath, String content) {
         try {
             RagClient client = ragClientManager.current();
@@ -1558,7 +1558,7 @@ public class ApiKnowledgeController {
     /**
     * 递归删除目录。
     * @param path 路径
-     */
+    */
     private void deleteRecursively(Path path) {
         if (!Files.exists(path)) {
             return;
@@ -1566,7 +1566,7 @@ public class ApiKnowledgeController {
         /**
         * 尝试。
         * @param Files.walk(path 文件.walk(路径
-         */
+        */
         try (Stream<Path> walk = Files.walk(path)) {
             List<Path> all = walk.sorted(Comparator.reverseOrder()).toList();
             for (Path p : all) {
@@ -1585,7 +1585,7 @@ public class ApiKnowledgeController {
     * 判断是否为可读取文本文件（按扩展名粗筛）。
     * @param file 文件
     * @return 是否文本文件的结果
-     */
+    */
     private boolean isTextFile(Path file) {
         String name = file.getFileName() == null ? "" : file.getFileName().toString().toLowerCase();
         return name.endsWith(".md") || name.endsWith(".txt") || name.endsWith(".markdown")
@@ -1603,7 +1603,7 @@ public class ApiKnowledgeController {
     * 文件大小（字节），读取失败返回 0。
     * @param file 文件
     * @return 文件大小的结果
-     */
+    */
     private long fileSize(Path file) {
         try {
             return Files.size(file);
@@ -1616,7 +1616,7 @@ public class ApiKnowledgeController {
     * 文件最后修改时间（轮次 ms），读取失败返回 空。
     * @param file 文件
     * @return 最后一个modified的结果
-     */
+    */
     private Long lastModified(Path file) {
         try {
             return Files.getLastModifiedTime(file).toMillis();
@@ -1630,7 +1630,7 @@ public class ApiKnowledgeController {
     * @param kind 种类
     * @param targetId Targetid
     * @return requireBinding的结果
-     */
+    */
     private Map<String, Object> requireBinding(String kind, String targetId) {
         Map<String, Object> binding = bindings.get(bindingKey(kind, targetId));
         if (binding != null) {
@@ -1652,7 +1652,7 @@ public class ApiKnowledgeController {
     * @param kind 种类
     * @param targetId Targetid
     * @return binding钥匙的结果
-     */
+    */
     private String bindingKey(String kind, String targetId) {
         return kind + ":" + targetId;
     }
@@ -1662,7 +1662,7 @@ public class ApiKnowledgeController {
     * @param base 基础
     * @param query 查询
     * @return 搜索入base的结果
-     */
+    */
     private List<Map<String, Object>> searchInBase(Map<String, Object> base, String query) {
         Path root = Paths.get(String.valueOf(base.get("root_path")));
         List<Map<String, Object>> hits = new ArrayList<>();
@@ -1673,7 +1673,7 @@ public class ApiKnowledgeController {
         /**
         * 尝试。
         * @param Files.walk(root 文件.walk(根
-         */
+        */
         try (Stream<Path> walk = Files.walk(root)) {
             for (Path p : (Iterable<Path>) walk.filter(Files::isRegularFile)::iterator) {
                 if (!isTextFile(p)) {
@@ -1720,7 +1720,7 @@ public class ApiKnowledgeController {
     * @param text 文本
     * @param sub sub
     * @return 数量occurrences的结果
-     */
+    */
     private int countOccurrences(String text, String sub) {
         int count = 0;
         int idx = 0;
@@ -1736,7 +1736,7 @@ public class ApiKnowledgeController {
     * @param content 内容
     * @param relPath rel路径
     * @return extractHeading的结果
-     */
+    */
     private String extractHeading(String content, String relPath) {
         for (String line : content.split("\n", -1)) {
             String trimmed = line.trim();
@@ -1753,7 +1753,7 @@ public class ApiKnowledgeController {
     * @param content 内容
     * @param terms terms
     * @return extractSnippet的结果
-     */
+    */
     private String extractSnippet(String content, String[] terms) {
         String lower = content.toLowerCase();
         int pos = -1;
@@ -1777,17 +1777,17 @@ public class ApiKnowledgeController {
     * 打包目录为 压缩。
     * @param sourceDir 源dir
     * @param zipFile 压缩文件
-     */
+    */
     private void zipDirectory(Path sourceDir, Path zipFile) throws IOException {
         /**
         * 尝试。
         * @param ZipOutputStream(Files.newOutputStream(zipFile 压缩输出流(文件.新输出流(压缩文件
-         */
+        */
         try (ZipOutputStream zos = new ZipOutputStream(Files.newOutputStream(zipFile))) {
             /**
             * 尝试。
             * @param Files.walk(sourceDir 文件.walk(源dir
-             */
+            */
             try (Stream<Path> walk = Files.walk(sourceDir)) {
                 for (Path p : (Iterable<Path>) walk.filter(Files::isRegularFile)::iterator) {
                     String entryName = sourceDir.relativize(p).toString().replace('\\', '/');
@@ -1803,12 +1803,12 @@ public class ApiKnowledgeController {
     * 解压 压缩 到目标目录（防路径穿越）。
     * @param zipFile 压缩文件
     * @param destDir destdir
-     */
+    */
     private void unzip(Path zipFile, Path destDir) throws IOException {
         /**
         * 尝试。
         * @param ZipInputStream(Files.newInputStream(zipFile 压缩输入流(文件.新输入流(压缩文件
-         */
+        */
         try (ZipInputStream zis = new ZipInputStream(Files.newInputStream(zipFile))) {
             ZipEntry entry;
             while ((entry = zis.getNextEntry()) != null) {
@@ -1818,7 +1818,7 @@ public class ApiKnowledgeController {
                     * io异常。
                     * @param entry.getName( entry.获取名称(
                     * @return io异常的结果
-                     */
+                    */
                     throw new IOException("非法 zip 条目: " + entry.getName());
                 }
                 if (entry.isDirectory()) {
@@ -1836,7 +1836,7 @@ public class ApiKnowledgeController {
     * 类型擦除安全的 映射 转换。
     * @param obj obj
     * @return uncheckedCast的结果
-     */
+    */
     @SuppressWarnings("unchecked")
     private static Map<String, Object> uncheckedCast(Object obj) {
         return (Map<String, Object>) obj;

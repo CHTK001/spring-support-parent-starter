@@ -39,7 +39,7 @@ public class CacheConfiguration {
     * </p>
     * @param properties 属性
     * @return caffeine缓存管理器的结果
-     */
+    */
     @Bean(name = CacheProperties.CAFFEINE_BEAN_NAME)
     @ConditionalOnMissingBean(name = CacheProperties.CAFFEINE_BEAN_NAME)
     @ConditionalOnClass(Caffeine.class)
@@ -81,7 +81,7 @@ public class CacheConfiguration {
     * </p>
     * @param applicationContext application上下文
     * @return multi水平仪缓存管理器的结果
-     */
+    */
     @Primary
     @Bean(name = CACHE_MANAGER_FOR_MULTI)
     @ConditionalOnMissingBean(name = CACHE_MANAGER_FOR_MULTI)
@@ -98,7 +98,7 @@ public class CacheConfiguration {
     * <p>
     * 用于生成包含租户、应用、平台等上下文的缓存键。
     * </p>
-     */
+    */
     @Bean("tenantedKeyGenerator")
     @ConditionalOnMissingBean(name = "tenantedKeyGenerator")
     public TenantedKeyGenerator tenantedKeyGenerator(
@@ -117,7 +117,7 @@ public class CacheConfiguration {
     *
     * <p>保留供既有 @Cacheable(keyGenerator = "customTenantedKeyGenerator") 引用兼容。</p>
     * @return 习俗tenanted钥匙生成器的结果
-     */
+    */
     @Bean("customTenantedKeyGenerator")
     @ConditionalOnMissingBean(name = "customTenantedKeyGenerator")
     public org.springframework.cache.interceptor.KeyGenerator customTenantedKeyGenerator() {
@@ -130,14 +130,14 @@ public class CacheConfiguration {
     * 支持 钥匙 和 钥匙生成器 同时使用，默认使用 tenanted钥匙生成器。
     * </p>
     * @return 缓存习俗注解parser的结果
-     */
+    */
     @Bean
     @ConditionalOnMissingBean(CacheCustomAnnotationParser.class)
     public CacheCustomAnnotationParser cacheCustomAnnotationParser() {
         /**
         * 缓存习俗注解parser。
         * @return 缓存习俗注解parser的结果
-         */
+        */
         return new CacheCustomAnnotationParser();
     }
 
@@ -159,7 +159,7 @@ public CacheTemplate cacheTemplate(
     * @param multiLevelCacheManager multi水平仪缓存管理器
     * @param tenantedKeyGenerator tenanted钥匙生成器
     * @return 缓存template的结果
-     */
+    */
     return new CacheTemplate(multiLevelCacheManager, tenantedKeyGenerator);
 }
 
@@ -181,7 +181,7 @@ public CacheTemplate cacheTemplate(
     * 注册缓存模块服务信息。
     *
     * @return 服务信息贡献器
-     */
+    */
     @Bean
     public com.chua.starter.common.support.serviceinfo.ServiceInfoContributor cacheServiceInfoContributor() {
         return registry -> registry.registerFlag("cache", "缓存", true, "缓存模块");

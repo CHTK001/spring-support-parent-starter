@@ -26,24 +26,24 @@ public class ScriptJobHandler implements JobHandler {
 
     /**
     * 任务标识
-     */
+    */
     private final int jobId;
 
     /**
     * 胶水更新时间戳
-     */
+    */
     @Getter
     /** Glueupdatetime */
     private final long glueUpdatetime;
 
     /**
     * 脚本源码
-     */
+    */
     private final String gluesource;
 
     /**
     * 脚本类型
-     */
+    */
     private final GlueTypeEnum glueType;
 
     /**
@@ -53,7 +53,7 @@ public class ScriptJobHandler implements JobHandler {
     * @param glueUpdatetime 胶水更新时间戳
     * @param gluesource     脚本源码
     * @param glueType       脚本类型
-     */
+    */
     public ScriptJobHandler(int jobId, long glueUpdatetime, String gluesource, GlueTypeEnum glueType) {
         this.jobId = jobId;
         this.glueUpdatetime = glueUpdatetime;
@@ -63,13 +63,13 @@ public class ScriptJobHandler implements JobHandler {
         // 清理旧版本的脚本文件
         /**
         * clean旧script文件。
-         */
+        */
         cleanOldScriptFiles();
     }
 
     /**
     * 清理旧版本的脚本文件
-     */
+    */
     private void cleanOldScriptFiles() {
         File glueSrcPath = new File(JobFileAppender.getGlueSrcPath());
         if (glueSrcPath.exists()) {

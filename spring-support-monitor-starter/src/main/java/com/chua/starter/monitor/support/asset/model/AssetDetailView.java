@@ -81,10 +81,10 @@ public class AssetDetailView {
     }
 
     /**
-    * 资产关联的监控项及告警摘要。
-    * @author CH
-    * @since 4.0.0
-    */
+        * 资产关联的监控项及告警摘要。
+        * @author CH
+        * @since 4.0.0
+        */
     @Data
     @Accessors(chain = true)
     public static class MonitorItem {

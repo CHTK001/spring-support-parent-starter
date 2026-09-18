@@ -59,7 +59,7 @@ public class AuthClientExecute {
     * 获取Instance
     *
     * @return 获取instance的结果
-     */
+    */
     public static AuthClientExecute getInstance() {
         return INSTANCE;
     }
@@ -79,7 +79,7 @@ public class AuthClientExecute {
     * 获取缓存的用户结果信息（仅从 会话 获取，不请求服务器）
     *
     * @return 用户结果信息，未登录返回 空
-     */
+    */
     public UserResult getCacheUserResult() {
         return getSessionUserResult();
     }
@@ -89,7 +89,7 @@ public class AuthClientExecute {
     *
     * @return 用户结果信息
     * @throws AuthenticationException 如果未登录或令牌无效
-     */
+    */
     public UserResult getUserResult() {
         return getUserResultInternal(true);
     }
@@ -98,7 +98,7 @@ public class AuthClientExecute {
     * 安全获取用户结果信息，不抛出异常
     *
     * @return 用户结果信息，如果未登录则返回 空
-     */
+    */
     public UserResult getSafeUserResult() {
         return getUserResultInternal(false);
     }
@@ -106,7 +106,7 @@ public class AuthClientExecute {
     /**
     * 从 会话 获取用户结果（不请求服务器）
     * @return 获取会话用户结果的结果
-     */
+    */
     private UserResult getSessionUserResult() {
         HttpServletRequest request = AuthSessionUtils.getRequest();
         if (request == null) {
@@ -135,7 +135,7 @@ public class AuthClientExecute {
     *
     * @param throwOnFailure 失败时是否抛出异常
     * @return 用户结果信息
-     */
+    */
     private UserResult getUserResultInternal(boolean throwOnFailure) {
         HttpServletRequest request = AuthSessionUtils.getRequest();
         if (request == null) {
@@ -160,7 +160,7 @@ public class AuthClientExecute {
     * @param loginType  登录类型，例如："mobile"、"email"
     * @param logoutType 登出类型，例如：logout类型.LOGOUT
     * @return 登录认证结果
-     */
+    */
     public LoginAuthResult logout(String uid, String loginType, LogoutType logoutType) {
         String protocol = authClientProperties.getProtocol();
         ProtocolExecutor protocolExecutor = ServiceProvider.of(ProtocolExecutor.class).getExtension(protocol);
@@ -175,7 +175,7 @@ public class AuthClientExecute {
     /**
     * 清除本地缓存（会话 和内存缓存）
     * <p>登出时调用，清除 AuthFilter 存储的用户信息</p>
-     */
+    */
     private void clearLocalCache() {
         HttpServletRequest request = AuthSessionUtils.getRequest();
         if (request == null) {
@@ -200,7 +200,7 @@ public class AuthClientExecute {
     * 从请求中获取 令牌
     * @param request 请求
     * @return 获取令牌从请求的结果
-     */
+    */
     private String getTokenFromRequest(HttpServletRequest request) {
  // 从 头部 获取
         String token = request.getHeader(authClientProperties.getTokenName());
@@ -227,7 +227,7 @@ public class AuthClientExecute {
     * <p>根据当前请求中的 Token 登出，删除 Token 和 RefreshToken，并清除本地缓存</p>
     *
     * @return 登出结果
-     */
+    */
     public LoginAuthResult logoutCurrent() {
         UserResult userResult = getUserResult();
         if (userResult == null || StringUtils.isBlank(userResult.getToken())) {
@@ -236,13 +236,13 @@ public class AuthClientExecute {
             * @param 400 400
             * @param "未登录" "未登录"
             * @return login认证结果的结果
-             */
+            */
             return new LoginAuthResult(400, "未登录");
         }
         // 清除本地缓存
         /**
         * clear本地缓存。
-         */
+        */
         clearLocalCache();
  // 使用 令牌 作为 uid 参数，logout类型.LOGOUT 表示单设备登出
         return logout(userResult.getToken(), userResult.getLoginType(), LogoutType.LOGOUT);
@@ -253,7 +253,7 @@ public class AuthClientExecute {
     * <p>删除该用户的所有 Token 和 RefreshToken，并清除本地缓存</p>
     *
     * @return 登出结果
-     */
+    */
     public LoginAuthResult logoutAll() {
         UserResult userResult = getUserResult();
         if (userResult == null || StringUtils.isBlank(userResult.getUid())) {
@@ -262,13 +262,13 @@ public class AuthClientExecute {
             * @param 400 400
             * @param "未登录" "未登录"
             * @return login认证结果的结果
-             */
+            */
             return new LoginAuthResult(400, "未登录");
         }
         // 清除本地缓存
         /**
         * clear本地缓存。
-         */
+        */
         clearLocalCache();
         return logout(userResult.getUid(), userResult.getLoginType(), LogoutType.LOGOUT_ALL);
     }
@@ -279,7 +279,7 @@ public class AuthClientExecute {
     *
     * @param uid 用户唯一标识
     * @return 登出结果
-     */
+    */
     public LoginAuthResult logoutAll(String uid) {
         if (StringUtils.isBlank(uid)) {
             /**
@@ -287,7 +287,7 @@ public class AuthClientExecute {
             * @param 400 400
             * @param "用户ID不能为空" "用户标识不能为空"
             * @return login认证结果的结果
-             */
+            */
             return new LoginAuthResult(400, "用户ID不能为空");
         }
         return logout(uid, null, LogoutType.LOGOUT_ALL);
@@ -298,7 +298,7 @@ public class AuthClientExecute {
     *
     * @param token 访问令牌
     * @return 登出结果
-     */
+    */
     public LoginAuthResult logoutByToken(String token) {
         if (StringUtils.isBlank(token)) {
             /**
@@ -306,7 +306,7 @@ public class AuthClientExecute {
             * @param 400 400
             * @param "Token不能为空" "令牌不能为空"
             * @return login认证结果的结果
-             */
+            */
             return new LoginAuthResult(400, "Token不能为空");
         }
         return logout(token, null, LogoutType.LOGOUT);
@@ -318,7 +318,7 @@ public class AuthClientExecute {
     *
     * @param uid 用户唯一标识
     * @return 登出结果
-     */
+    */
     public LoginAuthResult unregister(String uid) {
         if (StringUtils.isBlank(uid)) {
             /**
@@ -326,7 +326,7 @@ public class AuthClientExecute {
             * @param 400 400
             * @param "用户ID不能为空" "用户标识不能为空"
             * @return login认证结果的结果
-             */
+            */
             return new LoginAuthResult(400, "用户ID不能为空");
         }
         return logout(uid, null, LogoutType.UN_REGISTER);
@@ -340,7 +340,7 @@ public class AuthClientExecute {
     * @param authType 认证类型，例如：认证类型.密码
     * @param ext      额外参数，例如：映射.的("captcha", "abcd")
     * @return 登录认证结果
-     */
+    */
     @Watch
     public LoginAuthResult getAccessToken(String username, String password, AuthType authType, Map<String, Object> ext) {
  // 账号锁定检查（o认证 限流能力）
@@ -381,7 +381,7 @@ public class AuthClientExecute {
     * @param authType   认证类型，例如 {@link AuthType#WECHAT} / {@link AuthType#THIRD_PARTY}
     * @param ext        额外参数，例如 {@code Map.of("openid", "xxx", "thirdPartyType", "wx_mini_app")}
     * @return 登录认证结果
-     */
+    */
     public LoginAuthResult thirdPartyLogin(String account, String credential, AuthType authType, Map<String, Object> ext) {
         return getAccessToken(account, credential, authType, ext);
     }
@@ -396,7 +396,7 @@ public class AuthClientExecute {
     * @param account 登录账号，例如手机号或用户标识
     * @param ext     额外参数，例如 {@code Map.of("loginType", "sms", "phone", "13800000000")}
     * @return 登录认证结果
-     */
+    */
     public LoginAuthResult smsLogin(String account, Map<String, Object> ext) {
         return getAccessToken(account, null, AuthType.SMS, ext);
     }
@@ -408,7 +408,7 @@ public class AuthClientExecute {
     * @param username 账号，例如："zhangsan"
     * @param authType 登录方式，例如："mobile"
     * @return UID
-     */
+    */
     public static String createUid(String username, String authType) {
         UserResult userResult = new UserResult();
         userResult.setLoginType(authType);
@@ -423,7 +423,7 @@ public class AuthClientExecute {
     * <p>通过调用服务器端接口获取在线状态信息</p>
     *
     * @return 在线状态信息，未登录返回 空
-     */
+    */
     public Protocol.OnlineStatus getOnlineStatus() {
         UserResult userResult = getUserResult();
         if (userResult == null || StringUtils.isBlank(userResult.getUid())) {
@@ -438,7 +438,7 @@ public class AuthClientExecute {
     *
     * @param uid 用户唯一标识
     * @return 在线状态信息
-     */
+    */
     public Protocol.OnlineStatus getOnlineStatus(String uid) {
         if (StringUtils.isBlank(uid)) {
             return null;
@@ -459,7 +459,7 @@ public class AuthClientExecute {
     * <p>通过调用服务器端接口判断</p>
     *
     * @return true-可以登录，false-已达上限
-     */
+    */
     public boolean canLogin() {
         Protocol.OnlineStatus status = getOnlineStatus();
         return status == null || !status.isReachedLimit();
@@ -471,7 +471,7 @@ public class AuthClientExecute {
     *
     * @param uid 用户唯一标识
     * @return true-可以登录，false-已达上限
-     */
+    */
     public boolean canLogin(String uid) {
         Protocol.OnlineStatus status = getOnlineStatus(uid);
         return status == null || !status.isReachedLimit();
@@ -481,7 +481,7 @@ public class AuthClientExecute {
     * 获取当前用户的在线数量
     *
     * @return 在线数量，未登录返回 0
-     */
+    */
     public int getOnlineCount() {
         Protocol.OnlineStatus status = getOnlineStatus();
         return status != null ? status.getOnlineCount() : 0;
@@ -492,7 +492,7 @@ public class AuthClientExecute {
     *
     * @param uid 用户唯一标识
     * @return 在线数量
-     */
+    */
     public int getOnlineCount(String uid) {
         Protocol.OnlineStatus status = getOnlineStatus(uid);
         return status != null ? status.getOnlineCount() : 0;
@@ -507,7 +507,7 @@ public class AuthClientExecute {
     * @param page     页码（从1开始）
     * @param size     每页大小
     * @return 在线用户列表结果
-     */
+    */
     public Protocol.OnlineUserResult getOnlineUsers(String username, String ip, int page, int size) {
         Protocol.OnlineUserQuery query = new Protocol.OnlineUserQuery(username, ip, page, size);
         return getOnlineUsers(query);
@@ -519,7 +519,7 @@ public class AuthClientExecute {
     *
     * @param query 查询参数
     * @return 在线用户列表结果
-     */
+    */
     public Protocol.OnlineUserResult getOnlineUsers(Protocol.OnlineUserQuery query) {
         try {
             Protocol protocol = WebRequest.getProtocolExtension(authClientProperties);
@@ -537,7 +537,7 @@ public class AuthClientExecute {
     * <p>通过调用服务器端接口获取在线用户信息</p>
     *
     * @return 在线用户列表结果
-     */
+    */
     public Protocol.OnlineUserResult getOnlineUsers() {
         return getOnlineUsers(null, null, 1, 100);
     }
@@ -546,12 +546,12 @@ public class AuthClientExecute {
 
     /**
     * 默认临时令牌过期时间（秒）
-     */
+    */
     private static final int DEFAULT_TEMPORARY_TOKEN_EXPIRE = 10;
 
     /**
     * 最大临时令牌过期时间（秒）
-     */
+    */
     private static final int MAX_TEMPORARY_TOKEN_EXPIRE = 3600;
 
     /**
@@ -559,7 +559,7 @@ public class AuthClientExecute {
     * <p>基于当前登录用户的令牌创建一个短期有效的临时令牌</p>
     *
     * @return 临时令牌结果，包含临时token和过期时间
-     */
+    */
     public LoginAuthResult createTemporaryToken() {
         return createTemporaryToken(DEFAULT_TEMPORARY_TOKEN_EXPIRE, null);
     }
@@ -569,7 +569,7 @@ public class AuthClientExecute {
     *
     * @param expireSeconds 过期时间（秒），范围：1-3600
     * @return 临时令牌结果
-     */
+    */
     public LoginAuthResult createTemporaryToken(int expireSeconds) {
         return createTemporaryToken(expireSeconds, null);
     }
@@ -580,7 +580,7 @@ public class AuthClientExecute {
     * @param expireSeconds 过期时间（秒），范围：1-3600
     * @param allowedUrls   允许访问的URL列表，空或空表示允许所有URL
     * @return 临时令牌结果
-     */
+    */
     public LoginAuthResult createTemporaryToken(int expireSeconds, List<String> allowedUrls) {
         UserResult userResult = getSafeUserResult();
         if (userResult == null || StringUtils.isBlank(userResult.getToken())) {
@@ -589,7 +589,7 @@ public class AuthClientExecute {
             * @param 401 401
             * @param "未登录或令牌无效" "未登录或令牌无效"
             * @return login认证结果的结果
-             */
+            */
             return new LoginAuthResult(401, "未登录或令牌无效");
         }
         return createTemporaryTokenByToken(userResult.getToken(), expireSeconds, allowedUrls);
@@ -602,7 +602,7 @@ public class AuthClientExecute {
     * @param expireSeconds 过期时间（秒），范围：1-3600
     * @param allowedUrls   允许访问的URL列表，空或空表示允许所有URL
     * @return 临时令牌结果
-     */
+    */
     public LoginAuthResult createTemporaryTokenByToken(String sourceToken, int expireSeconds, List<String> allowedUrls) {
         if (StringUtils.isBlank(sourceToken)) {
             /**
@@ -610,7 +610,7 @@ public class AuthClientExecute {
             * @param 400 400
             * @param "源令牌不能为空" "源令牌不能为空"
             * @return login认证结果的结果
-             */
+            */
             return new LoginAuthResult(400, "源令牌不能为空");
         }
 
@@ -625,7 +625,7 @@ public class AuthClientExecute {
                 * @param 500 500
                 * @param "协议服务不可用" "协议服务不可用"
                 * @return login认证结果的结果
-                 */
+                */
                 return new LoginAuthResult(500, "协议服务不可用");
             }
 
@@ -643,7 +643,7 @@ public class AuthClientExecute {
             * @param 500 500
             * @param e.getMessage( e.获取消息(
             * @return login认证结果的结果
-             */
+            */
             return new LoginAuthResult(500, "创建临时令牌失败: " + e.getMessage());
         }
     }
@@ -658,7 +658,7 @@ public class AuthClientExecute {
     * @param expireSeconds 过期时间（秒），范围：1-3600
     * @param allowedUrls   允许访问的URL列表，空或空表示允许所有URL
     * @return 临时令牌结果
-     */
+    */
     public LoginAuthResult createTemporaryTokenByRefreshToken(String refreshToken, int expireSeconds, List<String> allowedUrls) {
         if (StringUtils.isBlank(refreshToken)) {
             /**
@@ -666,7 +666,7 @@ public class AuthClientExecute {
             * @param 400 400
             * @param "刷新令牌不能为空" "刷新令牌不能为空"
             * @return login认证结果的结果
-             */
+            */
             return new LoginAuthResult(400, "刷新令牌不能为空");
         }
         return createTemporaryTokenByToken(refreshToken, expireSeconds, allowedUrls);
@@ -678,7 +678,7 @@ public class AuthClientExecute {
     * @param refreshToken  刷新令牌，例如："refresh_令牌_abc123"
     * @param upgradeType   更新类型，例如：upgrade类型.REFRESH
     * @return 登录结果
-     */
+    */
     public LoginResult upgrade(String refreshToken, UpgradeType upgradeType) {
         RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
         if (requestAttributes == null) {
@@ -700,7 +700,7 @@ public class AuthClientExecute {
     *
     * @param token 令牌令牌，例如："access_令牌_xyz789"
     * @return {@link 用户结果} 用户结果对象
-     */
+    */
     public UserResult getUserResult(String token) {
         if (StringUtils.isEmpty(token)) {
             return null;
@@ -742,7 +742,7 @@ public class AuthClientExecute {
     *
     * @return 租户ID，例如："tenant_001"
     * @see AuthSessionUtils#getTenantId()
-     */
+    */
     public static String getTenantId() {
         return AuthSessionUtils.getTenantId();
     }
@@ -752,7 +752,7 @@ public class AuthClientExecute {
     *
     * @return 用户ID，例如："user_001"
     * @see AuthSessionUtils#getUserId()
-     */
+    */
     public static String getUserId() {
         return AuthSessionUtils.getUserId();
     }
@@ -762,7 +762,7 @@ public class AuthClientExecute {
     *
     * @return 用户名，例如："zhangsan"
     * @see AuthSessionUtils#getUsername()
-     */
+    */
     public static String getUsername() {
         return AuthSessionUtils.getUsername();
     }
@@ -772,7 +772,7 @@ public class AuthClientExecute {
     *
     * @param username 用户名，例如："zhangsan"
     * @see AuthSessionUtils#setUsername(String)
-     */
+    */
     public static void setUsername(String username) {
         AuthSessionUtils.setUsername(username);
     }
@@ -782,7 +782,7 @@ public class AuthClientExecute {
     *
     * @param userInfo 用户信息对象
     * @see AuthSessionUtils#setUserInfo(Object)
-     */
+    */
     public static void setUserInfo(Object userInfo) {
         AuthSessionUtils.setUserInfo(userInfo);
     }
@@ -794,7 +794,7 @@ public class AuthClientExecute {
     * @param <T>    泛型类型
     * @return 用户信息对象
     * @see AuthSessionUtils#getUserInfo(Class)
-     */
+    */
     public static <T> T getUserInfo(Class<T> target) {
         return AuthSessionUtils.getUserInfo(target);
     }
@@ -803,7 +803,7 @@ public class AuthClientExecute {
     * 删除用户名
     *
     * @see AuthSessionUtils#removeUsername()
-     */
+    */
     public static void removeUsername() {
         AuthSessionUtils.removeUsername();
     }
@@ -812,7 +812,7 @@ public class AuthClientExecute {
     * 删除用户信息
     *
     * @see AuthSessionUtils#removeUserInfo()
-     */
+    */
     public static void removeUserInfo() {
         AuthSessionUtils.removeUserInfo();
     }
@@ -821,7 +821,7 @@ public class AuthClientExecute {
     * 获取请求中的令牌
     *
     * @return token字符串，例如："access_token_xyz789"
-     */
+    */
     public String getToken() {
         HttpServletRequest request = getRequest();
         if (null == request) {
@@ -846,7 +846,7 @@ public class AuthClientExecute {
     /**
     * 是否明白
     * @return 是否明白
-     */
+    */
     public boolean whiteList() {
         HttpServletRequest request = getRequest();
         if (null == request) {

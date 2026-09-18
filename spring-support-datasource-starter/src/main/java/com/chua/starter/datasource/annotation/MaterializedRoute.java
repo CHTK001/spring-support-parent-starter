@@ -22,7 +22,7 @@ public @interface MaterializedRoute {
     * 小于等于 0 时使用全局默认值。
     *
     * @return 阈值
-     */
+    */
     long threshold() default -1L;
 
     /**
@@ -30,7 +30,7 @@ public @interface MaterializedRoute {
     * 留空时优先使用当前上下文数据源，否则回退到 master。
     *
     * @return 数据源名称
-     */
+    */
     String dataSource() default "";
 
 }

@@ -29,7 +29,7 @@ public class SpiderExecutionLog extends SysBase {
 
     /**
     * 主键 标识（自增）
-     */
+    */
     @TableId(type = IdType.AUTO)
     @Schema(description = "主键 ID")
     /** 标识 */
@@ -37,7 +37,7 @@ public class SpiderExecutionLog extends SysBase {
 
     /**
     * 执行号（追踪标识）
-     */
+    */
     @TableField("execution_no")
     @Schema(description = "执行号")
     /** 执行no */
@@ -45,7 +45,7 @@ public class SpiderExecutionLog extends SysBase {
 
     /**
     * 爬虫编码
-     */
+    */
     @TableField("definition_code")
     @Schema(description = "爬虫编码")
     /** Definition代码 */
@@ -53,7 +53,7 @@ public class SpiderExecutionLog extends SysBase {
 
     /**
     * 流程 标识
-     */
+    */
     @TableField("flow_id")
     @Schema(description = "流程 ID")
     /** 流标识 */
@@ -61,7 +61,7 @@ public class SpiderExecutionLog extends SysBase {
 
     /**
     * 节点 标识
-     */
+    */
     @TableField("node_id")
     @Schema(description = "节点 ID")
     /** 节点标识 */
@@ -69,7 +69,7 @@ public class SpiderExecutionLog extends SysBase {
 
     /**
     * 节点名称
-     */
+    */
     @TableField("node_name")
     @Schema(description = "节点名称")
     /** 节点名称 */
@@ -77,7 +77,7 @@ public class SpiderExecutionLog extends SysBase {
 
     /**
     * 节点类型
-     */
+    */
     @TableField("node_type")
     @Schema(description = "节点类型")
     /** 节点类型 */
@@ -85,7 +85,7 @@ public class SpiderExecutionLog extends SysBase {
 
     /**
     * 状态（RUNNING/成功/失败）
-     */
+    */
     @TableField("status")
     @Schema(description = "状态")
     /** 状态 */
@@ -93,7 +93,7 @@ public class SpiderExecutionLog extends SysBase {
 
     /**
     * 节点输入数据（JSON）
-     */
+    */
     @TableField("input_data")
     @Schema(description = "节点输入数据")
     /** 输入数据 */
@@ -101,7 +101,7 @@ public class SpiderExecutionLog extends SysBase {
 
     /**
     * 节点输出数据（JSON）
-     */
+    */
     @TableField("output_data")
     @Schema(description = "节点输出数据")
     /** 输出数据 */
@@ -109,7 +109,7 @@ public class SpiderExecutionLog extends SysBase {
 
     /**
     * 失败信息
-     */
+    */
     @TableField("error_message")
     @Schema(description = "失败信息")
     /** 错误消息 */
@@ -117,7 +117,7 @@ public class SpiderExecutionLog extends SysBase {
 
     /**
     * 节点开始时间
-     */
+    */
     @TableField("start_at")
     @Schema(description = "节点开始时间")
     /** 开始AT */
@@ -125,7 +125,7 @@ public class SpiderExecutionLog extends SysBase {
 
     /**
     * 节点结束时间
-     */
+    */
     @TableField("end_at")
     @Schema(description = "节点结束时间")
     /** 结束AT */
@@ -133,7 +133,7 @@ public class SpiderExecutionLog extends SysBase {
 
     /**
     * 逻辑删除标记（0 未删除 / 1 已删除）
-     */
+    */
     @TableField("sys_deleted")
     @TableLogic
     @Schema(description = "逻辑删除标记")

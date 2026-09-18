@@ -22,7 +22,7 @@ public interface AiModelCatalogService {
     * 获取按能力分组的所有模型清单。
     *
     * @return 能力标签 → 模型 标识 列表
-     */
+    */
     Map<String, List<String>> listModelsByCapability();
 
     /**
@@ -30,13 +30,13 @@ public interface AiModelCatalogService {
     *
     * @param capability 能力标签（如 detect / 特征 / 对话 / 文本-转为-镜像）
     * @return 模型 标识 列表
-     */
+    */
     List<String> listModels(String capability);
 
     /**
     * 获取全部能力标签。
     *
     * @return 能力标签列表
-     */
+    */
     List<String> listCapabilities();
 }

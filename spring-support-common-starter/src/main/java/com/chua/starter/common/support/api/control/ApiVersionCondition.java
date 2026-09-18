@@ -31,29 +31,29 @@ public class ApiVersionCondition implements RequestCondition<ApiVersionCondition
     /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(ApiVersionCondition.class);
         /**
-        * 版本参数名
-     */
+    * 版本参数名
+    */
     private static final String VERSION_PARAM = "apiVersion";
 
     /**
     * 版本请求头名
-     */
+    */
     private static final String VERSION_HEADER = "X-Api-Version";
 
     /**
     * 最新版本标识
-     */
+    */
     private static final String LATEST = "latest";
 
     /**
     * API 版本 接口
-     */
+    */
     private final ApiVersion apiVersion;
 
     /**
     * 创建 api版本条件 实例
     * @param apiVersion api版本
-     */
+    */
     public ApiVersionCondition(ApiVersion apiVersion) {
         this.apiVersion = apiVersion;
     }
@@ -63,13 +63,13 @@ public class ApiVersionCondition implements RequestCondition<ApiVersionCondition
     *
     * @param other 另一个条件
     * @return 合并后的条件
-     */
+    */
     @Override
     public ApiVersionCondition combine(ApiVersionCondition other) {
         /**
         * api版本条件。
         * @param other.getApiVersion( other.获取api版本(
-         */
+        */
         return new ApiVersionCondition(other.getApiVersion());
     }
 
@@ -83,7 +83,7 @@ public class ApiVersionCondition implements RequestCondition<ApiVersionCondition
     *
     * @param httpServletRequest HTTP 请求
     * @return 匹配成功的条件，失败返回 空
-     */
+    */
     @Override
     public ApiVersionCondition getMatchingCondition(HttpServletRequest httpServletRequest) {
  // 1. 从查询参数获取版本号 ?api版本=1 或 ?api版本=v1 或 ?api版本=latest
@@ -129,7 +129,7 @@ Version apiVersionValue = Version.of(currentApiVersion.value());
     *
     * @param httpServletRequest HTTP 请求
     * @return 是否为 latest
-     */
+    */
     private boolean isLatestVersion(HttpServletRequest httpServletRequest) {
         String versionStr = httpServletRequest.getParameter(VERSION_PARAM);
         if (null == versionStr || versionStr.isEmpty()) {
@@ -143,7 +143,7 @@ Version apiVersionValue = Version.of(currentApiVersion.value());
     *
     * @param versionStr 版本号字符串
     * @return 版本号数值
-     */
+    */
     private Version parseVersion(String versionStr) {
         try {
             return Version.of(versionStr);
@@ -162,7 +162,7 @@ Version apiVersionValue = Version.of(currentApiVersion.value());
     * @param other              另一个条件
     * @param httpServletRequest HTTP 请求
     * @return 比较结果
-     */
+    */
     @Override
     public int compareTo(ApiVersionCondition other, HttpServletRequest httpServletRequest) {
         Version thisVersion = getApiVersion() != null ? Version.of(getApiVersion().value()) : Version.of("0");
@@ -180,7 +180,7 @@ Version apiVersionValue = Version.of(currentApiVersion.value());
     * 获取 api版本
     *
     * @return apiVersion
-     */
+    */
     public ApiVersion getApiVersion() {
         return apiVersion;
     }

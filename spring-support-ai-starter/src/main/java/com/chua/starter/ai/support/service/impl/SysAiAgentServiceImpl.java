@@ -88,7 +88,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
     * 创建智能体。
     * @param body 主体
     * @return 创建智能体的结果
-     */
+    */
     public Map<String, Object> createAgent(Map<String, Object> body) {
         long now = System.currentTimeMillis();
         SysAiAgent entity = new SysAiAgent();
@@ -98,7 +98,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
         * @param entity 实体
         * @param body 主体
         * @param true true
-         */
+        */
         applyBody(entity, body, true);
         entity.setEnabled(bool(body, "enabled", true));
         entity.setSortOrder(intv(body, "sort_order", agentMapper.selectCount(null).intValue()));
@@ -108,7 +108,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
         /**
         * rebuild智能体。
         * @param entity 实体
-         */
+        */
         rebuildAgent(entity);
         return toResponse(entity, true);
     }
@@ -120,7 +120,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
     * @param agentId 智能体标识
     * @param body 主体
     * @return 更新智能体的结果
-     */
+    */
     public Map<String, Object> updateAgent(String agentId, Map<String, Object> body) {
         SysAiAgent entity = requireAgent(agentId);
         /**
@@ -128,7 +128,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
         * @param entity 实体
         * @param body 主体
         * @param false false
-         */
+        */
         applyBody(entity, body, false);
         if (body.containsKey("enabled")) {
             entity.setEnabled(bool(body, "enabled", true));
@@ -141,7 +141,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
         /**
         * rebuild智能体。
         * @param entity 实体
-         */
+        */
         rebuildAgent(entity);
         return toResponse(entity, true);
     }
@@ -151,7 +151,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
     /**
     * 删除智能体。
     * @param agentId 智能体标识
-     */
+    */
     public void deleteAgent(String agentId) {
         SysAiAgent agent = requireAgent(agentId);
         agentRegistry.unregister(agent.getName());
@@ -169,12 +169,12 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
     * @param agentId 智能体标识
     * @param body 主体
     * @return 创建sub智能体的结果
-     */
+    */
     public Map<String, Object> createSubAgent(String agentId, Map<String, Object> body) {
         /**
         * require智能体。
         * @param agentId 智能体标识
-         */
+        */
         requireAgent(agentId);
         long now = System.currentTimeMillis();
         SysAiAgent entity = new SysAiAgent();
@@ -185,7 +185,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
         * @param entity 实体
         * @param body 主体
         * @param true true
-         */
+        */
         applyBody(entity, body, true);
         entity.setEnabled(bool(body, "enabled", true));
         entity.setSortOrder(intv(body, "sort_order",
@@ -198,7 +198,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
         /**
         * rebuild智能体。
         * @param master master
-         */
+        */
         rebuildAgent(master);
         return toResponse(entity, false);
     }
@@ -211,12 +211,12 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
     * @param subId subid
     * @param body 主体
     * @return 更新sub智能体的结果
-     */
+    */
     public Map<String, Object> updateSubAgent(String agentId, String subId, Map<String, Object> body) {
         /**
         * require智能体。
         * @param agentId 智能体标识
-         */
+        */
         requireAgent(agentId);
         SysAiAgent entity = requireAgent(subId);
         if (entity.getParentId() == null || !entity.getParentId().equals(agentId)) {
@@ -224,7 +224,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
             * illegal参数异常。
             * @param agentId 智能体标识
             * @return illegal参数异常的结果
-             */
+            */
             throw new IllegalArgumentException("子 Agent " + subId + " 不属于主 Agent " + agentId);
         }
         /**
@@ -232,7 +232,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
         * @param entity 实体
         * @param body 主体
         * @param false false
-         */
+        */
         applyBody(entity, body, false);
         entity.setUpdatedAt(System.currentTimeMillis());
         agentMapper.updateById(entity);
@@ -240,7 +240,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
         /**
         * rebuild智能体。
         * @param master master
-         */
+        */
         rebuildAgent(master);
         return toResponse(entity, false);
     }
@@ -251,12 +251,12 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
     * 删除sub智能体。
     * @param agentId 智能体标识
     * @param subId subid
-     */
+    */
     public void deleteSubAgent(String agentId, String subId) {
         /**
         * require智能体。
         * @param agentId 智能体标识
-         */
+        */
         requireAgent(agentId);
         SysAiAgent entity = requireAgent(subId);
         if (entity.getParentId() == null || !entity.getParentId().equals(agentId)) {
@@ -264,7 +264,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
             * illegal参数异常。
             * @param agentId 智能体标识
             * @return illegal参数异常的结果
-             */
+            */
             throw new IllegalArgumentException("子 Agent " + subId + " 不属于主 Agent " + agentId);
         }
         agentMapper.deleteById(subId);
@@ -272,7 +272,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
         /**
         * rebuild智能体。
         * @param master master
-         */
+        */
         rebuildAgent(master);
     }
 
@@ -435,7 +435,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
 
     /**
     * Kahn 拓扑排序：按 edges(source→target) 对节点排序，跳过主节点与未注册子 Agent。
-     */
+    */
     private static List<String> topologicalOrder(List<Map<String, Object>> nodes, List<Map<String, Object>> edges,
                                                  Set<String> validSubIds, String masterId) {
         Map<String, Integer> indegree = new LinkedHashMap<>(4); // 节点数量不可预估
@@ -508,7 +508,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
             * illegal参数异常。
             * @param 可以注册为模型" 可以注册为模型"
             * @return illegal参数异常的结果
-             */
+            */
             throw new IllegalArgumentException("只有主 Agent 可以注册为模型");
         }
         String resolvedModel = modelName != null && !modelName.isBlank()
@@ -516,7 +516,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
         /**
         * rebuild智能体。
         * @param agent 智能体
-         */
+        */
         rebuildAgent(agent);
 
  // 智能体-as-模型：包装为 对话客户端 注册到对话注册中心
@@ -659,7 +659,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
         /**
         * rebuild智能体。
         * @param agent 智能体
-         */
+        */
         rebuildAgent(agent);
     }
 
@@ -669,7 +669,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
     * 构建对话客户端。
     * @param agent 智能体
     * @return 构建对话客户端的结果
-     */
+    */
     private ChatClient buildChatClient(SysAiAgent agent) {
         if (agent.getProviderId() == null || agent.getProviderId().isBlank()
                 || agent.getModel() == null || agent.getModel().isBlank()) {
@@ -696,7 +696,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
     * @param entity 实体
     * @param body 主体
     * @param create 创建
-     */
+    */
     private void applyBody(SysAiAgent entity, Map<String, Object> body, boolean create) {
         if (body.containsKey("name")) {
             entity.setName(str(body, "name"));
@@ -745,7 +745,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
     * @param agent 智能体
     * @param includeSubs includesubs
     * @return 转为响应的结果
-     */
+    */
     private Map<String, Object> toResponse(SysAiAgent agent, boolean includeSubs) {
         Map<String, Object> map = new LinkedHashMap<>(16);
         map.put("agent_id", agent.getAgentId());
@@ -780,7 +780,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
     * sub智能体的。
     * @param parentId 父标识
     * @return sub智能体的的结果
-     */
+    */
     private List<SysAiAgent> subAgentsOf(String parentId) {
         return agentMapper.selectList(new LambdaQueryWrapper<SysAiAgent>()
                 .eq(SysAiAgent::getParentId, parentId)
@@ -792,7 +792,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
     * require智能体。
     * @param agentId 智能体标识
     * @return require智能体的结果
-     */
+    */
     private SysAiAgent requireAgent(String agentId) {
         SysAiAgent agent = agentMapper.selectById(agentId);
         if (agent == null) {
@@ -800,7 +800,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
             * illegal参数异常。
             * @param agentId 智能体标识
             * @return illegal参数异常的结果
-             */
+            */
             throw new IllegalArgumentException("Agent 不存在: " + agentId);
         }
         return agent;
@@ -812,7 +812,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
     * @param key 钥匙
     * @param def def
     * @return strategyStr的结果
-     */
+    */
     private static String strategyStr(SysAiAgent agent, String key, String def) {
         Object v = agent.getStrategy() != null ? agent.getStrategy().get(key) : null;
         return v != null && !v.toString().isBlank() ? v.toString() : def;
@@ -824,7 +824,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
     * @param key 钥匙
     * @param def def
     * @return strategyBool的结果
-     */
+    */
     private static boolean strategyBool(SysAiAgent agent, String key, boolean def) {
         Object v = agent.getStrategy() != null ? agent.getStrategy().get(key) : null;
         return v != null ? Boolean.parseBoolean(v.toString()) : def;
@@ -836,7 +836,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
     * @param key 钥匙
     * @param def def
     * @return strategyInt的结果
-     */
+    */
     private static int strategyInt(SysAiAgent agent, String key, int def) {
         Object v = agent.getStrategy() != null ? agent.getStrategy().get(key) : null;
         if (v == null) {
@@ -853,7 +853,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
     * extractapi钥匙。
     * @param credentials 凭证
     * @return extractapi钥匙的结果
-     */
+    */
     private static String extractApiKey(Map<String, Object> credentials) {
         if (credentials == null) {
             return null;
@@ -871,7 +871,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
     * extractextra头部。
     * @param extra extra
     * @return extractextra头部的结果
-     */
+    */
     private static Map<String, String> extractExtraHeaders(Map<String, Object> extra) {
         if (extra == null) {
             return null;
@@ -894,7 +894,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
     * @param map 映射
     * @param key 钥匙
     * @return str的结果
-     */
+    */
     private static String str(Map<String, Object> map, String key) {
         Object v = map.get(key);
         return v != null ? v.toString() : null;
@@ -906,7 +906,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
     * @param key 钥匙
     * @param def def
     * @return bool的结果
-     */
+    */
     private static boolean bool(Map<String, Object> map, String key, boolean def) {
         Object v = map.get(key);
         return v != null ? Boolean.parseBoolean(v.toString()) : def;
@@ -918,7 +918,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
     * @param key 钥匙
     * @param def def
     * @return intv的结果
-     */
+    */
     private static int intv(Map<String, Object> map, String key, int def) {
         Object v = map.get(key);
         if (v == null) {
@@ -936,7 +936,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
     * @param map 映射
     * @param key 钥匙
     * @return 字符串列表的结果
-     */
+    */
     private static List<String> stringList(Map<String, Object> map, String key) {
         Object v = map.get(key);
         if (!(v instanceof List<?> list)) {

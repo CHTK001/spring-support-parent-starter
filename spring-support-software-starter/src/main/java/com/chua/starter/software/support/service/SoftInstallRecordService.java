@@ -21,7 +21,7 @@ public interface SoftInstallRecordService extends IService<SoftInstallRecord> {
     *
     * @param request 安装请求
     * @return 返回安装详情
-     */
+    */
     ReturnResult<InstallDetailResponse> install(InstallRequest request);
 
     /**
@@ -31,7 +31,7 @@ public interface SoftInstallRecordService extends IService<SoftInstallRecord> {
     * @param userId 用户标识
     * @param deviceId 设备标识
     * @return 返回卸载详情
-     */
+    */
     ReturnResult<InstallDetailResponse> uninstall(String softwareId, String userId, String deviceId);
 
     /**
@@ -42,7 +42,7 @@ public interface SoftInstallRecordService extends IService<SoftInstallRecord> {
     * @param deviceId 设备标识
     * @param targetVersion 目标版本
     * @return 返回升级详情
-     */
+    */
     ReturnResult<InstallDetailResponse> updateVersion(String softwareId, String userId, String deviceId, String targetVersion);
 
     /**
@@ -50,7 +50,7 @@ public interface SoftInstallRecordService extends IService<SoftInstallRecord> {
     *
     * @param softwareId 软件标识
     * @return 安装记录列表
-     */
+    */
     List<SoftInstallRecord> listBySoftwareId(String softwareId);
 
     /**
@@ -58,7 +58,7 @@ public interface SoftInstallRecordService extends IService<SoftInstallRecord> {
     *
     * @param userId 用户标识
     * @return 安装记录列表
-     */
+    */
     List<SoftInstallRecord> listByUserId(String userId);
 
     /**
@@ -66,7 +66,7 @@ public interface SoftInstallRecordService extends IService<SoftInstallRecord> {
     *
     * @param userId 用户标识
     * @return 已安装记录列表
-     */
+    */
     List<SoftInstallRecord> listInstalledByUserId(String userId);
 
     /**
@@ -76,7 +76,7 @@ public interface SoftInstallRecordService extends IService<SoftInstallRecord> {
     * @param userId 用户标识
     * @param deviceId 设备标识
     * @return 安装记录
-     */
+    */
     SoftInstallRecord getInstalledRecord(String softwareId, String userId, String deviceId);
 
     /**
@@ -84,7 +84,7 @@ public interface SoftInstallRecordService extends IService<SoftInstallRecord> {
     *
     * @param userId 用户标识
     * @return 已安装软件ID列表
-     */
+    */
     List<String> getInstalledSoftwareIds(String userId);
 
     /**
@@ -92,7 +92,7 @@ public interface SoftInstallRecordService extends IService<SoftInstallRecord> {
     *
     * @param recordId 记录标识
     * @return 安装详情
-     */
+    */
     ReturnResult<InstallDetailResponse> getInstallDetail(String recordId);
 
     /**
@@ -102,7 +102,7 @@ public interface SoftInstallRecordService extends IService<SoftInstallRecord> {
     * @param progress 进度
     * @param message 消息
     * @return 更新结果
-     */
+    */
     ReturnResult<Boolean> updateProgress(String recordId, Integer progress, String message);
 
     /**
@@ -110,7 +110,7 @@ public interface SoftInstallRecordService extends IService<SoftInstallRecord> {
     *
     * @param recordId 记录标识
     * @return 结果
-     */
+    */
     ReturnResult<Boolean> completeInstall(String recordId);
 
     /**
@@ -119,7 +119,7 @@ public interface SoftInstallRecordService extends IService<SoftInstallRecord> {
     * @param recordId 记录标识
     * @param errorMessage 错误信息
     * @return 结果
-     */
+    */
     ReturnResult<Boolean> failInstall(String recordId, String errorMessage);
 
     /**
@@ -127,7 +127,7 @@ public interface SoftInstallRecordService extends IService<SoftInstallRecord> {
     *
     * @param recordId 记录标识
     * @return 结果
-     */
+    */
     ReturnResult<Boolean> completeUninstall(String recordId);
 
     /**
@@ -136,6 +136,6 @@ public interface SoftInstallRecordService extends IService<SoftInstallRecord> {
     * @param recordId 记录标识
     * @param errorMessage 错误信息
     * @return 结果
-     */
+    */
     ReturnResult<Boolean> failUninstall(String recordId, String errorMessage);
 }

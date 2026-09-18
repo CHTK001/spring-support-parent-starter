@@ -29,22 +29,22 @@ public class MonitoringDataSource implements DataSource {
 
     /**
     * 目标数据源
-     */
+    */
     private final DataSource delegate;
 
     /**
     * 数据源名称
-     */
+    */
     private final String dataSourceName;
 
     /**
     * 监控门面
-     */
+    */
     private final DataSourceSqlMonitor monitor;
 
     /**
     * 当前活跃连接数（统计用）
-     */
+    */
     private final AtomicInteger activeConnections = new AtomicInteger();
 
     /**
@@ -53,7 +53,7 @@ public class MonitoringDataSource implements DataSource {
     * @param delegate       目标数据源
     * @param dataSourceName 数据源名称
     * @param monitor        监控门面
-     */
+    */
     public MonitoringDataSource(DataSource delegate, String dataSourceName, DataSourceSqlMonitor monitor) {
         this.delegate = Objects.requireNonNull(delegate, "delegate must not be null");
         this.dataSourceName = dataSourceName;
@@ -66,13 +66,13 @@ public class MonitoringDataSource implements DataSource {
         Connection connection = delegate.getConnection();
         activeConnections.incrementAndGet();
         /**
-        * 监控connection。
-        * @param connection connection
-        * @param dataSourceName 数据源名称
-        * @param monitor 监控
-        * @param closeCallback( 关闭callback(
-        * @return 监控connection的结果
-         */
+    * 监控connection。
+    * @param connection connection
+    * @param dataSourceName 数据源名称
+    * @param monitor 监控
+    * @param closeCallback( 关闭callback(
+    * @return 监控connection的结果
+    */
         return new MonitoringConnection(connection, dataSourceName, monitor, closeCallback()).proxy();
     }
 
@@ -82,13 +82,13 @@ public class MonitoringDataSource implements DataSource {
         Connection connection = delegate.getConnection(username, password);
         activeConnections.incrementAndGet();
         /**
-        * 监控connection。
-        * @param connection connection
-        * @param dataSourceName 数据源名称
-        * @param monitor 监控
-        * @param closeCallback( 关闭callback(
-        * @return 监控connection的结果
-         */
+    * 监控connection。
+    * @param connection connection
+    * @param dataSourceName 数据源名称
+    * @param monitor 监控
+    * @param closeCallback( 关闭callback(
+    * @return 监控connection的结果
+    */
         return new MonitoringConnection(connection, dataSourceName, monitor, closeCallback()).proxy();
     }
 
@@ -141,7 +141,7 @@ public class MonitoringDataSource implements DataSource {
     * 获取目标数据源
     *
     * @return 目标数据源
-     */
+    */
     public DataSource getTargetDataSource() {
         return delegate;
     }
@@ -150,7 +150,7 @@ public class MonitoringDataSource implements DataSource {
     * 获取数据源名称
     *
     * @return 数据源名称
-     */
+    */
     public String getDataSourceName() {
         return dataSourceName;
     }
@@ -159,7 +159,7 @@ public class MonitoringDataSource implements DataSource {
     * 获取当前活跃连接数
     *
     * @return 活跃连接数
-     */
+    */
     public int getActiveConnections() {
         return activeConnections.get();
     }
@@ -168,7 +168,7 @@ public class MonitoringDataSource implements DataSource {
     * 构建连接关闭回调（幂等：连接被重复 关闭 时仅递减一次）
     *
     * @return 关闭回调
-     */
+    */
     private Runnable closeCallback() {
         AtomicBoolean closed = new AtomicBoolean(false);
         return () -> {

@@ -43,12 +43,12 @@ public class DataSyncAutoConfiguration {
     * 数据同步mapping管理器
     *
     * @return 数据同步mapping管理器的结果
-     */
+    */
     public DataSyncMappingManager dataSyncMappingManager() {
         /**
         * 默认数据同步mapping管理器。
         * @return 默认数据同步mapping管理器的结果
-         */
+        */
         return new DefaultDataSyncMappingManager();
     }
 
@@ -58,7 +58,7 @@ public class DataSyncAutoConfiguration {
     * 数据同步服务端
     * @param agentServerManager 智能体服务端管理器
     * @param mappingManager mapping管理器
-     */
+    */
     public com.chua.starter.datasync.DataSyncServer dataSyncServer(AgentServerManager agentServerManager,
                                                                    DataSyncMappingManager mappingManager) {
         com.chua.starter.datasync.DefaultDataSyncServer server = new com.chua.starter.datasync.DefaultDataSyncServer(agentServerManager);
@@ -72,7 +72,7 @@ public class DataSyncAutoConfiguration {
     * 智能体服务端管理器
     *
     * @return 智能体服务端管理器的结果
-     */
+    */
     public AgentServerManager agentServerManager() {
         /**
         * 数据同步智能体服务端。
@@ -80,7 +80,7 @@ public class DataSyncAutoConfiguration {
         * @param null 空
         * @param "default-server" "默认-服务端"
         * @return 数据同步智能体服务端的结果
-         */
+        */
         return new DataSyncAgentServer(null, null, "default-server");
     }
 
@@ -91,7 +91,7 @@ public class DataSyncAutoConfiguration {
     * 目录数据同步mappingscanner
     * @param properties 属性
     * @param mappingManager mapping管理器
-     */
+    */
     public DirectoryDataSyncMappingScanner directoryDataSyncMappingScanner(DatasyncProperties properties,
                                                                           DataSyncMappingManager mappingManager) {
         return new DirectoryDataSyncMappingScanner(
@@ -113,7 +113,7 @@ public class DataSyncAutoConfiguration {
     * @param dataSource 数据源
     * @param properties 属性
     * @param mappingManager mapping管理器
-     */
+    */
     public DatabaseMappingLoader databaseMappingLoader(javax.sql.DataSource dataSource,
                                                        DatasyncProperties properties,
                                                        DataSyncMappingManager mappingManager) {
@@ -123,7 +123,7 @@ public class DataSyncAutoConfiguration {
         * @param properties 属性
         * @param mappingManager mapping管理器
         * @return databasemapping加载的结果
-         */
+        */
         return new DatabaseMappingLoader(dataSource, properties, mappingManager);
     }
 
@@ -132,7 +132,7 @@ public class DataSyncAutoConfiguration {
     *
     * @author CH
     * @since 4.0.0
-     */
+    */
     private static class SimpleDirectoryConfigDefinition implements DirectoryConfigDefinition {
         /** 目录路径 */
         private final String directoryPath;
@@ -140,7 +140,7 @@ public class DataSyncAutoConfiguration {
         /**
         * 简单目录配置definition。
         * @param directoryPath 目录路径
-         */
+        */
         SimpleDirectoryConfigDefinition(String directoryPath) {
             this.directoryPath = directoryPath;
         }
@@ -208,10 +208,10 @@ public class DataSyncAutoConfiguration {
 
     @Bean
     /**
-    * 数据同步服务信息contributor
-    *
-    * @return 数据同步服务信息contributor的结果
-     */
+        * 数据同步服务信息contributor
+        *
+        * @return 数据同步服务信息contributor的结果
+        */
     public ServiceInfoContributor dataSyncServiceInfoContributor() {
         return registry -> {
             registry.registerFlag("datasync", "数据同步", true, "数据同步模块");

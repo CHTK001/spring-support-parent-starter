@@ -30,19 +30,19 @@ public class AiGroupServiceImpl implements AiGroupService {
 
     /**
     * 时间格式化器
-     */
+    */
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     /**
     * 分组 映射器
-     */
+    */
     private final AiGroupMapper groupMapper;
 
     /**
     * 查询所有分组。
     *
     * @return 分组 DTO 列表
-     */
+    */
     @Override
     public List<AiGroupDTO> list() {
         return groupMapper.selectList(
@@ -58,7 +58,7 @@ public class AiGroupServiceImpl implements AiGroupService {
     *
     * @param group 分组 DTO
     * @return 创建后的分组 DTO
-     */
+    */
     @Override
     @Transactional
     public AiGroupDTO create(AiGroupDTO group) {
@@ -83,7 +83,7 @@ public class AiGroupServiceImpl implements AiGroupService {
     * @param groupId 分组主键
     * @param group   分组 DTO
     * @return 更新后的分组 DTO
-     */
+    */
     @Override
     @Transactional
     public AiGroupDTO update(Long groupId, AiGroupDTO group) {
@@ -98,7 +98,7 @@ public class AiGroupServiceImpl implements AiGroupService {
     * 删除分组（逻辑删除）。
     *
     * @param groupId 分组主键
-     */
+    */
     @Override
     @Transactional
     public void delete(Long groupId) {
@@ -111,7 +111,7 @@ public class AiGroupServiceImpl implements AiGroupService {
     *
     * @param entity 分组实体
     * @return 分组 DTO
-     */
+    */
     private AiGroupDTO toDto(SysAiGroup entity) {
         if (entity == null) {
             return null;
@@ -131,7 +131,7 @@ public class AiGroupServiceImpl implements AiGroupService {
     *
     * @param dto 分组 DTO
     * @return 分组实体
-     */
+    */
     private SysAiGroup toEntity(AiGroupDTO dto) {
         SysAiGroup entity = new SysAiGroup();
         entity.setGroupName(dto.getName());
@@ -146,7 +146,7 @@ public class AiGroupServiceImpl implements AiGroupService {
     *
     * @param content JSON 数组字符串
     * @return 字符串列表
-     */
+    */
     private List<String> parseStringList(String content) {
         if (content == null || content.isBlank()) {
             return new java.util.ArrayList<>();
@@ -168,7 +168,7 @@ public class AiGroupServiceImpl implements AiGroupService {
     *
     * @param content JSON 数组字符串
     * @return Long 列表
-     */
+    */
     private List<Long> parseLongList(String content) {
         if (content == null || content.isBlank()) {
             return new java.util.ArrayList<>();

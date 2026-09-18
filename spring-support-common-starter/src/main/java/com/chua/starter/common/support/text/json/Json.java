@@ -21,7 +21,7 @@ public final class Json {
 
     /**
     * Json。
-     */
+    */
     private Json() {
     }
 
@@ -31,7 +31,7 @@ public final class Json {
     * @param value 待序列化对象
     * @return JSON 字符串
     * @throws RuntimeException 当序列化失败时
-     */
+    */
     public static String toJson(Object value) {
         try {
             return MAPPER.writeValueAsString(value);
@@ -41,7 +41,7 @@ public final class Json {
             * @param failure" 失败"
             * @param e e
             * @return runtime异常的结果
-             */
+            */
             throw new RuntimeException("JSON serialize failure", e);
         }
     }
@@ -52,7 +52,7 @@ public final class Json {
     * @param value 待序列化对象
     * @return JSON 字符串
     * @throws RuntimeException 当序列化失败时
-     */
+    */
     public static String toJSONString(Object value) {
         return toJson(value);
     }
@@ -65,7 +65,7 @@ public final class Json {
     * @param <T>   泛型
     * @return 反序列化后的对象
     * @throws RuntimeException 当反序列化失败时
-     */
+    */
     public static <T> T fromJson(String json, Class<T> clazz) {
         try {
             return MAPPER.readValue(json, clazz);
@@ -75,7 +75,7 @@ public final class Json {
             * @param failure" 失败"
             * @param e e
             * @return runtime异常的结果
-             */
+            */
             throw new RuntimeException("JSON parse failure", e);
         }
     }
@@ -86,7 +86,7 @@ public final class Json {
     * @param content JSON 字符串
     * @return Map 对象
     * @throws RuntimeException 当反序列化失败时
-     */
+    */
     public static Map<String, Object> getJsonObject(String content) {
         try {
             return MAPPER.readValue(content, new TypeReference<Map<String, Object>>() {});
@@ -96,7 +96,7 @@ public final class Json {
             * @param failure" 失败"
             * @param e e
             * @return runtime异常的结果
-             */
+            */
             throw new RuntimeException("JSON parse failure", e);
         }
     }

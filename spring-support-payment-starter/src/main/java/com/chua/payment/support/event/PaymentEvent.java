@@ -31,12 +31,12 @@ public abstract class PaymentEvent extends ApplicationEvent {
     * @param eventType 事件类型
     * @param tenantId tenantid
     * @param merchantId merchantid
-     */
+    */
     public PaymentEvent(Object source, String eventType, Long tenantId, Long merchantId) {
         /**
         * 父。
         * @param source 源
-         */
+        */
         super(source);
         this.eventType = eventType;
         this.tenantId = tenantId;

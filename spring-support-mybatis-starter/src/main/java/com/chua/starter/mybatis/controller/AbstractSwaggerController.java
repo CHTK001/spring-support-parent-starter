@@ -36,7 +36,7 @@ public abstract class AbstractSwaggerController<S extends IService<T>, T> extend
     * @param @Validated(SelectGroup.class @校验(选择群体.类
     * @param @Validated(SelectGroup.class @校验(选择群体.类
     * @param @Validated(SelectGroup.class @Validated(SelectGroup.class
-     */
+    */
     @ResponseBody
     @Operation(summary = "分页查询基础数据")
     @GetMapping("page")
@@ -55,7 +55,7 @@ public abstract class AbstractSwaggerController<S extends IService<T>, T> extend
         /**
         * page之后。
         * @param records records
-         */
+        */
         pageAfter(records);
         return PageResultUtils.ok(tPage);
     }
@@ -67,7 +67,7 @@ public abstract class AbstractSwaggerController<S extends IService<T>, T> extend
     * @param @Validated(SelectGroup.class @校验(选择群体.类
     * @param @Validated(SelectGroup.class @校验(选择群体.类
     * @param @Validated(SelectGroup.class @Validated(SelectGroup.class
-     */
+    */
     @ResponseBody
     @Operation(summary = "查询基础数据")
     @GetMapping("list")
@@ -84,7 +84,7 @@ public abstract class AbstractSwaggerController<S extends IService<T>, T> extend
     * 创建查询条件
     * @param entity 实体
     * @return 查询条件
-     */
+    */
     protected Wrapper<T> createWrapper(T entity) {
         return Wrappers.lambdaQuery(entity);
     }
@@ -93,7 +93,7 @@ public abstract class AbstractSwaggerController<S extends IService<T>, T> extend
     /**
     * 分页查询后
     * @param page 分页
-     */
+    */
     protected void pageAfter(List<T> page) {
 
     }
@@ -101,7 +101,7 @@ public abstract class AbstractSwaggerController<S extends IService<T>, T> extend
     * 查询详细信息
     * @param id 标识
     * @return 结果
-     */
+    */
     @Operation(summary = "查询详细信息")
     @GetMapping("get")
     public ReturnResult<T> get(String id) {

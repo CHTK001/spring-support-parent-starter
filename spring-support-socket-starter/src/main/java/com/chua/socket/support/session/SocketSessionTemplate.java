@@ -25,7 +25,7 @@ public interface SocketSessionTemplate {
     * @param clientId 客户端唯一标识符
     * @param session  会话实例
     * @return 保存后的会话实例
-     */
+    */
     SocketSession save(String clientId, SocketSession session);
 
     /**
@@ -33,7 +33,7 @@ public interface SocketSessionTemplate {
     *
     * @param clientId 客户端唯一标识符
     * @param session  需要被移除的会话实例
-     */
+    */
     void remove(String clientId, SocketSession session);
 
     /**
@@ -41,7 +41,7 @@ public interface SocketSessionTemplate {
     *
     * @param sessionId 会话唯一标识符
     * @return 对应的会话实例，如果不存在则返回null
-     */
+    */
     SocketSession getSession(String sessionId);
 
     /**
@@ -50,7 +50,7 @@ public interface SocketSessionTemplate {
     * @param sessionId 目标客户端的会话标识
     * @param event     触发的事件名称
     * @param msg       要发送的消息内容
-     */
+    */
     void send(String sessionId, String event, String msg);
 
     /**
@@ -58,13 +58,13 @@ public interface SocketSessionTemplate {
     *
     * @param event     触发的事件名称
     * @param msg       要发送的消息内容
-     */
+    */
     default void send(String event, Object msg) {
         /**
         * broadcast对象。
         * @param event 事件
         * @param msg msg
-         */
+        */
         broadcastObject(event, msg);
     }
 
@@ -73,13 +73,13 @@ public interface SocketSessionTemplate {
     *
     * @param event     触发的事件名称
     * @param msg       要发送的消息内容
-     */
+    */
     default void sendObject(String event, Object msg) {
         /**
         * broadcast对象。
         * @param event 事件
         * @param msg msg
-         */
+        */
         broadcastObject(event, msg);
     }
     /**
@@ -88,14 +88,14 @@ public interface SocketSessionTemplate {
     * @param sessionId 目标客户端的会话标识
     * @param event     触发的事件名称
     * @param msg       要发送的消息内容对象
-     */
+    */
     default void sendObject(String sessionId, String event, Object msg) {
         /**
         * 发送。
         * @param sessionId 会话标识
         * @param event 事件
         * @param msg.toString( msg.转为字符串(
-         */
+        */
         send(sessionId, event, msg instanceof String ? msg.toString() : toJson(msg));
     }
 
@@ -104,7 +104,7 @@ public interface SocketSessionTemplate {
     *
     * @param event 触发的事件名称
     * @param msg   要发送的消息内容
-     */
+    */
     void broadcast(String event, String msg);
 
     /**
@@ -112,14 +112,14 @@ public interface SocketSessionTemplate {
     *
     * @param event 触发的事件名称
     * @param msg   要发送的消息内容对象
-     */
+    */
     default void broadcastObject(String event, Object msg) {
         if (msg instanceof MsgEvent message) {
             /**
             * broadcast。
             * @param event 事件
             * @param message 消息
-             */
+            */
             broadcast(event, message);
             return;
         }
@@ -128,7 +128,7 @@ public interface SocketSessionTemplate {
             * broadcast。
             * @param event 事件
             * @param message 消息
-             */
+            */
             broadcast(event, message);
             return;
         }
@@ -136,7 +136,7 @@ public interface SocketSessionTemplate {
         * broadcast。
         * @param event 事件
         * @param msg.toString( msg.转为字符串(
-         */
+        */
         broadcast(event, msg instanceof String ? msg.toString() : toJson(msg));
     }
 
@@ -145,13 +145,13 @@ public interface SocketSessionTemplate {
     *
     * @param event    触发的事件名称
     * @param msgEvent 消息映射
-     */
+    */
     default void broadcast(String event, Map<String, Object> msgEvent) {
         /**
         * broadcast。
         * @param event 事件
         * @param toJSONString(msgEvent 转为jsonstring(msg事件
-         */
+        */
         broadcast(event, toJSONString(msgEvent));
     }
 
@@ -160,13 +160,13 @@ public interface SocketSessionTemplate {
     *
     * @param event    触发的事件名称
     * @param msgEvent 消息事件对象
-     */
+    */
     default void broadcast(String event, MsgEvent msgEvent) {
         /**
         * broadcast。
         * @param event 事件
         * @param msgEvent.toString( msg事件.转为字符串(
-         */
+        */
         broadcast(event, msgEvent.toString());
     }
 
@@ -175,13 +175,13 @@ public interface SocketSessionTemplate {
     *
     * @param event   触发的事件名称
     * @param msgStep 消息步骤对象
-     */
+    */
     default void broadcast(String event, MsgStep msgStep) {
         /**
         * broadcast。
         * @param event 事件
         * @param msgStep.toString( msgstep.转为字符串(
-         */
+        */
         broadcast(event, msgStep.toString());
     }
 
@@ -191,7 +191,7 @@ public interface SocketSessionTemplate {
     * @param userId 目标用户标识
     * @param event  触发的事件名称
     * @param msg    要发送的消息内容
-     */
+    */
     void sendToUser(String userId, String event, String msg);
 
     /**
@@ -200,14 +200,14 @@ public interface SocketSessionTemplate {
     * @param userId 目标用户标识
     * @param event  触发的事件名称
     * @param msg    要发送的消息内容对象
-     */
+    */
     default void sendToUserObject(String userId, String event, Object msg) {
         /**
         * 发送转为用户。
         * @param userId 用户标识
         * @param event 事件
         * @param msg.toString( msg.转为字符串(
-         */
+        */
         sendToUser(userId, event, msg instanceof String ? msg.toString() : toJson(msg));
     }
 
@@ -215,7 +215,7 @@ public interface SocketSessionTemplate {
     * 获取所有在线会话列表
     *
     * @return 在线会话列表
-     */
+    */
     List<SocketSession> getOnlineSessions();
 
     /**
@@ -224,7 +224,7 @@ public interface SocketSessionTemplate {
     * @param type   类型（如 WebRTC、对话 等）
     * @param roomId 房间标识
     * @return 在线会话列表
-     */
+    */
     List<SocketSession> getOnlineSession(String type, String roomId);
 
     /**
@@ -232,14 +232,14 @@ public interface SocketSessionTemplate {
     *
     * @param type 用户类型
     * @return 在线用户列表
-     */
+    */
     List<SocketUser> getOnlineUsers(String type);
 
     /**
     * 获取在线会话数量
     *
     * @return 在线会话数量
-     */
+    */
     int getOnlineCount();
 
     /**
@@ -248,7 +248,7 @@ public interface SocketSessionTemplate {
     * @param sessionId 目标客户端的会话标识
     * @param event     触发的事件名称
     * @param data      二进制数据
-     */
+    */
     default void sendBinary(String sessionId, String event, byte[] data) {
         SocketSession session = getSession(sessionId);
         if (session != null) {
@@ -261,7 +261,7 @@ public interface SocketSessionTemplate {
     *
     * @param event 触发的事件名称
     * @param data  二进制数据
-     */
+    */
     default void broadcastBinary(String event, byte[] data) {
         List<SocketSession> sessions = getOnlineSessions();
         for (SocketSession session : sessions) {
@@ -279,7 +279,7 @@ public interface SocketSessionTemplate {
     * @param userId 目标用户标识
     * @param event  触发的事件名称
     * @param data   二进制数据
-     */
+    */
     default void sendBinaryToUser(String userId, String event, byte[] data) {
         List<SocketSession> sessions = getOnlineSessions();
         for (SocketSession session : sessions) {
@@ -296,11 +296,11 @@ public interface SocketSessionTemplate {
 
     /**
     * 启动服务
-     */
+    */
     void start();
 
     /**
     * 停止服务
-     */
+    */
     void stop();
 }

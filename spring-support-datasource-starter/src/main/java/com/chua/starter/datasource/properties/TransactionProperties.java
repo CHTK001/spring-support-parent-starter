@@ -26,7 +26,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class TransactionProperties {
     /**
     * 是否启用
-     */
+    */
     private boolean enable = false;
 
 
@@ -34,23 +34,23 @@ public class TransactionProperties {
     public static final String PREFIX = "plugin.transaction";
     /**
     * 事务超时时间
-     */
+    */
     private Integer timeout = 10;
     /**
     * 事务位置
-     */
+    */
     private String txMapper = "";
     /**
     * 只读事务前缀
-     */
+    */
     private String readOnly = "";
     /**
     * 无事务
-     */
+    */
     private String noTx = "";
     /**
     * 写事务
-     */
+    */
     private String writeOnly = "";
 
     // Getter 方法（Lombok 在 Java 25 下可能不工作，手动添加）
@@ -58,7 +58,7 @@ public class TransactionProperties {
     * 是否启用
     *
     * @return 是否enable的结果
-     */
+    */
     public boolean isEnable() {
         return enable;
     }
@@ -67,7 +67,7 @@ public class TransactionProperties {
     * 获取超时
     *
     * @return 获取超时的结果
-     */
+    */
     public Integer getTimeout() {
         return timeout;
     }
@@ -76,7 +76,7 @@ public class TransactionProperties {
     * 获取tx映射器
     *
     * @return 获取tx映射器的结果
-     */
+    */
     public String getTxMapper() {
         return txMapper;
     }
@@ -85,7 +85,7 @@ public class TransactionProperties {
     * 获取读取Only
     *
     * @return 获取读取only的结果
-     */
+    */
     public String getReadOnly() {
         return readOnly;
     }
@@ -94,7 +94,7 @@ public class TransactionProperties {
     * 获取notx
     *
     * @return 获取notx的结果
-     */
+    */
     public String getNoTx() {
         return noTx;
     }
@@ -103,7 +103,7 @@ public class TransactionProperties {
     * 获取写入Only
     *
     * @return 获取写入only的结果
-     */
+    */
     public String getWriteOnly() {
         return writeOnly;
     }

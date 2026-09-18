@@ -58,12 +58,12 @@ public class DataSourceHealthIndicator extends AbstractHealthIndicator {
 
     /**
     * 数据源健康indicator。
-     */
+    */
     public DataSourceHealthIndicator() {
         /**
         * 父。
         * @param "数据源健康检查失败" "数据源健康检查失败"
-         */
+        */
         super("数据源健康检查失败");
     }
 
@@ -125,7 +125,7 @@ public class DataSourceHealthIndicator extends AbstractHealthIndicator {
     * @param name 名称
     * @param dataSource 数据源
     * @return 检查单个数据源的结果
-     */
+    */
     private Map<String, Object> checkSingleDataSource(String name, DataSource dataSource) {
         Map<String, Object> result = new LinkedHashMap<>();
         long start = System.currentTimeMillis();
@@ -133,7 +133,7 @@ public class DataSourceHealthIndicator extends AbstractHealthIndicator {
         /**
         * 尝试。
         * @param dataSource.getConnection( 数据源.getconnection(
-         */
+        */
         try (Connection conn = dataSource.getConnection()) {
             boolean valid = conn.isValid(VALIDATION_TIMEOUT_SECONDS);
             long elapsed = System.currentTimeMillis() - start;
@@ -171,7 +171,7 @@ public class DataSourceHealthIndicator extends AbstractHealthIndicator {
     * 判断是否为暂时性错误（网络抖动、超时等）
     * @param errorMsg 错误msg
     * @return 是否transient错误的结果
-     */
+    */
     private boolean isTransientError(String errorMsg) {
         if (errorMsg == null) {
             return false;

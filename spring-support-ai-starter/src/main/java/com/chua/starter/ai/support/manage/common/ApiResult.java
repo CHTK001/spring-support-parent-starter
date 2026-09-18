@@ -27,30 +27,30 @@ public class ApiResult<T> implements Serializable {
 
     /**
     * 是否成功
-     */
+    */
     private boolean success;
 
     /**
     * 业务数据（成功时返回，始终输出即使为 空）
-     */
+    */
     @JsonInclude(JsonInclude.Include.ALWAYS)
     private T data; // 数据
 
     /**
     * 机器可读错误码（如 CONVERSATION_ARCHIVED / FORBIDDEN）
-     */
+    */
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private String code; // 编码
 
     /**
     * 人类可读错误信息
-     */
+    */
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private String error; // 错误
 
     /**
     * 附加提示信息
-     */
+    */
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private String msg; // msg
 
@@ -60,7 +60,7 @@ public class ApiResult<T> implements Serializable {
     * @param data 业务数据
     * @param <T>  数据类型
     * @return 响应信封
-     */
+    */
     public static <T> ApiResult<T> ok(T data) {
         ApiResult<T> result = new ApiResult<>();
         result.setSuccess(true);
@@ -72,7 +72,7 @@ public class ApiResult<T> implements Serializable {
     * 构造成功响应（无业务数据）。
     *
     * @return 响应信封
-     */
+    */
     public static ApiResult<Void> ok() {
         return ok(null);
     }
@@ -83,7 +83,7 @@ public class ApiResult<T> implements Serializable {
     * @param code  机器可读错误码
     * @param error 人类可读错误信息
     * @return 响应信封
-     */
+    */
     public static ApiResult<Void> error(String code, String error) {
         ApiResult<Void> result = new ApiResult<>();
         result.setSuccess(false);
@@ -99,7 +99,7 @@ public class ApiResult<T> implements Serializable {
     * @param error 人类可读错误信息
     * @param msg   附加提示
     * @return 响应信封
-     */
+    */
     public static ApiResult<Void> error(String code, String error, String msg) {
         ApiResult<Void> result = new ApiResult<>();
         result.setSuccess(false);

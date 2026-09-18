@@ -27,13 +27,13 @@ public class SpiderMetaObjectHandlerConfiguration {
     * 由 MyBatis-启动 的 SQL会话工厂 关联到 全局配置。</p>
     *
     * @return 公共字段自动填充处理器
-     */
+    */
     @Bean
     public MetaObjectHandler spiderMetaObjectHandler() {
         /**
         * 蜘蛛meta对象处理器。
         * @return 蜘蛛meta对象处理器的结果
-         */
+        */
         return new SpiderMetaObjectHandler();
     }
 }

@@ -28,7 +28,7 @@ public class GlobalExceptionHandler {
     * 处理支付异常
     * @param e e
     * @return 把手薪酬异常的结果
-     */
+    */
     @ExceptionHandler(PaymentException.class)
     public ReturnResult<Void> handlePaymentException(PaymentException e) {
         log.error("支付异常: {}", e.getMessage(), e);
@@ -39,7 +39,7 @@ public class GlobalExceptionHandler {
     * 处理参数校验异常
     * @param e e
     * @return 把手校验异常的结果
-     */
+    */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ReturnResult<Void> handleValidationException(MethodArgumentNotValidException e) {
         String message = e.getBindingResult().getFieldErrors().stream()
@@ -53,7 +53,7 @@ public class GlobalExceptionHandler {
     * 处理绑定异常
     * @param e e
     * @return 把手bind异常的结果
-     */
+    */
     @ExceptionHandler(BindException.class)
     public ReturnResult<Void> handleBindException(BindException e) {
         String message = e.getBindingResult().getFieldErrors().stream()
@@ -67,7 +67,7 @@ public class GlobalExceptionHandler {
     * 处理非法参数异常
     * @param e e
     * @return 把手illegal参数异常的结果
-     */
+    */
     @ExceptionHandler(IllegalArgumentException.class)
     public ReturnResult<Void> handleIllegalArgumentException(IllegalArgumentException e) {
         log.error("非法参数: {}", e.getMessage(), e);
@@ -78,7 +78,7 @@ public class GlobalExceptionHandler {
     * 处理通用异常
     * @param e e
     * @return 把手异常的结果
-     */
+    */
     @ExceptionHandler(Exception.class)
     public ReturnResult<Void> handleException(Exception e) {
         log.error("系统异常: {}", e.getMessage(), e);

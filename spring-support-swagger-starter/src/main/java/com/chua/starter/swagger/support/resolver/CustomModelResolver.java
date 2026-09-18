@@ -19,14 +19,14 @@ public class CustomModelResolver extends ModelResolver {
     
     /**
     * 用户价值观注解类（可选依赖）
-     */
+    */
     private static final Class<?> USER_VALUE_CLASS = loadUserValueClass();
 
     /**
     * 加载用户价值观注解类
     *
     * @return UserValue注解类，如果不存在则返回null
-     */
+    */
     private static Class<?> loadUserValueClass() {
         try {
             return ClassUtils.forName("com.chua.starter.oauth.client.support.annotation.UserValue", 
@@ -40,13 +40,13 @@ public class CustomModelResolver extends ModelResolver {
     * 构造函数
     *
     * @param mapper 对象映射器
-     */
+    */
 
     public CustomModelResolver(ObjectMapper mapper) {
         /**
         * 父。
         * @param mapper 映射器
-         */
+        */
         super(mapper);
     }
 
@@ -55,7 +55,7 @@ public class CustomModelResolver extends ModelResolver {
     *
     * @param type 类型
     * @return 是否忽略
-     */
+    */
     @Override
     protected boolean shouldIgnoreClass(Type type) {
         if (type instanceof Class) {
@@ -76,7 +76,7 @@ public class CustomModelResolver extends ModelResolver {
     * 获取 用户价值观 注解类型
     *
     * @return UserValue 注解 类
-     */
+    */
     @SuppressWarnings("unchecked")
     private Class<? extends Annotation> getUserValueAnnotationClass() {
         return (Class<? extends Annotation>) USER_VALUE_CLASS;

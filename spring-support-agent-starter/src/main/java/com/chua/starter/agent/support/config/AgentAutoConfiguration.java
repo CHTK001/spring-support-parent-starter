@@ -27,7 +27,7 @@ public class AgentAutoConfiguration {
     *
     * @param properties 配置项
     * @return 自注入服务
-     */
+    */
     @Bean
     @ConditionalOnMissingBean
     public AgentAttachService agentAttachService(AgentAttachProperties properties) {

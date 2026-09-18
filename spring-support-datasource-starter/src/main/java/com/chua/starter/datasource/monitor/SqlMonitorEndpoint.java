@@ -21,14 +21,14 @@ public class SqlMonitorEndpoint {
 
     /**
     * 监控门面
-     */
+    */
     private final DataSourceSqlMonitor monitor;
 
     /**
     * 端点构造器
     *
     * @param monitor 监控门面
-     */
+    */
     public SqlMonitorEndpoint(DataSourceSqlMonitor monitor) {
         this.monitor = monitor;
     }
@@ -37,7 +37,7 @@ public class SqlMonitorEndpoint {
     * 查询 SQL 执行统计
     *
     * @return 统计信息（按数据源分组）
-     */
+    */
     @ReadOperation
     public Map<String, Object> statistics() {
         Map<String, Object> result = new LinkedHashMap<>();
@@ -50,7 +50,7 @@ public class SqlMonitorEndpoint {
     * 重置统计
     *
     * @return 提示信息
-     */
+    */
     @WriteOperation
     public Map<String, Object> reset() {
         monitor.resetStatistics();
@@ -64,7 +64,7 @@ public class SqlMonitorEndpoint {
     * 生成各数据源统计快照
     *
     * @return 数据源名 → 统计明细
-     */
+    */
     private Map<String, Object> snapshot() {
         Map<String, Object> snapshot = new LinkedHashMap<>();
         for (Map.Entry<String, SqlStatistics> entry : monitor.getAllStatistics().entrySet()) {

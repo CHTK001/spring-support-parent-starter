@@ -11,7 +11,7 @@ public class EnumTypeConverter implements com.chua.common.support.converter.defi
     * 获取该转换器支持的源类型
     *
     * @return 返回 {@link Enum} 类型，表示支持所有枚举类型的转换
-     */
+    */
     @Override
     public Class<?> getType() {
         return Enum.class;
@@ -22,7 +22,7 @@ public class EnumTypeConverter implements com.chua.common.support.converter.defi
     *
     * @param source 待转换的源对象
     * @return 转换后的对象，当前实现中直接返回 源 本身
-     */
+    */
     @Override
     public Object convert(Object source) {
         return source;

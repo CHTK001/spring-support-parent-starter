@@ -25,7 +25,7 @@ public class PagePreconditioning<T> {
     /**
     * 创建 pagepreconditioning 实例
     * @param page page
-     */
+    */
     public PagePreconditioning(IPage<T> page) {
         this.page = page;
     }
@@ -35,7 +35,7 @@ public class PagePreconditioning<T> {
     *
     * @param function 转化器
     * @return 转换的结果
-     */
+    */
     public <R> PagePreconditioning<R> convert(Function<T, R> function) {
         IPage<R> page = new Page<>(this.page.getCurrent(), this.page.getSize(), this.page.getTotal());
         page.setRecords(this.page.getRecords().stream().map(function).collect(Collectors.toList()));
@@ -48,7 +48,7 @@ public class PagePreconditioning<T> {
     * @param idFunction 映射
     * @param consumer   消费
     * @return mapping的结果
-     */
+    */
     public PagePreconditioning<T> mapping(Function<T, Serializable> idFunction, BiConsumer<Set<Serializable>, Map<Serializable, T>> consumer) {
         List<T> records = page.getRecords();
         Map<Serializable, T> map = records.stream().collect(Collectors.toMap(idFunction, Function.identity()));
@@ -60,7 +60,7 @@ public class PagePreconditioning<T> {
     * 返回分页
     *
     * @return 分页
-     */
+    */
     public IPage<T> returnPage() {
         return page;
     }

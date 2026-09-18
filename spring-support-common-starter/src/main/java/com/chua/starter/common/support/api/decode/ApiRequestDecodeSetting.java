@@ -15,22 +15,22 @@ public class ApiRequestDecodeSetting extends ApplicationEvent implements Upgrade
 
     /**
     * 数据库配置别名：codec请求打开
-     */
+    */
     private boolean codecRequestOpen = true;
 
     /**
     * 请求加密钥匙
-     */
+    */
     private String codecRequestKey = null;
 
     /**
     * 无参构造方法
-     */
+    */
     public ApiRequestDecodeSetting() {
         /**
         * this。
         * @param true true
-         */
+        */
         this(true);
     }
 
@@ -38,12 +38,12 @@ public class ApiRequestDecodeSetting extends ApplicationEvent implements Upgrade
     * 带参构造方法
     *
     * @param source 事件源对象
-     */
+    */
     public ApiRequestDecodeSetting(Object source) {
         /**
         * 父。
         * @param source 源
-         */
+        */
         super(source);
     }
 
@@ -51,7 +51,7 @@ public class ApiRequestDecodeSetting extends ApplicationEvent implements Upgrade
     * 升级配置信息
     *
     * @param setting 新的配置信息
-     */
+    */
     @Override
     public void upgrade(ApiRequestDecodeSetting setting) {
         this.codecRequestOpen = setting.isEnable();
@@ -61,7 +61,7 @@ public class ApiRequestDecodeSetting extends ApplicationEvent implements Upgrade
     * 获取 enable
     *
     * @return enable
-     */
+    */
     public boolean getEnable() {
         return isEnable();
     }
@@ -70,7 +70,7 @@ public class ApiRequestDecodeSetting extends ApplicationEvent implements Upgrade
     * 判断是否开启请求解密
     *
     * @return enable
-     */
+    */
     public boolean isEnable() {
         return codecRequestOpen;
     }
@@ -79,7 +79,7 @@ public class ApiRequestDecodeSetting extends ApplicationEvent implements Upgrade
     * 设置 enable
     *
     * @param enable enable
-     */
+    */
     public void setEnable(boolean enable) {
         this.codecRequestOpen = enable;
     }
@@ -88,7 +88,7 @@ public class ApiRequestDecodeSetting extends ApplicationEvent implements Upgrade
     * 获取 codec请求打开
     *
     * @return codecRequestOpen
-     */
+    */
     public boolean getCodecRequestOpen() {
         return codecRequestOpen;
     }
@@ -97,7 +97,7 @@ public class ApiRequestDecodeSetting extends ApplicationEvent implements Upgrade
     * 判断是否开启请求解密
     *
     * @return codecRequestOpen
-     */
+    */
     public boolean isCodecRequestOpen() {
         return codecRequestOpen;
     }
@@ -106,7 +106,7 @@ public class ApiRequestDecodeSetting extends ApplicationEvent implements Upgrade
     * 设置 codec请求打开
     *
     * @param codecRequestOpen codec请求打开
-     */
+    */
     public void setCodecRequestOpen(boolean codecRequestOpen) {
         this.codecRequestOpen = codecRequestOpen;
     }
@@ -115,7 +115,7 @@ public class ApiRequestDecodeSetting extends ApplicationEvent implements Upgrade
     * 获取 codec请求钥匙
     *
     * @return codecRequestKey
-     */
+    */
     public String getCodecRequestKey() {
         return codecRequestKey;
     }
@@ -124,7 +124,7 @@ public class ApiRequestDecodeSetting extends ApplicationEvent implements Upgrade
     * 设置 codec请求钥匙
     *
     * @param codecRequestKey codec请求钥匙
-     */
+    */
     public void setCodecRequestKey(String codecRequestKey) {
         this.codecRequestKey = codecRequestKey;
     }

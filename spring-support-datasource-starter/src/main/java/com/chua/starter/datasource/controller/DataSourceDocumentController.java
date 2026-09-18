@@ -54,7 +54,7 @@ public class DataSourceDocumentController {
 
     /**
     * 可选的图谱服务（仅当图谱相关 Bean 装配时存在）
-     */
+    */
     private final DatabaseGraphService graphService;
 
     /**
@@ -62,14 +62,14 @@ public class DataSourceDocumentController {
     * @param service 服务
     * @param properties 文档属性
     * @param properties 属性
-     */
+    */
     public DataSourceDocumentController(DataSourceDocumentService service, DocumentProperties properties) {
         /**
         * this。
         * @param service 服务
         * @param properties 属性
         * @param null 空
-         */
+        */
         this(service, properties, null);
     }
 
@@ -78,7 +78,7 @@ public class DataSourceDocumentController {
     * @param service 服务
     * @param properties 属性
     * @param graphService 图计算服务
-     */
+    */
     public DataSourceDocumentController(DataSourceDocumentService service,
                                         DocumentProperties properties,
                                         DatabaseGraphService graphService) {
@@ -90,35 +90,35 @@ public class DataSourceDocumentController {
     /**
     * 渲染整库 HTML，优先使用缓存
     * @param response 响应
-     */
+    */
     public void preview(HttpServletResponse response) throws IOException {
         DocumentData data = service.preview();
         /**
         * 写入HTML。
         * @param response 响应
         * @param null 空
-         */
+        */
         writeHtml(response, renderHtml(data, null));
     }
 
     /**
     * 强制刷新后渲染整库 HTML
     * @param response 响应
-     */
+    */
     public void apply(HttpServletResponse response) throws IOException {
         DocumentData data = service.apply();
         /**
         * 写入HTML。
         * @param response 响应
         * @param null 空
-         */
+        */
         writeHtml(response, renderHtml(data, null));
     }
 
     /**
     * 文档元信息 JSON
     * @param response 响应
-     */
+    */
     public void list(HttpServletResponse response) throws IOException {
         DocumentData data = service.preview();
         Map<String, Object> body = new LinkedHashMap<>();
@@ -149,7 +149,7 @@ public class DataSourceDocumentController {
         * 写入json。
         * @param response 响应
         * @param body 主体
-         */
+        */
         writeJson(response, body);
     }
 
@@ -158,7 +158,7 @@ public class DataSourceDocumentController {
     * <p>从 request URI 末段解析表名（避免 path variable 绑定问题）</p>
     * @param request 请求
     * @param response 响应
-     */
+    */
     public void table(jakarta.servlet.http.HttpServletRequest request, HttpServletResponse response) throws IOException {
         String tableName = lastPathSegment(request);
         if (tableName.isEmpty()) {
@@ -166,7 +166,7 @@ public class DataSourceDocumentController {
             * 写入notfound。
             * @param response 响应
             * @param "未指定表名" "未指定表名"
-             */
+            */
             writeNotFound(response, "未指定表名");
             return;
         }
@@ -176,7 +176,7 @@ public class DataSourceDocumentController {
             * 写入notfound。
             * @param response 响应
             * @param tableName table名称
-             */
+            */
             writeNotFound(response, "未找到表: " + tableName);
             return;
         }
@@ -192,7 +192,7 @@ public class DataSourceDocumentController {
             * 写入notfound。
             * @param response 响应
             * @param tableName table名称
-             */
+            */
             writeNotFound(response, "未找到表: " + tableName);
             return;
         }
@@ -200,21 +200,21 @@ public class DataSourceDocumentController {
         * 写入HTML。
         * @param response 响应
         * @param target Target
-         */
+        */
         writeHtml(response, renderHtml(data, target));
     }
 
     /**
     * 表关系图 JSON（节点 + 边）
     * @param response 响应
-     */
+    */
     public void relationshipJson(HttpServletResponse response) throws IOException {
         DocumentData data = service.preview();
         /**
         * 写入json。
         * @param response 响应
         * @param com.chua.common.support.lang.document.DocumentProvider.toRelationshipJson(data com.chua.通用.支持.lang.文档.文档提供者.转为relationshipjson(数据
-         */
+        */
         writeJson(response, com.chua.common.support.lang.document.DocumentProvider.toRelationshipJson(data));
     }
 
@@ -224,18 +224,18 @@ public class DataSourceDocumentController {
     * 返回 relation-图计算 兼容的 JSON（图 + 节点 数据 携带触发器/存储过程）
     * @param request 请求
     * @param response 响应
-     */
+    */
     public void graphJson(HttpServletRequest request, HttpServletResponse response) throws IOException {
         /**
         * ensure图计算服务。
-         */
+        */
         ensureGraphService();
         DatabaseGraphService.GraphPayload payload = isForceRefresh(request) ? graphService.apply() : graphService.preview();
         /**
         * 写入json。
         * @param response 响应
         * @param payload payload
-         */
+        */
         writeJson(response, payload);
     }
 
@@ -243,11 +243,11 @@ public class DataSourceDocumentController {
     * 内嵌 relation-图计算 的 HTML 可视化预览页
     * @param request 请求
     * @param response 响应
-     */
+    */
     public void graphHtml(HttpServletRequest request, HttpServletResponse response) throws IOException {
         /**
         * ensure图计算服务。
-         */
+        */
         ensureGraphService();
         DatabaseGraphService.GraphPayload payload = isForceRefresh(request) ? graphService.apply() : graphService.preview();
         String json = com.chua.common.support.lang.json.Json.toJson(payload);
@@ -255,7 +255,7 @@ public class DataSourceDocumentController {
         * 写入HTML。
         * @param response 响应
         * @param payload payload
-         */
+        */
         writeHtml(response, renderGraphHtml(json, payload));
     }
 
@@ -264,11 +264,11 @@ public class DataSourceDocumentController {
     * <p>从 request URI 末段解析表名（避免 path variable 绑定问题）</p>
     * @param request 请求
     * @param response 响应
-     */
+    */
     public void graphTable(jakarta.servlet.http.HttpServletRequest request, HttpServletResponse response) throws IOException {
         /**
         * ensure图计算服务。
-         */
+        */
         ensureGraphService();
  // 解析 URI：/plugin/datasource/文档/图计算/table/SYS_用户.json -> SYS_用户
         String pathInfo = request.getRequestURI();
@@ -280,7 +280,7 @@ public class DataSourceDocumentController {
             * 写入json。
             * @param response 响应
             * @param pathInfo 路径信息
-             */
+            */
             writeJson(response, Map.of("error", "Invalid path: " + pathInfo));
             return;
         }
@@ -294,7 +294,7 @@ public class DataSourceDocumentController {
             * 写入json。
             * @param response 响应
             * @param empty" 空"
-             */
+            */
             writeJson(response, Map.of("error", "Table name is empty"));
             return;
         }
@@ -313,7 +313,7 @@ public class DataSourceDocumentController {
                 * 写入json。
                 * @param response 响应
                 * @param body 主体
-                 */
+                */
                 writeJson(response, body);
                 return;
             }
@@ -323,25 +323,25 @@ public class DataSourceDocumentController {
         * 写入json。
         * @param response 响应
         * @param tableName table名称
-         */
+        */
         writeJson(response, Map.of("error", "Table not found: " + tableName));
     }
 
     /**
     * 强制重建图谱缓存
     * @param response 响应
-     */
+    */
     public void graphApply(HttpServletResponse response) throws IOException {
         /**
         * ensure图计算服务。
-         */
+        */
         ensureGraphService();
         DatabaseGraphService.GraphPayload payload = graphService.apply();
         /**
         * 写入json。
         * @param response 响应
         * @param payload payload
-         */
+        */
         writeJson(response, payload);
     }
 
@@ -358,7 +358,7 @@ public class DataSourceDocumentController {
     *
     * @param request 请求
     * @return 是否forcerefresh的结果
-     */
+    */
     private boolean isForceRefresh(HttpServletRequest request) {
         if (request == null) {
             return false;
@@ -372,7 +372,7 @@ public class DataSourceDocumentController {
     * @param json json
     * @param payload payload
     * @return render图计算html的结果
-     */
+    */
     private String renderGraphHtml(String json, DatabaseGraphService.GraphPayload payload) {
         StringBuilder sb = new StringBuilder(8192);
         sb.append("<!DOCTYPE html><html lang=\"zh-CN\"><head><meta charset=\"UTF-8\">")
@@ -454,7 +454,7 @@ public class DataSourceDocumentController {
     * @param data 数据
     * @param single 单个
     * @return renderHtml的结果
-     */
+    */
     private String renderHtml(DocumentData data, TableData single) {
         try {
             DocumentTemplate template = resolveTemplate();
@@ -485,7 +485,7 @@ public class DataSourceDocumentController {
     /**
     * 解析模板：优先按用户配置名（如 Swagger）查找，找不到回退 默认
     * @return resolveTemplate的结果
-     */
+    */
     private DocumentTemplate resolveTemplate() {
         try {
             DocumentTemplateType type = DocumentTemplateType.valueOf(properties.getTemplate().toUpperCase());
@@ -505,7 +505,7 @@ public class DataSourceDocumentController {
     * @param data 数据
     * @param single 单个
     * @return 降级html的结果
-     */
+    */
     private String fallbackHtml(DocumentData data, TableData single) {
         StringBuilder sb = new StringBuilder();
         sb.append("<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>")
@@ -587,7 +587,7 @@ public class DataSourceDocumentController {
     *
     * @param c c
     * @return 类型desc的结果
-     */
+    */
     private String typeDesc(com.chua.common.support.lang.document.ColumnData c) {
         String name = c.getTypeName();
         if (name == null) {
@@ -613,7 +613,7 @@ public class DataSourceDocumentController {
     *
     * @param response 响应
     * @param html HTML
-     */
+    */
     private void writeHtml(HttpServletResponse response, String html) throws IOException {
         response.setStatus(HttpServletResponse.SC_OK);
         response.setContentType(MediaType.TEXT_HTML_VALUE + ";charset=UTF-8");
@@ -621,7 +621,7 @@ public class DataSourceDocumentController {
         /**
         * 尝试。
         * @param response.getWriter( 响应.获取writer(
-         */
+        */
         try (PrintWriter w = response.getWriter()) {
             w.write(html);
             w.flush();
@@ -633,7 +633,7 @@ public class DataSourceDocumentController {
     *
     * @param response 响应
     * @param body 主体
-     */
+    */
     private void writeJson(HttpServletResponse response, Object body) throws IOException {
         response.setStatus(HttpServletResponse.SC_OK);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8");
@@ -641,7 +641,7 @@ public class DataSourceDocumentController {
         /**
         * 尝试。
         * @param response.getWriter( 响应.获取writer(
-         */
+        */
         try (PrintWriter w = response.getWriter()) {
             w.write(Json.toJson(body));
             w.flush();
@@ -653,14 +653,14 @@ public class DataSourceDocumentController {
     *
     * @param response 响应
     * @param msg msg
-     */
+    */
     private void writeNotFound(HttpServletResponse response, String msg) throws IOException {
         response.setStatus(HttpServletResponse.SC_NOT_FOUND);
         response.setContentType(MediaType.TEXT_HTML_VALUE + ";charset=UTF-8");
         /**
         * 尝试。
         * @param response.getWriter( 响应.获取writer(
-         */
+        */
         try (PrintWriter w = response.getWriter()) {
             w.write("<!DOCTYPE html><html><body><h1>404</h1><p>" + escape(msg) + "</p></body></html>");
             w.flush();
@@ -672,7 +672,7 @@ public class DataSourceDocumentController {
     *
     * @param s s
     * @return escape的结果
-     */
+    */
     private static String escape(String s) {
         if (s == null) {
             return "";
@@ -686,7 +686,7 @@ public class DataSourceDocumentController {
     *
     * @param s s
     * @return 空转为空的结果
-     */
+    */
     private static String nullToEmpty(String s) {
         return s == null ? "" : s;
     }
@@ -695,7 +695,7 @@ public class DataSourceDocumentController {
     * 从 请求 URI 中提取最后一段路径
     * @param request 请求
     * @return 最后一个路径segment的结果
-     */
+    */
     private static String lastPathSegment(jakarta.servlet.http.HttpServletRequest request) {
         String uri = request.getRequestURI();
         if (uri == null) {

@@ -31,7 +31,7 @@ public class PaymentCipherService {
     /**
     * 创建 薪酬cipher服务 实例
     * @param environment 环境
-     */
+    */
     public PaymentCipherService(Environment environment) {
         this.environment = environment;
     }
@@ -41,7 +41,7 @@ public class PaymentCipherService {
     *
     * @param plainText plain文本
     * @return encrypt的结果
-     */
+    */
     public String encrypt(String plainText) {
         if (!StringUtils.hasText(plainText)) {
             return plainText;
@@ -54,7 +54,7 @@ public class PaymentCipherService {
     *
     * @param encryptedText encrypted文本
     * @return decrypt的结果
-     */
+    */
     public String decrypt(String encryptedText) {
         if (!StringUtils.hasText(encryptedText)) {
             return encryptedText;
@@ -72,14 +72,14 @@ public class PaymentCipherService {
         * @param 密钥配置" 密钥配置"
         * @param lastException 最后一个异常
         * @return 薪酬异常的结果
-         */
+        */
         throw new PaymentException("解密失败，请检查 payment/encryption 或 plugin.payment.security 密钥配置", lastException);
     }
 
     /**
     * candidate解密钥匙。
     * @return candidate解密钥匙的结果
-     */
+    */
     List<String> candidateDecryptionKeys() {
         Set<String> keys = new LinkedHashSet<>();
         if (StringUtils.hasText(configuredEncryptionKey())) {
@@ -97,7 +97,7 @@ public class PaymentCipherService {
     /**
     * required加密钥匙。
     * @return required加密钥匙的结果
-     */
+    */
     String requiredEncryptionKey() {
         String key = configuredEncryptionKey();
         return StringUtils.hasText(key) ? key : LEGACY_DEFAULT_KEY;
@@ -107,7 +107,7 @@ public class PaymentCipherService {
     * configured加密钥匙
     *
     * @return configured加密钥匙的结果
-     */
+    */
     private String configuredEncryptionKey() {
         return property(
                 "plugin.payment.security.key",
@@ -123,7 +123,7 @@ public class PaymentCipherService {
     *
     * @param keys 钥匙
     * @return 财产的结果
-     */
+    */
     private String property(String... keys) {
         for (String key : keys) {
             String value = environment.getProperty(key);
@@ -139,7 +139,7 @@ public class PaymentCipherService {
     *
     * @param value 价值观
     * @return 分割钥匙的结果
-     */
+    */
     private List<String> splitKeys(String value) {
         if (!StringUtils.hasText(value)) {
             return List.of();
@@ -160,7 +160,7 @@ public class PaymentCipherService {
     * @param keyText 钥匙文本
     * @param mode mode
     * @return 执行cipher的结果
-     */
+    */
     private String doCipher(String value, String keyText, int mode) {
         try {
             SecretKeySpec key = new SecretKeySpec(normalizeKey(keyText), "AES");
@@ -176,7 +176,7 @@ public class PaymentCipherService {
             * @param decrypted decrypted
             * @param StandardCharsets.UTF_8 标准字符集.utf8
             * @return 字符串的结果
-             */
+            */
             return new String(decrypted, StandardCharsets.UTF_8);
         } catch (Exception e) {
             /**
@@ -184,7 +184,7 @@ public class PaymentCipherService {
             * @param "解密失败" "解密失败"
             * @param e e
             * @return 薪酬异常的结果
-             */
+            */
             throw new PaymentException(mode == Cipher.ENCRYPT_MODE ? "加密失败" : "解密失败", e);
         }
     }
@@ -194,14 +194,14 @@ public class PaymentCipherService {
     *
     * @param keyText 钥匙文本
     * @return normalize钥匙的结果
-     */
+    */
     private byte[] normalizeKey(String keyText) {
         if (!StringUtils.hasText(keyText)) {
             /**
             * 薪酬异常。
             * @param "支付加密密钥不能为空" "支付加密密钥不能为空"
             * @return 薪酬异常的结果
-             */
+            */
             throw new PaymentException("支付加密密钥不能为空");
         }
         byte[] source = keyText.getBytes(StandardCharsets.UTF_8);

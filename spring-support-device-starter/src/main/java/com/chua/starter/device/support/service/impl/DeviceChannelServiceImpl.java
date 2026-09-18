@@ -23,7 +23,7 @@ public class DeviceChannelServiceImpl implements DeviceChannelService {
 
     /**
     * 通道 映射器
-     */
+    */
     private final DeviceChannelMapper channelMapper;
 
     @Override

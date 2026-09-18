@@ -19,7 +19,7 @@ public interface IEduQuestionService extends IService<EduQuestion> {
     *
     * @param query 查询条件
     * @return 分页结果
-     */
+    */
     PageResult<EduQuestion> pageQuery(QuestionQueryDTO query);
 
     /**
@@ -27,7 +27,7 @@ public interface IEduQuestionService extends IService<EduQuestion> {
     *
     * @param dto 题目数据
     * @return 题目ID
-     */
+    */
     Long saveQuestion(QuestionSaveDTO dto);
 
     /**
@@ -35,7 +35,7 @@ public interface IEduQuestionService extends IService<EduQuestion> {
     *
     * @param list 题目列表
     * @return 导入数量
-     */
+    */
     int importQuestions(java.util.List<QuestionSaveDTO> list);
 
     /**
@@ -43,6 +43,6 @@ public interface IEduQuestionService extends IService<EduQuestion> {
     *
     * @param id 题目标识
     * @return 是否成功
-     */
+    */
     boolean deleteQuestion(Long id);
 }

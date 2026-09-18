@@ -23,7 +23,7 @@ public interface SysAiGlobalSettingMapper extends BaseMapper<SysAiGlobalSetting>
     * @param group 分组
     * @return 设置项列表
     * @param @Param("group" @参数("群体"
-     */
+    */
     List<SysAiGlobalSetting> selectByGroup(@Param("group") String group);
 
     /**
@@ -33,6 +33,6 @@ public interface SysAiGlobalSettingMapper extends BaseMapper<SysAiGlobalSetting>
     * @param field 字段名
     * @return 设置项（可选）
     * @param @Param("group" @参数("群体"
-     */
+    */
     Optional<SysAiGlobalSetting> selectByGroupAndField(@Param("group") String group, @Param("field") String field);
 }

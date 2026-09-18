@@ -60,7 +60,7 @@ public class LoggingConfigHandler implements SyncMessageHandler {
     * 
     * @param data 请求数据，包含 日志记录器名称 和 水平仪
     * @return 操作结果
-     */
+    */
     private Object handleSetLevel(Map<String, Object> data) {
         String loggerName = getString(data, "loggerName");
         String levelStr = getString(data, "level");
@@ -107,7 +107,7 @@ public class LoggingConfigHandler implements SyncMessageHandler {
     * 
     * @param data 请求数据，可包含 keyword 用于过滤
     * @return 日志器列表
-     */
+    */
     private Object handleGetLoggers(Map<String, Object> data) {
         String keyword = getString(data, "keyword");
 
@@ -148,7 +148,7 @@ public class LoggingConfigHandler implements SyncMessageHandler {
     * 
     * @param data 请求数据，包含 日志记录器名称
     * @return 日志级别信息
-     */
+    */
     private Object handleGetLevel(Map<String, Object> data) {
         String loggerName = getString(data, "loggerName");
 
@@ -179,7 +179,7 @@ public class LoggingConfigHandler implements SyncMessageHandler {
     * @param data 数据
     * @param key 钥匙
     * @return 获取字符串的结果
-     */
+    */
     private String getString(Map<String, Object> data, String key) {
         Object v = data.get(key);
         return v != null ? v.toString() : null;

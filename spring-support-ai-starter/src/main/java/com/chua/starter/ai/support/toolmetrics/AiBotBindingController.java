@@ -45,22 +45,22 @@ public class AiBotBindingController {
 
     /**
     * 机器人 绑定服务
-     */
+    */
     private final AiBotBindingService botBindingService;
 
     /**
     * 机器人 聊天引擎（主动发消息 / 聊天记录）
-     */
+    */
     private final AiBotChatService aiBotChatService;
 
     /**
     * 全局设置服务（机器人 默认模型等键值配置）
-     */
+    */
     private final SysAiGlobalSettingService sysAiGlobalSettingService;
 
     /**
     * 模型表 映射器（机器人 可选的对话模型来自模型管理配置的 提供者_模型）
-     */
+    */
     private final SysAiProviderModelMapper providerModelMapper;
 
     /**
@@ -70,7 +70,7 @@ public class AiBotBindingController {
     * 与前端模型管理页面的数据一致。</p>
     *
     * @return 对话模型名列表
-     */
+    */
     @GetMapping("/models")
     public ReturnResult<List<String>> models() {
         List<SysAiProviderModel> all = providerModelMapper.selectList(
@@ -90,7 +90,7 @@ public class AiBotBindingController {
     * @param m m
     * @param task 任务
     * @return 是否包含capability的结果
-     */
+    */
     private static boolean hasCapability(SysAiProviderModel m, String task) {
         if (m.getCapabilities() == null) {
             return false;
@@ -114,7 +114,7 @@ public class AiBotBindingController {
     * @param httpRequest HTTP 请求（用于解析当前身份）
     * @return 绑定列表（按创建时间降序）
     * @param false false
-     */
+    */
     @GetMapping("/list")
     public ReturnResult<List<BotBindingListResponse>> list(@RequestParam(required = false) Long userId,
                                                            HttpServletRequest httpRequest) {
@@ -138,7 +138,7 @@ public class AiBotBindingController {
     * 管理员视角的用户聚合列表（每个用户绑定了多少 机器人、多少在线）。
     *
     * @return 用户摘要列表
-     */
+    */
     @GetMapping("/users")
     public ReturnResult<List<BotUserSummary>> users() {
         return ReturnResult.ok(botBindingService.listUserSummaries());
@@ -149,7 +149,7 @@ public class AiBotBindingController {
     *
     * @param body 请求体：机器人标识 / 从用户 / 内容
     * @return 发送结果（含 消息_标识）
-     */
+    */
     @PostMapping("/send")
     public ReturnResult<Map<String, Object>> send(@RequestBody Map<String, String> body) {
         String botId = body.get("botId");
@@ -176,7 +176,7 @@ public class AiBotBindingController {
     *
     * @param message 失败原因
     * @return 统一的发送结果响应
-     */
+    */
     private ReturnResult<Map<String, Object>> sendFailure(String message) {
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("ok", false);
@@ -196,7 +196,7 @@ public class AiBotBindingController {
     * @param page     页码（从 0 开始，默认 0）
     * @param pageSize 每页条数（默认 50）
     * @return 分页聊天记录
-     */
+    */
     @GetMapping("/messages")
     public ReturnResult<Map<String, Object>> messages(@RequestParam String botId,
                                                       @RequestParam(required = false) String fromUser,
@@ -211,7 +211,7 @@ public class AiBotBindingController {
     *
     * @param body 请求体：机器人标识 / 文本
     * @return 润色结果（{@code result} 字段）
-     */
+    */
     @PostMapping("/polish")
     public ReturnResult<Map<String, Object>> polish(@RequestBody Map<String, String> body) {
         String botId = body.get("botId");
@@ -229,7 +229,7 @@ public class AiBotBindingController {
     *
     * @param body 请求体：机器人标识 / 从用户
     * @return 会话摘要（{@code summary} 字段）
-     */
+    */
     @PostMapping("/summarize")
     public ReturnResult<Map<String, Object>> summarize(@RequestBody Map<String, String> body) {
         String botId = body.get("botId");
@@ -246,7 +246,7 @@ public class AiBotBindingController {
     * 会话列表（IM 左侧）：按 机器人 + 微信用户聚合，取最后一条消息。
     *
     * @return 会话列表（按最后消息时间降序）
-     */
+    */
     @GetMapping("/conversations")
     public ReturnResult<List<BotConversation>> conversations() {
         return ReturnResult.ok(aiBotChatService.listConversations());
@@ -256,7 +256,7 @@ public class AiBotBindingController {
     * 机器人 内置命令清单（供 IM 输入框斜杠命令面板）。
     *
     * @return 命令列表（prefix / 名称 / description）
-     */
+    */
     @GetMapping("/commands")
     public ReturnResult<List<Map<String, Object>>> commands() {
         return ReturnResult.ok(aiBotChatService.listCommands());
@@ -267,7 +267,7 @@ public class AiBotBindingController {
     *
     * @param botId 机器人 唯一标识
     * @return 联系人列表
-     */
+    */
     @GetMapping("/contacts")
     public ReturnResult<List<String>> contacts(@RequestParam String botId) {
         if (StringUtils.isBlank(botId)) {
@@ -284,7 +284,7 @@ public class AiBotBindingController {
     *
     * @param botId 机器人 唯一标识
     * @return status: running=会话存活 / stopped=已停止需重新扫码
-     */
+    */
     @GetMapping("/runtime-status")
     public ReturnResult<Map<String, Object>> runtimeStatus(@RequestParam String botId) {
         if (StringUtils.isBlank(botId)) {
@@ -303,7 +303,7 @@ public class AiBotBindingController {
     * @param botId    机器人 唯一标识
     * @param fromUser 微信用户 标识（可空，空则删除该 机器人 全部会话）
     * @return 删除的消息条数
-     */
+    */
     @DeleteMapping("/conversations")
     public ReturnResult<Integer> deleteConversation(@RequestParam String botId,
                                                     @RequestParam(required = false) String fromUser) {
@@ -314,7 +314,7 @@ public class AiBotBindingController {
     * 查询 机器人 默认 AI 模型（全局设置 机器人.默认_模型，机器人 未单独配置时兜底）。
     *
     * @return 默认模型名（可能为空）
-     */
+    */
     @GetMapping("/default-model")
     public ReturnResult<Map<String, Object>> getDefaultModel() {
         String model = sysAiGlobalSettingService.getValue("bot", "default_model").orElse(null);
@@ -328,7 +328,7 @@ public class AiBotBindingController {
     *
     * @param body 请求体：模型
     * @return 更新后的默认模型名
-     */
+    */
     @PutMapping("/default-model")
     public ReturnResult<Map<String, Object>> setDefaultModel(@RequestBody Map<String, String> body) {
         String model = body.get("model");
@@ -348,7 +348,7 @@ public class AiBotBindingController {
     * <p>统一存储在全局设置表 bot 分组下，未配置时返回内置默认值。</p>
     *
     * @return 全局配置键值对
-     */
+    */
     @GetMapping("/global-config")
     public ReturnResult<Map<String, Object>> getGlobalConfig() {
         Map<String, Object> data = new LinkedHashMap<>();
@@ -365,7 +365,7 @@ public class AiBotBindingController {
     *
     * @param body 配置键值对（支持 上下文thinking / 上下文大小 / 历史大小 / 命令已启用 / compression阈值）
     * @return 更新后的完整配置
-     */
+    */
     @PutMapping("/global-config")
     public ReturnResult<Map<String, Object>> updateGlobalConfig(@RequestBody Map<String, Object> body) {
         if (body == null || body.isEmpty()) {
@@ -405,7 +405,7 @@ public class AiBotBindingController {
     * @param field        设置字段名
     * @param defaultValue 默认值
     * @return 配置值
-     */
+    */
     private boolean readBool(String field, boolean defaultValue) {
         return sysAiGlobalSettingService.getValue("bot", field)
                 .map(v -> Boolean.parseBoolean(v))
@@ -418,7 +418,7 @@ public class AiBotBindingController {
     * @param field        设置字段名
     * @param defaultValue 默认值
     * @return 配置值
-     */
+    */
     private int readInt(String field, int defaultValue) {
         return sysAiGlobalSettingService.getValue("bot", field)
                 .map(v -> {
@@ -439,7 +439,7 @@ public class AiBotBindingController {
     *
     * @param request HTTP 请求
     * @return hasAdmin / 角色 / 用户标识
-     */
+    */
     @GetMapping("/meta")
     public ReturnResult<Map<String, Object>> meta(HttpServletRequest request) {
         Map<String, Object> data = new LinkedHashMap<>();
@@ -475,7 +475,7 @@ public class AiBotBindingController {
     *
     * @param request HTTP 请求
     * @return Token 字符串，无则返回 空
-     */
+    */
     private String resolveToken(HttpServletRequest request) {
         String auth = request.getHeader("Authorization");
         if (StringUtils.isNotBlank(auth) && auth.startsWith("Bearer ")) {
@@ -492,7 +492,7 @@ public class AiBotBindingController {
     *
     * @param id 绑定 标识
     * @return 绑定信息
-     */
+    */
     @GetMapping("/{id}")
     public ReturnResult<BotBindingListResponse> get(@PathVariable Long id) {
         SysAiBotBinding entity = botBindingService.getById(id);
@@ -504,7 +504,7 @@ public class AiBotBindingController {
     *
     * @param request 绑定请求
     * @return 数据库 标识
-     */
+    */
     @PostMapping("/create")
     public ReturnResult<Long> create(@RequestBody BotBindingCreateRequest body,
                                      HttpServletRequest httpRequest) {
@@ -520,7 +520,7 @@ public class AiBotBindingController {
     *
     * @param request 绑定请求（含 标识）
     * @return 数据库 标识
-     */
+    */
     @PutMapping("/update")
     public ReturnResult<Long> update(@RequestBody BotBindingCreateRequest request) {
         SysAiBotBinding entity = new SysAiBotBinding();
@@ -533,7 +533,7 @@ public class AiBotBindingController {
     *
     * @param id 数据库 标识
     * @return 操作结果
-     */
+    */
     @DeleteMapping("/{id}")
     public ReturnResult<Void> delete(@PathVariable Long id) {
         botBindingService.delete(id);
@@ -545,7 +545,7 @@ public class AiBotBindingController {
     *
     * @param entity 数据库实体
     * @return 响应 DTO
-     */
+    */
     private BotBindingListResponse toResponse(SysAiBotBinding entity) {
         BotBindingListResponse resp = new BotBindingListResponse();
         resp.setId(entity.getId());
@@ -579,7 +579,7 @@ public class AiBotBindingController {
     * @param platform 平台类型，默认 wechat
     * @param botId    重新扫码场景下需合并的旧 机器人 唯一标识（可选）
     * @return key + qrcodeurl；qrcodeurl 即时为空，前端轮询 状态=就绪 后从 qr状态 取
-     */
+    */
     @PostMapping("/qrcode")
     public ReturnResult<AiBotBindingService.QrResult> generateQr(
             @RequestParam(defaultValue = "wechat") String platform,
@@ -600,7 +600,7 @@ public class AiBotBindingController {
     *
     * @param key 会话 钥匙
     * @return status + 机器人标识（confirmed 时回填）
-     */
+    */
     @GetMapping("/qrcode/status")
     public ReturnResult<AiBotBindingService.QrStatus> checkQrStatus(@RequestParam String key) {
         return ReturnResult.ok(botBindingService.checkQrCodeStatus(key));
@@ -616,7 +616,7 @@ public class AiBotBindingController {
     * @param appId     飞书应用 标识
     * @param appSecret 飞书应用密钥
     * @return 数据库 标识
-     */
+    */
     @PostMapping("/feishu")
     public ReturnResult<Long> bindFeishu(@RequestParam String appId,
                                          @RequestParam String appSecret,
@@ -634,7 +634,7 @@ public class AiBotBindingController {
     *
     * @param request HTTP 请求
     * @return 归属身份（ownerKey + 是否管理员）
-     */
+    */
     private Identity resolveIdentity(HttpServletRequest request) {
         // 本地信任（Tauri / 本地开发）：视为管理员，保持原有全量可见行为
         Object trusted = request.getAttribute(LocalTrustAuthFilter.TRUSTED_ATTR);
@@ -644,7 +644,7 @@ public class AiBotBindingController {
             * @param null 空
             * @param true true
             * @return Identity的结果
-             */
+            */
             return new Identity(null, true);
         }
         // 登录态：以 u:<userId> 归属，管理员放行全部
@@ -660,7 +660,7 @@ public class AiBotBindingController {
                         * Identity。
                         * @param user.getUserId( 用户.获取用户标识(
                         * @return Identity的结果
-                         */
+                        */
                         return new Identity("u:" + user.getUserId().trim(), admin);
                     }
                     if (admin) {
@@ -669,7 +669,7 @@ public class AiBotBindingController {
                         * @param null 空
                         * @param true true
                         * @return Identity的结果
-                         */
+                        */
                         return new Identity(null, true);
                     }
                 }
@@ -687,7 +687,7 @@ public class AiBotBindingController {
             * Identity。
             * @param fingerprint.trim( fingerprint.修剪(
             * @return Identity的结果
-             */
+            */
             return new Identity("fp:" + fingerprint.trim(), false);
         }
         /**
@@ -695,7 +695,7 @@ public class AiBotBindingController {
         * @param null 空
         * @param false false
         * @return Identity的结果
-         */
+        */
         return new Identity(null, false);
     }
 
@@ -705,7 +705,7 @@ public class AiBotBindingController {
     * @param ownerKey 归属标识（{@code u:<userId>} / {@code fp:<fingerprint>}），无身份时为 空
     * @param admin    是否管理员（或本地信任）
     * @return Identity的结果
-     */
+    */
     private record Identity(String ownerKey, boolean admin) {
     }
 }

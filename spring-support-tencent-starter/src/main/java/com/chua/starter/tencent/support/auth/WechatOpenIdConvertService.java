@@ -18,7 +18,7 @@ public class WechatOpenIdConvertService implements OpenIdConvertService {
     * @param componentAppId 字符串
     * @param componentAppSecret 组件appsecret
     * @param defaultMiniAppId 默认miniappid
-     */
+    */
     public WechatOpenIdConvertService(String componentAppId, String componentAppSecret, String defaultMiniAppId) {
         log.info("初始化微信openid转换服务: componentAppId={}", componentAppId);
     }

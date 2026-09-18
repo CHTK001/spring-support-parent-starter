@@ -12,7 +12,7 @@ public interface MediaTypeHandler {
     *
     * @param o o
     * @return 结果
-     */
+    */
     byte[] asByteArray(Object o);
 }
 

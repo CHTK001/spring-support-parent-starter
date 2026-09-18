@@ -55,17 +55,17 @@ public class AiManufacturerController {
 
     /**
     * 厂商门面服务
-     */
+    */
     private final AiManufacturerFacadeService aiManufacturerFacadeService;
 
     /**
     * 模型价格同步服务
-     */
+    */
     private final AiModelPriceSyncService aiModelPriceSyncService;
 
     /**
     * 运行目录（用于 Logo 文件存储）
-     */
+    */
     @Value("${user.dir:.}")
     /** 用户目录 */
     private String userDir;
@@ -76,7 +76,7 @@ public class AiManufacturerController {
     /**
     * 列表。
     * @return 列表的结果
-     */
+    */
     public ReturnResult<?> list() {
         return ReturnResult.ok(aiManufacturerFacadeService.list());
     }
@@ -87,7 +87,7 @@ public class AiManufacturerController {
     /**
     * 工厂。
     * @return 工厂的结果
-     */
+    */
     public ReturnResult<?> factories() {
         List<String> names = new ArrayList<>(ServiceProvider.of(ChatClient.class).getExtensions());
         if (!names.contains("siliconflow")) {
@@ -133,7 +133,7 @@ public class AiManufacturerController {
     * @return 保存的结果
     * @param "厂商实体" "厂商实体"
     * @param "厂商实体" "厂商实体"
-     */
+    */
     public ReturnResult<?> save(@Parameter(description = "厂商实体") @RequestBody SysAiManufacturer manufacturer) {
         return ReturnResult.ok(aiManufacturerFacadeService.save(manufacturer));
     }
@@ -147,7 +147,7 @@ public class AiManufacturerController {
     * @return 更新的结果
     * @param "厂商实体" "厂商实体"
     * @param "厂商实体" "厂商实体"
-     */
+    */
     public ReturnResult<?> update(@Parameter(description = "厂商实体") @RequestBody SysAiManufacturer manufacturer) {
         return ReturnResult.of(aiManufacturerFacadeService.update(manufacturer));
     }
@@ -161,7 +161,7 @@ public class AiManufacturerController {
     * @return 删除的结果
     * @param "厂商标识" "厂商标识"
     * @param "厂商标识" "厂商标识"
-     */
+    */
     public ReturnResult<?> delete(@Parameter(description = "厂商标识") @RequestParam Integer sysAiManufacturerId) {
         return ReturnResult.of(aiManufacturerFacadeService.delete(sysAiManufacturerId));
     }
@@ -176,7 +176,7 @@ public class AiManufacturerController {
     * @return uploadLogo的结果
     * @param "标志文件" "标志文件"
     * @param "标志文件" "标志文件"
-     */
+    */
     public ReturnResult<?> uploadLogo(@Parameter(description = "标志文件") @RequestParam("file") MultipartFile file) {
         if (file == null || file.isEmpty()) {
             return ReturnResult.illegal("文件不能为空");
@@ -212,7 +212,7 @@ public class AiManufacturerController {
     * @return logo的结果
     * @param "文件名称" "文件名称"
     * @param "文件名称" "文件名称"
-     */
+    */
     public ResponseEntity<Resource> logo(@Parameter(description = "文件名称") @PathVariable String fileName) {
         Path folder = Paths.get(userDir, ".runtime", "ai", "manufacturer", "logo").toAbsolutePath().normalize();
         Path file = folder.resolve(fileName).normalize();
@@ -234,7 +234,7 @@ public class AiManufacturerController {
 
     /**
     * 允许上传的厂商标志扩展名白名单。
-     */
+    */
     private static final Set<String> ALLOWED_LOGO_EXTENSIONS = Set.of(
             ".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico"
     );

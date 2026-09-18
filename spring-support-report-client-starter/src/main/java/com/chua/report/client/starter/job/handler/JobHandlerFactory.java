@@ -23,19 +23,19 @@ public class JobHandlerFactory {
 
     /**
     * 单例实例
-     */
+    */
     private static final JobHandlerFactory INSTANCE = new JobHandlerFactory();
 
     /**
     * 作业处理器存储仓库
     * 钥匙: 处理器名称
     * 价值观: 作业处理器实例
-     */
+    */
     private static final ConcurrentMap<String, JobHandler> JOB_HANDLER_REPOSITORY = new ConcurrentHashMap<>();
 
     /**
     * 私有构造函数，防止外部实例化
-     */
+    */
     private JobHandlerFactory() {
     }
 
@@ -43,7 +43,7 @@ public class JobHandlerFactory {
     * 获取工厂单例实例
     *
     * @return 工厂实例
-     */
+    */
     public static JobHandlerFactory getInstance() {
         return INSTANCE;
     }
@@ -57,7 +57,7 @@ public class JobHandlerFactory {
     * @param name       处理器名称
     * @param jobHandler 作业处理程序实例
     * @return 如果名称已存在返回原有处理器，否则返回null
-     */
+    */
     public JobHandler register(String name, JobHandler jobHandler) {
         log.debug("注册JobHandler: {}", name);
         JobHandler existing = JOB_HANDLER_REPOSITORY.putIfAbsent(name, jobHandler);
@@ -72,7 +72,7 @@ public class JobHandlerFactory {
     *
     * @param name 处理器名称
     * @return JobHandler实例，如果不存在返回null
-     */
+    */
     public JobHandler get(String name) {
         return JOB_HANDLER_REPOSITORY.get(name);
     }
@@ -81,7 +81,7 @@ public class JobHandlerFactory {
     * 获取所有已注册的处理器名称
     *
     * @return 处理器名称集合
-     */
+    */
     public Set<String> keys() {
         return JOB_HANDLER_REPOSITORY.keySet();
     }
@@ -90,7 +90,7 @@ public class JobHandlerFactory {
     * 获取已注册处理器数量
     *
     * @return 处理器数量
-     */
+    */
     public int size() {
         return JOB_HANDLER_REPOSITORY.size();
     }
@@ -100,7 +100,7 @@ public class JobHandlerFactory {
     *
     * @param name 处理器名称
     * @return 如果已注册返回true
-     */
+    */
     public boolean contains(String name) {
         return JOB_HANDLER_REPOSITORY.containsKey(name);
     }

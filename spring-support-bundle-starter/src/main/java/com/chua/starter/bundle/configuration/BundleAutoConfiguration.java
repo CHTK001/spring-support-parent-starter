@@ -38,7 +38,7 @@ public class BundleAutoConfiguration {
     * @param launcher   osgi 启动器（由 spring-支持-osgi-启动 提供）
     * @param properties Bundle 配置
     * @return Bundle 管理器
-     */
+    */
     @Bean
     public BundleManagerService bundleManagerService(
             OsgiLauncher launcher,
@@ -48,7 +48,7 @@ public class BundleAutoConfiguration {
         * @param launcher launcher
         * @param properties 属性
         * @return bundle管理器服务的结果
-         */
+        */
         return new BundleManagerService(launcher, properties);
     }
 
@@ -61,7 +61,7 @@ public class BundleAutoConfiguration {
     * @param bundleManager  Bundle 管理器
     * @param properties Bundle 配置
     * @return 启动时 Bundle 处理器
-     */
+    */
     @Bean
     public org.springframework.beans.factory.SmartInitializingSingleton bundleStartupProcessor(
             BundleManagerService bundleManager,
@@ -90,7 +90,7 @@ public class BundleAutoConfiguration {
     /**
     * 注册 Bundle 模块服务信息。
     * @return bundle服务信息contributor的结果
-     */
+    */
     @Bean
     public ServiceInfoContributor bundleServiceInfoContributor() {
         return registry -> registry.registerFlag("bundle", "OSGi Bundle", true, "OSGi Bundle 生命周期管理");

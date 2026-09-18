@@ -18,7 +18,7 @@ public class SaturateImageFilterProvider implements FileStorageImageFilterProvid
     * 获取滤镜唯一名称。
     *
     * @return 滤镜名称 SATURATE
-     */
+    */
     @Override
     public String getName() {
         return "SATURATE";
@@ -28,7 +28,7 @@ public class SaturateImageFilterProvider implements FileStorageImageFilterProvid
     * 获取滤镜展示名。
     *
     * @return 展示名 鲜艳
-     */
+    */
     @Override
     public String getLabel() {
         return "鲜艳";
@@ -38,7 +38,7 @@ public class SaturateImageFilterProvider implements FileStorageImageFilterProvid
     * 获取前端应用的 CSS filter 值。
     *
     * @return CSS filter 值 saturate(1.8)
-     */
+    */
     @Override
     public String getCssFilter() {
         return "saturate(1.8)";

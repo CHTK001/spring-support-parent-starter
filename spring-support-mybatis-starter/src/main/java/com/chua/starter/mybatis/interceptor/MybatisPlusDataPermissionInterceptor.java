@@ -42,7 +42,7 @@ public class MybatisPlusDataPermissionInterceptor extends DataPermissionIntercep
     * @param dataPermissionHandler 数据权限处理器
     * @param methodSecurityInterceptor mybatisplus数据scope属性
     * @param methodSecurityInterceptor 方法安全性拦截器
-     */
+    */
     public MybatisPlusDataPermissionInterceptor(DataPermissionHandler dataPermissionHandler, MybatisPlusDataScopeProperties methodSecurityInterceptor) {
         this(dataPermissionHandler, methodSecurityInterceptor, () -> null);
     }
@@ -52,14 +52,14 @@ public class MybatisPlusDataPermissionInterceptor extends DataPermissionIntercep
     * @param dataPermissionHandler 数据权限处理器
     * @param methodSecurityInterceptor 方法安全性拦截器
     * @param authServiceSupplier 认证服务供应商
-     */
+    */
     public MybatisPlusDataPermissionInterceptor(DataPermissionHandler dataPermissionHandler,
                                                 MybatisPlusDataScopeProperties methodSecurityInterceptor,
                                                 Supplier<AuthService> authServiceSupplier) {
         /**
         * 父。
         * @param dataPermissionHandler 数据权限处理器
-         */
+        */
         super(dataPermissionHandler);
         this.methodSecurityInterceptor = methodSecurityInterceptor;
         this.authServiceSupplier = authServiceSupplier;
@@ -97,7 +97,7 @@ public class MybatisPlusDataPermissionInterceptor extends DataPermissionIntercep
     *
     * <p>对 SQL 解析失败（如字段别名撞数据库保留字）做容错，
     * 跳过数据权限过滤而不阻断查询。</p>
-     */
+    */
     @Override
     public void beforeQuery(Executor executor, MappedStatement ms, Object parameter,
                             RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql) {
@@ -113,7 +113,7 @@ public class MybatisPlusDataPermissionInterceptor extends DataPermissionIntercep
     * 判断是否应该应用数据权限
     *
     * @return true-应用, false-不应用
-     */
+    */
     private boolean shouldApplyDataPermission() {
         // 检查是否开启数据权限
         if (!methodSecurityInterceptor.isEnable()) {
@@ -133,7 +133,7 @@ public class MybatisPlusDataPermissionInterceptor extends DataPermissionIntercep
     *
     * @param currentUser 当前用户
     * @return 是否包含manageddept铅scope的结果
-     */
+    */
     private boolean hasManagedDeptLeaderScope(CurrentUser currentUser) {
         return currentUser.hasRole(DEPT_LEADER)
                 && null != currentUser.getExt()
@@ -144,7 +144,7 @@ public class MybatisPlusDataPermissionInterceptor extends DataPermissionIntercep
     * 获取当前用户
     *
     * @return 获取当前用户的结果
-     */
+    */
     private CurrentUser getCurrentUser() {
         if (authServiceSupplier == null) {
             return null;

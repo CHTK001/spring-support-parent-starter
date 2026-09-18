@@ -43,24 +43,24 @@ public class DataSyncApplication {
 
     /**
     * 映射配置文件目录（main resources 下）
-     */
+    */
     private static final String MAPPING_DIR = "./src/main/resources/datasync/mappings";
 
     /**
     * 数据库模式参数值
-     */
+    */
     private static final String MODE_DATABASE = "database";
 
     /**
     * 数据库类型参数值（MySQL 显式指定；默认嵌入式 H2 便于本地真实启动验证）
-     */
+    */
     private static final String DB_MYSQL = "mysql";
 
     /**
     * 程序入口。
     *
     * @param args 命令行参数
-     */
+    */
     public static void main(String[] args) {
         // 解析模式参数（优先系统属性，其次命令行 --datasync.mode=）
         String mode = System.getProperty("datasync.mode", "file");
@@ -136,7 +136,7 @@ public class DataSyncApplication {
         * @param server 服务端
         * @param databaseMode databasemode
         * @param useMysql usemysql
-         */
+        */
         registerSampleSourcesAndSinks(server, databaseMode, useMysql);
         log.info("[DATA-SYNC] 已注册测试 Source/Sink，等待定时调度执行");
         log.info("[DATA-SYNC] DataSyncServer 启动成功");
@@ -153,7 +153,7 @@ public class DataSyncApplication {
     * @param server       数据同步服务器
     * @param databaseMode 是否数据库模式
     * @param useMysql     是否使用真实 MySQL（false 时数据库模式走嵌入式 H2）
-     */
+    */
     private static void registerSampleSourcesAndSinks(DefaultDataSyncServer server, boolean databaseMode, boolean useMysql) {
  // 确保 Sink 输出目录存在（delimited数据同步智能体sink 不会自动创建父目录）
         java.io.File outDir = new java.io.File("target/datasync-out");
@@ -208,7 +208,7 @@ public class DataSyncApplication {
     * 真实 MySQL（172.16.0.40，库 datasync_测试）。文件模式同样使用嵌入式 H2。</p>
     *
     * @return 数据源
-     */
+    */
     @Bean
     public DataSource dataSource() {
         String mode = System.getProperty("datasync.mode", "file");
@@ -227,7 +227,7 @@ public class DataSyncApplication {
         /**
         * embeddeddatabase构建器。
         * @return embeddeddatabase构建器的结果
-         */
+        */
         return new EmbeddedDatabaseBuilder()
                 .setType(EmbeddedDatabaseType.H2)
                 .setName("datasync-testdb")

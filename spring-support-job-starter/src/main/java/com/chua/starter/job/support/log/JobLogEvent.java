@@ -39,7 +39,7 @@ public record JobLogEvent(
     *
     * @since 4.0.0.42
     * @author CH
-     */
+    */
     public enum Status {
         SUCCESS, FAILURE, SKIPPED
     }
@@ -51,7 +51,7 @@ public record JobLogEvent(
     * @param executedAtMs 执行atms
     * @param nodeId 节点标识
     * @return 成功的结果
-     */
+    */
     public static JobLogEvent success(String jobName, long costMs, long executedAtMs, String nodeId) {
         return new JobLogEvent(jobName, Status.SUCCESS, costMs, null,
                 executedAtMs, nodeId, Instant.now(), null);
@@ -65,7 +65,7 @@ public record JobLogEvent(
     * @param nodeId 节点标识
     * @param logContent 日志内容
     * @return 成功的结果
-     */
+    */
     public static JobLogEvent success(String jobName, long costMs, long executedAtMs, String nodeId, String logContent) {
         return new JobLogEvent(jobName, Status.SUCCESS, costMs, null,
                 executedAtMs, nodeId, Instant.now(), logContent);
@@ -73,7 +73,7 @@ public record JobLogEvent(
 
     /**
     * 构造失败事件 (无日志内容)。
-     */
+    */
     public static JobLogEvent failure(String jobName, long costMs, Throwable throwable,
                                       long executedAtMs, String nodeId) {
         return failure(jobName, costMs, throwable, executedAtMs, nodeId, null);
@@ -83,7 +83,7 @@ public record JobLogEvent(
     * 构造失败事件 (含日志内容)。
     * @param throwable 抛出
     * @return extract消息的结果
-     */
+    */
     public static JobLogEvent failure(String jobName, long costMs, Throwable throwable,
                                       long executedAtMs, String nodeId, String logContent) {
         String message = extractMessage(throwable);
@@ -113,7 +113,7 @@ public record JobLogEvent(
     * @param reason ReasonMLML
     * @param nodeId 节点标识
     * @return skipped的结果
-     */
+    */
     public static JobLogEvent skipped(String jobName, String reason, String nodeId) {
         return new JobLogEvent(jobName, Status.SKIPPED, 0L, reason,
                 System.currentTimeMillis(), nodeId, Instant.now(), null);
@@ -122,7 +122,7 @@ public record JobLogEvent(
     /**
     * 序列化为 wire 格式 (基础64 编码 日志内容)。
     * @return 转为json的结果
-     */
+    */
     public String toJson() {
         return "JobLogEvent["
                 + "jobName=" + nvl(jobName)
@@ -140,7 +140,7 @@ public record JobLogEvent(
     * 从 wire 格式反序列化。
     * @param text 文本
     * @return 从json的结果
-     */
+    */
     public static JobLogEvent fromJson(String text) {
         if (text == null || text.isEmpty()) {
             return null;
@@ -170,8 +170,8 @@ public record JobLogEvent(
     }
 
     /**
-     * 字段模式。
-     */
+    * 字段模式。
+    */
     private static final Pattern FIELD_PATTERN = Pattern.compile("\\b([a-zA-Z]+)=([^,\\]]*)");
 
     /**
@@ -179,7 +179,7 @@ public record JobLogEvent(
     * @param text 文本
     * @param name 名称
     * @return 读取字段的结果
-     */
+    */
     private static String readField(String text, String name) {
         Matcher m = FIELD_PATTERN.matcher(text);
         while (m.find()) {
@@ -191,11 +191,11 @@ public record JobLogEvent(
     }
 
     /**
-     * 读取long字段。
-     * @param text 文本
-     * @param name 名称
-     * @return 读取long字段的结果
-     */
+    * 读取long字段。
+    * @param text 文本
+    * @param name 名称
+    * @return 读取long字段的结果
+    */
     private static long readLongField(String text, String name) {
         String v = readField(text, name);
         if (v == null || v.isEmpty() || "null".equals(v)) {
@@ -209,10 +209,10 @@ public record JobLogEvent(
     }
 
     /**
-     * nvl。
-     * @param s s
-     * @return nvl的结果
-     */
+    * nvl。
+    * @param s s
+    * @return nvl的结果
+    */
     private static String nvl(String s) {
         return s == null ? "null" : s;
     }

@@ -54,7 +54,7 @@ public class MapperXmlEndpoint {
     /**
     * 映射器xml端点。
     * @param reload reload
-     */
+    */
     public MapperXmlEndpoint(Reload reload) {
         this.reload = reload;
     }
@@ -62,7 +62,7 @@ public class MapperXmlEndpoint {
     /**
     * 列出所有已加载的 映射器 XML 文件信息
     * @return 文件的结果
-     */
+    */
     @ReadOperation
     public List<FileInfo> files() {
         return reload.listFiles();
@@ -73,7 +73,7 @@ public class MapperXmlEndpoint {
     *
     * @param name 文件名（如 用户映射器.xml）
     * @return 内容的结果
-     */
+    */
     @ReadOperation
     public ResponseEntity<Map<String, Object>> content(@Selector String name) {
         if (StringUtils.isBlank(name)) {
@@ -108,7 +108,7 @@ public class MapperXmlEndpoint {
     * <p>仅对可写本地文件生效；JAR 内资源无法保存。</p>
     *
     * @param name 文件名
-     */
+    */
     @WriteOperation
     public ResponseEntity<Map<String, Object>> save(@Selector String name,
                                                      @RequestBody(required = false) Map<String, String> body) {
@@ -157,7 +157,7 @@ public class MapperXmlEndpoint {
     *
     * @param name 文件名
     * @return reload的结果
-     */
+    */
     @WriteOperation
     public ResponseEntity<Map<String, Object>> reload(@Selector String name) {
         if (StringUtils.isBlank(name)) {
@@ -175,7 +175,7 @@ public class MapperXmlEndpoint {
     /**
     * 返回嵌入式 XML 编辑器 HTML 页面
     * @return editorPage的结果
-     */
+    */
     @GetMapping(path = "/mybatis/xml/editor", produces = "text/html;charset=UTF-8")
     public ResponseEntity<String> editorPage() {
         Resource resource = new ClassPathResource("static/mybatis/xml-editor.html");
@@ -195,7 +195,7 @@ public class MapperXmlEndpoint {
     * 读取文件内容。
     * @param filename 文件名
     * @return 读取文件内容的结果
-     */
+    */
     private String readFileContent(String filename) throws IOException {
         Resource[] resources = new org.springframework.core.io.support.PathMatchingResourcePatternResolver()
                 .getResources("classpath*:**/" + filename);
@@ -204,14 +204,14 @@ public class MapperXmlEndpoint {
             * 字符串。
             * @param resources[0].getInputStream( resources[0].获取输入流(
             * @return 字符串的结果
-             */
+            */
             return new String(resources[0].getInputStream().readAllBytes(), StandardCharsets.UTF_8);
         }
         /**
         * io异常。
         * @param filename 文件名
         * @return io异常的结果
-         */
+        */
         throw new IOException("找不到资源: " + filename);
     }
 }

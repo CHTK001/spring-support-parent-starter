@@ -63,21 +63,21 @@ public class RagController {
     private final RagProperties ragProperties;
 
     /**
-     * 创建 RAG 控制器实例。
-     *
-     * @param ragClientManager 全局 RAG 客户端管理器
-     * @param ragProperties    RAG 配置属性
-     */
+    * 创建 RAG 控制器实例。
+    *
+    * @param ragClientManager 全局 RAG 客户端管理器
+    * @param ragProperties    RAG 配置属性
+    */
     public RagController(RagClientManager ragClientManager, RagProperties ragProperties) {
         this.ragClientManager = ragClientManager;
         this.ragProperties = ragProperties;
     }
 
     /**
-     * 获取当前全局 RAG 客户端。
-     *
-     * @return 当前 RAG 客户端；尚未初始化时为 null
-     */
+    * 获取当前全局 RAG 客户端。
+    *
+    * @return 当前 RAG 客户端；尚未初始化时为 null
+    */
     private RagClient ragClient() {
         return ragClientManager.current();
     }
@@ -85,14 +85,14 @@ public class RagController {
     // ── 文档管理 ─────────────────────────────────────────
 
     /**
-     * 上传文档并自动索引到知识库。
-     *
-     * <p>先做非空与 MIME 白名单校验，再交由 RAG 客户端解析、切分并写入向量存储。</p>
-     *
-     * @param file      上传的文件
-     * @param libraryId 目标知识库 ID，为空时使用默认知识库
-     * @return 索引结果；校验或索引失败时返回错误信息
-     */
+    * 上传文档并自动索引到知识库。
+    *
+    * <p>先做非空与 MIME 白名单校验，再交由 RAG 客户端解析、切分并写入向量存储。</p>
+    *
+    * @param file      上传的文件
+    * @param libraryId 目标知识库 ID，为空时使用默认知识库
+    * @return 索引结果；校验或索引失败时返回错误信息
+    */
     @Permission("admin")
     @Operation(summary = "上传文档", description = "上传文件并自动索引到知识库")
     @PostMapping(value = "/document/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -124,16 +124,16 @@ public class RagController {
     }
 
     /**
-     * 分页查询已上传文档。
-     *
-     * <p>分页参数做上下界收敛（page ≥ 1，1 ≤ pageSize ≤ 100）；总数取
-     * {@code documentCount} 而非当前页条数，保证前端分页正确。</p>
-     *
-     * @param page      页码，从 1 开始
-     * @param pageSize  每页条数，最大 100
-     * @param libraryId 知识库 ID，为空时查询全部
-     * @return 含 records / total / page / pageSize 的分页结果
-     */
+    * 分页查询已上传文档。
+    *
+    * <p>分页参数做上下界收敛（page ≥ 1，1 ≤ pageSize ≤ 100）；总数取
+    * {@code documentCount} 而非当前页条数，保证前端分页正确。</p>
+    *
+    * @param page      页码，从 1 开始
+    * @param pageSize  每页条数，最大 100
+    * @param libraryId 知识库 ID，为空时查询全部
+    * @return 含 records / total / page / pageSize 的分页结果
+    */
     @Permission("admin")
     @Operation(summary = "文档列表", description = "分页查询已上传文档")
     @GetMapping("/document/list")
@@ -162,11 +162,11 @@ public class RagController {
     }
 
     /**
-     * 删除文档及其向量索引。
-     *
-     * @param id 文档 ID
-     * @return 删除成功返回 true；文档不存在时返回错误信息
-     */
+    * 删除文档及其向量索引。
+    *
+    * @param id 文档 ID
+    * @return 删除成功返回 true；文档不存在时返回错误信息
+    */
     @Permission("admin")
     @Operation(summary = "删除文档", description = "删除文档及其向量索引")
     @DeleteMapping("/document/{id}")
@@ -176,11 +176,11 @@ public class RagController {
     }
 
     /**
-     * 预览文档原始文本内容（仅限文本文件）。
-     *
-     * @param id 文档 ID
-     * @return 文档文本内容；不可读取时返回错误信息
-     */
+    * 预览文档原始文本内容（仅限文本文件）。
+    *
+    * @param id 文档 ID
+    * @return 文档文本内容；不可读取时返回错误信息
+    */
     @Permission("admin")
     @Operation(summary = "文档内容预览", description = "读取文档原始文本内容（仅限文本文件）")
     @GetMapping("/document/{id}/content")
@@ -193,13 +193,13 @@ public class RagController {
     }
 
     /**
-     * 读取来源图片的原始字节（供前端渲染缩略图 / 预览）。
-     * <p>图片类文档入库后，查询响应的 {@code sources[].imageUrl} 指向本端点，
-     * 前端据此展示命中来源的原图。文本类文档访问本端点返回 404。</p>
-     *
-     * @param id 文档 ID（图片类文档）
-     * @return 图片字节流，Content-Type 按扩展名设置；非图片或不存在时返回 404
-     */
+    * 读取来源图片的原始字节（供前端渲染缩略图 / 预览）。
+    * <p>图片类文档入库后，查询响应的 {@code sources[].imageUrl} 指向本端点，
+    * 前端据此展示命中来源的原图。文本类文档访问本端点返回 404。</p>
+    *
+    * @param id 文档 ID（图片类文档）
+    * @return 图片字节流，Content-Type 按扩展名设置；非图片或不存在时返回 404
+    */
     @Permission("admin")
     @Operation(summary = "来源图片", description = "读取图片类文档的原始字节（供 RAG 查询来源渲染）")
     @GetMapping("/document/{id}/image")
@@ -216,11 +216,11 @@ public class RagController {
     }
 
     /**
-     * 按文档 ID 前缀推断图片 Content-Type。
-     *
-     * @param docId 文档 ID
-     * @return MIME 类型（默认 image/png）
-     */
+    * 按文档 ID 前缀推断图片 Content-Type。
+    *
+    * @param docId 文档 ID
+    * @return MIME 类型（默认 image/png）
+    */
     private String resolveImageContentType(String docId) {
         String lower = docId == null ? "" : docId.toLowerCase();
         if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) {
@@ -241,11 +241,11 @@ public class RagController {
     // ── 问答 ─────────────────────────────────────────────
 
     /**
-     * 基于已索引文档进行 RAG 问答。
-     *
-     * @param body 请求体，包含 query（必填）、topK（可选）、threshold（可选，0~1）
-     * @return 含 answer 与 sources（documentId / content / score）的响应
-     */
+    * 基于已索引文档进行 RAG 问答。
+    *
+    * @param body 请求体，包含 query（必填）、topK（可选）、threshold（可选，0~1）
+    * @return 含 answer 与 sources（documentId / content / score）的响应
+    */
     @Permission("admin")
     @Operation(summary = "RAG 问答", description = "基于已索引文档进行问答，返回答案和引用来源")
     @PostMapping("/query")
@@ -287,10 +287,10 @@ public class RagController {
     // ── 状态与管理 ───────────────────────────────────────
 
     /**
-     * 获取 RAG 服务运行状态。
-     *
-     * @return 含引擎、上传目录、默认 topK / 阈值、客户端类型与文档数的状态信息
-     */
+    * 获取 RAG 服务运行状态。
+    *
+    * @return 含引擎、上传目录、默认 topK / 阈值、客户端类型与文档数的状态信息
+    */
     @Operation(summary = "服务状态", description = "获取 RAG 服务运行状态")
     @GetMapping("/status")
     public ReturnResult<Map<String, Object>> status() {
@@ -312,10 +312,10 @@ public class RagController {
     }
 
     /**
-     * 清空向量存储并重新索引全部文档。
-     *
-     * @return 重新索引的文档数量；失败时返回错误信息
-     */
+    * 清空向量存储并重新索引全部文档。
+    *
+    * @return 重新索引的文档数量；失败时返回错误信息
+    */
     @Permission("admin")
     @Operation(summary = "重置索引", description = "清空向量存储并重新索引所有文档")
     @PostMapping("/reset")
@@ -331,10 +331,10 @@ public class RagController {
  // ── 嵌入 引擎发现 ─────────────────────────────────
 
     /**
-     * 列出所有可用的 Embedding 引擎。
-     *
-     * @return VectorService SPI 扩展名列表（value / label 形式）
-     */
+    * 列出所有可用的 Embedding 引擎。
+    *
+    * @return VectorService SPI 扩展名列表（value / label 形式）
+    */
     @Operation(summary = "Embedding 引擎列表", description = "获取所有可用的 Embedding 引擎（VectorService SPI 实现）")
     @GetMapping("/embedding-engines")
     public ReturnResult<List<Map<String, String>>> listEmbeddingEngines() {
@@ -351,12 +351,12 @@ public class RagController {
     // ── 向量浏览 ───────────────────────────────────────────
 
     /**
-     * 分页查看已存储的向量数据（不返回原始向量值）。
-     *
-     * @param page     页码，从 1 开始
-     * @param pageSize 每页条数，最大 100
-     * @return 含 records / total / page / pageSize 的分页结果
-     */
+    * 分页查看已存储的向量数据（不返回原始向量值）。
+    *
+    * @param page     页码，从 1 开始
+    * @param pageSize 每页条数，最大 100
+    * @return 含 records / total / page / pageSize 的分页结果
+    */
     @Operation(summary = "向量列表", description = "分页查看已存储的向量数据（不含原始向量值）")
     @GetMapping("/vector/list")
     public ReturnResult<Map<String, Object>> listVectors(
@@ -385,12 +385,12 @@ public class RagController {
     }
 
     /**
-     * 按文本检索相似向量（仅做向量检索，不调用 LLM）。
-     *
-     * @param query 检索文本，不能为空
-     * @param topK  返回条数
-     * @return 命中的向量条目（documentId / score / content）
-     */
+    * 按文本检索相似向量（仅做向量检索，不调用 LLM）。
+    *
+    * @param query 检索文本，不能为空
+    * @param topK  返回条数
+    * @return 命中的向量条目（documentId / score / content）
+    */
     @Operation(summary = "向量搜索", description = "按文本检索相似向量（仅搜索，不走 LLM）")
     @GetMapping("/vector/search")
     public ReturnResult<List<Map<String, Object>>> searchVectors(
@@ -417,13 +417,13 @@ public class RagController {
     }
 
     /**
-     * 从指定 URL 抓取网页内容并添加为 RAG 文档。
-     *
-     * <p>先做 SSRF 防护校验（协议白名单 + 内网地址拦截），抓取后去除 HTML 标签并按上限截断。</p>
-     *
-     * @param request URL 抓取请求，包含目标 url
-     * @return 索引结果；URL 非法或抓取失败时返回错误信息
-     */
+    * 从指定 URL 抓取网页内容并添加为 RAG 文档。
+    *
+    * <p>先做 SSRF 防护校验（协议白名单 + 内网地址拦截），抓取后去除 HTML 标签并按上限截断。</p>
+    *
+    * @param request URL 抓取请求，包含目标 url
+    * @return 索引结果；URL 非法或抓取失败时返回错误信息
+    */
     @Permission("admin")
     @Operation(summary = "URL 抓取文档", description = "从指定 URL 抓取网页内容并添加为 RAG 文档")
     @PostMapping("/document/url")
@@ -478,17 +478,17 @@ public class RagController {
 
     /**
     * URL 抓取内容最大长度。
-     */
+    */
     private static final int URL_CONTENT_MAX_LENGTH = 2000;
 
     /**
     * 合法协议白名单。
-     */
+    */
     private static final Set<String> SAFE_PROTOCOLS = Set.of("http", "https");
 
     /**
     * 文档上传允许的 MIME 类型白名单，防止上传可执行文件等危险内容。
-     */
+    */
     private static final Set<String> ALLOWED_CONTENT_TYPES = Set.of(
             "text/plain", "text/markdown", "text/html", "text/css", "text/xml",
             "application/json", "application/pdf", "application/msword",
@@ -509,7 +509,7 @@ public class RagController {
     * @return 合法返回 true，非法抛出异常
     * @throws URISyntaxException URL 格式非法
     * @throws java.net.UnknownHostException 主机无法解析
-     */
+    */
     private boolean isSafeUrl(String url) throws Exception {
         URI uri = new URI(url);
         String protocol = uri.getScheme() == null ? "" : uri.getScheme().toLowerCase();
@@ -535,7 +535,7 @@ public class RagController {
     *
     * @param address IP 地址
     * @return 命中内网等不可信地址返回 true
-     */
+    */
     private boolean isInternalAddress(InetAddress address) {
         if (address == null || !(address instanceof Inet4Address)
                 && !(address instanceof Inet6Address)) {
@@ -557,7 +557,7 @@ public class RagController {
     * @param value  原始值（可能是 字符串/数字/空）
     * @param defVal 解析失败时返回的默认值
     * @return 解析后的正整数值，非法时返回默认值
-     */
+    */
     private int parsePositiveInt(Object value, int defVal) {
         if (value == null) {
             return defVal;
@@ -577,7 +577,7 @@ public class RagController {
     * @param value  原始值（可能是 字符串/数字/空）
     * @param defVal 解析失败时返回的默认值
     * @return 解析后的阈值，非法或越界时返回默认值
-     */
+    */
     private double parseThreshold(Object value, double defVal) {
         if (value == null) {
             return defVal;

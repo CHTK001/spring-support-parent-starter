@@ -16,17 +16,17 @@ public class PluginBeanRegisteredEvent extends ApplicationEvent {
 
     /**
     * Bean 名称
-     */
+    */
     private final String beanName;
 
     /**
     * Bean 实例对象
-     */
+    */
     private final Object beanInstance;
 
     /**
     * 插件文件路径
-     */
+    */
     private String pluginFilePath;
 
     /**
@@ -35,12 +35,12 @@ public class PluginBeanRegisteredEvent extends ApplicationEvent {
     * @param source       事件源
     * @param beanName     Bean 名称
     * @param beanInstance Bean 实例
-     */
+    */
     public PluginBeanRegisteredEvent(Object source, String beanName, Object beanInstance) {
         /**
         * 父。
         * @param source 源
-         */
+        */
         super(source);
         this.beanName = beanName;
         this.beanInstance = beanInstance;
@@ -50,7 +50,7 @@ public class PluginBeanRegisteredEvent extends ApplicationEvent {
     * 获取 Bean 名称
     *
     * @return Bean 名称
-     */
+    */
     public String getBeanName() {
         return beanName;
     }
@@ -59,7 +59,7 @@ public class PluginBeanRegisteredEvent extends ApplicationEvent {
     * 获取 Bean 实例对象
     *
     * @return Bean 实例
-     */
+    */
     public Object getBeanInstance() {
         return beanInstance;
     }
@@ -68,7 +68,7 @@ public class PluginBeanRegisteredEvent extends ApplicationEvent {
     * 获取插件文件路径
     *
     * @return 插件文件路径
-     */
+    */
     public String getPluginFilePath() {
         return pluginFilePath;
     }
@@ -77,7 +77,7 @@ public class PluginBeanRegisteredEvent extends ApplicationEvent {
     * 设置插件文件路径
     *
     * @param pluginFilePath 插件文件路径
-     */
+    */
     public void setPluginFilePath(String pluginFilePath) {
         this.pluginFilePath = pluginFilePath;
     }

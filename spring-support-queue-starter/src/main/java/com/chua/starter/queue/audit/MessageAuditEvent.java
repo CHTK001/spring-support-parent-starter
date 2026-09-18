@@ -18,7 +18,7 @@ public class MessageAuditEvent extends ApplicationEvent {
 
     /**
     * 审计日志数据
-     */
+    */
     private final MessageAuditLog auditLog;
 
     /**
@@ -26,12 +26,12 @@ public class MessageAuditEvent extends ApplicationEvent {
     *
     * @param source    事件源（一般为拦截器实例）
     * @param auditLog  审计日志
-     */
+    */
     public MessageAuditEvent(Object source, MessageAuditLog auditLog) {
         /**
         * 父。
         * @param source 源
-         */
+        */
         super(source);
         this.auditLog = auditLog;
     }

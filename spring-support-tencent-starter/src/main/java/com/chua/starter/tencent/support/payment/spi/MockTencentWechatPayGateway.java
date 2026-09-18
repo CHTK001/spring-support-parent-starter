@@ -248,7 +248,7 @@ public class MockTencentWechatPayGateway implements TencentWechatPayGateway {
     * @param orderNo 订单no
     * @param appId appid
     * @return 构建sdk参数的结果
-     */
+    */
     private Map<String, Object> buildSdkParams(String orderNo, String appId) {
         Map<String, Object> params = new LinkedHashMap<>();
         params.put("appId", firstNonBlank(appId, "mock-app-id"));
@@ -265,7 +265,7 @@ public class MockTencentWechatPayGateway implements TencentWechatPayGateway {
     *
     * @param orderNo 订单no
     * @return 构建订单响应的结果
-     */
+    */
     private TencentWechatOrderResponse buildOrderResponse(String orderNo) {
         TencentWechatOrderResponse result = new TencentWechatOrderResponse();
         result.setSuccess(true);
@@ -283,7 +283,7 @@ public class MockTencentWechatPayGateway implements TencentWechatPayGateway {
     * @param refundStatus 退税状态
     * @param message 消息
     * @return 构建退税响应的结果
-     */
+    */
     private TencentWechatRefundResponse buildRefundResponse(TencentWechatRefundRequest request, String refundStatus, String message) {
         TencentWechatRefundResponse result = new TencentWechatRefundResponse();
         result.setSuccess(true);
@@ -303,7 +303,7 @@ public class MockTencentWechatPayGateway implements TencentWechatPayGateway {
     * @param state 状态
     * @param message 消息
     * @return 构建薪酬score响应的结果
-     */
+    */
     private TencentWechatPayScoreResponse buildPayScoreResponse(TencentWechatPayScoreRequest request, String state, String message) {
         TencentWechatPayScoreResponse result = new TencentWechatPayScoreResponse();
         result.setSuccess(true);
@@ -325,7 +325,7 @@ public class MockTencentWechatPayGateway implements TencentWechatPayGateway {
     *
     * @param body 主体
     * @return 解析json主体的结果
-     */
+    */
     private Map<String, Object> parseJsonBody(String body) {
         if (!StringUtils.hasText(body)) {
             return Map.of();
@@ -339,7 +339,7 @@ public class MockTencentWechatPayGateway implements TencentWechatPayGateway {
             * @param JSON" JSON"
             * @param e e
             * @return illegal状态异常的结果
-             */
+            */
             throw new IllegalStateException("微信支付 mock 通知体必须是 JSON", e);
         }
     }
@@ -351,7 +351,7 @@ public class MockTencentWechatPayGateway implements TencentWechatPayGateway {
     * @param scene scene
     * @param value 价值观
     * @return raw的结果
-     */
+    */
     private String raw(String provider, String scene, String value) {
         return "{\"provider\":\"" + provider + "\",\"scene\":\"" + scene + "\",\"value\":\"" + value + "\",\"time\":\"" + LocalDateTime.now() + "\"}";
     }
@@ -361,7 +361,7 @@ public class MockTencentWechatPayGateway implements TencentWechatPayGateway {
     *
     * @param orderNo 订单no
     * @return resolve贸易状态的结果
-     */
+    */
     private String resolveTradeState(String orderNo) {
         if (!StringUtils.hasText(orderNo)) {
             return "SUCCESS";
@@ -384,7 +384,7 @@ public class MockTencentWechatPayGateway implements TencentWechatPayGateway {
     *
     * @param value 价值观
     * @return long价值观的结果
-     */
+    */
     private Long longValue(Object value) {
         if (value == null) {
             return null;
@@ -400,7 +400,7 @@ public class MockTencentWechatPayGateway implements TencentWechatPayGateway {
             * @param value 价值观
             * @param e e
             * @return illegal状态异常的结果
-             */
+            */
             throw new IllegalStateException("微信支付 mock 金额格式错误: " + value, e);
         }
     }
@@ -410,7 +410,7 @@ public class MockTencentWechatPayGateway implements TencentWechatPayGateway {
     *
     * @param value 价值观
     * @return 文本的的结果
-     */
+    */
     private String textOf(Object value) {
         return value == null ? null : String.valueOf(value);
     }
@@ -420,7 +420,7 @@ public class MockTencentWechatPayGateway implements TencentWechatPayGateway {
     *
     * @param values 价值观
     * @return 第一个nonblank的结果
-     */
+    */
     private String firstNonBlank(String... values) {
         for (String value : values) {
             if (StringUtils.hasText(value)) {

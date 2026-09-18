@@ -15,12 +15,12 @@ public final class SysAiWsTopics {
     * 模型价格/指标定时推送：服务端定时聚合「输入价格/输出价格/缓存价格/速度/延迟/智能」后，
     * 以 {@code { name: 'model.metrics.push', data: ModelMetricsSnapshot }} 广播。
     * 前端 {@code GET /api/model-metrics} 获取同一份快照。
-     */
+    */
     public static final String MODEL_METRICS_PUSH = "model.metrics.push";
 
     /**
     * sysaiwstopics。
-     */
+    */
     private SysAiWsTopics() {
     }
 }

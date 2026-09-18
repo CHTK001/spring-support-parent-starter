@@ -55,22 +55,22 @@ public class LogPushHandler implements SyncMessageHandler, ApplicationContextAwa
 
     /**
     * 订阅状态（会话标识 -> 是否订阅）
-     */
+    */
     private final ConcurrentHashMap<String, AtomicBoolean> subscriptions = new ConcurrentHashMap<>();
 
     /**
     * 日志 Appender
-     */
+    */
     private LogPushAppender logAppender;
 
     /**
     * 日志级别过滤
-     */
+    */
     private String logLevelFilter = "INFO";
 
     /**
     * 同步客户端 用于推送日志
-     */
+    */
     private SyncClient syncClient;
 
     /** Formatter */
@@ -123,7 +123,7 @@ public class LogPushHandler implements SyncMessageHandler, ApplicationContextAwa
     * @param sessionId 会话标识
     * @param data      请求数据
     * @return 订阅结果
-     */
+    */
     private Map<String, Object> handleSubscribe(String sessionId, Map<String, Object> data) {
         try {
             // 获取日志级别过滤
@@ -136,7 +136,7 @@ public class LogPushHandler implements SyncMessageHandler, ApplicationContextAwa
             // 启动日志监听
             /**
             * 启动日志追加。
-             */
+            */
             startLogAppender();
 
             log.info("[LogPush] 日志订阅成功: sessionId={}, level={}", sessionId, level);
@@ -161,7 +161,7 @@ public class LogPushHandler implements SyncMessageHandler, ApplicationContextAwa
     *
     * @param sessionId 会话标识
     * @return 取消结果
-     */
+    */
     private Map<String, Object> handleUnsubscribe(String sessionId) {
         AtomicBoolean subscription = subscriptions.get(sessionId);
         if (subscription != null) {
@@ -173,7 +173,7 @@ public class LogPushHandler implements SyncMessageHandler, ApplicationContextAwa
         if (subscriptions.isEmpty()) {
             /**
             * 停止日志追加。
-             */
+            */
             stopLogAppender();
         }
 
@@ -184,7 +184,7 @@ public class LogPushHandler implements SyncMessageHandler, ApplicationContextAwa
 
     /**
     * 启动日志 Appender
-     */
+    */
     private synchronized void startLogAppender() {
         if (logAppender != null) {
             return;
@@ -209,7 +209,7 @@ public class LogPushHandler implements SyncMessageHandler, ApplicationContextAwa
 
     /**
     * 停止日志 Appender
-     */
+    */
     private synchronized void stopLogAppender() {
         if (logAppender == null) {
             return;
@@ -233,8 +233,8 @@ public class LogPushHandler implements SyncMessageHandler, ApplicationContextAwa
     /** 销毁 */
     public void destroy() {
         /**
-        * 停止日志追加。
-         */
+    * 停止日志追加。
+    */
         stopLogAppender();
         subscriptions.clear();
     }
@@ -243,7 +243,7 @@ public class LogPushHandler implements SyncMessageHandler, ApplicationContextAwa
     * 推送日志到 监控
     *
     * @param logEntry 日志条目
-     */
+    */
     private void pushLog(Map<String, Object> logEntry) {
         if (syncClient == null || subscriptions.isEmpty()) {
             return;
@@ -260,7 +260,7 @@ public class LogPushHandler implements SyncMessageHandler, ApplicationContextAwa
     * 检查日志级别是否满足过滤条件
     * @param level 水平仪
     * @return shouldPush的结果
-     */
+    */
     private boolean shouldPush(String level) {
         int currentLevel = getLevelPriority(level);
         int filterLevel = getLevelPriority(logLevelFilter);
@@ -271,7 +271,7 @@ public class LogPushHandler implements SyncMessageHandler, ApplicationContextAwa
     * 获取日志级别优先级
     * @param level 水平仪
     * @return 获取水平仪priority的结果
-     */
+    */
     private int getLevelPriority(String level) {
         return switch (level.toUpperCase()) {
             case "TRACE" -> 1;
@@ -287,7 +287,7 @@ public class LogPushHandler implements SyncMessageHandler, ApplicationContextAwa
     * 日志推送 Appender
     * @author CH
     * @since 4.0.0
-     */
+    */
     private class LogPushAppender extends AppenderBase<ILoggingEvent> {
 
         @Override
@@ -320,9 +320,9 @@ public class LogPushHandler implements SyncMessageHandler, ApplicationContextAwa
             }
 
             /**
-            * push日志。
-            * @param logEntry 日志entry
-             */
+        * push日志。
+        * @param logEntry 日志entry
+        */
             pushLog(logEntry);
         }
 
@@ -331,7 +331,7 @@ public class LogPushHandler implements SyncMessageHandler, ApplicationContextAwa
         *
         * @param timestamp 时间戳
         * @return 格式化时间的结果
-         */
+        */
         private String formatTime(long timestamp) {
             return LocalDateTime.ofInstant(
                     Instant.ofEpochMilli(timestamp),

@@ -26,7 +26,7 @@ public interface SysAiUsageService {
     * @param usage 用量信息
     * @param requestId 请求标识
     * @param userId 用户标识
-     */
+    */
     void record(String groupName, String provider, String model, String callType,
                 AiUsage usage, String requestId, String userId);
 
@@ -41,7 +41,7 @@ public interface SysAiUsageService {
     * @param page 页码
     * @param size 每页大小
     * @return 用量列表
-     */
+    */
     Page<SysAiUsage> list(String groupName, String provider, String model,
                           LocalDateTime startTime, LocalDateTime endTime, int page, int size);
 
@@ -54,7 +54,7 @@ public interface SysAiUsageService {
     * @param startTime 开始时间
     * @param endTime 结束时间
     * @return 统计结果
-     */
+    */
     UsageStatistics getStatistics(String groupName, String provider, String model,
                                   LocalDateTime startTime, LocalDateTime endTime);
 
@@ -69,7 +69,7 @@ public interface SysAiUsageService {
     * @param startTime 开始时间（可为空）
     * @param endTime   结束时间（可为空）
     * @return 按天排序的趋势点列表（statDate 升序）
-     */
+    */
     List<SysAiUsageDaily> getDailyTrend(String provider, String model,
                                         LocalDateTime startTime, LocalDateTime endTime);
 
@@ -77,7 +77,7 @@ public interface SysAiUsageService {
     * 用量统计摘要
     * @author CH
     * @since 4.0.0
-     */
+    */
     class UsageStatistics {
         /** 总数calls */
         public Long totalCalls;

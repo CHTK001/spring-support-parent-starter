@@ -45,7 +45,7 @@ public class FaceController {
 
     /**
     * 人脸识别服务
-     */
+    */
     private final AiFaceService faceService;
 
     /**
@@ -56,7 +56,7 @@ public class FaceController {
     * @param @RequestParam("file" @请求参数("文件"
     * @param @RequestParam("file" @请求参数("文件"
     * @param @RequestParam("file" @RequestParam("file"
-     */
+    */
     @Permission("admin")
     @Operation(summary = "人脸检测", description = "检测图片中的人脸位置、数量与活体状态")
     @PostMapping("/detect")
@@ -84,7 +84,7 @@ public class FaceController {
     * @param @RequestParam("file" @请求参数("文件"
     * @param @RequestParam("file" @请求参数("文件"
     * @param @RequestParam("file" @RequestParam("file"
-     */
+    */
     @Permission("admin")
     @Operation(summary = "人脸特征提取", description = "提取图片中人脸的特征向量")
     @PostMapping("/feature")
@@ -109,7 +109,7 @@ public class FaceController {
     * @param @RequestParam("file" @请求参数("文件"
     * @param @RequestParam("file" @请求参数("文件"
     * @param @RequestParam("file" @RequestParam("file"
-     */
+    */
     @Permission("admin")
     @Operation(summary = "人脸对齐", description = "detect→crop→liveness→align，返回 5 点仿射旋转后的对齐人脸图")
     @PostMapping(value = "/align", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -142,7 +142,7 @@ public class FaceController {
     * @param fileB 图片 B
     * @return 相似度与判定
     * @param @RequestParam("fileA" @请求参数("文件a"
-     */
+    */
     @Permission("admin")
     @Operation(summary = "人脸比对", description = "1:1 人脸比对（detect→crop→liveness→align→feature→cosine），返回相似度与是否同一人")
     @PostMapping("/compare")
@@ -187,7 +187,7 @@ public class FaceController {
     * @param metadata 附加元数据（JSON）
     * @return 登记结果
     * @param @RequestParam("id" @请求参数("标识"
-     */
+    */
     @Permission("admin")
     @Operation(summary = "人脸登记（图像）", description = "登记管线：detect→crop→liveness→align→feature→入库，取最大人脸")
     @PostMapping("/enroll")
@@ -218,7 +218,7 @@ public class FaceController {
     * @param metadata  元数据 JSON
     * @return 登记结果
     * @param @RequestParam("id" @请求参数("标识"
-     */
+    */
     @Permission("admin")
     @Operation(summary = "人脸登记（特征向量）", description = "直接用特征向量入库，不跑管线；适用已提取特征或外部导入场景")
     @PostMapping("/enroll-feature")
@@ -247,7 +247,7 @@ public class FaceController {
     * @param @RequestParam("file" @请求参数("文件"
     * @param @RequestParam("file" @请求参数("文件"
     * @param @RequestParam("file" @RequestParam("file"
-     */
+    */
     @Permission("admin")
     @Operation(summary = "人脸识别", description = "1:N 人脸识别，返回 TopK 命中")
     @PostMapping("/identify")
@@ -279,7 +279,7 @@ public class FaceController {
     * @param topK    topk
     * @return 检索结果
     * @param @RequestParam("feature" @请求参数("特征"
-     */
+    */
     @Permission("admin")
     @Operation(summary = "人脸检索", description = "按特征向量检索人脸库")
     @GetMapping("/search")
@@ -302,7 +302,7 @@ public class FaceController {
     * @param file 图片文件
     * @return 核验结果
     * @param @RequestParam("id" @请求参数("标识"
-     */
+    */
     @Permission("admin")
     @Operation(summary = "人脸核验", description = "核验指定人脸 ID 与图片是否匹配")
     @PostMapping("/verify")
@@ -328,7 +328,7 @@ public class FaceController {
     * @param @RequestParam("file" @请求参数("文件"
     * @param @RequestParam("file" @请求参数("文件"
     * @param @RequestParam("file" @RequestParam("file"
-     */
+    */
     @Permission("admin")
     @Operation(summary = "活体检测", description = "检测人脸是否为活体")
     @PostMapping("/liveness")
@@ -354,7 +354,7 @@ public class FaceController {
     * @param @RequestParam("file" @请求参数("文件"
     * @param @RequestParam("file" @请求参数("文件"
     * @param @RequestParam("file" @RequestParam("file"
-     */
+    */
     @Permission("admin")
     @Operation(summary = "动漫人脸检测", description = "检测动漫/二次元图片中的人脸")
     @PostMapping("/anime-detect")
@@ -379,7 +379,7 @@ public class FaceController {
     * @param @RequestParam("file" @请求参数("文件"
     * @param @RequestParam("file" @请求参数("文件"
     * @param @RequestParam("file" @RequestParam("file"
-     */
+    */
     @Permission("admin")
     @Operation(summary = "人脸超分", description = "GFPGAN/ESRGAN 人脸超分辨率")
     @PostMapping(value = "/super-resolution", produces = MediaType.IMAGE_PNG_VALUE)
@@ -403,7 +403,7 @@ public class FaceController {
     * @param @RequestParam("file" @请求参数("文件"
     * @param @RequestParam("file" @请求参数("文件"
     * @param @RequestParam("file" @RequestParam("file"
-     */
+    */
     @Permission("admin")
     @Operation(summary = "人脸修复", description = "CodeFormer 人脸修复（老照片/模糊人脸）")
     @PostMapping(value = "/restore", produces = MediaType.IMAGE_PNG_VALUE)
@@ -427,7 +427,7 @@ public class FaceController {
     * @param @RequestParam("file" @请求参数("文件"
     * @param @RequestParam("file" @请求参数("文件"
     * @param @RequestParam("file" @RequestParam("file"
-     */
+    */
     @Permission("admin")
     @Operation(summary = "人脸属性分析", description = "年龄/性别/种族属性识别")
     @PostMapping("/attributes")
@@ -452,7 +452,7 @@ public class FaceController {
     * @param @RequestParam("file" @请求参数("文件"
     * @param @RequestParam("file" @请求参数("文件"
     * @param @RequestParam("file" @RequestParam("file"
-     */
+    */
     @Permission("admin")
     @Operation(summary = "人脸表情识别", description = "识别图片中的人脸表情")
     @PostMapping("/emotion")
@@ -477,7 +477,7 @@ public class FaceController {
     * @param @RequestParam("file" @请求参数("文件"
     * @param @RequestParam("file" @请求参数("文件"
     * @param @RequestParam("file" @RequestParam("file"
-     */
+    */
     @Permission("admin")
     @Operation(summary = "人脸关键点", description = "人脸 106 点关键点定位")
     @PostMapping("/landmark")
@@ -502,7 +502,7 @@ public class FaceController {
     * @param @RequestParam("file" @请求参数("文件"
     * @param @RequestParam("file" @请求参数("文件"
     * @param @RequestParam("file" @RequestParam("file"
-     */
+    */
     @Permission("admin")
     @Operation(summary = "人脸质量评估", description = "评估人脸图片质量（模糊/亮度/人脸占比）")
     @PostMapping("/quality")
@@ -537,7 +537,7 @@ public class FaceController {
     * @param @RequestParam("file" @请求参数("文件"
     * @param @RequestParam("file" @请求参数("文件"
     * @param @RequestParam("file" @RequestParam("file"
-     */
+    */
     @Permission("admin")
     @Operation(summary = "换脸检测", description = "检测图片是否疑似 AI 换脸")
     @PostMapping("/deepfake")
@@ -558,7 +558,7 @@ public class FaceController {
     * 人脸模型枚举。
     *
     * @return 可用模型清单
-     */
+    */
     @Permission("admin")
     @Operation(summary = "人脸模型清单", description = "枚举可用的人脸检测/特征/活体/超分等模型")
     @GetMapping("/models")
@@ -571,7 +571,7 @@ public class FaceController {
     *
     * @param json JSON 数组字符串
     * @return 特征向量
-     */
+    */
     private static float[] parseFeature(String json) {
         String trimmed = json.trim();
         if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
@@ -586,7 +586,7 @@ public class FaceController {
         * illegal参数异常。
         * @param 数组" 数组"
         * @return illegal参数异常的结果
-         */
+        */
         throw new IllegalArgumentException("特征向量格式错误，应为 JSON 数组");
     }
 
@@ -595,7 +595,7 @@ public class FaceController {
     *
     * @param json JSON 对象字符串，空或非法时返回空 映射
     * @return 元数据 映射
-     */
+    */
     private static Map<String, Object> parseMetadata(String json) {
         if (null == json || json.isBlank()) {
             return Map.of();

@@ -42,7 +42,7 @@ public class SocketIOSession implements SocketSession {
     * @param client 客户端
     * @param properties 套接字属性
     * @param properties 属性
-     */
+    */
     public SocketIOSession(SocketIOClient client, SocketProperties properties) {
         this.client = client;
         this.properties = properties;
@@ -53,7 +53,7 @@ public class SocketIOSession implements SocketSession {
             * 设置attribute。
             * @param ATTRIBUTE_ENCRYPT_REQUESTED attributeencrypt请求
             * @param encryptRequested encrypt请求
-             */
+            */
             setAttribute(ATTRIBUTE_ENCRYPT_REQUESTED, encryptRequested);
         }
     }
@@ -101,7 +101,7 @@ public class SocketIOSession implements SocketSession {
     *
     * @param key 钥匙
     * @return 获取attribute的结果
-     */
+    */
     public <T> T getAttribute(String key) {
         return (T) attributes.get(key);
     }
@@ -163,7 +163,7 @@ public class SocketIOSession implements SocketSession {
     * 获取Connection
     *
     * @return 获取connection的结果
-     */
+    */
     public <T> T getConnection() {
         return (T) client;
     }
@@ -172,7 +172,7 @@ public class SocketIOSession implements SocketSession {
     * 获取原生 套接字.IO 客户端
     *
     * @return SocketIOClient
-     */
+    */
     public SocketIOClient getClient() {
         return client;
     }
@@ -182,7 +182,7 @@ public class SocketIOSession implements SocketSession {
     *
     * @param client 客户端
     * @return resolveencrypt请求的结果
-     */
+    */
     private Boolean resolveEncryptRequested(SocketIOClient client) {
         if (client == null) {
             return null;
@@ -203,7 +203,7 @@ public class SocketIOSession implements SocketSession {
     * @param first 第一个
     * @param second second
     * @return 第一个nonblank的结果
-     */
+    */
     private String firstNonBlank(String first, String second) {
         if (first != null && !first.isBlank()) {
             return first;
@@ -219,7 +219,7 @@ public class SocketIOSession implements SocketSession {
     *
     * @param value 价值观
     * @return 解析encrypt请求的结果
-     */
+    */
     private Boolean parseEncryptRequested(String value) {
         if (value == null || value.isBlank()) {
             return null;

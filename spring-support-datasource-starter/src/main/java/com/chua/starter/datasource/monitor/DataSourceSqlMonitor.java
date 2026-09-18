@@ -35,47 +35,47 @@ public class DataSourceSqlMonitor {
 
     /**
     * 全局静态实例（由自动配置初始化）
-     */
+    */
     private static volatile DataSourceSqlMonitor INSTANCE;
 
     /**
     * 是否启用（由配置解析，未显式设置时按环境自动切换）
-     */
+    */
     private volatile boolean enabled = true;
 
     /**
     * 事件发布器
-     */
+    */
     private final ApplicationEventPublisher eventPublisher;
 
     /**
     * 自定义监听器
-     */
+    */
     private final List<SqlExecutionListener> listeners;
 
     /**
     * 监控配置
-     */
+    */
     private final SqlMonitorProperties properties;
 
     /**
     * 数据源统计缓存：数据源名称 → 统计
-     */
+    */
     private final Map<String, SqlStatistics> statisticsMap = new ConcurrentHashMap<>();
 
     /**
     * 已跟踪数据源名称（有界去重，按策略淘汰）
-     */
+    */
     private final CircularLinkedSet<String> trackedDataSources;
 
     /**
     * 已包装数据源缓存，保证幂等
-     */
+    */
     private final Map<DataSource, DataSource> wrappedCache = new ConcurrentHashMap<>();
 
     /**
     * 已包装数据源 钥匙 集合（有界去重，按策略淘汰）
-     */
+    */
     private final CircularLinkedSet<DataSource> trackedWrappedKeys;
 
     /**
@@ -84,7 +84,7 @@ public class DataSourceSqlMonitor {
     * @param eventPublisher 事件发布器
     * @param listeners      自定义监听器
     * @param properties     监控配置
-     */
+    */
     public DataSourceSqlMonitor(ApplicationEventPublisher eventPublisher,
                                 List<SqlExecutionListener> listeners,
                                 SqlMonitorProperties properties) {
@@ -99,7 +99,7 @@ public class DataSourceSqlMonitor {
     * 初始化静态实例
     *
     * @param monitor 监控实例
-     */
+    */
     public static void initialize(DataSourceSqlMonitor monitor) {
         INSTANCE = monitor;
     }
@@ -108,7 +108,7 @@ public class DataSourceSqlMonitor {
     * 获取静态实例
     *
     * @return 监控实例，未初始化时返回 空
-     */
+    */
     public static DataSourceSqlMonitor getInstance() {
         return INSTANCE;
     }
@@ -119,7 +119,7 @@ public class DataSourceSqlMonitor {
     * @param dataSourceName 数据源名称
     * @param dataSource     数据源
     * @return 包装后的数据源（监控未启用或数据源为 空 时返回原对象）
-     */
+    */
     public static DataSource wrapIfEnabled(String dataSourceName, DataSource dataSource) {
         DataSourceSqlMonitor instance = INSTANCE;
         if (instance == null || !instance.isEnabled() || dataSource == null) {
@@ -132,7 +132,7 @@ public class DataSourceSqlMonitor {
     * 设置启用状态
     *
     * @param enabled 是否启用
-     */
+    */
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
     }
@@ -141,7 +141,7 @@ public class DataSourceSqlMonitor {
     * 是否启用
     *
     * @return 是否启用
-     */
+    */
     public boolean isEnabled() {
         return enabled;
     }
@@ -150,7 +150,7 @@ public class DataSourceSqlMonitor {
     * 补包装所有已注册的数据源
     * <p>解决 {@link DataSourceInspect}（BDRPP）在容器早期注册数据源时监控尚未初始化的时序问题。
     * 幂等：已包装的数据源保持不变，分组注册表同步替换为包装后的数据源。</p>
-     */
+    */
     public static void wrapExistingDataSources() {
         DataSourceSqlMonitor instance = INSTANCE;
         if (instance == null || !instance.isEnabled()) {
@@ -177,7 +177,7 @@ public class DataSourceSqlMonitor {
     * @param dataSource     数据源
     * @param dataSourceName 数据源名称
     * @return 包装后的数据源
-     */
+    */
     public DataSource wrap(DataSource dataSource, String dataSourceName) {
         if (dataSource instanceof MonitoringDataSource) {
             return dataSource;
@@ -219,7 +219,7 @@ public class DataSourceSqlMonitor {
     * @param costMs         执行耗时（毫秒）
     * @param success        是否成功
     * @param errorMessage   失败原因（失败时）
-     */
+    */
     public void recordExecution(String dataSourceName, String sql, long costMs, boolean success, String errorMessage) {
         boolean slowSql = costMs >= properties.getSlowSqlThresholdMs();
         String sqlType = resolveSqlType(sql);
@@ -284,7 +284,7 @@ public class DataSourceSqlMonitor {
     *
     * @param dataSourceName 数据源名称
     * @return 统计信息，不存在时返回 空
-     */
+    */
     public SqlStatistics getStatistics(String dataSourceName) {
         return statisticsMap.get(dataSourceName);
     }
@@ -293,14 +293,14 @@ public class DataSourceSqlMonitor {
     * 获取全部统计
     *
     * @return 全部统计信息
-     */
+    */
     public Map<String, SqlStatistics> getAllStatistics() {
         return statisticsMap;
     }
 
     /**
     * 重置统计
-     */
+    */
     public void resetStatistics() {
         statisticsMap.values().forEach(SqlStatistics::reset);
     }
@@ -310,7 +310,7 @@ public class DataSourceSqlMonitor {
     *
     * @param sql SQL 文本
     * @return select/insert/update/delete/other
-     */
+    */
     private String resolveSqlType(String sql) {
         if (sql == null) {
             return "other";
@@ -336,7 +336,7 @@ public class DataSourceSqlMonitor {
     *
     * @param sql SQL 文本
     * @return 截断后的 SQL
-     */
+    */
     private String truncate(String sql) {
         if (sql == null) {
             return null;
@@ -353,7 +353,7 @@ public class DataSourceSqlMonitor {
     *
     * @param dataSource 数据源
     * @return 是否已被监控包装
-     */
+    */
     public static boolean isMonitored(DataSource dataSource) {
         if (dataSource instanceof MonitoringDataSource) {
             return true;

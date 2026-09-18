@@ -17,26 +17,26 @@ import java.util.List;
 public class PageResultVO<T> {
     /**
     * 当前页码
-     */
+    */
     private long pageNo;
     /**
     * 每页条数
-     */
+    */
     private long pageSize;
     /**
     * 总条数
-     */
+    */
     private long total;
     /**
     * 总页数
-     */
+    */
     private long totalPages;
     /**
     * 当前页数据
-     */
+    */
     private List<T> records;
     /**
     * 数据列表（兼容别名）
-     */
+    */
     private List<T> data;
 }

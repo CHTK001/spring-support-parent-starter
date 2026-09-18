@@ -43,7 +43,7 @@ public class RpcProxyFactoryManager {
     * 获取Instance
     *
     * @return 获取instance的结果
-     */
+    */
     public static RpcProxyFactoryManager getInstance() {
         return INSTANCE;
     }
@@ -57,7 +57,7 @@ public class RpcProxyFactoryManager {
     * @param handler     调用处理器
     * @return 代理对象
     * @throws RpcProxyCreationException 如果所有工厂都创建失败
-     */
+    */
     public Object createProxy(ClassLoader classLoader, List<Class<?>> interfaces, InvocationHandler handler) {
         Exception lastException = null;
 
@@ -80,7 +80,7 @@ public class RpcProxyFactoryManager {
         * @param interfaces 接口
         * @param lastException 最后一个异常
         * @return rpc代理创建异常的结果
-         */
+        */
         throw new RpcProxyCreationException("Failed to create proxy with all available factories. Interfaces: " + interfaces, lastException);
     }
 
@@ -88,7 +88,7 @@ public class RpcProxyFactoryManager {
     * 注册自定义代理工厂
     *
     * @param factory 代理工厂
-     */
+    */
     public void registerFactory(RpcProxyFactory factory) {
         factories.add(factory);
         factories.sort(Comparator.comparingInt(RpcProxyFactory::getOrder));

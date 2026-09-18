@@ -63,7 +63,7 @@ public class AuthClientConfiguration
     /**
     * Spring 管理的 认证客户端属性 Bean
     * 确保与 whitelist文件watcher 使用同一个实例
-     */
+    */
     private AuthClientProperties authProperties;
     
     /** Application上下文 */
@@ -76,14 +76,14 @@ public class AuthClientConfiguration
     * 支持获取当前用户信息、角色验证、权限检查等功能。
     *
     * @return OAuth认证服务实例
-     */
+    */
     @Bean(name = "authService")
     @Primary
     public AuthService authService() {
         /**
         * OAuth认证服务。
         * @return oauth认证服务的结果
-         */
+        */
         return new OauthAuthService();
     }
 
@@ -94,14 +94,14 @@ public class AuthClientConfiguration
     * 集成o认证用户信息进行权限检查。
     *
     * @return 权限拦截器实例
-     */
+    */
     @Bean
     @ConditionalOnMissingBean
     public PermissionInterceptor permissionProxyFactoryBean() {
         /**
         * 权限拦截器。
         * @return 权限拦截器的结果
-         */
+        */
         return new PermissionInterceptor();
     }
 
@@ -112,14 +112,14 @@ public class AuthClientConfiguration
     * 根据@令牌for类型注解自动处理令牌类型转换和验证。
     *
     * @return Token类型拦截器实例
-     */
+    */
     @Bean
     @ConditionalOnMissingBean
     public TokenForTypeInterceptor tokenForTypeInterceptor() {
         /**
         * 令牌for类型拦截器。
         * @return 令牌for类型拦截器的结果
-         */
+        */
         return new TokenForTypeInterceptor();
     }
 
@@ -129,7 +129,7 @@ public class AuthClientConfiguration
     * 提供用户统计和临时数据处理功能。
     *
     * @return 用户统计提供者实例
-     */
+    */
     @Bean
     @ConditionalOnProperty(name = "plugin.oauth.temp.open", havingValue = "true", matchIfMissing = false)
     public UserStatisticProvider tempProvider() {
@@ -137,7 +137,7 @@ public class AuthClientConfiguration
         /**
         * 用户statistic提供者。
         * @return 用户statistic提供者的结果
-         */
+        */
         return new UserStatisticProvider();
     }
 
@@ -156,7 +156,7 @@ public class AuthClientConfiguration
     *
     * @param requestMappingHandlerMapping Spring MVC请求映射处理器
     * @return 过滤器注册Bean
-     */
+    */
     @Bean("authFilterFilterRegistrationBean")
     @ConditionalOnMissingClass("com.chua.starter.oauth.server.support.SsoServer")
     @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
@@ -193,7 +193,7 @@ public class AuthClientConfiguration
     *
     * @param requestMappingHandlerMapping Spring MVC请求映射处理器
     * @return 认证过滤器实例
-     */
+    */
     @Bean
     @ConditionalOnMissingClass("com.chua.starter.oauth.server.support.SsoServer")
     @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
@@ -202,7 +202,7 @@ public class AuthClientConfiguration
         * 认证过滤器。
         * @param WebRequest(getSpringBean( web请求(获取springBean(
         * @return 认证过滤器的结果
-         */
+        */
         return new AuthFilter(new WebRequest(getSpringBean()), requestMappingHandlerMapping);
     }
 
@@ -214,7 +214,7 @@ public class AuthClientConfiguration
     *
     * @param authClientProperties 客户端配置
     * @return 过滤器注册Bean
-     */
+    */
     @Bean("rateLimitFilterRegistrationBean")
     @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
     public FilterRegistrationBean<RateLimitFilter> rateLimitFilterRegistrationBean() {
@@ -257,7 +257,7 @@ public class AuthClientConfiguration
     * 配置绑定，则回退到 Binder 绑定成功的实例，确保 协议/地址/whitelist 等配置有效。
     * </p>
     * @return 获取springBean的结果
-     */
+    */
     private AuthClientProperties getSpringBean() {
         try {
             AuthClientProperties bean = applicationContext.getBean(AuthClientProperties.class);
@@ -313,13 +313,13 @@ public class AuthClientConfiguration
     *
     * @param authClientProperties 认证客户端属性
     * @return whitelist文件watcher的结果
-     */
+    */
     public WhitelistFileWatcher whitelistFileWatcher(AuthClientProperties authClientProperties) {
         /**
         * whitelist文件watcher。
         * @param authClientProperties 认证客户端属性
         * @return whitelist文件watcher的结果
-         */
+        */
         return new WhitelistFileWatcher(authClientProperties);
     }
 
@@ -334,7 +334,7 @@ public class AuthClientConfiguration
     * @param authClientProperties o认证 客户端配置
     * @param dataSource           应用数据源
     * @return AI app钥匙 认证支持实例
-     */
+    */
     @Bean
     @ConditionalOnProperty(prefix = "plugin.oauth.ai-app-key", name = "enabled", havingValue = "true")
     @ConditionalOnMissingBean
@@ -352,7 +352,7 @@ public class AuthClientConfiguration
     * 认证客户端服务信息contributor
     *
     * @return 认证客户端服务信息contributor的结果
-     */
+    */
     public ServiceInfoContributor authClientServiceInfoContributor() {
         return registry -> {
             registry.registerEndpoint("认证授权", "认证接口", "/auth/**", "认证接口");

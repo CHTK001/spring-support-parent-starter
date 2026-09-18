@@ -19,7 +19,7 @@ public interface PaymentNotifyLogService {
     /**
     * 饰面。
     * @param dto dto
-     */
+    */
     void finish(FinishNotifyLogDTO dto);
 }
 

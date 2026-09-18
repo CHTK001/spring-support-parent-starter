@@ -35,24 +35,24 @@ public class LeaderElector {
 
     /**
     * 当前进程节点标识
-     */
+    */
     private final String nodeId;
 
     /**
     * 铅 状态标记 (CAS)
-     */
+    */
     private final AtomicBoolean leader = new AtomicBoolean(false);
 
     /**
     * 当前所属命名空间
-     */
+    */
     private volatile String currentGroup;
 
     /**
     * 标记当前节点为指定命名空间的 Leader (本地态)。
     *
     * @param group 命名空间
-     */
+    */
     public void markLeader(String group) {
         leader.set(true);
         currentGroup = group;
@@ -63,7 +63,7 @@ public class LeaderElector {
     * 主动释放 Leader 权 (本地态 + 调用 SPI release)。
     *
     * @param resolver 选举解析器
-     */
+    */
     public void release(LeaderElectionResolver resolver) {
         if (leader.compareAndSet(true, false)) {
             String group = currentGroup;
@@ -76,7 +76,7 @@ public class LeaderElector {
 
     /**
     * 仅释放本地态 (不由 SPI 释放, 多用于心跳线程)。
-     */
+    */
     public void release() {
         if (leader.compareAndSet(true, false)) {
             log.info("[job] 释放本地 Leader 态 nodeId={} group={}", nodeId, currentGroup);
@@ -87,7 +87,7 @@ public class LeaderElector {
     * 当前是否为 Leader。
     *
     * @return Leader 时返回 true
-     */
+    */
     public boolean isLeader() {
         return leader.get();
     }
@@ -96,7 +96,7 @@ public class LeaderElector {
     * 当前所属命名空间。
     *
     * @return 命名空间
-     */
+    */
     public String currentGroup() {
         return currentGroup;
     }
@@ -105,7 +105,7 @@ public class LeaderElector {
     * 节点标识。
     *
     * @return 节点 标识
-     */
+    */
     public String nodeId() {
         return nodeId;
     }
@@ -116,7 +116,7 @@ public class LeaderElector {
     * @param group        命名空间
     * @param leaseSeconds 租约时长 (秒)
     * @return 抢占成功返回 true
-     */
+    */
     public boolean tryAcquireLeader(String group, int leaseSeconds) {
         if (leader.compareAndSet(false, true)) {
             currentGroup = group;

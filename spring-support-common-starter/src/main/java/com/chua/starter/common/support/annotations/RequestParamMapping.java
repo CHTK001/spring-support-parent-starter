@@ -22,7 +22,7 @@ public @interface RequestParamMapping {
     * <p>例如: @RequestParamMapping("id") 或 @RequestParamMapping(value = "id")</p>
     *
     * @return 参数名称数组
-     */
+    */
     @AliasFor("name")
     String[] value() default "";
 
@@ -32,7 +32,7 @@ public @interface RequestParamMapping {
     *
     * @return 参数名称数组
     * @since 4.2
-     */
+    */
     @AliasFor("value")
     String[] name() default "";
 
@@ -44,7 +44,7 @@ public @interface RequestParamMapping {
     * <p>例如: @RequestParamMapping(required = false)</p>
     *
     * @return 是否必需
-     */
+    */
     boolean required() default true;
 
     /**
@@ -53,7 +53,7 @@ public @interface RequestParamMapping {
     * <p>例如: @RequestParamMapping(defaultValue = "0")</p>
     *
     * @return 默认值
-     */
+    */
     String defaultValue() default ValueConstants.DEFAULT_NONE;
 
 }

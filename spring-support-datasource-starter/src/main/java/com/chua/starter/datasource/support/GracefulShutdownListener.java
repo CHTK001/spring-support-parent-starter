@@ -50,10 +50,10 @@ public class GracefulShutdownListener implements ApplicationListener<ContextClos
 
             try {
                 /**
-                * 关闭数据源。
-                * @param dsName ds名称
-                * @param ds ds
-                 */
+    * 关闭数据源。
+    * @param dsName ds名称
+    * @param ds ds
+    */
                 closeDataSource(dsName, ds);
                 closed++;
             } catch (Exception e) {
@@ -73,7 +73,7 @@ public class GracefulShutdownListener implements ApplicationListener<ContextClos
     * 尝试以多种方式关闭数据源
     * @param name 名称
     * @param dataSource 数据源
-     */
+    */
     private void closeDataSource(String name, DataSource dataSource) throws Exception {
         if (dataSource == null) {
             return;
@@ -106,7 +106,7 @@ public class GracefulShutdownListener implements ApplicationListener<ContextClos
             * 关闭by反射。
             * @param name 名称
             * @param dataSource 数据源
-             */
+            */
             closeByReflection(name, dataSource);
         } catch (Exception e) {
             log.debug("[数据源] '{}' 不支持关闭操作 (类型: {})", name, dataSource.getClass().getName());
@@ -117,7 +117,7 @@ public class GracefulShutdownListener implements ApplicationListener<ContextClos
     * 通过反射尝试关闭特定连接池
     * @param name 名称
     * @param dataSource 数据源
-     */
+    */
     @SuppressWarnings("JavaReflectionMemberAccess")
     private void closeByReflection(String name, DataSource dataSource) throws Exception {
         Class<?> clazz = dataSource.getClass();

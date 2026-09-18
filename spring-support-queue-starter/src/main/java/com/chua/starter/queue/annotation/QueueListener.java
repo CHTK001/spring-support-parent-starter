@@ -42,14 +42,14 @@ public @interface QueueListener {
     * 目标地址（topic/队列）
     *
     * @return 目标地址
-     */
+    */
     String value();
 
     /**
     * 消费组（Kafka/RocketMQ使用）
     *
     * @return 消费组名称
-     */
+    */
     String group() default "";
 
     /**
@@ -59,7 +59,7 @@ public @interface QueueListener {
     * </p>
     *
     * @return 目标类型
-     */
+    */
     Class<?> payloadType() default Object.class;
 
     /**
@@ -69,21 +69,21 @@ public @interface QueueListener {
     * </p>
     *
     * @return 消息队列类型
-     */
+    */
     String type() default "";
 
     /**
     * 是否自动确认消息
     *
     * @return 是否自动确认
-     */
+    */
     boolean autoAck() default true;
 
     /**
     * 并发消费者数量
     *
     * @return 并发数
-     */
+    */
     int concurrency() default 1;
 }
 

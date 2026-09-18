@@ -31,7 +31,7 @@ public class PaymentAutoConfiguration {
     * 薪酬mybatisplus拦截器
     *
     * @return 薪酬mybatisplus拦截器的结果
-     */
+    */
     public MybatisPlusInterceptor paymentMybatisPlusInterceptor() {
         MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
         interceptor.addInnerInterceptor(new PaginationInnerInterceptor(DbType.MYSQL));
@@ -44,7 +44,7 @@ public class PaymentAutoConfiguration {
     * 默认用户打开标识解析器
     *
     * @return 默认用户打开id解析器的结果
-     */
+    */
     public UserOpenIdResolver defaultUserOpenIdResolver() {
         return (merchantId, userId, channelType) -> null;
     }
@@ -57,7 +57,7 @@ public class PaymentAutoConfiguration {
     * 薪酬thread游泳池任务调度器
     *
     * @return 薪酬thread游泳池任务调度器的结果
-     */
+    */
     public ThreadPoolTaskScheduler paymentThreadPoolTaskScheduler() {
         ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
         scheduler.setPoolSize(4);
@@ -72,7 +72,7 @@ public class PaymentAutoConfiguration {
     * 薪酬服务信息contributor
     *
     * @return 薪酬服务信息contributor的结果
-     */
+    */
     public ServiceInfoContributor paymentServiceInfoContributor() {
         return registry -> {
             registry.registerFlag("payment", "支付", true, "支付模块");

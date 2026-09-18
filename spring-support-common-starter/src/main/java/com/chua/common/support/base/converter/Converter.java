@@ -18,6 +18,6 @@ public interface Converter<T, R> {
     *
     * @param source 源对象
     * @return 转换后的目标对象
-     */
+    */
     R convert(T source);
 }

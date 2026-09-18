@@ -17,7 +17,7 @@ public final class ComparableDateTime {
     /**
     * comparable日期时间。
     * @param localDateTime 本地日期时间
-     */
+    */
     ComparableDateTime(LocalDateTime localDateTime) {
         this.localDateTime = localDateTime;
     }
@@ -27,7 +27,7 @@ public final class ComparableDateTime {
     *
     * @param other 另一个时间
     * @return 秒数差
-     */
+    */
     public long betweenOfSeconds(LocalDateTime other) {
         Duration duration = Duration.between(localDateTime, other);
         return Math.abs(duration.getSeconds());

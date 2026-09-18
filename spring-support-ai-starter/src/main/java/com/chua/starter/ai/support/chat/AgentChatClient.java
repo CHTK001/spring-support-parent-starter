@@ -36,7 +36,7 @@ public class AgentChatClient implements ChatClient {
     * 创建 智能体对话客户端 实例
     *
     * @param agent 智能体 运行时实例
-     */
+    */
     public AgentChatClient(Agent agent) {
         this.agent = agent;
     }
@@ -44,7 +44,7 @@ public class AgentChatClient implements ChatClient {
     /**
     * 获取内部 智能体 实例
     * @return 获取智能体的结果
-     */
+    */
     public Agent getAgent() {
         return agent;
     }

@@ -20,14 +20,14 @@ public interface MessageDispatcherProvider {
     /**
     * 名称：与 {@code plugin.queue.type} 对应（如 {@code kafka} / {@code rabbitmq} / {@code rocketmq} / {@code mqtt} / {@code nats}）。
     * @return 名称的结果
-     */
+    */
     String name();
 
     /**
     * 是否在当前 类路径 下可用（客户端 jar 是否被业务方拉入）。
     * 即检查关键类是否存在。
     * @return 是否可用的结果
-     */
+    */
     boolean isAvailable();
 
     /**
@@ -38,6 +38,6 @@ public interface MessageDispatcherProvider {
     * @param beanFactory Bean工厂
     * @param properties 属性
     * @return dispatch的结果
-     */
+    */
     MessageTemplate dispatch(ConfigurableBeanFactory beanFactory, QueueProperties properties);
 }

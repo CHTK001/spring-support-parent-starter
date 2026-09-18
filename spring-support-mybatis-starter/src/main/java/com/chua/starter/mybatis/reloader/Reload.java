@@ -25,7 +25,7 @@ public interface Reload extends InitializingBean {
     *
     * @param mapperXml 映射器 XML文件名或路径
     * @return 重载结果信息，成功返回"重载成功: 文件名"，失败返回错误信息
-     */
+    */
     String reload(String mapperXml);
 
     /**
@@ -35,6 +35,6 @@ public interface Reload extends InitializingBean {
     * </p>
     *
     * @return 文件信息列表，包含文件名、路径、类型和监听状态
-     */
+    */
     List<FileInfo> listFiles();
 }

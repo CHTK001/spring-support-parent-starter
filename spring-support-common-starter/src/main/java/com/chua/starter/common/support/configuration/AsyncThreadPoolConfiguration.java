@@ -31,7 +31,7 @@ public class AsyncThreadPoolConfiguration implements AsyncConfigurer {
     * 构造函数
     *
     * @param asyncProperties Asyncthread游泳池属性
-     */
+    */
     public AsyncThreadPoolConfiguration(AsyncThreadPoolProperties asyncProperties) {
         this.asyncProperties = asyncProperties;
     }
@@ -41,7 +41,7 @@ public class AsyncThreadPoolConfiguration implements AsyncConfigurer {
 
     /**
     * 注册异步线程池配置到全局环境
-     */
+    */
     @PostConstruct
     public void registerEnvironment() {
         new ModuleEnvironmentRegistration(AsyncThreadPoolProperties.PRE, asyncProperties, asyncProperties.isEnable());
@@ -50,7 +50,7 @@ public class AsyncThreadPoolConfiguration implements AsyncConfigurer {
     /**
     * 创建共享线程池（默认_执行器2 和 默认_任务_执行器 均指向同一实例，保持向后兼容）
     * @return 共享thread游泳池任务执行器的结果
-     */
+    */
     @Bean({Constant.DEFAULT_EXECUTOR2, Constant.DEFAULT_TASK_EXECUTOR})
     public ThreadPoolTaskExecutor sharedThreadPoolTaskExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
@@ -72,7 +72,7 @@ public class AsyncThreadPoolConfiguration implements AsyncConfigurer {
     * 异步执行器
     *
     * @return Async执行器的结果
-     */
+    */
     public ThreadPoolTaskExecutor asyncExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         // 核心线程数：线程池创建的时候初始化的线程数
@@ -99,12 +99,12 @@ public class AsyncThreadPoolConfiguration implements AsyncConfigurer {
     * 任务decorator
     *
     * @return 任务decorator的结果
-     */
+    */
     public TaskDecorator taskDecorator() {
        /**
        * mdc任务decorator。
        * @return mdc任务decorator的结果
-        */
+       */
        return new MdcTaskDecorator();
     }
 
@@ -118,7 +118,7 @@ public class AsyncThreadPoolConfiguration implements AsyncConfigurer {
     * 异步线程池的 服务信息 贡献者。
     *
     * @return ServiceInfoContributor
-     */
+    */
     @Bean
     public ServiceInfoContributor asyncThreadPoolServiceInfoContributor() {
         return registry -> registry.registerFlag("async", "异步",

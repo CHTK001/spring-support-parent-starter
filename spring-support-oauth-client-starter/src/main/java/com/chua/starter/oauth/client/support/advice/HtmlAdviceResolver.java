@@ -57,7 +57,7 @@ public class HtmlAdviceResolver implements AdviceResolver {
     * @param response       响应
     * @param code           错误码
     * @param authProperties 认证属性
-     */
+    */
     public void resolve(HttpServletRequest request, HttpServletResponse response, int code, AuthClientProperties authProperties) {
         String url1 = authProperties.getLoginPage();
         if (code == 403) {
@@ -93,7 +93,7 @@ public class HtmlAdviceResolver implements AdviceResolver {
                 /**
                 * 尝试。
                 * @param response.getOutputStream( 响应.获取输出流(
-                 */
+                */
                 try (OutputStream writer = response.getOutputStream()) {
                     writer.write(Xml.toXmlByte(Json.getJsonObject(Json.toJson(ReturnResult.error("未授权")))));
                 } catch (Exception e) {
@@ -101,7 +101,7 @@ public class HtmlAdviceResolver implements AdviceResolver {
                     * runtime异常。
                     * @param e e
                     * @return runtime异常的结果
-                     */
+                    */
                     throw new RuntimeException(e);
                 }
                 return;
@@ -120,7 +120,7 @@ public class HtmlAdviceResolver implements AdviceResolver {
     *
     * @param request 请求
     * @return 是否本地
-     */
+    */
     private boolean isLocalhost(HttpServletRequest request) {
         String ipAddress = RequestUtils.getIpAddress(request);
         return null == ipAddress || "localhost".equalsIgnoreCase(ipAddress) || "127.0.0.1".equalsIgnoreCase(ipAddress);

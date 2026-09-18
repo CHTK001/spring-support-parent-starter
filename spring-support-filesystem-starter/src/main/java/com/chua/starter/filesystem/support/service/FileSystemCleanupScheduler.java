@@ -35,7 +35,7 @@ public class FileSystemCleanupScheduler
 
     /**
     * 终态状态集合：完成/失败/取消
-     */
+    */
     private static final List<Integer> TERMINAL_STATUS = List.of(
             SysFileSystemUpload.Status.COMPLETED,
             SysFileSystemUpload.Status.FAILED,
@@ -43,37 +43,37 @@ public class FileSystemCleanupScheduler
 
     /**
     * 上传任务服务
-     */
+    */
     private final SysFileSystemUploadService uploadService;
 
     /**
     * 分片详情服务
-     */
+    */
     private final SysFileSystemUploadChunkService chunkService;
 
     /**
     * 文件主体服务
-     */
+    */
     private final SysFileSystemUploadFileService fileService;
 
     /**
     * 合并记录服务
-     */
+    */
     private final SysFileSystemUploadMergeLogService mergeLogService;
 
     /**
     * 上传记录服务
-     */
+    */
     private final SysFileSystemUploadUploadLogService uploadLogService;
 
     /**
     * 上传配置
-     */
+    */
     private final FileStorageUploadProperties uploadProperties;
 
     /**
     * 定期清理过期终态任务。
-     */
+    */
     @Scheduled(fixedDelayString = "${plugin.filesystem.upload.cleanup-interval-ms:86400000}")
     public void cleanExpiredTasks() {
         int retentionDays = uploadProperties.getRetentionDays();
@@ -97,7 +97,7 @@ public class FileSystemCleanupScheduler
                 /**
                 * cleanupdisk文件。
                 * @param uploadId uploadid
-                 */
+                */
                 cleanupDiskFiles(uploadId);
                 uploadService.removeById(task.getFilesystemUploadTaskId());
                 count++;
@@ -112,7 +112,7 @@ public class FileSystemCleanupScheduler
     * 清理磁盘临时文件（分片与合并文件）。
     *
     * @param uploadId 上传任务 标识
-     */
+    */
     private void cleanupDiskFiles(String uploadId) {
         String baseDir = Optional.ofNullable(System.getProperty("filesystem.temp.path"))
                 .orElse(uploadProperties.getTempDir());
@@ -137,7 +137,7 @@ public class FileSystemCleanupScheduler
     *
     * @param uploadId 上传任务 标识
     * @return 任务实体
-     */
+    */
     private SysFileSystemUpload getByUploadId(String uploadId) {
         return getOne(new LambdaQueryWrapper<SysFileSystemUpload>()
                 .eq(SysFileSystemUpload::getFilesystemUploadTaskUploadId, uploadId));

@@ -44,14 +44,14 @@ public class AgentAttachService implements SmartInitializingSingleton {
     * 创建自注入服务。
     *
     * @param properties 配置项
-     */
+    */
     public AgentAttachService(com.chua.starter.agent.support.config.AgentAttachProperties properties) {
         this.properties = properties;
     }
 
     /**
     * 全部单例就绪后触发自注入（幂等；失败不阻断应用）。
-     */
+    */
     @Override
     public void afterSingletonsInstantiated() {
         if (!properties.isEnabled()) {
@@ -67,7 +67,7 @@ public class AgentAttachService implements SmartInitializingSingleton {
 
     /**
     * 执行自注入（幂等）。
-     */
+    */
     public void attach() {
         if (!attachAttempted.compareAndSet(false, true)) {
             return;
@@ -93,7 +93,7 @@ public class AgentAttachService implements SmartInitializingSingleton {
     * Agent 是否注入成功。
     *
     * @return 是否注入成功
-     */
+    */
     public boolean isAgentActive() {
         return agentActive;
     }
@@ -102,7 +102,7 @@ public class AgentAttachService implements SmartInitializingSingleton {
     * 自注入是否启用。
     *
     * @return 是否启用的结果
-     */
+    */
     public boolean isEnabled() {
         return properties.isEnabled();
     }
@@ -114,7 +114,7 @@ public class AgentAttachService implements SmartInitializingSingleton {
     * （LaunchedClassLoader 不回填 {@code java.class.path} 的场景）。</p>
     *
     * @return agent jar 路径；定位不到返回 null
-     */
+    */
     private static Path resolveAgentJar() {
         String classPath = System.getProperty("java.class.path");
         if (classPath == null) {

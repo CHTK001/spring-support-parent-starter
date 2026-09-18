@@ -10,14 +10,14 @@ public class GeoCity {
 
     /**
     * 城市名称
-     */
+    */
     private String city;
 
     /**
     * 获取城市名称
     *
     * @return 城市名称
-     */
+    */
     public String getCity() {
         return city;
     }
@@ -26,7 +26,7 @@ public class GeoCity {
     * 设置城市名称
     *
     * @param city 城市名称
-     */
+    */
     public void setCity(String city) {
         this.city = city;
     }

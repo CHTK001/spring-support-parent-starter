@@ -12,6 +12,6 @@ public interface LocalModuleProvider {
 
     /**
     * @return 本地模块定义列表
-     */
+    */
     List<LocalModuleDefinition> getModules();
 }

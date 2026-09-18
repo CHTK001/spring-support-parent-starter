@@ -23,24 +23,24 @@ public class AiAsyncConfiguration {
 
     /**
     * 核心线程数
-     */
+    */
     private static final int CORE_POOL_SIZE = 4;
 
     /**
     * 最大线程数
-     */
+    */
     private static final int MAX_POOL_SIZE = 16;
 
     /**
     * 队列容量
-     */
+    */
     private static final int QUEUE_CAPACITY = 500;
 
     /**
     * 异步任务线程池
     *
     * @return 线程池执行器
-     */
+    */
     @Bean("taskExecutor")
     public Executor taskExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();

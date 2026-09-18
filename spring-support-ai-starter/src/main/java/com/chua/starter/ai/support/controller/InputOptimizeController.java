@@ -31,7 +31,7 @@ public class InputOptimizeController {
 
     /**
     * 输入优化服务
-     */
+    */
     private final AiInputOptimizeService inputOptimizeService;
 
     /**
@@ -42,7 +42,7 @@ public class InputOptimizeController {
     *
     * @param request 优化请求
     * @return 优化结果
-     */
+    */
     @Permission("admin")
     @Operation(summary = "输入优化", description = "使用配置的优化模型改写输入文本，返回优化后内容与使用模型")
     @PostMapping("/optimize")

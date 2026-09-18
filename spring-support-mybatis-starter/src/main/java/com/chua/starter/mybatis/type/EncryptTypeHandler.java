@@ -66,7 +66,7 @@ public class EncryptTypeHandler extends BaseTypeHandler<String> {
     *
     * @param value 价值观
     * @return decrypt的结果
-     */
+    */
     private static String decrypt(String value) {
         if (value == null) {
             return null;
@@ -82,7 +82,7 @@ public class EncryptTypeHandler extends BaseTypeHandler<String> {
             * @param decoded decoded
             * @param java.nio.charset.StandardCharsets.UTF_8 Java.nio.字符集.标准字符集.UTF_8
             * @return 字符串的结果
-             */
+            */
             return new String(decoded, java.nio.charset.StandardCharsets.UTF_8);
         } catch (RuntimeException ex) {
             if (encryptMode == EncryptMode.AUTO) {
@@ -97,7 +97,7 @@ public class EncryptTypeHandler extends BaseTypeHandler<String> {
     *
     * @param rawValue raw价值观
     * @return encrypt的结果
-     */
+    */
     public static String encrypt(String rawValue) {
         if (rawValue == null) {
             return null;
@@ -115,7 +115,7 @@ public class EncryptTypeHandler extends BaseTypeHandler<String> {
             * @param "加密失败" "加密失败"
             * @param e e
             * @return runtime异常的结果
-             */
+            */
             throw new RuntimeException("加密失败", e);
         }
     }
@@ -124,7 +124,7 @@ public class EncryptTypeHandler extends BaseTypeHandler<String> {
     * 获取Encryptor
     *
     * @return 获取encryptor的结果
-     */
+    */
     private static AesCipher getEncryptor() {
         if (aesCodec != null) {
             return aesCodec;
@@ -140,7 +140,7 @@ public class EncryptTypeHandler extends BaseTypeHandler<String> {
     * 解析encryptmode
     *
     * @return resolveEncryptMode的结果
-     */
+    */
     private static EncryptMode resolveEncryptMode() {
         String mode = System.getProperty(ENCRYPTOR_MODE_PROPERTY_NAME);
         if (!StringUtils.hasText(mode)) {
@@ -158,7 +158,7 @@ public class EncryptTypeHandler extends BaseTypeHandler<String> {
     *
     * @author CH
     * @since 4.0.0
-     */
+    */
     private enum EncryptMode {
         ENCRYPT,
         PLAIN,

@@ -37,7 +37,7 @@ public class PaymentNotifyReceivedEvent extends PaymentEvent {
     * @param orderNo 订单no
     * @param refundNo 退税no
     * @param signVerified 标志verified
-     */
+    */
     public PaymentNotifyReceivedEvent(Object source, Long tenantId, Long merchantId, Long notifyLogId,
                                       String notifyType, String channelType, String channelSubType,
                                       String orderNo, String refundNo, Boolean signVerified) {
@@ -47,7 +47,7 @@ public class PaymentNotifyReceivedEvent extends PaymentEvent {
         * @param "PAYMENT_NOTIFY_RECEIVED" "payment通知received"
         * @param tenantId tenantid
         * @param merchantId merchantid
-         */
+        */
         super(source, "PAYMENT_NOTIFY_RECEIVED", tenantId, merchantId);
         this.notifyLogId = notifyLogId;
         this.notifyType = notifyType;

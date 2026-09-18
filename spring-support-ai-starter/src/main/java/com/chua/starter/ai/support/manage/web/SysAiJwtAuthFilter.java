@@ -72,7 +72,7 @@ public class SysAiJwtAuthFilter extends OncePerRequestFilter {
                         * @param response 响应
                         * @param 401 401
                         * @param invalid" invalid"
-                         */
+                        */
                         sendJsonError(response, 401, "JWT signature invalid");
                         return;
                     }
@@ -84,7 +84,7 @@ public class SysAiJwtAuthFilter extends OncePerRequestFilter {
                     * @param response 响应
                     * @param 401 401
                     * @param expired" expired"
-                     */
+                    */
                     sendJsonError(response, 401, "JWT expired");
                     return;
                 }
@@ -100,7 +100,7 @@ public class SysAiJwtAuthFilter extends OncePerRequestFilter {
                 * @param response 响应
                 * @param 401 401
                 * @param e.getMessage( e.获取消息(
-                 */
+                */
                 sendJsonError(response, 401, "JWT invalid: " + e.getMessage());
                 return;
             }
@@ -116,7 +116,7 @@ public class SysAiJwtAuthFilter extends OncePerRequestFilter {
     * @param response 响应
     * @param status 状态
     * @param message 消息
-     */
+    */
     private void sendJsonError(HttpServletResponse response, int status, String message) throws IOException {
         response.setStatus(status);
         response.setContentType("application/json;charset=UTF-8");

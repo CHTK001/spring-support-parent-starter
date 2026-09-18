@@ -71,7 +71,7 @@ public class SocketServerRegistry {
     * 套接字服务端registry。
     * @param redisTemplate redistemplate
     * @param properties 属性
-     */
+    */
     public SocketServerRegistry(RedisTemplate<String, Object> redisTemplate, SocketProperties properties) {
         this.redisTemplate = redisTemplate;
         this.properties = properties;
@@ -99,7 +99,7 @@ public class SocketServerRegistry {
     * 获取所有在线 套接字 服务器地址（合并数据库配置）
     *
     * @return 获取全部online服务端的结果
-     */
+    */
     public List<SocketServerInfo> getAllOnlineServers() {
         List<SocketServerInfo> result = new ArrayList<>();
 
@@ -159,7 +159,7 @@ public class SocketServerRegistry {
     /**
     * generate服务端标识。
     * @return generate服务端id的结果
-     */
+    */
     private String generateServerId() {
         String host = getLocalHost();
         int port = getActualPort();
@@ -169,7 +169,7 @@ public class SocketServerRegistry {
     /**
     * 获取本地主机。
     * @return 获取本地主机的结果
-     */
+    */
     private String getLocalHost() {
         try {
             return InetAddress.getLocalHost().getHostAddress();
@@ -182,7 +182,7 @@ public class SocketServerRegistry {
     /**
     * 获取actual端口。
     * @return 获取actual端口的结果
-     */
+    */
     private int getActualPort() {
         if (properties.getRoom() != null && !properties.getRoom().isEmpty()) {
             SocketProperties.Room room = properties.getRoom().getFirst();
@@ -195,7 +195,7 @@ public class SocketServerRegistry {
     /**
     * 获取路径。
     * @return 获取路径的结果
-     */
+    */
     private String getPath() {
         if (properties.getRoom() != null && !properties.getRoom().isEmpty()) {
             SocketProperties.Room room = properties.getRoom().getFirst();
@@ -207,7 +207,7 @@ public class SocketServerRegistry {
     /**
     * 获取上下文。
     * @return 获取上下文的结果
-     */
+    */
     private String getContext() {
         return getPath();
     }
@@ -215,7 +215,7 @@ public class SocketServerRegistry {
     /**
     * 获取服务端名称。
     * @return 获取服务端名称的结果
-     */
+    */
     private String getServerName() {
         if (properties.getRoom() != null && !properties.getRoom().isEmpty()) {
             SocketProperties.Room room = properties.getRoom().getFirst();
@@ -228,7 +228,7 @@ public class SocketServerRegistry {
     * 解析服务端信息。
     * @param info 信息
     * @return 解析服务端信息的结果
-     */
+    */
     private SocketServerInfo parseServerInfo(Map<Object, Object> info) {
         try {
             SocketServerInfo server = new SocketServerInfo();
@@ -253,7 +253,7 @@ public class SocketServerRegistry {
     * 解析int。
     * @param value 值
     * @return 解析int的结果
-     */
+    */
     private int parseInt(Object value) {
         if (value == null) {
             return 0;
@@ -272,7 +272,7 @@ public class SocketServerRegistry {
     * 解析long。
     * @param value 值
     * @return 解析long的结果
-     */
+    */
     private long parseLong(Object value) {
         if (value == null) {
             return 0L;
@@ -291,7 +291,7 @@ public class SocketServerRegistry {
     * 是否online。
     * @param server 服务端
     * @return 是否online的结果
-     */
+    */
     private boolean isOnline(SocketServerInfo server) {
         if (server.getHeartbeat() == 0) {
             return false;
@@ -300,9 +300,9 @@ public class SocketServerRegistry {
     }
 
      /**
-    * 获取数据库中的服务端
-    *
-    * @return 服务端标识
+     * 获取数据库中的服务端
+     *
+     * @return 服务端标识
      */
     protected List<SocketServerInfo> getDatabaseServers() {
         return Collections.emptyList();
@@ -326,7 +326,7 @@ public class SocketServerRegistry {
     * @param ttl ttl
     * @author CH
     * @since 4.0.0
-     */
+    */
     public static class SocketServerInfo {
         private String id; // 标识
         private String protocol; // 协议
@@ -336,7 +336,7 @@ public class SocketServerRegistry {
         /**
         * 获取标识。
         * @return 获取id的结果
-         */
+        */
         private String context;
         private boolean enable; // enable
         private long heartbeat; // 心跳
@@ -344,20 +344,20 @@ public class SocketServerRegistry {
         /**
         * 设置标识。
         * @param id 标识
-         */
+        */
         private String name;
 
         /**
         * 获取id。
         * @return 获取id的结果
-         */
+        */
         public String getId() {
             return id;
         /**
         * 获取协议。
         * @return 获取协议的结果
         * @param id id
-         */
+        */
         }
 
         public void setId(String id) {
@@ -366,7 +366,7 @@ public class SocketServerRegistry {
         * 设置协议。
         * @param protocol 协议
         * @return 获取协议的结果
-         */
+        */
         }
 
         public String getProtocol() {
@@ -375,7 +375,7 @@ public class SocketServerRegistry {
         * 获取主机。
         * @return 获取主机的结果
         * @param protocol 协议
-         */
+        */
         }
 
         public void setProtocol(String protocol) {
@@ -384,7 +384,7 @@ public class SocketServerRegistry {
         * 设置主机。
         * @param host 主机
         * @return 获取主机的结果
-         */
+        */
         }
 
         public String getHost() {
@@ -393,7 +393,7 @@ public class SocketServerRegistry {
         * 获取端口。
         * @return 获取端口的结果
         * @param host 主机
-         */
+        */
         }
 
         public void setHost(String host) {
@@ -402,7 +402,7 @@ public class SocketServerRegistry {
         * 设置端口。
         * @param port 端口
         * @return 获取端口的结果
-         */
+        */
         }
 
         public int getPort() {
@@ -411,7 +411,7 @@ public class SocketServerRegistry {
         * 获取路径。
         * @return 获取路径的结果
         * @param port 端口
-         */
+        */
         }
 
         public void setPort(int port) {
@@ -420,7 +420,7 @@ public class SocketServerRegistry {
         * 设置路径。
         * @param path 路径
         * @return 获取路径的结果
-         */
+        */
         }
 
         public String getPath() {
@@ -429,7 +429,7 @@ public class SocketServerRegistry {
         * 获取上下文。
         * @return 获取上下文的结果
         * @param path 路径
-         */
+        */
         }
 
         public void setPath(String path) {
@@ -438,7 +438,7 @@ public class SocketServerRegistry {
         * 设置上下文。
         * @param context 上下文
         * @return 获取上下文的结果
-         */
+        */
         }
 
         public String getContext() {
@@ -447,7 +447,7 @@ public class SocketServerRegistry {
         * 是否enable。
         * @return 是否enable的结果
         * @param context 上下文
-         */
+        */
         }
 
         public void setContext(String context) {
@@ -456,7 +456,7 @@ public class SocketServerRegistry {
         * 设置enable。
         * @param enable enable
         * @return 是否enable的结果
-         */
+        */
         }
 
         public boolean isEnable() {
@@ -465,7 +465,7 @@ public class SocketServerRegistry {
         * 获取心跳。
         * @return 获取心跳的结果
         * @param enable enable
-         */
+        */
         }
 
         public void setEnable(boolean enable) {
@@ -474,7 +474,7 @@ public class SocketServerRegistry {
         * 设置心跳。
         * @param heartbeat 心跳
         * @return 获取心跳的结果
-         */
+        */
         }
 
         public long getHeartbeat() {
@@ -485,7 +485,7 @@ public class SocketServerRegistry {
         * @param name 名称
         * @param ttl ttl
         * @param heartbeat 心跳
-         */
+        */
         }
 
         public void setHeartbeat(long heartbeat) {
@@ -493,7 +493,7 @@ public class SocketServerRegistry {
         /**
         * 获取ttl。
         * @return 获取ttl的结果
-         */
+        */
         }
 
         public int getTtl() {

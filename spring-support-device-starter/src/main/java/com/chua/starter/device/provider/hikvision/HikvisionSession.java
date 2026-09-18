@@ -30,23 +30,23 @@ public class HikvisionSession implements DeviceSession {
 
     /**
     * 设备连接信息
-     */
+    */
     private final DeviceConnectInfo info;
 
     /**
     * 在线状态
-     */
+    */
     private boolean online = true;
 
     /**
     * 事件订阅映射表
-     */
+    */
     private final Map<EventType, List<EventListener>> listeners = new ConcurrentHashMap<>();
 
     /**
     * 创建 hikvision会话 实例
     * @param info 信息
-     */
+    */
     public HikvisionSession(DeviceConnectInfo info) {
         this.info = info;
         log.info("海康设备连接成功: {}", info.getIp());

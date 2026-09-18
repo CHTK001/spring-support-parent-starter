@@ -21,7 +21,7 @@ public class ContentDisposition {
     * @param filename 字符串
     * @param charset 字符集
     * @param name 名称
-     */
+    */
     public ContentDisposition(String filename, String charset, String name) {
         this.filename = filename;
         this.charset = charset;
@@ -32,7 +32,7 @@ public class ContentDisposition {
     * 获取文件名
     *
     * @return 获取文件名的结果
-     */
+    */
     public String getFilename() {
         return filename;
     }
@@ -41,7 +41,7 @@ public class ContentDisposition {
     * 获取字符集
     *
     * @return 获取字符集的结果
-     */
+    */
     public String getCharset() {
         return charset;
     }
@@ -50,7 +50,7 @@ public class ContentDisposition {
     * 获取名称
     *
     * @return 获取名称的结果
-     */
+    */
     public String getName() {
         return name;
     }

@@ -54,7 +54,7 @@ public class WindowsLocalSoftwareCollector implements LocalSoftwareCollector {
     *
     * @param baseKey 基础钥匙
     * @return 扫描uninstall钥匙的结果
-     */
+    */
     private List<SoftSoftware> scanUninstallKey(String baseKey) {
         List<SoftSoftware> list = new ArrayList<>();
         try {
@@ -81,7 +81,7 @@ public class WindowsLocalSoftwareCollector implements LocalSoftwareCollector {
     *
     * @param key 钥匙
     * @return 读取software信息的结果
-     */
+    */
     private SoftSoftware readSoftwareInfo(String key) {
         try {
             Process process = Runtime.getRuntime().exec(
@@ -117,7 +117,7 @@ public class WindowsLocalSoftwareCollector implements LocalSoftwareCollector {
     * @param output 输出
     * @param name 名称
     * @return extract价值观的结果
-     */
+    */
     private String extractValue(String output, String name) {
         for (String line : output.split("\n")) {
             if (line.contains(name)) {
@@ -135,7 +135,7 @@ public class WindowsLocalSoftwareCollector implements LocalSoftwareCollector {
     *
     * @param output 输出
     * @return extracticon路径的结果
-     */
+    */
     private String extractIconPath(String output) {
         String icon = extractValue(output, "DisplayIcon");
         if (icon != null && new File(icon).exists()) {

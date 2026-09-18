@@ -55,7 +55,7 @@ public class RequestFingerprintAutoConfiguration {
     *
     * @param props 指纹配置
     * @return 过滤器
-     */
+    */
     @Bean
     @Order(Ordered.HIGHEST_PRECEDENCE + 20)
     public Filter requestFingerprintFilter(FingerprintProps props) {
@@ -110,7 +110,7 @@ public class RequestFingerprintAutoConfiguration {
     * @param cfg       配置
     * @param bodyBytes 已缓存的请求体字节
     * @return 指纹十六进制字符串
-     */
+    */
     private String computeFingerprint(HttpServletRequest req, FingerprintProps cfg, byte[] bodyBytes) {
         try {
             HashFunction hf = selectHash(cfg.getAlgorithm());
@@ -157,7 +157,7 @@ public class RequestFingerprintAutoConfiguration {
     * @param method 方法
     * @param props props
     * @return 匹配主体方法的结果
-     */
+    */
     private boolean matchBodyMethod(String method, FingerprintProps props) {
         if (method == null) {
             return false;
@@ -174,7 +174,7 @@ public class RequestFingerprintAutoConfiguration {
     * @param req req
     * @param maxBytes 最大bytes
     * @return within大小限制的结果
-     */
+    */
     private boolean withinSizeLimit(HttpServletRequest req, long maxBytes) {
         if (maxBytes <= 0) {
             return true;
@@ -188,7 +188,7 @@ public class RequestFingerprintAutoConfiguration {
     *
     * @param algorithm 算法名称
     * @return 哈希函数
-     */
+    */
     private HashFunction selectHash(String algorithm) {
         if (algorithm == null) {
             return Hashing.murmur3_128();
@@ -209,14 +209,14 @@ public class RequestFingerprintAutoConfiguration {
     *
     * @param s 字符串
     * @return 非空字符串
-     */
+    */
     private String nullToEmpty(String s) { return s == null ? "" : s; }
 
     /**
     * 指纹配置属性
     * @author CH
     * @since 4.0.0
-     */
+    */
     @ConfigurationProperties(prefix = "plugin.security.fingerprint")
     public static class FingerprintProps {
         /** 是否启用 */
@@ -250,7 +250,7 @@ public class RequestFingerprintAutoConfiguration {
         * 是否已启用
         *
         * @return 是否已启用的结果
-         */
+        */
         public boolean isEnabled() {
             return enabled;
         }
@@ -259,7 +259,7 @@ public class RequestFingerprintAutoConfiguration {
         * 设置已启用
         *
         * @param enabled 已启用
-         */
+        */
         public void setEnabled(boolean enabled) {
             this.enabled = enabled;
         }
@@ -268,7 +268,7 @@ public class RequestFingerprintAutoConfiguration {
         * 获取头部名称
         *
         * @return 获取头部名称的结果
-         */
+        */
         public String getHeaderName() {
             return headerName;
         }
@@ -277,7 +277,7 @@ public class RequestFingerprintAutoConfiguration {
         * 设置头部名称
         *
         * @param headerName 头部名称
-         */
+        */
         public void setHeaderName(String headerName) {
             this.headerName = headerName;
         }
@@ -286,7 +286,7 @@ public class RequestFingerprintAutoConfiguration {
         * 获取Algorithm
         *
         * @return 获取algorithm的结果
-         */
+        */
         public String getAlgorithm() {
             return algorithm;
         }
@@ -295,7 +295,7 @@ public class RequestFingerprintAutoConfiguration {
         * 设置Algorithm
         *
         * @param algorithm algorithm
-         */
+        */
         public void setAlgorithm(String algorithm) {
             this.algorithm = algorithm;
         }
@@ -304,7 +304,7 @@ public class RequestFingerprintAutoConfiguration {
         * 获取Salt
         *
         * @return 获取salt的结果
-         */
+        */
         public String getSalt() {
             return salt;
         }
@@ -313,7 +313,7 @@ public class RequestFingerprintAutoConfiguration {
         * 设置Salt
         *
         * @param salt salt
-         */
+        */
         public void setSalt(String salt) {
             this.salt = salt;
         }
@@ -322,7 +322,7 @@ public class RequestFingerprintAutoConfiguration {
         * 是否include方法
         *
         * @return 是否include方法的结果
-         */
+        */
         public boolean isIncludeMethod() {
             return includeMethod;
         }
@@ -331,7 +331,7 @@ public class RequestFingerprintAutoConfiguration {
         * 设置include方法
         *
         * @param includeMethod include方法
-         */
+        */
         public void setIncludeMethod(boolean includeMethod) {
             this.includeMethod = includeMethod;
         }
@@ -340,7 +340,7 @@ public class RequestFingerprintAutoConfiguration {
         * 是否include路径
         *
         * @return 是否include路径的结果
-         */
+        */
         public boolean isIncludePath() {
             return includePath;
         }
@@ -349,7 +349,7 @@ public class RequestFingerprintAutoConfiguration {
         * 设置include路径
         *
         * @param includePath include路径
-         */
+        */
         public void setIncludePath(boolean includePath) {
             this.includePath = includePath;
         }
@@ -358,7 +358,7 @@ public class RequestFingerprintAutoConfiguration {
         * 是否include参数
         *
         * @return 是否include参数的结果
-         */
+        */
         public boolean isIncludeParams() {
             return includeParams;
         }
@@ -367,7 +367,7 @@ public class RequestFingerprintAutoConfiguration {
         * 设置include参数
         *
         * @param includeParams include参数
-         */
+        */
         public void setIncludeParams(boolean includeParams) {
             this.includeParams = includeParams;
         }
@@ -376,7 +376,7 @@ public class RequestFingerprintAutoConfiguration {
         * 获取include头部
         *
         * @return 获取include头部的结果
-         */
+        */
         public Set<String> getIncludeHeaders() {
             return includeHeaders;
         }
@@ -385,7 +385,7 @@ public class RequestFingerprintAutoConfiguration {
         * 设置include头部
         *
         * @param includeHeaders include头部
-         */
+        */
         public void setIncludeHeaders(Set<String> includeHeaders) {
             this.includeHeaders = includeHeaders;
         }
@@ -394,7 +394,7 @@ public class RequestFingerprintAutoConfiguration {
         * 是否include主体
         *
         * @return 是否include主体的结果
-         */
+        */
         public boolean isIncludeBody() {
             return includeBody;
         }
@@ -403,7 +403,7 @@ public class RequestFingerprintAutoConfiguration {
         * 设置include主体
         *
         * @param includeBody include主体
-         */
+        */
         public void setIncludeBody(boolean includeBody) {
             this.includeBody = includeBody;
         }
@@ -412,7 +412,7 @@ public class RequestFingerprintAutoConfiguration {
         * 获取include主体最大值Bytes
         *
         * @return 获取include主体最大bytes的结果
-         */
+        */
         public long getIncludeBodyMaxBytes() {
             return includeBodyMaxBytes;
         }
@@ -421,7 +421,7 @@ public class RequestFingerprintAutoConfiguration {
         * 设置include主体最大值Bytes
         *
         * @param includeBodyMaxBytes include主体最大bytes
-         */
+        */
         public void setIncludeBodyMaxBytes(long includeBodyMaxBytes) {
             this.includeBodyMaxBytes = includeBodyMaxBytes;
         }
@@ -430,7 +430,7 @@ public class RequestFingerprintAutoConfiguration {
         * 获取主体方法
         *
         * @return 获取主体方法的结果
-         */
+        */
         public Set<String> getBodyMethods() {
             return bodyMethods;
         }
@@ -439,7 +439,7 @@ public class RequestFingerprintAutoConfiguration {
         * 设置主体方法
         *
         * @param bodyMethods 主体方法
-         */
+        */
         public void setBodyMethods(Set<String> bodyMethods) {
             this.bodyMethods = bodyMethods;
         }
@@ -448,7 +448,7 @@ public class RequestFingerprintAutoConfiguration {
         * 获取validityms
         *
         * @return 获取validityms的结果
-         */
+        */
         public long getValidityMs() {
             return validityMs;
         }
@@ -457,7 +457,7 @@ public class RequestFingerprintAutoConfiguration {
         * 设置validityms
         *
         * @param validityMs validityms
-         */
+        */
         public void setValidityMs(long validityMs) {
             this.validityMs = validityMs;
         }
@@ -466,7 +466,7 @@ public class RequestFingerprintAutoConfiguration {
         * 是否reject重复
         *
         * @return 是否reject重复的结果
-         */
+        */
         public boolean isRejectDuplicate() {
             return rejectDuplicate;
         }
@@ -475,7 +475,7 @@ public class RequestFingerprintAutoConfiguration {
         * 设置reject重复
         *
         * @param rejectDuplicate reject重复
-         */
+        */
         public void setRejectDuplicate(boolean rejectDuplicate) {
             this.rejectDuplicate = rejectDuplicate;
         }
@@ -483,7 +483,7 @@ public class RequestFingerprintAutoConfiguration {
 
     /**
     * 应用销毁时关闭指纹缓存清理线程池
-     */
+    */
     @PreDestroy
     public void destroy() {
         if (fingerprintCleaner != null) {
@@ -495,7 +495,7 @@ public class RequestFingerprintAutoConfiguration {
     * 带缓存请求体的 请求 包装器
     * @author CH
     * @since 4.0.0
-     */
+    */
     static class CachedBodyHttpServletRequest extends HttpServletRequestWrapper {
         /** Cached请求体 */
         private final byte[] cachedBody;
@@ -504,7 +504,7 @@ public class RequestFingerprintAutoConfiguration {
         *
         * @param request 原请求
         * @param maxBytes 最大读取字节数（<=0 表示不限制）
-         */
+        */
         CachedBodyHttpServletRequest(HttpServletRequest request, long maxBytes) throws java.io.IOException {
             super(request);
             java.io.InputStream is = request.getInputStream();

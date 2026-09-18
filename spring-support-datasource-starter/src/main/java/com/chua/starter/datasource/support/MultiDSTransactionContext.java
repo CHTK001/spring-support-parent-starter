@@ -49,7 +49,7 @@ public class MultiDSTransactionContext {
     * 获取当前线程的事务上下文
     *
     * @return 当前上下文，无事务时返回 空
-     */
+    */
     public static MultiDSTransactionContext getCurrent() {
         return CURRENT_CONTEXT.get();
     }
@@ -58,7 +58,7 @@ public class MultiDSTransactionContext {
     * 设置当前线程的事务上下文
     *
     * @param context 上下文
-     */
+    */
     static void setCurrent(MultiDSTransactionContext context) {
         if (context == null) {
             CURRENT_CONTEXT.remove();
@@ -71,7 +71,7 @@ public class MultiDSTransactionContext {
     * 当前线程是否处于 @dstransactional 事务中
     *
     * @return 是否在事务中
-     */
+    */
     public static boolean isInTransaction() {
         return CURRENT_CONTEXT.get() != null;
     }
@@ -80,7 +80,7 @@ public class MultiDSTransactionContext {
     * 增加嵌套深度
     *
     * @return 当前深度
-     */
+    */
     static int incrementDepth() {
         int depth = NESTED_DEPTH.get() + 1;
         NESTED_DEPTH.set(depth);
@@ -91,7 +91,7 @@ public class MultiDSTransactionContext {
     * 减少嵌套深度
     *
     * @return 当前深度
-     */
+    */
     static int decrementDepth() {
         int depth = Math.max(0, NESTED_DEPTH.get() - 1);
         if (depth == 0) {
@@ -106,7 +106,7 @@ public class MultiDSTransactionContext {
     * 获取当前嵌套深度
     *
     * @return 嵌套深度
-     */
+    */
     public static int getDepth() {
         return NESTED_DEPTH.get();
     }
@@ -138,7 +138,7 @@ public class MultiDSTransactionContext {
     /**
     * multidstransaction上下文。
     * @param transactionName transaction名称
-     */
+    */
     public MultiDSTransactionContext(String transactionName) {
         this.transactionName = transactionName;
         this.startTime = System.currentTimeMillis();
@@ -150,7 +150,7 @@ public class MultiDSTransactionContext {
     * 推入数据源上下文
     *
     * @param dsName 数据源名称
-     */
+    */
     public void pushDataSource(String dsName) {
         dataSourceStack.push(dsName);
         usedDataSources.add(dsName);
@@ -161,7 +161,7 @@ public class MultiDSTransactionContext {
     * 弹出数据源上下文
     *
     * @return 上一级数据源名称，栈空时返回 空
-     */
+    */
     public String popDataSource() {
         String popped = dataSourceStack.poll();
         String restored = dataSourceStack.peek();
@@ -174,7 +174,7 @@ public class MultiDSTransactionContext {
     * 获取当前数据源上下文
     *
     * @return 当前数据源名称
-     */
+    */
     public String currentDataSource() {
         return dataSourceStack.peek();
     }
@@ -183,7 +183,7 @@ public class MultiDSTransactionContext {
     * 获取已使用的数据源名称集合
     *
     * @return 数据源名称集合
-     */
+    */
     public Set<String> getUsedDataSources() {
         return Collections.unmodifiableSet(usedDataSources);
     }
@@ -197,7 +197,7 @@ public class MultiDSTransactionContext {
     * @param dataSource 数据源实例
     * @return 数据库连接
     * @throws SQLException 获取或初始化连接失败
-     */
+    */
     public Connection getOrCreateConnection(String dsName, DataSource dataSource) throws SQLException {
         Connection conn = connections.get(dsName);
         if (conn == null) {
@@ -214,7 +214,7 @@ public class MultiDSTransactionContext {
     *
     * @param dsName 数据源名称
     * @return 连接，不存在时返回 空
-     */
+    */
     public Connection getConnection(String dsName) {
         return connections.get(dsName);
     }
@@ -223,7 +223,7 @@ public class MultiDSTransactionContext {
 
     /**
     * 提交所有连接
-     */
+    */
     public void commit() {
         if (completed) {
             return;
@@ -268,7 +268,7 @@ public class MultiDSTransactionContext {
 
     /**
     * 回滚所有连接
-     */
+    */
     public void rollback() {
         if (completed) {
             return;
@@ -294,7 +294,7 @@ public class MultiDSTransactionContext {
 
     /**
     * 清理资源并释放
-     */
+    */
     public void cleanup() {
         for (Map.Entry<String, Connection> entry : connections.entrySet()) {
             String dsName = entry.getKey();
@@ -317,7 +317,7 @@ public class MultiDSTransactionContext {
     * 获取事务持续时间（毫秒）
     *
     * @return 持续时间
-     */
+    */
     public long getElapsed() {
         return System.currentTimeMillis() - startTime;
     }
@@ -326,7 +326,7 @@ public class MultiDSTransactionContext {
     * 获取事务名称
     *
     * @return 事务名称
-     */
+    */
     public String getTransactionName() {
         return transactionName;
     }
@@ -335,7 +335,7 @@ public class MultiDSTransactionContext {
     * 是否已完成
     *
     * @return 是否已完成
-     */
+    */
     public boolean isCompleted() {
         return completed;
     }

@@ -30,6 +30,6 @@ public interface ServiceInfoContributor {
     * 向注册表贡献端点和开关信息。
     *
     * @param registry 服务信息 注册表
-     */
+    */
     void contribute(ServiceInfoRegistry registry);
 }

@@ -44,7 +44,7 @@ public class SocketConfiguration {
     * @param properties 配置属性
     * @param listeners  监听器列表
     * @return 协议名称到会话模板实例的映射
-     */
+    */
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = SocketProperties.PRE, name = "enable", havingValue = "true")
@@ -93,7 +93,7 @@ public class SocketConfiguration {
     *
     * @param templates 所有协议模板映射
     * @return 默认会话模板实例
-     */
+    */
     @Bean
     @Primary
     @ConditionalOnProperty(prefix = SocketProperties.PRE, name = "enable", havingValue = "true")
@@ -112,7 +112,7 @@ public class SocketConfiguration {
     * @param baseProperties 基础属性
     * @param protocolConfig 协议配置
     * @return 协议特定的属性对象
-     */
+    */
     private SocketProperties createProtocolProperties(
             SocketProperties baseProperties,
             SocketProperties.ProtocolConfig protocolConfig) {
@@ -143,7 +143,7 @@ public class SocketConfiguration {
     * @param templates  所有协议模板映射
     * @param properties 配置属性
     * @return 生命周期 Bean
-     */
+    */
     @Bean
     @ConditionalOnProperty(prefix = SocketProperties.PRE, name = "enable", havingValue = "true")
     public SocketLifecycle socketLifecycle(
@@ -154,7 +154,7 @@ public class SocketConfiguration {
         * @param templates templates
         * @param properties 属性
         * @return 套接字lifecycle的结果
-         */
+        */
         return new SocketLifecycle(templates, properties);
     }
 
@@ -163,7 +163,7 @@ public class SocketConfiguration {
     * 支持管理多个协议模板的启动和停止
     * @author CH
     * @since 4.0.0
-     */
+    */
     @Slf4j
     public static class SocketLifecycle implements InitializingBean, DisposableBean {
         private final Map<String, SocketSessionTemplate> templates; // templates
@@ -176,7 +176,7 @@ public class SocketConfiguration {
         * @param templates templates
         * @param properties 套接字属性
         * @param properties 属性
-         */
+        */
         public SocketLifecycle(Map<String, SocketSessionTemplate> templates, SocketProperties properties) {
             this.templates = templates;
             this.properties = properties;
@@ -216,10 +216,10 @@ public class SocketConfiguration {
 
     @Bean
     /**
-    * 套接字服务信息contributor
-    *
-    * @return 套接字服务信息contributor的结果
-     */
+        * 套接字服务信息contributor
+        *
+        * @return 套接字服务信息contributor的结果
+        */
     public ServiceInfoContributor socketServiceInfoContributor() {
         return registry -> {
             registry.registerFlag("socket", "Socket通信", true, "Socket通信模块");

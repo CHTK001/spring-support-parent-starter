@@ -22,12 +22,12 @@ public class LayoutGlobalSettingProvider implements GlobalSettingProvider {
 
     /**
     * 配置分组标识
-     */
+    */
     private static final String GROUP = "layout";
 
     /**
     * 分组显示名称
-     */
+    */
     private static final String GROUP_NAME = "布局识别";
 
     @Override

@@ -58,116 +58,116 @@ public class CacheProperties {
 
     /**
     * 配置前缀
-     */
+    */
     public static final String PRE = "plugin.cache";
 
     /**
     * Caffeine 缓存管理器 Bean 名称
-     */
+    */
     public static final String CAFFEINE_BEAN_NAME = "caffeineCacheManager";
 
     /**
     * Redis 缓存管理器 Bean 名称
-     */
+    */
     public static final String REDIS_BEAN_NAME = "redisCacheManager";
 
     /**
     * 是否启用多级缓存
-     */
+    */
     private boolean enabled = false;
 
     /**
     * 多级缓存层级（按读取顺序，越靠前越接近调用方）
     * <p>支持：caffeine、redis</p>
-     */
+    */
     private List<String> levels = List.of("caffeine", "redis");
 
     /**
     * 本地 Caffeine 缓存配置
-     */
+    */
     private CaffeineProperties caffeine = new CaffeineProperties();
 
     /**
     * Redis 分布式缓存配置
-     */
+    */
     private RedisProperties redis = new RedisProperties();
 
     /**
     * 缓存键策略
-     */
+    */
     private KeyProperties key = new KeyProperties();
 
     /**
     * Caffeine 缓存管理器 Bean 名称（用于多级缓存中按名称解析）
-     */
+    */
     private String caffeineBean = CAFFEINE_BEAN_NAME;
 
     /**
     * Redis 缓存管理器 Bean 名称（用于多级缓存中按名称解析）
-     */
+    */
     private String redisBean = REDIS_BEAN_NAME;
 
     /**
     * 按缓存名称细化的过期时间（秒）
     * <p>未配置的缓存名使用 {@link RedisProperties#getTtl()} 默认值</p>
-     */
+    */
     private Map<String, Long> expires = new LinkedHashMap<>();
 
     /**
     * 是否允许缓存空值（防缓存穿透）
-     */
+    */
     private boolean cacheNullValues = false;
 
     /**
     * 空值占位符过期时间（秒），仅在 {@link #cacheNullValues} 为 true 时生效
-     */
+    */
     private long nullValueTtl = 60;
 
     /**
     * 多级缓存中是否启用命中率统计
-     */
+    */
     private boolean recordStats = true;
 
     /**
     * Caffeine 本地缓存配置
     * @author CH
     * @since 4.0.0
-     */
+    */
     @Data
     public static class CaffeineProperties {
         /**
         * 初始容量
-         */
+        */
         private int initialCapacity = 256;
 
         /**
         * 最大容量
-         */
+        */
         private long maximumSize = 10_000L;
 
         /**
         * 写入后过期时间（秒），小于等于 0 表示不设置
-         */
+        */
         private long expireAfterWrite = 300;
 
         /**
         * 访问后过期时间（秒），小于等于 0 表示不设置
-         */
+        */
         private long expireAfterAccess = 0;
 
         /**
         * 是否启用命中率统计
-         */
+        */
         private boolean recordStats = true;
 
         /**
         * 弱引用 钥匙
-         */
+        */
         private boolean weakKeys = false;
 
         /**
         * 弱引用 价值观
-         */
+        */
         private boolean weakValues = false;
     }
 
@@ -175,37 +175,37 @@ public class CacheProperties {
     * Redis 缓存配置
     * @author CH
     * @since 4.0.0
-     */
+    */
     @Data
     public static class RedisProperties {
         /**
         * 默认过期时间（秒），小于等于 0 表示永不过期
-         */
+        */
         private long ttl = 600;
 
         /**
         * 钥匙 前缀
-         */
+        */
         private String keyPrefix = "cache:";
 
         /**
         * 值序列化方式：jackson / jdk
-         */
+        */
         private String serializer = "jackson";
 
         /**
         * 是否允许缓存空值
-         */
+        */
         private boolean cacheNullValues = false;
 
         /**
         * 钥匙 与 价值观 是否使用相同分隔符
-         */
+        */
         private String separator = ":";
 
         /**
         * 是否在 钥匙 中携带应用名前缀
-         */
+        */
         private boolean useKeyPrefix = true;
     }
 
@@ -213,32 +213,32 @@ public class CacheProperties {
     * 缓存键策略
     * @author CH
     * @since 4.0.0
-     */
+    */
     @Data
     public static class KeyProperties {
         /**
         * 缓存键统一前缀
-         */
+        */
         private String prefix = "cache:";
 
         /**
         * 缓存键分隔符
-         */
+        */
         private String separator = ":";
 
         /**
         * 是否在 钥匙 中追加租户标识
-         */
+        */
         private boolean withTenant = true;
 
         /**
         * 是否在 钥匙 中追加应用名
-         */
+        */
         private boolean withApplication = true;
 
         /**
         * 是否在 钥匙 中追加平台标识
-         */
+        */
         private boolean withPlatform = true;
     }
 }

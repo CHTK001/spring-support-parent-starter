@@ -45,7 +45,7 @@ public class ModelMetricsSnapshotService {
     /**
     * 平台标识 → Logo 静态资源基名（对应 {@code /api/assets/logos/{base}}）。
     * 与前端 {@code modelPlatforms.ts} 的 模型_PLATFORMS 命名对齐；缺失平台忽略。
-     */
+    */
     private static final Map<String, String> PLATFORM_LOGO = logoMap();
 
     /**
@@ -53,7 +53,7 @@ public class ModelMetricsSnapshotService {
     *
     * @param platform 平台标识（区分大小写匹配后统一小写）
     * @return Logo 相对 URL，平台未配置时返回 空
-     */
+    */
     public static String providerLogoUrl(String platform) {
         if (platform == null) {
             return null;
@@ -69,7 +69,7 @@ public class ModelMetricsSnapshotService {
     * 构建平台 → Logo 基名映射。
     *
     * @return 不可变映射
-     */
+    */
     private static Map<String, String> logoMap() {
         Map<String, String> m = new java.util.HashMap<>();
         m.put("openai", "openai");
@@ -125,42 +125,42 @@ public class ModelMetricsSnapshotService {
 
     /**
     * Redis 快照 钥匙
-     */
+    */
     static final String REDIS_KEY = "nomifun:model-metrics:latest";
 
     /**
     * Redis 快照 TTL（12 小时，防止冗余堆积）
-     */
+    */
     private static final long REDIS_TTL_SECONDS = 12L * 60 * 60;
 
     /**
     * 提供商 映射器
-     */
+    */
     private final SysAiProviderMapper providerMapper;
 
     /**
     * 提供商模型 映射器
-     */
+    */
     private final SysAiProviderModelMapper modelMapper;
 
     /**
     * 指标富集服务（Artificial Analysis 价格/速度/延迟匹配）
-     */
+    */
     private final AiModelMetricsEnrichmentService metricsEnrichmentService;
 
     /**
     * Redis 模板
-     */
+    */
     private final StringRedisTemplate stringRedisTemplate;
 
     /**
     * JSON 工具
-     */
+    */
     private final ObjectMapper objectMapper;
 
     /**
     * WS 推送服务
-     */
+    */
     private final ApiWebSocketPushService pushService;
 
     /**
@@ -170,13 +170,13 @@ public class ModelMetricsSnapshotService {
     * 前端展示占位符。Redis 写入失败仅告警。</p>
     *
     * @return 本次快照
-     */
+    */
     public Map<String, Object> buildAndPushSnapshot() {
         Map<String, Object> snapshot = buildSnapshotInternal();
         /**
         * persist转为Redis。
         * @param snapshot snapshot
-         */
+        */
         persistToRedis(snapshot);
         return snapshot;
     }
@@ -185,7 +185,7 @@ public class ModelMetricsSnapshotService {
     * 仅构建快照（不写 Redis、不推送），供查询接口首查/后台任务直接使用。
     *
     * @return 快照 映射
-     */
+    */
     public Map<String, Object> buildSnapshot() {
         return buildSnapshotInternal();
     }
@@ -201,7 +201,7 @@ public class ModelMetricsSnapshotService {
     * @param providerId 提供商 标识
     * @param model      模型名
     * @param latencyMs  实测延迟（毫秒）
-     */
+    */
     public void updateProbeLatency(String providerId, String model, long latencyMs) {
         try {
             String cached = stringRedisTemplate.opsForValue().get(REDIS_KEY);
@@ -233,7 +233,7 @@ public class ModelMetricsSnapshotService {
                 /**
                 * persist转为Redis。
                 * @param parsed 解析
-                 */
+                */
                 persistToRedis(parsed);
                 log.debug("[ModelMetrics] 已更新模型探测延迟 provider={} model={} latency={}ms",
                         providerId, model, latencyMs);
@@ -247,7 +247,7 @@ public class ModelMetricsSnapshotService {
     * 读取最近一次 Redis 快照；无快照时现场构建一份并返回。
     *
     * @return 快照 映射，构造失败时返回空结构
-     */
+    */
     public Map<String, Object> latestSnapshot() {
         try {
             String cached = stringRedisTemplate.opsForValue().get(REDIS_KEY);
@@ -268,7 +268,7 @@ public class ModelMetricsSnapshotService {
     * 快照构建核心：枚举配置模型并匹配指标。
     *
     * @return 快照 映射
-     */
+    */
     private Map<String, Object> buildSnapshotInternal() {
         List<Map<String, Object>> models = new ArrayList<>();
         List<SysAiProvider> providers = providerMapper.selectList(new LambdaQueryWrapper<>());
@@ -294,7 +294,7 @@ public class ModelMetricsSnapshotService {
     * @param provider 供应商
     * @param row      模型实体
     * @return 聚合行
-     */
+    */
     private Map<String, Object> toRow(SysAiProvider provider, SysAiProviderModel row) {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("provider_id", provider.getProviderId());
@@ -327,21 +327,21 @@ public class ModelMetricsSnapshotService {
             * @param out 出
             * @param "latency_ms" "延迟_ms"
             * @param metrics.get("latency_ms" 指标.获取("延迟_ms"
-             */
+            */
             mergeNotNull(out, "latency_ms", metrics.get("latency_ms"));
             /**
             * 合并not空。
             * @param out 出
             * @param "intelligence" "智能"
             * @param metrics.get("intelligence" 指标.获取("智能"
-             */
+            */
             mergeNotNull(out, "intelligence", metrics.get("intelligence"));
             /**
             * 合并not空。
             * @param out 出
             * @param "output_speed" "输出_速度"
             * @param metrics.get("output_speed" 指标.获取("输出_速度"
-             */
+            */
             mergeNotNull(out, "output_speed", metrics.get("output_speed"));
         }
 
@@ -368,7 +368,7 @@ public class ModelMetricsSnapshotService {
     *
     * @param row 模型实体
     * @return 延迟毫秒或 空
-     */
+    */
     private Long firstCapabilityLatency(SysAiProviderModel row) {
         List<Map<String, Object>> capabilities = row.getCapabilities();
         if (capabilities == null) {
@@ -392,7 +392,7 @@ public class ModelMetricsSnapshotService {
     * @param out   目标行
     * @param key   键
     * @param value 值
-     */
+    */
     private void mergeNotNull(Map<String, Object> out, String key, Object value) {
         if (value != null) {
             out.put(key, value);
@@ -403,7 +403,7 @@ public class ModelMetricsSnapshotService {
     * 快照写入 Redis（失败仅告警，不影响 WS 推送）。
     *
     * @param snapshot 快照
-     */
+    */
     private void persistToRedis(Map<String, Object> snapshot) {
         try {
             String json = objectMapper.writeValueAsString(snapshot);

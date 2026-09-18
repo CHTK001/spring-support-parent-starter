@@ -17,7 +17,7 @@ public interface SysAiAppKeyService {
     * 查询全部 app钥匙。
     *
     * @return AppKey 列表
-     */
+    */
     List<SysAiAppKey> list();
 
     /**
@@ -25,7 +25,7 @@ public interface SysAiAppKeyService {
     *
     * @param appKey app钥匙 实体
     * @return 保存后的 app钥匙
-     */
+    */
     SysAiAppKey save(SysAiAppKey appKey);
 
     /**
@@ -33,7 +33,7 @@ public interface SysAiAppKeyService {
     *
     * @param appKey app钥匙 实体
     * @return 是否成功
-     */
+    */
     boolean update(SysAiAppKey appKey);
 
     /**
@@ -41,7 +41,7 @@ public interface SysAiAppKeyService {
     *
     * @param id app钥匙 标识
     * @return 是否成功
-     */
+    */
     boolean deleteById(Integer id);
 
     /**
@@ -49,7 +49,7 @@ public interface SysAiAppKeyService {
     *
     * @param appKey app钥匙
     * @return AppKey 实体（可选）
-     */
+    */
     default Optional<SysAiAppKey> findByAppKey(String appKey) {
         return Optional.ofNullable(getByAppKey(appKey));
     }
@@ -58,14 +58,14 @@ public interface SysAiAppKeyService {
     * 获取byapp钥匙。
     * @param appKey app钥匙
     * @return 获取byapp钥匙的结果
-     */
+    */
     SysAiAppKey getByAppKey(String appKey);
 
     /**
     * 获取群体idbyapp钥匙。
     * @param appKey app钥匙
     * @return 获取群体idbyapp钥匙的结果
-     */
+    */
     Integer getGroupIdByAppKey(String appKey);
 
     /**
@@ -74,7 +74,7 @@ public interface SysAiAppKeyService {
     * @param secret secret
     * @param ip ip
     * @return 验证的结果
-     */
+    */
     boolean verify(String appKey, String secret, String ip);
 
     /**
@@ -84,13 +84,13 @@ public interface SysAiAppKeyService {
     * @param appKey app钥匙
     * @param ip     客户端 IP（可为空）
     * @return 是否有效
-     */
+    */
     boolean verifyAppKeyOnly(String appKey, String ip);
 
     /**
     * 更新use信息byapp钥匙。
     * @param appKey app钥匙
-     */
+    */
     void updateUseInfoByAppKey(String appKey);
 
     /**
@@ -101,6 +101,6 @@ public interface SysAiAppKeyService {
     *
     * @param appKey  app钥匙 值
     * @param tokens  本次消耗的 令牌 数
-     */
+    */
     void updateTokenQuotaByAppKey(String appKey, long tokens);
 }

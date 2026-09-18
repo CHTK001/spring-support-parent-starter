@@ -16,7 +16,7 @@ public interface OrderStateMachineService {
     * 创建状态机
     *
     * @param orderId 订单标识
-     */
+    */
     void createStateMachine(Long orderId);
 
     /**
@@ -26,7 +26,7 @@ public interface OrderStateMachineService {
     * @param event     事件
     * @param operator  操作人
     * @return 是否成功
-     */
+    */
     OrderTransitionResult sendEvent(Long orderId, OrderEvent event, String operator);
 
     /**
@@ -34,6 +34,6 @@ public interface OrderStateMachineService {
     *
     * @param orderId 订单标识
     * @return 当前状态
-     */
+    */
     OrderState getCurrentState(Long orderId);
 }

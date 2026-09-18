@@ -17,7 +17,7 @@ public class SpecCaptchaGenerator implements CaptchaGenerator {
     * SPI 扩展名。
     *
     * @return "spec"
-     */
+    */
     @Override
     public String name() {
         return "spec";
@@ -30,7 +30,7 @@ public class SpecCaptchaGenerator implements CaptchaGenerator {
     * @param height 图片高度
     * @param length 验证码长度
     * @return 特殊验证码实例
-     */
+    */
     @Override
     public Captcha create(int width, int height, int length) {
         SpecCaptcha captcha = new SpecCaptcha(width, height);

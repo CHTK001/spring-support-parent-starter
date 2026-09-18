@@ -17,7 +17,7 @@ public class ArithmeticCaptchaGenerator implements CaptchaGenerator {
     * SPI 扩展名。
     *
     * @return "arithmetic"
-     */
+    */
     @Override
     public String name() {
         return "arithmetic";
@@ -30,7 +30,7 @@ public class ArithmeticCaptchaGenerator implements CaptchaGenerator {
     * @param height 图片高度
     * @param length 验证码长度
     * @return 算术验证码实例
-     */
+    */
     @Override
     public Captcha create(int width, int height, int length) {
         ArithmeticCaptcha captcha = new ArithmeticCaptcha(width, height);

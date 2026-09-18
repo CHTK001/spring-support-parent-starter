@@ -48,7 +48,7 @@ public class WalletWithdrawApprovalController {
     * @param pageNum pagenum
     * @param pageSize page大小
     * @param status 状态
-     */
+    */
     public Result<PageResult<WalletWithdrawApproval>> page(HttpServletRequest request,
                                                             @RequestParam(defaultValue = "1") int pageNum,
                                                             @RequestParam(defaultValue = "10") int pageSize,
@@ -69,7 +69,7 @@ public class WalletWithdrawApprovalController {
     * @param id 标识
     * @param request 请求
     * @return approve的结果
-     */
+    */
     public Result<String> approve(@PathVariable Long id, HttpServletRequest request) {
         Result<String> denied = denyIfNecessary(request);
         if (denied != null) {
@@ -110,7 +110,7 @@ public class WalletWithdrawApprovalController {
     * @param id 标识
     * @param reason ReasonMLML
     * @param request 请求
-     */
+    */
     public Result<String> reject(@PathVariable Long id,
                                  @RequestParam(required = false) String reason,
                                  HttpServletRequest request) {
@@ -138,7 +138,7 @@ public class WalletWithdrawApprovalController {
     * @param orderNo 钱包订单号
     * @param thirdPartyOrderNo 厂商订单号
     * @param responsePayload 厂商响应报文
-     */
+    */
     @PostMapping("/{orderNo}/withdrawal/success")
     public Result<String> withdrawalSuccess(@PathVariable String orderNo,
                                              @RequestParam(required = false) String thirdPartyOrderNo,
@@ -166,7 +166,7 @@ public class WalletWithdrawApprovalController {
     * @param orderNo 钱包订单号
     * @param responsePayload 厂商响应报文
     * @param reason 失败原因
-     */
+    */
     @PostMapping("/{orderNo}/withdrawal/fail")
     public Result<String> withdrawalFail(@PathVariable String orderNo,
                                           @RequestParam(required = false) String responsePayload,
@@ -191,7 +191,7 @@ public class WalletWithdrawApprovalController {
     *
     * @param request 请求
     * @return denyIfNecessary的结果
-     */
+    */
     private <T> Result<T> denyIfNecessary(HttpServletRequest request) {
         UserResume userResume = principalResolver.resolve(request);
         if (userResume == null) {
@@ -208,7 +208,7 @@ public class WalletWithdrawApprovalController {
     *
     * @param request 请求
     * @return resolve操作符的结果
-     */
+    */
     private String resolveOperator(HttpServletRequest request) {
         UserResume userResume = principalResolver.resolve(request);
         if (userResume == null) {

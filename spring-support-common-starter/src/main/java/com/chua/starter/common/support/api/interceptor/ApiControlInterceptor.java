@@ -55,7 +55,7 @@ public class ApiControlInterceptor implements HandlerInterceptor  {
     * @param environment 环境
     * @param featureManager api特征管理器
     * @param overrideProvider 运行时覆盖提供者（可空：未注册实现时走默认判定）
-     */
+    */
     public ApiControlInterceptor(ApiProperties apiProperties, Environment environment, ApiFeatureManager featureManager,
                                  ObjectProvider<ApiSwitchOverrideProvider> overrideProvider) {
         this.apiProperties = apiProperties;
@@ -76,12 +76,12 @@ public class ApiControlInterceptor implements HandlerInterceptor  {
     private final ApiGrayEvaluator grayEvaluator = new ApiGrayEvaluator();
 
     /**
-    * 应用灰度运行时覆盖：无覆盖时原样返回注解；有覆盖时经动态代理合并——
-    * percentage/角色/用户/头部/rule 取覆盖值（未覆盖字段沿用注解），其余属性委托原注解。
-    *
-    * @param apiGray 原注解
-    * @return 生效的灰度规则
-     */
+        * 应用灰度运行时覆盖：无覆盖时原样返回注解；有覆盖时经动态代理合并——
+        * percentage/角色/用户/头部/rule 取覆盖值（未覆盖字段沿用注解），其余属性委托原注解。
+        *
+        * @param apiGray 原注解
+        * @return 生效的灰度规则
+        */
     private ApiGray applyGrayOverride(ApiGray apiGray) {
         if (overrideProvider == null) {
             return apiGray;
@@ -112,12 +112,12 @@ public class ApiControlInterceptor implements HandlerInterceptor  {
 
     /**
     * 语义化版本正则（预编译）
-     */
+    */
     private static final Pattern VERSION_PATTERN = Pattern.compile("/v([0-9]+(?:\\.[0-9]+)*(?:-[0-9A-Za-z.-]+)?)/");
 
     /**
     * 内部接口标识属性名
-     */
+    */
     public static final String ATTR_SKIP_AUTH = "API_INTERNAL_SKIP_AUTH";
 
     @Override
@@ -166,7 +166,7 @@ public class ApiControlInterceptor implements HandlerInterceptor  {
     * <p>
     * 校验请求是否来自内网IP或白名单
     * </p>
-     */
+    */
     private boolean handleApiInternal(HandlerMethod handlerMethod, HttpServletRequest request,
                                       HttpServletResponse response) throws IOException {
         ApiInternal apiInternal = AnnotationUtils.findAnnotation(handlerMethod.getMethod(), ApiInternal.class);
@@ -224,7 +224,7 @@ public class ApiControlInterceptor implements HandlerInterceptor  {
             * 写入响应。
             * @param response 响应
             * @param apiInternal.status( api内部.状态(
-             */
+            */
             writeResponse(response, apiInternal.status(), ReturnResult.error(apiInternal.message()));
             return false;
         }
@@ -236,7 +236,7 @@ public class ApiControlInterceptor implements HandlerInterceptor  {
             * 写入响应。
             * @param response 响应
             * @param apiInternal.status( api内部.状态(
-             */
+            */
             writeResponse(response, apiInternal.status(), ReturnResult.error(apiInternal.message()));
             return false;
         }
@@ -247,14 +247,14 @@ public class ApiControlInterceptor implements HandlerInterceptor  {
         * 写入响应。
         * @param response 响应
         * @param apiInternal.status( api内部.状态(
-         */
+        */
         writeResponse(response, apiInternal.status(), ReturnResult.error(apiInternal.message()));
         return false;
     }
 
     /**
     * 处理 @api特征 注解
-     */
+    */
     private boolean handleApiFeature(HandlerMethod handlerMethod, HttpServletRequest request,
                                      HttpServletResponse response) throws IOException {
         var apiFeature = AnnotationUtils.findAnnotation(handlerMethod.getMethod(), ApiFeature.class);
@@ -281,7 +281,7 @@ public class ApiControlInterceptor implements HandlerInterceptor  {
             * @param response 响应
             * @param status 状态
             * @param ReturnResult.error(message 申报结果.错误(消息
-             */
+            */
             writeResponse(response, status, ReturnResult.error(message));
             return false;
         }
@@ -291,7 +291,7 @@ public class ApiControlInterceptor implements HandlerInterceptor  {
 
     /**
     * 处理 @apimock 注解
-     */
+    */
     private boolean handleApiMock(HandlerMethod handlerMethod, HttpServletRequest request,
                                   HttpServletResponse response) throws IOException {
         var apiMock = AnnotationUtils.findAnnotation(handlerMethod.getMethod(), ApiMock.class);
@@ -350,7 +350,7 @@ public class ApiControlInterceptor implements HandlerInterceptor  {
     * <p>
     * 支持语义化版本号（如 1.0.0, 1.0.0-release, 2.0.0-rc.1）进行比较
     * </p>
-     */
+    */
     private boolean handleApiDeprecated(HandlerMethod handlerMethod, HttpServletRequest request,
                                         HttpServletResponse response) throws IOException {
         var apiDeprecated = AnnotationUtils.findAnnotation(handlerMethod.getMethod(), ApiDeprecated.class);
@@ -388,7 +388,7 @@ public class ApiControlInterceptor implements HandlerInterceptor  {
             * @param response 响应
             * @param 410 410
             * @param ReturnResult.error("此接口已被移除" 申报结果.错误("此接口已被移除"
-             */
+            */
             writeResponse(response, 410, ReturnResult.error("此接口已被移除"));
             return false;
         }
@@ -408,7 +408,7 @@ public class ApiControlInterceptor implements HandlerInterceptor  {
                 * @param response 响应
                 * @param 200 200
                 * @param ReturnResult.ok(null 申报结果.ok(空
-                 */
+                */
                 writeResponse(response, 200, ReturnResult.ok(null));
                 return false;
             }
@@ -419,7 +419,7 @@ public class ApiControlInterceptor implements HandlerInterceptor  {
 
     /**
     * 处理 @apigray 注解
-     */
+    */
     private boolean handleApiGray(HandlerMethod handlerMethod, HttpServletRequest request,
                                   HttpServletResponse response) throws IOException {
         var apiGray = AnnotationUtils.findAnnotation(handlerMethod.getMethod(), ApiGray.class);
@@ -474,7 +474,7 @@ public class ApiControlInterceptor implements HandlerInterceptor  {
                     * runtime异常。
                     * @param e e
                     * @return runtime异常的结果
-                     */
+                    */
                     throw new RuntimeException(e);
                 }
                 return false;
@@ -485,7 +485,7 @@ public class ApiControlInterceptor implements HandlerInterceptor  {
             * 写入响应。
             * @param response 响应
             * @param apiGray.notInGrayStatus( apigray.not入graystatus(
-             */
+            */
             writeResponse(response, apiGray.notInGrayStatus(), 
                     ReturnResult.error(apiGray.notInGrayMessage()));
             return false;
@@ -499,7 +499,7 @@ public class ApiControlInterceptor implements HandlerInterceptor  {
     /**
     * 检查灰度功能是否开启
     * @return 是否gray已启用的结果
-     */
+    */
     private boolean isGrayEnabled() {
         return apiProperties.getGray() != null && apiProperties.getGray().isEnable();
     }
@@ -510,7 +510,7 @@ public class ApiControlInterceptor implements HandlerInterceptor  {
     * 支持 集合&lt;字符串&gt; 或逗号分隔字符串两种存储形式，
     * 属性名为 "角色"，优先从 请求 attribute 取，其次从 会话 取。
     * </p>
-     */
+    */
     @SuppressWarnings("unchecked")
     private java.util.Collection<String> resolveRoles(HttpServletRequest request,
                                                        jakarta.servlet.http.HttpSession session) {
@@ -530,7 +530,7 @@ public class ApiControlInterceptor implements HandlerInterceptor  {
     /**
     * 检查 Mock 功能是否开启
     * @return 是否mock已启用的结果
-     */
+    */
     private boolean isMockEnabled() {
         return environment.getProperty("plugin.api.mock.enable", Boolean.class, true);
     }
@@ -539,7 +539,7 @@ public class ApiControlInterceptor implements HandlerInterceptor  {
     * 获取 Mock 响应内容
     * @param apiMock apimock
     * @return 获取mock响应的结果
-     */
+    */
     private String getMockResponse(ApiMock apiMock) {
  // 优先使用 响应 属性
         if (StringUtils.isNotBlank(apiMock.response())) {
@@ -570,7 +570,7 @@ public class ApiControlInterceptor implements HandlerInterceptor  {
     * </p>
     * @return 解析后的 版本 对象
     * @param request 请求
-     */
+    */
     private Version getRequestVersion(HttpServletRequest request) {
         // 从请求头获取
         String versionHeader = request.getHeader("X-API-Version");
@@ -600,7 +600,7 @@ public class ApiControlInterceptor implements HandlerInterceptor  {
     * 处理 @权限 注解
     * <p>校验用户角色是否在允许列表中，且当前运行 profile 为 dev。</p>
     * <p>角色来源优先级：x-user-role 请求头 → session attributes → request attributes。</p>
-     */
+    */
     private boolean handlePermission(HandlerMethod handlerMethod, HttpServletRequest request,
                                      HttpServletResponse response) throws IOException {
         Permission permission = AnnotationUtils.findAnnotation(handlerMethod.getMethod(), Permission.class);
@@ -633,7 +633,7 @@ public class ApiControlInterceptor implements HandlerInterceptor  {
             * @param response 响应
             * @param HttpServletResponse.SC_FORBIDDEN httpservlet响应.SC_FORBIDDEN
             * @param ReturnResult.error("仅管理员可操作" 申报结果.错误("仅管理员可操作"
-             */
+            */
             writeResponse(response, HttpServletResponse.SC_FORBIDDEN, ReturnResult.error("仅管理员可操作"));
             return false;
         }
@@ -648,7 +648,7 @@ public class ApiControlInterceptor implements HandlerInterceptor  {
             * @param response 响应
             * @param HttpServletResponse.SC_FORBIDDEN httpservlet响应.SC_FORBIDDEN
             * @param 模式下修改" 模式下修改"
-             */
+            */
             writeResponse(response, HttpServletResponse.SC_FORBIDDEN, ReturnResult.error("系统目录仅允许在 dev 模式下修改"));
             return false;
         }
@@ -661,7 +661,7 @@ public class ApiControlInterceptor implements HandlerInterceptor  {
     * <p>优先从 x-user-role 请求头获取，其次 session，最后 request attribute。</p>
     * @param request 请求
     * @return resolve用户角色的结果
-     */
+    */
     private String resolveUserRole(HttpServletRequest request) {
  // 1. 请求头（webui 前端在 authenticated 时通过 httpbridge 注入）
         String headerRole = request.getHeader("x-user-role");
@@ -690,7 +690,7 @@ public class ApiControlInterceptor implements HandlerInterceptor  {
     * @param response 响应
     * @param status 状态
     * @param body 主体
-     */
+    */
     private void writeResponse(HttpServletResponse response, int status, Object body) throws IOException {
         response.setStatus(status);
         response.setContentType("application/json;charset=UTF-8");

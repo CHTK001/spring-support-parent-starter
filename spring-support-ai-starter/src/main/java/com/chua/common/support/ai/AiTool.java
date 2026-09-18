@@ -13,17 +13,17 @@ public interface AiTool {
 
     /**
     * @return 工具名称（LLM 调用的标识）
-     */
+    */
     String name();
 
     /**
     * @return 工具描述（供 LLM 决定何时调用）
-     */
+    */
     String description();
 
     /**
     * @return 工具参数名称列表
-     */
+    */
     List<String> parameters();
 
     /**
@@ -31,6 +31,6 @@ public interface AiTool {
     *
     * @param args 工具入参键值映射
     * @return 工具执行结果
-     */
+    */
     AiToolResult call(Map<String, Object> args);
 }

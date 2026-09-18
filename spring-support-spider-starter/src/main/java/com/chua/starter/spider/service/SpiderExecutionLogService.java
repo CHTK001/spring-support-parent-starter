@@ -23,7 +23,7 @@ public interface SpiderExecutionLogService extends SpiderBaseService<SpiderExecu
     *
     * @param executionNo 执行号（追踪标识）
     * @return 节点日志列表
-     */
+    */
     List<SpiderExecutionLog> listByExecutionNo(String executionNo);
 
     /**
@@ -34,13 +34,13 @@ public interface SpiderExecutionLogService extends SpiderBaseService<SpiderExecu
     * @param definitionCode 爬虫编码（可选，空表示全部）
     * @param status        执行状态（可选，空表示全部）
     * @return 执行记录分页结果
-     */
+    */
     PageResultVO<ExecutionRecordVO> pageExecutionRecords(long pageNo, long pageSize, String definitionCode, String status);
 
     /**
     * 按爬虫编码聚合执行统计。
     *
     * @return 统计列表
-     */
+    */
     List<DefinitionStatsVO> aggregateStats();
 }

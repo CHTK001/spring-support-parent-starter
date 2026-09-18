@@ -50,12 +50,12 @@ public class AIChatController extends BaseAiController {
 
     /**
     * 压缩上下文拼接时的摘要最大长度
-     */
+    */
     private static final int SUMMARY_MAX_LENGTH = 4000;
 
     /**
     * 压缩上下文总量上限
-     */
+    */
     private static final int COMPRESSED_CONTEXT_MAX_LENGTH = 16000;
 
     /** aidialogrecord服务 */
@@ -75,7 +75,7 @@ public class AIChatController extends BaseAiController {
     * @return 创建dialog的结果
     * @param "新对话" "新对话"
     * @param "新对话" "新对话"
-     */
+    */
     @Operation(summary = "创建会话", description = "创建新的对话会话")
     @Permission("admin")
     @PostMapping("/provider/ai/chat/dialog")
@@ -92,7 +92,7 @@ public class AIChatController extends BaseAiController {
     * 删除指定会话。
     * @param dialogId dialogid
     * @return 删除dialog的结果
-     */
+    */
     @Operation(summary = "删除会话", description = "删除指定对话会话及其所有消息")
     @Permission("admin")
     @DeleteMapping("/provider/ai/chat/dialog/{dialogId}")
@@ -104,7 +104,7 @@ public class AIChatController extends BaseAiController {
     /**
     * 获取所有会话列表。
     * @return 获取dialog的结果
-     */
+    */
     @Operation(summary = "获取会话列表", description = "获取所有对话会话列表")
     @Permission("admin")
     @GetMapping("/provider/ai/chat/dialog")
@@ -117,7 +117,7 @@ public class AIChatController extends BaseAiController {
     * 获取指定会话的消息记录。
     * @param dialogId dialogid
     * @return 获取dialogrecord的结果
-     */
+    */
     @Operation(summary = "获取会话消息", description = "获取指定会话的所有消息记录")
     @Permission("admin")
     @GetMapping("/provider/ai/chat/dialog/{dialogId}")
@@ -133,7 +133,7 @@ public class AIChatController extends BaseAiController {
     * <p>
     * 将用户消息保存到会话记录，调用 AI 门面服务进行流式推理，
     * 并将 AI 回复也保存到消息记录。
-     */
+    */
     @Operation(summary = "AI 聊天", description = "向指定会话发送消息并获取 AI 流式回复（SSE）")
     @Permission("admin")
     @PostMapping(value = "/provider/ai/chat/{dialogId}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
@@ -209,7 +209,7 @@ public class AIChatController extends BaseAiController {
             /**
             * compressand保存上下文。
             * @param dialogId dialogid
-             */
+            */
             compressAndSaveContext(dialogId);
         });
     }
@@ -228,7 +228,7 @@ public class AIChatController extends BaseAiController {
     * </ul></p>
     *
     * @param dialogId 会话 标识
-     */
+    */
     private void compressAndSaveContext(Long dialogId) {
         try {
             List<ChatMessage> history = aiDialogRecordService.getDialogMessages(dialogId);
@@ -298,7 +298,7 @@ public class AIChatController extends BaseAiController {
     * @param field        配置字段名（runtime 分组）
     * @param defaultValue 默认值
     * @return 配置值
-     */
+    */
     private int parseIntSetting(String field, int defaultValue) {
         return sysAiGlobalSettingService.getValue("runtime", field)
                 .map(value -> {

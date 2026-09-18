@@ -18,14 +18,14 @@ public class ConfigCenterHolder {
 
     /**
     * 全局 配置center 实例
-     */
+    */
     private static volatile ConfigCenter instance;
 
     /**
     * 设置 配置center 实例
     *
     * @param configCenter 配置中心实例
-     */
+    */
     public static void setInstance(ConfigCenter configCenter) {
         if (instance == null) {
             synchronized (ConfigCenterHolder.class) {
@@ -42,7 +42,7 @@ public class ConfigCenterHolder {
     * 获取 配置center 实例
     *
     * @return 配置中心实例，可能为 空
-     */
+    */
     public static ConfigCenter getInstance() {
         return instance;
     }
@@ -51,7 +51,7 @@ public class ConfigCenterHolder {
     * 检查是否已初始化
     *
     * @return true-已初始化
-     */
+    */
     public static boolean isInitialized() {
         return instance != null;
     }
@@ -60,14 +60,14 @@ public class ConfigCenterHolder {
     * 检查是否支持监听
     *
     * @return true-支持监听
-     */
+    */
     public static boolean isSupportListener() {
         return instance != null && instance.isSupportListener();
     }
 
     /**
     * 关闭 配置center
-     */
+    */
     public static void shutdown() {
         if (instance != null) {
             try {

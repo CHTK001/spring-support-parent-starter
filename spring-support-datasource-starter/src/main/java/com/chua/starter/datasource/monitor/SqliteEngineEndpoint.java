@@ -35,7 +35,7 @@ public class SqliteEngineEndpoint {
     /**
     * sqliteengine端点。
     * @param engine engine
-     */
+    */
     public SqliteEngineEndpoint(SqliteEngine engine) {
         this.engine = engine;
     }
@@ -43,7 +43,7 @@ public class SqliteEngineEndpoint {
     /**
     * 查询 sqlite 引擎基本信息。
     * @return 信息的结果
-     */
+    */
     @ReadOperation
     public Map<String, Object> info() {
         Map<String, Object> result = new HashMap<>();
@@ -60,7 +60,7 @@ public class SqliteEngineEndpoint {
     /**
     * 查询 sqlite 引擎统计信息（表数量等）。
     * @return stats的结果
-     */
+    */
     @ReadOperation
     public Map<String, Object> stats() {
         Map<String, Object> result = new HashMap<>();

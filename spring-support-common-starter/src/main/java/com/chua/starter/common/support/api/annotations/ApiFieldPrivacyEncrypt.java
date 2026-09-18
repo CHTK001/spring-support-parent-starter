@@ -66,7 +66,7 @@ public @interface ApiFieldPrivacyEncrypt {
     * </p>
     *
     * @return 脱敏类型枚举
-     */
+    */
     PrivacyTypeEnum type() default PrivacyTypeEnum.NONE;
 
     /**
@@ -76,7 +76,7 @@ public @interface ApiFieldPrivacyEncrypt {
     * </p>
     *
     * @return 前置保留长度，默认0
-     */
+    */
     int prefixNoMaskLen() default 0;
 
     /**
@@ -86,7 +86,7 @@ public @interface ApiFieldPrivacyEncrypt {
     * </p>
     *
     * @return 后置保留长度，默认0
-     */
+    */
     int suffixNoMaskLen() default 0;
 
     /**
@@ -96,6 +96,6 @@ public @interface ApiFieldPrivacyEncrypt {
     * </p>
     *
     * @return 掩码符号，默认*
-     */
+    */
     String symbol() default "*";
 }

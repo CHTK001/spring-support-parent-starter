@@ -30,7 +30,7 @@ public final class AnsiStyle {
     *
     * <p>使用 {@link ThreadLocal} 缓存, 避免每次调用都访问环境变量;
     * 测试场景可调用 {@link #reset()} 清缓存。</p>
-     */
+    */
     private static final ThreadLocal<Boolean> ENABLED_CACHE = new ThreadLocal<>();
 
     /** Reset */
@@ -60,7 +60,7 @@ public final class AnsiStyle {
     /**
     * 当前是否启用 ANSI 颜色。
     * @return 是否已启用的结果
-     */
+    */
     public static boolean isEnabled() {
         Boolean cached = ENABLED_CACHE.get();
         if (cached != null) {
@@ -75,7 +75,7 @@ public final class AnsiStyle {
     * compute已启用
     *
     * @return compute已启用的结果
-     */
+    */
     private static boolean computeEnabled() {
         try {
             if (System.getenv("NO_COLOR") != null) {
@@ -94,7 +94,7 @@ public final class AnsiStyle {
     *
     * <p>主要用于单元测试, 在修改 {@code NO_COLOR} 等环境变量后调用。
     * 生产代码不应调用此方法。</p>
-     */
+    */
     public static void reset() {
         ENABLED_CACHE.remove();
     }
@@ -104,7 +104,7 @@ public final class AnsiStyle {
     *
     * @param code 编码
     * @return wrap的结果
-     */
+    */
     private static String wrap(String code) {
         return isEnabled() ? code : "";
     }
@@ -115,7 +115,7 @@ public final class AnsiStyle {
     * @param code 编码
     * @param text 文本
     * @return color的结果
-     */
+    */
     public static String color(String code, String text) {
         return isEnabled() ? code + text + RESET : text;
     }
@@ -125,49 +125,49 @@ public final class AnsiStyle {
     *
     * @param s s
     * @return R的结果
-     */
+    */
     public static String red(String s) { return color(RED, s); }
     /**
     * Green
     *
     * @param s s
     * @return green的结果
-     */
+    */
     public static String green(String s) { return color(GREEN, s); }
     /**
     * Yellow
     *
     * @param s s
     * @return yellow的结果
-     */
+    */
     public static String yellow(String s) { return color(YELLOW, s); }
     /**
     * Cyan
     *
     * @param s s
     * @return cyan的结果
-     */
+    */
     public static String cyan(String s) { return color(CYAN, s); }
     /**
     * Blue
     *
     * @param s s
     * @return blue的结果
-     */
+    */
     public static String blue(String s) { return color(BLUE, s); }
     /**
     * Gray
     *
     * @param s s
     * @return gray的结果
-     */
+    */
     public static String gray(String s) { return color(GRAY, s); }
     /**
     * Bold
     *
     * @param s s
     * @return bold的结果
-     */
+    */
     public static String bold(String s) { return color(BOLD, s); }
 
     /**
@@ -179,7 +179,7 @@ public final class AnsiStyle {
     * </ul>
     * @param value 值
     * @return triFlag的结果
-     */
+    */
     public static String triFlag(Boolean value) {
         if (value == null) {
             return color(GRAY, "? unset");
@@ -202,7 +202,7 @@ public final class AnsiStyle {
     * {@code [API控制] [@ApiVersion] [版本控制] [开启]} 的横幅行。</p>
     * @param value 值
     * @return cn标签的结果
-     */
+    */
     public static String cnLabel(Boolean value) {
         if (value == null) {
             return color(GRAY, "[未配置]");
@@ -218,7 +218,7 @@ public final class AnsiStyle {
     * @param ansiCode ansi编码
     * @param text 文本
     * @return wrap的结果
-     */
+    */
     public static String wrap(String ansiCode, String text) {
         return color(ansiCode, text);
     }
@@ -228,7 +228,7 @@ public final class AnsiStyle {
     * @param width width
     * @param ch ch
     * @return separator的结果
-     */
+    */
     public static String separator(int width, char ch) {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < width; i++) {

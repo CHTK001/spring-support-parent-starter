@@ -61,7 +61,7 @@ public class ProjectServiceImpl implements ProjectService {
     * 创建。
     * @param project project
     * @return 创建的结果
-     */
+    */
     public ReturnResult<MsProject> create(MsProject project) {
         ReturnResult<MsProject> validated = validate(project);
         if (validated != null) {
@@ -83,7 +83,7 @@ public class ProjectServiceImpl implements ProjectService {
     * @param id 标识
     * @param project project
     * @return 更新的结果
-     */
+    */
     public ReturnResult<MsProject> update(Long id, MsProject project) {
         if (id == null || projectMapper.selectById(id) == null) {
             return ReturnResult.error("项目不存在: " + id);
@@ -105,7 +105,7 @@ public class ProjectServiceImpl implements ProjectService {
     * 删除。
     * @param id 标识
     * @return 删除的结果
-     */
+    */
     public ReturnResult<Boolean> delete(Long id) {
         if (id == null || projectMapper.selectById(id) == null) {
             return ReturnResult.error("项目不存在: " + id);
@@ -148,7 +148,7 @@ public class ProjectServiceImpl implements ProjectService {
     * @param id 标识
     * @param enabled 已启用
     * @return 更新已启用的结果
-     */
+    */
     public ReturnResult<Boolean> updateEnabled(Long id, Boolean enabled) {
         MsProject project = id == null ? null : projectMapper.selectById(id);
         if (project == null) {
@@ -184,7 +184,7 @@ public class ProjectServiceImpl implements ProjectService {
     *
     * @param project 项目
     * @return 校验失败的错误结果，合法返回 空
-     */
+    */
     private ReturnResult<MsProject> validate(MsProject project) {
         if (project == null) {
             return ReturnResult.error("项目不能为空");
@@ -225,7 +225,7 @@ public class ProjectServiceImpl implements ProjectService {
     *
     * @param json JSON 字符串
     * @return ID 列表，解析失败返回空列表
-     */
+    */
     private List<Long> parseHostIds(String json) {
         if (isBlank(json)) {
             return List.of();
@@ -244,7 +244,7 @@ public class ProjectServiceImpl implements ProjectService {
     *
     * @param value 待判断字符串
     * @return 是否为空
-     */
+    */
     private boolean isBlank(String value) {
         return value == null || value.isBlank();
     }

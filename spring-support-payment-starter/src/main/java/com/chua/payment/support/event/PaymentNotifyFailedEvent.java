@@ -37,7 +37,7 @@ public class PaymentNotifyFailedEvent extends PaymentEvent {
     * @param refundNo 退税no
     * @param errorType 错误类型
     * @param errorMessage 错误消息
-     */
+    */
     public PaymentNotifyFailedEvent(Object source, Long tenantId, Long merchantId, Long notifyLogId,
                                     Long notifyErrorId, String notifyType, String orderNo, String refundNo,
                                     String errorType, String errorMessage) {
@@ -47,7 +47,7 @@ public class PaymentNotifyFailedEvent extends PaymentEvent {
         * @param "PAYMENT_NOTIFY_FAILED" "薪酬通知失败"
         * @param tenantId tenantid
         * @param merchantId merchantid
-         */
+        */
         super(source, "PAYMENT_NOTIFY_FAILED", tenantId, merchantId);
         this.notifyLogId = notifyLogId;
         this.notifyErrorId = notifyErrorId;

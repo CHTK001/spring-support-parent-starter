@@ -26,7 +26,7 @@ public interface JobHandler {
     * </p>
     *
     * @throws Exception 任务执行过程中可能抛出的异常
-     */
+    */
     void execute() throws Exception;
 
     /**
@@ -37,7 +37,7 @@ public interface JobHandler {
     * </p>
     *
     * @throws Exception 初始化过程中可能抛出的异常
-     */
+    */
     default void init() throws Exception {
         // 默认空实现
     }
@@ -50,7 +50,7 @@ public interface JobHandler {
     * </p>
     *
     * @throws Exception 销毁过程中可能抛出的异常
-     */
+    */
     default void destroy() throws Exception {
         // 默认空实现
     }

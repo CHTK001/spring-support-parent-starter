@@ -39,7 +39,7 @@ public class TransactionalMessageTemplate {
     * @param destination 目标地址
     * @param payload     消息内容
     * @return 发送结果（如果在事务中，返回null）
-     */
+    */
     public SendResult sendAfterCommit(String destination, Object payload) {
         return sendAfterCommit(destination, payload, null);
     }
@@ -51,7 +51,7 @@ public class TransactionalMessageTemplate {
     * @param payload     消息内容
     * @param headers     消息头
     * @return 发送结果（如果在事务中，返回null）
-     */
+    */
     public SendResult sendAfterCommit(String destination, Object payload, Map<String, Object> headers) {
         if (!TransactionSynchronizationManager.isActualTransactionActive()) {
             // 没有事务，立即发送
@@ -70,7 +70,7 @@ public class TransactionalMessageTemplate {
     * 在事务提交后批量发送消息
     *
     * @param messages 消息列表
-     */
+    */
     public void sendBatchAfterCommit(List<TransactionalMessage> messages) {
         if (!TransactionSynchronizationManager.isActualTransactionActive()) {
             // 没有事务，立即发送
@@ -91,7 +91,7 @@ public class TransactionalMessageTemplate {
     * 消息发送同步器
     * @author CH
     * @since 4.0.0
-     */
+    */
     private class MessageSendSynchronization implements TransactionSynchronization {
         /** 目的地 */
         private final String destination;
@@ -107,7 +107,7 @@ public class TransactionalMessageTemplate {
         * @param payload 对象
         * @param headers 头部
         * @param payload payload
-         */
+        */
         public MessageSendSynchronization(String destination, Object payload, Map<String, Object> headers) {
             this.destination = destination;
             this.payload = payload;
@@ -132,10 +132,10 @@ public class TransactionalMessageTemplate {
     }
 
     /**
-    * 批量消息发送同步器
-    * @author CH
-    * @since 4.0.0
-     */
+        * 批量消息发送同步器
+        * @author CH
+        * @since 4.0.0
+        */
     private class BatchMessageSendSynchronization implements TransactionSynchronization {
         /** 消息 */
         private final List<TransactionalMessage> messages;
@@ -143,7 +143,7 @@ public class TransactionalMessageTemplate {
         /**
         * 创建 批量消息发送synchronization 实例
         * @param messages 消息
-         */
+        */
         public BatchMessageSendSynchronization(List<TransactionalMessage> messages) {
             this.messages = new ArrayList<>(messages);
         }
@@ -176,10 +176,10 @@ public class TransactionalMessageTemplate {
     }
 
     /**
-    * 事务消息
-    * @author CH
-    * @since 4.0.0
-     */
+        * 事务消息
+        * @author CH
+        * @since 4.0.0
+        */
     public static class TransactionalMessage {
         /** 目的地 */
         private final String destination;
@@ -192,14 +192,14 @@ public class TransactionalMessageTemplate {
         * @param destination 目标
         * @param payload 对象
         * @param payload payload
-         */
+        */
         public TransactionalMessage(String destination, Object payload) {
             /**
             * this。
             * @param destination 目标
             * @param payload payload
             * @param null 空
-             */
+            */
             this(destination, payload, null);
         }
 
@@ -211,7 +211,7 @@ public class TransactionalMessageTemplate {
         * @param payload 对象
         * @param headers 头部
         * @param payload payload
-         */
+        */
         public TransactionalMessage(String destination, Object payload, Map<String, Object> headers) {
             this.destination = destination;
             this.payload = payload;
@@ -222,7 +222,7 @@ public class TransactionalMessageTemplate {
         * 获取目标
         *
         * @return 获取目标的结果
-         */
+        */
         public String getDestination() {
             return destination;
         }
@@ -231,7 +231,7 @@ public class TransactionalMessageTemplate {
         * 获取Payload
         *
         * @return 获取payload的结果
-         */
+        */
         public Object getPayload() {
             return payload;
         }
@@ -240,7 +240,7 @@ public class TransactionalMessageTemplate {
         * 获取头部
         *
         * @return 获取头部的结果
-         */
+        */
         public Map<String, Object> getHeaders() {
             return headers;
         }

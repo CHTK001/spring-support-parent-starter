@@ -35,14 +35,14 @@ public class AiAlertController {
 
     /**
     * 告警服务
-     */
+    */
     private final AiAlertService alertService;
 
     /**
     * 查询所有告警规则。
     *
     * @return 告警 DTO 列表
-     */
+    */
     @Permission("admin")
     @Operation(summary = "查询所有告警规则")
     @GetMapping
@@ -55,7 +55,7 @@ public class AiAlertController {
     *
     * @param alert 告警 DTO
     * @return 创建后的告警 DTO
-     */
+    */
     @Permission("admin")
     @Operation(summary = "新建告警规则")
     @PostMapping
@@ -70,7 +70,7 @@ public class AiAlertController {
     * @param alert   告警 DTO
     * @return 更新后的告警 DTO
     * @param ID" 标识"
-     */
+    */
     @Permission("admin")
     @Operation(summary = "更新告警规则")
     @PutMapping("/{alertId}")
@@ -86,7 +86,7 @@ public class AiAlertController {
     * @param ID" 标识"
     * @param ID" 标识"
     * @param ID" ID"
-     */
+    */
     @Permission("admin")
     @Operation(summary = "删除告警规则")
     @DeleteMapping("/{alertId}")
@@ -101,7 +101,7 @@ public class AiAlertController {
     * @param enabled 是否启用
     * @return 更新后的告警 DTO
     * @param ID" 标识"
-     */
+    */
     @Permission("admin")
     @Operation(summary = "切换告警启用状态")
     @PutMapping("/{alertId}/toggle")

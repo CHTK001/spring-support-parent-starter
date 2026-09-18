@@ -52,7 +52,7 @@ public class SystemUsageParser implements UsageParser {
     * 转为aiusage。
     * @param u u
     * @return 转为AIusage的结果
-     */
+    */
     private AiUsage toAiUsage(SysAiUsage u) {
         AiUsage.AiUsageBuilder builder = AiUsage.builder()
                 .provider(u.getSysAiUsageProvider())

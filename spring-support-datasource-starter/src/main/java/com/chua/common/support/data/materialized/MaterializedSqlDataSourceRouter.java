@@ -15,6 +15,6 @@ public interface MaterializedSqlDataSourceRouter extends MaterializedSqlRouter {
     *
     * @param route 路由结果
     * @return 目标数据源
-     */
+    */
     DataSource resolveDataSource(MaterializedSqlRoute route);
 }

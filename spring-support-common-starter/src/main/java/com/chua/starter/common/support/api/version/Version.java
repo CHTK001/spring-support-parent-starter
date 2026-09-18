@@ -41,20 +41,20 @@ public class Version implements Comparable<Version> {
 
     /**
     * 最新版本标识
-     */
+    */
     public static final String LATEST = "latest";
 
     /**
     * 版本号正则表达式
     * 支持格式：1, 1.0, 1.0.0, 1.0.0-alpha, 1.0.0-alpha.1, 1.0.0+构建
-     */
+    */
     private static final Pattern VERSION_PATTERN = Pattern.compile(
             "^[vV]?(\\d+)(?:\\.(\\d+))?(?:\\.(\\d+))?(?:-([a-zA-Z][a-zA-Z0-9]*(?:\\.[a-zA-Z0-9]+)*))?(?:\\+([a-zA-Z0-9.]+))?$"
     );
 
     /**
     * 预发布版本优先级（数值越大优先级越高）
-     */
+    */
     private static final java.util.Map<String, Integer> PRERELEASE_PRIORITY = java.util.Map.of(
             "snapshot", 1,
             "alpha", 2,
@@ -67,42 +67,42 @@ public class Version implements Comparable<Version> {
 
     /**
     * 主版本号
-     */
+    */
     private final int major;
 
     /**
     * 次版本号
-     */
+    */
     private final int minor;
 
     /**
     * 修订号
-     */
+    */
     private final int patch;
 
     /**
     * 预发布标识（如 alpha, beta, rc, release）
-     */
+    */
     private final String prerelease;
 
     /**
     * 构建元数据
-     */
+    */
     private final String buildMetadata;
 
     /**
     * 是否为 latest 特殊版本
-     */
+    */
     private final boolean latest;
 
     /**
     * 原始版本字符串
-     */
+    */
     private final String original;
 
     /**
     * 私有构造函数
-     */
+    */
     private Version(int major, int minor, int patch, String prerelease, String buildMetadata, 
                     boolean latest, String original) {
         this.major = major;
@@ -120,7 +120,7 @@ public class Version implements Comparable<Version> {
     * @param version 版本号字符串
     * @return Version 对象
     * @throws IllegalArgumentException 如果版本格式无效
-     */
+    */
     public static Version parse(String version) {
         if (StringUtils.isBlank(version)) {
             return new Version(1, 0, 0, null, null, false, "1.0.0");
@@ -161,7 +161,7 @@ public class Version implements Comparable<Version> {
     *
     * @param version 版本号字符串
     * @return Version 对象，解析失败返回默认版本 1.0.0
-     */
+    */
     public static Version parseOrDefault(String version) {
         try {
             return parse(version);
@@ -177,7 +177,7 @@ public class Version implements Comparable<Version> {
     * @param minor 次版本号
     * @param patch 修订号
     * @return Version 对象
-     */
+    */
     public static Version of(int major, int minor, int patch) {
         return new Version(major, minor, patch, null, null, false, 
                 major + "." + minor + "." + patch);
@@ -191,7 +191,7 @@ public class Version implements Comparable<Version> {
     * @param patch 修订号
     * @param prerelease 预发布标识
     * @return Version 对象
-     */
+    */
     public static Version of(int major, int minor, int patch, String prerelease) {
         String original = major + "." + minor + "." + patch;
         if (StringUtils.isNotBlank(prerelease)) {
@@ -204,7 +204,7 @@ public class Version implements Comparable<Version> {
     * 获取最新版本对象
     *
     * @return 表示最新版本的 版本 对象
-     */
+    */
     public static Version latest() {
         return new Version(Integer.MAX_VALUE, Integer.MAX_VALUE, Integer.MAX_VALUE, 
                 null, null, true, LATEST);
@@ -215,7 +215,7 @@ public class Version implements Comparable<Version> {
     *
     * @param other 另一个版本
     * @return 比较结果
-     */
+    */
     @Override
     public int compareTo(Version other) {
         if (other == null) {
@@ -260,7 +260,7 @@ public class Version implements Comparable<Version> {
     * @param pre1 pre1
     * @param pre2 pre2
     * @return comparePrerelease的结果
-     */
+    */
     private int comparePrerelease(String pre1, String pre2) {
         // 没有预发布标识的版本比有预发布标识的版本高
         // 例如：1.0.0 > 1.0.0-rc.1 > 1.0.0-beta > 1.0.0-alpha
@@ -309,7 +309,7 @@ public class Version implements Comparable<Version> {
     * 获取预发布类型的优先级
     * @param type 类型
     * @return 获取prereleasepriority的结果
-     */
+    */
     private int getPrereleasePriority(String type) {
         return PRERELEASE_PRIORITY.getOrDefault(type.toLowerCase(), 0);
     }
@@ -319,7 +319,7 @@ public class Version implements Comparable<Version> {
     *
     * @param other 另一个版本
     * @return 是否大于等于
-     */
+    */
     public boolean isGreaterThanOrEqual(Version other) {
         return compareTo(other) >= 0;
     }
@@ -329,7 +329,7 @@ public class Version implements Comparable<Version> {
     *
     * @param other 另一个版本
     * @return 是否大于
-     */
+    */
     public boolean isGreaterThan(Version other) {
         return compareTo(other) > 0;
     }
@@ -339,7 +339,7 @@ public class Version implements Comparable<Version> {
     *
     * @param other 另一个版本
     * @return 是否小于等于
-     */
+    */
     public boolean isLessThanOrEqual(Version other) {
         return compareTo(other) <= 0;
     }
@@ -349,7 +349,7 @@ public class Version implements Comparable<Version> {
     *
     * @param other 另一个版本
     * @return 是否小于
-     */
+    */
     public boolean isLessThan(Version other) {
         return compareTo(other) < 0;
     }
@@ -359,7 +359,7 @@ public class Version implements Comparable<Version> {
     *
     * @param other 另一个版本
     * @return 是否匹配
-     */
+    */
     public boolean matches(Version other) {
         return compareTo(other) == 0;
     }
@@ -370,7 +370,7 @@ public class Version implements Comparable<Version> {
     * @param min 最小版本（包含）
     * @param max 最大版本（包含）
     * @return 是否在范围内
-     */
+    */
     public boolean isInRange(Version min, Version max) {
         return isGreaterThanOrEqual(min) && isLessThanOrEqual(max);
     }
@@ -379,7 +379,7 @@ public class Version implements Comparable<Version> {
     * 获取标准化版本字符串
     *
     * @return 标准化版本字符串
-     */
+    */
     public String toStandardString() {
         if (latest) {
             return LATEST;
@@ -423,7 +423,7 @@ public class Version implements Comparable<Version> {
     * 获取 major
     *
     * @return major
-     */
+    */
     public int getMajor() {
         return major;
     }
@@ -432,7 +432,7 @@ public class Version implements Comparable<Version> {
     * 获取 minor
     *
     * @return minor
-     */
+    */
     public int getMinor() {
         return minor;
     }
@@ -441,7 +441,7 @@ public class Version implements Comparable<Version> {
     * 获取 patch
     *
     * @return patch
-     */
+    */
     public int getPatch() {
         return patch;
     }
@@ -450,7 +450,7 @@ public class Version implements Comparable<Version> {
     * 获取 prerelease
     *
     * @return prerelease
-     */
+    */
     public String getPrerelease() {
         return prerelease;
     }
@@ -459,7 +459,7 @@ public class Version implements Comparable<Version> {
     * 获取 构建metadata
     *
     * @return buildMetadata
-     */
+    */
     public String getBuildMetadata() {
         return buildMetadata;
     }
@@ -468,7 +468,7 @@ public class Version implements Comparable<Version> {
     * 获取 latest
     *
     * @return latest
-     */
+    */
     public boolean getLatest() {
         return latest;
     }
@@ -477,7 +477,7 @@ public class Version implements Comparable<Version> {
     * 获取 原始
     *
     * @return original
-     */
+    */
     public String getOriginal() {
         return original;
     }

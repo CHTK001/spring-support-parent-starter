@@ -30,7 +30,7 @@ public class BinaryLogClient {
     * @param port 端口
     * @param username 用户名
     * @param password 密码
-     */
+    */
     public BinaryLogClient(String host, int port, String username, String password) {
         this.host = host;
         this.port = port;
@@ -42,7 +42,7 @@ public class BinaryLogClient {
     * 设置服务器 标识
     *
     * @param serverId 服务器 标识
-     */
+    */
     public void setServerId(int serverId) {
         this.serverId = serverId;
     }
@@ -51,7 +51,7 @@ public class BinaryLogClient {
     * 设置连接超时时间
     *
     * @param timeout 超时时间（毫秒）
-     */
+    */
     public void setConnectTimeout(int timeout) {
         this.connectTimeout = timeout;
     }
@@ -60,7 +60,7 @@ public class BinaryLogClient {
     * 注册事件监听器
     *
     * @param eventListener 事件监听器
-     */
+    */
     public void registerEventListener(EventListener eventListener) {
     }
 
@@ -68,19 +68,19 @@ public class BinaryLogClient {
     * 取消注册事件监听器
     *
     * @param eventListener 事件监听器
-     */
+    */
     public void unregisterEventListener(EventListener eventListener) {
     }
 
     /**
     * 连接到 MySQL 服务器
-     */
+    */
     public void connect() {
     }
 
     /**
     * 断开连接
-     */
+    */
     public void disconnect() {
     }
 
@@ -88,14 +88,14 @@ public class BinaryLogClient {
     * Binary 日志 事件监听器接口
     * @author CH
     * @since 4.0.0
-     */
+    */
     public interface EventListener {
 
         /**
         * 处理 Binary 日志 事件
         *
         * @param event 事件对象
-         */
+        */
         void onEvent(Event event);
     }
 }

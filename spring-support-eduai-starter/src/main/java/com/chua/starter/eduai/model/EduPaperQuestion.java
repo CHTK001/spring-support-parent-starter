@@ -19,33 +19,33 @@ public class EduPaperQuestion {
 
     /**
     * 关联标识
-     */
+    */
     @TableId(type = IdType.AUTO)
     /** paperquestionid */
     private Long paperQuestionId;
 
     /**
     * 试卷标识
-     */
+    */
     private Long paperQuestionPaperId;
 
     /**
     * 题目标识
-     */
+    */
     private Long paperQuestionQuestionId;
 
     /**
     * 题目顺序
-     */
+    */
     private Integer paperQuestionOrder;
 
     /**
     * 题目分值
-     */
+    */
     private Integer paperQuestionScore;
 
     /**
     * 创建时间
-     */
+    */
     private LocalDateTime paperQuestionCreateTime;
 }

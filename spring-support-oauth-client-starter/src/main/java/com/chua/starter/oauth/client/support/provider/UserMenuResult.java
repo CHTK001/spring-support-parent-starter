@@ -14,18 +14,18 @@ import java.util.Set;
 public class UserMenuResult {
     /**
     * 用户菜单
-     */
+    */
     private List<RouteVO> menu;
     /**
     * 权限
-     */
+    */
     private Set<String> permissions;
     /**
     * 用户所拥有的组件
-     */
+    */
     private Set<String> dashboardGrid;
     /**
     * 首页样式
-     */
+    */
     private String dashboard;
 }

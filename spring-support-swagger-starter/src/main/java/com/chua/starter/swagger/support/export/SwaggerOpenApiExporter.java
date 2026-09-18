@@ -28,7 +28,7 @@ public class SwaggerOpenApiExporter {
     * @param openAPI    springdoc 打开api
     * @param props      导出配置
     * @throws IOException 写文件失败
-     */
+    */
     public void export(io.swagger.v3.oas.models.OpenAPI openAPI, SwaggerExportProperties props) throws IOException {
         if (openAPI == null) {
             log.warn("[SwaggerExport] OpenAPI 为空, 跳过导出");
@@ -58,7 +58,7 @@ public class SwaggerOpenApiExporter {
     * 解析要使用的 提供者 类型: 默认从 输出 后缀推断 (HTML / md / docx)。
     * @param props props
     * @return resolve类型的结果
-     */
+    */
     private String resolveType(SwaggerExportProperties props) {
         String output = props.getOutput();
         if (output == null) {

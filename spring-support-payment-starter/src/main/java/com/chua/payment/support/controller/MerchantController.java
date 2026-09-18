@@ -41,7 +41,7 @@ public class MerchantController {
     *
     * @param dto dto
     * @return 创建merchant的结果
-     */
+    */
     public Result<MerchantVO> createMerchant(@RequestBody MerchantDTO dto) {
         MerchantVO vo = merchantService.createMerchant(dto);
         return Result.success(vo);
@@ -55,7 +55,7 @@ public class MerchantController {
     * @param id 标识
     * @param dto dto
     * @return 更新merchant的结果
-     */
+    */
     public Result<MerchantVO> updateMerchant(@PathVariable Long id, @RequestBody MerchantDTO dto) {
         MerchantVO vo = merchantService.updateMerchant(id, dto);
         return Result.success(vo);
@@ -68,7 +68,7 @@ public class MerchantController {
     *
     * @param id 标识
     * @return 删除merchant的结果
-     */
+    */
     public Result<Boolean> deleteMerchant(@PathVariable Long id) {
         boolean success = merchantService.deleteMerchant(id);
         return Result.success(success);
@@ -81,7 +81,7 @@ public class MerchantController {
     *
     * @param id 标识
     * @return 获取merchant的结果
-     */
+    */
     public Result<MerchantVO> getMerchant(@PathVariable Long id) {
         MerchantVO vo = merchantService.getMerchant(id);
         return Result.success(vo);
@@ -100,7 +100,7 @@ public class MerchantController {
     * @param status 状态
     * @param id 标识
     * @param id 标识
-     */
+    */
     public Result<PageResult<MerchantVO>> listMerchants(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
@@ -123,7 +123,7 @@ public class MerchantController {
     *
     * @param id 标识
     * @return activateMerchant的结果
-     */
+    */
     public Result<Boolean> activateMerchant(@PathVariable Long id) {
         boolean success = merchantService.activateMerchant(id);
         return Result.success(success);
@@ -136,7 +136,7 @@ public class MerchantController {
     *
     * @param id 标识
     * @return deactivateMerchant的结果
-     */
+    */
     public Result<Boolean> deactivateMerchant(@PathVariable Long id) {
         boolean success = merchantService.deactivateMerchant(id);
         return Result.success(success);

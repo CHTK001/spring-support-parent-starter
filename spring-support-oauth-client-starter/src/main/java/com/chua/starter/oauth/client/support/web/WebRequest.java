@@ -67,7 +67,7 @@ public class WebRequest {
     * @param requestMappingHandlerMapping 请求mapping处理器mapping
     * @param request 请求
     * @param requestMappingHandlerMapping 请求mapping处理器mapping
-     */
+    */
     public WebRequest(AuthClientProperties authProperties, HttpServletRequest request, RequestMappingHandlerMapping requestMappingHandlerMapping) {
         this.authProperties = authProperties;
         this.protocol = authProperties.getProtocol();
@@ -85,14 +85,14 @@ public class WebRequest {
     /**
     * 创建 web请求 实例
     * @param authProperties 认证属性
-     */
+    */
     public WebRequest(AuthClientProperties authProperties) {
         /**
         * this。
         * @param authProperties 认证属性
         * @param null 空
         * @param null 空
-         */
+        */
         this(authProperties, null, null);
     }
 
@@ -101,14 +101,14 @@ public class WebRequest {
     /**
     * 协议实例缓存（协议名+配置摘要 -> 协议实例），避免每次请求重复 SPI 查找与构造
     * <p>key 包含配置摘要，防止同协议名不同配置（如 address/oauthUrl/加密方式）复用同一实例导致串配置</p>
-     */
+    */
     private static final java.util.concurrent.ConcurrentHashMap<String, Protocol> PROTOCOL_CACHE = new java.util.concurrent.ConcurrentHashMap<>(8);
 
     /**
     * 是否通过
     *
     * @return 是否通过
-     */
+    */
     public boolean isPass() {
         String uri = request.getRequestURI();
         log.debug("[WebRequest白名单]开始检查白名单 - URI: {}", uri);
@@ -161,7 +161,7 @@ public class WebRequest {
                     * runtime异常。
                     * @param e.getMessage( e.获取消息(
                     * @return runtime异常的结果
-                     */
+                    */
                     throw new RuntimeException(e.getMessage());
                 }
             } catch (Exception ignored) {
@@ -211,7 +211,7 @@ public class WebRequest {
     *
     * @param uri uri
     * @return 是否resource的结果
-     */
+    */
     private boolean isResource(String uri) {
         return uri.endsWith(".js") ||
                 uri.endsWith(".css") ||
@@ -222,7 +222,7 @@ public class WebRequest {
     * 鉴权失败
     *
     * @return 鉴权失败
-     */
+    */
     public boolean isFailure() {
         String uri = request != null ? request.getRequestURI() : "unknown";
         log.debug("[WebRequest Token检查]开始检查Token - URI: {}", uri);
@@ -258,7 +258,7 @@ public class WebRequest {
     * 鉴权令牌
     *
     * @return token
-     */
+    */
     private String getToken() {
         String header = request.getHeader(authProperties.getTokenName());
         if (!Strings.isNullOrEmpty(header)) {
@@ -280,7 +280,7 @@ public class WebRequest {
     * 鉴权令牌
     *
     * @return token
-     */
+    */
     private Cookie[] getCookie() {
         return request.getCookies();
     }
@@ -290,7 +290,7 @@ public class WebRequest {
     *
     * @param chain    链路
     * @param response 响应
-     */
+    */
     public void doFailureChain(FilterChain chain, HttpServletResponse response) throws IOException, ServletException {
         WebResponse webResponse = new WebResponse(authProperties, chain, request, response);
         webResponse.doFailureChain(Information.AUTHENTICATION_FAILURE);
@@ -302,7 +302,7 @@ public class WebRequest {
     * @param chain       链路
     * @param response    响应
     * @param information 状态码
-     */
+    */
     public void doFailureChain(FilterChain chain, HttpServletResponse response, Information information) {
         WebResponse webResponse = new WebResponse(authProperties, chain, request, response);
         webResponse.doFailureChain(information);
@@ -313,7 +313,7 @@ public class WebRequest {
     * 鉴权（支持指定协议）- 高性能版本
     *
     * @return 鉴权信息
-     */
+    */
     public AuthenticationInformation authentication() {
         String uri = request != null ? request.getRequestURI() : "unknown";
         long startTime = System.currentTimeMillis();
@@ -393,7 +393,7 @@ public class WebRequest {
     *
     * @param appKeySecret 用户编码
     * @return 用户信息
-     */
+    */
     public AuthenticationInformation authentication(AppKeySecret appKeySecret) {
         // 快速确定协议类型
         log.debug("获取默认协议: {}", protocol);
@@ -414,7 +414,7 @@ public class WebRequest {
     * </p>
     *
     * @return 认证信息，未命中返回 {@code null}
-     */
+    */
     private AuthenticationInformation tryAuthenticateAiAppKey() {
         var support = com.chua.starter.oauth.client.support.appkey.AiAppKeySupport.get();
         if (support == null || !support.isEnabled()) {
@@ -440,7 +440,7 @@ public class WebRequest {
         * @param Information.OK 信息.OK
         * @param userResume 用户resume
         * @return 认证信息的结果
-         */
+        */
         return new AuthenticationInformation(Information.OK, userResume);
     }
 
@@ -448,7 +448,7 @@ public class WebRequest {
     * 获取默认协议
     *
     * @return 默认协议类型
-     */
+    */
     private String getDefaultProtocol() {
         // 使用局部变量避免多次属性访问
         String defaultProtocol = authProperties != null ? authProperties.getProtocol() : null;
@@ -460,7 +460,7 @@ public class WebRequest {
     * <p>通过 SPI 加载配置的协议实现，协议未注册时返回 null，由调用方降级处理</p>
     *
     * @return 协议实例，未注册返回 空
-     */
+    */
     private Protocol resolveProtocol() {
         return getProtocolExtension(authProperties);
     }
@@ -471,7 +471,7 @@ public class WebRequest {
     *
     * @param authProperties 认证配置
     * @return 协议实例，未注册返回 空
-     */
+    */
     public static Protocol getProtocolExtension(AuthClientProperties authProperties) {
         if (null == authProperties) {
             return null;
@@ -499,7 +499,7 @@ public class WebRequest {
     *
     * @param authProperties 认证配置
     * @return 缓存key
-     */
+    */
     private static String protocolCacheKey(AuthClientProperties authProperties) {
         AuthClientProperties.Aksk aksk = authProperties.getKey();
         String akskPart = null == aksk ? "" : aksk.isEnabled() + "|"
@@ -524,7 +524,7 @@ public class WebRequest {
     *
     * @return boolean
     * @param authProperties 认证属性
-     */
+    */
     public static boolean isEmbed(AuthClientProperties authProperties) {
         String oauthUrl = authProperties.getAddress();
         return StringUtils.isEmpty(oauthUrl);
@@ -535,7 +535,7 @@ public class WebRequest {
     *
     * @param chain    链路
     * @param response 响应
-     */
+    */
     public void doChain(FilterChain chain, HttpServletResponse response) throws IOException, ServletException {
         chain.doFilter(request, response);
     }
@@ -546,7 +546,7 @@ public class WebRequest {
     * @param upgradeType   升级类型
     * @param refreshToken  刷新令牌
     * @return 登录结果
-     */
+    */
     public LoginResult upgrade(UpgradeType upgradeType, String refreshToken) {
         // 快速获取认证数据
         Cookie[] cookie = getCookie();
@@ -579,7 +579,7 @@ public class WebRequest {
     *
     * @return 用户信息
     * @param throwOnFailure 抛出on失败
-     */
+    */
     public UserResult getUserResult(boolean throwOnFailure) {
         AuthenticationInformation authentication = authentication();
         UserResume returnResult = authentication.getReturnResult();
@@ -593,7 +593,7 @@ public class WebRequest {
                 * runtime异常。
                 * @param "请重新登录" "请重新登录"
                 * @return runtime异常的结果
-                 */
+                */
                 throw new RuntimeException("请重新登录");
             }
             return null;

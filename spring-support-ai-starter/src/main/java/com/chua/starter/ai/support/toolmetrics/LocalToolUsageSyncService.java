@@ -40,7 +40,7 @@ public class LocalToolUsageSyncService {
     * @param scanned scanned
     * @param inserted 插入
     * @return 同步结果的结果
-     */
+    */
     public record SyncResult(int scanned, int inserted) {
     }
 
@@ -48,7 +48,7 @@ public class LocalToolUsageSyncService {
     * 同步全部本地工具用量。
     *
     * @return 扫描数与新增数
-     */
+    */
     public SyncResult syncAll() {
         int scanned = 0;
         int inserted = 0;
@@ -74,7 +74,7 @@ public class LocalToolUsageSyncService {
         * @param scanned scanned
         * @param inserted 插入
         * @return 同步结果的结果
-         */
+        */
         return new SyncResult(scanned, inserted);
     }
 
@@ -84,7 +84,7 @@ public class LocalToolUsageSyncService {
     * @param source 解析器名
     * @param u      用量记录
     * @return true 表示新增写入
-     */
+    */
     private boolean insertOne(String source, AiUsage u) {
         if (u == null) { return false; }
         String requestId = dedupKey(source, u);
@@ -125,7 +125,7 @@ public class LocalToolUsageSyncService {
     * @param source 源
     * @param u u
     * @return 去重钥匙的结果
-     */
+    */
     private static String dedupKey(String source, AiUsage u) {
         String base = source + '|' + u.getProvider() + '|' + u.getModel() + '|'
                 + u.getStartTime() + '|' + u.getInputTokens() + '|' + u.getOutputTokens();
@@ -136,7 +136,7 @@ public class LocalToolUsageSyncService {
     * 转为日期时间。
     * @param ms ms
     * @return 转为日期时间的结果
-     */
+    */
     private static LocalDateTime toDateTime(Long ms) {
         return ms == null ? null
                 : LocalDateTime.ofInstant(Instant.ofEpochMilli(ms), ZoneId.systemDefault());
@@ -146,7 +146,7 @@ public class LocalToolUsageSyncService {
     * nvl。
     * @param v v
     * @return nvl的结果
-     */
+    */
     private static double nvl(Double v) {
         return v == null ? 0.0 : v;
     }

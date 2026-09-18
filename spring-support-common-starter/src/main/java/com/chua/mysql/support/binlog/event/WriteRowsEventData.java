@@ -19,7 +19,7 @@ public class WriteRowsEventData implements EventData {
     * 创建写入行事件数据
     *
     * @param rows 写入的行数据
-     */
+    */
     public WriteRowsEventData(List<Serializable[]> rows) {
         this.rows = rows;
     }
@@ -28,7 +28,7 @@ public class WriteRowsEventData implements EventData {
     * 获取写入的行数据
     *
     * @return 写入行数据列表
-     */
+    */
     public List<Serializable[]> getRows() {
         return rows;
     }

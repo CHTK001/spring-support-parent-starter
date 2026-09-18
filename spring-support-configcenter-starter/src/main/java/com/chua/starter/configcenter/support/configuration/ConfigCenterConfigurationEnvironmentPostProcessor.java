@@ -39,12 +39,12 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
 
     /**
     * 已加载的配置文件名称
-     */
+    */
     private static final Set<String> LOADED_CONFIG_NAMES = ConcurrentHashMap.newKeySet();
 
     /**
     * 环境引用（用于配置更新）
-     */
+    */
     private static volatile ConfigurableEnvironment environmentRef;
 
     @Override
@@ -91,11 +91,11 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
 
         // 加载配置
         /**
-        * 加载配置。
-        * @param environment 环境
-        * @param configCenter 配置center
-        * @param active 活跃
-         */
+    * 加载配置。
+    * @param environment 环境
+    * @param configCenter 配置center
+    * @param active 活跃
+    */
         loadConfigurations(environment, configCenter, active);
         
         // 注册配置变更监听（根据配置决定是否启用）
@@ -104,7 +104,7 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
             * 注册配置监听器。
             * @param configCenter 配置center
             * @param configCenterProperties 配置center属性
-             */
+            */
             registerConfigListener(configCenter, configCenterProperties);
             log.info("[配置中心]热更新已启用");
             ServiceInfoRegistry.getInstance().registerFlag(
@@ -131,7 +131,7 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
     * @param environment 环境对象
     * @param configCenter 配置中心实例
     * @param active 激活的环境
-     */
+    */
     private void loadConfigurations(ConfigurableEnvironment environment, ConfigCenter configCenter, String active) {
  // 1. 优先加载默认的 Application 配置（基于 spring.application.名称）
         String applicationName = environment.getProperty("spring.application.name");
@@ -143,7 +143,7 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
             * @param environment 环境
             * @param configCenter 配置center
             * @param appConfigWithProfile app配置with配置文件
-             */
+            */
             loadConfigIfExists(environment, configCenter, appConfigWithProfile);
             
  // 1.2 加载 Application-{app名称}（远程配置中心，不带环境后缀）
@@ -153,7 +153,7 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
             * @param environment 环境
             * @param configCenter 配置center
             * @param appConfig app配置
-             */
+            */
             loadConfigIfExists(environment, configCenter, appConfig);
         }
         
@@ -214,7 +214,7 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
     * @param environment 环境对象
     * @param configCenter 配置中心实例
     * @param configName 配置名称
-     */
+    */
     private void loadConfigIfExists(ConfigurableEnvironment environment, ConfigCenter configCenter, String configName) {
         Map<String, Object> configMap = configCenter.get(configName);
         if (configMap == null || configMap.isEmpty()) {
@@ -233,7 +233,7 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
     *
     * @param configCenter 配置中心
     * @param properties   配置属性
-     */
+    */
     private void registerConfigListener(ConfigCenter configCenter, ConfigCenterProperties properties) {
         if (!configCenter.isSupportListener()) {
             log.warn("[配置中心]当前配置中心不支持监听功能");
@@ -257,7 +257,7 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
     * </p>
     * @author CH
     * @since 4.0.0
-     */
+    */
     private static class EnvironmentConfigListener implements ConfigListener {
         
         /** 配置名称 */
@@ -273,7 +273,7 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
         * @param configName 配置名称
         * @param refreshDelayMs refresh延迟ms
         * @param logOnChange 日志on改变
-         */
+        */
         EnvironmentConfigListener(String configName, long refreshDelayMs, boolean logOnChange) {
             this.configName = configName;
             this.refreshDelayMs = refreshDelayMs;

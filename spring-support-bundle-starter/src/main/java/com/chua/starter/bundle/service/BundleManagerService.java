@@ -38,7 +38,7 @@ public class BundleManagerService {
     * bundle管理器服务。
     * @param launcher launcher
     * @param properties 属性
-     */
+    */
     public BundleManagerService(OsgiLauncher launcher, BundleProperties properties) {
         this.launcher = launcher;
         this.properties = properties;
@@ -53,7 +53,7 @@ public class BundleManagerService {
     *
     * @param coords Maven 坐标，格式：{@code groupId:artifactId:version}
     * @return 安装结果，包含 symbolic名称 和版本号
-     */
+    */
     public InstallResult install(String coords) {
         if (!launcher.isActive()) {
             return InstallResult.fail(coords, "OSGi 框架未激活");
@@ -91,7 +91,7 @@ public class BundleManagerService {
     *
     * @param coordsList Maven 坐标列表
     * @return 每个坐标的安装结果
-     */
+    */
     public List<InstallResult> installAll(List<String> coordsList) {
         List<InstallResult> results = new ArrayList<>();
         for (String coords : coordsList) {
@@ -107,7 +107,7 @@ public class BundleManagerService {
     *
     * @param symbolicName bundle 符号名
     * @return 是否成功卸载
-     */
+    */
     public boolean uninstall(String symbolicName) {
         if (!launcher.isActive()) {
             return false;
@@ -128,7 +128,7 @@ public class BundleManagerService {
     *
     * @param symbolicNames bundle 符号名列表
     * @return 每个 bundle 的卸载结果
-     */
+    */
     public List<Boolean> uninstallAll(List<String> symbolicNames) {
         List<Boolean> results = new ArrayList<>();
         for (String name : symbolicNames) {
@@ -142,7 +142,7 @@ public class BundleManagerService {
     /**
     * 获取所有已安装 bundle 的状态。
     * @return 获取状态的结果
-     */
+    */
     public List<Map<String, Object>> getStatus() {
         if (!launcher.isActive()) {
             return Collections.emptyList();
@@ -162,7 +162,7 @@ public class BundleManagerService {
     * 检查指定符号名的 bundle 是否已安装。
     * @param symbolicName symbolic名称
     * @return 是否installed的结果
-     */
+    */
     public boolean isInstalled(String symbolicName) {
         return launcher.getBundles().stream()
                 .anyMatch(b -> symbolicName.equals(b.getSymbolicName()));
@@ -171,7 +171,7 @@ public class BundleManagerService {
     /**
     * 获取已管理的 bundle 符号名列表。
     * @return 获取managedbundles的结果
-     */
+    */
     public List<String> getManagedBundles() {
         return new ArrayList<>(installedBundles.keySet());
     }
@@ -182,7 +182,7 @@ public class BundleManagerService {
     * findexisting。
     * @param artifactId artifactid
     * @return findExisting的结果
-     */
+    */
     private OsgiBundle findExisting(String artifactId) {
         return launcher.getBundles().stream()
                 .filter(b -> {
@@ -197,7 +197,7 @@ public class BundleManagerService {
     * 解析coords。
     * @param coords coords
     * @return 解析coords的结果
-     */
+    */
     private MavenCoord parseCoords(String coords) {
         Matcher m = MAVEN_COORDS_PATTERN.matcher(coords.trim());
         if (!m.matches()) {
@@ -210,7 +210,7 @@ public class BundleManagerService {
     * 转为mavenurl。
     * @param coord coord
     * @return 转为mavenurl的结果
-     */
+    */
     private String toMavenUrl(MavenCoord coord) {
         String path = coord.groupId.replace('.', '/')
                 + "/" + coord.artifactId + "/" + coord.version
@@ -222,7 +222,7 @@ public class BundleManagerService {
     * extract版本。
     * @param version 版本
     * @return extract版本的结果
-     */
+    */
     private String extractVersion(String version) {
         if (version == null) {
             return "0.0.0";
@@ -236,7 +236,7 @@ public class BundleManagerService {
     * @param v1 v1
     * @param v2 v2
     * @return compare版本的结果
-     */
+    */
     private int compareVersions(String v1, String v2) {
         Matcher m1 = VERSION_PATTERN.matcher(v1);
         Matcher m2 = VERSION_PATTERN.matcher(v2);
@@ -262,14 +262,14 @@ public class BundleManagerService {
     * @param success 成功
     * @param message 消息
     * @return install结果的结果
-     */
+    */
     public record InstallResult(String artifactId, String version, boolean success, String message) {
         /**
         * 成功。
         * @param artifactId artifactid
         * @param version 版本
         * @return 成功的结果
-         */
+        */
         public static InstallResult success(String artifactId, String version) {
             return new InstallResult(artifactId, version, true, null);
         }
@@ -278,7 +278,7 @@ public class BundleManagerService {
         * @param artifactId artifactid
         * @param message 消息
         * @return 失败的结果
-         */
+        */
         public static InstallResult fail(String artifactId, String message) {
             return new InstallResult(artifactId, null, false, message);
         }
@@ -290,6 +290,6 @@ public class BundleManagerService {
     * @param artifactId artifactid
     * @param version 版本
     * @return MavenCoord的结果
-     */
+    */
     private record MavenCoord(String groupId, String artifactId, String version) {}
 }

@@ -16,13 +16,13 @@ public interface WalletLimitService {
     * 获取商户钱包限额配置
     * @param merchantId merchantid
     * @return 获取限制的结果
-     */
+    */
     MerchantWalletLimit getLimit(Long merchantId);
 
     /**
     * 保存或更新限额配置
     * @param limit 限制
-     */
+    */
     void saveOrUpdate(MerchantWalletLimit limit);
 
     /**
@@ -30,7 +30,7 @@ public interface WalletLimitService {
     * @param merchantId merchantid
     * @param userId 用户标识
     * @param amount amount
-     */
+    */
     void validateRechargeLimit(Long merchantId, Long userId, BigDecimal amount);
 
     /**
@@ -38,7 +38,7 @@ public interface WalletLimitService {
     * @param merchantId merchantid
     * @param userId 用户标识
     * @param amount amount
-     */
+    */
     void validateWithdrawLimit(Long merchantId, Long userId, BigDecimal amount);
 
     /**
@@ -46,7 +46,7 @@ public interface WalletLimitService {
     * @param merchantId merchantid
     * @param userId 用户标识
     * @param amount amount
-     */
+    */
     void validateTransferLimit(Long merchantId, Long userId, BigDecimal amount);
 
     /**
@@ -55,7 +55,7 @@ public interface WalletLimitService {
     * @param userId 用户标识
     * @param currentBalance 当前balance
     * @param addAmount 添加amount
-     */
+    */
     void validateBalanceLimit(Long merchantId, Long userId, BigDecimal currentBalance, BigDecimal addAmount);
 }
 

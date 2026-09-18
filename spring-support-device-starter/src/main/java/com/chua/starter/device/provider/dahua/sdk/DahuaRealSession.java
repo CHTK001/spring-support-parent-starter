@@ -43,17 +43,17 @@ public class DahuaRealSession implements DeviceSession {
 
     /**
     * 大华 SDK 库名（不含扩展名）
-     */
+    */
     private static final String SDK_LIBRARY_NAME = "dhnetsdk";
 
     /**
     * 码流数据缓冲上限（8MB）
-     */
+    */
     private static final int MAX_STREAM_BUFFER = 8 * 1024 * 1024;
 
     /**
     * 云台指令映射：业务枚举 -> 大华命令码
-     */
+    */
     private static final Map<PtzCommand, Integer> PTZ_COMMANDS = new ConcurrentHashMap<>();
 
     static {
@@ -71,42 +71,42 @@ public class DahuaRealSession implements DeviceSession {
 
     /**
     * SDK 接口实例
-     */
+    */
     private final DahuaNetSDK sdk;
 
     /**
     * 设备连接信息
-     */
+    */
     private final DeviceConnectInfo info;
 
     /**
     * 在线状态
-     */
+    */
     private volatile boolean online = true;
 
     /**
     * 登录句柄
-     */
+    */
     private long loginHandle = -1;
 
     /**
     * 设备序列号
-     */
+    */
     private String serial;
 
     /**
     * 通道数量
-     */
+    */
     private int channelCount;
 
     /**
     * 事件订阅监听器
-     */
+    */
     private final Map<EventType, List<EventListener>> listeners = new ConcurrentHashMap<>();
 
     /**
     * 事件缓冲队列
-     */
+    */
     private final List<DeviceEvent> eventQueue = new CopyOnWriteArrayList<>();
 
     /**
@@ -114,7 +114,7 @@ public class DahuaRealSession implements DeviceSession {
     *
     * @param info 设备连接信息
     * @throws IllegalStateException SDK 加载或设备登录失败
-     */
+    */
     public DahuaRealSession(DeviceConnectInfo info) {
         this.info = info;
         try {
@@ -124,25 +124,25 @@ public class DahuaRealSession implements DeviceSession {
             * illegal状态异常。
             * @param e.getMessage( e.获取消息(
             * @return illegal状态异常的结果
-             */
+            */
             throw new IllegalStateException("dhnetsdk 动态库加载失败，请将 SDK 的 dll 放入系统库路径: " + e.getMessage(), e);
         }
         /**
         * login。
-         */
+        */
         login();
     }
 
     /**
     * 登录设备
-     */
+    */
     private void login() {
         if (!sdk.CLIENT_Init((handle, user) -> log.info("大华设备连接状态变化: handle={}", handle), Pointer.NULL)) {
             /**
             * illegal状态异常。
             * @param 初始化失败" 初始化失败"
             * @return illegal状态异常的结果
-             */
+            */
             throw new IllegalStateException("大华 NetSDK 初始化失败");
         }
         LOGIN_INFO loginInfo = new LOGIN_INFO();
@@ -155,7 +155,7 @@ public class DahuaRealSession implements DeviceSession {
             * illegal状态异常。
             * @param info.getIp( 信息.获取ip(
             * @return illegal状态异常的结果
-             */
+            */
             throw new IllegalStateException("大华设备登录失败: " + info.getIp()
                     + "，错误码: " + sdk.CLIENT_GetLastError());
         }
@@ -210,10 +210,10 @@ public class DahuaRealSession implements DeviceSession {
                     + "，错误码: " + sdk.CLIENT_GetLastError());
         }
         /**
-        * bytearray输入流。
-        * @param buffer.toByteArray( 缓冲.转为bytearray(
-        * @return bytearray输入流的结果
-         */
+    * bytearray输入流。
+    * @param buffer.toByteArray( 缓冲.转为bytearray(
+    * @return bytearray输入流的结果
+    */
         return new ByteArrayInputStream(buffer.toByteArray());
     }
 
@@ -248,10 +248,10 @@ public class DahuaRealSession implements DeviceSession {
     public InputStream playback(int channel, TimeRange range) {
  // 大华回放需配合 客户端_findrecord / 客户端_playbackbyrecord API，此处简化
         /**
-        * bytearray输入流。
-        * @param byte[0] byte[0]
-        * @return bytearray输入流的结果
-         */
+    * bytearray输入流。
+    * @param byte[0] byte[0]
+    * @return bytearray输入流的结果
+    */
         return new ByteArrayInputStream(new byte[0]);
     }
 
@@ -354,7 +354,7 @@ public class DahuaRealSession implements DeviceSession {
     * 获取设备序列号
     *
     * @return 序列号
-     */
+    */
     public String getSerial() {
         return serial;
     }
@@ -363,7 +363,7 @@ public class DahuaRealSession implements DeviceSession {
     * 获取通道数量
     *
     * @return 通道数量
-     */
+    */
     public int getChannelCount() {
         return channelCount;
     }

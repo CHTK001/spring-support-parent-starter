@@ -14,7 +14,7 @@ public class BeanDefinitionRegistryUtils {
 
     /**
     * 私有构造函数，防止实例化
-     */
+    */
     private BeanDefinitionRegistryUtils() {
     }
 
@@ -23,13 +23,13 @@ public class BeanDefinitionRegistryUtils {
     *
     * @param registry 注册器
     * @param type     类型
-     */
+    */
     public static void registerBeanDefinition(BeanDefinitionRegistry registry, Class<?> type) {
         /**
         * 注册Beandefinition。
         * @param registry registry
         * @param type.getName( 类型.获取名称(
-         */
+        */
         registerBeanDefinition(registry, type.getName(), type);
     }
 
@@ -40,7 +40,7 @@ public class BeanDefinitionRegistryUtils {
     * @param type     类型
     * @param bean Bean
     * @return 注册Beandefinition的结果
-     */
+    */
     public static <T> void registerBeanDefinition(BeanDefinitionRegistry registry, Class<T> type, T bean) {
         registry.registerBeanDefinition(type.getName(),
                 BeanDefinitionBuilder.genericBeanDefinition(type, () -> bean).getBeanDefinition());
@@ -52,7 +52,7 @@ public class BeanDefinitionRegistryUtils {
     * @param registry 注册器
     * @param name     Bean名称
     * @param type     类型
-     */
+    */
     public static void registerBeanDefinition(BeanDefinitionRegistry registry, String name, Class<?> type) {
         registry.registerBeanDefinition(name, BeanDefinitionBuilder.genericBeanDefinition(type).getBeanDefinition());
     }
@@ -63,7 +63,7 @@ public class BeanDefinitionRegistryUtils {
     * @param registry       注册器
     * @param name           Bean名称
     * @param beanDefinition 类型
-     */
+    */
     public static void registerBeanDefinition(BeanDefinitionRegistry registry, String name, BeanDefinition beanDefinition) {
         registry.registerBeanDefinition(name, beanDefinition);
     }

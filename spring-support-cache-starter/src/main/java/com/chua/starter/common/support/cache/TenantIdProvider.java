@@ -35,6 +35,6 @@ public interface TenantIdProvider {
     * 获取当前请求的租户标识
     *
     * @return 租户ID，不可返回 {@code null}
-     */
+    */
     String getCurrentTenantId();
 }

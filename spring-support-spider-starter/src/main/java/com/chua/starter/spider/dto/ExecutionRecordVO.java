@@ -17,38 +17,38 @@ import java.time.LocalDateTime;
 public class ExecutionRecordVO {
     /**
     * 执行号
-     */
+    */
     private String executionNo;
     /**
     * 触发类型（MANUAL / CRON / ONCE）
-     */
+    */
     private String triggerType;
     /**
     * 执行状态（RUNNING / 成功 / 失败）
-     */
+    */
     private String executionStatus;
     /**
     * 最大爬取深度
-     */
+    */
     private Integer maxDepthReached;
     /**
     * 已采集数据条数
-     */
+    */
     private Integer collectedCount;
     /**
     * 已完成 URL 数
-     */
+    */
     private Integer urlCompleted;
     /**
     * 总 URL 数
-     */
+    */
     private Integer urlTotal;
     /**
     * 开始时间
-     */
+    */
     private LocalDateTime startedAt;
     /**
     * 结束时间
-     */
+    */
     private LocalDateTime finishedAt;
 }

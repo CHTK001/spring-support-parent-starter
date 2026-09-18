@@ -19,7 +19,7 @@ public enum ApiErrorCode {
     * @param "FORBIDDEN" "FORBIDDEN"
     * @param 403 403
     * @return FORBIDDEN的结果
-     */
+    */
     FORBIDDEN("FORBIDDEN", 403),
 
     /**
@@ -27,7 +27,7 @@ public enum ApiErrorCode {
     * @param "UNAUTHORIZED" "UNAUTHORIZED"
     * @param 401 401
     * @return UNAUTHORIZED的结果
-     */
+    */
     UNAUTHORIZED("UNAUTHORIZED", 401),
 
     /**
@@ -35,7 +35,7 @@ public enum ApiErrorCode {
     * @param "TIMEOUT" "超时"
     * @param 504 504
     * @return 超时的结果
-     */
+    */
     TIMEOUT("TIMEOUT", 504),
 
     /**
@@ -43,7 +43,7 @@ public enum ApiErrorCode {
     * @param "BAD_GATEWAY" "BAD_GATEWAY"
     * @param 502 502
     * @return BAD_GATEWAY的结果
-     */
+    */
     BAD_GATEWAY("BAD_GATEWAY", 502),
 
     /**
@@ -51,7 +51,7 @@ public enum ApiErrorCode {
     * @param "NOT_FOUND" "NOT_FOUND"
     * @param 404 404
     * @return NOT_FOUND的结果
-     */
+    */
     NOT_FOUND("NOT_FOUND", 404),
 
     /**
@@ -59,7 +59,7 @@ public enum ApiErrorCode {
     * @param "INVALID_PARAM" "INVALID_参数"
     * @param 400 400
     * @return invalid参数的结果
-     */
+    */
     INVALID_PARAM("INVALID_PARAM", 400),
 
     /**
@@ -67,7 +67,7 @@ public enum ApiErrorCode {
     * @param "CONVERSATION_ARCHIVED" "CONVERSATION_ARCHIVED"
     * @param 409 409
     * @return CONVERSATION_ARCHIVED的结果
-     */
+    */
     CONVERSATION_ARCHIVED("CONVERSATION_ARCHIVED", 409),
 
     /**
@@ -75,7 +75,7 @@ public enum ApiErrorCode {
     * @param "CONFLICT" "CONFLICT"
     * @param 409 409
     * @return CONFLICT的结果
-     */
+    */
     CONFLICT("CONFLICT", 409),
 
     /**
@@ -83,7 +83,7 @@ public enum ApiErrorCode {
     * @param "NO_COMPLETER" "NO_COMPLETER"
     * @param 409 409
     * @return NO_COMPLETER的结果
-     */
+    */
     NO_COMPLETER("NO_COMPLETER", 409),
 
     /**
@@ -91,7 +91,7 @@ public enum ApiErrorCode {
     * @param "RATE_LIMITED" "RATE_限制"
     * @param 429 429
     * @return rate限制的结果
-     */
+    */
     RATE_LIMITED("RATE_LIMITED", 429),
 
     /**
@@ -99,7 +99,7 @@ public enum ApiErrorCode {
     * @param "INTERNAL_ERROR" "内部_错误"
     * @param 500 500
     * @return 内部错误的结果
-     */
+    */
     INTERNAL_ERROR("INTERNAL_ERROR", 500),
 
     /**
@@ -107,24 +107,24 @@ public enum ApiErrorCode {
     * @param "UPSTREAM_ERROR" "UPSTREAM_错误"
     * @param 502 502
     * @return upstream错误的结果
-     */
+    */
     UPSTREAM_ERROR("UPSTREAM_ERROR", 502);
 
     /**
     * 机器可读错误码
-     */
+    */
     private final String code;
 
     /**
     * 绑定的 HTTP 状态码
-     */
+    */
     private final int httpStatus;
 
     /**
     * api错误编码。
     * @param code 编码
     * @param httpStatus http状态
-     */
+    */
     ApiErrorCode(String code, int httpStatus) {
         this.code = code;
         this.httpStatus = httpStatus;

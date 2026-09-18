@@ -16,40 +16,40 @@ import java.util.Set;
 public class ActuatorProperties {
     /**
     * 是否启用
-     */
+    */
     private boolean enable = false;
 
 
     /**
     * 是否开启认证
-     */
+    */
     private boolean enableAuth = false;
 
     /**
     * 用户名
-     */
+    */
     private String username = "";
 
     /**
     * 密码
-     */
+    */
     private String password = "";
 
     /**
     * IP白名单
-     */
+    */
     private Set<String> ipWhitelist = new LinkedHashSet<>();
 
     /**
     * 排除的路径
-     */
+    */
     private Set<String> excludePaths = new LinkedHashSet<>();
 
     /**
     * 获取 enable
     *
     * @return enable
-     */
+    */
     public boolean getEnable() {
         return enable;
     }
@@ -58,7 +58,7 @@ public class ActuatorProperties {
     * 判断是否启用
     *
     * @return enable
-     */
+    */
     public boolean isEnable() {
         return enable;
     }
@@ -67,7 +67,7 @@ public class ActuatorProperties {
     * 设置 enable
     *
     * @param enable enable
-     */
+    */
     public void setEnable(boolean enable) {
         this.enable = enable;
     }
@@ -76,7 +76,7 @@ public class ActuatorProperties {
     * 获取 enable认证
     *
     * @return enableAuth
-     */
+    */
     public boolean getEnableAuth() {
         return enableAuth;
     }
@@ -85,7 +85,7 @@ public class ActuatorProperties {
     * 判断是否开启认证
     *
     * @return enableAuth
-     */
+    */
     public boolean isEnableAuth() {
         return enableAuth;
     }
@@ -94,7 +94,7 @@ public class ActuatorProperties {
     * 设置 enable认证
     *
     * @param enableAuth enable认证
-     */
+    */
     public void setEnableAuth(boolean enableAuth) {
         this.enableAuth = enableAuth;
     }
@@ -103,7 +103,7 @@ public class ActuatorProperties {
     * 获取 用户名
     *
     * @return username
-     */
+    */
     public String getUsername() {
         return username;
     }
@@ -112,7 +112,7 @@ public class ActuatorProperties {
     * 设置 用户名
     *
     * @param username 用户名
-     */
+    */
     public void setUsername(String username) {
         this.username = username;
     }
@@ -121,7 +121,7 @@ public class ActuatorProperties {
     * 获取 密码
     *
     * @return password
-     */
+    */
     public String getPassword() {
         return password;
     }
@@ -130,7 +130,7 @@ public class ActuatorProperties {
     * 设置 密码
     *
     * @param password 密码
-     */
+    */
     public void setPassword(String password) {
         this.password = password;
     }
@@ -139,7 +139,7 @@ public class ActuatorProperties {
     * 获取 ipwhitelist
     *
     * @return ipWhitelist
-     */
+    */
     public Set<String> getIpWhitelist() {
         return ipWhitelist;
     }
@@ -148,7 +148,7 @@ public class ActuatorProperties {
     * 设置 ipwhitelist
     *
     * @param ipWhitelist ipwhitelist
-     */
+    */
     public void setIpWhitelist(Set<String> ipWhitelist) {
         this.ipWhitelist = ipWhitelist;
     }
@@ -157,7 +157,7 @@ public class ActuatorProperties {
     * 获取 exclude路径
     *
     * @return excludePaths
-     */
+    */
     public Set<String> getExcludePaths() {
         return excludePaths;
     }
@@ -166,7 +166,7 @@ public class ActuatorProperties {
     * 设置 exclude路径
     *
     * @param excludePaths exclude路径
-     */
+    */
     public void setExcludePaths(Set<String> excludePaths) {
         this.excludePaths = excludePaths;
     }

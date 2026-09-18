@@ -69,14 +69,14 @@ public class EduExamServiceImpl extends ServiceImpl<EduExamMapper, EduExam> impl
     *
     * @param exam exam
     * @return 创建exam的结果
-     */
+    */
     public Long createExam(EduExam exam) {
         if (exam.getExamPaperId() == null) {
             /**
             * 业务异常。
             * @param "试卷ID不能为空" "试卷标识不能为空"
             * @return 业务异常的结果
-             */
+            */
             throw new BusinessException("试卷ID不能为空");
         }
         exam.setExamId(null);
@@ -95,14 +95,14 @@ public class EduExamServiceImpl extends ServiceImpl<EduExamMapper, EduExam> impl
     *
     * @param exam exam
     * @return 更新exam的结果
-     */
+    */
     public boolean updateExam(EduExam exam) {
         if (exam.getExamId() == null) {
             /**
             * 业务异常。
             * @param "考试ID不能为空" "考试标识不能为空"
             * @return 业务异常的结果
-             */
+            */
             throw new BusinessException("考试ID不能为空");
         }
         EduExam exists = baseMapper.selectById(exam.getExamId());
@@ -111,7 +111,7 @@ public class EduExamServiceImpl extends ServiceImpl<EduExamMapper, EduExam> impl
             * 业务异常。
             * @param "考试不存在" "考试不存在"
             * @return 业务异常的结果
-             */
+            */
             throw new BusinessException("考试不存在");
         }
         exam.setExamUpdateTime(LocalDateTime.now());
@@ -127,7 +127,7 @@ public class EduExamServiceImpl extends ServiceImpl<EduExamMapper, EduExam> impl
     *
     * @param id 标识
     * @return 删除exam的结果
-     */
+    */
     public boolean deleteExam(Long id) {
         EduExam exists = baseMapper.selectById(id);
         if (exists == null) {
@@ -135,7 +135,7 @@ public class EduExamServiceImpl extends ServiceImpl<EduExamMapper, EduExam> impl
             * 业务异常。
             * @param "考试不存在" "考试不存在"
             * @return 业务异常的结果
-             */
+            */
             throw new BusinessException("考试不存在");
         }
         // 逻辑删除：状态置为已结束

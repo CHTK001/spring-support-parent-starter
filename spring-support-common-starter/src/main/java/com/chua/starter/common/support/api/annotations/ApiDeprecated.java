@@ -53,7 +53,7 @@ public @interface ApiDeprecated {
     * </p>
     *
     * @return 废弃版本号
-     */
+    */
     String since();
 
     /**
@@ -64,14 +64,14 @@ public @interface ApiDeprecated {
     * </p>
     *
     * @return 替代接口路径
-     */
+    */
     String replacement() default "";
 
     /**
     * 废弃提示信息
     *
     * @return 提示信息
-     */
+    */
     String message() default "此接口已废弃";
 
     /**
@@ -81,13 +81,13 @@ public @interface ApiDeprecated {
     * </p>
     *
     * @return 移除版本号，默认空表示不移除
-     */
+    */
     String removedIn() default "";
 
     /**
     * 是否在响应头中添加废弃警告
     *
     * @return 是否添加警告头
-     */
+    */
     boolean addWarningHeader() default true;
 }

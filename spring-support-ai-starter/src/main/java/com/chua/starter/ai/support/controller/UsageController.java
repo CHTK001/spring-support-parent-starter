@@ -45,17 +45,17 @@ public class UsageController {
 
     /**
     * 用量服务
-     */
+    */
     private final SysAiUsageService usageService;
 
     /**
     * 用量同步日志 映射器（持久化日志分页查询）
-     */
+    */
     private final SysAiUsageSyncLogMapper syncLogMapper;
 
     /**
     * Spring 应用上下文（用于收集 Spring 容器中的 usageparser 实现）
-     */
+    */
     @Autowired
     private ApplicationContext applicationContext; // application上下文
 
@@ -86,7 +86,7 @@ public class UsageController {
     * @param model 模型
     * @param startTime 启动时间
     * @param endTime 结束时间
-     */
+    */
     public ReturnResult<?> list(
             @RequestParam(required = false) String groupName,
             @RequestParam(required = false) String provider,
@@ -118,7 +118,7 @@ public class UsageController {
     * @param model 模型
     * @param startTime 启动时间
     * @param endTime 结束时间
-     */
+    */
     public ReturnResult<Map<String, Object>> statistics(
             @RequestParam(required = false) String groupName,
             @RequestParam(required = false) String provider,
@@ -168,7 +168,7 @@ public class UsageController {
     /**
     * parsers。
     * @return parsers的结果
-     */
+    */
     public ReturnResult<List<Map<String, Object>>> parsers() {
         Map<String, UsageParser> allParsers = new LinkedHashMap<>();
 
@@ -216,7 +216,7 @@ public class UsageController {
     /**
     * trigger。
     * @return trigger的结果
-     */
+    */
     public ReturnResult<String> trigger() {
         UsageAggregationTask task = applicationContext.getBean(UsageAggregationTask.class);
         new Thread(() -> {
@@ -235,7 +235,7 @@ public class UsageController {
     /**
     * aggregate。
     * @return aggregate的结果
-     */
+    */
     public ReturnResult<String> aggregate() {
         UsageAggregationTask task = applicationContext.getBean(UsageAggregationTask.class);
         new Thread(() -> {
@@ -254,7 +254,7 @@ public class UsageController {
     /**
     * aggregate全部。
     * @return aggregate全部的结果
-     */
+    */
     public ReturnResult<String> aggregateAll() {
         UsageAggregationTask task = applicationContext.getBean(UsageAggregationTask.class);
         new Thread(() -> {
@@ -273,7 +273,7 @@ public class UsageController {
     /**
     * 日志。
     * @return 日志的结果
-     */
+    */
     public ReturnResult<List<UsageAggregationTask.SyncLogEntry>> logs() {
         return ReturnResult.ok(UsageAggregationTask.getSyncLogs());
     }

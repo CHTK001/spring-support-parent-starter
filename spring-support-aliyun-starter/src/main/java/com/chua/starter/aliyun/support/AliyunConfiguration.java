@@ -26,12 +26,12 @@ public class AliyunConfiguration {
     * aliyunalipay客户端工厂
     *
     * @return aliyunalipay客户端工厂的结果
-     */
+    */
     public AliyunAlipayClientFactory aliyunAlipayClientFactory() {
         /**
         * aliyunalipay客户端工厂。
         * @return aliyunalipay客户端工厂的结果
-         */
+        */
         return new AliyunAlipayClientFactory();
     }
 
@@ -41,7 +41,7 @@ public class AliyunConfiguration {
     * alipay客户端
     * @param properties 属性
     * @param factory 工厂
-     */
+    */
     public AlipayClient alipayClient(AliyunAlipayProperties properties,
                                      AliyunAlipayClientFactory factory) {
         log.info("[阿里云配置][支付宝] 加载配置");
@@ -55,7 +55,7 @@ public class AliyunConfiguration {
     * 阿里云服务信息contributor
     *
     * @return aliyun服务信息contributor的结果
-     */
+    */
     public ServiceInfoContributor aliyunServiceInfoContributor() {
         return registry -> {
             registry.registerFlag("aliyun", "阿里云", true, "阿里云服务模块");

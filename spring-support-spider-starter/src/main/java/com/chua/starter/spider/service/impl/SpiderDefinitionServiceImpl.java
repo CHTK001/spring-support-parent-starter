@@ -32,7 +32,7 @@ public class SpiderDefinitionServiceImpl
 
     /**
     * 启用列表缓存 钥匙 常量
-     */
+    */
     private static final String ENABLED_LIST_KEY = "'definitions:enabled'";
 
     @Cacheable(key = ENABLED_LIST_KEY)

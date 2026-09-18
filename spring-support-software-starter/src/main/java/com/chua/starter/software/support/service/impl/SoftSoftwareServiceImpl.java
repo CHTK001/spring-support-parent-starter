@@ -48,22 +48,22 @@ public class SoftSoftwareServiceImpl extends ServiceImpl<SoftSoftwareMapper, Sof
 
     /**
     * 事务模板
-     */
+    */
     private final TransactionTemplate transactionTemplate;
 
     /**
     * 软件源服务
-     */
+    */
     private final SoftSourceService sourceService;
 
     /**
     * 安装记录服务 - 使用 Setter + @Lazy 打断循环依赖
-     */
+    */
     private SoftInstallRecordService installRecordService;
 
     /**
     * 软件源 SPI 列表
-     */
+    */
     private final List<SoftwareSource> softwareSources;
 
     /** 日志 */
@@ -73,7 +73,7 @@ public class SoftSoftwareServiceImpl extends ServiceImpl<SoftSoftwareMapper, Sof
     * Setter 注入，支持 @Lazy
     *
     * @param installRecordService 安装记录服务
-     */
+    */
     @Autowired
     public void setInstallRecordService(@Lazy SoftInstallRecordService installRecordService) {
         this.installRecordService = installRecordService;
@@ -103,9 +103,9 @@ public class SoftSoftwareServiceImpl extends ServiceImpl<SoftSoftwareMapper, Sof
         software.setSoftwareUpdateTime(LocalDateTime.now());
         baseMapper.insert(software);
         /**
-        * 索引转为Elasticsearch。
-        * @param software software
-         */
+    * 索引转为Elasticsearch。
+    * @param software software
+    */
         indexToElasticsearch(software);
         return ReturnResult.ok(software);
     }
@@ -123,9 +123,9 @@ public class SoftSoftwareServiceImpl extends ServiceImpl<SoftSoftwareMapper, Sof
         software.setSoftwareUpdateTime(LocalDateTime.now());
         baseMapper.updateById(software);
         /**
-        * 索引转为Elasticsearch。
-        * @param software software
-         */
+    * 索引转为Elasticsearch。
+    * @param software software
+    */
         indexToElasticsearch(software);
         return ReturnResult.ok(software);
     }
@@ -141,9 +141,9 @@ public class SoftSoftwareServiceImpl extends ServiceImpl<SoftSoftwareMapper, Sof
         exist.setSoftwareUpdateTime(LocalDateTime.now());
         baseMapper.updateById(exist);
         /**
-        * 删除从Elasticsearch。
-        * @param softwareId softwareid
-         */
+    * 删除从Elasticsearch。
+    * @param softwareId softwareid
+    */
         deleteFromElasticsearch(softwareId);
         return ReturnResult.ok(true);
     }
@@ -208,9 +208,9 @@ public class SoftSoftwareServiceImpl extends ServiceImpl<SoftSoftwareMapper, Sof
         }
         for (SoftSoftware software : softwareList) {
             /**
-            * 索引转为Elasticsearch。
-            * @param software software
-             */
+    * 索引转为Elasticsearch。
+    * @param software software
+    */
             indexToElasticsearch(software);
         }
     }
@@ -239,7 +239,7 @@ public class SoftSoftwareServiceImpl extends ServiceImpl<SoftSoftwareMapper, Sof
     *
     * @param userId 用户标识
     * @return 获取installedsoftware标识的结果
-     */
+    */
     public List<String> getInstalledSoftwareIds(String userId) {
         List<SoftInstallRecord> records = installRecordService.listInstalledByUserId(userId);
         if (CollectionUtils.isEmpty(records)) {

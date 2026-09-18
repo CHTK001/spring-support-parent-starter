@@ -27,24 +27,24 @@ public class DiscoveryService {
 
     /**
     * 默认负载均衡策略
-     */
+    */
     private static final String DEFAULT_BALANCE = "weight";
 
     /**
     * 默认服务发现实现（primary）
-     */
+    */
     private final ServiceDiscovery defaultServiceDiscovery;
 
     /**
     * 所有服务发现实现，钥匙 为 Bean名称
-     */
+    */
     private final Map<String, ServiceDiscovery> serviceDiscoveryMap;
 
     /**
     * 仅注入单个 {@link ServiceDiscovery} 的构造方法，供禁用发现开关等简单场景使用。
     *
     * @param defaultServiceDiscovery 默认服务发现实现
-     */
+    */
     public DiscoveryService(ServiceDiscovery defaultServiceDiscovery) {
         this(defaultServiceDiscovery,
                 Collections.singletonMap("serviceDiscovery#default", defaultServiceDiscovery));
@@ -55,7 +55,7 @@ public class DiscoveryService {
     *
     * @param defaultServiceDiscovery 默认服务发现实现（primary）
     * @param serviceDiscoveryMap     所有服务发现实现，钥匙 为 Bean名称
-     */
+    */
     public DiscoveryService(ServiceDiscovery defaultServiceDiscovery,
                             Map<String, ServiceDiscovery> serviceDiscoveryMap) {
         this.defaultServiceDiscovery = defaultServiceDiscovery;
@@ -67,7 +67,7 @@ public class DiscoveryService {
     *
     * @param uriSpec 服务标识
     * @return 匹配到的服务实例
-     */
+    */
     public Discovery getDiscovery(String uriSpec) {
         return defaultServiceDiscovery.getService(uriSpec);
     }
@@ -77,7 +77,7 @@ public class DiscoveryService {
     *
     * @param uriSpec 服务标识
     * @return 匹配到的服务实例集合
-     */
+    */
     public Set<Discovery> getDiscoveryAll(String uriSpec) {
         return defaultServiceDiscovery.getServiceAll(uriSpec);
     }
@@ -88,7 +88,7 @@ public class DiscoveryService {
     * @param protocol 协议名称，对应配置中的 协议
     * @param uriSpec  服务标识
     * @return 匹配到的服务实例
-     */
+    */
     public Discovery getDiscovery(String protocol, String uriSpec) {
         ServiceDiscovery target = resolveServiceDiscovery(protocol);
         return target.getService(uriSpec, DEFAULT_BALANCE, protocol);
@@ -100,7 +100,7 @@ public class DiscoveryService {
     * @param protocol 协议名称，对应配置中的 协议
     * @param uriSpec  服务标识
     * @return 匹配到的服务实例集合
-     */
+    */
     public Set<Discovery> getDiscoveryAll(String protocol, String uriSpec) {
         ServiceDiscovery target = resolveServiceDiscovery(protocol);
         return target.getServiceAll(uriSpec);
@@ -118,7 +118,7 @@ public class DiscoveryService {
     *
     * @param protocol 协议名称
     * @return 对应的 {@link ServiceDiscovery} 实现
-     */
+    */
     private ServiceDiscovery resolveServiceDiscovery(String protocol) {
         if (StringUtils.isEmpty(protocol) || serviceDiscoveryMap.isEmpty()) {
             return defaultServiceDiscovery;

@@ -30,7 +30,7 @@ public class MaterializedSqlRequest {
     * 获取 SQL 语句
     *
     * @return SQL 语句
-     */
+    */
     public String getSql() {
         return sql;
     }
@@ -39,7 +39,7 @@ public class MaterializedSqlRequest {
     * 获取 SQL 语句 标识
     *
     * @return 语句 标识
-     */
+    */
     public String getStatementId() {
         return statementId;
     }
@@ -48,7 +48,7 @@ public class MaterializedSqlRequest {
     * 获取源数据源
     *
     * @return 源数据源
-     */
+    */
     public String getSourceDataSource() {
         return sourceDataSource;
     }
@@ -57,7 +57,7 @@ public class MaterializedSqlRequest {
     * 获取命令类型
     *
     * @return 命令类型
-     */
+    */
     public MaterializedSqlCommandType getCommandType() {
         return commandType;
     }
@@ -66,7 +66,7 @@ public class MaterializedSqlRequest {
     * 获取表列表
     *
     * @return 表列表
-     */
+    */
     public List<String> getTables() {
         return tables;
     }
@@ -75,7 +75,7 @@ public class MaterializedSqlRequest {
     * 获取参数列表
     *
     * @return 参数列表
-     */
+    */
     public List<Object> getParameters() {
         return parameters;
     }
@@ -84,12 +84,12 @@ public class MaterializedSqlRequest {
     * 创建构建器
     *
     * @return 构建器实例
-     */
+    */
     public static MaterializedSqlRequestBuilder builder() {
         /**
         * 物化SQL请求构建器。
         * @return 物化sql请求构建器的结果
-         */
+        */
         return new MaterializedSqlRequestBuilder();
     }
 
@@ -97,7 +97,7 @@ public class MaterializedSqlRequest {
     * 物化SQL请求 构建器
     * @author CH
     * @since 4.0.0
-     */
+    */
     public static class MaterializedSqlRequestBuilder {
         /** 请求 */
         private final MaterializedSqlRequest request = new MaterializedSqlRequest();
@@ -107,7 +107,7 @@ public class MaterializedSqlRequest {
         *
         * @param statementId 语句 标识
         * @return 当前构建器
-         */
+        */
         public MaterializedSqlRequestBuilder statementId(String statementId) {
             request.statementId = statementId;
             return this;
@@ -118,7 +118,7 @@ public class MaterializedSqlRequest {
         *
         * @param sourceDataSource 源数据源
         * @return 当前构建器
-         */
+        */
         public MaterializedSqlRequestBuilder sourceDataSource(String sourceDataSource) {
             request.sourceDataSource = sourceDataSource;
             return this;
@@ -129,7 +129,7 @@ public class MaterializedSqlRequest {
         *
         * @param sql SQL 语句
         * @return 当前构建器
-         */
+        */
         public MaterializedSqlRequestBuilder sql(String sql) {
             request.sql = sql;
             return this;
@@ -140,7 +140,7 @@ public class MaterializedSqlRequest {
         *
         * @param commandType 命令类型
         * @return 当前构建器
-         */
+        */
         public MaterializedSqlRequestBuilder commandType(MaterializedSqlCommandType commandType) {
             request.commandType = commandType;
             return this;
@@ -151,7 +151,7 @@ public class MaterializedSqlRequest {
         *
         * @param definition 路由定义
         * @return 当前构建器
-         */
+        */
         public MaterializedSqlRequestBuilder definition(MaterializedRouteDefinition definition) {
             request.definition = definition;
             return this;
@@ -162,7 +162,7 @@ public class MaterializedSqlRequest {
         *
         * @param table 表名
         * @return 当前构建器
-         */
+        */
         public MaterializedSqlRequestBuilder table(String table) {
             request.tables.add(table);
             return this;
@@ -173,7 +173,7 @@ public class MaterializedSqlRequest {
         *
         * @param parameter 参数
         * @return 当前构建器
-         */
+        */
         public MaterializedSqlRequestBuilder parameter(Object parameter) {
             request.parameters.add(parameter);
             return this;
@@ -183,7 +183,7 @@ public class MaterializedSqlRequest {
         * 构建请求
         *
         * @return 请求实例
-         */
+        */
         public MaterializedSqlRequest build() {
             return request;
         }

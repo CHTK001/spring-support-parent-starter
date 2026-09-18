@@ -25,14 +25,14 @@ public class SysAiSshHostStore {
 
     /**
     * 主机表 映射器：提供主机增删改查
-     */
+    */
     private final SysAiSshHostMapper sshHostMapper;
 
     /**
     * 构造注入 映射器。
     *
     * @param sshHostMapper 主机 映射器
-     */
+    */
     public SysAiSshHostStore(SysAiSshHostMapper sshHostMapper) {
         this.sshHostMapper = sshHostMapper;
     }
@@ -41,7 +41,7 @@ public class SysAiSshHostStore {
     * 生成主机主键（uuidv7 字符串）。
     *
     * @return 36 位 uuidv7 字符串
-     */
+    */
     public String newId() {
         return generateUuidV7();
     }
@@ -50,7 +50,7 @@ public class SysAiSshHostStore {
     * 列出全部主机（按创建时间升序，与存储顺序一致）。
     *
     * @return 主机列表
-     */
+    */
     public List<SysAiSshHost> listAll() {
         LambdaQueryWrapper<SysAiSshHost> wrapper = new LambdaQueryWrapper<SysAiSshHost>()
                 .orderByAsc(SysAiSshHost::getCreatedAt);
@@ -62,7 +62,7 @@ public class SysAiSshHostStore {
     *
     * @param sshHostId 主机 标识
     * @return 主机
-     */
+    */
     public SysAiSshHost get(String sshHostId) {
         SysAiSshHost host = sshHostMapper.selectById(sshHostId);
         if (host == null) {
@@ -76,7 +76,7 @@ public class SysAiSshHostStore {
     *
     * @param host 主机（须已填充主键与时间戳）
     * @return 创建的主机
-     */
+    */
     public SysAiSshHost create(SysAiSshHost host) {
         sshHostMapper.insert(host);
         return host;
@@ -88,7 +88,7 @@ public class SysAiSshHostStore {
     * @param sshHostId 主机 标识
     * @param updates   更新内容（非 空 字段生效）
     * @return 更新后的主机
-     */
+    */
     public SysAiSshHost update(String sshHostId, SysAiSshHost updates) {
         SysAiSshHost current = get(sshHostId);
         if (updates.getName() != null) {
@@ -120,7 +120,7 @@ public class SysAiSshHostStore {
     * 删除主机。
     *
     * @param sshHostId 主机 标识
-     */
+    */
     public void delete(String sshHostId) {
         get(sshHostId);
         sshHostMapper.deleteById(sshHostId);
@@ -135,7 +135,7 @@ public class SysAiSshHostStore {
     * @param host    当前主机
     * @param secret  请求中的密钥值
     * @param setter  密钥字段设置器
-     */
+    */
     private void applySecret(SysAiSshHost host, String secret,
                              java.util.function.Consumer<String> setter) {
         if (secret == null || MASKED_SECRET.equals(secret)) {
@@ -146,14 +146,14 @@ public class SysAiSshHostStore {
 
     /**
     * 前端掩码哨兵（表示"未修改，保留原值"）
-     */
+    */
     private static final String MASKED_SECRET = "***";
 
     /**
     * 生成 uuidv7：前 48 位为毫秒时间戳，随后填充版本/变体位与随机位。
     *
     * @return 36 位 uuidv7 字符串
-     */
+    */
     private String generateUuidV7() {
         long millis = System.currentTimeMillis();
         byte[] bytes = new byte[16];

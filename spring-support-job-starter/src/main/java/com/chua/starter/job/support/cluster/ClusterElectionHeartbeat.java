@@ -31,42 +31,42 @@ public class ClusterElectionHeartbeat {
 
     /**
     * 心跳周期占租约比例 (心跳 = lease / 3)
-     */
+    */
     public static final int HEARTBEAT_DIVISOR = 3;
 
     /**
     * 心跳执行器
-     */
+    */
     private final LeaderElector leaderElector;
 
     /**
     * Leader 选举解析器
-     */
+    */
     private final LeaderElectionResolver resolver;
 
     /**
     * 当前命名空间
-     */
+    */
     private final String clusterGroup;
 
     /**
     * 租约时长 (秒)
-     */
+    */
     private final int leaseSeconds;
 
     /**
     * 心跳执行器
-     */
+    */
     private ScheduledExecutorService executor;
 
     /**
     * 运行标记
-     */
+    */
     private final AtomicBoolean running = new AtomicBoolean(false);
 
     /**
     * 启动心跳。
-     */
+    */
     @PostConstruct
     public void start() {
         if (!running.compareAndSet(false, true)) {
@@ -85,7 +85,7 @@ public class ClusterElectionHeartbeat {
 
     /**
     * 停止心跳。
-     */
+    */
     @PreDestroy
     public void stop() {
         if (!running.compareAndSet(true, false)) {
@@ -113,7 +113,7 @@ public class ClusterElectionHeartbeat {
 
     /**
     * 单拍续约。
-     */
+    */
     private void tick() {
         if (!leaderElector.isLeader()) {
             return;

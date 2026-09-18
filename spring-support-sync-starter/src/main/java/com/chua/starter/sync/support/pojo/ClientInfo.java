@@ -96,7 +96,7 @@ public class ClientInfo implements Serializable {
     /**
     * 获取客户端标识。
     * @return 获取客户端id的结果
-     */
+    */
     public String getClientId() {
         return clientId;
     }
@@ -104,7 +104,7 @@ public class ClientInfo implements Serializable {
     /**
     * 设置客户端标识。
     * @param clientId 客户端标识
-     */
+    */
     public void setClientId(String clientId) {
         this.clientId = clientId;
     }
@@ -112,7 +112,7 @@ public class ClientInfo implements Serializable {
     /**
     * 获取客户端application名称。
     * @return 获取客户端application名称的结果
-     */
+    */
     public String getClientApplicationName() {
         return clientApplicationName;
     }
@@ -120,7 +120,7 @@ public class ClientInfo implements Serializable {
     /**
     * 设置客户端application名称。
     * @param clientApplicationName 客户端application名称
-     */
+    */
     public void setClientApplicationName(String clientApplicationName) {
         this.clientApplicationName = clientApplicationName;
     }
@@ -128,7 +128,7 @@ public class ClientInfo implements Serializable {
     /**
     * 获取客户端application活跃。
     * @return 获取客户端application活跃的结果
-     */
+    */
     public String getClientApplicationActive() {
         return clientApplicationActive;
     }
@@ -136,7 +136,7 @@ public class ClientInfo implements Serializable {
     /**
     * 设置客户端application活跃。
     * @param clientApplicationActive 客户端application活跃
-     */
+    */
     public void setClientApplicationActive(String clientApplicationActive) {
         this.clientApplicationActive = clientApplicationActive;
     }
@@ -144,7 +144,7 @@ public class ClientInfo implements Serializable {
     /**
     * 获取客户端instanceid。
     * @return 获取客户端instanceid的结果
-     */
+    */
     public String getClientInstanceId() {
         return clientInstanceId;
     }
@@ -152,7 +152,7 @@ public class ClientInfo implements Serializable {
     /**
     * 设置客户端instanceid。
     * @param clientInstanceId 客户端instanceid
-     */
+    */
     public void setClientInstanceId(String clientInstanceId) {
         this.clientInstanceId = clientInstanceId;
     }
@@ -160,7 +160,7 @@ public class ClientInfo implements Serializable {
     /**
     * 获取客户端上下文路径。
     * @return 获取客户端上下文路径的结果
-     */
+    */
     public String getClientContextPath() {
         return clientContextPath;
     }
@@ -168,7 +168,7 @@ public class ClientInfo implements Serializable {
     /**
     * 设置客户端上下文路径。
     * @param clientContextPath 客户端上下文路径
-     */
+    */
     public void setClientContextPath(String clientContextPath) {
         this.clientContextPath = clientContextPath;
     }
@@ -176,7 +176,7 @@ public class ClientInfo implements Serializable {
     /**
     * 获取客户端url。
     * @return 获取客户端url的结果
-     */
+    */
     public String getClientUrl() {
         return clientUrl;
     }
@@ -184,7 +184,7 @@ public class ClientInfo implements Serializable {
     /**
     * 设置客户端url。
     * @param clientUrl 客户端url
-     */
+    */
     public void setClientUrl(String clientUrl) {
         this.clientUrl = clientUrl;
     }
@@ -192,7 +192,7 @@ public class ClientInfo implements Serializable {
     /**
     * 获取客户端actuator路径。
     * @return 获取客户端actuator路径的结果
-     */
+    */
     public String getClientActuatorPath() {
         return clientActuatorPath;
     }
@@ -200,7 +200,7 @@ public class ClientInfo implements Serializable {
     /**
     * 设置客户端actuator路径。
     * @param clientActuatorPath 客户端actuator路径
-     */
+    */
     public void setClientActuatorPath(String clientActuatorPath) {
         this.clientActuatorPath = clientActuatorPath;
     }
@@ -208,7 +208,7 @@ public class ClientInfo implements Serializable {
     /**
     * 获取客户端ip地址。
     * @return 获取客户端ip地址的结果
-     */
+    */
     public String getClientIpAddress() {
         return clientIpAddress;
     }
@@ -216,7 +216,7 @@ public class ClientInfo implements Serializable {
     /**
     * 设置客户端ip地址。
     * @param clientIpAddress 客户端ip地址
-     */
+    */
     public void setClientIpAddress(String clientIpAddress) {
         this.clientIpAddress = clientIpAddress;
     }
@@ -224,7 +224,7 @@ public class ClientInfo implements Serializable {
     /**
     * 获取客户端端口。
     * @return 获取客户端端口的结果
-     */
+    */
     public int getClientPort() {
         return clientPort;
     }
@@ -232,7 +232,7 @@ public class ClientInfo implements Serializable {
     /**
     * 设置客户端端口。
     * @param clientPort 客户端端口
-     */
+    */
     public void setClientPort(int clientPort) {
         this.clientPort = clientPort;
     }
@@ -240,7 +240,7 @@ public class ClientInfo implements Serializable {
     /**
     * 获取客户端hostname。
     * @return 获取客户端hostname的结果
-     */
+    */
     public String getClientHostname() {
         return clientHostname;
     }
@@ -248,7 +248,7 @@ public class ClientInfo implements Serializable {
     /**
     * 设置客户端hostname。
     * @param clientHostname 客户端hostname
-     */
+    */
     public void setClientHostname(String clientHostname) {
         this.clientHostname = clientHostname;
     }
@@ -256,7 +256,7 @@ public class ClientInfo implements Serializable {
     /**
     * 获取客户端os名称。
     * @return 获取客户端os名称的结果
-     */
+    */
     public String getClientOsName() {
         return clientOsName;
     }
@@ -264,7 +264,7 @@ public class ClientInfo implements Serializable {
     /**
     * 设置客户端os名称。
     * @param clientOsName 客户端os名称
-     */
+    */
     public void setClientOsName(String clientOsName) {
         this.clientOsName = clientOsName;
     }
@@ -272,7 +272,7 @@ public class ClientInfo implements Serializable {
     /**
     * 获取客户端Java版本。
     * @return 获取客户端java版本的结果
-     */
+    */
     public String getClientJavaVersion() {
         return clientJavaVersion;
     }
@@ -280,7 +280,7 @@ public class ClientInfo implements Serializable {
     /**
     * 设置客户端Java版本。
     * @param clientJavaVersion 客户端Java版本
-     */
+    */
     public void setClientJavaVersion(String clientJavaVersion) {
         this.clientJavaVersion = clientJavaVersion;
     }
@@ -288,7 +288,7 @@ public class ClientInfo implements Serializable {
     /**
     * 获取客户端pid。
     * @return 获取客户端pid的结果
-     */
+    */
     public long getClientPid() {
         return clientPid;
     }
@@ -296,7 +296,7 @@ public class ClientInfo implements Serializable {
     /**
     * 设置客户端pid。
     * @param clientPid 客户端pid
-     */
+    */
     public void setClientPid(long clientPid) {
         this.clientPid = clientPid;
     }
@@ -304,7 +304,7 @@ public class ClientInfo implements Serializable {
     /**
     * 获取客户端启动时间。
     * @return 获取客户端启动时间的结果
-     */
+    */
     public long getClientStartTime() {
         return clientStartTime;
     }
@@ -312,7 +312,7 @@ public class ClientInfo implements Serializable {
     /**
     * 设置客户端启动时间。
     * @param clientStartTime 客户端启动时间
-     */
+    */
     public void setClientStartTime(long clientStartTime) {
         this.clientStartTime = clientStartTime;
     }
@@ -320,7 +320,7 @@ public class ClientInfo implements Serializable {
     /**
     * 获取客户端uptime。
     * @return 获取客户端uptime的结果
-     */
+    */
     public long getClientUptime() {
         return clientUptime;
     }
@@ -328,7 +328,7 @@ public class ClientInfo implements Serializable {
     /**
     * 设置客户端uptime。
     * @param clientUptime 客户端uptime
-     */
+    */
     public void setClientUptime(long clientUptime) {
         this.clientUptime = clientUptime;
     }
@@ -336,7 +336,7 @@ public class ClientInfo implements Serializable {
     /**
     * 获取客户端注册时间。
     * @return 获取客户端注册时间的结果
-     */
+    */
     public long getClientRegisterTime() {
         return clientRegisterTime;
     }
@@ -344,7 +344,7 @@ public class ClientInfo implements Serializable {
     /**
     * 设置客户端注册时间。
     * @param clientRegisterTime 客户端注册时间
-     */
+    */
     public void setClientRegisterTime(long clientRegisterTime) {
         this.clientRegisterTime = clientRegisterTime;
     }
@@ -352,7 +352,7 @@ public class ClientInfo implements Serializable {
     /**
     * 获取客户端最后一个心跳时间。
     * @return 获取客户端最后一个心跳时间的结果
-     */
+    */
     public long getClientLastHeartbeatTime() {
         return clientLastHeartbeatTime;
     }
@@ -360,7 +360,7 @@ public class ClientInfo implements Serializable {
     /**
     * 设置客户端最后一个心跳时间。
     * @param clientLastHeartbeatTime 客户端最后一个心跳时间
-     */
+    */
     public void setClientLastHeartbeatTime(long clientLastHeartbeatTime) {
         this.clientLastHeartbeatTime = clientLastHeartbeatTime;
     }
@@ -368,7 +368,7 @@ public class ClientInfo implements Serializable {
     /**
     * 是否客户端online。
     * @return 是否客户端online的结果
-     */
+    */
     public boolean isClientOnline() {
         return clientOnline;
     }
@@ -376,7 +376,7 @@ public class ClientInfo implements Serializable {
     /**
     * 设置客户端online。
     * @param clientOnline 客户端online
-     */
+    */
     public void setClientOnline(boolean clientOnline) {
         this.clientOnline = clientOnline;
     }
@@ -384,7 +384,7 @@ public class ClientInfo implements Serializable {
     /**
     * 获取客户端metadata。
     * @return 获取客户端metadata的结果
-     */
+    */
     public Map<String, Object> getClientMetadata() {
         return clientMetadata;
     }
@@ -392,7 +392,7 @@ public class ClientInfo implements Serializable {
     /**
     * 设置客户端metadata。
     * @param clientMetadata 客户端metadata
-     */
+    */
     public void setClientMetadata(Map<String, Object> clientMetadata) {
         this.clientMetadata = clientMetadata;
     }
@@ -400,7 +400,7 @@ public class ClientInfo implements Serializable {
     /**
     * 获取客户端capabilities。
     * @return 获取客户端capabilities的结果
-     */
+    */
     public String[] getClientCapabilities() {
         return clientCapabilities;
     }
@@ -408,7 +408,7 @@ public class ClientInfo implements Serializable {
     /**
     * 设置客户端capabilities。
     * @param clientCapabilities 客户端capabilities
-     */
+    */
     public void setClientCapabilities(String[] clientCapabilities) {
         this.clientCapabilities = clientCapabilities;
     }

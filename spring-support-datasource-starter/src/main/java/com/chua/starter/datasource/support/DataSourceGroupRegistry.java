@@ -37,7 +37,7 @@ public class DataSourceGroupRegistry {
 
     /**
     * 数据源群体registry。
-     */
+    */
     private DataSourceGroupRegistry() {}
 
     /**
@@ -49,7 +49,7 @@ public class DataSourceGroupRegistry {
     *
     * @param dsName     数据源名称
     * @param dataSource 数据源实例
-     */
+    */
     public static void register(String dsName, DataSource dataSource) {
         String groupName = extractGroupName(dsName);
         if (groupName == null) {
@@ -75,7 +75,7 @@ public class DataSourceGroupRegistry {
     *
     * @param name 数据源名称或组名
     * @return 数据源实例，不存在时返回 空
-     */
+    */
     public static DataSource getDataSource(String name) {
         if (name == null) {
             return null;
@@ -92,7 +92,7 @@ public class DataSourceGroupRegistry {
     *
     * @param name 名称
     * @return 是否为分组名
-     */
+    */
     public static boolean isGroup(String name) {
         return name != null && GROUP_MAP.containsKey(name);
     }
@@ -102,7 +102,7 @@ public class DataSourceGroupRegistry {
     *
     * @param groupName 组名
     * @return 分组，不存在时返回 空
-     */
+    */
     public static DataSourceGroup getGroup(String groupName) {
         return GROUP_MAP.get(groupName);
     }
@@ -111,14 +111,14 @@ public class DataSourceGroupRegistry {
     * 获取所有分组名称
     *
     * @return 分组名称集合
-     */
+    */
     public static Set<String> getGroupNames() {
         return GROUP_MAP.keySet();
     }
 
     /**
     * 清除所有分组
-     */
+    */
     public static synchronized void clear() {
         GROUP_MAP.clear();
         DS_TO_GROUP.clear();
@@ -130,7 +130,7 @@ public class DataSourceGroupRegistry {
     *
     * @param dsName 数据源名称
     * @return 组名，不在任何组时返回 空
-     */
+    */
     public static String getGroupNameByDs(String dsName) {
         return DS_TO_GROUP.get(dsName);
     }
@@ -140,7 +140,7 @@ public class DataSourceGroupRegistry {
     *
     * @param groupName 组名
     * @param strategy  策略名称：round_robin 或 随机
-     */
+    */
     public static void setLoadBalanceStrategy(String groupName, String strategy) {
         DataSourceGroup group = GROUP_MAP.get(groupName);
         if (group != null) {
@@ -152,7 +152,7 @@ public class DataSourceGroupRegistry {
     * 设置全局默认负载均衡策略（对所有已存在的分组生效，新分组也会继承）
     *
     * @param strategy 策略名称：round_robin 或 随机
-     */
+    */
     public static void setGlobalLoadBalanceStrategy(String strategy) {
         defaultStrategy = parseStrategy(strategy);
         log.info("[数据源分组] 设置全局负载均衡策略: {}", defaultStrategy);
@@ -165,7 +165,7 @@ public class DataSourceGroupRegistry {
     * 解析策略名称
     * @param strategy strategy
     * @return 解析strategy的结果
-     */
+    */
     private static DataSourceGroup.LoadBalanceStrategy parseStrategy(String strategy) {
         return "random".equalsIgnoreCase(strategy)
                 ? DataSourceGroup.LoadBalanceStrategy.RANDOM
@@ -182,7 +182,7 @@ public class DataSourceGroupRegistry {
     *
     * @param dsName 数据源名称
     * @return 组名，不适用时返回 空
-     */
+    */
     static String extractGroupName(String dsName) {
         if (dsName == null || dsName.isEmpty()) {
             return null;

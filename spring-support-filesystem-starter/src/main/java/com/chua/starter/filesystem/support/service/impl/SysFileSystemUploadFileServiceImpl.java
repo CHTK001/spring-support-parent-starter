@@ -39,7 +39,7 @@ public class SysFileSystemUploadFileServiceImpl
     * @param url      文件来源 URL
     * @param etag     文件 e标签
     * @return 是否保存成功
-     */
+    */
     @Override
     @Transactional
     public boolean createFromTask(String uploadId, String url, String etag) {
@@ -73,7 +73,7 @@ public class SysFileSystemUploadFileServiceImpl
     *
     * @param uploadId 上传任务 标识
     * @return 文件记录，不存在返回 空
-     */
+    */
     @Override
     public SysFileSystemUploadFile getByUploadId(String uploadId) {
         return getOne(new LambdaQueryWrapper<SysFileSystemUploadFile>()
@@ -85,7 +85,7 @@ public class SysFileSystemUploadFileServiceImpl
     *
     * @param uploadId 上传任务 标识
     * @return 是否删除成功
-     */
+    */
     @Override
     @Transactional
     public boolean deleteByUploadId(String uploadId) {

@@ -20,7 +20,7 @@ public class RpcAutoConfiguration {
     * 注册 RPC 模块服务信息。
     *
     * @return 服务信息贡献器
-     */
+    */
     @Bean
     public ServiceInfoContributor rpcServiceInfoContributor() {
         return registry -> registry.registerFlag("rpc", "RPC", true, "RPC 远程调用模块");

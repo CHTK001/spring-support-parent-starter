@@ -50,9 +50,9 @@ public class DuplicateMessageFilter implements MessageFilter {
 
         // 清理过期记录
         /**
-        * cleanupexpiredrecords。
-        * @param now now
-         */
+    * cleanupexpiredrecords。
+    * @param now now
+    */
         cleanupExpiredRecords(now);
 
         return true;
@@ -61,7 +61,7 @@ public class DuplicateMessageFilter implements MessageFilter {
     /**
     * 清理过期记录
     * @param now now
-     */
+    */
     private void cleanupExpiredRecords(long now) {
         if (processedMessages.size() > 10000) {
             processedMessages.entrySet().removeIf(entry ->
@@ -71,7 +71,7 @@ public class DuplicateMessageFilter implements MessageFilter {
 
     /**
     * 清空所有记录
-     */
+    */
     public void clear() {
         processedMessages.clear();
     }

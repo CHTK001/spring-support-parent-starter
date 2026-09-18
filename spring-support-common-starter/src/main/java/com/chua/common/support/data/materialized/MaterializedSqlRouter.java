@@ -15,7 +15,7 @@ public interface MaterializedSqlRouter {
     *
     * @param request 物化 SQL 请求
     * @return 路由结果
-     */
+    */
     MaterializedSqlRoute route(MaterializedSqlRequest request);
 
     /**
@@ -23,13 +23,13 @@ public interface MaterializedSqlRouter {
     *
     * @param route 路由信息
     * @return 数据源
-     */
+    */
     DataSource resolveDataSource(MaterializedSqlRoute route);
 
     /**
     * 写操作成功回调
     *
     * @param request 物化 SQL 请求
-     */
+    */
     void onWriteSuccess(MaterializedSqlRequest request);
 }

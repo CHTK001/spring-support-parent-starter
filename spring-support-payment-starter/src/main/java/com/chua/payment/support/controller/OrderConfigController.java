@@ -40,7 +40,7 @@ public class OrderConfigController {
     *
     * @param request 请求
     * @return 列表的结果
-     */
+    */
     public Result<List<OrderPartitionConfigVO>> list(HttpServletRequest request) {
         Result<List<OrderPartitionConfigVO>> denied = denyIfNecessary(request);
         return denied != null ? denied : Result.success(orderPartitionConfigService.listConfigs());
@@ -53,7 +53,7 @@ public class OrderConfigController {
     * @param businessType 业务类型
     * @param dto dto
     * @param request 请求
-     */
+    */
     public Result<OrderPartitionConfigVO> update(@PathVariable String businessType,
                                                  @RequestBody OrderPartitionConfigDTO dto,
                                                  HttpServletRequest request) {
@@ -69,7 +69,7 @@ public class OrderConfigController {
     * @param businessType 业务类型
     * @param request 请求
     * @return preview的结果
-     */
+    */
     public Result<OrderPartitionPreviewVO> preview(@PathVariable String businessType, HttpServletRequest request) {
         Result<OrderPartitionPreviewVO> denied = denyIfNecessary(request);
         return denied != null ? denied : Result.success(orderPartitionConfigService.preview(businessType));
@@ -83,7 +83,7 @@ public class OrderConfigController {
     * @param businessType 业务类型
     * @param request 请求
     * @return trigger创建的结果
-     */
+    */
     public Result<Void> triggerCreate(@PathVariable String businessType, HttpServletRequest request) {
         Result<Void> denied = denyIfNecessary(request);
         if (denied != null) {
@@ -101,7 +101,7 @@ public class OrderConfigController {
     * @param businessType 业务类型
     * @param request 请求
     * @return triggerMigrate的结果
-     */
+    */
     public Result<Void> triggerMigrate(@PathVariable String businessType, HttpServletRequest request) {
         Result<Void> denied = denyIfNecessary(request);
         if (denied != null) {
@@ -116,7 +116,7 @@ public class OrderConfigController {
     *
     * @param request 请求
     * @return denyIfNecessary的结果
-     */
+    */
     private <T> Result<T> denyIfNecessary(HttpServletRequest request) {
         UserResume userResume = principalResolver.resolve(request);
         if (userResume == null) {

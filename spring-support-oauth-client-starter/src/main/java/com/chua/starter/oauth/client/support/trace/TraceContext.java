@@ -26,50 +26,50 @@ public class TraceContext {
 
     /**
     * 线程本地存储
-     */
+    */
     private static final ThreadLocal<TraceContext> CONTEXT_HOLDER = new ThreadLocal<>();
 
     /**
     * 追踪标识（全局唯一）
-     */
+    */
     @Getter
     /** 跟踪标识 */
     private final String traceId;
 
     /**
     * 当前 Span 标识 计数器
-     */
+    */
     private final AtomicInteger spanCounter = new AtomicInteger(0);
 
     /**
     * 请求开始时间戳
-     */
+    */
     @Getter
     /** 开始时间戳 */
     private final long startTimestamp;
 
     /**
     * 追踪的 Span 列表
-     */
+    */
     @Getter
     /** Spans */
     private final List<TraceSpan> spans = new ArrayList<>();
 
     /**
     * 当前活跃的 Span
-     */
+    */
     private TraceSpan currentSpan;
 
     /**
     * 客户端应用名称
-     */
+    */
     @Getter
     /** 客户端APP名称 */
     private String clientAppName;
 
     /**
     * 客户端IP
-     */
+    */
     @Getter
     /** 客户端IP */
     private String clientIp;
@@ -77,7 +77,7 @@ public class TraceContext {
     /**
     * 私有构造
     * @param traceId 追踪标识
-     */
+    */
     private TraceContext(String traceId) {
         this.traceId = traceId != null ? traceId : UUID.randomUUID().toString().replace("-", "");
         this.startTimestamp = System.currentTimeMillis();
@@ -87,7 +87,7 @@ public class TraceContext {
     * 创建新的追踪上下文
     *
     * @return 追踪上下文
-     */
+    */
     public static TraceContext create() {
         TraceContext context = new TraceContext(null);
         CONTEXT_HOLDER.set(context);
@@ -100,7 +100,7 @@ public class TraceContext {
     *
     * @param traceId 追踪标识
     * @return 追踪上下文
-     */
+    */
     public static TraceContext create(String traceId) {
         TraceContext context = new TraceContext(traceId);
         CONTEXT_HOLDER.set(context);
@@ -112,14 +112,14 @@ public class TraceContext {
     * 获取当前追踪上下文
     *
     * @return 追踪上下文，可能为 空
-     */
+    */
     public static TraceContext current() {
         return CONTEXT_HOLDER.get();
     }
 
     /**
     * 清除当前追踪上下文
-     */
+    */
     public static void clear() {
         CONTEXT_HOLDER.remove();
         MDC.remove(MDC_TRACE_ID);
@@ -132,7 +132,7 @@ public class TraceContext {
     * @param appName 应用名称
     * @param ip      客户端IP
     * @return this
-     */
+    */
     public TraceContext clientInfo(String appName, String ip) {
         this.clientAppName = appName;
         this.clientIp = ip;
@@ -143,7 +143,7 @@ public class TraceContext {
     * 生成新的 Span 标识
     *
     * @return Span 标识
-     */
+    */
     public String nextSpanId() {
         return traceId.substring(0, 8) + "-" + spanCounter.incrementAndGet();
     }
@@ -153,7 +153,7 @@ public class TraceContext {
     *
     * @param spanName Span 名称
     * @return TraceSpan
-     */
+    */
     public TraceSpan startSpan(String spanName) {
         String spanId = nextSpanId();
         String parentSpanId = currentSpan != null ? currentSpan.getSpanId() : null;
@@ -166,7 +166,7 @@ public class TraceContext {
 
     /**
     * 结束当前 Span
-     */
+    */
     public void endSpan() {
         if (currentSpan != null) {
             currentSpan.end();
@@ -188,7 +188,7 @@ public class TraceContext {
     * 获取总耗时（毫秒）
     *
     * @return 总耗时
-     */
+    */
     public long getTotalCostMs() {
         return System.currentTimeMillis() - startTimestamp;
     }
@@ -197,7 +197,7 @@ public class TraceContext {
     * 获取所有 Span 的耗时摘要
     *
     * @return 耗时摘要 JSON 字符串
-     */
+    */
     public String getSpansSummary() {
         StringBuilder sb = new StringBuilder("[");
         for (int i = 0; i < spans.size(); i++) {

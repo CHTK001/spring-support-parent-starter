@@ -18,7 +18,7 @@ public interface MerchantService {
     *
     * @param dto 商户DTO
     * @return 商户VO
-     */
+    */
     MerchantVO createMerchant(MerchantDTO dto);
 
     /**
@@ -27,7 +27,7 @@ public interface MerchantService {
     * @param id 商户标识
     * @param dto 商户DTO
     * @return 商户VO
-     */
+    */
     MerchantVO updateMerchant(Long id, MerchantDTO dto);
 
     /**
@@ -35,7 +35,7 @@ public interface MerchantService {
     *
     * @param id 商户标识
     * @return 是否成功
-     */
+    */
     boolean deleteMerchant(Long id);
 
     /**
@@ -43,7 +43,7 @@ public interface MerchantService {
     *
     * @param id 商户标识
     * @return 商户VO
-     */
+    */
     MerchantVO getMerchant(Long id);
 
     /**
@@ -54,7 +54,7 @@ public interface MerchantService {
     * @param merchantName 商户名称（可选）
     * @param status 状态（可选）
     * @return 分页结果
-     */
+    */
     Page<MerchantVO> listMerchants(int page, int size, String merchantName, Integer status);
 
     /**
@@ -62,7 +62,7 @@ public interface MerchantService {
     *
     * @param id 商户标识
     * @return 是否成功
-     */
+    */
     boolean activateMerchant(Long id);
 
     /**
@@ -70,6 +70,6 @@ public interface MerchantService {
     *
     * @param id 商户标识
     * @return 是否成功
-     */
+    */
     boolean deactivateMerchant(Long id);
 }

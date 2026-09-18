@@ -37,7 +37,7 @@ public final class Constant {
 
     /**
     * 常量。
-     */
+    */
     private Constant() {
     }
 }

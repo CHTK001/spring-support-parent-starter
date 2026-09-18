@@ -35,14 +35,14 @@ public class AiRoleController {
 
     /**
     * 角色服务
-     */
+    */
     private final SysAiRoleService roleService;
 
     /**
     * 查询所有角色。
     *
     * @return 角色列表
-     */
+    */
     @Operation(summary = "查询所有角色")
     @GetMapping
     public List<SysAiRole> list() {
@@ -53,7 +53,7 @@ public class AiRoleController {
     * 查询所有启用角色（供前端下拉选择）。
     *
     * @return 启用角色列表
-     */
+    */
     @Operation(summary = "查询启用角色")
     @GetMapping("/enabled")
     public List<SysAiRole> listEnabled() {
@@ -68,7 +68,7 @@ public class AiRoleController {
     * @param "角色主键" "角色主键"
     * @param "角色主键" "角色主键"
     * @param "角色主键" "角色主键"
-     */
+    */
     @Operation(summary = "查询单个角色")
     @GetMapping("/{id}")
     public SysAiRole getById(@Parameter(description = "角色主键") @PathVariable Integer id) {
@@ -80,7 +80,7 @@ public class AiRoleController {
     *
     * @param role 角色实体
     * @return 保存后的角色
-     */
+    */
     @Permission("admin")
     @Operation(summary = "新增角色")
     @PostMapping
@@ -95,7 +95,7 @@ public class AiRoleController {
     * @param role 角色实体
     * @return 是否成功
     * @param "角色主键" "角色主键"
-     */
+    */
     @Permission("admin")
     @Operation(summary = "更新角色")
     @PutMapping("/{id}")
@@ -113,7 +113,7 @@ public class AiRoleController {
     * @param "角色主键" "角色主键"
     * @param "角色主键" "角色主键"
     * @param "角色主键" "角色主键"
-     */
+    */
     @Permission("admin")
     @Operation(summary = "删除角色")
     @DeleteMapping("/{id}")

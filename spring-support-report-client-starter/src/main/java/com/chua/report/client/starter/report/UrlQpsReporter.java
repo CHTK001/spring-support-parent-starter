@@ -54,7 +54,7 @@ public class UrlQpsReporter {
     * URL 统计数据
     * 钥匙: URL 模式
     * 价值观: urlstats
-     */
+    */
     private final ConcurrentHashMap<String, UrlStats> urlStatsMap = new ConcurrentHashMap<>();
 
     /** 调度器 */
@@ -69,7 +69,7 @@ public class UrlQpsReporter {
     * 获取Instance
     *
     * @return 获取instance的结果
-     */
+    */
     public static UrlQpsReporter getInstance() {
         return INSTANCE;
     }
@@ -82,7 +82,7 @@ public class UrlQpsReporter {
     * @param duration     请求耗时（毫秒）
     * @param success      是否成功
     * @param statusCode   HTTP 状态码
-     */
+    */
     public void recordRequest(String url, String method, long duration, boolean success, int statusCode) {
         if (!running) {
             return;
@@ -95,7 +95,7 @@ public class UrlQpsReporter {
 
     /**
     * 启动上报
-     */
+    */
     public synchronized void start() {
         if (running) {
             log.warn("[UrlQpsReporter] 已经在运行中");
@@ -115,7 +115,7 @@ public class UrlQpsReporter {
 
     /**
     * 停止上报
-     */
+    */
     public synchronized void stop() {
         if (!running) {
             return;
@@ -137,7 +137,7 @@ public class UrlQpsReporter {
         // 最后上报一次
         /**
         * reportstats。
-         */
+        */
         reportStats();
         urlStatsMap.clear();
         log.info("[UrlQpsReporter] 已停止");
@@ -145,7 +145,7 @@ public class UrlQpsReporter {
 
     /**
     * 上报统计数据
-     */
+    */
     private void reportStats() {
         if (syncClient == null || !syncClient.isConnected()) {
             log.debug("[UrlQpsReporter] SyncClient 未连接，跳过上报");
@@ -193,7 +193,7 @@ public class UrlQpsReporter {
     * 获取当前统计快照（用于调试）
     *
     * @return 统计数据快照
-     */
+    */
     public Map<String, Map<String, Object>> getStatsSnapshot() {
         Map<String, Map<String, Object>> snapshot = new HashMap<>();
         for (Map.Entry<String, UrlStats> entry : urlStatsMap.entrySet()) {
@@ -206,7 +206,7 @@ public class UrlQpsReporter {
     * URL 统计数据
     * @author CH
     * @since 4.0.0
-     */
+    */
     private static class UrlStats {
         /** URL */
         private final String url;
@@ -240,7 +240,7 @@ public class UrlQpsReporter {
         * urlstats。
         * @param url url
         * @param method 方法
-         */
+        */
         UrlStats(String url, String method) {
             this.url = url;
             this.method = method;
@@ -251,7 +251,7 @@ public class UrlQpsReporter {
         * @param duration 持续时间
         * @param success 成功
         * @param statusCode 状态编码
-         */
+        */
         void record(long duration, boolean success, int statusCode) {
             totalCount.incrementAndGet();
             historyTotalCount.incrementAndGet();
@@ -281,7 +281,7 @@ public class UrlQpsReporter {
         * 收集数据并重置当前周期计数
         *
         * @return 统计数据，如果无数据返回 空
-         */
+        */
         Map<String, Object> collectAndReset() {
             long count = totalCount.getAndSet(0);
             if (count == 0) {
@@ -329,7 +329,7 @@ public class UrlQpsReporter {
         /**
         * 获取快照（不重置）
         * @return 获取snapshot的结果
-         */
+        */
         Map<String, Object> getSnapshot() {
             Map<String, Object> data = new HashMap<>();
             data.put("url", url);

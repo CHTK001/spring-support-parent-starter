@@ -813,6 +813,18 @@
                 <version>${utils.version}</version>
             </dependency>
 
+            <!-- BouncyCastle jdk18on 1.80：统一 bcprov/bcpkix 版本，废弃 jdk15on 1.70 -->
+            <dependency>
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcprov-jdk18on</artifactId>
+                <version>1.80</version>
+            </dependency>
+            <dependency>
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcpkix-jdk18on</artifactId>
+                <version>1.80</version>
+            </dependency>
+
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-groovy-starter</artifactId>

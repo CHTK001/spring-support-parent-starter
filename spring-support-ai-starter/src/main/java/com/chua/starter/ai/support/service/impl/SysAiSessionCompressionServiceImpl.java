@@ -27,7 +27,7 @@ public class SysAiSessionCompressionServiceImpl implements SysAiSessionCompressi
 
     /**
     * 压缩上下文 映射器
-     */
+    */
     private final SysAiSessionCompressionMapper compressionMapper;
 
     /**
@@ -35,7 +35,7 @@ public class SysAiSessionCompressionServiceImpl implements SysAiSessionCompressi
     *
     * @param sessionId 会话 标识
     * @return 压缩上下文实体，不存在时返回 {@code null}
-     */
+    */
     @Override
     public SysAiSessionCompression getBySessionId(Long sessionId) {
         if (sessionId == null) {
@@ -48,7 +48,7 @@ public class SysAiSessionCompressionServiceImpl implements SysAiSessionCompressi
     * 保存（新增或更新）会话的压缩上下文。
     *
     * @param compression 压缩上下文实体
-     */
+    */
     @Override
     public void saveOrUpdate(SysAiSessionCompression compression) {
         if (compression == null || compression.getSysAiSessionId() == null) {
@@ -76,7 +76,7 @@ public class SysAiSessionCompressionServiceImpl implements SysAiSessionCompressi
     * 删除会话的压缩上下文。
     *
     * @param sessionId 会话 标识
-     */
+    */
     @Override
     public void deleteBySessionId(Long sessionId) {
         if (sessionId == null) {

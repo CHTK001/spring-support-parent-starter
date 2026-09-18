@@ -27,22 +27,22 @@ public class MonitoringConnection implements InvocationHandler {
 
     /**
     * 目标连接
-     */
+    */
     private final Connection delegate;
 
     /**
     * 数据源名称
-     */
+    */
     private final String dataSourceName;
 
     /**
     * 监控门面
-     */
+    */
     private final DataSourceSqlMonitor monitor;
 
     /**
     * 连接关闭时的回调（用于连接数统计递减），可为 空
-     */
+    */
     private final Runnable onClose;
 
     /**
@@ -51,7 +51,7 @@ public class MonitoringConnection implements InvocationHandler {
     * @param delegate       目标连接
     * @param dataSourceName 数据源名称
     * @param monitor        监控门面
-     */
+    */
     public MonitoringConnection(Connection delegate, String dataSourceName, DataSourceSqlMonitor monitor) {
         /**
         * this。
@@ -59,7 +59,7 @@ public class MonitoringConnection implements InvocationHandler {
         * @param dataSourceName 数据源名称
         * @param monitor 监控
         * @param null 空
-         */
+        */
         this(delegate, dataSourceName, monitor, null);
     }
 
@@ -70,7 +70,7 @@ public class MonitoringConnection implements InvocationHandler {
     * @param dataSourceName 数据源名称
     * @param monitor        监控门面
     * @param onClose        连接关闭回调，可为 空
-     */
+    */
     public MonitoringConnection(Connection delegate, String dataSourceName, DataSourceSqlMonitor monitor, Runnable onClose) {
         this.delegate = delegate;
         this.dataSourceName = dataSourceName;
@@ -82,7 +82,7 @@ public class MonitoringConnection implements InvocationHandler {
     * 创建代理连接
     *
     * @return 代理后的连接
-     */
+    */
     public Connection proxy() {
         return ReflectUtils.newProxy(
                 delegate.getClass().getClassLoader(),
@@ -150,7 +150,7 @@ public class MonitoringConnection implements InvocationHandler {
     * @param args   参数
     * @return 方法返回值
     * @throws Throwable 目标连接抛出的异常
-     */
+    */
     private Object invokeTarget(Method method, Object[] args) throws Throwable {
         try {
             return method.invoke(delegate, args);

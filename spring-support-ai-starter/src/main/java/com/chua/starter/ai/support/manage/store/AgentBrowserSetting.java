@@ -37,7 +37,7 @@ public class AgentBrowserSetting implements Serializable {
     *   <li>{@code resource_policy} - 资源策略配置</li>
     *   <li>{@code login_status} - 登录窗口状态</li>
     * </ul>
-     */
+    */
     @TableId(type = IdType.INPUT)
     @Schema(description = "设置项键名", example = "display_mode")
     private String settingKey; // setting钥匙
@@ -51,7 +51,7 @@ public class AgentBrowserSetting implements Serializable {
     *   <li>{@code resource_policy} - JSON 对象：{@code {"preset":"automatic","memory_ratio":0.3,...}}</li>
     *   <li>{@code login_status} - JSON 对象：{@code {"open":false}}</li>
     * </ul>
-     */
+    */
     @TableField("setting_value")
     @Schema(description = "设置项值（JSON 格式）")
     private String settingValue; // setting价值观
@@ -60,7 +60,7 @@ public class AgentBrowserSetting implements Serializable {
     * 更新时间（毫秒级时间戳）。
     *
     * <p>记录设置项最后更新的时间，用于缓存刷新和并发控制。</p>
-     */
+    */
     @TableField("updated_at")
     @Schema(description = "更新时间（毫秒级时间戳）")
     private Long updatedAt; // 更新at

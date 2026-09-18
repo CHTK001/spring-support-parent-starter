@@ -21,7 +21,7 @@ public interface SyncMessageHandler {
     * </p>
     *
     * @return 处理器名称
-     */
+    */
     String getName();
 
     /**
@@ -31,7 +31,7 @@ public interface SyncMessageHandler {
     * </p>
     *
     * @return 优先级
-     */
+    */
     default int getOrder() {
         return 0;
     }
@@ -43,7 +43,7 @@ public interface SyncMessageHandler {
     * @param sessionId 会话标识
     * @param data      消息数据
     * @return 处理结果，可为 空
-     */
+    */
     Object handle(String topic, String sessionId, Map<String, Object> data);
 
     /**
@@ -51,7 +51,7 @@ public interface SyncMessageHandler {
     *
     * @param topic 主题
     * @return 是否支持
-     */
+    */
     default boolean supports(String topic) {
         return true;
     }

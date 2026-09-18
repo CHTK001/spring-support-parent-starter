@@ -10,18 +10,18 @@ public class PaymentException extends RuntimeException {
 
     /**
     * 错误码
-     */
+    */
     private Integer code;
 
     /**
     * 创建 薪酬异常 实例
     * @param message 消息
-     */
+    */
     public PaymentException(String message) {
         /**
         * 父。
         * @param message 消息
-         */
+        */
         super(message);
         this.code = 500;
     }
@@ -31,12 +31,12 @@ public class PaymentException extends RuntimeException {
     * @param code 编码
     * @param message 字符串
     * @param message 消息
-     */
+    */
     public PaymentException(Integer code, String message) {
         /**
         * 父。
         * @param message 消息
-         */
+        */
         super(message);
         this.code = code;
     }
@@ -46,13 +46,13 @@ public class PaymentException extends RuntimeException {
     * @param message 消息
     * @param cause Throwable
     * @param cause cause
-     */
+    */
     public PaymentException(String message, Throwable cause) {
         /**
         * 父。
         * @param message 消息
         * @param cause cause
-         */
+        */
         super(message, cause);
         this.code = 500;
     }
@@ -64,13 +64,13 @@ public class PaymentException extends RuntimeException {
     * @param cause Throwable
     * @param message 消息
     * @param cause cause
-     */
+    */
     public PaymentException(Integer code, String message, Throwable cause) {
         /**
         * 父。
         * @param message 消息
         * @param cause cause
-         */
+        */
         super(message, cause);
         this.code = code;
     }
@@ -79,7 +79,7 @@ public class PaymentException extends RuntimeException {
     * 获取编码
     *
     * @return 获取编码的结果
-     */
+    */
     public Integer getCode() {
         return code;
     }
@@ -88,7 +88,7 @@ public class PaymentException extends RuntimeException {
     * 设置编码
     *
     * @param code 编码
-     */
+    */
     public void setCode(Integer code) {
         this.code = code;
     }

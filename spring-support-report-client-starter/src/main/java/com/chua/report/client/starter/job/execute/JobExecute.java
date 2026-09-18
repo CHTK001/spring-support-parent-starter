@@ -24,6 +24,6 @@ public interface JobExecute {
     * @param request      请求对象，包含作业执行所需的请求信息
     * @param triggerParam 触发器参数，包含作业调度的相关参数信息
     * @return {@link servlet响应} 作业执行结果响应
-     */
+    */
     ServletResponse run(ServletRequest request, TriggerParam triggerParam);
 }

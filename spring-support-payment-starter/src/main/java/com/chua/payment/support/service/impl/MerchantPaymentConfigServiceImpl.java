@@ -46,14 +46,14 @@ public class MerchantPaymentConfigServiceImpl implements MerchantPaymentConfigSe
     * 保存或更新
     *
     * @param config 配置
-     */
+    */
     public void saveOrUpdate(MerchantPaymentConfig config) {
         if (config == null || config.getMerchantId() == null) {
             /**
             * 薪酬异常。
             * @param "配置不能为空" "配置不能为空"
             * @return 薪酬异常的结果
-             */
+            */
             throw new PaymentException("配置不能为空");
         }
         MerchantPaymentConfig existing = configMapper.selectOne(new LambdaQueryWrapper<MerchantPaymentConfig>()
@@ -83,10 +83,10 @@ public class MerchantPaymentConfigServiceImpl implements MerchantPaymentConfigSe
 
             if (pendingCount >= config.getPendingOrderLimit()) {
                 /**
-                * 薪酬异常。
-                * @param "待支付订单数量已达上限，请先完成或取消现有订单" "待支付订单数量已达上限，请先完成或取消现有订单"
-                * @return 薪酬异常的结果
-                 */
+    * 薪酬异常。
+    * @param "待支付订单数量已达上限，请先完成或取消现有订单" "待支付订单数量已达上限，请先完成或取消现有订单"
+    * @return 薪酬异常的结果
+    */
                 throw new PaymentException("待支付订单数量已达上限，请先完成或取消现有订单");
             }
         }
@@ -98,10 +98,10 @@ public class MerchantPaymentConfigServiceImpl implements MerchantPaymentConfigSe
         PaymentOrder order = orderMapper.selectById(orderId);
         if (order == null) {
             /**
-            * 薪酬异常。
-            * @param "订单不存在" "订单不存在"
-            * @return 薪酬异常的结果
-             */
+    * 薪酬异常。
+    * @param "订单不存在" "订单不存在"
+    * @return 薪酬异常的结果
+    */
             throw new PaymentException("订单不存在");
         }
 
@@ -113,7 +113,7 @@ public class MerchantPaymentConfigServiceImpl implements MerchantPaymentConfigSe
                 * 薪酬异常。
                 * @param "该订单为一次性订单，不可重复支付" "该订单为一次性订单，不可重复支付"
                 * @return 薪酬异常的结果
-                 */
+                */
                 throw new PaymentException("该订单为一次性订单，不可重复支付");
             }
         }
@@ -126,7 +126,7 @@ public class MerchantPaymentConfigServiceImpl implements MerchantPaymentConfigSe
                 * 薪酬异常。
                 * @param "订单已超时，无法继续支付" "订单已超时，无法继续支付"
                 * @return 薪酬异常的结果
-                 */
+                */
                 throw new PaymentException("订单已超时，无法继续支付");
             }
         }
@@ -143,7 +143,7 @@ public class MerchantPaymentConfigServiceImpl implements MerchantPaymentConfigSe
     * 获取默认配置
     *
     * @return 获取默认配置的结果
-     */
+    */
     private MerchantPaymentConfig getDefaultConfig() {
         MerchantPaymentConfig config = new MerchantPaymentConfig();
         config.setOrderReusable(true);
