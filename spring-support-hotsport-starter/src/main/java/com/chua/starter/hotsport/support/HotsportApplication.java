@@ -21,10 +21,10 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 public class HotsportApplication {
 
     /**
-    * 主入口。
-    *
-    * @param args 启动参数
-    */
+     * 主入口。
+     *
+     * @param args 启动参数
+     */
     public static void main(String[] args) {
         SpringApplication.run(HotsportApplication.class, args);
     }
