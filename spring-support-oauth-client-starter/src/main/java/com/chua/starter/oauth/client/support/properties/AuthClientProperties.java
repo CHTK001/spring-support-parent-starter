@@ -199,13 +199,16 @@ public class AuthClientProperties {
     * <p>
     * 可选值：
     * <ul>
-    * <li><strong>armeria</strong> - Armeria协议，基于Netty高性能异步框架，[推荐]</li>
-    * <li><strong>http</strong> - HTTP协议，基于Unirest，兼容性好</li>
+    * <li><strong>tcp</strong> - TCP协议，基于原生 Socket，默认</li>
+    * <li><strong>armeria</strong> - Armeria协议，基于Netty的高性能异步框架，需额外依赖</li>
+    * <li><strong>http</strong> - HTTP协议，基于Unirest，同步实现</li>
+    * <li><strong>oauth2</strong> - OAuth2 协议</li>
+    * <li><strong>rsocket</strong> - RSocket 协议</li>
     * <li><strong>static</strong> - 静态协议，用于测试</li>
     * </ul>
     * </p>
     */
-    private String protocol = "static";
+    private String protocol = "tcp";
     /**
     * 令牌-名称
     */
