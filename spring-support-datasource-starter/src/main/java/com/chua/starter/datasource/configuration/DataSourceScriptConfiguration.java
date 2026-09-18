@@ -139,6 +139,7 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
                 for (String location : splitLocations(dataSourceScriptProperties.getScriptPath())) {
                     flyway.location(location);
                 }
+                flyway.protocol(resolveProtocol(ds));
                 int count = flyway.migrate();
                 log.info("DataSource [{}] SPI Flyway 迁移完成，执行 {} 个脚本", beanName, count);
                 return true;
@@ -147,6 +148,46 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
             log.warn("DataSource [{}] SPI Flyway 不可用，回退内置迁移器: {}", beanName, e.getMessage());
         }
         return false;
+    }
+
+    /**
+    * 依据目标库产品名解析 {@link com.chua.common.support.lang.datasource.flyway.ScriptConverter} 协议名。
+    * <p>仅为需要方言转换的引擎返回非空协议：MySQL 系（mysql/mariadb/tidb/oceanbase）与 H2 返回
+    * {@code null}，保持原样执行既有行为（MySQL 原生兼容、H2 以 {@code MODE=MySQL} 兼容）；
+    * 其余引擎（sqlite/postgresql/oracle/sqlserver）返回对应协议名以启用 ScriptConverter 转换。</p>
+    *
+    * @param ds 数据源
+    * @return 协议名；无需转换或无法判定时为 {@code null}
+    */
+    private String resolveProtocol(DataSource ds) {
+        String product;
+        try (java.sql.Connection connection = ds.getConnection()) {
+            product = connection.getMetaData().getDatabaseProductName();
+        } catch (Exception e) {
+            log.debug("解析目标库协议失败，按原样执行: {}", e.getMessage());
+            return null;
+        }
+        if (product == null) {
+            return null;
+        }
+        String p = product.toLowerCase(java.util.Locale.ROOT);
+        if (p.contains("mysql") || p.contains("mariadb") || p.contains("tidb") || p.contains("oceanbase")
+                || p.contains("h2")) {
+            return null;
+        }
+        if (p.contains("sqlite")) {
+            return "sqlite";
+        }
+        if (p.contains("postgres")) {
+            return "postgresql";
+        }
+        if (p.contains("oracle")) {
+            return "oracle";
+        }
+        if (p.contains("microsoft") || p.contains("sql server")) {
+            return "sqlserver";
+        }
+        return null;
     }
 
     /**
@@ -1706,12 +1747,6 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
                         %s_checksum VARCHAR(64),
                         %s_executed_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         %s_success VARCHAR(8),
-                        /**
-                        * UNIQUE。
-                        * @param %s_script_name %sscript名称
-                        * @param %s_version %s版本
-                        * @return UNIQUE的结果
-                        */
                         CONSTRAINT uk_script_name_version UNIQUE (%s_script_name, %s_version)
                     )
                     """, tableName, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix);
@@ -1726,12 +1761,6 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
                         %s_checksum VARCHAR(64) COMMENT '脚本文件MD5校验和',
                         %s_executed_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '脚本执行时间',
                         %s_success VARCHAR(8) COMMENT '执行状态：true-成功，false-失败',
-                        /**
-                        * ukscript名称版本。
-                        * @param %s_script_name %sscript名称
-                        * @param %s_version %s版本
-                        * @return ukscript名称版本的结果
-                        */
                         UNIQUE KEY uk_script_name_version (%s_script_name, %s_version)
                     )
                     """, tableName, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix);
