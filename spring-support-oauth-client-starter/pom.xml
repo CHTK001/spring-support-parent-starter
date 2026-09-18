@@ -54,10 +54,14 @@
             
         </dependency>
 
+        <!-- Armeria 协议支持（可选）：仅当显式使用 Armeria OAuth 协议时才引入。
+             设为 optional 使其不传递给下游（如 eduai 后端），避免拖入 armeria + netty-all (~30MB)。
+             ArmeriaProtocol 已加 @ConditionalOnClass，缺 armeria 时自动失效。 -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-armeria-starter</artifactId>
             <version>${utils.version}</version>
+            <optional>true</optional>
         </dependency>
 
         <dependency>
