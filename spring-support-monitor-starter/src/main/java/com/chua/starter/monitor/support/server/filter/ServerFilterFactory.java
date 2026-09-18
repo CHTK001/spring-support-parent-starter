@@ -236,12 +236,13 @@ public class ServerFilterFactory {
             }
             String setter = "set" + Character.toUpperCase(key.charAt(0)) + key.substring(1);
             try {
+ // 按 setter 名称动态定位方法；需将"方法不存在/调用失败"抛成带参数上下文的异常，
+ // ReflectUtils 入口在失败时静默返回 null 会丢失该语义，故保留原生反射（见同行豁免标记）
                 if (SETTING_BOOLEAN_KEYS.contains(key)) {
-                    // [P3C 1.10 豁免] 按 setter 名称动态定位方法，ReflectUtils.invoke 需预知返回类型，此处保持原生反射
-                    Method method = storageSetting.getClass().getMethod(setter, boolean.class);
+                    Method method = storageSetting.getClass().getMethod(setter, boolean.class); // [P3C 1.10 豁免] 动态 setter 定位需保留失败即抛语义，ReflectUtils 静默降级不适用
                     method.invoke(storageSetting, parseBoolean(value));
                 } else if (SETTING_STRING_KEYS.contains(key)) {
-                    Method method = storageSetting.getClass().getMethod(setter, String.class);
+                    Method method = storageSetting.getClass().getMethod(setter, String.class); // [P3C 1.10 豁免] 动态 setter 定位需保留失败即抛语义，ReflectUtils 静默降级不适用
                     method.invoke(storageSetting, value);
                 } else {
                     log.warn("[ServerFilterFactory] file-storage 忽略未知参数: {}={}", key, value);
@@ -346,15 +347,14 @@ public class ServerFilterFactory {
     * @throws Exception 反射异常
     */
     private Object newInstance(Class<?> clazz, ServerSetting setting) throws Exception {
-        // [P3C 1.10 豁免] 先试无参构造、再试 (ServerSetting) 构造的优先级探测，
-        // ReflectUtils.instantiate 失败时静默返回 null，无法区分"无该构造器"与"实例化失败"，保持原生反射
+ // 先试无参构造、再试 (ServerSetting) 构造的优先级探测，ReflectUtils 无法表达该语义
         try {
-            return clazz.getDeclaredConstructor().newInstance();
+            return clazz.getDeclaredConstructor().newInstance(); // [P3C 1.10 豁免] 无参构造缺省需回落 (ServerSetting) 构造，ReflectUtils.instantiate 静默返回 null 无法区分缺省与失败
         } catch (NoSuchMethodException ignored) {
             // 尝试 (服务端setting) 构造
         }
         try {
-            return clazz.getDeclaredConstructor(ServerSetting.class).newInstance(setting);
+            return clazz.getDeclaredConstructor(ServerSetting.class).newInstance(setting); // [P3C 1.10 豁免] 需按接口类型精确匹配构造器并在缺省时抛出明确异常，ReflectUtils 按实参类型推断不可靠
         } catch (NoSuchMethodException e) {
             throw new IllegalArgumentException(clazz.getName() + " 缺少无参或 (ServerSetting) 构造器");
         }

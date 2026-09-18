@@ -1,5 +1,6 @@
 package com.chua.starter.osgi.shell;
 
+import com.chua.common.support.reflection.ReflectUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
@@ -180,11 +181,6 @@ public class GogoSshShellServer {
                             console.println(raw);
                             console.flush();
                             if (!handleBundleCommand(command, console)) {
-                                /**
-                                * 执行viagogo。
-                                * @param command 命令
-                                * @param console 控制台
-                                */
                                 executeViaGogo(command, console);
                             }
                             console.print("g! ");
@@ -221,10 +217,19 @@ public class GogoSshShellServer {
                     console.println("Command not found: " + command);
                     return;
                 }
-                Method createSession = processor.getClass().getMethod(
-                        "createSession", InputStream.class, OutputStream.class, OutputStream.class);
+ // 方法定位统一经 ReflectUtils.findMethod，调用仍用 Method 以便外层 catch 解包 InvocationTargetException
+                Method createSession = ReflectUtils.findMethod(processor.getClass(), "createSession",
+                        InputStream.class, OutputStream.class, OutputStream.class);
+                if (createSession == null) {
+                    console.println("命令执行失败（Gogo CommandProcessor.createSession 方法不存在）");
+                    return;
+                }
                 Object session = createSession.invoke(processor, in, out, err);
-                Method execute = session.getClass().getMethod("execute", CharSequence.class);
+                Method execute = ReflectUtils.findMethod(session.getClass(), "execute", CharSequence.class);
+                if (execute == null) {
+                    console.println("命令执行失败（Gogo Session.execute 方法不存在）");
+                    return;
+                }
                 execute.invoke(session, command);
             } catch (Exception e) {
                 Throwable root = (e instanceof java.lang.reflect.InvocationTargetException && e.getCause() != null)

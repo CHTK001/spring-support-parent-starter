@@ -59,6 +59,7 @@ public class SwaggerExportController {
     * 下载 打开api 文档。默认 HTML，可通过 {@code format} 指定。
     * @param false false
     * @return download的结果
+    * @param format 格式化，不允许为 null
     */
     @GetMapping
     public ResponseEntity<byte[]> download(@RequestParam(value = "format", required = false) String format) {

@@ -135,7 +135,8 @@ public class ProcedureReader {
         * 尝试。
         * @param conn.createStatement( conn.创建对账单(
         */
-        try (var stmt = conn.createStatement(); var rs = stmt.executeQuery(sql)) {
+        try (var stmt = conn.createStatement();
+             var rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
                 ProcedureInfo p = new ProcedureInfo();
                 p.setName(rs.getString("ROUTINE_NAME"));
@@ -162,7 +163,8 @@ public class ProcedureReader {
         * 尝试。
         * @param conn.createStatement( conn.创建对账单(
         */
-        try (var stmt = conn.createStatement(); var rs = stmt.executeQuery(sql)) {
+        try (var stmt = conn.createStatement();
+             var rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
                 ProcedureInfo p = new ProcedureInfo();
                 p.setName(rs.getString("routine_name"));
@@ -188,7 +190,8 @@ public class ProcedureReader {
         * 尝试。
         * @param conn.createStatement( conn.创建对账单(
         */
-        try (var stmt = conn.createStatement(); var rs = stmt.executeQuery(sql)) {
+        try (var stmt = conn.createStatement();
+             var rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
                 ProcedureInfo p = new ProcedureInfo();
                 p.setName(rs.getString("OBJECT_NAME"));
@@ -214,7 +217,8 @@ public class ProcedureReader {
         * 尝试。
         * @param conn.createStatement( conn.创建对账单(
         */
-        try (var stmt = conn.createStatement(); var rs = stmt.executeQuery(sql)) {
+        try (var stmt = conn.createStatement();
+             var rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
                 ProcedureInfo p = new ProcedureInfo();
                 p.setName(rs.getString("name"));

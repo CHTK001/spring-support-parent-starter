@@ -71,7 +71,10 @@ public class RequestFingerprintAutoConfiguration {
         );
         this.fingerprintCleaner = cleaner;
         return (ServletRequest req, ServletResponse res, FilterChain chain) -> {
-            if (!props.isEnabled()) { chain.doFilter(req, res); return; }
+            if (!props.isEnabled()) {
+                chain.doFilter(req, res);
+                return;
+            }
             HttpServletRequest request = (HttpServletRequest) req;
             HttpServletResponse response = (HttpServletResponse) res;
 
@@ -83,7 +86,10 @@ public class RequestFingerprintAutoConfiguration {
             }
 
             String fp = computeFingerprint(request, props, wrapped != null ? wrapped.getCachedBody() : null);
-            if (fp == null) { chain.doFilter(req, res); return; }
+            if (fp == null) {
+                chain.doFilter(req, res);
+                return;
+            }
 
             long now = System.currentTimeMillis();
             Long until = cache.get(fp);

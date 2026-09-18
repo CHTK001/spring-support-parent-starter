@@ -120,10 +120,6 @@ public class AgentUsage {
     * @return 建造器实例
     */
     public static AgentUsageBuilder builder() {
-        /**
-        * Agentusage构建器。
-        * @return Agentusage构建器的结果
-        */
         return new AgentUsageBuilder();
     }
 
@@ -165,35 +161,50 @@ public class AgentUsage {
         * @param promptTokens 提示符令牌
         * @return 提示符令牌的结果
         */
-        public AgentUsageBuilder promptTokens(Integer promptTokens) { this.promptTokens = promptTokens; return this; }
+        public AgentUsageBuilder promptTokens(Integer promptTokens) {
+            this.promptTokens = promptTokens;
+            return this;
+        }
         /**
         * 完成令牌
         *
         * @param completionTokens 完成令牌
         * @return 完成令牌的结果
         */
-        public AgentUsageBuilder completionTokens(Integer completionTokens) { this.completionTokens = completionTokens; return this; }
+        public AgentUsageBuilder completionTokens(Integer completionTokens) {
+            this.completionTokens = completionTokens;
+            return this;
+        }
         /**
         * 总计令牌
         *
         * @param totalTokens total令牌
         * @return total令牌的结果
         */
-        public AgentUsageBuilder totalTokens(Integer totalTokens) { this.totalTokens = totalTokens; return this; }
+        public AgentUsageBuilder totalTokens(Integer totalTokens) {
+            this.totalTokens = totalTokens;
+            return this;
+        }
         /**
         * Cost
         *
         * @param cost cost
         * @return cost的结果
         */
-        public AgentUsageBuilder cost(Double cost) { this.cost = cost; return this; }
+        public AgentUsageBuilder cost(Double cost) {
+            this.cost = cost;
+            return this;
+        }
         /**
         * 模型
         *
         * @param model 模型
         * @return 模型的结果
         */
-        public AgentUsageBuilder model(String model) { this.model = model; return this; }
+        public AgentUsageBuilder model(String model) {
+            this.model = model;
+            return this;
+        }
 
         /**
         * 构造 Agentusage 实例。
@@ -201,15 +212,6 @@ public class AgentUsage {
         * @return AgentUsage 实例
         */
         public AgentUsage build() {
-            /**
-            * Agentusage。
-            * @param promptTokens 提示符令牌
-            * @param completionTokens 完成令牌
-            * @param totalTokens total令牌
-            * @param cost cost
-            * @param model 模型
-            * @return Agentusage的结果
-            */
             return new AgentUsage(promptTokens, completionTokens, totalTokens, cost, model);
         }
     }

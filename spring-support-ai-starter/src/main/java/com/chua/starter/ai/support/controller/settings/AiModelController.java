@@ -32,6 +32,11 @@ public class AiModelController {
 
     private final AiModelService modelService;
 
+    /**
+     * 列出。
+     *
+     * @return 结果列表，无数据时为空列表
+     */
     @Permission("admin")
     @Operation(summary = "查询所有模型")
     @GetMapping
@@ -39,6 +44,12 @@ public class AiModelController {
         return modelService.list();
     }
 
+    /**
+     * 创建。
+     *
+     * @param model 模型，不允许为 null
+     * @return Ai模型DTO 对象
+     */
     @Permission("admin")
     @Operation(summary = "新建模型")
     @PostMapping
@@ -54,6 +65,11 @@ public class AiModelController {
         return modelService.update(modelId, model);
     }
 
+    /**
+     * 删除。
+     *
+     * @param modelId 模型ID，不允许为 null
+     */
     @Permission("admin")
     @Operation(summary = "删除模型")
     @DeleteMapping("/{modelId}")
@@ -61,6 +77,12 @@ public class AiModelController {
         modelService.delete(modelId);
     }
 
+    /**
+     * 测试：Latency。
+     *
+     * @param modelId 模型ID，不允许为 null
+     * @return Ai模型DTO 对象
+     */
     @Permission("admin")
     @Operation(summary = "测试模型连通性延迟（非本地模型）")
     @PostMapping("/{modelId}/test-latency")

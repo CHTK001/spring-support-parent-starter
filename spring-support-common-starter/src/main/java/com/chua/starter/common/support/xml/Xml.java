@@ -74,11 +74,6 @@ public class Xml {
         StringBuilder xml = new StringBuilder();
         int i = 0;
         while (i < json.length()) {
-            /**
-            * 跳过whitespace。
-            * @param json json
-            * @param i i
-            */
             skipWhitespace(json, i);
             int colon = findNextColon(json, i);
             if (colon < 0) {
@@ -119,11 +114,6 @@ public class Xml {
         StringBuilder xml = new StringBuilder();
         int i = 1;
         while (i < array.length() - 1) {
-            /**
-            * 跳过whitespace。
-            * @param array array
-            * @param i i
-            */
             skipWhitespace(array, i);
             char c = array.charAt(i);
             if (c == ']') {
@@ -327,14 +317,38 @@ public class Xml {
             if (c == '\\' && i + 1 < s.length()) {
                 char next = s.charAt(i + 1);
                 switch (next) {
-                    case '"' -> { sb.append('"'); i++; }
-                    case '\\' -> { sb.append('\\'); i++; }
-                    case '/' -> { sb.append('/'); i++; }
-                    case 'b' -> { sb.append('\b'); i++; }
-                    case 'f' -> { sb.append('\f'); i++; }
-                    case 'n' -> { sb.append('\n'); i++; }
-                    case 'r' -> { sb.append('\r'); i++; }
-                    case 't' -> { sb.append('\t'); i++; }
+                    case '"' -> {
+                        sb.append('"');
+                        i++;
+                    }
+                    case '\\' -> {
+                        sb.append('\\');
+                        i++;
+                    }
+                    case '/' -> {
+                        sb.append('/');
+                        i++;
+                    }
+                    case 'b' -> {
+                        sb.append('\b');
+                        i++;
+                    }
+                    case 'f' -> {
+                        sb.append('\f');
+                        i++;
+                    }
+                    case 'n' -> {
+                        sb.append('\n');
+                        i++;
+                    }
+                    case 'r' -> {
+                        sb.append('\r');
+                        i++;
+                    }
+                    case 't' -> {
+                        sb.append('\t');
+                        i++;
+                    }
                     default -> sb.append(c);
                 }
             } else {

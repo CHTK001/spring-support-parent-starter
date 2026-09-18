@@ -100,6 +100,7 @@ public abstract class AbstractSwaggerUpdateController<S extends IService<T>, T> 
     * @param @Validated(UpdateGroup.class @校验(更新群体.类
     * @param @Validated(UpdateGroup.class @校验(更新群体.类
     * @param @Validated(UpdateGroup.class @Validated(UpdateGroup.class
+    * @param bindingResult binding结果，不允许为 null
     */
     @ResponseBody
     @Operation(summary = "更新/保存数据")
@@ -124,11 +125,6 @@ public abstract class AbstractSwaggerUpdateController<S extends IService<T>, T> 
         return transactionTemplate.execute(it -> {
             boolean saveOrUpdate = getService().saveOrUpdate(render(t));
             if (!saveOrUpdate) {
-                /**
-                * runtime异常。
-                * @param "保存失败" "保存失败"
-                * @return runtime异常的结果
-                */
                 throw new RuntimeException("保存失败");
             }
             /**
@@ -148,6 +144,7 @@ public abstract class AbstractSwaggerUpdateController<S extends IService<T>, T> 
     * @param @Validated(UpdateGroup.class @校验(更新群体.类
     * @param @Validated(UpdateGroup.class @校验(更新群体.类
     * @param @Validated(UpdateGroup.class @Validated(UpdateGroup.class
+    * @param bindingResult binding结果，不允许为 null
     */
     @ResponseBody
     @Operation(summary = "更新数据")
@@ -166,6 +163,7 @@ public abstract class AbstractSwaggerUpdateController<S extends IService<T>, T> 
     * @param @Validated(AddGroup.class @校验(添加群体.类
     * @param @Validated(AddGroup.class @校验(添加群体.类
     * @param @Validated(AddGroup.class @Validated(AddGroup.class
+    * @param bindingResult binding结果，不允许为 null
     */
     @ResponseBody
     @Operation(summary = "添加数据")

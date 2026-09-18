@@ -51,6 +51,7 @@ public class RpcResourceBean<T> implements FactoryBean<T>, ApplicationContextAwa
     /** 密钥 */
     private String key;
 
+    /** interfaceClass */
     private Class<?> interfaceClass;
 
     /** 接口名称 */
@@ -78,11 +79,6 @@ public class RpcResourceBean<T> implements FactoryBean<T>, ApplicationContextAwa
     /** 获取对象 */
     public T getObject() throws Exception {
         if (interfaceClass == null) {
-            /**
-    * illegal状态异常。
-    * @param initialized" initialized"
-    * @return illegal状态异常的结果
-    */
             throw new IllegalStateException("The interface class of ReferenceBean is not initialized");
         }
         return intercept((T) rpcClient.get(interfaceClass));
@@ -130,11 +126,6 @@ public class RpcResourceBean<T> implements FactoryBean<T>, ApplicationContextAwa
             MethodHandle handle = ReflectUtils.findMethodHandle(target.getClass(), method.getName(),
                     method.getReturnType(), method.getParameterTypes());
             if (handle == null) {
-                /**
-                * illegal状态异常。
-                * @param target.getClass( Target.获取类(
-                * @return illegal状态异常的结果
-                */
                 throw new IllegalStateException("No such RPC method: " + target.getClass().getName()
                         + "." + method.getName());
             }
@@ -190,22 +181,12 @@ public class RpcResourceBean<T> implements FactoryBean<T>, ApplicationContextAwa
         ConfigurableListableBeanFactory beanFactory = getBeanFactory();
 
         if (getId() == null || getId().isEmpty()) {
-            /**
-    * illegal状态异常。
-    * @param empty" 空"
-    * @return illegal状态异常的结果
-    */
             throw new IllegalStateException("The id of ReferenceBean cannot be empty");
         }
         BeanDefinition beanDefinition = beanFactory.getBeanDefinition(getId());
         this.interfaceClass = (Class<?>) beanDefinition.getAttribute(RpcAttribute.INTERFACE_CLASS);
         this.interfaceName = (String) beanDefinition.getAttribute(RpcAttribute.INTERFACE_NAME);
         if (this.interfaceClass == null) {
-            /**
-            * illegal状态异常。
-            * @param initialized" initialized"
-            * @return illegal状态异常的结果
-            */
             throw new IllegalStateException("The interface class of ReferenceBean is not initialized");
         }
     }

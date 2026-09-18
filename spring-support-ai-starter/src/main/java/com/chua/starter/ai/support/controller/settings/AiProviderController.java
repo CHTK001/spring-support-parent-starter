@@ -1,7 +1,10 @@
 package com.chua.starter.ai.support.controller.settings;
 
+import com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper;
+import com.chua.starter.ai.support.manage.store.SysAiProvider;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -17,10 +20,14 @@ import java.util.Map;
 @Tag(name = "AI 设置 - 模型供应商")
 @RestController
 @RequestMapping("/v2/providers")
+@RequiredArgsConstructor
 public class AiProviderController {
+
+    private final SysAiProviderMapper sysAiProviderMapper;
 
     /**
     * 获取可添加的供应商模板
+    * @return 结果列表，无数据时为空列表
     */
     @Operation(summary = "获取可添加的供应商模板")
     @GetMapping("/templates")
@@ -176,11 +183,21 @@ public class AiProviderController {
 
     /**
     * 获取已添加的供应商列表
+    * @return 结果列表，无数据时为空列表
     */
     @Operation(summary = "获取已添加的供应商列表")
     @GetMapping
     public List<Map<String, Object>> list() {
-        // 暂时返回空列表，后续从数据库读取
-        return new ArrayList<>(0);
+        List<Map<String, Object>> result = new ArrayList<>();
+        List<SysAiProvider> providers = sysAiProviderMapper.selectList(null);
+        for (SysAiProvider provider : providers) {
+            Map<String, Object> item = new HashMap<>();
+            item.put("id", provider.getProviderId());
+            item.put("name", provider.getName());
+            item.put("platform", provider.getPlatform());
+            item.put("baseUrl", provider.getBaseUrl());
+            result.add(item);
+        }
+        return result;
     }
 }

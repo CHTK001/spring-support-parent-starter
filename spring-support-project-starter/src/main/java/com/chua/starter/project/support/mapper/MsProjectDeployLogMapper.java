@@ -2,7 +2,6 @@ package com.chua.starter.project.support.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.chua.starter.project.support.entity.MsProjectDeployLog;
-import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Param;
 
 /**
@@ -19,6 +18,5 @@ public interface MsProjectDeployLogMapper extends BaseMapper<MsProjectDeployLog>
     * @param beforeTime 时间界限
     * @return 删除的行数
     */
-    @Delete("DELETE FROM ms_project_deploy_log WHERE create_time < #{beforeTime}")
     int deleteByTimeBefore(@Param("beforeTime") java.time.LocalDateTime beforeTime);
 }

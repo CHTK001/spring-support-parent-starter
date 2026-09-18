@@ -62,10 +62,6 @@ public class AiToolResult {
     * @return 建造器实例
     */
     public static AiToolResultBuilder builder() {
-        /**
-        * aitool结果构建器。
-        * @return AItool结果构建器的结果
-        */
         return new AiToolResultBuilder();
     }
 
@@ -107,35 +103,50 @@ public class AiToolResult {
         * @param callId callid
         * @return callId的结果
         */
-        public AiToolResultBuilder callId(String callId) { this.callId = callId; return this; }
+        public AiToolResultBuilder callId(String callId) {
+            this.callId = callId;
+            return this;
+        }
         /**
         * 名称
         *
         * @param name 名称
         * @return 名称的结果
         */
-        public AiToolResultBuilder name(String name) { this.name = name; return this; }
+        public AiToolResultBuilder name(String name) {
+            this.name = name;
+            return this;
+        }
         /**
         * 结果
         *
         * @param result 结果
         * @return 结果的结果
         */
-        public AiToolResultBuilder result(Object result) { this.result = result; return this; }
+        public AiToolResultBuilder result(Object result) {
+            this.result = result;
+            return this;
+        }
         /**
         * 成功
         *
         * @param success 成功
         * @return 成功的结果
         */
-        public AiToolResultBuilder success(boolean success) { this.success = success; return this; }
+        public AiToolResultBuilder success(boolean success) {
+            this.success = success;
+            return this;
+        }
         /**
         * 记录错误消息
         *
         * @param errorMessage 错误消息
         * @return 错误消息的结果
         */
-        public AiToolResultBuilder errorMessage(String errorMessage) { this.errorMessage = errorMessage; return this; }
+        public AiToolResultBuilder errorMessage(String errorMessage) {
+            this.errorMessage = errorMessage;
+            return this;
+        }
 
         /**
         * 构造 aitool结果 实例。
@@ -143,15 +154,6 @@ public class AiToolResult {
         * @return AiToolResult 实例
         */
         public AiToolResult build() {
-            /**
-            * aitool结果。
-            * @param callId callid
-            * @param name 名称
-            * @param result 结果
-            * @param success 成功
-            * @param errorMessage 错误消息
-            * @return AItool结果的结果
-            */
             return new AiToolResult(callId, name, result, success, errorMessage);
         }
     }

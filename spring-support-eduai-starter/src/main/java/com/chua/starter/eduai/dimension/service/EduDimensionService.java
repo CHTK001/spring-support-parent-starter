@@ -379,7 +379,10 @@ public class EduDimensionService {
         * @param value 字符串
         * @param label 标签
         */
-        public EnumOption(String value, String label) { this.value = value; this.label = label; }
+        public EnumOption(String value, String label) {
+            this.value = value;
+            this.label = label;
+        }
         /**
         * 获取值
         *

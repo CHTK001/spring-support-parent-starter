@@ -260,6 +260,12 @@ public class MsServerHost extends SysBase {
     @TableField("ms_server_host_agent_enabled")
     @Schema(description = "Agent上报开关(主机级)", example = "0")
     private Integer serverHostAgentEnabled; // 服务端主机Agent启用
+    /**
+    * Agent 是否已安装（0未安装 1已安装）
+    */
+    @TableField("ms_server_host_agent_installed")
+    @Schema(description = "Agent是否已安装(0未安装 1已安装)", example = "0")
+    private Integer serverHostAgentInstalled; // 服务端主机Agent已安装
 
     /**
     * 远控开关（主机级）

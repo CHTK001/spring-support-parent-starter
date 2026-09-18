@@ -66,6 +66,8 @@ public class SoftSoftwareController {
     * @return 保存的结果
     * @param @Validated(AddGroup.class @校验(添加群体.类
     * @param @Validated(AddGroup.class @Validated(AddGroup.class
+    * @param software 方法入参 software
+    * @param bindingResult binding结果，不允许为 null
     */
     public ReturnResult<SoftSoftware> save(@Validated(AddGroup.class) @RequestBody SoftSoftware software, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
@@ -84,6 +86,8 @@ public class SoftSoftwareController {
     * @return 更新的结果
     * @param @Validated(UpdateGroup.class @校验(更新群体.类
     * @param @Validated(UpdateGroup.class @Validated(UpdateGroup.class
+    * @param software 方法入参 software
+    * @param bindingResult binding结果，不允许为 null
     */
     public ReturnResult<SoftSoftware> update(@Validated(UpdateGroup.class) @RequestBody SoftSoftware software, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {

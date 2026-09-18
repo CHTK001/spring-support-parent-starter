@@ -35,7 +35,10 @@ public class SipServerManager {
     public void init() {
         // 延迟启动，等待配置加载
         new Thread(() -> {
-            try { Thread.sleep(10000); } catch (InterruptedException ignored) {}
+            try {
+                Thread.sleep(10000);
+            } catch (InterruptedException ignored) {
+            }
             tryStart();
         }, "sip-init").start();
     }

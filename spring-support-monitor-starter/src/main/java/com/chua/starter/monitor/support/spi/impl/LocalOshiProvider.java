@@ -38,10 +38,14 @@ public class LocalOshiProvider implements SystemInfoProvider {
     */
     @Override
     public boolean supports(MsServerHost host) {
-        if (host.getServerHostAddress() == null) return false;
+        if (host.getServerHostAddress() == null) {
+            return false;
+        }
         try {
             String addr = host.getServerHostAddress();
-            if (addr.equals("127.0.0.1") || addr.equals("localhost")) return true;
+            if (addr.equals("127.0.0.1") || addr.equals("localhost")) {
+                return true;
+            }
             for (NetworkInterface ni : Collections.list(NetworkInterface.getNetworkInterfaces())) {
                 for (InetAddress ia : Collections.list(ni.getInetAddresses())) {
                     if (addr.equals(ia.getHostAddress())) return true;
@@ -88,7 +92,9 @@ public class LocalOshiProvider implements SystemInfoProvider {
         List<Map<String, Object>> list = new ArrayList<>();
         File dir = new File(path);
         File[] files = dir.listFiles();
-        if (files == null) return list;
+        if (files == null) {
+            return list;
+        }
         for (File f : files) {
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("name", f.getName());
@@ -100,7 +106,9 @@ public class LocalOshiProvider implements SystemInfoProvider {
         }
         list.sort((a, b) -> {
             boolean ad = (boolean) a.get("isDir"), bd = (boolean) b.get("isDir");
-            if (ad != bd) return ad ? -1 : 1;
+            if (ad != bd) {
+                return ad ? -1 : 1;
+            }
             return ((String) a.get("name")).compareToIgnoreCase((String) b.get("name"));
         });
         return list;
@@ -145,7 +153,8 @@ public class LocalOshiProvider implements SystemInfoProvider {
         List<Map<String, Object>> list = new ArrayList<>();
         System.getenv().forEach((k, v) -> {
             Map<String, Object> m = new LinkedHashMap<>();
-            m.put("name", k); m.put("value", v);
+            m.put("name", k);
+            m.put("value", v);
             list.add(m);
         });
         return list;

@@ -302,22 +302,37 @@ public class GenericApiRequirementDataSource implements IRequirementDataSource {
         return current;
     }
 
+    /**
+     * 获取字符串。
+     *
+     * @param map 映射，不允许为 null
+     * @param key 键，不允许为 null
+     * @return 结果字符串
+     */
     private String getString(Map<String, Object> map, String key) {
         Object v = map.get(key);
         return v != null ? v.toString() : null;
     }
 
+    /**
+     * 获取字符串。
+     *
+     * @param map 映射，不允许为 null
+     * @param key 键，不允许为 null
+     * @param defaultValue default值，不允许为 null
+     * @return 结果字符串
+     */
     private String getString(Map<String, Object> map, String key, String defaultValue) {
-        /**
-        * 解析json。
-        * @param json json
-        * @return 解析json的结果
-        * @param obj obj
-        */
         Object v = map.get(key);
         return v != null ? v.toString() : defaultValue;
     }
 
+    /**
+     * 解析Json。
+     *
+     * @param json 方法入参 json
+     * @return 结果映射，无数据时为空映射
+     */
     @SuppressWarnings("unchecked")
     private Map<String, Object> parseJson(String json) {
         try {
@@ -328,6 +343,12 @@ public class GenericApiRequirementDataSource implements IRequirementDataSource {
         }
     }
 
+    /**
+     * 转为JSON字符串。
+     *
+     * @param obj 对象，不允许为 null
+     * @return 结果字符串
+     */
     private String toJSONString(Object obj) {
         try {
             return JSON.writeValueAsString(obj);

@@ -29,6 +29,7 @@ public class SysAiSessionGroupController {
 
     /**
     * 查询所有分组
+    * @return 结果列表，无数据时为空列表
     */
     @GetMapping
     public List<SysAiSessionGroup> list() {
@@ -37,6 +38,8 @@ public class SysAiSessionGroupController {
 
     /**
     * 创建分组
+    * @param body 请求体，不允许为 null
+    * @return SysAi会话分组 对象
     */
     @PostMapping
     public SysAiSessionGroup create(@RequestBody Map<String, String> body) {
@@ -46,6 +49,9 @@ public class SysAiSessionGroupController {
 
     /**
     * 更新分组
+    * @param id ID，不允许为 null
+    * @param body 请求体，不允许为 null
+    * @return SysAi会话分组 对象
     */
     @PutMapping("/{id}")
     public SysAiSessionGroup update(@PathVariable Long id, @RequestBody Map<String, String> body) {
@@ -55,6 +61,7 @@ public class SysAiSessionGroupController {
 
     /**
     * 删除分组
+    * @param id ID，不允许为 null
     */
     @DeleteMapping("/{id}")
     public void delete(@PathVariable Long id) {
@@ -63,6 +70,7 @@ public class SysAiSessionGroupController {
 
     /**
     * 排序
+    * @param body 请求体，不允许为 null
     */
     @PostMapping("/reorder")
     public void reorder(@RequestBody Map<String, List<Long>> body) {

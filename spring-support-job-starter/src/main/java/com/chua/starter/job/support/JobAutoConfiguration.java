@@ -114,11 +114,6 @@ public class JobAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public ScheduledAnnotationScanner jobScheduledAnnotationScanner(TaskScheduler jobTaskScheduler) {
-        /**
-        * 调度注解scanner。
-        * @param jobTaskScheduler 作业任务调度器
-        * @return 调度注解scanner的结果
-        */
         return new ScheduledAnnotationScanner(jobTaskScheduler);
     }
 
@@ -139,10 +134,6 @@ public class JobAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public JobAnnotationScanner jobAnnotationScanner() {
-        /**
-        * 作业注解scanner。
-        * @return 作业注解scanner的结果
-        */
         return new JobAnnotationScanner();
     }
 
@@ -153,10 +144,6 @@ public class JobAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public JobSyncBus jobSyncBus() {
-        /**
-        * 作业同步bus。
-        * @return 作业同步bus的结果
-        */
         return new JobSyncBus();
     }
 
@@ -168,10 +155,6 @@ public class JobAutoConfiguration {
     @ConditionalOnMissingBean
     @ConditionalOnMissingClass("com.baomidou.mybatisplus.core.mapper.BaseMapper")
     public JobRepository inMemoryJobRepository() {
-        /**
-        * 入内存作业仓库。
-        * @return 入内存作业仓库的结果
-        */
         return new InMemoryJobRepository();
     }
 
@@ -183,11 +166,6 @@ public class JobAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public LeaderElector jobLeaderElector(String jobNodeId) {
-        /**
-        * 铅elector。
-        * @param jobNodeId 作业节点标识
-        * @return 铅elector的结果
-        */
         return new LeaderElector(jobNodeId);
     }
 
@@ -199,10 +177,6 @@ public class JobAutoConfiguration {
     @ConditionalOnMissingBean
     @ConditionalOnMissingClass("com.baomidou.mybatisplus.core.mapper.BaseMapper")
     public JobLogSink stdoutJobLogSink() {
-        /**
-        * stdout作业日志sink。
-        * @return stdout作业日志sink的结果
-        */
         return new StdoutJobLogSink();
     }
 
@@ -320,7 +294,10 @@ public class JobAutoConfiguration {
                 SyncServer s = sp.getExtension(k);
                 log.info("[job][diag] try key={} -> class={} extClassLoader={}",
                         k, s == null ? "NULL" : s.getClass().getName(), s == null ? "-" : s.getClass().getClassLoader());
-                if (s != null) { server = s; break; }
+                if (s != null) {
+                    server = s;
+                    break;
+                }
             } catch (Throwable t) {
                 log.warn("[job][diag] key={} threw cause={}", k, t.getClass().getName() + ":" + t.getMessage(), t);
             }
@@ -360,14 +337,6 @@ public class JobAutoConfiguration {
                                                      JobSyncBus jobSyncBus,
                                                      JobLogSink jobLogSink,
                                                      String jobNodeId) {
-        /**
-        * 调度器同步binder。
-        * @param jobSyncServer 作业同步服务端
-        * @param jobSyncBus 作业同步bus
-        * @param jobLogSink 作业日志sink
-        * @param jobNodeId 作业节点标识
-        * @return 调度器同步binder的结果
-        */
         return new SchedulerSyncBinder(jobSyncServer, jobSyncBus, jobLogSink, jobNodeId);
     }
 
@@ -477,14 +446,6 @@ public class JobAutoConfiguration {
     public ExecutorSyncBinder jobExecutorSyncBinder(SyncClient jobSyncClient,
                                                     JobSyncBus jobSyncBus,
                                                     String jobNodeId) {
-        /**
-        * 执行器同步binder。
-        * @param jobSyncClient 作业同步客户端
-        * @param jobSyncBus 作业同步bus
-        * @param properties 属性
-        * @param jobNodeId 作业节点标识
-        * @return 执行器同步binder的结果
-        */
         return new ExecutorSyncBinder(jobSyncClient, jobSyncBus, properties, jobNodeId);
     }
 
@@ -497,14 +458,6 @@ public class JobAutoConfiguration {
     public JobExecutor jobExecutor(JobHandlerFactory jobHandlerFactory,
                                    JobSyncBus jobSyncBus,
                                    String jobNodeId) {
-        /**
-        * 作业执行器。
-        * @param jobHandlerFactory 作业处理器工厂
-        * @param jobSyncBus 作业同步bus
-        * @param jobNodeId 作业节点标识
-        * @param buildExecutor( 构建执行器(
-        * @return 作业执行器的结果
-        */
         return new JobExecutor(jobHandlerFactory, jobSyncBus, jobNodeId, buildExecutor());
     }
 
@@ -569,14 +522,6 @@ public class JobAutoConfiguration {
     public JobExecutor jobSingleExecutor(JobHandlerFactory jobHandlerFactory,
                                           JobSyncBus jobSyncBus,
                                           String jobNodeId) {
-        /**
-        * 作业执行器。
-        * @param jobHandlerFactory 作业处理器工厂
-        * @param jobSyncBus 作业同步bus
-        * @param jobNodeId 作业节点标识
-        * @param buildExecutor( 构建执行器(
-        * @return 作业执行器的结果
-        */
         return new JobExecutor(jobHandlerFactory, jobSyncBus, jobNodeId, buildExecutor());
     }
 
@@ -593,12 +538,6 @@ public class JobAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public JobSampleSeeder jobSampleSeeder(JobRepository jobRepository, JobHandlerFactory jobHandlerFactory) {
-        /**
-        * 作业样本seeder。
-        * @param jobRepository 作业仓库
-        * @param jobHandlerFactory 作业处理器工厂
-        * @return 作业样本seeder的结果
-        */
         return new JobSampleSeeder(jobRepository, jobHandlerFactory);
     }
 

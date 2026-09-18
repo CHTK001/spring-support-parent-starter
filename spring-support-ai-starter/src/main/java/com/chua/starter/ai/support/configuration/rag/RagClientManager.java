@@ -220,6 +220,8 @@ public class RagClientManager {
     * 1. 按 rag_llm_model 从 ChatClientRegistry 查找已注册客户端
     * 2. 查不到则用 registry 默认客户端
     * 3. 都没有时，从 runtime 全局设置（provider/apiKey/baseUrl/model）直接构造真实客户端
+    * @param ragLlmModel ragLlm模型，不允许为 null
+    * @return Chat客户端 对象
     */
     private ChatClient resolveChatClient(String ragLlmModel) {
         if (chatClientRegistry != null) {
@@ -242,6 +244,7 @@ public class RagClientManager {
     /**
     * 从 runtime 全局设置构建真实 ChatClient。
     * 读取 provider/provider_api_key/provider_base_url/default_model，构造并返回。
+    * @return Chat客户端 对象
     */
     private ChatClient buildRuntimeChatClient() {
         String provider = settingReader.getStr("runtime", "provider");
@@ -399,6 +402,7 @@ public class RagClientManager {
     * @param storageName 存储名称（jvector / memory / milvus 等，留空取属性默认）
     * @param uploadDir   上传根目录，jvector 索引文件存放于其下
     * @return VectorStorage 实例（jvector 失败时降级 memory）
+    * @param embeddingDimensions 方法入参 embeddingDimensions
     */
     private VectorStorage createVectorStorage(String storageName, String uploadDir, int embeddingDimensions) {
         String name = StringUtils.hasText(storageName)

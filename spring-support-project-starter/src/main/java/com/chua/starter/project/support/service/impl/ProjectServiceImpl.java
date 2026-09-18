@@ -203,6 +203,12 @@ public class ProjectServiceImpl implements ProjectService {
         }
         return deleted;
     }
+    /**
+     * 校验。
+     *
+     * @param project 方法入参 project
+     * @return Return结果 对象
+     */
     private ReturnResult<MsProject> validate(MsProject project) {
         if (project == null) {
             return ReturnResult.error("项目不能为空");

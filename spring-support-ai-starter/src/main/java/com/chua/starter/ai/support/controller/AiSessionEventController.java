@@ -34,13 +34,13 @@ public class AiSessionEventController {
     */
     @GetMapping(value = "/sessions", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter sessions() {
-        SseEmitter emitter = new SseEmitter(180000L); // 3分钟超时
+        SseEmitter emitter = new SseEmitter(0L); // 不超时
 
         // 发送心跳
         scheduler.scheduleAtFixedRate(() -> {
             try {
                 emitter.send(SseEmitter.event().name("heartbeat").data("ping"));
-            } catch (IOException e) {
+            } catch (Exception e) {
                 emitter.complete();
             }
         }, 0, 30, TimeUnit.SECONDS);

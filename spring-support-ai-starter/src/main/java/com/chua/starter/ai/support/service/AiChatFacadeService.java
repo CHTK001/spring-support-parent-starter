@@ -77,6 +77,24 @@ public interface AiChatFacadeService {
                       Consumer<Throwable> onError);
 
     /**
+    * 流式对话调用（含思考内容回调）。
+    *
+    * @param request          对话请求
+    * @param onChunk          每段正式回答增量文本回调
+    * @param onComplete       完成后回调
+    * @param onError          失败回调
+    * @param onThinkingChunk  每段思考内容增量回调（深度思考时）
+    * @return SSE 发射器
+    */
+    default SseEmitter stream(AiChatRequest request,
+                              Consumer<String> onChunk,
+                              Consumer<String> onComplete,
+                              Consumer<Throwable> onError,
+                              Consumer<String> onThinkingChunk) {
+        return stream(request, onChunk, onComplete, onError);
+    }
+
+    /**
     * 获取分组可用模型列表。
     *
     * @param groupId 分组 标识

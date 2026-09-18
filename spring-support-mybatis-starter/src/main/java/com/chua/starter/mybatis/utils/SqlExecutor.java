@@ -25,6 +25,7 @@ public class SqlExecutor {
     * @param @Qualifier("sqlSessionFactory" @qualifier("SQL会话工厂"
     * @param @Qualifier("sqlSessionFactory" @Qualifier("sql会话工厂"
     * @param @Qualifier("sqlSessionFactory" @Qualifier("sqlSessionFactory"
+    * @param sqlSessionFactory SQL会话工厂，不允许为 null
     */
     public SqlExecutor(@Qualifier("sqlSessionFactory") SqlSessionFactory sqlSessionFactory) {
         this.sqlSessionFactory = sqlSessionFactory;

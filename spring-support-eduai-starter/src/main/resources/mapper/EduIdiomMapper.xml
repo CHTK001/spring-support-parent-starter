@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.eduai.mapper.EduIdiomMapper">
+
+    <!-- 根据学段获取成语列表：grade 非空时追加年级过滤，随机排序并限制条数 -->
+    <select id="selectByGradeLevel" resultType="com.chua.starter.eduai.model.EduIdiom">
+        SELECT i.* FROM edu_idiom i
+        INNER JOIN edu_idiom_grade g ON i.idiom_id = g.idiom_id
+        WHERE g.grade_level = #{gradeLevel}
+        <if test="grade != null and grade != ''">
+            AND g.grade = #{grade}
+        </if>
+        ORDER BY RAND()
+        LIMIT #{count}
+    </select>
+
+    <!-- 随机获取指定数量的成语 -->
+    <select id="selectRandom" resultType="com.chua.starter.eduai.model.EduIdiom">
+        SELECT * FROM edu_idiom ORDER BY RAND() LIMIT #{count}
+    </select>
+
+</mapper>

@@ -447,6 +447,12 @@ public class DatalakeAdvancedProbe {
                 .build();
     }
 
+    /**
+     * 校验。
+     *
+     * @param name 名称，不允许为 null
+     * @param check 校验，不允许为 null
+     */
     private static void check(String name, ProbeCheck check) {
         total++;
         try {
@@ -498,7 +504,10 @@ public class DatalakeAdvancedProbe {
         /**
         * reset。
          */
-        public void reset() { count.set(0); lastConfig = null; }
+        public void reset() {
+            count.set(0);
+            lastConfig = null;
+        }
         /**
         * 获取数量。
         * @return 获取数量的结果

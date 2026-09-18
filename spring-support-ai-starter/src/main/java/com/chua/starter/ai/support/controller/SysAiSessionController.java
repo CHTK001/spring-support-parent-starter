@@ -1,12 +1,15 @@
 package com.chua.starter.ai.support.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.ai.support.entity.SysAiSession;
 import com.chua.starter.ai.support.mapper.SysAiSessionMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -26,18 +29,38 @@ public class SysAiSessionController {
     * 查询归档会话列表
     */
     @GetMapping("/archived")
-    public List<SysAiSession> listArchived(
+    public ReturnResult<Map<String, Object>> listArchived(
             @RequestParam(required = false) String keyword,
-            @RequestParam(required = false) Long groupId) {
+            @RequestParam(required = false) Long groupId,
+            @RequestParam(required = false) Integer skip,
+            @RequestParam(required = false) Integer limit) {
         LambdaQueryWrapper<SysAiSession> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(SysAiSession::getIsArchived, true);  // 只查询已归档的会话
         if (keyword != null && !keyword.isEmpty()) {
             wrapper.like(SysAiSession::getTitle, keyword);
         }
         if (groupId != null) {
-            wrapper.eq(SysAiSession::getId, groupId);
+            wrapper.eq(SysAiSession::getSysAiModuleCode, groupId);
         }
         wrapper.orderByDesc(SysAiSession::getUpdateTime);
-        return sessionMapper.selectList(wrapper);
+
+        List<SysAiSession> sessions = sessionMapper.selectList(wrapper);
+
+        List<Map<String, Object>> items = new ArrayList<>();
+        for (SysAiSession session : sessions) {
+            Map<String, Object> item = new HashMap<>();
+            item.put("id", String.valueOf(session.getId()));
+            item.put("title", session.getTitle());
+            item.put("createdAt", session.getCreateTime());
+            item.put("updatedAt", session.getUpdateTime());
+            item.put("lastActiveAt", session.getUpdateTime());
+            items.add(item);
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("items", items);
+        result.put("total", items.size());
+        return ReturnResult.ok(result);
     }
 
     /**
@@ -45,19 +68,53 @@ public class SysAiSessionController {
     */
     @PutMapping("/{sessionId}/archive")
     public Map<String, Object> archive(
-            @PathVariable Long sessionId,
+            @PathVariable String sessionId,
             @RequestBody Map<String, Boolean> body) {
         Boolean archived = body.get("archived");
-        SysAiSession session = sessionMapper.selectById(sessionId);
-        if (session != null) {
-            session.setUpdateTime(LocalDateTime.now());
-            sessionMapper.updateById(session);
+        
+        // 解析 sessionId：数字直接用，UUID 通过标题匹配查找
+        Long sessionIdLong = resolveSessionId(sessionId);
+        
+        SysAiSession session = null;
+        if (sessionIdLong != null) {
+            session = sessionMapper.selectById(sessionIdLong);
+            if (session != null) {
+                session.setIsArchived(archived);
+                session.setUpdateTime(LocalDateTime.now());
+                sessionMapper.updateById(session);
+            }
         }
         return Map.of("success", true, "session", session);
+    }
+    
+    /**
+     * 解析前端 sessionId 到后端 Long ID。
+     *
+     * @param sessionId 前端会话 id，数字串或前缀编码串，可为空白
+     * @return 后端数值 id，无法解析时返回 null
+     */
+    private Long resolveSessionId(String sessionId) {
+        if (sessionId == null || sessionId.isBlank()) {
+            return null;
+        }
+        // 数字 ID 直接转换
+        if (sessionId.matches("\\d+")) {
+            return Long.parseLong(sessionId);
+        }
+        // UUID 通过标题匹配查找（标题格式：guada-xxxxxxxx）
+        String titlePrefix = "guada-" + sessionId.substring(0, Math.min(8, sessionId.length()));
+        LambdaQueryWrapper<SysAiSession> wrapper = new LambdaQueryWrapper<>();
+        wrapper.likeRight(SysAiSession::getTitle, titlePrefix);
+        wrapper.orderByDesc(SysAiSession::getCreateTime);
+        wrapper.last("LIMIT 1");
+        SysAiSession session = sessionMapper.selectOne(wrapper);
+        return session != null ? session.getId() : null;
     }
 
     /**
     * 批量归档/取消归档会话
+    * @param body 请求体，不允许为 null
+    * @return 结果映射，无数据时为空映射
     */
     @PutMapping("/batch-archive")
     public Map<String, Object> batchArchive(@RequestBody Map<String, Object> body) {
@@ -67,6 +124,7 @@ public class SysAiSessionController {
         for (Long id : sessionIds) {
             SysAiSession session = sessionMapper.selectById(id);
             if (session != null) {
+                session.setIsArchived(archived);
                 session.setUpdateTime(LocalDateTime.now());
                 sessionMapper.updateById(session);
             }

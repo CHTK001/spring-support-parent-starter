@@ -48,6 +48,12 @@ import static com.chua.starter.common.support.constant.MdcConstant.TRACE_ID;
         @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class}),
         @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class, CacheKey.class, BoundSql.class}),
 })
+/**
+ * SlowSQLDetectInterceptor类，提供相关能力。
+ *
+ * @author CH
+ * @since 1.0.0
+ */
 public class SlowSqlDetectInterceptor implements Interceptor {
     /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(SlowSqlDetectInterceptor.class);
@@ -185,6 +191,13 @@ public class SlowSqlDetectInterceptor implements Interceptor {
         }
     }
 
+    /**
+     * 解析SQL。
+     *
+     * @param configuration 配置，不允许为 null
+     * @param boundSql boundSQL，不允许为 null
+     * @return SQL解析结果 对象
+     */
     private SqlResolveResult resolveSql(Configuration configuration, BoundSql boundSql) {
         Object parameterObject = boundSql.getParameterObject();
         List<ParameterMapping> mappings = boundSql.getParameterMappings();
@@ -219,6 +232,13 @@ public class SlowSqlDetectInterceptor implements Interceptor {
         return new SqlResolveResult(sql, list);
     }
 
+    /**
+     * truncate。
+     *
+     * @param value 值，不允许为 null
+     * @param maxLen 最大值Len，不允许为 null
+     * @return 结果字符串
+     */
     private String truncate(String value, int maxLen) {
         if (value == null) {
             return null;
@@ -233,6 +253,12 @@ public class SlowSqlDetectInterceptor implements Interceptor {
         return value.substring(0, safeMax) + "...(truncated)";
     }
 
+    /**
+     * 获取Parameter值。
+     *
+     * @param obj 对象，不允许为 null
+     * @return 结果字符串
+     */
     private String getParameterValue(Object obj) {
         if (obj == null) {
             return "null";

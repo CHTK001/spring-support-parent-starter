@@ -131,7 +131,9 @@ public class RemoteControlPageController {
                     setTimeout(resize, 500);
                     // 状态
                     tunnel.onstatechange = (state) => {
-                      if (state === Guacamole.Tunnel.State.OPEN) statusEl.textContent = '已连接';
+                      if (state === Guacamole.Tunnel.State.OPEN) {
+                          statusEl.textContent = '已连接';
+                      }
                       else if (state === Guacamole.Tunnel.State.CLOSED) statusEl.textContent = '已断开';
                     };
                     tunnel.onerror = (status) => {

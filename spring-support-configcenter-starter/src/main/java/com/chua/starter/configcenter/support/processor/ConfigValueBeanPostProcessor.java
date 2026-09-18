@@ -122,13 +122,6 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
     * @param configCenter 配置中心
     */
     public ConfigValueBeanPostProcessor(ConfigCenter configCenter) {
-        /**
-        * this。
-        * @param configCenter 配置center
-        * @param true true
-        * @param DEFAULT_REFRESH_DELAY_MS 默认refresh延迟ms
-        * @param true true
-        */
         this(configCenter, true, DEFAULT_REFRESH_DELAY_MS, true);
     }
 
@@ -139,13 +132,6 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
     * @param hotReloadEnabled 是否启用热更新
     */
     public ConfigValueBeanPostProcessor(ConfigCenter configCenter, boolean hotReloadEnabled) {
-        /**
-        * this。
-        * @param configCenter 配置center
-        * @param hotReloadEnabled hotreload已启用
-        * @param DEFAULT_REFRESH_DELAY_MS 默认refresh延迟ms
-        * @param true true
-        */
         this(configCenter, hotReloadEnabled, DEFAULT_REFRESH_DELAY_MS, true);
     }
 
@@ -588,12 +574,6 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
             }
 
             for (BindingInfo binding : bindings) {
-                /**
-                * 更新binding。
-                * @param binding binding
-                * @param oldValue 旧值
-                * @param resolvedValue resolved值
-                */
                 updateBinding(binding, oldValue, resolvedValue);
             }
         }
@@ -615,16 +595,8 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
 
             // 更新值
             if (binding.field() != null) {
-                /**
-                * inject字段值。
-                * @param binding.bean( binding.Bean(
-                */
                 injectFieldValue(binding.bean(), binding.field(), newValue);
             } else if (binding.method() != null) {
-                /**
-                * inject方法值。
-                * @param binding.bean( binding.Bean(
-                */
                 injectMethodValue(binding.bean(), binding.method(), newValue);
             }
 
@@ -657,9 +629,12 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
             }
 
             try {
-                // 预检方法是否存在（框架签名兼容，仅做存在性校验）
-                binding.bean().getClass().getDeclaredMethod(
-                        callbackName, String.class, Object.class, Object.class);
+ // 预检方法是否存在（框架签名兼容，仅做存在性校验），方法查找统一经 ReflectUtils
+                if (ReflectUtils.findDeclaredMethod(binding.bean().getClass(), callbackName,
+                        String.class, Object.class, Object.class) == null) {
+                    log.warn("回调方法不存在: {}.{}", binding.beanName(), callbackName);
+                    return;
+                }
                 Object convertedNewValue = convertValue(newValue, binding.targetType());
                 Object result = ReflectUtils.invoke(binding.bean(), callbackName,
                         Object.class, new Class<?>[]{String.class, Object.class, Object.class},
@@ -667,8 +642,6 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
                 if (result == null) {
                     log.warn("回调方法不存在: {}.{}", binding.beanName(), callbackName);
                 }
-            } catch (NoSuchMethodException e) {
-                log.warn("回调方法不存在: {}.{}", binding.beanName(), callbackName);
             } catch (Exception e) {
                 log.error("调用回调方法失败: {}.{}", binding.beanName(), callbackName, e);
             }

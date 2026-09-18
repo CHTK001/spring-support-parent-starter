@@ -230,24 +230,97 @@ public class FileStorageServerFilterExample {
         private HttpHeader headers = HttpHeader.create(); // 头部
         private byte[] bodyBytes; // 主体bytes
 
-        @Override public ServerResponse setStatus(int status) { this.status = status; return this; }
-        @Override public int getStatus() { return status; }
-        @Override public ServerResponse setHeader(String name, String value) { headers.add(name, value); return this; }
-        @Override public String getHeader(String name) { return headers.get(name); }
-        @Override public HttpHeader getHeaders() { return headers; }
-        @Override public ServerResponse setContentType(String contentType) { headers.add("Content-Type", contentType); return this; }
-        @Override public String getContentType() { return headers.get("Content-Type"); }
-        @Override public ServerResponse setBody(byte[] body) { this.bodyBytes = body; return this; }
-        @Override public ServerResponse setBody(String body) { this.bodyBytes = body.getBytes(java.nio.charset.StandardCharsets.UTF_8); return this; }
-        @Override public byte[] getBody() { return bodyBytes; }
-        @Override public java.io.OutputStream getOutputStream() { return null; }
-        @Override public ServerResponse sendRedirect(String location) { return this; }
-        @Override public ServerResponse sendError(int statusCode, String message) { this.status = statusCode; return this; }
-        @Override public void flush() {}
-        @Override public boolean isCommitted() { return false; }
-        @Override public boolean isEnded() { return false; }
-        @Override public void end() {}
-        @Override public void writeRaw(byte[] bytes) {
+        @Override
+        public ServerResponse setStatus(int status) {
+            this.status = status;
+            return this;
+        }
+
+        @Override
+        public int getStatus() {
+            return status;
+        }
+
+        @Override
+        public ServerResponse setHeader(String name, String value) {
+            headers.add(name, value);
+            return this;
+        }
+
+        @Override
+        public String getHeader(String name) {
+            return headers.get(name);
+        }
+
+        @Override
+        public HttpHeader getHeaders() {
+            return headers;
+        }
+
+        @Override
+        public ServerResponse setContentType(String contentType) {
+            headers.add("Content-Type", contentType);
+            return this;
+        }
+
+        @Override
+        public String getContentType() {
+            return headers.get("Content-Type");
+        }
+
+        @Override
+        public ServerResponse setBody(byte[] body) {
+            this.bodyBytes = body;
+            return this;
+        }
+
+        @Override
+        public ServerResponse setBody(String body) {
+            this.bodyBytes = body.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            return this;
+        }
+
+        @Override
+        public byte[] getBody() {
+            return bodyBytes;
+        }
+
+        @Override
+        public java.io.OutputStream getOutputStream() {
+            return null;
+        }
+
+        @Override
+        public ServerResponse sendRedirect(String location) {
+            return this;
+        }
+
+        @Override
+        public ServerResponse sendError(int statusCode, String message) {
+            this.status = statusCode;
+            return this;
+        }
+
+        @Override
+        public void flush() {
+        }
+
+        @Override
+        public boolean isCommitted() {
+            return false;
+        }
+
+        @Override
+        public boolean isEnded() {
+            return false;
+        }
+
+        @Override
+        public void end() {
+        }
+
+        @Override
+        public void writeRaw(byte[] bytes) {
             if (bodyBytes == null) {
                 bodyBytes = bytes;
             }
@@ -256,7 +329,23 @@ public class FileStorageServerFilterExample {
             }
             System.arraycopy(bytes, 0, bodyBytes, bodyBytes.length - bytes.length, bytes.length);
         }
-        @Override public ServerResponse reset() { status = 0; headers = HttpHeader.create(); bodyBytes = null; return this; }
-        public String getHeaderVal(String name) { return headers.get(name); }
+
+        @Override
+        public ServerResponse reset() {
+            status = 0;
+            headers = HttpHeader.create();
+            bodyBytes = null;
+            return this;
+        }
+
+        /**
+         * 读取指定请求头的值。
+         *
+         * @param name 头名称，不允许为 null
+         * @return 头的值，不存在时返回 null
+         */
+        public String getHeaderVal(String name) {
+            return headers.get(name);
+        }
     }
 }

@@ -1,0 +1,494 @@
+package com.chua.starter.ai.support.controller;
+
+import com.chua.starter.ai.support.chat.ChatMessage;
+import com.chua.starter.ai.support.entity.AIDialog;
+import com.chua.starter.ai.support.model.AiChatRequest;
+import com.chua.starter.ai.support.service.AIDialogRecordService;
+import com.chua.starter.ai.support.service.AiChatFacadeService;
+import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
+import com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper;
+import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
+import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * Guada 前端聊天流式控制器。
+ *
+ * <p>对接前端 /v2/chat/stream（SSE）裸 data 帧协议：
+ * create -> 多个 text(增量) -> finish -> turn_end -> [DONE]。</p>
+ *
+ * <p>复用 {@link AiChatFacadeService} 走 agnes-2.5-flash 模型，
+ * 用户消息与助手回复按 sessionId 落 MySQL（{@link AIDialogRecordService}）。</p>
+ *
+ * @author CH
+ */
+@RestController
+@RequestMapping("/v2/chat")
+@ApiReturnFormatIgnore
+@RequiredArgsConstructor
+@Slf4j
+public class ChatStreamController {
+
+    /** 默认模型（fallback） */
+    private static final String DEFAULT_MODEL_FALLBACK = "agnes-2.5-flash";
+
+    private final AiChatFacadeService aiChatFacadeService;
+    private final AIDialogRecordService aiDialogRecordService;
+    private final ObjectMapper objectMapper;
+    private final SysAiGlobalSettingService sysAiGlobalSettingService;
+    private final SysAiProviderModelMapper sysAiProviderModelMapper;
+
+    /** 前端 sessionId(UUID) -> 后端 sys_ai_session 主键(Long) 的进程内映射 */
+    private final Map<String, Long> sessionDialogMap = new ConcurrentHashMap<>();
+
+    /** 活跃流式连接，供 /stop 主动结束 */
+    private final Map<String, SseEmitter> activeStreams = new ConcurrentHashMap<>();
+
+    /** 原始输出流（绕过 SseEmitter 自动加 data: 前缀，严格控制帧格式为 "data: <json>\\n\\n"） */
+    private final Map<String, java.io.OutputStream> rawOut = new ConcurrentHashMap<>();
+
+    /** 当前活跃 sessionId（用于 writeRaw 精准写入） */
+    private final ThreadLocal<String> currentSessionId = new ThreadLocal<>();
+
+    /**
+    * SSE 流式聊天。
+    * @param body 请求体，不允许为 null
+    * @param response 响应，不允许为 null
+    * @return SseEmitter 对象
+    */
+    @PostMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter stream(@RequestBody Map<String, Object> body, HttpServletResponse response) {
+        String sessionId = str(body.get("sessionId"));
+        Map<?, ?> userMessage = asMap(body.get("userMessage"));
+        String content = userMessage != null ? str(userMessage.get("content")) : "";
+        if (content == null || content.isBlank()) {
+            content = str(body.get("content"));
+        }
+        
+        // 从请求中获取用户选择的模型
+        String selectedModel = str(body.get("modelId"));
+        if (selectedModel == null || selectedModel.isBlank()) {
+            selectedModel = str(body.get("model"));
+        }
+
+        // 0L = 不超时，避免前端报异步请求超时
+        SseEmitter emitter = new SseEmitter(0L);
+        if (sessionId != null) {
+            activeStreams.put(sessionId, emitter);
+            try {
+                response.setContentType("text/event-stream;charset=UTF-8");
+                response.setHeader("Cache-Control", "no-cache");
+                response.setHeader("X-Accel-Buffering", "no");
+                rawOut.put(sessionId, response.getOutputStream());
+            } catch (Exception ignored) {
+            }
+        }
+        registerCleanup(emitter, sessionId);
+
+        Long dialogId;
+        try {
+            dialogId = resolveDialogId(sessionId);
+
+            // 1. 落库本轮用户消息
+            try {
+                aiDialogRecordService.addMessage(dialogId, new ChatMessage("user", content));
+            } catch (Exception e) {
+                log.warn("[ChatStream] 保存用户消息失败 sessionId={}: {}", sessionId, e.getMessage());
+            }
+
+            // 2. 组装历史消息（含本轮用户消息，参考 AIChatController）
+            List<Map<String, Object>> msgList = new ArrayList<>();
+            try {
+                List<ChatMessage> history = aiDialogRecordService.getDialogMessages(dialogId);
+                if (history != null) {
+                    for (ChatMessage m : history) {
+                        Map<String, Object> mm = new LinkedHashMap<>();
+                        mm.put("role", m.getRole() != null ? m.getRole() : "user");
+                        mm.put("content", m.getContent() != null ? m.getContent() : "");
+                        msgList.add(mm);
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("[ChatStream] 加载历史失败 sessionId={}: {}", sessionId, e.getMessage());
+            }
+            if (msgList.isEmpty()) {
+                Map<String, Object> mm = new LinkedHashMap<>();
+                mm.put("role", "user");
+                mm.put("content", content != null ? content : "");
+                msgList.add(mm);
+            }
+
+            // 3. 构建模型请求，优先使用用户选择的模型，否则使用默认模型
+            String modelToUse;
+            if (selectedModel != null && !selectedModel.isBlank()) {
+                modelToUse = selectedModel;
+                log.info("[ChatStream] 使用用户选择的模型: {}", modelToUse);
+            } else {
+                modelToUse = getDefaultModel();
+                log.info("[ChatStream] 使用默认模型: {}", modelToUse);
+            }
+            AiChatRequest request = new AiChatRequest();
+            request.setModel(modelToUse);
+            request.setStream(true);
+            request.setPrompt(content != null ? content : "");
+            request.setMessages(msgList);
+            // 从模型表读取采样参数
+            try {
+                SysAiProviderModel modelInfo = sysAiProviderModelMapper.selectById(modelToUse);
+                if (modelInfo != null) {
+                    if (modelInfo.getTemperature() != null) {
+                        request.setTemperature(modelInfo.getTemperature());
+                    }
+                    if (modelInfo.getMaxTokens() != null) {
+                        request.setMaxTokens(modelInfo.getMaxTokens());
+                    }
+                    if (modelInfo.getTopP() != null) {
+                        request.setTopP(modelInfo.getTopP());
+                    }
+                    if (modelInfo.getFrequencyPenalty() != null) {
+                        request.setFrequencyPenalty(modelInfo.getFrequencyPenalty());
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("[ChatStream] 读取模型参数失败 model={}: {}", modelToUse, e.getMessage());
+            }
+            // 读取前端传来的 thinking / web_search 开关
+            Object thinkObj = body.get("think");
+            if (thinkObj != null) {
+                request.setThink(Boolean.parseBoolean(String.valueOf(thinkObj)));
+            }
+            Object searchObj = body.get("search");
+            if (searchObj != null) {
+                request.setSearch(Boolean.parseBoolean(String.valueOf(searchObj)));
+            }
+
+            // 4. 生成本轮消息标识
+            String messageId = UUID.randomUUID().toString();
+            String turnsId = UUID.randomUUID().toString();
+            String contentId = UUID.randomUUID().toString();
+
+            // 5. 所有写 SSE 的动作放到后台线程，确保 emitter 已被 Spring 初始化后再写
+            final Long did = dialogId;
+            final String sid = sessionId;
+            final String userMsgId = userMessage != null && str(userMessage.get("id")) != null ? str(userMessage.get("id")) : UUID.randomUUID().toString();
+            final String finalContent = content;
+            CompletableFuture.runAsync(() -> {
+                currentSessionId.set(sid);
+                try {
+                    // 等待 Spring 把 emitter 绑定到响应（方法返回后才初始化 handler），避免首帧 send 丢失
+                    Thread.sleep(120);
+                    // 先发 user_message 事件，把用户消息加入前端消息列表
+                    Map<String, Object> userContent = new LinkedHashMap<>();
+                    userContent.put("id", contentId);
+                    userContent.put("content", finalContent != null ? finalContent : "");
+                    userContent.put("state", Map.of("isStreaming", false));
+                    Map<String, Object> userMsg = new LinkedHashMap<>();
+                    userMsg.put("id", userMsgId);
+                    userMsg.put("role", "user");
+                    userMsg.put("contents", java.util.List.of(userContent));
+                    userMsg.put("state", Map.of("isStreaming", false));
+                    Map<String, Object> userEvent = new LinkedHashMap<>();
+                    userEvent.put("type", "user_message");
+                    userEvent.put("userMessage", userMsg);
+                    sendEvent(emitter, userEvent);
+
+                    Map<String, Object> createEvent = new LinkedHashMap<>();
+                    createEvent.put("type", "create");
+                    createEvent.put("messageId", messageId);
+                    createEvent.put("turnsId", turnsId);
+                    createEvent.put("contentId", contentId);
+                    createEvent.put("modelName", modelToUse);
+                    createEvent.put("parentId", userMsgId);
+                    sendEvent(emitter, createEvent);
+                    log.info("[ChatStream] 已发送 create sessionId={}", sid);
+                } catch (Exception e) {
+                    log.warn("[ChatStream] 发送 create 失败: {}", e.getMessage());
+                }
+
+                StringBuilder fullReply = new StringBuilder();
+                final boolean[] firstChunkLogged = { false };
+
+                // 6. 调模型流式
+                aiChatFacadeService.stream(request,
+                        chunk -> {
+                            if (chunk != null && !chunk.isEmpty()) {
+                                if (!firstChunkLogged[0]) {
+                                    firstChunkLogged[0] = true;
+                                    log.info("[ChatStream] 收到首个 chunk sessionId={}, len={}", sid, chunk.length());
+                                } else {
+                                    log.info("[ChatStream] 收到 chunk sessionId={}, len={}, preview={}", sid, chunk.length(), chunk.length() > 20 ? chunk.substring(0, 20) : chunk);
+                                }
+                                fullReply.append(chunk);
+                                Map<String, Object> textEvent = new LinkedHashMap<>();
+                                textEvent.put("type", "text");
+                                textEvent.put("content", chunk);
+                                sendEvent(emitter, textEvent);
+                            }
+                        },
+                        reply -> {
+                            String finalText = reply != null ? reply : fullReply.toString();
+                            log.info("[ChatStream] 流式完成 sessionId={}, 回复长度={}", sid, finalText.length());
+                            try {
+                                aiDialogRecordService.addMessage(did, new ChatMessage("assistant", finalText));
+                            } catch (Exception e) {
+                                log.warn("[ChatStream] 保存助手消息失败 sessionId={}: {}", sid, e.getMessage());
+                            }
+                            Map<String, Object> finishEvent = new LinkedHashMap<>();
+                            finishEvent.put("type", "finish");
+                            finishEvent.put("finishReason", "stop");
+                            sendEvent(emitter, finishEvent);
+                            Map<String, Object> turnEndEvent = new LinkedHashMap<>();
+                            turnEndEvent.put("type", "turn_end");
+                            turnEndEvent.put("finishReason", "stop");
+                            turnEndEvent.put("content", finalText);
+                            turnEndEvent.put("messageId", messageId);
+                            turnEndEvent.put("contentId", contentId);
+                            sendEvent(emitter, turnEndEvent);
+                            sendDone(emitter);
+                            activeStreams.remove(sid);
+                            emitter.complete();
+                            currentSessionId.remove();
+                        },
+                        error -> {
+                            String msg = error != null && error.getMessage() != null ? error.getMessage() : "未知错误";
+                            log.error("[ChatStream] 流式失败 sessionId={}", sid, error);
+                            Map<String, Object> finishEvent = new LinkedHashMap<>();
+                            finishEvent.put("type", "finish");
+                            finishEvent.put("finishReason", "error");
+                            finishEvent.put("error", msg);
+                            sendEvent(emitter, finishEvent);
+                            Map<String, Object> turnEndEvent = new LinkedHashMap<>();
+                            turnEndEvent.put("type", "turn_end");
+                            turnEndEvent.put("finishReason", "error");
+                            turnEndEvent.put("error", msg);
+                            turnEndEvent.put("messageId", messageId);
+                            turnEndEvent.put("contentId", contentId);
+                            sendEvent(emitter, turnEndEvent);
+                            sendDone(emitter);
+                            activeStreams.remove(sid);
+                            emitter.complete();
+                            currentSessionId.remove();
+                        },
+                        thinking -> {
+                            if (thinking != null && !thinking.isEmpty()) {
+                                Map<String, Object> thinkEvent = new LinkedHashMap<>();
+                                thinkEvent.put("type", "think");
+                                thinkEvent.put("reasoningContent", thinking);
+                                sendEvent(emitter, thinkEvent);
+                            }
+                        }
+                );
+            });
+        } catch (Exception e) {
+            log.error("[ChatStream] 初始化流式失败 sessionId={}", sessionId, e);
+            Map<String, Object> finishEvent = new LinkedHashMap<>();
+            finishEvent.put("type", "finish");
+            finishEvent.put("finishReason", "error");
+            finishEvent.put("error", e.getMessage() != null ? e.getMessage() : "初始化失败");
+            sendEvent(emitter, finishEvent);
+            Map<String, Object> turnEndEvent = new LinkedHashMap<>();
+            turnEndEvent.put("type", "turn_end");
+            turnEndEvent.put("finishReason", "error");
+            sendEvent(emitter, turnEndEvent);
+            sendDone(emitter);
+            activeStreams.remove(sessionId);
+            emitter.complete();
+        }
+
+        return emitter;
+    }
+
+    /**
+    * 停止指定会话的流式输出。
+    * @param sessionId 会话ID，不允许为 null
+    * @return 结果映射，无数据时为空映射
+    */
+    @PostMapping("/stream/{sessionId}/stop")
+    public Map<String, Object> stop(@PathVariable String sessionId) {
+        SseEmitter emitter = activeStreams.get(sessionId);
+        if (emitter != null) {
+            try {
+                Map<String, Object> finishEvent = new LinkedHashMap<>();
+                finishEvent.put("type", "finish");
+                finishEvent.put("finishReason", "stop");
+                sendEvent(emitter, finishEvent);
+                Map<String, Object> turnEndEvent = new LinkedHashMap<>();
+                turnEndEvent.put("type", "turn_end");
+                turnEndEvent.put("finishReason", "stop");
+                sendEvent(emitter, turnEndEvent);
+                sendDone(emitter);
+            } catch (Exception ignored) {
+            }
+            try {
+                emitter.complete();
+            } catch (Exception ignored) {
+            }
+            activeStreams.remove(sessionId);
+        }
+        return Map.of("success", true);
+    }
+
+    // ==================== 内部方法 ====================
+
+    /**
+    * 从系统设置读取默认聊天模型。
+    * 优先级：配置的默认模型 → 第一个可用模型 → fallback
+    * @return 结果字符串
+    */
+    private String getDefaultModel() {
+        // 1. 从系统设置读取
+        String configured = sysAiGlobalSettingService.getValue("runtime", "default_chat_model")
+                .map(value -> value.trim())
+                .filter(value -> !value.isEmpty())
+                .orElse(null);
+        if (configured != null) {
+            return configured;
+        }
+        // 2. 没配置就 fallback
+        log.warn("[ChatStream] 未配置 default_chat_model，使用 fallback: {}", DEFAULT_MODEL_FALLBACK);
+        return DEFAULT_MODEL_FALLBACK;
+    }
+
+    /**
+     * 注册Cleanup。
+     *
+     * @param emitter 方法入参 emitter
+     * @param sessionId 会话ID，不允许为 null
+     */
+    private void registerCleanup(SseEmitter emitter, String sessionId) {
+        emitter.onCompletion(() -> {
+            if (sessionId != null) {
+                activeStreams.remove(sessionId);
+                rawOut.remove(sessionId);
+            }
+        });
+        emitter.onTimeout(() -> {
+            if (sessionId != null) {
+                activeStreams.remove(sessionId);
+                rawOut.remove(sessionId);
+            }
+            try {
+                emitter.complete();
+            } catch (Exception ignored) {
+            }
+        });
+        emitter.onError(t -> {
+            if (sessionId != null) {
+                activeStreams.remove(sessionId);
+                rawOut.remove(sessionId);
+            }
+        });
+    }
+
+    /**
+    * 发送一行裸 data 帧：data: <json>\n\n。
+    * @param emitter 方法入参 emitter
+    * @param event 方法入参 event
+    */
+    private void sendEvent(SseEmitter emitter, Map<String, Object> event) {
+        try {
+            String json = objectMapper.writeValueAsString(event);
+            writeRaw("data: " + json + "\n\n");
+        } catch (Exception e) {
+            log.debug("[ChatStream] 发送事件失败: {}", e.getMessage());
+        }
+    }
+
+    /**
+    * 发送 data: [DONE] 结束帧。
+    * @param emitter 方法入参 emitter
+    */
+    private void sendDone(SseEmitter emitter) {
+        try {
+            writeRaw("data: [DONE]\n\n");
+        } catch (Exception e) {
+            log.debug("[ChatStream] 发送 DONE 失败: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 直接写原始字节到当前 session 的响应输出流，flush 刷新。
+     * @param s 方法入参 s
+     */
+    private void writeRaw(String s) throws Exception {
+        String sid = currentSessionId.get();
+        if (sid != null) {
+            java.io.OutputStream os = rawOut.get(sid);
+            if (os != null) {
+                os.write(s.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                os.flush();
+                return;
+            }
+        }
+        // fallback：遍历所有活跃流（兼容旧逻辑）
+        for (java.io.OutputStream os : rawOut.values()) {
+            os.write(s.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            os.flush();
+        }
+    }
+
+    /**
+    * 解析前端 sessionId 到后端 dialogId。
+    * 数字 sessionId 直接使用；UUID 则首次落库一个会话并缓存映射。
+    * @param sessionId 会话ID，不允许为 null
+    * @return Long 对象
+    */
+    private Long resolveDialogId(String sessionId) {
+        if (sessionId != null && sessionId.matches("\\d+")) {
+            return Long.parseLong(sessionId);
+        }
+        if (sessionId != null && !sessionId.isBlank()) {
+            Long cached = sessionDialogMap.get(sessionId);
+            if (cached != null) {
+                return cached;
+            }
+        }
+        String title = "guada-" + (sessionId != null && sessionId.length() > 8 ? sessionId.substring(0, 8) : "chat");
+        AIDialog dialog = aiDialogRecordService.createDialog(title);
+        Long id = dialog.getId();
+        if (sessionId != null && !sessionId.isBlank()) {
+            sessionDialogMap.put(sessionId, id);
+        }
+        log.info("[ChatStream] 映射 sessionId={} -> dialogId={}", sessionId, id);
+        return id;
+    }
+
+    /**
+     * 字符串。
+     *
+     * @param o 方法入参 o
+     * @return 结果字符串
+     */
+    private static String str(Object o) {
+        return o != null ? String.valueOf(o) : null;
+    }
+
+    /**
+     * as映射。
+     *
+     * @param o 方法入参 o
+     * @return 结果映射，无数据时为空映射
+     */
+    @SuppressWarnings("unchecked")
+    private static Map<?, ?> asMap(Object o) {
+        return o instanceof Map ? (Map<?, ?>) o : null;
+    }
+}

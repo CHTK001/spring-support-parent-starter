@@ -445,6 +445,14 @@ public class AiBotChatService {
         return commands;
     }
 
+    /**
+     * 添加Command。
+     *
+     * @param commands 方法入参 commands
+     * @param prefix 前缀，不允许为 null
+     * @param name 名称，不允许为 null
+     * @param desc 描述，不允许为 null
+     */
     private void addCommand(List<Map<String, Object>> commands, String prefix, String name, String desc) {
         Map<String, Object> cmd = new LinkedHashMap<>(4);
         cmd.put("prefix", prefix);

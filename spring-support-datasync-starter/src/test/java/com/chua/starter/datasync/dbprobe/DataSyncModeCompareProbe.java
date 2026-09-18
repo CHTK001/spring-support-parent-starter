@@ -154,7 +154,11 @@ public final class DataSyncModeCompareProbe {
         }
         @Override public String sinkId() { return id; }
         @Override public void write(Flux<Map<String, Object>> rows) {
-            rows.doOnNext(m -> { if (count.incrementAndGet() >= exp) done.countDown(); }).subscribe();
+            rows.doOnNext(m -> {
+                if (count.incrementAndGet() >= exp) {
+                    done.countDown();
+                }
+            }).subscribe();
         }
         @Override public void close() {}
     }

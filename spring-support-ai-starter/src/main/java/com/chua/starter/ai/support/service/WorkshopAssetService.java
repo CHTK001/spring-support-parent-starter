@@ -322,6 +322,12 @@ public class WorkshopAssetService {
         return assetMapper.selectDistinctCollections();
     }
 
+    /**
+     * escapeLike。
+     *
+     * @param s 方法入参 s
+     * @return 结果字符串
+     */
     private static String escapeLike(String s) {
         return s.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
     }

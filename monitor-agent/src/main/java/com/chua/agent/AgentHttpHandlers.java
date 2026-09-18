@@ -167,7 +167,9 @@ public class AgentHttpHandlers {
         StringBuilder sb = new StringBuilder("[");
         if (files != null) {
             for (int i = 0; i < files.length; i++) {
-                if (i > 0) sb.append(",");
+                if (i > 0) {
+                    sb.append(",");
+                }
                 File f = files[i];
                 sb.append("{\"name\":\"").append(f.getName().replace("\"", "\\\""))
                   .append("\",\"isDir\":").append(f.isDirectory())
@@ -207,7 +209,9 @@ public class AgentHttpHandlers {
         StringBuilder sb = new StringBuilder("[");
         boolean first = true;
         for (Map.Entry<String, String> e : System.getenv().entrySet()) {
-            if (!first) sb.append(",");
+            if (!first) {
+                sb.append(",");
+            }
             sb.append("{\"name\":\"").append(e.getKey()).append("\",\"value\":\"").append(e.getValue().replace("\"", "\\\"")).append("\"}");
             first = false;
         }

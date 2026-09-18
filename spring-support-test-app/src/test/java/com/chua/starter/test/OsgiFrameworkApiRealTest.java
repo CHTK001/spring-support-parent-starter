@@ -517,6 +517,11 @@ class OsgiFrameworkApiRealTest {
     }
 
     /** 真实测试：ObjectContext 与 osgiLauncher 全流程结果一致（复用注入的 ObjectContext） */    @Test
+    /**
+     * 对象上下文AndLauncherConsistent。
+     *
+     * @throws Exception 当执行过程不满足前置条件时
+     */
     void objectContextAndLauncherConsistent() throws Exception {
         // 初始一致
         /**
@@ -773,11 +778,6 @@ class OsgiFrameworkApiRealTest {
                     try {
                         Files.deleteIfExists(p);
                     } catch (java.io.IOException e) {
-                        /**
-                        * uncheckedio异常。
-                        * @param e e
-                        * @return uncheckedio异常的结果
-                         */
                         throw new UncheckedIOException(e);
                     }
                 });
@@ -791,11 +791,6 @@ class OsgiFrameworkApiRealTest {
                 "-classpath", System.getProperty("java.class.path"),
                 srcFile.toString());
         if (result != 0) {
-            /**
-            * illegal状态异常。
-            * @param className 类名称
-            * @return illegal状态异常的结果
-             */
             throw new IllegalStateException("bundle 实现类编译失败: " + className);
         }
 

@@ -366,7 +366,8 @@ public class ProjectMetricServiceImpl implements ProjectMetricService {
         SshClients.Handle handle = null;
         try {
             handle = connectionManager.borrow(host, credential);
-            final SshClients.Handle borrowed = handle;            Future<String> future = collectExecutor.submit(() -> {
+            final SshClients.Handle borrowed = handle;
+            Future<String> future = collectExecutor.submit(() -> {
                 var result = borrowed.client().exec().command(command).execute();
                 return result.stdout() == null ? "" : result.stdout().trim();
             });

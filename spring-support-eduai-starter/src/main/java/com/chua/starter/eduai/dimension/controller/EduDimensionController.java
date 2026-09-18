@@ -56,6 +56,7 @@ public class EduDimensionController {
     *
     * @param false false
     * @return 列表主题的结果
+    * @param gradeLevel grade级别，不允许为 null
     */
     public ReturnResult<List<EduSubject>> listSubjects(@RequestParam(required = false) String gradeLevel) {
         return ReturnResult.ok(dimensionService.listSubjects(gradeLevel));
@@ -94,6 +95,7 @@ public class EduDimensionController {
     *
     * @param false false
     * @return 列表grades的结果
+    * @param gradeLevel grade级别，不允许为 null
     */
     public ReturnResult<List<EduGrade>> listGrades(@RequestParam(required = false) String gradeLevel) {
         return ReturnResult.ok(dimensionService.listGrades(gradeLevel));
@@ -208,6 +210,7 @@ public class EduDimensionController {
     *
     * @param false false
     * @return 列表teachers的结果
+    * @param subjectCode subject编码，不允许为 null
     */
     public ReturnResult<List<EduTeacher>> listTeachers(@RequestParam(required = false) String subjectCode) {
         return ReturnResult.ok(dimensionService.listTeachers(subjectCode));

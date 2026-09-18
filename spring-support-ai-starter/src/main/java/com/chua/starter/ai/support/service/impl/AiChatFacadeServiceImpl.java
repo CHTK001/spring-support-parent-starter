@@ -108,11 +108,6 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     public Map<String, Object> call(AiChatRequest request) {
         ChatClient client = resolveChatClient(request);
         if (client == null) {
-            /**
-            * illegal状态异常。
-            * @param request.getModel( 请求.获取模型(
-            * @return illegal状态异常的结果
-            */
             throw new IllegalStateException("No available ChatClient for model: " + request.getModel());
         }
         ChatClient configured = configureClient(client, request);
@@ -160,6 +155,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
 
         CompletableFuture.runAsync(() -> {
             try {
+                log.info("[AiChat] DBG chat call begin, promptLen={}, class={}", promptOf(request)==null?-1:promptOf(request).length(), configured.getClass().getName());
                 configured.chat(promptOf(request),
                         response -> {
                             if (response.getState() == com.chua.common.support.ai.chat.ChatResponse.State.STOP) {
@@ -187,12 +183,6 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                         },
                         () -> {
                             if (lastUsage[0] != null) {
-                                /**
-                                * enrich延迟。
-                                * @param lastUsage[0] 最后一个usage[0]
-                                * @param start 启动
-                                * @param System.currentTimeMillis( 系统.当前时间millis(
-                                */
                                 enrichLatency(lastUsage[0], start, System.currentTimeMillis(), firstTokenAt[0]);
                                 /**
                                 * recordusage。
@@ -220,7 +210,8 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                             emitter.completeWithError(error);
                         }
                 );
-            } catch (Exception e) {
+                log.info("[AiChat] DBG configured.chat() returned normally");
+            } catch (Throwable e) {
                 log.error("[AiChat] stream failed: model={}", request.getModel(), e);
                 if (onError != null) {
                     try {
@@ -392,6 +383,12 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         }
     }
 
+    /**
+     * 解析Aliases。
+     *
+     * @param content 内容，不允许为 null
+     * @return 结果列表，无数据时为空列表
+     */
     private List<String> parseAliases(String content) {
         if (content == null || content.isBlank()) {
             return new java.util.ArrayList<>();
@@ -408,6 +405,12 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         }
     }
 
+    /**
+     * 解析Db提供者By模型。
+     *
+     * @param model 模型，不允许为 null
+     * @return SysAi提供者 对象
+     */
     private SysAiProvider resolveDbProviderByModel(String model) {
         if (model == null || model.isBlank()) {
             return null;
@@ -470,29 +473,32 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                 }
                 return raw.model(model);
             }
- // 多 appKey：逐密钥构建客户端，按 提供者 负载均衡算法聚合（默认 failover = 首个 Key 优先）
-            AggregateChatClientSetting agg = new AggregateChatClientSetting();
-            String strategy = resolveLoadStrategy(provider);
-            agg.setStrategy(strategy);
-            List<AggregateChatClientSetting.ClientConfig> clients = new ArrayList<>(4); // 密钥数量不可预估
-            for (String key : keys) {
-                AggregateChatClientSetting.ClientConfig cc = new AggregateChatClientSetting.ClientConfig();
-                cc.setProvider(provider.getPlatform());
-                cc.setApiKey(key);
-                cc.setBaseUrl(provider.getBaseUrl());
-                cc.setModel(model);
-                cc.setProxy(provider.getProxy());
-                clients.add(cc);
+        // 多 appKey：逐密钥构建客户端，按 提供者 负载均衡算法聚合（默认 failover = 首个 Key 优先）
+        String strategy = resolveLoadStrategy(provider);
+        log.info("[AiChat] 构建多 AppKey 聚合客户端: provider={} model={} keys={} strategy={}",
+                provider.getProviderId(), model, keys.size(), strategy);
+        // 创建聚合客户端，先设置策略
+        AggregateChatClientSetting agg = new AggregateChatClientSetting();
+        agg.setStrategy(strategy);
+        AggregateChatClient aggregateClient = new AggregateChatClient(agg);
+        // 逐个创建底层客户端，设置 stream(true)
+        for (int i = 0; i < keys.size(); i++) {
+            String key = keys.get(i);
+            ChatClientSetting setting = ChatClientSetting.builder()
+                    .provider(provider.getPlatform())
+                    .appKey(key)
+                    .baseUrl(provider.getBaseUrl())
+                    .extraHeaders(extraHeaders)
+                    .proxy(provider.getProxy())
+                    .build();
+            ChatClient raw = ChatClient.create(setting);
+            if (raw != null) {
+                raw = raw.model(model);
+                raw = raw.stream(true); // 启用流式
+                aggregateClient.addClient("client-" + i, provider.getPlatform(), 1, raw);
             }
-            agg.setClients(clients);
-            log.info("[AiChat] 构建多 AppKey 聚合客户端: provider={} model={} keys={} strategy={}",
-                    provider.getProviderId(), model, keys.size(), strategy);
-            /**
-            * aggregate对话客户端。
-            * @param agg agg
-            * @return aggregate对话客户端的结果
-            */
-            return new AggregateChatClient(agg).model(model);
+        }
+        return aggregateClient.model(model);
         } catch (Exception e) {
             log.warn("[AiChat] 构建 DB ChatClient 失败 provider={} model={}: {}",
                     provider.getProviderId(), model, e.getMessage());
@@ -602,6 +608,12 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         if (request.getMaxTokens() != null) {
             c = c.maxTokens(request.getMaxTokens());
         }
+         if (request.getTopP() != null) {
+             c = c.topP(request.getTopP());
+         }
+         if (request.getFrequencyPenalty() != null) {
+             c = c.extraBody(java.util.Map.of("frequency_penalty", request.getFrequencyPenalty()));
+         }
         if (Boolean.TRUE.equals(request.getThink())) {
             c = c.thinking(true);
             if (request.getParameters() != null && request.getParameters().get("thinking_effort") != null) {
@@ -611,6 +623,8 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         if (Boolean.TRUE.equals(request.getSearch())) {
             c = c.smartSearch(true);
         }
+        // 启用流式
+        c = c.stream(Boolean.TRUE.equals(request.getStream()));
         if (request.getImageUrls() != null) {
             for (String imageUrl : request.getImageUrls()) {
                 if (imageUrl != null && !imageUrl.isBlank()) {
@@ -647,12 +661,6 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     * @param response 响应
     */
     private void recordUsage(ChatClient client, String callType, ChatSyncResponse response) {
-        /**
-        * recordusage。
-        * @param client 客户端
-        * @param callType call类型
-        * @param response.getUsage( 响应.获取usage(
-        */
         recordUsage(client, callType, response != null ? response.getUsage() : null);
     }
 
@@ -686,11 +694,6 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     * @param usage usage
     */
     private void recordUsage(com.chua.common.support.ai.AiUsage usage) {
-        /**
-        * recordusage。
-        * @param usage usage
-        * @param "chat_stream" "对话_流"
-        */
         recordUsage(usage, "chat_stream");
     }
 
