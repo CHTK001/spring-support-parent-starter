@@ -177,7 +177,7 @@ public class LoggingConfigHandler implements SyncMessageHandler {
     * 获取字符串
     *
     * @param data 数据
-    * @param key 钥匙
+    * @param key Key
     * @return 获取字符串的结果
     */
     private String getString(Map<String, Object> data, String key) {

@@ -38,7 +38,7 @@ public class LambdaQueryWrapperX<T> extends LambdaQueryWrapper<T> {
     * 入ifpresent
     *
     * @param column column
-    * @param values 价值观
+    * @param values 值
     * @return 入ifpresent的结果
     */
     public LambdaQueryWrapperX<T> inIfPresent(SFunction<T, ?> column, Collection<?> values) {
@@ -52,7 +52,7 @@ public class LambdaQueryWrapperX<T> extends LambdaQueryWrapper<T> {
     * 入ifpresent
     *
     * @param column column
-    * @param values 价值观
+    * @param values 值
     * @return 入ifpresent的结果
     */
     public LambdaQueryWrapperX<T> inIfPresent(SFunction<T, ?> column, Object... values) {
@@ -171,7 +171,7 @@ public class LambdaQueryWrapperX<T> extends LambdaQueryWrapper<T> {
     * betweenifpresent
     *
     * @param column column
-    * @param values 价值观
+    * @param values 值
     * @return betweenIfPresent的结果
     */
     public LambdaQueryWrapperX<T> betweenIfPresent(SFunction<T, ?> column, Object[] values) {

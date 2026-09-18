@@ -285,7 +285,7 @@ public class RpcResourceAnnotationBeanPostProcessor extends AbstractAnnotationBe
         beanDefinition.getPropertyValues().add(RpcAttribute.ID, referenceBeanName);
         beanDefinition.getPropertyValues().add("rpcClient", rpcClient);
 
- // 设置 attribute instead 的 财产 价值观
+ // 设置 attribute instead 的 财产 值
  // Beandefinition.设置attribute(常量.引用_PROPS, attributes);
         beanDefinition.setAttribute(RpcAttribute.INTERFACE_CLASS, injectedType);
         beanDefinition.setAttribute(RpcAttribute.INTERFACE_NAME, interfaceName);
@@ -300,7 +300,7 @@ public class RpcResourceAnnotationBeanPostProcessor extends AbstractAnnotationBe
  // Beandefinition.设置attribute(常量.对象_类型_ATTRIBUTE, 接口类);
 
         beanDefinitionRegistry.registerBeanDefinition(referenceBeanName, beanDefinition);
- // 引用Bean管理器.注册引用钥匙andBean名称(引用钥匙, 引用Bean名称);
+ // 引用Bean管理器.注册引用KeyandBean名称(引用Key, 引用Bean名称);
         return referenceBeanName;
     }
 
@@ -312,7 +312,7 @@ public class RpcResourceAnnotationBeanPostProcessor extends AbstractAnnotationBe
         BindResult<RpcProperties> bindResult = Binder.get(environment).bind(RpcProperties.PRE, RpcProperties.class);
         if(bindResult.isBound()) {
             rpcProperties = bindResult.get();
- // 未显式配置 令牌 时，由 access钥匙/secret钥匙/服务钥匙 派生，避免配置死区
+ // 未显式配置 令牌 时，由 accessKey/secretKey/服务Key 派生，避免配置死区
             if (rpcProperties.getConsumer().getToken() == null) {
                 rpcProperties.getConsumer().setToken(deriveToken(rpcProperties));
             }

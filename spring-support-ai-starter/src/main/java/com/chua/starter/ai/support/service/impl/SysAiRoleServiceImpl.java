@@ -46,7 +46,7 @@ public class SysAiRoleServiceImpl implements SysAiRoleService {
     public List<SysAiRole> list() {
         return sysAiRoleMapper.selectList(
                 Wrappers.lambdaQuery(SysAiRole.class)
-                        .eq(SysAiRole::getDelete, DELETE_NOT_DELETED)
+                        .eq(SysAiRole::getDeleted, DELETE_NOT_DELETED)
                         .orderByAsc(SysAiRole::getSort));
     }
 
@@ -59,7 +59,7 @@ public class SysAiRoleServiceImpl implements SysAiRoleService {
     public List<SysAiRole> listEnabled() {
         return sysAiRoleMapper.selectList(
                 Wrappers.lambdaQuery(SysAiRole.class)
-                        .eq(SysAiRole::getDelete, DELETE_NOT_DELETED)
+                        .eq(SysAiRole::getDeleted, DELETE_NOT_DELETED)
                         .eq(SysAiRole::getStatus, STATUS_ENABLED)
                         .orderByAsc(SysAiRole::getSort));
     }
@@ -92,7 +92,7 @@ public class SysAiRoleServiceImpl implements SysAiRoleService {
         return sysAiRoleMapper.selectOne(
                 Wrappers.lambdaQuery(SysAiRole.class)
                         .eq(SysAiRole::getCode, code)
-                        .eq(SysAiRole::getDelete, DELETE_NOT_DELETED)
+                        .eq(SysAiRole::getDeleted, DELETE_NOT_DELETED)
                         .last("LIMIT 1"));
     }
 
@@ -107,8 +107,8 @@ public class SysAiRoleServiceImpl implements SysAiRoleService {
         if (role.getStatus() == null) {
             role.setStatus(STATUS_ENABLED);
         }
-        if (role.getDelete() == null) {
-            role.setDelete(DELETE_NOT_DELETED);
+        if (role.getDeleted() == null) {
+            role.setDeleted(DELETE_NOT_DELETED);
         }
         if (role.getSort() == null) {
             role.setSort(0);

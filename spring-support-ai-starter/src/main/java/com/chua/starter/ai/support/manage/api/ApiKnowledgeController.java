@@ -96,7 +96,7 @@ public class ApiKnowledgeController {
     private final Map<String, Map<String, Object>> bases = new ConcurrentHashMap<>();
 
     /**
-    * 标签表：钥匙 → 标签
+    * 标签表：Key → 标签
     */
     private final Map<String, Map<String, Object>> tags = new ConcurrentHashMap<>();
 
@@ -1065,7 +1065,7 @@ public class ApiKnowledgeController {
             /**
             * api异常。
             * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
-            * @param key 钥匙
+            * @param key Key
             * @return api异常的结果
             */
             throw new ApiException(ApiErrorCode.NOT_FOUND, "标签不存在: " + key);
@@ -1086,7 +1086,7 @@ public class ApiKnowledgeController {
     @DeleteMapping("/tags/{key}")
     /**
     * 删除标签。
-    * @param key 钥匙
+    * @param key Key
     * @return 删除标签的结果
     */
     public ApiResult<Void> deleteTag(@PathVariable String key) {
@@ -1094,7 +1094,7 @@ public class ApiKnowledgeController {
             /**
             * api异常。
             * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
-            * @param key 钥匙
+            * @param key Key
             * @return api异常的结果
             */
             throw new ApiException(ApiErrorCode.NOT_FOUND, "标签不存在: " + key);
@@ -1651,7 +1651,7 @@ public class ApiKnowledgeController {
     * 绑定存储键。
     * @param kind 种类
     * @param targetId Targetid
-    * @return binding钥匙的结果
+    * @return bindingKey的结果
     */
     private String bindingKey(String kind, String targetId) {
         return kind + ":" + targetId;

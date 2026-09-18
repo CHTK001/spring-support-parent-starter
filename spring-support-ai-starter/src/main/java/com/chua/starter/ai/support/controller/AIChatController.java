@@ -185,7 +185,7 @@ public class AIChatController extends BaseAiController {
             request.setMessages(msgList);
         }
 
- // 注入 app钥匙 与分组 标识 到扩展参数，供用量统计与配额同步使用
+ // 注入 appKey 与分组 标识 到扩展参数，供用量统计与配额同步使用
         String appKey = resolveAppKey(servletRequest);
         if (appKey != null) {
             Map<String, Object> parameters = request.getParameters();

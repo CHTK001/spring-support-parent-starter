@@ -41,7 +41,7 @@ public interface SimpleRedisService {
         /**
         * increment。
         * @param indicator indicator
-        * @param key 钥匙
+        * @param key Key
         * @param ofSeconds 的seconds
         */
         increment(indicator, key, ofSeconds);
@@ -66,7 +66,7 @@ public interface SimpleRedisService {
         /**
         * decrement。
         * @param indicator indicator
-        * @param key 钥匙
+        * @param key Key
         * @param ofSeconds 的seconds
         */
         decrement(indicator, key, ofSeconds);

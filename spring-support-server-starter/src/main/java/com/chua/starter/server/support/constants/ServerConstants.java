@@ -8,7 +8,7 @@ package com.chua.starter.server.support.constants;
  */
 public final class ServerConstants {
 
-    /** 终端 web套接字 端点路径 */
+    /** 终端 webSocket 端点路径 */
     public static final String WEBSOCKET_TERMINAL_PATH = "/ws/ms/server/terminal";
 
     /** 接口根路径 */

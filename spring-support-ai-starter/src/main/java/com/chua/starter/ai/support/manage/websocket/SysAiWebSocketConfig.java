@@ -7,7 +7,7 @@ import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
 import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
 
 /**
-* Nomifun /ws web套接字 配置。
+* Nomifun /ws webSocket 配置。
 *
 * <p>注册 {@code /ws} 端点，供前端桌面壳模式建立流式/推送连接。
 * 子协议协商通过 {@link SysAiWebSocketHandler#getSubProtocols()} 声明，

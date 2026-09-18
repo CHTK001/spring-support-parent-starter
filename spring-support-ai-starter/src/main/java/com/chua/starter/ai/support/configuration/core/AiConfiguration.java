@@ -28,7 +28,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
-* AI 核心自动配置 — 全局 对话客户端 和 智能体 注册体系。
+* AI 核心自动配置 — 全局 对话客户端 和 Agent 注册体系。
 *
 * <p>Spring Boot 专属层，职责：</p>
 * <ul>
@@ -74,16 +74,16 @@ public class AiConfiguration {
     }
 
     /**
-    * 全局 智能体 注册中心。
-    * @return 智能体registry的结果
+    * 全局 Agent 注册中心。
+    * @return Agentregistry的结果
     */
     @Bean
     @ConditionalOnMissingBean
     public AgentRegistry agentRegistry() {
         log.info("[AiConfiguration] 创建 AgentRegistry");
         /**
-        * 智能体registry。
-        * @return 智能体registry的结果
+        * Agentregistry。
+        * @return Agentregistry的结果
         */
         return new AgentRegistry();
     }
@@ -176,7 +176,7 @@ public class AiConfiguration {
 
         log.info("[AiConfiguration] ChatClientRegistry 初始化完成，共 {} 个客户端", chatClientRegistry.size());
 
- // 初始化主 智能体
+ // 初始化主 Agent
         ChatClient defaultClient = chatClientRegistry.getDefault();
         if (defaultClient != null) {
             try {

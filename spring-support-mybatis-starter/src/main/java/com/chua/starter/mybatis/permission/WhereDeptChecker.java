@@ -1,6 +1,5 @@
 package com.chua.starter.mybatis.permission;
 
-import lombok.Getter;
 import net.sf.jsqlparser.expression.BinaryExpression;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.schema.Column;
@@ -19,7 +18,6 @@ public class WhereDeptChecker {
     private final String tableAlias;
     /** 列名称 */
     private final String columnName;
-    @Getter
     /** 当前表 */
     private Table currentTable;
 

@@ -645,9 +645,9 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
         result.setMessage(response.getStatus() != null ? response.getStatus().name() : null);
         result.setRefundAmountFen(response.getAmount() != null && response.getAmount().getRefund() != null
                 /**
-                * long价值观。
+                * long值。
                 * @param response.getAmount( 响应.获取amount(
-                * @return long价值观的结果
+                * @return long值的结果
                 */
                 ? longValue(response.getAmount().getRefund())
                 : fallbackRefundAmountFen);
@@ -656,10 +656,10 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
     }
 
     /**
-    * long价值观
+    * long值
     *
-    * @param value 价值观
-    * @return long价值观的结果
+    * @param value 值
+    * @return long值的结果
     */
     private Long longValue(Number value) {
         return value == null ? null : value.longValue();
@@ -752,8 +752,8 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
     * 放入if是否拥有文本
     *
     * @param body 主体
-    * @param key 钥匙
-    * @param value 价值观
+    * @param key Key
+    * @param value 值
     */
     private void putIfHasText(Map<String, Object> body, String key, String value) {
         if (StringUtils.hasText(value)) {
@@ -765,7 +765,7 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
     * 第一个文本
     *
     * @param body 主体
-    * @param keys 钥匙
+    * @param keys Key
     * @return 第一个文本的结果
     */
     private String firstText(Map<String, Object> body, String... keys) {
@@ -790,7 +790,7 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
     /**
     * Url编码
     *
-    * @param value 价值观
+    * @param value 值
     * @return urlEncode的结果
     */
     private String urlEncode(String value) {
@@ -800,7 +800,7 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
     /**
     * 转为json
     *
-    * @param value 价值观
+    * @param value 值
     * @return 转为json的结果
     */
     private String toJson(Object value) {
@@ -814,7 +814,7 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
     /**
     * 第一个nonblank
     *
-    * @param values 价值观
+    * @param values 值
     * @return 第一个nonblank的结果
     */
     private String firstNonBlank(String... values) {
@@ -829,7 +829,7 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
     /**
     * required文本
     *
-    * @param value 价值观
+    * @param value 值
     * @param message 消息
     * @return required文本的结果
     */

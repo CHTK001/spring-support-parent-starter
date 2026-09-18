@@ -59,7 +59,7 @@ public class JobAnnotationScanner implements BeanPostProcessor, SmartInitializin
             /**
     * 注册处理器。
     * @param bean Bean
-    * @param targetClass Target类
+    * @param targetClass 目标类
     * @param entry.getKey( entry.获取键(
     */
             registerHandler(bean, targetClass, entry.getKey(), entry.getValue());

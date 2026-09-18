@@ -1,7 +1,7 @@
 package com.chua.starter.common.support.network;
 
 /**
-* 用户-智能体 工具。
+* 用户-Agent 工具。
 *
 * @since 4.0.0.42
 * @author CH
@@ -9,24 +9,24 @@ package com.chua.starter.common.support.network;
 public final class UserAgent {
 
     /**
-    * 用户智能体。
+    * 用户Agent。
     */
     private UserAgent() {
     }
 
     /**
-    * 解析 用户-智能体 字符串。
+    * 解析 用户-Agent 字符串。
     *
-    * @param userAgentString 用户-智能体 字符串
+    * @param userAgentString 用户-Agent 字符串
     * @return UserAgent 实例
     */
     public static UserAgentInfo parseUserAgentString(String userAgentString) {
         if (userAgentString == null || userAgentString.isBlank()) {
             /**
-            * 用户智能体信息。
+            * 用户Agent信息。
             * @param null 空
             * @param null 空
-            * @return 用户智能体信息的结果
+            * @return 用户Agent信息的结果
             */
             return new UserAgentInfo(null, null);
         }
@@ -59,17 +59,17 @@ public final class UserAgent {
         }
 
         /**
-        * 用户智能体信息。
+        * 用户Agent信息。
         * @param browser browser
         * @param os os
-        * @return 用户智能体信息的结果
+        * @return 用户Agent信息的结果
         */
         return new UserAgentInfo(browser, os);
     }
 
     /**
     * 是否爬虫。
-    * @param userAgent 用户智能体
+    * @param userAgent 用户Agent
     * @return 是否爬虫的结果
     */
     public static boolean isCrawler(String userAgent) {
@@ -81,7 +81,7 @@ public final class UserAgent {
     }
 
     /**
-    * 用户-智能体 信息。
+    * 用户-Agent 信息。
     */
     public static final class UserAgentInfo {
         /** Browser */
@@ -90,10 +90,10 @@ public final class UserAgent {
         private final OperatingSystem operatingSystem;
 
         /**
-        * 用户智能体信息。
+        * 用户Agent信息。
         * @param browser browser
         * @param operatingSystem operating系统
-        * @return 用户智能体信息的结果
+        * @return 用户Agent信息的结果
         */
         public UserAgentInfo(Browser browser, OperatingSystem operatingSystem) {
             this.browser = browser;

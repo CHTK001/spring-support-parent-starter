@@ -953,7 +953,7 @@ public class MonitorController {
     /**
     * 获取当前系统 Redis 信息（信息 关键指标）。
     * <p>
-    * 直接读取应用自身连接的 Redis（spring.数据.Redis），与监控资产/智能体 无关；
+    * 直接读取应用自身连接的 Redis（spring.数据.Redis），与监控资产/Agent 无关；
     * 无 Redis 配置时前端不显示该菜单。
     * </p>
     *

@@ -133,9 +133,9 @@ public class SpiderRequestNode implements FlowNode {
         String url = envResolver.resolve(props.getString("url"));
         if (url == null || url.isEmpty()) {
             /**
-            * illegal参数异常。
+            * IllegalArgumentException。
             * @param 参数" 参数"
-            * @return illegal参数异常的结果
+            * @return IllegalArgumentException的结果
             */
             throw new IllegalArgumentException("spider.request 节点缺少 url 参数");
         }

@@ -83,7 +83,7 @@ public interface BaseMapperX<T> extends MPJBaseMapper<T> {
     * 选择One
     *
     * @param field 字段
-    * @param value 价值观
+    * @param value 值
     * @return 选择one的结果
     */
     default T selectOne(String field, Object value) {
@@ -94,7 +94,7 @@ public interface BaseMapperX<T> extends MPJBaseMapper<T> {
     * 选择One
     *
     * @param field 字段
-    * @param value 价值观
+    * @param value 值
     * @return 选择one的结果
     */
     default T selectOne(SFunction<T, ?> field, Object value) {
@@ -130,11 +130,11 @@ public interface BaseMapperX<T> extends MPJBaseMapper<T> {
     /**
     * 选择One
     * @param field1 字段1
-    * @param value1 价值观1
+    * @param value1 值1
     * @param field2 字段2
-    * @param value2 价值观2
+    * @param value2 值2
     * @param field3 字段3
-    * @param value3 价值观3
+    * @param value3 值3
     */
     default T selectOne(SFunction<T, ?> field1, Object value1, SFunction<T, ?> field2, Object value2,
                         SFunction<T, ?> field3, Object value3) {
@@ -155,7 +155,7 @@ public interface BaseMapperX<T> extends MPJBaseMapper<T> {
     * 选择计算数量
     *
     * @param field 字段
-    * @param value 价值观
+    * @param value 值
     * @return 选择数量的结果
     */
     default Long selectCount(String field, Object value) {
@@ -166,7 +166,7 @@ public interface BaseMapperX<T> extends MPJBaseMapper<T> {
     * 选择计算数量
     *
     * @param field 字段
-    * @param value 价值观
+    * @param value 值
     * @return 选择数量的结果
     */
     default Long selectCount(SFunction<T, ?> field, Object value) {
@@ -186,7 +186,7 @@ public interface BaseMapperX<T> extends MPJBaseMapper<T> {
     * 选择列表
     *
     * @param field 字段
-    * @param value 价值观
+    * @param value 值
     * @return 选择列表的结果
     */
     default List<T> selectList(String field, Object value) {
@@ -197,7 +197,7 @@ public interface BaseMapperX<T> extends MPJBaseMapper<T> {
     * 选择列表
     *
     * @param field 字段
-    * @param value 价值观
+    * @param value 值
     * @return 选择列表的结果
     */
     default List<T> selectList(SFunction<T, ?> field, Object value) {
@@ -208,7 +208,7 @@ public interface BaseMapperX<T> extends MPJBaseMapper<T> {
     * 选择列表
     *
     * @param field 字段
-    * @param values 价值观
+    * @param values 值
     * @return 选择列表的结果
     */
     default List<T> selectList(String field, Collection<?> values) {
@@ -222,7 +222,7 @@ public interface BaseMapperX<T> extends MPJBaseMapper<T> {
     * 选择列表
     *
     * @param field 字段
-    * @param values 价值观
+    * @param values 值
     * @return 选择列表的结果
     */
     default List<T> selectList(SFunction<T, ?> field, Collection<?> values) {
@@ -238,7 +238,7 @@ public interface BaseMapperX<T> extends MPJBaseMapper<T> {
     *
     * @param leField le字段
     * @param geField ge字段
-    * @param value 价值观
+    * @param value 值
     * @return 选择列表的结果
     */
     default List<T> selectList(SFunction<T, ?> leField, SFunction<T, ?> geField, Object value) {
@@ -334,7 +334,7 @@ public interface BaseMapperX<T> extends MPJBaseMapper<T> {
     * 删除
     *
     * @param field 字段
-    * @param value 价值观
+    * @param value 值
     * @return 删除的结果
     */
     default int delete(String field, String value) {
@@ -345,7 +345,7 @@ public interface BaseMapperX<T> extends MPJBaseMapper<T> {
     * 删除
     *
     * @param field 字段
-    * @param value 价值观
+    * @param value 值
     * @return 删除的结果
     */
     default int delete(SFunction<T, ?> field, Object value) {

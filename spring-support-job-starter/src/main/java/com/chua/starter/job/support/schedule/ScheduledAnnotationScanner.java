@@ -68,7 +68,7 @@ public class ScheduledAnnotationScanner implements BeanPostProcessor, SmartIniti
         for (java.util.Map.Entry<Method, Scheduled> entry : annotated.entrySet()) {
             /**
     * 调度。
-    * @param targetClass Target类
+    * @param targetClass 目标类
     * @param bean Bean
     * @param entry.getKey( entry.获取键(
     */

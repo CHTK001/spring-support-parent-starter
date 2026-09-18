@@ -21,7 +21,7 @@ import java.util.stream.Collectors;
 * 通用能力配置控制器基类。
 *
 * <p>按指定分组（如 image / layout）读取 GlobalSettingProvider SPI 定义的配置项，
-* 返回 {字段,价值观,价值观类型,description,排序}，供前端 {@code CapabilityConfigForm} 数据驱动渲染。
+* 返回 {字段,值,值类型,description,排序}，供前端 {@code CapabilityConfigForm} 数据驱动渲染。
 * 更新时整组替换。</p>
 *
 * <p>子类只需声明分组，并配置 {@code @RequestMapping} 即可。</p>

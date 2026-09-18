@@ -173,8 +173,8 @@ public class ApiMcpController {
 
     @GetMapping("/agent-configs")
     /**
-    * 智能体配置。
-    * @return 智能体配置的结果
+    * Agent配置。
+    * @return Agent配置的结果
     */
     public ApiResult<List<Map<String, Object>>> agentConfigs() {
         return ApiResult.ok(new ArrayList<>());

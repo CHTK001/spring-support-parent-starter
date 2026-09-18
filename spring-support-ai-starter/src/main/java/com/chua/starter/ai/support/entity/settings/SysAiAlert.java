@@ -13,7 +13,7 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
-* 告警规则表，针对 app钥匙 用量/费用/异常的阈值告警。
+* 告警规则表，针对 appKey 用量/费用/异常的阈值告警。
 *
 * @since 2026-08-03
 * @author CH
@@ -47,10 +47,10 @@ public class SysAiAlert implements Serializable {
     private String alertName;
 
     /**
-    * 关联 app钥匙 标识（0 表示全局）
+    * 关联 appKey 标识（0 表示全局）
     */
     /**
-    * 关联 app钥匙 标识
+    * 关联 appKey 标识
     */
     @TableField("sys_ai_alert_app_key_id")
     @Schema(description = "关联 AppKey ID")

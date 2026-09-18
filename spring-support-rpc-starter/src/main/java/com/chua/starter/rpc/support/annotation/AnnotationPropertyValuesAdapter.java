@@ -37,10 +37,10 @@ public class AnnotationPropertyValuesAdapter implements PropertyValues {
     }
 
     /**
-    * 创建 注解财产价值观适配器 实例
+    * 创建 注解财产值适配器 实例
     * @param annotation 注解
     * @param propertyResolver 财产解析器
-    * @param ignoreDefaultValue ignore默认价值观
+    * @param ignoreDefaultValue ignore默认值
     * @param ignoreAttributeNames ignoreattribute名称
     * @param false false
     * @param false false
@@ -64,7 +64,7 @@ public class AnnotationPropertyValuesAdapter implements PropertyValues {
     }
 
     /**
-    * 创建 注解财产价值观适配器 实例
+    * 创建 注解财产值适配器 实例
     * @param annotation 注解
     * @param propertyResolver 财产解析器
     * @param ignoreAttributeNames ignoreattribute名称
@@ -88,13 +88,13 @@ public class AnnotationPropertyValuesAdapter implements PropertyValues {
     }
 
     @Override
-    /** 获取财产价值观 */
+    /** 获取财产值 */
     public PropertyValue[] getPropertyValues() {
         return delegate.getPropertyValues();
     }
 
     @Override
-    /** 获取财产价值观 */
+    /** 获取财产值 */
     public PropertyValue getPropertyValue(String propertyName) {
         return delegate.getPropertyValue(propertyName);
     }

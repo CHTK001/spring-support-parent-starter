@@ -190,18 +190,18 @@ public class CaptchaProvider {
         private String verifyCodeBase64;
 
         /**
-        * 获取验证编码钥匙
+        * 获取验证编码Key
         *
-        * @return 获取验证编码钥匙的结果
+        * @return 获取验证编码Key的结果
         */
         public String getVerifyCodeKey() {
             return verifyCodeKey;
         }
 
         /**
-        * 设置验证编码钥匙
+        * 设置验证编码Key
         *
-        * @param verifyCodeKey 验证编码钥匙
+        * @param verifyCodeKey 验证编码Key
         */
         public void setVerifyCodeKey(String verifyCodeKey) {
             this.verifyCodeKey = verifyCodeKey;

@@ -28,9 +28,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
-* @价值观注解Bean后置处理器
+* @值注解Bean后置处理器
 * <p>
-* 在Bean初始化后扫描@价值观注解，注入配置值并支持热更新和配置缓存。
+* 在Bean初始化后扫描@值注解，注入配置值并支持热更新和配置缓存。
 * </p>
 *
 * <h3>功能</h3>
@@ -81,15 +81,15 @@ public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, Envi
 
     /**
     * 配置值缓存
-    * 钥匙: 配置键
-    * 价值观: 缓存的配置值
+    * Key: 配置键
+    * 值: 缓存的配置值
     */
     private final Map<String, String> configValueCache = new ConcurrentHashMap<>();
 
     /**
     * 绑定信息映射
-    * 钥匙: 配置键
-    * 价值观: 绑定信息列表
+    * Key: 配置键
+    * 值: 绑定信息列表
     */
     private final Map<String, List<ValueBindingInfo>> bindingsByKey = new ConcurrentHashMap<>();
 
@@ -105,8 +105,8 @@ public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, Envi
 
     /**
     * 配置刷新时间缓存
-    * 钥匙: 配置键
-    * 价值观: 上次刷新时间戳
+    * Key: 配置键
+    * 值: 上次刷新时间戳
     */
     private final Map<String, Long> lastRefreshTimeByKey = new ConcurrentHashMap<>();
 
@@ -230,10 +230,10 @@ public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, Envi
             
             // 注入初始值
             /**
-            * inject字段价值观。
+            * inject字段值。
             * @param bean Bean
             * @param field 字段
-            * @param value 价值观
+            * @param value 值
             */
             injectFieldValue(bean, field, value);
 
@@ -282,10 +282,10 @@ public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, Envi
             
             // 注入初始值
             /**
-            * inject方法价值观。
+            * inject方法值。
             * @param bean Bean
             * @param method 方法
-            * @param value 价值观
+            * @param value 值
             */
             injectMethodValue(bean, method, value);
 
@@ -431,8 +431,8 @@ public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, Envi
             String defaultValue = matcher.group(2);
             /**
             * 解析expression。
-            * @param key 钥匙
-            * @param defaultValue 默认价值观
+            * @param key Key
+            * @param defaultValue 默认值
             * @return 解析expression的结果
             */
             return new ParsedExpression(key, defaultValue);
@@ -473,8 +473,8 @@ public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, Envi
         private final String configKey;
 
         /**
-        * 价值观配置监听器。
-        * @param configKey 配置钥匙
+        * 值配置监听器。
+        * @param configKey 配置Key
         */
         ValueConfigListener(String configKey) {
             this.configKey = configKey;
@@ -483,9 +483,9 @@ public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, Envi
         @Override
         /**
         * on改变
-        * @param key 钥匙
-        * @param oldValue 旧价值观
-        * @param newValue 新价值观
+        * @param key Key
+        * @param oldValue 旧值
+        * @param newValue 新值
         */
         public void onChange(String key, String oldValue, String newValue) {
  // 由 on更新 处理
@@ -494,8 +494,8 @@ public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, Envi
         @Override
         /**
         * On删除
-        * @param key 钥匙
-        * @param oldValue 旧价值观
+        * @param key Key
+        * @param oldValue 旧值
         */
         public void onDelete(String key, String oldValue) {
             List<ValueBindingInfo> bindings = bindingsByKey.get(configKey);
@@ -506,7 +506,7 @@ public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, Envi
             // 更新缓存
             /**
             * 更新缓存。
-            * @param configKey 配置钥匙
+            * @param configKey 配置Key
             * @param null 空
             */
             updateCache(configKey, null);
@@ -516,8 +516,8 @@ public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, Envi
                 /**
                 * 更新binding。
                 * @param binding binding
-                * @param oldValue 旧价值观
-                * @param binding.defaultValue binding.默认价值观
+                * @param oldValue 旧值
+                * @param binding.defaultValue binding.默认值
                 */
                 updateBinding(binding, oldValue, binding.defaultValue);
             }
@@ -526,9 +526,9 @@ public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, Envi
         @Override
         /**
         * On更新
-        * @param key 钥匙
-        * @param oldValue 旧价值观
-        * @param newValue 新价值观
+        * @param key Key
+        * @param oldValue 旧值
+        * @param newValue 新值
         */
         public void onUpdate(String key, String oldValue, String newValue) {
             List<ValueBindingInfo> bindings = bindingsByKey.get(configKey);
@@ -549,8 +549,8 @@ public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, Envi
             // 更新缓存
             /**
             * 更新缓存。
-            * @param configKey 配置钥匙
-            * @param newValue 新价值观
+            * @param configKey 配置Key
+            * @param newValue 新值
             */
             updateCache(configKey, newValue);
 
@@ -567,8 +567,8 @@ public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, Envi
                 /**
                 * 更新binding。
                 * @param binding binding
-                * @param oldValue 旧价值观
-                * @param resolvedValue resolved价值观
+                * @param oldValue 旧值
+                * @param resolvedValue resolved值
                 */
                 updateBinding(binding, oldValue, resolvedValue);
             }
@@ -592,13 +592,13 @@ public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, Envi
             // 更新值
             if (binding.field() != null) {
                 /**
-                * inject字段价值观。
+                * inject字段值。
                 * @param binding.bean( binding.Bean(
                 */
                 injectFieldValue(binding.bean(), binding.field(), newValue);
             } else if (binding.method() != null) {
                 /**
-                * inject方法价值观。
+                * inject方法值。
                 * @param binding.bean( binding.Bean(
                 */
                 injectMethodValue(binding.bean(), binding.method(), newValue);
@@ -624,8 +624,8 @@ public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, Envi
 
     /**
     * 解析后的表达式
-    * @param key 钥匙
-    * @param defaultValue 默认价值观
+    * @param key Key
+    * @param defaultValue 默认值
     * @return 解析expression的结果
     */
     private record ParsedExpression(String key, String defaultValue) {

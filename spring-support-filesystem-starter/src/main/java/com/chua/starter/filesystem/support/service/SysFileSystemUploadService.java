@@ -28,7 +28,7 @@ public interface SysFileSystemUploadService extends IService<SysFileSystemUpload
     * @param totalChunks  总分片数
     * @param storageType  存储类型
     * @param bucket       存储桶
-    * @param key          对象 钥匙
+    * @param key          对象 Key
     * @param contentType  内容类型
     * @return 创建后的任务实体
     */

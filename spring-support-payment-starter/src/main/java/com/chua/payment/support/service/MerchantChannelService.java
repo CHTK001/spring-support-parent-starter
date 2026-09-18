@@ -74,16 +74,16 @@ public interface MerchantChannelService {
     List<PaymentMethodGuideVO> listCatalog();
 
     /**
-    * encryptapi钥匙。
-    * @param apiKey api钥匙
-    * @return encryptapi钥匙的结果
+    * encryptapiKey。
+    * @param apiKey apiKey
+    * @return encryptapiKey的结果
     */
     String encryptApiKey(String apiKey);
 
     /**
-    * decryptapi钥匙。
-    * @param encryptedKey encrypted钥匙
-    * @return decryptapi钥匙的结果
+    * decryptapiKey。
+    * @param encryptedKey encryptedKey
+    * @return decryptapiKey的结果
     */
     String decryptApiKey(String encryptedKey);
 

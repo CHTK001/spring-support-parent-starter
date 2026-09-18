@@ -14,7 +14,7 @@ import java.util.Optional;
 * 主机采集 提供者 注册中心
 * <p>
 * 启动时扫描全部 {@link HostCollectProvider} Bean，按 {@link HostCollectType} 建索引，
-* 调度器 / 智能体 上报端点据此路由到具体采集实现。
+* 调度器 / Agent 上报端点据此路由到具体采集实现。
 * </p>
 *
 * @author CH

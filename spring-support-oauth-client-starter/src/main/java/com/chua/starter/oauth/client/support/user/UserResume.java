@@ -154,7 +154,7 @@ public class UserResume {
     /**
     * 获取期权
     *
-    * @param key 钥匙
+    * @param key Key
     * @return 获取期权的结果
     */
     public Object getOption(String key) {

@@ -3,7 +3,7 @@ package com.chua.starter.sync.support.message;
 import java.util.Map;
 
 /**
-* web套接字 推送消息体
+* webSocket 推送消息体
 * 用于在同步任务执行过程中向前端推送实时状态、日志、进度等信息
 *
 * @since 2024/12/19

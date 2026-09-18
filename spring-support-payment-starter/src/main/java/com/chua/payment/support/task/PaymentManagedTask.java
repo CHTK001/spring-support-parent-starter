@@ -9,7 +9,7 @@ public interface PaymentManagedTask {
 
     /**
     * 唯一任务编码
-    * @return 任务钥匙的结果
+    * @return 任务Key的结果
     */
     String taskKey();
 

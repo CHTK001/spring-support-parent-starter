@@ -91,7 +91,7 @@ public class CustomHttpServletRequestWrapper extends HttpServletRequestWrapper {
     }
 
     @Override
-    /** 获取参数价值观 */
+    /** 获取参数值 */
     public String[] getParameterValues(String name) {
         return super.getParameterValues(name);
     }

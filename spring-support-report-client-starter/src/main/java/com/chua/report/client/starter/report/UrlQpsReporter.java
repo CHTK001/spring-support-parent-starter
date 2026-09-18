@@ -52,8 +52,8 @@ public class UrlQpsReporter {
 
     /**
     * URL 统计数据
-    * 钥匙: URL 模式
-    * 价值观: urlstats
+    * Key: URL 模式
+    * 值: urlstats
     */
     private final ConcurrentHashMap<String, UrlStats> urlStatsMap = new ConcurrentHashMap<>();
 

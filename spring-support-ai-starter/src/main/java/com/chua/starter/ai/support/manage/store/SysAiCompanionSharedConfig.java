@@ -26,13 +26,13 @@ public class SysAiCompanionSharedConfig implements Serializable {
     * 配置键（如 共享、consent、disable_全部）
     */
     @TableId(value = "sys_ai_companion_shared_config_key", type = IdType.INPUT)
-    private String configKey; // 配置钥匙
+    private String configKey; // 配置Key
 
     /**
     * 配置值（JSON 字符串）
     */
     @TableField("sys_ai_companion_shared_config_value")
-    private String configValue; // 配置价值观
+    private String configValue; // 配置值
 
     /**
     * 更新时间（轮次 毫秒）

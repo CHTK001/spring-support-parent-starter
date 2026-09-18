@@ -7,7 +7,7 @@ import java.util.Base64;
 * AI 密钥生成工具类，提供 sk- 前缀安全随机密钥生成能力。
 *
 * <p>生成 48 字符的 URL 安全 Base64 密钥，前缀为 {@code sk-}，
-* 适用于 app钥匙、令牌 等场景。</p>
+* 适用于 appKey、令牌 等场景。</p>
 *
 * @since 4.0.0.42
 * @author CH
@@ -34,7 +34,7 @@ public final class KeyGenerator {
     */
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
-    /** 创建 钥匙生成器 实例 */
+    /** 创建 Key生成器 实例 */
     private KeyGenerator() {
         // 工具类禁止实例化
     }

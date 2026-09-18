@@ -96,7 +96,7 @@ public class PaymentTaskSchedulerManager implements SmartInitializingSingleton {
     /**
     * 更新任务
     *
-    * @param taskKey 任务钥匙
+    * @param taskKey 任务Key
     * @param dto dto
     * @return 更新任务的结果
     */
@@ -126,7 +126,7 @@ public class PaymentTaskSchedulerManager implements SmartInitializingSingleton {
         paymentSchedulerConfigMapper.updateById(config);
         /**
         * refresh任务。
-        * @param taskKey 任务钥匙
+        * @param taskKey 任务Key
         */
         refreshTask(taskKey);
         return toTaskVO(task, requireConfig(taskKey));
@@ -135,7 +135,7 @@ public class PaymentTaskSchedulerManager implements SmartInitializingSingleton {
     /**
     * trigger任务
     *
-    * @param taskKey 任务钥匙
+    * @param taskKey 任务Key
     * @return trigger任务的结果
     */
     public synchronized PaymentSchedulerTaskVO triggerTask(String taskKey) {
@@ -143,7 +143,7 @@ public class PaymentTaskSchedulerManager implements SmartInitializingSingleton {
         /**
         * 执行任务。
         * @param task 任务
-        * @param requireConfig(taskKey requireconfig(任务钥匙
+        * @param requireConfig(taskKey requireconfig(任务Key
         */
         executeTask(task, requireConfig(taskKey));
         return toTaskVO(task, requireConfig(taskKey));
@@ -157,14 +157,14 @@ public class PaymentTaskSchedulerManager implements SmartInitializingSingleton {
     /**
     * refresh任务
     *
-    * @param taskKey 任务钥匙
+    * @param taskKey 任务Key
     */
     public synchronized void refreshTask(String taskKey) {
         PaymentManagedTask task = requireTask(taskKey);
         PaymentSchedulerConfig config = requireConfig(taskKey);
         /**
         * cancel任务。
-        * @param taskKey 任务钥匙
+        * @param taskKey 任务Key
         */
         cancelTask(taskKey);
         if (!Boolean.TRUE.equals(config.getEnabled())) {
@@ -306,7 +306,7 @@ public class PaymentTaskSchedulerManager implements SmartInitializingSingleton {
     /**
     * 是否Scheduled
     *
-    * @param taskKey 任务钥匙
+    * @param taskKey 任务Key
     * @return 是否调度的结果
     */
     private boolean isScheduled(String taskKey) {
@@ -317,7 +317,7 @@ public class PaymentTaskSchedulerManager implements SmartInitializingSingleton {
     /**
     * cancel任务
     *
-    * @param taskKey 任务钥匙
+    * @param taskKey 任务Key
     */
     private void cancelTask(String taskKey) {
         ScheduledFuture<?> future = scheduledFutures.remove(taskKey);
@@ -329,7 +329,7 @@ public class PaymentTaskSchedulerManager implements SmartInitializingSingleton {
     /**
     * require任务
     *
-    * @param taskKey 任务钥匙
+    * @param taskKey 任务Key
     * @return require任务的结果
     */
     private PaymentManagedTask requireTask(String taskKey) {
@@ -337,7 +337,7 @@ public class PaymentTaskSchedulerManager implements SmartInitializingSingleton {
         if (task == null) {
             /**
             * 薪酬异常。
-            * @param taskKey 任务钥匙
+            * @param taskKey 任务Key
             * @return 薪酬异常的结果
             */
             throw new PaymentException("未知调度任务: " + taskKey);
@@ -348,7 +348,7 @@ public class PaymentTaskSchedulerManager implements SmartInitializingSingleton {
     /**
     * require配置
     *
-    * @param taskKey 任务钥匙
+    * @param taskKey 任务Key
     * @return require配置的结果
     */
     private PaymentSchedulerConfig requireConfig(String taskKey) {
@@ -358,7 +358,7 @@ public class PaymentTaskSchedulerManager implements SmartInitializingSingleton {
         if (config == null) {
             /**
             * 薪酬异常。
-            * @param taskKey 任务钥匙
+            * @param taskKey 任务Key
             * @return 薪酬异常的结果
             */
             throw new PaymentException("调度任务配置不存在: " + taskKey);
@@ -416,7 +416,7 @@ public class PaymentTaskSchedulerManager implements SmartInitializingSingleton {
     * Rethrow
     *
     * @param throwable 抛出
-    * @param taskKey 任务钥匙
+    * @param taskKey 任务Key
     * @return rethrow的结果
     */
     private RuntimeException rethrow(Throwable throwable, String taskKey) {
@@ -428,7 +428,7 @@ public class PaymentTaskSchedulerManager implements SmartInitializingSingleton {
         }
         /**
         * 薪酬异常。
-        * @param taskKey 任务钥匙
+        * @param taskKey 任务Key
         * @param throwable 抛出
         * @return 薪酬异常的结果
         */

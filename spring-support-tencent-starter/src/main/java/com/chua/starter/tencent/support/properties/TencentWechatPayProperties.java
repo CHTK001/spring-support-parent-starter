@@ -34,7 +34,7 @@ public class TencentWechatPayProperties {
     /** Merchantserial数字 */
     private String merchantSerialNumber;
 
-    /** apiv3钥匙 */
+    /** apiv3Key */
     private String apiV3Key;
 
     /** 通知url */

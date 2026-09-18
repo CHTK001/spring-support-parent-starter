@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit;
 * 基于 Spring 数据 Redis {@link StringRedisTemplate} 的 {@link KvEngine} 实现。
 *
 * <p>通过 Spring Boot 自动配置注入，作为默认 KV 引擎在应用中使用。
-* 利用 Redis 扫描 命令实现高效前缀查询，避免 钥匙 命令阻塞 Redis 实例。</p>
+* 利用 Redis 扫描 命令实现高效前缀查询，避免 Key 命令阻塞 Redis 实例。</p>
 *
 * <h2>使用方式</h2>
 * <pre>{@code
@@ -89,7 +89,7 @@ public class RedisKvEngine implements KvEngine {
     }
 
     @Override
-    /** contains钥匙 */
+    /** containsKey */
     public boolean containsKey(String key) {
         return Boolean.TRUE.equals(redisTemplate.hasKey(key));
     }

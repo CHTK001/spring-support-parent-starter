@@ -45,7 +45,7 @@ public class TsharkCaptureService {
     private final Map<Long, Process> running = new ConcurrentHashMap<>(); // running
     private final MsTsharkSessionMapper sessionMapper; // 会话映射器
     private final MsTsharkPacketMapper packetMapper; // 数据包映射器
-    /** 实时推送服务（套接字 未启用时静默跳过） */
+    /** 实时推送服务（Socket 未启用时静默跳过） */
     private final MonitorPushService pushService;
 
     public TsharkCaptureService(MsTsharkSessionMapper sessionMapper,

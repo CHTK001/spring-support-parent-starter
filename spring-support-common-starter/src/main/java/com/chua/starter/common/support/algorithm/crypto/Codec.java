@@ -34,7 +34,7 @@ public class Codec {
         /**
         * Codec。
         * @param type 类型
-        * @param key 钥匙
+        * @param key Key
         */
         return new Codec(type, key);
     }

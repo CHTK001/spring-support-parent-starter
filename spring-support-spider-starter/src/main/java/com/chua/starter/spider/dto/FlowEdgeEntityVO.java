@@ -78,15 +78,15 @@ public class FlowEdgeEntityVO {
     */
     public void setFlowEdgeCondOp(String flowEdgeCondOp) { this.flowEdgeCondOp = flowEdgeCondOp; }
     /**
-    * 获取流edgecond价值观
+    * 获取流edgecond值
     *
-    * @return 获取流edgecond价值观的结果
+    * @return 获取流edgecond值的结果
     */
     public String getFlowEdgeCondValue() { return flowEdgeCondValue; }
     /**
-    * 设置流edgecond价值观
+    * 设置流edgecond值
     *
-    * @param flowEdgeCondValue 流edgecond价值观
+    * @param flowEdgeCondValue 流edgecond值
     */
     public void setFlowEdgeCondValue(String flowEdgeCondValue) { this.flowEdgeCondValue = flowEdgeCondValue; }
     /**

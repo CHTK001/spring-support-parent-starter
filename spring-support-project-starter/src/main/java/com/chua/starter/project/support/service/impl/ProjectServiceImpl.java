@@ -2,6 +2,7 @@ package com.chua.starter.project.support.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.starter.project.support.config.ProjectProperties;
 import com.chua.starter.project.support.constants.ProjectConstants;
 import com.chua.starter.project.support.entity.MsProject;
 import com.chua.starter.project.support.entity.MsProjectDeployLog;
@@ -39,6 +40,9 @@ public class ProjectServiceImpl implements ProjectService {
 
     /** 项目 映射器 */
     private final MsProjectMapper projectMapper;
+
+    /** 模块配置（部署日志保留天数） */
+    private final ProjectProperties projectProperties;
 
     /** 部署日志 映射器（删除项目时级联清理） */
     private final MsProjectDeployLogMapper deployLogMapper;
@@ -185,6 +189,20 @@ public class ProjectServiceImpl implements ProjectService {
     * @param project 项目
     * @return 校验失败的错误结果，合法返回 空
     */
+
+    @Override
+    public int cleanupDeployLogs() {
+        int retentionDays = projectProperties.getDeployLogRetentionDays();
+        if (retentionDays <= 0) {
+            return 0;
+        }
+        java.time.LocalDateTime beforeTime = java.time.LocalDateTime.now().minusDays(retentionDays);
+        int deleted = deployLogMapper.deleteByTimeBefore(beforeTime);
+        if (deleted > 0) {
+            log.info("[project] 清理过期部署日志 {} 条（保留 {} 天）", deleted, retentionDays);
+        }
+        return deleted;
+    }
     private ReturnResult<MsProject> validate(MsProject project) {
         if (project == null) {
             return ReturnResult.error("项目不能为空");

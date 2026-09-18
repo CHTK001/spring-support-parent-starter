@@ -74,7 +74,7 @@ public class CommonConfiguration {
     }
 
     /**
-    * 初始化 Nonce 签名密钥（与前端 secret钥匙 一致）
+    * 初始化 Nonce 签名密钥（与前端 secretKey 一致）
     * 支持多路径解析：plugin.nonce.标志、nonce.标志、环境变量
     * @param props props
     * @param env env

@@ -118,7 +118,7 @@ public final class OauthClientRuntimeContext {
     /**
     * 解析Placeholders
     *
-    * @param value 价值观
+    * @param value 值
     * @return resolvePlaceholders的结果
     */
     public static String resolvePlaceholders(String value) {

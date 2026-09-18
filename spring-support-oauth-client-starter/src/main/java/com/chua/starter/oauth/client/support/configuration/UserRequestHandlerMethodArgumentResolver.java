@@ -228,10 +228,10 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
     }
 
     /**
-    * 解析embedded价值观andexpressions
+    * 解析embedded值andexpressions
     *
-    * @param value 价值观
-    * @return resolveembedded价值观andexpressions的结果
+    * @param value 值
+    * @return resolveembedded值andexpressions的结果
     */
     protected Object resolveEmbeddedValuesAndExpressions(String value) {
         if (this.configurableBeanFactory == null || this.expressionContext == null) {

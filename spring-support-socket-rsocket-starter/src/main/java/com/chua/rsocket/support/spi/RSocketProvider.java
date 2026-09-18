@@ -12,8 +12,8 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.List;
 
 /**
-* r套接字 协议提供者
-* 实现基础 套接字 模块的 SPI 接口
+* rSocket 协议提供者
+* 实现基础 Socket 模块的 SPI 接口
 *
 * @版本 1.0.0
 * @since 2024-12-04
@@ -43,10 +43,10 @@ public class RSocketProvider implements SocketProvider {
             List<SocketListener> listeners) {
         log.info("[RSocket] 创建 RSocket 会话模板");
         /**
-        * r套接字会话templateimpl。
+        * rSocket会话templateimpl。
         * @param properties 属性
         * @param listeners 监听器
-        * @return r套接字会话templateimpl的结果
+        * @return rSocket会话templateimpl的结果
         */
         return new RSocketSessionTemplateImpl(properties, listeners);
     }

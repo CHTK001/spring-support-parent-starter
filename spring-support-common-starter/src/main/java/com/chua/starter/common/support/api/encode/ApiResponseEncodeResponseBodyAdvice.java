@@ -101,7 +101,7 @@ public class ApiResponseEncodeResponseBodyAdvice implements ResponseBodyAdvice<O
  // 添加X-内容-类型-期权: nosniff响应头
         headers.set("X-Content-Type-Options", "nosniff");
 
- // 构建响应数据（钥匙直接拼接在02后面）
+ // 构建响应数据（Key直接拼接在02后面）
         String responseData = "02" + codecResult.getKey() + "200" + codecResult.getData() + "ffff";
 
         // 将响应数据转换为字节数组（使用更真实的二进制转换方法）

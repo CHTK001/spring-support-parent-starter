@@ -263,17 +263,17 @@ public class AuthClientProperties {
     private Fingerprint fingerprint = new Fingerprint();
 
     /**
-    * AI app钥匙 本地认证配置
+    * AI appKey 本地认证配置
     * <p>
-    * 启用后，o认证 过滤器对 Bearer 令牌 先做本地 AI app钥匙 校验
+    * 启用后，o认证 过滤器对 Bearer 令牌 先做本地 AI appKey 校验
     * （通过 {@link com.chua.datasource.support.engine.JdbcEngine} 动态查表，无需 映射器）。
-    * 用于单机部署或外部 o认证 服务不可达时的 AI app钥匙 认证。
+    * 用于单机部署或外部 o认证 服务不可达时的 AI appKey 认证。
     * </p>
     */
     private AiAppKey aiAppKey = new AiAppKey();
 
     /**
-    * AI app钥匙 本地认证配置
+    * AI appKey 本地认证配置
     * @author CH
     * @since 4.0.0
     */
@@ -281,32 +281,32 @@ public class AuthClientProperties {
     public static class AiAppKey {
 
         /**
-        * 是否启用 AI app钥匙 本地认证
+        * 是否启用 AI appKey 本地认证
         */
         private boolean enabled = false;
 
         /**
-        * app钥匙 表名（动态表，默认 AI 模块的 sys_AI_app_钥匙）
+        * appKey 表名（动态表，默认 AI 模块的 sys_AI_app_Key）
         */
         private String tableName = "sys_ai_app_key";
 
         /**
-        * app钥匙 列名（默认 sys_AI_app_钥匙_app_钥匙）
+        * appKey 列名（默认 sys_AI_app_Key_app_Key）
         */
         private String appKeyColumn = "sys_ai_app_key_app_key";
 
         /**
-        * 状态列名（1 启用 / 0 停用，默认 sys_AI_app_钥匙_状态）
+        * 状态列名（1 启用 / 0 停用，默认 sys_AI_app_Key_状态）
         */
         private String statusColumn = "sys_ai_app_key_status";
 
         /**
-        * 过期时间列名（默认 sys_AI_app_钥匙_expire_datetime，可为空）
+        * 过期时间列名（默认 sys_AI_app_Key_expire_datetime，可为空）
         */
         private String expireTimeColumn = "sys_ai_app_key_expire_datetime";
 
         /**
-        * 用户名列（返回给认证结果使用，默认取 app钥匙column）
+        * 用户名列（返回给认证结果使用，默认取 appKeycolumn）
         */
         private String usernameColumn;
     }
@@ -327,11 +327,11 @@ public class AuthClientProperties {
         */
         private boolean enabled = false;
         /**
-        * access钥匙 (用于标识客户端)
+        * accessKey (用于标识客户端)
         */
         private String accessKey;
         /**
-        * secret钥匙 (用于加密数据)
+        * secretKey (用于加密数据)
         */
         private String secretKey;
     }
@@ -396,17 +396,17 @@ public class AuthClientProperties {
         /**
         * 指纹配置缓存时间（秒）
         * <p>
-        * 客户端会缓存从服务端获取的 app钥匙 指纹配置，此配置控制缓存的有效期。
+        * 客户端会缓存从服务端获取的 appKey 指纹配置，此配置控制缓存的有效期。
         * 默认 1 小时（3600 秒）。
         * </p>
         */
         private long configCacheTimeout = 3600;
         
         /**
-        * app钥匙 指纹配置映射
+        * appKey 指纹配置映射
         * <p>
-        * 钥匙: app钥匙
-        * 价值观: 指纹配置（enablefingerprint: 0-不启用, 1-启用; fingerprintwhitelist: 指纹白名单，多个用逗号分隔）
+        * Key: appKey
+        * 值: 指纹配置（enablefingerprint: 0-不启用, 1-启用; fingerprintwhitelist: 指纹白名单，多个用逗号分隔）
         * </p>
         * <p>
         * 配置示例：
@@ -427,7 +427,7 @@ public class AuthClientProperties {
     }
     
     /**
-    * app钥匙 指纹配置
+    * appKey 指纹配置
     * @author CH
     * @since 4.0.0
     */

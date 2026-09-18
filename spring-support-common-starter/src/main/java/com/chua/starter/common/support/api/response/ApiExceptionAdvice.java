@@ -586,9 +586,9 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
     @ExceptionHandler(IllegalArgumentException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     /**
-    * 处理illegal参数异常。
+    * 处理IllegalArgumentException。
     * @param e e
-    * @return 处理illegal参数异常的结果
+    * @return 处理IllegalArgumentException的结果
     */
     public <T> ReturnResult<T> handleIllegalArgumentException(IllegalArgumentException e) {
         logWarn("非法参数异常", e);

@@ -349,7 +349,7 @@ public class MockTencentWechatPayGateway implements TencentWechatPayGateway {
     *
     * @param provider 提供者
     * @param scene scene
-    * @param value 价值观
+    * @param value 值
     * @return raw的结果
     */
     private String raw(String provider, String scene, String value) {
@@ -380,10 +380,10 @@ public class MockTencentWechatPayGateway implements TencentWechatPayGateway {
     }
 
     /**
-    * long价值观
+    * long值
     *
-    * @param value 价值观
-    * @return long价值观的结果
+    * @param value 值
+    * @return long值的结果
     */
     private Long longValue(Object value) {
         if (value == null) {
@@ -397,7 +397,7 @@ public class MockTencentWechatPayGateway implements TencentWechatPayGateway {
         } catch (Exception e) {
             /**
             * illegal状态异常。
-            * @param value 价值观
+            * @param value 值
             * @param e e
             * @return illegal状态异常的结果
             */
@@ -408,7 +408,7 @@ public class MockTencentWechatPayGateway implements TencentWechatPayGateway {
     /**
     * 文本的
     *
-    * @param value 价值观
+    * @param value 值
     * @return 文本的的结果
     */
     private String textOf(Object value) {
@@ -418,7 +418,7 @@ public class MockTencentWechatPayGateway implements TencentWechatPayGateway {
     /**
     * 第一个nonblank
     *
-    * @param values 价值观
+    * @param values 值
     * @return 第一个nonblank的结果
     */
     private String firstNonBlank(String... values) {

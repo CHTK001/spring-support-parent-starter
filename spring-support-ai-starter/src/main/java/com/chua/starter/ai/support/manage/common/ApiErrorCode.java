@@ -23,7 +23,7 @@ public enum ApiErrorCode {
     FORBIDDEN("FORBIDDEN", 403),
 
     /**
-    * 未授权（如供应商 API 钥匙 无效，前端提示检查 钥匙）
+    * 未授权（如供应商 API Key 无效，前端提示检查 Key）
     * @param "UNAUTHORIZED" "UNAUTHORIZED"
     * @param 401 401
     * @return UNAUTHORIZED的结果

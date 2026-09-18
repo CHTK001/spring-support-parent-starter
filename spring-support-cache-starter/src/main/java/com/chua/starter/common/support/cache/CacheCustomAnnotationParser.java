@@ -21,8 +21,8 @@ import java.util.Set;
 /**
 * 自定义缓存注解解析器
 * <p>
-* 解除了原有 Spring 缓存 中 钥匙 和 钥匙生成器 不能同时使用的限制。
-* 默认使用 tenanted钥匙生成器 作为 钥匙生成器。
+* 解除了原有 Spring 缓存 中 Key 和 Key生成器 不能同时使用的限制。
+* 默认使用 tenantedKey生成器 作为 Key生成器。
 * </p>
 *
 * @版本 1.0.0
@@ -37,7 +37,7 @@ public class CacheCustomAnnotationParser implements CacheAnnotationParser, Seria
             Set.of(Cacheable.class, CacheEvict.class, CachePut.class, Caching.class);
 
     /**
-    * 默认的 钥匙生成器
+    * 默认的 Key生成器
     */
     private static final String DEFAULT_KEY_GENERATOR = "tenantedKeyGenerator";
 
@@ -355,7 +355,7 @@ public class CacheCustomAnnotationParser implements CacheAnnotationParser, Seria
                 builder.setCacheNames(this.cacheNames);
             }
 
- // 设置 钥匙生成器，默认使用 tenanted钥匙生成器
+ // 设置 Key生成器，默认使用 tenantedKey生成器
             if (!StringUtils.hasText(builder.getKeyGenerator())) {
                 if (StringUtils.hasText(this.keyGenerator)) {
                     builder.setKeyGenerator(this.keyGenerator);

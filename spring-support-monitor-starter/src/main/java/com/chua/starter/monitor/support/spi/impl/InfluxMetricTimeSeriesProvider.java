@@ -213,7 +213,7 @@ public class InfluxMetricTimeSeriesProvider implements MetricTimeSeriesProvider 
         String influxql = """
                 /**
                 * mean。
-                * @param value 价值观
+                * @param value 值
                 * @return mean的结果
                 */
                 SELECT mean(value) AS value FROM "%s"

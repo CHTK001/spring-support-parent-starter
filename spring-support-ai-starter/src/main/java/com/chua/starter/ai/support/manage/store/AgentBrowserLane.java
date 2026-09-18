@@ -11,7 +11,7 @@ import lombok.Data;
 *
 * <p>Lane 是浏览器平台的核心调度单元，对应一个由 Managed Browser Host 托管的
 * 浏览器实例。每个 Lane 可以承载多个 Tab，并通过 owner 信息追踪是由哪个
-* 智能体/对话/用户发起的。</p>
+* Agent/对话/用户发起的。</p>
 *
 * <p>数据来源：{@code sys_agent_browser_lane} 表</p>
 *
@@ -106,20 +106,20 @@ public class AgentBrowserLane {
     private String attemptId; // 尝试标识
 
     /**
-    * 智能体 标识。
+    * Agent 标识。
     *
     * <p>标识使用此 Lane 的 agent 类型（如 browser_use、playwright 等）。</p>
     */
     @TableField("agent_id")
-    private String agentId; // 智能体标识
+    private String agentId; // Agent标识
 
     /**
-    * 智能体 显示名称。
+    * Agent 显示名称。
     *
     * <p>用于在 UI 中展示 agent 的友好名称。</p>
     */
     @TableField("agent_name")
-    private String agentName; // 智能体名称
+    private String agentName; // Agent名称
 
     /**
     * 显示来源（Surface）。

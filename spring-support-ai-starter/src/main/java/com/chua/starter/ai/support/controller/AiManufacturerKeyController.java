@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
-* AI 厂商 API 钥匙 管理控制器。
+* AI 厂商 API Key 管理控制器。
 *
 * <p>提供厂商 API Key 的增删改查、按厂商编码查询与启停切换接口。</p>
 *
@@ -38,14 +38,14 @@ import java.util.List;
 public class AiManufacturerKeyController {
 
     /**
-    * 厂商 API 钥匙 服务
+    * 厂商 API Key 服务
     */
     private final SysAiManufacturerKeyService manufacturerKeyService;
 
     /**
-    * 对 API 钥匙 与 Secret 进行脱敏，避免明文泄露。
+    * 对 API Key 与 Secret 进行脱敏，避免明文泄露。
     *
-    * @param list 原始 钥匙 列表
+    * @param list 原始 Key 列表
     */
     private void maskSecrets(List<SysAiManufacturerKey> list) {
         if (list == null) {
@@ -74,9 +74,9 @@ public class AiManufacturerKeyController {
     }
 
     /**
-    * 查询全部厂商 API 钥匙，钥匙 与 Secret 脱敏返回。
+    * 查询全部厂商 API Key，Key 与 Secret 脱敏返回。
     *
-    * @return API 钥匙 列表
+    * @return API Key 列表
     */
     @Permission("admin")
     @Operation(summary = "查询全部厂商 API Key")
@@ -92,10 +92,10 @@ public class AiManufacturerKeyController {
     }
 
     /**
-    * 按厂商编码查询 API 钥匙，钥匙 与 Secret 脱敏返回。
+    * 按厂商编码查询 API Key，Key 与 Secret 脱敏返回。
     *
     * @param manufacturerCode 厂商编码
-    * @return API 钥匙 列表
+    * @return API Key 列表
     */
     @Permission("admin")
     @Operation(summary = "按厂商编码查询 API Key")
@@ -112,9 +112,9 @@ public class AiManufacturerKeyController {
     }
 
     /**
-    * 新增厂商 API 钥匙。
+    * 新增厂商 API Key。
     *
-    * @param manufacturerKey API 钥匙 实体
+    * @param manufacturerKey API Key 实体
     * @return 保存后的实体
     */
     @Permission("admin")
@@ -126,9 +126,9 @@ public class AiManufacturerKeyController {
     }
 
     /**
-    * 更新厂商 API 钥匙。
+    * 更新厂商 API Key。
     *
-    * @param manufacturerKey API 钥匙 实体
+    * @param manufacturerKey API Key 实体
     * @return 是否成功
     */
     @Permission("admin")
@@ -140,7 +140,7 @@ public class AiManufacturerKeyController {
     }
 
     /**
-    * 删除厂商 API 钥匙。
+    * 删除厂商 API Key。
     *
     * @param id 主键 标识
     * @return 是否成功
@@ -154,7 +154,7 @@ public class AiManufacturerKeyController {
     }
 
     /**
-    * 切换 API 钥匙 启停状态。
+    * 切换 API Key 启停状态。
     *
     * @param id      主键 标识
     * @param enabled 是否启用

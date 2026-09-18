@@ -146,7 +146,7 @@ public class SshServerService implements InitializingBean, DisposableBean {
             });
         }
 
- // 公钥认证：从 公共钥匙文件 加载授权公钥
+ // 公钥认证：从 公共Key文件 加载授权公钥
         if (auth.isPublicKey()) {
             if (StringUtils.hasText(auth.getPublicKeyFile())) {
                 sshServer.setPublickeyAuthenticator(

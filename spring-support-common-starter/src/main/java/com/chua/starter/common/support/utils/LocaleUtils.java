@@ -31,7 +31,7 @@ public class LocaleUtils {
     /**
     * 获取 国际化后内容信息
     *
-    * @param code 国际化钥匙
+    * @param code 国际化Key
     * @return 国际化后内容信息
     */
     public static String getMessage(String code) {

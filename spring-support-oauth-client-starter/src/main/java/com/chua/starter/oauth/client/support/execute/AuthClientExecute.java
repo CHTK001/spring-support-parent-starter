@@ -52,7 +52,7 @@ public class AuthClientExecute {
     /** 实例 */
     public static final AuthClientExecute INSTANCE = new AuthClientExecute();
 
-    /** 默认_钥匙 */
+    /** 默认_Key */
     public static final String DEFAULT_KEY = "1234567980123456";
 
     /**

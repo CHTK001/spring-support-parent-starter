@@ -113,10 +113,10 @@ public class CacheConfiguration {
     }
 
     /**
-    * 兼容旧版的自定义缓存键生成器 Bean（返回 简单钥匙生成器）。
+    * 兼容旧版的自定义缓存键生成器 Bean（返回 简单Key生成器）。
     *
     * <p>保留供既有 @Cacheable(keyGenerator = "customTenantedKeyGenerator") 引用兼容。</p>
-    * @return 习俗tenanted钥匙生成器的结果
+    * @return 习俗tenantedKey生成器的结果
     */
     @Bean("customTenantedKeyGenerator")
     @ConditionalOnMissingBean(name = "customTenantedKeyGenerator")
@@ -127,7 +127,7 @@ public class CacheConfiguration {
     /**
     * 自定义缓存注解解析器
     * <p>
-    * 支持 钥匙 和 钥匙生成器 同时使用，默认使用 tenanted钥匙生成器。
+    * 支持 Key 和 Key生成器 同时使用，默认使用 tenantedKey生成器。
     * </p>
     * @return 缓存习俗注解parser的结果
     */
@@ -144,8 +144,8 @@ public class CacheConfiguration {
 /**
 * 缓存操作模板
 * <p>
-* 提供手动缓存操作方法，内部自动使用 tenanted钥匙生成器 拼接完整缓存键，
-* 保证手动操作与 {@code @Cacheable} 等注解生成的 钥匙 一致。
+* 提供手动缓存操作方法，内部自动使用 tenantedKey生成器 拼接完整缓存键，
+* 保证手动操作与 {@code @Cacheable} 等注解生成的 Key 一致。
 * </p>
  */
 @Bean
@@ -157,7 +157,7 @@ public CacheTemplate cacheTemplate(
     /**
     * 缓存template。
     * @param multiLevelCacheManager multi水平仪缓存管理器
-    * @param tenantedKeyGenerator tenanted钥匙生成器
+    * @param tenantedKeyGenerator tenantedKey生成器
     * @return 缓存template的结果
     */
     return new CacheTemplate(multiLevelCacheManager, tenantedKeyGenerator);
@@ -166,9 +166,9 @@ public CacheTemplate cacheTemplate(
 /**
 * 缓存操作源（覆盖默认，使用自定义解析器）
 * <p>无条件创建并标记 @Primary，确保 CacheInterceptor 始终使用
-* 支持 钥匙 与 钥匙生成器 共用的 缓存习俗注解parser；
+* 支持 Key 与 Key生成器 共用的 缓存习俗注解parser；
 * 若依赖 @条件onmissingBean 会被 @enable缓存 默认的标准解析器抢注，
-* 导致 钥匙+钥匙生成器 同时使用时报 illegal状态异常。</p>
+* 导致 Key+Key生成器 同时使用时报 illegal状态异常。</p>
      */
     @Bean
     @Primary

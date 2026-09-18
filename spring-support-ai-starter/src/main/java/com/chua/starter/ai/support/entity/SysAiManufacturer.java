@@ -51,10 +51,10 @@ public class SysAiManufacturer {
     private String baseUrl; // baseurl
 
     /**
-    * 厂商应用 钥匙
+    * 厂商应用 Key
     */
     @TableField("sys_ai_manufacturer_app_key")
-    private String appKey; // app钥匙
+    private String appKey; // appKey
 
     /**
     * 厂商应用 Secret

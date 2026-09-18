@@ -148,7 +148,7 @@ public class HikariDataSourcePropertyProvider implements DataSourcePropertyProvi
     /**
     * 转为int
     *
-    * @param value 价值观
+    * @param value 值
     * @return 转为int的结果
     */
     private int toInt(Object value) {
@@ -161,7 +161,7 @@ public class HikariDataSourcePropertyProvider implements DataSourcePropertyProvi
     /**
     * 转为long
     *
-    * @param value 价值观
+    * @param value 值
     * @return 转为long的结果
     */
     private long toLong(Object value) {
@@ -174,7 +174,7 @@ public class HikariDataSourcePropertyProvider implements DataSourcePropertyProvi
     /**
     * 转为布尔值
     *
-    * @param value 价值观
+    * @param value 值
     * @return 转为布尔值的结果
     */
     private boolean toBoolean(Object value) {

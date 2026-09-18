@@ -12,8 +12,8 @@ import java.util.Map;
 /**
 * 发布项目管理实时推送服务
 * <p>
-* 复用 spring-支持-套接字-* 的 {@link SocketSessionTemplate}（套接字.IO 协议），
-* 广播项目部署/回滚进度。宿主未装配 套接字 时静默降级（对象提供者 为空）。
+* 复用 spring-支持-Socket-* 的 {@link SocketSessionTemplate}（Socket.IO 协议），
+* 广播项目部署/回滚进度。宿主未装配 Socket 时静默降级（对象提供者 为空）。
 * </p>
 *
 * @author CH
@@ -23,13 +23,13 @@ import java.util.Map;
 @Service
 public class ProjectPushService {
 
-    /** 套接字 模板（可空） */
+    /** Socket 模板（可空） */
     private final ObjectProvider<SocketSessionTemplate> socketTemplates;
 
     /**
     * 构造器注入
     *
-    * @param socketTemplates 套接字 模板
+    * @param socketTemplates Socket 模板
     */
     public ProjectPushService(ObjectProvider<SocketSessionTemplate> socketTemplates) {
         this.socketTemplates = socketTemplates;
@@ -106,6 +106,45 @@ public class ProjectPushService {
             template.broadcastObject("message", payload);
         } catch (Exception e) {
             log.warn("[project] 推送项目指标失败: {}", e.getMessage());
+        }
+    }
+
+    /**
+    * 广播项目实时日志流帧（共享采集器专用通道）
+    *
+    * @param projectId  项目 标识
+    * @param hostId     主机 标识
+    * @param content    日志增量内容（错误帧可为空串）
+    * @param cursor     下一个读取游标
+    * @param eof        是否已到文件末尾
+    * @param truncated  本帧是否因超长被截断
+    * @param message    错误原因（成功时为空串）
+    */
+    public void pushProjectLog(Long projectId, Long hostId, String content, long cursor,
+                               boolean eof, boolean truncated, String message) {
+        SocketSessionTemplate template = socketTemplates.getIfAvailable();
+        if (template == null) {
+            return;
+        }
+        Map<String, Object> data = new HashMap<>(8);
+        data.put("projectId", projectId);
+        data.put("hostId", hostId);
+        data.put("content", content == null ? "" : content);
+        data.put("cursor", cursor);
+        data.put("eof", eof);
+        data.put("truncated", truncated);
+        data.put("message", message == null ? "" : message);
+        data.put("timestamp", System.currentTimeMillis());
+        Map<String, Object> payload = new HashMap<>(4);
+        payload.put("module", ProjectConstants.PUSH_MODULE);
+        payload.put("event", ProjectConstants.PUSH_EVENT_PROJECT_LOG);
+        payload.put("data", data);
+        payload.put("dataId", projectId == null ? "" : String.valueOf(projectId));
+        payload.put("timestamp", System.currentTimeMillis());
+        try {
+            template.broadcastObject("message", payload);
+        } catch (Exception e) {
+            log.warn("[project] 推送项目日志失败: {}", e.getMessage());
         }
     }
 }

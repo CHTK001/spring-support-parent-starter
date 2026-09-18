@@ -27,7 +27,7 @@ import java.util.regex.Pattern;
 @Component
 public class WindowsLocalSoftwareCollector implements LocalSoftwareCollector {
 
-    /** Uninstall_钥匙 */
+    /** Uninstall_Key */
     private static final Pattern UNINSTALL_KEY = Pattern.compile(
             "SOFTWARE\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Uninstall\\\\([^\\\\]+)",
             Pattern.CASE_INSENSITIVE
@@ -50,10 +50,10 @@ public class WindowsLocalSoftwareCollector implements LocalSoftwareCollector {
     }
 
     /**
-    * 扫描uninstall钥匙
+    * 扫描uninstallKey
     *
-    * @param baseKey 基础钥匙
-    * @return 扫描uninstall钥匙的结果
+    * @param baseKey 基础Key
+    * @return 扫描uninstallKey的结果
     */
     private List<SoftSoftware> scanUninstallKey(String baseKey) {
         List<SoftSoftware> list = new ArrayList<>();
@@ -79,7 +79,7 @@ public class WindowsLocalSoftwareCollector implements LocalSoftwareCollector {
     /**
     * 读取software信息
     *
-    * @param key 钥匙
+    * @param key Key
     * @return 读取software信息的结果
     */
     private SoftSoftware readSoftwareInfo(String key) {
@@ -112,11 +112,11 @@ public class WindowsLocalSoftwareCollector implements LocalSoftwareCollector {
     }
 
     /**
-    * extract价值观
+    * extract值
     *
     * @param output 输出
     * @param name 名称
-    * @return extract价值观的结果
+    * @return extract值的结果
     */
     private String extractValue(String output, String name) {
         for (String line : output.split("\n")) {

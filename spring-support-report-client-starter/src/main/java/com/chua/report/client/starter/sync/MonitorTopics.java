@@ -57,10 +57,10 @@ public interface MonitorTopics {
     String NODE_RESTORE = "monitor/maintenance/restore";
 
  // ==================== 日志 Push ====================
-    /** 日志推送（智能体 -> 监控） */
+    /** 日志推送（Agent -> 监控） */
     String LOG_PUSH = "monitor/log/push";
-    /** 日志订阅请求（监控 -> 智能体） */
+    /** 日志订阅请求（监控 -> Agent） */
     String LOG_SUBSCRIBE = "monitor/log/subscribe";
-    /** 日志取消订阅（监控 -> 智能体） */
+    /** 日志取消订阅（监控 -> Agent） */
     String LOG_UNSUBSCRIBE = "monitor/log/unsubscribe";
 }

@@ -281,7 +281,7 @@ public class ApiChatController {
             assistantMsg.setMsgId(assistantMsgId);
             conversationStore.addMessage(conversationId, assistantMsg);
 
- // 7. 推送 turn.完成（runtime 用可空 链接哈希映射，映射.的 不允许 空 价值观）
+ // 7. 推送 turn.完成（runtime 用可空 链接哈希映射，映射.的 不允许 空 值）
             java.util.Map<String, Object> runtimeMap = new LinkedHashMap<>();
             runtimeMap.put("state", "ai_waiting_input");
             runtimeMap.put("can_send_message", true);

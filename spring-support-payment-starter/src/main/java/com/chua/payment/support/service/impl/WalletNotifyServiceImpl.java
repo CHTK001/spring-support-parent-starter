@@ -222,7 +222,7 @@ public class WalletNotifyServiceImpl implements WalletNotifyService {
     /**
     * Matches
     *
-    * @param value 价值观
+    * @param value 值
     * @param candidates candidates
     * @return 匹配的结果
     */
@@ -241,7 +241,7 @@ public class WalletNotifyServiceImpl implements WalletNotifyService {
     /**
     * 第一个nonblank
     *
-    * @param values 价值观
+    * @param values 值
     * @return 第一个nonblank的结果
     */
     private String firstNonBlank(String... values) {

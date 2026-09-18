@@ -196,8 +196,8 @@ public class ConsolePageController {
     /**
     * 写入通用键值
     *
-    * @param key 钥匙
-    * @param value 价值观
+    * @param key Key
+    * @param value 值
     * @return upsertKv的结果
     */
     @PostMapping("/api/kv")
@@ -210,7 +210,7 @@ public class ConsolePageController {
     /**
     * 删除通用键值
     *
-    * @param key 钥匙
+    * @param key Key
     * @return 删除kv的结果
     */
     @PostMapping("/api/kv/delete")

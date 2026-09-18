@@ -118,9 +118,9 @@ public class SpiderFlowRunner {
     public String run(SpiderDefinition definition) {
         if (definition == null) {
             /**
-            * illegal参数异常。
+            * IllegalArgumentException。
             * @param "爬虫定义不存在" "爬虫定义不存在"
-            * @return illegal参数异常的结果
+            * @return IllegalArgumentException的结果
             */
             throw new IllegalArgumentException("爬虫定义不存在");
         }

@@ -34,16 +34,16 @@ public enum SoftwareStatus {
 
     /**
     * software状态。
-    * @param value 价值观
+    * @param value 值
     */
     SoftwareStatus(int value) {
         this.value = value;
     }
 
     /**
-    * 获取价值观
+    * 获取值
     *
-    * @return 获取价值观的结果
+    * @return 获取值的结果
     */
     public int getValue() {
         return value;

@@ -44,7 +44,7 @@ public class SysAiRequirement implements Serializable {
 
     /** 执行次序（点分十进制） */
     @TableField("sys_ai_requirement_order_key")
-    private String orderKey; // 订单钥匙
+    private String orderKey; // 订单Key
 
     /** 状态 */
     @TableField("sys_ai_requirement_status")

@@ -150,18 +150,18 @@ public class SshServerProperties {
         }
         
         /**
-        * 是否公共钥匙
+        * 是否公共Key
         *
-        * @return 是否公共钥匙的结果
+        * @return 是否公共Key的结果
         */
         public boolean isPublicKey() {
             return publicKey;
         }
         
         /**
-        * 设置公共钥匙
+        * 设置公共Key
         *
-        * @param publicKey 公共钥匙
+        * @param publicKey 公共Key
         */
         public void setPublicKey(boolean publicKey) {
             this.publicKey = publicKey;

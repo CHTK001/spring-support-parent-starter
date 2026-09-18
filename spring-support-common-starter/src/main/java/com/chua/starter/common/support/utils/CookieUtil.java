@@ -66,8 +66,8 @@ public class CookieUtil {
         /**
         * 设置。
         * @param response 响应
-        * @param key 钥匙
-        * @param value 价值观
+        * @param key Key
+        * @param value 值
         * @param null 空
         * @param COOKIE_PATH Cookie路径
         * @param age age
@@ -154,7 +154,7 @@ public class CookieUtil {
         if (cookies != null) {
             // 遍历所有Cookie，寻找匹配名称的Cookie
             for (Cookie cookie : cookies) {
- // 如果当前Cookie的名称与参数钥匙匹配，则返回该Cookie
+ // 如果当前Cookie的名称与参数Key匹配，则返回该Cookie
                 if (cookie.getName().equals(key)) {
                     return cookie;
                 }
@@ -177,7 +177,7 @@ public class CookieUtil {
             /**
             * 设置。
             * @param response 响应
-            * @param key 钥匙
+            * @param key Key
             * @param "" ""
             * @param null 空
             * @param COOKIE_PATH Cookie路径

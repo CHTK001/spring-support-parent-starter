@@ -330,10 +330,10 @@ public class WatchPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor imp
 
     }
     /**
-    * 创建钥匙
+    * 创建Key
     *
     * @param span span
-    * @return 创建钥匙的结果
+    * @return 创建Key的结果
     */
     private static String createKey(Span span) {
         return span.getMessage() + span.getEnterTime() + span.getPid();

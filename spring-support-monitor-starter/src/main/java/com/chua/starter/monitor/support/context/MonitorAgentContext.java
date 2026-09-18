@@ -12,7 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
 * 监控目标探针上下文
 * <p>
-* 内存维护每个监控目标(智能体)的最后心跳时间，供在线判定使用。
+* 内存维护每个监控目标(Agent)的最后心跳时间，供在线判定使用。
 * 判定规则：距最后一次心跳超过 {@code timeoutMinutes} 即视为离线；
 * 从未上报过心跳的目标不纳入本上下文（视为从未上线）。
 * </p>
@@ -94,7 +94,7 @@ public class MonitorAgentContext {
     * @param monitorId     目标 标识
     * @param lastHeartbeat 最后心跳时间
     * @param online        是否在线
-    * @return 智能体状态的结果
+    * @return Agent状态的结果
     */
     public record AgentStatus(Long monitorId, LocalDateTime lastHeartbeat, boolean online) {
     }

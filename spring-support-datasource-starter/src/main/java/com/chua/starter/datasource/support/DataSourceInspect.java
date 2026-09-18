@@ -382,7 +382,7 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
                 /**
                 * analysismapping。
                 * @param objectMap 对象映射
-                * @param newKey 新钥匙
+                * @param newKey 新Key
                 * @param dataSource 数据源
                 */
                 analysisMapping(objectMap, newKey, dataSource);

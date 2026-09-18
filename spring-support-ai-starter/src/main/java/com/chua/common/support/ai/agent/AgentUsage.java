@@ -1,7 +1,7 @@
 package com.chua.common.support.ai.agent;
 
 /**
-* 智能体 调用用量统计（令牌 / cost / 模型）。
+* Agent 调用用量统计（令牌 / cost / 模型）。
 *
 * @since 4.0.0
 * @author CH
@@ -121,14 +121,14 @@ public class AgentUsage {
     */
     public static AgentUsageBuilder builder() {
         /**
-        * 智能体usage构建器。
-        * @return 智能体usage构建器的结果
+        * Agentusage构建器。
+        * @return Agentusage构建器的结果
         */
         return new AgentUsageBuilder();
     }
 
     /**
-    * 智能体usage 建造器。
+    * Agentusage 建造器。
     * @author CH
     * @since 4.0.0
     */
@@ -196,19 +196,19 @@ public class AgentUsage {
         public AgentUsageBuilder model(String model) { this.model = model; return this; }
 
         /**
-        * 构造 智能体usage 实例。
+        * 构造 Agentusage 实例。
         *
         * @return AgentUsage 实例
         */
         public AgentUsage build() {
             /**
-            * 智能体usage。
+            * Agentusage。
             * @param promptTokens 提示符令牌
             * @param completionTokens 完成令牌
             * @param totalTokens total令牌
             * @param cost cost
             * @param model 模型
-            * @return 智能体usage的结果
+            * @return Agentusage的结果
             */
             return new AgentUsage(promptTokens, completionTokens, totalTokens, cost, model);
         }

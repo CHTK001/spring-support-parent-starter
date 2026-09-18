@@ -180,7 +180,7 @@ public class ApiSkillController {
     * 扫描本机已安装 AI 编辑器的 skill/rules 目录，返回可导入的技能列表。
     *
     * <p>通过 {@link ServiceProvider} SPI 收集全部离线 {@link SkillOfflineProvider} 实现，
-    * 汇总每个已安装 智能体 的 {@code listAgentSkills()} 扫描结果，避免反射与硬编码目录。</p>
+    * 汇总每个已安装 Agent 的 {@code listAgentSkills()} 扫描结果，避免反射与硬编码目录。</p>
     *
     * @return 技能列表（按 提供者 分组）
     */
@@ -283,7 +283,7 @@ public class ApiSkillController {
     }
 
     /**
-    * 为智能体实例化技能（返回技能源路径列表）。
+    * 为Agent实例化技能（返回技能源路径列表）。
     *
     * @param body 请求体 {@code { conversation_id: string, skills: string[] }}
     * @return 实例化结果
@@ -1090,13 +1090,13 @@ public class ApiSkillController {
      }
 
     /**
-    * 导入 {@code agent://PROVIDER/SKILL} 虚拟地址指向的 智能体 本地技能。
+    * 导入 {@code agent://PROVIDER/SKILL} 虚拟地址指向的 Agent 本地技能。
     *
     * <p>前端「从 Agent 导入」对 agent 类来源合成 {@code agent://<providerKey>/<skillName>}
     * 地址。这里通过 {@link SkillOfflineProvider} SPI 将虚拟地址解析为真实落盘位置
     * （技能目录或单文件规则），再走与文件系统导入相同的符号链接/复制逻辑。</p>
     *
-    * @param agentUri 智能体:// 虚拟地址
+    * @param agentUri Agent:// 虚拟地址
     * @return 导入结果（skill_name / skill_名称）
     */
     private Map<String, Object> importAgentSkill(String agentUri) {
@@ -1108,7 +1108,7 @@ public class ApiSkillController {
             /**
             * api异常。
             * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
-            * @param agentUri 智能体uri
+            * @param agentUri Agenturi
             * @return api异常的结果
             */
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "agent 地址不完整: " + agentUri);
@@ -1187,7 +1187,7 @@ public class ApiSkillController {
     }
 
     /**
-    * 按 SPI 注册键查找 提供者（大小写不敏感，前端可能以任意大小写合成 智能体:// 地址）。
+    * 按 SPI 注册键查找 提供者（大小写不敏感，前端可能以任意大小写合成 Agent:// 地址）。
     *
     * @param providers SPI 枚举结果
     * @param key       请求的 提供者 键
@@ -1659,7 +1659,7 @@ public class ApiSkillController {
     }
 
     /**
-    * 读取本机 智能体 技能内容（「从 智能体 导入」扫描项的内容预览）。
+    * 读取本机 Agent 技能内容（「从 Agent 导入」扫描项的内容预览）。
     *
     * <p>通过 {@link SkillOfflineProvider} SPI 将 {@code provider + skill_name} 解析为本机
     * 落盘位置（技能目录或单文件规则），读取其 SKILL.md 文本。未安装/已删除时

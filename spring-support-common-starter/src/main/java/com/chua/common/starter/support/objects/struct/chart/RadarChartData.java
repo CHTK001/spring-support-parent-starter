@@ -18,7 +18,7 @@ public class RadarChartData implements Serializable {
     private List<String> indicators = new ArrayList<>();
 
     /** 数值集合 */
-    /** 价值观 */
+    /** 值 */
     private List<Number> values = new ArrayList<>();
 
     /**
@@ -38,16 +38,16 @@ public class RadarChartData implements Serializable {
     }
 
     /**
-    * 获取价值观。
-    * @return 获取价值观的结果
+    * 获取值。
+    * @return 获取值的结果
     */
     public List<Number> getValues() {
         return values;
     }
 
     /**
-    * 设置价值观。
-    * @param values 价值观
+    * 设置值。
+    * @param values 值
     */
     public void setValues(List<Number> values) {
         this.values = values;

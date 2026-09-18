@@ -37,7 +37,7 @@ public class AssetDetailView {
 
     /** 采集通道：是否开启采集 */
     private Boolean collectEnabled;
-    /** 智能体 通道：是否开启 智能体 */
+    /** Agent 通道：是否开启 Agent */
     private Boolean agentEnabled;
     /** 远控通道：是否开启 guacd 远控 */
     private Boolean remoteEnabled;

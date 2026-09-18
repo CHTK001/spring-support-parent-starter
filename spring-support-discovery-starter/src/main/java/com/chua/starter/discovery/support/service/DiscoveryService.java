@@ -36,7 +36,7 @@ public class DiscoveryService {
     private final ServiceDiscovery defaultServiceDiscovery;
 
     /**
-    * 所有服务发现实现，钥匙 为 Bean名称
+    * 所有服务发现实现，Key 为 Bean名称
     */
     private final Map<String, ServiceDiscovery> serviceDiscoveryMap;
 
@@ -54,7 +54,7 @@ public class DiscoveryService {
     * 注入默认及全部 {@link ServiceDiscovery} 实现的构造方法。
     *
     * @param defaultServiceDiscovery 默认服务发现实现（primary）
-    * @param serviceDiscoveryMap     所有服务发现实现，钥匙 为 Bean名称
+    * @param serviceDiscoveryMap     所有服务发现实现，Key 为 Bean名称
     */
     public DiscoveryService(ServiceDiscovery defaultServiceDiscovery,
                             Map<String, ServiceDiscovery> serviceDiscoveryMap) {

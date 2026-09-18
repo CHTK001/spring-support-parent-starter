@@ -23,7 +23,7 @@ public interface ServerConfigService {
     /**
     * 读取全部配置为扁平 映射（缺省合并默认值）
     *
-    * @return key -> 价值观 映射
+    * @return key -> 值 映射
     */
     ReturnResult<Map<String, Object>> getConfigMap();
 

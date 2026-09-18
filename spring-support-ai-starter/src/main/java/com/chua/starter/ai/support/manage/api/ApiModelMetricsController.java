@@ -24,7 +24,7 @@ import java.util.Map;
 * 模型价格/指标快照查询与刷新端点。
 *
 * <p>前端在「模型定价」面板打开时调用 {@code GET /api/model-metrics} 获取当前快照，
-* 同时通过 web套接字 订阅 {@code model.metrics.push} 主题接收后台定时推送的增量更新。</p>
+* 同时通过 webSocket 订阅 {@code model.metrics.push} 主题接收后台定时推送的增量更新。</p>
 *
 * @since 4.0.0.42
 * @author CH
@@ -94,7 +94,7 @@ public class ApiModelMetricsController {
     }
 
     /**
-    * 手动触发模型价格/指标快照刷新并推送 web套接字。
+    * 手动触发模型价格/指标快照刷新并推送 webSocket。
     *
     * @return 刷新后的快照
     */

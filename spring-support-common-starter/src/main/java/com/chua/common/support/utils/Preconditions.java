@@ -17,9 +17,9 @@ public class Preconditions {
     public static void checkArgument(boolean expression, String message) {
         if (!expression) {
             /**
-            * illegal参数异常。
+            * IllegalArgumentException。
             * @param message 消息
-            * @return illegal参数异常的结果
+            * @return IllegalArgumentException的结果
             */
             throw new IllegalArgumentException(message);
         }
@@ -70,9 +70,9 @@ public class Preconditions {
     public static <T> T notEmpty(T reference, String message, String errorCode) {
         if (reference == null || (reference instanceof String && ((String) reference).isEmpty())) {
             /**
-            * illegal参数异常。
+            * IllegalArgumentException。
             * @param message 消息
-            * @return illegal参数异常的结果
+            * @return IllegalArgumentException的结果
             */
             throw new IllegalArgumentException("[" + errorCode + "] " + message);
         }

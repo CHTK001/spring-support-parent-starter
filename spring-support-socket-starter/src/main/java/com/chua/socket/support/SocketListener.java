@@ -1,7 +1,7 @@
 package com.chua.socket.support;
 
 /**
-* 套接字 监听器接口
+* Socket 监听器接口
 * 用于标记实现了事件监听的类
 *
 * @版本 1.0.0

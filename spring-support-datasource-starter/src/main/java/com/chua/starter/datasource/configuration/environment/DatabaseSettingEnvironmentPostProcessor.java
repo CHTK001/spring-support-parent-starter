@@ -41,7 +41,7 @@ import java.util.Map;
  */
 @Slf4j
 public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostProcessor, Ordered {
-    /** 已启用_钥匙 */
+    /** 已启用_Key */
     private static final String ENABLED_KEY = "plugin.ops-config.database.enabled";
     /** Setting_table */
     private static final String SETTING_TABLE = "sys_setting";
@@ -647,8 +647,8 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
     /**
     * settingdefinition
     * @param name 名称
-    * @param defaultValue 默认价值观
-    * @param valueType 价值观类型
+    * @param defaultValue 默认值
+    * @param valueType 值类型
     * @param groupCode 群体编码
     * @param sort 排序
     * @param config 配置

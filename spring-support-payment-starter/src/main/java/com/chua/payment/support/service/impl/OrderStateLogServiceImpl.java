@@ -35,9 +35,9 @@ public class OrderStateLogServiceImpl implements OrderStateLogService {
     public void log(OrderStateLogRequest request) {
         if (request == null) {
             /**
-            * illegal参数异常。
+            * IllegalArgumentException。
             * @param "订单状态日志参数不能为空" "订单状态日志参数不能为空"
-            * @return illegal参数异常的结果
+            * @return IllegalArgumentException的结果
             */
             throw new IllegalArgumentException("订单状态日志参数不能为空");
         }

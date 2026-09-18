@@ -255,7 +255,7 @@ public class SshTerminalSessionManager {
     // ==================== 私有方法 ====================
 
     /**
-    * 装配并建立真实 SSH 连接（与 sshconnection管理器 一致：密码 / 钥匙 / 证书）。
+    * 装配并建立真实 SSH 连接（与 sshconnection管理器 一致：密码 / Key / 证书）。
     * @param host 主机
     * @return 构建连接客户端的结果
     */

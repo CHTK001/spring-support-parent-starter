@@ -127,7 +127,7 @@ public class C3p0DataSourcePropertyProvider implements DataSourcePropertyProvide
     /**
     * 转为int
     *
-    * @param value 价值观
+    * @param value 值
     * @return 转为int的结果
     */
     private int toInt(Object value) {
@@ -140,7 +140,7 @@ public class C3p0DataSourcePropertyProvider implements DataSourcePropertyProvide
     /**
     * 转为布尔值
     *
-    * @param value 价值观
+    * @param value 值
     * @return 转为布尔值的结果
     */
     private boolean toBoolean(Object value) {

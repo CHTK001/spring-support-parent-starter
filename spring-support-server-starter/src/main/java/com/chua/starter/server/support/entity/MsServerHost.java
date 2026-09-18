@@ -115,11 +115,11 @@ public class MsServerHost extends SysBase {
     private java.time.LocalDateTime serverHostOnlineTime; // 服务端主机online时间
 
     /**
-    * 探针标识（为后续 智能体 上报预留，服务端生成）
+    * 探针标识（为后续 Agent 上报预留，服务端生成）
     */
     @TableField("ms_server_host_agent_key")
     @Schema(description = "探针标识(32位)", example = "8f14e45fceea167a5a36dedd4bea2543")
-    private String serverHostAgentKey; // 服务端主机智能体键
+    private String serverHostAgentKey; // 服务端主机Agent键
 
     /**
     * 描述
@@ -255,11 +255,11 @@ public class MsServerHost extends SysBase {
     private java.time.LocalDateTime serverHostLastCollectTime; // 服务端主机最后一个collect时间
 
     /**
-    * 智能体 上报开关（主机级）
+    * Agent 上报开关（主机级）
     */
     @TableField("ms_server_host_agent_enabled")
     @Schema(description = "Agent上报开关(主机级)", example = "0")
-    private Integer serverHostAgentEnabled; // 服务端主机智能体启用
+    private Integer serverHostAgentEnabled; // 服务端主机Agent启用
 
     /**
     * 远控开关（主机级）

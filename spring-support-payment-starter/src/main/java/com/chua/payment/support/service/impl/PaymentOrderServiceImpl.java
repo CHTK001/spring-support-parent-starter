@@ -1487,7 +1487,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
     /**
     * 解析Long
     *
-    * @param values 价值观
+    * @param values 值
     * @return 解析long的结果
     */
     private Long parseLong(Object... values) {
@@ -1723,7 +1723,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
     /**
     * 空转为zero
     *
-    * @param value 价值观
+    * @param value 值
     * @return 空转为zero的结果
     */
     private BigDecimal nullToZero(BigDecimal value) {
@@ -2024,7 +2024,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
     /**
     * 第一个nonblank
     *
-    * @param values 价值观
+    * @param values 值
     * @return 第一个nonblank的结果
     */
     private String firstNonBlank(String... values) {
@@ -2107,7 +2107,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
     /**
     * safejson
     *
-    * @param value 价值观
+    * @param value 值
     * @return safeJson的结果
     */
     private String safeJson(Object value) {

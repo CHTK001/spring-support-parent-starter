@@ -13,8 +13,8 @@ import java.util.List;
 import static com.chua.starter.common.support.logger.ModuleLog.highlight;
 
 /**
-* SSE 套接字 服务提供者
-* 实现 套接字提供者 SPI，提供 SSE 协议支持
+* SSE Socket 服务提供者
+* 实现 Socket提供者 SPI，提供 SSE 协议支持
 *
 * @版本 1.0.0
 * @since 2024-12-24
@@ -36,7 +36,7 @@ public class SseSocketProvider implements SocketProvider {
     * @param properties 属性
     * @param listeners 监听器
     * @param 0 0
-    * @param SseSocketSessionTemplate sse套接字会话template
+    * @param SseSocketSessionTemplate sseSocket会话template
     * @param template template
     * @param template template
     * @param protocol 协议

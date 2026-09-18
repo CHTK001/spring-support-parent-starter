@@ -19,7 +19,7 @@ import java.util.List;
 public interface ServerHostService {
 
     /**
-    * 新增主机（自动生成探针标识 智能体键）
+    * 新增主机（自动生成探针标识 Agent键）
     *
     * @param host 主机
     * @return 结果

@@ -153,7 +153,7 @@ public class SpiderOutputNode implements FlowNode {
     *
     * @param source  来源标识
     * @param context 当前流程上下文
-    * @return 来源映射，非映射类型时包一层 钥匙 为 价值观 的映射
+    * @return 来源映射，非映射类型时包一层 Key 为 值 的映射
     */
     @SuppressWarnings("unchecked")
     private Map<String, Object> resolveMap(String source, FlowContext context) {

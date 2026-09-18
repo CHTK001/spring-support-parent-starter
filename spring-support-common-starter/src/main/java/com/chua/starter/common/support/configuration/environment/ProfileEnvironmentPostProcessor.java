@@ -139,7 +139,7 @@ public class ProfileEnvironmentPostProcessor implements EnvironmentPostProcessor
         List<String> defaultLoadedConfigs = new ArrayList<>();
         List<String> profileLoadedConfigs = new ArrayList<>();
 
- // 合并后的配置：钥匙=文件名，价值观=合并后的属性
+ // 合并后的配置：Key=文件名，值=合并后的属性
         Map<String, Map<String, Object>> mergedConfigs = new LinkedHashMap<>();
 
         // 1. 计算需要加载的目录列表：
@@ -312,7 +312,7 @@ public class ProfileEnvironmentPostProcessor implements EnvironmentPostProcessor
             if (source.getSource() instanceof Map) {
                 @SuppressWarnings("unchecked")
                 Map<String, Object> sourceMap = (Map<String, Object>) source.getSource();
- // 解包 origintracked价值观
+ // 解包 origintracked值
                 sourceMap.forEach((key, value) -> result.put(key, unwrapValue(value)));
             }
         }
@@ -369,7 +369,7 @@ public class ProfileEnvironmentPostProcessor implements EnvironmentPostProcessor
     }
 
     /**
-    * 解包 origintracked价值观
+    * 解包 origintracked值
     *
     * @param value 原始值
     * @return 解包后的值

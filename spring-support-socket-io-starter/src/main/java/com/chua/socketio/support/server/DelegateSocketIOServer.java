@@ -9,7 +9,7 @@ import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
 
 /**
-* 套接字io服务端
+* Socketio服务端
 *
 * @author CH
 * @since 4.0.0
@@ -21,7 +21,7 @@ public class DelegateSocketIOServer extends SocketIOServer implements Initializi
     private static final Logger log = LoggerFactory.getLogger(DelegateSocketIOServer.class);
 
     /**
-    * 创建 delegate套接字io服务端 实例
+    * 创建 delegateSocketio服务端 实例
     * @param configuration 配置
     */
     public DelegateSocketIOServer(Configuration configuration) {

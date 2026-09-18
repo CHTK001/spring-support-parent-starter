@@ -22,7 +22,7 @@ public enum ProviderType {
     /**
     * SSH/终端执行自定义命令
     */
-    TERMINAL("TERMINAL", "终端命令"),
+    TERMINAL("TERMINAL", "终端"),
     /**
     * HTTP 接口拉取
     */

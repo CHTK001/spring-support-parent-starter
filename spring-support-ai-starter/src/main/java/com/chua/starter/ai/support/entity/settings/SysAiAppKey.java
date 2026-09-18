@@ -13,7 +13,7 @@ import lombok.EqualsAndHashCode;
 import java.time.LocalDateTime;
 
 /**
-* app钥匙 表，存储供应商接入凭证、次数限制与过期策略。
+* appKey 表，存储供应商接入凭证、次数限制与过期策略。
 *
 * <p>次数限制与过期时间二选一：{@link #appKeyMaxUse} 为次数上限，
 * {@link #appKeyExpireTime} 为过期时间，均为空表示不限。</p>
@@ -28,10 +28,10 @@ import java.time.LocalDateTime;
 public class SysAiAppKey extends SysBase {
 
     /**
-    * app钥匙 主键 标识
+    * appKey 主键 标识
     */
     /**
-    * app钥匙 主键 标识
+    * appKey 主键 标识
     */
     @TableId(value = "sys_ai_app_key_id", type = IdType.AUTO)
     @Schema(description = "AppKey 主键 ID")
@@ -39,10 +39,10 @@ public class SysAiAppKey extends SysBase {
     private Long appKeyId;
 
     /**
-    * app钥匙 名称
+    * appKey 名称
     */
     /**
-    * app钥匙 名称
+    * appKey 名称
     */
     @TableField("sys_ai_app_key_name")
     @Schema(description = "AppKey 名称")
@@ -50,10 +50,10 @@ public class SysAiAppKey extends SysBase {
     private String appKeyName;
 
     /**
-    * app钥匙 密钥值
+    * appKey 密钥值
     */
     /**
-    * app钥匙 密钥值
+    * appKey 密钥值
     */
     @TableField("sys_ai_app_key_value")
     @Schema(description = "AppKey 密钥值")

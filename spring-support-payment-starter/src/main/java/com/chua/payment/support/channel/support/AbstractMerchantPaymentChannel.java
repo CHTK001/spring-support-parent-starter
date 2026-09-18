@@ -59,7 +59,7 @@ public abstract class AbstractMerchantPaymentChannel {
     * ext文本
     *
     * @param channel 通道
-    * @param key 钥匙
+    * @param key Key
     * @return ext文本的结果
     */
     protected String extText(MerchantChannel channel, String key) {
@@ -109,10 +109,10 @@ public abstract class AbstractMerchantPaymentChannel {
     }
 
     /**
-    * decrypt价值观
+    * decrypt值
     *
-    * @param encryptedValue encrypted价值观
-    * @return decrypt价值观的结果
+    * @param encryptedValue encrypted值
+    * @return decrypt值的结果
     */
     protected String decryptValue(String encryptedValue) {
         if (!StringUtils.hasText(encryptedValue)) {
@@ -157,7 +157,7 @@ public abstract class AbstractMerchantPaymentChannel {
     /**
     * 第一个nonblank
     *
-    * @param values 价值观
+    * @param values 值
     * @return 第一个nonblank的结果
     */
     protected String firstNonBlank(String... values) {
@@ -172,7 +172,7 @@ public abstract class AbstractMerchantPaymentChannel {
     /**
     * required文本
     *
-    * @param value 价值观
+    * @param value 值
     * @param message 消息
     * @return required文本的结果
     */
@@ -191,7 +191,7 @@ public abstract class AbstractMerchantPaymentChannel {
     /**
     * 转为json
     *
-    * @param value 价值观
+    * @param value 值
     * @return 转为json的结果
     */
     protected String toJson(Object value) {

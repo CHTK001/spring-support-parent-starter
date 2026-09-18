@@ -494,8 +494,8 @@ public class SyncServer implements InitializingBean, DisposableBean {
     /**
     * 查找客户端标识bymetadata
     *
-    * @param metadataKey metadata钥匙
-    * @param metadataValue metadata价值观
+    * @param metadataKey metadataKey
+    * @param metadataValue metadata值
     * @return find客户端标识bymetadata的结果
     */
     public List<String> findClientIdsByMetadata(String metadataKey, Object metadataValue) {
@@ -532,8 +532,8 @@ public class SyncServer implements InitializingBean, DisposableBean {
     /**
     * 发布bymetadata
     *
-    * @param metadataKey metadata钥匙
-    * @param metadataValue metadata价值观
+    * @param metadataKey metadataKey
+    * @param metadataValue metadata值
     * @param topic topic
     * @param data 数据
     * @return 发布bymetadata的结果
@@ -575,11 +575,11 @@ public class SyncServer implements InitializingBean, DisposableBean {
     }
 
     /**
-    * 匹配价值观
+    * 匹配值
     *
     * @param actual actual
     * @param expected 期望
-    * @return 匹配价值观的结果
+    * @return 匹配值的结果
     */
     private boolean matchesValue(Object actual, Object expected) {
         if (Objects.equals(actual, expected)) {

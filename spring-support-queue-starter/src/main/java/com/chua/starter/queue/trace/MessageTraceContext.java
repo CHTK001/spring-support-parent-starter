@@ -85,8 +85,8 @@ public class MessageTraceContext {
 
     /**
     * 添加标签
-    * @param key 钥匙
-    * @param value 价值观
+    * @param key Key
+    * @param value 值
     */
     public void addTag(String key, String value) {
         tags.put(key, value);

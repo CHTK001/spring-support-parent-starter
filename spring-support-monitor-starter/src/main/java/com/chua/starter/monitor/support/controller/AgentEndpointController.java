@@ -25,9 +25,9 @@ import java.util.List;
 import java.util.Map;
 
 /**
-* 智能体 上报端点（开放 API，不走登录态）
+* Agent 上报端点（开放 API，不走登录态）
 * <p>
-* 外部探针以 {@code X-Agent-Key} 头鉴权，键 与 ms监控.监控智能体键 匹配。
+* 外部探针以 {@code X-Agent-Key} 头鉴权，键 与 ms监控.监控Agent键 匹配。
 * 推送数据与 提供者 轮询共用同一条写入管道（MySQL + influxdb + 告警评估）；
 * 心跳与推送均会刷新在线状态上下文。
 * </p>
@@ -42,7 +42,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AgentEndpointController {
 
-    /** 智能体 鉴权请求头 */
+    /** Agent 鉴权请求头 */
     private static final String AGENT_KEY_HEADER = "X-Agent-Key";
 
     /** 监控目标 映射器 */

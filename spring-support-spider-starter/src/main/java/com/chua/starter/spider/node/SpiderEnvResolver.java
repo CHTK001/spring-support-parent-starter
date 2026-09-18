@@ -37,7 +37,7 @@ public class SpiderEnvResolver {
     private static final String ENV_SUFFIX = "}}";
 
     /**
-    * 环境变量占位符正则，分组 1 为变量 钥匙
+    * 环境变量占位符正则，分组 1 为变量 Key
     */
     private static final String ENV_PATTERN = "\\{\\{env\\.([^}]+)\\}\\}";
 

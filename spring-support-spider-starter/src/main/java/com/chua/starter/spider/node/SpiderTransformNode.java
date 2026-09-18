@@ -138,9 +138,9 @@ public class SpiderTransformNode implements FlowNode {
         String saveAs = props.getString("saveAs");
         if (saveAs == null || saveAs.isEmpty()) {
             /**
-            * illegal参数异常。
+            * IllegalArgumentException。
             * @param 参数" 参数"
-            * @return illegal参数异常的结果
+            * @return IllegalArgumentException的结果
             */
             throw new IllegalArgumentException("spider.transform 节点缺少 saveAs 参数");
         }

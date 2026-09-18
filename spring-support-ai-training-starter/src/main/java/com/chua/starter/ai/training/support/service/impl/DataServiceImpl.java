@@ -38,9 +38,9 @@ public class DataServiceImpl implements DataService {
         if (data == null || data.length < 4 || data[0] != 'P' || data[1] != 'K'
                 || (data[2] != 3 && data[2] != 5 && data[2] != 7)) {
             /**
-    * illegal参数异常。
+    * IllegalArgumentException。
     * @param 格式" 格式"
-    * @return illegal参数异常的结果
+    * @return IllegalArgumentException的结果
     */
             throw new IllegalArgumentException("文件内容不是有效的 ZIP 格式");
         }
@@ -83,9 +83,9 @@ public class DataServiceImpl implements DataService {
         File zipFile = new File(zipFilePath);
         if (!zipFile.exists()) {
             /**
-            * illegal参数异常。
+            * IllegalArgumentException。
             * @param zipFilePath 压缩文件路径
-            * @return illegal参数异常的结果
+            * @return IllegalArgumentException的结果
             */
             throw new IllegalArgumentException("ZIP 文件不存在: " + zipFilePath);
         }

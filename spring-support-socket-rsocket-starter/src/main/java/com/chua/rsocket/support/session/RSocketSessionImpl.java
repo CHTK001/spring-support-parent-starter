@@ -14,8 +14,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
-* r套接字 会话实现
-* 基于 Spring web套接字
+* rSocket 会话实现
+* 基于 Spring webSocket
 *
 * @版本 1.0.0
 * @since 2024-12-04
@@ -37,7 +37,7 @@ public class RSocketSessionImpl implements SocketSession {
     private SocketUser user;
 
     /**
-    * 创建 r套接字会话impl 实例
+    * 创建 rSocket会话impl 实例
     * @param session 会话
     */
     public RSocketSessionImpl(WebSocketSession session) {
@@ -85,7 +85,7 @@ public class RSocketSessionImpl implements SocketSession {
     /**
     * 获取Attribute
     *
-    * @param key 钥匙
+    * @param key Key
     * @return 获取attribute的结果
     */
     public <T> T getAttribute(String key) {

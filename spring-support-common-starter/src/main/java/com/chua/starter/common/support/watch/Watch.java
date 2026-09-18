@@ -18,7 +18,7 @@ public @interface Watch {
 
     /**
     * 追踪描述，用于在链路日志中标识该节点的业务含义
-    * @return 价值观的结果
+    * @return 值的结果
     */
     String value() default "";
 

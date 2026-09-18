@@ -52,7 +52,7 @@ public class TreemapData implements Serializable {
         /**
         * Block。
         * @param name 名称
-        * @param value 价值观
+        * @param value 值
         * @param path 路径
         */
         public Block(String name, Number value, String path) {
@@ -78,16 +78,16 @@ public class TreemapData implements Serializable {
         }
 
         /**
-        * 获取价值观。
-        * @return 获取价值观的结果
+        * 获取值。
+        * @return 获取值的结果
         */
         public Number getValue() {
             return value;
         }
 
         /**
-        * 设置价值观。
-        * @param value 价值观
+        * 设置值。
+        * @param value 值
         */
         public void setValue(Number value) {
             this.value = value;

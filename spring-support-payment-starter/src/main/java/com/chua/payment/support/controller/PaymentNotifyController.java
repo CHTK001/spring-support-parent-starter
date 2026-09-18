@@ -401,9 +401,9 @@ public class PaymentNotifyController {
                 .last("limit 1"));
         if (order == null) {
             /**
-            * illegal参数异常。
+            * IllegalArgumentException。
             * @param "订单不存在" "订单不存在"
-            * @return illegal参数异常的结果
+            * @return IllegalArgumentException的结果
             */
             throw new IllegalArgumentException("订单不存在");
         }
@@ -425,9 +425,9 @@ public class PaymentNotifyController {
                 .last("limit 1"));
         if (refundOrder == null) {
             /**
-            * illegal参数异常。
+            * IllegalArgumentException。
             * @param "退款单不存在" "退款单不存在"
-            * @return illegal参数异常的结果
+            * @return IllegalArgumentException的结果
             */
             throw new IllegalArgumentException("退款单不存在");
         }

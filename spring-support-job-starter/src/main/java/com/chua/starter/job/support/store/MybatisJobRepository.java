@@ -41,7 +41,7 @@ public class MybatisJobRepository implements JobRepository {
     private final ConcurrentMap<String, Long> lastFireMs = new ConcurrentHashMap<>();
 
     /**
-    * 触发器缓存, 钥匙 为 执行Bean/名称 (复用固定序列推进)
+    * 触发器缓存, Key 为 执行Bean/名称 (复用固定序列推进)
     */
     private final ConcurrentMap<String, com.chua.common.support.task.scheduler.Trigger> triggerCache = new ConcurrentHashMap<>();
 
@@ -175,7 +175,7 @@ public class MybatisJobRepository implements JobRepository {
     * 计算下一次触发时间 (委托 {@link com.chua.starter.job.support.dispatch.JobTriggering})。
     *
     * @param entity 任务实体
-    * @param key    唯一 钥匙 (执行Bean/名称), 用于缓存触发器
+    * @param key    唯一 Key (执行Bean/名称), 用于缓存触发器
     * @param now    当前时间戳
     * @return 下次触发时间, 未配置或计算失败返回 -1
     */

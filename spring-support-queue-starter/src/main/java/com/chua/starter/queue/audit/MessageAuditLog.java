@@ -105,8 +105,8 @@ public class MessageAuditLog {
 
     /**
     * 添加扩展信息
-    * @param key 钥匙
-    * @param value 价值观
+    * @param key Key
+    * @param value 值
     */
     public void addExtra(String key, Object value) {
         extras.put(key, value);

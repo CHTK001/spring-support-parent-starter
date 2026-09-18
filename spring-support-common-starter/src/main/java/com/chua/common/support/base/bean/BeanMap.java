@@ -79,8 +79,8 @@ public class BeanMap extends HashMap<String, Object> {
                             if (value != null) {
                                 /**
                                 * 放入。
-                                * @param key 钥匙
-                                * @param value 价值观
+                                * @param key Key
+                                * @param value 值
                                 */
                                 put(key, value);
                             }

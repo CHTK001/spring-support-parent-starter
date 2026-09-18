@@ -37,7 +37,7 @@ public class PaymentRequest {
     private String clientIp;
     /** deviceid */
     private String deviceId;
-    /** 用户智能体 */
+    /** 用户Agent */
     private String userAgent;
     /** Attach */
     private String attach;

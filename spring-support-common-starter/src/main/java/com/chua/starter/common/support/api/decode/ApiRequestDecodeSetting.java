@@ -19,7 +19,7 @@ public class ApiRequestDecodeSetting extends ApplicationEvent implements Upgrade
     private boolean codecRequestOpen = true;
 
     /**
-    * 请求加密钥匙
+    * 请求加密Key
     */
     private String codecRequestKey = null;
 
@@ -112,7 +112,7 @@ public class ApiRequestDecodeSetting extends ApplicationEvent implements Upgrade
     }
 
     /**
-    * 获取 codec请求钥匙
+    * 获取 codec请求Key
     *
     * @return codecRequestKey
     */
@@ -121,9 +121,9 @@ public class ApiRequestDecodeSetting extends ApplicationEvent implements Upgrade
     }
 
     /**
-    * 设置 codec请求钥匙
+    * 设置 codec请求Key
     *
-    * @param codecRequestKey codec请求钥匙
+    * @param codecRequestKey codec请求Key
     */
     public void setCodecRequestKey(String codecRequestKey) {
         this.codecRequestKey = codecRequestKey;

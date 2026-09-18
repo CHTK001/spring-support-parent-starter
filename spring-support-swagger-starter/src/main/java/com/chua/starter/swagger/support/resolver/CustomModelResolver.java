@@ -18,12 +18,12 @@ import java.lang.reflect.Type;
 public class CustomModelResolver extends ModelResolver {
     
     /**
-    * 用户价值观注解类（可选依赖）
+    * 用户值注解类（可选依赖）
     */
     private static final Class<?> USER_VALUE_CLASS = loadUserValueClass();
 
     /**
-    * 加载用户价值观注解类
+    * 加载用户值注解类
     *
     * @return UserValue注解类，如果不存在则返回null
     */
@@ -64,7 +64,7 @@ public class CustomModelResolver extends ModelResolver {
             if (clazz.isAnnotationPresent(HiddenParam.class)) {
                 return true;
             }
- // 忽略用户价值观注解的类（如果存在）
+ // 忽略用户值注解的类（如果存在）
             if (USER_VALUE_CLASS != null && clazz.isAnnotationPresent(getUserValueAnnotationClass())) {
                 return true;
             }
@@ -73,7 +73,7 @@ public class CustomModelResolver extends ModelResolver {
     }
 
     /**
-    * 获取 用户价值观 注解类型
+    * 获取 用户值 注解类型
     *
     * @return UserValue 注解 类
     */

@@ -709,8 +709,8 @@ public interface HCNetSDK extends Library {
         /** bydeviceip */
         public byte[] byDeviceIP = new byte[4];
 
-        /** 套接字 IP */
-        /** by套接字ip */
+        /** Socket IP */
+        /** bySocketip */
         public byte[] bySocketIP = new byte[4];
 
         /** 连接端口 */

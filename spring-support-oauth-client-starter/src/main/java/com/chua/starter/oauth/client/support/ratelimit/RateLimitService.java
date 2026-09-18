@@ -46,17 +46,17 @@ public class RateLimitService {
     private static final RateLimitService INSTANCE = new RateLimitService();
 
     /**
-    * IP 滑动窗口计数：钥匙 = "ip:类型"，价值观 = 时间戳队列
+    * IP 滑动窗口计数：Key = "ip:类型"，值 = 时间戳队列
     */
     private final Map<String, Deque<Long>> ipWindows = new ConcurrentHashMap<>();
 
     /**
-    * 账号失败计数：钥匙 = 账号，价值观 = 连续失败次数
+    * 账号失败计数：Key = 账号，值 = 连续失败次数
     */
     private final Map<String, Integer> failCounts = new ConcurrentHashMap<>();
 
     /**
-    * 账号锁定截止时间：钥匙 = 账号，价值观 = 解锁时间戳
+    * 账号锁定截止时间：Key = 账号，值 = 解锁时间戳
     */
     private final Map<String, Long> lockedUntil = new ConcurrentHashMap<>();
 

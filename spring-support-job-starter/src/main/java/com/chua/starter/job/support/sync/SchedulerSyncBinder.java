@@ -34,7 +34,7 @@ import java.util.function.BiConsumer;
 public class SchedulerSyncBinder {
 
     /**
-    * 同步服务端 SPI 钥匙
+    * 同步服务端 SPI Key
     */
     public static final String SPI_SYNC_SERVER = "sync.server";
 

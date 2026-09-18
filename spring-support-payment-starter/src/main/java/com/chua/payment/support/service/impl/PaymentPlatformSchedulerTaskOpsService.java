@@ -442,7 +442,7 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
     /**
     * 解析时间
     *
-    * @param value 价值观
+    * @param value 值
     * @return 解析时间的结果
     */
     private LocalDateTime parseTime(String value) {
@@ -475,7 +475,7 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
         }
         /**
         * 薪酬异常。
-        * @param value 价值观
+        * @param value 值
         * @return 薪酬异常的结果
         */
         throw new PaymentException("无法解析调度平台返回的时间字段: " + value);
@@ -495,7 +495,7 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
     * 任务url
     *
     * @param accessMode accessmode
-    * @param taskKey 任务钥匙
+    * @param taskKey 任务Key
     * @return 任务url的结果
     */
     private URI taskUrl(AccessMode accessMode, String taskKey) {
@@ -506,7 +506,7 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
     * 任务triggerurl
     *
     * @param accessMode accessmode
-    * @param taskKey 任务钥匙
+    * @param taskKey 任务Key
     * @return 任务triggerurl的结果
     */
     private URI taskTriggerUrl(AccessMode accessMode, String taskKey) {
@@ -606,7 +606,7 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
     /**
     * require文本
     *
-    * @param value 价值观
+    * @param value 值
     * @param message 消息
     * @return require文本的结果
     */

@@ -347,7 +347,7 @@ public class WebRequest {
             return AuthenticationInformation.passAuthenticationInformation();
         }
 
- // AI app钥匙 本地认证：Bearer 令牌 命中动态表则直接放行（单机/外部 o认证 不可达场景）
+ // AI appKey 本地认证：Bearer 令牌 命中动态表则直接放行（单机/外部 o认证 不可达场景）
         AuthenticationInformation aiAppKeyResult = tryAuthenticateAiAppKey();
         if (aiAppKeyResult != null) {
             return aiAppKeyResult;
@@ -407,7 +407,7 @@ public class WebRequest {
     }
 
     /**
-    * 尝试使用 AI app钥匙 本地认证。
+    * 尝试使用 AI appKey 本地认证。
     * <p>
     * 启用 {@code plugin.oauth.ai-app-key.enabled} 时，对 Bearer 令牌 做本地动态表校验。
     * 命中则返回已认证信息；未命中或未启用返回 {@code null}，由调用方走原 o认证 协议。
@@ -493,9 +493,9 @@ public class WebRequest {
     }
 
     /**
-    * 构建协议缓存钥匙
+    * 构建协议缓存Key
     * <p>以协议名 + 影响协议运行行为的关键配置摘要作为 key，
-    * 保证不同配置的协议实例互不串用，同时避免敏感配置（如 secret钥匙）明文进 钥匙</p>
+    * 保证不同配置的协议实例互不串用，同时避免敏感配置（如 secretKey）明文进 Key</p>
     *
     * @param authProperties 认证配置
     * @return 缓存key

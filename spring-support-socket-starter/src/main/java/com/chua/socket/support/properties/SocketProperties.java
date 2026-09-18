@@ -12,8 +12,8 @@ import java.util.List;
 import static com.chua.socket.support.properties.SocketProperties.PRE;
 
 /**
-* 套接字 基础配置属性类
-* 提供统一的 套接字 配置，支持多种协议切换
+* Socket 基础配置属性类
+* 提供统一的 Socket 配置，支持多种协议切换
 *
 * @版本 1.0.0
 * @since 2024-12-04
@@ -32,7 +32,7 @@ public class SocketProperties {
     private boolean enable;
 
     /**
-    * 是否在 Spring 容器启动阶段自动启动 套接字 服务
+    * 是否在 Spring 容器启动阶段自动启动 Socket 服务
     * <p>
     * 关闭后仍会创建对应的 {@link com.chua.socket.support.session.SocketSessionTemplate} Bean，
     * 但不会在应用启动时自动监听端口，适合由外部逻辑或运维脚本显式控制生命周期。
@@ -43,7 +43,7 @@ public class SocketProperties {
     /**
     * 房间配置列表
     * <p>
-    * 支持配置多个独立的 套接字 服务实例，每个实例可以有不同的端口和路径
+    * 支持配置多个独立的 Socket 服务实例，每个实例可以有不同的端口和路径
     * </p>
     * 示例配置：
     * <pre>
@@ -64,7 +64,7 @@ public class SocketProperties {
 
     /**
     * 协议类型，默认 sse
-    * 可选值：套接字.IO, rsocket, sse
+    * 可选值：Socket.IO, rsocket, sse
     */
     private SocketProtocol protocol = SocketProtocol.SSE;
 

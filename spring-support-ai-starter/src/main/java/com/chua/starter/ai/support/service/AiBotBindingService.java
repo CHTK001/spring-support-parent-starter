@@ -52,10 +52,10 @@ public class AiBotBindingService {
     private final AiBotChatService aiBotChatService;
 
     /**
-    * 扫码会话内存表（钥匙 -> 会话状态）。
+    * 扫码会话内存表（Key -> 会话状态）。
     *
     * <p>使用 ConcurrentHashMap 避免高并发下 session 互相覆盖；
-    * 生产环境替换为 Redis，钥匙 带前缀避免冲突。</p>
+    * 生产环境替换为 Redis，Key 带前缀避免冲突。</p>
     */
     private final ConcurrentHashMap<String, QrSession> qrSessions = new ConcurrentHashMap<>();
 
@@ -256,7 +256,7 @@ public class AiBotBindingService {
     * 前端识别后提示改用手动导入。</p>
     *
     * @param platform wechat / wecom
-    * @return 会话 钥匙（前端传给 /qrcode/状态）+ qrcodeurl（轮询 状态=就绪 后从 qr状态 取）
+    * @return 会话 Key（前端传给 /qrcode/状态）+ qrcodeurl（轮询 状态=就绪 后从 qr状态 取）
     */
     public QrResult generateQrCode(String platform) {
         return generateQrCode(platform, null, null);
@@ -267,7 +267,7 @@ public class AiBotBindingService {
     *
     * @param platform wechat / wecom
     * @param oldBotId 重新扫码场景下需合并的旧 机器人 唯一标识（可为空）
-    * @return 会话 钥匙 + qrcodeurl
+    * @return 会话 Key + qrcodeurl
     */
     public QrResult generateQrCode(String platform, String oldBotId) {
         return generateQrCode(platform, oldBotId, null);
@@ -282,11 +282,11 @@ public class AiBotBindingService {
     *
     * @param platform wechat / wecom
     * @param oldBotId 重新扫码场景下需合并的旧 机器人 唯一标识（可为空，表示全新绑定）
-    * @return 会话 钥匙 + qrcodeurl
-    * @param ownerKey owner钥匙
+    * @return 会话 Key + qrcodeurl
+    * @param ownerKey ownerKey
     */
     public QrResult generateQrCode(String platform, String oldBotId, String ownerKey) {
- // 企业微信不支持 i链接 扫码，直接返回空 钥匙
+ // 企业微信不支持 i链接 扫码，直接返回空 Key
         if ("wecom".equals(platform)) {
             log.info("[Bot] wecom 扫码被拒绝，使用手动导入");
             /**
@@ -315,7 +315,7 @@ public class AiBotBindingService {
                 session.errorMsg = "iLink SPI 未返回 ILinkBotClient";
                 /**
                 * qr结果。
-                * @param key 钥匙
+                * @param key Key
                 * @param "" ""
                 * @return qr结果的结果
                 */
@@ -350,7 +350,7 @@ public class AiBotBindingService {
                     } else {
                         /**
                         * 保存binding从扫描。
-                        * @param key 钥匙
+                        * @param key Key
                         * @param session 会话
                         * @param userId 用户标识
                         */
@@ -400,7 +400,7 @@ public class AiBotBindingService {
         // 直接返回二维码 URL（若同步等待期间已就绪）；前端无需再额外轮询拿 URL
         /**
         * qr结果。
-        * @param key 钥匙
+        * @param key Key
         * @param "" ""
         * @return qr结果的结果
         */
@@ -413,12 +413,12 @@ public class AiBotBindingService {
     * <p>会话状态由后台 {@link ILinkBotClient} 扫码流程的
     * {@link QrcodeListener} 回调实时更新，此处仅读取缓存，不做网络请求。</p>
     *
-    * @param key 会话 钥匙
+    * @param key 会话 Key
     * @return 状态 + 凭证（confirmed 时）
     */
     public QrStatus checkQrCodeStatus(String key) {
         var session = qrSessions.get(key);
- // 会话不存在（已 confirmed 移除 / 已过期 / 钥匙 无效）：返回 expired，避免前端轮询报错
+ // 会话不存在（已 confirmed 移除 / 已过期 / Key 无效）：返回 expired，避免前端轮询报错
         if (session == null) {
             /**
             * qr状态。
@@ -473,7 +473,7 @@ public class AiBotBindingService {
     *   <li>更新其中一条旧绑定记录为新的 botId/botToken（记录 id 不变，前端会话不分裂）</li>
     *   <li>删除同微信用户的其他旧绑定记录，避免重复行</li>
     * </ol></p>
-    * @param key 钥匙
+    * @param key Key
     * @param session 会话
     * @param userId 用户标识
     */
@@ -597,9 +597,9 @@ public class AiBotBindingService {
     public Long bindFeishu(String appId, String appSecret, String ownerKey) {
         if (appId == null || appId.isBlank() || appSecret == null || appSecret.isBlank()) {
             /**
-            * illegal参数异常。
+            * IllegalArgumentException。
             * @param 必填" 必填"
-            * @return illegal参数异常的结果
+            * @return IllegalArgumentException的结果
             */
             throw new IllegalArgumentException("飞书 appId 与 appSecret 必填");
         }
@@ -619,9 +619,9 @@ public class AiBotBindingService {
         } catch (Exception e) {
             log.error("[Bot] 飞书绑定失败 appId={}", appId, e);
             /**
-            * illegal参数异常。
+            * IllegalArgumentException。
             * @param e.getMessage( e.获取消息(
-            * @return illegal参数异常的结果
+            * @return IllegalArgumentException的结果
             */
             throw new IllegalArgumentException("飞书客户端初始化失败: " + e.getMessage());
         }
@@ -652,13 +652,13 @@ public class AiBotBindingService {
     */
     @Data
     static class QrSession {
-        /** 会话唯一 钥匙 */
+        /** 会话唯一 Key */
         String key;
         /** 平台类型 */
         String platform;
         /** pending / 就绪 / scanned / confirmed / expired / 错误 */
         String status;
-        /** i链接 返回的 qrcode 钥匙 */
+        /** i链接 返回的 qrcode Key */
         String qrKey;
         /** 二维码图片 URL（i链接 返回的 qrcode_img_内容，前端 img src 直接使用） */
         String qrImageUrl;
@@ -677,7 +677,7 @@ public class AiBotBindingService {
     /**
         * 生成二维码响应（不可变，用 record）。
         *
-        * @param key       轮询 钥匙（前端传给 /qrcode/状态?钥匙=）
+        * @param key       轮询 Key（前端传给 /qrcode/状态?Key=）
         * @param qrcodeUrl 二维码图片 URL（异步 模式即时返回空，前端轮询到 状态=就绪 后从 qr状态 取）
         */
     public record QrResult(String key,

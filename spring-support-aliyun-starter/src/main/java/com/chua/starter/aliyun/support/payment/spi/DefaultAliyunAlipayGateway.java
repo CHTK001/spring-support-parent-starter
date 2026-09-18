@@ -373,7 +373,7 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
     /**
     * 第一个nonblank
     *
-    * @param values 价值观
+    * @param values 值
     * @return 第一个nonblank的结果
     */
     private String firstNonBlank(String... values) {
@@ -388,7 +388,7 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
     /**
     * 转为json
     *
-    * @param value 价值观
+    * @param value 值
     * @return 转为json的结果
     */
     private String toJson(Object value) {

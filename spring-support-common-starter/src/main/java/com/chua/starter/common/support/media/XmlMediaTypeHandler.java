@@ -118,7 +118,7 @@ public class XmlMediaTypeHandler implements MediaTypeHandler {
     /**
     * Formatter
     *
-    * @param value 价值观
+    * @param value 值
     * @param aClass a类
     * @param field 字段
     * @return formatter的结果

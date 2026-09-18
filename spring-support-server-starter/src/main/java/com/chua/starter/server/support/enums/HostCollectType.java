@@ -21,7 +21,7 @@ public enum HostCollectType {
     */
     SCHEDULED("SCHEDULED", "定时SSH采集"),
     /**
-    * 智能体 主动上报：目标主机 智能体 按 智能体键 推送数据
+    * Agent 主动上报：目标主机 Agent 按 Agent键 推送数据
     */
     AGENT("AGENT", "Agent主动上报"),
     /**

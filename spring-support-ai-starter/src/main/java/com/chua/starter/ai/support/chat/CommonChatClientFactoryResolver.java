@@ -50,7 +50,7 @@ final class CommonChatClientFactoryResolver {
                 .extraHeaders(setting != null ? setting.getExtraHeaders() : null)
                 .proxy(setting != null ? setting.getProxy() : null)
                 .build();
- // 始终携带 setting 创建，保证 zhipu对话客户端 等无无参构造的实现能注入 api钥匙/baseurl
+ // 始终携带 setting 创建，保证 zhipu对话客户端 等无无参构造的实现能注入 apiKey/baseurl
         try {
             com.chua.common.support.ai.chat.ChatClient client = ChatClient.create(chatClientSetting);
             if (client != null) {

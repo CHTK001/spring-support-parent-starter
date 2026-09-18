@@ -19,13 +19,13 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 /**
-* 套接字 服务器动态注册服务
+* Socket 服务器动态注册服务
 * <p>
-* 服务器启动时向 Redis 注册本实例的 套接字 配置（协议/地址/端口/路径/上下文 等），
+* 服务器启动时向 Redis 注册本实例的 Socket 配置（协议/地址/端口/路径/上下文 等），
 * 并启动心跳定时任务保持在线。支持多个服务器实例同时运行，并按协议/地址汇聚供前端获取。
 * </p>
 * <p>
-* 前端从接口获取所有在线 套接字 服务器地址时，自动合并数据库配置（默认为空），
+* 前端从接口获取所有在线 Socket 服务器地址时，自动合并数据库配置（默认为空），
 * 前端根据 URL scheme 决定协议，不再固定死 协议。
 * </p>
 *
@@ -68,7 +68,7 @@ public class SocketServerRegistry {
     private long lastHeartbeat = System.currentTimeMillis(); // 最后一个心跳
 
     /**
-    * 套接字服务端registry。
+    * Socket服务端registry。
     * @param redisTemplate redistemplate
     * @param properties 属性
     */
@@ -96,7 +96,7 @@ public class SocketServerRegistry {
     }
 
     /**
-    * 获取所有在线 套接字 服务器地址（合并数据库配置）
+    * 获取所有在线 Socket 服务器地址（合并数据库配置）
     *
     * @return 获取全部online服务端的结果
     */
@@ -319,7 +319,7 @@ public class SocketServerRegistry {
     // ======================== SocketServerInfo ========================
 
     /**
-    * 套接字 服务器在线信息
+    * Socket 服务器在线信息
     *
     * @param name 名称
     * @return 设置ttl的结果

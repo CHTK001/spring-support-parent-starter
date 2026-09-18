@@ -163,7 +163,7 @@ public final class OpenIdGenerator {
     /**
     * 生成 unionid（简化版）
     * <p>
-    * 使用平台标识作为 platform钥匙
+    * 使用平台标识作为 platformKey
     * </p>
     *
     * @param platform 平台标识

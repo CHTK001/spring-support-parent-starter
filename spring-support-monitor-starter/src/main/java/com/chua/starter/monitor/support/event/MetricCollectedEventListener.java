@@ -67,7 +67,7 @@ public class MetricCollectedEventListener {
             log.warn("[event] 告警评估异常: {}", e.getMessage());
         }
 
- // 2) 最新指标实时推送（套接字 未启用时静默跳过）
+ // 2) 最新指标实时推送（Socket 未启用时静默跳过）
         try {
             Map<String, Object> payload = new HashMap<>(8);
             payload.put("monitorId", monitorId);
