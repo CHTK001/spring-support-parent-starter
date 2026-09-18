@@ -165,4 +165,13 @@ public interface ServerHostService {
     * @return 同步结果概要（成功数 / 跳过数 / 失败数 / 变更明细）
     */
     ReturnResult<java.util.Map<String, Object>> syncHosts(java.util.List<Long> hostIds);
+
+    /**
+    * Prometheus 凭据校验：GET 目标主机 {@code http://{address}:{port}/metrics}，
+    * 验证 node_exporter 等指标端点是否可达并返回 200。
+    *
+    * @param id 主机主键
+    * @return 校验结果（成功时回显端点地址与指标行数）
+    */
+    ReturnResult<String> testPrometheus(Long id);
 }

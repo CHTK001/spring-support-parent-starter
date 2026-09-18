@@ -345,8 +345,12 @@ public class ApmController {
     public ReturnResult<List<Map<String, Object>>> alertRules() {
         return ReturnResult.ok(alertMonitorService.listRules().stream().map(r -> {
             Map<String, Object> m = new LinkedHashMap<>();
-            m.put("id", r.id); m.put("metric", r.metric); m.put("threshold", r.threshold);
-            m.put("severity", r.severity); m.put("debounceMs", r.debounceMs); m.put("enabled", r.enabled);
+            m.put("id", r.id);
+            m.put("metric", r.metric);
+            m.put("threshold", r.threshold);
+            m.put("severity", r.severity);
+            m.put("debounceMs", r.debounceMs);
+            m.put("enabled", r.enabled);
             return m;
         }).collect(java.util.stream.Collectors.toList()));
     }
@@ -371,8 +375,12 @@ public class ApmController {
                 new AlertMonitorService.AlertRule(0, metric, threshold, severity, debounceMs, enabled);
         AlertMonitorService.AlertRule saved = alertMonitorService.addRule(rule);
         Map<String, Object> m = new LinkedHashMap<>();
-        m.put("id", saved.id); m.put("metric", saved.metric); m.put("threshold", saved.threshold);
-        m.put("severity", saved.severity); m.put("debounceMs", saved.debounceMs); m.put("enabled", saved.enabled);
+        m.put("id", saved.id);
+        m.put("metric", saved.metric);
+        m.put("threshold", saved.threshold);
+        m.put("severity", saved.severity);
+        m.put("debounceMs", saved.debounceMs);
+        m.put("enabled", saved.enabled);
         return ReturnResult.ok(m);
     }
 

@@ -12,6 +12,7 @@ package com.chua.starter.server.support.spi;
 * @param stderr   错误输出，可能为空串
 * @author CH
 * @since 4.0.0.42
+ * @return 结果值
  */
 public record RemoteExecResult(int exitCode, String stdout, String stderr) {
 

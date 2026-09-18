@@ -62,14 +62,6 @@ public class DataSourceDocumentHandler {
     * @param mapping mapping
     */
     public void register(RequestMappingHandlerMapping mapping) {
-        /**
-        * 注册路径。
-        * @param mapping mapping
-        * @param "GET" "获取"
-        * @param "/preview" "/preview"
-        * @param "preview" "preview"
-        * @param HttpServletResponse.class httpservlet响应.类
-        */
         registerPath(mapping, "GET", "/preview", "preview", HttpServletResponse.class);
         /**
         * 注册路径。
@@ -153,15 +145,15 @@ public class DataSourceDocumentHandler {
     private void registerPath(RequestMappingHandlerMapping mapping,
                               String method, String path, String handlerMethod,
                               Class<?>... paramTypes) {
-        try {
-            Method m = DataSourceDocumentController.class.getMethod(handlerMethod, paramTypes);
-            RequestMappingInfo info = RequestMappingInfo.paths(basePath + path)
-                    .methods(org.springframework.web.bind.annotation.RequestMethod.valueOf(method))
-                    .build();
-            mapping.registerMapping(info, controller, m);
-        } catch (NoSuchMethodException e) {
-            log.error("注册文档路径失败: {} {} -> {}", method, path, handlerMethod, e);
+        Method m = ReflectUtils.findMethod(DataSourceDocumentController.class, handlerMethod, paramTypes);
+        if (m == null) {
+            log.error("注册文档路径失败: {} {} -> {} 未找到处理方法", method, path, handlerMethod);
+            return;
         }
+        RequestMappingInfo info = RequestMappingInfo.paths(basePath + path)
+                .methods(org.springframework.web.bind.annotation.RequestMethod.valueOf(method))
+                .build();
+        mapping.registerMapping(info, controller, m);
     }
 
     /**

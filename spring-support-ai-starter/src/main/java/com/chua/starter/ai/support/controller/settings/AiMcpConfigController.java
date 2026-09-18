@@ -117,6 +117,13 @@ public class AiMcpConfigController {
         return list();
     }
 
+    /**
+     * 是否Enabled。
+     *
+     * @param key 键，不允许为 null
+     * @param defaultValue default值（布尔开关）
+     * @return 是否成功（true 表示成功）
+     */
     private boolean isEnabled(String key, boolean defaultValue) {
         try {
             return globalSettingService.getBoolean(MCP_GROUP, "provider_" + key + "_enabled", defaultValue);
@@ -125,6 +132,12 @@ public class AiMcpConfigController {
         }
     }
 
+    /**
+     * 设置Enabled。
+     *
+     * @param key 键，不允许为 null
+     * @param enabled enabled（布尔开关）
+     */
     private void setEnabled(String key, boolean enabled) {
         try {
             globalSettingService.upsertValue(MCP_GROUP, "provider_" + key + "_enabled", String.valueOf(enabled), "MCP Provider " + key + " enabled");

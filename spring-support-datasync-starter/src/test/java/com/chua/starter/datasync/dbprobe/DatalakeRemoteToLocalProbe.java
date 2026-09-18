@@ -194,7 +194,11 @@ public final class DatalakeRemoteToLocalProbe {
             executor.publish("remote-output", rows);
 
             // 等待 Chronicle 异步消费
-            try { Thread.sleep(2000); } catch (InterruptedException ignored) { Thread.currentThread().interrupt(); }
+            try {
+                Thread.sleep(2000);
+            } catch (InterruptedException ignored) {
+                Thread.currentThread().interrupt();
+            }
 
             // 验证各 Sink 写入
             boolean logOk = LOG_WRITES.size() >= 50;

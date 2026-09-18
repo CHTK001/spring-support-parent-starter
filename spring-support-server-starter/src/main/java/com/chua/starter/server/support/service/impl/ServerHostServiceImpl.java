@@ -342,10 +342,6 @@ public class ServerHostServiceImpl implements ServerHostService {
             markOnline(host.getId(), true);
             return ReturnResult.ok(banner, "测试成功");
         } catch (Exception e) {
-            /**
-            * markonline。
-            * @param host.getId( 主机.获取标识(
-            */
             markOnline(host.getId(), false);
             log.warn("[server] 连通性测试失败 hostId={} address={}: {}", id, host.getServerHostAddress(), e.getMessage());
             return ReturnResult.error("连接失败: " + e.getMessage());
@@ -759,11 +755,6 @@ public class ServerHostServiceImpl implements ServerHostService {
             * @param conn.getInputStream( conn.获取输入流(
             */
             try (var in = conn.getInputStream()) {
-                /**
-                * 字符串。
-                * @param in.readAllBytes( 入.读取全部bytes(
-                * @return 字符串的结果
-                */
                 return new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8).trim();
             }
         } catch (Exception e) {
@@ -956,6 +947,48 @@ public class ServerHostServiceImpl implements ServerHostService {
         return HexFormat.of().formatHex(bytes);
     }
 
+    /**
+    * Prometheus 凭据校验：GET 目标主机 /metrics 端点
+    *
+    * @param id 主机主键
+    * @return 校验结果
+    */
+    @Override
+    public ReturnResult<String> testPrometheus(Long id) {
+        MsServerHost host = hostMapper.selectById(id);
+        if (host == null) {
+            return ReturnResult.error("主机不存在: " + id);
+        }
+        String address = host.getServerHostAddress();
+        if (isBlank(address)) {
+            return ReturnResult.error("主机地址为空");
+        }
+        int port = host.getServerHostPort() == null || host.getServerHostPort() <= 0
+                ? 9100 : host.getServerHostPort();
+        String url = "http://" + address.trim() + ":" + port + "/metrics";
+        try {
+            java.net.HttpURLConnection conn = (java.net.HttpURLConnection) new java.net.URL(url).openConnection();
+            conn.setConnectTimeout(5000);
+            conn.setReadTimeout(5000);
+            conn.setRequestMethod("GET");
+            int code = conn.getResponseCode();
+            if (code != 200) {
+                return ReturnResult.error("metrics 端点返回 " + code);
+            }
+            int lines = 0;
+            try (java.io.BufferedReader reader = new java.io.BufferedReader(
+                    new java.io.InputStreamReader(conn.getInputStream(), java.nio.charset.StandardCharsets.UTF_8))) {
+                while (reader.readLine() != null) {
+                    lines++;
+                }
+            }
+            log.info("[server] Prometheus 校验成功 hostId={} url={} lines={}", id, url, lines);
+            return ReturnResult.ok(url, "校验成功，共 " + lines + " 行指标");
+        } catch (Exception e) {
+            log.warn("[server] Prometheus 校验失败 hostId={} url={}: {}", id, url, e.getMessage());
+            return ReturnResult.error("连接失败: " + e.getMessage());
+        }
+    }
     /**
     * 空串判断
     *

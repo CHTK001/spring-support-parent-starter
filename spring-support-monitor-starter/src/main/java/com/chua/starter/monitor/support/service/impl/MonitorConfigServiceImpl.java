@@ -54,13 +54,21 @@ public class MonitorConfigServiceImpl implements MonitorConfigService {
     @Override
     /** 获取Int */
     public int getInt(String key, int defaultValue) {
-        try { return Integer.parseInt(getString(key)); } catch (NumberFormatException e) { return defaultValue; }
+        try {
+            return Integer.parseInt(getString(key));
+        } catch (NumberFormatException e) {
+            return defaultValue;
+        }
     }
 
     @Override
     /** 获取Long */
     public long getLong(String key, long defaultValue) {
-        try { return Long.parseLong(getString(key)); } catch (NumberFormatException e) { return defaultValue; }
+        try {
+            return Long.parseLong(getString(key));
+        } catch (NumberFormatException e) {
+            return defaultValue;
+        }
     }
 
     @Override

@@ -75,6 +75,7 @@ public class AIChatController extends BaseAiController {
     * @return 创建dialog的结果
     * @param "新对话" "新对话"
     * @param "新对话" "新对话"
+    * @param name 名称，不允许为 null
     */
     @Operation(summary = "创建会话", description = "创建新的对话会话")
     @Permission("admin")
@@ -235,18 +236,52 @@ public class AIChatController extends BaseAiController {
             if (history == null || history.isEmpty()) {
                 return;
             }
-            // 触发压缩的累计轮数（默认 100 轮，即 200 条消息）与保留的最近轮数（默认 6 轮）
+            // 读取压缩配置
+            String compressType = getStringSetting("chat_compress_type", "rounds");
             int triggerRounds = parseIntSetting("chat_compress_trigger_rounds", 100);
+            int tokenThresholdPercent = parseIntSetting("chat_compress_token_threshold", 80);
             int retainRounds = parseIntSetting("chat_compress_retain_rounds", 6);
+
             if (triggerRounds <= 0) {
                 triggerRounds = 100;
+            }
+            if (tokenThresholdPercent <= 0) {
+                tokenThresholdPercent = 80;
             }
             if (retainRounds <= 0) {
                 retainRounds = 6;
             }
             int retainCount = retainRounds * 2;
-            // 会话轮数未达到触发阈值时不压缩（上下文表保持未命中状态，直接用历史）
-            if (history.size() <= triggerRounds * 2) {
+
+            // 检查是否需要触发压缩
+            boolean shouldCompress = false;
+
+            if ("rounds".equals(compressType) || "both".equals(compressType)) {
+                // 按轮数触发
+                if (history.size() > triggerRounds * 2) {
+                    shouldCompress = true;
+                }
+            }
+
+            if ("tokens".equals(compressType) || "both".equals(compressType)) {
+                // 按上下文阈值触发（估算 token 数 ≈ 字符数 / 4）
+                int totalChars = 0;
+                for (ChatMessage msg : history) {
+                    if (msg.getContent() != null) {
+                        totalChars += msg.getContent().length();
+                    }
+                }
+                // 假设模型窗口 128K tokens，估算阈值
+                int estimatedTokens = totalChars / 4;
+                int maxTokens = 128000; // 默认模型窗口
+                double usagePercent = (double) estimatedTokens / maxTokens * 100;
+                if (usagePercent > tokenThresholdPercent) {
+                    shouldCompress = true;
+                }
+            }
+
+            // 未达到触发条件时不压缩
+            if (!shouldCompress) {
                 return;
             }
             List<ChatMessage> head = new ArrayList<>(history.subList(0, history.size() - retainCount));
@@ -308,6 +343,20 @@ public class AIChatController extends BaseAiController {
                         return defaultValue;
                     }
                 })
+                .orElse(defaultValue);
+    }
+
+    /**
+    * 从全局设置读取字符串配置，未配置时返回默认值。
+    *
+    * @param field        配置字段名（runtime 分组）
+    * @param defaultValue 默认值
+    * @return 配置值
+    */
+    private String getStringSetting(String field, String defaultValue) {
+        return sysAiGlobalSettingService.getValue("runtime", field)
+                .map(value -> value.trim())
+                .filter(value -> !value.isEmpty())
                 .orElse(defaultValue);
     }
 }

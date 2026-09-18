@@ -49,18 +49,30 @@ public class SystemManageController {
     private static final boolean IS_WINDOWS = System.getProperty("os.name").toLowerCase(Locale.ROOT).contains("win");
 
     @Autowired
+    /** localSystemInfo服务 */
     private LocalSystemInfoService localSystemInfoService;
 
     @Autowired
+    /** 主机Mapper */
     private MsServerHostMapper hostMapper;
 
     @Autowired
+    /** 提供者Router */
     private com.chua.starter.monitor.support.spi.SystemInfoProviderRouter providerRouter;
-    /** 远程执行命令（通过 SSH） */
+    /**
+     * 远程执行命令（通过 SSH）
+     * @param hostId 主机ID，不允许为 null
+     * @param command 方法入参 command
+     * @return 结果字符串
+     */
     private String execRemoteCommand(Long hostId, String command) {
-        if (hostId == null) return execCommand(command.split(" "));
+        if (hostId == null) {
+            return execCommand(command.split(" "));
+        }
         MsServerHost host = hostMapper.selectById(hostId);
-        if (host == null) return "";
+        if (host == null) {
+            return "";
+        }
         try {
             com.chua.common.support.network.protocol.ClientSetting setting = com.chua.common.support.network.protocol.ClientSetting.builder()
                     .host(host.getServerHostAddress())
@@ -91,12 +103,16 @@ public class SystemManageController {
                 return (ReturnResult<Map<String, Object>>)(ReturnResult<?>) ReturnResult.ok(localSystemInfoService.getHostInfo());
             }
             MsServerHost host = hostMapper.selectById(hostId);
-            if (host == null) return ReturnResult.error("主机不存在: " + hostId);
+            if (host == null) {
+                return ReturnResult.error("主机不存在: " + hostId);
+            }
             try {
                 Map<String, Object> info = providerRouter.route(host).hostInfo(host);
                 host.setServerHostName((String) info.getOrDefault("hostname", host.getServerHostName()));
                 Object cpuObj = info.get("cpuCores");
-                if (cpuObj instanceof Number) host.setServerHostCpuCores(((Number) cpuObj).intValue());
+                if (cpuObj instanceof Number) {
+                    host.setServerHostCpuCores(((Number) cpuObj).intValue());
+                }
                 hostMapper.updateById(host);
                 return ReturnResult.ok(info);
             } catch (Exception e) {
@@ -105,6 +121,11 @@ public class SystemManageController {
             }
         }).subscribeOn(Schedulers.boundedElastic());
     }
+    /**
+     * 环境Vars。
+     *
+     * @return Mono 对象
+     */
     @Operation(summary = "获取环境变量")
     @GetMapping("/env")
     public Mono<ReturnResult<List<Map<String, String>>>> envVars() {
@@ -628,7 +649,9 @@ public class SystemManageController {
         List<Map<String, Object>> list = new ArrayList<>();
         String[] lines = output.split("\\r?\\n");
         for (String line : lines) {
-            if (line.isBlank()) continue;
+            if (line.isBlank()) {
+                continue;
+            }
             String[] parts = line.trim().split("\\s+", 10);
             if (parts.length >= 6) {
                 Map<String, Object> p = new LinkedHashMap<>();
@@ -668,7 +691,9 @@ public class SystemManageController {
         List<Map<String, Object>> list = new ArrayList<>();
         String[] lines = output.split("\\r?\\n");
         for (String line : lines) {
-            if (line.isBlank()) continue;
+            if (line.isBlank()) {
+                continue;
+            }
             String[] parts = line.trim().split("\\s+", 5);
             if (parts.length >= 3) {
                 Map<String, Object> s = new LinkedHashMap<>();
@@ -692,9 +717,17 @@ public class SystemManageController {
     */
     private static final com.fasterxml.jackson.databind.ObjectMapper JACKSON = new com.fasterxml.jackson.databind.ObjectMapper();
 
+    /**
+     * 解析Json列出。
+     *
+     * @param json 方法入参 json
+     * @return 结果列表，无数据时为空列表
+     */
     @SuppressWarnings("unchecked")
     private List<Map<String, Object>> parseJsonList(String json) {
-        if (json == null || json.isBlank()) return new ArrayList<>();
+        if (json == null || json.isBlank()) {
+            return new ArrayList<>();
+        }
         try {
             com.fasterxml.jackson.databind.JsonNode root = JACKSON.readTree(json);
             if (root.isArray()) {
@@ -714,24 +747,62 @@ public class SystemManageController {
         return new ArrayList<>();
     }
 
+    /**
+     * 解析Int。
+     *
+     * @param s 方法入参 s
+     * @return 结果数值
+     */
     private int parseInt(String s) {
-        try { return Integer.parseInt(s.trim()); } catch (Exception e) { return 0; }
+        try {
+            return Integer.parseInt(s.trim());
+        } catch (Exception e) {
+            return 0;
+        }
     }
 
+    /**
+     * 解析Long。
+     *
+     * @param s 方法入参 s
+     * @return 结果数值
+     */
     private long parseLong(String s) {
-        try { return Long.parseLong(s.trim()); } catch (Exception e) { return 0L; }
+        try {
+            return Long.parseLong(s.trim());
+        } catch (Exception e) {
+            return 0L;
+        }
     }
 
+    /**
+     * 解析Double。
+     *
+     * @param s 方法入参 s
+     * @return 结果数值
+     */
     private double parseDouble(String s) {
-        try { return Double.parseDouble(s.trim()); } catch (Exception e) { return 0.0; }
+        try {
+            return Double.parseDouble(s.trim());
+        } catch (Exception e) {
+            return 0.0;
+        }
     }
 
-    /** 解析 ps 输出 */
+    /**
+     * 解析 ps 输出
+     * @param output 方法入参 output
+     * @return 结果列表，无数据时为空列表
+     */
     private List<Map<String, Object>> parsePsOutput(String output) {
         List<Map<String, Object>> list = new ArrayList<>();
-        if (output == null || output.isBlank()) return list;
+        if (output == null || output.isBlank()) {
+            return list;
+        }
         for (String line : output.split("\\r?\\n")) {
-            if (line.isBlank()) continue;
+            if (line.isBlank()) {
+                continue;
+            }
             String[] parts = line.trim().split("\\s+", 9);
             if (parts.length >= 6) {
                 Map<String, Object> p = new LinkedHashMap<>();

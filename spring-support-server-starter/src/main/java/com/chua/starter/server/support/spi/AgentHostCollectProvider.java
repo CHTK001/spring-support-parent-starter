@@ -1,4 +1,4 @@
-package com.chua.starter.server.support.spi;
+﻿package com.chua.starter.server.support.spi;
 
 import com.chua.starter.server.support.entity.MsServerHost;
 import com.chua.starter.server.support.enums.HostCollectType;

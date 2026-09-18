@@ -57,10 +57,6 @@ public class LocalFileStorage extends AbstractFileStorage {
     * @param setting setting
     */
     public LocalFileStorage(BucketSetting setting) {
-        /**
-        * 父。
-        * @param setting setting
-        */
         super(setting);
         String baseDir = Optional.ofNullable(System.getProperty("filesystem.temp.path"))
                 .orElse(System.getProperty("java.io.tmpdir"))
@@ -70,12 +66,6 @@ public class LocalFileStorage extends AbstractFileStorage {
         try {
             Files.createDirectories(rootPath);
         } catch (IOException e) {
-            /**
-            * runtime异常。
-            * @param baseDir basedir
-            * @param e e
-            * @return runtime异常的结果
-            */
             throw new RuntimeException("创建本地存储根目录失败: " + baseDir, e);
         }
     }
@@ -83,10 +73,6 @@ public class LocalFileStorage extends AbstractFileStorage {
     @Override
     /** 创建multipartstorage */
     public MultipartStorage createMultipartStorage() {
-        /**
-    * 本地multipartstorage。
-    * @return 本地multipartstorage的结果
-    */
         return new LocalMultipartStorage();
     }
 
@@ -339,7 +325,10 @@ public class LocalFileStorage extends AbstractFileStorage {
             Map<Integer, Path> parts = multipartMap.remove(uploadId);
             if (parts != null) {
                 parts.values().forEach(p -> {
-                    try { Files.deleteIfExists(p); } catch (IOException ignored) {}
+                    try {
+                        Files.deleteIfExists(p);
+                    } catch (IOException ignored) {
+                    }
                 });
             }
             return DeleteObjectResult.builder()

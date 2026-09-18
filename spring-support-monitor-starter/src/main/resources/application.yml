@@ -28,11 +28,16 @@ spring:
   sql:
     init:
       mode: always
+      encoding: UTF-8
       continue-on-error: true
       schema-locations:
         - classpath:db/init/V1.0__init_monitor.sql
         - classpath:db/init/V1.0__init_server.sql
         - classpath:db/init/V1.0__init_project.sql
+        # TShark 抓包两张表（本模块自有，原合并脚本未包含）
+        - classpath:db/init/V1.5__init_tshark.sql
+        # 资产表补列 ms_server_host_agent_installed（server-starter 实体已有、建表脚本缺失）
+        - classpath:db/init/V1.6__alter_server_host_agent_installed.sql
         # AI 模块 H2 兼容建表脚本（纯 CREATE TABLE，无 MySQL-only 语法）
         - classpath:db/h2-local-schema.sql
 
@@ -107,12 +112,14 @@ plugin:
     enable: true
     type: local
 
-# 时序存储引擎：influxdb / redis / none（默认 influxdb，向后兼容）
-# influxdb：需 InfluxDB 服务；redis：走 ZSET 简化时序（需上方 spring.data.redis 可达）
-# 本地冒烟验证用 none（仅 MySQL 明细），生产按需切换
+# 时序存储引擎：datasource / redis / influxdb / none（默认 datasource）
+# datasource：JDBC 数据库明细表（用 Engine + SqlExecutor）
+# redis：Redis ZSET 简化时序（需上方 spring.data.redis 可达）
+# influxdb：需 InfluxDB 服务
+# none：跳过时序，仅 MySQL 明细
 monitor:
   timeseries:
-    engine: redis
+    engine: none
     url: http://172.16.0.40:8086
     database: monitor
 

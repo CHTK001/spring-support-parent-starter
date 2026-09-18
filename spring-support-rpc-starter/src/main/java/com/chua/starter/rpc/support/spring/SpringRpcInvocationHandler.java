@@ -104,11 +104,6 @@ public class SpringRpcInvocationHandler<T> implements InvocationHandler {
         if (circuitBreakerManager != null && Boolean.TRUE.equals(circuitBreakerEnabled)) {
             circuitBreaker = circuitBreakerManager.getOrCreate(serviceName);
             if (!circuitBreaker.tryAcquire()) {
-                /**
-    * runtime异常。
-    * @param serviceName 服务名称
-    * @return runtime异常的结果
-    */
                 throw new RuntimeException("服务熔断中: " + serviceName);
             }
         }
@@ -259,11 +254,10 @@ public class SpringRpcInvocationHandler<T> implements InvocationHandler {
         if (config == null) {
             return null;
         }
-        try {
-            Method method = config.getClass().getMethod(methodName);
-            return ReflectUtils.invoke(config, method.getName(), method.getReturnType());
-        } catch (ReflectiveOperationException ignored) {
+        Method method = ReflectUtils.findMethod(config.getClass(), methodName);
+        if (method == null) {
             return null;
         }
+        return ReflectUtils.invoke(config, method.getName(), method.getReturnType());
     }
 }

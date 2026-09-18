@@ -50,12 +50,15 @@ public class ApmQueryService {
     private volatile boolean agentActive = false;
 
     @Value("${hotsport.agent.enabled:true}")
+    /** agentEnabled */
     private boolean agentEnabled;
 
     @Value("${hotsport.agent.shell-port:4567}")
+    /** shell端口 */
     private int shellPort;
 
     @Value("${hotsport.agent.options:}")
+    /** agent选项 */
     private String agentOptions;
 
     /** 时间格式：epoch 毫秒 → 前端可读字符串。 */
@@ -155,7 +158,10 @@ public class ApmQueryService {
         return null;
     }
 
-    /** Agent 是否已激活。 */
+    /**
+     * Agent 是否已激活。
+     * @return 是否成功（true 表示成功）
+     */
     public boolean isAgentActive() {
         return agentActive;
     }
@@ -290,6 +296,8 @@ public class ApmQueryService {
 
     /**
     * 传输记录 DTO。
+    * @param e 方法入参 e
+    * @return 结果映射，无数据时为空映射
     */
     private Map<String, Object> transmissionDto(TransmissionEvent e) {
         Map<String, Object> m = new LinkedHashMap<>();
@@ -734,6 +742,9 @@ public class ApmQueryService {
 
     /**
     * Map 列表 → CSV 文本（RFC 4180）。
+    * @param header 请求头，不允许为 null
+    * @param rows 方法入参 rows
+    * @return 结果字符串
     */
     private static String toCsv(String[] header, List<Map<String, Object>> rows) {
         StringBuilder sb = new StringBuilder();
@@ -802,8 +813,12 @@ public class ApmQueryService {
         for (Map<String, Object> s : detail) {
             long start = parseEpochMillis(s.get("startTime"));
             long end = parseEpochMillis(s.get("endTime"));
-            if (start > 0 && start < startMin) startMin = start;
-            if (end > 0 && end > endMax) endMax = end;
+            if (start > 0 && start < startMin) {
+                startMin = start;
+            }
+            if (end > 0 && end > endMax) {
+                endMax = end;
+            }
         }
         long totalMs = Math.max(1L, endMax - startMin);
         Map<String, Integer> spanDepth = new ConcurrentHashMap<>();
@@ -923,7 +938,12 @@ public class ApmQueryService {
         return out;
     }
 
-    /** 服务名 = software@host（无 host 时仅 software）。 */
+    /**
+     * 服务名 = software@host（无 host 时仅 software）。
+     * @param software 方法入参 software
+     * @param host 主机，不允许为 null
+     * @return 结果字符串
+     */
     private static String serviceLabel(String software, String host) {
         if ((software == null || software.isBlank()) && (host == null || host.isBlank())) {
             return null;
@@ -1004,7 +1024,12 @@ public class ApmQueryService {
         return out;
     }
 
-    /** 排序列表取第 p 分位（线性内插近似，空列表返回 0）。 */
+    /**
+     * 排序列表取第 p 分位（线性内插近似，空列表返回 0）。
+     * @param sorted 方法入参 sorted
+     * @param p 方法入参 p
+     * @return 结果数值
+     */
     private static long percentile(List<Long> sorted, double p) {
         if (sorted.isEmpty()) {
             return 0L;
@@ -1098,7 +1123,10 @@ public class ApmQueryService {
         return result;
     }
 
-    /** 活跃泄漏计数（APM 存储兜底 0）。 */
+    /**
+     * 活跃泄漏计数（APM 存储兜底 0）。
+     * @return 结果数值
+     */
     private int countActiveLeaks() {
         try {
             ApmStorage storage = currentStorage();
@@ -1119,7 +1147,10 @@ public class ApmQueryService {
         }
     }
 
-    /** 当前堆使用百分比（PlatformMXBean 直读，失败返回 0）。 */
+    /**
+     * 当前堆使用百分比（PlatformMXBean 直读，失败返回 0）。
+     * @return 结果数值
+     */
     private static double lastJvmMemoryPercent() {
         try {
             java.lang.management.MemoryUsage heap =
@@ -1444,6 +1475,12 @@ public class ApmQueryService {
         ports.add(p);
     }
 
+    /**
+     * 字节数组转为Hex。
+     *
+     * @param bytes 字节数组，不允许为 null
+     * @return 结果字符串
+     */
     private static String bytesToHex(byte[] bytes) {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < bytes.length; i++) {
@@ -1455,7 +1492,11 @@ public class ApmQueryService {
         return sb.toString();
     }
 
-    /** 通用 long 解析（Number / 数字字符串 / null 兜底 0）。 */
+    /**
+     * 通用 long 解析（Number / 数字字符串 / null 兜底 0）。
+     * @param v 方法入参 v
+     * @return 结果数值
+     */
     private static long parseLong(Object v) {
         if (v instanceof Number n) {
             return n.longValue();
@@ -1470,7 +1511,11 @@ public class ApmQueryService {
         return 0L;
     }
 
-    /** 从 toIso() 生成的 "yyyy-MM-dd HH:mm:ss" 字符串还原 epoch 毫秒（失败返回 0）。 */
+    /**
+     * 从 toIso() 生成的 "yyyy-MM-dd HH:mm:ss" 字符串还原 epoch 毫秒（失败返回 0）。
+     * @param v 方法入参 v
+     * @return 结果数值
+     */
     private static long parseEpochMillis(Object v) {
         if (v instanceof Number n) {
             return n.longValue();
@@ -1493,7 +1538,11 @@ public class ApmQueryService {
         }
     }
 
-    /** 将任意 Map 值转换为 String 键值 Map（缺省空 Map）。 */
+    /**
+     * 将任意 Map 值转换为 String 键值 Map（缺省空 Map）。
+     * @param raw 方法入参 raw
+     * @return 结果映射，无数据时为空映射
+     */
     private static Map<String, String> toStringMap(Map<?, ?> raw) {
         Map<String, String> out = new LinkedHashMap<>();
         if (raw != null) {
@@ -1506,12 +1555,20 @@ public class ApmQueryService {
     // 内部工具
     // ------------------------------------------------------------------
 
-    /** 当前 APM 存储（兜底 Noop，永不为 null）。 */
+    /**
+     * 当前 APM 存储（兜底 Noop，永不为 null）。
+     * @return ApmStorage 对象
+     */
     private ApmStorage currentStorage() {
         return HotsportProperties.storage();
     }
 
-    /** 取存储并执行查询；存储不可用返回空列表。 */
+    /**
+     * 取存储并执行查询；存储不可用返回空列表。
+     * @param q 方法入参 q
+     * @param fn 函数，不允许为 null
+     * @return 结果列表，无数据时为空列表
+     */
     private <T> List<T> queryAll(Query q, java.util.function.Function<ApmStorage, List<T>> fn) {
         ApmStorage storage = currentStorage();
         if (storage == null) {
@@ -1526,15 +1583,35 @@ public class ApmQueryService {
         }
     }
 
+    /**
+     * containsIgnoreCase。
+     *
+     * @param haystack 方法入参 haystack
+     * @param needle 方法入参 needle
+     * @return 是否成功（true 表示成功）
+     */
     private static boolean containsIgnoreCase(String haystack, String needle) {
         return haystack != null && needle != null
                 && haystack.toLowerCase().contains(needle.toLowerCase());
     }
 
+    /**
+     * endpoint标签。
+     *
+     * @param edge 方法入参 edge
+     * @return 结果字符串
+     */
     private static String endpointLabel(DependencyEdge edge) {
         return edge.getSource() != null ? edge.getSource().displayLabel() : "?";
     }
 
+    /**
+     * endpoint标签。
+     *
+     * @param edge 方法入参 edge
+     * @param target 目标，不允许为 null
+     * @return 结果字符串
+     */
     private static String endpointLabel(DependencyEdge edge, boolean target) {
         Endpoint t = target ? edge.getTarget() : edge.getSource();
         return t != null ? t.displayLabel() : "?";
@@ -1561,6 +1638,12 @@ public class ApmQueryService {
         return sb.length() == 0 ? "?" : sb.toString();
     }
 
+    /**
+     * 转为Iso。
+     *
+     * @param epochMillis epoch毫秒数，不允许为 null
+     * @return 结果字符串
+     */
     private static String toIso(long epochMillis) {
         if (epochMillis <= 0) {
             return "";

@@ -44,18 +44,28 @@ public class SshConnectionCache {
     private static final long TTL_MS = 5 * 60 * 1000L;
 
     @Autowired(required = false)
+    /** 主机IdentityMapper */
     private MsServerHostIdentityMapper hostIdentityMapper;
     @Autowired(required = false)
+    /** identityMapper */
     private MsServerIdentityMapper identityMapper;
     @Autowired(required = false)
+    /** credentialCipher */
     private CredentialCipher credentialCipher;
     @Autowired(required = false)
+    /** 键Mapper */
     private com.chua.starter.server.support.mapper.MsServerKeyMapper keyMapper;
 
-    /** 解析主机绑定的所有身份，按优先级排序（非 root 优先） */
+    /**
+     * 解析主机绑定的所有身份，按优先级排序（非 root 优先）
+     * @param host 主机，不允许为 null
+     * @return 结果列表，无数据时为空列表
+     */
     private List<SshCred> resolveCredentials(MsServerHost host) {
         List<SshCred> result = new java.util.ArrayList<>();
-        if (hostIdentityMapper == null || identityMapper == null) return result;
+        if (hostIdentityMapper == null || identityMapper == null) {
+            return result;
+        }
         try {
             List<MsServerHostIdentity> rels = hostIdentityMapper.selectList(
                     new LambdaQueryWrapper<MsServerHostIdentity>()
@@ -64,9 +74,13 @@ public class SshConnectionCache {
             List<SshCred> roots = new java.util.ArrayList<>();
             for (MsServerHostIdentity rel : rels) {
                 MsServerIdentity id = identityMapper.selectById(rel.getMsServerHostIdentityIdentityId());
-                if (id == null) continue;
+                if (id == null) {
+                    continue;
+                }
                 String uname = id.getMsServerIdentityUsername();
-                if (uname == null) continue;
+                if (uname == null) {
+                    continue;
+                }
                 SshCred cred = null;
                 if ("PUBLIC_KEY".equalsIgnoreCase(id.getMsServerIdentityAuthType())) {
                     if (keyMapper != null && id.getMsServerIdentityKeyId() != null) {
@@ -85,8 +99,12 @@ public class SshConnectionCache {
                     }
                 }
                 if (cred != null) {
-                    if ("root".equalsIgnoreCase(uname)) roots.add(cred);
-                    else result.add(cred);
+                    if ("root".equalsIgnoreCase(uname)) {
+                        roots.add(cred);
+                    }
+                    else {
+                        result.add(cred);
+                    }
                 }
             }
             result.addAll(roots);
@@ -159,13 +177,18 @@ public class SshConnectionCache {
                     java.nio.file.Path tmp = java.nio.file.Files.createTempFile("ms-ssh-", ".pem");
                     java.nio.file.Files.writeString(tmp, cred.privateKey());
                     builder.privateKey(tmp.toString());
-                    if (cred.password() != null && !cred.password().isBlank()) builder.password(cred.password());
+                    if (cred.password() != null && !cred.password().isBlank()) {
+                        builder.password(cred.password());
+                    }
                 } else {
                     builder.password(cred.password() != null ? cred.password() : "lvzhou2011");
                 }
                 com.chua.ssh.support.client.SshClient ssh = builder.build();
                 ssh.connect();
-                if (c == null) { c = new CachedSession(); cache.put(key, c); }
+                if (c == null) {
+                    c = new CachedSession();
+                    cache.put(key, c);
+                }
                 c.ssh = ssh;
                 c.expireAt = System.currentTimeMillis() + TTL_MS;
                 log.info("SSH connected host={} user={}", host.getId(), cred.username());
@@ -183,7 +206,10 @@ public class SshConnectionCache {
                 .password("lvzhou2011");
         com.chua.ssh.support.client.SshClient ssh = builder.build();
         ssh.connect();
-        if (c == null) { c = new CachedSession(); cache.put(key, c); }
+        if (c == null) {
+            c = new CachedSession();
+            cache.put(key, c);
+        }
         c.ssh = ssh;
         c.expireAt = System.currentTimeMillis() + TTL_MS;
         return ssh;
@@ -213,7 +239,9 @@ public class SshConnectionCache {
                     java.nio.file.Path tmp = java.nio.file.Files.createTempFile("ms-sftp-", ".pem");
                     java.nio.file.Files.writeString(tmp, cred.privateKey());
                     sftpBuilder.privateKey(tmp.toString());
-                    if (cred.password() != null && !cred.password().isBlank()) sftpBuilder.password(cred.password());
+                    if (cred.password() != null && !cred.password().isBlank()) {
+                        sftpBuilder.password(cred.password());
+                    }
                 } else {
                     sftpBuilder.password(cred.password() != null ? cred.password() : "lvzhou2011");
                 }

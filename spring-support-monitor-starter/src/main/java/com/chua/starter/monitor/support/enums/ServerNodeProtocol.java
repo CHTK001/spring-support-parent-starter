@@ -33,6 +33,8 @@ public enum ServerNodeProtocol {
 
     /**
     * SIP 隧道服务器（单端口信令 + 数据平面，需要 令牌 认证）
+    * @param 19460 方法入参 19460
+    * @param false 方法入参 false
     */
     SIP("SIP", "sip", 19460, "sip", false, "SIP 隧道服务器");
 

@@ -158,6 +158,10 @@ public class DeployServiceImpl implements DeployService {
 
     /**
     * 部署内部执行（已被并发锁保护）
+    * @param project 方法入参 project
+    * @param action 方法入参 action
+    * @param file 文件，不允许为 null
+    * @return Return结果 对象
     */
     private ReturnResult<List<MsProjectDeployLog>> doDeploy(MsProject project, String action, MultipartFile file) {
         Long projectId = project.getId();
@@ -659,7 +663,9 @@ public class DeployServiceImpl implements DeployService {
     * @param anySuccess 任意成功
     */
     private void afterDeploy(MsProject project, boolean anySuccess) {
-        if (!anySuccess) return;
+        if (!anySuccess) {
+            return;
+        }
         // 自动启动
         if (project.getMsProjectAutoStart() != null && project.getMsProjectAutoStart() == 1
                 && !isBlank(project.getMsProjectStartScript())) {
@@ -687,18 +693,26 @@ public class DeployServiceImpl implements DeployService {
 
     /**
     * 健康检查：对所有绑定主机执行探测
+    * @param project 方法入参 project
+    * @return 是否成功（true 表示成功）
     */
     private boolean healthCheck(MsProject project) {
         List<Long> hostIds = parseHostIds(project.getMsProjectHostIds());
         int timeout = project.getMsProjectHealthTimeout() != null ? project.getMsProjectHealthTimeout() : 30;
         for (Long hostId : hostIds) {
             MsServerHost host = serverHostMapper.selectById(hostId);
-            if (host == null) return false;
+            if (host == null) {
+                return false;
+            }
             try {
                 ReturnResult<SshCredential> resolved = serverHostService.resolveCredential(hostId, null);
-                if (!resolved.isOk()) return false;
+                if (!resolved.isOk()) {
+                    return false;
+                }
                 boolean pass = doHealthCheck(host, resolved.getData(), project, timeout);
-                if (!pass) return false;
+                if (!pass) {
+                    return false;
+                }
             } catch (Exception e) {
                 log.warn("[project] 健康检查异常 hostId={}: {}", hostId, e.getMessage());
                 return false;
@@ -764,6 +778,14 @@ public class DeployServiceImpl implements DeployService {
         }
     }
 
+    /**
+     * lifecycleInternal。
+     *
+     * @param project 方法入参 project
+     * @param action 方法入参 action
+     * @param targetStatus 目标状态，不允许为 null
+     * @return Return结果 对象
+     */
     private ReturnResult<List<MsProjectDeployLog>> lifecycleInternal(MsProject project, String action, String targetStatus) {
         String script = switch (action) {
             case ProjectConstants.ACTION_START -> project.getMsProjectStartScript();
@@ -1299,6 +1321,7 @@ public class DeployServiceImpl implements DeployService {
     * @param script script
     * @param dir dir
     * @return renderScript的结果
+    * @param linux linux（布尔开关）
     */
     private String renderScript(String script, String dir, boolean linux) {
         if (script == null) {
@@ -1318,6 +1341,8 @@ public class DeployServiceImpl implements DeployService {
 
     /**
     * 根据项目配置的主机 OS 判断是否为 Linux
+    * @param os 方法入参 os
+    * @return 是否成功（true 表示成功）
     */
     private boolean isLinuxHostOs(String os) {
         return os != null && os.trim().toUpperCase(Locale.ROOT).startsWith("LINUX");

@@ -9,8 +9,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 
-import java.lang.reflect.Method;
-
 /**
  * 项目告警出口桥接（反射降级版）
  * <p>
@@ -46,9 +44,10 @@ public class ProjectAlarmHookImpl implements ProjectAlarmHook {
             return;
         }
         try {
-            // [P3C 1.10 豁免] 跨模块解耦反射调用，保持原生反射以避免编译期强依赖
-            Method evaluate = engine.getClass().getMethod("evaluate", Long.class, String.class, String.class, double.class);
-            evaluate.invoke(engine, project.getId(), project.getMsProjectName(), metricName, value);
+ // 跨模块解耦：告警引擎 API 不在本模块编译类路径，调用统一经 ReflectUtils（失败仅记日志，不影响主流程）
+            ReflectUtils.invoke(engine, "evaluate", void.class,
+                    new Class<?>[]{Long.class, String.class, String.class, double.class},
+                    project.getId(), project.getMsProjectName(), metricName, value);
         } catch (Exception e) {
             log.debug("[project-alarm] 告警引擎调用失败（不影响主流程）: {}", e.getMessage());
         }

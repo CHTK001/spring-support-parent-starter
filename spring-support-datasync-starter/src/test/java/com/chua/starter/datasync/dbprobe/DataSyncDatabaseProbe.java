@@ -76,7 +76,11 @@ public class DataSyncDatabaseProbe {
         log.info("[DB-PROBE] DataSyncServer 启动成功, 等待定时调度执行");
 
         // 等待调度执行 6 秒后退出 (cron=0/5 理论 1~2 轮)
-        try { Thread.sleep(6000); } catch (InterruptedException ignored) { Thread.currentThread().interrupt(); }
+        try {
+            Thread.sleep(6000);
+        } catch (InterruptedException ignored) {
+            Thread.currentThread().interrupt();
+        }
         server.stop();
         System.exit(0);
     }
@@ -88,10 +92,6 @@ public class DataSyncDatabaseProbe {
      */
     @Bean
     public DataSource dataSource() {
-        /**
-        * embeddeddatabase构建器。
-        * @return embeddeddatabase构建器的结果
-         */
         return new EmbeddedDatabaseBuilder()
                 .setType(EmbeddedDatabaseType.H2)
                 .setName("datasync-db-probe")

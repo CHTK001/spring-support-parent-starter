@@ -73,4 +73,9 @@ public class SysAiSession {
     @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
     /** 更新时间 */
     private LocalDateTime updateTime;
+
+    @TableField("is_archived")
+    /** 是否已归档 */
+    private Boolean isArchived;
 }
+

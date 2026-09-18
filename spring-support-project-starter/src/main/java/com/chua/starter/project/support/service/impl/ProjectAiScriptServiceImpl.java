@@ -55,8 +55,11 @@ public class ProjectAiScriptServiceImpl implements ProjectAiScriptService {
         }
         boolean linux = isLinux(project);
         try {
-            // [P3C 1.10 豁免] 跨模块解耦反射调用 AI 注册表 API
-            Method getDefault = registry.getClass().getMethod("getDefault");
+ // 跨模块解耦：AI 注册表 API 不在本模块编译类路径，方法定位统一经 ReflectUtils，调用仍用 Method 以传播原始异常
+            Method getDefault = ReflectUtils.findMethod(registry.getClass(), "getDefault");
+            if (getDefault == null) {
+                return ReturnResult.error("AI 注册表缺少 getDefault 方法，请检查 spring-support-ai-starter 版本");
+            }
             Object client = getDefault.invoke(registry);
             if (client == null) {
                 return ReturnResult.error("AI 客户端不可用：请在 sys_ai_global_setting.runtime 配置 provider/api_key/base_url/model");
@@ -149,12 +152,21 @@ public class ProjectAiScriptServiceImpl implements ProjectAiScriptService {
     * @throws Exception 反射调用异常
     */
     private Object invokeClient(Object client, String system, String prompt) throws Exception {
-        // [P3C 1.10 豁免] 跨模块解耦反射调用 AI 客户端 API，保持原生反射以避免编译期强依赖
-        Method systemMethod = client.getClass().getMethod("system", String.class);
+ // 跨模块解耦：AI 客户端 API 不在本模块编译类路径，方法定位统一经 ReflectUtils，调用仍用 Method 以传播原始异常
+        Method systemMethod = ReflectUtils.findMethod(client.getClass(), "system", String.class);
+        if (systemMethod == null) {
+            throw new IllegalStateException("AI 客户端缺少 system(String) 方法");
+        }
         Object configured = systemMethod.invoke(client, system);
-        Method tempMethod = configured.getClass().getMethod("temperature", double.class);
+        Method tempMethod = ReflectUtils.findMethod(configured.getClass(), "temperature", double.class);
+        if (tempMethod == null) {
+            throw new IllegalStateException("AI 客户端配置缺少 temperature(double) 方法");
+        }
         Object tuned = tempMethod.invoke(configured, 0.2);
-        Method chatMethod = tuned.getClass().getMethod("chatSync", String.class);
+        Method chatMethod = ReflectUtils.findMethod(tuned.getClass(), "chatSync", String.class);
+        if (chatMethod == null) {
+            throw new IllegalStateException("AI 客户端缺少 chatSync(String) 方法");
+        }
         return chatMethod.invoke(tuned, prompt);
     }
 
@@ -169,8 +181,11 @@ public class ProjectAiScriptServiceImpl implements ProjectAiScriptService {
         if (response instanceof String s) {
             return s;
         }
-        // [P3C 1.10 豁免] 同上，跨模块解耦反射调用
-        Method getText = response.getClass().getMethod("getText");
+ // 同上：跨模块解耦，方法定位统一经 ReflectUtils
+        Method getText = ReflectUtils.findMethod(response.getClass(), "getText");
+        if (getText == null) {
+            throw new IllegalStateException("AI 响应缺少 getText() 方法");
+        }
         Object text = getText.invoke(response);
         return text == null ? null : text.toString();
     }

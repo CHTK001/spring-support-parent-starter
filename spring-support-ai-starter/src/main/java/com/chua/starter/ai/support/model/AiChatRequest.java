@@ -45,6 +45,16 @@ public class AiChatRequest {
     private Integer maxTokens;
 
     /**
+    * top_p 采样参数
+    */
+    private Double topP;
+
+    /**
+    * 频率惩罚
+    */
+    private Double frequencyPenalty;
+
+    /**
     * 历史消息列表
     */
     private List<Map<String, Object>> messages;

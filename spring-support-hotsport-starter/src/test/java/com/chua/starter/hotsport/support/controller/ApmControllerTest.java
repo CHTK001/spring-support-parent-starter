@@ -29,6 +29,11 @@ class ApmControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
+    /**
+     * stats应当ReturnReturn结果WithAgentFlags。
+     *
+     * @throws Exception 当执行过程不满足前置条件时
+     */
     @Test
     void statsShouldReturnReturnResultWithAgentFlags() throws Exception {
         mockMvc.perform(get("/api/apm/stats"))
@@ -43,6 +48,11 @@ class ApmControllerTest {
                 .andExpect(jsonPath("$.data.dependencyCount").isNumber());
     }
 
+    /**
+     * transmissions应当ReturnPagedShape。
+     *
+     * @throws Exception 当执行过程不满足前置条件时
+     */
     @Test
     void transmissionsShouldReturnPagedShape() throws Exception {
         mockMvc.perform(get("/api/apm/transmissions").param("size", "3"))
@@ -53,6 +63,11 @@ class ApmControllerTest {
                 .andExpect(jsonPath("$.data.items").isArray());
     }
 
+    /**
+     * transmissions时间Range过滤Accepted。
+     *
+     * @throws Exception 当执行过程不满足前置条件时
+     */
     @Test
     void transmissionsTimeRangeFilterAccepted() throws Exception {
         mockMvc.perform(get("/api/apm/transmissions")
@@ -63,6 +78,11 @@ class ApmControllerTest {
                 .andExpect(jsonPath("$.data.items").isArray());
     }
 
+    /**
+     * dependencies应当ReturnShape。
+     *
+     * @throws Exception 当执行过程不满足前置条件时
+     */
     @Test
     void dependenciesShouldReturnShape() throws Exception {
         mockMvc.perform(get("/api/apm/dependencies").param("size", "10"))
@@ -72,6 +92,11 @@ class ApmControllerTest {
                 .andExpect(jsonPath("$.data.items").isArray());
     }
 
+    /**
+     * leaks应当ReturnPagedShape。
+     *
+     * @throws Exception 当执行过程不满足前置条件时
+     */
     @Test
     void leaksShouldReturnPagedShape() throws Exception {
         mockMvc.perform(get("/api/apm/leaks").param("size", "5"))
@@ -81,6 +106,11 @@ class ApmControllerTest {
                 .andExpect(jsonPath("$.data.items").isArray());
     }
 
+    /**
+     * logs应当ReturnPagedShape。
+     *
+     * @throws Exception 当执行过程不满足前置条件时
+     */
     @Test
     void logsShouldReturnPagedShape() throws Exception {
         mockMvc.perform(get("/api/apm/logs").param("size", "5"))
@@ -90,6 +120,11 @@ class ApmControllerTest {
                 .andExpect(jsonPath("$.data.items").isArray());
     }
 
+    /**
+     * agent状态应当ReturnStatsShape。
+     *
+     * @throws Exception 当执行过程不满足前置条件时
+     */
     @Test
     void agentStatusShouldReturnStatsShape() throws Exception {
         mockMvc.perform(get("/api/apm/agent/status"))
@@ -98,6 +133,11 @@ class ApmControllerTest {
                 .andExpect(jsonPath("$.data.agentActive").isBoolean());
     }
 
+    /**
+     * sse流Endpoint应当BeAvailable。
+     *
+     * @throws Exception 当执行过程不满足前置条件时
+     */
     @Test
     void sseStreamEndpointShouldBeAvailable() throws Exception {
         // SSE 端点返回 200 + text/event-stream（流不读体，仅验证路由可达与内容类型）
@@ -110,6 +150,11 @@ class ApmControllerTest {
                 });
     }
 
+    /**
+     * exportTransmissions应当ReturnCsvAttachment。
+     *
+     * @throws Exception 当执行过程不满足前置条件时
+     */
     @Test
     void exportTransmissionsShouldReturnCsvAttachment() throws Exception {
         mockMvc.perform(get("/api/apm/export/transmissions"))
@@ -127,6 +172,11 @@ class ApmControllerTest {
                 });
     }
 
+    /**
+     * exportLeaks应当ReturnCsvAttachment。
+     *
+     * @throws Exception 当执行过程不满足前置条件时
+     */
     @Test
     void exportLeaksShouldReturnCsvAttachment() throws Exception {
         mockMvc.perform(get("/api/apm/export/leaks"))
@@ -137,6 +187,11 @@ class ApmControllerTest {
                 });
     }
 
+    /**
+     * exportLogsWith级别过滤应当ReturnCsv。
+     *
+     * @throws Exception 当执行过程不满足前置条件时
+     */
     @Test
     void exportLogsWithLevelFilterShouldReturnCsv() throws Exception {
         mockMvc.perform(get("/api/apm/export/logs").param("level", "INFO"))
@@ -147,6 +202,11 @@ class ApmControllerTest {
                 });
     }
 
+    /**
+     * traceDetail应当Return列出EvenForUnknownTrace。
+     *
+     * @throws Exception 当执行过程不满足前置条件时
+     */
     @Test
     void traceDetailShouldReturnListEvenForUnknownTrace() throws Exception {
         mockMvc.perform(get("/api/apm/trace/nonexistent-trace-id"))

@@ -66,6 +66,7 @@ public enum Information {
     * @param -1 -1
     * @param "其它错误" "其它错误"
     * @return OTHER的结果
+    * @param 1 方法入参 1
     */
     OTHER(-1, "其它错误");
 

@@ -14,7 +14,12 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class ServerProperties {
 
     /**
-    * 是否启用服务器资产模块
+    * 服务信息面板上"服务器资产"模块的展示旗标。
+    * <p>
+    * 注意：这不是模块开关。本模块没有 {@code @ConditionalOnProperty}，
+    * 置 false 不会卸载任何 Bean；monitor/project 等模块直接注入本模块服务，
+    * 真要停用只能移除依赖。
+    * </p>
     */
     private boolean enabled = true;
 

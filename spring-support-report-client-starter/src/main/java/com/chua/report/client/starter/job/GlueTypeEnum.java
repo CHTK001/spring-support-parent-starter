@@ -49,6 +49,7 @@ public enum GlueTypeEnum {
     /**
     * 胶水PowerShell。
     * @param "GLUE(PowerShell "胶水(PowerShell
+    * @param true 方法入参 true
     */
     GLUE_POWERSHELL("GLUE(PowerShell)", true, "powershell", ".ps1");
 

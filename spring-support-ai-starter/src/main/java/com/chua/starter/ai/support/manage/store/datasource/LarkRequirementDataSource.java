@@ -221,6 +221,13 @@ public class LarkRequirementDataSource implements IRequirementDataSource {
         }
     }
 
+    /**
+     * 获取字段文本。
+     *
+     * @param record 记录，不允许为 null
+     * @param fieldName 字段名称，不允许为 null
+     * @return 结果字符串
+     */
     private String getFieldText(Map<String, Object> record, String fieldName) {
         Object fields = record.get("fields");
         if (!(fields instanceof Map)) {
@@ -260,6 +267,12 @@ public class LarkRequirementDataSource implements IRequirementDataSource {
     */
     }
 
+    /**
+     * 映射状态。
+     *
+     * @param raw 方法入参 raw
+     * @return 结果字符串
+     */
     private String mapStatus(String raw) {
         if (raw == null) {
             return "pending";
@@ -275,6 +288,13 @@ public class LarkRequirementDataSource implements IRequirementDataSource {
         };
     }
 
+    /**
+     * 获取字符串。
+     *
+     * @param map 映射，不允许为 null
+     * @param key 键，不允许为 null
+     * @return 结果字符串
+     */
     private String getString(Map<String, Object> map, String key) {
         Object v = map.get(key);
         return v != null ? v.toString() : null;
@@ -287,6 +307,14 @@ public class LarkRequirementDataSource implements IRequirementDataSource {
     */
     }
 
+    /**
+     * 获取字符串。
+     *
+     * @param map 映射，不允许为 null
+     * @param key 键，不允许为 null
+     * @param defaultValue default值，不允许为 null
+     * @return 结果字符串
+     */
     private String getString(Map<String, Object> map, String key, String defaultValue) {
         Object v = map.get(key);
         return v != null ? v.toString() : defaultValue;
@@ -298,6 +326,12 @@ public class LarkRequirementDataSource implements IRequirementDataSource {
     */
     }
 
+    /**
+     * escapeJson。
+     *
+     * @param s 方法入参 s
+     * @return 结果字符串
+     */
     private String escapeJson(String s) {
         if (s == null) {
             return "";
@@ -305,6 +339,12 @@ public class LarkRequirementDataSource implements IRequirementDataSource {
         return s.replace("\\", "\\\\").replace("\"", "\\\"");
     }
 
+    /**
+     * 解析Json。
+     *
+     * @param json 方法入参 json
+     * @return 结果映射，无数据时为空映射
+     */
     @SuppressWarnings("unchecked")
     private Map<String, Object> parseJson(String json) {
         try {

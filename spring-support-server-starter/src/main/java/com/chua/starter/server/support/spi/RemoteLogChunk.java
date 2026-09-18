@@ -14,6 +14,7 @@ package com.chua.starter.server.support.spi;
 * @param eof        本次是否未读到新内容（内容为空）
 * @author CH
 * @since 4.0.0.42
+ * @return 结果值
  */
 public record RemoteLogChunk(String content, long nextCursor, boolean eof) {
 

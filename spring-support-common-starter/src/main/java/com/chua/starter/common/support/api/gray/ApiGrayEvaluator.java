@@ -1,4 +1,5 @@
 package com.chua.starter.common.support.api.gray;
+import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.api.annotations.ApiGray;
 import com.chua.starter.common.support.utils.IpUtils;
@@ -10,6 +11,7 @@ import org.springframework.expression.ExpressionParser;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
 
+import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
@@ -233,24 +235,36 @@ public class ApiGrayEvaluator {
         context.setVariable("roles", roles);
         context.setVariable("request", request);
 
-        // 注册方法
-        try {
-            // 注：StandardEvaluationContext.registerFunction 要求 java.lang.reflect.Method 参数，
-            //     属于 SpEL 框架 API 签名约束，无法用 ReflectUtils 替代，豁免
-            context.registerFunction("header",
-                    ApiGrayEvaluator.class.getDeclaredMethod("getHeader", HttpServletRequest.class, String.class));
-            context.registerFunction("param",
-                    ApiGrayEvaluator.class.getDeclaredMethod("getParam", HttpServletRequest.class, String.class));
-            context.registerFunction("cookie",
-                    ApiGrayEvaluator.class.getDeclaredMethod("getCookie", HttpServletRequest.class, String.class));
-        } catch (NoSuchMethodException e) {
-            log.warn("注册SpEL函数失败", e);
-        }
+        // 注册 SpEL 函数：方法定位统一走 ReflectUtils；取到的 Method 由 SpEL 框架 API 消费
+        //（StandardEvaluationContext.registerFunction 只接受 java.lang.reflect.Method，属 SpEL 签名约束）
+        registerSpelFunction(context, "header", "getHeader");
+        registerSpelFunction(context, "param", "getParam");
+        registerSpelFunction(context, "cookie", "getCookie");
 
         // 设置根对象为请求，方便直接访问
         context.setRootObject(new GrayContext(request, userId, username, clientIp, roles));
 
         return context;
+    }
+
+    /**
+    * 将本类的静态工具方法注册为 SpEL 函数。
+    *
+    * <p>方法定位经由 {@link ReflectUtils#findDeclaredMethod} 完成；未找到方法时记录告警并跳过注册，
+    * 不影响灰度评估的其余能力。</p>
+    *
+    * @param context      SpEL 评估上下文，不能为 null
+    * @param functionName 注册到 SpEL 的函数名（表达式中使用的名字）
+    * @param methodName   本类中对应的静态方法名，参数签名固定为 (HttpServletRequest, String)
+    */
+    private void registerSpelFunction(StandardEvaluationContext context, String functionName, String methodName) {
+        Method method = ReflectUtils.findDeclaredMethod(ApiGrayEvaluator.class, methodName,
+                HttpServletRequest.class, String.class);
+        if (method == null) {
+            log.warn("注册SpEL函数失败, 未找到方法: {}", methodName);
+            return;
+        }
+        context.registerFunction(functionName, method);
     }
 
     /**

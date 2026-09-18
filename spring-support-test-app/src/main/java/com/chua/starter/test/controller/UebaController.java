@@ -50,11 +50,6 @@ public class UebaController {
      */
     public UebaController(UebaEngine engine) {
         if (engine == null) {
-            /**
-            * illegal参数异常。
-            * @param null" 空"
-            * @return illegal参数异常的结果
-             */
             throw new IllegalArgumentException("engine must not be null");
         }
         this.engine = engine;
@@ -150,13 +145,8 @@ public class UebaController {
     * @return 获取prop的结果
      */
     private static Object getProp(Object obj, String name) {
-        // [P3C 1.10 豁免] 演示 app 动态读取任意 getter，保持原生反射
-        try {
-            java.lang.reflect.Method m = obj.getClass().getMethod("get" + capitalize(name));
-            return m.invoke(obj);
-        } catch (Exception ignored) {
-            return null;
-        }
+ // 动态读取任意 getter：统一经 ReflectUtils.invoke（未命中方法或调用异常时返回 null）
+        return ReflectUtils.invoke(obj, "get" + capitalize(name), Object.class);
     }
 
     /**

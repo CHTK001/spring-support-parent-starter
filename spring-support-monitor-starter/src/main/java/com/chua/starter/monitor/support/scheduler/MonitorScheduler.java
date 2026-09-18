@@ -136,6 +136,19 @@ public class MonitorScheduler {
     }
 
     /**
+    * 立即执行一次采集（手动触发, 忽略 cron 与启用状态, 异步执行）
+    *
+    * @param task 任务
+    */
+    public void triggerNow(MsMonitorTask task) {
+        execute(task).subscribe(
+                result -> log.info("[MonitorScheduler] 手动采集完成 task={} points={}",
+                        task.getId(), result.getPoints().size()),
+                error -> log.error("[MonitorScheduler] 手动采集异常 task={}", task.getId(), error)
+        );
+    }
+
+    /**
     * 判断任务是否到达触发时间
     *
     * @param task 任务

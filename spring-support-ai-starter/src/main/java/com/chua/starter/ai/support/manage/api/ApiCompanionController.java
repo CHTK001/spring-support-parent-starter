@@ -485,6 +485,12 @@ public class ApiCompanionController {
         return ApiResult.ok(toFigure(updated));
     }
 
+    /**
+     * 删除Figure。
+     *
+     * @param figureId figureID，不允许为 null
+     * @return Api结果 对象
+     */
     @DeleteMapping("/figures/{figureId}")
     public ApiResult<Void> deleteFigure(@PathVariable String figureId) {
         companionStore.deleteFigure(figureId);
@@ -798,11 +804,23 @@ public class ApiCompanionController {
         return map;
     }
 
+    /**
+     * 转为映射OrEmpty。
+     *
+     * @param map 映射，不允许为 null
+     * @return 结果映射，无数据时为空映射
+     */
     @SuppressWarnings("unchecked")
     private static Map<String, Object> toMapOrEmpty(Map<String, Object> map) {
         return map == null ? new LinkedHashMap<>(4) : map;
     }
 
+    /**
+     * 转为映射OrNull。
+     *
+     * @param value 值，不允许为 null
+     * @return 结果映射，无数据时为空映射
+     */
     @SuppressWarnings("unchecked")
     private static Map<String, Object> toMapOrNull(Object value) {
         return value instanceof Map<?, ?> m ? (Map<String, Object>) m : null;

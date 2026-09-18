@@ -546,8 +546,19 @@ public class DatalakeComprehensiveProbe {
             AtomicBoolean startOk = new AtomicBoolean(false);
             AtomicBoolean stopOk = new AtomicBoolean(false);
             ExecutorService es = Executors.newFixedThreadPool(4);
-            es.execute(() -> { startLatch.countDown(); server.start(); startOk.set(true); });
-            es.execute(() -> { try { startLatch.await(); } catch (Exception ignored) {} server.stop(); stopOk.set(true); });
+            es.execute(() -> {
+                startLatch.countDown();
+                server.start();
+                startOk.set(true);
+            });
+            es.execute(() -> {
+                try {
+                    startLatch.await();
+                } catch (Exception ignored) {
+                }
+                server.stop();
+                stopOk.set(true);
+            });
             es.shutdown();
             es.awaitTermination(5, TimeUnit.SECONDS);
             return startOk.get() && stopOk.get();
@@ -782,10 +793,18 @@ public class DatalakeComprehensiveProbe {
         total++;
         try {
             boolean ok = check.check();
-            if (ok) { passed++; System.err.printf("  [PASS] %s%n", name); }
-            else { failed++; failedCases.add(name); System.err.printf("  [FAIL] %s%n", name); }
+            if (ok) {
+                passed++;
+                System.err.printf("  [PASS] %s%n", name);
+            }
+            else {
+                failed++;
+                failedCases.add(name);
+                System.err.printf("  [FAIL] %s%n", name);
+            }
         } catch (Exception e) {
-            failed++; failedCases.add(name + " (" + e.getMessage() + ")");
+            failed++;
+            failedCases.add(name + " (" + e.getMessage() + ")");
             System.err.printf("  [ERROR] %s: %s%n", name, e.getMessage());
         /**
         * capturingsink类。
@@ -827,7 +846,11 @@ public class DatalakeComprehensiveProbe {
         @Override public String type() { return type; }
         @Override public void start() {}
         @Override public void stop() {}
-        @Override public boolean write(DataEnvelope env, Map<String, Object> config) { count.incrementAndGet(); return true; }
+        @Override
+        public boolean write(DataEnvelope env, Map<String, Object> config) {
+            count.incrementAndGet();
+            return true;
+        }
         @Override public EngineDataSource<?> getDataSource() { return null; }
     }
 
@@ -836,7 +859,11 @@ public class DatalakeComprehensiveProbe {
         @Override public String type() { return "failing"; }
         @Override public void start() {}
         @Override public void stop() {}
-        @Override public boolean write(DataEnvelope env, Map<String, Object> config) { count.incrementAndGet(); throw new RuntimeException("fail"); }
+        @Override
+        public boolean write(DataEnvelope env, Map<String, Object> config) {
+            count.incrementAndGet();
+            throw new RuntimeException("fail");
+        }
         @Override public EngineDataSource<?> getDataSource() { return null; }
         public int getCount() { return count.get(); }
     }

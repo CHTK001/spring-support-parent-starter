@@ -8,6 +8,7 @@ import com.chua.starter.monitor.support.entity.MsMonitorAlarmPolicy;
 import com.chua.starter.monitor.support.entity.MsMonitorAlarmRule;
 
 import java.util.List;
+import java.util.Map;
 
 /**
 * 告警引擎服务
@@ -172,4 +173,22 @@ public interface AlarmEngineService {
     * @return 结果
     */
     ReturnResult<Void> handleEvent(Long id, String remark, boolean falseAlarm);
+
+    // ==================== 统计 ====================
+
+    /**
+    * 告警概览统计
+    *
+    * @return todayTotal/unprocessed/processed/falseAlarm/levelDistribution
+    */
+    ReturnResult<Map<String, Object>> statsSummary();
+
+    /**
+    * 告警趋势（按小时分桶，空桶补 0）
+    *
+    * @param hours    统计过去 N 小时
+    * @param interval 分桶粒度，当前仅支持按小时
+    * @return 时间序列，元素为 {time, count}
+    */
+    ReturnResult<List<Map<String, Object>>> statsTrend(int hours, String interval);
 }

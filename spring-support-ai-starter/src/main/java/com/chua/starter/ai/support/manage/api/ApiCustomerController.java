@@ -140,10 +140,6 @@ public class ApiCustomerController {
     * @return 移除Agent的结果
     */
     public ApiResult<Void> removeAgent(@PathVariable String csAgentId) {
-        /**
-        * requireAgent。
-        * @param csAgentId CAgent标识
-        */
         requireAgent(csAgentId);
         agents.remove(csAgentId);
         return ApiResult.ok();
@@ -156,10 +152,6 @@ public class ApiCustomerController {
     * @return 列表bindings的结果
     */
     public ApiResult<List<Map<String, Object>>> listBindings(@PathVariable String csAgentId) {
-        /**
-        * requireAgent。
-        * @param csAgentId CAgent标识
-        */
         requireAgent(csAgentId);
         return ApiResult.ok(new ArrayList<>());
     }
@@ -167,10 +159,6 @@ public class ApiCustomerController {
     @PutMapping("/agents/{csAgentId}/bindings")
     public ApiResult<List<Map<String, Object>>> replaceBindings(@PathVariable String csAgentId,
                                                                 @RequestBody Map<String, Object> body) {
-        /**
-        * requireAgent。
-        * @param csAgentId CAgent标识
-        */
         requireAgent(csAgentId);
         return ApiResult.ok(new ArrayList<>());
     }
@@ -182,6 +170,7 @@ public class ApiCustomerController {
     * 列表笔记。
     * @param false false
     * @return 列表笔记的结果
+    * @param cs_agent_id csagentID，不允许为 null
     */
     public ApiResult<List<Map<String, Object>>> listNotes(@RequestParam(required = false) String cs_agent_id) {
         List<Map<String, Object>> result = new ArrayList<>();
@@ -242,10 +231,6 @@ public class ApiCustomerController {
     * @return 移除笔记的结果
     */
     public ApiResult<Void> removeNote(@PathVariable String csNoteId) {
-        /**
-        * require笔记。
-        * @param csNoteId C笔记标识
-        */
         requireNote(csNoteId);
         notes.remove(csNoteId);
         return ApiResult.ok();
@@ -260,10 +245,6 @@ public class ApiCustomerController {
     * @return 列表dialogues的结果
     */
     public ApiResult<List<Map<String, Object>>> listDialogues(@RequestParam String cs_agent_id) {
-        /**
-        * requireAgent。
-        * @param cs_agent_id CAgent标识
-        */
         requireAgent(cs_agent_id);
         List<Map<String, Object>> result = new ArrayList<>();
         for (Map<String, Object> dialogue : dialogues.values()) {
@@ -281,10 +262,6 @@ public class ApiCustomerController {
     * @return 列表dialogue消息的结果
     */
     public ApiResult<List<Map<String, Object>>> listDialogueMessages(@PathVariable String csDialogueId) {
-        /**
-        * requiredialogue。
-        * @param csDialogueId Cdialogueid
-        */
         requireDialogue(csDialogueId);
         return ApiResult.ok(messages.getOrDefault(csDialogueId, new ArrayList<>()));
     }
@@ -297,12 +274,6 @@ public class ApiCustomerController {
     private Map<String, Object> requireAgent(String csAgentId) {
         Map<String, Object> agent = agents.get(csAgentId);
         if (agent == null) {
-            /**
-            * api异常。
-            * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
-            * @param csAgentId CAgent标识
-            * @return api异常的结果
-            */
             throw new ApiException(ApiErrorCode.NOT_FOUND, "客服Agent不存在: " + csAgentId);
         }
         return agent;
@@ -316,12 +287,6 @@ public class ApiCustomerController {
     private Map<String, Object> requireNote(String csNoteId) {
         Map<String, Object> note = notes.get(csNoteId);
         if (note == null) {
-            /**
-            * api异常。
-            * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
-            * @param csNoteId C笔记标识
-            * @return api异常的结果
-            */
             throw new ApiException(ApiErrorCode.NOT_FOUND, "笔记不存在: " + csNoteId);
         }
         return note;
@@ -335,12 +300,6 @@ public class ApiCustomerController {
     private Map<String, Object> requireDialogue(String csDialogueId) {
         Map<String, Object> dialogue = dialogues.get(csDialogueId);
         if (dialogue == null) {
-            /**
-            * api异常。
-            * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
-            * @param csDialogueId Cdialogueid
-            * @return api异常的结果
-            */
             throw new ApiException(ApiErrorCode.NOT_FOUND, "对话不存在: " + csDialogueId);
         }
         return dialogue;

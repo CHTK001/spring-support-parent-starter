@@ -61,18 +61,17 @@ public class SysAiJwtAuthFilter extends OncePerRequestFilter {
         String auth = request.getHeader("Authorization");
         if (StringUtils.hasText(auth) && auth.startsWith("Bearer ")) {
             String token = auth.substring(7).trim();
+            if (!StringUtils.hasText(token) || "null".equals(token) || "undefined".equals(token)) {
+                request.setAttribute("nomifun.auth.mode", "anonymous");
+                chain.doFilter(request, response);
+                return;
+            }
             try {
                 SignedJWT signedJWT = SignedJWT.parse(token);
                 String secret = System.getProperty(SECRET_PROP, "");
                 if (StringUtils.hasText(secret)) {
                     JWSVerifier verifier = new MACVerifier(secret);
                     if (!signedJWT.verify(verifier)) {
-                        /**
-                        * 发送json错误。
-                        * @param response 响应
-                        * @param 401 401
-                        * @param invalid" invalid"
-                        */
                         sendJsonError(response, 401, "JWT signature invalid");
                         return;
                     }
@@ -95,12 +94,6 @@ public class SysAiJwtAuthFilter extends OncePerRequestFilter {
                 request.setAttribute("nomifun.auth.mode", "jwt");
                 log.debug("[nomifun-auth] JWT ok user={} path={}", userId, request.getRequestURI());
             } catch (ParseException | JOSEException e) {
-                /**
-                * 发送json错误。
-                * @param response 响应
-                * @param 401 401
-                * @param e.getMessage( e.获取消息(
-                */
                 sendJsonError(response, 401, "JWT invalid: " + e.getMessage());
                 return;
             }

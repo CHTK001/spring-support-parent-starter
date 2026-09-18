@@ -58,11 +58,23 @@ public final class DataSyncSerialBenchProbe {
         // 2. JacksonJsonProvider (通用 JSON 门面)
         benchJsonProvider("jackson-json", new JacksonJsonProvider(), data);
         // 3. Fory (Apache Fury 二进制)
-        try { benchBinary("fury", new ForySerialization(), data); } catch (Throwable t) { System.err.println("fury: " + t.getMessage()); }
+        try {
+            benchBinary("fury", new ForySerialization(), data);
+        } catch (Throwable t) {
+            System.err.println("fury: " + t.getMessage());
+        }
         // 4. Protobuf (protostuff)
-        try { benchBinary("protobuf", new ProtobufSerialization(), data); } catch (Throwable t) { System.err.println("protobuf: " + t.getMessage()); }
+        try {
+            benchBinary("protobuf", new ProtobufSerialization(), data);
+        } catch (Throwable t) {
+            System.err.println("protobuf: " + t.getMessage());
+        }
         // 5. Kryo
-        try { benchKryo(data); } catch (Throwable t) { System.err.println("kryo: " + t.getMessage()); }
+        try {
+            benchKryo(data);
+        } catch (Throwable t) {
+            System.err.println("kryo: " + t.getMessage());
+        }
 
         System.err.println("========================================================================");
     }
@@ -85,10 +97,18 @@ public final class DataSyncSerialBenchProbe {
         }
 
         Runnable ser = () -> {
-            try { MAPPER.writeValueAsString(data); } catch (Exception e) { throw new RuntimeException(e); }
+            try {
+                MAPPER.writeValueAsString(data);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
         };
         Runnable des = () -> {
-            try { MAPPER.readValue(json, List.class); } catch (Exception e) { throw new RuntimeException(e); }
+            try {
+                MAPPER.readValue(json, List.class);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
         };
         report("jackson(当前)", size, ser, des, ok);
     }
@@ -108,10 +128,18 @@ public final class DataSyncSerialBenchProbe {
         boolean ok = data.equals(back);
 
         Runnable ser = () -> {
-            try { s.serialize(data); } catch (Exception e) { throw new RuntimeException(e); }
+            try {
+                s.serialize(data);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
         };
         Runnable des = () -> {
-            try { s.deserialize(bytes, List.class); } catch (Exception e) { throw new RuntimeException(e); }
+            try {
+                s.deserialize(bytes, List.class);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
         };
         report(label, size, ser, des, ok);
     }
@@ -131,10 +159,18 @@ public final class DataSyncSerialBenchProbe {
         boolean ok = data.equals(back);
 
         Runnable ser = () -> {
-            try { p.toJson(data); } catch (Exception e) { throw new RuntimeException(e); }
+            try {
+                p.toJson(data);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
         };
         Runnable des = () -> {
-            try { p.fromJson(json, List.class); } catch (Exception e) { throw new RuntimeException(e); }
+            try {
+                p.fromJson(json, List.class);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
         };
         report(label, size, ser, des, ok);
     }
@@ -153,10 +189,18 @@ public final class DataSyncSerialBenchProbe {
         boolean ok = data.equals(back);
 
         Runnable ser = () -> {
-            try { ks.serialize((Serializable) data); } catch (Exception e) { throw new RuntimeException(e); }
+            try {
+                ks.serialize((Serializable) data);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
         };
         Runnable des = () -> {
-            try { ks.deserialize(bytes); } catch (Exception e) { throw new RuntimeException(e); }
+            try {
+                ks.deserialize(bytes);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
         };
         report("kryo", size, ser, des, ok);
     }
@@ -204,7 +248,10 @@ public final class DataSyncSerialBenchProbe {
         long start = System.nanoTime();
         long deadline = start + ms * 1_000_000L;
         long count = 0;
-        while (System.nanoTime() < deadline) { task.run(); count++; }
+        while (System.nanoTime() < deadline) {
+            task.run();
+            count++;
+        }
         return count * 1_000_000_000L / (System.nanoTime() - start);
     }
 

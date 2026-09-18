@@ -269,6 +269,7 @@ public class SysAiCompanionStore {
     *
     * @param companionId 伙伴 ID
     * @param patch       补丁
+    * @return SysAiCompanion 对象
     */
     public SysAiCompanion patchCompanion(String companionId, Map<String, Object> patch) {
         SysAiCompanion current = getCompanion(companionId);
@@ -278,6 +279,11 @@ public class SysAiCompanionStore {
         return current;
     }
 
+    /**
+     * 删除Companion。
+     *
+     * @param companionId companionID，不允许为 null
+     */
     public void deleteCompanion(String companionId) {
         getCompanion(companionId);
         companionMapper.deleteById(companionId);
@@ -351,6 +357,12 @@ public class SysAiCompanionStore {
     */
     }
 
+    /**
+     * 字符串。
+     *
+     * @param value 值，不允许为 null
+     * @return 结果字符串
+     */
     private static String str(Object value) {
         return value == null ? null : String.valueOf(value);
     /**
@@ -360,6 +372,12 @@ public class SysAiCompanionStore {
     */
     }
 
+    /**
+     * num。
+     *
+     * @param value 值，不允许为 null
+     * @return Integer 对象
+     */
     private static Integer num(Object value) {
         if (value == null) {
             return null;
@@ -374,6 +392,12 @@ public class SysAiCompanionStore {
         }
     }
 
+    /**
+     * 转为映射。
+     *
+     * @param value 值，不允许为 null
+     * @return 结果映射，无数据时为空映射
+     */
     @SuppressWarnings("unchecked")
     private static Map<String, Object> toMap(Object value) {
         if (value instanceof Map<?, ?> m) {

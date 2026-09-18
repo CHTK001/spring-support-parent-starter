@@ -150,6 +150,18 @@ public class ServerHostController {
     }
 
     /**
+    * Prometheus 凭据校验：GET 目标主机 /metrics 端点
+    *
+    * @param id 主机主键
+    * @return 校验结果
+    */
+    @Operation(summary = "Prometheus 凭据校验")
+    @PostMapping("/{id}/test-prometheus")
+    public ReturnResult<String> testPrometheus(@PathVariable Long id) {
+        return serverHostService.testPrometheus(id);
+    }
+
+    /**
     * 绑定身份
     *
     * @param id         主机 标识

@@ -215,6 +215,7 @@ public class WorkshopAssetController {
     * 创建Canvas。
     * @param false false
     * @return 创建Canvas的结果
+    * @param body 请求体，不允许为 null
     */
     public Map<String, Object> createCanvas(@RequestBody(required = false) Map<String, Object> body) {
         String id = com.chua.common.support.utils.IdUtils.uuidv7();

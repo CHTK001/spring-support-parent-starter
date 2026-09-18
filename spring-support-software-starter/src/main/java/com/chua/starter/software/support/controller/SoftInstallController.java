@@ -49,6 +49,8 @@ public class SoftInstallController {
     * @return install的结果
     * @param @Validated(AddGroup.class @校验(添加群体.类
     * @param @Validated(AddGroup.class @Validated(AddGroup.class
+    * @param request 请求，不允许为 null
+    * @param bindingResult binding结果，不允许为 null
     */
     public ReturnResult<InstallDetailResponse> install(@Validated(AddGroup.class) @RequestBody InstallRequest request, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {

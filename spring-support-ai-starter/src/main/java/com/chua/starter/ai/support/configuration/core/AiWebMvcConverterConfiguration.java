@@ -15,9 +15,20 @@ import java.util.List;
 * @since 4.0.0
  */
 // @Configuration // 暂时注释，编译错误
+/**
+ * AiWebMvcConverter配置类，提供相关能力。
+ *
+ * @author CH
+ * @since 1.0.0
+ */
 public class AiWebMvcConverterConfiguration implements WebMvcConfigurer {
 
     // @Override
+    /**
+     * extend消息Converters。
+     *
+     * @param converters 方法入参 converters
+     */
     public void extendMessageConverters(List<HttpMessageConverter<?>> converters) {
         boolean hasResource = converters.stream()
                 .anyMatch(c -> c instanceof ResourceHttpMessageConverter);

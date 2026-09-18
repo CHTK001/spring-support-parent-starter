@@ -171,8 +171,12 @@ public class HostOnlineScheduler {
             long[] ok = {0};
             Flux.fromIterable(dueHosts)
                     .map(host -> {
-                        HostCollectType mode = HostCollectType.of(
-                                host.getServerHostCollectMode() == null ? "SCHEDULED" : host.getServerHostCollectMode());
+                        // 本机（osType=LOCAL）强制走本机自采集 OSHI，忽略前端选择的 AGENT/PROMETHEUS
+                        String osType = host.getServerHostOsType();
+                        String modeCode = ("LOCAL".equalsIgnoreCase(osType == null ? "" : osType))
+                                ? "LOCAL"
+                                : (host.getServerHostCollectMode() == null ? "SCHEDULED" : host.getServerHostCollectMode());
+                        HostCollectType mode = HostCollectType.of(modeCode);
                         /**
                         * 主机collect上下文。
                         * @param mode mode

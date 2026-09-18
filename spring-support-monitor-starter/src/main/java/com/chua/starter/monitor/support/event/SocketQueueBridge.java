@@ -58,13 +58,17 @@ public class SocketQueueBridge {
         messageTemplate.subscribe(MonitorPushService.SOCKET_PUSH_TOPIC, (Message message, com.chua.starter.queue.Acknowledgment ack) -> {
             String json = message == null ? null : message.getPayloadAsString();
             if (json == null || json.isBlank()) {
-                if (ack != null) ack.acknowledge();
+                if (ack != null) {
+                    ack.acknowledge();
+                }
                 return;
             }
             try {
                 SocketSessionTemplate socketTemplate = socketTemplateProvider.getIfAvailable();
                 if (socketTemplate == null) {
-                    if (ack != null) ack.acknowledge();
+                    if (ack != null) {
+                        ack.acknowledge();
+                    }
                     return;
                 }
                 // 诊断：确认广播实际使用的会话模板实现类型
@@ -74,7 +78,9 @@ public class SocketQueueBridge {
             } catch (Exception e) {
                 log.warn("[socket-bridge] 广播失败: {}", e.getMessage());
             } finally {
-                if (ack != null) ack.acknowledge();
+                if (ack != null) {
+                    ack.acknowledge();
+                }
             }
         });
         log.info("[socket-bridge] 已订阅 socket:push 推送 topic");

@@ -35,6 +35,7 @@ public class DeadLetterAutoConfiguration {
     * 死信队列消息模板
     * @param false false
     * @return deadLetterTemplate的结果
+    * @param mainMessageTemplate main消息模板，不允许为 null
     */
     @Bean(destroyMethod = "close")
     public DeadLetterTemplate deadLetterTemplate(@Autowired(required = false) MessageTemplate mainMessageTemplate) {

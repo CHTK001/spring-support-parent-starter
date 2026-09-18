@@ -50,6 +50,12 @@ public class EduIdiomController {
         return ReturnResult.ok(idiomService.generateIdiomGame(gradeLevel, grade, count));
     }
 
+    /**
+     * 校验Pair。
+     *
+     * @param params 参数，不允许为 null
+     * @return Return结果 对象
+     */
     @Operation(summary = "验证成语配对")
     @PostMapping("/game/validate")
     public ReturnResult<Boolean> validatePair(@RequestBody Map<String, Object> params) {
@@ -59,18 +65,36 @@ public class EduIdiomController {
         return ReturnResult.ok(idiomService.validateIdiomPair(idiomId, pinyin, meaning));
     }
 
+    /**
+     * detail。
+     *
+     * @param idiomId idiomID，不允许为 null
+     * @return Return结果 对象
+     */
     @Operation(summary = "获取成语详情")
     @GetMapping("/detail/{idiomId}")
     public ReturnResult<EduIdiom> detail(@PathVariable Long idiomId) {
         return ReturnResult.ok(idiomService.getById(idiomId));
     }
 
+    /**
+     * 保存。
+     *
+     * @param idiom 方法入参 idiom
+     * @return Return结果 对象
+     */
     @Operation(summary = "添加成语")
     @PostMapping("/save")
     public ReturnResult<Boolean> save(@RequestBody EduIdiom idiom) {
         return ReturnResult.ok(idiomService.saveOrUpdate(idiom));
     }
 
+    /**
+     * 删除。
+     *
+     * @param idiomId idiomID，不允许为 null
+     * @return Return结果 对象
+     */
     @Operation(summary = "删除成语")
     @DeleteMapping("/delete/{idiomId}")
     public ReturnResult<Boolean> delete(@PathVariable Long idiomId) {

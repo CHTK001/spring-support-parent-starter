@@ -117,13 +117,25 @@ public class LocalSystemInfoService {
 
         String pkgMgr = "unknown";
         String osFamily = System.getProperty("os.name", "").toLowerCase();
-        if (osFamily.contains("win")) pkgMgr = "winget/choco";
+        if (osFamily.contains("win")) {
+            pkgMgr = "winget/choco";
+        }
         else if (osFamily.contains("linux")) {
-            if (new java.io.File("/usr/bin/apt").exists()) pkgMgr = "apt";
-            else if (new java.io.File("/usr/bin/yum").exists()) pkgMgr = "yum";
-            else if (new java.io.File("/usr/bin/dnf").exists()) pkgMgr = "dnf";
-            else if (new java.io.File("/usr/bin/zypper").exists()) pkgMgr = "zypper";
-        } else if (osFamily.contains("mac")) pkgMgr = "brew";
+            if (new java.io.File("/usr/bin/apt").exists()) {
+                pkgMgr = "apt";
+            }
+            else if (new java.io.File("/usr/bin/yum").exists()) {
+                pkgMgr = "yum";
+            }
+            else if (new java.io.File("/usr/bin/dnf").exists()) {
+                pkgMgr = "dnf";
+            }
+            else if (new java.io.File("/usr/bin/zypper").exists()) {
+                pkgMgr = "zypper";
+            }
+        } else if (osFamily.contains("mac")) {
+            pkgMgr = "brew";
+        }
         info.put("packageManager", pkgMgr);
 
         return info;
@@ -134,11 +146,55 @@ public class LocalSystemInfoService {
     *
     * @return 磁盘列表（名称、挂载路径、类型、容量与使用率）；采集失败返回空列表
     */
-    public List<Map<String, Object>> getDisks() {
+        /**
+        * 获取本机 CPU 使用率（%，瞬时）。
+        *
+        * @return CPU 使用率 0-100；采集失败返回 0
+        */
+    /** 上次 CPU ticks（getSystemCpuLoadBetweenTicks 需要两次采样） */
+    private transient long[] lastCpuTicks = null;
+
+    /**
+     * 获取CpuPercent。
+     *
+     * @return 结果数值
+     */
+    public double getCpuPercent() {
+        try {
+            SystemInfo sys = getSi();
+            if (sys == null) {
+                return 0;
+            }
+            var cpu = sys.getHardware().getProcessor();
+            long[] ticks = System.getProperty("os.name").toLowerCase().contains("win")
+                    ? cpu.getSystemCpuLoadTicks() : cpu.getSystemCpuLoadTicks();
+            double load;
+            if (lastCpuTicks == null) {
+                load = 0;
+            } else {
+                load = cpu.getSystemCpuLoadBetweenTicks(lastCpuTicks);
+            }
+            lastCpuTicks = ticks;
+            if (load < 0 || Double.isNaN(load)) {
+                return 0;
+            }
+            return Math.round(load * 1000) / 10.0;
+        } catch (Throwable t) {
+            return 0;
+        }
+    }
+/**
+ * 获取Disks。
+ *
+ * @return 结果列表，无数据时为空列表
+ */
+public List<Map<String, Object>> getDisks() {
         List<Map<String, Object>> disks = new ArrayList<>();
         try {
             SystemInfo sys = getSi();
-            if (sys == null) return disks;
+            if (sys == null) {
+                return disks;
+            }
             FileSystem fs = sys.getOperatingSystem().getFileSystem();
             for (OSFileStore store : fs.getFileStores()) {
                 Map<String, Object> d = new HashMap<>();
@@ -171,7 +227,9 @@ public class LocalSystemInfoService {
         List<Map<String, Object>> result = new ArrayList<>();
         try {
             SystemInfo sys = getSi();
-            if (sys == null) return result;
+            if (sys == null) {
+                return result;
+            }
             OperatingSystem os = sys.getOperatingSystem();
             List<OSProcess> procs = os.getProcesses(null, OperatingSystem.ProcessSorting.CPU_DESC, Math.max(limit * 3, 200));
             for (OSProcess p : procs) {
@@ -209,7 +267,9 @@ public class LocalSystemInfoService {
         List<Map<String, Object>> result = new ArrayList<>();
         try {
             SystemInfo sys = getSi();
-            if (sys == null) return result;
+            if (sys == null) {
+                return result;
+            }
             for (OSService s : sys.getOperatingSystem().getServices()) {
                 Map<String, Object> m = new HashMap<>();
                 m.put("name", s.getName());
@@ -232,7 +292,9 @@ public class LocalSystemInfoService {
         List<Map<String, Object>> result = new ArrayList<>();
         try {
             SystemInfo sys = getSi();
-            if (sys == null) return result;
+            if (sys == null) {
+                return result;
+            }
             for (NetworkIF net : sys.getHardware().getNetworkIFs()) {
                 Map<String, Object> m = new HashMap<>();
                 m.put("name", net.getName());
@@ -281,7 +343,9 @@ public class LocalSystemInfoService {
                 StringBuilder sb = new StringBuilder();
                 try (BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream(), Charset.defaultCharset()))) {
                     String line;
-                    while ((line = br.readLine()) != null) sb.append(line).append("\n");
+                    while ((line = br.readLine()) != null) {
+                        sb.append(line).append("\n");
+                    }
                 }
                 p.waitFor();
                 String json = sb.toString().trim();
