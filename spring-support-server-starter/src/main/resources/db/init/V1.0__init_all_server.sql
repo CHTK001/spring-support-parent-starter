@@ -286,6 +286,42 @@ CREATE TABLE IF NOT EXISTS ms_proxy (
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '免费代理';
 
 -- ---------------------------------------------------------------------
+-- 13. 项目管理（原 project 模块实体并入 server）
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS ms_server_project (
+    id             BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    release_id     BIGINT       NULL                    COMMENT '发布ID',
+    project_name   VARCHAR(128) NOT NULL                COMMENT '项目名称',
+    project_type   VARCHAR(32)  NULL                    COMMENT '项目类型: springboot/fatjar/static/nginx等',
+    start_script   TEXT         NULL                    COMMENT '启动脚本',
+    stop_script    TEXT         NULL                    COMMENT '停止脚本',
+    restart_script TEXT         NULL                    COMMENT '重启脚本',
+    status         VARCHAR(16)  NULL DEFAULT 'unknown'   COMMENT '项目状态: running/stopped/unknown',
+    project_path   VARCHAR(512) NULL                    COMMENT '项目地址',
+    log_path       VARCHAR(512) NULL                    COMMENT '日志地址',
+    description    VARCHAR(255) NULL                    COMMENT '描述',
+    create_time    DATETIME     NULL                    COMMENT '创建时间',
+    update_time    DATETIME     NULL                    COMMENT '更新时间',
+    PRIMARY KEY (id),
+    KEY idx_server_project_release (release_id)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '项目管理';
+
+-- ---------------------------------------------------------------------
+-- 14. 发布管理
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS ms_server_release (
+    id           BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    release_name VARCHAR(128) NOT NULL                COMMENT '发布名称',
+    host_id      BIGINT       NULL                    COMMENT '主机ID',
+    host_ip      VARCHAR(64)  NULL                    COMMENT '主机IP',
+    description  VARCHAR(255) NULL                    COMMENT '描述',
+    create_time  DATETIME     NULL                    COMMENT '创建时间',
+    update_time  DATETIME     NULL                    COMMENT '更新时间',
+    PRIMARY KEY (id),
+    KEY idx_server_release_host (host_id)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '发布管理';
+
+-- ---------------------------------------------------------------------
 -- 主机延迟检测字段（原 V1.1__add_host_delay_detect，老库补列；新库已由
 -- ms_server_host 全量建表包含，此处幂等 IF NOT EXISTS）
 -- ---------------------------------------------------------------------
