@@ -1,10 +1,10 @@
 package com.chua.starter.server.support.spi;
 
+import com.chua.common.support.spi.annotations.Spi;
 import com.chua.starter.server.support.enums.HostCollectType;
 import com.chua.starter.server.support.service.ServerHostService;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Autowired;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
@@ -19,14 +19,14 @@ import reactor.core.scheduler.Schedulers;
  * @since 4.0.0.42
  */
 @Slf4j
-@Component
-@RequiredArgsConstructor
+@Spi(value = "scheduled", order = 100)
 public class ScheduledHostCollectProvider implements HostCollectProvider {
 
     /**
      * 主机服务
     */
-    private final ServerHostService hostService;
+    @Autowired
+    private ServerHostService hostService;
 
     @Override
     public HostCollectType type() {

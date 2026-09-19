@@ -3,6 +3,9 @@ package com.chua.starter.server.support.controller;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.server.support.constants.ServerConstants;
 import com.chua.starter.server.support.model.TempFile;
+import com.chua.starter.server.support.model.vo.SftpContentVO;
+import com.chua.starter.server.support.model.vo.SftpEntryVO;
+import com.chua.starter.server.support.model.vo.SftpRenameVO;
 import com.chua.starter.server.support.service.SftpService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -23,7 +26,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.nio.file.Files;
 import java.util.List;
-import java.util.Map;
 
 /**
  * SFTP 文件管理接口
@@ -55,9 +57,9 @@ public class SftpController {
      */
     @Operation(summary = "列出目录")
     @GetMapping
-    public ReturnResult<List<Map<String, Object>>> list(@PathVariable Long hostId,
-                                                        @RequestParam(required = false) Long identityId,
-                                                        @RequestParam(required = false) String path) {
+    public ReturnResult<List<SftpEntryVO>> list(@PathVariable Long hostId,
+                                                @RequestParam(required = false) Long identityId,
+                                                @RequestParam(required = false) String path) {
         return sftpService.list(hostId, identityId, path);
     }
 
@@ -71,9 +73,9 @@ public class SftpController {
      */
     @Operation(summary = "读取文本内容")
     @GetMapping("/content")
-    public ReturnResult<Map<String, Object>> readContent(@PathVariable Long hostId,
-                                                         @RequestParam(required = false) Long identityId,
-                                                         @RequestParam String path) {
+    public ReturnResult<SftpContentVO> readContent(@PathVariable Long hostId,
+                                                   @RequestParam(required = false) Long identityId,
+                                                   @RequestParam String path) {
         return sftpService.readContent(hostId, identityId, path);
     }
 
@@ -195,14 +197,14 @@ public class SftpController {
      *
      * @param hostId     主机 标识
      * @param identityId 身份 标识，可为空
-     * @param body       从路径 + 转为路径
+     * @param body       源路径与目标路径
      * @return 结果
      */
     @Operation(summary = "重命名或移动")
     @PutMapping("/rename")
     public ReturnResult<Void> rename(@PathVariable Long hostId,
                                      @RequestParam(required = false) Long identityId,
-                                     @RequestBody Map<String, String> body) {
-        return sftpService.rename(hostId, identityId, body.get("fromPath"), body.get("toPath"));
+                                     @RequestBody SftpRenameVO body) {
+        return sftpService.rename(hostId, identityId, body.fromPath(), body.toPath());
     }
 }

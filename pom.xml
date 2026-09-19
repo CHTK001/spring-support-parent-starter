@@ -150,9 +150,6 @@
         <module>spring-support-monitor-starter</module>
         <module>spring-support-server-starter</module>
 
-        <!-- 发布项目管理模块（软件部署/升级/启停） -->
-        <module>spring-support-project-starter</module>
-
         <!-- AI深度学习模块 -->
         <module>spring-support-ai-starter</module>
 

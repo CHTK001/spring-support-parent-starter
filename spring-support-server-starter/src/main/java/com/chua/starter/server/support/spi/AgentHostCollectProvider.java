@@ -1,14 +1,15 @@
 package com.chua.starter.server.support.spi;
 
+
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.chua.common.support.spi.annotations.Spi;
 import com.chua.starter.server.support.entity.MsServerHost;
 import com.chua.starter.server.support.enums.HostCollectType;
 import com.chua.starter.server.support.mapper.MsServerHostMapper;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
-import reactor.core.publisher.Mono;
-
 import java.time.LocalDateTime;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import reactor.core.publisher.Mono;
 
 /**
  * Agent 主动上报采集 提供者（Agent）
@@ -22,14 +23,14 @@ import java.time.LocalDateTime;
  * @since 4.0.0.42
  */
 @Slf4j
-@Component
-@RequiredArgsConstructor
+@Spi(value = "agent", order = 100)
 public class AgentHostCollectProvider implements HostCollectProvider {
 
     /**
      * 主机 映射器（用于回写上报的在线状态）
     */
-    private final MsServerHostMapper hostMapper;
+    @Autowired
+    private MsServerHostMapper hostMapper;
 
     @Override
     public HostCollectType type() {
@@ -55,7 +56,11 @@ public class AgentHostCollectProvider implements HostCollectProvider {
             MsServerHost host = context.getHost();
             host.setServerHostOnline(1);
             host.setServerHostOnlineTime(LocalDateTime.now());
-            hostMapper.updateById(host);
+            // 只写自己负责的列：updateById 会用这份旧快照覆盖并发路径刚改过的列
+            hostMapper.update(null, new LambdaUpdateWrapper<MsServerHost>()
+                    .eq(MsServerHost::getId, host.getId())
+                    .set(MsServerHost::getServerHostOnline, host.getServerHostOnline())
+                    .set(MsServerHost::getServerHostOnlineTime, host.getServerHostOnlineTime()));
             return CollectOutcome.ok("Agent 上报已回写");
         } catch (Exception e) {
             log.warn("[collect] AGENT 回写失败 hostId={}: {}",

@@ -8,6 +8,7 @@ import com.chua.starter.server.support.spi.HostCollectContext;
 import com.chua.starter.server.support.spi.HostCollectProvider;
 import com.chua.starter.server.support.spi.HostCollectProviderRegistry;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -284,7 +285,11 @@ public class HostOnlineScheduler {
             long delay = measureDelayMs(host);
             host.setServerHostDelayMs(delay < 0 ? -1 : delay);
             host.setServerHostLastDelayTime(LocalDateTime.now());
-            hostMapper.updateById(host);
+            // 只写自己负责的列：updateById 会用这份旧快照覆盖并发路径刚改过的列
+            hostMapper.update(null, new LambdaUpdateWrapper<MsServerHost>()
+                    .eq(MsServerHost::getId, hostId)
+                    .set(MsServerHost::getServerHostDelayMs, host.getServerHostDelayMs())
+                    .set(MsServerHost::getServerHostLastDelayTime, host.getServerHostLastDelayTime()));
             if (delayHook != null) {
                 try {
                     delayHook.accept(host);
@@ -331,7 +336,10 @@ public class HostOnlineScheduler {
     private void markCollected(MsServerHost host) {
         try {
             host.setServerHostLastCollectTime(LocalDateTime.now());
-            hostMapper.updateById(host);
+            // 只写自己负责的列：updateById 会用这份旧快照覆盖并发路径刚改过的列
+            hostMapper.update(null, new LambdaUpdateWrapper<MsServerHost>()
+                    .eq(MsServerHost::getId, host.getId())
+                    .set(MsServerHost::getServerHostLastCollectTime, host.getServerHostLastCollectTime()));
             // 采集完成回调（监控 侧注册：评估 CPU/内存/磁盘使用率告警规则）
             if (collectHook != null) {
                 try {
@@ -353,15 +361,15 @@ public class HostOnlineScheduler {
      */
     private void updateOnline(Long hostId, boolean reachable) {
         try {
-            MsServerHost host = hostMapper.selectById(hostId);
-            if (host == null) {
-                return;
-            }
-            host.setServerHostOnline(reachable ? 1 : 0);
+            LocalDateTime now = LocalDateTime.now();
+            LambdaUpdateWrapper<MsServerHost> wrapper = new LambdaUpdateWrapper<MsServerHost>()
+                    .eq(MsServerHost::getId, hostId)
+                    .set(MsServerHost::getServerHostOnline, reachable ? 1 : 0);
             if (reachable) {
-                host.setServerHostOnlineTime(java.time.LocalDateTime.now());
+                wrapper.set(MsServerHost::getServerHostOnlineTime, now);
             }
-            hostMapper.updateById(host);
+            // 只写自己负责的列：updateById 会用这份旧快照覆盖并发路径刚改过的列
+            hostMapper.update(null, wrapper);
         } catch (Exception e) {
             log.warn("[online] 更新在线状态失败 hostId={}", hostId, e);
         }

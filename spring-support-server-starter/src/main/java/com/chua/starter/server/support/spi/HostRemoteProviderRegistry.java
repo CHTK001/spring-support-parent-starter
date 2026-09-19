@@ -1,23 +1,35 @@
 package com.chua.starter.server.support.spi;
 
+import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.spi.definition.ServiceDefinition;
 import com.chua.starter.server.support.entity.MsServerHost;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.Set;
 
 /**
  * 主机远程操作 提供者注册中心
  * <p>
- * 启动时扫描全部 {@link HostRemoteProvider} Bean，按系统类型建索引；
- * 部署/启停/实时日志/指标采集/守护探测等入口统一通过本注册中心解析实现，
- * 从而做到「新增一种服务器系统只加一个实现类，上层零改动」。
+ * 实现按 {@code @Spi} 注册到 {@link HostRemoteProvider} 扩展点，本类取其全部定义并按
+ * {@link HostRemoteProvider#osTypes()} 建索引；部署/启停/实时日志/指标采集/守护探测等入口
+ * 统一通过本注册中心解析实现，从而做到「新增一种服务器系统只加一个实现类，上层零改动」。
+ * </p>
+ *
+ * <p>
+ * 之所以必须做传输层抽象而不是只抽象命令串：Windows 默认不提供 SSH，
+ * 把 cmd/PowerShell 命令塞进 SSH 通道在真实 Windows 主机上根本跑不通。
+ * </p>
+ *
+ * <p>
+ * 索引在首次解析时构建：SPI 实例的依赖由 Spring 装配链注入，容器就绪前构建会得到半初始化实例。
  * </p>
  *
  * @author CH
@@ -28,44 +40,14 @@ import java.util.concurrent.ConcurrentHashMap;
 public class HostRemoteProviderRegistry {
 
     /**
-     * 系统类型 -> 实现索引
-    */
-    private final Map<String, HostRemoteProvider> index = new ConcurrentHashMap<>();
-
-    /**
-     * 兜底实现（处理未注册的系统类型）
-    */
-    private volatile HostRemoteProvider fallbackProvider;
-
-    /**
-     * 构造：注册全部远程操作提供者
-     *
-     * @param providers 提供者列表
+     * 远程操作扩展点
      */
-    @Autowired
-    public HostRemoteProviderRegistry(List<HostRemoteProvider> providers) {
-        if (providers == null || providers.isEmpty()) {
-            log.warn("[remote] 未发现 HostRemoteProvider 实现");
-            return;
-        }
-        for (HostRemoteProvider provider : providers) {
-            for (String osType : provider.osTypes()) {
-                if (osType == null || osType.isBlank()) {
-                    continue;
-                }
-                HostRemoteProvider exists = index.put(osType.trim().toUpperCase(Locale.ROOT), provider);
-                if (exists != null) {
-                    log.warn("[remote] 系统类型 {} 存在多个实现，后注册者生效: {} 覆盖 {}",
-                            osType, provider.getClass().getSimpleName(), exists.getClass().getSimpleName());
-                }
-            }
-            if (provider.fallback() && fallbackProvider == null) {
-                fallbackProvider = provider;
-            }
-            log.info("[remote] 注册远程操作 Provider: osTypes={}, fallback={}, impl={}",
-                    provider.osTypes(), provider.fallback(), provider.getClass().getSimpleName());
-        }
-    }
+    private final ServiceProvider<HostRemoteProvider> extensions = ServiceProvider.of(HostRemoteProvider.class);
+
+    /**
+     * 系统类型 -> 实现索引 + 兜底实现，首次使用时构建
+     */
+    private volatile Registry registry;
 
     /**
      * 按系统类型解析提供者
@@ -74,17 +56,18 @@ public class HostRemoteProviderRegistry {
      * @return Optional，可能为空
      */
     public Optional<HostRemoteProvider> resolve(String osType) {
+        Registry current = registry();
         if (osType == null || osType.isBlank()) {
-            return Optional.ofNullable(fallbackProvider);
+            return Optional.ofNullable(current.fallback());
         }
-        HostRemoteProvider provider = index.get(osType.trim().toUpperCase(Locale.ROOT));
+        HostRemoteProvider provider = current.index().get(osType.trim().toUpperCase(Locale.ROOT));
         if (provider != null) {
             return Optional.of(provider);
         }
-        if (fallbackProvider != null) {
+        if (current.fallback() != null) {
             log.warn("[remote] 系统类型 {} 未注册专用实现，回退兜底实现 {}",
-                    osType, fallbackProvider.getClass().getSimpleName());
-            return Optional.of(fallbackProvider);
+                    osType, current.fallback().getClass().getSimpleName());
+            return Optional.of(current.fallback());
         }
         return Optional.empty();
     }
@@ -152,11 +135,75 @@ public class HostRemoteProviderRegistry {
      * @return 系统类型 -> 实现类名
      */
     public Map<String, String> describe() {
+        Registry current = registry();
         Map<String, String> out = new LinkedHashMap<>();
-        index.forEach((type, provider) -> out.put(type, provider.getClass().getSimpleName()));
-        if (fallbackProvider != null) {
-            out.put("*", fallbackProvider.getClass().getSimpleName() + "(fallback)");
+        current.index().forEach((type, provider) -> out.put(type, provider.getClass().getSimpleName()));
+        if (current.fallback() != null) {
+            out.put("*", current.fallback().getClass().getSimpleName() + "(fallback)");
         }
         return out;
+    }
+
+    /**
+     * 取注册结果，必要时构建。
+     *
+     * @return 索引与兜底实现
+     */
+    private Registry registry() {
+        Registry current = registry;
+        if (current != null) {
+            return current;
+        }
+        synchronized (this) {
+            if (registry == null) {
+                registry = build();
+            }
+            return registry;
+        }
+    }
+
+    /**
+     * 遍历扩展点定义建索引，同一实现类的多个别名只登记一次。
+     *
+     * @return 索引与兜底实现
+     */
+    private Registry build() {
+        Map<String, HostRemoteProvider> index = new HashMap<>();
+        HostRemoteProvider fallback = null;
+        Set<Class<?>> seen = new HashSet<>();
+        for (ServiceDefinition definition : extensions.getPriorityServiceDefinitions()) {
+            HostRemoteProvider provider = definition.getObj(extensions.getServiceAutowire());
+            if (provider == null || !seen.add(provider.getClass())) {
+                continue;
+            }
+            for (String osType : provider.osTypes()) {
+                if (osType == null || osType.isBlank()) {
+                    continue;
+                }
+                HostRemoteProvider exists = index.put(osType.trim().toUpperCase(Locale.ROOT), provider);
+                if (exists != null) {
+                    log.warn("[remote] 系统类型 {} 存在多个实现，后注册者生效: {} 覆盖 {}",
+                            osType, provider.getClass().getSimpleName(), exists.getClass().getSimpleName());
+                }
+            }
+            if (provider.fallback() && fallback == null) {
+                fallback = provider;
+            }
+            log.info("[remote] 注册远程操作 Provider: osTypes={}, fallback={}, impl={}",
+                    provider.osTypes(), provider.fallback(), provider.getClass().getSimpleName());
+        }
+        if (index.isEmpty() && fallback == null) {
+            log.warn("[remote] HostRemoteProvider 扩展点无任何实现，部署/启停/日志链路不可用");
+        }
+        return new Registry(Collections.unmodifiableMap(index), fallback);
+    }
+
+    /**
+     * 一次构建结果：系统类型索引与兜底实现。
+     *
+     * @param index    系统类型 -> 实现
+     * @param fallback 兜底实现，可为 null
+     */
+    private record Registry(Map<String, HostRemoteProvider> index, HostRemoteProvider fallback) {
     }
 }

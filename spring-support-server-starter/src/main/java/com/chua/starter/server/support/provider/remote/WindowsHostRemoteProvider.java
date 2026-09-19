@@ -1,5 +1,7 @@
 package com.chua.starter.server.support.provider.remote;
 
+
+import com.chua.common.support.spi.annotations.Spi;
 import com.chua.starter.server.support.entity.MsServerHost;
 import com.chua.starter.server.support.model.SshCredential;
 import com.chua.starter.server.support.spi.HostHealthType;
@@ -9,15 +11,13 @@ import com.chua.starter.server.support.spi.HostShellDialect;
 import com.chua.starter.server.support.spi.RemoteExecResult;
 import com.chua.starter.server.support.spi.RemoteLogChunk;
 import com.chua.winrm.support.client.WinRmExecClient;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
-
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Base64;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Windows 主机远程操作实现（WinRM + PowerShell）
@@ -39,7 +39,7 @@ import java.util.Base64;
  * @since 4.0.0.42
  */
 @Slf4j
-@Component
+@Spi(value = "winrm", order = 100)
 public class WindowsHostRemoteProvider implements HostRemoteProvider {
 
     /**

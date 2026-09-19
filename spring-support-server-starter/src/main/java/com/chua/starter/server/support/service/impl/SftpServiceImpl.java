@@ -3,6 +3,8 @@ package com.chua.starter.server.support.service.impl;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.server.support.model.SshCredential;
 import com.chua.starter.server.support.model.TempFile;
+import com.chua.starter.server.support.model.vo.SftpContentVO;
+import com.chua.starter.server.support.model.vo.SftpEntryVO;
 import com.chua.starter.server.support.service.ServerHostService;
 import com.chua.starter.server.support.service.SftpService;
 import com.chua.ssh.support.client.SftpClient;
@@ -16,7 +18,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -51,7 +52,7 @@ public class SftpServiceImpl implements SftpService {
     private final ServerHostService serverHostService;
 
     @Override
-    public ReturnResult<List<Map<String, Object>>> list(Long hostId, Long identityId, String path) {
+    public ReturnResult<List<SftpEntryVO>> list(Long hostId, Long identityId, String path) {
         ReturnResult<SshCredential> resolved = resolve(hostId, identityId);
         if (!resolved.isOk()) {
             return ReturnResult.error(resolved.getMsg());
@@ -62,29 +63,47 @@ public class SftpServiceImpl implements SftpService {
          * @param openSftpClient(host.getServerHostAddress( 打开sftpclient(主机.获取服务端主机地址(
          */
         try (var client = openSftpClient(host.getServerHostAddress(), host.getServerHostPort(), resolved.getData())) {
-            var entries = client.ls().path(normalizeDir(path)).exec();
- // 归一化为前端契约: 名称/路径/目录/文件/大小
-            List<Map<String, Object>> normalized = new ArrayList<>(entries.size());
+            String parent = normalizeDir(path);
+            var entries = client.ls().path(parent).exec();
+            List<SftpEntryVO> rows = new ArrayList<>(entries.size());
             for (Map<String, Object> entry : entries) {
-                Map<String, Object> row = new LinkedHashMap<>();
                 String name = String.valueOf(entry.get("name"));
-                row.put("name", name);
-                boolean isDir = isDirectory(entry);
-                String parent = normalizeDir(path);
-                row.put("path", parent.endsWith("/") ? parent + name : parent + "/" + name);
-                row.put("directory", isDir);
-                row.put("file", !isDir);
-                Object attrs = entry.get("attributes");
-                if (attrs instanceof org.apache.sshd.sftp.client.SftpClient.Attributes a) {
-                    row.put("size", a.getSize());
+                // 远端目录清单里的 . 与 .. 不是可操作条目，浏览器中展示只会产生幽灵行
+                if (".".equals(name) || "..".equals(name)) {
+                    continue;
                 }
-                normalized.add(row);
+                boolean isDir = isDirectory(entry);
+                rows.add(new SftpEntryVO(name, joinPath(parent, name), isDir, !isDir, sizeOf(entry)));
             }
-            return ReturnResult.list(normalized);
+            return ReturnResult.list(rows);
         } catch (Exception e) {
             log.warn("[sftp] 目录浏览失败 hostId={} path={}: {}", hostId, path, e.getMessage());
             return ReturnResult.error("目录浏览失败: " + e.getMessage());
         }
+    }
+
+    /**
+     * 取目录条目字节数，底层未给出属性时返回空
+     *
+     * @param entry 目录条目
+     * @return 字节数或空
+     */
+    private Long sizeOf(Map<String, Object> entry) {
+        if (entry.get("attributes") instanceof org.apache.sshd.sftp.client.SftpClient.Attributes a) {
+            return a.getSize();
+        }
+        return null;
+    }
+
+    /**
+     * 拼接目录与条目名为绝对路径，避免根目录出现双斜杠
+     *
+     * @param parent 目录路径
+     * @param name   条目名称
+     * @return 绝对路径
+     */
+    private String joinPath(String parent, String name) {
+        return parent.endsWith("/") ? parent + name : parent + "/" + name;
     }
 
     /**
@@ -105,7 +124,7 @@ public class SftpServiceImpl implements SftpService {
     }
 
     @Override
-    public ReturnResult<Map<String, Object>> readContent(Long hostId, Long identityId, String path) {
+    public ReturnResult<SftpContentVO> readContent(Long hostId, Long identityId, String path) {
         if (path == null || path.isBlank()) {
             return ReturnResult.error("文件路径不能为空");
         }
@@ -125,12 +144,7 @@ public class SftpServiceImpl implements SftpService {
             // 限制读取长度，避免超大文件拖垮内存
             byte[] bytes = Files.readAllBytes(truncated
                     ? sliceFile(temp.path(), CONTENT_LIMIT_BYTES) : temp.path());
-            Map<String, Object> result = new LinkedHashMap<>();
-            result.put("path", path);
-            result.put("content", new String(bytes, StandardCharsets.UTF_8));
-            result.put("size", size);
-            result.put("truncated", truncated);
-            return ReturnResult.ok(result);
+            return ReturnResult.ok(new SftpContentVO(path, new String(bytes, StandardCharsets.UTF_8), size, truncated));
         } catch (Exception e) {
             log.warn("[sftp] 读取内容失败 hostId={} path={}: {}", hostId, path, e.getMessage());
             return ReturnResult.error("读取失败: " + e.getMessage());

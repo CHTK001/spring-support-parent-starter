@@ -7,6 +7,7 @@ import com.chua.starter.server.support.entity.MsTerminalSession;
 import com.chua.starter.server.support.entity.MsTerminalSnippet;
 import com.chua.starter.server.support.mapper.MsTerminalBookmarkMapper;
 import com.chua.starter.server.support.mapper.MsTerminalSnippetMapper;
+import com.chua.starter.server.support.model.vo.TerminalOnlineVO;
 import com.chua.starter.server.support.service.TerminalSessionService;
 import com.chua.starter.server.support.terminal.GuacdSession;
 import com.chua.starter.server.support.terminal.GuacdSessionRegistry;
@@ -23,9 +24,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * 终端接口：在线会话、命令片段、路径书签
@@ -66,17 +65,12 @@ public class TerminalController {
      */
     @Operation(summary = "在线会话列表")
     @GetMapping("/online")
-    public ReturnResult<List<Map<String, Object>>> online() {
+    public ReturnResult<List<TerminalOnlineVO>> online() {
         List<GuacdSession> sessions = sessionRegistry.snapshot();
-        List<Map<String, Object>> result = new java.util.ArrayList<>(sessions.size());
+        List<TerminalOnlineVO> result = new java.util.ArrayList<>(sessions.size());
         for (GuacdSession session : sessions) {
-            Map<String, Object> item = new LinkedHashMap<>();
-            item.put("tunnelId", session.getTunnelId());
-            item.put("hostId", session.getHostId());
-            item.put("recordId", session.getSessionId());
-            item.put("protocol", session.getProtocol());
-            item.put("lastActiveTime", session.getLastActiveTime());
-            result.add(item);
+            result.add(new TerminalOnlineVO(session.getTunnelId(), session.getHostId(),
+                    session.getSessionId(), session.getProtocol(), session.getLastActiveTime()));
         }
         return ReturnResult.list(result);
     }

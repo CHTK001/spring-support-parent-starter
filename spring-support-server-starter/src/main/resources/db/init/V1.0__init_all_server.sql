@@ -315,11 +315,15 @@ CREATE TABLE IF NOT EXISTS ms_server_release (
     host_id      BIGINT       NULL                    COMMENT '主机ID',
     host_ip      VARCHAR(64)  NULL                    COMMENT '主机IP',
     description  VARCHAR(255) NULL                    COMMENT '描述',
+    background_image VARCHAR(1000) NULL               COMMENT '背景图URL',
     create_time  DATETIME     NULL                    COMMENT '创建时间',
     update_time  DATETIME     NULL                    COMMENT '更新时间',
     PRIMARY KEY (id),
     KEY idx_server_release_host (host_id)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '发布管理';
+
+-- 老库补列：背景图（H2 支持 IF NOT EXISTS；MySQL 新库建表已含，报错由 continue-on-error 忽略）
+ALTER TABLE ms_server_release ADD COLUMN IF NOT EXISTS background_image VARCHAR(1000);
 
 -- ---------------------------------------------------------------------
 -- 主机延迟检测字段（原 V1.1__add_host_delay_detect，老库补列；新库已由

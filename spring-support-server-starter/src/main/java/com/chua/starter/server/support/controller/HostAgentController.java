@@ -6,8 +6,10 @@ import com.chua.starter.server.support.constants.ServerConstants;
 import com.chua.starter.server.support.entity.MsServerHost;
 import com.chua.starter.server.support.enums.HostCollectType;
 import com.chua.starter.server.support.mapper.MsServerHostMapper;
-import com.chua.starter.server.support.spi.AgentHostCollectProvider;
+import com.chua.starter.server.support.model.vo.AgentPushVO;
 import com.chua.starter.server.support.spi.HostCollectContext;
+import com.chua.starter.server.support.spi.HostCollectProvider;
+import com.chua.starter.server.support.spi.HostCollectProviderRegistry;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -19,13 +21,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Mono;
 
-import java.util.Map;
 
 /**
  * 服务器资产 Agent 上报接口
  * <p>
  * 目标主机上的 Agent 按 Agent键 主动推送硬件/状态数据，
- * 由 {@link AgentHostCollectProvider} 处理回写。用于 NAT / 防火墙下
+ * 由 {@link HostCollectProviderRegistry} 解析出的 AGENT 采集实现处理回写。用于 NAT / 防火墙下
  * 服务端无法直连的主机采集。
  * </p>
  *
@@ -39,9 +40,9 @@ import java.util.Map;
 public class HostAgentController {
 
     /**
-     * Agent 采集 提供者
+     * 采集提供者注册中心
     */
-    private final AgentHostCollectProvider agentProvider;
+    private final HostCollectProviderRegistry collectRegistry;
 
     /**
      * 主机 映射器
@@ -58,12 +59,12 @@ public class HostAgentController {
      * Agent 推送数据（按 Agent键 定位主机）
      *
      * @param agentKey 探针标识
-     * @param payload  上报数据（cpu核心/内存mb/diskgb/os版本/公共ip/私募ip 等）
+     * @param payload  上报负载（cpu核心/内存mb/diskgb/os版本/公共ip/私募ip 等）
      * @return 处理结果
      */
     @Operation(summary = "Agent推送采集数据")
     @PostMapping("/{agentKey}/push")
-    public Mono<ReturnResult<String>> push(@PathVariable String agentKey, @RequestBody Map<String, Object> payload) {
+    public Mono<ReturnResult<String>> push(@PathVariable String agentKey, @RequestBody AgentPushVO payload) {
         if (agentKey == null || agentKey.isBlank()) {
             return Mono.just(ReturnResult.error("agentKey 不能为空"));
         }
@@ -87,7 +88,9 @@ public class HostAgentController {
                     .mode(HostCollectType.AGENT)
                     .host(host)
                     .build();
-            return agentProvider.collect(context)
+            HostCollectProvider provider = collectRegistry.resolve(HostCollectType.AGENT)
+                    .orElseThrow(() -> new IllegalStateException("AGENT 采集实现未注册"));
+            return provider.collect(context)
                     .map(outcome -> outcome.isSuccess()
                             ? ReturnResult.ok(outcome.getMessage())
                             : ReturnResult.error(outcome.getMessage()));
@@ -102,124 +105,47 @@ public class HostAgentController {
      * @param host    主机
      * @param payload 上报数据
      */
-    private void applyPayload(MsServerHost host, Map<String, Object> payload) {
-        Integer cpuCores = toInteger(payload.get("cpuCores"));
-        if (cpuCores != null) {
-            host.setServerHostCpuCores(cpuCores);
+    private void applyPayload(MsServerHost host, AgentPushVO payload) {
+        if (payload.cpuCores() != null) {
+            host.setServerHostCpuCores(payload.cpuCores());
         }
-        Long memoryMb = toLong(payload.get("memoryMb"));
-        if (memoryMb != null) {
-            host.setServerHostMemoryMb(memoryMb);
+        if (payload.memoryMb() != null) {
+            host.setServerHostMemoryMb(payload.memoryMb());
         }
-        Long diskGb = toLong(payload.get("diskGb"));
-        if (diskGb != null) {
-            host.setServerHostDiskGb(diskGb);
+        if (payload.diskGb() != null) {
+            host.setServerHostDiskGb(payload.diskGb());
         }
-        if (payload.get("osVersion") != null) {
-            host.setServerHostOsVersion(String.valueOf(payload.get("osVersion")));
+        if (payload.osVersion() != null) {
+            host.setServerHostOsVersion(payload.osVersion());
         }
-        if (payload.get("osArch") != null) {
-            host.setServerHostOsArch(String.valueOf(payload.get("osArch")));
+        if (payload.osArch() != null) {
+            host.setServerHostOsArch(payload.osArch());
         }
-        Integer gpuCount = toInteger(payload.get("gpuCount"));
-        if (gpuCount != null) {
-            host.setServerHostGpuCount(gpuCount);
+        if (payload.gpuCount() != null) {
+            host.setServerHostGpuCount(payload.gpuCount());
         }
-        if (payload.get("gpuModel") != null) {
-            host.setServerHostGpuModel(String.valueOf(payload.get("gpuModel")));
+        if (payload.gpuModel() != null) {
+            host.setServerHostGpuModel(payload.gpuModel());
         }
-        if (payload.get("networks") != null) {
-            host.setServerHostNetworks(String.valueOf(payload.get("networks")));
+        if (payload.networks() != null) {
+            host.setServerHostNetworks(payload.networks());
         }
-        Double cpuUsage = toDouble(payload.get("cpuUsage"));
-        if (cpuUsage == null) {
-            cpuUsage = toDouble(payload.get("cpu"));
+        if (payload.cpuUsage() != null) {
+            host.setServerHostCpuUsage(payload.cpuUsage());
         }
-        if (cpuUsage != null) {
-            host.setServerHostCpuUsage(cpuUsage);
+        if (payload.memUsage() != null) {
+            host.setServerHostMemUsage(payload.memUsage());
         }
-        Double memUsage = toDouble(payload.get("memUsage"));
-        if (memUsage == null) {
-            memUsage = toDouble(payload.get("memUsedPct"));
+        if (payload.diskUsage() != null) {
+            host.setServerHostDiskUsage(payload.diskUsage());
         }
-        if (memUsage != null) {
-            host.setServerHostMemUsage(memUsage);
+        if (payload.publicIp() != null) {
+            host.setServerHostPublicIp(payload.publicIp());
         }
-        Double diskUsage = toDouble(payload.get("diskUsage"));
-        if (diskUsage != null) {
-            host.setServerHostDiskUsage(diskUsage);
-        }
-        if (payload.get("publicIp") != null) {
-            host.setServerHostPublicIp(String.valueOf(payload.get("publicIp")));
-        }
-        if (payload.get("privateIp") != null) {
-            host.setServerHostPrivateIp(String.valueOf(payload.get("privateIp")));
+        if (payload.privateIp() != null) {
+            host.setServerHostPrivateIp(payload.privateIp());
         }
         hostMapper.updateById(host);
-    }
-
-    /**
-     * 安全转为 Integer（空/非数字返回 空）
-     *
-     * @param value 原始值
-     * @return Integer 或 空
-     */
-    private Integer toInteger(Object value) {
-        if (value == null) {
-            return null;
-        }
-        try {
-            if (value instanceof Number n) {
-                return n.intValue();
-            }
-            String s = String.valueOf(value).trim();
-            // 规约四十二：异常兜底解析字符串数字，Converter 未覆盖该场景，保留手写转换
-            return s.isEmpty() ? null : Integer.valueOf(s);
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    /**
-     * 安全转为 Long（空/非数字返回 空）
-     *
-     * @param value 原始值
-     * @return Long 或 空
-     */
-    private Long toLong(Object value) {
-        if (value == null) {
-            return null;
-        }
-        try {
-            if (value instanceof Number n) {
-                return n.longValue();
-            }
-            String s = String.valueOf(value).trim();
-            return s.isEmpty() ? null : Long.valueOf(s);
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    /**
-     * 安全转为 Double（空/非数字返回 空）
-     *
-     * @param value 原始值
-     * @return Double 或 空
-     */
-    private Double toDouble(Object value) {
-        if (value == null) {
-            return null;
-        }
-        try {
-            if (value instanceof Number n) {
-                return n.doubleValue();
-            }
-            String s = String.valueOf(value).trim();
-            return s.isEmpty() ? null : Double.valueOf(s);
-        } catch (Exception e) {
-            return null;
-        }
     }
 
     /**
@@ -228,7 +154,7 @@ public class HostAgentController {
      * @param host    主机
      * @param payload 上报负载
      */
-    private void writeHistoryMetrics(MsServerHost host, Map<String, Object> payload) {
+    private void writeHistoryMetrics(MsServerHost host, AgentPushVO payload) {
         if (seriesEngine == null || !seriesEngine.isAvailable()) {
             return;
         }
@@ -236,25 +162,16 @@ public class HostAgentController {
         long now = System.currentTimeMillis();
         try {
             // CPU
-            Double cpuUsage = toDouble(payload.get("cpuUsage"));
-            if (cpuUsage == null) {
-                cpuUsage = toDouble(payload.get("cpu"));
-            }
-            if (cpuUsage != null) {
-                seriesEngine.writePoint("ms_monitor_metric_cpu", monitorId, "cpu_usage", cpuUsage, now);
+            if (payload.cpuUsage() != null) {
+                seriesEngine.writePoint("ms_monitor_metric_cpu", monitorId, "cpu_usage", payload.cpuUsage(), now);
             }
             // 内存
-            Double memUsage = toDouble(payload.get("memUsage"));
-            if (memUsage == null) {
-                memUsage = toDouble(payload.get("memUsedPct"));
-            }
-            if (memUsage != null) {
-                seriesEngine.writePoint("ms_monitor_metric_memory", monitorId, "usage_percent", memUsage, now);
+            if (payload.memUsage() != null) {
+                seriesEngine.writePoint("ms_monitor_metric_memory", monitorId, "usage_percent", payload.memUsage(), now);
             }
             // 磁盘
-            Double diskUsage = toDouble(payload.get("diskUsage"));
-            if (diskUsage != null) {
-                seriesEngine.writePoint("ms_monitor_metric_disk", monitorId, "usage_percent", diskUsage, now);
+            if (payload.diskUsage() != null) {
+                seriesEngine.writePoint("ms_monitor_metric_disk", monitorId, "usage_percent", payload.diskUsage(), now);
             }
         } catch (Exception e) {
             org.slf4j.LoggerFactory.getLogger(HostAgentController.class)

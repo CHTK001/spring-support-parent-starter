@@ -58,14 +58,13 @@ public class ProxyController {
     }
 
     /**
-     * 批量检测代理（异步）
+     * 批量检测代理（全部探测收敛后返回）
      *
      * @return 结果
      */
     @GetMapping("/check")
     public ReturnResult<String> check() {
-        proxyService.checkProxies();
-        return ReturnResult.ok("批量检测已开始");
+        return ReturnResult.ok("批量检测完成，共检测 " + proxyService.checkProxies() + " 条");
     }
 
     /**
@@ -76,7 +75,9 @@ public class ProxyController {
      */
     @GetMapping("/check/{id}")
     public ReturnResult<String> checkOne(@PathVariable Long id) {
-        proxyService.checkProxy(id);
+        if (!proxyService.checkProxy(id)) {
+            return ReturnResult.error("代理不存在: " + id);
+        }
         return ReturnResult.ok("检测完成");
     }
 }

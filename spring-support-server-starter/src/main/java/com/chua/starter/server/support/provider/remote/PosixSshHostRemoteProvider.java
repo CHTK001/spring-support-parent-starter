@@ -1,5 +1,6 @@
 package com.chua.starter.server.support.provider.remote;
 
+import com.chua.common.support.spi.annotations.Spi;
 import com.chua.ssh.support.client.SftpClient;
 import com.chua.starter.server.support.connection.ConnectionManager;
 import com.chua.starter.server.support.entity.MsServerHost;
@@ -11,7 +12,7 @@ import com.chua.starter.server.support.spi.RemoteExecResult;
 import com.chua.starter.server.support.spi.RemoteLogChunk;
 import com.chua.starter.server.support.util.SshClients;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -37,7 +38,7 @@ import java.util.concurrent.TimeoutException;
  * @since 4.0.0.42
  */
 @Slf4j
-@Component
+@Spi(value = "posix", order = 100)
 public class PosixSshHostRemoteProvider implements HostRemoteProvider {
 
     /**
@@ -83,7 +84,8 @@ public class PosixSshHostRemoteProvider implements HostRemoteProvider {
     /**
      * SSH 连接缓存管理器
     */
-    private final ConnectionManager connectionManager;
+    @Autowired
+    private ConnectionManager connectionManager;
 
     /**
      * 命令执行线程池（用于超时中断）
@@ -93,15 +95,6 @@ public class PosixSshHostRemoteProvider implements HostRemoteProvider {
         t.setDaemon(true);
         return t;
     });
-
-    /**
-     * 构造
-     *
-     * @param connectionManager SSH 连接缓存管理器
-     */
-    public PosixSshHostRemoteProvider(ConnectionManager connectionManager) {
-        this.connectionManager = connectionManager;
-    }
 
     @Override
     public String osType() {
