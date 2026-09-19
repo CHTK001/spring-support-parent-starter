@@ -466,6 +466,8 @@ public class AiModelMetricsEnrichmentService {
                 MetricsRecord r = records.get(i);
                 if (i > 0) { sb.append(','); }
                 sb.append("{\"key\":\"").append(esc(r.normalizedKey)).append('"')
+                  .append(",\"prov\":")
+                  .append(r.provider == null ? "null" : "\"" + esc(r.provider) + "\"")
                   .append(",\"in\":").append(r.inputPerMillion)
                   .append(",\"out\":").append(r.outputPerMillion)
                   .append(",\"intel\":").append(r.intelligenceIndex)
@@ -510,6 +512,7 @@ public class AiModelMetricsEnrichmentService {
             for (Map<String, Object> o : arr) {
                 out.add(new MetricsRecord(
                         String.valueOf(o.get("key")),
+                        o.get("prov") == null ? null : String.valueOf(o.get("prov")),
                         /**
                          * dec。
                          * @param o.get("in" o.获取("入"
