@@ -34,11 +34,11 @@ public final class JobTriggering {
     }
 
     /**
-    * 判断任务是否配置了可调度的触发策略。
-    *
-    * @param definition 任务定义
-    * @return 任一调度配置有效返回 true
-    */
+     * 判断任务是否配置了可调度的触发策略。
+     *
+     * @param definition 任务定义
+     * @return 任一调度配置有效返回 true
+     */
     public static boolean hasTrigger(JobDefinition definition) {
         if (definition == null) {
             return false;

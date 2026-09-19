@@ -75,9 +75,9 @@ public enum OrderState {
     private final String description;
 
     /**
-    * 订单状态。
-    * @param description description
-    */
+     * 订单状态。
+     * @param description description
+     */
     OrderState(String description) {
         this.description = description;
     }

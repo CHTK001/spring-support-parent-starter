@@ -47,10 +47,10 @@ public class MpWalletController {
 
     @GetMapping
     /**
-    * 获取Wallet
-    * @param request 请求
-    * @param merchantId merchantid
-    */
+     * 获取Wallet
+     * @param request 请求
+     * @param merchantId merchantid
+     */
     public Result<WalletAccountVO> getWallet(HttpServletRequest request,
                                              @RequestParam Long merchantId) {
         Long userId = principalResolver.resolveUserId(request);

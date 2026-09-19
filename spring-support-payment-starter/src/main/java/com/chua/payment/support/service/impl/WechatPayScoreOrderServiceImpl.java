@@ -190,10 +190,10 @@ public class WechatPayScoreOrderServiceImpl extends AbstractMerchantPaymentChann
     public Page<WechatPayScoreOrder> page(WechatPayScoreOrderQueryRequest request) {
         if (request == null) {
             /**
-    * 薪酬异常。
-    * @param "查询参数不能为空" "查询参数不能为空"
-    * @return 薪酬异常的结果
-    */
+             * 薪酬异常。
+             * @param "查询参数不能为空" "查询参数不能为空"
+             * @return 薪酬异常的结果
+             */
             throw new PaymentException("查询参数不能为空");
         }
         LambdaQueryWrapper<WechatPayScoreOrder> wrapper = new LambdaQueryWrapper<WechatPayScoreOrder>()

@@ -56,10 +56,10 @@ public class AuthClientExecute {
     public static final String DEFAULT_KEY = "1234567980123456";
 
     /**
-    * 获取Instance
-    *
-    * @return 获取instance的结果
-    */
+     * 获取Instance
+     *
+     * @return 获取instance的结果
+     */
     public static AuthClientExecute getInstance() {
         return INSTANCE;
     }
@@ -76,10 +76,10 @@ public class AuthClientExecute {
 
 
     /**
-    * 获取缓存的用户结果信息（仅从 会话 获取，不请求服务器）
-    *
-    * @return 用户结果信息，未登录返回 空
-    */
+     * 获取缓存的用户结果信息（仅从 会话 获取，不请求服务器）
+     *
+     * @return 用户结果信息，未登录返回 空
+     */
     public UserResult getCacheUserResult() {
         return getSessionUserResult();
     }

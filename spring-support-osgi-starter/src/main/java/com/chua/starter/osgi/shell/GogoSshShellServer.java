@@ -44,13 +44,13 @@ public class GogoSshShellServer {
     private volatile Object commandProcessor;
 
     /**
-    * gogosshshell服务端。
-    * @param host 主机
-    * @param port 端口
-    * @param username 用户名
-    * @param password 密码
-    * @param bundleContext bundle上下文
-    */
+     * gogosshshell服务端。
+     * @param host 主机
+     * @param port 端口
+     * @param username 用户名
+     * @param password 密码
+     * @param bundleContext bundle上下文
+     */
     public GogoSshShellServer(String host, int port, String username, String password, BundleContext bundleContext) {
         this.host = host == null ? "127.0.0.1" : host;
         this.port = port;

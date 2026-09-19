@@ -28,10 +28,10 @@ public class HostCollectProviderRegistry {
     private final Map<HostCollectType, HostCollectProvider> index = new EnumMap<>(HostCollectType.class);
 
     /**
-    * 构造：注册全部 提供者
-    *
-    * @param providers 提供者 列表
-    */
+     * 构造：注册全部 提供者
+     *
+     * @param providers 提供者 列表
+     */
     @Autowired
     public HostCollectProviderRegistry(List<HostCollectProvider> providers) {
         if (providers == null || providers.isEmpty()) {

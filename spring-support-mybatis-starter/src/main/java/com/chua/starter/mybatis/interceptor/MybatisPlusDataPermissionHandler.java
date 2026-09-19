@@ -49,8 +49,8 @@ public class MybatisPlusDataPermissionHandler implements MultiDataPermissionHand
     private static final String MANAGED_DEPT_TREE_IDS = "managedDeptTreeIds";
 
     /**
-    * 缓存 mapped对账单标识 对应的 数据scope 注解
-    */
+     * 缓存 mapped对账单标识 对应的 数据scope 注解
+     */
     private static final Map<String, DataScopeInfo> DATA_SCOPE_CACHE = new ConcurrentReferenceHashMap<>(4096);
 
     /** Meta数据作用域属性 */
@@ -354,10 +354,10 @@ public class MybatisPlusDataPermissionHandler implements MultiDataPermissionHand
         final String userAlias;
 
         /**
-        * 构造函数
-        *
-        * @param annotation @数据scope注解对象
-        */
+         * 构造函数
+         *
+         * @param annotation @数据scope注解对象
+         */
         DataScopeInfo(DataScope annotation) {
             this.enabled = annotation.enabled();
             this.useUserPermission = annotation.useUserPermission();

@@ -70,13 +70,13 @@ public class AuthClientConfiguration
     private ApplicationContext applicationContext;
 
     /**
-    * o认证认证服务
-    *
-    * 提供用户认证和权限管理功能，集成o认证用户信息。
-    * 支持获取当前用户信息、角色验证、权限检查等功能。
-    *
-    * @return OAuth认证服务实例
-    */
+     * o认证认证服务
+     *
+     * 提供用户认证和权限管理功能，集成o认证用户信息。
+     * 支持获取当前用户信息、角色验证、权限检查等功能。
+     *
+     * @return OAuth认证服务实例
+     */
     @Bean(name = "authService")
     @Primary
     public AuthService authService() {

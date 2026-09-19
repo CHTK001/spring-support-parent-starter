@@ -25,8 +25,8 @@ public class SignUtils {
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(SignUtils.class);
 
     /**
-    * 默认的参数连接符
-    */
+     * 默认的参数连接符
+     */
     private static final String DEFAULT_SEPARATOR = "&";
 
     /**

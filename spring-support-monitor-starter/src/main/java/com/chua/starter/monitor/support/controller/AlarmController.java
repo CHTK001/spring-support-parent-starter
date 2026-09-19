@@ -39,11 +39,11 @@ public class AlarmController {
     private final AlarmEngineService alarmEngineService;
 
     /**
-    * 新增策略
-    *
-    * @param policy 策略
-    * @return 结果
-    */
+     * 新增策略
+     *
+     * @param policy 策略
+     * @return 结果
+     */
     @Operation(summary = "新增告警策略")
     @PostMapping("/policy")
     public ReturnResult<MsMonitorAlarmPolicy> createPolicy(@RequestBody MsMonitorAlarmPolicy policy) {

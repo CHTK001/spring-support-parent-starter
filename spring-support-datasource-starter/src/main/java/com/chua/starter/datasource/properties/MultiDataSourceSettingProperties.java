@@ -22,8 +22,8 @@ public class MultiDataSourceSettingProperties {
     public static final String PRE = "plugin.multi-datasource";
 
     /**
-    * 是否强制使用注解上的数据源
-    */
+     * 是否强制使用注解上的数据源
+     */
     private boolean forceAnnotation = true;
 
     /**

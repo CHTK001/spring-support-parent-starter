@@ -14,12 +14,12 @@ public final class NamingCase {
     }
 
     /**
-    * 转为camel大小写
-    * <p>将下划线/连字符/空格分隔的命名统一归一为下划线后，委托 {@link NamingStyle#UNDERSCORE} 转换。</p>
-    *
-    * @param name 名称
-    * @return 转为camel大小写的结果
-    */
+     * 转为camel大小写
+     * <p>将下划线/连字符/空格分隔的命名统一归一为下划线后，委托 {@link NamingStyle#UNDERSCORE} 转换。</p>
+     *
+     * @param name 名称
+     * @return 转为camel大小写的结果
+     */
     public static String toCamelCase(String name) {
         if (name == null || name.isEmpty()) {
             return name;

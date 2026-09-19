@@ -30,11 +30,11 @@ public class SpringCompatUtils {
         private static volatile Boolean factoryMethodMetadataEnabled = null; // 工厂方法metadata已启用
 
     /**
-    * 获取工厂方法申报类型
-    *
-    * @param annotatedBeanDefinition annotatedbeandefinition
-    * @return 获取工厂方法申报类型的结果
-    */
+     * 获取工厂方法申报类型
+     *
+     * @param annotatedBeanDefinition annotatedbeandefinition
+     * @return 获取工厂方法申报类型的结果
+     */
     public static String getFactoryMethodReturnType(AnnotatedBeanDefinition annotatedBeanDefinition) {
         try {
             if (isFactoryMethodMetadataEnabled()) {

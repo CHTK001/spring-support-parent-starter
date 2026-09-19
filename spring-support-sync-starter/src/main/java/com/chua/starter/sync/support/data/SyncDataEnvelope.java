@@ -235,11 +235,11 @@ public class SyncDataEnvelope implements Serializable {
         private long timestamp;
 
         /**
-        * 请求标识
-        *
-        * @param requestId 请求标识
-        * @return 请求id的结果
-        */
+         * 请求标识
+         *
+         * @param requestId 请求标识
+         * @return 请求id的结果
+         */
         public Builder requestId(String requestId) {
             this.requestId = requestId;
             return this;

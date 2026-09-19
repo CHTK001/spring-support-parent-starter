@@ -30,11 +30,11 @@ public class AlipayWebPaymentChannel extends AbstractMerchantPaymentChannel impl
     private final PaymentProviderGatewayRegistry providerGatewayRegistry;
 
     /**
-    * 创建 alipayweb薪酬通道 实例
-    * @param merchantChannelService merchant通道服务
-    * @param objectMapper 对象映射器
-    * @param providerGatewayRegistry 提供者gatewayregistry
-    */
+     * 创建 alipayweb薪酬通道 实例
+     * @param merchantChannelService merchant通道服务
+     * @param objectMapper 对象映射器
+     * @param providerGatewayRegistry 提供者gatewayregistry
+     */
     public AlipayWebPaymentChannel(MerchantChannelService merchantChannelService,
                                    ObjectMapper objectMapper,
                                    PaymentProviderGatewayRegistry providerGatewayRegistry) {

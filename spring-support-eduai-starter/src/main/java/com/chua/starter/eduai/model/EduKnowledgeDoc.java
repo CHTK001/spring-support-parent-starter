@@ -25,8 +25,8 @@ public class EduKnowledgeDoc {
     private Long knowledgeDocId;
 
     /**
-    * 文档名称
-    */
+     * 文档名称
+     */
     private String knowledgeDocName;
 
     /**

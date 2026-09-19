@@ -20,8 +20,8 @@ public final class Json {
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     /**
-    * Json。
-    */
+     * Json。
+     */
     private Json() {
     }
 

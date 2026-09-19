@@ -75,9 +75,9 @@ public enum OrderEvent {
     private final String description;
 
     /**
-    * 订单事件。
-    * @param description description
-    */
+     * 订单事件。
+     * @param description description
+     */
     OrderEvent(String description) {
         this.description = description;
     }

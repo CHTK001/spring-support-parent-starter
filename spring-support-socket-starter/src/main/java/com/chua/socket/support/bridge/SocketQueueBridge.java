@@ -51,10 +51,10 @@ public class SocketQueueBridge {
     private final ObjectMapper objectMapper;
 
     /**
-    * 监听 Socket:push topic，解析 payload 后广播到所有前端会话
-    *
-    * @param message 队列消息（payload 为 JSON 字符串）
-    */
+     * 监听 Socket:push topic，解析 payload 后广播到所有前端会话
+     *
+     * @param message 队列消息（payload 为 JSON 字符串）
+     */
     @QueueListener(TOPIC)
     public void onSocketMessage(Message message) {
         SocketSessionTemplate template = socketTemplateProvider.getIfAvailable();

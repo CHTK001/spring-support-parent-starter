@@ -28,9 +28,9 @@ public class ResponseModelViewMethodProcessor extends RequestResponseBodyMethodP
     private String redirectPatterns;
 
     /**
-    * 创建 响应模型view方法处理器 实例
-    * @param converters 转换器
-    */
+     * 创建 响应模型view方法处理器 实例
+     * @param converters 转换器
+     */
     public ResponseModelViewMethodProcessor(List<HttpMessageConverter<?>> converters) {
         /**
          * 父。

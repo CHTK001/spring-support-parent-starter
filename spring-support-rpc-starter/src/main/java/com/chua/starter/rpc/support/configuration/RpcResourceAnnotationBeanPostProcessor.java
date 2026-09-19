@@ -62,9 +62,9 @@ public class RpcResourceAnnotationBeanPostProcessor extends AbstractAnnotationBe
     /** 创建 rpcresource注解Beanpost处理器 实例 */
     public RpcResourceAnnotationBeanPostProcessor() {
         /**
-    * 父。
-    * @param RpcResource.class rpcresource.类
-    */
+         * 父。
+         * @param RpcResource.class rpcresource.类
+         */
         super(RpcResource.class);
     }
 
@@ -82,9 +82,9 @@ public class RpcResourceAnnotationBeanPostProcessor extends AbstractAnnotationBe
                 AnnotatedInjectionMetadata metadata = findInjectionMetadata(beanName, beanType, null);
                 try {
                     /**
-    * prepareinjection。
-    * @param metadata metadata
-    */
+                     * prepareinjection。
+                     * @param metadata metadata
+                     */
                     prepareInjection(metadata);
                 } catch (BeansException e) {
                     throw e;
@@ -121,9 +121,9 @@ public class RpcResourceAnnotationBeanPostProcessor extends AbstractAnnotationBe
         metadata.checkConfigMembers(beanDefinition);
         try {
             /**
-    * prepareinjection。
-    * @param metadata metadata
-    */
+             * prepareinjection。
+             * @param metadata metadata
+             */
             prepareInjection(metadata);
         } catch (Exception e) {
             /**
@@ -145,9 +145,9 @@ public class RpcResourceAnnotationBeanPostProcessor extends AbstractAnnotationBe
         try {
             AnnotatedInjectionMetadata metadata = findInjectionMetadata(beanName, bean.getClass(), pvs);
             /**
-    * prepareinjection。
-    * @param metadata metadata
-    */
+             * prepareinjection。
+             * @param metadata metadata
+             */
             prepareInjection(metadata);
             metadata.inject(bean, beanName, pvs);
         } catch (BeansException ex) {
@@ -174,10 +174,10 @@ public class RpcResourceAnnotationBeanPostProcessor extends AbstractAnnotationBe
         }
         if (injectedElement.injectedObject == null) {
             /**
-    * illegal状态异常。
-    * @param injection" injection"
-    * @return illegal状态异常的结果
-    */
+             * illegal状态异常。
+             * @param injection" injection"
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("The AnnotatedInjectElement of bean should be inited before injection");
         }
 

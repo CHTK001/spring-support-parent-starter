@@ -43,12 +43,12 @@ public class MailboxSseService {
     private final CredentialCipher cipher;
 
     /**
-    * 构造
-    *
-    * @param sseSocketSessionTemplateProvider SSE 会话模板提供器
-    * @param identityMapper                  身份 映射器
-    * @param cipher                          凭据加解密器
-    */
+     * 构造
+     *
+     * @param sseSocketSessionTemplateProvider SSE 会话模板提供器
+     * @param identityMapper                  身份 映射器
+     * @param cipher                          凭据加解密器
+     */
     public MailboxSseService(ObjectProvider<SseSocketSessionTemplate> sseSocketSessionTemplateProvider,
                              MsServerIdentityMapper identityMapper,
                              CredentialCipher cipher) {

@@ -24,10 +24,10 @@ public class PaymentChannelRegistry {
     private ApplicationContext applicationContext;
 
     /**
-    * 通道
-    *
-    * @return 通道的结果
-    */
+     * 通道
+     *
+     * @return 通道的结果
+     */
     private List<PaymentChannel> channels() {
         if (channels == null) {
             synchronized (this) {

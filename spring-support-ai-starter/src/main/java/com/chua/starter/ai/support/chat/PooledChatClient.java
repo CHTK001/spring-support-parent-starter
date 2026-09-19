@@ -89,8 +89,8 @@ public class PooledChatClient implements ChatClient {
         int target = size == null ? 1 : size.intValue();
         synchronized (this) {
             /**
-    * 关闭游泳池。
-    */
+             * 关闭游泳池。
+             */
             closePool();
             if (target <= 0) {
                 poolMode = 0;
@@ -250,9 +250,9 @@ public class PooledChatClient implements ChatClient {
             inner.chat(scope, consumer, onComplete, onError);
         } finally {
             /**
-    * 申报客户端。
-    * @param inner 内部
-    */
+             * 申报客户端。
+             * @param inner 内部
+             */
             returnClient(inner);
         }
     }
@@ -266,9 +266,9 @@ public class PooledChatClient implements ChatClient {
             return inner.listTools(scope);
         } finally {
             /**
-    * 申报客户端。
-    * @param inner 内部
-    */
+             * 申报客户端。
+             * @param inner 内部
+             */
             returnClient(inner);
         }
     }
@@ -282,9 +282,9 @@ public class PooledChatClient implements ChatClient {
             return inner.callTool(scope, toolCall);
         } finally {
             /**
-    * 申报客户端。
-    * @param inner 内部
-    */
+             * 申报客户端。
+             * @param inner 内部
+             */
             returnClient(inner);
         }
     }
@@ -298,9 +298,9 @@ public class PooledChatClient implements ChatClient {
             return inner.getModelName();
         } finally {
             /**
-    * 申报客户端。
-    * @param inner 内部
-    */
+             * 申报客户端。
+             * @param inner 内部
+             */
             returnClient(inner);
         }
     }
@@ -314,9 +314,9 @@ public class PooledChatClient implements ChatClient {
             return inner.getFactory();
         } finally {
             /**
-    * 申报客户端。
-    * @param inner 内部
-    */
+             * 申报客户端。
+             * @param inner 内部
+             */
             returnClient(inner);
         }
     }
@@ -330,9 +330,9 @@ public class PooledChatClient implements ChatClient {
             return inner.getProvider();
         } finally {
             /**
-    * 申报客户端。
-    * @param inner 内部
-    */
+             * 申报客户端。
+             * @param inner 内部
+             */
             returnClient(inner);
         }
     }
@@ -346,9 +346,9 @@ public class PooledChatClient implements ChatClient {
             return inner.getDefaultModel();
         } finally {
             /**
-    * 申报客户端。
-    * @param inner 内部
-    */
+             * 申报客户端。
+             * @param inner 内部
+             */
             returnClient(inner);
         }
     }
@@ -362,9 +362,9 @@ public class PooledChatClient implements ChatClient {
             return inner.getEndpoint();
         } finally {
             /**
-    * 申报客户端。
-    * @param inner 内部
-    */
+             * 申报客户端。
+             * @param inner 内部
+             */
             returnClient(inner);
         }
     }
@@ -378,9 +378,9 @@ public class PooledChatClient implements ChatClient {
             return inner.listModelDefinitions();
         } finally {
             /**
-    * 申报客户端。
-    * @param inner 内部
-    */
+             * 申报客户端。
+             * @param inner 内部
+             */
             returnClient(inner);
         }
     }
@@ -394,9 +394,9 @@ public class PooledChatClient implements ChatClient {
             return inner.chatSync(prompt);
         } finally {
             /**
-    * 申报客户端。
-    * @param inner 内部
-    */
+             * 申报客户端。
+             * @param inner 内部
+             */
             returnClient(inner);
         }
     }
@@ -410,9 +410,9 @@ public class PooledChatClient implements ChatClient {
             return inner.chatSync(prompt, timeoutMillis);
         } finally {
             /**
-    * 申报客户端。
-    * @param inner 内部
-    */
+             * 申报客户端。
+             * @param inner 内部
+             */
             returnClient(inner);
         }
     }
@@ -426,9 +426,9 @@ public class PooledChatClient implements ChatClient {
             return inner.chatSyncWithResponse(prompt);
         } finally {
             /**
-    * 申报客户端。
-    * @param inner 内部
-    */
+             * 申报客户端。
+             * @param inner 内部
+             */
             returnClient(inner);
         }
     }
@@ -439,8 +439,8 @@ public class PooledChatClient implements ChatClient {
     public void close() {
         synchronized (this) {
             /**
-    * 关闭游泳池。
-    */
+             * 关闭游泳池。
+             */
             closePool();
         }
     }

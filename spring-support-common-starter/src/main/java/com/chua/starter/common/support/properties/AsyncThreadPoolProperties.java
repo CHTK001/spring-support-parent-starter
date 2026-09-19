@@ -20,8 +20,8 @@ public class AsyncThreadPoolProperties {
     /** PRE */
     public static final String PRE = "plugin.thread";
     /**
-    * 核心线程数：线程池创建的时候初始化的线程数
-    */
+     * 核心线程数：线程池创建的时候初始化的线程数
+     */
     private int corePoolSize = 20;
     /**
      * 最大线程数：线程池最大的线程数，只有缓冲队列满了之后才会申请超过核心线程数的线程

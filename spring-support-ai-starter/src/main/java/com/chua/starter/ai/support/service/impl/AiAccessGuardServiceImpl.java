@@ -28,8 +28,8 @@ public class AiAccessGuardServiceImpl implements AiAccessGuardService {
     private static final String BEARER_PREFIX = "Bearer ";
 
     /**
-    * app_Key_已启用 开关缓存，5s TTL — 避免每次请求都查询远程 DB/Redis
-    */
+     * app_Key_已启用 开关缓存，5s TTL — 避免每次请求都查询远程 DB/Redis
+     */
     private static final Cache<String, Boolean> APP_KEY_ENABLED_CACHE = Caffeine.newBuilder()
             .expireAfterWrite(5, TimeUnit.SECONDS)
             .maximumSize(10)

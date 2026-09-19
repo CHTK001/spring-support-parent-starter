@@ -37,11 +37,11 @@ public class MerchantChannelController {
     @Operation(summary = "创建渠道配置")
     @PostMapping
     /**
-    * 创建通道
-    *
-    * @param dto dto
-    * @return 创建通道的结果
-    */
+     * 创建通道
+     *
+     * @param dto dto
+     * @return 创建通道的结果
+     */
     public Result<MerchantChannelVO> createChannel(@RequestBody ChannelConfigDTO dto) {
         return Result.success(channelService.createChannel(dto));
     }

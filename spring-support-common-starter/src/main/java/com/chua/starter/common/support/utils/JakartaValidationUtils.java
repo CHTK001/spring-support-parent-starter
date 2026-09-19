@@ -32,9 +32,9 @@ public class JakartaValidationUtils {
 
     static {
         /**
-    * 尝试。
-    * @param Validation.buildDefaultValidatorFactory( 校验.构建默认validatorfactory(
-    */
+         * 尝试。
+         * @param Validation.buildDefaultValidatorFactory( 校验.构建默认validatorfactory(
+         */
         try (ValidatorFactory factory = Validation.buildDefaultValidatorFactory()) {
             VALIDATOR = factory.getValidator();
         }

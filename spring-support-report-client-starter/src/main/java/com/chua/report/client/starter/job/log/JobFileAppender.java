@@ -44,10 +44,10 @@ public class JobFileAppender {
     /** 胶水src路径 */
     private static String glueSrcPath = logBasePath.concat("/gluesource");
     /**
-    * 初始化记录日志路径
-    *
-    * @param logPath 日志路径
-    */
+     * 初始化记录日志路径
+     *
+     * @param logPath 日志路径
+     */
     public static void initLogPath(String logPath){
  // 初始化
         if (logPath!=null && logPath.trim().length()>0) {

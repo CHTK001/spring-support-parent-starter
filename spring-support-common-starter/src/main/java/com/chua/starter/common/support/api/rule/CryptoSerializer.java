@@ -34,8 +34,8 @@ public class CryptoSerializer extends JsonSerializer<String> implements Contextu
     private Crypto.KeyType keyType;
 
     /**
-    * 无参构造函数
-    */
+     * 无参构造函数
+     */
     public CryptoSerializer() {
         this.codec = null;
         this.key = null;

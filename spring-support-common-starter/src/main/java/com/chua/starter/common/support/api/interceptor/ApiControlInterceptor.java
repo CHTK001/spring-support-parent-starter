@@ -49,13 +49,13 @@ public class ApiControlInterceptor implements HandlerInterceptor  {
     /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(ApiControlInterceptor.class);
     /**
-    * 构造函数
-    *
-    * @param apiProperties api属性
-    * @param environment 环境
-    * @param featureManager api特征管理器
-    * @param overrideProvider 运行时覆盖提供者（可空：未注册实现时走默认判定）
-    */
+     * 构造函数
+     *
+     * @param apiProperties api属性
+     * @param environment 环境
+     * @param featureManager api特征管理器
+     * @param overrideProvider 运行时覆盖提供者（可空：未注册实现时走默认判定）
+     */
     public ApiControlInterceptor(ApiProperties apiProperties, Environment environment, ApiFeatureManager featureManager,
                                  ObjectProvider<ApiSwitchOverrideProvider> overrideProvider) {
         this.apiProperties = apiProperties;
@@ -76,12 +76,12 @@ public class ApiControlInterceptor implements HandlerInterceptor  {
     private final ApiGrayEvaluator grayEvaluator = new ApiGrayEvaluator();
 
     /**
-        * 应用灰度运行时覆盖：无覆盖时原样返回注解；有覆盖时经动态代理合并——
-        * percentage/角色/用户/头部/rule 取覆盖值（未覆盖字段沿用注解），其余属性委托原注解。
-        *
-        * @param apiGray 原注解
-        * @return 生效的灰度规则
-        */
+     * 应用灰度运行时覆盖：无覆盖时原样返回注解；有覆盖时经动态代理合并——
+     * percentage/角色/用户/头部/rule 取覆盖值（未覆盖字段沿用注解），其余属性委托原注解。
+     *
+     * @param apiGray 原注解
+     * @return 生效的灰度规则
+     */
     private ApiGray applyGrayOverride(ApiGray apiGray) {
         if (overrideProvider == null) {
             return apiGray;

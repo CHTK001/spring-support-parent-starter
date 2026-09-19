@@ -28,9 +28,9 @@ public class SupportInjector extends DefaultSqlInjector implements DisposableBea
     private final Map<MybatisPlusProperties.SqlMethodProperties, List<AbstractMethod>> cacheAbstractMethod = new ConcurrentHashMap<>(); // 缓存抽象方法
 
     /**
-    * 创建 支持injector 实例
-    * @param mybatisProperties MyBatis属性
-    */
+     * 创建 支持injector 实例
+     * @param mybatisProperties MyBatis属性
+     */
     public SupportInjector(MybatisPlusProperties mybatisProperties) {
         this.mybatisProperties = mybatisProperties;
     }
@@ -68,11 +68,11 @@ public class SupportInjector extends DefaultSqlInjector implements DisposableBea
     }
 
     /**
-    * 获取记号笔
-    *
-    * @param sqlMethodProperties SQL方法属性
-    * @return 获取记号笔的结果
-    */
+     * 获取记号笔
+     *
+     * @param sqlMethodProperties SQL方法属性
+     * @return 获取记号笔的结果
+     */
     private SqlMethodMarker getMarker(MybatisPlusProperties.SqlMethodProperties sqlMethodProperties) {
         MybatisPlusProperties.SqlMethodType type = sqlMethodProperties.getType();
         return type == MybatisPlusProperties.SqlMethodType.FILE ?
@@ -89,11 +89,11 @@ public class SupportInjector extends DefaultSqlInjector implements DisposableBea
     }
 
     /**
-    * Refresh
-    *
-    * @param name 名称
-    * @return refresh的结果
-    */
+     * Refresh
+     *
+     * @param name 名称
+     * @return refresh的结果
+     */
     public String refresh(String name) {
         for (SqlMethodMarker marker : cache.values()) {
             marker.refresh(name);

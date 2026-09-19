@@ -15,13 +15,13 @@ public final class Joiner {
     private final boolean trimResults;
 
     /**
-    * 创建 Joiner 实例
-    * @param separator separator
-    * @param omitEmpty 布尔值
-    * @param omitEmpty 布尔值
-    * @param omitEmpty omit空
-    * @param trimResults 修剪结果
-    */
+     * 创建 Joiner 实例
+     * @param separator separator
+     * @param omitEmpty 布尔值
+     * @param omitEmpty 布尔值
+     * @param omitEmpty omit空
+     * @param trimResults 修剪结果
+     */
     private Joiner(String separator, boolean omitEmpty, boolean trimResults) {
         this.separator = separator == null ? "" : separator;
         this.omitEmpty = omitEmpty;
@@ -31,11 +31,11 @@ public final class Joiner {
     /** 创建 Joiner 实例 */
     private Joiner() {
         /**
-    * this。
-    * @param "" ""
-    * @param false false
-    * @param false false
-    */
+         * this。
+         * @param "" ""
+         * @param false false
+         * @param false false
+         */
         this("", false, false);
     }
 

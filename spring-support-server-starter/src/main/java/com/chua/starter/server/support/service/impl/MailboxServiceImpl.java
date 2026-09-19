@@ -125,10 +125,10 @@ public class MailboxServiceImpl implements MailboxService {
     }
 
     /**
-    * 解析邮箱身份 → IMAP 连接信息。
-    * @param identityId identityid
-    * @return resolve的结果
-    */
+     * 解析邮箱身份 → IMAP 连接信息。
+     * @param identityId identityid
+     * @return resolve的结果
+     */
     private ResolvedMail resolve(Long identityId) {
         if (identityId == null) {
             return null;

@@ -287,14 +287,14 @@ public class ApiConfiguration implements EnvironmentAware  {
     }
 
     /**
-    * API 控制的 服务信息 贡献者: 注册 @apixxx 系列开关。
-    *
-    * <p>原先在 {@code WebMvcRegistrations#getRequestMappingHandlerMapping()} 中触发,
-    * 重构为 {@code @Bean WebMvcRegistrations} 后丢失, 这里改为标准贡献者方式补齐,
-    * 保证 {@code plugin.api.*} 相关开关始终出现在服务信息横幅中。</p>
-    *
-    * @return ServiceInfoContributor
-    */
+     * API 控制的 服务信息 贡献者: 注册 @apixxx 系列开关。
+     *
+     * <p>原先在 {@code WebMvcRegistrations#getRequestMappingHandlerMapping()} 中触发,
+     * 重构为 {@code @Bean WebMvcRegistrations} 后丢失, 这里改为标准贡献者方式补齐,
+     * 保证 {@code plugin.api.*} 相关开关始终出现在服务信息横幅中。</p>
+     *
+     * @return ServiceInfoContributor
+     */
     @Bean
     public ServiceInfoContributor apiServiceInfoContributor() {
         return registry -> logControlStatus();

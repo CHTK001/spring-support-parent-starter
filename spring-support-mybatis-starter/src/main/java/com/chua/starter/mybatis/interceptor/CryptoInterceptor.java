@@ -46,8 +46,8 @@ public class CryptoInterceptor implements Interceptor {
     private static final Logger log = LoggerFactory.getLogger(CryptoInterceptor.class);
 
     /**
-    * 缓存类对应的加密字段列表，Key为类对象，值为该类所有带@加密货币注解的字段列表
-    */
+     * 缓存类对应的加密字段列表，Key为类对象，值为该类所有带@加密货币注解的字段列表
+     */
     private static final Map<Class<?>, List<CryptoFieldInfo>> CRYPTO_FIELD_CACHE = new ConcurrentReferenceHashMap<>(256);
 
     /**

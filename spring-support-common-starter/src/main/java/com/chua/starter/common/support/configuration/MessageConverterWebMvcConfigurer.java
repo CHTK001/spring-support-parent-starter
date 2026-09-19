@@ -56,10 +56,10 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
     /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(MessageConverterWebMvcConfigurer.class);
     /**
-    * 构造函数
-    *
-    * @param messageConverterProperties 消息转换器属性
-    */
+     * 构造函数
+     *
+     * @param messageConverterProperties 消息转换器属性
+     */
     public MessageConverterWebMvcConfigurer(MessageConverterProperties messageConverterProperties) {
         this.messageConverterProperties = messageConverterProperties;
     }

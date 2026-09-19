@@ -32,8 +32,8 @@ public class IP2ProxyLiteIpQualityDetector implements IpQualityDetector {
     private final IP2Proxy ip2Proxy;
 
     /**
-    * 从默认 classpath 资源创建实例。BIN 缺失时降级为不可用（不抛异常）。
-    */
+     * 从默认 classpath 资源创建实例。BIN 缺失时降级为不可用（不抛异常）。
+     */
     public IP2ProxyLiteIpQualityDetector() {
         Path bin = findDefaultResource();
         if (bin == null) {

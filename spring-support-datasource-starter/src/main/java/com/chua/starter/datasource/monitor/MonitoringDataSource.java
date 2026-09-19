@@ -66,13 +66,13 @@ public class MonitoringDataSource implements DataSource {
         Connection connection = delegate.getConnection();
         activeConnections.incrementAndGet();
         /**
-    * 监控connection。
-    * @param connection connection
-    * @param dataSourceName 数据源名称
-    * @param monitor 监控
-    * @param closeCallback( 关闭callback(
-    * @return 监控connection的结果
-    */
+         * 监控connection。
+         * @param connection connection
+         * @param dataSourceName 数据源名称
+         * @param monitor 监控
+         * @param closeCallback( 关闭callback(
+         * @return 监控connection的结果
+         */
         return new MonitoringConnection(connection, dataSourceName, monitor, closeCallback()).proxy();
     }
 
@@ -82,13 +82,13 @@ public class MonitoringDataSource implements DataSource {
         Connection connection = delegate.getConnection(username, password);
         activeConnections.incrementAndGet();
         /**
-    * 监控connection。
-    * @param connection connection
-    * @param dataSourceName 数据源名称
-    * @param monitor 监控
-    * @param closeCallback( 关闭callback(
-    * @return 监控connection的结果
-    */
+         * 监控connection。
+         * @param connection connection
+         * @param dataSourceName 数据源名称
+         * @param monitor 监控
+         * @param closeCallback( 关闭callback(
+         * @return 监控connection的结果
+         */
         return new MonitoringConnection(connection, dataSourceName, monitor, closeCallback()).proxy();
     }
 
@@ -138,10 +138,10 @@ public class MonitoringDataSource implements DataSource {
     }
 
     /**
-    * 获取目标数据源
-    *
-    * @return 目标数据源
-    */
+     * 获取目标数据源
+     *
+     * @return 目标数据源
+     */
     public DataSource getTargetDataSource() {
         return delegate;
     }

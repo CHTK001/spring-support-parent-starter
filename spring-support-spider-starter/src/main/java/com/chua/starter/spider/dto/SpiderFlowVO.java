@@ -18,10 +18,10 @@ public class SpiderFlowVO {
     private LocalDateTime updateTime;
 
     /**
-    * 获取流编码
-    *
-    * @return 获取流编码的结果
-    */
+     * 获取流编码
+     *
+     * @return 获取流编码的结果
+     */
     public String getFlowCode() { return flowCode; }
     /**
      * 设置流编码

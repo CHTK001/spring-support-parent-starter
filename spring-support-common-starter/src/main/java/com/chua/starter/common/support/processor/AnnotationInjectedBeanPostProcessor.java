@@ -71,8 +71,8 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
     private int order;
 
     /**
-    * 注解injectedbeanpost处理器。
-    */
+     * 注解injectedbeanpost处理器。
+     */
     public AnnotationInjectedBeanPostProcessor() {
         this.injectionMetadataCache = new ConcurrentHashMap(CACHE_SIZE);
         this.injectedObjectsCache = new ConcurrentHashMap(CACHE_SIZE);

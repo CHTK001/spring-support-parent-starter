@@ -50,10 +50,10 @@ public class TransactionRecordServiceImpl implements TransactionRecordService {
     public Page<TransactionRecord> page(TransactionRecordQueryRequest request) {
         if (request == null) {
             /**
-    * IllegalArgumentException。
-    * @param "查询参数不能为空" "查询参数不能为空"
-    * @return IllegalArgumentException的结果
-    */
+             * IllegalArgumentException。
+             * @param "查询参数不能为空" "查询参数不能为空"
+             * @return IllegalArgumentException的结果
+             */
             throw new IllegalArgumentException("查询参数不能为空");
         }
         Page<TransactionRecord> page = new Page<>(request.pageNum(), request.pageSize());

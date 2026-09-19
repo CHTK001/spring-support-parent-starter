@@ -22,8 +22,8 @@ public class ReportProperties {
     public static final String PRE = "plugin.report.client";
 
     /**
-    * 应用信息上报配置
-    */
+     * 应用信息上报配置
+     */
     private AppReport appReport = new AppReport();
 
     /**

@@ -27,8 +27,8 @@ public class SysAiGroupModel {
     private Integer id;
 
     /**
-    * 分组 标识
-    */
+     * 分组 标识
+     */
     private Integer sysAiGroupId;
 
     /**

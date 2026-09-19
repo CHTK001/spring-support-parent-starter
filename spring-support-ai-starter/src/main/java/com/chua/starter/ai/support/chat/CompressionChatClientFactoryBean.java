@@ -52,10 +52,10 @@ public class CompressionChatClientFactoryBean implements FactoryBean<ChatClient>
     }
 
     /**
-    * 构建客户端safe
-    *
-    * @return 构建客户端safe的结果
-    */
+     * 构建客户端safe
+     *
+     * @return 构建客户端safe的结果
+     */
     private ChatClient buildClientSafe() {
         try {
             return buildClient();

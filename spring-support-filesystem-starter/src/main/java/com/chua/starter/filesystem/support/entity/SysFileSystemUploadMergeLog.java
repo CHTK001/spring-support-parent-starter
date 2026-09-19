@@ -66,10 +66,10 @@ public class SysFileSystemUploadMergeLog extends SysBase implements Serializable
     public SysFileSystemUploadMergeLog() {}
 
     /**
-    * 获取filesystemupload合并记录日志标识
-    *
-    * @return 获取filesystemupload合并日志id的结果
-    */
+     * 获取filesystemupload合并记录日志标识
+     *
+     * @return 获取filesystemupload合并日志id的结果
+     */
     public Long getFilesystemUploadMergeLogId() { return filesystemUploadMergeLogId; }
     /**
      * 设置filesystemupload合并记录日志标识

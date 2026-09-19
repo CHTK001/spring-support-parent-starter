@@ -31,8 +31,8 @@ public class ApiVersionCondition implements RequestCondition<ApiVersionCondition
     /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(ApiVersionCondition.class);
         /**
-    * 版本参数名
-    */
+         * 版本参数名
+         */
     private static final String VERSION_PARAM = "apiVersion";
 
     /**

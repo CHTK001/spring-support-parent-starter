@@ -31,8 +31,8 @@ public class SysAiToken {
     private Integer id;
 
     /**
-    * 令牌名称
-    */
+     * 令牌名称
+     */
     @TableField("sys_ai_token_name")
     private String name; // 名称
 
@@ -186,36 +186,36 @@ public class SysAiToken {
     private String createName;
 
     /**
-    * 创建人 标识
-    */
+     * 创建人 标识
+     */
     @TableField(fill = FieldFill.INSERT)
     /** 创建by */
     private Integer createBy;
 
     /**
-    * 创建时间
-    */
+     * 创建时间
+     */
     @TableField(fill = FieldFill.INSERT)
     /** 创建时间 */
     private LocalDateTime createTime;
 
     /**
-    * 更新时间
-    */
+     * 更新时间
+     */
     @TableField(fill = FieldFill.INSERT_UPDATE)
     /** 更新时间 */
     private LocalDateTime updateTime;
 
     /**
-    * 更新人名称
-    */
+     * 更新人名称
+     */
     @TableField(fill = FieldFill.INSERT_UPDATE)
     /** 更新名称 */
     private String updateName;
 
     /**
-    * 更新人 标识
-    */
+     * 更新人 标识
+     */
     @TableField(fill = FieldFill.INSERT_UPDATE)
     /** 更新by */
     private Integer updateBy;

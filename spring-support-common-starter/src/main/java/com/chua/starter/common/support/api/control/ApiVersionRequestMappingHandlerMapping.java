@@ -39,11 +39,11 @@ public class ApiVersionRequestMappingHandlerMapping extends RequestMappingHandle
     private final String[] activeProfiles;
 
     /**
-    * 创建 api版本请求mapping处理器mapping 实例
-    * @param apiProperties api属性
-    * @param environment 环境
-    * @param environment 环境
-    */
+     * 创建 api版本请求mapping处理器mapping 实例
+     * @param apiProperties api属性
+     * @param environment 环境
+     * @param environment 环境
+     */
     public ApiVersionRequestMappingHandlerMapping(ApiProperties apiProperties, Environment environment) {
         this.apiProperties = apiProperties;
         this.activeProfiles = environment.getActiveProfiles();

@@ -102,11 +102,11 @@ public class OcrTextExtractor implements TextExtractor {
     private String restorerModel;
 
     /**
-    * 从图片中提取文本，非图片文件抛出异常触发 UTF-8 降级。
-    *
-    * @param file 待提取的文件
-    * @return 结构化文本结果列表
-    */
+     * 从图片中提取文本，非图片文件抛出异常触发 UTF-8 降级。
+     *
+     * @param file 待提取的文件
+     * @return 结构化文本结果列表
+     */
     @Override
     public List<TextExtractResult> extractText(File file) {
         if (!isImage(file)) {

@@ -75,11 +75,11 @@ public class SysFileSystemUploadUploadLogServiceImpl
     @Override
     @Transactional
     /**
-    * 删除byuploadid
-    *
-    * @param uploadId uploadid
-    * @return 删除byuploadid的结果
-    */
+     * 删除byuploadid
+     *
+     * @param uploadId uploadid
+     * @return 删除byuploadid的结果
+     */
     public boolean deleteByUploadId(String uploadId) {
         return remove(new LambdaQueryWrapper<SysFileSystemUploadUploadLog>()
                 .eq(SysFileSystemUploadUploadLog::getFilesystemUploadUploadLogUploadId, uploadId));

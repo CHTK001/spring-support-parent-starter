@@ -45,8 +45,8 @@ public class NodeControlHandler implements SyncMessageHandler, ApplicationContex
     private ApplicationContext applicationContext;
 
     /**
-    * 默认健康检查超时时间（秒）
-    */
+     * 默认健康检查超时时间（秒）
+     */
     private static final int DEFAULT_HEALTH_CHECK_TIMEOUT = 120;
 
     /**

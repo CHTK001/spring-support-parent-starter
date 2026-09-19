@@ -71,8 +71,8 @@ public class DataSourceTransactionConfiguration implements
     /** Transaction属性 */
     private TransactionProperties transactionProperties;
     /**
-    * 只读事务
-    */
+     * 只读事务
+     */
     private final String[] readOnly = new String[]{"get*", "query*", "find*", "list*", "count*", "exist*", "search*", "fetch*"};
     /**
      * 写事务

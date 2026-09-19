@@ -61,8 +61,8 @@ public class ArmeriaProtocol extends AbstractProtocol {
     private static final Object CLIENT_LOCK = new Object();
     
     /**
-    * 弹性处理器（熔断+重试）
-    */
+     * 弹性处理器（熔断+重试）
+     */
     private final OAuthClientResilience resilience;
 
     /**
@@ -204,9 +204,9 @@ public class ArmeriaProtocol extends AbstractProtocol {
                 String cacheKey = getCacheKey(new Cookie[]{cookie}, token);
                 if (hasCache(cacheKey)) {
                     /**
-    * clear认证信息。
-    * @param cacheKey 缓存Key
-    */
+                     * clear认证信息。
+                     * @param cacheKey 缓存Key
+                     */
                     clearAuthenticationInformation(cacheKey);
                 }
             } else if (upgradeType == UpgradeType.REFRESH) {
@@ -378,11 +378,11 @@ public class ArmeriaProtocol extends AbstractProtocol {
     }
 
     /**
-    * 解析online用户结果
-    *
-    * @param resultMap 结果映射
-    * @return 解析online用户结果的结果
-    */
+     * 解析online用户结果
+     *
+     * @param resultMap 结果映射
+     * @return 解析online用户结果的结果
+     */
     private OnlineUserResult parseOnlineUserResult(java.util.Map<String, Object> resultMap) {
         OnlineUserResult result = new OnlineUserResult();
         result.setTotal(getIntValue(resultMap, "total", 0));

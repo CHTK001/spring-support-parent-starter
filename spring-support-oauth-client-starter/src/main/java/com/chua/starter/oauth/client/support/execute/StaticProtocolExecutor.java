@@ -27,14 +27,14 @@ import java.util.Map;
 import java.util.Set;
 
 /**
-* 实现了协议执行器接口的静态协议执行器类。
-* <p>
-* 该类旨在处理特定的协议执行逻辑，通过静态方法提供协议处理能力。
-* 作为协议执行器，它负责解析和执行特定格式的协议数据。
-* </p>
-*
-* @since 2024/6/12
-* @author CH
+ * 实现了协议执行器接口的静态协议执行器类。
+ * <p>
+ * 该类旨在处理特定的协议执行逻辑，通过静态方法提供协议处理能力。
+ * 作为协议执行器，它负责解析和执行特定格式的协议数据。
+ * </p>
+ *
+ * @since 2024/6/12
+ * @author CH
  */
 @Spi("static")
 public class StaticProtocolExecutor implements ProtocolExecutor {
@@ -74,21 +74,21 @@ public class StaticProtocolExecutor implements ProtocolExecutor {
             AbstractProtocol.invalidateAllCache();
         }
         /**
-    * login认证结果。
-    * @param 200 200
-    * @param "" ""
-    * @return login认证结果的结果
-    */
+         * login认证结果。
+         * @param 200 200
+         * @param "" ""
+         * @return login认证结果的结果
+         */
         return new LoginAuthResult(200, "");
     }
 
     /**
-    * 新登录身份验证结果
-    *
-    * @param username 用户名
-    * @param password 暗语
-    * @return {@link login认证结果}
-    */
+     * 新登录身份验证结果
+     *
+     * @param username 用户名
+     * @param password 暗语
+     * @return {@link login认证结果}
+     */
     private LoginAuthResult newLoginAuthResult(String username, String password) {
         AuthClientProperties.TempUser temp = authClientProperties.getTemp();
         LoginAuthResult loginAuthResult = new LoginAuthResult();
@@ -147,13 +147,13 @@ public class StaticProtocolExecutor implements ProtocolExecutor {
     }
 
     /**
-    * 匹配用户与密码
-    *
-    * @param userAndPassword 用户和密码列表
-    * @param username        用户名
-    * @param password        密码
-    * @return 是否匹配
-    */
+     * 匹配用户与密码
+     *
+     * @param userAndPassword 用户和密码列表
+     * @param username        用户名
+     * @param password        密码
+     * @return 是否匹配
+     */
     private boolean isMatch(List<String> userAndPassword, String username, String password) {
         if (userAndPassword.isEmpty()) {
             return false;

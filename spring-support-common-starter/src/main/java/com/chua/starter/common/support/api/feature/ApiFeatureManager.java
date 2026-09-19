@@ -30,10 +30,10 @@ public class ApiFeatureManager {
     /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(ApiFeatureManager.class);
         /**
-    * 功能开关状态缓存
-    * Key: 功能标识
-    * 值: 是否启用
-    */
+         * 功能开关状态缓存
+         * Key: 功能标识
+         * 值: 是否启用
+         */
     private final Map<String, Boolean> featureStates = new ConcurrentHashMap<>();
 
     /**

@@ -47,10 +47,10 @@ public class RsocketSyncServer extends AbstractSyncServer {
     }
 
     /**
-    * rSocket 连接建立时回调。
-    *
-    * @param sessionId 会话标识
-    */
+     * rSocket 连接建立时回调。
+     *
+     * @param sessionId 会话标识
+     */
     public void onRsocketConnect(String sessionId) {
         SyncSession syncSession = new SyncSession(sessionId);
         /**

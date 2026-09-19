@@ -23,11 +23,11 @@ public class NewTrackManager {
     private static final ThreadLocal<Stack<Span>> TRACK_CACHE = new ThreadLocal<>();
 
     /**
-    * 调用
-    *
-    * @param callable callable
-    * @return invoke的结果
-    */
+     * 调用
+     *
+     * @param callable callable
+     * @return invoke的结果
+     */
     public static Object invoke(Callable<?> callable) throws Exception {
         return callable.call();
     }
@@ -44,10 +44,10 @@ public class NewTrackManager {
     }
 
     /**
-    * 获取当前span
-    *
-    * @return 获取当前span的结果
-    */
+     * 获取当前span
+     *
+     * @return 获取当前span的结果
+     */
     public static Span getCurrentSpan() {
         Stack<Span> stack = TRACK_CACHE.get();
         if (stack == null || stack.isEmpty()) {
@@ -72,10 +72,10 @@ public class NewTrackManager {
     }
 
     /**
-    * 创建entryspan
-    *
-    * @return 创建entryspan的结果
-    */
+     * 创建entryspan
+     *
+     * @return 创建entryspan的结果
+     */
     public static Span createEntrySpan() {
         Span span = createSpan();
         Stack<Span> stack = TRACK_CACHE.get();

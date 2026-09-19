@@ -49,8 +49,8 @@ public class SshServerService implements InitializingBean, DisposableBean {
     public void afterPropertiesSet() throws Exception {
         if (properties.isEnabled()) {
             /**
-    * 启动ssh服务端。
-    */
+             * 启动ssh服务端。
+             */
             startSshServer();
         } else {
             log.info("[SSH] 服务状态 [{}]", disabled());
@@ -61,8 +61,8 @@ public class SshServerService implements InitializingBean, DisposableBean {
     /** 销毁 */
     public void destroy() throws Exception {
         /**
-    * 停止ssh服务端。
-    */
+         * 停止ssh服务端。
+         */
         stopSshServer();
     }
 

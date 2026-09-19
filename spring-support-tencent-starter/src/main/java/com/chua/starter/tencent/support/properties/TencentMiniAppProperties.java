@@ -17,8 +17,8 @@ public class TencentMiniAppProperties {
     public static final String PREFIX = "plugin.tencent.mini-app";
 
     /**
-    * 是否启用
-    */
+     * 是否启用
+     */
     private boolean enable = false;
 
     /**

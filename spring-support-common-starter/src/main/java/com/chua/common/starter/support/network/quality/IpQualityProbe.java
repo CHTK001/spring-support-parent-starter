@@ -54,10 +54,10 @@ public class IpQualityProbe {
     /** 运行with默认 */
     private void runWithDefaults() throws Exception {
         /**
-    * 运行withips。
-    * @param DEFAULT_BIN_PATH 默认bin路径
-    * @param DEFAULT_TEST_IPS.split("," 默认测试ips.分割(","
-    */
+         * 运行withips。
+         * @param DEFAULT_BIN_PATH 默认bin路径
+         * @param DEFAULT_TEST_IPS.split("," 默认测试ips.分割(","
+         */
         runWithIps(DEFAULT_BIN_PATH, DEFAULT_TEST_IPS.split(","));
     }
 

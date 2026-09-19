@@ -44,13 +44,13 @@ public class SftpController {
     private final SftpService sftpService;
 
     /**
-    * 列出目录
-    *
-    * @param hostId     主机 标识
-    * @param identityId 身份 标识，可为空
-    * @param path       目录路径，可为空取主目录
-    * @return 条目列表
-    */
+     * 列出目录
+     *
+     * @param hostId     主机 标识
+     * @param identityId 身份 标识，可为空
+     * @param path       目录路径，可为空取主目录
+     * @return 条目列表
+     */
     @Operation(summary = "列出目录")
     @GetMapping
     public ReturnResult<List<Map<String, Object>>> list(@PathVariable Long hostId,

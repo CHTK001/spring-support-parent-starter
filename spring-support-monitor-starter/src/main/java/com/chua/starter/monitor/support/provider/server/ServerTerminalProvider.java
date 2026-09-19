@@ -62,11 +62,11 @@ public class ServerTerminalProvider implements MetricProvider {
     }
 
     /**
-    * 同步执行 SSH 命令
-    *
-    * @param context 采集上下文
-    * @return 采集结果
-    */
+     * 同步执行 SSH 命令
+     *
+     * @param context 采集上下文
+     * @return 采集结果
+     */
 
     private CollectResult doCollect(CollectContext context) {
         CollectResult result = new CollectResult();

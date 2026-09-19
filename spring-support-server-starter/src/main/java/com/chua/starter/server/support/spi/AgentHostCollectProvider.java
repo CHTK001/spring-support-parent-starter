@@ -40,11 +40,11 @@ public class AgentHostCollectProvider implements HostCollectProvider {
     }
 
     /**
-    * 同步回写 Agent 上报数据
-    *
-    * @param context 上下文
-    * @return 结果
-    */
+     * 同步回写 Agent 上报数据
+     *
+     * @param context 上下文
+     * @return 结果
+     */
     private CollectOutcome doCollect(HostCollectContext context) {
         if (context == null || context.getHost() == null || context.getHost().getId() == null) {
             return CollectOutcome.fail("主机数据不完整");

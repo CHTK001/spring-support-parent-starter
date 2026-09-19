@@ -23,9 +23,9 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
     private final TreeStructConfig<T> config;
 
     /**
-    * 创建 默认对象struct 实例
-    * @param config 配置
-    */
+     * 创建 默认对象struct 实例
+     * @param config 配置
+     */
     public DefaultObjectStruct(TreeStructConfig<T> config) {
         this.config = config;
     }

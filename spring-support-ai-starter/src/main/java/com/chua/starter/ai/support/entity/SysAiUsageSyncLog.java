@@ -34,32 +34,32 @@ public class SysAiUsageSyncLog implements Serializable {
     private Long id;
 
     /**
-    * 日志级别：信息 / WARN / 错误
-    */
+     * 日志级别：信息 / WARN / 错误
+     */
     @TableField("sys_ai_usage_sync_log_level")
     @Schema(description = "日志级别：INFO / WARN / ERROR")
     /** 日志级别 */
     private String level;
 
     /**
-    * 日志来源：调度 / manual / parser
-    */
+     * 日志来源：调度 / manual / parser
+     */
     @TableField("sys_ai_usage_sync_log_source")
     @Schema(description = "日志来源：schedule / manual / parser")
     /** 日志来源 */
     private String source;
 
     /**
-    * 日志内容
-    */
+     * 日志内容
+     */
     @TableField("sys_ai_usage_sync_log_message")
     @Schema(description = "日志内容")
     /** 日志内容 */
     private String message;
 
     /**
-    * 创建时间
-    */
+     * 创建时间
+     */
     @TableField("create_time")
     @Schema(description = "创建时间")
     /** 创建时间 */

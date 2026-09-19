@@ -171,12 +171,12 @@ public class SocketConfiguration {
         private final SocketProperties properties;
 
         /**
-        * 创建 Socketlifecycle 实例
-        * @param templates Socket会话template
-        * @param templates templates
-        * @param properties Socket属性
-        * @param properties 属性
-        */
+         * 创建 Socketlifecycle 实例
+         * @param templates Socket会话template
+         * @param templates templates
+         * @param properties Socket属性
+         * @param properties 属性
+         */
         public SocketLifecycle(Map<String, SocketSessionTemplate> templates, SocketProperties properties) {
             this.templates = templates;
             this.properties = properties;

@@ -231,10 +231,10 @@ final class ServiceInfoBanner {
         }
 
         /**
-    * 框体内容宽度: 所有行自然宽度的最大值 + 右边距, 夹在上下限之间
-    *
-    * @return 内部width的结果
-    */
+         * 框体内容宽度: 所有行自然宽度的最大值 + 右边距, 夹在上下限之间
+         *
+         * @return 内部width的结果
+         */
         int innerWidth() {
             int inner = MIN_INNER;
             if (!endpoints.isEmpty()) {
@@ -299,11 +299,11 @@ final class ServiceInfoBanner {
     /** 横幅中的一行 (渲染结果已包含左右边框) */
     private interface Row {
         /**
-    * 按指定内容宽度渲染整行, 可见宽度恒为 内部 + 2
-    *
-    * @param inner 内部
-    * @return render的结果
-    */
+         * 按指定内容宽度渲染整行, 可见宽度恒为 内部 + 2
+         *
+         * @param inner 内部
+         * @return render的结果
+         */
         String render(int inner);
     }
 
@@ -312,9 +312,9 @@ final class ServiceInfoBanner {
         private final Line line;
 
         /**
-    * 文本row。
-    * @param line 线
-    */
+         * 文本row。
+         * @param line 线
+         */
         TextRow(Line line) {
             this.line = line;
         }
@@ -332,9 +332,9 @@ final class ServiceInfoBanner {
         private final String label;
 
         /**
-    * dividerrow。
-    * @param label 标签
-    */
+         * dividerrow。
+         * @param label 标签
+         */
         DividerRow(String label) {
             this.label = label;
         }
@@ -360,11 +360,11 @@ final class ServiceInfoBanner {
         private int fills;
 
         /**
-        * 追加文本片段 (自动累加可见宽度)
-        *
-        * @param text 文本
-        * @return 添加的结果
-        */
+         * 追加文本片段 (自动累加可见宽度)
+         *
+         * @param text 文本
+         * @return 添加的结果
+         */
         Line add(String text) {
             if (text == null || text.isEmpty()) {
                 return this;

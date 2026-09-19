@@ -19,8 +19,8 @@ public class ServicePackagesHolder {
     public static final String BEAN_NAME = "servicePackagesHolder";
 
     /**
-    * 存储已扫描的包名集合
-    */
+     * 存储已扫描的包名集合
+     */
     private final Set<String> scannedPackages = new HashSet<>();
 
     /**
@@ -32,9 +32,9 @@ public class ServicePackagesHolder {
     private static final ServicePackagesHolder DEFAULT = new ServicePackagesHolder();
 
     /**
-    * 获取服务包holder的单例实例。
-    * @return ServicePackagesHolder的单例实例。
-    */
+     * 获取服务包holder的单例实例。
+     * @return ServicePackagesHolder的单例实例。
+     */
     public static ServicePackagesHolder getInstance() {
         return DEFAULT;
     }

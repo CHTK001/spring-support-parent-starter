@@ -323,11 +323,11 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
     }
 
     /**
-    * 校验响应码：约定 编码 == 200 / "200" 表示成功，其它抛出异常。
-    *
-    * @param resp 响应 JSON
-    * @return data 节点
-    */
+     * 校验响应码：约定 编码 == 200 / "200" 表示成功，其它抛出异常。
+     *
+     * @param resp 响应 JSON
+     * @return data 节点
+     */
     protected JsonNode assertOk(JsonNode resp) {
         if (resp == null) {
             /**

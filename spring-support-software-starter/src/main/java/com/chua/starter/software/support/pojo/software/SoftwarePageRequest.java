@@ -26,10 +26,10 @@ public class SoftwarePageRequest extends SoftSoftware {
     private java.util.Collection<String> installedSoftwareIds;
 
     /**
-    * 获取installedsoftware标识
-    *
-    * @return 获取installedsoftware标识的结果
-    */
+     * 获取installedsoftware标识
+     *
+     * @return 获取installedsoftware标识的结果
+     */
     public java.util.Collection<String> getInstalledSoftwareIds() {
         return installedSoftwareIds;
     }

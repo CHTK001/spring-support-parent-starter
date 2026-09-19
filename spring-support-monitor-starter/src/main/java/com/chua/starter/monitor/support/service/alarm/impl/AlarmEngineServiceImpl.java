@@ -72,8 +72,8 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
     private static final int DAY_SPAN_HOURS = 24;
 
     /**
-    * 连续触发计数的 Redis 前缀（跨重启保留静默窗口外的语义无需持久化）
-    */
+     * 连续触发计数的 Redis 前缀（跨重启保留静默窗口外的语义无需持久化）
+     */
     private static final String SILENCE_KEY_PREFIX = "monitor:alarm:silence:";
 
     /** 策略 映射器 */
@@ -104,18 +104,18 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
     private final Map<String, AtomicInteger> consecutiveCounter = new ConcurrentHashMap<>();
 
     /**
-    * Redis 不可用时的内存静默期降级表：silence键 → 静默截止 轮次 毫秒。
-    * <p>独立部署(无 Redis)或 Redis 短暂不可用时, 以此表完成 SETNX+TTL 的等价语义,
-    * 保证告警事件仍能落库, 而非被异常吞掉导致一条告警都不记录。</p>
-    */
+     * Redis 不可用时的内存静默期降级表：silence键 → 静默截止 轮次 毫秒。
+     * <p>独立部署(无 Redis)或 Redis 短暂不可用时, 以此表完成 SETNX+TTL 的等价语义,
+     * 保证告警事件仍能落库, 而非被异常吞掉导致一条告警都不记录。</p>
+     */
     private final Map<String, Long> memorySilence = new ConcurrentHashMap<>();
 
     /** 维护窗口 映射器 */
     private final MsMonitorAlarmMaintenanceWindowMapper maintenanceWindowMapper;
 
     /**
-    * 启动时加载规则缓存
-    */
+     * 启动时加载规则缓存
+     */
     @PostConstruct
     public void init() {
         /**

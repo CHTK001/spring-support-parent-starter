@@ -23,10 +23,10 @@ public class CredentialCipher {
     private final AesCodec codec;
 
     /**
-    * 构造注入（密钥取自服务属性）
-    *
-    * @param properties 服务属性
-    */
+     * 构造注入（密钥取自服务属性）
+     *
+     * @param properties 服务属性
+     */
     public CredentialCipher(ServerProperties properties) {
         String key = properties == null ? null : properties.getCredentialKey();
         this.codec = new AesCodec((key == null ? "" : key).getBytes(StandardCharsets.UTF_8));

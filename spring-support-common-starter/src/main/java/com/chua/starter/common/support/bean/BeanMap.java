@@ -19,12 +19,12 @@ public final class BeanMap {
 
     @SuppressWarnings("unchecked")
     /**
-    * 的
-    *
-    * @param bean Bean
-    * @param ignoreNull ignore空
-    * @return 的的结果
-    */
+     * 的
+     *
+     * @param bean Bean
+     * @param ignoreNull ignore空
+     * @return 的的结果
+     */
     public static Map<String, Object> of(Object bean, boolean ignoreNull) {
         if (bean == null) {
             return Collections.emptyMap();

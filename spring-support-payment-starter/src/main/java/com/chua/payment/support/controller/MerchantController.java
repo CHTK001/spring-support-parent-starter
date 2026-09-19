@@ -37,11 +37,11 @@ public class MerchantController {
     @Operation(summary = "创建商户")
     @PostMapping
     /**
-    * 创建Merchant
-    *
-    * @param dto dto
-    * @return 创建merchant的结果
-    */
+     * 创建Merchant
+     *
+     * @param dto dto
+     * @return 创建merchant的结果
+     */
     public Result<MerchantVO> createMerchant(@RequestBody MerchantDTO dto) {
         MerchantVO vo = merchantService.createMerchant(dto);
         return Result.success(vo);

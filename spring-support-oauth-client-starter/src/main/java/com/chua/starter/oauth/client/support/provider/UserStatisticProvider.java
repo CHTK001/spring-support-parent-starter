@@ -62,13 +62,13 @@ public class UserStatisticProvider {
     /** 认证属性 */
     private AuthClientProperties authProperties;
     /**
-    * 登录
-    *
-    * @param loginData     登录信息
-    * @param request       请求
-    * @param response      响应
-    * @return 结果
-    */
+     * 登录
+     *
+     * @param loginData     登录信息
+     * @param request       请求
+     * @param response      响应
+     * @return 结果
+     */
     @PostMapping("/login")    public ReturnResult<LoginResult> login(@Valid @RequestBody LoginData loginData,
                                      HttpServletRequest request,
                                      HttpServletResponse response,

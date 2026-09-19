@@ -32,15 +32,15 @@ public class SseSocketProvider implements SocketProvider {
 
     @Override
     /**
-    * 创建会话template
-    * @param properties 属性
-    * @param listeners 监听器
-    * @param 0 0
-    * @param SseSocketSessionTemplate sseSocket会话template
-    * @param template template
-    * @param template template
-    * @param protocol 协议
-    */
+     * 创建会话template
+     * @param properties 属性
+     * @param listeners 监听器
+     * @param 0 0
+     * @param SseSocketSessionTemplate sseSocket会话template
+     * @param template template
+     * @param template template
+     * @param protocol 协议
+     */
     public SocketSessionTemplate createSessionTemplate(
             SocketProperties properties,
             List<SocketListener> listeners) {

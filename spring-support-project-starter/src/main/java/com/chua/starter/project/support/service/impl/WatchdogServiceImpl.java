@@ -138,14 +138,14 @@ public class WatchdogServiceImpl implements WatchdogService {
     }
 
     /**
-    * 单主机探测：优先自定义检测脚本（exit 0=健康），未配置时回退健康检查类型
-    *
-    * @param project    项目
-    * @param host       主机
-    * @param credential 凭据
-    * @return 是否健康
-    * @throws Exception 连接/超时异常
-    */
+     * 单主机探测：优先自定义检测脚本（exit 0=健康），未配置时回退健康检查类型
+     *
+     * @param project    项目
+     * @param host       主机
+     * @param credential 凭据
+     * @return 是否健康
+     * @throws Exception 连接/超时异常
+     */
     private boolean probeHost(MsProject project, MsServerHost host, SshCredential credential) throws Exception {
         String script = project.getMsProjectCheckScript();
         String cmd;
@@ -199,13 +199,13 @@ public class WatchdogServiceImpl implements WatchdogService {
     }
 
     /**
-    * 记录检测结果：连续失败计数、阈值触发自动拉起、状态写库与推送
-    *
-    * @param project    项目
-    * @param healthy    是否健康
-    * @param firstError 首个错误描述
-    * @param maxFail    连续失败阈值
-    */
+     * 记录检测结果：连续失败计数、阈值触发自动拉起、状态写库与推送
+     *
+     * @param project    项目
+     * @param healthy    是否健康
+     * @param firstError 首个错误描述
+     * @param maxFail    连续失败阈值
+     */
     private void recordResult(MsProject project, boolean healthy, String firstError, int maxFail) {
         Long projectId = project.getId();
         lastCheckTimeMap.put(projectId, LocalDateTime.now());
@@ -297,13 +297,13 @@ public class WatchdogServiceImpl implements WatchdogService {
     }
 
     /**
-    * 执行单主机重启脚本并返回日志记录
-    *
-    * @param project 项目
-    * @param host    主机
-    * @param command 命令
-    * @return 部署日志
-    */
+     * 执行单主机重启脚本并返回日志记录
+     *
+     * @param project 项目
+     * @param host    主机
+     * @param command 命令
+     * @return 部署日志
+     */
     private MsProjectDeployLog execRestart(MsProject project, MsServerHost host, String command) {
         long startMs = System.currentTimeMillis();
         MsProjectDeployLog item = new MsProjectDeployLog();
@@ -360,13 +360,13 @@ public class WatchdogServiceImpl implements WatchdogService {
     }
 
     /**
-    * 插入守护检测留痕日志（action 固定为 WATCHDOG，阶段放 output 前缀，避免超出列宽）
-    *
-    * @param project 项目
-    * @param hostId  主机 标识，可为空
-    * @param stage   阶段标记
-    * @param message 消息
-    */
+     * 插入守护检测留痕日志（action 固定为 WATCHDOG，阶段放 output 前缀，避免超出列宽）
+     *
+     * @param project 项目
+     * @param hostId  主机 标识，可为空
+     * @param stage   阶段标记
+     * @param message 消息
+     */
     private void insertLog(MsProject project, Long hostId, String stage, String message) {
         MsProjectDeployLog item = new MsProjectDeployLog();
         item.setMsProjectDeployLogProjectId(project.getId());
@@ -450,13 +450,13 @@ public class WatchdogServiceImpl implements WatchdogService {
     }
 
     /**
-    * 脚本模板渲染：{{dir}} 替换为部署目录（按目标 OS 转义）
-    *
-    * @param script 脚本
-    * @param dir    部署目录
-    * @param linux  是否 Linux
-    * @return 渲染后脚本
-    */
+     * 脚本模板渲染：{{dir}} 替换为部署目录（按目标 OS 转义）
+     *
+     * @param script 脚本
+     * @param dir    部署目录
+     * @param linux  是否 Linux
+     * @return 渲染后脚本
+     */
     private String renderScript(String script, String dir, boolean linux) {
         if (script == null) {
             return "";
@@ -473,11 +473,11 @@ public class WatchdogServiceImpl implements WatchdogService {
     }
 
     /**
-    * 解析 主机标识 JSON 数组
-    *
-    * @param json JSON 字符串
-    * @return ID 列表，解析失败返回空列表
-    */
+     * 解析 主机标识 JSON 数组
+     *
+     * @param json JSON 字符串
+     * @return ID 列表，解析失败返回空列表
+     */
     private List<Long> parseHostIds(String json) {
         if (json == null || json.isBlank()) {
             return List.of();
@@ -492,11 +492,11 @@ public class WatchdogServiceImpl implements WatchdogService {
     }
 
     /**
-    * 是否 Linux 主机
-    *
-    * @param host 主机
-    * @return 是否 Linux
-    */
+     * 是否 Linux 主机
+     *
+     * @param host 主机
+     * @return 是否 Linux
+     */
     private boolean isLinux(MsServerHost host) {
         return host != null && host.getServerHostOsType() != null
                 && host.getServerHostOsType().trim().toUpperCase(java.util.Locale.ROOT).startsWith("LINUX");

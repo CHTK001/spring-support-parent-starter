@@ -28,9 +28,9 @@ public class PaymentProviderGatewayRegistry {
     private final PaymentProviderProperties properties;
 
     /**
-    * 创建 薪酬提供者gatewayregistry 实例
-    * @param properties 属性
-    */
+     * 创建 薪酬提供者gatewayregistry 实例
+     * @param properties 属性
+     */
     public PaymentProviderGatewayRegistry(PaymentProviderProperties properties) {
         this.properties = properties;
     }

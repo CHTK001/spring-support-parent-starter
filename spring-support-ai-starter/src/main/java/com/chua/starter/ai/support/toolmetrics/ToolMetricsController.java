@@ -36,10 +36,10 @@ public class ToolMetricsController {
     private final SysAiSessionCompressionMapper compressionMapper;
 
     /**
-    * 触发一次本地工具用量同步。
-    *
-    * @return 扫描数与新增数
-    */
+     * 触发一次本地工具用量同步。
+     *
+     * @return 扫描数与新增数
+     */
     @PostMapping("/sync")
     public ReturnResult<LocalToolUsageSyncService.SyncResult> sync() {
         return ReturnResult.ok(localToolUsageSyncService.syncAll());

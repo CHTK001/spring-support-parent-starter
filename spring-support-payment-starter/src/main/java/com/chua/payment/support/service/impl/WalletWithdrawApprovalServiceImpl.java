@@ -38,18 +38,18 @@ public class WalletWithdrawApprovalServiceImpl implements WalletWithdrawApproval
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-    * 创建Approval
-    * @param merchantId merchantid
-    * @param userId 用户标识
-    * @param amount amount
-    * @param bankAccount bank账户
-    * @param bankName bank名称
-    * @param accountName 账户名称
-    * @param withdrawNo withdrawno
-    * @param remark 评论
-    * @param dto dto
-    * @return 创建approval的结果
-    */
+     * 创建Approval
+     * @param merchantId merchantid
+     * @param userId 用户标识
+     * @param amount amount
+     * @param bankAccount bank账户
+     * @param bankName bank名称
+     * @param accountName 账户名称
+     * @param withdrawNo withdrawno
+     * @param remark 评论
+     * @param dto dto
+     * @return 创建approval的结果
+     */
     public WalletWithdrawApproval createApproval(CreateApprovalDTO dto) {
         WalletWithdrawApproval approval = new WalletWithdrawApproval();
         approval.setMerchantId(dto.merchantId());

@@ -33,9 +33,9 @@ public class SocketMessageCodec {
     private final String publicKeyHex;
 
     /**
-    * 创建 Socket消息codec 实例
-    * @param properties 属性
-    */
+     * 创建 Socket消息codec 实例
+     * @param properties 属性
+     */
     public SocketMessageCodec(SocketProperties properties) {
         String codecType = properties == null || properties.getCodecType() == null
                 ? "json"

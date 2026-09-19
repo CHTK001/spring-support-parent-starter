@@ -53,10 +53,10 @@ public class OAuthClientResilience {
     private final AtomicInteger halfOpenRequestCount = new AtomicInteger(0);
 
     /**
-    * 创建 o认证客户端韧性 实例
-    * @param authClientProperties 认证客户端属性
-    * @return o认证客户端韧性的结果
-    */
+     * 创建 o认证客户端韧性 实例
+     * @param authClientProperties 认证客户端属性
+     * @return o认证客户端韧性的结果
+     */
     public OAuthClientResilience(AuthClientProperties authClientProperties) {
         this.retryConfig = authClientProperties.getRetry();
         this.circuitBreakerConfig = authClientProperties.getCircuitBreaker();

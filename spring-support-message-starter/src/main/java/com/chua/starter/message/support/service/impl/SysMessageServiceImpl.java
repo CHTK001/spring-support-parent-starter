@@ -222,9 +222,9 @@ public class SysMessageServiceImpl implements SysMessageService {
 
     @Override
     /**
-    * 保存Template
-    * @param template template
-    */
+     * 保存Template
+     * @param template template
+     */
     public ReturnResult<SysMessageTemplate> saveTemplate(SysMessageTemplate template) {
         if (template.getSysMessageProviderId() == null) {
             return ReturnResult.illegal("请选择提供商");
@@ -750,9 +750,9 @@ public class SysMessageServiceImpl implements SysMessageService {
 
     @Override
     /**
-    * mark状态消息读取
-    * @param lastId 最后一个标识
-    */
+     * mark状态消息读取
+     * @param lastId 最后一个标识
+     */
     public ReturnResult<Boolean> markStationMessageRead(Integer lastId) {
         String userId = currentUserId();
         if (StringUtils.isBlank(userId)) {

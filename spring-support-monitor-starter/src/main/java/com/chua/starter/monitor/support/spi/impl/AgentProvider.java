@@ -29,11 +29,11 @@ public class AgentProvider implements SystemInfoProvider {
     private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
 
     /**
-    * 拼接 Agent 基础地址。
-    *
-    * @param host 目标主机
-    * @return Agent 地址
-    */
+     * 拼接 Agent 基础地址。
+     *
+     * @param host 目标主机
+     * @return Agent 地址
+     */
     private String agentUrl(MsServerHost host) {
         return "http://" + host.getServerHostAddress() + ":19876";
     }

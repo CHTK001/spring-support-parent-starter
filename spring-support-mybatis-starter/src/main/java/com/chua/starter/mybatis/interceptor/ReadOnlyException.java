@@ -13,8 +13,8 @@ public class ReadOnlyException extends RuntimeException {
     private static final long serialVersionUID = 1L;
 
     /**
-    * 构造函数
-    */
+     * 构造函数
+     */
     public ReadOnlyException() {
         /**
          * 父。

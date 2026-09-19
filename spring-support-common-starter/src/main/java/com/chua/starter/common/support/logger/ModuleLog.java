@@ -46,11 +46,11 @@ public final class ModuleLog {
     private final String moduleName;
 
     /**
-    * 创建 module日志 实例
-    * @param moduleName module名称
-    * @param clazz 类
-    * @param clazz clazz
-    */
+     * 创建 module日志 实例
+     * @param moduleName module名称
+     * @param clazz 类
+     * @param clazz clazz
+     */
     private ModuleLog(String moduleName, Class<?> clazz) {
         this.moduleName = moduleName;
         this.log = LoggerFactory.getLogger(clazz);

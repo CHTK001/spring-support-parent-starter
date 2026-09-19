@@ -72,22 +72,22 @@ public class DeviceMetricsReporter {
     private SyncClient syncClient;
 
     /**
-    * 应用名称
-    */
+     * 应用名称
+     */
     @Setter
     /** APP名称 */
     private String appName;
 
     /**
-    * 主机地址
-    */
+     * 主机地址
+     */
     @Setter
     /** 主机 */
     private String host;
 
     /**
-    * 主调度器
-    */
+     * 主调度器
+     */
     private ScheduledExecutorService scheduler;
 
     /**
@@ -108,15 +108,15 @@ public class DeviceMetricsReporter {
     private long intervalSeconds = 30;
 
     /**
-    * 要上报的指标类型（默认全部）
-    */
+     * 要上报的指标类型（默认全部）
+     */
     @Setter
     /** 是否启用指标 */
     private Set<MetricType> enabledMetrics = Set.of(MetricType.values());
 
     /**
-    * 系统信息采集器（OSHI 统一入口）
-    */
+     * 系统信息采集器（OSHI 统一入口）
+     */
     private final OshiSystemMonitor monitor = new OshiSystemMonitor();
 
     /**
@@ -129,10 +129,10 @@ public class DeviceMetricsReporter {
     }
 
     /**
-    * 获取单例实例
-    *
-    * @return 单例
-    */
+     * 获取单例实例
+     *
+     * @return 单例
+     */
     public static DeviceMetricsReporter getInstance() {
         return INSTANCE;
     }

@@ -6,8 +6,8 @@ import com.chua.starter.device.spi.model.DeviceEvent;
 @FunctionalInterface
 public interface EventListener {
     /**
-    * on事件。
-    * @param event 事件
-    */
+     * on事件。
+     * @param event 事件
+     */
     void onEvent(DeviceEvent event);
 }

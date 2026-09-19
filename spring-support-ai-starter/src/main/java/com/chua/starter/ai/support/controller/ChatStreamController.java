@@ -72,11 +72,11 @@ public class ChatStreamController {
     private final java.util.Set<String> cancelledStreams = ConcurrentHashMap.newKeySet();
 
     /**
-    * SSE 流式聊天。
-    * @param body 请求体，不允许为 null
-    * @param response 响应，不允许为 null
-    * @return SseEmitter 对象
-    */
+     * SSE 流式聊天。
+     * @param body 请求体，不允许为 null
+     * @param response 响应，不允许为 null
+     * @return SseEmitter 对象
+     */
     @PostMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter stream(@RequestBody Map<String, Object> body, HttpServletResponse response) {
         String sessionId = str(body.get("sessionId"));
@@ -381,10 +381,10 @@ public class ChatStreamController {
     }
 
     /**
-    * 停止指定会话的流式输出。
-    * @param sessionId 会话ID，不允许为 null
-    * @return 结果映射，无数据时为空映射
-    */
+     * 停止指定会话的流式输出。
+     * @param sessionId 会话ID，不允许为 null
+     * @return 结果映射，无数据时为空映射
+     */
     @PostMapping("/stream/{sessionId}/stop")
     public Map<String, Object> stop(@PathVariable String sessionId) {
         SseEmitter emitter = activeStreams.get(sessionId);
@@ -415,10 +415,10 @@ public class ChatStreamController {
     // ==================== 内部方法 ====================
 
     /**
-    * 从系统设置读取默认聊天模型。
-    * 优先级：配置的默认模型 → 第一个可用模型 → fallback
-    * @return 结果字符串
-    */
+     * 从系统设置读取默认聊天模型。
+     * 优先级：配置的默认模型 → 第一个可用模型 → fallback
+     * @return 结果字符串
+     */
     private String getDefaultModel() {
         // 1. 从系统设置读取
         String configured = sysAiGlobalSettingService.getValue("runtime", "default_chat_model")
@@ -465,10 +465,10 @@ public class ChatStreamController {
     }
 
     /**
-    * 发送一行裸 data 帧：data: <json>\n\n。
-    * @param emitter 方法入参 emitter
-    * @param event 方法入参 event
-    */
+     * 发送一行裸 data 帧：data: <json>\n\n。
+     * @param emitter 方法入参 emitter
+     * @param event 方法入参 event
+     */
     private void sendEvent(SseEmitter emitter, Map<String, Object> event) {
         try {
             String json = objectMapper.writeValueAsString(event);
@@ -479,9 +479,9 @@ public class ChatStreamController {
     }
 
     /**
-    * 发送 data: [DONE] 结束帧。
-    * @param emitter 方法入参 emitter
-    */
+     * 发送 data: [DONE] 结束帧。
+     * @param emitter 方法入参 emitter
+     */
     private void sendDone(SseEmitter emitter) {
         try {
             writeRaw("data: [DONE]\n\n");
@@ -512,11 +512,11 @@ public class ChatStreamController {
     }
 
     /**
-    * 解析前端 sessionId 到后端 dialogId。
-    * 数字 sessionId 直接使用；UUID 则首次落库一个会话并缓存映射。
-    * @param sessionId 会话ID，不允许为 null
-    * @return Long 对象
-    */
+     * 解析前端 sessionId 到后端 dialogId。
+     * 数字 sessionId 直接使用；UUID 则首次落库一个会话并缓存映射。
+     * @param sessionId 会话ID，不允许为 null
+     * @return Long 对象
+     */
     private Long resolveDialogId(String sessionId) {
         if (sessionId != null && sessionId.matches("\\d+")) {
             return Long.parseLong(sessionId);

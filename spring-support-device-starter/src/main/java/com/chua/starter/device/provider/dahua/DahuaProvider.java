@@ -97,10 +97,10 @@ public class DahuaProvider implements DeviceProvider {
             try {
                 if (PLATFORM_DAHUA_CLOUD.equalsIgnoreCase(platform)) {
                     /**
-    * dahuacloud会话。
-    * @param info 信息
-    * @return dahuacloud会话的结果
-    */
+                     * dahuacloud会话。
+                     * @param info 信息
+                     * @return dahuacloud会话的结果
+                     */
                     return new DahuaCloudSession(info);
                 }
                 if (PLATFORM_LECHANGE.equalsIgnoreCase(platform)) {

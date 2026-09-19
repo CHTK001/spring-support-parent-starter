@@ -25,10 +25,10 @@ public class AlipayUserInfoService implements UserInfoService {
         String alipayUserId = principal;
         if (!StringUtils.hasText(alipayUserId)) {
             /**
-    * 用户resume。
-    * @param "支付宝用户ID不能为空" "支付宝用户标识不能为空"
-    * @return 用户resume的结果
-    */
+             * 用户resume。
+             * @param "支付宝用户ID不能为空" "支付宝用户标识不能为空"
+             * @return 用户resume的结果
+             */
             return new UserResume("支付宝用户ID不能为空");
         }
 

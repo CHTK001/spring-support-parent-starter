@@ -73,25 +73,25 @@ public class UserResult extends UserResume implements Serializable {
     private String token;
 
     /**
-    * 刷新令牌
-    * <p>用于获取新的访问令牌，当访问令牌过期时使用</p>
-    * <p>格式：RT{uid}{randomHex}，前缀RT表示Refresh Token</p>
-    */
+     * 刷新令牌
+     * <p>用于获取新的访问令牌，当访问令牌过期时使用</p>
+     * <p>格式：RT{uid}{randomHex}，前缀RT表示Refresh Token</p>
+     */
     @Schema(description = "刷新令牌")
     /** Refresh令牌 */
     private String refreshToken;
 
     /**
-    * 刷新令牌过期时间（秒）
-    * <p>刷新令牌失效的时间戳</p>
-    */
+     * 刷新令牌过期时间（秒）
+     * <p>刷新令牌失效的时间戳</p>
+     */
     @Schema(description = "刷新令牌过期时间（秒）")
     /** Refreshexpire时间 */
     private Long refreshExpireTime;
 
     /**
-    * 登录类型
-    */
+     * 登录类型
+     */
     private String loginType;
 
     /**

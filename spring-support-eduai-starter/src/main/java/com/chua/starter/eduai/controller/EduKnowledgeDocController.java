@@ -36,13 +36,13 @@ public class EduKnowledgeDocController {
     private final IEduKnowledgeDocService knowledgeDocService;
 
     /**
-    * 分页查询知识库文档
-    *
-    * @param query    查询条件
-    * @param page     页码
-    * @param pageSize 每页条数
-    * @return 分页结果
-    */
+     * 分页查询知识库文档
+     *
+     * @param query    查询条件
+     * @param page     页码
+     * @param pageSize 每页条数
+     * @return 分页结果
+     */
     @Operation(summary = "分页查询知识库文档")
     @GetMapping("/page")
     public ReturnResult<PageResult<KnowledgeDocVO>> page(EduKnowledgeDoc query,

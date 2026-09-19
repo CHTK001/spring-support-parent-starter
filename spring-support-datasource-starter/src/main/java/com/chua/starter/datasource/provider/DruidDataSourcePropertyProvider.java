@@ -143,11 +143,11 @@ public class DruidDataSourcePropertyProvider implements DataSourcePropertyProvid
     }
 
     /**
-    * 转为int
-    *
-    * @param value 值
-    * @return 转为int的结果
-    */
+     * 转为int
+     *
+     * @param value 值
+     * @return 转为int的结果
+     */
     private int toInt(Object value) {
         if (value instanceof Number) {
             return ((Number) value).intValue();

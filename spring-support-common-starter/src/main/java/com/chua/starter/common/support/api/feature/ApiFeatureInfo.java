@@ -17,8 +17,8 @@ public class ApiFeatureInfo implements Serializable {
     private static final long serialVersionUID = 1L;
 
     /**
-    * 功能标识
-    */
+     * 功能标识
+     */
     private String featureId;
 
     /**

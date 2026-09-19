@@ -39,8 +39,8 @@ public class SysAiAppKey extends SysBase {
     private Long appKeyId;
 
     /**
-    * appKey 名称
-    */
+     * appKey 名称
+     */
     /**
      * appKey 名称
      */
@@ -50,8 +50,8 @@ public class SysAiAppKey extends SysBase {
     private String appKeyName;
 
     /**
-    * appKey 密钥值
-    */
+     * appKey 密钥值
+     */
     /**
      * appKey 密钥值
      */
@@ -61,8 +61,8 @@ public class SysAiAppKey extends SysBase {
     private String appKeyValue;
 
     /**
-    * 关联供应商 标识
-    */
+     * 关联供应商 标识
+     */
     /**
      * 关联供应商 标识
      */
@@ -72,8 +72,8 @@ public class SysAiAppKey extends SysBase {
     private Long appKeyProviderId;
 
     /**
-    * 限定使用的模型（可空）
-    */
+     * 限定使用的模型（可空）
+     */
     /**
      * 限定使用的模型
      */
@@ -83,8 +83,8 @@ public class SysAiAppKey extends SysBase {
     private String appKeyModel;
 
     /**
-    * 绑定分组 标识
-    */
+     * 绑定分组 标识
+     */
     /**
      * 绑定分组 标识
      */
@@ -94,8 +94,8 @@ public class SysAiAppKey extends SysBase {
     private Long appKeyGroupId;
 
     /**
-    * 是否启用
-    */
+     * 是否启用
+     */
     /**
      * 是否启用
      */
@@ -105,8 +105,8 @@ public class SysAiAppKey extends SysBase {
     private Boolean appKeyEnabled;
 
     /**
-    * 已使用次数
-    */
+     * 已使用次数
+     */
     /**
      * 已使用次数
      */
@@ -116,8 +116,8 @@ public class SysAiAppKey extends SysBase {
     private Long appKeyUseCount;
 
     /**
-    * 次数上限（空 表示不限）
-    */
+     * 次数上限（空 表示不限）
+     */
     /**
      * 次数上限
      */
@@ -127,8 +127,8 @@ public class SysAiAppKey extends SysBase {
     private Long appKeyMaxUse;
 
     /**
-    * 过期时间（空 表示不限）
-    */
+     * 过期时间（空 表示不限）
+     */
     /**
      * 过期时间
      */
@@ -138,8 +138,8 @@ public class SysAiAppKey extends SysBase {
     private LocalDateTime appKeyExpireTime;
 
     /**
-    * 逻辑删除标记
-    */
+     * 逻辑删除标记
+     */
     /**
      * 逻辑删除标记
      */

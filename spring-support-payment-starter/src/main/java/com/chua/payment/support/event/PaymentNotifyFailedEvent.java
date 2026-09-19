@@ -26,18 +26,18 @@ public class PaymentNotifyFailedEvent extends PaymentEvent {
     private final String errorMessage;
 
     /**
-    * 创建 薪酬通知失败事件 实例
-    * @param source 源
-    * @param tenantId tenantid
-    * @param merchantId merchantid
-    * @param notifyLogId 通知日志标识
-    * @param notifyErrorId 通知错误标识
-    * @param notifyType 通知类型
-    * @param orderNo 订单no
-    * @param refundNo 退税no
-    * @param errorType 错误类型
-    * @param errorMessage 错误消息
-    */
+     * 创建 薪酬通知失败事件 实例
+     * @param source 源
+     * @param tenantId tenantid
+     * @param merchantId merchantid
+     * @param notifyLogId 通知日志标识
+     * @param notifyErrorId 通知错误标识
+     * @param notifyType 通知类型
+     * @param orderNo 订单no
+     * @param refundNo 退税no
+     * @param errorType 错误类型
+     * @param errorMessage 错误消息
+     */
     public PaymentNotifyFailedEvent(Object source, Long tenantId, Long merchantId, Long notifyLogId,
                                     Long notifyErrorId, String notifyType, String orderNo, String refundNo,
                                     String errorType, String errorMessage) {

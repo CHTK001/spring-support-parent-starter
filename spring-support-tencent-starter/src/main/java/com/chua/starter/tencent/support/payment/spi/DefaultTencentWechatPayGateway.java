@@ -318,11 +318,11 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
     public TencentWechatPayScoreResponse createPayScoreOrder(TencentWechatPayProperties properties, TencentWechatPayScoreRequest request) {
         Map<String, Object> body = new LinkedHashMap<>();
         /**
-    * 放入if是否包含文本。
-    * @param body 主体
-    * @param "appid" "appid"
-    * @param firstNonBlank(request.getAppId( 第一个nonblank(请求.getappid(
-    */
+         * 放入if是否包含文本。
+         * @param body 主体
+         * @param "appid" "appid"
+         * @param firstNonBlank(request.getAppId( 第一个nonblank(请求.getappid(
+         */
         putIfHasText(body, "appid", firstNonBlank(request.getAppId(), properties.getAppId()));
         /**
          * 放入if是否包含文本。
@@ -467,11 +467,11 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
     public TencentWechatPayScoreResponse cancelPayScoreOrder(TencentWechatPayProperties properties, TencentWechatPayScoreRequest request) {
         Map<String, Object> body = new LinkedHashMap<>();
         /**
-    * 放入if是否包含文本。
-    * @param body 主体
-    * @param "appid" "appid"
-    * @param firstNonBlank(request.getAppId( 第一个nonblank(请求.getappid(
-    */
+         * 放入if是否包含文本。
+         * @param body 主体
+         * @param "appid" "appid"
+         * @param firstNonBlank(request.getAppId( 第一个nonblank(请求.getappid(
+         */
         putIfHasText(body, "appid", firstNonBlank(request.getAppId(), properties.getAppId()));
         /**
          * 放入if是否包含文本。
@@ -582,11 +582,11 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
     }
 
     /**
-    * 创建notificationparser
-    *
-    * @param properties 属性
-    * @return 创建notificationparser的结果
-    */
+     * 创建notificationparser
+     *
+     * @param properties 属性
+     * @return 创建notificationparser的结果
+     */
     private NotificationParser createNotificationParser(TencentWechatPayProperties properties) {
         return clientFactory.createNotificationParser(clientFactory.createAutoCertificateConfig(properties));
     }

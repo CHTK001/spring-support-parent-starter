@@ -58,21 +58,21 @@ public class WindowsHostRemoteProvider implements HostRemoteProvider {
     private static final int HTTP_PROBE_MAX_SECONDS = 10;
 
     /**
-    * 单次上传分块字节数
-    * <p>
-    * 瓶颈不是 WinRM 报文额度，而是最终落到远端 cmd.exe 的命令行长（上限 8191 字符）：
-    * 脚本本身还要经 {@code -EncodedCommand} 再 Base64 一次，命令行按原始字节约 2.67 倍膨胀。
-    * 实测 6KB 块报「The command line is too long.」、12KB 块直接 SoapFault，故取 1536 字节。
-    * </p>
-    */
+     * 单次上传分块字节数
+     * <p>
+     * 瓶颈不是 WinRM 报文额度，而是最终落到远端 cmd.exe 的命令行长（上限 8191 字符）：
+     * 脚本本身还要经 {@code -EncodedCommand} 再 Base64 一次，命令行按原始字节约 2.67 倍膨胀。
+     * 实测 6KB 块报「The command line is too long.」、12KB 块直接 SoapFault，故取 1536 字节。
+     * </p>
+     */
     private static final int UPLOAD_CHUNK_BYTES = 1536;
 
     /**
-    * 分块上传可接受的文件大小上限（约 170 次往返）
-    * <p>
-    * 超过这个规模的文件必须由目标机自行 HTTP 拉取，不能靠命令行搬运。
-    * </p>
-    */
+     * 分块上传可接受的文件大小上限（约 170 次往返）
+     * <p>
+     * 超过这个规模的文件必须由目标机自行 HTTP 拉取，不能靠命令行搬运。
+     * </p>
+     */
     private static final long MAX_UPLOAD_BYTES = 256 * 1024L;
 
     /** 远端临时目录 */

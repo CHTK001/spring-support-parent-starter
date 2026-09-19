@@ -57,15 +57,15 @@ public class GuacdConnectionFactory {
     private final ServerConfigService configService;
 
     /**
-    * 创建与 guacd 完成握手的隧道
-    *
-    * @param protocolType 协议类型
-    * @param address      目标主机地址
-    * @param targetPort   目标服务端口，空 时按协议默认值
-    * @param credential   解密后的凭据
-    * @param sessionId    会话标识
-    * @return 已配置隧道（使用方负责 关闭）
-    */
+     * 创建与 guacd 完成握手的隧道
+     *
+     * @param protocolType 协议类型
+     * @param address      目标主机地址
+     * @param targetPort   目标服务端口，空 时按协议默认值
+     * @param credential   解密后的凭据
+     * @param sessionId    会话标识
+     * @return 已配置隧道（使用方负责 关闭）
+     */
     public GuacdTunnel create(ProtocolType protocolType, String address,
                               Integer targetPort, SshCredential credential, String sessionId) {
         var guacd = properties.getGuacd();

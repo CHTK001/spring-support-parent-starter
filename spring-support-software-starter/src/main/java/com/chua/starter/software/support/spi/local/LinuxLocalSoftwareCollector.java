@@ -51,10 +51,10 @@ public class LinuxLocalSoftwareCollector implements LocalSoftwareCollector {
     }
 
     /**
-    * 扫描Dpkg
-    *
-    * @return 扫描dpkg的结果
-    */
+     * 扫描Dpkg
+     *
+     * @return 扫描dpkg的结果
+     */
     private List<SoftSoftware> scanDpkg() {
         List<SoftSoftware> list = new ArrayList<>();
         try {

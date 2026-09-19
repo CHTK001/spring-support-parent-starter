@@ -32,8 +32,8 @@ public class DataSyncAgentLifecycleConfiguration {
     private static final Logger log = LoggerFactory.getLogger(DataSyncAgentLifecycleConfiguration.class);
 
     /**
-    * 客户端能力标识：数据同步 Agent
-    */
+     * 客户端能力标识：数据同步 Agent
+     */
     private static final String CAPABILITY_DATASYNC = "datasync";
 
     /** 同步服务器提供者 */

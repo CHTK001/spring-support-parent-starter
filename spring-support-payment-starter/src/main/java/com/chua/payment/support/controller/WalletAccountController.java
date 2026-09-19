@@ -31,10 +31,10 @@ public class WalletAccountController {
 
     @GetMapping("/account")
     /**
-    * 获取账户
-    * @param merchantId merchantid
-    * @param userId 用户标识
-    */
+     * 获取账户
+     * @param merchantId merchantid
+     * @param userId 用户标识
+     */
     public Result<WalletAccountVO> getAccount(@RequestParam Long merchantId,
                                               @RequestParam Long userId) {
         return Result.success(walletAccountService.getAccount(merchantId, userId));

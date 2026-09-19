@@ -115,8 +115,8 @@ public class SyncClientWrapper implements com.chua.starter.sync.support.client.S
         delegate.connect();
         if (syncProperties.getClient().isAutoRegister() && clientInfo != null) {
             /**
-    * 发送注册。
-    */
+             * 发送注册。
+             */
             sendRegister();
         }
     }
@@ -197,11 +197,11 @@ public class SyncClientWrapper implements com.chua.starter.sync.support.client.S
     }
 
     /**
-    * 将传输层收到的字符串消息解析为结构化对象（JSON -> 映射）。
-    *
-    * @param message 收到的消息
-    * @return 解析后的对象，无法解析时原样返回
-    */
+     * 将传输层收到的字符串消息解析为结构化对象（JSON -> 映射）。
+     *
+     * @param message 收到的消息
+     * @return 解析后的对象，无法解析时原样返回
+     */
     private Object parseIfNeeded(Object message) {
         if (!(message instanceof String text) || text.isBlank()) {
             return message;

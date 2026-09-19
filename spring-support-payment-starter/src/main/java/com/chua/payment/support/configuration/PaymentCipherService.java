@@ -29,9 +29,9 @@ public class PaymentCipherService {
     private final Environment environment;
 
     /**
-    * 创建 薪酬cipher服务 实例
-    * @param environment 环境
-    */
+     * 创建 薪酬cipher服务 实例
+     * @param environment 环境
+     */
     public PaymentCipherService(Environment environment) {
         this.environment = environment;
     }

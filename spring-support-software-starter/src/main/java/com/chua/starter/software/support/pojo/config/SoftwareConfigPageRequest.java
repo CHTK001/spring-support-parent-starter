@@ -18,8 +18,8 @@ public class SoftwareConfigPageRequest extends SoftConfig {
     private static final long serialVersionUID = 1L;
 
     /**
-    * 配置分组（用于分组过滤）
-    */
+     * 配置分组（用于分组过滤）
+     */
     @Schema(description = "配置分组")
     /** 配置分组 */
     private String configGroup;

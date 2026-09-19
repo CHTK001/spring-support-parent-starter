@@ -34,56 +34,56 @@ public class SpiderFlow extends SysBase {
     private Long id;
 
     /**
-    * 关联爬虫定义 标识
-    */
+     * 关联爬虫定义 标识
+     */
     @TableField("definition_id")
     @Schema(description = "关联爬虫定义 ID")
     /** definitionid */
     private Long definitionId;
 
     /**
-    * 流程编码（前端 流编码）
-    */
+     * 流程编码（前端 流编码）
+     */
     @TableField("code")
     @Schema(description = "流程编码（前端 flowCode）")
     /** 代码 */
     private String code;
 
     /**
-    * 是否启用（1 启用 / 0 停用）
-    */
+     * 是否启用（1 启用 / 0 停用）
+     */
     @TableField("enabled")
     @Schema(description = "是否启用")
     /** 是否启用 */
     private Integer enabled;
 
     /**
-    * 流程名称
-    */
+     * 流程名称
+     */
     @TableField("name")
     @Schema(description = "流程名称")
     /** 名称 */
     private String name;
 
     /**
-    * 节点 JSON（re流 导出）
-    */
+     * 节点 JSON（re流 导出）
+     */
     @TableField("nodes_json")
     @Schema(description = "节点 JSON")
     /** 节点json */
     private String nodesJson;
 
     /**
-    * 连线 JSON（re流 导出）
-    */
+     * 连线 JSON（re流 导出）
+     */
     @TableField("edges_json")
     @Schema(description = "连线 JSON")
     /** edgesjson */
     private String edgesJson;
 
     /**
-    * 逻辑删除标记（0 未删除 / 1 已删除）
-    */
+     * 逻辑删除标记（0 未删除 / 1 已删除）
+     */
     @TableField("sys_deleted")
     @TableLogic
     @Schema(description = "逻辑删除标记")

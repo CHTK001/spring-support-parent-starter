@@ -36,11 +36,11 @@ public class LocalToolUsageSyncService {
     private final SysAiUsageMapper sysAiUsageMapper;
 
     /**
-    * 同步结果。
-    * @param scanned scanned
-    * @param inserted 插入
-    * @return 同步结果的结果
-    */
+     * 同步结果。
+     * @param scanned scanned
+     * @param inserted 插入
+     * @return 同步结果的结果
+     */
     public record SyncResult(int scanned, int inserted) {
     }
 

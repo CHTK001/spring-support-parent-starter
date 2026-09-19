@@ -25,11 +25,11 @@ public class Xml {
     }
 
     /**
-    * 将 json对象 转换为 XML 字节数组。
-    *
-    * @param jsonObject JSON 对象
-    * @return XML 字节数组
-    */
+     * 将 json对象 转换为 XML 字节数组。
+     *
+     * @param jsonObject JSON 对象
+     * @return XML 字节数组
+     */
     public static byte[] toXmlByte(JsonObject jsonObject) {
         if (jsonObject == null) {
             return new byte[0];

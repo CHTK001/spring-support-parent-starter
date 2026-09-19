@@ -62,9 +62,9 @@ public class RedisOperationProvider implements OperationProvider {
     public Mono<String> getValue(CollectContext ctx, String key) {
         return Mono.fromCallable(() -> {
             /**
-    * 尝试。
-    * @param buildClient(ctx 构建客户端(ctx
-    */
+             * 尝试。
+             * @param buildClient(ctx 构建客户端(ctx
+             */
             try (RedisClient client = buildClient(ctx)) {
                 return client.get(key);
             }
@@ -76,9 +76,9 @@ public class RedisOperationProvider implements OperationProvider {
     public Mono<Boolean> setValue(CollectContext ctx, String key, String value, Duration ttl) {
         return Mono.fromCallable(() -> {
             /**
-    * 尝试。
-    * @param buildClient(ctx 构建客户端(ctx
-    */
+             * 尝试。
+             * @param buildClient(ctx 构建客户端(ctx
+             */
             try (RedisClient client = buildClient(ctx)) {
                 if (ttl != null) {
                     client.put(key, value, Duration.ofSeconds(ttl.getSeconds()));
@@ -96,10 +96,10 @@ public class RedisOperationProvider implements OperationProvider {
         return Mono.fromCallable(() -> {
             if (!configService.getBoolean(CONFIG_KEY_ALLOW_DELETE, false)) {
                 /**
-    * illegal状态异常。
-    * @param monitor.redis.allowDelete=true" 监控.Redis.allow删除=true"
-    * @return illegal状态异常的结果
-    */
+                 * illegal状态异常。
+                 * @param monitor.redis.allowDelete=true" 监控.Redis.allow删除=true"
+                 * @return illegal状态异常的结果
+                 */
                 throw new IllegalStateException("Redis 删除操作已禁用，请设置 monitor.redis.allowDelete=true");
             }
             /**
@@ -123,9 +123,9 @@ public class RedisOperationProvider implements OperationProvider {
     public Mono<Boolean> expire(CollectContext ctx, String key, Duration ttl) {
         return Mono.fromCallable(() -> {
             /**
-    * 尝试。
-    * @param buildClient(ctx 构建客户端(ctx
-    */
+             * 尝试。
+             * @param buildClient(ctx 构建客户端(ctx
+             */
             try (RedisClient client = buildClient(ctx)) {
                 client.expire(key, ttl.getSeconds());
                 return true;
@@ -138,9 +138,9 @@ public class RedisOperationProvider implements OperationProvider {
     public Mono<Long> ttl(CollectContext ctx, String key) {
         return Mono.fromCallable(() -> {
             /**
-    * 尝试。
-    * @param buildClient(ctx 构建客户端(ctx
-    */
+             * 尝试。
+             * @param buildClient(ctx 构建客户端(ctx
+             */
             try (RedisClient client = buildClient(ctx)) {
                 return client.ttl(key);
             }
@@ -152,9 +152,9 @@ public class RedisOperationProvider implements OperationProvider {
     public Mono<String> type(CollectContext ctx, String key) {
         return Mono.fromCallable(() -> {
             /**
-    * 尝试。
-    * @param buildClient(ctx 构建客户端(ctx
-    */
+             * 尝试。
+             * @param buildClient(ctx 构建客户端(ctx
+             */
             try (RedisClient client = buildClient(ctx)) {
                 Object result = client.reactiveExecCommand("TYPE " + key).block();
                 return result != null ? result.toString() : "none";

@@ -49,11 +49,11 @@ public class TokenForTypeInterceptor extends StaticMethodMatcherPointcutAdvisor 
                 UserResume userResume = com.chua.starter.oauth.client.support.execute.AuthSessionUtils.getUserInfo(UserResume.class);
                 if (null == userResume) {
                     /**
-    * OAuth异常。
-    * @param "您的账号没有权限 "您的账号没有权限
-    * @param 请联系管理员分配!" 请联系管理员分配!"
-    * @return oauth异常的结果
-    */
+                     * OAuth异常。
+                     * @param "您的账号没有权限 "您的账号没有权限
+                     * @param 请联系管理员分配!" 请联系管理员分配!"
+                     * @return oauth异常的结果
+                     */
                     throw new OauthException("您的账号没有权限, 请联系管理员分配!");
                 }
 

@@ -46,10 +46,10 @@ public class ActuatorConfiguration  {
     /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(ActuatorConfiguration.class);
     /**
-    * 构造函数
-    *
-    * @param actuatorProperties actuator属性
-    */
+     * 构造函数
+     *
+     * @param actuatorProperties actuator属性
+     */
     public ActuatorConfiguration(ActuatorProperties actuatorProperties) {
         this.actuatorProperties = actuatorProperties;
     }
@@ -58,8 +58,8 @@ public class ActuatorConfiguration  {
         private final ActuatorProperties actuatorProperties;
 
     /**
-        * 注册 Actuator 配置到全局环境
-        */
+     * 注册 Actuator 配置到全局环境
+     */
     @PostConstruct
     public void registerEnvironment() {
         ServiceInfoRegistry registry = ServiceInfoRegistry.getInstance();

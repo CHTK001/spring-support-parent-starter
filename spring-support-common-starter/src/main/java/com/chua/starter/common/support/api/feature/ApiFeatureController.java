@@ -34,10 +34,10 @@ public class ApiFeatureController {
     private final ApiFeatureManager featureManager;
 
     /**
-    * 构造函数
-    *
-    * @param featureManager api特征管理器
-    */
+     * 构造函数
+     *
+     * @param featureManager api特征管理器
+     */
     public ApiFeatureController(ApiFeatureManager featureManager) {
         this.featureManager = featureManager;
     }

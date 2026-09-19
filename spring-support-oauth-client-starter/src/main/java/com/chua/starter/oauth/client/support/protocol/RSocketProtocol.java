@@ -129,12 +129,12 @@ public class RSocketProtocol extends AbstractProtocol {
 
     @Override
     /**
-    * upgrade信息
-    * @param cookie Cookie
-    * @param token 令牌
-    * @param upgradeType upgrade类型
-    * @param refreshToken refresh令牌
-    */
+     * upgrade信息
+     * @param cookie Cookie
+     * @param token 令牌
+     * @param upgradeType upgrade类型
+     * @param refreshToken refresh令牌
+     */
     protected AuthenticationInformation upgradeInformation(Cookie cookie, String token, UpgradeType upgradeType,
             String refreshToken) {
         JsonObject jsonObject = new JsonObject();
@@ -225,10 +225,10 @@ public class RSocketProtocol extends AbstractProtocol {
             return LoginAuthResult.OK;
         }
         /**
-    * 认证异常。
-    * @param information.getInformation( 信息.获取信息(
-    * @return 认证异常的结果
-    */
+         * 认证异常。
+         * @param information.getInformation( 信息.获取信息(
+         * @return 认证异常的结果
+         */
         throw new AuthException(information.getInformation().getMessage());
     }
 
@@ -256,13 +256,13 @@ public class RSocketProtocol extends AbstractProtocol {
     }
 
     /**
-    * 发送 rSocket 请求
-    *
-    * @param route       路由
-    * @param jsonObject  请求数据
-    * @param upgradeType 升级类型
-    * @return 认证信息
-    */
+     * 发送 rSocket 请求
+     *
+     * @param route       路由
+     * @param jsonObject  请求数据
+     * @param upgradeType 升级类型
+     * @return 认证信息
+     */
     protected AuthenticationInformation sendRSocketRequest(String route, JsonObject jsonObject, UpgradeType upgradeType) {
         /**
          * 初始化rSocket。

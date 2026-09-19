@@ -32,9 +32,9 @@ public class ProcedureReader {
     private final TriggerReader.DatabaseDialect dialect;
 
     /**
-    * 创建 procedure读取 实例
-    * @param dialect dialect
-    */
+     * 创建 procedure读取 实例
+     * @param dialect dialect
+     */
     public ProcedureReader(TriggerReader.DatabaseDialect dialect) {
         this.dialect = dialect;
     }

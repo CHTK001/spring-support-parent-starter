@@ -105,10 +105,10 @@ public class SyncDataSyncConfiguration {
     }
 
     /**
-    * 创建 Spring 同步 -> 数据同步 数据桥接
-    *
-    * @return 数据桥接函数
-    */
+     * 创建 Spring 同步 -> 数据同步 数据桥接
+     *
+     * @return 数据桥接函数
+     */
     @Bean
     @ConditionalOnProperty(prefix = "plugin.sync.datasync", name = "enabled", havingValue = "true", matchIfMissing = true)
     public DataSyncMessageBridge dataSyncMessageBridge() {

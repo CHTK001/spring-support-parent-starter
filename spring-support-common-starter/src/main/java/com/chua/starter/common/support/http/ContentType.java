@@ -11,9 +11,9 @@ public class ContentType {
     private final String mimeType;
 
     /**
-    * 创建 内容类型 实例
-    * @param mimeType mime类型
-    */
+     * 创建 内容类型 实例
+     * @param mimeType mime类型
+     */
     public ContentType(String mimeType) {
         this.mimeType = mimeType;
     }

@@ -68,8 +68,8 @@ public class PaymentTaskSchedulerManager implements SmartInitializingSingleton {
     /** 之后单例instantiated */
     public void afterSingletonsInstantiated() {
         /**
-    * 同步默认。
-    */
+         * 同步默认。
+         */
         syncDefaults();
         /**
          * refresh全部。
@@ -155,10 +155,10 @@ public class PaymentTaskSchedulerManager implements SmartInitializingSingleton {
     }
 
     /**
-    * refresh任务
-    *
-    * @param taskKey 任务Key
-    */
+     * refresh任务
+     *
+     * @param taskKey 任务Key
+     */
     public synchronized void refreshTask(String taskKey) {
         PaymentManagedTask task = requireTask(taskKey);
         PaymentSchedulerConfig config = requireConfig(taskKey);
@@ -253,10 +253,10 @@ public class PaymentTaskSchedulerManager implements SmartInitializingSingleton {
     }
 
     /**
-    * 加载配置映射
-    *
-    * @return 加载配置映射的结果
-    */
+     * 加载配置映射
+     *
+     * @return 加载配置映射的结果
+     */
     private Map<String, PaymentSchedulerConfig> loadConfigMap() {
         return paymentSchedulerConfigMapper.selectList(new LambdaQueryWrapper<PaymentSchedulerConfig>()
                         .orderByAsc(PaymentSchedulerConfig::getId))

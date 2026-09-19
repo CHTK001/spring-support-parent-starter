@@ -34,11 +34,11 @@ public class AssetLinkageController {
     private final AssetLinkageService assetLinkageService;
 
     /**
-    * 资产聚合详情：基础信息 + 在线/通道状态 + 服务节点清单。
-    *
-    * @param hostId 主机 标识
-    * @return 资产聚合视图
-    */
+     * 资产聚合详情：基础信息 + 在线/通道状态 + 服务节点清单。
+     *
+     * @param hostId 主机 标识
+     * @return 资产聚合视图
+     */
     @Operation(summary = "资产聚合详情")
     @GetMapping("/{hostId}")
     public ReturnResult<AssetDetailView> assetDetail(@PathVariable Long hostId) {

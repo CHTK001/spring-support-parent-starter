@@ -24,10 +24,10 @@ public class Splitter {
     private boolean omitEmptyStrings;
 
     /**
-    * 构造拆分器
-    *
-    * @param separator 分隔符
-    */
+     * 构造拆分器
+     *
+     * @param separator 分隔符
+     */
     public Splitter(String separator) {
         this.separator = separator;
     }

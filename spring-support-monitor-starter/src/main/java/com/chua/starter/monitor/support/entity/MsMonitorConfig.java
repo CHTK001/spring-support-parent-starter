@@ -25,32 +25,32 @@ public class MsMonitorConfig extends SysBase {
     private static final long serialVersionUID = 1L;
 
     /**
-    * 主键
-    */
+     * 主键
+     */
     @TableId(value = "id", type = IdType.AUTO)
     @Schema(description = "主键", example = "1")
     /** 标识 */
     private Long id;
 
     /**
-    * 配置项 键
-    */
+     * 配置项 键
+     */
     @TableField("ms_monitor_config_key")
     @Schema(description = "配置项 key", example = "monitor.data.retention.days")
     /** 监控配置密钥 */
     private String monitorConfigKey;
 
     /**
-    * 配置项 值
-    */
+     * 配置项 值
+     */
     @TableField("ms_monitor_config_value")
     @Schema(description = "配置项 value", example = "30")
     /** 监控配置值 */
     private String monitorConfigValue;
 
     /**
-    * 配置项描述
-    */
+     * 配置项描述
+     */
     @TableField("ms_monitor_config_desc")
     @Schema(description = "配置项描述", example = "历史数据保留天数")
     /** 监控配置desc */

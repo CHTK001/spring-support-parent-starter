@@ -28,19 +28,19 @@ import java.time.LocalDateTime;
 import java.util.Map;
 
 /**
-* 远程终端 webSocket 处理器
-* <p>
-* 桥接浏览器（guacamole-通用-js）与 guacd 守护进程：
-* <ul>
-*   <li>握手阶段：解析查询参数 -> 解析主机凭据 -> 与 guacd 握手 -> 写入审计记录</li>
-*   <li>数据阶段：浏览器指令写入 guacd；读线程将 guacd 输出推回浏览器</li>
-*   <li>关闭阶段：双向断开、审计闭环、注册表清理</li>
-* </ul>
-* 端点：{@code /ws/ms/server/terminal?hostId=&protocol=ssh|vnc|rdp&identityId=&targetPort=&user=}
-* </p>
-*
-* @author CH
-* @since 4.0.0.42
+ * 远程终端 webSocket 处理器
+ * <p>
+ * 桥接浏览器（guacamole-通用-js）与 guacd 守护进程：
+ * <ul>
+ *   <li>握手阶段：解析查询参数 -> 解析主机凭据 -> 与 guacd 握手 -> 写入审计记录</li>
+ *   <li>数据阶段：浏览器指令写入 guacd；读线程将 guacd 输出推回浏览器</li>
+ *   <li>关闭阶段：双向断开、审计闭环、注册表清理</li>
+ * </ul>
+ * 端点：{@code /ws/ms/server/terminal?hostId=&protocol=ssh|vnc|rdp&identityId=&targetPort=&user=}
+ * </p>
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 @Slf4j
 @Component
@@ -69,11 +69,11 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
     private final ServerProperties properties;
 
     /**
-    * 连接建立：完成鉴权参数校验、guacd 握手并启动读线程
-    *
-    * @param wsSession 浏览器 WS 会话
-    * @throws Exception 参数非法或 guacd 握手失败时抛出，框架将关闭连接
-    */
+     * 连接建立：完成鉴权参数校验、guacd 握手并启动读线程
+     *
+     * @param wsSession 浏览器 WS 会话
+     * @throws Exception 参数非法或 guacd 握手失败时抛出，框架将关闭连接
+     */
     @Override
     public void afterConnectionEstablished(WebSocketSession wsSession) throws Exception {
         wsSession.setTextMessageSizeLimit(MAX_TEXT_BUFFER);
@@ -129,10 +129,10 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
 
         if (hostId == null) {
             /**
-            * reject。
-            * @param wsSession ws会话
-            * @param 参数" 参数"
-            */
+             * reject。
+             * @param wsSession ws会话
+             * @param 参数" 参数"
+             */
             reject(wsSession, "缺少 hostId 参数");
             return;
         }
@@ -141,19 +141,19 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
             protocolType = ProtocolType.valueOf(protocolName.toUpperCase());
         } catch (IllegalArgumentException e) {
             /**
-            * reject。
-            * @param wsSession ws会话
-            * @param protocolName 协议名称
-            */
+             * reject。
+             * @param wsSession ws会话
+             * @param protocolName 协议名称
+             */
             reject(wsSession, "未知协议: " + protocolName);
             return;
         }
         if (!protocolType.isGuacdProtocol()) {
             /**
-            * reject。
-            * @param wsSession ws会话
-            * @param protocolName 协议名称
-            */
+             * reject。
+             * @param wsSession ws会话
+             * @param protocolName 协议名称
+             */
             reject(wsSession, "协议不支持经 guacd 连接: " + protocolName);
             return;
         }
@@ -162,20 +162,20 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
         ReturnResult<SshCredential> resolved = serverHostService.resolveCredential(hostId, identityId);
         if (!resolved.isOk()) {
             /**
-            * reject。
-            * @param wsSession ws会话
-            * @param resolved.getMsg( resolved.获取msg(
-            */
+             * reject。
+             * @param wsSession ws会话
+             * @param resolved.getMsg( resolved.获取msg(
+             */
             reject(wsSession, resolved.getMsg());
             return;
         }
         var hostResult = serverHostService.get(hostId);
         if (!hostResult.isOk()) {
             /**
-            * reject。
-            * @param wsSession ws会话
-            * @param hostResult.getMsg( 主机结果.getmsg(
-            */
+             * reject。
+             * @param wsSession ws会话
+             * @param hostResult.getMsg( 主机结果.getmsg(
+             */
             reject(wsSession, hostResult.getMsg());
             return;
         }
@@ -191,10 +191,10 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
         } catch (RuntimeException e) {
             log.warn("[terminal] guacd 握手失败 hostId={} protocol={}: {}", hostId, protocolName, e.getMessage());
             /**
-            * reject。
-            * @param wsSession ws会话
-            * @param e.getMessage( e.获取消息(
-            */
+             * reject。
+             * @param wsSession ws会话
+             * @param e.getMessage( e.获取消息(
+             */
             reject(wsSession, "guacd 握手失败: " + e.getMessage());
             return;
         }
@@ -218,11 +218,11 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
     }
 
     /**
-    * 接收浏览器指令并转发给 guacd
-    *
-    * @param wsSession WS 会话
-    * @param message   文本消息（一条或多条 guacd 指令）
-    */
+     * 接收浏览器指令并转发给 guacd
+     *
+     * @param wsSession WS 会话
+     * @param message   文本消息（一条或多条 guacd 指令）
+     */
     @Override
     protected void handleTextMessage(WebSocketSession wsSession, TextMessage message) {
         GuacdSession session = sessionRegistry.findByWsSessionId(wsSession.getId());
@@ -251,11 +251,11 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
     }
 
     /**
-    * 连接关闭：断开 guacd、闭环审计记录
-    *
-    * @param wsSession  WS 会话
-    * @param status     关闭状态
-    */
+     * 连接关闭：断开 guacd、闭环审计记录
+     *
+     * @param wsSession  WS 会话
+     * @param status     关闭状态
+     */
     @Override
     public void afterConnectionClosed(WebSocketSession wsSession, CloseStatus status) {
         GuacdSession session = sessionRegistry.findByWsSessionId(wsSession.getId());
@@ -268,11 +268,11 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
     }
 
     /**
-    * 处理传输错误：统一走关闭流程
-    *
-    * @param wsSession WS 会话
-    * @param exception 异常
-    */
+     * 处理传输错误：统一走关闭流程
+     *
+     * @param wsSession WS 会话
+     * @param exception 异常
+     */
     @Override
     public void handleTransportError(WebSocketSession wsSession, Throwable exception) {
         log.warn("[terminal] WS 传输异常 sessionId={} {}",
@@ -287,14 +287,14 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
     }
 
     /**
-    * 读线程主循环：持续读取 guacd 输出并推送给浏览器
-    * <p>
-    * {@code GuacamoleReader.read()} 返回 null 表示 Socket 已关闭，
-    * 此时主动触发整条会话的关闭流程。
-    * </p>
-    *
-    * @param session 会话
-    */
+     * 读线程主循环：持续读取 guacd 输出并推送给浏览器
+     * <p>
+     * {@code GuacamoleReader.read()} 返回 null 表示 Socket 已关闭，
+     * 此时主动触发整条会话的关闭流程。
+     * </p>
+     *
+     * @param session 会话
+     */
     private void pumpGuacdToBrowser(GuacdSession session) {
         try {
             while (true) {
@@ -321,11 +321,11 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
     }
 
     /**
-    * 拒绝连接并发送原因后关闭 WS
-    *
-    * @param wsSession WS 会话
-    * @param reason    原因
-    */
+     * 拒绝连接并发送原因后关闭 WS
+     *
+     * @param wsSession WS 会话
+     * @param reason    原因
+     */
     private void reject(WebSocketSession wsSession, String reason) {
         log.warn("[terminal] 拒绝终端连接 sessionId={} reason={}", wsSession.getId(), reason);
         try {
@@ -342,13 +342,13 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
     }
 
     /**
-    * 解析目标端口：显式请求 > 主机远控端口 > SSH 沿用端口字段 > 协议默认
-    *
-    * @param host       主机记录
-    * @param type       协议类型
-    * @param requested  浏览器显式传入的端口，可空
-    * @return 端口，空 表示交由 guacd 按协议默认
-    */
+     * 解析目标端口：显式请求 > 主机远控端口 > SSH 沿用端口字段 > 协议默认
+     *
+     * @param host       主机记录
+     * @param type       协议类型
+     * @param requested  浏览器显式传入的端口，可空
+     * @return 端口，空 表示交由 guacd 按协议默认
+     */
     private Integer resolveTargetPort(MsServerHost host, ProtocolType type, Integer requested) {
         if (requested != null && requested > 0) {
             return requested;
@@ -363,11 +363,11 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
     }
 
     /**
-    * 解析 WS 握手 URL 的查询参数
-    *
-    * @param wsSession WS 会话
-    * @return 参数表
-    */
+     * 解析 WS 握手 URL 的查询参数
+     *
+     * @param wsSession WS 会话
+     * @return 参数表
+     */
     private Map<String, String> parseQuery(WebSocketSession wsSession) throws IOException {
         URI uri = wsSession.getUri();
         Map<String, String> params = new java.util.HashMap<>();
@@ -386,22 +386,22 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
     }
 
     /**
-    * 提取客户端 IP
-    *
-    * @param wsSession WS 会话
-    * @return IP 字符串
-    */
+     * 提取客户端 IP
+     *
+     * @param wsSession WS 会话
+     * @return IP 字符串
+     */
     private String resolveClientIp(WebSocketSession wsSession) {
         var remoteAddress = wsSession.getRemoteAddress();
         return remoteAddress == null ? "unknown" : remoteAddress.getAddress().getHostAddress();
     }
 
     /**
-    * 安全解析长整型参数
-    *
-    * @param value 原始字符串
-    * @return 长整型或 空
-    */
+     * 安全解析长整型参数
+     *
+     * @param value 原始字符串
+     * @return 长整型或 空
+     */
     private Long parseLong(String value) {
         if (value == null || value.isBlank()) {
             return null;
@@ -414,11 +414,11 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
     }
 
     /**
-    * 安全解析整型参数
-    *
-    * @param value 原始字符串
-    * @return 整型或 空
-    */
+     * 安全解析整型参数
+     *
+     * @param value 原始字符串
+     * @return 整型或 空
+     */
     private Integer parseInteger(String value) {
         if (value == null || value.isBlank()) {
             return null;

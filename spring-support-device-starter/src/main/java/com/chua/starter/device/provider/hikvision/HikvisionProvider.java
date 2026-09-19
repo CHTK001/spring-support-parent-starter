@@ -104,10 +104,10 @@ public class HikvisionProvider implements DeviceProvider {
             try {
                 if (PLATFORM_CLOUD_YAO.equalsIgnoreCase(platform)) {
                     /**
-    * hikvisioncloudyao会话。
-    * @param info 信息
-    * @return hikvisioncloudyao会话的结果
-    */
+                     * hikvisioncloudyao会话。
+                     * @param info 信息
+                     * @return hikvisioncloudyao会话的结果
+                     */
                     return new HikvisionCloudYaoSession(info);
                 }
                 if (PLATFORM_CLOUD_EYE.equalsIgnoreCase(platform)) {

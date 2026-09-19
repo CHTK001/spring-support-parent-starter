@@ -27,10 +27,10 @@ public class OrderStateLogServiceImpl implements OrderStateLogService {
     private final OrderStateLogMapper orderStateLogMapper;
 
     /**
-    * 记录订单状态流转日志，将状态变更写入数据库。
-    *
-    * @param request 日志请求参数，包含订单标识、原状态、目标状态、事件描述、操作人和备注
-    */
+     * 记录订单状态流转日志，将状态变更写入数据库。
+     *
+     * @param request 日志请求参数，包含订单标识、原状态、目标状态、事件描述、操作人和备注
+     */
     @Override
     public void log(OrderStateLogRequest request) {
         if (request == null) {

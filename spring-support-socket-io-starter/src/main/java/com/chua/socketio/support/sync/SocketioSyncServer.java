@@ -47,10 +47,10 @@ public class SocketioSyncServer extends AbstractSyncServer {
     }
 
     /**
-    * Socket.IO 连接建立时回调。
-    *
-    * @param sessionId 会话标识
-    */
+     * Socket.IO 连接建立时回调。
+     *
+     * @param sessionId 会话标识
+     */
     public void onSocketioConnect(String sessionId) {
         SyncSession syncSession = new SyncSession(sessionId);
         /**

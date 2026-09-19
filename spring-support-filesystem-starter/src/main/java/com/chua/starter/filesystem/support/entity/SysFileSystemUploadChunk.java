@@ -61,10 +61,10 @@ public class SysFileSystemUploadChunk extends SysBase implements Serializable {
     public SysFileSystemUploadChunk() {}
 
     /**
-    * 获取filesystemuploadchunkid
-    *
-    * @return 获取filesystemuploadchunkid的结果
-    */
+     * 获取filesystemuploadchunkid
+     *
+     * @return 获取filesystemuploadchunkid的结果
+     */
     public Long getFilesystemUploadChunkId() { return filesystemUploadChunkId; }
     /**
      * 设置filesystemuploadchunkid

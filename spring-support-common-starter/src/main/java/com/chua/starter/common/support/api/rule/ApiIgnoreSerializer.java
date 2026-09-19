@@ -32,9 +32,9 @@ public class ApiIgnoreSerializer extends JsonSerializer<Object> implements Conte
     private Class<?>[] group; // 群体
 
     /**
-    * 创建 apiignore序列化器 实例
-    * @param group 群体
-    */
+     * 创建 apiignore序列化器 实例
+     * @param group 群体
+     */
     public ApiIgnoreSerializer(Class<?>[] group) {
         /**
          * this。

@@ -44,8 +44,8 @@ public class LocalMessageTemplate implements MessageTemplate {
     private static final String TYPE = "local";
 
     /**
-    * 事件bus容器，每个目标对应一个事件bus
-    */
+     * 事件bus容器，每个目标对应一个事件bus
+     */
     private final ConcurrentHashMap<String, EventBus> eventBuses = new ConcurrentHashMap<>();
 
     /**
@@ -270,11 +270,11 @@ public class LocalMessageTemplate implements MessageTemplate {
     public void subscribe(String destination, MessageHandler handler, boolean autoAck, int concurrency) {
         if (concurrency <= 1) {
             /**
-    * 订阅。
-    * @param destination 目标
-    * @param handler 处理器
-    * @param autoAck autoACK
-    */
+             * 订阅。
+             * @param destination 目标
+             * @param handler 处理器
+             * @param autoAck autoACK
+             */
             subscribe(destination, handler, autoAck);
             return;
         }
@@ -605,10 +605,10 @@ public class LocalMessageTemplate implements MessageTemplate {
     }
 
     /**
-        * 序列化消息内容
-        * @param payload payload
-        * @return serializePayload的结果
-        */
+     * 序列化消息内容
+     * @param payload payload
+     * @return serializePayload的结果
+     */
     private byte[] serializePayload(Object payload) {
         if (payload == null) {
             return new byte[0];

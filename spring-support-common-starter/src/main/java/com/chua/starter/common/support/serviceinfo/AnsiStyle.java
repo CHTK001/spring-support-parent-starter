@@ -21,16 +21,16 @@ public final class AnsiStyle {
     private static final Logger log = LoggerFactory.getLogger(AnsiStyle.class);
 
     /**
-    * 是否启用颜色: 由 {@link System#getenv(String) 环境变量} 动态读取。
-    * <ul>
-    *     <li>{@code NO_COLOR} 存在 → 关闭 (遵循 no-color.org 标准)</li>
-    *     <li>{@code TERM=dumb} → 关闭</li>
-    *     <li>其它情况 → 启用</li>
-    * </ul>
-    *
-    * <p>使用 {@link ThreadLocal} 缓存, 避免每次调用都访问环境变量;
-    * 测试场景可调用 {@link #reset()} 清缓存。</p>
-    */
+     * 是否启用颜色: 由 {@link System#getenv(String) 环境变量} 动态读取。
+     * <ul>
+     *     <li>{@code NO_COLOR} 存在 → 关闭 (遵循 no-color.org 标准)</li>
+     *     <li>{@code TERM=dumb} → 关闭</li>
+     *     <li>其它情况 → 启用</li>
+     * </ul>
+     *
+     * <p>使用 {@link ThreadLocal} 缓存, 避免每次调用都访问环境变量;
+     * 测试场景可调用 {@link #reset()} 清缓存。</p>
+     */
     private static final ThreadLocal<Boolean> ENABLED_CACHE = new ThreadLocal<>();
 
     /** Reset */
@@ -58,9 +58,9 @@ public final class AnsiStyle {
     private AnsiStyle() {}
 
     /**
-    * 当前是否启用 ANSI 颜色。
-    * @return 是否已启用的结果
-    */
+     * 当前是否启用 ANSI 颜色。
+     * @return 是否已启用的结果
+     */
     public static boolean isEnabled() {
         Boolean cached = ENABLED_CACHE.get();
         if (cached != null) {

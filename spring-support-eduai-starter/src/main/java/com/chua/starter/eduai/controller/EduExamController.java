@@ -35,13 +35,13 @@ public class EduExamController {
     private final IEduExamService examService;
 
     /**
-    * 分页查询考试
-    *
-    * @param exam     查询条件
-    * @param page     页码
-    * @param pageSize 每页条数
-    * @return 分页结果
-    */
+     * 分页查询考试
+     *
+     * @param exam     查询条件
+     * @param page     页码
+     * @param pageSize 每页条数
+     * @return 分页结果
+     */
     @Operation(summary = "分页查询考试")
     @GetMapping("/page")
     public ReturnResult<PageResult<EduExam>> page(EduExam exam,

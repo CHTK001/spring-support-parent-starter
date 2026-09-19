@@ -88,10 +88,10 @@ public class FileHandler implements SyncMessageHandler {
     }
 
     /**
-    * 列出目录内容
-    * @param data 数据
-    * @return 处理列表的结果
-    */
+     * 列出目录内容
+     * @param data 数据
+     * @return 处理列表的结果
+     */
     private Object handleList(Map<String, Object> data) throws IOException {
         String path = getString(data, "path");
         boolean includeHidden = getBoolean(data, "includeHidden", false);

@@ -37,10 +37,10 @@ public class ConsolePageController {
     private final ConsoleSqliteStore store; // 存储
 
     /**
-    * 控制台page控制器。
-    * @param scanner scanner
-    * @param store 存储
-    */
+     * 控制台page控制器。
+     * @param scanner scanner
+     * @param store 存储
+     */
     public ConsolePageController(AnnotationSwitchScanner scanner, ConsoleSqliteStore store) {
         this.scanner = scanner;
         this.store = store;
@@ -154,11 +154,11 @@ public class ConsolePageController {
     }
 
     /**
-    * 移除 @api特征 覆盖
-    *
-    * @param featureId 特征标识
-    * @return 删除特征的结果
-    */
+     * 移除 @api特征 覆盖
+     *
+     * @param featureId 特征标识
+     * @return 删除特征的结果
+     */
     @PostMapping("/api/features/delete")
     @Permission(CONSOLE_PERMISSION)
     public String deleteFeature(@RequestParam String featureId) {
@@ -181,11 +181,11 @@ public class ConsolePageController {
     }
 
     /**
-    * 移除 @apigray 覆盖
-    *
-    * @param pattern 模式
-    * @return 删除gray的结果
-    */
+     * 移除 @apigray 覆盖
+     *
+     * @param pattern 模式
+     * @return 删除gray的结果
+     */
     @PostMapping("/api/grays/delete")
     @Permission(CONSOLE_PERMISSION)
     public String deleteGray(@RequestParam String pattern) {

@@ -16,40 +16,42 @@ import java.util.Map;
 /**
  * 同步消息传输加密工具。
  * <p>
- * 基于 AES-GCM 认证加密，密钥由配置的 加密货币-secret 经 SHA-256 派生。
+ * 基于 AES-GCM 认证加密，密钥由配置的加密密钥经 SHA-256 派生。
  * 仅加密消息 payload（topic 不加密），使用方无感知。
  * </p>
  *
- * @版本 1.0.0
  * @since 4.0.0.42
  * @author CH
  */
 public final class SyncCryptoUtils {
 
     /** 加密标记字段 */
-    /** Encrypted */
     public static final String ENCRYPTED = "encrypted";
+
     /** 加密算法字段 */
-    /** 算法 */
     public static final String ALGORITHM = "encAlgorithm";
+
     /** 密文字段 */
-    /** 加密 */
     public static final String CIPHER = "encData";
 
-    /** Aes_gcm */
+    /** AES-GCM 变换名 */
     private static final String AES_GCM = "AES/GCM/NoPadding";
-    /** Aes_algorithm */
+
+    /** AES 算法名 */
     private static final String AES_ALGORITHM = "AES";
-    /** Sha_256 */
+
+    /** SHA-256 摘要算法名 */
     private static final String SHA_256 = "SHA-256";
-    /** Gcm_iv_长度 */
+
+    /** GCM 初始向量长度（字节） */
     private static final int GCM_IV_LENGTH = 12;
-    /** Gcm_标签_长度 */
+
+    /** GCM 认证标签长度（比特） */
     private static final int GCM_TAG_LENGTH = 128;
 
     /**
-    * 同步加密货币工具。
-    */
+     * 工具类构造器，禁止实例化。
+     */
     private SyncCryptoUtils() {
     }
 
@@ -66,9 +68,9 @@ public final class SyncCryptoUtils {
     /**
      * 加密消息 payload。未启用加密或加密失败时原样返回。
      *
-     * @param payload    明文消息（映射 或其它可 JSON 序列化对象）
+     * @param payload    明文消息（Map 或其它可 JSON 序列化对象）
      * @param properties 同步配置
-     * @return 加密后的包装 映射，未启用时返回原对象
+     * @return 加密后的包装 Map，未启用时返回原对象
      */
     public static Object encrypt(Object payload, SyncProperties properties) {
         if (!isEnabled(properties) || payload == null) {
@@ -99,7 +101,7 @@ public final class SyncCryptoUtils {
      *
      * @param message    收到的消息对象
      * @param properties 同步配置
-     * @return 解密后的 映射，未启用或不匹配时返回原对象
+     * @return 解密后的 Map，未启用或不匹配时返回原对象
      */
     public static Object decrypt(Object message, SyncProperties properties) {
         if (!isEnabled(properties) || message == null || !(message instanceof Map<?, ?> map)) {
@@ -128,18 +130,21 @@ public final class SyncCryptoUtils {
     }
 
     /**
-     * deriveKey。
-     * @param secret secret
-     * @return deriveKey的结果
+     * 由加密密钥派生 AES 密钥。
+     *
+     * @param secret 配置的加密密钥
+     * @return SHA-256 派生的 32 字节密钥
+     * @throws Exception SHA-256 算法不可用时抛出
      */
     private static byte[] deriveKey(String secret) throws Exception {
         return MessageDigest.getInstance(SHA_256).digest(secret.getBytes(StandardCharsets.UTF_8));
     }
 
     /**
-     * 是否包含文本。
-     * @param value 值
-     * @return 是否包含文本的结果
+     * 判断字符串是否非空白。
+     *
+     * @param value 待判断字符串
+     * @return true=非空白
      */
     private static boolean hasText(String value) {
         return value != null && !value.isBlank();

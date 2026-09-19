@@ -47,10 +47,10 @@ public class DataSourceStoreService {
     private final ObjectProvider<DataSource> defaultDataSourceProvider;
 
     /**
-    * 构造数据源配置存储服务。
-    *
-    * @param defaultDataSourceProvider 默认主数据源提供者,可为空(未配置主数据源时)
-    */
+     * 构造数据源配置存储服务。
+     *
+     * @param defaultDataSourceProvider 默认主数据源提供者,可为空(未配置主数据源时)
+     */
     public DataSourceStoreService(ObjectProvider<DataSource> defaultDataSourceProvider) {
         this.defaultDataSourceProvider = defaultDataSourceProvider;
     }
