@@ -7,10 +7,10 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
-* soft_install_record 安装记录表
-*
-* @since 2026/7/25
-* @author CH
+ * soft_install_record 安装记录表
+ *
+ * @since 2026/7/25
+ * @author CH
  */
 @Data
 @TableName("soft_install_record")
@@ -119,345 +119,345 @@ public class SoftInstallRecord implements Serializable {
     }
 
     /**
-    * 设置installrecordid。
-    * @param installRecordId installrecordid
-    */
+     * 设置installrecordid。
+     * @param installRecordId installrecordid
+     */
     public void setInstallRecordId(String installRecordId) {
         this.installRecordId = installRecordId;
     }
 
     /**
-    * 获取installrecordsoftwareid。
-    * @return 获取installrecordsoftwareid的结果
-    */
+     * 获取installrecordsoftwareid。
+     * @return 获取installrecordsoftwareid的结果
+     */
     public String getInstallRecordSoftwareId() {
         return installRecordSoftwareId;
     }
 
     /**
-    * 设置installrecordsoftwareid。
-    * @param installRecordSoftwareId installrecordsoftwareid
-    */
+     * 设置installrecordsoftwareid。
+     * @param installRecordSoftwareId installrecordsoftwareid
+     */
     public void setInstallRecordSoftwareId(String installRecordSoftwareId) {
         this.installRecordSoftwareId = installRecordSoftwareId;
     }
 
     /**
-    * 获取installrecord用户标识。
-    * @return 获取installrecord用户id的结果
-    */
+     * 获取installrecord用户标识。
+     * @return 获取installrecord用户id的结果
+     */
     public String getInstallRecordUserId() {
         return installRecordUserId;
     }
 
     /**
-    * 设置installrecord用户标识。
-    * @param installRecordUserId installrecord用户标识
-    */
+     * 设置installrecord用户标识。
+     * @param installRecordUserId installrecord用户标识
+     */
     public void setInstallRecordUserId(String installRecordUserId) {
         this.installRecordUserId = installRecordUserId;
     }
 
     /**
-    * 获取installrecorddeviceid。
-    * @return 获取installrecorddeviceid的结果
-    */
+     * 获取installrecorddeviceid。
+     * @return 获取installrecorddeviceid的结果
+     */
     public String getInstallRecordDeviceId() {
         return installRecordDeviceId;
     }
 
     /**
-    * 设置installrecorddeviceid。
-    * @param installRecordDeviceId installrecorddeviceid
-    */
+     * 设置installrecorddeviceid。
+     * @param installRecordDeviceId installrecorddeviceid
+     */
     public void setInstallRecordDeviceId(String installRecordDeviceId) {
         this.installRecordDeviceId = installRecordDeviceId;
     }
 
     /**
-    * 获取installrecord源标识。
-    * @return 获取installrecord源id的结果
-    */
+     * 获取installrecord源标识。
+     * @return 获取installrecord源id的结果
+     */
     public String getInstallRecordSourceId() {
         return installRecordSourceId;
     }
 
     /**
-    * 设置installrecord源标识。
-    * @param installRecordSourceId installrecord源标识
-    */
+     * 设置installrecord源标识。
+     * @param installRecordSourceId installrecord源标识
+     */
     public void setInstallRecordSourceId(String installRecordSourceId) {
         this.installRecordSourceId = installRecordSourceId;
     }
 
     /**
-    * 获取installrecord版本。
-    * @return 获取installrecord版本的结果
-    */
+     * 获取installrecord版本。
+     * @return 获取installrecord版本的结果
+     */
     public String getInstallRecordVersion() {
         return installRecordVersion;
     }
 
     /**
-    * 设置installrecord版本。
-    * @param installRecordVersion installrecord版本
-    */
+     * 设置installrecord版本。
+     * @param installRecordVersion installrecord版本
+     */
     public void setInstallRecordVersion(String installRecordVersion) {
         this.installRecordVersion = installRecordVersion;
     }
 
     /**
-    * 获取installrecordTarget版本。
-    * @return 获取installrecordTarget版本的结果
-    */
+     * 获取installrecordTarget版本。
+     * @return 获取installrecordTarget版本的结果
+     */
     public String getInstallRecordTargetVersion() {
         return installRecordTargetVersion;
     }
 
     /**
-    * 设置installrecordTarget版本。
-    * @param installRecordTargetVersion installrecordTarget版本
-    */
+     * 设置installrecordTarget版本。
+     * @param installRecordTargetVersion installrecordTarget版本
+     */
     public void setInstallRecordTargetVersion(String installRecordTargetVersion) {
         this.installRecordTargetVersion = installRecordTargetVersion;
     }
 
     /**
-    * 获取installrecordoperation。
-    * @return 获取installrecordoperation的结果
-    */
+     * 获取installrecordoperation。
+     * @return 获取installrecordoperation的结果
+     */
     public String getInstallRecordOperation() {
         return installRecordOperation;
     }
 
     /**
-    * 设置installrecordoperation。
-    * @param installRecordOperation installrecordoperation
-    */
+     * 设置installrecordoperation。
+     * @param installRecordOperation installrecordoperation
+     */
     public void setInstallRecordOperation(String installRecordOperation) {
         this.installRecordOperation = installRecordOperation;
     }
 
     /**
-    * 获取installrecord状态。
-    * @return 获取installrecord状态的结果
-    */
+     * 获取installrecord状态。
+     * @return 获取installrecord状态的结果
+     */
     public Integer getInstallRecordStatus() {
         return installRecordStatus;
     }
 
     /**
-    * 设置installrecord状态。
-    * @param installRecordStatus installrecord状态
-    */
+     * 设置installrecord状态。
+     * @param installRecordStatus installrecord状态
+     */
     public void setInstallRecordStatus(Integer installRecordStatus) {
         this.installRecordStatus = installRecordStatus;
     }
 
     /**
-    * 获取installrecord进步。
-    * @return 获取installrecord进步的结果
-    */
+     * 获取installrecord进步。
+     * @return 获取installrecord进步的结果
+     */
     public Integer getInstallRecordProgress() {
         return installRecordProgress;
     }
 
     /**
-    * 设置installrecord进步。
-    * @param installRecordProgress installrecord进步
-    */
+     * 设置installrecord进步。
+     * @param installRecordProgress installrecord进步
+     */
     public void setInstallRecordProgress(Integer installRecordProgress) {
         this.installRecordProgress = installRecordProgress;
     }
 
     /**
-    * 获取installrecord启动时间。
-    * @return 获取installrecord启动时间的结果
-    */
+     * 获取installrecord启动时间。
+     * @return 获取installrecord启动时间的结果
+     */
     public LocalDateTime getInstallRecordStartTime() {
         return installRecordStartTime;
     }
 
     /**
-    * 设置installrecord启动时间。
-    * @param installRecordStartTime installrecord启动时间
-    */
+     * 设置installrecord启动时间。
+     * @param installRecordStartTime installrecord启动时间
+     */
     public void setInstallRecordStartTime(LocalDateTime installRecordStartTime) {
         this.installRecordStartTime = installRecordStartTime;
     }
 
     /**
-    * 获取installrecord结束时间。
-    * @return 获取installrecord结束时间的结果
-    */
+     * 获取installrecord结束时间。
+     * @return 获取installrecord结束时间的结果
+     */
     public LocalDateTime getInstallRecordEndTime() {
         return installRecordEndTime;
     }
 
     /**
-    * 设置installrecord结束时间。
-    * @param installRecordEndTime installrecord结束时间
-    */
+     * 设置installrecord结束时间。
+     * @param installRecordEndTime installrecord结束时间
+     */
     public void setInstallRecordEndTime(LocalDateTime installRecordEndTime) {
         this.installRecordEndTime = installRecordEndTime;
     }
 
     /**
-    * 获取installrecord持续时间。
-    * @return 获取installrecord持续时间的结果
-    */
+     * 获取installrecord持续时间。
+     * @return 获取installrecord持续时间的结果
+     */
     public Long getInstallRecordDuration() {
         return installRecordDuration;
     }
 
     /**
-    * 设置installrecord持续时间。
-    * @param installRecordDuration installrecord持续时间
-    */
+     * 设置installrecord持续时间。
+     * @param installRecordDuration installrecord持续时间
+     */
     public void setInstallRecordDuration(Long installRecordDuration) {
         this.installRecordDuration = installRecordDuration;
     }
 
     /**
-    * 获取installrecord错误消息。
-    * @return 获取installrecord错误消息的结果
-    */
+     * 获取installrecord错误消息。
+     * @return 获取installrecord错误消息的结果
+     */
     public String getInstallRecordErrorMessage() {
         return installRecordErrorMessage;
     }
 
     /**
-    * 设置installrecord错误消息。
-    * @param installRecordErrorMessage installrecord错误消息
-    */
+     * 设置installrecord错误消息。
+     * @param installRecordErrorMessage installrecord错误消息
+     */
     public void setInstallRecordErrorMessage(String installRecordErrorMessage) {
         this.installRecordErrorMessage = installRecordErrorMessage;
     }
 
     /**
-    * 获取installrecord错误detail。
-    * @return 获取installrecord错误detail的结果
-    */
+     * 获取installrecord错误detail。
+     * @return 获取installrecord错误detail的结果
+     */
     public String getInstallRecordErrorDetail() {
         return installRecordErrorDetail;
     }
 
     /**
-    * 设置installrecord错误detail。
-    * @param installRecordErrorDetail installrecord错误detail
-    */
+     * 设置installrecord错误detail。
+     * @param installRecordErrorDetail installrecord错误detail
+     */
     public void setInstallRecordErrorDetail(String installRecordErrorDetail) {
         this.installRecordErrorDetail = installRecordErrorDetail;
     }
 
     /**
-    * 获取installrecord日志路径。
-    * @return 获取installrecord日志路径的结果
-    */
+     * 获取installrecord日志路径。
+     * @return 获取installrecord日志路径的结果
+     */
     public String getInstallRecordLogPath() {
         return installRecordLogPath;
     }
 
     /**
-    * 设置installrecord日志路径。
-    * @param installRecordLogPath installrecord日志路径
-    */
+     * 设置installrecord日志路径。
+     * @param installRecordLogPath installrecord日志路径
+     */
     public void setInstallRecordLogPath(String installRecordLogPath) {
         this.installRecordLogPath = installRecordLogPath;
     }
 
     /**
-    * 获取installrecorddownload路径。
-    * @return 获取installrecorddownload路径的结果
-    */
+     * 获取installrecorddownload路径。
+     * @return 获取installrecorddownload路径的结果
+     */
     public String getInstallRecordDownloadPath() {
         return installRecordDownloadPath;
     }
 
     /**
-    * 设置installrecorddownload路径。
-    * @param installRecordDownloadPath installrecorddownload路径
-    */
+     * 设置installrecorddownload路径。
+     * @param installRecordDownloadPath installrecorddownload路径
+     */
     public void setInstallRecordDownloadPath(String installRecordDownloadPath) {
         this.installRecordDownloadPath = installRecordDownloadPath;
     }
 
     /**
-    * 获取installrecordinstall路径。
-    * @return 获取installrecordinstall路径的结果
-    */
+     * 获取installrecordinstall路径。
+     * @return 获取installrecordinstall路径的结果
+     */
     public String getInstallRecordInstallPath() {
         return installRecordInstallPath;
     }
 
     /**
-    * 设置installrecordinstall路径。
-    * @param installRecordInstallPath installrecordinstall路径
-    */
+     * 设置installrecordinstall路径。
+     * @param installRecordInstallPath installrecordinstall路径
+     */
     public void setInstallRecordInstallPath(String installRecordInstallPath) {
         this.installRecordInstallPath = installRecordInstallPath;
     }
 
     /**
-    * 获取installrecordrollback版本。
-    * @return 获取installrecordrollback版本的结果
-    */
+     * 获取installrecordrollback版本。
+     * @return 获取installrecordrollback版本的结果
+     */
     public String getInstallRecordRollbackVersion() {
         return installRecordRollbackVersion;
     }
 
     /**
-    * 设置installrecordrollback版本。
-    * @param installRecordRollbackVersion installrecordrollback版本
-    */
+     * 设置installrecordrollback版本。
+     * @param installRecordRollbackVersion installrecordrollback版本
+     */
     public void setInstallRecordRollbackVersion(String installRecordRollbackVersion) {
         this.installRecordRollbackVersion = installRecordRollbackVersion;
     }
 
     /**
-    * 获取installrecordextra。
-    * @return 获取installrecordextra的结果
-    */
+     * 获取installrecordextra。
+     * @return 获取installrecordextra的结果
+     */
     public String getInstallRecordExtra() {
         return installRecordExtra;
     }
 
     /**
-    * 设置installrecordextra。
-    * @param installRecordExtra installrecordextra
-    */
+     * 设置installrecordextra。
+     * @param installRecordExtra installrecordextra
+     */
     public void setInstallRecordExtra(String installRecordExtra) {
         this.installRecordExtra = installRecordExtra;
     }
 
     /**
-    * 获取installrecord创建时间。
-    * @return 获取installrecord创建时间的结果
-    */
+     * 获取installrecord创建时间。
+     * @return 获取installrecord创建时间的结果
+     */
     public LocalDateTime getInstallRecordCreateTime() {
         return installRecordCreateTime;
     }
 
     /**
-    * 设置installrecord创建时间。
-    * @param installRecordCreateTime installrecord创建时间
-    */
+     * 设置installrecord创建时间。
+     * @param installRecordCreateTime installrecord创建时间
+     */
     public void setInstallRecordCreateTime(LocalDateTime installRecordCreateTime) {
         this.installRecordCreateTime = installRecordCreateTime;
     }
 
     /**
-    * 获取installrecord更新时间。
-    * @return 获取installrecord更新时间的结果
-    */
+     * 获取installrecord更新时间。
+     * @return 获取installrecord更新时间的结果
+     */
     public LocalDateTime getInstallRecordUpdateTime() {
         return installRecordUpdateTime;
     }
 
     /**
-    * 设置installrecord更新时间。
-    * @param installRecordUpdateTime installrecord更新时间
-    */
+     * 设置installrecord更新时间。
+     * @param installRecordUpdateTime installrecord更新时间
+     */
     public void setInstallRecordUpdateTime(LocalDateTime installRecordUpdateTime) {
         this.installRecordUpdateTime = installRecordUpdateTime;
     }

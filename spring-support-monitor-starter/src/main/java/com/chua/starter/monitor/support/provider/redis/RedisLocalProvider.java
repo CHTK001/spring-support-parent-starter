@@ -21,14 +21,14 @@ import java.util.Map;
 import java.util.Set;
 
 /**
-* Redis 本地采集 提供者
-* <p>
-* 通过 Jedis 直连 Redis, 执行 信息 命令解析关键指标(内存/连接/命中率/键数量等),
-* 无需部署 exporter。
-* </p>
-*
-* @since 2026/8/4
-* @author CH
+ * Redis 本地采集 提供者
+ * <p>
+ * 通过 Jedis 直连 Redis, 执行 信息 命令解析关键指标(内存/连接/命中率/键数量等),
+ * 无需部署 exporter。
+ * </p>
+ *
+ * @since 2026/8/4
+ * @author CH
  */
 @Slf4j
 @Component
@@ -93,10 +93,10 @@ public class RedisLocalProvider implements MetricProvider {
             String info = fetchInfo(client);
             result.setRawOutput(info);
             /**
-            * 解析信息。
-            * @param info 信息
-            * @param result 结果
-            */
+             * 解析信息。
+             * @param info 信息
+             * @param result 结果
+             */
             parseInfo(info, result);
             result.setSuccess(true);
         } catch (Exception e) {
@@ -107,22 +107,22 @@ public class RedisLocalProvider implements MetricProvider {
     }
 
     /**
-    * 获取 信息 全量输出
-    *
-    * @param client Redis 客户端
-    * @return INFO 文本
-    */
+     * 获取 信息 全量输出
+     *
+     * @param client Redis 客户端
+     * @return INFO 文本
+     */
     private String fetchInfo(RedisClient client) {
         Object result = client.reactiveExecCommand("INFO").block();
         return result != null ? result.toString() : null;
     }
 
     /**
-    * 解析 信息 输出为指标点
-    *
-    * @param info   信息 文本
-    * @param result 结果
-    */
+     * 解析 信息 输出为指标点
+     *
+     * @param info   信息 文本
+     * @param result 结果
+     */
     private void parseInfo(String info, CollectResult result) {
         if (info == null) {
             return;
@@ -189,12 +189,12 @@ public class RedisLocalProvider implements MetricProvider {
     }
 
     /**
-    * 添加指标点
-    *
-    * @param result 采集结果
-    * @param name   指标名
-    * @param value  指标值
-    */
+     * 添加指标点
+     *
+     * @param result 采集结果
+     * @param name   指标名
+     * @param value  指标值
+     */
     private void addMetric(CollectResult result, String name, Double value) {
         if (value == null) {
             return;
@@ -209,10 +209,10 @@ public class RedisLocalProvider implements MetricProvider {
     }
 
     /**
-    * 解析数值(兼容带单位的字节数, 如 12345 或 1.5M)
-    * @param raw raw
-    * @return 解析double的结果
-    */
+     * 解析数值(兼容带单位的字节数, 如 12345 或 1.5M)
+     * @param raw raw
+     * @return 解析double的结果
+     */
     private static Double parseDouble(String raw) {
         if (raw == null || raw.isEmpty()) {
             return null;
@@ -239,21 +239,21 @@ public class RedisLocalProvider implements MetricProvider {
     }
 
     /**
-    * 对象转字符串
-    *
-    * @param o 对象
-    * @return 字符串
-    */
+     * 对象转字符串
+     *
+     * @param o 对象
+     * @return 字符串
+     */
     private static String str(Object o) {
         return o == null ? null : String.valueOf(o);
     }
 
     /**
-    * 对象转 int
-    *
-    * @param o 对象
-    * @return int, 转换失败返回 0
-    */
+     * 对象转 int
+     *
+     * @param o 对象
+     * @return int, 转换失败返回 0
+     */
     private static int intOrZero(Object o) {
         if (o == null) {
             return 0;

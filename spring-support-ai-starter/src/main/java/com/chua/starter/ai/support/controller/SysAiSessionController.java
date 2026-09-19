@@ -26,8 +26,8 @@ public class SysAiSessionController {
     private final SysAiSessionMapper sessionMapper;
 
     /**
-    * 查询归档会话列表
-    */
+     * 查询归档会话列表
+     */
     @GetMapping("/archived")
     public ReturnResult<Map<String, Object>> listArchived(
             @RequestParam(required = false) String keyword,
@@ -64,8 +64,8 @@ public class SysAiSessionController {
     }
 
     /**
-    * 归档/取消归档会话
-    */
+     * 归档/取消归档会话
+     */
     @PutMapping("/{sessionId}/archive")
     public Map<String, Object> archive(
             @PathVariable String sessionId,
@@ -112,10 +112,10 @@ public class SysAiSessionController {
     }
 
     /**
-    * 批量归档/取消归档会话
-    * @param body 请求体，不允许为 null
-    * @return 结果映射，无数据时为空映射
-    */
+     * 批量归档/取消归档会话
+     * @param body 请求体，不允许为 null
+     * @return 结果映射，无数据时为空映射
+     */
     @PutMapping("/batch-archive")
     public Map<String, Object> batchArchive(@RequestBody Map<String, Object> body) {
         @SuppressWarnings("unchecked")

@@ -7,19 +7,19 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
 /**
-* 设备预置位实体
-* <p>对应数据库表 device_preset。</p>
-*
-* @since 4.0.0.42
-* @author CH
+ * 设备预置位实体
+ * <p>对应数据库表 device_preset。</p>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Data
 @TableName("device_preset")
 public class DevicePreset {
 
     /**
-    * 主键 标识
-    */
+     * 主键 标识
+     */
     @TableId(value = "device_preset_id", type = IdType.ASSIGN_UUID)
     /** devicepresetid */
     private String devicePresetId;

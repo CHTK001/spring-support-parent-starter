@@ -3,10 +3,10 @@ package com.chua.common.starter.support.objects.struct;
 import java.util.function.Function;
 
 /**
-* 树形结构配置
-*
-* @author CH
-* @since 4.0.0
+ * 树形结构配置
+ *
+ * @author CH
+ * @since 4.0.0
  */
 public class TreeStructConfig<T> {
 
@@ -23,12 +23,12 @@ public class TreeStructConfig<T> {
     private Function<T, Number> valueExtractor;
 
     /**
-    * 创建 树struct配置 实例
-    * @param idExtractor idextractor
-    * @param parentIdExtractor 父idextractor
-    * @param nameExtractor 名称extractor
-    * @param valueExtractor 值extractor
-    */
+     * 创建 树struct配置 实例
+     * @param idExtractor idextractor
+     * @param parentIdExtractor 父idextractor
+     * @param nameExtractor 名称extractor
+     * @param valueExtractor 值extractor
+     */
     public TreeStructConfig(Function<T, ?> idExtractor,
                             Function<T, ?> parentIdExtractor,
                             Function<T, String> nameExtractor,
@@ -40,71 +40,71 @@ public class TreeStructConfig<T> {
     }
 
     /**
-    * 获取idextractor。
-    * @return 获取idextractor的结果
-    */
+     * 获取idextractor。
+     * @return 获取idextractor的结果
+     */
     public Function<T, ?> getIdExtractor() {
         return idExtractor;
     }
 
     /**
-    * 设置idextractor
-    *
-    * @param idExtractor idextractor
-    */
+     * 设置idextractor
+     *
+     * @param idExtractor idextractor
+     */
     public void setIdExtractor(Function<T, ?> idExtractor) {
         this.idExtractor = idExtractor;
     }
 
     /**
-    * 获取父idextractor。
-    * @return 获取父idextractor的结果
-    */
+     * 获取父idextractor。
+     * @return 获取父idextractor的结果
+     */
     public Function<T, ?> getParentIdExtractor() {
         return parentIdExtractor;
     }
 
     /**
-    * 设置父idextractor
-    *
-    * @param parentIdExtractor 父idextractor
-    */
+     * 设置父idextractor
+     *
+     * @param parentIdExtractor 父idextractor
+     */
     public void setParentIdExtractor(Function<T, ?> parentIdExtractor) {
         this.parentIdExtractor = parentIdExtractor;
     }
 
     /**
-    * 获取名称extractor
-    *
-    * @return 获取名称extractor的结果
-    */
+     * 获取名称extractor
+     *
+     * @return 获取名称extractor的结果
+     */
     public Function<T, String> getNameExtractor() {
         return nameExtractor;
     }
 
     /**
-    * 设置名称extractor
-    *
-    * @param nameExtractor 名称extractor
-    */
+     * 设置名称extractor
+     *
+     * @param nameExtractor 名称extractor
+     */
     public void setNameExtractor(Function<T, String> nameExtractor) {
         this.nameExtractor = nameExtractor;
     }
 
     /**
-    * 获取值extractor
-    *
-    * @return 获取值extractor的结果
-    */
+     * 获取值extractor
+     *
+     * @return 获取值extractor的结果
+     */
     public Function<T, Number> getValueExtractor() {
         return valueExtractor;
     }
 
     /**
-    * 设置值extractor
-    *
-    * @param valueExtractor 值extractor
-    */
+     * 设置值extractor
+     *
+     * @param valueExtractor 值extractor
+     */
     public void setValueExtractor(Function<T, Number> valueExtractor) {
         this.valueExtractor = valueExtractor;
     }

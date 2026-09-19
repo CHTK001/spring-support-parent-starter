@@ -11,10 +11,10 @@ import java.time.format.DateTimeFormatter;
 import java.util.Date;
 
 /**
-* MyBatis-Plus 版 {@link JobLogSink}, 写入 {@code sys_job_log} 表。
-*
-* @since 4.0.0.42
-* @author CH
+ * MyBatis-Plus 版 {@link JobLogSink}, 写入 {@code sys_job_log} 表。
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 public class MybatisJobLogSink implements JobLogSink {
@@ -34,19 +34,19 @@ public class MybatisJobLogSink implements JobLogSink {
     */
     public MybatisJobLogSink(JobLogMapper jobLogMapper) {
         /**
-        * this。
-        * @param jobLogMapper 作业日志映射器
-        * @param true true
-        */
+         * this。
+         * @param jobLogMapper 作业日志映射器
+         * @param true true
+         */
         this(jobLogMapper, true);
     }
 
     /**
-    * 创建 MyBatis作业日志sink 实例
-    * @param jobLogMapper 作业日志映射器
-    * @param fileLoggingEnabled 布尔值
-    * @param fileLoggingEnabled 文件日志已启用
-    */
+     * 创建 MyBatis作业日志sink 实例
+     * @param jobLogMapper 作业日志映射器
+     * @param fileLoggingEnabled 布尔值
+     * @param fileLoggingEnabled 文件日志已启用
+     */
     public MybatisJobLogSink(JobLogMapper jobLogMapper, boolean fileLoggingEnabled) {
         this.jobLogMapper = jobLogMapper;
         this.fileLoggingEnabled = fileLoggingEnabled;
@@ -94,11 +94,11 @@ public class MybatisJobLogSink implements JobLogSink {
     }
 
     /**
-    * 解析记录日志文件路径
-    *
-    * @param event 事件
-    * @return resolve日志文件路径的结果
-    */
+     * 解析记录日志文件路径
+     *
+     * @param event 事件
+     * @return resolve日志文件路径的结果
+     */
     private String resolveLogFilePath(JobLogEvent event) {
         String dateDir = DATE_FMT.format(Instant.now());
         String jobName = sanitize(event.jobName() != null ? event.jobName() : "unknown");
@@ -106,11 +106,11 @@ public class MybatisJobLogSink implements JobLogSink {
     }
 
     /**
-    * Sanitize
-    *
-    * @param name 名称
-    * @return sanitize的结果
-    */
+     * Sanitize
+     *
+     * @param name 名称
+     * @return sanitize的结果
+     */
     private static String sanitize(String name) {
         return name.replaceAll("[/\\\\:*?\"<>|]", "_");
     }

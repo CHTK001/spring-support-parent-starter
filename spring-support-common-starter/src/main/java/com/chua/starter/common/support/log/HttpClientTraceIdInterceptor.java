@@ -6,9 +6,9 @@ import org.apache.hc.core5.http.protocol.HttpContext;
 import org.slf4j.MDC;
 
 /**
-* http客户端 追踪标识拦截器（兼容 http客户端 5.x）。
-* @author CH
-* @since 4.0.0
+ * http客户端 追踪标识拦截器（兼容 http客户端 5.x）。
+ * @author CH
+ * @since 4.0.0
  */
 public class HttpClientTraceIdInterceptor implements HttpRequestInterceptor {
 

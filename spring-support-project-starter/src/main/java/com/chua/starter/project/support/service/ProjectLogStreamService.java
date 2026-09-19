@@ -34,40 +34,40 @@ import java.util.Map;
 public interface ProjectLogStreamService {
 
     /**
-    * 一次性读取日志增量（REST 降级通道，同时保留原有 {@code GET /{id}/log} 契约）
-    *
-    * @param projectId 项目标识
-    * @param hostId    主机标识
-    * @param cursor    上次读取的字节偏移，为空表示取末尾若干行
-    * @param lines     首帧拉取行数，为空取配置默认值
-    * @return 日志内容 + 下次偏移 + 是否无新内容
-    */
+     * 一次性读取日志增量（REST 降级通道，同时保留原有 {@code GET /{id}/log} 契约）
+     *
+     * @param projectId 项目标识
+     * @param hostId    主机标识
+     * @param cursor    上次读取的字节偏移，为空表示取末尾若干行
+     * @param lines     首帧拉取行数，为空取配置默认值
+     * @return 日志内容 + 下次偏移 + 是否无新内容
+     */
     ReturnResult<Map<String, Object>> readOnce(Long projectId, Long hostId, Long cursor, Integer lines);
 
     /**
-    * 订阅实时日志推送（幂等：同一 subscriberId 重复调用即为续订心跳）
-    *
-    * @param projectId    项目标识
-    * @param hostId       主机标识
-    * @param subscriberId 观察者标识（前端生成，同一日志窗口复用同一个）
-    * @return 流信息（采集间隔、续订超时），失败时返回错误
-    */
+     * 订阅实时日志推送（幂等：同一 subscriberId 重复调用即为续订心跳）
+     *
+     * @param projectId    项目标识
+     * @param hostId       主机标识
+     * @param subscriberId 观察者标识（前端生成，同一日志窗口复用同一个）
+     * @return 流信息（采集间隔、续订超时），失败时返回错误
+     */
     ReturnResult<Map<String, Object>> subscribe(Long projectId, Long hostId, String subscriberId);
 
     /**
-    * 取消订阅（幂等）
-    *
-    * @param projectId    项目标识
-    * @param hostId       主机标识
-    * @param subscriberId 观察者标识
-    * @return 操作结果
-    */
+     * 取消订阅（幂等）
+     *
+     * @param projectId    项目标识
+     * @param hostId       主机标识
+     * @param subscriberId 观察者标识
+     * @return 操作结果
+     */
     ReturnResult<Map<String, Object>> unsubscribe(Long projectId, Long hostId, String subscriberId);
 
     /**
-    * 当前活跃流（运维排查：谁在拉、拉了多少次、是否在退避）
-    *
-    * @return 流快照列表
-    */
+     * 当前活跃流（运维排查：谁在拉、拉了多少次、是否在退避）
+     *
+     * @return 流快照列表
+     */
     List<Map<String, Object>> activeStreams();
 }

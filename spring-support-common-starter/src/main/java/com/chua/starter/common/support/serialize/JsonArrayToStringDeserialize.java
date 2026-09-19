@@ -15,10 +15,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
-* JSON 数组转字符串反序列化器
-*
-* @author CH
-* @since 4.0.0
+ * JSON 数组转字符串反序列化器
+ *
+ * @author CH
+ * @since 4.0.0
  */
 public class JsonArrayToStringDeserialize extends JsonDeserializer<String> {
     /** 日志 */
@@ -50,11 +50,11 @@ public class JsonArrayToStringDeserialize extends JsonDeserializer<String> {
     }
 
     /**
-    * analysis值
-    *
-    * @param treeNode1 树节点1
-    * @return analysis值的结果
-    */
+     * analysis值
+     *
+     * @param treeNode1 树节点1
+     * @return analysis值的结果
+     */
     public static Object analysisValue(TreeNode treeNode1) {
         if (treeNode1 instanceof IntNode) {
             return ((IntNode) treeNode1).asInt();
@@ -74,10 +74,10 @@ public class JsonArrayToStringDeserialize extends JsonDeserializer<String> {
 
         if (treeNode1 instanceof DecimalNode) {
             /**
-            * bigdecimal。
-            * @param ((DecimalNode ((decimal节点
-            * @return BigDecimal的结果
-            */
+             * bigdecimal。
+             * @param ((DecimalNode ((decimal节点
+             * @return BigDecimal的结果
+             */
             return new BigDecimal(((DecimalNode) treeNode1).asText());
         }
 

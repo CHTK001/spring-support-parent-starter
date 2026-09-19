@@ -11,11 +11,11 @@ import java.util.List;
 import java.util.UUID;
 
 /**
-* SSE 事件发送模板
-* 基于 Spring 内置的 sseemitter 实现
-*
-* @author CH
-* @since 4.0.0
+ * SSE 事件发送模板
+ * 基于 Spring 内置的 sseemitter 实现
+ *
+ * @author CH
+ * @since 4.0.0
  */
 @Slf4j
 public class SseTemplate {
@@ -27,36 +27,36 @@ public class SseTemplate {
     private final DefaultSseEventBusConfigurer sseEventBusConfigurer;
 
     /**
-    * 创建 ssetemplate 实例
-    * @param sseEventBusConfigurer sse事件busconfigurer
-    */
+     * 创建 ssetemplate 实例
+     * @param sseEventBusConfigurer sse事件busconfigurer
+     */
     public SseTemplate(DefaultSseEventBusConfigurer sseEventBusConfigurer) {
         this.sseEventBusConfigurer = sseEventBusConfigurer;
     }
 
     /**
-    * 发送消息到指定客户端
-    *
-    * @param sseMessage 消息内容
-    * @param clientIds  目标客户端标识列表
-    */
+     * 发送消息到指定客户端
+     *
+     * @param sseMessage 消息内容
+     * @param clientIds  目标客户端标识列表
+     */
     public void emit(SseMessage sseMessage, String... clientIds) {
         /**
-        * emit。
-        * @param sseMessage sse消息
-        * @param null 空
-        * @param clientIds 客户端标识
-        */
+         * emit。
+         * @param sseMessage sse消息
+         * @param null 空
+         * @param clientIds 客户端标识
+         */
         emit(sseMessage, null, clientIds);
     }
 
     /**
-    * 发送消息到指定客户端（带重试时间）
-    *
-    * @param sseMessage 消息内容
-    * @param retry      重试间隔
-    * @param clientIds  目标客户端标识列表
-    */
+     * 发送消息到指定客户端（带重试时间）
+     *
+     * @param sseMessage 消息内容
+     * @param retry      重试间隔
+     * @param clientIds  目标客户端标识列表
+     */
     public void emit(SseMessage sseMessage, Duration retry, String... clientIds) {
         try {
             var messageId = UUID.randomUUID().toString();
@@ -67,52 +67,52 @@ public class SseTemplate {
                 var emitter = sseEventBusConfigurer.getEmitterByClientId(clientId);
                 if (emitter != null && emitter.getSseEmitter() != null) {
                     /**
-                    * 发送事件。
-                    * @param emitter.getSseEmitter( emitter.获取sseemitter(
-                    */
+                     * 发送事件。
+                     * @param emitter.getSseEmitter( emitter.获取sseemitter(
+                     */
                     sendEvent(emitter.getSseEmitter(), messageId, event, data, retry);
                 }
             }
         } catch (Exception e) {
             log.error("[SSE][消息发送] 发送SSE消息失败", e);
             /**
-            * runtime异常。
-            * @param "发送SSE消息失败" "发送SSE消息失败"
-            * @param e e
-            * @return runtime异常的结果
-            */
+             * runtime异常。
+             * @param "发送SSE消息失败" "发送SSE消息失败"
+             * @param e e
+             * @return runtime异常的结果
+             */
             throw new RuntimeException("发送SSE消息失败", e);
         }
     }
 
     /**
-    * 发送消息到指定客户端
-    *
-    * @param id        消息标识
-    * @param data      消息数据
-    * @param event     事件名称
-    * @param retry     重试间隔
-    * @param clientIds 目标客户端标识列表
-    */
+     * 发送消息到指定客户端
+     *
+     * @param id        消息标识
+     * @param data      消息数据
+     * @param event     事件名称
+     * @param retry     重试间隔
+     * @param clientIds 目标客户端标识列表
+     */
     public void emit(String id, String data, String event, Duration retry, String... clientIds) {
         for (String clientId : clientIds) {
             var emitter = sseEventBusConfigurer.getEmitterByClientId(clientId);
             if (emitter != null && emitter.getSseEmitter() != null) {
                 /**
-                * 发送事件。
-                * @param emitter.getSseEmitter( emitter.获取sseemitter(
-                */
+                 * 发送事件。
+                 * @param emitter.getSseEmitter( emitter.获取sseemitter(
+                 */
                 sendEvent(emitter.getSseEmitter(), id, event, data, retry);
             }
         }
     }
 
     /**
-    * 创建 SSE 连接
-    *
-    * @param emitter 发射器配置
-    * @return SseEmitter 实例
-    */
+     * 创建 SSE 连接
+     *
+     * @param emitter 发射器配置
+     * @return SseEmitter 实例
+     */
     public SseEmitter createSseEmitter(Emitter emitter) {
         var sseEmitter = new SseEmitter(0L);
         emitter.setSseEmitter(sseEmitter);
@@ -126,33 +126,33 @@ public class SseTemplate {
     }
 
     /**
-    * 获取指定事件的所有 Emitter
-    *
-    * @param event 事件名称
-    * @return Emitter 列表
-    */
+     * 获取指定事件的所有 Emitter
+     *
+     * @param event 事件名称
+     * @return Emitter 列表
+     */
     public List<Emitter> getEmitter(String event) {
         return sseEventBusConfigurer.getEmitter(event);
     }
 
     /**
-    * 关闭指定客户端的连接
-    *
-    * @param clientIds 客户端标识列表
-    */
+     * 关闭指定客户端的连接
+     *
+     * @param clientIds 客户端标识列表
+     */
     public void closeEmitter(List<String> clientIds) {
         sseEventBusConfigurer.closeEmitter(clientIds);
     }
 
     /**
-    * 发送 SSE 事件
-    *
-    * @param sseEmitter SSE发射器
-    * @param id         消息标识
-    * @param event      事件名称
-    * @param data       消息数据
-    * @param retry      重试间隔
-    */
+     * 发送 SSE 事件
+     *
+     * @param sseEmitter SSE发射器
+     * @param id         消息标识
+     * @param event      事件名称
+     * @param data       消息数据
+     * @param retry      重试间隔
+     */
     private void sendEvent(SseEmitter sseEmitter, String id, String event, String data, Duration retry) {
         try {
             var builder = SseEmitter.event()

@@ -11,13 +11,13 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 import java.util.List;
 
 /**
-* 委托 webSocket 处理器
-* <p>
-* 管理会话并将事件委托给用户实现的 {@link WebSocketMessageHandler}
-* </p>
-*
-* @since 2025-12-25
-* @author CH
+ * 委托 webSocket 处理器
+ * <p>
+ * 管理会话并将事件委托给用户实现的 {@link WebSocketMessageHandler}
+ * </p>
+ *
+ * @since 2025-12-25
+ * @author CH
  */
 @Slf4j
 public class DelegatingWebSocketHandler extends TextWebSocketHandler {
@@ -28,11 +28,11 @@ public class DelegatingWebSocketHandler extends TextWebSocketHandler {
     private final List<WebSocketMessageHandler> handlers;
 
     /**
-    * 构造器
-    *
-    * @param sessionManager 会话管理器
-    * @param handlers       消息处理器列表
-    */
+     * 构造器
+     *
+     * @param sessionManager 会话管理器
+     * @param handlers       消息处理器列表
+     */
     public DelegatingWebSocketHandler(WebSocketSessionManager sessionManager, List<WebSocketMessageHandler> handlers) {
         this.sessionManager = sessionManager;
         this.handlers = handlers;

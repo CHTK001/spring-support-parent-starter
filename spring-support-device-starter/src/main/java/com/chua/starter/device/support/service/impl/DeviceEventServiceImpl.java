@@ -19,10 +19,10 @@ import java.util.List;
 import java.util.UUID;
 
 /**
-* 设备事件服务实现
-*
-* @since 4.0.0.42
-* @author CH
+ * 设备事件服务实现
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @Service
@@ -30,13 +30,13 @@ import java.util.UUID;
 public class DeviceEventServiceImpl implements DeviceEventService {
 
     /**
-    * 事件记录 映射器
-    */
+     * 事件记录 映射器
+     */
     private final DeviceEventRecordMapper eventRecordMapper;
 
     /**
-    * 设备会话管理器
-    */
+     * 设备会话管理器
+     */
     private final DeviceSessionManager sessionManager;
 
     @Override

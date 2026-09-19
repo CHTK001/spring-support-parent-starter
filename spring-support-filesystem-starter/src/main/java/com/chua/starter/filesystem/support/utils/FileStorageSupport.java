@@ -5,10 +5,10 @@ import com.chua.common.support.storage.setting.BucketSetting;
 import com.chua.common.support.storage.FileStorage;
 
 /**
-* 文件存储工具类。
-*
-* @since 1.0
-* @author CH
+ * 文件存储工具类。
+ *
+ * @since 1.0
+ * @author CH
  */
 public final class FileStorageSupport {
 
@@ -29,12 +29,12 @@ public final class FileStorageSupport {
     }
 
     /**
-    * 创建本地存储桶配置。
-    *
-    * @param bucket 存储桶名称
-    * @param path 存储路径
-    * @return 存储桶配置
-    */
+     * 创建本地存储桶配置。
+     *
+     * @param bucket 存储桶名称
+     * @param path 存储路径
+     * @return 存储桶配置
+     */
     public static BucketSetting createLocalBucketSetting(String bucket) {
         return BucketSetting.builder()
                 .bucket(bucket)

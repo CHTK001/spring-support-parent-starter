@@ -15,10 +15,10 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
-* 用量统计控制器，按模型维度查询用量数据。
-*
-* @since 2026-08-03
-* @author CH
+ * 用量统计控制器，按模型维度查询用量数据。
+ *
+ * @since 2026-08-03
+ * @author CH
  */
 @RestController
 @RequestMapping("/v2/usage")
@@ -27,19 +27,19 @@ import java.util.List;
 public class AiUsageController {
 
     /**
-    * 用量服务
-    */
+     * 用量服务
+     */
     private final AiUsageService usageService;
 
     /**
-    * 查询用量，可按模型过滤。
-    *
-    * @param model 模型名称（可选）
-    * @return 用量 DTO 列表
-    * @param "模型名称" "模型名称"
-    * @param "模型名称" "模型名称"
-    * @param "模型名称" "模型名称"
-    */
+     * 查询用量，可按模型过滤。
+     *
+     * @param model 模型名称（可选）
+     * @return 用量 DTO 列表
+     * @param "模型名称" "模型名称"
+     * @param "模型名称" "模型名称"
+     * @param "模型名称" "模型名称"
+     */
     @Permission("admin")
     @Operation(summary = "查询用量统计")
     @GetMapping

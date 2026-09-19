@@ -32,30 +32,30 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
-* 本地文件系统存储 SPI 实现（仅用于集成测试）。
-*
-* <p>将对象写入本地磁盘目录，提供最小化的 {@link com.chua.common.support.storage.FileStorage} 接口，
-* 用于在没有真实云存储的情况下验证分片上传链路。</p>
-*
-* @since 4.0.0.42
-* @author CH
+ * 本地文件系统存储 SPI 实现（仅用于集成测试）。
+ *
+ * <p>将对象写入本地磁盘目录，提供最小化的 {@link com.chua.common.support.storage.FileStorage} 接口，
+ * 用于在没有真实云存储的情况下验证分片上传链路。</p>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 public class LocalFileStorage extends AbstractFileStorage {
 
     /**
-    * 本地存储根目录
-    */
+     * 本地存储根目录
+     */
     private final Path rootPath;
 
     /**
-    * uploadid → 分片路径 映射
-    */
+     * uploadid → 分片路径 映射
+     */
     private final Map<String, Map<Integer, Path>> multipartMap = new ConcurrentHashMap<>();
 
     /**
-    * 创建 本地文件storage 实例
-    * @param setting setting
-    */
+     * 创建 本地文件storage 实例
+     * @param setting setting
+     */
     public LocalFileStorage(BucketSetting setting) {
         super(setting);
         String baseDir = Optional.ofNullable(System.getProperty("filesystem.temp.path"))
@@ -221,12 +221,12 @@ public class LocalFileStorage extends AbstractFileStorage {
     }
 
     /**
-    * 解析Key
-    *
-    * @param filePath 文件路径
-    * @param fileName 文件名称
-    * @return resolveKey的结果
-    */
+     * 解析Key
+     *
+     * @param filePath 文件路径
+     * @param fileName 文件名称
+     * @return resolveKey的结果
+     */
     private String resolveKey(String filePath, String fileName) {
         if (filePath == null || filePath.isEmpty()) {
             return fileName;
@@ -235,10 +235,10 @@ public class LocalFileStorage extends AbstractFileStorage {
     }
 
     /**
-    * 本地分片上传会话。
-    * @author CH
-    * @since 4.0.0
-    */
+     * 本地分片上传会话。
+     * @author CH
+     * @since 4.0.0
+     */
     private class LocalMultipartStorage implements MultipartStorage {
 
         @Override

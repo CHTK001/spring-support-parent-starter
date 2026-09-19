@@ -24,13 +24,13 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
-* AI 人脸识别配置管理控制器。
-*
-* <p>提供 {@code face} 分组全局配置的读取与更新，以及可用模型清单。
-* 配置更新后 {@link FaceClientManager} 监听事件热重建，实时生效。</p>
-*
-* @since 4.0.0.42
-* @author CH
+ * AI 人脸识别配置管理控制器。
+ *
+ * <p>提供 {@code face} 分组全局配置的读取与更新，以及可用模型清单。
+ * 配置更新后 {@link FaceClientManager} 监听事件热重建，实时生效。</p>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @RestController
@@ -40,25 +40,25 @@ import java.util.stream.Collectors;
 public class FaceConfigController {
 
     /**
-    * 人脸配置分组
-    */
+     * 人脸配置分组
+     */
     private static final String GROUP = "face";
 
     /**
-    * 全局设置服务
-    */
+     * 全局设置服务
+     */
     private final SysAiGlobalSettingService settingService;
 
     /**
-    * 人脸识别服务
-    */
+     * 人脸识别服务
+     */
     private final AiFaceService faceService;
 
     /**
-    * 获取人脸识别配置项定义与当前值。
-    *
-    * @return 配置列表（field/value/valueType/description/sort）
-    */
+     * 获取人脸识别配置项定义与当前值。
+     *
+     * @return 配置列表（field/value/valueType/description/sort）
+     */
     @Permission("admin")
     @Operation(summary = "获取人脸识别配置", description = "返回 face 分组全部配置项及当前值")
     @GetMapping
@@ -105,11 +105,11 @@ public class FaceConfigController {
     }
 
     /**
-    * 更新人脸识别配置（整组替换，触发实例热重建）。
-    *
-    * @param body 配置请求（群体 + 字段）
-    * @return 更新结果
-    */
+     * 更新人脸识别配置（整组替换，触发实例热重建）。
+     *
+     * @param body 配置请求（群体 + 字段）
+     * @return 更新结果
+     */
     @Permission("admin")
     @Operation(summary = "更新人脸识别配置", description = "整组替换 face 配置并触发热重建")
     @PutMapping
@@ -123,10 +123,10 @@ public class FaceConfigController {
     }
 
     /**
-    * 可用人脸模型清单（复用 aiface服务.列表模型）。
-    *
-    * @return 模型清单
-    */
+     * 可用人脸模型清单（复用 aiface服务.列表模型）。
+     *
+     * @return 模型清单
+     */
     @Permission("admin")
     @Operation(summary = "人脸模型清单", description = "枚举可用的人脸检测/特征/活体/超分等模型")
     @GetMapping("/models")
@@ -135,11 +135,11 @@ public class FaceConfigController {
     }
 
     /**
-    * 安全转换整数。
-    *
-    * @param obj 值
-    * @return int，非法返回 0
-    */
+     * 安全转换整数。
+     *
+     * @param obj 值
+     * @return int，非法返回 0
+     */
     private static int toInt(Object obj) {
         if (obj instanceof Number n) {
             return n.intValue();

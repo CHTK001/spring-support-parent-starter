@@ -7,10 +7,10 @@ import lombok.Singular;
 import java.util.List;
 
 /**
-* 物理化 SQL 请求。
-*
-* @since 2026/4/2
-* @author CH
+ * 物理化 SQL 请求。
+ *
+ * @since 2026/4/2
+ * @author CH
  */
 @Data
 @Builder(toBuilder = true)

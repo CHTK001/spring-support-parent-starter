@@ -9,19 +9,19 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 /**
-* 设备事件记录实体
-* <p>对应数据库表 device_event_record。</p>
-*
-* @since 4.0.0.42
-* @author CH
+ * 设备事件记录实体
+ * <p>对应数据库表 device_event_record。</p>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Data
 @TableName("device_event_record")
 public class DeviceEventRecord {
 
     /**
-    * 主键 标识
-    */
+     * 主键 标识
+     */
     @TableId(value = "device_event_record_id", type = IdType.ASSIGN_UUID)
     /** Device事件recordid */
     private String deviceEventRecordId;

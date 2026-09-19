@@ -15,10 +15,10 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
-* 支持
-*
-* @author CH
-* @since 4.0.0
+ * 支持
+ *
+ * @author CH
+ * @since 4.0.0
  */
 public class SupportInjector extends DefaultSqlInjector implements DisposableBean {
 
@@ -102,10 +102,10 @@ public class SupportInjector extends DefaultSqlInjector implements DisposableBea
     }
 
     /**
-    * refresh全部
-    *
-    * @return refresh全部的结果
-    */
+     * refresh全部
+     *
+     * @return refresh全部的结果
+     */
     public String refreshAll() {
         for (SqlMethodMarker marker : cache.values()) {
             if (marker instanceof MysqlSqlMethodMarker mysqlMarker) {

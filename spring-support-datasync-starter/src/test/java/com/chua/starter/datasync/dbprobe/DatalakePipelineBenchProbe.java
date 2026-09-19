@@ -21,16 +21,16 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
-* 数据湖 pipelineengine 吞吐基准：测量 pipelineengine.执行 在不同数据量下的吞吐。
-*
-* <p>测试矩阵：
-* <ul>
-*   <li>10K / 100K / 1M 条</li>
-*   <li>单 Sink (log) / 多 Sink (log+statistic+realtime)</li>
-* </ul>
-*
-* @author CH
-* @since 4.0.0.42
+ * 数据湖 pipelineengine 吞吐基准：测量 pipelineengine.执行 在不同数据量下的吞吐。
+ *
+ * <p>测试矩阵：
+ * <ul>
+ *   <li>10K / 100K / 1M 条</li>
+ *   <li>单 Sink (log) / 多 Sink (log+statistic+realtime)</li>
+ * </ul>
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 public final class DatalakePipelineBenchProbe {
 
@@ -80,11 +80,11 @@ public final class DatalakePipelineBenchProbe {
         for (int i = 0; i < pipelines.length; i++) {
             for (int count : counts) {
                 /**
-                * 运行bench。
-                * @param engine engine
-                * @param pipelines[i] pipelines[i]
-                * @param pipelineLabels[i] pipeline标签[i]
-                * @param count 数量
+                 * 运行bench。
+                 * @param engine engine
+                 * @param pipelines[i] pipelines[i]
+                 * @param pipelineLabels[i] pipeline标签[i]
+                 * @param count 数量
                  */
                 runBench(engine, pipelines[i], pipelineLabels[i], count);
             }
@@ -98,13 +98,13 @@ public final class DatalakePipelineBenchProbe {
     }
 
     /**
-    * 运行单次基准测试。
-    *
-    * @param engine  管线引擎
-    * @param pipeId  管线 标识
-    * @param label   管线标签
-    * @param count   数据条数
-    * @throws Exception 异常
+     * 运行单次基准测试。
+     *
+     * @param engine  管线引擎
+     * @param pipeId  管线 标识
+     * @param label   管线标签
+     * @param count   数据条数
+     * @throws Exception 异常
      */
     private static void runBench(PipelineEngine engine, String pipeId, String label, int count) throws Exception {
         // 预热 100 条

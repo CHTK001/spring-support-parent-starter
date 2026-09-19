@@ -12,12 +12,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
-* macOS 平台本地软件采集器
-*
-* <p>从 /Applications 目录读取 .app 包信息，使用 mdls 提取名称和版本。</p>
-*
-* @since 2026/7/25
-* @author CH
+ * macOS 平台本地软件采集器
+ *
+ * <p>从 /Applications 目录读取 .app 包信息，使用 mdls 提取名称和版本。</p>
+ *
+ * @since 2026/7/25
+ * @author CH
  */
 @Slf4j
 @Component
@@ -52,11 +52,11 @@ public class MacLocalSoftwareCollector implements LocalSoftwareCollector {
     }
 
     /**
-    * 读取app信息
-    *
-    * @param app app
-    * @return 读取app信息的结果
-    */
+     * 读取app信息
+     *
+     * @param app app
+     * @return 读取app信息的结果
+     */
     private SoftSoftware readAppInfo(File app) {
         try {
             SoftSoftware software = new SoftSoftware();
@@ -81,12 +81,12 @@ public class MacLocalSoftwareCollector implements LocalSoftwareCollector {
     }
 
     /**
-    * 获取Mdls
-    *
-    * @param app app
-    * @param attribute attribute
-    * @return 获取mdls的结果
-    */
+     * 获取Mdls
+     *
+     * @param app app
+     * @param attribute attribute
+     * @return 获取mdls的结果
+     */
     private String getMdls(File app, String attribute) {
         try {
             Process process = Runtime.getRuntime().exec(

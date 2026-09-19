@@ -1,10 +1,10 @@
 package com.chua.starter.common.support.codec;
 
 /**
-* Codec 兼容包装
-*
-* @author CH
-* @since 4.0.0
+ * Codec 兼容包装
+ *
+ * @author CH
+ * @since 4.0.0
  */
 public final class Codec {
 

@@ -29,10 +29,10 @@ import java.util.stream.Collectors;
 import static com.chua.starter.software.support.enums.SourceType.LOCAL;
 
 /**
-* 本地软件服务实现
-*
-* @since 2026/7/25
-* @author CH
+ * 本地软件服务实现
+ *
+ * @since 2026/7/25
+ * @author CH
  */
 @Slf4j
 @Service

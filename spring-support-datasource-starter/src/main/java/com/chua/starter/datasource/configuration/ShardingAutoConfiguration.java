@@ -20,19 +20,19 @@ import java.util.List;
 import java.util.Map;
 
 /**
-* 分库分表sphere 分库分表自动配置。
-* <p>
-* 当 {@code spring.datasource.sharding.enabled=true} 时，
-* 自动基于配置创建 分库分表sphere 分片数据源。
-* </p>
-*
-* <p>
-* 用户可自行注册 {@link ShardingV5Conversion} 或
-* {@link DataSourceConversion} 类型的 Bean 来覆盖默认行为。
-* </p>
-*
-* @since 2026/07/14
-* @author CH
+ * 分库分表sphere 分库分表自动配置。
+ * <p>
+ * 当 {@code spring.datasource.sharding.enabled=true} 时，
+ * 自动基于配置创建 分库分表sphere 分片数据源。
+ * </p>
+ *
+ * <p>
+ * 用户可自行注册 {@link ShardingV5Conversion} 或
+ * {@link DataSourceConversion} 类型的 Bean 来覆盖默认行为。
+ * </p>
+ *
+ * @since 2026/07/14
+ * @author CH
  */
 @Slf4j
 @Configuration(proxyBeanMethods = false)
@@ -42,22 +42,22 @@ import java.util.Map;
 public class ShardingAutoConfiguration {
 
     /**
-    * 注册 分库分表v5 数据源转换器 Bean
-    * @return 分库分表v5转换的结果
-    */
+     * 注册 分库分表v5 数据源转换器 Bean
+     * @return 分库分表v5转换的结果
+     */
     @Bean
     @ConditionalOnMissingBean(name = "shardingV5Conversion")
     public DataSourceConversion shardingV5Conversion() {
         /**
-        * 分库分表v5转换。
-        * @return 分库分表v5转换的结果
-        */
+         * 分库分表v5转换。
+         * @return 分库分表v5转换的结果
+         */
         return new ShardingV5Conversion();
     }
 
     /**
-    * 创建 分库分表sphere 分片数据源 Bean
-    */
+     * 创建 分库分表sphere 分片数据源 Bean
+     */
     @Bean
     @ConditionalOnMissingBean(name = "shardingDataSource")
     public DataSource shardingDataSource(
@@ -85,18 +85,18 @@ public class ShardingAutoConfiguration {
     }
 
     /**
-    * 根据配置构建 分库分表v5转换
-    * @param conversion 转换
-    * @param properties 属性
-    * @return configure分库分表的结果
-    */
+     * 根据配置构建 分库分表v5转换
+     * @param conversion 转换
+     * @param properties 属性
+     * @return configure分库分表的结果
+     */
     private ShardingV5Conversion configureSharding(DataSourceConversion conversion, ShardingDataSourceProperties properties) {
         if (!(conversion instanceof ShardingV5Conversion)) {
             log.warn("[Sharding] 转换器不是 ShardingV5Conversion 类型，使用默认配置");
             /**
-            * 分库分表v5转换。
-            * @return 分库分表v5转换的结果
-            */
+             * 分库分表v5转换。
+             * @return 分库分表v5转换的结果
+             */
             return new ShardingV5Conversion();
         }
 
@@ -154,10 +154,10 @@ public class ShardingAutoConfiguration {
     }
 
     /**
-    * 根据时间单位返回分片模式
-    * @param timeUnit 时间unit
-    * @return 获取时间分区模式的结果
-    */
+     * 根据时间单位返回分片模式
+     * @param timeUnit 时间unit
+     * @return 获取时间分区模式的结果
+     */
     private String getTimePartitionPattern(String timeUnit) {
         switch (timeUnit.toUpperCase()) {
             case "YEAR":
@@ -178,9 +178,9 @@ public class ShardingAutoConfiguration {
     }
 
     /**
-    * 收集所有已注册的数据源（过滤动态路由数据源和分片数据源）
-    * @return collect数据源的结果
-    */
+     * 收集所有已注册的数据源（过滤动态路由数据源和分片数据源）
+     * @return collect数据源的结果
+     */
     private List<DataSource> collectDataSources() {
         Map<String, DataSource> allDataSources = DataSourceContextSupport.getAllDataSources();
         List<DataSource> result = new ArrayList<>();

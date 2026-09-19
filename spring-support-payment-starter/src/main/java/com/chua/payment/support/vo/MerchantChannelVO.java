@@ -6,9 +6,9 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
-* 商户支付方式视图对象
-* @author CH
-* @since 4.0.0
+ * 商户支付方式视图对象
+ * @author CH
+ * @since 4.0.0
  */
 @Data
 public class MerchantChannelVO implements Serializable {

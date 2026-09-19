@@ -5,9 +5,9 @@ import lombok.Data;
 import java.math.BigDecimal;
 
 /**
-* 商户钱包限额 DTO
-* @author CH
-* @since 4.0.0
+ * 商户钱包限额 DTO
+ * @author CH
+ * @since 4.0.0
  */
 @Data
 public class MerchantWalletLimitDTO {

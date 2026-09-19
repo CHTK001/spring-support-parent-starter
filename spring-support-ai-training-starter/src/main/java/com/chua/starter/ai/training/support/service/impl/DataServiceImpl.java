@@ -17,10 +17,10 @@ import java.util.Enumeration;
 import java.util.UUID;
 
 /**
-* 训练数据服务实现：压缩 文件上传保存与解压。
-*
-* @author CH
-* @since 4.0.0.42
+ * 训练数据服务实现：压缩 文件上传保存与解压。
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 @Slf4j
 @Service
@@ -38,10 +38,10 @@ public class DataServiceImpl implements DataService {
         if (data == null || data.length < 4 || data[0] != 'P' || data[1] != 'K'
                 || (data[2] != 3 && data[2] != 5 && data[2] != 7)) {
             /**
-    * IllegalArgumentException。
-    * @param 格式" 格式"
-    * @return IllegalArgumentException的结果
-    */
+             * IllegalArgumentException。
+             * @param 格式" 格式"
+             * @return IllegalArgumentException的结果
+             */
             throw new IllegalArgumentException("文件内容不是有效的 ZIP 格式");
         }
         Path uploadDir = Path.of(properties.getUploadPath());
@@ -56,15 +56,15 @@ public class DataServiceImpl implements DataService {
     }
 
     /**
-    * 净化客户端原始文件名：仅保留末段路径基名，并剔除路径分隔符与
-    * 窗口/通用非法字符（{@code \ / : * ? " < > |} 及控制字符）。
-    * 净化结果为空（全非法字符/纯路径）时回退 {@link #DEFAULT_FILE_NAME}。
-    *
-    * <p>包可见便于单测直接覆盖净化规则。</p>
-    *
-    * @param name 客户端原始文件名（可为 空）
-    * @return 安全文件名（不含任何路径分隔符/非法字符）
-    */
+     * 净化客户端原始文件名：仅保留末段路径基名，并剔除路径分隔符与
+     * 窗口/通用非法字符（{@code \ / : * ? " < > |} 及控制字符）。
+     * 净化结果为空（全非法字符/纯路径）时回退 {@link #DEFAULT_FILE_NAME}。
+     *
+     * <p>包可见便于单测直接覆盖净化规则。</p>
+     *
+     * @param name 客户端原始文件名（可为 空）
+     * @return 安全文件名（不含任何路径分隔符/非法字符）
+     */
     static String sanitizeFileName(String name) {
         if (name == null) {
             return DEFAULT_FILE_NAME;
@@ -83,10 +83,10 @@ public class DataServiceImpl implements DataService {
         File zipFile = new File(zipFilePath);
         if (!zipFile.exists()) {
             /**
-            * IllegalArgumentException。
-            * @param zipFilePath 压缩文件路径
-            * @return IllegalArgumentException的结果
-            */
+             * IllegalArgumentException。
+             * @param zipFilePath 压缩文件路径
+             * @return IllegalArgumentException的结果
+             */
             throw new IllegalArgumentException("ZIP 文件不存在: " + zipFilePath);
         }
 
@@ -96,9 +96,9 @@ public class DataServiceImpl implements DataService {
         destDir.mkdirs();
 
         /**
-        * 尝试。
-        * @param ZipFile(zipFile 压缩文件(压缩文件
-        */
+         * 尝试。
+         * @param ZipFile(zipFile 压缩文件(压缩文件
+         */
         try (ZipFile zip = new ZipFile(zipFile)) {
             Enumeration<? extends ZipArchiveEntry> entries = zip.getEntries();
             while (entries.hasMoreElements()) {
@@ -109,10 +109,10 @@ public class DataServiceImpl implements DataService {
                 String canonicalDestDir = destDir.getCanonicalPath();
                 if (!canonicalDestPath.startsWith(canonicalDestDir + File.separator)) {
                     /**
-                    * 安全性异常。
-                    * @param entry.getName( entry.获取名称(
-                    * @return 安全性异常的结果
-                    */
+                     * 安全性异常。
+                     * @param entry.getName( entry.获取名称(
+                     * @return 安全性异常的结果
+                     */
                     throw new SecurityException("ZIP 路径越界: " + entry.getName());
                 }
                 if (entry.isDirectory()) {
@@ -120,9 +120,9 @@ public class DataServiceImpl implements DataService {
                 } else {
                     outFile.getParentFile().mkdirs();
                     /**
-                    * 尝试。
-                    * @param FileOutputStream(outFile 文件输出流(出文件
-                    */
+                     * 尝试。
+                     * @param FileOutputStream(outFile 文件输出流(出文件
+                     */
                     try (OutputStream os = new FileOutputStream(outFile)) {
                         zip.getInputStream(entry).transferTo(os);
                     }

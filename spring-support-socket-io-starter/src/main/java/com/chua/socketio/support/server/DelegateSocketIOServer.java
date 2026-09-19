@@ -9,10 +9,10 @@ import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
 
 /**
-* Socketio服务端
-*
-* @author CH
-* @since 4.0.0
+ * Socketio服务端
+ *
+ * @author CH
+ * @since 4.0.0
  */
 @Slf4j
 public class DelegateSocketIOServer extends SocketIOServer implements InitializingBean, DisposableBean {
@@ -26,9 +26,9 @@ public class DelegateSocketIOServer extends SocketIOServer implements Initializi
     */
     public DelegateSocketIOServer(Configuration configuration) {
         /**
-        * 父。
-        * @param configuration 配置
-        */
+         * 父。
+         * @param configuration 配置
+         */
         super(configuration);
     }
 

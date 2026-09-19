@@ -18,31 +18,31 @@ import org.slf4j.LoggerFactory;
 
 
 /**
-* API跨域配置
-* <p>
-* 用于配置跨域请求过滤器，支持自定义跨域路径匹配规则。
-* </p>
-*
-* <h3>使用场景</h3>
-* <ul>
-*   <li>前后端分离项目的跨域请求处理</li>
-*   <li>微服务间的跨域访问</li>
-*   <li>开发环境的跨域调试</li>
-* </ul>
-*
-* <h3>配置示例</h3>
-* <pre>
-* plugin:
-*   api:
-*     cors:
-*       enable: true           # 开启跨域
-*       pattern:               # 跨域路径
-*         - /api/**
-* </pre>
-*
-* @版本 1.0.0
-* @since 2024/12/07
-* @author CH
+ * API跨域配置
+ * <p>
+ * 用于配置跨域请求过滤器，支持自定义跨域路径匹配规则。
+ * </p>
+ *
+ * <h3>使用场景</h3>
+ * <ul>
+ *   <li>前后端分离项目的跨域请求处理</li>
+ *   <li>微服务间的跨域访问</li>
+ *   <li>开发环境的跨域调试</li>
+ * </ul>
+ *
+ * <h3>配置示例</h3>
+ * <pre>
+ * plugin:
+ *   api:
+ *     cors:
+ *       enable: true           # 开启跨域
+ *       pattern:               # 跨域路径
+ *         - /api/**
+ * </pre>
+ *
+ * @版本 1.0.0
+ * @since 2024/12/07
+ * @author CH
  */
 @Configuration
 @EnableConfigurationProperties(ApiCorsProperties.class)
@@ -65,10 +65,10 @@ public class ApiCorsConfiguration  {
     }
 
     /**
-    * 跨域过滤器
-    *
-    * @return CorsFilter 过滤器注册Bean
-    */
+     * 跨域过滤器
+     *
+     * @return CorsFilter 过滤器注册Bean
+     */
     @Bean("apiCorsFilterRegistrationBean")
     public FilterRegistrationBean<CorsFilter> corsFilterFilterRegistrationBean() {
  // 1. 添加 跨域资源共享 配置信息

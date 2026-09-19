@@ -24,10 +24,10 @@ import java.util.Map;
 public class GlobalSettingDefinitionController {
 
     /**
-    * 获取所有分组定义
-    *
-    * @return 分组列表，每个分组包含 group, groupName, items（配置项列表）
-    */
+     * 获取所有分组定义
+     *
+     * @return 分组列表，每个分组包含 group, groupName, items（配置项列表）
+     */
     @GetMapping
     public ApiResult<List<Map<String, Object>>> listDefinitions() {
         ServiceProvider<GlobalSettingProvider> provider = ServiceProvider.of(GlobalSettingProvider.class);

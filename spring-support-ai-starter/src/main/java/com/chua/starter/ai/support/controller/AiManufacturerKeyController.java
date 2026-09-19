@@ -22,14 +22,14 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
-* AI 厂商 API Key 管理控制器。
-*
-* <p>提供厂商 API Key 的增删改查、按厂商编码查询与启停切换接口。</p>
-*
-* <p>所有接口均受 {@code @Permission("admin")} 保护，查询接口对 Key 明文进行脱敏处理。</p>
-*
-* @since 4.0.0.42
-* @author CH
+ * AI 厂商 API Key 管理控制器。
+ *
+ * <p>提供厂商 API Key 的增删改查、按厂商编码查询与启停切换接口。</p>
+ *
+ * <p>所有接口均受 {@code @Permission("admin")} 保护，查询接口对 Key 明文进行脱敏处理。</p>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Tag(name = "AI Manufacturer Key Controller", description = "AI 厂商 API Key 管理相关接口")
 @RestController
@@ -38,15 +38,15 @@ import java.util.List;
 public class AiManufacturerKeyController {
 
     /**
-    * 厂商 API Key 服务
-    */
+     * 厂商 API Key 服务
+     */
     private final SysAiManufacturerKeyService manufacturerKeyService;
 
     /**
-    * 对 API Key 与 Secret 进行脱敏，避免明文泄露。
-    *
-    * @param list 原始 Key 列表
-    */
+     * 对 API Key 与 Secret 进行脱敏，避免明文泄露。
+     *
+     * @param list 原始 Key 列表
+     */
     private void maskSecrets(List<SysAiManufacturerKey> list) {
         if (list == null) {
             return;
@@ -58,11 +58,11 @@ public class AiManufacturerKeyController {
     }
 
     /**
-    * 脱敏单值，保留首尾各 2 位，中间以星号替代。
-    *
-    * @param value 明文
-    * @return 脱敏结果
-    */
+     * 脱敏单值，保留首尾各 2 位，中间以星号替代。
+     *
+     * @param value 明文
+     * @return 脱敏结果
+     */
     private String mask(String value) {
         if (StringUtils.isBlank(value)) {
             return value;
@@ -74,29 +74,29 @@ public class AiManufacturerKeyController {
     }
 
     /**
-    * 查询全部厂商 API Key，Key 与 Secret 脱敏返回。
-    *
-    * @return API Key 列表
-    */
+     * 查询全部厂商 API Key，Key 与 Secret 脱敏返回。
+     *
+     * @return API Key 列表
+     */
     @Permission("admin")
     @Operation(summary = "查询全部厂商 API Key")
     @GetMapping("list")
     public ReturnResult<List<SysAiManufacturerKey>> list() {
         List<SysAiManufacturerKey> list = manufacturerKeyService.list();
         /**
-        * mask密钥。
-        * @param list 列表
-        */
+         * mask密钥。
+         * @param list 列表
+         */
         maskSecrets(list);
         return ReturnResult.ok(list);
     }
 
     /**
-    * 按厂商编码查询 API Key，Key 与 Secret 脱敏返回。
-    *
-    * @param manufacturerCode 厂商编码
-    * @return API Key 列表
-    */
+     * 按厂商编码查询 API Key，Key 与 Secret 脱敏返回。
+     *
+     * @param manufacturerCode 厂商编码
+     * @return API Key 列表
+     */
     @Permission("admin")
     @Operation(summary = "按厂商编码查询 API Key")
     @GetMapping("list-by-code")
@@ -104,19 +104,19 @@ public class AiManufacturerKeyController {
             @Parameter(description = "厂商编码") @RequestParam String manufacturerCode) {
         List<SysAiManufacturerKey> list = manufacturerKeyService.listByManufacturerCode(manufacturerCode);
         /**
-        * mask密钥。
-        * @param list 列表
-        */
+         * mask密钥。
+         * @param list 列表
+         */
         maskSecrets(list);
         return ReturnResult.ok(list);
     }
 
     /**
-    * 新增厂商 API Key。
-    *
-    * @param manufacturerKey API Key 实体
-    * @return 保存后的实体
-    */
+     * 新增厂商 API Key。
+     *
+     * @param manufacturerKey API Key 实体
+     * @return 保存后的实体
+     */
     @Permission("admin")
     @Operation(summary = "新增厂商 API Key")
     @PostMapping("save")
@@ -126,11 +126,11 @@ public class AiManufacturerKeyController {
     }
 
     /**
-    * 更新厂商 API Key。
-    *
-    * @param manufacturerKey API Key 实体
-    * @return 是否成功
-    */
+     * 更新厂商 API Key。
+     *
+     * @param manufacturerKey API Key 实体
+     * @return 是否成功
+     */
     @Permission("admin")
     @Operation(summary = "更新厂商 API Key")
     @PutMapping("update")
@@ -140,11 +140,11 @@ public class AiManufacturerKeyController {
     }
 
     /**
-    * 删除厂商 API Key。
-    *
-    * @param id 主键 标识
-    * @return 是否成功
-    */
+     * 删除厂商 API Key。
+     *
+     * @param id 主键 标识
+     * @return 是否成功
+     */
     @Permission("admin")
     @Operation(summary = "删除厂商 API Key")
     @DeleteMapping("delete")
@@ -154,12 +154,12 @@ public class AiManufacturerKeyController {
     }
 
     /**
-    * 切换 API Key 启停状态。
-    *
-    * @param id      主键 标识
-    * @param enabled 是否启用
-    * @return 是否成功
-    */
+     * 切换 API Key 启停状态。
+     *
+     * @param id      主键 标识
+     * @param enabled 是否启用
+     * @return 是否成功
+     */
     @Permission("admin")
     @Operation(summary = "切换 API Key 启停状态")
     @PutMapping("toggle")

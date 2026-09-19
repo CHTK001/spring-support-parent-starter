@@ -7,13 +7,13 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 
 /**
-* 全局设置 DTO，字段命名与前端面板对齐。
-*
-* <p>前端提交的字段为 {@code chatClientEnabled}、{@code usageReportInterval} 等，
-* 与实体 {@code settingXxx} 前缀不同，故通过 DTO 隔离。</p>
-*
-* @since 2026-08-03
-* @author CH
+ * 全局设置 DTO，字段命名与前端面板对齐。
+ *
+ * <p>前端提交的字段为 {@code chatClientEnabled}、{@code usageReportInterval} 等，
+ * 与实体 {@code settingXxx} 前缀不同，故通过 DTO 隔离。</p>
+ *
+ * @since 2026-08-03
+ * @author CH
  */
 @Data
 @Schema(name = "全局设置 DTO")
@@ -21,8 +21,8 @@ public class AiGlobalSettingDTO implements Serializable {
     private static final long serialVersionUID = 1L; // 串行版本uid
 
     /**
-    * 是否启用 对话客户端 聚合
-    */
+     * 是否启用 对话客户端 聚合
+     */
     @Schema(description = "是否启用 ChatClient 聚合")
     /** 对话客户端是否启用 */
     private Boolean chatClientEnabled;

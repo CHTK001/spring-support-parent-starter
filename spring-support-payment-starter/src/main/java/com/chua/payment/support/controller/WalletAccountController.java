@@ -17,9 +17,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
-* 钱包账户控制器
-* @author CH
-* @since 4.0.0
+ * 钱包账户控制器
+ * @author CH
+ * @since 4.0.0
  */
 @RestController
 @RequestMapping("/wallet")
@@ -42,21 +42,21 @@ public class WalletAccountController {
 
     @PostMapping("/account/recharge")
     /**
-    * Recharge
-    *
-    * @param dto dto
-    * @return recharge的结果
-    */
+     * Recharge
+     *
+     * @param dto dto
+     * @return recharge的结果
+     */
     public Result<WalletAccountVO> recharge(@RequestBody WalletRechargeDTO dto) {
         return Result.success(walletAccountService.recharge(dto));
     }
 
     @GetMapping("/account/log/page")
     /**
-    * page日志。
-    * @param "1" "1"
-    * @return page日志的结果
-    */
+     * page日志。
+     * @param "1" "1"
+     * @return page日志的结果
+     */
     public Result<PageResult<WalletAccountLog>> pageLogs(@RequestParam(defaultValue = "1") int pageNum,
                                                           @RequestParam(defaultValue = "10") int pageSize,
                                                           @RequestParam(required = false) Long merchantId,

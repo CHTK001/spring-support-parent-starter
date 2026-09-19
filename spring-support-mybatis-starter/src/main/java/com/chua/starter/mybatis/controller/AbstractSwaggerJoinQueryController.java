@@ -17,24 +17,24 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import java.util.List;
 
 /**
-* 超类
-*
-* @author CH
-* @since 4.0.0
+ * 超类
+ *
+ * @author CH
+ * @since 4.0.0
  */
 public abstract class AbstractSwaggerJoinQueryController<S extends IService<T>, T> extends AbstractSwaggerController<S, T>{
 
     /**
-    * 分页查询数据
-    *
-    * @param entity 结果
-    * @return 分页结果
-    * @param page page
-    * @param @Validated(SelectGroup.class @校验(选择群体.类
-    * @param @Validated(SelectGroup.class @校验(选择群体.类
-    * @param @Validated(SelectGroup.class @Validated(SelectGroup.class
-    * @param bindingResult binding结果，不允许为 null
-    */
+     * 分页查询数据
+     *
+     * @param entity 结果
+     * @return 分页结果
+     * @param page page
+     * @param @Validated(SelectGroup.class @校验(选择群体.类
+     * @param @Validated(SelectGroup.class @校验(选择群体.类
+     * @param @Validated(SelectGroup.class @Validated(SelectGroup.class
+     * @param bindingResult binding结果，不允许为 null
+     */
     @ResponseBody
     @Operation(summary = "分页查询基础数据")
     @GetMapping("page")
@@ -47,15 +47,15 @@ public abstract class AbstractSwaggerJoinQueryController<S extends IService<T>, 
         return PageResultUtils.ok(tPage);
     }
     /**
-    * 查询基础数据
-    *
-    * @param entity 结果
-    * @return 分页结果
-    * @param @Validated(SelectGroup.class @校验(选择群体.类
-    * @param @Validated(SelectGroup.class @校验(选择群体.类
-    * @param @Validated(SelectGroup.class @Validated(SelectGroup.class
-    * @param bindingResult binding结果，不允许为 null
-    */
+     * 查询基础数据
+     *
+     * @param entity 结果
+     * @return 分页结果
+     * @param @Validated(SelectGroup.class @校验(选择群体.类
+     * @param @Validated(SelectGroup.class @校验(选择群体.类
+     * @param @Validated(SelectGroup.class @Validated(SelectGroup.class
+     * @param bindingResult binding结果，不允许为 null
+     */
     @ResponseBody
     @Operation(summary = "查询基础数据")
     @GetMapping("list")
@@ -64,11 +64,11 @@ public abstract class AbstractSwaggerJoinQueryController<S extends IService<T>, 
     }
 
     /**
-    * 查询详细信息
-    *
-    * @param entity 实体
-    * @return 详细信息
-    */
+     * 查询详细信息
+     *
+     * @param entity 实体
+     * @return 详细信息
+     */
 
     abstract public MPJLambdaWrapper<T> createJoinWrapper(T entity);
 }

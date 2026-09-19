@@ -13,15 +13,15 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
-* osgi 真实测试（Telnet 回退模式）：{@code plugin.osgi.shell.protocol=telnet} 独立上下文。
-*
-* <p>验证链路：Felix 框架正常启动（SSH bean 退避为 null）；telnet 远程管理声明但不具备
-* 框架级监听能力（Gogo 1.1.4 仅提供 {@code telnetd PORT start} 会话内命令，无
-* {@code osgi.shell.telnet.*} 配置监听），默认端口 6666 应无任何监听——此为真实存在的
-* 设计缺口，本测试如实记录：telnet 模式当前仅完成配置透传，不实际监听。</p>
-*
-* @author CH
-* @since 2026/09/11
+ * osgi 真实测试（Telnet 回退模式）：{@code plugin.osgi.shell.protocol=telnet} 独立上下文。
+ *
+ * <p>验证链路：Felix 框架正常启动（SSH bean 退避为 null）；telnet 远程管理声明但不具备
+ * 框架级监听能力（Gogo 1.1.4 仅提供 {@code telnetd PORT start} 会话内命令，无
+ * {@code osgi.shell.telnet.*} 配置监听），默认端口 6666 应无任何监听——此为真实存在的
+ * 设计缺口，本测试如实记录：telnet 模式当前仅完成配置透传，不实际监听。</p>
+ *
+ * @author CH
+ * @since 2026/09/11
  */
 @SpringBootTest(properties = {
         "plugin.osgi.enabled=true",
@@ -32,10 +32,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
         "plugin.osgi.shell.host=127.0.0.1"
 })
 /**
-* osgitelnet降级real测试类。
-*
-* @author CH
-* @since 4.0.0
+ * osgitelnet降级real测试类。
+ *
+ * @author CH
+ * @since 4.0.0
  */
 class OsgiTelnetFallbackRealTest {
 
@@ -74,8 +74,8 @@ class OsgiTelnetFallbackRealTest {
         // 如实际被监听，则 telnet 模式真实可用，测试据实判断
         boolean connectable;
         /**
-        * 尝试。
-        * @param Socket( 套接字(
+         * 尝试。
+         * @param Socket( 套接字(
          */
         try (Socket socket = new Socket()) {
             socket.connect(new InetSocketAddress("127.0.0.1", 6666), 2000);

@@ -21,14 +21,14 @@ import java.util.List;
 import java.util.Map;
 
 /**
-* Plugins 配置控制器，枚举本地/在线 PluginProvider 并支持开关。
-*
-* <p>本地 Provider 通过 Spring 注入的 {@link PluginOfflineProvider} Bean 加载；
-* 在线市场源通过 {@link PluginMarketSourceProvider} SPI 加载（暂无数据源）。
-* 开关状态持久化在 {@code sys_ai_global_setting} 的 plugins 分组。</p>
-*
-* @since 4.0.0.43
-* @author CH
+ * Plugins 配置控制器，枚举本地/在线 PluginProvider 并支持开关。
+ *
+ * <p>本地 Provider 通过 Spring 注入的 {@link PluginOfflineProvider} Bean 加载；
+ * 在线市场源通过 {@link PluginMarketSourceProvider} SPI 加载（暂无数据源）。
+ * 开关状态持久化在 {@code sys_ai_global_setting} 的 plugins 分组。</p>
+ *
+ * @since 4.0.0.43
+ * @author CH
  */
 @Slf4j
 @RestController
@@ -43,10 +43,10 @@ public class AiPluginConfigController {
     private final List<PluginOfflineProvider> offlineProviders;
 
     /**
-    * 获取所有 Plugins Provider 配置（本地 + 在线）。
-    *
-    * @return Provider 列表
-    */
+     * 获取所有 Plugins Provider 配置（本地 + 在线）。
+     *
+     * @return Provider 列表
+     */
     @Permission("admin")
     @Operation(summary = "获取 Plugins Provider 配置列表")
     @GetMapping
@@ -100,11 +100,11 @@ public class AiPluginConfigController {
     }
 
     /**
-    * 更新 Plugins Provider 开关状态。
-    *
-    * @param config 配置 Map
-    * @return 更新后的配置
-    */
+     * 更新 Plugins Provider 开关状态。
+     *
+     * @param config 配置 Map
+     * @return 更新后的配置
+     */
     @Permission("admin")
     @Operation(summary = "更新 Plugins Provider 开关")
     @PutMapping

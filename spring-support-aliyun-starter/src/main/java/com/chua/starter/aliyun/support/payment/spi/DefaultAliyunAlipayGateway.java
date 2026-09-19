@@ -39,9 +39,9 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
-* 默认支付宝网关实现
-* @author CH
-* @since 4.0.0
+ * 默认支付宝网关实现
+ * @author CH
+ * @since 4.0.0
  */
 @Spi({"default", "alipay"})
 public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
@@ -245,19 +245,19 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
 
     @Override
     /**
-    * 验证和解析薪酬通知
-    * @param properties 属性
-    * @param request 请求
-    */
+     * 验证和解析薪酬通知
+     * @param properties 属性
+     * @param request 请求
+     */
     public AliyunAlipayPayNotifyPayload verifyAndParsePayNotify(AliyunAlipayProperties properties,
                                                                 AliyunAlipayNotifyRequest request) {
         Map<String, String> params = request.getParams();
         if (params == null || params.isEmpty()) {
             /**
-            * illegal状态异常。
-            * @param "支付宝通知参数不能为空" "支付宝通知参数不能为空"
-            * @return illegal状态异常的结果
-            */
+             * illegal状态异常。
+             * @param "支付宝通知参数不能为空" "支付宝通知参数不能为空"
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("支付宝通知参数不能为空");
         }
         try {
@@ -265,26 +265,26 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
                     params,
                     properties.getAlipayPublicKey(),
                     /**
-                    * 第一个nonblank。
-                    * @param params.get("charset" 参数.获取("字符集"
-                    */
+                     * 第一个nonblank。
+                     * @param params.get("charset" 参数.获取("字符集"
+                     */
                     firstNonBlank(params.get("charset"), properties.getCharset(), "UTF-8"),
                     firstNonBlank(params.get("sign_type"), properties.getSignType(), "RSA2"));
             if (!verified) {
                 /**
-                * illegal状态异常。
-                * @param "支付宝通知验签失败" "支付宝通知验签失败"
-                * @return illegal状态异常的结果
-                */
+                 * illegal状态异常。
+                 * @param "支付宝通知验签失败" "支付宝通知验签失败"
+                 * @return illegal状态异常的结果
+                 */
                 throw new IllegalStateException("支付宝通知验签失败");
             }
         } catch (AlipayApiException e) {
             /**
-            * illegal状态异常。
-            * @param "支付宝通知验签失败" "支付宝通知验签失败"
-            * @param e e
-            * @return illegal状态异常的结果
-            */
+             * illegal状态异常。
+             * @param "支付宝通知验签失败" "支付宝通知验签失败"
+             * @param e e
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("支付宝通知验签失败", e);
         }
 
@@ -342,21 +342,21 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
     }
 
     /**
-    * 客户端
-    *
-    * @param properties 属性
-    * @return 客户端的结果
-    */
+     * 客户端
+     *
+     * @param properties 属性
+     * @return 客户端的结果
+     */
     private AlipayClient client(AliyunAlipayProperties properties) {
         return clientFactory.createClient(properties);
     }
 
     /**
-    * 构建薪酬biz内容
-    *
-    * @param request 请求
-    * @return 构建薪酬biz内容的结果
-    */
+     * 构建薪酬biz内容
+     *
+     * @param request 请求
+     * @return 构建薪酬biz内容的结果
+     */
     private Map<String, Object> buildPayBizContent(AliyunAlipayPayRequest request) {
         Map<String, Object> bizContent = new LinkedHashMap<>();
         bizContent.put("out_trade_no", request.getOrderNo());
@@ -371,11 +371,11 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
     }
 
     /**
-    * 第一个nonblank
-    *
-    * @param values 值
-    * @return 第一个nonblank的结果
-    */
+     * 第一个nonblank
+     *
+     * @param values 值
+     * @return 第一个nonblank的结果
+     */
     private String firstNonBlank(String... values) {
         for (String value : values) {
             if (StringUtils.hasText(value)) {
@@ -386,21 +386,21 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
     }
 
     /**
-    * 转为json
-    *
-    * @param value 值
-    * @return 转为json的结果
-    */
+     * 转为json
+     *
+     * @param value 值
+     * @return 转为json的结果
+     */
     private String toJson(Object value) {
         try {
             return objectMapper.writeValueAsString(value);
         } catch (Exception e) {
             /**
-            * illegal状态异常。
-            * @param "支付宝请求序列化失败" "支付宝请求序列化失败"
-            * @param e e
-            * @return illegal状态异常的结果
-            */
+             * illegal状态异常。
+             * @param "支付宝请求序列化失败" "支付宝请求序列化失败"
+             * @param e e
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("支付宝请求序列化失败", e);
         }
     }

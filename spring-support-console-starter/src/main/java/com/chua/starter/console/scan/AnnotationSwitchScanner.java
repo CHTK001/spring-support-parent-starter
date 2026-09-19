@@ -17,14 +17,14 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
-* 注解开关扫描器：扫描 Spring MVC 全部处理器上的 {@code @ApiFeature}/{@code @ApiGray}，
-* 生成规范化清单与整体指纹（SHA-256）。
-*
-* <p>指纹计算：所有注解的规范化描述（{@code canonical()}）排序后拼接再哈希——
-* 与扫描顺序无关；"注解更新"（新增/修改/删除注解）必然改变指纹，从而触发启动重置。</p>
-*
-* @author CH
-* @since 2026/09/04
+ * 注解开关扫描器：扫描 Spring MVC 全部处理器上的 {@code @ApiFeature}/{@code @ApiGray}，
+ * 生成规范化清单与整体指纹（SHA-256）。
+ *
+ * <p>指纹计算：所有注解的规范化描述（{@code canonical()}）排序后拼接再哈希——
+ * 与扫描顺序无关；"注解更新"（新增/修改/删除注解）必然改变指纹，从而触发启动重置。</p>
+ *
+ * @author CH
+ * @since 2026/09/04
  */
 @Slf4j
 public class AnnotationSwitchScanner {
@@ -37,10 +37,10 @@ public class AnnotationSwitchScanner {
     }
 
     /**
-    * 扫描全部处理器注解并计算指纹
-    *
-    * @return 开关清单
-    */
+     * 扫描全部处理器注解并计算指纹
+     *
+     * @return 开关清单
+     */
     public SwitchInventory scan() {
         List<SwitchInventory.FeatureDescriptor> features = new ArrayList<>();
         List<SwitchInventory.GrayDescriptor> grays = new ArrayList<>();
@@ -100,10 +100,10 @@ public class AnnotationSwitchScanner {
     }
 
     /**
-    * sha256。
-    * @param input 输入
-    * @return sha256的结果
-    */
+     * sha256。
+     * @param input 输入
+     * @return sha256的结果
+     */
     private static String sha256(String input) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
@@ -115,11 +115,11 @@ public class AnnotationSwitchScanner {
             return sb.toString();
         } catch (Exception e) {
             /**
-            * illegal状态异常。
-            * @param "指纹计算失败" "指纹计算失败"
-            * @param e e
-            * @return illegal状态异常的结果
-            */
+             * illegal状态异常。
+             * @param "指纹计算失败" "指纹计算失败"
+             * @param e e
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("指纹计算失败", e);
         }
     }

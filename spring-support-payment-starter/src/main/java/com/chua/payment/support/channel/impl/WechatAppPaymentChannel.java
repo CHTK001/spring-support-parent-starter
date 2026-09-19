@@ -12,27 +12,27 @@ import com.chua.starter.tencent.support.payment.dto.TencentWechatPayResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
-* 微信 App 支付
-* @author CH
-* @since 4.0.0
+ * 微信 App 支付
+ * @author CH
+ * @since 4.0.0
  */
 public class WechatAppPaymentChannel extends WechatJsapiPaymentChannel implements PaymentChannel {
 
     /**
-    * 创建 wechatapp薪酬通道 实例
-    * @param merchantChannelService merchant通道服务
-    * @param objectMapper 对象映射器
-    * @param providerGatewayRegistry 提供者gatewayregistry
-    */
+     * 创建 wechatapp薪酬通道 实例
+     * @param merchantChannelService merchant通道服务
+     * @param objectMapper 对象映射器
+     * @param providerGatewayRegistry 提供者gatewayregistry
+     */
     public WechatAppPaymentChannel(MerchantChannelService merchantChannelService,
                                    ObjectMapper objectMapper,
                                    PaymentProviderGatewayRegistry providerGatewayRegistry) {
         /**
-        * 父。
-        * @param merchantChannelService merchant通道服务
-        * @param objectMapper 对象映射器
-        * @param providerGatewayRegistry 提供者gatewayregistry
-        */
+         * 父。
+         * @param merchantChannelService merchant通道服务
+         * @param objectMapper 对象映射器
+         * @param providerGatewayRegistry 提供者gatewayregistry
+         */
         super(merchantChannelService, objectMapper, providerGatewayRegistry);
     }
 

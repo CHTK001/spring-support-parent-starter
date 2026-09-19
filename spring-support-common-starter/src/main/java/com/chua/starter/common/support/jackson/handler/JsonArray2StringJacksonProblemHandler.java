@@ -10,9 +10,9 @@ import java.util.LinkedList;
 import java.util.List;
 
 /**
-* 数组转字符串
-* @since 2024/7/19
-* @author CH
+ * 数组转字符串
+ * @since 2024/7/19
+ * @author CH
  */
 public class JsonArray2StringJacksonProblemHandler implements JacksonProblemHandler{
 

@@ -10,10 +10,10 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
-* 监控全局配置实体
-*
-* @since 2026/8/4
-* @author CH
+ * 监控全局配置实体
+ *
+ * @since 2026/8/4
+ * @author CH
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

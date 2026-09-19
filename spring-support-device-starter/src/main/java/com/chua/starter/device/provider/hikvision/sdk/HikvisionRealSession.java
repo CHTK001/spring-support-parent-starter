@@ -32,26 +32,26 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
-* 海康设备真实会话（基于 hcnetsdk JNA）
-* <p>通过 JNA 加载本机 HCNetSDK.dll 与真实设备通信。</p>
-*
-* <p>若未安装 SDK 动态库或设备不可达，构造函数会抛出异常，</p>
-* <p>由 {@code HikvisionProvider} 捕获并回退到模拟会话。</p>
-*
-* @since 4.0.0.42
-* @author CH
+ * 海康设备真实会话（基于 hcnetsdk JNA）
+ * <p>通过 JNA 加载本机 HCNetSDK.dll 与真实设备通信。</p>
+ *
+ * <p>若未安装 SDK 动态库或设备不可达，构造函数会抛出异常，</p>
+ * <p>由 {@code HikvisionProvider} 捕获并回退到模拟会话。</p>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 public class HikvisionRealSession implements DeviceSession {
 
     /**
-    * 海康 SDK 库名（不含扩展名）
-    */
+     * 海康 SDK 库名（不含扩展名）
+     */
     private static final String SDK_LIBRARY_NAME = "HCNetSDK";
 
     /**
-    * 云台指令映射：业务枚举 -> 海康命令码
-    */
+     * 云台指令映射：业务枚举 -> 海康命令码
+     */
     private static final Map<PtzCommand, Integer> PTZ_COMMANDS = new ConcurrentHashMap<>();
 
     static {
@@ -68,94 +68,94 @@ public class HikvisionRealSession implements DeviceSession {
     }
 
     /**
-    * 门禁远程开门命令码
-    */
+     * 门禁远程开门命令码
+     */
     private static final int NET_DVR_CMD_OPEN_DOOR = 3000;
 
     /**
-    * 码流数据缓冲上限（8MB）
-    */
+     * 码流数据缓冲上限（8MB）
+     */
     private static final int MAX_STREAM_BUFFER = 8 * 1024 * 1024;
 
     /**
-    * SDK 接口实例
-    */
+     * SDK 接口实例
+     */
     private final HCNetSDK sdk;
 
     /**
-    * 设备连接信息
-    */
+     * 设备连接信息
+     */
     private final DeviceConnectInfo info;
 
     /**
-    * 在线状态
-    */
+     * 在线状态
+     */
     private volatile boolean online = true;
 
     /**
-    * 登录用户 标识
-    */
+     * 登录用户 标识
+     */
     private int userId = -1;
 
     /**
-    * 设备序列号
-    */
+     * 设备序列号
+     */
     private String serial;
 
     /**
-    * 通道数量
-    */
+     * 通道数量
+     */
     private int channelCount;
 
     /**
-    * 预览句柄 -> 码流缓冲
-    */
+     * 预览句柄 -> 码流缓冲
+     */
     private final Map<Integer, ByteArrayOutputStream> previewBuffers = new ConcurrentHashMap<>();
 
     /**
-    * 事件订阅监听器
-    */
+     * 事件订阅监听器
+     */
     private final Map<EventType, List<EventListener>> listeners = new ConcurrentHashMap<>();
 
     /**
-    * 事件缓冲队列
-    */
+     * 事件缓冲队列
+     */
     private final List<DeviceEvent> eventQueue = new CopyOnWriteArrayList<>();
 
     /**
-    * 构造并登录设备
-    *
-    * @param info 设备连接信息
-    * @throws IllegalStateException SDK 加载或设备登录失败
-    */
+     * 构造并登录设备
+     *
+     * @param info 设备连接信息
+     * @throws IllegalStateException SDK 加载或设备登录失败
+     */
     public HikvisionRealSession(DeviceConnectInfo info) {
         this.info = info;
         try {
             this.sdk = Native.load(SDK_LIBRARY_NAME, HCNetSDK.class);
         } catch (UnsatisfiedLinkError e) {
             /**
-            * illegal状态异常。
-            * @param e.getMessage( e.获取消息(
-            * @return illegal状态异常的结果
-            */
+             * illegal状态异常。
+             * @param e.getMessage( e.获取消息(
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("HCNetSDK 动态库加载失败，请将 SDK 的 dll 放入系统库路径: " + e.getMessage(), e);
         }
         /**
-        * login。
-        */
+         * login。
+         */
         login();
     }
 
     /**
-    * 登录设备
-    */
+     * 登录设备
+     */
     private void login() {
         if (!sdk.NET_DVR_Init()) {
             /**
-            * illegal状态异常。
-            * @param sdk.NET_DVR_GetLastError( sdk.netdvr获取最后一个错误(
-            * @return illegal状态异常的结果
-            */
+             * illegal状态异常。
+             * @param sdk.NET_DVR_GetLastError( sdk.netdvr获取最后一个错误(
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("HCNetSDK 初始化失败，错误码: " + sdk.NET_DVR_GetLastError());
         }
         NET_DVR_USER_LOGIN_INFO loginInfo = new NET_DVR_USER_LOGIN_INFO();
@@ -165,10 +165,10 @@ public class HikvisionRealSession implements DeviceSession {
         if (userId < 0) {
             sdk.NET_DVR_Cleanup();
             /**
-            * illegal状态异常。
-            * @param info.getIp( 信息.获取ip(
-            * @return illegal状态异常的结果
-            */
+             * illegal状态异常。
+             * @param info.getIp( 信息.获取ip(
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("海康设备登录失败: " + info.getIp()
                     + "，错误码: " + sdk.NET_DVR_GetLastError());
         }
@@ -177,14 +177,14 @@ public class HikvisionRealSession implements DeviceSession {
         log.info("海康设备登录成功: ip={}, serial={}, channels={}",
                 info.getIp(), serial, channelCount);
         /**
-        * setup事件callback。
-        */
+         * setup事件callback。
+         */
         setupEventCallback();
     }
 
     /**
-    * 注册报警消息回调，接收设备事件
-    */
+     * 注册报警消息回调，接收设备事件
+     */
     private void setupEventCallback() {
         HCNetSDK.MessageCallback callback = this::onAlarmMessage;
         sdk.NET_DVR_SetDVRMessageCallBack(callback, Pointer.NULL);
@@ -192,15 +192,15 @@ public class HikvisionRealSession implements DeviceSession {
     }
 
     /**
-    * 报警消息处理
-    *
-    * @param command    命令类型
-    * @param alarmer    设备信息
-    * @param alarmInfo  报警信息
-    * @param bufLen     缓冲长度
-    * @param user       用户数据
-    * @return 是否成功
-    */
+     * 报警消息处理
+     *
+     * @param command    命令类型
+     * @param alarmer    设备信息
+     * @param alarmInfo  报警信息
+     * @param bufLen     缓冲长度
+     * @param user       用户数据
+     * @return 是否成功
+     */
     private boolean onAlarmMessage(int command, NET_DVR_ALARMER alarmer, Pointer alarmInfo, int bufLen, Pointer user) {
         DeviceEvent event = new DeviceEvent();
         event.setDeviceId(info.getIp());
@@ -271,10 +271,10 @@ public class HikvisionRealSession implements DeviceSession {
         }
         previewBuffers.put(handle, buffer);
         /**
-    * bytearray输入流。
-    * @param buffer.toByteArray( 缓冲.转为bytearray(
-    * @return bytearray输入流的结果
-    */
+         * bytearray输入流。
+         * @param buffer.toByteArray( 缓冲.转为bytearray(
+         * @return bytearray输入流的结果
+         */
         return new ByteArrayInputStream(buffer.toByteArray());
     }
 
@@ -344,10 +344,10 @@ public class HikvisionRealSession implements DeviceSession {
                     + "，错误码: " + sdk.NET_DVR_GetLastError());
         }
         /**
-    * bytearray输入流。
-    * @param buffer.toByteArray( 缓冲.转为bytearray(
-    * @return bytearray输入流的结果
-    */
+         * bytearray输入流。
+         * @param buffer.toByteArray( 缓冲.转为bytearray(
+         * @return bytearray输入流的结果
+         */
         return new ByteArrayInputStream(buffer.toByteArray());
     }
 
@@ -458,10 +458,10 @@ public class HikvisionRealSession implements DeviceSession {
     }
 
     /**
-    * 获取通道数量
-    *
-    * @return 通道数量
-    */
+     * 获取通道数量
+     *
+     * @return 通道数量
+     */
     public int getChannelCount() {
         return channelCount;
     }

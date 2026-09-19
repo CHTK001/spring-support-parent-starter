@@ -18,19 +18,19 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
-* 被动推送入站适配器全面探测。
-*
-* <p>验证 MQTT / Webhook / CDC 三个入站适配器的数据通路：</p>
-* <ul>
-*   <li>T01~T03: Builder 参数校验</li>
-*   <li>T04~T05: MqttInboundAdapter 生命周期</li>
-*   <li>T06~T08: WebhookInboundAdapter HTTP 推送</li>
-*   <li>T09~T10: MysqlCdcListener 生命周期</li>
-*   <li>T11~T12: 全链路 — 模拟消息 → PipelineEngine → Sink 写入验证</li>
-* </ul>
-*
-* @author CH
-* @since 4.0.0.42
+ * 被动推送入站适配器全面探测。
+ *
+ * <p>验证 MQTT / Webhook / CDC 三个入站适配器的数据通路：</p>
+ * <ul>
+ *   <li>T01~T03: Builder 参数校验</li>
+ *   <li>T04~T05: MqttInboundAdapter 生命周期</li>
+ *   <li>T06~T08: WebhookInboundAdapter HTTP 推送</li>
+ *   <li>T09~T10: MysqlCdcListener 生命周期</li>
+ *   <li>T11~T12: 全链路 — 模拟消息 → PipelineEngine → Sink 写入验证</li>
+ * </ul>
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 @Slf4j
 public class InboundAdapterProbe {
@@ -46,8 +46,8 @@ public class InboundAdapterProbe {
     private static MockSink mockSink; // mocksink
 
     /**
-    * main。
-    * @param args 参数
+     * main。
+     * @param args 参数
      */
     public static void main(String[] args) throws Exception {
         log.info("═══════════════════════════════════════════════════════");
@@ -55,27 +55,27 @@ public class InboundAdapterProbe {
         log.info("═══════════════════════════════════════════════════════");
 
         /**
-        * setupinfrastructure。
+         * setupinfrastructure。
          */
         setupInfrastructure();
         /**
-        * 测试构建器校验。
+         * 测试构建器校验。
          */
         testBuilderValidation();
         /**
-        * 测试mqttlifecycle。
+         * 测试mqttlifecycle。
          */
         testMqttLifecycle();
         /**
-        * 测试webhookpush。
+         * 测试webhookpush。
          */
         testWebhookPush();
         /**
-        * 测试cdclifecycle。
+         * 测试cdclifecycle。
          */
         testCdcLifecycle();
         /**
-        * 测试完整pipeline。
+         * 测试完整pipeline。
          */
         testFullPipeline();
 
@@ -94,7 +94,7 @@ public class InboundAdapterProbe {
     // ━━━━━━━━━━━━━━━ 基础设施 ━━━━━━━━━━━━━━━
 
     /**
-    * setupinfrastructure。
+     * setupinfrastructure。
      */
     private static void setupInfrastructure() {
  // pipeline管理器 — 注册四条测试管线
@@ -118,7 +118,7 @@ public class InboundAdapterProbe {
  // ━━━━━━━━━━━━━━━ T01~T03: 构建器 校验 ━━━━━━━━━━━━━━━
 
     /**
-    * 测试构建器校验。
+     * 测试构建器校验。
      */
     private static void testBuilderValidation() {
         log.info("───── T01~T03: Builder 参数校验 ─────");
@@ -157,7 +157,7 @@ public class InboundAdapterProbe {
     // ━━━━━━━━━━━━━━━ T04~T05: MQTT 生命周期 ━━━━━━━━━━━━━━━
 
     /**
-    * 测试mqttlifecycle。
+     * 测试mqttlifecycle。
      */
     private static void testMqttLifecycle() {
         log.info("───── T04~T05: MQTT 适配器生命周期 ─────");
@@ -197,7 +197,7 @@ public class InboundAdapterProbe {
     // ━━━━━━━━━━━━━━━ T06~T08: Webhook 推送 ━━━━━━━━━━━━━━━
 
     /**
-    * 测试webhookpush。
+     * 测试webhookpush。
      */
     private static void testWebhookPush() throws Exception {
         log.info("───── T06~T08: Webhook HTTP 推送 ─────");
@@ -275,7 +275,7 @@ public class InboundAdapterProbe {
     // ━━━━━━━━━━━━━━━ T09~T10: CDC 生命周期 ━━━━━━━━━━━━━━━
 
     /**
-    * 测试cdclifecycle。
+     * 测试cdclifecycle。
      */
     private static void testCdcLifecycle() {
         log.info("───── T09~T10: CDC 适配器生命周期 ─────");
@@ -319,7 +319,7 @@ public class InboundAdapterProbe {
     // ━━━━━━━━━━━━━━━ T11~T12: 全链路验证 ━━━━━━━━━━━━━━━
 
     /**
-    * 测试完整pipeline。
+     * 测试完整pipeline。
      */
     private static void testFullPipeline() throws Exception {
         log.info("───── T11~T12: 全链路（Webhook → Pipeline → MockSink）─────");
@@ -390,9 +390,9 @@ public class InboundAdapterProbe {
     // ━━━━━━━━━━━━━━━ 辅助 ━━━━━━━━━━━━━━━
 
     /**
-    * 检查。
-    * @param name 名称
-    * @param check 检查
+     * 检查。
+     * @param name 名称
+     * @param check 检查
      */
     private static void check(String name, ProbeCheck check) {
         total++;
@@ -415,15 +415,15 @@ public class InboundAdapterProbe {
 
     @FunctionalInterface
     /**
-    * 探针检查接口。
-    *
-    * @author CH
-    * @since 4.0.0
+     * 探针检查接口。
+     *
+     * @author CH
+     * @since 4.0.0
      */
     interface ProbeCheck {
         /**
-        * 检查。
-        * @return 检查的结果
+         * 检查。
+         * @return 检查的结果
          */
         boolean check() throws Exception;
     }
@@ -431,10 +431,10 @@ public class InboundAdapterProbe {
  // ━━━━━━━━━━━━━━━ mocksink ━━━━━━━━━━━━━━━
 
     /**
-    * mocksink类。
-    *
-    * @author CH
-    * @since 4.0.0
+     * mocksink类。
+     *
+     * @author CH
+     * @since 4.0.0
      */
     public static class MockSink implements DataSink {
         private final AtomicInteger writeCount = new AtomicInteger(0); // 写入数量
@@ -442,7 +442,7 @@ public class InboundAdapterProbe {
         private volatile Map<String, Object> lastData; // 最后一个数据
 
         /**
-        * reset。
+         * reset。
          */
         public void reset() {
             writeCount.set(0);
@@ -473,18 +473,18 @@ public class InboundAdapterProbe {
         }
 
         /**
-        * 获取写入数量。
-        * @return 获取写入数量的结果
+         * 获取写入数量。
+         * @return 获取写入数量的结果
          */
         public int getWriteCount() { return writeCount.get(); }
         /**
-        * 获取最后一个envelope。
-        * @return 获取最后一个envelope的结果
+         * 获取最后一个envelope。
+         * @return 获取最后一个envelope的结果
          */
         public DataEnvelope getLastEnvelope() { return lastEnvelope; }
         /**
-        * 获取最后一个数据。
-        * @return 获取最后一个数据的结果
+         * 获取最后一个数据。
+         * @return 获取最后一个数据的结果
          */
         public Map<String, Object> getLastData() { return lastData; }
     }

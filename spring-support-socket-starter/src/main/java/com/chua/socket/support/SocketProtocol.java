@@ -1,33 +1,33 @@
 package com.chua.socket.support;
 
 /**
-* Socket 协议类型枚举
-*
-* @版本 1.0.0
-* @since 2024-12-04
-* @author CH
+ * Socket 协议类型枚举
+ *
+ * @版本 1.0.0
+ * @since 2024-12-04
+ * @author CH
  */
 public enum SocketProtocol {
 
     /**
-    * Socket.IO 协议
-    * @param "socketio" "Socket.IO"
-    * @return Socket.IO的结果
-    */
+     * Socket.IO 协议
+     * @param "socketio" "Socket.IO"
+     * @return Socket.IO的结果
+     */
     SOCKETIO("socketio"),
 
     /**
-    * rSocket 协议
-    * @param "rsocket" "rsocket"
-    * @return RSOCKET的结果
-    */
+     * rSocket 协议
+     * @param "rsocket" "rsocket"
+     * @return RSOCKET的结果
+     */
     RSOCKET("rsocket"),
 
     /**
-    * SSE (服务端-Sent 事件) 协议
-    * @param "sse" "sse"
-    * @return SSE的结果
-    */
+     * SSE (服务端-Sent 事件) 协议
+     * @param "sse" "sse"
+     * @return SSE的结果
+     */
     SSE("sse");
 
     /** 值 */
@@ -42,20 +42,20 @@ public enum SocketProtocol {
     }
 
     /**
-    * 获取值
-    *
-    * @return 获取值的结果
-    */
+     * 获取值
+     *
+     * @return 获取值的结果
+     */
     public String getValue() {
         return value;
     }
 
     /**
-    * 根据值获取协议类型
-    *
-    * @param value 值
-    * @return 协议类型
-    */
+     * 根据值获取协议类型
+     *
+     * @param value 值
+     * @return 协议类型
+     */
     public static SocketProtocol of(String value) {
         for (SocketProtocol protocol : values()) {
             if (protocol.value.equalsIgnoreCase(value)) {

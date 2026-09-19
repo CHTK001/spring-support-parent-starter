@@ -23,39 +23,39 @@ import java.util.Base64;
 import java.util.Map;
 
 /**
-* o认证 2.0 标准协议客户端实现
-* <p>
-* 提供符合 RFC 6749 规范的 o认证 2.0 客户端功能：
-* - 支持 客户端_凭证 授权模式
-* - 支持 密码 授权模式
-* - 支持 refresh_令牌 刷新令牌
-* - 支持令牌撤销 (RFC 7009)
-* - 支持令牌内省 (RFC 7662)
-* </p>
-*
-* @版本 1.0.0
-* @since 2025-12-15
-* @see <a href="https://datatracker.ietf.org/doc/html/rfc6749">RFC 6749 - OAuth 2.0</a>
-* @author CH
+ * o认证 2.0 标准协议客户端实现
+ * <p>
+ * 提供符合 RFC 6749 规范的 o认证 2.0 客户端功能：
+ * - 支持 客户端_凭证 授权模式
+ * - 支持 密码 授权模式
+ * - 支持 refresh_令牌 刷新令牌
+ * - 支持令牌撤销 (RFC 7009)
+ * - 支持令牌内省 (RFC 7662)
+ * </p>
+ *
+ * @版本 1.0.0
+ * @since 2025-12-15
+ * @see <a href="https://datatracker.ietf.org/doc/html/rfc6749">RFC 6749 - OAuth 2.0</a>
+ * @author CH
  */
 @Spi({"oauth2"})
 @Slf4j
 public class Oauth2Protocol extends AbstractProtocol {
 
     /**
-    * 弹性处理器（熔断+重试）
-    */
+     * 弹性处理器（熔断+重试）
+     */
     private final OAuthClientResilience resilience;
 
     /**
-    * 创建 OAuth2协议 实例
-    * @param authClientProperties 认证客户端属性
-    */
+     * 创建 OAuth2协议 实例
+     * @param authClientProperties 认证客户端属性
+     */
     public Oauth2Protocol(AuthClientProperties authClientProperties) {
         /**
-        * 父。
-        * @param authClientProperties 认证客户端属性
-        */
+         * 父。
+         * @param authClientProperties 认证客户端属性
+         */
         super(authClientProperties);
         this.resilience = new OAuthClientResilience(authClientProperties);
     }
@@ -77,12 +77,12 @@ public class Oauth2Protocol extends AbstractProtocol {
 
     @Override
     /**
-    * upgrade信息
-    * @param cookie Cookie
-    * @param token 令牌
-    * @param upgradeType upgrade类型
-    * @param refreshToken refresh令牌
-    */
+     * upgrade信息
+     * @param cookie Cookie
+     * @param token 令牌
+     * @param upgradeType upgrade类型
+     * @param refreshToken refresh令牌
+     */
     protected AuthenticationInformation upgradeInformation(Cookie cookie, String token,
                                                            UpgradeType upgradeType, String refreshToken) {
         if (upgradeType == UpgradeType.REFRESH && StringUtils.isNotBlank(refreshToken)) {
@@ -119,11 +119,11 @@ public class Oauth2Protocol extends AbstractProtocol {
         } catch (Exception e) {
             log.error("[OAuth2客户端]获取令牌失败", e);
             /**
-            * login认证结果。
-            * @param 500 500
-            * @param e.getMessage( e.获取消息(
-            * @return login认证结果的结果
-            */
+             * login认证结果。
+             * @param 500 500
+             * @param e.getMessage( e.获取消息(
+             * @return login认证结果的结果
+             */
             return new LoginAuthResult(500, "获取令牌失败: " + e.getMessage());
         }
     }
@@ -154,20 +154,20 @@ public class Oauth2Protocol extends AbstractProtocol {
                 return LoginAuthResult.OK;
             }
             /**
-            * 认证异常。
-            * @param status 状态
-            * @return 认证异常的结果
-            */
+             * 认证异常。
+             * @param status 状态
+             * @return 认证异常的结果
+             */
             throw new AuthException("登出失败: HTTP " + status);
         } catch (AuthException e) {
             throw e;
         } catch (Exception e) {
             log.error("[OAuth2客户端]登出失败", e);
             /**
-            * 认证异常。
-            * @param e.getMessage( e.获取消息(
-            * @return 认证异常的结果
-            */
+             * 认证异常。
+             * @param e.getMessage( e.获取消息(
+             * @return 认证异常的结果
+             */
             throw new AuthException("登出失败: " + e.getMessage());
         }
     }
@@ -177,11 +177,11 @@ public class Oauth2Protocol extends AbstractProtocol {
     public LoginAuthResult createTemporaryToken(String sourceToken, Map<String, Object> ext) {
  // o认证 2.0 标准不直接支持临时令牌，返回不支持
         /**
-    * login认证结果。
-    * @param 501 501
-    * @param 2.0协议不支持临时令牌功能" 2.0协议不支持临时令牌功能"
-    * @return login认证结果的结果
-    */
+         * login认证结果。
+         * @param 501 501
+         * @param 2.0协议不支持临时令牌功能" 2.0协议不支持临时令牌功能"
+         * @return login认证结果的结果
+         */
         return new LoginAuthResult(501, "OAuth 2.0协议不支持临时令牌功能");
     }
 
@@ -200,12 +200,12 @@ public class Oauth2Protocol extends AbstractProtocol {
  // ==================== o认证 2.0 特有方法 ====================
 
     /**
-    * 使用客户端凭据模式获取令牌
-    * @param clientId 客户端标识
-    * @param clientSecret 客户端secret
-    * @param scope scope
-    * @return 客户端凭证grant的结果
-    */
+     * 使用客户端凭据模式获取令牌
+     * @param clientId 客户端标识
+     * @param clientSecret 客户端secret
+     * @param scope scope
+     * @return 客户端凭证grant的结果
+     */
     public AuthenticationInformation clientCredentialsGrant(String clientId, String clientSecret, String scope) {
         log.debug("OAuth2 client_credentials授权 - clientId: {}", clientId);
         var selectedUrl = selectUrl();
@@ -227,10 +227,10 @@ public class Oauth2Protocol extends AbstractProtocol {
     }
 
     /**
-    * 使用刷新令牌获取新的访问令牌
-    * @param refreshToken refresh令牌
-    * @return refresh令牌grant的结果
-    */
+     * 使用刷新令牌获取新的访问令牌
+     * @param refreshToken refresh令牌
+     * @return refresh令牌grant的结果
+     */
     public AuthenticationInformation refreshTokenGrant(String refreshToken) {
         log.debug("OAuth2 refresh_token授权");
         var selectedUrl = selectUrl();
@@ -252,10 +252,10 @@ public class Oauth2Protocol extends AbstractProtocol {
     }
 
     /**
-    * 令牌内省 (RFC 7662)
-    * @param token 令牌
-    * @return introspect令牌的结果
-    */
+     * 令牌内省 (RFC 7662)
+     * @param token 令牌
+     * @return introspect令牌的结果
+     */
     public AuthenticationInformation introspectToken(String token) {
         log.debug("OAuth2 令牌内省");
         if (StringUtils.isBlank(token)) {
@@ -292,10 +292,10 @@ public class Oauth2Protocol extends AbstractProtocol {
     }
 
     /**
-    * 获取用户信息
-    * @param accessToken access令牌
-    * @return 获取用户信息的结果
-    */
+     * 获取用户信息
+     * @param accessToken access令牌
+     * @return 获取用户信息的结果
+     */
     public UserResume getUserInfo(String accessToken) {
         log.debug("OAuth2 获取用户信息");
         var selectedUrl = selectUrl();
@@ -329,10 +329,10 @@ public class Oauth2Protocol extends AbstractProtocol {
     // ==================== 辅助方法 ====================
 
     /**
-    * 构建 o认证2 表单 POST 客户端(application/x-www-form-urlencoded)
-    * @param url url
-    * @return formPost的结果
-    */
+     * 构建 o认证2 表单 POST 客户端(application/x-www-form-urlencoded)
+     * @param url url
+     * @return formPost的结果
+     */
     private com.chua.common.support.network.client.HttpClientBuilder formPost(String url) {
         return com.chua.common.support.network.client.HttpClientFactory.of(url)
                 .form()
@@ -340,9 +340,9 @@ public class Oauth2Protocol extends AbstractProtocol {
     }
 
     /**
-    * 构建基础认证头（使用配置的客户端_标识/客户端_secret）
-    * @return 构建basic认证的结果
-    */
+     * 构建基础认证头（使用配置的客户端_标识/客户端_secret）
+     * @return 构建basic认证的结果
+     */
     private String buildBasicAuth() {
         return buildBasicAuth(
                 authClientProperties.getKey().getAccessKey(),
@@ -351,40 +351,40 @@ public class Oauth2Protocol extends AbstractProtocol {
     }
 
     /**
-    * 构建基础认证头
-    * @param clientId 客户端标识
-    * @param clientSecret 客户端secret
-    * @return 构建basic认证的结果
-    */
+     * 构建基础认证头
+     * @param clientId 客户端标识
+     * @param clientSecret 客户端secret
+     * @return 构建basic认证的结果
+     */
     private String buildBasicAuth(String clientId, String clientSecret) {
         var credentials = clientId + ":" + clientSecret;
         return "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes(StandardCharsets.UTF_8));
     }
 
     /**
-    * 解析令牌响应
-    * @param response 响应
-    * @return 解析令牌响应的结果
-    */
+     * 解析令牌响应
+     * @param response 响应
+     * @return 解析令牌响应的结果
+     */
     private LoginAuthResult parseTokenResponse(com.chua.common.support.network.client.ClientResponse response) {
         if (response.getStatusCode() != 200) {
             var error = Json.fromJson(response.getBodyString(), Map.class);
             var errorDesc = error != null ? getStringValue(error, "error_description") : "未知错误";
             /**
-            * login认证结果。
-            * @param response.getStatusCode( 响应.获取状态编码(
-            * @return login认证结果的结果
-            */
+             * login认证结果。
+             * @param response.getStatusCode( 响应.获取状态编码(
+             * @return login认证结果的结果
+             */
             return new LoginAuthResult(response.getStatusCode(), errorDesc);
         }
         var result = Json.fromJson(response.getBodyString(), Map.class);
         if (result == null) {
             /**
-            * login认证结果。
-            * @param 500 500
-            * @param "解析响应失败" "解析响应失败"
-            * @return login认证结果的结果
-            */
+             * login认证结果。
+             * @param 500 500
+             * @param "解析响应失败" "解析响应失败"
+             * @return login认证结果的结果
+             */
             return new LoginAuthResult(500, "解析响应失败");
         }
         var authResult = new LoginAuthResult();
@@ -403,18 +403,18 @@ public class Oauth2Protocol extends AbstractProtocol {
     }
 
     /**
-    * 解析认证响应
-    * @param response 响应
-    * @return 解析认证响应的结果
-    */
+     * 解析认证响应
+     * @param response 响应
+     * @return 解析认证响应的结果
+     */
     private AuthenticationInformation parseAuthResponse(com.chua.common.support.network.client.ClientResponse response) {
         if (response.getStatusCode() != 200) {
             /**
-            * 认证信息。
-            * @param Information.AUTHENTICATION_FAILURE 信息.认证失败
-            * @param null 空
-            * @return 认证信息的结果
-            */
+             * 认证信息。
+             * @param Information.AUTHENTICATION_FAILURE 信息.认证失败
+             * @param null 空
+             * @return 认证信息的结果
+             */
             return new AuthenticationInformation(Information.AUTHENTICATION_FAILURE, null);
         }
         var result = Json.fromJson(response.getBodyString(), Map.class);
@@ -435,12 +435,12 @@ public class Oauth2Protocol extends AbstractProtocol {
     }
 
     /**
-    * 获取字符串值
-    *
-    * @param map 映射
-    * @param key Key
-    * @return 获取字符串值的结果
-    */
+     * 获取字符串值
+     *
+     * @param map 映射
+     * @param key Key
+     * @return 获取字符串值的结果
+     */
     private String getStringValue(Map<String, Object> map, String key) {
         if (map == null) {
             return null;

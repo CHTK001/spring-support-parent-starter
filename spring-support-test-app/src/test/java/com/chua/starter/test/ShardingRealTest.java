@@ -19,14 +19,14 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
-* 数据源分片真实测试：两个 H2 分片库经 分库分表sphere v5 集成，订单 表按 标识 MOD 分片。
-*
-* <p>依赖门控：分片引擎依赖 {@code utils-support-shardingv5-starter}（datasource starter 的
-* 可选依赖，未随传递装配；{@code @ConditionalOnClass(ShardingV5Conversion)} 退避）。依赖就绪时
-* 本测试自动执行，未装配时以明确原因跳过（见测试报告"条件/预期/结果"）。</p>
-*
-* @author CH
-* @since 2026/09/04
+ * 数据源分片真实测试：两个 H2 分片库经 分库分表sphere v5 集成，订单 表按 标识 MOD 分片。
+ *
+ * <p>依赖门控：分片引擎依赖 {@code utils-support-shardingv5-starter}（datasource starter 的
+ * 可选依赖，未随传递装配；{@code @ConditionalOnClass(ShardingV5Conversion)} 退避）。依赖就绪时
+ * 本测试自动执行，未装配时以明确原因跳过（见测试报告"条件/预期/结果"）。</p>
+ *
+ * @author CH
+ * @since 2026/09/04
  */
 @SpringBootTest
 class ShardingRealTest {
@@ -43,34 +43,34 @@ class ShardingRealTest {
  // id=3 -> shard1.订单_3，id=4 -> shard0.订单_4。
     static {
         /**
-        * 参见。
-        * @param "jdbc:h2:mem:shard0;DB_CLOSE_DELAY=-1;MODE=MYSQL;IGNORECASE=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE" "JDBC:h2:mem:shard0;db关闭延迟=1;mode=MySQL;ignorecase=true;caseinsensitiveidentifiers=true"
-        * @param 2 2
-        * @param "order-2" "订单-2"
-        * @param 4 4
-        * @param "order-4" "订单-4"
+         * 参见。
+         * @param "jdbc:h2:mem:shard0;DB_CLOSE_DELAY=-1;MODE=MYSQL;IGNORECASE=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE" "JDBC:h2:mem:shard0;db关闭延迟=1;mode=MySQL;ignorecase=true;caseinsensitiveidentifiers=true"
+         * @param 2 2
+         * @param "order-2" "订单-2"
+         * @param 4 4
+         * @param "order-4" "订单-4"
          */
         seed("jdbc:h2:mem:shard0;DB_CLOSE_DELAY=-1;MODE=MYSQL;IGNORECASE=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE", 2, "order-2", 4, "order-4");
         /**
-        * 参见。
-        * @param "jdbc:h2:mem:shard1;DB_CLOSE_DELAY=-1;MODE=MYSQL;IGNORECASE=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE" "JDBC:h2:mem:shard1;db关闭延迟=1;mode=MySQL;ignorecase=true;caseinsensitiveidentifiers=true"
-        * @param 1 1
-        * @param "order-1" "订单-1"
-        * @param 3 3
-        * @param "order-3" "订单-3"
+         * 参见。
+         * @param "jdbc:h2:mem:shard1;DB_CLOSE_DELAY=-1;MODE=MYSQL;IGNORECASE=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE" "JDBC:h2:mem:shard1;db关闭延迟=1;mode=MySQL;ignorecase=true;caseinsensitiveidentifiers=true"
+         * @param 1 1
+         * @param "order-1" "订单-1"
+         * @param 3 3
+         * @param "order-3" "订单-3"
          */
         seed("jdbc:h2:mem:shard1;DB_CLOSE_DELAY=-1;MODE=MYSQL;IGNORECASE=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE", 1, "order-1", 3, "order-3");
     }
 
     /**
-    * 参见。
-    * @param url url
-    * @param pairs pairs
+     * 参见。
+     * @param url url
+     * @param pairs pairs
      */
     private static void seed(String url, Object... pairs) {
         /**
-        * 尝试。
-        * @param "" ""
+         * 尝试。
+         * @param "" ""
          */
         try (Connection connection = DriverManager.getConnection(url, "sa", "");
              Statement statement = connection.createStatement()) {
@@ -96,10 +96,10 @@ class ShardingRealTest {
             }
         } catch (Exception e) {
             /**
-            * illegal状态异常。
-            * @param url url
-            * @param e e
-            * @return illegal状态异常的结果
+             * illegal状态异常。
+             * @param url url
+             * @param e e
+             * @return illegal状态异常的结果
              */
             throw new IllegalStateException("分片库种子初始化失败: " + url, e);
         }
@@ -115,8 +115,8 @@ class ShardingRealTest {
          */
         assertNotNull(shardingDataSource, "分片引擎应已装配（provided 依赖修复后引擎激活）");
         /**
-        * 断言true。
-        * @param shardingDataSource.getClass( 分库分表数据源.getclass(
+         * 断言true。
+         * @param shardingDataSource.getClass( 分库分表数据源.getclass(
          */
         assertTrue(shardingDataSource.getClass().getName().contains("ShardingSphere"),
                 "shardingDataSource 应为 ShardingSphere 数据源，实际: " + shardingDataSource.getClass().getName());
@@ -132,10 +132,10 @@ class ShardingRealTest {
         JdbcTemplate shardedJdbc = new JdbcTemplate(shardingDataSource);
         Integer count = shardedJdbc.queryForObject("select count(*) from orders", Integer.class);
         /**
-        * 断言equals。
-        * @param 4 4
-        * @param count 数量
-        * @param "分片聚合应统计两个分片库的全部数据" "分片聚合应统计两个分片库的全部数据"
+         * 断言equals。
+         * @param 4 4
+         * @param count 数量
+         * @param "分片聚合应统计两个分片库的全部数据" "分片聚合应统计两个分片库的全部数据"
          */
         assertEquals(4, count, "分片聚合应统计两个分片库的全部数据");
     }
@@ -150,25 +150,25 @@ class ShardingRealTest {
         JdbcTemplate shardedJdbc = new JdbcTemplate(shardingDataSource);
         List<String> names = shardedJdbc.queryForList("select name from orders where id = 2", String.class);
         /**
-        * 断言equals。
-        * @param 1 1
-        * @param names.size( 名称.大小(
+         * 断言equals。
+         * @param 1 1
+         * @param names.size( 名称.大小(
          */
         assertEquals(1, names.size(), "按分片键查询应命中分片返回对应行");
         /**
-        * 断言equals。
-        * @param "order-2" "订单-2"
-        * @param names.getFirst 名称.获取(0
+         * 断言equals。
+         * @param "order-2" "订单-2"
+         * @param names.getFirst 名称.获取(0
          */
         assertEquals("order-2", names.getFirst(), "分片路由应返回正确数据");
     }
 
     /**
-    * 路由可用性门控：分片路由查询**仍不可用**（探针 tablenotfound '订单'）——
-    * 本批次 7 类候选修复实验已全部验证（provided 依赖显式化/逐表库规则/URL MODE=MySQL
-    * 参数/逻辑表名 订单（通配移除+重装）/书签表种子/脚本运行器排除/H2 1.4.200 钉版）：
-    * 引擎装配与分库分表规则构建均已实证生效，但路由查询仍失败——剩余为 分库分表sphere 5.5.2
-    * 与当前装配的深层集成问题（如实记录，待 分库分表sphere 升级或专项），路由用例在可用时自动执行。
+     * 路由可用性门控：分片路由查询**仍不可用**（探针 tablenotfound '订单'）——
+     * 本批次 7 类候选修复实验已全部验证（provided 依赖显式化/逐表库规则/URL MODE=MySQL
+     * 参数/逻辑表名 订单（通配移除+重装）/书签表种子/脚本运行器排除/H2 1.4.200 钉版）：
+     * 引擎装配与分库分表规则构建均已实证生效，但路由查询仍失败——剩余为 分库分表sphere 5.5.2
+     * 与当前装配的深层集成问题（如实记录，待 分库分表sphere 升级或专项），路由用例在可用时自动执行。
      */
     private void assumeShardingRoutable() {
         if (shardingDataSource == null) {

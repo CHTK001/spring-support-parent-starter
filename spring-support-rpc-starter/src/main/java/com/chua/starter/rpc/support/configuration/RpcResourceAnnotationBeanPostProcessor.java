@@ -30,22 +30,22 @@ import java.util.concurrent.ConcurrentMap;
 
 
 /**
-* rpc资源注释配置
-*
-* @版本 1.0.0
-* @since 2024/04/07
-* @author CH
+ * rpc资源注释配置
+ *
+ * @版本 1.0.0
+ * @since 2024/04/07
+ * @author CH
  */
 public class RpcResourceAnnotationBeanPostProcessor extends AbstractAnnotationBeanPostProcessor implements BeanFactoryPostProcessor {
 
     /**
-    *
-    */
+     *
+     */
     public static final String BEAN_NAME = "referenceAnnotationBeanPostProcessor";
 
     /**
-    * 缓存 大小
-    */
+     * 缓存 大小
+     */
     private static final int CACHE_SIZE = Integer.getInteger(BEAN_NAME + ".cache.size", 32);
 
     private final ConcurrentMap<InjectionMetadata.InjectedElement, String> injectedFieldReferenceBeanCache =
@@ -90,11 +90,11 @@ public class RpcResourceAnnotationBeanPostProcessor extends AbstractAnnotationBe
                     throw e;
                 } catch (Exception e) {
                     /**
-                    * illegal状态异常。
-                    * @param failed" 失败"
-                    * @param e e
-                    * @return illegal状态异常的结果
-                    */
+                     * illegal状态异常。
+                     * @param failed" 失败"
+                     * @param e e
+                     * @return illegal状态异常的结果
+                     */
                     throw new IllegalStateException("Prepare rpc reference injection element failed", e);
                 }
             }
@@ -127,11 +127,11 @@ public class RpcResourceAnnotationBeanPostProcessor extends AbstractAnnotationBe
             prepareInjection(metadata);
         } catch (Exception e) {
             /**
-            * illegal状态异常。
-            * @param failed" 失败"
-            * @param e e
-            * @return illegal状态异常的结果
-            */
+             * illegal状态异常。
+             * @param failed" 失败"
+             * @param e e
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("Prepare reference injection element failed", e);
         }
     }
@@ -154,11 +154,11 @@ public class RpcResourceAnnotationBeanPostProcessor extends AbstractAnnotationBe
             throw ex;
         } catch (Throwable ex) {
             /**
-            * Bean创建异常。
-            * @param beanName Bean名称
-            * @param getAnnotationType( 获取注解类型(
-            * @return Bean创建异常的结果
-            */
+             * Bean创建异常。
+             * @param beanName Bean名称
+             * @param getAnnotationType( 获取注解类型(
+             * @return Bean创建异常的结果
+             */
             throw new BeanCreationException(beanName, "Injection of @" + getAnnotationType().getSimpleName()
                     + " dependencies is failed", ex);
         }
@@ -186,10 +186,10 @@ public class RpcResourceAnnotationBeanPostProcessor extends AbstractAnnotationBe
     }
 
     /**
-    * prepareinjection
-    *
-    * @param metadata metadata
-    */
+     * prepareinjection
+     *
+     * @param metadata metadata
+     */
     protected void prepareInjection(AnnotatedInjectionMetadata metadata) throws BeansException {
         try {
             for (AnnotatedFieldElement fieldElement : metadata.getFieldElements()) {
@@ -218,24 +218,24 @@ public class RpcResourceAnnotationBeanPostProcessor extends AbstractAnnotationBe
             }
         } catch (ClassNotFoundException e) {
             /**
-            * Bean创建异常。
-            * @param failed" 失败"
-            * @param e e
-            * @return Bean创建异常的结果
-            */
+             * Bean创建异常。
+             * @param failed" 失败"
+             * @param e e
+             * @return Bean创建异常的结果
+             */
             throw new BeanCreationException("prepare reference annotation failed", e);
         }
     }
 
     /**
-    * 注册引用Bean
-    *
-    * @param propertyName 财产名称
-    * @param injectedType injected类型
-    * @param attributes attributes
-    * @param member member
-    * @return 注册引用Bean的结果
-    */
+     * 注册引用Bean
+     *
+     * @param propertyName 财产名称
+     * @param injectedType injected类型
+     * @param attributes attributes
+     * @param member member
+     * @return 注册引用Bean的结果
+     */
     public String registerReferenceBean(String propertyName, Class<?> injectedType, Map<String, Object> attributes, Member member) throws BeansException {
 
         boolean renameable = true;
@@ -253,10 +253,10 @@ public class RpcResourceAnnotationBeanPostProcessor extends AbstractAnnotationBe
         String interfaceName = MapUtils.getString(attributes, RpcAttribute.INTERFACE);
         if (com.chua.common.support.utils.StringUtils.isBlank(interfaceName)) {
             /**
-            * Bean创建异常。
-            * @param checkLocation 检查位置
-            * @return Bean创建异常的结果
-            */
+             * Bean创建异常。
+             * @param checkLocation 检查位置
+             * @return Bean创建异常的结果
+             */
             throw new BeanCreationException("Need to specify the 'interfaceName' or 'interfaceClass' attribute of 'bean' if enable generic. " + checkLocation);
         }
 
@@ -328,12 +328,12 @@ public class RpcResourceAnnotationBeanPostProcessor extends AbstractAnnotationBe
     }
 
     /**
-    * 由 {@link RpcProperties#getAccessKey()}、{@link RpcProperties#getSecretKey()}、
-    * {@link RpcProperties#getServiceKey()} 派生调用令牌。
-    *
-    * @param properties RPC 配置
-    * @return 派生令牌，字段均未配置时返回 {@code null}
-    */
+     * 由 {@link RpcProperties#getAccessKey()}、{@link RpcProperties#getSecretKey()}、
+     * {@link RpcProperties#getServiceKey()} 派生调用令牌。
+     *
+     * @param properties RPC 配置
+     * @return 派生令牌，字段均未配置时返回 {@code null}
+     */
     private static String deriveToken(RpcProperties properties) {
         String accessKey = properties.getAccessKey();
         String secretKey = properties.getSecretKey();

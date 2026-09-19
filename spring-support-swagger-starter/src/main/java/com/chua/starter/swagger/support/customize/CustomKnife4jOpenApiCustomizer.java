@@ -46,43 +46,43 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
-* 增强扩展属性支持
-*
-* @author <a href="xiaoymin@foxmail.com">xiaoymin@foxmail.com</a>
-* 2022/12/11 22:40
-* @since 4.1.0
-* @author CH
+ * 增强扩展属性支持
+ *
+ * @author <a href="xiaoymin@foxmail.com">xiaoymin@foxmail.com</a>
+ * 2022/12/11 22:40
+ * @since 4.1.0
+ * @author CH
  */
 @Slf4j
 @Primary
 public class CustomKnife4jOpenApiCustomizer implements GlobalOpenApiCustomizer {
     
     /**
-    * 刀4j配置属性
-    */
+     * 刀4j配置属性
+     */
     private final Knife4jProperties knife4jProperties;
     
     /**
-    * springdoc配置属性
-    */
+     * springdoc配置属性
+     */
     private final SpringDocConfigProperties properties;
 
     /**
-    * 构造函数
-    *
-    * @param knife4jProperties 刀4j配置属性
-    * @param properties springdoc配置属性
-    */
+     * 构造函数
+     *
+     * @param knife4jProperties 刀4j配置属性
+     * @param properties springdoc配置属性
+     */
     public CustomKnife4jOpenApiCustomizer(Knife4jProperties knife4jProperties, SpringDocConfigProperties properties) {
         this.knife4jProperties = knife4jProperties;
         this.properties = properties;
     }
 
     /**
-    * 定制打开api
-    *
-    * @param openApi 打开api对象
-    */
+     * 定制打开api
+     *
+     * @param openApi 打开api对象
+     */
     @Override
     public void customise(OpenAPI openApi) {
         log.debug("Knife4j OpenApiCustomizer");
@@ -96,18 +96,18 @@ public class CustomKnife4jOpenApiCustomizer implements GlobalOpenApiCustomizer {
             objectMap.put(GlobalConstants.EXTENSION_OPEN_MARKDOWN_NAME, openApiExtensionResolver.getMarkdownFiles());
             openApi.addExtension(GlobalConstants.EXTENSION_OPEN_API_NAME, objectMap);
             /**
-            * 添加订单延伸。
-            * @param openApi 打开api
-            */
+             * 添加订单延伸。
+             * @param openApi 打开api
+             */
             addOrderExtension(openApi);
         }
     }
 
     /**
-    * 往打开api内标签字段添加x-订单属性
-    *
-    * @param openApi 打开api对象
-    */
+     * 往打开api内标签字段添加x-订单属性
+     *
+     * @param openApi 打开api对象
+     */
     private void addOrderExtension(OpenAPI openApi) {
         if (CollectionUtils.isEmpty(properties.getGroupConfigs())) {
             return;
@@ -156,11 +156,11 @@ public class CustomKnife4jOpenApiCustomizer implements GlobalOpenApiCustomizer {
     }
 
     /**
-    * 获取标签注解
-    *
-    * @param clazz 类
-    * @return Tag注解
-    */
+     * 获取标签注解
+     *
+     * @param clazz 类
+     * @return Tag注解
+     */
     private Tag getTag(Class<?> clazz) {
         // 从类上获取
         Tag tag = clazz.getAnnotation(Tag.class);
@@ -181,12 +181,12 @@ public class CustomKnife4jOpenApiCustomizer implements GlobalOpenApiCustomizer {
     }
 
     /**
-    * 按注解扫描包
-    *
-    * @param packageName 包名
-    * @param annotationClass 注解类
-    * @return 类集合
-    */
+     * 按注解扫描包
+     *
+     * @param packageName 包名
+     * @param annotationClass 注解类
+     * @return 类集合
+     */
     private Set<Class<?>> scanPackageByAnnotation(
             String packageName, final Class<? extends Annotation> annotationClass) {
         ClassPathScanningCandidateComponentProvider scanner =

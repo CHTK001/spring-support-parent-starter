@@ -5,10 +5,10 @@ import com.chua.starter.device.support.entity.DeviceOrganization;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
-* 设备组织 映射器
-*
-* @since 4.0.0.42
-* @author CH
+ * 设备组织 映射器
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Mapper
 public interface DeviceOrganizationMapper extends BaseMapper<DeviceOrganization> {

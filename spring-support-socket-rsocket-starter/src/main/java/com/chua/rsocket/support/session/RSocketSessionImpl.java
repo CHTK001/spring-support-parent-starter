@@ -14,12 +14,12 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
-* rSocket 会话实现
-* 基于 Spring webSocket
-*
-* @版本 1.0.0
-* @since 2024-12-04
-* @author CH
+ * rSocket 会话实现
+ * 基于 Spring webSocket
+ *
+ * @版本 1.0.0
+ * @since 2024-12-04
+ * @author CH
  */
 @Slf4j
 public class RSocketSessionImpl implements SocketSession {
@@ -83,11 +83,11 @@ public class RSocketSessionImpl implements SocketSession {
     @Override
     @SuppressWarnings("unchecked")
     /**
-    * 获取Attribute
-    *
-    * @param key Key
-    * @return 获取attribute的结果
-    */
+     * 获取Attribute
+     *
+     * @param key Key
+     * @return 获取attribute的结果
+     */
     public <T> T getAttribute(String key) {
         return (T) attributes.get(key);
     }
@@ -155,20 +155,20 @@ public class RSocketSessionImpl implements SocketSession {
     @Override
     @SuppressWarnings("unchecked")
     /**
-    * 获取Connection
-    *
-    * @return 获取connection的结果
-    */
+     * 获取Connection
+     *
+     * @return 获取connection的结果
+     */
     public <T> T getConnection() {
         return (T) session;
     }
 
     /**
-    * 创建消息
-    * @param event 事件
-    * @param data 数据
-    * @return 创建消息的结果
-    */
+     * 创建消息
+     * @param event 事件
+     * @param data 数据
+     * @return 创建消息的结果
+     */
     private String createMessage(String event, Object data) {
         try {
             String dataStr = data instanceof String ? (String) data : objectMapper.writeValueAsString(data);

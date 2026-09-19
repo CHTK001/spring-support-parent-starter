@@ -31,9 +31,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 /**
-* tshark 网络抓包服务
-* @author CH
-* @since 4.0.0
+ * tshark 网络抓包服务
+ * @author CH
+ * @since 4.0.0
  */
 @Slf4j
 @Service
@@ -67,9 +67,9 @@ public class TsharkCaptureService {
             Process p = pb.start();
             List<String> ifaces = new ArrayList<>();
             /**
-            * 尝试。
-            * @param InputStreamReader(p.getInputStream( 输入流读取(p.获取输入流(
-            */
+             * 尝试。
+             * @param InputStreamReader(p.getInputStream( 输入流读取(p.获取输入流(
+             */
             try (BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8))) {
                 String line;
                 while ((line = r.readLine()) != null) {
@@ -94,9 +94,9 @@ public class TsharkCaptureService {
     }
 
     /**
-    * 检查tshark。
-    * @return 检查tshark的结果
-    */
+     * 检查tshark。
+     * @return 检查tshark的结果
+     */
     public ReturnResult<Boolean> checkTshark() {
         try {
             ProcessBuilder pb = new ProcessBuilder(TSHARK_BIN, "--version");
@@ -104,9 +104,9 @@ public class TsharkCaptureService {
             Process p = pb.start();
             StringBuilder sb = new StringBuilder();
             /**
-            * 尝试。
-            * @param InputStreamReader(p.getInputStream( 输入流读取(p.获取输入流(
-            */
+             * 尝试。
+             * @param InputStreamReader(p.getInputStream( 输入流读取(p.获取输入流(
+             */
             try (BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8))) {
                 String line;
                 while ((line = r.readLine()) != null && sb.length() < 300) {
@@ -121,14 +121,14 @@ public class TsharkCaptureService {
     }
 
     /**
-    * 启动capture。
-    * @param name 名称
-    * @param iface iface
-    * @param filter 过滤器
-    * @param count 数量
-    * @param timeout 超时
-    * @return 启动capture的结果
-    */
+     * 启动capture。
+     * @param name 名称
+     * @param iface iface
+     * @param filter 过滤器
+     * @param count 数量
+     * @param timeout 超时
+     * @return 启动capture的结果
+     */
     public ReturnResult<MsTsharkSession> startCapture(String name, String iface, String filter, Integer count, Integer timeout) {
         try {
             if (iface == null || iface.isBlank()) {
@@ -181,11 +181,11 @@ public class TsharkCaptureService {
 
     @Async
     /**
-    * Asyncfinalize。
-    * @param sessionId 会话标识
-    * @param proc proc
-    * @param filePath 文件路径
-    */
+     * Asyncfinalize。
+     * @param sessionId 会话标识
+     * @param proc proc
+     * @param filePath 文件路径
+     */
     public void asyncFinalize(Long sessionId, Process proc, Path filePath) {
         try {
             boolean finished = proc.waitFor(60L, TimeUnit.MINUTES);
@@ -209,10 +209,10 @@ public class TsharkCaptureService {
     }
 
     /**
-    * 停止capture。
-    * @param sessionId 会话标识
-    * @return 停止capture的结果
-    */
+     * 停止capture。
+     * @param sessionId 会话标识
+     * @return 停止capture的结果
+     */
     public ReturnResult<Void> stopCapture(Long sessionId) {
         Process proc = this.running.get(sessionId);
         if (proc == null) {
@@ -243,10 +243,10 @@ public class TsharkCaptureService {
     }
 
     /**
-    * 解析 pcap 文件: 用 tshark 输出 JSON 数组, 遍历每个元素入库。
-    * @param sessionId 会话标识
-    * @param filePath 文件路径
-    */
+     * 解析 pcap 文件: 用 tshark 输出 JSON 数组, 遍历每个元素入库。
+     * @param sessionId 会话标识
+     * @param filePath 文件路径
+     */
     private void parsePcapToDb(Long sessionId, Path filePath) {
         try {
             if (!Files.exists(filePath) || Files.size(filePath) == 0L) {
@@ -260,9 +260,9 @@ public class TsharkCaptureService {
             Process p = pb.start();
             int batch = 0;
             /**
-            * 尝试。
-            * @param InputStreamReader(p.getInputStream( 输入流读取(p.获取输入流(
-            */
+             * 尝试。
+             * @param InputStreamReader(p.getInputStream( 输入流读取(p.获取输入流(
+             */
             try (BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8), 0x100000)) {
                 String line;
                 while ((line = r.readLine()) != null) {
@@ -299,11 +299,11 @@ public class TsharkCaptureService {
     }
 
     /**
-    * 保存数据包。
-    * @param sessionId 会话标识
-    * @param jsonLine json线
-    * @return 保存数据包的结果
-    */
+     * 保存数据包。
+     * @param sessionId 会话标识
+     * @param jsonLine json线
+     * @return 保存数据包的结果
+     */
     private boolean savePacket(Long sessionId, String jsonLine) {
         try {
             PacketRecord rec = PacketParserService.parse(jsonLine);
@@ -333,11 +333,11 @@ public class TsharkCaptureService {
     }
 
     /**
-    * page会话。
-    * @param page page
-    * @param size 大小
-    * @return page会话的结果
-    */
+     * page会话。
+     * @param page page
+     * @param size 大小
+     * @return page会话的结果
+     */
     public ReturnResult<IPage<MsTsharkSession>> pageSessions(int page, int size) {
         IPage<MsTsharkSession> p = this.sessionMapper.selectPage(new Page<>(page, size),
                 new LambdaQueryWrapper<MsTsharkSession>().orderByDesc(MsTsharkSession::getId));
@@ -345,12 +345,12 @@ public class TsharkCaptureService {
     }
 
     /**
-    * page数据包。
-    * @param sessionId 会话标识
-    * @param page page
-    * @param size 大小
-    * @return page数据包的结果
-    */
+     * page数据包。
+     * @param sessionId 会话标识
+     * @param page page
+     * @param size 大小
+     * @return page数据包的结果
+     */
     public ReturnResult<IPage<MsTsharkPacket>> pagePackets(Long sessionId, int page, int size) {
         IPage<MsTsharkPacket> p = this.packetMapper.selectPage(new Page<>(page, size),
                 new LambdaQueryWrapper<MsTsharkPacket>().eq(sessionId != null, MsTsharkPacket::getSessionId, sessionId)
@@ -359,20 +359,20 @@ public class TsharkCaptureService {
     }
 
     /**
-    * 获取数据包。
-    * @param id 标识
-    * @return 获取数据包的结果
-    */
+     * 获取数据包。
+     * @param id 标识
+     * @return 获取数据包的结果
+     */
     public ReturnResult<MsTsharkPacket> getPacket(Long id) {
         MsTsharkPacket packet = this.packetMapper.selectById(id);
         return packet == null ? ReturnResult.error("数据包不存在: " + id) : ReturnResult.ok(packet);
     }
 
     /**
-    * 协议stats。
-    * @param sessionId 会话标识
-    * @return 协议stats的结果
-    */
+     * 协议stats。
+     * @param sessionId 会话标识
+     * @return 协议stats的结果
+     */
     public ReturnResult<List<Map<String, Object>>> protocolStats(Long sessionId) {
         List<MsTsharkPacket> packets = this.packetMapper.selectList(
                 new LambdaQueryWrapper<MsTsharkPacket>().eq(sessionId != null, MsTsharkPacket::getSessionId, sessionId));
@@ -395,11 +395,11 @@ public class TsharkCaptureService {
     }
 
     /**
-    * top流。
-    * @param sessionId 会话标识
-    * @param limit 限制
-    * @return top流的结果
-    */
+     * top流。
+     * @param sessionId 会话标识
+     * @param limit 限制
+     * @return top流的结果
+     */
     public ReturnResult<List<Map<String, Object>>> topFlows(Long sessionId, int limit) {
         List<MsTsharkPacket> packets = this.packetMapper.selectList(
                 new LambdaQueryWrapper<MsTsharkPacket>().eq(sessionId != null, MsTsharkPacket::getSessionId, sessionId));
@@ -425,10 +425,10 @@ public class TsharkCaptureService {
     }
 
     /**
-    * 删除会话。
-    * @param sessionId 会话标识
-    * @return 删除会话的结果
-    */
+     * 删除会话。
+     * @param sessionId 会话标识
+     * @return 删除会话的结果
+     */
     public ReturnResult<Void> deleteSession(Long sessionId) {
         Process proc = this.running.get(sessionId);
         if (proc != null) {

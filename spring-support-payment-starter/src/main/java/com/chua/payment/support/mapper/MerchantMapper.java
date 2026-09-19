@@ -5,10 +5,10 @@ import com.chua.payment.support.entity.Merchant;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
-* 商户映射器接口
-*
-* @since 2026-03-18
-* @author CH
+ * 商户映射器接口
+ *
+ * @since 2026-03-18
+ * @author CH
  */
 @Mapper
 public interface MerchantMapper extends BaseMapper<Merchant> {

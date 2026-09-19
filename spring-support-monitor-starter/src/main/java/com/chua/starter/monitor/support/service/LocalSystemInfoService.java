@@ -61,10 +61,10 @@ public class LocalSystemInfoService {
     }
 
     /**
-    * 获取本机基本信息（CPU、内存、操作系统、网络接口、包管理器）。
-    *
-    * @return 本机基本信息键值对；OSHI 不可用时降级为 JVM 系统属性
-    */
+     * 获取本机基本信息（CPU、内存、操作系统、网络接口、包管理器）。
+     *
+     * @return 本机基本信息键值对；OSHI 不可用时降级为 JVM 系统属性
+     */
     public Map<String, Object> getHostInfo() {
         Map<String, Object> info = new HashMap<>();
         try {
@@ -142,15 +142,15 @@ public class LocalSystemInfoService {
     }
 
     /**
-    * 获取本机磁盘信息（文件系统挂载点）。
-    *
-    * @return 磁盘列表（名称、挂载路径、类型、容量与使用率）；采集失败返回空列表
-    */
+     * 获取本机磁盘信息（文件系统挂载点）。
+     *
+     * @return 磁盘列表（名称、挂载路径、类型、容量与使用率）；采集失败返回空列表
+     */
         /**
-        * 获取本机 CPU 使用率（%，瞬时）。
-        *
-        * @return CPU 使用率 0-100；采集失败返回 0
-        */
+         * 获取本机 CPU 使用率（%，瞬时）。
+         *
+         * @return CPU 使用率 0-100；采集失败返回 0
+         */
     /** 上次 CPU ticks（getSystemCpuLoadBetweenTicks 需要两次采样） */
     private transient long[] lastCpuTicks = null;
 
@@ -217,12 +217,12 @@ public List<Map<String, Object>> getDisks() {
     }
 
     /**
-    * 获取本机进程列表（按 CPU 占用倒序）。
-    *
-    * @param keyword 进程名或命令行关键字，为空则不做过滤
-    * @param limit   最大返回条数
-    * @return 进程信息列表；采集失败返回空列表
-    */
+     * 获取本机进程列表（按 CPU 占用倒序）。
+     *
+     * @param keyword 进程名或命令行关键字，为空则不做过滤
+     * @param limit   最大返回条数
+     * @return 进程信息列表；采集失败返回空列表
+     */
     public List<Map<String, Object>> getProcesses(String keyword, int limit) {
         List<Map<String, Object>> result = new ArrayList<>();
         try {
@@ -259,10 +259,10 @@ public List<Map<String, Object>> getDisks() {
     }
 
     /**
-    * 获取本机服务列表。
-    *
-    * @return 服务列表（名称、状态、PID）；采集失败返回空列表
-    */
+     * 获取本机服务列表。
+     *
+     * @return 服务列表（名称、状态、PID）；采集失败返回空列表
+     */
     public List<Map<String, Object>> getServices() {
         List<Map<String, Object>> result = new ArrayList<>();
         try {
@@ -284,10 +284,10 @@ public List<Map<String, Object>> getDisks() {
     }
 
     /**
-    * 获取本机网络接口。
-    *
-    * @return 网络接口列表（名称、MAC、IPv4/IPv6、速率、MTU）；采集失败返回空列表
-    */
+     * 获取本机网络接口。
+     *
+     * @return 网络接口列表（名称、MAC、IPv4/IPv6、速率、MTU）；采集失败返回空列表
+     */
     public List<Map<String, Object>> getNetworkInterfaces() {
         List<Map<String, Object>> result = new ArrayList<>();
         try {
@@ -313,10 +313,10 @@ public List<Map<String, Object>> getDisks() {
     }
 
     /**
-    * 获取本机网络连接。
-    *
-    * @return 连接列表（协议类型、本地地址与端口、连接状态）；采集失败返回空列表
-    */
+     * 获取本机网络连接。
+     *
+     * @return 连接列表（协议类型、本地地址与端口、连接状态）；采集失败返回空列表
+     */
     public List<Map<String, Object>> getNetworkConnections() {
         List<Map<String, Object>> result = new ArrayList<>();
         try {
@@ -370,10 +370,10 @@ public List<Map<String, Object>> getDisks() {
     }
 
     /**
-    * 获取本机环境变量。
-    *
-    * @return 环境变量列表（name / value）
-    */
+     * 获取本机环境变量。
+     *
+     * @return 环境变量列表（name / value）
+     */
     public List<Map<String, String>> getEnvVars() {
         List<Map<String, String>> result = new ArrayList<>();
         Map<String, String> env = System.getenv();

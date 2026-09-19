@@ -6,23 +6,23 @@ import java.net.NetworkInterface;
 import java.util.Enumeration;
 
 /**
-* 网络工具（spring-支持 本地实现）。
-* @author CH
-* @since 4.0.0
+ * 网络工具（spring-支持 本地实现）。
+ * @author CH
+ * @since 4.0.0
  */
 public final class NetUtils {
 
     /**
-    * 私有构造函数，防止实例化
-    */
+     * 私有构造函数，防止实例化
+     */
     private NetUtils() {
     }
 
     /**
-    * 获取本地主机
-    *
-    * @return 获取本地主机的结果
-    */
+     * 获取本地主机
+     *
+     * @return 获取本地主机的结果
+     */
     public static String getLocalHost() {
         try {
             return InetAddress.getLocalHost().getHostAddress();
@@ -32,10 +32,10 @@ public final class NetUtils {
     }
 
     /**
-    * 获取本地ipv
-    *
-    * @return 获取本地ipv4的结果
-    */
+     * 获取本地ipv
+     *
+     * @return 获取本地ipv4的结果
+     */
     public static String getLocalIpv4() {
         try {
             Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();

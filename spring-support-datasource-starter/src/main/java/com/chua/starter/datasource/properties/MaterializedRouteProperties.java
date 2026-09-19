@@ -7,10 +7,10 @@ import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.core.env.Environment;
 
 /**
-* SQL 物理化路由配置。
-*
-* @since 2026/4/2
-* @author CH
+ * SQL 物理化路由配置。
+ *
+ * @since 2026/4/2
+ * @author CH
  */
 @Data
 @ConfigurationProperties(prefix = MaterializedRouteProperties.PRE)
@@ -22,38 +22,38 @@ public class MaterializedRouteProperties {
     public static final String LEGACY_PRE = "spring.datasource.materialized";
 
     /**
-    * 是否启用。
-    */
+     * 是否启用。
+     */
     private boolean enabled = false;
 
     /**
-    * 默认表行数阈值。
-    */
+     * 默认表行数阈值。
+     */
     private long defaultThreshold = 1000L;
 
     /**
-    * 内存副本自动刷新间隔，单位秒。
-    * 小于等于 0 时表示关闭自动刷新。
-    */
+     * 内存副本自动刷新间隔，单位秒。
+     * 小于等于 0 时表示关闭自动刷新。
+     */
     private long refreshIntervalSeconds = 0L;
 
     /**
-    * 事务中是否跳过查询物理化。
-    * 默认跳过，避免与事务连接绑定冲突。
-    */
+     * 事务中是否跳过查询物理化。
+     * 默认跳过，避免与事务连接绑定冲突。
+     */
     private boolean skipQueryInTransaction = true;
 
     /**
-    * 物理化数据源名称前缀。
-    */
+     * 物理化数据源名称前缀。
+     */
     private String cacheDataSourcePrefix = "materialized#";
 
     /**
-    * 绑定
-    *
-    * @param environment 环境
-    * @return bind的结果
-    */
+     * 绑定
+     *
+     * @param environment 环境
+     * @return bind的结果
+     */
     public static MaterializedRouteProperties bind(Environment environment) {
         MaterializedRouteProperties current = Binder.get(environment).bindOrCreate(PRE, MaterializedRouteProperties.class);
         MaterializedRouteProperties legacy = Binder.get(environment).bindOrCreate(LEGACY_PRE, MaterializedRouteProperties.class);
@@ -73,13 +73,13 @@ public class MaterializedRouteProperties {
     }
 
     /**
-    * 读取布尔值
-    * @param environment 环境
-    * @param currentKey 当前Key
-    * @param legacyKey legacyKey
-    * @param currentValue 当前值
-    * @param legacyValue legacy值
-    */
+     * 读取布尔值
+     * @param environment 环境
+     * @param currentKey 当前Key
+     * @param legacyKey legacyKey
+     * @param currentValue 当前值
+     * @param legacyValue legacy值
+     */
     private static boolean readBoolean(Environment environment,
                                        String currentKey,
                                        String legacyKey,
@@ -95,13 +95,13 @@ public class MaterializedRouteProperties {
     }
 
     /**
-    * 读取Long
-    * @param environment 环境
-    * @param currentKey 当前Key
-    * @param legacyKey legacyKey
-    * @param currentValue 当前值
-    * @param legacyValue legacy值
-    */
+     * 读取Long
+     * @param environment 环境
+     * @param currentKey 当前Key
+     * @param legacyKey legacyKey
+     * @param currentValue 当前值
+     * @param legacyValue legacy值
+     */
     private static long readLong(Environment environment,
                                  String currentKey,
                                  String legacyKey,
@@ -117,13 +117,13 @@ public class MaterializedRouteProperties {
     }
 
     /**
-    * 读取字符串
-    * @param environment 环境
-    * @param currentKey 当前Key
-    * @param legacyKey legacyKey
-    * @param currentValue 当前值
-    * @param legacyValue legacy值
-    */
+     * 读取字符串
+     * @param environment 环境
+     * @param currentKey 当前Key
+     * @param legacyKey legacyKey
+     * @param currentValue 当前值
+     * @param legacyValue legacy值
+     */
     private static String readString(Environment environment,
                                      String currentKey,
                                      String legacyKey,
@@ -139,10 +139,10 @@ public class MaterializedRouteProperties {
     }
 
     /**
-    * 转为期权
-    *
-    * @return 转为期权的结果
-    */
+     * 转为期权
+     *
+     * @return 转为期权的结果
+     */
     public MaterializedSqlOptions toOptions() {
         MaterializedSqlOptions options = new MaterializedSqlOptions();
         options.setDefaultThreshold(defaultThreshold);

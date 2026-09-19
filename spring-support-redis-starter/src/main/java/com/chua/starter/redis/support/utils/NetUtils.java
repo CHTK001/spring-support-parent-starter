@@ -4,10 +4,10 @@ import java.io.IOException;
 import java.net.Socket;
 
 /**
-* 网络工具类
-*
-* @since 2024/12/25
-* @author CH
+ * 网络工具类
+ *
+ * @since 2024/12/25
+ * @author CH
  */
 public final class NetUtils {
 
@@ -23,9 +23,9 @@ public final class NetUtils {
     */
     public static boolean isPortInUsed(int port) {
         /**
-        * 尝试。
-        * @param port 端口
-        */
+         * 尝试。
+         * @param port 端口
+         */
         try (Socket socket = new Socket("localhost", port)) {
             return true;
         } catch (IOException e) {

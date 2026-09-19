@@ -18,13 +18,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
-* 数据权限（@数据scope）真实测试：MyBatis-Plus + H2 + 真实 映射器 + 真实数据权限拦截器。
-*
-* <p>数据：sys_user 表含部门 10（张三/李四）与部门 20（王五），列名用框架默认值
-* （sys_dept_标识 / 创建_by）。当前用户经 {@link DataScopeAuthService} 按用例注入。</p>
-*
-* @author CH
-* @since 2026/09/04
+ * 数据权限（@数据scope）真实测试：MyBatis-Plus + H2 + 真实 映射器 + 真实数据权限拦截器。
+ *
+ * <p>数据：sys_user 表含部门 10（张三/李四）与部门 20（王五），列名用框架默认值
+ * （sys_dept_标识 / 创建_by）。当前用户经 {@link DataScopeAuthService} 按用例注入。</p>
+ *
+ * @author CH
+ * @since 2026/09/04
  */
 @SpringBootTest
 class DataScopeRealTest {
@@ -36,7 +36,7 @@ class DataScopeRealTest {
 
     @BeforeEach
     /**
-    * 参见。
+     * 参见。
      */
     void seed() {
         jdbcTemplate.execute("drop table if exists sys_user");
@@ -51,11 +51,11 @@ class DataScopeRealTest {
     }
 
     /**
-    * 用户。
-    * @param dataPermission 数据权限
-    * @param deptId deptid
-    * @param roles 角色
-    * @return 用户的结果
+     * 用户。
+     * @param dataPermission 数据权限
+     * @param deptId deptid
+     * @param roles 角色
+     * @return 用户的结果
      */
     private static CurrentUser user(DataFilterTypeEnum dataPermission, String deptId, Set<String> roles) {
         CurrentUser user = new CurrentUser();

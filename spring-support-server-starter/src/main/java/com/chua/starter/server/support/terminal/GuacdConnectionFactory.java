@@ -10,19 +10,19 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
-* guacd 连接工厂（对齐 Orion-Visor 的 guacdtunnel 参数集）
-*
-* <p>按协议（SSH/VNC/RDP）组装 {@link GuacamoleConfiguration} 并与 guacd 完成握手。
-* 协议参数遵循 Guacamole 官方协议定义，支持：
-* <ul>
-*   <li>SSH：私钥/密码两种认证，终端类型/字体/颜色方案</li>
-*   <li>RDP：磁盘映射、RemoteApp、音频、时区、图形优化、预连接(Hyper-V)</li>
-*   <li>VNC：红蓝交换、压缩/质量、编码、剪贴板、音频</li>
-* </ul>
-* </p>
-*
-* @author CH
-* @since 4.0.0.42
+ * guacd 连接工厂（对齐 Orion-Visor 的 guacdtunnel 参数集）
+ *
+ * <p>按协议（SSH/VNC/RDP）组装 {@link GuacamoleConfiguration} 并与 guacd 完成握手。
+ * 协议参数遵循 Guacamole 官方协议定义，支持：
+ * <ul>
+ *   <li>SSH：私钥/密码两种认证，终端类型/字体/颜色方案</li>
+ *   <li>RDP：磁盘映射、RemoteApp、音频、时区、图形优化、预连接(Hyper-V)</li>
+ *   <li>VNC：红蓝交换、压缩/质量、编码、剪贴板、音频</li>
+ * </ul>
+ * </p>
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 @Slf4j
 @Component
@@ -88,22 +88,22 @@ public class GuacdConnectionFactory {
         } catch (Exception e) {
             tunnel.close();
             /**
-            * runtime异常。
-            * @param e.getMessage( e.获取消息(
-            * @return runtime异常的结果
-            */
+             * runtime异常。
+             * @param e.getMessage( e.获取消息(
+             * @return runtime异常的结果
+             */
             throw new RuntimeException("guacd 握手失败: " + e.getMessage(), e);
         }
         return tunnel;
     }
 
     /**
-    * 组装 SSH 参数
-    * @param tunnel tunnel
-    * @param address 地址
-    * @param targetPort Target端口
-    * @param credential credential
-    */
+     * 组装 SSH 参数
+     * @param tunnel tunnel
+     * @param address 地址
+     * @param targetPort Target端口
+     * @param credential credential
+     */
     private void buildSshConfig(GuacdTunnel tunnel, String address, Integer targetPort, SshCredential credential) {
         tunnel.remote(address, targetPort == null ? DEFAULT_SSH_PORT : targetPort);
         if (notBlank(credential.username())) {
@@ -127,12 +127,12 @@ public class GuacdConnectionFactory {
     }
 
     /**
-    * 组装 VNC 参数
-    * @param tunnel tunnel
-    * @param address 地址
-    * @param targetPort Target端口
-    * @param credential credential
-    */
+     * 组装 VNC 参数
+     * @param tunnel tunnel
+     * @param address 地址
+     * @param targetPort Target端口
+     * @param credential credential
+     */
     private void buildVncConfig(GuacdTunnel tunnel, String address, Integer targetPort, SshCredential credential) {
         tunnel.remote(address, targetPort == null ? DEFAULT_VNC_PORT : targetPort);
         if (notBlank(credential.password())) {
@@ -150,12 +150,12 @@ public class GuacdConnectionFactory {
     }
 
     /**
-    * 组装 RDP 参数
-    * @param tunnel tunnel
-    * @param address 地址
-    * @param targetPort Target端口
-    * @param credential credential
-    */
+     * 组装 RDP 参数
+     * @param tunnel tunnel
+     * @param address 地址
+     * @param targetPort Target端口
+     * @param credential credential
+     */
     private void buildRdpConfig(GuacdTunnel tunnel, String address, Integer targetPort, SshCredential credential) {
         tunnel.remote(address, targetPort == null ? DEFAULT_RDP_PORT : targetPort);
         if (notBlank(credential.username())) {
@@ -211,11 +211,11 @@ public class GuacdConnectionFactory {
     }
 
     /**
-    * 非空判断
-    *
-    * @param value 待判断字符串
-    * @return 是否非空
-    */
+     * 非空判断
+     *
+     * @param value 待判断字符串
+     * @return 是否非空
+     */
     private boolean notBlank(String value) {
         return value != null && !value.isBlank();
     }

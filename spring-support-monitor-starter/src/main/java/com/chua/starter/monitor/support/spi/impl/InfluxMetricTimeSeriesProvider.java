@@ -61,10 +61,10 @@ public class InfluxMetricTimeSeriesProvider implements MetricTimeSeriesProvider 
     private final MonitorTimeseriesProperties properties;
 
     /**
-    * 构造时初始化 SPI 引擎并注册数据源
-    *
-    * @param properties 时序存储配置
-    */
+     * 构造时初始化 SPI 引擎并注册数据源
+     *
+     * @param properties 时序存储配置
+     */
     public InfluxMetricTimeSeriesProvider(MonitorTimeseriesProperties properties) {
         this.properties = properties;
         InfluxDbEngine engine = null;
@@ -87,11 +87,11 @@ public class InfluxMetricTimeSeriesProvider implements MetricTimeSeriesProvider 
     }
 
     /**
-    * 构造 InfluxDB 内存数据源（承载查询过滤，无方言）
-    *
-    * @param properties 时序配置
-    * @return 数据源实例
-    */
+     * 构造 InfluxDB 内存数据源（承载查询过滤，无方言）
+     *
+     * @param properties 时序配置
+     * @return 数据源实例
+     */
     private <T> EngineDataSource<T> newInfluxDataSource(MonitorTimeseriesProperties properties) {
         return new EngineDataSource<T>() {
             @Override
@@ -162,11 +162,11 @@ public class InfluxMetricTimeSeriesProvider implements MetricTimeSeriesProvider 
                 : System.currentTimeMillis();
         for (MetricPoint point : result.getPoints()) {
             /**
-            * 写入point。
-            * @param monitorId 监控标识
-            * @param point point
-            * @param timestamp 时间戳
-            */
+             * 写入point。
+             * @param monitorId 监控标识
+             * @param point point
+             * @param timestamp 时间戳
+             */
             writePoint(monitorId, point, timestamp);
         }
     }
@@ -258,20 +258,20 @@ public class InfluxMetricTimeSeriesProvider implements MetricTimeSeriesProvider 
         } catch (Exception e) {
             log.warn("[monitor] series 查询失败 target={} monitor={}: {}", target, monitorId, e.getMessage());
             /**
-            * runtime异常。
-            * @param e.getMessage( e.获取消息(
-            * @return runtime异常的结果
-            */
+             * runtime异常。
+             * @param e.getMessage( e.获取消息(
+             * @return runtime异常的结果
+             */
             throw new RuntimeException("查询失败: " + e.getMessage(), e);
         }
     }
 
     /**
-    * influxdb 时间字符串(RFC3339)转毫秒时间戳
-    *
-    * @param iso 时间串
-    * @return 毫秒
-    */
+     * influxdb 时间字符串(RFC3339)转毫秒时间戳
+     *
+     * @param iso 时间串
+     * @return 毫秒
+     */
     private long toEpochMilli(String iso) {
         try {
             return java.time.Instant.parse(iso).toEpochMilli();

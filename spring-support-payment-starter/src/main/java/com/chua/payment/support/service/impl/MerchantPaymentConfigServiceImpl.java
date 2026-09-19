@@ -14,10 +14,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 
 /**
-* 商户支付配置服务实现，管理商户维度的支付功能开关与行为参数。
-*
-* @author CH
-* @since 4.0.0.50
+ * 商户支付配置服务实现，管理商户维度的支付功能开关与行为参数。
+ *
+ * @author CH
+ * @since 4.0.0.50
  */
 @Service
 @RequiredArgsConstructor
@@ -50,10 +50,10 @@ public class MerchantPaymentConfigServiceImpl implements MerchantPaymentConfigSe
     public void saveOrUpdate(MerchantPaymentConfig config) {
         if (config == null || config.getMerchantId() == null) {
             /**
-            * 薪酬异常。
-            * @param "配置不能为空" "配置不能为空"
-            * @return 薪酬异常的结果
-            */
+             * 薪酬异常。
+             * @param "配置不能为空" "配置不能为空"
+             * @return 薪酬异常的结果
+             */
             throw new PaymentException("配置不能为空");
         }
         MerchantPaymentConfig existing = configMapper.selectOne(new LambdaQueryWrapper<MerchantPaymentConfig>()
@@ -110,10 +110,10 @@ public class MerchantPaymentConfigServiceImpl implements MerchantPaymentConfigSe
         if (!Boolean.TRUE.equals(config.getOrderReusable())) {
             if ("PAYING".equals(order.getStatus()) || "PAID".equals(order.getStatus())) {
                 /**
-                * 薪酬异常。
-                * @param "该订单为一次性订单，不可重复支付" "该订单为一次性订单，不可重复支付"
-                * @return 薪酬异常的结果
-                */
+                 * 薪酬异常。
+                 * @param "该订单为一次性订单，不可重复支付" "该订单为一次性订单，不可重复支付"
+                 * @return 薪酬异常的结果
+                 */
                 throw new PaymentException("该订单为一次性订单，不可重复支付");
             }
         }
@@ -123,10 +123,10 @@ public class MerchantPaymentConfigServiceImpl implements MerchantPaymentConfigSe
             LocalDateTime expireTime = baseTime.plusMinutes(config.getOrderTimeoutMinutes());
             if (LocalDateTime.now().isAfter(expireTime)) {
                 /**
-                * 薪酬异常。
-                * @param "订单已超时，无法继续支付" "订单已超时，无法继续支付"
-                * @return 薪酬异常的结果
-                */
+                 * 薪酬异常。
+                 * @param "订单已超时，无法继续支付" "订单已超时，无法继续支付"
+                 * @return 薪酬异常的结果
+                 */
                 throw new PaymentException("订单已超时，无法继续支付");
             }
         }

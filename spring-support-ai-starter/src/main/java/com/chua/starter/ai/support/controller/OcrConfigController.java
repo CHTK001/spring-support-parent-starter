@@ -22,13 +22,13 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
-* AI OCR 配置管理控制器。
-*
-* <p>提供 {@code ocr} 分组全局配置的读取与更新。
-* OCR 管线（detector/recognizer/direction/restorer）与检测置信度阈值均可配置。</p>
-*
-* @since 4.0.0.42
-* @author CH
+ * AI OCR 配置管理控制器。
+ *
+ * <p>提供 {@code ocr} 分组全局配置的读取与更新。
+ * OCR 管线（detector/recognizer/direction/restorer）与检测置信度阈值均可配置。</p>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @RestController
@@ -38,20 +38,20 @@ import java.util.stream.Collectors;
 public class OcrConfigController {
 
     /**
-    * OCR 配置分组
-    */
+     * OCR 配置分组
+     */
     private static final String GROUP = "ocr";
 
     /**
-    * 全局设置服务
-    */
+     * 全局设置服务
+     */
     private final SysAiGlobalSettingService settingService;
 
     /**
-    * 获取 OCR 配置项定义与当前值。
-    *
-    * @return 配置列表（field/value/valueType/description/sort）
-    */
+     * 获取 OCR 配置项定义与当前值。
+     *
+     * @return 配置列表（field/value/valueType/description/sort）
+     */
     @Permission("admin")
     @Operation(summary = "获取 OCR 配置", description = "返回 ocr 分组全部配置项及当前值（detector/recognizer/threshold/direction/restorer）")
     @GetMapping
@@ -84,11 +84,11 @@ public class OcrConfigController {
     }
 
     /**
-    * 更新 OCR 配置（整组替换）。
-    *
-    * @param body 配置请求（群体 + 字段）
-    * @return 更新结果
-    */
+     * 更新 OCR 配置（整组替换）。
+     *
+     * @param body 配置请求（群体 + 字段）
+     * @return 更新结果
+     */
     @Permission("admin")
     @Operation(summary = "更新 OCR 配置", description = "整组替换 ocr 配置（detector/recognizer/threshold 等）")
     @PutMapping
@@ -102,11 +102,11 @@ public class OcrConfigController {
     }
 
     /**
-    * 转为int
-    *
-    * @param obj obj
-    * @return 转为int的结果
-    */
+     * 转为int
+     *
+     * @param obj obj
+     * @return 转为int的结果
+     */
     private static int toInt(Object obj) {
         if (obj instanceof Number n) {
             return n.intValue();

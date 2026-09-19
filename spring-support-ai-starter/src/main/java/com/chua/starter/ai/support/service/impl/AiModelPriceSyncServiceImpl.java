@@ -12,12 +12,12 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 
 /**
-* AI 模型价格同步服务实现。
-* <p>
-* 从 对话客户端 注册中心获取模型列表，同步到 sys_AI_模型_setting 表。
-*
-* @author CH
-* @since 4.0.0
+ * AI 模型价格同步服务实现。
+ * <p>
+ * 从 对话客户端 注册中心获取模型列表，同步到 sys_AI_模型_setting 表。
+ *
+ * @author CH
+ * @since 4.0.0
  */
 @Slf4j
 @Service
@@ -105,8 +105,8 @@ public class AiModelPriceSyncServiceImpl implements AiModelPriceSyncService {
     public void syncPrices(String code) {
         if (code == null || code.isBlank()) {
             /**
-    * 同步prices。
-    */
+             * 同步prices。
+             */
             syncPrices();
             return;
         }

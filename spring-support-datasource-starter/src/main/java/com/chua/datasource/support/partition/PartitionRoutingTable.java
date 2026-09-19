@@ -22,11 +22,11 @@ import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
-* Calcite {@link ScannableTable} 实现 — 将源表（热表）与所有已发现的分区表组合为 UNION 全部 虚拟表，
-* 使通过 Calcite 执行的查询可以透明地访问全量冷热数据。
-*
-* @author CH
-* @since 4.0.0
+ * Calcite {@link ScannableTable} 实现 — 将源表（热表）与所有已发现的分区表组合为 UNION 全部 虚拟表，
+ * 使通过 Calcite 执行的查询可以透明地访问全量冷热数据。
+ *
+ * @author CH
+ * @since 4.0.0
  */
 @Slf4j
 public class PartitionRoutingTable extends AbstractTable implements ScannableTable {
@@ -43,10 +43,10 @@ public class PartitionRoutingTable extends AbstractTable implements ScannableTab
     private volatile RelDataType rowType; // row类型
 
     /**
-    * @param sourceTable   源表（热表）名
-    * @param tableNames    所有物理表名列表（热表 + 分区表）
-    * @param jdbcTemplate  JDBC 模板
-    */
+     * @param sourceTable   源表（热表）名
+     * @param tableNames    所有物理表名列表（热表 + 分区表）
+     * @param jdbcTemplate  JDBC 模板
+     */
     public PartitionRoutingTable(String sourceTable, List<String> tableNames,
                                   JdbcTemplate jdbcTemplate) {
         this.sourceTable = PartitionRoutingService.validateTableName(sourceTable, "源表");
@@ -58,9 +58,9 @@ public class PartitionRoutingTable extends AbstractTable implements ScannableTab
     }
 
     /**
-    * 刷新分区表列表（热表始终在第一位）。
-    * @param discoveredPartitions discovered分区
-    */
+     * 刷新分区表列表（热表始终在第一位）。
+     * @param discoveredPartitions discovered分区
+     */
     public void refreshTableNames(List<String> discoveredPartitions) {
         List<String> refreshed = new ArrayList<>();
         refreshed.add(sourceTable);
@@ -73,19 +73,19 @@ public class PartitionRoutingTable extends AbstractTable implements ScannableTab
     }
 
     /**
-    * 获取源table
-    *
-    * @return 获取源table的结果
-    */
+     * 获取源table
+     *
+     * @return 获取源table的结果
+     */
     public String getSourceTable() {
         return sourceTable;
     }
 
     /**
-    * 获取table名称
-    *
-    * @return 获取table名称的结果
-    */
+     * 获取table名称
+     *
+     * @return 获取table名称的结果
+     */
     public List<String> getTableNames() {
         return List.copyOf(tableNames);
     }
@@ -174,22 +174,22 @@ public class PartitionRoutingTable extends AbstractTable implements ScannableTab
     }
 
     /**
-    * 构建row类型
-    *
-    * @param typeFactory 类型工厂
-    * @return 构建row类型的结果
-    */
+     * 构建row类型
+     *
+     * @param typeFactory 类型工厂
+     * @return 构建row类型的结果
+     */
     private RelDataType buildRowType(RelDataTypeFactory typeFactory) {
         /**
-        * 尝试。
-        * @param Objects.requireNonNull(jdbcTemplate.getDataSource( 对象.requirenonnull(jdbctemplate.获取数据源(
-        */
+         * 尝试。
+         * @param Objects.requireNonNull(jdbcTemplate.getDataSource( 对象.requirenonnull(jdbctemplate.获取数据源(
+         */
         try (var conn = Objects.requireNonNull(jdbcTemplate.getDataSource()).getConnection()) {
             DatabaseMetaData metaData = conn.getMetaData();
             /**
-            * 尝试。
-            * @param null 空
-            */
+             * 尝试。
+             * @param null 空
+             */
             try (ResultSet rs = metaData.getColumns(null, null, sourceTable, null)) {
                 List<String> names = new ArrayList<>();
                 List<RelDataType> types = new ArrayList<>();
@@ -216,12 +216,12 @@ public class PartitionRoutingTable extends AbstractTable implements ScannableTab
     }
 
     /**
-    * 转为calcite类型
-    *
-    * @param typeFactory 类型工厂
-    * @param sqlType SQL类型
-    * @return 转为calcite类型的结果
-    */
+     * 转为calcite类型
+     *
+     * @param typeFactory 类型工厂
+     * @param sqlType SQL类型
+     * @return 转为calcite类型的结果
+     */
     private static RelDataType toCalciteType(RelDataTypeFactory typeFactory, int sqlType) {
         SqlTypeName typeName = switch (sqlType) {
             case Types.VARCHAR, Types.CHAR, Types.NCHAR, Types.NVARCHAR, Types.LONGVARCHAR, Types.LONGNVARCHAR ->
@@ -244,11 +244,11 @@ public class PartitionRoutingTable extends AbstractTable implements ScannableTab
     }
 
     /**
-    * 降级row类型
-    *
-    * @param typeFactory 类型工厂
-    * @return 降级row类型的结果
-    */
+     * 降级row类型
+     *
+     * @param typeFactory 类型工厂
+     * @return 降级row类型的结果
+     */
     private static RelDataType fallbackRowType(RelDataTypeFactory typeFactory) {
         return typeFactory.createStructType(
                 List.of(typeFactory.createSqlType(SqlTypeName.VARCHAR)),

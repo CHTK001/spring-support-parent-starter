@@ -5,9 +5,9 @@ import lombok.Data;
 import java.io.Serializable;
 
 /**
-* 提供者 SPI 选项
-* @author CH
-* @since 4.0.0
+ * 提供者 SPI 选项
+ * @author CH
+ * @since 4.0.0
  */
 @Data
 public class ProviderSpiOptionVO implements Serializable {

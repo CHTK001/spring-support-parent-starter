@@ -25,18 +25,18 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 
 /**
-* AI 训练平台 REST 接口（面向对象风格）。
-*
-* <p>对应 AIAS 2_training_platform 的 TrainController，提供完整的训练闭环：</p>
-* <ul>
-*   <li>上传训练数据（ZIP）并自动解压</li>
-*   <li>启动异步训练（后台 DL4J ResNet50 迁移学习），支持冷启动/续训练</li>
-*   <li>实时查询训练进度、最佳 F1、类别标签</li>
-*   <li>训练超参数配置（epoch/batchSize/nClasses 等）</li>
-* </ul>
-*
-* @author CH
-* @since 4.0.0.42
+ * AI 训练平台 REST 接口（面向对象风格）。
+ *
+ * <p>对应 AIAS 2_training_platform 的 TrainController，提供完整的训练闭环：</p>
+ * <ul>
+ *   <li>上传训练数据（ZIP）并自动解压</li>
+ *   <li>启动异步训练（后台 DL4J ResNet50 迁移学习），支持冷启动/续训练</li>
+ *   <li>实时查询训练进度、最佳 F1、类别标签</li>
+ *   <li>训练超参数配置（epoch/batchSize/nClasses 等）</li>
+ * </ul>
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 @Slf4j
 @RestController
@@ -49,14 +49,14 @@ public class TrainController {
     private final TrainService trainService; // train服务
 
     /**
-    * 上传训练数据 压缩 文件并创建训练任务。
-    *
-    * @param file 训练数据 压缩 文件（子目录为类别）
-    * @return 上传结果视图
-    * @param @RequestParam("file" @请求参数("文件"
-    * @param @RequestParam("file" @请求参数("文件"
-    * @param @RequestParam("file" @RequestParam("file"
-    */
+     * 上传训练数据 压缩 文件并创建训练任务。
+     *
+     * @param file 训练数据 压缩 文件（子目录为类别）
+     * @return 上传结果视图
+     * @param @RequestParam("file" @请求参数("文件"
+     * @param @RequestParam("file" @请求参数("文件"
+     * @param @RequestParam("file" @RequestParam("file"
+     */
     @Permission("admin")
     @Operation(summary = "上传训练数据", description = "上传 ZIP 格式训练数据并创建训练任务")
     @PostMapping("/upload")
@@ -84,15 +84,15 @@ public class TrainController {
     }
 
     /**
-    * 启动训练（异步）。
-    *
-    * <p>不传 {@code resumeModelPath} 时使用默认预训练模型（冷启动训练）；
-    * 传入已训练模型路径时从该模型继续微调。{@code type} 缺省 resnet50，
-    * 传 {@code yolo} 时走 Python-http 引擎（本地拉起 Ultralytics YOLO 子进程）。</p>
-    *
-    * @param request 请求体
-    * @return 启动结果
-    */
+     * 启动训练（异步）。
+     *
+     * <p>不传 {@code resumeModelPath} 时使用默认预训练模型（冷启动训练）；
+     * 传入已训练模型路径时从该模型继续微调。{@code type} 缺省 resnet50，
+     * 传 {@code yolo} 时走 Python-http 引擎（本地拉起 Ultralytics YOLO 子进程）。</p>
+     *
+     * @param request 请求体
+     * @return 启动结果
+     */
     @Permission("admin")
     @Operation(summary = "启动训练", description = "启动异步训练；type 缺省 resnet50(DL4J 图像分类)，可选 yolo(python 检测)；可传 resumeModelPath 从已有模型继续微调")
     @PostMapping("/trigger")
@@ -112,14 +112,14 @@ public class TrainController {
     }
 
     /**
-    * 查询训练进度（返回强类型视图对象）。
-    *
-    * @param taskId 任务 标识
-    * @return 任务详情视图
-    * @param @RequestParam("taskId" @请求参数("任务标识"
-    * @param @RequestParam("taskId" @请求参数("任务id"
-    * @param @RequestParam("taskId" @RequestParam("taskId"
-    */
+     * 查询训练进度（返回强类型视图对象）。
+     *
+     * @param taskId 任务 标识
+     * @return 任务详情视图
+     * @param @RequestParam("taskId" @请求参数("任务标识"
+     * @param @RequestParam("taskId" @请求参数("任务id"
+     * @param @RequestParam("taskId" @RequestParam("taskId"
+     */
     @Permission("admin")
     @Operation(summary = "查询训练进度", description = "实时查询训练任务的进度、当前 epoch、F1 等信息")
     @GetMapping("/status")
@@ -132,10 +132,10 @@ public class TrainController {
     }
 
     /**
-    * 列出所有训练任务。
-    *
-    * @return 任务摘要列表
-    */
+     * 列出所有训练任务。
+     *
+     * @return 任务摘要列表
+     */
     @Permission("admin")
     @Operation(summary = "任务列表", description = "列出所有训练任务及其当前状态")
     @GetMapping("/list")
@@ -145,11 +145,11 @@ public class TrainController {
     }
 
     /**
-    * 更新训练超参数（部分更新语义，仅非空字段生效，PENDING 状态可修改）。
-    *
-    * @param request 超参数更新请求
-    * @return 更新结果
-    */
+     * 更新训练超参数（部分更新语义，仅非空字段生效，PENDING 状态可修改）。
+     *
+     * @param request 超参数更新请求
+     * @return 更新结果
+     */
     @Permission("admin")
     @Operation(summary = "配置超参数", description = "修改训练超参数（仅非空字段生效），仅 PENDING 状态可修改")
     @PostMapping("/argument")

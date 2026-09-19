@@ -22,18 +22,18 @@ import java.util.List;
 import java.util.Map;
 
 /**
-* 远程主机（SSH 主机簿）控制器，对齐前端 {@code /api/ssh-hosts} 契约。
-*
-* <p>提供可复用远程主机连接档案（{@code ssh_host_id} 主键）的增删改查，
-* 密钥字段写入后不回显明文（响应恒为掩码 {@code "***"}）；链接实时状态
-* 通过 {@code ssh.status} WebSocket 事件推送，快照见 {@code /statuses}。</p>
-*
-* <p>响应字段为 camelCase（对齐前端 {@code IApiSshHost}），
-* 与 {@code SysAiConversation} 等 manage 域的 snake_大小写 契约不同——这是 SSH
-* 主机簿独有的契约，前端 {@code fromApiSshHost} 仅做主键 brand 化转换。</p>
-*
-* @since 4.0.0.42
-* @author CH
+ * 远程主机（SSH 主机簿）控制器，对齐前端 {@code /api/ssh-hosts} 契约。
+ *
+ * <p>提供可复用远程主机连接档案（{@code ssh_host_id} 主键）的增删改查，
+ * 密钥字段写入后不回显明文（响应恒为掩码 {@code "***"}）；链接实时状态
+ * 通过 {@code ssh.status} WebSocket 事件推送，快照见 {@code /statuses}。</p>
+ *
+ * <p>响应字段为 camelCase（对齐前端 {@code IApiSshHost}），
+ * 与 {@code SysAiConversation} 等 manage 域的 snake_大小写 契约不同——这是 SSH
+ * 主机簿独有的契约，前端 {@code fromApiSshHost} 仅做主键 brand 化转换。</p>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @ApiReturnFormatIgnore
 @RestController
@@ -43,42 +43,42 @@ import java.util.Map;
 public class ApiSshController {
 
     /**
-    * 主机簿持久化存储
-    */
+     * 主机簿持久化存储
+     */
     private final SysAiSshHostStore sshHostStore;
 
     /**
-    * SSH 连接管理（真实握手 / 状态机 / WS 推送）
-    */
+     * SSH 连接管理（真实握手 / 状态机 / WS 推送）
+     */
     private final SshConnectionManager connectionManager;
 
     /**
-    * 查询全部主机。
-    *
-    * @return 主机列表（密钥字段脱敏）
-    */
+     * 查询全部主机。
+     *
+     * @return 主机列表（密钥字段脱敏）
+     */
     @GetMapping
     public ApiResult<List<Map<String, Object>>> list() {
         return ApiResult.ok(sshHostStore.listAll().stream().map(this::toResponse).toList());
     }
 
     /**
-    * 查询单台主机。
-    *
-    * @param sshHostId 主机 标识
-    * @return 主机（密钥字段脱敏）
-    */
+     * 查询单台主机。
+     *
+     * @param sshHostId 主机 标识
+     * @return 主机（密钥字段脱敏）
+     */
     @GetMapping("/{sshHostId}")
     public ApiResult<Map<String, Object>> get(@PathVariable String sshHostId) {
         return ApiResult.ok(toResponse(sshHostStore.get(sshHostId)));
     }
 
     /**
-    * 新增主机并落库。
-    *
-    * @param body 请求体（camel大小写，密钥为明文）
-    * @return 创建的主机（密钥字段脱敏）
-    */
+     * 新增主机并落库。
+     *
+     * @param body 请求体（camel大小写，密钥为明文）
+     * @return 创建的主机（密钥字段脱敏）
+     */
     @PostMapping
     public ApiResult<Map<String, Object>> create(@RequestBody Map<String, Object> body) {
         SysAiSshHost host = new SysAiSshHost();
@@ -102,12 +102,12 @@ public class ApiSshController {
     }
 
     /**
-    * 部分更新主机（密钥字段带掩码哨兵则保留原值）。
-    *
-    * @param sshHostId 主机 标识
-    * @param body      请求体（camel大小写，密钥为明文或掩码哨兵）
-    * @return 更新后的主机（密钥字段脱敏）
-    */
+     * 部分更新主机（密钥字段带掩码哨兵则保留原值）。
+     *
+     * @param sshHostId 主机 标识
+     * @param body      请求体（camel大小写，密钥为明文或掩码哨兵）
+     * @return 更新后的主机（密钥字段脱敏）
+     */
     @PutMapping("/{sshHostId}")
     public ApiResult<Map<String, Object>> update(@PathVariable String sshHostId,
                                                  @RequestBody Map<String, Object> body) {
@@ -146,11 +146,11 @@ public class ApiSshController {
     }
 
     /**
-    * 删除主机（同时关闭其关联链路）。
-    *
-    * @param sshHostId 主机 标识
-    * @return 空结果
-    */
+     * 删除主机（同时关闭其关联链路）。
+     *
+     * @param sshHostId 主机 标识
+     * @return 空结果
+     */
     @DeleteMapping("/{sshHostId}")
     public ApiResult<Void> delete(@PathVariable String sshHostId) {
         sshHostStore.delete(sshHostId);
@@ -159,11 +159,11 @@ public class ApiSshController {
     }
 
     /**
-    * 真实测试主机连通性（SSH 握手 + 探活）。
-    *
-    * @param sshHostId 主机 标识
-    * @return 测试结果 {@code {ok, message}}
-    */
+     * 真实测试主机连通性（SSH 握手 + 探活）。
+     *
+     * @param sshHostId 主机 标识
+     * @return 测试结果 {@code {ok, message}}
+     */
     @PostMapping("/{sshHostId}/test-connection")
     public ApiResult<Map<String, Object>> testConnection(@PathVariable String sshHostId) {
         SysAiSshHost host = sshHostStore.get(sshHostId);
@@ -171,20 +171,20 @@ public class ApiSshController {
     }
 
     /**
-    * 查询全部链路实时状态快照（与 {@code ssh.status} 事件同一形状）。
-    *
-    * @return 状态列表（camelCase）
-    */
+     * 查询全部链路实时状态快照（与 {@code ssh.status} 事件同一形状）。
+     *
+     * @return 状态列表（camelCase）
+     */
     @GetMapping("/statuses")
     public ApiResult<List<Map<String, Object>>> statuses() {
         return ApiResult.ok(connectionManager.statuses());
     }
 
     /**
-    * 扫描本机 {@code ~/.ssh/config} 提供的候选主机（当前返回空占位）。
-    *
-    * @return 扫描结果
-    */
+     * 扫描本机 {@code ~/.ssh/config} 提供的候选主机（当前返回空占位）。
+     *
+     * @return 扫描结果
+     */
     @GetMapping("/import-candidates")
     public ApiResult<Map<String, Object>> importCandidates() {
         Map<String, Object> result = new LinkedHashMap<>();
@@ -194,11 +194,11 @@ public class ApiSshController {
     }
 
     /**
-    * 将候选主机批量导入主机簿（当前返回空占位）。
-    *
-    * @param body 请求体：aliases
-    * @return 导入结果
-    */
+     * 将候选主机批量导入主机簿（当前返回空占位）。
+     *
+     * @param body 请求体：aliases
+     * @return 导入结果
+     */
     @PostMapping("/import")
     public ApiResult<Map<String, Object>> importHosts(@RequestBody Map<String, Object> body) {
         Map<String, Object> result = new LinkedHashMap<>();
@@ -208,11 +208,11 @@ public class ApiSshController {
     }
 
     /**
-    * 实体转前端契约响应（密钥字段脱敏为 {@code "***"}）。
-    *
-    * @param host 主机实体
-    * @return camelCase 响应 映射
-    */
+     * 实体转前端契约响应（密钥字段脱敏为 {@code "***"}）。
+     *
+     * @param host 主机实体
+     * @return camelCase 响应 映射
+     */
     private Map<String, Object> toResponse(SysAiSshHost host) {
         Map<String, Object> map = new LinkedHashMap<>();
         map.put("sshHostId", host.getSshHostId());
@@ -235,22 +235,22 @@ public class ApiSshController {
     }
 
     /**
-    * 密钥脱敏：存在则返回掩码哨兵，否则返回 空。
-    *
-    * @param value 原始值
-    * @return 脱敏值
-    */
+     * 密钥脱敏：存在则返回掩码哨兵，否则返回 空。
+     *
+     * @param value 原始值
+     * @return 脱敏值
+     */
     private static String mask(String value) {
         return (value == null || value.isEmpty()) ? null : "***";
     }
 
     /**
-    * 安全取字符串（含 数字 转字符串的兜底）。
-    *
-    * @param value        原始值
-    * @param defaultValue 缺失或空时的默认值
-    * @return 字符串值
-    */
+     * 安全取字符串（含 数字 转字符串的兜底）。
+     *
+     * @param value        原始值
+     * @param defaultValue 缺失或空时的默认值
+     * @return 字符串值
+     */
     private static String asString(Object value, String defaultValue) {
         if (value == null) {
             return defaultValue;

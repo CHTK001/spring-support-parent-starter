@@ -9,14 +9,14 @@ import java.util.List;
 import java.util.Optional;
 
 /**
-* 分布式锁配置的 sqlite 持久化仓库。
-* <p>
-* 负责将锁配置（名称、锁类型、公平性、等待时间、租约时间、启用状态）读写到
-* sqlite 数据库的 并发_distributed_锁 表，供 actuator 端点增删查改。
-* </p>
-*
-* @author CH
-* @since 4.0.0.42
+ * 分布式锁配置的 sqlite 持久化仓库。
+ * <p>
+ * 负责将锁配置（名称、锁类型、公平性、等待时间、租约时间、启用状态）读写到
+ * sqlite 数据库的 并发_distributed_锁 表，供 actuator 端点增删查改。
+ * </p>
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 @Slf4j
 @Repository
@@ -35,10 +35,10 @@ public class DistributedLockConfigRepository {
     }
 
     /**
-    * 查询所有分布式锁配置记录。
-    *
-    * @return 锁配置列表，按名称排序；无记录时返回空列表
-    */
+     * 查询所有分布式锁配置记录。
+     *
+     * @return 锁配置列表，按名称排序；无记录时返回空列表
+     */
     public List<ConcurrentDistributedLockConfig> findAll() {
         return jdbcTemplate.query(
                 "SELECT name, lock_type, fair, wait_time_ms, lease_time_ms, enabled FROM concurrent_distributed_lock ORDER BY name",
@@ -47,11 +47,11 @@ public class DistributedLockConfigRepository {
     }
 
     /**
-    * 按名称查询单个分布式锁配置。
-    *
-    * @param name 锁名称
-    * @return 配置对象，不存在时返回 期权.空()
-    */
+     * 按名称查询单个分布式锁配置。
+     *
+     * @param name 锁名称
+     * @return 配置对象，不存在时返回 期权.空()
+     */
     public Optional<ConcurrentDistributedLockConfig> findByName(String name) {
         List<ConcurrentDistributedLockConfig> list = jdbcTemplate.query(
                 "SELECT name, lock_type, fair, wait_time_ms, lease_time_ms, enabled FROM concurrent_distributed_lock WHERE name = ?",
@@ -62,14 +62,14 @@ public class DistributedLockConfigRepository {
     }
 
     /**
-    * 保存或更新分布式锁配置（UPSERT）。
-    * <p>
-    * sqlite 使用 插入 或 替换 语义：名称相同时覆盖旧记录，不存在时插入新记录。
-    * </p>
-    *
-    * @param config 锁配置对象，名称 不能为 空 或空
-    * @return 影响的行数
-    */
+     * 保存或更新分布式锁配置（UPSERT）。
+     * <p>
+     * sqlite 使用 插入 或 替换 语义：名称相同时覆盖旧记录，不存在时插入新记录。
+     * </p>
+     *
+     * @param config 锁配置对象，名称 不能为 空 或空
+     * @return 影响的行数
+     */
     public int save(ConcurrentDistributedLockConfig config) {
         return jdbcTemplate.update(
                 "INSERT OR REPLACE INTO concurrent_distributed_lock "
@@ -87,11 +87,11 @@ public class DistributedLockConfigRepository {
     }
 
     /**
-    * 按名称删除分布式锁配置。
-    *
-    * @param name 锁名称
-    * @return 影响的行数（1 = 删除成功，0 = 记录不存在）
-    */
+     * 按名称删除分布式锁配置。
+     *
+     * @param name 锁名称
+     * @return 影响的行数（1 = 删除成功，0 = 记录不存在）
+     */
     public int delete(String name) {
         return jdbcTemplate.update(
                 "DELETE FROM concurrent_distributed_lock WHERE name = ?",
@@ -100,12 +100,12 @@ public class DistributedLockConfigRepository {
     }
 
     /**
-    * 将 结果设置 当前行映射为分布式锁配置对象。
-    *
-    * @param rs JDBC 结果集，已定位到当前行
-    * @return 映射后的配置对象
-    * @throws java.sql.SQLException 读取列失败时抛出
-    */
+     * 将 结果设置 当前行映射为分布式锁配置对象。
+     *
+     * @param rs JDBC 结果集，已定位到当前行
+     * @return 映射后的配置对象
+     * @throws java.sql.SQLException 读取列失败时抛出
+     */
     private ConcurrentDistributedLockConfig mapRow(java.sql.ResultSet rs) throws java.sql.SQLException {
         ConcurrentDistributedLockConfig c = new ConcurrentDistributedLockConfig();
         c.setName(rs.getString("name"));

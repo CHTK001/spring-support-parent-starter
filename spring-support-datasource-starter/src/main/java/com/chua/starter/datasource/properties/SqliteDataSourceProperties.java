@@ -4,18 +4,18 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
-* sqlite 嵌入式数据库配置属性。
-* <p>
-* 支持通过 {@code plugin.sqlite.*} 配置：
-* <pre>{@code
-* plugin.sqlite.enable=true
-* plugin.sqlite.path=./data/app.sqlite
-* plugin.sqlite.init-sql=classpath:db/init.sql
-* }</pre> }</pre>
-* </p>
-*
-* @author CH
-* @since 4.0.0.42
+ * sqlite 嵌入式数据库配置属性。
+ * <p>
+ * 支持通过 {@code plugin.sqlite.*} 配置：
+ * <pre>{@code
+ * plugin.sqlite.enable=true
+ * plugin.sqlite.path=./data/app.sqlite
+ * plugin.sqlite.init-sql=classpath:db/init.sql
+ * }</pre> }</pre>
+ * </p>
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 @Data
 @ConfigurationProperties(prefix = "plugin.sqlite", ignoreInvalidFields = true)

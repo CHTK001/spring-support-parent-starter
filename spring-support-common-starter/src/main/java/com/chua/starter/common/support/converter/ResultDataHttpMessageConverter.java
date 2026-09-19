@@ -13,15 +13,15 @@ import java.io.IOException;
 import java.lang.reflect.Type;
 
 /**
-* Fastjson for Spring MVC 转换器.
-* <p>
-* Compatible fastjson 1.2.x
-*
-* @author VictorZeng
-* @see AbstractHttpMessageConverter
-* @see GenericHttpMessageConverter
-* @since 2.0.2
-* @author CH
+ * Fastjson for Spring MVC 转换器.
+ * <p>
+ * Compatible fastjson 1.2.x
+ *
+ * @author VictorZeng
+ * @see AbstractHttpMessageConverter
+ * @see GenericHttpMessageConverter
+ * @since 2.0.2
+ * @author CH
  */
 
 @SuppressWarnings({"removal"})

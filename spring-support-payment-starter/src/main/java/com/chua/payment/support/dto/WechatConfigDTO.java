@@ -3,10 +3,10 @@ package com.chua.payment.support.dto;
 import lombok.Data;
 
 /**
-* 微信支付配置DTO
-*
-* @since 2026-03-18
-* @author CH
+ * 微信支付配置DTO
+ *
+ * @since 2026-03-18
+ * @author CH
  */
 @Data
 public class WechatConfigDTO {

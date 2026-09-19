@@ -26,14 +26,14 @@ import java.util.Optional;
 import static com.chua.starter.common.support.constant.CacheConstant.REDIS_CACHE_ALWAYS;
 
 /**
-* AI 全局配置服务实现。
-* <p>
-* 基于 MyBatis Plus 操作 sys_AI_全局_setting 表，
-* 支持按分组（群体_名称）和字段名（字段_名称）读写配置。
-* 提供缓存以降低高频读取（如认证守卫的 app_Key_已启用 开关）带来的 DB 压力。
-*
-* @since 2026-08-03
-* @author CH
+ * AI 全局配置服务实现。
+ * <p>
+ * 基于 MyBatis Plus 操作 sys_AI_全局_setting 表，
+ * 支持按分组（群体_名称）和字段名（字段_名称）读写配置。
+ * 提供缓存以降低高频读取（如认证守卫的 app_Key_已启用 开关）带来的 DB 压力。
+ *
+ * @since 2026-08-03
+ * @author CH
  */
 @Slf4j
 @Service
@@ -41,31 +41,31 @@ import static com.chua.starter.common.support.constant.CacheConstant.REDIS_CACHE
 public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService {
 
     /**
-    * 全局设置 映射器
-    */
+     * 全局设置 映射器
+     */
     private final SysAiGlobalSettingMapper sysAiGlobalSettingMapper;
 
     /**
-    * Spring 应用事件发布器（配置变更后通知各能力模块热重建）
-    */
+     * Spring 应用事件发布器（配置变更后通知各能力模块热重建）
+     */
     private final ApplicationEventPublisher eventPublisher;
 
     /**
-    * 根据分组和字段名查询配置值（带缓存）。
-    *
-    * @param group 配置分组名
-    * @param field 配置字段名
-    * @return 配置值，不存在或为空时返回 期权.空()
-    */
+     * 根据分组和字段名查询配置值（带缓存）。
+     *
+     * @param group 配置分组名
+     * @param field 配置字段名
+     * @return 配置值，不存在或为空时返回 期权.空()
+     */
     @Override
     @Cacheable(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS,
             key = "'sys:ai:global:setting:' + #group + ':' + #field", unless = "#result == null || #result.isEmpty()")
     /**
-    * 获取值。
-    * @param group 群体
-    * @param field 字段
-    * @return 获取值的结果
-    */
+     * 获取值。
+     * @param group 群体
+     * @param field 字段
+     * @return 获取值的结果
+     */
     public Optional<String> getValue(String group, String field) {
         LambdaQueryWrapper<SysAiGlobalSetting> wrapper = Wrappers.<SysAiGlobalSetting>lambdaQuery()
                 .eq(SysAiGlobalSetting::getSettingGroup, group)
@@ -83,13 +83,13 @@ public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService 
     }
 
     /**
-    * 读取布尔类型配置，查询失败或转换失败时返回默认值。
-    *
-    * @param group          配置分组名
-    * @param field          配置字段名
-    * @param defaultValue   默认值（查询失败或字段不存在时返回）
-    * @return 解析后的布尔值
-    */
+     * 读取布尔类型配置，查询失败或转换失败时返回默认值。
+     *
+     * @param group          配置分组名
+     * @param field          配置字段名
+     * @param defaultValue   默认值（查询失败或字段不存在时返回）
+     * @return 解析后的布尔值
+     */
     @Override
     public boolean getBoolean(String group, String field, boolean defaultValue) {
         return getValue(group, field)
@@ -101,11 +101,11 @@ public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService 
     }
 
     /**
-    * 列出指定分组下所有启用的配置项，按 排序 排序。
-    *
-    * @param group 配置分组名
-    * @return 配置项列表，每项包含 群体、字段、值、值类型、description、排序 字段
-    */
+     * 列出指定分组下所有启用的配置项，按 排序 排序。
+     *
+     * @param group 配置分组名
+     * @return 配置项列表，每项包含 群体、字段、值、值类型、description、排序 字段
+     */
     @Override
     public List<Map<String, Object>> list(String group) {
         LambdaQueryWrapper<SysAiGlobalSetting> wrapper = Wrappers.<SysAiGlobalSetting>lambdaQuery()
@@ -128,18 +128,18 @@ public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService 
     }
 
     /**
-    * 批量替换指定分组的配置：先删后插（事务内），并清除缓存。
-    *
-    * @param request 映射 对象，包含 群体（分组名）和 字段（配置项列表）
-    */
+     * 批量替换指定分组的配置：先删后插（事务内），并清除缓存。
+     *
+     * @param request 映射 对象，包含 群体（分组名）和 字段（配置项列表）
+     */
     @Override
     @CacheEvict(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS,
             allEntries = true)
     @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
     /**
-    * 替换。
-    * @param request 请求
-    */
+     * 替换。
+     * @param request 请求
+     */
     public void replace(Object request) {
         if (!(request instanceof Map)) {
             log.warn("[SysAiGlobalSetting] replace 参数类型不支持: {}", request.getClass());
@@ -198,24 +198,24 @@ public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService 
     }
 
     /**
-    * 增量写入/更新单字段配置，不影响分组内其它已有字段。
-    *
-    * @param group       配置分组名
-    * @param field       配置字段名
-    * @param value       配置值
-    * @param description 配置描述（可为 空）
-    */
+     * 增量写入/更新单字段配置，不影响分组内其它已有字段。
+     *
+     * @param group       配置分组名
+     * @param field       配置字段名
+     * @param value       配置值
+     * @param description 配置描述（可为 空）
+     */
     @Override
     @CacheEvict(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS,
             allEntries = true)
     @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
     /**
-    * upsert值。
-    * @param group 群体
-    * @param field 字段
-    * @param value 值
-    * @param description description
-    */
+     * upsert值。
+     * @param group 群体
+     * @param field 字段
+     * @param value 值
+     * @param description description
+     */
     public void upsertValue(String group, String field, String value, String description) {
         if (group == null || group.isBlank() || field == null || field.isBlank()) {
             log.warn("[SysAiGlobalSetting] upsertValue 缺少 group/field 参数");
@@ -250,28 +250,28 @@ public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService 
     }
 
     /**
-    * 完整写入/更新单字段配置（含类型与排序）。
-    *
-    * @param group       配置分组名
-    * @param field       配置字段名
-    * @param value       配置值
-    * @param valueType   值类型（如 字符串、布尔值）
-    * @param description 配置描述（可为 空）
-    * @param sort        排序值
-    */
+     * 完整写入/更新单字段配置（含类型与排序）。
+     *
+     * @param group       配置分组名
+     * @param field       配置字段名
+     * @param value       配置值
+     * @param valueType   值类型（如 字符串、布尔值）
+     * @param description 配置描述（可为 空）
+     * @param sort        排序值
+     */
     @Override
     @CacheEvict(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS,
             allEntries = true)
     @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
     /**
-    * upsert字段。
-    * @param group 群体
-    * @param field 字段
-    * @param value 值
-    * @param valueType 值类型
-    * @param description description
-    * @param sort 排序
-    */
+     * upsert字段。
+     * @param group 群体
+     * @param field 字段
+     * @param value 值
+     * @param valueType 值类型
+     * @param description description
+     * @param sort 排序
+     */
     public void upsertField(String group, String field, String value, String valueType, String description, int sort) {
         if (group == null || group.isBlank() || field == null || field.isBlank()) {
             log.warn("[SysAiGlobalSetting] upsertField 缺少 group/field 参数");

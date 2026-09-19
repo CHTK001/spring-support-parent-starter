@@ -6,10 +6,10 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
-* 文件存储设置
-*
-* @since 2024/12/28
-* @author CH
+ * 文件存储设置
+ *
+ * @since 2024/12/28
+ * @author CH
  */
 @Data
 @NoArgsConstructor
@@ -55,12 +55,12 @@ public class FileStorageSetting {
     */
     public enum LayoutType {
         /**
-        * 简单文件列表树
-        */
+         * 简单文件列表树
+         */
         SIMPLE,
         /**
-        * 类 窗口 资源管理器
-        */
+         * 类 窗口 资源管理器
+         */
         SYSTEM
     }
 }

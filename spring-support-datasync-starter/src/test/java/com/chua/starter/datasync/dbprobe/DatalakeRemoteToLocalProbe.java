@@ -35,24 +35,24 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
-* 数据湖 远程→本地全链路探针：CSV源 → 数据同步调度 → Chronicle → pipelineengine → 多Sink + Subscriber。
-*
-* <p>验证项（10 项）：
-* <ol>
-*   <li>CSV 源数据生成（模拟远程数据源）</li>
-*   <li>DataSync 调度器读取 CSV → 发布到 Chronicle</li>
-*   <li>DatalakeReactorExecutor 接收数据 → 包装 DataEnvelope</li>
-*   <li>PipelineEngine 路由到 LogSink</li>
-*   <li>PipelineEngine 路由到 StatisticSink</li>
-*   <li>PipelineEngine 路由到 RealTimeSink</li>
-*   <li>PipelineEngine 路由到 JdbcSink</li>
-*   <li>多 Sink 同时接收（管线分发）</li>
-*   <li>RealTimeDatalakeSubscriber 接收推送 + offset 推进</li>
-*   <li>DataSyncServer + DatalakeServer 完整生命周期</li>
-* </ol>
-*
-* @author CH
-* @since 4.0.0.42
+ * 数据湖 远程→本地全链路探针：CSV源 → 数据同步调度 → Chronicle → pipelineengine → 多Sink + Subscriber。
+ *
+ * <p>验证项（10 项）：
+ * <ol>
+ *   <li>CSV 源数据生成（模拟远程数据源）</li>
+ *   <li>DataSync 调度器读取 CSV → 发布到 Chronicle</li>
+ *   <li>DatalakeReactorExecutor 接收数据 → 包装 DataEnvelope</li>
+ *   <li>PipelineEngine 路由到 LogSink</li>
+ *   <li>PipelineEngine 路由到 StatisticSink</li>
+ *   <li>PipelineEngine 路由到 RealTimeSink</li>
+ *   <li>PipelineEngine 路由到 JdbcSink</li>
+ *   <li>多 Sink 同时接收（管线分发）</li>
+ *   <li>RealTimeDatalakeSubscriber 接收推送 + offset 推进</li>
+ *   <li>DataSyncServer + DatalakeServer 完整生命周期</li>
+ * </ol>
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 public final class DatalakeRemoteToLocalProbe {
 
@@ -72,10 +72,10 @@ public final class DatalakeRemoteToLocalProbe {
     private static final CopyOnWriteArrayList<String> JDBC_WRITES = new CopyOnWriteArrayList<>(); // JDBC写入
 
     /**
-    * 入口。
-    *
-    * @param args 命令行参数
-    * @throws Exception 异常
+     * 入口。
+     *
+     * @param args 命令行参数
+     * @throws Exception 异常
      */
     public static void main(String[] args) throws Exception {
         Files.createDirectories(WORK_DIR);
@@ -251,9 +251,9 @@ public final class DatalakeRemoteToLocalProbe {
     }
 
     /**
-    * 断言检查。
-    * @param name 名称
-    * @param check 检查
+     * 断言检查。
+     * @param name 名称
+     * @param check 检查
      */
     private static void check(String name, java.util.function.BooleanSupplier check) {
         try {

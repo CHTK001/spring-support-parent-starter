@@ -10,14 +10,14 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
-* 主机硬件探测提供者注册中心
-* <p>
-* 启动时扫描全部 {@link HostDetectProvider} Bean，按系统类型建索引，
-* {@code ServerHostServiceImpl.detectHardware} 据此路由到具体探测实现。
-* </p>
-*
-* @author CH
-* @since 4.0.0.42
+ * 主机硬件探测提供者注册中心
+ * <p>
+ * 启动时扫描全部 {@link HostDetectProvider} Bean，按系统类型建索引，
+ * {@code ServerHostServiceImpl.detectHardware} 据此路由到具体探测实现。
+ * </p>
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 @Slf4j
 @Component
@@ -48,11 +48,11 @@ public class HostDetectProviderRegistry {
     }
 
     /**
-    * 按系统类型解析探测提供者
-    *
-    * @param osType 系统类型（LINUX/MACOS/WINDOWS）
-    * @return Optional，可能为空
-    */
+     * 按系统类型解析探测提供者
+     *
+     * @param osType 系统类型（LINUX/MACOS/WINDOWS）
+     * @return Optional，可能为空
+     */
     public Optional<HostDetectProvider> resolve(String osType) {
         if (osType == null || osType.isBlank()) {
             return Optional.empty();
@@ -61,11 +61,11 @@ public class HostDetectProviderRegistry {
     }
 
     /**
-    * 是否支持指定系统类型
-    *
-    * @param osType 系统类型
-    * @return 是否支持
-    */
+     * 是否支持指定系统类型
+     *
+     * @param osType 系统类型
+     * @return 是否支持
+     */
     public boolean supports(String osType) {
         return resolve(osType).isPresent();
     }

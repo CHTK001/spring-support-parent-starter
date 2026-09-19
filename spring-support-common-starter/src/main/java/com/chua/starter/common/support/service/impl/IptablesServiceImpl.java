@@ -13,11 +13,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
-* IP地址服务实现类，提供IP地址转换为地理位置信息的功能
-*
-* @版本 1.0.0
-* @since 2024/01/19
-* @author CH
+ * IP地址服务实现类，提供IP地址转换为地理位置信息的功能
+ *
+ * @版本 1.0.0
+ * @since 2024/01/19
+ * @author CH
  */
 @Service
 public class IptablesServiceImpl implements IptablesService  {
@@ -30,23 +30,23 @@ public class IptablesServiceImpl implements IptablesService  {
     private volatile boolean isLoaded = false; // 是否加载
 
     /**
-    * 构造方法，注入IP配置属性
-    *
-    * @param ipProperties IP配置属性对象，包含数据库文件路径和IP解析类型等配置信息
-    */
+     * 构造方法，注入IP配置属性
+     *
+     * @param ipProperties IP配置属性对象，包含数据库文件路径和IP解析类型等配置信息
+     */
     public IptablesServiceImpl(IpProperties ipProperties) {
         this.ipProperties = ipProperties;
     }
 
     /**
-    * 将IP地址转换为地理位置信息
-    *
-    * @param address IP地址字符串，例如: "114.114.114.114" 或 "8.8.8.8"
-    *                如果是包含端口的格式如 "192.168.1.1:8080"，会自动提取IP部分
-    * @return 返回包含地理位置信息的封装结果
-    * 成功时返回 {@code ReturnResult.ok(GeoCity)} 包含城市、省份、国家等信息
-    * 失败时返回 {@code ReturnResult.failed("错误信息")} 包含具体的错误原因
-    */
+     * 将IP地址转换为地理位置信息
+     *
+     * @param address IP地址字符串，例如: "114.114.114.114" 或 "8.8.8.8"
+     *                如果是包含端口的格式如 "192.168.1.1:8080"，会自动提取IP部分
+     * @return 返回包含地理位置信息的封装结果
+     * 成功时返回 {@code ReturnResult.ok(GeoCity)} 包含城市、省份、国家等信息
+     * 失败时返回 {@code ReturnResult.failed("错误信息")} 包含具体的错误原因
+     */
     @Override
     public ReturnResult<GeoCity> transferAddress(String address) {
         if (StringUtils.isEmpty(address)) {

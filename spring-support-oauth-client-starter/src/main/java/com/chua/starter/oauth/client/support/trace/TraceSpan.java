@@ -3,59 +3,59 @@ package com.chua.starter.oauth.client.support.trace;
 import lombok.Getter;
 
 /**
-* o认证 链路追踪 Span
-* <p>
-* 表示追踪链路中的一个节点，记录该节点的耗时信息
-* </p>
-*
-* @since 2024/12/28
-* @author CH
+ * o认证 链路追踪 Span
+ * <p>
+ * 表示追踪链路中的一个节点，记录该节点的耗时信息
+ * </p>
+ *
+ * @since 2024/12/28
+ * @author CH
  */
 @Getter
 public class TraceSpan {
 
     /**
-    * Span 标识
-    */
+     * Span 标识
+     */
     private final String spanId;
 
     /**
-    * 父 Span 标识
-    */
+     * 父 Span 标识
+     */
     private final String parentSpanId;
 
     /**
-    * Span 名称
-    */
+     * Span 名称
+     */
     private final String spanName;
 
     /**
-    * 开始时间（毫秒）
-    */
+     * 开始时间（毫秒）
+     */
     private final long startTime;
 
     /**
-    * 结束时间（毫秒）
-    */
+     * 结束时间（毫秒）
+     */
     private long endTime;
 
     /**
-    * 是否已结束
-    */
+     * 是否已结束
+     */
     private boolean finished;
 
     /**
-    * 附加信息
-    */
+     * 附加信息
+     */
     private String extra;
 
     /**
-    * 构造函数
-    *
-    * @param spanId       Span 标识
-    * @param parentSpanId 父 Span 标识
-    * @param spanName     Span 名称
-    */
+     * 构造函数
+     *
+     * @param spanId       Span 标识
+     * @param parentSpanId 父 Span 标识
+     * @param spanName     Span 名称
+     */
     public TraceSpan(String spanId, String parentSpanId, String spanName) {
         this.spanId = spanId;
         this.parentSpanId = parentSpanId;
@@ -65,8 +65,8 @@ public class TraceSpan {
     }
 
     /**
-    * 结束 Span
-    */
+     * 结束 Span
+     */
     public void end() {
         if (!finished) {
             this.endTime = System.currentTimeMillis();
@@ -75,21 +75,21 @@ public class TraceSpan {
     }
 
     /**
-    * 设置附加信息
-    *
-    * @param extra 附加信息
-    * @return this
-    */
+     * 设置附加信息
+     *
+     * @param extra 附加信息
+     * @return this
+     */
     public TraceSpan extra(String extra) {
         this.extra = extra;
         return this;
     }
 
     /**
-    * 获取耗时（毫秒）
-    *
-    * @return 耗时
-    */
+     * 获取耗时（毫秒）
+     *
+     * @return 耗时
+     */
     public long getCostMs() {
         if (finished) {
             return endTime - startTime;
@@ -98,10 +98,10 @@ public class TraceSpan {
     }
 
     /**
-    * 转换为 JSON 字符串
-    *
-    * @return JSON 字符串
-    */
+     * 转换为 JSON 字符串
+     *
+     * @return JSON 字符串
+     */
     public String toJson() {
         StringBuilder sb = new StringBuilder("{");
         sb.append("\"spanId\":\"").append(spanId).append("\"");

@@ -10,12 +10,12 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
-* SSE Socket 会话实现
-* 封装 sseemitter 为统一的 Socket会话 接口
-*
-* @版本 1.0.0
-* @since 2024-12-24
-* @author CH
+ * SSE Socket 会话实现
+ * 封装 sseemitter 为统一的 Socket会话 接口
+ *
+ * @版本 1.0.0
+ * @since 2024-12-24
+ * @author CH
  */
 public class SseSocketSession implements SocketSession {
 
@@ -88,11 +88,11 @@ public class SseSocketSession implements SocketSession {
     @Override
     @SuppressWarnings("unchecked")
     /**
-    * 获取Attribute
-    *
-    * @param key Key
-    * @return 获取attribute的结果
-    */
+     * 获取Attribute
+     *
+     * @param key Key
+     * @return 获取attribute的结果
+     */
     public <T> T getAttribute(String key) {
         return (T) attributes.get(key);
     }
@@ -152,10 +152,10 @@ public class SseSocketSession implements SocketSession {
     }
 
     /**
-    * 获取 sseemitter
-    *
-    * @return SseEmitter
-    */
+     * 获取 sseemitter
+     *
+     * @return SseEmitter
+     */
     public SseEmitter getEmitter() {
         return emitter;
     }

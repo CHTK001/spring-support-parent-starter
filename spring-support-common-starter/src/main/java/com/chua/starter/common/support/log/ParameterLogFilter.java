@@ -31,29 +31,29 @@ import static java.time.format.DateTimeFormatter.*;
 import lombok.extern.slf4j.Slf4j;
 
 /**
-* 参数日志过滤器
-* <p>
-* 用于记录 HTTP 请求的详细信息，包括：
-* <ul>
-*     <li>请求方法和 URL</li>
-*     <li>请求参数（Query String / Request Body）</li>
-*     <li>自定义请求头（以 x- 开头）</li>
-*     <li>客户端 IP 地址</li>
-*     <li>请求耗时统计</li>
-* </ul>
-* </p>
-*
-* <h3>配置项：</h3>
-* <pre>
-* plugin:
-*   log:
-*     enable: true              # 是否开启日志过滤器
-*     open-interface-log: true  # 是否开启接口日志事件
-* </pre>
-*
-* @author CH
-* @版本 1.0.0
-* @since 2023/09/08
+ * 参数日志过滤器
+ * <p>
+ * 用于记录 HTTP 请求的详细信息，包括：
+ * <ul>
+ *     <li>请求方法和 URL</li>
+ *     <li>请求参数（Query String / Request Body）</li>
+ *     <li>自定义请求头（以 x- 开头）</li>
+ *     <li>客户端 IP 地址</li>
+ *     <li>请求耗时统计</li>
+ * </ul>
+ * </p>
+ *
+ * <h3>配置项：</h3>
+ * <pre>
+ * plugin:
+ *   log:
+ *     enable: true              # 是否开启日志过滤器
+ *     open-interface-log: true  # 是否开启接口日志事件
+ * </pre>
+ *
+ * @author CH
+ * @版本 1.0.0
+ * @since 2023/09/08
  */
 @Slf4j
 public class ParameterLogFilter implements Filter {
@@ -63,15 +63,15 @@ public class ParameterLogFilter implements Filter {
     private final ExecutorService interfaceServiceLog = Executors.newVirtualThreadPerTaskExecutor(); // 接口服务日志
     
     /**
-    * 请求开始时间的属性名
-    */
+     * 请求开始时间的属性名
+     */
     private static final String REQUEST_START_TIME = "REQUEST_START_TIME";
 
     /**
-    * 参数日志过滤器。
-    * @param logProperties 日志属性
-    * @param applicationContext application上下文
-    */
+     * 参数日志过滤器。
+     * @param logProperties 日志属性
+     * @param applicationContext application上下文
+     */
     public ParameterLogFilter(LogProperties logProperties, ApplicationContext applicationContext) {
         this.logProperties = logProperties;
         this.applicationContext = applicationContext;
@@ -117,17 +117,17 @@ public class ParameterLogFilter implements Filter {
             filterChain.doFilter(requestWrapper, responseWrapper);
             responseWrapper.copyBodyToResponse();
             /**
-            * inject接口服务日志。
-            * @param requestWrapper 请求包装器
-            */
+             * inject接口服务日志。
+             * @param requestWrapper 请求包装器
+             */
             injectInterfaceServiceLog(requestWrapper);
             /**
-            * printcost时间。
-            * @param method 方法
-            * @param requestURI 请求uri
-            * @param startTime 启动时间
-            * @param responseWrapper.getStatus( 响应包装器.getstatus(
-            */
+             * printcost时间。
+             * @param method 方法
+             * @param requestURI 请求uri
+             * @param startTime 启动时间
+             * @param responseWrapper.getStatus( 响应包装器.getstatus(
+             */
             printCostTime(method, requestURI, startTime, responseWrapper.getStatus());
             return;
         }
@@ -145,31 +145,31 @@ public class ParameterLogFilter implements Filter {
  // form-数据 请求
             if (StringUtils.contains(contentType, "form-data")) {
                 /**
-                * 追加url。
-                * @param logBuilder 日志构建器
-                * @param requestWrapper 请求包装器
-                */
+                 * 追加url。
+                 * @param logBuilder 日志构建器
+                 * @param requestWrapper 请求包装器
+                 */
                 appendUrl(logBuilder, requestWrapper);
                 /**
-                * 追加头部。
-                * @param logBuilder 日志构建器
-                * @param requestWrapper 请求包装器
-                */
+                 * 追加头部。
+                 * @param logBuilder 日志构建器
+                 * @param requestWrapper 请求包装器
+                 */
                 appendHeader(logBuilder, requestWrapper);
                 logBuilder.append("║ 请求类型: multipart/form-data (文件上传)\n");
                 log.debug(logBuilder.toString());
                 filterChain.doFilter(requestWrapper, responseWrapper);
                 responseWrapper.copyBodyToResponse();
                 /**
-                * inject接口服务日志。
-                * @param requestWrapper 请求包装器
-                */
+                 * inject接口服务日志。
+                 * @param requestWrapper 请求包装器
+                 */
                 injectInterfaceServiceLog(requestWrapper);
                 /**
-                * print响应。
-                * @param responseWrapper 响应包装器
-                * @param startTime 启动时间
-                */
+                 * print响应。
+                 * @param responseWrapper 响应包装器
+                 * @param startTime 启动时间
+                 */
                 printResponse(responseWrapper, startTime);
                 return;
             }
@@ -177,35 +177,35 @@ public class ParameterLogFilter implements Filter {
  // 获取/删除 请求
             if (StringUtils.isEmpty(contentType) || GET.equals(method) || DELETE.equals(method)) {
                 /**
-                * 追加url。
-                * @param logBuilder 日志构建器
-                * @param requestWrapper 请求包装器
-                */
+                 * 追加url。
+                 * @param logBuilder 日志构建器
+                 * @param requestWrapper 请求包装器
+                 */
                 appendUrl(logBuilder, requestWrapper);
                 /**
-                * 追加查询。
-                * @param logBuilder 日志构建器
-                * @param requestWrapper 请求包装器
-                */
+                 * 追加查询。
+                 * @param logBuilder 日志构建器
+                 * @param requestWrapper 请求包装器
+                 */
                 appendQuery(logBuilder, requestWrapper);
                 /**
-                * 追加头部。
-                * @param logBuilder 日志构建器
-                * @param requestWrapper 请求包装器
-                */
+                 * 追加头部。
+                 * @param logBuilder 日志构建器
+                 * @param requestWrapper 请求包装器
+                 */
                 appendHeader(logBuilder, requestWrapper);
                 log.debug("\n{}", logBuilder);
                 filterChain.doFilter(requestWrapper, responseWrapper);
                 /**
-                * inject接口服务日志。
-                * @param request 请求
-                */
+                 * inject接口服务日志。
+                 * @param request 请求
+                 */
                 injectInterfaceServiceLog(request);
                 /**
-                * print响应。
-                * @param responseWrapper 响应包装器
-                * @param startTime 启动时间
-                */
+                 * print响应。
+                 * @param responseWrapper 响应包装器
+                 * @param startTime 启动时间
+                 */
                 printResponse(responseWrapper, startTime);
                 return;
             }
@@ -213,45 +213,45 @@ public class ParameterLogFilter implements Filter {
  // POST/放入/PATCH 请求
             if (POST.equalsIgnoreCase(method) || PUT.equalsIgnoreCase(method) || "patch".equalsIgnoreCase(method)) {
                 /**
-                * 追加主体。
-                * @param logBuilder 日志构建器
-                * @param requestWrapper 请求包装器
-                */
+                 * 追加主体。
+                 * @param logBuilder 日志构建器
+                 * @param requestWrapper 请求包装器
+                 */
                 appendBody(logBuilder, requestWrapper);
                 /**
-                * 追加头部。
-                * @param logBuilder 日志构建器
-                * @param requestWrapper 请求包装器
-                */
+                 * 追加头部。
+                 * @param logBuilder 日志构建器
+                 * @param requestWrapper 请求包装器
+                 */
                 appendHeader(logBuilder, requestWrapper);
                 log.debug("\n{}", logBuilder.toString());
                 filterChain.doFilter(requestWrapper, responseWrapper);
                 /**
-                * inject接口服务日志。
-                * @param requestWrapper 请求包装器
-                */
+                 * inject接口服务日志。
+                 * @param requestWrapper 请求包装器
+                 */
                 injectInterfaceServiceLog(requestWrapper);
                 /**
-                * print响应。
-                * @param responseWrapper 响应包装器
-                * @param startTime 启动时间
-                */
+                 * print响应。
+                 * @param responseWrapper 响应包装器
+                 * @param startTime 启动时间
+                 */
                 printResponse(responseWrapper, startTime);
                 return;
             }
 
             log.debug(logBuilder.toString());
             /**
-            * inject接口服务日志。
-            * @param requestWrapper 请求包装器
-            */
+             * inject接口服务日志。
+             * @param requestWrapper 请求包装器
+             */
             injectInterfaceServiceLog(requestWrapper);
             filterChain.doFilter(requestWrapper, responseWrapper);
             /**
-            * print响应。
-            * @param responseWrapper 响应包装器
-            * @param startTime 启动时间
-            */
+             * print响应。
+             * @param responseWrapper 响应包装器
+             * @param startTime 启动时间
+             */
             printResponse(responseWrapper, startTime);
         } finally {
             responseWrapper.copyBodyToResponse();
@@ -259,11 +259,11 @@ public class ParameterLogFilter implements Filter {
     }
 
     /**
-    * 打印响应信息
-    *
-    * @param responseWrapper 响应包装器
-    * @param startTime       开始时间
-    */
+     * 打印响应信息
+     *
+     * @param responseWrapper 响应包装器
+     * @param startTime       开始时间
+     */
     private void printResponse(ContentCachingResponseWrapper responseWrapper, long startTime) {
         long costTime = System.currentTimeMillis() - startTime;
         int status = responseWrapper.getStatus();
@@ -299,13 +299,13 @@ public class ParameterLogFilter implements Filter {
     }
 
     /**
-    * 打印请求耗时（简化版，用于静态资源）
-    *
-    * @param method    请求方法
-    * @param uri       请求 URI
-    * @param startTime 开始时间
-    * @param status    响应状态码
-    */
+     * 打印请求耗时（简化版，用于静态资源）
+     *
+     * @param method    请求方法
+     * @param uri       请求 URI
+     * @param startTime 开始时间
+     * @param status    响应状态码
+     */
     private void printCostTime(String method, String uri, long startTime, int status) {
         long costTime = System.currentTimeMillis() - startTime;
         long threshold = logProperties.getSlowRequestThresholdMs();
@@ -319,10 +319,10 @@ public class ParameterLogFilter implements Filter {
     }
 
     /**
-    * 注入接口服务日志
-    *
-    * @param request 请求
-    */
+     * 注入接口服务日志
+     *
+     * @param request 请求
+     */
     private void injectInterfaceServiceLog(HttpServletRequest request) {
         if (!logProperties.isOpenInterfaceLog()) {
             return;
@@ -334,21 +334,21 @@ public class ParameterLogFilter implements Filter {
     }
 
     /**
-    * 是否跳过
-    *
-    * @param requestURI 请求URI
-    * @return 是否跳过
-    */
+     * 是否跳过
+     *
+     * @param requestURI 请求URI
+     * @return 是否跳过
+     */
     private boolean isPass(String requestURI) {
         return RequestUtils.isResource(requestURI);
     }
 
     /**
-    * 追加URL信息到日志
-    *
-    * @param sb      字符串构建器
-    * @param request 请求
-    */
+     * 追加URL信息到日志
+     *
+     * @param sb      字符串构建器
+     * @param request 请求
+     */
     private void appendUrl(StringBuilder sb, HttpServletRequest request) {
         sb.append("║ 请求方法: ").append(request.getMethod()).append("\n");
         sb.append("║ 请求URI: ").append(request.getRequestURI()).append("\n");
@@ -360,11 +360,11 @@ public class ParameterLogFilter implements Filter {
     }
 
     /**
-    * 追加请求头信息到日志
-    *
-    * @param sb      字符串构建器
-    * @param request 请求
-    */
+     * 追加请求头信息到日志
+     *
+     * @param sb      字符串构建器
+     * @param request 请求
+     */
     private void appendHeader(StringBuilder sb, HttpServletRequest request) {
         sb.append("║ 客户端IP: ").append(RequestUtils.getIpAddress(request)).append("\n");
         sb.append("║ User-Agent: ").append(request.getHeader("User-Agent")).append("\n");
@@ -390,11 +390,11 @@ public class ParameterLogFilter implements Filter {
     }
 
     /**
-    * 追加查询参数到日志
-    *
-    * @param sb      字符串构建器
-    * @param request 请求
-    */
+     * 追加查询参数到日志
+     *
+     * @param sb      字符串构建器
+     * @param request 请求
+     */
     private void appendQuery(StringBuilder sb, HttpServletRequest request) {
         String queryString = request.getQueryString();
         if (StringUtils.isNotEmpty(queryString)) {
@@ -409,11 +409,11 @@ public class ParameterLogFilter implements Filter {
     }
 
     /**
-    * 追加请求体到日志
-    *
-    * @param sb             字符串构建器
-    * @param requestWrapper 请求包装器
-    */
+     * 追加请求体到日志
+     *
+     * @param sb             字符串构建器
+     * @param requestWrapper 请求包装器
+     */
     private void appendBody(StringBuilder sb, ContentCachingRequestWrapper requestWrapper) {
         sb.append("║ 请求方法: ").append(requestWrapper.getMethod()).append("\n");
         sb.append("║ 请求URL: ").append(requestWrapper.getRequestURL()).append("\n");

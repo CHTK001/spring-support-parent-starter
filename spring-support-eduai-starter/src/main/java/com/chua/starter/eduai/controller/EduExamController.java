@@ -19,10 +19,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
-* 考试管理控制器
-*
-* @since 4.0.0.42
-* @author CH
+ * 考试管理控制器
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @RestController
@@ -51,11 +51,11 @@ public class EduExamController {
     }
 
     /**
-    * 获取考试详情
-    *
-    * @param id 考试标识
-    * @return 考试详情
-    */
+     * 获取考试详情
+     *
+     * @param id 考试标识
+     * @return 考试详情
+     */
     @Operation(summary = "获取考试详情")
     @GetMapping("/{id}")
     public ReturnResult<EduExam> detail(@PathVariable Long id) {
@@ -63,11 +63,11 @@ public class EduExamController {
     }
 
     /**
-    * 创建考试
-    *
-    * @param exam 考试信息
-    * @return 考试ID
-    */
+     * 创建考试
+     *
+     * @param exam 考试信息
+     * @return 考试ID
+     */
     @Operation(summary = "创建考试")
     @PostMapping("/create")
     public ReturnResult<Long> create(@RequestBody EduExam exam) {
@@ -75,11 +75,11 @@ public class EduExamController {
     }
 
     /**
-    * 更新考试
-    *
-    * @param exam 考试信息
-    * @return 是否成功
-    */
+     * 更新考试
+     *
+     * @param exam 考试信息
+     * @return 是否成功
+     */
     @Operation(summary = "更新考试")
     @PutMapping("/update")
     public ReturnResult<Boolean> update(@RequestBody EduExam exam) {
@@ -87,11 +87,11 @@ public class EduExamController {
     }
 
     /**
-    * 删除考试（逻辑删除）
-    *
-    * @param id 考试标识
-    * @return 是否成功
-    */
+     * 删除考试（逻辑删除）
+     *
+     * @param id 考试标识
+     * @return 是否成功
+     */
     @Operation(summary = "删除考试")
     @DeleteMapping("/{id}")
     public ReturnResult<Boolean> delete(@PathVariable Long id) {

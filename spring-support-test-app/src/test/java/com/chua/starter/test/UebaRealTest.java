@@ -12,15 +12,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
-* UEBA 自动装配集成测试。
-* <p>
-* 使用 {@link ApplicationContextRunner} 真实加载 {@link UebaAutoConfiguration}，
-* 验证引擎 Bean 被装配且可用于真实分析（规则回退路径，无需外部模型）。
-* 不使用全量 {@code @SpringBootTest} 上下文——测试-app 全上下文会因 common-starter
-* 缓存配置 引用 spring-数据-Redis 而失败（与该模块无关）。</p>
-*
-* @author CH
-* @since 4.0.0.42
+ * UEBA 自动装配集成测试。
+ * <p>
+ * 使用 {@link ApplicationContextRunner} 真实加载 {@link UebaAutoConfiguration}，
+ * 验证引擎 Bean 被装配且可用于真实分析（规则回退路径，无需外部模型）。
+ * 不使用全量 {@code @SpringBootTest} 上下文——测试-app 全上下文会因 common-starter
+ * 缓存配置 引用 spring-数据-Redis 而失败（与该模块无关）。</p>
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 class UebaRealTest {
 
@@ -37,7 +37,7 @@ class UebaRealTest {
     }
 
     /**
-    * 真实分析：正常流量判 NORMAL，滥用流量判非 NORMAL。
+     * 真实分析：正常流量判 NORMAL，滥用流量判非 NORMAL。
      */
     @Test
     void analyzeNormalAndAbuse() {
@@ -57,8 +57,8 @@ class UebaRealTest {
                         .build());
             }
             /**
-            * 断言that。
-            * @param normal.getRiskLevel( normal.获取risk级别(
+             * 断言that。
+             * @param normal.getRiskLevel( normal.获取risk级别(
              */
             assertThat(normal.getRiskLevel()).isEqualTo(UebaResult.RiskLevel.NORMAL);
 
@@ -75,15 +75,15 @@ class UebaRealTest {
                         .build());
             }
             /**
-            * 断言that。
-            * @param abuse.getRiskLevel( abuse.获取risk级别(
+             * 断言that。
+             * @param abuse.getRiskLevel( abuse.获取risk级别(
              */
             assertThat(abuse.getRiskLevel()).isNotEqualTo(UebaResult.RiskLevel.NORMAL);
         });
     }
 
     /**
-    * 空 事件必须被拒绝（P3C 规约十五）。
+     * 空 事件必须被拒绝（P3C 规约十五）。
      */
     @Test
     void analyzeNullRejected() {

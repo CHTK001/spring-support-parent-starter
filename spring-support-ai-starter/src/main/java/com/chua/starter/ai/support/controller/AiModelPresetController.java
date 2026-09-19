@@ -29,10 +29,10 @@ public class AiModelPresetController {
     private final SysAiProviderModelMapper sysAiProviderModelMapper;
 
     /**
-    * 获取模型预设列表
-    *
-    * @return 模型预设列表
-    */
+     * 获取模型预设列表
+     *
+     * @return 模型预设列表
+     */
     @GetMapping("/presets")
     public ReturnResult<List<Object>> presets() {
         List<Object> items = new ArrayList<>();

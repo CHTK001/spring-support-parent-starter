@@ -3,10 +3,10 @@ package com.chua.starter.oauth.client.support.user;
 import lombok.*;
 
 /**
-* 登录结果
-*
-* @author CH
-* @since 4.0.0
+ * 登录结果
+ *
+ * @author CH
+ * @since 4.0.0
  */
 @Data
 @NoArgsConstructor

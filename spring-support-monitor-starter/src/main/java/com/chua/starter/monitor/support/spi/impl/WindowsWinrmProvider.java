@@ -57,10 +57,10 @@ public class WindowsWinrmProvider implements SystemInfoProvider {
     }
 
     /**
-    * 按 CSV 规则拆分行，支持带引号字段
-    * @param line 方法入参 line
-    * @return 结果列表，无数据时为空列表
-    */
+     * 按 CSV 规则拆分行，支持带引号字段
+     * @param line 方法入参 line
+     * @return 结果列表，无数据时为空列表
+     */
     private List<String> csvSplit(String line) {
         List<String> out = new ArrayList<>();
         StringBuilder cur = new StringBuilder();

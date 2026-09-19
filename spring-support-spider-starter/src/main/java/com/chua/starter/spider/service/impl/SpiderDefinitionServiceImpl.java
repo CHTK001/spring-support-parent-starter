@@ -15,14 +15,14 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
-* 爬虫定义服务实现。
-*
-* <p>启用列表使用 {@link Cacheable} 缓存，缓存在 Caffeine 中；
-* 新增/更新/删除时通过 {@link CacheEvict} 清理全部缓存项，保证一致性。
-* 调度器回写 {@code last_run_at} 走 {@link #markRunAtOnly}，绕开缓存清理。</p>
-*
-* @since 4.0.0.42
-* @author CH
+ * 爬虫定义服务实现。
+ *
+ * <p>启用列表使用 {@link Cacheable} 缓存，缓存在 Caffeine 中；
+ * 新增/更新/删除时通过 {@link CacheEvict} 清理全部缓存项，保证一致性。
+ * 调度器回写 {@code last_run_at} 走 {@link #markRunAtOnly}，绕开缓存清理。</p>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @CacheConfig(cacheNames = "spider")
 @Service
@@ -31,8 +31,8 @@ public class SpiderDefinitionServiceImpl
         implements SpiderDefinitionService {
 
     /**
-    * 启用列表缓存 Key 常量
-    */
+     * 启用列表缓存 Key 常量
+     */
     private static final String ENABLED_LIST_KEY = "'definitions:enabled'";
 
     @Cacheable(key = ENABLED_LIST_KEY)

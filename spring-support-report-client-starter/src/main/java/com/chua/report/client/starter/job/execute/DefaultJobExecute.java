@@ -15,15 +15,15 @@ import com.chua.report.client.starter.job.thread.JobThreadFactory;
 import lombok.extern.slf4j.Slf4j;
 
 /**
-* 默认作业执行实现
-* <p>
-* 根据任务类型（Bean、Groovy、script）获取或创建对应的处理器和线程。
-* 支持处理器热更新和版本管理。
-* </p>
-*
-* @版本 1.0.0
-* @since 2024/03/11
-* @author CH
+ * 默认作业执行实现
+ * <p>
+ * 根据任务类型（Bean、Groovy、script）获取或创建对应的处理器和线程。
+ * 支持处理器热更新和版本管理。
+ * </p>
+ *
+ * @版本 1.0.0
+ * @since 2024/03/11
+ * @author CH
  */
 @Slf4j
 public class DefaultJobExecute implements JobExecute {
@@ -62,12 +62,12 @@ public class DefaultJobExecute implements JobExecute {
     }
 
     /**
-    * 根据触发参数和胶水类型获取或创建任务处理器
-    *
-    * @param triggerParam 触发参数
-    * @param glueTypeEnum 胶水类型
-    * @return 处理器结果
-    */
+     * 根据触发参数和胶水类型获取或创建任务处理器
+     *
+     * @param triggerParam 触发参数
+     * @param glueTypeEnum 胶水类型
+     * @return 处理器结果
+     */
     private HandlerResult getJobHandler(TriggerParam triggerParam, GlueTypeEnum glueTypeEnum) {
         // 加载已存在的任务线程
         JobThread jobThread = JobThreadFactory.loadJobThread(triggerParam.getJobId());
@@ -147,10 +147,10 @@ public class DefaultJobExecute implements JobExecute {
 }
 
 /**
-* 处理器结果类。
-*
-* @author CH
-* @since 4.0.0
+ * 处理器结果类。
+ *
+ * @author CH
+ * @since 4.0.0
  */
 class HandlerResult {
     /** 作业处理器 */
@@ -165,13 +165,13 @@ class HandlerResult {
     }
 
     /**
-    * 创建 处理器结果 实例
-    * @param jobHandler 作业处理器
-    * @param jobThread 作业thread
-    * @param removeOldReason 字符串
-    * @param jobThread 作业thread
-    * @param removeOldReason 移除旧ReasonMLmlml
-    */
+     * 创建 处理器结果 实例
+     * @param jobHandler 作业处理器
+     * @param jobThread 作业thread
+     * @param removeOldReason 字符串
+     * @param jobThread 作业thread
+     * @param removeOldReason 移除旧ReasonMLmlml
+     */
     public HandlerResult(JobHandler jobHandler, JobThread jobThread, String removeOldReason) {
         this.jobHandler = jobHandler;
         this.jobThread = jobThread;
@@ -179,55 +179,55 @@ class HandlerResult {
     }
 
     /**
-    * 获取作业处理器
-    *
-    * @return 获取作业处理器的结果
-    */
+     * 获取作业处理器
+     *
+     * @return 获取作业处理器的结果
+     */
     public JobHandler getJobHandler() {
         return jobHandler;
     }
 
     /**
-    * 设置作业处理器
-    *
-    * @param jobHandler 作业处理器
-    */
+     * 设置作业处理器
+     *
+     * @param jobHandler 作业处理器
+     */
     public void setJobHandler(JobHandler jobHandler) {
         this.jobHandler = jobHandler;
     }
 
     /**
-    * 获取作业thread
-    *
-    * @return 获取作业thread的结果
-    */
+     * 获取作业thread
+     *
+     * @return 获取作业thread的结果
+     */
     public JobThread getJobThread() {
         return jobThread;
     }
 
     /**
-    * 设置作业thread
-    *
-    * @param jobThread 作业thread
-    */
+     * 设置作业thread
+     *
+     * @param jobThread 作业thread
+     */
     public void setJobThread(JobThread jobThread) {
         this.jobThread = jobThread;
     }
 
     /**
-    * 获取移除旧ReasonMLmlml
-    *
-    * @return 获取移除旧ReasonML的结果
-    */
+     * 获取移除旧ReasonMLmlml
+     *
+     * @return 获取移除旧ReasonML的结果
+     */
     public String getRemoveOldReason() {
         return removeOldReason;
     }
 
     /**
-    * 设置移除旧ReasonMLmlml
-    *
-    * @param removeOldReason 移除旧ReasonMLmlml
-    */
+     * 设置移除旧ReasonMLmlml
+     *
+     * @param removeOldReason 移除旧ReasonMLmlml
+     */
     public void setRemoveOldReason(String removeOldReason) {
         this.removeOldReason = removeOldReason;
     }

@@ -6,20 +6,20 @@ import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 
 /**
-* 数据处理器
-*
-* @author CH
-* @since 4.0.0
+ * 数据处理器
+ *
+ * @author CH
+ * @since 4.0.0
  */
 public interface SelectDataPermissionHandler extends DataPermissionHandler {
     /**
-    * SQL片段
-    *
-    * @param plainSelect       选择
-    * @param where             where
-    * @param mappedStatementId 片段标识
-    * @param currentUser       用户信息
-    */
+     * SQL片段
+     *
+     * @param plainSelect       选择
+     * @param where             where
+     * @param mappedStatementId 片段标识
+     * @param currentUser       用户信息
+     */
     void processSelect(PlainSelect plainSelect, Expression where, String mappedStatementId, CurrentUser currentUser);
 
 }

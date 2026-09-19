@@ -9,13 +9,13 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
 /**
-* 基于信号量的消息限流器
-* <p>
-* 使用信号量控制并发消息处理数量
-* </p>
-*
-* @since 2025-03-20
-* @author CH
+ * 基于信号量的消息限流器
+ * <p>
+ * 使用信号量控制并发消息处理数量
+ * </p>
+ *
+ * @since 2025-03-20
+ * @author CH
  */
 @Slf4j
 @Component
@@ -88,10 +88,10 @@ public class SemaphoreMessageRateLimiter implements MessageRateLimiter {
     }
 
     /**
-    * 设置目标队列的许可数
-    * @param destination 目标
-    * @param permits 许可证
-    */
+     * 设置目标队列的许可数
+     * @param destination 目标
+     * @param permits 许可证
+     */
     public void setPermits(String destination, int permits) {
         semaphores.put(destination, new Semaphore(permits));
     }

@@ -23,9 +23,9 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
-* 微信支付 mock SPI，实现本地联调与前后端演示。
-* @author CH
-* @since 4.0.0
+ * 微信支付 mock SPI，实现本地联调与前后端演示。
+ * @author CH
+ * @since 4.0.0
  */
 @Spi({"mock", "wechat-mock"})
 public class MockTencentWechatPayGateway implements TencentWechatPayGateway {
@@ -261,11 +261,11 @@ public class MockTencentWechatPayGateway implements TencentWechatPayGateway {
     }
 
     /**
-    * 构建订单响应
-    *
-    * @param orderNo 订单no
-    * @return 构建订单响应的结果
-    */
+     * 构建订单响应
+     *
+     * @param orderNo 订单no
+     * @return 构建订单响应的结果
+     */
     private TencentWechatOrderResponse buildOrderResponse(String orderNo) {
         TencentWechatOrderResponse result = new TencentWechatOrderResponse();
         result.setSuccess(true);
@@ -277,13 +277,13 @@ public class MockTencentWechatPayGateway implements TencentWechatPayGateway {
     }
 
     /**
-    * 构建退税响应
-    *
-    * @param request 请求
-    * @param refundStatus 退税状态
-    * @param message 消息
-    * @return 构建退税响应的结果
-    */
+     * 构建退税响应
+     *
+     * @param request 请求
+     * @param refundStatus 退税状态
+     * @param message 消息
+     * @return 构建退税响应的结果
+     */
     private TencentWechatRefundResponse buildRefundResponse(TencentWechatRefundRequest request, String refundStatus, String message) {
         TencentWechatRefundResponse result = new TencentWechatRefundResponse();
         result.setSuccess(true);
@@ -297,13 +297,13 @@ public class MockTencentWechatPayGateway implements TencentWechatPayGateway {
     }
 
     /**
-    * 构建薪酬score响应
-    *
-    * @param request 请求
-    * @param state 状态
-    * @param message 消息
-    * @return 构建薪酬score响应的结果
-    */
+     * 构建薪酬score响应
+     *
+     * @param request 请求
+     * @param state 状态
+     * @param message 消息
+     * @return 构建薪酬score响应的结果
+     */
     private TencentWechatPayScoreResponse buildPayScoreResponse(TencentWechatPayScoreRequest request, String state, String message) {
         TencentWechatPayScoreResponse result = new TencentWechatPayScoreResponse();
         result.setSuccess(true);
@@ -321,11 +321,11 @@ public class MockTencentWechatPayGateway implements TencentWechatPayGateway {
     }
 
     /**
-    * 解析json主体
-    *
-    * @param body 主体
-    * @return 解析json主体的结果
-    */
+     * 解析json主体
+     *
+     * @param body 主体
+     * @return 解析json主体的结果
+     */
     private Map<String, Object> parseJsonBody(String body) {
         if (!StringUtils.hasText(body)) {
             return Map.of();
@@ -335,33 +335,33 @@ public class MockTencentWechatPayGateway implements TencentWechatPayGateway {
             });
         } catch (Exception e) {
             /**
-            * illegal状态异常。
-            * @param JSON" JSON"
-            * @param e e
-            * @return illegal状态异常的结果
-            */
+             * illegal状态异常。
+             * @param JSON" JSON"
+             * @param e e
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("微信支付 mock 通知体必须是 JSON", e);
         }
     }
 
     /**
-    * Raw
-    *
-    * @param provider 提供者
-    * @param scene scene
-    * @param value 值
-    * @return raw的结果
-    */
+     * Raw
+     *
+     * @param provider 提供者
+     * @param scene scene
+     * @param value 值
+     * @return raw的结果
+     */
     private String raw(String provider, String scene, String value) {
         return "{\"provider\":\"" + provider + "\",\"scene\":\"" + scene + "\",\"value\":\"" + value + "\",\"time\":\"" + LocalDateTime.now() + "\"}";
     }
 
     /**
-    * 解析贸易状态
-    *
-    * @param orderNo 订单no
-    * @return resolve贸易状态的结果
-    */
+     * 解析贸易状态
+     *
+     * @param orderNo 订单no
+     * @return resolve贸易状态的结果
+     */
     private String resolveTradeState(String orderNo) {
         if (!StringUtils.hasText(orderNo)) {
             return "SUCCESS";
@@ -380,11 +380,11 @@ public class MockTencentWechatPayGateway implements TencentWechatPayGateway {
     }
 
     /**
-    * long值
-    *
-    * @param value 值
-    * @return long值的结果
-    */
+     * long值
+     *
+     * @param value 值
+     * @return long值的结果
+     */
     private Long longValue(Object value) {
         if (value == null) {
             return null;
@@ -396,31 +396,31 @@ public class MockTencentWechatPayGateway implements TencentWechatPayGateway {
             return Long.parseLong(String.valueOf(value));
         } catch (Exception e) {
             /**
-            * illegal状态异常。
-            * @param value 值
-            * @param e e
-            * @return illegal状态异常的结果
-            */
+             * illegal状态异常。
+             * @param value 值
+             * @param e e
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("微信支付 mock 金额格式错误: " + value, e);
         }
     }
 
     /**
-    * 文本的
-    *
-    * @param value 值
-    * @return 文本的的结果
-    */
+     * 文本的
+     *
+     * @param value 值
+     * @return 文本的的结果
+     */
     private String textOf(Object value) {
         return value == null ? null : String.valueOf(value);
     }
 
     /**
-    * 第一个nonblank
-    *
-    * @param values 值
-    * @return 第一个nonblank的结果
-    */
+     * 第一个nonblank
+     *
+     * @param values 值
+     * @return 第一个nonblank的结果
+     */
     private String firstNonBlank(String... values) {
         for (String value : values) {
             if (StringUtils.hasText(value)) {

@@ -27,13 +27,13 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
-* 客服（习俗 服务）控制器，替代 nomicore 的 {@code /api/customer-service/*} 契约。
-*
-* <p>维护客服Agent（{@code cs_agent_id}）、知识笔记（{@code cs_note_id}）、对话通道
-* （{@code cs_dialogue_id}）与消息（{@code cs_message_id}）。当前为进程内内存实现。</p>
-*
-* @since 4.0.0.42
-* @author CH
+ * 客服（习俗 服务）控制器，替代 nomicore 的 {@code /api/customer-service/*} 契约。
+ *
+ * <p>维护客服Agent（{@code cs_agent_id}）、知识笔记（{@code cs_note_id}）、对话通道
+ * （{@code cs_dialogue_id}）与消息（{@code cs_message_id}）。当前为进程内内存实现。</p>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @ApiReturnFormatIgnore
 @RestController
@@ -43,52 +43,52 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ApiCustomerController {
 
     /**
-    * 主键生成与基础存储工具
-    */
+     * 主键生成与基础存储工具
+     */
     private final SysAiConversationStore conversationStore;
 
     /**
-    * WS 事件推送服务
-    */
+     * WS 事件推送服务
+     */
     private final ApiWebSocketPushService pushService;
 
     /**
-    * 客服Agent：C_Agent_标识 → Agent
-    */
+     * 客服Agent：C_Agent_标识 → Agent
+     */
     private final Map<String, Map<String, Object>> agents = new ConcurrentHashMap<>();
 
     /**
-    * 知识笔记：C_笔记_标识 → 笔记
-    */
+     * 知识笔记：C_笔记_标识 → 笔记
+     */
     private final Map<String, Map<String, Object>> notes = new ConcurrentHashMap<>();
 
     /**
-    * 对话通道：C_dialogue_标识 → 对话
-    */
+     * 对话通道：C_dialogue_标识 → 对话
+     */
     private final Map<String, Map<String, Object>> dialogues = new ConcurrentHashMap<>();
 
     /**
-    * 对话消息：C_dialogue_标识 → 消息列表
-    */
+     * 对话消息：C_dialogue_标识 → 消息列表
+     */
     private final Map<String, List<Map<String, Object>>> messages = new ConcurrentHashMap<>();
 
  // ---- Agent ----
 
     @GetMapping("/agents")
     /**
-    * 列表Agent。
-    * @return 列表Agent的结果
-    */
+     * 列表Agent。
+     * @return 列表Agent的结果
+     */
     public ApiResult<List<Map<String, Object>>> listAgents() {
         return ApiResult.ok(new ArrayList<>(agents.values()));
     }
 
     @PostMapping("/agents")
     /**
-    * 创建Agent。
-    * @param body 主体
-    * @return 创建Agent的结果
-    */
+     * 创建Agent。
+     * @param body 主体
+     * @return 创建Agent的结果
+     */
     public ApiResult<Map<String, Object>> createAgent(@RequestBody Map<String, Object> body) {
         String agentId = conversationStore.newId();
         Map<String, Object> agent = new LinkedHashMap<>();
@@ -112,10 +112,10 @@ public class ApiCustomerController {
 
     @GetMapping("/agents/{csAgentId}")
     /**
-    * 获取Agent。
-    * @param csAgentId CAgent标识
-    * @return 获取Agent的结果
-    */
+     * 获取Agent。
+     * @param csAgentId CAgent标识
+     * @return 获取Agent的结果
+     */
     public ApiResult<Map<String, Object>> getAgent(@PathVariable String csAgentId) {
         return ApiResult.ok(requireAgent(csAgentId));
     }
@@ -135,10 +135,10 @@ public class ApiCustomerController {
 
     @DeleteMapping("/agents/{csAgentId}")
     /**
-    * 移除Agent。
-    * @param csAgentId CAgent标识
-    * @return 移除Agent的结果
-    */
+     * 移除Agent。
+     * @param csAgentId CAgent标识
+     * @return 移除Agent的结果
+     */
     public ApiResult<Void> removeAgent(@PathVariable String csAgentId) {
         requireAgent(csAgentId);
         agents.remove(csAgentId);
@@ -147,10 +147,10 @@ public class ApiCustomerController {
 
     @GetMapping("/agents/{csAgentId}/bindings")
     /**
-    * 列表bindings。
-    * @param csAgentId CAgent标识
-    * @return 列表bindings的结果
-    */
+     * 列表bindings。
+     * @param csAgentId CAgent标识
+     * @return 列表bindings的结果
+     */
     public ApiResult<List<Map<String, Object>>> listBindings(@PathVariable String csAgentId) {
         requireAgent(csAgentId);
         return ApiResult.ok(new ArrayList<>());
@@ -167,11 +167,11 @@ public class ApiCustomerController {
 
     @GetMapping("/notes")
     /**
-    * 列表笔记。
-    * @param false false
-    * @return 列表笔记的结果
-    * @param cs_agent_id csagentID，不允许为 null
-    */
+     * 列表笔记。
+     * @param false false
+     * @return 列表笔记的结果
+     * @param cs_agent_id csagentID，不允许为 null
+     */
     public ApiResult<List<Map<String, Object>>> listNotes(@RequestParam(required = false) String cs_agent_id) {
         List<Map<String, Object>> result = new ArrayList<>();
         for (Map<String, Object> note : notes.values()) {
@@ -184,10 +184,10 @@ public class ApiCustomerController {
 
     @PostMapping("/notes")
     /**
-    * 创建笔记。
-    * @param body 主体
-    * @return 创建笔记的结果
-    */
+     * 创建笔记。
+     * @param body 主体
+     * @return 创建笔记的结果
+     */
     public ApiResult<Map<String, Object>> createNote(@RequestBody Map<String, Object> body) {
         String noteId = conversationStore.newId();
         Map<String, Object> note = new LinkedHashMap<>();
@@ -226,10 +226,10 @@ public class ApiCustomerController {
 
     @DeleteMapping("/notes/{csNoteId}")
     /**
-    * 移除笔记。
-    * @param csNoteId C笔记标识
-    * @return 移除笔记的结果
-    */
+     * 移除笔记。
+     * @param csNoteId C笔记标识
+     * @return 移除笔记的结果
+     */
     public ApiResult<Void> removeNote(@PathVariable String csNoteId) {
         requireNote(csNoteId);
         notes.remove(csNoteId);
@@ -240,10 +240,10 @@ public class ApiCustomerController {
 
     @GetMapping("/dialogues")
     /**
-    * 列表dialogues。
-    * @param cs_agent_id CAgent标识
-    * @return 列表dialogues的结果
-    */
+     * 列表dialogues。
+     * @param cs_agent_id CAgent标识
+     * @return 列表dialogues的结果
+     */
     public ApiResult<List<Map<String, Object>>> listDialogues(@RequestParam String cs_agent_id) {
         requireAgent(cs_agent_id);
         List<Map<String, Object>> result = new ArrayList<>();
@@ -257,20 +257,20 @@ public class ApiCustomerController {
 
     @GetMapping("/dialogues/{csDialogueId}/messages")
     /**
-    * 列表dialogue消息。
-    * @param csDialogueId Cdialogueid
-    * @return 列表dialogue消息的结果
-    */
+     * 列表dialogue消息。
+     * @param csDialogueId Cdialogueid
+     * @return 列表dialogue消息的结果
+     */
     public ApiResult<List<Map<String, Object>>> listDialogueMessages(@PathVariable String csDialogueId) {
         requireDialogue(csDialogueId);
         return ApiResult.ok(messages.getOrDefault(csDialogueId, new ArrayList<>()));
     }
 
     /**
-    * requireAgent。
-    * @param csAgentId CAgent标识
-    * @return requireAgent的结果
-    */
+     * requireAgent。
+     * @param csAgentId CAgent标识
+     * @return requireAgent的结果
+     */
     private Map<String, Object> requireAgent(String csAgentId) {
         Map<String, Object> agent = agents.get(csAgentId);
         if (agent == null) {
@@ -280,10 +280,10 @@ public class ApiCustomerController {
     }
 
     /**
-    * require笔记。
-    * @param csNoteId C笔记标识
-    * @return require笔记的结果
-    */
+     * require笔记。
+     * @param csNoteId C笔记标识
+     * @return require笔记的结果
+     */
     private Map<String, Object> requireNote(String csNoteId) {
         Map<String, Object> note = notes.get(csNoteId);
         if (note == null) {
@@ -293,10 +293,10 @@ public class ApiCustomerController {
     }
 
     /**
-    * requiredialogue。
-    * @param csDialogueId Cdialogueid
-    * @return requireDialogue的结果
-    */
+     * requiredialogue。
+     * @param csDialogueId Cdialogueid
+     * @return requireDialogue的结果
+     */
     private Map<String, Object> requireDialogue(String csDialogueId) {
         Map<String, Object> dialogue = dialogues.get(csDialogueId);
         if (dialogue == null) {

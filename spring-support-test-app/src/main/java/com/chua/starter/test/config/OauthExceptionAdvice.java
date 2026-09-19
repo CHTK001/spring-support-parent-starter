@@ -9,21 +9,21 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import java.util.Map;
 
 /**
-* 应用级异常映射：{@link OauthException}（权限/角色校验失败）统一返回 403。
-*
-* <p>框架抛出 {@link OauthException} 表示无权限，应用层按需映射为 HTTP 状态码。</p>
-*
-* @author CH
-* @since 2026/09/04
+ * 应用级异常映射：{@link OauthException}（权限/角色校验失败）统一返回 403。
+ *
+ * <p>框架抛出 {@link OauthException} 表示无权限，应用层按需映射为 HTTP 状态码。</p>
+ *
+ * @author CH
+ * @since 2026/09/04
  */
 @RestControllerAdvice
 public class OauthExceptionAdvice {
 
     @ExceptionHandler(OauthException.class)
     /**
-    * 把手OAuth异常。
-    * @param ex ex
-    * @return 把手oauth异常的结果
+     * 把手OAuth异常。
+     * @param ex ex
+     * @return 把手oauth异常的结果
      */
     public ResponseEntity<Map<String, Object>> handleOauthException(OauthException ex) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)

@@ -50,15 +50,15 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
-* 消息推送服务实现
-* <p>
-* 基于 MyBatis-Plus 提供消息提供商与模板的管理，并通过 工具 的 消息push SPI 实现统一发送。
-* 发送完成后通过 @异步 异步记录推送日志；开启邮件阅读追踪时，会在 HTML 内容中注入追踪图，
-* 收件人打开邮件后由追踪接口回写已读状态。
-* </p>
-*
-* @since 2026/08/03
-* @author CH
+ * 消息推送服务实现
+ * <p>
+ * 基于 MyBatis-Plus 提供消息提供商与模板的管理，并通过 工具 的 消息push SPI 实现统一发送。
+ * 发送完成后通过 @异步 异步记录推送日志；开启邮件阅读追踪时，会在 HTML 内容中注入追踪图，
+ * 收件人打开邮件后由追踪接口回写已读状态。
+ * </p>
+ *
+ * @since 2026/08/03
+ * @author CH
  */
 @Slf4j
 @Service
@@ -75,17 +75,17 @@ public class SysMessageServiceImpl implements SysMessageService {
     private final MessageTrackProperties messageTrackProperties;
 
     /**
-    * 当前登录用户服务（可空：未接入认证时站内消息查询返回空）
-    */
+     * 当前登录用户服务（可空：未接入认证时站内消息查询返回空）
+     */
     private final ObjectProvider<AuthService> authServiceProvider;
 
     @Override
     /**
-    * pagefor提供者
-    * @param provider 提供者
-    * @param page page
-    * @param pageSize page大小
-    */
+     * pagefor提供者
+     * @param provider 提供者
+     * @param page page
+     * @param pageSize page大小
+     */
     public IPage<SysMessageProvider> pageForProvider(SysMessageProvider provider, long page, long pageSize) {
         LambdaQueryWrapper<SysMessageProvider> wrapper = Wrappers.<SysMessageProvider>lambdaQuery()
                 .eq(SysMessageProvider::getSysMessageProviderDelete, 0)
@@ -127,9 +127,9 @@ public class SysMessageServiceImpl implements SysMessageService {
 
     @Override
     /**
-    * 保存提供者
-    * @param provider 提供者
-    */
+     * 保存提供者
+     * @param provider 提供者
+     */
     public ReturnResult<SysMessageProvider> saveProvider(SysMessageProvider provider) {
         if (StringUtils.isBlank(provider.getSysMessageProviderCode())) {
             return ReturnResult.illegal("提供商编码不能为空");
@@ -153,9 +153,9 @@ public class SysMessageServiceImpl implements SysMessageService {
 
     @Override
     /**
-    * 更新提供者
-    * @param provider 提供者
-    */
+     * 更新提供者
+     * @param provider 提供者
+     */
     public ReturnResult<Boolean> updateProvider(SysMessageProvider provider) {
         if (provider.getSysMessageProviderId() == null) {
             return ReturnResult.illegal("提供商ID不能为空");
@@ -174,9 +174,9 @@ public class SysMessageServiceImpl implements SysMessageService {
 
     @Override
     /**
-    * 删除提供者
-    * @param providerId 提供者标识
-    */
+     * 删除提供者
+     * @param providerId 提供者标识
+     */
     public ReturnResult<Boolean> deleteProvider(Integer providerId) {
         if (providerId == null) {
             return ReturnResult.illegal("提供商信息不存在");
@@ -189,11 +189,11 @@ public class SysMessageServiceImpl implements SysMessageService {
 
     @Override
     /**
-    * pagefortemplate
-    * @param template template
-    * @param page page
-    * @param pageSize page大小
-    */
+     * pagefortemplate
+     * @param template template
+     * @param page page
+     * @param pageSize page大小
+     */
     public IPage<SysMessageTemplate> pageForTemplate(SysMessageTemplate template, long page, long pageSize) {
         LambdaQueryWrapper<SysMessageTemplate> wrapper = Wrappers.<SysMessageTemplate>lambdaQuery()
                 .eq(SysMessageTemplate::getSysMessageTemplateDelete, 0)
@@ -260,9 +260,9 @@ public class SysMessageServiceImpl implements SysMessageService {
 
     @Override
     /**
-    * 更新Template
-    * @param template template
-    */
+     * 更新Template
+     * @param template template
+     */
     public ReturnResult<Boolean> updateTemplate(SysMessageTemplate template) {
         if (template.getSysMessageTemplateId() == null) {
             return ReturnResult.illegal("模板ID不能为空");
@@ -282,9 +282,9 @@ public class SysMessageServiceImpl implements SysMessageService {
 
     @Override
     /**
-    * 删除Template
-    * @param templateId templateid
-    */
+     * 删除Template
+     * @param templateId templateid
+     */
     public ReturnResult<Boolean> deleteTemplate(Integer templateId) {
         if (templateId == null) {
             return ReturnResult.illegal("模板信息不存在");
@@ -297,9 +297,9 @@ public class SysMessageServiceImpl implements SysMessageService {
 
     @Override
     /**
-    * 发送
-    * @param request 请求
-    */
+     * 发送
+     * @param request 请求
+     */
     public ReturnResult<List<MessageResponse>> send(MessageSendRequest request) {
         if (request.getSysMessageTemplateId() == null) {
             return ReturnResult.illegal("模板ID不能为空");
@@ -365,14 +365,14 @@ public class SysMessageServiceImpl implements SysMessageService {
                 log.error("发送消息失败, 接收人: {}", target, e);
                 result.add(MessageResponse.failure(e.getMessage()));
                 /**
-                * 保存日志异步。
-                * @param channel 通道
-                * @param target Target
-                * @param template template
-                * @param provider 提供者
-                * @param request 请求
-                * @param MessageResponse.failure(e.getMessage( 消息响应.失败(e.getmessage(
-                */
+                 * 保存日志异步。
+                 * @param channel 通道
+                 * @param target Target
+                 * @param template template
+                 * @param provider 提供者
+                 * @param request 请求
+                 * @param MessageResponse.failure(e.getMessage( 消息响应.失败(e.getmessage(
+                 */
                 saveLogAsync(channel, target, template, provider, request, MessageResponse.failure(e.getMessage()),
                         trackToken, batchId, request.getSubject());
             }
@@ -382,9 +382,9 @@ public class SysMessageServiceImpl implements SysMessageService {
 
     @Override
     /**
-    * 发送内容
-    * @param request 请求
-    */
+     * 发送内容
+     * @param request 请求
+     */
     public ReturnResult<List<MessageResponse>> sendContent(MessageContentSendRequest request) {
         if (request.getSysMessageProviderId() == null) {
             return ReturnResult.illegal("提供商ID不能为空");
@@ -445,13 +445,13 @@ public class SysMessageServiceImpl implements SysMessageService {
                 log.error("按内容发送消息失败, 接收人: {}", target, e);
                 result.add(MessageResponse.failure(e.getMessage()));
                 /**
-                * 保存内容日志异步。
-                * @param channel 通道
-                * @param target Target
-                * @param provider 提供者
-                * @param request 请求
-                * @param MessageResponse.failure(e.getMessage( 消息响应.失败(e.getmessage(
-                */
+                 * 保存内容日志异步。
+                 * @param channel 通道
+                 * @param target Target
+                 * @param provider 提供者
+                 * @param request 请求
+                 * @param MessageResponse.failure(e.getMessage( 消息响应.失败(e.getmessage(
+                 */
                 saveContentLogAsync(channel, target, provider, request, MessageResponse.failure(e.getMessage()),
                         trackToken, batchId, request.getSubject());
             }
@@ -461,9 +461,9 @@ public class SysMessageServiceImpl implements SysMessageService {
 
     @Override
     /**
-    * 同步template
-    * @param providerId 提供者标识
-    */
+     * 同步template
+     * @param providerId 提供者标识
+     */
     public ReturnResult<Integer> syncTemplate(Integer providerId) {
         if (providerId == null) {
             return ReturnResult.illegal("提供商ID不能为空");
@@ -516,20 +516,20 @@ public class SysMessageServiceImpl implements SysMessageService {
     }
 
     /**
-    * 异步记录按内容发送的消息推送日志
-    * <p>
-    * 使用 @异步 在独立的线程池中执行，不阻塞发送主流程。
-    * </p>
-    *
-    * @param channel    渠道标识
-    * @param target     接收人
-    * @param provider   消息提供商
-    * @param request    按内容发送请求
-    * @param response   发送响应
-    * @param trackToken 阅读追踪标识（可空）
-    * @param batchId    发送批次号
-    * @param subject    消息主题（可空）
-    */
+     * 异步记录按内容发送的消息推送日志
+     * <p>
+     * 使用 @异步 在独立的线程池中执行，不阻塞发送主流程。
+     * </p>
+     *
+     * @param channel    渠道标识
+     * @param target     接收人
+     * @param provider   消息提供商
+     * @param request    按内容发送请求
+     * @param response   发送响应
+     * @param trackToken 阅读追踪标识（可空）
+     * @param batchId    发送批次号
+     * @param subject    消息主题（可空）
+     */
     @Async(Constant.DEFAULT_EXECUTOR_TASK)
     public void saveContentLogAsync(String channel, String target, SysMessageProvider provider,
                                     MessageContentSendRequest request, MessageResponse response, String trackToken,
@@ -557,21 +557,21 @@ public class SysMessageServiceImpl implements SysMessageService {
     }
 
     /**
-    * 异步记录消息推送日志
-    * <p>
-    * 使用 @异步 在独立的线程池中执行，不阻塞发送主流程。
-    * </p>
-    *
-    * @param channel    渠道标识
-    * @param target     接收人
-    * @param template   消息模板
-    * @param provider   消息提供商
-    * @param request    发送请求
-    * @param response   发送响应
-    * @param trackToken 阅读追踪标识（可空）
-    * @param batchId    发送批次号
-    * @param subject    消息主题（可空）
-    */
+     * 异步记录消息推送日志
+     * <p>
+     * 使用 @异步 在独立的线程池中执行，不阻塞发送主流程。
+     * </p>
+     *
+     * @param channel    渠道标识
+     * @param target     接收人
+     * @param template   消息模板
+     * @param provider   消息提供商
+     * @param request    发送请求
+     * @param response   发送响应
+     * @param trackToken 阅读追踪标识（可空）
+     * @param batchId    发送批次号
+     * @param subject    消息主题（可空）
+     */
     @Async(Constant.DEFAULT_EXECUTOR_TASK)
     public void saveLogAsync(String channel, String target, SysMessageTemplate template,
                              SysMessageProvider provider, MessageSendRequest request, MessageResponse response,
@@ -601,11 +601,11 @@ public class SysMessageServiceImpl implements SysMessageService {
 
     @Override
     /**
-    * pagefor日志
-    * @param log 日志
-    * @param page page
-    * @param pageSize page大小
-    */
+     * pagefor日志
+     * @param log 日志
+     * @param page page
+     * @param pageSize page大小
+     */
     public IPage<SysMessageLog> pageForLog(SysMessageLog log, long page, long pageSize) {
         LambdaQueryWrapper<SysMessageLog> wrapper = Wrappers.<SysMessageLog>lambdaQuery()
                 .eq(SysMessageLog::getSysMessageLogDelete, 0)
@@ -629,9 +629,9 @@ public class SysMessageServiceImpl implements SysMessageService {
 
     @Override
     /**
-    * previewtemplate
-    * @param request 请求
-    */
+     * previewtemplate
+     * @param request 请求
+     */
     public ReturnResult<TemplatePreviewResponse> previewTemplate(TemplatePreviewRequest request) {
         if (request == null || request.getSysMessageTemplateId() == null) {
             return ReturnResult.illegal("模板ID不能为空");
@@ -674,9 +674,9 @@ public class SysMessageServiceImpl implements SysMessageService {
 
     @Override
     /**
-    * clean日志
-    * @param beforeTime 之前时间
-    */
+     * clean日志
+     * @param beforeTime 之前时间
+     */
     public ReturnResult<Integer> cleanLog(LocalDateTime beforeTime) {
         if (beforeTime == null) {
             return ReturnResult.illegal("截止时间不能为空");
@@ -688,9 +688,9 @@ public class SysMessageServiceImpl implements SysMessageService {
 
     @Override
     /**
-    * mark日志读取
-    * @param token 令牌
-    */
+     * mark日志读取
+     * @param token 令牌
+     */
     public ReturnResult<Boolean> markLogRead(String token) {
         if (StringUtils.isBlank(token)) {
             return ReturnResult.illegal("追踪标识不能为空");
@@ -714,10 +714,10 @@ public class SysMessageServiceImpl implements SysMessageService {
 
     @Override
     /**
-    * pagefor状态消息
-    * @param page page
-    * @param pageSize page大小
-    */
+     * pagefor状态消息
+     * @param page page
+     * @param pageSize page大小
+     */
     public IPage<SysMessageStationItem> pageForStationMessage(long page, long pageSize) {
         String userId = currentUserId();
         if (StringUtils.isBlank(userId)) {
@@ -775,11 +775,11 @@ public class SysMessageServiceImpl implements SysMessageService {
     }
 
     /**
-    * 推送日志转站内消息项
-    *
-    * @param log 推送日志
-    * @return 站内消息项
-    */
+     * 推送日志转站内消息项
+     *
+     * @param log 推送日志
+     * @return 站内消息项
+     */
     private static SysMessageStationItem toStationItem(SysMessageLog log) {
         SysMessageStationItem item = new SysMessageStationItem();
         item.setId(log.getSysMessageLogId());
@@ -791,10 +791,10 @@ public class SysMessageServiceImpl implements SysMessageService {
     }
 
     /**
-    * 获取当前登录用户标识（未接入认证时返回 空）
-    *
-    * @return 用户ID
-    */
+     * 获取当前登录用户标识（未接入认证时返回 空）
+     *
+     * @return 用户ID
+     */
     private String currentUserId() {
         AuthService authService = authServiceProvider.getIfAvailable();
         if (authService == null) {
@@ -805,19 +805,19 @@ public class SysMessageServiceImpl implements SysMessageService {
     }
 
     /**
-    * 站内消息渠道标识
-    */
+     * 站内消息渠道标识
+     */
     private static final String STATION_CHANNEL = "station";
 
     /**
-    * 解析消息渠道标识
-    * <p>
-    * 优先使用厂家编码，否则使用提供商类型作为渠道标识。
-    * </p>
-    *
-    * @param provider 消息提供商
-    * @return 渠道标识
-    */
+     * 解析消息渠道标识
+     * <p>
+     * 优先使用厂家编码，否则使用提供商类型作为渠道标识。
+     * </p>
+     *
+     * @param provider 消息提供商
+     * @return 渠道标识
+     */
     private String resolveChannel(SysMessageProvider provider) {
         return StringUtils.isNotBlank(provider.getSysMessageProviderVender())
                 ? provider.getSysMessageProviderVender()
@@ -825,15 +825,15 @@ public class SysMessageServiceImpl implements SysMessageService {
     }
 
     /**
-    * 判断是否启用邮件阅读追踪
-    * <p>
-    * 仅邮件渠道、HTML 内容类型且配置开启时返回 true。
-    * </p>
-    *
-    * @param channel     渠道标识
-    * @param contentType 内容类型
-    * @return 是否可追踪
-    */
+     * 判断是否启用邮件阅读追踪
+     * <p>
+     * 仅邮件渠道、HTML 内容类型且配置开启时返回 true。
+     * </p>
+     *
+     * @param channel     渠道标识
+     * @param contentType 内容类型
+     * @return 是否可追踪
+     */
     private boolean isTrackable(String channel, String contentType) {
         if (!messageTrackProperties.isEnabled()) {
             return false;
@@ -847,18 +847,18 @@ public class SysMessageServiceImpl implements SysMessageService {
     }
 
     /**
-    * 防抖检查
-    * <p>
-    * 提供商配置了重复消息间隔（分钟）时，检查间隔内同一接收人的相同模板（或相同内容）
-    * 是否已发送成功；已成功则本次不重复发送。失败记录不参与防抖，允许重试。
-    * </p>
-    *
-    * @param provider   消息提供商
-    * @param target     接收人
-    * @param templateId 模板标识（按模板发送时传入，按内容发送传 空）
-    * @param content    消息内容（按内容发送时传入，按模板发送传 空）
-    * @return 是否命中防抖（间隔内已发送成功）
-    */
+     * 防抖检查
+     * <p>
+     * 提供商配置了重复消息间隔（分钟）时，检查间隔内同一接收人的相同模板（或相同内容）
+     * 是否已发送成功；已成功则本次不重复发送。失败记录不参与防抖，允许重试。
+     * </p>
+     *
+     * @param provider   消息提供商
+     * @param target     接收人
+     * @param templateId 模板标识（按模板发送时传入，按内容发送传 空）
+     * @param content    消息内容（按内容发送时传入，按模板发送传 空）
+     * @return 是否命中防抖（间隔内已发送成功）
+     */
     private boolean isDebounced(SysMessageProvider provider, String target, Integer templateId, String content) {
         Integer interval = provider.getSysMessageProviderInterval();
         // 未配置时默认 1 分钟防抖，显式配置 0 表示不限制
@@ -880,15 +880,15 @@ public class SysMessageServiceImpl implements SysMessageService {
     }
 
     /**
-    * 构建带追踪图的内容
-    * <p>
-    * 追踪开启时在内容末尾追加 1x1 透明图，指向追踪接口；追踪图对收件人不可见。
-    * </p>
-    *
-    * @param trackToken 追踪标识（可空）
-    * @param content    原始内容
-    * @return 追加追踪图后的内容
-    */
+     * 构建带追踪图的内容
+     * <p>
+     * 追踪开启时在内容末尾追加 1x1 透明图，指向追踪接口；追踪图对收件人不可见。
+     * </p>
+     *
+     * @param trackToken 追踪标识（可空）
+     * @param content    原始内容
+     * @return 追加追踪图后的内容
+     */
     private String buildContentWithTrack(String trackToken, String content) {
         if (StringUtils.isBlank(trackToken)) {
             return content;
@@ -903,11 +903,11 @@ public class SysMessageServiceImpl implements SysMessageService {
     }
 
     /**
-    * 将发送请求中的参数转换为模板参数字符串映射
-    *
-    * @param request 发送请求
-    * @return 模板参数映射
-    */
+     * 将发送请求中的参数转换为模板参数字符串映射
+     *
+     * @param request 发送请求
+     * @return 模板参数映射
+     */
     private Map<String, String> toParamMap(MessageSendRequest request) {
         if (request.getParams() == null || request.getParams().isEmpty()) {
             return Collections.emptyMap();
@@ -918,11 +918,11 @@ public class SysMessageServiceImpl implements SysMessageService {
     }
 
     /**
-    * 将参数映射转换为模板参数字符串映射
-    *
-    * @param paramMap 原始参数映射
-    * @return 模板参数映射
-    */
+     * 将参数映射转换为模板参数字符串映射
+     *
+     * @param paramMap 原始参数映射
+     * @return 模板参数映射
+     */
     private Map<String, String> toParamMap(Map<String, Object> paramMap) {
         if (CollectionUtils.isEmpty(paramMap)) {
             return Collections.emptyMap();
@@ -933,15 +933,15 @@ public class SysMessageServiceImpl implements SysMessageService {
     }
 
     /**
-    * 校验模板内容中的占位符格式
-    * <p>
-    * 只允许 ${var} 或 {{var}} 两种形式，找到第一个非法占位符返回其原始文本，
-    * 未发现非法占位符时返回 空。
-    * </p>
-    *
-    * @param content 模板内容
-    * @return 第一个非法占位符文本，无则返回 空
-    */
+     * 校验模板内容中的占位符格式
+     * <p>
+     * 只允许 ${var} 或 {{var}} 两种形式，找到第一个非法占位符返回其原始文本，
+     * 未发现非法占位符时返回 空。
+     * </p>
+     *
+     * @param content 模板内容
+     * @return 第一个非法占位符文本，无则返回 空
+     */
     private String findIllegalPlaceholder(String content) {
         if (StringUtils.isBlank(content)) {
             return null;

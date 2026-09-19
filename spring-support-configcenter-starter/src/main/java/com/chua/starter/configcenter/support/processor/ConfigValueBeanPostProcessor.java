@@ -29,120 +29,120 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
-* 配置值注解Bean后置处理器
-* <p>
-* 在Bean初始化后扫描@配置值注解，注入配置值并支持热更新和配置推送。
-* </p>
-*
-* <h3>功能</h3>
-* <ul>
-*     <li>扫描@ConfigValue注解字段和方法</li>
-*     <li>从Environment中获取配置值并注入</li>
-*     <li>注册热更新监听器</li>
-*     <li>配置变化时自动更新字段值</li>
-*     <li>支持配置推送到配置中心（强制推送或仅当不存在时推送）</li>
-* </ul>
-*
-* @since 2024-12-05
-* @版本 1.1.0
-* @author CH
+ * 配置值注解Bean后置处理器
+ * <p>
+ * 在Bean初始化后扫描@配置值注解，注入配置值并支持热更新和配置推送。
+ * </p>
+ *
+ * <h3>功能</h3>
+ * <ul>
+ *     <li>扫描@ConfigValue注解字段和方法</li>
+ *     <li>从Environment中获取配置值并注入</li>
+ *     <li>注册热更新监听器</li>
+ *     <li>配置变化时自动更新字段值</li>
+ *     <li>支持配置推送到配置中心（强制推送或仅当不存在时推送）</li>
+ * </ul>
+ *
+ * @since 2024-12-05
+ * @版本 1.1.0
+ * @author CH
  */
 @Slf4j
 public class ConfigValueBeanPostProcessor implements BeanPostProcessor, EnvironmentAware, BeanFactoryAware {
 
     /**
-    * 占位符正则表达式
-    */
+     * 占位符正则表达式
+     */
     private static final Pattern PLACEHOLDER_PATTERN = Pattern.compile("\\$\\{([^}:]+)(?::([^}]*))?}");
 
     /**
-    * 默认配置刷新延迟时间（毫秒）
-    */
+     * 默认配置刷新延迟时间（毫秒）
+     */
     private static final long DEFAULT_REFRESH_DELAY_MS = 100L;
 
     /**
-    * Spring环境
-    */
+     * Spring环境
+     */
     private Environment environment;
 
     /**
-    * Bean工厂
-    */
+     * Bean工厂
+     */
     private ConfigurableListableBeanFactory beanFactory;
 
     /**
-    * 配置中心
-    */
+     * 配置中心
+     */
     private final ConfigCenter configCenter;
 
     /**
-    * 是否启用热更新
-    */
+     * 是否启用热更新
+     */
     private final boolean hotReloadEnabled;
 
     /**
-    * 配置变更后的延迟刷新时间（毫秒）
-    */
+     * 配置变更后的延迟刷新时间（毫秒）
+     */
     private final long refreshDelayMs;
 
     /**
-    * 是否在配置变更时打印日志
-    */
+     * 是否在配置变更时打印日志
+     */
     private final boolean logOnChange;
 
     /**
-    * 绑定信息映射
-    * Key: 配置键
-    * 值: 绑定信息列表
-    */
+     * 绑定信息映射
+     * Key: 配置键
+     * 值: 绑定信息列表
+     */
     private final Map<String, List<BindingInfo>> bindingsByKey = new ConcurrentHashMap<>();
 
     /**
-    * 已注册监听的配置键
-    */
+     * 已注册监听的配置键
+     */
     private final Set<String> registeredListeners = Collections.synchronizedSet(new HashSet<>());
 
     /**
-    * 配置值缓存
-    * Key: 配置键
-    * 值: 缓存的配置值
-    */
+     * 配置值缓存
+     * Key: 配置键
+     * 值: 缓存的配置值
+     */
     private final Map<String, String> configValueCache = new ConcurrentHashMap<>();
 
     /**
-    * 配置刷新时间缓存
-    * Key: 配置键
-    * 值: 上次刷新时间戳
-    */
+     * 配置刷新时间缓存
+     * Key: 配置键
+     * 值: 上次刷新时间戳
+     */
     private final Map<String, Long> lastRefreshTimeByKey = new ConcurrentHashMap<>();
 
     /**
-    * 构造函数
-    *
-    * @param configCenter 配置中心
-    */
+     * 构造函数
+     *
+     * @param configCenter 配置中心
+     */
     public ConfigValueBeanPostProcessor(ConfigCenter configCenter) {
         this(configCenter, true, DEFAULT_REFRESH_DELAY_MS, true);
     }
 
     /**
-    * 构造函数
-    *
-    * @param configCenter     配置中心
-    * @param hotReloadEnabled 是否启用热更新
-    */
+     * 构造函数
+     *
+     * @param configCenter     配置中心
+     * @param hotReloadEnabled 是否启用热更新
+     */
     public ConfigValueBeanPostProcessor(ConfigCenter configCenter, boolean hotReloadEnabled) {
         this(configCenter, hotReloadEnabled, DEFAULT_REFRESH_DELAY_MS, true);
     }
 
     /**
-    * 构造函数
-    *
-    * @param configCenter     配置中心
-    * @param hotReloadEnabled 是否启用热更新
-    * @param refreshDelayMs   配置变更后的延迟刷新时间（毫秒）
-    * @param logOnChange      是否在配置变更时打印日志
-    */
+     * 构造函数
+     *
+     * @param configCenter     配置中心
+     * @param hotReloadEnabled 是否启用热更新
+     * @param refreshDelayMs   配置变更后的延迟刷新时间（毫秒）
+     * @param logOnChange      是否在配置变更时打印日志
+     */
     public ConfigValueBeanPostProcessor(ConfigCenter configCenter, boolean hotReloadEnabled, long refreshDelayMs,
                                         boolean logOnChange) {
         this.configCenter = configCenter;
@@ -153,18 +153,18 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
 
     @Override
     /**
-    * 设置环境
-    * @param environment 环境
-    */
+     * 设置环境
+     * @param environment 环境
+     */
     public void setEnvironment(Environment environment) {
         this.environment = environment;
     }
 
     @Override
     /**
-    * 设置Bean工厂
-    * @param beanFactory Bean工厂
-    */
+     * 设置Bean工厂
+     * @param beanFactory Bean工厂
+     */
     public void setBeanFactory(BeanFactory beanFactory) throws BeansException {
         if (beanFactory instanceof ConfigurableListableBeanFactory) {
             this.beanFactory = (ConfigurableListableBeanFactory) beanFactory;
@@ -173,10 +173,10 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
 
     @Override
     /**
-    * Post处理之后initialization
-    * @param bean Bean
-    * @param beanName Bean名称
-    */
+     * Post处理之后initialization
+     * @param bean Bean
+     * @param beanName Bean名称
+     */
     public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
         if (beanFactory != null && !beanFactory.isSingleton(beanName)) {
             return bean;
@@ -186,32 +186,32 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
 
         // 扫描字段
         /**
-        * 扫描字段。
-        * @param bean Bean
-        * @param beanName Bean名称
-        * @param clazz clazz
-        */
+         * 扫描字段。
+         * @param bean Bean
+         * @param beanName Bean名称
+         * @param clazz clazz
+         */
         scanFields(bean, beanName, clazz);
 
         // 扫描方法
         /**
-        * 扫描方法。
-        * @param bean Bean
-        * @param beanName Bean名称
-        * @param clazz clazz
-        */
+         * 扫描方法。
+         * @param bean Bean
+         * @param beanName Bean名称
+         * @param clazz clazz
+         */
         scanMethods(bean, beanName, clazz);
 
         return bean;
     }
 
     /**
-    * 扫描字段
-    *
-    * @param bean     Bean实例
-    * @param beanName Bean名称
-    * @param clazz    类
-    */
+     * 扫描字段
+     *
+     * @param bean     Bean实例
+     * @param beanName Bean名称
+     * @param clazz    类
+     */
     private void scanFields(Object bean, String beanName, Class<?> clazz) {
         for (Field field : getAllFields(clazz)) {
             ConfigValue annotation = field.getAnnotation(ConfigValue.class);
@@ -225,11 +225,11 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
             // 注入初始值
             String value = resolveValue(parsed.key(), parsed.defaultValue());
             /**
-            * inject字段值。
-            * @param bean Bean
-            * @param field 字段
-            * @param value 值
-            */
+             * inject字段值。
+             * @param bean Bean
+             * @param field 字段
+             * @param value 值
+             */
             injectFieldValue(bean, field, value);
 
             // 如果支持热更新，注册监听
@@ -246,9 +246,9 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
                 );
 
                 /**
-                * 注册binding。
-                * @param binding binding
-                */
+                 * 注册binding。
+                 * @param binding binding
+                 */
                 registerBinding(binding);
                 log.debug("注册热更新绑定: key={}, bean={}, field={}",
                         parsed.key(), beanName, field.getName());
@@ -257,12 +257,12 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
     }
 
     /**
-    * 扫描方法
-    *
-    * @param bean     Bean实例
-    * @param beanName Bean名称
-    * @param clazz    类
-    */
+     * 扫描方法
+     *
+     * @param bean     Bean实例
+     * @param beanName Bean名称
+     * @param clazz    类
+     */
     private void scanMethods(Object bean, String beanName, Class<?> clazz) {
         for (Method method : clazz.getDeclaredMethods()) {
             ConfigValue annotation = method.getAnnotation(ConfigValue.class);
@@ -276,11 +276,11 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
             // 注入初始值
             String value = resolveValue(parsed.key(), parsed.defaultValue());
             /**
-            * inject方法值。
-            * @param bean Bean
-            * @param method 方法
-            * @param value 值
-            */
+             * inject方法值。
+             * @param bean Bean
+             * @param method 方法
+             * @param value 值
+             */
             injectMethodValue(bean, method, value);
 
             // 如果支持热更新，注册监听
@@ -297,9 +297,9 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
                 );
 
                 /**
-                * 注册binding。
-                * @param binding binding
-                */
+                 * 注册binding。
+                 * @param binding binding
+                 */
                 registerBinding(binding);
                 log.debug("注册热更新绑定: key={}, bean={}, method={}",
                         parsed.key(), beanName, method.getName());
@@ -308,10 +308,10 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
     }
 
     /**
-    * 注册绑定并添加监听
-    *
-    * @param binding 绑定信息
-    */
+     * 注册绑定并添加监听
+     *
+     * @param binding 绑定信息
+     */
     private void registerBinding(BindingInfo binding) {
         String configKey = binding.configKey();
 
@@ -328,12 +328,12 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
     }
 
     /**
-    * 解析配置值
-    *
-    * @param key          配置键
-    * @param defaultValue 默认值
-    * @return 配置值
-    */
+     * 解析配置值
+     *
+     * @param key          配置键
+     * @param defaultValue 默认值
+     * @return 配置值
+     */
     private String resolveValue(String key, String defaultValue) {
         // 先从缓存获取
         String cachedValue = configValueCache.get(key);
@@ -361,11 +361,11 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
     }
 
     /**
-    * 更新配置值缓存
-    *
-    * @param key   配置键
-    * @param value 配置值
-    */
+     * 更新配置值缓存
+     *
+     * @param key   配置键
+     * @param value 配置值
+     */
     private void updateCache(String key, String value) {
         if (value != null) {
             configValueCache.put(key, value);
@@ -375,12 +375,12 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
     }
 
     /**
-    * 注入字段值
-    *
-    * @param bean  Bean实例
-    * @param field 字段
-    * @param value 值
-    */
+     * 注入字段值
+     *
+     * @param bean  Bean实例
+     * @param field 字段
+     * @param value 值
+     */
     private void injectFieldValue(Object bean, Field field, String value) {
         try {
             Object convertedValue = convertValue(value, field.getType());
@@ -394,12 +394,12 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
     }
 
     /**
-    * 注入方法值
-    *
-    * @param bean   Bean实例
-    * @param method 方法
-    * @param value  值
-    */
+     * 注入方法值
+     *
+     * @param bean   Bean实例
+     * @param method 方法
+     * @param value  值
+     */
     private void injectMethodValue(Object bean, Method method, String value) {
         try {
             Object convertedValue = convertValue(value, method.getParameterTypes()[0]);
@@ -414,12 +414,12 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
     }
 
     /**
-    * 转换值类型
-    *
-    * @param value      字符串值
-    * @param targetType 目标类型
-    * @return 转换后的值
-    */
+     * 转换值类型
+     *
+     * @param value      字符串值
+     * @param targetType 目标类型
+     * @return 转换后的值
+     */
     private Object convertValue(String value, Class<?> targetType) {
         if (value == null) {
             return null;
@@ -428,39 +428,39 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
     }
 
     /**
-    * 解析占位符表达式
-    *
-    * @param expression 表达式
-    * @return 解析结果
-    */
+     * 解析占位符表达式
+     *
+     * @param expression 表达式
+     * @return 解析结果
+     */
     private ParsedExpression parseExpression(String expression) {
         Matcher matcher = PLACEHOLDER_PATTERN.matcher(expression);
         if (matcher.find()) {
             String key = matcher.group(1);
             String defaultValue = matcher.group(2);
             /**
-            * 解析expression。
-            * @param key Key
-            * @param defaultValue 默认值
-            * @return 解析expression的结果
-            */
+             * 解析expression。
+             * @param key Key
+             * @param defaultValue 默认值
+             * @return 解析expression的结果
+             */
             return new ParsedExpression(key, defaultValue);
         }
         /**
-        * 解析expression。
-        * @param expression expression
-        * @param null 空
-        * @return 解析expression的结果
-        */
+         * 解析expression。
+         * @param expression expression
+         * @param null 空
+         * @return 解析expression的结果
+         */
         return new ParsedExpression(expression, null);
     }
 
     /**
-    * 获取类的所有字段
-    *
-    * @param clazz 类
-    * @return 字段列表
-    */
+     * 获取类的所有字段
+     *
+     * @param clazz 类
+     * @return 字段列表
+     */
     private List<Field> getAllFields(Class<?> clazz) {
         List<Field> fields = new ArrayList<>();
         while (clazz != null && clazz != Object.class) {
@@ -473,10 +473,10 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
     // ==================== 内部类 ====================
 
     /**
-    * 配置值监听器
-    * @author CH
-    * @since 4.0.0
-    */
+     * 配置值监听器
+     * @author CH
+     * @since 4.0.0
+     */
     private class ConfigValueListener implements ConfigListener {
 
         /** 配置密钥 */
@@ -492,21 +492,21 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
 
         @Override
         /**
-        * on改变
-        * @param key Key
-        * @param oldValue 旧值
-        * @param newValue 新值
-        */
+         * on改变
+         * @param key Key
+         * @param oldValue 旧值
+         * @param newValue 新值
+         */
         public void onChange(String key, String oldValue, String newValue) {
  // 由 on更新 处理
         }
 
         @Override
         /**
-        * On删除
-        * @param key Key
-        * @param oldValue 旧值
-        */
+         * On删除
+         * @param key Key
+         * @param oldValue 旧值
+         */
         public void onDelete(String key, String oldValue) {
             List<BindingInfo> bindings = bindingsByKey.get(configKey);
             if (bindings == null) {
@@ -515,31 +515,31 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
 
             // 更新缓存
             /**
-            * 更新缓存。
-            * @param configKey 配置Key
-            * @param null 空
-            */
+             * 更新缓存。
+             * @param configKey 配置Key
+             * @param null 空
+             */
             updateCache(configKey, null);
 
             for (BindingInfo binding : bindings) {
                 // 使用默认值
                 /**
-                * 更新binding。
-                * @param binding binding
-                * @param oldValue 旧值
-                * @param binding.defaultValue( binding.默认值(
-                */
+                 * 更新binding。
+                 * @param binding binding
+                 * @param oldValue 旧值
+                 * @param binding.defaultValue( binding.默认值(
+                 */
                 updateBinding(binding, oldValue, binding.defaultValue());
             }
         }
 
         @Override
         /**
-        * On更新
-        * @param key Key
-        * @param oldValue 旧值
-        * @param newValue 新值
-        */
+         * On更新
+         * @param key Key
+         * @param oldValue 旧值
+         * @param newValue 新值
+         */
         public void onUpdate(String key, String oldValue, String newValue) {
             List<BindingInfo> bindings = bindingsByKey.get(configKey);
             if (bindings == null) {
@@ -558,10 +558,10 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
 
             // 更新缓存
             /**
-            * 更新缓存。
-            * @param configKey 配置Key
-            * @param newValue 新值
-            */
+             * 更新缓存。
+             * @param configKey 配置Key
+             * @param newValue 新值
+             */
             updateCache(configKey, newValue);
 
  // 从环境重新获取值（可能包含占位符解析）
@@ -579,12 +579,12 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
         }
 
         /**
-        * 更新绑定值
-        *
-        * @param binding  绑定信息
-        * @param oldValue 旧值
-        * @param newValue 新值
-        */
+         * 更新绑定值
+         *
+         * @param binding  绑定信息
+         * @param oldValue 旧值
+         * @param newValue 新值
+         */
         private void updateBinding(BindingInfo binding, String oldValue, String newValue) {
             Object oldConvertedValue = null;
 
@@ -607,21 +607,21 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
 
             // 调用回调
             /**
-            * invokecallback。
-            * @param binding binding
-            * @param oldConvertedValue 旧转换值
-            * @param newValue 新值
-            */
+             * invokecallback。
+             * @param binding binding
+             * @param oldConvertedValue 旧转换值
+             * @param newValue 新值
+             */
             invokeCallback(binding, oldConvertedValue, newValue);
         }
 
         /**
-        * 调用回调方法
-        *
-        * @param binding  绑定信息
-        * @param oldValue 旧值
-        * @param newValue 新值
-        */
+         * 调用回调方法
+         *
+         * @param binding  绑定信息
+         * @param oldValue 旧值
+         * @param newValue 新值
+         */
         private void invokeCallback(BindingInfo binding, Object oldValue, String newValue) {
             String callbackName = binding.callback();
             if (StringUtils.isEmpty(callbackName)) {
@@ -649,11 +649,11 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
     }
 
     /**
-    * 绑定信息
-    * <p>
-    * 注意：record 类型不支持 @构建器 注解，直接使用构造函数
-    * </p>
-    */
+     * 绑定信息
+     * <p>
+     * 注意：record 类型不支持 @构建器 注解，直接使用构造函数
+     * </p>
+     */
     private record BindingInfo(String configKey,
                                String defaultValue,
                                Object bean,
@@ -665,11 +665,11 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
     }
 
     /**
-    * 解析后的表达式
-    * @param key Key
-    * @param defaultValue 默认值
-    * @return 解析expression的结果
-    */
+     * 解析后的表达式
+     * @param key Key
+     * @param defaultValue 默认值
+     * @return 解析expression的结果
+     */
     private record ParsedExpression(String key, String defaultValue) {
     }
 }

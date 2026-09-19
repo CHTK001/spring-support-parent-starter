@@ -16,12 +16,12 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
-* 窗口 平台本地软件采集器
-*
-* <p>从注册表 Uninstall 节点读取已安装软件，提取 DisplayName / DisplayVersion / InstallLocation / DisplayIcon。</p>
-*
-* @since 2026/7/25
-* @author CH
+ * 窗口 平台本地软件采集器
+ *
+ * <p>从注册表 Uninstall 节点读取已安装软件，提取 DisplayName / DisplayVersion / InstallLocation / DisplayIcon。</p>
+ *
+ * @since 2026/7/25
+ * @author CH
  */
 @Slf4j
 @Component
@@ -77,11 +77,11 @@ public class WindowsLocalSoftwareCollector implements LocalSoftwareCollector {
     }
 
     /**
-    * 读取software信息
-    *
-    * @param key Key
-    * @return 读取software信息的结果
-    */
+     * 读取software信息
+     *
+     * @param key Key
+     * @return 读取software信息的结果
+     */
     private SoftSoftware readSoftwareInfo(String key) {
         try {
             Process process = Runtime.getRuntime().exec(
@@ -112,12 +112,12 @@ public class WindowsLocalSoftwareCollector implements LocalSoftwareCollector {
     }
 
     /**
-    * extract值
-    *
-    * @param output 输出
-    * @param name 名称
-    * @return extract值的结果
-    */
+     * extract值
+     *
+     * @param output 输出
+     * @param name 名称
+     * @return extract值的结果
+     */
     private String extractValue(String output, String name) {
         for (String line : output.split("\n")) {
             if (line.contains(name)) {
@@ -131,11 +131,11 @@ public class WindowsLocalSoftwareCollector implements LocalSoftwareCollector {
     }
 
     /**
-    * extracticon路径
-    *
-    * @param output 输出
-    * @return extracticon路径的结果
-    */
+     * extracticon路径
+     *
+     * @param output 输出
+     * @return extracticon路径的结果
+     */
     private String extractIconPath(String output) {
         String icon = extractValue(output, "DisplayIcon");
         if (icon != null && new File(icon).exists()) {

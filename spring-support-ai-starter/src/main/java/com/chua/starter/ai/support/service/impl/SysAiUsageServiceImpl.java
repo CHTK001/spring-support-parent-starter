@@ -26,10 +26,10 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
-* AI 用量服务实现类
-*
-* @since 4.0.0.42
-* @author CH
+ * AI 用量服务实现类
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @Service
@@ -37,37 +37,37 @@ import java.util.List;
 public class SysAiUsageServiceImpl implements SysAiUsageService {
 
     /**
-    * 用量 映射器
-    */
+     * 用量 映射器
+     */
     private final SysAiUsageMapper usageMapper;
 
     /**
-    * 日汇总 映射器
-    */
+     * 日汇总 映射器
+     */
     private final SysAiUsageDailyMapper dailyMapper;
 
     /**
-    * 定价服务
-    */
+     * 定价服务
+     */
     private final SysAiPricingService pricingService;
 
     /**
-    * IP 地址转物理地址服务（spring-支持-通用，带 Redis 缓存）
-    */
+     * IP 地址转物理地址服务（spring-支持-通用，带 Redis 缓存）
+     */
     private final IptablesService iptablesService;
 
     @Override
     @Transactional
     /**
-    * Record
-    * @param groupName 群体名称
-    * @param provider 提供者
-    * @param model 模型
-    * @param callType call类型
-    * @param usage usage
-    * @param requestId 请求标识
-    * @param userId 用户标识
-    */
+     * Record
+     * @param groupName 群体名称
+     * @param provider 提供者
+     * @param model 模型
+     * @param callType call类型
+     * @param usage usage
+     * @param requestId 请求标识
+     * @param userId 用户标识
+     */
     public void record(String groupName, String provider, String model, String callType,
                        AiUsage usage, String requestId, String userId) {
         if (usage == null) {
@@ -149,15 +149,15 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
 
     @Override
     /**
-    * 列表
-    * @param groupName 群体名称
-    * @param provider 提供者
-    * @param model 模型
-    * @param startTime 启动时间
-    * @param endTime 结束时间
-    * @param page page
-    * @param size 大小
-    */
+     * 列表
+     * @param groupName 群体名称
+     * @param provider 提供者
+     * @param model 模型
+     * @param startTime 启动时间
+     * @param endTime 结束时间
+     * @param page page
+     * @param size 大小
+     */
     public Page<SysAiUsage> list(String groupName, String provider, String model,
                                  LocalDateTime startTime, LocalDateTime endTime, int page, int size) {
         LambdaQueryWrapper<SysAiUsage> wrapper = new LambdaQueryWrapper<>();
@@ -184,16 +184,16 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
 
     @Override
     /**
-    * 获取用量统计。
-    * <p>查询日汇总表 sys_ai_usage_daily，避免全量扫描原始明细表。</p>
-    *
-    * @param groupName 分组名称（可为空）
-    * @param provider  服务商（可为空）
-    * @param model     模型（可为空）
-    * @param startTime 开始时间（可为空）
-    * @param endTime   结束时间（可为空）
-    * @return 聚合统计结果
-    */
+     * 获取用量统计。
+     * <p>查询日汇总表 sys_ai_usage_daily，避免全量扫描原始明细表。</p>
+     *
+     * @param groupName 分组名称（可为空）
+     * @param provider  服务商（可为空）
+     * @param model     模型（可为空）
+     * @param startTime 开始时间（可为空）
+     * @param endTime   结束时间（可为空）
+     * @return 聚合统计结果
+     */
     public UsageStatistics getStatistics(String groupName, String provider, String model,
                                           LocalDateTime startTime, LocalDateTime endTime) {
         LambdaQueryWrapper<SysAiUsageDaily> wrapper = new LambdaQueryWrapper<>();

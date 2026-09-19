@@ -17,16 +17,16 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
-* 真实端口 E2E 测试：{@code RANDOM_PORT} + {@link RestTemplate} 走**真实 HTTP 栈**
-* （嵌入式 Tomcat 监听随机端口），区别于 mockmvc 的模拟 Servlet 容器。
-*
-* <p>覆盖：多数据源接口、api 版本路由、接口权限（本地联调模式——无会话用户注入本地 admin 放行）。</p>
-*
-* <p>注：Boot 4.1 中 {@code @LocalServerPort} 位于 {@code org.springframework.boot.test.web.server}；
-* {@code TestRestTemplate} 已从测试构件移除，改用 spring-web 的 {@link RestTemplate}。</p>
-*
-* @author CH
-* @since 2026/09/04
+ * 真实端口 E2E 测试：{@code RANDOM_PORT} + {@link RestTemplate} 走**真实 HTTP 栈**
+ * （嵌入式 Tomcat 监听随机端口），区别于 mockmvc 的模拟 Servlet 容器。
+ *
+ * <p>覆盖：多数据源接口、api 版本路由、接口权限（本地联调模式——无会话用户注入本地 admin 放行）。</p>
+ *
+ * <p>注：Boot 4.1 中 {@code @LocalServerPort} 位于 {@code org.springframework.boot.test.web.server}；
+ * {@code TestRestTemplate} 已从测试构件移除，改用 spring-web 的 {@link RestTemplate}。</p>
+ *
+ * @author CH
+ * @since 2026/09/04
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class RealPortE2ETest {
@@ -38,38 +38,38 @@ class RealPortE2ETest {
 
     @BeforeEach
     /**
-    * 参见。
+     * 参见。
      */
     void seed() throws Exception {
         /**
-        * 参见。
-        * @param "jdbc:h2:mem:ds1;DB_CLOSE_DELAY=-1" "JDBC:h2:mem:ds1;db关闭延迟=1"
-        * @param "ds1-data" "ds1-数据"
+         * 参见。
+         * @param "jdbc:h2:mem:ds1;DB_CLOSE_DELAY=-1" "JDBC:h2:mem:ds1;db关闭延迟=1"
+         * @param "ds1-data" "ds1-数据"
          */
         seed("jdbc:h2:mem:ds1;DB_CLOSE_DELAY=-1", "ds1-data");
         /**
-        * 参见。
-        * @param "jdbc:h2:mem:ds2;DB_CLOSE_DELAY=-1" "JDBC:h2:mem:ds2;db关闭延迟=1"
-        * @param "ds2-data" "ds2-数据"
+         * 参见。
+         * @param "jdbc:h2:mem:ds2;DB_CLOSE_DELAY=-1" "JDBC:h2:mem:ds2;db关闭延迟=1"
+         * @param "ds2-data" "ds2-数据"
          */
         seed("jdbc:h2:mem:ds2;DB_CLOSE_DELAY=-1", "ds2-data");
         /**
-        * 参见。
-        * @param "jdbc:h2:mem:test;DB_CLOSE_DELAY=-1;MODE=MySQL" "JDBC:h2:mem:测试;db关闭延迟=1;mode=MySQL"
-        * @param "master-data" "master-数据"
+         * 参见。
+         * @param "jdbc:h2:mem:test;DB_CLOSE_DELAY=-1;MODE=MySQL" "JDBC:h2:mem:测试;db关闭延迟=1;mode=MySQL"
+         * @param "master-data" "master-数据"
          */
         seed("jdbc:h2:mem:test;DB_CLOSE_DELAY=-1;MODE=MySQL", "master-data");
     }
 
     /**
-    * 参见。
-    * @param url url
-    * @param data 数据
+     * 参见。
+     * @param url url
+     * @param data 数据
      */
     private static void seed(String url, String data) throws Exception {
         /**
-        * 尝试。
-        * @param "" ""
+         * 尝试。
+         * @param "" ""
          */
         try (Connection connection = DriverManager.getConnection(url, "sa", "");
              Statement statement = connection.createStatement()) {
@@ -80,9 +80,9 @@ class RealPortE2ETest {
     }
 
     /**
-    * url。
-    * @param path 路径
-    * @return url的结果
+     * url。
+     * @param path 路径
+     * @return url的结果
      */
     private String url(String path) {
         return "http://localhost:" + port + path;
@@ -99,16 +99,16 @@ class RealPortE2ETest {
          */
         assertNotNull(ds1, "响应不应为空");
         /**
-        * 断言equals。
-        * @param "ds1-data" "ds1-数据"
-        * @param ds1.get("data" ds1.获取("数据"
+         * 断言equals。
+         * @param "ds1-data" "ds1-数据"
+         * @param ds1.get("data" ds1.获取("数据"
          */
         assertEquals("ds1-data", ds1.get("data"));
         Map<?, ?> ds2 = restTemplate.getForObject(url("/api/ds/region/ds2"), Map.class);
         /**
-        * 断言equals。
-        * @param "ds2-data" "ds2-数据"
-        * @param ds2.get("data" ds2.获取("数据"
+         * 断言equals。
+         * @param "ds2-data" "ds2-数据"
+         * @param ds2.get("data" ds2.获取("数据"
          */
         assertEquals("ds2-data", ds2.get("data"));
     }
@@ -125,9 +125,9 @@ class RealPortE2ETest {
         assertEquals("1", v1.get("version"));
         Map<?, ?> v2 = restTemplate.getForObject(url("/api/api-version/greet?apiVersion=2"), Map.class);
         /**
-        * 断言equals。
-        * @param "2" "2"
-        * @param v2.get("version" v2.获取("版本"
+         * 断言equals。
+         * @param "2" "2"
+         * @param v2.get("version" v2.获取("版本"
          */
         assertEquals("2", v2.get("version"));
     }

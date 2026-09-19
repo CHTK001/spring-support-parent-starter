@@ -16,12 +16,12 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 
 /**
-* 分片上传文件记录服务实现。
-*
-* <p>负责将分片上传结果持久化到 {@code filesystem_upload_file} 表。
-*
-* @author CH
-* @since 4.0.0
+ * 分片上传文件记录服务实现。
+ *
+ * <p>负责将分片上传结果持久化到 {@code filesystem_upload_file} 表。
+ *
+ * @author CH
+ * @since 4.0.0
  */
 @Service
 @RequiredArgsConstructor
@@ -69,11 +69,11 @@ public class SysFileSystemUploadFileServiceImpl
     }
 
     /**
-    * 按上传任务 标识 查询文件记录。
-    *
-    * @param uploadId 上传任务 标识
-    * @return 文件记录，不存在返回 空
-    */
+     * 按上传任务 标识 查询文件记录。
+     *
+     * @param uploadId 上传任务 标识
+     * @return 文件记录，不存在返回 空
+     */
     @Override
     public SysFileSystemUploadFile getByUploadId(String uploadId) {
         return getOne(new LambdaQueryWrapper<SysFileSystemUploadFile>()
@@ -81,11 +81,11 @@ public class SysFileSystemUploadFileServiceImpl
     }
 
     /**
-    * 删除指定上传任务的所有文件记录。
-    *
-    * @param uploadId 上传任务 标识
-    * @return 是否删除成功
-    */
+     * 删除指定上传任务的所有文件记录。
+     *
+     * @param uploadId 上传任务 标识
+     * @return 是否删除成功
+     */
     @Override
     @Transactional
     public boolean deleteByUploadId(String uploadId) {

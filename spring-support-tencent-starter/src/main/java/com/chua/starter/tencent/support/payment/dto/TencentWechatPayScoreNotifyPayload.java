@@ -5,9 +5,9 @@ import lombok.Data;
 import java.util.Map;
 
 /**
-* 微信支付分服务订单回调解析结果
-* @author CH
-* @since 4.0.0
+ * 微信支付分服务订单回调解析结果
+ * @author CH
+ * @since 4.0.0
  */
 @Data
 public class TencentWechatPayScoreNotifyPayload {

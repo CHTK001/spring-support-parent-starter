@@ -22,13 +22,13 @@ import java.util.List;
 import java.util.Map;
 
 /**
-* 服务器目录浏览接口（安全开关控制，默认关闭）。
-* <p>
-* 提供服务器本地目录树浏览能力，供前端「上传目录」选择器使用。
-* 通过 {@code plugin.filesystem.dir-list} 开关控制是否暴露，默认关闭。
-*
-* @since 4.0.0.42
-* @author CH
+ * 服务器目录浏览接口（安全开关控制，默认关闭）。
+ * <p>
+ * 提供服务器本地目录树浏览能力，供前端「上传目录」选择器使用。
+ * 通过 {@code plugin.filesystem.dir-list} 开关控制是否暴露，默认关闭。
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @RestController
@@ -38,16 +38,16 @@ import java.util.Map;
 public class FileDirController {
 
     /**
-    * 文件存储配置
-    */
+     * 文件存储配置
+     */
     private final FileStorageProperties properties;
 
     /**
-    * 浏览指定目录下的子目录。
-    *
-    * @param path 目录路径，为空时返回盘符/根目录
-    * @return 子目录列表
-    */
+     * 浏览指定目录下的子目录。
+     *
+     * @param path 目录路径，为空时返回盘符/根目录
+     * @return 子目录列表
+     */
     @Operation(summary = "目录列表", description = "浏览指定路径下的子目录")
     @GetMapping("/list")
     public ReturnResult<List<Map<String, Object>>> list(
@@ -70,9 +70,9 @@ public class FileDirController {
 
         List<Map<String, Object>> result = new ArrayList<>();
         /**
-        * 尝试。
-        * @param Files.newDirectoryStream(dir 文件.新目录流(dir
-        */
+         * 尝试。
+         * @param Files.newDirectoryStream(dir 文件.新目录流(dir
+         */
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir)) {
             for (Path entry : stream) {
                 if (!Files.isDirectory(entry)) {

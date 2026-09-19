@@ -11,13 +11,13 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
-* 流程编排实体。
-*
-* <p>对应 {@code spider_flow} 表，保存前端 ReFlow 可视化画布导出的
-* 节点 JSON（节点_json）与连线 JSON（edges_json），一个爬虫定义对应一条流程。</p>
-*
-* @since 4.0.0.42
-* @author CH
+ * 流程编排实体。
+ *
+ * <p>对应 {@code spider_flow} 表，保存前端 ReFlow 可视化画布导出的
+ * 节点 JSON（节点_json）与连线 JSON（edges_json），一个爬虫定义对应一条流程。</p>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -26,8 +26,8 @@ import lombok.EqualsAndHashCode;
 public class SpiderFlow extends SysBase {
 
     /**
-    * 主键 标识（自增）
-    */
+     * 主键 标识（自增）
+     */
     @TableId(type = IdType.AUTO)
     @Schema(description = "主键 ID")
     /** 标识 */

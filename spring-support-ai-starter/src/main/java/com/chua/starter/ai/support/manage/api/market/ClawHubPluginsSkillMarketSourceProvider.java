@@ -3,10 +3,10 @@ package com.chua.starter.ai.support.manage.api.market;
 import com.chua.common.support.spi.annotations.Spi;
 
 /**
-* clawhub 插件市场源 SPI。
-*
-* @since 4.0.0.42
-* @author CH
+ * clawhub 插件市场源 SPI。
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Spi("clawhub_plugins")
 public class ClawHubPluginsSkillMarketSourceProvider implements SkillMarketSourceProvider {

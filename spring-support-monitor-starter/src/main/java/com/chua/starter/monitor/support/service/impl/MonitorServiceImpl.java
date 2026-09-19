@@ -21,10 +21,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 /**
-* 监控 服务 实现
-*
-* @since 2026/8/4
-* @author CH
+ * 监控 服务 实现
+ *
+ * @since 2026/8/4
+ * @author CH
  */
 @Slf4j
 @Service
@@ -70,10 +70,10 @@ public class MonitorServiceImpl implements MonitorService {
     }
 
     /**
-    * 生成探针标识（32 位十六进制，与 服务端-启动 风格一致）
-    *
-    * @return 探针标识
-    */
+     * 生成探针标识（32 位十六进制，与 服务端-启动 风格一致）
+     *
+     * @return 探针标识
+     */
     private String generateAgentKey() {
         byte[] bytes = new byte[16];
         SECURE_RANDOM.nextBytes(bytes);
@@ -84,10 +84,10 @@ public class MonitorServiceImpl implements MonitorService {
     @Transactional(rollbackFor = Exception.class)
     @CacheEvict(allEntries = true, cacheNames = "monitor")
     /**
-    * 更新。
-    * @param monitor 监控
-    * @return 更新的结果
-    */
+     * 更新。
+     * @param monitor 监控
+     * @return 更新的结果
+     */
     public ReturnResult<MsMonitor> update(MsMonitor monitor) {
         try {
             monitorMapper.updateById(monitor);
@@ -102,10 +102,10 @@ public class MonitorServiceImpl implements MonitorService {
     @Transactional(rollbackFor = Exception.class)
     @CacheEvict(allEntries = true, cacheNames = "monitor")
     /**
-    * 删除。
-    * @param id 标识
-    * @return 删除的结果
-    */
+     * 删除。
+     * @param id 标识
+     * @return 删除的结果
+     */
     public ReturnResult<Void> delete(Long id) {
         try {
             // 级联删除关联的任务和网关
@@ -124,10 +124,10 @@ public class MonitorServiceImpl implements MonitorService {
     @Override
     @Cacheable(cacheNames = "monitor", key = "'monitor:id:' + #id")
     /**
-    * findbyid。
-    * @param id 标识
-    * @return findById的结果
-    */
+     * findbyid。
+     * @param id 标识
+     * @return findById的结果
+     */
     public ReturnResult<MsMonitor> findById(Long id) {
         try {
             MsMonitor monitor = monitorMapper.selectById(id);
@@ -140,9 +140,9 @@ public class MonitorServiceImpl implements MonitorService {
     @Override
     @Cacheable(cacheNames = "monitor", key = "'monitor:list:all'")
     /**
-    * 列表全部。
-    * @return 列表全部的结果
-    */
+     * 列表全部。
+     * @return 列表全部的结果
+     */
     public ReturnResult<List<MsMonitor>> listAll() {
         try {
             return ReturnResult.ok(monitorMapper.selectList(null));

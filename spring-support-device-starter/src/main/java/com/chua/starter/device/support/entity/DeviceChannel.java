@@ -7,19 +7,19 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
 /**
-* 设备通道实体
-* <p>对应数据库表 device_channel。</p>
-*
-* @since 4.0.0.42
-* @author CH
+ * 设备通道实体
+ * <p>对应数据库表 device_channel。</p>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Data
 @TableName("device_channel")
 public class DeviceChannel {
 
     /**
-    * 主键 标识
-    */
+     * 主键 标识
+     */
     @TableId(value = "device_channel_id", type = IdType.ASSIGN_UUID)
     /** Device通道标识 */
     private String deviceChannelId;

@@ -37,33 +37,33 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
-* 软件信息表 服务 实现
-*
-* @since 2026/7/25
-* @author CH
+ * 软件信息表 服务 实现
+ *
+ * @since 2026/7/25
+ * @author CH
  */
 @Service
 @RequiredArgsConstructor
 public class SoftSoftwareServiceImpl extends ServiceImpl<SoftSoftwareMapper, SoftSoftware> implements SoftSoftwareService {
 
     /**
-    * 事务模板
-    */
+     * 事务模板
+     */
     private final TransactionTemplate transactionTemplate;
 
     /**
-    * 软件源服务
-    */
+     * 软件源服务
+     */
     private final SoftSourceService sourceService;
 
     /**
-    * 安装记录服务 - 使用 Setter + @Lazy 打断循环依赖
-    */
+     * 安装记录服务 - 使用 Setter + @Lazy 打断循环依赖
+     */
     private SoftInstallRecordService installRecordService;
 
     /**
-    * 软件源 SPI 列表
-    */
+     * 软件源 SPI 列表
+     */
     private final List<SoftwareSource> softwareSources;
 
     /** 日志 */
@@ -103,9 +103,9 @@ public class SoftSoftwareServiceImpl extends ServiceImpl<SoftSoftwareMapper, Sof
         software.setSoftwareUpdateTime(LocalDateTime.now());
         baseMapper.insert(software);
         /**
-    * 索引转为Elasticsearch。
-    * @param software software
-    */
+         * 索引转为Elasticsearch。
+         * @param software software
+         */
         indexToElasticsearch(software);
         return ReturnResult.ok(software);
     }

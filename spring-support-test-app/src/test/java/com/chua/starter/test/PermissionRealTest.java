@@ -15,13 +15,13 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
-* 接口权限 + 按钮权限真实测试（@springboot测试 + mockmvc + 真实 权限拦截器）。
-*
-* <p>用户上下文经会话注入（{@code AuthSessionUtils.SESSION_USER_INFO}），
-* 与生产请求路径一致；拒绝场景由 {@code OauthExceptionAdvice} 映射为 403。</p>
-*
-* @author CH
-* @since 2026/09/04
+ * 接口权限 + 按钮权限真实测试（@springboot测试 + mockmvc + 真实 权限拦截器）。
+ *
+ * <p>用户上下文经会话注入（{@code AuthSessionUtils.SESSION_USER_INFO}），
+ * 与生产请求路径一致；拒绝场景由 {@code OauthExceptionAdvice} 映射为 403。</p>
+ *
+ * @author CH
+ * @since 2026/09/04
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -31,9 +31,9 @@ class PermissionRealTest {
     private MockMvc mockMvc; // mockmvc
 
     /**
-    * 会话with。
-    * @param user 用户
-    * @return 会话with的结果
+     * 会话with。
+     * @param user 用户
+     * @return 会话with的结果
      */
     private MockHttpSession sessionWith(UserResume user) {
         MockHttpSession session = new MockHttpSession();
@@ -42,10 +42,10 @@ class PermissionRealTest {
     }
 
     /**
-    * 用户。
-    * @param roles 角色
-    * @param permissions 权限
-    * @return 用户的结果
+     * 用户。
+     * @param roles 角色
+     * @param permissions 权限
+     * @return 用户的结果
      */
     private static UserResume user(Set<String> roles, Set<String> permissions) {
         UserResume user = new UserResume();

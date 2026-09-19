@@ -34,58 +34,58 @@ import java.util.List;
 import java.util.Map;
 
 /**
-* 真实场景矩阵探针：数据库双向 + 文件系统桥接。
-*
-* <p>覆盖用户关注的"很多场景"（Excel 同步到数据库 / 数据库导出 Excel）：
-* 由于 datasync 的 {@code FileSystemDataSyncSource} 为占位实现（读取 返回空流），
-* 本探针通过通用 {@link FileSystem} SPI（POI 的 excel文件系统）桥接出 Excel 源/汇，
-* 与现成的 CSV/JDBC 组件组合出以下真实数据同步场景：</p>
-*
-* <ol>
-*   <li>CSV(Files) → JDBC 数据库（文件导入数据库）</li>
-*   <li>JDBC 数据库 → CSV(Files)（数据库导出文件）</li>
-*   <li>JDBC → JDBC（数据库到数据库）</li>
-*   <li>Excel(Files, POI) → JDBC 数据库（excel 同步到数据库）</li>
-*   <li>JDBC 数据库 → Excel(Files, POI)（数据库导出 excel）</li>
-* </ol>
-*
-* <p>运行说明：需要把 {@code utils-support-excel-starter} 与 POI 全家 jar 追加到运行 classpath
-* （datasync 默认 类路径 不含 POI），并从 H2/源库验证行数与内容一致性。</p>
-*
-* @since 4.0.0.42
-* @author CH
+ * 真实场景矩阵探针：数据库双向 + 文件系统桥接。
+ *
+ * <p>覆盖用户关注的"很多场景"（Excel 同步到数据库 / 数据库导出 Excel）：
+ * 由于 datasync 的 {@code FileSystemDataSyncSource} 为占位实现（读取 返回空流），
+ * 本探针通过通用 {@link FileSystem} SPI（POI 的 excel文件系统）桥接出 Excel 源/汇，
+ * 与现成的 CSV/JDBC 组件组合出以下真实数据同步场景：</p>
+ *
+ * <ol>
+ *   <li>CSV(Files) → JDBC 数据库（文件导入数据库）</li>
+ *   <li>JDBC 数据库 → CSV(Files)（数据库导出文件）</li>
+ *   <li>JDBC → JDBC（数据库到数据库）</li>
+ *   <li>Excel(Files, POI) → JDBC 数据库（excel 同步到数据库）</li>
+ *   <li>JDBC 数据库 → Excel(Files, POI)（数据库导出 excel）</li>
+ * </ol>
+ *
+ * <p>运行说明：需要把 {@code utils-support-excel-starter} 与 POI 全家 jar 追加到运行 classpath
+ * （datasync 默认 类路径 不含 POI），并从 H2/源库验证行数与内容一致性。</p>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 public final class DataSyncExcelJdbcProbe {
 
     /**
-    * H2 内存库 JDBC URL（进程内共享）。
+     * H2 内存库 JDBC URL（进程内共享）。
      */
     private static final String JDBC_URL = "jdbc:h2:mem:dsasync-probe;DB_CLOSE_DELAY=-1";
 
     /**
-    * 数据行数（每场景源数据规模）。
+     * 数据行数（每场景源数据规模）。
      */
     private static final int ROWS = 5_000;
 
     /**
-    * 目标文件目录。
+     * 目标文件目录。
      */
     private static final Path WORK_DIR = Paths.get("target/excel-jdbc");
 
     /**
-    * 列定义（与表结构/CSV/Excel 表头一致）。
+     * 列定义（与表结构/CSV/Excel 表头一致）。
      */
     private static final String[] COLS = {"id", "name", "age", "score"};
 
     /**
-    * 程序入口。
-    *
-    * @param args 命令行参数
+     * 程序入口。
+     *
+     * @param args 命令行参数
      */
     public static void main(String[] args) throws Exception {
         Files.createDirectories(WORK_DIR);
         /**
-        * 初始化database。
+         * 初始化database。
          */
         initDatabase();
 
@@ -119,16 +119,16 @@ public final class DataSyncExcelJdbcProbe {
     }
 
     /**
-    * 场景1：CSV(文件) → JDBC 数据库。
-    *
-    * @return 失败计数（0 为通过）
+     * 场景1：CSV(文件) → JDBC 数据库。
+     *
+     * @return 失败计数（0 为通过）
      */
     private static int runCsvToDb() throws Exception {
         String name = "CSV->DB(文件导入数据库)";
         Path csv = WORK_DIR.resolve("source.csv");
         /**
-        * 写入csv。
-        * @param csv csv
+         * 写入csv。
+         * @param csv csv
          */
         writeCsv(csv);
 
@@ -143,9 +143,9 @@ public final class DataSyncExcelJdbcProbe {
     }
 
     /**
-    * 场景2：JDBC 数据库 → CSV(文件)。
-    *
-    * @return 失败计数（0 为通过）
+     * 场景2：JDBC 数据库 → CSV(文件)。
+     *
+     * @return 失败计数（0 为通过）
      */
     private static int runDbToCsv() throws Exception {
         String name = "DB->CSV(数据库导出文件)";
@@ -161,9 +161,9 @@ public final class DataSyncExcelJdbcProbe {
     }
 
     /**
-    * 场景3：JDBC → JDBC（数据库到数据库）。
-    *
-    * @return 失败计数（0 为通过）
+     * 场景3：JDBC → JDBC（数据库到数据库）。
+     *
+     * @return 失败计数（0 为通过）
      */
     private static int runDbToDb() throws Exception {
         String name = "DB->DB(数据库到数据库)";
@@ -179,16 +179,16 @@ public final class DataSyncExcelJdbcProbe {
     }
 
     /**
-    * 场景4：Excel(文件系统 SPI) → JDBC 数据库。
-    *
-    * @return 失败计数（0 为通过）
+     * 场景4：Excel(文件系统 SPI) → JDBC 数据库。
+     *
+     * @return 失败计数（0 为通过）
      */
     private static int runExcelToDb() throws Exception {
         String name = "Excel->DB(excel同步到数据库, POI)";
         Path excel = WORK_DIR.resolve("seed.xlsx");
         /**
-        * 写入excel。
-        * @param excel excel
+         * 写入excel。
+         * @param excel excel
          */
         writeExcel(excel);
 
@@ -203,9 +203,9 @@ public final class DataSyncExcelJdbcProbe {
     }
 
     /**
-    * 场景5：JDBC 数据库 → Excel(文件系统 SPI)。
-    *
-    * @return 失败计数（0 为通过）
+     * 场景5：JDBC 数据库 → Excel(文件系统 SPI)。
+     *
+     * @return 失败计数（0 为通过）
      */
     private static int runDbToExcel() throws Exception {
         String name = "DB->Excel(数据库导出excel, POI)";
@@ -235,12 +235,12 @@ public final class DataSyncExcelJdbcProbe {
     }
 
     /**
-    * 场景6：JDBC → JDBC 增量同步（偏移量 断点续传）。
-    *
-    * <p>先同步前 3000 行到 dst_inc，再用 offset=2999 增量同步剩余 2000 行，
-    * 验证最终 5000 行全部到位且增量段不重不丢。</p>
-    *
-    * @return 失败计数（0 为通过）
+     * 场景6：JDBC → JDBC 增量同步（偏移量 断点续传）。
+     *
+     * <p>先同步前 3000 行到 dst_inc，再用 offset=2999 增量同步剩余 2000 行，
+     * 验证最终 5000 行全部到位且增量段不重不丢。</p>
+     *
+     * @return 失败计数（0 为通过）
      */
     private static int runIncrementalSync() throws Exception {
         String name = "DB->DB(增量同步offset断点续传)";
@@ -266,8 +266,8 @@ public final class DataSyncExcelJdbcProbe {
                 1000, COLS);
         incSink.write(Flux.fromIterable(incRows));
         /**
-        * sleep。
-        * @param 1500 1500
+         * sleep。
+         * @param 1500 1500
          */
         sleep(1500);
         incSink.close();
@@ -283,9 +283,9 @@ public final class DataSyncExcelJdbcProbe {
     }
 
     /**
-    * 场景8：TSV → JDBC 数据库（制表符分隔文件导入数据库）。
-    *
-    * @return 失败计数（0 为通过）
+     * 场景8：TSV → JDBC 数据库（制表符分隔文件导入数据库）。
+     *
+     * @return 失败计数（0 为通过）
      */
     private static int runTsvToDb() throws Exception {
         String name = "TSV->DB(制表符分隔文件导入数据库)";
@@ -310,16 +310,16 @@ public final class DataSyncExcelJdbcProbe {
     }
 
     /**
-    * 场景9：CSV → Excel（CSV 文件转 Excel 文件，文件系统 SPI 桥接）。
-    *
-    * @return 失败计数（0 为通过）
+     * 场景9：CSV → Excel（CSV 文件转 Excel 文件，文件系统 SPI 桥接）。
+     *
+     * @return 失败计数（0 为通过）
      */
     private static int runCsvToExcel() throws Exception {
         String name = "CSV->Excel(CSV文件转Excel文件, POI)";
         Path csv = WORK_DIR.resolve("source.csv");
         /**
-        * 写入csv。
-        * @param csv csv
+         * 写入csv。
+         * @param csv csv
          */
         writeCsv(csv);
         Path excelOut = WORK_DIR.resolve("csv2excel.xlsx");
@@ -346,16 +346,16 @@ public final class DataSyncExcelJdbcProbe {
     }
 
     /**
-    * 场景10：Excel → CSV（Excel 文件转 CSV 文件，POI → Delimited 桥接）。
-    *
-    * @return 失败计数（0 为通过）
+     * 场景10：Excel → CSV（Excel 文件转 CSV 文件，POI → Delimited 桥接）。
+     *
+     * @return 失败计数（0 为通过）
      */
     private static int runExcelToCsv() throws Exception {
         String name = "Excel->CSV(Excel文件转CSV文件, POI)";
         Path excel = WORK_DIR.resolve("seed.xlsx");
         /**
-        * 写入excel。
-        * @param excel excel
+         * 写入excel。
+         * @param excel excel
          */
         writeExcel(excel);
         Path csvOut = WORK_DIR.resolve("excel2csv.csv");
@@ -370,16 +370,16 @@ public final class DataSyncExcelJdbcProbe {
     }
 
     /**
-    * 场景11：Excel 多 Sheet（写入两个 sheet，按索引/名称分别读取校验）。
-    *
-    * @return 失败计数（0 为通过）
+     * 场景11：Excel 多 Sheet（写入两个 sheet，按索引/名称分别读取校验）。
+     *
+     * @return 失败计数（0 为通过）
      */
     private static int runExcelMultiSheet() throws Exception {
         String name = "Excel多Sheet(索引+名称双读取)";
         Path excel = WORK_DIR.resolve("multisheet.xlsx");
         /**
-        * 写入multisheetexcel。
-        * @param excel excel
+         * 写入multisheetexcel。
+         * @param excel excel
          */
         writeMultiSheetExcel(excel);
 
@@ -403,9 +403,9 @@ public final class DataSyncExcelJdbcProbe {
     }
 
     /**
-    * 场景12：大批量压测（10 万行 Excel 生成 + 读回）。
-    *
-    * @return 失败计数（0 为通过）
+     * 场景12：大批量压测（10 万行 Excel 生成 + 读回）。
+     *
+     * @return 失败计数（0 为通过）
      */
     private static int runBigBatch() throws Exception {
         String name = "大批量(10万行 Excel 生成+读回)";
@@ -436,9 +436,9 @@ public final class DataSyncExcelJdbcProbe {
     }
 
     /**
-    * 场景13：Chronicle 异步通道端到端（数据经 Dispatcher 转发后落库）。
-    *
-    * @return 失败计数（0 为通过）
+     * 场景13：Chronicle 异步通道端到端（数据经 Dispatcher 转发后落库）。
+     *
+     * @return 失败计数（0 为通过）
      */
     private static int runChronicle() throws Exception {
         String name = "Chronicle异步通道(Dispatcher转发落库)";
@@ -446,8 +446,8 @@ public final class DataSyncExcelJdbcProbe {
         // 清理上次运行残留的队列文件，避免 tailer 从头消费旧数据导致重复计数
         if (java.nio.file.Files.exists(dataPath)) {
             /**
-            * 尝试。
-            * @param java.nio.file.Files.walk(dataPath Java.nio.文件.文件.walk(数据路径
+             * 尝试。
+             * @param java.nio.file.Files.walk(dataPath Java.nio.文件.文件.walk(数据路径
              */
             try (var walk = java.nio.file.Files.walk(dataPath)) {
                 walk.sorted(java.util.Comparator.reverseOrder()).forEach(p -> p.toFile().delete());
@@ -493,9 +493,9 @@ public final class DataSyncExcelJdbcProbe {
     }
 
     /**
-    * 场景14：Delimited 文件增量读取（文件 偏移量 按行跳过 + 文件同步数据偏移量storage 持久化）。
-    *
-    * @return 失败计数（0 为通过）
+     * 场景14：Delimited 文件增量读取（文件 偏移量 按行跳过 + 文件同步数据偏移量storage 持久化）。
+     *
+     * @return 失败计数（0 为通过）
      */
     private static int runDelimitedOffset() throws Exception {
         String name = "Delimited文件增量(offset跳过+偏移量持久化)";
@@ -539,16 +539,16 @@ public final class DataSyncExcelJdbcProbe {
     }
 
     /**
-    * 场景15：数据同步智能体 生命周期编排（启动/停止、获取源/获取sink）。
-    *
-    * @return 失败计数（0 为通过）
+     * 场景15：数据同步智能体 生命周期编排（启动/停止、获取源/获取sink）。
+     *
+     * @return 失败计数（0 为通过）
      */
     private static int runAgentLifecycle() throws Exception {
         String name = "Agent生命周期(start/stop/装配)";
         Path csv = WORK_DIR.resolve("lifecycle.csv");
         /**
-        * 写入csv。
-        * @param csv csv
+         * 写入csv。
+         * @param csv csv
          */
         writeCsv(csv);
         String insert = "INSERT INTO dst_user (id, name, age, score) VALUES (?, ?, ?, ?)";
@@ -558,13 +558,13 @@ public final class DataSyncExcelJdbcProbe {
         AbstractDataSyncAgent agent = new AbstractDataSyncAgent("lc-agent") {
             {
                 /**
-                * 添加源。
-                * @param source 源
+                 * 添加源。
+                 * @param source 源
                  */
                 addSource(source);
                 /**
-                * 添加sink。
-                * @param sink sink
+                 * 添加sink。
+                 * @param sink sink
                  */
                 addSink(sink);
             }
@@ -583,15 +583,15 @@ public final class DataSyncExcelJdbcProbe {
     }
 
     /**
-    * 场景16：JDBC 大批量（10 万行流式读取 + 批量写入）。
-    *
-    * @return 失败计数（0 为通过）
+     * 场景16：JDBC 大批量（10 万行流式读取 + 批量写入）。
+     *
+     * @return 失败计数（0 为通过）
      */
     private static int runJdbcBigBatch() throws Exception {
         String name = "JDBC大批量(读写10万行)";
         /**
-        * 尝试。
-        * @param "" ""
+         * 尝试。
+         * @param "" ""
          */
         try (Connection c = DriverManager.getConnection(JDBC_URL, "sa", "");
              Statement st = c.createStatement()) {
@@ -620,8 +620,8 @@ public final class DataSyncExcelJdbcProbe {
 
         long rows = drive(name, source, sink);
         /**
-        * sleep。
-        * @param 1500 1500
+         * sleep。
+         * @param 1500 1500
          */
         sleep(1500);
         sink.close();
@@ -630,9 +630,9 @@ public final class DataSyncExcelJdbcProbe {
     }
 
     /**
-    * 场景17：Excel 单元格类型（字符串/数值/布尔/日期/公式）。
-    *
-    * @return 失败计数（0 为通过）
+     * 场景17：Excel 单元格类型（字符串/数值/布尔/日期/公式）。
+     *
+     * @return 失败计数（0 为通过）
      */
     private static int runExcelCellTypes() throws Exception {
         String name = "Excel单元格类型(字符串/数值/布尔/日期/公式)";
@@ -643,52 +643,52 @@ public final class DataSyncExcelJdbcProbe {
             return 0;
         }
         /**
-        * 尝试。
-        * @param (java.io.Closeable (Java.io.关闭
+         * 尝试。
+         * @param (java.io.Closeable (Java.io.关闭
          */
         try (java.io.Closeable wb = (java.io.Closeable) wbClass.getConstructor().newInstance()) {
             Object sheet = wbClass.getMethod("createSheet").invoke(wb);
             Object row0 = sheet.getClass().getMethod("createRow", int.class).invoke(sheet, 0);
             /**
-            * 设置cellreflect。
-            * @param row0 row0
-            * @param 0 0
-            * @param "str" "str"
+             * 设置cellreflect。
+             * @param row0 row0
+             * @param 0 0
+             * @param "str" "str"
              */
             setCellReflect(row0, 0, "str");
             /**
-            * 设置cellreflect。
-            * @param row0 row0
-            * @param 1 1
-            * @param "命中" "命中"
+             * 设置cellreflect。
+             * @param row0 row0
+             * @param 1 1
+             * @param "命中" "命中"
              */
             setCellReflect(row0, 1, "命中");
             /**
-            * 设置cellreflect。
-            * @param row0 row0
-            * @param 2 2
-            * @param "bool" "bool"
+             * 设置cellreflect。
+             * @param row0 row0
+             * @param 2 2
+             * @param "bool" "bool"
              */
             setCellReflect(row0, 2, "bool");
             /**
-            * 设置cellreflect。
-            * @param row0 row0
-            * @param 3 3
-            * @param "date" "日期"
+             * 设置cellreflect。
+             * @param row0 row0
+             * @param 3 3
+             * @param "date" "日期"
              */
             setCellReflect(row0, 3, "date");
             /**
-            * 设置cellreflect。
-            * @param row0 row0
-            * @param 4 4
-            * @param "num" "num"
+             * 设置cellreflect。
+             * @param row0 row0
+             * @param 4 4
+             * @param "num" "num"
              */
             setCellReflect(row0, 4, "num");
             /**
-            * 设置cellreflect。
-            * @param row0 row0
-            * @param 5 5
-            * @param "formula" "formula"
+             * 设置cellreflect。
+             * @param row0 row0
+             * @param 5 5
+             * @param "formula" "formula"
              */
             setCellReflect(row0, 5, "formula");
             Object row1 = sheet.getClass().getMethod("createRow", int.class).invoke(sheet, 1);
@@ -712,8 +712,8 @@ public final class DataSyncExcelJdbcProbe {
                     .getClass().getMethod("setCellFormula", String.class).invoke(
                     row1.getClass().getMethod("createCell", int.class).invoke(row1, 5), "SUM(B2,2)");
             /**
-            * 尝试。
-            * @param java.io.FileOutputStream(excel.toFile( Java.io.文件输出流(excel.tofile(
+             * 尝试。
+             * @param java.io.FileOutputStream(excel.toFile( Java.io.文件输出流(excel.tofile(
              */
             try (java.io.FileOutputStream fos = new java.io.FileOutputStream(excel.toFile())) {
                 wbClass.getMethod("write", java.io.OutputStream.class).invoke(wb, fos);
@@ -744,11 +744,11 @@ public final class DataSyncExcelJdbcProbe {
     }
 
     /**
-    * 反射写入简单单元格（头部 辅助）。
-    *
-    * @param row  行对象
-    * @param col  列下标
-    * @param value 字符串值
+     * 反射写入简单单元格（头部 辅助）。
+     *
+     * @param row  行对象
+     * @param col  列下标
+     * @param value 字符串值
      */
     private static void setCellReflect(Object row, int col, String value) throws Exception {
         Object cell = row.getClass().getMethod("createCell", int.class).invoke(row, col);
@@ -756,12 +756,12 @@ public final class DataSyncExcelJdbcProbe {
     }
 
     /**
-    * 场景7：DB → Excel → DB 全链路往返一致性（逐字段比对）。
-    *
-    * <p>从 src_user 导出一份 Excel，再用 SPI 读回 Excel 全部行写入 dst_round，
-    * 最后对 标识 做逐字段比对（数值单元格读回为 double，统一转 long 后比较）。</p>
-    *
-    * @return 失败计数（0 为通过）
+     * 场景7：DB → Excel → DB 全链路往返一致性（逐字段比对）。
+     *
+     * <p>从 src_user 导出一份 Excel，再用 SPI 读回 Excel 全部行写入 dst_round，
+     * 最后对 标识 做逐字段比对（数值单元格读回为 double，统一转 long 后比较）。</p>
+     *
+     * @return 失败计数（0 为通过）
      */
     private static int runRoundTrip() throws Exception {
         String name = "DB->Excel->DB(全链路往返一致性)";
@@ -783,8 +783,8 @@ public final class DataSyncExcelJdbcProbe {
                 1000, COLS);
         rtSink.write(Flux.fromIterable(readBack));
         /**
-        * sleep。
-        * @param 1500 1500
+         * sleep。
+         * @param 1500 1500
          */
         sleep(1500);
         rtSink.close();
@@ -795,8 +795,8 @@ public final class DataSyncExcelJdbcProbe {
         }
 
         /**
-        * 尝试。
-        * @param "" ""
+         * 尝试。
+         * @param "" ""
          */
         try (Connection c = DriverManager.getConnection(JDBC_URL, "sa", "");
              Statement st = c.createStatement();
@@ -825,12 +825,12 @@ public final class DataSyncExcelJdbcProbe {
     }
 
     /**
-    * 驱动一次完整同步并返回源行数。
-    *
-    * @param name  场景名
-    * @param source 源
-    * @param sink   汇
-    * @return 源行数
+     * 驱动一次完整同步并返回源行数。
+     *
+     * @param name  场景名
+     * @param source 源
+     * @param sink   汇
+     * @return 源行数
      */
     private static long drive(String name, DataSyncAgentSource source, DataSyncAgentSink sink) {
         System.out.println();
@@ -840,8 +840,8 @@ public final class DataSyncExcelJdbcProbe {
         System.out.println("[EXCEL-JDBC-PROBE] 源读取行数=" + n);
         sink.write(Flux.fromIterable(rows));
         /**
-        * sleep。
-        * @param 1500 1500
+         * sleep。
+         * @param 1500 1500
          */
         sleep(1500);
         try {
@@ -853,13 +853,13 @@ public final class DataSyncExcelJdbcProbe {
     }
 
     /**
-    * 校验源行数与目标行数一致。
-    *
-    * @param name   场景名
-    * @param label  目标行数标签
-    * @param source 源行数
-    * @param target 目标行数
-    * @return 失败计数
+     * 校验源行数与目标行数一致。
+     *
+     * @param name   场景名
+     * @param label  目标行数标签
+     * @param source 源行数
+     * @param target 目标行数
+     * @return 失败计数
      */
     private static int verify(String name, String label, long source, long target) {
         boolean ok = source == target;
@@ -873,14 +873,14 @@ public final class DataSyncExcelJdbcProbe {
     }
 
     /**
-    * 初始化 H2：预置源表数据 + 目标空表。
-    *
-    * @throws Exception SQL 异常
+     * 初始化 H2：预置源表数据 + 目标空表。
+     *
+     * @throws Exception SQL 异常
      */
     private static void initDatabase() throws Exception {
         /**
-        * 尝试。
-        * @param "" ""
+         * 尝试。
+         * @param "" ""
          */
         try (Connection c = DriverManager.getConnection(JDBC_URL, "sa", "");
              Statement st = c.createStatement()) {
@@ -909,15 +909,15 @@ public final class DataSyncExcelJdbcProbe {
     }
 
     /**
-    * 查询表行数。
-    *
-    * @param table 表名
-    * @return 行数
+     * 查询表行数。
+     *
+     * @param table 表名
+     * @return 行数
      */
     private static long count(String table) throws Exception {
         /**
-        * 尝试。
-        * @param "" ""
+         * 尝试。
+         * @param "" ""
          */
         try (Connection c = DriverManager.getConnection(JDBC_URL, "sa", "");
              Statement st = c.createStatement();
@@ -928,9 +928,9 @@ public final class DataSyncExcelJdbcProbe {
     }
 
     /**
-    * 写 CSV 种子文件（首行表头）。
-    *
-    * @param path 目标文件
+     * 写 CSV 种子文件（首行表头）。
+     *
+     * @param path 目标文件
      */
     private static void writeCsv(Path path) throws Exception {
         StringBuilder sb = new StringBuilder(ROWS * 24);
@@ -944,9 +944,9 @@ public final class DataSyncExcelJdbcProbe {
     }
 
     /**
-    * 写 Excel 种子文件（文件系统 SPI, 首行表头）。
-    *
-    * @param path 目标文件
+     * 写 Excel 种子文件（文件系统 SPI, 首行表头）。
+     *
+     * @param path 目标文件
      */
     private static void writeExcel(Path path) throws Exception {
         List<Map<String, Object>> rows = new ArrayList<>();
@@ -966,10 +966,10 @@ public final class DataSyncExcelJdbcProbe {
     }
 
     /**
-    * 写多 Sheet Excel 种子文件（sheet0=100 行, sheet1=50 行），供多 Sheet 读取场景使用。
-    * <p>通过反射调用 POI（运行期 classpath 才存在），避免探针模块编译期依赖 POI。</p>
-    *
-    * @param path 目标文件
+     * 写多 Sheet Excel 种子文件（sheet0=100 行, sheet1=50 行），供多 Sheet 读取场景使用。
+     * <p>通过反射调用 POI（运行期 classpath 才存在），避免探针模块编译期依赖 POI。</p>
+     *
+     * @param path 目标文件
      */
     private static void writeMultiSheetExcel(Path path) throws Exception {
         Class<?> wbClass = ReflectUtils.forName("org.apache.poi.xssf.usermodel.XSSFWorkbook");
@@ -978,29 +978,29 @@ public final class DataSyncExcelJdbcProbe {
             return;
         }
         /**
-        * 尝试。
-        * @param (java.io.Closeable (Java.io.关闭
+         * 尝试。
+         * @param (java.io.Closeable (Java.io.关闭
          */
         try (java.io.Closeable wb = (java.io.Closeable) wbClass.getConstructor().newInstance()) {
             Object sheet0 = wbClass.getMethod("createSheet", String.class).invoke(wb, "sheet0");
             /**
-            * fillsheetreflect。
-            * @param sheet0 sheet0
-            * @param 100 100
-            * @param "user" "用户"
+             * fillsheetreflect。
+             * @param sheet0 sheet0
+             * @param 100 100
+             * @param "user" "用户"
              */
             fillSheetReflect(sheet0, 100, "user");
             Object sheet1 = wbClass.getMethod("createSheet", String.class).invoke(wb, "sheet1");
             /**
-            * fillsheetreflect。
-            * @param sheet1 sheet1
-            * @param 50 50
-            * @param "bob" "bob"
+             * fillsheetreflect。
+             * @param sheet1 sheet1
+             * @param 50 50
+             * @param "bob" "bob"
              */
             fillSheetReflect(sheet1, 50, "bob");
             /**
-            * 尝试。
-            * @param java.io.FileOutputStream(path.toFile( Java.io.文件输出流(路径.tofile(
+             * 尝试。
+             * @param java.io.FileOutputStream(path.toFile( Java.io.文件输出流(路径.tofile(
              */
             try (java.io.FileOutputStream fos = new java.io.FileOutputStream(path.toFile())) {
                 wbClass.getMethod("write", java.io.OutputStream.class).invoke(wb, fos);
@@ -1010,11 +1010,11 @@ public final class DataSyncExcelJdbcProbe {
     }
 
     /**
-    * 反射填充指定 Sheet 的表头与数据。
-    *
-    * @param sheet  Sheet 对象
-    * @param rows   数据行数
-    * @param prefix 名称前缀
+     * 反射填充指定 Sheet 的表头与数据。
+     *
+     * @param sheet  Sheet 对象
+     * @param rows   数据行数
+     * @param prefix 名称前缀
      */
     private static void fillSheetReflect(Object sheet, int rows, String prefix) throws Exception {
         Object header = sheet.getClass().getMethod("createRow", int.class).invoke(sheet, 0);
@@ -1033,9 +1033,9 @@ public final class DataSyncExcelJdbcProbe {
     }
 
     /**
-    * 简单休眠。
-    *
-    * @param millis 毫秒
+     * 简单休眠。
+     *
+     * @param millis 毫秒
      */
     private static void sleep(long millis) {
         try {
@@ -1046,32 +1046,32 @@ public final class DataSyncExcelJdbcProbe {
     }
 
     /**
-    * Excel 文件源：基于 {@link FileSystem} SPI（POI excel文件系统）读取 xlsx 为数据行流。
+     * Excel 文件源：基于 {@link FileSystem} SPI（POI excel文件系统）读取 xlsx 为数据行流。
      */
     static final class ExcelFileSource implements DataSyncAgentSource {
 
         /**
-        * 源 标识
+         * 源 标识
          */
         private final String sourceId;
 
         /**
-        * 入参 标识
+         * 入参 标识
          */
         private final String inputId;
 
         /**
-        * Excel 文件路径
+         * Excel 文件路径
          */
         private final String filePath;
 
         /**
-        * 构造器。
-        *
-        * @param sourceId 源 标识
-        * @param inputId  入参 标识
-        * @param filePath Excel 文件路径
-        * @return excel文件源的结果
+         * 构造器。
+         *
+         * @param sourceId 源 标识
+         * @param inputId  入参 标识
+         * @param filePath Excel 文件路径
+         * @return excel文件源的结果
          */
         ExcelFileSource(String sourceId, String inputId, String filePath) {
             this.sourceId = sourceId;
@@ -1080,7 +1080,7 @@ public final class DataSyncExcelJdbcProbe {
         }
 
         /**
-        * {@inheritDoc}
+         * {@inheritDoc}
          */
         @Override
         public String sourceId() {
@@ -1088,7 +1088,7 @@ public final class DataSyncExcelJdbcProbe {
         }
 
         /**
-        * {@inheritDoc}
+         * {@inheritDoc}
          */
         @Override
         public String inputId() {
@@ -1096,9 +1096,9 @@ public final class DataSyncExcelJdbcProbe {
         }
 
         /**
-        * 读取全部行。
-        *
-        * @return 数据行列表
+         * 读取全部行。
+         *
+         * @return 数据行列表
          */
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> readAll() {
@@ -1108,10 +1108,10 @@ public final class DataSyncExcelJdbcProbe {
         }
 
         /**
-        * 按 sheet 索引读取全部行（子类方法编译期不可见，通过反射调用）。
-        *
-        * @param sheetIndex sheet 下标（0 起）
-        * @return 数据行列表
+         * 按 sheet 索引读取全部行（子类方法编译期不可见，通过反射调用）。
+         *
+         * @param sheetIndex sheet 下标（0 起）
+         * @return 数据行列表
          */
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> readAll(int sheetIndex) throws Exception {
@@ -1122,10 +1122,10 @@ public final class DataSyncExcelJdbcProbe {
         }
 
         /**
-        * 按 sheet 名称读取全部行（子类方法编译期不可见，通过反射调用）。
-        *
-        * @param sheetName sheet 名称
-        * @return 数据行列表
+         * 按 sheet 名称读取全部行（子类方法编译期不可见，通过反射调用）。
+         *
+         * @param sheetName sheet 名称
+         * @return 数据行列表
          */
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> readAll(String sheetName) throws Exception {
@@ -1136,7 +1136,7 @@ public final class DataSyncExcelJdbcProbe {
         }
 
         /**
-        * {@inheritDoc}
+         * {@inheritDoc}
          */
         @Override
         public Flux<Map<String, Object>> read(Map<String, Object> params) {
@@ -1144,7 +1144,7 @@ public final class DataSyncExcelJdbcProbe {
         }
 
         /**
-        * {@inheritDoc}
+         * {@inheritDoc}
          */
         @Override
         public void close() {
@@ -1153,26 +1153,26 @@ public final class DataSyncExcelJdbcProbe {
     }
 
     /**
-    * Excel 文件汇：基于 {@link FileSystem} SPI（POI excel文件系统）将数据行写入 xlsx。
+     * Excel 文件汇：基于 {@link FileSystem} SPI（POI excel文件系统）将数据行写入 xlsx。
      */
     static final class ExcelFileSink implements DataSyncAgentSink {
 
         /**
-        * 汇 标识
+         * 汇 标识
          */
         private final String sinkId;
 
         /**
-        * Excel 输出文件路径
+         * Excel 输出文件路径
          */
         private final String filePath;
 
         /**
-        * 构造器。
-        *
-        * @param sinkId   汇 标识
-        * @param filePath 输出文件路径
-        * @return excel文件sink的结果
+         * 构造器。
+         *
+         * @param sinkId   汇 标识
+         * @param filePath 输出文件路径
+         * @return excel文件sink的结果
          */
         ExcelFileSink(String sinkId, String filePath) {
             this.sinkId = sinkId;
@@ -1180,7 +1180,7 @@ public final class DataSyncExcelJdbcProbe {
         }
 
         /**
-        * {@inheritDoc}
+         * {@inheritDoc}
          */
         @Override
         public String sinkId() {
@@ -1188,7 +1188,7 @@ public final class DataSyncExcelJdbcProbe {
         }
 
         /**
-        * {@inheritDoc}
+         * {@inheritDoc}
          */
         @Override
         public void write(Flux<Map<String, Object>> rows) {
@@ -1202,7 +1202,7 @@ public final class DataSyncExcelJdbcProbe {
         }
 
         /**
-        * {@inheritDoc}
+         * {@inheritDoc}
          */
         @Override
         public void close() {

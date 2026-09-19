@@ -5,10 +5,10 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.util.StringUtils;
 
 /**
-* 支付宝属性配置
-*
-* @since 2026-03-19
-* @author CH
+ * 支付宝属性配置
+ *
+ * @since 2026-03-19
+ * @author CH
  */
 @Data
 @ConfigurationProperties(prefix = AliyunAlipayProperties.PREFIX, ignoreInvalidFields = true)

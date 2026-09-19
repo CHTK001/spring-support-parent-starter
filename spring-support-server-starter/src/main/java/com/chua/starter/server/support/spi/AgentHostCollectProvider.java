@@ -11,15 +11,15 @@ import reactor.core.publisher.Mono;
 import java.time.LocalDateTime;
 
 /**
-* Agent 主动上报采集 提供者（Agent）
-* <p>
-* 目标主机上的 Agent 主动上报硬件/状态数据，服务端按 Agent键 定位主机并回写。
-* 不主动发起连接，适用于无法从服务端直连（NAT / 防火墙）的主机。
-* 上报侧直接回写，响应式仅作统一封装。
-* </p>
-*
-* @author CH
-* @since 4.0.0.42
+ * Agent 主动上报采集 提供者（Agent）
+ * <p>
+ * 目标主机上的 Agent 主动上报硬件/状态数据，服务端按 Agent键 定位主机并回写。
+ * 不主动发起连接，适用于无法从服务端直连（NAT / 防火墙）的主机。
+ * 上报侧直接回写，响应式仅作统一封装。
+ * </p>
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 @Slf4j
 @Component

@@ -14,20 +14,20 @@ import org.springframework.context.ApplicationContextAware;
 import java.lang.reflect.Method;
 
 /**
-* 租户缓存键生成器
-* <p>
-* 在缓存键中自动追加应用名、平台名、租户标识，支持与 @缓存 的 Key 属性兼容。
-* 开关配置由 {@link CacheProperties.KeyProperties} 控制。
-* </p>
-*
-* <h3>租户ID提供方式：</h3>
-* <ul>
-*   <li>若 Spring 容器中存在 {@link TenantIdProvider} Bean，则自动装配并从请求上下文获取租户ID。</li>
-*   <li>若不存在，则使用默认值 {@code "0"}（单租户场景）。</li>
-* </ul>
-*
-* @since 2024/9/5
-* @author CH
+ * 租户缓存键生成器
+ * <p>
+ * 在缓存键中自动追加应用名、平台名、租户标识，支持与 @缓存 的 Key 属性兼容。
+ * 开关配置由 {@link CacheProperties.KeyProperties} 控制。
+ * </p>
+ *
+ * <h3>租户ID提供方式：</h3>
+ * <ul>
+ *   <li>若 Spring 容器中存在 {@link TenantIdProvider} Bean，则自动装配并从请求上下文获取租户ID。</li>
+ *   <li>若不存在，则使用默认值 {@code "0"}（单租户场景）。</li>
+ * </ul>
+ *
+ * @since 2024/9/5
+ * @author CH
  */
 public class TenantedKeyGenerator implements KeyGenerator, ApplicationContextAware, InitializingBean {
 
@@ -46,29 +46,29 @@ public class TenantedKeyGenerator implements KeyGenerator, ApplicationContextAwa
     private String platformName;
 
     /**
-    * 租户标识提供者（由 缓存配置 自动注入）
-    */
+     * 租户标识提供者（由 缓存配置 自动注入）
+     */
     private TenantIdProvider tenantIdProvider;
 
     /**
-    * 缓存键配置（由 缓存配置 注入）
-    */
+     * 缓存键配置（由 缓存配置 注入）
+     */
     private CacheProperties.KeyProperties keyProperties;
 
     /**
-    * 设置缓存键配置
-    *
-    * @param keyProperties 缓存键配置
-    */
+     * 设置缓存键配置
+     *
+     * @param keyProperties 缓存键配置
+     */
     public void setKeyProperties(CacheProperties.KeyProperties keyProperties) {
         this.keyProperties = keyProperties;
     }
 
     /**
-    * 设置租户标识提供者
-    *
-    * @param tenantIdProvider 租户标识提供者
-    */
+     * 设置租户标识提供者
+     *
+     * @param tenantIdProvider 租户标识提供者
+     */
     public void setTenantIdProvider(TenantIdProvider tenantIdProvider) {
         this.tenantIdProvider = tenantIdProvider;
     }
@@ -99,10 +99,10 @@ public class TenantedKeyGenerator implements KeyGenerator, ApplicationContextAwa
     }
 
     /**
-    * 获取当前租户标识
-    *
-    * @return 租户ID，由 {@link TenantIdProvider} 提供；若未设置则返回 {@code "0"}
-    */
+     * 获取当前租户标识
+     *
+     * @return 租户ID，由 {@link TenantIdProvider} 提供；若未设置则返回 {@code "0"}
+     */
     private String resolveTenantId() {
         if (tenantIdProvider != null) {
             String tenantId = tenantIdProvider.getCurrentTenantId();
@@ -147,14 +147,14 @@ public class TenantedKeyGenerator implements KeyGenerator, ApplicationContextAwa
     }
 
     /**
-    * 构建带指定租户标识的缓存键
-    *
-    * @param tenantId 指定的租户标识
-    * @param target   目标对象
-    * @param method   目标方法
-    * @param params   方法参数
-    * @return 完整的缓存键字符串
-    */
+     * 构建带指定租户标识的缓存键
+     *
+     * @param tenantId 指定的租户标识
+     * @param target   目标对象
+     * @param method   目标方法
+     * @param params   方法参数
+     * @return 完整的缓存键字符串
+     */
     public String generateWithTenant(String tenantId, Object target, Method method, Object... params) {
         StringBuilder keyBuilder = new StringBuilder();
 
@@ -176,28 +176,28 @@ public class TenantedKeyGenerator implements KeyGenerator, ApplicationContextAwa
     }
 
     /**
-    * 获取当前租户标识（供外部使用）
-    *
-    * @return 当前租户ID
-    */
+     * 获取当前租户标识（供外部使用）
+     *
+     * @return 当前租户ID
+     */
     public String getCurrentTenantId() {
         return resolveTenantId();
     }
 
     /**
-    * 获取当前应用名（供外部使用）
-    *
-    * @return 应用名
-    */
+     * 获取当前应用名（供外部使用）
+     *
+     * @return 应用名
+     */
     public String getApplicationName() {
         return applicationName;
     }
 
     /**
-    * 获取当前平台名（供外部使用）
-    *
-    * @return 平台名
-    */
+     * 获取当前平台名（供外部使用）
+     *
+     * @return 平台名
+     */
     public String getPlatformName() {
         return platformName;
     }

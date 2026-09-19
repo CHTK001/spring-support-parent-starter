@@ -19,71 +19,71 @@ import java.util.concurrent.*;
 import static org.slf4j.LoggerFactory.getLogger;
 
 /**
-* 作业执行线程
-* <p>
-* 每个任务对应一个独立的作业thread实例，通过队列接收触发参数并执行任务。
-* 支持超时控制、重复触发检测、空闲自动回收等特性。
-* </p>
-*
-* @版本 1.0.0
-* @since 2024/03/11
-* @author CH
+ * 作业执行线程
+ * <p>
+ * 每个任务对应一个独立的作业thread实例，通过队列接收触发参数并执行任务。
+ * 支持超时控制、重复触发检测、空闲自动回收等特性。
+ * </p>
+ *
+ * @版本 1.0.0
+ * @since 2024/03/11
+ * @author CH
  */
 @Slf4j
 public class JobThread extends Thread {
 
     /**
-    * 任务标识
-    */
+     * 任务标识
+     */
     private final int jobId;
 
     /**
-    * 任务处理器
-    */
+     * 任务处理器
+     */
     private final JobHandler handler;
 
     /**
-    * 触发参数队列
-    */
+     * 触发参数队列
+     */
     private final LinkedBlockingQueue<TriggerParam> triggerQueue;
 
     /**
-    * 触发日志标识集合，用于防止重复触发
-    */
+     * 触发日志标识集合，用于防止重复触发
+     */
     private final Set<Long> triggerLogIdSet;
 
     /**
-    * 停止标志
-    */
+     * 停止标志
+     */
     private volatile boolean toStop = false;
 
     /**
-    * 停止原因
-    */
+     * 停止原因
+     */
     private String stopReason;
 
     /**
-    * 是否正在执行任务
-    */
+     * 是否正在执行任务
+     */
     private boolean running = false;
 
     /**
-    * 空闲次数计数器
-    */
+     * 空闲次数计数器
+     */
     private int idleTimes = 0;
 
 
     /**
-    * 最大空闲次数，超过后线程将被回收
-    */
+     * 最大空闲次数，超过后线程将被回收
+     */
     private static final int MAX_IDLE_TIMES = 30;
 
     /**
-    * 构造函数
-    *
-    * @param jobId   任务标识
-    * @param handler 任务处理器
-    */
+     * 构造函数
+     *
+     * @param jobId   任务标识
+     * @param handler 任务处理器
+     */
     public JobThread(int jobId, JobHandler handler) {
         this.jobId = jobId;
         this.handler = handler;
@@ -94,20 +94,20 @@ public class JobThread extends Thread {
     }
 
     /**
-    * 获取任务处理器
-    *
-    * @return 任务处理器实例
-    */
+     * 获取任务处理器
+     *
+     * @return 任务处理器实例
+     */
     public JobHandler getHandler() {
         return handler;
     }
 
     /**
-    * 将触发参数推送到队列
-    *
-    * @param triggerParam 触发参数
-    * @return 推送结果
-    */
+     * 将触发参数推送到队列
+     *
+     * @param triggerParam 触发参数
+     * @return 推送结果
+     */
     public ReturnResult<String> pushTriggerQueue(TriggerParam triggerParam) {
         // 防止重复触发
         if (triggerLogIdSet.contains(triggerParam.getLogId())) {
@@ -122,14 +122,14 @@ public class JobThread extends Thread {
     }
 
     /**
-    * 停止任务线程
-    * <p>
-    * 通过共享变量方式通知线程停止，而不是使用Thread.interrupt。
-    * 因为interrupt只能终止线程的阻塞状态，不能终止运行中的线程。
-    * </p>
-    *
-    * @param stopReason 停止原因
-    */
+     * 停止任务线程
+     * <p>
+     * 通过共享变量方式通知线程停止，而不是使用Thread.interrupt。
+     * 因为interrupt只能终止线程的阻塞状态，不能终止运行中的线程。
+     * </p>
+     *
+     * @param stopReason 停止原因
+     */
     public void toStop(String stopReason) {
         this.toStop = true;
         this.stopReason = stopReason;
@@ -137,10 +137,10 @@ public class JobThread extends Thread {
     }
 
     /**
-    * 检查任务是否正在运行或队列中有待处理任务
-    *
-    * @return true表示正在运行或有待处理任务
-    */
+     * 检查任务是否正在运行或队列中有待处理任务
+     *
+     * @return true表示正在运行或有待处理任务
+     */
     public boolean isRunningOrHasQueue() {
         return running || !triggerQueue.isEmpty();
     }
@@ -206,11 +206,11 @@ public class JobThread extends Thread {
 
                             Boolean tempResult = futureTask.get(triggerParam.getExecutorTimeout(), TimeUnit.SECONDS);
                             /**
-    * report作业。
-    * @param triggerParam trigger参数
-    * @param "SUCCESS" "成功"
-    * @param null 空
-    */
+                             * report作业。
+                             * @param triggerParam trigger参数
+                             * @param "SUCCESS" "成功"
+                             * @param null 空
+                             */
                             reportJob(triggerParam, "SUCCESS", null);
 
                         } catch (TimeoutException e) {
@@ -222,11 +222,11 @@ public class JobThread extends Thread {
                             DefaultJobLog.log("job execute timeout ");
 
                             /**
-                            * report作业。
-                            * @param triggerParam trigger参数
-                            * @param "FAILURE" "失败"
-                            * @param " "
-                            */
+                             * report作业。
+                             * @param triggerParam trigger参数
+                             * @param "FAILURE" "失败"
+                             * @param " "
+                             */
                             reportJob(triggerParam, "FAILURE", "job execute timeout ");
 
                         } finally {
@@ -273,11 +273,11 @@ public class JobThread extends Thread {
                 String errorMsg = stringWriter.toString();
 
                 /**
-                * report作业。
-                * @param triggerParam trigger参数
-                * @param "FAILURE" "失败"
-                * @param errorMsg 错误msg
-                */
+                 * report作业。
+                 * @param triggerParam trigger参数
+                 * @param "FAILURE" "失败"
+                 * @param errorMsg 错误msg
+                 */
                 reportJob(triggerParam, "FAILURE", errorMsg);
 
                 DefaultJobLog.log(errorMsg);
@@ -298,12 +298,12 @@ public class JobThread extends Thread {
     }
 
     /**
-    * report作业
-    *
-    * @param triggerParam trigger参数
-    * @param status 状态
-    * @param message 消息
-    */
+     * report作业
+     *
+     * @param triggerParam trigger参数
+     * @param status 状态
+     * @param message 消息
+     */
     private void reportJob(TriggerParam triggerParam, String status, String message) {
         JobReporter.getInstance().report(triggerParam.getJobId(), triggerParam.getLogId(), status, message);
     }

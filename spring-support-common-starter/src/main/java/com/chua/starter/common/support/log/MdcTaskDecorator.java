@@ -7,25 +7,25 @@ import org.springframework.lang.NonNull;
 import java.util.Map;
 
 /**
-* MDC任务装饰器
-* <p>
-* 用于在异步任务中传递MDC上下文。
-* </p>
-*
-* @版本 1.0.0
-* @since 2024/01/01
-* @author CH
+ * MDC任务装饰器
+ * <p>
+ * 用于在异步任务中传递MDC上下文。
+ * </p>
+ *
+ * @版本 1.0.0
+ * @since 2024/01/01
+ * @author CH
  */
 public class MdcTaskDecorator implements TaskDecorator {
 
     @Override
     @NonNull
     /**
-    * Decorate
-    *
-    * @param runnable runnable
-    * @return decorate的结果
-    */
+     * Decorate
+     *
+     * @param runnable runnable
+     * @return decorate的结果
+     */
     public Runnable decorate(@NonNull Runnable runnable) {
         Map<String, String> contextMap = MDC.getCopyOfContextMap();
         return () -> {

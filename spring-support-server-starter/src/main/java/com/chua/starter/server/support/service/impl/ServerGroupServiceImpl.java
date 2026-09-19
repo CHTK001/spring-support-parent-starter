@@ -14,10 +14,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 /**
-* 服务器分组服务实现
-*
-* @author CH
-* @since 4.0.0.42
+ * 服务器分组服务实现
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 @Service
 @RequiredArgsConstructor
@@ -31,10 +31,10 @@ public class ServerGroupServiceImpl implements ServerGroupService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-    * 创建。
-    * @param group 群体
-    * @return 创建的结果
-    */
+     * 创建。
+     * @param group 群体
+     * @return 创建的结果
+     */
     public ReturnResult<MsServerGroup> create(MsServerGroup group) {
         if (group.getMsServerGroupName() == null || group.getMsServerGroupName().isEmpty()) {
             return ReturnResult.error("分组名称不能为空");
@@ -52,11 +52,11 @@ public class ServerGroupServiceImpl implements ServerGroupService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-    * 更新。
-    * @param id 标识
-    * @param group 群体
-    * @return 更新的结果
-    */
+     * 更新。
+     * @param id 标识
+     * @param group 群体
+     * @return 更新的结果
+     */
     public ReturnResult<MsServerGroup> update(Long id, MsServerGroup group) {
         MsServerGroup exists = groupMapper.selectById(id);
         if (exists == null) {
@@ -73,10 +73,10 @@ public class ServerGroupServiceImpl implements ServerGroupService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-    * 删除。
-    * @param id 标识
-    * @return 删除的结果
-    */
+     * 删除。
+     * @param id 标识
+     * @return 删除的结果
+     */
     public ReturnResult<Void> delete(Long id) {
         Long childCount = groupMapper.selectCount(
                 new LambdaQueryWrapper<MsServerGroup>().eq(MsServerGroup::getMsServerGroupParentId, id));

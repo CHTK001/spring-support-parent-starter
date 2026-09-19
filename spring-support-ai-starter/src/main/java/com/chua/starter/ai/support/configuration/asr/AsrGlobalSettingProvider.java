@@ -6,54 +6,54 @@ import com.chua.common.support.spi.annotations.Spi;
 import java.util.List;
 
 /**
-* 语音识别（ASR）模块全局设置提供者 SPI。
-*
-* <p>定义 {@code asr} 分组的全部配置项，由 {@link com.chua.starter.ai.support.configuration.client.GlobalSettingInitializer}
-* 启动时自动注册到 {@code sys_ai_global_setting} 表（仅首次）。调用层通过
-* {@link com.chua.starter.ai.support.configuration.client.AiCapabilityResolver} 按能力标签
-* {@code asr} 统一解析该分组配置并创建 {@code AudioClient}（本地 whisper / 云端 ASR）。</p>
-*
-* @since 4.0.0.42
-* @author CH
+ * 语音识别（ASR）模块全局设置提供者 SPI。
+ *
+ * <p>定义 {@code asr} 分组的全部配置项，由 {@link com.chua.starter.ai.support.configuration.client.GlobalSettingInitializer}
+ * 启动时自动注册到 {@code sys_ai_global_setting} 表（仅首次）。调用层通过
+ * {@link com.chua.starter.ai.support.configuration.client.AiCapabilityResolver} 按能力标签
+ * {@code asr} 统一解析该分组配置并创建 {@code AudioClient}（本地 whisper / 云端 ASR）。</p>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Spi("asr")
 public class AsrGlobalSettingProvider implements GlobalSettingProvider {
 
     /**
-    * 配置分组标识
-    */
+     * 配置分组标识
+     */
     private static final String GROUP = "asr";
 
     /**
-    * 分组显示名称
-    */
+     * 分组显示名称
+     */
     private static final String GROUP_NAME = "语音识别";
 
     /**
-    * 配置分组标识。
-    *
-    * @return asr
-    */
+     * 配置分组标识。
+     *
+     * @return asr
+     */
     @Override
     public String group() {
         return GROUP;
     }
 
     /**
-    * 配置分组显示名称。
-    *
-    * @return 语音识别
-    */
+     * 配置分组显示名称。
+     *
+     * @return 语音识别
+     */
     @Override
     public String groupName() {
         return GROUP_NAME;
     }
 
     /**
-    * 语音识别模块全部配置项。
-    *
-    * @return 配置项列表
-    */
+     * 语音识别模块全部配置项。
+     *
+     * @return 配置项列表
+     */
     @Override
     public List<SettingItem> getItems() {
         return List.of(

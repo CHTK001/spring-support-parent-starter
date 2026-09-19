@@ -12,10 +12,10 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
-* 监控 Redis 小时聚合
-*
-* @since 2026/8/4
-* @author CH
+ * 监控 Redis 小时聚合
+ *
+ * @since 2026/8/4
+ * @author CH
  */
 @Data
 @EqualsAndHashCode(callSuper = false)

@@ -31,20 +31,20 @@ import java.util.Map;
 public class RemoteWorkspaceController {
 
     /**
-    * SSH 连接管理
-    */
+     * SSH 连接管理
+     */
     private final SshConnectionManager connectionManager;
 
     /**
-    * 主机簿持久化存储
-    */
+     * 主机簿持久化存储
+     */
     private final SysAiSshHostStore sshHostStore;
 
     /**
-    * 获取所有连接列表。
-    *
-    * @return 连接列表
-    */
+     * 获取所有连接列表。
+     *
+     * @return 连接列表
+     */
     @Operation(summary = "获取连接列表", description = "获取所有远程工作区连接")
     @GetMapping("/connections")
     public ReturnResult<List<Map<String, Object>>> getConnections() {
@@ -75,11 +75,11 @@ public class RemoteWorkspaceController {
     }
 
     /**
-    * 创建新连接。
-    *
-    * @param body 请求体
-    * @return 创建的连接
-    */
+     * 创建新连接。
+     *
+     * @param body 请求体
+     * @return 创建的连接
+     */
     @Operation(summary = "创建连接", description = "创建新的远程工作区连接")
     @PostMapping("/connections")
     public ReturnResult<Map<String, Object>> createConnection(@RequestBody Map<String, Object> body) {
@@ -138,11 +138,11 @@ public class RemoteWorkspaceController {
     }
 
     /**
-    * 测试连接。
-    *
-    * @param body 请求体
-    * @return 测试结果
-    */
+     * 测试连接。
+     *
+     * @param body 请求体
+     * @return 测试结果
+     */
     @Operation(summary = "测试连接", description = "测试 SSH 连接是否正常")
     @PostMapping("/connections/test")
     public ReturnResult<Map<String, Object>> testConnection(@RequestBody Map<String, Object> body) {
@@ -196,11 +196,11 @@ public class RemoteWorkspaceController {
     }
 
     /**
-    * 部署连接。
-    *
-    * @param body 请求体
-    * @return 部署任务 ID
-    */
+     * 部署连接。
+     *
+     * @param body 请求体
+     * @return 部署任务 ID
+     */
     @Operation(summary = "部署连接", description = "部署 Agent 到远程服务器")
     @PostMapping("/connections/deploy")
     public ReturnResult<Map<String, Object>> deployConnection(@RequestBody Map<String, Object> body) {
@@ -210,11 +210,11 @@ public class RemoteWorkspaceController {
     }
 
     /**
-    * 获取部署日志。
-    *
-    * @param jobId 任务 ID
-    * @return 部署日志
-    */
+     * 获取部署日志。
+     *
+     * @param jobId 任务 ID
+     * @return 部署日志
+     */
     @Operation(summary = "获取部署日志", description = "获取部署任务的日志")
     @GetMapping("/connections/deploy-log/{jobId}")
     public ReturnResult<Map<String, Object>> getDeployLog(@PathVariable String jobId) {
@@ -230,11 +230,11 @@ public class RemoteWorkspaceController {
     }
 
     /**
-    * 取消部署。
-    *
-    * @param jobId 任务 ID
-    * @return 取消结果
-    */
+     * 取消部署。
+     *
+     * @param jobId 任务 ID
+     * @return 取消结果
+     */
     @Operation(summary = "取消部署", description = "取消部署任务")
     @PostMapping("/connections/deploy-cancel/{jobId}")
     public ReturnResult<Map<String, Object>> cancelDeploy(@PathVariable String jobId) {
@@ -244,11 +244,11 @@ public class RemoteWorkspaceController {
     }
 
     /**
-    * 浏览远程目录。
-    *
-    * @param body 请求体
-    * @return 目录列表
-    */
+     * 浏览远程目录。
+     *
+     * @param body 请求体
+     * @return 目录列表
+     */
     @Operation(summary = "浏览目录", description = "浏览远程服务器上的目录")
     @PostMapping("/connections/browse")
     public ReturnResult<List<Map<String, Object>>> browsePath(@RequestBody Map<String, Object> body) {
@@ -257,12 +257,12 @@ public class RemoteWorkspaceController {
     }
 
     /**
-    * 更新连接。
-    *
-    * @param id 连接 ID
-    * @param body 请求体
-    * @return 更新后的连接
-    */
+     * 更新连接。
+     *
+     * @param id 连接 ID
+     * @param body 请求体
+     * @return 更新后的连接
+     */
     @Operation(summary = "更新连接", description = "更新远程工作区连接")
     @PutMapping("/connections/{id}")
     public ReturnResult<Map<String, Object>> updateConnection(@PathVariable String id, @RequestBody Map<String, Object> body) {
@@ -272,11 +272,11 @@ public class RemoteWorkspaceController {
     }
 
     /**
-    * 删除连接。
-    *
-    * @param id 连接 ID
-    * @return 删除结果
-    */
+     * 删除连接。
+     *
+     * @param id 连接 ID
+     * @return 删除结果
+     */
     @Operation(summary = "删除连接", description = "删除远程工作区连接")
     @DeleteMapping("/connections/{id}")
     public ReturnResult<Map<String, Object>> deleteConnection(@PathVariable String id) {

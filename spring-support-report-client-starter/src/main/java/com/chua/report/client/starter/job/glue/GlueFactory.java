@@ -11,11 +11,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 /**
-* 胶水厂
-*
-* @版本 1.0.0
-* @since 2024/03/11
-* @author CH
+ * 胶水厂
+ *
+ * @版本 1.0.0
+ * @since 2024/03/11
+ * @author CH
  */
 public class GlueFactory {
 
@@ -31,10 +31,10 @@ public class GlueFactory {
         return glueFactory;
     }
     /**
-    * refreshinstance
-    *
-    * @param type 类型
-    */
+     * refreshinstance
+     *
+     * @param type 类型
+     */
     public static void refreshInstance(int type){
         if (type == 0) {
             glueFactory = new GlueFactory();
@@ -45,18 +45,18 @@ public class GlueFactory {
 
 
     /**
-    * Groovy 类 加载
-    */
+     * Groovy 类 加载
+     */
     private final GroovyClassLoader groovyClassLoader = new GroovyClassLoader();
     private final ConcurrentMap<String, Class<?>> CLASS_CACHE = new ConcurrentHashMap<>(); // 类缓存
 
     /**
-    * 加载 新 instance, 原型
-    *
-    * @param codeSource
-    * @return
-    * @throws Exception
-    */
+     * 加载 新 instance, 原型
+     *
+     * @param codeSource
+     * @return
+     * @throws Exception
+     */
     public JobHandler loadNewInstance(String codeSource) throws Exception{
         if (codeSource!=null && codeSource.trim().length()>0) {
             Class<?> clazz = getCodeSourceClass(codeSource);
@@ -75,17 +75,17 @@ public class GlueFactory {
             }
         }
         /**
-        * IllegalArgumentException。
-        * @param null" 空"
-        * @return IllegalArgumentException的结果
-        */
+         * IllegalArgumentException。
+         * @param null" 空"
+         * @return IllegalArgumentException的结果
+         */
         throw new IllegalArgumentException(">>>>>>>>>>> xxl-glue, loadNewInstance error, instance is null");
     }
     /**
-    * 获取编码源类。
-    * @param codeSource 编码源
-    * @return 获取编码源类的结果
-    */
+     * 获取编码源类。
+     * @param codeSource 编码源
+     * @return 获取编码源类的结果
+     */
     private Class<?> getCodeSourceClass(String codeSource){
         try {
             // md5
@@ -104,10 +104,10 @@ public class GlueFactory {
     }
 
     /**
-    * inject 服务 的 Bean 字段
-    *
-    * @param instance
-    */
+     * inject 服务 的 Bean 字段
+     *
+     * @param instance
+     */
     public void injectService(Object instance) {
  // 执行 something
     }

@@ -25,18 +25,18 @@ import java.util.Map;
 public class FileSystemSkillOfflineProvider implements SkillOfflineProvider {
 
     /**
-    * Provider 展示名
-    */
+     * Provider 展示名
+     */
     @Override
     public String name() {
         return "本地技能目录";
     }
 
     /**
-    * 扫描技能根目录一级子目录，每个子目录作为一个技能条目。
-    *
-    * @return 技能列表（含 code/name/description）
-    */
+     * 扫描技能根目录一级子目录，每个子目录作为一个技能条目。
+     *
+     * @return 技能列表（含 code/name/description）
+     */
     @Override
     public List<Map<String, Object>> listSkills() {
         List<Map<String, Object>> skills = new ArrayList<>();
@@ -63,10 +63,10 @@ public class FileSystemSkillOfflineProvider implements SkillOfflineProvider {
     }
 
     /**
-    * 解析技能根目录：优先系统属性 nomifun.skills-root，回退常见绝对路径。
-    *
-    * @return 根目录，不存在时返回 空
-    */
+     * 解析技能根目录：优先系统属性 nomifun.skills-root，回退常见绝对路径。
+     *
+     * @return 根目录，不存在时返回 空
+     */
     private File resolveRoot() {
         String configured = System.getProperty("nomifun.skills-root");
         if (configured == null || configured.isBlank()) {

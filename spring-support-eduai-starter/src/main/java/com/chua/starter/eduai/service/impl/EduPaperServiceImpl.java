@@ -31,18 +31,18 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
-* 试卷服务实现
-*
-* <p>AI 组卷流程：
-* <ol>
-*   <li>先按学科/学段/年级/题型从题库中筛出候选题目（兜底数据）</li>
-*   <li>调用 {@link EduAiService#generatePaperOutline} 让模型挑选合适的题目 ID</li>
-*   <li>AI 不可用/返回为空时回退到候选前 N 条</li>
-*   <li>写入 {@code edu_paper} 与 {@code edu_paper_question} 关联表</li>
-* </ol>
-*
-* @since 4.0.0.42
-* @author CH
+ * 试卷服务实现
+ *
+ * <p>AI 组卷流程：
+ * <ol>
+ *   <li>先按学科/学段/年级/题型从题库中筛出候选题目（兜底数据）</li>
+ *   <li>调用 {@link EduAiService#generatePaperOutline} 让模型挑选合适的题目 ID</li>
+ *   <li>AI 不可用/返回为空时回退到候选前 N 条</li>
+ *   <li>写入 {@code edu_paper} 与 {@code edu_paper_question} 关联表</li>
+ * </ol>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @Service
@@ -92,10 +92,10 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
         EduPaper paper = baseMapper.selectById(paperId);
         if (paper == null) {
             /**
-    * 业务异常。
-    * @param "试卷不存在" "试卷不存在"
-    * @return 业务异常的结果
-    */
+             * 业务异常。
+             * @param "试卷不存在" "试卷不存在"
+             * @return 业务异常的结果
+             */
             throw new BusinessException("试卷不存在");
         }
         PaperVO vo = toVO(paper);
@@ -132,11 +132,11 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-    * generatepaper
-    *
-    * @param dto dto
-    * @return generatePaper的结果
-    */
+     * generatepaper
+     *
+     * @param dto dto
+     * @return generatePaper的结果
+     */
     public Long generatePaper(PaperGenerateDTO dto) {
         log.info("[EduAi] AI 组卷: subject={}, knowledgePoints={}", dto.getSubject(), dto.getKnowledgePointIds());
 
@@ -233,13 +233,13 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-    * 替换question
-    *
-    * @param paperId paperid
-    * @param oldQuestionId 旧questionid
-    * @param newQuestionId 新questionid
-    * @return 替换question的结果
-    */
+     * 替换question
+     *
+     * @param paperId paperid
+     * @param oldQuestionId 旧questionid
+     * @param newQuestionId 新questionid
+     * @return 替换question的结果
+     */
     public boolean replaceQuestion(Long paperId, Long oldQuestionId, Long newQuestionId) {
         LambdaQueryWrapper<EduPaperQuestion> delWrapper = new LambdaQueryWrapper<>();
         delWrapper.eq(EduPaperQuestion::getPaperQuestionPaperId, paperId)
@@ -259,11 +259,11 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
     }
 
     /**
-    * 转为vo
-    *
-    * @param paper paper
-    * @return 转为vo的结果
-    */
+     * 转为vo
+     *
+     * @param paper paper
+     * @return 转为vo的结果
+     */
     private PaperVO toVO(EduPaper paper) {
         PaperVO vo = new PaperVO();
         vo.setPaperId(paper.getPaperId());

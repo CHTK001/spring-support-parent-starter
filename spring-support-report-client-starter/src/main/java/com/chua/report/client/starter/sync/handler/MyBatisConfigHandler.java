@@ -24,15 +24,15 @@ import java.util.Map;
 import java.util.Set;
 
 /**
-* MyBatis 配置处理器
-* <p>
-* 监听 MyBatis 配置 Topic，提供 XML 刷新功能
-* 映射器 信息查询通过 actuator 端点 /actuator/MyBatis 获取
-* </p>
-*
-* @版本 1.0.0
-* @since 2025/01/17
-* @author CH
+ * MyBatis 配置处理器
+ * <p>
+ * 监听 MyBatis 配置 Topic，提供 XML 刷新功能
+ * 映射器 信息查询通过 actuator 端点 /actuator/MyBatis 获取
+ * </p>
+ *
+ * @版本 1.0.0
+ * @since 2025/01/17
+ * @author CH
  */
 @Slf4j
 @Spi("myBatisConfigHandler")
@@ -116,11 +116,11 @@ public class MyBatisConfigHandler implements SyncMessageHandler, ApplicationCont
     }
 
     /**
-    * 刷新所有 XML 文件
-    *
-    * @param data 请求数据
-    * @return 刷新结果
-    */
+     * 刷新所有 XML 文件
+     *
+     * @param data 请求数据
+     * @return 刷新结果
+     */
     private Object handleRefreshAllXml(Map<String, Object> data) {
         try {
             SqlSessionFactory sqlSessionFactory = getSqlSessionFactory();
@@ -162,10 +162,10 @@ public class MyBatisConfigHandler implements SyncMessageHandler, ApplicationCont
     }
 
     /**
-    * 获取 SQL会话工厂
-    *
-    * @return SqlSessionFactory 实例，未找到返回 空
-    */
+     * 获取 SQL会话工厂
+     *
+     * @return SqlSessionFactory 实例，未找到返回 空
+     */
     private SqlSessionFactory getSqlSessionFactory() {
         if (applicationContext == null) {
             return null;
@@ -179,11 +179,11 @@ public class MyBatisConfigHandler implements SyncMessageHandler, ApplicationCont
     }
 
     /**
-    * 获取已加载的资源列表
-    *
-    * @param configuration MyBatis 配置
-    * @return 资源路径集合
-    */
+     * 获取已加载的资源列表
+     *
+     * @param configuration MyBatis 配置
+     * @return 资源路径集合
+     */
     @SuppressWarnings("unchecked")
     private Set<String> getLoadedResources(Configuration configuration) {
         Set<String> loadedResources = (Set<String>) ReflectUtils.getField(configuration, "loadedResources");
@@ -195,12 +195,12 @@ public class MyBatisConfigHandler implements SyncMessageHandler, ApplicationCont
     }
 
     /**
-    * 刷新 映射器 XML 文件
-    *
-    * @param configuration  MyBatis 配置
-    * @param resourcePath   资源路径
-    * @return 是否刷新成功
-    */
+     * 刷新 映射器 XML 文件
+     *
+     * @param configuration  MyBatis 配置
+     * @param resourcePath   资源路径
+     * @return 是否刷新成功
+     */
     private boolean refreshMapperXml(Configuration configuration, String resourcePath) {
         try {
             // 查找资源文件
@@ -220,18 +220,18 @@ public class MyBatisConfigHandler implements SyncMessageHandler, ApplicationCont
 
  // 清除旧的 mapped对账单
             /**
-            * clearmapped对账单。
-            * @param configuration 配置
-            * @param resourcePath resource路径
-            */
+             * clearmapped对账单。
+             * @param configuration 配置
+             * @param resourcePath resource路径
+             */
             clearMappedStatements(configuration, resourcePath);
 
             // 重新加载 XML
             for (Resource resource : resources) {
                 /**
-                * 尝试。
-                * @param resource.getInputStream( resource.获取输入流(
-                */
+                 * 尝试。
+                 * @param resource.getInputStream( resource.获取输入流(
+                 */
                 try (InputStream inputStream = resource.getInputStream()) {
                     XMLMapperBuilder xmlMapperBuilder = new XMLMapperBuilder(
                             inputStream,
@@ -253,11 +253,11 @@ public class MyBatisConfigHandler implements SyncMessageHandler, ApplicationCont
     }
 
     /**
-    * 清除指定资源的 mapped对账单
-    *
-    * @param configuration MyBatis 配置
-    * @param resourcePath  资源路径
-    */
+     * 清除指定资源的 mapped对账单
+     *
+     * @param configuration MyBatis 配置
+     * @param resourcePath  资源路径
+     */
     @SuppressWarnings("unchecked")
     private void clearMappedStatements(Configuration configuration, String resourcePath) {
         try {

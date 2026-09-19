@@ -5,10 +5,10 @@ import com.chua.starter.ai.support.manage.store.SysAiProvider;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
-* nomifun 提供商 映射器。
-*
-* @since 4.0.0.42
-* @author CH
+ * nomifun 提供商 映射器。
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Mapper
 public interface SysAiProviderMapper extends BaseMapper<SysAiProvider> {

@@ -7,10 +7,10 @@ import java.io.Serializable;
 import java.util.List;
 
 /**
-* 模型分组 DTO，字段命名与前端面板对齐。
-*
-* @since 2026-08-03
-* @author CH
+ * 模型分组 DTO，字段命名与前端面板对齐。
+ *
+ * @since 2026-08-03
+ * @author CH
  */
 @Data
 @Schema(name = "模型分组 DTO")
@@ -18,8 +18,8 @@ public class AiGroupDTO implements Serializable {
     private static final long serialVersionUID = 1L; // 串行版本uid
 
     /**
-    * 分组主键 标识
-    */
+     * 分组主键 标识
+     */
     @Schema(description = "分组主键 ID")
     /** 标识 */
     private Long id;

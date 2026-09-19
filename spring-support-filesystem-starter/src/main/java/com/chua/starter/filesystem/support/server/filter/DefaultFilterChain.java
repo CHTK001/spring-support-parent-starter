@@ -5,12 +5,12 @@ import com.sun.net.httpserver.HttpExchange;
 import java.util.List;
 
 /**
-* 默认过滤器链实现。
-*
-* <p>按顺序依次执行各 {@link ServerFilter}，最终调用提供的终态处理器。
-*
-* @author CH
-* @since 4.0.0
+ * 默认过滤器链实现。
+ *
+ * <p>按顺序依次执行各 {@link ServerFilter}，最终调用提供的终态处理器。
+ *
+ * @author CH
+ * @since 4.0.0
  */
 public class DefaultFilterChain implements FilterChain {
 
@@ -33,11 +33,11 @@ public class DefaultFilterChain implements FilterChain {
     }
 
     /**
-    * 执行过滤器链。
-    *
-    * @param exchange HTTP 请求/响应上下文
-    * @throws Exception 过滤器执行异常
-    */
+     * 执行过滤器链。
+     *
+     * @param exchange HTTP 请求/响应上下文
+     * @throws Exception 过滤器执行异常
+     */
     @Override
     public void doFilter(HttpExchange exchange) throws Exception {
         if (index < filters.size()) {

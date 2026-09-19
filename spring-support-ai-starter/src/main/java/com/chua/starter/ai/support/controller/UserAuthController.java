@@ -23,15 +23,15 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
-* 统一登录契约控制器（前端 Vue / React 均走该契约）。
-*
-* <p>提供 {@code /v2/user} 前缀下的登录、登出、当前用户信息、刷新令牌等接口，
-* 统一以 {@link ReturnResult} 作为响应信封，适配前端 {@code LoginResult} 结构。</p>
-*
-* <p>所有接口均标注 {@link TokenForIgnore}，避免被 oauth 客户端拦截。</p>
-*
-* @since 4.0.0.42
-* @author CH
+ * 统一登录契约控制器（前端 Vue / React 均走该契约）。
+ *
+ * <p>提供 {@code /v2/user} 前缀下的登录、登出、当前用户信息、刷新令牌等接口，
+ * 统一以 {@link ReturnResult} 作为响应信封，适配前端 {@code LoginResult} 结构。</p>
+ *
+ * <p>所有接口均标注 {@link TokenForIgnore}，避免被 oauth 客户端拦截。</p>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @RestController
 @RequestMapping("/v2/user")
@@ -45,14 +45,14 @@ public class UserAuthController {
     private static final int BEARER_PREFIX_LENGTH = BEARER_PREFIX.length();
 
     /**
-    * 用户登录（对接 o认证 静态 协议）。
-    *
-    * <p>调用 oauth 客户端换取访问令牌，成功后组装前端契约所需的
-    * {@code LoginResult} 结构并返回。</p>
-    *
-    * @param body 请求体（含 用户名 / 密码）
-    * @return 登录结果（成功含 access令牌 / refresh令牌 / 用户信息 / 角色 / expires）
-    */
+     * 用户登录（对接 o认证 静态 协议）。
+     *
+     * <p>调用 oauth 客户端换取访问令牌，成功后组装前端契约所需的
+     * {@code LoginResult} 结构并返回。</p>
+     *
+     * @param body 请求体（含 用户名 / 密码）
+     * @return 登录结果（成功含 access令牌 / refresh令牌 / 用户信息 / 角色 / expires）
+     */
     @TokenForIgnore
     @PostMapping("/login")
     public ReturnResult<Map<String, Object>> login(@RequestBody Map<String, String> body) {
@@ -95,12 +95,12 @@ public class UserAuthController {
     }
 
     /**
-    * 用户登出。
-    *
-    * <p>调用 oauth 客户端登出当前用户，清除本地会话。</p>
-    *
-    * @return 登出结果
-    */
+     * 用户登出。
+     *
+     * <p>调用 oauth 客户端登出当前用户，清除本地会话。</p>
+     *
+     * @return 登出结果
+     */
     @TokenForIgnore
     @PostMapping("/logout")
     public ReturnResult<Void> logout() {
@@ -114,14 +114,14 @@ public class UserAuthController {
     }
 
     /**
-    * 获取当前登录用户信息。
-    *
-    * <p>从 {@code Authorization: Bearer <token>} 请求头（或 query token）提取令牌，
-    * 调用 OAuth 客户端校验并解析用户信息；无法解析时返回未登录。</p>
-    *
-    * @param request HTTP 请求
-    * @return 当前用户信息（userId / 用户名 / nickname / 角色）
-    */
+     * 获取当前登录用户信息。
+     *
+     * <p>从 {@code Authorization: Bearer <token>} 请求头（或 query token）提取令牌，
+     * 调用 OAuth 客户端校验并解析用户信息；无法解析时返回未登录。</p>
+     *
+     * @param request HTTP 请求
+     * @return 当前用户信息（userId / 用户名 / nickname / 角色）
+     */
     @TokenForIgnore
     @GetMapping("/me")
     public ReturnResult<Map<String, Object>> me(HttpServletRequest request) {
@@ -163,16 +163,16 @@ public class UserAuthController {
     }
 
     /**
-    * 刷新令牌（占位实现）。
-    *
-    * <p>当前仅返回沿用旧 token 的占位结果；后续可对接 oauth 客户端的
-    * {@link AuthClientExecute#upgrade(String, com.chua.starter.oauth.client.support.enums.UpgradeType)}
-    * 实现真正的令牌刷新。</p>
-    *
-    * @param body 请求体（含 refresh令牌）
-    * @return 刷新后的令牌结果
-    * @param false false
-    */
+     * 刷新令牌（占位实现）。
+     *
+     * <p>当前仅返回沿用旧 token 的占位结果；后续可对接 oauth 客户端的
+     * {@link AuthClientExecute#upgrade(String, com.chua.starter.oauth.client.support.enums.UpgradeType)}
+     * 实现真正的令牌刷新。</p>
+     *
+     * @param body 请求体（含 refresh令牌）
+     * @return 刷新后的令牌结果
+     * @param false false
+     */
     @TokenForIgnore
     @PostMapping("/refresh-token")
     public ReturnResult<Map<String, Object>> refreshToken(@RequestBody(required = false) Map<String, String> body) {
@@ -187,11 +187,11 @@ public class UserAuthController {
     }
 
     /**
-    * 从请求中解析 令牌（优先 授权 头，其次 查询 令牌）。
-    *
-    * @param request HTTP 请求
-    * @return Token 字符串，无法解析时返回 {@code null}
-    */
+     * 从请求中解析 令牌（优先 授权 头，其次 查询 令牌）。
+     *
+     * @param request HTTP 请求
+     * @return Token 字符串，无法解析时返回 {@code null}
+     */
     private String resolveToken(HttpServletRequest request) {
         String auth = request.getHeader("Authorization");
         if (StringUtils.isNotBlank(auth) && auth.startsWith(BEARER_PREFIX)) {
@@ -205,12 +205,12 @@ public class UserAuthController {
     }
 
     /**
-    * 生成 uuidv7 格式字符串。
-    *
-    * <p>格式：xxxxxxxx-xxxx-7xxx-yxxx-xxxxxxxxxxxx（y ∈ {8,9,a,b}）</p>
-    *
-    * @return UUIDv7 字符串
-    */
+     * 生成 uuidv7 格式字符串。
+     *
+     * <p>格式：xxxxxxxx-xxxx-7xxx-yxxx-xxxxxxxxxxxx（y ∈ {8,9,a,b}）</p>
+     *
+     * @return UUIDv7 字符串
+     */
     private static String generateUuidV7() {
         UUID uuid = UUID.randomUUID();
         long ms = System.currentTimeMillis();

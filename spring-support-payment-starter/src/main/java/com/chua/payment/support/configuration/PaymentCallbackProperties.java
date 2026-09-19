@@ -5,10 +5,10 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
 /**
-* 支付回调地址配置，定义对外可访问的支付服务根地址。
-*
-* @author CH
-* @since 4.0.0.50
+ * 支付回调地址配置，定义对外可访问的支付服务根地址。
+ *
+ * @author CH
+ * @since 4.0.0.50
  */
 @Data
 @Component
@@ -16,8 +16,8 @@ import org.springframework.stereotype.Component;
 public class PaymentCallbackProperties {
 
     /**
-    * 对外可访问的支付服务根地址，例如 https://pay.example.com
-    */
+     * 对外可访问的支付服务根地址，例如 https://pay.example.com
+     */
     private String baseUrl;
 }
 

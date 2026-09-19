@@ -5,9 +5,9 @@ import lombok.Data;
 import java.util.Map;
 
 /**
-* 微信支付分取消请求
-* @author CH
-* @since 4.0.0
+ * 微信支付分取消请求
+ * @author CH
+ * @since 4.0.0
  */
 @Data
 public class WechatPayScoreCancelDTO {

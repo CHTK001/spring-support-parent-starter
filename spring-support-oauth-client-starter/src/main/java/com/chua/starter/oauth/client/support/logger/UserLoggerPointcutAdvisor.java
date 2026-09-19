@@ -26,16 +26,16 @@ import java.util.Date;
 import java.util.Optional;
 
 /**
-* 用户操作日志切入点顾问
-* <p>用于拦截带有 {@link UserLog} 注解的方法，记录用户操作日志</p>
-* <p>日志格式：[时间] 用户名 执行了 模块-操作名称 (耗时: xxxms, 状态: 成功/失败)</p>
-* <p>通过事件机制发布日志信息，各模块可以监听并处理日志事件</p>
-*
-* @版本 1.0
-* @since 2024-01-01
-* @see UserLog
-* @see UserLoggerInfo
-* @author CH
+ * 用户操作日志切入点顾问
+ * <p>用于拦截带有 {@link UserLog} 注解的方法，记录用户操作日志</p>
+ * <p>日志格式：[时间] 用户名 执行了 模块-操作名称 (耗时: xxxms, 状态: 成功/失败)</p>
+ * <p>通过事件机制发布日志信息，各模块可以监听并处理日志事件</p>
+ *
+ * @版本 1.0
+ * @since 2024-01-01
+ * @see UserLog
+ * @see UserLoggerInfo
+ * @author CH
  */
 @Lazy
 @Slf4j
@@ -43,13 +43,13 @@ import java.util.Optional;
 public class UserLoggerPointcutAdvisor extends AbstractLoggerPointcutAdvisor {
 
     /**
-    * 日期格式化器，用于格式化日志时间
-    */
+     * 日期格式化器，用于格式化日志时间
+     */
     private static final String DATE_FORMAT_PATTERN = "yyyy-MM-dd HH:mm:ss";
 
     /**
-    * 匿名用户标识
-    */
+     * 匿名用户标识
+     */
     private static final String ANONYMOUS_USER = "匿名用户";
 
     @Override
@@ -92,11 +92,11 @@ public class UserLoggerPointcutAdvisor extends AbstractLoggerPointcutAdvisor {
         // 构建并输出格式化日志：[时间] 用户名 执行了 模块-操作名称
         String logMessage = buildLogMessage(formattedTime, displayUsername, logModule, name, costTime, statusText, throwable);
         /**
-    * 输出日志。
-    * @param isSuccess 是否成功
-    * @param logMessage 日志消息
-    * @param throwable 抛出
-    */
+         * 输出日志。
+         * @param isSuccess 是否成功
+         * @param logMessage 日志消息
+         * @param throwable 抛出
+         */
         outputLog(isSuccess, logMessage, throwable);
 
         // 构建日志信息对象
@@ -134,24 +134,24 @@ public class UserLoggerPointcutAdvisor extends AbstractLoggerPointcutAdvisor {
 
         // 发布日志事件
         /**
-        * 发布事件。
-        * @param userLoggerInfo 用户日志记录器信息
-        */
+         * 发布事件。
+         * @param userLoggerInfo 用户日志记录器信息
+         */
         publishEvent(userLoggerInfo);
     }
 
     /**
-    * 构建格式化的日志消息
-    *
-    * @param formattedTime 格式化后的时间字符串
-    * @param username      用户名
-    * @param module        操作模块
-    * @param name          操作名称
-    * @param costTime      操作耗时(毫秒)
-    * @param statusText    状态文本(成功/失败)
-    * @param throwable     异常信息，可为空
-    * @return 格式化后的日志消息
-    */
+     * 构建格式化的日志消息
+     *
+     * @param formattedTime 格式化后的时间字符串
+     * @param username      用户名
+     * @param module        操作模块
+     * @param name          操作名称
+     * @param costTime      操作耗时(毫秒)
+     * @param statusText    状态文本(成功/失败)
+     * @param throwable     异常信息，可为空
+     * @return 格式化后的日志消息
+     */
     private String buildLogMessage(String formattedTime, String username, String module, String name,
                                    long costTime, String statusText, Throwable throwable) {
         StringBuilder sb = new StringBuilder();
@@ -169,13 +169,13 @@ public class UserLoggerPointcutAdvisor extends AbstractLoggerPointcutAdvisor {
     }
 
     /**
-    * 输出日志
-    * <p>根据操作状态选择不同的日志级别输出</p>
-    *
-    * @param isSuccess  操作是否成功
-    * @param logMessage 日志消息
-    * @param throwable  异常信息，可为空
-    */
+     * 输出日志
+     * <p>根据操作状态选择不同的日志级别输出</p>
+     *
+     * @param isSuccess  操作是否成功
+     * @param logMessage 日志消息
+     * @param throwable  异常信息，可为空
+     */
     private void outputLog(boolean isSuccess, String logMessage, Throwable throwable) {
         if (isSuccess) {
             log.info(logMessage);

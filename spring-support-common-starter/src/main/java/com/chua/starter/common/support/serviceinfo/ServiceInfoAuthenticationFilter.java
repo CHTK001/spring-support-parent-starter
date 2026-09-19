@@ -19,21 +19,21 @@ import java.util.Base64;
 import java.util.Set;
 
 /**
-* 服务信息 端点认证过滤器。
-*
-* <p>对 {@code /service-info/**} 端点进行 Basic Auth 认证,
-* 防止未授权访问应用内部端点信息。</p>
-*
-* <p>使用 {@link ServiceInfoProperties} 配置:
-* <ul>
-*     <li>{@code plugin.service-info.auth.enable} = true 开启认证 (默认 false)</li>
-*     <li>{@code plugin.service-info.auth.username} / {@code password}</li>
-*     <li>{@code plugin.service-info.auth.ip-whitelist} IP 白名单 (CIDR 支持)</li>
-* </ul>
-* </p>
-*
-* @since 4.0.0.42
-* @author CH
+ * 服务信息 端点认证过滤器。
+ *
+ * <p>对 {@code /service-info/**} 端点进行 Basic Auth 认证,
+ * 防止未授权访问应用内部端点信息。</p>
+ *
+ * <p>使用 {@link ServiceInfoProperties} 配置:
+ * <ul>
+ *     <li>{@code plugin.service-info.auth.enable} = true 开启认证 (默认 false)</li>
+ *     <li>{@code plugin.service-info.auth.username} / {@code password}</li>
+ *     <li>{@code plugin.service-info.auth.ip-whitelist} IP 白名单 (CIDR 支持)</li>
+ * </ul>
+ * </p>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @WebFilter(filterName = "ServiceInfoAuthenticationFilter", urlPatterns = {"/service-info", "/service-info/**"})
 public class ServiceInfoAuthenticationFilter implements Filter {
@@ -49,9 +49,9 @@ public class ServiceInfoAuthenticationFilter implements Filter {
     private final ServiceInfoProperties properties;
 
     /**
-    * 创建 服务信息认证过滤器 实例
-    * @param properties 属性
-    */
+     * 创建 服务信息认证过滤器 实例
+     * @param properties 属性
+     */
     public ServiceInfoAuthenticationFilter(ServiceInfoProperties properties) {
         this.properties = properties;
     }
@@ -110,11 +110,11 @@ public class ServiceInfoAuthenticationFilter implements Filter {
     }
 
     /**
-    * 是否ipwhitelisted
-    *
-    * @param ip ip
-    * @return 是否ipwhitelisted的结果
-    */
+     * 是否ipwhitelisted
+     *
+     * @param ip ip
+     * @return 是否ipwhitelisted的结果
+     */
     private boolean isIpWhitelisted(String ip) {
         Set<String> whitelist = properties.getAuthIpWhitelist();
         if (whitelist == null || whitelist.isEmpty() || ip == null) {
@@ -124,11 +124,11 @@ public class ServiceInfoAuthenticationFilter implements Filter {
     }
 
     /**
-    * 解析客户端ip
-    *
-    * @param request 请求
-    * @return resolve客户端ip的结果
-    */
+     * 解析客户端ip
+     *
+     * @param request 请求
+     * @return resolve客户端ip的结果
+     */
     private String resolveClientIp(HttpServletRequest request) {
         String forwarded = request.getHeader("X-Forwarded-For");
         if (forwarded != null && !forwarded.isBlank()) {

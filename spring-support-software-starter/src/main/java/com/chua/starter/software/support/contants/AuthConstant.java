@@ -1,10 +1,10 @@
 package com.chua.starter.software.support.contants;
 
 /**
-* 认证常量
-*
-* @author CH
-* @since 4.0.0
+ * 认证常量
+ *
+ * @author CH
+ * @since 4.0.0
  */
 public class AuthConstant {
 

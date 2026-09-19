@@ -8,12 +8,12 @@ import java.util.Collections;
 import java.util.List;
 
 /**
-* 空桩实现——不持久化任何对话记录。
-* <p>
-* 当未配置持久化存储时使用此实现，所有查询返回空结果。
-*
-* @author CH
-* @since 4.0.0
+ * 空桩实现——不持久化任何对话记录。
+ * <p>
+ * 当未配置持久化存储时使用此实现，所有查询返回空结果。
+ *
+ * @author CH
+ * @since 4.0.0
  */
 public class AIDialogNoneRecordService implements AIDialogRecordService {
 

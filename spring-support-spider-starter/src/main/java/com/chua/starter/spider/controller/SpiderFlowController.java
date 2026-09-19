@@ -42,13 +42,13 @@ import java.util.Map;
 import java.util.Set;
 
 /**
-* 流程编排管理接口。
-*
-* <p>提供流程编排的分页/详情/保存/启停/删除/执行/调试/历史/回滚等能力，
-* 路径前缀 {@code /spider/flows}，对齐前端 蜘蛛api。</p>
-*
-* @since 4.0.0.42
-* @author CH
+ * 流程编排管理接口。
+ *
+ * <p>提供流程编排的分页/详情/保存/启停/删除/执行/调试/历史/回滚等能力，
+ * 路径前缀 {@code /spider/flows}，对齐前端 蜘蛛api。</p>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Tag(name = "流程编排管理")
 @RestController
@@ -56,55 +56,55 @@ import java.util.Set;
 public class SpiderFlowController {
 
     /**
-    * JSON 解析器
-    */
+     * JSON 解析器
+     */
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     /**
-    * 开始节点类型标识
-    */
+     * 开始节点类型标识
+     */
     private static final String NODE_TYPE_START = "start";
 
     /**
-    * 结束节点类型标识
-    */
+     * 结束节点类型标识
+     */
     private static final String NODE_TYPE_END = "stop";
 
     /**
-    * 支持的节点类型集合（与执行器映射保持一致）
-    */
+     * 支持的节点类型集合（与执行器映射保持一致）
+     */
     private static final Set<String> SUPPORTED_NODE_TYPES = Set.of(
             "start", "stop", "request", "extract", "loop", "output",
             "transform", "condition", "map", "script", "db", "function");
 
     /**
-    * 流程编排服务
-    */
+     * 流程编排服务
+     */
     private final SpiderFlowService flowService;
 
     /**
-    * 爬虫定义服务
-    */
+     * 爬虫定义服务
+     */
     private final SpiderDefinitionService definitionService;
 
     /**
-    * 流程执行器
-    */
+     * 流程执行器
+     */
     private final SpiderFlowRunner flowRunner;
 
     /**
-    * 执行日志服务
-    */
+     * 执行日志服务
+     */
     private final SpiderExecutionLogService executionLogService;
 
     /**
-    * 构造方法。
-    *
-    * @param flowService         流程编排服务
-    * @param definitionService   爬虫定义服务
-    * @param flowRunner          流程执行器
-    * @param executionLogService 执行日志服务
-    */
+     * 构造方法。
+     *
+     * @param flowService         流程编排服务
+     * @param definitionService   爬虫定义服务
+     * @param flowRunner          流程执行器
+     * @param executionLogService 执行日志服务
+     */
     public SpiderFlowController(SpiderFlowService flowService,
                                 SpiderDefinitionService definitionService,
                                 SpiderFlowRunner flowRunner,
@@ -116,13 +116,13 @@ public class SpiderFlowController {
     }
 
     /**
-    * 流程分页列表。
-    *
-    * @param pageNo   页码
-    * @param pageSize 每页条数
-    * @param keyword  关键字（编码/名称）
-    * @return 分页结果
-    */
+     * 流程分页列表。
+     *
+     * @param pageNo   页码
+     * @param pageSize 每页条数
+     * @param keyword  关键字（编码/名称）
+     * @return 分页结果
+     */
     @GetMapping("/page")
     @Operation(summary = "流程分页列表")
     public ReturnResult<PageResultVO<SpiderFlowVO>> page(
@@ -153,11 +153,11 @@ public class SpiderFlowController {
     }
 
     /**
-    * 完整加载流程（节点 + 边）。
-    *
-    * @param flowCode 流程编码
-    * @return 流程聚合
-    */
+     * 完整加载流程（节点 + 边）。
+     *
+     * @param flowCode 流程编码
+     * @return 流程聚合
+     */
     @GetMapping("/detail")
     @Operation(summary = "完整加载流程")
     public ReturnResult<FlowAggregateDTO> detail(@RequestParam String flowCode) {
@@ -173,11 +173,11 @@ public class SpiderFlowController {
     }
 
     /**
-    * 保存流程（含节点 + 边）。
-    *
-    * @param aggregate 流程聚合
-    * @return 保存成功返回流程版本号
-    */
+     * 保存流程（含节点 + 边）。
+     *
+     * @param aggregate 流程聚合
+     * @return 保存成功返回流程版本号
+     */
     @PostMapping("/save")
     @Operation(summary = "保存流程")
     public ReturnResult<Integer> save(@RequestBody FlowAggregateDTO aggregate) {
@@ -212,12 +212,12 @@ public class SpiderFlowController {
     }
 
     /**
-    * 启停切换。
-    *
-    * @param flowCode 流程编码
-    * @param status   目标状态
-    * @return 是否成功
-    */
+     * 启停切换。
+     *
+     * @param flowCode 流程编码
+     * @param status   目标状态
+     * @return 是否成功
+     */
     @PostMapping("/status")
     @Operation(summary = "启用/禁用流程")
     public ReturnResult<Boolean> status(@RequestParam String flowCode,
@@ -233,11 +233,11 @@ public class SpiderFlowController {
     }
 
     /**
-    * 按编码删除流程。
-    *
-    * @param flowCode 流程编码
-    * @return 是否成功
-    */
+     * 按编码删除流程。
+     *
+     * @param flowCode 流程编码
+     * @return 是否成功
+     */
     @DeleteMapping("/{flowCode}")
     @Operation(summary = "删除流程")
     public ReturnResult<Boolean> remove(@PathVariable String flowCode) {
@@ -249,11 +249,11 @@ public class SpiderFlowController {
     }
 
     /**
-    * 执行流程（同步执行，返回 执行no）。
-    *
-    * @param flowCode 流程编码
-    * @return 执行号
-    */
+     * 执行流程（同步执行，返回 执行no）。
+     *
+     * @param flowCode 流程编码
+     * @return 执行号
+     */
     @PostMapping("/run")
     @Operation(summary = "执行流程")
     public ReturnResult<String> run(@RequestParam String flowCode) {
@@ -271,11 +271,11 @@ public class SpiderFlowController {
     }
 
     /**
-    * 调试执行（返回节点级执行日志）。
-    *
-    * @param flowCode 流程编码
-    * @return 节点日志列表
-    */
+     * 调试执行（返回节点级执行日志）。
+     *
+     * @param flowCode 流程编码
+     * @return 节点日志列表
+     */
     @PostMapping("/debug")
     @Operation(summary = "调试执行流程")
     public ReturnResult<List<FlowNodeLogVO>> debug(@RequestParam String flowCode) {
@@ -289,11 +289,11 @@ public class SpiderFlowController {
     }
 
     /**
-    * 流程历史（简化：返回当前版本记录）。
-    *
-    * @param flowCode 流程编码
-    * @return 历史快照列表
-    */
+     * 流程历史（简化：返回当前版本记录）。
+     *
+     * @param flowCode 流程编码
+     * @return 历史快照列表
+     */
     @GetMapping("/history")
     @Operation(summary = "流程历史版本")
     public ReturnResult<List<Map<String, Object>>> history(@RequestParam String flowCode) {
@@ -314,12 +314,12 @@ public class SpiderFlowController {
     }
 
     /**
-    * 回滚流程版本（当前仅单版本，返回当前版本号）。
-    *
-    * @param flowCode 流程编码
-    * @param version  目标版本
-    * @return 当前版本号
-    */
+     * 回滚流程版本（当前仅单版本，返回当前版本号）。
+     *
+     * @param flowCode 流程编码
+     * @param version  目标版本
+     * @return 当前版本号
+     */
     @PostMapping("/rollback")
     @Operation(summary = "回滚流程版本")
     public ReturnResult<Integer> rollback(@RequestParam String flowCode,
@@ -328,10 +328,10 @@ public class SpiderFlowController {
     }
 
     /**
-    * 节点类型清单。
-    *
-    * @return 节点类型元信息
-    */
+     * 节点类型清单。
+     *
+     * @return 节点类型元信息
+     */
     @GetMapping("/node-types")
     @Operation(summary = "节点类型清单")
     public ReturnResult<List<FlowNodeMetadata>> nodeTypes() {
@@ -339,12 +339,12 @@ public class SpiderFlowController {
     }
 
     /**
-    * 节点执行日志（按 执行no 回放）。
-    *
-    * @param executionNo 执行号，可空
-    * @param flowId      流程 标识，可空
-    * @return 节点日志列表
-    */
+     * 节点执行日志（按 执行no 回放）。
+     *
+     * @param executionNo 执行号，可空
+     * @param flowId      流程 标识，可空
+     * @return 节点日志列表
+     */
     @GetMapping("/node-logs")
     @Operation(summary = "节点执行日志")
     public ReturnResult<List<FlowNodeLogVO>> nodeLogs(
@@ -358,23 +358,23 @@ public class SpiderFlowController {
     }
 
     /**
-    * 校验流程结构合法性。
-    *
-    * <p>检查规则：</p>
-    * <ul>
-    *   <li>流程编码非空</li>
-    *   <li>节点列表非空</li>
-    *   <li>恰好存在一个开始节点</li>
-    *   <li>节点类型均在支持集合内</li>
-    *   <li>每条连线的起点与终点都必须是已存在的节点 key</li>
-    *   <li>至少存在一个结束节点</li>
-    * </ul>
-    *
-    * @param flowCode 流程编码
-    * @param nodes    节点列表
-    * @param edges    连线列表
-    * @return 校验通过返回成功；否则返回错误信息
-    */
+     * 校验流程结构合法性。
+     *
+     * <p>检查规则：</p>
+     * <ul>
+     *   <li>流程编码非空</li>
+     *   <li>节点列表非空</li>
+     *   <li>恰好存在一个开始节点</li>
+     *   <li>节点类型均在支持集合内</li>
+     *   <li>每条连线的起点与终点都必须是已存在的节点 key</li>
+     *   <li>至少存在一个结束节点</li>
+     * </ul>
+     *
+     * @param flowCode 流程编码
+     * @param nodes    节点列表
+     * @param edges    连线列表
+     * @return 校验通过返回成功；否则返回错误信息
+     */
     private ReturnResult<Integer> validateFlow(String flowCode,
                                                List<FlowNodeEntityVO> nodes,
                                                List<FlowEdgeEntityVO> edges) {
@@ -428,11 +428,11 @@ public class SpiderFlowController {
     }
 
     /**
-    * 按编码查询流程。
-    *
-    * @param flowCode 流程编码
-    * @return 流程实体
-    */
+     * 按编码查询流程。
+     *
+     * @param flowCode 流程编码
+     * @return 流程实体
+     */
     private SpiderFlow findByCode(String flowCode) {
         if (!StringUtils.hasText(flowCode)) {
             return null;
@@ -441,11 +441,11 @@ public class SpiderFlowController {
     }
 
     /**
-    * 序列化节点列表为 JSON 数组。
-    *
-    * @param nodes 节点视图列表
-    * @return JSON 字符串
-    */
+     * 序列化节点列表为 JSON 数组。
+     *
+     * @param nodes 节点视图列表
+     * @return JSON 字符串
+     */
     private String serializeNodes(List<FlowNodeEntityVO> nodes) {
         if (nodes == null) {
             return "[]";
@@ -458,11 +458,11 @@ public class SpiderFlowController {
     }
 
     /**
-    * 序列化连线列表为 JSON 数组。
-    *
-    * @param edges 连线视图列表
-    * @return JSON 字符串
-    */
+     * 序列化连线列表为 JSON 数组。
+     *
+     * @param edges 连线视图列表
+     * @return JSON 字符串
+     */
     private String serializeEdges(List<FlowEdgeEntityVO> edges) {
         if (edges == null) {
             return "[]";
@@ -475,11 +475,11 @@ public class SpiderFlowController {
     }
 
     /**
-    * 解析节点 JSON 数组为视图列表。
-    *
-    * @param json JSON 数组字符串
-    * @return 节点视图列表
-    */
+     * 解析节点 JSON 数组为视图列表。
+     *
+     * @param json JSON 数组字符串
+     * @return 节点视图列表
+     */
     private List<FlowNodeEntityVO> parseNodeEntities(String json) {
         if (!StringUtils.hasText(json)) {
             return new ArrayList<>();
@@ -493,11 +493,11 @@ public class SpiderFlowController {
     }
 
     /**
-    * 解析连线 JSON 数组为视图列表。
-    *
-    * @param json JSON 数组字符串
-    * @return 连线视图列表
-    */
+     * 解析连线 JSON 数组为视图列表。
+     *
+     * @param json JSON 数组字符串
+     * @return 连线视图列表
+     */
     private List<FlowEdgeEntityVO> parseEdgeEntities(String json) {
         if (!StringUtils.hasText(json)) {
             return new ArrayList<>();

@@ -6,53 +6,53 @@ import com.chua.common.support.spi.annotations.Spi;
 import java.util.List;
 
 /**
-* 聚合协议服务（protocol-server 分组）全局设置提供者 SPI。
-*
-* <p>定义 {@code protocol-server} 分组的全部配置项，由 {@link com.chua.starter.ai.support.configuration.client.GlobalSettingInitializer}
-* 启动时自动注册到 {@code sys_ai_global_setting} 表（仅首次）。聚合协议服务用于对外提供 API 接口，
-* 支持 OpenAI / Claude / Gemini 三协议端点，供其它软件对接使用。</p>
-*
-* @since 4.0.0.42
-* @author CH
+ * 聚合协议服务（protocol-server 分组）全局设置提供者 SPI。
+ *
+ * <p>定义 {@code protocol-server} 分组的全部配置项，由 {@link com.chua.starter.ai.support.configuration.client.GlobalSettingInitializer}
+ * 启动时自动注册到 {@code sys_ai_global_setting} 表（仅首次）。聚合协议服务用于对外提供 API 接口，
+ * 支持 OpenAI / Claude / Gemini 三协议端点，供其它软件对接使用。</p>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Spi("protocol-server")
 public class ProtocolServerGlobalSettingProvider implements GlobalSettingProvider {
 
     /**
-    * 配置分组ID
-    */
+     * 配置分组ID
+     */
     private static final String GROUP = "protocol-server";
 
     /**
-    * 分组显示名称
-    */
+     * 分组显示名称
+     */
     private static final String GROUP_NAME = "聚合协议服务";
 
     /**
-    * 配置分组ID。
-    *
-    * @return protocol-server
-    */
+     * 配置分组ID。
+     *
+     * @return protocol-server
+     */
     @Override
     public String group() {
         return GROUP;
     }
 
     /**
-    * 配置分组显示名称。
-    *
-    * @return 聚合协议服务
-    */
+     * 配置分组显示名称。
+     *
+     * @return 聚合协议服务
+     */
     @Override
     public String groupName() {
         return GROUP_NAME;
     }
 
     /**
-    * 聚合协议服务配置项。
-    *
-    * @return 配置项列表
-    */
+     * 聚合协议服务配置项。
+     *
+     * @return 配置项列表
+     */
     @Override
     public List<SettingItem> getItems() {
         return List.of(

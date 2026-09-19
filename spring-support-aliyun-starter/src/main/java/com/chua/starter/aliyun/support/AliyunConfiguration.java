@@ -11,10 +11,10 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 
 /**
-* 阿里云配置
-*
-* @since 2026-03-19
-* @author CH
+ * 阿里云配置
+ *
+ * @since 2026-03-19
+ * @author CH
  */
 @Slf4j
 @EnableConfigurationProperties(AliyunAlipayProperties.class)
@@ -23,25 +23,25 @@ public class AliyunConfiguration {
     @Bean
     @ConditionalOnMissingBean
     /**
-    * aliyunalipay客户端工厂
-    *
-    * @return aliyunalipay客户端工厂的结果
-    */
+     * aliyunalipay客户端工厂
+     *
+     * @return aliyunalipay客户端工厂的结果
+     */
     public AliyunAlipayClientFactory aliyunAlipayClientFactory() {
         /**
-        * aliyunalipay客户端工厂。
-        * @return aliyunalipay客户端工厂的结果
-        */
+         * aliyunalipay客户端工厂。
+         * @return aliyunalipay客户端工厂的结果
+         */
         return new AliyunAlipayClientFactory();
     }
 
     @Bean
     @ConditionalOnProperty(prefix = "plugin.aliyun.alipay", name = "enabled", havingValue = "true")
     /**
-    * alipay客户端
-    * @param properties 属性
-    * @param factory 工厂
-    */
+     * alipay客户端
+     * @param properties 属性
+     * @param factory 工厂
+     */
     public AlipayClient alipayClient(AliyunAlipayProperties properties,
                                      AliyunAlipayClientFactory factory) {
         log.info("[阿里云配置][支付宝] 加载配置");
@@ -52,10 +52,10 @@ public class AliyunConfiguration {
 
     @Bean
     /**
-    * 阿里云服务信息contributor
-    *
-    * @return aliyun服务信息contributor的结果
-    */
+     * 阿里云服务信息contributor
+     *
+     * @return aliyun服务信息contributor的结果
+     */
     public ServiceInfoContributor aliyunServiceInfoContributor() {
         return registry -> {
             registry.registerFlag("aliyun", "阿里云", true, "阿里云服务模块");

@@ -6,10 +6,10 @@ import java.util.Collections;
 import java.util.List;
 
 /**
-* 方法构建器
-*
-* @author CH
-* @since 4.0.0
+ * 方法构建器
+ *
+ * @author CH
+ * @since 4.0.0
  */
 public class MapperSqlMethodMarker implements SqlMethodMarker {
 

@@ -15,11 +15,11 @@ import java.util.List;
 import java.util.Map;
 
 /**
-* MyBatis扩展端点
-* 提供热重载、文件列表等功能
-*
-* @author CH
-* @since 4.0.0
+ * MyBatis扩展端点
+ * 提供热重载、文件列表等功能
+ *
+ * @author CH
+ * @since 4.0.0
  */
 @WebEndpoint(id = "mybatis-extension")
 public class MybatisEndpoint {
@@ -46,12 +46,12 @@ public class MybatisEndpoint {
     }
 
     /**
-    * 热重载指定的映射器文件
-    *
-    * @param name 映射器 XML文件名或路径
-    * @param type 类型: 名称（映射器方法名）, 映射器（映射器 XML文件名）
-    * @return 重载结果信息
-    */
+     * 热重载指定的映射器文件
+     *
+     * @param name 映射器 XML文件名或路径
+     * @param type 类型: 名称（映射器方法名）, 映射器（映射器 XML文件名）
+     * @return 重载结果信息
+     */
     @WriteOperation
     public String reload(@Selector String name, @Selector String type) {
         if (reload == null) {
@@ -70,11 +70,11 @@ public class MybatisEndpoint {
     }
 
     /**
-    * 获取MyBatis扩展端点信息（根路径）
-    * 包含mapped对账单列表和可重载文件列表
-    *
-    * @return 端点信息
-    */
+     * 获取MyBatis扩展端点信息（根路径）
+     * 包含mapped对账单列表和可重载文件列表
+     *
+     * @return 端点信息
+     */
     @ReadOperation
     public Map<String, Object> info() {
         Map<String, Object> result = new HashMap<>();

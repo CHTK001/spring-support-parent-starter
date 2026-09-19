@@ -21,9 +21,9 @@ import java.util.Map;
 import java.util.Set;
 
 /**
-* 服务器系统配置服务实现
-* @author CH
-* @since 4.0.0
+ * 服务器系统配置服务实现
+ * @author CH
+ * @since 4.0.0
  */
 @Slf4j
 @Service
@@ -74,10 +74,10 @@ public class ServerConfigServiceImpl implements ServerConfigService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-    * 保存配置。
-    * @param map 映射
-    * @return 保存配置的结果
-    */
+     * 保存配置。
+     * @param map 映射
+     * @return 保存配置的结果
+     */
     public ReturnResult<Void> saveConfig(Map<String, Object> map) {
         if (map == null) {
             return ReturnResult.error("配置不能为空");
@@ -142,11 +142,11 @@ public class ServerConfigServiceImpl implements ServerConfigService {
     }
 
     /**
-    * 解析存储值（JSON 标量原样，字符串去引号）
-    *
-    * @param raw 原始存储值
-    * @return 解析后的值
-    */
+     * 解析存储值（JSON 标量原样，字符串去引号）
+     *
+     * @param raw 原始存储值
+     * @return 解析后的值
+     */
     private Object parseValue(String raw) {
         if (raw == null) {
             return null;
@@ -167,11 +167,11 @@ public class ServerConfigServiceImpl implements ServerConfigService {
     }
 
     /**
-    * 序列化值（字符串带引号，其余 JSON）
-    *
-    * @param value 值
-    * @return 存储串
-    */
+     * 序列化值（字符串带引号，其余 JSON）
+     *
+     * @param value 值
+     * @return 存储串
+     */
     private String serializeValue(Object value) {
         try {
             return MAPPER.writeValueAsString(value);
@@ -181,10 +181,10 @@ public class ServerConfigServiceImpl implements ServerConfigService {
     }
 
     /**
-    * 判断纯数字
-    * @param s s
-    * @return 是否numeric的结果
-    */
+     * 判断纯数字
+     * @param s s
+     * @return 是否numeric的结果
+     */
     private boolean isNumeric(String s) {
         if (s == null || s.isEmpty()) {
             return false;
@@ -198,10 +198,10 @@ public class ServerConfigServiceImpl implements ServerConfigService {
     }
 
     /**
-    * 配置键默认描述
-    * @param key 键
-    * @return 默认desc的结果
-    */
+     * 配置键默认描述
+     * @param key 键
+     * @return 默认desc的结果
+     */
     private String defaultDesc(String key) {
         Map<String, String> desc = new HashMap<>();
         desc.put("guacd.host", "guacd 网关地址（远控隧道）");

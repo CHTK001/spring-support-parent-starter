@@ -10,20 +10,20 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 /**
-* AI 会话压缩上下文实体，对应表 {@code sys_ai_session_compression}。
-*
-* <p>保存会话历史被压缩后的摘要上下文。聊天时优先使用本表上下文，未命中时回退历史对话记录。</p>
-*
-* @since 4.0.0.42
-* @author CH
+ * AI 会话压缩上下文实体，对应表 {@code sys_ai_session_compression}。
+ *
+ * <p>保存会话历史被压缩后的摘要上下文。聊天时优先使用本表上下文，未命中时回退历史对话记录。</p>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Data
 @TableName("sys_ai_session_compression")
 public class SysAiSessionCompression {
 
     /**
-    * 压缩上下文主键 标识
-    */
+     * 压缩上下文主键 标识
+     */
     @TableId(value = "sys_ai_session_compression_id", type = IdType.AUTO)
     /** SYSAI会话compressionid */
     private Integer id;

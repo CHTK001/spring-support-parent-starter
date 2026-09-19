@@ -15,13 +15,13 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
-* 本地工具用量与上下文记录接口。
-*
-* <p>提供：本地用量同步、本地用量列表、压缩上下文记录查询。
-* 供前端「模型指标 / 用量」页面消费。</p>
-*
-* @author CH
-* @since 4.0.0.42
+ * 本地工具用量与上下文记录接口。
+ *
+ * <p>提供：本地用量同步、本地用量列表、压缩上下文记录查询。
+ * 供前端「模型指标 / 用量」页面消费。</p>
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 @RestController
 @RequiredArgsConstructor
@@ -46,10 +46,10 @@ public class ToolMetricsController {
     }
 
     /**
-    * 本地用量列表（最新 200 条）。
-    *
-    * @return 用量记录
-    */
+     * 本地用量列表（最新 200 条）。
+     *
+     * @return 用量记录
+     */
     @GetMapping("/list")
     public ReturnResult<List<SysAiUsage>> list() {
         return ReturnResult.ok(sysAiUsageMapper.selectList(
@@ -60,10 +60,10 @@ public class ToolMetricsController {
     }
 
     /**
-    * 压缩上下文记录（最新 100 条）。
-    *
-    * @return 压缩记录
-    */
+     * 压缩上下文记录（最新 100 条）。
+     *
+     * @return 压缩记录
+     */
     @GetMapping("/compressions")
     public ReturnResult<List<SysAiSessionCompression>> compressions() {
         return ReturnResult.ok(compressionMapper.selectList(

@@ -14,15 +14,15 @@ import java.util.List;
 import java.util.Map;
 
 /**
-* AI 管线目录控制器。
-*
-* <p>返回系统内置 AI 管线目录（文生图 / 文生视频 / OCR / 布局 / 人脸识别 / 图片识别），
-* 以及全局 Bean 设置分组（对话路由 / RAG / 输入优化等）。
-* 每个管线声明其必填能力（required）与非必填能力（optional）——按后台管线定义，
-* 必填与非必填的模型均属于该管线的模型集合，前端据此在模型管理中打标并分组展示。</p>
-*
-* @author CH
-* @since 4.0.0.42
+ * AI 管线目录控制器。
+ *
+ * <p>返回系统内置 AI 管线目录（文生图 / 文生视频 / OCR / 布局 / 人脸识别 / 图片识别），
+ * 以及全局 Bean 设置分组（对话路由 / RAG / 输入优化等）。
+ * 每个管线声明其必填能力（required）与非必填能力（optional）——按后台管线定义，
+ * 必填与非必填的模型均属于该管线的模型集合，前端据此在模型管理中打标并分组展示。</p>
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 @RestController
 @RequestMapping("/v2/ai/pipelines")
@@ -30,10 +30,10 @@ import java.util.Map;
 public class AiPipelineController {
 
     /**
-    * 管线目录。
-    *
-    * @return 管线定义列表
-    */
+     * 管线目录。
+     *
+     * @return 管线定义列表
+     */
     @Permission("admin")
     @Operation(summary = "AI 管线目录", description = "管线必填/非必填能力定义，驱动左侧菜单、能力页与模型管理")
     @GetMapping
@@ -77,8 +77,8 @@ public class AiPipelineController {
     }
 
     /**
-    * 构造管线定义。
-    */
+     * 构造管线定义。
+     */
     private static Map<String, Object> pipeline(String code, String name, String group, String tag,
                                                List<String> required, List<String> optional,
                                                String description, String route, String configGroup) {
@@ -97,8 +97,8 @@ public class AiPipelineController {
     }
 
     /**
-    * 构造全局 Bean 设置分组定义。
-    */
+     * 构造全局 Bean 设置分组定义。
+     */
     private static Map<String, Object> globalBean(String code, String name, String group,
                                                   String description, String route, String configGroup) {
         Map<String, Object> item = new LinkedHashMap<>();

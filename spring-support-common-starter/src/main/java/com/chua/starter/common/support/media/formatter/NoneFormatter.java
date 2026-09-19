@@ -7,16 +7,16 @@ import com.chua.common.support.spi.annotations.SpiDefault;
 import java.lang.reflect.Field;
 
 /**
-* 空格式化器（默认实现）
-* <p>
-* 不做任何格式化处理，直接返回原始值。
-* 作为 {@link Formatter} 的默认实现。
-* </p>
-*
-* @版本 1.0.0
-* @see Formatter
-* @author CH
-* @since 4.0.0
+ * 空格式化器（默认实现）
+ * <p>
+ * 不做任何格式化处理，直接返回原始值。
+ * 作为 {@link Formatter} 的默认实现。
+ * </p>
+ *
+ * @版本 1.0.0
+ * @see Formatter
+ * @author CH
+ * @since 4.0.0
  */
 @SpiDefault
 public class NoneFormatter implements Formatter {

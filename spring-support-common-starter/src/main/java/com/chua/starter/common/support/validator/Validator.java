@@ -1,9 +1,9 @@
 package com.chua.starter.common.support.validator;
 
 /**
-* 简单校验器。
-* @author CH
-* @since 4.0.0
+ * 简单校验器。
+ * @author CH
+ * @since 4.0.0
  */
 public final class Validator {
 

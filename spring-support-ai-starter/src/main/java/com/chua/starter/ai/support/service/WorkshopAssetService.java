@@ -21,12 +21,12 @@ import java.time.Instant;
 import java.util.List;
 
 /**
-* 创意工坊资产服务实现。
-*
-* <p>负责资产的 CRUD、文件上传、集合重命名及物理文件管理。</p>
-*
-* @author CH
-* @since 4.0.0
+ * 创意工坊资产服务实现。
+ *
+ * <p>负责资产的 CRUD、文件上传、集合重命名及物理文件管理。</p>
+ *
+ * @author CH
+ * @since 4.0.0
  */
 @Slf4j
 @Service
@@ -39,10 +39,10 @@ public class WorkshopAssetService {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper(); // 对象映射器
 
     /**
-    * 把标签列表序列化为 JSON 数组字符串存储（空/空列表 -> "[]"）。
-    * @param tags 标签
-    * @return 转为标签json的结果
-    */
+     * 把标签列表序列化为 JSON 数组字符串存储（空/空列表 -> "[]"）。
+     * @param tags 标签
+     * @return 转为标签json的结果
+     */
     private static String toTagsJson(List<String> tags) {
         if (tags == null || tags.isEmpty()) {
             return "[]";
@@ -73,17 +73,17 @@ public class WorkshopAssetService {
     }
 
     /**
-    * 暴露给 控制器 使用的存储目录（与 resolvestoragedir 保持一致）
-    *
-    * @return 获取storagedir的结果
-    */
+     * 暴露给 控制器 使用的存储目录（与 resolvestoragedir 保持一致）
+     *
+     * @return 获取storagedir的结果
+     */
     public String getStorageDir() {
         return resolveStorageDir();
     }
 
     /**
-    * 应用启动时确保存储目录存在。
-    */
+     * 应用启动时确保存储目录存在。
+     */
     @PostConstruct
     public void init() {
         try {
@@ -94,9 +94,9 @@ public class WorkshopAssetService {
     }
 
     /**
-    * 从全局设置读取单次上传大小上限（MB），未配置时默认 100MB。
-    * @return resolve最大文件大小的结果
-    */
+     * 从全局设置读取单次上传大小上限（MB），未配置时默认 100MB。
+     * @return resolve最大文件大小的结果
+     */
     private long resolveMaxFileSize() {
         return globalSettingService.getValue("workshop", "max_upload_size_mb")
                 .map(v -> {
@@ -111,11 +111,11 @@ public class WorkshopAssetService {
     }
 
     /**
-    * 白名单上传扩展名（小写，不含点）。空扩展名视为允许（无扩展名文件）。
-    *
-    * @param ext 扩展名（已小写），可为空字符串
-    * @return true 表示允许上传
-    */
+     * 白名单上传扩展名（小写，不含点）。空扩展名视为允许（无扩展名文件）。
+     *
+     * @param ext 扩展名（已小写），可为空字符串
+     * @return true 表示允许上传
+     */
     private boolean isExtensionAllowed(String ext) {
         if (ext == null || ext.isEmpty()) {
             return true;
@@ -129,18 +129,18 @@ public class WorkshopAssetService {
     }
 
     /**
-    * 资产查询参数对象。
-    *
-    * @param kind       资产类型过滤（镜像/视频/文本），空 表示全部
-    * @param collection 集合名称过滤，空 表示全部
-    * @param ungrouped  是否仅查未分组资产
-    * @param query      标题/标签模糊搜索
-    * @param tag        精确标签匹配
-    * @param inLibrary  是否仅在库中，空 表示不过滤
-    * @param sort       排序方式（创建_desc/创建_asc/更新_desc/名称_asc/大小_desc）
-    * @param page       页码（从 1 开始）
-    * @param pageSize   每页数量（建议 1-200）
-    */
+     * 资产查询参数对象。
+     *
+     * @param kind       资产类型过滤（镜像/视频/文本），空 表示全部
+     * @param collection 集合名称过滤，空 表示全部
+     * @param ungrouped  是否仅查未分组资产
+     * @param query      标题/标签模糊搜索
+     * @param tag        精确标签匹配
+     * @param inLibrary  是否仅在库中，空 表示不过滤
+     * @param sort       排序方式（创建_desc/创建_asc/更新_desc/名称_asc/大小_desc）
+     * @param page       页码（从 1 开始）
+     * @param pageSize   每页数量（建议 1-200）
+     */
     public record AssetQueryRequest(
             String kind,
             String collection,
@@ -155,11 +155,11 @@ public class WorkshopAssetService {
     }
 
     /**
-    * 分页查询资产列表，支持 种类 / 集合 / 搜索 / 标签 / 排序 过滤。
-    *
-    * @param req 查询参数
-    * @return 分页结果（items + total）
-    */
+     * 分页查询资产列表，支持 种类 / 集合 / 搜索 / 标签 / 排序 过滤。
+     *
+     * @param req 查询参数
+     * @return 分页结果（items + total）
+     */
     public List<WorkshopAsset> listAssets(AssetQueryRequest req) {
         int safePage = Math.max(req.page(), 1);
         int safePageSize = Math.min(Math.max(req.pageSize(), 1), MAX_PAGE_SIZE);
@@ -171,11 +171,11 @@ public class WorkshopAssetService {
     }
 
     /**
-    * 统计符合条件的资产总数。
-    *
-    * @param req 查询参数（仅使用过滤字段，忽略分页）
-    * @return 符合过滤条件的资产总数
-    */
+     * 统计符合条件的资产总数。
+     *
+     * @param req 查询参数（仅使用过滤字段，忽略分页）
+     * @return 符合过滤条件的资产总数
+     */
     public long countAssets(AssetQueryRequest req) {
         return assetMapper.countByFilter(
                 req.kind(), req.collection(), req.ungrouped(),
@@ -183,13 +183,13 @@ public class WorkshopAssetService {
     }
 
     /**
-    * 创建文本资产。
-    * @param title title
-    * @param content 内容
-    * @param collection 集合
-    * @param tags 标签
-    * @return 创建文本asset的结果
-    */
+     * 创建文本资产。
+     * @param title title
+     * @param content 内容
+     * @param collection 集合
+     * @param tags 标签
+     * @return 创建文本asset的结果
+     */
     @Transactional
     public WorkshopAsset createTextAsset(String title, String content, String collection, List<String> tags) {
         String id = IdUtils.uuidv7();
@@ -210,15 +210,15 @@ public class WorkshopAssetService {
     }
 
     /**
-    * 上传二进制资产（图片/视频）。
-    *
-    * @param file       上传文件
-    * @param title      标题
-    * @param collection 集合
-    * @param tags       标签
-    * @param inLibrary  是否在库
-    * @return 创建后的资产对象
-    */
+     * 上传二进制资产（图片/视频）。
+     *
+     * @param file       上传文件
+     * @param title      标题
+     * @param collection 集合
+     * @param tags       标签
+     * @param inLibrary  是否在库
+     * @return 创建后的资产对象
+     */
     @Transactional
     public WorkshopAsset uploadAsset(MultipartFile file, String title, String collection,
                                       List<String> tags, boolean inLibrary) throws IOException {
@@ -259,8 +259,8 @@ public class WorkshopAssetService {
     }
 
     /**
-    * 更新资产元数据（标题/集合/标签/入_图书馆）。
-    */
+     * 更新资产元数据（标题/集合/标签/入_图书馆）。
+     */
     @Transactional
     public WorkshopAsset patchAsset(String assetId, String title, String collection,
                                       List<String> tags, Boolean inLibrary) {
@@ -274,9 +274,9 @@ public class WorkshopAssetService {
     }
 
     /**
-    * 删除资产（物理文件 + 数据库记录）。
-    * @param assetId assetid
-    */
+     * 删除资产（物理文件 + 数据库记录）。
+     * @param assetId assetid
+     */
     @Transactional
     public void deleteAsset(String assetId) {
         WorkshopAsset asset = assetMapper.selectById(assetId);
@@ -291,12 +291,12 @@ public class WorkshopAssetService {
     }
 
     /**
-    * 批量重命名集合（更新所有使用该集合的资产）。
-    *
-    * @param from 原集合名
-    * @param to   新集合名（空 表示移出分组）
-    * @return 更新的记录数
-    */
+     * 批量重命名集合（更新所有使用该集合的资产）。
+     *
+     * @param from 原集合名
+     * @param to   新集合名（空 表示移出分组）
+     * @return 更新的记录数
+     */
     @Transactional
     public int renameCollection(String from, String to) {
         if (from == null || from.isBlank()) {
@@ -306,18 +306,18 @@ public class WorkshopAssetService {
     }
 
     /**
-    * 获取资产记录。
-    * @param assetId assetid
-    * @return 获取asset的结果
-    */
+     * 获取资产记录。
+     * @param assetId assetid
+     * @return 获取asset的结果
+     */
     public WorkshopAsset getAsset(String assetId) {
         return assetMapper.selectById(assetId);
     }
     /**
-    * 获取所有非空集合名称列表。
-    *
-    * @return 去重升序的集合名列表
-    */
+     * 获取所有非空集合名称列表。
+     *
+     * @return 去重升序的集合名列表
+     */
     public List<String> listCollections() {
         return assetMapper.selectDistinctCollections();
     }

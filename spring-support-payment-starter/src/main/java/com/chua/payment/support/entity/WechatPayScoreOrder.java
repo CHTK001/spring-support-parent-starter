@@ -10,9 +10,9 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
-* 微信支付分订单
-* @author CH
-* @since 4.0.0
+ * 微信支付分订单
+ * @author CH
+ * @since 4.0.0
  */
 @Data
 @TableName("pay_wechat_pay_score_order")

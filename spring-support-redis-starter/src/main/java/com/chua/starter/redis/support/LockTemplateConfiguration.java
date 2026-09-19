@@ -12,13 +12,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 
 /**
-* 锁模板。
-*
-* <p>基于 Redisson 的分布式锁自动配置：存在 {@link RedissonClient} 时注册
-* {@link RedissonLockTemplate}，否则回退 {@link NoopLockTemplate}。</p>
-*
-* @since 2022/08/01
-* @author CH
+ * 锁模板。
+ *
+ * <p>基于 Redisson 的分布式锁自动配置：存在 {@link RedissonClient} 时注册
+ * {@link RedissonLockTemplate}，否则回退 {@link NoopLockTemplate}。</p>
+ *
+ * @since 2022/08/01
+ * @author CH
  */
 @Slf4j
 @ConditionalOnClass(name = "com.chua.starter.redis.support.template.LockTemplate")

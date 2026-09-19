@@ -41,9 +41,9 @@ import java.util.UUID;
 import static com.chua.starter.common.support.logger.ModuleLog.highlight;
 
 /**
-* 数据库注入
-* @author CH
-* @since 4.0.0
+ * 数据库注入
+ * @author CH
+ * @since 4.0.0
  */
 @Slf4j
 public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
@@ -93,39 +93,39 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
     */
         registerMultiDataSourceProperties(beanDefinitionRegistry);
         /**
-        * 注册环境。
-        * @param beanDefinitionRegistry Beandefinitionregistry
-        */
+         * 注册环境。
+         * @param beanDefinitionRegistry Beandefinitionregistry
+         */
         registerEnvironment(beanDefinitionRegistry);
     }
 
     /**
-    * 注册multi数据源属性
-    *
-    * @param beanDefinitionRegistry Beandefinitionregistry
-    */
+     * 注册multi数据源属性
+     *
+     * @param beanDefinitionRegistry Beandefinitionregistry
+     */
     private void registerMultiDataSourceProperties(BeanDefinitionRegistry beanDefinitionRegistry) {
         MultiDataSourceProperties multiDataSourceProperties = bindMultiDataSourceProperties(environment);
         /**
-        * 注册数据源。
-        * @param multiDataSourceProperties.getDataSource( multi数据源属性.获取数据源(
-        */
+         * 注册数据源。
+         * @param multiDataSourceProperties.getDataSource( multi数据源属性.获取数据源(
+         */
         registerDataSource(multiDataSourceProperties.getDataSource(), beanDefinitionRegistry, null);
 
         MultiHikariDataSourceProperties multiHikariDataSourceProperties = bindMultiHikariDataSourceProperties(environment);
         /**
-        * 注册数据源。
-        * @param multiHikariDataSourceProperties.getDataSource( multihikari数据源属性.获取数据源(
-        */
+         * 注册数据源。
+         * @param multiHikariDataSourceProperties.getDataSource( multihikari数据源属性.获取数据源(
+         */
         registerDataSource(multiHikariDataSourceProperties.getDataSource(), beanDefinitionRegistry, HikariDataSource.class);
     }
 
     /**
-    * 绑定multi数据源属性
-    *
-    * @param environment 环境
-    * @return bindmulti数据源属性的结果
-    */
+     * 绑定multi数据源属性
+     *
+     * @param environment 环境
+     * @return bindmulti数据源属性的结果
+     */
     static MultiDataSourceProperties bindMultiDataSourceProperties(Environment environment) {
         MultiDataSourceProperties current = Binder.get(environment)
                 .bindOrCreate(MultiDataSourceProperties.PRE, MultiDataSourceProperties.class);
@@ -139,11 +139,11 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
     }
 
     /**
-    * 绑定multihikari数据源属性
-    *
-    * @param environment 环境
-    * @return bindmultihikari数据源属性的结果
-    */
+     * 绑定multihikari数据源属性
+     *
+     * @param environment 环境
+     * @return bindmultihikari数据源属性的结果
+     */
     static MultiHikariDataSourceProperties bindMultiHikariDataSourceProperties(Environment environment) {
         MultiHikariDataSourceProperties current = Binder.get(environment)
                 .bindOrCreate(MultiHikariDataSourceProperties.PRE, MultiHikariDataSourceProperties.class);
@@ -157,36 +157,36 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
     }
 
     /**
-    * 合并数据源属性
-    *
-    * @param current 当前
-    * @param legacy legacy
-    * @return 合并数据源属性的结果
-    */
+     * 合并数据源属性
+     *
+     * @param current 当前
+     * @param legacy legacy
+     * @return 合并数据源属性的结果
+     */
     private static <T extends DataSourceProperties> List<T> mergeDataSourceProperties(List<T> current, List<T> legacy) {
         Map<String, T> merged = new LinkedHashMap<>();
         /**
-        * 放入数据源属性。
-        * @param merged 合并
-        * @param legacy legacy
-        */
+         * 放入数据源属性。
+         * @param merged 合并
+         * @param legacy legacy
+         */
         putDataSourceProperties(merged, legacy);
         /**
-        * 放入数据源属性。
-        * @param merged 合并
-        * @param current 当前
-        */
+         * 放入数据源属性。
+         * @param merged 合并
+         * @param current 当前
+         */
         putDataSourceProperties(merged, current);
         return merged.isEmpty() ? null : new ArrayList<>(merged.values());
     }
 
     /**
-    * 放入数据源属性
-    *
-    * @param target Target
-    * @param source 源
-    * @return 放入数据源属性的结果
-    */
+     * 放入数据源属性
+     *
+     * @param target Target
+     * @param source 源
+     * @return 放入数据源属性的结果
+     */
     private static <T extends DataSourceProperties> void putDataSourceProperties(Map<String, T> target, List<T> source) {
         if (source == null) {
             return;
@@ -201,11 +201,11 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
     }
 
     /**
-    * 注册数据源
-    * @param dataSource 数据源
-    * @param beanDefinitionRegistry Beandefinitionregistry
-    * @param dataSourceType 数据源类型
-    */
+     * 注册数据源
+     * @param dataSource 数据源
+     * @param beanDefinitionRegistry Beandefinitionregistry
+     * @param dataSourceType 数据源类型
+     */
     private void registerDataSource(List<? extends DataSourceProperties> dataSource,
                                     BeanDefinitionRegistry beanDefinitionRegistry,
                                     Class<? extends DataSource> dataSourceType) {
@@ -250,10 +250,10 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
     }
 
     /**
-    * 注册环境
-    *
-    * @param beanDefinitionRegistry Beandefinitionregistry
-    */
+     * 注册环境
+     *
+     * @param beanDefinitionRegistry Beandefinitionregistry
+     */
     private void registerEnvironment(BeanDefinitionRegistry beanDefinitionRegistry) {
         if (null == dataSourceClass) {
             return;
@@ -261,11 +261,11 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
         for (String prefix : PREFIX) {
             Map<String, Object> objectMap = environmentSupport.getProperties(prefix);
             /**
-            * analysis数据源。
-            * @param objectMap 对象映射
-            * @param prefix 前缀
-            * @param beanDefinitionRegistry Beandefinitionregistry
-            */
+             * analysis数据源。
+             * @param objectMap 对象映射
+             * @param prefix 前缀
+             * @param beanDefinitionRegistry Beandefinitionregistry
+             */
             analysisDataSource(objectMap, prefix, beanDefinitionRegistry);
         }
 
@@ -298,12 +298,12 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
     }
 
     /**
-    * 分析数据源
-    *
-    * @param objectMap              配置集
-    * @param prefix                 前缀
-    * @param beanDefinitionRegistry 注册器
-    */
+     * 分析数据源
+     *
+     * @param objectMap              配置集
+     * @param prefix                 前缀
+     * @param beanDefinitionRegistry 注册器
+     */
     private void analysisDataSource(Map<String, Object> objectMap, String prefix, BeanDefinitionRegistry beanDefinitionRegistry) {
         String urlPrefix = prefix.replace("*", "url");
         String urlPrefix2 = prefix.replace("*", "jdbc-url");
@@ -350,12 +350,12 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
     }
 
     /**
-    * 数据源
-    *
-    * @param objectMap 配置
-    * @param prefix    前缀
-    * @return 数据源
-    */
+     * 数据源
+     *
+     * @param objectMap 配置
+     * @param prefix    前缀
+     * @return 数据源
+     */
     private Map<String, DataSource> createDataSources(Map<String, Object> objectMap, String prefix) {
         Set<String> result = new HashSet<>();
         objectMap.forEach((k, v) -> {
@@ -380,11 +380,11 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
             if (null != dataSource) {
                 //补充名称
                 /**
-                * analysismapping。
-                * @param objectMap 对象映射
-                * @param newKey 新Key
-                * @param dataSource 数据源
-                */
+                 * analysismapping。
+                 * @param objectMap 对象映射
+                 * @param newKey 新Key
+                 * @param dataSource 数据源
+                 */
                 analysisMapping(objectMap, newKey, dataSource);
             }
         }
@@ -392,12 +392,12 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
     }
 
     /**
-    * 数据源
-    *
-    * @param objectMap 配置
-    * @param prefix    前缀
-    * @return 数据源
-    */
+     * 数据源
+     *
+     * @param objectMap 配置
+     * @param prefix    前缀
+     * @return 数据源
+     */
     private DataSource createDataSource(Map<String, Object> objectMap, String prefix) {
         Class<? extends DataSource> dataSourceType = getDataSourceType(objectMap, prefix);
         BindResult<? extends DataSource> bindResult = Binder.get(environment).bind(prefix, dataSourceType);
@@ -406,10 +406,10 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
  // 将 spring.datasource.hikari.* 属性应用到已创建的 hikari数据源
         if (dataSource instanceof HikariDataSource hikari) {
             /**
-            * applyhikari属性。
-            * @param hikari hikari
-            * @param prefix 前缀
-            */
+             * applyhikari属性。
+             * @param hikari hikari
+             * @param prefix 前缀
+             */
             applyHikariProperties(hikari, prefix);
         }
 
@@ -420,22 +420,22 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
 
         //补充名称
         /**
-        * analysismapping。
-        * @param objectMap 对象映射
-        * @param prefix 前缀
-        * @param dataSource 数据源
-        */
+         * analysismapping。
+         * @param objectMap 对象映射
+         * @param prefix 前缀
+         * @param dataSource 数据源
+         */
         analysisMapping(objectMap, prefix, dataSource);
         return dataSource;
     }
 
     /**
-    * 将 前缀.hikari.* 配置属性应用到 hikari数据源。
-    * Spring Boot 的 Binder.bind() 对已有实例的绑定可能不生效，
-    * 因此通过 提供者 直接设置属性。
-    * @param hikari hikari
-    * @param prefix 前缀
-    */
+     * 将 前缀.hikari.* 配置属性应用到 hikari数据源。
+     * Spring Boot 的 Binder.bind() 对已有实例的绑定可能不生效，
+     * 因此通过 提供者 直接设置属性。
+     * @param hikari hikari
+     * @param prefix 前缀
+     */
     private void applyHikariProperties(HikariDataSource hikari, String prefix) {
         String hikariPrefix = prefix + ".hikari";
         Map<String, Object> hikariProps = environmentSupport.getProperties(hikariPrefix + ".*");
@@ -464,12 +464,12 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
     }
 
     /**
-    * 数据类型
-    *
-    * @param objectMap 数据
-    * @param prefix    前缀
-    * @return 数据源
-    */
+     * 数据类型
+     *
+     * @param objectMap 数据
+     * @param prefix    前缀
+     * @return 数据源
+     */
     private Class<? extends DataSource> getDataSourceType(Map<String, Object> objectMap, String prefix) {
         String dataSourceType = objectMap.getOrDefault(prefix + ".type", "").toString();
         if (Strings.isNullOrEmpty(dataSourceType) || null == ClassUtils.forName(dataSourceType)) {
@@ -479,12 +479,12 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
     }
 
     /**
-    * 名称映射
-    *
-    * @param objectMap  数据源配置
-    * @param prefix     前缀
-    * @param dataSource 数据源
-    */
+     * 名称映射
+     *
+     * @param objectMap  数据源配置
+     * @param prefix     前缀
+     * @param dataSource 数据源
+     */
     private void analysisMapping(Map<String, Object> objectMap, String prefix, DataSource dataSource) {
         if (dataSource == null) {
             return;

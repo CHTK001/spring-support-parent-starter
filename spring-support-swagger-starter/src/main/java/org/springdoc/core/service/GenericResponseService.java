@@ -94,65 +94,65 @@ import static org.springdoc.core.utils.SpringDocAnnotationsUtils.mergeSchema;
  // 解决当前 刀4j 4.5 版本依赖的 springdoc 2.3 版本 与 Spring Boot 3.4 不兼容的问题
 
 /**
-* The 类型 Generic 响应 构建器.
-*
-* @author bnasslahsen
-* @author CH
-* @since 4.0.0
+ * The 类型 Generic 响应 构建器.
+ *
+ * @author bnasslahsen
+ * @author CH
+ * @since 4.0.0
  */
 @Slf4j
 public class GenericResponseService implements ApplicationContextAware {
 
     /**
-    * This 延伸 名称 是否 used 转为 temporary 存储
-    * the 异常 类.
-    */
+     * This 延伸 名称 是否 used 转为 temporary 存储
+     * the 异常 类.
+     */
     private static final String EXTENSION_EXCEPTION_CLASSES = "x-exception-class";
     /**
-    * The 响应 实体 异常 处理器 类.
-    */
+     * The 响应 实体 异常 处理器 类.
+     */
     private static Class<?> responseEntityExceptionHandlerClass;
     /**
-    * The Operation 构建器.
-    */
+     * The Operation 构建器.
+     */
     private final OperationService operationService;
     /**
-    * The 返回 类型 parsers.
-    */
+     * The 返回 类型 parsers.
+     */
     private final List<ReturnTypeParser> returnTypeParsers;
     /**
-    * The Spring doc 配置 属性.
-    */
+     * The Spring doc 配置 属性.
+     */
     private final SpringDocConfigProperties springDocConfigProperties;
     /**
-    * The 财产 解析器 工具.
-    */
+     * The 财产 解析器 工具.
+     */
     private final PropertyResolverUtils propertyResolverUtils;
     /**
-    * The 控制器 advice 信息.
-    */
+     * The 控制器 advice 信息.
+     */
     private final List<ControllerAdviceInfo> controllerAdviceInfos = new CopyOnWriteArrayList<>();
     /**
-    * The 控制器 信息.
-    */
+     * The 控制器 信息.
+     */
     private final List<ControllerAdviceInfo> localExceptionHandlers = new CopyOnWriteArrayList<>();
     /**
-    * The Reentrant 锁.
-    */
+     * The Reentrant 锁.
+     */
     private final Lock reentrantLock = new ReentrantLock();
     /**
-    * A 列表 的 全部 Bean annotated with {@code @ControllerAdvice}
-    */
+     * A 列表 的 全部 Bean annotated with {@code @ControllerAdvice}
+     */
     private List<ControllerAdviceBean> controllerAdviceBeans;
 
     /**
-    * Instantiates a 新 Generic 响应 构建器.
-    *
-    * @param operationService          the operation 构建器
-    * @param returnTypeParsers         the 返回 类型 parsers
-    * @param springDocConfigProperties the spring doc 配置 属性
-    * @param propertyResolverUtils     the 财产 解析器 工具
-    */
+     * Instantiates a 新 Generic 响应 构建器.
+     *
+     * @param operationService          the operation 构建器
+     * @param returnTypeParsers         the 返回 类型 parsers
+     * @param springDocConfigProperties the spring doc 配置 属性
+     * @param propertyResolverUtils     the 财产 解析器 工具
+     */
     public GenericResponseService(OperationService operationService, List<ReturnTypeParser> returnTypeParsers,
                                   SpringDocConfigProperties springDocConfigProperties,
                                   PropertyResolverUtils propertyResolverUtils) {
@@ -164,15 +164,15 @@ public class GenericResponseService implements ApplicationContextAware {
     }
 
     /**
-    * 构建 内容 从 doc.
-    *
-    * @param components             the 组件
-    * @param apiResponsesOp         the api 响应 op
-    * @param methodAttributes       the 方法 attributes
-    * @param apiResponseAnnotations the api 响应 注解
-    * @param apiResponse            the api 响应
-    * @param openapi31              the openapi 31
-    */
+     * 构建 内容 从 doc.
+     *
+     * @param components             the 组件
+     * @param apiResponsesOp         the api 响应 op
+     * @param methodAttributes       the 方法 attributes
+     * @param apiResponseAnnotations the api 响应 注解
+     * @param apiResponse            the api 响应
+     * @param openapi31              the openapi 31
+     */
     public static void buildContentFromDoc(Components components, ApiResponses apiResponsesOp,
                                            MethodAttributes methodAttributes,
                                            io.swagger.v3.oas.annotations.responses.ApiResponse apiResponseAnnotations,
@@ -204,11 +204,11 @@ public class GenericResponseService implements ApplicationContextAware {
     }
 
     /**
-    * 设置 description.
-    *
-    * @param httpCode    the http 编码
-    * @param apiResponse the api 响应
-    */
+     * 设置 description.
+     *
+     * @param httpCode    the http 编码
+     * @param apiResponse the api 响应
+     */
     public static void setDescription(String httpCode, ApiResponse apiResponse) {
         try {
             HttpStatus httpStatus = HttpStatus.valueOf(Integer.parseInt(httpCode));
@@ -219,23 +219,23 @@ public class GenericResponseService implements ApplicationContextAware {
     }
 
     /**
-    * 设置 响应 实体 异常 处理器 类.
-    *
-    * @param responseEntityExceptionHandlerClass the 响应 实体 异常 处理器 类
-    */
+     * 设置 响应 实体 异常 处理器 类.
+     *
+     * @param responseEntityExceptionHandlerClass the 响应 实体 异常 处理器 类
+     */
     public static void setResponseEntityExceptionHandlerClass(Class<?> responseEntityExceptionHandlerClass) {
         GenericResponseService.responseEntityExceptionHandlerClass = responseEntityExceptionHandlerClass;
     }
 
     /**
-    * 构建 api 响应.
-    *
-    * @param components       the 组件
-    * @param handlerMethod    the 处理器 方法
-    * @param operation        the operation
-    * @param methodAttributes the 方法 attributes
-    * @return the api 响应
-    */
+     * 构建 api 响应.
+     *
+     * @param components       the 组件
+     * @param handlerMethod    the 处理器 方法
+     * @param operation        the operation
+     * @param methodAttributes the 方法 attributes
+     * @return the api 响应
+     */
     public ApiResponses build(Components components, HandlerMethod handlerMethod, Operation operation,
                               MethodAttributes methodAttributes) {
         Map<String, ApiResponse> genericMapResponse = getGenericMapResponse(handlerMethod.getBeanType());
@@ -256,13 +256,13 @@ public class GenericResponseService implements ApplicationContextAware {
     }
 
     /**
-    * 过滤器 the generic API 响应 by the declared 异常.
-    * If Javadoc 评论 found for the declaration than it overrides the 默认 description.
-    *
-    * @param handlerMethod      the 方法 which 能否 have 异常 declarations
-    * @param genericMapResponse the 默认 generic API 响应
-    * @return the 过滤器 和 enriched 响应
-    */
+     * 过滤器 the generic API 响应 by the declared 异常.
+     * If Javadoc 评论 found for the declaration than it overrides the 默认 description.
+     *
+     * @param handlerMethod      the 方法 which 能否 have 异常 declarations
+     * @param genericMapResponse the 默认 generic API 响应
+     * @return the 过滤器 和 enriched 响应
+     */
     private Map<String, ApiResponse> filterAndEnrichGenericMapResponseByDeclarations(HandlerMethod handlerMethod, Map<String, ApiResponse> genericMapResponse) {
         if (operationService.getJavadocProvider() != null) {
             JavadocProvider javadocProvider = operationService.getJavadocProvider();
@@ -287,12 +287,12 @@ public class GenericResponseService implements ApplicationContextAware {
     }
 
     /**
-    * 构建 generic 响应.
-    *
-    * @param components           the 组件
-    * @param findControllerAdvice the 查找 控制器 advice
-    * @param locale               the 区域
-    */
+     * 构建 generic 响应.
+     *
+     * @param components           the 组件
+     * @param findControllerAdvice the 查找 控制器 advice
+     * @param locale               the 区域
+     */
     public void buildGenericResponse(Components components, Map<String, Object> findControllerAdvice, Locale locale) {
  // 控制器advice
         for (Map.Entry<String, Object> entry : findControllerAdvice.entrySet()) {
@@ -342,11 +342,11 @@ public class GenericResponseService implements ApplicationContextAware {
     }
 
     /**
-    * 是否 响应 实体 异常 处理器 方法 布尔值.
-    *
-    * @param m the m
-    * @return the 布尔值
-    */
+     * 是否 响应 实体 异常 处理器 方法 布尔值.
+     *
+     * @param m the m
+     * @return the 布尔值
+     */
     private boolean isResponseEntityExceptionHandlerMethod(Method m) {
         if (AnnotatedElementUtils.hasAnnotation(m.getDeclaringClass(), ControllerAdvice.class)) {
             return responseEntityExceptionHandlerClass != null && (responseEntityExceptionHandlerClass.isAssignableFrom(m.getDeclaringClass()) && ReflectionUtils.findMethod(responseEntityExceptionHandlerClass, m.getName(), m.getParameterTypes()) != null);
@@ -355,15 +355,15 @@ public class GenericResponseService implements ApplicationContextAware {
     }
 
     /**
-    * Compute 响应 从 doc 映射.
-    *
-    * @param components       the 组件
-    * @param methodParameter  the 方法 参数
-    * @param apiResponsesOp   the api 响应 op
-    * @param methodAttributes the 方法 attributes
-    * @param openapi31        the openapi 31
-    * @return the 映射
-    */
+     * Compute 响应 从 doc 映射.
+     *
+     * @param components       the 组件
+     * @param methodParameter  the 方法 参数
+     * @param apiResponsesOp   the api 响应 op
+     * @param methodAttributes the 方法 attributes
+     * @param openapi31        the openapi 31
+     * @return the 映射
+     */
     private Map<String, ApiResponse> computeResponseFromDoc(Components components, MethodParameter methodParameter, ApiResponses apiResponsesOp,
                                                             MethodAttributes methodAttributes, boolean openapi31) {
         // Parsing documentation, if present
@@ -393,13 +393,13 @@ public class GenericResponseService implements ApplicationContextAware {
     }
 
     /**
-    * 构建 generic api 响应.
-    *
-    * @param components       the 组件
-    * @param methodParameter  the 方法 参数
-    * @param apiResponsesOp   the api 响应 op
-    * @param methodAttributes the 方法 attributes
-    */
+     * 构建 generic api 响应.
+     *
+     * @param components       the 组件
+     * @param methodParameter  the 方法 参数
+     * @param apiResponsesOp   the api 响应 op
+     * @param methodAttributes the 方法 attributes
+     */
     private void buildGenericApiResponses(Components components, MethodParameter methodParameter, ApiResponses apiResponsesOp,
                                           MethodAttributes methodAttributes) {
         if (!CollectionUtils.isEmpty(apiResponsesOp)) {
@@ -422,13 +422,13 @@ public class GenericResponseService implements ApplicationContextAware {
     }
 
     /**
-    * 构建 api 响应.
-    *
-    * @param components       the 组件
-    * @param methodParameter  the 方法 参数
-    * @param apiResponsesOp   the api 响应 op
-    * @param methodAttributes the 方法 attributes
-    */
+     * 构建 api 响应.
+     *
+     * @param components       the 组件
+     * @param methodParameter  the 方法 参数
+     * @param apiResponsesOp   the api 响应 op
+     * @param methodAttributes the 方法 attributes
+     */
     private void buildApiResponses(Components components, MethodParameter methodParameter, ApiResponses apiResponsesOp,
                                    MethodAttributes methodAttributes) {
         Map<String, ApiResponse> genericMapResponse = methodAttributes.getGenericMapResponse();
@@ -458,11 +458,11 @@ public class GenericResponseService implements ApplicationContextAware {
     }
 
     /**
-    * 获取 api 响应.
-    *
-    * @param method the 方法
-    * @return the api 响应
-    */
+     * 获取 api 响应.
+     *
+     * @param method the 方法
+     * @return the api 响应
+     */
     public Set<io.swagger.v3.oas.annotations.responses.ApiResponse> getApiResponses(Method method) {
         Class<?> declaringClass = method.getDeclaringClass();
 
@@ -489,29 +489,29 @@ public class GenericResponseService implements ApplicationContextAware {
     }
 
     /**
-    * 构建 内容 内容.
-    *
-    * @param components      the 组件
-    * @param methodParameter the 方法 参数
-    * @param methodProduces  the 方法 produces
-    * @param jsonView        the json view
-    * @return the 内容
-    */
+     * 构建 内容 内容.
+     *
+     * @param components      the 组件
+     * @param methodParameter the 方法 参数
+     * @param methodProduces  the 方法 produces
+     * @param jsonView        the json view
+     * @return the 内容
+     */
     private Content buildContent(Components components, MethodParameter methodParameter, String[] methodProduces, JsonView jsonView) {
         Type returnType = getReturnType(methodParameter);
         return buildContent(components, methodParameter.getParameterAnnotations(), methodProduces, jsonView, returnType);
     }
 
     /**
-    * 构建 内容 内容.
-    *
-    * @param components     the 组件
-    * @param annotations    the 注解
-    * @param methodProduces the 方法 produces
-    * @param jsonView       the json view
-    * @param returnType     the 返回 类型
-    * @return the 内容
-    */
+     * 构建 内容 内容.
+     *
+     * @param components     the 组件
+     * @param annotations    the 注解
+     * @param methodProduces the 方法 produces
+     * @param jsonView       the json view
+     * @param returnType     the 返回 类型
+     * @return the 内容
+     */
     public Content buildContent(Components components, Annotation[] annotations, String[] methodProduces, JsonView jsonView, Type returnType) {
         Content content = new Content();
  // if Void Linux Linux, no 内容
@@ -531,11 +531,11 @@ public class GenericResponseService implements ApplicationContextAware {
     }
 
     /**
-    * 获取 返回 类型.
-    *
-    * @param methodParameter the 方法 参数
-    * @return the 返回 类型
-    */
+     * 获取 返回 类型.
+     *
+     * @param methodParameter the 方法 参数
+     * @return the 返回 类型
+     */
     private Type getReturnType(MethodParameter methodParameter) {
         Type returnType = Object.class;
         for (ReturnTypeParser returnTypeParser : returnTypeParsers) {
@@ -549,14 +549,14 @@ public class GenericResponseService implements ApplicationContextAware {
     }
 
     /**
-    * Calculate 模式 模式.
-    *
-    * @param components  the 组件
-    * @param returnType  the 返回 类型
-    * @param jsonView    the json view
-    * @param annotations the 注解
-    * @return the 模式
-    */
+     * Calculate 模式 模式.
+     *
+     * @param components  the 组件
+     * @param returnType  the 返回 类型
+     * @param jsonView    the json view
+     * @param annotations the 注解
+     * @return the 模式
+     */
     private Schema<?> calculateSchema(Components components, Type returnType, JsonView jsonView, Annotation[] annotations) {
         if (!isVoid(returnType) && !SpringDocAnnotationsUtils.isAnnotationToIgnore(returnType)) {
             return extractSchema(components, returnType, jsonView, annotations, propertyResolverUtils.getSpecVersion());
@@ -565,28 +565,28 @@ public class GenericResponseService implements ApplicationContextAware {
     }
 
     /**
-    * 设置 内容.
-    *
-    * @param methodProduces the 方法 produces
-    * @param content        the 内容
-    * @param mediaType      the media 类型
-    */
+     * 设置 内容.
+     *
+     * @param methodProduces the 方法 produces
+     * @param content        the 内容
+     * @param mediaType      the media 类型
+     */
     private void setContent(String[] methodProduces, Content content,
                             io.swagger.v3.oas.models.media.MediaType mediaType) {
         Arrays.stream(methodProduces).forEach(mediaTypeStr -> content.addMediaType(mediaTypeStr, mediaType));
     }
 
     /**
-    * 构建 api 响应.
-    *
-    * @param components       the 组件
-    * @param methodParameter  the 方法 参数
-    * @param apiResponsesOp   the api 响应 op
-    * @param methodAttributes the 方法 attributes
-    * @param httpCode         the http 编码
-    * @param apiResponse      the api 响应
-    * @param isGeneric        the 是否 generic
-    */
+     * 构建 api 响应.
+     *
+     * @param components       the 组件
+     * @param methodParameter  the 方法 参数
+     * @param apiResponsesOp   the api 响应 op
+     * @param methodAttributes the 方法 attributes
+     * @param httpCode         the http 编码
+     * @param apiResponse      the api 响应
+     * @param isGeneric        the 是否 generic
+     */
     private void buildApiResponses(Components components, MethodParameter methodParameter, ApiResponses apiResponsesOp,
                                    MethodAttributes methodAttributes, String httpCode, ApiResponse apiResponse, boolean isGeneric) {
         // No documentation
@@ -639,13 +639,13 @@ public class GenericResponseService implements ApplicationContextAware {
     }
 
     /**
-    * 评估 响应 状态 字符串.
-    *
-    * @param method    the 方法
-    * @param beanType  the Bean 类型
-    * @param isGeneric the 是否 generic
-    * @return the 字符串
-    */
+     * 评估 响应 状态 字符串.
+     *
+     * @param method    the 方法
+     * @param beanType  the Bean 类型
+     * @param isGeneric the 是否 generic
+     * @return the 字符串
+     */
     public String evaluateResponseStatus(Method method, Class<?> beanType, boolean isGeneric) {
         String responseStatus = null;
         ResponseStatus annotation = AnnotatedElementUtils.findMergedAnnotation(method, ResponseStatus.class);
@@ -662,11 +662,11 @@ public class GenericResponseService implements ApplicationContextAware {
     }
 
     /**
-    * 是否 Void Linux Linux 布尔值.
-    *
-    * @param returnType the 返回 类型
-    * @return the 布尔值
-    */
+     * 是否 Void Linux Linux 布尔值.
+     *
+     * @param returnType the 返回 类型
+     * @return the 布尔值
+     */
     private boolean isVoid(Type returnType) {
         boolean result = false;
         if (Void.TYPE.equals(returnType) || Void.class.equals(returnType)) {
@@ -682,12 +682,12 @@ public class GenericResponseService implements ApplicationContextAware {
     }
 
     /**
-    * 获取 控制器 advice Bean.
-    *
-    * @param controllerAdviceBeans the 控制器 advice Bean
-    * @param controllerAdvice      the 控制器 advice
-    * @return the 控制器 advice Bean
-    */
+     * 获取 控制器 advice Bean.
+     *
+     * @param controllerAdviceBeans the 控制器 advice Bean
+     * @param controllerAdvice      the 控制器 advice
+     * @return the 控制器 advice Bean
+     */
     private ControllerAdviceBean getControllerAdviceBean(List<ControllerAdviceBean> controllerAdviceBeans, Object controllerAdvice) {
         return controllerAdviceBeans.stream()
                 .filter(controllerAdviceBean -> (controllerAdviceBean.getBeanType() != null && controllerAdviceBean.getBeanType().isAssignableFrom(controllerAdvice.getClass())))
@@ -696,11 +696,11 @@ public class GenericResponseService implements ApplicationContextAware {
     }
 
     /**
-    * 获取 generic 映射 响应.
-    *
-    * @param beanType the Bean 类型
-    * @return the generic 映射 响应
-    */
+     * 获取 generic 映射 响应.
+     *
+     * @param beanType the Bean 类型
+     * @return the generic 映射 响应
+     */
     private Map<String, ApiResponse> getGenericMapResponse(Class<?> beanType) {
         reentrantLock.lock();
         try {
@@ -748,12 +748,12 @@ public class GenericResponseService implements ApplicationContextAware {
     }
 
     /**
-    * 是否 valid http 编码 布尔值.
-    *
-    * @param httpCode        the http 编码
-    * @param methodParameter the 方法 参数
-    * @return the 布尔值
-    */
+     * 是否 valid http 编码 布尔值.
+     *
+     * @param httpCode        the http 编码
+     * @param methodParameter the 方法 参数
+     * @return the 布尔值
+     */
     private boolean isValidHttpCode(String httpCode, MethodParameter methodParameter) {
         boolean result = false;
         final Method method = methodParameter.getMethod();
@@ -778,12 +778,12 @@ public class GenericResponseService implements ApplicationContextAware {
     }
 
     /**
-    * 是否 http 编码 present 布尔值.
-    *
-    * @param httpCode    the http 编码
-    * @param responseSet the 响应 设置
-    * @return the 布尔值
-    */
+     * 是否 http 编码 present 布尔值.
+     *
+     * @param httpCode    the http 编码
+     * @param responseSet the 响应 设置
+     * @return the 布尔值
+     */
     private boolean isHttpCodePresent(String httpCode, Set<io.swagger.v3.oas.annotations.responses.ApiResponse> responseSet) {
         return !responseSet.isEmpty() && responseSet.stream().anyMatch(apiResponseAnnotations -> httpCode.equals(apiResponseAnnotations.responseCode()));
     }

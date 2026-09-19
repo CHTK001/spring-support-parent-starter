@@ -5,9 +5,9 @@ import lombok.Getter;
 import java.math.BigDecimal;
 
 /**
-* 支付成功事件
-* @author CH
-* @since 4.0.0
+ * 支付成功事件
+ * @author CH
+ * @since 4.0.0
  */
 @Getter
 public class PaymentSuccessEvent extends PaymentEvent {
@@ -44,12 +44,12 @@ public class PaymentSuccessEvent extends PaymentEvent {
                                Long userId, BigDecimal paidAmount, String thirdPartyOrderNo,
                                String channelType, String channelSubType) {
         /**
-        * 父。
-        * @param source 源
-        * @param "PAYMENT_SUCCESS" "薪酬_成功"
-        * @param tenantId tenantid
-        * @param merchantId merchantid
-        */
+         * 父。
+         * @param source 源
+         * @param "PAYMENT_SUCCESS" "薪酬_成功"
+         * @param tenantId tenantid
+         * @param merchantId merchantid
+         */
         super(source, "PAYMENT_SUCCESS", tenantId, merchantId);
         this.orderId = orderId;
         this.orderNo = orderNo;

@@ -15,10 +15,10 @@ import java.util.List;
 import java.util.Objects;
 
 /**
-* 本地软件源实现 - 根据当前操作系统选择对应的采集器
-*
-* @since 2026/7/25
-* @author CH
+ * 本地软件源实现 - 根据当前操作系统选择对应的采集器
+ *
+ * @since 2026/7/25
+ * @author CH
  */
 @Slf4j
 @Component

@@ -12,11 +12,11 @@ import java.util.Objects;
 import java.util.function.Function;
 
 /**
-* 基于 Calcite 物理化能力的最小路由实现。
-* 当前仓库仍以安全降级为第一原则，缺失完整依赖时自动旁路源库。
-*
-* @since 2026/4/2
-* @author CH
+ * 基于 Calcite 物理化能力的最小路由实现。
+ * 当前仓库仍以安全降级为第一原则，缺失完整依赖时自动旁路源库。
+ *
+ * @since 2026/4/2
+ * @author CH
  */
 public class CalciteMaterializedSqlRouter implements MaterializedSqlDataSourceRouter {
 
@@ -27,11 +27,11 @@ public class CalciteMaterializedSqlRouter implements MaterializedSqlDataSourceRo
     private final Function<String, DataSource> dataSourceResolver; // 数据源解析器
 
     /**
-    * 创建 calcite物化sqlrouter 实例
-    * @param options 期权
-    * @param defaultDataSource 默认数据源
-    * @param dataSourceResolver 数据源解析器
-    */
+     * 创建 calcite物化sqlrouter 实例
+     * @param options 期权
+     * @param defaultDataSource 默认数据源
+     * @param dataSourceResolver 数据源解析器
+     */
     public CalciteMaterializedSqlRouter(MaterializedSqlOptions options,
                                         DataSource defaultDataSource,
                                         Function<String, DataSource> dataSourceResolver) {
@@ -78,12 +78,12 @@ public class CalciteMaterializedSqlRouter implements MaterializedSqlDataSourceRo
     }
 
     /**
-    * 构建缓存数据源名称
-    *
-    * @param definition definition
-    * @param tableName table名称
-    * @return 构建缓存数据源名称的结果
-    */
+     * 构建缓存数据源名称
+     *
+     * @param definition definition
+     * @param tableName table名称
+     * @return 构建缓存数据源名称的结果
+     */
     private String buildCacheDataSourceName(MaterializedRouteDefinition definition, String tableName) {
         String prefix = options == null || options.getCacheDataSourcePrefix() == null
                 ? "materialized#"
@@ -95,11 +95,11 @@ public class CalciteMaterializedSqlRouter implements MaterializedSqlDataSourceRo
     }
 
     /**
-    * 解析by名称
-    *
-    * @param dataSourceName 数据源名称
-    * @return resolveby名称的结果
-    */
+     * 解析by名称
+     *
+     * @param dataSourceName 数据源名称
+     * @return resolveby名称的结果
+     */
     private DataSource resolveByName(String dataSourceName) {
         if (dataSourceName == null || dataSourceResolver == null) {
             return null;

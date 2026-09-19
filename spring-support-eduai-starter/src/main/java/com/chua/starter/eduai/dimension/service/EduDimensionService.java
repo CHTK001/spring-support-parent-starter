@@ -13,19 +13,19 @@ import org.springframework.util.StringUtils;
 import java.util.List;
 
 /**
-* 维度管理服务。
-*
-* <p>统一管理学段 (PRIMARY/JUNIOR/SENIOR/UNIVERSITY)、学科、年级、班级、学生、教师
-* 5 个维度的 CRUD。其中：</p>
-* <ul>
-*   <li>学科 / 班级 / 学生 / 教师 — 本地独立管理（教育域口径不一致）</li>
-*   <li>学生 / 教师 — 通过 {@code studentUserId} / {@code teacherUserId} 关联
-*       {@code spring-support-common-starter} 的用户体系（避免重复存储）</li>
-*   <li>学段 / 年级 — 由内置枚举 + edu_grade 表组合（仅做查询）</li>
-* </ul>
-*
-* @since 4.0.0.42
-* @author CH
+ * 维度管理服务。
+ *
+ * <p>统一管理学段 (PRIMARY/JUNIOR/SENIOR/UNIVERSITY)、学科、年级、班级、学生、教师
+ * 5 个维度的 CRUD。其中：</p>
+ * <ul>
+ *   <li>学科 / 班级 / 学生 / 教师 — 本地独立管理（教育域口径不一致）</li>
+ *   <li>学生 / 教师 — 通过 {@code studentUserId} / {@code teacherUserId} 关联
+ *       {@code spring-support-common-starter} 的用户体系（避免重复存储）</li>
+ *   <li>学段 / 年级 — 由内置枚举 + edu_grade 表组合（仅做查询）</li>
+ * </ul>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @Service
@@ -46,11 +46,11 @@ public class EduDimensionService {
     // ==================== 学科 ====================
 
     /**
-    * 列表主题
-    *
-    * @param gradeLevel grade级别
-    * @return 列表主题的结果
-    */
+     * 列表主题
+     *
+     * @param gradeLevel grade级别
+     * @return 列表主题的结果
+     */
     public List<EduSubject> listSubjects(String gradeLevel) {
         LambdaQueryWrapper<EduSubject> wrapper = new LambdaQueryWrapper<>();
         if (StringUtils.hasText(gradeLevel)) {
@@ -63,11 +63,11 @@ public class EduDimensionService {
 
     @Transactional(rollbackFor = Exception.class)
     /**
-    * 保存主题
-    *
-    * @param entity 实体
-    * @return 保存主题的结果
-    */
+     * 保存主题
+     *
+     * @param entity 实体
+     * @return 保存主题的结果
+     */
     public Long saveSubject(EduSubject entity) {
         if (!StringUtils.hasText(entity.getSubjectCode()) || !StringUtils.hasText(entity.getSubjectName())) {
             throw new BusinessException("学科编码与名称必填");
@@ -89,11 +89,11 @@ public class EduDimensionService {
 
     @Transactional(rollbackFor = Exception.class)
     /**
-    * 删除主题
-    *
-    * @param id 标识
-    * @return 删除主题的结果
-    */
+     * 删除主题
+     *
+     * @param id 标识
+     * @return 删除主题的结果
+     */
     public boolean deleteSubject(Long id) {
         if (id == null) {
             return false;
@@ -106,11 +106,11 @@ public class EduDimensionService {
     // ==================== 年级 ====================
 
     /**
-    * 列表grades
-    *
-    * @param gradeLevel grade级别
-    * @return 列表grades的结果
-    */
+     * 列表grades
+     *
+     * @param gradeLevel grade级别
+     * @return 列表grades的结果
+     */
     public List<EduGrade> listGrades(String gradeLevel) {
         LambdaQueryWrapper<EduGrade> wrapper = new LambdaQueryWrapper<>();
         if (StringUtils.hasText(gradeLevel)) {
@@ -123,12 +123,12 @@ public class EduDimensionService {
     // ==================== 班级 ====================
 
     /**
-    * 列表类
-    *
-    * @param gradeLevel grade级别
-    * @param teacherId teacherid
-    * @return 列表类的结果
-    */
+     * 列表类
+     *
+     * @param gradeLevel grade级别
+     * @param teacherId teacherid
+     * @return 列表类的结果
+     */
     public List<EduClass> listClasses(String gradeLevel, Long teacherId) {
         LambdaQueryWrapper<EduClass> wrapper = new LambdaQueryWrapper<>();
         if (StringUtils.hasText(gradeLevel)) {
@@ -144,11 +144,11 @@ public class EduDimensionService {
 
     @Transactional(rollbackFor = Exception.class)
     /**
-    * 保存类
-    *
-    * @param entity 实体
-    * @return 保存类的结果
-    */
+     * 保存类
+     *
+     * @param entity 实体
+     * @return 保存类的结果
+     */
     public Long saveClass(EduClass entity) {
         if (!StringUtils.hasText(entity.getClassCode()) || !StringUtils.hasText(entity.getClassName())) {
             throw new BusinessException("班级编码与名称必填");
@@ -167,11 +167,11 @@ public class EduDimensionService {
 
     @Transactional(rollbackFor = Exception.class)
     /**
-    * 删除类
-    *
-    * @param id 标识
-    * @return 删除类的结果
-    */
+     * 删除类
+     *
+     * @param id 标识
+     * @return 删除类的结果
+     */
     public boolean deleteClass(Long id) {
         if (id == null) {
             return false;
@@ -184,13 +184,13 @@ public class EduDimensionService {
     // ==================== 学生 ====================
 
     /**
-    * 列表students
-    *
-    * @param classId 类标识
-    * @param gradeLevel grade级别
-    * @param grade grade
-    * @return 列表students的结果
-    */
+     * 列表students
+     *
+     * @param classId 类标识
+     * @param gradeLevel grade级别
+     * @param grade grade
+     * @return 列表students的结果
+     */
     public List<EduStudent> listStudents(Long classId, String gradeLevel, String grade) {
         LambdaQueryWrapper<EduStudent> wrapper = new LambdaQueryWrapper<>();
         if (classId != null) {
@@ -209,11 +209,11 @@ public class EduDimensionService {
 
     @Transactional(rollbackFor = Exception.class)
     /**
-    * 保存Student
-    *
-    * @param entity 实体
-    * @return 保存student的结果
-    */
+     * 保存Student
+     *
+     * @param entity 实体
+     * @return 保存student的结果
+     */
     public Long saveStudent(EduStudent entity) {
         if (!StringUtils.hasText(entity.getStudentNo())) {
             throw new BusinessException("学号必填");
@@ -232,11 +232,11 @@ public class EduDimensionService {
 
     @Transactional(rollbackFor = Exception.class)
     /**
-    * 删除Student
-    *
-    * @param id 标识
-    * @return 删除student的结果
-    */
+     * 删除Student
+     *
+     * @param id 标识
+     * @return 删除student的结果
+     */
     public boolean deleteStudent(Long id) {
         if (id == null) {
             return false;
@@ -247,11 +247,11 @@ public class EduDimensionService {
     // ==================== 教师 ====================
 
     /**
-    * 列表teachers
-    *
-    * @param subjectCode 主题编码
-    * @return 列表teachers的结果
-    */
+     * 列表teachers
+     *
+     * @param subjectCode 主题编码
+     * @return 列表teachers的结果
+     */
     public List<EduTeacher> listTeachers(String subjectCode) {
         LambdaQueryWrapper<EduTeacher> wrapper = new LambdaQueryWrapper<>();
         if (StringUtils.hasText(subjectCode)) {
@@ -264,11 +264,11 @@ public class EduDimensionService {
 
     @Transactional(rollbackFor = Exception.class)
     /**
-    * 保存Teacher
-    *
-    * @param entity 实体
-    * @return 保存teacher的结果
-    */
+     * 保存Teacher
+     *
+     * @param entity 实体
+     * @return 保存teacher的结果
+     */
     public Long saveTeacher(EduTeacher entity) {
         if (!StringUtils.hasText(entity.getTeacherNo())) {
             throw new BusinessException("工号必填");
@@ -287,11 +287,11 @@ public class EduDimensionService {
 
     @Transactional(rollbackFor = Exception.class)
     /**
-    * 删除Teacher
-    *
-    * @param id 标识
-    * @return 删除teacher的结果
-    */
+     * 删除Teacher
+     *
+     * @param id 标识
+     * @return 删除teacher的结果
+     */
     public boolean deleteTeacher(Long id) {
         if (id == null) {
             return false;
@@ -300,12 +300,12 @@ public class EduDimensionService {
     }
 
     /**
-    * 全量字典下拉：返回前端需要的 (学段枚举, 学科, 年级) 三元组。
-    * 用于考试/试卷表单的级联下拉。
-    * @author CH
-    * @since 4.0.0
-    * @return 获取dropdown的结果
-    */
+     * 全量字典下拉：返回前端需要的 (学段枚举, 学科, 年级) 三元组。
+     * 用于考试/试卷表单的级联下拉。
+     * @author CH
+     * @since 4.0.0
+     * @return 获取dropdown的结果
+     */
     public DimensionDropdown getDropdown() {
         DimensionDropdown dropdown = new DimensionDropdown();
         dropdown.setGradeLevels(List.of(
@@ -333,36 +333,36 @@ public class EduDimensionService {
         */
         public List<EnumOption> getGradeLevels() { return gradeLevels; }
         /**
-        * 设置grade级别
-        *
-        * @param gradeLevels grade级别
-        */
+         * 设置grade级别
+         *
+         * @param gradeLevels grade级别
+         */
         public void setGradeLevels(List<EnumOption> gradeLevels) { this.gradeLevels = gradeLevels; }
         /**
-        * 获取主题
-        *
-        * @return 获取主题的结果
-        */
+         * 获取主题
+         *
+         * @return 获取主题的结果
+         */
         public List<EduSubject> getSubjects() { return subjects; }
         /**
-        * 设置主题
-        *
-        * @param subjects 主题
-        */
+         * 设置主题
+         *
+         * @param subjects 主题
+         */
         public void setSubjects(List<EduSubject> subjects) { this.subjects = subjects; }
         /**
-        * 获取Grades
-        *
-        * @return 获取grades的结果
-        */
+         * 获取Grades
+         *
+         * @return 获取grades的结果
+         */
         public List<EduGrade> getGrades() { return grades; }
         /**
-        * 设置Grades
-        *
-        * @param grades grades
-        * @author CH
-        * @since 4.0.0
-        */
+         * 设置Grades
+         *
+         * @param grades grades
+         * @author CH
+         * @since 4.0.0
+         */
         public void setGrades(List<EduGrade> grades) { this.grades = grades; }
     }
 
@@ -384,28 +384,28 @@ public class EduDimensionService {
             this.label = label;
         }
         /**
-        * 获取值
-        *
-        * @return 获取值的结果
-        */
+         * 获取值
+         *
+         * @return 获取值的结果
+         */
         public String getValue() { return value; }
         /**
-        * 设置值
-        *
-        * @param value 值
-        */
+         * 设置值
+         *
+         * @param value 值
+         */
         public void setValue(String value) { this.value = value; }
         /**
-        * 获取标签
-        *
-        * @return 获取标签的结果
-        */
+         * 获取标签
+         *
+         * @return 获取标签的结果
+         */
         public String getLabel() { return label; }
         /**
-        * 设置标签
-        *
-        * @param label 标签
-        */
+         * 设置标签
+         *
+         * @param label 标签
+         */
         public void setLabel(String label) { this.label = label; }
     }
 }

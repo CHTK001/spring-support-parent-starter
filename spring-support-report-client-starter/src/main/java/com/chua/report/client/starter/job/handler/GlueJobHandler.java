@@ -5,23 +5,23 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 /**
-* Groovy脚本方式的作业处理程序
-* <p>
-* 通过Groovy动态编译执行脚本代码，支持在线编辑和热更新。
-* 每次代码更新会生成新的版本号，确保执行的是最新代码。
-* </p>
-*
-* @版本 1.0.0
-* @since 2024/03/11
-* @author CH
+ * Groovy脚本方式的作业处理程序
+ * <p>
+ * 通过Groovy动态编译执行脚本代码，支持在线编辑和热更新。
+ * 每次代码更新会生成新的版本号，确保执行的是最新代码。
+ * </p>
+ *
+ * @版本 1.0.0
+ * @since 2024/03/11
+ * @author CH
  */
 @Slf4j
 public class GlueJobHandler implements JobHandler {
 
 
     /**
-    * 胶水代码更新时间戳
-    */
+     * 胶水代码更新时间戳
+     */
     @Getter
     /** Glueupdatetime */
     private final long glueUpdatetime;
@@ -32,11 +32,11 @@ public class GlueJobHandler implements JobHandler {
     private final JobHandler jobHandler;
 
     /**
-    * 构造函数
-    *
-    * @param jobHandler     实际执行的作业处理器实例
-    * @param glueUpdatetime 胶水代码更新时间戳
-    */
+     * 构造函数
+     *
+     * @param jobHandler     实际执行的作业处理器实例
+     * @param glueUpdatetime 胶水代码更新时间戳
+     */
     public GlueJobHandler(JobHandler jobHandler, long glueUpdatetime) {
         this.jobHandler = jobHandler;
         this.glueUpdatetime = glueUpdatetime;

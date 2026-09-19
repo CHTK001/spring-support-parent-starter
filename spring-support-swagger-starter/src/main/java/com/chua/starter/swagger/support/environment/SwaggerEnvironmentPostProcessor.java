@@ -15,25 +15,25 @@ import java.util.List;
 import java.util.Properties;
 
 /**
-* Swagger环境后处理器
-* 用于配置刀4j和springdoc的相关属性
-*
-* @author CH
-* @since 4.0.0
+ * Swagger环境后处理器
+ * 用于配置刀4j和springdoc的相关属性
+ *
+ * @author CH
+ * @since 4.0.0
  */
 public class SwaggerEnvironmentPostProcessor implements EnvironmentPostProcessor {
     
     /**
-    * 属性源名称
-    */
+     * 属性源名称
+     */
     private static final String PROPERTY_SOURCE_NAME = "knife4j-extension";
 
     /**
-    * 后处理环境
-    *
-    * @param environment 可配置环境
-    * @param application Spring应用
-    */
+     * 后处理环境
+     *
+     * @param environment 可配置环境
+     * @param application Spring应用
+     */
     @Override
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
         Properties properties = new Properties();
@@ -73,12 +73,12 @@ public class SwaggerEnvironmentPostProcessor implements EnvironmentPostProcessor
     }
 
     /**
-    * 连接字符串数组
-    *
-    * @param array 字符串数组
-    * @param delimiter 分隔符
-    * @return 连接后的字符串
-    */
+     * 连接字符串数组
+     *
+     * @param array 字符串数组
+     * @param delimiter 分隔符
+     * @return 连接后的字符串
+     */
     private String joinArray(String[] array, String delimiter) {
         if (ArrayUtils.isEmpty(array)) {
             return "";

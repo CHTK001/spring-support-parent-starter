@@ -8,21 +8,21 @@ import java.util.Arrays;
 import java.util.stream.Collectors;
 
 /**
-* 刀4j枚举模型属性插件
-* 用于自定义枚举类型的属性显示
-*
-* @since 2025/9/30 13:38
-* @author CH
+ * 刀4j枚举模型属性插件
+ * 用于自定义枚举类型的属性显示
+ *
+ * @since 2025/9/30 13:38
+ * @author CH
  */
 public class Knife4jEnumModelPropertyPlugin implements PropertyCustomizer {
 
     /**
-    * 定制属性
-    *
-    * @param property 属性模式
-    * @param type 注解类型
-    * @return 定制后的属性Schema
-    */
+     * 定制属性
+     *
+     * @param property 属性模式
+     * @param type 注解类型
+     * @return 定制后的属性Schema
+     */
     @Override
     public Schema customize(Schema property, AnnotatedType type) {
         if (type.getType() instanceof Class clazz && clazz.isEnum() && SwaggerEnum.class.isAssignableFrom(clazz)) {
@@ -37,11 +37,11 @@ public class Knife4jEnumModelPropertyPlugin implements PropertyCustomizer {
     }
 
     /**
-    * 获取枚举的描述
-    *
-    * @param e 枚举对象
-    * @return 枚举的描述
-    */
+     * 获取枚举的描述
+     *
+     * @param e 枚举对象
+     * @return 枚举的描述
+     */
     private String getEnumDescription(SwaggerEnum e) {
         return e.getCode() +":" + e.getName();
     }

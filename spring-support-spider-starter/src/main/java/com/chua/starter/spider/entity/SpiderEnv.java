@@ -11,13 +11,13 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
-* 环境变量实体。
-*
-* <p>对应 {@code spider_env} 表，供爬虫在运行期通过 {@code {{env.KEY}}}
-* 语法在 URL / 请求体 / 提取表达式等位置插值使用。</p>
-*
-* @since 4.0.0.42
-* @author CH
+ * 环境变量实体。
+ *
+ * <p>对应 {@code spider_env} 表，供爬虫在运行期通过 {@code {{env.KEY}}}
+ * 语法在 URL / 请求体 / 提取表达式等位置插值使用。</p>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -26,8 +26,8 @@ import lombok.EqualsAndHashCode;
 public class SpiderEnv extends SysBase {
 
     /**
-    * 主键 标识（自增）
-    */
+     * 主键 标识（自增）
+     */
     @TableId(type = IdType.AUTO)
     @Schema(description = "主键 ID")
     /** 标识 */

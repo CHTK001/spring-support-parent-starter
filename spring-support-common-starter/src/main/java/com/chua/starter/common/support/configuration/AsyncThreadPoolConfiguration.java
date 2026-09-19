@@ -18,20 +18,20 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadPoolExecutor;
 
 /**
-* 异步任务
-*
-* @author CH
-* @since 4.0.0
+ * 异步任务
+ *
+ * @author CH
+ * @since 4.0.0
  */
 @EnableAsync
 @EnableConfigurationProperties(AsyncThreadPoolProperties.class)
 @ConditionalOnProperty(prefix = "plugin.async", name = "enable", havingValue = "true", matchIfMissing = true)
 public class AsyncThreadPoolConfiguration implements AsyncConfigurer {
     /**
-    * 构造函数
-    *
-    * @param asyncProperties Asyncthread游泳池属性
-    */
+     * 构造函数
+     *
+     * @param asyncProperties Asyncthread游泳池属性
+     */
     public AsyncThreadPoolConfiguration(AsyncThreadPoolProperties asyncProperties) {
         this.asyncProperties = asyncProperties;
     }
@@ -40,17 +40,17 @@ public class AsyncThreadPoolConfiguration implements AsyncConfigurer {
     final AsyncThreadPoolProperties asyncProperties; // 异步属性
 
     /**
-    * 注册异步线程池配置到全局环境
-    */
+     * 注册异步线程池配置到全局环境
+     */
     @PostConstruct
     public void registerEnvironment() {
         new ModuleEnvironmentRegistration(AsyncThreadPoolProperties.PRE, asyncProperties, asyncProperties.isEnable());
     }
 
     /**
-    * 创建共享线程池（默认_执行器2 和 默认_任务_执行器 均指向同一实例，保持向后兼容）
-    * @return 共享thread游泳池任务执行器的结果
-    */
+     * 创建共享线程池（默认_执行器2 和 默认_任务_执行器 均指向同一实例，保持向后兼容）
+     * @return 共享thread游泳池任务执行器的结果
+     */
     @Bean({Constant.DEFAULT_EXECUTOR2, Constant.DEFAULT_TASK_EXECUTOR})
     public ThreadPoolTaskExecutor sharedThreadPoolTaskExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
@@ -69,10 +69,10 @@ public class AsyncThreadPoolConfiguration implements AsyncConfigurer {
 
     @Bean(Constant.DEFAULT_EXECUTOR)
     /**
-    * 异步执行器
-    *
-    * @return Async执行器的结果
-    */
+     * 异步执行器
+     *
+     * @return Async执行器的结果
+     */
     public ThreadPoolTaskExecutor asyncExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         // 核心线程数：线程池创建的时候初始化的线程数
@@ -96,15 +96,15 @@ public class AsyncThreadPoolConfiguration implements AsyncConfigurer {
     }
     @Bean
     /**
-    * 任务decorator
-    *
-    * @return 任务decorator的结果
-    */
+     * 任务decorator
+     *
+     * @return 任务decorator的结果
+     */
     public TaskDecorator taskDecorator() {
        /**
-       * mdc任务decorator。
-       * @return mdc任务decorator的结果
-       */
+        * mdc任务decorator。
+        * @return mdc任务decorator的结果
+        */
        return new MdcTaskDecorator();
     }
 

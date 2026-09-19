@@ -9,9 +9,9 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 /**
-* 回调异常记录
-* @author CH
-* @since 4.0.0
+ * 回调异常记录
+ * @author CH
+ * @since 4.0.0
  */
 @Data
 @TableName("pay_notify_error")

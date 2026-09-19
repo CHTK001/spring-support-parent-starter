@@ -6,10 +6,10 @@ import lombok.Data;
 import java.util.Map;
 
 /**
-* 服务管理 —— 服务器节点视图（实体 + 运行时状态）。
-*
-* @author CH
-* @since 4.0.0.42
+ * 服务管理 —— 服务器节点视图（实体 + 运行时状态）。
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 @Data
 @Schema(description = "服务管理-服务器节点视图")
@@ -24,8 +24,8 @@ public class ServerNodeView {
     private String name; // 名称
 
     /**
-    * 协议编码: HTTP / HTTP_代理 / TCP_代理 / SIP
-    */
+     * 协议编码: HTTP / HTTP_代理 / TCP_代理 / SIP
+     */
     @Schema(description = "协议编码: HTTP / HTTP_PROXY / TCP_PROXY / SIP")
     private String protocol; // 协议
 

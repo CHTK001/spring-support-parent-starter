@@ -15,12 +15,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
-* AI 输入优化控制器。
-*
-* <p>提供输入优化对外接口，优化模型与提示词读取自 {@code input} 分组全局设置，配置变更实时生效。</p>
-*
-* @since 4.0.0.42
-* @author CH
+ * AI 输入优化控制器。
+ *
+ * <p>提供输入优化对外接口，优化模型与提示词读取自 {@code input} 分组全局设置，配置变更实时生效。</p>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @RestController
@@ -30,19 +30,19 @@ import org.springframework.web.bind.annotation.RestController;
 public class InputOptimizeController {
 
     /**
-    * 输入优化服务
-    */
+     * 输入优化服务
+     */
     private final AiInputOptimizeService inputOptimizeService;
 
     /**
-    * 输入优化接口。
-    *
-    * <p>调用前需通过 AppKey/Bearer Token 鉴权。请求体 {@code input} 为待优化原始输入，
-    * {@code model}/{@code systemPrompt} 可选覆盖全局配置。</p>
-    *
-    * @param request 优化请求
-    * @return 优化结果
-    */
+     * 输入优化接口。
+     *
+     * <p>调用前需通过 AppKey/Bearer Token 鉴权。请求体 {@code input} 为待优化原始输入，
+     * {@code model}/{@code systemPrompt} 可选覆盖全局配置。</p>
+     *
+     * @param request 优化请求
+     * @return 优化结果
+     */
     @Permission("admin")
     @Operation(summary = "输入优化", description = "使用配置的优化模型改写输入文本，返回优化后内容与使用模型")
     @PostMapping("/optimize")

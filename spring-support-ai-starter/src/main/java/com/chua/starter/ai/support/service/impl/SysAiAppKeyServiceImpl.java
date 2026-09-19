@@ -22,10 +22,10 @@ import static com.chua.starter.common.support.constant.CacheConstant.REDIS_CACHE
 import static com.chua.starter.common.support.constant.CacheConstant.REDIS_CACHE_MIN;
 
 /**
-* AI 应用密钥服务实现。
-*
-* @author CH
-* @since 4.0.0
+ * AI 应用密钥服务实现。
+ *
+ * @author CH
+ * @since 4.0.0
  */
 @Slf4j
 @Service
@@ -51,11 +51,11 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
             unless = "#result == null"
     )
     /**
-    * 获取byappKey
-    *
-    * @param appKey appKey
-    * @return 获取byappKey的结果
-    */
+     * 获取byappKey
+     *
+     * @param appKey appKey
+     * @return 获取byappKey的结果
+     */
     public SysAiAppKey getByAppKey(String appKey) {
         if (StringUtils.isBlank(appKey)) {
             return null;
@@ -99,11 +99,11 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
     @Override
     @CacheEvict(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS, allEntries = true)
     /**
-    * 更新
-    *
-    * @param entity 实体
-    * @return 更新的结果
-    */
+     * 更新
+     *
+     * @param entity 实体
+     * @return 更新的结果
+     */
     public boolean update(SysAiAppKey entity) {
         return sysAiAppKeyMapper.updateById(entity) > 0;
     }
@@ -111,11 +111,11 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
     @Override
     @CacheEvict(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS, allEntries = true)
     /**
-    * 删除byid
-    *
-    * @param id 标识
-    * @return 删除byid的结果
-    */
+     * 删除byid
+     *
+     * @param id 标识
+     * @return 删除byid的结果
+     */
     public boolean deleteById(Integer id) {
         if (id == null) {
             return false;
@@ -141,11 +141,11 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
     }
 
     /**
-    * 绕过缓存实时查询 appKey（限流/配额检查需要最新 DB 值）。
-    *
-    * @param appKey appKey
-    * @return AppKey 记录；不存在返回 空
-    */
+     * 绕过缓存实时查询 appKey（限流/配额检查需要最新 DB 值）。
+     *
+     * @param appKey appKey
+     * @return AppKey 记录；不存在返回 空
+     */
     private SysAiAppKey queryAppKeyUncached(String appKey) {
         if (StringUtils.isBlank(appKey)) {
             return null;
@@ -154,12 +154,12 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
     }
 
     /**
-    * 校验 appKey 记录自身有效性（存在、启用、未过期、次数上限、令牌 配额、IP 白名单）。
-    *
-    * @param dbAppKey appKey 记录
-    * @param ip       客户端 IP
-    * @return 是否有效
-    */
+     * 校验 appKey 记录自身有效性（存在、启用、未过期、次数上限、令牌 配额、IP 白名单）。
+     *
+     * @param dbAppKey appKey 记录
+     * @param ip       客户端 IP
+     * @return 是否有效
+     */
     private boolean isValidAppKey(SysAiAppKey dbAppKey, String ip) {
         if (dbAppKey == null) {
             return false;
@@ -205,10 +205,10 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
     @Override
     @Async("taskExecutor")
     /**
-    * 更新use信息byappKey
-    *
-    * @param appKey appKey
-    */
+     * 更新use信息byappKey
+     *
+     * @param appKey appKey
+     */
     public void updateUseInfoByAppKey(String appKey) {
         if (StringUtils.isBlank(appKey)) {
             return;
@@ -233,11 +233,11 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
     @Override
     @Async("taskExecutor")
     /**
-    * 更新令牌配额byappKey
-    *
-    * @param appKey appKey
-    * @param tokens 令牌
-    */
+     * 更新令牌配额byappKey
+     *
+     * @param appKey appKey
+     * @param tokens 令牌
+     */
     public void updateTokenQuotaByAppKey(String appKey, long tokens) {
         if (StringUtils.isBlank(appKey) || tokens <= 0) {
             return;
@@ -259,11 +259,11 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
             unless = "#result == null"
     )
     /**
-    * 获取分组idbyappKey
-    *
-    * @param appKey appKey
-    * @return 获取群体idbyappKey的结果
-    */
+     * 获取分组idbyappKey
+     *
+     * @param appKey appKey
+     * @return 获取群体idbyappKey的结果
+     */
     public Integer getGroupIdByAppKey(String appKey) {
         if (StringUtils.isBlank(appKey)) {
             return null;
@@ -280,11 +280,11 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
     
 
     /**
-    * 是否Expired
-    *
-    * @param appKey appKey
-    * @return 是否expired的结果
-    */
+     * 是否Expired
+     *
+     * @param appKey appKey
+     * @return 是否expired的结果
+     */
     private boolean isExpired(SysAiAppKey appKey) {
         Long expireTime = resolveExpireTime(appKey);
         if (expireTime == null) {
@@ -294,11 +294,11 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
     }
 
     /**
-    * 解析expire时间
-    *
-    * @param appKey appKey
-    * @return resolveexpire时间的结果
-    */
+     * 解析expire时间
+     *
+     * @param appKey appKey
+     * @return resolveexpire时间的结果
+     */
     private Long resolveExpireTime(SysAiAppKey appKey) {
         if (appKey == null) {
             return null;

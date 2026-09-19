@@ -47,8 +47,8 @@ import static com.chua.starter.oauth.client.support.contants.AuthConstant.CAPTCH
 import static com.chua.starter.common.support.utils.RequestUtils.getIpAddress;
 
 /**
-* @author CH
-* @since 4.0.0
+ * @author CH
+ * @since 4.0.0
  */
 @RestController
 @RequestMapping("/v1/users")
@@ -119,18 +119,18 @@ public class UserStatisticProvider {
     }
 
     /**
-    * 获取用户登录信息
-    *
-    * @param token 代币
-    * @return {@link 用户信息vo}
-    */
+     * 获取用户登录信息
+     *
+     * @param token 代币
+     * @return {@link 用户信息vo}
+     */
     public UserInfoVO getUserLoginInfo(String token) {
         RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
         if (requestAttributes == null || StringUtils.isBlank(token)) {
             /**
-            * 用户信息vo。
-            * @return 用户信息vo的结果
-            */
+             * 用户信息vo。
+             * @return 用户信息vo的结果
+             */
             return new UserInfoVO();
         }
 
@@ -140,10 +140,10 @@ public class UserStatisticProvider {
     }
 
     /**
-    * 获取用户登录信息
-    *
-    * @return {@link 用户信息vo}
-    */
+     * 获取用户登录信息
+     *
+     * @return {@link 用户信息vo}
+     */
     public UserInfoVO getUserLoginInfo() {
         UserResult userLoginInfo = AuthClientExecute.getInstance().getUserResult();
         UserInfoVO userInfoVO = new UserInfoVO();
@@ -164,16 +164,16 @@ public class UserStatisticProvider {
     }
 
     /**
-    * 注销
-    *
-    * @param uid      uid
-    * @param request  要求
-    * @param response 回答
-    * @return {@link 结果}
-    * @param @UserValue("token" @用户值("令牌"
-    * @param @UserValue("token" @用户值("令牌"
-    * @param @UserValue("token" @UserValue("token"
-    */
+     * 注销
+     *
+     * @param uid      uid
+     * @param request  要求
+     * @param response 回答
+     * @return {@link 结果}
+     * @param @UserValue("token" @用户值("令牌"
+     * @param @UserValue("token" @用户值("令牌"
+     * @param @UserValue("token" @UserValue("token"
+     */
     @DeleteMapping("/logout")
     public ReturnResult logout(@UserValue("token") String uid, HttpServletRequest request, HttpServletResponse response) {
         if (StringUtils.isEmpty(uid)) {
@@ -193,11 +193,11 @@ public class UserStatisticProvider {
         return ReturnResult.ok("注销成功");
     }
     /**
-    * 保存用户首页布局
-    *
-    * @param sysUserSetting 保存用户首页布局
-    * @return 保存用户首页布局
-    */
+     * 保存用户首页布局
+     *
+     * @param sysUserSetting 保存用户首页布局
+     * @return 保存用户首页布局
+     */
     @PostMapping("/grid")
     public ReturnResult<Boolean> grid(@RequestBody JsonObject sysUserSetting,
                                       @UserValue("userDashboardGrid") String userDashboardGrid,
@@ -209,16 +209,16 @@ public class UserStatisticProvider {
         return ReturnResult.ok(true);
     }
     /**
-    * 我菜单
-    *
-    * @param userId        用户标识
-    * @param userGrid      用户网格
-    * @param userDashboard 用户面板
-    * @param username      用户名
-    * @param roles         角色
-    * @return {@link 结果}< 0 >
-    * @param @UserValue("userId" @用户值("用户标识"
-    */
+     * 我菜单
+     *
+     * @param userId        用户标识
+     * @param userGrid      用户网格
+     * @param userDashboard 用户面板
+     * @param username      用户名
+     * @param roles         角色
+     * @return {@link 结果}< 0 >
+     * @param @UserValue("userId" @用户值("用户标识"
+     */
     @GetMapping("/menus/my/**")
     public ReturnResult<UserMenuResult> myMenu(@UserValue("userId") String userId,
                                          @UserValue("userDashboardGrid") String userGrid,
@@ -232,9 +232,9 @@ public class UserStatisticProvider {
         userMenuResult.setPermissions(AuthClientExecute.getInstance().getUserResult().getPermission());
         Environment environment = OauthClientRuntimeContext.getEnvironment();
         /**
-        * 尝试。
-        * @param UserStatisticProvider.class.getResourceAsStream(StringUtils.defaultString(authProperties.getTemp( 用户statisticprovider.类.getresourceasstream(stringutils.defaultstring(authproperties.gettemp(
-        */
+         * 尝试。
+         * @param UserStatisticProvider.class.getResourceAsStream(StringUtils.defaultString(authProperties.getTemp( 用户statisticprovider.类.getresourceasstream(stringutils.defaultstring(authproperties.gettemp(
+         */
         try (InputStream resourceAsStream = UserStatisticProvider.class.getResourceAsStream(StringUtils.defaultString(authProperties.getTemp().getMenuPath(), "/menu.json5"));){
             List<RouteVO> routeVOS =
                     Json5.fromJsonList(IoUtils.asString(resourceAsStream, StandardCharsets.UTF_8), RouteVO.class);

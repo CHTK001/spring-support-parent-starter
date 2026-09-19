@@ -18,14 +18,14 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.Map;
 
 /**
-* 文本转语音（TTS）控制器，替代 nomicore 的 {@code /api/tts} 契约。
-*
-* <p>正常情况下该端点应返回二进制音频流（{@code audio/*}）。本内存后端未接入任何 TTS 引擎，
-* 故仅返回 JSON 错误信封（{@code NO_COMPLETER}，HTTP 409）以符合契约形状，避免返回非 JSON
-* 响应被前端判为契约违规。</p>
-*
-* @since 4.0.0.42
-* @author CH
+ * 文本转语音（TTS）控制器，替代 nomicore 的 {@code /api/tts} 契约。
+ *
+ * <p>正常情况下该端点应返回二进制音频流（{@code audio/*}）。本内存后端未接入任何 TTS 引擎，
+ * 故仅返回 JSON 错误信封（{@code NO_COMPLETER}，HTTP 409）以符合契约形状，避免返回非 JSON
+ * 响应被前端判为契约违规。</p>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @ApiReturnFormatIgnore
 @RestController
@@ -35,15 +35,15 @@ import java.util.Map;
 public class ApiTtsController {
 
     /**
-    * 生成语音（占位实现）。
-    *
-    * <p>未接入 TTS 引擎，返回 {@code NO_COMPLETER} 错误信封，HTTP 状态 409。</p>
-    *
-    * @param body    请求体（含 文本 / voice 等字段，本实现忽略）
-    * @param voice   可选音色参数
-    * @return JSON 错误信封
-    * @param false false
-    */
+     * 生成语音（占位实现）。
+     *
+     * <p>未接入 TTS 引擎，返回 {@code NO_COMPLETER} 错误信封，HTTP 状态 409。</p>
+     *
+     * @param body    请求体（含 文本 / voice 等字段，本实现忽略）
+     * @param voice   可选音色参数
+     * @return JSON 错误信封
+     * @param false false
+     */
     @PostMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResult<Void>> tts(@RequestBody(required = false) Map<String, Object> body,
                                                @RequestParam(required = false) String voice) {

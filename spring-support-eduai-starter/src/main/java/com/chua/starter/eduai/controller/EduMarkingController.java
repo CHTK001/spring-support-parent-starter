@@ -18,10 +18,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
-* 阅卷管理控制器
-*
-* @since 4.0.0.42
-* @author CH
+ * 阅卷管理控制器
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @RestController
@@ -46,11 +46,11 @@ public class EduMarkingController {
     }
 
     /**
-    * 轮询阅卷结果
-    *
-    * @param taskId 任务标识
-    * @return 阅卷结果
-    */
+     * 轮询阅卷结果
+     *
+     * @param taskId 任务标识
+     * @return 阅卷结果
+     */
     @Operation(summary = "轮询阅卷结果")
     @GetMapping("/result/{taskId}")
     public ReturnResult<MarkingResultVO> result(@PathVariable String taskId) {
@@ -58,11 +58,11 @@ public class EduMarkingController {
     }
 
     /**
-    * 教师确认评分
-    *
-    * @param dto 确认数据
-    * @return 是否成功
-    */
+     * 教师确认评分
+     *
+     * @param dto 确认数据
+     * @return 是否成功
+     */
     @Operation(summary = "教师确认评分")
     @PutMapping("/confirm")
     public ReturnResult<Boolean> confirm(@RequestBody MarkingConfirmDTO dto) {

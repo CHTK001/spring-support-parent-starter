@@ -7,12 +7,12 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 /**
-* 异步日志写入器，包装多个 {@link JobLogSink}。
-*
-* <p>使用后台线程异步消费队列，避免阻塞 Netty 事件循环。</p>
-*
-* @since 4.0.0.42
-* @author CH
+ * 异步日志写入器，包装多个 {@link JobLogSink}。
+ *
+ * <p>使用后台线程异步消费队列，避免阻塞 Netty 事件循环。</p>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 public class AsyncLogWriter implements JobLogSink {
@@ -66,8 +66,8 @@ public class AsyncLogWriter implements JobLogSink {
         }
         // 消费剩余
         /**
-        * drain。
-        */
+         * drain。
+         */
         drain();
     }
 
@@ -83,8 +83,8 @@ public class AsyncLogWriter implements JobLogSink {
     */
                     writeToSinks(event);
                     /**
-                    * drain。
-                    */
+                     * drain。
+                     */
                     drain();
                 }
             } catch (InterruptedException e) {
@@ -93,8 +93,8 @@ public class AsyncLogWriter implements JobLogSink {
             }
         }
         /**
-        * drain。
-        */
+         * drain。
+         */
         drain();
     }
 
@@ -111,10 +111,10 @@ public class AsyncLogWriter implements JobLogSink {
     }
 
     /**
-    * 写入转为sinks
-    *
-    * @param event 事件
-    */
+     * 写入转为sinks
+     *
+     * @param event 事件
+     */
     private void writeToSinks(JobLogEvent event) {
         for (JobLogSink sink : sinks) {
             try {

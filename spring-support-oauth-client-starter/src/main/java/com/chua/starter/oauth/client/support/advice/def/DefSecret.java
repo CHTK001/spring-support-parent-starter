@@ -1,10 +1,10 @@
 package com.chua.starter.oauth.client.support.advice.def;
 
 /**
-* 默认
-*
-* @author CH
-* @since 4.0.0
+ * 默认
+ *
+ * @author CH
+ * @since 4.0.0
  */
 public class DefSecret {
 

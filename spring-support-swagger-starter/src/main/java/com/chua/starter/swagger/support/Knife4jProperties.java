@@ -8,12 +8,12 @@ import java.util.List;
 import java.util.Map;
 
 /**
-* Swagger 刀4j 配置
-*
-* <p>用于统一管理 Swagger / Knife4j 的基础配置和分组信息。</p>
-*
-* @author CH
-* @since 4.0.0
+ * Swagger 刀4j 配置
+ *
+ * <p>用于统一管理 Swagger / Knife4j 的基础配置和分组信息。</p>
+ *
+ * @author CH
+ * @since 4.0.0
  */
 @Data
 @ConfigurationProperties(prefix = "plugin.swagger")
@@ -21,45 +21,45 @@ public class Knife4jProperties {
 
 
     /**
-    * 是否开启
-    */
+     * 是否开启
+     */
     private boolean enable = false;
 
     /**
-    * 刀4j
-    */
+     * 刀4j
+     */
     private List<Knife4j> knife4j;
 
     /**
-    * 默认请求头
-    */
+     * 默认请求头
+     */
     private Map<String, String> defaultHeader;
 
     /**
-    * 账号
-    */
+     * 账号
+     */
     private String username = "";
     /**
-    * 密码
-    */
+     * 密码
+     */
     private String password = "";
     /**
-    * 是否开启Swagger注解记录用户操作日志
-    */
+     * 是否开启Swagger注解记录用户操作日志
+     */
     private boolean log;
 
     /**
-    * 描述
-    */
+     * 描述
+     */
     private String description = "无";
     /**
-    * 版本
-    */
+     * 版本
+     */
     private String version = "1.0";
 
     /**
-    * 条款初始化服务
-    */
+     * 条款初始化服务
+     */
     private String termsOfService = "1.服务提供方：本条款中的“服务提供方”指指定的公司或组织，提供API服务。<br>\n" +
             "  2.用户：本条款中的“用户”指使用服务提供方提供的API服务的个人、公司或组织。<br>\n" +
             "  3.授权：用户在遵守本条款的前提下，服务提供方授予用户使用其API服务的权利。<br>\n" +
@@ -79,46 +79,46 @@ public class Knife4jProperties {
             "  ⚠\uFE0F用户一旦使用API服务，即视为用户已接受本条款的全部内容。";
 
     /**
-    * 获取 刀4j 分组配置
-    *
-    * @return Knife4j 分组配置列表
-    */
+     * 获取 刀4j 分组配置
+     *
+     * @return Knife4j 分组配置列表
+     */
     public List<Knife4j> getKnife4j() {
         return knife4j;
     }
 
     /**
-    * 获取默认请求头
-    *
-    * @return 默认请求头配置
-    */
+     * 获取默认请求头
+     *
+     * @return 默认请求头配置
+     */
     public Map<String, String> getDefaultHeader() {
         return defaultHeader;
     }
 
     /**
-    * 获取描述信息
-    *
-    * @return 描述信息
-    */
+     * 获取描述信息
+     *
+     * @return 描述信息
+     */
     public String getDescription() {
         return description;
     }
 
     /**
-    * 获取版本号
-    *
-    * @return 版本号
-    */
+     * 获取版本号
+     *
+     * @return 版本号
+     */
     public String getVersion() {
         return version;
     }
 
     /**
-    * 获取服务条款
-    *
-    * @return 服务条款内容
-    */
+     * 获取服务条款
+     *
+     * @return 服务条款内容
+     */
     public String getTermsOfService() {
         return termsOfService;
     }
@@ -126,103 +126,103 @@ public class Knife4jProperties {
     @Data
     @Accessors(chain = true)
     /**
-    * 刀4j类。
-    *
-    * @author CH
-    * @since 4.0.0
-    */
+     * 刀4j类。
+     *
+     * @author CH
+     * @since 4.0.0
+     */
     public static class Knife4j {
 
         /**
-        * 分组
-        */
+         * 分组
+         */
         private String group;
         /**
-        * 分组名
-        */
+         * 分组名
+         */
         private String groupName;
 
         /**
-        * 路径 openapi
-        */
+         * 路径 openapi
+         */
         private String[] pathsToMatch;
         /**
-        * 基础包
-        */
+         * 基础包
+         */
         private String[] basePackage;
         /**
-        * 标题
-        */
+         * 标题
+         */
         private String title = "";
 
         /**
-        * 描述
-        */
+         * 描述
+         */
         private String description = "";
         /**
-        * 版本
-        */
+         * 版本
+         */
         private String version = "v1.0.0";
 
         /**
-        * 获取分组编码
-        *
-        * @return 分组编码
-        */
+         * 获取分组编码
+         *
+         * @return 分组编码
+         */
         public String getGroup() {
             return group;
         }
 
         /**
-        * 获取分组名称
-        *
-        * @return 分组名称
-        */
+         * 获取分组名称
+         *
+         * @return 分组名称
+         */
         public String getGroupName() {
             return groupName;
         }
 
         /**
-        * 获取路径匹配配置
-        *
-        * @return 路径匹配数组
-        */
+         * 获取路径匹配配置
+         *
+         * @return 路径匹配数组
+         */
         public String[] getPathsToMatch() {
             return pathsToMatch;
         }
 
         /**
-        * 获取基础包配置
-        *
-        * @return 基础包数组
-        */
+         * 获取基础包配置
+         *
+         * @return 基础包数组
+         */
         public String[] getBasePackage() {
             return basePackage;
         }
 
         /**
-        * 获取标题
-        *
-        * @return 标题
-        */
+         * 获取标题
+         *
+         * @return 标题
+         */
         public String getTitle() {
             return title;
         }
 
         /**
-        * 获取描述
-        *
-        * @return 描述
-        */
+         * 获取描述
+         *
+         * @return 描述
+         */
         public String getDescription() {
             return description;
         }
 
         /**
-        * 获取版本
-        *
-        * @return 版本号
-        */
+         * 获取版本
+         *
+         * @return 版本号
+         */
         public String getVersion() {
             return version;
         }

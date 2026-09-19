@@ -3,10 +3,10 @@ package com.chua.common.support.data.materialized;
 import lombok.Data;
 
 /**
-* 物理化 SQL 选项。
-*
-* @since 2026/4/2
-* @author CH
+ * 物理化 SQL 选项。
+ *
+ * @since 2026/4/2
+ * @author CH
  */
 @Data
 public class MaterializedSqlOptions {

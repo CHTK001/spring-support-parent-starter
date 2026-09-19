@@ -84,8 +84,8 @@ public class SipServiceManager {
     }
 
     /**
-    * 停止中继服务：关闭控制端口并清空 Provider / 隧道状态
-    */
+     * 停止中继服务：关闭控制端口并清空 Provider / 隧道状态
+     */
     public synchronized void stop() {
         running.set(false);
         try {
@@ -99,20 +99,20 @@ public class SipServiceManager {
     }
 
     /**
-    * 中继服务是否运行中
-    *
-    * @return true 表示已启动
-    */
+     * 中继服务是否运行中
+     *
+     * @return true 表示已启动
+     */
     public boolean isRunning() {
         return running.get();
     }
 
     /**
-    * 处理单条控制连接：循环读取并解析 REGISTER / CONNECT / DATA 指令
-    *
-    * @param socket 控制连接（方法结束自动关闭）
-    * @param secret 鉴权密钥，与指令中携带的密钥比对
-    */
+     * 处理单条控制连接：循环读取并解析 REGISTER / CONNECT / DATA 指令
+     *
+     * @param socket 控制连接（方法结束自动关闭）
+     * @param secret 鉴权密钥，与指令中携带的密钥比对
+     */
     private void handleControl(Socket socket, String secret) {
         try (socket) {
             var in = new java.io.BufferedReader(new java.io.InputStreamReader(socket.getInputStream()));
@@ -190,11 +190,11 @@ public class SipServiceManager {
     }
 
     /**
-    * 双向桥接两个 Socket 的数据流（各提交一个拷贝任务）
-    *
-    * @param a 一侧连接
-    * @param b 另一侧连接
-    */
+     * 双向桥接两个 Socket 的数据流（各提交一个拷贝任务）
+     *
+     * @param a 一侧连接
+     * @param b 另一侧连接
+     */
     private void bridgeStreams(java.net.Socket a, java.net.Socket b) {
         try {
             java.io.InputStream aIn = a.getInputStream();
@@ -221,12 +221,12 @@ public class SipServiceManager {
     }
 
     /**
-    * 字节流拷贝，直至输入流结束
-    *
-    * @param in  输入流
-    * @param out 输出流
-    * @throws IOException 读写异常
-    */
+     * 字节流拷贝，直至输入流结束
+     *
+     * @param in  输入流
+     * @param out 输出流
+     * @throws IOException 读写异常
+     */
     private void copy(java.io.InputStream in, java.io.OutputStream out) throws IOException {
         byte[] buf = new byte[8192];
         int n;
@@ -237,8 +237,8 @@ public class SipServiceManager {
     }
 
     /**
-    * Provider 注册信息：控制连接、控制输出流、可访问服务列表（service:port 逗号分隔）
-    */
+     * Provider 注册信息：控制连接、控制输出流、可访问服务列表（service:port 逗号分隔）
+     */
     private static class ProviderInfo {
         /** 控制连接 */
         Socket socket;
@@ -262,8 +262,8 @@ public class SipServiceManager {
     }
 
     /**
-    * 待桥接隧道：visit 与 provider 两端数据连接就绪后开始双向转发
-    */
+     * 待桥接隧道：visit 与 provider 两端数据连接就绪后开始双向转发
+     */
     private class PendingTunnel {
         /** 通道号 */
         int channelId;
@@ -275,19 +275,19 @@ public class SipServiceManager {
         java.net.Socket providerSocket;
 
         /**
-        * 构造隧道上下文
-        *
-        * @param id 通道号
-        * @param ds 数据端口监听
-        */
+         * 构造隧道上下文
+         *
+         * @param id 通道号
+         * @param ds 数据端口监听
+         */
         PendingTunnel(int id, ServerSocket ds) {
             channelId = id;
             dataSocket = ds;
         }
 
         /**
-        * 两端数据连接均就绪时启动桥接（线程安全）
-        */
+         * 两端数据连接均就绪时启动桥接（线程安全）
+         */
         synchronized void tryBridge() {
             if (visitSocket != null && providerSocket != null) {
                 bridgeStreams(visitSocket, providerSocket);
