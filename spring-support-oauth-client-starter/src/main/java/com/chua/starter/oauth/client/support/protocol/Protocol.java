@@ -16,439 +16,439 @@ import lombok.NoArgsConstructor;
 import java.util.Map;
 
 /**
-* 认证协议接口
-* <p>定义了与 OAuth 认证相关的核心操作，包括：</p>
-* <ul>
-*     <li>令牌验证与刷新</li>
-*     <li>用户登录与登出</li>
-*     <li>临时令牌管理</li>
-*     <li>在线状态查询</li>
-* </ul>
-*
-* @since 2024/12/11
-* @版本 4.0.0.34
-* @author CH
+ * 认证协议接口
+ * <p>定义了与 OAuth 认证相关的核心操作，包括：</p>
+ * <ul>
+ *     <li>令牌验证与刷新</li>
+ *     <li>用户登录与登出</li>
+ *     <li>临时令牌管理</li>
+ *     <li>在线状态查询</li>
+ * </ul>
+ *
+ * @since 2024/12/11
+ * @版本 4.0.0.34
+ * @author CH
  */
 public interface Protocol {
 
     /**
-    * 验证认证信息
-    * <p>根据 Cookie 或 Token 验证用户身份</p>
-    *
-    * @param cookie      请求中的 Cookie 数组
-    * @param token       认证令牌
-    * @param subProtocol 子协议名称
-    * @return 认证信息对象
-    */
+     * 验证认证信息
+     * <p>根据 Cookie 或 Token 验证用户身份</p>
+     *
+     * @param cookie      请求中的 Cookie 数组
+     * @param token       认证令牌
+     * @param subProtocol 子协议名称
+     * @return 认证信息对象
+     */
     AuthenticationInformation approve(Cookie[] cookie, String token, String subProtocol);
 
     /**
-    * 应用密钥认证
-    * <p>根据 AppKey 和 AppSecret 进行应用级别的身份验证</p>
-    *
-    * @param appKeySecret 应用密钥对
-    * @return 认证信息对象
-    */
+     * 应用密钥认证
+     * <p>根据 AppKey 和 AppSecret 进行应用级别的身份验证</p>
+     *
+     * @param appKeySecret 应用密钥对
+     * @return 认证信息对象
+     */
     AuthenticationInformation authentication(AppKeySecret appKeySecret);
 
     /**
-    * 升级/刷新令牌
-    * <p>使用刷新令牌获取新的访问令牌</p>
-    *
-    * @param cookie       请求中的 Cookie 数组
-    * @param token        当前访问令牌
-    * @param upgradeType  升级类型
-    * @param refreshToken 刷新令牌
-    * @return 登录结果
-    */
+     * 升级/刷新令牌
+     * <p>使用刷新令牌获取新的访问令牌</p>
+     *
+     * @param cookie       请求中的 Cookie 数组
+     * @param token        当前访问令牌
+     * @param upgradeType  升级类型
+     * @param refreshToken 刷新令牌
+     * @return 登录结果
+     */
     LoginResult upgrade(Cookie[] cookie, String token, UpgradeType upgradeType, String refreshToken);
 
     /**
-    * 获取访问令牌
-    * <p>根据用户凭据进行登录认证，获取访问令牌</p>
-    *
-    * @param username 用户名
-    * @param password 密码
-    * @param authType 认证类型
-    * @param ext      扩展参数
-    * @return 登录认证结果
-    */
+     * 获取访问令牌
+     * <p>根据用户凭据进行登录认证，获取访问令牌</p>
+     *
+     * @param username 用户名
+     * @param password 密码
+     * @param authType 认证类型
+     * @param ext      扩展参数
+     * @return 登录认证结果
+     */
     LoginAuthResult getAccessToken(String username, String password, AuthType authType, Map<String, Object> ext);
 
     /**
-    * 用户登出
-    * <p>终止用户会话，清除认证信息</p>
-    *
-    * @param uid        用户唯一标识
-    * @param logoutType 登出类型
-    * @param userResult 用户信息
-    * @return 登出处理结果
-    */
+     * 用户登出
+     * <p>终止用户会话，清除认证信息</p>
+     *
+     * @param uid        用户唯一标识
+     * @param logoutType 登出类型
+     * @param userResult 用户信息
+     * @return 登出处理结果
+     */
     LoginAuthResult logout(String uid, LogoutType logoutType, UserResult userResult);
 
     /**
-    * 创建临时令牌
-    * <p>基于源令牌创建一个短期有效的临时令牌，适用于临时授权场景</p>
-    *
-    * @param sourceToken 源令牌
-    * @param ext         扩展参数（如 expire时间、allowedurls 等）
-    * @return 临时令牌结果
-    */
+     * 创建临时令牌
+     * <p>基于源令牌创建一个短期有效的临时令牌，适用于临时授权场景</p>
+     *
+     * @param sourceToken 源令牌
+     * @param ext         扩展参数（如 expire时间、allowedurls 等）
+     * @return 临时令牌结果
+     */
     default LoginAuthResult createTemporaryToken(String sourceToken, Map<String, Object> ext) {
         /**
-        * login认证结果。
-        * @param 501 501
-        * @param "当前协议不支持临时令牌功能" "当前协议不支持临时令牌功能"
-        * @return login认证结果的结果
-        */
+         * login认证结果。
+         * @param 501 501
+         * @param "当前协议不支持临时令牌功能" "当前协议不支持临时令牌功能"
+         * @return login认证结果的结果
+         */
         return new LoginAuthResult(501, "当前协议不支持临时令牌功能");
     }
 
     /**
-    * 查询用户在线状态
-    * <p>获取指定用户的在线状态信息，用于单点登录或多端控制</p>
-    *
-    * @param uid 用户唯一标识
-    * @return 在线状态信息
-    */
+     * 查询用户在线状态
+     * <p>获取指定用户的在线状态信息，用于单点登录或多端控制</p>
+     *
+     * @param uid 用户唯一标识
+     * @return 在线状态信息
+     */
     default OnlineStatus getOnlineStatus(String uid) {
         return OnlineStatus.defaultStatus();
     }
 
     /**
-    * 获取在线用户列表
-    * <p>获取所有在线用户信息，支持分页和筛选</p>
-    *
-    * @param query 查询参数
-    * @return 在线用户列表结果
-    */
+     * 获取在线用户列表
+     * <p>获取所有在线用户信息，支持分页和筛选</p>
+     *
+     * @param query 查询参数
+     * @return 在线用户列表结果
+     */
     default OnlineUserResult getOnlineUsers(OnlineUserQuery query) {
         return OnlineUserResult.empty();
     }
 
     /**
-    * 验证浏览器指纹
-    * <p>向服务器验证当前请求的浏览器指纹是否与登录时一致</p>
-    *
-    * @param token       当前访问令牌
-    * @param fingerprint 当前请求的浏览器指纹
-    * @return 验证结果
-    */
+     * 验证浏览器指纹
+     * <p>向服务器验证当前请求的浏览器指纹是否与登录时一致</p>
+     *
+     * @param token       当前访问令牌
+     * @param fingerprint 当前请求的浏览器指纹
+     * @return 验证结果
+     */
     default FingerprintVerifyResult verifyFingerprint(String token, String fingerprint) {
         return FingerprintVerifyResult.notSupported();
     }
 
     /**
-    * 根据指纹反查用户信息
-    * <p>用于安全审计：通过浏览器指纹查询对应用户身份</p>
-    *
-    * @param fingerprint 浏览器指纹
-    * @return 用户信息 映射（含 用户标识、用户名、ip 等），不存在返回 空
-    */
+     * 根据指纹反查用户信息
+     * <p>用于安全审计：通过浏览器指纹查询对应用户身份</p>
+     *
+     * @param fingerprint 浏览器指纹
+     * @return 用户信息 映射（含 用户标识、用户名、ip 等），不存在返回 空
+     */
     default Map<String, Object> getFingerprintUser(String fingerprint) {
         return null;
     }
 
     /**
-    * 根据 IP 反查登录用户列表
-    * <p>用于安全审计：查询指定 IP 地址上登录过的所有用户</p>
-    *
-    * @param ip 客户端 IP 地址
-    * @return 用户信息列表，不存在返回空列表
-    */
+     * 根据 IP 反查登录用户列表
+     * <p>用于安全审计：查询指定 IP 地址上登录过的所有用户</p>
+     *
+     * @param ip 客户端 IP 地址
+     * @return 用户信息列表，不存在返回空列表
+     */
     default java.util.List<Map<String, Object>> getFingerprintUsersByIp(String ip) {
         return java.util.Collections.emptyList();
     }
 
     /**
-    * 指纹验证结果
-    * @author CH
-    * @since 4.0.0
-    */
+     * 指纹验证结果
+     * @author CH
+     * @since 4.0.0
+     */
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
     class FingerprintVerifyResult {
         /**
-        * 是否验证通过
-        */
+         * 是否验证通过
+         */
         private boolean valid;
         /**
-        * 错误码
-        */
+         * 错误码
+         */
         private int code;
         /**
-        * 错误消息
-        */
+         * 错误消息
+         */
         private String message;
         /**
-        * 登录时的指纹（用于客户端缓存）
-        */
+         * 登录时的指纹（用于客户端缓存）
+         */
         private String storedFingerprint;
 
         /**
-        * 验证通过
-        * @param storedFingerprint 存储fingerprint
-        * @return 成功的结果
-        */
+         * 验证通过
+         * @param storedFingerprint 存储fingerprint
+         * @return 成功的结果
+         */
         public static FingerprintVerifyResult success(String storedFingerprint) {
             /**
-            * fingerprint验证结果。
-            * @param true true
-            * @param 200 200
-            * @param "OK" "OK"
-            * @param storedFingerprint 存储fingerprint
-            */
+             * fingerprint验证结果。
+             * @param true true
+             * @param 200 200
+             * @param "OK" "OK"
+             * @param storedFingerprint 存储fingerprint
+             */
             return new FingerprintVerifyResult(true, 200, "OK", storedFingerprint);
         }
 
         /**
-        * 指纹不匹配
-        * @return mismatch的结果
-        */
+         * 指纹不匹配
+         * @return mismatch的结果
+         */
         public static FingerprintVerifyResult mismatch() {
             /**
-            * fingerprint验证结果。
-            * @param false false
-            * @param 40301 40301
-            * @param "浏览器指纹不匹配，请重新登录" "浏览器指纹不匹配，请重新登录"
-            * @param null 空
-            */
+             * fingerprint验证结果。
+             * @param false false
+             * @param 40301 40301
+             * @param "浏览器指纹不匹配，请重新登录" "浏览器指纹不匹配，请重新登录"
+             * @param null 空
+             */
             return new FingerprintVerifyResult(false, 40301, "浏览器指纹不匹配，请重新登录", null);
         }
 
         /**
-        * 缺少指纹
-        * @return missing的结果
-        */
+         * 缺少指纹
+         * @return missing的结果
+         */
         public static FingerprintVerifyResult missing() {
             /**
-            * fingerprint验证结果。
-            * @param false false
-            * @param 40302 40302
-            * @param "缺少浏览器指纹" "缺少浏览器指纹"
-            * @param null 空
-            */
+             * fingerprint验证结果。
+             * @param false false
+             * @param 40302 40302
+             * @param "缺少浏览器指纹" "缺少浏览器指纹"
+             * @param null 空
+             */
             return new FingerprintVerifyResult(false, 40302, "缺少浏览器指纹", null);
         }
 
         /**
-        * 不支持指纹验证
-        * @return not支持的结果
-        */
+         * 不支持指纹验证
+         * @return not支持的结果
+         */
         public static FingerprintVerifyResult notSupported() {
             /**
-            * fingerprint验证结果。
-            * @param false false
-            * @param 501 501
-            * @param "当前协议不支持指纹验证" "当前协议不支持指纹验证"
-            * @param null 空
-            */
+             * fingerprint验证结果。
+             * @param false false
+             * @param 501 501
+             * @param "当前协议不支持指纹验证" "当前协议不支持指纹验证"
+             * @param null 空
+             */
             return new FingerprintVerifyResult(false, 501, "当前协议不支持指纹验证", null);
         }
 
         /**
-        * 服务器错误
-        * @param message 消息
-        * @return 服务端错误的结果
-        */
+         * 服务器错误
+         * @param message 消息
+         * @return 服务端错误的结果
+         */
         public static FingerprintVerifyResult serverError(String message) {
             /**
-            * fingerprint验证结果。
-            * @param false false
-            * @param 500 500
-            * @param message 消息
-            * @param null 空
-            */
+             * fingerprint验证结果。
+             * @param false false
+             * @param 500 500
+             * @param message 消息
+             * @param null 空
+             */
             return new FingerprintVerifyResult(false, 500, message, null);
         }
     }
 
     /**
-    * 在线用户查询参数
-    * @author CH
-    * @since 4.0.0
-    */
+     * 在线用户查询参数
+     * @author CH
+     * @since 4.0.0
+     */
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
     class OnlineUserQuery {
         /**
-        * 用户名（模糊匹配）
-        */
+         * 用户名（模糊匹配）
+         */
         private String username;
         /**
-        * IP地址（模糊匹配）
-        */
+         * IP地址（模糊匹配）
+         */
         private String ip;
         /**
-        * 页码（从1开始）
-        */
+         * 页码（从1开始）
+         */
         private int page = 1;
         /**
-        * 每页大小
-        */
+         * 每页大小
+         */
         private int size = 20;
     }
 
     /**
-    * 在线用户列表返回结果
-    * @author CH
-    * @since 4.0.0
-    */
+     * 在线用户列表返回结果
+     * @author CH
+     * @since 4.0.0
+     */
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
     class OnlineUserResult {
         /**
-        * 在线用户列表
-        */
+         * 在线用户列表
+         */
         private java.util.List<OnlineUserInfo> users;
         /**
-        * 总数量
-        */
+         * 总数量
+         */
         private int total;
         /**
-        * 当前页码
-        */
+         * 当前页码
+         */
         private int page;
         /**
-        * 每页大小
-        */
+         * 每页大小
+         */
         private int size;
 
         /**
-        * 空。
-        * @return 空的结果
-        */
+         * 空。
+         * @return 空的结果
+         */
         public static OnlineUserResult empty() {
             /**
-            * online用户结果。
-            * @param java.util.Collections.emptyList( Java.util.集合.空列表(
-            */
+             * online用户结果。
+             * @param java.util.Collections.emptyList( Java.util.集合.空列表(
+             */
             return new OnlineUserResult(java.util.Collections.emptyList(), 0, 1, 20);
         }
     }
 
     /**
-    * 在线用户信息
-    * @author CH
-    * @since 4.0.0
-    */
+     * 在线用户信息
+     * @author CH
+     * @since 4.0.0
+     */
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
     class OnlineUserInfo {
         /**
-        * 用户标识
-        */
+         * 用户标识
+         */
         private String userId;
         /**
-        * 用户名
-        */
+         * 用户名
+         */
         private String username;
         /**
-        * 昵称
-        */
+         * 昵称
+         */
         private String nickname;
         /**
-        * 登录IP
-        */
+         * 登录IP
+         */
         private String loginIp;
         /**
-        * 登录地址
-        */
+         * 登录地址
+         */
         private String loginAddress;
         /**
-        * 浏览器
-        */
+         * 浏览器
+         */
         private String browser;
         /**
-        * 操作系统
-        */
+         * 操作系统
+         */
         private String os;
         /**
-        * 登录时间（时间戳）
-        */
+         * 登录时间（时间戳）
+         */
         private Long loginTime;
         /**
-        * 最后访问时间（时间戳）
-        */
+         * 最后访问时间（时间戳）
+         */
         private Long lastAccessTime;
         /**
-        * 令牌
-        */
+         * 令牌
+         */
         private String token;
         /**
-        * 登录类型
-        */
+         * 登录类型
+         */
         private String loginType;
     }
 
     /**
-    * 用户在线状态信息
-    * <p>包含当前在线数、最大允许在线数、在线模式等信息</p>
-    *
-    * @since 2024/12/11
-    * @author CH
-    */
+     * 用户在线状态信息
+     * <p>包含当前在线数、最大允许在线数、在线模式等信息</p>
+     *
+     * @since 2024/12/11
+     * @author CH
+     */
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
     class OnlineStatus {
 
         /**
-        * 不限制在线数量的标识值
-        */
+         * 不限制在线数量的标识值
+         */
         private static final int UNLIMITED = -1;
 
         /**
-        * 当前在线数量
-        */
+         * 当前在线数量
+         */
         private int onlineCount = 0;
 
         /**
-        * 最大允许在线数量
-        * <p>-1 表示不限制</p>
-        */
+         * 最大允许在线数量
+         * <p>-1 表示不限制</p>
+         */
         private int maxOnlineCount = UNLIMITED;
 
         /**
-        * 在线模式
-        * <ul>
-        *     <li>SINGLE - 单点登录，同时只允许一个终端</li>
-        *     <li>MULTIPLE - 多端登录，不限制终端数量</li>
-        *     <li>LIMIT - 限制模式，最多允许指定数量的终端</li>
-        * </ul>
-        */
+         * 在线模式
+         * <ul>
+         *     <li>SINGLE - 单点登录，同时只允许一个终端</li>
+         *     <li>MULTIPLE - 多端登录，不限制终端数量</li>
+         *     <li>LIMIT - 限制模式，最多允许指定数量的终端</li>
+         * </ul>
+         */
         private String onlineMode = "MULTIPLE";
 
         /**
-        * 创建默认状态
-        *
-        * @return 默认在线状态
-        */
+         * 创建默认状态
+         *
+         * @return 默认在线状态
+         */
         public static OnlineStatus defaultStatus() {
             /**
-            * online状态。
-            */
+             * online状态。
+             */
             return new OnlineStatus();
         }
 
         /**
-        * 判断是否已达到在线上限
-        *
-        * @return true-已达上限，false-未达上限
-        */
+         * 判断是否已达到在线上限
+         *
+         * @return true-已达上限，false-未达上限
+         */
         public boolean isReachedLimit() {
             return maxOnlineCount > 0 && onlineCount >= maxOnlineCount;
         }
 
         /**
-        * 获取剩余可登录数量
-        *
-        * @return 剩余可登录数量，-1 表示不限制
-        */
+         * 获取剩余可登录数量
+         *
+         * @return 剩余可登录数量，-1 表示不限制
+         */
         public int getRemainingSlots() {
             if (maxOnlineCount == UNLIMITED) {
                 return UNLIMITED;
@@ -457,28 +457,28 @@ public interface Protocol {
         }
 
         /**
-        * 判断是否为单点登录模式
-        *
-        * @return true-单点登录模式
-        */
+         * 判断是否为单点登录模式
+         *
+         * @return true-单点登录模式
+         */
         public boolean isSingleMode() {
             return "SINGLE".equalsIgnoreCase(onlineMode);
         }
 
         /**
-        * 判断是否为多端登录模式
-        *
-        * @return true-多端登录模式
-        */
+         * 判断是否为多端登录模式
+         *
+         * @return true-多端登录模式
+         */
         public boolean isMultipleMode() {
             return "MULTIPLE".equalsIgnoreCase(onlineMode);
         }
 
         /**
-        * 判断是否为限制模式
-        *
-        * @return true-限制模式
-        */
+         * 判断是否为限制模式
+         *
+         * @return true-限制模式
+         */
         public boolean isLimitMode() {
             return "LIMIT".equalsIgnoreCase(onlineMode);
         }

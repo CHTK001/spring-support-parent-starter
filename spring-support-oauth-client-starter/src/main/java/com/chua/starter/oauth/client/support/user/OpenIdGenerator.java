@@ -254,8 +254,8 @@ public final class OpenIdGenerator {
         public static final String SYSTEM = "system";
 
         /**
-        * Platform。
-        */
+         * Platform。
+         */
         private Platform() {
         }
     }

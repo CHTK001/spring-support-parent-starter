@@ -15,10 +15,10 @@ public class FlowAggregateDTO {
     private String flowGraphJson;
 
     /**
-    * 获取流
-    *
-    * @return 获取流的结果
-    */
+     * 获取流
+     *
+     * @return 获取流的结果
+     */
     public SpiderFlowVO getFlow() { return flow; }
     /**
      * 设置流

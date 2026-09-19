@@ -173,10 +173,10 @@ public class OAuthPrincipal implements Principal {
     }
 
     /**
-    * 获取用户标识
-    * 
-    * @return 用户ID
-    */
+     * 获取用户标识
+     * 
+     * @return 用户ID
+     */
     public String getUserId() {
         String userId = userResume != null ? userResume.getUserId() : null;
         log.debug("[Principal获取]获取用户ID: {}", userId);

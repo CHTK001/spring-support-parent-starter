@@ -25,22 +25,22 @@ public class DevicePreset {
     private String devicePresetId;
 
     /**
-    * 所属设备 标识
-    */
+     * 所属设备 标识
+     */
     @TableField("device_preset_device_id")
     /** devicepresetdeviceid */
     private String devicePresetDeviceId;
 
     /**
-    * 预置位编号
-    */
+     * 预置位编号
+     */
     @TableField("device_preset_no")
     /** devicepresetno */
     private Integer devicePresetNo;
 
     /**
-    * 预置位名称
-    */
+     * 预置位名称
+     */
     @TableField("device_preset_name")
     /** Devicepreset名称 */
     private String devicePresetName;

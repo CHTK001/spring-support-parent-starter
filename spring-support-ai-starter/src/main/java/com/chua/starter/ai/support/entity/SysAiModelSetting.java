@@ -27,8 +27,8 @@ public class SysAiModelSetting {
     private Integer id;
 
     /**
-    * 所属模块 标识
-    */
+     * 所属模块 标识
+     */
     @TableField("module_id")
     private Integer moduleId; // moduleid
 
@@ -76,8 +76,8 @@ public class SysAiModelSetting {
     private LocalDateTime createTime;
 
     /**
-    * 更新时间
-    */
+     * 更新时间
+     */
     @TableField("update_time")
     /** 更新时间 */
     private LocalDateTime updateTime;

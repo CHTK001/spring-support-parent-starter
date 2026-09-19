@@ -106,11 +106,11 @@ public class InMemorySyncClient implements SyncClient {
     }
 
     /**
-    * 读取已发送的消息。
-    *
-    * @param topic 主题
-    * @return 消息列表
-    */
+     * 读取已发送的消息。
+     *
+     * @param topic 主题
+     * @return 消息列表
+     */
     public java.util.List<Object> getSent(String topic) {
         return sent.getOrDefault(topic, java.util.List.of());
     }

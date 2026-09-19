@@ -23,15 +23,15 @@ public class TemplatePreviewResponse {
     private String content;
 
     /**
-    * 模板中未被填充的占位符列表
-    */
+     * 模板中未被填充的占位符列表
+     */
     @Schema(description = "模板中未被填充的占位符列表")
     /** Unresolved参数 */
     private java.util.List<String> unresolvedParams;
 
     /**
-    * 模板内容是否完整（所有占位符均被填充）
-    */
+     * 模板内容是否完整（所有占位符均被填充）
+     */
     @Schema(description = "模板内容是否完整（所有占位符均被填充）")
     /** 完成 */
     private boolean complete;

@@ -36,80 +36,80 @@ public class SpiderDataRecord extends SysBase {
     private Long id;
 
     /**
-    * 执行号（追踪标识）
-    */
+     * 执行号（追踪标识）
+     */
     @TableField("execution_no")
     @Schema(description = "执行号")
     /** 执行no */
     private String executionNo;
 
     /**
-    * 爬虫编码
-    */
+     * 爬虫编码
+     */
     @TableField("definition_code")
     @Schema(description = "爬虫编码")
     /** Definition代码 */
     private String definitionCode;
 
     /**
-    * 标题
-    */
+     * 标题
+     */
     @TableField("title")
     @Schema(description = "标题")
     /** 标题 */
     private String title;
 
     /**
-    * 内容
-    */
+     * 内容
+     */
     @TableField("content")
     @Schema(description = "内容")
     /** 内容 */
     private String content;
 
     /**
-    * 来源 URL
-    */
+     * 来源 URL
+     */
     @TableField("source_url")
     @Schema(description = "来源 URL")
     /** 来源URL */
     private String sourceUrl;
 
     /**
-    * 原始采集数据（JSON）
-    */
+     * 原始采集数据（JSON）
+     */
     @TableField("raw_data")
     @Schema(description = "原始采集数据")
     /** RAW数据 */
     private String rawData;
 
     /**
-    * 状态（成功/失败）
-    */
+     * 状态（成功/失败）
+     */
     @TableField("status")
     @Schema(description = "状态")
     /** 状态 */
     private String status;
 
     /**
-    * 失败信息
-    */
+     * 失败信息
+     */
     @TableField("error_message")
     @Schema(description = "失败信息")
     /** 错误消息 */
     private String errorMessage;
 
     /**
-    * 记录时间（写库时间）
-    */
+     * 记录时间（写库时间）
+     */
     @TableField("record_time")
     @Schema(description = "记录时间")
     /** Record时间 */
     private LocalDateTime recordTime;
 
     /**
-    * 逻辑删除标记（0 未删除 / 1 已删除）
-    */
+     * 逻辑删除标记（0 未删除 / 1 已删除）
+     */
     @TableField("sys_deleted")
     @TableLogic
     @Schema(description = "逻辑删除标记")

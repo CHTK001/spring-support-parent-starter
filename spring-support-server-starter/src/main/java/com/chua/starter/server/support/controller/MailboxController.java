@@ -32,13 +32,13 @@ public class MailboxController {
     private final MailboxService mailboxService;
 
     /**
-    * 收件箱邮件列表
-    *
-    * @param identityId 邮箱身份 标识
-    * @param folder     文件夹(默认 INBOX)
-    * @param limit      最大条数(默认 20)
-    * @return 邮件列表
-    */
+     * 收件箱邮件列表
+     *
+     * @param identityId 邮箱身份 标识
+     * @param folder     文件夹(默认 INBOX)
+     * @param limit      最大条数(默认 20)
+     * @return 邮件列表
+     */
     @Operation(summary = "邮箱收件箱列表")
     @GetMapping("/{identityId}/mailbox/list")
     public ReturnResult<List<Map<String, Object>>> list(@PathVariable Long identityId,

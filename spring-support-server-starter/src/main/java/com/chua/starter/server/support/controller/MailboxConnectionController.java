@@ -35,12 +35,12 @@ public class MailboxConnectionController {
     private final MailboxSseService mailboxSseService;
 
     /**
-    * 注册邮箱推送(前端打开邮件箱时调用)。
-    *
-    * @param identityId 邮箱身份 标识
-    * @param clientId  前端 SSE 连接 客户端标识
-    * @return 结果
-    */
+     * 注册邮箱推送(前端打开邮件箱时调用)。
+     *
+     * @param identityId 邮箱身份 标识
+     * @param clientId  前端 SSE 连接 客户端标识
+     * @return 结果
+     */
     @Operation(summary = "注册邮箱推送连接")
     @PostMapping("/{identityId}/mailbox/register")
     public ReturnResult<Void> register(@PathVariable Long identityId, @RequestParam String clientId) {

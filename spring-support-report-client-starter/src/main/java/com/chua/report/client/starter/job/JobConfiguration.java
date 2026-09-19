@@ -18,9 +18,9 @@ public class JobConfiguration implements SchedulingConfigurer {
     private ScheduledTaskRegistrar taskRegistrar;
 
     /**
-    * 用线程池执行任务
-    * @return
-    */
+     * 用线程池执行任务
+     * @return
+     */
     @Bean
     @ConditionalOnMissingBean
     public ThreadPoolTaskScheduler threadPoolTaskScheduler(){

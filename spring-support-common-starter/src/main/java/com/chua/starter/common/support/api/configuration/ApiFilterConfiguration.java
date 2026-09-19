@@ -99,9 +99,9 @@ public class ApiFilterConfiguration  {
         private final VersionArgumentResolver versionArgumentResolver;
 
         /**
-        * 创建 api版本过滤器 实例
-        * @param versionArgumentResolver 版本参数解析器
-        */
+         * 创建 api版本过滤器 实例
+         * @param versionArgumentResolver 版本参数解析器
+         */
         public ApiVersionFilter(VersionArgumentResolver versionArgumentResolver) {
             this.versionArgumentResolver = versionArgumentResolver;
         }
@@ -121,11 +121,11 @@ public class ApiFilterConfiguration  {
     }
 
     /**
-        * XHR Nonce 防重放过滤器
-        * 对携带完整签名头的请求做 x-nonce 重放校验及签名校验
-        * @author CH
-        * @since 4.0.0
-        */
+     * XHR Nonce 防重放过滤器
+     * 对携带完整签名头的请求做 x-nonce 重放校验及签名校验
+     * @author CH
+     * @since 4.0.0
+     */
     public static class NonceXhrFilter implements Filter {
         /** 日志 */
         private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(NonceXhrFilter.class);

@@ -25,8 +25,8 @@ public class MsgEvent implements Serializable {
     private static final long serialVersionUID = 1L;
 
     /**
-    * 事件名称
-    */
+     * 事件名称
+     */
     private String name;
 
     /**

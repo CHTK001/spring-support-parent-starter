@@ -27,13 +27,13 @@ public class PartitionRoutingService {
     private static final DateTimeFormatter DAY_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd");
 
     /**
-    * 发现数据库中已存在的分区表。
-    *
-    * @param jdbcTemplate   JDBC 模板
-    * @param partitionPrefix 分区表前缀，如 薪酬_订单_part
-    * @param sourceTable     源表名（排除自身）
-    * @return 已排序的分区表名列表（不含源表）
-    */
+     * 发现数据库中已存在的分区表。
+     *
+     * @param jdbcTemplate   JDBC 模板
+     * @param partitionPrefix 分区表前缀，如 薪酬_订单_part
+     * @param sourceTable     源表名（排除自身）
+     * @return 已排序的分区表名列表（不含源表）
+     */
     public static List<String> discoverPartitionTables(JdbcTemplate jdbcTemplate, String partitionPrefix, String sourceTable) {
         /**
          * 校验table名称。

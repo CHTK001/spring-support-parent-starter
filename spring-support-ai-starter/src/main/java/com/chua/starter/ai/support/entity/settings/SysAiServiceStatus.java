@@ -35,8 +35,8 @@ public class SysAiServiceStatus implements Serializable {
     private Long statusId;
 
     /**
-    * 服务名称
-    */
+     * 服务名称
+     */
     /**
      * 服务名称
      */
@@ -46,8 +46,8 @@ public class SysAiServiceStatus implements Serializable {
     private String statusServiceName;
 
     /**
-    * 是否运行中
-    */
+     * 是否运行中
+     */
     /**
      * 是否运行中
      */
@@ -57,8 +57,8 @@ public class SysAiServiceStatus implements Serializable {
     private Boolean statusRunning;
 
     /**
-    * 进程 PID
-    */
+     * 进程 PID
+     */
     /**
      * 进程 PID
      */
@@ -68,8 +68,8 @@ public class SysAiServiceStatus implements Serializable {
     private Long statusPid;
 
     /**
-    * 启动时间
-    */
+     * 启动时间
+     */
     /**
      * 启动时间
      */
@@ -79,8 +79,8 @@ public class SysAiServiceStatus implements Serializable {
     private LocalDateTime statusStartTime;
 
     /**
-    * 运行时长（秒）
-    */
+     * 运行时长（秒）
+     */
     /**
      * 运行时长(秒)
      */
@@ -90,8 +90,8 @@ public class SysAiServiceStatus implements Serializable {
     private Long statusUptimeSec;
 
     /**
-    * 更新时间
-    */
+     * 更新时间
+     */
     /**
      * 更新时间
      */

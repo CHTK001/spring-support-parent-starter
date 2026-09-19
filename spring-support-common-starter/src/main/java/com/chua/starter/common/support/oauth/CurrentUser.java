@@ -28,8 +28,8 @@ public class CurrentUser {
     /** 任意 */
     private static final String ANY = "*";
     /**
-    * unionid
-    */
+     * unionid
+     */
     private String unionId;
     /**
      * 打开标识

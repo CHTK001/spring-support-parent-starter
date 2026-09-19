@@ -27,9 +27,9 @@ public class XmlMediaTypeHandler implements MediaTypeHandler {
     /** asbytearray */
     public byte[] asByteArray(Object o) {
         /**
-    * 尝试。
-    * @param ByteArrayOutputStream( bytearray输出流(
-    */
+         * 尝试。
+         * @param ByteArrayOutputStream( bytearray输出流(
+         */
         try (ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();) {
             /**
              * 导出。

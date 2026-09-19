@@ -45,8 +45,8 @@ public class JobContext {
     private final long jobId;
 
     /**
-    * 任务执行参数
-    */
+     * 任务执行参数
+     */
     private final String jobParam;
 
     /**
@@ -66,25 +66,25 @@ public class JobContext {
     private final String jobLogFileName;
 
     /**
-    * 分片索引（从0开始）
-    */
+     * 分片索引（从0开始）
+     */
     @Getter
     /** Shard索引 */
     private final int shardIndex;
 
     /**
-    * 分片总数
-    */
+     * 分片总数
+     */
     @Getter
     /** Shard总数 */
     private final int shardTotal;
 
     /**
-    * 处理状态码
-    * 200: 成功
-    * 500: 失败
-    * 502: 超时
-    */
+     * 处理状态码
+     * 200: 成功
+     * 500: 失败
+     * 502: 超时
+     */
     private int handleCode;
 
     /**

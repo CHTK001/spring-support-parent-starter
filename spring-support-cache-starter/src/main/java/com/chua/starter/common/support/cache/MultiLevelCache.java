@@ -33,8 +33,8 @@ public class MultiLevelCache implements Cache {
     private static final Logger log = LoggerFactory.getLogger(MultiLevelCache.class);
 
     /**
-    * 空值占位符（用于防缓存穿透）
-    */
+     * 空值占位符（用于防缓存穿透）
+     */
     static final Object NULL_VALUE_PLACEHOLDER = new Object() {
         @Override
         /** 转为字符串 */
@@ -49,8 +49,8 @@ public class MultiLevelCache implements Cache {
     private final List<Cache> caches;
 
     /**
-        * 缓存统计
-        */
+     * 缓存统计
+     */
     private final LongAdder hitCount = new LongAdder();
     /** Miss数量 */
     private final LongAdder missCount = new LongAdder();
@@ -115,12 +115,12 @@ public class MultiLevelCache implements Cache {
     }
 
     /**
-    * 获取内部
-    *
-    * @param key Key
-    * @param typeIndexHint 类型索引hint
-    * @return 获取内部的结果
-    */
+     * 获取内部
+     *
+     * @param key Key
+     * @param typeIndexHint 类型索引hint
+     * @return 获取内部的结果
+     */
     private ValueWrapper getInternal(Object key, Integer typeIndexHint) {
         for (int i = 0; i < caches.size(); i++) {
             Cache cache = caches.get(i);
@@ -215,12 +215,12 @@ public class MultiLevelCache implements Cache {
     @Override
     @SuppressWarnings("unchecked")
     /**
-    * 获取
-    *
-    * @param key Key
-    * @param valueLoader 值加载
-    * @return 获取的结果
-    */
+     * 获取
+     *
+     * @param key Key
+     * @param valueLoader 值加载
+     * @return 获取的结果
+     */
     public <T> T get(Object key, Callable<T> valueLoader) {
         if (key == null) {
             missCount.increment();
@@ -483,10 +483,10 @@ public class MultiLevelCache implements Cache {
     }
 
     /**
-        * 支持按模式清除的缓存接口
-        * @author CH
-        * @since 4.0.0
-        */
+     * 支持按模式清除的缓存接口
+     * @author CH
+     * @since 4.0.0
+     */
     public interface PatternEvictable {
 
         /**

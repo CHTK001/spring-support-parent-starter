@@ -31,8 +31,8 @@ public class Emitter {
     private Set<String> event;
 
     /**
-    * 实体对象，具体事件的数据内容
-    */
+     * 实体对象，具体事件的数据内容
+     */
     private Object entity;
 
     /**
@@ -48,8 +48,8 @@ public class Emitter {
     private long createTime = System.nanoTime();
 
     /**
-    * SSE 发送器实例，用于实际的事件推送
-    */
+     * SSE 发送器实例，用于实际的事件推送
+     */
     private SseEmitter sseEmitter;
 
     /**

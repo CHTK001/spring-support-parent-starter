@@ -108,10 +108,10 @@ public class DahuaCloudSession extends AbstractOpenApiSession {
             long expires = data.path("expiresIn").asLong(7200L);
             if (token == null || token.isEmpty()) {
                 /**
-    * illegal状态异常。
-    * @param 为空" 为空"
-    * @return illegal状态异常的结果
-    */
+                 * illegal状态异常。
+                 * @param 为空" 为空"
+                 * @return illegal状态异常的结果
+                 */
                 throw new IllegalStateException("大华云睿 accessToken 为空");
             }
             /**
@@ -136,8 +136,8 @@ public class DahuaCloudSession extends AbstractOpenApiSession {
     protected JsonNode doRequest(String method, String path, Map<String, Object> params) {
         if (!tokenValid() && !PATH_LOGIN.equals(path)) {
             /**
-    * login。
-    */
+             * login。
+             */
             login();
         }
         String time = String.valueOf(System.currentTimeMillis());
@@ -230,10 +230,10 @@ public class DahuaCloudSession extends AbstractOpenApiSession {
         params.put("action", mapAction(cmd));
         params.put("speed", (int) Math.max(1, Math.min(255, Math.round(speed * 255))));
         /**
-    * post。
-    * @param PATH_PTZ_CONTROL 路径ptzcontrol
-    * @param params 参数
-    */
+         * post。
+         * @param PATH_PTZ_CONTROL 路径ptzcontrol
+         * @param params 参数
+         */
         post(PATH_PTZ_CONTROL, params);
     }
 
@@ -267,10 +267,10 @@ public class DahuaCloudSession extends AbstractOpenApiSession {
         params.put("doorId", doorId);
         params.put("action", "open");
         /**
-    * post。
-    * @param PATH_DOOR_CONTROL 路径门control
-    * @param params 参数
-    */
+         * post。
+         * @param PATH_DOOR_CONTROL 路径门control
+         * @param params 参数
+         */
         post(PATH_DOOR_CONTROL, params);
     }
 }

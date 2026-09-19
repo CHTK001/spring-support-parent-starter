@@ -25,15 +25,15 @@ public class AiTemplateFacadeServiceImpl implements AiTemplateFacadeService {
     private final SysAiTemplateMapper sysAiTemplateMapper;
 
     /**
-    * 根据条件查询AI模板列表。
-    *
-    * @param moduleId    模块标识（可选）
-    * @param templateType 模板类型（可选）
-    * @param category    分类（可选）
-    * @param name        模板名称模糊匹配（可选）
-    * @param remark      备注模糊匹配（可选）
-    * @return 启用的模板列表，按排序字段升序、创建时间降序排列
-    */
+     * 根据条件查询AI模板列表。
+     *
+     * @param moduleId    模块标识（可选）
+     * @param templateType 模板类型（可选）
+     * @param category    分类（可选）
+     * @param name        模板名称模糊匹配（可选）
+     * @param remark      备注模糊匹配（可选）
+     * @return 启用的模板列表，按排序字段升序、创建时间降序排列
+     */
     @Override
     public List<SysAiTemplate> list(Integer moduleId, String templateType, String category, String name, String remark) {
         return sysAiTemplateMapper.selectList(

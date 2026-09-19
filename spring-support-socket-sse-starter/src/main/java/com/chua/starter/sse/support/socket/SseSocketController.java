@@ -32,12 +32,12 @@ public class SseSocketController {
     private SseSocketSessionTemplate sseSocketSessionTemplate;
 
     /**
-    * 建立 SSE 连接
-    *
-    * @param clientId 客户端标识（可选）
-    * @return SseEmitter
-    * @param false false
-    */
+     * 建立 SSE 连接
+     *
+     * @param clientId 客户端标识（可选）
+     * @return SseEmitter
+     * @param false false
+     */
     @GetMapping(value = "/connect", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter connect(@RequestParam(required = false) String clientId) {
         log.info("[SSE] 连接请求: clientId={}", clientId);

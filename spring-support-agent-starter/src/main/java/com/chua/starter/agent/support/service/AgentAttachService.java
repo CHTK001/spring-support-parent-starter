@@ -41,10 +41,10 @@ public class AgentAttachService implements SmartInitializingSingleton {
     private final com.chua.starter.agent.support.config.AgentAttachProperties properties;
 
     /**
-    * 创建自注入服务。
-    *
-    * @param properties 配置项
-    */
+     * 创建自注入服务。
+     *
+     * @param properties 配置项
+     */
     public AgentAttachService(com.chua.starter.agent.support.config.AgentAttachProperties properties) {
         this.properties = properties;
     }

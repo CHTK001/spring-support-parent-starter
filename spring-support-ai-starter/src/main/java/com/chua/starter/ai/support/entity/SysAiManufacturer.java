@@ -27,8 +27,8 @@ public class SysAiManufacturer {
     private Integer id;
 
     /**
-    * 厂商编码（如 openai / zhipu / 百度云）
-    */
+     * 厂商编码（如 openai / zhipu / 百度云）
+     */
     @TableField("sys_ai_manufacturer_code")
     private String code; // 编码
 
@@ -100,8 +100,8 @@ public class SysAiManufacturer {
     private LocalDateTime createTime;
 
     /**
-    * 更新时间
-    */
+     * 更新时间
+     */
     @TableField("update_time")
     /** 更新时间 */
     private LocalDateTime updateTime;

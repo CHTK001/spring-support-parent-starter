@@ -55,14 +55,14 @@ public class LocalSoftwareServiceImpl implements LocalSoftwareService {
 
     @Autowired
     /**
-    * 创建 本地software服务impl 实例
-    * @param transactionTemplate transactiontemplate
-    * @param softSourceService soft源服务
-    * @param softSoftwareService softsoftware服务
-    * @param softSoftwareMapper softsoftware映射器
-    * @param localSoftwareSource 本地software源
-    * @param softwareSources software源
-    */
+     * 创建 本地software服务impl 实例
+     * @param transactionTemplate transactiontemplate
+     * @param softSourceService soft源服务
+     * @param softSoftwareService softsoftware服务
+     * @param softSoftwareMapper softsoftware映射器
+     * @param localSoftwareSource 本地software源
+     * @param softwareSources software源
+     */
     public LocalSoftwareServiceImpl(TransactionTemplate transactionTemplate,
                                     SoftSourceService softSourceService,
                                     SoftSoftwareService softSoftwareService,

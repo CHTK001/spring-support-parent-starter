@@ -52,11 +52,11 @@ public class DatabaseGraphService {
     private volatile long cachedAt; // 缓存at
 
     /**
-    * 创建 database图计算服务 实例
-    * @param dataSource 数据源
-    * @param properties 文档属性
-    * @param properties 属性
-    */
+     * 创建 database图计算服务 实例
+     * @param dataSource 数据源
+     * @param properties 文档属性
+     * @param properties 属性
+     */
     public DatabaseGraphService(DataSource dataSource, DocumentProperties properties) {
         this.dataSource = dataSource;
         this.properties = properties;

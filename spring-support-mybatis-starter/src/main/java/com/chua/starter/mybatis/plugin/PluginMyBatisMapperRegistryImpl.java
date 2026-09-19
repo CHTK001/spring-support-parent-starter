@@ -37,11 +37,11 @@ public class PluginMyBatisMapperRegistryImpl implements PluginMyBatisMapperRegis
     private static final Logger log = LoggerFactory.getLogger(PluginMyBatisMapperRegistryImpl.class);
 
     /**
-    * 注册插件 映射器 接口
-    *
-    * @param sqlSessionFactory SQL会话工厂 实例
-    * @param mapperClasses     映射器 接口类
-    */
+     * 注册插件 映射器 接口
+     *
+     * @param sqlSessionFactory SQL会话工厂 实例
+     * @param mapperClasses     映射器 接口类
+     */
     @Override
     public void registerMappers(SqlSessionFactory sqlSessionFactory, Class<?>... mapperClasses) {
         if (sqlSessionFactory == null || mapperClasses == null || mapperClasses.length == 0) {

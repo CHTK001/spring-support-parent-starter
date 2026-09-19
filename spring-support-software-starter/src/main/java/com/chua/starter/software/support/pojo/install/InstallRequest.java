@@ -25,39 +25,39 @@ public class InstallRequest {
     private String softwareId;
 
     /**
-    * 用户标识
-    */
+     * 用户标识
+     */
     @NotBlank(message = "用户ID不能为空")
     @Schema(description = "用户ID")
     /** 用户标识 */
     private String userId;
 
     /**
-    * 设备标识
-    */
+     * 设备标识
+     */
     @Schema(description = "设备ID")
     /** deviceid */
     private String deviceId;
 
     /**
-    * 安装路径
-    */
+     * 安装路径
+     */
     @Schema(description = "安装路径")
     /** Install路径 */
     private String installPath;
 
     /**
-    * 源标识
-    */
+     * 源标识
+     */
     @Schema(description = "源ID")
     /** 来源标识 */
     private String sourceId;
 
     /**
-    * 获取softwareid
-    *
-    * @return 获取softwareid的结果
-    */
+     * 获取softwareid
+     *
+     * @return 获取softwareid的结果
+     */
     public String getSoftwareId() {
         return softwareId;
     }

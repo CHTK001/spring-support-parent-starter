@@ -17,8 +17,8 @@ public enum HostHealthType {
     PORT("PORT", "端口"),
 
     /**
-    * HTTP 探测：target 为 host:port 或完整 URL
-    */
+     * HTTP 探测：target 为 host:port 或完整 URL
+     */
     HTTP("HTTP", "HTTP"),
 
     /** 进程探测：target 为进程名或命令行关键字 */
@@ -31,11 +31,11 @@ public enum HostHealthType {
     private final String desc;
 
     /**
-    * 构造
-    *
-    * @param code 编码
-    * @param desc 描述
-    */
+     * 构造
+     *
+     * @param code 编码
+     * @param desc 描述
+     */
     HostHealthType(String code, String desc) {
         this.code = code;
         this.desc = desc;

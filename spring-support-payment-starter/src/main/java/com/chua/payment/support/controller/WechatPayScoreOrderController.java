@@ -39,11 +39,11 @@ public class WechatPayScoreOrderController {
     @Operation(summary = "创建微信支付分订单")
     @PostMapping
     /**
-    * 创建
-    *
-    * @param dto dto
-    * @return 创建的结果
-    */
+     * 创建
+     *
+     * @param dto dto
+     * @return 创建的结果
+     */
     public Result<WechatPayScoreOrderVO> create(@RequestBody WechatPayScoreCreateDTO dto) {
         return Result.success(convert(wechatPayScoreOrderService.createOrder(dto)));
     }

@@ -29,10 +29,10 @@ public class SpringBeanUtils {
     private static ApplicationContext applicationContext;
 
     /**
-    * 设置 application上下文
-    *
-    * @param ctx application上下文 实例
-    */
+     * 设置 application上下文
+     *
+     * @param ctx application上下文 实例
+     */
     public static void setApplicationContext(ApplicationContext ctx) {
         applicationContext = ctx;
     }

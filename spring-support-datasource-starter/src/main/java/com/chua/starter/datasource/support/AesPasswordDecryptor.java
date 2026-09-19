@@ -52,10 +52,10 @@ public class AesPasswordDecryptor implements PasswordDecryptor {
             DEFAULT_SECRET_KEY = sha.digest("spring-support-datasource-default-key".getBytes(StandardCharsets.UTF_8));
         } catch (NoSuchAlgorithmException e) {
             /**
-    * 异常入initializer错误。
-    * @param available" 可用"
-    * @return 异常入initializer错误的结果
-    */
+             * 异常入initializer错误。
+             * @param available" 可用"
+             * @return 异常入initializer错误的结果
+             */
             throw new ExceptionInInitializerError("SHA-256 not available");
         }
     }
@@ -64,8 +64,8 @@ public class AesPasswordDecryptor implements PasswordDecryptor {
     private final byte[] secretKey;
 
     /**
-    * 使用默认密钥创建解密器
-    */
+     * 使用默认密钥创建解密器
+     */
     public AesPasswordDecryptor() {
         this.secretKey = DEFAULT_SECRET_KEY;
     }

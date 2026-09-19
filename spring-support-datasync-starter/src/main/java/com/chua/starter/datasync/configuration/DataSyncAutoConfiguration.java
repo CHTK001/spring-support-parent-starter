@@ -138,9 +138,9 @@ public class DataSyncAutoConfiguration {
         private final String directoryPath;
 
         /**
-        * 简单目录配置definition。
-        * @param directoryPath 目录路径
-        */
+         * 简单目录配置definition。
+         * @param directoryPath 目录路径
+         */
         SimpleDirectoryConfigDefinition(String directoryPath) {
             this.directoryPath = directoryPath;
         }

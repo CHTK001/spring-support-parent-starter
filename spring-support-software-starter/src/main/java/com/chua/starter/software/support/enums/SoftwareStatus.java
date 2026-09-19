@@ -33,9 +33,9 @@ public enum SoftwareStatus {
     private final int value;
 
     /**
-    * software状态。
-    * @param value 值
-    */
+     * software状态。
+     * @param value 值
+     */
     SoftwareStatus(int value) {
         this.value = value;
     }

@@ -21,10 +21,10 @@ public class PidConverter extends ClassicConverter {
     private static final String PID = getPid();
 
     /**
-    * 获取Pid
-    *
-    * @return 获取pid的结果
-    */
+     * 获取Pid
+     *
+     * @return 获取pid的结果
+     */
     private static String getPid() {
         String name = ManagementFactory.getRuntimeMXBean().getName();
         return name.split("@")[0];

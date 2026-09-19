@@ -26,10 +26,10 @@ public class ReturnPageResultUtils {
     }
 
     /**
-    * 获取空分页对象
-    *
-    * @return 空分页实例
-    */
+     * 获取空分页对象
+     *
+     * @return 空分页实例
+     */
     @SuppressWarnings("ALL")
     public static IPage<?> empty() {
         return EMPTY;

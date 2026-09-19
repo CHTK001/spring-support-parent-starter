@@ -37,11 +37,11 @@ public class EduWrongQuestionController {
     private final IEduWrongQuestionService wrongService;
 
     /**
-    * 分页查询错题
-    *
-    * @param query 查询条件
-    * @return 分页结果
-    */
+     * 分页查询错题
+     *
+     * @param query 查询条件
+     * @return 分页结果
+     */
     @Operation(summary = "分页查询错题")
     @GetMapping("/page")
     public ReturnResult<PageResult<WrongQuestionVO>> page(WrongQueryDTO query) {

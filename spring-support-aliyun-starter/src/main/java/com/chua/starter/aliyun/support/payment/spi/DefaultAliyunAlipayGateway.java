@@ -70,11 +70,11 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
             return result;
         } catch (AlipayApiException e) {
             /**
-    * illegal状态异常。
-    * @param "发起支付宝电脑网站支付失败" "发起支付宝电脑网站支付失败"
-    * @param e e
-    * @return illegal状态异常的结果
-    */
+             * illegal状态异常。
+             * @param "发起支付宝电脑网站支付失败" "发起支付宝电脑网站支付失败"
+             * @param e e
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("发起支付宝电脑网站支付失败", e);
         }
     }
@@ -98,11 +98,11 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
             return result;
         } catch (AlipayApiException e) {
             /**
-    * illegal状态异常。
-    * @param "发起支付宝手机网站支付失败" "发起支付宝手机网站支付失败"
-    * @param e e
-    * @return illegal状态异常的结果
-    */
+             * illegal状态异常。
+             * @param "发起支付宝手机网站支付失败" "发起支付宝手机网站支付失败"
+             * @param e e
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("发起支付宝手机网站支付失败", e);
         }
     }
@@ -125,11 +125,11 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
             return result;
         } catch (AlipayApiException e) {
             /**
-    * illegal状态异常。
-    * @param 支付失败" 支付失败"
-    * @param e e
-    * @return illegal状态异常的结果
-    */
+             * illegal状态异常。
+             * @param 支付失败" 支付失败"
+             * @param e e
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("发起支付宝 App 支付失败", e);
         }
     }
@@ -152,11 +152,11 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
             return result;
         } catch (AlipayApiException e) {
             /**
-    * illegal状态异常。
-    * @param "查询支付宝订单失败" "查询支付宝订单失败"
-    * @param e e
-    * @return illegal状态异常的结果
-    */
+             * illegal状态异常。
+             * @param "查询支付宝订单失败" "查询支付宝订单失败"
+             * @param e e
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("查询支付宝订单失败", e);
         }
     }
@@ -170,11 +170,11 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
             return client(properties).execute(closeRequest).isSuccess();
         } catch (AlipayApiException e) {
             /**
-    * illegal状态异常。
-    * @param "关闭支付宝订单失败" "关闭支付宝订单失败"
-    * @param e e
-    * @return illegal状态异常的结果
-    */
+             * illegal状态异常。
+             * @param "关闭支付宝订单失败" "关闭支付宝订单失败"
+             * @param e e
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("关闭支付宝订单失败", e);
         }
     }
@@ -203,11 +203,11 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
             return result;
         } catch (AlipayApiException e) {
             /**
-    * illegal状态异常。
-    * @param "支付宝退款失败" "支付宝退款失败"
-    * @param e e
-    * @return illegal状态异常的结果
-    */
+             * illegal状态异常。
+             * @param "支付宝退款失败" "支付宝退款失败"
+             * @param e e
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("支付宝退款失败", e);
         }
     }
@@ -234,11 +234,11 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
             return result;
         } catch (AlipayApiException e) {
             /**
-    * illegal状态异常。
-    * @param "查询支付宝退款失败" "查询支付宝退款失败"
-    * @param e e
-    * @return illegal状态异常的结果
-    */
+             * illegal状态异常。
+             * @param "查询支付宝退款失败" "查询支付宝退款失败"
+             * @param e e
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("查询支付宝退款失败", e);
         }
     }
@@ -332,11 +332,11 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
             return result;
         } catch (AlipayApiException e) {
             /**
-    * illegal状态异常。
-    * @param "支付宝单笔转账失败" "支付宝单笔转账失败"
-    * @param e e
-    * @return illegal状态异常的结果
-    */
+             * illegal状态异常。
+             * @param "支付宝单笔转账失败" "支付宝单笔转账失败"
+             * @param e e
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("支付宝单笔转账失败", e);
         }
     }

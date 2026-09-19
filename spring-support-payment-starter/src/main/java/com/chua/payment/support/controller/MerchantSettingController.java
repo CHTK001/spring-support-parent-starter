@@ -42,11 +42,11 @@ public class MerchantSettingController {
     @Operation(summary = "查询商户支付规则")
     @GetMapping("/{merchantId}/payment-config")
     /**
-    * 获取薪酬配置
-    *
-    * @param merchantId merchantid
-    * @return 获取薪酬配置的结果
-    */
+     * 获取薪酬配置
+     *
+     * @param merchantId merchantid
+     * @return 获取薪酬配置的结果
+     */
     public Result<MerchantPaymentConfigVO> getPaymentConfig(@PathVariable Long merchantId) {
         merchantService.getMerchant(merchantId);
         return Result.success(toPaymentConfigVO(merchantId, merchantPaymentConfigService.getConfig(merchantId)));

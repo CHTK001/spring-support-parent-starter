@@ -29,22 +29,22 @@ public class SysAiManufacturerKey {
     private Long id;
 
     /**
-    * 厂商编码（关联 sys_AI_manufacturer.sys_AI_manufacturer_编码）
-    */
+     * 厂商编码（关联 sys_AI_manufacturer.sys_AI_manufacturer_编码）
+     */
     @TableField("sys_ai_manufacturer_code")
     /** sysaimanufacturer代码 */
     private String sysAiManufacturerCode;
 
     /**
-    * 厂商名称
-    */
+     * 厂商名称
+     */
     @TableField("sys_ai_manufacturer_name")
     /** sysaimanufacturer名称 */
     private String sysAiManufacturerName;
 
     /**
-    * API Key
-    */
+     * API Key
+     */
     @TableField("sys_ai_manufacturer_key_value")
     private String value; // 值
 
@@ -86,36 +86,36 @@ public class SysAiManufacturerKey {
     private String createName;
 
     /**
-    * 创建人 标识
-    */
+     * 创建人 标识
+     */
     @TableField(fill = FieldFill.INSERT)
     /** 创建by */
     private Integer createBy;
 
     /**
-    * 创建时间
-    */
+     * 创建时间
+     */
     @TableField(fill = FieldFill.INSERT)
     /** 创建时间 */
     private LocalDateTime createTime;
 
     /**
-    * 更新时间
-    */
+     * 更新时间
+     */
     @TableField(fill = FieldFill.INSERT_UPDATE)
     /** 更新时间 */
     private LocalDateTime updateTime;
 
     /**
-    * 更新人名称
-    */
+     * 更新人名称
+     */
     @TableField(fill = FieldFill.INSERT_UPDATE)
     /** 更新名称 */
     private String updateName;
 
     /**
-    * 更新人 标识
-    */
+     * 更新人 标识
+     */
     @TableField(fill = FieldFill.INSERT_UPDATE)
     /** 更新by */
     private Integer updateBy;

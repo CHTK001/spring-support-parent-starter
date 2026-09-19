@@ -30,11 +30,11 @@ public class PaymentOauthWhitelistConfiguration {
 
     @Bean
     /**
-    * 薪酬oauthwhitelistinitializer
-    *
-    * @param applicationContext application上下文
-    * @return 薪酬oauthwhitelistinitializer的结果
-    */
+     * 薪酬oauthwhitelistinitializer
+     *
+     * @param applicationContext application上下文
+     * @return 薪酬oauthwhitelistinitializer的结果
+     */
     public SmartInitializingSingleton paymentOauthWhitelistInitializer(ApplicationContext applicationContext) {
         return () -> {
             try {

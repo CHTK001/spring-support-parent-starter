@@ -58,8 +58,8 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
     /** 初始化默认 */
     public void initDefaults() {
         /**
-    * 同步默认。
-    */
+         * 同步默认。
+         */
         syncDefaults();
     }
 
@@ -67,8 +67,8 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
     /** 列表配置 */
     public List<OrderPartitionConfigVO> listConfigs() {
         /**
-    * 同步默认。
-    */
+         * 同步默认。
+         */
         syncDefaults();
         return orderPartitionConfigMapper.selectList(new LambdaQueryWrapper<OrderPartitionConfig>().orderByAsc(OrderPartitionConfig::getId))
                 .stream().map(this::toVO).toList();
@@ -128,10 +128,10 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-    * 执行Auto创建
-    *
-    * @param businessType 业务类型
-    */
+     * 执行Auto创建
+     *
+     * @param businessType 业务类型
+     */
     public void executeAutoCreate(String businessType) {
         OrderPartitionConfig config = requireConfig(businessType);
         String tableName = resolvePartitionTable(config, LocalDate.now().plusDays(config.getCreateAheadDays()));

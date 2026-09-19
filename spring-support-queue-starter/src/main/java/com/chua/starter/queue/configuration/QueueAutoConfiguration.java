@@ -37,12 +37,12 @@ public class QueueAutoConfiguration {
     private QueueProperties queueProperties;
 
     /**
-    * 本地消息队列模板（基于Guava 事件bus）
-    * <p>
-    * 当配置类型=本地时启用，基于Guava 事件bus实现。
-    * </p>
-    * @return 本地消息template的结果
-    */
+     * 本地消息队列模板（基于Guava 事件bus）
+     * <p>
+     * 当配置类型=本地时启用，基于Guava 事件bus实现。
+     * </p>
+     * @return 本地消息template的结果
+     */
     @Bean(destroyMethod = "close")
     @ConditionalOnMissingBean(MessageTemplate.class)
     @ConditionalOnProperty(prefix = QueueProperties.PREFIX, name = "type", havingValue = "local")

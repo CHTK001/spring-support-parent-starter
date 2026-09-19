@@ -79,10 +79,10 @@ public class AppRegisterReporter {
     private long startTime;
 
     /**
-    * 获取Instance
-    *
-    * @return 获取instance的结果
-    */
+     * 获取Instance
+     *
+     * @return 获取instance的结果
+     */
     public static AppRegisterReporter getInstance() {
         return INSTANCE;
     }

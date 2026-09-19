@@ -18,22 +18,22 @@ public class SoftwareSourceDTO extends SoftSource {
     private static final long serialVersionUID = 1L;
 
     /**
-    * 最后同步时间文本
-    */
+     * 最后同步时间文本
+     */
     @Schema(description = "最后同步时间文本")
     /** 最后同步时间文本 */
     private String lastSyncTimeText;
 
     /**
-    * 同步状态文本
-    */
+     * 同步状态文本
+     */
     @Schema(description = "同步状态文本")
     /** 同步状态文本 */
     private String syncStatusText;
 
     /**
-    * 源类型文本
-    */
+     * 源类型文本
+     */
     @Schema(description = "源类型文本")
     /** 来源类型文本 */
     private String sourceTypeText;

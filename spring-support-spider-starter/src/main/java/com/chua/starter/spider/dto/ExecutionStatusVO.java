@@ -16,10 +16,10 @@ public class ExecutionStatusVO {
     private String spiderCode;
 
     /**
-    * 获取状态
-    *
-    * @return 获取状态的结果
-    */
+     * 获取状态
+     *
+     * @return 获取状态的结果
+     */
     public String getStatus() { return status; }
     /**
      * 设置状态

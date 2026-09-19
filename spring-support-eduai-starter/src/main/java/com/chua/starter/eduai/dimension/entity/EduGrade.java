@@ -26,8 +26,8 @@ public class EduGrade {
     private Long gradeId;
 
     /**
-    * 学段：PRIMARY / JUNIOR / SENIOR / UNIVERSITY
-    */
+     * 学段：PRIMARY / JUNIOR / SENIOR / UNIVERSITY
+     */
     private String gradeLevel;
 
     /**

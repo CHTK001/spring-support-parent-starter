@@ -34,8 +34,8 @@ public class AiSessionController {
     private final com.chua.starter.ai.support.mapper.SysAiSessionGroupMapper sessionGroupMapper;
 
     /**
-    * 获取会话列表
-    */
+     * 获取会话列表
+     */
     @GetMapping
     public ReturnResult<Map<String, Object>> list(
             @RequestParam(required = false) Integer skip,
@@ -66,11 +66,11 @@ public class AiSessionController {
     }
 
     /**
-    * 获取侧边栏会话列表
-    *
-    * @param limit 数量限制
-    * @return 会话列表
-    */
+     * 获取侧边栏会话列表
+     *
+     * @param limit 数量限制
+     * @return 会话列表
+     */
     @GetMapping("/sidebar")
     public ReturnResult<Map<String, Object>> sidebar(@RequestParam(required = false) Integer limit) {
         int pageSize = limit != null ? limit : 15;
@@ -124,15 +124,15 @@ public class AiSessionController {
     }
 
     /**
-    * 创建新会话
-    *
-    * @param body 会话参数
-    * @return 创建的会话
-    */
+     * 创建新会话
+     *
+     * @param body 会话参数
+     * @return 创建的会话
+     */
 
     /**
-    * 获取会话消息列表
-    */
+     * 获取会话消息列表
+     */
     // 前端 UUID sessionId -> 后端 Long sessionId 的映射（与 ChatStreamController 共享）
     public static final java.util.Map<String, Long> SESSION_DIALOG_MAP = new java.util.concurrent.ConcurrentHashMap<>();
 
@@ -263,10 +263,10 @@ public class AiSessionController {
     }
 
     /**
-    * 获取单个会话详情（前端 fetchSession）
-    * @param id ID，不允许为 null
-    * @return Return结果 对象
-    */
+     * 获取单个会话详情（前端 fetchSession）
+     * @param id ID，不允许为 null
+     * @return Return结果 对象
+     */
     @GetMapping("/{id}")
     public ReturnResult<Map<String, Object>> detail(@PathVariable("id") String id) {
         Long sessionId = Long.parseLong(id);
@@ -436,10 +436,10 @@ public class AiSessionController {
     }
 
     /**
-    * 删除会话
-    * @param id ID，不允许为 null
-    * @return Return结果 对象
-    */
+     * 删除会话
+     * @param id ID，不允许为 null
+     * @return Return结果 对象
+     */
     @DeleteMapping("/{id}")
     public ReturnResult<Map<String, Object>> delete(@PathVariable("id") String id) {
         Long sessionId = Long.parseLong(id);

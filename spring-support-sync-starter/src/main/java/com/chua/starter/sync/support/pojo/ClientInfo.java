@@ -94,9 +94,9 @@ public class ClientInfo implements Serializable {
     private String[] clientCapabilities;
 
     /**
-    * 获取客户端标识。
-    * @return 获取客户端id的结果
-    */
+     * 获取客户端标识。
+     * @return 获取客户端id的结果
+     */
     public String getClientId() {
         return clientId;
     }

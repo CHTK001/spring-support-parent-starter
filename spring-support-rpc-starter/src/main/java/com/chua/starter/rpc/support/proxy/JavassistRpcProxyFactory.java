@@ -32,11 +32,11 @@ public class JavassistRpcProxyFactory implements RpcProxyFactory {
     public Object createProxy(ClassLoader classLoader, List<Class<?>> interfaces, InvocationHandler handler) {
         if (!JAVASSIST_AVAILABLE) {
             /**
-    * unsupportedoperation异常。
-    * @param available 可用
-    * @param missing" missing"
-    * @return unsupportedoperation异常的结果
-    */
+             * unsupportedoperation异常。
+             * @param available 可用
+             * @param missing" missing"
+             * @return unsupportedoperation异常的结果
+             */
             throw new UnsupportedOperationException("Javassist proxy is not available, Dubbo dependency is missing");
         }
         

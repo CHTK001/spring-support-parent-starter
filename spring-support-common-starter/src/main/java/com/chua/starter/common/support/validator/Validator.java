@@ -12,11 +12,11 @@ public final class Validator {
     }
 
     /**
-    * 是否拥有Chinese
-    *
-    * @param value 值
-    * @return 是否包含chinese的结果
-    */
+     * 是否拥有Chinese
+     *
+     * @param value 值
+     * @return 是否包含chinese的结果
+     */
     public static boolean hasChinese(String value) {
         if (value == null || value.isEmpty()) {
             return false;

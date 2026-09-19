@@ -56,11 +56,11 @@ public class LoggingConfigHandler implements SyncMessageHandler {
     }
 
     /**
-    * 设置日志级别
-    * 
-    * @param data 请求数据，包含 日志记录器名称 和 水平仪
-    * @return 操作结果
-    */
+     * 设置日志级别
+     * 
+     * @param data 请求数据，包含 日志记录器名称 和 水平仪
+     * @return 操作结果
+     */
     private Object handleSetLevel(Map<String, Object> data) {
         String loggerName = getString(data, "loggerName");
         String levelStr = getString(data, "level");

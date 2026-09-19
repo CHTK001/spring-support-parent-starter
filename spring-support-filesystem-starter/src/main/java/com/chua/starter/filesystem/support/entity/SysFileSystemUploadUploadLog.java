@@ -66,10 +66,10 @@ public class SysFileSystemUploadUploadLog extends SysBase implements Serializabl
     public SysFileSystemUploadUploadLog() {}
 
     /**
-    * 获取filesystemuploadupload记录日志标识
-    *
-    * @return 获取filesystemuploadupload日志id的结果
-    */
+     * 获取filesystemuploadupload记录日志标识
+     *
+     * @return 获取filesystemuploadupload日志id的结果
+     */
     public Long getFilesystemUploadUploadLogId() { return filesystemUploadUploadLogId; }
     /**
      * 设置filesystemuploadupload记录日志标识

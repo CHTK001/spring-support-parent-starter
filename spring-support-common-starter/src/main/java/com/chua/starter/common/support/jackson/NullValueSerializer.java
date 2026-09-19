@@ -49,12 +49,12 @@ public class NullValueSerializer extends StdSerializer<NullValue> {
 
     @Override
     /**
-    * 序列化设置类型
-    * @param value 值
-    * @param jsonGenerator json生成器
-    * @param serializers 序列化器
-    * @param typeSerializer 类型序列化器
-    */
+     * 序列化设置类型
+     * @param value 值
+     * @param jsonGenerator json生成器
+     * @param serializers 序列化器
+     * @param typeSerializer 类型序列化器
+     */
     public void serializeWithType(NullValue value, JsonGenerator jsonGenerator, SerializerProvider serializers,
                                   TypeSerializer typeSerializer) throws IOException {
 

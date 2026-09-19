@@ -25,8 +25,8 @@ public class EduMarkingResult {
     private Long markingResultId;
 
     /**
-    * 答题卡标识
-    */
+     * 答题卡标识
+     */
     private Long markingResultAnswerSheetId;
 
     /**

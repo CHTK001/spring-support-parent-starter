@@ -652,11 +652,11 @@ public class AiBotBindingService {
     }
 
     /**
-        * 生成二维码响应（不可变，用 record）。
-        *
-        * @param key       轮询 Key（前端传给 /qrcode/状态?Key=）
-        * @param qrcodeUrl 二维码图片 URL（异步 模式即时返回空，前端轮询到 状态=就绪 后从 qr状态 取）
-        */
+     * 生成二维码响应（不可变，用 record）。
+     *
+     * @param key       轮询 Key（前端传给 /qrcode/状态?Key=）
+     * @param qrcodeUrl 二维码图片 URL（异步 模式即时返回空，前端轮询到 状态=就绪 后从 qr状态 取）
+     */
     public record QrResult(String key,
                            @JsonProperty("qrcodeUrl") String qrcodeUrl) {
     }

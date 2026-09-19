@@ -50,8 +50,8 @@ public class InfluxMetricTimeSeriesProvider implements MetricTimeSeriesProvider 
     private static final String DATA_SOURCE_NAME = "monitor";
 
     /**
-    * influxdb 引擎（SPI 获取，内存过滤引擎；写入/查询经下方 influxdb-client 直连）
-    */
+     * influxdb 引擎（SPI 获取，内存过滤引擎；写入/查询经下方 influxdb-client 直连）
+     */
     private final InfluxDbEngine influxDbEngine;
 
     /** influxdb 客户端（InfluxDB v1 兼容端点直连） */

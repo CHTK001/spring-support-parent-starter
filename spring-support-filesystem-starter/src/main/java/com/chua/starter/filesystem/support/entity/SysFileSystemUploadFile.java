@@ -81,10 +81,10 @@ public class SysFileSystemUploadFile extends SysBase implements Serializable {
     public SysFileSystemUploadFile() {}
 
     /**
-    * 获取filesystemupload文件标识
-    *
-    * @return 获取filesystemupload文件id的结果
-    */
+     * 获取filesystemupload文件标识
+     *
+     * @return 获取filesystemupload文件id的结果
+     */
     public Long getFilesystemUploadFileId() { return filesystemUploadFileId; }
     /**
      * 设置filesystemupload文件标识

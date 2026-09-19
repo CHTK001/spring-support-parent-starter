@@ -19,10 +19,10 @@ public class ServerConfigChangedEvent {
     private final java.util.Set<String> keys;
 
     /**
-    * 构造
-    *
-    * @param keys 变更的配置键
-    */
+     * 构造
+     *
+     * @param keys 变更的配置键
+     */
     public ServerConfigChangedEvent(java.util.Set<String> keys) {
         this.keys = keys == null ? java.util.Collections.emptySet() : keys;
     }

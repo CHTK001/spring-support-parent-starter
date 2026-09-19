@@ -33,8 +33,8 @@ public class TransactionProperties {
     /** 前缀 */
     public static final String PREFIX = "plugin.transaction";
     /**
-    * 事务超时时间
-    */
+     * 事务超时时间
+     */
     private Integer timeout = 10;
     /**
      * 事务位置

@@ -28,11 +28,11 @@ public final class ChatClientSettingsResolver {
     }
 
     /**
-    * 解析
-    *
-    * @param sysAiGlobalSettingService sysAI全局setting服务
-    * @return resolve的结果
-    */
+     * 解析
+     *
+     * @param sysAiGlobalSettingService sysAI全局setting服务
+     * @return resolve的结果
+     */
     public static ChatClientSettings resolve(SysAiGlobalSettingService sysAiGlobalSettingService) {
         boolean enabled = getBoolean(sysAiGlobalSettingService, "enabled", true);
         if (!enabled) {

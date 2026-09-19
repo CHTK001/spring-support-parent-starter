@@ -34,8 +34,8 @@ public class SysAiProvider extends SysBase {
     private Long providerId;
 
     /**
-    * 供应商名称（如 打开AI、Claude）
-    */
+     * 供应商名称（如 打开AI、Claude）
+     */
     /**
      * 供应商名称
      */
@@ -45,8 +45,8 @@ public class SysAiProvider extends SysBase {
     private String providerName;
 
     /**
-    * 供应商类型（openai / anthropic / gemini / 通义千问 / 习俗）
-    */
+     * 供应商类型（openai / anthropic / gemini / 通义千问 / 习俗）
+     */
     /**
      * 供应商类型
      */
@@ -56,8 +56,8 @@ public class SysAiProvider extends SysBase {
     private String providerType;
 
     /**
-    * 接入 基础 URL
-    */
+     * 接入 基础 URL
+     */
     /**
      * 接入 基础 URL
      */
@@ -67,8 +67,8 @@ public class SysAiProvider extends SysBase {
     private String providerBaseUrl;
 
     /**
-    * 提供商 API Key
-    */
+     * 提供商 API Key
+     */
     /**
      * API Key
      */
@@ -78,8 +78,8 @@ public class SysAiProvider extends SysBase {
     private String providerApiKey;
 
     /**
-    * Logo 图片地址
-    */
+     * Logo 图片地址
+     */
     /**
      * Logo 图片地址
      */
@@ -89,8 +89,8 @@ public class SysAiProvider extends SysBase {
     private String providerLogo;
 
     /**
-    * 可用模型列表（JSON 字符串）
-    */
+     * 可用模型列表（JSON 字符串）
+     */
     /**
      * 可用模型列表(JSON)
      */
@@ -100,8 +100,8 @@ public class SysAiProvider extends SysBase {
     private String providerModels;
 
     /**
-    * 是否启用
-    */
+     * 是否启用
+     */
     /**
      * 是否启用
      */
@@ -111,8 +111,8 @@ public class SysAiProvider extends SysBase {
     private Boolean providerEnabled;
 
     /**
-    * 逻辑删除标记
-    */
+     * 逻辑删除标记
+     */
     /**
      * 逻辑删除标记
      */

@@ -29,10 +29,10 @@ public class CustomOperationCustomizer implements GlobalOperationCustomizer {
     private final Map<String, String> defaultHeaders; // 默认头部
 
     /**
-    * 构造函数
-    *
-    * @param knife4jProperties 刀4j配置属性
-    */
+     * 构造函数
+     *
+     * @param knife4jProperties 刀4j配置属性
+     */
     public CustomOperationCustomizer(Knife4jProperties knife4jProperties) {
         this.knife4jProperties = knife4jProperties;
         this.defaultHeaders = Optional.ofNullable(knife4jProperties.getDefaultHeader())

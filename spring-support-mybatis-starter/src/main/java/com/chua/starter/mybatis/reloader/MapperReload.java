@@ -49,8 +49,8 @@ public class MapperReload implements Reload, DisposableBean {
     private static final Logger log = LoggerFactory.getLogger(MapperReload.class);
 
     /**
-    * 资源模式匹配解析器
-    */
+     * 资源模式匹配解析器
+     */
     final PathMatchingResourcePatternResolver patternResolver = new PathMatchingResourcePatternResolver();
     
     /**

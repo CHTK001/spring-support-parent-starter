@@ -31,10 +31,10 @@ public final class JobHandlerFactory {
     }
 
     /**
-    * 获取单例实例。
-    *
-    * @return 工厂实例
-    */
+     * 获取单例实例。
+     *
+     * @return 工厂实例
+     */
     public static JobHandlerFactory getInstance() {
         return INSTANCE;
     }

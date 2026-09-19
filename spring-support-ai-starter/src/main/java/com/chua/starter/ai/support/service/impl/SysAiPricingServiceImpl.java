@@ -33,8 +33,8 @@ public class SysAiPricingServiceImpl implements SysAiPricingService {
     private static final String CACHE_NAME = "aiPricing";
 
     /**
-    * 定价 映射器
-    */
+     * 定价 映射器
+     */
     private final SysAiPricingMapper pricingMapper;
 
     /**

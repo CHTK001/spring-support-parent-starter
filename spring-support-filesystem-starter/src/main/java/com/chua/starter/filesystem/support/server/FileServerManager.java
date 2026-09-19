@@ -436,8 +436,8 @@ public class FileServerManager implements AutoCloseable {
     /** 关闭 */
     public void close() {
         /**
-    * 停止全部。
-    */
+         * 停止全部。
+         */
         stopAll();
     }
 }

@@ -34,10 +34,10 @@ import static com.chua.starter.common.support.constant.Constant.OPS;
 import static com.chua.starter.oauth.client.support.contants.AuthConstant.SUPER_ADMIN;
 
 /**
-* 静态协议实现类，用于处理静态认证逻辑。
-* 该类通过 令牌cipher（SM4加密）解析令牌或Cookie中的用户信息，并构建认证信息。
-* @author CH
-* @since 4.0.0
+ * 静态协议实现类，用于处理静态认证逻辑。
+ * 该类通过 令牌cipher（SM4加密）解析令牌或Cookie中的用户信息，并构建认证信息。
+ * @author CH
+ * @since 4.0.0
  */
 @Slf4j
 @Spi({"Static"})
@@ -47,27 +47,27 @@ public class StaticProtocol extends AbstractProtocol {
     private static final StaticSessionRegistry SESSIONS = StaticSessionRegistry.getInstance();
 
     /**
-    * 构造函数
-    *
-    * @param authClientProperties 认证客户端配置属性
-    */
+     * 构造函数
+     *
+     * @param authClientProperties 认证客户端配置属性
+     */
     public StaticProtocol(AuthClientProperties authClientProperties) {
         /**
-        * 父。
-        * @param authClientProperties 认证客户端属性
-        */
+         * 父。
+         * @param authClientProperties 认证客户端属性
+         */
         super(authClientProperties);
     }
 
     /**
-    * 鉴权入口，先拦截已吊销令牌
-    * <p>父类实现优先读取认证缓存，吊销后必须在此处拦断，否则缓存命中仍会放行已登出的令牌</p>
-    *
-    * @param cookies     Cookie数组
-    * @param token       认证令牌
-    * @param subProtocol 子协议
-    * @return 认证信息对象
-    */
+     * 鉴权入口，先拦截已吊销令牌
+     * <p>父类实现优先读取认证缓存，吊销后必须在此处拦断，否则缓存命中仍会放行已登出的令牌</p>
+     *
+     * @param cookies     Cookie数组
+     * @param token       认证令牌
+     * @param subProtocol 子协议
+     * @return 认证信息对象
+     */
     @Override
     public AuthenticationInformation approve(Cookie[] cookies, String token, String subProtocol) {
         if (isTokenRevoked(token)) {
@@ -80,14 +80,14 @@ public class StaticProtocol extends AbstractProtocol {
     }
 
     /**
-    * 登记在线会话
-    * <p>鉴权命中缓存时不会进入 newAuthenticationInformation，因此统一在鉴权入口登记，
-    * 保证活跃用户的最后访问时间持续刷新</p>
-    *
-    * @param token       请求携带的令牌
-    * @param cookies     请求 Cookie
-    * @param information 鉴权结果
-    */
+     * 登记在线会话
+     * <p>鉴权命中缓存时不会进入 newAuthenticationInformation，因此统一在鉴权入口登记，
+     * 保证活跃用户的最后访问时间持续刷新</p>
+     *
+     * @param token       请求携带的令牌
+     * @param cookies     请求 Cookie
+     * @param information 鉴权结果
+     */
     private void recordSession(String token, Cookie[] cookies, AuthenticationInformation information) {
         if (null == information || null == information.getReturnResult()) {
             return;
@@ -104,13 +104,13 @@ public class StaticProtocol extends AbstractProtocol {
     }
 
     /**
-    * 认证方法，根据Cookie和令牌进行用户认证
-    *
-    * @param cookie      Cookie对象
-    * @param token       认证令牌
-    * @param subProtocol 子协议
-    * @return 认证信息对象
-    */
+     * 认证方法，根据Cookie和令牌进行用户认证
+     *
+     * @param cookie      Cookie对象
+     * @param token       认证令牌
+     * @param subProtocol 子协议
+     * @return 认证信息对象
+     */
     @Override
     protected AuthenticationInformation approve(Cookie cookie, String token, String subProtocol) {
         try {
@@ -130,26 +130,26 @@ public class StaticProtocol extends AbstractProtocol {
     }
 
     /**
-    * 升级认证信息方法，根据Cookie、令牌和升级类型进行认证信息升级
-    *
-    * @param cookie       Cookie对象
-    * @param token        认证令牌
-    * @param upgradeType  升级类型
-    * @param refreshToken 刷新令牌
-    * @return 认证信息对象
-    */
+     * 升级认证信息方法，根据Cookie、令牌和升级类型进行认证信息升级
+     *
+     * @param cookie       Cookie对象
+     * @param token        认证令牌
+     * @param upgradeType  升级类型
+     * @param refreshToken 刷新令牌
+     * @return 认证信息对象
+     */
     @Override
     protected AuthenticationInformation upgradeInformation(Cookie cookie, String token, UpgradeType upgradeType, String refreshToken) {
         return newAuthenticationInformation(token, new Cookie[]{cookie});
     }
 
     /**
-    * 创建新的认证信息对象
-    *
-    * @param token  认证令牌
-    * @param cookie Cookie数组
-    * @return 认证信息对象
-    */
+     * 创建新的认证信息对象
+     *
+     * @param token  认证令牌
+     * @param cookie Cookie数组
+     * @return 认证信息对象
+     */
     private AuthenticationInformation newAuthenticationInformation(String token, Cookie[] cookie) {
         UserResume userResume = new UserResume();
         UserResult userResult = null;
@@ -224,23 +224,23 @@ public class StaticProtocol extends AbstractProtocol {
         com.chua.starter.oauth.client.support.execute.AuthSessionUtils.setUserInfo(userResume);
         // 返回认证成功的信息
         /**
-        * 认证信息。
-        * @param Information.OK 信息.OK
-        * @param userResume 用户resume
-        * @return 认证信息的结果
-        */
+         * 认证信息。
+         * @param Information.OK 信息.OK
+         * @param userResume 用户resume
+         * @return 认证信息的结果
+         */
         return new AuthenticationInformation(Information.OK, userResume);
     }
 
     /**
-    * 升级认证信息
-    *
-    * @param cookie        Cookie数组
-    * @param token         认证令牌
-    * @param upgradeType   升级类型
-    * @param refreshToken  刷新令牌
-    * @return 登录结果对象
-    */
+     * 升级认证信息
+     *
+     * @param cookie        Cookie数组
+     * @param token         认证令牌
+     * @param upgradeType   升级类型
+     * @param refreshToken  刷新令牌
+     * @return 登录结果对象
+     */
     @Override
     public LoginResult upgrade(Cookie[] cookie, String token, UpgradeType upgradeType, String refreshToken) {
         String sourceToken = StringUtils.isNotBlank(refreshToken) ? refreshToken : token;
@@ -285,28 +285,28 @@ public class StaticProtocol extends AbstractProtocol {
         userResult.setToken(refreshedToken);
         userResult.setRefreshToken(refreshedToken);
         /**
-        * login结果。
-        * @param refreshedToken refreshed令牌
-        * @param refreshedToken refreshed令牌
-        * @param userResume.getFingerprint( 用户resume.getfingerprint(
-        * @return login结果的结果
-        */
+         * login结果。
+         * @param refreshedToken refreshed令牌
+         * @param refreshedToken refreshed令牌
+         * @param userResume.getFingerprint( 用户resume.getfingerprint(
+         * @return login结果的结果
+         */
         return new LoginResult(refreshedToken, refreshedToken, userResume.getFingerprint(), userResult);
     }
 
     /**
-    * 获取访问令牌
-    *
-    * <p>静态协议下基于 {@code plugin.oauth.temp.user} 验证账号密码，
-    * 命中后通过 {@link TokenCipher} 签发 令牌，角色/用户标识 与
-    * {@link #newAuthenticationInformation} 保持一致（admin → SUPER_ADMIN + ADMIN）。</p>
-    *
-    * @param username  用户名
-    * @param password  密码
-    * @param authType  认证类型
-    * @param ext       扩展信息
-    * @return 登录认证结果对象
-    */
+     * 获取访问令牌
+     *
+     * <p>静态协议下基于 {@code plugin.oauth.temp.user} 验证账号密码，
+     * 命中后通过 {@link TokenCipher} 签发 令牌，角色/用户标识 与
+     * {@link #newAuthenticationInformation} 保持一致（admin → SUPER_ADMIN + ADMIN）。</p>
+     *
+     * @param username  用户名
+     * @param password  密码
+     * @param authType  认证类型
+     * @param ext       扩展信息
+     * @return 登录认证结果对象
+     */
     @Override
     public LoginAuthResult getAccessToken(String username, String password, AuthType authType, Map<String, Object> ext) {
         try {
@@ -376,13 +376,13 @@ public class StaticProtocol extends AbstractProtocol {
     }
 
     /**
-    * 用户登出
-    *
-    * @param uid          用户标识
-    * @param logoutType   登出类型
-    * @param userResult   用户结果对象
-    * @return 登录认证结果对象
-    */
+     * 用户登出
+     *
+     * @param uid          用户标识
+     * @param logoutType   登出类型
+     * @param userResult   用户结果对象
+     * @return 登录认证结果对象
+     */
     @Override
     public LoginAuthResult logout(String uid, LogoutType logoutType, UserResult userResult) {
         if (logoutType == LogoutType.KICK) {
@@ -398,11 +398,11 @@ public class StaticProtocol extends AbstractProtocol {
     }
 
     /**
-    * 强制下线指定用户的全部会话
-    *
-    * @param userKey 用户标识或用户名
-    * @return 登录认证结果
-    */
+     * 强制下线指定用户的全部会话
+     *
+     * @param userKey 用户标识或用户名
+     * @return 登录认证结果
+     */
     public static LoginAuthResult kick(String userKey) {
         List<String> hashes = SESSIONS.tokenHashesOf(userKey);
         if (hashes.isEmpty()) {
@@ -416,12 +416,12 @@ public class StaticProtocol extends AbstractProtocol {
     }
 
     /**
-    * 获取在线用户列表
-    * <p>静态协议没有中心会话存储，数据来自鉴权过程中登记的进程内会话表</p>
-    *
-    * @param query 查询参数
-    * @return 在线用户结果
-    */
+     * 获取在线用户列表
+     * <p>静态协议没有中心会话存储，数据来自鉴权过程中登记的进程内会话表</p>
+     *
+     * @param query 查询参数
+     * @return 在线用户结果
+     */
     @Override
     public OnlineUserResult getOnlineUsers(OnlineUserQuery query) {
         String username = null == query ? null : query.getUsername();
@@ -449,11 +449,11 @@ public class StaticProtocol extends AbstractProtocol {
     }
 
     /**
-    * 获取在线状态
-    *
-    * @param uid 用户标识
-    * @return 在线状态
-    */
+     * 获取在线状态
+     *
+     * @param uid 用户标识
+     * @return 在线状态
+     */
     @Override
     public OnlineStatus getOnlineStatus(String uid) {
         OnlineStatus status = new OnlineStatus();

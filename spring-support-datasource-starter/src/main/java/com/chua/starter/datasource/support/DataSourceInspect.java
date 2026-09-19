@@ -88,9 +88,9 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
     /** Post处理Beandefinitionregistry */
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry beanDefinitionRegistry) throws BeansException {
         /**
-    * 注册multi数据源属性。
-    * @param beanDefinitionRegistry Beandefinitionregistry
-    */
+         * 注册multi数据源属性。
+         * @param beanDefinitionRegistry Beandefinitionregistry
+         */
         registerMultiDataSourceProperties(beanDefinitionRegistry);
         /**
          * 注册环境。

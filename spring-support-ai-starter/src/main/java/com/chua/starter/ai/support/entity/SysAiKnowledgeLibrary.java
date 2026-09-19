@@ -27,8 +27,8 @@ public class SysAiKnowledgeLibrary {
     private Integer id;
 
     /**
-    * 知识库名称
-    */
+     * 知识库名称
+     */
     @TableField("sys_ai_knowledge_library_name")
     private String name; // 名称
 
@@ -52,8 +52,8 @@ public class SysAiKnowledgeLibrary {
     private LocalDateTime createTime;
 
     /**
-    * 更新时间
-    */
+     * 更新时间
+     */
     @TableField("update_time")
     /** 更新时间 */
     private LocalDateTime updateTime;

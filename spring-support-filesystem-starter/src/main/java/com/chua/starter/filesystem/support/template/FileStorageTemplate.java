@@ -45,9 +45,9 @@ public class FileStorageTemplate implements AutoCloseable {
     private final ModuleLog log = ModuleLog.of("FileStorage", FileStorageTemplate.class);
 
     /**
-    * 创建 文件storagetemplate 实例
-    * @param properties 属性
-    */
+     * 创建 文件storagetemplate 实例
+     * @param properties 属性
+     */
     public FileStorageTemplate(FileStorageProperties properties) {
         this.properties = properties;
     }

@@ -89,11 +89,11 @@ public class ServerLocalProvider implements MetricProvider {
     }
 
     /**
-    * 同步执行本地采集
-    *
-    * @param context 采集上下文
-    * @return 采集结果
-    */
+     * 同步执行本地采集
+     *
+     * @param context 采集上下文
+     * @return 采集结果
+     */
 
     private CollectResult doCollect(CollectContext context) {
         CollectResult result = new CollectResult();

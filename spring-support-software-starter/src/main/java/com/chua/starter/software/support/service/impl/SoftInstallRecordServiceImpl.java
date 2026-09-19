@@ -170,9 +170,9 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
 
             try {
                 /**
-    * 更新进步。
-    * @param record.getInstallRecordId( record.获取installrecordid(
-    */
+                 * 更新进步。
+                 * @param record.getInstallRecordId( record.获取installrecordid(
+                 */
                 updateProgress(record.getInstallRecordId(), 50, "正在卸载");
                 SoftwareSourceResult result = uninstallSource.uninstall(source, software, record.getInstallRecordInstallPath());
                 /**
@@ -224,9 +224,9 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
 
             try {
                 /**
-    * 更新进步。
-    * @param record.getInstallRecordId( record.获取installrecordid(
-    */
+                 * 更新进步。
+                 * @param record.getInstallRecordId( record.获取installrecordid(
+                 */
                 updateProgress(record.getInstallRecordId(), 50, "正在更新");
                 SoftwareSourceResult result = softwareSourceImpl.update(source, software, targetVersion, record.getInstallRecordInstallPath());
                 /**
@@ -399,11 +399,11 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
     }
 
     /**
-    * 获取可用的软件源实现
-    *
-    * @param source 软件源配置
-    * @return 软件源实现，如果没有可用实现则返回null
-    */
+     * 获取可用的软件源实现
+     *
+     * @param source 软件源配置
+     * @return 软件源实现，如果没有可用实现则返回null
+     */
     private SoftwareSource getSoftwareSource(SoftSource source) {
         for (SoftwareSource softwareSource : softwareSources) {
             if (softwareSource.support(source)) {

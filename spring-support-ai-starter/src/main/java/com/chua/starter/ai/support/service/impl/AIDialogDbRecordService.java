@@ -17,13 +17,13 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
-* 基于数据库的对话记录实现。
-*
-* <p>会话写入 {@code sys_ai_session}，消息写入 {@code sys_ai_message}，
-* 重启后历史记录不丢失。取代 {@link AIDialogLocalRecordService} 的内存实现。</p>
-*
-* @since 4.0.0.42
-* @author CH
+ * 基于数据库的对话记录实现。
+ *
+ * <p>会话写入 {@code sys_ai_session}，消息写入 {@code sys_ai_message}，
+ * 重启后历史记录不丢失。取代 {@link AIDialogLocalRecordService} 的内存实现。</p>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @Service
@@ -31,13 +31,13 @@ import java.util.stream.Collectors;
 public class AIDialogDbRecordService implements AIDialogRecordService {
 
     /**
-    * 会话 映射器
-    */
+     * 会话 映射器
+     */
     private final SysAiSessionMapper sessionMapper;
 
     /**
-    * 消息 映射器
-    */
+     * 消息 映射器
+     */
     private final SysAiMessageMapper messageMapper;
 
     @Override
@@ -119,11 +119,11 @@ public class AIDialogDbRecordService implements AIDialogRecordService {
     }
 
     /**
-    * 数据库会话实体转业务会话。
-    *
-    * @param session 数据库会话
-    * @return 业务会话
-    */
+     * 数据库会话实体转业务会话。
+     *
+     * @param session 数据库会话
+     * @return 业务会话
+     */
     private AIDialog toDialog(SysAiSession session) {
         AIDialog dialog = new AIDialog();
         dialog.setId(session.getId());
@@ -135,11 +135,11 @@ public class AIDialogDbRecordService implements AIDialogRecordService {
     }
 
     /**
-    * 数据库消息实体转业务消息。
-    *
-    * @param entity 数据库消息
-    * @return 业务消息
-    */
+     * 数据库消息实体转业务消息。
+     *
+     * @param entity 数据库消息
+     * @return 业务消息
+     */
     private ChatMessage toChatMessage(SysAiMessage entity) {
         ChatMessage message = new ChatMessage();
         message.setId(entity.getId());

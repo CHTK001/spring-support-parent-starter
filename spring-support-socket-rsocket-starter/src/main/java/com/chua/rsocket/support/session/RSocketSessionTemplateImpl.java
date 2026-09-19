@@ -107,13 +107,13 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
     }
 
     /**
-    * 从路径中提取 客户端标识
-    * <p>
-    * 例如：/ws/WebRTC -> WebRTC, /ws -> 默认, / -> 默认
-    * </p>
-    * @param path 路径
-    * @return extract客户端id的结果
-    */
+     * 从路径中提取 客户端标识
+     * <p>
+     * 例如：/ws/WebRTC -> WebRTC, /ws -> 默认, / -> 默认
+     * </p>
+     * @param path 路径
+     * @return extract客户端id的结果
+     */
     private String extractClientId(String path) {
         if (path == null || path.isEmpty() || "/".equals(path)) {
             return "default";

@@ -27,8 +27,8 @@ public class SysTaskStore {
     private String taskId;
 
     /**
-    * 任务类型
-    */
+     * 任务类型
+     */
     private String taskType;
 
     /**

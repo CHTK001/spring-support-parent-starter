@@ -34,13 +34,13 @@ public class MailService {
     private final JavaMailSender mailSender;
 
     /**
-    * 发送简单文本邮件
-    *
-    * @param to      收件人
-    * @param subject 邮件主题
-    * @param content 邮件正文
-    * @return 结果
-    */
+     * 发送简单文本邮件
+     *
+     * @param to      收件人
+     * @param subject 邮件主题
+     * @param content 邮件正文
+     * @return 结果
+     */
     public ReturnResult<Void> sendSimpleMail(String to, String subject, String content) {
         try {
             SimpleMailMessage message = new SimpleMailMessage();

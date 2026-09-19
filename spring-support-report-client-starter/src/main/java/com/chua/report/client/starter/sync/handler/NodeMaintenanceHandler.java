@@ -1126,9 +1126,9 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
         private final String displayName;
 
         /**
-        * 包类型。
-        * @param displayName display名称
-        */
+         * 包类型。
+         * @param displayName display名称
+         */
         PackageType(String displayName) {
             this.displayName = displayName;
         }

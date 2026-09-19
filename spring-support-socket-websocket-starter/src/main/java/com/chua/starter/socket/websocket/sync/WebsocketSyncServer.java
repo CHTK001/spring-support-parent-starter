@@ -37,9 +37,9 @@ public class WebsocketSyncServer extends AbstractSyncServer {
     protected void doStart() {
         for (WebSocketSession session : sessionManager.getAllSessions()) {
             /**
-    * onwebSocket连接。
-    * @param session 会话
-    */
+             * onwebSocket连接。
+             * @param session 会话
+             */
             onWebSocketConnect(session);
         }
     }

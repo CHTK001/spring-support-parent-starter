@@ -21,8 +21,8 @@ public class JacksonProperties {
     public static final String PRE = "plugin.jackson";
 
     /**
-    * 是否包含空值
-    */
+     * 是否包含空值
+     */
     private boolean includeNull = false;
 
     /**

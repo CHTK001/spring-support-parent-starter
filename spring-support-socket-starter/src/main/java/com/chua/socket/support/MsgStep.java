@@ -25,8 +25,8 @@ public class MsgStep implements Serializable {
     private static final long serialVersionUID = 1L;
 
     /**
-    * 事件标识
-    */
+     * 事件标识
+     */
     private String eventId;
 
     /**

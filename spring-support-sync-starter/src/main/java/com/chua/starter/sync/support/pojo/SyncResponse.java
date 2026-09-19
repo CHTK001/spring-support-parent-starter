@@ -15,8 +15,8 @@ public class SyncResponse implements Serializable {
     private static final long serialVersionUID = 1L;
 
     /**
-    * 请求标识
-    */
+     * 请求标识
+     */
     private String requestId;
 
     /**

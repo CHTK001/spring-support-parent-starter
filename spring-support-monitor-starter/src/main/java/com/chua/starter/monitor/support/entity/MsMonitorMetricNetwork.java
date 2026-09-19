@@ -27,56 +27,56 @@ public class MsMonitorMetricNetwork implements Serializable {
     private static final long serialVersionUID = 1L;
 
     /**
-    * 主键
-    */
+     * 主键
+     */
     @TableId(value = "id", type = IdType.AUTO)
     @Schema(description = "主键", example = "1")
     /** 标识 */
     private Long id;
 
     /**
-    * 监控主机 标识
-    */
+     * 监控主机 标识
+     */
     @TableField("ms_monitor_metric_network_monitor_id")
     @Schema(description = "监控主机 id", example = "1")
     /** 监控标识 */
     private Long monitorId;
 
     /**
-    * 网卡名
-    */
+     * 网卡名
+     */
     @TableField("ms_monitor_metric_network_interface_name")
     @Schema(description = "网卡名", example = "eth0")
     /** 接口名称 */
     private String interfaceName;
 
     /**
-    * 接收字节数
-    */
+     * 接收字节数
+     */
     @TableField("ms_monitor_metric_network_rx_bytes")
     @Schema(description = "接收字节数", example = "1073741824")
     /** rxbytes */
     private Long rxBytes;
 
     /**
-    * 发送字节数
-    */
+     * 发送字节数
+     */
     @TableField("ms_monitor_metric_network_tx_bytes")
     @Schema(description = "发送字节数", example = "536870912")
     /** txbytes */
     private Long txBytes;
 
     /**
-    * 网卡速率(bps)
-    */
+     * 网卡速率(bps)
+     */
     @TableField("ms_monitor_metric_network_speed_bps")
     @Schema(description = "网卡速率(bps)", example = "1000000000")
     /** 速度bps */
     private Long speedBps;
 
     /**
-    * 采集时间
-    */
+     * 采集时间
+     */
     @TableField("ms_monitor_metric_network_collect_time")
     @Schema(description = "采集时间", example = "2026-08-04T10:00:00")
     /** Collect时间 */

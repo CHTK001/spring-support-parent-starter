@@ -51,8 +51,8 @@ import java.util.Map;
     public static final String PRE = "plugin.api";
 
     /**
-    * 忽略返回格式（针对返回格式不进行统计处理）
-    */
+     * 忽略返回格式（针对返回格式不进行统计处理）
+     */
     private String[] ignoreFormatPackages;
 
     /**
@@ -64,18 +64,18 @@ import java.util.Map;
     private Version version = new Version();
 
     /**
-    * 平台配置
-    */
+     * 平台配置
+     */
     @Valid
     @NotNull(message = "平台配置不能为空")
     /** Platform */
     private Platform platform = new Platform();
 
     /**
-    * 获取平台配置
-    *
-    * @return 平台配置
-    */
+     * 获取平台配置
+     *
+     * @return 平台配置
+     */
     public Platform getPlatform() {
         return platform;
     }
@@ -94,10 +94,10 @@ import java.util.Map;
     private ResponseEncodeProperties encode = new ResponseEncodeProperties();
 
     /**
-    * 获取编码
-    *
-    * @return 获取encode的结果
-    */
+     * 获取编码
+     *
+     * @return 获取encode的结果
+     */
     public ResponseEncodeProperties getEncode() {
         return encode;
     }
@@ -111,10 +111,10 @@ import java.util.Map;
     private RequestDecodeProperties decode = new RequestDecodeProperties();
 
     /**
-    * 获取解码
-    *
-    * @return 获取decode的结果
-    */
+     * 获取解码
+     *
+     * @return 获取decode的结果
+     */
     public RequestDecodeProperties getDecode() {
         return decode;
     }
@@ -127,10 +127,10 @@ import java.util.Map;
     private SpiConfig spi = new SpiConfig();
 
     /**
-    * 获取SPI配置
-    *
-    * @return SPI配置
-    */
+     * 获取SPI配置
+     *
+     * @return SPI配置
+     */
     public SpiConfig getSpi() {
         return spi;
     }
@@ -144,10 +144,10 @@ import java.util.Map;
     private MockConfig mock = new MockConfig();
 
     /**
-    * 获取Mock
-    *
-    * @return 获取mock的结果
-    */
+     * 获取Mock
+     *
+     * @return 获取mock的结果
+     */
     public MockConfig getMock() {
         return mock;
     }
@@ -189,10 +189,10 @@ import java.util.Map;
     private FeatureConfig feature = new FeatureConfig();
 
     /**
-    * 获取特征
-    *
-    * @return 获取特征的结果
-    */
+     * 获取特征
+     *
+     * @return 获取特征的结果
+     */
     public FeatureConfig getFeature() {
         return feature;
     }
@@ -206,10 +206,10 @@ import java.util.Map;
     private GrayConfig gray = new GrayConfig();
 
     /**
-    * 获取灰度发布配置
-    *
-    * @return 灰度发布配置
-    */
+     * 获取灰度发布配置
+     *
+     * @return 灰度发布配置
+     */
     public GrayConfig getGray() {
         return gray;
     }
@@ -299,9 +299,9 @@ import java.util.Map;
         private final String value;
 
         /**
-        * platform类型。
-        * @param value 值
-        */
+         * platform类型。
+         * @param value 值
+         */
         PlatformType(String value) {
             this.value = value;
         }
@@ -440,17 +440,17 @@ import java.util.Map;
         private String codecType = "sm2";
 
         /**
-        * 白名单（不需要加密的接口路径）
-        */
+         * 白名单（不需要加密的接口路径）
+         */
         @NotNull(message = "白名单不能为null，可以为空列表")
         /** White列表 */
         private List<String> whiteList = Collections.emptyList();
 
         /**
-        * 是否启用
-        *
-        * @return 是否enable的结果
-        */
+         * 是否启用
+         *
+         * @return 是否enable的结果
+         */
         public boolean isEnable() {
             return enable;
         }
@@ -570,10 +570,10 @@ import java.util.Map;
         private String codecType = "sm4";
 
         /**
-        * 获取codec类型
-        *
-        * @return 获取codec类型的结果
-        */
+         * 获取codec类型
+         *
+         * @return 获取codec类型的结果
+         */
         public String getCodecType() {
             return codecType;
         }
@@ -698,10 +698,10 @@ import java.util.Map;
     }
 
     /**
-        * SPI 配置
-        * @author CH
-        * @since 4.0.0
-        */
+     * SPI 配置
+     * @author CH
+     * @since 4.0.0
+     */
     public static class SpiConfig {
 
         /**
@@ -766,10 +766,10 @@ import java.util.Map;
         private String profiles = "dev,test";
 
         /**
-        * 是否启用
-        *
-        * @return 是否enable的结果
-        */
+         * 是否启用
+         *
+         * @return 是否enable的结果
+         */
         public boolean isEnable() {
             return enable;
         }
@@ -823,10 +823,10 @@ import java.util.Map;
         private String path = "/api/features";
 
         /**
-        * 是否启用
-        *
-        * @return 是否enable的结果
-        */
+         * 是否启用
+         *
+         * @return 是否enable的结果
+         */
         public boolean isEnable() {
             return enable;
         }
@@ -1014,51 +1014,51 @@ import java.util.Map;
         private String headerName = "X-Gray-Hit";
 
         /**
-        * 全局灰度用户白名单
-        * <p>
-        * 这些用户始终进入灰度版本
-        * </p>
-        */
+         * 全局灰度用户白名单
+         * <p>
+         * 这些用户始终进入灰度版本
+         * </p>
+         */
         @NotNull(message = "全局灰度用户白名单不能为null，可以为空列表")
         /** 全局用户 */
         private List<String> globalUsers = Collections.emptyList();
 
         /**
-        * 全局灰度IP白名单
-        * <p>
-        * 这些IP始终进入灰度版本
-        * </p>
-        */
+         * 全局灰度IP白名单
+         * <p>
+         * 这些IP始终进入灰度版本
+         * </p>
+         */
         @NotNull(message = "全局灰度IP白名单不能为null，可以为空列表")
         /** 全局IPS */
         private List<String> globalIps = Collections.emptyList();
 
         /**
-        * 全局灰度角色白名单
-        * <p>
-        * 拥有这些角色的用户始终进入灰度版本
-        * </p>
-        */
+         * 全局灰度角色白名单
+         * <p>
+         * 拥有这些角色的用户始终进入灰度版本
+         * </p>
+         */
         @NotNull(message = "全局灰度角色白名单不能为null，可以为空列表")
         /** 全局角色 */
         private List<String> globalRoles = Collections.emptyList();
 
         /**
-        * 默认灰度百分比
-        * <p>
-        * 注解未指定百分比时使用此默认值
-        * </p>
-        */
+         * 默认灰度百分比
+         * <p>
+         * 注解未指定百分比时使用此默认值
+         * </p>
+         */
         @Min(value = 0, message = "灰度百分比不能小于0")
         @Max(value = 100, message = "灰度百分比不能大于100")
         /** 默认percentage */
         private int defaultPercentage = 0;
 
         /**
-        * 是否启用
-        *
-        * @return 是否enable的结果
-        */
+         * 是否启用
+         *
+         * @return 是否enable的结果
+         */
         public boolean isEnable() {
             return enable;
         }

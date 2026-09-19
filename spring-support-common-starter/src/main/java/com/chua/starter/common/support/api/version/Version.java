@@ -420,10 +420,10 @@ public class Version implements Comparable<Version> {
         return original;
     }
     /**
-    * 获取 major
-    *
-    * @return major
-    */
+     * 获取 major
+     *
+     * @return major
+     */
     public int getMajor() {
         return major;
     }

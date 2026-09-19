@@ -36,11 +36,11 @@ public class OrderConfigController {
     @Operation(summary = "查询分表配置")
     @GetMapping("/partitions")
     /**
-    * 列表
-    *
-    * @param request 请求
-    * @return 列表的结果
-    */
+     * 列表
+     *
+     * @param request 请求
+     * @return 列表的结果
+     */
     public Result<List<OrderPartitionConfigVO>> list(HttpServletRequest request) {
         Result<List<OrderPartitionConfigVO>> denied = denyIfNecessary(request);
         return denied != null ? denied : Result.success(orderPartitionConfigService.listConfigs());

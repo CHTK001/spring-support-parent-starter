@@ -34,10 +34,10 @@ public class ServerIdentityServiceImpl implements ServerIdentityService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-    * 创建。
-    * @param identity identity
-    * @return 创建的结果
-    */
+     * 创建。
+     * @param identity identity
+     * @return 创建的结果
+     */
     public ReturnResult<MsServerIdentity> create(MsServerIdentity identity) {
         if (identity.getMsServerIdentityName() == null || identity.getMsServerIdentityName().isEmpty()) {
             return ReturnResult.error("身份名称不能为空");

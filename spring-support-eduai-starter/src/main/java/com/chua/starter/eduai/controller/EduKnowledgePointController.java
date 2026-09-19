@@ -36,14 +36,14 @@ public class EduKnowledgePointController {
     private final IEduKnowledgePointService knowledgePointService;
 
     /**
-    * 查询知识点树
-    *
-    * @param subject    学科
-    * @param gradeLevel 学段
-    * @param grade      年级
-    * @return 知识点树
-    * @param false false
-    */
+     * 查询知识点树
+     *
+     * @param subject    学科
+     * @param gradeLevel 学段
+     * @param grade      年级
+     * @return 知识点树
+     * @param false false
+     */
     @Operation(summary = "查询知识点树")
     @GetMapping("/tree")
     public ReturnResult<List<KnowledgePointVO>> tree(@RequestParam(required = false) String subject,

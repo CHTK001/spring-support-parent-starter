@@ -56,11 +56,11 @@ public class MybatisPlusPermissionInterceptor extends JsqlParserSupport implemen
     static final Map<String, Expression> MAPPED_STATEMENT_ID = new ConcurrentReferenceHashMap<>(4096); // mapped对账单标识
 
     /**
-    * 创建 mybatisplus权限拦截器 实例
-    * @param mybatisPlusPermissionHandler mybatisplus权限处理器
-    * @param methodSecurityInterceptor mybatisplus数据scope属性
-    * @param methodSecurityInterceptor 方法安全性拦截器
-    */
+     * 创建 mybatisplus权限拦截器 实例
+     * @param mybatisPlusPermissionHandler mybatisplus权限处理器
+     * @param methodSecurityInterceptor mybatisplus数据scope属性
+     * @param methodSecurityInterceptor 方法安全性拦截器
+     */
     public MybatisPlusPermissionInterceptor(DataPermissionHandler mybatisPlusPermissionHandler, MybatisPlusDataScopeProperties methodSecurityInterceptor) {
         this(mybatisPlusPermissionHandler, methodSecurityInterceptor, () -> null);
     }

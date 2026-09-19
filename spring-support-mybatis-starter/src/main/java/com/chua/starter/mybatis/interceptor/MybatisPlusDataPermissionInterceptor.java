@@ -93,11 +93,11 @@ public class MybatisPlusDataPermissionInterceptor extends DataPermissionIntercep
     }
 
     /**
-    * 查询前置处理：解析 SQL 并应用数据权限条件。
-    *
-    * <p>对 SQL 解析失败（如字段别名撞数据库保留字）做容错，
-    * 跳过数据权限过滤而不阻断查询。</p>
-    */
+     * 查询前置处理：解析 SQL 并应用数据权限条件。
+     *
+     * <p>对 SQL 解析失败（如字段别名撞数据库保留字）做容错，
+     * 跳过数据权限过滤而不阻断查询。</p>
+     */
     @Override
     public void beforeQuery(Executor executor, MappedStatement ms, Object parameter,
                             RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql) {

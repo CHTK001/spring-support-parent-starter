@@ -70,10 +70,10 @@ public class ServiceInfoAutoConfiguration {
     public ServiceInfoEndpointDetector serviceInfoEndpointDetector(
             Environment environment, ServiceInfoProperties properties) {
         /**
-    * 服务信息端点detector。
-    * @param environment 环境
-    * @return 服务信息端点detector的结果
-    */
+         * 服务信息端点detector。
+         * @param environment 环境
+         * @return 服务信息端点detector的结果
+         */
         return new ServiceInfoEndpointDetector(environment)
                 .infrastructureEnabled(properties.isInfrastructure());
     }

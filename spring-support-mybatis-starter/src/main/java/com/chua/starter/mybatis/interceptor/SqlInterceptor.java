@@ -55,10 +55,10 @@ import static com.chua.starter.common.support.constant.MdcConstant.TRACE_ID;
         @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class, CacheKey.class, BoundSql.class}),
 })
 /**
-* SQL拦截器类。
-*
-* @author CH
-* @since 4.0.0
+ * SQL拦截器类。
+ *
+ * @author CH
+ * @since 4.0.0
  */
 public class SqlInterceptor implements Interceptor {
     /** 日志 */

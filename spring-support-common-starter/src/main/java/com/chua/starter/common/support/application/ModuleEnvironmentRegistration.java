@@ -17,10 +17,10 @@ public class ModuleEnvironmentRegistration {
     private static final Logger log = LoggerFactory.getLogger(ModuleEnvironmentRegistration.class);
 
     /**
-    * 使用配置对象类型作为分组标识，将配置注册到全局环境中。
-    *
-    * @param config 配置对象
-    */
+     * 使用配置对象类型作为分组标识，将配置注册到全局环境中。
+     *
+     * @param config 配置对象
+     */
     public ModuleEnvironmentRegistration(Object config) {
         /**
          * this。

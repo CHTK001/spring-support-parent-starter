@@ -158,10 +158,10 @@ public class PartitionRoutingTable extends AbstractTable implements ScannableTab
     }
 
     /**
-    * 构建union全部SQL
-    *
-    * @return 构建union全部sql的结果
-    */
+     * 构建union全部SQL
+     *
+     * @return 构建union全部sql的结果
+     */
     private String buildUnionAllSql() {
         StringBuilder sql = new StringBuilder();
         for (int i = 0; i < tableNames.size(); i++) {

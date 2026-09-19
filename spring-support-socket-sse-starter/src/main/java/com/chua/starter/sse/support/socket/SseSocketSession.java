@@ -33,11 +33,11 @@ public class SseSocketSession implements SocketSession {
     private volatile boolean connected = true; // 连接
 
     /**
-    * 创建 sseSocket会话 实例
-    * @param id 标识
-    * @param emitter sseemitter
-    * @param emitter emitter
-    */
+     * 创建 sseSocket会话 实例
+     * @param id 标识
+     * @param emitter sseemitter
+     * @param emitter emitter
+     */
     public SseSocketSession(String id, SseEmitter emitter) {
         this.id = id;
         this.clientId = id;
@@ -143,10 +143,10 @@ public class SseSocketSession implements SocketSession {
     @Override
     @SuppressWarnings("unchecked")
     /**
-    * 获取Connection
-    *
-    * @return 获取connection的结果
-    */
+     * 获取Connection
+     *
+     * @return 获取connection的结果
+     */
     public <T> T getConnection() {
         return (T) emitter;
     }

@@ -118,10 +118,10 @@ public class HikvisionSecurePlatformSession extends AbstractOpenApiSession {
     }
 
     /**
-    * 获取摄像头预览 URL（HLS/RTSP 等）
-    * @param channel 通道
-    * @return 获取previewurl的结果
-    */
+     * 获取摄像头预览 URL（HLS/RTSP 等）
+     * @param channel 通道
+     * @return 获取previewurl的结果
+     */
     public JsonNode getPreviewUrl(int channel) {
         Map<String, Object> params = new HashMap<>();
         params.put("cameraIndexCode", info.getDeviceSerial());
@@ -164,11 +164,11 @@ public class HikvisionSecurePlatformSession extends AbstractOpenApiSession {
     }
 
     /**
-    * 映射Artemisdirection
-    *
-    * @param cmd CMD
-    * @return 映射Artemisdirection的结果
-    */
+     * 映射Artemisdirection
+     *
+     * @param cmd CMD
+     * @return 映射Artemisdirection的结果
+     */
     private int mapArtemisDirection(com.chua.starter.device.spi.model.PtzCommand cmd) {
         switch (cmd) {
             case UP: return 0;

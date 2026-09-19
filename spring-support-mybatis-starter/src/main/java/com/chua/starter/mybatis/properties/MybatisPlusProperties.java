@@ -25,8 +25,8 @@ public class MybatisPlusProperties {
     public static final String PRE = "plugin.mybatis";
 
     /**
-    * xml是否可热加载
-    */
+     * xml是否可热加载
+     */
     private boolean openXmlReload = true;
 
     /**

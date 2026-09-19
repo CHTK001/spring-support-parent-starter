@@ -144,11 +144,11 @@ public class RedissonLockTemplate implements LockTemplate {
     /** 锁 */
     public void lock(String lockKey, Runnable action) {
         /**
-    * 锁。
-    * @param lockKey 锁Key
-    * @param DEFAULT_LEASE_TIME 默认lease时间
-    * @param action 动作
-    */
+         * 锁。
+         * @param lockKey 锁Key
+         * @param DEFAULT_LEASE_TIME 默认lease时间
+         * @param action 动作
+         */
         lock(lockKey, DEFAULT_LEASE_TIME, action);
     }
 

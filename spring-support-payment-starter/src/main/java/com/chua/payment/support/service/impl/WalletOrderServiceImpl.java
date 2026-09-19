@@ -40,11 +40,11 @@ public class WalletOrderServiceImpl implements WalletOrderService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-    * 创建recharge订单
-    *
-    * @param request 请求
-    * @return 创建recharge订单的结果
-    */
+     * 创建recharge订单
+     *
+     * @param request 请求
+     * @return 创建recharge订单的结果
+     */
     public WalletOrder createRechargeOrder(RechargeRequest request) {
         String orderNo = StringUtils.hasText(request.getRechargeNo()) ? request.getRechargeNo() : generateOrderNo("RCH");
         request.setRechargeNo(orderNo);
@@ -227,10 +227,10 @@ public class WalletOrderServiceImpl implements WalletOrderService {
     public Page<WalletOrder> page(WalletOrderQueryRequest request) {
         if (request == null) {
             /**
-    * 薪酬异常。
-    * @param "查询参数不能为空" "查询参数不能为空"
-    * @return 薪酬异常的结果
-    */
+             * 薪酬异常。
+             * @param "查询参数不能为空" "查询参数不能为空"
+             * @return 薪酬异常的结果
+             */
             throw new PaymentException("查询参数不能为空");
         }
         LambdaQueryWrapper<WalletOrder> wrapper = new LambdaQueryWrapper<WalletOrder>()

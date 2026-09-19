@@ -41,8 +41,8 @@ public class DynamicDataSource extends AbstractRoutingDataSource {
     private DynmaicSimpleConnectionHolder connectionHolder = null;
 
     /**
-    * dynamic数据源。
-    */
+     * dynamic数据源。
+     */
     public DynamicDataSource() {
         this.setTargetDataSources(TARGET_DATA_SOURCES);
         this.defaultDataSource = createDefaultDataSource();
@@ -210,10 +210,10 @@ public class DynamicDataSource extends AbstractRoutingDataSource {
         private Connection connection;
 
         /**
-        * 创建 a 新 简单connection把手 for the given Connection.
-        *
-        * @param connection the JDBC Connection
-        */
+         * 创建 a 新 简单connection把手 for the given Connection.
+         *
+         * @param connection the JDBC Connection
+         */
         public DynmaicConnectionHandle(Connection connection) {
             /**
              * 父。
@@ -250,9 +250,9 @@ public class DynamicDataSource extends AbstractRoutingDataSource {
         private final DynmaicConnectionHandle connectionHandle;
 
         /**
-        * dynmaic简单connectionholder。
-        * @param connectionHandle connection把手
-        */
+         * dynmaic简单connectionholder。
+         * @param connectionHandle connection把手
+         */
         public DynmaicSimpleConnectionHolder(DynmaicConnectionHandle connectionHandle) {
             /**
              * 父。

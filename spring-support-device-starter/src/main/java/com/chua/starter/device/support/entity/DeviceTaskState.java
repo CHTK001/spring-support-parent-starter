@@ -27,36 +27,36 @@ public class DeviceTaskState {
     private String deviceTaskStateId;
 
     /**
-    * 任务名称（唯一）
-    */
+     * 任务名称（唯一）
+     */
     @TableField("device_task_state_name")
     /** Device任务状态名称 */
     private String deviceTaskStateName;
 
     /**
-    * 是否正在运行：0 否、1 是
-    */
+     * 是否正在运行：0 否、1 是
+     */
     @TableField("device_task_state_running")
     /** Device任务状态running */
     private Boolean deviceTaskStateRunning;
 
     /**
-    * 最后运行时间
-    */
+     * 最后运行时间
+     */
     @TableField("device_task_state_last_run_at")
     /** Device任务状态最后RUNAT */
     private LocalDateTime deviceTaskStateLastRunAt;
 
     /**
-    * 运行间隔（秒）
-    */
+     * 运行间隔（秒）
+     */
     @TableField("device_task_state_interval")
     /** Device任务状态间隔 */
     private Integer deviceTaskStateInterval;
 
     /**
-    * 任务描述
-    */
+     * 任务描述
+     */
     @TableField("device_task_state_description")
     /** Device任务状态描述 */
     private String deviceTaskStateDescription;

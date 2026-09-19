@@ -19,8 +19,8 @@ public class MessagePriorityComparator implements Comparator<Message> {
     public static final String PRIORITY_HEADER = "X-Priority";
 
     /**
-    * 默认优先级
-    */
+     * 默认优先级
+     */
     public static final int DEFAULT_PRIORITY = 5;
 
     /**

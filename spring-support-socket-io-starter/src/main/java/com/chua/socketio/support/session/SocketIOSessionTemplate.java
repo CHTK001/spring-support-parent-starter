@@ -367,11 +367,11 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
     }
 
     /**
-    * 获取指定 客户端标识 的服务器实例
-    *
-    * @param clientId 客户端标识
-    * @return 服务器实例，不存在返回 空
-    */
+     * 获取指定 客户端标识 的服务器实例
+     *
+     * @param clientId 客户端标识
+     * @return 服务器实例，不存在返回 空
+     */
     public DelegateSocketIOServer getServer(String clientId) {
         return servers.get(clientId);
     }

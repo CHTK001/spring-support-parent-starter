@@ -36,8 +36,8 @@ public class SysAiGroup implements Serializable {
     private Long groupId;
 
     /**
-    * 分组名称
-    */
+     * 分组名称
+     */
     /**
      * 分组名称
      */
@@ -47,8 +47,8 @@ public class SysAiGroup implements Serializable {
     private String groupName;
 
     /**
-    * 分组描述
-    */
+     * 分组描述
+     */
     /**
      * 分组描述
      */
@@ -58,8 +58,8 @@ public class SysAiGroup implements Serializable {
     private String groupDescription;
 
     /**
-    * 关联模型列表（JSON 数组字符串）
-    */
+     * 关联模型列表（JSON 数组字符串）
+     */
     /**
      * 关联模型列表(JSON)
      */
@@ -69,8 +69,8 @@ public class SysAiGroup implements Serializable {
     private String groupModels;
 
     /**
-    * 绑定 appKey 标识 列表（JSON 数组字符串）
-    */
+     * 绑定 appKey 标识 列表（JSON 数组字符串）
+     */
     /**
      * 绑定 appKey 标识 列表(JSON)
      */
@@ -80,8 +80,8 @@ public class SysAiGroup implements Serializable {
     private String groupAppKeyIds;
 
     /**
-    * 是否启用
-    */
+     * 是否启用
+     */
     /**
      * 是否启用
      */
@@ -91,8 +91,8 @@ public class SysAiGroup implements Serializable {
     private Boolean groupEnabled;
 
     /**
-    * 创建时间
-    */
+     * 创建时间
+     */
     /**
      * 创建时间
      */
@@ -102,8 +102,8 @@ public class SysAiGroup implements Serializable {
     private LocalDateTime groupCreateTime;
 
     /**
-    * 更新时间
-    */
+     * 更新时间
+     */
     /**
      * 更新时间
      */
@@ -113,8 +113,8 @@ public class SysAiGroup implements Serializable {
     private LocalDateTime groupUpdateTime;
 
     /**
-    * 逻辑删除标记
-    */
+     * 逻辑删除标记
+     */
     /**
      * 逻辑删除标记
      */

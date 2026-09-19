@@ -23,9 +23,9 @@ public class JsonLongSetTypeHandler extends AbstractJsonTypeHandler<Object> {
     private static final TypeReference<Set<Long>> TYPE_REFERENCE = new TypeReference<Set<Long>>(){};
 
     /**
-    * 创建 jsonlong设置类型处理器 实例
-    * @param type 类型
-    */
+     * 创建 jsonlong设置类型处理器 实例
+     * @param type 类型
+     */
     public JsonLongSetTypeHandler(Class<?> type) {
         /**
          * 父。

@@ -25,8 +25,8 @@ public class EduPaperQuestion {
     private Long paperQuestionId;
 
     /**
-    * 试卷标识
-    */
+     * 试卷标识
+     */
     private Long paperQuestionPaperId;
 
     /**

@@ -26,8 +26,8 @@ public class EduSubject {
     private Long subjectId;
 
     /**
-    * 学科编码（业务唯一，如 chinese/math/english）
-    */
+     * 学科编码（业务唯一，如 chinese/math/english）
+     */
     private String subjectCode;
 
     /**

@@ -110,12 +110,12 @@ public class ProjectMetricServiceImpl implements ProjectMetricService {
     }
 
     /**
-    * 单主机指标采集：进程内存/CPU + 端口存活 + HTTP 健康码
-    *
-    * @param project 项目
-    * @param host    主机
-    * @param hostId  主机 标识
-    */
+     * 单主机指标采集：进程内存/CPU + 端口存活 + HTTP 健康码
+     *
+     * @param project 项目
+     * @param host    主机
+     * @param hostId  主机 标识
+     */
     private void collectFromHost(MsProject project, MsServerHost host, Long hostId) {
         ReturnResult<SshCredential> resolved = serverHostService.resolveCredential(hostId, null);
         if (!resolved.isOk()) {
@@ -206,12 +206,12 @@ public class ProjectMetricServiceImpl implements ProjectMetricService {
             new java.util.concurrent.ConcurrentHashMap<>();
 
     /**
-    * 采集失败状态键
-    *
-    * @param project 项目
-    * @param host    主机
-    * @return 键
-    */
+     * 采集失败状态键
+     *
+     * @param project 项目
+     * @param host    主机
+     * @return 键
+     */
     private String collectFailKey(MsProject project, MsServerHost host) {
         return project.getId() + ":" + host.getId();
     }

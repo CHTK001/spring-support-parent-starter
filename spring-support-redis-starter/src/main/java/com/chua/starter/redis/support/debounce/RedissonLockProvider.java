@@ -28,9 +28,9 @@ public class RedissonLockProvider implements LockProvider {
     private String key;
 
     /**
-    * 创建 redisson锁提供者 实例
-    * @param key Key
-    */
+     * 创建 redisson锁提供者 实例
+     * @param key Key
+     */
     public RedissonLockProvider(String key) {
         this.key = key;
     }

@@ -85,11 +85,11 @@ public class ServiceInfoAuthenticationFilter implements Filter {
     }
 
     /**
-    * 校验基础认证
-    *
-    * @param request 请求
-    * @return 检查basic认证的结果
-    */
+     * 校验基础认证
+     *
+     * @param request 请求
+     * @return 检查basic认证的结果
+     */
     private boolean checkBasicAuth(HttpServletRequest request) {
         String authHeader = request.getHeader(AUTHORIZATION);
         if (authHeader == null || !authHeader.startsWith(BASIC)) {

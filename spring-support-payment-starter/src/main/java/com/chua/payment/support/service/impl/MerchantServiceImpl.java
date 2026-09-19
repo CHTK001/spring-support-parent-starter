@@ -41,11 +41,11 @@ public class MerchantServiceImpl implements MerchantService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-    * 创建Merchant
-    *
-    * @param dto dto
-    * @return 创建merchant的结果
-    */
+     * 创建Merchant
+     *
+     * @param dto dto
+     * @return 创建merchant的结果
+     */
     public MerchantVO createMerchant(MerchantDTO dto) {
         Merchant merchant = new Merchant();
         BeanUtils.copyProperties(dto, merchant);

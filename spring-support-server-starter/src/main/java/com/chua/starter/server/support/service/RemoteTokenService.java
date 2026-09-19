@@ -41,8 +41,8 @@ public class RemoteTokenService {
     private static final int DEFAULT_TOKEN_TTL_MINUTES = 60;
 
     /**
-    * guacamole客户端 单例（令牌 登记表必须全局唯一，签发与解析才对得上）
-    */
+     * guacamole客户端 单例（令牌 登记表必须全局唯一，签发与解析才对得上）
+     */
     @Getter
     private GuacamoleClient client; // 客户端
 
@@ -50,8 +50,8 @@ public class RemoteTokenService {
     private final ServerProperties properties;
 
     /**
-    * 系统配置服务（guacd 地址/令牌 TTL 动态化——配置表优先）
-    */
+     * 系统配置服务（guacd 地址/令牌 TTL 动态化——配置表优先）
+     */
     private final ServerConfigService configService;
 
     /**

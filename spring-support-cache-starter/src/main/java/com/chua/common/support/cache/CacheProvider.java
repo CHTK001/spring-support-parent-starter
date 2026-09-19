@@ -133,11 +133,11 @@ public interface CacheProvider {
         /** 放入 */
         public void put(String key, Object value) {
             /**
-        * 放入。
-        * @param key Key
-        * @param value 值
-        * @param 0 0
-        */
+             * 放入。
+             * @param key Key
+             * @param value 值
+             * @param 0 0
+             */
             put(key, value, 0);
         }
 
@@ -217,11 +217,11 @@ public interface CacheProvider {
         /** 放入 */
         public void put(String key, Object value) {
             /**
-        * 放入。
-        * @param key Key
-        * @param value 值
-        * @param defaultTtl 默认ttl
-        */
+             * 放入。
+             * @param key Key
+             * @param value 值
+             * @param defaultTtl 默认ttl
+             */
             put(key, value, defaultTtl);
         }
 

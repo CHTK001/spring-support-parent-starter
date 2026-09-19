@@ -26,11 +26,11 @@ public class WalletBalancePaymentChannel extends AbstractMerchantPaymentChannel 
     private final WalletAccountService walletAccountService;
 
     /**
-    * 创建 walletbalance薪酬通道 实例
-    * @param merchantChannelService merchant通道服务
-    * @param objectMapper 对象映射器
-    * @param walletAccountService wallet账户服务
-    */
+     * 创建 walletbalance薪酬通道 实例
+     * @param merchantChannelService merchant通道服务
+     * @param objectMapper 对象映射器
+     * @param walletAccountService wallet账户服务
+     */
     public WalletBalancePaymentChannel(MerchantChannelService merchantChannelService,
                                        ObjectMapper objectMapper,
                                        WalletAccountService walletAccountService) {

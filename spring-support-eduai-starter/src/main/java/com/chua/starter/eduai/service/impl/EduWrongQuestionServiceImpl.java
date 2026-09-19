@@ -114,12 +114,12 @@ public class EduWrongQuestionServiceImpl extends ServiceImpl<EduWrongQuestionMap
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-    * 更新Mastery
-    *
-    * @param wrongId wrongid
-    * @param masteryLevel mastery水平仪
-    * @return 更新mastery的结果
-    */
+     * 更新Mastery
+     *
+     * @param wrongId wrongid
+     * @param masteryLevel mastery水平仪
+     * @return 更新mastery的结果
+     */
     public boolean updateMastery(Long wrongId, Integer masteryLevel) {
         EduWrongQuestion entity = baseMapper.selectById(wrongId);
         if (entity == null) {

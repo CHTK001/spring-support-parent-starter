@@ -29,8 +29,8 @@ public class SysAiGlobalSetting {
     private Long id;
 
     /**
-    * 设置分组（如 全局 / runtime / rag）
-    */
+     * 设置分组（如 全局 / runtime / rag）
+     */
     @TableField("sys_ai_global_setting_group")
     private String settingGroup; // setting群体
 
@@ -78,8 +78,8 @@ public class SysAiGlobalSetting {
     private LocalDateTime createTime;
 
     /**
-    * 更新时间
-    */
+     * 更新时间
+     */
     @TableField("update_time")
     /** 更新时间 */
     private LocalDateTime updateTime;

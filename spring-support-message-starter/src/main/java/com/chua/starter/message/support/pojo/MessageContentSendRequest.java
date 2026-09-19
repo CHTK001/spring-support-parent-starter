@@ -23,29 +23,29 @@ public class MessageContentSendRequest {
     private Integer sysMessageProviderId;
 
     /**
-    * 接收人
-    */
+     * 接收人
+     */
     @Schema(description = "接收人")
     /** 目标 */
     private String[] target;
 
     /**
-    * 消息标题
-    */
+     * 消息标题
+     */
     @Schema(description = "消息标题")
     /** 主题 */
     private String subject;
 
     /**
-    * 消息内容
-    */
+     * 消息内容
+     */
     @Schema(description = "消息内容")
     /** 内容 */
     private String content;
 
     /**
-    * 消息参数
-    */
+     * 消息参数
+     */
     @Schema(description = "消息参数")
     private Map<String, Object> params; // 参数
 }

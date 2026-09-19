@@ -23,10 +23,10 @@ public final class OauthClientRuntimeContext {
     }
 
     /**
-    * 设置application上下文
-    *
-    * @param context 上下文
-    */
+     * 设置application上下文
+     *
+     * @param context 上下文
+     */
     public static void setApplicationContext(ApplicationContext context) {
         applicationContext = context;
         if (context != null) {

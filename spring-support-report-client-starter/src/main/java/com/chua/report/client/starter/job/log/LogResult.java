@@ -22,8 +22,8 @@ public class LogResult implements Serializable {
     private static final long serialVersionUID = 42L;
 
     /**
-    * 起始行号
-    */
+     * 起始行号
+     */
     private int fromLineNum;
 
     /**

@@ -120,12 +120,12 @@ public class AiFaceServiceImpl implements AiFaceService {
     }
 
     /**
-    * 1:1 特征向量比对（单独能力）。
-    *
-    * @param featureA 特征向量 A
-    * @param featureB 特征向量 B
-    * @return 相似度（0~1）
-    */
+     * 1:1 特征向量比对（单独能力）。
+     *
+     * @param featureA 特征向量 A
+     * @param featureB 特征向量 B
+     * @return 相似度（0~1）
+     */
     @Override
     public double compareFeature(float[] featureA, float[] featureB) {
         return cosineSimilarity(featureA, featureB);
@@ -165,11 +165,11 @@ public class AiFaceServiceImpl implements AiFaceService {
     }
 
     /**
-    * 1:N 人脸识别（单独能力，取最大人脸）。
-    *
-    * @param imageData 图片字节
-    * @return 识别命中（TopK）
-    */
+     * 1:N 人脸识别（单独能力，取最大人脸）。
+     *
+     * @param imageData 图片字节
+     * @return 识别命中（TopK）
+     */
     @Override
     public FaceIdentifyHit identify(byte[] imageData) {
         return faceClientManager.currentPipeline().identifyPipelineLargest(imageData);

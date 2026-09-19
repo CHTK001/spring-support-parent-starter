@@ -60,8 +60,8 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
     private final DataSourceScriptProperties dataSourceScriptProperties;
 
     /**
-    * 已处理的 数据源 Bean 名称集合，避免重复执行
-    */
+     * 已处理的 数据源 Bean 名称集合，避免重复执行
+     */
     private final Set<String> processedDataSources = Collections.synchronizedSet(new HashSet<>());
     /**
      * 已提示过禁用状态的 数据源 Bean 名称集合，避免重复打印日志
@@ -277,11 +277,11 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         private final DataSourceScriptProperties dataSourceScriptProperties;
 
         /**
-        * 构造函数
-        *
-        * @param ds                         数据源对象
-        * @param dataSourceScriptProperties 数据源脚本配置属性
-        */
+         * 构造函数
+         *
+         * @param ds                         数据源对象
+         * @param dataSourceScriptProperties 数据源脚本配置属性
+         */
         FlywayLikePopulator(DataSource ds, DataSourceScriptProperties dataSourceScriptProperties) {
             this.ds = ds;
             this.jdbc = new JdbcTemplate(ds);

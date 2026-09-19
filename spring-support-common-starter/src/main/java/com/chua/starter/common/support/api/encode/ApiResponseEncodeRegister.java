@@ -81,11 +81,11 @@ public class ApiResponseEncodeRegister implements Upgrade<ApiResponseEncodeConfi
     }
 
     /**
-    * 编码数据
-    *
-    * @param data 数据
-    * @return 编码结果
-    */
+     * 编码数据
+     *
+     * @param data 数据
+     * @return 编码结果
+     */
     public CodecResult encode(String data) {
         try {
             if ("sm2".equalsIgnoreCase(codecType)) {

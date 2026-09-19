@@ -9,11 +9,11 @@ public class ServletResponse {
     private final String message;
 
     /**
-    * 创建 servlet响应 实例
-    * @param success 成功
-    * @param message 字符串
-    * @param message 消息
-    */
+     * 创建 servlet响应 实例
+     * @param success 成功
+     * @param message 字符串
+     * @param message 消息
+     */
     private ServletResponse(boolean success, String message) {
         this.success = success;
         this.message = message;

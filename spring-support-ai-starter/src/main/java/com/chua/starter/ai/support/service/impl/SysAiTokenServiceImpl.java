@@ -97,11 +97,11 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
     @Override
     @CacheEvict(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS, allEntries = true)
     /**
-    * 更新
-    *
-    * @param token 令牌
-    * @return 更新的结果
-    */
+     * 更新
+     *
+     * @param token 令牌
+     * @return 更新的结果
+     */
     public boolean update(SysAiToken token) {
         return sysAiTokenMapper.updateById(token) > 0;
     }
@@ -172,13 +172,13 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
     @Override
     @Async("taskExecutor")
     /**
-    * recordusage
-    *
-    * @param tokenKey 令牌Key
-    * @param promptTokens 提示符令牌
-    * @param completionTokens 完成令牌
-    * @param cost cost
-    */
+     * recordusage
+     *
+     * @param tokenKey 令牌Key
+     * @param promptTokens 提示符令牌
+     * @param completionTokens 完成令牌
+     * @param cost cost
+     */
     public void recordUsage(String tokenKey, int promptTokens, int completionTokens, BigDecimal cost) {
         SysAiToken token = findByTokenKey(tokenKey);
         if (token == null) {

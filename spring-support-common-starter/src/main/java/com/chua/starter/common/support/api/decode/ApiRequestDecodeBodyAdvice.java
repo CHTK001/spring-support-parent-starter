@@ -308,10 +308,10 @@ public class ApiRequestDecodeBodyAdvice implements RequestBodyAdvice  {
         /** 获取主体 */
         public InputStream getBody() {
             /**
-        * bytearray输入流。
-        * @param body 主体
-        * @return bytearray输入流的结果
-        */
+             * bytearray输入流。
+             * @param body 主体
+             * @return bytearray输入流的结果
+             */
             return new ByteArrayInputStream(body);
         }
 
@@ -323,11 +323,11 @@ public class ApiRequestDecodeBodyAdvice implements RequestBodyAdvice  {
     }
 
     /**
-        * 空http输入消息类。
-        *
-        * @author CH
-        * @since 4.0.0
-        */
+     * 空http输入消息类。
+     *
+     * @author CH
+     * @since 4.0.0
+     */
     static class EmptyHttpInputMessage implements HttpInputMessage {
         /** 空_消息 */
         private static final EmptyHttpInputMessage EMPTY_MESSAGE = new EmptyHttpInputMessage();
@@ -349,9 +349,9 @@ public class ApiRequestDecodeBodyAdvice implements RequestBodyAdvice  {
         }
 
         /**
-        * 获取instance。
-        * @return 获取instance的结果
-        */
+         * 获取instance。
+         * @return 获取instance的结果
+         */
         public static EmptyHttpInputMessage getInstance() {
             return EMPTY_MESSAGE;
         }

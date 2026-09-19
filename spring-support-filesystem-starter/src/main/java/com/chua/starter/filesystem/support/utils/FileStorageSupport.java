@@ -17,12 +17,12 @@ public final class FileStorageSupport {
     }
 
     /**
-    * 通过 SPI 创建文件存储实例。
-    *
-    * @param name 存储类型名称
-    * @param bucketSetting 存储配置
-    * @return 文件存储实例
-    */
+     * 通过 SPI 创建文件存储实例。
+     *
+     * @param name 存储类型名称
+     * @param bucketSetting 存储配置
+     * @return 文件存储实例
+     */
     public static FileStorage createStorage(String name, BucketSetting bucketSetting) {
         return ServiceProvider.of(FileStorage.class)
                 .getNewExtension(name, bucketSetting);

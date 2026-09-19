@@ -48,8 +48,8 @@ public class RpcServiceBean<T> extends AbstractRpcServiceSetting<T> implements I
     /** 之后属性设置 */
     public void afterPropertiesSet() throws Exception {
         /**
-    * 导出。
-    */
+         * 导出。
+         */
         export();
     }
 
@@ -59,10 +59,10 @@ public class RpcServiceBean<T> extends AbstractRpcServiceSetting<T> implements I
     }
 
     /**
-    * 获取接口名称
-    *
-    * @return 接口名称
-    */
+     * 获取接口名称
+     *
+     * @return 接口名称
+     */
     public String getInterfaceName() {
         String interfaceName = super.getInterfaceName();
         if (interfaceName != null && !interfaceName.isEmpty()) {

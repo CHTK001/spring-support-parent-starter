@@ -31,15 +31,15 @@ public class TransactionalMessageTemplate {
     private final MessageTemplate messageTemplate;
 
     /**
-    * 在事务提交后发送消息
-    * <p>
-    * 如果当前没有事务，则立即发送
-    * </p>
-    *
-    * @param destination 目标地址
-    * @param payload     消息内容
-    * @return 发送结果（如果在事务中，返回null）
-    */
+     * 在事务提交后发送消息
+     * <p>
+     * 如果当前没有事务，则立即发送
+     * </p>
+     *
+     * @param destination 目标地址
+     * @param payload     消息内容
+     * @return 发送结果（如果在事务中，返回null）
+     */
     public SendResult sendAfterCommit(String destination, Object payload) {
         return sendAfterCommit(destination, payload, null);
     }
@@ -132,18 +132,18 @@ public class TransactionalMessageTemplate {
     }
 
     /**
-        * 批量消息发送同步器
-        * @author CH
-        * @since 4.0.0
-        */
+     * 批量消息发送同步器
+     * @author CH
+     * @since 4.0.0
+     */
     private class BatchMessageSendSynchronization implements TransactionSynchronization {
         /** 消息 */
         private final List<TransactionalMessage> messages;
 
         /**
-        * 创建 批量消息发送synchronization 实例
-        * @param messages 消息
-        */
+         * 创建 批量消息发送synchronization 实例
+         * @param messages 消息
+         */
         public BatchMessageSendSynchronization(List<TransactionalMessage> messages) {
             this.messages = new ArrayList<>(messages);
         }
@@ -176,10 +176,10 @@ public class TransactionalMessageTemplate {
     }
 
     /**
-        * 事务消息
-        * @author CH
-        * @since 4.0.0
-        */
+     * 事务消息
+     * @author CH
+     * @since 4.0.0
+     */
     public static class TransactionalMessage {
         /** 目的地 */
         private final String destination;

@@ -34,11 +34,11 @@ public class ClassUtils {
     private static final String[] EMPTY_STRING_ARRAY = new String[0];
 
     /**
-    * 实例化类
-    *
-    * @param s 类名
-    * @return 类
-    */
+     * 实例化类
+     *
+     * @param s 类名
+     * @return 类
+     */
     public static Class<?> forName(String s) {
         try {
             return org.springframework.util.ClassUtils.forName(s, org.springframework.util.ClassUtils.getDefaultClassLoader());

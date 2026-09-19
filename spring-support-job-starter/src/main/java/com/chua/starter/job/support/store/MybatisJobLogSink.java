@@ -29,9 +29,9 @@ public class MybatisJobLogSink implements JobLogSink {
     private final boolean fileLoggingEnabled;
 
     /**
-    * 创建 MyBatis作业日志sink 实例
-    * @param jobLogMapper 作业日志映射器
-    */
+     * 创建 MyBatis作业日志sink 实例
+     * @param jobLogMapper 作业日志映射器
+     */
     public MybatisJobLogSink(JobLogMapper jobLogMapper) {
         /**
          * this。
@@ -67,11 +67,11 @@ public class MybatisJobLogSink implements JobLogSink {
     }
 
     /**
-    * 事件转实体 (字段均按 sys_作业_日志_* 前缀)。
-    *
-    * @param event 事件
-    * @return 实体
-    */
+     * 事件转实体 (字段均按 sys_作业_日志_* 前缀)。
+     *
+     * @param event 事件
+     * @return 实体
+     */
     private JobLogEntity toEntity(JobLogEvent event) {
         JobLogEntity entity = new JobLogEntity();
         entity.setSysJobLogNo("JOBLOG" + System.currentTimeMillis());

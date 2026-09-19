@@ -52,10 +52,10 @@ public class SpiderDbNode implements FlowNode {
     private DataSource dataSource;
 
     /**
-    * 节点类型标识。
-    *
-    * @return 节点类型
-    */
+     * 节点类型标识。
+     *
+     * @return 节点类型
+     */
     @Override
     public String type() {
         return "spider.db";

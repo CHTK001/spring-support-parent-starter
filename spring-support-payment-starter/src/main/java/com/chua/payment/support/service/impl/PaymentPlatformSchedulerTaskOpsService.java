@@ -121,17 +121,17 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
     }
 
     /**
-    * 使用统一的 JSON 协议访问 调度器 平台。
-    * <p>
-    * 这里对空响应、业务码失败和反序列化异常都显式抛出 薪酬异常，
-    * 避免运营台收到模糊的 NPE 或日期解析异常。
-    * </p>
-    * @param method 方法
-    * @param uri uri
-    * @param body 主体
-    * @param accessMode accessmode
-    * @return 请求的结果
-    */
+     * 使用统一的 JSON 协议访问 调度器 平台。
+     * <p>
+     * 这里对空响应、业务码失败和反序列化异常都显式抛出 薪酬异常，
+     * 避免运营台收到模糊的 NPE 或日期解析异常。
+     * </p>
+     * @param method 方法
+     * @param uri uri
+     * @param body 主体
+     * @param accessMode accessmode
+     * @return 请求的结果
+     */
     private JsonNode request(HttpMethod method, URI uri, Object body, AccessMode accessMode) {
         try {
             ResponseEntity<String> response = exchange(method, uri, body, accessMode, true);
@@ -283,10 +283,10 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
     }
 
     /**
-    * 应用控制台Cookie
-    *
-    * @param headers 头部
-    */
+     * 应用控制台Cookie
+     *
+     * @param headers 头部
+     */
     private void applyConsoleCookie(HttpHeaders headers) {
         if (StringUtils.hasText(schedulerConsoleCookie)) {
             headers.set(HttpHeaders.COOKIE, schedulerConsoleCookie);

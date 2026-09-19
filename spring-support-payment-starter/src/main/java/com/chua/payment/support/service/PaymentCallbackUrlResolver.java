@@ -21,14 +21,14 @@ public class PaymentCallbackUrlResolver {
     private final PaymentGlobalConfigService paymentGlobalConfigService;
 
     /**
-    * 解析薪酬通知Url
-    *
-    * @param requestNotifyUrl 请求通知url
-    * @param channel 通道
-    * @param merchant merchant
-    * @param orderNo 订单no
-    * @return resolve薪酬通知url的结果
-    */
+     * 解析薪酬通知Url
+     *
+     * @param requestNotifyUrl 请求通知url
+     * @param channel 通道
+     * @param merchant merchant
+     * @param orderNo 订单no
+     * @return resolve薪酬通知url的结果
+     */
     public String resolvePayNotifyUrl(String requestNotifyUrl, MerchantChannel channel, Merchant merchant, String orderNo) {
         return firstNonBlank(
                 requestNotifyUrl,

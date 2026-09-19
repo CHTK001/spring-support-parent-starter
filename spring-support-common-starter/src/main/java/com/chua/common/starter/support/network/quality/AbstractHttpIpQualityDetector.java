@@ -70,9 +70,9 @@ public abstract class AbstractHttpIpQualityDetector implements IpQualityDetector
             }
             Request request = buildRequest(url, ip);
             /**
-    * 尝试。
-    * @param httpClient.newCall(request HTTP客户端.新call(请求
-    */
+             * 尝试。
+             * @param httpClient.newCall(request HTTP客户端.新call(请求
+             */
             try (Response response = httpClient.newCall(request).execute()) {
                 if (!response.isSuccessful()) {
                     /**
@@ -116,11 +116,11 @@ public abstract class AbstractHttpIpQualityDetector implements IpQualityDetector
     }
 
     /**
-    * 构建请求 URL
-    *
-    * @param ip IP 地址
-    * @return URL
-    */
+     * 构建请求 URL
+     *
+     * @param ip IP 地址
+     * @return URL
+     */
     protected abstract String buildUrl(String ip);
 
     /**

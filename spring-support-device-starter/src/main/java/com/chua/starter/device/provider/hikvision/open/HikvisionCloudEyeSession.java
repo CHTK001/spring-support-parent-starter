@@ -139,8 +139,8 @@ public class HikvisionCloudEyeSession extends AbstractOpenApiSession {
     protected JsonNode doRequest(String method, String path, Map<String, Object> params) {
         if (!tokenValid() && !PATH_LOGIN.equals(path)) {
             /**
-    * login。
-    */
+             * login。
+             */
             login();
         }
         Map<String, Object> realParams = new LinkedHashMap<>();
@@ -204,10 +204,10 @@ public class HikvisionCloudEyeSession extends AbstractOpenApiSession {
         params.put("action", mapAction(cmd));
         params.put("speed", Math.max(1, Math.min(255, Math.round(speed * 255))));
         /**
-    * post。
-    * @param PATH_PTZ_CONTROL 路径ptzcontrol
-    * @param params 参数
-    */
+         * post。
+         * @param PATH_PTZ_CONTROL 路径ptzcontrol
+         * @param params 参数
+         */
         post(PATH_PTZ_CONTROL, params);
     }
 
@@ -241,10 +241,10 @@ public class HikvisionCloudEyeSession extends AbstractOpenApiSession {
         params.put("doorId", doorId);
         params.put("action", "OPEN");
         /**
-    * post。
-    * @param PATH_DOOR_CONTROL 路径门control
-    * @param params 参数
-    */
+         * post。
+         * @param PATH_DOOR_CONTROL 路径门control
+         * @param params 参数
+         */
         post(PATH_DOOR_CONTROL, params);
     }
 }

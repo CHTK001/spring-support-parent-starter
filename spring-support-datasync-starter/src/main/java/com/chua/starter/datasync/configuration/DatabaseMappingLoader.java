@@ -35,11 +35,11 @@ public class DatabaseMappingLoader implements InitializingBean {
     private final DataSyncMappingManager mappingManager;
 
     /**
-    * 创建 databasemapping加载 实例
-    * @param dataSource 数据源
-    * @param properties 属性
-    * @param mappingManager mapping管理器
-    */
+     * 创建 databasemapping加载 实例
+     * @param dataSource 数据源
+     * @param properties 属性
+     * @param mappingManager mapping管理器
+     */
     public DatabaseMappingLoader(DataSource dataSource,
                                  DatasyncProperties properties,
                                  DataSyncMappingManager mappingManager) {
@@ -59,10 +59,10 @@ public class DatabaseMappingLoader implements InitializingBean {
         org.springframework.jdbc.core.JdbcTemplate jdbcTemplate =
                 new org.springframework.jdbc.core.JdbcTemplate(dataSource);
         /**
-    * 加载mappings。
-    * @param jdbcTemplate jdbctemplate
-    * @param config.getTablePrefix( 配置.获取table前缀(
-    */
+         * 加载mappings。
+         * @param jdbcTemplate jdbctemplate
+         * @param config.getTablePrefix( 配置.获取table前缀(
+         */
         loadMappings(jdbcTemplate, config.getTablePrefix());
     }
 
@@ -180,11 +180,11 @@ public class DatabaseMappingLoader implements InitializingBean {
         private final String converter;
 
         /**
-        * database数据同步字段mapping。
-        * @param sourceField 源字段
-        * @param targetField Target字段
-        * @param converter 转换器
-        */
+         * database数据同步字段mapping。
+         * @param sourceField 源字段
+         * @param targetField Target字段
+         * @param converter 转换器
+         */
         DatabaseDataSyncFieldMapping(String sourceField, String targetField, String converter) {
             this.sourceField = sourceField;
             this.targetField = targetField;

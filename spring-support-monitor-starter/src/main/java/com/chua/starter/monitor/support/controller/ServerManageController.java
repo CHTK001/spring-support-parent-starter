@@ -43,10 +43,10 @@ public class ServerManageController {
     private final ServerManageService serverManageService;
 
     /**
-    * 查询全部节点。
-    *
-    * @return 节点视图列表
-    */
+     * 查询全部节点。
+     *
+     * @return 节点视图列表
+     */
     @Operation(summary = "查询全部服务器节点", description = "返回定义与运行状态(RUNNING/STOPPED/ERROR)")
     @GetMapping
     public ReturnResult<List<ServerNodeView>> list() {

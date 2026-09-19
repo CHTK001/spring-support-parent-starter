@@ -32,8 +32,8 @@ public class MsTerminalSession implements Serializable {
     private static final long serialVersionUID = 1L;
 
     /**
-    * 主键
-    */
+     * 主键
+     */
     @TableId(value = "id", type = IdType.AUTO)
     @Schema(description = "主键", example = "1")
     private Long id; // 标识

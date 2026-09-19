@@ -99,11 +99,11 @@ public class Oauth2Protocol extends AbstractProtocol {
         var selectedUrl = selectUrl();
         if (selectedUrl == null) {
             /**
-    * login认证结果。
-    * @param 500 500
-    * @param "认证服务器不可用" "认证服务器不可用"
-    * @return login认证结果的结果
-    */
+             * login认证结果。
+             * @param 500 500
+             * @param "认证服务器不可用" "认证服务器不可用"
+             * @return login认证结果的结果
+             */
             return new LoginAuthResult(500, "认证服务器不可用");
         }
         try {
@@ -135,10 +135,10 @@ public class Oauth2Protocol extends AbstractProtocol {
         var selectedUrl = selectUrl();
         if (selectedUrl == null) {
             /**
-    * 认证异常。
-    * @param "认证服务器不可用" "认证服务器不可用"
-    * @return 认证异常的结果
-    */
+             * 认证异常。
+             * @param "认证服务器不可用" "认证服务器不可用"
+             * @return 认证异常的结果
+             */
             throw new AuthException("认证服务器不可用");
         }
         try {

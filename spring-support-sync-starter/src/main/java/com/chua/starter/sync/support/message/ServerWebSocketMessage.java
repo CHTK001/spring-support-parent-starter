@@ -133,11 +133,11 @@ public class ServerWebSocketMessage {
         private long timestamp;
 
         /**
-        * 消息类型
-        *
-        * @param messageType 消息类型
-        * @return 消息类型的结果
-        */
+         * 消息类型
+         *
+         * @param messageType 消息类型
+         * @return 消息类型的结果
+         */
         public Builder messageType(String messageType) {
             this.messageType = messageType;
             return this;

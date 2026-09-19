@@ -50,12 +50,12 @@ public class TypeResolverBuilder  extends ObjectMapper.DefaultTypeResolverBuilde
     }
 
     /**
-    * 方法 called 转为 检查 if the 默认 类型 处理器 should be used for given 类型. 笔记: "natural 类型" (字符串,
-    * 布尔值, Integer, Double) will 从不 use 类型; that 是否 both due 转为 them 存在 混凝土 和 最终, 和 自
-    * actual 序列化器 和 反序列化器 will also ignore 任意 尝试 转为 enforce 类型.
-    * @param javaType Java类型
-    * @return usefor类型的结果
-    */
+     * 方法 called 转为 检查 if the 默认 类型 处理器 should be used for given 类型. 笔记: "natural 类型" (字符串,
+     * 布尔值, Integer, Double) will 从不 use 类型; that 是否 both due 转为 them 存在 混凝土 和 最终, 和 自
+     * actual 序列化器 和 反序列化器 will also ignore 任意 尝试 转为 enforce 类型.
+     * @param javaType Java类型
+     * @return usefor类型的结果
+     */
     public boolean useForType(JavaType javaType) {
 
         if (javaType.isJavaLangObject()) {

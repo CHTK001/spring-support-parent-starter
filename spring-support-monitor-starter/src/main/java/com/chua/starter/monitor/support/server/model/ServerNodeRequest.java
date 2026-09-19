@@ -30,8 +30,8 @@ public class ServerNodeRequest {
     private String name; // 名称
 
     /**
-    * 协议类型: http / http-代理 / tcp-代理 / sip（大小写、-/_ 均可）
-    */
+     * 协议类型: http / http-代理 / tcp-代理 / sip（大小写、-/_ 均可）
+     */
     @Schema(description = "协议类型: http / http-proxy / tcp-proxy / sip", example = "http")
     private String protocol; // 协议
 

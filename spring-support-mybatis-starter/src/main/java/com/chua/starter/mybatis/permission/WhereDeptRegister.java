@@ -27,14 +27,14 @@ public class WhereDeptRegister extends AbstractDeptRegister {
     private final Table currentTable;
 
     /**
-    * 创建 wheredept注册 实例
-    * @param plainSelect plain选择
-    * @param where where
-    * @param user 用户
-    * @param dataPermission 数据权限
-    * @param scopeProperties scope属性
-    * @param currentTable 当前table
-    */
+     * 创建 wheredept注册 实例
+     * @param plainSelect plain选择
+     * @param where where
+     * @param user 用户
+     * @param dataPermission 数据权限
+     * @param scopeProperties scope属性
+     * @param currentTable 当前table
+     */
     public WhereDeptRegister(PlainSelect plainSelect,
                              Expression where,
                              CurrentUser user,

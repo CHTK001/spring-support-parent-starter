@@ -354,11 +354,11 @@ public class DataSourceDocumentController {
     }
 
     /**
-    * 是否forcerefresh
-    *
-    * @param request 请求
-    * @return 是否forcerefresh的结果
-    */
+     * 是否forcerefresh
+     *
+     * @param request 请求
+     * @return 是否forcerefresh的结果
+     */
     private boolean isForceRefresh(HttpServletRequest request) {
         if (request == null) {
             return false;

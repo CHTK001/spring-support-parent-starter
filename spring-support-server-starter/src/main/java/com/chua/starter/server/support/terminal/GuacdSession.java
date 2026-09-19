@@ -98,10 +98,10 @@ public class GuacdSession {
     private final Object sendLock = new Object();
 
     /**
-    * 获取发送锁对象
-    *
-    * @return 锁
-    */
+     * 获取发送锁对象
+     *
+     * @return 锁
+     */
     public Object getSendLock() {
         return sendLock;
     }

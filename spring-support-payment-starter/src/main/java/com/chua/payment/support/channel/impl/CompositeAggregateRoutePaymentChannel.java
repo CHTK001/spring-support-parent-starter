@@ -103,11 +103,11 @@ public class CompositeAggregateRoutePaymentChannel extends AbstractMerchantPayme
     }
 
     /**
-    * Delegate
-    *
-    * @param targetChannel Target通道
-    * @return delegate的结果
-    */
+     * Delegate
+     *
+     * @param targetChannel Target通道
+     * @return delegate的结果
+     */
     private PaymentChannel delegate(MerchantChannel targetChannel) {
         return paymentChannelRegistry.getChannel(targetChannel.getChannelType(), targetChannel.getChannelSubType());
     }

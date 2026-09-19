@@ -27,8 +27,8 @@ public class AuthClientProperties {
     public static final String PRE = "plugin.oauth";
 
     /**
-    * 内置默认白名单（不会被 yaml 配置覆盖）
-    */
+     * 内置默认白名单（不会被 yaml 配置覆盖）
+     */
     private static final List<String> DEFAULT_WHITELIST = List.of(
             "/**/captcha",
             "/**/login",
@@ -73,9 +73,9 @@ public class AuthClientProperties {
     }
 
     /**
-    * 获取完整白名单（内置默认 + yaml 自定义 + 动态添加）
-    * @return 获取effectivewhitelist的结果
-    */
+     * 获取完整白名单（内置默认 + yaml 自定义 + 动态添加）
+     * @return 获取effectivewhitelist的结果
+     */
     public List<String> getEffectiveWhitelist() {
         List<String> effective = new java.util.ArrayList<>(DEFAULT_WHITELIST);
         if (whitelist != null) {

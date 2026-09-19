@@ -34,40 +34,40 @@ public class SpiderEnv extends SysBase {
     private Long id;
 
     /**
-    * 变量名（如 Cookie、令牌）
-    */
+     * 变量名（如 Cookie、令牌）
+     */
     @TableField("env_key")
     @Schema(description = "变量名")
     /** ENV密钥 */
     private String envKey;
 
     /**
-    * 变量值
-    */
+     * 变量值
+     */
     @TableField("env_value")
     @Schema(description = "变量值")
     /** ENV值 */
     private String envValue;
 
     /**
-    * 描述
-    */
+     * 描述
+     */
     @TableField("description")
     @Schema(description = "描述")
     /** 描述 */
     private String description;
 
     /**
-    * 是否启用（1 启用 / 0 停用）
-    */
+     * 是否启用（1 启用 / 0 停用）
+     */
     @TableField("enabled")
     @Schema(description = "是否启用")
     /** 是否启用 */
     private Integer enabled;
 
     /**
-    * 逻辑删除标记（0 未删除 / 1 已删除）
-    */
+     * 逻辑删除标记（0 未删除 / 1 已删除）
+     */
     @TableField("sys_deleted")
     @TableLogic
     @Schema(description = "逻辑删除标记")

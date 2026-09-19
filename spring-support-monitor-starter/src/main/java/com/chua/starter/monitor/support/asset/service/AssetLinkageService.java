@@ -52,11 +52,11 @@ public class AssetLinkageService {
     private final MsMonitorAlarmEventMapper alarmEventMapper;
 
     /**
-    * 按主机 标识 聚合资产详情。
-    *
-    * @param hostId 主机 标识
-    * @return 资产聚合详情；主机不存在返回 数据=空（编码 仍 00000）
-    */
+     * 按主机 标识 聚合资产详情。
+     *
+     * @param hostId 主机 标识
+     * @return 资产聚合详情；主机不存在返回 数据=空（编码 仍 00000）
+     */
     public ReturnResult<AssetDetailView> assetDetail(Long hostId) {
         try {
             ReturnResult<MsServerHost> hostResult = serverHostService.get(hostId);

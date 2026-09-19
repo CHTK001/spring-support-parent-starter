@@ -473,9 +473,9 @@ public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, Envi
         private final String configKey;
 
         /**
-        * 值配置监听器。
-        * @param configKey 配置Key
-        */
+         * 值配置监听器。
+         * @param configKey 配置Key
+         */
         ValueConfigListener(String configKey) {
             this.configKey = configKey;
         }

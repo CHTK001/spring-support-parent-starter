@@ -57,11 +57,11 @@ public class JobAnnotationScanner implements BeanPostProcessor, SmartInitializin
         }
         for (java.util.Map.Entry<Method, Job> entry : annotated.entrySet()) {
             /**
-    * 注册处理器。
-    * @param bean Bean
-    * @param targetClass 目标类
-    * @param entry.getKey( entry.获取键(
-    */
+             * 注册处理器。
+             * @param bean Bean
+             * @param targetClass 目标类
+             * @param entry.getKey( entry.获取键(
+             */
             registerHandler(bean, targetClass, entry.getKey(), entry.getValue());
         }
         return bean;
@@ -97,13 +97,13 @@ public class JobAnnotationScanner implements BeanPostProcessor, SmartInitializin
     }
 
     /**
-    * 注册单个处理器。
-    *
-    * @param bean        业务 Bean
-    * @param targetClass 业务类
-    * @param method      执行 方法
-    * @param job         {@link Job} 注解
-    */
+     * 注册单个处理器。
+     *
+     * @param bean        业务 Bean
+     * @param targetClass 业务类
+     * @param method      执行 方法
+     * @param job         {@link Job} 注解
+     */
     private void registerHandler(Object bean, Class<?> targetClass, Method method, Job job) {
         if (job == null) {
             return;

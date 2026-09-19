@@ -14,9 +14,9 @@ public class OcrSettingsChangedEvent {
     private final String group;
 
     /**
-    * ocrsettings改变事件。
-    * @param group 群体
-    */
+     * ocrsettings改变事件。
+     * @param group 群体
+     */
     public OcrSettingsChangedEvent(String group) {
         this.group = group;
     }

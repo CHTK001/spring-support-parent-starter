@@ -17,9 +17,9 @@ public class RoleOptional<T> {
     private final Map<String, Supplier<T>> condition = new LinkedHashMap<>(); // 条件
 
     /**
-    * 创建 角色期权 实例
-    * @param roles 角色
-    */
+     * 创建 角色期权 实例
+     * @param roles 角色
+     */
     public RoleOptional(Set<String> roles) {
         this.roles = roles;
     }

@@ -30,8 +30,8 @@ public class SyncProperties {
     public static final String PRE = "plugin.sync";
 
     /**
-    * 程序类型：服务端-服务端，客户端-客户端，both-同时启用
-    */
+     * 程序类型：服务端-服务端，客户端-客户端，both-同时启用
+     */
     private String type = "client";
 
     /**
