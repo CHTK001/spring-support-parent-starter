@@ -9,10 +9,10 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * 限流器配置的 sqlite 持久化仓库。
+ * 限流器配置的数据库持久化仓库。
  * <p>
  * 负责将限流器配置（名称、QPS、预热时间、超时时间、启用状态）读写到
- * sqlite 数据库的 并发_rate_限制 表，供 {@link com.chua.springboot.support.endpoint.ConcurrentEndpoint}
+ * concurrent_rate_limiter 表，供 {@link com.chua.springboot.support.endpoint.ConcurrentEndpoint}
  * 端点通过 actuator API 进行增删查改。
  * </p>
  *
@@ -67,17 +67,33 @@ public class RateLimiterConfigRepository {
     /**
      * 保存或更新限流器配置（UPSERT）。
      * <p>
-     * sqlite 使用 插入 或 替换 语义：名称相同时覆盖旧记录，不存在时插入新记录。
+     * 先按主键 UPDATE，未命中再 INSERT；不使用方言专属的插入或替换语法，
+     * 以便在 MySQL、H2 上通用。
      * </p>
      *
      * @param config 限流器配置对象，名称 不能为 空 或空
-     * @return 影响的行数（1 = 插入，2 = 先删后插）
+     * @return 影响的行数（更新命中的行数，或插入的 1 行）
      */
     public int save(ConcurrentRateLimiterConfig config) {
-        int rows = jdbcTemplate.update(
-                "INSERT OR REPLACE INTO concurrent_rate_limiter "
+        int updated = jdbcTemplate.update(
+                "UPDATE concurrent_rate_limiter "
+                        + "SET permits_per_second = ?, warmup_period_ms = ?, timeout_ms = ?, enabled = ?, "
+                        + "updated_at = CURRENT_TIMESTAMP WHERE name = ?",
+                ps -> {
+                    ps.setDouble(1, config.getPermitsPerSecond());
+                    ps.setLong(2, config.getWarmupPeriodMs());
+                    ps.setLong(3, config.getTimeoutMs());
+                    ps.setInt(4, config.isEnabled() ? 1 : 0);
+                    ps.setString(5, config.getName());
+                }
+        );
+        if (updated > 0) {
+            return updated;
+        }
+        return jdbcTemplate.update(
+                "INSERT INTO concurrent_rate_limiter "
                         + "(name, permits_per_second, warmup_period_ms, timeout_ms, enabled, updated_at) "
-                        + "VALUES (?, ?, ?, ?, ?, datetime('now'))",
+                        + "VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)",
                 ps -> {
                     ps.setString(1, config.getName());
                     ps.setDouble(2, config.getPermitsPerSecond());
@@ -86,7 +102,6 @@ public class RateLimiterConfigRepository {
                     ps.setInt(5, config.isEnabled() ? 1 : 0);
                 }
         );
-        return rows;
     }
 
     /**

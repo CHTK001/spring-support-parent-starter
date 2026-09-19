@@ -3,7 +3,7 @@ package com.chua.starter.datasource.entity;
 import lombok.Data;
 
 /**
- * 分布式锁配置实体，持久化到 sqlite 的 并发_distributed_锁 表。
+ * 分布式锁配置实体，持久化到 concurrent_distributed_lock 表。
  * <p>
  * 字段与注解 {@code @DistributedLock} 属性对应，通过 actuator 端点增删查改后
  * 清除 {@link com.chua.common.support.concurrent.lock.LockFlow} 缓存，
@@ -47,12 +47,12 @@ public class ConcurrentDistributedLockConfig {
     private boolean enabled;
 
     /**
-     * 记录创建时间（sqlite datetime('now')）
+     * 记录创建时间（列 created_at，由数据库默认值写入，仓储读回时不回填）
     */
     private long createdAt;
 
     /**
-     * 记录更新时间（sqlite datetime('now')）
+     * 记录更新时间（列 updated_at，保存时写 CURRENT_TIMESTAMP，仓储读回时不回填）
     */
     private long updatedAt;
 }
