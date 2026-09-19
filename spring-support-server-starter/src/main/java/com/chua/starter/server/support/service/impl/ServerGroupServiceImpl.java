@@ -23,9 +23,13 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ServerGroupServiceImpl implements ServerGroupService {
 
-    /** 分组 映射器 */
+    /**
+     * 分组 映射器
+    */
     private final MsServerGroupMapper groupMapper;
-    /** 主机 映射器 */
+    /**
+     * 主机 映射器
+    */
     private final MsServerHostMapper hostMapper;
 
     @Override

@@ -19,7 +19,9 @@ import java.util.List;
  */
 public class ApiContentNegotiationStrategy implements ContentNegotiationStrategy {
 
-    /** API响应encoderegister */
+    /**
+     * API响应encoderegister
+    */
     private final ApiResponseEncodeRegister apiResponseEncodeRegister;
 
     /**
@@ -31,7 +33,9 @@ public class ApiContentNegotiationStrategy implements ContentNegotiationStrategy
     }
 
     @Override
-    /** 解析media类型 */
+    /**
+     * 解析media类型
+    */
     public List<MediaType> resolveMediaTypes(NativeWebRequest webRequest) throws HttpMediaTypeNotAcceptableException {
         if (apiResponseEncodeRegister.isPass()) {
             return MEDIA_TYPE_ALL_LIST;

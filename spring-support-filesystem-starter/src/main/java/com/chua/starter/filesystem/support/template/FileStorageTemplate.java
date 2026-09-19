@@ -35,13 +35,19 @@ public class FileStorageTemplate implements AutoCloseable {
     @Getter
     public final Map<String, FileStorage> storageMap = new ConcurrentHashMap<>(); // storage映射
 
-    /** 默认存储名称 */
+    /**
+     * 默认存储名称
+    */
     private String defaultStorageName;
 
-    /** 属性 */
+    /**
+     * 属性
+    */
     private final FileStorageProperties properties;
 
-    /** 日志 */
+    /**
+     * 日志
+    */
     private final ModuleLog log = ModuleLog.of("FileStorage", FileStorageTemplate.class);
 
     /**
@@ -361,7 +367,9 @@ public class FileStorageTemplate implements AutoCloseable {
     }
 
     @Override
-    /** 关闭 */
+    /**
+     * 关闭
+    */
     public void close() {
         for (Map.Entry<String, FileStorage> entry : storageMap.entrySet()) {
             try {

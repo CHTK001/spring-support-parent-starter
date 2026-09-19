@@ -30,10 +30,14 @@ import java.util.Locale;
 @RequiredArgsConstructor
 public class ProjectAiScriptServiceImpl implements ProjectAiScriptService {
 
-    /** AI 注册表 bean 类型（全限定名，反射查找） */
+    /**
+     * AI 注册表 bean 类型（全限定名，反射查找）
+    */
     private static final String REGISTRY_CLASS = "com.chua.starter.ai.support.registry.ChatClientRegistry";
 
-    /** Spring 应用上下文（运行时反射查找 AI bean，与 AI starter 零编译期依赖） */
+    /**
+     * Spring 应用上下文（运行时反射查找 AI bean，与 AI starter 零编译期依赖）
+    */
     private final ApplicationContext applicationContext;
 
     @Override

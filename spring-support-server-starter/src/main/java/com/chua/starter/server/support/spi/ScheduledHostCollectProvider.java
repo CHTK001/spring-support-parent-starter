@@ -23,7 +23,9 @@ import reactor.core.scheduler.Schedulers;
 @RequiredArgsConstructor
 public class ScheduledHostCollectProvider implements HostCollectProvider {
 
-    /** 主机服务 */
+    /**
+     * 主机服务
+    */
     private final ServerHostService hostService;
 
     @Override

@@ -39,7 +39,9 @@ import static com.chua.starter.common.support.logger.ModuleLog.highlight;
 @Slf4j
 public class LocalMessageTemplate implements MessageTemplate {
 
-    /** 类型 */
+    /**
+     * 类型
+    */
     private static final String TYPE = "local";
 
     /**
@@ -108,13 +110,17 @@ public class LocalMessageTemplate implements MessageTemplate {
     }
 
     @Override
-    /** 发送 */
+    /**
+     * 发送
+    */
     public SendResult send(String destination, Object payload) {
         return send(destination, payload, null);
     }
 
     @Override
-    /** 发送异步 */
+    /**
+     * 发送异步
+    */
     public CompletableFuture<SendResult> sendAsync(String destination, Object payload) {
         return sendAsync(destination, payload, null);
     }
@@ -160,7 +166,9 @@ public class LocalMessageTemplate implements MessageTemplate {
     }
 
     @Override
-    /** 发送 */
+    /**
+     * 发送
+    */
     public SendResult send(String destination, Object payload, Map<String, Object> headers) {
         // 检查是否已关闭
         if (!running) {
@@ -191,7 +199,9 @@ public class LocalMessageTemplate implements MessageTemplate {
     }
 
     @Override
-    /** 发送延迟 */
+    /**
+     * 发送延迟
+    */
     public SendResult sendDelayed(String destination, Object payload, Duration delay) {
         // 检查是否已关闭
         if (!running) {
@@ -230,7 +240,9 @@ public class LocalMessageTemplate implements MessageTemplate {
     }
 
     @Override
-    /** 订阅 */
+    /**
+     * 订阅
+    */
     public void subscribe(String destination, MessageHandler handler, boolean autoAck) {
         CopyOnWriteArrayList<MessageHandler> handlers = subscribers.computeIfAbsent(
                 destination, k -> new CopyOnWriteArrayList<>());
@@ -252,7 +264,9 @@ public class LocalMessageTemplate implements MessageTemplate {
     }
 
     @Override
-    /** 订阅 */
+    /**
+     * 订阅
+    */
     public void subscribe(String destination, String group, MessageHandler handler, boolean autoAck) {
         // 本地队列不支持消费组，直接订阅
         /**
@@ -265,7 +279,9 @@ public class LocalMessageTemplate implements MessageTemplate {
     }
 
     @Override
-    /** 订阅 */
+    /**
+     * 订阅
+    */
     public void subscribe(String destination, MessageHandler handler, boolean autoAck, int concurrency) {
         if (concurrency <= 1) {
             /**
@@ -331,7 +347,9 @@ public class LocalMessageTemplate implements MessageTemplate {
     }
 
     @Override
-    /** 订阅 */
+    /**
+     * 订阅
+    */
     public void subscribe(String destination, String group, MessageHandler handler, boolean autoAck, int concurrency) {
         // 本地队列不支持消费组，直接订阅
         /**
@@ -345,7 +363,9 @@ public class LocalMessageTemplate implements MessageTemplate {
     }
 
     @Override
-    /** 取消订阅 */
+    /**
+     * 取消订阅
+    */
     public void unsubscribe(String destination) {
         // 先检查是否还有订阅者，再决定是否清理资源
         CopyOnWriteArrayList<MessageHandler> remainingHandlers = this.subscribers.get(destination);
@@ -409,19 +429,25 @@ public class LocalMessageTemplate implements MessageTemplate {
     }
 
     @Override
-    /** 获取类型 */
+    /**
+     * 获取类型
+    */
     public String getType() {
         return TYPE;
     }
 
     @Override
-    /** 是否连接 */
+    /**
+     * 是否连接
+    */
     public boolean isConnected() {
         return running;
     }
 
     @Override
-    /** 关闭 */
+    /**
+     * 关闭
+    */
     public void close() {
         running = false;
 
@@ -523,13 +549,21 @@ public class LocalMessageTemplate implements MessageTemplate {
      * @since 4.0.0
      */
     private class EventBusSubscriber {
-        /** 日志 */
+        /**
+         * 日志
+        */
         private final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(EventBusSubscriber.class);
-        /** 目的地 */
+        /**
+         * 目的地
+        */
         private final String destination;
-        /** 处理器 */
+        /**
+         * 处理器
+        */
         private final MessageHandler handler;
-        /** autoACK */
+        /**
+         * autoACK
+        */
         private final boolean autoAck;
 
         /**
@@ -584,20 +618,26 @@ public class LocalMessageTemplate implements MessageTemplate {
         private volatile boolean acknowledged = false; // acknowledged
 
         @Override
-        /** Acknowledge */
+        /**
+         * Acknowledge
+        */
         public void acknowledge() {
             acknowledged = true;
         }
 
         @Override
-        /** Nack */
+        /**
+         * Nack
+        */
         public void nack(boolean requeue) {
             // 本地队列不支持requeue，nack等同于丢弃
             acknowledged = false;
         }
 
         @Override
-        /** 是否Acknowledged */
+        /**
+         * 是否Acknowledged
+        */
         public boolean isAcknowledged() {
             return acknowledged;
         }

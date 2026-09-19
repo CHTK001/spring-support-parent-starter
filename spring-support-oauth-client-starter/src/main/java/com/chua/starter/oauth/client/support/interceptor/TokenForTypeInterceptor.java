@@ -27,7 +27,9 @@ import java.lang.reflect.Proxy;
 @Order(1)
 public class TokenForTypeInterceptor extends StaticMethodMatcherPointcutAdvisor implements InitializingBean, Ordered {
     @Override
-    /** Matches */
+    /**
+     * Matches
+    */
     public boolean matches(Method method, Class<?> targetClass) {
         if (Proxy.isProxyClass(targetClass)) {
             return false;
@@ -37,12 +39,16 @@ public class TokenForTypeInterceptor extends StaticMethodMatcherPointcutAdvisor 
     }
 
     @Override
-    /** 之后属性设置 */
+    /**
+     * 之后属性设置
+    */
     public void afterPropertiesSet() throws Exception {
         this.setAdvice(new MethodInterceptor() {
             @Nullable
             @Override
-            /** 调用 */
+            /**
+             * 调用
+            */
             public Object invoke(@Nonnull MethodInvocation invocation) throws Throwable {
                 TokenForType tokenForType = getAnnotation(invocation);
                 UserResume userResume = com.chua.starter.oauth.client.support.execute.AuthSessionUtils.getUserInfo(UserResume.class);
@@ -118,7 +124,9 @@ public class TokenForTypeInterceptor extends StaticMethodMatcherPointcutAdvisor 
     }
 
     @Override
-    /** 获取订单 */
+    /**
+     * 获取订单
+    */
     public int getOrder() {
         return Ordered.HIGHEST_PRECEDENCE;
     }

@@ -14,27 +14,43 @@ import lombok.Data;
 @Data
 public class LogQuery {
 
-    /** 页码，从 1 起，缺省 1。 */
+    /**
+     * 页码，从 1 起，缺省 1。
+    */
     private Integer page;
 
-    /** 每页条数，缺省 20。 */
+    /**
+     * 每页条数，缺省 20。
+    */
     private Integer size;
 
-    /** 级别过滤（可空）。 */
+    /**
+     * 级别过滤（可空）。
+    */
     private String level;
 
-    /** 关键字过滤（匹配 message/logger，可空）。 */
+    /**
+     * 关键字过滤（匹配 message/logger，可空）。
+    */
     private String keyword;
 
-    /** 链路 ID 精确匹配（可空）。 */
+    /**
+     * 链路 ID 精确匹配（可空）。
+    */
     private String traceId;
 
-    /** 开始时间（epoch 毫秒，可空）。 */
+    /**
+     * 开始时间（epoch 毫秒，可空）。
+    */
     private Long startTime;
 
-    /** 结束时间（epoch 毫秒，可空）。 */
+    /**
+     * 结束时间（epoch 毫秒，可空）。
+    */
     private Long endTime;
 
-    /** 类名过滤（包含匹配，可空）。 */
+    /**
+     * 类名过滤（包含匹配，可空）。
+    */
     private String className;
 }

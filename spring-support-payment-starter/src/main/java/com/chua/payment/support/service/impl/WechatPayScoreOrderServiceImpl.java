@@ -40,13 +40,21 @@ import java.util.UUID;
 @Service
 public class WechatPayScoreOrderServiceImpl extends AbstractMerchantPaymentChannel implements WechatPayScoreOrderService {
 
-    /** wechat薪酬分数排序映射器 */
+    /**
+     * wechat薪酬分数排序映射器
+    */
     private final WechatPayScoreOrderMapper wechatPayScoreOrderMapper;
-    /** Merchant通道映射器 */
+    /**
+     * Merchant通道映射器
+    */
     private final MerchantChannelMapper merchantChannelMapper;
-    /** 提供者gateway注册表 */
+    /**
+     * 提供者gateway注册表
+    */
     private final PaymentProviderGatewayRegistry providerGatewayRegistry;
-    /** paymentcallbackurl解析器 */
+    /**
+     * paymentcallbackurl解析器
+    */
     private final PaymentCallbackUrlResolver paymentCallbackUrlResolver;
 
     /**
@@ -176,7 +184,9 @@ public class WechatPayScoreOrderServiceImpl extends AbstractMerchantPaymentChann
     }
 
     @Override
-    /** 获取by出订单no */
+    /**
+     * 获取by出订单no
+    */
     public WechatPayScoreOrder getByOutOrderNo(String outOrderNo) {
         if (!StringUtils.hasText(outOrderNo)) {
             return null;

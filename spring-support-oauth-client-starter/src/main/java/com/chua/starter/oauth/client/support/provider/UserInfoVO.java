@@ -14,38 +14,64 @@ import java.util.Set;
 @Data
 public class UserInfoVO {
 
-    /** 用户标识 */
+    /**
+     * 用户标识
+    */
     private String userId;
 
-    /** 用户SEX */
+    /**
+     * 用户SEX
+    */
     private Integer userSex;
 
-    /** 用户记号笔 */
+    /**
+     * 用户记号笔
+    */
     private String userMarker;
 
-    /** 用户名称 */
+    /**
+     * 用户名称
+    */
     private String userName;
-    /** 用户real名称 */
+    /**
+     * 用户real名称
+    */
     private String userRealName;
 
-    /** Nickname */
+    /**
+     * Nickname
+    */
     private String nickname;
-    /** 用户gender */
+    /**
+     * 用户gender
+    */
     private String userGender;
-    /** 用户mobile */
+    /**
+     * 用户mobile
+    */
     private String userMobile;
-    /** 用户email */
+    /**
+     * 用户email
+    */
     private String userEmail;
-    /** 用户地址 */
+    /**
+     * 用户地址
+    */
     private String userAddress;
 
-    /** Avatar */
+    /**
+     * Avatar
+    */
     private String avatar;
 
-    /** 角色 */
+    /**
+     * 角色
+    */
     private Set<String> roles;
 
-    /** Perms */
+    /**
+     * Perms
+    */
     private Set<String> perms;
 
 }

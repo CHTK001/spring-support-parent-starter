@@ -15,10 +15,14 @@ import org.slf4j.LoggerFactory;
  * @since 4.0.0
  */
 public class JsonArrayToStringSerialize extends JsonSerializer<Object[]> {
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(JsonArrayToStringSerialize.class);
         @Override
-    /** 序列化 */
+    /**
+     * 序列化
+    */
     public void serialize(Object[] value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
         if (log.isTraceEnabled()) {
             log.trace("[序列化]使用 JsonArrayToStringSerialize 序列化数组, 长度: {}", value != null ? value.length : 0);

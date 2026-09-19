@@ -19,7 +19,9 @@ import java.util.Map;
  */
 public class DefaultObjectStruct<T> implements ObjectStruct<T> {
 
-    /** 配置 */
+    /**
+     * 配置
+    */
     private final TreeStructConfig<T> config;
 
     /**
@@ -31,7 +33,9 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
     }
 
     @Override
-    /** 转为树 */
+    /**
+     * 转为树
+    */
     public List<TreeNode<T>> toTree(List<T> source) {
         if (source == null || source.isEmpty()) {
             return Collections.emptyList();
@@ -65,7 +69,9 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
     }
 
     @Override
-    /** 转为barchart数据 */
+    /**
+     * 转为barchart数据
+    */
     public BarChartData toBarChartData(List<TreeNode<T>> tree) {
         BarChartData data = new BarChartData();
         if (tree == null) {
@@ -87,7 +93,9 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
     }
 
     @Override
-    /** 转为radarchart数据 */
+    /**
+     * 转为radarchart数据
+    */
     public RadarChartData toRadarChartData(List<TreeNode<T>> tree) {
         RadarChartData data = new RadarChartData();
         if (tree == null) {
@@ -108,7 +116,9 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
     }
 
     @Override
-    /** 转为relation数据 */
+    /**
+     * 转为relation数据
+    */
     public RelationData toRelationData(List<TreeNode<T>> tree) {
         RelationData data = new RelationData();
         if (tree == null) {
@@ -128,7 +138,9 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
     }
 
     @Override
-    /** 转为treemap数据 */
+    /**
+     * 转为treemap数据
+    */
     public TreemapData toTreemapData(List<TreeNode<T>> tree) {
         TreemapData data = new TreemapData();
         if (tree == null) {

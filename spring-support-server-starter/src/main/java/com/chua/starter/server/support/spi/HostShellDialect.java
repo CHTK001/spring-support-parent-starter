@@ -21,16 +21,24 @@ public enum HostShellDialect {
      */
     POSIX("POSIX", "Linux", "bash"),
 
-    /** PowerShell：Windows */
+    /**
+     * PowerShell：Windows
+    */
     POWERSHELL("POWERSHELL", "Windows", "PowerShell");
 
-    /** 编码 */
+    /**
+     * 编码
+    */
     private final String code;
 
-    /** 系统展示名（用于提示词中的「目标 OS=」） */
+    /**
+     * 系统展示名（用于提示词中的「目标 OS=」）
+    */
     private final String osName;
 
-    /** 脚本语言展示名（用于提示词中的「只输出可直接执行的 X 脚本」） */
+    /**
+     * 脚本语言展示名（用于提示词中的「只输出可直接执行的 X 脚本」）
+    */
     private final String scriptName;
 
     /**

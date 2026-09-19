@@ -24,31 +24,41 @@ import java.util.List;
 @MappedTypes(List.class)
 public class IntegerListTypeHandler implements TypeHandler<List<Integer>> {
 
-    /** Comma */
+    /**
+     * Comma
+    */
     private static final String COMMA = ",";
 
     @Override
-    /** 设置参数 */
+    /**
+     * 设置参数
+    */
     public void setParameter(PreparedStatement ps, int i, List<Integer> strings, JdbcType jdbcType) throws SQLException {
         ps.setString(i, Joiner.on(COMMA).join(strings));
     }
 
     @Override
-    /** 获取结果 */
+    /**
+     * 获取结果
+    */
     public List<Integer> getResult(ResultSet rs, String columnName) throws SQLException {
         String value = rs.getString(columnName);
         return getResult(value);
     }
 
     @Override
-    /** 获取结果 */
+    /**
+     * 获取结果
+    */
     public List<Integer> getResult(ResultSet rs, int columnIndex) throws SQLException {
         String value = rs.getString(columnIndex);
         return getResult(value);
     }
 
     @Override
-    /** 获取结果 */
+    /**
+     * 获取结果
+    */
     public List<Integer> getResult(CallableStatement cs, int columnIndex) throws SQLException {
         String value = cs.getString(columnIndex);
         return getResult(value);

@@ -48,11 +48,15 @@ public class LocalDbRequirementDataSource implements IRequirementDataSource {
     private static final Duration CONNECTION_TIMEOUT = Duration.ofSeconds(10); // connection超时
     private static final int MAX_POOL_SIZE = 2; // 最大游泳池大小
 
-    /** 表名白名单正则，仅允许字母、数字、下划线，防 SQL 注入 */
+    /**
+     * 表名白名单正则，仅允许字母、数字、下划线，防 SQL 注入
+    */
     private static final java.util.regex.Pattern SAFE_TABLE_NAME =
             java.util.regex.Pattern.compile("^[A-Za-z0-9_]+$");
 
-    /** 数量 查询：仅计数远程表中的需求条目 */
+    /**
+     * 数量 查询：仅计数远程表中的需求条目
+    */
     private static final String COUNT_SQL =
             """
             /**
@@ -63,7 +67,9 @@ public class LocalDbRequirementDataSource implements IRequirementDataSource {
             SELECT COUNT(*) FROM `%s`
             """;
 
-    /** 获取 查询：读取远程表全部需求列（不含 extra JSON，避免序列化问题） */
+    /**
+     * 获取 查询：读取远程表全部需求列（不含 extra JSON，避免序列化问题）
+    */
     private static final String FETCH_SQL =
             """
             SELECT sys_ai_requirement_id, sys_ai_requirement_title,

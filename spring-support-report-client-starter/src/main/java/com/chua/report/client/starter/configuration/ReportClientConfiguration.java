@@ -53,15 +53,25 @@ import org.springframework.core.env.Environment;
 public class ReportClientConfiguration implements ApplicationContextAware {
 
 
-    /** 同步客户端 */
+    /**
+     * 同步客户端
+    */
     private final SyncClient syncClient;
-    /** 环境 */
+    /**
+     * 环境
+    */
     private final Environment environment;
-    /** Report属性 */
+    /**
+     * Report属性
+    */
     private final ReportProperties reportProperties;
-    /** 特征管理器提供者 */
+    /**
+     * 特征管理器提供者
+    */
     private final ObjectProvider<ApiFeatureManager> featureManagerProvider;
-    /** Application上下文 */
+    /**
+     * Application上下文
+    */
     private ApplicationContext applicationContext;
 
     /**
@@ -81,25 +91,35 @@ public class ReportClientConfiguration implements ApplicationContextAware {
     }
 
     @Override
-    /** 设置application上下文 */
+    /**
+     * 设置application上下文
+    */
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
     }
 
     @Value("${spring.application.name:unknown}")
-    /** APP名称 */
+    /**
+     * APP名称
+    */
     private String appName;
 
     @Value("${server.port:8080}")
-    /** 服务器端口 */
+    /**
+     * 服务器端口
+    */
     private Integer serverPort;
 
     @Value("${server.servlet.context-path:}")
-    /** 上下文路径 */
+    /**
+     * 上下文路径
+    */
     private String contextPath;
 
     @PostConstruct
-    /** 初始化 */
+    /**
+     * 初始化
+    */
     public void init() {
         log.info("[ReportClient] 初始化");
 
@@ -192,7 +212,9 @@ public class ReportClientConfiguration implements ApplicationContextAware {
     }
 
     @PreDestroy
-    /** 销毁 */
+    /**
+     * 销毁
+    */
     public void destroy() {
         // 先发送下线通知
         AppRegisterReporter.getInstance().stop();

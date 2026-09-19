@@ -8,7 +8,9 @@ package com.chua.starter.common.support.codec;
  */
 public final class Codec {
 
-    /** 创建 Codec 实例 */
+    /**
+     * 创建 Codec 实例
+    */
     private Codec() {
     }
 

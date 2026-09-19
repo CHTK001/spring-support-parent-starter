@@ -19,7 +19,9 @@ import java.util.Set;
  */
 public class JsonLongSetTypeHandler extends AbstractJsonTypeHandler<Object> {
 
-    /** 类型_引用 */
+    /**
+     * 类型_引用
+    */
     private static final TypeReference<Set<Long>> TYPE_REFERENCE = new TypeReference<Set<Long>>(){};
 
     /**
@@ -50,13 +52,17 @@ public class JsonLongSetTypeHandler extends AbstractJsonTypeHandler<Object> {
     }
 
     @Override
-    /** 解析 */
+    /**
+     * 解析
+    */
     public Object parse(String json) {
         return Json.fromJson(json, TYPE_REFERENCE);
     }
 
     @Override
-    /** 转为json */
+    /**
+     * 转为json
+    */
     public String toJson(Object obj) {
         return Json.toJson(obj);
     }

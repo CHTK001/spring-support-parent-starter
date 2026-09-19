@@ -19,10 +19,14 @@ import org.springframework.core.env.Environment;
 @Setter
 public class NonceSignProperties {
 
-    /** PRE */
+    /**
+     * PRE
+    */
     public static final String PRE = "plugin.nonce.sign";
 
-    /** 备用前缀（解析失败时尝试） */
+    /**
+     * 备用前缀（解析失败时尝试）
+    */
     public static final String PRE_ALT = "nonce.sign";
 
     /**

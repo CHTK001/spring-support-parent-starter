@@ -9,7 +9,9 @@ import com.chua.common.support.lang.bean.NamingStyle;
  */
 public final class NamingCase {
 
-    /** 创建 名称大小写 实例 */
+    /**
+     * 创建 名称大小写 实例
+    */
     private NamingCase() {
     }
 

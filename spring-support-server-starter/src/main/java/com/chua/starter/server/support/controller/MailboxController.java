@@ -28,7 +28,9 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class MailboxController {
 
-    /** 邮箱读取服务 */
+    /**
+     * 邮箱读取服务
+    */
     private final MailboxService mailboxService;
 
     /**

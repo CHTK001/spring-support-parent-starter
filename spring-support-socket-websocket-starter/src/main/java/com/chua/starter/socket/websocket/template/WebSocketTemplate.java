@@ -23,7 +23,9 @@ import java.util.Collection;
 @Slf4j
 public class WebSocketTemplate {
 
-    /** 会话管理器 */
+    /**
+     * 会话管理器
+    */
     private final WebSocketSessionManager sessionManager;
 
     /**

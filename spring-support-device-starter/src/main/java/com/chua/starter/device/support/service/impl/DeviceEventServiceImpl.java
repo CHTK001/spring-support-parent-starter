@@ -40,7 +40,9 @@ public class DeviceEventServiceImpl implements DeviceEventService {
     private final DeviceSessionManager sessionManager;
 
     @Override
-    /** 保存事件 */
+    /**
+     * 保存事件
+    */
     public void saveEvent(DeviceEvent event) {
         DeviceEventRecord record = new DeviceEventRecord();
         record.setDeviceEventRecordId(UUID.randomUUID().toString());
@@ -53,7 +55,9 @@ public class DeviceEventServiceImpl implements DeviceEventService {
     }
 
     @Override
-    /** 查询事件 */
+    /**
+     * 查询事件
+    */
     public List<DeviceEventRecord> queryEvents(String deviceId, EventType type, LocalDateTime start, LocalDateTime end) {
         LambdaQueryWrapper<DeviceEventRecord> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(DeviceEventRecord::getDeviceEventRecordDeviceId, deviceId);
@@ -72,7 +76,9 @@ public class DeviceEventServiceImpl implements DeviceEventService {
 
     @Override
     @Scheduled(fixedDelayString = "${plugin.device.event.poll-interval:30000}")
-    /** 取出全部devices */
+    /**
+     * 取出全部devices
+    */
     public void pollAllDevices() {
         sessionManager.getAllSessions().forEach((deviceId, session) -> {
             if (session.isOnline()) {

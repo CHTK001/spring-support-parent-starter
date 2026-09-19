@@ -13,25 +13,45 @@ import java.util.Map;
  */
 @Data
 public class PaymentResult {
-    /** 成功 */
+    /**
+     * 成功
+    */
     private boolean success;
-    /** 贸易no */
+    /**
+     * 贸易no
+    */
     private String tradeNo;
-    /** 消息 */
+    /**
+     * 消息
+    */
     private String message;
-    /** PAYURL */
+    /**
+     * PAYURL
+    */
     private String payUrl;
-    /** Launch类型 */
+    /**
+     * Launch类型
+    */
     private String launchType;
-    /** formhtml */
+    /**
+     * formhtml
+    */
     private String formHtml;
-    /** 请求体 */
+    /**
+     * 请求体
+    */
     private String body;
     private Map<String, Object> sdkParams; // sdk参数
-    /** Paidamount */
+    /**
+     * Paidamount
+    */
     private BigDecimal paidAmount;
-    /** 状态 */
+    /**
+     * 状态
+    */
     private String status;
-    /** RAW响应 */
+    /**
+     * RAW响应
+    */
     private String rawResponse;
 }

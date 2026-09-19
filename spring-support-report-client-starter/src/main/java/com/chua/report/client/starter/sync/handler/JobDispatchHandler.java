@@ -28,23 +28,31 @@ import java.util.Map;
 public class JobDispatchHandler implements SyncMessageHandler {
 
 
-    /** 作业执行 */
+    /**
+     * 作业执行
+    */
     private final JobExecute jobExecute = new DefaultJobExecute();
 
     @Override
-    /** 获取名称 */
+    /**
+     * 获取名称
+    */
     public String getName() {
         return "jobDispatchHandler";
     }
 
     @Override
-    /** 支持 */
+    /**
+     * 支持
+    */
     public boolean supports(String topic) {
         return MonitorTopics.JOB_DISPATCH.equals(topic) || MonitorTopics.JOB_CANCEL.equals(topic);
     }
 
     @Override
-    /** 处理 */
+    /**
+     * 处理
+    */
     public Object handle(String topic, String sessionId, Map<String, Object> data) {
         if (MonitorTopics.JOB_DISPATCH.equals(topic)) {
             return handleDispatch(data);

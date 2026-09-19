@@ -42,7 +42,9 @@ import java.util.Map;
  * @since 4.0.0
  */
 public class CryptoInterceptor implements Interceptor {
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(CryptoInterceptor.class);
 
     /**

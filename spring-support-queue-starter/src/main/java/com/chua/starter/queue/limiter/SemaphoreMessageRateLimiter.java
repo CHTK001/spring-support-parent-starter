@@ -22,11 +22,15 @@ import java.util.concurrent.TimeUnit;
 public class SemaphoreMessageRateLimiter implements MessageRateLimiter {
 
     private final ConcurrentHashMap<String, Semaphore> semaphores = new ConcurrentHashMap<>(); // semaphores
-    /** 默认_许可证 */
+    /**
+     * 默认_许可证
+    */
     private static final int DEFAULT_PERMITS = 100;
 
     @Override
-    /** 尝试获取 */
+    /**
+     * 尝试获取
+    */
     public boolean tryAcquire(Message message) {
         Semaphore semaphore = getSemaphore(message.getDestination());
         boolean acquired = semaphore.tryAcquire();
@@ -40,7 +44,9 @@ public class SemaphoreMessageRateLimiter implements MessageRateLimiter {
     }
 
     @Override
-    /** 获取 */
+    /**
+     * 获取
+    */
     public void acquire(Message message) {
         Semaphore semaphore = getSemaphore(message.getDestination());
         try {
@@ -58,14 +64,18 @@ public class SemaphoreMessageRateLimiter implements MessageRateLimiter {
     }
 
     @Override
-    /** 释放 */
+    /**
+     * 释放
+    */
     public void release(Message message) {
         Semaphore semaphore = getSemaphore(message.getDestination());
         semaphore.release();
     }
 
     @Override
-    /** 可用许可证 */
+    /**
+     * 可用许可证
+    */
     public int availablePermits() {
         return semaphores.values().stream()
             .mapToInt(Semaphore::availablePermits)
@@ -73,7 +83,9 @@ public class SemaphoreMessageRateLimiter implements MessageRateLimiter {
     }
 
     @Override
-    /** 重置 */
+    /**
+     * 重置
+    */
     public void reset() {
         semaphores.clear();
     }

@@ -11,25 +11,45 @@ import java.math.BigDecimal;
  */
 @Data
 public class WithdrawRequest {
-    /** withdrawno */
+    /**
+     * withdrawno
+    */
     private String withdrawNo;
-    /** 通知url */
+    /**
+     * 通知url
+    */
     private String notifyUrl;
-    /** merchantid */
+    /**
+     * merchantid
+    */
     private Long merchantId;
-    /** 用户标识 */
+    /**
+     * 用户标识
+    */
     private Long userId;
-    /** Amount */
+    /**
+     * Amount
+    */
     private BigDecimal amount;
-    /** Bankaccount */
+    /**
+     * Bankaccount
+    */
     private String bankAccount;
-    /** Bank名称 */
+    /**
+     * Bank名称
+    */
     private String bankName;
-    /** 账户名称 */
+    /**
+     * 账户名称
+    */
     private String accountName;
-    /** 操作符 */
+    /**
+     * 操作符
+    */
     private String operator;
-    /** 评论 */
+    /**
+     * 评论
+    */
     private String remark;
 }
 

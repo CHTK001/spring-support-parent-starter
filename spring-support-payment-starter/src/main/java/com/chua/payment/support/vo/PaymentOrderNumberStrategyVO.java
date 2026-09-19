@@ -9,17 +9,29 @@ import lombok.Data;
  */
 @Data
 public class PaymentOrderNumberStrategyVO {
-    /** 业务类型 */
+    /**
+     * 业务类型
+    */
     private String businessType;
-    /** 字段名称 */
+    /**
+     * 字段名称
+    */
     private String fieldName;
-    /** Generationrule */
+    /**
+     * Generationrule
+    */
     private String generationRule;
-    /** Calleroverridefield */
+    /**
+     * Calleroverridefield
+    */
     private String callerOverrideField;
-    /** Idempotentrule */
+    /**
+     * Idempotentrule
+    */
     private String idempotentRule;
-    /** 笔记 */
+    /**
+     * 笔记
+    */
     private String notes;
 }
 

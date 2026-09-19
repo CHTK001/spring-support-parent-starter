@@ -35,11 +35,17 @@ import java.util.stream.Collectors;
 @Service
 public class MailboxSseService {
 
-    /** SSE 会话模板(全局 Socket 基础设施；未启用 SSE 时为空) */
+    /**
+     * SSE 会话模板(全局 Socket 基础设施；未启用 SSE 时为空)
+    */
     private final ObjectProvider<SseSocketSessionTemplate> sseSocketSessionTemplateProvider;
-    /** 身份 映射器 */
+    /**
+     * 身份 映射器
+    */
     private final MsServerIdentityMapper identityMapper;
-    /** 凭据加解密器 */
+    /**
+     * 凭据加解密器
+    */
     private final CredentialCipher cipher;
 
     /**
@@ -57,14 +63,22 @@ public class MailboxSseService {
         this.cipher = cipher;
     }
 
-    /** 轮询间隔(毫秒) */
+    /**
+     * 轮询间隔(毫秒)
+    */
     private static final long POLL_INTERVAL_MS = 10_000;
-    /** 单次推送最大新邮件数 */
+    /**
+     * 单次推送最大新邮件数
+    */
     private static final int MAX_PUSH_PER_TICK = 20;
 
-    /** 客户端标识 → 邮箱身份 标识 映射 */
+    /**
+     * 客户端标识 → 邮箱身份 标识 映射
+    */
     private final Map<String, Long> clientIdentityMap = new ConcurrentHashMap<>();
-    /** 邮箱身份 标识 → 已推送邮件 标识 集合(检测新邮件) */
+    /**
+     * 邮箱身份 标识 → 已推送邮件 标识 集合(检测新邮件)
+    */
     private final Map<Long, Set<String>> seenEmailIds = new ConcurrentHashMap<>();
 
     /**

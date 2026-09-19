@@ -27,15 +27,25 @@ import java.lang.reflect.Method;
  */
 public class ApiVersionRequestMappingHandlerMapping extends RequestMappingHandlerMapping {
 
-    /** API属性 */
+    /**
+     * API属性
+    */
     private final ApiProperties apiProperties;
-    /** Platformopen */
+    /**
+     * Platformopen
+    */
     private final boolean platformOpen;
-    /** 版本打开 */
+    /**
+     * 版本打开
+    */
     private final boolean versionOpen;
-    /** Platform */
+    /**
+     * Platform
+    */
     private final String platform;
-    /** 是否激活配置文件 */
+    /**
+     * 是否激活配置文件
+    */
     private final String[] activeProfiles;
 
     /**

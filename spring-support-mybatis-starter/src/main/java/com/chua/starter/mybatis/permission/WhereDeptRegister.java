@@ -23,7 +23,9 @@ import java.util.stream.Collectors;
 public class WhereDeptRegister extends AbstractDeptRegister {
 
 
-    /** 当前表 */
+    /**
+     * 当前表
+    */
     private final Table currentTable;
 
     /**

@@ -59,7 +59,9 @@ public enum ProjectType {
      */
     CUSTOM("自定义");
 
-    /** 描述 */
+    /**
+     * 描述
+    */
     private final String desc;
 
     /**

@@ -32,9 +32,13 @@ import java.util.function.Function;
 @ConditionalOnProperty(prefix = "plugin.sync.datasync", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class SyncDataSyncConfiguration {
 
-    /** 前缀 */
+    /**
+     * 前缀
+    */
     private static final String PREFIX = "plugin.sync.datasync";
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(SyncDataSyncConfiguration.class);
 
     /**
@@ -91,7 +95,9 @@ public class SyncDataSyncConfiguration {
     }
 
     @PostConstruct
-    /** 初始化 */
+    /**
+     * 初始化
+    */
     public void init() {
         Boolean enable = environment.getProperty(PREFIX + ".enabled", Boolean.class, false);
         ServiceInfoRegistry.getInstance().registerFlag(

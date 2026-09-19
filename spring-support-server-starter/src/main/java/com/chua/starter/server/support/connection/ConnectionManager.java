@@ -27,21 +27,35 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Component
 public class ConnectionManager {
 
-    /** 默认空闲超时(秒) */
+    /**
+     * 默认空闲超时(秒)
+    */
     private static final long DEFAULT_IDLE_TIMEOUT_SECONDS = 300L;
 
-    /** 健康检查：ECHO 命令 */
+    /**
+     * 健康检查：ECHO 命令
+    */
     private static final String HEALTH_PROBE_CMD = "echo ok";
 
-    /** 缓存项：已连接句柄 + 最后活动时间 + 引用计数 */
+    /**
+     * 缓存项：已连接句柄 + 最后活动时间 + 引用计数
+    */
     static class Entry {
-        /** SSH 句柄 */
+        /**
+         * SSH 句柄
+        */
         final SshClients.Handle handle;
-        /** 凭据指纹（凭据变化时强制重建） */
+        /**
+         * 凭据指纹（凭据变化时强制重建）
+        */
         final String credentialFingerprint;
-        /** 最后活动纳秒时间 */
+        /**
+         * 最后活动纳秒时间
+        */
         volatile long lastActiveNanos;
-        /** 引用计数 */
+        /**
+         * 引用计数
+        */
         final AtomicInteger refCount = new AtomicInteger(0);
 
         Entry(SshClients.Handle handle, String credentialFingerprint, long nowNanos) {
@@ -51,7 +65,9 @@ public class ConnectionManager {
         }
     }
 
-    /** 主机标识 -> 缓存项 */
+    /**
+     * 主机标识 -> 缓存项
+    */
     private final ConcurrentHashMap<Long, Entry> cache = new ConcurrentHashMap<>();
 
     /**

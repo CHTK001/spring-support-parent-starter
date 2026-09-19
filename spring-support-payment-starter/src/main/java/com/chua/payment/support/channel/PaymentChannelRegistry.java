@@ -20,7 +20,9 @@ public class PaymentChannelRegistry {
     private volatile List<PaymentChannel> channels; // 通道
 
     @Autowired
-    /** Application上下文 */
+    /**
+     * Application上下文
+    */
     private ApplicationContext applicationContext;
 
     /**

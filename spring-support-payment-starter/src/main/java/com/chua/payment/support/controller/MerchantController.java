@@ -31,7 +31,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class MerchantController {
 
-    /** Merchant服务 */
+    /**
+     * Merchant服务
+    */
     private final MerchantService merchantService;
 
     @Operation(summary = "创建商户")

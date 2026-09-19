@@ -17,10 +17,14 @@ public class NoticeProperties {
     private boolean enable = false;
 
 
-    /** PRE */
+    /**
+     * PRE
+    */
     public static final String PRE = "plugin.notice";
 
-    /** Email */
+    /**
+     * Email
+    */
     private Email email;
 
     @Data

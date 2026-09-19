@@ -24,11 +24,17 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ServerIdentityServiceImpl implements ServerIdentityService {
 
-    /** 身份 映射器 */
+    /**
+     * 身份 映射器
+    */
     private final MsServerIdentityMapper identityMapper;
-    /** 主机身份关联 映射器 */
+    /**
+     * 主机身份关联 映射器
+    */
     private final MsServerHostIdentityMapper hostIdentityMapper;
-    /** 凭据加解密器 */
+    /**
+     * 凭据加解密器
+    */
     private final CredentialCipher cipher;
 
     @Override

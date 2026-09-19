@@ -22,7 +22,9 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class SupportInjector extends DefaultSqlInjector implements DisposableBean {
 
-    /** MyBatis属性 */
+    /**
+     * MyBatis属性
+    */
     private MybatisPlusProperties mybatisProperties;
     private final Map<MybatisPlusProperties.SqlMethodProperties, SqlMethodMarker> cache = new ConcurrentHashMap<>(); // 缓存
     private final Map<MybatisPlusProperties.SqlMethodProperties, List<AbstractMethod>> cacheAbstractMethod = new ConcurrentHashMap<>(); // 缓存抽象方法
@@ -36,7 +38,9 @@ public class SupportInjector extends DefaultSqlInjector implements DisposableBea
     }
 
     @Override
-    /** 获取方法列表 */
+    /**
+     * 获取方法列表
+    */
     public List<AbstractMethod> getMethodList(Class<?> mapperClass, TableInfo tableInfo) {
         List<AbstractMethod> list = new ArrayList<>();
 
@@ -81,7 +85,9 @@ public class SupportInjector extends DefaultSqlInjector implements DisposableBea
     }
 
     @Override
-    /** 销毁 */
+    /**
+     * 销毁
+    */
     public void destroy() throws Exception {
         for (SqlMethodMarker sqlMethodMarker : cache.values()) {
             sqlMethodMarker.destroy();

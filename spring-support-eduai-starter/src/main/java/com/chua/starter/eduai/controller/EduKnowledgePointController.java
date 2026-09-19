@@ -32,7 +32,9 @@ import java.util.List;
 @Tag(name = "知识点管理")
 public class EduKnowledgePointController {
 
-    /** Knowledgepoint服务 */
+    /**
+     * Knowledgepoint服务
+    */
     private final IEduKnowledgePointService knowledgePointService;
 
     /**

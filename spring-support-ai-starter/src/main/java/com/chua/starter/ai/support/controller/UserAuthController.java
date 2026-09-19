@@ -38,10 +38,14 @@ import java.util.UUID;
 @Slf4j
 public class UserAuthController {
 
-    /** Bearer 令牌 前缀 */
+    /**
+     * Bearer 令牌 前缀
+    */
     private static final String BEARER_PREFIX = "Bearer ";
 
-    /** Bearer 令牌 前缀长度 */
+    /**
+     * Bearer 令牌 前缀长度
+    */
     private static final int BEARER_PREFIX_LENGTH = BEARER_PREFIX.length();
 
     /**

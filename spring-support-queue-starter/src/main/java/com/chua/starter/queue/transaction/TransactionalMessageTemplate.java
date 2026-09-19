@@ -27,7 +27,9 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class TransactionalMessageTemplate {
 
-    /** 消息模板 */
+    /**
+     * 消息模板
+    */
     private final MessageTemplate messageTemplate;
 
     /**
@@ -93,9 +95,13 @@ public class TransactionalMessageTemplate {
      * @since 4.0.0
      */
     private class MessageSendSynchronization implements TransactionSynchronization {
-        /** 目的地 */
+        /**
+         * 目的地
+        */
         private final String destination;
-        /** Payload */
+        /**
+         * Payload
+        */
         private final Object payload;
         private final Map<String, Object> headers; // 头部
 
@@ -115,7 +121,9 @@ public class TransactionalMessageTemplate {
         }
 
         @Override
-        /** 之后提交 */
+        /**
+         * 之后提交
+        */
         public void afterCommit() {
             try {
                 SendResult result = messageTemplate.send(destination, payload, headers);
@@ -137,7 +145,9 @@ public class TransactionalMessageTemplate {
      * @since 4.0.0
      */
     private class BatchMessageSendSynchronization implements TransactionSynchronization {
-        /** 消息 */
+        /**
+         * 消息
+        */
         private final List<TransactionalMessage> messages;
 
         /**
@@ -149,7 +159,9 @@ public class TransactionalMessageTemplate {
         }
 
         @Override
-        /** 之后提交 */
+        /**
+         * 之后提交
+        */
         public void afterCommit() {
             int successCount = 0;
             int failureCount = 0;
@@ -181,9 +193,13 @@ public class TransactionalMessageTemplate {
      * @since 4.0.0
      */
     public static class TransactionalMessage {
-        /** 目的地 */
+        /**
+         * 目的地
+        */
         private final String destination;
-        /** Payload */
+        /**
+         * Payload
+        */
         private final Object payload;
         private final Map<String, Object> headers; // 头部
 

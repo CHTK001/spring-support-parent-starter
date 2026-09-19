@@ -11,19 +11,33 @@ import java.util.List;
  */
 public class MaterializedSqlRequest {
 
-    /** 对账单标识 */
+    /**
+     * 对账单标识
+    */
     private String statementId;
-    /** 来源数据来源 */
+    /**
+     * 来源数据来源
+    */
     private String sourceDataSource;
-    /** SQL */
+    /**
+     * SQL
+    */
     private String sql;
-    /** 命令类型 */
+    /**
+     * 命令类型
+    */
     private MaterializedSqlCommandType commandType;
-    /** Definition */
+    /**
+     * Definition
+    */
     private MaterializedRouteDefinition definition;
-    /** Tables */
+    /**
+     * Tables
+    */
     private List<String> tables = new ArrayList<>();
-    /** 参数 */
+    /**
+     * 参数
+    */
     private List<Object> parameters = new ArrayList<>();
 
     /**
@@ -99,7 +113,9 @@ public class MaterializedSqlRequest {
      * @since 4.0.0
      */
     public static class MaterializedSqlRequestBuilder {
-        /** 请求 */
+        /**
+         * 请求
+        */
         private final MaterializedSqlRequest request = new MaterializedSqlRequest();
 
         /**

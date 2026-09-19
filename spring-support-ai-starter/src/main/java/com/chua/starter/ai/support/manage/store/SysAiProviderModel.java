@@ -60,23 +60,33 @@ public class SysAiProviderModel implements Serializable {
 
 
     @TableField("sys_ai_provider_model_context_window")
-    /** 上下文Window */
+    /**
+     * 上下文Window
+    */
     private Integer contextWindow;
 
     @TableField("sys_ai_provider_model_max_tokens")
-    /** 最大值Tokens */
+    /**
+     * 最大值Tokens
+    */
     private Integer maxTokens;
 
     @TableField("sys_ai_provider_model_temperature")
-    /** temperature */
+    /**
+     * temperature
+    */
     private Double temperature;
 
     @TableField("sys_ai_provider_model_top_p")
-    /** 顶部P */
+    /**
+     * 顶部P
+    */
     private Double topP;
 
     @TableField("sys_ai_provider_model_frequency_penalty")
-    /** frequencyPenalty */
+    /**
+     * frequencyPenalty
+    */
     private Double frequencyPenalty;
     /**
      * 任务能力JSON数组

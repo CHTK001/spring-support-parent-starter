@@ -27,15 +27,23 @@ import java.util.List;
  */
 public abstract class AbstractHttpIpQualityDetector implements IpQualityDetector {
 
-    /** 日志记录器 */
+    /**
+     * 日志记录器
+    */
     private static final Logger logger = LoggerFactory.getLogger(AbstractHttpIpQualityDetector.class);
 
-    /** Objectmapper */
+    /**
+     * Objectmapper
+    */
     protected final ObjectMapper objectMapper;
-    /** HTTP客户端 */
+    /**
+     * HTTP客户端
+    */
     protected final OkHttpClient httpClient;
 
-    /** 创建 抽象httpipqualitydetector 实例 */
+    /**
+     * 创建 抽象httpipqualitydetector 实例
+    */
     protected AbstractHttpIpQualityDetector() {
         /**
          * this。
@@ -58,7 +66,9 @@ public abstract class AbstractHttpIpQualityDetector implements IpQualityDetector
     }
 
     @Override
-    /** Detect */
+    /**
+     * Detect
+    */
     public IpQuality detect(String ip) {
         if (ip == null || ip.isEmpty()) {
             return null;
@@ -103,7 +113,9 @@ public abstract class AbstractHttpIpQualityDetector implements IpQualityDetector
     }
 
     @Override
-    /** Detect */
+    /**
+     * Detect
+    */
     public IpQuality[] detect(String[] ips) {
         if (ips == null || ips.length == 0) {
             return new IpQuality[0];

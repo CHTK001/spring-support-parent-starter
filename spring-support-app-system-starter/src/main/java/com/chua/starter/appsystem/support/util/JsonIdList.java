@@ -21,7 +21,9 @@ import java.util.Set;
  */
 public final class JsonIdList {
 
-    /** Jackson */
+    /**
+     * Jackson
+    */
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     /**

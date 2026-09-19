@@ -55,7 +55,9 @@ public class ApiCryptoSerializer extends JsonSerializer<String> implements Conte
         this.key = key;
     }
 
-    /** 私有构造器，公钥可为空（由静态工厂创建实例） */
+    /**
+     * 私有构造器，公钥可为空（由静态工厂创建实例）
+    */
     private ApiCryptoSerializer() {
         this.publicKeyHex = null;
         this.cryptoType = null;

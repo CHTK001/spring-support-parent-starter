@@ -19,21 +19,27 @@ import java.lang.reflect.Method;
 public class LoggingRpcInterceptor implements RpcInterceptor {
 
     @Override
-    /** Pre处理 */
+    /**
+     * Pre处理
+    */
     public boolean preHandle(Method method, Object[] args) {
         log.debug("[RPC] 调用开始: {}.{}", method.getDeclaringClass().getSimpleName(), method.getName());
         return true;
     }
 
     @Override
-    /** Post处理 */
+    /**
+     * Post处理
+    */
     public Object postHandle(Method method, Object[] args, Object result) {
         log.debug("[RPC] 调用成功: {}.{}", method.getDeclaringClass().getSimpleName(), method.getName());
         return result;
     }
 
     @Override
-    /** 处理异常 */
+    /**
+     * 处理异常
+    */
     public void handleException(Method method, Object[] args, Throwable error) throws Throwable {
         log.error("[RPC] 调用失败: {}.{}, error={}",
             method.getDeclaringClass().getSimpleName(), method.getName(), error.getMessage());
@@ -41,7 +47,9 @@ public class LoggingRpcInterceptor implements RpcInterceptor {
     }
 
     @Override
-    /** 获取订单 */
+    /**
+     * 获取订单
+    */
     public int getOrder() {
         return Integer.MAX_VALUE; // 最低优先级，最后执行
     }

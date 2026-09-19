@@ -20,7 +20,9 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class ExecJobScheduler {
 
-    /** 批量执行服务 */
+    /**
+     * 批量执行服务
+    */
     private final ExecService execService;
 
     /**

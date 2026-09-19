@@ -358,7 +358,9 @@ public class MetricServiceImpl implements MetricService {
     }
 
     @Override
-    /** cleanup旧数据 */
+    /**
+     * cleanup旧数据
+    */
     public ReturnResult<Void> cleanupOldData(int retentionDays) {
         try {
             LocalDateTime cutoff = LocalDateTime.now().minusDays(retentionDays);
@@ -460,7 +462,9 @@ public class MetricServiceImpl implements MetricService {
     }
 
     @Override
-    /** 获取cpu历史 */
+    /**
+     * 获取cpu历史
+    */
     public ReturnResult<List<MsMonitorMetricCpu>> getCpuHistory(Long monitorId, LocalDateTime startTime, LocalDateTime endTime) {
         return ReturnResult.ok(cpuMapper.selectList(
                 new LambdaQueryWrapper<MsMonitorMetricCpu>()
@@ -472,7 +476,9 @@ public class MetricServiceImpl implements MetricService {
     }
 
     @Override
-    /** 获取内存历史 */
+    /**
+     * 获取内存历史
+    */
     public ReturnResult<List<MsMonitorMetricMemory>> getMemoryHistory(Long monitorId, LocalDateTime startTime, LocalDateTime endTime) {
         return ReturnResult.ok(memoryMapper.selectList(
                 new LambdaQueryWrapper<MsMonitorMetricMemory>()
@@ -484,7 +490,9 @@ public class MetricServiceImpl implements MetricService {
     }
 
     @Override
-    /** 获取jvm历史 */
+    /**
+     * 获取jvm历史
+    */
     public ReturnResult<List<MsMonitorMetricJvm>> getJvmHistory(Long monitorId, LocalDateTime startTime, LocalDateTime endTime) {
         return ReturnResult.ok(jvmMapper.selectList(
                 new LambdaQueryWrapper<MsMonitorMetricJvm>()
@@ -496,7 +504,9 @@ public class MetricServiceImpl implements MetricService {
     }
 
     @Override
-    /** 获取network历史 */
+    /**
+     * 获取network历史
+    */
     public ReturnResult<List<MsMonitorMetricNetwork>> getNetworkHistory(Long monitorId, LocalDateTime startTime, LocalDateTime endTime) {
         return ReturnResult.ok(networkMapper.selectList(
                 new LambdaQueryWrapper<MsMonitorMetricNetwork>()
@@ -508,7 +518,9 @@ public class MetricServiceImpl implements MetricService {
     }
 
     @Override
-    /** 获取disk历史 */
+    /**
+     * 获取disk历史
+    */
     public ReturnResult<List<MsMonitorMetricDisk>> getDiskHistory(Long monitorId, LocalDateTime startTime, LocalDateTime endTime) {
         return ReturnResult.ok(diskMapper.selectList(
                 new LambdaQueryWrapper<MsMonitorMetricDisk>()
@@ -520,7 +532,9 @@ public class MetricServiceImpl implements MetricService {
     }
 
     @Override
-    /** 获取latestredis指标 */
+    /**
+     * 获取latestredis指标
+    */
     public ReturnResult<MsMonitorRedisMetric> getLatestRedisMetric(Long monitorId) {
         return ReturnResult.ok(redisMetricMapper.selectOne(
                 new LambdaQueryWrapper<MsMonitorRedisMetric>()
@@ -530,7 +544,9 @@ public class MetricServiceImpl implements MetricService {
     }
 
     @Override
-    /** 获取Redis指标历史 */
+    /**
+     * 获取Redis指标历史
+    */
     public ReturnResult<List<MsMonitorRedisMetric>> getRedisMetricHistory(Long monitorId, LocalDateTime startTime, LocalDateTime endTime) {
         return ReturnResult.ok(redisMetricMapper.selectList(
                 new LambdaQueryWrapper<MsMonitorRedisMetric>()
@@ -542,7 +558,9 @@ public class MetricServiceImpl implements MetricService {
     }
 
     @Override
-    /** 获取generic指标历史 */
+    /**
+     * 获取generic指标历史
+    */
     public ReturnResult<List<MsMonitorMetric>> getGenericMetricHistory(Long monitorId, String metricName, LocalDateTime startTime, LocalDateTime endTime) {
         return ReturnResult.ok(metricMapper.selectList(
                 new LambdaQueryWrapper<MsMonitorMetric>()
@@ -555,7 +573,9 @@ public class MetricServiceImpl implements MetricService {
     }
 
     @Override
-    /** 获取指标statistics */
+    /**
+     * 获取指标statistics
+    */
     public ReturnResult<List<MsMonitorMetricStatistics>> getMetricStatistics(Long monitorId, String metricName, LocalDateTime startTime, LocalDateTime endTime) {
         return ReturnResult.ok(statisticsMapper.selectList(
                 new LambdaQueryWrapper<MsMonitorMetricStatistics>()
@@ -567,7 +587,9 @@ public class MetricServiceImpl implements MetricService {
     }
 
 @Override
-    /** 获取 Redis 指标小时聚合统计 */
+    /**
+     * 获取 Redis 指标小时聚合统计
+    */
     public ReturnResult<List<MsMonitorRedisMetricStatistics>> getRedisMetricStatistics(Long monitorId, String metricName, LocalDateTime startTime, LocalDateTime endTime) {
         return ReturnResult.ok(redisMetricStatsMapper.selectList(
                 new LambdaQueryWrapper<MsMonitorRedisMetricStatistics>()
@@ -579,7 +601,9 @@ public class MetricServiceImpl implements MetricService {
     }
 
     @Override
-    /** 导出指标历史数据 */
+    /**
+     * 导出指标历史数据
+    */
     public ReturnResult<String> exportMetricHistory(Long monitorId, String metricName, LocalDateTime startTime, LocalDateTime endTime) {
         try {
  // 1. 查询通用指标 (ms_监控_指标)

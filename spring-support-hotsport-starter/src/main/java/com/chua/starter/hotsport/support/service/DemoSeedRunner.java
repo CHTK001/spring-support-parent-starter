@@ -34,7 +34,9 @@ import java.util.concurrent.ThreadLocalRandom;
 @Component
 public class DemoSeedRunner implements ApplicationRunner {
 
-    /** 是否启用演示数据种子。 */
+    /**
+     * 是否启用演示数据种子。
+    */
     @Value("${hotsport.demo.seed:false}")
     private boolean enabled;
 

@@ -9,19 +9,33 @@ import lombok.Data;
  */
 @Data
 public class TencentWechatRefundResponse {
-    /** 成功 */
+    /**
+     * 成功
+    */
     private boolean success;
-    /** 退税no */
+    /**
+     * 退税no
+    */
     private String refundNo;
-    /** 退税标识 */
+    /**
+     * 退税标识
+    */
     private String refundId;
-    /** refundamountfen */
+    /**
+     * refundamountfen
+    */
     private Long refundAmountFen;
-    /** 退税状态 */
+    /**
+     * 退税状态
+    */
     private String refundStatus;
-    /** 消息 */
+    /**
+     * 消息
+    */
     private String message;
-    /** RAW响应 */
+    /**
+     * RAW响应
+    */
     private String rawResponse;
 }
 

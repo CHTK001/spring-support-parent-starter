@@ -28,7 +28,9 @@ import java.time.LocalDateTime;
 @TableName("ms_monitor_alarm_event")
 public class MsMonitorAlarmEvent implements Serializable {
 
-    /** 串行版本UID */
+    /**
+     * 串行版本UID
+    */
     private static final long serialVersionUID = 1L;
 
     /**

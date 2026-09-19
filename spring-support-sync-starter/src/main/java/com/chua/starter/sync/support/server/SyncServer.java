@@ -34,26 +34,40 @@ import java.util.stream.Collectors;
  */
 public class SyncServer implements InitializingBean, DisposableBean {
 
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(SyncServer.class);
 
-    /** Topic_健康 */
+    /**
+     * Topic_健康
+    */
     public static final String TOPIC_HEALTH = SyncServerInstance.TOPIC_HEALTH;
-    /** Topic_响应 */
+    /**
+     * Topic_响应
+    */
     public static final String TOPIC_RESPONSE = SyncServerInstance.TOPIC_RESPONSE;
-    /** Topic_连接 */
+    /**
+     * Topic_连接
+    */
     public static final String TOPIC_CONNECT = SyncServerInstance.TOPIC_CONNECT;
-    /** Topic_断开连接 */
+    /**
+     * Topic_断开连接
+    */
     public static final String TOPIC_DISCONNECT = SyncServerInstance.TOPIC_DISCONNECT;
 
-    /** 同步属性 */
+    /**
+     * 同步属性
+    */
     private final SyncProperties syncProperties;
 
     private final Map<String, SyncServerInstance> instances = new ConcurrentHashMap<>(); // instances
 
     private final Map<String, ClientInfo> allClientsInternal = new ConcurrentHashMap<>(); // 全部客户端内部
 
-    /** 处理器 */
+    /**
+     * 处理器
+    */
     private final List<com.chua.common.support.network.sync.SyncMessageHandler> handlers = new CopyOnWriteArrayList<>();
 
     private final List<BiConsumer<String, ClientInfo>> connectListeners = new CopyOnWriteArrayList<>(); // 连接监听器
@@ -87,7 +101,9 @@ public class SyncServer implements InitializingBean, DisposableBean {
     }
 
     @Override
-    /** 之后属性设置 */
+    /**
+     * 之后属性设置
+    */
     public void afterPropertiesSet() throws Exception {
         if (!syncProperties.isServerEnabled()) {
             log.info("[Sync] 服务端 [{}]", disabled());
@@ -99,7 +115,9 @@ public class SyncServer implements InitializingBean, DisposableBean {
         startAllInstances();
     }
 
-    /** 开始全部instances */
+    /**
+     * 开始全部instances
+    */
     private void startAllInstances() {
         List<SyncProperties.ServerInstance> instanceConfigs = syncProperties.getServer().getEffectiveInstances();
 
@@ -640,7 +658,9 @@ public class SyncServer implements InitializingBean, DisposableBean {
     }
 
     @Override
-    /** 销毁 */
+    /**
+     * 销毁
+    */
     public void destroy() throws Exception {
         for (SyncServerInstance instance : instances.values()) {
             instance.stop();

@@ -71,17 +71,29 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
      */
     private static final int STATUS_TEACHER_DONE = 2;
 
-    /** Answersheetmapper */
+    /**
+     * Answersheetmapper
+    */
     private final EduAnswerSheetMapper answerSheetMapper;
-    /** Marking结果映射器 */
+    /**
+     * Marking结果映射器
+    */
     private final EduMarkingResultMapper markingResultMapper;
-    /** Questionmapper */
+    /**
+     * Questionmapper
+    */
     private final EduQuestionMapper questionMapper;
-    /** EDUAI服务 */
+    /**
+     * EDUAI服务
+    */
     private final EduAiService eduAiService;
-    /** 属性 */
+    /**
+     * 属性
+    */
     private final EduAiProperties properties;
-    /** 消息模板 */
+    /**
+     * 消息模板
+    */
     private final MessageTemplate messageTemplate;
 
     @Override
@@ -211,7 +223,9 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
     }
 
     @Override
-    /** 获取结果 */
+    /**
+     * 获取结果
+    */
     public MarkingResultVO getResult(String taskId) {
         LambdaQueryWrapper<EduMarkingResult> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(EduMarkingResult::getMarkingResultTaskId, taskId);

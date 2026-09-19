@@ -38,13 +38,17 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class SoftConfigController {
 
-    /** Soft配置服务 */
+    /**
+     * Soft配置服务
+    */
     private final SoftConfigService softConfigService;
 
     @Operation(summary = "配置列表")
     @GetMapping("/page")
     @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
-    /** Page */
+    /**
+     * Page
+    */
     public ReturnPageResult<SoftConfig> page(
             @ParameterObject Query<SoftConfig> query,
             @ParameterObject SoftwareConfigPageRequest request) {

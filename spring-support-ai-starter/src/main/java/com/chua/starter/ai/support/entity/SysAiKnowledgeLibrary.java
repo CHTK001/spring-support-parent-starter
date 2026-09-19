@@ -23,7 +23,9 @@ public class SysAiKnowledgeLibrary {
      * 知识库主键 标识
      */
     @TableId(value = "sys_ai_knowledge_library_id", type = IdType.AUTO)
-    /** sysaiknowledgelibraryid */
+    /**
+     * sysaiknowledgelibraryid
+    */
     private Integer id;
 
     /**
@@ -48,14 +50,18 @@ public class SysAiKnowledgeLibrary {
      * 创建时间
      */
     @TableField("create_time")
-    /** 创建时间 */
+    /**
+     * 创建时间
+    */
     private LocalDateTime createTime;
 
     /**
      * 更新时间
      */
     @TableField("update_time")
-    /** 更新时间 */
+    /**
+     * 更新时间
+    */
     private LocalDateTime updateTime;
 }
 

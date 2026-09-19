@@ -19,9 +19,13 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class TraceContext {
 
-    /** Mdc_追踪_标识 */
+    /**
+     * Mdc_追踪_标识
+    */
     private static final String MDC_TRACE_ID = "traceId";
-    /** Mdc_span_标识 */
+    /**
+     * Mdc_span_标识
+    */
     private static final String MDC_SPAN_ID = "spanId";
 
     /**
@@ -33,7 +37,9 @@ public class TraceContext {
      * 追踪标识（全局唯一）
      */
     @Getter
-    /** 跟踪标识 */
+    /**
+     * 跟踪标识
+    */
     private final String traceId;
 
     /**
@@ -45,14 +51,18 @@ public class TraceContext {
      * 请求开始时间戳
      */
     @Getter
-    /** 开始时间戳 */
+    /**
+     * 开始时间戳
+    */
     private final long startTimestamp;
 
     /**
      * 追踪的 Span 列表
      */
     @Getter
-    /** Spans */
+    /**
+     * Spans
+    */
     private final List<TraceSpan> spans = new ArrayList<>();
 
     /**
@@ -64,14 +74,18 @@ public class TraceContext {
      * 客户端应用名称
      */
     @Getter
-    /** 客户端APP名称 */
+    /**
+     * 客户端APP名称
+    */
     private String clientAppName;
 
     /**
      * 客户端IP
      */
     @Getter
-    /** 客户端IP */
+    /**
+     * 客户端IP
+    */
     private String clientIp;
 
     /**

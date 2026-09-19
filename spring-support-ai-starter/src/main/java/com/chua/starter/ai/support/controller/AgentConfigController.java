@@ -47,11 +47,17 @@ import java.util.Set;
 @Tag(name = "Agent 配置管理", description = "Agent 编排与 Agent-as-Model 接口")
 public class AgentConfigController {
 
-    /** Agent注册表 */
+    /**
+     * Agent注册表
+    */
     private final AgentRegistry agentRegistry;
-    /** 对话客户端注册表 */
+    /**
+     * 对话客户端注册表
+    */
     private final ChatClientRegistry chatClientRegistry;
-    /** SYSAI全局设置服务 */
+    /**
+     * SYSAI全局设置服务
+    */
     private final SysAiGlobalSettingService sysAiGlobalSettingService;
 
  // ==================== Agent-as-模型 ====================

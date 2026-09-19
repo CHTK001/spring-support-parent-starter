@@ -33,7 +33,9 @@ import java.util.List;
 @Tag(name = "题目管理")
 public class EduQuestionController {
 
-    /** Question服务 */
+    /**
+     * Question服务
+    */
     private final IEduQuestionService questionService;
 
     /**

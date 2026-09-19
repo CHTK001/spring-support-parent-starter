@@ -50,37 +50,59 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 public class ProjectMetricServiceImpl implements ProjectMetricService {
 
-    /** 项目 映射器 */
+    /**
+     * 项目 映射器
+    */
     private final MsProjectMapper projectMapper;
 
-    /** 服务器主机 映射器（来自 spring-支持-服务端-启动） */
+    /**
+     * 服务器主机 映射器（来自 spring-支持-服务端-启动）
+    */
     private final MsServerHostMapper serverHostMapper;
 
-    /** 服务器主机服务（凭据解析） */
+    /**
+     * 服务器主机服务（凭据解析）
+    */
     private final ServerHostService serverHostService;
 
-    /** SSH 连接池 */
+    /**
+     * SSH 连接池
+    */
     private final ConnectionManager connectionManager;
 
-    /** 实时推送 */
+    /**
+     * 实时推送
+    */
     private final ProjectPushService pushService;
 
-    /** 告警出口（反射桥接 monitor 告警引擎，可选） */
+    /**
+     * 告警出口（反射桥接 monitor 告警引擎，可选）
+    */
     private final ProjectAlarmHook alarmHook;
 
-    /** 模块配置 */
+    /**
+     * 模块配置
+    */
     private final ProjectProperties projectProperties;
 
-    /** JDBC 模板（写主数据源 ms_project_metric 时间序列表） */
+    /**
+     * JDBC 模板（写主数据源 ms_project_metric 时间序列表）
+    */
     private final JdbcTemplate jdbcTemplate;
 
-    /** Jackson */
+    /**
+     * Jackson
+    */
     private final ObjectMapper objectMapper;
 
-    /** 单主机指标采集超时（秒） */
+    /**
+     * 单主机指标采集超时（秒）
+    */
     private static final int COLLECT_TIMEOUT_SECONDS = 20;
 
-    /** 指标采集专用线程池（多项目并行采集，4 线程） */
+    /**
+     * 指标采集专用线程池（多项目并行采集，4 线程）
+    */
     private final ExecutorService collectExecutor = Executors.newFixedThreadPool(4, r -> {
         Thread t = new Thread(r, "project-metric-collect");
         t.setDaemon(true);
@@ -201,7 +223,9 @@ public class ProjectMetricServiceImpl implements ProjectMetricService {
         }
     }
 
-    /** 采集失败状态（项目:主机 → 是否已落点），用于去刷屏 */
+    /**
+     * 采集失败状态（项目:主机 → 是否已落点），用于去刷屏
+    */
     private final java.util.concurrent.ConcurrentHashMap<String, Boolean> collectFailState =
             new java.util.concurrent.ConcurrentHashMap<>();
 

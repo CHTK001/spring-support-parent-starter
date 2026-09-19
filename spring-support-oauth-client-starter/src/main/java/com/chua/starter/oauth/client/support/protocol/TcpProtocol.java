@@ -44,10 +44,14 @@ import java.util.Map;
 @Slf4j
 public class TcpProtocol extends AbstractProtocol {
 
-    /** TCP 短连接客户端（每次请求新建连接，用完关闭，由 jdktcp客户端 内部虚拟线程池管理） */
+    /**
+     * TCP 短连接客户端（每次请求新建连接，用完关闭，由 jdktcp客户端 内部虚拟线程池管理）
+    */
     private final TcpClient tcpClient = new JdkTcpClient();
 
-    /** 弹性处理器（熔断+重试） */
+    /**
+     * 弹性处理器（熔断+重试）
+    */
     private final OAuthClientResilience resilience;
 
     /**

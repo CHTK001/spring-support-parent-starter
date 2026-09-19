@@ -28,13 +28,19 @@ import java.util.List;
 @RequiredArgsConstructor
 public class MetricSeriesController {
 
-    /** 默认查询窗口 */
+    /**
+     * 默认查询窗口
+    */
     private static final String DEFAULT_WINDOW = "1m";
 
-    /** 默认查询时长（小时） */
+    /**
+     * 默认查询时长（小时）
+    */
     private static final int DEFAULT_HOURS = 1;
 
-    /** 时序存储门面（按配置选择实现） */
+    /**
+     * 时序存储门面（按配置选择实现）
+    */
     private final MetricTimeSeriesWriter timeSeriesWriter;
 
     /**

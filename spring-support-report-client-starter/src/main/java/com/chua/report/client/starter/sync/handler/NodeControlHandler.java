@@ -40,7 +40,9 @@ import java.util.concurrent.TimeUnit;
 public class NodeControlHandler implements SyncMessageHandler, ApplicationContextAware {
 
 
-    /** Application上下文 */
+    /**
+     * Application上下文
+    */
     private ApplicationContext applicationContext;
 
     /**
@@ -63,26 +65,34 @@ public class NodeControlHandler implements SyncMessageHandler, ApplicationContex
     });
 
     @Override
-    /** 设置application上下文 */
+    /**
+     * 设置application上下文
+    */
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
     }
 
     @Override
-    /** 获取名称 */
+    /**
+     * 获取名称
+    */
     public String getName() {
         return "nodeControlHandler";
     }
 
     @Override
-    /** 支持 */
+    /**
+     * 支持
+    */
     public boolean supports(String topic) {
         return MonitorTopics.NODE_RESTART.equals(topic) 
                 || MonitorTopics.NODE_SHUTDOWN.equals(topic);
     }
 
     @Override
-    /** 处理 */
+    /**
+     * 处理
+    */
     public Object handle(String topic, String sessionId, Map<String, Object> data) {
         String action = MapUtils.getString(data, "action", topic);
         log.info("[NodeControl] 收到控制命令: topic={}, action={}", topic, action);

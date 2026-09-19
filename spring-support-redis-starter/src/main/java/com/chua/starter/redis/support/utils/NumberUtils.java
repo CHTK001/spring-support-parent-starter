@@ -10,7 +10,9 @@ import com.chua.common.support.utils.StringUtils;
  */
 public final class NumberUtils {
 
-    /** 创建 数字工具 实例 */
+    /**
+     * 创建 数字工具 实例
+    */
     private NumberUtils() {
     }
 

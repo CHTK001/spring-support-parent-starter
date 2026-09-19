@@ -22,7 +22,9 @@ public class EduQuestion {
      * 题目标识
      */
     @TableId(type = IdType.AUTO)
-    /** questionid */
+    /**
+     * questionid
+    */
     private Long questionId;
 
     /**

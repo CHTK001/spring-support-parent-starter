@@ -26,7 +26,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class WalletAccountController {
 
-    /** Walletaccount服务 */
+    /**
+     * Walletaccount服务
+    */
     private final WalletAccountService walletAccountService;
 
     @GetMapping("/account")

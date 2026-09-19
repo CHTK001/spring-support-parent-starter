@@ -34,7 +34,9 @@ import java.util.Objects;
  */
 public final class ServiceInfoRegistry {
 
-    /** 实例 */
+    /**
+     * 实例
+    */
     private static final ServiceInfoRegistry INSTANCE = new ServiceInfoRegistry();
 
     /**
@@ -46,7 +48,9 @@ public final class ServiceInfoRegistry {
     private final Map<String, EndpointInfo> endpoints = new LinkedHashMap<>(); // 端点
     private final Map<String, FlagInfo> flags = new LinkedHashMap<>(); // flags
 
-    /** 创建 服务信息registry 实例 */
+    /**
+     * 创建 服务信息registry 实例
+    */
     private ServiceInfoRegistry() {}
 
     /**
@@ -181,13 +185,21 @@ public final class ServiceInfoRegistry {
     }
 
     public static class EndpointInfo {
-        /** 分组 */
+        /**
+         * 分组
+        */
         private final String group;
-        /** 名称 */
+        /**
+         * 名称
+        */
         private final String name;
-        /** URL */
+        /**
+         * URL
+        */
         private final String url;
-        /** 描述 */
+        /**
+         * 描述
+        */
         private final String description;
 
         /**
@@ -233,7 +245,9 @@ public final class ServiceInfoRegistry {
         public String getDescription() { return description; }
 
         @Override
-        /** 判断相等 */
+        /**
+         * 判断相等
+        */
         public boolean equals(Object o) {
             if (!(o instanceof EndpointInfo)) {
                 return false;
@@ -256,15 +270,25 @@ public final class ServiceInfoRegistry {
     }
 
     public static class FlagInfo {
-        /** 名称 */
+        /**
+         * 名称
+        */
         private final String name;
-        /** 分组 */
+        /**
+         * 分组
+        */
         private final String group;
-        /** 值 */
+        /**
+         * 值
+        */
         private final Boolean value;
-        /** 描述 */
+        /**
+         * 描述
+        */
         private final String description;
-        /** 后缀 */
+        /**
+         * 后缀
+        */
         private final String suffix;
 
         /**
@@ -319,7 +343,9 @@ public final class ServiceInfoRegistry {
         public String getSuffix() { return suffix; }
 
         @Override
-        /** 判断相等 */
+        /**
+         * 判断相等
+        */
         public boolean equals(Object o) {
             if (!(o instanceof FlagInfo)) {
                 return false;
@@ -329,7 +355,9 @@ public final class ServiceInfoRegistry {
         }
 
         @Override
-        /** 哈希编码 */
+        /**
+         * 哈希编码
+        */
         public int hashCode() {
             return Objects.hash(group, name);
         }

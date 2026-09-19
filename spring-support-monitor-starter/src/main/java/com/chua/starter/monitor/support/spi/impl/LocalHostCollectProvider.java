@@ -31,10 +31,14 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class LocalHostCollectProvider implements HostCollectProvider {
 
-    /** 本机系统信息采集服务（OSHI） */
+    /**
+     * 本机系统信息采集服务（OSHI）
+    */
     private final LocalSystemInfoService localService;
 
-    /** 主机 映射器（回写硬件字段） */
+    /**
+     * 主机 映射器（回写硬件字段）
+    */
     private final MsServerHostMapper hostMapper;
 
     @Override

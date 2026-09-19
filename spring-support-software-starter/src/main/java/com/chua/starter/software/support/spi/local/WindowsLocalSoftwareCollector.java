@@ -27,20 +27,26 @@ import java.util.regex.Pattern;
 @Component
 public class WindowsLocalSoftwareCollector implements LocalSoftwareCollector {
 
-    /** Uninstall_Key */
+    /**
+     * Uninstall_Key
+    */
     private static final Pattern UNINSTALL_KEY = Pattern.compile(
             "SOFTWARE\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Uninstall\\\\([^\\\\]+)",
             Pattern.CASE_INSENSITIVE
     );
 
     @Override
-    /** 支持 */
+    /**
+     * 支持
+    */
     public boolean support() {
         return System.getProperty("os.name", "").toLowerCase().contains("windows");
     }
 
     @Override
-    /** Collect */
+    /**
+     * Collect
+    */
     public List<SoftSoftware> collect() {
         List<SoftSoftware> result = new ArrayList<>();
         result.addAll(scanUninstallKey("HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall"));

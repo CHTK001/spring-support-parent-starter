@@ -11,16 +11,24 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "runtime.agent")
 public class AgentAttachProperties {
 
-    /** 是否启用自注入（默认启用）。 */
+    /**
+     * 是否启用自注入（默认启用）。
+    */
     private boolean enabled = true;
 
-    /** agent 参数（如 {@code port=4567}；空串时由 RuntimeBoot 默认）。 */
+    /**
+     * agent 参数（如 {@code port=4567}；空串时由 RuntimeBoot 默认）。
+    */
     private String options = "";
 
-    /** Shell 端口（options 为空时作为默认 options 传入）。 */
+    /**
+     * Shell 端口（options 为空时作为默认 options 传入）。
+    */
     private int shellPort = 4567;
 
-    /** 是否异步注入（虚拟线程执行，避免阻塞 Spring 启动）。 */
+    /**
+     * 是否异步注入（虚拟线程执行，避免阻塞 Spring 启动）。
+    */
     private boolean async = true;
 
     /**

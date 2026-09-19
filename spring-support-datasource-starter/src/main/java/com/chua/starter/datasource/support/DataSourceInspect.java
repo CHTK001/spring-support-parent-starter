@@ -50,13 +50,19 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
         EnvironmentAware,
         ApplicationContextAware {
 
-    /** 数据来源类 */
+    /**
+     * 数据来源类
+    */
     protected Class<DataSource> dataSourceClass;
-    /** Application上下文 */
+    /**
+     * Application上下文
+    */
     private ApplicationContext applicationContext;
 
     @Value("${spring.datasource.druid.filters:}")
-    /** 过滤器 */
+    /**
+     * 过滤器
+    */
     private String filter;
 
     {
@@ -69,23 +75,33 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
         }
     }
 
-    /** Transaction */
+    /**
+     * Transaction
+    */
     private static final String TRANSACTION = "_transaction";
-    /** 前缀 */
+    /**
+     * 前缀
+    */
     private final String[] PREFIX = new String[]{
             "spring.datasource.hikari.*",
             "spring.datasource.druid.*",
             "spring.datasource.*",
     };
 
-    /** 环境 */
+    /**
+     * 环境
+    */
     private Environment environment;
 
-    /** 环境支持 */
+    /**
+     * 环境支持
+    */
     private EnvironmentSupport environmentSupport;
 
     @Override
-    /** Post处理Beandefinitionregistry */
+    /**
+     * Post处理Beandefinitionregistry
+    */
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry beanDefinitionRegistry) throws BeansException {
         /**
          * 注册multi数据源属性。
@@ -515,19 +531,25 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
     }
 
     @Override
-    /** Post处理Bean工厂 */
+    /**
+     * Post处理Bean工厂
+    */
     public void postProcessBeanFactory(ConfigurableListableBeanFactory configurableListableBeanFactory) throws BeansException {
     }
 
     @Override
-    /** 设置application上下文 */
+    /**
+     * 设置application上下文
+    */
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
         this.filter = applicationContext.getEnvironment().getProperty("spring.datasource.druid.filters");
     }
 
     @Override
-    /** 设置环境 */
+    /**
+     * 设置环境
+    */
     public void setEnvironment(Environment environment) {
         this.environment = environment;
         this.environmentSupport = new EnvironmentSupport(environment);

@@ -42,19 +42,29 @@ import java.util.Base64;
 @Component
 public class WindowsHostRemoteProvider implements HostRemoteProvider {
 
-    /** 默认 WinRM 端口（HTTP） */
+    /**
+     * 默认 WinRM 端口（HTTP）
+    */
     private static final int DEFAULT_WINRM_PORT = 5985;
 
-    /** 命令执行默认超时（秒） */
+    /**
+     * 命令执行默认超时（秒）
+    */
     private static final int DEFAULT_TIMEOUT_SECONDS = 120;
 
-    /** WinRM 连接超时（毫秒） */
+    /**
+     * WinRM 连接超时（毫秒）
+    */
     private static final int CONNECT_TIMEOUT_MS = 10_000;
 
-    /** 健康探测最短超时（秒） */
+    /**
+     * 健康探测最短超时（秒）
+    */
     private static final int MIN_HEALTH_TIMEOUT_SECONDS = 10;
 
-    /** HTTP 探测超时上限（秒） */
+    /**
+     * HTTP 探测超时上限（秒）
+    */
     private static final int HTTP_PROBE_MAX_SECONDS = 10;
 
     /**
@@ -75,10 +85,14 @@ public class WindowsHostRemoteProvider implements HostRemoteProvider {
      */
     private static final long MAX_UPLOAD_BYTES = 256 * 1024L;
 
-    /** 远端临时目录 */
+    /**
+     * 远端临时目录
+    */
     private static final String TEMP_DIR = "C:\\Windows\\Temp";
 
-    /** 路径分隔符 */
+    /**
+     * 路径分隔符
+    */
     private static final String SEPARATOR = "\\";
 
     @Override

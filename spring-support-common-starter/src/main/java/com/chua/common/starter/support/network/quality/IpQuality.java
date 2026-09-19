@@ -11,58 +11,94 @@ import java.io.Serializable;
 public class IpQuality implements Serializable {
     private static final long serialVersionUID = 1L; // 串行版本uid
 
-    /** IP 地址 */
+    /**
+     * IP 地址
+    */
     private String ip;
 
-    /** 是否高危代理 */
+    /**
+     * 是否高危代理
+    */
     private boolean highRiskProxy;
 
-    /** 是否 VPN */
+    /**
+     * 是否 VPN
+    */
     private boolean vpn;
 
-    /** 是否为代理 */
+    /**
+     * 是否为代理
+    */
     private boolean proxy;
 
-    /** 是否为 Tor 节点 */
+    /**
+     * 是否为 Tor 节点
+    */
     private boolean tor;
 
-    /** 是否云服务 */
+    /**
+     * 是否云服务
+    */
     private boolean cloudService;
 
-    /** 是否数据中 */
+    /**
+     * 是否数据中
+    */
     private boolean dataCenter;
 
-    /** 风险评分 (0-100) */
+    /**
+     * 风险评分 (0-100)
+    */
     private int riskScore;
 
-    /** 风险等级 (low/medium/high) */
+    /**
+     * 风险等级 (low/medium/high)
+    */
     private String riskLevel;
 
-    /** 运营商信息 */
+    /**
+     * 运营商信息
+    */
     private String isp;
 
-    /** 国家/地区 */
+    /**
+     * 国家/地区
+    */
     private String country;
 
-    /** 省份 */
+    /**
+     * 省份
+    */
     private String region;
 
-    /** 城市 */
+    /**
+     * 城市
+    */
     private String city;
 
-    /** 经度 */
+    /**
+     * 经度
+    */
     private Double longitude;
 
-    /** 纬度 */
+    /**
+     * 纬度
+    */
     private Double latitude;
 
-    /** 使用类型 */
+    /**
+     * 使用类型
+    */
     private String usageType;
 
-    /** ASN 编号 */
+    /**
+     * ASN 编号
+    */
     private String asn;
 
-    /**  organisation */
+    /**
+     *  organisation
+    */
     private String organisation;
 
     /**

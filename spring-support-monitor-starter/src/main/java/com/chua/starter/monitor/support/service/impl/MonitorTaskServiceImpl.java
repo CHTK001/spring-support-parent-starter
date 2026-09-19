@@ -26,7 +26,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class MonitorTaskServiceImpl implements MonitorTaskService {
 
-    /** 任务 映射器 */
+    /**
+     * 任务 映射器
+    */
     private final MsMonitorTaskMapper taskMapper;
 
     @Override

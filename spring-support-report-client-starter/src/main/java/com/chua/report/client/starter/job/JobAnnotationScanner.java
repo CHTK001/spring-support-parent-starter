@@ -64,11 +64,15 @@ import java.util.Map;
 public class JobAnnotationScanner implements BeanPostProcessor {
 
 
-    /** 作业处理器工厂 */
+    /**
+     * 作业处理器工厂
+    */
     private final JobHandlerFactory jobHandlerFactory = JobHandlerFactory.getInstance();
 
     @Override
-    /** Post处理之后initialization */
+    /**
+     * Post处理之后initialization
+    */
     public Object postProcessAfterInitialization(@NonNull Object bean, @NonNull String beanName) throws BeansException {
  // 扫描带有 @作业 注解的方法
         Map<Method, Job> annotatedMethods = null;

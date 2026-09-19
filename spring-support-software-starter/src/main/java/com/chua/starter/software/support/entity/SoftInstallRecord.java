@@ -16,79 +16,131 @@ import java.time.LocalDateTime;
 @TableName("soft_install_record")
 public class SoftInstallRecord implements Serializable {
 
-    /** 串行版本UID */
+    /**
+     * 串行版本UID
+    */
     private static final long serialVersionUID = 1L;
 
-    /** install_record_标识 - 主键标识 */
+    /**
+     * install_record_标识 - 主键标识
+    */
     @TableId(type = IdType.ASSIGN_ID)
-    /** installrecordid */
+    /**
+     * installrecordid
+    */
     private String installRecordId;
 
-    /** install_record_software_标识 - 软件标识 */
+    /**
+     * install_record_software_标识 - 软件标识
+    */
     private String installRecordSoftwareId;
 
-    /** install_record_用户_标识 - 用户标识 */
+    /**
+     * install_record_用户_标识 - 用户标识
+    */
     private String installRecordUserId;
 
-    /** install_record_device_标识 - 设备标识 */
+    /**
+     * install_record_device_标识 - 设备标识
+    */
     private String installRecordDeviceId;
 
-    /** install_record_源_标识 - 软件源标识 */
+    /**
+     * install_record_源_标识 - 软件源标识
+    */
     private String installRecordSourceId;
 
-    /** install_record_版本 - 操作版本 */
+    /**
+     * install_record_版本 - 操作版本
+    */
     private String installRecordVersion;
 
-    /** install_record_Target_版本 - 目标版本(升级用) */
+    /**
+     * install_record_Target_版本 - 目标版本(升级用)
+    */
     private String installRecordTargetVersion;
 
-    /** install_record_operation - 操作类型: install/uninstall/更新/rollback */
+    /**
+     * install_record_operation - 操作类型: install/uninstall/更新/rollback
+    */
     private String installRecordOperation;
 
-    /** install_record_状态 - 状态: 0未安装 1安装中 2已安装 3安装失败 4卸载中 5已卸载 6更新中 7更新失败 */
+    /**
+     * install_record_状态 - 状态: 0未安装 1安装中 2已安装 3安装失败 4卸载中 5已卸载 6更新中 7更新失败
+    */
     private Integer installRecordStatus;
 
-    /** install_record_进步 - 进度(0-100) */
+    /**
+     * install_record_进步 - 进度(0-100)
+    */
     private Integer installRecordProgress;
 
-    /** install_record_启动_时间 - 开始时间 */
+    /**
+     * install_record_启动_时间 - 开始时间
+    */
     private LocalDateTime installRecordStartTime;
 
-    /** install_record_结束_时间 - 结束时间 */
+    /**
+     * install_record_结束_时间 - 结束时间
+    */
     private LocalDateTime installRecordEndTime;
 
-    /** install_record_持续时间 - 耗时(毫秒) */
+    /**
+     * install_record_持续时间 - 耗时(毫秒)
+    */
     private Long installRecordDuration;
 
-    /** install_record_错误_消息 - 错误信息 */
+    /**
+     * install_record_错误_消息 - 错误信息
+    */
     private String installRecordErrorMessage;
 
-    /** install_record_错误_detail - 错误详情 */
+    /**
+     * install_record_错误_detail - 错误详情
+    */
     private String installRecordErrorDetail;
 
-    /** install_record_日志_路径 - 日志路径 */
+    /**
+     * install_record_日志_路径 - 日志路径
+    */
     private String installRecordLogPath;
 
-    /** install_record_download_路径 - 下载文件路径 */
+    /**
+     * install_record_download_路径 - 下载文件路径
+    */
     private String installRecordDownloadPath;
 
-    /** install_record_install_路径 - 安装路径 */
+    /**
+     * install_record_install_路径 - 安装路径
+    */
     private String installRecordInstallPath;
 
-    /** install_record_rollback_版本 - 回滚版本 */
+    /**
+     * install_record_rollback_版本 - 回滚版本
+    */
     private String installRecordRollbackVersion;
 
-    /** install_record_extra - 扩展信息JSON */
+    /**
+     * install_record_extra - 扩展信息JSON
+    */
     private String installRecordExtra;
 
-    /** install_record_创建_时间 - 创建时间 */
+    /**
+     * install_record_创建_时间 - 创建时间
+    */
     @TableField(fill = FieldFill.INSERT)
-    /** Installrecordcreate时间 */
+    /**
+     * Installrecordcreate时间
+    */
     private LocalDateTime installRecordCreateTime;
 
-    /** install_record_更新_时间 - 更新时间 */
+    /**
+     * install_record_更新_时间 - 更新时间
+    */
     @TableField(fill = FieldFill.INSERT_UPDATE)
-    /** Installrecordupdate时间 */
+    /**
+     * Installrecordupdate时间
+    */
     private LocalDateTime installRecordUpdateTime;
 
     /**

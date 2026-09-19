@@ -12,19 +12,25 @@ import com.fasterxml.jackson.databind.util.Converter;
  */
 public class JsonArrayConverter implements Converter<Object[], String> {
     @Override
-    /** 转换 */
+    /**
+     * 转换
+    */
     public String convert(Object[] value) {
         return java.util.Arrays.stream(value).map(String::valueOf).collect(java.util.stream.Collectors.joining(","));
     }
 
     @Override
-    /** 获取输入类型 */
+    /**
+     * 获取输入类型
+    */
     public JavaType getInputType(TypeFactory typeFactory) {
         return typeFactory.constructArrayType(Object.class);
     }
 
     @Override
-    /** 获取输出类型 */
+    /**
+     * 获取输出类型
+    */
     public JavaType getOutputType(TypeFactory typeFactory) {
         return typeFactory.constructType(String.class);
     }

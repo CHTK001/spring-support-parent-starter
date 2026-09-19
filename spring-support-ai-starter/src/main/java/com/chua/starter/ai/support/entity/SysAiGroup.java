@@ -23,7 +23,9 @@ public class SysAiGroup {
      * 分组主键
      */
     @TableId(value = "sys_ai_group_id", type = IdType.AUTO)
-    /** SYSAI分组标识 */
+    /**
+     * SYSAI分组标识
+    */
     private Integer id;
 
     /**
@@ -60,28 +62,36 @@ public class SysAiGroup {
      * 创建时间
      */
     @TableField(fill = FieldFill.INSERT)
-    /** 创建时间 */
+    /**
+     * 创建时间
+    */
     private LocalDateTime createTime;
 
     /**
      * 创建人
      */
     @TableField(fill = FieldFill.INSERT)
-    /** 创建by */
+    /**
+     * 创建by
+    */
     private String createBy;
 
     /**
      * 更新时间
      */
     @TableField(fill = FieldFill.INSERT_UPDATE)
-    /** 更新时间 */
+    /**
+     * 更新时间
+    */
     private LocalDateTime updateTime;
 
     /**
      * 更新人
      */
     @TableField(fill = FieldFill.INSERT_UPDATE)
-    /** 更新by */
+    /**
+     * 更新by
+    */
     private String updateBy;
 }
 

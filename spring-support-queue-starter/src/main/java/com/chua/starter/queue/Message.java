@@ -325,22 +325,38 @@ public class Message {
      * @since 4.0.0
      */
     public static class MessageBuilder {
-        /** 标识 */
+        /**
+         * 标识
+        */
         private String id;
-        /** 目的地 */
+        /**
+         * 目的地
+        */
         private String destination;
-        /** Payload */
+        /**
+         * Payload
+        */
         private byte[] payload;
         private Map<String, Object> headers = new HashMap<>(); // 头部
-        /** 时间戳 */
+        /**
+         * 时间戳
+        */
         private long timestamp;
-        /** 类型 */
+        /**
+         * 类型
+        */
         private String type;
-        /** 分组 */
+        /**
+         * 分组
+        */
         private String group;
-        /** 承认 */
+        /**
+         * 承认
+        */
         private Acknowledgment acknowledgment;
-        /** 原始消息 */
+        /**
+         * 原始消息
+        */
         private Object originalMessage;
 
         /**

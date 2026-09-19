@@ -66,9 +66,13 @@ public enum DataFilterTypeEnum {
     }
 
 
-    /** 代码 */
+    /**
+     * 代码
+    */
     private final Integer code;
-    /** 标签 */
+    /**
+     * 标签
+    */
     private final String label;
 
     /**

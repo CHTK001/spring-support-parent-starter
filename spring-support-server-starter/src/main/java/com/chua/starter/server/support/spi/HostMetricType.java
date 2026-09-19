@@ -36,10 +36,14 @@ public enum HostMetricType {
      */
     HTTP_CODE("HTTP_CODE", "HTTP状态码");
 
-    /** 编码 */
+    /**
+     * 编码
+    */
     private final String code;
 
-    /** 中文描述 */
+    /**
+     * 中文描述
+    */
     private final String desc;
 
     /**

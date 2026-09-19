@@ -32,13 +32,21 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class WalletWithdrawApprovalController {
 
-    /** Walletwithdrawapproval服务 */
+    /**
+     * Walletwithdrawapproval服务
+    */
     private final WalletWithdrawApprovalService walletWithdrawApprovalService;
-    /** Walletaccount服务 */
+    /**
+     * Walletaccount服务
+    */
     private final WalletAccountService walletAccountService;
-    /** Wallet排序服务 */
+    /**
+     * Wallet排序服务
+    */
     private final WalletOrderService walletOrderService;
-    /** Principal解析器 */
+    /**
+     * Principal解析器
+    */
     private final PaymentAccountPrincipalResolver principalResolver;
 
     @GetMapping("/page")

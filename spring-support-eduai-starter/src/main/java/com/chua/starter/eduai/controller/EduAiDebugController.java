@@ -29,9 +29,13 @@ import java.util.Map;
 @Tag(name = "教育AI-调试")
 public class EduAiDebugController {
 
-    /** EDUAI服务 */
+    /**
+     * EDUAI服务
+    */
     private final EduAiService eduAiService;
-    /** 消息模板（队列未启用时为null） */
+    /**
+     * 消息模板（队列未启用时为null）
+    */
     private final MessageTemplate messageTemplate;
 
     @Autowired

@@ -16,9 +16,13 @@ import org.springframework.core.env.Environment;
 @ConfigurationProperties(prefix = MaterializedRouteProperties.PRE)
 public class MaterializedRouteProperties {
 
-    /** PRE */
+    /**
+     * PRE
+    */
     public static final String PRE = "plugin.datasource.materialized";
-    /** Legacy_pre */
+    /**
+     * Legacy_pre
+    */
     public static final String LEGACY_PRE = "spring.datasource.materialized";
 
     /**

@@ -39,7 +39,9 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class ServerManageController {
 
-    /** 服务管理 */
+    /**
+     * 服务管理
+    */
     private final ServerManageService serverManageService;
 
     /**

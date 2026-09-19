@@ -17,9 +17,13 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 public class PartitionAwareTableFactory {
 
-    /** 数据来源 */
+    /**
+     * 数据来源
+    */
     private final DataSource dataSource;
-    /** JDBC模板 */
+    /**
+     * JDBC模板
+    */
     private final JdbcTemplate jdbcTemplate;
     private final ConcurrentHashMap<String, PartitionRoutingTable> cache = new ConcurrentHashMap<>(); // 缓存
 

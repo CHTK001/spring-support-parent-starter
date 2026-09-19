@@ -27,17 +27,27 @@ import static com.chua.starter.common.support.logger.ModuleLog.highlight;
 @Slf4j
 public class DynamicDataSource extends AbstractRoutingDataSource {
 
-    /** Master */
+    /**
+     * Master
+    */
     private static final String MASTER = "master";
     protected static final Map<Object, Object> TARGET_DATA_SOURCES = DataSourceContextSupport.DATA_SOURCE_MAP; // Target数据源
-    /** 默认数据来源 */
+    /**
+     * 默认数据来源
+    */
     private final Object defaultDataSource;
-    /** MyBatis */
+    /**
+     * MyBatis
+    */
     private static final String MYBATIS = "org.springframework.transaction.support.TransactionSynchronizationManager";
-    /** Binder */
+    /**
+     * Binder
+    */
     private boolean binder;
 
-    /** Connectionholder */
+    /**
+     * Connectionholder
+    */
     private DynmaicSimpleConnectionHolder connectionHolder = null;
 
     /**
@@ -56,7 +66,9 @@ public class DynamicDataSource extends AbstractRoutingDataSource {
 
     }
 
-    /** 严格模式标志 */
+    /**
+     * 严格模式标志
+    */
     private boolean strict = false;
 
     /**
@@ -205,7 +217,9 @@ public class DynamicDataSource extends AbstractRoutingDataSource {
      */
     class DynmaicConnectionHandle extends SimpleConnectionHandle {
 
-        /** Connection */
+        /**
+         * Connection
+        */
         private Connection connection;
 
         /**
@@ -245,7 +259,9 @@ public class DynamicDataSource extends AbstractRoutingDataSource {
     class DynmaicSimpleConnectionHolder extends ConnectionHolder {
 
 
-        /** Connectionhandle */
+        /**
+         * Connectionhandle
+        */
         private final DynmaicConnectionHandle connectionHandle;
 
         /**

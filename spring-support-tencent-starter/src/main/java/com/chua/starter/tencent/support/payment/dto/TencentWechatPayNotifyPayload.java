@@ -9,21 +9,37 @@ import lombok.Data;
  */
 @Data
 public class TencentWechatPayNotifyPayload {
-    /** 排序NO */
+    /**
+     * 排序NO
+    */
     private String orderNo;
-    /** transactionid */
+    /**
+     * transactionid
+    */
     private String transactionId;
-    /** APPID */
+    /**
+     * APPID
+    */
     private String appId;
-    /** merchantid */
+    /**
+     * merchantid
+    */
     private String merchantId;
-    /** 总数amountfen */
+    /**
+     * 总数amountfen
+    */
     private Long totalAmountFen;
-    /** 薪酬总数amountfen */
+    /**
+     * 薪酬总数amountfen
+    */
     private Long payerTotalAmountFen;
-    /** 贸易状态 */
+    /**
+     * 贸易状态
+    */
     private String tradeState;
-    /** 贸易状态desc */
+    /**
+     * 贸易状态desc
+    */
     private String tradeStateDesc;
 }
 

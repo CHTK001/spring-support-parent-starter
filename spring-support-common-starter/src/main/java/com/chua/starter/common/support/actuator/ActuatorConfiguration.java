@@ -42,7 +42,9 @@ import org.slf4j.LoggerFactory;
 @ConditionalOnProperty(prefix = "plugin.actuator", name = "enable", havingValue = "true", matchIfMissing = true)
 @EnableConfigurationProperties(ActuatorProperties.class)
 public class ActuatorConfiguration  {
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(ActuatorConfiguration.class);
     /**
      * 构造函数
@@ -53,7 +55,9 @@ public class ActuatorConfiguration  {
         this.actuatorProperties = actuatorProperties;
     }
 
-        /** Actuator属性 */
+        /**
+         * Actuator属性
+        */
         private final ActuatorProperties actuatorProperties;
 
     /**

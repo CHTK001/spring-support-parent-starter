@@ -11,10 +11,14 @@ import java.io.IOException;
  */
 public class ToDetectIpQualityDetector extends AbstractHttpIpQualityDetector {
 
-    /** baseurl */
+    /**
+     * baseurl
+    */
     private final String baseUrl;
 
-    /** 创建 转为detectipqualitydetector 实例 */
+    /**
+     * 创建 转为detectipqualitydetector 实例
+    */
     public ToDetectIpQualityDetector() {
         /**
          * this。
@@ -36,13 +40,17 @@ public class ToDetectIpQualityDetector extends AbstractHttpIpQualityDetector {
     }
 
     @Override
-    /** 构建Url */
+    /**
+     * 构建Url
+    */
     protected String buildUrl(String ip) {
         return baseUrl + "/" + ip;
     }
 
     @Override
-    /** 解析结果 */
+    /**
+     * 解析结果
+    */
     protected IpQuality parseResult(String json) throws IOException {
         JsonNode root = objectMapper.readTree(json);
         IpQuality q = new IpQuality();

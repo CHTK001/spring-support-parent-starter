@@ -25,7 +25,9 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class MarkingMessageListener {
 
-    /** Marking服务 */
+    /**
+     * Marking服务
+    */
     private final IEduMarkingService markingService;
 
     /**

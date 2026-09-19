@@ -64,15 +64,23 @@ import java.util.concurrent.ConcurrentHashMap;
  * @since 4.0.0
  */
 public class MaterializedSqlInterceptor implements Interceptor {
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(MaterializedSqlInterceptor.class);
 
-    /** 无 */
+    /**
+     * 无
+    */
     private static final MaterializedRouteDefinition NONE = new MaterializedRouteDefinition(-1L, null);
 
-    /** 物化sqlrouter */
+    /**
+     * 物化sqlrouter
+    */
     private final MaterializedSqlDataSourceRouter materializedSqlRouter;
-    /** 属性 */
+    /**
+     * 属性
+    */
     private final MaterializedRouteProperties properties;
     private final Map<String, MaterializedRouteDefinition> definitionCache = new ConcurrentHashMap<>(); // definition缓存
     private final Map<String, MaterializedRouteDefinition> refreshDefinitionCache = new ConcurrentHashMap<>(); // refreshdefinition缓存

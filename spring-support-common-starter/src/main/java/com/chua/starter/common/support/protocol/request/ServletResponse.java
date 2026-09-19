@@ -1,11 +1,17 @@
 package com.chua.starter.common.support.protocol.request;
 
-/** @作者 CH */
+/**
+ * @作者 CH
+*/
 public class ServletResponse {
 
-    /** 成功 */
+    /**
+     * 成功
+    */
     private final boolean success;
-    /** 消息 */
+    /**
+     * 消息
+    */
     private final String message;
 
     /**

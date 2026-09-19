@@ -23,7 +23,9 @@ import java.util.List;
 public class RSocketProvider implements SocketProvider {
 
     @Override
-    /** 获取协议 */
+    /**
+     * 获取协议
+    */
     public SocketProtocol getProtocol() {
         return SocketProtocol.RSOCKET;
     }
@@ -51,14 +53,18 @@ public class RSocketProvider implements SocketProvider {
     }
 
     @Override
-    /** 开始 */
+    /**
+     * 开始
+    */
     public void start(SocketSessionTemplate template) {
         log.info("[RSocket] 启动 RSocket 服务");
         template.start();
     }
 
     @Override
-    /** 停止 */
+    /**
+     * 停止
+    */
     public void stop(SocketSessionTemplate template) {
         log.info("[RSocket] 停止 RSocket 服务");
         template.stop();

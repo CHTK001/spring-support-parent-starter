@@ -20,28 +20,50 @@ import org.slf4j.LoggerFactory;
 public final class ModuleLog {
 
     // ANSI 颜色码
-    /** Reset */
+    /**
+     * Reset
+    */
     public static final String RESET = "\u001B[0m";
-    /** 绿色 */
+    /**
+     * 绿色
+    */
     public static final String GREEN = "\u001B[32m";
-    /** 红色 */
+    /**
+     * 红色
+    */
     public static final String RED = "\u001B[31m";
-    /** Cyan */
+    /**
+     * Cyan
+    */
     public static final String CYAN = "\u001B[36m";
-    /** Yellow */
+    /**
+     * Yellow
+    */
     public static final String YELLOW = "\u001B[33m";
-    /** 蓝色 */
+    /**
+     * 蓝色
+    */
     public static final String BLUE = "\u001B[34m";
-    /** Magenta */
+    /**
+     * Magenta
+    */
     public static final String MAGENTA = "\u001B[35m";
-    /** White */
+    /**
+     * White
+    */
     public static final String WHITE = "\u001B[37m";
-    /** Bold */
+    /**
+     * Bold
+    */
     public static final String BOLD = "\u001B[1m";
 
-    /** 日志 */
+    /**
+     * 日志
+    */
     private final Logger log;
-    /** Module名称 */
+    /**
+     * Module名称
+    */
     private final String moduleName;
 
     /**

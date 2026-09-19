@@ -13,11 +13,17 @@ import lombok.Data;
 @Builder
 public class MaterializedSqlRoute {
 
-    /** Routed */
+    /**
+     * Routed
+    */
     private boolean routed;
-    /** 数据来源 */
+    /**
+     * 数据来源
+    */
     private String dataSource;
-    /** 缓存密钥 */
+    /**
+     * 缓存密钥
+    */
     private String cacheKey;
 
     /**

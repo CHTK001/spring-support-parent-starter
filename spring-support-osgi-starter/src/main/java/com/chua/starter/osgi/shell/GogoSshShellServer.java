@@ -40,7 +40,9 @@ public class GogoSshShellServer {
     private final String password; // 密码
     private final BundleContext bundleContext; // bundle上下文
     private SshServer sshServer; // ssh服务端
-    /** 缓存 Gogo 命令处理器（启动时一次性查找——避免每连接查找的抖动） */
+    /**
+     * 缓存 Gogo 命令处理器（启动时一次性查找——避免每连接查找的抖动）
+    */
     private volatile Object commandProcessor;
 
     /**
@@ -59,7 +61,9 @@ public class GogoSshShellServer {
         this.bundleContext = bundleContext;
     }
 
-    /** 启动 SSH 服务器（MINA SSHD 2.x） */
+    /**
+     * 启动 SSH 服务器（MINA SSHD 2.x）
+    */
     public void start() throws IOException {
         commandProcessor = lookupCommandProcessor();
         if (commandProcessor == null) {
@@ -78,7 +82,9 @@ public class GogoSshShellServer {
         log.info("[OSGi] Gogo SSH shell 已监听: {}:{}", host, port);
     }
 
-    /** 停止 SSH 服务器 */
+    /**
+     * 停止 SSH 服务器
+    */
     public void stop() {
         if (sshServer != null) {
             try {
@@ -120,7 +126,9 @@ public class GogoSshShellServer {
         return null;
     }
 
-    /** SSH 通道会话 -> Gogo 命令处理器 会话接线 */
+    /**
+     * SSH 通道会话 -> Gogo 命令处理器 会话接线
+    */
     private class GogoShellCommand implements Command {
 
         private InputStream in; // 入

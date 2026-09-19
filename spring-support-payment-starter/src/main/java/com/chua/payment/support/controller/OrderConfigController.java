@@ -20,7 +20,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-/** @作者 CH */
+/**
+ * @作者 CH
+*/
 
 @Tag(name = "订单配置管理", description = "订单和流水分表策略配置")
 @RestController
@@ -28,9 +30,13 @@ import java.util.List;
 @RequiredArgsConstructor
 public class OrderConfigController {
 
-    /** 排序分区配置服务 */
+    /**
+     * 排序分区配置服务
+    */
     private final OrderPartitionConfigService orderPartitionConfigService;
-    /** Principal解析器 */
+    /**
+     * Principal解析器
+    */
     private final PaymentAccountPrincipalResolver principalResolver;
 
     @Operation(summary = "查询分表配置")

@@ -24,22 +24,34 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Getter
 public class GuacdSession {
 
-    /** 会话唯一标识（同时作为审计关联键的补充信息） */
+    /**
+     * 会话唯一标识（同时作为审计关联键的补充信息）
+    */
     private final String tunnelId;
 
-    /** 浏览器侧 webSocket 会话 */
+    /**
+     * 浏览器侧 webSocket 会话
+    */
     private final WebSocketSession webSocketSession;
 
-    /** guacd 侧隧道（含握手后的配置） */
+    /**
+     * guacd 侧隧道（含握手后的配置）
+    */
     private final GuacdTunnel tunnel;
 
-    /** 主机 标识 */
+    /**
+     * 主机 标识
+    */
     private final Long hostId;
 
-    /** 审计会话记录 标识（ms_terminal_会话.标识） */
+    /**
+     * 审计会话记录 标识（ms_terminal_会话.标识）
+    */
     private final Long sessionId;
 
-    /** 协议名（小写：ssh/vnc/rdp） */
+    /**
+     * 协议名（小写：ssh/vnc/rdp）
+    */
     private final String protocol;
 
     /**
@@ -48,10 +60,14 @@ public class GuacdSession {
     @Setter
     private Thread readerThread;
 
-    /** 关闭标记，防止重复关闭 */
+    /**
+     * 关闭标记，防止重复关闭
+    */
     private final AtomicBoolean closed = new AtomicBoolean(false);
 
-    /** 最近活跃时间（空闲清理依据） */
+    /**
+     * 最近活跃时间（空闲清理依据）
+    */
     @Setter
     private volatile LocalDateTime lastActiveTime = LocalDateTime.now(); // 最后一个活跃时间
 
@@ -94,7 +110,9 @@ public class GuacdSession {
         }
     }
 
-    /** 发送锁：保证同一会话内指令串行下发 */
+    /**
+     * 发送锁：保证同一会话内指令串行下发
+    */
     private final Object sendLock = new Object();
 
     /**

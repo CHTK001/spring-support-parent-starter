@@ -39,10 +39,14 @@ import jakarta.annotation.PreDestroy;
 @ConditionalOnProperty(prefix = "plugin.queue", name = "enable", havingValue = "true", matchIfMissing = true)
 public class SocketQueueBridge {
 
-    /** 消息队列模板（queue 未启用时为空实现） */
+    /**
+     * 消息队列模板（queue 未启用时为空实现）
+    */
     private final ObjectProvider<MessageTemplate> messageTemplateProvider;
 
-    /** Socket 会话模板（socket 未启用时为空实现） */
+    /**
+     * Socket 会话模板（socket 未启用时为空实现）
+    */
     private final ObjectProvider<SocketSessionTemplate> socketTemplateProvider;
 
     /**

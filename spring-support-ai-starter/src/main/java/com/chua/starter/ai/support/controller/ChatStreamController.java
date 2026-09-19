@@ -47,7 +47,9 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 public class ChatStreamController {
 
-    /** 默认模型（fallback） */
+    /**
+     * 默认模型（fallback）
+    */
     private static final String DEFAULT_MODEL_FALLBACK = "agnes-2.5-flash";
 
     private final AiChatFacadeService aiChatFacadeService;
@@ -56,19 +58,29 @@ public class ChatStreamController {
     private final SysAiGlobalSettingService sysAiGlobalSettingService;
     private final SysAiProviderModelMapper sysAiProviderModelMapper;
 
-    /** 前端 sessionId(UUID) -> 后端 sys_ai_session 主键(Long) 的进程内映射 */
+    /**
+     * 前端 sessionId(UUID) -> 后端 sys_ai_session 主键(Long) 的进程内映射
+    */
     private final Map<String, Long> sessionDialogMap = new ConcurrentHashMap<>();
 
-    /** 活跃流式连接，供 /stop 主动结束 */
+    /**
+     * 活跃流式连接，供 /stop 主动结束
+    */
     private final Map<String, SseEmitter> activeStreams = new ConcurrentHashMap<>();
 
-    /** 原始输出流（绕过 SseEmitter 自动加 data: 前缀，严格控制帧格式为 "data: <json>\\n\\n"） */
+    /**
+     * 原始输出流（绕过 SseEmitter 自动加 data: 前缀，严格控制帧格式为 "data: <json>\\n\\n"）
+    */
     private final Map<String, java.io.OutputStream> rawOut = new ConcurrentHashMap<>();
 
-    /** 当前活跃 sessionId（用于 writeRaw 精准写入） */
+    /**
+     * 当前活跃 sessionId（用于 writeRaw 精准写入）
+    */
     private final ThreadLocal<String> currentSessionId = new ThreadLocal<>();
 
-    /** 已请求取消的流式会话集合 */
+    /**
+     * 已请求取消的流式会话集合
+    */
     private final java.util.Set<String> cancelledStreams = ConcurrentHashMap.newKeySet();
 
     /**

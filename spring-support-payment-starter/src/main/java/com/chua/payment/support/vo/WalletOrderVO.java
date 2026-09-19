@@ -12,45 +12,85 @@ import java.time.LocalDateTime;
  */
 @Data
 public class WalletOrderVO {
-    /** 标识 */
+    /**
+     * 标识
+    */
     private Long id;
-    /** 排序NO */
+    /**
+     * 排序NO
+    */
     private String orderNo;
-    /** 排序类型 */
+    /**
+     * 排序类型
+    */
     private String orderType;
-    /** merchantid */
+    /**
+     * merchantid
+    */
     private Long merchantId;
-    /** 用户标识 */
+    /**
+     * 用户标识
+    */
     private Long userId;
-    /** Related用户标识 */
+    /**
+     * Related用户标识
+    */
     private Long relatedUserId;
-    /** Amount */
+    /**
+     * Amount
+    */
     private BigDecimal amount;
-    /** 状态 */
+    /**
+     * 状态
+    */
     private String status;
-    /** Thirdparty排序NO */
+    /**
+     * Thirdparty排序NO
+    */
     private String thirdPartyOrderNo;
-    /** Bankaccount */
+    /**
+     * Bankaccount
+    */
     private String bankAccount;
-    /** Bank名称 */
+    /**
+     * Bank名称
+    */
     private String bankName;
-    /** 账户名称 */
+    /**
+     * 账户名称
+    */
     private String accountName;
-    /** 请求payload */
+    /**
+     * 请求payload
+    */
     private String requestPayload;
-    /** 响应payload */
+    /**
+     * 响应payload
+    */
     private String responsePayload;
-    /** 操作符 */
+    /**
+     * 操作符
+    */
     private String operator;
-    /** 评论 */
+    /**
+     * 评论
+    */
     private String remark;
-    /** 通知url */
+    /**
+     * 通知url
+    */
     private String notifyUrl;
-    /** 完成at */
+    /**
+     * 完成at
+    */
     private LocalDateTime completedAt;
-    /** 创建时间 */
+    /**
+     * 创建时间
+    */
     private LocalDateTime createTime;
-    /** 更新时间 */
+    /**
+     * 更新时间
+    */
     private LocalDateTime updateTime;
 }
 

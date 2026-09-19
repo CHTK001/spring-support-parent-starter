@@ -35,11 +35,17 @@ import static com.chua.starter.common.support.logger.ModuleLog.highlight;
 @Slf4j
 public class MessageListenerBeanPostProcessor implements BeanPostProcessor {
 
-    /** 消息templates */
+    /**
+     * 消息templates
+    */
     private final List<MessageTemplate> messageTemplates;
-    /** 队列属性 */
+    /**
+     * 队列属性
+    */
     private final QueueProperties queueProperties;
-    /** 事件publisher */
+    /**
+     * 事件publisher
+    */
     private final ApplicationEventPublisher eventPublisher;
     private final Map<String, MessageTemplate> templateMap = new ConcurrentHashMap<>(); // template映射
 
@@ -58,7 +64,9 @@ public class MessageListenerBeanPostProcessor implements BeanPostProcessor {
     }
 
     @Override
-    /** Post处理之后initialization */
+    /**
+     * Post处理之后initialization
+    */
     public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
         if (messageTemplates == null || messageTemplates.isEmpty()) {
             return bean;

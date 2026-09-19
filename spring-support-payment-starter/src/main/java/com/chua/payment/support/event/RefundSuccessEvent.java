@@ -12,23 +12,41 @@ import java.math.BigDecimal;
 @Getter
 public class RefundSuccessEvent extends PaymentEvent {
 
-    /** 排序标识 */
+    /**
+     * 排序标识
+    */
     private final Long orderId;
-    /** 排序NO */
+    /**
+     * 排序NO
+    */
     private final String orderNo;
-    /** 退税标识 */
+    /**
+     * 退税标识
+    */
     private final Long refundId;
-    /** 退税no */
+    /**
+     * 退税no
+    */
     private final String refundNo;
-    /** 用户标识 */
+    /**
+     * 用户标识
+    */
     private final Long userId;
-    /** Refundamount */
+    /**
+     * Refundamount
+    */
     private final BigDecimal refundAmount;
-    /** thirdpartyrefundno */
+    /**
+     * thirdpartyrefundno
+    */
     private final String thirdPartyRefundNo;
-    /** 通道类型 */
+    /**
+     * 通道类型
+    */
     private final String channelType;
-    /** 通道SUB类型 */
+    /**
+     * 通道SUB类型
+    */
     private final String channelSubType;
 
     /**

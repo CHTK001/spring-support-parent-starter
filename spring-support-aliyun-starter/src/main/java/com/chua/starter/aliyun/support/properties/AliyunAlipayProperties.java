@@ -14,55 +14,89 @@ import org.springframework.util.StringUtils;
 @ConfigurationProperties(prefix = AliyunAlipayProperties.PREFIX, ignoreInvalidFields = true)
 public class AliyunAlipayProperties {
 
-    /** 前缀 */
+    /**
+     * 前缀
+    */
     public static final String PREFIX = "plugin.aliyun.alipay";
 
-    /** Enable */
+    /**
+     * Enable
+    */
     private boolean enable = false;
 
-    /** 是否启用 */
+    /**
+     * 是否启用
+    */
     private boolean enabled = false;
 
-    /** Sandbox */
+    /**
+     * Sandbox
+    */
     private boolean sandbox = false;
 
-    /** 服务器URL */
+    /**
+     * 服务器URL
+    */
     private String serverUrl;
 
-    /** APPID */
+    /**
+     * APPID
+    */
     private String appId;
 
-    /** 私有密钥 */
+    /**
+     * 私有密钥
+    */
     private String privateKey;
 
-    /** Alipay公开密钥 */
+    /**
+     * Alipay公开密钥
+    */
     private String alipayPublicKey;
 
-    /** 通知url */
+    /**
+     * 通知url
+    */
     private String notifyUrl;
 
-    /** 返回值URL */
+    /**
+     * 返回值URL
+    */
     private String returnUrl;
 
-    /** 格式 */
+    /**
+     * 格式
+    */
     private String format = "json";
 
-    /** 字符集 */
+    /**
+     * 字符集
+    */
     private String charset = "UTF-8";
 
-    /** 标志类型 */
+    /**
+     * 标志类型
+    */
     private String signType = "RSA2";
 
-    /** 连接超时 */
+    /**
+     * 连接超时
+    */
     private Integer connectTimeout = 10000;
 
-    /** 读取超时 */
+    /**
+     * 读取超时
+    */
     private Integer readTimeout = 30000;
 
-    /** 最大值idleconnections */
+    /**
+     * 最大值idleconnections
+    */
     private Integer maxIdleConnections = 5;
 
-    /** Keepalive持续时间 */
+    /**
+     * Keepalive持续时间
+    */
     private Long keepAliveDuration = 300000L;
 
     /**

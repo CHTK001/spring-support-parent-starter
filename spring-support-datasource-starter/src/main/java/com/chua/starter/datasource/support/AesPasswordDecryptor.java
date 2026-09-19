@@ -36,12 +36,18 @@ import java.util.Base64;
 @Slf4j
 public class AesPasswordDecryptor implements PasswordDecryptor {
 
-    /** AES 算法 */
+    /**
+     * AES 算法
+    */
     private static final String AES_ALGORITHM = "AES";
-    /** Cipher_转变 */
+    /**
+     * Cipher_转变
+    */
     private static final String CIPHER_TRANSFORMATION = "AES/ECB/PKCS5Padding";
 
-    /** 默认密钥（32字节，用于没有配置密钥时的兼容） */
+    /**
+     * 默认密钥（32字节，用于没有配置密钥时的兼容）
+    */
     private static final byte[] DEFAULT_SECRET_KEY;
 
     static {
@@ -58,7 +64,9 @@ public class AesPasswordDecryptor implements PasswordDecryptor {
         }
     }
 
-    /** Secret密钥 */
+    /**
+     * Secret密钥
+    */
     private final byte[] secretKey;
 
     /**

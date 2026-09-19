@@ -24,9 +24,13 @@ import java.util.function.Supplier;
 @Slf4j
 public class OAuthClientResilience {
 
-    /** 重试配置 */
+    /**
+     * 重试配置
+    */
     private final AuthClientProperties.RetryConfig retryConfig;
-    /** Circuitbreaker配置 */
+    /**
+     * Circuitbreaker配置
+    */
     private final AuthClientProperties.CircuitBreakerConfig circuitBreakerConfig;
 
     /**
@@ -41,15 +45,25 @@ public class OAuthClientResilience {
     }
 
     private volatile CircuitState state = CircuitState.CLOSED;
-    /** 失败数量 */
+    /**
+     * 失败数量
+    */
     private final AtomicInteger failureCount = new AtomicInteger(0);
-    /** 成功数量 */
+    /**
+     * 成功数量
+    */
     private final AtomicInteger successCount = new AtomicInteger(0);
-    /** 请求数量 */
+    /**
+     * 请求数量
+    */
     private final AtomicInteger requestCount = new AtomicInteger(0);
-    /** 最后失败时间 */
+    /**
+     * 最后失败时间
+    */
     private final AtomicLong lastFailureTime = new AtomicLong(0);
-    /** Halfopen请求数量 */
+    /**
+     * Halfopen请求数量
+    */
     private final AtomicInteger halfOpenRequestCount = new AtomicInteger(0);
 
     /**

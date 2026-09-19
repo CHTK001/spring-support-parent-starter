@@ -32,22 +32,38 @@ import java.util.function.BiConsumer;
  */
 public class SyncServerInstance {
 
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(SyncServerInstance.class);
 
-    /** Topic_健康 */
+    /**
+     * Topic_健康
+    */
     public static final String TOPIC_HEALTH = "sync/health";
-    /** Topic_响应 */
+    /**
+     * Topic_响应
+    */
     public static final String TOPIC_RESPONSE = "sync/response";
-    /** Topic_连接 */
+    /**
+     * Topic_连接
+    */
     public static final String TOPIC_CONNECT = "sync/connect";
-    /** Topic_断开连接 */
+    /**
+     * Topic_断开连接
+    */
     public static final String TOPIC_DISCONNECT = "sync/disconnect";
-    /** Topic_客户端_注册 */
+    /**
+     * Topic_客户端_注册
+    */
     public static final String TOPIC_CLIENT_REGISTER = "sync/client/register";
-    /** Topic_客户端_心跳 */
+    /**
+     * Topic_客户端_心跳
+    */
     public static final String TOPIC_CLIENT_HEARTBEAT = "sync/client/heartbeat";
-    /** Topic_客户端_offline */
+    /**
+     * Topic_客户端_offline
+    */
     public static final String TOPIC_CLIENT_OFFLINE = "sync/client/offline";
 
     /**
@@ -59,13 +75,19 @@ public class SyncServerInstance {
      */
     public static final String SYNC_MESSAGE_SOURCE_CLIENT_ID = "__syncClientId__";
 
-    /** 实例配置 */
+    /**
+     * 实例配置
+    */
     private final SyncProperties.ServerInstance instanceConfig;
 
-    /** 同步属性 */
+    /**
+     * 同步属性
+    */
     private final SyncProperties syncProperties;
 
-    /** 同步服务器 */
+    /**
+     * 同步服务器
+    */
     private SyncServer syncServer;
 
     private final Map<String, List<SyncMessageHandler>> handlerMap = new ConcurrentHashMap<>(); // 处理器映射
@@ -78,7 +100,9 @@ public class SyncServerInstance {
 
     private volatile boolean running = false; // running
 
-    /** Listenersattached */
+    /**
+     * Listenersattached
+    */
     private boolean listenersAttached = false;
 
     /**
@@ -184,7 +208,9 @@ public class SyncServerInstance {
         attachListeners();
     }
 
-    /** attach监听器 */
+    /**
+     * attach监听器
+    */
     private void attachListeners() {
         if (listenersAttached || syncServer == null) {
             return;
@@ -193,7 +219,9 @@ public class SyncServerInstance {
         listenersAttached = true;
     }
 
-    /** 开始 */
+    /**
+     * 开始
+    */
     public void start() {
         if (running) {
             log.warn("[SyncServer:{}] 已在运行中", instanceConfig.getName());
@@ -238,7 +266,9 @@ public class SyncServerInstance {
         return provider.getNewExtension(protocol, setting);
     }
 
-    /** 停止 */
+    /**
+     * 停止
+    */
     public void stop() {
         if (!running) {
             return;
@@ -338,7 +368,9 @@ public class SyncServerInstance {
      */
     private class InternalServerListener implements SyncServerListener {
         @Override
-        /** on客户端连接 */
+        /**
+         * on客户端连接
+        */
         public void onClientConnected(String clientId, java.util.Map<String, Object> metadata) {
             log.info("[SyncServer:{}] 客户端连接: clientId={}", instanceConfig.getName(), clientId);
             broadcastToOthers(clientId, TOPIC_CONNECT, Map.of(
@@ -347,7 +379,9 @@ public class SyncServerInstance {
         }
 
         @Override
-        /** on客户端断开连接 */
+        /**
+         * on客户端断开连接
+        */
         public void onClientDisconnected(String clientId) {
             ClientInfo clientInfo = clientInfoMap.remove(clientId);
             log.info("[SyncServer:{}] 客户端断开: clientId={}", instanceConfig.getName(), clientId);
@@ -364,7 +398,9 @@ public class SyncServerInstance {
         }
 
         @Override
-        /** on消息 */
+        /**
+         * on消息
+        */
         public void onMessage(String clientId, String topic, Object message) {
             /**
              * 把手服务端消息。
@@ -376,7 +412,9 @@ public class SyncServerInstance {
         }
 
         @Override
-        /** On记录错误 */
+        /**
+         * On记录错误
+        */
         public void onError(String clientId, Throwable cause) {
             log.error("[SyncServer:{}] 客户端错误: clientId={}", instanceConfig.getName(), clientId, cause);
         }

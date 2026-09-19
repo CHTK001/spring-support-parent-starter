@@ -23,10 +23,14 @@ import java.util.Map;
 @ConfigurationProperties(prefix = "hotsport")
 public class HotsportProperties {
 
-    /** Agent 配置。 */
+    /**
+     * Agent 配置。
+    */
     private Agent agent = new Agent();
 
-    /** APM 存储配置。 */
+    /**
+     * APM 存储配置。
+    */
     private Apm apm = new Apm();
 
     /**
@@ -65,16 +69,24 @@ public class HotsportProperties {
         this.apm = apm;
     }
 
-    /** Agent 子配置。 */
+    /**
+     * Agent 子配置。
+    */
     public static class Agent {
 
-        /** 是否启用自注入。 */
+        /**
+         * 是否启用自注入。
+        */
         private boolean enabled = true;
 
-        /** Shell 端口。 */
+        /**
+         * Shell 端口。
+        */
         private int shellPort = 4567;
 
-        /** 额外 Agent 参数（逗号分隔 Key=值）。 */
+        /**
+         * 额外 Agent 参数（逗号分隔 Key=值）。
+        */
         private String options = "";
 
         /**
@@ -132,10 +144,14 @@ public class HotsportProperties {
         }
     }
 
-    /** APM 子配置。 */
+    /**
+     * APM 子配置。
+    */
     public static class Apm {
 
-        /** 存储配置。 */
+        /**
+         * 存储配置。
+        */
         private Storage storage = new Storage();
 
         /**
@@ -157,13 +173,19 @@ public class HotsportProperties {
         }
     }
 
-    /** 存储子配置。 */
+    /**
+     * 存储子配置。
+    */
     public static class Storage {
 
-        /** 存储类型：inmemory / sqlite / noop。 */
+        /**
+         * 存储类型：inmemory / sqlite / noop。
+        */
         private String type = "inmemory";
 
-        /** 数据保留毫秒。 */
+        /**
+         * 数据保留毫秒。
+        */
         private long retentionMs = 7L * 24 * 60 * 60 * 1000;
 
         /**
@@ -222,7 +244,9 @@ public class HotsportProperties {
         return s != null ? s : noop();
     }
 
-    /** Noop 兜底实例（storage管理器 未初始化时使用）。 */
+    /**
+     * Noop 兜底实例（storage管理器 未初始化时使用）。
+    */
     private static final ApmStorage NOOP = new ApmStorage() {
         @Override
         public String name() {

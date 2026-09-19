@@ -55,9 +55,13 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class ServerDiscoveryController {
 
-    /** 运行时注册表（从中取运行中节点挂载的发现过滤器） */
+    /**
+     * 运行时注册表（从中取运行中节点挂载的发现过滤器）
+    */
     private final ServerNodeRegistry nodeRegistry;
-    /** 发现服务（可选，缺失时降级） */
+    /**
+     * 发现服务（可选，缺失时降级）
+    */
     private final ObjectProvider<DiscoveryService> discoveryServiceProvider;
 
     /**

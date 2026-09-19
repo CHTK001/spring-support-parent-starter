@@ -19,41 +19,63 @@ import java.util.List;
 @Builder
 public class SwitchInventory {
 
-    /** @api特征 注解描述列表 */
+    /**
+     * @api特征 注解描述列表
+    */
     @Builder.Default
     private final List<FeatureDescriptor> features = new ArrayList<>(); // 特征
 
-    /** @apigray 注解描述列表 */
+    /**
+     * @apigray 注解描述列表
+    */
     @Builder.Default
     private final List<GrayDescriptor> grays = new ArrayList<>(); // grays
 
-    /** 注解指纹（SHA-256 hex，基于规范化描述排序后哈希） */
+    /**
+     * 注解指纹（SHA-256 hex，基于规范化描述排序后哈希）
+    */
     private String fingerprint;
 
-    /** @api特征 注解规范化描述 */
+    /**
+     * @api特征 注解规范化描述
+    */
     @Data
     @Builder
     public static class FeatureDescriptor {
 
-        /** 功能标识（@api特征.值） */
+        /**
+         * 功能标识（@api特征.值）
+        */
         private String featureId;
 
-        /** 默认是否启用 */
+        /**
+         * 默认是否启用
+        */
         private boolean defaultEnabled;
 
-        /** 禁用提示 */
+        /**
+         * 禁用提示
+        */
         private String disabledMessage;
 
-        /** 禁用状态码 */
+        /**
+         * 禁用状态码
+        */
         private int disabledStatus;
 
-        /** 描述 */
+        /**
+         * 描述
+        */
         private String description;
 
-        /** 分组 */
+        /**
+         * 分组
+        */
         private String group;
 
-        /** 映射路径（用于页面定位） */
+        /**
+         * 映射路径（用于页面定位）
+        */
         private List<String> patterns;
 
         /**
@@ -70,33 +92,51 @@ public class SwitchInventory {
         }
     }
 
-    /** @apigray 注解规范化描述 */
+    /**
+     * @apigray 注解规范化描述
+    */
     @Data
     @Builder
     public static class GrayDescriptor {
 
-        /** 灰度标识（@apigray.值） */
+        /**
+         * 灰度标识（@apigray.值）
+        */
         private String pattern;
 
-        /** 灰度比例 */
+        /**
+         * 灰度比例
+        */
         private int percentage;
 
-        /** 角色白名单 */
+        /**
+         * 角色白名单
+        */
         private String[] roles;
 
-        /** 用户白名单 */
+        /**
+         * 用户白名单
+        */
         private String[] users;
 
-        /** 请求头白名单 */
+        /**
+         * 请求头白名单
+        */
         private String[] headers;
 
-        /** spel 规则 */
+        /**
+         * spel 规则
+        */
         private String rule;
 
-        /** 是否强制灰度 */
+        /**
+         * 是否强制灰度
+        */
         private boolean forceGray;
 
-        /** 映射路径（用于页面定位） */
+        /**
+         * 映射路径（用于页面定位）
+        */
         private List<String> patterns;
 
         /**

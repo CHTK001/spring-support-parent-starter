@@ -32,15 +32,25 @@ import java.util.List;
 @RequiredArgsConstructor
 public class EduDimensionService {
 
-    /** Subjectmapper */
+    /**
+     * Subjectmapper
+    */
     private final EduSubjectMapper subjectMapper;
-    /** Grademapper */
+    /**
+     * Grademapper
+    */
     private final EduGradeMapper gradeMapper;
-    /** Classmapper */
+    /**
+     * Classmapper
+    */
     private final EduClassMapper classMapper;
-    /** Studentmapper */
+    /**
+     * Studentmapper
+    */
     private final EduStudentMapper studentMapper;
-    /** Teachermapper */
+    /**
+     * Teachermapper
+    */
     private final EduTeacherMapper teacherMapper;
 
     // ==================== 学科 ====================
@@ -320,11 +330,17 @@ public class EduDimensionService {
     }
 
     public static class DimensionDropdown {
-        /** Gradelevels */
+        /**
+         * Gradelevels
+        */
         private List<EnumOption> gradeLevels;
-        /** 主题 */
+        /**
+         * 主题
+        */
         private List<EduSubject> subjects;
-        /** Grades */
+        /**
+         * Grades
+        */
         private List<EduGrade> grades;
         /**
          * 获取grade级别
@@ -367,11 +383,17 @@ public class EduDimensionService {
     }
 
     public static class EnumOption {
-        /** 值 */
+        /**
+         * 值
+        */
         private String value;
-        /** 标签 */
+        /**
+         * 标签
+        */
         private String label;
-        /** 创建 enum期权 实例 */
+        /**
+         * 创建 enum期权 实例
+        */
         public EnumOption() {}
         /**
          * 创建 enum期权 实例

@@ -23,7 +23,9 @@ import java.util.List;
 @ConditionalOnClass(name = "com.chua.starter.oauth.client.support.properties.AuthClientProperties")
 public class PaymentOauthWhitelistConfiguration {
 
-    /** 薪酬_通知_whitelist_模式 */
+    /**
+     * 薪酬_通知_whitelist_模式
+    */
     private static final List<String> PAYMENT_NOTIFY_WHITELIST_PATTERNS = List.of(
             "/api/notify/**"
     );

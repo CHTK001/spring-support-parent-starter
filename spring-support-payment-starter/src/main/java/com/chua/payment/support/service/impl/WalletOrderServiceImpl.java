@@ -30,11 +30,17 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class WalletOrderServiceImpl implements WalletOrderService {
 
-    /** Wallet排序映射器 */
+    /**
+     * Wallet排序映射器
+    */
     private final WalletOrderMapper walletOrderMapper;
-    /** paymentcallbackurl解析器 */
+    /**
+     * paymentcallbackurl解析器
+    */
     private final PaymentCallbackUrlResolver paymentCallbackUrlResolver;
-    /** Objectmapper */
+    /**
+     * Objectmapper
+    */
     private final ObjectMapper objectMapper;
 
     @Override
@@ -213,7 +219,9 @@ public class WalletOrderServiceImpl implements WalletOrderService {
     }
 
     @Override
-    /** 获取by订单no */
+    /**
+     * 获取by订单no
+    */
     public WalletOrder getByOrderNo(String orderNo) {
         if (!StringUtils.hasText(orderNo)) {
             return null;

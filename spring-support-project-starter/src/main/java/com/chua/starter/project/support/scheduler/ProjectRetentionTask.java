@@ -34,13 +34,19 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 public class ProjectRetentionTask {
 
-    /** 项目服务（提供超期部署日志清理） */
+    /**
+     * 项目服务（提供超期部署日志清理）
+    */
     private final ProjectService projectService;
 
-    /** 模块配置（保留天数 / 清理间隔） */
+    /**
+     * 模块配置（保留天数 / 清理间隔）
+    */
     private final ProjectProperties projectProperties;
 
-    /** 清理执行线程（单线程，避免并发清理与业务写入互相争锁） */
+    /**
+     * 清理执行线程（单线程，避免并发清理与业务写入互相争锁）
+    */
     private ScheduledExecutorService executor;
 
     /**

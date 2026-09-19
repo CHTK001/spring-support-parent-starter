@@ -39,12 +39,18 @@ import java.util.function.Supplier;
  */
 public class CacheTemplate {
 
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(CacheTemplate.class);
 
-    /** 缓存管理器 */
+    /**
+     * 缓存管理器
+    */
     private final MultiLevelCacheManager cacheManager;
-    /** 密钥生成器 */
+    /**
+     * 密钥生成器
+    */
     private final TenantedKeyGenerator keyGenerator;
 
     /**

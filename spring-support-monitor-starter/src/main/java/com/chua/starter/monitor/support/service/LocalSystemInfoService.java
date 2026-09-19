@@ -36,7 +36,9 @@ import java.util.Map;
 @Service
 public class LocalSystemInfoService {
 
-    /** OSHI 句柄，懒加载失败时为 null（降级为基础信息模式）。 */
+    /**
+     * OSHI 句柄，懒加载失败时为 null（降级为基础信息模式）。
+    */
     private volatile SystemInfo si;
 
     /**
@@ -151,7 +153,9 @@ public class LocalSystemInfoService {
          *
          * @return CPU 使用率 0-100；采集失败返回 0
          */
-    /** 上次 CPU ticks（getSystemCpuLoadBetweenTicks 需要两次采样） */
+    /**
+     * 上次 CPU ticks（getSystemCpuLoadBetweenTicks 需要两次采样）
+    */
     private transient long[] lastCpuTicks = null;
 
     /**

@@ -30,7 +30,9 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "阅卷管理")
 public class EduMarkingController {
 
-    /** Marking服务 */
+    /**
+     * Marking服务
+    */
     private final IEduMarkingService markingService;
 
     /**

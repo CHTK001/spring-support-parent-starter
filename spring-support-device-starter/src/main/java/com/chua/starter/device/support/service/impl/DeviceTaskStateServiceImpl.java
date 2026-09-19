@@ -28,7 +28,9 @@ public class DeviceTaskStateServiceImpl implements DeviceTaskStateService {
     private final DeviceTaskStateMapper taskStateMapper;
 
     @Override
-    /** 是否应该运行 */
+    /**
+     * 是否应该运行
+    */
     public boolean shouldRun(String taskName) {
         DeviceTaskState state = getState(taskName);
         if (state == null) {
@@ -46,7 +48,9 @@ public class DeviceTaskStateServiceImpl implements DeviceTaskStateService {
     }
 
     @Override
-    /** 标记Running */
+    /**
+     * 标记Running
+    */
     public boolean markRunning(String taskName) {
         LambdaUpdateWrapper<DeviceTaskState> wrapper = new LambdaUpdateWrapper<>();
         wrapper.eq(DeviceTaskState::getDeviceTaskStateName, taskName);
@@ -56,7 +60,9 @@ public class DeviceTaskStateServiceImpl implements DeviceTaskStateService {
     }
 
     @Override
-    /** 标记饰面 */
+    /**
+     * 标记饰面
+    */
     public void markFinished(String taskName) {
         LambdaUpdateWrapper<DeviceTaskState> wrapper = new LambdaUpdateWrapper<>();
         wrapper.eq(DeviceTaskState::getDeviceTaskStateName, taskName);
@@ -65,7 +71,9 @@ public class DeviceTaskStateServiceImpl implements DeviceTaskStateService {
     }
 
     @Override
-    /** 获取状态 */
+    /**
+     * 获取状态
+    */
     public DeviceTaskState getState(String taskName) {
         LambdaQueryWrapper<DeviceTaskState> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(DeviceTaskState::getDeviceTaskStateName, taskName);
@@ -73,7 +81,9 @@ public class DeviceTaskStateServiceImpl implements DeviceTaskStateService {
     }
 
     @Override
-    /** 更新间隔 */
+    /**
+     * 更新间隔
+    */
     public void updateInterval(String taskName, int interval) {
         LambdaUpdateWrapper<DeviceTaskState> wrapper = new LambdaUpdateWrapper<>();
         wrapper.eq(DeviceTaskState::getDeviceTaskStateName, taskName);

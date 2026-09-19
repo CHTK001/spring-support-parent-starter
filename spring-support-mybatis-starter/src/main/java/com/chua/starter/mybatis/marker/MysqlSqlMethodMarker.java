@@ -13,7 +13,9 @@ import java.util.List;
  */
 public class MysqlSqlMethodMarker implements SqlMethodMarker {
 
-    /** 超时 */
+    /**
+     * 超时
+    */
     private int timeout;
 
     /**
@@ -27,25 +29,33 @@ public class MysqlSqlMethodMarker implements SqlMethodMarker {
     }
 
     @Override
-    /** Analysis */
+    /**
+     * Analysis
+    */
     public List<AbstractMethod> analysis(String source) {
         return Collections.emptyList();
     }
 
     @Override
-    /** Refresh */
+    /**
+     * Refresh
+    */
     public void refresh(String name) {
 
     }
 
     @Override
-    /** 销毁 */
+    /**
+     * 销毁
+    */
     public void destroy() throws Exception {
 
     }
 
     @Override
-    /** refresh全部 */
+    /**
+     * refresh全部
+    */
     public void refreshAll() {
 
     }

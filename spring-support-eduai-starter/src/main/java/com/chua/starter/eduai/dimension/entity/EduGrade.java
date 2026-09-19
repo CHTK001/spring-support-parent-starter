@@ -22,7 +22,9 @@ import java.time.LocalDateTime;
 public class EduGrade {
 
     @TableId(type = IdType.AUTO)
-    /** gradeid */
+    /**
+     * gradeid
+    */
     private Long gradeId;
 
     /**
@@ -41,6 +43,8 @@ public class EduGrade {
     private Integer gradeOrder;
 
     @TableField(value = "create_time", fill = com.baomidou.mybatisplus.annotation.FieldFill.INSERT)
-    /** 创建时间 */
+    /**
+     * 创建时间
+    */
     private LocalDateTime createTime;
 }

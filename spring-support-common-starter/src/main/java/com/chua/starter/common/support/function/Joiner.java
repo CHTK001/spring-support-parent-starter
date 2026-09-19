@@ -7,11 +7,17 @@ package com.chua.starter.common.support.function;
  */
 public final class Joiner {
 
-    /** Separator */
+    /**
+     * Separator
+    */
     private final String separator;
-    /** Omit是否为空 */
+    /**
+     * Omit是否为空
+    */
     private final boolean omitEmpty;
-    /** Trimresults */
+    /**
+     * Trimresults
+    */
     private final boolean trimResults;
 
     /**
@@ -28,7 +34,9 @@ public final class Joiner {
         this.trimResults = trimResults;
     }
 
-    /** 创建 Joiner 实例 */
+    /**
+     * 创建 Joiner 实例
+    */
     private Joiner() {
         /**
          * this。

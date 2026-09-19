@@ -53,13 +53,21 @@ public enum GlueTypeEnum {
      */
     GLUE_POWERSHELL("GLUE(PowerShell)", true, "powershell", ".ps1");
 
-    /** Desc */
+    /**
+     * Desc
+    */
     private final String desc;
-    /** isscript */
+    /**
+     * isscript
+    */
     private final boolean isScript;
-    /** CMD */
+    /**
+     * CMD
+    */
     private final String cmd;
-    /** 后缀 */
+    /**
+     * 后缀
+    */
     private final String suffix;
 
     /**

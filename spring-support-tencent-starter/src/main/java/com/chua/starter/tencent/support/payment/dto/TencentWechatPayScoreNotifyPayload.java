@@ -11,19 +11,33 @@ import java.util.Map;
  */
 @Data
 public class TencentWechatPayScoreNotifyPayload {
-    /** 出排序NO */
+    /**
+     * 出排序NO
+    */
     private String outOrderNo;
-    /** 服务排序NO */
+    /**
+     * 服务排序NO
+    */
     private String serviceOrderNo;
-    /** APPID */
+    /**
+     * APPID
+    */
     private String appId;
-    /** 服务标识 */
+    /**
+     * 服务标识
+    */
     private String serviceId;
-    /** 打开标识 */
+    /**
+     * 打开标识
+    */
     private String openId;
-    /** 状态 */
+    /**
+     * 状态
+    */
     private String state;
-    /** Finishreason */
+    /**
+     * Finishreason
+    */
     private String finishReason;
     private Map<String, Object> rawData; // raw数据
 }

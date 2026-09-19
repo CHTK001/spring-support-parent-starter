@@ -54,28 +54,44 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class AiBotChatService {
 
-    /** 机器人 绑定 映射器 */
+    /**
+     * 机器人 绑定 映射器
+    */
     private final SysAiBotBindingMapper botBindingMapper;
 
-    /** 模型表 映射器（按模型名查所属 提供者） */
+    /**
+     * 模型表 映射器（按模型名查所属 提供者）
+    */
     private final SysAiProviderModelMapper providerModelMapper;
 
-    /** 提供者 表 映射器（获取 platform/baseurl/凭证） */
+    /**
+     * 提供者 表 映射器（获取 platform/baseurl/凭证）
+    */
     private final SysAiProviderMapper providerMapper;
 
-    /** 机器人 聊天消息 映射器（进度聊天历史落库） */
+    /**
+     * 机器人 聊天消息 映射器（进度聊天历史落库）
+    */
     private final SysAiBotMessageMapper botMessageMapper;
 
-    /** WS 推送（新消息广播给 IM 页） */
+    /**
+     * WS 推送（新消息广播给 IM 页）
+    */
     private final SysAiWebSocketHandler webSocketHandler;
 
-    /** 全局设置读取（机器人 默认模型兜底） */
+    /**
+     * 全局设置读取（机器人 默认模型兜底）
+    */
     private final GlobalSettingReader globalSettingReader;
 
-    /** 用量记录拦截器（记录每次 机器人 AI 调用的 令牌/费用） */
+    /**
+     * 用量记录拦截器（记录每次 机器人 AI 调用的 令牌/费用）
+    */
     private final UsageRecorderInterceptor usageRecorderInterceptor;
 
-    /** 运行中的 机器人：机器人标识 -> i链接 客户端 */
+    /**
+     * 运行中的 机器人：机器人标识 -> i链接 客户端
+    */
     private final Map<String, ILinkBotClient> runningBots = new ConcurrentHashMap<>();
 
     /**

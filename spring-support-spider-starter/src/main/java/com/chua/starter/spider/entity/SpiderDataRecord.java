@@ -32,7 +32,9 @@ public class SpiderDataRecord extends SysBase {
      */
     @TableId(type = IdType.AUTO)
     @Schema(description = "主键 ID")
-    /** 标识 */
+    /**
+     * 标识
+    */
     private Long id;
 
     /**
@@ -40,7 +42,9 @@ public class SpiderDataRecord extends SysBase {
      */
     @TableField("execution_no")
     @Schema(description = "执行号")
-    /** 执行no */
+    /**
+     * 执行no
+    */
     private String executionNo;
 
     /**
@@ -48,7 +52,9 @@ public class SpiderDataRecord extends SysBase {
      */
     @TableField("definition_code")
     @Schema(description = "爬虫编码")
-    /** Definition代码 */
+    /**
+     * Definition代码
+    */
     private String definitionCode;
 
     /**
@@ -56,7 +62,9 @@ public class SpiderDataRecord extends SysBase {
      */
     @TableField("title")
     @Schema(description = "标题")
-    /** 标题 */
+    /**
+     * 标题
+    */
     private String title;
 
     /**
@@ -64,7 +72,9 @@ public class SpiderDataRecord extends SysBase {
      */
     @TableField("content")
     @Schema(description = "内容")
-    /** 内容 */
+    /**
+     * 内容
+    */
     private String content;
 
     /**
@@ -72,7 +82,9 @@ public class SpiderDataRecord extends SysBase {
      */
     @TableField("source_url")
     @Schema(description = "来源 URL")
-    /** 来源URL */
+    /**
+     * 来源URL
+    */
     private String sourceUrl;
 
     /**
@@ -80,7 +92,9 @@ public class SpiderDataRecord extends SysBase {
      */
     @TableField("raw_data")
     @Schema(description = "原始采集数据")
-    /** RAW数据 */
+    /**
+     * RAW数据
+    */
     private String rawData;
 
     /**
@@ -88,7 +102,9 @@ public class SpiderDataRecord extends SysBase {
      */
     @TableField("status")
     @Schema(description = "状态")
-    /** 状态 */
+    /**
+     * 状态
+    */
     private String status;
 
     /**
@@ -96,7 +112,9 @@ public class SpiderDataRecord extends SysBase {
      */
     @TableField("error_message")
     @Schema(description = "失败信息")
-    /** 错误消息 */
+    /**
+     * 错误消息
+    */
     private String errorMessage;
 
     /**
@@ -104,7 +122,9 @@ public class SpiderDataRecord extends SysBase {
      */
     @TableField("record_time")
     @Schema(description = "记录时间")
-    /** Record时间 */
+    /**
+     * Record时间
+    */
     private LocalDateTime recordTime;
 
     /**
@@ -113,6 +133,8 @@ public class SpiderDataRecord extends SysBase {
     @TableField("sys_deleted")
     @TableLogic
     @Schema(description = "逻辑删除标记")
-    /** SYS删除标记 */
+    /**
+     * SYS删除标记
+    */
     private Integer sysDeleted;
 }

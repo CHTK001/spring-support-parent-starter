@@ -75,11 +75,17 @@ public class PaperGenerateDTO {
      */
     @Data
     public static class QuestionTypeConfig {
-        /** 类型 */
+        /**
+         * 类型
+        */
         private String type;
-        /** 数量 */
+        /**
+         * 数量
+        */
         private Integer count;
-        /** 分数perquestion */
+        /**
+         * 分数perquestion
+        */
         private Integer scorePerQuestion;
     }
 }

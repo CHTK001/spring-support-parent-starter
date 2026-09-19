@@ -48,9 +48,13 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
      * appKey 映射器（与协议层共用）
      */
     private final SysAiAppKeyMapper appKeyMapper;
-    /** 提供者映射器 */
+    /**
+     * 提供者映射器
+    */
     private final AiProviderMapper providerMapper;
-    /** 分组映射器 */
+    /**
+     * 分组映射器
+    */
     private final AiGroupMapper groupMapper;
 
     /**

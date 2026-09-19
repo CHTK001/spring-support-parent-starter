@@ -20,13 +20,17 @@ public class XmlAdviceResolver implements AdviceResolver {
 
 
     @Override
-    /** 类型 */
+    /**
+     * 类型
+    */
     public String type() {
         return MediaType.TEXT_XML_VALUE;
     }
 
     @Override
-    /** 解析 */
+    /**
+     * 解析
+    */
     public Object resolve(HttpServletResponse response, Integer status, String message) {
         /**
          * 尝试。

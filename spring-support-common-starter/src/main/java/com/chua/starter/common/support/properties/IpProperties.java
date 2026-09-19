@@ -16,7 +16,9 @@ public class IpProperties {
     private boolean enable = false;
 
 
-    /** PRE */
+    /**
+     * PRE
+    */
     public static final String PRE = "plugin.ip";
 
 

@@ -21,62 +21,86 @@ public class SysFileSystemUpload extends SysBase implements Serializable {
 
     private static final long serialVersionUID = 1L; // 串行版本uid
 
-    /** 主键 标识，自增 */
+    /**
+     * 主键 标识，自增
+    */
     @TableId(value = "filesystem_upload_task_id", type = IdType.AUTO)
     @Schema(description = "主键 ID")
     private Long filesystemUploadTaskId; // filesystemupload任务标识
 
-    /** 上传任务唯一标识（ULID） */
+    /**
+     * 上传任务唯一标识（ULID）
+    */
     @TableField(value = "filesystem_upload_task_upload_id")
     @Schema(description = "上传任务 ID（ULID）")
     private String filesystemUploadTaskUploadId; // filesystemupload任务uploadid
 
-    /** 文件原始名称 */
+    /**
+     * 文件原始名称
+    */
     @TableField("filesystem_upload_task_file_name")
     @Schema(description = "文件名称")
     private String filesystemUploadTaskFileName; // filesystemupload任务文件名称
 
-    /** 文件原始名称 */
+    /**
+     * 文件原始名称
+    */
     @TableField("filesystem_upload_task_original_name")
     @Schema(description = "文件原始名称")
     private String filesystemUploadTaskOriginalName; // filesystemupload任务原始名称
 
-    /** 文件大小（字节） */
+    /**
+     * 文件大小（字节）
+    */
     @TableField("filesystem_upload_task_file_size")
     @Schema(description = "文件大小(字节)")
     private Long filesystemUploadTaskFileSize; // filesystemupload任务文件大小
 
-    /** 单个分片大小（字节） */
+    /**
+     * 单个分片大小（字节）
+    */
     @TableField("filesystem_upload_task_chunk_size")
     @Schema(description = "分片大小(字节)")
     private Long filesystemUploadTaskChunkSize; // filesystemupload任务chunk大小
 
-    /** 总分片数量 */
+    /**
+     * 总分片数量
+    */
     @TableField("filesystem_upload_task_total_chunks")
     @Schema(description = "总分片数")
     private Integer filesystemUploadTaskTotalChunks; // filesystemupload任务totalchunks
 
-    /** 已上传分片数量 */
+    /**
+     * 已上传分片数量
+    */
     @TableField("filesystem_upload_task_uploaded_chunks")
     @Schema(description = "已上传分片数")
     private Integer filesystemUploadTaskUploadedChunks; // filesystemupload任务uploadedchunks
 
-    /** 存储类型（本地 / 对象存储 / s3 等） */
+    /**
+     * 存储类型（本地 / 对象存储 / s3 等）
+    */
     @TableField("filesystem_upload_task_storage_type")
     @Schema(description = "存储类型")
     private String filesystemUploadTaskStorageType; // filesystemupload任务storage类型
 
-    /** 存储桶名称 */
+    /**
+     * 存储桶名称
+    */
     @TableField("filesystem_upload_task_bucket")
     @Schema(description = "存储桶")
     private String filesystemUploadTaskBucket; // filesystemupload任务bucket
 
-    /** 文件在存储中的 Key */
+    /**
+     * 文件在存储中的 Key
+    */
     @TableField("filesystem_upload_task_key")
     @Schema(description = "文件Key")
     private String filesystemUploadTaskKey; // filesystemupload任务Key
 
-    /** 内容类型（MIME 类型） */
+    /**
+     * 内容类型（MIME 类型）
+    */
     @TableField("filesystem_upload_task_content_type")
     @Schema(description = "内容类型")
     private String filesystemUploadTaskContentType; // filesystemupload任务内容类型
@@ -98,27 +122,37 @@ public class SysFileSystemUpload extends SysBase implements Serializable {
     @Schema(description = "阶段: 0-分片上传, 1-合并, 2-上传OSS")
     private Integer filesystemUploadTaskStage; // filesystemupload任务Stage
 
-    /** 失败原因 */
+    /**
+     * 失败原因
+    */
     @TableField("filesystem_upload_task_error_message")
     @Schema(description = "错误信息")
     private String filesystemUploadTaskErrorMessage; // filesystemupload任务错误消息
 
-    /** 最终文件 URL */
+    /**
+     * 最终文件 URL
+    */
     @TableField("filesystem_upload_task_file_url")
     @Schema(description = "最终文件URL")
     private String filesystemUploadTaskFileUrl; // filesystemupload任务文件url
 
-    /** 上传开始时间 */
+    /**
+     * 上传开始时间
+    */
     @TableField("filesystem_upload_task_start_time")
     @Schema(description = "上传开始时间")
     private LocalDateTime filesystemUploadTaskStartTime; // filesystemupload任务启动时间
 
-    /** 上传完成时间 */
+    /**
+     * 上传完成时间
+    */
     @TableField("filesystem_upload_task_complete_time")
     @Schema(description = "上传完成时间")
     private LocalDateTime filesystemUploadTaskCompleteTime; // filesystemupload任务完成时间
 
-    /** 重试次数 */
+    /**
+     * 重试次数
+    */
     @TableField("filesystem_upload_task_retry_count")
     @Schema(description = "合并重试次数")
     private Integer filesystemUploadTaskRetryCount; // filesystemupload任务重试数量

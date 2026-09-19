@@ -30,7 +30,9 @@ import java.util.Map;
 @RequestMapping("/console")
 public class ConsolePageController {
 
-    /** 控制台统一权限码（页面与调整接口均需该权限） */
+    /**
+     * 控制台统一权限码（页面与调整接口均需该权限）
+    */
     public static final String CONSOLE_PERMISSION = "console:manage";
 
     private final AnnotationSwitchScanner scanner; // scanner
@@ -142,7 +144,9 @@ public class ConsolePageController {
 
     // ==================== 调整接口 ====================
 
-    /** 调整 @api特征 覆盖 */
+    /**
+     * 调整 @api特征 覆盖
+    */
     @PostMapping("/api/features")
     @Permission(CONSOLE_PERMISSION)
     public String upsertFeature(@RequestParam String featureId,
@@ -166,7 +170,9 @@ public class ConsolePageController {
         return "redirect:/console/features";
     }
 
-    /** 调整 @apigray 覆盖（percentage/角色/用户/头部/rule 均可选，缺省沿用注解） */
+    /**
+     * 调整 @apigray 覆盖（percentage/角色/用户/头部/rule 均可选，缺省沿用注解）
+    */
     @PostMapping("/api/grays")
     @Permission(CONSOLE_PERMISSION)
     public String upsertGray(@RequestParam String pattern,

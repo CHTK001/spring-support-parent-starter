@@ -13,10 +13,14 @@ import java.util.List;
 public class RelationData implements Serializable {
     private static final long serialVersionUID = 1L; // 串行版本uid
 
-    /** 节点集合 */
+    /**
+     * 节点集合
+    */
     private List<Node> nodes = new ArrayList<>();
 
-    /** 连线集合 */
+    /**
+     * 连线集合
+    */
     private List<Link> links = new ArrayList<>();
 
     /**
@@ -59,9 +63,13 @@ public class RelationData implements Serializable {
      */
     public static class Node implements Serializable {
         private static final long serialVersionUID = 1L; // 串行版本uid
-        /** 标识 */
+        /**
+         * 标识
+        */
         private String id;
-        /** 名称 */
+        /**
+         * 名称
+        */
         private String name;
 
         /**
@@ -115,9 +123,13 @@ public class RelationData implements Serializable {
      */
     public static class Link implements Serializable {
         private static final long serialVersionUID = 1L; // 串行版本uid
-        /** 来源 */
+        /**
+         * 来源
+        */
         private String source;
-        /** 目标 */
+        /**
+         * 目标
+        */
         private String target;
 
         /**

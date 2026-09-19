@@ -20,49 +20,83 @@ import java.time.LocalDateTime;
 @TableName(value = "filesystem_upload_merge_log")
 public class SysFileSystemUploadMergeLog extends SysBase implements Serializable {
 
-    /** 串行版本UID */
+    /**
+     * 串行版本UID
+    */
     private static final long serialVersionUID = 1L;
 
     @TableId(value = "filesystem_upload_merge_log_id", type = IdType.AUTO)
-    /** Filesystem上传合并日志标识 */
+    /**
+     * Filesystem上传合并日志标识
+    */
     private Long filesystemUploadMergeLogId;
 
-    /** 上传任务标识 */
+    /**
+     * 上传任务标识
+    */
     @TableField("filesystem_upload_merge_log_upload_id")
-    /** Filesystem上传合并日志上传标识 */
+    /**
+     * Filesystem上传合并日志上传标识
+    */
     private String filesystemUploadMergeLogUploadId;
 
-    /** 阶段标识: 1-合并 */
+    /**
+     * 阶段标识: 1-合并
+    */
     @TableField("filesystem_upload_merge_log_stage")
-    /** Filesystem上传合并日志阶段 */
+    /**
+     * Filesystem上传合并日志阶段
+    */
     private Integer filesystemUploadMergeLogStage;
 
-    /** 结果状态: 1-成功, 0-失败 */
+    /**
+     * 结果状态: 1-成功, 0-失败
+    */
     @TableField("filesystem_upload_merge_log_status")
-    /** Filesystem上传合并日志状态 */
+    /**
+     * Filesystem上传合并日志状态
+    */
     private Integer filesystemUploadMergeLogStatus;
 
-    /** 记录信息（成功/失败原因） */
+    /**
+     * 记录信息（成功/失败原因）
+    */
     @TableField("filesystem_upload_merge_log_message")
-    /** Filesystem上传合并日志消息 */
+    /**
+     * Filesystem上传合并日志消息
+    */
     private String filesystemUploadMergeLogMessage;
 
-    /** 第几次尝试 */
+    /**
+     * 第几次尝试
+    */
     @TableField("filesystem_upload_merge_log_retry_count")
-    /** Filesystem上传合并日志重试数量 */
+    /**
+     * Filesystem上传合并日志重试数量
+    */
     private Integer filesystemUploadMergeLogRetryCount;
 
-    /** 开始时间 */
+    /**
+     * 开始时间
+    */
     @TableField("filesystem_upload_merge_log_start_time")
-    /** Filesystem上传合并日志开始时间 */
+    /**
+     * Filesystem上传合并日志开始时间
+    */
     private LocalDateTime filesystemUploadMergeLogStartTime;
 
-    /** 结束时间 */
+    /**
+     * 结束时间
+    */
     @TableField("filesystem_upload_merge_log_end_time")
-    /** Filesystem上传合并日志结束时间 */
+    /**
+     * Filesystem上传合并日志结束时间
+    */
     private LocalDateTime filesystemUploadMergeLogEndTime;
 
-    /** 创建 sys文件系统upload合并日志 实例 */
+    /**
+     * 创建 sys文件系统upload合并日志 实例
+    */
     public SysFileSystemUploadMergeLog() {}
 
     /**
@@ -175,9 +209,13 @@ public class SysFileSystemUploadMergeLog extends SysBase implements Serializable
      * @since 4.0.0
      */
     public static class Result {
-        /** 成功 */
+        /**
+         * 成功
+        */
         public static final int SUCCESS = 1;
-        /** 失败 */
+        /**
+         * 失败
+        */
         public static final int FAILED = 0;
     }
 
@@ -187,7 +225,9 @@ public class SysFileSystemUploadMergeLog extends SysBase implements Serializable
      * @since 4.0.0
      */
     public static class Stage {
-        /** 合并 */
+        /**
+         * 合并
+        */
         public static final int MERGE = 1;
     }
 }

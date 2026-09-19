@@ -32,7 +32,9 @@ public class SoftwareSourceResult {
      */
     private File downloadedFile;
 
-    /** 创建 software源结果 实例 */
+    /**
+     * 创建 software源结果 实例
+    */
     public SoftwareSourceResult() {
     }
 

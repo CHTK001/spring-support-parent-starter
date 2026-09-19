@@ -50,7 +50,9 @@ import java.util.Set;
  */
 public class RequestParamsMapMethodArgumentResolver extends RequestParamMapMethodArgumentResolver {
     @Override
-    /** 支持参数 */
+    /**
+     * 支持参数
+    */
     public boolean supportsParameter(MethodParameter parameter) {
         RequestParamMapping requestParam = parameter.getParameterAnnotation(RequestParamMapping.class);
         boolean has = (requestParam != null && Map.class.isAssignableFrom(parameter.getParameterType()) &&

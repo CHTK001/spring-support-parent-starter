@@ -54,7 +54,9 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
         ApplicationContextAware,
         BeanFactoryAware, BeanClassLoaderAware, EnvironmentAware, DisposableBean, SmartInstantiationAwareBeanPostProcessor {
 
-    /** 日志 */
+    /**
+     * 日志
+    */
     protected static final Logger log = LoggerFactory.getLogger(AbstractAnnotationBeanPostProcessor.class);
 
     private final static int CACHE_SIZE = Integer.getInteger("", 32);
@@ -65,19 +67,29 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
     private final ConcurrentMap<String, AnnotatedInjectionMetadata> injectionMetadataCache =
             new ConcurrentHashMap<String, AnnotatedInjectionMetadata>(CACHE_SIZE);
 
-    /** Bean工厂 */
+    /**
+     * Bean工厂
+    */
     private ConfigurableListableBeanFactory beanFactory;
 
-    /** 环境 */
+    /**
+     * 环境
+    */
     private Environment environment;
 
     ClassLoader classLoader;
 
-    /** 排序 */
+    /**
+     * 排序
+    */
     private final int order = Ordered.LOWEST_PRECEDENCE;
-    /** Application上下文 */
+    /**
+     * Application上下文
+    */
     protected ApplicationContext applicationContext;
-    /** Beandefinition注册表 */
+    /**
+     * Beandefinition注册表
+    */
     protected BeanDefinitionRegistry beanDefinitionRegistry;
     /**
      * @param annotationTypes the 多个 类型 的 {@link Annotation annotations}
@@ -396,10 +408,14 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
     protected static class AnnotatedInjectionMetadata extends InjectionMetadata {
 
         private final Class<?> targetClass; // 目标类
-        /** Fieldelements */
+        /**
+         * Fieldelements
+        */
         private final Collection<AnnotatedFieldElement> fieldElements;
 
-        /** Methodelements */
+        /**
+         * Methodelements
+        */
         private final Collection<AnnotatedMethodElement> methodElements;
 
         public AnnotatedInjectionMetadata(Class<?> targetClass, Collection<AnnotatedFieldElement> fieldElements,
@@ -448,7 +464,9 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
      */
     protected class AnnotatedInjectElement extends InjectionMetadata.InjectedElement {
 
-        /** Attributes */
+        /**
+         * Attributes
+        */
         public final AnnotationAttributes attributes;
 
         public volatile Object injectedObject; // injected对象
@@ -538,7 +556,9 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
      */
     protected class AnnotatedMethodElement extends AnnotatedInjectElement {
 
-        /** 方法 */
+        /**
+         * 方法
+        */
         public final Method method;
 
         /**
@@ -567,7 +587,9 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
      */
     public class AnnotatedFieldElement extends AnnotatedInjectElement {
 
-        /** 字段 */
+        /**
+         * 字段
+        */
         public final Field field;
 
         /**

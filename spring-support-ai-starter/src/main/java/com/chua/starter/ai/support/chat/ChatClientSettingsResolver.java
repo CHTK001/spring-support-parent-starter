@@ -18,12 +18,18 @@ import java.util.Map;
  */
 public final class ChatClientSettingsResolver {
 
-    /** 分组 */
+    /**
+     * 分组
+    */
     private static final String GROUP = "runtime";
-    /** 默认_超时_millis */
+    /**
+     * 默认_超时_millis
+    */
     private static final long DEFAULT_TIMEOUT_MILLIS = 30_000L;
 
-    /** 创建 对话客户端settings解析器 实例 */
+    /**
+     * 创建 对话客户端settings解析器 实例
+    */
     private ChatClientSettingsResolver() {
     }
 

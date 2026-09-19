@@ -2,23 +2,35 @@ package com.chua.starter.oauth.client.support.provider;
 
 import lombok.Builder;
 import lombok.Data;
-/** @作者 CH */
+/**
+ * @作者 CH
+*/
 
 @Data
 @Builder
 public class LoginResult {
 
-    /** Access令牌 */
+    /**
+     * Access令牌
+    */
     private String accessToken;
 
-    /** 令牌类型 */
+    /**
+     * 令牌类型
+    */
     private String tokenType;
 
-    /** Refresh令牌 */
+    /**
+     * Refresh令牌
+    */
     private String refreshToken;
-    /** 用户信息 */
+    /**
+     * 用户信息
+    */
     private UserInfoVO userInfo;
-    /** Expires */
+    /**
+     * Expires
+    */
     private Long expires;
 
 }

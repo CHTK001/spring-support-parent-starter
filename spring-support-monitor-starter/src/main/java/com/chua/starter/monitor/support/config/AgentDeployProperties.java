@@ -15,7 +15,9 @@ import org.springframework.stereotype.Component;
 @ConfigurationProperties(prefix = "monitor.agent")
 public class AgentDeployProperties {
 
-    /** agent 默认 HTTP 端口（主机未单独配置时使用） */
+    /**
+     * agent 默认 HTTP 端口（主机未单独配置时使用）
+    */
     public static final int DEFAULT_PORT = 19876;
 
     /**
@@ -33,16 +35,24 @@ public class AgentDeployProperties {
      */
     private String jarUrl = "";
 
-    /** Linux 系统服务名（systemd unit） */
+    /**
+     * Linux 系统服务名（systemd unit）
+    */
     private String linuxServiceName = "monitor-agent";
 
-    /** Windows 系统服务名（nssm） */
+    /**
+     * Windows 系统服务名（nssm）
+    */
     private String windowsServiceName = "MonitorAgent";
 
-    /** 远端安装目录名（位于各系统的临时目录下） */
+    /**
+     * 远端安装目录名（位于各系统的临时目录下）
+    */
     private String remoteDirName = "monitor-agent";
 
-    /** agent 默认端口 */
+    /**
+     * agent 默认端口
+    */
     private int port = DEFAULT_PORT;
 
     /**
@@ -51,15 +61,23 @@ public class AgentDeployProperties {
      */
     private String token = "";
 
-    /** 启动后等待 /health 就绪的秒数 */
+    /**
+     * 启动后等待 /health 就绪的秒数
+    */
     private int healthWaitSeconds = 30;
 
-    /** 单次 agent HTTP 请求超时（秒） */
+    /**
+     * 单次 agent HTTP 请求超时（秒）
+    */
     private int requestTimeoutSeconds = 8;
 
-    /** 远端 java 可执行文件；留空则自动探测（command -v java / where java） */
+    /**
+     * 远端 java 可执行文件；留空则自动探测（command -v java / where java）
+    */
     private String javaCommand = "";
 
-    /** 平台回写地址（写入 agent.yml 供 agent 主动上报预留使用） */
+    /**
+     * 平台回写地址（写入 agent.yml 供 agent 主动上报预留使用）
+    */
     private String reportUrl = "";
 }

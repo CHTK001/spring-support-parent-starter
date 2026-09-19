@@ -39,7 +39,9 @@ import java.util.stream.Collectors;
  */
 public class MultiLevelCacheManager implements CacheManager, InitializingBean, ApplicationContextAware {
 
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(MultiLevelCacheManager.class);
 
     /**
@@ -49,26 +51,38 @@ public class MultiLevelCacheManager implements CacheManager, InitializingBean, A
 
     private final Map<String, Cache> cacheMap = new ConcurrentHashMap<>(); // 缓存映射
 
-    /** 缓存管理器 */
+    /**
+     * 缓存管理器
+    */
     private final List<CacheManager> cacheManagers = new ArrayList<>();
     private final Map<String, CacheManager> cacheManagerMap = new ConcurrentHashMap<>(); // 缓存管理器映射
 
-    /** Application上下文 */
+    /**
+     * Application上下文
+    */
     private ApplicationContext applicationContext;
-    /** 环境 */
+    /**
+     * 环境
+    */
     private Environment environment;
-    /** 缓存属性 */
+    /**
+     * 缓存属性
+    */
     private CacheProperties cacheProperties;
 
     @Override
-    /** 设置application上下文 */
+    /**
+     * 设置application上下文
+    */
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
         this.environment = applicationContext.getEnvironment();
     }
 
     @Override
-    /** 之后属性设置 */
+    /**
+     * 之后属性设置
+    */
     public void afterPropertiesSet() {
         // 加载配置
         cacheProperties = Binder.get(environment)
@@ -125,7 +139,9 @@ public class MultiLevelCacheManager implements CacheManager, InitializingBean, A
     }
 
     @Override
-    /** 获取缓存 */
+    /**
+     * 获取缓存
+    */
     public Cache getCache(String name) {
         if (name == null || name.isEmpty()) {
             return null;
@@ -179,7 +195,9 @@ public class MultiLevelCacheManager implements CacheManager, InitializingBean, A
     }
 
     @Override
-    /** 获取缓存名称 */
+    /**
+     * 获取缓存名称
+    */
     public Collection<String> getCacheNames() {
         if (cacheManagers.isEmpty()) {
             return List.of();

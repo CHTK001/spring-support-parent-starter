@@ -25,7 +25,9 @@ public class PaymentCipherService {
 
     static final String LEGACY_DEFAULT_KEY = "PaymentSystem16"; // legacy默认Key
 
-    /** 环境 */
+    /**
+     * 环境
+    */
     private final Environment environment;
 
     /**

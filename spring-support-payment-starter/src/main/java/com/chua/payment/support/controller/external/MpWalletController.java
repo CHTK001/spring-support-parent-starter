@@ -38,11 +38,17 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class MpWalletController {
 
-    /** Walletaccount服务 */
+    /**
+     * Walletaccount服务
+    */
     private final WalletAccountService walletAccountService;
-    /** Wallet排序服务 */
+    /**
+     * Wallet排序服务
+    */
     private final WalletOrderService walletOrderService;
-    /** Principal解析器 */
+    /**
+     * Principal解析器
+    */
     private final PaymentAccountPrincipalResolver principalResolver;
 
     @GetMapping

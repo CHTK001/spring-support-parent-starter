@@ -27,7 +27,9 @@ public class SysAiAppKey {
      * 应用密钥主键 标识
      */
     @TableId(value = "sys_ai_app_key_id", type = IdType.AUTO)
-    /** SYSAIAPP密钥标识 */
+    /**
+     * SYSAIAPP密钥标识
+    */
     private Integer id;
 
     /**
@@ -166,42 +168,54 @@ public class SysAiAppKey {
      * 创建人名称
      */
     @TableField(fill = FieldFill.INSERT)
-    /** 创建名称 */
+    /**
+     * 创建名称
+    */
     private String createName;
 
     /**
      * 创建人 标识
      */
     @TableField(fill = FieldFill.INSERT)
-    /** 创建by */
+    /**
+     * 创建by
+    */
     private Integer createBy;
 
     /**
      * 创建时间
      */
     @TableField(fill = FieldFill.INSERT)
-    /** 创建时间 */
+    /**
+     * 创建时间
+    */
     private LocalDateTime createTime;
 
     /**
      * 更新时间
      */
     @TableField(fill = FieldFill.INSERT_UPDATE)
-    /** 更新时间 */
+    /**
+     * 更新时间
+    */
     private LocalDateTime updateTime;
 
     /**
      * 更新人名称
      */
     @TableField(fill = FieldFill.INSERT_UPDATE)
-    /** 更新名称 */
+    /**
+     * 更新名称
+    */
     private String updateName;
 
     /**
      * 更新人 标识
      */
     @TableField(fill = FieldFill.INSERT_UPDATE)
-    /** 更新by */
+    /**
+     * 更新by
+    */
     private Integer updateBy;
 }
 

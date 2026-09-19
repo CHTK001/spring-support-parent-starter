@@ -26,7 +26,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class MonitorGatewayServiceImpl implements MonitorGatewayService {
 
-    /** 网关 映射器 */
+    /**
+     * 网关 映射器
+    */
     private final MsMonitorGatewayMapper gatewayMapper;
 
     @Override

@@ -67,21 +67,27 @@ public class DeviceMetricsReporter {
      * 同步客户端 实例
      */
     @Setter
-    /** 同步客户端 */
+    /**
+     * 同步客户端
+    */
     private SyncClient syncClient;
 
     /**
      * 应用名称
      */
     @Setter
-    /** APP名称 */
+    /**
+     * APP名称
+    */
     private String appName;
 
     /**
      * 主机地址
      */
     @Setter
-    /** 主机 */
+    /**
+     * 主机
+    */
     private String host;
 
     /**
@@ -103,14 +109,18 @@ public class DeviceMetricsReporter {
      * 上报间隔（秒）
      */
     @Setter
-    /** 间隔秒 */
+    /**
+     * 间隔秒
+    */
     private long intervalSeconds = 30;
 
     /**
      * 要上报的指标类型（默认全部）
      */
     @Setter
-    /** 是否启用指标 */
+    /**
+     * 是否启用指标
+    */
     private Set<MetricType> enabledMetrics = Set.of(MetricType.values());
 
     /**
@@ -123,7 +133,9 @@ public class DeviceMetricsReporter {
      */
     private final AtomicReference<Map<String, Object>> cpuCache = new AtomicReference<>(new HashMap<>());
 
-    /** 创建 device指标reporter 实例 */
+    /**
+     * 创建 device指标reporter 实例
+    */
     private DeviceMetricsReporter() {
     }
 

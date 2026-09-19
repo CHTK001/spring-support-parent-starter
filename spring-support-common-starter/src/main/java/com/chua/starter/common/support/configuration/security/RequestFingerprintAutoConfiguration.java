@@ -47,7 +47,9 @@ import java.util.concurrent.TimeUnit;
 @EnableConfigurationProperties(RequestFingerprintAutoConfiguration.FingerprintProps.class)
 public class RequestFingerprintAutoConfiguration {
 
-    /** Fingerprintcleaner */
+    /**
+     * Fingerprintcleaner
+    */
     private ScheduledExecutorService fingerprintCleaner;
 
     /**
@@ -225,31 +227,57 @@ public class RequestFingerprintAutoConfiguration {
      */
     @ConfigurationProperties(prefix = "plugin.security.fingerprint")
     public static class FingerprintProps {
-        /** 是否启用 */
+        /**
+         * 是否启用
+        */
         private boolean enabled = false;
-        /** 头部名称 */
+        /**
+         * 头部名称
+        */
         private String headerName = "X-Request-Fingerprint";
-        /** 算法 */
+        /**
+         * 算法
+        */
         private String algorithm = "SHA-256";
-        /** Salt */
+        /**
+         * Salt
+        */
         private String salt;
-        /** Includemethod */
+        /**
+         * Includemethod
+        */
         private boolean includeMethod = true;
-        /** Include路径 */
+        /**
+         * Include路径
+        */
         private boolean includePath = true;
-        /** Include参数 */
+        /**
+         * Include参数
+        */
         private boolean includeParams = true;
-        /** Includeheaders */
+        /**
+         * Includeheaders
+        */
         private Set<String> includeHeaders = new LinkedHashSet<>();
-        /** Include请求体 */
+        /**
+         * Include请求体
+        */
         private boolean includeBody = false;
-        /** 1MB 默认上限 */
+        /**
+         * 1MB 默认上限
+        */
         private long includeBodyMaxBytes = 1024 * 1024;
-        /** 请求体方法 */
+        /**
+         * 请求体方法
+        */
         private Set<String> bodyMethods = new LinkedHashSet<>(Arrays.asList("POST", "PUT", "PATCH"));
-        /** validityms */
+        /**
+         * validityms
+        */
         private long validityMs = 60_000;
-        /** Rejectduplicate */
+        /**
+         * Rejectduplicate
+        */
         private boolean rejectDuplicate = false;
 
         /**
@@ -503,7 +531,9 @@ public class RequestFingerprintAutoConfiguration {
      * @since 4.0.0
      */
     static class CachedBodyHttpServletRequest extends HttpServletRequestWrapper {
-        /** Cached请求体 */
+        /**
+         * Cached请求体
+        */
         private final byte[] cachedBody;
         /**
          * 构造
@@ -529,7 +559,9 @@ public class RequestFingerprintAutoConfiguration {
         }
         byte[] getCachedBody() { return cachedBody; }
         @Override
-        /** 获取输入流 */
+        /**
+         * 获取输入流
+        */
         public ServletInputStream getInputStream() {
             final java.io.ByteArrayInputStream bais = new java.io.ByteArrayInputStream(cachedBody);
             return new ServletInputStream() {
@@ -540,7 +572,9 @@ public class RequestFingerprintAutoConfiguration {
             };
         }
         @Override
-        /** 获取Reader */
+        /**
+         * 获取Reader
+        */
         public java.io.BufferedReader getReader() {
             return new java.io.BufferedReader(new java.io.InputStreamReader(getInputStream(), StandardCharsets.UTF_8));
         }

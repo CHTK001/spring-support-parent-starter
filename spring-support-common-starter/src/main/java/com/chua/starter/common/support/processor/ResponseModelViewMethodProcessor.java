@@ -24,7 +24,9 @@ import java.util.List;
  */
 public class ResponseModelViewMethodProcessor extends RequestResponseBodyMethodProcessor {
 
-    /** Redirectpatterns */
+    /**
+     * Redirectpatterns
+    */
     private String redirectPatterns;
 
     /**
@@ -40,21 +42,27 @@ public class ResponseModelViewMethodProcessor extends RequestResponseBodyMethodP
     }
 
     @Override
-    /** 支持参数 */
+    /**
+     * 支持参数
+    */
     public boolean supportsParameter(MethodParameter returnType) {
         Class<?> paramType = returnType.getParameterType();
         return ModelView.class.isAssignableFrom(paramType);
     }
 
     @Override
-    /** 支持申报类型 */
+    /**
+     * 支持申报类型
+    */
     public boolean supportsReturnType(MethodParameter returnType) {
         Class<?> paramType = returnType.getParameterType();
         return ModelView.class.isAssignableFrom(paramType);
     }
 
     @Override
-    /** 处理申报值 */
+    /**
+     * 处理申报值
+    */
     public void handleReturnValue(Object returnValue, MethodParameter returnType, ModelAndViewContainer mavContainer, NativeWebRequest webRequest) throws IOException, HttpMediaTypeNotAcceptableException, HttpMessageNotWritableException {
         ModelView modelView = (ModelView) returnValue;
         Object data = modelView.getData();

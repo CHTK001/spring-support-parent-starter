@@ -23,7 +23,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class OrderStateLogServiceImpl implements OrderStateLogService {
 
-    /** 排序状态日志映射器 */
+    /**
+     * 排序状态日志映射器
+    */
     private final OrderStateLogMapper orderStateLogMapper;
 
     /**
@@ -54,7 +56,9 @@ public class OrderStateLogServiceImpl implements OrderStateLogService {
     }
 
     @Override
-    /** 列表by订单标识 */
+    /**
+     * 列表by订单标识
+    */
     public List<OrderStateLog> listByOrderId(Long orderId) {
         return orderStateLogMapper.selectList(new LambdaQueryWrapper<OrderStateLog>()
                 .eq(OrderStateLog::getOrderId, orderId)

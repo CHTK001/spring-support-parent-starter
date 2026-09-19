@@ -32,14 +32,22 @@ import static com.chua.starter.common.support.constant.CacheConstant.REDIS_CACHE
 @RequiredArgsConstructor
 public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
 
-    /** 状态_已启用 */
+    /**
+     * 状态_已启用
+    */
     private static final int STATUS_ENABLED = 1;
-    /** Millis_per_second */
+    /**
+     * Millis_per_second
+    */
     private static final long MILLIS_PER_SECOND = 1000L;
-    /** Seconds_per_day */
+    /**
+     * Seconds_per_day
+    */
     private static final long SECONDS_PER_DAY = 24L * 60L * 60L;
 
-    /** SYSAIAPP密钥映射器 */
+    /**
+     * SYSAIAPP密钥映射器
+    */
     private final SysAiAppKeyMapper sysAiAppKeyMapper;
 
     @Override
@@ -64,7 +72,9 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
     }
 
     @Override
-    /** 列表 */
+    /**
+     * 列表
+    */
     public List<SysAiAppKey> list() {
         return sysAiAppKeyMapper.selectList(
                 Wrappers.lambdaQuery(SysAiAppKey.class)
@@ -125,7 +135,9 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
     }
 
     @Override
-    /** 验证 */
+    /**
+     * 验证
+    */
     public boolean verify(String appKey, String secret, String ip) {
         SysAiAppKey dbAppKey = queryAppKeyUncached(appKey);
         if (!isValidAppKey(dbAppKey, ip)) {
@@ -135,7 +147,9 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
     }
 
     @Override
-    /** 验证appKeyonly */
+    /**
+     * 验证appKeyonly
+    */
     public boolean verifyAppKeyOnly(String appKey, String ip) {
         return isValidAppKey(queryAppKeyUncached(appKey), ip);
     }

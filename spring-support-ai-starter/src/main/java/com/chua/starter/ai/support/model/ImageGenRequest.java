@@ -10,14 +10,24 @@ import lombok.Data;
  */
 @Data
 public class ImageGenRequest {
-    /** 提示词 */
+    /**
+     * 提示词
+    */
     private String prompt;
-    /** 模型名称，可选 */
+    /**
+     * 模型名称，可选
+    */
     private String model;
-    /** 尺寸，如 1024x1024，可选 */
+    /**
+     * 尺寸，如 1024x1024，可选
+    */
     private String size;
-    /** 风格，可选 */
+    /**
+     * 风格，可选
+    */
     private String style;
-    /** 质量，可选 */
+    /**
+     * 质量，可选
+    */
     private String quality;
 }

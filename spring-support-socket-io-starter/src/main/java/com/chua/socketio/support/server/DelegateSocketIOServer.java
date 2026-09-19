@@ -17,7 +17,9 @@ import org.springframework.beans.factory.InitializingBean;
 @Slf4j
 public class DelegateSocketIOServer extends SocketIOServer implements InitializingBean, DisposableBean {
 
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(DelegateSocketIOServer.class);
 
     /**
@@ -34,13 +36,17 @@ public class DelegateSocketIOServer extends SocketIOServer implements Initializi
 
 
     @Override
-    /** 销毁 */
+    /**
+     * 销毁
+    */
     public void destroy() throws Exception {
         this.stop();
     }
 
     @Override
-    /** 之后属性设置 */
+    /**
+     * 之后属性设置
+    */
     public void afterPropertiesSet() throws Exception {
         Configuration configuration = getConfiguration();
         log.info(">>>> 正在启动 Socket.io服务器; {}:{}", configuration.getHostname(), configuration.getPort());

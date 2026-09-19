@@ -46,13 +46,19 @@ import static com.chua.starter.common.support.utils.RequestUtils.*;
  */
 public class AuthClientExecute {
 
-    /** 认证客户端属性 */
+    /**
+     * 认证客户端属性
+    */
     private final AuthClientProperties authClientProperties;
 
-    /** 实例 */
+    /**
+     * 实例
+    */
     public static final AuthClientExecute INSTANCE = new AuthClientExecute();
 
-    /** 默认_Key */
+    /**
+     * 默认_Key
+    */
     public static final String DEFAULT_KEY = "1234567980123456";
 
     /**
@@ -69,7 +75,9 @@ public class AuthClientExecute {
             .expireAfterWrite(3, TimeUnit.MINUTES)
             .build();
 
-    /** 创建 认证客户端执行 实例 */
+    /**
+     * 创建 认证客户端执行 实例
+    */
     public AuthClientExecute() {
         this.authClientProperties = OauthClientRuntimeContext.getAuthClientProperties();
     }

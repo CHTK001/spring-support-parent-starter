@@ -38,9 +38,13 @@ public enum PaymentChannelType {
      */
     WALLET("WALLET", "钱包");
 
-    /** 代码 */
+    /**
+     * 代码
+    */
     private final String code;
-    /** 描述 */
+    /**
+     * 描述
+    */
     private final String description;
 
     /**

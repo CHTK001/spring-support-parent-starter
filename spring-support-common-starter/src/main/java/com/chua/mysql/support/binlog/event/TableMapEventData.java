@@ -8,7 +8,9 @@ package com.chua.mysql.support.binlog.event;
  */
 public class TableMapEventData implements EventData {
 
-    /** 表 */
+    /**
+     * 表
+    */
     private final String table;
 
     /**

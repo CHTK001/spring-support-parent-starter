@@ -35,16 +35,24 @@ import java.util.Map;
 @RequestMapping(ServerConstants.API_PREFIX + "/host/agent")
 public class AgentDeployController {
 
-    /** 部署生命周期服务 */
+    /**
+     * 部署生命周期服务
+    */
     private final AgentDeployService deployService;
 
-    /** agent HTTP 客户端 */
+    /**
+     * agent HTTP 客户端
+    */
     private final AgentHttpClient agentClient;
 
-    /** 主机 映射器 */
+    /**
+     * 主机 映射器
+    */
     private final MsServerHostMapper hostMapper;
 
-    /** 部署配置 */
+    /**
+     * 部署配置
+    */
     private final AgentDeployProperties properties;
 
     /**

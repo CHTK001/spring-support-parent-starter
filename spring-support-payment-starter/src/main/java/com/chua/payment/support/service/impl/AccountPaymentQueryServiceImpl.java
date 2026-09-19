@@ -36,15 +36,25 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AccountPaymentQueryServiceImpl implements AccountPaymentQueryService {
 
-    /** 薪酬排序映射器 */
+    /**
+     * 薪酬排序映射器
+    */
     private final PaymentOrderMapper paymentOrderMapper;
-    /** Transactionrecordmapper */
+    /**
+     * Transactionrecordmapper
+    */
     private final TransactionRecordMapper transactionRecordMapper;
-    /** 排序状态日志服务 */
+    /**
+     * 排序状态日志服务
+    */
     private final OrderStateLogService orderStateLogService;
-    /** Merchantmapper */
+    /**
+     * Merchantmapper
+    */
     private final MerchantMapper merchantMapper;
-    /** Merchant通道映射器 */
+    /**
+     * Merchant通道映射器
+    */
     private final MerchantChannelMapper merchantChannelMapper;
 
     @Override
@@ -64,13 +74,17 @@ public class AccountPaymentQueryServiceImpl implements AccountPaymentQueryServic
     }
 
     @Override
-    /** 获取订单by用户 */
+    /**
+     * 获取订单by用户
+    */
     public OrderVO getOrderByUser(Long userId, Long id) {
         return toOrderVO(requireUserOrder(userId, id));
     }
 
     @Override
-    /** 列表订单日志by用户 */
+    /**
+     * 列表订单日志by用户
+    */
     public List<OrderStateLogVO> listOrderLogsByUser(Long userId, Long id) {
         /**
          * require用户订单。

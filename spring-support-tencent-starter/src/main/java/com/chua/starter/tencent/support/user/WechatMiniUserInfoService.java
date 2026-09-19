@@ -17,7 +17,9 @@ import org.springframework.util.StringUtils;
 public class WechatMiniUserInfoService implements UserInfoService {
 
     @Override
-    /** 校验Login */
+    /**
+     * 校验Login
+    */
     public UserResume checkLogin(String principal, String credential, String address, Object ext) {
         String openid = principal;
         if (!StringUtils.hasText(openid)) {
@@ -49,7 +51,9 @@ public class WechatMiniUserInfoService implements UserInfoService {
     }
 
     @Override
-    /** Upgrade */
+    /**
+     * Upgrade
+    */
     public UserResume upgrade(UserResult userResult) {
         return null;
     }

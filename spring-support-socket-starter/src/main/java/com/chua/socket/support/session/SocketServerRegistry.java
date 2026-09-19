@@ -36,7 +36,9 @@ import java.util.concurrent.TimeUnit;
 @Service
 public class SocketServerRegistry {
 
-    /** 注册本服务器到 Redis */
+    /**
+     * 注册本服务器到 Redis
+    */
     public void registerSelf() {
         Map<String, Object> info = new HashMap<>();
         info.put("id", serverId);
@@ -133,7 +135,9 @@ public class SocketServerRegistry {
         return result;
     }
 
-    /** 服务器关闭时不删除 Redis 注册信息 */
+    /**
+     * 服务器关闭时不删除 Redis 注册信息
+    */
     public void onShutdown() {
         if (!enable) {
             return;
@@ -141,7 +145,9 @@ public class SocketServerRegistry {
         log.warn("[SocketServerRegistry] 服务器 {} 下线，不删除 Redis 注册信息", serverId);
     }
 
-    /** 心跳定时任务：刷新心跳时间并续期 */
+    /**
+     * 心跳定时任务：刷新心跳时间并续期
+    */
     @Scheduled(fixedDelay = HEARTBEAT_INTERVAL_MS)
     public void heartbeat() {
         if (!enable) {

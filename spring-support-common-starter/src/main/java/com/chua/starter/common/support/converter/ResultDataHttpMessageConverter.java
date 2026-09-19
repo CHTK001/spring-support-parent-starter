@@ -28,7 +28,9 @@ import java.lang.reflect.Type;
 public class ResultDataHttpMessageConverter
         extends MappingJackson2HttpMessageConverter {
     @Override
-    /** 是否可以写入 */
+    /**
+     * 是否可以写入
+    */
     public boolean canWrite(Class<?> clazz, MediaType mediaType) {
         if(
                null != mediaType && mediaType.includes(MediaType.APPLICATION_JSON)
@@ -41,7 +43,9 @@ public class ResultDataHttpMessageConverter
 
 
     @Override
-    /** 写入内部 */
+    /**
+     * 写入内部
+    */
     protected void writeInternal(Object object, Type type, HttpOutputMessage outputMessage) throws IOException, HttpMessageNotWritableException {
         super.writeInternal(object, type, outputMessage);
     }

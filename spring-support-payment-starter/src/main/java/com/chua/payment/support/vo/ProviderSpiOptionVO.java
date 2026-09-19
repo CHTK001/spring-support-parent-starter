@@ -13,15 +13,23 @@ import java.io.Serializable;
 public class ProviderSpiOptionVO implements Serializable {
     private static final long serialVersionUID = 1L; // 串行版本uid
 
-    /** 通道类型 */
+    /**
+     * 通道类型
+    */
     private String channelType;
 
-    /** 延伸名称 */
+    /**
+     * 延伸名称
+    */
     private String extensionName;
 
-    /** 默认期权 */
+    /**
+     * 默认期权
+    */
     private Boolean defaultOption;
 
-    /** 描述 */
+    /**
+     * 描述
+    */
     private String description;
 }

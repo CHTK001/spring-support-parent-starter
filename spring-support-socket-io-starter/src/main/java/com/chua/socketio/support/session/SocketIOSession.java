@@ -20,20 +20,34 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class SocketIOSession implements SocketSession {
 
-    /** 对象_映射器 */
+    /**
+     * 对象_映射器
+    */
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-    /** Attribute_encrypt_请求 */
+    /**
+     * Attribute_encrypt_请求
+    */
     public static final String ATTRIBUTE_ENCRYPT_REQUESTED = "socketEncryptRequested";
-    /** 客户端 */
+    /**
+     * 客户端
+    */
     private final SocketIOClient client;
-    /** 属性 */
+    /**
+     * 属性
+    */
     private final SocketProperties properties;
-    /** 消息codec */
+    /**
+     * 消息codec
+    */
     private final SocketMessageCodec messageCodec;
     private final Map<String, Object> attributes = new ConcurrentHashMap<>(); // attributes
-    /** 客户端标识 */
+    /**
+     * 客户端标识
+    */
     private String clientId;
-    /** 用户 */
+    /**
+     * 用户
+    */
     private SocketUser user;
 
     /**
@@ -58,37 +72,49 @@ public class SocketIOSession implements SocketSession {
     }
 
     @Override
-    /** 获取标识 */
+    /**
+     * 获取标识
+    */
     public String getId() {
         return client.getSessionId().toString();
     }
 
     @Override
-    /** 获取客户端标识 */
+    /**
+     * 获取客户端标识
+    */
     public String getClientId() {
         return clientId;
     }
 
     @Override
-    /** 设置客户端标识 */
+    /**
+     * 设置客户端标识
+    */
     public void setClientId(String clientId) {
         this.clientId = clientId;
     }
 
     @Override
-    /** 获取用户 */
+    /**
+     * 获取用户
+    */
     public SocketUser getUser() {
         return user;
     }
 
     @Override
-    /** 设置用户 */
+    /**
+     * 设置用户
+    */
     public void setUser(SocketUser user) {
         this.user = user;
     }
 
     @Override
-    /** 设置Attribute */
+    /**
+     * 设置Attribute
+    */
     public void setAttribute(String key, Object value) {
         attributes.put(key, value);
     }
@@ -106,31 +132,41 @@ public class SocketIOSession implements SocketSession {
     }
 
     @Override
-    /** 移除Attribute */
+    /**
+     * 移除Attribute
+    */
     public void removeAttribute(String key) {
         attributes.remove(key);
     }
 
     @Override
-    /** 获取Attributes */
+    /**
+     * 获取Attributes
+    */
     public Map<String, Object> getAttributes() {
         return attributes;
     }
 
     @Override
-    /** 是否连接 */
+    /**
+     * 是否连接
+    */
     public boolean isConnected() {
         return client.isChannelOpen();
     }
 
     @Override
-    /** 断开 */
+    /**
+     * 断开
+    */
     public void disconnect() {
         client.disconnect();
     }
 
     @Override
-    /** 发送 */
+    /**
+     * 发送
+    */
     public void send(String event, Object data) {
         if (client.isChannelOpen()) {
             String msg;
@@ -148,7 +184,9 @@ public class SocketIOSession implements SocketSession {
     }
 
     @Override
-    /** 发送Binary */
+    /**
+     * 发送Binary
+    */
     public void sendBinary(String event, byte[] data) {
         if (client.isChannelOpen()) {
  // Socket.IO 原生支持二进制数据传输

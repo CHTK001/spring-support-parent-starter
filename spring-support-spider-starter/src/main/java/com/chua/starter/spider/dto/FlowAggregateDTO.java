@@ -3,15 +3,25 @@ package com.chua.starter.spider.dto;
 import java.util.List;
 import java.util.Map;
 
-/** @作者 CH */
+/**
+ * @作者 CH
+*/
 public class FlowAggregateDTO {
-    /** 流 */
+    /**
+     * 流
+    */
     private SpiderFlowVO flow;
-    /** 节点 */
+    /**
+     * 节点
+    */
     private List<FlowNodeEntityVO> nodes;
-    /** Edges */
+    /**
+     * Edges
+    */
     private List<FlowEdgeEntityVO> edges;
-    /** flowgraphjson */
+    /**
+     * flowgraphjson
+    */
     private String flowGraphJson;
 
     /**

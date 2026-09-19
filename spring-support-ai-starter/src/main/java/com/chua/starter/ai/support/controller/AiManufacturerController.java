@@ -67,7 +67,9 @@ public class AiManufacturerController {
      * 运行目录（用于 Logo 文件存储）
      */
     @Value("${user.dir:.}")
-    /** 用户目录 */
+    /**
+     * 用户目录
+    */
     private String userDir;
 
     @Permission("admin")

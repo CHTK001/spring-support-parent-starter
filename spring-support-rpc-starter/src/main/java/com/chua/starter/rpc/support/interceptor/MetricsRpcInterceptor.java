@@ -23,40 +23,72 @@ import java.util.concurrent.atomic.AtomicLong;
 @Component
 public class MetricsRpcInterceptor implements RpcInterceptor {
 
-    /** 最近一次结果：成功 */
+    /**
+     * 最近一次结果：成功
+    */
     private static final String RESULT_SUCCESS = "SUCCESS";
-    /** 最近一次结果：失败 */
+    /**
+     * 最近一次结果：失败
+    */
     private static final String RESULT_FAILURE = "FAILURE";
-    /** 最近一次结果：尚无调用 */
+    /**
+     * 最近一次结果：尚无调用
+    */
     private static final String RESULT_NONE = "NONE";
-    /** 最小耗时初始哨兵值 */
+    /**
+     * 最小耗时初始哨兵值
+    */
     private static final long MIN_DURATION_INIT = Long.MAX_VALUE;
 
-    /** 方法调用计数器 */
+    /**
+     * 方法调用计数器
+    */
     private final ConcurrentHashMap<String, AtomicLong> callCounters = new ConcurrentHashMap<>();
-    /** 方法成功计数器 */
+    /**
+     * 方法成功计数器
+    */
     private final ConcurrentHashMap<String, AtomicLong> successCounters = new ConcurrentHashMap<>();
-    /** 方法失败计数器 */
+    /**
+     * 方法失败计数器
+    */
     private final ConcurrentHashMap<String, AtomicLong> failureCounters = new ConcurrentHashMap<>();
-    /** 方法累计总耗时（毫秒） */
+    /**
+     * 方法累计总耗时（毫秒）
+    */
     private final ConcurrentHashMap<String, AtomicLong> totalDurations = new ConcurrentHashMap<>();
-    /** 方法最大耗时（毫秒） */
+    /**
+     * 方法最大耗时（毫秒）
+    */
     private final ConcurrentHashMap<String, AtomicLong> maxDurations = new ConcurrentHashMap<>();
-    /** 方法最小耗时（毫秒） */
+    /**
+     * 方法最小耗时（毫秒）
+    */
     private final ConcurrentHashMap<String, AtomicLong> minDurations = new ConcurrentHashMap<>();
-    /** 方法最近一次耗时（毫秒） */
+    /**
+     * 方法最近一次耗时（毫秒）
+    */
     private final ConcurrentHashMap<String, AtomicLong> lastDurations = new ConcurrentHashMap<>();
-    /** 方法最近一次调用时间戳（毫秒） */
+    /**
+     * 方法最近一次调用时间戳（毫秒）
+    */
     private final ConcurrentHashMap<String, AtomicLong> lastCallTimes = new ConcurrentHashMap<>();
-    /** 方法最近一次调用结果（成功 / 失败 / 无） */
+    /**
+     * 方法最近一次调用结果（成功 / 失败 / 无）
+    */
     private final ConcurrentHashMap<String, String> lastResults = new ConcurrentHashMap<>();
-    /** 方法最近一次失败的错误信息 */
+    /**
+     * 方法最近一次失败的错误信息
+    */
     private final ConcurrentHashMap<String, String> lastErrors = new ConcurrentHashMap<>();
-    /** 开始时间 */
+    /**
+     * 开始时间
+    */
     private final ThreadLocal<Long> startTimes = new ThreadLocal<>();
 
     @Override
-    /** Pre处理 */
+    /**
+     * Pre处理
+    */
     public boolean preHandle(Method method, Object[] args) {
         startTimes.set(System.currentTimeMillis());
         String methodKey = getMethodKey(method);
@@ -65,7 +97,9 @@ public class MetricsRpcInterceptor implements RpcInterceptor {
     }
 
     @Override
-    /** Post处理 */
+    /**
+     * Post处理
+    */
     public Object postHandle(Method method, Object[] args, Object result) {
         String methodKey = getMethodKey(method);
         successCounters.computeIfAbsent(methodKey, k -> new AtomicLong()).incrementAndGet();
@@ -79,7 +113,9 @@ public class MetricsRpcInterceptor implements RpcInterceptor {
     }
 
     @Override
-    /** 处理异常 */
+    /**
+     * 处理异常
+    */
     public void handleException(Method method, Object[] args, Throwable error) throws Throwable {
         String methodKey = getMethodKey(method);
         failureCounters.computeIfAbsent(methodKey, k -> new AtomicLong()).incrementAndGet();
@@ -236,7 +272,9 @@ public class MetricsRpcInterceptor implements RpcInterceptor {
     }
 
     @Override
-    /** 获取订单 */
+    /**
+     * 获取订单
+    */
     public int getOrder() {
         return -100; // 高优先级
     }

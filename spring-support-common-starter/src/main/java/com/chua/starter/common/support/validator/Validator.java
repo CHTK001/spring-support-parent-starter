@@ -7,7 +7,9 @@ package com.chua.starter.common.support.validator;
  */
 public final class Validator {
 
-    /** 创建 Validator 实例 */
+    /**
+     * 创建 Validator 实例
+    */
     private Validator() {
     }
 

@@ -25,7 +25,9 @@ import java.util.Map;
 @RequestMapping("/ms/agent")
 public class AgentController {
 
-    /** 部署服务（提供 agent 包定位） */
+    /**
+     * 部署服务（提供 agent 包定位）
+    */
     private final AgentDeployService deployService;
 
     /**

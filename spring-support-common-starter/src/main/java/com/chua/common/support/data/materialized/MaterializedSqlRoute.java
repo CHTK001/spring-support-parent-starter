@@ -8,9 +8,13 @@ package com.chua.common.support.data.materialized;
  */
 public class MaterializedSqlRoute {
 
-    /** 数据来源名称 */
+    /**
+     * 数据来源名称
+    */
     private String dataSourceName;
-    /** 表名称 */
+    /**
+     * 表名称
+    */
     private String tableName;
 
     /**

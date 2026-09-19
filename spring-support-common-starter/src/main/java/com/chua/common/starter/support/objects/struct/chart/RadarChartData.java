@@ -13,10 +13,14 @@ import java.util.List;
 public class RadarChartData implements Serializable {
     private static final long serialVersionUID = 1L; // 串行版本uid
 
-    /** 指标名称 */
+    /**
+     * 指标名称
+    */
     private List<String> indicators = new ArrayList<>();
 
-    /** 数值集合 */
+    /**
+     * 数值集合
+    */
     private List<Number> values = new ArrayList<>();
 
     /**

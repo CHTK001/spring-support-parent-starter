@@ -56,7 +56,9 @@ import java.util.Map;
 @ConfigurationProperties(prefix = FileStorageProperties.PREFIX)
 public class FileStorageProperties {
 
-    /** 前缀 */
+    /**
+     * 前缀
+    */
     public static final String PREFIX = "plugin.filesystem";
 
     /**
@@ -99,9 +101,13 @@ public class FileStorageProperties {
      */
     private AccessMode mode = AccessMode.BOTH;
 
-    /** Openwebjars */
+    /**
+     * Openwebjars
+    */
     private boolean openWebjars = true;
-    /** 打开远程文件 */
+    /**
+     * 打开远程文件
+    */
     private boolean openRemoteFile = false;
 
     /**
@@ -277,31 +283,57 @@ public class FileStorageProperties {
     @Getter
     @Setter
     public static class ServerConfig {
-        /** 名称 */
+        /**
+         * 名称
+        */
         private String name = "default";
-        /** Enable */
+        /**
+         * Enable
+        */
         private boolean enable = true;
-        /** 类型 */
+        /**
+         * 类型
+        */
         private String type = "jdk";
-        /** 主机 */
+        /**
+         * 主机
+        */
         private String host = "0.0.0.0";
-        /** 端口 */
+        /**
+         * 端口
+        */
         private int port = 9000;
-        /** SSL */
+        /**
+         * SSL
+        */
         private boolean ssl = false;
-        /** SSL证书路径 */
+        /**
+         * SSL证书路径
+        */
         private String sslCertPath;
-        /** SSL证书密码 */
+        /**
+         * SSL证书密码
+        */
         private String sslCertPassword;
-        /** 提供者名称 */
+        /**
+         * 提供者名称
+        */
         private List<String> providerNames = new ArrayList<>();
-        /** 上下文路径 */
+        /**
+         * 上下文路径
+        */
         private String contextPath = "/";
-        /** 读取超时毫秒 */
+        /**
+         * 读取超时毫秒
+        */
         private long readTimeoutMillis = 30_000;
-        /** 写入超时毫秒 */
+        /**
+         * 写入超时毫秒
+        */
         private long writeTimeoutMillis = 30_000;
-        /** 过滤器 */
+        /**
+         * 过滤器
+        */
         private List<String> filters = new ArrayList<>();
         /**
          * 最大请求大小（字节）
@@ -344,7 +376,9 @@ public class FileStorageProperties {
      * 新版本请改用 {@link #providers}, 此字段保留用于向后兼容解析。
      */
     @Deprecated
-    /** Storages */
+    /**
+     * Storages
+    */
     private List<LegacyStorageConfig> storages = new ArrayList<>();
 
     /**
@@ -357,23 +391,41 @@ public class FileStorageProperties {
     @Setter
     @Deprecated
     public static class LegacyStorageConfig {
-        /** 名称 */
+        /**
+         * 名称
+        */
         private String name;
-        /** 类型 */
+        /**
+         * 类型
+        */
         private String type = "minio";
-        /** 端点 */
+        /**
+         * 端点
+        */
         private String endpoint;
-        /** Access密钥标识 */
+        /**
+         * Access密钥标识
+        */
         private String accessKeyId;
-        /** Access密钥secret */
+        /**
+         * Access密钥secret
+        */
         private String accessKeySecret;
-        /** 存储桶 */
+        /**
+         * 存储桶
+        */
         private String bucket;
-        /** 区域 */
+        /**
+         * 区域
+        */
         private String region;
-        /** 默认存储 */
+        /**
+         * 默认存储
+        */
         private boolean defaultStorage = false;
-        /** 基础路径 */
+        /**
+         * 基础路径
+        */
         private String basePath;
     }
 }

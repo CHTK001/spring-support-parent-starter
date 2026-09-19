@@ -45,11 +45,17 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class ServerManageServiceImpl implements ServerManageService {
 
-    /** 节点 映射器 */
+    /**
+     * 节点 映射器
+    */
     private final MsServerNodeMapper nodeMapper;
-    /** 运行时注册表 */
+    /**
+     * 运行时注册表
+    */
     private final ServerNodeRegistry nodeRegistry;
-    /** JSON */
+    /**
+     * JSON
+    */
     private final ObjectMapper objectMapper;
 
     @Override
@@ -386,7 +392,9 @@ public class ServerManageServiceImpl implements ServerManageService {
         return l == null ? r == null : l.equals(r);
     }
 
-    /** HTTP 引擎变体（SPI 注册但不应出现在协议下拉中） */
+    /**
+     * HTTP 引擎变体（SPI 注册但不应出现在协议下拉中）
+    */
     private static final Set<String> HTTP_ENGINE_ALIASES =
             Set.of("jdk", "nio", "aio", "jdk-http", "nio-http", "aio-http");
 
@@ -450,12 +458,16 @@ public class ServerManageServiceImpl implements ServerManageService {
      * 因此前端应新窗口直开节点地址，而不是跳宿主路由——宿主未挂载该页时同样可用，不会死链。</p>
      */
     private static final Set<String> FILTER_NODE_DETAIL_TYPES = Set.of("file-storage");
-    /** 过滤器类型 → 深度查看入口文案 */
+    /**
+     * 过滤器类型 → 深度查看入口文案
+    */
     private static final Map<String, String> FILTER_DETAIL_LABELS = Map.of(
             "file-storage", "打开文件管理器",
             "service-discovery", "查看服务实例",
             "reverse-proxy", "打开代理管理");
-    /** 过滤器类型 → 前端分组（左栏归类） */
+    /**
+     * 过滤器类型 → 前端分组（左栏归类）
+    */
     private static final Map<String, String> FILTER_GROUPS = Map.of(
             "file-storage", "storage",
             "service-discovery", "discovery",

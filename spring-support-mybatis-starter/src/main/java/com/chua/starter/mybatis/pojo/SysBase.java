@@ -22,7 +22,9 @@ import java.time.LocalDateTime;
  */
 @Data
 public class SysBase implements Serializable {
-    /** 串行版本UID */
+    /**
+     * 串行版本UID
+    */
     private static final long serialVersionUID = 1L;
     /**
      * 创建人
@@ -30,7 +32,9 @@ public class SysBase implements Serializable {
     @TableField(fill = FieldFill.INSERT)
     @Schema(description = "创建人姓名")
     @ApiFieldIgnore(IgnoreGroup.class)
-    /** 创建名称 */
+    /**
+     * 创建名称
+    */
     protected String createName;
     /**
      * 创建人
@@ -38,7 +42,9 @@ public class SysBase implements Serializable {
     @TableField(fill = FieldFill.INSERT)
     @Schema(description = "创建人")
     @ApiFieldIgnore(IgnoreGroup.class)
-    /** 创建by */
+    /**
+     * 创建by
+    */
     protected Integer createBy;
 
     /**
@@ -49,7 +55,9 @@ public class SysBase implements Serializable {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     @JsonSerialize(using = LocalDateTimeSerializer.class)
     @JsonDeserialize(using = LocalDateTimeDeserializer.class)
-    /** 创建时间 */
+    /**
+     * 创建时间
+    */
     protected LocalDateTime createTime;
 
     /**
@@ -60,7 +68,9 @@ public class SysBase implements Serializable {
     @JsonSerialize(using = LocalDateTimeSerializer.class)
     @Schema(description = "更新时间")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
-    /** 更新时间 */
+    /**
+     * 更新时间
+    */
     protected LocalDateTime updateTime;
 
 
@@ -70,7 +80,9 @@ public class SysBase implements Serializable {
     @TableField(fill = FieldFill.UPDATE)
     @Schema(description = "更新人姓名")
     @ApiFieldIgnore(IgnoreGroup.class)
-    /** 更新名称 */
+    /**
+     * 更新名称
+    */
     protected String updateName;
 
     /**
@@ -79,6 +91,8 @@ public class SysBase implements Serializable {
     @TableField(fill = FieldFill.UPDATE)
     @Schema(description = "更新人")
     @ApiFieldIgnore(IgnoreGroup.class)
-    /** 更新by */
+    /**
+     * 更新by
+    */
     protected Integer updateBy;
 }

@@ -37,6 +37,8 @@ public class RedisServerProperties {
      * 最大内存
      */
     private String maxMemory = "128M";
-    /** 最大值heap */
+    /**
+     * 最大值heap
+    */
     private String maxHeap = "100M";
 }

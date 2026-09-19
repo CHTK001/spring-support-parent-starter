@@ -25,7 +25,9 @@ import org.springframework.context.annotation.Bean;
 public class LockTemplateConfiguration {
 
     @Autowired(required = false)
-    /** Redisson客户端 */
+    /**
+     * Redisson客户端
+    */
     private RedissonClient redissonClient;
 
     /**

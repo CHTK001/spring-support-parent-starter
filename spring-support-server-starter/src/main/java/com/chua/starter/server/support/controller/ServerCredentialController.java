@@ -36,10 +36,14 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ServerCredentialController {
 
-    /** 密钥服务 */
+    /**
+     * 密钥服务
+    */
     private final ServerKeyService keyService;
 
-    /** 身份服务 */
+    /**
+     * 身份服务
+    */
     private final ServerIdentityService identityService;
 
     /**

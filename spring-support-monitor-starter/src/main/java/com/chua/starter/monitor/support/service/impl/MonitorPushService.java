@@ -40,16 +40,24 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class MonitorPushService {
 
-    /** Socket 模块标识 */
+    /**
+     * Socket 模块标识
+    */
     public static final String MODULE = "monitor";
 
-    /** 告警事件名（前端 订阅("监控", "报警器") 接收） */
+    /**
+     * 告警事件名（前端 订阅("监控", "报警器") 接收）
+    */
     public static final String EVENT_ALARM = "alarm";
 
-    /** 指标推送事件名（前端 订阅("监控", "指标") 接收） */
+    /**
+     * 指标推送事件名（前端 订阅("监控", "指标") 接收）
+    */
     public static final String EVENT_METRIC = "metric";
 
-    /** 采集任务执行状态事件名 */
+    /**
+     * 采集任务执行状态事件名
+    */
     public static final String EVENT_TASK = "task";
 
     /**
@@ -57,7 +65,9 @@ public class MonitorPushService {
      */
     public static final String EVENT_TSHARK_PACKET = "tshark-packet";
 
-    /** tshark 会话状态变更事件名（启动/停止/结束） */
+    /**
+     * tshark 会话状态变更事件名（启动/停止/结束）
+    */
     public static final String EVENT_TSHARK_SESSION = "tshark-session";
 
     /**
@@ -78,10 +88,14 @@ public class MonitorPushService {
      */
     public static final String EVENT_HOST_METRICS = "host-metrics";
 
-    /** Socket队列bridge 订阅的统一 topic */
+    /**
+     * Socket队列bridge 订阅的统一 topic
+    */
     public static final String SOCKET_PUSH_TOPIC = "socket:push";
 
-    /** 消息模板（队列 未启用时为空实现，推送静默跳过） */
+    /**
+     * 消息模板（队列 未启用时为空实现，推送静默跳过）
+    */
     private final ObjectProvider<MessageTemplate> messageTemplateProvider;
 
     /**

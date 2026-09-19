@@ -21,22 +21,34 @@ import java.util.List;
  */
 public interface DahuaNetSDK extends Library {
 
-    /** 设备序列号长度 */
+    /**
+     * 设备序列号长度
+    */
     int DH_DEVICE_SERIALNO_LEN = 48;
 
-    /** 最大通道数 */
+    /**
+     * 最大通道数
+    */
     int DH_MAX_CHANNUM = 16;
 
-    /** 主码流 */
+    /**
+     * 主码流
+    */
     int DH_PLAY_STREAM_TYPE_MAIN = 0;
 
-    /** 预览：系统头 */
+    /**
+     * 预览：系统头
+    */
     int DH_AV_CTRL_GET_SYSHEAD = 1;
 
-    /** 预览：流数据 */
+    /**
+     * 预览：流数据
+    */
     int DH_AV_CTRL_GET_STREAM = 2;
 
-    /** 云台指令：方向 */
+    /**
+     * 云台指令：方向
+    */
     int DH_PTZ_UP = 0;
     int DH_PTZ_DOWN = 1; // DH_PTZ_DOWN
     int DH_PTZ_LEFT = 2; // DH_PTZ_LEFT
@@ -207,28 +219,44 @@ public interface DahuaNetSDK extends Library {
      */
     class LOGIN_INFO extends Structure {
 
-        /** 设备地址 */
+        /**
+         * 设备地址
+        */
         public byte[] szHost = new byte[129];
 
-        /** 用户名 */
+        /**
+         * 用户名
+        */
         public byte[] szUser = new byte[64];
 
-        /** 密码 */
+        /**
+         * 密码
+        */
         public byte[] szPassword = new byte[64];
 
-        /** 端口 */
+        /**
+         * 端口
+        */
         public int nPort;
 
-        /** 连接类型 */
+        /**
+         * 连接类型
+        */
         public int emType;
 
-        /** 是否使用 SSL */
+        /**
+         * 是否使用 SSL
+        */
         public boolean bUseSSL;
 
-        /** 登录类型 */
+        /**
+         * 登录类型
+        */
         public int dwLoginType;
 
-        /** 设备 标识 */
+        /**
+         * 设备 标识
+        */
         public byte[] szDeviceID = new byte[48];
 
         /**
@@ -273,79 +301,129 @@ public interface DahuaNetSDK extends Library {
      */
     class DEVICEINFO extends Structure {
 
-        /** 设备序列号 */
+        /**
+         * 设备序列号
+        */
         public byte[] szSerialNumber = new byte[DH_DEVICE_SERIALNO_LEN];
 
-        /** 报警输入口个数 */
+        /**
+         * 报警输入口个数
+        */
         public byte byAlarmInPortNum;
 
-        /** 报警输出口个数 */
+        /**
+         * 报警输出口个数
+        */
         public byte byAlarmOutPortNum;
 
-        /** 硬盘个数 */
+        /**
+         * 硬盘个数
+        */
         public byte byDiskNum;
 
-        /** 设备类型 */
+        /**
+         * 设备类型
+        */
         public byte byDVRType;
 
-        /** 模拟通道个数 */
+        /**
+         * 模拟通道个数
+        */
         public byte byChanNum;
 
-        /** 起始通道号 */
+        /**
+         * 起始通道号
+        */
         public byte byStartChan;
 
-        /** 语音通道数 */
+        /**
+         * 语音通道数
+        */
         public byte byAudioChanNum;
 
-        /** 数字通道个数 */
+        /**
+         * 数字通道个数
+        */
         public byte byIPChanNum;
 
-        /** 零通道编码个数 */
+        /**
+         * 零通道编码个数
+        */
         public byte byZeroChanNum;
 
-        /** 主协议 */
+        /**
+         * 主协议
+        */
         public byte byMainProto;
 
-        /** 子协议 */
+        /**
+         * 子协议
+        */
         public byte bySubProto;
 
-        /** 支持能力 */
+        /**
+         * 支持能力
+        */
         public byte bySupport;
 
-        /** 支持能力 1 */
+        /**
+         * 支持能力 1
+        */
         public byte bySupport1;
 
-        /** 支持能力 2 */
+        /**
+         * 支持能力 2
+        */
         public byte bySupport2;
 
-        /** 设备类型 */
+        /**
+         * 设备类型
+        */
         public short wDevType;
 
-        /** 支持能力 3 */
+        /**
+         * 支持能力 3
+        */
         public byte bySupport3;
 
-        /** 多码流能力 */
+        /**
+         * 多码流能力
+        */
         public byte byMultiStreamProto;
 
-        /** 起始数字通道 */
+        /**
+         * 起始数字通道
+        */
         public byte byStartDChan;
 
-        /** 起始数字对讲通道 */
+        /**
+         * 起始数字对讲通道
+        */
         public byte byStartDTalkChan;
 
-        /** 高清数字通道数 */
+        /**
+         * 高清数字通道数
+        */
         public byte byHighDChanNum;
 
-        /** 支持能力 4 */
+        /**
+         * 支持能力 4
+        */
         public byte bySupport4;
 
-        /** 支持能力 5 */
+        /**
+         * 支持能力 5
+        */
         public byte bySupport5;
 
-        /** 高清数字通道最大值 */
+        /**
+         * 高清数字通道最大值
+        */
         public byte byIPChanInHighMax;
 
-        /** 保留字节 */
+        /**
+         * 保留字节
+        */
         public byte[] byReserved1 = new byte[24];
 
         @Override

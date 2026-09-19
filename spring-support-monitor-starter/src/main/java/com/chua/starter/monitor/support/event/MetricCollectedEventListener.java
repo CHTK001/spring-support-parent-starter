@@ -34,10 +34,14 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class MetricCollectedEventListener {
 
-    /** 告警引擎 */
+    /**
+     * 告警引擎
+    */
     private final AlarmEngineService alarmEngineService;
 
-    /** 实时推送服务 */
+    /**
+     * 实时推送服务
+    */
     private final MonitorPushService monitorPushService;
 
     /**

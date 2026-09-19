@@ -16,49 +16,63 @@ import java.time.LocalDateTime;
 @Schema(description = "安装记录详情响应")
 public class InstallDetailResponse extends SoftInstallRecord {
 
-    /** 串行版本UID */
+    /**
+     * 串行版本UID
+    */
     private static final long serialVersionUID = 1L;
 
     /**
      * 软件名称
      */
     @Schema(description = "软件名称")
-    /** Software名称 */
+    /**
+     * Software名称
+    */
     private String softwareName;
 
     /**
      * 软件版本
      */
     @Schema(description = "软件版本")
-    /** Software版本 */
+    /**
+     * Software版本
+    */
     private String softwareVersion;
 
     /**
      * 软件图标
      */
     @Schema(description = "软件图标")
-    /** Softwareicon */
+    /**
+     * Softwareicon
+    */
     private String softwareIcon;
 
     /**
      * 状态文本
      */
     @Schema(description = "状态文本")
-    /** 状态文本 */
+    /**
+     * 状态文本
+    */
     private String statusText;
 
     /**
      * 开始时间
      */
     @Schema(description = "开始时间")
-    /** 开始时间 */
+    /**
+     * 开始时间
+    */
     private LocalDateTime startTime;
 
     /**
      * 结束时间
      */
     @Schema(description = "结束时间")
-    /** 结束时间 */
+    /**
+     * 结束时间
+    */
     private LocalDateTime endTime;
 
     /**

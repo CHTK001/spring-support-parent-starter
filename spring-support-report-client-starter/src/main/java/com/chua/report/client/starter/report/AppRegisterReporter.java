@@ -31,50 +31,74 @@ import java.util.concurrent.TimeUnit;
 public class AppRegisterReporter {
 
 
-    /** 实例 */
+    /**
+     * 实例
+    */
     private static final AppRegisterReporter INSTANCE = new AppRegisterReporter();
 
     @Setter
-    /** 同步客户端 */
+    /**
+     * 同步客户端
+    */
     private SyncClient syncClient;
 
-    /** 调度器 */
+    /**
+     * 调度器
+    */
     private ScheduledExecutorService scheduler;
     private volatile boolean running = false; // running
 
     // Spring 应用信息
     @Setter
-    /** Application名称 */
+    /**
+     * Application名称
+    */
     private String applicationName;
 
     @Setter
-    /** 是否激活配置文件 */
+    /**
+     * 是否激活配置文件
+    */
     private String[] activeProfiles;
 
     @Setter
-    /** 主机 */
+    /**
+     * 主机
+    */
     private String host;
 
     @Setter
-    /** 上下文路径 */
+    /**
+     * 上下文路径
+    */
     private String contextPath;
 
     @Setter
-    /** 服务器端口 */
+    /**
+     * 服务器端口
+    */
     private Integer serverPort;
 
-    /** IP地址 */
+    /**
+     * IP地址
+    */
     private String ipAddress;
-    /** Hostname */
+    /**
+     * Hostname
+    */
     private String hostname;
 
     // 上报间隔（秒）
     @Setter
-    /** Report间隔 */
+    /**
+     * Report间隔
+    */
     private long reportInterval = 30;
 
     // 启动时间
-    /** 开始时间 */
+    /**
+     * 开始时间
+    */
     private long startTime;
 
     /**

@@ -21,7 +21,9 @@ public class EduMarkingResult {
      * 阅卷结果标识
      */
     @TableId(type = IdType.AUTO)
-    /** Marking结果标识 */
+    /**
+     * Marking结果标识
+    */
     private Long markingResultId;
 
     /**

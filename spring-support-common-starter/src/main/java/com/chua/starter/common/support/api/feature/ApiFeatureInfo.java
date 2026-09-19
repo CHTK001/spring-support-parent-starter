@@ -12,7 +12,9 @@ import java.util.Set;
  */
 public class ApiFeatureInfo implements Serializable {
 
-    /** 串行版本UID */
+    /**
+     * 串行版本UID
+    */
     private static final long serialVersionUID = 1L;
 
     /**
@@ -142,25 +144,45 @@ public class ApiFeatureInfo implements Serializable {
      * @since 4.0.0
      */
     public static class Builder {
-        /** 特征标识 */
+        /**
+         * 特征标识
+        */
         private String featureId;
-        /** 描述 */
+        /**
+         * 描述
+        */
         private String description;
-        /** 分组 */
+        /**
+         * 分组
+        */
         private String group;
-        /** 默认是否启用 */
+        /**
+         * 默认是否启用
+        */
         private boolean defaultEnabled;
-        /** 是否启用 */
+        /**
+         * 是否启用
+        */
         private boolean enabled;
-        /** 已禁用消息 */
+        /**
+         * 已禁用消息
+        */
         private String disabledMessage;
-        /** 已禁用状态 */
+        /**
+         * 已禁用状态
+        */
         private int disabledStatus;
-        /** 类名称 */
+        /**
+         * 类名称
+        */
         private String className;
-        /** 方法名称 */
+        /**
+         * 方法名称
+        */
         private String methodName;
-        /** 模式 */
+        /**
+         * 模式
+        */
         private Set<String> patterns;
 
         /**

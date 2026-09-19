@@ -17,7 +17,9 @@ import java.util.Locale;
 @RequiredArgsConstructor
 public class PaymentCallbackUrlResolver {
 
-    /** Payment全局配置服务 */
+    /**
+     * Payment全局配置服务
+    */
     private final PaymentGlobalConfigService paymentGlobalConfigService;
 
     /**

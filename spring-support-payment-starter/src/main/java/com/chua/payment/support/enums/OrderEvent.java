@@ -71,7 +71,9 @@ public enum OrderEvent {
      */
     REFUND_FAIL("退款失败");
 
-    /** 描述 */
+    /**
+     * 描述
+    */
     private final String description;
 
     /**

@@ -27,11 +27,17 @@ import org.springframework.util.StringUtils;
 @Service
 public class WechatPayScoreNotifyServiceImpl extends AbstractMerchantPaymentChannel implements WechatPayScoreNotifyService {
 
-    /** Merchant通道映射器 */
+    /**
+     * Merchant通道映射器
+    */
     private final MerchantChannelMapper merchantChannelMapper;
-    /** 提供者gateway注册表 */
+    /**
+     * 提供者gateway注册表
+    */
     private final PaymentProviderGatewayRegistry providerGatewayRegistry;
-    /** wechat薪酬分数排序服务 */
+    /**
+     * wechat薪酬分数排序服务
+    */
     private final WechatPayScoreOrderService wechatPayScoreOrderService;
 
     /**

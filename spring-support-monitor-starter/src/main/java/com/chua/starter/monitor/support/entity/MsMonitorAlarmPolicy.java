@@ -26,7 +26,9 @@ import java.io.Serializable;
 @TableName("ms_monitor_alarm_policy")
 public class MsMonitorAlarmPolicy implements Serializable {
 
-    /** 串行版本UID */
+    /**
+     * 串行版本UID
+    */
     private static final long serialVersionUID = 1L;
 
     /**

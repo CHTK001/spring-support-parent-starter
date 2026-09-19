@@ -10,6 +10,8 @@ import lombok.Data;
  */
 @Data
 public class UrlDocumentRequest {
-    /** 要抓取的网页 URL */
+    /**
+     * 要抓取的网页 URL
+    */
     private String url;
 }

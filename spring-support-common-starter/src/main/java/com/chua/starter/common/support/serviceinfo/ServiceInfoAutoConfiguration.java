@@ -66,7 +66,9 @@ public class ServiceInfoAutoConfiguration {
 
     @Bean
     @Order(Ordered.LOWEST_PRECEDENCE)
-    /** 服务信息端点detector */
+    /**
+     * 服务信息端点detector
+    */
     public ServiceInfoEndpointDetector serviceInfoEndpointDetector(
             Environment environment, ServiceInfoProperties properties) {
         /**

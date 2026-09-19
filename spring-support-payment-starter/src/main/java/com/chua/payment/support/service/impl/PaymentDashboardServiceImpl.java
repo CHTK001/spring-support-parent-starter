@@ -34,26 +34,46 @@ import java.util.Objects;
 @Service
 public class PaymentDashboardServiceImpl implements PaymentDashboardService {
 
-    /** Paid_订单_状态 */
+    /**
+     * Paid_订单_状态
+    */
     private static final List<String> PAID_ORDER_STATUSES = List.of("PAID", "COMPLETED", "REFUNDING", "REFUNDED");
-    /** 活跃_merchant_状态 */
+    /**
+     * 活跃_merchant_状态
+    */
     private static final int ACTIVE_MERCHANT_STATUS = 1;
-    /** 退税_状态 */
+    /**
+     * 退税_状态
+    */
     private static final String REFUNDED_STATUS = "REFUNDED";
-    /** 成功_状态 */
+    /**
+     * 成功_状态
+    */
     private static final String SUCCESS_STATUS = "SUCCESS";
 
-    /** Merchantmapper */
+    /**
+     * Merchantmapper
+    */
     private final MerchantMapper merchantMapper;
-    /** Merchant通道映射器 */
+    /**
+     * Merchant通道映射器
+    */
     private final MerchantChannelMapper merchantChannelMapper;
-    /** 薪酬排序映射器 */
+    /**
+     * 薪酬排序映射器
+    */
     private final PaymentOrderMapper paymentOrderMapper;
-    /** Paymentrefund排序映射器 */
+    /**
+     * Paymentrefund排序映射器
+    */
     private final PaymentRefundOrderMapper paymentRefundOrderMapper;
-    /** Paymentnotify日志映射器 */
+    /**
+     * Paymentnotify日志映射器
+    */
     private final PaymentNotifyLogMapper paymentNotifyLogMapper;
-    /** Transactionrecordmapper */
+    /**
+     * Transactionrecordmapper
+    */
     private final TransactionRecordMapper transactionRecordMapper;
 
     /**
@@ -80,7 +100,9 @@ public class PaymentDashboardServiceImpl implements PaymentDashboardService {
     }
 
     @Override
-    /** Summary */
+    /**
+     * Summary
+    */
     public PaymentDashboardSummaryVO summary(LocalDate startDate, LocalDate endDate) {
         LocalDate normalizedEndDate = endDate != null ? endDate : LocalDate.now();
         LocalDate normalizedStartDate = startDate != null ? startDate : normalizedEndDate;

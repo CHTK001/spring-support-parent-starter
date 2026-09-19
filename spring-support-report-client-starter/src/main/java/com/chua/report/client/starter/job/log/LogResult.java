@@ -17,7 +17,9 @@ import java.io.Serializable;
 @AllArgsConstructor
 @NoArgsConstructor
 public class LogResult implements Serializable {
-    /** 串行版本UID */
+    /**
+     * 串行版本UID
+    */
     private static final long serialVersionUID = 42L;
 
     /**

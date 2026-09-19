@@ -46,10 +46,14 @@ import java.util.Map;
 @Slf4j
 public class DataSourceHealthIndicator extends AbstractHealthIndicator {
 
-    /** 连接验证超时（秒） */
+    /**
+     * 连接验证超时（秒）
+    */
     private static final int VALIDATION_TIMEOUT_SECONDS = 5;
 
-    /** 运行时异常白名单（不标记为 DOWN，避免循环） */
+    /**
+     * 运行时异常白名单（不标记为 DOWN，避免循环）
+    */
     private static final String[] TRANSIENT_ERROR_PREFIXES = {
             "CommunicationsException", "SocketException", "InterruptedException"
     };

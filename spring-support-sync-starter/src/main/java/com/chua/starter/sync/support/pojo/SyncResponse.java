@@ -10,7 +10,9 @@ import java.io.Serializable;
  */
 public class SyncResponse implements Serializable {
 
-    /** 串行版本UID */
+    /**
+     * 串行版本UID
+    */
     private static final long serialVersionUID = 1L;
 
     /**
@@ -284,21 +286,37 @@ public class SyncResponse implements Serializable {
      * @since 4.0.0
      */
     public static class Builder {
-        /** 请求标识 */
+        /**
+         * 请求标识
+        */
         private String requestId;
-        /** 客户端标识 */
+        /**
+         * 客户端标识
+        */
         private String clientId;
-        /** Topic */
+        /**
+         * Topic
+        */
         private String topic;
-        /** 代码 */
+        /**
+         * 代码
+        */
         private int code;
-        /** 消息 */
+        /**
+         * 消息
+        */
         private String message;
-        /** 数据 */
+        /**
+         * 数据
+        */
         private Object data;
-        /** 时间戳 */
+        /**
+         * 时间戳
+        */
         private long timestamp;
-        /** 持续时间 */
+        /**
+         * 持续时间
+        */
         private long duration;
 
         /**

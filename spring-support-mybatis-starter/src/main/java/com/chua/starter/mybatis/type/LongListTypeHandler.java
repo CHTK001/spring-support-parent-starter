@@ -24,32 +24,42 @@ import java.util.List;
 @MappedTypes(List.class)
 public class LongListTypeHandler implements TypeHandler<List<Long>> {
 
-    /** Comma */
+    /**
+     * Comma
+    */
     private static final String COMMA = ",";
 
     @Override
-    /** 设置参数 */
+    /**
+     * 设置参数
+    */
     public void setParameter(PreparedStatement ps, int i, List<Long> strings, JdbcType jdbcType) throws SQLException {
         // 设置占位符
         ps.setString(i, Joiner.on(COMMA).join(strings));
     }
 
     @Override
-    /** 获取结果 */
+    /**
+     * 获取结果
+    */
     public List<Long> getResult(ResultSet rs, String columnName) throws SQLException {
         String value = rs.getString(columnName);
         return getResult(value);
     }
 
     @Override
-    /** 获取结果 */
+    /**
+     * 获取结果
+    */
     public List<Long> getResult(ResultSet rs, int columnIndex) throws SQLException {
         String value = rs.getString(columnIndex);
         return getResult(value);
     }
 
     @Override
-    /** 获取结果 */
+    /**
+     * 获取结果
+    */
     public List<Long> getResult(CallableStatement cs, int columnIndex) throws SQLException {
         String value = cs.getString(columnIndex);
         return getResult(value);

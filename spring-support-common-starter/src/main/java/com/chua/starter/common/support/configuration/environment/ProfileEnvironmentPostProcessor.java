@@ -59,7 +59,9 @@ import org.slf4j.LoggerFactory;
  */
 @SuppressWarnings("removal")
 public class ProfileEnvironmentPostProcessor implements EnvironmentPostProcessor, Ordered {
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(ProfileEnvironmentPostProcessor.class);
         /**
          * 目录前缀
@@ -92,7 +94,9 @@ public class ProfileEnvironmentPostProcessor implements EnvironmentPostProcessor
     private final PropertiesPropertySourceLoader propertiesLoader = new PropertiesPropertySourceLoader();
 
     @Override
-    /** Post处理环境 */
+    /**
+     * Post处理环境
+    */
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
         // 检查是否启用
         var enabledValue = environment.getProperty(ENABLED_KEY, "true");
@@ -396,7 +400,9 @@ public class ProfileEnvironmentPostProcessor implements EnvironmentPostProcessor
     }
 
     @Override
-    /** 获取订单 */
+    /**
+     * 获取订单
+    */
     public int getOrder() {
  // 在 配置数据环境post处理器 之后执行
         // 优先级低于业务配置和配置中心

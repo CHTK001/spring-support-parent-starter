@@ -27,7 +27,9 @@ import java.math.BigDecimal;
 @TableName("ms_monitor_alarm_rule")
 public class MsMonitorAlarmRule implements Serializable {
 
-    /** 串行版本UID */
+    /**
+     * 串行版本UID
+    */
     private static final long serialVersionUID = 1L;
 
     /**

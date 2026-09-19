@@ -16,62 +16,92 @@ import java.time.LocalDateTime;
 @TableName("pay_transaction_record")
 public class TransactionRecord {
     @TableId(value = "pay_transaction_record_id", type = IdType.AUTO)
-    /** 标识 */
+    /**
+     * 标识
+    */
     private Long id;
 
     @TableField("pay_transaction_record_transaction_no")
-    /** transactionno */
+    /**
+     * transactionno
+    */
     private String transactionNo;
 
     @TableField("pay_transaction_record_order_id")
-    /** 排序标识 */
+    /**
+     * 排序标识
+    */
     private Long orderId;
 
     @TableField("pay_transaction_record_order_no")
-    /** 排序NO */
+    /**
+     * 排序NO
+    */
     private String orderNo;
 
     @TableField("pay_transaction_record_merchant_id")
-    /** merchantid */
+    /**
+     * merchantid
+    */
     private Long merchantId;
 
     @TableField("pay_transaction_record_channel_id")
-    /** 通道标识 */
+    /**
+     * 通道标识
+    */
     private Long channelId;
 
     @TableField("pay_transaction_record_transaction_type")
-    /** Transaction类型 */
+    /**
+     * Transaction类型
+    */
     private String transactionType;
 
     @TableField("pay_transaction_record_amount")
-    /** Amount */
+    /**
+     * Amount
+    */
     private BigDecimal amount;
 
     @TableField("pay_transaction_record_channel_type")
-    /** 通道类型 */
+    /**
+     * 通道类型
+    */
     private String channelType;
 
     @TableField("pay_transaction_record_third_party_transaction_no")
-    /** thirdpartytransactionno */
+    /**
+     * thirdpartytransactionno
+    */
     private String thirdPartyTransactionNo;
 
     @TableField("pay_transaction_record_status")
-    /** 状态 */
+    /**
+     * 状态
+    */
     private Integer status;
 
     @TableField("pay_transaction_record_request_payload")
-    /** 请求payload */
+    /**
+     * 请求payload
+    */
     private String requestPayload;
 
     @TableField("pay_transaction_record_response_payload")
-    /** 响应payload */
+    /**
+     * 响应payload
+    */
     private String responsePayload;
 
     @TableField("pay_transaction_record_remark")
-    /** 评论 */
+    /**
+     * 评论
+    */
     private String remark;
 
     @TableField(value = "pay_transaction_record_created_at", fill = FieldFill.INSERT)
-    /** 创建时间AT */
+    /**
+     * 创建时间AT
+    */
     private LocalDateTime createdAt;
 }

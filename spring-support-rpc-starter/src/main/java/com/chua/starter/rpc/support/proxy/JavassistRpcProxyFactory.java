@@ -16,10 +16,14 @@ import java.util.List;
  */
 public class JavassistRpcProxyFactory implements RpcProxyFactory {
 
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(JavassistRpcProxyFactory.class);
 
-    /** Javassist_可用 */
+    /**
+     * Javassist_可用
+    */
     private static final boolean JAVASSIST_AVAILABLE;
 
     static {
@@ -27,7 +31,9 @@ public class JavassistRpcProxyFactory implements RpcProxyFactory {
     }
 
     @Override
-    /** 创建代理 */
+    /**
+     * 创建代理
+    */
     public Object createProxy(ClassLoader classLoader, List<Class<?>> interfaces, InvocationHandler handler) {
         if (!JAVASSIST_AVAILABLE) {
             /**
@@ -56,7 +62,9 @@ public class JavassistRpcProxyFactory implements RpcProxyFactory {
     }
 
     @Override
-    /** 获取订单 */
+    /**
+     * 获取订单
+    */
     public int getOrder() {
         // Javassist 性能更好，优先级较高
         return JAVASSIST_AVAILABLE ? 0 : Integer.MAX_VALUE;

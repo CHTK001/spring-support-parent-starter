@@ -30,7 +30,9 @@ public class TransactionProperties {
     private boolean enable = false;
 
 
-    /** 前缀 */
+    /**
+     * 前缀
+    */
     public static final String PREFIX = "plugin.transaction";
     /**
      * 事务超时时间

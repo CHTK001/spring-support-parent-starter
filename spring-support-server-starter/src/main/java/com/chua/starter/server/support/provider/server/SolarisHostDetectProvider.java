@@ -27,7 +27,9 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class SolarisHostDetectProvider implements HostDetectProvider {
 
-    /** SSH 连接池管理器 */
+    /**
+     * SSH 连接池管理器
+    */
     private final ConnectionManager connectionManager;
 
     @Override

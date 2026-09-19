@@ -183,35 +183,45 @@ public class LambdaQueryWrapperX<T> extends LambdaQueryWrapper<T> {
     // ========== 重写父类方法，方便链式调用 ==========
 
     @Override
-    /** Eq */
+    /**
+     * Eq
+    */
     public LambdaQueryWrapperX<T> eq(boolean condition, SFunction<T, ?> column, Object val) {
         super.eq(condition, column, val);
         return this;
     }
 
     @Override
-    /** Eq */
+    /**
+     * Eq
+    */
     public LambdaQueryWrapperX<T> eq(SFunction<T, ?> column, Object val) {
         super.eq(column, val);
         return this;
     }
 
     @Override
-    /** 订单bydesc */
+    /**
+     * 订单bydesc
+    */
     public LambdaQueryWrapperX<T> orderByDesc(SFunction<T, ?> column) {
         super.orderByDesc(true, column);
         return this;
     }
 
     @Override
-    /** 最后一个 */
+    /**
+     * 最后一个
+    */
     public LambdaQueryWrapperX<T> last(String lastSql) {
         super.last(lastSql);
         return this;
     }
 
     @Override
-    /** 入 */
+    /**
+     * 入
+    */
     public LambdaQueryWrapperX<T> in(SFunction<T, ?> column, Collection<?> coll) {
         super.in(column, coll);
         return this;

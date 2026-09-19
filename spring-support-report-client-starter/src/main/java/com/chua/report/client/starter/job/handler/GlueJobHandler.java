@@ -22,7 +22,9 @@ public class GlueJobHandler implements JobHandler {
      * 胶水代码更新时间戳
      */
     @Getter
-    /** Glueupdatetime */
+    /**
+     * Glueupdatetime
+    */
     private final long glueUpdatetime;
 
     /**
@@ -42,7 +44,9 @@ public class GlueJobHandler implements JobHandler {
     }
 
     @Override
-    /** 执行 */
+    /**
+     * 执行
+    */
     public void execute() throws Exception {
  // 记录胶水版本信息
         DefaultJobLog.log("----------- GLUE任务执行, 版本:" + glueUpdatetime + " -----------");
@@ -52,14 +56,18 @@ public class GlueJobHandler implements JobHandler {
     }
 
     @Override
-    /** 初始化 */
+    /**
+     * 初始化
+    */
     public void init() throws Exception {
         log.debug("初始化GLUE任务处理器, 版本: {}", glueUpdatetime);
         this.jobHandler.init();
     }
 
     @Override
-    /** 销毁 */
+    /**
+     * 销毁
+    */
     public void destroy() throws Exception {
         log.debug("销毁GLUE任务处理器, 版本: {}", glueUpdatetime);
         this.jobHandler.destroy();

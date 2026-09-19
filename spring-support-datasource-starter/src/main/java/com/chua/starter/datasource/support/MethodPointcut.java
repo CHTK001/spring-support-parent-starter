@@ -16,7 +16,9 @@ import org.springframework.context.annotation.Bean;
 public class MethodPointcut implements ApplicationContextAware {
 
 
-    /** Application上下文 */
+    /**
+     * Application上下文
+    */
     private ApplicationContext applicationContext;
 
     /**
@@ -33,7 +35,9 @@ public class MethodPointcut implements ApplicationContextAware {
     }
 
     @Override
-    /** 设置application上下文 */
+    /**
+     * 设置application上下文
+    */
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
     }

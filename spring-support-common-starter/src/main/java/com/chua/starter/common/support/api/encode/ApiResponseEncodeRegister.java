@@ -22,13 +22,21 @@ import java.util.List;
  * @author CH
  */
 public class ApiResponseEncodeRegister implements Upgrade<ApiResponseEncodeConfiguration>, ApplicationListener<ApiResponseEncodeConfiguration>  {
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ApiResponseEncodeRegister.class);
-    /** White列表 */
+    /**
+     * White列表
+    */
     private final List<String> whiteList;
-    /** Codec类型 */
+    /**
+     * Codec类型
+    */
     private final String codecType;
-    /** API响应encodeconfiguration */
+    /**
+     * API响应encodeconfiguration
+    */
     private ApiResponseEncodeConfiguration apiResponseEncodeConfiguration;
 
     /**
@@ -71,7 +79,9 @@ public class ApiResponseEncodeRegister implements Upgrade<ApiResponseEncodeConfi
         return !apiResponseEncodeConfiguration.isCodecResponseOpen();
     }
 
-    /** 校验 */
+    /**
+     * 校验
+    */
     private void check() {
         if (null != apiResponseEncodeConfiguration) {
             return;
@@ -192,13 +202,17 @@ public class ApiResponseEncodeRegister implements Upgrade<ApiResponseEncodeConfi
     }
 
     @Override
-    /** Upgrade */
+    /**
+     * Upgrade
+    */
     public void upgrade(ApiResponseEncodeConfiguration apiResponseEncodeConfiguration) {
         this.apiResponseEncodeConfiguration = apiResponseEncodeConfiguration;
     }
 
     @Override
-    /** onapplication事件 */
+    /**
+     * onapplication事件
+    */
     public void onApplicationEvent(ApiResponseEncodeConfiguration event) {
         /**
          * upgrade。

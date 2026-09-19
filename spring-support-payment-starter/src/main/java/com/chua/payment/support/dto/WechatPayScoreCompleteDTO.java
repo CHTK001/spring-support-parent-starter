@@ -13,18 +13,28 @@ import java.util.Map;
  */
 @Data
 public class WechatPayScoreCompleteDTO {
-    /** 总数amount */
+    /**
+     * 总数amount
+    */
     private BigDecimal totalAmount;
-    /** 饰面类型 */
+    /**
+     * 饰面类型
+    */
     private String finishType;
-    /** ReasonMLmlml */
+    /**
+     * ReasonMLmlml
+    */
     private String reason;
-    /** 结束时间 */
+    /**
+     * 结束时间
+    */
     private String endTime;
     private List<Map<String, Object>> postPayments; // postpayments
     private List<Map<String, Object>> postDiscounts; // postdiscounts
     private Map<String, Object> extraParams; // extra参数
-    /** 评论 */
+    /**
+     * 评论
+    */
     private String remark;
 }
 

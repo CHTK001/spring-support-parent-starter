@@ -21,7 +21,9 @@ public class EduAnswerSheet {
      * 答题卡标识
      */
     @TableId(type = IdType.AUTO)
-    /** answersheetid */
+    /**
+     * answersheetid
+    */
     private Long answerSheetId;
 
     /**

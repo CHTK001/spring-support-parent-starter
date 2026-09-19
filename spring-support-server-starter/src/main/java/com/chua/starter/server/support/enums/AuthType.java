@@ -8,9 +8,13 @@ package com.chua.starter.server.support.enums;
  */
 public enum AuthType {
 
-    /** 用户名密码 */
+    /**
+     * 用户名密码
+    */
     PASSWORD,
 
-    /** SSH 公私钥（引用密钥库） */
+    /**
+     * SSH 公私钥（引用密钥库）
+    */
     PUBLIC_KEY
 }

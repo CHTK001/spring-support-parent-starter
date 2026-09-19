@@ -14,13 +14,17 @@ import java.io.IOException;
 public class OctetAdviceResolver implements AdviceResolver {
 
     @Override
-    /** 类型 */
+    /**
+     * 类型
+    */
     public String type() {
         return MediaType.APPLICATION_OCTET_STREAM_VALUE;
     }
 
     @Override
-    /** 解析 */
+    /**
+     * 解析
+    */
     public Object resolve(HttpServletResponse response, Integer status, String message) throws IOException {
         if (null == response) {
             return new byte[0];

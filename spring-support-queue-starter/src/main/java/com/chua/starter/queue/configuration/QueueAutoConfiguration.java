@@ -33,7 +33,9 @@ import static com.chua.starter.common.support.logger.ModuleLog.highlight;
 public class QueueAutoConfiguration {
 
     @Autowired
-    /** 队列属性 */
+    /**
+     * 队列属性
+    */
     private QueueProperties queueProperties;
 
     /**

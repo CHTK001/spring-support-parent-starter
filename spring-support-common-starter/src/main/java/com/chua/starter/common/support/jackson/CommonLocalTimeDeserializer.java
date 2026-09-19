@@ -19,7 +19,9 @@ import java.time.LocalTime;
  */
 public class CommonLocalTimeDeserializer extends LocalTimeDeserializer {
     @Override
-    /** 反序列化 */
+    /**
+     * 反序列化
+    */
     public LocalTime deserialize(JsonParser parser, DeserializationContext context) throws IOException {
         IOException ex;
         try {

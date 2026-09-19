@@ -34,7 +34,9 @@ public class Result<T> implements Serializable {
      */
     private Long timestamp;
 
-    /** 创建 结果 实例 */
+    /**
+     * 创建 结果 实例
+    */
     public Result() {
         this.timestamp = System.currentTimeMillis();
     }

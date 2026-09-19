@@ -225,23 +225,41 @@ public final class OpenIdGenerator {
      * @since 4.0.0
      */
     public static class Platform {
-        /** 微信 */
+        /**
+         * 微信
+        */
         public static final String WECHAT = "wechat";
-        /** 微信小程序 */
+        /**
+         * 微信小程序
+        */
         public static final String WECHAT_MINI = "wechat_mini";
-        /** 微信公众号 */
+        /**
+         * 微信公众号
+        */
         public static final String WECHAT_MP = "wechat_mp";
-        /** 支付宝 */
+        /**
+         * 支付宝
+        */
         public static final String ALIPAY = "alipay";
-        /** 钉钉 */
+        /**
+         * 钉钉
+        */
         public static final String DINGTALK = "dingtalk";
-        /** 企业微信 */
+        /**
+         * 企业微信
+        */
         public static final String WEWORK = "wework";
-        /** GitHub */
+        /**
+         * GitHub
+        */
         public static final String GITHUB = "github";
-        /** Gitee */
+        /**
+         * Gitee
+        */
         public static final String GITEE = "gitee";
-        /** 系统内部 */
+        /**
+         * 系统内部
+        */
         public static final String SYSTEM = "system";
 
         /**

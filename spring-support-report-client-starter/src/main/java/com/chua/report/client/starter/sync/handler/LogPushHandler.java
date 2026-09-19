@@ -41,15 +41,21 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class LogPushHandler implements SyncMessageHandler, ApplicationContextAware {
 
 
-    /** Application上下文 */
+    /**
+     * Application上下文
+    */
     private ApplicationContext applicationContext;
 
     @Value("${spring.application.name:unknown}")
-    /** Application名称 */
+    /**
+     * Application名称
+    */
     private String applicationName;
 
     @Value("${server.port:8080}")
-    /** 服务器端口 */
+    /**
+     * 服务器端口
+    */
     private Integer serverPort;
 
     /**
@@ -72,17 +78,23 @@ public class LogPushHandler implements SyncMessageHandler, ApplicationContextAwa
      */
     private SyncClient syncClient;
 
-    /** Formatter */
+    /**
+     * Formatter
+    */
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
 
     @Override
-    /** 设置application上下文 */
+    /**
+     * 设置application上下文
+    */
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
     }
 
     @PostConstruct
-    /** 初始化 */
+    /**
+     * 初始化
+    */
     public void init() {
         try {
             syncClient = applicationContext.getBean(SyncClient.class);
@@ -92,20 +104,26 @@ public class LogPushHandler implements SyncMessageHandler, ApplicationContextAwa
     }
 
     @Override
-    /** 获取名称 */
+    /**
+     * 获取名称
+    */
     public String getName() {
         return "logPushHandler";
     }
 
     @Override
-    /** 支持 */
+    /**
+     * 支持
+    */
     public boolean supports(String topic) {
         return MonitorTopics.LOG_SUBSCRIBE.equals(topic) 
                 || MonitorTopics.LOG_UNSUBSCRIBE.equals(topic);
     }
 
     @Override
-    /** 处理 */
+    /**
+     * 处理
+    */
     public Object handle(String topic, String sessionId, Map<String, Object> data) {
         log.info("[LogPush] 收到消息: topic={}, sessionId={}", topic, sessionId);
 
@@ -229,7 +247,9 @@ public class LogPushHandler implements SyncMessageHandler, ApplicationContextAwa
     }
 
     @PreDestroy
-    /** 销毁 */
+    /**
+     * 销毁
+    */
     public void destroy() {
         /**
          * 停止日志追加。
@@ -290,7 +310,9 @@ public class LogPushHandler implements SyncMessageHandler, ApplicationContextAwa
     private class LogPushAppender extends AppenderBase<ILoggingEvent> {
 
         @Override
-        /** 追加 */
+        /**
+         * 追加
+        */
         protected void append(ILoggingEvent event) {
             // 过滤掉自身的日志，避免死循环
             if (event.getLoggerName().contains("LogPushHandler")) {

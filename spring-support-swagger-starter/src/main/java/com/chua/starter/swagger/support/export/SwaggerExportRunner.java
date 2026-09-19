@@ -25,9 +25,13 @@ import org.springframework.stereotype.Component;
 @ConditionalOnProperty(prefix = "chua.swagger.export", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class SwaggerExportRunner implements CommandLineRunner {
 
-    /** 打开api */
+    /**
+     * 打开api
+    */
     private final OpenAPI openAPI;
-    /** 属性 */
+    /**
+     * 属性
+    */
     private final SwaggerExportProperties properties;
 
     /**
@@ -42,7 +46,9 @@ public class SwaggerExportRunner implements CommandLineRunner {
     }
 
     @Override
-    /** 运行 */
+    /**
+     * 运行
+    */
     public void run(String... args) {
         if (openAPI == null) {
             log.warn("[SwaggerExport] 未发现 OpenAPI Bean (SpringDoc 未加载?), 跳过导出");

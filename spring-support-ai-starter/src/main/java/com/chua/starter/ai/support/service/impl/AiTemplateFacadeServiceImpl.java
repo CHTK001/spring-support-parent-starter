@@ -21,7 +21,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AiTemplateFacadeServiceImpl implements AiTemplateFacadeService {
 
-    /** SYSAI模板映射器 */
+    /**
+     * SYSAI模板映射器
+    */
     private final SysAiTemplateMapper sysAiTemplateMapper;
 
     /**

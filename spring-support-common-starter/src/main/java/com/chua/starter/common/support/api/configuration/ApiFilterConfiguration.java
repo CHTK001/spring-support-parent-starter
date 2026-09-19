@@ -33,10 +33,14 @@ import org.slf4j.LoggerFactory;
  * @author CH
  */
 public class ApiFilterConfiguration  {
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(ApiFilterConfiguration.class);
 
-    /** Sc_nonce_reject */
+    /**
+     * Sc_nonce_reject
+    */
     private static final int SC_NONCE_REJECT = 400;
         /**
          * 响应头中的版本字段名
@@ -95,7 +99,9 @@ public class ApiFilterConfiguration  {
      */
     public static class ApiVersionFilter implements Filter {
 
-        /** 版本参数解析器 */
+        /**
+         * 版本参数解析器
+        */
         private final VersionArgumentResolver versionArgumentResolver;
 
         /**
@@ -107,7 +113,9 @@ public class ApiFilterConfiguration  {
         }
 
         @Override
-        /** 执行过滤 */
+        /**
+         * 执行过滤
+        */
         public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
                 throws IOException, ServletException {
             if (versionArgumentResolver != null && response instanceof HttpServletResponse httpServletResponse) {
@@ -127,14 +135,20 @@ public class ApiFilterConfiguration  {
      * @since 4.0.0
      */
     public static class NonceXhrFilter implements Filter {
-        /** 日志 */
+        /**
+         * 日志
+        */
         private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(NonceXhrFilter.class);
 
-        /** Reject_msg */
+        /**
+         * Reject_msg
+        */
         private static final String REJECT_MSG = "{\"code\":400,\"msg\":\"请求校验失败，请勿重放请求\"}";
 
         @Override
-        /** 执行过滤 */
+        /**
+         * 执行过滤
+        */
         public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
                 throws IOException, ServletException {
             if (!(request instanceof HttpServletRequest req) || !(response instanceof HttpServletResponse resp)) {

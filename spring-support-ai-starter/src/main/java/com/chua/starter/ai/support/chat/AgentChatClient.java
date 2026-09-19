@@ -23,13 +23,19 @@ import java.util.function.Consumer;
 @Slf4j
 public class AgentChatClient implements ChatClient {
 
-    /** 默认模型名称 */
+    /**
+     * 默认模型名称
+    */
     private static final String DEFAULT_MODEL = "agent-router";
 
-    /** 内部 Agent 实例 */
+    /**
+     * 内部 Agent 实例
+    */
     private final Agent agent;
 
-    /** 模型名称 */
+    /**
+     * 模型名称
+    */
     private String model = DEFAULT_MODEL;
 
     /**

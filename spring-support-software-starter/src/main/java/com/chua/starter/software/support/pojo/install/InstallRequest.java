@@ -21,7 +21,9 @@ public class InstallRequest {
      */
     @NotBlank(message = "软件ID不能为空")
     @Schema(description = "软件ID")
-    /** softwareid */
+    /**
+     * softwareid
+    */
     private String softwareId;
 
     /**
@@ -29,28 +31,36 @@ public class InstallRequest {
      */
     @NotBlank(message = "用户ID不能为空")
     @Schema(description = "用户ID")
-    /** 用户标识 */
+    /**
+     * 用户标识
+    */
     private String userId;
 
     /**
      * 设备标识
      */
     @Schema(description = "设备ID")
-    /** deviceid */
+    /**
+     * deviceid
+    */
     private String deviceId;
 
     /**
      * 安装路径
      */
     @Schema(description = "安装路径")
-    /** Install路径 */
+    /**
+     * Install路径
+    */
     private String installPath;
 
     /**
      * 源标识
      */
     @Schema(description = "源ID")
-    /** 来源标识 */
+    /**
+     * 来源标识
+    */
     private String sourceId;
 
     /**

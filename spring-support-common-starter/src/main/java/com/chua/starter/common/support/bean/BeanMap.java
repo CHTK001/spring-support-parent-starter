@@ -13,7 +13,9 @@ import java.util.Map;
  */
 public final class BeanMap {
 
-    /** 创建 Bean映射 实例 */
+    /**
+     * 创建 Bean映射 实例
+    */
     private BeanMap() {
     }
 

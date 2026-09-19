@@ -54,15 +54,25 @@ import org.slf4j.LoggerFactory;
 @EnableConfigurationProperties(JacksonProperties.class)
 @SuppressWarnings({"removal"})
 public class JacksonConfiguration {
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(JacksonConfiguration.class);
-    /** 日期_时间_formatter */
+    /**
+     * 日期_时间_formatter
+    */
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-    /** 日期_formatter */
+    /**
+     * 日期_formatter
+    */
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-    /** 时间_formatter */
+    /**
+     * 时间_formatter
+    */
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss");
-    /** 简单_日期_格式化 */
+    /**
+     * 简单_日期_格式化
+    */
     private static final SimpleDateFormat SIMPLE_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
     /**
@@ -211,10 +221,14 @@ public class JacksonConfiguration {
      * @since 4.0.0
      */
     static class TransientFieldIgnoringDeserializer extends StdDeserializer<Object> {
-        /** 串行版本UID */
+        /**
+         * 串行版本UID
+        */
         private static final long serialVersionUID = 1L;
 
-        /** 创建 transient字段ignoring反序列化器 实例 */
+        /**
+         * 创建 transient字段ignoring反序列化器 实例
+        */
         public TransientFieldIgnoringDeserializer() {
             /**
              * 父。
@@ -224,7 +238,9 @@ public class JacksonConfiguration {
         }
 
         @Override
-        /** 反序列化 */
+        /**
+         * 反序列化
+        */
         public Object deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
             return p.readValuesAs(Object.class);
         }
@@ -246,7 +262,9 @@ public class JacksonConfiguration {
         }
 
         @Override
-        /** 处理unexpected令牌 */
+        /**
+         * 处理unexpected令牌
+        */
         public Object handleUnexpectedToken(DeserializationContext ctxt, JavaType targetType, JsonToken t, JsonParser p, String failureMsg) throws IOException {
             Class<?> targetRawClass = targetType.getRawClass();
             String name = t.name();

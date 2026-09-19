@@ -49,17 +49,27 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> implements IEduPaperService {
 
-    /** Paperquestionmapper */
+    /**
+     * Paperquestionmapper
+    */
     private final EduPaperQuestionMapper paperQuestionMapper;
-    /** Questionmapper */
+    /**
+     * Questionmapper
+    */
     private final EduQuestionMapper questionMapper;
-    /** EDUAI服务 */
+    /**
+     * EDUAI服务
+    */
     private final EduAiService eduAiService;
-    /** 属性 */
+    /**
+     * 属性
+    */
     private final EduAiProperties properties;
 
     @Override
-    /** Page查询 */
+    /**
+     * Page查询
+    */
     public PageResult<PaperVO> pageQuery(PaperQueryDTO query) {
         LambdaQueryWrapper<EduPaper> wrapper = new LambdaQueryWrapper<>();
         if (StringUtils.hasText(query.getSubject())) {
@@ -87,7 +97,9 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
     }
 
     @Override
-    /** 获取paperdetail */
+    /**
+     * 获取paperdetail
+    */
     public PaperVO getPaperDetail(Long paperId) {
         EduPaper paper = baseMapper.selectById(paperId);
         if (paper == null) {

@@ -34,7 +34,9 @@ public final class KeyGenerator {
      */
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
-    /** 创建 Key生成器 实例 */
+    /**
+     * 创建 Key生成器 实例
+    */
     private KeyGenerator() {
         // 工具类禁止实例化
     }

@@ -50,10 +50,14 @@ import java.util.function.Consumer;
 @RequiredArgsConstructor
 public class HostOnlineScheduler {
 
-    /** 主机 映射器 */
+    /**
+     * 主机 映射器
+    */
     private final MsServerHostMapper hostMapper;
 
-    /** 采集 提供者 注册中心（SPI 按 mode 路由） */
+    /**
+     * 采集 提供者 注册中心（SPI 按 mode 路由）
+    */
     private final HostCollectProviderRegistry collectRegistry;
 
     /**
@@ -62,7 +66,9 @@ public class HostOnlineScheduler {
     @Setter
     private Consumer<MsServerHost> delayHook; // 延迟hook
 
-    /** 在线状态变更钩子（监控 侧注册；仅状态翻转时回调） */
+    /**
+     * 在线状态变更钩子（监控 侧注册；仅状态翻转时回调）
+    */
     @Setter
     private Consumer<MsServerHost> onlineHook; // onlinehook
 
@@ -72,25 +78,39 @@ public class HostOnlineScheduler {
     @Setter
     private Consumer<MsServerHost> collectHook; // collecthook
 
-    /** TCP 连接超时(毫秒) */
+    /**
+     * TCP 连接超时(毫秒)
+    */
     private static final int CONNECT_TIMEOUT_MS = 3000;
 
-    /** 默认在离线间隔(秒) */
+    /**
+     * 默认在离线间隔(秒)
+    */
     private static final int DEFAULT_ONLINE_INTERVAL = 60;
 
-    /** 默认采集间隔(秒) */
+    /**
+     * 默认采集间隔(秒)
+    */
     private static final int DEFAULT_COLLECT_INTERVAL = 3600;
 
-    /** 默认延迟检测间隔(秒) */
+    /**
+     * 默认延迟检测间隔(秒)
+    */
     private static final int DEFAULT_DELAY_INTERVAL = 60;
 
-    /** 最小间隔(秒) */
+    /**
+     * 最小间隔(秒)
+    */
     private static final int MIN_INTERVAL = 5;
 
-    /** 状态：启用 */
+    /**
+     * 状态：启用
+    */
     private static final int ENABLED = 1;
 
-    /** 虚拟线程执行器（批量并发探测/采集/延迟，避免逐个串行阻塞时间轮） */
+    /**
+     * 虚拟线程执行器（批量并发探测/采集/延迟，避免逐个串行阻塞时间轮）
+    */
     private static final ExecutorService VIRTUAL_EXECUTOR =
             java.util.concurrent.Executors.newThreadPerTaskExecutor(
                     Thread.ofVirtual().name("host-online-").factory());

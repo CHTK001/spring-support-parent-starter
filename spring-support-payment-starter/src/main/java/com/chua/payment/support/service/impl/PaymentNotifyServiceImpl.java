@@ -44,15 +44,25 @@ import java.util.Map;
 @Service
 public class PaymentNotifyServiceImpl extends AbstractMerchantPaymentChannel implements PaymentNotifyService {
 
-    /** Merchant通道映射器 */
+    /**
+     * Merchant通道映射器
+    */
     private final MerchantChannelMapper merchantChannelMapper;
-    /** 薪酬排序映射器 */
+    /**
+     * 薪酬排序映射器
+    */
     private final PaymentOrderMapper paymentOrderMapper;
-    /** Payment排序服务 */
+    /**
+     * Payment排序服务
+    */
     private final PaymentOrderService paymentOrderService;
-    /** Paymentrefund排序服务 */
+    /**
+     * Paymentrefund排序服务
+    */
     private final PaymentRefundOrderService paymentRefundOrderService;
-    /** 提供者gateway注册表 */
+    /**
+     * 提供者gateway注册表
+    */
     private final PaymentProviderGatewayRegistry providerGatewayRegistry;
 
     /**

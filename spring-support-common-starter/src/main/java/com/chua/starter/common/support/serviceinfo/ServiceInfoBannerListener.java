@@ -24,9 +24,13 @@ import org.slf4j.LoggerFactory;
 public class ServiceInfoBannerListener implements SmartApplicationListener {
     private static final Logger log = LoggerFactory.getLogger(ServiceInfoBannerListener.class); // 日志
 
-    /** Detector */
+    /**
+     * Detector
+    */
     private final ServiceInfoEndpointDetector detector;
-    /** 属性 */
+    /**
+     * 属性
+    */
     private final ServiceInfoProperties properties;
     private volatile boolean bannerPrinted = false; // bannerprinted
 
@@ -42,14 +46,18 @@ public class ServiceInfoBannerListener implements SmartApplicationListener {
     }
 
     @Override
-    /** 支持事件类型 */
+    /**
+     * 支持事件类型
+    */
     public boolean supportsEventType(Class<? extends ApplicationEvent> eventType) {
         return ApplicationReadyEvent.class.isAssignableFrom(eventType)
                 || ApplicationFailedEvent.class.isAssignableFrom(eventType);
     }
 
     @Override
-    /** onapplication事件 */
+    /**
+     * onapplication事件
+    */
     public void onApplicationEvent(ApplicationEvent event) {
         if (event instanceof ApplicationReadyEvent) {
             /**
@@ -107,7 +115,9 @@ public class ServiceInfoBannerListener implements SmartApplicationListener {
 
  // smartapplication监听器 requires these 方法
     @Override
-    /** 获取订单 */
+    /**
+     * 获取订单
+    */
     public int getOrder() {
         return Ordered.LOWEST_PRECEDENCE;
     }

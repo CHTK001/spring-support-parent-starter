@@ -96,7 +96,9 @@ public class DahuaCloudSession extends AbstractOpenApiSession {
         }
     }
 
-    /** Login */
+    /**
+     * Login
+    */
     private void login() {
         try {
             Map<String, Object> params = new LinkedHashMap<>();
@@ -132,7 +134,9 @@ public class DahuaCloudSession extends AbstractOpenApiSession {
     }
 
     @Override
-    /** 执行请求 */
+    /**
+     * 执行请求
+    */
     protected JsonNode doRequest(String method, String path, Map<String, Object> params) {
         if (!tokenValid() && !PATH_LOGIN.equals(path)) {
             /**
@@ -176,14 +180,18 @@ public class DahuaCloudSession extends AbstractOpenApiSession {
     }
 
     @Override
-    /** 获取liveurl */
+    /**
+     * 获取liveurl
+    */
     public String getLiveUrl(int channel, String protocol) {
         JsonNode data = getLiveUrl(channel);
         return data.path("url").asText(data.path("hls").asText(data.path("flv").asText("")));
     }
 
     @Override
-    /** 获取playbackurl */
+    /**
+     * 获取playbackurl
+    */
     public String getPlaybackUrl(int channel, com.chua.starter.device.spi.model.TimeRange range) {
         Map<String, Object> params = new HashMap<>();
         params.put("deviceSerial", info.getDeviceSerial());
@@ -219,7 +227,9 @@ public class DahuaCloudSession extends AbstractOpenApiSession {
     }
 
     @Override
-    /** ptzcontrol */
+    /**
+     * ptzcontrol
+    */
     public void ptzControl(com.chua.starter.device.spi.model.PtzCommand cmd, double speed) {
         if (cmd == com.chua.starter.device.spi.model.PtzCommand.STOP) {
             return;
@@ -260,7 +270,9 @@ public class DahuaCloudSession extends AbstractOpenApiSession {
     }
 
     @Override
-    /** 远程解锁 */
+    /**
+     * 远程解锁
+    */
     public void remoteUnlock(int doorId) {
         Map<String, Object> params = new HashMap<>();
         params.put("deviceSerial", info.getDeviceSerial());

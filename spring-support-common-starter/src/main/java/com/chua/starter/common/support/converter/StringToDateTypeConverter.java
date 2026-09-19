@@ -13,7 +13,9 @@ import java.util.Date;
  */
 public class StringToDateTypeConverter implements Converter<String, Date> {
     @Override
-    /** 转换 */
+    /**
+     * 转换
+    */
     public Date convert(String source) {
         try {
         return DateUtils.parseDate(source);

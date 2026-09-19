@@ -84,9 +84,13 @@ public final class UserAgent {
      * 用户-Agent 信息。
      */
     public static final class UserAgentInfo {
-        /** Browser */
+        /**
+         * Browser
+        */
         private final Browser browser;
-        /** Operatingsystem */
+        /**
+         * Operatingsystem
+        */
         private final OperatingSystem operatingSystem;
 
         /**

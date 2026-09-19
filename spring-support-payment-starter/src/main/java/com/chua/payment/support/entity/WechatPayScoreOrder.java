@@ -18,111 +18,165 @@ import java.time.LocalDateTime;
 @TableName("pay_wechat_pay_score_order")
 public class WechatPayScoreOrder {
     @TableId(value = "pay_wechat_pay_score_order_id", type = IdType.AUTO)
-    /** 标识 */
+    /**
+     * 标识
+    */
     private Long id;
 
     @TableField("pay_wechat_pay_score_order_merchant_id")
-    /** merchantid */
+    /**
+     * merchantid
+    */
     private Long merchantId;
 
     @TableField("pay_wechat_pay_score_order_channel_id")
-    /** 通道标识 */
+    /**
+     * 通道标识
+    */
     private Long channelId;
 
     @TableField("pay_wechat_pay_score_order_user_id")
-    /** 用户标识 */
+    /**
+     * 用户标识
+    */
     private Long userId;
 
     @TableField("pay_wechat_pay_score_order_out_order_no")
-    /** 出排序NO */
+    /**
+     * 出排序NO
+    */
     private String outOrderNo;
 
     @TableField("pay_wechat_pay_score_order_service_order_no")
-    /** 服务排序NO */
+    /**
+     * 服务排序NO
+    */
     private String serviceOrderNo;
 
     @TableField("pay_wechat_pay_score_order_app_id")
-    /** APPID */
+    /**
+     * APPID
+    */
     private String appId;
 
     @TableField("pay_wechat_pay_score_order_service_id")
-    /** 服务标识 */
+    /**
+     * 服务标识
+    */
     private String serviceId;
 
     @TableField("pay_wechat_pay_score_order_open_id")
-    /** 打开标识 */
+    /**
+     * 打开标识
+    */
     private String openId;
 
     @TableField("pay_wechat_pay_score_order_state")
-    /** 状态 */
+    /**
+     * 状态
+    */
     private String state;
 
     @TableField("pay_wechat_pay_score_order_total_amount")
-    /** 总数amount */
+    /**
+     * 总数amount
+    */
     private BigDecimal totalAmount;
 
     @TableField("pay_wechat_pay_score_order_notify_url")
-    /** 通知url */
+    /**
+     * 通知url
+    */
     private String notifyUrl;
 
     @TableField("pay_wechat_pay_score_order_service_introduction")
-    /** 服务introduction */
+    /**
+     * 服务introduction
+    */
     private String serviceIntroduction;
 
     @TableField("pay_wechat_pay_score_order_start_time")
-    /** 开始时间 */
+    /**
+     * 开始时间
+    */
     private String startTime;
 
     @TableField("pay_wechat_pay_score_order_end_time")
-    /** 结束时间 */
+    /**
+     * 结束时间
+    */
     private String endTime;
 
     @TableField("pay_wechat_pay_score_order_finish_type")
-    /** 饰面类型 */
+    /**
+     * 饰面类型
+    */
     private String finishType;
 
     @TableField("pay_wechat_pay_score_order_reason")
-    /** ReasonMLmlml */
+    /**
+     * ReasonMLmlml
+    */
     private String reason;
 
     @TableField("pay_wechat_pay_score_order_finish_reason")
-    /** Finishreason */
+    /**
+     * Finishreason
+    */
     private String finishReason;
 
     @TableField("pay_wechat_pay_score_order_package_info")
-    /** 包信息 */
+    /**
+     * 包信息
+    */
     private String packageInfo;
 
     @TableField("pay_wechat_pay_score_order_attach")
-    /** Attach */
+    /**
+     * Attach
+    */
     private String attach;
 
     @TableField("pay_wechat_pay_score_order_request_payload")
-    /** 请求payload */
+    /**
+     * 请求payload
+    */
     private String requestPayload;
 
     @TableField("pay_wechat_pay_score_order_response_payload")
-    /** 响应payload */
+    /**
+     * 响应payload
+    */
     private String responsePayload;
 
     @TableField("pay_wechat_pay_score_order_remark")
-    /** 评论 */
+    /**
+     * 评论
+    */
     private String remark;
 
     @TableField("pay_wechat_pay_score_order_completed_at")
-    /** 完成at */
+    /**
+     * 完成at
+    */
     private LocalDateTime completedAt;
 
     @TableField("pay_wechat_pay_score_order_cancelled_at")
-    /** cancelledat */
+    /**
+     * cancelledat
+    */
     private LocalDateTime cancelledAt;
 
     @TableField("pay_wechat_pay_score_order_create_time")
-    /** 创建时间 */
+    /**
+     * 创建时间
+    */
     private LocalDateTime createTime;
 
     @TableField("pay_wechat_pay_score_order_update_time")
-    /** 更新时间 */
+    /**
+     * 更新时间
+    */
     private LocalDateTime updateTime;
 }
 

@@ -27,12 +27,18 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 public class WalletWithdrawApprovalServiceImpl implements WalletWithdrawApprovalService {
 
-    /** Approvalmapper */
+    /**
+     * Approvalmapper
+    */
     private final WalletWithdrawApprovalMapper approvalMapper;
-    /** 幂等模板 */
+    /**
+     * 幂等模板
+    */
     private final IdempotentTemplate idempotentTemplate;
 
-    /** 锁_前缀 */
+    /**
+     * 锁_前缀
+    */
     private static final String LOCK_PREFIX = "payment:lock:withdraw-approval:";
 
     @Override
@@ -66,7 +72,9 @@ public class WalletWithdrawApprovalServiceImpl implements WalletWithdrawApproval
     }
 
     @Override
-    /** pageapprovals */
+    /**
+     * pageapprovals
+    */
     public Page<WalletWithdrawApproval> pageApprovals(int pageNum, int pageSize, String status) {
         LambdaQueryWrapper<WalletWithdrawApproval> wrapper = new LambdaQueryWrapper<WalletWithdrawApproval>()
                 .orderByDesc(WalletWithdrawApproval::getCreatedAt);
@@ -77,7 +85,9 @@ public class WalletWithdrawApprovalServiceImpl implements WalletWithdrawApproval
     }
 
     @Override
-    /** 获取byid */
+    /**
+     * 获取byid
+    */
     public WalletWithdrawApproval getById(Long id) {
         WalletWithdrawApproval approval = approvalMapper.selectById(id);
         if (approval == null) {

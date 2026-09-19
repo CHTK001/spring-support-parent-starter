@@ -74,19 +74,25 @@ public class BeanJobHandler implements JobHandler {
     }
 
     @Override
-    /** 名称 */
+    /**
+     * 名称
+    */
     public String name() {
         return name;
     }
 
     @Override
-    /** Desc */
+    /**
+     * Desc
+    */
     public String desc() {
         return desc == null ? "" : desc;
     }
 
     @Override
-    /** 执行 */
+    /**
+     * 执行
+    */
     public void execute() throws Exception {
         log.debug("[job] execute handler={} target={}#{}",
                 name, target.getClass().getSimpleName(), method.getName());
@@ -94,7 +100,9 @@ public class BeanJobHandler implements JobHandler {
     }
 
     @Override
-    /** 初始化 */
+    /**
+     * 初始化
+    */
     public void init() throws Exception {
         if (initMethod == null) {
             return;
@@ -104,7 +112,9 @@ public class BeanJobHandler implements JobHandler {
     }
 
     @Override
-    /** 销毁 */
+    /**
+     * 销毁
+    */
     public void destroy() throws Exception {
         if (destroyMethod == null) {
             return;

@@ -11,22 +11,40 @@ import lombok.Data;
 @Data
 public class AuthRequest {
 
-    /** 数据 */
+    /**
+     * 数据
+    */
     private String data;
-    /** 用户名 */
+    /**
+     * 用户名
+    */
     private String username;
-    /** 类型 */
+    /**
+     * 类型
+    */
     private String type;
-    /** Passwd */
+    /**
+     * Passwd
+    */
     private String passwd;
-    /** 代码 */
+    /**
+     * 代码
+    */
     private String code;
-    /** Redirect_url */
+    /**
+     * Redirect_url
+    */
     private String redirect_url;
-    /** 模式 */
+    /**
+     * 模式
+    */
     private String mode;
-    /** Encipher */
+    /**
+     * Encipher
+    */
     private boolean encipher = true;
-    /** ifremember */
+    /**
+     * ifremember
+    */
     private String ifRemember;
 }

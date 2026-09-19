@@ -190,35 +190,45 @@ public class QueryWrapperX<T> extends QueryWrapper<T> {
     // ========== 重写父类方法，方便链式调用 ==========
 
     @Override
-    /** Eq */
+    /**
+     * Eq
+    */
     public QueryWrapperX<T> eq(boolean condition, String column, Object val) {
         super.eq(condition, column, val);
         return this;
     }
 
     @Override
-    /** Eq */
+    /**
+     * Eq
+    */
     public QueryWrapperX<T> eq(String column, Object val) {
         super.eq(column, val);
         return this;
     }
 
     @Override
-    /** 订单bydesc */
+    /**
+     * 订单bydesc
+    */
     public QueryWrapperX<T> orderByDesc(String column) {
         super.orderByDesc(true, column);
         return this;
     }
 
     @Override
-    /** 最后一个 */
+    /**
+     * 最后一个
+    */
     public QueryWrapperX<T> last(String lastSql) {
         super.last(lastSql);
         return this;
     }
 
     @Override
-    /** 入 */
+    /**
+     * 入
+    */
     public QueryWrapperX<T> in(String column, Collection<?> coll) {
         super.in(column, coll);
         return this;

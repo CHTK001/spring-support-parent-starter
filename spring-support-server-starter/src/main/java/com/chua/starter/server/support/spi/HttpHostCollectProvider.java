@@ -25,13 +25,19 @@ import reactor.core.scheduler.Schedulers;
 @RequiredArgsConstructor
 public class HttpHostCollectProvider implements HostCollectProvider {
 
-    /** 采集端点路径（与 AgentMain 注册的路由一致） */
+    /**
+     * 采集端点路径（与 AgentMain 注册的路由一致）
+    */
     private static final String METRICS_PATH = "/metrics";
 
-    /** agent 默认 HTTP 端口 */
+    /**
+     * agent 默认 HTTP 端口
+    */
     private static final int DEFAULT_AGENT_PORT = 19876;
 
-    /** 主机 映射器 */
+    /**
+     * 主机 映射器
+    */
     private final MsServerHostMapper hostMapper;
 
     @Override

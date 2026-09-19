@@ -25,7 +25,9 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class SettingsController {
 
-    /** 全局设置服务 */
+    /**
+     * 全局设置服务
+    */
     private final SysAiGlobalSettingService globalSettingService;
 
     /**

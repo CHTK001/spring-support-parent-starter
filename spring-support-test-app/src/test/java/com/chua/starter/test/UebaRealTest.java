@@ -24,7 +24,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  */
 class UebaRealTest {
 
-    /** 真实加载 UEBA 自动配置的运行器 */
+    /**
+     * 真实加载 UEBA 自动配置的运行器
+    */
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
             .withConfiguration(AutoConfigurations.of(UebaAutoConfiguration.class));
 

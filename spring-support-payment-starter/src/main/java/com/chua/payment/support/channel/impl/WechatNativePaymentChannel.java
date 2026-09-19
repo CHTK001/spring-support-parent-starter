@@ -37,14 +37,18 @@ public class WechatNativePaymentChannel extends WechatJsapiPaymentChannel implem
     }
 
     @Override
-    /** 支持 */
+    /**
+     * 支持
+    */
     public boolean supports(String channelType, String channelSubType) {
         return ("WECHAT".equalsIgnoreCase(channelType) || "EPAY".equalsIgnoreCase(channelType))
                 && "NATIVE".equalsIgnoreCase(channelSubType);
     }
 
     @Override
-    /** 薪酬 */
+    /**
+     * 薪酬
+    */
     public PaymentResult pay(MerchantChannel channel, PaymentRequest request) {
         TencentWechatPayRequest payRequest = buildPayRequest(channel, request);
         TencentWechatPayResponse response = gateway(providerSpi(channel, null)).nativePay(buildProperties(channel), payRequest);
@@ -60,7 +64,9 @@ public class WechatNativePaymentChannel extends WechatJsapiPaymentChannel implem
     }
 
     @Override
-    /** 查询 */
+    /**
+     * 查询
+    */
     public PaymentResult query(MerchantChannel channel, String orderNo) {
         TencentWechatOrderResponse response = gateway(providerSpi(channel, null)).queryNativeOrder(buildProperties(channel), orderNo);
 
@@ -75,7 +81,9 @@ public class WechatNativePaymentChannel extends WechatJsapiPaymentChannel implem
     }
 
     @Override
-    /** 关闭 */
+    /**
+     * 关闭
+    */
     public boolean close(MerchantChannel channel, String orderNo) {
         return gateway(providerSpi(channel, null)).closeNativeOrder(buildProperties(channel), orderNo);
     }

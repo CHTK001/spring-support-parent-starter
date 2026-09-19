@@ -32,25 +32,33 @@ public class CustomServletInputStream extends ServletInputStream {
     }
 
     @Override
-    /** 是否饰面 */
+    /**
+     * 是否饰面
+    */
     public boolean isFinished() {
         return inputStream.available() == 0;
     }
 
     @Override
-    /** 是否就绪 */
+    /**
+     * 是否就绪
+    */
     public boolean isReady() {
         return true;
     }
 
     @Override
-    /** 设置读取监听器 */
+    /**
+     * 设置读取监听器
+    */
     public void setReadListener(ReadListener readListener) {
 
     }
 
     @Override
-    /** 读取 */
+    /**
+     * 读取
+    */
     public int read() throws IOException {
         return inputStream.read();
     }

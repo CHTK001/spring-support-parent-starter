@@ -32,7 +32,9 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "知识库文档管理")
 public class EduKnowledgeDocController {
 
-    /** 知识doc服务 */
+    /**
+     * 知识doc服务
+    */
     private final IEduKnowledgeDocService knowledgeDocService;
 
     /**

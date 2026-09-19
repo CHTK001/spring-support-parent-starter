@@ -24,38 +24,54 @@ import java.sql.SQLException;
  */
 public class EncryptTypeHandler extends BaseTypeHandler<String> {
 
-    /** Encryptor_财产_名称 */
+    /**
+     * Encryptor_财产_名称
+    */
     private static final String ENCRYPTOR_PROPERTY_NAME = "mybatis-plus.encryptor.password";
-    /** Encryptor_mode_财产_名称 */
+    /**
+     * Encryptor_mode_财产_名称
+    */
     private static final String ENCRYPTOR_MODE_PROPERTY_NAME = "mybatis-plus.encryptor.mode";
 
-    /** aescodec */
+    /**
+     * aescodec
+    */
     private static AesCipher aesCodec;
-    /** 密码 */
+    /**
+     * 密码
+    */
     private static String password;
 
     @Override
-    /** 设置non空参数 */
+    /**
+     * 设置non空参数
+    */
     public void setNonNullParameter(PreparedStatement ps, int i, String parameter, JdbcType jdbcType) throws SQLException {
         ps.setString(i, encrypt(parameter));
     }
 
     @Override
-    /** 获取空结果 */
+    /**
+     * 获取空结果
+    */
     public String getNullableResult(ResultSet rs, String columnName) throws SQLException {
         String value = rs.getString(columnName);
         return decrypt(value);
     }
 
     @Override
-    /** 获取空结果 */
+    /**
+     * 获取空结果
+    */
     public String getNullableResult(ResultSet rs, int columnIndex) throws SQLException {
         String value = rs.getString(columnIndex);
         return decrypt(value);
     }
 
     @Override
-    /** 获取空结果 */
+    /**
+     * 获取空结果
+    */
     public String getNullableResult(CallableStatement cs, int columnIndex) throws SQLException {
         String value = cs.getString(columnIndex);
         return decrypt(value);

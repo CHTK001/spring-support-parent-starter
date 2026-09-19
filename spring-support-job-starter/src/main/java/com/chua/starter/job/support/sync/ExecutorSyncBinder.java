@@ -124,14 +124,18 @@ public class ExecutorSyncBinder {
  // (pre-existing: Netty 客户端 通道处理器 没实现 通道inactive, 不会自动通知 监听器)
         syncClient.addListener(new com.chua.common.support.network.sync.SyncFlowListener() {
             @Override
-            /** On停止 */
+            /**
+             * On停止
+            */
             public void onStop() {
                 log.warn("[job] SyncClient 收到 onStop, 重置 registered 标志, 守护线程将自动重连");
                 registered.set(false);
             }
 
             @Override
-            /** On记录错误 */
+            /**
+             * On记录错误
+            */
             public void onError(String clientId, Throwable ex) {
                 log.warn("[job] SyncClient 收到 onError clientId={} cause={}, 重置 registered",
                         clientId, ex.getMessage());

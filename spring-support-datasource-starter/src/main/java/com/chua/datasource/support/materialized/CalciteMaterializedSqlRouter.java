@@ -20,9 +20,13 @@ import java.util.function.Function;
  */
 public class CalciteMaterializedSqlRouter implements MaterializedSqlDataSourceRouter {
 
-    /** 期权 */
+    /**
+     * 期权
+    */
     private final MaterializedSqlOptions options;
-    /** 默认数据来源 */
+    /**
+     * 默认数据来源
+    */
     private final DataSource defaultDataSource;
     private final Function<String, DataSource> dataSourceResolver; // 数据源解析器
 
@@ -41,7 +45,9 @@ public class CalciteMaterializedSqlRouter implements MaterializedSqlDataSourceRo
     }
 
     @Override
-    /** Route */
+    /**
+     * Route
+    */
     public MaterializedSqlRoute route(MaterializedSqlRequest request) {
         if (request == null || request.getCommandType() != MaterializedSqlCommandType.SELECT) {
             return MaterializedSqlRoute.notRouted();
@@ -59,7 +65,9 @@ public class CalciteMaterializedSqlRouter implements MaterializedSqlDataSourceRo
     }
 
     @Override
-    /** 解析数据源 */
+    /**
+     * 解析数据源
+    */
     public DataSource resolveDataSource(MaterializedSqlRoute route) {
         if (route == null || !route.isRouted()) {
             return defaultDataSource;
@@ -72,7 +80,9 @@ public class CalciteMaterializedSqlRouter implements MaterializedSqlDataSourceRo
     }
 
     @Override
-    /** On写入成功 */
+    /**
+     * On写入成功
+    */
     public void onWriteSuccess(MaterializedSqlRequest request) {
         // 当前仓库缺失完整物理化实现，先保持 no-op，确保路由链可编译和可安全降级。
     }

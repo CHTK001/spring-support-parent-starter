@@ -17,22 +17,34 @@ import com.chua.starter.project.support.entity.MsProject;
  */
 public interface ProjectAlarmHook {
 
-    /** 指标：守护连续失败次数 */
+    /**
+     * 指标：守护连续失败次数
+    */
     String METRIC_WATCHDOG_FAIL = "project.watchdog.fail";
 
-    /** 指标：守护自动拉起失败次数 */
+    /**
+     * 指标：守护自动拉起失败次数
+    */
     String METRIC_WATCHDOG_RESTART_FAIL = "project.watchdog.restart.fail";
 
-    /** 指标：进程内存占用（MB） */
+    /**
+     * 指标：进程内存占用（MB）
+    */
     String METRIC_PROCESS_MEM_MB = "project.process.mem.mb";
 
-    /** 指标：进程 CPU 占用（%） */
+    /**
+     * 指标：进程 CPU 占用（%）
+    */
     String METRIC_PROCESS_CPU = "project.process.cpu";
 
-    /** 指标：端口存活（0/1） */
+    /**
+     * 指标：端口存活（0/1）
+    */
     String METRIC_PORT_ALIVE = "project.port.alive";
 
-    /** 指标：采集失败占位（SSH/凭据异常时=1，保证前端面板有数据可展示） */
+    /**
+     * 指标：采集失败占位（SSH/凭据异常时=1，保证前端面板有数据可展示）
+    */
     String METRIC_COLLECT_FAIL = "project.collect.fail";
 
     /**

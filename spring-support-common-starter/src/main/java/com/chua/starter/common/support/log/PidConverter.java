@@ -16,7 +16,9 @@ import java.lang.management.ManagementFactory;
  */
 public class PidConverter extends ClassicConverter {
 
-    /** PID */
+    /**
+     * PID
+    */
     private static final String PID = getPid();
 
     /**
@@ -30,7 +32,9 @@ public class PidConverter extends ClassicConverter {
     }
 
     @Override
-    /** 转换 */
+    /**
+     * 转换
+    */
     public String convert(ILoggingEvent event) {
         return PID;
     }

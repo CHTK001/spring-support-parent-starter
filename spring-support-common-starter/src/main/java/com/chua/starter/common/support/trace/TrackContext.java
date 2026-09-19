@@ -7,10 +7,14 @@ package com.chua.starter.common.support.trace;
  */
 public final class TrackContext {
 
-    /** 链接_标识 */
+    /**
+     * 链接_标识
+    */
     private static final ThreadLocal<String> LINK_ID = new ThreadLocal<>();
 
-    /** 创建 track上下文 实例 */
+    /**
+     * 创建 track上下文 实例
+    */
     private TrackContext() {
     }
 
@@ -32,7 +36,9 @@ public final class TrackContext {
         return LINK_ID.get();
     }
 
-    /** Clear */
+    /**
+     * Clear
+    */
     public static void clear() {
         LINK_ID.remove();
     }

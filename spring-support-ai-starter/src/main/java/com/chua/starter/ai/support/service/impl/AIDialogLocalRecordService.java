@@ -22,19 +22,29 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class AIDialogLocalRecordService implements AIDialogRecordService {
 
-    /** dialogidgenerator */
+    /**
+     * dialogidgenerator
+    */
     private final AtomicLong dialogIdGenerator = new AtomicLong(1);
-    /** 消息idgenerator */
+    /**
+     * 消息idgenerator
+    */
     private final AtomicLong messageIdGenerator = new AtomicLong(1);
 
-    /** dialogid → aidialog */
+    /**
+     * dialogid → aidialog
+    */
     private final Map<Long, AIDialog> dialogs = new ConcurrentHashMap<>();
 
-    /** dialogid → 列表&lt;对话消息&gt; */
+    /**
+     * dialogid → 列表&lt;对话消息&gt;
+    */
     private final Map<Long, List<ChatMessage>> messages = new ConcurrentHashMap<>();
 
     @Override
-    /** 创建Dialog */
+    /**
+     * 创建Dialog
+    */
     public AIDialog createDialog(String name) {
         Long id = dialogIdGenerator.getAndIncrement();
         AIDialog dialog = new AIDialog(id, name);
@@ -44,20 +54,26 @@ public class AIDialogLocalRecordService implements AIDialogRecordService {
     }
 
     @Override
-    /** 删除Dialog */
+    /**
+     * 删除Dialog
+    */
     public void deleteDialog(Long dialogId) {
         dialogs.remove(dialogId);
         messages.remove(dialogId);
     }
 
     @Override
-    /** 列表dialog */
+    /**
+     * 列表dialog
+    */
     public List<AIDialog> listDialog() {
         return new ArrayList<>(dialogs.values());
     }
 
     @Override
-    /** 获取dialog消息 */
+    /**
+     * 获取dialog消息
+    */
     public List<ChatMessage> getDialogMessages(Long dialogId) {
         List<ChatMessage> list = messages.get(dialogId);
         if (list == null) {
@@ -67,7 +83,9 @@ public class AIDialogLocalRecordService implements AIDialogRecordService {
     }
 
     @Override
-    /** 添加消息 */
+    /**
+     * 添加消息
+    */
     public void addMessage(Long dialogId, ChatMessage message) {
         List<ChatMessage> list = messages.get(dialogId);
         if (list == null) {

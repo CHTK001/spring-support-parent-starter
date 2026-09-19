@@ -41,9 +41,13 @@ public class MarkingSubmitDTO {
      * @since 4.0.0
      */
     public static class AnswerItem {
-        /** questionid */
+        /**
+         * questionid
+        */
         private Long questionId;
-        /** Answer */
+        /**
+         * Answer
+        */
         private String answer;
     }
 }

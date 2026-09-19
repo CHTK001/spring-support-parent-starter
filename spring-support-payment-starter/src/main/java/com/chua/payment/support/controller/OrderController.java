@@ -38,7 +38,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class OrderController {
 
-    /** 排序服务 */
+    /**
+     * 排序服务
+    */
     private final PaymentOrderService orderService;
 
     @Operation(summary = "创建订单")

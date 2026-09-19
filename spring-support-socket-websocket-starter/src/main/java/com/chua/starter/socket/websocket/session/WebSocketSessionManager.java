@@ -20,7 +20,9 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 public class WebSocketSessionManager {
 
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(WebSocketSessionManager.class);
 
     /**

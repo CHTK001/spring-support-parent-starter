@@ -30,7 +30,9 @@ public class MaterializedRouteAdvisor extends StaticMethodMatcherPointcutAdvisor
         this.setAdvice(new MethodInterceptor() {
             @Nullable
             @Override
-            /** 调用 */
+            /**
+             * 调用
+            */
             public Object invoke(@Nonnull MethodInvocation invocation) throws Throwable {
                 MaterializedRoute route = resolveRoute(invocation.getMethod(), invocation.getThis().getClass());
                 if (route == null) {
@@ -49,7 +51,9 @@ public class MaterializedRouteAdvisor extends StaticMethodMatcherPointcutAdvisor
     }
 
     @Override
-    /** Matches */
+    /**
+     * Matches
+    */
     public boolean matches(Method method, Class<?> targetClass) {
         if (Proxy.isProxyClass(targetClass)) {
             return false;

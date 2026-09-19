@@ -28,7 +28,9 @@ import java.util.function.BiConsumer;
 @ConditionalOnProperty(prefix = "plugin.sync.datasync", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class DataSyncAgentLifecycleConfiguration {
 
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(DataSyncAgentLifecycleConfiguration.class);
 
     /**
@@ -36,9 +38,13 @@ public class DataSyncAgentLifecycleConfiguration {
      */
     private static final String CAPABILITY_DATASYNC = "datasync";
 
-    /** 同步服务器提供者 */
+    /**
+     * 同步服务器提供者
+    */
     private final ObjectProvider<SyncServer> syncServerProvider;
-    /** 数据同步Agent服务器提供者 */
+    /**
+     * 数据同步Agent服务器提供者
+    */
     private final ObjectProvider<DataSyncAgentServer> dataSyncAgentServerProvider;
 
     /**
@@ -72,7 +78,9 @@ public class DataSyncAgentLifecycleConfiguration {
     }
 
     @PostConstruct
-    /** 初始化 */
+    /**
+     * 初始化
+    */
     public void init() {
         SyncServer syncServer = syncServerProvider.getIfAvailable();
         DataSyncAgentServer agentServer = dataSyncAgentServerProvider.getIfAvailable();
@@ -88,7 +96,9 @@ public class DataSyncAgentLifecycleConfiguration {
  // 客户端断开时，注销对应 Agent
         syncServer.addDisconnectListener(new BiConsumer<String, ClientInfo>() {
             @Override
-            /** Accept */
+            /**
+             * Accept
+            */
             public void accept(String sessionId, ClientInfo clientInfo) {
                 String clientId = clientInfo != null ? clientInfo.getClientId() : null;
                 if (clientId != null && hasDatasyncCapability(clientInfo)) {

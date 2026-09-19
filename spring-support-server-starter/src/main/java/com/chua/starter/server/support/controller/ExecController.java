@@ -34,7 +34,9 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class ExecController {
 
-    /** 批量执行服务 */
+    /**
+     * 批量执行服务
+    */
     private final ExecService execService;
 
     /**

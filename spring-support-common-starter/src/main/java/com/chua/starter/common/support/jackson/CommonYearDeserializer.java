@@ -43,7 +43,9 @@ public class CommonYearDeserializer extends YearDeserializer {
      * @throws IOException 反序列化过程中无法恢复的 IO 错误
      */
     @Override
-    /** 反序列化 */
+    /**
+     * 反序列化
+    */
     public Year deserialize(JsonParser parser, DeserializationContext context) throws IOException {
         JsonToken t = parser.currentToken();
         if (t == JsonToken.VALUE_STRING) {

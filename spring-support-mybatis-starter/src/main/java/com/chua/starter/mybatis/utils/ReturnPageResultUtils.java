@@ -21,7 +21,9 @@ public class ReturnPageResultUtils {
      */
     private static final IPage<?> EMPTY = new Page<>();
 
-    /** 创建 申报page结果工具 实例 */
+    /**
+     * 创建 申报page结果工具 实例
+    */
     private ReturnPageResultUtils() {
     }
 

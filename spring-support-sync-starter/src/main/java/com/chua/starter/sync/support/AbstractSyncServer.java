@@ -53,7 +53,9 @@ public abstract class AbstractSyncServer extends AbstractServer implements SyncS
     }
 
     @Override
-    /** 获取协议类型 */
+    /**
+     * 获取协议类型
+    */
     public ProtocolType getProtocolType() {
         if (protocol == null) {
             return ProtocolType.UNKNOWN;
@@ -67,7 +69,9 @@ public abstract class AbstractSyncServer extends AbstractServer implements SyncS
     }
 
     @Override
-    /** 发布 */
+    /**
+     * 发布
+    */
     public void publish(String topic, Object message) {
         for (String sessionId : sessions.keySet()) {
             /**
@@ -81,7 +85,9 @@ public abstract class AbstractSyncServer extends AbstractServer implements SyncS
     }
 
     @Override
-    /** 发送 */
+    /**
+     * 发送
+    */
     public void send(String clientId, String topic, Object message) {
         /**
          * 执行发送。
@@ -93,20 +99,26 @@ public abstract class AbstractSyncServer extends AbstractServer implements SyncS
     }
 
     @Override
-    /** 获取连接客户端 */
+    /**
+     * 获取连接客户端
+    */
     public List<String> getConnectedClients() {
         return List.copyOf(sessions.keySet());
     }
 
     @Override
-    /** 获取客户端metadata */
+    /**
+     * 获取客户端metadata
+    */
     public Map<String, Object> getClientMetadata(String clientId) {
         SyncSession session = sessions.get(clientId);
         return session == null ? Map.of() : session.toMetadata();
     }
 
     @Override
-    /** 添加监听器 */
+    /**
+     * 添加监听器
+    */
     public void addListener(SyncServerListener listener) {
         if (listener != null) {
             listeners.add(listener);
@@ -114,7 +126,9 @@ public abstract class AbstractSyncServer extends AbstractServer implements SyncS
     }
 
     @Override
-    /** 移除监听器 */
+    /**
+     * 移除监听器
+    */
     public void removeListener(SyncServerListener listener) {
         listeners.remove(listener);
     }

@@ -21,18 +21,28 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "plugin.sqlite", ignoreInvalidFields = true)
 public class SqliteDataSourceProperties {
 
-    /** 配置前缀常量 */
+    /**
+     * 配置前缀常量
+    */
     public static final String PRE = "plugin.sqlite";
 
-    /** 是否启用 sqlite 引擎自动配置 */
+    /**
+     * 是否启用 sqlite 引擎自动配置
+    */
     private boolean enable = false;
 
-    /** sqlite 数据库文件路径，如 {@code ./data/app.sqlite} 或绝对路径 */
+    /**
+     * sqlite 数据库文件路径，如 {@code ./data/app.sqlite} 或绝对路径
+    */
     private String path = "./data/app.sqlite";
 
-    /** SQL 初始化脚本路径，支持 类路径: 前缀，如 {@code classpath:db/init/sqlite} */
+    /**
+     * SQL 初始化脚本路径，支持 类路径: 前缀，如 {@code classpath:db/init/sqlite}
+    */
     private String initSql = "";
 
-    /** 最大连接数（默认 5） */
+    /**
+     * 最大连接数（默认 5）
+    */
     private int maxPoolSize = 5;
 }

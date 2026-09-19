@@ -29,7 +29,9 @@ public class SysFileSystemUploadFileServiceImpl
         extends ServiceImpl<SysFileSystemUploadFileMapper, SysFileSystemUploadFile>
         implements SysFileSystemUploadFileService {
 
-    /** 上传任务服务 */
+    /**
+     * 上传任务服务
+    */
     private final SysFileSystemUploadService uploadService;
 
     /**

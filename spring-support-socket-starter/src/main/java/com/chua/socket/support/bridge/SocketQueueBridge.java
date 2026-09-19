@@ -41,13 +41,19 @@ import java.util.Map;
 @ConditionalOnMissingBean(name = "monitorSocketQueueBridge")
 public class SocketQueueBridge {
 
-    /** 固定订阅 topic：业务方统一向此 topic 发送 Socket 广播消息 */
+    /**
+     * 固定订阅 topic：业务方统一向此 topic 发送 Socket 广播消息
+    */
     public static final String TOPIC = "socket:push";
 
-    /** Socket 会话模板（Socket 未启用时为空实现） */
+    /**
+     * Socket 会话模板（Socket 未启用时为空实现）
+    */
     private final ObjectProvider<SocketSessionTemplate> socketTemplateProvider;
 
-    /** JSON 解析器 */
+    /**
+     * JSON 解析器
+    */
     private final ObjectMapper objectMapper;
 
     /**

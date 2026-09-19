@@ -28,7 +28,9 @@ import org.springframework.context.annotation.Configuration;
 public class DeadLetterAutoConfiguration {
 
     @Autowired
-    /** Deadletter属性 */
+    /**
+     * Deadletter属性
+    */
     private DeadLetterProperties deadLetterProperties;
 
     /**

@@ -10,14 +10,24 @@ import lombok.Data;
  */
 @Data
 public class AlipayConfigDTO {
-    /** APPID */
+    /**
+     * APPID
+    */
     private String appId;
-    /** 私有密钥 */
+    /**
+     * 私有密钥
+    */
     private String privateKey;
-    /** 公开密钥 */
+    /**
+     * 公开密钥
+    */
     private String publicKey;
-    /** 通知url */
+    /**
+     * 通知url
+    */
     private String notifyUrl;
-    /** Sandbox */
+    /**
+     * Sandbox
+    */
     private Boolean sandbox;
 }

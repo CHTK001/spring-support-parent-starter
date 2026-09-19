@@ -40,26 +40,40 @@ import java.util.logging.Logger;
  */
 @Slf4j
 public class MultiDataSource implements DataSource {
-    /** 数据源 */
+    /**
+     * 数据源
+    */
     private final List<DataSource> dataSources;
-    /** Dynamic数据来源 */
+    /**
+     * Dynamic数据来源
+    */
     private final DynamicDataSource dynamicDataSource;
-    /** Application上下文 */
+    /**
+     * Application上下文
+    */
     private ApplicationContext applicationContext;
 
-    /** Thread_本地 */
+    /**
+     * Thread_本地
+    */
     private static final ThreadLocal<GenericObjectPool<Connection>> THREAD_LOCAL = new InheritableThreadLocal<>();
     private final Multimap<String, String> tables = HashMultimap.create(); // tables
 
     private final Map<SchemaPlus, SchemaPlus> cache = new ConcurrentHashMap<>(); // 缓存
 
-    /** Print写入器 */
+    /**
+     * Print写入器
+    */
     private PrintWriter printWriter = new PrintWriter(System.out);
 
     final Properties info = new Properties(); // 信息
-    /** 池 */
+    /**
+     * 池
+    */
     private GenericObjectPool<Connection> pool;
-    /** 秒 */
+    /**
+     * 秒
+    */
     private int seconds;
 
     {
@@ -231,7 +245,9 @@ public class MultiDataSource implements DataSource {
     private void initialDataSource() {
         PooledObjectFactory<Connection> factory = new BasePooledObjectFactory<Connection>() {
             @Override
-            /** 创建 */
+            /**
+             * 创建
+            */
             public Connection create() throws Exception {
                 try {
                     Connection connection = DriverManager.getConnection("jdbc:calcite:", info).unwrap(CalciteConnection.class);
@@ -253,7 +269,9 @@ public class MultiDataSource implements DataSource {
             }
 
             @Override
-            /** Wrap */
+            /**
+             * Wrap
+            */
             public PooledObject<Connection> wrap(Connection obj) {
                 return new DefaultPooledObject<>(obj);
             }
@@ -262,7 +280,9 @@ public class MultiDataSource implements DataSource {
     }
 
     @Override
-    /** 获取Connection */
+    /**
+     * 获取Connection
+    */
     public Connection getConnection() throws SQLException {
         try {
             Connection connection = pool.borrowObject();
@@ -282,49 +302,65 @@ public class MultiDataSource implements DataSource {
     }
 
     @Override
-    /** 获取Connection */
+    /**
+     * 获取Connection
+    */
     public Connection getConnection(String username, String password) throws SQLException {
         return getConnection();
     }
 
     @Override
-    /** Unwrap */
+    /**
+     * Unwrap
+    */
     public <T> T unwrap(Class<T> iface) throws SQLException {
         return null;
     }
 
     @Override
-    /** 是否包装器for */
+    /**
+     * 是否包装器for
+    */
     public boolean isWrapperFor(Class<?> iface) throws SQLException {
         return false;
     }
 
     @Override
-    /** 获取记录日志Writer */
+    /**
+     * 获取记录日志Writer
+    */
     public PrintWriter getLogWriter() throws SQLException {
         return printWriter;
     }
 
     @Override
-    /** 设置记录日志Writer */
+    /**
+     * 设置记录日志Writer
+    */
     public void setLogWriter(PrintWriter out) throws SQLException {
         this.printWriter = out;
     }
 
     @Override
-    /** 设置login超时 */
+    /**
+     * 设置login超时
+    */
     public void setLoginTimeout(int seconds) throws SQLException {
         this.seconds = seconds;
     }
 
     @Override
-    /** 获取login超时 */
+    /**
+     * 获取login超时
+    */
     public int getLoginTimeout() throws SQLException {
         return seconds;
     }
 
     @Override
-    /** 获取父日志记录器 */
+    /**
+     * 获取父日志记录器
+    */
     public Logger getParentLogger() throws SQLFeatureNotSupportedException {
  // 数据源接口要求返回Java.util.日志.日志记录器，但实际使用SLF4J
  // 返回空表示不支持，由SLF4J桥接处理

@@ -33,7 +33,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class WechatPayScoreOrderController {
 
-    /** wechat薪酬分数排序服务 */
+    /**
+     * wechat薪酬分数排序服务
+    */
     private final WechatPayScoreOrderService wechatPayScoreOrderService;
 
     @Operation(summary = "创建微信支付分订单")

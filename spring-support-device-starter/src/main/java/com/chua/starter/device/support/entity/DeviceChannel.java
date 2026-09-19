@@ -21,48 +21,62 @@ public class DeviceChannel {
      * 主键 标识
      */
     @TableId(value = "device_channel_id", type = IdType.ASSIGN_UUID)
-    /** Device通道标识 */
+    /**
+     * Device通道标识
+    */
     private String deviceChannelId;
 
     /**
      * 所属设备 标识
      */
     @TableField("device_channel_device_id")
-    /** Device通道deviceid */
+    /**
+     * Device通道deviceid
+    */
     private String deviceChannelDeviceId;
 
     /**
      * 通道号
      */
     @TableField("device_channel_no")
-    /** Device通道NO */
+    /**
+     * Device通道NO
+    */
     private Integer deviceChannelNo;
 
     /**
      * 通道名称
      */
     @TableField("device_channel_name")
-    /** Device通道名称 */
+    /**
+     * Device通道名称
+    */
     private String deviceChannelName;
 
     /**
      * 通道类型，例如 视频、门
      */
     @TableField("device_channel_type")
-    /** Device通道类型 */
+    /**
+     * Device通道类型
+    */
     private String deviceChannelType;
 
     /**
      * 通道状态：已启用 启用、已禁用 禁用
      */
     @TableField("device_channel_status")
-    /** Device通道状态 */
+    /**
+     * Device通道状态
+    */
     private String deviceChannelStatus;
 
     /**
      * 排序字段
      */
     @TableField("device_channel_sort")
-    /** Device通道排序 */
+    /**
+     * Device通道排序
+    */
     private Integer deviceChannelSort;
 }

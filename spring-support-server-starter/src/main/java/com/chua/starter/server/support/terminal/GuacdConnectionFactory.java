@@ -29,31 +29,49 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class GuacdConnectionFactory {
 
-    /** SSH 默认端口 */
+    /**
+     * SSH 默认端口
+    */
     private static final int DEFAULT_SSH_PORT = 22;
 
-    /** RDP 默认端口 */
+    /**
+     * RDP 默认端口
+    */
     private static final int DEFAULT_RDP_PORT = 3389;
 
-    /** VNC 默认端口 */
+    /**
+     * VNC 默认端口
+    */
     private static final int DEFAULT_VNC_PORT = 5900;
 
-    /** RDP 默认分辨率宽 */
+    /**
+     * RDP 默认分辨率宽
+    */
     private static final int RDP_WIDTH = 1280;
 
-    /** RDP 默认分辨率高 */
+    /**
+     * RDP 默认分辨率高
+    */
     private static final int RDP_HEIGHT = 768;
 
-    /** RDP 默认 DPI */
+    /**
+     * RDP 默认 DPI
+    */
     private static final int RDP_DPI = 96;
 
-    /** RDP 默认色深 */
+    /**
+     * RDP 默认色深
+    */
     private static final int RDP_COLOR_DEPTH = 24;
 
-    /** 服务属性（guacd 地址） */
+    /**
+     * 服务属性（guacd 地址）
+    */
     private final ServerProperties properties;
 
-    /** 系统配置服务（guacd 地址动态化——配置表优先） */
+    /**
+     * 系统配置服务（guacd 地址动态化——配置表优先）
+    */
     private final ServerConfigService configService;
 
     /**

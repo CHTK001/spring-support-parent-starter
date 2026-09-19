@@ -265,26 +265,34 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
     }
 
     @Override
-    /** 执行过滤 */
+    /**
+     * 执行过滤
+    */
     public void doFilter(ServerRequest request, ServerResponse response, com.chua.common.support.network.server.filter.ServerFilterChain chain) throws Exception {
         // 简单透传
         chain.doFilter(request, response);
     }
 
     @Override
-    /** 绑定路径模式：空 表示 Access 过滤器，每次请求都触发 */
+    /**
+     * 绑定路径模式：空 表示 Access 过滤器，每次请求都触发
+    */
     public String supportPath() {
         return null;
     }
 
     @Override
-    /** 过滤器执行顺序：数值越小越先执行 */
+    /**
+     * 过滤器执行顺序：数值越小越先执行
+    */
     public int getOrder() {
         return 100;
     }
 
     @Override
-    /** 响应式执行过滤 */
+    /**
+     * 响应式执行过滤
+    */
     public CompletionStage<Void> doFilter(ServerRequest request, ServerResponse response, ReactiveFilterChain chain) {
  // 统一 跨域资源共享 支持（独立部署时浏览器跨域访问列表/上传/删除必需）
         applyCorsHeaders(request, response);
@@ -715,15 +723,25 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
      * 链接条目（支持一次性 / 限时两种模式）。
      */
     private static final class OneTimeEntry {
-        /** 存储桶 */
+        /**
+         * 存储桶
+        */
         final String bucket;
-        /** 对象 键 */
+        /**
+         * 对象 键
+        */
         final String key;
-        /** 创建时间戳 */
+        /**
+         * 创建时间戳
+        */
         final long createTime;
-        /** 自定义过期时长（毫秒） */
+        /**
+         * 自定义过期时长（毫秒）
+        */
         final long ttlMillis;
-        /** true=一次性（访问即销毁），false=限时（到期失效，可多次访问） */
+        /**
+         * true=一次性（访问即销毁），false=限时（到期失效，可多次访问）
+        */
         final boolean once;
 
         OneTimeEntry(String bucket, String key, long createTime) {

@@ -50,7 +50,9 @@ public class ScheduledAnnotationScanner implements BeanPostProcessor, SmartIniti
     }
 
     @Override
-    /** Post处理之后initialization */
+    /**
+     * Post处理之后initialization
+    */
     public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
         Class<?> targetClass = ClassUtils.getUserClass(bean);
         java.util.Map<Method, Scheduled> annotated = null;
@@ -78,7 +80,9 @@ public class ScheduledAnnotationScanner implements BeanPostProcessor, SmartIniti
     }
 
     @Override
-    /** 之后单例instantiated */
+    /**
+     * 之后单例instantiated
+    */
     public void afterSingletonsInstantiated() {
         log.info("[job] @Scheduled 扫描完成, 共注册 {} 个定时任务", registeredCount.get());
     }

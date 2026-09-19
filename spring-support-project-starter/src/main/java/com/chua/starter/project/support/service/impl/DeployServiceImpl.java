@@ -61,38 +61,60 @@ import java.util.concurrent.atomic.AtomicInteger;
 @RequiredArgsConstructor
 public class DeployServiceImpl implements DeployService {
 
-    /** 项目 映射器 */
+    /**
+     * 项目 映射器
+    */
     private final MsProjectMapper projectMapper;
 
-    /** 部署日志 映射器 */
+    /**
+     * 部署日志 映射器
+    */
     private final MsProjectDeployLogMapper deployLogMapper;
 
-    /** 部署包归档 映射器 */
+    /**
+     * 部署包归档 映射器
+    */
     private final MsProjectUploadArchiveMapper archiveMapper;
 
-    /** 服务器主机 映射器（来自 spring-支持-服务端-启动） */
+    /**
+     * 服务器主机 映射器（来自 spring-支持-服务端-启动）
+    */
     private final MsServerHostMapper serverHostMapper;
 
-    /** 服务器主机服务（凭据解析） */
+    /**
+     * 服务器主机服务（凭据解析）
+    */
     private final ServerHostService serverHostService;
 
-    /** SSH 连接池 */
+    /**
+     * SSH 连接池
+    */
     private final ConnectionManager connectionManager;
 
-    /** 实时推送 */
+    /**
+     * 实时推送
+    */
     private final ProjectPushService pushService;
 
-    /** 模块配置 */
+    /**
+     * 模块配置
+    */
     private final com.chua.starter.project.support.config.ProjectProperties projectProperties;
 
-    /** Jackson */
+    /**
+     * Jackson
+    */
     private final ObjectMapper objectMapper;
 
-    /** 项目部署互斥锁（防止同项目并发部署互相清目录） */
+    /**
+     * 项目部署互斥锁（防止同项目并发部署互相清目录）
+    */
     private final java.util.concurrent.ConcurrentHashMap<Long, java.util.concurrent.atomic.AtomicBoolean>
             projectDeployLocks = new java.util.concurrent.ConcurrentHashMap<>();
 
-    /** 命令执行超时控制用线程池（单线程串行，仅用于 Future.get 超时） */
+    /**
+     * 命令执行超时控制用线程池（单线程串行，仅用于 Future.get 超时）
+    */
     private final java.util.concurrent.ExecutorService execCommandPool =
             java.util.concurrent.Executors.newSingleThreadExecutor(r -> {
                 Thread t = new Thread(r, "project-exec-cmd");

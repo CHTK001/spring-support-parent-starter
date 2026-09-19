@@ -34,7 +34,9 @@ public class SysAiRequirementStore {
     private final SysAiDataSourceMapper dataSourceMapper;
     private final RequirementDataSourceRegistry registry;
     private final AtomicLong displaySeq = new AtomicLong(1);
-    /** In-memory AutoWork target → state map, keyed by "kind:targetId". */
+    /**
+     * In-memory AutoWork target → state map, keyed by "kind:targetId".
+    */
     private final Map<String, Map<String, Object>> autoworkBindings = new ConcurrentHashMap<>();
 
     public SysAiRequirementStore(SysAiRequirementMapper requirementMapper,

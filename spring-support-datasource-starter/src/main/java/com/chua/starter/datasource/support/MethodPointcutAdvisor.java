@@ -28,7 +28,9 @@ public class MethodPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor {
         this.setAdvice(new MethodInterceptor() {
             @Nullable
             @Override
-            /** 调用 */
+            /**
+             * 调用
+            */
             public Object invoke(@Nonnull MethodInvocation invocation) throws Throwable {
                 Method method = invocation.getMethod();
                 if (AnnotatedElementUtils.hasAnnotation(method, DS.class) || AnnotatedElementUtils.hasAnnotation(invocation.getThis().getClass(), DS.class)) {
@@ -47,7 +49,9 @@ public class MethodPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor {
     }
 
     @Override
-    /** Matches */
+    /**
+     * Matches
+    */
     public boolean matches(Method method, Class<?> targetClass) {
         if (Proxy.isProxyClass(targetClass)) {
             return false;
