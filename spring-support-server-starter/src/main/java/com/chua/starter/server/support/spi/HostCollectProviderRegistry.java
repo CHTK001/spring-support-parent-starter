@@ -1,20 +1,27 @@
 package com.chua.starter.server.support.spi;
 
+import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.spi.definition.ServiceDefinition;
 import com.chua.starter.server.support.enums.HostCollectType;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.util.Collections;
 import java.util.EnumMap;
-import java.util.List;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * 主机采集 提供者 注册中心
  * <p>
- * 启动时扫描全部 {@link HostCollectProvider} Bean，按 {@link HostCollectType} 建索引，
- * 调度器 / Agent 上报端点据此路由到具体采集实现。
+ * 实现按 {@code @Spi} 注册到 {@link HostCollectProvider} 扩展点，本类取其全部定义并按
+ * {@link HostCollectProvider#type()} 建索引，调度器 / Agent 上报端点据此路由到具体采集实现。
+ * </p>
+ *
+ * <p>
+ * 索引在首次解析时构建：SPI 实例的依赖由 Spring 装配链注入，容器就绪前构建会得到半初始化实例。
  * </p>
  *
  * @author CH
@@ -25,30 +32,14 @@ import java.util.Optional;
 public class HostCollectProviderRegistry {
 
     /**
-     * 采集方式 -> 实现索引
-    */
-    private final Map<HostCollectType, HostCollectProvider> index = new EnumMap<>(HostCollectType.class);
+     * 主机采集扩展点
+     */
+    private final ServiceProvider<HostCollectProvider> extensions = ServiceProvider.of(HostCollectProvider.class);
 
     /**
-     * 构造：注册全部 提供者
-     *
-     * @param providers 提供者 列表
+     * 采集方式 -> 实现索引，首次使用时构建
      */
-    @Autowired
-    public HostCollectProviderRegistry(List<HostCollectProvider> providers) {
-        if (providers == null || providers.isEmpty()) {
-            log.warn("[collect] 未发现 HostCollectProvider 实现");
-            return;
-        }
-        for (HostCollectProvider provider : providers) {
-            HostCollectType type = provider.type();
-            if (type == null) {
-                continue;
-            }
-            index.put(type, provider);
-            log.info("[collect] 注册采集 Provider: type={}, impl={}", type, provider.getClass().getSimpleName());
-        }
-    }
+    private volatile Map<HostCollectType, HostCollectProvider> index;
 
     /**
      * 解析指定采集方式的 提供者
@@ -60,7 +51,7 @@ public class HostCollectProviderRegistry {
         if (type == null) {
             return Optional.empty();
         }
-        return Optional.ofNullable(index.get(type));
+        return Optional.ofNullable(index().get(type));
     }
 
     /**
@@ -70,7 +61,51 @@ public class HostCollectProviderRegistry {
      */
     public Map<HostCollectType, String> describe() {
         Map<HostCollectType, String> out = new EnumMap<>(HostCollectType.class);
-        index.forEach((t, p) -> out.put(t, p.getClass().getSimpleName()));
+        index().forEach((type, provider) -> out.put(type, provider.getClass().getSimpleName()));
         return out;
+    }
+
+    /**
+     * 取索引，必要时构建。
+     *
+     * @return 采集方式 -> 实现
+     */
+    private Map<HostCollectType, HostCollectProvider> index() {
+        Map<HostCollectType, HostCollectProvider> current = index;
+        if (current != null) {
+            return current;
+        }
+        synchronized (this) {
+            if (index == null) {
+                index = build();
+            }
+            return index;
+        }
+    }
+
+    /**
+     * 遍历扩展点定义建索引，同一实现类的多个别名只登记一次。
+     *
+     * @return 不可变索引
+     */
+    private Map<HostCollectType, HostCollectProvider> build() {
+        Map<HostCollectType, HostCollectProvider> out = new EnumMap<>(HostCollectType.class);
+        Set<Class<?>> seen = new HashSet<>();
+        for (ServiceDefinition definition : extensions.getPriorityServiceDefinitions()) {
+            HostCollectProvider provider = definition.getObj(extensions.getServiceAutowire());
+            if (provider == null || !seen.add(provider.getClass())) {
+                continue;
+            }
+            HostCollectType type = provider.type();
+            if (type == null) {
+                continue;
+            }
+            out.put(type, provider);
+            log.info("[collect] 注册采集 Provider: type={}, impl={}", type, provider.getClass().getSimpleName());
+        }
+        if (out.isEmpty()) {
+            log.warn("[collect] HostCollectProvider 扩展点无任何实现，主机采集不可用");
+        }
+        return Collections.unmodifiableMap(out);
     }
 }

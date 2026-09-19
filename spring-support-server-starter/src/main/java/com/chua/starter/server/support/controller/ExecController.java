@@ -4,6 +4,7 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.server.support.constants.ServerConstants;
 import com.chua.starter.server.support.entity.MsExecJob;
 import com.chua.starter.server.support.entity.MsExecLog;
+import com.chua.starter.server.support.model.vo.ExecCommandVO;
 import com.chua.starter.server.support.service.ExecService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -20,7 +21,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * 批量执行接口：批量命令、文件分发与计划任务
@@ -42,16 +42,14 @@ public class ExecController {
     /**
      * 批量执行命令
      *
-     * @param body 请求体：主机标识 / 命令 / 超时seconds
+     * @param body 请求体：主机标识 / 命令 / 超时（秒）
      * @return 各主机日志
      */
     @Operation(summary = "批量执行命令")
     @PostMapping("/command")
-    public ReturnResult<List<MsExecLog>> runCommand(@RequestBody Map<String, Object> body) {
-        List<Long> hostIds = parseLongList(body.get("hostIds"));
-        String command = (String) body.get("command");
-        Integer timeout = toInteger(body.get("timeoutSeconds"));
-        return execService.runCommand(hostIds, command, timeout, null);
+    public ReturnResult<List<MsExecLog>> runCommand(@RequestBody ExecCommandVO body) {
+        List<Long> hostIds = body.hostIds() == null ? List.of() : body.hostIds();
+        return execService.runCommand(hostIds, body.command(), body.timeoutSeconds(), null);
     }
 
     /**
@@ -61,7 +59,6 @@ public class ExecController {
      * @param directory 目标目录
      * @param file      文件
      * @return 各主机日志
-     * @param @RequestParam("hostIds" @请求参数("主机标识"
      */
     @Operation(summary = "文件分发")
     @PostMapping("/file")
@@ -137,34 +134,12 @@ public class ExecController {
      * @param type   类型过滤，可为空
      * @param hostId 主机过滤，可为空
      * @return 日志列表
-     * @param false false
      */
     @Operation(summary = "执行日志查询")
     @GetMapping("/log")
     public ReturnResult<List<MsExecLog>> listLogs(@RequestParam(required = false) String type,
                                                   @RequestParam(required = false) Long hostId) {
         return execService.listLogs(type, hostId);
-    }
-
-    /**
-     * 解析对象为长整型列表（JSON 数组或字符串）
-     *
-     * @param value 原始值
-     * @return 长整型列表，非法输入返回空列表
-     */
-    @SuppressWarnings("unchecked")
-    private List<Long> parseLongList(Object value) {
-        if (value instanceof List<?> rawList) {
-            List<Long> ids = new java.util.ArrayList<>(rawList.size());
-            for (Object item : rawList) {
-                Long parsed = toLong(item);
-                if (parsed != null) {
-                    ids.add(parsed);
-                }
-            }
-            return ids;
-        }
-        return parseLongCsv(value == null ? "" : value.toString());
     }
 
     /**
@@ -204,14 +179,4 @@ public class ExecController {
         }
     }
 
-    /**
-     * 安全转换整型
-     *
-     * @param value 原始值
-     * @return 整型或 空
-     */
-    private Integer toInteger(Object value) {
-        Long parsed = toLong(value);
-        return parsed == null ? null : parsed.intValue();
-    }
 }

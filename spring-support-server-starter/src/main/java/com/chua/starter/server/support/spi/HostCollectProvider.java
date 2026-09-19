@@ -5,7 +5,8 @@ import reactor.core.publisher.Mono;
 /**
  * 主机采集 提供者 SPI（响应式）
  * <p>
- * 采集方式可插拔扩展：新增采集方式只需实现本接口并注册为 Spring Bean，
+ * 采集方式可插拔扩展：新增采集方式只需实现本接口、标注 {@code @Spi}，
+ * 并在 {@code META-INF/extensions/com.chua.starter.server.support.spi.HostCollectProvider} 中登记，
  * 注册中心按 {@link #type()} 自动路由，调度零改动。
  * 无论主动（SSH/HTTP/SNMP/Prometheus）还是被动（Agent 上报），
  * 上层统一通过 {@link Mono} 获取数据，屏蔽底层差异。

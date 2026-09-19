@@ -1,18 +1,19 @@
 package com.chua.starter.server.support.spi;
 
+
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.chua.common.support.spi.annotations.Spi;
 import com.chua.starter.server.support.entity.MsServerHost;
 import com.chua.starter.server.support.enums.HostCollectType;
 import com.chua.starter.server.support.mapper.MsServerHostMapper;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
-import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
-
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 /**
  * Prometheus 拉取采集 提供者（Prometheus）
@@ -25,8 +26,7 @@ import java.util.regex.Pattern;
  * @since 4.0.0.42
  */
 @Slf4j
-@Component
-@RequiredArgsConstructor
+@Spi(value = "prometheus", order = 100)
 public class PrometheusHostCollectProvider implements HostCollectProvider {
 
     /**
@@ -37,7 +37,8 @@ public class PrometheusHostCollectProvider implements HostCollectProvider {
     /**
      * 主机 映射器
     */
-    private final MsServerHostMapper hostMapper;
+    @Autowired
+    private MsServerHostMapper hostMapper;
 
     /**
      * CPU 空闲秒数指标
@@ -109,13 +110,9 @@ public class PrometheusHostCollectProvider implements HostCollectProvider {
         String url = "http://" + address.trim() + ":" + port + METRICS_PATH;
         try {
             String body = fetchBody(url);
-            /**
-             * apply指标。
-             * @param host 主机
-             * @param body 主体
-             */
-            applyMetrics(host, body);
-            hostMapper.updateById(host);
+            LambdaUpdateWrapper<MsServerHost> write = new LambdaUpdateWrapper<>();
+            applyMetrics(host, body, write);
+            hostMapper.update(null, write.eq(MsServerHost::getId, host.getId()));
             return CollectOutcome.ok("Prometheus 采集成功");
         } catch (Exception e) {
             log.warn("[collect] PROMETHEUS 采集失败 hostId={} url={}: {}", host.getId(), url, e.getMessage());
@@ -157,16 +154,18 @@ public class PrometheusHostCollectProvider implements HostCollectProvider {
     /**
      * 从 Prometheus 文本解析并回写主机
      *
-     * @param host 主机
-     * @param body 指标文本
+     * @param host  主机（内存态同步刷新，供采集钩子读取）
+     * @param body  指标文本
+     * @param write 收集实际采到的列，只更新这些列
      */
-    private void applyMetrics(MsServerHost host, String body) {
+    private void applyMetrics(MsServerHost host, String body, LambdaUpdateWrapper<MsServerHost> write) {
         double idleSum = sumGroup(CPU_IDLE, body);
         double totalSum = sumGroup(CPU_TOTAL, body);
         if (totalSum > 0 && idleSum >= 0) {
             double usage = (1 - idleSum / totalSum) * 100;
             if (host.getServerHostCpuCores() == null) {
                 host.setServerHostCpuCores((int) Math.round(usage));
+                write.set(MsServerHost::getServerHostCpuCores, host.getServerHostCpuCores());
             }
         }
         double memTotal = firstDouble(MEM_TOTAL, body);
@@ -174,6 +173,7 @@ public class PrometheusHostCollectProvider implements HostCollectProvider {
         if (memTotal > 0) {
             long usedMb = Math.round((memTotal - Math.max(memAvailable, 0)) / 1024 / 1024);
             host.setServerHostMemoryMb(usedMb);
+            write.set(MsServerHost::getServerHostMemoryMb, host.getServerHostMemoryMb());
         }
         double diskTotal = firstDouble(DISK_TOTAL, body);
         double diskAvailable = firstDouble(DISK_AVAILABLE, body);
@@ -181,8 +181,10 @@ public class PrometheusHostCollectProvider implements HostCollectProvider {
             long totalGb = Math.round(diskTotal / 1024 / 1024 / 1024);
             long availGb = Math.round(Math.max(diskAvailable, 0) / 1024 / 1024 / 1024);
             host.setServerHostDiskGb(totalGb);
+            write.set(MsServerHost::getServerHostDiskGb, host.getServerHostDiskGb());
             if (totalGb - availGb > 0 && host.getServerHostDescription() == null) {
                 host.setServerHostDescription("磁盘已用 " + (totalGb - availGb) + " GB");
+                write.set(MsServerHost::getServerHostDescription, host.getServerHostDescription());
             }
         }
     }

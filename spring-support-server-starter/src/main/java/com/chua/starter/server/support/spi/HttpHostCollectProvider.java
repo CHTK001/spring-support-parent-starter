@@ -1,11 +1,12 @@
 package com.chua.starter.server.support.spi;
 
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.chua.common.support.spi.annotations.Spi;
 import com.chua.starter.server.support.entity.MsServerHost;
 import com.chua.starter.server.support.enums.HostCollectType;
 import com.chua.starter.server.support.mapper.MsServerHostMapper;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Autowired;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
@@ -21,8 +22,7 @@ import reactor.core.scheduler.Schedulers;
  * @since 4.0.0.42
  */
 @Slf4j
-@Component
-@RequiredArgsConstructor
+@Spi(value = "http", order = 100)
 public class HttpHostCollectProvider implements HostCollectProvider {
 
     /**
@@ -38,7 +38,8 @@ public class HttpHostCollectProvider implements HostCollectProvider {
     /**
      * 主机 映射器
     */
-    private final MsServerHostMapper hostMapper;
+    @Autowired
+    private MsServerHostMapper hostMapper;
 
     @Override
     public HostCollectType type() {
@@ -80,20 +81,12 @@ public class HttpHostCollectProvider implements HostCollectProvider {
                 return CollectOutcome.fail("HTTP 端点返回 " + code);
             }
             String body;
-            /**
-             * 尝试。
-             * @param conn.getInputStream( conn.获取输入流(
-             */
             try (var in = conn.getInputStream()) {
                 body = new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
             }
-            /**
-             * applypayload。
-             * @param host 主机
-             * @param body 主体
-             */
-            applyPayload(host, body);
-            hostMapper.updateById(host);
+            LambdaUpdateWrapper<MsServerHost> write = new LambdaUpdateWrapper<>();
+            applyPayload(host, body, write);
+            hostMapper.update(null, write.eq(MsServerHost::getId, host.getId()));
             return CollectOutcome.ok("HTTP 采集成功");
         } catch (Exception e) {
             log.warn("[collect] HTTP 采集失败 hostId={} url={}: {}", host.getId(), url, e.getMessage());
@@ -102,35 +95,43 @@ public class HttpHostCollectProvider implements HostCollectProvider {
     }
 
     /**
-     * 解析 JSON 负载并回写主机字段（容错：解析失败不阻断在线标记）
+     * 解析 JSON 负载并回写主机字段（容错：解析失败不阻断本次采集）
      *
-     * @param host 主机
-     * @param body 响应体
+     * @param host  主机（内存态同步刷新，供采集钩子读取）
+     * @param body  响应体
+     * @param write 收集实际采到的列，只更新这些列
      */
-    private void applyPayload(MsServerHost host, String body) {
+    private void applyPayload(MsServerHost host, String body, LambdaUpdateWrapper<MsServerHost> write) {
         try {
             com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
             com.fasterxml.jackson.databind.JsonNode root = mapper.readTree(body);
             if (root.has("cpuCores")) {
                 host.setServerHostCpuCores(root.get("cpuCores").asInt());
+                write.set(MsServerHost::getServerHostCpuCores, host.getServerHostCpuCores());
             }
             if (root.has("memoryMb")) {
                 host.setServerHostMemoryMb(root.get("memoryMb").asLong());
+                write.set(MsServerHost::getServerHostMemoryMb, host.getServerHostMemoryMb());
             }
             if (root.has("diskGb")) {
                 host.setServerHostDiskGb(root.get("diskGb").asLong());
+                write.set(MsServerHost::getServerHostDiskGb, host.getServerHostDiskGb());
             }
             if (root.has("osVersion")) {
                 host.setServerHostOsVersion(root.get("osVersion").asText());
+                write.set(MsServerHost::getServerHostOsVersion, host.getServerHostOsVersion());
             }
             if (root.has("osArch")) {
                 host.setServerHostOsArch(root.get("osArch").asText());
+                write.set(MsServerHost::getServerHostOsArch, host.getServerHostOsArch());
             }
             if (root.has("publicIp")) {
                 host.setServerHostPublicIp(root.get("publicIp").asText());
+                write.set(MsServerHost::getServerHostPublicIp, host.getServerHostPublicIp());
             }
             if (root.has("privateIp")) {
                 host.setServerHostPrivateIp(root.get("privateIp").asText());
+                write.set(MsServerHost::getServerHostPrivateIp, host.getServerHostPrivateIp());
             }
         } catch (Exception e) {
             log.debug("[collect] HTTP 负载解析失败(忽略): {}", e.getMessage());

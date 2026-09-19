@@ -1,19 +1,28 @@
 package com.chua.starter.server.support.spi;
 
+import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.spi.definition.ServiceDefinition;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.Set;
 
 /**
  * 主机硬件探测提供者注册中心
  * <p>
- * 启动时扫描全部 {@link HostDetectProvider} Bean，按系统类型建索引，
+ * 实现按 {@code @Spi} 注册到 {@link HostDetectProvider} 扩展点（{@code META-INF/extensions} 文件 +
+ * 接口同包扫描两条发现路径），本类取其全部定义并按 {@link HostDetectProvider#osType()} 建索引，
  * {@code ServerHostServiceImpl.detectHardware} 据此路由到具体探测实现。
+ * </p>
+ *
+ * <p>
+ * 索引在首次解析时构建：SPI 实例的依赖由 Spring 装配链注入，容器就绪前构建会得到半初始化实例。
  * </p>
  *
  * @author CH
@@ -24,30 +33,14 @@ import java.util.concurrent.ConcurrentHashMap;
 public class HostDetectProviderRegistry {
 
     /**
-     * 系统类型 -> 探测实现索引
-    */
-    private final Map<String, HostDetectProvider> index = new ConcurrentHashMap<>();
+     * 硬件探测扩展点
+     */
+    private final ServiceProvider<HostDetectProvider> extensions = ServiceProvider.of(HostDetectProvider.class);
 
     /**
-     * 构造：注册全部探测提供者
-     *
-     * @param providers 探测提供者列表
+     * 系统类型 -> 探测实现索引，首次使用时构建
      */
-    @Autowired
-    public HostDetectProviderRegistry(List<HostDetectProvider> providers) {
-        if (providers == null || providers.isEmpty()) {
-            log.warn("[detect] 未发现 HostDetectProvider 实现");
-            return;
-        }
-        for (HostDetectProvider provider : providers) {
-            String osType = provider.osType();
-            if (osType == null || osType.isBlank()) {
-                continue;
-            }
-            index.put(osType.toUpperCase(), provider);
-            log.info("[detect] 注册探测 Provider: osType={}, impl={}", osType, provider.getClass().getSimpleName());
-        }
-    }
+    private volatile Map<String, HostDetectProvider> index;
 
     /**
      * 按系统类型解析探测提供者
@@ -59,7 +52,7 @@ public class HostDetectProviderRegistry {
         if (osType == null || osType.isBlank()) {
             return Optional.empty();
         }
-        return Optional.ofNullable(index.get(osType.toUpperCase()));
+        return Optional.ofNullable(index().get(osType.trim().toUpperCase(Locale.ROOT)));
     }
 
     /**
@@ -70,5 +63,49 @@ public class HostDetectProviderRegistry {
      */
     public boolean supports(String osType) {
         return resolve(osType).isPresent();
+    }
+
+    /**
+     * 取索引，必要时构建。
+     *
+     * @return 系统类型 -> 实现
+     */
+    private Map<String, HostDetectProvider> index() {
+        Map<String, HostDetectProvider> current = index;
+        if (current != null) {
+            return current;
+        }
+        synchronized (this) {
+            if (index == null) {
+                index = build();
+            }
+            return index;
+        }
+    }
+
+    /**
+     * 遍历扩展点定义建索引，同一实现类的多个别名只登记一次。
+     *
+     * @return 不可变索引
+     */
+    private Map<String, HostDetectProvider> build() {
+        Map<String, HostDetectProvider> out = new HashMap<>();
+        Set<Class<?>> seen = new HashSet<>();
+        for (ServiceDefinition definition : extensions.getPriorityServiceDefinitions()) {
+            HostDetectProvider provider = definition.getObj(extensions.getServiceAutowire());
+            if (provider == null || !seen.add(provider.getClass())) {
+                continue;
+            }
+            String osType = provider.osType();
+            if (osType == null || osType.isBlank()) {
+                continue;
+            }
+            out.put(osType.trim().toUpperCase(Locale.ROOT), provider);
+            log.info("[detect] 注册探测 Provider: osType={}, impl={}", osType, provider.getClass().getSimpleName());
+        }
+        if (out.isEmpty()) {
+            log.warn("[detect] HostDetectProvider 扩展点无任何实现，硬件探测不可用");
+        }
+        return Collections.unmodifiableMap(out);
     }
 }

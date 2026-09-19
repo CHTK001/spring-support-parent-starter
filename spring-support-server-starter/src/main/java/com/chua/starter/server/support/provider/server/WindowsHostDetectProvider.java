@@ -1,13 +1,13 @@
 package com.chua.starter.server.support.provider.server;
 
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.spi.annotations.Spi;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.server.support.entity.MsServerHost;
 import com.chua.starter.server.support.model.SshCredential;
 import com.chua.starter.server.support.spi.HostDetectProvider;
 import com.chua.winrm.support.client.WinRmExecClient;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
 
 /**
  * Windows 主机硬件探测提供者（WinRM 采集）
@@ -20,7 +20,7 @@ import org.springframework.stereotype.Component;
  * @since 4.0.0.42
  */
 @Slf4j
-@Component
+@Spi(value = "windows", order = 100)
 public class WindowsHostDetectProvider implements HostDetectProvider {
 
     /**
