@@ -11,6 +11,7 @@ import com.chua.starter.eduai.model.dto.ReviewPaperDTO;
 import com.chua.starter.eduai.model.dto.WrongQueryDTO;
 import com.chua.starter.eduai.model.vo.WrongQuestionVO;
 import com.chua.starter.eduai.service.IEduWrongQuestionService;
+import com.chua.starter.eduai.support.util.EduUserContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -56,6 +57,7 @@ public class EduWrongQuestionServiceImpl extends ServiceImpl<EduWrongQuestionMap
             baseMapper.updateById(existing);
         } else {
             EduWrongQuestion entity = new EduWrongQuestion();
+            entity.setOwnerUserId(EduUserContext.requireUserId());
             entity.setWrongQuestionStudentId(studentId);
             entity.setWrongQuestionQuestionId(questionId);
             entity.setWrongQuestionExamId(examId);
@@ -83,6 +85,7 @@ public class EduWrongQuestionServiceImpl extends ServiceImpl<EduWrongQuestionMap
         if (query.getMasteryLevel() != null) {
             wrapper.eq(EduWrongQuestion::getWrongQuestionMasteryLevel, query.getMasteryLevel());
         }
+        EduUserContext.scopeOwned(wrapper, EduWrongQuestion::getOwnerUserId);
         wrapper.orderByDesc(EduWrongQuestion::getWrongQuestionLastWrongTime);
 
         Page<EduWrongQuestion> page = new Page<>(query.getPageNum(), query.getPageSize());
@@ -105,8 +108,9 @@ public class EduWrongQuestionServiceImpl extends ServiceImpl<EduWrongQuestionMap
     public List<Long> generateReviewPaper(ReviewPaperDTO dto) {
         LambdaQueryWrapper<EduWrongQuestion> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(EduWrongQuestion::getWrongQuestionStudentId, dto.getStudentId())
-                .eq(EduWrongQuestion::getWrongQuestionStatus, 1)
-                .orderByAsc(EduWrongQuestion::getWrongQuestionMasteryLevel)
+                .eq(EduWrongQuestion::getWrongQuestionStatus, 1);
+        EduUserContext.scopeOwned(wrapper, EduWrongQuestion::getOwnerUserId);
+        wrapper.orderByAsc(EduWrongQuestion::getWrongQuestionMasteryLevel)
                 .orderByDesc(EduWrongQuestion::getWrongQuestionLastWrongTime)
                 .last("limit " + (dto.getCount() != null ? dto.getCount() : 10));
         List<EduWrongQuestion> list = baseMapper.selectList(wrapper);
@@ -129,6 +133,7 @@ public class EduWrongQuestionServiceImpl extends ServiceImpl<EduWrongQuestionMap
         if (entity == null) {
             return false;
         }
+        EduUserContext.checkWritable(entity.getOwnerUserId());
         entity.setWrongQuestionMasteryLevel(masteryLevel);
         entity.setWrongQuestionLastReviewTime(LocalDateTime.now());
         entity.setWrongQuestionReviewCount(entity.getWrongQuestionReviewCount() + 1);

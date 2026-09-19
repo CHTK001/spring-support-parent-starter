@@ -72,6 +72,12 @@
             <artifactId>spring-support-queue-starter</artifactId>
         </dependency>
 
+        <!-- 定时任务（题库采集调度 edu-collect-dispatch） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-job-starter</artifactId>
+        </dependency>
+
         <!-- 深度学习/AI推理 -->
         <dependency>
             <groupId>com.chua</groupId>

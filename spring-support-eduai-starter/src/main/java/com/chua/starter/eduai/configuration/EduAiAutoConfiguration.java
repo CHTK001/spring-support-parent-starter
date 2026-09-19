@@ -7,7 +7,6 @@ import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
-import org.springframework.scheduling.annotation.EnableAsync;
 
 /**
  * 教育AI模块自动配置
@@ -29,10 +28,10 @@ import org.springframework.scheduling.annotation.EnableAsync;
         "com.chua.starter.eduai.dimension.controller",
         "com.chua.starter.eduai.service.impl",
         "com.chua.starter.eduai.dimension.service",
-        "com.chua.starter.eduai.ai"
+        "com.chua.starter.eduai.ai",
+        "com.chua.starter.eduai.collect"
 })
 @EnableConfigurationProperties(EduAiProperties.class)
-@EnableAsync
 /**
  * eduaiauto配置类。
  *
@@ -56,6 +55,7 @@ public class EduAiAutoConfiguration {
             registry.registerEndpoint("教育AI", "知识库管理", "/v2/edu/knowledge-doc/**", "文档上传、语义检索与删除");
             registry.registerEndpoint("教育AI", "错题库管理", "/v2/edu/wrongbook/**", "错题查询、复习卷与掌握度更新");
             registry.registerEndpoint("教育AI", "考试管理", "/v2/edu/exam/**", "考试创建、更新与删除");
+            registry.registerEndpoint("教育AI", "题库采集", "/v2/edu/collect/**", "采集任务 CRUD、SPI 数据源、手动触发、执行日志与调度总览");
             registry.registerEndpoint("教育AI", "维度管理", "/v2/edu/dimension/**", "学科/年级/班级/学生/教师维度字典");
             registry.registerEndpoint("教育AI", "调试", "/v2/edu/debug/**", "AI 健康检查、队列连通性");
             registry.registerFlag("eduai", "教育AI", true, "教育AI辅助教学模块 (AI 组卷/阅卷/语义检索/维度管理)");

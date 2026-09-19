@@ -1,8 +1,10 @@
 package com.chua.starter.eduai.controller;
 
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.starter.common.support.exception.BusinessException;
 import com.chua.starter.eduai.model.EduIdiom;
 import com.chua.starter.eduai.service.IEduIdiomService;
+import com.chua.starter.eduai.support.util.EduUserContext;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -74,7 +76,11 @@ public class EduIdiomController {
     @Operation(summary = "获取成语详情")
     @GetMapping("/detail/{idiomId}")
     public ReturnResult<EduIdiom> detail(@PathVariable Long idiomId) {
-        return ReturnResult.ok(idiomService.getById(idiomId));
+        EduIdiom idiom = idiomService.getById(idiomId);
+        if (idiom != null) {
+            EduUserContext.checkReadable(idiom.getOwnerUserId());
+        }
+        return ReturnResult.ok(idiom);
     }
 
     /**
@@ -86,6 +92,16 @@ public class EduIdiomController {
     @Operation(summary = "添加成语")
     @PostMapping("/save")
     public ReturnResult<Boolean> save(@RequestBody EduIdiom idiom) {
+        if (idiom.getIdiomId() == null) {
+            idiom.setOwnerUserId(EduUserContext.requireUserId());
+        } else {
+            EduIdiom exists = idiomService.getById(idiom.getIdiomId());
+            if (exists == null) {
+                throw new BusinessException("成语不存在");
+            }
+            EduUserContext.checkWritable(exists.getOwnerUserId());
+            idiom.setOwnerUserId(exists.getOwnerUserId());
+        }
         return ReturnResult.ok(idiomService.saveOrUpdate(idiom));
     }
 
@@ -98,6 +114,11 @@ public class EduIdiomController {
     @Operation(summary = "删除成语")
     @DeleteMapping("/delete/{idiomId}")
     public ReturnResult<Boolean> delete(@PathVariable Long idiomId) {
+        EduIdiom exists = idiomService.getById(idiomId);
+        if (exists == null) {
+            return ReturnResult.ok(false);
+        }
+        EduUserContext.checkWritable(exists.getOwnerUserId());
         return ReturnResult.ok(idiomService.removeById(idiomId));
     }
 }

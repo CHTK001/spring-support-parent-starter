@@ -17,6 +17,7 @@ import com.chua.starter.eduai.model.vo.MarkingResultVO;
 import com.chua.starter.eduai.queue.MarkingJob;
 import com.chua.starter.eduai.queue.MarkingMessageListener;
 import com.chua.starter.eduai.service.IEduMarkingService;
+import com.chua.starter.eduai.support.util.EduUserContext;
 import com.chua.starter.queue.MessageTemplate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -107,6 +108,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
     public String submitAnswerSheet(MarkingSubmitDTO dto) {
         // 1. 持久化答题卡
         EduAnswerSheet sheet = new EduAnswerSheet();
+        sheet.setOwnerUserId(EduUserContext.requireUserId());
         sheet.setAnswerSheetExamId(dto.getExamId());
         sheet.setAnswerSheetStudentId(dto.getStudentId());
         sheet.setAnswerSheetContent(dto.getContent());
@@ -120,6 +122,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         String taskId = UUID.randomUUID().toString().replace("-", "");
         for (MarkingSubmitDTO.AnswerItem item : dto.getAnswers()) {
             EduMarkingResult result = new EduMarkingResult();
+            result.setOwnerUserId(sheet.getOwnerUserId());
             result.setMarkingResultAnswerSheetId(sheet.getAnswerSheetId());
             result.setMarkingResultQuestionId(item.getQuestionId());
             result.setMarkingResultTaskId(taskId);
@@ -229,6 +232,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
     public MarkingResultVO getResult(String taskId) {
         LambdaQueryWrapper<EduMarkingResult> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(EduMarkingResult::getMarkingResultTaskId, taskId);
+        EduUserContext.scopeOwned(wrapper, EduMarkingResult::getOwnerUserId);
         List<EduMarkingResult> results = markingResultMapper.selectList(wrapper);
 
         if (results.isEmpty()) {
@@ -282,6 +286,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
             if (result == null) {
                 continue;
             }
+            EduUserContext.checkWritable(result.getOwnerUserId());
             result.setMarkingResultTeacherScore(adj.getScore());
             result.setMarkingResultTeacherComment(adj.getComment());
             result.setMarkingResultStatus(STATUS_TEACHER_DONE);

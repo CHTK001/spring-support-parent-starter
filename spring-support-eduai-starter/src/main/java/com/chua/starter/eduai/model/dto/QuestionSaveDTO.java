@@ -95,4 +95,9 @@ public class QuestionSaveDTO {
      * 状态（0-停用 1-启用）
      */
     private Integer questionStatus;
+
+    /**
+     * 归属用户标识（内部链路传递，如采集任务异步落题时继承任务归属；请求线程以登录态为准，客户端传值无效）
+     */
+    private String ownerUserId;
 }

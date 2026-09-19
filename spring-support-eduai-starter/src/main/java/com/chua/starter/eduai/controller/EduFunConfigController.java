@@ -1,8 +1,10 @@
 package com.chua.starter.eduai.controller;
 
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.starter.common.support.exception.BusinessException;
 import com.chua.starter.eduai.model.EduFunConfig;
 import com.chua.starter.eduai.service.IEduFunConfigService;
+import com.chua.starter.eduai.support.util.EduUserContext;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -51,7 +53,7 @@ public class EduFunConfigController {
     @Operation(summary = "获取所有趣味模块（含禁用）")
     @GetMapping("/list-all")
     public ReturnResult<List<EduFunConfig>> listAll() {
-        return ReturnResult.ok(funConfigService.list());
+        return ReturnResult.ok(funConfigService.listAllScoped());
     }
 
     /**
@@ -82,6 +84,16 @@ public class EduFunConfigController {
     @Operation(summary = "保存趣味模块配置")
     @PostMapping("/save")
     public ReturnResult<Boolean> save(@RequestBody EduFunConfig config) {
+        if (config.getConfigId() == null) {
+            config.setOwnerUserId(EduUserContext.requireUserId());
+        } else {
+            EduFunConfig exists = funConfigService.getById(config.getConfigId());
+            if (exists == null) {
+                throw new BusinessException("趣味模块配置不存在");
+            }
+            EduUserContext.checkWritable(exists.getOwnerUserId());
+            config.setOwnerUserId(exists.getOwnerUserId());
+        }
         return ReturnResult.ok(funConfigService.saveOrUpdate(config));
     }
 
@@ -94,6 +106,11 @@ public class EduFunConfigController {
     @Operation(summary = "删除趣味模块配置")
     @DeleteMapping("/delete/{configId}")
     public ReturnResult<Boolean> delete(@PathVariable Long configId) {
+        EduFunConfig exists = funConfigService.getById(configId);
+        if (exists == null) {
+            return ReturnResult.ok(false);
+        }
+        EduUserContext.checkWritable(exists.getOwnerUserId());
         return ReturnResult.ok(funConfigService.removeById(configId));
     }
 }
