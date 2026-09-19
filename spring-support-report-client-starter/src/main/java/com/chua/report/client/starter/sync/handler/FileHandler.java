@@ -27,7 +27,6 @@ import java.util.stream.Collectors;
  * 处理服务端发送的文件操作请求
  * </p>
  *
- * @版本 1.0.0
  * @since 2024/12/05
  * @author CH
  */

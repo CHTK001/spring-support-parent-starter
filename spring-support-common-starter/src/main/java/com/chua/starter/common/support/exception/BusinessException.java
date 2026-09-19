@@ -9,7 +9,6 @@ import com.chua.common.support.lang.code.ResultCode;
  * </p>
  *
  * @since 2022/7/31
- * @版本 1.0.0
  * @author CH
  */
 public class BusinessException extends RuntimeException {

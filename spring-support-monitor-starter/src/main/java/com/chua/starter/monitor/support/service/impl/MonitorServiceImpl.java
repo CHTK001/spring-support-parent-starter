@@ -32,13 +32,10 @@ import java.util.List;
 public class MonitorServiceImpl implements MonitorService {
 
     /** 监控 映射器 */
-    /** Monitormapper */
     private final MsMonitorMapper monitorMapper;
     /** 任务 映射器, 用于级联删除 */
-    /** 监控任务映射器 */
     private final MsMonitorTaskMapper monitorTaskMapper;
     /** 网关 映射器, 用于级联删除 */
-    /** Monitorgatewaymapper */
     private final MsMonitorGatewayMapper monitorGatewayMapper;
 
     /** 探针标识随机源（静态 最终 复用，线程安全） */

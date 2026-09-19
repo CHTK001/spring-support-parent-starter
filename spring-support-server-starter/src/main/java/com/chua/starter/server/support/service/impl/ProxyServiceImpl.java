@@ -19,10 +19,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 免费代理服务实现：自研抓取可用源（databay——JSON）→ 清空代理表 → 录入。
- * 每次获取均为全量刷新（每次获取清空录入）；页面从表读取（快）。
- * @author CH
- * @since 4.0.0
+* 免费代理服务实现：自研抓取可用源（databay——JSON）→ 清空代理表 → 录入。
+* 每次获取均为全量刷新（每次获取清空录入）；页面从表读取（快）。
+* @author CH
+* @since 4.0.0
  */
 @Slf4j
 @Service
@@ -63,6 +63,58 @@ public class ProxyServiceImpl implements ProxyService {
                 .stream().findFirst()
                 .map(p -> p.getHost() + ":" + p.getPort())
                 .orElse(null);
+    }
+
+    @Override
+    public void checkProxies() {
+        List<MsProxy> proxies = proxyMapper.selectList(null);
+        if (proxies.isEmpty()) {
+            return;
+        }
+        // 虚拟线程批量检测
+        try (var executor = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor()) {
+            for (MsProxy proxy : proxies) {
+                executor.submit(() -> checkProxyInternal(proxy));
+            }
+        }
+        log.info("[ProxyService] 批量检测代理完成: {} 条", proxies.size());
+    }
+
+    @Override
+    public void checkProxy(Long id) {
+        MsProxy proxy = proxyMapper.selectById(id);
+        if (proxy == null) {
+            return;
+        }
+        checkProxyInternal(proxy);
+    }
+
+    /**
+     * 检测单个代理（内部方法）
+     *
+     * @param proxy 代理
+     */
+    private void checkProxyInternal(MsProxy proxy) {
+        long start = System.currentTimeMillis();
+        boolean reachable = false;
+        try {
+            // 使用代理访问 google
+            HttpClient client = HttpClient.newBuilder()
+                    .connectTimeout(Duration.ofSeconds(5))
+                    .proxy(java.net.ProxySelector.of(new java.net.InetSocketAddress(proxy.getHost(), proxy.getPort())))
+                    .build();
+            HttpRequest req = HttpRequest.newBuilder(URI.create("https://www.google.com"))
+                    .timeout(Duration.ofSeconds(10)).GET().build();
+            HttpResponse<String> resp = client.send(req, HttpResponse.BodyHandlers.ofString());
+            reachable = resp.statusCode() == 200;
+        } catch (Exception e) {
+            reachable = false;
+        }
+        long delay = System.currentTimeMillis() - start;
+        proxy.setDelay(delay);
+        proxy.setReachable(reachable ? 1 : 0);
+        proxy.setCheckTime(System.currentTimeMillis());
+        proxyMapper.updateById(proxy);
     }
 
     /**

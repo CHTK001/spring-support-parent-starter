@@ -12,7 +12,6 @@ import java.util.function.Supplier;
  * 注意：此接口是临时创建的，用于编译通过。实际应该使用 strategy-starter 中的接口。
  * </p>
  *
- * @版本 1.0.0
  * @since 2025-12-25
  * @author CH
  */

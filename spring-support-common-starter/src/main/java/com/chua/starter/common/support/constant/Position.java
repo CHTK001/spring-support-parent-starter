@@ -3,7 +3,6 @@ package com.chua.starter.common.support.constant;
 /**
  * 位置
  *
- * @版本 1.0.0
  * @since 2024/03/01
  * @author CH
  */

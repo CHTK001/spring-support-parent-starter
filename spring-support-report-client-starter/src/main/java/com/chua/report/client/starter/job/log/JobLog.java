@@ -3,7 +3,6 @@ package com.chua.report.client.starter.job.log;
 /**
  * 作业日志
  *
- * @版本 1.0.0
  * @since 2024/03/11
  * @author CH
  */

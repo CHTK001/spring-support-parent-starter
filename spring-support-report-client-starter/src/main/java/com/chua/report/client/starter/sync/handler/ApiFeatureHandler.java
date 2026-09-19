@@ -15,7 +15,6 @@ import java.util.Map;
  * </p>
  *
  * @since 2024/12/08
- * @版本 1.0.0
  * @author CH
  */
 @Slf4j

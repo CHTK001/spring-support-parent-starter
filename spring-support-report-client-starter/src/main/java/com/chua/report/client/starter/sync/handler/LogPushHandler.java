@@ -33,7 +33,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * 监听应用日志并推送到 监控
  * </p>
  *
- * @版本 1.0.0
  * @since 2025/01/17
  * @author CH
  */

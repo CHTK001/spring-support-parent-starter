@@ -32,7 +32,6 @@ import java.util.concurrent.atomic.AtomicReference;
  *
  * <p>采集能力通过 {@link OshiSystemMonitor} 统一封装，本类只负责调度与上报。</p>
  *
- * @版本 1.0.0
  * @since 2024/12/05
  * @author CH
  */

@@ -10,7 +10,6 @@ import java.io.Serializable;
 /**
  * 日志结果
  *
- * @版本 1.0.0
  * @since 2024/03/11
  * @author CH
  */

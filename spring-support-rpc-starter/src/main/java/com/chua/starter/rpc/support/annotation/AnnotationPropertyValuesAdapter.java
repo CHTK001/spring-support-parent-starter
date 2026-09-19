@@ -16,7 +16,6 @@ import java.util.Map;
  * {@link PropertyValues}
  * 适配器
  *
- * @版本 1.0.0
  * @since 2.5.11
  * @author CH
  */

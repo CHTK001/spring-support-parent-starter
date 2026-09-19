@@ -71,7 +71,6 @@ import org.slf4j.LoggerFactory;
  * </p>
  *
  * @since 2023-08-01
- * @版本 1.0.0
  * @author CH
  */
 @RestControllerAdvice
@@ -79,15 +78,12 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
     /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(ApiExceptionAdvice.class);
     /** 是否为生产环境（生产环境隐藏技术细节） */
-    /** isproduction */
     private boolean isProduction = false;
 
     /** 是否在响应中返回详细错误信息（字段级别错误） */
-    /** 返回值detailederrors */
     private boolean returnDetailedErrors = true;
 
     /** 请求追踪标识的头部名称 */
-    /** 追踪_标识_头部 */
     private static final String TRACE_ID_HEADER = "X-Trace-Id";
 
     @Override

@@ -66,7 +66,6 @@ import java.lang.annotation.*;
  * </pre>
  *
  * @since 2020-09-23
- * @版本 1.1.0
  * @see com.chua.starter.common.support.api.control.ApiVersionCondition
  * @see com.chua.starter.common.support.api.control.ApiVersionRequestMappingHandlerMapping
  * @author CH

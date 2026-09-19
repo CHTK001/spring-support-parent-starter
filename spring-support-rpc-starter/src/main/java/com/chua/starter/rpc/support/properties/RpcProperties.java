@@ -47,7 +47,7 @@ public class RpcProperties {
      */
     private String serviceKey = "98bb5008c946bdce065af13070241e10";
     /**
-     * 加密货币
+     * 加密算法
      */
     private String crypto = "aes";
     /**

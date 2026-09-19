@@ -31,4 +31,16 @@ public interface ProxyService {
      * @return "host:port"，无则 空
      */
     String currentProxy();
+
+    /**
+     * 批量检测代理（异步——虚拟线程处理）
+     */
+    void checkProxies();
+
+    /**
+     * 检测单个代理
+     *
+     * @param id 代理ID
+     */
+    void checkProxy(Long id);
 }

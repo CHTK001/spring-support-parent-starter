@@ -25,7 +25,6 @@ import static org.slf4j.LoggerFactory.getLogger;
  * 支持超时控制、重复触发检测、空闲自动回收等特性。
  * </p>
  *
- * @版本 1.0.0
  * @since 2024/03/11
  * @author CH
  */

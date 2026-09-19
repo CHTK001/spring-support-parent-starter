@@ -262,7 +262,6 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
      *   <li>异步执行 INITDATA 脚本（初始化数据，使用虚拟线程）</li>
      * </ol>
      *
-     * @版本 1.2.0
      * @since 2025/9/3 9:07
      * @author CH
      */

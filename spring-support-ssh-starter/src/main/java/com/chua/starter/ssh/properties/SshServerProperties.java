@@ -9,7 +9,6 @@ import java.util.List;
 /**
  * SSH服务端配置属性
  * 
- * @版本 4.0.0.32
  * @author CH
  * @since 4.0.0
  */

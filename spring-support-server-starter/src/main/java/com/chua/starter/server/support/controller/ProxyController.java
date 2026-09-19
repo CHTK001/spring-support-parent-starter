@@ -6,6 +6,7 @@ import com.chua.starter.server.support.entity.MsProxy;
 import com.chua.starter.server.support.service.ProxyService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -13,11 +14,11 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 免费代理（业务——代理表 ms_代理）：
- * 获取（抓取→清空→录入——较慢）· 列表（读表——快）· 当前代理（自动——无需业务指定）
- * @author CH
- * @since 4.0.0
- */
+* 免费代理（业务——代理表 ms_代理）：
+* 获取（抓取→清空→录入——较慢）· 列表（读表——快）· 当前代理（自动——无需业务指定）
+* @author CH
+* @since 4.0.0
+*/
 @RestController
 @RequestMapping(ServerConstants.API_PREFIX + "/proxy")
 @RequiredArgsConstructor
@@ -54,5 +55,28 @@ public class ProxyController {
     public ReturnResult<Map<String, String>> current() {
         return ReturnResult.ok(Map.of("proxy",
                 proxyService.currentProxy() == null ? "" : proxyService.currentProxy()));
+    }
+
+    /**
+     * 批量检测代理（异步）
+     *
+     * @return 结果
+     */
+    @GetMapping("/check")
+    public ReturnResult<String> check() {
+        proxyService.checkProxies();
+        return ReturnResult.ok("批量检测已开始");
+    }
+
+    /**
+     * 检测单个代理
+     *
+     * @param id 代理ID
+     * @return 结果
+     */
+    @GetMapping("/check/{id}")
+    public ReturnResult<String> checkOne(@PathVariable Long id) {
+        proxyService.checkProxy(id);
+        return ReturnResult.ok("检测完成");
     }
 }

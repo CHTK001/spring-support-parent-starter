@@ -54,7 +54,6 @@ import java.util.Map;
  * }
  * </pre>
  *
- * @版本 1.0.0
  * @since 2024/12/07
  * @see Job
  * @see JobHandlerFactory

@@ -10,7 +10,6 @@ import org.springframework.beans.factory.InitializingBean;
 /**
  * rpc服务Bean
  *
- * @版本 1.0.0
  * @since 2024/04/08
  * @author CH
  */

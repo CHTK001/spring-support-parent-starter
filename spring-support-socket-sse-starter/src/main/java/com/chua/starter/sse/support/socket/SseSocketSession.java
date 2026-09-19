@@ -13,7 +13,6 @@ import java.util.concurrent.ConcurrentHashMap;
  * SSE Socket 会话实现
  * 封装 sseemitter 为统一的 Socket会话 接口
  *
- * @版本 1.0.0
  * @since 2024-12-24
  * @author CH
  */

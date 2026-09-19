@@ -34,7 +34,6 @@ import java.util.regex.Pattern;
  * </ol>
  *
  * @since 2024/12/18
- * @版本 1.0.0
  * @author CH
  */
 public class Version implements Comparable<Version> {

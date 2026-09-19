@@ -43,7 +43,6 @@ import java.util.regex.Pattern;
  * </ul>
  *
  * @since 2024-12-07
- * @版本 1.0.0
  * @author CH
  */
 @Slf4j

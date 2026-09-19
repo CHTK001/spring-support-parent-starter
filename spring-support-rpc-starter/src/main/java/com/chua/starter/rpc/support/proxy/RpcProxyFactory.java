@@ -6,7 +6,6 @@ import java.util.List;
  * RPC 代理工厂接口
  * <p>用于创建 RPC 服务代理，解耦具体实现</p>
  *
- * @版本 1.0.0
  * @since 2024/04/07
  * @author CH
  */

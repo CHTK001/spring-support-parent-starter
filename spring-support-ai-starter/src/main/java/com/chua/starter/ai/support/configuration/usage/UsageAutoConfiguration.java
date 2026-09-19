@@ -85,13 +85,15 @@ public class UsageAutoConfiguration {
      * @param usageService usage服务
      * @return usagerecorder拦截器的结果
      */
-    public UsageRecorderInterceptor usageRecorderInterceptor(SysAiUsageService usageService) {
+    public UsageRecorderInterceptor usageRecorderInterceptor(SysAiUsageService usageService,
+                                                               GlobalSettingReader settingReader) {
         /**
          * usagerecorder拦截器。
          * @param usageService usage服务
+         * @param settingReader setting读取
          * @return usagerecorder拦截器的结果
          */
-        return new UsageRecorderInterceptor(usageService);
+        return new UsageRecorderInterceptor(usageService, settingReader);
     }
 
     @Bean

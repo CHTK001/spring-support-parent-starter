@@ -15,7 +15,6 @@ import java.util.UUID;
  * 在请求进入时设置追踪标识，请求结束时清理MDC上下文。
  * </p>
  *
- * @版本 1.0.0
  * @since 2024/01/01
  * @author CH
  */

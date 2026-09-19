@@ -33,7 +33,6 @@ import static com.chua.starter.common.support.logger.ModuleLog.highlight;
  * 适用于单机环境或测试场景，支持同步和异步消息传递。
  * </p>
  *
- * @版本 1.0.0
  * @since 2025-01-02
  * @author CH
  */

@@ -21,7 +21,6 @@ import java.lang.reflect.Proxy;
 
 /**
  * 令牌类型拦截器
- * @版本 1.0.0
  * @since 2024/01/18
  * @author CH
  */

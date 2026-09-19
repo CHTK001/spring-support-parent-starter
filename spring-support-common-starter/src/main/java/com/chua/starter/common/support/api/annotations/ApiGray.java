@@ -57,7 +57,6 @@ import java.lang.annotation.*;
  * </pre>
  *
  * @since 2024/12/18
- * @版本 1.0.0
  * @author CH
  */
 @Target({ElementType.METHOD})

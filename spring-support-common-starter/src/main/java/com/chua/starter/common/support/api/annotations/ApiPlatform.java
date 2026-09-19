@@ -62,7 +62,6 @@ import java.lang.annotation.*;
  * </ul>
  *
  * @since 2020-09-23
- * @版本 1.0.0
  * @see com.chua.starter.common.support.api.properties.ApiProperties.PlatformType
  * @author CH
  */

@@ -7,7 +7,6 @@ import java.util.Map;
  * 用于在同步任务执行过程中向前端推送实时状态、日志、进度等信息
  *
  * @since 2024/12/19
- * @版本 1.0.0
  * @author CH
  */
 public class ServerWebSocketMessage {

@@ -32,7 +32,6 @@ import java.util.concurrent.ConcurrentMap;
 /**
  * rpc资源注释配置
  *
- * @版本 1.0.0
  * @since 2024/04/07
  * @author CH
  */

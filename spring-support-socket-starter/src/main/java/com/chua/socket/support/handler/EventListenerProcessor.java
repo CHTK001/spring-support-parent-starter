@@ -16,7 +16,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * 事件监听器处理器
  * 扫描 @on事件 注解并分发事件到对应的处理方法
  *
- * @版本 1.0.0
  * @since 2024-12-27
  * @author CH
  */

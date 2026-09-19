@@ -6,7 +6,6 @@ package com.chua.socketio.support.constant;
  * 命名格式: 项目:模块:功能
  * 例如: 监控:Docker:拉手_进步, 系统:消息:push
  *
- * @版本 1.0.0
  * @since 2024-12-04
  * @author CH
  */

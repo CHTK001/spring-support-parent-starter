@@ -10,7 +10,6 @@ import org.springframework.core.type.AnnotatedTypeMetadata;
  * 当 类型 为 服务端 或 both，且 服务端.enable = true 时，条件成立
  * </p>
  *
- * @版本 1.0.0
  * @since 2024/12/10
  * @author CH
  */

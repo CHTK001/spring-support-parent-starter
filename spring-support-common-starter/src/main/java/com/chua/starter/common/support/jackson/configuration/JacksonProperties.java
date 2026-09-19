@@ -5,7 +5,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 /**
  * Jackson配置属性
  *
- * @版本 1.0.0
  * @since 2024/12/3
  * @author CH
  */

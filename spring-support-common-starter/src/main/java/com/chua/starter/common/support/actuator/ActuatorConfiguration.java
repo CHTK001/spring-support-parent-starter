@@ -36,7 +36,6 @@ import org.slf4j.LoggerFactory;
  *       - /actuator/health
  * </pre>
  *
- * @版本 1.0.0
  * @since 2024/06/21
  * @author CH
  */

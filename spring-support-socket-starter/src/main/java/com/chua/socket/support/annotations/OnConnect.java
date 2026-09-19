@@ -9,7 +9,6 @@ import java.lang.annotation.Target;
  * 连接事件注解
  * 标记方法用于处理客户端连接事件
  *
- * @版本 1.0.0
  * @since 2024-12-04
  * @author CH
  */

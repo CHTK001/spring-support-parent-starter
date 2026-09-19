@@ -13,7 +13,6 @@ import java.util.Map;
  * 通过 同步协议 上报任务执行结果
  * </p>
  *
- * @版本 1.0.0
  * @since 2024/12/05
  * @author CH
  */

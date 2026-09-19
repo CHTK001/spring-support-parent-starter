@@ -212,7 +212,7 @@ public class UsageAggregationTask implements SchedulingConfigurer {
             }
             recordLog(LOG_LEVEL_INFO, "开始定时同步与聚合 (" + java.time.LocalTime.now().withNano(0) + ")");
             self.syncExternalUsage();
-            self.aggregateToday();
+            self.aggregateCurrentHour();
         } catch (Throwable e) {
             log.error("[UsageAggregation] 定时任务执行异常（已捕获，不影响JVM）: {}", e.getMessage(), e);
             recordLog(LOG_LEVEL_WARN, "定时任务异常: " + e.getMessage());
@@ -630,30 +630,30 @@ public class UsageAggregationTask implements SchedulingConfigurer {
     }
 
     /**
-     * 聚合执行入口（默认当天）。
-     * <p>定时任务与「仅聚合」接口共用：只聚合当天 usage 明细到日汇总表，
+     * 聚合执行入口（默认当前小时）。
+     * <p>定时任务与「仅聚合」接口共用：只聚合当前小时 usage 明细到日汇总表，
      * 触发一次汇总一次，扫描量小、压力小。</p>
      */
     public void aggregate() {
-        self.aggregateToday();
+        self.aggregateCurrentHour();
     }
 
     /**
-     * 聚合当天 usage 明细到日汇总表（当天 00:00:00 ~ 当前时间）。
+     * 聚合当前小时 usage 明细到日汇总表（当前小时 00分00秒 ~ 当前时间）。
      */
     @Transactional
-    public void aggregateToday() {
-        LocalDate today = LocalDate.now();
-        LocalDateTime start = today.atStartOfDay();
-        LocalDateTime end = LocalDateTime.now();
+    public void aggregateCurrentHour() {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime start = now.withMinute(0).withSecond(0).withNano(0);
+        LocalDateTime end = now;
         long total = self.aggregateRange(start, end);
         /**
          * record日志。
          * @param total) 日志水平仪信息
          * @param total total
          */
-        recordLog(LOG_LEVEL_INFO, String.format("当日聚合完成 [%s]，共 %d 条记录", today, total));
-        log.info("[UsageAggregation] 当日聚合完成: date={}, records={}", today, total);
+        recordLog(LOG_LEVEL_INFO, String.format("小时聚合完成 [%s ~ %s]，共 %d 条记录", start, end, total));
+        log.info("[UsageAggregation] 小时聚合完成: range={} ~ {}, records={}", start, end, total);
     }
 
     /**

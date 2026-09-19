@@ -219,9 +219,9 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
  // writer过滤器.添加(新 隐私encrypt过滤器());
 //        }
 //
- // if(消息转换器属性.是否打开加密货币()) {
- // writer过滤器.添加(新 加密货币过滤器());
- // 读取过滤器.添加(新 加密货币过滤器());
+ // if(消息转换器属性.是否打开加密()) {
+ // writer过滤器.添加(新 加密过滤器());
+ // 读取过滤器.添加(新 加密过滤器());
 //        }
 //
  // if(集合工具.是否not空(writer过滤器)) {

@@ -18,7 +18,6 @@ import java.nio.charset.StandardCharsets;
  * </p>
  *
  * @since 2023/09/08
- * @版本 1.0.0
  * @author CH
  */
 public class CustomHttpServletRequestWrapper extends HttpServletRequestWrapper {

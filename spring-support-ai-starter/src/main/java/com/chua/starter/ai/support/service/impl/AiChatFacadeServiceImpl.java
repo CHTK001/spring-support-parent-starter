@@ -795,7 +795,8 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
      */
     private Map<String, Object> buildResult(ChatSyncResponse response) {
         Map<String, Object> result = new LinkedHashMap<>(4);
-        if (response.getUsage() != null) {
+        result.put("text", response != null && response.getText() != null ? response.getText() : "");
+        if (response != null && response.getUsage() != null) {
             result.put("promptTokens", response.getUsage().getInputTokens());
             result.put("completionTokens", response.getUsage().getOutputTokens());
             result.put("totalTokens", response.getUsage().getTotalTokens());

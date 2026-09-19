@@ -10,7 +10,6 @@ import org.springframework.cache.annotation.EnableCaching;
  * 若在此重复定义 习俗缓存operation源 会导致与 缓存配置 同名 Bean 冲突。
  * </p>
  *
- * @版本 1.0.0
  * @since 2025/6/6
  * @author CH
  */

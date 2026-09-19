@@ -1,6 +1,7 @@
 package com.chua.starter.sync.support.security;
 
 import com.chua.common.support.lang.json.Json;
+import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.sync.support.properties.SyncProperties;
 
 import javax.crypto.Cipher;
@@ -25,28 +26,44 @@ import java.util.Map;
  */
 public final class SyncCryptoUtils {
 
-    /** 加密标记字段 */
+    /**
+     * 加密标记字段
+     */
     public static final String ENCRYPTED = "encrypted";
 
-    /** 加密算法字段 */
+    /**
+     * 加密算法字段
+     */
     public static final String ALGORITHM = "encAlgorithm";
 
-    /** 密文字段 */
+    /**
+     * 密文字段
+     */
     public static final String CIPHER = "encData";
 
-    /** AES-GCM 变换名 */
+    /**
+     * AES-GCM 变换名
+     */
     private static final String AES_GCM = "AES/GCM/NoPadding";
 
-    /** AES 算法名 */
+    /**
+     * AES 算法名
+     */
     private static final String AES_ALGORITHM = "AES";
 
-    /** SHA-256 摘要算法名 */
+    /**
+     * SHA-256 摘要算法名
+     */
     private static final String SHA_256 = "SHA-256";
 
-    /** GCM 初始向量长度（字节） */
+    /**
+     * GCM 初始向量长度（字节）
+     */
     private static final int GCM_IV_LENGTH = 12;
 
-    /** GCM 认证标签长度（比特） */
+    /**
+     * GCM 认证标签长度（比特）
+     */
     private static final int GCM_TAG_LENGTH = 128;
 
     /**
@@ -62,7 +79,7 @@ public final class SyncCryptoUtils {
      * @return true=启用
      */
     public static boolean isEnabled(SyncProperties properties) {
-        return properties != null && hasText(properties.getCryptoSecret());
+        return properties != null && StringUtils.isNotBlank(properties.getCryptoSecret());
     }
 
     /**
@@ -138,15 +155,5 @@ public final class SyncCryptoUtils {
      */
     private static byte[] deriveKey(String secret) throws Exception {
         return MessageDigest.getInstance(SHA_256).digest(secret.getBytes(StandardCharsets.UTF_8));
-    }
-
-    /**
-     * 判断字符串是否非空白。
-     *
-     * @param value 待判断字符串
-     * @return true=非空白
-     */
-    private static boolean hasText(String value) {
-        return value != null && !value.isBlank();
     }
 }

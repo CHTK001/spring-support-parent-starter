@@ -25,7 +25,6 @@ import java.util.Set;
  * 默认使用 tenantedKey生成器 作为 Key生成器。
  * </p>
  *
- * @版本 1.0.0
  * @since 2025/6/6
  * @author CH
  */

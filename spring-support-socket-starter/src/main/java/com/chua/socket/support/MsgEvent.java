@@ -11,7 +11,6 @@ import java.io.Serializable;
 /**
  * 消息事件
  *
- * @版本 1.0.0
  * @since 2024-12-04
  * @author CH
  */

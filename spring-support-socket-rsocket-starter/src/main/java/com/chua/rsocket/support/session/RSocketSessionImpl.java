@@ -17,7 +17,6 @@ import java.util.concurrent.ConcurrentHashMap;
  * rSocket 会话实现
  * 基于 Spring webSocket
  *
- * @版本 1.0.0
  * @since 2024-12-04
  * @author CH
  */

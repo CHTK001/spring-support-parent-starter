@@ -30,7 +30,6 @@ import java.util.Set;
  * 映射器 信息查询通过 actuator 端点 /actuator/MyBatis 获取
  * </p>
  *
- * @版本 1.0.0
  * @since 2025/01/17
  * @author CH
  */

@@ -3,7 +3,6 @@ package com.chua.starter.rpc.support.proxy;
 /**
  * RPC 代理创建异常
  *
- * @版本 1.0.0
  * @since 2024/04/07
  * @author CH
  */
