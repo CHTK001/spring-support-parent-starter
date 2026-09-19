@@ -3,7 +3,11 @@ package com.chua.starter.ai.support.service;
 import com.chua.common.support.utils.IdUtils;
 import com.chua.starter.ai.support.entity.WorkshopAsset;
 import com.chua.starter.ai.support.mapper.WorkshopAssetMapper;
+import com.chua.starter.ai.support.manage.common.ApiErrorCode;
+import com.chua.starter.ai.support.manage.common.ApiException;
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
+import com.chua.starter.ai.support.service.SysAiUserSettingService;
+import com.chua.starter.ai.support.util.AiUserContext;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,6 +39,7 @@ public class WorkshopAssetService {
 
     private final WorkshopAssetMapper assetMapper; // asset映射器
     private final SysAiGlobalSettingService globalSettingService; // 全局setting服务
+    private final SysAiUserSettingService userSettingService; // 全局默认 + 用户覆盖两层解析
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper(); // 对象映射器
 
@@ -96,11 +101,14 @@ public class WorkshopAssetService {
     }
 
     /**
-     * 从全局设置读取单次上传大小上限（MB），未配置时默认 100MB。
+     * 读取单次上传大小上限（MB），未配置时默认 100MB。
+     *
+     * <p>走「用户覆盖 -&gt; 全局默认」两层解析；无请求上下文时用户标识为空，自动回落全局层。</p>
+     *
      * @return resolve最大文件大小的结果
      */
     private long resolveMaxFileSize() {
-        return globalSettingService.getValue("workshop", "max_upload_size_mb")
+        return userSettingService.resolve(AiUserContext.currentUserId(), "workshop", "max_upload_size_mb")
                 .map(v -> {
                     try {
                         long mb = Long.parseLong(v.trim());
@@ -113,7 +121,18 @@ public class WorkshopAssetService {
     }
 
     /**
+     * 内置默认白名单（配置未给出 allowed_extensions 时使用）
+     */
+    private static final java.util.Set<String> DEFAULT_EXTENSIONS = java.util.Set.of(
+            "png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "ico",
+            "mp4", "webm", "mov", "avi", "mkv", "mp3", "wav", "ogg", "flac",
+            "pdf", "txt", "md", "json", "html", "csv", "xlsx", "xls", "doc", "docx", "ppt", "pptx",
+            "zip", "tar", "gz", "7z", "onnx", "bin", "wasm");
+
+    /**
      * 白名单上传扩展名（小写，不含点）。空扩展名视为允许（无扩展名文件）。
+     *
+     * <p>白名单取「用户覆盖 -&gt; 全局默认 -&gt; 内置默认」，配置项真正生效。</p>
      *
      * @param ext 扩展名（已小写），可为空字符串
      * @return true 表示允许上传
@@ -122,12 +141,22 @@ public class WorkshopAssetService {
         if (ext == null || ext.isEmpty()) {
             return true;
         }
-        return java.util.Set.of(
-                        "png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "ico",
-                        "mp4", "webm", "mov", "avi", "mkv", "mp3", "wav", "ogg", "flac",
-                        "pdf", "txt", "md", "json", "html", "csv", "xlsx", "xls", "doc", "docx", "ppt", "pptx",
-                        "zip", "tar", "gz", "7z", "onnx", "bin", "wasm")
-                .contains(ext);
+        String configured = userSettingService
+                .resolve(AiUserContext.currentUserId(), "workshop", "allowed_extensions")
+                .orElse(null);
+        if (configured == null || configured.isBlank()) {
+            return DEFAULT_EXTENSIONS.contains(ext);
+        }
+        for (String token : configured.split("[,;\\s]+")) {
+            String allowed = token.trim().toLowerCase(java.util.Locale.ROOT);
+            if (allowed.startsWith(".")) {
+                allowed = allowed.substring(1);
+            }
+            if (allowed.equals(ext)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -224,15 +253,17 @@ public class WorkshopAssetService {
     @Transactional
     public WorkshopAsset uploadAsset(MultipartFile file, String title, String collection,
                                       List<String> tags, boolean inLibrary) throws IOException {
-        if (file.getSize() > resolveMaxFileSize()) {
-            throw new IOException("FILE_TOO_LARGE");
+        long maxFileSize = resolveMaxFileSize();
+        if (file.getSize() > maxFileSize) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM,
+                    "文件大小超出上限（上限 " + (maxFileSize / 1024 / 1024) + "MB）");
         }
 
         String originalName = file.getOriginalFilename() != null ? file.getOriginalFilename() : "upload";
         String ext = originalName.contains(".")
                 ? originalName.substring(originalName.lastIndexOf('.') + 1).toLowerCase() : "";
         if (!isExtensionAllowed(ext)) {
-            throw new IOException("UNSUPPORTED_EXTENSION: " + ext);
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "不支持的文件类型：" + ext);
         }
         String fileId = IdUtils.uuidv7();
         String relativePath = "assets/" + fileId + (ext.isEmpty() ? "" : "." + ext);

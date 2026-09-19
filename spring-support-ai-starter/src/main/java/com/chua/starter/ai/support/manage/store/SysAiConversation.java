@@ -96,6 +96,12 @@ public class SysAiConversation implements Serializable {
     private String executionTemplateId; // 执行templateid
 
     /**
+     * 归属用户标识（登录用户名，由服务端按当前身份写入）
+     */
+    @TableField("sys_ai_conversation_user_id")
+    private String userId; // 归属用户
+
+    /**
      * 运行时状态（如 活跃_turn_标识），仅内存使用，不持久化
      */
     @TableField(exist = false)

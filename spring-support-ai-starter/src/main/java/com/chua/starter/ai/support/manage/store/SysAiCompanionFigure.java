@@ -65,4 +65,10 @@ public class SysAiCompanionFigure implements Serializable {
      */
     @TableField("sys_ai_companion_figure_created_at")
     private Long createdAt; // 创建at
+
+    /**
+     * 归属用户标识（为空表示内置共享形象，所有人可见）
+     */
+    @TableField("sys_ai_companion_figure_user_id")
+    private String userId; // 归属用户
 }

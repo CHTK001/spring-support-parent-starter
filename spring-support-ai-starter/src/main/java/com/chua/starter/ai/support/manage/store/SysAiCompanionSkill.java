@@ -119,4 +119,10 @@ public class SysAiCompanionSkill implements Serializable {
      */
     @TableField("sys_ai_companion_skill_content")
     private String content; // 内容
+
+    /**
+     * 归属用户标识（随所属伙伴写入，非客户端传入）
+     */
+    @TableField("sys_ai_companion_skill_user_id")
+    private String userId; // 归属用户
 }

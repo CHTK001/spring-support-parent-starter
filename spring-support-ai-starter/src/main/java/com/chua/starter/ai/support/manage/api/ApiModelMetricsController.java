@@ -1,12 +1,14 @@
 package com.chua.starter.ai.support.manage.api;
 
-import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
-
 import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
 import com.chua.starter.ai.support.manage.common.ApiResult;
 import com.chua.starter.ai.support.manage.service.ModelMetricsSnapshotService;
+import com.chua.starter.ai.support.manage.service.SysAiModelMetricsService;
+import com.chua.starter.ai.support.manage.store.SysAiModelMetrics;
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
 import com.chua.starter.ai.support.service.SysAiPricingService;
+import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -14,17 +16,22 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
- * 模型价格/指标快照查询与刷新端点。
+ * 模型指标库查询、全量同步、配置与手动修改端点。
  *
- * <p>前端在「模型定价」面板打开时调用 {@code GET /api/model-metrics} 获取当前快照，
- * 同时通过 webSocket 订阅 {@code model.metrics.push} 主题接收后台定时推送的增量更新。</p>
+ * <p>设置页主数据走 {@code GET /api/model-metrics/table}（分页，全量指标库）；
+ * {@code POST /api/model-metrics/refresh} 触发指标源全量同步落库；
+ * {@code PUT /api/model-metrics/manual} 手动修改/锁定指标表字段。</p>
  *
  * @since 4.0.0.42
  * @author CH
@@ -37,7 +44,7 @@ import java.util.Map;
 public class ApiModelMetricsController {
 
     /**
-     * 全局设置分组（与 ModelMetricsPushTask 一致）
+     * 全局设置分组
      */
     private static final String GROUP = "global";
 
@@ -62,7 +69,12 @@ public class ApiModelMetricsController {
     private static final int MIN_INTERVAL_SEC = 30;
 
     /**
-     * 模型价格/指标快照服务
+     * 全量指标库服务
+     */
+    private final SysAiModelMetricsService metricsService;
+
+    /**
+     * 模型快照服务（兼容旧快照）
      */
     private final ModelMetricsSnapshotService snapshotService;
 
@@ -82,9 +94,29 @@ public class ApiModelMetricsController {
     private final SysAiPricingService pricingService;
 
     /**
-     * 获取当前模型价格/指标快照。
+     * 分页查询全量指标库。
      *
-     * <p>优先从 Redis 读取上次构建的快照；Redis 无缓存时现场构建一份返回。</p>
+     * @param page    当前页
+     * @param size    每页条数
+     * @param keyword 模型名/厂商关键字（可空）
+     * @return 分页数据
+     */
+    @GetMapping("/model-metrics/table")
+    public ApiResult<Map<String, Object>> getTable(
+            @RequestParam(value = "page", defaultValue = "1") long page,
+            @RequestParam(value = "size", defaultValue = "20") long size,
+            @RequestParam(value = "keyword", required = false) String keyword) {
+        Page<SysAiModelMetrics> p = metricsService.page(page, size, keyword);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("total", p.getTotal());
+        result.put("current", p.getCurrent());
+        result.put("size", p.getSize());
+        result.put("records", p.getRecords());
+        return ApiResult.ok(result);
+    }
+
+    /**
+     * 获取旧版快照（兼容）。
      *
      * @return 快照数据
      */
@@ -94,22 +126,23 @@ public class ApiModelMetricsController {
     }
 
     /**
-     * 手动触发模型价格/指标快照刷新并推送 webSocket。
+     * 手动触发指标源全量同步落库，并重建兼容快照。
      *
-     * @return 刷新后的快照
+     * @return 同步条数与快照
      */
     @PostMapping("/model-metrics/refresh")
     public ApiResult<Map<String, Object>> refreshSnapshot() {
-        log.info("[ModelMetrics] 手动触发快照刷新");
-        return ApiResult.ok(snapshotService.buildAndPushSnapshot());
+        log.info("[ModelMetrics] 手动触发全量同步");
+        int synced = metricsService.syncAll();
+        Map<String, Object> snapshot = snapshotService.buildAndPushSnapshot();
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("synced", synced);
+        result.put("snapshot", snapshot);
+        return ApiResult.ok(result);
     }
 
     /**
-     * 读取模型指标推送配置。
-     *
-     * <p>从 {@code sys_ai_global_setting} 的 {@code global} 分组读取：
-     * {@code enable_model_metrics_push}（默认 true）与
-     * {@code model_metrics_push_interval_sec}（默认 300，最小 30）。</p>
+     * 读取指标推送配置。
      *
      * @return {enabled, intervalSec}
      */
@@ -127,10 +160,7 @@ public class ApiModelMetricsController {
     }
 
     /**
-     * 保存模型指标推送配置。
-     *
-     * <p>接收 {@code {enabled, intervalSec}}，写入 {@code global} 分组；
-     * {@code intervalSec} 小于 30 时自动钳制为 30。</p>
+     * 保存指标推送配置。
      *
      * @param body 配置 {@code {enabled, intervalSec}}
      * @return 是否保存成功
@@ -155,9 +185,7 @@ public class ApiModelMetricsController {
     }
 
     /**
-     * 手动触发官方定价同步到 {@code sys_ai_pricing} 表。
-     *
-     * <p>清空旧数据并全量插入官方定价，供用量统计金额回退使用。</p>
+     * 手动触发官方定价同步。
      *
      * @return {synced, syncedAt}
      */
@@ -172,11 +200,100 @@ public class ApiModelMetricsController {
     }
 
     /**
-     * 宽松解析布尔值。
+     * 手动修改指标库字段并锁定。
      *
-     * @param value        原始值
-     * @param defaultValue 默认值
-     * @return 布尔值
+     * <p>请求体：{@code {key, values:{字段:值}, locked:[字段...], operator?}}。
+     * 落点为全量指标表 {@code sys_ai_model_metrics}；被锁定的字段在后续全量同步时不覆盖。</p>
+     *
+     * @param body 请求体
+     * @return 锁定字段、修改时间与更新行
+     */
+    @PutMapping("/model-metrics/manual")
+    public ApiResult<Map<String, Object>> saveManual(@RequestBody Map<String, Object> body) {
+        if (body == null) {
+            return manualError("400", "请求体为空");
+        }
+        String key = body.get("key") == null ? null : body.get("key").toString().trim();
+        if (key == null || key.isEmpty()) {
+            return manualError("400", "key 不能为空");
+        }
+
+        Map<String, BigDecimal> values = new LinkedHashMap<>();
+        if (body.get("values") instanceof Map<?, ?> vm) {
+            for (Map.Entry<?, ?> en : vm.entrySet()) {
+                if (en.getKey() == null) {
+                    continue;
+                }
+                BigDecimal bd = parseBigDecimal(en.getValue());
+                if (bd != null) {
+                    values.put(en.getKey().toString(), bd);
+                }
+            }
+        }
+
+        List<String> locked = new ArrayList<>();
+        if (body.get("locked") instanceof List<?> lk) {
+            for (Object o : lk) {
+                if (o != null && !locked.contains(o.toString().trim())) {
+                    locked.add(o.toString().trim());
+                }
+            }
+        }
+
+        String operator = body.get("operator") == null
+                ? "admin" : body.get("operator").toString().trim();
+
+        try {
+            SysAiModelMetrics updated = metricsService.applyManual(key, values, locked, operator);
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("key", key);
+            result.put("locked", updated.getManualLocked());
+            result.put("updatedAt", updated.getManualUpdatedAt());
+            result.put("row", updated);
+            log.info("[ModelMetrics] 手动修改指标 key={} locked={}", key, updated.getManualLocked());
+            return ApiResult.ok(result);
+        } catch (IllegalArgumentException e) {
+            return manualError("404", e.getMessage());
+        }
+    }
+
+    /**
+     * 构造失败响应。
+     */
+    private static ApiResult<Map<String, Object>> manualError(String code, String msg) {
+        ApiResult<Map<String, Object>> r = new ApiResult<>();
+        r.setSuccess(false);
+        r.setCode(code);
+        r.setError(msg);
+        return r;
+    }
+
+    /**
+     * 解析 BigDecimal。
+     */
+    private static BigDecimal parseBigDecimal(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof BigDecimal bd) {
+            return bd;
+        }
+        if (value instanceof Number n) {
+            return BigDecimal.valueOf(n.doubleValue());
+        }
+        String s = value.toString().trim();
+        if (s.isEmpty()) {
+            return null;
+        }
+        try {
+            return new BigDecimal(s);
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    /**
+     * 解析布尔值。
      */
     private static boolean parseBool(Object value, boolean defaultValue) {
         if (value == null) {
@@ -193,11 +310,7 @@ public class ApiModelMetricsController {
     }
 
     /**
-     * 宽松解析整数。
-     *
-     * @param value        原始值
-     * @param defaultValue 默认值
-     * @return 整数
+     * 解析整数。
      */
     private static int parseInt(Object value, int defaultValue) {
         if (value == null) {

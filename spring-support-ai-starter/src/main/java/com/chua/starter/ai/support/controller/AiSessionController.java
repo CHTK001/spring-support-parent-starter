@@ -15,6 +15,10 @@ import com.chua.starter.ai.support.mapper.SysAiSessionMapper;
 import com.chua.starter.ai.support.mapper.SysAiMessageMapper;
 import com.chua.starter.ai.support.entity.SysAiSession;
 import com.chua.starter.ai.support.entity.SysAiMessage;
+import com.chua.starter.ai.support.entity.SysAiSessionGroup;
+import com.chua.starter.ai.support.manage.common.ApiErrorCode;
+import com.chua.starter.ai.support.manage.common.ApiException;
+import com.chua.starter.ai.support.util.AiUserContext;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 
 /**
@@ -44,6 +48,10 @@ public class AiSessionController {
             @RequestParam(required = false) Boolean includeArchived) {
 
         LambdaQueryWrapper<SysAiSession> wrapper = new LambdaQueryWrapper<>();
+ // 管理员只读全量，其余仅本人会话
+        if (!AiUserContext.isAdmin()) {
+            wrapper.eq(SysAiSession::getSysUserId, AiUserContext.requireUserId());
+        }
         wrapper.orderByDesc(SysAiSession::getCreateTime);
 
         List<SysAiSession> sessions = sessionMapper.selectList(wrapper);
@@ -74,16 +82,20 @@ public class AiSessionController {
     @GetMapping("/sidebar")
     public ReturnResult<Map<String, Object>> sidebar(@RequestParam(required = false) Integer limit) {
         int pageSize = limit != null ? limit : 15;
+        boolean admin = AiUserContext.isAdmin();
+        String userId = AiUserContext.requireUserId();
 
-        // 查询所有分组
-        List<com.chua.starter.ai.support.entity.SysAiSessionGroup> groups = sessionGroupMapper.selectList(
-                new LambdaQueryWrapper<com.chua.starter.ai.support.entity.SysAiSessionGroup>()
-                        .orderByAsc(com.chua.starter.ai.support.entity.SysAiSessionGroup::getSortOrder)
-        );
+        // 查询分组：管理员可见全量，其余仅本人分组
+        LambdaQueryWrapper<SysAiSessionGroup> groupWrapper = new LambdaQueryWrapper<>();
+        if (!admin) {
+            groupWrapper.eq(SysAiSessionGroup::getUserId, userId);
+        }
+        groupWrapper.orderByAsc(SysAiSessionGroup::getSortOrder);
+        List<SysAiSessionGroup> groups = sessionGroupMapper.selectList(groupWrapper);
 
         // 构造 groups 数组
         List<Map<String, Object>> groupList = new ArrayList<>();
-        for (com.chua.starter.ai.support.entity.SysAiSessionGroup group : groups) {
+        for (SysAiSessionGroup group : groups) {
             Map<String, Object> groupMap = new HashMap<>();
             groupMap.put("id", String.valueOf(group.getId()));
             groupMap.put("name", group.getName());
@@ -91,9 +103,12 @@ public class AiSessionController {
             groupList.add(groupMap);
         }
 
-        // 查询所有未归档会话
+        // 查询未归档会话：管理员可见全量，其余仅本人会话
         LambdaQueryWrapper<SysAiSession> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(SysAiSession::getIsArchived, false);  // 只查询未归档的会话
+        if (!admin) {
+            wrapper.eq(SysAiSession::getSysUserId, userId);
+        }
         wrapper.orderByDesc(SysAiSession::getCreateTime);
         wrapper.last("LIMIT " + pageSize);
         List<SysAiSession> sessions = sessionMapper.selectList(wrapper);
@@ -168,7 +183,7 @@ public class AiSessionController {
                 if (sessionId == null) {
                     SysAiSession newSession = new SysAiSession();
                     newSession.setTitle("guada-" + (id != null && id.length() > 8 ? id.substring(0, 8) : "chat"));
-                    newSession.setSysUserId("1");
+                    newSession.setSysUserId(AiUserContext.requireUserId());
                     newSession.setStatus(1);
                     newSession.setIsArchived(false);
                     sessionMapper.insert(newSession);
@@ -177,6 +192,9 @@ public class AiSessionController {
                 }
             }
         }
+
+ // 归属校验：他人会话的消息不可读（管理员只读放行）
+        requireReadableSession(sessionId);
 
         log.info("[Messages] Querying messages for sessionId (Long): {}", sessionId);
         LambdaQueryWrapper<SysAiMessage> wrapper = new LambdaQueryWrapper<>();
@@ -271,6 +289,10 @@ public class AiSessionController {
     public ReturnResult<Map<String, Object>> detail(@PathVariable("id") String id) {
         Long sessionId = Long.parseLong(id);
         SysAiSession session = sessionMapper.selectById(sessionId);
+        if (session != null) {
+ // 归属校验：他人会话详情不可读（管理员只读放行）
+            requireReadableSession(sessionId);
+        }
         
         Map<String, Object> result = new HashMap<>();
         result.put("id", String.valueOf(sessionId));
@@ -311,6 +333,8 @@ public class AiSessionController {
             result.put("message", "会话不存在");
             return ReturnResult.ok(result);
         }
+ // 写出口校验：仅归属人可改，管理员对他人数据只读
+        requireWritableSession(sessionId);
         
         // 更新标题
         if (body.containsKey("title")) {
@@ -366,7 +390,7 @@ public class AiSessionController {
         session.setTitle(title);
         session.setSysAiModuleCode(null);
         session.setModelId(modelId);
-        session.setSysUserId("1"); // 默认用户ID
+        session.setSysUserId(AiUserContext.requireUserId());
         session.setCreateTime(LocalDateTime.now());
         session.setUpdateTime(LocalDateTime.now());
         session.setStatus(1);
@@ -398,6 +422,8 @@ public class AiSessionController {
         // 先查询这条消息
         SysAiMessage message = messageMapper.selectById(mid);
         if (message != null) {
+ // 写出口校验：消息随所属会话归属
+            requireWritableSession(message.getSysAiSessionId());
             // 如果是用户消息，同时删除对应的 AI 回复（通过 parent_id 关联）
             if ("user".equals(message.getRole())) {
                 LambdaQueryWrapper<SysAiMessage> assistantWrapper = new LambdaQueryWrapper<>();
@@ -427,6 +453,8 @@ public class AiSessionController {
         String content = (String) body.get("content");
         SysAiMessage message = messageMapper.selectById(mid);
         if (message != null) {
+ // 写出口校验：消息随所属会话归属
+            requireWritableSession(message.getSysAiSessionId());
             message.setContent(content);
             messageMapper.updateById(message);
         }
@@ -443,6 +471,8 @@ public class AiSessionController {
     @DeleteMapping("/{id}")
     public ReturnResult<Map<String, Object>> delete(@PathVariable("id") String id) {
         Long sessionId = Long.parseLong(id);
+ // 写出口校验：仅归属人可删，管理员对他人数据只读
+        requireWritableSession(sessionId);
         
         // 删除会话的所有消息
         LambdaQueryWrapper<SysAiMessage> messageWrapper = new LambdaQueryWrapper<>();
@@ -475,10 +505,17 @@ public class AiSessionController {
             return ReturnResult.ok(result);
         }
         
-        int deletedCount = 0;
+ // 先整批校验归属，再执行删除：避免中途拒绝导致部分删除
+        List<Long> sessionIds = new ArrayList<>();
         for (String id : ids) {
             Long sessionId = Long.parseLong(id);
-            
+ // 写出口校验：仅归属人可删，管理员对他人数据只读
+            requireWritableSession(sessionId);
+            sessionIds.add(sessionId);
+        }
+
+        int deletedCount = 0;
+        for (Long sessionId : sessionIds) {
             // 删除会话的所有消息
             LambdaQueryWrapper<SysAiMessage> messageWrapper = new LambdaQueryWrapper<>();
             messageWrapper.eq(SysAiMessage::getSysAiSessionId, sessionId);
@@ -493,5 +530,43 @@ public class AiSessionController {
         result.put("success", true);
         result.put("deletedCount", deletedCount);
         return ReturnResult.ok(result);
+    }
+
+    /**
+     * 读出口归属校验。
+     *
+     * @param sessionId 会话 标识
+     * @return 校验通过的会话
+     */
+    private SysAiSession requireReadableSession(Long sessionId) {
+        SysAiSession session = sessionMapper.selectById(sessionId);
+        if (session == null) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "会话不存在");
+        }
+ // 管理员只读全量
+        if (AiUserContext.isAdmin()) {
+            return session;
+        }
+        if (!AiUserContext.requireUserId().equals(session.getSysUserId())) {
+            throw new ApiException(ApiErrorCode.FORBIDDEN, "无权访问他人会话");
+        }
+        return session;
+    }
+
+    /**
+     * 写出口归属校验：只认归属人本身，管理员对他人数据只读。
+     *
+     * @param sessionId 会话 标识
+     * @return 校验通过的会话
+     */
+    private SysAiSession requireWritableSession(Long sessionId) {
+        SysAiSession session = requireReadableSession(sessionId);
+        if (AiUserContext.isReadonly()) {
+            throw new ApiException(ApiErrorCode.FORBIDDEN, "只读账号不允许执行写操作");
+        }
+        if (!AiUserContext.requireUserId().equals(session.getSysUserId())) {
+            throw new ApiException(ApiErrorCode.FORBIDDEN, "管理员对他人数据只读，不可修改或删除");
+        }
+        return session;
     }
 }

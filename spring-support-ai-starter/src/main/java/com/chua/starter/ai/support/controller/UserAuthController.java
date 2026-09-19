@@ -7,7 +7,10 @@ import com.chua.starter.oauth.client.support.enums.AuthType;
 import com.chua.starter.oauth.client.support.enums.LogoutType;
 import com.chua.starter.oauth.client.support.execute.AuthClientExecute;
 import com.chua.starter.oauth.client.support.user.LoginAuthResult;
+import com.chua.starter.oauth.client.support.user.LoginResult;
+import com.chua.starter.oauth.client.support.enums.UpgradeType;
 import com.chua.starter.oauth.client.support.user.UserResult;
+import com.chua.starter.oauth.client.support.user.UserResume;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,7 +23,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 /**
  * 统一登录契约控制器（前端 Vue / React 均走该契约）。
@@ -69,7 +71,10 @@ public class UserAuthController {
         LoginAuthResult result = AuthClientExecute.getInstance()
                 .getAccessToken(username, password, AuthType.WEB, Map.of());
         if (result == null || result.getCode() == null || result.getCode() != 200) {
-            return ReturnResult.error("用户名或密码错误");
+            // 区分「口令错误」与「静态账号未配置」等原因，否则配置缺失只会被当成密码错
+            String message = result == null ? null : result.getMessage();
+            log.warn("登录失败 username={} 原因={}", username, StringUtils.defaultString(message, "无返回"));
+            return ReturnResult.error(StringUtils.isNotBlank(message) ? message : "用户名或密码错误");
         }
 
         String token = result.getToken();
@@ -77,24 +82,28 @@ public class UserAuthController {
         String refreshToken = StringUtils.isNotBlank(result.getRefreshToken())
                 ? result.getRefreshToken() : (token != null ? token : "");
 
-        Map<String, Object> userInfo = new LinkedHashMap<>();
- // 前端要求 uuidv7 格式的 用户标识
-        userInfo.put("userId", generateUuidV7());
-        userInfo.put("username", result.getUserResume() != null
-                ? result.getUserResume().getUsername() : username);
-        userInfo.put("nickname", result.getUserResume() != null
-                ? result.getUserResume().getNickName() : username);
+        UserResume userResume = result.getUserResume();
+        if (userResume == null || StringUtils.isBlank(userResume.getUserId())) {
+            return ReturnResult.error("登录未返回有效用户身份");
+        }
+
+        Map<String, Object> user = new LinkedHashMap<>();
+        user.put("userId", userResume.getUserId());
+        user.put("username", userResume.getUsername());
+        user.put("nickname", StringUtils.defaultString(userResume.getNickName(), userResume.getUsername()));
+        user.put("readonly", userResume.isReadonly());
 
         List<String> roles = new ArrayList<>();
-        roles.add("admin");
+        if (userResume.getRoles() != null) {
+            roles.addAll(userResume.getRoles());
+        }
 
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("accessToken", token);
         data.put("refreshToken", refreshToken);
-        data.put("userInfo", userInfo);
+        data.put("user", user);
         data.put("roles", roles);
-        data.put("expires", result.getUserResume() != null
-                ? result.getUserResume().getExpireTime() : null);
+        data.put("expires", userResume.getExpireTime());
         return ReturnResult.ok(data);
     }
 
@@ -141,52 +150,52 @@ public class UserAuthController {
             log.warn("解析用户信息异常: {}", e.getMessage());
         }
 
- // 若 OAuth 客户端暂未接通校验服务，则返回占位用户信息，待完善
-        Map<String, Object> userInfo = new LinkedHashMap<>();
-        userInfo.put("userId", userResult != null && StringUtils.isNotBlank(userResult.getUserId())
-                ? userResult.getUserId() : generateUuidV7());
-        userInfo.put("username", userResult != null && StringUtils.isNotBlank(userResult.getUsername())
-                ? userResult.getUsername() : "anonymous");
-        userInfo.put("nickname", userResult != null && StringUtils.isNotBlank(userResult.getNickName())
-                ? userResult.getNickName() : "匿名用户");
-
-        List<String> roles = new ArrayList<>();
-        if (userResult != null && userResult.getRoles() != null && !userResult.getRoles().isEmpty()) {
-            roles.addAll(userResult.getRoles());
-        } else {
-            // 占位角色，待完善角色解析
-            roles.add("admin");
+ // 解析不到真实身份即未登录，不得编造用户标识与角色
+        if (userResult == null || StringUtils.isBlank(userResult.getUserId())) {
+            return ReturnResult.error("未登录");
         }
 
         Map<String, Object> data = new LinkedHashMap<>();
-        data.put("userId", userInfo.get("userId"));
-        data.put("username", userInfo.get("username"));
-        data.put("nickname", userInfo.get("nickname"));
-        data.put("roles", roles);
+        data.put("userId", userResult.getUserId());
+        data.put("username", userResult.getUsername());
+        data.put("nickname", StringUtils.defaultString(userResult.getNickName(), userResult.getUsername()));
+        data.put("readonly", userResult.isReadonly());
+        data.put("roles", userResult.getRoles() == null
+                ? new ArrayList<String>() : new ArrayList<>(userResult.getRoles()));
         return ReturnResult.ok(data);
     }
 
     /**
-     * 刷新令牌（占位实现）。
+     * 刷新令牌。
      *
-     * <p>当前仅返回沿用旧 token 的占位结果；后续可对接 oauth 客户端的
-     * {@link AuthClientExecute#upgrade(String, com.chua.starter.oauth.client.support.enums.UpgradeType)}
-     * 实现真正的令牌刷新。</p>
+     * <p>用刷新令牌走 oauth 客户端 {@code upgrade(REFRESH)} 换发新令牌；
+     * 换发失败说明刷新令牌已失效，需要重新登录。</p>
      *
      * @param body 请求体（含 refresh令牌）
      * @return 刷新后的令牌结果
-     * @param false false
      */
     @TokenForIgnore
     @PostMapping("/refresh-token")
     public ReturnResult<Map<String, Object>> refreshToken(@RequestBody(required = false) Map<String, String> body) {
         String refreshToken = body != null ? body.get("refreshToken") : null;
- // 占位：沿用旧 令牌，待对接 OAuth 刷新
-        String accessToken = refreshToken != null ? refreshToken : "";
+        if (StringUtils.isBlank(refreshToken)) {
+            return ReturnResult.error("refreshToken 不能为空");
+        }
+
+        LoginResult upgraded;
+        try {
+            upgraded = AuthClientExecute.getInstance().upgrade(refreshToken, UpgradeType.REFRESH);
+        } catch (Exception e) {
+            log.warn("刷新令牌异常: {}", e.getMessage());
+            return ReturnResult.error("刷新令牌失败");
+        }
+        if (upgraded == null || StringUtils.isBlank(upgraded.getToken())) {
+            return ReturnResult.error("刷新令牌已失效，请重新登录");
+        }
 
         Map<String, Object> data = new LinkedHashMap<>();
-        data.put("accessToken", accessToken);
-        data.put("refreshToken", refreshToken);
+        data.put("accessToken", upgraded.getToken());
+        data.put("refreshToken", StringUtils.defaultString(upgraded.getRefreshToken(), upgraded.getToken()));
         return ReturnResult.ok(data);
     }
 
@@ -206,40 +215,5 @@ public class UserAuthController {
         }
  // 查询 令牌 兜底
         return request.getParameter("token");
-    }
-
-    /**
-     * 生成 uuidv7 格式字符串。
-     *
-     * <p>格式：xxxxxxxx-xxxx-7xxx-yxxx-xxxxxxxxxxxx（y ∈ {8,9,a,b}）</p>
-     *
-     * @return UUIDv7 字符串
-     */
-    private static String generateUuidV7() {
-        UUID uuid = UUID.randomUUID();
-        long ms = System.currentTimeMillis();
-        byte[] bytes = new byte[16];
- // 时间戳高位 (48 钻头) 放入前6字节
-        bytes[0] = (byte) (ms >> 40);
-        bytes[1] = (byte) (ms >> 32);
-        bytes[2] = (byte) (ms >> 24);
-        bytes[3] = (byte) (ms >> 16);
-        bytes[4] = (byte) (ms >> 8);
-        bytes[5] = (byte) ms;
-        // 用随机数填充剩余字节
-        byte[] random = uuid.toString().replace("-", "").substring(12).getBytes();
-        System.arraycopy(random, 0, bytes, 6, 10);
- // 设置 版本 = 7 (0111)
-        bytes[6] = (byte) ((bytes[6] & 0x0F) | 0x70);
-        // 设置 variant = 10xx
-        bytes[8] = (byte) ((bytes[8] & 0x3F) | 0x80);
-
-        return String.format("%08x-%04x-%04x-%04x-%012x",
-                ((bytes[0] & 0xFF) << 24 | (bytes[1] & 0xFF) << 16 | (bytes[2] & 0xFF) << 8 | (bytes[3] & 0xFF)),
-                ((bytes[4] & 0xFF) << 8 | (bytes[5] & 0xFF)),
-                ((bytes[6] & 0xFF) << 8 | (bytes[7] & 0xFF)),
-                ((bytes[8] & 0xFF) << 8 | (bytes[9] & 0xFF)),
-                (((long) (bytes[10] & 0xFF) << 40) | ((long) (bytes[11] & 0xFF) << 32) | ((long) (bytes[12] & 0xFF) << 24) | ((long) (bytes[13] & 0xFF) << 16) | ((long) (bytes[14] & 0xFF) << 8) | (bytes[15] & 0xFF))
-        );
     }
 }

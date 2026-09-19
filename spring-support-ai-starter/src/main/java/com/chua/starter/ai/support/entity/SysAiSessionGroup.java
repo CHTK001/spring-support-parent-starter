@@ -36,6 +36,12 @@ public class SysAiSessionGroup {
     private Integer sortOrder;
 
     /**
+     * 归属用户标识（登录用户名）
+     */
+    @TableField("user_id")
+    private String userId;
+
+    /**
      * 创建时间
      */
     @TableField("create_time")

@@ -9,12 +9,13 @@
         <result column="url" jdbcType="VARCHAR" property="url"/>
         <result column="active" jdbcType="BOOLEAN" property="active"/>
         <result column="crashed" jdbcType="BOOLEAN" property="crashed"/>
+        <result column="user_id" jdbcType="VARCHAR" property="userId"/>
         <result column="created_at" jdbcType="BIGINT" property="createdAt"/>
         <result column="updated_at" jdbcType="BIGINT" property="updatedAt"/>
     </resultMap>
 
     <sql id="Base_Column_List">
-        tab_id, lane_id, title, url, active, crashed, created_at, updated_at
+        tab_id, lane_id, title, url, active, crashed, user_id, created_at, updated_at
     </sql>
 
     <!-- 根据 Lane ID 查询关联的 Tab 列表 -->

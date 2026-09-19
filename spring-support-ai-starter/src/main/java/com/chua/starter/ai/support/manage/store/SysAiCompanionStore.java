@@ -8,6 +8,7 @@ import com.chua.starter.ai.support.manage.mapper.SysAiCompanionMapper;
 import com.chua.starter.ai.support.manage.mapper.SysAiCompanionMemoryMapper;
 import com.chua.starter.ai.support.manage.mapper.SysAiCompanionSharedConfigMapper;
 import com.chua.starter.ai.support.manage.mapper.SysAiCompanionSkillMapper;
+import com.chua.starter.ai.support.util.AiUserContext;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -109,7 +110,9 @@ public class SysAiCompanionStore {
                 + "`sys_ai_companion_conversation_id` VARCHAR(36) NULL,"
                 + "`sys_ai_companion_created_at` BIGINT NOT NULL,"
                 + "`sys_ai_companion_updated_at` BIGINT NOT NULL,"
-                + "PRIMARY KEY (`sys_ai_companion_id`)"
+                + "`sys_ai_companion_user_id` VARCHAR(64) NULL,"
+                + "PRIMARY KEY (`sys_ai_companion_id`),"
+                + "KEY `sys_ai_companion_user` (`sys_ai_companion_user_id`, `sys_ai_companion_order_index`)"
                 + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
             "CREATE TABLE IF NOT EXISTS `sys_ai_companion_memory` ("
                 + "`sys_ai_companion_memory_id` VARCHAR(36) NOT NULL,"
@@ -125,8 +128,10 @@ public class SysAiCompanionStore {
                 + "`sys_ai_companion_memory_created_at` BIGINT NOT NULL,"
                 + "`sys_ai_companion_memory_updated_at` BIGINT NOT NULL,"
                 + "`sys_ai_companion_memory_last_reinforced_at` BIGINT NULL,"
+                + "`sys_ai_companion_memory_user_id` VARCHAR(64) NULL,"
                 + "PRIMARY KEY (`sys_ai_companion_memory_id`),"
-                + "KEY `idx_ai_companion_memory_owner` (`sys_ai_companion_memory_companion_id`)"
+                + "KEY `idx_ai_companion_memory_owner` (`sys_ai_companion_memory_companion_id`),"
+                + "KEY `idx_ai_companion_memory_user` (`sys_ai_companion_memory_user_id`, `sys_ai_companion_memory_companion_id`)"
                 + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
             "CREATE TABLE IF NOT EXISTS `sys_ai_companion_skill` ("
                 + "`sys_ai_companion_skill_id` VARCHAR(36) NOT NULL,"
@@ -145,8 +150,10 @@ public class SysAiCompanionStore {
                 + "`sys_ai_companion_skill_updated_at` BIGINT NOT NULL,"
                 + "`sys_ai_companion_skill_description` TEXT NULL,"
                 + "`sys_ai_companion_skill_content` TEXT NULL,"
+                + "`sys_ai_companion_skill_user_id` VARCHAR(64) NULL,"
                 + "PRIMARY KEY (`sys_ai_companion_skill_id`),"
-                + "KEY `idx_ai_companion_skill_owner` (`sys_ai_companion_skill_companion_id`)"
+                + "KEY `idx_ai_companion_skill_owner` (`sys_ai_companion_skill_companion_id`),"
+                + "KEY `idx_ai_companion_skill_user` (`sys_ai_companion_skill_user_id`, `sys_ai_companion_skill_companion_id`)"
                 + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
             "CREATE TABLE IF NOT EXISTS `sys_ai_companion_figure` ("
                 + "`sys_ai_companion_figure_id` VARCHAR(36) NOT NULL,"
@@ -156,7 +163,9 @@ public class SysAiCompanionStore {
                 + "`sys_ai_companion_figure_size_tier` VARCHAR(4) NOT NULL DEFAULT 'm',"
                 + "`sys_ai_companion_figure_source_path` VARCHAR(512) NULL,"
                 + "`sys_ai_companion_figure_created_at` BIGINT NOT NULL,"
-                + "PRIMARY KEY (`sys_ai_companion_figure_id`)"
+                + "`sys_ai_companion_figure_user_id` VARCHAR(64) NULL,"
+                + "PRIMARY KEY (`sys_ai_companion_figure_id`),"
+                + "KEY `sys_ai_companion_figure_user` (`sys_ai_companion_figure_user_id`)"
                 + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
             "CREATE TABLE IF NOT EXISTS `sys_ai_companion_shared_config` ("
                 + "`sys_ai_companion_shared_config_key` VARCHAR(64) NOT NULL,"
@@ -228,8 +237,11 @@ public class SysAiCompanionStore {
      * @return 创建companion的结果
      */
     public SysAiCompanion createCompanion(SysAiCompanion companion) {
+        // 归属由服务端按当前登录用户写入，客户端传值一律覆盖
+        companion.setUserId(AiUserContext.requireUserId());
         if (companion.getSeq() == null) {
-            Long maxSeq = companionMapper.selectCount(new LambdaQueryWrapper<>());
+            Long maxSeq = companionMapper.selectCount(new LambdaQueryWrapper<SysAiCompanion>()
+                    .eq(SysAiCompanion::getUserId, companion.getUserId()));
             companion.setSeq(maxSeq == null ? 1 : maxSeq.intValue() + 1);
         }
         long now = System.currentTimeMillis();
@@ -251,7 +263,53 @@ public class SysAiCompanionStore {
         if (companion == null) {
             throw new ApiException(ApiErrorCode.NOT_FOUND, "伙伴不存在: " + companionId);
         }
+        checkReadable(companion.getUserId());
         return companion;
+    }
+
+    /**
+     * 归属校验后的伙伴读取（写出口）：仅归属者可改删，管理员对他人数据只读。
+     *
+     * @param companionId 伙伴 标识
+     * @return 伙伴实体
+     */
+    public SysAiCompanion requireWritableCompanion(String companionId) {
+        SysAiCompanion companion = companionMapper.selectById(companionId);
+        if (companion == null) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "伙伴不存在: " + companionId);
+        }
+        checkWritable(companion.getUserId());
+        return companion;
+    }
+
+    /**
+     * 读归属校验：管理员可跨用户读取，其余仅本人。
+     *
+     * @param owner 数据归属用户标识
+     */
+    private void checkReadable(String owner) {
+        if (AiUserContext.isAdmin()) {
+            return;
+        }
+        String userId = AiUserContext.requireUserId();
+        if (!userId.equals(owner)) {
+            throw new ApiException(ApiErrorCode.FORBIDDEN, "无权访问他人数据");
+        }
+    }
+
+    /**
+     * 写归属校验：只读账号拒绝，且仅归属者可写（管理员对他人数据只读）。
+     *
+     * @param owner 数据归属用户标识
+     */
+    private void checkWritable(String owner) {
+        if (AiUserContext.isReadonly()) {
+            throw new ApiException(ApiErrorCode.FORBIDDEN, "只读账号不允许执行写操作");
+        }
+        String userId = AiUserContext.requireUserId();
+        if (!userId.equals(owner)) {
+            throw new ApiException(ApiErrorCode.FORBIDDEN, "管理员对他人数据只读，不可修改或删除");
+        }
     }
 
     /**
@@ -259,8 +317,10 @@ public class SysAiCompanionStore {
      * @return 列表companions的结果
      */
     public List<SysAiCompanion> listCompanions() {
+        // 管理员可跨用户查看，普通用户仅本人；无身份时条件恒不匹配（失败即关闭）
         return companionMapper.selectList(
                 new LambdaQueryWrapper<SysAiCompanion>()
+                        .eq(!AiUserContext.isAdmin(), SysAiCompanion::getUserId, AiUserContext.currentUserId())
                         .orderByAsc(SysAiCompanion::getSeq));
     }
 
@@ -272,7 +332,7 @@ public class SysAiCompanionStore {
      * @return SysAiCompanion 对象
      */
     public SysAiCompanion patchCompanion(String companionId, Map<String, Object> patch) {
-        SysAiCompanion current = getCompanion(companionId);
+        SysAiCompanion current = requireWritableCompanion(companionId);
         applyPatch(current, patch);
         current.setUpdatedAt(System.currentTimeMillis());
         companionMapper.updateById(current);
@@ -285,7 +345,7 @@ public class SysAiCompanionStore {
      * @param companionId companionID，不允许为 null
      */
     public void deleteCompanion(String companionId) {
-        getCompanion(companionId);
+        requireWritableCompanion(companionId);
         companionMapper.deleteById(companionId);
         // 级联清理记忆与技能
         memoryMapper.delete(new LambdaQueryWrapper<SysAiCompanionMemory>()
@@ -416,8 +476,14 @@ public class SysAiCompanionStore {
      * @return 列表内存的结果
      */
     public List<SysAiCompanionMemory> listMemories(String companionId, Integer limit, Integer offset) {
+        boolean scoped = companionId != null && !companionId.isBlank();
+        if (scoped) {
+            getCompanion(companionId);
+        }
         LambdaQueryWrapper<SysAiCompanionMemory> wrapper = new LambdaQueryWrapper<SysAiCompanionMemory>()
-                .eq(companionId != null && !companionId.isBlank(), SysAiCompanionMemory::getCompanionId, companionId)
+                .eq(scoped, SysAiCompanionMemory::getCompanionId, companionId)
+                // 未指定伙伴时按归属用户过滤：管理员全量，无身份恒不匹配
+                .eq(!scoped && !AiUserContext.isAdmin(), SysAiCompanionMemory::getUserId, AiUserContext.currentUserId())
                 .orderByDesc(SysAiCompanionMemory::getCreatedAt);
         if (offset != null && offset > 0) {
             wrapper.last("LIMIT " + (limit == null || limit <= 0 ? 200 : limit) + " OFFSET " + offset);
@@ -443,7 +509,7 @@ public class SysAiCompanionStore {
      * @param conversationId conversationid
      */
     public void setCompanionConversationId(String companionId, String conversationId) {
-        SysAiCompanion companion = getCompanion(companionId);
+        SysAiCompanion companion = requireWritableCompanion(companionId);
         companion.setConversationId(conversationId);
         companion.setUpdatedAt(System.currentTimeMillis());
         companionMapper.updateById(companion);
@@ -455,6 +521,9 @@ public class SysAiCompanionStore {
      * @return 创建内存的结果
      */
     public SysAiCompanionMemory createMemory(SysAiCompanionMemory memory) {
+        // 归属随所属伙伴写入，且要求调用方可写该伙伴
+        SysAiCompanion companion = requireWritableCompanion(memory.getCompanionId());
+        memory.setUserId(companion.getUserId());
         long now = System.currentTimeMillis();
         if (memory.getCreatedAt() == null) {
             memory.setCreatedAt(now);
@@ -489,12 +558,14 @@ public class SysAiCompanionStore {
         if (memory == null) {
             throw new ApiException(ApiErrorCode.NOT_FOUND, "记忆不存在: " + memoryId);
         }
+        checkReadable(memory.getUserId());
         return memory;
     }
 
     public SysAiCompanionMemory updateMemory(String memoryId, String companionId,
                                              String content, Boolean pinned, String status) {
         SysAiCompanionMemory memory = getMemory(memoryId);
+        checkWritable(memory.getUserId());
         // owner 不匹配拒绝（强约束：记忆严格按伙伴归属）
         if (companionId != null && !companionId.isBlank()
                 && memory.getCompanionId() != null && !memory.getCompanionId().equals(companionId)) {
@@ -521,6 +592,7 @@ public class SysAiCompanionStore {
      */
     public void deleteMemory(String memoryId, String companionId) {
         SysAiCompanionMemory memory = getMemory(memoryId);
+        checkWritable(memory.getUserId());
         if (companionId != null && !companionId.isBlank()
                 && memory.getCompanionId() != null && !memory.getCompanionId().equals(companionId)) {
             throw new ApiException(ApiErrorCode.NOT_FOUND, "记忆不存在: " + memoryId);
@@ -539,6 +611,7 @@ public class SysAiCompanionStore {
      * @return 疑似重复分组（每组 memories ≥ 2）
      */
     public List<List<SysAiCompanionMemory>> suggestMemoryMerges(String companionId) {
+        getCompanion(companionId);
         LambdaQueryWrapper<SysAiCompanionMemory> wrapper = new LambdaQueryWrapper<SysAiCompanionMemory>()
                 .eq(SysAiCompanionMemory::getCompanionId, companionId)
                 .eq(SysAiCompanionMemory::getStatus, "active");
@@ -589,6 +662,9 @@ public class SysAiCompanionStore {
      * @return 创建skill的结果
      */
     public SysAiCompanionSkill createSkill(SysAiCompanionSkill skill) {
+        // 归属随所属伙伴写入，且要求调用方可写该伙伴
+        SysAiCompanion companion = requireWritableCompanion(skill.getCompanionId());
+        skill.setUserId(companion.getUserId());
         long now = System.currentTimeMillis();
         if (skill.getCreatedAt() == null) {
             skill.setCreatedAt(now);
@@ -623,6 +699,7 @@ public class SysAiCompanionStore {
         if (skill == null) {
             throw new ApiException(ApiErrorCode.NOT_FOUND, "技能不存在: " + skillId);
         }
+        checkReadable(skill.getUserId());
         return skill;
     }
 
@@ -634,8 +711,14 @@ public class SysAiCompanionStore {
      * @return 列表skills的结果
      */
     public List<SysAiCompanionSkill> listSkills(String companionId, Integer limit, Integer offset) {
+        boolean scoped = companionId != null && !companionId.isBlank();
+        if (scoped) {
+            getCompanion(companionId);
+        }
         LambdaQueryWrapper<SysAiCompanionSkill> wrapper = new LambdaQueryWrapper<SysAiCompanionSkill>()
-                .eq(companionId != null && !companionId.isBlank(), SysAiCompanionSkill::getCompanionId, companionId)
+                .eq(scoped, SysAiCompanionSkill::getCompanionId, companionId)
+                // 未指定伙伴时按归属用户过滤：管理员全量，无身份恒不匹配
+                .eq(!scoped && !AiUserContext.isAdmin(), SysAiCompanionSkill::getUserId, AiUserContext.currentUserId())
                 .orderByDesc(SysAiCompanionSkill::getCreatedAt);
         if (offset != null && offset > 0) {
             wrapper.last("LIMIT " + (limit == null || limit <= 0 ? 200 : limit) + " OFFSET " + offset);
@@ -646,6 +729,7 @@ public class SysAiCompanionStore {
     public SysAiCompanionSkill updateSkill(String skillId, String companionId,
                                            String content, String status) {
         SysAiCompanionSkill skill = getSkill(skillId);
+        checkWritable(skill.getUserId());
         if (companionId != null && !companionId.isBlank()
                 && skill.getCompanionId() != null && !skill.getCompanionId().equals(companionId)) {
             throw new ApiException(ApiErrorCode.NOT_FOUND, "技能不存在: " + skillId);
@@ -668,6 +752,7 @@ public class SysAiCompanionStore {
      */
     public void deleteSkill(String skillId, String companionId) {
         SysAiCompanionSkill skill = getSkill(skillId);
+        checkWritable(skill.getUserId());
         if (companionId != null && !companionId.isBlank()
                 && skill.getCompanionId() != null && !skill.getCompanionId().equals(companionId)) {
             throw new ApiException(ApiErrorCode.NOT_FOUND, "技能不存在: " + skillId);
@@ -683,6 +768,8 @@ public class SysAiCompanionStore {
      * @return 创建figure的结果
      */
     public SysAiCompanionFigure createFigure(SysAiCompanionFigure figure) {
+        // 归属由服务端按当前登录用户写入；为空即内置共享形象
+        figure.setUserId(AiUserContext.requireUserId());
         if (figure.getCreatedAt() == null) {
             figure.setCreatedAt(System.currentTimeMillis());
         }
@@ -701,8 +788,17 @@ public class SysAiCompanionStore {
      * @return 列表figures的结果
      */
     public List<SysAiCompanionFigure> listFigures() {
+        if (AiUserContext.isAdmin()) {
+            return figureMapper.selectList(
+                    new LambdaQueryWrapper<SysAiCompanionFigure>().orderByDesc(SysAiCompanionFigure::getCreatedAt));
+        }
+        // 普通用户可见范围：内置共享形象（归属为空）+ 本人自建形象
+        String userId = AiUserContext.requireUserId();
         return figureMapper.selectList(
-                new LambdaQueryWrapper<SysAiCompanionFigure>().orderByDesc(SysAiCompanionFigure::getCreatedAt));
+                new LambdaQueryWrapper<SysAiCompanionFigure>()
+                        .and(w -> w.isNull(SysAiCompanionFigure::getUserId)
+                                .or().eq(SysAiCompanionFigure::getUserId, userId))
+                        .orderByDesc(SysAiCompanionFigure::getCreatedAt));
     }
 
     /**
@@ -715,12 +811,18 @@ public class SysAiCompanionStore {
         if (figure == null) {
             throw new ApiException(ApiErrorCode.NOT_FOUND, "形象不存在: " + figureId);
         }
+        // 内置共享形象对所有人开放；越权判定与伙伴记忆/技能一致
+        if (figure.getUserId() == null) {
+            return figure;
+        }
+        checkReadable(figure.getUserId());
         return figure;
     }
 
     public SysAiCompanionFigure updateFigure(String figureId, String name,
                                              Map<String, Object> headBox, String sizeTier) {
         SysAiCompanionFigure figure = getFigure(figureId);
+        checkWritableFigure(figure);
         if (name != null) {
             figure.setName(name);
         }
@@ -739,8 +841,27 @@ public class SysAiCompanionStore {
      * @param figureId figureid
      */
     public void deleteFigure(String figureId) {
-        getFigure(figureId);
+        SysAiCompanionFigure figure = getFigure(figureId);
+        checkWritableFigure(figure);
         figureMapper.deleteById(figureId);
+    }
+
+    /**
+     * 形象写归属校验：本人形象仅本人可改删；内置共享形象（归属为空）仅管理员可维护。
+     *
+     * @param figure 形象实体
+     */
+    private void checkWritableFigure(SysAiCompanionFigure figure) {
+        if (figure.getUserId() == null) {
+            if (!AiUserContext.isAdmin()) {
+                throw new ApiException(ApiErrorCode.FORBIDDEN, "内置共享形象仅管理员可维护");
+            }
+            if (AiUserContext.isReadonly()) {
+                throw new ApiException(ApiErrorCode.FORBIDDEN, "只读账号不允许执行写操作");
+            }
+            return;
+        }
+        checkWritable(figure.getUserId());
     }
 
     // ==================== 共享配置 KV ====================

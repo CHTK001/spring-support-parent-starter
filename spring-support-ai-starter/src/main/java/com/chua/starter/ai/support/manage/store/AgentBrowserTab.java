@@ -72,6 +72,12 @@ public class AgentBrowserTab {
     private Boolean crashed; // crashed
 
     /**
+     * 归属用户标识（与所属 Lane 同源，由服务端写入）。
+     */
+    @TableField("user_id")
+    private String userId; // 归属用户
+
+    /**
      * 创建时间（毫秒级时间戳）。
      *
      * <p>记录 Tab 的创建时间，用于排序和生命周期管理。</p>

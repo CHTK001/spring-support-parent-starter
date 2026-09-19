@@ -27,6 +27,8 @@ import com.chua.starter.ai.support.model.AiChatRequest;
 import com.chua.starter.ai.support.registry.ChatClientRegistry;
 import com.chua.starter.ai.support.service.AiChatFacadeService;
 import com.chua.starter.ai.support.service.SysAiPricingService;
+import com.chua.starter.ai.support.util.AiUserContext;
+import com.chua.starter.ai.support.util.ProviderCredentials;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -44,6 +46,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -126,7 +129,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
              * @param "chat" "对话"
              * @param response 响应
              */
-            recordUsage(configured, "chat", response);
+            recordUsage(configured, "chat", response, AiUserContext.currentUserId());
             return buildResult(response);
         } catch (Exception e) {
             log.error("[AiChat] call failed: model={}", request.getModel(), e);
@@ -139,6 +142,20 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     @Override
     public SseEmitter stream(AiChatRequest request, Consumer<String> onChunk, Consumer<String> onComplete,
                              Consumer<Throwable> onError) {
+        return stream(request, onChunk, onComplete, onError, null);
+    }
+
+    @Override
+    public SseEmitter stream(AiChatRequest request, Consumer<String> onChunk, Consumer<String> onComplete,
+                             Consumer<Throwable> onError, Consumer<String> onThinkingChunk) {
+        return streamWithUsage(request, onChunk,
+                onComplete == null ? null : (reply, usage) -> onComplete.accept(reply), onError, onThinkingChunk);
+    }
+
+    @Override
+    public SseEmitter streamWithUsage(AiChatRequest request, Consumer<String> onChunk,
+                                      BiConsumer<String, com.chua.common.support.ai.AiUsage> onCompleteWithUsage,
+                                      Consumer<Throwable> onError, Consumer<String> onThinkingChunk) {
         SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MILLIS);
 
         ChatClient client = resolveChatClient(request);
@@ -152,14 +169,27 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         final com.chua.common.support.ai.AiUsage[] lastUsage = new com.chua.common.support.ai.AiUsage[1];
         final long start = System.currentTimeMillis();
         final long[] firstTokenAt = new long[] { 0L };
+ // 请求线程内捕获身份：流式回调整时在别的线程执行，届时取不到上下文
+        final String usageUserId = AiUserContext.currentUserId();
 
-        CompletableFuture.runAsync(() -> {
+        CompletableFuture.runAsync(AiUserContext.capturing(() -> {
             try {
                 log.info("[AiChat] DBG chat call begin, promptLen={}, class={}", promptOf(request)==null?-1:promptOf(request).length(), configured.getClass().getName());
                 configured.chat(promptOf(request),
                         response -> {
-                            if (response.getState() == com.chua.common.support.ai.chat.ChatResponse.State.STOP) {
+                            if (response.getState() == com.chua.common.support.ai.chat.ChatResponse.State.STOP
+                                    && lastUsage[0] == null && response.getUsage() != null) {
+                                // 聚合客户端会在底层客户端的带量 STOP 之后补发一个空 STOP，
+                                // 无条件覆盖会把真实用量清空，导致 sys_ai_usage 恒为 0 行
                                 lastUsage[0] = response.getUsage();
+                            }
+                            // 思考内容分流（深度思考），不受正文为空影响
+                            String reasoning = response.getReasoningContent();
+                            if (reasoning != null && !reasoning.isEmpty() && onThinkingChunk != null) {
+                                try {
+                                    onThinkingChunk.accept(reasoning);
+                                } catch (Exception ignored) {
+                                }
                             }
                             String chunk = response.getContent() != null ? response.getContent() : "";
                             if (chunk.isEmpty()) {
@@ -188,12 +218,12 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                                  * recordusage。
                                  * @param lastUsage[0] 最后一个usage[0]
                                  */
-                                recordUsage(lastUsage[0]);
+                                recordStreamUsage(lastUsage[0], usageUserId);
                             }
                             String reply = fullResponse.toString();
-                            if (onComplete != null) {
+                            if (onCompleteWithUsage != null) {
                                 try {
-                                    onComplete.accept(reply);
+                                    onCompleteWithUsage.accept(reply, lastUsage[0]);
                                 } catch (Exception ignored) {
                                 }
                             }
@@ -221,7 +251,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                 }
                 emitter.completeWithError(e);
             }
-        });
+        }));
 
         return emitter;
     }
@@ -563,28 +593,12 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     }
 
     /**
-     * 从凭证中提取全部 API Key（兼容 {@code api_keys} 数组与 {@code apiKey} 键）。
+     * 从凭证中提取全部 API Key（形态兼容见 {@link ProviderCredentials}）。
      * @param credentials 凭证
      * @return extractapiKey的结果
      */
     private static List<String> extractApiKeys(Map<String, Object> credentials) {
-        if (credentials == null) {
-            return new ArrayList<>(1);
-        }
-        List<String> result = new ArrayList<>(2);
-        Object keys = credentials.get("api_keys");
-        if (keys instanceof List<?> list) {
-            for (Object o : list) {
-                if (o != null && !o.toString().isBlank()) {
-                    result.add(o.toString());
-                }
-            }
-        }
-        Object key = credentials.get("apiKey");
-        if (key != null && !key.toString().isBlank() && !result.contains(key.toString())) {
-            result.add(key.toString());
-        }
-        return result;
+        return ProviderCredentials.apiKeys(credentials);
     }
 
     /**
@@ -660,8 +674,8 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
      * @param callType call类型
      * @param response 响应
      */
-    private void recordUsage(ChatClient client, String callType, ChatSyncResponse response) {
-        recordUsage(client, callType, response != null ? response.getUsage() : null);
+    private void recordUsage(ChatClient client, String callType, ChatSyncResponse response, String userId) {
+        recordUsage(client, callType, response != null ? response.getUsage() : null, userId);
     }
 
     /**
@@ -669,8 +683,9 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
      * @param client 客户端
      * @param callType call类型
      * @param usage usage
+     * @param userId 归属用户标识
      */
-    private void recordUsage(ChatClient client, String callType, com.chua.common.support.ai.AiUsage usage) {
+    private void recordUsage(ChatClient client, String callType, com.chua.common.support.ai.AiUsage usage, String userId) {
         if (usage == null) {
             return;
         }
@@ -682,7 +697,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                     callType,
                     usage,
                     UUID.randomUUID().toString(),
-                    null
+                    userId
             );
         } catch (Exception e) {
             log.warn("[UsageRecorder] 记录失败: {}", e.getMessage());
@@ -690,19 +705,22 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     }
 
     /**
-     * recordusage。
-     * @param usage usage
+     * 记录流式对话用量。
+     *
+     * @param usage  用量
+     * @param userId 请求线程捕获的归属用户标识
      */
-    private void recordUsage(com.chua.common.support.ai.AiUsage usage) {
-        recordUsage(usage, "chat_stream");
+    private void recordStreamUsage(com.chua.common.support.ai.AiUsage usage, String userId) {
+        recordUsage(usage, "chat_stream", userId);
     }
 
     /**
      * recordusage。
      * @param usage usage
      * @param callType call类型
+     * @param userId 归属用户标识
      */
-    private void recordUsage(com.chua.common.support.ai.AiUsage usage, String callType) {
+    private void recordUsage(com.chua.common.support.ai.AiUsage usage, String callType, String userId) {
         if (usage == null) {
             return;
         }
@@ -714,7 +732,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                     callType,
                     usage,
                     UUID.randomUUID().toString(),
-                    null
+                    userId
             );
         } catch (Exception e) {
             log.warn("[UsageRecorder] 记录失败: {}", e.getMessage());

@@ -129,4 +129,10 @@ public class SysAiRequirement implements Serializable {
 
     @TableField("update_time")
     private Long updateTime; // 更新时间
+
+    /**
+     * 归属用户标识（登录用户名，由服务端按当前登录用户写入）
+     */
+    @TableField("sys_ai_requirement_user_id")
+    private String userId; // 归属用户
 }

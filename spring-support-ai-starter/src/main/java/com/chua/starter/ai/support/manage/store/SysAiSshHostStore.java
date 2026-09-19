@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.starter.ai.support.manage.common.ApiErrorCode;
 import com.chua.starter.ai.support.manage.common.ApiException;
 import com.chua.starter.ai.support.manage.mapper.SysAiSshHostMapper;
+import com.chua.starter.ai.support.util.AiUserContext;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -52,7 +53,9 @@ public class SysAiSshHostStore {
      * @return 主机列表
      */
     public List<SysAiSshHost> listAll() {
+        // 凭据仅归属者可见：管理员可跨用户查看，普通用户仅本人
         LambdaQueryWrapper<SysAiSshHost> wrapper = new LambdaQueryWrapper<SysAiSshHost>()
+                .eq(!AiUserContext.isAdmin(), SysAiSshHost::getUserId, AiUserContext.requireUserId())
                 .orderByAsc(SysAiSshHost::getCreatedAt);
         return sshHostMapper.selectList(wrapper);
     }
@@ -68,6 +71,29 @@ public class SysAiSshHostStore {
         if (host == null) {
             throw new ApiException(ApiErrorCode.NOT_FOUND, "SSH 主机不存在: " + sshHostId);
         }
+        if (!AiUserContext.isAdmin() && !AiUserContext.requireUserId().equals(host.getUserId())) {
+            throw new ApiException(ApiErrorCode.FORBIDDEN, "无权访问他人数据");
+        }
+        return host;
+    }
+
+    /**
+     * 写出口主机读取：仅归属者可改删，管理员对他人数据只读，只读账号拒绝。
+     *
+     * @param sshHostId 主机 标识
+     * @return 主机
+     */
+    public SysAiSshHost requireWritable(String sshHostId) {
+        if (AiUserContext.isReadonly()) {
+            throw new ApiException(ApiErrorCode.FORBIDDEN, "只读账号不允许执行写操作");
+        }
+        SysAiSshHost host = sshHostMapper.selectById(sshHostId);
+        if (host == null) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "SSH 主机不存在: " + sshHostId);
+        }
+        if (!AiUserContext.requireUserId().equals(host.getUserId())) {
+            throw new ApiException(ApiErrorCode.FORBIDDEN, "管理员对他人数据只读，不可修改或删除");
+        }
         return host;
     }
 
@@ -78,6 +104,8 @@ public class SysAiSshHostStore {
      * @return 创建的主机
      */
     public SysAiSshHost create(SysAiSshHost host) {
+        // 归属由服务端按当前登录用户写入，客户端传值一律覆盖
+        host.setUserId(AiUserContext.requireUserId());
         sshHostMapper.insert(host);
         return host;
     }
@@ -90,7 +118,7 @@ public class SysAiSshHostStore {
      * @return 更新后的主机
      */
     public SysAiSshHost update(String sshHostId, SysAiSshHost updates) {
-        SysAiSshHost current = get(sshHostId);
+        SysAiSshHost current = requireWritable(sshHostId);
         if (updates.getName() != null) {
             current.setName(updates.getName());
         }
@@ -122,7 +150,7 @@ public class SysAiSshHostStore {
      * @param sshHostId 主机 标识
      */
     public void delete(String sshHostId) {
-        get(sshHostId);
+        requireWritable(sshHostId);
         sshHostMapper.deleteById(sshHostId);
     }
 
