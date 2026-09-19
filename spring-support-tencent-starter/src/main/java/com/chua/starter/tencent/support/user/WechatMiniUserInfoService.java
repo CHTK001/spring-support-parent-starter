@@ -8,10 +8,10 @@ import me.zhyd.oauth.model.AuthUser;
 import org.springframework.util.StringUtils;
 
 /**
-* 微信小程序用户信息服务
-*
-* @since 2026/07/20
-* @author CH
+ * 微信小程序用户信息服务
+ *
+ * @since 2026/07/20
+ * @author CH
  */
 @Spi("WECHAT_MINI")
 public class WechatMiniUserInfoService implements UserInfoService {

@@ -12,35 +12,35 @@ import java.util.List;
 public interface SysAiSessionGroupService {
 
     /**
-    * 查询所有分组
-    * @return 结果列表，无数据时为空列表
-    */
+     * 查询所有分组
+     * @return 结果列表，无数据时为空列表
+     */
     List<SysAiSessionGroup> list();
 
     /**
-    * 创建分组
-    * @param name 名称，不允许为 null
-    * @return SysAi会话分组 对象
-    */
+     * 创建分组
+     * @param name 名称，不允许为 null
+     * @return SysAi会话分组 对象
+     */
     SysAiSessionGroup create(String name);
 
     /**
-    * 更新分组
-    * @param id ID，不允许为 null
-    * @param name 名称，不允许为 null
-    * @return SysAi会话分组 对象
-    */
+     * 更新分组
+     * @param id ID，不允许为 null
+     * @param name 名称，不允许为 null
+     * @return SysAi会话分组 对象
+     */
     SysAiSessionGroup update(Long id, String name);
 
     /**
-    * 删除分组
-    * @param id ID，不允许为 null
-    */
+     * 删除分组
+     * @param id ID，不允许为 null
+     */
     void delete(Long id);
 
     /**
-    * 排序
-    * @param ids 方法入参 ids
-    */
+     * 排序
+     * @param ids 方法入参 ids
+     */
     void reorder(List<Long> ids);
 }

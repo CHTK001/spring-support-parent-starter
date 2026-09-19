@@ -20,10 +20,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
-* 知识库文档管理控制器
-*
-* @since 4.0.0.42
-* @author CH
+ * 知识库文档管理控制器
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @RestController
@@ -52,11 +52,11 @@ public class EduKnowledgeDocController {
     }
 
     /**
-    * 上传文档
-    *
-    * @param dto 文档上传数据
-    * @return 文档ID
-    */
+     * 上传文档
+     *
+     * @param dto 文档上传数据
+     * @return 文档ID
+     */
     @Operation(summary = "上传文档")
     @PostMapping("/upload")
     public ReturnResult<Long> upload(@RequestBody KnowledgeDocUploadDTO dto) {
@@ -64,13 +64,13 @@ public class EduKnowledgeDocController {
     }
 
     /**
-    * 语义检索
-    *
-    * @param keyword 检索关键字
-    * @param subject 学科
-    * @param limit   返回数量
-    * @return 检索结果
-    */
+     * 语义检索
+     *
+     * @param keyword 检索关键字
+     * @param subject 学科
+     * @param limit   返回数量
+     * @return 检索结果
+     */
     @Operation(summary = "语义检索")
     @GetMapping("/search")
     public ReturnResult<PageResult<KnowledgeDocVO>> search(@RequestParam String keyword,
@@ -80,11 +80,11 @@ public class EduKnowledgeDocController {
     }
 
     /**
-    * 删除文档
-    *
-    * @param id 文档标识
-    * @return 是否成功
-    */
+     * 删除文档
+     *
+     * @param id 文档标识
+     * @return 是否成功
+     */
     @Operation(summary = "删除文档")
     @DeleteMapping("/{id}")
     public ReturnResult<Boolean> delete(@PathVariable Long id) {

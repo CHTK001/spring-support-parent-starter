@@ -57,11 +57,11 @@ public class AgentController {
     }
 
     /**
-    * 下载 Agent tar.gz
-    * 结构: monitor-agent.jar + lib/*.jar + agent.yml + start.sh
-    * @param serverUrl 服务端URL，不允许为 null
-    * @return 响应实体 对象
-    */
+     * 下载 Agent tar.gz
+     * 结构: monitor-agent.jar + lib/*.jar + agent.yml + start.sh
+     * @param serverUrl 服务端URL，不允许为 null
+     * @return 响应实体 对象
+     */
     @GetMapping("/download")
     public ResponseEntity<FileSystemResource> download(@RequestParam(defaultValue = "http://localhost:8081") String serverUrl) throws IOException {
         // 更新配置

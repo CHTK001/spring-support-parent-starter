@@ -16,12 +16,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
-* SSE Socket 会话模板实现
-* 实现 Socket会话template 接口，提供统一的消息发送能力
-*
-* @版本 1.0.0
-* @since 2024-12-24
-* @author CH
+ * SSE Socket 会话模板实现
+ * 实现 Socket会话template 接口，提供统一的消息发送能力
+ *
+ * @版本 1.0.0
+ * @since 2024-12-24
+ * @author CH
  */
 @Slf4j
 public class SseSocketSessionTemplate implements SocketSessionTemplate {
@@ -35,15 +35,15 @@ public class SseSocketSessionTemplate implements SocketSessionTemplate {
     private final long timeout;
 
     /**
-    * 客户端连接映射
-    * Key: 客户端标识, 值: sseSocket会话
-    */
+     * 客户端连接映射
+     * Key: 客户端标识, 值: sseSocket会话
+     */
     private final Map<String, SseSocketSession> sessions = new ConcurrentHashMap<>();
 
     /**
-    * 用户到会话的映射
-    * Key: 用户标识, 值: 客户端标识
-    */
+     * 用户到会话的映射
+     * Key: 用户标识, 值: 客户端标识
+     */
     private final Map<String, String> userSessionMap = new ConcurrentHashMap<>();
 
     /** 创建 sseSocket会话template 实例 */
@@ -56,19 +56,19 @@ public class SseSocketSessionTemplate implements SocketSessionTemplate {
     }
 
     /**
-    * 创建 sseSocket会话template 实例
-    * @param timeout 超时
-    */
+     * 创建 sseSocket会话template 实例
+     * @param timeout 超时
+     */
     public SseSocketSessionTemplate(long timeout) {
         this.timeout = timeout;
     }
 
     /**
-    * 创建新的 SSE 连接
-    *
-    * @param clientId 客户端标识，如果为空则自动生成
-    * @return SseEmitter
-    */
+     * 创建新的 SSE 连接
+     *
+     * @param clientId 客户端标识，如果为空则自动生成
+     * @return SseEmitter
+     */
     public SseEmitter createConnection(String clientId) {
         if (clientId == null || clientId.isEmpty()) {
             clientId = UUID.randomUUID().toString().replace("-", "");
@@ -77,10 +77,10 @@ public class SseSocketSessionTemplate implements SocketSessionTemplate {
         // 如果已存在连接，先关闭旧连接
         if (sessions.containsKey(clientId)) {
             /**
-            * 移除。
-            * @param clientId 客户端标识
-            * @param sessions.get(clientId 会话.获取(客户端标识
-            */
+             * 移除。
+             * @param clientId 客户端标识
+             * @param sessions.get(clientId 会话.获取(客户端标识
+             */
             remove(clientId, sessions.get(clientId));
         }
 
@@ -244,11 +244,11 @@ public class SseSocketSessionTemplate implements SocketSessionTemplate {
     }
 
     /**
-    * 绑定用户到会话
-    *
-    * @param userId   用户标识
-    * @param clientId 客户端标识
-    */
+     * 绑定用户到会话
+     *
+     * @param userId   用户标识
+     * @param clientId 客户端标识
+     */
     public void bindUser(String userId, String clientId) {
         userSessionMap.put(userId, clientId);
         SseSocketSession session = sessions.get(clientId);
@@ -260,19 +260,19 @@ public class SseSocketSessionTemplate implements SocketSessionTemplate {
     }
 
     /**
-    * 解绑用户
-    *
-    * @param userId 用户标识
-    */
+     * 解绑用户
+     *
+     * @param userId 用户标识
+     */
     public void unbindUser(String userId) {
         userSessionMap.remove(userId);
     }
 
     /**
-    * 获取所有连接状态
-    *
-    * @return 连接状态信息
-    */
+     * 获取所有连接状态
+     *
+     * @return 连接状态信息
+     */
     public Map<String, Object> getConnectionStatus() {
         return Map.of(
                 "totalConnections", sessions.size(),

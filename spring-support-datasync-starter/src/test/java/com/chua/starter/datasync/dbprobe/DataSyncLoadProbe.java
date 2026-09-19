@@ -29,39 +29,39 @@ import java.util.concurrent.atomic.LongAdder;
 import java.util.stream.Collectors;
 
 /**
-* 并发与吞吐专项探针。
-*
-* <p>真实场景验证点：</p>
-* <ul>
-*   <li><b>并发</b>：注册 3 个映射（cron 同为 {@code 0/1 * * * * ?}，同一调度 tick 同时到点），
-*       验证调度器单线程轮询 + Reactor 异步执行下多映射并行执行、互不阻塞、无丢失。</li>
-*   <li><b>吞吐</b>：CSV 源预置 5 万行数据，首个触发点一次性注入，Sink 记录行数/批次/耗时，
-*       计算吞吐（行/秒），观察批次数与并行执行耗时。</li>
-* </ul>
-*
-* <p>不依赖 Spring 装配（直接构造 {@link DefaultDataSyncServer} 全链路），
-* 便于聚焦调度器并发与数据吞吐的可复现测量。</p>
-*
-* @since 4.0.0.42
-* @author CH
+ * 并发与吞吐专项探针。
+ *
+ * <p>真实场景验证点：</p>
+ * <ul>
+ *   <li><b>并发</b>：注册 3 个映射（cron 同为 {@code 0/1 * * * * ?}，同一调度 tick 同时到点），
+ *       验证调度器单线程轮询 + Reactor 异步执行下多映射并行执行、互不阻塞、无丢失。</li>
+ *   <li><b>吞吐</b>：CSV 源预置 5 万行数据，首个触发点一次性注入，Sink 记录行数/批次/耗时，
+ *       计算吞吐（行/秒），观察批次数与并行执行耗时。</li>
+ * </ul>
+ *
+ * <p>不依赖 Spring 装配（直接构造 {@link DefaultDataSyncServer} 全链路），
+ * 便于聚焦调度器并发与数据吞吐的可复现测量。</p>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 public final class DataSyncLoadProbe {
 
     /**
-    * 工作目录（生成源 CSV 及输出目录）。
+     * 工作目录（生成源 CSV 及输出目录）。
      */
     private static final Path WORK_DIR = Paths.get("target/stress");
 
     /**
-    * 每个映射的源行数（用于吞吐测量）。
+     * 每个映射的源行数（用于吞吐测量）。
      */
     private static final int LINES_PER_SOURCE = 50_000;
 
     /**
-    * 程序入口。
-    *
-    * @param args 命令行参数
+     * 程序入口。
+     *
+     * @param args 命令行参数
      */
     public static void main(String[] args) throws Exception {
         Files.createDirectories(WORK_DIR);
@@ -78,9 +78,9 @@ public final class DataSyncLoadProbe {
             String id = "load-" + i;
             Path csv = WORK_DIR.resolve("source-" + i + ".csv");
             /**
-            * generatecsv。
-            * @param csv csv
-            * @param LINES_PER_SOURCE 线per源
+             * generatecsv。
+             * @param csv csv
+             * @param LINES_PER_SOURCE 线per源
              */
             generateCsv(csv, LINES_PER_SOURCE);
 
@@ -126,15 +126,15 @@ public final class DataSyncLoadProbe {
     }
 
     /**
-    * 创建极简配置定义（cron 与 mapping 保持一致）。
-    *
-    * @param id 映射 标识
-    * @return 配置定义
+     * 创建极简配置定义（cron 与 mapping 保持一致）。
+     *
+     * @param id 映射 标识
+     * @return 配置定义
      */
     private static DataSyncConfigDefinition config(String id) {
         /**
-        * 数据同步配置definition。
-        * @return 数据同步配置definition的结果
+         * 数据同步配置definition。
+         * @return 数据同步配置definition的结果
          */
         return new DataSyncConfigDefinition() {
             @Override
@@ -185,11 +185,11 @@ public final class DataSyncLoadProbe {
     }
 
     /**
-    * 生成 CSV 源：首行表头 {@code name,age,score}，后续行递增。
-    *
-    * @param path  目标路径
-    * @param lines 行数（不含表头）
-    * @throws Exception IO 异常
+     * 生成 CSV 源：首行表头 {@code name,age,score}，后续行递增。
+     *
+     * @param path  目标路径
+     * @param lines 行数（不含表头）
+     * @throws Exception IO 异常
      */
     private static void generateCsv(Path path, int lines) throws Exception {
         StringBuilder sb = new StringBuilder(lines * 16);
@@ -204,52 +204,52 @@ public final class DataSyncLoadProbe {
 }
 
 /**
-* 记录执行信息的数据 Sink（委托 CSV 写入 + 计时统计）。
-* @author CH
-* @since 4.0.0
+ * 记录执行信息的数据 Sink（委托 CSV 写入 + 计时统计）。
+ * @author CH
+ * @since 4.0.0
  */
 final class TimerSink implements DataSyncAgentSink {
 
     /**
-    * Sink 标识
+     * Sink 标识
      */
     private final String sinkId;
 
     /**
-    * 输出文件
+     * 输出文件
      */
     private final Path outPath;
 
     /**
-    * 轮次计数
+     * 轮次计数
      */
     private final LongAdder rounds = new LongAdder();
 
     /**
-    * 行数累计
+     * 行数累计
      */
     private final LongAdder totalRows = new LongAdder();
 
     /**
-    * 累计执行毫秒
+     * 累计执行毫秒
      */
     private final java.util.concurrent.atomic.AtomicLong totalMillis = new java.util.concurrent.atomic.AtomicLong();
 
     /**
-    * 首轮耗时
+     * 首轮耗时
      */
     private final java.util.concurrent.atomic.AtomicLong firstRoundMillis = new java.util.concurrent.atomic.AtomicLong(-1);
 
     /**
-    * 执行线程名集合（去重）
+     * 执行线程名集合（去重）
      */
     private final Set<String> threads = ConcurrentHashMap.newKeySet();
 
     /**
-    * 构造器。
-    *
-    * @param sinkId  Sink 标识
-    * @param outPath 输出文件路径
+     * 构造器。
+     *
+     * @param sinkId  Sink 标识
+     * @param outPath 输出文件路径
      */
     TimerSink(String sinkId, Path outPath) {
         this.sinkId = sinkId;
@@ -257,7 +257,7 @@ final class TimerSink implements DataSyncAgentSink {
     }
 
     /**
-    * {@inheritDoc}
+     * {@inheritDoc}
      */
     @Override
     public String sinkId() {
@@ -265,7 +265,7 @@ final class TimerSink implements DataSyncAgentSink {
     }
 
     /**
-    * {@inheritDoc}
+     * {@inheritDoc}
      */
     @Override
     public void write(Flux<Map<String, Object>> rows) {
@@ -284,8 +284,8 @@ final class TimerSink implements DataSyncAgentSink {
                     totalRows.add(counter.sum());
                     totalMillis.addAndGet(ms);
                     /**
-                    * persist。
-                    * @param list 列表
+                     * persist。
+                     * @param list 列表
                      */
                     persist(list);
                     System.out.println("[LOAD-PROBE] " + sinkId + " 轮次#" + rounds.sum() + " 写入 " + counter.sum()
@@ -294,9 +294,9 @@ final class TimerSink implements DataSyncAgentSink {
     }
 
     /**
-    * 追加落盘。
-    *
-    * @param list 数据列表
+     * 追加落盘。
+     *
+     * @param list 数据列表
      */
     private void persist(List<Map<String, Object>> list) {
         try {
@@ -317,52 +317,52 @@ final class TimerSink implements DataSyncAgentSink {
     }
 
     /**
-    * 轮次数。
-    *
-    * @return 轮次数
+     * 轮次数。
+     *
+     * @return 轮次数
      */
     long rounds() {
         return rounds.sum();
     }
 
     /**
-    * 总行数。
-    *
-    * @return 行数
+     * 总行数。
+     *
+     * @return 行数
      */
     long totalRows() {
         return totalRows.sum();
     }
 
     /**
-    * 累计耗时。
-    *
-    * @return 毫秒
+     * 累计耗时。
+     *
+     * @return 毫秒
      */
     long totalMillis() {
         return Math.max(1, totalMillis.get());
     }
 
     /**
-    * 执行线程名（去重）。
-    *
-    * @return 线程名集合
+     * 执行线程名（去重）。
+     *
+     * @return 线程名集合
      */
     String threads() {
         return String.join(",", threads);
     }
 
     /**
-    * 首轮耗时。
-    *
-    * @return 毫秒（未发生为 -1）
+     * 首轮耗时。
+     *
+     * @return 毫秒（未发生为 -1）
      */
     long firstRoundMillis() {
         return firstRoundMillis.get();
     }
 
     /**
-    * {@inheritDoc}
+     * {@inheritDoc}
      */
     @Override
     public void close() {

@@ -49,14 +49,14 @@ public class SettingsController {
     }
 
     /**
-    * 更新指定分组的设置
-    *
-    * <p>逐字段 upsert 落库，由 Service 发布变更事件触发热更新。</p>
-    *
-    * @param group    设置分组名称
-    * @param settings 待更新的 field -> value 集合
-    * @return 更新后的分组设置
-    */
+     * 更新指定分组的设置
+     *
+     * <p>逐字段 upsert 落库，由 Service 发布变更事件触发热更新。</p>
+     *
+     * @param group    设置分组名称
+     * @param settings 待更新的 field -> value 集合
+     * @return 更新后的分组设置
+     */
     @PutMapping("/{group}")
     public ApiResult<Map<String, Object>> updateGroupSettings(
             @PathVariable String group,

@@ -28,11 +28,11 @@ public class MonitorMetricConfigServiceImpl implements MonitorMetricConfigServic
     @Transactional(rollbackFor = Exception.class)
     @CacheEvict(allEntries = true, cacheNames = "monitorMetricConfig")
     /**
-    * 创建
-    *
-    * @param entity 实体
-    * @return 创建的结果
-    */
+     * 创建
+     *
+     * @param entity 实体
+     * @return 创建的结果
+     */
     public ReturnResult<MsMonitorMetricConfig> create(MsMonitorMetricConfig entity) {
         try {
             if (entity.getId() == null) {
@@ -50,11 +50,11 @@ public class MonitorMetricConfigServiceImpl implements MonitorMetricConfigServic
     @Transactional(rollbackFor = Exception.class)
     @CacheEvict(allEntries = true, cacheNames = "monitorMetricConfig")
     /**
-    * 更新
-    *
-    * @param entity 实体
-    * @return 更新的结果
-    */
+     * 更新
+     *
+     * @param entity 实体
+     * @return 更新的结果
+     */
     public ReturnResult<MsMonitorMetricConfig> update(MsMonitorMetricConfig entity) {
         try {
             mapper.updateById(entity);
@@ -69,11 +69,11 @@ public class MonitorMetricConfigServiceImpl implements MonitorMetricConfigServic
     @Transactional(rollbackFor = Exception.class)
     @CacheEvict(allEntries = true, cacheNames = "monitorMetricConfig")
     /**
-    * 删除
-    *
-    * @param id 标识
-    * @return 删除的结果
-    */
+     * 删除
+     *
+     * @param id 标识
+     * @return 删除的结果
+     */
     public ReturnResult<Void> delete(Long id) {
         try {
             mapper.deleteById(id);
@@ -87,11 +87,11 @@ public class MonitorMetricConfigServiceImpl implements MonitorMetricConfigServic
     @Override
     @Cacheable(cacheNames = "monitorMetricConfig", key = "'monitor.metricConfig:task:' + #taskId")
     /**
-    * 列表by任务
-    *
-    * @param taskId 任务标识
-    * @return 列表by任务的结果
-    */
+     * 列表by任务
+     *
+     * @param taskId 任务标识
+     * @return 列表by任务的结果
+     */
     public ReturnResult<List<MsMonitorMetricConfig>> listByTask(Long taskId) {
         try {
             return ReturnResult.ok(mapper.selectList(

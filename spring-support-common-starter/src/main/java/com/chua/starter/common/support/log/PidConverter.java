@@ -6,14 +6,14 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import java.lang.management.ManagementFactory;
 
 /**
-* 进程标识转换器
-* <p>
-* 用于在日志中输出当前进程标识。
-* </p>
-*
-* @版本 1.0.0
-* @since 2024/01/01
-* @author CH
+ * 进程标识转换器
+ * <p>
+ * 用于在日志中输出当前进程标识。
+ * </p>
+ *
+ * @版本 1.0.0
+ * @since 2024/01/01
+ * @author CH
  */
 public class PidConverter extends ClassicConverter {
 

@@ -9,15 +9,15 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 /**
-* 应用启动后将 springdoc 收集的 打开api 按泛微 E10 风格导出到本地 HTML。
-*
-* <p>默认在 {@code chua.swagger.export.enabled=true} 时启用。
-* 输出路径由 {@link SwaggerExportProperties#getOutput()} 指定, 默认 {@code ./swagger-export.html}。</p>
-*
-* <p>延迟到 {@code SmartLifecycle} 启动之后, 避免 controller 中 Swagger 注解尚未扫描完成。</p>
-*
-* @since 4.0.0.42
-* @author CH
+ * 应用启动后将 springdoc 收集的 打开api 按泛微 E10 风格导出到本地 HTML。
+ *
+ * <p>默认在 {@code chua.swagger.export.enabled=true} 时启用。
+ * 输出路径由 {@link SwaggerExportProperties#getOutput()} 指定, 默认 {@code ./swagger-export.html}。</p>
+ *
+ * <p>延迟到 {@code SmartLifecycle} 启动之后, 避免 controller 中 Swagger 注解尚未扫描完成。</p>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @Component
@@ -31,10 +31,10 @@ public class SwaggerExportRunner implements CommandLineRunner {
     private final SwaggerExportProperties properties;
 
     /**
-    * 创建 Swagger导出runner 实例
-    * @param openAPIProvider 打开api提供者
-    * @param properties 属性
-    */
+     * 创建 Swagger导出runner 实例
+     * @param openAPIProvider 打开api提供者
+     * @param properties 属性
+     */
     public SwaggerExportRunner(org.springframework.beans.factory.ObjectProvider<OpenAPI> openAPIProvider,
                                SwaggerExportProperties properties) {
         this.openAPI = openAPIProvider.getIfAvailable();

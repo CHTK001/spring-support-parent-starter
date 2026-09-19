@@ -15,10 +15,10 @@ import java.util.Arrays;
 import java.util.stream.Collectors;
 
 /**
-* where注入机构标识
-*
-* @author CH
-* @since 4.0.0
+ * where注入机构标识
+ *
+ * @author CH
+ * @since 4.0.0
  */
 public class WhereDeptRegister extends AbstractDeptRegister {
 
@@ -42,32 +42,32 @@ public class WhereDeptRegister extends AbstractDeptRegister {
                              MybatisPlusDataScopeProperties scopeProperties,
                              Table currentTable) {
         /**
-        * 父。
-        * @param plainSelect plain选择
-        * @param where where
-        * @param user 用户
-        * @param dataPermission 数据权限
-        * @param scopeProperties scope属性
-        */
+         * 父。
+         * @param plainSelect plain选择
+         * @param where where
+         * @param user 用户
+         * @param dataPermission 数据权限
+         * @param scopeProperties scope属性
+         */
         super(plainSelect, where, user, dataPermission, scopeProperties);
         this.currentTable = currentTable;
         deptTable = currentTable;
     }
 
     /**
-    * 注册
-    *
-    * @return 注册的结果
-    */
+     * 注册
+     *
+     * @return 注册的结果
+     */
     public Expression register() {
         return registerDataScope();
     }
 
     /**
-    * 创建入表达式
-    *
-    * @return
-    */
+     * 创建入表达式
+     *
+     * @return
+     */
     private Expression createInExpression() {
         return new InExpression(
                 new Column(currentTable, deptIdColumn),

@@ -11,14 +11,14 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
-* 上报客户端环境配置后处理器
-* <p>
-* 根据上报客户端的配置自动设置 同步 模块的配置，实现配置串联。
-* </p>
-*
-* @版本 1.0.0
-* @since 2024/12/06
-* @author CH
+ * 上报客户端环境配置后处理器
+ * <p>
+ * 根据上报客户端的配置自动设置 同步 模块的配置，实现配置串联。
+ * </p>
+ *
+ * @版本 1.0.0
+ * @since 2024/12/06
+ * @author CH
  */
 public class ReportEnvironmentPostProcessor implements EnvironmentPostProcessor {
 
@@ -71,10 +71,10 @@ public class ReportEnvironmentPostProcessor implements EnvironmentPostProcessor 
 
         // 串联客户端配置
         /**
-    * 链接客户端配置。
-    * @param environment 环境
-    * @param syncProperties 同步属性
-    */
+         * 链接客户端配置。
+         * @param environment 环境
+         * @param syncProperties 同步属性
+         */
         linkClientConfig(environment, syncProperties);
 
  // 添加配置源（使用 添加第一个 确保优先级高于默认配置）
@@ -86,10 +86,10 @@ public class ReportEnvironmentPostProcessor implements EnvironmentPostProcessor 
     }
 
     /**
-    * 串联客户端配置
-    * @param environment 环境
-    * @param syncProperties 同步属性
-    */
+     * 串联客户端配置
+     * @param environment 环境
+     * @param syncProperties 同步属性
+     */
     private void linkClientConfig(ConfigurableEnvironment environment, Map<String, Object> syncProperties) {
         // 服务端连接配置
         String serverHost = environment.getProperty(REPORT_CLIENT_PREFIX + "host", "localhost");

@@ -13,10 +13,10 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 
 /**
-* 订单状态流转日志服务实现，记录订单在各状态间的变更历史。
-*
-* @author CH
-* @since 4.0.0.50
+ * 订单状态流转日志服务实现，记录订单在各状态间的变更历史。
+ *
+ * @author CH
+ * @since 4.0.0.50
  */
 @Slf4j
 @Service
@@ -35,10 +35,10 @@ public class OrderStateLogServiceImpl implements OrderStateLogService {
     public void log(OrderStateLogRequest request) {
         if (request == null) {
             /**
-            * IllegalArgumentException。
-            * @param "订单状态日志参数不能为空" "订单状态日志参数不能为空"
-            * @return IllegalArgumentException的结果
-            */
+             * IllegalArgumentException。
+             * @param "订单状态日志参数不能为空" "订单状态日志参数不能为空"
+             * @return IllegalArgumentException的结果
+             */
             throw new IllegalArgumentException("订单状态日志参数不能为空");
         }
         OrderStateLog stateLog = new OrderStateLog();

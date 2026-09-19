@@ -4,14 +4,14 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
-* 配置中心配置属性
-* <p>
-* 支持从远程配置中心（如 Nacos、Apollo、Consul 等）加载配置，
-* 并支持配置热更新功能。
-* </p>
-*
-* @since 2024/9/9
-* @author CH
+ * 配置中心配置属性
+ * <p>
+ * 支持从远程配置中心（如 Nacos、Apollo、Consul 等）加载配置，
+ * 并支持配置热更新功能。
+ * </p>
+ *
+ * @since 2024/9/9
+ * @author CH
  */
 @Data
 @ConfigurationProperties(prefix = ConfigCenterProperties.PRE, ignoreInvalidFields = true)
@@ -26,96 +26,96 @@ public class ConfigCenterProperties {
     private boolean enable = false;
 
     /**
-    * 连接超时（毫秒）
-    */
+     * 连接超时（毫秒）
+     */
     private int connectTimeout = 5000;
 
     /**
-    * 读取超时（毫秒）
-    */
+     * 读取超时（毫秒）
+     */
     private int readTimeout = 5000;
 
     /**
-    * 协议类型
-    * <p>
-    * 支持：nacos, apollo, consul, ZooKeeper 等
-    * </p>
-    */
+     * 协议类型
+     * <p>
+     * 支持：nacos, apollo, consul, ZooKeeper 等
+     * </p>
+     */
     private String protocol;
 
     /**
-    * 配置中心地址
-    */
+     * 配置中心地址
+     */
     private String address;
 
     /**
-    * 账号
-    */
+     * 账号
+     */
     private String username;
 
     /**
-    * 密码
-    */
+     * 密码
+     */
     private String password;
 
     /**
-    * 命名空间标识
-    * <p>
-    * 不填写默认为 spring.配置文件.活跃
-    * </p>
-    */
+     * 命名空间标识
+     * <p>
+     * 不填写默认为 spring.配置文件.活跃
+     * </p>
+     */
     private String namespaceId;
 
     /**
-    * 热更新配置
-    */
+     * 热更新配置
+     */
     private HotReload hotReload = new HotReload();
 
     /**
-    * 热更新配置
-    * @author CH
-    * @since 4.0.0
-    */
+     * 热更新配置
+     * @author CH
+     * @since 4.0.0
+     */
     @Data
     public static class HotReload {
 
         /**
-        * 是否启用热更新
-        * <p>
-        * 启用后，配置中心的配置变更会自动同步到应用
-        * </p>
-        */
+         * 是否启用热更新
+         * <p>
+         * 启用后，配置中心的配置变更会自动同步到应用
+         * </p>
+         */
         private boolean enabled = true;
 
         /**
-        * 是否支持 @值 注解热更新
-        * <p>
-        * 启用后，使用 @值 注解的字段也能实现热更新。
-        * 注意：需要配合 @refreshscope 使用，或者使用 @配置值 注解。
-        * </p>
-        */
+         * 是否支持 @值 注解热更新
+         * <p>
+         * 启用后，使用 @值 注解的字段也能实现热更新。
+         * 注意：需要配合 @refreshscope 使用，或者使用 @配置值 注解。
+         * </p>
+         */
         private boolean valueAnnotationEnabled = true;
 
         /**
-        * 是否支持 @配置值 注解热更新
-        * <p>
-        * 启用后，使用 @配置值 注解的字段支持热更新，
-        * 无需 @refreshscope。
-        * </p>
-        */
+         * 是否支持 @配置值 注解热更新
+         * <p>
+         * 启用后，使用 @配置值 注解的字段支持热更新，
+         * 无需 @refreshscope。
+         * </p>
+         */
         private boolean configValueAnnotationEnabled = true;
 
         /**
-        * 配置变更后的延迟刷新时间（毫秒）
-        * <p>
-        * 防止配置频繁变更导致应用抖动
-        * </p>
-        */
+         * 配置变更后的延迟刷新时间（毫秒）
+         * <p>
+         * 防止配置频繁变更导致应用抖动
+         * </p>
+         */
         private long refreshDelayMs = 100;
 
         /**
-        * 是否在配置变更时打印日志
-        */
+         * 是否在配置变更时打印日志
+         */
         private boolean logOnChange = true;
     }
 }

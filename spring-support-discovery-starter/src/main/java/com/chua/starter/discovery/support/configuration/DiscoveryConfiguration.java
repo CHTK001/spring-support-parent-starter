@@ -44,9 +44,9 @@ import java.util.Map;
 import java.util.Properties;
 
 /**
-* 发现服务
-* @since 2024/9/9
-* @author CH
+ * 发现服务
+ * @since 2024/9/9
+ * @author CH
  */
 @Slf4j
 @EnableConfigurationProperties(DiscoveryListProperties.class)
@@ -109,13 +109,13 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
     }
 
     /**
-    * 注册服务发现实现
-    *
-    * @param registry            Bean 注册器
-    * @param discoveryProperties 当前发现配置
-    * @param primaryCandidate    是否作为首选实现
-    * @return 是否成功注册 服务discovery Bean
-    */
+     * 注册服务发现实现
+     *
+     * @param registry            Bean 注册器
+     * @param discoveryProperties 当前发现配置
+     * @param primaryCandidate    是否作为首选实现
+     * @return 是否成功注册 服务discovery Bean
+     */
     private boolean registryBean(BeanDefinitionRegistry registry, DiscoveryProperties discoveryProperties, boolean primaryCandidate) {
         DiscoveryOption discoveryOption = new DiscoveryOption();
         discoveryOption.setAddress(discoveryProperties.getAddress());
@@ -153,11 +153,11 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
     }
 
     /**
-    * registry节点
-    *
-    * @param discoveryNodeProperties discovery节点属性
-    * @return registry节点的结果
-    */
+     * registry节点
+     *
+     * @param discoveryNodeProperties discovery节点属性
+     * @return registry节点的结果
+     */
     private Discovery registryNode(DiscoveryNodeProperties discoveryNodeProperties) {
         Project project = Project.getInstance();
         String serverId = discoveryNodeProperties.getServerId();
@@ -199,13 +199,13 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
     }
 
     /**
-    * 创建服务发现 Beandefinition
-    *
-    * @param serviceDiscovery 服务发现实现
-    * @param discovery        发现配置列表
-    * @param primary          是否作为首选实现
-    * @return BeanDefinition
-    */
+     * 创建服务发现 Beandefinition
+     *
+     * @param serviceDiscovery 服务发现实现
+     * @param discovery        发现配置列表
+     * @param primary          是否作为首选实现
+     * @return BeanDefinition
+     */
     private BeanDefinition createBeanDefinitionDiscovery(ServiceDiscovery serviceDiscovery, List<Discovery> discovery, boolean primary) {
         BeanDefinitionBuilder beanDefinitionBuilder = BeanDefinitionBuilder.rootBeanDefinition(ServiceDiscovertyFactoryBean.class);
         beanDefinitionBuilder.addConstructorArgValue(serviceDiscovery);
@@ -219,11 +219,11 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
 
 
     /**
-    * 服务discoverty工厂Bean类。
-    *
-    * @author CH
-    * @since 4.0.0
-    */
+     * 服务discoverty工厂Bean类。
+     *
+     * @author CH
+     * @since 4.0.0
+     */
     static class ServiceDiscovertyFactoryBean implements FactoryBean<ServiceDiscovery>, AutoCloseable{
 
         final ServiceDiscovery serviceDiscovery; // 服务discovery
@@ -279,10 +279,10 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
 
     @Bean
     /**
-        * discovery服务信息contributor
-        *
-        * @return discovery服务信息contributor的结果
-        */
+     * discovery服务信息contributor
+     *
+     * @return discovery服务信息contributor的结果
+     */
     public ServiceInfoContributor discoveryServiceInfoContributor() {
         return registry -> {
             registry.registerFlag("discovery", "服务发现", true, "服务发现模块");

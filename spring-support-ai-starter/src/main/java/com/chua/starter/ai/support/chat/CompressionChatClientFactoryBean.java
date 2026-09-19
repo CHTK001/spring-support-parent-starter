@@ -6,36 +6,36 @@ import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
 import org.springframework.beans.factory.FactoryBean;
 
 /**
-* 压缩专用 对话客户端 工厂Bean，支持运行时重建。
-* <p>
-* 读取 sys_AI_全局_setting(runtime) 中的 compression_模型 和压缩专用 提供者 配置，
-* 如果 compression_模型 为空则不创建压缩专用 对话客户端（回落到主 对话客户端）。
-*
-* @since 2026/05/26
-* @author CH
+ * 压缩专用 对话客户端 工厂Bean，支持运行时重建。
+ * <p>
+ * 读取 sys_AI_全局_setting(runtime) 中的 compression_模型 和压缩专用 提供者 配置，
+ * 如果 compression_模型 为空则不创建压缩专用 对话客户端（回落到主 对话客户端）。
+ *
+ * @since 2026/05/26
+ * @author CH
  */
 public class CompressionChatClientFactoryBean implements FactoryBean<ChatClient> {
 
     /**
-    * 配置分组
-    */
+     * 配置分组
+     */
     private static final String GROUP = "runtime";
 
     /**
-    * 全局设置服务
-    */
+     * 全局设置服务
+     */
     private final SysAiGlobalSettingService sysAiGlobalSettingService;
 
     /**
-    * 当前生效的压缩 对话客户端（可能为 空，回落到主 对话客户端）
-    */
+     * 当前生效的压缩 对话客户端（可能为 空，回落到主 对话客户端）
+     */
     private volatile ChatClient chatClient;
 
     /**
-    * 构造压缩 对话客户端 工厂Bean，启动即尝试构建。
-    *
-    * @param sysAiGlobalSettingService 全局设置服务
-    */
+     * 构造压缩 对话客户端 工厂Bean，启动即尝试构建。
+     *
+     * @param sysAiGlobalSettingService 全局设置服务
+     */
     public CompressionChatClientFactoryBean(SysAiGlobalSettingService sysAiGlobalSettingService) {
         this.sysAiGlobalSettingService = sysAiGlobalSettingService;
         this.chatClient = buildClientSafe();
@@ -67,10 +67,10 @@ public class CompressionChatClientFactoryBean implements FactoryBean<ChatClient>
     }
 
     /**
-    * 构建客户端
-    *
-    * @return 构建客户端的结果
-    */
+     * 构建客户端
+     *
+     * @return 构建客户端的结果
+     */
     private ChatClient buildClient() {
         String compressionModel = getValue("compression_model");
         if (StringUtils.isBlank(compressionModel)) {
@@ -119,22 +119,22 @@ public class CompressionChatClientFactoryBean implements FactoryBean<ChatClient>
     }
 
     /**
-    * 获取值
-    *
-    * @param field 字段
-    * @return 获取值的结果
-    */
+     * 获取值
+     *
+     * @param field 字段
+     * @return 获取值的结果
+     */
     private String getValue(String field) {
         return sysAiGlobalSettingService.getValue(GROUP, field).orElse(null);
     }
 
     /**
-    * 获取Long
-    *
-    * @param field 字段
-    * @param defaultValue 默认值
-    * @return 获取long的结果
-    */
+     * 获取Long
+     *
+     * @param field 字段
+     * @param defaultValue 默认值
+     * @return 获取long的结果
+     */
     private long getLong(String field, long defaultValue) {
         String value = getValue(field);
         if (StringUtils.isBlank(value)) {
@@ -148,11 +148,11 @@ public class CompressionChatClientFactoryBean implements FactoryBean<ChatClient>
     }
 
     /**
-    * 第一个nonblank
-    *
-    * @param values 值
-    * @return 第一个nonblank的结果
-    */
+     * 第一个nonblank
+     *
+     * @param values 值
+     * @return 第一个nonblank的结果
+     */
     private static String firstNonBlank(String... values) {
         if (values == null) {
             return null;
@@ -166,10 +166,10 @@ public class CompressionChatClientFactoryBean implements FactoryBean<ChatClient>
     }
 
     /**
-    * 关闭Quietly
-    *
-    * @param client 客户端
-    */
+     * 关闭Quietly
+     *
+     * @param client 客户端
+     */
     private static void closeQuietly(ChatClient client) {
         if (client != null) {
             try {

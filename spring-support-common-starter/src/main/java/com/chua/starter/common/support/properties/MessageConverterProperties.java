@@ -8,16 +8,16 @@ import org.springframework.http.MediaType;
 import java.util.List;
 
 /**
-* 消息转换器属性
-*
-* @author CH
-* @since 4.0.0
+ * 消息转换器属性
+ *
+ * @author CH
+ * @since 4.0.0
  */
 @ConfigurationProperties(prefix = MessageConverterProperties.PRE, ignoreInvalidFields = true)
 public class MessageConverterProperties {
     /**
-    * 是否启用
-    */
+     * 是否启用
+     */
     private boolean enable = false;
 
 
@@ -31,107 +31,107 @@ public class MessageConverterProperties {
 
 
     /**
-    * 开启脱敏
-    */
+     * 开启脱敏
+     */
     private boolean openDesensitize = true;
 
     /**
-    * 开启加解密
-    */
+     * 开启加解密
+     */
     private boolean openCrypto = true;
     /**
-    * 媒体类型
-    */
+     * 媒体类型
+     */
     private List<MediaType> mediaTypes = Lists.newArrayList(MediaType.APPLICATION_JSON,
             MediaType.TEXT_XML
             );
 
     /**
-    * 获取 enable
-    *
-    * @return enable
-    */
+     * 获取 enable
+     *
+     * @return enable
+     */
     public boolean getEnable() {
         return enable;
     }
 
     /**
-    * 设置 enable
-    *
-    * @param enable enable
-    */
+     * 设置 enable
+     *
+     * @param enable enable
+     */
     public void setEnable(boolean enable) {
         this.enable = enable;
     }
 
     /**
-    * 获取 数据格式化
-    *
-    * @return dataFormat
-    */
+     * 获取 数据格式化
+     *
+     * @return dataFormat
+     */
     public String getDataFormat() {
         return dataFormat;
     }
 
     /**
-    * 设置 数据格式化
-    *
-    * @param dataFormat 数据格式化
-    */
+     * 设置 数据格式化
+     *
+     * @param dataFormat 数据格式化
+     */
     public void setDataFormat(String dataFormat) {
         this.dataFormat = dataFormat;
     }
 
     /**
-    * 获取 打开desensitize
-    *
-    * @return openDesensitize
-    */
+     * 获取 打开desensitize
+     *
+     * @return openDesensitize
+     */
     public boolean getOpenDesensitize() {
         return openDesensitize;
     }
 
     /**
-    * 设置 打开desensitize
-    *
-    * @param openDesensitize 打开desensitize
-    */
+     * 设置 打开desensitize
+     *
+     * @param openDesensitize 打开desensitize
+     */
     public void setOpenDesensitize(boolean openDesensitize) {
         this.openDesensitize = openDesensitize;
     }
 
     /**
-    * 获取 打开加密货币
-    *
-    * @return openCrypto
-    */
+     * 获取 打开加密货币
+     *
+     * @return openCrypto
+     */
     public boolean getOpenCrypto() {
         return openCrypto;
     }
 
     /**
-    * 设置 打开加密货币
-    *
-    * @param openCrypto 打开加密货币
-    */
+     * 设置 打开加密货币
+     *
+     * @param openCrypto 打开加密货币
+     */
     public void setOpenCrypto(boolean openCrypto) {
         this.openCrypto = openCrypto;
     }
 
     /**
-    * 获取 media类型
-    *
-    * @return mediaTypes
-    */
+     * 获取 media类型
+     *
+     * @return mediaTypes
+     */
     public List<MediaType> getMediaTypes() {
         return mediaTypes;
     }
 
     /**
-    * 设置 media类型
-    *
-    * @param mediaTypes media类型
-    */
+     * 设置 media类型
+     *
+     * @param mediaTypes media类型
+     */
     public void setMediaTypes(List<MediaType> mediaTypes) {
         this.mediaTypes = mediaTypes;
     }

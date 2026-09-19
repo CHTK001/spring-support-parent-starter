@@ -15,14 +15,14 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
-* sqlite 引擎 Actuator 端点
-* <p>
-* 暴露 sqlite 引擎运行状态，包括数据库文件路径、连接数、表结构等信息。
-* 端点路径 {@code /actuator/sqlite}。
-* </p>
-*
-* @author CH
-* @since 4.0.0.42
+ * sqlite 引擎 Actuator 端点
+ * <p>
+ * 暴露 sqlite 引擎运行状态，包括数据库文件路径、连接数、表结构等信息。
+ * 端点路径 {@code /actuator/sqlite}。
+ * </p>
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 @Slf4j
 @WebEndpoint(id = "sqlite")
@@ -33,17 +33,17 @@ public class SqliteEngineEndpoint {
     private final SqliteEngine engine; // engine
 
     /**
-    * sqliteengine端点。
-    * @param engine engine
-    */
+     * sqliteengine端点。
+     * @param engine engine
+     */
     public SqliteEngineEndpoint(SqliteEngine engine) {
         this.engine = engine;
     }
 
     /**
-    * 查询 sqlite 引擎基本信息。
-    * @return 信息的结果
-    */
+     * 查询 sqlite 引擎基本信息。
+     * @return 信息的结果
+     */
     @ReadOperation
     public Map<String, Object> info() {
         Map<String, Object> result = new HashMap<>();
@@ -58,9 +58,9 @@ public class SqliteEngineEndpoint {
     }
 
     /**
-    * 查询 sqlite 引擎统计信息（表数量等）。
-    * @return stats的结果
-    */
+     * 查询 sqlite 引擎统计信息（表数量等）。
+     * @return stats的结果
+     */
     @ReadOperation
     public Map<String, Object> stats() {
         Map<String, Object> result = new HashMap<>();

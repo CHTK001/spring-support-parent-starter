@@ -36,12 +36,12 @@ public class ChatClientHotUpdater {
     private final SysAiGlobalSettingMapper globalSettingMapper;
 
     /**
-    * 监听设置变更事件，按分组触发热更新
-    *
-    * <p>当前仅处理 {@code models} 分组：刷新全部默认能力对应的 ChatClient。</p>
-    *
-    * @param event 设置变更事件
-    */
+     * 监听设置变更事件，按分组触发热更新
+     *
+     * <p>当前仅处理 {@code models} 分组：刷新全部默认能力对应的 ChatClient。</p>
+     *
+     * @param event 设置变更事件
+     */
     @EventListener
     public void onSettingChanged(SettingChangedEvent event) {
         String group = event.getGroup();
@@ -54,8 +54,8 @@ public class ChatClientHotUpdater {
     }
 
     /**
-    * 刷新所有默认类型的 ChatClient
-    */
+     * 刷新所有默认类型的 ChatClient
+     */
     public void refreshAllDefaultChatClients() {
         // 1. 对话模型
         refreshDefaultChatClient("defaultChatModelId", "chat");
@@ -70,11 +70,11 @@ public class ChatClientHotUpdater {
     }
 
     /**
-    * 刷新指定类型的默认 ChatClient
-    *
-    * @param settingField 设置字段名
-    * @param capability   能力ID（chat/summary/vision/compression/translation）
-    */
+     * 刷新指定类型的默认 ChatClient
+     *
+     * @param settingField 设置字段名
+     * @param capability   能力ID（chat/summary/vision/compression/translation）
+     */
     public void refreshDefaultChatClient(String settingField, String capability) {
         try {
             log.info("[ChatClientHotUpdater] 开始刷新默认 {} ChatClient...", capability);
@@ -151,11 +151,11 @@ public class ChatClientHotUpdater {
     }
 
     /**
-    * 从全局设置读取指定字段的值
-    *
-    * @param field 字段名
-    * @return 字段值，未配置时返回null
-    */
+     * 从全局设置读取指定字段的值
+     *
+     * @param field 字段名
+     * @return 字段值，未配置时返回null
+     */
     private String getSettingValue(String field) {
         SysAiGlobalSetting setting = globalSettingMapper.selectOne(
                 new LambdaQueryWrapper<SysAiGlobalSetting>()

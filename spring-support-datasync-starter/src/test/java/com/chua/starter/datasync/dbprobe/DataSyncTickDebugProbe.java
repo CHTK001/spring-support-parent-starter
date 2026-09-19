@@ -22,10 +22,10 @@ import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
-* 调度触发时序诊断：打印每次 Sink.写入 的时间戳与线程，定位调度超频根因。
-*
-* @author CH
-* @since 4.0.0.42
+ * 调度触发时序诊断：打印每次 Sink.写入 的时间戳与线程，定位调度超频根因。
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 @Slf4j
 public final class DataSyncTickDebugProbe {

@@ -5,13 +5,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
-* 日志拦截器
-* <p>
-* 记录消息发送和接收的日志
-* </p>
-*
-* @since 2025-03-20
-* @author CH
+ * 日志拦截器
+ * <p>
+ * 记录消息发送和接收的日志
+ * </p>
+ *
+ * @since 2025-03-20
+ * @author CH
  */
 @Slf4j
 @Component

@@ -3,10 +3,10 @@ package com.chua.starter.redis.support.utils;
 import com.chua.common.support.utils.StringUtils;
 
 /**
-* 数字工具类
-*
-* @since 2024/12/25
-* @author CH
+ * 数字工具类
+ *
+ * @since 2024/12/25
+ * @author CH
  */
 public final class NumberUtils {
 
@@ -33,11 +33,11 @@ public final class NumberUtils {
     }
 
     /**
-    * 判断字符串是否为整数
-    *
-    * @param str 待判断的字符串
-    * @return 如果字符串可以解析为整数，返回 true；否则返回 false
-    */
+     * 判断字符串是否为整数
+     *
+     * @param str 待判断的字符串
+     * @return 如果字符串可以解析为整数，返回 true；否则返回 false
+     */
     public static boolean isInteger(String str) {
         if (StringUtils.isBlank(str)) {
             return false;

@@ -16,14 +16,14 @@ import java.time.Duration;
 import java.util.List;
 
 /**
-* Spring RPC调用处理器
-* <p>
-* 处理RPC调用，支持拦截器、重试、熔断等功能。
-* 底层委托真实的 {@link RpcClient} 发起网络调用，避免旧实现的「本地 Bean + 反射直调」伪远程问题。
-* </p>
-*
-* @since 2025-03-20
-* @author CH
+ * Spring RPC调用处理器
+ * <p>
+ * 处理RPC调用，支持拦截器、重试、熔断等功能。
+ * 底层委托真实的 {@link RpcClient} 发起网络调用，避免旧实现的「本地 Bean + 反射直调」伪远程问题。
+ * </p>
+ *
+ * @since 2025-03-20
+ * @author CH
  */
 @Slf4j
 public class SpringRpcInvocationHandler<T> implements InvocationHandler {
@@ -179,11 +179,11 @@ public class SpringRpcInvocationHandler<T> implements InvocationHandler {
     }
 
     /**
-    * 查找Spring Bean
-    *
-    * @deprecated 伪远程实现遗留方法，已由 {@link #rpcClient} 网络调用替代
-    * @return findBean的结果
-    */
+     * 查找Spring Bean
+     *
+     * @deprecated 伪远程实现遗留方法，已由 {@link #rpcClient} 网络调用替代
+     * @return findBean的结果
+     */
     @Deprecated
     private T findBean() {
         try {
@@ -195,10 +195,10 @@ public class SpringRpcInvocationHandler<T> implements InvocationHandler {
     }
 
     /**
-    * 创建重试策略
-    * @param config 配置
-    * @return 创建重试policy的结果
-    */
+     * 创建重试策略
+     * @param config 配置
+     * @return 创建重试policy的结果
+     */
     private RpcRetryPolicy createRetryPolicy(RpcConsumerConfig config) {
         RpcRetryPolicy policy = new RpcRetryPolicy();
 
@@ -220,36 +220,36 @@ public class SpringRpcInvocationHandler<T> implements InvocationHandler {
     }
 
     /**
-    * 读取布尔值
-    *
-    * @param config 配置
-    * @param methodName 方法名称
-    * @return 读取布尔值的结果
-    */
+     * 读取布尔值
+     *
+     * @param config 配置
+     * @param methodName 方法名称
+     * @return 读取布尔值的结果
+     */
     private Boolean readBoolean(RpcConsumerConfig config, String methodName) {
         Object value = invokeOptionalGetter(config, methodName);
         return value instanceof Boolean bool ? bool : null;
     }
 
     /**
-    * 读取Integer
-    *
-    * @param config 配置
-    * @param methodName 方法名称
-    * @return 读取integer的结果
-    */
+     * 读取Integer
+     *
+     * @param config 配置
+     * @param methodName 方法名称
+     * @return 读取integer的结果
+     */
     private Integer readInteger(RpcConsumerConfig config, String methodName) {
         Object value = invokeOptionalGetter(config, methodName);
         return value instanceof Integer integer ? integer : null;
     }
 
     /**
-    * 调用期权getter
-    *
-    * @param config 配置
-    * @param methodName 方法名称
-    * @return invoke期权getter的结果
-    */
+     * 调用期权getter
+     *
+     * @param config 配置
+     * @param methodName 方法名称
+     * @return invoke期权getter的结果
+     */
     private Object invokeOptionalGetter(RpcConsumerConfig config, String methodName) {
         if (config == null) {
             return null;

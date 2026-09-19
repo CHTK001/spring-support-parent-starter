@@ -8,11 +8,11 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
 /**
-* 用量记录拦截器
-* 用于异步记录 对话客户端 调用用量
-*
-* @since 4.0.0.42
-* @author CH
+ * 用量记录拦截器
+ * 用于异步记录 对话客户端 调用用量
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @Component
@@ -20,21 +20,21 @@ import org.springframework.stereotype.Component;
 public class UsageRecorderInterceptor {
 
     /**
-    * 用量服务
-    */
+     * 用量服务
+     */
     private final SysAiUsageService usageService;
 
     /**
-    * 异步记录用量
-    *
-    * @param groupName 分组
-    * @param provider 服务商
-    * @param model 模型
-    * @param callType 调用类型
-    * @param usage 用量信息
-    * @param requestId 请求标识
-    * @param userId 用户标识
-    */
+     * 异步记录用量
+     *
+     * @param groupName 分组
+     * @param provider 服务商
+     * @param model 模型
+     * @param callType 调用类型
+     * @param usage 用量信息
+     * @param requestId 请求标识
+     * @param userId 用户标识
+     */
     @Async
     public void record(String groupName, String provider, String model, String callType,
                        AiUsage usage, String requestId, String userId) {

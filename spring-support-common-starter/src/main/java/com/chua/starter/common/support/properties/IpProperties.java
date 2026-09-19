@@ -3,16 +3,16 @@ package com.chua.starter.common.support.properties;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
-* 跨域/版本控制/统一响应
-*
-* @author CH
-* @since 4.0.0
+ * 跨域/版本控制/统一响应
+ *
+ * @author CH
+ * @since 4.0.0
  */
 @ConfigurationProperties(prefix = IpProperties.PRE, ignoreInvalidFields = true)
 public class IpProperties {
     /**
-    * 是否启用
-    */
+     * 是否启用
+     */
     private boolean enable = false;
 
 
@@ -26,60 +26,60 @@ public class IpProperties {
     private String databaseFile = "classpath:qqwry.dat";
 
     /**
-    * ip翻译实现方式
-    */
+     * ip翻译实现方式
+     */
     private String ipType = "qqwry";
 
     /**
-    * 获取 enable
-    *
-    * @return enable
-    */
+     * 获取 enable
+     *
+     * @return enable
+     */
     public boolean getEnable() {
         return enable;
     }
 
     /**
-    * 设置 enable
-    *
-    * @param enable enable
-    */
+     * 设置 enable
+     *
+     * @param enable enable
+     */
     public void setEnable(boolean enable) {
         this.enable = enable;
     }
 
     /**
-    * 获取 database文件
-    *
-    * @return databaseFile
-    */
+     * 获取 database文件
+     *
+     * @return databaseFile
+     */
     public String getDatabaseFile() {
         return databaseFile;
     }
 
     /**
-    * 设置 database文件
-    *
-    * @param databaseFile database文件
-    */
+     * 设置 database文件
+     *
+     * @param databaseFile database文件
+     */
     public void setDatabaseFile(String databaseFile) {
         this.databaseFile = databaseFile;
     }
 
     /**
-    * 获取 ip类型
-    *
-    * @return ipType
-    */
+     * 获取 ip类型
+     *
+     * @return ipType
+     */
     public String getIpType() {
         return ipType;
     }
 
     /**
-    * 设置 ip类型
-    *
-    * @param ipType ip类型
-    */
+     * 设置 ip类型
+     *
+     * @param ipType ip类型
+     */
     public void setIpType(String ipType) {
         this.ipType = ipType;
     }

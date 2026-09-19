@@ -6,18 +6,18 @@ import lombok.Data;
 import java.util.Map;
 
 /**
-* 按内容发送请求
-*
-* @since 2026/08/03
-* @author CH
+ * 按内容发送请求
+ *
+ * @since 2026/08/03
+ * @author CH
  */
 @Data
 @Schema(description = "按内容发送请求")
 public class MessageContentSendRequest {
 
     /**
-    * 提供商标识
-    */
+     * 提供商标识
+     */
     @Schema(description = "提供商ID")
     /** SYS消息提供者标识 */
     private Integer sysMessageProviderId;

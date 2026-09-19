@@ -12,13 +12,13 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
-* 基于内存的对话记录实现。
-* <p>
-* 使用 {@link ConcurrentHashMap} 存储会话与消息，适用于单实例、无需持久化的场景。
-* 重启后数据丢失。
-*
-* @author CH
-* @since 4.0.0
+ * 基于内存的对话记录实现。
+ * <p>
+ * 使用 {@link ConcurrentHashMap} 存储会话与消息，适用于单实例、无需持久化的场景。
+ * 重启后数据丢失。
+ *
+ * @author CH
+ * @since 4.0.0
  */
 public class AIDialogLocalRecordService implements AIDialogRecordService {
 

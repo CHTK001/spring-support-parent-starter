@@ -26,13 +26,13 @@ import java.util.List;
 import java.util.Map;
 
 /**
-* MCP �������������� nomicore �� {@code /api/mcp/*} ��Լ��
-*
-* <p>ά�� MCP ������������{@code mcp_server_id} ���������������롢��ͣ�л������Ӳ�����
-* o认证 ����·�ɡ������־û��� {@code sys_ai_mcp_server} ����MySQL����</p>
-*
-* @since 4.0.0.42
-* @author CH
+ * MCP �������������� nomicore �� {@code /api/mcp/*} ��Լ��
+ *
+ * <p>ά�� MCP ������������{@code mcp_server_id} ���������������롢��ͣ�л������Ӳ�����
+ * o认证 ����·�ɡ������־û��� {@code sys_ai_mcp_server} ����MySQL����</p>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @ApiReturnFormatIgnore
 @RestController
@@ -42,55 +42,55 @@ import java.util.Map;
 public class ApiMcpController {
 
     /**
-    * MCP �г����ÿ���飺MCP �г�����״̬�洢�ڴ˷����档
-    */
+     * MCP �г����ÿ���飺MCP �г�����״̬�洢�ڴ˷����档
+     */
     private static final String MCP_MARKET_GROUP = "mcp";
 
     /**
-    * MCP �г������ֶΣ�true=������false=�رա�
-    */
+     * MCP �г������ֶΣ�true=������false=�رա�
+     */
     private static final String MCP_MARKET_ENABLED_FIELD = "market_enabled";
 
     /**
-    * ��������������洢����
-    */
+     * ��������������洢����
+     */
     private final SysAiConversationStore conversationStore;
 
     /**
-    * WS �¼����ͷ���
-    */
+     * WS �¼����ͷ���
+     */
     private final ApiWebSocketPushService pushService;
 
     /**
-    * MCP ��ʵ���ӷ���SDK ���� + �����о٣�
-    */
+     * MCP ��ʵ���ӷ���SDK ���� + �����о٣�
+     */
     private final McpConnectionService mcpConnectionService;
 
     /**
-    * MCP �������������ݿ�洢
-    */
+     * MCP �������������ݿ�洢
+     */
     private final McpServerStore mcpServerStore;
 
     /**
-    * ȫ���������񣨶�ȡ/д�� MCP �г����ؿ���
-    */
+     * ȫ���������񣨶�ȡ/д�� MCP �г����ؿ���
+     */
     private final SysAiGlobalSettingService globalSettingService;
 
     @GetMapping("/servers")
     /**
-    * 列表服务端。
-    * @return 列表服务端的结果
-    */
+     * 列表服务端。
+     * @return 列表服务端的结果
+     */
     public ApiResult<List<Map<String, Object>>> listServers() {
         return ApiResult.ok(mcpServerStore.listAll());
     }
 
     @PostMapping("/servers")
     /**
-    * 创建服务端。
-    * @param body 主体
-    * @return 创建服务端的结果
-    */
+     * 创建服务端。
+     * @param body 主体
+     * @return 创建服务端的结果
+     */
     public ApiResult<Map<String, Object>> createServer(@RequestBody Map<String, Object> body) {
         String serverId = conversationStore.newId();
         Map<String, Object> server = newLinked(body);
@@ -109,10 +109,10 @@ public class ApiMcpController {
 
     @PostMapping("/servers/import")
     /**
-    * 导入服务端。
-    * @param body 主体
-    * @return 导入服务端的结果
-    */
+     * 导入服务端。
+     * @param body 主体
+     * @return 导入服务端的结果
+     */
     public ApiResult<List<Map<String, Object>>> importServers(@RequestBody Map<String, Object> body) {
         List<Map<String, Object>> created = new ArrayList<>();
         Object raw = body.get("servers");
@@ -142,15 +142,15 @@ public class ApiMcpController {
 
     @DeleteMapping("/servers/{serverId}")
     /**
-    * 删除服务端。
-    * @param serverId 服务端标识
-    * @return 删除服务端的结果
-    */
+     * 删除服务端。
+     * @param serverId 服务端标识
+     * @return 删除服务端的结果
+     */
     public ApiResult<Void> deleteServer(@PathVariable String serverId) {
         /**
-        * require服务端。
-        * @param serverId 服务端标识
-        */
+         * require服务端。
+         * @param serverId 服务端标识
+         */
         requireServer(serverId);
         mcpServerStore.delete(serverId);
         return ApiResult.ok();
@@ -158,10 +158,10 @@ public class ApiMcpController {
 
     @PostMapping("/servers/{serverId}/toggle")
     /**
-    * toggle服务端。
-    * @param serverId 服务端标识
-    * @return toggle服务端的结果
-    */
+     * toggle服务端。
+     * @param serverId 服务端标识
+     * @return toggle服务端的结果
+     */
     public ApiResult<Map<String, Object>> toggleServer(@PathVariable String serverId) {
         Map<String, Object> server = requireServer(serverId);
         Object enabled = server.get("enabled");
@@ -173,19 +173,19 @@ public class ApiMcpController {
 
     @GetMapping("/agent-configs")
     /**
-    * Agent配置。
-    * @return Agent配置的结果
-    */
+     * Agent配置。
+     * @return Agent配置的结果
+     */
     public ApiResult<List<Map<String, Object>>> agentConfigs() {
         return ApiResult.ok(new ArrayList<>());
     }
 
     @PostMapping("/test-connection")
     /**
-    * 测试connection。
-    * @param body 主体
-    * @return 测试connection的结果
-    */
+     * 测试connection。
+     * @param body 主体
+     * @return 测试connection的结果
+     */
     public ApiResult<Map<String, Object>> testConnection(@RequestBody Map<String, Object> body) {
         String name = body.get("name") == null ? "" : String.valueOf(body.get("name"));
         @SuppressWarnings("unchecked")
@@ -196,10 +196,10 @@ public class ApiMcpController {
 
     @PostMapping("/oauth/check-status")
     /**
-    * OAuth检查状态。
-    * @param body 主体
-    * @return oauth检查状态的结果
-    */
+     * OAuth检查状态。
+     * @param body 主体
+     * @return oauth检查状态的结果
+     */
     public ApiResult<Map<String, Object>> oauthCheckStatus(@RequestBody Map<String, Object> body) {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("authenticated", false);
@@ -208,10 +208,10 @@ public class ApiMcpController {
 
     @PostMapping("/oauth/login")
     /**
-    * oauthlogin。
-    * @param body 主体
-    * @return oauthLogin的结果
-    */
+     * oauthlogin。
+     * @param body 主体
+     * @return oauthLogin的结果
+     */
     public ApiResult<Map<String, Object>> oauthLogin(@RequestBody Map<String, Object> body) {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("success", false);
@@ -221,29 +221,29 @@ public class ApiMcpController {
 
     @PostMapping("/oauth/logout")
     /**
-    * oauthlogout。
-    * @param body 主体
-    * @return oauthLogout的结果
-    */
+     * oauthlogout。
+     * @param body 主体
+     * @return oauthLogout的结果
+     */
     public ApiResult<Void> oauthLogout(@RequestBody Map<String, Object> body) {
         return ApiResult.ok();
     }
 
     @GetMapping("/oauth/authenticated")
     /**
-    * oauthauthenticated。
-    * @return oauthAuthenticated的结果
-    */
+     * oauthauthenticated。
+     * @return oauthAuthenticated的结果
+     */
     public ApiResult<List<String>> oauthAuthenticated() {
         return ApiResult.ok(new ArrayList<>());
     }
 
     /**
-    * 启用 MCP 市场。
-    * <p>将 MCP 市场启用状态持久化到 {@code sys_ai_global_setting}（分组 mcp，字段 market_enabled）。</p>
-    *
-    * @return 成功信封
-    */
+     * 启用 MCP 市场。
+     * <p>将 MCP 市场启用状态持久化到 {@code sys_ai_global_setting}（分组 mcp，字段 market_enabled）。</p>
+     *
+     * @return 成功信封
+     */
     @PostMapping("/market/enable")
     public ApiResult<Void> mcpMarketEnable() {
         globalSettingService.upsertValue(MCP_MARKET_GROUP, MCP_MARKET_ENABLED_FIELD, "true", "MCP 市场是否启用");
@@ -252,11 +252,11 @@ public class ApiMcpController {
     }
 
     /**
-    * 禁用 MCP 市场。
-    * <p>将 MCP 市场禁用状态持久化到 {@code sys_ai_global_setting}（分组 mcp，字段 market_enabled）。</p>
-    *
-    * @return 成功信封
-    */
+     * 禁用 MCP 市场。
+     * <p>将 MCP 市场禁用状态持久化到 {@code sys_ai_global_setting}（分组 mcp，字段 market_enabled）。</p>
+     *
+     * @return 成功信封
+     */
     @PostMapping("/market/disable")
     public ApiResult<Void> mcpMarketDisable() {
         globalSettingService.upsertValue(MCP_MARKET_GROUP, MCP_MARKET_ENABLED_FIELD, "false", "MCP 市场是否启用");
@@ -265,10 +265,10 @@ public class ApiMcpController {
     }
 
     /**
-    * 查询 MCP 市场启用状态。
-    *
-    * @return 市场启用状态（enabled=true 表示市场开启；默认开启）
-    */
+     * 查询 MCP 市场启用状态。
+     *
+     * @return 市场启用状态（enabled=true 表示市场开启；默认开启）
+     */
     @GetMapping("/market/status")
     public ApiResult<Map<String, Object>> mcpMarketStatus() {
         boolean enabled = globalSettingService.getBoolean(MCP_MARKET_GROUP, MCP_MARKET_ENABLED_FIELD, true);
@@ -278,10 +278,10 @@ public class ApiMcpController {
     }
 
     /**
-    * 新链接。
-    * @param source 源
-    * @return 新链接的结果
-    */
+     * 新链接。
+     * @param source 源
+     * @return 新链接的结果
+     */
     private Map<String, Object> newLinked(Map<String, Object> source) {
         Map<String, Object> map = new LinkedHashMap<>();
         if (source != null) {
@@ -291,19 +291,19 @@ public class ApiMcpController {
     }
 
     /**
-    * require服务端。
-    * @param serverId 服务端标识
-    * @return require服务端的结果
-    */
+     * require服务端。
+     * @param serverId 服务端标识
+     * @return require服务端的结果
+     */
     private Map<String, Object> requireServer(String serverId) {
         Map<String, Object> server = mcpServerStore.get(serverId);
         if (server == null) {
             /**
-            * api异常。
-            * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
-            * @param serverId 服务端标识
-            * @return api异常的结果
-            */
+             * api异常。
+             * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
+             * @param serverId 服务端标识
+             * @return api异常的结果
+             */
             throw new ApiException(ApiErrorCode.NOT_FOUND, "MCP 服务器不存在: " + serverId);
         }
         return server;

@@ -22,14 +22,14 @@ import java.time.Duration;
 import static com.chua.starter.common.support.constant.CacheConstant.TTL_NEVER_EXPIRE;
 
 /**
-* Redis 缓存自动配置 (独立类)。
-*
-* <p>独立于 {@link CacheConfiguration}, 仅在 classpath 存在 spring-data-redis 时生效,
-* 避免缺少 Redis 依赖的应用启动时内省 {@link CacheConfiguration} 报
-* {@code NoClassDefFoundError}。</p>
-*
-* @since 4.0.0.42
-* @author CH
+ * Redis 缓存自动配置 (独立类)。
+ *
+ * <p>独立于 {@link CacheConfiguration}, 仅在 classpath 存在 spring-data-redis 时生效,
+ * 避免缺少 Redis 依赖的应用启动时内省 {@link CacheConfiguration} 报
+ * {@code NoClassDefFoundError}。</p>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @AutoConfiguration
 @ConditionalOnClass(RedisSerializer.class)
@@ -37,16 +37,16 @@ import static com.chua.starter.common.support.constant.CacheConstant.TTL_NEVER_E
 public class RedisCacheManagerConfiguration {
 
     /**
-    * Redis 缓存管理器
-    * <p>
-    * 当未显式定义 Redis缓存管理器 Bean 时，根据 缓存属性 创建。
-    * </p>
-    *
-    * @param properties       缓存配置
-    * @param connectionFactory Redis 连接工厂
-    * @param objectMapper      JSON 序列化器
-    * @return Redis 缓存管理器
-    */
+     * Redis 缓存管理器
+     * <p>
+     * 当未显式定义 Redis缓存管理器 Bean 时，根据 缓存属性 创建。
+     * </p>
+     *
+     * @param properties       缓存配置
+     * @param connectionFactory Redis 连接工厂
+     * @param objectMapper      JSON 序列化器
+     * @return Redis 缓存管理器
+     */
     @Bean(name = CacheProperties.REDIS_BEAN_NAME)
     @ConditionalOnMissingBean(name = CacheProperties.REDIS_BEAN_NAME)
     @ConditionalOnBean(RedisConnectionFactory.class)

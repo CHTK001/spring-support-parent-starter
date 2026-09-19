@@ -7,15 +7,15 @@ import java.util.UUID;
 import java.util.concurrent.Callable;
 
 /**
-* 追踪管控
-* @author CH
-* @since 4.0.0
+ * 追踪管控
+ * @author CH
+ * @since 4.0.0
  */
 public class NewTrackManager {
 
     /**
-    * 新track管理器。
-    */
+     * 新track管理器。
+     */
     private NewTrackManager() {
     }
 
@@ -57,10 +57,10 @@ public class NewTrackManager {
     }
 
     /**
-    * 获取栈
-    *
-    * @return 栈
-    */
+     * 获取栈
+     *
+     * @return 栈
+     */
     public static Stack<Span> currentSpans() {
         return TRACK_CACHE.get();
     }
@@ -92,10 +92,10 @@ public class NewTrackManager {
 
 
     /**
-    * 获取最后一个span
-    *
-    * @return 获取最后一个span的结果
-    */
+     * 获取最后一个span
+     *
+     * @return 获取最后一个span的结果
+     */
     public static Span getLastSpan() {
         Stack<Span> stack = TRACK_CACHE.get();
         if (stack == null || stack.isEmpty()) {
@@ -106,10 +106,10 @@ public class NewTrackManager {
     }
 
     /**
-    * 注册Span
-    *
-    * @param span span
-    */
+     * 注册Span
+     *
+     * @param span span
+     */
     public static void registerSpan(Span span) {
         Stack<Span> spans = TRACK_CACHE.get();
         if (spans == null) {
@@ -121,10 +121,10 @@ public class NewTrackManager {
     }
 
     /**
-    * 创建Span
-    *
-    * @return 创建span的结果
-    */
+     * 创建Span
+     *
+     * @return 创建span的结果
+     */
     private static Span createSpan() {
         Stack<Span> stack = TRACK_CACHE.get();
         if (stack == null) {
@@ -146,18 +146,18 @@ public class NewTrackManager {
             TrackContext.setLinkId(linkId);
         }
         /**
-        * Span。
-        * @param linkId 链接标识
-        * @return Span的结果
-        */
+         * Span。
+         * @param linkId 链接标识
+         * @return Span的结果
+         */
         return new Span(linkId);
     }
 
     /**
-    * refreshcost
-    *
-    * @param span span
-    */
+     * refreshcost
+     *
+     * @param span span
+     */
     public static void refreshCost(Span span) {
         if(null == span) {
             return;

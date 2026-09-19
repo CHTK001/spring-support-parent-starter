@@ -6,24 +6,24 @@ import com.chua.starter.sync.support.SyncSession;
 import lombok.extern.slf4j.Slf4j;
 
 /**
-* Socket.IO 同步服务端实现。
-*
-* @since 4.0.0.41
-* @author CH
+ * Socket.IO 同步服务端实现。
+ *
+ * @since 4.0.0.41
+ * @author CH
  */
 @Slf4j
 public class SocketioSyncServer extends AbstractSyncServer {
 
     /**
-    * Socket.IO 会话模板
-    */
+     * Socket.IO 会话模板
+     */
     private final SocketIOSessionTemplate sessionTemplate;
 
     /**
-    * 构造 Socket.IO 同步服务端。
-    *
-    * @param sessionTemplate Socket.IO 会话模板
-    */
+     * 构造 Socket.IO 同步服务端。
+     *
+     * @param sessionTemplate Socket.IO 会话模板
+     */
     public SocketioSyncServer(SocketIOSessionTemplate sessionTemplate) {
         this.sessionTemplate = sessionTemplate;
         this.protocol = "socketio";
@@ -54,35 +54,35 @@ public class SocketioSyncServer extends AbstractSyncServer {
     public void onSocketioConnect(String sessionId) {
         SyncSession syncSession = new SyncSession(sessionId);
         /**
-        * fireconnectionestablished。
-        * @param syncSession 同步会话
-        */
+         * fireconnectionestablished。
+         * @param syncSession 同步会话
+         */
         fireConnectionEstablished(syncSession);
     }
 
     /**
-    * Socket.IO 连接断开时回调。
-    *
-    * @param sessionId 会话标识
-    */
+     * Socket.IO 连接断开时回调。
+     *
+     * @param sessionId 会话标识
+     */
     public void onSocketioDisconnect(String sessionId) {
         SyncSession syncSession = sessions.get(sessionId);
         if (syncSession != null) {
             /**
-            * fireconnection关闭。
-            * @param syncSession 同步会话
-            */
+             * fireconnection关闭。
+             * @param syncSession 同步会话
+             */
             fireConnectionClosed(syncSession);
         }
     }
 
     /**
-    * Socket.IO 消息到达时回调。
-    *
-    * @param sessionId 会话标识
-    * @param topic     消息主题
-    * @param data      消息数据
-    */
+     * Socket.IO 消息到达时回调。
+     *
+     * @param sessionId 会话标识
+     * @param topic     消息主题
+     * @param data      消息数据
+     */
     public void onSocketioMessage(String sessionId, String topic, Object data) {
         SyncSession syncSession = sessions.get(sessionId);
         if (syncSession == null) {
@@ -90,11 +90,11 @@ public class SocketioSyncServer extends AbstractSyncServer {
             sessions.put(sessionId, syncSession);
         }
         /**
-        * fire消息接收。
-        * @param syncSession 同步会话
-        * @param topic topic
-        * @param data 数据
-        */
+         * fire消息接收。
+         * @param syncSession 同步会话
+         * @param topic topic
+         * @param data 数据
+         */
         fireMessageReceived(syncSession, topic, data);
     }
 }

@@ -13,13 +13,13 @@ import lombok.EqualsAndHashCode;
 import java.time.LocalDateTime;
 
 /**
-* 爬虫定义实体。
-*
-* <p>对应 {@code spider_definition} 表，描述一个爬虫的基本信息：编码、名称、
-* 状态、关联流程与定时调度表达式。cron_expression 为空时不参与自动调度。</p>
-*
-* @since 4.0.0.42
-* @author CH
+ * 爬虫定义实体。
+ *
+ * <p>对应 {@code spider_definition} 表，描述一个爬虫的基本信息：编码、名称、
+ * 状态、关联流程与定时调度表达式。cron_expression 为空时不参与自动调度。</p>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -28,8 +28,8 @@ import java.time.LocalDateTime;
 public class SpiderDefinition extends SysBase {
 
     /**
-    * 主键 标识（自增）
-    */
+     * 主键 标识（自增）
+     */
     @TableId(type = IdType.AUTO)
     @Schema(description = "主键 ID")
     /** 标识 */

@@ -3,9 +3,9 @@ package com.chua.payment.support.vo;
 import lombok.Data;
 
 /**
-* 订单号策略视图
-* @author CH
-* @since 4.0.0
+ * 订单号策略视图
+ * @author CH
+ * @since 4.0.0
  */
 @Data
 public class PaymentOrderNumberStrategyVO {

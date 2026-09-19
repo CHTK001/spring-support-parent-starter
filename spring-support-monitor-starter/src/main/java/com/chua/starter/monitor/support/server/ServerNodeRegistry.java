@@ -34,55 +34,55 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
-* 服务管理 —— 协议服务器运行时注册表。
-*
-* <p>按 {@link MsServerNode} 定义拉起 common-starter {@link Server} 实例并托管生命周期：</p>
-* <ul>
-*   <li>HTTP：{@code ServerBuilder.type(engine)}（jdk/nio/aio），可挂 ServerFilter 插件</li>
-*   <li>HTTP_PROXY：{@code HttpProxyServer(setting, backend)}（backend 取 config.backendHost/backendPort）</li>
-*   <li>TCP_PROXY：{@code TcpProxyServer(setting, backend)}</li>
-*   <li>SIP：{@code SipServer(SipConfig)}（token 取 config.token）</li>
-* </ul>
-*
-* <p>应用就绪后自动拉起 {@code enabled=1} 的节点；单节点启动失败仅记录错误，不影响其他节点。</p>
-*
-* @author CH
-* @since 4.0.0.42
+ * 服务管理 —— 协议服务器运行时注册表。
+ *
+ * <p>按 {@link MsServerNode} 定义拉起 common-starter {@link Server} 实例并托管生命周期：</p>
+ * <ul>
+ *   <li>HTTP：{@code ServerBuilder.type(engine)}（jdk/nio/aio），可挂 ServerFilter 插件</li>
+ *   <li>HTTP_PROXY：{@code HttpProxyServer(setting, backend)}（backend 取 config.backendHost/backendPort）</li>
+ *   <li>TCP_PROXY：{@code TcpProxyServer(setting, backend)}</li>
+ *   <li>SIP：{@code SipServer(SipConfig)}（token 取 config.token）</li>
+ * </ul>
+ *
+ * <p>应用就绪后自动拉起 {@code enabled=1} 的节点；单节点启动失败仅记录错误，不影响其他节点。</p>
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 @Slf4j
 @Component
 public class ServerNodeRegistry {
 
     /**
-    * HTTP 引擎白名单
-    */
+     * HTTP 引擎白名单
+     */
     private static final Set<String> HTTP_ENGINES = Set.of("jdk", "nio", "aio");
 
     /**
-    * 运行中/曾拉起的节点: 节点标识 -> 运行时
-    */
+     * 运行中/曾拉起的节点: 节点标识 -> 运行时
+     */
     private final Map<Long, RuntimeServer> runtimes = new ConcurrentHashMap<>();
 
     /**
-    * 节点 映射器
-    */
+     * 节点 映射器
+     */
     private final MsServerNodeMapper nodeMapper;
     /**
-    * 插件工厂
-    */
+     * 插件工厂
+     */
     private final ServerFilterFactory filterFactory;
     /**
-    * JSON
-    */
+     * JSON
+     */
     private final ObjectMapper objectMapper;
 
     /**
-    * 创建注册表
-    *
-    * @param nodeMapper    节点 映射器
-    * @param filterFactory 插件工厂
-    * @param objectMapper  JSON
-    */
+     * 创建注册表
+     *
+     * @param nodeMapper    节点 映射器
+     * @param filterFactory 插件工厂
+     * @param objectMapper  JSON
+     */
     @Autowired
     public ServerNodeRegistry(MsServerNodeMapper nodeMapper,
                               ServerFilterFactory filterFactory,
@@ -93,10 +93,10 @@ public class ServerNodeRegistry {
     }
 
     /**
-    * 应用就绪后自动拉起启用节点。
-    *
-    * @param event 就绪事件
-    */
+     * 应用就绪后自动拉起启用节点。
+     *
+     * @param event 就绪事件
+     */
     @EventListener(ApplicationReadyEvent.class)
     public void autoStart() {
         try {
@@ -124,12 +124,12 @@ public class ServerNodeRegistry {
     }
 
     /**
-    * 按定义构建并启动服务器。
-    *
-    * @param node 节点定义
-    * @return 运行时
-    * @throws Exception 启动失败时抛出
-    */
+     * 按定义构建并启动服务器。
+     *
+     * @param node 节点定义
+     * @return 运行时
+     * @throws Exception 启动失败时抛出
+     */
     public RuntimeServer start(MsServerNode node) throws Exception {
         ServerNodeProtocol protocol = ServerNodeProtocol.of(node.getProtocol());
         if (protocol == null && !ServiceProvider.of(Server.class).isSupport(node.getProtocol())) {
@@ -143,9 +143,9 @@ public class ServerNodeRegistry {
  // 若残留未运行或错误实例, 先清理, 避免旧 服务端 占着端口
         if (existing != null) {
             /**
-            * 停止。
-            * @param node.getId( 节点.获取标识(
-            */
+             * 停止。
+             * @param node.getId( 节点.获取标识(
+             */
             stop(node.getId());
         }
         RuntimeServer runtime = new RuntimeServer();
@@ -169,15 +169,15 @@ public class ServerNodeRegistry {
     }
 
     /**
-    * 热更新过滤器链（不重启服务器）。
-    *
-    * <p>仅替换本注册表托管的过滤器实例：逐个从运行中的 {@link Server} 上摘除并销毁旧实例，
-    * 再按新的 {@code filters} 描述重建挂载。服务器内置过滤器（Gzip/Tracing/AccessLog/Cors）
-    * 不受影响。节点未运行时不产生副作用，等待下次启动生效。</p>
-    *
-    * @param node 节点定义（filters 已是最新）
-    * @return 运行时快照
-    */
+     * 热更新过滤器链（不重启服务器）。
+     *
+     * <p>仅替换本注册表托管的过滤器实例：逐个从运行中的 {@link Server} 上摘除并销毁旧实例，
+     * 再按新的 {@code filters} 描述重建挂载。服务器内置过滤器（Gzip/Tracing/AccessLog/Cors）
+     * 不受影响。节点未运行时不产生副作用，等待下次启动生效。</p>
+     *
+     * @param node 节点定义（filters 已是最新）
+     * @return 运行时快照
+     */
     public RuntimeServer hotUpdateFilters(MsServerNode node) {
         RuntimeServer runtime = runtimes.get(node.getId());
         if (runtime == null || !runtime.isRunning()) {
@@ -212,16 +212,16 @@ public class ServerNodeRegistry {
     }
 
     /**
-    * 热更新单个过滤器的参数（不重启服务器、不重建实例）。
-    *
-    * <p>定位到托管链路上第 {@code index} 个过滤器，调用其
-    * {@code updateConfig(params)}；实现未覆写该方法时为无害空操作。</p>
-    *
-    * @param node   节点定义（用于报错定位）
-    * @param index  过滤器下标（与 {@code filters} 数组一致）
-    * @param params 新的参数键值
-    * @return 运行时快照
-    */
+     * 热更新单个过滤器的参数（不重启服务器、不重建实例）。
+     *
+     * <p>定位到托管链路上第 {@code index} 个过滤器，调用其
+     * {@code updateConfig(params)}；实现未覆写该方法时为无害空操作。</p>
+     *
+     * @param node   节点定义（用于报错定位）
+     * @param index  过滤器下标（与 {@code filters} 数组一致）
+     * @param params 新的参数键值
+     * @return 运行时快照
+     */
     public RuntimeServer hotUpdateFilterParams(MsServerNode node, int index, Map<String, Object> params) {
         RuntimeServer runtime = runtimes.get(node.getId());
         if (runtime == null || !runtime.isRunning()) {
@@ -238,13 +238,13 @@ public class ServerNodeRegistry {
     }
 
     /**
-    * 热切换单个过滤器的启用状态（不重启服务器、不重建实例）。
-    *
-    * @param node    节点定义（用于报错定位）
-    * @param index   过滤器下标
-    * @param enabled 是否启用
-    * @return 运行时快照
-    */
+     * 热切换单个过滤器的启用状态（不重启服务器、不重建实例）。
+     *
+     * @param node    节点定义（用于报错定位）
+     * @param index   过滤器下标
+     * @param enabled 是否启用
+     * @return 运行时快照
+     */
     public RuntimeServer hotToggleFilter(MsServerNode node, int index, boolean enabled) {
         RuntimeServer runtime = runtimes.get(node.getId());
         if (runtime == null || !runtime.isRunning()) {
@@ -265,12 +265,12 @@ public class ServerNodeRegistry {
     }
 
     /**
-    * 按下标定位托管链路上的过滤器。
-    *
-    * @param runtime 运行时
-    * @param index   下标
-    * @return 过滤器实例，越界返回 空
-    */
+     * 按下标定位托管链路上的过滤器。
+     *
+     * @param runtime 运行时
+     * @param index   下标
+     * @return 过滤器实例，越界返回 空
+     */
     private ServerFilter resolveManagedFilter(RuntimeServer runtime, int index) {
         List<ServerFilter> filters = runtime.getManagedFilters();
         if (index < 0 || index >= filters.size()) {
@@ -280,10 +280,10 @@ public class ServerNodeRegistry {
     }
 
     /**
-    * 停止节点(定义保留)。
-    *
-    * @param nodeId 节点 标识
-    */
+     * 停止节点(定义保留)。
+     *
+     * @param nodeId 节点 标识
+     */
     public void stop(Long nodeId) {
         RuntimeServer runtime = runtimes.remove(nodeId);
         if (runtime == null) {
@@ -302,46 +302,46 @@ public class ServerNodeRegistry {
     }
 
     /**
-    * 停止并移除节点。
-    *
-    * @param nodeId 节点 标识
-    */
+     * 停止并移除节点。
+     *
+     * @param nodeId 节点 标识
+     */
     public void remove(Long nodeId) {
         /**
-        * 停止。
-        * @param nodeId 节点标识
-        */
+         * 停止。
+         * @param nodeId 节点标识
+         */
         stop(nodeId);
     }
 
     /**
-    * 查询节点运行时。
-    *
-    * @param nodeId 节点 标识
-    * @return 运行时，未拉起返回 空
-    */
+     * 查询节点运行时。
+     *
+     * @param nodeId 节点 标识
+     * @return 运行时，未拉起返回 空
+     */
     public RuntimeServer get(Long nodeId) {
         return runtimes.get(nodeId);
     }
 
     /**
-    * 全部运行时快照。
-    *
-    * @return 不可变快照
-    */
+     * 全部运行时快照。
+     *
+     * @return 不可变快照
+     */
     public Collection<RuntimeServer> snapshot() {
         return Collections.unmodifiableCollection(runtimes.values());
     }
 
     /**
-    * 按协议构建服务器实例。
-    *
-    * @param node     节点定义
-    * @param protocol 协议枚举
-    * @param managed  收集本注册表托管的过滤器实例（用于热更新时精准摘除）
-    * @return 服务器实例（未启动）
-    * @throws Exception 构建失败
-    */
+     * 按协议构建服务器实例。
+     *
+     * @param node     节点定义
+     * @param protocol 协议枚举
+     * @param managed  收集本注册表托管的过滤器实例（用于热更新时精准摘除）
+     * @return 服务器实例（未启动）
+     * @throws Exception 构建失败
+     */
     private Server buildServer(MsServerNode node, ServerNodeProtocol protocol, List<ServerFilter> managed) throws Exception {
         Map<String, Object> config = parseConfig(node);
         ServerSetting setting = buildSetting(node, protocol, config);
@@ -359,35 +359,35 @@ public class ServerNodeRegistry {
     }
 
     /**
-    * 通过 服务提供者 SPI 创建代理服务器。
-    *
-    * @param spiName  SPI 扩展名（http-代理 / tcp-代理）
-    * @param setting 服务器配置
-    * @param backend 后端地址
-    * @return 代理服务器实例
-    */
+     * 通过 服务提供者 SPI 创建代理服务器。
+     *
+     * @param spiName  SPI 扩展名（http-代理 / tcp-代理）
+     * @param setting 服务器配置
+     * @param backend 后端地址
+     * @return 代理服务器实例
+     */
     private Server createProxyServer(String spiName, ServerSetting setting, InetSocketAddress backend) {
         Server server = ServiceProvider.of(Server.class).getNewExtension(spiName, setting, backend);
         if (server == null) {
             /**
-            * illegal状态异常。
-            * @param spiName spi名称
-            * @return illegal状态异常的结果
-            */
+             * illegal状态异常。
+             * @param spiName spi名称
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("代理服务器 SPI 未注册: " + spiName);
         }
         return server;
     }
 
     /**
-    * 构建 HTTP 服务器并挂载插件。
-    *
-    * @param node        节点定义
-    * @param setting     配置
-    * @param descriptors 插件描述
-    * @param managed     托管过滤器收集器
-    * @return 服务器实例
-    */
+     * 构建 HTTP 服务器并挂载插件。
+     *
+     * @param node        节点定义
+     * @param setting     配置
+     * @param descriptors 插件描述
+     * @param managed     托管过滤器收集器
+     * @return 服务器实例
+     */
     private Server buildHttpServer(MsServerNode node, ServerSetting setting,
                                    List<ServerFilterDescriptor> descriptors, List<ServerFilter> managed) {
         String engine = node.getEngine() == null || node.getEngine().isBlank()
@@ -405,15 +405,15 @@ public class ServerNodeRegistry {
     }
 
     /**
-    * 为代理服务器挂载插件。
-    *
-    * @param server      代理服务器
-    * @param node        节点定义
-    * @param descriptors 插件描述
-    * @param managed     托管过滤器收集器
-    * @param <T>         代理类型
-    * @return 服务器实例
-    */
+     * 为代理服务器挂载插件。
+     *
+     * @param server      代理服务器
+     * @param node        节点定义
+     * @param descriptors 插件描述
+     * @param managed     托管过滤器收集器
+     * @param <T>         代理类型
+     * @return 服务器实例
+     */
     private <T extends com.chua.common.support.network.server.Server> Server buildProxyServer(
             T server, MsServerNode node, List<ServerFilterDescriptor> descriptors, List<ServerFilter> managed) {
         attachFilters(server, descriptors, server.getSetting(), managed);
@@ -421,14 +421,14 @@ public class ServerNodeRegistry {
     }
 
     /**
-    * 构建 SIP 服务器并挂载插件。
-    *
-    * @param node        节点定义
-    * @param config      协议配置
-    * @param descriptors 插件描述
-    * @param managed     托管过滤器收集器
-    * @return 服务器实例
-    */
+     * 构建 SIP 服务器并挂载插件。
+     *
+     * @param node        节点定义
+     * @param config      协议配置
+     * @param descriptors 插件描述
+     * @param managed     托管过滤器收集器
+     * @return 服务器实例
+     */
     private Server buildSipServer(MsServerNode node, Map<String, Object> config,
                                   List<ServerFilterDescriptor> descriptors, List<ServerFilter> managed) {
         SipConfig.Builder builder = SipConfig.builder()
@@ -448,14 +448,14 @@ public class ServerNodeRegistry {
     }
 
     /**
-    * 通过 SPI 名称构建动态协议服务器。
-    *
-    * @param node        节点定义
-    * @param setting     通用配置
-    * @param descriptors 插件描述
-    * @param managed     托管过滤器收集器
-    * @return 服务器实例
-    */
+     * 通过 SPI 名称构建动态协议服务器。
+     *
+     * @param node        节点定义
+     * @param setting     通用配置
+     * @param descriptors 插件描述
+     * @param managed     托管过滤器收集器
+     * @return 服务器实例
+     */
     private Server buildSpiServer(MsServerNode node, ServerSetting setting,
                                   List<ServerFilterDescriptor> descriptors, List<ServerFilter> managed) {
         Server server = ServiceProvider.of(Server.class).getNewExtension(node.getProtocol(), setting);
@@ -467,13 +467,13 @@ public class ServerNodeRegistry {
     }
 
     /**
-    * 按描述构建过滤器并挂载到服务器，同时记录到托管集合。
-    *
-    * @param server      目标服务器
-    * @param descriptors 插件描述
-    * @param setting     服务器配置
-    * @param managed     托管过滤器收集器
-    */
+     * 按描述构建过滤器并挂载到服务器，同时记录到托管集合。
+     *
+     * @param server      目标服务器
+     * @param descriptors 插件描述
+     * @param setting     服务器配置
+     * @param managed     托管过滤器收集器
+     */
     private void attachFilters(Server server, List<ServerFilterDescriptor> descriptors,
                                ServerSetting setting, List<ServerFilter> managed) {
         for (ServerFilter filter : filterFactory.createFilters(descriptors, setting)) {
@@ -483,13 +483,13 @@ public class ServerNodeRegistry {
     }
 
     /**
-    * 构建通用 服务端setting。
-    *
-    * @param node     节点定义
-    * @param protocol 协议枚举（SPI 动态协议为 空）
-    * @param config   协议配置
-    * @return 配置实例
-    */
+     * 构建通用 服务端setting。
+     *
+     * @param node     节点定义
+     * @param protocol 协议枚举（SPI 动态协议为 空）
+     * @param config   协议配置
+     * @return 配置实例
+     */
     private ServerSetting buildSetting(MsServerNode node, ServerNodeProtocol protocol, Map<String, Object> config) {
         ServerSetting setting = ServerSetting.defaults();
         setting.setHost(node.getHost() == null || node.getHost().isBlank() ? "0.0.0.0" : node.getHost());
@@ -497,20 +497,20 @@ public class ServerNodeRegistry {
                 : (protocol == null ? 0 : protocol.getDefaultPort()));
         setting.setProtocol(protocol == null ? node.getProtocol() : protocol.getAlias());
         /**
-        * apply通用期权。
-        * @param setting setting
-        * @param config 配置
-        */
+         * apply通用期权。
+         * @param setting setting
+         * @param config 配置
+         */
         applyCommonOptions(setting, config);
         return setting;
     }
 
     /**
-    * 应用通用配置项（可选）。
-    *
-    * @param setting 配置实例
-    * @param config  协议配置
-    */
+     * 应用通用配置项（可选）。
+     *
+     * @param setting 配置实例
+     * @param config  协议配置
+     */
     private void applyCommonOptions(ServerSetting setting, Map<String, Object> config) {
         applyString(setting::setContextPath, config, "contextPath");
         applyString(setting::setCharset, config, "charset");
@@ -526,11 +526,11 @@ public class ServerNodeRegistry {
     }
 
     /**
-    * 解析代理后端地址（配置.backend主机/backend端口 必填）。
-    *
-    * @param config 协议配置
-    * @return 后端地址
-    */
+     * 解析代理后端地址（配置.backend主机/backend端口 必填）。
+     *
+     * @param config 协议配置
+     * @return 后端地址
+     */
     private InetSocketAddress resolveBackend(Map<String, Object> config) {
         Object backendHost = config.get("backendHost");
         Object backendPort = config.get("backendPort");
@@ -539,19 +539,19 @@ public class ServerNodeRegistry {
             throw new IllegalArgumentException("代理服务器必须在 config 中提供 backendHost 与 backendPort");
         }
         /**
-        * inetSocket地址。
-        * @param String.valueOf(backendHost 字符串.valueof(backend主机
-        * @return inetSocket地址的结果
-        */
+         * inetSocket地址。
+         * @param String.valueOf(backendHost 字符串.valueof(backend主机
+         * @return inetSocket地址的结果
+         */
         return new InetSocketAddress(String.valueOf(backendHost), Integer.parseInt(String.valueOf(backendPort).trim()));
     }
 
     /**
-    * 解析节点 配置 JSON。
-    *
-    * @param node 节点定义
-    * @return 配置 映射
-    */
+     * 解析节点 配置 JSON。
+     *
+     * @param node 节点定义
+     * @return 配置 映射
+     */
     public Map<String, Object> parseConfig(MsServerNode node) {
         String json = node.getConfig();
         if (json == null || json.isBlank()) {
@@ -566,11 +566,11 @@ public class ServerNodeRegistry {
     }
 
     /**
-    * 解析节点 过滤器 JSON。
-    *
-    * @param node 节点定义
-    * @return 插件描述列表
-    */
+     * 解析节点 过滤器 JSON。
+     *
+     * @param node 节点定义
+     * @return 插件描述列表
+     */
     public List<ServerFilterDescriptor> parseFilters(MsServerNode node) {
         String json = node.getFilters();
         if (json == null || json.isBlank()) {
@@ -585,12 +585,12 @@ public class ServerNodeRegistry {
     }
 
     /**
-    * 构建访问地址。
-    *
-    * @param node     节点定义
-    * @param protocol 协议枚举
-    * @return 地址字符串
-    */
+     * 构建访问地址。
+     *
+     * @param node     节点定义
+     * @param protocol 协议枚举
+     * @return 地址字符串
+     */
     private String buildServerUrl(MsServerNode node, ServerNodeProtocol protocol) {
         String scheme = switch (protocol) {
             case HTTP, HTTP_PROXY -> "http";
@@ -602,11 +602,11 @@ public class ServerNodeRegistry {
     }
 
     /**
-    * apply字符串。
-    * @param setter setter
-    * @param config 配置
-    * @param key 键
-    */
+     * apply字符串。
+     * @param setter setter
+     * @param config 配置
+     * @param key 键
+     */
     private void applyString(java.util.function.Consumer<String> setter, Map<String, Object> config, String key) {
         Object v = config.get(key);
         if (v != null && !String.valueOf(v).isBlank()) {
@@ -615,11 +615,11 @@ public class ServerNodeRegistry {
     }
 
     /**
-    * applyint。
-    * @param setter setter
-    * @param config 配置
-    * @param key 键
-    */
+     * applyint。
+     * @param setter setter
+     * @param config 配置
+     * @param key 键
+     */
     private void applyInt(java.util.function.IntConsumer setter, Map<String, Object> config, String key) {
         Object v = config.get(key);
         if (v != null && !String.valueOf(v).isBlank()) {
@@ -628,11 +628,11 @@ public class ServerNodeRegistry {
     }
 
     /**
-    * applylong。
-    * @param setter setter
-    * @param config 配置
-    * @param key 键
-    */
+     * applylong。
+     * @param setter setter
+     * @param config 配置
+     * @param key 键
+     */
     private void applyLong(java.util.function.LongConsumer setter, Map<String, Object> config, String key) {
         Object v = config.get(key);
         if (v != null && !String.valueOf(v).isBlank()) {
@@ -641,11 +641,11 @@ public class ServerNodeRegistry {
     }
 
     /**
-    * apply布尔值。
-    * @param setter setter
-    * @param config 配置
-    * @param key 键
-    */
+     * apply布尔值。
+     * @param setter setter
+     * @param config 配置
+     * @param key 键
+     */
     private void applyBoolean(java.util.function.Consumer<Boolean> setter, Map<String, Object> config, String key) {
         Object v = config.get(key);
         if (v != null && !String.valueOf(v).isBlank()) {
@@ -655,111 +655,111 @@ public class ServerNodeRegistry {
     }
 
     /**
-    * 节点运行时。
-    * @author CH
-    * @since 4.0.0
-    */
+     * 节点运行时。
+     * @author CH
+     * @since 4.0.0
+     */
     @Getter
     public static class RuntimeServer {
 
         /**
-        * 节点 标识
-        */
+         * 节点 标识
+         */
         private Long id;
         /**
-        * 节点名称
-        */
+         * 节点名称
+         */
         private String name;
         /**
-        * 协议编码
-        */
+         * 协议编码
+         */
         private String protocol;
         /**
-        * 服务器实例(停止后置空)
-        */
+         * 服务器实例(停止后置空)
+         */
         private volatile Server server;
         /**
-        * 访问地址
-        */
+         * 访问地址
+         */
         private volatile String serverUrl;
         /**
-        * 最近错误
-        */
+         * 最近错误
+         */
         private volatile String error;
 
         /**
-        * 本注册表托管的过滤器实例（热更新时精准摘除，不影响服务器内置过滤器）
-        */
+         * 本注册表托管的过滤器实例（热更新时精准摘除，不影响服务器内置过滤器）
+         */
         private volatile List<ServerFilter> managedFilters = new ArrayList<>();
 
         /**
-        * 设置托管的过滤器实例集合。
-        *
-        * @param managedFilters 过滤器实例列表
-        */
+         * 设置托管的过滤器实例集合。
+         *
+         * @param managedFilters 过滤器实例列表
+         */
         public void setManagedFilters(List<ServerFilter> managedFilters) {
             this.managedFilters = managedFilters == null ? new ArrayList<>() : managedFilters;
         }
 
         /**
-        * 设置节点 标识
-        *
-        * @param id 节点 标识
-        */
+         * 设置节点 标识
+         *
+         * @param id 节点 标识
+         */
         public void setId(Long id) {
             this.id = id;
         }
 
         /**
-        * 设置节点名称
-        *
-        * @param name 节点名称
-        */
+         * 设置节点名称
+         *
+         * @param name 节点名称
+         */
         public void setName(String name) {
             this.name = name;
         }
 
         /**
-        * 设置协议编码
-        *
-        * @param protocol 协议编码
-        */
+         * 设置协议编码
+         *
+         * @param protocol 协议编码
+         */
         public void setProtocol(String protocol) {
             this.protocol = protocol;
         }
 
         /**
-        * 设置服务器实例
-        *
-        * @param server 服务器实例
-        */
+         * 设置服务器实例
+         *
+         * @param server 服务器实例
+         */
         public void setServer(Server server) {
             this.server = server;
         }
 
         /**
-        * 设置访问地址
-        *
-        * @param serverUrl 访问地址
-        */
+         * 设置访问地址
+         *
+         * @param serverUrl 访问地址
+         */
         public void setServerUrl(String serverUrl) {
             this.serverUrl = serverUrl;
         }
 
         /**
-        * 设置最近错误
-        *
-        * @param error 错误信息
-        */
+         * 设置最近错误
+         *
+         * @param error 错误信息
+         */
         public void setError(String error) {
             this.error = error;
         }
 
 /**
-* 运行状态。
-*
-* @return RUNNING / STOPPED / 错误
-     */
+ * 运行状态。
+ *
+ * @return RUNNING / STOPPED / 错误
+ */
     public String status() {
         Server s = this.server;
         if (s != null && s.isRunning()) {
@@ -772,10 +772,10 @@ public class ServerNodeRegistry {
     }
 
     /**
-    * 是否处于运行中(服务端 非空且底层服务器正在运行)。
-    *
-    * @return true=运行中
-    */
+     * 是否处于运行中(服务端 非空且底层服务器正在运行)。
+     *
+     * @return true=运行中
+     */
     public boolean isRunning() {
         return server != null && server.isRunning();
     }

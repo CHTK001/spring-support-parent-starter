@@ -22,13 +22,13 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
-* 凭据接口：密钥库与登录身份
-* <p>
-* 两者均脱敏返回：私钥、口令永不出现在响应体中。
-* </p>
-*
-* @author CH
-* @since 4.0.0.42
+ * 凭据接口：密钥库与登录身份
+ * <p>
+ * 两者均脱敏返回：私钥、口令永不出现在响应体中。
+ * </p>
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 @Tag(name = "服务器资产-凭据", description = "SSH 密钥库与登录身份")
 @RestController
@@ -43,11 +43,11 @@ public class ServerCredentialController {
     private final ServerIdentityService identityService;
 
     /**
-    * 新增密钥
-    *
-    * @param key 密钥
-    * @return 结果（脱敏）
-    */
+     * 新增密钥
+     *
+     * @param key 密钥
+     * @return 结果（脱敏）
+     */
     @Operation(summary = "新增密钥")
     @PostMapping("/key")
     public ReturnResult<MsServerKey> createKey(@RequestBody MsServerKey key) {
@@ -55,12 +55,12 @@ public class ServerCredentialController {
     }
 
     /**
-    * 更新密钥
-    *
-    * @param id  主键
-    * @param key 密钥
-    * @return 结果（脱敏）
-    */
+     * 更新密钥
+     *
+     * @param id  主键
+     * @param key 密钥
+     * @return 结果（脱敏）
+     */
     @Operation(summary = "更新密钥")
     @PutMapping("/key/{id}")
     public ReturnResult<MsServerKey> updateKey(@PathVariable Long id, @RequestBody MsServerKey key) {
@@ -68,11 +68,11 @@ public class ServerCredentialController {
     }
 
     /**
-    * 删除密钥
-    *
-    * @param id 主键
-    * @return 结果
-    */
+     * 删除密钥
+     *
+     * @param id 主键
+     * @return 结果
+     */
     @Operation(summary = "删除密钥")
     @DeleteMapping("/key/{id}")
     public ReturnResult<Void> deleteKey(@PathVariable Long id) {
@@ -80,10 +80,10 @@ public class ServerCredentialController {
     }
 
     /**
-    * 密钥列表
-    *
-    * @return 脱敏列表
-    */
+     * 密钥列表
+     *
+     * @return 脱敏列表
+     */
     @Operation(summary = "密钥列表")
     @GetMapping("/key")
     public ReturnResult<List<MsServerKey>> listKeys() {
@@ -91,14 +91,14 @@ public class ServerCredentialController {
     }
 
     /**
-    * 生成密钥对并保存到密钥库
-    *
-    * @param name     密钥名称
-    * @param type     密钥类型（RSA / ED25519 / ECDSA，默认 RSA）
-    * @param password 私钥口令（可空）
-    * @param remark   备注（可空）
-    * @return 生成结果（脱敏：不含私钥明文）
-    */
+     * 生成密钥对并保存到密钥库
+     *
+     * @param name     密钥名称
+     * @param type     密钥类型（RSA / ED25519 / ECDSA，默认 RSA）
+     * @param password 私钥口令（可空）
+     * @param remark   备注（可空）
+     * @return 生成结果（脱敏：不含私钥明文）
+     */
     @Operation(summary = "生成密钥对")
     @PostMapping("/key/generate")
     public ReturnResult<MsServerKey> generateKey(
@@ -110,11 +110,11 @@ public class ServerCredentialController {
     }
 
     /**
-    * 新增身份
-    *
-    * @param identity 身份
-    * @return 结果（脱敏）
-    */
+     * 新增身份
+     *
+     * @param identity 身份
+     * @return 结果（脱敏）
+     */
     @Operation(summary = "新增登录身份")
     @PostMapping("/identity")
     public ReturnResult<MsServerIdentity> createIdentity(@RequestBody MsServerIdentity identity) {
@@ -122,12 +122,12 @@ public class ServerCredentialController {
     }
 
     /**
-    * 更新身份
-    *
-    * @param id       主键
-    * @param identity 身份
-    * @return 结果（脱敏）
-    */
+     * 更新身份
+     *
+     * @param id       主键
+     * @param identity 身份
+     * @return 结果（脱敏）
+     */
     @Operation(summary = "更新登录身份")
     @PutMapping("/identity/{id}")
     public ReturnResult<MsServerIdentity> updateIdentity(@PathVariable Long id,
@@ -136,11 +136,11 @@ public class ServerCredentialController {
     }
 
     /**
-    * 删除身份
-    *
-    * @param id 主键
-    * @return 结果
-    */
+     * 删除身份
+     *
+     * @param id 主键
+     * @return 结果
+     */
     @Operation(summary = "删除登录身份")
     @DeleteMapping("/identity/{id}")
     public ReturnResult<Void> deleteIdentity(@PathVariable Long id) {
@@ -148,10 +148,10 @@ public class ServerCredentialController {
     }
 
     /**
-    * 身份列表
-    *
-    * @return 脱敏列表
-    */
+     * 身份列表
+     *
+     * @return 脱敏列表
+     */
     @Operation(summary = "身份列表")
     @GetMapping("/identity")
     public ReturnResult<List<MsServerIdentity>> listIdentities() {

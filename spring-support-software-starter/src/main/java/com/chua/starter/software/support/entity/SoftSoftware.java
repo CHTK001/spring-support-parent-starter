@@ -7,10 +7,10 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
-* soft_software 软件信息表
-*
-* @since 2026/7/25
-* @author CH
+ * soft_software 软件信息表
+ *
+ * @since 2026/7/25
+ * @author CH
  */
 @Data
 @TableName("soft_software")
@@ -147,345 +147,345 @@ public class SoftSoftware implements Serializable {
     }
 
     /**
-    * 设置softwareid。
-    * @param softwareId softwareid
-    */
+     * 设置softwareid。
+     * @param softwareId softwareid
+     */
     public void setSoftwareId(String softwareId) {
         this.softwareId = softwareId;
     }
 
     /**
-    * 获取software名称。
-    * @return 获取software名称的结果
-    */
+     * 获取software名称。
+     * @return 获取software名称的结果
+     */
     public String getSoftwareName() {
         return softwareName;
     }
 
     /**
-    * 设置software名称。
-    * @param softwareName software名称
-    */
+     * 设置software名称。
+     * @param softwareName software名称
+     */
     public void setSoftwareName(String softwareName) {
         this.softwareName = softwareName;
     }
 
     /**
-    * 获取software编码。
-    * @return 获取software编码的结果
-    */
+     * 获取software编码。
+     * @return 获取software编码的结果
+     */
     public String getSoftwareCode() {
         return softwareCode;
     }
 
     /**
-    * 设置software编码。
-    * @param softwareCode software编码
-    */
+     * 设置software编码。
+     * @param softwareCode software编码
+     */
     public void setSoftwareCode(String softwareCode) {
         this.softwareCode = softwareCode;
     }
 
     /**
-    * 获取software版本。
-    * @return 获取software版本的结果
-    */
+     * 获取software版本。
+     * @return 获取software版本的结果
+     */
     public String getSoftwareVersion() {
         return softwareVersion;
     }
 
     /**
-    * 设置software版本。
-    * @param softwareVersion software版本
-    */
+     * 设置software版本。
+     * @param softwareVersion software版本
+     */
     public void setSoftwareVersion(String softwareVersion) {
         this.softwareVersion = softwareVersion;
     }
 
     /**
-    * 获取softwarelatest版本。
-    * @return 获取softwarelatest版本的结果
-    */
+     * 获取softwarelatest版本。
+     * @return 获取softwarelatest版本的结果
+     */
     public String getSoftwareLatestVersion() {
         return softwareLatestVersion;
     }
 
     /**
-    * 设置softwarelatest版本。
-    * @param softwareLatestVersion softwarelatest版本
-    */
+     * 设置softwarelatest版本。
+     * @param softwareLatestVersion softwarelatest版本
+     */
     public void setSoftwareLatestVersion(String softwareLatestVersion) {
         this.softwareLatestVersion = softwareLatestVersion;
     }
 
     /**
-    * 获取softwaredescription。
-    * @return 获取softwaredescription的结果
-    */
+     * 获取softwaredescription。
+     * @return 获取softwaredescription的结果
+     */
     public String getSoftwareDescription() {
         return softwareDescription;
     }
 
     /**
-    * 设置softwaredescription。
-    * @param softwareDescription softwaredescription
-    */
+     * 设置softwaredescription。
+     * @param softwareDescription softwaredescription
+     */
     public void setSoftwareDescription(String softwareDescription) {
         this.softwareDescription = softwareDescription;
     }
 
     /**
-    * 获取softwareicon。
-    * @return 获取softwareicon的结果
-    */
+     * 获取softwareicon。
+     * @return 获取softwareicon的结果
+     */
     public String getSoftwareIcon() {
         return softwareIcon;
     }
 
     /**
-    * 设置softwareicon。
-    * @param softwareIcon softwareicon
-    */
+     * 设置softwareicon。
+     * @param softwareIcon softwareicon
+     */
     public void setSoftwareIcon(String softwareIcon) {
         this.softwareIcon = softwareIcon;
     }
 
     /**
-    * 获取software分类。
-    * @return 获取software分类的结果
-    */
+     * 获取software分类。
+     * @return 获取software分类的结果
+     */
     public String getSoftwareCategory() {
         return softwareCategory;
     }
 
     /**
-    * 设置software分类。
-    * @param softwareCategory software分类
-    */
+     * 设置software分类。
+     * @param softwareCategory software分类
+     */
     public void setSoftwareCategory(String softwareCategory) {
         this.softwareCategory = softwareCategory;
     }
 
     /**
-    * 获取software标签。
-    * @return 获取software标签的结果
-    */
+     * 获取software标签。
+     * @return 获取software标签的结果
+     */
     public String getSoftwareTags() {
         return softwareTags;
     }
 
     /**
-    * 设置software标签。
-    * @param softwareTags software标签
-    */
+     * 设置software标签。
+     * @param softwareTags software标签
+     */
     public void setSoftwareTags(String softwareTags) {
         this.softwareTags = softwareTags;
     }
 
     /**
-    * 获取softwaredownloadurl。
-    * @return 获取softwaredownloadurl的结果
-    */
+     * 获取softwaredownloadurl。
+     * @return 获取softwaredownloadurl的结果
+     */
     public String getSoftwareDownloadUrl() {
         return softwareDownloadUrl;
     }
 
     /**
-    * 设置softwaredownloadurl。
-    * @param softwareDownloadUrl softwaredownloadurl
-    */
+     * 设置softwaredownloadurl。
+     * @param softwareDownloadUrl softwaredownloadurl
+     */
     public void setSoftwareDownloadUrl(String softwareDownloadUrl) {
         this.softwareDownloadUrl = softwareDownloadUrl;
     }
 
     /**
-    * 获取software文件大小。
-    * @return 获取software文件大小的结果
-    */
+     * 获取software文件大小。
+     * @return 获取software文件大小的结果
+     */
     public Long getSoftwareFileSize() {
         return softwareFileSize;
     }
 
     /**
-    * 设置software文件大小。
-    * @param softwareFileSize software文件大小
-    */
+     * 设置software文件大小。
+     * @param softwareFileSize software文件大小
+     */
     public void setSoftwareFileSize(Long softwareFileSize) {
         this.softwareFileSize = softwareFileSize;
     }
 
     /**
-    * 获取softwaremd5。
-    * @return 获取softwaremd5的结果
-    */
+     * 获取softwaremd5。
+     * @return 获取softwaremd5的结果
+     */
     public String getSoftwareMd5() {
         return softwareMd5;
     }
 
     /**
-    * 设置softwaremd5。
-    * @param softwareMd5 softwaremd5
-    */
+     * 设置softwaremd5。
+     * @param softwareMd5 softwaremd5
+     */
     public void setSoftwareMd5(String softwareMd5) {
         this.softwareMd5 = softwareMd5;
     }
 
     /**
-    * 获取softwaresha256。
-    * @return 获取softwaresha256的结果
-    */
+     * 获取softwaresha256。
+     * @return 获取softwaresha256的结果
+     */
     public String getSoftwareSha256() {
         return softwareSha256;
     }
 
     /**
-    * 设置softwaresha256。
-    * @param softwareSha256 softwaresha256
-    */
+     * 设置softwaresha256。
+     * @param softwareSha256 softwaresha256
+     */
     public void setSoftwareSha256(String softwareSha256) {
         this.softwareSha256 = softwareSha256;
     }
 
     /**
-    * 获取software最小os版本。
-    * @return 获取software最小os版本的结果
-    */
+     * 获取software最小os版本。
+     * @return 获取software最小os版本的结果
+     */
     public String getSoftwareMinOsVersion() {
         return softwareMinOsVersion;
     }
 
     /**
-    * 设置software最小os版本。
-    * @param softwareMinOsVersion software最小os版本
-    */
+     * 设置software最小os版本。
+     * @param softwareMinOsVersion software最小os版本
+     */
     public void setSoftwareMinOsVersion(String softwareMinOsVersion) {
         this.softwareMinOsVersion = softwareMinOsVersion;
     }
 
     /**
-    * 获取softwarecpuArch Linux Linux Linux。
-    * @return 获取softwarecpuArch Linux的结果
-    */
+     * 获取softwarecpuArch Linux Linux Linux。
+     * @return 获取softwarecpuArch Linux的结果
+     */
     public String getSoftwareCpuArch() {
         return softwareCpuArch;
     }
 
     /**
-    * 设置softwarecpuArch Linux Linux Linux。
-    * @param softwareCpuArch softwarecpuArch Linux Linux Linux
-    */
+     * 设置softwarecpuArch Linux Linux Linux。
+     * @param softwareCpuArch softwarecpuArch Linux Linux Linux
+     */
     public void setSoftwareCpuArch(String softwareCpuArch) {
         this.softwareCpuArch = softwareCpuArch;
     }
 
     /**
-    * 获取software源标识。
-    * @return 获取software源id的结果
-    */
+     * 获取software源标识。
+     * @return 获取software源id的结果
+     */
     public String getSoftwareSourceId() {
         return softwareSourceId;
     }
 
     /**
-    * 设置software源标识。
-    * @param softwareSourceId software源标识
-    */
+     * 设置software源标识。
+     * @param softwareSourceId software源标识
+     */
     public void setSoftwareSourceId(String softwareSourceId) {
         this.softwareSourceId = softwareSourceId;
     }
 
     /**
-    * 获取softwareinstall数量。
-    * @return 获取softwareinstall数量的结果
-    */
+     * 获取softwareinstall数量。
+     * @return 获取softwareinstall数量的结果
+     */
     public Integer getSoftwareInstallCount() {
         return softwareInstallCount;
     }
 
     /**
-    * 设置softwareinstall数量。
-    * @param softwareInstallCount softwareinstall数量
-    */
+     * 设置softwareinstall数量。
+     * @param softwareInstallCount softwareinstall数量
+     */
     public void setSoftwareInstallCount(Integer softwareInstallCount) {
         this.softwareInstallCount = softwareInstallCount;
     }
 
     /**
-    * 获取software状态。
-    * @return 获取software状态的结果
-    */
+     * 获取software状态。
+     * @return 获取software状态的结果
+     */
     public Integer getSoftwareStatus() {
         return softwareStatus;
     }
 
     /**
-    * 设置software状态。
-    * @param softwareStatus software状态
-    */
+     * 设置software状态。
+     * @param softwareStatus software状态
+     */
     public void setSoftwareStatus(Integer softwareStatus) {
         this.softwareStatus = softwareStatus;
     }
 
     /**
-    * 获取software创建时间。
-    * @return 获取software创建时间的结果
-    */
+     * 获取software创建时间。
+     * @return 获取software创建时间的结果
+     */
     public LocalDateTime getSoftwareCreateTime() {
         return softwareCreateTime;
     }
 
     /**
-    * 设置software创建时间。
-    * @param softwareCreateTime software创建时间
-    */
+     * 设置software创建时间。
+     * @param softwareCreateTime software创建时间
+     */
     public void setSoftwareCreateTime(LocalDateTime softwareCreateTime) {
         this.softwareCreateTime = softwareCreateTime;
     }
 
     /**
-    * 获取software更新时间。
-    * @return 获取software更新时间的结果
-    */
+     * 获取software更新时间。
+     * @return 获取software更新时间的结果
+     */
     public LocalDateTime getSoftwareUpdateTime() {
         return softwareUpdateTime;
     }
 
     /**
-    * 设置software更新时间。
-    * @param softwareUpdateTime software更新时间
-    */
+     * 设置software更新时间。
+     * @param softwareUpdateTime software更新时间
+     */
     public void setSoftwareUpdateTime(LocalDateTime softwareUpdateTime) {
         this.softwareUpdateTime = softwareUpdateTime;
     }
 
     /**
-    * 获取software创建by。
-    * @return 获取software创建by的结果
-    */
+     * 获取software创建by。
+     * @return 获取software创建by的结果
+     */
     public String getSoftwareCreateBy() {
         return softwareCreateBy;
     }
 
     /**
-    * 设置software创建by。
-    * @param softwareCreateBy software创建by
-    */
+     * 设置software创建by。
+     * @param softwareCreateBy software创建by
+     */
     public void setSoftwareCreateBy(String softwareCreateBy) {
         this.softwareCreateBy = softwareCreateBy;
     }
 
     /**
-    * 获取software更新by。
-    * @return 获取software更新by的结果
-    */
+     * 获取software更新by。
+     * @return 获取software更新by的结果
+     */
     public String getSoftwareUpdateBy() {
         return softwareUpdateBy;
     }
 
     /**
-    * 设置software更新by。
-    * @param softwareUpdateBy software更新by
-    */
+     * 设置software更新by。
+     * @param softwareUpdateBy software更新by
+     */
     public void setSoftwareUpdateBy(String softwareUpdateBy) {
         this.softwareUpdateBy = softwareUpdateBy;
     }

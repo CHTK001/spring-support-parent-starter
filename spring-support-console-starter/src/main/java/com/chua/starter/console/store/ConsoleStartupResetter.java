@@ -7,12 +7,12 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 
 /**
-* 启动重置器（applicationrunner：上下文就绪、处理器 mapping 完整后执行）：
-* 扫描注解计算指纹，与 sqlite 存储的上次指纹比对——不一致（注解更新）则清空覆盖库并落新指纹；
-* 一致则保留运行时覆盖（页面临时调整在注解未变时跨重启存活）。
-*
-* @author CH
-* @since 2026/09/04
+ * 启动重置器（applicationrunner：上下文就绪、处理器 mapping 完整后执行）：
+ * 扫描注解计算指纹，与 sqlite 存储的上次指纹比对——不一致（注解更新）则清空覆盖库并落新指纹；
+ * 一致则保留运行时覆盖（页面临时调整在注解未变时跨重启存活）。
+ *
+ * @author CH
+ * @since 2026/09/04
  */
 @Slf4j
 public class ConsoleStartupResetter implements ApplicationRunner {
@@ -21,10 +21,10 @@ public class ConsoleStartupResetter implements ApplicationRunner {
     private final ConsoleSqliteStore store; // 存储
 
     /**
-    * 控制台startupresetter。
-    * @param scanner scanner
-    * @param store 存储
-    */
+     * 控制台startupresetter。
+     * @param scanner scanner
+     * @param store 存储
+     */
     public ConsoleStartupResetter(AnnotationSwitchScanner scanner, ConsoleSqliteStore store) {
         this.scanner = scanner;
         this.store = store;

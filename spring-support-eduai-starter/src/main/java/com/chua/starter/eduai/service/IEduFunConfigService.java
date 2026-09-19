@@ -14,26 +14,26 @@ import java.util.List;
 public interface IEduFunConfigService extends IService<EduFunConfig> {
 
     /**
-    * 获取所有启用的趣味模块配置
-    *
-    * @return 启用的配置列表
-    */
+     * 获取所有启用的趣味模块配置
+     *
+     * @return 启用的配置列表
+     */
     List<EduFunConfig> listEnabled();
 
     /**
-    * 根据模块编码获取配置
-    *
-    * @param moduleCode 模块编码
-    * @return 配置
-    */
+     * 根据模块编码获取配置
+     *
+     * @param moduleCode 模块编码
+     * @return 配置
+     */
     EduFunConfig getByModuleCode(String moduleCode);
 
     /**
-    * 更新模块启用状态
-    *
-    * @param moduleCode 模块编码
-    * @param enabled    是否启用
-    * @return 是否成功
-    */
+     * 更新模块启用状态
+     *
+     * @param moduleCode 模块编码
+     * @param enabled    是否启用
+     * @return 是否成功
+     */
     boolean updateEnabled(String moduleCode, Integer enabled);
 }

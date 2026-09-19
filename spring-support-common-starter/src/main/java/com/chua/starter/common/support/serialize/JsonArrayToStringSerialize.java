@@ -9,10 +9,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
-* JSON 数组转字符串序列化器
-*
-* @author CH
-* @since 4.0.0
+ * JSON 数组转字符串序列化器
+ *
+ * @author CH
+ * @since 4.0.0
  */
 public class JsonArrayToStringSerialize extends JsonSerializer<Object[]> {
     /** 日志 */

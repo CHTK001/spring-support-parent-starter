@@ -18,18 +18,18 @@ import javax.sql.DataSource;
 import java.util.List;
 
 /**
-* SQL 监听自动配置
-*
-* <p>启用后创建 {@link DataSourceSqlMonitor} 并注册为静态实例，
-* 之后通过 {@link DataSourceContextSupport#addDatasource} 注册的数据源将自动被包装监控。
-* 配置前缀 {@code plugin.datasource.monitor}。</p>
-*
-* <p><b>启用策略</b>：显式配置 {@code enabled} 时以配置为准；未配置时根据 Spring 环境
-* 自动切换——匹配 {@code autoEnableEnvironments}（默认 dev/测试/uat/本地）任一激活
-* 配置文件 则启用，否则关闭。</p>
-*
-* @since 4.0.0.42
-* @author CH
+ * SQL 监听自动配置
+ *
+ * <p>启用后创建 {@link DataSourceSqlMonitor} 并注册为静态实例，
+ * 之后通过 {@link DataSourceContextSupport#addDatasource} 注册的数据源将自动被包装监控。
+ * 配置前缀 {@code plugin.datasource.monitor}。</p>
+ *
+ * <p><b>启用策略</b>：显式配置 {@code enabled} 时以配置为准；未配置时根据 Spring 环境
+ * 自动切换——匹配 {@code autoEnableEnvironments}（默认 dev/测试/uat/本地）任一激活
+ * 配置文件 则启用，否则关闭。</p>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @Configuration(proxyBeanMethods = false)
@@ -39,28 +39,28 @@ import java.util.List;
 public class SqlMonitorAutoConfiguration implements EnvironmentAware {
 
     /**
-    * Spring 环境
-    */
+     * Spring 环境
+     */
     private Environment environment;
 
     /**
-    * 注入 Spring 环境
-    *
-    * @param environment Spring 环境
-    */
+     * 注入 Spring 环境
+     *
+     * @param environment Spring 环境
+     */
     @Override
     public void setEnvironment(Environment environment) {
         this.environment = environment;
     }
 
     /**
-    * 创建 SQL 监控门面
-    *
-    * @param eventPublisher Spring 事件发布器
-    * @param listeners      自定义 SQL 监听器
-    * @param properties     监控配置
-    * @return SQL 监控门面
-    */
+     * 创建 SQL 监控门面
+     *
+     * @param eventPublisher Spring 事件发布器
+     * @param listeners      自定义 SQL 监听器
+     * @param properties     监控配置
+     * @return SQL 监控门面
+     */
     @Bean
     @ConditionalOnMissingBean
     public DataSourceSqlMonitor dataSourceSqlMonitor(ApplicationEventPublisher eventPublisher,
@@ -81,21 +81,21 @@ public class SqlMonitorAutoConfiguration implements EnvironmentAware {
     }
 
     /**
-    * 创建 SQL 监听 Actuator 端点
-    * <p>依赖 actuator 环境，当类路径存在 {@link Endpoint} 时注册。</p>
-    *
-    * @param monitor 监控门面
-    * @return SQL 监听端点
-    */
+     * 创建 SQL 监听 Actuator 端点
+     * <p>依赖 actuator 环境，当类路径存在 {@link Endpoint} 时注册。</p>
+     *
+     * @param monitor 监控门面
+     * @return SQL 监听端点
+     */
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnClass(name = "org.springframework.boot.actuate.endpoint.annotation.Endpoint")
     public SqlMonitorEndpoint sqlMonitorEndpoint(DataSourceSqlMonitor monitor) {
         /**
-        * SQL监控端点。
-        * @param monitor 监控
-        * @return sql监控端点的结果
-        */
+         * SQL监控端点。
+         * @param monitor 监控
+         * @return sql监控端点的结果
+         */
         return new SqlMonitorEndpoint(monitor);
     }
 }

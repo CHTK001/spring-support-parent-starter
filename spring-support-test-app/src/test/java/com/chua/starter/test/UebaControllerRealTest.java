@@ -13,13 +13,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
-* UEBA 控制器真实集成测试。
-* <p>
-* 启动真实 Spring 上下文（含 uebaauto配置），通过 mockmvc 打真实 HTTP 请求
-* 验证 /api/ueba/分析 端点能正常分析正常流量与滥用流量。</p>
-*
-* @author CH
-* @since 4.0.0.42
+ * UEBA 控制器真实集成测试。
+ * <p>
+ * 启动真实 Spring 上下文（含 uebaauto配置），通过 mockmvc 打真实 HTTP 请求
+ * 验证 /api/ueba/分析 端点能正常分析正常流量与滥用流量。</p>
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -55,7 +55,7 @@ class UebaControllerRealTest {
     }
 
     /**
-    * 滥用流量（POST /admin 500）应返回非 NORMAL 风险等级。
+     * 滥用流量（POST /admin 500）应返回非 NORMAL 风险等级。
      */
     @Test
     void analyzeAbuseEvent() throws Exception {
@@ -78,7 +78,7 @@ class UebaControllerRealTest {
     }
 
     /**
-    * 缺失字段时接口不应抛异常（容错）。
+     * 缺失字段时接口不应抛异常（容错）。
      */
     @Test
     void analyzePartialEvent() throws Exception {

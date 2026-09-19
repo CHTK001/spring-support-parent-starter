@@ -11,13 +11,13 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
-* 监控资产实体
-* <p>
-* 对应表 {@code ms_monitor}, 存储被监控的服务器或中间件的主数据。
-* </p>
-*
-* @since 2026/8/4
-* @author CH
+ * 监控资产实体
+ * <p>
+ * 对应表 {@code ms_monitor}, 存储被监控的服务器或中间件的主数据。
+ * </p>
+ *
+ * @since 2026/8/4
+ * @author CH
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -119,8 +119,8 @@ public class MsMonitor extends SysBase {
     private String monitorAgentKey; // 监控Agent键
 
     /**
-    * 关联服务器主机 标识（ms_服务端_主机.标识，用于联动服务器台账配置）
-    */
+     * 关联服务器主机 标识（ms_服务端_主机.标识，用于联动服务器台账配置）
+     */
     @TableField("ms_server_host_id")
     @Schema(description = "关联服务器主机ID", example = "1")
     private Long msServerHostId; // ms服务端主机标识

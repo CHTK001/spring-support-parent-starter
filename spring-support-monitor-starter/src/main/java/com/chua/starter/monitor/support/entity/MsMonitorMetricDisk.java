@@ -12,10 +12,10 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
-* 监控磁盘明细
-*
-* @since 2026/8/4
-* @author CH
+ * 监控磁盘明细
+ *
+ * @since 2026/8/4
+ * @author CH
  */
 @Data
 @EqualsAndHashCode(callSuper = false)

@@ -14,9 +14,9 @@ import java.sql.SQLException;
 import java.util.List;
 
 /**
-* 字符串 -> 列表 字符串
-* @author CH
-* @since 4.0.0
+ * 字符串 -> 列表 字符串
+ * @author CH
+ * @since 4.0.0
  */
 @MappedTypes(List.class)
 @MappedJdbcTypes(JdbcType.VARCHAR)

@@ -10,36 +10,36 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
-* SSE 事件总线配置
-* 管理所有 SSE 连接和事件分发
-*
-* @since 2023/09/26
-* @author CH
+ * SSE 事件总线配置
+ * 管理所有 SSE 连接和事件分发
+ *
+ * @since 2023/09/26
+ * @author CH
  */
 @Slf4j
 public class DefaultSseEventBusConfigurer {
 
     /**
-    * 客户端连接缓存
-    * Key: 客户端标识, 值: Emitter列表
-    */
+     * 客户端连接缓存
+     * Key: 客户端标识, 值: Emitter列表
+     */
     private static final Map<String, List<Emitter>> SSE_CACHE = new ConcurrentHashMap<>();
 
     /**
-    * 注册 Emitter
-    *
-    * @param emitter 待注册的 Emitter
-    */
+     * 注册 Emitter
+     *
+     * @param emitter 待注册的 Emitter
+     */
     public void register(Emitter emitter) {
         SSE_CACHE.computeIfAbsent(emitter.getClientId(), it -> new LinkedList<>()).add(emitter);
         log.debug("[SSE][连接管理] 注册客户端: clientId={}", emitter.getClientId());
             }
 
     /**
-    * 注销 Emitter
-    *
-    * @param clientId 客户端标识
-    */
+     * 注销 Emitter
+     *
+     * @param clientId 客户端标识
+     */
     public void unregister(String clientId) {
         var emitters = SSE_CACHE.remove(clientId);
         if (emitters != null) {
@@ -56,11 +56,11 @@ public class DefaultSseEventBusConfigurer {
     }
 
     /**
-    * 根据客户端标识获取 Emitter
-    *
-    * @param clientId 客户端标识
-    * @return 第一个匹配的 Emitter，不存在返回 空
-    */
+     * 根据客户端标识获取 Emitter
+     *
+     * @param clientId 客户端标识
+     * @return 第一个匹配的 Emitter，不存在返回 空
+     */
     public Emitter getEmitterByClientId(String clientId) {
         var emitters = SSE_CACHE.get(clientId);
         if (emitters != null && !emitters.isEmpty()) {
@@ -70,11 +70,11 @@ public class DefaultSseEventBusConfigurer {
     }
 
     /**
-    * 获取订阅指定事件的所有 Emitter
-    *
-    * @param event 事件名称
-    * @return 匹配的 Emitter 列表
-    */
+     * 获取订阅指定事件的所有 Emitter
+     *
+     * @param event 事件名称
+     * @return 匹配的 Emitter 列表
+     */
     public List<Emitter> getEmitter(String event) {
         List<Emitter> result = new LinkedList<>();
         for (var emitterList : SSE_CACHE.values()) {
@@ -88,10 +88,10 @@ public class DefaultSseEventBusConfigurer {
     }
 
     /**
-    * 关闭指定客户端的连接
-    *
-    * @param clientIds 客户端标识列表
-    */
+     * 关闭指定客户端的连接
+     *
+     * @param clientIds 客户端标识列表
+     */
     public void closeEmitter(List<String> clientIds) {
         for (var clientId : clientIds) {
             var emitters = SSE_CACHE.get(clientId);
@@ -120,10 +120,10 @@ public class DefaultSseEventBusConfigurer {
     }
 
     /**
-    * 获取当前连接数
-    *
-    * @return 连接数
-    */
+     * 获取当前连接数
+     *
+     * @return 连接数
+     */
     public int getConnectionCount() {
         return SSE_CACHE.size();
     }

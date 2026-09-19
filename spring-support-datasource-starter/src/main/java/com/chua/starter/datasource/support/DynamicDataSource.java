@@ -19,10 +19,10 @@ import java.util.Map;
 import static com.chua.starter.common.support.logger.ModuleLog.highlight;
 
 /**
-* 动态数据源
-*
-* @author CH
-* @since 4.0.0
+ * 动态数据源
+ *
+ * @author CH
+ * @since 4.0.0
  */
 @Slf4j
 public class DynamicDataSource extends AbstractRoutingDataSource {
@@ -61,11 +61,11 @@ public class DynamicDataSource extends AbstractRoutingDataSource {
     private boolean strict = false;
 
     /**
-    * 绑定事务
-    *
-    * @param value 值
-    * @throws IllegalStateException ex
-    */
+     * 绑定事务
+     *
+     * @param value 值
+     * @throws IllegalStateException ex
+     */
     public void bindResource(Connection value) throws IllegalStateException {
         if (null == connectionHolder) {
             synchronized (DynamicDataSource.class) {
@@ -88,10 +88,10 @@ public class DynamicDataSource extends AbstractRoutingDataSource {
     }
 
     /**
-    * 绑定事务
-    *
-    * @throws IllegalStateException ex
-    */
+     * 绑定事务
+     *
+     * @throws IllegalStateException ex
+     */
     public void unbindResource() throws IllegalStateException {
         if (!binder) {
             return;
@@ -111,8 +111,8 @@ public class DynamicDataSource extends AbstractRoutingDataSource {
     @Override
     protected DataSource determineTargetDataSource() {
         /**
-        * unbindresource。
-        */
+         * unbindresource。
+         */
         unbindResource();
         Object lookupKey = determineCurrentLookupKey();
         if (null == lookupKey) {
@@ -140,20 +140,20 @@ public class DynamicDataSource extends AbstractRoutingDataSource {
         }
         if (dataSource == null) {
             /**
-            * illegal状态异常。
-            * @param "]" "]"
-            * @return illegal状态异常的结果
-            */
+             * illegal状态异常。
+             * @param "]" "]"
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("Cannot determine target DataSource for lookup key [" + lookupKey + "]");
         }
         return dataSource;
     }
 
     /**
-    * 获取数据源。
-    * @param name 名称
-    * @return 获取数据源的结果
-    */
+     * 获取数据源。
+     * @param name 名称
+     * @return 获取数据源的结果
+     */
     public DataSource getDataSource(String name) {
         if (Strings.isNullOrEmpty(name)) {
             return determineTargetDataSource();
@@ -162,10 +162,10 @@ public class DynamicDataSource extends AbstractRoutingDataSource {
     }
 
     /**
-    * 构建默认数据源
-    *
-    * @return 数据源
-    */
+     * 构建默认数据源
+     *
+     * @return 数据源
+     */
     private Object createDefaultDataSource() {
         if (TARGET_DATA_SOURCES.containsKey(MASTER)) {
             return TARGET_DATA_SOURCES.get(MASTER);
@@ -179,10 +179,10 @@ public class DynamicDataSource extends AbstractRoutingDataSource {
     }
 
     /**
-    * 设置严格模式
-    *
-    * @param strict 是否严格模式
-    */
+     * 设置严格模式
+     *
+     * @param strict 是否严格模式
+     */
     public void setStrict(boolean strict) {
         this.strict = strict;
         log.info("[动态数据源] 严格模式: {}", strict ? "已启用" : "已禁用");
@@ -199,11 +199,11 @@ public class DynamicDataSource extends AbstractRoutingDataSource {
 
 
     /**
-    * dynmaicconnection把手类。
-    *
-    * @author CH
-    * @since 4.0.0
-    */
+     * dynmaicconnection把手类。
+     *
+     * @author CH
+     * @since 4.0.0
+     */
     class DynmaicConnectionHandle extends SimpleConnectionHandle {
 
         /** Connection */
@@ -216,17 +216,17 @@ public class DynamicDataSource extends AbstractRoutingDataSource {
         */
         public DynmaicConnectionHandle(Connection connection) {
             /**
-            * 父。
-            * @param connection connection
-            */
+             * 父。
+             * @param connection connection
+             */
             super(connection);
             this.connection = connection;
         }
 
         /**
-        * 设置connection。
-        * @param connection connection
-        */
+         * 设置connection。
+         * @param connection connection
+         */
         public void setConnection(Connection connection) {
             this.connection = connection;
         }
@@ -238,11 +238,11 @@ public class DynamicDataSource extends AbstractRoutingDataSource {
     }
 
     /**
-    * dynmaic简单connectionholder类。
-    *
-    * @author CH
-    * @since 4.0.0
-    */
+     * dynmaic简单connectionholder类。
+     *
+     * @author CH
+     * @since 4.0.0
+     */
     class DynmaicSimpleConnectionHolder extends ConnectionHolder {
 
 
@@ -255,17 +255,17 @@ public class DynamicDataSource extends AbstractRoutingDataSource {
         */
         public DynmaicSimpleConnectionHolder(DynmaicConnectionHandle connectionHandle) {
             /**
-            * 父。
-            * @param connectionHandle connection把手
-            */
+             * 父。
+             * @param connectionHandle connection把手
+             */
             super(connectionHandle);
             this.connectionHandle = connectionHandle;
         }
 
         /**
-        * 设置connection。
-        * @param connection connection
-        */
+         * 设置connection。
+         * @param connection connection
+         */
         public void setConnection(Connection connection) {
             connectionHandle.setConnection(connection);
         }

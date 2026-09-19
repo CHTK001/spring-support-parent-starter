@@ -49,11 +49,11 @@ public class LocalHostCollectProvider implements HostCollectProvider {
     }
 
     /**
-    * 同步执行本机 OSHI 采集并回写主机硬件字段
-    *
-    * @param context 上下文
-    * @return 采集结果
-    */
+     * 同步执行本机 OSHI 采集并回写主机硬件字段
+     *
+     * @param context 上下文
+     * @return 采集结果
+     */
     private CollectOutcome doCollect(HostCollectContext context) {
         if (context == null || context.getHost() == null || context.getHost().getId() == null) {
             return CollectOutcome.fail("主机数据不完整");

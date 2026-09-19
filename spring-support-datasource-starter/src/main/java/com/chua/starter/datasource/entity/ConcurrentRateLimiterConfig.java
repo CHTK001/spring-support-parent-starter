@@ -3,14 +3,14 @@ package com.chua.starter.datasource.entity;
 import lombok.Data;
 
 /**
-* 限流器配置实体，持久化到 sqlite 的 并发_rate_限制 表。
-* <p>
-* 字段与注解 {@code @RateLimiter} 属性对应，通过 actuator 端点增删查改后
-* 自动加载到 {@link com.chua.common.support.concurrent.rate.RateLimiterFlow} 缓存。
-* </p>
-*
-* @author CH
-* @since 4.0.0.42
+ * 限流器配置实体，持久化到 sqlite 的 并发_rate_限制 表。
+ * <p>
+ * 字段与注解 {@code @RateLimiter} 属性对应，通过 actuator 端点增删查改后
+ * 自动加载到 {@link com.chua.common.support.concurrent.rate.RateLimiterFlow} 缓存。
+ * </p>
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 @Data
 public class ConcurrentRateLimiterConfig {

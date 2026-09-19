@@ -7,20 +7,20 @@ import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 /**
-* 刀4j Web MVC配置器
-* 配置静态资源处理器、视图控制器和枚举属性插件
-*
-* @since 2024/8/7
-* @author CH
+ * 刀4j Web MVC配置器
+ * 配置静态资源处理器、视图控制器和枚举属性插件
+ *
+ * @since 2024/8/7
+ * @author CH
  */
 @org.springframework.context.annotation.Configuration
 public class Knife4jWebMvcConfigurer implements WebMvcConfigurer {
 
     /**
-    * 添加资源处理器
-    *
-    * @param registry 资源处理器注册表
-    */
+     * 添加资源处理器
+     *
+     * @param registry 资源处理器注册表
+     */
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         registry.addResourceHandler("/doc.html")
@@ -33,11 +33,11 @@ public class Knife4jWebMvcConfigurer implements WebMvcConfigurer {
     }
 
     /**
-    * 添加视图控制器
-    * 配置文档页面的路径映射
-    *
-    * @param registry 视图控制器注册表
-    */
+     * 添加视图控制器
+     * 配置文档页面的路径映射
+     *
+     * @param registry 视图控制器注册表
+     */
     @Override
     public void addViewControllers(ViewControllerRegistry registry) {
  // 刀4j 文档页面
@@ -47,17 +47,17 @@ public class Knife4jWebMvcConfigurer implements WebMvcConfigurer {
     }
 
     /**
-    * 获取刀4j枚举模型属性插件
-    *
-    * @return Knife4j枚举模型属性插件
-    */
+     * 获取刀4j枚举模型属性插件
+     *
+     * @return Knife4j枚举模型属性插件
+     */
     @Bean
     @ConditionalOnClass(name = "io.swagger.v3.oas.models.media.Schema")
     public Knife4jEnumModelPropertyPlugin getKnife4jEnumModelPropertyPlugin() {
         /**
-        * 刀4jenum模型财产plugin。
-        * @return knife4jenum模型财产plugin的结果
-        */
+         * 刀4jenum模型财产plugin。
+         * @return knife4jenum模型财产plugin的结果
+         */
         return new Knife4jEnumModelPropertyPlugin();
     }
 }

@@ -12,10 +12,10 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
-* 文件系统分片合并记录服务实现。
-*
-* @since 4.0.0.42
-* @author CH
+ * 文件系统分片合并记录服务实现。
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Service
 public class SysFileSystemUploadMergeLogServiceImpl
@@ -23,26 +23,26 @@ public class SysFileSystemUploadMergeLogServiceImpl
         implements SysFileSystemUploadMergeLogService {
 
     /**
-    * 系统默认操作人 标识
-    */
+     * 系统默认操作人 标识
+     */
     private static final int SYSTEM_USER_ID = 0;
 
     /**
-    * 系统默认操作人名称
-    */
+     * 系统默认操作人名称
+     */
     private static final String SYSTEM_USER_NAME = "system";
 
     @Override
     @Transactional
     /**
-    * Record
-    *
-    * @param uploadId uploadid
-    * @param success 成功
-    * @param message 消息
-    * @param retryCount 重试数量
-    * @return record的结果
-    */
+     * Record
+     *
+     * @param uploadId uploadid
+     * @param success 成功
+     * @param message 消息
+     * @param retryCount 重试数量
+     * @return record的结果
+     */
     public boolean record(String uploadId, boolean success, String message, int retryCount) {
         SysFileSystemUploadMergeLog log = new SysFileSystemUploadMergeLog();
         LocalDateTime now = LocalDateTime.now();

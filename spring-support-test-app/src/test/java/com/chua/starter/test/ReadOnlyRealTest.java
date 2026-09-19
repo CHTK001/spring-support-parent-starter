@@ -15,14 +15,14 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
-* 只读优先于所有权限真实测试（读取_ONLY 角色禁止写操作）。
-*
-* <p>策略：PermissionInterceptor 在权限校验前检查 READ_ONLY 角色——拥有该角色的账号
-* 对非安全方法（POST/放入/删除/PATCH）一律拒绝（403），获取 等只读操作放行；
-* 该限制优先于普通权限、管理员与超级管理员旁路。</p>
-*
-* @author CH
-* @since 2026/09/04
+ * 只读优先于所有权限真实测试（读取_ONLY 角色禁止写操作）。
+ *
+ * <p>策略：PermissionInterceptor 在权限校验前检查 READ_ONLY 角色——拥有该角色的账号
+ * 对非安全方法（POST/放入/删除/PATCH）一律拒绝（403），获取 等只读操作放行；
+ * 该限制优先于普通权限、管理员与超级管理员旁路。</p>
+ *
+ * @author CH
+ * @since 2026/09/04
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -32,21 +32,21 @@ class ReadOnlyRealTest {
     private MockMvc mockMvc; // mockmvc
 
     /**
-    * 会话with。
-    * @param roles 角色
-    * @param permissions 权限
-    * @return 会话with的结果
+     * 会话with。
+     * @param roles 角色
+     * @param permissions 权限
+     * @return 会话with的结果
      */
     private MockHttpSession sessionWith(Set<String> roles, Set<String> permissions) {
         return sessionWith(roles, permissions, false);
     }
 
     /**
-    * 会话with。
-    * @param roles 角色
-    * @param permissions 权限
-    * @param readonly readonly
-    * @return 会话with的结果
+     * 会话with。
+     * @param roles 角色
+     * @param permissions 权限
+     * @param readonly readonly
+     * @return 会话with的结果
      */
     private MockHttpSession sessionWith(Set<String> roles, Set<String> permissions, boolean readonly) {
         UserResume user = new UserResume();

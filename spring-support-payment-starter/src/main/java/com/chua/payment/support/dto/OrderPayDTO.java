@@ -3,9 +3,9 @@ package com.chua.payment.support.dto;
 import lombok.Data;
 
 /**
-* 订单发起支付 DTO
-* @author CH
-* @since 4.0.0
+ * 订单发起支付 DTO
+ * @author CH
+ * @since 4.0.0
  */
 @Data
 public class OrderPayDTO {

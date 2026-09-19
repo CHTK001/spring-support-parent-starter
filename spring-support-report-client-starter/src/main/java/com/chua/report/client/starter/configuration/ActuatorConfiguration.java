@@ -7,18 +7,18 @@ import org.springframework.context.annotation.Bean;
 import java.util.Set;
 
 /**
-* Actuator配置
-* @author CH
-* @since 4.0.0
+ * Actuator配置
+ * @author CH
+ * @since 4.0.0
  */
 public class ActuatorConfiguration {
 
     @Bean
     /**
-    * 习俗sanitizer
-    *
-    * @return 习俗sanitizer的结果
-    */
+     * 习俗sanitizer
+     *
+     * @return 习俗sanitizer的结果
+     */
     public SanitizingFunction customSanitizer() {
         return data -> {
             // 自定义哪些属性需要脱敏
@@ -45,10 +45,10 @@ public class ActuatorConfiguration {
             }
 
             /**
-            * sanitizable数据。
-            * @param data.getPropertySource( 数据.获取财产源(
-            * @return sanitizable数据的结果
-            */
+             * sanitizable数据。
+             * @param data.getPropertySource( 数据.获取财产源(
+             * @return sanitizable数据的结果
+             */
             return shouldSanitize ? new SanitizableData(data.getPropertySource(), key, "******") : data;
         };
     }

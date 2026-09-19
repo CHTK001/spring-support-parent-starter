@@ -11,62 +11,62 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
-* Leader 续约心跳守护线程。
-*
-* <p>每 {@code leaseSeconds/3} 秒由守护线程主动调用 {@link LeaderElectionResolver#tryAcquire}
-* (CAS 重入实现) 续约; 若失败则释放本地 铅 状态。</p>
-*
-* <h3>行为</h3>
-* <ul>
-*   <li>启动时初始化 {@link ScheduledExecutorService} 单线程;</li>
-*   <li>{@code @PreDestroy} 优雅关闭, 释放 Leader 权。</li>
-* </ul>
-*
-* @since 4.0.0.42
-* @author CH
+ * Leader 续约心跳守护线程。
+ *
+ * <p>每 {@code leaseSeconds/3} 秒由守护线程主动调用 {@link LeaderElectionResolver#tryAcquire}
+ * (CAS 重入实现) 续约; 若失败则释放本地 铅 状态。</p>
+ *
+ * <h3>行为</h3>
+ * <ul>
+ *   <li>启动时初始化 {@link ScheduledExecutorService} 单线程;</li>
+ *   <li>{@code @PreDestroy} 优雅关闭, 释放 Leader 权。</li>
+ * </ul>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @RequiredArgsConstructor
 public class ClusterElectionHeartbeat {
 
     /**
-    * 心跳周期占租约比例 (心跳 = lease / 3)
-    */
+     * 心跳周期占租约比例 (心跳 = lease / 3)
+     */
     public static final int HEARTBEAT_DIVISOR = 3;
 
     /**
-    * 心跳执行器
-    */
+     * 心跳执行器
+     */
     private final LeaderElector leaderElector;
 
     /**
-    * Leader 选举解析器
-    */
+     * Leader 选举解析器
+     */
     private final LeaderElectionResolver resolver;
 
     /**
-    * 当前命名空间
-    */
+     * 当前命名空间
+     */
     private final String clusterGroup;
 
     /**
-    * 租约时长 (秒)
-    */
+     * 租约时长 (秒)
+     */
     private final int leaseSeconds;
 
     /**
-    * 心跳执行器
-    */
+     * 心跳执行器
+     */
     private ScheduledExecutorService executor;
 
     /**
-    * 运行标记
-    */
+     * 运行标记
+     */
     private final AtomicBoolean running = new AtomicBoolean(false);
 
     /**
-    * 启动心跳。
-    */
+     * 启动心跳。
+     */
     @PostConstruct
     public void start() {
         if (!running.compareAndSet(false, true)) {
@@ -84,8 +84,8 @@ public class ClusterElectionHeartbeat {
     }
 
     /**
-    * 停止心跳。
-    */
+     * 停止心跳。
+     */
     @PreDestroy
     public void stop() {
         if (!running.compareAndSet(true, false)) {
@@ -112,8 +112,8 @@ public class ClusterElectionHeartbeat {
     }
 
     /**
-    * 单拍续约。
-    */
+     * 单拍续约。
+     */
     private void tick() {
         if (!leaderElector.isLeader()) {
             return;

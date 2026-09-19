@@ -26,22 +26,22 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 /**
-* AI 多协议标准网关控制器。
-*
-* <p>提供与 {@code AiProtocolServerFilter} 等价的 Spring MVC 路由映射，
-* 将 Claude、打开AI 响应、Gemini 等外部协议请求收敛到统一的 appKey 鉴权与对话链路。</p>
-*
-* <h3>接口列表</h3>
-* <ul>
-*   <li>Claude Messages — {@code POST /v2/v1/messages}</li>
-*   <li>OpenAI Responses — {@code POST /v2/v1/responses}</li>
-*   <li>Gemini — {@code POST /v2/v1beta/models/...}</li>
-* </ul>
-*
-* <p>继承 {@link BaseAiController} 统一使用 Bearer Token 鉴权与分组解析。</p>
-*
-* @since 4.0.0.42
-* @author CH
+ * AI 多协议标准网关控制器。
+ *
+ * <p>提供与 {@code AiProtocolServerFilter} 等价的 Spring MVC 路由映射，
+ * 将 Claude、打开AI 响应、Gemini 等外部协议请求收敛到统一的 appKey 鉴权与对话链路。</p>
+ *
+ * <h3>接口列表</h3>
+ * <ul>
+ *   <li>Claude Messages — {@code POST /v2/v1/messages}</li>
+ *   <li>OpenAI Responses — {@code POST /v2/v1/responses}</li>
+ *   <li>Gemini — {@code POST /v2/v1beta/models/...}</li>
+ * </ul>
+ *
+ * <p>继承 {@link BaseAiController} 统一使用 Bearer Token 鉴权与分组解析。</p>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Tag(name = "AI Protocol Gateway Controller", description = "Claude / Responses / Gemini 等第三方协议兼容入口")
 @RestController
@@ -52,37 +52,37 @@ import java.util.concurrent.CompletableFuture;
 public class AiProtocolController extends BaseAiController {
 
     /**
-    * AI 对话门面服务，负责模型路由与对话执行
-    */
+     * AI 对话门面服务，负责模型路由与对话执行
+     */
     private final AiChatFacadeService aiChatFacadeService;
 
     /**
-    * SSE 超时时间（毫秒）
-    */
+     * SSE 超时时间（毫秒）
+     */
     private static final long SSE_TIMEOUT_MILLIS = 30_000L;
 
  // ==================== Claude 消息 ====================
 
     /**
-    * Claude 消息 协议入口。
-    *
-    * <p>请求体遵循 Anthropic Messages API 结构：</p>
-    * <pre>{@code
-    * {
-    *   "model": "claude-sonnet-4-20250514",
-    *   "system": "你是助手",
-    *   "messages": [{"role": "user", "content": "你好"}],
-    *   "max_tokens": 1024
-    * }
-    * }</pre>4
-    * }
-    * }</pre>
-    *
-    * @param body           请求体
-    * @param servletRequest HTTP 请求
-    * @return Claude 消息 响应
-    * @param false false
-    */
+     * Claude 消息 协议入口。
+     *
+     * <p>请求体遵循 Anthropic Messages API 结构：</p>
+     * <pre>{@code
+     * {
+     *   "model": "claude-sonnet-4-20250514",
+     *   "system": "你是助手",
+     *   "messages": [{"role": "user", "content": "你好"}],
+     *   "max_tokens": 1024
+     * }
+     * }</pre>4
+     * }
+     * }</pre>
+     *
+     * @param body           请求体
+     * @param servletRequest HTTP 请求
+     * @return Claude 消息 响应
+     * @param false false
+     */
     @Operation(summary = "Claude Messages", description = "Anthropic Claude Messages 标准协议入口")
     @PostMapping("/v1/messages")
     public Object messages(@RequestBody(required = false) Map<String, Object> body,
@@ -122,17 +122,17 @@ public class AiProtocolController extends BaseAiController {
     }
 
     /**
-    * Claude 流式响应（SSE）。
-    *
-    * <p>按 Claude 协议顺序发送 {@code message_start}、{@code content_block_start}、
-    * {@code content_block_delta}、{@code content_block_stop}、{@code message_delta}、
-    * {@code message_stop} 事件。</p>
-    *
-    * @param body           请求体
-    * @param model          模型名称
-    * @param servletRequest HTTP 请求
-    * @return SSE 发射器
-    */
+     * Claude 流式响应（SSE）。
+     *
+     * <p>按 Claude 协议顺序发送 {@code message_start}、{@code content_block_start}、
+     * {@code content_block_delta}、{@code content_block_stop}、{@code message_delta}、
+     * {@code message_stop} 事件。</p>
+     *
+     * @param body           请求体
+     * @param model          模型名称
+     * @param servletRequest HTTP 请求
+     * @return SSE 发射器
+     */
     private SseEmitter claudeStream(Map<String, Object> body, String model, HttpServletRequest servletRequest) {
         SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MILLIS);
         CompletableFuture.runAsync(() -> {
@@ -179,24 +179,24 @@ public class AiProtocolController extends BaseAiController {
  // ==================== 打开AI 响应 (Codex/CCS) ====================
 
     /**
-    * 打开AI 响应 协议。
-    *
-    * <p>请求体遵循 OpenAI Responses API 结构：</p>
-    * <pre>{@code
-    * {
-    *   "model": "gpt-4o",
-    *   "instructions": "你是助手",
-    *   "input": [{"type": "message", "role": "user", "content": "你好"}]
-    * }
-    * }</pre>
-    * }
-    * }</pre>
-    *
-    * @param body           请求体
-    * @param servletRequest HTTP 请求
-    * @return Responses 响应
-    * @param false false
-    */
+     * 打开AI 响应 协议。
+     *
+     * <p>请求体遵循 OpenAI Responses API 结构：</p>
+     * <pre>{@code
+     * {
+     *   "model": "gpt-4o",
+     *   "instructions": "你是助手",
+     *   "input": [{"type": "message", "role": "user", "content": "你好"}]
+     * }
+     * }</pre>
+     * }
+     * }</pre>
+     *
+     * @param body           请求体
+     * @param servletRequest HTTP 请求
+     * @return Responses 响应
+     * @param false false
+     */
     @Operation(summary = "OpenAI Responses", description = "OpenAI Responses API（Codex CLI 兼容）入口")
     @PostMapping("/v1/responses")
     public Object responses(@RequestBody(required = false) Map<String, Object> body,
@@ -241,18 +241,18 @@ public class AiProtocolController extends BaseAiController {
     }
 
     /**
-    * 响应 流式响应（SSE）。
-    *
-    * <p>按 Responses 协议顺序发送 {@code response.created}、{@code response.output_item.added}、
-    * {@code response.content_part.added}、{@code response.output_text.delta}、
-    * {@code response.output_text.done}、{@code response.content_part.done}、
-    * {@code response.output_item.done}、{@code response.completed} 事件。</p>
-    *
-    * @param body           请求体
-    * @param model          模型名称
-    * @param servletRequest HTTP 请求
-    * @return SSE 发射器
-    */
+     * 响应 流式响应（SSE）。
+     *
+     * <p>按 Responses 协议顺序发送 {@code response.created}、{@code response.output_item.added}、
+     * {@code response.content_part.added}、{@code response.output_text.delta}、
+     * {@code response.output_text.done}、{@code response.content_part.done}、
+     * {@code response.output_item.done}、{@code response.completed} 事件。</p>
+     *
+     * @param body           请求体
+     * @param model          模型名称
+     * @param servletRequest HTTP 请求
+     * @return SSE 发射器
+     */
     private SseEmitter responsesStream(Map<String, Object> body, String model, HttpServletRequest servletRequest) {
         SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MILLIS);
         CompletableFuture.runAsync(() -> {
@@ -327,15 +327,15 @@ public class AiProtocolController extends BaseAiController {
     // ==================== Gemini ====================
 
     /**
-    * Gemini 协议入口。
-    *
-    * <p>支持 {@code /v1beta/models/{model}:generateContent} 与流式
-    * {@code streamGenerateContent} 变体。</p>
-    *
-    * @param request HTTP 请求（路径以 {@code request.getRequestURI()} 解析）
-    * @param body    请求体
-    * @return Gemini 响应
-    */
+     * Gemini 协议入口。
+     *
+     * <p>支持 {@code /v1beta/models/{model}:generateContent} 与流式
+     * {@code streamGenerateContent} 变体。</p>
+     *
+     * @param request HTTP 请求（路径以 {@code request.getRequestURI()} 解析）
+     * @param body    请求体
+     * @return Gemini 响应
+     */
     @Operation(summary = "Gemini", description = "Google Gemini 1beta 协议入口")
     @PostMapping("/v1beta/models/**")
     public Object gemini(HttpServletRequest request,
@@ -357,16 +357,16 @@ public class AiProtocolController extends BaseAiController {
     }
 
     /**
-    * Gemini 处理逻辑。
-    *
-    * <p>从请求路径解析模型名称与动作（generateContent / streamGenerateContent），
-    * 构建对话请求并执行。</p>
-    *
-    * @param fullPath        请求完整路径
-    * @param body            请求体
-    * @param servletRequest  HTTP 请求
-    * @return Gemini 响应
-    */
+     * Gemini 处理逻辑。
+     *
+     * <p>从请求路径解析模型名称与动作（generateContent / streamGenerateContent），
+     * 构建对话请求并执行。</p>
+     *
+     * @param fullPath        请求完整路径
+     * @param body            请求体
+     * @param servletRequest  HTTP 请求
+     * @return Gemini 响应
+     */
     private Object handleGemini(String fullPath, Map<String, Object> body, HttpServletRequest servletRequest) {
         String suffix = "/v1beta/models/";
         int idx = fullPath.lastIndexOf(suffix);
@@ -422,12 +422,12 @@ public class AiProtocolController extends BaseAiController {
  // ==================== 提示符 抽取 ====================
 
     /**
-    * 构建通用对话请求（提示符 提取优先使用 消息）。
-    *
-    * @param body           请求体
-    * @param servletRequest HTTP 请求
-    * @return 对话请求
-    */
+     * 构建通用对话请求（提示符 提取优先使用 消息）。
+     *
+     * @param body           请求体
+     * @param servletRequest HTTP 请求
+     * @return 对话请求
+     */
     private AiChatRequest buildChatRequest(Map<String, Object> body, HttpServletRequest servletRequest) {
         AiChatRequest request = new AiChatRequest();
         request.setModel(toString(body.get("model")));
@@ -435,61 +435,61 @@ public class AiProtocolController extends BaseAiController {
         request.setSystemPrompt(extractSystem(body));
         request.setStream(Boolean.TRUE.equals(body.get("stream")));
         /**
-        * apply群体。
-        * @param request 请求
-        * @param servletRequest servlet请求
-        */
+         * apply群体。
+         * @param request 请求
+         * @param servletRequest servlet请求
+         */
         applyGroup(request, servletRequest);
         return request;
     }
 
     /**
-    * 构建 响应 对话请求。
-    *
-    * @param body           请求体
-    * @param servletRequest HTTP 请求
-    * @return 对话请求
-    */
+     * 构建 响应 对话请求。
+     *
+     * @param body           请求体
+     * @param servletRequest HTTP 请求
+     * @return 对话请求
+     */
     private AiChatRequest buildResponsesChatRequest(Map<String, Object> body, HttpServletRequest servletRequest) {
         AiChatRequest request = new AiChatRequest();
         request.setModel(toString(body.get("model")));
         request.setPrompt(extractResponsesPrompt(body));
         request.setStream(Boolean.TRUE.equals(body.get("stream")));
         /**
-        * apply群体。
-        * @param request 请求
-        * @param servletRequest servlet请求
-        */
+         * apply群体。
+         * @param request 请求
+         * @param servletRequest servlet请求
+         */
         applyGroup(request, servletRequest);
         return request;
     }
 
     /**
-    * 构建 Gemini 对话请求。
-    *
-    * @param body           请求体
-    * @param servletRequest HTTP 请求
-    * @return 对话请求
-    */
+     * 构建 Gemini 对话请求。
+     *
+     * @param body           请求体
+     * @param servletRequest HTTP 请求
+     * @return 对话请求
+     */
     private AiChatRequest buildGeminiChatRequest(Map<String, Object> body, HttpServletRequest servletRequest) {
         AiChatRequest request = new AiChatRequest();
         request.setModel(toString(body.get("model")));
         request.setPrompt(extractGeminiPrompt(body));
         /**
-        * apply群体。
-        * @param request 请求
-        * @param servletRequest servlet请求
-        */
+         * apply群体。
+         * @param request 请求
+         * @param servletRequest servlet请求
+         */
         applyGroup(request, servletRequest);
         return request;
     }
 
     /**
-    * 注入分组 标识 到 参数，供 facade 模型隔离。
-    *
-    * @param request         对话请求
-    * @param servletRequest  HTTP 请求
-    */
+     * 注入分组 标识 到 参数，供 facade 模型隔离。
+     *
+     * @param request         对话请求
+     * @param servletRequest  HTTP 请求
+     */
     private void applyGroup(AiChatRequest request, HttpServletRequest servletRequest) {
         Integer groupId = resolveGroupId(servletRequest);
         String appKey = resolveAppKey(servletRequest);
@@ -505,11 +505,11 @@ public class AiProtocolController extends BaseAiController {
     }
 
     /**
-    * 从 {@code messages: []} 提取 系统 与 用户 内容。
-    *
-    * @param body 请求体
-    * @return 组合提示词
-    */
+     * 从 {@code messages: []} 提取 系统 与 用户 内容。
+     *
+     * @param body 请求体
+     * @return 组合提示词
+     */
     private String extractClaudePrompt(Map<String, Object> body) {
         StringBuilder sb = new StringBuilder();
         String system = toString(body.get("system"));
@@ -531,21 +531,21 @@ public class AiProtocolController extends BaseAiController {
     }
 
     /**
-    * 从 主体 提取 系统 提示词。
-    *
-    * @param body 请求体
-    * @return 系统提示词
-    */
+     * 从 主体 提取 系统 提示词。
+     *
+     * @param body 请求体
+     * @return 系统提示词
+     */
     private String extractSystem(Map<String, Object> body) {
         return toString(body.get("system"));
     }
 
     /**
-    * 从 响应 请求体提取提示词。
-    *
-    * @param body 请求体
-    * @return 组合提示词
-    */
+     * 从 响应 请求体提取提示词。
+     *
+     * @param body 请求体
+     * @return 组合提示词
+     */
     private String extractResponsesPrompt(Map<String, Object> body) {
         StringBuilder sb = new StringBuilder();
         String instructions = toString(body.get("instructions"));
@@ -573,11 +573,11 @@ public class AiProtocolController extends BaseAiController {
     }
 
     /**
-    * 从 Gemini 请求体提取提示词。
-    *
-    * @param body 请求体
-    * @return 组合提示词
-    */
+     * 从 Gemini 请求体提取提示词。
+     *
+     * @param body 请求体
+     * @return 组合提示词
+     */
     private String extractGeminiPrompt(Map<String, Object> body) {
         StringBuilder sb = new StringBuilder();
         Object systemInstruction = body.get("systemInstruction");
@@ -602,11 +602,11 @@ public class AiProtocolController extends BaseAiController {
     }
 
     /**
-    * 提取 parts.文本 内容。
-    *
-    * @param obj 对象
-    * @return 文本内容
-    */
+     * 提取 parts.文本 内容。
+     *
+     * @param obj 对象
+     * @return 文本内容
+     */
     private String extractPartsText(Map<?, ?> obj) {
         Object parts = obj.get("parts");
         if (parts instanceof List<?> list) {
@@ -623,11 +623,11 @@ public class AiProtocolController extends BaseAiController {
     }
 
     /**
-    * 递归提取文本内容（支持 字符串 / 列表 / 映射）。
-    *
-    * @param value 内容对象
-    * @return 文本
-    */
+     * 递归提取文本内容（支持 字符串 / 列表 / 映射）。
+     *
+     * @param value 内容对象
+     * @return 文本
+     */
     private String extractText(Object value) {
         if (value == null) {
             return null;
@@ -668,11 +668,11 @@ public class AiProtocolController extends BaseAiController {
     // ==================== 响应构建器 ====================
 
     /**
-    * 构建 Claude 起始响应（流式 消息_启动 事件）。
-    *
-    * @param model 模型名称
-    * @return 起始响应体
-    */
+     * 构建 Claude 起始响应（流式 消息_启动 事件）。
+     *
+     * @param model 模型名称
+     * @return 起始响应体
+     */
     private Map<String, Object> buildClaudeStartResponse(String model) {
         String id = "msg_" + UUID.randomUUID().toString().replace("-", "");
         Map<String, Object> body = new LinkedHashMap<>();
@@ -688,12 +688,12 @@ public class AiProtocolController extends BaseAiController {
     }
 
     /**
-    * 构建 Claude 响应。
-    *
-    * @param result 对话结果
-    * @param model  模型名称
-    * @return Claude 响应体
-    */
+     * 构建 Claude 响应。
+     *
+     * @param result 对话结果
+     * @param model  模型名称
+     * @return Claude 响应体
+     */
     private Map<String, Object> buildClaudeResponse(Map<String, Object> result, String model) {
         String id = "msg_" + UUID.randomUUID().toString().replace("-", "");
         String text = result != null ? toString(result.get("text")) : "";
@@ -710,12 +710,12 @@ public class AiProtocolController extends BaseAiController {
     }
 
     /**
-    * 构建 Claude 错误响应。
-    *
-    * @param model        模型名称
-    * @param errorMessage 错误消息
-    * @return 错误响应体
-    */
+     * 构建 Claude 错误响应。
+     *
+     * @param model        模型名称
+     * @param errorMessage 错误消息
+     * @return 错误响应体
+     */
     private Map<String, Object> buildClaudeError(String model, String errorMessage) {
         String id = "msg_" + UUID.randomUUID().toString().replace("-", "");
         Map<String, Object> body = new LinkedHashMap<>();
@@ -726,12 +726,12 @@ public class AiProtocolController extends BaseAiController {
     }
 
     /**
-    * 构建 响应 响应。
-    *
-    * @param result 对话结果
-    * @param model  模型名称
-    * @return Responses 响应体
-    */
+     * 构建 响应 响应。
+     *
+     * @param result 对话结果
+     * @param model  模型名称
+     * @return Responses 响应体
+     */
     private Map<String, Object> buildResponsesResponse(Map<String, Object> result, String model) {
         String responseId = "resp_" + UUID.randomUUID().toString().replace("-", "");
         String messageId = "msg_" + UUID.randomUUID().toString().replace("-", "");
@@ -740,12 +740,12 @@ public class AiProtocolController extends BaseAiController {
     }
 
     /**
-    * 构建 响应 错误响应。
-    *
-    * @param model        模型名称
-    * @param errorMessage 错误消息
-    * @return 错误响应体
-    */
+     * 构建 响应 错误响应。
+     *
+     * @param model        模型名称
+     * @param errorMessage 错误消息
+     * @return 错误响应体
+     */
     private Map<String, Object> buildResponsesError(String model, String errorMessage) {
         String responseId = "resp_" + UUID.randomUUID().toString().replace("-", "");
         String messageId = "msg_" + UUID.randomUUID().toString().replace("-", "");
@@ -755,15 +755,15 @@ public class AiProtocolController extends BaseAiController {
     }
 
     /**
-    * 构建 CCS / 响应 标准响应。
-    *
-    * @param responseId 响应 标识
-    * @param messageId  消息 标识
-    * @param model      模型名称
-    * @param text       文本内容
-    * @param status     状态
-    * @return 响应体
-    */
+     * 构建 CCS / 响应 标准响应。
+     *
+     * @param responseId 响应 标识
+     * @param messageId  消息 标识
+     * @param model      模型名称
+     * @param text       文本内容
+     * @param status     状态
+     * @return 响应体
+     */
     private Map<String, Object> buildCcsResponse(String responseId, String messageId, String model, String text, String status) {
         String resolvedModel = StringUtils.isNotBlank(model) ? model : "unknown";
         Map<String, Object> body = new LinkedHashMap<>();
@@ -780,13 +780,13 @@ public class AiProtocolController extends BaseAiController {
     }
 
     /**
-    * 构建 CCS 消息对象。
-    *
-    * @param messageId 消息 标识
-    * @param text      文本
-    * @param status    状态
-    * @return 消息体
-    */
+     * 构建 CCS 消息对象。
+     *
+     * @param messageId 消息 标识
+     * @param text      文本
+     * @param status    状态
+     * @return 消息体
+     */
     private Map<String, Object> buildCcsMessage(String messageId, String text, String status) {
         Map<String, Object> message = new LinkedHashMap<>();
         message.put("id", messageId);
@@ -802,12 +802,12 @@ public class AiProtocolController extends BaseAiController {
     }
 
     /**
-    * 构建 Gemini candidate。
-    *
-    * @param model 模型名称
-    * @param text  文本
-    * @return candidate 体
-    */
+     * 构建 Gemini candidate。
+     *
+     * @param model 模型名称
+     * @param text  文本
+     * @return candidate 体
+     */
     private Map<String, Object> buildGeminiCandidate(String model, String text) {
         Map<String, Object> content = new LinkedHashMap<>();
         content.put("role", "model");
@@ -822,11 +822,11 @@ public class AiProtocolController extends BaseAiController {
     // ==================== 工具方法 ====================
 
     /**
-    * 对象转字符串。
-    *
-    * @param value 对象
-    * @return 字符串
-    */
+     * 对象转字符串。
+     *
+     * @param value 对象
+     * @return 字符串
+     */
     private String toString(Object value) {
         if (value == null) {
             return null;
@@ -835,14 +835,14 @@ public class AiProtocolController extends BaseAiController {
     }
 
     /**
-    * 从 {@link AiChatFacadeService#call} 的返回结果中提取文本。
-    *
-    * <p>调用失败时 call() 返回 {@code {error:{message:...}}} 结构，
-    * 这里把错误信息作为文本返回，避免前端收到空内容。</p>
-    *
-    * @param result call 返回结果
-    * @return 文本内容（错误时返回错误信息）
-    */
+     * 从 {@link AiChatFacadeService#call} 的返回结果中提取文本。
+     *
+     * <p>调用失败时 call() 返回 {@code {error:{message:...}}} 结构，
+     * 这里把错误信息作为文本返回，避免前端收到空内容。</p>
+     *
+     * @param result call 返回结果
+     * @return 文本内容（错误时返回错误信息）
+     */
     private String resolveResultText(Map<String, Object> result) {
         if (result == null) {
             return "";
@@ -859,11 +859,11 @@ public class AiProtocolController extends BaseAiController {
     }
 
     /**
-    * 对象转 JSON 字符串。
-    *
-    * @param value 对象
-    * @return JSON 字符串
-    */
+     * 对象转 JSON 字符串。
+     *
+     * @param value 对象
+     * @return JSON 字符串
+     */
     private String toJson(Object value) {
         try {
             return objectMapper.writeValueAsString(value);

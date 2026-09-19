@@ -33,10 +33,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
 /**
-* 多数据源
-*
-* @author CH
-* @since 4.0.0
+ * 多数据源
+ *
+ * @author CH
+ * @since 4.0.0
  */
 @Slf4j
 public class MultiDataSource implements DataSource {
@@ -78,17 +78,17 @@ public class MultiDataSource implements DataSource {
         this.applicationContext = applicationContext;
         this.dynamicDataSource = applicationContext.getBean(DynamicDataSource.class);
         /**
-        * initial数据源。
-        */
+         * initial数据源。
+         */
         initialDataSource();
     }
 
 
     /**
-    * 申报对象
-    *
-    * @param connection connection
-    */
+     * 申报对象
+     *
+     * @param connection connection
+     */
     public static void returnObject(Connection connection) {
         if (null == connection) {
             return;
@@ -102,24 +102,24 @@ public class MultiDataSource implements DataSource {
     }
 
     /**
-    * 创建连接池
-    * @param schemaPlus 模式plus
-    */
+     * 创建连接池
+     * @param schemaPlus 模式plus
+     */
     private void refreshDataSource(SchemaPlus schemaPlus) {
         for (DataSource dataSource : dataSources) {
             String catalog;
             /**
-            * 尝试。
-            * @param dataSource.getConnection( 数据源.getconnection(
-            */
+             * 尝试。
+             * @param dataSource.getConnection( 数据源.getconnection(
+             */
             try (Connection connection = dataSource.getConnection()) {
                 catalog = connection.getCatalog();
             } catch (SQLException e) {
                 /**
-                * runtime异常。
-                * @param e e
-                * @return runtime异常的结果
-                */
+                 * runtime异常。
+                 * @param e e
+                 * @return runtime异常的结果
+                 */
                 throw new RuntimeException(e);
             }
             JdbcSchema jdbcSchema = JdbcSchema.create(schemaPlus, catalog, dataSource, catalog, null);
@@ -128,16 +128,16 @@ public class MultiDataSource implements DataSource {
 
         // 注册分区感知路由表，使 Calcite 查询自动跨源表 + 分区表
         /**
-        * 注册分区routingtables。
-        * @param schemaPlus 模式plus
-        */
+         * 注册分区routingtables。
+         * @param schemaPlus 模式plus
+         */
         registerPartitionRoutingTables(schemaPlus);
     }
 
     /**
-    * 注册分区感知路由表，使 Calcite 查询自动跨源表 + 分区表。
-    * @param schemaPlus 模式plus
-    */
+     * 注册分区感知路由表，使 Calcite 查询自动跨源表 + 分区表。
+     * @param schemaPlus 模式plus
+     */
     private void registerPartitionRoutingTables(SchemaPlus schemaPlus) {
         try {
             if (dataSources.isEmpty()) {
@@ -170,17 +170,17 @@ public class MultiDataSource implements DataSource {
     }
 
     /**
-    * 获取Catalogs
-    *
-    * @return 获取catalogs的结果
-    */
+     * 获取Catalogs
+     *
+     * @return 获取catalogs的结果
+     */
     private List<String> getCatalogs() {
         List<String> catalogs = new ArrayList<>(dataSources.size());
         for (DataSource ds : dataSources) {
             /**
-            * 尝试。
-            * @param ds.getConnection( ds.获取connection(
-            */
+             * 尝试。
+             * @param ds.getConnection( ds.获取connection(
+             */
             try (Connection conn = ds.getConnection()) {
                 catalogs.add(conn.getCatalog());
             } catch (SQLException ignored) {
@@ -191,10 +191,10 @@ public class MultiDataSource implements DataSource {
     }
 
     /**
-    * 连接池配置
-    *
-    * @return 配置
-    */
+     * 连接池配置
+     *
+     * @return 配置
+     */
     private GenericObjectPoolConfig<Connection> createConfig() {
         GenericObjectPoolConfig<Connection> poolConfig = new GenericObjectPoolConfig();
         // 最大空闲数
@@ -226,8 +226,8 @@ public class MultiDataSource implements DataSource {
     }
 
     /**
-    * 初始化数据库
-    */
+     * 初始化数据库
+     */
     private void initialDataSource() {
         PooledObjectFactory<Connection> factory = new BasePooledObjectFactory<Connection>() {
             @Override
@@ -244,10 +244,10 @@ public class MultiDataSource implements DataSource {
                     return calciteConnection;
                 } catch (SQLException e) {
                     /**
-                    * runtime异常。
-                    * @param e e
-                    * @return runtime异常的结果
-                    */
+                     * runtime异常。
+                     * @param e e
+                     * @return runtime异常的结果
+                     */
                     throw new RuntimeException(e);
                 }
             }
@@ -272,11 +272,11 @@ public class MultiDataSource implements DataSource {
             return connection;
         } catch (Exception e) {
             /**
-            * SQL异常。
-            * @param "获取连接失败" "获取连接失败"
-            * @param e e
-            * @return sql异常的结果
-            */
+             * SQL异常。
+             * @param "获取连接失败" "获取连接失败"
+             * @param e e
+             * @return sql异常的结果
+             */
             throw new SQLException("获取连接失败", e);
         }
     }

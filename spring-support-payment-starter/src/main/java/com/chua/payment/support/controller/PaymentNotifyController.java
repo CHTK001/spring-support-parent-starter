@@ -30,10 +30,10 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.Map;
 
 /**
-* 第三方支付异步通知控制器，统一处理微信支付和支付宝的支付/退款通知回调。
-*
-* @since 2025-01-01
-* @author CH
+ * 第三方支付异步通知控制器，统一处理微信支付和支付宝的支付/退款通知回调。
+ *
+ * @since 2025-01-01
+ * @author CH
  */
 @Slf4j
 @Hidden
@@ -84,19 +84,19 @@ public class PaymentNotifyController {
     }
 
     /**
-    * 处理微信支付支付通知（带 订单no，可直接路由到对应订单）。
-    *
-    * @param channelId      支付通道 标识
-    * @param orderNo        商户订单号
-    * @param serialNumber   Wechatpay-串行 请求头
-    * @param timestamp      Wechatpay-时间戳 请求头
-    * @param nonce          Wechatpay-Nonce 请求头
-    * @param signature      Wechatpay-签名 请求头
-    * @param signType       Wechatpay-签名-类型 请求头
-    * @param body           微信通知报文
-    * @param request        原始 HTTP 请求
-    * @return 微信支付要求的不重复响应体
-    */
+     * 处理微信支付支付通知（带 订单no，可直接路由到对应订单）。
+     *
+     * @param channelId      支付通道 标识
+     * @param orderNo        商户订单号
+     * @param serialNumber   Wechatpay-串行 请求头
+     * @param timestamp      Wechatpay-时间戳 请求头
+     * @param nonce          Wechatpay-Nonce 请求头
+     * @param signature      Wechatpay-签名 请求头
+     * @param signType       Wechatpay-签名-类型 请求头
+     * @param body           微信通知报文
+     * @param request        原始 HTTP 请求
+     * @return 微信支付要求的不重复响应体
+     */
     @PostMapping("/wechat/pay/{channelId}/{orderNo}")
     public ResponseEntity<String> handleWechatPayNotify(@PathVariable Long channelId,
                                                         @PathVariable String orderNo,
@@ -129,19 +129,19 @@ public class PaymentNotifyController {
     }
 
     /**
-    * 按商户维度处理微信支付支付通知（通过订单号+商户标识查找通道后委托给 通道标识 版本处理）。
-    *
-    * @param orderNo        商户订单号
-    * @param merchantId     商户标识
-    * @param serialNumber   Wechatpay-串行 请求头
-    * @param timestamp      Wechatpay-时间戳 请求头
-    * @param nonce          Wechatpay-Nonce 请求头
-    * @param signature      Wechatpay-签名 请求头
-    * @param signType       Wechatpay-签名-类型 请求头
-    * @param body           微信通知报文
-    * @param request        原始 HTTP 请求
-    * @return 微信支付要求的不重复响应体
-    */
+     * 按商户维度处理微信支付支付通知（通过订单号+商户标识查找通道后委托给 通道标识 版本处理）。
+     *
+     * @param orderNo        商户订单号
+     * @param merchantId     商户标识
+     * @param serialNumber   Wechatpay-串行 请求头
+     * @param timestamp      Wechatpay-时间戳 请求头
+     * @param nonce          Wechatpay-Nonce 请求头
+     * @param signature      Wechatpay-签名 请求头
+     * @param signType       Wechatpay-签名-类型 请求头
+     * @param body           微信通知报文
+     * @param request        原始 HTTP 请求
+     * @return 微信支付要求的不重复响应体
+     */
     @PostMapping("/wechat/pay/{orderNo}/{merchantId}")
     public ResponseEntity<String> handleWechatPayNotifyByMerchant(@PathVariable String orderNo,
                                                                   @PathVariable Long merchantId,
@@ -162,18 +162,18 @@ public class PaymentNotifyController {
     }
 
     /**
-    * 处理微信支付退款通知（按 通道 标识 路由，无 退税no 时由通知体决定退款单）。
-    *
-    * @param channelId      支付通道 标识
-    * @param serialNumber   Wechatpay-串行 请求头
-    * @param timestamp      Wechatpay-时间戳 请求头
-    * @param nonce          Wechatpay-Nonce 请求头
-    * @param signature      Wechatpay-签名 请求头
-    * @param signType       Wechatpay-签名-类型 请求头
-    * @param body           微信通知报文
-    * @param request        原始 HTTP 请求
-    * @return 微信支付要求的不重复响应体
-    */
+     * 处理微信支付退款通知（按 通道 标识 路由，无 退税no 时由通知体决定退款单）。
+     *
+     * @param channelId      支付通道 标识
+     * @param serialNumber   Wechatpay-串行 请求头
+     * @param timestamp      Wechatpay-时间戳 请求头
+     * @param nonce          Wechatpay-Nonce 请求头
+     * @param signature      Wechatpay-签名 请求头
+     * @param signType       Wechatpay-签名-类型 请求头
+     * @param body           微信通知报文
+     * @param request        原始 HTTP 请求
+     * @return 微信支付要求的不重复响应体
+     */
     @PostMapping("/wechat/refund/{channelId}")
     public ResponseEntity<String> handleWechatRefundNotify(@PathVariable Long channelId,
                                                            @RequestHeader(value = "Wechatpay-Serial", required = false) String serialNumber,
@@ -191,19 +191,19 @@ public class PaymentNotifyController {
     }
 
     /**
-    * 处理微信支付退款通知（带 退税no，可直接路由到对应退款单）。
-    *
-    * @param channelId      支付通道 标识
-    * @param refundNo       商户退款单号
-    * @param serialNumber   Wechatpay-串行 请求头
-    * @param timestamp      Wechatpay-时间戳 请求头
-    * @param nonce          Wechatpay-Nonce 请求头
-    * @param signature      Wechatpay-签名 请求头
-    * @param signType       Wechatpay-签名-类型 请求头
-    * @param body           微信通知报文
-    * @param request        原始 HTTP 请求
-    * @return 微信支付要求的不重复响应体
-    */
+     * 处理微信支付退款通知（带 退税no，可直接路由到对应退款单）。
+     *
+     * @param channelId      支付通道 标识
+     * @param refundNo       商户退款单号
+     * @param serialNumber   Wechatpay-串行 请求头
+     * @param timestamp      Wechatpay-时间戳 请求头
+     * @param nonce          Wechatpay-Nonce 请求头
+     * @param signature      Wechatpay-签名 请求头
+     * @param signType       Wechatpay-签名-类型 请求头
+     * @param body           微信通知报文
+     * @param request        原始 HTTP 请求
+     * @return 微信支付要求的不重复响应体
+     */
     @PostMapping("/wechat/refund/{channelId}/{refundNo}")
     public ResponseEntity<String> handleWechatRefundNotify(@PathVariable Long channelId,
                                                            @PathVariable String refundNo,
@@ -236,19 +236,19 @@ public class PaymentNotifyController {
     }
 
     /**
-    * 按商户维度处理微信支付退款通知（通过退款单号+商户标识查找通道后委托处理）。
-    *
-    * @param refundNo       商户退款单号
-    * @param merchantId     商户标识
-    * @param serialNumber   Wechatpay-串行 请求头
-    * @param timestamp      Wechatpay-时间戳 请求头
-    * @param nonce          Wechatpay-Nonce 请求头
-    * @param signature      Wechatpay-签名 请求头
-    * @param signType       Wechatpay-签名-类型 请求头
-    * @param body           微信通知报文
-    * @param request        原始 HTTP 请求
-    * @return 微信支付要求的不重复响应体
-    */
+     * 按商户维度处理微信支付退款通知（通过退款单号+商户标识查找通道后委托处理）。
+     *
+     * @param refundNo       商户退款单号
+     * @param merchantId     商户标识
+     * @param serialNumber   Wechatpay-串行 请求头
+     * @param timestamp      Wechatpay-时间戳 请求头
+     * @param nonce          Wechatpay-Nonce 请求头
+     * @param signature      Wechatpay-签名 请求头
+     * @param signType       Wechatpay-签名-类型 请求头
+     * @param body           微信通知报文
+     * @param request        原始 HTTP 请求
+     * @return 微信支付要求的不重复响应体
+     */
     @PostMapping("/wechat/refund/{refundNo}/{merchantId}")
     public ResponseEntity<String> handleWechatRefundNotifyByMerchant(@PathVariable String refundNo,
                                                                      @PathVariable Long merchantId,
@@ -269,19 +269,19 @@ public class PaymentNotifyController {
     }
 
     /**
-    * 处理微信支付分通知（用于支付分模式的支付回调）。
-    *
-    * @param channelId      支付通道 标识
-    * @param outOrderNo     商户订单号
-    * @param serialNumber   Wechatpay-串行 请求头
-    * @param timestamp      Wechatpay-时间戳 请求头
-    * @param nonce          Wechatpay-Nonce 请求头
-    * @param signature      Wechatpay-签名 请求头
-    * @param signType       Wechatpay-签名-类型 请求头
-    * @param body           微信通知报文
-    * @param request        原始 HTTP 请求
-    * @return 微信支付要求的不重复响应体
-    */
+     * 处理微信支付分通知（用于支付分模式的支付回调）。
+     *
+     * @param channelId      支付通道 标识
+     * @param outOrderNo     商户订单号
+     * @param serialNumber   Wechatpay-串行 请求头
+     * @param timestamp      Wechatpay-时间戳 请求头
+     * @param nonce          Wechatpay-Nonce 请求头
+     * @param signature      Wechatpay-签名 请求头
+     * @param signType       Wechatpay-签名-类型 请求头
+     * @param body           微信通知报文
+     * @param request        原始 HTTP 请求
+     * @return 微信支付要求的不重复响应体
+     */
     @PostMapping("/wechat/payscore/{channelId}/{outOrderNo}")
     public ResponseEntity<String> handleWechatPayScoreNotify(@PathVariable Long channelId,
                                                              @PathVariable String outOrderNo,
@@ -314,14 +314,14 @@ public class PaymentNotifyController {
     }
 
     /**
-    * 处理支付宝支付通知（按 通道 标识 路由，无 订单no 时由通知体决定订单）。
-    * 支付宝使用 form 表单提交，返回 "成功" 或 "失败" 字符串。
-    *
-    * @param channelId 支付通道 标识
-    * @param params    支付宝回调参数 映射
-    * @param request   原始 HTTP 请求
-    * @return "success" 或 "失败"
-    */
+     * 处理支付宝支付通知（按 通道 标识 路由，无 订单no 时由通知体决定订单）。
+     * 支付宝使用 form 表单提交，返回 "成功" 或 "失败" 字符串。
+     *
+     * @param channelId 支付通道 标识
+     * @param params    支付宝回调参数 映射
+     * @param request   原始 HTTP 请求
+     * @return "success" 或 "失败"
+     */
     @PostMapping(value = "/alipay/pay/{channelId}", produces = MediaType.TEXT_PLAIN_VALUE)
     public String handleAlipayPayNotify(@PathVariable Long channelId,
                                         @RequestParam Map<String, String> params,
@@ -330,14 +330,14 @@ public class PaymentNotifyController {
     }
 
     /**
-    * 处理支付宝支付通知（带 订单no，可直接路由到对应订单）。
-    *
-    * @param channelId 支付通道 标识
-    * @param orderNo   商户订单号
-    * @param params    支付宝回调参数 映射
-    * @param request   原始 HTTP 请求
-    * @return "success" 或 "失败"
-    */
+     * 处理支付宝支付通知（带 订单no，可直接路由到对应订单）。
+     *
+     * @param channelId 支付通道 标识
+     * @param orderNo   商户订单号
+     * @param params    支付宝回调参数 映射
+     * @param request   原始 HTTP 请求
+     * @return "success" 或 "失败"
+     */
     @PostMapping(value = "/alipay/pay/{channelId}/{orderNo}", produces = MediaType.TEXT_PLAIN_VALUE)
     public String handleAlipayPayNotify(@PathVariable Long channelId,
                                         @PathVariable String orderNo,
@@ -364,14 +364,14 @@ public class PaymentNotifyController {
     }
 
     /**
-    * 按商户维度处理支付宝支付通知（通过订单号+商户标识查找通道后委托处理）。
-    *
-    * @param orderNo    商户订单号
-    * @param merchantId 商户标识
-    * @param params     支付宝回调参数 映射
-    * @param request    原始 HTTP 请求
-    * @return "success" 或 "失败"
-    */
+     * 按商户维度处理支付宝支付通知（通过订单号+商户标识查找通道后委托处理）。
+     *
+     * @param orderNo    商户订单号
+     * @param merchantId 商户标识
+     * @param params     支付宝回调参数 映射
+     * @param request    原始 HTTP 请求
+     * @return "success" 或 "失败"
+     */
     @PostMapping(value = "/alipay/pay/{orderNo}/{merchantId}", produces = MediaType.TEXT_PLAIN_VALUE)
     public String handleAlipayPayNotifyByMerchant(@PathVariable String orderNo,
                                                   @PathVariable Long merchantId,
@@ -387,13 +387,13 @@ public class PaymentNotifyController {
     }
 
     /**
-    * 根据订单号和商户标识查询支付订单，若不存在则抛出异常。
-    *
-    * @param orderNo    订单号
-    * @param merchantId 商户标识
-    * @return 支付订单实体
-    * @throws IllegalArgumentException 订单不存在时抛出
-    */
+     * 根据订单号和商户标识查询支付订单，若不存在则抛出异常。
+     *
+     * @param orderNo    订单号
+     * @param merchantId 商户标识
+     * @return 支付订单实体
+     * @throws IllegalArgumentException 订单不存在时抛出
+     */
     private PaymentOrder requireOrder(String orderNo, Long merchantId) {
         PaymentOrder order = paymentOrderMapper.selectOne(new LambdaQueryWrapper<PaymentOrder>()
                 .eq(PaymentOrder::getOrderNo, orderNo)
@@ -401,23 +401,23 @@ public class PaymentNotifyController {
                 .last("limit 1"));
         if (order == null) {
             /**
-            * IllegalArgumentException。
-            * @param "订单不存在" "订单不存在"
-            * @return IllegalArgumentException的结果
-            */
+             * IllegalArgumentException。
+             * @param "订单不存在" "订单不存在"
+             * @return IllegalArgumentException的结果
+             */
             throw new IllegalArgumentException("订单不存在");
         }
         return order;
     }
 
     /**
-    * 根据退款单号和商户标识查询退款订单，若不存在则抛出异常。
-    *
-    * @param refundNo   退款单号
-    * @param merchantId 商户标识
-    * @return 退款订单实体
-    * @throws IllegalArgumentException 退款单不存在时抛出
-    */
+     * 根据退款单号和商户标识查询退款订单，若不存在则抛出异常。
+     *
+     * @param refundNo   退款单号
+     * @param merchantId 商户标识
+     * @return 退款订单实体
+     * @throws IllegalArgumentException 退款单不存在时抛出
+     */
     private PaymentRefundOrder requireRefundOrder(String refundNo, Long merchantId) {
         PaymentRefundOrder refundOrder = paymentRefundOrderMapper.selectOne(new LambdaQueryWrapper<PaymentRefundOrder>()
                 .eq(PaymentRefundOrder::getRefundNo, refundNo)
@@ -425,21 +425,21 @@ public class PaymentNotifyController {
                 .last("limit 1"));
         if (refundOrder == null) {
             /**
-            * IllegalArgumentException。
-            * @param "退款单不存在" "退款单不存在"
-            * @return IllegalArgumentException的结果
-            */
+             * IllegalArgumentException。
+             * @param "退款单不存在" "退款单不存在"
+             * @return IllegalArgumentException的结果
+             */
             throw new IllegalArgumentException("退款单不存在");
         }
         return refundOrder;
     }
 
     /**
-    * 构造微信支付通知失败响应体（JSON 格式，编码=失败）。
-    *
-    * @param message 失败原因说明
-    * @return HTTP 500 响应，含错误 编码 与 消息
-    */
+     * 构造微信支付通知失败响应体（JSON 格式，编码=失败）。
+     *
+     * @param message 失败原因说明
+     * @return HTTP 500 响应，含错误 编码 与 消息
+     */
     private ResponseEntity<String> wechatFailure(String message) {
         try {
             String body = objectMapper.writeValueAsString(Map.of(

@@ -27,11 +27,11 @@ import java.io.IOException;
 import java.util.Objects;
 
 /**
-* *
-* 鉴权拦截器
-*
-* @author CH
-* @since 4.0.0
+ * *
+ * 鉴权拦截器
+ *
+ * @author CH
+ * @since 4.0.0
  */
 @Slf4j
 public class AuthFilter implements Filter {
@@ -42,52 +42,52 @@ public class AuthFilter implements Filter {
     private final RequestMappingHandlerMapping requestMappingHandlerMapping;
     
     /**
-    * 缓存处理器方法是否需要指纹验证的结果
-    * 使用并发引用哈希映射，线程安全且支持弱引用
-    */
+     * 缓存处理器方法是否需要指纹验证的结果
+     * 使用并发引用哈希映射，线程安全且支持弱引用
+     */
     private final ConcurrentReferenceHashMap<HandlerMethod, Boolean> fingerprintVerificationCache = 
             new ConcurrentReferenceHashMap<>(16, ConcurrentReferenceHashMap.ReferenceType.WEAK);
 
     /**
-    * 创建 认证过滤器 实例
-    * @param webRequest web请求
-    * @param requestMappingHandlerMapping 请求mapping处理器mapping
-    * @param requestMappingHandlerMapping 请求mapping处理器mapping
-    */
+     * 创建 认证过滤器 实例
+     * @param webRequest web请求
+     * @param requestMappingHandlerMapping 请求mapping处理器mapping
+     * @param requestMappingHandlerMapping 请求mapping处理器mapping
+     */
     public AuthFilter(WebRequest webRequest, RequestMappingHandlerMapping requestMappingHandlerMapping) {
         this.webRequest = webRequest;
         this.requestMappingHandlerMapping = requestMappingHandlerMapping;
     }
 
     /**
-    * 动态添加白名单规则
-    * <p>
-    * 支持 Ant 风格的 URL 模式，例如 /v2/face/**，添加后立即生效，无需重启。
-    * </p>
-    *
-    * @param pattern 白名单规则
-    */
+     * 动态添加白名单规则
+     * <p>
+     * 支持 Ant 风格的 URL 模式，例如 /v2/face/**，添加后立即生效，无需重启。
+     * </p>
+     *
+     * @param pattern 白名单规则
+     */
     public void addWhitelist(String pattern) {
         webRequest.getAuthProperties().addWhitelist(pattern);
         log.debug("[AuthFilter]动态添加白名单规则 - {}", pattern);
     }
 
     /**
-    * 动态删除白名单规则
-    * <p>
-    * 删除后立即生效，无需重启。仅删除通过 {@link #addWhitelist(String)} 动态添加的规则。
-    * </p>
-    *
-    * @param pattern 白名单规则
-    */
+     * 动态删除白名单规则
+     * <p>
+     * 删除后立即生效，无需重启。仅删除通过 {@link #addWhitelist(String)} 动态添加的规则。
+     * </p>
+     *
+     * @param pattern 白名单规则
+     */
     public void removeWhitelist(String pattern) {
         webRequest.getAuthProperties().removeWhitelist(pattern);
         log.debug("[AuthFilter]动态删除白名单规则 - {}", pattern);
     }
 
     /**
-    * 清空所有动态添加的白名单规则
-    */
+     * 清空所有动态添加的白名单规则
+     */
     public void clearWhitelist() {
         webRequest.getAuthProperties().clearDynamicWhitelist();
         log.debug("[AuthFilter]清空动态白名单规则");
@@ -160,10 +160,10 @@ public class AuthFilter implements Filter {
 
  // 渲染用户信息到会话
         /**
-    * render。
-    * @param authentication 认证
-    * @param httpRequest http请求
-    */
+         * render。
+         * @param authentication 认证
+         * @param httpRequest http请求
+         */
         render(authentication, httpRequest);
 
  // 创建增强的httpservlet请求包装器，集成Principal支持
@@ -197,11 +197,11 @@ public class AuthFilter implements Filter {
     }
 
     /**
-    * 确定认证类型
-    *
-    * @param webRequest Web请求
-    * @return 认证类型
-    */
+     * 确定认证类型
+     *
+     * @param webRequest Web请求
+     * @return 认证类型
+     */
     private String determineAuthType(WebRequest webRequest) {
  // 根据o认证客户端配置确定认证类型
         String protocol = webRequest.getAuthProperties().getProtocol();
@@ -218,11 +218,11 @@ public class AuthFilter implements Filter {
     }
 
     /**
-    * Render
-    *
-    * @param authentication 认证
-    * @param request 请求
-    */
+     * Render
+     *
+     * @param authentication 认证
+     * @param request 请求
+     */
     private void render(AuthenticationInformation authentication, HttpServletRequest request) {
         if(authentication.getInformation() != Information.OK) {
             log.debug("[AuthFilter渲染]认证信息状态非OK，跳过渲染 - 状态: {}", authentication.getInformation());
@@ -269,13 +269,13 @@ public class AuthFilter implements Filter {
     }
 
     /**
-    * 验证浏览器指纹
-    * <p>仅对标记了@VerifyFingerprint注解的接口进行指纹验证</p>
-    *
-    * @param request    HTTP请求
-    * @param userResume 用户信息
-    * @return 验证结果，null表示不需要验证或验证通过，否则返回错误信息
-    */
+     * 验证浏览器指纹
+     * <p>仅对标记了@VerifyFingerprint注解的接口进行指纹验证</p>
+     *
+     * @param request    HTTP请求
+     * @param userResume 用户信息
+     * @return 验证结果，null表示不需要验证或验证通过，否则返回错误信息
+     */
     private Information verifyFingerprint(HttpServletRequest request, UserResume userResume) {
         // 检查当前请求对应的处理方法是否需要指纹验证
         if (!requiresFingerprintVerification(request)) {
@@ -316,16 +316,16 @@ public class AuthFilter implements Filter {
     }
     
     /**
-    * 检查当前请求是否需要指纹验证
-    * <p>
-    * 判断逻辑：
-    * 1. 如果开启了全局指纹验证，则所有接口都需要验证
-    * 2. 否则，只检查处理方法或其所在类是否标记了@验证fingerprint注解
-    * </p>
-    *
-    * @param request HTTP请求
-    * @return 是否需要指纹验证
-    */
+     * 检查当前请求是否需要指纹验证
+     * <p>
+     * 判断逻辑：
+     * 1. 如果开启了全局指纹验证，则所有接口都需要验证
+     * 2. 否则，只检查处理方法或其所在类是否标记了@验证fingerprint注解
+     * </p>
+     *
+     * @param request HTTP请求
+     * @return 是否需要指纹验证
+     */
     private boolean requiresFingerprintVerification(HttpServletRequest request) {
         // 检查是否开启了全局指纹验证
         if (webRequest.getAuthProperties().getFingerprint() != null 
@@ -371,10 +371,10 @@ public class AuthFilter implements Filter {
     }
 
     /**
-    * 脱敏指纹（用于日志输出）
-    * @param fingerprint fingerprint
-    * @return maskFingerprint的结果
-    */
+     * 脱敏指纹（用于日志输出）
+     * @param fingerprint fingerprint
+     * @return maskFingerprint的结果
+     */
     private String maskFingerprint(String fingerprint) {
         if (fingerprint == null || fingerprint.length() < 8) {
             return "***";

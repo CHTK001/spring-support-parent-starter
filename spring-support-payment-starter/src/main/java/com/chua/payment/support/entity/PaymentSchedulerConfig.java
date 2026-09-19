@@ -9,9 +9,9 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 /**
-* 支付调度任务配置
-* @author CH
-* @since 4.0.0
+ * 支付调度任务配置
+ * @author CH
+ * @since 4.0.0
  */
 @Data
 @TableName("pay_scheduler_config")

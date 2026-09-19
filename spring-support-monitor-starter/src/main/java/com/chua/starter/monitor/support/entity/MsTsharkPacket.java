@@ -12,9 +12,9 @@ import lombok.EqualsAndHashCode;
 import java.time.LocalDateTime;
 
 /**
-* 网络数据包
-* @author CH
-* @since 4.0.0
+ * 网络数据包
+ * @author CH
+ * @since 4.0.0
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

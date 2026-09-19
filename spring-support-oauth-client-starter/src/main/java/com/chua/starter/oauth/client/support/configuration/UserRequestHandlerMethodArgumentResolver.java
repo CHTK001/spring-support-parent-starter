@@ -32,10 +32,10 @@ import java.util.Map;
 import java.util.function.Function;
 
 /**
-* 用户信息
-*
-* @since 2022/7/25 16:48
-* @author CH
+ * 用户信息
+ *
+ * @since 2022/7/25 16:48
+ * @author CH
  */
 public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodArgumentResolver {
 
@@ -49,18 +49,18 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
     private ConversionService conversionService;
 
     /**
-    * 创建 用户请求处理器方法参数解析器 实例
-    * @param webRequest web请求
-    */
+     * 创建 用户请求处理器方法参数解析器 实例
+     * @param webRequest web请求
+     */
     public UserRequestHandlerMethodArgumentResolver(WebRequest webRequest) {
         this.webRequest = webRequest;
     }
 
     /**
-    * 设置configurableBean工厂
-    *
-    * @param configurableBeanFactory configurableBean工厂
-    */
+     * 设置configurableBean工厂
+     *
+     * @param configurableBeanFactory configurableBean工厂
+     */
     public void setConfigurableBeanFactory(ConfigurableBeanFactory configurableBeanFactory) {
         this.configurableBeanFactory = configurableBeanFactory;
         if (configurableBeanFactory == null) {
@@ -107,13 +107,13 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
     }
 
     /**
-    * 解析参数
-    *
-    * @param mavContainer    容器
-    * @param webRequest      请求
-    * @param binderFactory   工厂
-    * @return 结果
-    */
+     * 解析参数
+     *
+     * @param mavContainer    容器
+     * @param webRequest      请求
+     * @param binderFactory   工厂
+     * @return 结果
+     */
 
     public Object resolveEmbeddedValuesAndExpressions(MethodParameter methodParameter,
                                                       ModelAndViewContainer mavContainer,
@@ -130,10 +130,10 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
 
         if (RoleJudge.class.isAssignableFrom(parameterType)) {
             /**
-            * 角色judge。
-            * @param userResume.getRoles( 用户resume.getroles(
-            * @return 角色judge的结果
-            */
+             * 角色judge。
+             * @param userResume.getRoles( 用户resume.getroles(
+             * @return 角色judge的结果
+             */
             return new RoleJudge(userResume.getRoles());
         }
 
@@ -209,12 +209,12 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
     }
 
     /**
-    * 转为映射
-    *
-    * @param returnResult 结果
-    * @param webRequest
-    * @return 结果
-    */
+     * 转为映射
+     *
+     * @param returnResult 结果
+     * @param webRequest
+     * @return 结果
+     */
     @SuppressWarnings("ALL")
     protected Map<String, Object> asMap(NativeWebRequest webRequest, UserResume returnResult) {
         Map<String, Object> rs = new LinkedHashMap<>();
@@ -228,11 +228,11 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
     }
 
     /**
-    * 解析embedded值andexpressions
-    *
-    * @param value 值
-    * @return resolveembedded值andexpressions的结果
-    */
+     * 解析embedded值andexpressions
+     *
+     * @param value 值
+     * @return resolveembedded值andexpressions的结果
+     */
     protected Object resolveEmbeddedValuesAndExpressions(String value) {
         if (this.configurableBeanFactory == null || this.expressionContext == null) {
             return value;
@@ -246,11 +246,11 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
     }
 
     /**
-    * 分析参数
-    *
-    * @param webRequest 请求参数
-    * @return 结果
-    */
+     * 分析参数
+     *
+     * @param webRequest 请求参数
+     * @return 结果
+     */
     protected UserResume analysis(WebRequest webRequest) {
         AuthenticationInformation authentication = webRequest.authentication();
         return authentication.getReturnResult();
@@ -258,12 +258,12 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
     }
 
     /**
-    * 支持参数
-    *
-    * @param annotationType 注解类型
-    * @return 结果
-    * @param methodParameter 方法参数
-    */
+     * 支持参数
+     *
+     * @param annotationType 注解类型
+     * @return 结果
+     * @param methodParameter 方法参数
+     */
     protected boolean supportsParameter(MethodParameter methodParameter, Class<? extends Annotation> annotationType) {
         if (null == configurableBeanFactory) {
             return false;

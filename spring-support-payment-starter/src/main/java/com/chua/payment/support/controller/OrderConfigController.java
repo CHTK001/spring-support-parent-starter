@@ -49,11 +49,11 @@ public class OrderConfigController {
     @Operation(summary = "更新分表配置")
     @PutMapping("/partitions/{businessType}")
     /**
-    * 更新
-    * @param businessType 业务类型
-    * @param dto dto
-    * @param request 请求
-    */
+     * 更新
+     * @param businessType 业务类型
+     * @param dto dto
+     * @param request 请求
+     */
     public Result<OrderPartitionConfigVO> update(@PathVariable String businessType,
                                                  @RequestBody OrderPartitionConfigDTO dto,
                                                  HttpServletRequest request) {
@@ -64,12 +64,12 @@ public class OrderConfigController {
     @Operation(summary = "预览分表策略")
     @GetMapping("/partitions/{businessType}/preview")
     /**
-    * Preview
-    *
-    * @param businessType 业务类型
-    * @param request 请求
-    * @return preview的结果
-    */
+     * Preview
+     *
+     * @param businessType 业务类型
+     * @param request 请求
+     * @return preview的结果
+     */
     public Result<OrderPartitionPreviewVO> preview(@PathVariable String businessType, HttpServletRequest request) {
         Result<OrderPartitionPreviewVO> denied = denyIfNecessary(request);
         return denied != null ? denied : Result.success(orderPartitionConfigService.preview(businessType));
@@ -78,12 +78,12 @@ public class OrderConfigController {
     @Operation(summary = "手动触发建表")
     @PostMapping("/partitions/{businessType}/create")
     /**
-    * Trigger创建
-    *
-    * @param businessType 业务类型
-    * @param request 请求
-    * @return trigger创建的结果
-    */
+     * Trigger创建
+     *
+     * @param businessType 业务类型
+     * @param request 请求
+     * @return trigger创建的结果
+     */
     public Result<Void> triggerCreate(@PathVariable String businessType, HttpServletRequest request) {
         Result<Void> denied = denyIfNecessary(request);
         if (denied != null) {
@@ -96,12 +96,12 @@ public class OrderConfigController {
     @Operation(summary = "手动触发迁移")
     @PostMapping("/partitions/{businessType}/migrate")
     /**
-    * triggermigrate
-    *
-    * @param businessType 业务类型
-    * @param request 请求
-    * @return triggerMigrate的结果
-    */
+     * triggermigrate
+     *
+     * @param businessType 业务类型
+     * @param request 请求
+     * @return triggerMigrate的结果
+     */
     public Result<Void> triggerMigrate(@PathVariable String businessType, HttpServletRequest request) {
         Result<Void> denied = denyIfNecessary(request);
         if (denied != null) {
@@ -112,11 +112,11 @@ public class OrderConfigController {
     }
 
     /**
-    * denyifnecessary
-    *
-    * @param request 请求
-    * @return denyIfNecessary的结果
-    */
+     * denyifnecessary
+     *
+     * @param request 请求
+     * @return denyIfNecessary的结果
+     */
     private <T> Result<T> denyIfNecessary(HttpServletRequest request) {
         UserResume userResume = principalResolver.resolve(request);
         if (userResume == null) {

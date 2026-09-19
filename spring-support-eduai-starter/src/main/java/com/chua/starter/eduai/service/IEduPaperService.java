@@ -8,44 +8,44 @@ import com.chua.starter.eduai.model.dto.PaperQueryDTO;
 import com.chua.starter.eduai.model.vo.PaperVO;
 
 /**
-* 试卷服务接口
-*
-* @since 4.0.0.42
-* @author CH
+ * 试卷服务接口
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 public interface IEduPaperService extends IService<EduPaper> {
 
     /**
-    * 分页查询试卷
-    *
-    * @param query 查询条件
-    * @return 分页结果
-    */
+     * 分页查询试卷
+     *
+     * @param query 查询条件
+     * @return 分页结果
+     */
     PageResult<PaperVO> pageQuery(PaperQueryDTO query);
 
     /**
-    * 获取试卷详情（含题目列表）
-    *
-    * @param paperId 试卷标识
-    * @return 试卷详情
-    */
+     * 获取试卷详情（含题目列表）
+     *
+     * @param paperId 试卷标识
+     * @return 试卷详情
+     */
     PaperVO getPaperDetail(Long paperId);
 
     /**
-    * AI生成试卷
-    *
-    * @param dto 组卷配置
-    * @return 试卷ID
-    */
+     * AI生成试卷
+     *
+     * @param dto 组卷配置
+     * @return 试卷ID
+     */
     Long generatePaper(PaperGenerateDTO dto);
 
     /**
-    * 替换试卷中的某道题
-    *
-    * @param paperId       试卷标识
-    * @param oldQuestionId 旧题目标识
-    * @param newQuestionId 新题目标识
-    * @return 是否成功
-    */
+     * 替换试卷中的某道题
+     *
+     * @param paperId       试卷标识
+     * @param oldQuestionId 旧题目标识
+     * @param newQuestionId 新题目标识
+     * @return 是否成功
+     */
     boolean replaceQuestion(Long paperId, Long oldQuestionId, Long newQuestionId);
 }

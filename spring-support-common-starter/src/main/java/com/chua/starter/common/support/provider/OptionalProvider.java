@@ -34,10 +34,10 @@ import static com.chua.starter.common.support.constant.CacheConstant.CACHE_MANAG
 import static com.chua.starter.common.support.constant.CacheConstant.REDIS_CACHE_ALWAYS;
 
 /**
-* 获取选项
-*
-* @author CH
-* @since 4.0.0
+ * 获取选项
+ *
+ * @author CH
+ * @since 4.0.0
  */
 @Slf4j
 @RestController
@@ -46,11 +46,11 @@ import static com.chua.starter.common.support.constant.CacheConstant.REDIS_CACHE
 @Tag(name = "选项")
 public class OptionalProvider {
     /**
-    * 构造函数
-    *
-    * @param apiProperties api属性
-    * @param beanFactory Bean工厂
-    */
+     * 构造函数
+     *
+     * @param apiProperties api属性
+     * @param beanFactory Bean工厂
+     */
     public OptionalProvider(ApiProperties apiProperties, BeanFactory beanFactory) {
         this.apiProperties = apiProperties;
         this.beanFactory = beanFactory;
@@ -60,12 +60,12 @@ public class OptionalProvider {
     private final ApiProperties apiProperties; // api属性
     private final BeanFactory beanFactory; // Bean工厂
     /**
-    * 获取选项
-    *
-    * @param type 类型
-    * @param name 名称，可为空
-    * @return 获取选项
-    */
+     * 获取选项
+     *
+     * @param type 类型
+     * @param name 名称，可为空
+     * @return 获取选项
+     */
     @Operation(summary = "获取已经加载选项")
     @GetMapping("objects/get")
     @Cacheable(cacheManager = CACHE_MANAGER_FOR_SYSTEM, cacheNames = REDIS_CACHE_ALWAYS, key = "'OPTION:OBJECT_GET' + #type + '' + #name")
@@ -104,11 +104,11 @@ public class OptionalProvider {
     }
 
     /**
-    * 获取选项
-    *
-    * @param type 类型
-    * @return 获取选项
-    */
+     * 获取选项
+     *
+     * @param type 类型
+     * @return 获取选项
+     */
     private String[] getTypes(String type) {
         ApiProperties.SpiConfig spi = apiProperties.getSpi();
         if (spi != null && spi.isEnable() && spi.getMapping() != null) {
@@ -125,11 +125,11 @@ public class OptionalProvider {
     }
 
     /**
-    * 获取选项
-    *
-    * @param type 类型
-    * @return 获取选项
-    */
+     * 获取选项
+     *
+     * @param type 类型
+     * @return 获取选项
+     */
     private String getType(String type) {
         ApiProperties.SpiConfig spi = apiProperties.getSpi();
         if (spi != null && spi.isEnable() && spi.getMapping() != null) {
@@ -139,12 +139,12 @@ public class OptionalProvider {
     }
 
     /**
-    * 获取选项
-    *
-    * @param type 类型
-    * @param name 名称，可为空
-    * @return 获取选项
-    */
+     * 获取选项
+     *
+     * @param type 类型
+     * @param name 名称，可为空
+     * @return 获取选项
+     */
     @Operation(summary = "获取选项")
     @GetMapping("get")
     @Cacheable(cacheManager = CACHE_MANAGER_FOR_SYSTEM, cacheNames = REDIS_CACHE_ALWAYS, key = "'OPTION:GET' + #type + '' + #name")
@@ -167,12 +167,12 @@ public class OptionalProvider {
         return ReturnResult.success(options);
     }
     /**
-    * 获取选项
-    *
-    * @param type 类型
-    * @param name 名称，可为空
-    * @return 获取选项
-    */
+     * 获取选项
+     *
+     * @param type 类型
+     * @param name 名称，可为空
+     * @return 获取选项
+     */
     @Operation(summary = "获取选项")
     @GetMapping("list")
     @Cacheable(cacheManager = CACHE_MANAGER_FOR_SYSTEM, cacheNames = REDIS_CACHE_ALWAYS, key = "'OPTION:LIST' + #type + '' + #name")
@@ -204,11 +204,11 @@ public class OptionalProvider {
     }
 
     /**
-    * 把 ServiceProvider.options() 返回的 List<?> 安全转换为 List<SpiOption>（元素实际均为 SpiOption）。
-    *
-    * @param raw 原始选项列表（运行时元素均为 {@link SpiOption}）
-    * @return SpiOption 列表；入参为 null 时返回空列表
-    */
+     * 把 ServiceProvider.options() 返回的 List<?> 安全转换为 List<SpiOption>（元素实际均为 SpiOption）。
+     *
+     * @param raw 原始选项列表（运行时元素均为 {@link SpiOption}）
+     * @return SpiOption 列表；入参为 null 时返回空列表
+     */
     @SuppressWarnings("unchecked")
     private static List<SpiOption> toSpiOptions(List<?> raw) {
         if (raw == null) {

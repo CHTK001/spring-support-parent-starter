@@ -14,13 +14,13 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.Map;
 
 /**
-* AI 网关端口管理。
-*
-* <p>在运行中的 Servlet 容器上动态添加/移除 Connector，
-* 使 /v2/** 端点同时监听主端口与独立 AI 端口。</p>
-*
-* @author CH
-* @since 4.0.0.42
+ * AI 网关端口管理。
+ *
+ * <p>在运行中的 Servlet 容器上动态添加/移除 Connector，
+ * 使 /v2/** 端点同时监听主端口与独立 AI 端口。</p>
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 @Slf4j
 @RestController
@@ -35,11 +35,11 @@ public class AiGatewayController {
     private volatile Object activeConnector;
 
     /**
-    * 启动独立 AI 端口。
-    *
-    * @param body 包含 端口 字段
-    * @return 操作结果
-    */
+     * 启动独立 AI 端口。
+     *
+     * @param body 包含 端口 字段
+     * @return 操作结果
+     */
     @PostMapping("/start")
     public ReturnResult<String> start(@RequestBody Map<String, Object> body) {
         int port = Integer.parseInt(String.valueOf(body.get("port")));
@@ -65,10 +65,10 @@ public class AiGatewayController {
     }
 
     /**
-    * 停止独立 AI 端口。
-    *
-    * @return 操作结果
-    */
+     * 停止独立 AI 端口。
+     *
+     * @return 操作结果
+     */
     @PostMapping("/stop")
     public ReturnResult<String> stop() {
         if (activeConnector == null) { return ReturnResult.ok("未在运行"); }
@@ -88,10 +88,10 @@ public class AiGatewayController {
     }
 
     /**
-    * 查询网关状态。
-    *
-    * @return running 与 端口 字段
-    */
+     * 查询网关状态。
+     *
+     * @return running 与 端口 字段
+     */
     @GetMapping("/status")
     public ReturnResult<Map<String, Object>> status() {
         boolean running = activeConnector != null;

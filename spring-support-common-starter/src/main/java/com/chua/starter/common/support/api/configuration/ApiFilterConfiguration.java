@@ -20,17 +20,17 @@ import org.slf4j.LoggerFactory;
 
 
 /**
-* API 过滤器配置类
-* <p>
-* 统一管理 API 相关的过滤器，包括：
-* <ul>
-*     <li>版本过滤器 - 在响应头中添加 API 版本信息</li>
-*     <li>XHR Nonce 防重放过滤器 - 对携带 x-nonce 的请求做时间戳、重放、签名校验</li>
-* </ul>
-* </p>
-*
-* @since 2024/06/21
-* @author CH
+ * API 过滤器配置类
+ * <p>
+ * 统一管理 API 相关的过滤器，包括：
+ * <ul>
+ *     <li>版本过滤器 - 在响应头中添加 API 版本信息</li>
+ *     <li>XHR Nonce 防重放过滤器 - 对携带 x-nonce 的请求做时间戳、重放、签名校验</li>
+ * </ul>
+ * </p>
+ *
+ * @since 2024/06/21
+ * @author CH
  */
 public class ApiFilterConfiguration  {
     /** 日志 */
@@ -39,19 +39,19 @@ public class ApiFilterConfiguration  {
     /** Sc_nonce_reject */
     private static final int SC_NONCE_REJECT = 400;
         /**
-    * 响应头中的版本字段名
-    */
+         * 响应头中的版本字段名
+         */
     private static final String X_HEADER_VERSION = "x-response-version";
 
     /**
-    * API 版本过滤器
-    * <p>
-    * 在每个响应头中添加当前 API 版本信息，便于客户端识别服务版本。
-    * </p>
-    *
-    * @param versionArgumentResolver 版本参数解析器（可选）
-    * @return FilterRegistrationBean 过滤器注册 Bean
-    */
+     * API 版本过滤器
+     * <p>
+     * 在每个响应头中添加当前 API 版本信息，便于客户端识别服务版本。
+     * </p>
+     *
+     * @param versionArgumentResolver 版本参数解析器（可选）
+     * @return FilterRegistrationBean 过滤器注册 Bean
+     */
     @Bean("apiVersionFilterRegistration")
     @ConditionalOnMissingBean(name = "apiVersionFilterRegistration")
     public FilterRegistrationBean<ApiVersionFilter> apiVersionFilterRegistration(
@@ -66,13 +66,13 @@ public class ApiFilterConfiguration  {
     }
 
     /**
-    * XHR Nonce 防重放过滤器
-    * <p>
-    * 仅对携带 x-nonce、x-标志、x-时间戳、x-req-fingerprint 的请求做校验，
-    * 校验失败返回 403。
-    * </p>
-    * @return noncexhr过滤器registration的结果
-    */
+     * XHR Nonce 防重放过滤器
+     * <p>
+     * 仅对携带 x-nonce、x-标志、x-时间戳、x-req-fingerprint 的请求做校验，
+     * 校验失败返回 403。
+     * </p>
+     * @return noncexhr过滤器registration的结果
+     */
     @Bean("nonceXhrFilterRegistration")
     @ConditionalOnMissingBean(name = "nonceXhrFilterRegistration")
     public FilterRegistrationBean<NonceXhrFilter> nonceXhrFilterRegistration() {
@@ -86,13 +86,13 @@ public class ApiFilterConfiguration  {
     }
 
     /**
-    * API 版本过滤器
-    * <p>
-    * 在响应头中添加版本信息。
-    * </p>
-    * @author CH
-    * @since 4.0.0
-    */
+     * API 版本过滤器
+     * <p>
+     * 在响应头中添加版本信息。
+     * </p>
+     * @author CH
+     * @since 4.0.0
+     */
     public static class ApiVersionFilter implements Filter {
 
         /** 版本参数解析器 */

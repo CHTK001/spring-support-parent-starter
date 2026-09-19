@@ -48,9 +48,9 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
-* MyBatis SQL 物理化拦截器。
-*
-* @since 2026/4/2
+ * MyBatis SQL 物理化拦截器。
+ *
+ * @since 2026/4/2
  */
 @Intercepts({
         @Signature(type = Executor.class, method = "update", args = {MappedStatement.class, Object.class}),
@@ -58,10 +58,10 @@ import java.util.concurrent.ConcurrentHashMap;
         @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class, CacheKey.class, BoundSql.class}),
 })
 /**
-* 物化SQL拦截器类。
-*
-* @author CH
-* @since 4.0.0
+ * 物化SQL拦截器类。
+ *
+ * @author CH
+ * @since 4.0.0
  */
 public class MaterializedSqlInterceptor implements Interceptor {
     /** 日志 */
@@ -122,11 +122,11 @@ public class MaterializedSqlInterceptor implements Interceptor {
     }
 
     /**
-    * intercept查询。
-    * @param invocation invocation
-    * @param request 请求
-    * @return intercept查询的结果
-    */
+     * intercept查询。
+     * @param invocation invocation
+     * @param request 请求
+     * @return intercept查询的结果
+     */
     private Object interceptQuery(Invocation invocation, MaterializedSqlRequest request) throws Throwable {
         MaterializedSqlRoute route = materializedSqlRouter.route(request);
         if (!route.isRouted()) {
@@ -145,24 +145,24 @@ public class MaterializedSqlInterceptor implements Interceptor {
         } catch (Throwable ex) {
             log.debug("[MyBatis][Materialized] 内存副本执行失败，回退源库: {}", ex.getMessage());
             /**
-            * restore数据源。
-            * @param originalDataSource 原始数据源
-            */
+             * restore数据源。
+             * @param originalDataSource 原始数据源
+             */
             restoreDataSource(originalDataSource);
             return invocation.proceed();
         } finally {
             /**
-            * restore数据源。
-            * @param originalDataSource 原始数据源
-            */
+             * restore数据源。
+             * @param originalDataSource 原始数据源
+             */
             restoreDataSource(originalDataSource);
         }
     }
 
     /**
-    * restore数据源。
-    * @param originalDataSource 原始数据源
-    */
+     * restore数据源。
+     * @param originalDataSource 原始数据源
+     */
     private void restoreDataSource(String originalDataSource) {
         if (StringUtils.hasText(originalDataSource)) {
             DataSourceContextSupport.setDbType(originalDataSource);
@@ -210,12 +210,12 @@ public class MaterializedSqlInterceptor implements Interceptor {
     }
 
     /**
-    * resolveboundsql。
-    * @param mappedStatement mapped对账单
-    * @param args 参数
-    * @param parameter 参数
-    * @return resolveBoundSql的结果
-    */
+     * resolveboundsql。
+     * @param mappedStatement mapped对账单
+     * @param args 参数
+     * @param parameter 参数
+     * @return resolveBoundSql的结果
+     */
     private BoundSql resolveBoundSql(MappedStatement mappedStatement, Object[] args, Object parameter) {
         if (args.length == 6 && args[5] instanceof BoundSql boundSql) {
             return boundSql;
@@ -242,12 +242,12 @@ public class MaterializedSqlInterceptor implements Interceptor {
     }
 
     /**
-    * resolve参数。
-    * @param configuration 配置
-    * @param boundSql boundsql
-    * @param parameterObject 参数对象
-    * @return resolve参数的结果
-    */
+     * resolve参数。
+     * @param configuration 配置
+     * @param boundSql boundsql
+     * @param parameterObject 参数对象
+     * @return resolve参数的结果
+     */
     private List<Object> resolveParameters(Configuration configuration, BoundSql boundSql, Object parameterObject) {
         List<Object> values = new ArrayList<>();
         List<ParameterMapping> parameterMappings = boundSql.getParameterMappings();
@@ -278,10 +278,10 @@ public class MaterializedSqlInterceptor implements Interceptor {
     }
 
     /**
-    * 解析tables。
-    * @param sql SQL
-    * @return 解析tables的结果
-    */
+     * 解析tables。
+     * @param sql SQL
+     * @return 解析tables的结果
+     */
     private List<String> parseTables(String sql) {
         try {
             Statement statement = CCJSqlParserUtil.parse(sql);
@@ -294,10 +294,10 @@ public class MaterializedSqlInterceptor implements Interceptor {
     }
 
     /**
-    * resolvedefinition。
-    * @param mappedStatement mapped对账单
-    * @return resolveDefinition的结果
-    */
+     * resolvedefinition。
+     * @param mappedStatement mapped对账单
+     * @return resolveDefinition的结果
+     */
     private MaterializedRouteDefinition resolveDefinition(MappedStatement mappedStatement) {
         MaterializedRouteDefinition current = MaterializedRouteContext.get();
         if (current != null) {
@@ -309,10 +309,10 @@ public class MaterializedSqlInterceptor implements Interceptor {
     }
 
     /**
-    * resolverefreshdefinition。
-    * @param mappedStatement mapped对账单
-    * @return resolveRefreshDefinition的结果
-    */
+     * resolverefreshdefinition。
+     * @param mappedStatement mapped对账单
+     * @return resolveRefreshDefinition的结果
+     */
     private MaterializedRouteDefinition resolveRefreshDefinition(MappedStatement mappedStatement) {
         MaterializedRouteDefinition current = MaterializedRefreshContext.get();
         if (current != null) {
@@ -324,10 +324,10 @@ public class MaterializedSqlInterceptor implements Interceptor {
     }
 
     /**
-    * resolvedefinition从映射器。
-    * @param statementId 对账单标识
-    * @return resolvedefinition从映射器的结果
-    */
+     * resolvedefinition从映射器。
+     * @param statementId 对账单标识
+     * @return resolvedefinition从映射器的结果
+     */
     private MaterializedRouteDefinition resolveDefinitionFromMapper(String statementId) {
         int lastDot = statementId.lastIndexOf('.');
         if (lastDot < 0) {
@@ -366,10 +366,10 @@ public class MaterializedSqlInterceptor implements Interceptor {
     }
 
     /**
-    * resolverefreshdefinition从映射器。
-    * @param statementId 对账单标识
-    * @return resolverefreshdefinition从映射器的结果
-    */
+     * resolverefreshdefinition从映射器。
+     * @param statementId 对账单标识
+     * @return resolverefreshdefinition从映射器的结果
+     */
     private MaterializedRouteDefinition resolveRefreshDefinitionFromMapper(String statementId) {
         int lastDot = statementId.lastIndexOf('.');
         if (lastDot < 0) {

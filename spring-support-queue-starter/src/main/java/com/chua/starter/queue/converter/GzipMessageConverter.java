@@ -10,13 +10,13 @@ import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
 /**
-* GZIP压缩消息转换器
-* <p>
-* 对消息内容进行GZIP压缩和解压
-* </p>
-*
-* @since 2025-03-20
-* @author CH
+ * GZIP压缩消息转换器
+ * <p>
+ * 对消息内容进行GZIP压缩和解压
+ * </p>
+ *
+ * @since 2025-03-20
+ * @author CH
  */
 @Slf4j
 @Component

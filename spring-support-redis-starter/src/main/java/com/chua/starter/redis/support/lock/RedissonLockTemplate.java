@@ -11,14 +11,14 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 /**
-* 基于 Redisson 的分布式锁模板实现
-* <p>
-* 使用 Redis 实现分布式锁，适用于分布式环境。
-* </p>
-*
-* @版本 1.0.0
-* @since 2025-12-25
-* @author CH
+ * 基于 Redisson 的分布式锁模板实现
+ * <p>
+ * 使用 Redis 实现分布式锁，适用于分布式环境。
+ * </p>
+ *
+ * @版本 1.0.0
+ * @since 2025-12-25
+ * @author CH
  */
 @Slf4j
 @RequiredArgsConstructor
@@ -35,21 +35,21 @@ public class RedissonLockTemplate implements LockTemplate {
     private final RedissonClient redissonClient;
 
     /**
-    * 获取锁的完整Key
-    *
-    * @param lockKey 锁的唯一标识
-    * @return 完整的锁key
-    */
+     * 获取锁的完整Key
+     *
+     * @param lockKey 锁的唯一标识
+     * @return 完整的锁key
+     */
     private String getLockKey(String lockKey) {
         return LOCK_PREFIX + lockKey;
     }
 
     /**
-    * 获取 Redisson 锁对象
-    *
-    * @param lockKey 锁的唯一标识
-    * @return RLock 对象
-    */
+     * 获取 Redisson 锁对象
+     *
+     * @param lockKey 锁的唯一标识
+     * @return RLock 对象
+     */
     private RLock getLock(String lockKey) {
         return redissonClient.getLock(getLockKey(lockKey));
     }

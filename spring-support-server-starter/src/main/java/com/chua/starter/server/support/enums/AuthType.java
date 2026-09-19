@@ -1,10 +1,10 @@
 package com.chua.starter.server.support.enums;
 
 /**
-* 登录身份认证类型
-*
-* @author CH
-* @since 4.0.0.42
+ * 登录身份认证类型
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 public enum AuthType {
 

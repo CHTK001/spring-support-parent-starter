@@ -26,15 +26,15 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
-* 节点控制处理器
-* <p>
-* 监听节点控制 Topic，提供重启和关闭功能
-* 包含重启保全机制：生成守护脚本检测应用启动状态
-* </p>
-*
-* @版本 1.0.0
-* @since 2025/01/17
-* @author CH
+ * 节点控制处理器
+ * <p>
+ * 监听节点控制 Topic，提供重启和关闭功能
+ * 包含重启保全机制：生成守护脚本检测应用启动状态
+ * </p>
+ *
+ * @版本 1.0.0
+ * @since 2025/01/17
+ * @author CH
  */
 @Slf4j
 @Spi("nodeControlHandler")
@@ -50,13 +50,13 @@ public class NodeControlHandler implements SyncMessageHandler, ApplicationContex
     private static final int DEFAULT_HEALTH_CHECK_TIMEOUT = 120;
 
     /**
-    * 健康检查间隔（秒）
-    */
+     * 健康检查间隔（秒）
+     */
     private static final int HEALTH_CHECK_INTERVAL = 5;
 
     /**
-    * 延迟执行器
-    */
+     * 延迟执行器
+     */
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
         Thread t = new Thread(r, "node-control-scheduler");
         t.setDaemon(true);
@@ -96,11 +96,11 @@ public class NodeControlHandler implements SyncMessageHandler, ApplicationContex
     }
 
     /**
-    * 处理重启命令
-    *
-    * @param data 请求数据
-    * @return 响应结果
-    */
+     * 处理重启命令
+     *
+     * @param data 请求数据
+     * @return 响应结果
+     */
     private Object handleRestart(Map<String, Object> data) {
         try {
             // 获取延迟时间，默认 3 秒
@@ -142,11 +142,11 @@ public class NodeControlHandler implements SyncMessageHandler, ApplicationContex
     }
 
     /**
-    * 处理关闭命令
-    *
-    * @param data 请求数据
-    * @return 响应结果
-    */
+     * 处理关闭命令
+     *
+     * @param data 请求数据
+     * @return 响应结果
+     */
     private Object handleShutdown(Map<String, Object> data) {
         try {
             // 获取延迟时间，默认 3 秒
@@ -178,11 +178,11 @@ public class NodeControlHandler implements SyncMessageHandler, ApplicationContex
     }
 
     /**
-    * 重启应用
-    * <p>
-    * 使用 Spring Boot 的优雅关闭机制，然后通过退出码触发重启
-    * </p>
-    */
+     * 重启应用
+     * <p>
+     * 使用 Spring Boot 的优雅关闭机制，然后通过退出码触发重启
+     * </p>
+     */
     private void restartApplication() {
         if (applicationContext instanceof ConfigurableApplicationContext ctx) {
  // 使用退出码 0 触发重启（需要配合外部进程管理器如 systemd、Docker 等）
@@ -206,11 +206,11 @@ public class NodeControlHandler implements SyncMessageHandler, ApplicationContex
     }
 
     /**
-    * 关闭应用
-    * <p>
-    * 使用 Spring Boot 的优雅关闭机制
-    * </p>
-    */
+     * 关闭应用
+     * <p>
+     * 使用 Spring Boot 的优雅关闭机制
+     * </p>
+     */
     private void shutdownApplication() {
         if (applicationContext instanceof ConfigurableApplicationContext ctx) {
             int exitCode = SpringApplication.exit(ctx, () -> 0);
@@ -223,17 +223,17 @@ public class NodeControlHandler implements SyncMessageHandler, ApplicationContex
     }
 
     /**
-    * 生成守护脚本（保全机制）
-    * <p>
-    * 脚本功能：
-    * 1. 定期检测应用健康状态
-    * 2. 启动成功后自动退出
-    * 3. 超时未启动记录日志
-    * </p>
-    *
-    * @param timeoutSeconds 超时时间（秒）
-    * @return 脚本文件路径
-    */
+     * 生成守护脚本（保全机制）
+     * <p>
+     * 脚本功能：
+     * 1. 定期检测应用健康状态
+     * 2. 启动成功后自动退出
+     * 3. 超时未启动记录日志
+     * </p>
+     *
+     * @param timeoutSeconds 超时时间（秒）
+     * @return 脚本文件路径
+     */
     private Path generateWatchdogScript(int timeoutSeconds) {
         try {
             Environment env = applicationContext.getEnvironment();
@@ -286,13 +286,13 @@ public class NodeControlHandler implements SyncMessageHandler, ApplicationContex
     }
 
     /**
-    * 生成 窗口 守护脚本
-    *
-    * @param healthUrl      健康检查 URL
-    * @param timeoutSeconds 超时时间
-    * @param appName        应用名称
-    * @return 脚本内容
-    */
+     * 生成 窗口 守护脚本
+     *
+     * @param healthUrl      健康检查 URL
+     * @param timeoutSeconds 超时时间
+     * @param appName        应用名称
+     * @return 脚本内容
+     */
     private String generateWindowsScript(String healthUrl, int timeoutSeconds, String appName) {
         return """
                 @echo off
@@ -345,13 +345,13 @@ public class NodeControlHandler implements SyncMessageHandler, ApplicationContex
     }
 
     /**
-    * 生成 Linux 守护脚本
-    *
-    * @param healthUrl      健康检查 URL
-    * @param timeoutSeconds 超时时间
-    * @param appName        应用名称
-    * @return 脚本内容
-    */
+     * 生成 Linux 守护脚本
+     *
+     * @param healthUrl      健康检查 URL
+     * @param timeoutSeconds 超时时间
+     * @param appName        应用名称
+     * @return 脚本内容
+     */
     private String generateLinuxScript(String healthUrl, int timeoutSeconds, String appName) {
         return """
                 #!/bin/bash
@@ -393,10 +393,10 @@ public class NodeControlHandler implements SyncMessageHandler, ApplicationContex
     }
 
     /**
-    * 启动守护脚本
-    *
-    * @param scriptPath 脚本路径
-    */
+     * 启动守护脚本
+     *
+     * @param scriptPath 脚本路径
+     */
     private void startWatchdogScript(Path scriptPath) {
         try {
             boolean isWindows = System.getProperty("os.name").toLowerCase().contains("win");

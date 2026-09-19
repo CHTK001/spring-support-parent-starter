@@ -21,19 +21,19 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 /**
-* 数据同步modecompare探针类。
-*
-* @author CH
-* @since 4.0.0
+ * 数据同步modecompare探针类。
+ *
+ * @author CH
+ * @since 4.0.0
  */
 public final class DataSyncModeCompareProbe {
     static final Path CSV = Paths.get("target/stress-compare/source.csv"); // CSV
     static final int ROWS = 100_000; // ROWS
     static final int BATCH = 1000; // 批量
     /**
-    * Main
-    *
-    * @param args 参数
+     * Main
+     *
+     * @param args 参数
      */
     public static void main(String[] args) throws Exception {
         Files.createDirectories(CSV.getParent());
@@ -54,9 +54,9 @@ public final class DataSyncModeCompareProbe {
         System.err.println("========================================================================");
     }
     /**
-    * 测试direct
-    *
-    * @param label 标签
+     * 测试direct
+     *
+     * @param label 标签
      */
     static void testDirect(String label) throws Exception {
         var cfg = DefaultSyncDataSchedulerManager.SchedulerConfig.builder()
@@ -76,9 +76,9 @@ public final class DataSyncModeCompareProbe {
         report(label, ms, sink.count.get());
     }
     /**
-    * 测试chronicle
-    *
-    * @param label 标签
+     * 测试chronicle
+     *
+     * @param label 标签
      */
     static void testChronicle(String label) throws Exception {
         try {
@@ -106,9 +106,9 @@ public final class DataSyncModeCompareProbe {
         }
     }
     /**
-    * 测试入内存
-    *
-    * @param label 标签
+     * 测试入内存
+     *
+     * @param label 标签
      */
     static void testInMemory(String label) throws Exception {
         var cfg = DefaultSyncDataSchedulerManager.SchedulerConfig.builder()
@@ -132,11 +132,11 @@ public final class DataSyncModeCompareProbe {
         report(label, ms, sink.count.get());
     }
     /**
-    * Report
-    *
-    * @param label 标签
-    * @param ms ms
-    * @param count 数量
+     * Report
+     *
+     * @param label 标签
+     * @param ms ms
+     * @param count 数量
      */
     static void report(String label, long ms, long count) {
         long tp = count * 1000L / Math.max(1, ms);

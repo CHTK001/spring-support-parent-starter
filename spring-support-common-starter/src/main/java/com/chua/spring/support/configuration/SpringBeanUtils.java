@@ -9,19 +9,19 @@ import java.util.Collection;
 import java.util.Collections;
 
 /**
-* Spring Bean 工具类
-* <p>
-* 提供获取 Spring Bean 的静态方法
-* </p>
-*
-* @author CH
-* @since 4.0.0
+ * Spring Bean 工具类
+ * <p>
+ * 提供获取 Spring Bean 的静态方法
+ * </p>
+ *
+ * @author CH
+ * @since 4.0.0
  */
 public class SpringBeanUtils {
 
     /**
-    * springBean工具。
-    */
+     * springBean工具。
+     */
     private SpringBeanUtils() {
     }
 
@@ -38,12 +38,12 @@ public class SpringBeanUtils {
     }
 
     /**
-    * 根据名称获取 Bean
-    *
-    * @param name Bean 名称
-    * @param <T>  Bean 类型
-    * @return Bean 实例
-    */
+     * 根据名称获取 Bean
+     *
+     * @param name Bean 名称
+     * @param <T>  Bean 类型
+     * @return Bean 实例
+     */
     @SuppressWarnings("unchecked")
     public static <T> T getBean(String name) {
         if (applicationContext == null) {
@@ -53,12 +53,12 @@ public class SpringBeanUtils {
     }
 
     /**
-    * 根据类型获取 Bean
-    *
-    * @param clz Bean 类型
-    * @param <T> Bean 类型
-    * @return Bean 实例
-    */
+     * 根据类型获取 Bean
+     *
+     * @param clz Bean 类型
+     * @param <T> Bean 类型
+     * @return Bean 实例
+     */
     public static <T> T getBean(Class<T> clz) {
         if (applicationContext == null) {
             return null;
@@ -67,37 +67,37 @@ public class SpringBeanUtils {
     }
 
     /**
-    * 获取 application上下文（允许返回 空）
-    *
-    * @return ApplicationContext 实例
-    */
+     * 获取 application上下文（允许返回 空）
+     *
+     * @return ApplicationContext 实例
+     */
     public static ApplicationContext getApplicationContextOrNull() {
         return applicationContext;
     }
 
     /**
-    * 获取 application上下文
-    *
-    * @return ApplicationContext 实例
-    */
+     * 获取 application上下文
+     *
+     * @return ApplicationContext 实例
+     */
     public static ApplicationContext getApplicationContext() {
         return applicationContext;
     }
 
     /**
-    * 获取 环境
-    *
-    * @return Environment 实例
-    */
+     * 获取 环境
+     *
+     * @return Environment 实例
+     */
     public static Environment getEnvironment() {
         return getBean(Environment.class);
     }
 
     /**
-    * 获取 请求mapping处理器mapping
-    *
-    * @return HandlerMapping 实例
-    */
+     * 获取 请求mapping处理器mapping
+     *
+     * @return HandlerMapping 实例
+     */
     public static RequestMappingHandlerMapping getRequestMappingHandlerMapping() {
         HandlerMapping handlerMapping = getBean("requestMappingHandlerMapping", HandlerMapping.class);
         if (handlerMapping instanceof RequestMappingHandlerMapping rmhm) {
@@ -107,12 +107,12 @@ public class SpringBeanUtils {
     }
 
     /**
-    * 获取指定类型的所有 Bean 实例。
-    *
-    * @param clz Bean 类型
-    * @param <T> Bean 类型参数
-    * @return 所有该类型的 Bean 集合
-    */
+     * 获取指定类型的所有 Bean 实例。
+     *
+     * @param clz Bean 类型
+     * @param <T> Bean 类型参数
+     * @return 所有该类型的 Bean 集合
+     */
     public static <T> Collection<T> getBeanList(Class<T> clz) {
         if (applicationContext == null) {
             return Collections.emptyList();
@@ -121,13 +121,13 @@ public class SpringBeanUtils {
     }
 
     /**
-    * 根据名称和类型获取 Bean
-    *
-    * @param name Bean 名称
-    * @param clz  Bean 类型
-    * @param <T>  Bean 类型
-    * @return Bean 实例
-    */
+     * 根据名称和类型获取 Bean
+     *
+     * @param name Bean 名称
+     * @param clz  Bean 类型
+     * @param <T>  Bean 类型
+     * @return Bean 实例
+     */
     @SuppressWarnings("unchecked")
     public static <T> T getBean(String name, Class<T> clz) {
         if (applicationContext == null) {
@@ -137,10 +137,10 @@ public class SpringBeanUtils {
     }
 
     /**
-    * 将 Spring Bean 依赖注入到指定对象中。
-    *
-    * @param bean 待注入的对象
-    */
+     * 将 Spring Bean 依赖注入到指定对象中。
+     *
+     * @param bean 待注入的对象
+     */
     public static void autowireBean(Object bean) {
         if (applicationContext != null) {
             applicationContext.getAutowireCapableBeanFactory().autowireBean(bean);

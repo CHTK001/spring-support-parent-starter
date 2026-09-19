@@ -12,17 +12,17 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 
 /**
-* SSH服务端自动配置类
-* 
-* 提供SSH服务端功能的自动配置，包括：
-* - SSH服务端启动和配置
-* - 用户认证配置
-* - 文件传输配置
-* - 安全配置
-* 
-* @版本 4.0.0.32
-* @author CH
-* @since 4.0.0
+ * SSH服务端自动配置类
+ * 
+ * 提供SSH服务端功能的自动配置，包括：
+ * - SSH服务端启动和配置
+ * - 用户认证配置
+ * - 文件传输配置
+ * - 安全配置
+ * 
+ * @版本 4.0.0.32
+ * @author CH
+ * @since 4.0.0
  */
 @Slf4j
 @AutoConfiguration
@@ -32,28 +32,28 @@ import org.springframework.context.annotation.Bean;
 public class SshAutoConfiguration {
 
     /**
-    * SSH服务端服务Bean
-    *
-    * @param properties SSH服务端配置属性
-    * @return SSH服务端服务实例
-    */
+     * SSH服务端服务Bean
+     *
+     * @param properties SSH服务端配置属性
+     * @return SSH服务端服务实例
+     */
     @Bean
     public SshServerService sshServerService(SshServerProperties properties) {
         log.info(" >>>>>>> 初始化SSH服务端服务，端口: {}", properties.getPort());
         /**
-        * ssh服务端服务。
-        * @param properties 属性
-        * @return ssh服务端服务的结果
-        */
+         * ssh服务端服务。
+         * @param properties 属性
+         * @return ssh服务端服务的结果
+         */
         return new SshServerService(properties);
     }
 
     @Bean
     /**
-    * ssh服务信息contributor
-    *
-    * @return ssh服务信息contributor的结果
-    */
+     * ssh服务信息contributor
+     *
+     * @return ssh服务信息contributor的结果
+     */
     public ServiceInfoContributor sshServiceInfoContributor() {
         return registry -> {
             registry.registerFlag("ssh", "SSH", true, "SSH服务端模块");

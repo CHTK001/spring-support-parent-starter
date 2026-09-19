@@ -21,10 +21,10 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
-* 题目服务实现
-*
-* @since 4.0.0.42
-* @author CH
+ * 题目服务实现
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @Service
@@ -86,11 +86,11 @@ public class EduQuestionServiceImpl extends ServiceImpl<EduQuestionMapper, EduQu
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-    * 保存Question
-    *
-    * @param dto dto
-    * @return 保存question的结果
-    */
+     * 保存Question
+     *
+     * @param dto dto
+     * @return 保存question的结果
+     */
     public Long saveQuestion(QuestionSaveDTO dto) {
         EduQuestion entity = new EduQuestion();
         entity.setQuestionType(dto.getQuestionType());
@@ -131,19 +131,19 @@ public class EduQuestionServiceImpl extends ServiceImpl<EduQuestionMapper, EduQu
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-    * 导入questions
-    *
-    * @param list 列表
-    * @return 导入questions的结果
-    */
+     * 导入questions
+     *
+     * @param list 列表
+     * @return 导入questions的结果
+     */
     public int importQuestions(List<QuestionSaveDTO> list) {
         int count = 0;
         for (QuestionSaveDTO dto : list) {
             try {
                 /**
-                * 保存question。
-                * @param dto dto
-                */
+                 * 保存question。
+                 * @param dto dto
+                 */
                 saveQuestion(dto);
                 count++;
             } catch (Exception e) {
@@ -157,19 +157,19 @@ public class EduQuestionServiceImpl extends ServiceImpl<EduQuestionMapper, EduQu
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-    * 删除Question
-    *
-    * @param id 标识
-    * @return 删除question的结果
-    */
+     * 删除Question
+     *
+     * @param id 标识
+     * @return 删除question的结果
+     */
     public boolean deleteQuestion(Long id) {
         EduQuestion entity = baseMapper.selectById(id);
         if (entity == null) {
             /**
-            * 业务异常。
-            * @param "题目不存在" "题目不存在"
-            * @return 业务异常的结果
-            */
+             * 业务异常。
+             * @param "题目不存在" "题目不存在"
+             * @return 业务异常的结果
+             */
             throw new BusinessException("题目不存在");
         }
         // 逻辑删除：将状态置为0

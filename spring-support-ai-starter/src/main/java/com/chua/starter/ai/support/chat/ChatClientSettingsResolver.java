@@ -9,12 +9,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Map;
 
 /**
-* 聊天客户端配置解析器。
-*
-* 当前版本仅从 sys_AI_全局_setting(runtime) 读取 LLM 主链路配置。
-*
-* @since 2026/04/03
-* @author CH
+ * 聊天客户端配置解析器。
+ *
+ * 当前版本仅从 sys_AI_全局_setting(runtime) 读取 LLM 主链路配置。
+ *
+ * @since 2026/04/03
+ * @author CH
  */
 public final class ChatClientSettingsResolver {
 
@@ -37,28 +37,28 @@ public final class ChatClientSettingsResolver {
         boolean enabled = getBoolean(sysAiGlobalSettingService, "enabled", true);
         if (!enabled) {
             /**
-            * illegal状态异常。
-            * @param 已禁用" 已禁用"
-            * @return illegal状态异常的结果
-            */
+             * illegal状态异常。
+             * @param 已禁用" 已禁用"
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("sys_ai_global_setting.runtime.enabled=false，ChatClient 已禁用");
         }
 
         String provider = firstNonBlank(
                 /**
-                * 获取值。
-                * @param sysAiGlobalSettingService sysAI全局setting服务
-                * @param "provider" "提供者"
-                */
+                 * 获取值。
+                 * @param sysAiGlobalSettingService sysAI全局setting服务
+                 * @param "provider" "提供者"
+                 */
                 getValue(sysAiGlobalSettingService, "provider"),
                 "openai"
         );
         String factory = firstNonBlank(
                 /**
-                * 获取值。
-                * @param sysAiGlobalSettingService sysAI全局setting服务
-                * @param "factory" "工厂"
-                */
+                 * 获取值。
+                 * @param sysAiGlobalSettingService sysAI全局setting服务
+                 * @param "factory" "工厂"
+                 */
                 getValue(sysAiGlobalSettingService, "factory"),
                 "default"
         );
@@ -69,44 +69,44 @@ public final class ChatClientSettingsResolver {
                 .provider(provider)
                 .baseUrl(firstNonBlank(
                         /**
-                        * 获取值。
-                        * @param sysAiGlobalSettingService sysAI全局setting服务
-                        * @param "provider_base_url" "提供者_基础_url"
-                        */
+                         * 获取值。
+                         * @param sysAiGlobalSettingService sysAI全局setting服务
+                         * @param "provider_base_url" "提供者_基础_url"
+                         */
                         getValue(sysAiGlobalSettingService, "provider_base_url"),
                         /**
-                        * 获取值。
-                        * @param sysAiGlobalSettingService sysAI全局setting服务
-                        * @param "provider_api_address" "提供者_api_地址"
-                        */
+                         * 获取值。
+                         * @param sysAiGlobalSettingService sysAI全局setting服务
+                         * @param "provider_api_address" "提供者_api_地址"
+                         */
                         getValue(sysAiGlobalSettingService, "provider_api_address")
                 ))
                 .appKey(firstNonBlank(
                         /**
-                        * 获取值。
-                        * @param sysAiGlobalSettingService sysAI全局setting服务
-                        * @param "provider_api_key" "提供者_api_键"
-                        */
+                         * 获取值。
+                         * @param sysAiGlobalSettingService sysAI全局setting服务
+                         * @param "provider_api_key" "提供者_api_键"
+                         */
                         getValue(sysAiGlobalSettingService, "provider_api_key"),
                         /**
-                        * 获取值。
-                        * @param sysAiGlobalSettingService sysAI全局setting服务
-                        * @param "provider_app_key" "提供者_app_键"
-                        */
+                         * 获取值。
+                         * @param sysAiGlobalSettingService sysAI全局setting服务
+                         * @param "provider_app_key" "提供者_app_键"
+                         */
                         getValue(sysAiGlobalSettingService, "provider_app_key")
                 ))
                 .appSecret(firstNonBlank(
                         /**
-                        * 获取值。
-                        * @param sysAiGlobalSettingService sysAI全局setting服务
-                        * @param "provider_app_secret" "提供者_app_secret"
-                        */
+                         * 获取值。
+                         * @param sysAiGlobalSettingService sysAI全局setting服务
+                         * @param "provider_app_secret" "提供者_app_secret"
+                         */
                         getValue(sysAiGlobalSettingService, "provider_app_secret"),
                         /**
-                        * 获取值。
-                        * @param sysAiGlobalSettingService sysAI全局setting服务
-                        * @param "provider_secret_key" "提供者_secret_键"
-                        */
+                         * 获取值。
+                         * @param sysAiGlobalSettingService sysAI全局setting服务
+                         * @param "provider_secret_key" "提供者_secret_键"
+                         */
                         getValue(sysAiGlobalSettingService, "provider_secret_key")
                 ))
                 .proxy(getValue(sysAiGlobalSettingService, "provider_proxy"))
@@ -131,47 +131,47 @@ public final class ChatClientSettingsResolver {
     }
 
     /**
-    * 获取值
-    *
-    * @param service 服务
-    * @param field 字段
-    * @return 获取值的结果
-    */
+     * 获取值
+     *
+     * @param service 服务
+     * @param field 字段
+     * @return 获取值的结果
+     */
     private static String getValue(SysAiGlobalSettingService service, String field) {
         return service.getValue(GROUP, field).orElse(null);
     }
 
     /**
-    * 获取布尔值
-    *
-    * @param service 服务
-    * @param field 字段
-    * @param defaultValue 默认值
-    * @return 获取布尔值的结果
-    */
+     * 获取布尔值
+     *
+     * @param service 服务
+     * @param field 字段
+     * @param defaultValue 默认值
+     * @return 获取布尔值的结果
+     */
     private static boolean getBoolean(SysAiGlobalSettingService service, String field, boolean defaultValue) {
         return service.getBoolean(GROUP, field, defaultValue);
     }
 
     /**
-    * 获取Integer
-    *
-    * @param service 服务
-    * @param field 字段
-    * @return 获取integer的结果
-    */
+     * 获取Integer
+     *
+     * @param service 服务
+     * @param field 字段
+     * @return 获取integer的结果
+     */
     private static Integer getInteger(SysAiGlobalSettingService service, String field) {
         return getInteger(service, field, null);
     }
 
     /**
-    * 获取Integer
-    *
-    * @param service 服务
-    * @param field 字段
-    * @param defaultValue 默认值
-    * @return 获取integer的结果
-    */
+     * 获取Integer
+     *
+     * @param service 服务
+     * @param field 字段
+     * @param defaultValue 默认值
+     * @return 获取integer的结果
+     */
     private static Integer getInteger(SysAiGlobalSettingService service, String field, Integer defaultValue) {
         String value = getValue(service, field);
         if (StringUtils.isBlank(value)) {
@@ -185,12 +185,12 @@ public final class ChatClientSettingsResolver {
     }
 
     /**
-    * 获取Double
-    *
-    * @param service 服务
-    * @param field 字段
-    * @return 获取double的结果
-    */
+     * 获取Double
+     *
+     * @param service 服务
+     * @param field 字段
+     * @return 获取double的结果
+     */
     private static Double getDouble(SysAiGlobalSettingService service, String field) {
         String value = getValue(service, field);
         if (StringUtils.isBlank(value)) {
@@ -204,13 +204,13 @@ public final class ChatClientSettingsResolver {
     }
 
     /**
-    * 获取Long
-    *
-    * @param service 服务
-    * @param field 字段
-    * @param defaultValue 默认值
-    * @return 获取long的结果
-    */
+     * 获取Long
+     *
+     * @param service 服务
+     * @param field 字段
+     * @param defaultValue 默认值
+     * @return 获取long的结果
+     */
     private static Long getLong(SysAiGlobalSettingService service, String field, long defaultValue) {
         String value = getValue(service, field);
         if (StringUtils.isBlank(value)) {
@@ -224,11 +224,11 @@ public final class ChatClientSettingsResolver {
     }
 
     /**
-    * 第一个nonblank
-    *
-    * @param values 值
-    * @return 第一个nonblank的结果
-    */
+     * 第一个nonblank
+     *
+     * @param values 值
+     * @return 第一个nonblank的结果
+     */
     private static String firstNonBlank(String... values) {
         if (values == null) {
             return null;
@@ -242,20 +242,20 @@ public final class ChatClientSettingsResolver {
     }
 
     /**
-    * 解析 extra_头部 JSON 字符串为 映射
-    *
-    * @param json json
-    * @return 解析extra头部的结果
-    */
+     * 解析 extra_头部 JSON 字符串为 映射
+     *
+     * @param json json
+     * @return 解析extra头部的结果
+     */
     private static Map<String, String> parseExtraHeaders(String json) {
         if (StringUtils.isBlank(json)) {
             return null;
         }
         try {
             /**
-            * 对象映射器。
-            * @return 对象映射器的结果
-            */
+             * 对象映射器。
+             * @return 对象映射器的结果
+             */
             return new ObjectMapper().readValue(json, new TypeReference<Map<String, String>>() {});
         } catch (Exception ignored) {
             return null;

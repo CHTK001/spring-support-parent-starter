@@ -6,10 +6,10 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
-* 支付请求
-*
-* @since 2026-03-18
-* @author CH
+ * 支付请求
+ *
+ * @since 2026-03-18
+ * @author CH
  */
 @Data
 public class PaymentRequest {

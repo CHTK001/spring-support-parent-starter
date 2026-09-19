@@ -29,11 +29,11 @@ public class MonitorConfigServiceImpl implements MonitorConfigService {
     @Override
     @Cacheable(cacheNames = "monitorConfig", key = "'monitor.config:key:' + #key")
     /**
-    * 查找by键
-    *
-    * @param key 键
-    * @return findby键的结果
-    */
+     * 查找by键
+     *
+     * @param key 键
+     * @return findby键的结果
+     */
     public ReturnResult<MsMonitorConfig> findByKey(String key) {
         try {
             LambdaQueryWrapper<MsMonitorConfig> w = new LambdaQueryWrapper<>();
@@ -81,10 +81,10 @@ public class MonitorConfigServiceImpl implements MonitorConfigService {
     @Override
     @Cacheable(cacheNames = "monitorConfig", key = "'monitor.config:all'")
     /**
-    * 获取全部
-    *
-    * @return 获取全部的结果
-    */
+     * 获取全部
+     *
+     * @return 获取全部的结果
+     */
     public ReturnResult<Map<String, String>> getAll() {
         try {
             Map<String, String> map = new HashMap<>();
@@ -127,11 +127,11 @@ public class MonitorConfigServiceImpl implements MonitorConfigService {
     @Transactional(rollbackFor = Exception.class)
     @CacheEvict(allEntries = true, cacheNames = "monitorConfig")
     /**
-    * upsert全部
-    *
-    * @param entities 实体
-    * @return upsert全部的结果
-    */
+     * upsert全部
+     *
+     * @param entities 实体
+     * @return upsert全部的结果
+     */
     public ReturnResult<Integer> upsertAll(List<MsMonitorConfig> entities) {
         if (entities == null || entities.isEmpty()) {
             return ReturnResult.ok(0);

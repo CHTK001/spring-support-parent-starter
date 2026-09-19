@@ -7,19 +7,19 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
 /**
-* 设备门禁实体
-* <p>对应数据库表 device_door。</p>
-*
-* @since 4.0.0.42
-* @author CH
+ * 设备门禁实体
+ * <p>对应数据库表 device_door。</p>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Data
 @TableName("device_door")
 public class DeviceDoor {
 
     /**
-    * 主键 标识
-    */
+     * 主键 标识
+     */
     @TableId(value = "device_door_id", type = IdType.ASSIGN_UUID)
     /** devicedoorid */
     private String deviceDoorId;

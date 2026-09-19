@@ -6,13 +6,13 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.core.env.Environment;
 
 /**
-* Nonce 签名配置（与前端 获取配置().secretKey 一致）
-* <p>
-* 支持多路径解析：plugin.nonce.标志.secret-Key、nonce.标志.secret-Key、环境变量 PLUGIN_NONCE_标志_SECRET_Key
-* </p>
-*
-* @since 2025/01/15
-* @author CH
+ * Nonce 签名配置（与前端 获取配置().secretKey 一致）
+ * <p>
+ * 支持多路径解析：plugin.nonce.标志.secret-Key、nonce.标志.secret-Key、环境变量 PLUGIN_NONCE_标志_SECRET_Key
+ * </p>
+ *
+ * @since 2025/01/15
+ * @author CH
  */
 @ConfigurationProperties(prefix = NonceSignProperties.PRE, ignoreInvalidFields = true)
 @Getter
@@ -33,18 +33,18 @@ public class NonceSignProperties {
     public static final String DEFAULT_SECRET = "aP9xL3sV7mQ2zT5kB8nR1cY4wH6eD0fJ";
 
     /**
-    * 签名密钥，需与前端 获取配置().secretKey 一致。
-    * 优先读取环境变量 PLUGIN_NONCE_标志_SECRET_Key，未设置时使用开发兜底值 默认_SECRET。
-    */
+     * 签名密钥，需与前端 获取配置().secretKey 一致。
+     * 优先读取环境变量 PLUGIN_NONCE_标志_SECRET_Key，未设置时使用开发兜底值 默认_SECRET。
+     */
     private String secretKey = System.getenv("PLUGIN_NONCE_SIGN_SECRET_KEY") != null
         ? System.getenv("PLUGIN_NONCE_SIGN_SECRET_KEY") : DEFAULT_SECRET;
 
     /**
-    * 从 环境 重新解析密钥（多路径回退）
-    *
-    * @param env 环境
-    * @return 解析到的密钥，无则返回当前 secretKey
-    */
+     * 从 环境 重新解析密钥（多路径回退）
+     *
+     * @param env 环境
+     * @return 解析到的密钥，无则返回当前 secretKey
+     */
     public String resolveSecretKey(Environment env) {
         if (env == null) {
             return secretKey;

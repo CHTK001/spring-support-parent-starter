@@ -21,8 +21,8 @@ public class SipServerManager {
     private static final Logger log = LoggerFactory.getLogger(SipServerManager.class);
 
     /**
-    * 控制端口监听对象（当前由 {@link SipTunnel} 内部持有，此字段保留用于后续接管）
-    */
+     * 控制端口监听对象（当前由 {@link SipTunnel} 内部持有，此字段保留用于后续接管）
+     */
     private ServerSocket controlSocket;
     /** 服务运行标记 */
     private boolean running = false;
@@ -44,10 +44,10 @@ public class SipServerManager {
     }
 
     /**
-    * 根据配置启动 SIP 服务
-    *
-    * <p>线程安全：已在运行时直接返回；启动失败仅记录告警，不阻断应用启动。</p>
-    */
+     * 根据配置启动 SIP 服务
+     *
+     * <p>线程安全：已在运行时直接返回；启动失败仅记录告警，不阻断应用启动。</p>
+     */
     public synchronized void tryStart() {
         if (running) {
             log.info("[SIP] 服务已在运行中");
@@ -71,8 +71,8 @@ public class SipServerManager {
     }
 
     /**
-    * 应用关闭时停止 SIP 服务
-    */
+     * 应用关闭时停止 SIP 服务
+     */
     @PreDestroy
     public void stop() {
         running = false;

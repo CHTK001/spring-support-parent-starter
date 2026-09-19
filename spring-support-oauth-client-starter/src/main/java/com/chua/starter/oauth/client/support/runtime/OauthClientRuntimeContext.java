@@ -7,10 +7,10 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.core.env.Environment;
 
 /**
-* o认证 客户端 运行时上下文。
-*
-* @author CH
-* @since 4.0.0
+ * o认证 客户端 运行时上下文。
+ *
+ * @author CH
+ * @since 4.0.0
  */
 public final class OauthClientRuntimeContext {
     private static volatile ApplicationContext applicationContext; // application上下文
@@ -35,46 +35,46 @@ public final class OauthClientRuntimeContext {
     }
 
     /**
-    * 获取application上下文
-    *
-    * @return 获取application上下文的结果
-    */
+     * 获取application上下文
+     *
+     * @return 获取application上下文的结果
+     */
     public static ApplicationContext getApplicationContext() {
         return applicationContext;
     }
 
     /**
-    * 设置环境
-    *
-    * @param env env
-    */
+     * 设置环境
+     *
+     * @param env env
+     */
     public static void setEnvironment(Environment env) {
         environment = env;
     }
 
     /**
-    * 获取环境
-    *
-    * @return 获取环境的结果
-    */
+     * 获取环境
+     *
+     * @return 获取环境的结果
+     */
     public static Environment getEnvironment() {
         return environment;
     }
 
     /**
-    * 设置Bean工厂
-    *
-    * @param factory 工厂
-    */
+     * 设置Bean工厂
+     *
+     * @param factory 工厂
+     */
     public static void setBeanFactory(ConfigurableBeanFactory factory) {
         beanFactory = factory;
     }
 
     /**
-    * 获取Bean工厂
-    *
-    * @return 获取Bean工厂的结果
-    */
+     * 获取Bean工厂
+     *
+     * @return 获取Bean工厂的结果
+     */
     public static ConfigurableBeanFactory getBeanFactory() {
         if (beanFactory != null) {
             return beanFactory;
@@ -87,28 +87,28 @@ public final class OauthClientRuntimeContext {
     }
 
     /**
-    * 设置认证客户端属性
-    *
-    * @param properties 属性
-    */
+     * 设置认证客户端属性
+     *
+     * @param properties 属性
+     */
     public static void setAuthClientProperties(AuthClientProperties properties) {
         authClientProperties = properties;
     }
 
     /**
-    * 获取认证客户端属性
-    *
-    * @return 获取认证客户端属性的结果
-    */
+     * 获取认证客户端属性
+     *
+     * @return 获取认证客户端属性的结果
+     */
     public static AuthClientProperties getAuthClientProperties() {
         if (authClientProperties != null) {
             return authClientProperties;
         }
         if (environment == null) {
             /**
-            * 认证客户端属性。
-            * @return 认证客户端属性的结果
-            */
+             * 认证客户端属性。
+             * @return 认证客户端属性的结果
+             */
             return new AuthClientProperties();
         }
         authClientProperties = Binder.get(environment).bindOrCreate(AuthClientProperties.PRE, AuthClientProperties.class);
@@ -116,11 +116,11 @@ public final class OauthClientRuntimeContext {
     }
 
     /**
-    * 解析Placeholders
-    *
-    * @param value 值
-    * @return resolvePlaceholders的结果
-    */
+     * 解析Placeholders
+     *
+     * @param value 值
+     * @return resolvePlaceholders的结果
+     */
     public static String resolvePlaceholders(String value) {
         if (value == null) {
             return null;
@@ -129,20 +129,20 @@ public final class OauthClientRuntimeContext {
     }
 
     /**
-    * 获取application名称
-    *
-    * @return 获取application名称的结果
-    */
+     * 获取application名称
+     *
+     * @return 获取application名称的结果
+     */
     public static String getApplicationName() {
         String value = resolvePlaceholders("${spring.application.name:}");
         return value == null ? "" : value;
     }
 
     /**
-    * 获取上下文路径
-    *
-    * @return 获取上下文路径的结果
-    */
+     * 获取上下文路径
+     *
+     * @return 获取上下文路径的结果
+     */
     public static String getContextPath() {
         String value = resolvePlaceholders("${server.servlet.context-path:}");
         return value == null ? "" : value;

@@ -13,41 +13,41 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
 /**
-* 服务管理 —— 描述委托过滤器。
-*
-* <p>用 {@code ServerFilterDescriptor} 中声明的 name/order/enabled 归一化底层过滤器实例，
-* 同时桥接同步与响应式两种过滤链接口：底层实现哪种链路就透传哪种。</p>
-*
-* @author CH
-* @since 4.0.0.42
+ * 服务管理 —— 描述委托过滤器。
+ *
+ * <p>用 {@code ServerFilterDescriptor} 中声明的 name/order/enabled 归一化底层过滤器实例，
+ * 同时桥接同步与响应式两种过滤链接口：底层实现哪种链路就透传哪种。</p>
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 public class DelegatingServerFilter implements ServerFilter, ReactiveServerFilter {
 
     /**
-    * 底层过滤器实例
-    */
+     * 底层过滤器实例
+     */
     private final ServerFilter delegate;
     /**
-    * 描述名
-    */
+     * 描述名
+     */
     private final String filterName;
     /**
-    * 覆盖顺序(空 则沿用底层实现)
-    */
+     * 覆盖顺序(空 则沿用底层实现)
+     */
     private final Integer order;
     /**
-    * 描述级启用开关(支持热切换)
-    */
+     * 描述级启用开关(支持热切换)
+     */
     private volatile boolean enabled;
 
     /**
-    * 创建委托过滤器
-    *
-    * @param delegate   底层过滤器
-    * @param filterName 描述名
-    * @param order      覆盖顺序(空 则沿用底层实现)
-    * @param enabled    描述级启用开关
-    */
+     * 创建委托过滤器
+     *
+     * @param delegate   底层过滤器
+     * @param filterName 描述名
+     * @param order      覆盖顺序(空 则沿用底层实现)
+     * @param enabled    描述级启用开关
+     */
     public DelegatingServerFilter(ServerFilter delegate, String filterName, Integer order, boolean enabled) {
         this.delegate = delegate;
         this.filterName = filterName;
@@ -56,19 +56,19 @@ public class DelegatingServerFilter implements ServerFilter, ReactiveServerFilte
     }
 
     /**
-    * 热切换启用状态(不重建过滤器实例)。
-    *
-    * @param enabled 是否启用
-    */
+     * 热切换启用状态(不重建过滤器实例)。
+     *
+     * @param enabled 是否启用
+     */
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
     }
 
     /**
-    * 获取底层过滤器实例
-    *
-    * @return 底层过滤器
-    */
+     * 获取底层过滤器实例
+     *
+     * @return 底层过滤器
+     */
     public ServerFilter getDelegate() {
         return delegate;
     }

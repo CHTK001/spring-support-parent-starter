@@ -14,15 +14,15 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
-* 同步消息传输加密工具。
-* <p>
-* 基于 AES-GCM 认证加密，密钥由配置的 加密货币-secret 经 SHA-256 派生。
-* 仅加密消息 payload（topic 不加密），使用方无感知。
-* </p>
-*
-* @版本 1.0.0
-* @since 4.0.0.42
-* @author CH
+ * 同步消息传输加密工具。
+ * <p>
+ * 基于 AES-GCM 认证加密，密钥由配置的 加密货币-secret 经 SHA-256 派生。
+ * 仅加密消息 payload（topic 不加密），使用方无感知。
+ * </p>
+ *
+ * @版本 1.0.0
+ * @since 4.0.0.42
+ * @author CH
  */
 public final class SyncCryptoUtils {
 
@@ -54,22 +54,22 @@ public final class SyncCryptoUtils {
     }
 
     /**
-    * 判断是否已启用加密（配置了密钥）
-    *
-    * @param properties 同步配置
-    * @return true=启用
-    */
+     * 判断是否已启用加密（配置了密钥）
+     *
+     * @param properties 同步配置
+     * @return true=启用
+     */
     public static boolean isEnabled(SyncProperties properties) {
         return properties != null && hasText(properties.getCryptoSecret());
     }
 
     /**
-    * 加密消息 payload。未启用加密或加密失败时原样返回。
-    *
-    * @param payload    明文消息（映射 或其它可 JSON 序列化对象）
-    * @param properties 同步配置
-    * @return 加密后的包装 映射，未启用时返回原对象
-    */
+     * 加密消息 payload。未启用加密或加密失败时原样返回。
+     *
+     * @param payload    明文消息（映射 或其它可 JSON 序列化对象）
+     * @param properties 同步配置
+     * @return 加密后的包装 映射，未启用时返回原对象
+     */
     public static Object encrypt(Object payload, SyncProperties properties) {
         if (!isEnabled(properties) || payload == null) {
             return payload;
@@ -95,12 +95,12 @@ public final class SyncCryptoUtils {
     }
 
     /**
-    * 解密消息 payload。非加密消息、未配置密钥或解密失败时原样返回。
-    *
-    * @param message    收到的消息对象
-    * @param properties 同步配置
-    * @return 解密后的 映射，未启用或不匹配时返回原对象
-    */
+     * 解密消息 payload。非加密消息、未配置密钥或解密失败时原样返回。
+     *
+     * @param message    收到的消息对象
+     * @param properties 同步配置
+     * @return 解密后的 映射，未启用或不匹配时返回原对象
+     */
     public static Object decrypt(Object message, SyncProperties properties) {
         if (!isEnabled(properties) || message == null || !(message instanceof Map<?, ?> map)) {
             return message;
@@ -128,19 +128,19 @@ public final class SyncCryptoUtils {
     }
 
     /**
-    * deriveKey。
-    * @param secret secret
-    * @return deriveKey的结果
-    */
+     * deriveKey。
+     * @param secret secret
+     * @return deriveKey的结果
+     */
     private static byte[] deriveKey(String secret) throws Exception {
         return MessageDigest.getInstance(SHA_256).digest(secret.getBytes(StandardCharsets.UTF_8));
     }
 
     /**
-    * 是否包含文本。
-    * @param value 值
-    * @return 是否包含文本的结果
-    */
+     * 是否包含文本。
+     * @param value 值
+     * @return 是否包含文本的结果
+     */
     private static boolean hasText(String value) {
         return value != null && !value.isBlank();
     }

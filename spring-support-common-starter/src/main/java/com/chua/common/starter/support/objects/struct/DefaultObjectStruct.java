@@ -12,10 +12,10 @@ import java.util.List;
 import java.util.Map;
 
 /**
-* 默认对象结构化实现
-*
-* @author CH
-* @since 4.0.0
+ * 默认对象结构化实现
+ *
+ * @author CH
+ * @since 4.0.0
  */
 public class DefaultObjectStruct<T> implements ObjectStruct<T> {
 
@@ -152,12 +152,12 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
     }
 
     /**
-    * 构建路径
-    *
-    * @param node 节点
-    * @param currentName 当前名称
-    * @return 构建路径的结果
-    */
+     * 构建路径
+     *
+     * @param node 节点
+     * @param currentName 当前名称
+     * @return 构建路径的结果
+     */
     private String buildPath(TreeNode<T> node, String currentName) {
         if (node.getParentId() == null) {
             return currentName;
@@ -168,11 +168,11 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
     }
 
     /**
-    * collect节点
-    *
-    * @param nodes 节点
-    * @param result 结果
-    */
+     * collect节点
+     *
+     * @param nodes 节点
+     * @param result 结果
+     */
     private void collectNodes(List<TreeNode<T>> nodes, List<TreeNode<T>> result) {
         for (TreeNode<T> node : nodes) {
             result.add(node);
@@ -183,11 +183,11 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
     }
 
     /**
-    * 添加链接
-    *
-    * @param nodes 节点
-    * @param data 数据
-    */
+     * 添加链接
+     *
+     * @param nodes 节点
+     * @param data 数据
+     */
     private void addLinks(List<TreeNode<T>> nodes, RelationData data) {
         for (TreeNode<T> node : nodes) {
             if (node.getChildren() != null) {

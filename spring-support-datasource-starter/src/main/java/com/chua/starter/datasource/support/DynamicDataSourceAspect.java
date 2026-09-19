@@ -26,62 +26,62 @@ import java.util.List;
 import java.util.Map;
 
 /**
-* 自定义注解 + AOP的方式实现数据源动态切换
-*
+ * 自定义注解 + AOP的方式实现数据源动态切换
+ *
  */
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 /**
-* dynamic数据源aspect类。
-*
-* @author CH
-* @since 4.0.0
+ * dynamic数据源aspect类。
+ *
+ * @author CH
+ * @since 4.0.0
  */
 public class DynamicDataSourceAspect {
     /**
-    * 上下文
-    */
+     * 上下文
+     */
     private ApplicationContext applicationContext;
 
     /**
-    * 设置应用上下文
-    *
-    * @param applicationContext 应用上下文
-    */
+     * 设置应用上下文
+     *
+     * @param applicationContext 应用上下文
+     */
     public void setApplicationContext(ApplicationContext applicationContext) {
         this.applicationContext = applicationContext;
     }
 
     /**
-    * 切入点
-    *
-    * @param methodInvocation          切入点
-    * @param multiDataSourceSettingProperties
-    */
+     * 切入点
+     *
+     * @param methodInvocation          切入点
+     * @param multiDataSourceSettingProperties
+     */
     public void beforeSwitchDS(MethodInvocation methodInvocation, MultiDataSourceSettingProperties multiDataSourceSettingProperties) {
         //默认数据源
         String dataSource = getDataSourceType(methodInvocation, multiDataSourceSettingProperties);
         /**
-        * switch转为。
-        * @param dataSource 数据源
-        * @param multiDataSourceSettingProperties multi数据源setting属性
-        */
+         * switch转为。
+         * @param dataSource 数据源
+         * @param multiDataSourceSettingProperties multi数据源setting属性
+         */
         switchTo(dataSource, multiDataSourceSettingProperties);
     }
 
     /**
-    * switch转为。
-    * @param dataSource 数据源
-    * @param multiDataSourceSettingProperties multi数据源setting属性
-    */
+     * switch转为。
+     * @param dataSource 数据源
+     * @param multiDataSourceSettingProperties multi数据源setting属性
+     */
     public void switchTo(String dataSource, MultiDataSourceSettingProperties multiDataSourceSettingProperties) {
         dataSource = createDataSource(dataSource, multiDataSourceSettingProperties);
         //分析处理多数据源
         /**
-        * 执行analysis数据源。
-        * @param dataSource 数据源
-        */
+         * 执行analysis数据源。
+         * @param dataSource 数据源
+         */
         doAnalysisDataSource(dataSource);
         // 切换数据源
         DataSourceContextSupport.setDbType(dataSource);
@@ -92,10 +92,10 @@ public class DynamicDataSourceAspect {
     }
 
     /**
-    * 分析处理多数据源
-    *
-    * @param dataSource 数据源
-    */
+     * 分析处理多数据源
+     *
+     * @param dataSource 数据源
+     */
     private void doAnalysisDataSource(String dataSource) {
         String[] split = dataSource.split(",");
         if (split.length == 1) {
@@ -125,12 +125,12 @@ public class DynamicDataSourceAspect {
     }
 
     /**
-    * 获取切换的数据源
-    *
-    * @param methodInvocation          切入点
-    * @param multiDataSourceSettingProperties
-    * @return 数据源
-    */
+     * 获取切换的数据源
+     *
+     * @param methodInvocation          切入点
+     * @param multiDataSourceSettingProperties
+     * @return 数据源
+     */
     private String getDataSourceType(MethodInvocation methodInvocation, MultiDataSourceSettingProperties multiDataSourceSettingProperties) {
         //類是否包含註解
         String dsName = DataSourceContextSupport.DEFAULT_DATASOURCE;
@@ -143,12 +143,12 @@ public class DynamicDataSourceAspect {
     }
 
     /**
-    * 数据源
-    *
-    * @param dsName                    数据源名称
-    * @param multiDataSourceSettingProperties 数据源配置
-    * @return 数据源名称
-    */
+     * 数据源
+     *
+     * @param dsName                    数据源名称
+     * @param multiDataSourceSettingProperties 数据源配置
+     * @return 数据源名称
+     */
     private String createDataSource(String dsName, MultiDataSourceSettingProperties multiDataSourceSettingProperties) {
         if (DataSourceContextSupport.hasDbType(dsName)) {
             return dsName;
@@ -182,12 +182,12 @@ public class DynamicDataSourceAspect {
     }
 
     /**
-    * 数据源
-    *
-    * @param dsName           名称
-    * @param methodInvocation 类
-    * @return 数据源
-    */
+     * 数据源
+     *
+     * @param dsName           名称
+     * @param methodInvocation 类
+     * @return 数据源
+     */
     private String analysisMethod(String dsName, MethodInvocation methodInvocation) {
         Method method = methodInvocation.getMethod();
         try {
@@ -209,12 +209,12 @@ public class DynamicDataSourceAspect {
     }
 
     /**
-    * 数据源
-    *
-    * @param dsName           名称
-    * @param methodInvocation 类
-    * @return 数据源
-    */
+     * 数据源
+     *
+     * @param dsName           名称
+     * @param methodInvocation 类
+     * @return 数据源
+     */
     private String analysisClass(String dsName, MethodInvocation methodInvocation) {
         Class<?> className = methodInvocation.getThis().getClass();
         if (!AnnotatedElementUtils.hasAnnotation(className, DS.class)) {
@@ -233,20 +233,20 @@ public class DynamicDataSourceAspect {
     }
 
     /**
-    * 解析 spel 表达式
-    * <p>
-    * 支持以下上下文变量：
-    * <ul>
-    *   <li>方法参数：按参数名注入（如 #tenantId）</li>
-    *   <li>#header：HttpServletRequest 请求头（如 #header.xTenantId）</li>
-    *   <li>#session：HttpSession 属性（如 #session.userType）</li>
-    * </ul>
-    * </p>
-    *
-    * @param expression spel 表达式
-    * @param invocation 方法调用
-    * @return 解析后的字符串值
-    */
+     * 解析 spel 表达式
+     * <p>
+     * 支持以下上下文变量：
+     * <ul>
+     *   <li>方法参数：按参数名注入（如 #tenantId）</li>
+     *   <li>#header：HttpServletRequest 请求头（如 #header.xTenantId）</li>
+     *   <li>#session：HttpSession 属性（如 #session.userType）</li>
+     * </ul>
+     * </p>
+     *
+     * @param expression spel 表达式
+     * @param invocation 方法调用
+     * @return 解析后的字符串值
+     */
     private String resolveSpelExpression(String expression, MethodInvocation invocation) {
         try {
             ExpressionParser parser = new SpelExpressionParser();
@@ -278,10 +278,10 @@ public class DynamicDataSourceAspect {
     }
 
     /**
-    * httpservlet请求 请求头包装器（使用 映射，支持 spel #头部['Key'] 和 #头部.Key 两种语法）
-    * @author CH
-    * @since 4.0.0
-    */
+     * httpservlet请求 请求头包装器（使用 映射，支持 spel #头部['Key'] 和 #头部.Key 两种语法）
+     * @author CH
+     * @since 4.0.0
+     */
     public static class HeaderWrapper extends java.util.HashMap<String, String> {
         /** 请求 */
         private final HttpServletRequest request;
@@ -295,25 +295,25 @@ public class DynamicDataSourceAspect {
             while (names != null && names.hasMoreElements()) {
                 String name = names.nextElement();
                 /**
-                * 放入。
-                * @param name 名称
-                * @param request.getHeader(name 请求.获取头部(名称
-                */
+                 * 放入。
+                 * @param name 名称
+                 * @param request.getHeader(name 请求.获取头部(名称
+                 */
                 put(name, request.getHeader(name));
             }
         }
     }
 
     /**
-    * http会话 属性包装器（使用 映射，支持 spel #会话['Key'] 和 #会话.Key 两种语法）
-    * @author CH
-    * @since 4.0.0
-    */
+     * http会话 属性包装器（使用 映射，支持 spel #会话['Key'] 和 #会话.Key 两种语法）
+     * @author CH
+     * @since 4.0.0
+     */
     public static class SessionWrapper extends java.util.HashMap<String, Object> {
         /**
-        * 会话包装器。
-        * @param request 请求
-        */
+         * 会话包装器。
+         * @param request 请求
+         */
         public SessionWrapper(HttpServletRequest request) {
             var session = request.getSession(false);
             if (session != null) {
@@ -321,10 +321,10 @@ public class DynamicDataSourceAspect {
                 while (names != null && names.hasMoreElements()) {
                     String name = names.nextElement();
                     /**
-                    * 放入。
-                    * @param name 名称
-                    * @param session.getAttribute(name 会话.获取attribute(名称
-                    */
+                     * 放入。
+                     * @param name 名称
+                     * @param session.getAttribute(name 会话.获取attribute(名称
+                     */
                     put(name, session.getAttribute(name));
                 }
             }
@@ -332,8 +332,8 @@ public class DynamicDataSourceAspect {
     }
 
     /**
-    * 重置
-    */
+     * 重置
+     */
     public synchronized void afterSwitchDS() {
  // 如果处于 @dstransactional 上下文中，从栈恢复上一级数据源
         if (MultiDSTransactionContext.isInTransaction()) {

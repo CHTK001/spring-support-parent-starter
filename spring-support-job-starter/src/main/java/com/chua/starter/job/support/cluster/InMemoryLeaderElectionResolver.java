@@ -4,25 +4,25 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 /**
-* 默认 (CAS 占位) 铅 选举解析器。
-*
-* <p>仅在单进程内有效, 适用于单机模式或测试场景;
-* 多 调度器 节点请实现 {@link LeaderElectionResolver} SPI 接入真实选主
-* (例如 {@code MysqlLeaderElectionResolver})。</p>
-*
-* @since 4.0.0.42
-* @author CH
+ * 默认 (CAS 占位) 铅 选举解析器。
+ *
+ * <p>仅在单进程内有效, 适用于单机模式或测试场景;
+ * 多 调度器 节点请实现 {@link LeaderElectionResolver} SPI 接入真实选主
+ * (例如 {@code MysqlLeaderElectionResolver})。</p>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 public class InMemoryLeaderElectionResolver implements LeaderElectionResolver {
 
     /**
-    * 本地内存中的 铅 记录, Key = 群体
-    */
+     * 本地内存中的 铅 记录, Key = 群体
+     */
     private final ConcurrentMap<String, String> leaderMap = new ConcurrentHashMap<>();
 
     /**
-    * 本地内存中的租约到期时间戳, Key = 群体
-    */
+     * 本地内存中的租约到期时间戳, Key = 群体
+     */
     private final ConcurrentMap<String, Long> leaseMap = new ConcurrentHashMap<>();
 
     @Override

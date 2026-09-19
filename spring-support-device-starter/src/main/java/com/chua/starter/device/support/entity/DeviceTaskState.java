@@ -9,19 +9,19 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 /**
-* 后台任务状态实体（Trigger 模式）
-* <p>用于控制任务是否运行，避免并发执行。</p>
-*
-* @since 4.0.0.42
-* @author CH
+ * 后台任务状态实体（Trigger 模式）
+ * <p>用于控制任务是否运行，避免并发执行。</p>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Data
 @TableName("device_task_state")
 public class DeviceTaskState {
 
     /**
-    * 主键 标识
-    */
+     * 主键 标识
+     */
     @TableId(value = "device_task_state_id", type = IdType.ASSIGN_UUID)
     /** Device任务状态标识 */
     private String deviceTaskStateId;

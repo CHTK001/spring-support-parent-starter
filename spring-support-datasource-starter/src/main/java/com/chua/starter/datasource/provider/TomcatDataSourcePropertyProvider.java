@@ -6,10 +6,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
-* Tomcat JDBC连接池数据源属性提供者
-*
-* @since 2024/12/21
-* @author CH
+ * Tomcat JDBC连接池数据源属性提供者
+ *
+ * @since 2024/12/21
+ * @author CH
  */
 public class TomcatDataSourcePropertyProvider implements DataSourcePropertyProvider<DataSource> {
 
@@ -128,11 +128,11 @@ public class TomcatDataSourcePropertyProvider implements DataSourcePropertyProvi
     }
 
     /**
-    * 转为int
-    *
-    * @param value 值
-    * @return 转为int的结果
-    */
+     * 转为int
+     *
+     * @param value 值
+     * @return 转为int的结果
+     */
     private int toInt(Object value) {
         if (value instanceof Number) {
             return ((Number) value).intValue();
@@ -141,11 +141,11 @@ public class TomcatDataSourcePropertyProvider implements DataSourcePropertyProvi
     }
 
     /**
-    * 转为long
-    *
-    * @param value 值
-    * @return 转为long的结果
-    */
+     * 转为long
+     *
+     * @param value 值
+     * @return 转为long的结果
+     */
     private long toLong(Object value) {
         if (value instanceof Number) {
             return ((Number) value).longValue();
@@ -154,11 +154,11 @@ public class TomcatDataSourcePropertyProvider implements DataSourcePropertyProvi
     }
 
     /**
-    * 转为布尔值
-    *
-    * @param value 值
-    * @return 转为布尔值的结果
-    */
+     * 转为布尔值
+     *
+     * @param value 值
+     * @return 转为布尔值的结果
+     */
     private boolean toBoolean(Object value) {
         if (value instanceof Boolean) {
             return (Boolean) value;

@@ -11,53 +11,53 @@ import java.sql.PreparedStatement;
 import java.sql.Statement;
 
 /**
-* SQL 监控 对账单
-*
-* <p>基于 JDK 动态代理包装 {@link Statement}，对 execute/executeQuery/executeUpdate/
-* 执行large更新/执行批量 等执行方法计时并上报到 {@link DataSourceSqlMonitor}。
-* 其余方法全部透传，包括批量添加、参数设置等，保证 SQL 语义不变。</p>
-*
-* @since 4.0.0.42
-* @author CH
+ * SQL 监控 对账单
+ *
+ * <p>基于 JDK 动态代理包装 {@link Statement}，对 execute/executeQuery/executeUpdate/
+ * 执行large更新/执行批量 等执行方法计时并上报到 {@link DataSourceSqlMonitor}。
+ * 其余方法全部透传，包括批量添加、参数设置等，保证 SQL 语义不变。</p>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 public class MonitoringStatement implements InvocationHandler {
 
     /**
-    * 执行方法集合
-    */
+     * 执行方法集合
+     */
     private static final String[] EXECUTE_METHODS = {
             "execute", "executeQuery", "executeUpdate", "executeLargeUpdate", "executeBatch", "executeLargeBatch"
     };
 
     /**
-    * 目标 对账单
-    */
+     * 目标 对账单
+     */
     private final Statement delegate;
 
     /**
-    * 数据源名称
-    */
+     * 数据源名称
+     */
     private final String dataSourceName;
 
     /**
-    * 监控门面
-    */
+     * 监控门面
+     */
     private final DataSourceSqlMonitor monitor;
 
     /**
-    * SQL 文本（prepared对账单 时为模板 SQL，无法拿到绑定参数）
-    */
+     * SQL 文本（prepared对账单 时为模板 SQL，无法拿到绑定参数）
+     */
     private final String sql;
 
     /**
-    * 构造器
-    *
-    * @param delegate       目标 对账单
-    * @param dataSourceName 数据源名称
-    * @param monitor        监控门面
-    * @param sql            SQL 文本
-    */
+     * 构造器
+     *
+     * @param delegate       目标 对账单
+     * @param dataSourceName 数据源名称
+     * @param monitor        监控门面
+     * @param sql            SQL 文本
+     */
     private MonitoringStatement(Statement delegate, String dataSourceName, DataSourceSqlMonitor monitor, String sql) {
         this.delegate = delegate;
         this.dataSourceName = dataSourceName;
@@ -66,26 +66,26 @@ public class MonitoringStatement implements InvocationHandler {
     }
 
     /**
-    * 包装 对账单
-    *
-    * @param statement      目标 对账单
-    * @param dataSourceName 数据源名称
-    * @param monitor        监控门面
-    * @return 代理后的 对账单
-    */
+     * 包装 对账单
+     *
+     * @param statement      目标 对账单
+     * @param dataSourceName 数据源名称
+     * @param monitor        监控门面
+     * @return 代理后的 对账单
+     */
     public static Statement wrap(Statement statement, String dataSourceName, DataSourceSqlMonitor monitor) {
         return wrap(statement, dataSourceName, monitor, null);
     }
 
     /**
-    * 包装 对账单（携带 SQL 文本）
-    *
-    * @param statement      目标 对账单
-    * @param dataSourceName 数据源名称
-    * @param monitor        监控门面
-    * @param sql            SQL 文本
-    * @return 代理后的 对账单
-    */
+     * 包装 对账单（携带 SQL 文本）
+     *
+     * @param statement      目标 对账单
+     * @param dataSourceName 数据源名称
+     * @param monitor        监控门面
+     * @param sql            SQL 文本
+     * @return 代理后的 对账单
+     */
     public static Statement wrap(Statement statement, String dataSourceName, DataSourceSqlMonitor monitor, String sql) {
         if (statement == null) {
             return null;
@@ -153,11 +153,11 @@ public class MonitoringStatement implements InvocationHandler {
     }
 
     /**
-    * 解析本次执行的 SQL 文本
-    *
-    * @param args 方法参数
-    * @return SQL 文本
-    */
+     * 解析本次执行的 SQL 文本
+     *
+     * @param args 方法参数
+     * @return SQL 文本
+     */
     private String resolveSql(Object[] args) {
  // 显式传入的 SQL（执行(sql) / 执行查询(sql) / 执行更新(sql)）
         if (args != null && args.length > 0 && args[0] instanceof String s) {
@@ -168,13 +168,13 @@ public class MonitoringStatement implements InvocationHandler {
     }
 
     /**
-    * 调用目标 对账单 对应方法
-    *
-    * @param method 方法
-    * @param args   参数
-    * @return 方法返回值
-    * @throws Throwable 目标 对账单 抛出的异常
-    */
+     * 调用目标 对账单 对应方法
+     *
+     * @param method 方法
+     * @param args   参数
+     * @return 方法返回值
+     * @throws Throwable 目标 对账单 抛出的异常
+     */
     private Object invokeTarget(Method method, Object[] args) throws Throwable {
         try {
             return method.invoke(delegate, args);

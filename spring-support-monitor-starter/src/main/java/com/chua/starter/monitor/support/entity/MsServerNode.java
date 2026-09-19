@@ -11,21 +11,21 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
-* 服务管理 —— 协议服务器节点主数据。
-*
-* <p>对应表 {@code ms_server_node}。存储基于 common-starter {@code Server} 接口
-* 创建的协议服务器定义（HTTP / HTTP_代理 / TCP_代理 / SIP），运行期实例由
-* {@code ServerNodeRegistry} 按定义拉起与回收。</p>
-*
-* <ul>
-*   <li>{@code protocol}：节点协议类型，见 {@code ServerNodeProtocol}</li>
-*   <li>{@code engine}：传输引擎（http 支持 jdk/nio/aio；代理与 sip 固定为 jdk/sip）</li>
-*   <li>{@code config}：协议专属配置 JSON（sip.token / 代理 backendHost、backendPort / ssl 等）</li>
-*   <li>{@code filters}：ServerFilter 插件配置 JSON 数组，见 {@code ServerFilterDescriptor}</li>
-* </ul>
-*
-* @author CH
-* @since 4.0.0.42
+ * 服务管理 —— 协议服务器节点主数据。
+ *
+ * <p>对应表 {@code ms_server_node}。存储基于 common-starter {@code Server} 接口
+ * 创建的协议服务器定义（HTTP / HTTP_代理 / TCP_代理 / SIP），运行期实例由
+ * {@code ServerNodeRegistry} 按定义拉起与回收。</p>
+ *
+ * <ul>
+ *   <li>{@code protocol}：节点协议类型，见 {@code ServerNodeProtocol}</li>
+ *   <li>{@code engine}：传输引擎（http 支持 jdk/nio/aio；代理与 sip 固定为 jdk/sip）</li>
+ *   <li>{@code config}：协议专属配置 JSON（sip.token / 代理 backendHost、backendPort / ssl 等）</li>
+ *   <li>{@code filters}：ServerFilter 插件配置 JSON 数组，见 {@code ServerFilterDescriptor}</li>
+ * </ul>
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -45,15 +45,15 @@ public class MsServerNode extends SysBase {
     private String name; // 名称
 
     /**
-    * 协议类型: HTTP / HTTP_代理 / TCP_代理 / SIP
-    */
+     * 协议类型: HTTP / HTTP_代理 / TCP_代理 / SIP
+     */
     @TableField("ms_server_node_protocol")
     @Schema(description = "协议类型: HTTP / HTTP_PROXY / TCP_PROXY / SIP", example = "HTTP")
     private String protocol; // 协议
 
     /**
-    * 传输引擎: http= jdk/nio/aio，代理= jdk，sip= sip
-    */
+     * 传输引擎: http= jdk/nio/aio，代理= jdk，sip= sip
+     */
     @TableField("ms_server_node_engine")
     @Schema(description = "传输引擎: http= jdk/nio/aio，代理= jdk，sip= sip", example = "jdk")
     private String engine; // engine
@@ -79,8 +79,8 @@ public class MsServerNode extends SysBase {
     private String remark; // 评论
 
     /**
-    * 协议专属配置(JSON 映射)：sip.令牌、代理.backend主机/backend端口 等
-    */
+     * 协议专属配置(JSON 映射)：sip.令牌、代理.backend主机/backend端口 等
+     */
     @TableField("ms_server_node_config")
     @Schema(description = "协议专属配置(JSON): sip.token、proxy.backendHost/backendPort、ssl 等")
     private String config; // 配置

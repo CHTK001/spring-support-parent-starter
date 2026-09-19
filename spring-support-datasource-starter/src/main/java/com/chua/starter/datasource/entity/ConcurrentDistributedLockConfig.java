@@ -3,15 +3,15 @@ package com.chua.starter.datasource.entity;
 import lombok.Data;
 
 /**
-* 分布式锁配置实体，持久化到 sqlite 的 并发_distributed_锁 表。
-* <p>
-* 字段与注解 {@code @DistributedLock} 属性对应，通过 actuator 端点增删查改后
-* 清除 {@link com.chua.common.support.concurrent.lock.LockFlow} 缓存，
-* 下次调用时按新配置重建锁提供者。
-* </p>
-*
-* @author CH
-* @since 4.0.0.42
+ * 分布式锁配置实体，持久化到 sqlite 的 并发_distributed_锁 表。
+ * <p>
+ * 字段与注解 {@code @DistributedLock} 属性对应，通过 actuator 端点增删查改后
+ * 清除 {@link com.chua.common.support.concurrent.lock.LockFlow} 缓存，
+ * 下次调用时按新配置重建锁提供者。
+ * </p>
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 @Data
 public class ConcurrentDistributedLockConfig {

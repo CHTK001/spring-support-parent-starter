@@ -23,21 +23,21 @@ import java.util.Map;
 public class PluginsController {
 
     /**
-    * 全局设置服务
-    */
+     * 全局设置服务
+     */
     private final SysAiGlobalSettingService globalSettingService;
 
     /**
-    * 插件状态存储分组
-    */
+     * 插件状态存储分组
+     */
     private static final String PLUGIN_GROUP = "plugins";
 
     /**
-    * 更新全局插件状态
-    *
-    * @param body 包含 pluginId 和 enabled 的请求体
-    * @return 更新结果
-    */
+     * 更新全局插件状态
+     *
+     * @param body 包含 pluginId 和 enabled 的请求体
+     * @return 更新结果
+     */
     @PutMapping("/global")
     public ApiResult<Boolean> updateGlobalPluginStatus(@RequestBody Map<String, Object> body) {
         String pluginId = (String) body.get("pluginId");
@@ -52,11 +52,11 @@ public class PluginsController {
     }
 
     /**
-    * 重新加载插件
-    *
-    * @param pluginId 插件ID
-    * @return 重载结果
-    */
+     * 重新加载插件
+     *
+     * @param pluginId 插件ID
+     * @return 重载结果
+     */
     @PostMapping("/reload/{pluginId}")
     public ApiResult<Map<String, Object>> reloadPlugin(@PathVariable String pluginId) {
         log.info("重新加载插件: pluginId={}", pluginId);
@@ -69,10 +69,10 @@ public class PluginsController {
     }
 
     /**
-    * 获取插件列表
-    *
-    * @return 插件列表
-    */
+     * 获取插件列表
+     *
+     * @return 插件列表
+     */
     @GetMapping("/list")
     public ApiResult<Map<String, Object>> getPluginList() {
         log.info("获取插件列表");
@@ -84,11 +84,11 @@ public class PluginsController {
     }
 
     /**
-    * 查询插件列表
-    *
-    * @param body 查询参数
-    * @return 插件列表
-    */
+     * 查询插件列表
+     *
+     * @param body 查询参数
+     * @return 插件列表
+     */
     @PostMapping("/query")
     public Map<String, Object> queryPlugins(@RequestBody Map<String, Object> body) {
         log.info("查询插件列表: {}", body);

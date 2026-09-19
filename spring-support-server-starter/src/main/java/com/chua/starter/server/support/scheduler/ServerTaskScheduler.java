@@ -15,21 +15,21 @@ import org.springframework.stereotype.Component;
 import java.util.concurrent.TimeUnit;
 
 /**
-* 服务器周期任务时间轮调度器
-* <p>
-* 统一使用 common-starter 的哈希时间轮（{@link Timer}）调度全部周期任务：
-* <ul>
-*   <li>在离线检测 / 硬件定时采集——主机级配置（各主机开关/间隔存于 ms_server_host 字段）</li>
-*   <li>计划任务扫描（ms_exec_job）</li>
-*   <li>终端会话空闲清理</li>
-*   <li>连接缓存健康检查（connection.*）</li>
-* </ul>
-* 系统设置保存后通过 {@link ServerConfigChangedEvent} 触发动态重排，
-* 间隔/开关调整即时生效，无需重启。
-* </p>
-*
-* @author CH
-* @since 4.0.0.42
+ * 服务器周期任务时间轮调度器
+ * <p>
+ * 统一使用 common-starter 的哈希时间轮（{@link Timer}）调度全部周期任务：
+ * <ul>
+ *   <li>在离线检测 / 硬件定时采集——主机级配置（各主机开关/间隔存于 ms_server_host 字段）</li>
+ *   <li>计划任务扫描（ms_exec_job）</li>
+ *   <li>终端会话空闲清理</li>
+ *   <li>连接缓存健康检查（connection.*）</li>
+ * </ul>
+ * 系统设置保存后通过 {@link ServerConfigChangedEvent} 触发动态重排，
+ * 间隔/开关调整即时生效，无需重启。
+ * </p>
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 @Slf4j
 @Component
@@ -87,41 +87,41 @@ public class ServerTaskScheduler {
     private volatile TimerTask delayTask;
 
     /**
-    * 启动：初始化时间轮并注册全部周期任务
-    */
+     * 启动：初始化时间轮并注册全部周期任务
+     */
     @PostConstruct
     public void start() {
         timer = Timer.newTimer(WHEEL_SLOTS, TICK_MILLIS, TimeUnit.MILLISECONDS);
         /**
-        * rescheduleonline。
-        */
+         * rescheduleonline。
+         */
         rescheduleOnline();
         /**
-        * reschedulecollect。
-        */
+         * reschedulecollect。
+         */
         rescheduleCollect();
         /**
-        * reschedule延迟。
-        */
+         * reschedule延迟。
+         */
         rescheduleDelay();
         /**
-        * reschedule执行。
-        */
+         * reschedule执行。
+         */
         rescheduleExec();
         /**
-        * reschedule会话。
-        */
+         * reschedule会话。
+         */
         rescheduleSession();
         /**
-        * rescheduleconnection。
-        */
+         * rescheduleconnection。
+         */
         rescheduleConnection();
         log.info("[task-scheduler] 时间轮调度器已启动: 在离线/采集/延迟检测/计划任务/会话清理/连接健康检查");
     }
 
     /**
-    * 关闭：停止时间轮
-    */
+     * 关闭：停止时间轮
+     */
     @PreDestroy
     public void stop() {
         if (timer != null) {
@@ -131,108 +131,108 @@ public class ServerTaskScheduler {
     }
 
     /**
-    * 主机级配置变更监听：重新注册周期任务
-    * <p>主机配置变更（新增/编辑/删除）或全局 connection 配置变更时触发。</p>
-    *
-    * @param event 配置变更事件
-    */
+     * 主机级配置变更监听：重新注册周期任务
+     * <p>主机配置变更（新增/编辑/删除）或全局 connection 配置变更时触发。</p>
+     *
+     * @param event 配置变更事件
+     */
     @EventListener
     public void onConfigChanged(ServerConfigChangedEvent event) {
         if (timer == null || !timer.isRunning()) {
             return;
         }
         /**
-        * rescheduleonline。
-        */
+         * rescheduleonline。
+         */
         rescheduleOnline();
         /**
-        * reschedulecollect。
-        */
+         * reschedulecollect。
+         */
         rescheduleCollect();
         /**
-        * reschedule延迟。
-        */
+         * reschedule延迟。
+         */
         rescheduleDelay();
         /**
-        * rescheduleconnection。
-        */
+         * rescheduleconnection。
+         */
         rescheduleConnection();
         log.info("[task-scheduler] 配置变更已重排周期任务: {}", event.getKeys());
     }
 
     /**
-    * 重排在离线检测任务：固定细粒度扫描，各主机按自身开关/间隔决定是否探测
-    */
+     * 重排在离线检测任务：固定细粒度扫描，各主机按自身开关/间隔决定是否探测
+     */
     private void rescheduleOnline() {
         /**
-        * cancel任务。
-        * @param onlineTask online任务
-        */
+         * cancel任务。
+         * @param onlineTask online任务
+         */
         cancelTask(onlineTask);
         onlineTask = timer.scheduleAtFixedRate(onlineScheduler::tick,
                 HOST_SCAN_INTERVAL_SECONDS, HOST_SCAN_INTERVAL_SECONDS, TimeUnit.SECONDS);
     }
 
     /**
-    * 重排采集任务：固定细粒度扫描，各主机按自身开关/间隔/方式决定是否采集
-    */
+     * 重排采集任务：固定细粒度扫描，各主机按自身开关/间隔/方式决定是否采集
+     */
     private void rescheduleCollect() {
         /**
-        * cancel任务。
-        * @param collectTask collect任务
-        */
+         * cancel任务。
+         * @param collectTask collect任务
+         */
         cancelTask(collectTask);
         collectTask = timer.scheduleAtFixedRate(onlineScheduler::collectTick,
                 HOST_SCAN_INTERVAL_SECONDS, HOST_SCAN_INTERVAL_SECONDS, TimeUnit.SECONDS);
     }
 
     /**
-    * 重排延迟检测任务：固定细粒度扫描，各主机按自身开关/间隔测 RTT 延迟
-    */
+     * 重排延迟检测任务：固定细粒度扫描，各主机按自身开关/间隔测 RTT 延迟
+     */
     private void rescheduleDelay() {
         /**
-        * cancel任务。
-        * @param delayTask 延迟任务
-        */
+         * cancel任务。
+         * @param delayTask 延迟任务
+         */
         cancelTask(delayTask);
         delayTask = timer.scheduleAtFixedRate(onlineScheduler::delayTick,
                 HOST_SCAN_INTERVAL_SECONDS, HOST_SCAN_INTERVAL_SECONDS, TimeUnit.SECONDS);
     }
 
     /**
-    * 重排计划任务扫描
-    */
+     * 重排计划任务扫描
+     */
     private void rescheduleExec() {
         /**
-        * cancel任务。
-        * @param execTask 执行任务
-        */
+         * cancel任务。
+         * @param execTask 执行任务
+         */
         cancelTask(execTask);
         execTask = timer.scheduleAtFixedRate(execJobScheduler::tick,
                 60, 30, TimeUnit.SECONDS);
     }
 
     /**
-    * 重排会话清理
-    */
+     * 重排会话清理
+     */
     private void rescheduleSession() {
         /**
-        * cancel任务。
-        * @param sessionTask 会话任务
-        */
+         * cancel任务。
+         * @param sessionTask 会话任务
+         */
         cancelTask(sessionTask);
         sessionTask = timer.scheduleAtFixedRate(sessionIdleSweeper::sweep,
                 120, 60, TimeUnit.SECONDS);
     }
 
     /**
-    * 重排连接健康检查
-    */
+     * 重排连接健康检查
+     */
     private void rescheduleConnection() {
         /**
-        * cancel任务。
-        * @param connectionTask connection任务
-        */
+         * cancel任务。
+         * @param connectionTask connection任务
+         */
         cancelTask(connectionTask);
         int interval = normalizeInterval(configService.getInt("connection.sweep.interval", 60));
         connectionTask = timer.scheduleAtFixedRate(() -> {
@@ -246,10 +246,10 @@ public class ServerTaskScheduler {
     }
 
     /**
-    * 取消并清空定时任务
-    *
-    * @param task 任务
-    */
+     * 取消并清空定时任务
+     *
+     * @param task 任务
+     */
     private void cancelTask(TimerTask task) {
         if (task != null) {
             timer.cancel(task);
@@ -257,11 +257,11 @@ public class ServerTaskScheduler {
     }
 
     /**
-    * 归一化间隔（不小于最小间隔）
-    *
-    * @param interval 配置间隔（秒）
-    * @return 归一化后的间隔
-    */
+     * 归一化间隔（不小于最小间隔）
+     *
+     * @param interval 配置间隔（秒）
+     * @return 归一化后的间隔
+     */
     private int normalizeInterval(int interval) {
         return interval < MIN_INTERVAL_SECONDS ? MIN_INTERVAL_SECONDS : interval;
     }

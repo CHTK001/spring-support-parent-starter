@@ -19,20 +19,20 @@ import java.util.List;
 public class MonitorDatabaseFileProvider implements DatabaseFileProvider {
 
     /**
-    * 是否启用当前提供者。
-    *
-    * @return 恒为 true，监控模块始终参与脚本注册
-    */
+     * 是否启用当前提供者。
+     *
+     * @return 恒为 true，监控模块始终参与脚本注册
+     */
     @Override
     public boolean isSupported() {
         return true;
     }
 
     /**
-    * 加载 classpath 下 {@code db/init/V1.1__*.sql} 迁移脚本。
-    *
-    * @return 匹配到的脚本资源列表，加载异常时返回空列表
-    */
+     * 加载 classpath 下 {@code db/init/V1.1__*.sql} 迁移脚本。
+     *
+     * @return 匹配到的脚本资源列表，加载异常时返回空列表
+     */
     @Override
     public List<Resource> getResources() {
         PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
@@ -45,10 +45,10 @@ public class MonitorDatabaseFileProvider implements DatabaseFileProvider {
     }
 
     /**
-    * 执行顺序，数值越小优先级越高。
-    *
-    * @return 固定为 200
-    */
+     * 执行顺序，数值越小优先级越高。
+     *
+     * @return 固定为 200
+     */
     @Override
     public int getOrder() {
         return 200;

@@ -20,14 +20,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
-* Redis 操作 提供者
-* <p>
-* 支持 Redis 键 的扫描、读取、写入、删除、过期设置等操作。
-* 连接参数从任务配置 {@code collect_config} 中获取。
-* </p>
-*
-* @since 2026/8/4
-* @author CH
+ * Redis 操作 提供者
+ * <p>
+ * 支持 Redis 键 的扫描、读取、写入、删除、过期设置等操作。
+ * 连接参数从任务配置 {@code collect_config} 中获取。
+ * </p>
+ *
+ * @since 2026/8/4
+ * @author CH
  */
 @Slf4j
 @Component
@@ -35,13 +35,13 @@ import java.util.List;
 public class RedisOperationProvider implements OperationProvider {
 
     /**
-    * 允许删除的配置键
-    */
+     * 允许删除的配置键
+     */
     private static final String CONFIG_KEY_ALLOW_DELETE = "monitor.redis.allowDelete";
 
     /**
-    * 全局配置 服务
-    */
+     * 全局配置 服务
+     */
     private final MonitorConfigService configService;
 
     @Override
@@ -103,9 +103,9 @@ public class RedisOperationProvider implements OperationProvider {
                 throw new IllegalStateException("Redis 删除操作已禁用，请设置 monitor.redis.allowDelete=true");
             }
             /**
-            * 尝试。
-            * @param buildClient(ctx 构建客户端(ctx
-            */
+             * 尝试。
+             * @param buildClient(ctx 构建客户端(ctx
+             */
             try (RedisClient client = buildClient(ctx)) {
                 long count = 0;
                 for (String key : keys) {
@@ -163,19 +163,19 @@ public class RedisOperationProvider implements OperationProvider {
     }
 
     /**
-    * 同步执行 键 扫描 (使用 Jedis 扫描 游标迭代, 避免 键 阻塞)
-    *
-    * @param ctx     操作上下文
-    * @param pattern 匹配模式
-    * @param cursor  游标
-    * @param count   期望返回条数
-    * @return 扫描结果
-    */
+     * 同步执行 键 扫描 (使用 Jedis 扫描 游标迭代, 避免 键 阻塞)
+     *
+     * @param ctx     操作上下文
+     * @param pattern 匹配模式
+     * @param cursor  游标
+     * @param count   期望返回条数
+     * @return 扫描结果
+     */
     private OperationProvider.ScanResult doScanKeys(CollectContext ctx, String pattern, String cursor, int count) {
         /**
-        * 尝试。
-        * @param buildClient(ctx 构建客户端(ctx
-        */
+         * 尝试。
+         * @param buildClient(ctx 构建客户端(ctx
+         */
         try (RedisClient client = buildClient(ctx)) {
             String match = pattern != null ? pattern : "*";
             List<String> keys = new ArrayList<>();
@@ -194,11 +194,11 @@ public class RedisOperationProvider implements OperationProvider {
     }
 
     /**
-    * 构建 Redis 客户端
-    *
-    * @param ctx 操作上下文
-    * @return Redis 客户端
-    */
+     * 构建 Redis 客户端
+     *
+     * @param ctx 操作上下文
+     * @return Redis 客户端
+     */
     private RedisClient buildClient(CollectContext ctx) {
         JsonObject config = Json.getJsonObject(ctx.getTask().getCollectConfig());
         String host = str(config.getObject("redis_host"));
@@ -216,11 +216,11 @@ public class RedisOperationProvider implements OperationProvider {
     }
 
     /**
-    * 对象转字符串
-    *
-    * @param o 对象
-    * @return 字符串
-    */
+     * 对象转字符串
+     *
+     * @param o 对象
+     * @return 字符串
+     */
     private static String str(Object o) {
         return StringUtils.toString(o);
     }

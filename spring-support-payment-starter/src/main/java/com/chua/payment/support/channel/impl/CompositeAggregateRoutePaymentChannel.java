@@ -22,9 +22,9 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
-* 直营网关托管路由
-* @author CH
-* @since 4.0.0
+ * 直营网关托管路由
+ * @author CH
+ * @since 4.0.0
  */
 public class CompositeAggregateRoutePaymentChannel extends AbstractMerchantPaymentChannel implements PaymentChannel {
 
@@ -34,21 +34,21 @@ public class CompositeAggregateRoutePaymentChannel extends AbstractMerchantPayme
     private final PaymentChannelRegistry paymentChannelRegistry;
 
     /**
-    * 创建 compositeaggregateroute薪酬通道 实例
-    * @param merchantChannelService merchant通道服务
-    * @param objectMapper 对象映射器
-    * @param merchantChannelMapper merchant通道映射器
-    * @param paymentChannelRegistry 薪酬通道registry
-    */
+     * 创建 compositeaggregateroute薪酬通道 实例
+     * @param merchantChannelService merchant通道服务
+     * @param objectMapper 对象映射器
+     * @param merchantChannelMapper merchant通道映射器
+     * @param paymentChannelRegistry 薪酬通道registry
+     */
     public CompositeAggregateRoutePaymentChannel(MerchantChannelService merchantChannelService,
                                                  ObjectMapper objectMapper,
                                                  MerchantChannelMapper merchantChannelMapper,
                                                  PaymentChannelRegistry paymentChannelRegistry) {
         /**
-        * 父。
-        * @param merchantChannelService merchant通道服务
-        * @param objectMapper 对象映射器
-        */
+         * 父。
+         * @param merchantChannelService merchant通道服务
+         * @param objectMapper 对象映射器
+         */
         super(merchantChannelService, objectMapper);
         this.merchantChannelMapper = merchantChannelMapper;
         this.paymentChannelRegistry = paymentChannelRegistry;
@@ -113,35 +113,35 @@ public class CompositeAggregateRoutePaymentChannel extends AbstractMerchantPayme
     }
 
     /**
-    * 解析Target通道
-    *
-    * @param compositeChannel composite通道
-    * @return resolveTarget通道的结果
-    */
+     * 解析Target通道
+     *
+     * @param compositeChannel composite通道
+     * @return resolveTarget通道的结果
+     */
     private MerchantChannel resolveTargetChannel(MerchantChannel compositeChannel) {
         if (compositeChannel == null) {
             /**
-            * 薪酬异常。
-            * @param "直营网关渠道不存在" "直营网关渠道不存在"
-            * @return 薪酬异常的结果
-            */
+             * 薪酬异常。
+             * @param "直营网关渠道不存在" "直营网关渠道不存在"
+             * @return 薪酬异常的结果
+             */
             throw new PaymentException("直营网关渠道不存在");
         }
         Long targetChannelId = parseRouteChannelId(extConfig(compositeChannel));
         if (targetChannelId == null) {
             /**
-            * 薪酬异常。
-            * @param defaultChannelId" 默认通道标识"
-            * @return 薪酬异常的结果
-            */
+             * 薪酬异常。
+             * @param defaultChannelId" 默认通道标识"
+             * @return 薪酬异常的结果
+             */
             throw new PaymentException("直营网关配置未提供 targetChannelId 或 defaultChannelId");
         }
         if (compositeChannel.getId() != null && compositeChannel.getId().equals(targetChannelId)) {
             /**
-            * 薪酬异常。
-            * @param "直营网关配置不能指向自身" "直营网关配置不能指向自身"
-            * @return 薪酬异常的结果
-            */
+             * 薪酬异常。
+             * @param "直营网关配置不能指向自身" "直营网关配置不能指向自身"
+             * @return 薪酬异常的结果
+             */
             throw new PaymentException("直营网关配置不能指向自身");
         }
         MerchantChannel targetChannel = merchantChannelMapper.selectOne(new LambdaQueryWrapper<MerchantChannel>()
@@ -149,34 +149,34 @@ public class CompositeAggregateRoutePaymentChannel extends AbstractMerchantPayme
                 .last("limit 1"));
         if (targetChannel == null) {
             /**
-            * 薪酬异常。
-            * @param targetChannelId Target通道标识
-            * @return 薪酬异常的结果
-            */
+             * 薪酬异常。
+             * @param targetChannelId Target通道标识
+             * @return 薪酬异常的结果
+             */
             throw new PaymentException("直营网关目标渠道不存在: " + targetChannelId);
         }
         if (compositeChannel.getMerchantId() != null && !compositeChannel.getMerchantId().equals(targetChannel.getMerchantId())) {
             /**
-            * 薪酬异常。
-            * @param "直营网关目标渠道和商户不匹配" "直营网关目标渠道和商户不匹配"
-            * @return 薪酬异常的结果
-            */
+             * 薪酬异常。
+             * @param "直营网关目标渠道和商户不匹配" "直营网关目标渠道和商户不匹配"
+             * @return 薪酬异常的结果
+             */
             throw new PaymentException("直营网关目标渠道和商户不匹配");
         }
         if ("COMPOSITE".equalsIgnoreCase(targetChannel.getChannelType())) {
             /**
-            * 薪酬异常。
-            * @param 渠道" 渠道"
-            * @return 薪酬异常的结果
-            */
+             * 薪酬异常。
+             * @param 渠道" 渠道"
+             * @return 薪酬异常的结果
+             */
             throw new PaymentException("直营网关配置不能嵌套 COMPOSITE 渠道");
         }
         if (!ChannelStatus.ENABLED.getCode().equals(targetChannel.getStatus())) {
             /**
-            * 薪酬异常。
-            * @param "直营网关目标渠道未启用" "直营网关目标渠道未启用"
-            * @return 薪酬异常的结果
-            */
+             * 薪酬异常。
+             * @param "直营网关目标渠道未启用" "直营网关目标渠道未启用"
+             * @return 薪酬异常的结果
+             */
             throw new PaymentException("直营网关目标渠道未启用");
         }
         if (!paymentChannelRegistry.supports(targetChannel.getChannelType(), targetChannel.getChannelSubType())) {
@@ -187,21 +187,21 @@ public class CompositeAggregateRoutePaymentChannel extends AbstractMerchantPayme
     }
 
     /**
-    * 解析route通道标识
-    *
-    * @param extConfig ext配置
-    * @return 解析route通道id的结果
-    */
+     * 解析route通道标识
+     *
+     * @param extConfig ext配置
+     * @return 解析route通道id的结果
+     */
     private Long parseRouteChannelId(Map<String, Object> extConfig) {
         return parseLong(extConfig.get("targetChannelId"), extConfig.get("defaultChannelId"));
     }
 
     /**
-    * 解析Long
-    *
-    * @param values 值
-    * @return 解析long的结果
-    */
+     * 解析Long
+     *
+     * @param values 值
+     * @return 解析long的结果
+     */
     private Long parseLong(Object... values) {
         if (values == null) {
             return null;
@@ -221,11 +221,11 @@ public class CompositeAggregateRoutePaymentChannel extends AbstractMerchantPayme
                 return Long.parseLong(text);
             } catch (NumberFormatException e) {
                 /**
-                * 薪酬异常。
-                * @param text 文本
-                * @param e e
-                * @return 薪酬异常的结果
-                */
+                 * 薪酬异常。
+                 * @param text 文本
+                 * @param e e
+                 * @return 薪酬异常的结果
+                 */
                 throw new PaymentException("直营网关 channelId 格式错误: " + text, e);
             }
         }

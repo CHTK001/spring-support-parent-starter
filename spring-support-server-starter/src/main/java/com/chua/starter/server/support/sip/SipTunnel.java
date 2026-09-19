@@ -36,12 +36,12 @@ public class SipTunnel {
     // ==================== SERVER ====================
 
     /**
-    * 启动中继服务（server 角色），阻塞返回后由线程池持续接受控制连接
-    *
-    * @param controlPort 控制端口
-    * @param secret      鉴权密钥
-    * @throws IOException 端口占用或监听失败
-    */
+     * 启动中继服务（server 角色），阻塞返回后由线程池持续接受控制连接
+     *
+     * @param controlPort 控制端口
+     * @param secret      鉴权密钥
+     * @throws IOException 端口占用或监听失败
+     */
     public static void startServer(int controlPort, String secret) throws IOException {
         ServerSocket controlSocket = new ServerSocket(controlPort);
         log.info("[SIP-Server] 中继服务启动，控制端口: {}，secret: {}", controlPort, secret);
@@ -63,14 +63,14 @@ public class SipTunnel {
     }
 
     /**
-    * 处理单条控制连接：解析 REGISTER / CONNECT / DATA 指令
-    *
-    * @param socket         控制连接（方法结束自动关闭）
-    * @param providers      共享的 Provider 注册表
-    * @param pendingTunnels 共享的待桥接隧道表
-    * @param channelIdGen   通道号生成器
-    * @param secret         鉴权密钥
-    */
+     * 处理单条控制连接：解析 REGISTER / CONNECT / DATA 指令
+     *
+     * @param socket         控制连接（方法结束自动关闭）
+     * @param providers      共享的 Provider 注册表
+     * @param pendingTunnels 共享的待桥接隧道表
+     * @param channelIdGen   通道号生成器
+     * @param secret         鉴权密钥
+     */
     private static void handleControl(Socket socket, Map<String, ProviderInfo> providers,
                                        Map<Integer, PendingTunnel> pendingTunnels,
                                        AtomicInteger channelIdGen, String secret) {
@@ -162,17 +162,17 @@ public class SipTunnel {
     // ==================== PROVIDER ====================
 
     /**
-    * 启动 Provider 端（provider 角色），注册到中继并处理 OPEN 指令
-    *
-    * <p>断线后每 5 秒自动重连，直到进程退出。</p>
-    *
-    * @param serverHost 中继地址
-    * @param serverPort 中继控制端口
-    * @param providerId Provider 标识
-    * @param secret     鉴权密钥
-    * @param services   暴露的服务列表（service:port 逗号分隔）
-    * @throws IOException 与中继建立连接失败
-    */
+     * 启动 Provider 端（provider 角色），注册到中继并处理 OPEN 指令
+     *
+     * <p>断线后每 5 秒自动重连，直到进程退出。</p>
+     *
+     * @param serverHost 中继地址
+     * @param serverPort 中继控制端口
+     * @param providerId Provider 标识
+     * @param secret     鉴权密钥
+     * @param services   暴露的服务列表（service:port 逗号分隔）
+     * @throws IOException 与中继建立连接失败
+     */
     public static void startProvider(String serverHost, int serverPort, String providerId,
                                       String secret, String services) throws IOException {
         log.info("[SIP-Provider] 连接 {}:{} providerId={} services={}", serverHost, serverPort, providerId, services);
@@ -215,18 +215,18 @@ public class SipTunnel {
     // ==================== VISIT ====================
 
     /**
-    * 启动 Visit 端（visit 角色），把远端服务映射到本地端口
-    *
-    * <p>向中继发起 CONNECT 后循环接受本地连接，并为每个连接新建数据通道桥接到中继。</p>
-    *
-    * @param serverHost 中继地址
-    * @param serverPort 中继控制端口
-    * @param providerId 目标 Provider 标识
-    * @param service    目标服务名（如 rdp、ssh）
-    * @param localPort  本地监听端口
-    * @param secret     鉴权密钥
-    * @throws IOException 连接中继或本地端口监听失败
-    */
+     * 启动 Visit 端（visit 角色），把远端服务映射到本地端口
+     *
+     * <p>向中继发起 CONNECT 后循环接受本地连接，并为每个连接新建数据通道桥接到中继。</p>
+     *
+     * @param serverHost 中继地址
+     * @param serverPort 中继控制端口
+     * @param providerId 目标 Provider 标识
+     * @param service    目标服务名（如 rdp、ssh）
+     * @param localPort  本地监听端口
+     * @param secret     鉴权密钥
+     * @throws IOException 连接中继或本地端口监听失败
+     */
     public static void startVisit(String serverHost, int serverPort, String providerId,
                                    String service, int localPort, String secret) throws IOException {
         log.info("[SIP-Visit] server={}:{} providerId={} service={} localPort={}",
@@ -261,11 +261,11 @@ public class SipTunnel {
     // ==================== 工具方法 ====================
 
     /**
-    * 双向桥接两个 Socket 的数据流（各提交一个拷贝任务）
-    *
-    * @param a 一侧连接
-    * @param b 另一侧连接
-    */
+     * 双向桥接两个 Socket 的数据流（各提交一个拷贝任务）
+     *
+     * @param a 一侧连接
+     * @param b 另一侧连接
+     */
     private static void bridgeStreams(Socket a, Socket b) {
         try {
             InputStream aIn = a.getInputStream();
@@ -291,12 +291,12 @@ public class SipTunnel {
     }
 
     /**
-    * 字节流拷贝，直至输入流结束
-    *
-    * @param in  输入流
-    * @param out 输出流
-    * @throws IOException 读写异常
-    */
+     * 字节流拷贝，直至输入流结束
+     *
+     * @param in  输入流
+     * @param out 输出流
+     * @throws IOException 读写异常
+     */
     private static void copy(InputStream in, OutputStream out) throws IOException {
         byte[] buf = new byte[8192];
         int n;
@@ -309,20 +309,20 @@ public class SipTunnel {
     // ==================== 内部类 ====================
 
     /**
-    * Provider 注册信息：控制连接、控制输出流、可访问服务列表（service:port 逗号分隔）
-    */
+     * Provider 注册信息：控制连接、控制输出流、可访问服务列表（service:port 逗号分隔）
+     */
     private static class ProviderInfo {
         Socket socket;
         PrintWriter out;
         String services;
 
         /**
-        * 构造 Provider 注册信息
-        *
-        * @param socket   控制连接
-        * @param out      控制连接输出流（自动 flush）
-        * @param services 服务列表
-        */
+         * 构造 Provider 注册信息
+         *
+         * @param socket   控制连接
+         * @param out      控制连接输出流（自动 flush）
+         * @param services 服务列表
+         */
         ProviderInfo(Socket socket, PrintWriter out, String services) {
             this.socket = socket;
             this.out = out;
@@ -331,8 +331,8 @@ public class SipTunnel {
     }
 
     /**
-    * 待桥接隧道：visit 与 provider 两端数据连接就绪后开始双向转发
-    */
+     * 待桥接隧道：visit 与 provider 两端数据连接就绪后开始双向转发
+     */
     private static class PendingTunnel {
         int channelId;
         ServerSocket dataSocket;
@@ -341,12 +341,12 @@ public class SipTunnel {
         Socket providerSocket;
 
         /**
-        * 构造隧道上下文
-        *
-        * @param channelId    通道号
-        * @param dataSocket   数据端口监听
-        * @param visitControl 访客控制连接输出流
-        */
+         * 构造隧道上下文
+         *
+         * @param channelId    通道号
+         * @param dataSocket   数据端口监听
+         * @param visitControl 访客控制连接输出流
+         */
         PendingTunnel(int channelId, ServerSocket dataSocket, PrintWriter visitControl) {
             this.channelId = channelId;
             this.dataSocket = dataSocket;
@@ -354,8 +354,8 @@ public class SipTunnel {
         }
 
         /**
-        * 两端数据连接均就绪时启动桥接（线程安全）
-        */
+         * 两端数据连接均就绪时启动桥接（线程安全）
+         */
         synchronized void tryBridge() {
             if (visitSocket != null && providerSocket != null) {
                 bridgeStreams(visitSocket, providerSocket);
@@ -366,14 +366,14 @@ public class SipTunnel {
     // ==================== Main ====================
 
     /**
-    * 命令行入口，按角色分发
-    *
-    * <p>支持 {@code --config xxx.properties} 方式从外部配置文件读取参数，
-    * 否则按 {@code server|provider|visit} 位置参数解析。</p>
-    *
-    * @param args 命令行参数
-    * @throws Exception 启动异常
-    */
+     * 命令行入口，按角色分发
+     *
+     * <p>支持 {@code --config xxx.properties} 方式从外部配置文件读取参数，
+     * 否则按 {@code server|provider|visit} 位置参数解析。</p>
+     *
+     * @param args 命令行参数
+     * @throws Exception 启动异常
+     */
     public static void main(String[] args) throws Exception {
         if (args.length < 1) {
             System.out.println("SIP Tunnel - 内网穿透隧道");

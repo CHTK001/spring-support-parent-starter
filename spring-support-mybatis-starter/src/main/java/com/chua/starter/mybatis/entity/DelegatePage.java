@@ -4,15 +4,15 @@ import com.chua.common.support.annotation.ColumnIgnore;
 import lombok.Data;
 
 /**
-* page
-* @author CH
-* @since 4.0.0
+ * page
+ * @author CH
+ * @since 4.0.0
  */
 @Data
 public class DelegatePage<T>{
     /**
-    * 每页显示条数，默认 10
-    */
+     * 每页显示条数，默认 10
+     */
     @ColumnIgnore
     /** 每页大小 */
     protected long pageSize = 10;

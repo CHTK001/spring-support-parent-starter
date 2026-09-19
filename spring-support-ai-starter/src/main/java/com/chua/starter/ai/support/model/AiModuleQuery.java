@@ -3,36 +3,36 @@ package com.chua.starter.ai.support.model;
 import lombok.Data;
 
 /**
-* AI 模块查询模型。
-*
-* @since 4.0.0.42
-* @author CH
+ * AI 模块查询模型。
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Data
 public class AiModuleQuery {
 
     /**
-    * 当前页码
-    */
+     * 当前页码
+     */
     private Integer current;
 
     /**
-    * 每页条数
-    */
+     * 每页条数
+     */
     private Integer size;
 
     /**
-    * 模块类型
-    */
+     * 模块类型
+     */
     private String sysAiModuleType;
 
     /**
-    * 模块厂商
-    */
+     * 模块厂商
+     */
     private String sysAiModuleVendor;
 
     /**
-    * 关键字（模糊搜索）
-    */
+     * 关键字（模糊搜索）
+     */
     private String keyword;
 }

@@ -217,13 +217,13 @@ public class ProjectMetricServiceImpl implements ProjectMetricService {
     }
 
     /**
-    * 持久化单个指标点（采集失败占位等场景）
-    *
-    * @param project    项目
-    * @param host       主机
-    * @param metricName 指标名
-    * @param value      值
-    */
+     * 持久化单个指标点（采集失败占位等场景）
+     *
+     * @param project    项目
+     * @param host       主机
+     * @param metricName 指标名
+     * @param value      值
+     */
     private void persistOne(MsProject project, MsServerHost host, String metricName, double value) {
         Map<String, Double> metrics = new LinkedHashMap<>(1);
         metrics.put(metricName, value);
@@ -234,12 +234,12 @@ public class ProjectMetricServiceImpl implements ProjectMetricService {
     }
 
     /**
-    * 持久化指标点到 ms_project_metric（JdbcTemplate 写主数据源）
-    *
-    * @param project 项目
-    * @param host    主机
-    * @param metrics 指标点
-    */
+     * 持久化指标点到 ms_project_metric（JdbcTemplate 写主数据源）
+     *
+     * @param project 项目
+     * @param host    主机
+     * @param metrics 指标点
+     */
     private void persistMetrics(MsProject project, MsServerHost host, Map<String, Double> metrics) {
         java.time.LocalDateTime now = java.time.LocalDateTime.now();
         for (Map.Entry<String, Double> entry : metrics.entrySet()) {
@@ -258,11 +258,11 @@ public class ProjectMetricServiceImpl implements ProjectMetricService {
     }
 
     /**
-    * 确保指标表存在（幂等建表）
-    *
-    * @param conn 连接
-    * @throws java.sql.SQLException SQL 异常
-    */
+     * 确保指标表存在（幂等建表）
+     *
+     * @param conn 连接
+     * @throws java.sql.SQLException SQL 异常
+     */
     @SuppressWarnings("unused")
     private void ensureTable(java.sql.Connection conn) throws java.sql.SQLException {
         try (var stmt = conn.createStatement()) {
@@ -350,14 +350,14 @@ public class ProjectMetricServiceImpl implements ProjectMetricService {
     }
 
     /**
-    * 静默执行 SSH 命令（采集专用，失败返回 空 不抛异常）
-    *
-    * @param host       主机
-    * @param credential 凭据
-    * @param command    命令
-    * @param sshBroken  短路标记：连接失败置 true，后续命令跳过
-    * @return 标准输出（trim 后），失败返回 空
-    */
+     * 静默执行 SSH 命令（采集专用，失败返回 空 不抛异常）
+     *
+     * @param host       主机
+     * @param credential 凭据
+     * @param command    命令
+     * @param sshBroken  短路标记：连接失败置 true，后续命令跳过
+     * @return 标准输出（trim 后），失败返回 空
+     */
     private String execQuiet(MsServerHost host, SshCredential credential, String command,
                              java.util.concurrent.atomic.AtomicBoolean sshBroken) {
         if (sshBroken != null && sshBroken.get()) {
@@ -386,12 +386,12 @@ public class ProjectMetricServiceImpl implements ProjectMetricService {
     }
 
     /**
-    * 构建进程内存采集命令（RSS MB，按关键字精确匹配 PID）
-    *
-    * @param key   进程 关键字
-    * @param linux 是否 Linux
-    * @return 命令
-    */
+     * 构建进程内存采集命令（RSS MB，按关键字精确匹配 PID）
+     *
+     * @param key   进程 关键字
+     * @param linux 是否 Linux
+     * @return 命令
+     */
     private String buildProcessMemCommand(String key, boolean linux) {
         String safe = key.replace("'", "'\\''");
         return linux
@@ -402,12 +402,12 @@ public class ProjectMetricServiceImpl implements ProjectMetricService {
     }
 
     /**
-    * 构建进程 CPU 采集命令（按关键字匹配 PID 的 pcpu 合计，%）
-    *
-    * @param key   进程 关键字
-    * @param linux 是否 Linux
-    * @return 命令
-    */
+     * 构建进程 CPU 采集命令（按关键字匹配 PID 的 pcpu 合计，%）
+     *
+     * @param key   进程 关键字
+     * @param linux 是否 Linux
+     * @return 命令
+     */
     private String buildProcessCpuCommand(String key, boolean linux) {
         String safe = key.replace("'", "'\\''");
         return linux
@@ -418,11 +418,11 @@ public class ProjectMetricServiceImpl implements ProjectMetricService {
     }
 
     /**
-    * 解析端口号（健康目标为 host:port 或 host:port/path 时取端口）
-    *
-    * @param target 健康目标
-    * @return 端口，无返回 空
-    */
+     * 解析端口号（健康目标为 host:port 或 host:port/path 时取端口）
+     *
+     * @param target 健康目标
+     * @return 端口，无返回 空
+     */
     private String portOf(String target) {
         if (target == null || target.isBlank()) {
             return null;
@@ -437,12 +437,12 @@ public class ProjectMetricServiceImpl implements ProjectMetricService {
     }
 
     /**
-    * 解析双精度
-    *
-    * @param text 文本
-    * @param dflt 默认值
-    * @return 数值
-    */
+     * 解析双精度
+     *
+     * @param text 文本
+     * @param dflt 默认值
+     * @return 数值
+     */
     private double parseDouble(String text, double dflt) {
         if (text == null || text.isBlank()) {
             return dflt;
@@ -499,11 +499,11 @@ public class ProjectMetricServiceImpl implements ProjectMetricService {
     }
 
     /**
-    * 解析指标采集目标主机（优先 msProjectMetricHostIds，为空时回退全部绑定主机）
-    *
-    * @param project 项目
-    * @return ID 列表
-    */
+     * 解析指标采集目标主机（优先 msProjectMetricHostIds，为空时回退全部绑定主机）
+     *
+     * @param project 项目
+     * @return ID 列表
+     */
     private List<Long> parseMetricHostIds(MsProject project) {
         List<Long> metricHosts = parseHostIds(project.getMsProjectMetricHostIds());
         if (!metricHosts.isEmpty()) {
@@ -513,11 +513,11 @@ public class ProjectMetricServiceImpl implements ProjectMetricService {
     }
 
     /**
-    * 解析 主机标识 JSON 数组
-    *
-    * @param json JSON 字符串
-    * @return ID 列表，解析失败返回空列表
-    */
+     * 解析 主机标识 JSON 数组
+     *
+     * @param json JSON 字符串
+     * @return ID 列表，解析失败返回空列表
+     */
     private List<Long> parseHostIds(String json) {
         if (!isNotBlank(json)) {
             return List.of();
@@ -532,22 +532,22 @@ public class ProjectMetricServiceImpl implements ProjectMetricService {
     }
 
     /**
-    * 是否 Linux 主机
-    *
-    * @param host 主机
-    * @return 是否 Linux
-    */
+     * 是否 Linux 主机
+     *
+     * @param host 主机
+     * @return 是否 Linux
+     */
     private boolean isLinux(MsServerHost host) {
         return host != null && host.getServerHostOsType() != null
                 && host.getServerHostOsType().trim().toUpperCase(java.util.Locale.ROOT).startsWith("LINUX");
     }
 
     /**
-    * 非空判断
-    *
-    * @param value 字符串
-    * @return 是否非空
-    */
+     * 非空判断
+     *
+     * @param value 字符串
+     * @return 是否非空
+     */
     private boolean isNotBlank(String value) {
         return value != null && !value.isBlank();
     }

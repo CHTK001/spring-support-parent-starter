@@ -4,20 +4,20 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
-* H2 嵌入式数据库配置属性。
-* <p>
-* 支持通过 {@code plugin.h2.*} 或 {@code spring.datasource.h2.*} 配置：
-* <pre>{@code
-* plugin.h2.enable=true
-* plugin.h2.url=jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1
-* plugin.h2.script-path=classpath:db/migration/h2
-* plugin.h2.cleanup-after-test=true
-* }</pre>ue
-* }</pre>
-* </p>
-*
-* @author CH
-* @since 4.0.0.42
+ * H2 嵌入式数据库配置属性。
+ * <p>
+ * 支持通过 {@code plugin.h2.*} 或 {@code spring.datasource.h2.*} 配置：
+ * <pre>{@code
+ * plugin.h2.enable=true
+ * plugin.h2.url=jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1
+ * plugin.h2.script-path=classpath:db/migration/h2
+ * plugin.h2.cleanup-after-test=true
+ * }</pre>ue
+ * }</pre>
+ * </p>
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 @Data
 @ConfigurationProperties(prefix = "plugin.h2", ignoreInvalidFields = true)

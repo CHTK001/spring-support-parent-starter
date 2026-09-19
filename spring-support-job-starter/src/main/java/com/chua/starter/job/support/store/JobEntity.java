@@ -12,17 +12,17 @@ import java.io.Serial;
 import java.io.Serializable;
 
 /**
-* sys_作业 任务主表实体 (MyBatis-Plus 持久化模型)。
-*
-* <p>所有字段以表名 {@code sys_job} 作为前缀 ({@code sys_job_*});
-* 通用审计字段来自 {@link SysBase} (创建_时间 / 更新_时间 / 创建_by / 更新_by / 创建_名称 / 更新_名称)。
-* 本表额外包含 {@link #sysJobIsDeleted} 与 {@link #sysJobVersion} 用于逻辑删除与乐观锁。</p>
-*
-* <p>跨数据库导入要求见同目录 {@code V1.0__init_job.sql},字段命名仅使用 ASCII,
-* 不使用方言专属语法,目标库: MySQL 8+ / PostgreSQL 12+ / Oracle 12C+。</p>
-*
-* @since 4.0.0.42
-* @author CH
+ * sys_作业 任务主表实体 (MyBatis-Plus 持久化模型)。
+ *
+ * <p>所有字段以表名 {@code sys_job} 作为前缀 ({@code sys_job_*});
+ * 通用审计字段来自 {@link SysBase} (创建_时间 / 更新_时间 / 创建_by / 更新_by / 创建_名称 / 更新_名称)。
+ * 本表额外包含 {@link #sysJobIsDeleted} 与 {@link #sysJobVersion} 用于逻辑删除与乐观锁。</p>
+ *
+ * <p>跨数据库导入要求见同目录 {@code V1.0__init_job.sql},字段命名仅使用 ASCII,
+ * 不使用方言专属语法,目标库: MySQL 8+ / PostgreSQL 12+ / Oracle 12C+。</p>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -30,8 +30,8 @@ import java.io.Serializable;
 public class JobEntity extends SysBase implements Serializable {
 
     /**
-    * 序列化版本
-    */
+     * 序列化版本
+     */
     @Serial
     /** 串行版本UID */
     private static final long serialVersionUID = 1L;

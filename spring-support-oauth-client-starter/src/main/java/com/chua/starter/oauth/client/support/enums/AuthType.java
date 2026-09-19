@@ -2,141 +2,141 @@
 package com.chua.starter.oauth.client.support.enums;
 
 /**
-* 认证类型枚举
-* <p>定义系统支持的认证方式</p>
-*
-* @版本 1.0.0
-* @since 2022/7/26 8:20
-* @author CH
+ * 认证类型枚举
+ * <p>定义系统支持的认证方式</p>
+ *
+ * @版本 1.0.0
+ * @since 2022/7/26 8:20
+ * @author CH
  */
 public enum AuthType {
 
     /**
-    * Web登录认证
-    * <p>基于用户名/密码的标准Web登录方式</p>
-    * @param "web" "web"
-    * @param "Web登录" "Web登录"
-    * @return WEB的结果
-    */
+     * Web登录认证
+     * <p>基于用户名/密码的标准Web登录方式</p>
+     * @param "web" "web"
+     * @param "Web登录" "Web登录"
+     * @return WEB的结果
+     */
     WEB("web", "Web登录"),
 
     /**
-    * 令牌认证
-    * <p>基于Token的认证方式，Token存在于sys_token表中即为有效</p>
-    * @param "token" "令牌"
-    * @param "Token认证" "令牌认证"
-    * @return 令牌的结果
-    */
+     * 令牌认证
+     * <p>基于Token的认证方式，Token存在于sys_token表中即为有效</p>
+     * @param "token" "令牌"
+     * @param "Token认证" "令牌认证"
+     * @return 令牌的结果
+     */
     TOKEN("token", "Token认证"),
 
     /**
-    * 微信认证
-    * <p>微信相关的认证方式，包括微信小程序、公众号等</p>
-    * @param "wechat" "wechat"
-    * @param "微信认证" "微信认证"
-    * @return WECHAT的结果
-    */
+     * 微信认证
+     * <p>微信相关的认证方式，包括微信小程序、公众号等</p>
+     * @param "wechat" "wechat"
+     * @param "微信认证" "微信认证"
+     * @return WECHAT的结果
+     */
     WECHAT("wechat", "微信认证"),
 
     /**
-    * 租户认证
-    * <p>多租户系统的租户级别认证</p>
-    * @param "tenant" "tenant"
-    * @param "租户认证" "租户认证"
-    * @return TENANT的结果
-    */
+     * 租户认证
+     * <p>多租户系统的租户级别认证</p>
+     * @param "tenant" "tenant"
+     * @param "租户认证" "租户认证"
+     * @return TENANT的结果
+     */
     TENANT("tenant", "租户认证"),
 
     /**
-    * Gitee认证
-    * <p>Gitee第三方OAuth2.0登录</p>
-    * @param "gitee" "gitee"
-    * @param "Gitee认证" "Gitee认证"
-    * @return GITEE的结果
-    */
+     * Gitee认证
+     * <p>Gitee第三方OAuth2.0登录</p>
+     * @param "gitee" "gitee"
+     * @param "Gitee认证" "Gitee认证"
+     * @return GITEE的结果
+     */
     GITEE("gitee", "Gitee认证"),
 
     /**
-    * GitHub认证
-    * <p>GitHub第三方OAuth2.0登录</p>
-    * @param "github" "GitHub"
-    * @param "GitHub认证" "GitHub认证"
-    * @return GITHUB的结果
-    */
+     * GitHub认证
+     * <p>GitHub第三方OAuth2.0登录</p>
+     * @param "github" "GitHub"
+     * @param "GitHub认证" "GitHub认证"
+     * @return GITHUB的结果
+     */
     GITHUB("github", "GitHub认证"),
 
     /**
-    * 第三方认证
-    * <p>通用第三方OAuth2.0登录，用于Gitee、GitHub、微信等第三方平台</p>
-    * @param "third_party" "third_party"
-    * @param "第三方认证" "第三方认证"
-    * @return THIRD_PARTY的结果
-    */
+     * 第三方认证
+     * <p>通用第三方OAuth2.0登录，用于Gitee、GitHub、微信等第三方平台</p>
+     * @param "third_party" "third_party"
+     * @param "第三方认证" "第三方认证"
+     * @return THIRD_PARTY的结果
+     */
     THIRD_PARTY("third_party", "第三方认证"),
 
     /**
-    * 短信验证码认证
-    * <p>基于手机号和短信验证码的登录方式</p>
-    * @param "sms" "sms"
-    * @param "短信验证码认证" "短信验证码认证"
-    * @return SMS的结果
-    */
+     * 短信验证码认证
+     * <p>基于手机号和短信验证码的登录方式</p>
+     * @param "sms" "sms"
+     * @param "短信验证码认证" "短信验证码认证"
+     * @return SMS的结果
+     */
     SMS("sms", "短信验证码认证"),
 
     /**
-    * 无认证类型
-    * <p>用于默认值或未指定认证类型的场景</p>
-    * @param "none" "无"
-    * @param "无" "无"
-    * @return 无的结果
-    */
+     * 无认证类型
+     * <p>用于默认值或未指定认证类型的场景</p>
+     * @param "none" "无"
+     * @param "无" "无"
+     * @return 无的结果
+     */
     NONE("none", "无");
 
     /**
-    * 认证类型编码
-    */
+     * 认证类型编码
+     */
     private final String code;
 
     /**
-    * 认证类型描述
-    */
+     * 认证类型描述
+     */
     private final String description;
 
     /**
-    * 构造函数
-    *
-    * @param code        认证类型编码
-    * @param description 认证类型描述
-    */
+     * 构造函数
+     *
+     * @param code        认证类型编码
+     * @param description 认证类型描述
+     */
     AuthType(String code, String description) {
         this.code = code;
         this.description = description;
     }
 
     /**
-    * 获取认证类型编码
-    *
-    * @return 认证类型编码
-    */
+     * 获取认证类型编码
+     *
+     * @return 认证类型编码
+     */
     public String getCode() {
         return code;
     }
 
     /**
-    * 获取认证类型描述
-    *
-    * @return 认证类型描述
-    */
+     * 获取认证类型描述
+     *
+     * @return 认证类型描述
+     */
     public String getDescription() {
         return description;
     }
 
     /**
-    * 根据编码获取认证类型
-    *
-    * @param code 认证类型编码
-    * @return 认证类型枚举，未找到返回 无
-    */
+     * 根据编码获取认证类型
+     *
+     * @param code 认证类型编码
+     * @return 认证类型枚举，未找到返回 无
+     */
     public static AuthType fromCode(String code) {
         if (code == null || code.isEmpty()) {
             return NONE;

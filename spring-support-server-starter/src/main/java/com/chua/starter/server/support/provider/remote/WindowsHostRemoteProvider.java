@@ -20,22 +20,22 @@ import java.util.Arrays;
 import java.util.Base64;
 
 /**
-* Windows 主机远程操作实现（WinRM + PowerShell）
-* <p>
-* 为什么必须独立实现而不是复用 SSH：Windows 默认不提供 SSH 服务，
-* 把 cmd/PowerShell 命令塞进 SSH 通道在真实 Windows 主机上根本连不上。
-* 本实现走 WinRM（Windows 远程管理，默认端口 5985/HTTP），
-* 所有命令以 PowerShell 脚本经 {@code -EncodedCommand}（UTF-16LE + Base64）下发，
-* 从根本上规避多行脚本与引号的转义问题。
-* </p>
-*
-* <p>
-* 文件传输说明：WinRM 协议本身不提供文件传输能力，故上传采用
-* 「Base64 分块 + PowerShell 追加写入」实现，并对上传结果做字节数校验。
-* </p>
-*
-* @author CH
-* @since 4.0.0.42
+ * Windows 主机远程操作实现（WinRM + PowerShell）
+ * <p>
+ * 为什么必须独立实现而不是复用 SSH：Windows 默认不提供 SSH 服务，
+ * 把 cmd/PowerShell 命令塞进 SSH 通道在真实 Windows 主机上根本连不上。
+ * 本实现走 WinRM（Windows 远程管理，默认端口 5985/HTTP），
+ * 所有命令以 PowerShell 脚本经 {@code -EncodedCommand}（UTF-16LE + Base64）下发，
+ * 从根本上规避多行脚本与引号的转义问题。
+ * </p>
+ *
+ * <p>
+ * 文件传输说明：WinRM 协议本身不提供文件传输能力，故上传采用
+ * 「Base64 分块 + PowerShell 追加写入」实现，并对上传结果做字节数校验。
+ * </p>
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 @Slf4j
 @Component
@@ -283,15 +283,15 @@ public class WindowsHostRemoteProvider implements HostRemoteProvider {
     }
 
     /**
-    * 解析指标采集输出
-    * <p>
-    * 取首个空白分隔的数值；输出为空、非数值或负值（-1 表示目标不存在）时返回
-    * {@link Double#NaN} 表示本轮无数据。
-    * </p>
-    *
-    * @param output 命令标准输出
-    * @return 指标数值
-    */
+     * 解析指标采集输出
+     * <p>
+     * 取首个空白分隔的数值；输出为空、非数值或负值（-1 表示目标不存在）时返回
+     * {@link Double#NaN} 表示本轮无数据。
+     * </p>
+     *
+     * @param output 命令标准输出
+     * @return 指标数值
+     */
     private double parseMetric(String output) {
         if (output == null || output.isBlank()) {
             return Double.NaN;
@@ -330,13 +330,13 @@ public class WindowsHostRemoteProvider implements HostRemoteProvider {
     }
 
     /**
-    * 建立 WinRM 连接
-    *
-    * @param host           主机
-    * @param credential     凭据（WinRM 仅支持用户名/密码）
-    * @param timeoutSeconds 会话超时秒数，&lt;=0 取默认
-    * @return 已连接客户端（调用方负责关闭）
-    */
+     * 建立 WinRM 连接
+     *
+     * @param host           主机
+     * @param credential     凭据（WinRM 仅支持用户名/密码）
+     * @param timeoutSeconds 会话超时秒数，&lt;=0 取默认
+     * @return 已连接客户端（调用方负责关闭）
+     */
     private WinRmExecClient open(MsServerHost host, SshCredential credential, int timeoutSeconds) {
         if (credential == null || credential.username() == null || credential.username().isBlank()) {
             throw new IllegalStateException("Windows 主机需要用户名/密码凭据（WinRM 不支持密钥认证）");
@@ -360,35 +360,35 @@ public class WindowsHostRemoteProvider implements HostRemoteProvider {
     }
 
     /**
-    * 在既有连接上执行 PowerShell 脚本
-    *
-    * @param client  已连接客户端
-    * @param script  PowerShell 脚本
-    * @return 执行结果
-    */
+     * 在既有连接上执行 PowerShell 脚本
+     *
+     * @param client  已连接客户端
+     * @param script  PowerShell 脚本
+     * @return 执行结果
+     */
     private RemoteExecResult execOn(WinRmExecClient client, String script) {
         var result = client.exec().command(encode(script)).execute();
         return new RemoteExecResult(result.exitCode(), result.stdout(), result.stderr());
     }
 
     /**
-    * 在既有连接上确保目录存在
-    *
-    * @param client 已连接客户端
-    * @param path   远端目录
-    * @return 执行结果
-    */
+     * 在既有连接上确保目录存在
+     *
+     * @param client 已连接客户端
+     * @param path   远端目录
+     * @return 执行结果
+     */
     private RemoteExecResult mkdirsOn(WinRmExecClient client, String path) {
         return execOn(client, "New-Item -ItemType Directory -Path '" + psEscape(path) + "' -Force | Out-Null");
     }
 
     /**
-    * 在既有连接上查询文件字节大小
-    *
-    * @param client 已连接客户端
-    * @param file   远端文件
-    * @return 字节数；不存在或探测失败为 -1
-    */
+     * 在既有连接上查询文件字节大小
+     *
+     * @param client 已连接客户端
+     * @param file   远端文件
+     * @return 字节数；不存在或探测失败为 -1
+     */
     private long fileSizeOn(WinRmExecClient client, String file) {
         try {
             String script = "$p='" + psEscape(file) + "';"
@@ -405,15 +405,15 @@ public class WindowsHostRemoteProvider implements HostRemoteProvider {
     }
 
     /**
-    * 将 PowerShell 脚本编码为 {@code -EncodedCommand} 参数
-    * <p>
-    * 脚本按 UTF-16LE 编码后 Base64：完全绕开引号/换行/特殊字符的转义问题，
-    * 多行脚本也能安全下发。
-    * </p>
-    *
-    * @param script PowerShell 脚本
-    * @return 完整命令行
-    */
+     * 将 PowerShell 脚本编码为 {@code -EncodedCommand} 参数
+     * <p>
+     * 脚本按 UTF-16LE 编码后 Base64：完全绕开引号/换行/特殊字符的转义问题，
+     * 多行脚本也能安全下发。
+     * </p>
+     *
+     * @param script PowerShell 脚本
+     * @return 完整命令行
+     */
     private String encode(String script) {
         String text = script == null ? "" : script;
         String base64 = Base64.getEncoder().encodeToString(text.getBytes(StandardCharsets.UTF_16LE));
@@ -421,11 +421,11 @@ public class WindowsHostRemoteProvider implements HostRemoteProvider {
     }
 
     /**
-    * PowerShell 单引号字面量转义（内部单引号翻倍）
-    *
-    * @param value 原始文本
-    * @return 可安全嵌入单引号字面量的文本
-    */
+     * PowerShell 单引号字面量转义（内部单引号翻倍）
+     *
+     * @param value 原始文本
+     * @return 可安全嵌入单引号字面量的文本
+     */
     private String psEscape(String value) {
         if (value == null) {
             return "";
@@ -434,11 +434,11 @@ public class WindowsHostRemoteProvider implements HostRemoteProvider {
     }
 
     /**
-    * 取远端路径的父目录
-    *
-    * @param path 远端路径
-    * @return 父目录；无分隔符时返回 null
-    */
+     * 取远端路径的父目录
+     *
+     * @param path 远端路径
+     * @return 父目录；无分隔符时返回 null
+     */
     private String parentOf(String path) {
         if (path == null) {
             return null;

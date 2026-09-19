@@ -13,13 +13,13 @@ import lombok.EqualsAndHashCode;
 import java.time.LocalDateTime;
 
 /**
-* 执行日志实体。
-*
-* <p>对应 {@code spider_execution_log} 表，记录每次执行中每个节点的输入输出、
-* 状态与耗时，以 执行_no（追踪标识）串联一次执行的完整链路。</p>
-*
-* @since 4.0.0.42
-* @author CH
+ * 执行日志实体。
+ *
+ * <p>对应 {@code spider_execution_log} 表，记录每次执行中每个节点的输入输出、
+ * 状态与耗时，以 执行_no（追踪标识）串联一次执行的完整链路。</p>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -28,8 +28,8 @@ import java.time.LocalDateTime;
 public class SpiderExecutionLog extends SysBase {
 
     /**
-    * 主键 标识（自增）
-    */
+     * 主键 标识（自增）
+     */
     @TableId(type = IdType.AUTO)
     @Schema(description = "主键 ID")
     /** 标识 */

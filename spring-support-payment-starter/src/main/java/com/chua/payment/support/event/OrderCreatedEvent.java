@@ -5,9 +5,9 @@ import lombok.Getter;
 import java.math.BigDecimal;
 
 /**
-* 订单创建事件
-* @author CH
-* @since 4.0.0
+ * 订单创建事件
+ * @author CH
+ * @since 4.0.0
  */
 @Getter
 public class OrderCreatedEvent extends PaymentEvent {
@@ -43,12 +43,12 @@ public class OrderCreatedEvent extends PaymentEvent {
     public OrderCreatedEvent(Object source, Long tenantId, Long merchantId, Long orderId, String orderNo,
                              Long userId, BigDecimal orderAmount, String channelType, String channelSubType, String subject) {
         /**
-        * 父。
-        * @param source 源
-        * @param "ORDER_CREATED" "订单_创建"
-        * @param tenantId tenantid
-        * @param merchantId merchantid
-        */
+         * 父。
+         * @param source 源
+         * @param "ORDER_CREATED" "订单_创建"
+         * @param tenantId tenantid
+         * @param merchantId merchantid
+         */
         super(source, "ORDER_CREATED", tenantId, merchantId);
         this.orderId = orderId;
         this.orderNo = orderNo;

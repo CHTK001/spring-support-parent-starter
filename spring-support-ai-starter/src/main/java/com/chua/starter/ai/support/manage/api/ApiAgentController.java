@@ -37,19 +37,19 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
-* Agent（Agent）控制器，替代 nomicore 的同名契约。
-*
-* <p>负责三类资源：
-* <ul>
-*     <li>/api/agents —— 内置/自定义 Agent 元数据目录；</li>
-*     <li>/api/agent-executions —— 持久化Agent执行（含步骤、尝试、决策）；</li>
-*     <li>/api/agent-execution-templates —— 执行模板（可一键创建执行）。</li>
-* </ul>
-* 全部为进程内内存实现，主键使用 {@link SysAiConversationStore#newId()} 生成的 UUID；
-* 关键状态变更通过 {@link ApiWebSocketPushService} 推送 {@code agentExecution.changed} 等事件。</p>
-*
-* @since 4.0.0.42
-* @author CH
+ * Agent（Agent）控制器，替代 nomicore 的同名契约。
+ *
+ * <p>负责三类资源：
+ * <ul>
+ *     <li>/api/agents —— 内置/自定义 Agent 元数据目录；</li>
+ *     <li>/api/agent-executions —— 持久化Agent执行（含步骤、尝试、决策）；</li>
+ *     <li>/api/agent-execution-templates —— 执行模板（可一键创建执行）。</li>
+ * </ul>
+ * 全部为进程内内存实现，主键使用 {@link SysAiConversationStore#newId()} 生成的 UUID；
+ * 关键状态变更通过 {@link ApiWebSocketPushService} 推送 {@code agentExecution.changed} 等事件。</p>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @ApiReturnFormatIgnore
 @RestController
@@ -59,65 +59,65 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ApiAgentController {
 
     /**
-    * 主键生成与基础存储工具
-    */
+     * 主键生成与基础存储工具
+     */
     private final SysAiConversationStore conversationStore;
 
     /**
-    * WS 事件推送服务
-    */
+     * WS 事件推送服务
+     */
     private final ApiWebSocketPushService pushService;
 
     /**
-    * 供应商 映射器（健康检测读取凭证与地址）
-    */
+     * 供应商 映射器（健康检测读取凭证与地址）
+     */
     private final SysAiProviderMapper providerMapper;
 
     /**
-    * 供应商模型 映射器（健康检测读取能力并回写结果）
-    */
+     * 供应商模型 映射器（健康检测读取能力并回写结果）
+     */
     private final SysAiProviderModelMapper modelMapper;
 
     /**
-    * 健康探测超时时间
-    */
+     * 健康探测超时时间
+     */
     private static final Duration HEALTH_TIMEOUT = Duration.ofSeconds(15);
 
     /**
-    * 共享 HTTP 客户端（连接池复用）
-    */
+     * 共享 HTTP 客户端（连接池复用）
+     */
     private final HttpClient healthHttpClient = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(10))
             .build();
 
     /**
-    * 内置 Agent 元数据目录（进程启动时初始化）
-    */
+     * 内置 Agent 元数据目录（进程启动时初始化）
+     */
     private final List<Map<String, Object>> builtinAgents = initBuiltinAgents();
 
     /**
-    * 自定义 Agent 元数据目录
-    */
+     * 自定义 Agent 元数据目录
+     */
     private final Map<String, Map<String, Object>> customAgents = new ConcurrentHashMap<>();
 
     /**
-    * 执行聚合：执行_标识 → 执行主体
-    */
+     * 执行聚合：执行_标识 → 执行主体
+     */
     private final Map<String, Map<String, Object>> executions = new ConcurrentHashMap<>();
 
     /**
-    * 执行步骤：执行_标识 → 步骤列表
-    */
+     * 执行步骤：执行_标识 → 步骤列表
+     */
     private final Map<String, List<Map<String, Object>>> executionSteps = new ConcurrentHashMap<>();
 
     /**
-    * 执行模板：执行_template_标识 → 模板主体
-    */
+     * 执行模板：执行_template_标识 → 模板主体
+     */
     private final Map<String, Map<String, Object>> templates = new ConcurrentHashMap<>();
 
     /**
-    * 模板参与者：执行_template_标识 → 参与者列表
-    */
+     * 模板参与者：执行_template_标识 → 参与者列表
+     */
     private final Map<String, List<Map<String, Object>>> templateParticipants = new ConcurrentHashMap<>();
 
     // =====================================================================
@@ -126,9 +126,9 @@ public class ApiAgentController {
 
     @GetMapping("/agents")
     /**
-    * 列表Agent。
-    * @return 列表Agent的结果
-    */
+     * 列表Agent。
+     * @return 列表Agent的结果
+     */
     public ApiResult<List<Map<String, Object>>> listAgents() {
         List<Map<String, Object>> all = new ArrayList<>(builtinAgents);
         all.addAll(customAgents.values());
@@ -137,9 +137,9 @@ public class ApiAgentController {
 
     @PostMapping("/agents/refresh")
     /**
-    * refresh习俗Agent。
-    * @return refresh习俗Agent的结果
-    */
+     * refresh习俗Agent。
+     * @return refresh习俗Agent的结果
+     */
     public ApiResult<Void> refreshCustomAgents() {
         // 内存实现：重新扫描自定义目录为幂等操作，无需实际 IO
         pushService.push("agent.listChanged", Map.of("action", "refreshed"));
@@ -151,8 +151,8 @@ public class ApiAgentController {
     // =====================================================================
 
     /**
-    * 故障转移配置存储（单例 JSON blob，进程内持久）
-    */
+     * 故障转移配置存储（单例 JSON blob，进程内持久）
+     */
     private final Map<String, Object> modelFailoverConfig = new ConcurrentHashMap<>(Map.of(
             "enabled", false,
             "queue", new ArrayList<Map<String, Object>>(),
@@ -160,20 +160,20 @@ public class ApiAgentController {
 
     @GetMapping("/agent/model-failover")
     /**
-    * 获取模型failover。
-    * @return 获取模型failover的结果
-    */
+     * 获取模型failover。
+     * @return 获取模型failover的结果
+     */
     public ApiResult<Map<String, Object>> getModelFailover() {
         return ApiResult.ok(new LinkedHashMap<>(modelFailoverConfig));
     }
 
     @PutMapping("/agent/model-failover")
     /**
-    * 更新模型failover。
-    * @param false false
-    * @return 更新模型failover的结果
-    * @param body 请求体，不允许为 null
-    */
+     * 更新模型failover。
+     * @param false false
+     * @return 更新模型failover的结果
+     * @param body 请求体，不允许为 null
+     */
     public ApiResult<Map<String, Object>> updateModelFailover(@RequestBody(required = false) Map<String, Object> body) {
         if (body == null) {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "请求体不能为空");
@@ -214,11 +214,11 @@ public class ApiAgentController {
 
     @PostMapping("/agents/provider-health-check")
     /**
-    * 提供者健康检查。
-    * @param false false
-    * @return 提供者健康检查的结果
-    * @param body 请求体，不允许为 null
-    */
+     * 提供者健康检查。
+     * @param false false
+     * @return 提供者健康检查的结果
+     * @param body 请求体，不允许为 null
+     */
     public ApiResult<Map<String, Object>> providerHealthCheck(@RequestBody(required = false) Map<String, Object> body) {
         String providerId = str(body == null ? null : body.get("provider_id"));
         String modelName = str(body == null ? null : body.get("model"));
@@ -295,15 +295,15 @@ public class ApiAgentController {
     }
 
     /**
-    * 按能力协议对上游发起最小真实请求。
-    *
-    * <p>chat → 最小补全（max_tokens=1）；embedding → 最小向量请求；
-    * 其余（图像/视频等生成类）→ 获取 /模型 校验连通性与鉴权，避免产生实际生成费用。</p>
-    * @param provider 提供者
-    * @param capability capability
-    * @param modelName 模型名称
-    * @return 探针的结果
-    */
+     * 按能力协议对上游发起最小真实请求。
+     *
+     * <p>chat → 最小补全（max_tokens=1）；embedding → 最小向量请求；
+     * 其余（图像/视频等生成类）→ 获取 /模型 校验连通性与鉴权，避免产生实际生成费用。</p>
+     * @param provider 提供者
+     * @param capability capability
+     * @param modelName 模型名称
+     * @return 探针的结果
+     */
     private ProbeOutcome probe(SysAiProvider provider, Map<String, Object> capability, String modelName) {
  // ONNX 本地离线模型：基础_url 即模型文件路径，只校验文件存在与可读
         if ("onnx".equalsIgnoreCase(str(provider.getPlatform()))) {
@@ -322,14 +322,14 @@ public class ApiAgentController {
                 return new ProbeOutcome("unhealthy", -1, "forbidden", 0, "模型文件不可读: " + modelPath);
             }
             /**
-            * 探针outcome。
-            * @param "healthy" "healthy"
-            * @param -1 -1
-            * @param null 空
-            * @param 0 0
-            * @param null 空
-            * @return 探针outcome的结果
-            */
+             * 探针outcome。
+             * @param "healthy" "healthy"
+             * @param -1 -1
+             * @param null 空
+             * @param 0 0
+             * @param null 空
+             * @return 探针outcome的结果
+             */
             return new ProbeOutcome("healthy", -1, null, 0, null);
         }
         String protocol = str(capability.get("protocol"));
@@ -369,12 +369,12 @@ public class ApiAgentController {
                 return new ProbeOutcome("healthy", -1, null, status, null);
             }
             /**
-            * 探针outcome。
-            * @param "unhealthy" "unhealthy"
-            * @param -1 -1
-            * @param mapErrorKind(status 映射错误种类(状态
-            * @return 探针outcome的结果
-            */
+             * 探针outcome。
+             * @param "unhealthy" "unhealthy"
+             * @param -1 -1
+             * @param mapErrorKind(status 映射错误种类(状态
+             * @return 探针outcome的结果
+             */
             return new ProbeOutcome("unhealthy", -1, mapErrorKind(status), status, httpErrorMessage(status, response.body()));
         } catch (java.net.http.HttpTimeoutException e) {
             return new ProbeOutcome("unhealthy", -1, "timeout", 0, "上游请求超时（15s）");
@@ -383,25 +383,25 @@ public class ApiAgentController {
         } catch (Exception e) {
             log.warn("[agent] provider health probe failed: {}", e.getMessage());
             /**
-            * 探针outcome。
-            * @param "unhealthy" "unhealthy"
-            * @param -1 -1
-            * @param "connection_error" "connection_错误"
-            * @param 0 0
-            * @param e.getMessage( e.获取消息(
-            * @return 探针outcome的结果
-            */
+             * 探针outcome。
+             * @param "unhealthy" "unhealthy"
+             * @param -1 -1
+             * @param "connection_error" "connection_错误"
+             * @param 0 0
+             * @param e.getMessage( e.获取消息(
+             * @return 探针outcome的结果
+             */
             return new ProbeOutcome("unhealthy", -1, "connection_error", 0, "探测失败: " + e.getMessage());
         }
     }
 
     /**
-    * 构建探测 HTTP 请求；获取 时 主体 为 空。
-    * @param url url
-    * @param apiKey apiKey
-    * @param jsonBody json主体
-    * @return 构建探针请求的结果
-    */
+     * 构建探测 HTTP 请求；获取 时 主体 为 空。
+     * @param url url
+     * @param apiKey apiKey
+     * @param jsonBody json主体
+     * @return 构建探针请求的结果
+     */
     private HttpRequest buildProbeRequest(String url, String apiKey, String jsonBody) {
         HttpRequest.Builder builder = HttpRequest.newBuilder()
                 .uri(URI.create(url))
@@ -419,10 +419,10 @@ public class ApiAgentController {
     }
 
     /**
-    * 序列化 JSON；失败返回空对象文本。
-    * @param payload payload
-    * @return 写入json的结果
-    */
+     * 序列化 JSON；失败返回空对象文本。
+     * @param payload payload
+     * @return 写入json的结果
+     */
     private String writeJson(Map<String, Object> payload) {
         try {
             return new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(payload);
@@ -432,10 +432,10 @@ public class ApiAgentController {
     }
 
     /**
-    * HTTP 状态码 → 前端契约错误类别。
-    * @param status 状态
-    * @return 映射错误种类的结果
-    */
+     * HTTP 状态码 → 前端契约错误类别。
+     * @param status 状态
+     * @return 映射错误种类的结果
+     */
     private String mapErrorKind(int status) {
         switch (status) {
             case 400: return "invalid_request";
@@ -448,11 +448,11 @@ public class ApiAgentController {
     }
 
     /**
-    * 依据状态码生成简明错误信息。
-    * @param status 状态
-    * @param body 主体
-    * @return http错误消息的结果
-    */
+     * 依据状态码生成简明错误信息。
+     * @param status 状态
+     * @param body 主体
+     * @return http错误消息的结果
+     */
     private String httpErrorMessage(int status, String body) {
         String hint;
         switch (status) {
@@ -484,10 +484,10 @@ public class ApiAgentController {
     }
 
     /**
-    * 从凭证中提取首个可用 API Key（兼容 api_Key 与 api_Key 形态）。
-    * @param credentials 凭证
-    * @return extractapiKey的结果
-    */
+     * 从凭证中提取首个可用 API Key（兼容 api_Key 与 api_Key 形态）。
+     * @param credentials 凭证
+     * @return extractapiKey的结果
+     */
     private String extractApiKey(Map<String, Object> credentials) {
         if (credentials == null || credentials.isEmpty()) {
             return null;
@@ -504,23 +504,23 @@ public class ApiAgentController {
     }
 
     /**
-    * str。
-    * @param value 值
-    * @return str的结果
-    */
+     * str。
+     * @param value 值
+     * @return str的结果
+     */
     private static String str(Object value) {
         return value == null ? null : String.valueOf(value);
     }
 
     /**
-    * 探测结果内部载体。
-    * @param status 状态
-    * @param latencyMs 延迟ms
-    * @param errorKind 错误种类
-    * @param httpStatus http状态
-    * @param error 错误
-    * @return 探针outcome的结果
-    */
+     * 探测结果内部载体。
+     * @param status 状态
+     * @param latencyMs 延迟ms
+     * @param errorKind 错误种类
+     * @param httpStatus http状态
+     * @param error 错误
+     * @return 探针outcome的结果
+     */
     private record ProbeOutcome(String status, long latencyMs, String errorKind, int httpStatus, String error) {
     }
 
@@ -530,20 +530,20 @@ public class ApiAgentController {
 
     @GetMapping("/agent-executions")
     /**
-    * 列表executions。
-    * @return 列表executions的结果
-    */
+     * 列表executions。
+     * @return 列表executions的结果
+     */
     public ApiResult<List<Map<String, Object>>> listExecutions() {
         return ApiResult.ok(new ArrayList<>(executions.values()));
     }
 
     @PostMapping("/agent-executions")
     /**
-    * 创建执行。
-    * @param false false
-    * @return 创建执行的结果
-    * @param body 请求体，不允许为 null
-    */
+     * 创建执行。
+     * @param false false
+     * @return 创建执行的结果
+     * @param body 请求体，不允许为 null
+     */
     public ApiResult<Map<String, Object>> createExecution(@RequestBody(required = false) Map<String, Object> body) {
         String executionId = conversationStore.newId();
         Map<String, Object> exec = new LinkedHashMap<>();
@@ -557,19 +557,19 @@ public class ApiAgentController {
         executions.put(executionId, exec);
         executionSteps.put(executionId, new ArrayList<>());
         /**
-        * push改变。
-        * @param executionId 执行标识
-        */
+         * push改变。
+         * @param executionId 执行标识
+         */
         pushChange(executionId);
         return ApiResult.ok(exec);
     }
 
     @GetMapping("/agent-executions/{executionId}")
     /**
-    * 获取执行。
-    * @param executionId 执行标识
-    * @return 获取执行的结果
-    */
+     * 获取执行。
+     * @param executionId 执行标识
+     * @return 获取执行的结果
+     */
     public ApiResult<Map<String, Object>> getExecution(@PathVariable String executionId) {
         Map<String, Object> exec = requireExecution(executionId);
         return ApiResult.ok(toExecutionDetail(exec));
@@ -580,17 +580,17 @@ public class ApiAgentController {
                                            @RequestParam(required = false, defaultValue = "1") long expected_version) {
         Map<String, Object> exec = requireExecution(executionId);
         /**
-        * 检查版本。
-        * @param exec 执行
-        * @param expected_version 期望版本
-        */
+         * 检查版本。
+         * @param exec 执行
+         * @param expected_version 期望版本
+         */
         checkVersion(exec, expected_version);
         executions.remove(executionId);
         executionSteps.remove(executionId);
         /**
-        * push改变。
-        * @param executionId 执行标识
-        */
+         * push改变。
+         * @param executionId 执行标识
+         */
         pushChange(executionId);
         return ApiResult.ok();
     }
@@ -603,14 +603,14 @@ public class ApiAgentController {
             exec.put("name", body.get("name"));
         }
         /**
-        * bump版本。
-        * @param exec 执行
-        */
+         * bump版本。
+         * @param exec 执行
+         */
         bumpVersion(exec);
         /**
-        * push改变。
-        * @param executionId 执行标识
-        */
+         * push改变。
+         * @param executionId 执行标识
+         */
         pushChange(executionId);
         return ApiResult.ok(toExecutionDetail(exec));
     }
@@ -620,14 +620,14 @@ public class ApiAgentController {
                                                           @RequestBody(required = false) Map<String, Object> body) {
         Map<String, Object> exec = requireExecution(executionId);
         /**
-        * bump版本。
-        * @param exec 执行
-        */
+         * bump版本。
+         * @param exec 执行
+         */
         bumpVersion(exec);
         /**
-        * push改变。
-        * @param executionId 执行标识
-        */
+         * push改变。
+         * @param executionId 执行标识
+         */
         pushChange(executionId);
         return ApiResult.ok(toExecutionDetail(exec));
     }
@@ -637,14 +637,14 @@ public class ApiAgentController {
                                                           @RequestBody(required = false) Map<String, Object> body) {
         Map<String, Object> exec = requireExecution(executionId);
         /**
-        * bump版本。
-        * @param exec 执行
-        */
+         * bump版本。
+         * @param exec 执行
+         */
         bumpVersion(exec);
         /**
-        * push改变。
-        * @param executionId 执行标识
-        */
+         * push改变。
+         * @param executionId 执行标识
+         */
         pushChange(executionId);
         return ApiResult.ok(toExecutionDetail(exec));
     }
@@ -693,14 +693,14 @@ public class ApiAgentController {
         }
         Map<String, Object> exec = executions.get(executionId);
         /**
-        * bump版本。
-        * @param exec 执行
-        */
+         * bump版本。
+         * @param exec 执行
+         */
         bumpVersion(exec);
         /**
-        * push改变。
-        * @param executionId 执行标识
-        */
+         * push改变。
+         * @param executionId 执行标识
+         */
         pushChange(executionId);
         return ApiResult.ok(toExecutionDetail(exec));
     }
@@ -717,14 +717,14 @@ public class ApiAgentController {
         });
         Map<String, Object> exec = executions.get(executionId);
         /**
-        * bump版本。
-        * @param exec 执行
-        */
+         * bump版本。
+         * @param exec 执行
+         */
         bumpVersion(exec);
         /**
-        * push改变。
-        * @param executionId 执行标识
-        */
+         * push改变。
+         * @param executionId 执行标识
+         */
         pushChange(executionId);
         return ApiResult.ok(step);
     }
@@ -754,14 +754,14 @@ public class ApiAgentController {
                                                      @RequestBody(required = false) Map<String, Object> body) {
         Map<String, Object> exec = requireExecution(executionId);
         /**
-        * bump版本。
-        * @param exec 执行
-        */
+         * bump版本。
+         * @param exec 执行
+         */
         bumpVersion(exec);
         /**
-        * push改变。
-        * @param executionId 执行标识
-        */
+         * push改变。
+         * @param executionId 执行标识
+         */
         pushChange(executionId);
         return ApiResult.ok(toExecutionDetail(exec));
     }
@@ -772,14 +772,14 @@ public class ApiAgentController {
                                                      @RequestBody(required = false) Map<String, Object> body) {
         Map<String, Object> exec = requireExecution(executionId);
         /**
-        * bump版本。
-        * @param exec 执行
-        */
+         * bump版本。
+         * @param exec 执行
+         */
         bumpVersion(exec);
         /**
-        * push改变。
-        * @param executionId 执行标识
-        */
+         * push改变。
+         * @param executionId 执行标识
+         */
         pushChange(executionId);
         return ApiResult.ok(toExecutionDetail(exec));
     }
@@ -804,14 +804,14 @@ public class ApiAgentController {
                                                         @RequestBody(required = false) Map<String, Object> body) {
         Map<String, Object> exec = requireExecution(executionId);
         /**
-        * bump版本。
-        * @param exec 执行
-        */
+         * bump版本。
+         * @param exec 执行
+         */
         bumpVersion(exec);
         /**
-        * push改变。
-        * @param executionId 执行标识
-        */
+         * push改变。
+         * @param executionId 执行标识
+         */
         pushChange(executionId);
         return ApiResult.ok(toExecutionDetail(exec));
     }
@@ -842,29 +842,29 @@ public class ApiAgentController {
 
     @GetMapping("/agent-execution-templates")
     /**
-    * 列表templates。
-    * @return 列表templates的结果
-    */
+     * 列表templates。
+     * @return 列表templates的结果
+     */
     public ApiResult<List<Map<String, Object>>> listTemplates() {
         return ApiResult.ok(new ArrayList<>(templates.values()));
     }
 
     @GetMapping("/agent-execution-templates/{templateId}")
     /**
-    * 获取template。
-    * @param templateId templateid
-    * @return 获取template的结果
-    */
+     * 获取template。
+     * @param templateId templateid
+     * @return 获取template的结果
+     */
     public ApiResult<Map<String, Object>> getTemplate(@PathVariable String templateId) {
         return ApiResult.ok(toTemplateDetail(requireTemplate(templateId)));
     }
 
     @PostMapping("/agent-execution-templates")
     /**
-    * 创建template。
-    * @param body 主体
-    * @return 创建template的结果
-    */
+     * 创建template。
+     * @param body 主体
+     * @return 创建template的结果
+     */
     public ApiResult<Map<String, Object>> createTemplate(@RequestBody Map<String, Object> body) {
         String templateId = conversationStore.newId();
         Map<String, Object> tpl = new LinkedHashMap<>();
@@ -918,9 +918,9 @@ public class ApiAgentController {
         executions.put(executionId, exec);
         executionSteps.put(executionId, new ArrayList<>());
         /**
-        * push改变。
-        * @param executionId 执行标识
-        */
+         * push改变。
+         * @param executionId 执行标识
+         */
         pushChange(executionId);
         return ApiResult.ok(exec);
     }
@@ -930,31 +930,31 @@ public class ApiAgentController {
     // =====================================================================
 
     /**
-    * 命令执行。
-    * @param executionId 执行标识
-    * @param status 状态
-    * @return 命令执行的结果
-    */
+     * 命令执行。
+     * @param executionId 执行标识
+     * @param status 状态
+     * @return 命令执行的结果
+     */
     private ApiResult<Map<String, Object>> commandExecution(String executionId, String status) {
         Map<String, Object> exec = requireExecution(executionId);
         exec.put("status", status);
         /**
-        * bump版本。
-        * @param exec 执行
-        */
+         * bump版本。
+         * @param exec 执行
+         */
         bumpVersion(exec);
         /**
-        * push改变。
-        * @param executionId 执行标识
-        */
+         * push改变。
+         * @param executionId 执行标识
+         */
         pushChange(executionId);
         return ApiResult.ok(toExecutionDetail(exec));
     }
 
     /**
-    * push改变。
-    * @param executionId 执行标识
-    */
+     * push改变。
+     * @param executionId 执行标识
+     */
     private void pushChange(String executionId) {
         Map<String, Object> exec = executions.get(executionId);
         if (exec != null) {
@@ -963,10 +963,10 @@ public class ApiAgentController {
     }
 
     /**
-    * 转为执行detail。
-    * @param exec 执行
-    * @return 转为执行detail的结果
-    */
+     * 转为执行detail。
+     * @param exec 执行
+     * @return 转为执行detail的结果
+     */
     private Map<String, Object> toExecutionDetail(Map<String, Object> exec) {
         Map<String, Object> detail = new LinkedHashMap<>(exec);
         List<Map<String, Object>> steps = executionSteps.get(exec.get("execution_id"));
@@ -975,10 +975,10 @@ public class ApiAgentController {
     }
 
     /**
-    * require执行。
-    * @param executionId 执行标识
-    * @return require执行的结果
-    */
+     * require执行。
+     * @param executionId 执行标识
+     * @return require执行的结果
+     */
     private Map<String, Object> requireExecution(String executionId) {
         Map<String, Object> exec = executions.get(executionId);
         if (exec == null) {
@@ -988,11 +988,11 @@ public class ApiAgentController {
     }
 
     /**
-    * requirestep。
-    * @param executionId 执行标识
-    * @param stepId stepid
-    * @return requireStep的结果
-    */
+     * requirestep。
+     * @param executionId 执行标识
+     * @param stepId stepid
+     * @return requireStep的结果
+     */
     private Map<String, Object> requireStep(String executionId, String stepId) {
         List<Map<String, Object>> steps = executionSteps.get(executionId);
         if (steps == null) {
@@ -1005,10 +1005,10 @@ public class ApiAgentController {
     }
 
     /**
-    * requiretemplate。
-    * @param templateId templateid
-    * @return requireTemplate的结果
-    */
+     * requiretemplate。
+     * @param templateId templateid
+     * @return requireTemplate的结果
+     */
     private Map<String, Object> requireTemplate(String templateId) {
         Map<String, Object> tpl = templates.get(templateId);
         if (tpl == null) {
@@ -1018,10 +1018,10 @@ public class ApiAgentController {
     }
 
     /**
-    * 转为templatedetail。
-    * @param tpl tpl
-    * @return 转为templatedetail的结果
-    */
+     * 转为templatedetail。
+     * @param tpl tpl
+     * @return 转为templatedetail的结果
+     */
     private Map<String, Object> toTemplateDetail(Map<String, Object> tpl) {
         Map<String, Object> detail = new LinkedHashMap<>(tpl);
         List<Map<String, Object>> participants = templateParticipants.get(tpl.get("execution_template_id"));
@@ -1030,9 +1030,9 @@ public class ApiAgentController {
     }
 
     /**
-    * bump版本。
-    * @param exec 执行
-    */
+     * bump版本。
+     * @param exec 执行
+     */
     private void bumpVersion(Map<String, Object> exec) {
         Object v = exec.get("version");
         long version = v instanceof Number ? ((Number) v).longValue() : 1;
@@ -1041,10 +1041,10 @@ public class ApiAgentController {
     }
 
     /**
-    * 检查版本。
-    * @param exec 执行
-    * @param expectedVersion 期望版本
-    */
+     * 检查版本。
+     * @param exec 执行
+     * @param expectedVersion 期望版本
+     */
     private void checkVersion(Map<String, Object> exec, long expectedVersion) {
         Object v = exec.get("version");
         long current = v instanceof Number ? ((Number) v).longValue() : 1;
@@ -1054,9 +1054,9 @@ public class ApiAgentController {
     }
 
     /**
-    * 初始化builtinAgent。
-    * @return 初始化builtinAgent的结果
-    */
+     * 初始化builtinAgent。
+     * @return 初始化builtinAgent的结果
+     */
     private List<Map<String, Object>> initBuiltinAgents() {
         List<Map<String, Object>> list = new ArrayList<>();
         list.add(buildAgent("nomi", "Nomi", "nomi", "builtin", true, true));
@@ -1065,15 +1065,15 @@ public class ApiAgentController {
     }
 
     /**
-    * 构建Agent。
-    * @param id 标识
-    * @param name 名称
-    * @param type 类型
-    * @param source 源
-    * @param enabled 已启用
-    * @param available 可用
-    * @return 构建Agent的结果
-    */
+     * 构建Agent。
+     * @param id 标识
+     * @param name 名称
+     * @param type 类型
+     * @param source 源
+     * @param enabled 已启用
+     * @param available 可用
+     * @return 构建Agent的结果
+     */
     private Map<String, Object> buildAgent(String id, String name, String type, String source, boolean enabled, boolean available) {
         Map<String, Object> agent = new LinkedHashMap<>();
         agent.put("agent_id", id);

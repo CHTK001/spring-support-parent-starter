@@ -10,13 +10,13 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
-* 监控解析规则实体
-* <p>
-* 任务的 N 条解析规则, 每条规则描述如何从采集输出中抽取一个指标。
-* </p>
-*
-* @since 2026/8/4
-* @author CH
+ * 监控解析规则实体
+ * <p>
+ * 任务的 N 条解析规则, 每条规则描述如何从采集输出中抽取一个指标。
+ * </p>
+ *
+ * @since 2026/8/4
+ * @author CH
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

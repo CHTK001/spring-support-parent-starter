@@ -24,10 +24,10 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
-* 服务器分组接口
-*
-* @author CH
-* @since 4.0.0.42
+ * 服务器分组接口
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 @Tag(name = "服务器资产-分组", description = "主机分组管理")
 @RestController
@@ -51,12 +51,12 @@ public class ServerGroupController {
     }
 
     /**
-    * 更新分组
-    *
-    * @param id    主键
-    * @param group 分组
-    * @return 结果
-    */
+     * 更新分组
+     *
+     * @param id    主键
+     * @param group 分组
+     * @return 结果
+     */
     @Operation(summary = "更新分组")
     @PutMapping("/{id}")
     public ReturnResult<MsServerGroup> update(@PathVariable Long id, @RequestBody MsServerGroup group) {
@@ -64,11 +64,11 @@ public class ServerGroupController {
     }
 
     /**
-    * 删除分组
-    *
-    * @param id 主键
-    * @return 结果
-    */
+     * 删除分组
+     *
+     * @param id 主键
+     * @return 结果
+     */
     @Operation(summary = "删除分组")
     @DeleteMapping("/{id}")
     public ReturnResult<Void> delete(@PathVariable Long id) {
@@ -76,10 +76,10 @@ public class ServerGroupController {
     }
 
     /**
-    * 分组列表（平铺，前端组树）
-    *
-    * @return 列表
-    */
+     * 分组列表（平铺，前端组树）
+     *
+     * @return 列表
+     */
     @Operation(summary = "分组列表")
     @GetMapping
     public ReturnResult<List<MsServerGroup>> list() {
@@ -87,10 +87,10 @@ public class ServerGroupController {
     }
 
     /**
-    * 分组树（按 msServerGroupParentId 组装，根节点 parentId 为 null 或 0）
-    *
-    * @return 树结构列表
-    */
+     * 分组树（按 msServerGroupParentId 组装，根节点 parentId 为 null 或 0）
+     *
+     * @return 树结构列表
+     */
     @Operation(summary = "分组树")
     @GetMapping("/tree")
     public ReturnResult<List<Map<String, Object>>> tree() {
@@ -116,11 +116,11 @@ public class ServerGroupController {
     }
 
     /**
-    * 将实体转换为树节点并递归组装 children
-    * @param g 方法入参 g
-    * @param childrenMap children映射，不允许为 null
-    * @return 结果映射，无数据时为空映射
-    */
+     * 将实体转换为树节点并递归组装 children
+     * @param g 方法入参 g
+     * @param childrenMap children映射，不允许为 null
+     * @return 结果映射，无数据时为空映射
+     */
     private Map<String, Object> toNode(MsServerGroup g, Map<Long, List<MsServerGroup>> childrenMap) {
         Map<String, Object> node = new LinkedHashMap<>();
         node.put("id", g.getId());

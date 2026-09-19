@@ -6,10 +6,10 @@ import com.chua.common.support.spi.annotations.Spi;
 import java.util.List;
 
 /**
-* RAG 模块全局设置提供者 SPI。
-*
-* @author CH
-* @since 4.0.0
+ * RAG 模块全局设置提供者 SPI。
+ *
+ * @author CH
+ * @since 4.0.0
  */
 @Spi("rag")
 public class RagGlobalSettingProvider implements GlobalSettingProvider {

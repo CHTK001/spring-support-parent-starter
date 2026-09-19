@@ -25,15 +25,15 @@ import java.util.Comparator;
 import java.util.List;
 
 /**
-* rpc资源Bean
-* <p>
-* 通过注入的 {@link RpcClient}（按协议类型 SPI 创建）获得远程服务代理，
-* 不耦合任何具体协议实现。
-* </p>
-*
-* @版本 1.0.0
-* @since 2024/04/07
-* @author CH
+ * rpc资源Bean
+ * <p>
+ * 通过注入的 {@link RpcClient}（按协议类型 SPI 创建）获得远程服务代理，
+ * 不耦合任何具体协议实现。
+ * </p>
+ *
+ * @版本 1.0.0
+ * @since 2024/04/07
+ * @author CH
  */
 @Getter
 @Setter
@@ -101,15 +101,15 @@ public class RpcResourceBean<T> implements FactoryBean<T>, ApplicationContextAwa
     }
 
     /**
-    * 按拦截器链执行一次远程调用（前置 / 调用 / 后置 / 异常 / 完成）。
-    *
-    * @param target       远程代理对象
-    * @param method       调用方法
-    * @param args         调用参数
-    * @param interceptors 拦截器链（已按 订单 排序）
-    * @return 调用结果
-    * @throws Throwable 远程调用或业务异常
-    */
+     * 按拦截器链执行一次远程调用（前置 / 调用 / 后置 / 异常 / 完成）。
+     *
+     * @param target       远程代理对象
+     * @param method       调用方法
+     * @param args         调用参数
+     * @param interceptors 拦截器链（已按 订单 排序）
+     * @return 调用结果
+     * @throws Throwable 远程调用或业务异常
+     */
     private Object invokeWithInterceptors(Object target, Method method, Object[] args,
                                           List<RpcInterceptor> interceptors) throws Throwable {
         if (method.getDeclaringClass() == Object.class) {

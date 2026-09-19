@@ -7,9 +7,9 @@ import java.util.Collections;
 import java.util.Map;
 
 /**
-* Bean 转 映射 工具。
-* @author CH
-* @since 4.0.0
+ * Bean 转 映射 工具。
+ * @author CH
+ * @since 4.0.0
  */
 public final class BeanMap {
 

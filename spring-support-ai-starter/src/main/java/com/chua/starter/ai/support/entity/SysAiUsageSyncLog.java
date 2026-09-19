@@ -11,13 +11,13 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
-* AI 用量同步日志实体。
-*
-* <p>每次用量同步/聚合执行（定时、手动触发、数据源 parser）都会落一条日志，
-* 供前端「用量同步日志」页持久化查询，避免仅依赖内存缓冲重启丢失。</p>
-*
-* @author CH
-* @since 4.0.0.42
+ * AI 用量同步日志实体。
+ *
+ * <p>每次用量同步/聚合执行（定时、手动触发、数据源 parser）都会落一条日志，
+ * 供前端「用量同步日志」页持久化查询，避免仅依赖内存缓冲重启丢失。</p>
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 @Data
 @TableName("sys_ai_usage_sync_log")
@@ -26,8 +26,8 @@ public class SysAiUsageSyncLog implements Serializable {
     private static final long serialVersionUID = 1L; // 串行版本uid
 
     /**
-    * 日志主键
-    */
+     * 日志主键
+     */
     @TableId(value = "sys_ai_usage_sync_log_id", type = IdType.AUTO)
     @Schema(description = "日志主键")
     /** 日志标识 */

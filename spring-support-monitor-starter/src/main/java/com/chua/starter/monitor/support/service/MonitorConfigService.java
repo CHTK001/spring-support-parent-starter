@@ -15,61 +15,61 @@ public interface MonitorConfigService {
     */
     ReturnResult<MsMonitorConfig> findByKey(String key);
     /**
-    * 获取字符串。
-    * @param key 键
-    * @return 获取字符串的结果
-    */
+     * 获取字符串。
+     * @param key 键
+     * @return 获取字符串的结果
+     */
     String getString(String key);
     /**
-    * 获取字符串。
-    * @param key 键
-    * @param defaultValue 默认值
-    * @return 获取字符串的结果
-    */
+     * 获取字符串。
+     * @param key 键
+     * @param defaultValue 默认值
+     * @return 获取字符串的结果
+     */
     String getString(String key, String defaultValue);
     /**
-    * 获取int。
-    * @param key 键
-    * @param defaultValue 默认值
-    * @return 获取int的结果
-    */
+     * 获取int。
+     * @param key 键
+     * @param defaultValue 默认值
+     * @return 获取int的结果
+     */
     int getInt(String key, int defaultValue);
     /**
-    * 获取long。
-    * @param key 键
-    * @param defaultValue 默认值
-    * @return 获取long的结果
-    */
+     * 获取long。
+     * @param key 键
+     * @param defaultValue 默认值
+     * @return 获取long的结果
+     */
     long getLong(String key, long defaultValue);
     /**
-    * 获取布尔值。
-    * @param key 键
-    * @param defaultValue 默认值
-    * @return 获取布尔值的结果
-    */
+     * 获取布尔值。
+     * @param key 键
+     * @param defaultValue 默认值
+     * @return 获取布尔值的结果
+     */
     boolean getBoolean(String key, boolean defaultValue);
     /**
-    * 获取全部。
-    * @return 获取全部的结果
-    */
+     * 获取全部。
+     * @return 获取全部的结果
+     */
     ReturnResult<Map<String, String>> getAll();
     /**
-    * 列表全部。
-    * @return 列表全部的结果
-    */
+     * 列表全部。
+     * @return 列表全部的结果
+     */
     List<MsMonitorConfig> listAll();
     /**
-    * upsert。
-    * @param entity 实体
-    * @return upsert的结果
-    */
+     * upsert。
+     * @param entity 实体
+     * @return upsert的结果
+     */
     ReturnResult<MsMonitorConfig> upsert(MsMonitorConfig entity);
 
     /**
-    * 批量保存配置（页面"保存全部"使用）。
-    *
-    * @param entities 配置列表
-    * @return 保存数量
-    */
+     * 批量保存配置（页面"保存全部"使用）。
+     *
+     * @param entities 配置列表
+     * @return 保存数量
+     */
     ReturnResult<Integer> upsertAll(List<MsMonitorConfig> entities);
 }

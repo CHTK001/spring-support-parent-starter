@@ -1,33 +1,33 @@
 package com.chua.starter.common.support.network;
 
 /**
-* 用户-Agent 工具。
-*
-* @since 4.0.0.42
-* @author CH
+ * 用户-Agent 工具。
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 public final class UserAgent {
 
     /**
-    * 用户Agent。
-    */
+     * 用户Agent。
+     */
     private UserAgent() {
     }
 
     /**
-    * 解析 用户-Agent 字符串。
-    *
-    * @param userAgentString 用户-Agent 字符串
-    * @return UserAgent 实例
-    */
+     * 解析 用户-Agent 字符串。
+     *
+     * @param userAgentString 用户-Agent 字符串
+     * @return UserAgent 实例
+     */
     public static UserAgentInfo parseUserAgentString(String userAgentString) {
         if (userAgentString == null || userAgentString.isBlank()) {
             /**
-            * 用户Agent信息。
-            * @param null 空
-            * @param null 空
-            * @return 用户Agent信息的结果
-            */
+             * 用户Agent信息。
+             * @param null 空
+             * @param null 空
+             * @return 用户Agent信息的结果
+             */
             return new UserAgentInfo(null, null);
         }
         String lower = userAgentString.toLowerCase();
@@ -59,19 +59,19 @@ public final class UserAgent {
         }
 
         /**
-        * 用户Agent信息。
-        * @param browser browser
-        * @param os os
-        * @return 用户Agent信息的结果
-        */
+         * 用户Agent信息。
+         * @param browser browser
+         * @param os os
+         * @return 用户Agent信息的结果
+         */
         return new UserAgentInfo(browser, os);
     }
 
     /**
-    * 是否爬虫。
-    * @param userAgent 用户Agent
-    * @return 是否爬虫的结果
-    */
+     * 是否爬虫。
+     * @param userAgent 用户Agent
+     * @return 是否爬虫的结果
+     */
     public static boolean isCrawler(String userAgent) {
         if (userAgent == null) {
             return false;
@@ -81,8 +81,8 @@ public final class UserAgent {
     }
 
     /**
-    * 用户-Agent 信息。
-    */
+     * 用户-Agent 信息。
+     */
     public static final class UserAgentInfo {
         /** Browser */
         private final Browser browser;
@@ -90,38 +90,38 @@ public final class UserAgent {
         private final OperatingSystem operatingSystem;
 
         /**
-        * 用户Agent信息。
-        * @param browser browser
-        * @param operatingSystem operating系统
-        * @return 用户Agent信息的结果
-        */
+         * 用户Agent信息。
+         * @param browser browser
+         * @param operatingSystem operating系统
+         * @return 用户Agent信息的结果
+         */
         public UserAgentInfo(Browser browser, OperatingSystem operatingSystem) {
             this.browser = browser;
             this.operatingSystem = operatingSystem;
         }
 
         /**
-        * 浏览器信息。
-        * @return 获取browser的结果
-        */
+         * 浏览器信息。
+         * @return 获取browser的结果
+         */
         public Browser getBrowser() {
             return browser;
         }
 
         /**
-        * 操作系统信息。
-        * @return 获取operating系统的结果
-        */
+         * 操作系统信息。
+         * @return 获取operating系统的结果
+         */
         public OperatingSystem getOperatingSystem() {
             return operatingSystem;
         }
     }
 
     /**
-    * 浏览器类型。
-    * @author CH
-    * @since 4.0.0
-    */
+     * 浏览器类型。
+     * @author CH
+     * @since 4.0.0
+     */
     public enum Browser {
         CHROME,
         FIREFOX,
@@ -137,10 +137,10 @@ public final class UserAgent {
     }
 
     /**
-    * 操作系统类型。
-    * @author CH
-    * @since 4.0.0
-    */
+     * 操作系统类型。
+     * @author CH
+     * @since 4.0.0
+     */
     public enum OperatingSystem {
         WINDOWS,
         MACOS,
@@ -150,9 +150,9 @@ public final class UserAgent {
         UNKNOWN; // UNKNOWN
 
         /**
-        * 获取名称。
-        * @return 获取名称的结果
-        */
+         * 获取名称。
+         * @return 获取名称的结果
+         */
         public String getName() {
             return this == UNKNOWN ? null : name();
         }

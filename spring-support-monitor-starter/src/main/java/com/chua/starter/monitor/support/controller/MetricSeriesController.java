@@ -12,15 +12,15 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
-* 指标时序曲线查询接口（数据源按配置选择：influxdb / Redis / 无）
-* <p>
-* 通过 {@link MetricTimeSeriesWriter} 统一门面路由到可用引擎；
-* 未配置时序存储时返回空数组，前端自动降级到 MySQL 历史。
-* 返回结构对齐前端 echarts 折线图：{@code [[时间戳ms, 值], ...]} 升序。
-* </p>
-*
-* @author CH
-* @since 4.0.0.42
+ * 指标时序曲线查询接口（数据源按配置选择：influxdb / Redis / 无）
+ * <p>
+ * 通过 {@link MetricTimeSeriesWriter} 统一门面路由到可用引擎；
+ * 未配置时序存储时返回空数组，前端自动降级到 MySQL 历史。
+ * 返回结构对齐前端 echarts 折线图：{@code [[时间戳ms, 值], ...]} 升序。
+ * </p>
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 @Slf4j
 @RestController

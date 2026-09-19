@@ -24,11 +24,11 @@ import java.util.Map;
 public class AiPluginController {
 
     /**
-    * 获取工具文案
-    *
-    * @param lang 语言
-    * @return 工具文案
-    */
+     * 获取工具文案
+     *
+     * @param lang 语言
+     * @return 工具文案
+     */
     @GetMapping("/tool-displays")
     public ReturnResult<Map<String, Object>> toolDisplays(@RequestParam(required = false) String lang) {
         Map<String, Object> result = new HashMap<>();

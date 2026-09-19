@@ -39,38 +39,38 @@ import static com.chua.common.support.utils.ClassUtils.isAssignableFrom;
 import lombok.extern.slf4j.Slf4j;
 
 /**
-* 统一返回值处理
-* <p>
-* 自动将返回值包装为统一的 结果 格式。
-* </p>
-*
-* @author CH
-* @since 2024/01/01
-* @版本 1.0.0
+ * 统一返回值处理
+ * <p>
+ * 自动将返回值包装为统一的 结果 格式。
+ * </p>
+ *
+ * @author CH
+ * @since 2024/01/01
+ * @版本 1.0.0
  */
 @Slf4j
 @RestControllerAdvice
 @SuppressWarnings({"unchecked", "rawtypes"})
 public class ApiUniformResponseBodyAdvice implements ResponseBodyAdvice<Object>, EnvironmentAware {
         /**
-        * 忽略包装的URL关键字
-        */
+         * 忽略包装的URL关键字
+         */
     private static final String SWAGGER_PATH = "swagger";
     
     /**
-    * Actuator类型标识
-    */
+     * Actuator类型标识
+     */
     private static final String ACTUATOR_SUBTYPE = "spring-boot.actuator";
     
     /**
-    * 流式响应类型
-    */
+     * 流式响应类型
+     */
     private static final String EVENT_STREAM = "event-stream";
     private static final String OCTET_STREAM = "octet-stream"; // octet流
     
     /**
-    * page结果类名后缀
-    */
+     * page结果类名后缀
+     */
     private static final String PAGE_RESULT_SUFFIX = "result.PageResult";
 
     @Resource(name = "uniform")
@@ -129,21 +129,21 @@ public class ApiUniformResponseBodyAdvice implements ResponseBodyAdvice<Object>,
     }
 
     /**
-    * 创建flux主体。
-    * @param flux flux
-    * @param serverHttpResponse 服务端http响应
-    * @return 创建flux主体的结果
-    */
+     * 创建flux主体。
+     * @param flux flux
+     * @param serverHttpResponse 服务端http响应
+     * @return 创建flux主体的结果
+     */
     private Object createFluxBody(Flux<?> flux, ServerHttpResponse serverHttpResponse) {
         return flux.map(it -> ReturnResult.success(it));
     }
 
     /**
-    * 是否忽略返回格式
-    *
-    * @return 是否忽略
-    * @param parameterDeclaringClass 参数declaring类
-    */
+     * 是否忽略返回格式
+     *
+     * @return 是否忽略
+     * @param parameterDeclaringClass 参数declaring类
+     */
     private boolean isIgnorePackages(Class<?> parameterDeclaringClass) {
         if (null == apiProperties) {
             return false;
@@ -164,12 +164,12 @@ public class ApiUniformResponseBodyAdvice implements ResponseBodyAdvice<Object>,
     }
 
     /**
-    * 预处理
-    *
-    * @param preconditioning    预处理对象
-    * @param serverHttpResponse 响应对象
-    * @return 处理结果
-    */
+     * 预处理
+     *
+     * @param preconditioning    预处理对象
+     * @param serverHttpResponse 响应对象
+     * @return 处理结果
+     */
     private Object bodyWithPreconditioning(ReturnPreconditioning<?> preconditioning, ServerHttpResponse serverHttpResponse) {
         ContentType contentType = preconditioning.getContentType();
         if (null != contentType) {
@@ -191,10 +191,10 @@ public class ApiUniformResponseBodyAdvice implements ResponseBodyAdvice<Object>,
     }
 
     /**
-    * 创建新结果。
-    * @param preconditioning preconditioning
-    * @return 创建新结果的结果
-    */
+     * 创建新结果。
+     * @param preconditioning preconditioning
+     * @return 创建新结果的结果
+     */
     private Object createNewResult(ReturnPreconditioning<?> preconditioning) {
         ReturnResult<?> result = preconditioning.toResult();
         if (!preconditioning.isSuccessful()) {
@@ -227,14 +227,14 @@ public class ApiUniformResponseBodyAdvice implements ResponseBodyAdvice<Object>,
 
     @SneakyThrows
     /**
-    * 是否ignore申报格式化。
-    * @param methodParameter 方法参数
-    * @param method 方法
-    * @param controllerClass 控制器类
-    * @param serverHttpRequest 服务端http请求
-    * @param mediaType media类型
-    * @return 是否ignore申报格式化的结果
-    */
+     * 是否ignore申报格式化。
+     * @param methodParameter 方法参数
+     * @param method 方法
+     * @param controllerClass 控制器类
+     * @param serverHttpRequest 服务端http请求
+     * @param mediaType media类型
+     * @return 是否ignore申报格式化的结果
+     */
     private boolean isIgnoreReturnFormat(MethodParameter methodParameter, Method method, Class<?> controllerClass, ServerHttpRequest serverHttpRequest, MediaType mediaType) {
         // 检查方法级别注解
         if (methodParameter.hasMethodAnnotation(ApiReturnFormatIgnore.class)) {
@@ -278,11 +278,11 @@ public class ApiUniformResponseBodyAdvice implements ResponseBodyAdvice<Object>,
     }
     
     /**
-    * 判断是否为page结果类型
-    *
-    * @param obj 对象
-    * @return 是否为PageResult类型
-    */
+     * 判断是否为page结果类型
+     *
+     * @param obj 对象
+     * @return 是否为PageResult类型
+     */
     private boolean isPageResultType(Object obj) {
         if (obj == null) {
             return false;

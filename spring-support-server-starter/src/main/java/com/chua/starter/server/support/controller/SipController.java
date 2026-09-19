@@ -34,21 +34,21 @@ public class SipController {
     private final SipServiceManager sipManager;
 
     /**
-    * 构造 SIP 控制器
-    *
-    * @param configService 服务器配置服务
-    * @param sipManager    SIP 中继服务管理器
-    */
+     * 构造 SIP 控制器
+     *
+     * @param configService 服务器配置服务
+     * @param sipManager    SIP 中继服务管理器
+     */
     public SipController(ServerConfigService configService, SipServiceManager sipManager) {
         this.configService = configService;
         this.sipManager = sipManager;
     }
 
     /**
-    * 获取 SIP 状态与当前生效配置
-    *
-    * @return 配置项与运行状态（sip.enabled / sip.control.port / sip.secret / sip.server.host / running）
-    */
+     * 获取 SIP 状态与当前生效配置
+     *
+     * @return 配置项与运行状态（sip.enabled / sip.control.port / sip.secret / sip.server.host / running）
+     */
     @Operation(summary = "获取 SIP 状态与配置")
     @GetMapping("/config")
     public ReturnResult<Map<String, Object>> getConfig() {
@@ -62,11 +62,11 @@ public class SipController {
     }
 
     /**
-    * 保存 SIP 配置，并根据 sip.enabled 自动启停中继服务
-    *
-    * @param body 配置键值对（sip.enabled / sip.control.port / sip.secret 等）
-    * @return 成功返回空数据；启停异常时返回错误信息
-    */
+     * 保存 SIP 配置，并根据 sip.enabled 自动启停中继服务
+     *
+     * @param body 配置键值对（sip.enabled / sip.control.port / sip.secret 等）
+     * @return 成功返回空数据；启停异常时返回错误信息
+     */
     @Operation(summary = "保存 SIP 配置（自动启停）")
     @PostMapping("/config")
     public ReturnResult<Void> saveConfig(@RequestBody Map<String, Object> body) {
@@ -89,10 +89,10 @@ public class SipController {
     }
 
     /**
-    * 手动启动 SIP 中继服务，启动成功后回写 sip.enabled=true
-    *
-    * @return 成功返回空数据；启动异常时返回错误信息
-    */
+     * 手动启动 SIP 中继服务，启动成功后回写 sip.enabled=true
+     *
+     * @return 成功返回空数据；启动异常时返回错误信息
+     */
     @Operation(summary = "手动启动 SIP")
     @PostMapping("/start")
     public ReturnResult<Void> start() {
@@ -108,10 +108,10 @@ public class SipController {
     }
 
     /**
-    * 手动停止 SIP 中继服务，并回写 sip.enabled=false
-    *
-    * @return 成功返回空数据
-    */
+     * 手动停止 SIP 中继服务，并回写 sip.enabled=false
+     *
+     * @return 成功返回空数据
+     */
     @Operation(summary = "手动停止 SIP")
     @PostMapping("/stop")
     public ReturnResult<Void> stop() {
@@ -121,10 +121,10 @@ public class SipController {
     }
 
     /**
-    * 生成 server / provider / visit 三种角色的部署命令
-    *
-    * @return 角色名到启动命令的映射
-    */
+     * 生成 server / provider / visit 三种角色的部署命令
+     *
+     * @return 角色名到启动命令的映射
+     */
     @Operation(summary = "生成部署命令")
     @GetMapping("/deploy-cmds")
     public ReturnResult<Map<String, String>> deployCmds() {

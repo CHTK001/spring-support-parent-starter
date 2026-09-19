@@ -27,10 +27,10 @@ import java.util.Stack;
 import java.util.UUID;
 
 /**
-* 切面
-*
-* @author CH
-* @since 4.0.0
+ * 切面
+ *
+ * @author CH
+ * @since 4.0.0
  */
 @Lazy
 public class WatchPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor implements InitializingBean {
@@ -84,12 +84,12 @@ public class WatchPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor imp
                     return result;
                 } finally {
                     /**
-    * 结束span。
-    * @param currentSpan 当前span
-    * @param entrySpan entryspan
-    * @param method 方法
-    * @param invocation.getThis( invocation.获取this(
-    */
+                     * 结束span。
+                     * @param currentSpan 当前span
+                     * @param entrySpan entryspan
+                     * @param method 方法
+                     * @param invocation.getThis( invocation.获取this(
+                     */
                     endSpan(currentSpan, entrySpan, method, invocation.getThis(), objects);
                     long cost = System.currentTimeMillis() - start;
 
@@ -119,35 +119,35 @@ public class WatchPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor imp
 
 
     /**
-    * 结束span
-    *
-    * @param currentSpan 当前span
-    * @param lastSpan 最后一个span
-    * @param method 方法
-    * @param obj obj
-    * @param objects 对象
-    */
+     * 结束span
+     *
+     * @param currentSpan 当前span
+     * @param lastSpan 最后一个span
+     * @param method 方法
+     * @param obj obj
+     * @param objects 对象
+     */
     private static void endSpan(Span currentSpan, Span lastSpan, Method method, Object obj, Object[] objects) {
         NewTrackManager.refreshCost(lastSpan);
         NewTrackManager.refreshCost(currentSpan);
         if (null != lastSpan) {
             /**
-            * 执行refreshspan。
-            * @param method 方法
-            * @param objects 对象
-            * @param lastSpan 最后一个span
-            */
+             * 执行refreshspan。
+             * @param method 方法
+             * @param objects 对象
+             * @param lastSpan 最后一个span
+             */
             doRefreshSpan(method, objects, lastSpan);
         }
     }
 
 
     /**
-    * 构建
-    *
-    * @param spans spans
-    * @return 构建的结果
-    */
+     * 构建
+     *
+     * @param spans spans
+     * @return 构建的结果
+     */
     public static List<Span> build(Stack<Span> spans) {
         if(null == spans) {
             return Collections.emptyList();
@@ -157,9 +157,9 @@ public class WatchPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor imp
         List<Span> spans1 = new LinkedList<>(spans);
 
         /**
-        * refix。
-        * @param spans1 spans1
-        */
+         * refix。
+         * @param spans1 spans1
+         */
         refix(spans1);
         if (spans1.size() == 1) {
             if ("java.lang.Object".equals(spans1.getFirst().getType())) {
@@ -184,11 +184,11 @@ public class WatchPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor imp
         return spans1;
     }
     /**
-    * 发送Span
-    *
-    * @param result 结果
-    * @return 发送span的结果
-    */
+     * 发送Span
+     *
+     * @param result 结果
+     * @return 发送span的结果
+     */
     private static List<Span> sendSpan(List<Span> result) {
         Span span1 = result.getFirst();
         if(StringUtils.isNullOrEmpty(span1.getEx())) {
@@ -222,11 +222,11 @@ public class WatchPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor imp
 
 
     /**
-    * Repackage
-    *
-    * @param spans2 spans2
-    * @return repackage的结果
-    */
+     * Repackage
+     *
+     * @param spans2 spans2
+     * @return repackage的结果
+     */
     private static List<Span> repackage(List<Span> spans2) {
         List<Span> rs = new LinkedList<>();
         for (Span span : spans2) {
@@ -253,12 +253,12 @@ public class WatchPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor imp
         return rs;
     }
     /**
-    * 获取新pid
-    *
-    * @param source 源
-    * @param span span
-    * @return 获取新pid的结果
-    */
+     * 获取新pid
+     *
+     * @param source 源
+     * @param span span
+     * @return 获取新pid的结果
+     */
     private static String getNewPid(List<Span> source, Span span) {
         Set<String> parents = span.getParents();
         for (String parent : parents) {
@@ -279,12 +279,12 @@ public class WatchPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor imp
     }
 
     /**
-    * 获取父
-    *
-    * @param source 源
-    * @param parent 父
-    * @return 获取父的结果
-    */
+     * 获取父
+     *
+     * @param source 源
+     * @param parent 父
+     * @return 获取父的结果
+     */
     private static String getParent(List<Span> source, String parent) {
         String pid  = null;
         for (int i = 0; i < source.size(); i++) {
@@ -298,10 +298,10 @@ public class WatchPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor imp
     }
 
     /**
-    * Refix
-    *
-    * @param spans1 spans1
-    */
+     * Refix
+     *
+     * @param spans1 spans1
+     */
     private static void refix(List<Span> spans1) {
         List<Span> del = new LinkedList<>();
         List<String> sign = new LinkedList<>();
@@ -330,22 +330,22 @@ public class WatchPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor imp
 
     }
     /**
-    * 创建Key
-    *
-    * @param span span
-    * @return 创建Key的结果
-    */
+     * 创建Key
+     *
+     * @param span span
+     * @return 创建Key的结果
+     */
     private static String createKey(Span span) {
         return span.getMessage() + span.getEnterTime() + span.getPid();
     }
 
     /**
-    * 链路
-    *
-    * @param method   方法
-    * @param lastSpan 链路
-    * @param args 参数
-    */
+     * 链路
+     *
+     * @param method   方法
+     * @param lastSpan 链路
+     * @param args 参数
+     */
     static void doRefreshSpan(Method method, Object[] args, Span lastSpan) {
         String className = method.getDeclaringClass().getName();
         String methodName = method.getName();

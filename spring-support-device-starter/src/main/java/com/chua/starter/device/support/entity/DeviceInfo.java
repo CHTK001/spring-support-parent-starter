@@ -10,27 +10,27 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
-* 设备信息实体
-* <p>对应数据库表 device_info。</p>
-*
-* <h3>设备大类</h3>
-* <ul>
-*   <li>{@code camera} 摄像头</li>
-*   <li>{@code accessControl} 门禁</li>
-*   <li>{@code alarm} 报警</li>
-*   <li>{@code intercom} 对讲</li>
-* </ul>
-*
-* @since 4.0.0.42
-* @author CH
+ * 设备信息实体
+ * <p>对应数据库表 device_info。</p>
+ *
+ * <h3>设备大类</h3>
+ * <ul>
+ *   <li>{@code camera} 摄像头</li>
+ *   <li>{@code accessControl} 门禁</li>
+ *   <li>{@code alarm} 报警</li>
+ *   <li>{@code intercom} 对讲</li>
+ * </ul>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Data
 @TableName("device_info")
 public class DeviceInfo {
 
     /**
-    * 主键 标识
-    */
+     * 主键 标识
+     */
     @TableId(value = "device_info_id", type = IdType.ASSIGN_UUID)
     /** Device信息标识 */
     private String deviceInfoId;

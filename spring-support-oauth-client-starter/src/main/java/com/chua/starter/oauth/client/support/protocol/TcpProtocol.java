@@ -30,16 +30,16 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 /**
-* TCP 协议实现
-* <p>
-* 使用 JDK NIO Socket通道 发送长度帧（4 字节大端长度头 + 消息体）与 o认证 认证服务端通信。
-* 帧格式为 {@code topic:body}，topic 对应服务端路由路径（如 login、OAuth、upgrade、logout、temporary-令牌），
-* 主体 为加密后的 JSON 请求体；服务端响应同样走长度帧，客户端解帧后解析 JSON。
-* </p>
-*
-* @版本 1.0.0
-* @since 2026-09-05
-* @author CH
+ * TCP 协议实现
+ * <p>
+ * 使用 JDK NIO Socket通道 发送长度帧（4 字节大端长度头 + 消息体）与 o认证 认证服务端通信。
+ * 帧格式为 {@code topic:body}，topic 对应服务端路由路径（如 login、OAuth、upgrade、logout、temporary-令牌），
+ * 主体 为加密后的 JSON 请求体；服务端响应同样走长度帧，客户端解帧后解析 JSON。
+ * </p>
+ *
+ * @版本 1.0.0
+ * @since 2026-09-05
+ * @author CH
  */
 @Spi({"tcp"})
 @Slf4j
@@ -52,15 +52,15 @@ public class TcpProtocol extends AbstractProtocol {
     private final OAuthClientResilience resilience;
 
     /**
-    * 构造函数
-    *
-    * @param authClientProperties 认证客户端配置
-    */
+     * 构造函数
+     *
+     * @param authClientProperties 认证客户端配置
+     */
     public TcpProtocol(AuthClientProperties authClientProperties) {
         /**
-        * 父。
-        * @param authClientProperties 认证客户端属性
-        */
+         * 父。
+         * @param authClientProperties 认证客户端属性
+         */
         super(authClientProperties);
         this.resilience = new OAuthClientResilience(authClientProperties);
     }
@@ -116,24 +116,24 @@ public class TcpProtocol extends AbstractProtocol {
                 String cacheKey = getCacheKey(new Cookie[]{cookie}, token);
                 if (hasCache(cacheKey)) {
                     /**
-                    * clear认证信息。
-                    * @param cacheKey 缓存Key
-                    */
+                     * clear认证信息。
+                     * @param cacheKey 缓存Key
+                     */
                     clearAuthenticationInformation(cacheKey);
                 }
             } else if (upgradeType == UpgradeType.REFRESH) {
                 String cacheKey = getCacheKey(new Cookie[]{cookie}, token);
                 if (hasCache(cacheKey)) {
                     /**
-                    * clear认证信息。
-                    * @param cacheKey 缓存Key
-                    */
+                     * clear认证信息。
+                     * @param cacheKey 缓存Key
+                     */
                     clearAuthenticationInformation(cacheKey);
                 }
                 /**
-                * invalidate缓存。
-                * @param token 令牌
-                */
+                 * invalidate缓存。
+                 * @param token 令牌
+                 */
                 invalidateCache(token);
             }
         }
@@ -183,10 +183,10 @@ public class TcpProtocol extends AbstractProtocol {
             return LoginAuthResult.OK;
         }
         /**
-        * 认证异常。
-        * @param information.getInformation( 信息.获取信息(
-        * @return 认证异常的结果
-        */
+         * 认证异常。
+         * @param information.getInformation( 信息.获取信息(
+         * @return 认证异常的结果
+         */
         throw new AuthException(information.getInformation().getMessage());
     }
 
@@ -302,13 +302,13 @@ public class TcpProtocol extends AbstractProtocol {
     // ==================== 内部方法 ====================
 
     /**
-    * 发送 TCP 请求并解析响应
-    * <p>帧格式：{@code topic:body}，body 为加密 JSON；响应为长度帧包裹的 JSON。</p>
-    * @param route route
-    * @param jsonObject json对象
-    * @param upgradeType upgrade类型
-    * @return 发送请求的结果
-    */
+     * 发送 TCP 请求并解析响应
+     * <p>帧格式：{@code topic:body}，body 为加密 JSON；响应为长度帧包裹的 JSON。</p>
+     * @param route route
+     * @param jsonObject json对象
+     * @param upgradeType upgrade类型
+     * @return 发送请求的结果
+     */
     protected AuthenticationInformation sendRequest(String route, JsonObject jsonObject, UpgradeType upgradeType) {
         return resilience.executeWithResilience(
                 () -> doRequest(route, jsonObject, upgradeType),
@@ -318,12 +318,12 @@ public class TcpProtocol extends AbstractProtocol {
     }
 
     /**
-    * 执行 TCP 短连接请求-响应
-    * @param route route
-    * @param jsonObject json对象
-    * @param upgradeType upgrade类型
-    * @return 执行请求的结果
-    */
+     * 执行 TCP 短连接请求-响应
+     * @param route route
+     * @param jsonObject json对象
+     * @param upgradeType upgrade类型
+     * @return 执行请求的结果
+     */
     private AuthenticationInformation doRequest(String route, JsonObject jsonObject, UpgradeType upgradeType) {
         String selectedUrl = selectUrl();
         if (selectedUrl == null) {
@@ -387,10 +387,10 @@ public class TcpProtocol extends AbstractProtocol {
     }
 
     /**
-    * 从 URL 提取主机名
-    * @param url url
-    * @return extract主机的结果
-    */
+     * 从 URL 提取主机名
+     * @param url url
+     * @return extract主机的结果
+     */
     private String extractHost(String url) {
         if (url.startsWith("tcp://")) {
             url = url.substring(6);
@@ -411,11 +411,11 @@ public class TcpProtocol extends AbstractProtocol {
     }
 
     /**
-    * 从 URL 提取端口
-    * @param url url
-    * @param defaultPort 默认端口
-    * @return extract端口的结果
-    */
+     * 从 URL 提取端口
+     * @param url url
+     * @param defaultPort 默认端口
+     * @return extract端口的结果
+     */
     private int extractPort(String url, int defaultPort) {
         if (url.startsWith("tcp://")) {
             url = url.substring(6);
@@ -438,11 +438,11 @@ public class TcpProtocol extends AbstractProtocol {
     }
 
     /**
-    * 解析在线用户结果
-    *
-    * @param resultMap 结果映射
-    * @return 解析online用户结果的结果
-    */
+     * 解析在线用户结果
+     *
+     * @param resultMap 结果映射
+     * @return 解析online用户结果的结果
+     */
     private OnlineUserResult parseOnlineUserResult(Map<String, Object> resultMap) {
         OnlineUserResult result = new OnlineUserResult();
         result.setTotal(getIntValue(resultMap, "total", 0));
@@ -479,12 +479,12 @@ public class TcpProtocol extends AbstractProtocol {
     }
 
     /**
-    * 获取int值。
-    * @param map 映射
-    * @param key Key
-    * @param defaultValue 默认值
-    * @return 获取int值的结果
-    */
+     * 获取int值。
+     * @param map 映射
+     * @param key Key
+     * @param defaultValue 默认值
+     * @return 获取int值的结果
+     */
     private int getIntValue(Map<String, Object> map, String key, int defaultValue) {
         Object value = map.get(key);
         if (value instanceof Number) {
@@ -494,12 +494,12 @@ public class TcpProtocol extends AbstractProtocol {
     }
 
     /**
-    * 获取字符串值。
-    * @param map 映射
-    * @param key Key
-    * @param defaultValue 默认值
-    * @return 获取字符串值的结果
-    */
+     * 获取字符串值。
+     * @param map 映射
+     * @param key Key
+     * @param defaultValue 默认值
+     * @return 获取字符串值的结果
+     */
     private String getStringValue(Map<String, Object> map, String key, String defaultValue) {
         Object value = map.get(key);
         return value != null ? value.toString() : defaultValue;

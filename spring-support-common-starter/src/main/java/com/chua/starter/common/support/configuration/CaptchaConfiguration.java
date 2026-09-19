@@ -14,14 +14,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
-* 校验码配置类
-* <p>
-* 用于配置验证码相关的Bean。
-* </p>
-*
-* @版本 1.0.0
-* @author CH
-* @since 4.0.0
+ * 校验码配置类
+ * <p>
+ * 用于配置验证码相关的Bean。
+ * </p>
+ *
+ * @版本 1.0.0
+ * @author CH
+ * @since 4.0.0
  */
 @Configuration
 @ConditionalOnProperty(prefix = "plugin.captcha", name = "enable", havingValue = "true", matchIfMissing = true)
@@ -43,9 +43,9 @@ public class CaptchaConfiguration {
         ServiceInfoRegistry.getInstance().registerFlag(
                 "captcha", "校验码", true, "图形验证码接口", null);
         /**
-        * captcha提供者。
-        * @return captcha提供者的结果
-        */
+         * captcha提供者。
+         * @return captcha提供者的结果
+         */
         return new CaptchaProvider();
     }
 }

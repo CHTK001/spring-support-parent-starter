@@ -18,13 +18,13 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
-* 需求条目持久化服务（JDBC 后端）。
-*
-* <p>替代原 {@code ApiRequirementController} 中的 {@code ConcurrentHashMap} 内存实现。
-* 提供完整的 CRUD、标签统计、看板查询、AutoWork 状态管理。</p>
-*
-* @since 4.0.0.42
-* @author CH
+ * 需求条目持久化服务（JDBC 后端）。
+ *
+ * <p>替代原 {@code ApiRequirementController} 中的 {@code ConcurrentHashMap} 内存实现。
+ * 提供完整的 CRUD、标签统计、看板查询、AutoWork 状态管理。</p>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @Service
@@ -60,10 +60,10 @@ public class SysAiRequirementStore {
     }
 
     /**
-    * 生成新的 UUIDv7 风格 ID。
-    *
-    * @return 36 位 UUIDv7 字符串
-    */
+     * 生成新的 UUIDv7 风格 ID。
+     *
+     * @return 36 位 UUIDv7 字符串
+     */
     public String newId() {
         return SysAiConversationStore.generateUuidV7();
     }
@@ -71,17 +71,17 @@ public class SysAiRequirementStore {
     // ======================== CRUD ========================
 
     /**
-    * 分页列表查询。
-    *
-    * @param tag      标签过滤，null = 不过滤
-    * @param status   状态过滤，null = 不过滤
-    * @param q        关键词（标题模糊搜索），null = 不过滤
-    * @param orderBy  排序字段：display_no / created_at / updated_at / status
-    * @param order    排序方向：asc / desc
-    * @param page     页码（从 1 开始）
-    * @param pageSize 每页条数
-    * @return { items, total, has_more }
-    */
+     * 分页列表查询。
+     *
+     * @param tag      标签过滤，null = 不过滤
+     * @param status   状态过滤，null = 不过滤
+     * @param q        关键词（标题模糊搜索），null = 不过滤
+     * @param orderBy  排序字段：display_no / created_at / updated_at / status
+     * @param order    排序方向：asc / desc
+     * @param page     页码（从 1 开始）
+     * @param pageSize 每页条数
+     * @return { items, total, has_more }
+     */
     public Map<String, Object> list(String tag, String status, String q, String orderBy, String order, int page, int pageSize) {
         LambdaQueryWrapper<SysAiRequirement> wrapper = new LambdaQueryWrapper<>();
         if (tag != null && !tag.isEmpty()) {
@@ -133,11 +133,11 @@ public class SysAiRequirementStore {
     }
 
     /**
-    * 获取单个需求。
-    *
-    * @param requirementId 需求 ID（UUIDv7），不能为 null 或空
-    * @return 需求数据 Map；不存在时返回 null
-    */
+     * 获取单个需求。
+     *
+     * @param requirementId 需求 ID（UUIDv7），不能为 null 或空
+     * @return 需求数据 Map；不存在时返回 null
+     */
     public Map<String, Object> get(String requirementId) {
         if (requirementId == null || requirementId.isEmpty()) {
             throw new IllegalArgumentException("requirementId 不能为空");
@@ -150,11 +150,11 @@ public class SysAiRequirementStore {
     }
 
     /**
-    * 创建需求。
-    *
-    * @param body 请求体，title/tag 缺省时使用默认值
-    * @return 创建后的需求数据 Map
-    */
+     * 创建需求。
+     *
+     * @param body 请求体，title/tag 缺省时使用默认值
+     * @return 创建后的需求数据 Map
+     */
     public Map<String, Object> create(Map<String, Object> body) {
         SysAiRequirement r = new SysAiRequirement();
         r.setRequirementId(newId());
@@ -177,12 +177,12 @@ public class SysAiRequirementStore {
     }
 
     /**
-    * 更新需求（部分更新）。
-    *
-    * @param requirementId 需求 ID
-    * @param body          更新字段（仅包含非 null 字段生效）
-    * @return 更新后的需求 Map；若不存在返回 null
-    */
+     * 更新需求（部分更新）。
+     *
+     * @param requirementId 需求 ID
+     * @param body          更新字段（仅包含非 null 字段生效）
+     * @return 更新后的需求 Map；若不存在返回 null
+     */
     public Map<String, Object> update(String requirementId, Map<String, Object> body) {
         SysAiRequirement existing = requirementMapper.selectById(requirementId);
         if (existing == null) {
@@ -233,11 +233,11 @@ public class SysAiRequirementStore {
     }
 
     /**
-    * 删除需求。
-    *
-    * @param requirementId 需求 ID
-    * @return 删除成功返回 true
-    */
+     * 删除需求。
+     *
+     * @param requirementId 需求 ID
+     * @return 删除成功返回 true
+     */
     public boolean remove(String requirementId) {
         if (requirementId == null || requirementId.isEmpty()) {
             throw new IllegalArgumentException("requirementId 不能为空");
@@ -246,11 +246,11 @@ public class SysAiRequirementStore {
     }
 
     /**
-    * 批量删除需求。
-    *
-    * @param requirementIds 需求 ID 列表，不能为 null；空列表返回 0
-    * @return 删除条数
-    */
+     * 批量删除需求。
+     *
+     * @param requirementIds 需求 ID 列表，不能为 null；空列表返回 0
+     * @return 删除条数
+     */
     public int batchDelete(List<String> requirementIds) {
         if (requirementIds == null || requirementIds.isEmpty()) {
             return 0;
@@ -263,10 +263,10 @@ public class SysAiRequirementStore {
     // ======================== 标签统计 ========================
 
     /**
-    * 标签统计：每个标签的需求计数（按状态分组）。
-    *
-    * @return 标签统计列表，每项含 tag/total/各状态计数
-    */
+     * 标签统计：每个标签的需求计数（按状态分组）。
+     *
+     * @return 标签统计列表，每项含 tag/total/各状态计数
+     */
     public List<Map<String, Object>> tags() {
         LambdaQueryWrapper<SysAiRequirement> wrapper = new LambdaQueryWrapper<>();
         wrapper.select(
@@ -300,11 +300,11 @@ public class SysAiRequirementStore {
     // ======================== 看板 ========================
 
     /**
-    * 看板数据：按状态分组的特定标签下的需求。
-    *
-    * @param tag 标签，不能为 null 或空
-    * @return 看板数据 Map（tag + 各状态下的需求列表）
-    */
+     * 看板数据：按状态分组的特定标签下的需求。
+     *
+     * @param tag 标签，不能为 null 或空
+     * @return 看板数据 Map（tag + 各状态下的需求列表）
+     */
     public Map<String, Object> board(String tag) {
         if (tag == null || tag.isEmpty()) {
             throw new IllegalArgumentException("tag 不能为空");
@@ -329,15 +329,15 @@ public class SysAiRequirementStore {
     // ======================== AutoWork ========================
 
     /**
-    * 设置标签自动执行状态（AutoWork）。
-    *
-    * @param kind        执行类型（conversation/terminal）
-    * @param targetId    目标会话或终端 ID
-    * @param enabled     是否启用
-    * @param tag         关联标签
-    * @param fromAdmin   是否来自管理员入口（标签会话管理）
-    * @return AutoWork 状态 Map（run_state、已办数等）
-    */
+     * 设置标签自动执行状态（AutoWork）。
+     *
+     * @param kind        执行类型（conversation/terminal）
+     * @param targetId    目标会话或终端 ID
+     * @param enabled     是否启用
+     * @param tag         关联标签
+     * @param fromAdmin   是否来自管理员入口（标签会话管理）
+     * @return AutoWork 状态 Map（run_state、已办数等）
+     */
     public Map<String, Object> setAutoWork(String kind, String targetId, boolean enabled, String tag, boolean fromAdmin) {
         Map<String, Object> state = new LinkedHashMap<>();
         state.put("kind", kind);
@@ -362,12 +362,12 @@ public class SysAiRequirementStore {
     }
 
     /**
-    * 恢复标签（取消暂停）。
-    *
-    * @param tag           标签名，不能为空
-    * @param requeueFailed 是否将失败需求重新入队
-    * @return 标签汇总 Map（各状态计数）
-    */
+     * 恢复标签（取消暂停）。
+     *
+     * @param tag           标签名，不能为空
+     * @param requeueFailed 是否将失败需求重新入队
+     * @return 标签汇总 Map（各状态计数）
+     */
     public Map<String, Object> resumeTag(String tag, boolean requeueFailed) {
         Map<String, Object> summary = new LinkedHashMap<>();
         summary.put("tag", tag);
@@ -386,10 +386,10 @@ public class SysAiRequirementStore {
     // ======================== 数据源管理 ========================
 
     /**
-    * 获取所有数据源配置列表（含简要信息，不含敏感配置字段）。
-    *
-    * @return 数据源列表，每项包含 id/name/type/enabled/lastSyncStatus 等概要字段
-    */
+     * 获取所有数据源配置列表（含简要信息，不含敏感配置字段）。
+     *
+     * @return 数据源列表，每项包含 id/name/type/enabled/lastSyncStatus 等概要字段
+     */
     public List<Map<String, Object>> listDataSources() {
         List<SysAiDataSource> all = dataSourceMapper.selectList(
                 new LambdaQueryWrapper<SysAiDataSource>().orderByDesc(SysAiDataSource::getCreateTime));
@@ -409,11 +409,11 @@ public class SysAiRequirementStore {
     }
 
     /**
-    * 创建数据源配置。
-    *
-    * @param body 请求体，须包含 name、type，可选 config（JSON）、enabled、syncCron
-    * @return 创建后的数据源 Map；若 type 不支持返回 null
-    */
+     * 创建数据源配置。
+     *
+     * @param body 请求体，须包含 name、type，可选 config（JSON）、enabled、syncCron
+     * @return 创建后的数据源 Map；若 type 不支持返回 null
+     */
     public Map<String, Object> createDataSource(Map<String, Object> body) {
         String name = getString(body, "name");
         String type = getString(body, "type");
@@ -444,12 +444,12 @@ public class SysAiRequirementStore {
     }
 
     /**
-    * 更新数据源配置（部分更新）。
-    *
-    * @param id   数据源 ID
-    * @param body 更新字段（name/type/config/enabled/sync_cron）
-    * @return 更新后的数据源 Map；若不存在返回 null
-    */
+     * 更新数据源配置（部分更新）。
+     *
+     * @param id   数据源 ID
+     * @param body 更新字段（name/type/config/enabled/sync_cron）
+     * @return 更新后的数据源 Map；若不存在返回 null
+     */
     public Map<String, Object> updateDataSource(String id, Map<String, Object> body) {
         SysAiDataSource existing = dataSourceMapper.selectById(id);
         if (existing == null) {
@@ -475,21 +475,21 @@ public class SysAiRequirementStore {
     }
 
     /**
-    * 删除数据源配置。
-    *
-    * @param id 数据源 ID
-    * @return 删除成功返回 true
-    */
+     * 删除数据源配置。
+     *
+     * @param id 数据源 ID
+     * @return 删除成功返回 true
+     */
     public boolean removeDataSource(String id) {
         return dataSourceMapper.deleteById(id) > 0;
     }
 
     /**
-    * 触发单个数据源同步。
-    *
-    * @param id 数据源 ID
-    * @return 同步结果 Map（含 synced/count/error）
-    */
+     * 触发单个数据源同步。
+     *
+     * @param id 数据源 ID
+     * @return 同步结果 Map（含 synced/count/error）
+     */
     @SuppressWarnings("unchecked")
     public Map<String, Object> syncDataSource(String id) {
         SysAiDataSource ds = dataSourceMapper.selectById(id);
@@ -535,12 +535,12 @@ public class SysAiRequirementStore {
     }
 
     /**
-    * 同步本地/远程 MySQL 数据库的需求记录到本地库。
-    *
-    * @param ds      数据源实体
-    * @param provider 提供方实例
-    * @return 同步结果
-    */
+     * 同步本地/远程 MySQL 数据库的需求记录到本地库。
+     *
+     * @param ds      数据源实体
+     * @param provider 提供方实例
+     * @return 同步结果
+     */
     private Map<String, Object> syncLocalDb(SysAiDataSource ds, LocalDbRequirementDataSource provider) {
         List<Map<String, Object>> remoteRecords;
         try {
@@ -589,11 +589,11 @@ public class SysAiRequirementStore {
     }
 
     /**
-    * 测试数据源连接是否可用。
-    *
-    * @param id 数据源 ID，不能为空
-    * @return true = 连接正常，false = 数据源不存在或连接失败
-    */
+     * 测试数据源连接是否可用。
+     *
+     * @param id 数据源 ID，不能为空
+     * @return true = 连接正常，false = 数据源不存在或连接失败
+     */
     public boolean testDataSource(String id) {
         if (id == null || id.isEmpty()) {
             throw new IllegalArgumentException("id 不能为空");
@@ -610,10 +610,10 @@ public class SysAiRequirementStore {
     }
 
     /**
-    * 获取注册表中所有可用的数据源类型列表。
-    *
-    * @return 已注册类型列表
-    */
+     * 获取注册表中所有可用的数据源类型列表。
+     *
+     * @return 已注册类型列表
+     */
     public List<String> availableTypes() {
         return registry.list();
     }
@@ -720,9 +720,9 @@ public class SysAiRequirementStore {
     }
 
     /**
-    * 获取所有 AutoWork 标签绑定，按 tag 分组。
-    * @return 结果列表，无数据时为空列表
-    */
+     * 获取所有 AutoWork 标签绑定，按 tag 分组。
+     * @return 结果列表，无数据时为空列表
+     */
     @SuppressWarnings("unchecked")
     public List<Map<String, Object>> getTagBindings() {
         Map<String, List<Map<String, Object>>> byTag = new LinkedHashMap<>();

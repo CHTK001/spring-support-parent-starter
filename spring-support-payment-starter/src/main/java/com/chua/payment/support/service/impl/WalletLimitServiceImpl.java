@@ -19,10 +19,10 @@ import java.time.LocalTime;
 import java.util.List;
 
 /**
-* 钱包限额服务实现，校验充值/转账/提现等操作是否超出商户额度限制。
-*
-* @author CH
-* @since 4.0.0.50
+ * 钱包限额服务实现，校验充值/转账/提现等操作是否超出商户额度限制。
+ *
+ * @author CH
+ * @since 4.0.0.50
  */
 @Service
 @RequiredArgsConstructor
@@ -93,10 +93,10 @@ public class WalletLimitServiceImpl implements WalletLimitService {
             BigDecimal todayTotal = getTodayAmount(merchantId, userId, "RECHARGE");
             if (todayTotal.add(amount).compareTo(limit.getDailyRechargeLimit()) > 0) {
                 /**
-                * 薪酬异常。
-                * @param limit.getDailyRechargeLimit( 限制.获取dailyrecharge限制(
-                * @return 薪酬异常的结果
-                */
+                 * 薪酬异常。
+                 * @param limit.getDailyRechargeLimit( 限制.获取dailyrecharge限制(
+                 * @return 薪酬异常的结果
+                 */
                 throw new PaymentException("充值金额超过日累计限额: " + limit.getDailyRechargeLimit());
             }
         }
@@ -123,10 +123,10 @@ public class WalletLimitServiceImpl implements WalletLimitService {
             BigDecimal todayTotal = getTodayAmount(merchantId, userId, "WITHDRAW");
             if (todayTotal.add(amount).compareTo(limit.getDailyWithdrawLimit()) > 0) {
                 /**
-                * 薪酬异常。
-                * @param limit.getDailyWithdrawLimit( 限制.获取dailywithdraw限制(
-                * @return 薪酬异常的结果
-                */
+                 * 薪酬异常。
+                 * @param limit.getDailyWithdrawLimit( 限制.获取dailywithdraw限制(
+                 * @return 薪酬异常的结果
+                 */
                 throw new PaymentException("提现金额超过日累计限额: " + limit.getDailyWithdrawLimit());
             }
         }
@@ -153,10 +153,10 @@ public class WalletLimitServiceImpl implements WalletLimitService {
             BigDecimal todayTotal = getTodayAmount(merchantId, userId, "TRANSFER_OUT");
             if (todayTotal.add(amount).compareTo(limit.getDailyTransferLimit()) > 0) {
                 /**
-                * 薪酬异常。
-                * @param limit.getDailyTransferLimit( 限制.getdaily调动限制(
-                * @return 薪酬异常的结果
-                */
+                 * 薪酬异常。
+                 * @param limit.getDailyTransferLimit( 限制.getdaily调动限制(
+                 * @return 薪酬异常的结果
+                 */
                 throw new PaymentException("转账金额超过日累计限额: " + limit.getDailyTransferLimit());
             }
         }
@@ -182,13 +182,13 @@ public class WalletLimitServiceImpl implements WalletLimitService {
     }
 
     /**
-    * 获取todayamount
-    *
-    * @param merchantId merchantid
-    * @param userId 用户标识
-    * @param bizType biz类型
-    * @return 获取todayamount的结果
-    */
+     * 获取todayamount
+     *
+     * @param merchantId merchantid
+     * @param userId 用户标识
+     * @param bizType biz类型
+     * @return 获取todayamount的结果
+     */
     private BigDecimal getTodayAmount(Long merchantId, Long userId, String bizType) {
         LocalDateTime startOfDay = LocalDateTime.of(LocalDate.now(), LocalTime.MIN);
         LocalDateTime endOfDay = LocalDateTime.of(LocalDate.now(), LocalTime.MAX);

@@ -6,11 +6,11 @@ import org.springframework.web.bind.annotation.ValueConstants;
 import java.lang.annotation.*;
 
 /**
-* 请求参数映射注解
-*
-* @since 2023-07-01
-* @see org.springframework.web.bind.annotation.RequestParam
-* @author CH
+ * 请求参数映射注解
+ *
+ * @since 2023-07-01
+ * @see org.springframework.web.bind.annotation.RequestParam
+ * @author CH
  */
 @Target({ElementType.PARAMETER, ElementType.FIELD})
 @Retention(RetentionPolicy.RUNTIME)
@@ -18,42 +18,42 @@ import java.lang.annotation.*;
 public @interface RequestParamMapping {
 
     /**
-    * 参数名称别名
-    * <p>例如: @RequestParamMapping("id") 或 @RequestParamMapping(value = "id")</p>
-    *
-    * @return 参数名称数组
-    */
+     * 参数名称别名
+     * <p>例如: @RequestParamMapping("id") 或 @RequestParamMapping(value = "id")</p>
+     *
+     * @return 参数名称数组
+     */
     @AliasFor("name")
     String[] value() default "";
 
     /**
-    * 请求参数绑定的名称
-    * <p>例如: @RequestParamMapping(name = "userId")</p>
-    *
-    * @return 参数名称数组
-    * @since 4.2
-    */
+     * 请求参数绑定的名称
+     * <p>例如: @RequestParamMapping(name = "userId")</p>
+     *
+     * @return 参数名称数组
+     * @since 4.2
+     */
     @AliasFor("value")
     String[] name() default "";
 
     /**
-    * 参数是否必需
-    * <p>默认为 {@code true}，如果请求中缺少该参数将抛出异常。
-    * 如果希望参数不存在时使用 {@code null} 值，则设置为 {@code false}。</p>
-    * <p>或者提供一个 {@link #defaultValue}，这会隐式地将此标志设置为 {@code false}。</p>
-    * <p>例如: @RequestParamMapping(required = false)</p>
-    *
-    * @return 是否必需
-    */
+     * 参数是否必需
+     * <p>默认为 {@code true}，如果请求中缺少该参数将抛出异常。
+     * 如果希望参数不存在时使用 {@code null} 值，则设置为 {@code false}。</p>
+     * <p>或者提供一个 {@link #defaultValue}，这会隐式地将此标志设置为 {@code false}。</p>
+     * <p>例如: @RequestParamMapping(required = false)</p>
+     *
+     * @return 是否必需
+     */
     boolean required() default true;
 
     /**
-    * 当请求参数未提供或值为空时使用的默认值。
-    * <p>提供默认值会隐式地将 {@link #required} 设置为 {@code false}。</p>
-    * <p>例如: @RequestParamMapping(defaultValue = "0")</p>
-    *
-    * @return 默认值
-    */
+     * 当请求参数未提供或值为空时使用的默认值。
+     * <p>提供默认值会隐式地将 {@link #required} 设置为 {@code false}。</p>
+     * <p>例如: @RequestParamMapping(defaultValue = "0")</p>
+     *
+     * @return 默认值
+     */
     String defaultValue() default ValueConstants.DEFAULT_NONE;
 
 }

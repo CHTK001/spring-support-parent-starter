@@ -3,10 +3,10 @@ package com.chua.starter.eduai.model.dto;
 import lombok.Data;
 
 /**
-* 复习卷生成DTO
-*
-* @since 4.0.0.42
-* @author CH
+ * 复习卷生成DTO
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Data
 public class ReviewPaperDTO {

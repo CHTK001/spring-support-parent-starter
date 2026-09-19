@@ -21,15 +21,15 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
-* 邮箱账号(MAILBOX) SSE 实时推送服务
-* <p>
-* 管理邮箱身份的 SSE 连接：前端通过 /sse/连接 建立连接后，注册到本服务；
-* 服务定时轮询邮箱(IMAP 真实邮箱 / 临时邮箱 API)检测新邮件，通过 sseSocket会话template 推送到前端。
-* SSE 未启用（无 sseSocket会话template Bean）时推送静默跳过。
-* </p>
-*
-* @author CH
-* @since 4.0.0.42
+ * 邮箱账号(MAILBOX) SSE 实时推送服务
+ * <p>
+ * 管理邮箱身份的 SSE 连接：前端通过 /sse/连接 建立连接后，注册到本服务；
+ * 服务定时轮询邮箱(IMAP 真实邮箱 / 临时邮箱 API)检测新邮件，通过 sseSocket会话template 推送到前端。
+ * SSE 未启用（无 sseSocket会话template Bean）时推送静默跳过。
+ * </p>
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 @Slf4j
 @Service
@@ -68,11 +68,11 @@ public class MailboxSseService {
     private final Map<Long, Set<String>> seenEmailIds = new ConcurrentHashMap<>();
 
     /**
-    * 注册邮箱 SSE 连接(前端打开邮件箱时调用)。
-    *
-    * @param clientId   前端 SSE 连接 客户端标识
-    * @param identityId 邮箱身份 标识
-    */
+     * 注册邮箱 SSE 连接(前端打开邮件箱时调用)。
+     *
+     * @param clientId   前端 SSE 连接 客户端标识
+     * @param identityId 邮箱身份 标识
+     */
     public void register(String clientId, Long identityId) {
         if (clientId == null || identityId == null) {
             return;
@@ -83,10 +83,10 @@ public class MailboxSseService {
     }
 
     /**
-    * 注销邮箱 SSE 连接(前端关闭邮件箱时调用)。
-    *
-    * @param clientId 前端 SSE 连接 客户端标识
-    */
+     * 注销邮箱 SSE 连接(前端关闭邮件箱时调用)。
+     *
+     * @param clientId 前端 SSE 连接 客户端标识
+     */
     public void unregister(String clientId) {
         if (clientId == null) {
             return;
@@ -98,8 +98,8 @@ public class MailboxSseService {
     }
 
     /**
-    * 定时轮询所有已注册的邮箱身份，检测新邮件并推送到对应前端。
-    */
+     * 定时轮询所有已注册的邮箱身份，检测新邮件并推送到对应前端。
+     */
     @Scheduled(fixedDelay = POLL_INTERVAL_MS)
     public void pollAndPush() {
         if (clientIdentityMap.isEmpty()) {
@@ -110,10 +110,10 @@ public class MailboxSseService {
             Long identityId = entry.getValue();
             try {
                 /**
-                * push新emails。
-                * @param clientId 客户端标识
-                * @param identityId identityid
-                */
+                 * push新emails。
+                 * @param clientId 客户端标识
+                 * @param identityId identityid
+                 */
                 pushNewEmails(clientId, identityId);
             } catch (Exception e) {
                 log.warn("[mailbox-sse] 轮询推送异常 identityId={} - {}", identityId, e.getMessage());
@@ -122,10 +122,10 @@ public class MailboxSseService {
     }
 
     /**
-    * 推送指定身份的新邮件到对应前端。
-    * @param clientId 客户端标识
-    * @param identityId identityid
-    */
+     * 推送指定身份的新邮件到对应前端。
+     * @param clientId 客户端标识
+     * @param identityId identityid
+     */
     private void pushNewEmails(String clientId, Long identityId) {
         MsServerIdentity identity = identityMapper.selectById(identityId);
         if (identity == null || !"MAILBOX".equals(identity.getMsServerIdentityAuthType())) {
@@ -150,11 +150,11 @@ public class MailboxSseService {
     }
 
     /**
-    * 拉取新邮件(真实邮箱走 IMAP / 临时邮箱走 API)，过滤已推送。
-    * @param identity identity
-    * @param email email
-    * @return 获取新emails的结果
-    */
+     * 拉取新邮件(真实邮箱走 IMAP / 临时邮箱走 API)，过滤已推送。
+     * @param identity identity
+     * @param email email
+     * @return 获取新emails的结果
+     */
     private List<Map<String, Object>> fetchNewEmails(MsServerIdentity identity, String email) {
         String source = identity.getMsServerIdentityEmailSource();
         List<Map<String, Object>> emails;
@@ -189,11 +189,11 @@ public class MailboxSseService {
     }
 
     /**
-    * 拉取临时邮箱邮件(走 email提供者 API)。
-    * @param provider 提供者
-    * @param email email
-    * @return 获取tempemails的结果
-    */
+     * 拉取临时邮箱邮件(走 email提供者 API)。
+     * @param provider 提供者
+     * @param email email
+     * @return 获取tempemails的结果
+     */
     private List<Map<String, Object>> fetchTempEmails(String provider, String email) {
         if (provider == null || provider.isBlank()) {
             return List.of();
@@ -216,11 +216,11 @@ public class MailboxSseService {
     }
 
     /**
-    * 拉取真实邮箱邮件(走 IMAP email客户端)。
-    * @param identity identity
-    * @param email email
-    * @return 获取imapemails的结果
-    */
+     * 拉取真实邮箱邮件(走 IMAP email客户端)。
+     * @param identity identity
+     * @param email email
+     * @return 获取imapemails的结果
+     */
     private List<Map<String, Object>> fetchImapEmails(MsServerIdentity identity, String email) {
         try {
             String authCode = cipher.decrypt(identity.getMsServerIdentityPassword());
@@ -239,10 +239,10 @@ public class MailboxSseService {
     }
 
     /**
-    * 序列化邮件列表为 JSON 字符串。
-    * @param emails emails
-    * @return serializeEmails的结果
-    */
+     * 序列化邮件列表为 JSON 字符串。
+     * @param emails emails
+     * @return serializeEmails的结果
+     */
     private String serializeEmails(List<Map<String, Object>> emails) {
         try {
             return new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(emails);
@@ -252,10 +252,10 @@ public class MailboxSseService {
     }
 
     /**
-    * 获取当前注册的连接数。
-    *
-    * @return 连接数
-    */
+     * 获取当前注册的连接数。
+     *
+     * @return 连接数
+     */
     public int getConnectionCount() {
         return clientIdentityMap.size();
     }

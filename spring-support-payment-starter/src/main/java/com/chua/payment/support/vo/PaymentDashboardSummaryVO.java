@@ -7,9 +7,9 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
-* 支付首页业务统计汇总。
-* @author CH
-* @since 4.0.0
+ * 支付首页业务统计汇总。
+ * @author CH
+ * @since 4.0.0
  */
 @Data
 public class PaymentDashboardSummaryVO implements Serializable {

@@ -20,49 +20,49 @@ public class ServletResponse {
     }
 
     /**
-    * 是否成功
-    *
-    * @return 是否成功的结果
-    */
+     * 是否成功
+     *
+     * @return 是否成功的结果
+     */
     public boolean isSuccess() {
         return success;
     }
 
     /**
-    * 获取消息
-    *
-    * @return 获取消息的结果
-    */
+     * 获取消息
+     *
+     * @return 获取消息的结果
+     */
     public String getMessage() {
         return message;
     }
 
     /**
-    * Ok
-    *
-    * @return ok的结果
-    */
+     * Ok
+     *
+     * @return ok的结果
+     */
     public static ServletResponse ok() {
         /**
-        * servlet响应。
-        * @param true true
-        * @param null 空
-        */
+         * servlet响应。
+         * @param true true
+         * @param null 空
+         */
         return new ServletResponse(true, null);
     }
 
     /**
-    * 记录错误
-    *
-    * @param msg msg
-    * @return 错误的结果
-    */
+     * 记录错误
+     *
+     * @param msg msg
+     * @return 错误的结果
+     */
     public static ServletResponse error(String msg) {
         /**
-        * servlet响应。
-        * @param false false
-        * @param msg msg
-        */
+         * servlet响应。
+         * @param false false
+         * @param msg msg
+         */
         return new ServletResponse(false, msg);
     }
 }

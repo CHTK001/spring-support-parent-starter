@@ -5,10 +5,10 @@ import com.chua.starter.message.support.entity.SysMessageProvider;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
-* 消息提供商 映射器
-*
-* @since 2026/08/03
-* @author CH
+ * 消息提供商 映射器
+ *
+ * @since 2026/08/03
+ * @author CH
  */
 @Mapper
 public interface SysMessageProviderMapper extends BaseMapper<SysMessageProvider> {

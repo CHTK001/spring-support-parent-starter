@@ -15,19 +15,19 @@ import java.util.List;
 import java.util.Map;
 
 /**
-* 指标采集事件监听器
-* <p>
-* 通过 {@link EventListener} 订阅 {@link MetricCollectedEvent}，在采集主链路入库后
-* 异步解耦执行：
-* <ul>
-*   <li>告警规则逐点评估（原有 AlarmEngineService 链路）</li>
-*   <li>最新指标 Socket 实时推送（新增实时能力）</li>
-* </ul>
-* 事件由 监控调度器 采集成功后发布；监听器内异常只记日志，不阻断主链路。
-* </p>
-*
-* @author CH
-* @since 4.0.0.42
+ * 指标采集事件监听器
+ * <p>
+ * 通过 {@link EventListener} 订阅 {@link MetricCollectedEvent}，在采集主链路入库后
+ * 异步解耦执行：
+ * <ul>
+ *   <li>告警规则逐点评估（原有 AlarmEngineService 链路）</li>
+ *   <li>最新指标 Socket 实时推送（新增实时能力）</li>
+ * </ul>
+ * 事件由 监控调度器 采集成功后发布；监听器内异常只记日志，不阻断主链路。
+ * </p>
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 @Slf4j
 @Component
@@ -41,10 +41,10 @@ public class MetricCollectedEventListener {
     private final MonitorPushService monitorPushService;
 
     /**
-    * 采集完成后的告警评估与实时推送
-    *
-    * @param event 采集完成事件
-    */
+     * 采集完成后的告警评估与实时推送
+     *
+     * @param event 采集完成事件
+     */
     @EventListener
     public void onCollected(MetricCollectedEvent event) {
         CollectResult result = event.result();

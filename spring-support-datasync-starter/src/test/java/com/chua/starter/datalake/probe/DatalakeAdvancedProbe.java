@@ -15,18 +15,18 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
-* 数据湖 管线进阶探测 — 覆盖 20 项场景：
-* <ul>
-*   <li>A01~A05: Null/缺失安全</li>
-*   <li>A06~A09: Sink 状态流转</li>
-*   <li>A10~A13: DataEnvelope 属性</li>
-*   <li>A14~A15: 并发执行</li>
-*   <li>A16~A18: 管线生命周期</li>
-*   <li>A19~A20: Sink 配置传递 + 压测</li>
-* </ul>
-*
-* @author CH
-* @since 4.0.0.42
+ * 数据湖 管线进阶探测 — 覆盖 20 项场景：
+ * <ul>
+ *   <li>A01~A05: Null/缺失安全</li>
+ *   <li>A06~A09: Sink 状态流转</li>
+ *   <li>A10~A13: DataEnvelope 属性</li>
+ *   <li>A14~A15: 并发执行</li>
+ *   <li>A16~A18: 管线生命周期</li>
+ *   <li>A19~A20: Sink 配置传递 + 压测</li>
+ * </ul>
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 @Slf4j
 public class DatalakeAdvancedProbe {
@@ -46,8 +46,8 @@ public class DatalakeAdvancedProbe {
     private static long startTime; // 启动时间
 
     /**
-    * main。
-    * @param args 参数
+     * main。
+     * @param args 参数
      */
     public static void main(String[] args) throws Exception {
         log.info("═══════════════════════════════════════════════════════");
@@ -77,7 +77,7 @@ public class DatalakeAdvancedProbe {
     // ━━━━━━━━━━━━━━━ 基础设施 ━━━━━━━━━━━━━━━
 
     /**
-    * setupinfrastructure。
+     * setupinfrastructure。
      */
     private static void setupInfrastructure() {
         pipelineManager = new DefaultPipelineManager();
@@ -100,18 +100,18 @@ public class DatalakeAdvancedProbe {
     }
 
     /**
-    * 单个sinkpipeline。
-    * @param sinkType sink类型
-    * @return 单个sinkpipeline的结果
+     * 单个sinkpipeline。
+     * @param sinkType sink类型
+     * @return 单个sinkpipeline的结果
      */
     private static String singleSinkPipeline(String sinkType) {
         return "{\"stages\":{\"default\":{\"sink\":[{\"type\":\"" + sinkType + "\"}]}}}";
     }
 
     /**
-    * multisinkpipeline。
-    * @param sinkTypes sink类型
-    * @return multiSinkPipeline的结果
+     * multisinkpipeline。
+     * @param sinkTypes sink类型
+     * @return multiSinkPipeline的结果
      */
     private static String multiSinkPipeline(String... sinkTypes) {
         StringBuilder sb = new StringBuilder("{\"stages\":{\"default\":{\"sink\":[");
@@ -128,7 +128,7 @@ public class DatalakeAdvancedProbe {
  // ━━━━━━━━━━━━━━━ A01~A05: 空/缺失安全 ━━━━━━━━━━━━━━━
 
     /**
-    * 测试空safety。
+     * 测试空safety。
      */
     private static void testNullSafety() {
         log.info("───── A01~A05: Null/缺失安全 ─────");
@@ -183,7 +183,7 @@ public class DatalakeAdvancedProbe {
     // ━━━━━━━━━━━━━━━ A06~A09: Sink 状态流转 ━━━━━━━━━━━━━━━
 
     /**
-    * 测试sink状态过渡。
+     * 测试sink状态过渡。
      */
     private static void testSinkStateTransition() {
         log.info("───── A06~A09: Sink 状态流转 ─────");
@@ -230,7 +230,7 @@ public class DatalakeAdvancedProbe {
  // ━━━━━━━━━━━━━━━ A10~A13: 数据envelope 属性 ━━━━━━━━━━━━━━━
 
     /**
-    * 测试数据envelope属性。
+     * 测试数据envelope属性。
      */
     private static void testDataEnvelopeProperties() {
         log.info("───── A10~A13: DataEnvelope 属性 ─────");
@@ -283,7 +283,7 @@ public class DatalakeAdvancedProbe {
     // ━━━━━━━━━━━━━━━ A14~A15: 并发 ━━━━━━━━━━━━━━━
 
     /**
-    * 测试concurrency。
+     * 测试concurrency。
      */
     private static void testConcurrency() throws Exception {
         log.info("───── A14~A15: 并发执行 ─────");
@@ -341,7 +341,7 @@ public class DatalakeAdvancedProbe {
     // ━━━━━━━━━━━━━━━ A16~A18: 管线生命周期 ━━━━━━━━━━━━━━━
 
     /**
-    * 测试pipelinelifecycle。
+     * 测试pipelinelifecycle。
      */
     private static void testPipelineLifecycle() {
         log.info("───── A16~A18: 管线生命周期 ─────");
@@ -386,7 +386,7 @@ public class DatalakeAdvancedProbe {
     // ━━━━━━━━━━━━━━━ A19~A20: Sink 配置传递 + 压测 ━━━━━━━━━━━━━━━
 
     /**
-    * 测试sink配置和stress。
+     * 测试sink配置和stress。
      */
     private static void testSinkConfigAndStress() throws Exception {
         log.info("───── A19~A20: Sink 配置传递 + 压测 ─────");
@@ -496,28 +496,28 @@ public class DatalakeAdvancedProbe {
         private volatile Map<String, Object> lastConfig; // 最后一个配置
 
         /**
-        * capturingsink。
-        * @param type 类型
+         * capturingsink。
+         * @param type 类型
          */
         public CapturingSink(String type) { this.type = type; }
 
         /**
-        * reset。
+         * reset。
          */
         public void reset() {
             count.set(0);
             lastConfig = null;
         }
         /**
-        * 获取数量。
-        * @return 获取数量的结果
+         * 获取数量。
+         * @return 获取数量的结果
          */
         public int getCount() { return count.get(); }
         /**
-        * 获取最后一个配置。
-        * @return 获取最后一个配置的结果
-        * @author CH
-        * @since 4.0.0
+         * 获取最后一个配置。
+         * @return 获取最后一个配置的结果
+         * @author CH
+         * @since 4.0.0
          */
         public Map<String, Object> getLastConfig() { return lastConfig; }
 
@@ -547,12 +547,12 @@ public class DatalakeAdvancedProbe {
         private final AtomicInteger count = new AtomicInteger(0);
 
         /**
-        * reset。
+         * reset。
          */
         public void reset() { count.set(0); }
         /**
-        * 获取数量。
-        * @return 获取数量的结果
+         * 获取数量。
+         * @return 获取数量的结果
          */
         public int getCount() { return count.get(); }
 

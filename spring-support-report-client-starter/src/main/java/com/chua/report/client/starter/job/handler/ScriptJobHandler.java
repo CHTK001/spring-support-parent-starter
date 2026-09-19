@@ -10,28 +10,28 @@ import lombok.extern.slf4j.Slf4j;
 import java.io.File;
 
 /**
-* 脚本方式的作业处理程序
-* <p>
-* 支持执行Shell、Python、PHP、节点js、PowerShell等脚本文件。
-* 脚本内容存储在数据库中，执行时会生成临时脚本文件并调用系统命令执行。
-* </p>
-*
-* @版本 1.0.0
-* @since 2024/03/11
-* @author CH
+ * 脚本方式的作业处理程序
+ * <p>
+ * 支持执行Shell、Python、PHP、节点js、PowerShell等脚本文件。
+ * 脚本内容存储在数据库中，执行时会生成临时脚本文件并调用系统命令执行。
+ * </p>
+ *
+ * @版本 1.0.0
+ * @since 2024/03/11
+ * @author CH
  */
 @Slf4j
 public class ScriptJobHandler implements JobHandler {
 
 
     /**
-    * 任务标识
-    */
+     * 任务标识
+     */
     private final int jobId;
 
     /**
-    * 胶水更新时间戳
-    */
+     * 胶水更新时间戳
+     */
     @Getter
     /** Glueupdatetime */
     private final long glueUpdatetime;
@@ -42,18 +42,18 @@ public class ScriptJobHandler implements JobHandler {
     private final String gluesource;
 
     /**
-    * 脚本类型
-    */
+     * 脚本类型
+     */
     private final GlueTypeEnum glueType;
 
     /**
-    * 构造函数
-    *
-    * @param jobId          任务标识
-    * @param glueUpdatetime 胶水更新时间戳
-    * @param gluesource     脚本源码
-    * @param glueType       脚本类型
-    */
+     * 构造函数
+     *
+     * @param jobId          任务标识
+     * @param glueUpdatetime 胶水更新时间戳
+     * @param gluesource     脚本源码
+     * @param glueType       脚本类型
+     */
     public ScriptJobHandler(int jobId, long glueUpdatetime, String gluesource, GlueTypeEnum glueType) {
         this.jobId = jobId;
         this.glueUpdatetime = glueUpdatetime;
@@ -62,14 +62,14 @@ public class ScriptJobHandler implements JobHandler {
 
         // 清理旧版本的脚本文件
         /**
-        * clean旧script文件。
-        */
+         * clean旧script文件。
+         */
         cleanOldScriptFiles();
     }
 
     /**
-    * 清理旧版本的脚本文件
-    */
+     * 清理旧版本的脚本文件
+     */
     private void cleanOldScriptFiles() {
         File glueSrcPath = new File(JobFileAppender.getGlueSrcPath());
         if (glueSrcPath.exists()) {

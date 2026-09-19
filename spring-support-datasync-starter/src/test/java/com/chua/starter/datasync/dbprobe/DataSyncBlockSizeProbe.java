@@ -18,10 +18,10 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
 /**
-* Chronicle mmap block大小 压测：不同块大小下的 pub/sub 吞吐。
-*
-* @since 4.0.0.42
-* @author CH
+ * Chronicle mmap block大小 压测：不同块大小下的 pub/sub 吞吐。
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 public final class DataSyncBlockSizeProbe {
 
@@ -29,9 +29,9 @@ public final class DataSyncBlockSizeProbe {
     static final int BATCH = 1000; // 批量
 
     /**
-    * Main
-    *
-    * @param args 参数
+     * Main
+     *
+     * @param args 参数
      */
     public static void main(String[] args) throws Exception {
         Path tmp = Files.createTempDirectory("chronicle-blocksize");
@@ -65,11 +65,11 @@ public final class DataSyncBlockSizeProbe {
     }
 
     /**
-    * Bench
-    *
-    * @param tmp tmp
-    * @param blockSize block大小
-    * @param data 数据
+     * Bench
+     *
+     * @param tmp tmp
+     * @param blockSize block大小
+     * @param data 数据
      */
     static void bench(Path tmp, long blockSize, List<Map<String, Object>> data) throws Exception {
         Path dataPath = tmp.resolve("queue-" + blockSize);

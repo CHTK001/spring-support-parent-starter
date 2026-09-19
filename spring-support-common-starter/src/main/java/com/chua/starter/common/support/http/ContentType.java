@@ -1,9 +1,9 @@
 package com.chua.starter.common.support.http;
 
 /**
-* HTTP 内容-类型 描述。
-* @author CH
-* @since 4.0.0
+ * HTTP 内容-类型 描述。
+ * @author CH
+ * @since 4.0.0
  */
 public class ContentType {
 
@@ -19,10 +19,10 @@ public class ContentType {
     }
 
     /**
-    * 获取mime类型
-    *
-    * @return 获取mime类型的结果
-    */
+     * 获取mime类型
+     *
+     * @return 获取mime类型的结果
+     */
     public String getMimeType() {
         return mimeType;
     }

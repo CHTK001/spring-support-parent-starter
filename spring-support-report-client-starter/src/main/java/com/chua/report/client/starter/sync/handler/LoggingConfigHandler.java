@@ -15,15 +15,15 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
-* 日志配置处理器
-* <p>
-* 监听日志配置 Topic，动态调整日志级别
-* 支持 Logback 日志框架
-* </p>
-*
-* @版本 1.0.0
-* @since 2024/12/08
-* @author CH
+ * 日志配置处理器
+ * <p>
+ * 监听日志配置 Topic，动态调整日志级别
+ * 支持 Logback 日志框架
+ * </p>
+ *
+ * @版本 1.0.0
+ * @since 2024/12/08
+ * @author CH
  */
 @Slf4j
 @Spi("loggingConfigHandler")
@@ -103,11 +103,11 @@ public class LoggingConfigHandler implements SyncMessageHandler {
     }
 
     /**
-    * 获取所有日志器列表
-    * 
-    * @param data 请求数据，可包含 keyword 用于过滤
-    * @return 日志器列表
-    */
+     * 获取所有日志器列表
+     * 
+     * @param data 请求数据，可包含 keyword 用于过滤
+     * @return 日志器列表
+     */
     private Object handleGetLoggers(Map<String, Object> data) {
         String keyword = getString(data, "keyword");
 
@@ -144,11 +144,11 @@ public class LoggingConfigHandler implements SyncMessageHandler {
     }
 
     /**
-    * 获取指定日志器的级别
-    * 
-    * @param data 请求数据，包含 日志记录器名称
-    * @return 日志级别信息
-    */
+     * 获取指定日志器的级别
+     * 
+     * @param data 请求数据，包含 日志记录器名称
+     * @return 日志级别信息
+     */
     private Object handleGetLevel(Map<String, Object> data) {
         String loggerName = getString(data, "loggerName");
 
@@ -174,12 +174,12 @@ public class LoggingConfigHandler implements SyncMessageHandler {
     }
 
     /**
-    * 获取字符串
-    *
-    * @param data 数据
-    * @param key Key
-    * @return 获取字符串的结果
-    */
+     * 获取字符串
+     *
+     * @param data 数据
+     * @param key Key
+     * @return 获取字符串的结果
+     */
     private String getString(Map<String, Object> data, String key) {
         Object v = data.get(key);
         return v != null ? v.toString() : null;

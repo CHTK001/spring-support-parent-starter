@@ -30,15 +30,15 @@ import java.util.List;
 import java.util.Map;
 
 /**
-* Agent 上报端点（开放 API，不走登录态）
-* <p>
-* 外部探针以 {@code X-Agent-Key} 头鉴权，键 与 ms监控.监控Agent键 匹配。
-* 推送数据与 提供者 轮询共用同一条写入管道（MySQL + influxdb + 告警评估）；
-* 心跳与推送均会刷新在线状态上下文。
-* </p>
-*
-* @author CH
-* @since 4.0.0.42
+ * Agent 上报端点（开放 API，不走登录态）
+ * <p>
+ * 外部探针以 {@code X-Agent-Key} 头鉴权，键 与 ms监控.监控Agent键 匹配。
+ * 推送数据与 提供者 轮询共用同一条写入管道（MySQL + influxdb + 告警评估）；
+ * 心跳与推送均会刷新在线状态上下文。
+ * </p>
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 @Slf4j
 @Tag(name = "监控-Agent上报", description = "外部探针推送指标、心跳与在线状态")
@@ -72,11 +72,11 @@ public class AgentEndpointController {
     private static final long DEFAULT_INTERVAL_MS = 10_000L;
 
     /**
-    * 心跳：探针周期性上报存活并刷新在线状态
-    *
-    * @param agentKey 探针标识
-    * @return 服务端时间
-    */
+     * 心跳：探针周期性上报存活并刷新在线状态
+     *
+     * @param agentKey 探针标识
+     * @return 服务端时间
+     */
     @Operation(summary = "Agent 心跳")
     @GetMapping("/heartbeat")
     public ReturnResult<Map<String, Object>> heartbeat(
@@ -91,10 +91,10 @@ public class AgentEndpointController {
     }
 
     /**
-    * 探针在线状态列表（心跳上下文快照）
-    *
-    * @return 每个目标的最后心跳时间与在线标记
-    */
+     * 探针在线状态列表（心跳上下文快照）
+     *
+     * @return 每个目标的最后心跳时间与在线标记
+     */
     @Operation(summary = "探针在线状态")
     @GetMapping("/status")
     public ReturnResult<List<Map<String, Object>>> status() {
@@ -110,10 +110,10 @@ public class AgentEndpointController {
     }
 
     /**
-    * Agent 列表：登记了探针标识的监控目标 + 在线状态
-    *
-    * @return 每个目标的 ID/名称/地址/探针标识/在线/最后心跳
-    */
+     * Agent 列表：登记了探针标识的监控目标 + 在线状态
+     *
+     * @return 每个目标的 ID/名称/地址/探针标识/在线/最后心跳
+     */
     @Operation(summary = "Agent 列表")
     @GetMapping("/list")
     public ReturnResult<List<Map<String, Object>>> listAgents() {
@@ -140,11 +140,11 @@ public class AgentEndpointController {
     }
 
     /**
-    * Agent 配置：采集间隔与该资产下的采集任务
-    *
-    * @param monitorId 监控目标 标识
-    * @return intervals + tasks，任务字段已归一化为 taskName/taskType/taskCron
-    */
+     * Agent 配置：采集间隔与该资产下的采集任务
+     *
+     * @param monitorId 监控目标 标识
+     * @return intervals + tasks，任务字段已归一化为 taskName/taskType/taskCron
+     */
     @Operation(summary = "Agent 配置")
     @GetMapping("/config/{monitorId}")
     public ReturnResult<Map<String, Object>> agentConfig(@PathVariable Long monitorId) {
@@ -174,25 +174,25 @@ public class AgentEndpointController {
     }
 
     /**
-    * 指标推送
-    * <p>
-    * 请求体结构：
-    * <pre>{@code
-    * {
-    *   "points": [
-    *     { "metricName": "cpu_usage", "value": 35.2, "unit": "%",
-    *       "tags": {"model":"x86"}, "targetTable": "ms_monitor_metric_cpu" }
-    *   ]
-    * }
-    * }</pre>   * }
-    * }</pre>
-    * Targettable 缺省时落通用表 ms_监控_指标。
-    * </p>
-    *
-    * @param agentKey 探针标识
-    * @param body     指标载荷
-    * @return 结果
-    */
+     * 指标推送
+     * <p>
+     * 请求体结构：
+     * <pre>{@code
+     * {
+     *   "points": [
+     *     { "metricName": "cpu_usage", "value": 35.2, "unit": "%",
+     *       "tags": {"model":"x86"}, "targetTable": "ms_monitor_metric_cpu" }
+     *   ]
+     * }
+     * }</pre>   * }
+     * }</pre>
+     * Targettable 缺省时落通用表 ms_监控_指标。
+     * </p>
+     *
+     * @param agentKey 探针标识
+     * @param body     指标载荷
+     * @return 结果
+     */
     @Operation(summary = "Agent 指标推送")
     @PostMapping("/metrics")
     public ReturnResult<Void> pushMetrics(
@@ -219,11 +219,11 @@ public class AgentEndpointController {
     }
 
     /**
-    * 按探针标识加载启用的监控目标
-    *
-    * @param agentKey 探针标识
-    * @return 目标实体，未命中返回 空
-    */
+     * 按探针标识加载启用的监控目标
+     *
+     * @param agentKey 探针标识
+     * @return 目标实体，未命中返回 空
+     */
     private MsMonitor requireByAgentKey(String agentKey) {
         if (agentKey == null || agentKey.isBlank()) {
             return null;
@@ -235,11 +235,11 @@ public class AgentEndpointController {
     }
 
     /**
-    * 宽松解析指标点数组
-    *
-    * @param raw 原始 JSON 数组对象
-    * @return 指标点列表（非法项跳过）
-    */
+     * 宽松解析指标点数组
+     *
+     * @param raw 原始 JSON 数组对象
+     * @return 指标点列表（非法项跳过）
+     */
     @SuppressWarnings("unchecked")
     private List<MetricPoint> parsePoints(Object raw) {
         List<MetricPoint> points = new java.util.ArrayList<>();

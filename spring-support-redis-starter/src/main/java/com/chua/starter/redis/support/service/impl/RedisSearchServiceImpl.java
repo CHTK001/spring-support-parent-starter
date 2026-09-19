@@ -5,10 +5,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 /**
-* Redis 搜索 服务实现（简化版）
-*
-* @author CH
-* @since 4.0.0
+ * Redis 搜索 服务实现（简化版）
+ *
+ * @author CH
+ * @since 4.0.0
  */
 @Slf4j
 @Service

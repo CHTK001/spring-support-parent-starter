@@ -4,19 +4,19 @@ import com.chua.common.support.ai.agent.AgentUsage;
 import com.chua.common.support.ai.chat.ChatResponse;
 
 /**
-* AI 用量统计工具类。
-*
-* @author CH
-* @since 4.0.0
+ * AI 用量统计工具类。
+ *
+ * @author CH
+ * @since 4.0.0
  */
 public abstract class ChatUsageSupport {
 
     /**
-    * 从 对话响应 提取 Agentusage。
-    *
-    * @param response 对话响应
-    * @return AgentUsage 实例
-    */
+     * 从 对话响应 提取 Agentusage。
+     *
+     * @param response 对话响应
+     * @return AgentUsage 实例
+     */
     public static AgentUsage from(ChatResponse response) {
         if (response == null || response.getUsage() == null) {
             return AgentUsage.builder()
@@ -33,12 +33,12 @@ public abstract class ChatUsageSupport {
     }
 
     /**
-    * 合并
-    *
-    * @param a a
-    * @param b b
-    * @return 合并的结果
-    */
+     * 合并
+     *
+     * @param a a
+     * @param b b
+     * @return 合并的结果
+     */
     public static AgentUsage merge(AgentUsage a, AgentUsage b) {
         if (a == null) {
             return b;

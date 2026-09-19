@@ -3,13 +3,13 @@ package com.chua.starter.oauth.client.support.annotation;
 import java.lang.annotation.*;
 
 /**
-* 令牌忽略注解
-* <p>用于标记Controller类或方法，被标记的类或方法在执行时将忽略Token验证</p>
-*
-* @since 2023-08-01
-* 
-* @see org.springframework.web.bind.annotation.RequestParam
-* @author CH
+ * 令牌忽略注解
+ * <p>用于标记Controller类或方法，被标记的类或方法在执行时将忽略Token验证</p>
+ *
+ * @since 2023-08-01
+ * 
+ * @see org.springframework.web.bind.annotation.RequestParam
+ * @author CH
  */
 @Target({ElementType.METHOD, ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)

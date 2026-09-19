@@ -27,13 +27,13 @@ import org.springframework.context.annotation.Configuration;
 import java.util.List;
 
 /**
-* 任务分发自动配置。
-*
-* <p>装配 NodeTable、TaskManager、ResultBuffer、DispatcherProvider 等核心 Bean，
-* 支持自动恢复、批量处理和 SPI 存储扩展。</p>
-*
-* @since 4.0.0.42
-* @author CH
+ * 任务分发自动配置。
+ *
+ * <p>装配 NodeTable、TaskManager、ResultBuffer、DispatcherProvider 等核心 Bean，
+ * 支持自动恢复、批量处理和 SPI 存储扩展。</p>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @Configuration
@@ -42,12 +42,12 @@ import java.util.List;
 public class TaskDistributionAutoConfiguration {
 
     /**
-    * 持久化存储 Bean（按 存储类型 选择 内存 / 文件 / db）。
-    *
-    * @param properties 配置属性
-    * @param mapper     数据库 映射器（存储类型 = db 时自动注入）
-    * @return TaskStore 实例
-    */
+     * 持久化存储 Bean（按 存储类型 选择 内存 / 文件 / db）。
+     *
+     * @param properties 配置属性
+     * @param mapper     数据库 映射器（存储类型 = db 时自动注入）
+     * @return TaskStore 实例
+     */
     @Bean
     @ConditionalOnMissingBean
     public TaskStore taskStore(TaskDistributionProperties properties,
@@ -56,52 +56,52 @@ public class TaskDistributionAutoConfiguration {
         if ("file".equalsIgnoreCase(storeType)) {
             log.info("任务分发使用文件存储: {}", properties.getStorePath());
             /**
-            * 文件任务存储。
-            * @param properties.getStorePath( 属性.获取存储路径(
-            * @return 文件任务存储的结果
-            */
+             * 文件任务存储。
+             * @param properties.getStorePath( 属性.获取存储路径(
+             * @return 文件任务存储的结果
+             */
             return new FileTaskStore(properties.getStorePath());
         }
         if ("db".equalsIgnoreCase(storeType)) {
             if (mapper != null) {
                 log.info("任务分发使用数据库存储");
                 /**
-                * db任务存储。
-                * @param mapper 映射器
-                * @return db任务存储的结果
-                */
+                 * db任务存储。
+                 * @param mapper 映射器
+                 * @return db任务存储的结果
+                 */
                 return new DbTaskStore(mapper);
             }
             log.warn("storeType=db 但未引入 mybatis 依赖或未配置数据源，回退到内存存储");
         }
         /**
-        * 入内存任务存储。
-        * @return 入内存任务存储的结果
-        */
+         * 入内存任务存储。
+         * @return 入内存任务存储的结果
+         */
         return new InMemoryTaskStore();
     }
 
     /**
-    * 节点注册表 Bean。
-    *
-    * @return NodeTable 实例
-    */
+     * 节点注册表 Bean。
+     *
+     * @return NodeTable 实例
+     */
     @Bean(destroyMethod = "destroy")
     @ConditionalOnMissingBean
     public NodeTable nodeTable() {
         /**
-        * 节点table。
-        * @return 节点table的结果
-        */
+         * 节点table。
+         * @return 节点table的结果
+         */
         return new NodeTable();
     }
 
     /**
-    * 任务管理器 Bean（启动时自动恢复未完成任务）。
-    *
-    * @param store 持久化存储（可选，无则纯内存）
-    * @return TaskManager 实例
-    */
+     * 任务管理器 Bean（启动时自动恢复未完成任务）。
+     *
+     * @param store 持久化存储（可选，无则纯内存）
+     * @return TaskManager 实例
+     */
     @Bean(destroyMethod = "destroy")
     @ConditionalOnMissingBean
     public TaskManager taskManager(TaskStore store) {
@@ -117,41 +117,41 @@ public class TaskDistributionAutoConfiguration {
     }
 
     /**
-    * 结果缓冲器 Bean。
-    *
-    * @return ResultBuffer 实例
-    */
+     * 结果缓冲器 Bean。
+     *
+     * @return ResultBuffer 实例
+     */
     @Bean(destroyMethod = "close")
     @ConditionalOnMissingBean
     public ResultBuffer resultBuffer() {
         /**
-        * 结果缓冲。
-        * @return 结果缓冲的结果
-        */
+         * 结果缓冲。
+         * @return 结果缓冲的结果
+         */
         return new ResultBuffer();
     }
 
     /**
-    * 执行器注册中心 Bean。
-    *
-    * @return TaskExecutorRegistry 实例
-    */
+     * 执行器注册中心 Bean。
+     *
+     * @return TaskExecutorRegistry 实例
+     */
     @Bean
     @ConditionalOnMissingBean
     public TaskExecutorRegistry taskExecutorRegistry() {
         /**
-        * 任务执行器registry。
-        * @return 任务执行器registry的结果
-        */
+         * 任务执行器registry。
+         * @return 任务执行器registry的结果
+         */
         return new TaskExecutorRegistry();
     }
 
     /**
-    * 派发提供者 Bean（默认内存实现，支持批量处理）。
-    *
-    * @param properties 配置属性
-    * @return DispatcherProvider 实例
-    */
+     * 派发提供者 Bean（默认内存实现，支持批量处理）。
+     *
+     * @param properties 配置属性
+     * @return DispatcherProvider 实例
+     */
     @Bean(destroyMethod = "close")
     @ConditionalOnMissingBean
     public DispatcherProvider dispatcherProvider(TaskDistributionProperties properties) {
@@ -164,13 +164,13 @@ public class TaskDistributionAutoConfiguration {
     }
 
     /**
-    * 初始化节点 标识 和自动注册 任务执行器。
-    *
-    * @param properties 配置属性
-    * @param registry   执行器注册中心
-    * @param nodeTable  节点注册表
-    * @param executors  用户自定义 任务执行器 列表
-    */
+     * 初始化节点 标识 和自动注册 任务执行器。
+     *
+     * @param properties 配置属性
+     * @param registry   执行器注册中心
+     * @param nodeTable  节点注册表
+     * @param executors  用户自定义 任务执行器 列表
+     */
     @Bean
     public ApplicationRunner taskDistributionInitializer(
             TaskDistributionProperties properties,
@@ -198,11 +198,11 @@ public class TaskDistributionAutoConfiguration {
     }
 
     /**
-    * 任务分发的 服务信息 贡献者。
-    *
-    * @param properties 配置属性
-    * @return ServiceInfoContributor
-    */
+     * 任务分发的 服务信息 贡献者。
+     *
+     * @param properties 配置属性
+     * @return ServiceInfoContributor
+     */
     @Bean
     public ServiceInfoContributor taskDistributionServiceInfoContributor(TaskDistributionProperties properties) {
         return registry -> registry.registerFlag("taskdistribution", "任务分发", true,

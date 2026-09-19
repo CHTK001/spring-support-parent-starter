@@ -4,18 +4,18 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 /**
-* 模板预览请求
-*
-* @since 2026/08/03
-* @author CH
+ * 模板预览请求
+ *
+ * @since 2026/08/03
+ * @author CH
  */
 @Data
 @Schema(description = "模板预览请求")
 public class TemplatePreviewRequest {
 
     /**
-    * 模板标识
-    */
+     * 模板标识
+     */
     @Schema(description = "模板ID")
     /** SYS消息模板标识 */
     private Integer sysMessageTemplateId;

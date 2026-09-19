@@ -13,14 +13,14 @@ import java.time.Duration;
 import java.util.Map;
 
 /**
-* Webhook 通知发送器
-* <p>
-* 从全局配置读取 {@code monitor.alert.webhook.url}，存在时以 POST JSON 投递；
-* 未配置时静默跳过。超时 5 秒，失败仅记录日志不影响主链路。
-* </p>
-*
-* @author CH
-* @since 4.0.0.42
+ * Webhook 通知发送器
+ * <p>
+ * 从全局配置读取 {@code monitor.alert.webhook.url}，存在时以 POST JSON 投递；
+ * 未配置时静默跳过。超时 5 秒，失败仅记录日志不影响主链路。
+ * </p>
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 @Slf4j
 @Component
@@ -49,12 +49,12 @@ public class WebhookNotifySender implements NotifySender {
     }
 
     /**
-    * 发送告警 JSON 到配置的 webhook 地址
-    *
-    * @param title    标题
-    * @param content  内容
-    * @param eventUrl 事件详情地址
-    */
+     * 发送告警 JSON 到配置的 webhook 地址
+     *
+     * @param title    标题
+     * @param content  内容
+     * @param eventUrl 事件详情地址
+     */
     @Override
     public void send(String title, String content, String eventUrl) {
         String url = monitorConfigService.getString(CONFIG_KEY, "");
