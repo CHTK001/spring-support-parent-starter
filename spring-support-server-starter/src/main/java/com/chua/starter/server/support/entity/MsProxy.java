@@ -1,6 +1,8 @@
 package com.chua.starter.server.support.entity;
 
+import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.chua.starter.mybatis.pojo.SysBase;
 import lombok.Data;
@@ -15,6 +17,12 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 @TableName("ms_proxy")
 public class MsProxy extends SysBase {
+
+    /**
+     * 主键
+    */
+    @TableId(value = "id", type = IdType.AUTO)
+    private Long id; // 标识
 
     /**
      * 代理主机

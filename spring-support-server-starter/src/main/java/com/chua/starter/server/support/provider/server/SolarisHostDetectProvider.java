@@ -1,6 +1,7 @@
 package com.chua.starter.server.support.provider.server;
 
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.spi.annotations.Spi;
 import com.chua.common.support.utils.NumberUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.server.support.connection.ConnectionManager;
@@ -8,9 +9,8 @@ import com.chua.starter.server.support.entity.MsServerHost;
 import com.chua.starter.server.support.model.SshCredential;
 import com.chua.starter.server.support.spi.HostDetectProvider;
 import com.chua.starter.server.support.util.SshClients;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * Solaris 主机硬件探测提供者（SSH 采集）
@@ -23,14 +23,14 @@ import org.springframework.stereotype.Component;
  * @since 4.0.0.42
  */
 @Slf4j
-@Component
-@RequiredArgsConstructor
+@Spi(value = "solaris", order = 100)
 public class SolarisHostDetectProvider implements HostDetectProvider {
 
     /**
      * SSH 连接池管理器
     */
-    private final ConnectionManager connectionManager;
+    @Autowired
+    private ConnectionManager connectionManager;
 
     @Override
     public String osType() {

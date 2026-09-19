@@ -424,6 +424,13 @@ public class ServerHostServiceImpl implements ServerHostService {
         if (host == null) {
             return ReturnResult.error("主机不存在: " + id);
         }
+        // Agent / Local 通道没有 SSH，连通性由各自的探测提供者按自身通道判断
+        HostDetectProvider detector = detectProviderRegistry.resolve(host.getServerHostOsType()).orElse(null);
+        if (detector != null && !detector.requiresCredential()) {
+            ReturnResult<String> tested = detector.test(host);
+            markOnline(id, tested.isOk());
+            return tested;
+        }
         ReturnResult<SshCredential> resolved = resolveCredential(id, null);
         if (!resolved.isOk()) {
             return ReturnResult.error(resolved.getMsg());
@@ -436,7 +443,7 @@ public class ServerHostServiceImpl implements ServerHostService {
         SshClients.Handle handle = null;
         try {
             handle = connectionManager.borrow(host, resolved.getData());
- // 登录+认证成功即为连通; banner 仅尽力获取(执行 通道不可用时不影响结论)
+            // 登录+认证成功即为连通；exec 通道不可用时不影响结论，banner 仅尽力获取
             String banner = "connected";
             if ("LINUX".equalsIgnoreCase(host.getServerHostOsType())) {
                 try {
@@ -445,14 +452,10 @@ public class ServerHostServiceImpl implements ServerHostService {
                         banner = uname;
                     }
                 } catch (Exception execError) {
- // 打印完整堆栈便于定位 执行 通道问题(不影响连通性结论)
+                    // 打印完整堆栈便于定位 exec 通道问题（不影响连通性结论）
                     log.info("[server] exec 通道不可用(不影响连通性结论)", execError);
                 }
             }
-            /**
-             * markonline。
-             * @param host.getId( 主机.获取标识(
-             */
             markOnline(host.getId(), true);
             return ReturnResult.ok(banner, "测试成功");
         } catch (Exception e) {
@@ -688,12 +691,21 @@ public class ServerHostServiceImpl implements ServerHostService {
         if (host == null) {
             return ReturnResult.error("主机不存在: " + hostId);
         }
-        ReturnResult<SshCredential> resolved = resolveCredential(hostId, null);
-        if (!resolved.isOk()) {
-            return ReturnResult.error(resolved.getMsg());
+        // 按系统类型 SPI 路由（Linux/macOS 走 SSH、Windows 走 WinRM、AGENT/LOCAL 由主机侧自报）
+        HostDetectProvider provider = detectProviderRegistry.resolve(host.getServerHostOsType()).orElse(null);
+        if (provider == null) {
+            log.warn("[detect] 未找到系统类型 {} 的探测实现 hostId={}", host.getServerHostOsType(), hostId);
+            return ReturnResult.error("不支持的探测系统类型: " + host.getServerHostOsType());
         }
-        // 按系统类型 SPI 路由到具体探测实现（Linux SSH / macOS SSH / Windows WinRM）
-        ReturnResult<MsServerHost> detected = detectByProvider(host, resolved.getData());
+        SshCredential credential = null;
+        if (provider.requiresCredential()) {
+            ReturnResult<SshCredential> resolved = resolveCredential(hostId, null);
+            if (!resolved.isOk()) {
+                return ReturnResult.error(resolved.getMsg());
+            }
+            credential = resolved.getData();
+        }
+        ReturnResult<MsServerHost> detected = provider.detect(host, credential);
         if (!detected.isOk()) {
             return detected;
         }
@@ -709,25 +721,6 @@ public class ServerHostServiceImpl implements ServerHostService {
         hostMapper.updateById(latest);
         markOnline(hostId, true);
         return ReturnResult.ok(hostMapper.selectById(hostId), "硬件探测成功");
-    }
-
-    /**
-     * 按系统类型 SPI 路由执行硬件探测，探测结果回写到传入主机对象
-     *
-     * @param host       目标主机，不能为 null
-     * @param credential 登录凭据，不能为 null
-     * @return 探测结果；探测成功返回包含已回写硬件字段的主机
-     */
-    private ReturnResult<MsServerHost> detectByProvider(MsServerHost host, SshCredential credential) {
-        String osType = host.getServerHostOsType();
-        var providerOpt = detectProviderRegistry.resolve(osType);
-        if (providerOpt.isEmpty()) {
-            log.warn("[detect] 未找到系统类型 {} 的探测实现，已跳过 hostId={}",
-                    osType, host.getId());
-            return ReturnResult.error("不支持的探测系统类型: " + osType);
-        }
-        HostDetectProvider provider = providerOpt.get();
-        return provider.detect(host, credential);
     }
 
     @Override

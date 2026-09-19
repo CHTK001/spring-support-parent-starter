@@ -1,0 +1,6 @@
+com.chua.starter.server.support.provider.server.LinuxHostDetectProvider
+com.chua.starter.server.support.provider.server.WindowsHostDetectProvider
+com.chua.starter.server.support.provider.server.MacosHostDetectProvider
+com.chua.starter.server.support.provider.server.FreebsdHostDetectProvider
+com.chua.starter.server.support.provider.server.AixHostDetectProvider
+com.chua.starter.server.support.provider.server.SolarisHostDetectProvider

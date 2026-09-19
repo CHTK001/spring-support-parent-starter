@@ -2,10 +2,11 @@ package com.chua.starter.server.support.service;
 
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.server.support.model.TempFile;
+import com.chua.starter.server.support.model.vo.SftpContentVO;
+import com.chua.starter.server.support.model.vo.SftpEntryVO;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * SFTP 文件管理服务
@@ -25,9 +26,9 @@ public interface SftpService {
      * @param hostId     主机 标识
      * @param identityId 指定身份 标识，可为空取默认绑定身份
      * @param path       目录路径，空时取用户主目录
-     * @return 文件条目列表（name/path/directory/file/size 等键）
+     * @return 目录条目列表
      */
-    ReturnResult<List<Map<String, Object>>> list(Long hostId, Long identityId, String path);
+    ReturnResult<List<SftpEntryVO>> list(Long hostId, Long identityId, String path);
 
     /**
      * 读取文本文件内容
@@ -35,9 +36,9 @@ public interface SftpService {
      * @param hostId     主机 标识
      * @param identityId 身份 标识
      * @param path       文件路径
-     * @return 内容结果：content（可能被截断）/ truncated / 大小
+     * @return 内容结果（含是否被截断）
      */
-    ReturnResult<Map<String, Object>> readContent(Long hostId, Long identityId, String path);
+    ReturnResult<SftpContentVO> readContent(Long hostId, Long identityId, String path);
 
     /**
      * 写入文本文件内容（整文件覆盖）

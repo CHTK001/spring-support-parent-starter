@@ -33,14 +33,17 @@ public interface ProxyService {
     String currentProxy();
 
     /**
-     * 批量检测代理（异步——虚拟线程处理）
+     * 批量检测代理（虚拟线程并发探测，全部收敛后返回）
+     *
+     * @return 已检测条数
      */
-    void checkProxies();
+    int checkProxies();
 
     /**
      * 检测单个代理
      *
      * @param id 代理ID
+     * @return true 表示记录存在且已完成探测
      */
-    void checkProxy(Long id);
+    boolean checkProxy(Long id);
 }

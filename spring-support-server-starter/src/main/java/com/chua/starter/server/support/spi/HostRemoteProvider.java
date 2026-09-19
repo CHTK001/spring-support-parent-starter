@@ -10,7 +10,8 @@ import java.util.Locale;
 /**
  * 主机远程操作 提供者 SPI（按系统类型路由）
  * <p>
- * 与 {@link HostDetectProvider} 同包同范式：实现类注册为 Spring Bean，
+ * 与 {@link HostDetectProvider} 同包同范式：实现类标注 {@code @Spi} 并登记到
+ * {@code META-INF/extensions} 由扩展点发现，
  * {@link HostRemoteProviderRegistry} 按 {@link #osTypes()} 建索引，
  * 调用方只需给出主机，无需关心底层是 SSH/SFTP 还是 WinRM/PowerShell。
  * </p>
