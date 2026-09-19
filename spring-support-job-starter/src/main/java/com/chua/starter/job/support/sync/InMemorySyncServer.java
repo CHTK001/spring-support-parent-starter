@@ -44,7 +44,9 @@ public class InMemorySyncServer implements SyncServer {
     private final List<String> clients = new ArrayList<>();
 
     @Override
-    /** 发布 */
+    /**
+     * 发布
+    */
     public void publish(String topic, Object message) {
         published.computeIfAbsent(topic, k -> new ArrayList<>()).add(message);
         for (SyncServerListener listener : listeners) {
@@ -56,118 +58,158 @@ public class InMemorySyncServer implements SyncServer {
     }
 
     @Override
-    /** 发送 */
+    /**
+     * 发送
+    */
     public void send(String clientId, String topic, Object message) {
         published.computeIfAbsent(topic, k -> new ArrayList<>()).add(message);
     }
 
     @Override
-    /** 获取连接客户端 */
+    /**
+     * 获取连接客户端
+    */
     public List<String> getConnectedClients() {
         return Collections.unmodifiableList(clients);
     }
 
     @Override
-    /** 获取客户端metadata */
+    /**
+     * 获取客户端metadata
+    */
     public Map<String, Object> getClientMetadata(String clientId) {
         return Map.of();
     }
 
     @Override
-    /** 添加监听器 */
+    /**
+     * 添加监听器
+    */
     public void addListener(SyncServerListener listener) {
         listeners.add(listener);
     }
 
     @Override
-    /** 移除监听器 */
+    /**
+     * 移除监听器
+    */
     public void removeListener(SyncServerListener listener) {
         listeners.remove(listener);
     }
 
     @Override
-    /** 开始 */
+    /**
+     * 开始
+    */
     public void start() {
     }
 
     @Override
-    /** 停止 */
+    /**
+     * 停止
+    */
     public void stop() {
     }
 
     @Override
-    /** 是否Running */
+    /**
+     * 是否Running
+    */
     public boolean isRunning() {
         return true;
     }
 
     @Override
-    /** 获取协议类型 */
+    /**
+     * 获取协议类型
+    */
     public ProtocolType getProtocolType() {
         return ProtocolType.WS;
     }
 
     @Override
-    /** 获取端口 */
+    /**
+     * 获取端口
+    */
     public int getPort() {
         return 18081;
     }
 
     @Override
-    /** 获取Setting */
+    /**
+     * 获取Setting
+    */
     public ServerSetting getSetting() {
         return null;
     }
 
     @Override
-    /** 获取对象上下文 */
+    /**
+     * 获取对象上下文
+    */
     public ObjectContext getObjectContext() {
         return null;
     }
 
     @Override
-    /** 设置对象上下文 */
+    /**
+     * 设置对象上下文
+    */
     public void setObjectContext(ObjectContext objectContext) {
     }
 
     @Override
-    /** 获取过滤器 */
+    /**
+     * 获取过滤器
+    */
     public List<ServerFilter> getFilters() {
         return List.of();
     }
 
     @Override
-    /** 添加过滤 */
+    /**
+     * 添加过滤
+    */
     public Server addFilter(ServerFilter filter) {
         return this;
     }
 
     @Override
-    /** 移除过滤 */
+    /**
+     * 移除过滤
+    */
     public Server removeFilter(ServerFilter filter) {
         return this;
     }
 
     @Override
-    /** refresh过滤器 */
+    /**
+     * refresh过滤器
+    */
     public Server refreshFilters() {
         return this;
     }
 
     @Override
-    /** 注册Bean */
+    /**
+     * 注册Bean
+    */
     public Server registerBean(Object bean) {
         return this;
     }
 
     @Override
-    /** 注销Bean */
+    /**
+     * 注销Bean
+    */
     public Server unregisterBean(Object bean) {
         return this;
     }
 
     @Override
-    /** 关闭 */
+    /**
+     * 关闭
+    */
     public void close() {
     }
 

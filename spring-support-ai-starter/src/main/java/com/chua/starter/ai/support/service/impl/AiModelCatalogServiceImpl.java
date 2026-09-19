@@ -48,7 +48,9 @@ public class AiModelCatalogServiceImpl implements AiModelCatalogService {
     private final Map<String, List<String>> cloudCapabilityModels = new LinkedHashMap<>();
 
     @Override
-    /** 列表模型bycapability */
+    /**
+     * 列表模型bycapability
+    */
     public Map<String, List<String>> listModelsByCapability() {
         if (cached != null) {
             return cached;
@@ -143,13 +145,17 @@ public class AiModelCatalogServiceImpl implements AiModelCatalogService {
     private volatile Map<String, List<String>> cached;
 
     @Override
-    /** 列表模型 */
+    /**
+     * 列表模型
+    */
     public List<String> listModels(String capability) {
         return listModelsByCapability().getOrDefault(capability, List.of());
     }
 
     @Override
-    /** 列表capabilities */
+    /**
+     * 列表capabilities
+    */
     public List<String> listCapabilities() {
         return new ArrayList<>(listModelsByCapability().keySet());
     }

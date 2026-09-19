@@ -23,9 +23,13 @@ import org.slf4j.LoggerFactory;
  * @author CH
  */
 public class BinaryHttpMessageConverter extends AbstractGenericHttpMessageConverter<Object> {
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(BinaryHttpMessageConverter.class);
-        /** API响应encoderegister */
+        /**
+         * API响应encoderegister
+        */
         private final ApiResponseEncodeRegister apiResponseEncodeRegister;
     private final List<HttpMessageConverter<?>> messageConverters; // 消息转换器
 
@@ -47,13 +51,17 @@ public class BinaryHttpMessageConverter extends AbstractGenericHttpMessageConver
     }
 
     @Override
-    /** 读取内部 */
+    /**
+     * 读取内部
+    */
     protected Object readInternal(Class<?> clazz, HttpInputMessage inputMessage) throws IOException, HttpMessageNotReadableException {
         return null;
     }
 
     @Override
-    /** 写入内部 */
+    /**
+     * 写入内部
+    */
     protected void writeInternal(Object o, Type type, HttpOutputMessage outputMessage) throws IOException, HttpMessageNotWritableException {
         if (log.isTraceEnabled()) {
             log.trace("[消息转换器]BinaryHttpMessageConverter 开始写入, 对象类型: {}", o != null ? o.getClass().getName() : "null");
@@ -152,13 +160,17 @@ public class BinaryHttpMessageConverter extends AbstractGenericHttpMessageConver
     }
 
     @Override
-    /** 读取 */
+    /**
+     * 读取
+    */
     public Object read(Type type, Class<?> contextClass, HttpInputMessage inputMessage) throws IOException, HttpMessageNotReadableException {
         return null;
     }
 
     @Override
-    /** 是否可以读取 */
+    /**
+     * 是否可以读取
+    */
     public boolean canRead(Type type, Class<?> contextClass, MediaType mediaType) {
         if (apiResponseEncodeRegister.isPass()) {
             if (log.isTraceEnabled()) {
@@ -174,7 +186,9 @@ public class BinaryHttpMessageConverter extends AbstractGenericHttpMessageConver
     }
 
     @Override
-    /** 是否可以写入 */
+    /**
+     * 是否可以写入
+    */
     public boolean canWrite(Type type, Class<?> clazz, MediaType mediaType) {
         if (apiResponseEncodeRegister.isPass()) {
             if (log.isTraceEnabled()) {

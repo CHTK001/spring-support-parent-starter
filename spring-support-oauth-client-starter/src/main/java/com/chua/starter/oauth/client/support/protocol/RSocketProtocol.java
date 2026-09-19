@@ -90,7 +90,9 @@ public class RSocketProtocol extends AbstractProtocol {
     }
 
     @Override
-    /** Approve */
+    /**
+     * Approve
+    */
     protected AuthenticationInformation approve(Cookie cookie, String token, String subProtocol) {
  // 如果传入的sub协议（认证类型）为空，尝试从头部读取 x-OAuth-类型
         if (StringUtils.isBlank(subProtocol)) {
@@ -115,7 +117,9 @@ public class RSocketProtocol extends AbstractProtocol {
     }
 
     @Override
-    /** 认证用户编码 */
+    /**
+     * 认证用户编码
+    */
     protected AuthenticationInformation authenticationUserCode(AppKeySecret appKeySecret) {
         JsonObject jsonObject = createAppKeyAuthenticationData(appKeySecret);
         jsonObject.put("x-oauth-access-key", authClientProperties.getKey().getAccessKey());
@@ -211,7 +215,9 @@ public class RSocketProtocol extends AbstractProtocol {
     }
 
     @Override
-    /** Logout */
+    /**
+     * Logout
+    */
     public LoginAuthResult logout(String uid, LogoutType logoutType, UserResult userResult) {
         JsonObject jsonObject = new JsonObject();
         jsonObject.put("x-oauth-access-key", authClientProperties.getKey().getAccessKey());
@@ -232,7 +238,9 @@ public class RSocketProtocol extends AbstractProtocol {
     }
 
     @Override
-    /** 创建temporary令牌 */
+    /**
+     * 创建temporary令牌
+    */
     public LoginAuthResult createTemporaryToken(String sourceToken, Map<String, Object> ext) {
         JsonObject jsonObject = new JsonObject();
         jsonObject.put("x-oauth-access-key", authClientProperties.getKey().getAccessKey());

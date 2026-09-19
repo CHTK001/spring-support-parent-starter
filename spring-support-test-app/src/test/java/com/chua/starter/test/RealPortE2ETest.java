@@ -88,7 +88,9 @@ class RealPortE2ETest {
         return "http://localhost:" + port + path;
     }
 
-    /** 真实 HTTP：多数据源 服务 级 @DS 路由 */
+    /**
+     * 真实 HTTP：多数据源 服务 级 @DS 路由
+    */
     @Test
     void dsRoutingOverRealHttp() {
         Map<?, ?> ds1 = restTemplate.getForObject(url("/api/ds/region/ds1"), Map.class);
@@ -113,7 +115,9 @@ class RealPortE2ETest {
         assertEquals("ds2-data", ds2.get("data"));
     }
 
-    /** 真实 HTTP：api 版本路由（查询参数） */
+    /**
+     * 真实 HTTP：api 版本路由（查询参数）
+    */
     @Test
     void apiVersionRoutingOverRealHttp() {
         Map<?, ?> v1 = restTemplate.getForObject(url("/api/api-version/greet?apiVersion=1"), Map.class);
@@ -132,7 +136,9 @@ class RealPortE2ETest {
         assertEquals("2", v2.get("version"));
     }
 
-    /** 真实 HTTP：接口权限本地联调模式（无会话用户 -> 注入本地 admin 放行） */
+    /**
+     * 真实 HTTP：接口权限本地联调模式（无会话用户 -> 注入本地 admin 放行）
+    */
     @Test
     void permissionLocalDebugOverRealHttp() {
         ResponseEntity<String> response = restTemplate.getForEntity(url("/api/permission/query"), String.class);

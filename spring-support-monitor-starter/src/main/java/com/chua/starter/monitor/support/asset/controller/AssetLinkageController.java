@@ -30,7 +30,9 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AssetLinkageController {
 
-    /** 资产联动服务 */
+    /**
+     * 资产联动服务
+    */
     private final AssetLinkageService assetLinkageService;
 
     /**

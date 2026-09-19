@@ -25,7 +25,9 @@ public class SysMessageTemplate extends SysBase {
      * 模板标识 - 主键自增
      */
     @TableId(value = "sys_message_template_id", type = IdType.AUTO)
-    /** SYS消息模板标识 */
+    /**
+     * SYS消息模板标识
+    */
     private Integer sysMessageTemplateId;
 
     /**

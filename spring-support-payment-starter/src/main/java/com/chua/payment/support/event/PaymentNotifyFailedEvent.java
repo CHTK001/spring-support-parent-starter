@@ -10,19 +10,33 @@ import lombok.Getter;
 @Getter
 public class PaymentNotifyFailedEvent extends PaymentEvent {
 
-    /** 通知日志标识 */
+    /**
+     * 通知日志标识
+    */
     private final Long notifyLogId;
-    /** 通知错误标识 */
+    /**
+     * 通知错误标识
+    */
     private final Long notifyErrorId;
-    /** 通知类型 */
+    /**
+     * 通知类型
+    */
     private final String notifyType;
-    /** 排序NO */
+    /**
+     * 排序NO
+    */
     private final String orderNo;
-    /** 退税no */
+    /**
+     * 退税no
+    */
     private final String refundNo;
-    /** 错误类型 */
+    /**
+     * 错误类型
+    */
     private final String errorType;
-    /** 错误消息 */
+    /**
+     * 错误消息
+    */
     private final String errorMessage;
 
     /**

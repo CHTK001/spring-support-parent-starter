@@ -37,7 +37,9 @@ import java.util.TreeMap;
  */
 public class OpenApiConverter {
 
-    /** JSON */
+    /**
+     * JSON
+    */
     private static final ObjectMapper JSON = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
 
     /**

@@ -27,7 +27,9 @@ import java.time.LocalDateTime;
 public class EduExamServiceImpl extends ServiceImpl<EduExamMapper, EduExam> implements IEduExamService {
 
     @Override
-    /** Page查询 */
+    /**
+     * Page查询
+    */
     public PageResult<EduExam> pageQuery(EduExam exam, long page, long pageSize) {
         LambdaQueryWrapper<EduExam> wrapper = new LambdaQueryWrapper<>();
         if (exam != null) {

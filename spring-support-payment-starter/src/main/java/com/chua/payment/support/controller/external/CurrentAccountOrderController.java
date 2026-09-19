@@ -22,18 +22,26 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-/** @作者 CH */
+/**
+ * @作者 CH
+*/
 
 @RestController
 @RequestMapping("/account")
 @RequiredArgsConstructor
 public class CurrentAccountOrderController {
 
-    /** Accountpaymentquery服务 */
+    /**
+     * Accountpaymentquery服务
+    */
     private final AccountPaymentQueryService accountPaymentQueryService;
-    /** Principal解析器 */
+    /**
+     * Principal解析器
+    */
     private final PaymentAccountPrincipalResolver principalResolver;
-    /** Payment排序服务 */
+    /**
+     * Payment排序服务
+    */
     private final PaymentOrderService paymentOrderService;
 
     @GetMapping("/orders")

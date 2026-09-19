@@ -7,7 +7,9 @@ package com.chua.starter.common.support.http;
  */
 public class ContentType {
 
-    /** Mime类型 */
+    /**
+     * Mime类型
+    */
     private final String mimeType;
 
     /**

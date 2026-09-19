@@ -28,32 +28,52 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 public class SshConnectionCache {
 
-    /** 单台主机的会话缓存项 */
+    /**
+     * 单台主机的会话缓存项
+    */
     private static class CachedSession {
-        /** SSH 会话 */
+        /**
+         * SSH 会话
+        */
         com.chua.ssh.support.client.SshClient ssh;
-        /** SFTP 会话 */
+        /**
+         * SFTP 会话
+        */
         com.chua.ssh.support.client.SftpClient sftp;
-        /** 过期时间戳（毫秒） */
+        /**
+         * 过期时间戳（毫秒）
+        */
         long expireAt;
     }
 
-    /** 缓存：主机 ID -> 会话 */
+    /**
+     * 缓存：主机 ID -> 会话
+    */
     private static final Map<Object, CachedSession> cache = new ConcurrentHashMap<>();
-    /** 会话空闲有效期：5 分钟 */
+    /**
+     * 会话空闲有效期：5 分钟
+    */
     private static final long TTL_MS = 5 * 60 * 1000L;
 
     @Autowired(required = false)
-    /** 主机IdentityMapper */
+    /**
+     * 主机IdentityMapper
+    */
     private MsServerHostIdentityMapper hostIdentityMapper;
     @Autowired(required = false)
-    /** identityMapper */
+    /**
+     * identityMapper
+    */
     private MsServerIdentityMapper identityMapper;
     @Autowired(required = false)
-    /** credentialCipher */
+    /**
+     * credentialCipher
+    */
     private CredentialCipher credentialCipher;
     @Autowired(required = false)
-    /** 键Mapper */
+    /**
+     * 键Mapper
+    */
     private com.chua.starter.server.support.mapper.MsServerKeyMapper keyMapper;
 
     /**

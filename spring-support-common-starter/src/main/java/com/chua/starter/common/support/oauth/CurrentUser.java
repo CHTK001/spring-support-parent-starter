@@ -25,7 +25,9 @@ public class CurrentUser {
     }
 
 
-    /** 任意 */
+    /**
+     * 任意
+    */
     private static final String ANY = "*";
     /**
      * unionid

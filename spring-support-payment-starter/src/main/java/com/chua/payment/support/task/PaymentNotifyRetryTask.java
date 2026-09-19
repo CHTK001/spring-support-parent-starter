@@ -24,12 +24,18 @@ import java.util.List;
 @ConditionalOnProperty(prefix = "plugin.payment.scheduler", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class PaymentNotifyRetryTask implements PaymentManagedTask {
 
-    /** 通知错误映射器 */
+    /**
+     * 通知错误映射器
+    */
     private final PaymentNotifyErrorMapper notifyErrorMapper;
-    /** Notifyprocess服务 */
+    /**
+     * Notifyprocess服务
+    */
     private final PaymentNotifyProcessService notifyProcessService;
 
-    /** 重试失败通知 */
+    /**
+     * 重试失败通知
+    */
     public void retryFailedNotifies() {
         log.info("开始执行回调异常重试任务");
 
@@ -57,25 +63,33 @@ public class PaymentNotifyRetryTask implements PaymentManagedTask {
     }
 
     @Override
-    /** 任务Key */
+    /**
+     * 任务Key
+    */
     public String taskKey() {
         return "payment-notify-retry";
     }
 
     @Override
-    /** 任务名称 */
+    /**
+     * 任务名称
+    */
     public String taskName() {
         return "回调异常重试";
     }
 
     @Override
-    /** 默认cron */
+    /**
+     * 默认cron
+    */
     public String defaultCron() {
         return "0 */5 * * * ?";
     }
 
     @Override
-    /** Description */
+    /**
+     * Description
+    */
     public String description() {
         return "扫描待重试的支付回调异常并自动回放。";
     }
@@ -86,7 +100,9 @@ public class PaymentNotifyRetryTask implements PaymentManagedTask {
             cron = "0 */5 * * * ?",
             desc = "扫描待重试的支付回调异常并自动回放。"
     )
-    /** 执行 */
+    /**
+     * 执行
+    */
     public void execute() {
         /**
          * 重试失败通知。

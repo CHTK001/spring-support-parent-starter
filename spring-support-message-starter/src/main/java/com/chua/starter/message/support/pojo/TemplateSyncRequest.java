@@ -17,6 +17,8 @@ public class TemplateSyncRequest {
      * 提供商标识
      */
     @Schema(description = "提供商ID")
-    /** SYS消息提供者标识 */
+    /**
+     * SYS消息提供者标识
+    */
     private Integer sysMessageProviderId;
 }

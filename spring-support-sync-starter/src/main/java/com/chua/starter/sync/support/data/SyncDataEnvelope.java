@@ -218,20 +218,34 @@ public class SyncDataEnvelope implements Serializable {
      * @since 4.0.0
      */
     public static class Builder {
-        /** 请求标识 */
+        /**
+         * 请求标识
+        */
         private String requestId;
-        /** 通道 */
+        /**
+         * 通道
+        */
         private String channel;
-        /** 事件类型 */
+        /**
+         * 事件类型
+        */
         private String eventType;
-        /** 来源客户端标识 */
+        /**
+         * 来源客户端标识
+        */
         private String sourceClientId;
-        /** 目标APP名称 */
+        /**
+         * 目标APP名称
+        */
         private String targetAppName;
-        /** Payload */
+        /**
+         * Payload
+        */
         private Object payload;
         private Map<String, Object> metadata = new HashMap<>(); // metadata
-        /** 时间戳 */
+        /**
+         * 时间戳
+        */
         private long timestamp;
 
         /**

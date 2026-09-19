@@ -32,7 +32,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class LocalToolUsageSyncService {
 
-    /** 用量 映射器 */
+    /**
+     * 用量 映射器
+    */
     private final SysAiUsageMapper sysAiUsageMapper;
 
     /**

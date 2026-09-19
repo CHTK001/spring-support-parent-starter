@@ -48,17 +48,25 @@ import java.util.concurrent.Executors;
 @Priority(0)
 @Order(Ordered.HIGHEST_PRECEDENCE + 1)
 public class ApiConfiguration implements EnvironmentAware  {
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(ApiConfiguration.class);
 
-    /** API属性 */
+    /**
+     * API属性
+    */
     private ApiProperties apiProperties;
-    /** 环境 */
+    /**
+     * 环境
+    */
     private Environment environment;
 
     // ==================== 版本控制配置 ====================
 
-    /** 记录日志control状态 */
+    /**
+     * 记录日志control状态
+    */
     private void logControlStatus() {
         ServiceInfoRegistry registry = ServiceInfoRegistry.getInstance();
 
@@ -274,7 +282,9 @@ public class ApiConfiguration implements EnvironmentAware  {
     }
 
     @Override
-    /** 设置环境 */
+    /**
+     * 设置环境
+    */
     public void setEnvironment(Environment environment) {
         this.environment = environment;
         this.apiProperties = Binder.get(environment).bindOrCreate(ApiProperties.PRE, ApiProperties.class);

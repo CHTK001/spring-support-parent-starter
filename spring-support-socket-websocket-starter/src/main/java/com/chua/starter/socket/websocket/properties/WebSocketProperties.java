@@ -16,7 +16,9 @@ import java.util.List;
 @ConfigurationProperties(prefix = WebSocketProperties.PREFIX)
 public class WebSocketProperties {
 
-    /** 前缀 */
+    /**
+     * 前缀
+    */
     public static final String PREFIX = "plugin.websocket";
 
     /**

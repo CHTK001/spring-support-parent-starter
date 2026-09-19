@@ -131,9 +131,13 @@ public class EventListenerProcessor {
      * @since 4.0.0
      */
     private static class EventHandler {
-        /** 监听器 */
+        /**
+         * 监听器
+        */
         private final SocketListener listener;
-        /** 方法 */
+        /**
+         * 方法
+        */
         private final Method method;
 
         /**

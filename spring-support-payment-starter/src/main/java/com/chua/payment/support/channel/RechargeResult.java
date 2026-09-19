@@ -11,19 +11,33 @@ import java.math.BigDecimal;
  */
 @Data
 public class RechargeResult {
-    /** 成功 */
+    /**
+     * 成功
+    */
     private boolean success;
-    /** rechargeno */
+    /**
+     * rechargeno
+    */
     private String rechargeNo;
-    /** 贸易no */
+    /**
+     * 贸易no
+    */
     private String tradeNo;
-    /** Amount */
+    /**
+     * Amount
+    */
     private BigDecimal amount;
-    /** 状态 */
+    /**
+     * 状态
+    */
     private String status;
-    /** 消息 */
+    /**
+     * 消息
+    */
     private String message;
-    /** RAW响应 */
+    /**
+     * RAW响应
+    */
     private String rawResponse;
 }
 

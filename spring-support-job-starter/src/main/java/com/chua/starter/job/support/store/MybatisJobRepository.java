@@ -51,7 +51,9 @@ public class MybatisJobRepository implements JobRepository {
     private final JobMapper jobMapper;
 
     @Override
-    /** 查找Due */
+    /**
+     * 查找Due
+    */
     public List<JobDefinition> findDue(long now, long preReadMs, int preReadCount) {
         List<JobEntity> candidates = jobMapper.selectList(
                 Wrappers.<JobEntity>lambdaQuery()

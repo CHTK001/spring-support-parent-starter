@@ -36,13 +36,21 @@ import java.util.concurrent.atomic.LongAdder;
 @Slf4j
 public final class DataSyncAllInOneProbe {
 
-    /** Work_dir */
+    /**
+     * Work_dir
+    */
     private static final Path WORK_DIR = Paths.get("target/all-in-one");
-    /** 通过 */
+    /**
+     * 通过
+    */
     private final List<String> pass = new CopyOnWriteArrayList<>();
-    /** 失败 */
+    /**
+     * 失败
+    */
     private final List<String> fail = new CopyOnWriteArrayList<>();
-    /** 信息记录（不阻断结论的已知问题） */
+    /**
+     * 信息记录（不阻断结论的已知问题）
+    */
     private final List<String> info = new CopyOnWriteArrayList<>();
 
     /**
@@ -347,7 +355,9 @@ public final class DataSyncAllInOneProbe {
     record SimpleFieldMapping(String sourceField, String targetField, String converter) implements DataSyncFieldMapping {}
 
     static final class CollectSink implements DataSyncAgentSink {
-        /** sinkid */
+        /**
+         * sinkid
+        */
         private final String sinkId;
         final List<Map<String, Object>> collected = new CopyOnWriteArrayList<>();
         final LongAdder total = new LongAdder();
@@ -360,7 +370,9 @@ public final class DataSyncAllInOneProbe {
     }
 
     static final class CountSink implements DataSyncAgentSink {
-        /** sinkid */
+        /**
+         * sinkid
+        */
         private final String sinkId;
         volatile int rounds = 0;
         volatile long total = 0;

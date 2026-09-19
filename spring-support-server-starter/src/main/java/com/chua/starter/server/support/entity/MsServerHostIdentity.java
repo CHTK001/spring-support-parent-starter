@@ -28,7 +28,9 @@ import java.io.Serializable;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class MsServerHostIdentity implements Serializable {
 
-    /** 串行版本UID */
+    /**
+     * 串行版本UID
+    */
     private static final long serialVersionUID = 1L;
 
     /**

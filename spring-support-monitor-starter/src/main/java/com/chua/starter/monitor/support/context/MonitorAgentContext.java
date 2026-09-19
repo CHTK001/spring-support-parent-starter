@@ -23,13 +23,19 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 public class MonitorAgentContext {
 
-    /** 默认离线判定阈值（分钟） */
+    /**
+     * 默认离线判定阈值（分钟）
+    */
     private static final int DEFAULT_OFFLINE_MINUTES = 5;
 
-    /** 最后心跳时间表: 监控标识 -> 心跳时间 */
+    /**
+     * 最后心跳时间表: 监控标识 -> 心跳时间
+    */
     private final Map<Long, LocalDateTime> lastHeartbeatMap = new ConcurrentHashMap<>();
 
-    /** 离线状态表: 监控标识 -> 是否已判定离线（用于状态翻转检测） */
+    /**
+     * 离线状态表: 监控标识 -> 是否已判定离线（用于状态翻转检测）
+    */
     private final Map<Long, Boolean> offlineFlagMap = new ConcurrentHashMap<>();
 
     /**

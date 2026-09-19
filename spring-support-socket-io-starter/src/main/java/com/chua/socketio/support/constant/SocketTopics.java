@@ -11,7 +11,9 @@ package com.chua.socketio.support.constant;
  */
 public final class SocketTopics {
 
-    /** 创建 Sockettopics 实例 */
+    /**
+     * 创建 Sockettopics 实例
+    */
     private SocketTopics() {
         // 私有构造函数，防止实例化
     }
@@ -33,13 +35,21 @@ public final class SocketTopics {
          * 消息相关
          */
         public static final class Message {
-            /** Push */
+            /**
+             * Push
+            */
             public static final String PUSH = "service:message:push";
-            /** Notification */
+            /**
+             * Notification
+            */
             public static final String NOTIFICATION = "service:message:notification";
-            /** 读取 */
+            /**
+             * 读取
+            */
             public static final String READ = "service:message:read";
-            /** 删除 */
+            /**
+             * 删除
+            */
             public static final String DELETE = "service:message:delete";
 
             /**
@@ -55,21 +65,37 @@ public final class SocketTopics {
          * 操作相关
          */
         public static final class Operation {
-            /** 开始 */
+            /**
+             * 开始
+            */
             public static final String START = "service:operation:start";
-            /** 停止 */
+            /**
+             * 停止
+            */
             public static final String STOP = "service:operation:stop";
-            /** Restart */
+            /**
+             * Restart
+            */
             public static final String RESTART = "service:operation:restart";
-            /** 状态 */
+            /**
+             * 状态
+            */
             public static final String STATUS = "service:operation:status";
-            /** 日志 */
+            /**
+             * 日志
+            */
             public static final String LOG = "service:operation:log";
-            /** 进步 */
+            /**
+             * 进步
+            */
             public static final String PROGRESS = "service:operation:progress";
-            /** 完成 */
+            /**
+             * 完成
+            */
             public static final String COMPLETE = "service:operation:complete";
-            /** 错误 */
+            /**
+             * 错误
+            */
             public static final String ERROR = "service:operation:error";
 
             /**
@@ -99,13 +125,21 @@ public final class SocketTopics {
          * 消息相关
          */
         public static final class Message {
-            /** Push */
+            /**
+             * Push
+            */
             public static final String PUSH = "system:message:push";
-            /** Notification */
+            /**
+             * Notification
+            */
             public static final String NOTIFICATION = "system:message:notification";
-            /** 读取 */
+            /**
+             * 读取
+            */
             public static final String READ = "system:message:read";
-            /** 删除 */
+            /**
+             * 删除
+            */
             public static final String DELETE = "system:message:delete";
 
             /**
@@ -121,13 +155,21 @@ public final class SocketTopics {
          * 用户相关
          */
         public static final class User {
-            /** Online */
+            /**
+             * Online
+            */
             public static final String ONLINE = "system:user:online";
-            /** Offline */
+            /**
+             * Offline
+            */
             public static final String OFFLINE = "system:user:offline";
-            /** 状态 */
+            /**
+             * 状态
+            */
             public static final String STATUS = "system:user:status";
-            /** Kick */
+            /**
+             * Kick
+            */
             public static final String KICK = "system:user:kick";
 
             /**
@@ -143,9 +185,13 @@ public final class SocketTopics {
          * 配置相关
          */
         public static final class Config {
-            /** 更新 */
+            /**
+             * 更新
+            */
             public static final String UPDATE = "system:config:update";
-            /** 版本 */
+            /**
+             * 版本
+            */
             public static final String VERSION = "system:config:version";
 
             /**
@@ -161,9 +207,13 @@ public final class SocketTopics {
          * 权限相关
          */
         public static final class Auth {
-            /** 令牌_expired */
+            /**
+             * 令牌_expired
+            */
             public static final String TOKEN_EXPIRED = "system:auth:token_expired";
-            /** 权限_改变 */
+            /**
+             * 权限_改变
+            */
             public static final String PERMISSION_CHANGE = "system:auth:permission_change";
 
             /**

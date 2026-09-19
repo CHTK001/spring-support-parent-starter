@@ -32,7 +32,9 @@ import java.util.List;
 @Tag(name = "教育AI-维度管理")
 public class EduDimensionController {
 
-    /** 维度服务 */
+    /**
+     * 维度服务
+    */
     private final EduDimensionService dimensionService;
 
     // ===== 字典下拉 =====

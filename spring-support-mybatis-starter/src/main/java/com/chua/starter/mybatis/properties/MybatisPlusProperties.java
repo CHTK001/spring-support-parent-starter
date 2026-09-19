@@ -21,7 +21,9 @@ public class MybatisPlusProperties {
 
 
 
-    /** PRE */
+    /**
+     * PRE
+    */
     public static final String PRE = "plugin.mybatis";
 
     /**

@@ -38,19 +38,33 @@ import static com.chua.starter.software.support.enums.SourceType.LOCAL;
 @Service
 public class LocalSoftwareServiceImpl implements LocalSoftwareService {
 
-    /** Transaction模板 */
+    /**
+     * Transaction模板
+    */
     private final TransactionTemplate transactionTemplate;
-    /** Soft来源服务 */
+    /**
+     * Soft来源服务
+    */
     private final SoftSourceService softSourceService;
-    /** Softsoftware服务 */
+    /**
+     * Softsoftware服务
+    */
     private final SoftSoftwareService softSoftwareService;
-    /** Softsoftwaremapper */
+    /**
+     * Softsoftwaremapper
+    */
     private final SoftSoftwareMapper softSoftwareMapper;
-    /** 本地software来源 */
+    /**
+     * 本地software来源
+    */
     private final LocalSoftwareSource localSoftwareSource;
-    /** Softwaresources */
+    /**
+     * Softwaresources
+    */
     private final List<SoftwareSource> softwareSources;
-    /** 安装记录服务 */
+    /**
+     * 安装记录服务
+    */
     private final SoftInstallRecordService installRecordService;
 
     @Autowired
@@ -80,7 +94,9 @@ public class LocalSoftwareServiceImpl implements LocalSoftwareService {
     }
 
     @Override
-    /** 扫描本地software */
+    /**
+     * 扫描本地software
+    */
     public int scanLocalSoftware(String sourceId) {
         if (StringUtils.isBlank(sourceId)) {
             sourceId = getLocalSourceId();
@@ -131,7 +147,9 @@ public class LocalSoftwareServiceImpl implements LocalSoftwareService {
     }
 
     @Override
-    /** clear本地software */
+    /**
+     * clear本地software
+    */
     public boolean clearLocalSoftware(String sourceId) {
         if (StringUtils.isBlank(sourceId)) {
             sourceId = getLocalSourceId();
@@ -141,7 +159,9 @@ public class LocalSoftwareServiceImpl implements LocalSoftwareService {
     }
 
     @Override
-    /** install本地software */
+    /**
+     * install本地software
+    */
     public ReturnResult<Object> installLocalSoftware(InstallRequest request) {
         // 从本地软件列表安装，本质上是检查软件是否存在于本地源，然后创建安装记录
         SoftSoftware software = softSoftwareService.getById(request.getSoftwareId());
@@ -171,7 +191,9 @@ public class LocalSoftwareServiceImpl implements LocalSoftwareService {
     }
 
     @Override
-    /** uninstall本地software */
+    /**
+     * uninstall本地software
+    */
     public ReturnResult<Object> uninstallLocalSoftware(String softwareId, String userId, String deviceId) {
         SoftSoftware software = softSoftwareService.getById(softwareId);
         if (software == null) {
@@ -187,7 +209,9 @@ public class LocalSoftwareServiceImpl implements LocalSoftwareService {
     }
 
     @Override
-    /** 添加本地software */
+    /**
+     * 添加本地software
+    */
     public ReturnResult<SoftSoftware> addLocalSoftware(SoftSoftware software) {
         if (StringUtils.isBlank(software.getSoftwareName())) {
             return ReturnResult.illegal("软件名称不能为空");
@@ -208,7 +232,9 @@ public class LocalSoftwareServiceImpl implements LocalSoftwareService {
     }
 
     @Override
-    /** 列表本地software */
+    /**
+     * 列表本地software
+    */
     public List<SoftSoftware> listLocalSoftware(String keyword) {
         String localSourceId = getLocalSourceId();
         LambdaQueryWrapper<SoftSoftware> wrapper = new LambdaQueryWrapper<SoftSoftware>()
@@ -220,7 +246,9 @@ public class LocalSoftwareServiceImpl implements LocalSoftwareService {
     }
 
     @Override
-    /** 获取本地源标识 */
+    /**
+     * 获取本地源标识
+    */
     public String getLocalSourceId() {
         // 查询默认本地源
         SoftSource localSource = softSourceService.getDefaultLocalSource();

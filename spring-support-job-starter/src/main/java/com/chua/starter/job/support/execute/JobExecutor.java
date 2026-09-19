@@ -249,11 +249,15 @@ public class JobExecutor {
      */
     public static ThreadFactory namedThreadFactory() {
         return new ThreadFactory() {
-            /** 计数器 */
+            /**
+             * 计数器
+            */
             private final AtomicLong counter = new AtomicLong(0L);
 
             @Override
-            /** 新thread */
+            /**
+             * 新thread
+            */
             public Thread newThread(Runnable r) {
                 Thread t = new Thread(r, DEFAULT_THREAD_NAME_PREFIX + counter.incrementAndGet());
                 t.setDaemon(true);

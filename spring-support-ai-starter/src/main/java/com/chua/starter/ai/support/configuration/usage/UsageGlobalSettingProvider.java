@@ -37,19 +37,25 @@ public class UsageGlobalSettingProvider implements GlobalSettingProvider {
     private static final String GROUP_NAME = "用量配置";
 
     @Override
-    /** 分组 */
+    /**
+     * 分组
+    */
     public String group() {
         return GROUP;
     }
 
     @Override
-    /** 分组名称 */
+    /**
+     * 分组名称
+    */
     public String groupName() {
         return GROUP_NAME;
     }
 
     @Override
-    /** 获取Items */
+    /**
+     * 获取Items
+    */
     public List<SettingItem> getItems() {
         return List.of(
                 new SettingItem("enable_usage_analysis", "true", "BOOLEAN", "用量分析开关：关闭后跳过定时同步与聚合", 1),

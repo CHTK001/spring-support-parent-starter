@@ -55,7 +55,9 @@ public class WorkshopAssetService {
         }
     }
 
-    /** 分页每页最大条数，防止超大 page大小 拖垮查询 */
+    /**
+     * 分页每页最大条数，防止超大 page大小 拖垮查询
+    */
     private static final int MAX_PAGE_SIZE = 200;
 
     /**

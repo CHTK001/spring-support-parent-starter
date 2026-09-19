@@ -38,7 +38,9 @@ public class ChatSendController {
     private final AiChatFacadeService aiChatFacadeService;
     private final AIDialogRecordService aiDialogRecordService;
 
-    /** 前端 sessionId(UUID) -> 后端 dialogId 映射 */
+    /**
+     * 前端 sessionId(UUID) -> 后端 dialogId 映射
+    */
     private final Map<String, Long> sessionDialogMap = new ConcurrentHashMap<>();
 
     /**

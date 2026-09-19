@@ -22,13 +22,19 @@ import java.nio.file.Path;
  */
 public class IP2ProxyLiteIpQualityDetector implements IpQualityDetector {
 
-    /** 日志记录器 */
+    /**
+     * 日志记录器
+    */
     private static final Logger logger = LoggerFactory.getLogger(IP2ProxyLiteIpQualityDetector.class);
 
-    /** 默认 BIN 文件名（从 classpath 读取） */
+    /**
+     * 默认 BIN 文件名（从 classpath 读取）
+    */
     private static final String DEFAULT_BIN = "IP2PROXY-LITE-PX2.BIN";
 
-    /** IP2Proxy 实例；BIN 缺失时为 null，表示不可用 */
+    /**
+     * IP2Proxy 实例；BIN 缺失时为 null，表示不可用
+    */
     private final IP2Proxy ip2Proxy;
 
     /**

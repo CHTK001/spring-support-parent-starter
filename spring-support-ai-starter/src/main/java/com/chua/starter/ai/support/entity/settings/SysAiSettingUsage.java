@@ -30,7 +30,9 @@ public class SysAiSettingUsage implements Serializable {
      */
     @TableId(value = "sys_ai_usage_id", type = IdType.AUTO)
     @Schema(description = "用量主键 ID")
-    /** usageid */
+    /**
+     * usageid
+    */
     private Long usageId;
 
     /**
@@ -41,7 +43,9 @@ public class SysAiSettingUsage implements Serializable {
      */
     @TableField("sys_ai_usage_model")
     @Schema(description = "模型名称")
-    /** Usage模型 */
+    /**
+     * Usage模型
+    */
     private String usageModel;
 
     /**
@@ -52,7 +56,9 @@ public class SysAiSettingUsage implements Serializable {
      */
     @TableField(exist = false)
     @Schema(description = "请求次数")
-    /** Usage请求数量 */
+    /**
+     * Usage请求数量
+    */
     private Long usageRequestCount;
 
     /**
@@ -63,7 +69,9 @@ public class SysAiSettingUsage implements Serializable {
      */
     @TableField("sys_ai_usage_prompt_tokens")
     @Schema(description = "提示 tokens")
-    /** Usageprompttokens */
+    /**
+     * Usageprompttokens
+    */
     private Long usagePromptTokens;
 
     /**
@@ -74,7 +82,9 @@ public class SysAiSettingUsage implements Serializable {
      */
     @TableField("sys_ai_usage_completion_tokens")
     @Schema(description = "生成 tokens")
-    /** Usagecompletiontokens */
+    /**
+     * Usagecompletiontokens
+    */
     private Long usageCompletionTokens;
 
     /**
@@ -85,7 +95,9 @@ public class SysAiSettingUsage implements Serializable {
      */
     @TableField("sys_ai_usage_total_tokens")
     @Schema(description = "总 tokens")
-    /** Usage总数令牌 */
+    /**
+     * Usage总数令牌
+    */
     private Long usageTotalTokens;
 
     /**
@@ -96,6 +108,8 @@ public class SysAiSettingUsage implements Serializable {
      */
     @TableField("sys_ai_usage_call_time")
     @Schema(description = "统计时间戳")
-    /** Usage时间戳 */
+    /**
+     * Usage时间戳
+    */
     private LocalDateTime usageTimestamp;
 }

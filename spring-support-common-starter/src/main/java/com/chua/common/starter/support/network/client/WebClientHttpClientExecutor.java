@@ -25,10 +25,14 @@ import java.util.Map;
 @ConditionalOnClass("org.springframework.web.reactive.function.client.WebClient")
 public class WebClientHttpClientExecutor implements HttpClientExecutor {
 
-    /** Web客户端 */
+    /**
+     * Web客户端
+    */
     private final WebClient webClient;
 
-    /** 创建 web客户端http客户端执行器 实例 */
+    /**
+     * 创建 web客户端http客户端执行器 实例
+    */
     public WebClientHttpClientExecutor() {
         this.webClient = WebClient.builder()
                 .codecs(config -> config.defaultCodecs().maxInMemorySize(10 * 1024 * 1024))
@@ -36,25 +40,33 @@ public class WebClientHttpClientExecutor implements HttpClientExecutor {
     }
 
     @Override
-    /** 获取名称 */
+    /**
+     * 获取名称
+    */
     public String getName() {
         return "webclient";
     }
 
     @Override
-    /** 是否可用 */
+    /**
+     * 是否可用
+    */
     public boolean isAvailable() {
         return ReflectUtils.forName("org.springframework.web.reactive.function.client.WebClient") != null;
     }
 
     @Override
-    /** 获取订单 */
+    /**
+     * 获取订单
+    */
     public int getOrder() {
         return 50;
     }
 
     @Override
-    /** 执行 */
+    /**
+     * 执行
+    */
     public ClientResponse execute(ClientRequest request) throws Exception {
         WebClient.RequestBodySpec spec = buildSpec(request);
         Object body = request.getBody();
@@ -65,7 +77,9 @@ public class WebClientHttpClientExecutor implements HttpClientExecutor {
     }
 
     @Override
-    /** 执行异步 */
+    /**
+     * 执行异步
+    */
     public Mono<ClientResponse> executeAsync(ClientRequest request) {
         WebClient.RequestBodySpec spec = buildSpec(request);
         Object body = request.getBody();
@@ -75,7 +89,9 @@ public class WebClientHttpClientExecutor implements HttpClientExecutor {
     }
 
     @Override
-    /** 支持版本 */
+    /**
+     * 支持版本
+    */
     public List<HttpVersion> supportedVersions() {
         return List.of(HttpVersion.HTTP_1_1, HttpVersion.HTTP_2);
     }
@@ -154,7 +170,9 @@ public class WebClientHttpClientExecutor implements HttpClientExecutor {
     }
 
     @Override
-    /** 关闭 */
+    /**
+     * 关闭
+    */
     public void close() {
     }
 }

@@ -24,31 +24,47 @@ import java.util.Map;
  */
 public class GuacdTunnel {
 
-    /** 会话唯一标识 */
+    /**
+     * 会话唯一标识
+    */
     private final String uuid;
 
-    /** guacd 服务器地址 */
+    /**
+     * guacd 服务器地址
+    */
     private final String serverAddress;
 
-    /** guacd 服务器端口 */
+    /**
+     * guacd 服务器端口
+    */
     private final int serverPort;
 
-    /** 协议 */
+    /**
+     * 协议
+    */
     private final String protocol;
 
-    /** 服务器配置 */
+    /**
+     * 服务器配置
+    */
     @Getter
     private final GuacamoleConfiguration serverConfig; // 服务端配置
 
-    /** 客户端信息 */
+    /**
+     * 客户端信息
+    */
     @Getter
     private final GuacamoleClientInformation clientConfig; // 客户端配置
 
-    /** guacd Socket */
+    /**
+     * guacd Socket
+    */
     @Getter
     private GuacamoleSocket socket; // Socket
 
-    /** 关闭标记 */
+    /**
+     * 关闭标记
+    */
     private volatile boolean closed;
 
     /**

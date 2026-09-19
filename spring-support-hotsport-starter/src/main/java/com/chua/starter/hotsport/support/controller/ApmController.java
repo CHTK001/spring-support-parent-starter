@@ -50,22 +50,34 @@ import java.util.stream.Collectors;
 @Slf4j
 public class ApmController {
 
-    /** APM 查询服务。 */
+    /**
+     * APM 查询服务。
+    */
     private final ApmQueryService apmQueryService;
 
-    /** APM 数据注入服务（页面操作产生数据）。 */
+    /**
+     * APM 数据注入服务（页面操作产生数据）。
+    */
     private final ApmInjectService apmInjectService;
 
-    /** JVM 指标服务（快照 + 时序 + 采样调度）。 */
+    /**
+     * JVM 指标服务（快照 + 时序 + 采样调度）。
+    */
     private final JvmMetricsService jvmMetricsService;
 
-    /** 告警监控服务（阈值巡检事件流）。 */
+    /**
+     * 告警监控服务（阈值巡检事件流）。
+    */
     private final AlertMonitorService alertMonitorService;
 
-    /** JSON 序列化（SSE data 事件）。 */
+    /**
+     * JSON 序列化（SSE data 事件）。
+    */
     private final ObjectMapper objectMapper;
 
-    /** SSE 推送线程池（单线程足够，间隔 3s）。 */
+    /**
+     * SSE 推送线程池（单线程足够，间隔 3s）。
+    */
     private final ScheduledExecutorService sseExecutor =
             Executors.newSingleThreadScheduledExecutor(r -> {
                 Thread t = new Thread(r, "hotsport-sse");
@@ -613,7 +625,9 @@ public class ApmController {
         return emitter;
     }
 
-    /** 容器销毁时关闭推送线程。 */
+    /**
+     * 容器销毁时关闭推送线程。
+    */
     @PreDestroy
     public void shutdownSse() {
         sseExecutor.shutdownNow();

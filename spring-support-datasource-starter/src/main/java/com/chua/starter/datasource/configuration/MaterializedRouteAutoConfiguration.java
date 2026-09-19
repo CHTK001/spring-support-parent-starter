@@ -106,7 +106,9 @@ public class MaterializedRouteAutoConfiguration {
 
     static final class MaterializedRouteEnabledCondition implements Condition {
         @Override
-        /** Matches */
+        /**
+         * Matches
+        */
         public boolean matches(ConditionContext context, AnnotatedTypeMetadata metadata) {
             return MaterializedRouteProperties.bind(context.getEnvironment()).isEnabled();
         }

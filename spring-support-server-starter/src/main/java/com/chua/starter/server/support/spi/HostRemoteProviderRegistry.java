@@ -27,10 +27,14 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 public class HostRemoteProviderRegistry {
 
-    /** 系统类型 -> 实现索引 */
+    /**
+     * 系统类型 -> 实现索引
+    */
     private final Map<String, HostRemoteProvider> index = new ConcurrentHashMap<>();
 
-    /** 兜底实现（处理未注册的系统类型） */
+    /**
+     * 兜底实现（处理未注册的系统类型）
+    */
     private volatile HostRemoteProvider fallbackProvider;
 
     /**

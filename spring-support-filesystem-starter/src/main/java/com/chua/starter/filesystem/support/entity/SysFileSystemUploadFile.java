@@ -15,69 +15,119 @@ import java.time.LocalDateTime;
 @TableName(value = "filesystem_upload_file")
 public class SysFileSystemUploadFile extends SysBase implements Serializable {
 
-    /** 串行版本UID */
+    /**
+     * 串行版本UID
+    */
     private static final long serialVersionUID = 1L;
 
     @TableId(value = "filesystem_upload_file_id", type = IdType.AUTO)
-    /** Filesystem上传文件标识 */
+    /**
+     * Filesystem上传文件标识
+    */
     private Long filesystemUploadFileId;
 
-    /** 上传任务标识，关联 filesystem_upload_任务.filesystem_upload_任务_upload_标识 */
+    /**
+     * 上传任务标识，关联 filesystem_upload_任务.filesystem_upload_任务_upload_标识
+    */
     @TableField("filesystem_upload_file_upload_id")
-    /** Filesystem上传文件上传标识 */
+    /**
+     * Filesystem上传文件上传标识
+    */
     private String filesystemUploadFileUploadId;
 
-    /** 文件名称 */
+    /**
+     * 文件名称
+    */
     @TableField("filesystem_upload_file_name")
-    /** Filesystem上传文件名称 */
+    /**
+     * Filesystem上传文件名称
+    */
     private String filesystemUploadFileName;
 
-    /** 文件原始名称 */
+    /**
+     * 文件原始名称
+    */
     @TableField("filesystem_upload_file_original_name")
-    /** Filesystem上传文件原始名称 */
+    /**
+     * Filesystem上传文件原始名称
+    */
     private String filesystemUploadFileOriginalName;
 
-    /** 文件大小(字节) */
+    /**
+     * 文件大小(字节)
+    */
     @TableField("filesystem_upload_file_size")
-    /** Filesystem上传文件尺寸 */
+    /**
+     * Filesystem上传文件尺寸
+    */
     private Long filesystemUploadFileSize;
 
-    /** 存储类型 (本地/minio/对象存储/COS/...) */
+    /**
+     * 存储类型 (本地/minio/对象存储/COS/...)
+    */
     @TableField("filesystem_upload_file_storage_type")
-    /** Filesystem上传文件存储类型 */
+    /**
+     * Filesystem上传文件存储类型
+    */
     private String filesystemUploadFileStorageType;
 
-    /** 存储桶 */
+    /**
+     * 存储桶
+    */
     @TableField("filesystem_upload_file_bucket")
-    /** Filesystem上传文件存储桶 */
+    /**
+     * Filesystem上传文件存储桶
+    */
     private String filesystemUploadFileBucket;
 
-    /** 文件Key */
+    /**
+     * 文件Key
+    */
     @TableField("filesystem_upload_file_key")
-    /** Filesystem上传文件密钥 */
+    /**
+     * Filesystem上传文件密钥
+    */
     private String filesystemUploadFileKey;
 
-    /** 文件访问URL */
+    /**
+     * 文件访问URL
+    */
     @TableField("filesystem_upload_file_url")
-    /** Filesystem上传文件URL */
+    /**
+     * Filesystem上传文件URL
+    */
     private String filesystemUploadFileUrl;
 
-    /** 内容类型(MIME) */
+    /**
+     * 内容类型(MIME)
+    */
     @TableField("filesystem_upload_file_content_type")
-    /** Filesystem上传文件内容类型 */
+    /**
+     * Filesystem上传文件内容类型
+    */
     private String filesystemUploadFileContentType;
 
-    /** 文件e标签 */
+    /**
+     * 文件e标签
+    */
     @TableField("filesystem_upload_file_etag")
-    /** Filesystem上传文件etag */
+    /**
+     * Filesystem上传文件etag
+    */
     private String filesystemUploadFileEtag;
 
-    /** 合并完成时间 */
+    /**
+     * 合并完成时间
+    */
     @TableField("filesystem_upload_file_complete_time")
-    /** Filesystem上传文件完成时间 */
+    /**
+     * Filesystem上传文件完成时间
+    */
     private LocalDateTime filesystemUploadFileCompleteTime;
 
-    /** 创建 sys文件系统upload文件 实例 */
+    /**
+     * 创建 sys文件系统upload文件 实例
+    */
     public SysFileSystemUploadFile() {}
 
     /**

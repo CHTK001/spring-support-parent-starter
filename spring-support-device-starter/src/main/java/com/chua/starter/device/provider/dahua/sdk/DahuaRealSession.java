@@ -166,19 +166,25 @@ public class DahuaRealSession implements DeviceSession {
     }
 
     @Override
-    /** 获取deviceid */
+    /**
+     * 获取deviceid
+    */
     public String getDeviceId() {
         return info.getIp();
     }
 
     @Override
-    /** 是否Online */
+    /**
+     * 是否Online
+    */
     public boolean isOnline() {
         return online && loginHandle > 0;
     }
 
     @Override
-    /** 关闭 */
+    /**
+     * 关闭
+    */
     public void close() {
         if (loginHandle > 0) {
             sdk.CLIENT_Logout(loginHandle);
@@ -190,7 +196,9 @@ public class DahuaRealSession implements DeviceSession {
     }
 
     @Override
-    /** Preview */
+    /**
+     * Preview
+    */
     public InputStream preview(int channel) {
         ByteArrayOutputStream buffer = new ByteArrayOutputStream();
         DahuaNetSDK.RealDataCallback callback = (playHandle, dataType, pBuffer, bufSize, user) -> {
@@ -218,33 +226,43 @@ public class DahuaRealSession implements DeviceSession {
     }
 
     @Override
-    /** 查询Records */
+    /**
+     * 查询Records
+    */
     public List<RecordFile> queryRecords(int channel, TimeRange range) {
         return Collections.emptyList();
     }
 
     @Override
-    /** 获取playbackurl */
+    /**
+     * 获取playbackurl
+    */
     public String getPlaybackUrl(int channel, TimeRange range) {
         // JNA 直连模式不返回 URL
         return null;
     }
 
     @Override
-    /** 获取liveurl */
+    /**
+     * 获取liveurl
+    */
     public String getLiveUrl(int channel, String protocol) {
         // JNA 直连模式不返回 URL
         return null;
     }
 
     @Override
-    /** 测试connection */
+    /**
+     * 测试connection
+    */
     public boolean testConnection() {
         return isOnline();
     }
 
     @Override
-    /** Playback */
+    /**
+     * Playback
+    */
     public InputStream playback(int channel, TimeRange range) {
  // 大华回放需配合 客户端_findrecord / 客户端_playbackbyrecord API，此处简化
         /**
@@ -256,7 +274,9 @@ public class DahuaRealSession implements DeviceSession {
     }
 
     @Override
-    /** ptzcontrol */
+    /**
+     * ptzcontrol
+    */
     public void ptzControl(PtzCommand cmd, double speed) {
         Integer command = PTZ_COMMANDS.get(cmd);
         if (command == null) {
@@ -272,7 +292,9 @@ public class DahuaRealSession implements DeviceSession {
     }
 
     @Override
-    /** 设置Preset */
+    /**
+     * 设置Preset
+    */
     public void setPreset(int presetId, String name) {
         boolean ok = sdk.CLIENT_SetPreset(loginHandle, 0, presetId);
         if (!ok) {
@@ -283,7 +305,9 @@ public class DahuaRealSession implements DeviceSession {
     }
 
     @Override
-    /** 调用Preset */
+    /**
+     * 调用Preset
+    */
     public void callPreset(int presetId) {
         boolean ok = sdk.CLIENT_GotoPreset(loginHandle, 0, presetId);
         if (!ok) {
@@ -294,7 +318,9 @@ public class DahuaRealSession implements DeviceSession {
     }
 
     @Override
-    /** 删除Preset */
+    /**
+     * 删除Preset
+    */
     public void deletePreset(int presetId) {
         boolean ok = sdk.CLIENT_DelPreset(loginHandle, 0, presetId);
         if (!ok) {
@@ -305,13 +331,17 @@ public class DahuaRealSession implements DeviceSession {
     }
 
     @Override
-    /** 列表presets */
+    /**
+     * 列表presets
+    */
     public List<PresetInfo> listPresets() {
         return Collections.emptyList();
     }
 
     @Override
-    /** 远程解锁 */
+    /**
+     * 远程解锁
+    */
     public void remoteUnlock(int doorId) {
         boolean ok = sdk.CLIENT_RemoteDoorOpen(loginHandle, doorId, 1);
         if (!ok) {
@@ -322,25 +352,33 @@ public class DahuaRealSession implements DeviceSession {
     }
 
     @Override
-    /** 查询accessrecords */
+    /**
+     * 查询accessrecords
+    */
     public List<AccessRecord> queryAccessRecords(TimeRange range) {
         return Collections.emptyList();
     }
 
     @Override
-    /** 订阅事件 */
+    /**
+     * 订阅事件
+    */
     public void subscribeEvent(EventType type, EventListener listener) {
         listeners.computeIfAbsent(type, k -> new CopyOnWriteArrayList<>()).add(listener);
     }
 
     @Override
-    /** 取消订阅事件 */
+    /**
+     * 取消订阅事件
+    */
     public void unsubscribeEvent(EventType type) {
         listeners.remove(type);
     }
 
     @Override
-    /** 取出事件 */
+    /**
+     * 取出事件
+    */
     public List<DeviceEvent> pollEvents(TimeRange range) {
         if (eventQueue.isEmpty()) {
             return Collections.emptyList();

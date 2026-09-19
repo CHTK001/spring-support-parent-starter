@@ -30,7 +30,9 @@ public class MaterializedRefreshAdvisor extends StaticMethodMatcherPointcutAdvis
         this.setAdvice(new MethodInterceptor() {
             @Nullable
             @Override
-            /** 调用 */
+            /**
+             * 调用
+            */
             public Object invoke(@Nonnull MethodInvocation invocation) throws Throwable {
                 MaterializedRefresh refresh = resolveRefresh(invocation.getMethod(), invocation.getThis().getClass());
                 if (refresh == null) {
@@ -49,7 +51,9 @@ public class MaterializedRefreshAdvisor extends StaticMethodMatcherPointcutAdvis
     }
 
     @Override
-    /** Matches */
+    /**
+     * Matches
+    */
     public boolean matches(Method method, Class<?> targetClass) {
         if (Proxy.isProxyClass(targetClass)) {
             return false;

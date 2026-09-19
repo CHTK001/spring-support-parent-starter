@@ -75,15 +75,23 @@ import org.slf4j.LoggerFactory;
  */
 @RestControllerAdvice
 public class ApiExceptionAdvice implements org.springframework.context.EnvironmentAware {
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(ApiExceptionAdvice.class);
-    /** 是否为生产环境（生产环境隐藏技术细节） */
+    /**
+     * 是否为生产环境（生产环境隐藏技术细节）
+    */
     private boolean isProduction = false;
 
-    /** 是否在响应中返回详细错误信息（字段级别错误） */
+    /**
+     * 是否在响应中返回详细错误信息（字段级别错误）
+    */
     private boolean returnDetailedErrors = true;
 
-    /** 请求追踪标识的头部名称 */
+    /**
+     * 请求追踪标识的头部名称
+    */
     private static final String TRACE_ID_HEADER = "X-Trace-Id";
 
     @Override
@@ -92,17 +100,29 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
         this.returnDetailedErrors = environment.getProperty("plugin.api.exception.detailed-errors", Boolean.class, true);
     }
 
-    /** 数据_too_long_模式 */
+    /**
+     * 数据_too_long_模式
+    */
     private static final Pattern DATA_TOO_LONG_PATTERN = Pattern.compile("Data too long for column '([^']*)' at row");
-    /** 重复_entry_模式 */
+    /**
+     * 重复_entry_模式
+    */
     private static final Pattern DUPLICATE_ENTRY_PATTERN = Pattern.compile("Duplicate entry '([^']*)' for key '([^']*)'");
-    /** 国外_键_模式 */
+    /**
+     * 国外_键_模式
+    */
     private static final Pattern FOREIGN_KEY_PATTERN = Pattern.compile("FOREIGN KEY \\(`([^`]*)`\\)");
-    /** Column_模式 */
+    /**
+     * Column_模式
+    */
     private static final Pattern COLUMN_PATTERN = Pattern.compile("Column '([^']*)'");
-    /** 转换器_模式 */
+    /**
+     * 转换器_模式
+    */
     private static final Pattern CONVERTER_PATTERN = Pattern.compile("\\[\"(.*?)\"]+");
-    /** Decimal_格式化 */
+    /**
+     * Decimal_格式化
+    */
     private static final DecimalFormat DECIMAL_FORMAT = new DecimalFormat("0.##");
 
     // ==================== 参数校验异常 ====================

@@ -32,9 +32,13 @@ import org.slf4j.LoggerFactory;
 @RestControllerAdvice
 @SuppressWarnings({"unchecked", "rawtypes"})
 public class ApiResponseEncodeResponseBodyAdvice implements ResponseBodyAdvice<Object>  {
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(ApiResponseEncodeResponseBodyAdvice.class);
-        /** API响应encoderegister */
+        /**
+         * API响应encoderegister
+        */
         private final ApiResponseEncodeRegister apiResponseEncodeRegister;
 
 
@@ -48,14 +52,18 @@ public class ApiResponseEncodeResponseBodyAdvice implements ResponseBodyAdvice<O
 
 
     @Override
-    /** 支持 */
+    /**
+     * 支持
+    */
     public boolean supports(MethodParameter methodParameter, Class<? extends HttpMessageConverter<?>> aClass) {
         return true;
     }
 
     @SneakyThrows
     @Override
-    /** 之前主体写入 */
+    /**
+     * 之前主体写入
+    */
     public Object beforeBodyWrite(Object o, MethodParameter methodParameter, MediaType mediaType, Class<? extends HttpMessageConverter<?>> aClass, ServerHttpRequest serverHttpRequest, ServerHttpResponse serverHttpResponse) {
         if (o instanceof StreamingResponseBody || o instanceof ResponseBodyEmitter) {
             return o;

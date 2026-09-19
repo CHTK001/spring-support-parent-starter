@@ -22,7 +22,9 @@ import java.util.Optional;
 @Repository
 public class CircuitBreakerConfigRepository {
 
-    /** Spring JDBC 模板，用于执行 SQL 语句 */
+    /**
+     * Spring JDBC 模板，用于执行 SQL 语句
+    */
     private final JdbcTemplate jdbcTemplate;
 
     /**

@@ -36,7 +36,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SoftInstallController {
 
-    /** Installrecord服务 */
+    /**
+     * Installrecord服务
+    */
     private final SoftInstallRecordService installRecordService;
 
     @Operation(summary = "安装软件")

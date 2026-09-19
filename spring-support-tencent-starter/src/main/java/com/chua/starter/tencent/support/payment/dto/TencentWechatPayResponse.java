@@ -11,14 +11,22 @@ import java.util.Map;
  */
 @Data
 public class TencentWechatPayResponse {
-    /** 成功 */
+    /**
+     * 成功
+    */
     private boolean success;
-    /** PAYURL */
+    /**
+     * PAYURL
+    */
     private String payUrl;
     private Map<String, Object> sdkParams; // sdk参数
-    /** 消息 */
+    /**
+     * 消息
+    */
     private String message;
-    /** RAW响应 */
+    /**
+     * RAW响应
+    */
     private String rawResponse;
 }
 

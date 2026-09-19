@@ -30,10 +30,14 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class ServerConfigServiceImpl implements ServerConfigService {
 
-    /** JSON 序列化器 */
+    /**
+     * JSON 序列化器
+    */
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
-    /** 默认配置 */
+    /**
+     * 默认配置
+    */
     private static final Map<String, String> DEFAULTS = new HashMap<>();
 
     static {
@@ -47,10 +51,14 @@ public class ServerConfigServiceImpl implements ServerConfigService {
         DEFAULTS.put("connection.idle.timeout", "300");
     }
 
-    /** 配置 映射器 */
+    /**
+     * 配置 映射器
+    */
     private final MsServerConfigMapper configMapper;
 
-    /** 应用事件发布器 */
+    /**
+     * 应用事件发布器
+    */
     private final ApplicationEventPublisher eventPublisher;
 
     @Override

@@ -32,7 +32,9 @@ public class ScriptJobHandler implements JobHandler {
      * 胶水更新时间戳
      */
     @Getter
-    /** Glueupdatetime */
+    /**
+     * Glueupdatetime
+    */
     private final long glueUpdatetime;
 
     /**
@@ -88,7 +90,9 @@ public class ScriptJobHandler implements JobHandler {
     }
 
     @Override
-    /** 执行 */
+    /**
+     * 执行
+    */
     public void execute() throws Exception {
         // 验证脚本类型
         if (!glueType.isScript()) {

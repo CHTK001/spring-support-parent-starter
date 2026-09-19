@@ -29,7 +29,9 @@ class RemoteConsoleApiTest {
     @Autowired
     private MockMvc mockMvc; // mockmvc
 
-    /** 配置：保存后回显一致 */
+    /**
+     * 配置：保存后回显一致
+    */
     @Test
     void config_save_and_echo() throws Exception {
         mockMvc.perform(post("/api/remote/config")
@@ -44,7 +46,9 @@ class RemoteConsoleApiTest {
                 .andExpect(jsonPath("$.targetAgentId").value("t-agent"));
     }
 
-    /** 被控端：列表返回（种子或已保存数据——结构断言） */
+    /**
+     * 被控端：列表返回（种子或已保存数据——结构断言）
+    */
     @Test
     void agents_list_shape() throws Exception {
         mockMvc.perform(get("/api/remote/agents"))
@@ -52,7 +56,9 @@ class RemoteConsoleApiTest {
                 .andExpect(jsonPath("$").isArray());
     }
 
-    /** 接入码：保存后回显一致 */
+    /**
+     * 接入码：保存后回显一致
+    */
     @Test
     void access_codes_save_and_echo() throws Exception {
         mockMvc.perform(post("/api/remote/access-codes")

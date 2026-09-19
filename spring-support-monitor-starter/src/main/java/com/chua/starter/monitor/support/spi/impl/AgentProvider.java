@@ -25,7 +25,9 @@ import java.util.*;
 @Component
 public class AgentProvider implements SystemInfoProvider {
 
-    /** HTTP 客户端（连接超时 5s） */
+    /**
+     * HTTP 客户端（连接超时 5s）
+    */
     private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
 
     /**

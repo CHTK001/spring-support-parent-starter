@@ -2,23 +2,41 @@ package com.chua.starter.spider.dto;
 
 import java.time.LocalDateTime;
 
-/** @作者 CH */
+/**
+ * @作者 CH
+*/
 public class DataRecordVO {
-    /** 蜘蛛标识 */
+    /**
+     * 蜘蛛标识
+    */
     private Long spiderId;
-    /** spiderexecutionno */
+    /**
+     * spiderexecutionno
+    */
     private String spiderExecutionNo;
-    /** 蜘蛛目标URL */
+    /**
+     * 蜘蛛目标URL
+    */
     private String spiderTargetUrl;
-    /** 蜘蛛数据名称 */
+    /**
+     * 蜘蛛数据名称
+    */
     private String spiderDataName;
-    /** 蜘蛛深度 */
+    /**
+     * 蜘蛛深度
+    */
     private Integer spiderDepth;
-    /** 蜘蛛数据状态 */
+    /**
+     * 蜘蛛数据状态
+    */
     private String spiderDataStatus;
-    /** 创建时间 */
+    /**
+     * 创建时间
+    */
     private LocalDateTime createTime;
-    /** 蜘蛛数据payload */
+    /**
+     * 蜘蛛数据payload
+    */
     private String spiderDataPayload;
 
     /**

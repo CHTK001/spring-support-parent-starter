@@ -26,27 +26,37 @@ import java.util.concurrent.atomic.AtomicLong;
 public class UrlQpsReporter {
 
 
-    /** 实例 */
+    /**
+     * 实例
+    */
     private static final UrlQpsReporter INSTANCE = new UrlQpsReporter();
 
     @Getter
     @Setter
-    /** 同步客户端 */
+    /**
+     * 同步客户端
+    */
     private SyncClient syncClient;
 
     @Getter
     @Setter
-    /** APP名称 */
+    /**
+     * APP名称
+    */
     private String appName;
 
     @Getter
     @Setter
-    /** 主机 */
+    /**
+     * 主机
+    */
     private String host;
 
     @Getter
     @Setter
-    /** 间隔秒 */
+    /**
+     * 间隔秒
+    */
     private long intervalSeconds = 30;
 
     /**
@@ -56,11 +66,15 @@ public class UrlQpsReporter {
      */
     private final ConcurrentHashMap<String, UrlStats> urlStatsMap = new ConcurrentHashMap<>();
 
-    /** 调度器 */
+    /**
+     * 调度器
+    */
     private ScheduledExecutorService scheduler;
     private volatile boolean running = false; // running
 
-    /** 创建 urlqpsreporter 实例 */
+    /**
+     * 创建 urlqpsreporter 实例
+    */
     private UrlQpsReporter() {
     }
 
@@ -207,29 +221,47 @@ public class UrlQpsReporter {
      * @since 4.0.0
      */
     private static class UrlStats {
-        /** URL */
+        /**
+         * URL
+        */
         private final String url;
-        /** 方法 */
+        /**
+         * 方法
+        */
         private final String method;
 
         // 当前周期统计
-        /** 总数数量 */
+        /**
+         * 总数数量
+        */
         private final AtomicLong totalCount = new AtomicLong(0);
-        /** 成功数量 */
+        /**
+         * 成功数量
+        */
         private final AtomicLong successCount = new AtomicLong(0);
-        /** 失败数量 */
+        /**
+         * 失败数量
+        */
         private final AtomicLong failCount = new AtomicLong(0);
-        /** 总数持续时间 */
+        /**
+         * 总数持续时间
+        */
         private final AtomicLong totalDuration = new AtomicLong(0);
         private volatile long minDuration = Long.MAX_VALUE; // 最小持续时间
         private volatile long maxDuration = 0; // 最大持续时间
 
         // 历史累计统计
-        /** 历史总数数量 */
+        /**
+         * 历史总数数量
+        */
         private final AtomicLong historyTotalCount = new AtomicLong(0);
-        /** Historysuccess数量 */
+        /**
+         * Historysuccess数量
+        */
         private final AtomicLong historySuccessCount = new AtomicLong(0);
-        /** Historyfail数量 */
+        /**
+         * Historyfail数量
+        */
         private final AtomicLong historyFailCount = new AtomicLong(0);
 
         // 状态码统计

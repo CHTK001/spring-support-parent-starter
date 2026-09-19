@@ -16,7 +16,9 @@ import java.util.concurrent.ConcurrentHashMap;
 @Data
 public class SocketUser implements Serializable {
 
-    /** 串行版本UID */
+    /**
+     * 串行版本UID
+    */
     private static final long serialVersionUID = 1L;
 
     /**
@@ -66,7 +68,9 @@ public class SocketUser implements Serializable {
      */
     private Map<String, Object> extras = new ConcurrentHashMap<>();
 
-    /** 创建 Socket用户 实例 */
+    /**
+     * 创建 Socket用户 实例
+    */
     public SocketUser() {
     }
 

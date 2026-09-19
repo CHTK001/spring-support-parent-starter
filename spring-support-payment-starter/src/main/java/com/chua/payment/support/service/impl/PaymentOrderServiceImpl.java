@@ -72,31 +72,57 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class PaymentOrderServiceImpl implements PaymentOrderService {
 
-    /** 排序映射器 */
+    /**
+     * 排序映射器
+    */
     private final PaymentOrderMapper orderMapper;
-    /** Merchantmapper */
+    /**
+     * Merchantmapper
+    */
     private final MerchantMapper merchantMapper;
-    /** Merchant通道映射器 */
+    /**
+     * Merchant通道映射器
+    */
     private final MerchantChannelMapper merchantChannelMapper;
-    /** 状态machine服务 */
+    /**
+     * 状态machine服务
+    */
     private final OrderStateMachineService stateMachineService;
-    /** 排序状态日志服务 */
+    /**
+     * 排序状态日志服务
+    */
     private final OrderStateLogService orderStateLogService;
-    /** Transactionrecord服务 */
+    /**
+     * Transactionrecord服务
+    */
     private final TransactionRecordService transactionRecordService;
-    /** Payment通道注册表 */
+    /**
+     * Payment通道注册表
+    */
     private final PaymentChannelRegistry paymentChannelRegistry;
-    /** Paymentrefund排序服务 */
+    /**
+     * Paymentrefund排序服务
+    */
     private final PaymentRefundOrderService paymentRefundOrderService;
-    /** paymentcallbackurl解析器 */
+    /**
+     * paymentcallbackurl解析器
+    */
     private final PaymentCallbackUrlResolver paymentCallbackUrlResolver;
-    /** Merchantpayment配置服务 */
+    /**
+     * Merchantpayment配置服务
+    */
     private final MerchantPaymentConfigService merchantPaymentConfigService;
-    /** 事件publisher */
+    /**
+     * 事件publisher
+    */
     private final ApplicationEventPublisher eventPublisher;
-    /** Objectmapper */
+    /**
+     * Objectmapper
+    */
     private final ObjectMapper objectMapper;
-    /** 用户打开标识解析器 */
+    /**
+     * 用户打开标识解析器
+    */
     private final UserOpenIdResolver userOpenIdResolver;
 
     @Override
@@ -225,7 +251,9 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
     }
 
     @Override
-    /** 获取订单 */
+    /**
+     * 获取订单
+    */
     public OrderVO getOrder(Long id) {
         return convertToVO(requireOrder(id));
     }
@@ -263,7 +291,9 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
     }
 
     @Override
-    /** 列表订单日志 */
+    /**
+     * 列表订单日志
+    */
     public List<OrderStateLogVO> listOrderLogs(Long id) {
         /**
          * require订单。
@@ -1194,7 +1224,9 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
     }
 
     @Override
-    /** generate订单no */
+    /**
+     * generate订单no
+    */
     public String generateOrderNo() {
         return "ORD" + System.currentTimeMillis() + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
     }

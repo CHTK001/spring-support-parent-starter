@@ -25,7 +25,9 @@ public class SysAiMessage {
      * 消息主键 标识
      */
     @TableId(value = "sys_ai_message_id", type = IdType.AUTO)
-    /** SYSAI消息标识 */
+    /**
+     * SYSAI消息标识
+    */
     private Long id;
 
     /**
@@ -38,7 +40,9 @@ public class SysAiMessage {
      * 会话 标识
      */
     @TableField("sys_ai_session_id")
-    /** SYSAI会话标识 */
+    /**
+     * SYSAI会话标识
+    */
     private Long sysAiSessionId;
 
     /**
@@ -93,13 +97,17 @@ public class SysAiMessage {
      * 创建时间
      */
     @TableField(value = "create_time", fill = FieldFill.INSERT)
-    /** 创建时间 */
+    /**
+     * 创建时间
+    */
     private LocalDateTime createTime;
 
     /**
      * 更新时间
      */
     @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
-    /** 更新时间 */
+    /**
+     * 更新时间
+    */
     private LocalDateTime updateTime;
 }

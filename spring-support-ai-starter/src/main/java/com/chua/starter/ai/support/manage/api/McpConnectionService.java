@@ -34,7 +34,9 @@ import java.util.Map;
 @Slf4j
 public class McpConnectionService {
 
-    /** 连接超时：初始化 MCP 会话的最长等待时间 */
+    /**
+     * 连接超时：初始化 MCP 会话的最长等待时间
+    */
     private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(15);
 
     /**
@@ -208,7 +210,9 @@ public class McpConnectionService {
         return new StdioClientTransport(builder.build(), McpJsonDefaults.getMapper());
     }
 
-    /** 把自定义 头部 应用到请求构造器（默认每次请求都带上） */
+    /**
+     * 把自定义 头部 应用到请求构造器（默认每次请求都带上）
+    */
     private void applyHeaders(
             HttpClientStreamableHttpTransport.Builder builder,
             Map<String, Object> headers) {
@@ -227,7 +231,9 @@ public class McpConnectionService {
         builder.customizeRequest(req -> flat.forEach(req::header));
     }
 
-    /** 把自定义 头部 应用到 SSE transport 请求构造器 */
+    /**
+     * 把自定义 头部 应用到 SSE transport 请求构造器
+    */
     private void applyHeaders(
             HttpClientSseClientTransport.Builder builder,
             Map<String, Object> headers) {

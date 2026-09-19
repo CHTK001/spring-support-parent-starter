@@ -29,7 +29,9 @@ import java.util.Map;
 @RequestMapping("/api/remote/access-codes")
 public class RemoteAccessCodesController {
 
-    /** 配置文件路径（应用目录 远程-access-编码.json） */
+    /**
+     * 配置文件路径（应用目录 远程-access-编码.json）
+    */
     private static final Path CONFIG_FILE = Paths.get(System.getProperty("user.dir"), "remote-access-codes.json");
 
     private final ObjectMapper objectMapper = new ObjectMapper(); // 对象映射器

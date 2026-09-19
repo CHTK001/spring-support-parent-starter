@@ -32,11 +32,17 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class MerchantSettingController {
 
-    /** Merchant服务 */
+    /**
+     * Merchant服务
+    */
     private final MerchantService merchantService;
-    /** Merchantpayment配置服务 */
+    /**
+     * Merchantpayment配置服务
+    */
     private final MerchantPaymentConfigService merchantPaymentConfigService;
-    /** Wallet限制服务 */
+    /**
+     * Wallet限制服务
+    */
     private final WalletLimitService walletLimitService;
 
     @Operation(summary = "查询商户支付规则")

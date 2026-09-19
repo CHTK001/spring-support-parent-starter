@@ -12,19 +12,33 @@ import java.math.BigDecimal;
 @Getter
 public class PaymentSuccessEvent extends PaymentEvent {
 
-    /** 排序标识 */
+    /**
+     * 排序标识
+    */
     private final Long orderId;
-    /** 排序NO */
+    /**
+     * 排序NO
+    */
     private final String orderNo;
-    /** 用户标识 */
+    /**
+     * 用户标识
+    */
     private final Long userId;
-    /** Paidamount */
+    /**
+     * Paidamount
+    */
     private final BigDecimal paidAmount;
-    /** Thirdparty排序NO */
+    /**
+     * Thirdparty排序NO
+    */
     private final String thirdPartyOrderNo;
-    /** 通道类型 */
+    /**
+     * 通道类型
+    */
     private final String channelType;
-    /** 通道SUB类型 */
+    /**
+     * 通道SUB类型
+    */
     private final String channelSubType;
 
     /**

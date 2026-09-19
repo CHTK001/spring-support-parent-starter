@@ -24,7 +24,9 @@ import java.util.stream.Collectors;
 @Slf4j
 public class BundleManagerService {
 
-    /** Maven 坐标正则：群体标识:artifactid:版本 */
+    /**
+     * Maven 坐标正则：群体标识:artifactid:版本
+    */
     private static final Pattern MAVEN_COORDS_PATTERN = Pattern.compile(
             "^([^:]+):([^:]+):(.+)$");
 

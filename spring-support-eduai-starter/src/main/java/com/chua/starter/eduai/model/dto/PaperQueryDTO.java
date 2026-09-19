@@ -11,14 +11,24 @@ import lombok.Data;
 @Data
 public class PaperQueryDTO {
 
-    /** 页NUM */
+    /**
+     * 页NUM
+    */
     private Integer pageNum = 1;
-    /** 每页大小 */
+    /**
+     * 每页大小
+    */
     private Integer pageSize = 10;
-    /** 主题 */
+    /**
+     * 主题
+    */
     private String subject;
-    /** Grade级别 */
+    /**
+     * Grade级别
+    */
     private String gradeLevel;
-    /** 状态 */
+    /**
+     * 状态
+    */
     private Integer status;
 }

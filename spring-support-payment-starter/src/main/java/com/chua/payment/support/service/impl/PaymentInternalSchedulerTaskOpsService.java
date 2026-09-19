@@ -23,23 +23,31 @@ import java.util.List;
 @ConditionalOnProperty(prefix = "plugin.payment.scheduler", name = "engine", havingValue = "internal", matchIfMissing = true)
 public class PaymentInternalSchedulerTaskOpsService implements PaymentSchedulerTaskOpsService {
 
-    /** Payment任务调度器管理器 */
+    /**
+     * Payment任务调度器管理器
+    */
     private final PaymentTaskSchedulerManager paymentTaskSchedulerManager;
 
     @Override
-    /** 列表任务 */
+    /**
+     * 列表任务
+    */
     public List<PaymentSchedulerTaskVO> listTasks() {
         return paymentTaskSchedulerManager.listTasks();
     }
 
     @Override
-    /** 更新任务 */
+    /**
+     * 更新任务
+    */
     public PaymentSchedulerTaskVO updateTask(String taskKey, PaymentSchedulerTaskUpdateDTO dto) {
         return paymentTaskSchedulerManager.updateTask(taskKey, dto);
     }
 
     @Override
-    /** trigger任务 */
+    /**
+     * trigger任务
+    */
     public PaymentSchedulerTaskVO triggerTask(String taskKey) {
         return paymentTaskSchedulerManager.triggerTask(taskKey);
     }

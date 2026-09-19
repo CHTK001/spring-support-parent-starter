@@ -32,7 +32,9 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "试卷管理")
 public class EduPaperController {
 
-    /** Paper服务 */
+    /**
+     * Paper服务
+    */
     private final IEduPaperService paperService;
 
     /**

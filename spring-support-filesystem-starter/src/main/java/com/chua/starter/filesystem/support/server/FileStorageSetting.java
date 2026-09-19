@@ -16,35 +16,61 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class FileStorageSetting {
-    /** Openpreview */
+    /**
+     * Openpreview
+    */
     private boolean openPreview;
-    /** 打开下载 */
+    /**
+     * 打开下载
+    */
     private boolean openDownload;
-    /** Openrange */
+    /**
+     * Openrange
+    */
     private boolean openRange;
-    /** Openwatermark */
+    /**
+     * Openwatermark
+    */
     private boolean openWatermark;
-    /** Openwebjars */
+    /**
+     * Openwebjars
+    */
     private boolean openWebjars;
-    /** 打开远程文件 */
+    /**
+     * 打开远程文件
+    */
     private boolean openRemoteFile;
-    /** Watermark */
+    /**
+     * Watermark
+    */
     private String watermark;
-    /** 是否开启目录文件列表页面（true 时 获取 /{bucket} 返回 HTML 文件列表；false 时目录访问直接 404） */
+    /**
+     * 是否开启目录文件列表页面（true 时 获取 /{bucket} 返回 HTML 文件列表；false 时目录访问直接 404）
+    */
     private boolean layout;
-    /** 文件列表布局类型：简单-简单文件列表树 / 系统-资源管理器风格，默认 简单 */
+    /**
+     * 文件列表布局类型：简单-简单文件列表树 / 系统-资源管理器风格，默认 简单
+    */
     @Builder.Default
     private String layoutType = LayoutType.SIMPLE.name();
-    /** 是否显示"类型"列（SYSTEM 布局详情视图） */
+    /**
+     * 是否显示"类型"列（SYSTEM 布局详情视图）
+    */
     @Builder.Default
     private boolean showFormat = true;
-    /** 是否显示"大小"列（SYSTEM 布局详情视图） */
+    /**
+     * 是否显示"大小"列（SYSTEM 布局详情视图）
+    */
     @Builder.Default
     private boolean showSize = true;
-    /** 是否显示"修改时间"列（SYSTEM 布局详情视图） */
+    /**
+     * 是否显示"修改时间"列（SYSTEM 布局详情视图）
+    */
     @Builder.Default
     private boolean showTime = true;
-    /** 图片滤镜名称（对应 {@code com.chua.common.support.image.filter.ImageFilter} SPI 扩展名，NONE 表示原图） */
+    /**
+     * 图片滤镜名称（对应 {@code com.chua.common.support.image.filter.ImageFilter} SPI 扩展名，NONE 表示原图）
+    */
     @Builder.Default
     private String imageFilter = "NONE";
 

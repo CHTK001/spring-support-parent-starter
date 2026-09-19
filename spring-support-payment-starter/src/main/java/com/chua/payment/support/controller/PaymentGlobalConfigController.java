@@ -27,9 +27,13 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class PaymentGlobalConfigController {
 
-    /** Payment全局配置服务 */
+    /**
+     * Payment全局配置服务
+    */
     private final PaymentGlobalConfigService paymentGlobalConfigService;
-    /** Principal解析器 */
+    /**
+     * Principal解析器
+    */
     private final PaymentAccountPrincipalResolver principalResolver;
 
     @Operation(summary = "查询支付全局配置")

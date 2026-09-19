@@ -42,30 +42,54 @@ import java.util.HashSet;
  */
 final class ServiceInfoBanner {
 
-    /** 框体内容最小宽度 (不含左右边框) */
+    /**
+     * 框体内容最小宽度 (不含左右边框)
+    */
     private static final int MIN_INNER = 62;
-    /** 框体内容最大宽度 */
+    /**
+     * 框体内容最大宽度
+    */
     private static final int MAX_INNER = 118;
-    /** 内容右侧留白 */
+    /**
+     * 内容右侧留白
+    */
     private static final int RIGHT_MARGIN = 2;
-    /** 列间距 */
+    /**
+     * 列间距
+    */
     private static final int GAP = 2;
-    /** 可伸缩间隙的最小列宽 */
+    /**
+     * 可伸缩间隙的最小列宽
+    */
     private static final int MIN_FILL = 2;
-    /** 端点行缩进 */
+    /**
+     * 端点行缩进
+    */
     private static final int ENDPOINT_INDENT = 2;
-    /** 开关行缩进 (比端点深一级, 形成层次) */
+    /**
+     * 开关行缩进 (比端点深一级, 形成层次)
+    */
     private static final int FLAG_INDENT = 4;
-    /** 端点描述列的最短保留宽度 */
+    /**
+     * 端点描述列的最短保留宽度
+    */
     private static final int MIN_DESC_WIDTH = 12;
 
-    /** 标题 */
+    /**
+     * 标题
+    */
     private static final String TITLE = "服务信息";
-    /** 端点分组标题 */
+    /**
+     * 端点分组标题
+    */
     private static final String ENDPOINT_SECTION = "端点";
-    /** 空分组的兜底标题 */
+    /**
+     * 空分组的兜底标题
+    */
     private static final String DEFAULT_SECTION = "其它";
-    /** 截断标记 */
+    /**
+     * 截断标记
+    */
     private static final String ELLIPSIS = "...";
 
     // ------------------------------------------------------------------ 框线字符
@@ -81,10 +105,14 @@ final class ServiceInfoBanner {
     private static final String DIV_LEFT = "╟"; // DIV_LEFT
     private static final String DIV_RIGHT = "╢"; // DIV_RIGHT
     private static final String DIV_LINE = "─"; // div线
-    /** 分组分隔线前缀: "── " */
+    /**
+     * 分组分隔线前缀: "── "
+    */
     private static final String DIV_PREFIX = DIV_LINE + DIV_LINE + " ";
 
-    /** 创建 服务信息banner 实例 */
+    /**
+     * 创建 服务信息banner 实例
+    */
     private ServiceInfoBanner() {}
 
     /**
@@ -193,7 +221,9 @@ final class ServiceInfoBanner {
 
     // ------------------------------------------------------------------ 度量与布局
 
-    /** 第一遍扫描得到的度量结果, 负责反推列宽并生成所有行 */
+    /**
+     * 第一遍扫描得到的度量结果, 负责反推列宽并生成所有行
+    */
     private static final class Metrics {
         private final List<ServiceInfoRegistry.EndpointInfo> endpoints;
         private final Map<String, List<ServiceInfoRegistry.FlagInfo>> groups;
@@ -296,7 +326,9 @@ final class ServiceInfoBanner {
 
     // ------------------------------------------------------------------ 行模型
 
-    /** 横幅中的一行 (渲染结果已包含左右边框) */
+    /**
+     * 横幅中的一行 (渲染结果已包含左右边框)
+    */
     private interface Row {
         /**
          * 按指定内容宽度渲染整行, 可见宽度恒为 内部 + 2
@@ -307,7 +339,9 @@ final class ServiceInfoBanner {
         String render(int inner);
     }
 
-    /** 文本行: ║ 内容 ... ║ */
+    /**
+     * 文本行: ║ 内容 ... ║
+    */
     private static final class TextRow implements Row {
         private final Line line;
 
@@ -327,7 +361,9 @@ final class ServiceInfoBanner {
         }
     }
 
-    /** 分组分隔行: ╟── 分组名 ──────╢ */
+    /**
+     * 分组分隔行: ╟── 分组名 ──────╢
+    */
     private static final class DividerRow implements Row {
         private final String label;
 
@@ -352,7 +388,9 @@ final class ServiceInfoBanner {
      * 一行内容: 由若干文本片段与"可伸缩间隙"组成, 渲染时按目标宽度展开间隙。
      */
     private static final class Line {
-        /** 可伸缩间隙标记 */
+        /**
+         * 可伸缩间隙标记
+        */
         private static final Object FILL = new Object();
 
         private final List<Object> segments = new ArrayList<>();

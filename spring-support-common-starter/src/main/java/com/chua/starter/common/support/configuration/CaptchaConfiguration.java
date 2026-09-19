@@ -26,7 +26,9 @@ import org.slf4j.LoggerFactory;
 @ConditionalOnProperty(prefix = "plugin.captcha", name = "enable", havingValue = "true", matchIfMissing = true)
 @EnableConfigurationProperties({CaptchaProperties.class})
 public class CaptchaConfiguration {
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(CaptchaConfiguration.class);
 
 

@@ -27,7 +27,9 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class ServerConfigController {
 
-    /** 配置服务 */
+    /**
+     * 配置服务
+    */
     private final ServerConfigService configService;
 
     /**

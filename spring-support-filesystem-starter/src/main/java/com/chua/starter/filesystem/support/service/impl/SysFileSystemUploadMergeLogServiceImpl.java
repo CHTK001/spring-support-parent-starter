@@ -65,7 +65,9 @@ public class SysFileSystemUploadMergeLogServiceImpl
     }
 
     @Override
-    /** 列表byuploadid */
+    /**
+     * 列表byuploadid
+    */
     public List<SysFileSystemUploadMergeLog> listByUploadId(String uploadId) {
         return list(new LambdaQueryWrapper<SysFileSystemUploadMergeLog>()
                 .eq(SysFileSystemUploadMergeLog::getFilesystemUploadMergeLogUploadId, uploadId)

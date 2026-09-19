@@ -36,7 +36,9 @@ public enum SourceType {
      */
     LOCAL(3);
 
-    /** 值 */
+    /**
+     * 值
+    */
     private final int value;
 
     /**

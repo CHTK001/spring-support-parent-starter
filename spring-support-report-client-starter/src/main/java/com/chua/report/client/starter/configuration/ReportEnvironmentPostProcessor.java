@@ -21,17 +21,27 @@ import java.util.Map;
  */
 public class ReportEnvironmentPostProcessor implements EnvironmentPostProcessor {
 
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final DeferredLog log = new DeferredLog();
-    /** Report_客户端_前缀 */
+    /**
+     * Report_客户端_前缀
+    */
     private static final String REPORT_CLIENT_PREFIX = "plugin.report.client.";
-    /** Report_前缀 */
+    /**
+     * Report_前缀
+    */
     private static final String REPORT_PREFIX = "plugin.report.";
-    /** 同步_前缀 */
+    /**
+     * 同步_前缀
+    */
     private static final String SYNC_PREFIX = "plugin.sync.";
 
     @Override
-    /** Post处理环境 */
+    /**
+     * Post处理环境
+    */
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
         log.info("[ReportEnvPostProcessor] 开始处理环境配置");
 

@@ -37,25 +37,37 @@ import java.util.regex.Pattern;
 @Service
 public class JdbcAdminService {
 
-    /** 标识符(表名/库名/列名)合法字符:字母数字下划线。 */
+    /**
+     * 标识符(表名/库名/列名)合法字符:字母数字下划线。
+    */
     private static final Pattern IDENTIFIER = Pattern.compile("^[A-Za-z0-9_]+$");
 
-    /** ORDER BY 列名白名单:字母数字下划线逗号与空格。 */
+    /**
+     * ORDER BY 列名白名单:字母数字下划线逗号与空格。
+    */
     private static final Pattern ORDER_BY_COLUMNS = Pattern.compile("^[A-Za-z0-9_,\\s]+$");
 
-    /** SQL 语句允许的首关键字白名单(小写)。 */
+    /**
+     * SQL 语句允许的首关键字白名单(小写)。
+    */
     private static final Set<String> ALLOWED_SQL_KEYWORDS = Set.of(
             "select", "show", "desc", "describe", "explain",
             "insert", "update", "delete",
             "create", "alter", "drop", "truncate");
 
-    /** SQL 语句最大长度(字符)。 */
+    /**
+     * SQL 语句最大长度(字符)。
+    */
     private static final int MAX_SQL_LENGTH = 100_000;
 
-    /** 查询结果最大行数。 */
+    /**
+     * 查询结果最大行数。
+    */
     private static final int MAX_ROWS = 1000;
 
-    /** 数据库 Web 管理服务构建。 */
+    /**
+     * 数据库 Web 管理服务构建。
+    */
     private final DataSourceStoreService dataSourceStoreService;
 
     /**

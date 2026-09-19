@@ -19,10 +19,14 @@ import org.slf4j.LoggerFactory;
  * @since 4.0.0
  */
 public class ResourceWebMvcConfigurer implements WebMvcConfigurer  {
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(ResourceWebMvcConfigurer.class);
         @Override
-    /** 添加resource处理器 */
+    /**
+     * 添加resource处理器
+    */
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         log.info("当前运行目录: {}", new File(".").getAbsolutePath());
         registry.addResourceHandler("/static/**").addResourceLocations("classpath:/static/", "file:./static/").setCachePeriod(3600);
@@ -43,7 +47,9 @@ public class ResourceWebMvcConfigurer implements WebMvcConfigurer  {
                 .resourceChain(true)
                 .addResolver(new PathResourceResolver() {
                     @Override
-                    /** 获取Resource */
+                    /**
+                     * 获取Resource
+                    */
                     protected Resource getResource(String resourcePath, Resource location) throws IOException {
                         // 在这里处理资源路径编码问题
                         String decodedPath = URLDecoder.decode(resourcePath, StandardCharsets.UTF_8);

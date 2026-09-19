@@ -22,44 +22,70 @@ public interface MonitorTopics {
     String DEVICE_INFO = "monitor/device/info"; // device信息
 
     // ==================== App Report ====================
-    /** 应用信息上报（定时） */
+    /**
+     * 应用信息上报（定时）
+    */
     String APP_REPORT = "monitor/app/report";
 
     // ==================== API Control ====================
-    /** API 功能开关控制 */
+    /**
+     * API 功能开关控制
+    */
     String API_FEATURE_CONTROL = "monitor/control/api-feature";
 
  // ==================== 日志 配置 ====================
-    /** 日志级别配置 */
+    /**
+     * 日志级别配置
+    */
     String LOGGING_CONFIG = "monitor/control/log-level";
 
  // ==================== mybatis 配置 ====================
-    /** MyBatis 配置管理 */
+    /**
+     * MyBatis 配置管理
+    */
     String MYBATIS_CONFIG = "monitor/control/mybatis";
 
     // ==================== URL QPS Statistics ====================
-    /** URL 请求统计上报 */
+    /**
+     * URL 请求统计上报
+    */
     String URL_QPS_REPORT = "monitor/url/qps-report";
 
  // ==================== 节点 Control ====================
-    /** 节点重启控制 */
+    /**
+     * 节点重启控制
+    */
     String NODE_RESTART = "monitor/control/node-restart";
-    /** 节点关闭控制 */
+    /**
+     * 节点关闭控制
+    */
     String NODE_SHUTDOWN = "monitor/control/node-shutdown";
 
  // ==================== 节点 Maintenance ====================
-    /** 节点配置备份 */
+    /**
+     * 节点配置备份
+    */
     String NODE_BACKUP = "monitor/maintenance/backup";
-    /** 节点升级 */
+    /**
+     * 节点升级
+    */
     String NODE_UPGRADE = "monitor/maintenance/upgrade";
-    /** 节点配置还原 */
+    /**
+     * 节点配置还原
+    */
     String NODE_RESTORE = "monitor/maintenance/restore";
 
  // ==================== 日志 Push ====================
-    /** 日志推送（Agent -> 监控） */
+    /**
+     * 日志推送（Agent -> 监控）
+    */
     String LOG_PUSH = "monitor/log/push";
-    /** 日志订阅请求（监控 -> Agent） */
+    /**
+     * 日志订阅请求（监控 -> Agent）
+    */
     String LOG_SUBSCRIBE = "monitor/log/subscribe";
-    /** 日志取消订阅（监控 -> Agent） */
+    /**
+     * 日志取消订阅（监控 -> Agent）
+    */
     String LOG_UNSUBSCRIBE = "monitor/log/unsubscribe";
 }

@@ -12,13 +12,19 @@ import org.slf4j.MDC;
  */
 public class HttpClientTraceIdInterceptor implements HttpRequestInterceptor {
 
-    /** 追踪_标识 */
+    /**
+     * 追踪_标识
+    */
     private static final String TRACE_ID = "traceId";
-    /** X_追踪_标识 */
+    /**
+     * X_追踪_标识
+    */
     private static final String X_TRACE_ID = "X-Trace-Id";
 
     @Override
-    /** 处理 */
+    /**
+     * 处理
+    */
     public void process(HttpRequest request, org.apache.hc.core5.http.EntityDetails entity, HttpContext context) {
         String traceId = MDC.get(TRACE_ID);
         if (traceId != null && !traceId.isEmpty()) {

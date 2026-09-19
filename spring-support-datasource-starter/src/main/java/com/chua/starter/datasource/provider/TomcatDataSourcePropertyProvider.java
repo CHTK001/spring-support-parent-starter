@@ -22,13 +22,17 @@ public class TomcatDataSourcePropertyProvider implements DataSourcePropertyProvi
     );
 
     @Override
-    /** 获取数据源类型 */
+    /**
+     * 获取数据源类型
+    */
     public Class<DataSource> getDataSourceType() {
         return DataSource.class;
     }
 
     @Override
-    /** 获取属性 */
+    /**
+     * 获取属性
+    */
     public Map<String, Object> getProperties(DataSource dataSource) {
         Map<String, Object> properties = new HashMap<>();
         
@@ -63,13 +67,17 @@ public class TomcatDataSourcePropertyProvider implements DataSourcePropertyProvi
     }
 
     @Override
-    /** 设置属性 */
+    /**
+     * 设置属性
+    */
     public void setProperties(DataSource dataSource, Map<String, Object> properties) {
         properties.forEach((name, value) -> setProperty(dataSource, name, value));
     }
 
     @Override
-    /** 设置财产 */
+    /**
+     * 设置财产
+    */
     public void setProperty(DataSource dataSource, String name, Object value) {
         if (value == null) {
             return;
@@ -116,13 +124,17 @@ public class TomcatDataSourcePropertyProvider implements DataSourcePropertyProvi
     }
 
     @Override
-    /** 获取财产名称mapping */
+    /**
+     * 获取财产名称mapping
+    */
     public Map<String, String> getPropertyNameMapping() {
         return PROPERTY_MAPPING;
     }
 
     @Override
-    /** 获取订单 */
+    /**
+     * 获取订单
+    */
     public int getOrder() {
         return 30;
     }

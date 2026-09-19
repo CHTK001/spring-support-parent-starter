@@ -126,21 +126,27 @@ public class OAuthHttpServletRequestWrapper extends ContentCachingRequestWrapper
     }
 
     @Override
-    /** 获取认证类型 */
+    /**
+     * 获取认证类型
+    */
     public String getAuthType() {
         log.debug("[Wrapper获取]获取认证类型: {}", authType);
         return authType;
     }
 
     @Override
-    /** 获取远程用户 */
+    /**
+     * 获取远程用户
+    */
     public String getRemoteUser() {
         log.debug("[Wrapper获取]获取远程用户: {}", remoteUser);
         return remoteUser;
     }
 
     @Override
-    /** 获取用户principal */
+    /**
+     * 获取用户principal
+    */
     public Principal getUserPrincipal() {
         log.debug("[Wrapper获取]获取用户Principal - 用户: {}, 已认证: {}", 
                  principal != null ? principal.getName() : "null",
@@ -149,7 +155,9 @@ public class OAuthHttpServletRequestWrapper extends ContentCachingRequestWrapper
     }
 
     @Override
-    /** 是否用户入角色 */
+    /**
+     * 是否用户入角色
+    */
     public boolean isUserInRole(String role) {
         boolean hasRole = principal != null && principal.hasRole(role);
         
@@ -167,7 +175,9 @@ public class OAuthHttpServletRequestWrapper extends ContentCachingRequestWrapper
     }
 
     @Override
-    /** Login */
+    /**
+     * Login
+    */
     public void login(String username, String password) throws ServletException {
         log.info("[Wrapper登录]尝试执行登录操作 - 用户名: {}", username);
         log.debug("[Wrapper登录]登录请求详情 - 用户名: {}, 当前已认证用户: {}, 认证状态: {}",
@@ -197,7 +207,9 @@ public class OAuthHttpServletRequestWrapper extends ContentCachingRequestWrapper
     }
 
     @Override
-    /** Logout */
+    /**
+     * Logout
+    */
     public void logout() throws ServletException {
         log.info("[Wrapper登出]开始执行登出操作 - 用户: {}, 用户ID: {}", remoteUser, getUserId());
         log.debug("[Wrapper登出]登出前状态 - 用户: {}, 认证类型: {}, 已认证: {}",

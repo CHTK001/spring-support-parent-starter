@@ -24,7 +24,9 @@ import java.util.Optional;
 @Component
 public class HostCollectProviderRegistry {
 
-    /** 采集方式 -> 实现索引 */
+    /**
+     * 采集方式 -> 实现索引
+    */
     private final Map<HostCollectType, HostCollectProvider> index = new EnumMap<>(HostCollectType.class);
 
     /**

@@ -17,11 +17,17 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 public class AsyncLogWriter implements JobLogSink {
 
-    /** 队列 */
+    /**
+     * 队列
+    */
     private final LinkedBlockingQueue<JobLogEvent> queue;
-    /** Sinks */
+    /**
+     * Sinks
+    */
     private final List<JobLogSink> sinks;
-    /** 工人 */
+    /**
+     * 工人
+    */
     private final Thread worker;
     private volatile boolean running = true; // running
 
@@ -43,7 +49,9 @@ public class AsyncLogWriter implements JobLogSink {
     }
 
     @Override
-    /** 写入 */
+    /**
+     * 写入
+    */
     public void write(JobLogEvent event) {
         if (event == null || !running) {
             return;
@@ -71,7 +79,9 @@ public class AsyncLogWriter implements JobLogSink {
         drain();
     }
 
-    /** drain循环 */
+    /**
+     * drain循环
+    */
     private void drainLoop() {
         while (running) {
             try {
@@ -98,7 +108,9 @@ public class AsyncLogWriter implements JobLogSink {
         drain();
     }
 
-    /** Drain */
+    /**
+     * Drain
+    */
     private void drain() {
         JobLogEvent event;
         while ((event = queue.poll()) != null) {

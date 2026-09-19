@@ -35,13 +35,17 @@ public class AlipayWapPaymentChannel extends AlipayWebPaymentChannel implements 
     }
 
     @Override
-    /** 支持 */
+    /**
+     * 支持
+    */
     public boolean supports(String channelType, String channelSubType) {
         return "ALIPAY".equalsIgnoreCase(channelType) && "WAP".equalsIgnoreCase(channelSubType);
     }
 
     @Override
-    /** 薪酬 */
+    /**
+     * 薪酬
+    */
     public PaymentResult pay(MerchantChannel channel, PaymentRequest request) {
         AliyunAlipayPayResponse response = gateway(providerSpi(channel, null)).wapPay(buildClientProperties(channel),
                 buildPayRequest(request, "QUICK_WAP_WAY"));

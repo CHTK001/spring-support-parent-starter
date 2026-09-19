@@ -47,16 +47,24 @@ import java.util.zip.ZipFile;
 @RequiredArgsConstructor
 public class AgentDeployServiceImpl implements AgentDeployService {
 
-    /** 部署进度事件名（前端 subscribe("monitor","agent-deploy") 接收） */
+    /**
+     * 部署进度事件名（前端 subscribe("monitor","agent-deploy") 接收）
+    */
     private static final String EVENT_DEPLOY = "agent-deploy";
 
-    /** 远端 java 探测超时（秒） */
+    /**
+     * 远端 java 探测超时（秒）
+    */
     private static final int PROBE_TIMEOUT_SECONDS = 15;
 
-    /** 目标机自取 agent 包超时（秒） */
+    /**
+     * 目标机自取 agent 包超时（秒）
+    */
     private static final int DOWNLOAD_TIMEOUT_SECONDS = 180;
 
-    /** 普通用户兜底启动时用的 JDK 主版本下限 */
+    /**
+     * 普通用户兜底启动时用的 JDK 主版本下限
+    */
     private static final int MIN_JAVA_MAJOR = 8;
 
     /**
@@ -75,28 +83,44 @@ public class AgentDeployServiceImpl implements AgentDeployService {
             + " | Select-Object -First 3 -ExpandProperty FullName) } };"
             + "($f | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1)";
 
-    /** 主机 映射器 */
+    /**
+     * 主机 映射器
+    */
     private final MsServerHostMapper hostMapper;
 
-    /** 主机服务（凭据解析） */
+    /**
+     * 主机服务（凭据解析）
+    */
     private final ServerHostService serverHostService;
 
-    /** 远程执行能力注册表 */
+    /**
+     * 远程执行能力注册表
+    */
     private final HostRemoteProviderRegistry remoteRegistry;
 
-    /** socket 推送服务 */
+    /**
+     * socket 推送服务
+    */
     private final MonitorPushService pushService;
 
-    /** agent HTTP 客户端 */
+    /**
+     * agent HTTP 客户端
+    */
     private final AgentHttpClient agentClient;
 
-    /** 模块配置 */
+    /**
+     * 模块配置
+    */
     private final AgentDeployProperties properties;
 
-    /** 执行中的主机集合，防同一主机并发操作 */
+    /**
+     * 执行中的主机集合，防同一主机并发操作
+    */
     private final Set<Long> running = ConcurrentHashMap.newKeySet();
 
-    /** 单线程序列足够：agent 操作是低频运维动作 */
+    /**
+     * 单线程序列足够：agent 操作是低频运维动作
+    */
     private final ExecutorService executor = Executors.newSingleThreadExecutor(runnable -> {
         AtomicInteger seq = new AtomicInteger();
         Thread thread = new Thread(runnable, "agent-deploy-" + seq.incrementAndGet());
@@ -922,25 +946,39 @@ public class AgentDeployServiceImpl implements AgentDeployService {
      */
     private final class Session {
 
-        /** 主机 */
+        /**
+         * 主机
+        */
         private final MsServerHost host;
 
-        /** 凭据 */
+        /**
+         * 凭据
+        */
         private final SshCredential credential;
 
-        /** 执行通道 */
+        /**
+         * 执行通道
+        */
         private final HostRemoteProvider provider;
 
-        /** 是否 Windows */
+        /**
+         * 是否 Windows
+        */
         private final boolean windows;
 
-        /** 远端安装目录 */
+        /**
+         * 远端安装目录
+        */
         private final String dir;
 
-        /** sudo 探测结果缓存 */
+        /**
+         * sudo 探测结果缓存
+        */
         private boolean sudoChecked;
 
-        /** sudo 前缀 */
+        /**
+         * sudo 前缀
+        */
         private String sudoPrefix = "";
 
         /**

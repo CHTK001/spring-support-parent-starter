@@ -77,19 +77,25 @@ public class TypeConverterRegisterConfiguration {
                         conversionService.removeConvertible(String.class, Enum.class);
                         conversionService.addConverter(new ConditionalGenericConverter() {
                             @Override
-                            /** Matches */
+                            /**
+                             * Matches
+                            */
                             public boolean matches(TypeDescriptor sourceType, TypeDescriptor targetType) {
                                 return true;
                             }
 
                             @Override
-                            /** 获取转换类型 */
+                            /**
+                             * 获取转换类型
+                            */
                             public Set<GenericConverter.ConvertiblePair> getConvertibleTypes() {
                                 return Collections.singleton(new GenericConverter.ConvertiblePair(String.class, Enum.class));
                             }
 
                             @Override
-                            /** 转换 */
+                            /**
+                             * 转换
+                            */
                             public Object convert(Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {
                                 return converter.convert(source);
                             }

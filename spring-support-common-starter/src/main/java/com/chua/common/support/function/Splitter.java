@@ -16,11 +16,17 @@ import java.util.Set;
  */
 public class Splitter {
 
-    /** Separator */
+    /**
+     * Separator
+    */
     private final String separator;
-    /** Trimresults */
+    /**
+     * Trimresults
+    */
     private boolean trimResults;
-    /** Omit是否为空字符串 */
+    /**
+     * Omit是否为空字符串
+    */
     private boolean omitEmptyStrings;
 
     /**

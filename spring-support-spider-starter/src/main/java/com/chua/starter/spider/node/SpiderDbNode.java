@@ -48,7 +48,9 @@ public class SpiderDbNode implements FlowNode {
      * 数据源
      */
     @Resource
-    /** 数据来源 */
+    /**
+     * 数据来源
+    */
     private DataSource dataSource;
 
     /**

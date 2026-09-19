@@ -11,19 +11,33 @@ import java.math.BigDecimal;
  */
 @Data
 public class OrderCreateRequest {
-    /** 排序NO */
+    /**
+     * 排序NO
+    */
     private String orderNo;
-    /** 用户标识 */
+    /**
+     * 用户标识
+    */
     private Long userId;
-    /** Amount */
+    /**
+     * Amount
+    */
     private BigDecimal amount;
-    /** 主题 */
+    /**
+     * 主题
+    */
     private String subject;
-    /** 请求体 */
+    /**
+     * 请求体
+    */
     private String body;
-    /** 货币 */
+    /**
+     * 货币
+    */
     private String currency;
-    /** Attach */
+    /**
+     * Attach
+    */
     private String attach;
 }
 

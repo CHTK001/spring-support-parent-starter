@@ -51,16 +51,24 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public final class DatalakeAllInOneProbe {
 
-    /** Work dir */
+    /**
+     * Work dir
+    */
     private static final Path WORK_DIR = Path.of("target/datalake-probe");
 
-    /** 通过 数量 */
+    /**
+     * 通过 数量
+    */
     private static final AtomicInteger PASS = new AtomicInteger(0);
 
-    /** 失败 数量 */
+    /**
+     * 失败 数量
+    */
     private static final AtomicInteger FAIL = new AtomicInteger(0);
 
-    /** 写入记录（线程安全） */
+    /**
+     * 写入记录（线程安全）
+    */
     private static final CopyOnWriteArrayList<String> WRITE_LOG = new CopyOnWriteArrayList<>();
 
     /**

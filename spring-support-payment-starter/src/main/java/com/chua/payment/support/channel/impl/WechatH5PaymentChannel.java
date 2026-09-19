@@ -37,14 +37,18 @@ public class WechatH5PaymentChannel extends WechatJsapiPaymentChannel implements
     }
 
     @Override
-    /** 支持 */
+    /**
+     * 支持
+    */
     public boolean supports(String channelType, String channelSubType) {
         return ("WECHAT".equalsIgnoreCase(channelType) || "EPAY".equalsIgnoreCase(channelType))
                 && "H5".equalsIgnoreCase(channelSubType);
     }
 
     @Override
-    /** 薪酬 */
+    /**
+     * 薪酬
+    */
     public PaymentResult pay(MerchantChannel channel, PaymentRequest request) {
         TencentWechatPayRequest payRequest = buildPayRequest(channel, request);
         payRequest.setAppUrl(firstNonBlank(request.getReturnUrl(), extText(channel, "appUrl")));
@@ -61,7 +65,9 @@ public class WechatH5PaymentChannel extends WechatJsapiPaymentChannel implements
     }
 
     @Override
-    /** 查询 */
+    /**
+     * 查询
+    */
     public PaymentResult query(MerchantChannel channel, String orderNo) {
         TencentWechatOrderResponse response = gateway(providerSpi(channel, null)).queryH5Order(buildProperties(channel), orderNo);
 
@@ -76,7 +82,9 @@ public class WechatH5PaymentChannel extends WechatJsapiPaymentChannel implements
     }
 
     @Override
-    /** 关闭 */
+    /**
+     * 关闭
+    */
     public boolean close(MerchantChannel channel, String orderNo) {
         return gateway(providerSpi(channel, null)).closeH5Order(buildProperties(channel), orderNo);
     }

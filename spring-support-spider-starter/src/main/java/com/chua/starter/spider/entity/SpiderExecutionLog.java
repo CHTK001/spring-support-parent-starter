@@ -32,7 +32,9 @@ public class SpiderExecutionLog extends SysBase {
      */
     @TableId(type = IdType.AUTO)
     @Schema(description = "主键 ID")
-    /** 标识 */
+    /**
+     * 标识
+    */
     private Long id;
 
     /**
@@ -40,7 +42,9 @@ public class SpiderExecutionLog extends SysBase {
      */
     @TableField("execution_no")
     @Schema(description = "执行号")
-    /** 执行no */
+    /**
+     * 执行no
+    */
     private String executionNo;
 
     /**
@@ -48,7 +52,9 @@ public class SpiderExecutionLog extends SysBase {
      */
     @TableField("definition_code")
     @Schema(description = "爬虫编码")
-    /** Definition代码 */
+    /**
+     * Definition代码
+    */
     private String definitionCode;
 
     /**
@@ -56,7 +62,9 @@ public class SpiderExecutionLog extends SysBase {
      */
     @TableField("flow_id")
     @Schema(description = "流程 ID")
-    /** 流标识 */
+    /**
+     * 流标识
+    */
     private Long flowId;
 
     /**
@@ -64,7 +72,9 @@ public class SpiderExecutionLog extends SysBase {
      */
     @TableField("node_id")
     @Schema(description = "节点 ID")
-    /** 节点标识 */
+    /**
+     * 节点标识
+    */
     private String nodeId;
 
     /**
@@ -72,7 +82,9 @@ public class SpiderExecutionLog extends SysBase {
      */
     @TableField("node_name")
     @Schema(description = "节点名称")
-    /** 节点名称 */
+    /**
+     * 节点名称
+    */
     private String nodeName;
 
     /**
@@ -80,7 +92,9 @@ public class SpiderExecutionLog extends SysBase {
      */
     @TableField("node_type")
     @Schema(description = "节点类型")
-    /** 节点类型 */
+    /**
+     * 节点类型
+    */
     private String nodeType;
 
     /**
@@ -88,7 +102,9 @@ public class SpiderExecutionLog extends SysBase {
      */
     @TableField("status")
     @Schema(description = "状态")
-    /** 状态 */
+    /**
+     * 状态
+    */
     private String status;
 
     /**
@@ -96,7 +112,9 @@ public class SpiderExecutionLog extends SysBase {
      */
     @TableField("input_data")
     @Schema(description = "节点输入数据")
-    /** 输入数据 */
+    /**
+     * 输入数据
+    */
     private String inputData;
 
     /**
@@ -104,7 +122,9 @@ public class SpiderExecutionLog extends SysBase {
      */
     @TableField("output_data")
     @Schema(description = "节点输出数据")
-    /** 输出数据 */
+    /**
+     * 输出数据
+    */
     private String outputData;
 
     /**
@@ -112,7 +132,9 @@ public class SpiderExecutionLog extends SysBase {
      */
     @TableField("error_message")
     @Schema(description = "失败信息")
-    /** 错误消息 */
+    /**
+     * 错误消息
+    */
     private String errorMessage;
 
     /**
@@ -120,7 +142,9 @@ public class SpiderExecutionLog extends SysBase {
      */
     @TableField("start_at")
     @Schema(description = "节点开始时间")
-    /** 开始AT */
+    /**
+     * 开始AT
+    */
     private LocalDateTime startAt;
 
     /**
@@ -128,7 +152,9 @@ public class SpiderExecutionLog extends SysBase {
      */
     @TableField("end_at")
     @Schema(description = "节点结束时间")
-    /** 结束AT */
+    /**
+     * 结束AT
+    */
     private LocalDateTime endAt;
 
     /**
@@ -137,6 +163,8 @@ public class SpiderExecutionLog extends SysBase {
     @TableField("sys_deleted")
     @TableLogic
     @Schema(description = "逻辑删除标记")
-    /** SYS删除标记 */
+    /**
+     * SYS删除标记
+    */
     private Integer sysDeleted;
 }

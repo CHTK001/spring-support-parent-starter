@@ -130,7 +130,9 @@ public interface CacheProvider {
         private final Map<String, CacheEntry> store = new ConcurrentHashMap<>();
 
         @Override
-        /** 放入 */
+        /**
+         * 放入
+        */
         public void put(String key, Object value) {
             /**
              * 放入。
@@ -142,7 +144,9 @@ public interface CacheProvider {
         }
 
         @Override
-        /** 放入 */
+        /**
+         * 放入
+        */
         public void put(String key, Object value, long ttlSeconds) {
             if (key != null && value != null) {
                 store.put(key, new CacheEntry(value, ttlSeconds));
@@ -150,7 +154,9 @@ public interface CacheProvider {
         }
 
         @Override
-        /** 获取 */
+        /**
+         * 获取
+        */
         public Object get(String key, Class<?> type) {
             if (key == null) {
                 return null;
@@ -167,7 +173,9 @@ public interface CacheProvider {
         }
 
         @Override
-        /** 移除 */
+        /**
+         * 移除
+        */
         public void remove(String key) {
             if (key != null) {
                 store.remove(key);
@@ -175,7 +183,9 @@ public interface CacheProvider {
         }
 
         @Override
-        /** Clear */
+        /**
+         * Clear
+        */
         public void clear() {
             store.clear();
         }
@@ -187,9 +197,13 @@ public interface CacheProvider {
      * @since 4.0.0
      */
     abstract class RedisCacheProvider implements CacheProvider {
-        /** 密钥前缀 */
+        /**
+         * 密钥前缀
+        */
         protected final String keyPrefix;
-        /** 默认TTL */
+        /**
+         * 默认TTL
+        */
         protected final long defaultTtl;
 
         /**
@@ -214,7 +228,9 @@ public interface CacheProvider {
         }
 
         @Override
-        /** 放入 */
+        /**
+         * 放入
+        */
         public void put(String key, Object value) {
             /**
              * 放入。
@@ -226,19 +242,27 @@ public interface CacheProvider {
         }
 
         @Override
-        /** 放入 */
+        /**
+         * 放入
+        */
         public abstract void put(String key, Object value, long ttlSeconds);
 
         @Override
-        /** 获取 */
+        /**
+         * 获取
+        */
         public abstract Object get(String key, Class<?> type);
 
         @Override
-        /** 移除 */
+        /**
+         * 移除
+        */
         public abstract void remove(String key);
 
         @Override
-        /** Clear */
+        /**
+         * Clear
+        */
         public abstract void clear();
     }
 }

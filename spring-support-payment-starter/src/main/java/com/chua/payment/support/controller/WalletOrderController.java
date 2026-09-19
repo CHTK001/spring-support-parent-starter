@@ -34,9 +34,13 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class WalletOrderController {
 
-    /** Wallet排序服务 */
+    /**
+     * Wallet排序服务
+    */
     private final WalletOrderService walletOrderService;
-    /** paymentcallbackurl解析器 */
+    /**
+     * paymentcallbackurl解析器
+    */
     private final PaymentCallbackUrlResolver paymentCallbackUrlResolver;
 
     @PostMapping("/recharge")

@@ -44,13 +44,21 @@ import java.util.Map;
 @EnableConfigurationProperties(OsgiProperties.class)
 public class OsgiAutoConfiguration {
 
-    /** Gogo runtime 类标记 */
+    /**
+     * Gogo runtime 类标记
+    */
     private static final String GOGO_RUNTIME_CLASS = "org.apache.felix.gogo.runtime.Closure";
-    /** Gogo 命令 类标记 */
+    /**
+     * Gogo 命令 类标记
+    */
     private static final String GOGO_COMMAND_CLASS = "org.apache.felix.gogo.command.Basic";
-    /** Gogo Shell 类标记 */
+    /**
+     * Gogo Shell 类标记
+    */
     private static final String GOGO_SHELL_CLASS = "org.apache.felix.gogo.shell.Shell";
-    /** SSHD osgi 类标记 */
+    /**
+     * SSHD osgi 类标记
+    */
     private static final String SSHD_OSGI_CLASS = "org.apache.sshd.agent.SshAgent";
 
     /**

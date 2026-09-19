@@ -70,7 +70,9 @@ public class DbTaskStore implements TaskStore {
     }
 
     @Override
-    /** 保存任务 */
+    /**
+     * 保存任务
+    */
     public void saveTask(Task<?> task, TaskStatus status) {
         if (task == null || task.getTaskId() == null) {
             return;
@@ -108,7 +110,9 @@ public class DbTaskStore implements TaskStore {
     }
 
     @Override
-    /** 更新状态 */
+    /**
+     * 更新状态
+    */
     public void updateStatus(String taskId, TaskStatus status) {
         if (taskId == null) {
             return;
@@ -134,7 +138,9 @@ public class DbTaskStore implements TaskStore {
     }
 
     @Override
-    /** 保存结果 */
+    /**
+     * 保存结果
+    */
     public void saveResult(TaskResult<?> result) {
         if (result == null || result.getTaskId() == null) {
             return;
@@ -208,7 +214,9 @@ public class DbTaskStore implements TaskStore {
     }
 
     @Override
-    /** 获取状态 */
+    /**
+     * 获取状态
+    */
     public TaskStatus getStatus(String taskId) {
         SysTaskStore entity = cache.get(taskId);
         if (entity == null) {
@@ -272,7 +280,9 @@ public class DbTaskStore implements TaskStore {
     }
 
     @Override
-    /** 移除任务 */
+    /**
+     * 移除任务
+    */
     public void removeTask(String taskId) {
         cache.remove(taskId);
         try {
@@ -284,7 +294,9 @@ public class DbTaskStore implements TaskStore {
     }
 
     @Override
-    /** Clear */
+    /**
+     * Clear
+    */
     public void clear() {
         cache.clear();
         try {
@@ -295,7 +307,9 @@ public class DbTaskStore implements TaskStore {
     }
 
     @Override
-    /** 关闭 */
+    /**
+     * 关闭
+    */
     public void close() {
         cache.clear();
     }

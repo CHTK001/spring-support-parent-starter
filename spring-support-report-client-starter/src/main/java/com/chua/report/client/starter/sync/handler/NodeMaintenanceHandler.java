@@ -40,44 +40,66 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
-/** @作者 CH */
+/**
+ * @作者 CH
+*/
 
 @Slf4j
 @Spi("nodeMaintenanceHandler")
 public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationContextAware {
 
-    /** Backup_dir */
+    /**
+     * Backup_dir
+    */
     private static final String BACKUP_DIR = "backups";
-    /** Upgrade_dir */
+    /**
+     * Upgrade_dir
+    */
     private static final String UPGRADE_DIR = "upgrades";
-    /** Rollback_dir */
+    /**
+     * Rollback_dir
+    */
     private static final String ROLLBACK_DIR = "rollbacks";
-    /** Maintenance_Home_dir */
+    /**
+     * Maintenance_Home_dir
+    */
     private static final String MAINTENANCE_HOME_DIR = "plugin.report.maintenance.home-dir";
-    /** Maintenance_当前_artifact */
+    /**
+     * Maintenance_当前_artifact
+    */
     private static final String MAINTENANCE_CURRENT_ARTIFACT = "plugin.report.maintenance.current-artifact";
-    /** 支持_包 */
+    /**
+     * 支持_包
+    */
     private static final List<String> SUPPORTED_PACKAGES = List.of("jar", "zip", "tar.gz", "tgz");
 
     private final Map<String, RollbackSnapshot> rollbackSnapshots = new ConcurrentHashMap<>(); // rollbacksnapshots
 
-    /** Application上下文 */
+    /**
+     * Application上下文
+    */
     private ApplicationContext applicationContext;
 
     @Override
-    /** 设置application上下文 */
+    /**
+     * 设置application上下文
+    */
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
     }
 
     @Override
-    /** 获取名称 */
+    /**
+     * 获取名称
+    */
     public String getName() {
         return "nodeMaintenanceHandler";
     }
 
     @Override
-    /** 支持 */
+    /**
+     * 支持
+    */
     public boolean supports(String topic) {
         return MonitorTopics.NODE_BACKUP.equals(topic)
                 || MonitorTopics.NODE_UPGRADE.equals(topic)
@@ -85,7 +107,9 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
     }
 
     @Override
-    /** 处理 */
+    /**
+     * 处理
+    */
     public Object handle(String topic, String sessionId, Map<String, Object> data) {
         String action = MapUtils.getString(data, "action", topic);
         log.info("[NodeMaintenance] 收到维护命令: topic={}, action={}", topic, action);
@@ -1122,7 +1146,9 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
          */
         TGZ("TGZ");
 
-        /** Display名称 */
+        /**
+         * Display名称
+        */
         private final String displayName;
 
         /**

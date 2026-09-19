@@ -6,7 +6,9 @@ import com.chua.starter.monitor.support.entity.MsMonitorConfig;
 import java.util.List;
 import java.util.Map;
 
-/** @作者 CH */
+/**
+ * @作者 CH
+*/
 public interface MonitorConfigService {
     /**
      * findby键。

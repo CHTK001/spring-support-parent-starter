@@ -28,11 +28,15 @@ import java.util.Set;
 @ConditionalOnProperty(prefix = ReportProperties.PRE + ".url-qps", name = "enabled", havingValue = "true", matchIfMissing = false)
 public class UrlQpsConfiguration implements WebMvcConfigurer {
 
-    /** Report属性 */
+    /**
+     * Report属性
+    */
     private final ReportProperties reportProperties;
 
     @Override
-    /** 添加拦截器 */
+    /**
+     * 添加拦截器
+    */
     public void addInterceptors(InterceptorRegistry registry) {
         ReportProperties.UrlQps urlQpsConfig = reportProperties.getUrlQps();
         Set<String> excludePatterns = urlQpsConfig.getExcludePatterns();

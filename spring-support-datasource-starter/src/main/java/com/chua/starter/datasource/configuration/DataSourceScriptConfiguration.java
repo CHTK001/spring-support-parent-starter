@@ -56,7 +56,9 @@ import java.util.stream.Collectors;
 @Slf4j
 public class DataSourceScriptConfiguration implements BeanPostProcessor {
 
-    /** 数据来源script属性 */
+    /**
+     * 数据来源script属性
+    */
     private final DataSourceScriptProperties dataSourceScriptProperties;
 
     /**
@@ -77,7 +79,9 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
     }
 
     @Override
-    /** Post处理之后initialization */
+    /**
+     * Post处理之后initialization
+    */
     public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
         if (bean instanceof DataSource) {
             if (!dataSourceScriptProperties.isEnable()) {
@@ -268,11 +272,17 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
     @Slf4j
     static class FlywayLikePopulator {
 
-        /** DS */
+        /**
+         * DS
+        */
         private final DataSource ds;
-        /** JDBC */
+        /**
+         * JDBC
+        */
         private final JdbcTemplate jdbc;
-        /** 数据来源script属性 */
+        /**
+         * 数据来源script属性
+        */
         private final DataSourceScriptProperties dataSourceScriptProperties;
 
         /**

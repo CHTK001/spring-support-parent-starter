@@ -21,7 +21,9 @@ public class EduExam {
      * 考试标识
      */
     @TableId(type = IdType.AUTO)
-    /** examid */
+    /**
+     * examid
+    */
     private Long examId;
 
     /**

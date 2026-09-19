@@ -28,19 +28,33 @@ import java.util.List;
 @Slf4j
 public class SpringRpcInvocationHandler<T> implements InvocationHandler {
 
-    /** 目标类型 */
+    /**
+     * 目标类型
+    */
     private final Class<T> targetType;
-    /** RPC客户端 */
+    /**
+     * RPC客户端
+    */
     private final RpcClient rpcClient;
-    /** Application上下文 */
+    /**
+     * Application上下文
+    */
     private final ApplicationContext applicationContext;
-    /** 消费者配置 */
+    /**
+     * 消费者配置
+    */
     private final RpcConsumerConfig consumerConfig;
-    /** 重试policy */
+    /**
+     * 重试policy
+    */
     private final RpcRetryPolicy retryPolicy;
-    /** Circuitbreaker管理器 */
+    /**
+     * Circuitbreaker管理器
+    */
     private RpcCircuitBreakerManager circuitBreakerManager;
-    /** 拦截器 */
+    /**
+     * 拦截器
+    */
     private List<RpcInterceptor> interceptors;
 
     /**
@@ -79,7 +93,9 @@ public class SpringRpcInvocationHandler<T> implements InvocationHandler {
     }
 
     @Override
-    /** 调用 */
+    /**
+     * 调用
+    */
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
  // 处理对象方法
         if (method.getDeclaringClass() == Object.class) {

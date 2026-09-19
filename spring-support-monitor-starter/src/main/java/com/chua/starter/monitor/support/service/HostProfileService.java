@@ -17,22 +17,34 @@ import java.util.Map;
  */
 public interface HostProfileService {
 
-    /** 画像分区：监听端口 */
+    /**
+     * 画像分区：监听端口
+    */
     String SECTION_PORTS = "ports";
 
-    /** 画像分区：进程 */
+    /**
+     * 画像分区：进程
+    */
     String SECTION_PROCESSES = "processes";
 
-    /** 画像分区：服务 */
+    /**
+     * 画像分区：服务
+    */
     String SECTION_SERVICES = "services";
 
-    /** 画像分区：磁盘 */
+    /**
+     * 画像分区：磁盘
+    */
     String SECTION_DISKS = "disks";
 
-    /** 画像分区：网卡 */
+    /**
+     * 画像分区：网卡
+    */
     String SECTION_NETWORK = "network";
 
-    /** 画像分区：环境变量 */
+    /**
+     * 画像分区：环境变量
+    */
     String SECTION_ENV = "env";
 
     /**

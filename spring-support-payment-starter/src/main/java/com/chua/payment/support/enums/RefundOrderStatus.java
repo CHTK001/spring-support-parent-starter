@@ -23,7 +23,9 @@ public enum RefundOrderStatus {
      */
     FAILED("退款失败");
 
-    /** 描述 */
+    /**
+     * 描述
+    */
     private final String description;
 
     /**

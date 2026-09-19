@@ -39,13 +39,21 @@ import java.util.function.Function;
  */
 public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodArgumentResolver {
 
-    /** Web请求 */
+    /**
+     * Web请求
+    */
     private final WebRequest webRequest;
-    /** Configurablebean工厂 */
+    /**
+     * Configurablebean工厂
+    */
     private ConfigurableBeanFactory configurableBeanFactory;
-    /** 表达式上下文 */
+    /**
+     * 表达式上下文
+    */
     private BeanExpressionContext expressionContext;
-    /** 转换服务 */
+    /**
+     * 转换服务
+    */
     private ConversionService conversionService;
 
     /**
@@ -71,7 +79,9 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
     }
 
     @Override
-    /** 支持参数 */
+    /**
+     * 支持参数
+    */
     public boolean supportsParameter(MethodParameter parameter) {
         return this.supportsParameter(parameter, UserValue.class);
     }

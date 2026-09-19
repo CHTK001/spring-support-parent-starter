@@ -90,15 +90,25 @@ public class OcrTextExtractor implements TextExtractor {
      * 完整管线参数（懒加载时用）。
      */
     private String detectorModel;
-    /** Recognizer模型 */
+    /**
+     * Recognizer模型
+    */
     private String recognizerModel;
-    /** 最小值信心 */
+    /**
+     * 最小值信心
+    */
     private float minConfidence = 0f;
-    /** Sortreading排序 */
+    /**
+     * Sortreading排序
+    */
     private boolean sortReadingOrder = true;
-    /** Direction模型 */
+    /**
+     * Direction模型
+    */
     private String directionModel;
-    /** Restorer模型 */
+    /**
+     * Restorer模型
+    */
     private String restorerModel;
 
     /**

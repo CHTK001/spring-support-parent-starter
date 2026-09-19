@@ -45,15 +45,25 @@ import java.util.List;
 @ConditionalOnProperty(prefix = "plugin.payment.ops", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class PaymentOpsController {
 
-    /** Payment调度器任务OPS服务 */
+    /**
+     * Payment调度器任务OPS服务
+    */
     private final PaymentSchedulerTaskOpsService paymentSchedulerTaskOpsService;
-    /** Paymentdashboard服务 */
+    /**
+     * Paymentdashboard服务
+    */
     private final PaymentDashboardService paymentDashboardService;
-    /** Paymentnotify日志映射器 */
+    /**
+     * Paymentnotify日志映射器
+    */
     private final PaymentNotifyLogMapper paymentNotifyLogMapper;
-    /** Paymentnotify错误映射器 */
+    /**
+     * Paymentnotify错误映射器
+    */
     private final PaymentNotifyErrorMapper paymentNotifyErrorMapper;
-    /** Paymentnotifyprocess服务 */
+    /**
+     * Paymentnotifyprocess服务
+    */
     private final PaymentNotifyProcessService paymentNotifyProcessService;
 
     /**

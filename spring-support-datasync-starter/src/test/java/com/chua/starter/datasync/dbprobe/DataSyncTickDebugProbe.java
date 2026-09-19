@@ -30,7 +30,9 @@ import java.util.concurrent.CopyOnWriteArrayList;
 @Slf4j
 public final class DataSyncTickDebugProbe {
 
-    /** 工作目录 */
+    /**
+     * 工作目录
+    */
     private static final Path WORK_DIR = Paths.get("target/tick-debug");
 
     /**

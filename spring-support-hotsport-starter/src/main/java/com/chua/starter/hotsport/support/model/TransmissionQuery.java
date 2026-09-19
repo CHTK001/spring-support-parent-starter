@@ -14,39 +14,63 @@ import lombok.Data;
 @Data
 public class TransmissionQuery {
 
-    /** 页码，从 1 起，缺省 1。 */
+    /**
+     * 页码，从 1 起，缺省 1。
+    */
     private Integer page;
 
-    /** 每页条数，缺省 20。 */
+    /**
+     * 每页条数，缺省 20。
+    */
     private Integer size;
 
-    /** 源端过滤（包含匹配，可空）。 */
+    /**
+     * 源端过滤（包含匹配，可空）。
+    */
     private String source;
 
-    /** 目标端过滤（包含匹配，可空）。 */
+    /**
+     * 目标端过滤（包含匹配，可空）。
+    */
     private String target;
 
-    /** 协议过滤（可空）。 */
+    /**
+     * 协议过滤（可空）。
+    */
     private String protocol;
 
-    /** 仅看错误（可空）。 */
+    /**
+     * 仅看错误（可空）。
+    */
     private Boolean errorOnly;
 
-    /** 开始时间（epoch 毫秒，可空）。 */
+    /**
+     * 开始时间（epoch 毫秒，可空）。
+    */
     private Long startTime;
 
-    /** 结束时间（epoch 毫秒，可空）。 */
+    /**
+     * 结束时间（epoch 毫秒，可空）。
+    */
     private Long endTime;
 
-    /** 链路 ID 精确匹配（可空）。 */
+    /**
+     * 链路 ID 精确匹配（可空）。
+    */
     private String traceId;
 
-    /** 最小耗时（毫秒，可空）。 */
+    /**
+     * 最小耗时（毫秒，可空）。
+    */
     private Long durationMin;
 
-    /** 最大耗时（毫秒，可空）。 */
+    /**
+     * 最大耗时（毫秒，可空）。
+    */
     private Long durationMax;
 
-    /** 操作名模糊过滤（可空）。 */
+    /**
+     * 操作名模糊过滤（可空）。
+    */
     private String operation;
 }

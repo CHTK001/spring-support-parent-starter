@@ -20,11 +20,15 @@ import java.util.Map;
 public class JobReporter {
 
 
-    /** 实例 */
+    /**
+     * 实例
+    */
     private static final JobReporter INSTANCE = new JobReporter();
 
     @Setter
-    /** 同步客户端 */
+    /**
+     * 同步客户端
+    */
     private SyncClient syncClient;
 
     /**

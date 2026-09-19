@@ -29,9 +29,13 @@ import org.slf4j.LoggerFactory;
  * @author CH
  */
 public class ApiGrayEvaluator {
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(ApiGrayEvaluator.class);
-        /** 解析器 */
+        /**
+         * 解析器
+        */
         private static final ExpressionParser PARSER = new SpelExpressionParser();
     
     /**

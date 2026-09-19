@@ -33,34 +33,54 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 public class ProjectWatchdogWheel {
 
-    /** 时间轮槽位数（32 × 1s = 一圈 32s，更长间隔靠多圈计数） */
+    /**
+     * 时间轮槽位数（32 × 1s = 一圈 32s，更长间隔靠多圈计数）
+    */
     private static final int SLOT_COUNT = 32;
 
-    /** 单 tick 时长（毫秒） */
+    /**
+     * 单 tick 时长（毫秒）
+    */
     private static final long TICK_MS = 1000L;
 
-    /** 守护检测服务 */
+    /**
+     * 守护检测服务
+    */
     private final WatchdogService watchdogService;
 
-    /** 槽位：每个槽位挂该 tick 到期的项目 ID */
+    /**
+     * 槽位：每个槽位挂该 tick 到期的项目 ID
+    */
     private final List<List<Long>> slots = newSlotArray();
 
-    /** 每个项目当前挂起圈数（轮转超过一圈仍未到期的补圈数） */
+    /**
+     * 每个项目当前挂起圈数（轮转超过一圈仍未到期的补圈数）
+    */
     private final ConcurrentHashMap<Long, Integer> pendingLaps = new ConcurrentHashMap<>();
 
-    /** 已入轮项目集合（防重复入轮） */
+    /**
+     * 已入轮项目集合（防重复入轮）
+    */
     private final ConcurrentHashMap<Long, Boolean> scheduled = new ConcurrentHashMap<>();
 
-    /** 正在执行的项目（防同项目重入） */
+    /**
+     * 正在执行的项目（防同项目重入）
+    */
     private final ConcurrentHashMap<Long, Boolean> running = new ConcurrentHashMap<>();
 
-    /** 时间轮驱动线程 */
+    /**
+     * 时间轮驱动线程
+    */
     private ScheduledExecutorService wheelExecutor;
 
-    /** 守护任务执行线程（与轮转线程分离，避免检测阻塞整个时间轮） */
+    /**
+     * 守护任务执行线程（与轮转线程分离，避免检测阻塞整个时间轮）
+    */
     private ScheduledExecutorService runExecutor;
 
-    /** cursor */
+    /**
+     * cursor
+    */
     private int cursor = 0;
 
     /**

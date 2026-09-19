@@ -23,7 +23,9 @@ public class SysAiGroupModel {
      * 主键
      */
     @TableId(value = "sys_ai_group_model_id", type = IdType.AUTO)
-    /** SYSAI分组模型标识 */
+    /**
+     * SYSAI分组模型标识
+    */
     private Integer id;
 
     /**
@@ -40,7 +42,9 @@ public class SysAiGroupModel {
      * 创建时间
      */
     @TableField(fill = FieldFill.INSERT)
-    /** 创建时间 */
+    /**
+     * 创建时间
+    */
     private LocalDateTime createTime;
 }
 

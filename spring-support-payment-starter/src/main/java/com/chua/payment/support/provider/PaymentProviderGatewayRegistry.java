@@ -19,12 +19,18 @@ import java.util.Set;
 @Component
 public class PaymentProviderGatewayRegistry {
 
-    /** 阿里云_alipay_gateway */
+    /**
+     * 阿里云_alipay_gateway
+    */
     private static final String ALIYUN_ALIPAY_GATEWAY = "com.chua.starter.aliyun.support.payment.AliyunAlipayGateway";
-    /** 腾讯云_wechat_薪酬_gateway */
+    /**
+     * 腾讯云_wechat_薪酬_gateway
+    */
     private static final String TENCENT_WECHAT_PAY_GATEWAY = "com.chua.starter.tencent.support.payment.TencentWechatPayGateway";
 
-    /** 属性 */
+    /**
+     * 属性
+    */
     private final PaymentProviderProperties properties;
 
     /**

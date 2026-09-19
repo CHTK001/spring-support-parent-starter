@@ -13,7 +13,9 @@ import org.springframework.scheduling.config.ScheduledTaskRegistrar;
  * @author CH
  */
 public class JobConfiguration implements SchedulingConfigurer {
-    /** 任务registrar */
+    /**
+     * 任务registrar
+    */
     private ScheduledTaskRegistrar taskRegistrar;
 
     /**
@@ -30,7 +32,9 @@ public class JobConfiguration implements SchedulingConfigurer {
     }
 
     @Override
-    /** configure任务 */
+    /**
+     * configure任务
+    */
     public void configureTasks(ScheduledTaskRegistrar taskRegistrar) {
         this.taskRegistrar = taskRegistrar;
         ThreadPoolTaskScheduler threadPool = threadPoolTaskScheduler();

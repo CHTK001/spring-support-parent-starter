@@ -12,31 +12,57 @@ import java.util.Map;
  */
 @Data
 public class TencentWechatPayScoreRequest {
-    /** APPID */
+    /**
+     * APPID
+    */
     private String appId;
-    /** 服务标识 */
+    /**
+     * 服务标识
+    */
     private String serviceId;
-    /** 出排序NO */
+    /**
+     * 出排序NO
+    */
     private String outOrderNo;
-    /** 打开标识 */
+    /**
+     * 打开标识
+    */
     private String openId;
-    /** 通知url */
+    /**
+     * 通知url
+    */
     private String notifyUrl;
-    /** 服务introduction */
+    /**
+     * 服务introduction
+    */
     private String serviceIntroduction;
-    /** 开始时间 */
+    /**
+     * 开始时间
+    */
     private String startTime;
-    /** 结束时间 */
+    /**
+     * 结束时间
+    */
     private String endTime;
-    /** 总数amountfen */
+    /**
+     * 总数amountfen
+    */
     private Integer totalAmountFen;
-    /** ReasonMLmlml */
+    /**
+     * ReasonMLmlml
+    */
     private String reason;
-    /** 饰面类型 */
+    /**
+     * 饰面类型
+    */
     private String finishType;
-    /** Need用户confirm */
+    /**
+     * Need用户confirm
+    */
     private Boolean needUserConfirm;
-    /** Attach */
+    /**
+     * Attach
+    */
     private String attach;
     private List<Map<String, Object>> postPayments; // postpayments
     private List<Map<String, Object>> postDiscounts; // postdiscounts

@@ -32,7 +32,9 @@ public class SpiderDefinition extends SysBase {
      */
     @TableId(type = IdType.AUTO)
     @Schema(description = "主键 ID")
-    /** 标识 */
+    /**
+     * 标识
+    */
     private Long id;
 
     /**
@@ -40,7 +42,9 @@ public class SpiderDefinition extends SysBase {
      */
     @TableField("code")
     @Schema(description = "爬虫唯一编码")
-    /** 代码 */
+    /**
+     * 代码
+    */
     private String code;
 
     /**
@@ -48,7 +52,9 @@ public class SpiderDefinition extends SysBase {
      */
     @TableField("name")
     @Schema(description = "爬虫名称")
-    /** 名称 */
+    /**
+     * 名称
+    */
     private String name;
 
     /**
@@ -56,7 +62,9 @@ public class SpiderDefinition extends SysBase {
      */
     @TableField("description")
     @Schema(description = "描述")
-    /** 描述 */
+    /**
+     * 描述
+    */
     private String description;
 
     /**
@@ -64,7 +72,9 @@ public class SpiderDefinition extends SysBase {
      */
     @TableField("flow_id")
     @Schema(description = "关联流程 ID")
-    /** 流标识 */
+    /**
+     * 流标识
+    */
     private Long flowId;
 
     /**
@@ -72,7 +82,9 @@ public class SpiderDefinition extends SysBase {
      */
     @TableField("enabled")
     @Schema(description = "是否启用")
-    /** 是否启用 */
+    /**
+     * 是否启用
+    */
     private Integer enabled;
 
     /**
@@ -80,7 +92,9 @@ public class SpiderDefinition extends SysBase {
      */
     @TableField("cron_expression")
     @Schema(description = "定时 cron 表达式")
-    /** Cron表达式 */
+    /**
+     * Cron表达式
+    */
     private String cronExpression;
 
     /**
@@ -88,7 +102,9 @@ public class SpiderDefinition extends SysBase {
      */
     @TableField("executor_type")
     @Schema(description = "执行类型（ONCE 一次 / SCHEDULE 定时）")
-    /** 执行器类型 */
+    /**
+     * 执行器类型
+    */
     private String executorType;
 
     /**
@@ -96,7 +112,9 @@ public class SpiderDefinition extends SysBase {
      */
     @TableField("last_run_at")
     @Schema(description = "上次执行时间")
-    /** 最后RUNAT */
+    /**
+     * 最后RUNAT
+    */
     private LocalDateTime lastRunAt;
 
     /**
@@ -104,7 +122,9 @@ public class SpiderDefinition extends SysBase {
      */
     @TableField("last_status")
     @Schema(description = "上次执行状态")
-    /** 最后状态 */
+    /**
+     * 最后状态
+    */
     private String lastStatus;
 
     /**
@@ -112,7 +132,9 @@ public class SpiderDefinition extends SysBase {
      */
     @TableField("last_message")
     @Schema(description = "上次执行消息")
-    /** 最后消息 */
+    /**
+     * 最后消息
+    */
     private String lastMessage;
 
     /**
@@ -120,7 +142,9 @@ public class SpiderDefinition extends SysBase {
      */
     @TableField("entry_url")
     @Schema(description = "入口 URL")
-    /** entryurl */
+    /**
+     * entryurl
+    */
     private String entryUrl;
 
     /**
@@ -128,7 +152,9 @@ public class SpiderDefinition extends SysBase {
      */
     @TableField("site_host")
     @Schema(description = "站点主机")
-    /** Site主机 */
+    /**
+     * Site主机
+    */
     private String siteHost;
 
     /**
@@ -136,7 +162,9 @@ public class SpiderDefinition extends SysBase {
      */
     @TableField("collect_deep_url")
     @Schema(description = "是否深度采集")
-    /** collectdeepurl */
+    /**
+     * collectdeepurl
+    */
     private Integer collectDeepUrl;
 
     /**
@@ -144,7 +172,9 @@ public class SpiderDefinition extends SysBase {
      */
     @TableField("max_depth")
     @Schema(description = "最大深度")
-    /** 最大值深度 */
+    /**
+     * 最大值深度
+    */
     private Integer maxDepth;
 
     /**
@@ -152,7 +182,9 @@ public class SpiderDefinition extends SysBase {
      */
     @TableField("max_pages")
     @Schema(description = "最大页数")
-    /** 最大值pages */
+    /**
+     * 最大值pages
+    */
     private Integer maxPages;
 
     /**
@@ -160,7 +192,9 @@ public class SpiderDefinition extends SysBase {
      */
     @TableField("executor_rounds")
     @Schema(description = "执行轮次")
-    /** 执行器rounds */
+    /**
+     * 执行器rounds
+    */
     private Integer executorRounds;
 
     /**
@@ -168,7 +202,9 @@ public class SpiderDefinition extends SysBase {
      */
     @TableField("remark")
     @Schema(description = "备注")
-    /** 评论 */
+    /**
+     * 评论
+    */
     private String remark;
 
     /**
@@ -177,6 +213,8 @@ public class SpiderDefinition extends SysBase {
     @TableField("sys_deleted")
     @TableLogic
     @Schema(description = "逻辑删除标记")
-    /** SYS删除标记 */
+    /**
+     * SYS删除标记
+    */
     private Integer sysDeleted;
 }

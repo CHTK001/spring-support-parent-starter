@@ -25,7 +25,9 @@ public class FindAllSqlMethod extends AbstractMethod {
     }
 
     @Override
-    /** injectmapped对账单 */
+    /**
+     * injectmapped对账单
+    */
     public MappedStatement injectMappedStatement(Class<?> mapperClass, Class<?> modelClass, TableInfo tableInfo) {
         String sql = "select * from " + tableInfo.getTableName();
 

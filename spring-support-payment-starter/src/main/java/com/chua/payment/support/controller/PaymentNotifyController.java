@@ -43,15 +43,25 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class PaymentNotifyController {
 
-    /** Merchant通道服务 */
+    /**
+     * Merchant通道服务
+    */
     private final MerchantChannelService merchantChannelService;
-    /** 支付通知处理服务 */
+    /**
+     * 支付通知处理服务
+    */
     private final PaymentNotifyProcessService paymentNotifyProcessService;
-    /** 支付订单数据访问 */
+    /**
+     * 支付订单数据访问
+    */
     private final PaymentOrderMapper paymentOrderMapper;
-    /** 退款订单数据访问 */
+    /**
+     * 退款订单数据访问
+    */
     private final PaymentRefundOrderMapper paymentRefundOrderMapper;
-    /** JSON 序列化工具 */
+    /**
+     * JSON 序列化工具
+    */
     private final ObjectMapper objectMapper;
 
     /**

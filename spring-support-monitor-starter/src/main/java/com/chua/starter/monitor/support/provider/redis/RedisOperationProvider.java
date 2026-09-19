@@ -45,20 +45,26 @@ public class RedisOperationProvider implements OperationProvider {
     private final MonitorConfigService configService;
 
     @Override
-    /** 服务类型 */
+    /**
+     * 服务类型
+    */
     public ServiceType serviceType() {
         return ServiceType.REDIS;
     }
 
     @Override
-    /** 扫描键 */
+    /**
+     * 扫描键
+    */
     public Mono<ScanResult> scanKeys(CollectContext ctx, String pattern, String cursor, int count) {
         return Mono.fromCallable(() -> doScanKeys(ctx, pattern, cursor, count))
                 .subscribeOn(Schedulers.boundedElastic());
     }
 
     @Override
-    /** 获取值 */
+    /**
+     * 获取值
+    */
     public Mono<String> getValue(CollectContext ctx, String key) {
         return Mono.fromCallable(() -> {
             /**
@@ -72,7 +78,9 @@ public class RedisOperationProvider implements OperationProvider {
     }
 
     @Override
-    /** 设置值 */
+    /**
+     * 设置值
+    */
     public Mono<Boolean> setValue(CollectContext ctx, String key, String value, Duration ttl) {
         return Mono.fromCallable(() -> {
             /**
@@ -91,7 +99,9 @@ public class RedisOperationProvider implements OperationProvider {
     }
 
     @Override
-    /** 删除键 */
+    /**
+     * 删除键
+    */
     public Mono<Long> deleteKeys(CollectContext ctx, List<String> keys) {
         return Mono.fromCallable(() -> {
             if (!configService.getBoolean(CONFIG_KEY_ALLOW_DELETE, false)) {
@@ -119,7 +129,9 @@ public class RedisOperationProvider implements OperationProvider {
     }
 
     @Override
-    /** Expire */
+    /**
+     * Expire
+    */
     public Mono<Boolean> expire(CollectContext ctx, String key, Duration ttl) {
         return Mono.fromCallable(() -> {
             /**
@@ -134,7 +146,9 @@ public class RedisOperationProvider implements OperationProvider {
     }
 
     @Override
-    /** Ttl */
+    /**
+     * Ttl
+    */
     public Mono<Long> ttl(CollectContext ctx, String key) {
         return Mono.fromCallable(() -> {
             /**
@@ -148,7 +162,9 @@ public class RedisOperationProvider implements OperationProvider {
     }
 
     @Override
-    /** 类型 */
+    /**
+     * 类型
+    */
     public Mono<String> type(CollectContext ctx, String key) {
         return Mono.fromCallable(() -> {
             /**

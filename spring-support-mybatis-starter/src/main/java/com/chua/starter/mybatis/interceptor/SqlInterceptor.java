@@ -61,12 +61,16 @@ import static com.chua.starter.common.support.constant.MdcConstant.TRACE_ID;
  * @since 4.0.0
  */
 public class SqlInterceptor implements Interceptor {
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(SqlInterceptor.class);
 
     private static final Map<String, Object> MAP = new ConcurrentHashMap<>(2); // 映射
 
-    /** Formatter */
+    /**
+     * Formatter
+    */
     private static final SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
     /**

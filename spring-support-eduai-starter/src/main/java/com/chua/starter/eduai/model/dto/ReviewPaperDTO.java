@@ -11,10 +11,16 @@ import lombok.Data;
 @Data
 public class ReviewPaperDTO {
 
-    /** studentid */
+    /**
+     * studentid
+    */
     private String studentId;
-    /** 数量 */
+    /**
+     * 数量
+    */
     private Integer count;
-    /** 主题 */
+    /**
+     * 主题
+    */
     private String subject;
 }

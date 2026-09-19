@@ -59,7 +59,9 @@ public class UserStatisticProvider {
 
 
     @Autowired
-    /** 认证属性 */
+    /**
+     * 认证属性
+    */
     private AuthClientProperties authProperties;
     /**
      * 登录

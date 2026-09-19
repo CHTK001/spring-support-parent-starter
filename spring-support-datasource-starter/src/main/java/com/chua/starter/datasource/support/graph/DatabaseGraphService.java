@@ -41,12 +41,18 @@ import java.util.concurrent.locks.ReentrantLock;
 @Slf4j
 public class DatabaseGraphService {
 
-    /** 数据来源 */
+    /**
+     * 数据来源
+    */
     private final DataSource dataSource;
-    /** 属性 */
+    /**
+     * 属性
+    */
     private final DocumentProperties properties;
 
-    /** 锁 */
+    /**
+     * 锁
+    */
     private final ReentrantLock lock = new ReentrantLock();
     private volatile GraphPayload cached; // 缓存
     private volatile long cachedAt; // 缓存at
@@ -321,15 +327,23 @@ public class DatabaseGraphService {
      * @since 4.0.0
      */
     public static class GraphPayload {
-        /** 根级标识 */
+        /**
+         * 根级标识
+        */
         public String rootId;
         public List<Map<String, Object>> nodes; // 节点
         public List<Map<String, Object>> lines; // 线
-        /** Trigger数量 */
+        /**
+         * Trigger数量
+        */
         public int triggerCount;
-        /** Procedure数量 */
+        /**
+         * Procedure数量
+        */
         public int procedureCount;
-        /** 缓存at */
+        /**
+         * 缓存at
+        */
         public long cachedAt;
     }
 }

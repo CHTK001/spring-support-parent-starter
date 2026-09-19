@@ -35,11 +35,15 @@ public class AiModelMetricsEnrichmentService {
     /**
      * 缓存刷新间隔（毫秒）：6 小时
      */
-    /** 磁盘快照目录 */
+    /**
+     * 磁盘快照目录
+    */
     private static final String CACHE_DIR =
             System.getProperty("user.home") + "/.nomifun/cache";
 
-    /** 磁盘快照文件名 */
+    /**
+     * 磁盘快照文件名
+    */
     private static final String SNAPSHOT_FILE = "ai-model-metrics.json";
 
     private static final long CACHE_TTL_MILLIS = 6L * 60 * 60 * 1000; // 缓存ttlmillis
@@ -612,33 +616,61 @@ public class AiModelMetricsEnrichmentService {
      * 单条模型指标记录。
      */
     public record MetricsRecord(
-            /** 归一化键 */
+            /**
+             * 归一化键
+            */
             String normalizedKey,
-            /** 输入单价（USD/百万 令牌） */
+            /**
+             * 输入单价（USD/百万 令牌）
+            */
             BigDecimal inputPerMillion,
-            /** 输出单价（USD/百万 令牌） */
+            /**
+             * 输出单价（USD/百万 令牌）
+            */
             BigDecimal outputPerMillion,
-            /** 智能指数 */
+            /**
+             * 智能指数
+            */
             BigDecimal intelligenceIndex,
-            /** 输出速度（令牌/秒） */
+            /**
+             * 输出速度（令牌/秒）
+            */
             BigDecimal outputSpeedTps,
-            /** 首 令牌 延迟（秒） */
+            /**
+             * 首 令牌 延迟（秒）
+            */
             BigDecimal latencyFirstTokenSeconds,
-            /** 图标地址 */
+            /**
+             * 图标地址
+            */
             String iconUrl,
-            /** 是否深度思考（推理模型） */
+            /**
+             * 是否深度思考（推理模型）
+            */
             Boolean reasoning,
-            /** 是否联网查询 */
+            /**
+             * 是否联网查询
+            */
             Boolean webSearch,
-            /** 是否图片识别（视觉输入） */
+            /**
+             * 是否图片识别（视觉输入）
+            */
             Boolean imageInput,
-            /** 是否函数调用 */
+            /**
+             * 是否函数调用
+            */
             Boolean functionCalling,
-            /** 缓存命中输入价（USD/百万 令牌） */
+            /**
+             * 缓存命中输入价（USD/百万 令牌）
+            */
             BigDecimal cacheHitPrice,
-            /** 缓存写入价（USD/百万 令牌） */
+            /**
+             * 缓存写入价（USD/百万 令牌）
+            */
             BigDecimal cacheWritePrice,
-            /** 上下文窗口（令牌 数） */
+            /**
+             * 上下文窗口（令牌 数）
+            */
             Long contextWindowTokens) {
     }
 

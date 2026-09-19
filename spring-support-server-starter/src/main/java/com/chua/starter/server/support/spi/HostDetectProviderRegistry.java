@@ -23,7 +23,9 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 public class HostDetectProviderRegistry {
 
-    /** 系统类型 -> 探测实现索引 */
+    /**
+     * 系统类型 -> 探测实现索引
+    */
     private final Map<String, HostDetectProvider> index = new ConcurrentHashMap<>();
 
     /**

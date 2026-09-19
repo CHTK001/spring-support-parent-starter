@@ -32,19 +32,29 @@ import java.util.Set;
 @ConditionalOnProperty(prefix = "monitor.timeseries", name = "engine", havingValue = "redis")
 public class RedisMetricTimeSeriesProvider implements MetricTimeSeriesProvider {
 
-    /** ZSET 键 前缀 */
+    /**
+     * ZSET 键 前缀
+    */
     private static final String KEY_PREFIX = "monitor:metric:";
 
-    /** 单条 ZSET 上限（防止无限增长，保留最近 N 点） */
+    /**
+     * 单条 ZSET 上限（防止无限增长，保留最近 N 点）
+    */
     private static final int MAX_POINTS_PER_METRIC = 100_000;
 
-    /** 单次曲线返回点数上限 */
+    /**
+     * 单次曲线返回点数上限
+    */
     private static final int MAX_SERIES_POINTS = 1440;
 
-    /** Redis 客户端 */
+    /**
+     * Redis 客户端
+    */
     private final StringRedisTemplate redisTemplate;
 
-    /** 是否可用（Redis 可达） */
+    /**
+     * 是否可用（Redis 可达）
+    */
     private final boolean available;
 
     /**

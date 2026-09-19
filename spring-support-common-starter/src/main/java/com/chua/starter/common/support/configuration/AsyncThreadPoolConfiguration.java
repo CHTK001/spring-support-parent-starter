@@ -109,7 +109,9 @@ public class AsyncThreadPoolConfiguration implements AsyncConfigurer {
     }
 
     @Override
-    /** 获取异步执行器 */
+    /**
+     * 获取异步执行器
+    */
     public Executor getAsyncExecutor() {
         return asyncExecutor();
     }

@@ -27,14 +27,22 @@ import java.util.function.Supplier;
  */
 @Slf4j
 public class MybatisPlusDataPermissionInterceptor extends DataPermissionInterceptor {
-    /** Dept_leader */
+    /**
+     * Dept_leader
+    */
     private static final String DEPT_LEADER = "DEPT_LEADER";
-    /** Managed_dept_树_标识 */
+    /**
+     * Managed_dept_树_标识
+    */
     private static final String MANAGED_DEPT_TREE_IDS = "managedDeptTreeIds";
 
-    /** Methodsecurityinterceptor */
+    /**
+     * Methodsecurityinterceptor
+    */
     private final MybatisPlusDataScopeProperties methodSecurityInterceptor;
-    /** 认证服务供应商 */
+    /**
+     * 认证服务供应商
+    */
     private final Supplier<AuthService> authServiceSupplier;
 
     /**
@@ -66,7 +74,9 @@ public class MybatisPlusDataPermissionInterceptor extends DataPermissionIntercep
     }
 
     @Override
-    /** 处理删除 */
+    /**
+     * 处理删除
+    */
     protected void processDelete(Delete delete, int index, String sql, Object obj) {
         if (!shouldApplyDataPermission()) {
             return;
@@ -75,7 +85,9 @@ public class MybatisPlusDataPermissionInterceptor extends DataPermissionIntercep
     }
 
     @Override
-    /** 处理更新 */
+    /**
+     * 处理更新
+    */
     protected void processUpdate(Update update, int index, String sql, Object obj) {
         if (!shouldApplyDataPermission()) {
             return;
@@ -84,7 +96,9 @@ public class MybatisPlusDataPermissionInterceptor extends DataPermissionIntercep
     }
 
     @Override
-    /** 处理选择 */
+    /**
+     * 处理选择
+    */
     protected void processSelect(Select select, int index, String sql, Object obj) {
         if (!shouldApplyDataPermission()) {
             return;

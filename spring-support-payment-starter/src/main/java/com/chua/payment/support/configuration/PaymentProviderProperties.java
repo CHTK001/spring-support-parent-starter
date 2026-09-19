@@ -16,13 +16,21 @@ import org.springframework.util.StringUtils;
 @ConfigurationProperties(prefix = "plugin.payment.provider")
 public class PaymentProviderProperties {
 
-    /** 默认SPI */
+    /**
+     * 默认SPI
+    */
     private String defaultSpi = AbstractMerchantPaymentChannel.DEFAULT_PROVIDER_SPI;
-    /** alipayspi */
+    /**
+     * alipayspi
+    */
     private String alipaySpi = AbstractMerchantPaymentChannel.DEFAULT_PROVIDER_SPI;
-    /** wechatspi */
+    /**
+     * wechatspi
+    */
     private String wechatSpi = AbstractMerchantPaymentChannel.DEFAULT_PROVIDER_SPI;
-    /** epayspi */
+    /**
+     * epayspi
+    */
     private String epaySpi = "epay";
 
     /**

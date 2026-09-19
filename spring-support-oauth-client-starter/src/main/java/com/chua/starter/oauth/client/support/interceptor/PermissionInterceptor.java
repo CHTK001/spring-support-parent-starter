@@ -37,14 +37,20 @@ import static com.chua.starter.oauth.client.support.contants.AuthConstant.SUPER_
 @Order(1)
 public class PermissionInterceptor extends StaticMethodMatcherPointcutAdvisor implements InitializingBean, Ordered {
 
-    /** 只读角色：拥有该角色的账号禁止写操作（优先于所有权限，含超级管理员） */
+    /**
+     * 只读角色：拥有该角色的账号禁止写操作（优先于所有权限，含超级管理员）
+    */
     private static final String READ_ONLY_ROLE = "READ_ONLY";
 
-    /** 安全方法（只读操作放行） */
+    /**
+     * 安全方法（只读操作放行）
+    */
     private static final Set<String> SAFE_METHODS = Set.of("GET", "HEAD", "OPTIONS");
 
     @Override
-    /** Matches */
+    /**
+     * Matches
+    */
     public boolean matches(Method method, Class<?> targetClass) {
         if (Proxy.isProxyClass(targetClass)) {
             return false;
@@ -58,13 +64,17 @@ public class PermissionInterceptor extends StaticMethodMatcherPointcutAdvisor im
     }
 
     @Override
-    /** 之后属性设置 */
+    /**
+     * 之后属性设置
+    */
     public void afterPropertiesSet() throws Exception {
         log.info("[权限拦截器]初始化权限拦截器");
         this.setAdvice(new MethodInterceptor() {
             @Nullable
             @Override
-            /** 调用 */
+            /**
+             * 调用
+            */
             public Object invoke(@Nonnull MethodInvocation invocation) throws Throwable {
                 Method method = invocation.getMethod();
                 String methodName = method.getDeclaringClass().getSimpleName() + "." + method.getName();
@@ -293,7 +303,9 @@ public class PermissionInterceptor extends StaticMethodMatcherPointcutAdvisor im
     }
 
     @Override
-    /** 获取订单 */
+    /**
+     * 获取订单
+    */
     public int getOrder() {
         return Ordered.HIGHEST_PRECEDENCE;
     }

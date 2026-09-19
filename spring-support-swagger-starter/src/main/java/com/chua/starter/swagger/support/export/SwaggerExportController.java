@@ -39,9 +39,13 @@ import java.nio.charset.StandardCharsets;
 @ConditionalOnProperty(prefix = "chua.swagger.export", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class SwaggerExportController {
 
-    /** Openapiprovider */
+    /**
+     * Openapiprovider
+    */
     private final ObjectProvider<OpenAPI> openAPIProvider;
-    /** 属性 */
+    /**
+     * 属性
+    */
     private final SwaggerExportProperties properties;
 
     /**

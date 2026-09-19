@@ -33,7 +33,9 @@ public class WebsocketSyncServer extends AbstractSyncServer {
     }
 
     @Override
-    /** 执行开始 */
+    /**
+     * 执行开始
+    */
     protected void doStart() {
         for (WebSocketSession session : sessionManager.getAllSessions()) {
             /**
@@ -45,12 +47,16 @@ public class WebsocketSyncServer extends AbstractSyncServer {
     }
 
     @Override
-    /** 执行停止 */
+    /**
+     * 执行停止
+    */
     protected void doStop() {
     }
 
     @Override
-    /** 执行发送 */
+    /**
+     * 执行发送
+    */
     protected void doSend(String sessionId, String topic, Object data) {
         WebSocketSession session = sessionManager.getSession(sessionId);
         if (session == null || !session.isOpen()) {

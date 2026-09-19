@@ -60,14 +60,18 @@ public class Oauth2Protocol extends AbstractProtocol {
     }
 
     @Override
-    /** Approve */
+    /**
+     * Approve
+    */
     protected AuthenticationInformation approve(Cookie cookie, String token, String subProtocol) {
  // 使用令牌内省端点验证令牌
         return introspectToken(token);
     }
 
     @Override
-    /** 认证用户编码 */
+    /**
+     * 认证用户编码
+    */
     protected AuthenticationInformation authenticationUserCode(AppKeySecret appKeySecret) {
  // o认证 2.0 使用 客户端_凭证 模式，凭据来自客户端配置
         return clientCredentialsGrant(authClientProperties.getKey().getAccessKey(),
@@ -92,7 +96,9 @@ public class Oauth2Protocol extends AbstractProtocol {
     }
 
     @Override
-    /** 获取access令牌 */
+    /**
+     * 获取access令牌
+    */
     public LoginAuthResult getAccessToken(String username, String password, AuthType authType, Map<String, Object> ext) {
         log.debug("OAuth2 获取访问令牌 - username: {}, authType: {}", username, authType);
         var selectedUrl = selectUrl();
@@ -128,7 +134,9 @@ public class Oauth2Protocol extends AbstractProtocol {
     }
 
     @Override
-    /** Logout */
+    /**
+     * Logout
+    */
     public LoginAuthResult logout(String uid, LogoutType logoutType, UserResult userResult) {
         log.debug("OAuth2 登出 - uid: {}, logoutType: {}", uid, logoutType);
         var selectedUrl = selectUrl();
@@ -172,7 +180,9 @@ public class Oauth2Protocol extends AbstractProtocol {
     }
 
     @Override
-    /** 创建temporary令牌 */
+    /**
+     * 创建temporary令牌
+    */
     public LoginAuthResult createTemporaryToken(String sourceToken, Map<String, Object> ext) {
  // o认证 2.0 标准不直接支持临时令牌，返回不支持
         /**
@@ -185,13 +195,17 @@ public class Oauth2Protocol extends AbstractProtocol {
     }
 
     @Override
-    /** 获取online状态 */
+    /**
+     * 获取online状态
+    */
     public OnlineStatus getOnlineStatus(String uid) {
         return OnlineStatus.defaultStatus();
     }
 
     @Override
-    /** 获取online用户 */
+    /**
+     * 获取online用户
+    */
     public OnlineUserResult getOnlineUsers(OnlineUserQuery query) {
         return OnlineUserResult.empty();
     }

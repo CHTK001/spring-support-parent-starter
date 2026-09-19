@@ -21,7 +21,9 @@ import com.chua.common.support.utils.StringUtils;
  */
 public class SignUtils {
 
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(SignUtils.class);
 
     /**
@@ -39,7 +41,9 @@ public class SignUtils {
      */
     private static final Set<String> DEFAULT_EXCLUDE_KEYS = Set.of("sign", "signature");
 
-    /** 创建 标志工具 实例 */
+    /**
+     * 创建 标志工具 实例
+    */
     private SignUtils() {
     }
 

@@ -91,40 +91,72 @@ public class SysAiUsage extends SysBase {
      */
     private LocalDateTime sysAiUsageCallTime;
 
-    /** 推理强度 */
+    /**
+     * 推理强度
+    */
     private String sysAiUsageInferenceStrength;
-    /** 端点URL */
+    /**
+     * 端点URL
+    */
     private String sysAiUsageEndpoint;
-    /** 请求IP */
+    /**
+     * 请求IP
+    */
     private String sysAiUsageIp;
-    /** IP 物理地址（省/市，来自 IP 定位） */
+    /**
+     * IP 物理地址（省/市，来自 IP 定位）
+    */
     private String sysAiUsageLocation;
-    /** 请求类型: 对话/完成/嵌入 */
+    /**
+     * 请求类型: 对话/完成/嵌入
+    */
     private String sysAiUsageType;
-    /** 计费模式: 薪酬_as_you_Go/subscription */
+    /**
+     * 计费模式: 薪酬_as_you_Go/subscription
+    */
     private String sysAiUsageBillingMode;
-    /** 缓存读取 令牌 */
+    /**
+     * 缓存读取 令牌
+    */
     private Integer sysAiUsageCachedTokens;
-    /** 缓存读取成本 */
+    /**
+     * 缓存读取成本
+    */
     private Double sysAiUsageCachedCost;
-    /** 输入单价(每1M 令牌) */
+    /**
+     * 输入单价(每1M 令牌)
+    */
     @com.baomidou.mybatisplus.annotation.TableField("sys_ai_usage_input_price_per_1m")
     private Double sysAiUsageInputPricePer1M; // sysaiusage输入priceper1m
-    /** 输出单价(每1M 令牌) */
+    /**
+     * 输出单价(每1M 令牌)
+    */
     @com.baomidou.mybatisplus.annotation.TableField("sys_ai_usage_output_price_per_1m")
     private Double sysAiUsageOutputPricePer1M; // sysaiusage输出priceper1m
-    /** 缓存读取单价(每1M 令牌) */
+    /**
+     * 缓存读取单价(每1M 令牌)
+    */
     @com.baomidou.mybatisplus.annotation.TableField("sys_ai_usage_cache_read_price_per_1m")
     private Double sysAiUsageCacheReadPricePer1M; // sysaiusage缓存读取priceper1m
-    /** 服务档位 */
+    /**
+     * 服务档位
+    */
     private String sysAiUsageServiceTier;
-    /** 倍率 */
+    /**
+     * 倍率
+    */
     private Double sysAiUsageRatio;
-    /** 原始费用(未折扣) */
+    /**
+     * 原始费用(未折扣)
+    */
     private Double sysAiUsageOriginalCost;
-    /** 首字延迟(ms) */
+    /**
+     * 首字延迟(ms)
+    */
     private Long sysAiUsageFirstTokenLatency;
-    /** 总耗时(ms) */
+    /**
+     * 总耗时(ms)
+    */
     private Long sysAiUsageTotalLatency;
 
     /**

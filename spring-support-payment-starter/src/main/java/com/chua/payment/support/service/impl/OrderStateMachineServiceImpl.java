@@ -29,13 +29,19 @@ import org.springframework.transaction.annotation.Transactional;
 public class OrderStateMachineServiceImpl implements OrderStateMachineService {
 
     private final StateMachineFactory<OrderState, OrderEvent> stateMachineFactory; // 状态machine工厂
-    /** 薪酬排序映射器 */
+    /**
+     * 薪酬排序映射器
+    */
     private final PaymentOrderMapper paymentOrderMapper;
-    /** 排序状态日志服务 */
+    /**
+     * 排序状态日志服务
+    */
     private final OrderStateLogService orderStateLogService;
 
     @Override
-    /** 创建状态machine */
+    /**
+     * 创建状态machine
+    */
     public void createStateMachine(Long orderId) {
         log.debug("订单状态机初始化完成: orderId={}", orderId);
     }
@@ -108,7 +114,9 @@ public class OrderStateMachineServiceImpl implements OrderStateMachineService {
     }
 
     @Override
-    /** 获取当前状态 */
+    /**
+     * 获取当前状态
+    */
     public OrderState getCurrentState(Long orderId) {
         PaymentOrder order = paymentOrderMapper.selectById(orderId);
         return order != null ? OrderState.valueOf(order.getStatus()) : null;

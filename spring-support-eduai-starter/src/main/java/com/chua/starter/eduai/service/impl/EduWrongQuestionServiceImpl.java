@@ -71,7 +71,9 @@ public class EduWrongQuestionServiceImpl extends ServiceImpl<EduWrongQuestionMap
     }
 
     @Override
-    /** Page查询 */
+    /**
+     * Page查询
+    */
     public PageResult<WrongQuestionVO> pageQuery(WrongQueryDTO query) {
         LambdaQueryWrapper<EduWrongQuestion> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(EduWrongQuestion::getWrongQuestionStudentId, query.getStudentId());
@@ -97,7 +99,9 @@ public class EduWrongQuestionServiceImpl extends ServiceImpl<EduWrongQuestionMap
     }
 
     @Override
-    /** generate评审paper */
+    /**
+     * generate评审paper
+    */
     public List<Long> generateReviewPaper(ReviewPaperDTO dto) {
         LambdaQueryWrapper<EduWrongQuestion> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(EduWrongQuestion::getWrongQuestionStudentId, dto.getStudentId())

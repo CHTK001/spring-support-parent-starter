@@ -34,10 +34,14 @@ import java.util.UUID;
  */
 @Lazy
 public class WatchPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor implements InitializingBean {
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(WatchPointcutAdvisor.class);
     @Override
-    /** Matches */
+    /**
+     * Matches
+    */
     public boolean matches(Method method, Class<?> targetClass) {
         if (Proxy.isProxyClass(targetClass)) {
             return false;
@@ -48,12 +52,16 @@ public class WatchPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor imp
     }
 
     @Override
-    /** 之后属性设置 */
+    /**
+     * 之后属性设置
+    */
     public void afterPropertiesSet() throws Exception {
         this.setAdvice(new MethodInterceptor() {
             @Nullable
             @Override
-            /** 调用 */
+            /**
+             * 调用
+            */
             public Object invoke(@Nonnull MethodInvocation invocation) throws Throwable {
                 Span currentSpan = NewTrackManager.getCurrentSpan();
                 if (null == currentSpan) {

@@ -22,7 +22,9 @@ public class EnvironmentSupport {
      */
     public Environment environment;
 
-    /** 路径matcher */
+    /**
+     * 路径matcher
+    */
     private final PathMatcher pathMatcher = new AntPathMatcher();
 
     /**

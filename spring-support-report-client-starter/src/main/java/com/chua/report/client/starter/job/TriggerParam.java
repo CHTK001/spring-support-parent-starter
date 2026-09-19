@@ -11,42 +11,70 @@ import lombok.Data;
 @Data
 public class TriggerParam {
 
-    /** 任务标识 */
+    /**
+     * 任务标识
+    */
     private int jobId;
 
-    /** 配置文件 */
+    /**
+     * 配置文件
+    */
     private String profile;
 
     // 执行器相关参数
-    /** 执行器处理代码的标识 */
+    /**
+     * 执行器处理代码的标识
+    */
     private String executorHandler;
-    /** 执行器的参数 */
+    /**
+     * 执行器的参数
+    */
     private String executorParams;
-    /** 执行器的阻塞策略 */
+    /**
+     * 执行器的阻塞策略
+    */
     private String executorBlockStrategy;
-    /** 执行器的阻塞策略 */
+    /**
+     * 执行器的阻塞策略
+    */
     private String executorRouter;
-    /** 执行器超时时间 */
+    /**
+     * 执行器超时时间
+    */
     private int executorTimeout;
 
     // 日志相关参数
-    /** 日志标识 */
+    /**
+     * 日志标识
+    */
     private long logId;
-    /** 日志生成时间戳 */
+    /**
+     * 日志生成时间戳
+    */
     private long logDateTime;
 
  // 胶水相关参数
-    /** 胶水类型（例如：脚本、JAR等） */
+    /**
+     * 胶水类型（例如：脚本、JAR等）
+    */
     private String glueType;
-    /** 胶水代码源 */
+    /**
+     * 胶水代码源
+    */
     private String glueSource;
-    /** 胶水最后更新时间 */
+    /**
+     * 胶水最后更新时间
+    */
     private long glueUpdatetime;
 
     // 广播执行相关参数
-    /** 广播执行的当前索引 */
+    /**
+     * 广播执行的当前索引
+    */
     private int broadcastIndex;
-    /** 广播执行的总任务数 */
+    /**
+     * 广播执行的总任务数
+    */
     private int broadcastTotal;
 
     // 手动添加 getter 方法，确保 Lombok 未生效时也能编译通过

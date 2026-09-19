@@ -38,13 +38,17 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class SoftSourceController {
 
-    /** Soft来源服务 */
+    /**
+     * Soft来源服务
+    */
     private final SoftSourceService softSourceService;
 
     @Operation(summary = "软件源列表")
     @GetMapping("/page")
     @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
-    /** Page */
+    /**
+     * Page
+    */
     public ReturnPageResult<SoftSource> page(
             @ParameterObject Query<SoftSource> query,
             @ParameterObject SoftSource request) {

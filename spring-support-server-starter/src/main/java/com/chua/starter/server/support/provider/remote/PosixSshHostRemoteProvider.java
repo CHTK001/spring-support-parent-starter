@@ -40,34 +40,54 @@ import java.util.concurrent.TimeoutException;
 @Component
 public class PosixSshHostRemoteProvider implements HostRemoteProvider {
 
-    /** 覆盖的 POSIX 系系统类型 */
+    /**
+     * 覆盖的 POSIX 系系统类型
+    */
     private static final List<String> OS_TYPES = List.of("LINUX", "MACOS", "FREEBSD", "AIX", "SOLARIS");
 
-    /** 命令执行默认超时（秒）：避免远端命令挂起拖死部署线程 */
+    /**
+     * 命令执行默认超时（秒）：避免远端命令挂起拖死部署线程
+    */
     private static final int DEFAULT_TIMEOUT_SECONDS = 120;
 
-    /** 健康探测最短超时（秒） */
+    /**
+     * 健康探测最短超时（秒）
+    */
     private static final int MIN_HEALTH_TIMEOUT_SECONDS = 10;
 
-    /** HTTP 探测超时上限（秒） */
+    /**
+     * HTTP 探测超时上限（秒）
+    */
     private static final int HTTP_PROBE_MAX_SECONDS = 10;
 
-    /** 默认 SSH 端口 */
+    /**
+     * 默认 SSH 端口
+    */
     private static final int DEFAULT_SSH_PORT = 22;
 
-    /** 连接超时（秒） */
+    /**
+     * 连接超时（秒）
+    */
     private static final int CONNECT_TIMEOUT_SECONDS = 8;
 
-    /** 远端临时目录 */
+    /**
+     * 远端临时目录
+    */
     private static final String TEMP_DIR = "/tmp";
 
-    /** 路径分隔符 */
+    /**
+     * 路径分隔符
+    */
     private static final String SEPARATOR = "/";
 
-    /** SSH 连接缓存管理器 */
+    /**
+     * SSH 连接缓存管理器
+    */
     private final ConnectionManager connectionManager;
 
-    /** 命令执行线程池（用于超时中断） */
+    /**
+     * 命令执行线程池（用于超时中断）
+    */
     private final ExecutorService execPool = Executors.newCachedThreadPool(r -> {
         Thread t = new Thread(r, "host-remote-exec-posix");
         t.setDaemon(true);

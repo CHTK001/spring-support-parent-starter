@@ -42,9 +42,13 @@ import java.io.Serializable;
 @JsonIgnoreProperties({"beanType", "accessSecret", "expire", "password", "salt", "userEnable", "lastArea", "lastLatitude", "lastLongitude"})
 public class UserResult extends UserResume implements Serializable {
 
-    /** 串行版本UID */
+    /**
+     * 串行版本UID
+    */
     private static final long serialVersionUID = 1L;
-    /** _空 */
+    /**
+     * _空
+    */
     private static final UserResult _EMPTY = new UserResult();
 
     /**
@@ -68,7 +72,9 @@ public class UserResult extends UserResume implements Serializable {
      * <p>格式：AT{uid}{randomHex}，前缀AT表示Access Token</p>
      */
     @Schema(description = "访问令牌")
-    /** 令牌 */
+    /**
+     * 令牌
+    */
     private String token;
 
     /**
@@ -77,7 +83,9 @@ public class UserResult extends UserResume implements Serializable {
      * <p>格式：RT{uid}{randomHex}，前缀RT表示Refresh Token</p>
      */
     @Schema(description = "刷新令牌")
-    /** Refresh令牌 */
+    /**
+     * Refresh令牌
+    */
     private String refreshToken;
 
     /**
@@ -85,7 +93,9 @@ public class UserResult extends UserResume implements Serializable {
      * <p>刷新令牌失效的时间戳</p>
      */
     @Schema(description = "刷新令牌过期时间（秒）")
-    /** Refreshexpire时间 */
+    /**
+     * Refreshexpire时间
+    */
     private Long refreshExpireTime;
 
     /**

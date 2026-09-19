@@ -37,10 +37,14 @@ import org.springframework.context.annotation.Bean;
  */
 @EnableConfigurationProperties({LogProperties.class})
 public class LogConfiguration {
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(LogConfiguration.class);
 
-    /** 日志属性 */
+    /**
+     * 日志属性
+    */
     private final LogProperties logProperties;
 
     /**

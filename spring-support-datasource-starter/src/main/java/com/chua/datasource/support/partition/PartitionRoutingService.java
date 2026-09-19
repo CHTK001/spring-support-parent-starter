@@ -19,11 +19,17 @@ import java.util.regex.Pattern;
 @Slf4j
 public class PartitionRoutingService {
 
-    /** Safe_table */
+    /**
+     * Safe_table
+    */
     private static final Pattern SAFE_TABLE = Pattern.compile("^[a-zA-Z0-9_]+$");
-    /** Month_格式化 */
+    /**
+     * Month_格式化
+    */
     private static final DateTimeFormatter MONTH_FORMAT = DateTimeFormatter.ofPattern("yyyyMM");
-    /** Day_格式化 */
+    /**
+     * Day_格式化
+    */
     private static final DateTimeFormatter DAY_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd");
 
     /**

@@ -49,7 +49,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SysMessageController {
 
-    /** SYS消息服务 */
+    /**
+     * SYS消息服务
+    */
     private final SysMessageService sysMessageService;
 
     /**

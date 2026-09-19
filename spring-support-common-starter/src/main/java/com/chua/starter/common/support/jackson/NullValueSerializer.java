@@ -18,10 +18,14 @@ import java.io.Serial;
 public class NullValueSerializer extends StdSerializer<NullValue> {
 
     @Serial
-    /** 串行版本UID */
+    /**
+     * 串行版本UID
+    */
     private static final long serialVersionUID = 1999052150548658808L;
 
-    /** 类标识符 */
+    /**
+     * 类标识符
+    */
     private final String classIdentifier;
 
     /**
@@ -38,7 +42,9 @@ public class NullValueSerializer extends StdSerializer<NullValue> {
     }
 
     @Override
-    /** 序列化 */
+    /**
+     * 序列化
+    */
     public void serialize(NullValue value, JsonGenerator jsonGenerator, SerializerProvider provider)
             throws IOException {
 

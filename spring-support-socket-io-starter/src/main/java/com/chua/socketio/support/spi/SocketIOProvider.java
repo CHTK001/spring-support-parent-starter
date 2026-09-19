@@ -24,11 +24,15 @@ import java.util.List;
 @Spi("socketio")
 public class SocketIOProvider implements SocketProvider {
 
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(SocketIOProvider.class);
 
     @Override
-    /** 获取协议 */
+    /**
+     * 获取协议
+    */
     public SocketProtocol getProtocol() {
         return SocketProtocol.SOCKETIO;
     }
@@ -56,14 +60,18 @@ public class SocketIOProvider implements SocketProvider {
     }
 
     @Override
-    /** 开始 */
+    /**
+     * 开始
+    */
     public void start(SocketSessionTemplate template) {
         log.info("[SocketIO] 启动 Socket.IO 服务");
         template.start();
     }
 
     @Override
-    /** 停止 */
+    /**
+     * 停止
+    */
     public void stop(SocketSessionTemplate template) {
         log.info("[SocketIO] 停止 Socket.IO 服务");
         template.stop();

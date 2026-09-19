@@ -82,19 +82,25 @@ public class HikvisionProvider implements DeviceProvider {
     }
 
     @Override
-    /** 获取供应商 */
+    /**
+     * 获取供应商
+    */
     public String getVendor() {
         return VENDOR;
     }
 
     @Override
-    /** 支持 */
+    /**
+     * 支持
+    */
     public boolean support(DeviceConnectInfo info) {
         return VENDOR.equalsIgnoreCase(info.getVendor());
     }
 
     @Override
-    /** 连接 */
+    /**
+     * 连接
+    */
     public DeviceSession connect(DeviceConnectInfo info) {
         log.info("海康设备连接: authType={}, platformType={}, deviceSerial={}",
                 info.getAuthType(), info.getPlatformType(), info.getDeviceSerial());
@@ -183,7 +189,9 @@ public class HikvisionProvider implements DeviceProvider {
     }
 
     @Override
-    /** 获取组织 */
+    /**
+     * 获取组织
+    */
     public List<OrganizationNode> fetchOrganizations() {
  // 组织同步需在已连接的 打开api 会话上下文中执行，由业务层调用 会话 后再行实现。
         return List.of();

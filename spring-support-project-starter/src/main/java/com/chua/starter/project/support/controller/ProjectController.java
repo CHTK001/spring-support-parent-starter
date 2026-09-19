@@ -43,22 +43,34 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class ProjectController {
 
-    /** 项目服务 */
+    /**
+     * 项目服务
+    */
     private final ProjectService projectService;
 
-    /** 部署操作服务 */
+    /**
+     * 部署操作服务
+    */
     private final DeployService deployService;
 
-    /** 实时日志流服务 */
+    /**
+     * 实时日志流服务
+    */
     private final ProjectLogStreamService logStreamService;
 
-    /** AI 脚本生成服务 */
+    /**
+     * AI 脚本生成服务
+    */
     private final ProjectAiScriptService aiScriptService;
 
-    /** 守护进程服务 */
+    /**
+     * 守护进程服务
+    */
     private final WatchdogService watchdogService;
 
-    /** 指标采集服务 */
+    /**
+     * 指标采集服务
+    */
     private final ProjectMetricService metricService;
 
     /**

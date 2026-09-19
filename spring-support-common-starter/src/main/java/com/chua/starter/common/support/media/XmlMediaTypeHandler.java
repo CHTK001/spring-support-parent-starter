@@ -24,7 +24,9 @@ import java.util.Map;
 @Spi({"xml"})
 public class XmlMediaTypeHandler implements MediaTypeHandler {
     @Override
-    /** asbytearray */
+    /**
+     * asbytearray
+    */
     public byte[] asByteArray(Object o) {
         /**
          * 尝试。

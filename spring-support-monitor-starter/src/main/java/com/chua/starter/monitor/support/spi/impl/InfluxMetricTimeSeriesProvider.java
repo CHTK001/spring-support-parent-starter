@@ -40,13 +40,19 @@ import java.util.concurrent.TimeUnit;
 @ConditionalOnProperty(prefix = "monitor.timeseries", name = "engine", havingValue = "influxdb", matchIfMissing = true)
 public class InfluxMetricTimeSeriesProvider implements MetricTimeSeriesProvider {
 
-    /** SPI 扩展名 */
+    /**
+     * SPI 扩展名
+    */
     private static final String SPI_NAME = "influxdb";
 
-    /** 单次曲线返回点数上限（防止超大响应） */
+    /**
+     * 单次曲线返回点数上限（防止超大响应）
+    */
     private static final int MAX_POINTS = 1440;
 
-    /** 数据源名称（引擎内注册标识） */
+    /**
+     * 数据源名称（引擎内注册标识）
+    */
     private static final String DATA_SOURCE_NAME = "monitor";
 
     /**
@@ -54,10 +60,14 @@ public class InfluxMetricTimeSeriesProvider implements MetricTimeSeriesProvider 
      */
     private final InfluxDbEngine influxDbEngine;
 
-    /** influxdb 客户端（InfluxDB v1 兼容端点直连） */
+    /**
+     * influxdb 客户端（InfluxDB v1 兼容端点直连）
+    */
     private final InfluxDB influxClient;
 
-    /** 时序配置（提供库名等） */
+    /**
+     * 时序配置（提供库名等）
+    */
     private final MonitorTimeseriesProperties properties;
 
     /**

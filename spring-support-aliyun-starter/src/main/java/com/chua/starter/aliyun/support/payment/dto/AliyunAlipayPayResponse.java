@@ -9,15 +9,25 @@ import lombok.Data;
  */
 @Data
 public class AliyunAlipayPayResponse {
-    /** 成功 */
+    /**
+     * 成功
+    */
     private boolean success;
-    /** 请求体 */
+    /**
+     * 请求体
+    */
     private String body;
-    /** 贸易no */
+    /**
+     * 贸易no
+    */
     private String tradeNo;
-    /** 消息 */
+    /**
+     * 消息
+    */
     private String message;
-    /** RAW响应 */
+    /**
+     * RAW响应
+    */
     private String rawResponse;
 }
 

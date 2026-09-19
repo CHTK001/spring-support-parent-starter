@@ -8,16 +8,24 @@ package com.chua.starter.server.support.enums;
  */
 public enum ProtocolType {
 
-    /** SSH 终端 */
+    /**
+     * SSH 终端
+    */
     SSH,
 
-    /** SFTP 文件管理（REST 实现，不经 guacd） */
+    /**
+     * SFTP 文件管理（REST 实现，不经 guacd）
+    */
     SFTP,
 
-    /** 远程桌面 */
+    /**
+     * 远程桌面
+    */
     RDP,
 
-    /** VNC 桌面 */
+    /**
+     * VNC 桌面
+    */
     VNC;
 
     /**

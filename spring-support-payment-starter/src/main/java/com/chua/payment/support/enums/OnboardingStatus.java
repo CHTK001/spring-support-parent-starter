@@ -26,9 +26,13 @@ public enum OnboardingStatus {
      */
     COMPLETED("COMPLETED", "已开通");
 
-    /** 代码 */
+    /**
+     * 代码
+    */
     private final String code;
-    /** 描述 */
+    /**
+     * 描述
+    */
     private final String description;
 
     /**

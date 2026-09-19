@@ -41,7 +41,9 @@ public class JobFileAppender {
      *
      */
     private static String logBasePath = "/data/applogs/job/jobhandler";
-    /** 胶水src路径 */
+    /**
+     * 胶水src路径
+    */
     private static String glueSrcPath = logBasePath.concat("/gluesource");
     /**
      * 初始化记录日志路径

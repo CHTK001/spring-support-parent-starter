@@ -25,7 +25,9 @@ import java.util.stream.Collectors;
 @Slf4j
 public class SseSocketSessionTemplate implements SocketSessionTemplate {
 
-    /** 对象_映射器 */
+    /**
+     * 对象_映射器
+    */
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     /**
@@ -45,7 +47,9 @@ public class SseSocketSessionTemplate implements SocketSessionTemplate {
      */
     private final Map<String, String> userSessionMap = new ConcurrentHashMap<>();
 
-    /** 创建 sseSocket会话template 实例 */
+    /**
+     * 创建 sseSocket会话template 实例
+    */
     public SseSocketSessionTemplate() {
         /**
          * this。
@@ -120,7 +124,9 @@ public class SseSocketSessionTemplate implements SocketSessionTemplate {
     }
 
     @Override
-    /** 保存 */
+    /**
+     * 保存
+    */
     public SocketSession save(String clientId, SocketSession session) {
         if (session instanceof SseSocketSession sseSession) {
             sessions.put(clientId, sseSession);
@@ -130,7 +136,9 @@ public class SseSocketSessionTemplate implements SocketSessionTemplate {
     }
 
     @Override
-    /** 移除 */
+    /**
+     * 移除
+    */
     public void remove(String clientId, SocketSession session) {
         SseSocketSession removed = sessions.remove(clientId);
         if (removed != null) {
@@ -139,13 +147,17 @@ public class SseSocketSessionTemplate implements SocketSessionTemplate {
     }
 
     @Override
-    /** 获取会话 */
+    /**
+     * 获取会话
+    */
     public SocketSession getSession(String sessionId) {
         return sessions.get(sessionId);
     }
 
     @Override
-    /** 发送 */
+    /**
+     * 发送
+    */
     public void send(String sessionId, String event, String msg) {
         SseSocketSession session = sessions.get(sessionId);
         if (session != null && session.isConnected()) {
@@ -154,7 +166,9 @@ public class SseSocketSessionTemplate implements SocketSessionTemplate {
     }
 
     @Override
-    /** Broadcast */
+    /**
+     * Broadcast
+    */
     public void broadcast(String event, String msg) {
         List<String> failedClients = new ArrayList<>();
 
@@ -179,7 +193,9 @@ public class SseSocketSessionTemplate implements SocketSessionTemplate {
     }
 
     @Override
-    /** 发送转为用户 */
+    /**
+     * 发送转为用户
+    */
     public void sendToUser(String userId, String event, String msg) {
         String clientId = userSessionMap.get(userId);
         if (clientId != null) {
@@ -194,7 +210,9 @@ public class SseSocketSessionTemplate implements SocketSessionTemplate {
     }
 
     @Override
-    /** 获取online会话 */
+    /**
+     * 获取online会话
+    */
     public List<SocketSession> getOnlineSessions() {
         return sessions.values().stream()
                 .filter(SocketSession::isConnected)
@@ -202,14 +220,18 @@ public class SseSocketSessionTemplate implements SocketSessionTemplate {
     }
 
     @Override
-    /** 获取online会话 */
+    /**
+     * 获取online会话
+    */
     public List<SocketSession> getOnlineSession(String type, String roomId) {
         // SSE 不支持房间概念，返回所有在线会话
         return getOnlineSessions();
     }
 
     @Override
-    /** 获取online用户 */
+    /**
+     * 获取online用户
+    */
     public List<SocketUser> getOnlineUsers(String type) {
         return sessions.values().stream()
                 .filter(SocketSession::isConnected)
@@ -220,7 +242,9 @@ public class SseSocketSessionTemplate implements SocketSessionTemplate {
     }
 
     @Override
-    /** 获取Online计算数量 */
+    /**
+     * 获取Online计算数量
+    */
     public int getOnlineCount() {
         return (int) sessions.values().stream()
                 .filter(SocketSession::isConnected)
@@ -228,13 +252,17 @@ public class SseSocketSessionTemplate implements SocketSessionTemplate {
     }
 
     @Override
-    /** 开始 */
+    /**
+     * 开始
+    */
     public void start() {
         log.info("[SSE] Socket 服务启动");
     }
 
     @Override
-    /** 停止 */
+    /**
+     * 停止
+    */
     public void stop() {
         log.info("[SSE] Socket 服务停止");
         sessions.values().forEach(SseSocketSession::disconnect);

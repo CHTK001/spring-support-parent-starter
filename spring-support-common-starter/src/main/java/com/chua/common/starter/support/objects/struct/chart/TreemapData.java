@@ -13,7 +13,9 @@ import java.util.List;
 public class TreemapData implements Serializable {
     private static final long serialVersionUID = 1L; // 串行版本uid
 
-    /** 矩形块集合 */
+    /**
+     * 矩形块集合
+    */
     private List<Block> blocks = new ArrayList<>();
 
     /**
@@ -40,11 +42,17 @@ public class TreemapData implements Serializable {
      */
     public static class Block implements Serializable {
         private static final long serialVersionUID = 1L; // 串行版本uid
-        /** 名称 */
+        /**
+         * 名称
+        */
         private String name;
-        /** 数值 */
+        /**
+         * 数值
+        */
         private Number value;
-        /** 路径 */
+        /**
+         * 路径
+        */
         private String path;
 
         /**

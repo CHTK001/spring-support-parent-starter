@@ -10,19 +10,29 @@ import lombok.Data;
 @Data
 public class OrderPayDTO {
 
-    /** 操作符 */
+    /**
+     * 操作符
+    */
     private String operator;
 
-    /** payeropenid */
+    /**
+     * payeropenid
+    */
     private String payerOpenId;
 
-    /** 客户端IP */
+    /**
+     * 客户端IP
+    */
     private String clientIp;
 
-    /** deviceid */
+    /**
+     * deviceid
+    */
     private String deviceId;
 
-    /** 用户Agent */
+    /**
+     * 用户Agent
+    */
     private String userAgent;
 }
 

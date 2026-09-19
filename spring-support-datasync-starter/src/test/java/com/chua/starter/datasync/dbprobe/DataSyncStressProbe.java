@@ -28,7 +28,9 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public final class DataSyncStressProbe {
 
-    /** Work_dir */
+    /**
+     * Work_dir
+    */
     private static final Path WORK_DIR = Paths.get("target/stress-full");
 
     /**
@@ -127,9 +129,13 @@ public final class DataSyncStressProbe {
     }
 
     static final class CountSink implements DataSyncAgentSink {
-        /** sinkid */
+        /**
+         * sinkid
+        */
         private final String sinkId;
-        /** 期望 */
+        /**
+         * 期望
+        */
         private final long expected;
         final AtomicLong count = new AtomicLong(0);
         final AtomicLong batches = new AtomicLong(0);
@@ -145,13 +151,17 @@ public final class DataSyncStressProbe {
         }
 
         @Override
-        /** sinkid */
+        /**
+         * sinkid
+        */
         public String sinkId() {
             return sinkId;
         }
 
         @Override
-        /** 写入 */
+        /**
+         * 写入
+        */
         public void write(Flux<Map<String, Object>> rows) {
             long t0 = System.currentTimeMillis();
             long b = batches.incrementAndGet();
@@ -172,7 +182,9 @@ public final class DataSyncStressProbe {
         }
 
         @Override
-        /** 关闭 */
+        /**
+         * 关闭
+        */
         public void close() {
         }
     }

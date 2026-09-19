@@ -25,7 +25,9 @@ public class SpringBeanUtils {
     private SpringBeanUtils() {
     }
 
-    /** Application上下文 */
+    /**
+     * Application上下文
+    */
     private static ApplicationContext applicationContext;
 
     /**

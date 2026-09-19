@@ -30,10 +30,14 @@ public class Project {
     public Project() {
     }
 
-    /** 密钥 */
+    /**
+     * 密钥
+    */
     public static final String KEY = "oo00OOOO00ooll11";
 
-    /** 实例 */
+    /**
+     * 实例
+    */
     private static final Project INSTANCE = new Project();
     /**
      * 应用名称

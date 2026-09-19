@@ -31,7 +31,9 @@ import java.util.Map;
 @Slf4j
 public class MailboxConnectionController {
 
-    /** 邮箱 SSE 推送服务 */
+    /**
+     * 邮箱 SSE 推送服务
+    */
     private final MailboxSseService mailboxSseService;
 
     /**

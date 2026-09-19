@@ -33,7 +33,9 @@ import java.util.List;
 @Tag(name = "错题库管理")
 public class EduWrongQuestionController {
 
-    /** Wrong服务 */
+    /**
+     * Wrong服务
+    */
     private final IEduWrongQuestionService wrongService;
 
     /**

@@ -47,25 +47,39 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class TerminalWebSocketHandler extends TextWebSocketHandler {
 
-    /** 单帧文本上限（guacd 指令可能较大，如全屏图像帧） */
+    /**
+     * 单帧文本上限（guacd 指令可能较大，如全屏图像帧）
+    */
     private static final int MAX_TEXT_BUFFER = 8 * 1024 * 1024;
 
-    /** 主机服务（凭据解析） */
+    /**
+     * 主机服务（凭据解析）
+    */
     private final ServerHostService serverHostService;
 
-    /** 会话审计服务 */
+    /**
+     * 会话审计服务
+    */
     private final TerminalSessionService terminalSessionService;
 
-    /** guacd 连接工厂 */
+    /**
+     * guacd 连接工厂
+    */
     private final GuacdConnectionFactory connectionFactory;
 
-    /** 远控短令牌服务（令牌 模式反解连接参数） */
+    /**
+     * 远控短令牌服务（令牌 模式反解连接参数）
+    */
     private final RemoteTokenService remoteTokenService;
 
-    /** 会话注册表 */
+    /**
+     * 会话注册表
+    */
     private final GuacdSessionRegistry sessionRegistry;
 
-    /** 服务属性（空闲超时等） */
+    /**
+     * 服务属性（空闲超时等）
+    */
     private final ServerProperties properties;
 
     /**

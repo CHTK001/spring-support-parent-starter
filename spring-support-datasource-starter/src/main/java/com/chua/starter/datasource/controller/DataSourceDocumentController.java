@@ -47,9 +47,13 @@ import java.util.Map;
 @Slf4j
 public class DataSourceDocumentController {
 
-    /** 服务 */
+    /**
+     * 服务
+    */
     private final DataSourceDocumentService service;
-    /** 属性 */
+    /**
+     * 属性
+    */
     private final DocumentProperties properties;
 
     /**
@@ -345,7 +349,9 @@ public class DataSourceDocumentController {
         writeJson(response, payload);
     }
 
-    /** ensure图计算服务 */
+    /**
+     * ensure图计算服务
+    */
     private void ensureGraphService() {
         if (graphService == null) {
             throw new IllegalStateException(

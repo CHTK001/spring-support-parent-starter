@@ -2,19 +2,33 @@ package com.chua.starter.spider.dto;
 
 import java.time.LocalDateTime;
 
-/** @作者 CH */
+/**
+ * @作者 CH
+*/
 public class FlowNodeLogVO {
-    /** 流节点密钥 */
+    /**
+     * 流节点密钥
+    */
     private String flowNodeKey;
-    /** 流节点类型 */
+    /**
+     * 流节点类型
+    */
     private String flowNodeType;
-    /** 流节点状态 */
+    /**
+     * 流节点状态
+    */
     private String flowNodeStatus;
-    /** 流节点costms */
+    /**
+     * 流节点costms
+    */
     private Long flowNodeCostMs;
-    /** 创建时间 */
+    /**
+     * 创建时间
+    */
     private LocalDateTime createTime;
-    /** 流节点消息 */
+    /**
+     * 流节点消息
+    */
     private String flowNodeMessage;
 
     /**

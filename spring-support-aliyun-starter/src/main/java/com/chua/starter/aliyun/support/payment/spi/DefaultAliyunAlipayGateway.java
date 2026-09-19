@@ -46,13 +46,19 @@ import java.util.Map;
 @Spi({"default", "alipay"})
 public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
 
-    /** 客户端工厂 */
+    /**
+     * 客户端工厂
+    */
     private final AliyunAlipayClientFactory clientFactory = new AliyunAlipayClientFactory();
-    /** Objectmapper */
+    /**
+     * Objectmapper
+    */
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
-    /** page薪酬 */
+    /**
+     * page薪酬
+    */
     public AliyunAlipayPayResponse pagePay(AliyunAlipayProperties properties, AliyunAlipayPayRequest request) {
         try {
             AlipayTradePagePayRequest payRequest = new AlipayTradePagePayRequest();
@@ -80,7 +86,9 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
     }
 
     @Override
-    /** wap薪酬 */
+    /**
+     * wap薪酬
+    */
     public AliyunAlipayPayResponse wapPay(AliyunAlipayProperties properties, AliyunAlipayPayRequest request) {
         try {
             AlipayTradeWapPayRequest payRequest = new AlipayTradeWapPayRequest();
@@ -108,7 +116,9 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
     }
 
     @Override
-    /** app薪酬 */
+    /**
+     * app薪酬
+    */
     public AliyunAlipayPayResponse appPay(AliyunAlipayProperties properties, AliyunAlipayPayRequest request) {
         try {
             AlipayTradeAppPayRequest payRequest = new AlipayTradeAppPayRequest();
@@ -135,7 +145,9 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
     }
 
     @Override
-    /** 查询订单 */
+    /**
+     * 查询订单
+    */
     public AliyunAlipayTradeQueryResponse queryOrder(AliyunAlipayProperties properties, String orderNo) {
         try {
             AlipayTradeQueryRequest queryRequest = new AlipayTradeQueryRequest();
@@ -162,7 +174,9 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
     }
 
     @Override
-    /** 关闭订单 */
+    /**
+     * 关闭订单
+    */
     public boolean closeOrder(AliyunAlipayProperties properties, String orderNo) {
         try {
             AlipayTradeCloseRequest closeRequest = new AlipayTradeCloseRequest();
@@ -180,7 +194,9 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
     }
 
     @Override
-    /** 退税 */
+    /**
+     * 退税
+    */
     public AliyunAlipayRefundResponse refund(AliyunAlipayProperties properties, AliyunAlipayRefundRequest request) {
         try {
             AlipayTradeRefundRequest refundRequest = new AlipayTradeRefundRequest();
@@ -213,7 +229,9 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
     }
 
     @Override
-    /** 查询退税 */
+    /**
+     * 查询退税
+    */
     public AliyunAlipayRefundResponse queryRefund(AliyunAlipayProperties properties, AliyunAlipayRefundRequest request) {
         try {
             AlipayTradeFastpayRefundQueryRequest queryRequest = new AlipayTradeFastpayRefundQueryRequest();
@@ -300,7 +318,9 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
     }
 
     @Override
-    /** 调动 */
+    /**
+     * 调动
+    */
     public AliyunAlipayTransferResponse transfer(AliyunAlipayProperties properties, AliyunAlipayTransferRequest request) {
         try {
             AlipayFundTransUniTransferRequest transferRequest = new AlipayFundTransUniTransferRequest();

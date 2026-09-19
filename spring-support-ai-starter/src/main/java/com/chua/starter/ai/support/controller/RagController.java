@@ -56,10 +56,14 @@ import java.util.Set;
 @Tag(name = "RAG 知识库", description = "RAG 文档管理、问答和配置接口")
 public class RagController {
 
-    /** 全局 RAG 客户端管理器 */
+    /**
+     * 全局 RAG 客户端管理器
+    */
     private final RagClientManager ragClientManager;
 
-    /** RAG 配置属性 */
+    /**
+     * RAG 配置属性
+    */
     private final RagProperties ragProperties;
 
     /**

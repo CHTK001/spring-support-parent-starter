@@ -166,7 +166,9 @@ public class SocketConfiguration {
     @Slf4j
     public static class SocketLifecycle implements InitializingBean, DisposableBean {
         private final Map<String, SocketSessionTemplate> templates; // templates
-        /** 属性 */
+        /**
+         * 属性
+        */
         private final SocketProperties properties;
 
         /**
@@ -182,7 +184,9 @@ public class SocketConfiguration {
         }
 
         @Override
-        /** 之后属性设置 */
+        /**
+         * 之后属性设置
+        */
         public void afterPropertiesSet() throws Exception {
             if (!properties.isAutoStart()) {
                 log.info("[Socket] auto-start=false，已跳过 Socket 服务自动启动");
@@ -204,7 +208,9 @@ public class SocketConfiguration {
         }
 
         @Override
-        /** 销毁 */
+        /**
+         * 销毁
+        */
         public void destroy() throws Exception {
             for (Map.Entry<String, SocketSessionTemplate> entry : templates.entrySet()) {
                 log.info("[Socket] 停止 {} 服务", entry.getKey());

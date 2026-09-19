@@ -12,19 +12,29 @@ import java.math.BigDecimal;
 @Data
 public class OrderOperateDTO {
 
-    /** 操作符 */
+    /**
+     * 操作符
+    */
     private String operator;
 
-    /** 评论 */
+    /**
+     * 评论
+    */
     private String remark;
 
-    /** Paidamount */
+    /**
+     * Paidamount
+    */
     private BigDecimal paidAmount;
 
-    /** Refundamount */
+    /**
+     * Refundamount
+    */
     private BigDecimal refundAmount;
 
-    /** Thirdparty排序NO */
+    /**
+     * Thirdparty排序NO
+    */
     private String thirdPartyOrderNo;
 }
 

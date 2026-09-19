@@ -25,10 +25,14 @@ import org.springframework.web.socket.server.support.DefaultHandshakeHandler;
 @EnableWebSocket
 public class TerminalWebSocketConfig implements WebSocketConfigurer {
 
-    /** 终端处理器 */
+    /**
+     * 终端处理器
+    */
     private final TerminalWebSocketHandler terminalWebSocketHandler;
 
-    /** SSH 直连处理器 */
+    /**
+     * SSH 直连处理器
+    */
     private final SshDirectWebSocketHandler sshDirectWebSocketHandler;
 
     /**

@@ -41,7 +41,9 @@ public class CacheCustomAnnotationParser implements CacheAnnotationParser, Seria
     private static final String DEFAULT_KEY_GENERATOR = "tenantedKeyGenerator";
 
     @Override
-    /** 是否candidate类 */
+    /**
+     * 是否candidate类
+    */
     public boolean isCandidateClass(Class<?> targetClass) {
         return AnnotationUtils.isCandidateClass(targetClass, CACHE_OPERATION_ANNOTATIONS);
     }
@@ -307,22 +309,32 @@ public class CacheCustomAnnotationParser implements CacheAnnotationParser, Seria
         private final Class<?> target; // Target
 
         @Nullable
-        /** 缓存名称 */
+        /**
+         * 缓存名称
+        */
         private String[] cacheNames;
 
         @Nullable
-        /** 密钥生成器 */
+        /**
+         * 密钥生成器
+        */
         private String keyGenerator;
 
         @Nullable
-        /** 缓存管理器 */
+        /**
+         * 缓存管理器
+        */
         private String cacheManager;
 
         @Nullable
-        /** 缓存解析器 */
+        /**
+         * 缓存解析器
+        */
         private String cacheResolver;
 
-        /** Initialized */
+        /**
+         * Initialized
+        */
         private boolean initialized = false;
 
         /**

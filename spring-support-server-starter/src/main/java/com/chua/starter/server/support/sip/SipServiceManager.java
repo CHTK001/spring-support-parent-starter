@@ -31,20 +31,34 @@ public class SipServiceManager {
 
     private static final Logger log = LoggerFactory.getLogger(SipServiceManager.class);
 
-    /** 服务运行标记 */
+    /**
+     * 服务运行标记
+    */
     private final AtomicBoolean running = new AtomicBoolean(false);
-    /** 控制端口监听 */
+    /**
+     * 控制端口监听
+    */
     private ServerSocket controlSocket;
-    /** 控制连接接收线程 */
+    /**
+     * 控制连接接收线程
+    */
     private Thread acceptThread;
 
-    /** 已注册 Provider：providerId -> 注册信息 */
+    /**
+     * 已注册 Provider：providerId -> 注册信息
+    */
     private final Map<String, ProviderInfo> providers = new ConcurrentHashMap<>();
-    /** 等待桥接的隧道：channelId -> 隧道上下文 */
+    /**
+     * 等待桥接的隧道：channelId -> 隧道上下文
+    */
     private final Map<Integer, PendingTunnel> pendingTunnels = new ConcurrentHashMap<>();
-    /** 通道号生成器 */
+    /**
+     * 通道号生成器
+    */
     private final AtomicInteger channelIdGen = new AtomicInteger(0);
-    /** 工作线程池（全部为守护线程） */
+    /**
+     * 工作线程池（全部为守护线程）
+    */
     private final ExecutorService pool = Executors.newCachedThreadPool(r -> {
         Thread t = new Thread(r, "sip-worker");
         t.setDaemon(true);
@@ -240,11 +254,17 @@ public class SipServiceManager {
      * Provider 注册信息：控制连接、控制输出流、可访问服务列表（service:port 逗号分隔）
      */
     private static class ProviderInfo {
-        /** 控制连接 */
+        /**
+         * 控制连接
+        */
         Socket socket;
-        /** 控制连接输出流（自动 flush） */
+        /**
+         * 控制连接输出流（自动 flush）
+        */
         java.io.PrintWriter out;
-        /** 服务列表，形如 rdp:3389,ssh:22 */
+        /**
+         * 服务列表，形如 rdp:3389,ssh:22
+        */
         String services;
 
         /**
@@ -265,13 +285,21 @@ public class SipServiceManager {
      * 待桥接隧道：visit 与 provider 两端数据连接就绪后开始双向转发
      */
     private class PendingTunnel {
-        /** 通道号 */
+        /**
+         * 通道号
+        */
         int channelId;
-        /** 数据端口监听 */
+        /**
+         * 数据端口监听
+        */
         ServerSocket dataSocket;
-        /** 访客侧数据连接 */
+        /**
+         * 访客侧数据连接
+        */
         java.net.Socket visitSocket;
-        /** Provider 侧数据连接 */
+        /**
+         * Provider 侧数据连接
+        */
         java.net.Socket providerSocket;
 
         /**

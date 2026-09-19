@@ -17,21 +17,37 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @AllArgsConstructor
 public class WalletTransferDTO {
-    /** merchantid */
+    /**
+     * merchantid
+    */
     private Long merchantId;
-    /** 从用户标识 */
+    /**
+     * 从用户标识
+    */
     private Long fromUserId;
-    /** 转为用户标识 */
+    /**
+     * 转为用户标识
+    */
     private Long toUserId;
-    /** 调动no */
+    /**
+     * 调动no
+    */
     private String transferNo;
-    /** 通知url */
+    /**
+     * 通知url
+    */
     private String notifyUrl;
-    /** Amount */
+    /**
+     * Amount
+    */
     private BigDecimal amount;
-    /** 操作符 */
+    /**
+     * 操作符
+    */
     private String operator;
-    /** 评论 */
+    /**
+     * 评论
+    */
     private String remark;
 }
 

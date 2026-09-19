@@ -29,7 +29,9 @@ import java.util.Map;
 @RequestMapping("/api/remote/agents")
 public class RemoteAgentsController {
 
-    /** 配置文件路径（应用目录 远程-智能体.json） */
+    /**
+     * 配置文件路径（应用目录 远程-智能体.json）
+    */
     private static final Path CONFIG_FILE = Paths.get(System.getProperty("user.dir"), "remote-agents.json");
 
     private final ObjectMapper objectMapper = new ObjectMapper(); // 对象映射器

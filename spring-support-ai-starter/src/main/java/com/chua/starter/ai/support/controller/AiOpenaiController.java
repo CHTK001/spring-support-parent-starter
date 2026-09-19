@@ -63,10 +63,14 @@ public class AiOpenaiController extends BaseAiController {
      */
     private final AiChatFacadeService aiChatFacadeService;
 
-    /** AI 模型指标富化服务 */
+    /**
+     * AI 模型指标富化服务
+    */
     private final com.chua.starter.ai.support.service.AiModelMetricsEnrichmentService modelMetricsEnrichmentService;
 
-    /** AI 模型能力目录（按能力类目返回模型 标识 列表） */
+    /**
+     * AI 模型能力目录（按能力类目返回模型 标识 列表）
+    */
     private final AiModelCatalogService aiModelCatalogService;
 
     /**

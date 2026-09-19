@@ -17,11 +17,15 @@ import java.io.IOException;
 @Getter
 public class ScanExcludeFilter implements TypeFilter {
 
-    /** Excluded数量 */
+    /**
+     * Excluded数量
+    */
     private int excludedCount;
 
     @Override
-    /** 匹配 */
+    /**
+     * 匹配
+    */
     public boolean match(MetadataReader metadataReader, MetadataReaderFactory metadataReaderFactory) throws IOException {
         String className = metadataReader.getClassMetadata().getClassName();
         boolean excluded = ServicePackagesHolder.getInstance().isClassScanned(className);

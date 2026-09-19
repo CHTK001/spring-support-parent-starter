@@ -13,7 +13,9 @@ package com.chua.starter.server.support.spi;
  */
 public enum HostHealthType {
 
-    /** 端口监听探测：target 为端口号 */
+    /**
+     * 端口监听探测：target 为端口号
+    */
     PORT("PORT", "端口"),
 
     /**
@@ -21,13 +23,19 @@ public enum HostHealthType {
      */
     HTTP("HTTP", "HTTP"),
 
-    /** 进程探测：target 为进程名或命令行关键字 */
+    /**
+     * 进程探测：target 为进程名或命令行关键字
+    */
     PROCESS("PROCESS", "进程");
 
-    /** 编码 */
+    /**
+     * 编码
+    */
     private final String code;
 
-    /** 中文描述 */
+    /**
+     * 中文描述
+    */
     private final String desc;
 
     /**

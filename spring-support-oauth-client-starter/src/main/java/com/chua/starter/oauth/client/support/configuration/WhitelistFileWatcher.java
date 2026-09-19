@@ -51,7 +51,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @RequiredArgsConstructor
 public class WhitelistFileWatcher {
 
-    /** 认证客户端属性 */
+    /**
+     * 认证客户端属性
+    */
     private final AuthClientProperties authClientProperties;
 
     /**
@@ -63,9 +65,13 @@ public class WhitelistFileWatcher {
      * 文件监听线程
      */
     private ExecutorService watchExecutor;
-    /** Watch服务 */
+    /**
+     * Watch服务
+    */
     private WatchService watchService;
-    /** Running */
+    /**
+     * Running
+    */
     private final AtomicBoolean running = new AtomicBoolean(false);
 
     /**

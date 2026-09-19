@@ -39,22 +39,30 @@ import java.util.Set;
 @Spi("static")
 public class StaticProtocolExecutor implements ProtocolExecutor {
 
-    /** 认证客户端属性 */
+    /**
+     * 认证客户端属性
+    */
     private final AuthClientProperties authClientProperties;
 
-    /** 创建 静态协议执行器 实例 */
+    /**
+     * 创建 静态协议执行器 实例
+    */
     public StaticProtocolExecutor() {
         this.authClientProperties = OauthClientRuntimeContext.getAuthClientProperties();
     }
 
     @Override
-    /** 获取access令牌 */
+    /**
+     * 获取access令牌
+    */
     public LoginAuthResult getAccessToken(String username, String password, AuthType authType, Map<String, Object> ext) {
         return newLoginAuthResult(username, password);
     }
 
     @Override
-    /** Logout */
+    /**
+     * Logout
+    */
     public LoginAuthResult logout(String uid, LogoutType logoutType, UserResult userResult) {
         Cookie cookie = CookieUtil.get(RequestUtils.getRequest(), "x-oauth-cookie");
         if (null != cookie) {

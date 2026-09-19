@@ -36,13 +36,19 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 public class ServerTaskScheduler {
 
-    /** 时间轮槽位数 */
+    /**
+     * 时间轮槽位数
+    */
     private static final int WHEEL_SLOTS = 512;
 
-    /** 时间轮 tick 间隔 */
+    /**
+     * 时间轮 tick 间隔
+    */
     private static final long TICK_MILLIS = 500L;
 
-    /** 最小调度间隔（秒） */
+    /**
+     * 最小调度间隔（秒）
+    */
     private static final int MIN_INTERVAL_SECONDS = 5;
 
     /**
@@ -50,40 +56,64 @@ public class ServerTaskScheduler {
      */
     private static final int HOST_SCAN_INTERVAL_SECONDS = 5;
 
-    /** 系统配置服务 */
+    /**
+     * 系统配置服务
+    */
     private final ServerConfigService configService;
 
-    /** 在离线检测器 */
+    /**
+     * 在离线检测器
+    */
     private final HostOnlineScheduler onlineScheduler;
 
-    /** 计划任务调度器 */
+    /**
+     * 计划任务调度器
+    */
     private final ExecJobScheduler execJobScheduler;
 
-    /** 会话空闲清理器 */
+    /**
+     * 会话空闲清理器
+    */
     private final SessionIdleSweeper sessionIdleSweeper;
 
-    /** 连接缓存管理器 */
+    /**
+     * 连接缓存管理器
+    */
     private final ConnectionManager connectionManager;
 
-    /** 时间轮实例 */
+    /**
+     * 时间轮实例
+    */
     private Timer timer;
 
-    /** 在离线检测定时任务 */
+    /**
+     * 在离线检测定时任务
+    */
     private volatile TimerTask onlineTask;
 
-    /** 采集定时任务 */
+    /**
+     * 采集定时任务
+    */
     private volatile TimerTask collectTask;
 
-    /** 计划任务扫描定时任务 */
+    /**
+     * 计划任务扫描定时任务
+    */
     private volatile TimerTask execTask;
 
-    /** 会话清理定时任务 */
+    /**
+     * 会话清理定时任务
+    */
     private volatile TimerTask sessionTask;
 
-    /** 连接健康检查定时任务 */
+    /**
+     * 连接健康检查定时任务
+    */
     private volatile TimerTask connectionTask;
 
-    /** 延迟检测定时任务 */
+    /**
+     * 延迟检测定时任务
+    */
     private volatile TimerTask delayTask;
 
     /**

@@ -20,40 +20,72 @@ import java.util.Map;
 @Accessors(chain = true)
 public class AssetDetailView {
 
-    /** 资产 标识（对应主机台账 ms服务端主机.标识） */
+    /**
+     * 资产 标识（对应主机台账 ms服务端主机.标识）
+    */
     private Long hostId;
-    /** 资产名称 */
+    /**
+     * 资产名称
+    */
     private String name;
-    /** 资产 IP/域名 */
+    /**
+     * 资产 IP/域名
+    */
     private String address;
-    /** 资产 SSH/默认端口 */
+    /**
+     * 资产 SSH/默认端口
+    */
     private Integer port;
-    /** 操作系统类型 */
+    /**
+     * 操作系统类型
+    */
     private String osType;
-    /** 在线状态：1=在线 0=离线 */
+    /**
+     * 在线状态：1=在线 0=离线
+    */
     private Integer online;
-    /** 在线时间 */
+    /**
+     * 在线时间
+    */
     private String onlineTime;
 
-    /** 采集通道：是否开启采集 */
+    /**
+     * 采集通道：是否开启采集
+    */
     private Boolean collectEnabled;
-    /** Agent 通道：是否开启 Agent */
+    /**
+     * Agent 通道：是否开启 Agent
+    */
     private Boolean agentEnabled;
-    /** 远控通道：是否开启 guacd 远控 */
+    /**
+     * 远控通道：是否开启 guacd 远控
+    */
     private Boolean remoteEnabled;
 
-    /** 服务节点数量 */
+    /**
+     * 服务节点数量
+    */
     private Integer nodeCount;
-    /** 运行中的服务节点数量 */
+    /**
+     * 运行中的服务节点数量
+    */
     private Integer runningCount;
-    /** 服务节点摘要列表 */
+    /**
+     * 服务节点摘要列表
+    */
     private List<NodeChannel> channels;
 
-    /** 关联监控项数量 */
+    /**
+     * 关联监控项数量
+    */
     private Integer monitorCount;
-    /** 未处理(活跃)告警数 */
+    /**
+     * 未处理(活跃)告警数
+    */
     private Integer activeAlarmCount;
-    /** 该资产关联的监控项及告警量 */
+    /**
+     * 该资产关联的监控项及告警量
+    */
     private List<MonitorItem> monitors;
 
     /**
@@ -64,19 +96,33 @@ public class AssetDetailView {
     @Data
     @Accessors(chain = true)
     public static class NodeChannel {
-        /** 节点 标识 */
+        /**
+         * 节点 标识
+        */
         private Long nodeId;
-        /** 节点名称 */
+        /**
+         * 节点名称
+        */
         private String name;
-        /** 协议 */
+        /**
+         * 协议
+        */
         private String protocol;
-        /** 监听端口 */
+        /**
+         * 监听端口
+        */
         private Integer port;
-        /** 运行状态：RUNNING / STOPPED / 错误 */
+        /**
+         * 运行状态：RUNNING / STOPPED / 错误
+        */
         private String status;
-        /** 访问地址 */
+        /**
+         * 访问地址
+        */
         private String url;
-        /** 附加信息 */
+        /**
+         * 附加信息
+        */
         private Map<String, Object> extra;
     }
 
@@ -88,19 +134,33 @@ public class AssetDetailView {
     @Data
     @Accessors(chain = true)
     public static class MonitorItem {
-        /** 监控项 标识 */
+        /**
+         * 监控项 标识
+        */
         private Long monitorId;
-        /** 监控项名称 */
+        /**
+         * 监控项名称
+        */
         private String name;
-        /** 主机地址 */
+        /**
+         * 主机地址
+        */
         private String host;
-        /** 服务类型 */
+        /**
+         * 服务类型
+        */
         private String serviceType;
-        /** 是否启用 */
+        /**
+         * 是否启用
+        */
         private Boolean enabled;
-        /** 该监控项未处理(活跃)告警数 */
+        /**
+         * 该监控项未处理(活跃)告警数
+        */
         private Integer activeAlarmCount;
-        /** 最高告警级别(未处理告警中的最高级) */
+        /**
+         * 最高告警级别(未处理告警中的最高级)
+        */
         private String maxLevel;
     }
 }

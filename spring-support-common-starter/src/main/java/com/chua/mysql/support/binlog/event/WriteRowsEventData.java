@@ -12,7 +12,9 @@ import java.util.List;
 public class WriteRowsEventData implements EventData {
     private static final long serialVersionUID = 1L; // 串行版本uid
 
-    /** Rows */
+    /**
+     * Rows
+    */
     private final List<Serializable[]> rows;
 
     /**

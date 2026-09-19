@@ -42,27 +42,45 @@ public class RpcResourceBean<T> implements FactoryBean<T>, ApplicationContextAwa
         InitializingBean,
         DisposableBean {
 
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(RpcResourceBean.class);
-    /** 标识 */
+    /**
+     * 标识
+    */
     private String id;
 
-    /** 密钥 */
+    /**
+     * 密钥
+    */
     private String key;
 
-    /** interfaceClass */
+    /**
+     * interfaceClass
+    */
     private Class<?> interfaceClass;
 
-    /** 接口名称 */
+    /**
+     * 接口名称
+    */
     private String interfaceName;
-    /** Classloader */
+    /**
+     * Classloader
+    */
     private ClassLoader classLoader;
-    /** Bean名称 */
+    /**
+     * Bean名称
+    */
     private String beanName;
-    /** Application上下文 */
+    /**
+     * Application上下文
+    */
     private ApplicationContext applicationContext;
 
-    /** RPC客户端 */
+    /**
+     * RPC客户端
+    */
     private RpcClient rpcClient;
 
     /**
@@ -75,7 +93,9 @@ public class RpcResourceBean<T> implements FactoryBean<T>, ApplicationContextAwa
     }
 
     @Override
-    /** 获取对象 */
+    /**
+     * 获取对象
+    */
     public T getObject() throws Exception {
         if (interfaceClass == null) {
             throw new IllegalStateException("The interface class of ReferenceBean is not initialized");
@@ -157,25 +177,33 @@ public class RpcResourceBean<T> implements FactoryBean<T>, ApplicationContextAwa
     }
 
     @Override
-    /** 设置Bean类加载 */
+    /**
+     * 设置Bean类加载
+    */
     public void setBeanClassLoader(ClassLoader classLoader) {
         this.classLoader = classLoader;
     }
 
     @Override
-    /** 设置Bean名称 */
+    /**
+     * 设置Bean名称
+    */
     public void setBeanName(String name) {
         this.beanName = name;
     }
 
     @Override
-    /** 销毁 */
+    /**
+     * 销毁
+    */
     public void destroy() throws Exception {
 
     }
 
     @Override
-    /** 之后属性设置 */
+    /**
+     * 之后属性设置
+    */
     public void afterPropertiesSet() throws Exception {
         ConfigurableListableBeanFactory beanFactory = getBeanFactory();
 
@@ -191,7 +219,9 @@ public class RpcResourceBean<T> implements FactoryBean<T>, ApplicationContextAwa
     }
 
     @Override
-    /** 设置application上下文 */
+    /**
+     * 设置application上下文
+    */
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
     }

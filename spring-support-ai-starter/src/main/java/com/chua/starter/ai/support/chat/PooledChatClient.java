@@ -84,7 +84,9 @@ public class PooledChatClient implements ChatClient {
 
 
     @Override
-    /** configure游泳池 */
+    /**
+     * configure游泳池
+    */
     public void configurePool(Number size) {
         int target = size == null ? 1 : size.intValue();
         synchronized (this) {
@@ -200,19 +202,25 @@ public class PooledChatClient implements ChatClient {
                 .build();
         ObjectFactory<ChatClient> objectFactory = new ObjectFactory<ChatClient>() {
             @Override
-            /** 创建 */
+            /**
+             * 创建
+            */
             public ChatClient create() {
                 return factory.get();
             }
 
             @Override
-            /** 校验 */
+            /**
+             * 校验
+            */
             public boolean validate(ChatClient obj) {
                 return obj != null;
             }
 
             @Override
-            /** 销毁 */
+            /**
+             * 销毁
+            */
             public void destroy(ChatClient obj) {
                 if (obj instanceof AutoCloseable) {
                     try {
@@ -227,7 +235,9 @@ public class PooledChatClient implements ChatClient {
 
 
     @Override
-    /** 对话 */
+    /**
+     * 对话
+    */
     public ChatResponse chat(ChatScope scope) {
         ChatClient inner = borrowClient();
         try {
@@ -243,7 +253,9 @@ public class PooledChatClient implements ChatClient {
 
 
     @Override
-    /** 对话 */
+    /**
+     * 对话
+    */
     public void chat(ChatScope scope, java.util.function.Consumer<String> consumer, Runnable onComplete, java.util.function.Consumer<Throwable> onError) {
         ChatClient inner = borrowClient();
         try {
@@ -259,7 +271,9 @@ public class PooledChatClient implements ChatClient {
 
 
     @Override
-    /** 列表tools */
+    /**
+     * 列表tools
+    */
     public List<AiTool> listTools(ChatScope scope) {
         ChatClient inner = borrowClient();
         try {
@@ -275,7 +289,9 @@ public class PooledChatClient implements ChatClient {
 
 
     @Override
-    /** 调用Tool */
+    /**
+     * 调用Tool
+    */
     public AiToolResult callTool(ChatScope scope, AiToolCall toolCall) {
         ChatClient inner = borrowClient();
         try {
@@ -291,7 +307,9 @@ public class PooledChatClient implements ChatClient {
 
 
     @Override
-    /** 获取模型名称 */
+    /**
+     * 获取模型名称
+    */
     public String getModelName() {
         ChatClient inner = borrowClient();
         try {
@@ -307,7 +325,9 @@ public class PooledChatClient implements ChatClient {
 
 
     @Override
-    /** 获取工厂 */
+    /**
+     * 获取工厂
+    */
     public String getFactory() {
         ChatClient inner = borrowClient();
         try {
@@ -323,7 +343,9 @@ public class PooledChatClient implements ChatClient {
 
 
     @Override
-    /** 获取提供者 */
+    /**
+     * 获取提供者
+    */
     public String getProvider() {
         ChatClient inner = borrowClient();
         try {
@@ -339,7 +361,9 @@ public class PooledChatClient implements ChatClient {
 
 
     @Override
-    /** 获取默认模型 */
+    /**
+     * 获取默认模型
+    */
     public String getDefaultModel() {
         ChatClient inner = borrowClient();
         try {
@@ -355,7 +379,9 @@ public class PooledChatClient implements ChatClient {
 
 
     @Override
-    /** 获取端点 */
+    /**
+     * 获取端点
+    */
     public String getEndpoint() {
         ChatClient inner = borrowClient();
         try {
@@ -371,7 +397,9 @@ public class PooledChatClient implements ChatClient {
 
 
     @Override
-    /** 列表模型definitions */
+    /**
+     * 列表模型definitions
+    */
     public List<ModelDefinition> listModelDefinitions() {
         ChatClient inner = borrowClient();
         try {
@@ -387,7 +415,9 @@ public class PooledChatClient implements ChatClient {
 
 
     @Override
-    /** 对话同步 */
+    /**
+     * 对话同步
+    */
     public String chatSync(String prompt) {
         ChatClient inner = borrowClient();
         try {
@@ -403,7 +433,9 @@ public class PooledChatClient implements ChatClient {
 
 
     @Override
-    /** 对话同步 */
+    /**
+     * 对话同步
+    */
     public String chatSync(String prompt, long timeoutMillis) {
         ChatClient inner = borrowClient();
         try {
@@ -419,7 +451,9 @@ public class PooledChatClient implements ChatClient {
 
 
     @Override
-    /** 对话同步with响应 */
+    /**
+     * 对话同步with响应
+    */
     public com.chua.common.support.ai.chat.ChatSyncResponse chatSyncWithResponse(String prompt) {
         ChatClient inner = borrowClient();
         try {
@@ -435,7 +469,9 @@ public class PooledChatClient implements ChatClient {
 
 
     @Override
-    /** 关闭 */
+    /**
+     * 关闭
+    */
     public void close() {
         synchronized (this) {
             /**

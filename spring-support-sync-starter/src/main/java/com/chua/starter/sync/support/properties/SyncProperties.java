@@ -25,7 +25,9 @@ import static com.chua.starter.sync.support.properties.SyncProperties.PRE;
 @ConfigurationProperties(prefix = PRE, ignoreInvalidFields = true)
 public class SyncProperties {
 
-    /** PRE */
+    /**
+     * PRE
+    */
     public static final String PRE = "plugin.sync";
 
     /**

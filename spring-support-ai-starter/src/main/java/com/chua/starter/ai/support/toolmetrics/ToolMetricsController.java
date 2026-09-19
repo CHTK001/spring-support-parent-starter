@@ -28,11 +28,17 @@ import java.util.List;
 @RequestMapping("/v2/tool-usage")
 public class ToolMetricsController {
 
-    /** 本地用量同步服务 */
+    /**
+     * 本地用量同步服务
+    */
     private final LocalToolUsageSyncService localToolUsageSyncService;
-    /** 用量 映射器 */
+    /**
+     * 用量 映射器
+    */
     private final SysAiUsageMapper sysAiUsageMapper;
-    /** 压缩记录 映射器 */
+    /**
+     * 压缩记录 映射器
+    */
     private final SysAiSessionCompressionMapper compressionMapper;
 
     /**

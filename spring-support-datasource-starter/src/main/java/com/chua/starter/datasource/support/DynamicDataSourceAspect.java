@@ -283,7 +283,9 @@ public class DynamicDataSourceAspect {
      * @since 4.0.0
      */
     public static class HeaderWrapper extends java.util.HashMap<String, String> {
-        /** 请求 */
+        /**
+         * 请求
+        */
         private final HttpServletRequest request;
         /**
          * 头部包装器。

@@ -25,7 +25,9 @@ import java.util.Map;
 @Schema(description = "服务管理-创建/更新服务器请求")
 public class ServerNodeRequest {
 
-    /** 节点名称（唯一） */
+    /**
+     * 节点名称（唯一）
+    */
     @Schema(description = "节点名称（唯一）", example = "fileserver-01")
     private String name; // 名称
 
@@ -35,31 +37,45 @@ public class ServerNodeRequest {
     @Schema(description = "协议类型: http / http-proxy / tcp-proxy / sip", example = "http")
     private String protocol; // 协议
 
-    /** 传输引擎: http= jdk/nio/aio（默认 jdk） */
+    /**
+     * 传输引擎: http= jdk/nio/aio（默认 jdk）
+    */
     @Schema(description = "传输引擎: http= jdk/nio/aio（默认 jdk）", example = "jdk")
     private String engine; // engine
 
-    /** 监听地址 */
+    /**
+     * 监听地址
+    */
     @Schema(description = "监听地址", example = "0.0.0.0")
     private String host; // 主机
 
-    /** 监听端口（缺省按协议默认） */
+    /**
+     * 监听端口（缺省按协议默认）
+    */
     @Schema(description = "监听端口（缺省按协议默认）", example = "18080")
     private Integer port; // 端口
 
-    /** 是否启用: 1 启动并随应用拉起，0 停用（默认 1） */
+    /**
+     * 是否启用: 1 启动并随应用拉起，0 停用（默认 1）
+    */
     @Schema(description = "是否启用: 1 启动并随应用拉起，0 停用（默认 1）", example = "1")
     private Integer enabled; // 启用
 
-    /** 备注 */
+    /**
+     * 备注
+    */
     @Schema(description = "备注")
     private String remark; // 评论
 
-    /** 协议专属配置（JSON 映射） */
+    /**
+     * 协议专属配置（JSON 映射）
+    */
     @Schema(description = "协议专属配置: proxy 需要 backendHost/backendPort，sip 可选 token")
     private Map<String, Object> config = new LinkedHashMap<>(); // 配置
 
-    /** 服务端过滤器 插件配置列表 */
+    /**
+     * 服务端过滤器 插件配置列表
+    */
     @Schema(description = "ServerFilter 插件配置列表")
     private List<ServerFilterDescriptor> filters = new ArrayList<>(); // 过滤器
 }

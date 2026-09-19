@@ -41,7 +41,9 @@ public class CompressionChatClientFactoryBean implements FactoryBean<ChatClient>
         this.chatClient = buildClientSafe();
     }
 
-    /** Rebuild */
+    /**
+     * Rebuild
+    */
     public synchronized void rebuild() {
         ChatClient old = this.chatClient;
         ChatClient newClient = buildClientSafe();
@@ -102,7 +104,9 @@ public class CompressionChatClientFactoryBean implements FactoryBean<ChatClient>
     }
 
     @Override
-    /** 获取对象 */
+    /**
+     * 获取对象
+    */
     public ChatClient getObject() {
         return chatClient;
     }
@@ -113,7 +117,9 @@ public class CompressionChatClientFactoryBean implements FactoryBean<ChatClient>
     }
 
     @Override
-    /** 是否单例 */
+    /**
+     * 是否单例
+    */
     public boolean isSingleton() {
         return true;
     }

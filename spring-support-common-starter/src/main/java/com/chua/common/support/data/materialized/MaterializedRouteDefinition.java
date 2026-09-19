@@ -8,9 +8,13 @@ package com.chua.common.support.data.materialized;
  */
 public class MaterializedRouteDefinition {
 
-    /** 阈值 */
+    /**
+     * 阈值
+    */
     private long threshold;
-    /** 数据来源 */
+    /**
+     * 数据来源
+    */
     private String dataSource;
 
     /**

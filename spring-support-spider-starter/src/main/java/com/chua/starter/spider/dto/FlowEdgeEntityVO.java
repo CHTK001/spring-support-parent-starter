@@ -1,20 +1,36 @@
 package com.chua.starter.spider.dto;
 
-/** @作者 CH */
+/**
+ * @作者 CH
+*/
 public class FlowEdgeEntityVO {
-    /** Flowedgefrom */
+    /**
+     * Flowedgefrom
+    */
     private String flowEdgeFrom;
-    /** flowedge转为 */
+    /**
+     * flowedge转为
+    */
     private String flowEdgeTo;
-    /** Flowedge文本 */
+    /**
+     * Flowedge文本
+    */
     private String flowEdgeText;
-    /** Flowedgecondfield */
+    /**
+     * Flowedgecondfield
+    */
     private String flowEdgeCondField;
-    /** flowedgecondop */
+    /**
+     * flowedgecondop
+    */
     private String flowEdgeCondOp;
-    /** Flowedgecond值 */
+    /**
+     * Flowedgecond值
+    */
     private String flowEdgeCondValue;
-    /** Flowedge优先级 */
+    /**
+     * Flowedge优先级
+    */
     private Integer flowEdgePriority;
 
     /**

@@ -30,7 +30,9 @@ public class SpiderFlow extends SysBase {
      */
     @TableId(type = IdType.AUTO)
     @Schema(description = "主键 ID")
-    /** 标识 */
+    /**
+     * 标识
+    */
     private Long id;
 
     /**
@@ -38,7 +40,9 @@ public class SpiderFlow extends SysBase {
      */
     @TableField("definition_id")
     @Schema(description = "关联爬虫定义 ID")
-    /** definitionid */
+    /**
+     * definitionid
+    */
     private Long definitionId;
 
     /**
@@ -46,7 +50,9 @@ public class SpiderFlow extends SysBase {
      */
     @TableField("code")
     @Schema(description = "流程编码（前端 flowCode）")
-    /** 代码 */
+    /**
+     * 代码
+    */
     private String code;
 
     /**
@@ -54,7 +60,9 @@ public class SpiderFlow extends SysBase {
      */
     @TableField("enabled")
     @Schema(description = "是否启用")
-    /** 是否启用 */
+    /**
+     * 是否启用
+    */
     private Integer enabled;
 
     /**
@@ -62,7 +70,9 @@ public class SpiderFlow extends SysBase {
      */
     @TableField("name")
     @Schema(description = "流程名称")
-    /** 名称 */
+    /**
+     * 名称
+    */
     private String name;
 
     /**
@@ -70,7 +80,9 @@ public class SpiderFlow extends SysBase {
      */
     @TableField("nodes_json")
     @Schema(description = "节点 JSON")
-    /** 节点json */
+    /**
+     * 节点json
+    */
     private String nodesJson;
 
     /**
@@ -78,7 +90,9 @@ public class SpiderFlow extends SysBase {
      */
     @TableField("edges_json")
     @Schema(description = "连线 JSON")
-    /** edgesjson */
+    /**
+     * edgesjson
+    */
     private String edgesJson;
 
     /**
@@ -87,6 +101,8 @@ public class SpiderFlow extends SysBase {
     @TableField("sys_deleted")
     @TableLogic
     @Schema(description = "逻辑删除标记")
-    /** SYS删除标记 */
+    /**
+     * SYS删除标记
+    */
     private Integer sysDeleted;
 }

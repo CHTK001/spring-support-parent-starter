@@ -29,7 +29,9 @@ import java.util.concurrent.atomic.LongAdder;
  */
 public class MultiLevelCache implements Cache {
 
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(MultiLevelCache.class);
 
     /**
@@ -37,24 +39,34 @@ public class MultiLevelCache implements Cache {
      */
     static final Object NULL_VALUE_PLACEHOLDER = new Object() {
         @Override
-        /** 转为字符串 */
+        /**
+         * 转为字符串
+        */
         public String toString() {
             return "NULL_VALUE";
         }
     };
 
-    /** 名称 */
+    /**
+     * 名称
+    */
     private final String name;
-    /** 缓存 */
+    /**
+     * 缓存
+    */
     private final List<Cache> caches;
 
     /**
      * 缓存统计
      */
     private final LongAdder hitCount = new LongAdder();
-    /** Miss数量 */
+    /**
+     * Miss数量
+    */
     private final LongAdder missCount = new LongAdder();
-    /** Backfill数量 */
+    /**
+     * Backfill数量
+    */
     private final LongAdder backfillCount = new LongAdder();
 
     /**
@@ -93,19 +105,25 @@ public class MultiLevelCache implements Cache {
     }
 
     @Override
-    /** 获取名称 */
+    /**
+     * 获取名称
+    */
     public String getName() {
         return name;
     }
 
     @Override
-    /** 获取NAT缓存 */
+    /**
+     * 获取NAT缓存
+    */
     public Object getNativeCache() {
         return caches;
     }
 
     @Override
-    /** 获取 */
+    /**
+     * 获取
+    */
     public ValueWrapper get(Object key) {
         if (key == null) {
             missCount.increment();
@@ -207,7 +225,9 @@ public class MultiLevelCache implements Cache {
     }
 
     @Override
-    /** 获取 */
+    /**
+     * 获取
+    */
     public <T> T get(Object key, Class<T> type) {
         return getInternalTyped(key, type);
     }
@@ -305,7 +325,9 @@ public class MultiLevelCache implements Cache {
     }
 
     @Override
-    /** 放入 */
+    /**
+     * 放入
+    */
     public void put(Object key, Object value) {
         if (key == null) {
             return;
@@ -344,7 +366,9 @@ public class MultiLevelCache implements Cache {
     }
 
     @Override
-    /** Evict */
+    /**
+     * Evict
+    */
     public void evict(Object key) {
         if (key == null) {
             return;
@@ -359,7 +383,9 @@ public class MultiLevelCache implements Cache {
     }
 
     @Override
-    /** Clear */
+    /**
+     * Clear
+    */
     public void clear() {
         for (int i = 0; i < caches.size(); i++) {
             try {
@@ -476,7 +502,9 @@ public class MultiLevelCache implements Cache {
         INSTANCE;
 
         @Override
-        /** 获取 */
+        /**
+         * 获取
+        */
         public Object get() {
             return null;
         }

@@ -36,9 +36,13 @@ import java.util.Objects;
 @Slf4j
 public class AuthFilter implements Filter {
 
-    /** Web请求 */
+    /**
+     * Web请求
+    */
     private final WebRequest webRequest;
-    /** 请求mapping处理器mapping */
+    /**
+     * 请求mapping处理器mapping
+    */
     private final RequestMappingHandlerMapping requestMappingHandlerMapping;
     
     /**
@@ -94,13 +98,17 @@ public class AuthFilter implements Filter {
     }
 
     @Override
-    /** 初始化 */
+    /**
+     * 初始化
+    */
     public void init(FilterConfig filterConfig) throws ServletException {
 
     }
 
     @Override
-    /** 执行过滤 */
+    /**
+     * 执行过滤
+    */
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
         HttpServletRequest httpRequest = (HttpServletRequest) request;
         String requestURI = httpRequest.getRequestURI();

@@ -12,7 +12,9 @@ import java.util.function.Supplier;
  * @author CH
  */
 public class RoleOptional<T> {
-    /** 角色 */
+    /**
+     * 角色
+    */
     private final Set<String> roles;
     private final Map<String, Supplier<T>> condition = new LinkedHashMap<>(); // 条件
 

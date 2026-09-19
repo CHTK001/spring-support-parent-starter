@@ -31,7 +31,9 @@ import java.util.Map;
 @RequestMapping(ServerConstants.API_PREFIX + "/host/profile")
 public class HostProfileController {
 
-    /** 画像服务 */
+    /**
+     * 画像服务
+    */
     private final HostProfileService profileService;
 
     /**

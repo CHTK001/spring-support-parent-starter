@@ -32,7 +32,9 @@ public interface ApiSwitchOverrideProvider {
         return null;
     }
 
-    /** 功能开关覆盖值 */
+    /**
+     * 功能开关覆盖值
+    */
     interface FeatureOverride {
 
         /**
@@ -61,7 +63,9 @@ public interface ApiSwitchOverrideProvider {
         }
     }
 
-    /** 灰度规则覆盖值（仅提供覆盖字段，其余属性委托注解） */
+    /**
+     * 灰度规则覆盖值（仅提供覆盖字段，其余属性委托注解）
+    */
     interface GrayOverride {
 
         /**

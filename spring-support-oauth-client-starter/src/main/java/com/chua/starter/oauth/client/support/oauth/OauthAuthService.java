@@ -14,7 +14,9 @@ import com.chua.starter.oauth.client.support.user.UserResume;
 public class OauthAuthService implements AuthService {
 
     @Override
-    /** 获取当前用户 */
+    /**
+     * 获取当前用户
+    */
     public CurrentUser getCurrentUser() {
         UserResume userInfo = com.chua.starter.oauth.client.support.execute.AuthSessionUtils.getUserInfo(UserResume.class);
         if (null == userInfo) {

@@ -31,10 +31,14 @@ import java.util.Map;
 @RequestMapping(ServerConstants.API_PREFIX + "/remote")
 public class RemoteTokenController {
 
-    /** 主机服务（主机信息 + 凭据解析） */
+    /**
+     * 主机服务（主机信息 + 凭据解析）
+    */
     private final ServerHostService serverHostService;
 
-    /** 远控短令牌服务 */
+    /**
+     * 远控短令牌服务
+    */
     private final RemoteTokenService remoteTokenService;
 
     /**

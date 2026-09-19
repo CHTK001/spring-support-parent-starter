@@ -38,29 +38,39 @@ import java.util.Set;
 public class MyBatisConfigHandler implements SyncMessageHandler, ApplicationContextAware {
 
 
-    /** Application上下文 */
+    /**
+     * Application上下文
+    */
     private ApplicationContext applicationContext;
 
     @Override
-    /** 设置application上下文 */
+    /**
+     * 设置application上下文
+    */
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
     }
 
     @Override
-    /** 获取名称 */
+    /**
+     * 获取名称
+    */
     public String getName() {
         return "myBatisConfigHandler";
     }
 
     @Override
-    /** 支持 */
+    /**
+     * 支持
+    */
     public boolean supports(String topic) {
         return MonitorTopics.MYBATIS_CONFIG.equals(topic);
     }
 
     @Override
-    /** 处理 */
+    /**
+     * 处理
+    */
     public Object handle(String topic, String sessionId, Map<String, Object> data) {
         String action = MapUtils.getString(data, "action");
         log.debug("[MyBatisConfig] 收到请求: action={}", action);

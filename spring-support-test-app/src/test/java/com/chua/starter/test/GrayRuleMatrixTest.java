@@ -47,7 +47,9 @@ class GrayRuleMatrixTest {
         return session;
     }
 
-    /** 角色名单：用户角色含 gray-角色 -> 命中；不含 -> 未命中 */
+    /**
+     * 角色名单：用户角色含 gray-角色 -> 命中；不含 -> 未命中
+    */
     @Test
     void rolesDimension() throws Exception {
         mockMvc.perform(get("/api/api-version/preview-roles").session(session("any-user", List.of("gray-role"))))
@@ -58,7 +60,9 @@ class GrayRuleMatrixTest {
                 .andExpect(header().doesNotExist("X-Gray-Hit"));
     }
 
-    /** IP 名单：X-远期-For 命中（ip工具 优先取该头）-> 命中；其他 IP -> 未命中 */
+    /**
+     * IP 名单：X-远期-For 命中（ip工具 优先取该头）-> 命中；其他 IP -> 未命中
+    */
     @Test
     void ipsDimension() throws Exception {
         mockMvc.perform(get("/api/api-version/preview-ips").session(session("any-user", null))
@@ -77,7 +81,9 @@ class GrayRuleMatrixTest {
                 .andExpect(header().doesNotExist("X-Gray-Hit"));
     }
 
-    /** 请求头维度：X-Gray-头部=1 精确匹配 -> 命中；缺失/不符 -> 未命中 */
+    /**
+     * 请求头维度：X-Gray-头部=1 精确匹配 -> 命中；缺失/不符 -> 未命中
+    */
     @Test
     void headersDimension() throws Exception {
         mockMvc.perform(get("/api/api-version/preview-headers").session(session("any-user", null))
@@ -89,7 +95,9 @@ class GrayRuleMatrixTest {
                 .andExpect(header().doesNotExist("X-Gray-Hit"));
     }
 
-    /** spel 规则维度：用户名 == 'spel-用户' -> 命中；其他用户 -> 未命中 */
+    /**
+     * spel 规则维度：用户名 == 'spel-用户' -> 命中；其他用户 -> 未命中
+    */
     @Test
     void ruleDimension() throws Exception {
         mockMvc.perform(get("/api/api-version/preview-rule").session(session("spel-user", null)))
@@ -100,7 +108,9 @@ class GrayRuleMatrixTest {
                 .andExpect(header().doesNotExist("X-Gray-Hit"));
     }
 
-    /** 百分比边界：100 -> 恒命中；0 -> 恒未命中（percentage<=0 跳过百分比检查） */
+    /**
+     * 百分比边界：100 -> 恒命中；0 -> 恒未命中（percentage<=0 跳过百分比检查）
+    */
     @Test
     void percentageDimension() throws Exception {
         mockMvc.perform(get("/api/api-version/preview-percentage").session(session("any-user", null)))

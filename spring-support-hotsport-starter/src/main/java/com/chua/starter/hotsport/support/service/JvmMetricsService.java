@@ -43,19 +43,27 @@ import java.util.concurrent.atomic.AtomicReference;
 @Service
 public class JvmMetricsService {
 
-    /** 环形缓冲容量（约 10h @5s 采样）。 */
+    /**
+     * 环形缓冲容量（约 10h @5s 采样）。
+    */
     private static final int RING_CAPACITY = 2000;
 
     private final AtomicReference<ConcurrentLinkedDeque<Map<String, Object>>> ring =
             new AtomicReference<>(new ConcurrentLinkedDeque<>());
 
-    /** 最近一次采样（含告警巡检用派生指标）。 */
+    /**
+     * 最近一次采样（含告警巡检用派生指标）。
+    */
     private final AtomicReference<Map<String, Object>> lastSample = new AtomicReference<>(Map.of());
 
-    /** 采样次数（用于 QPS 窗口估算）。 */
+    /**
+     * 采样次数（用于 QPS 窗口估算）。
+    */
     private final AtomicLong sampleCount = new AtomicLong(0);
 
-    /** 采样钩子（AlertMonitorService 经 @Lazy 构造注入后注册，null 安全）。 */
+    /**
+     * 采样钩子（AlertMonitorService 经 @Lazy 构造注入后注册，null 安全）。
+    */
     private volatile Runnable onSample;
 
     /**
@@ -67,13 +75,17 @@ public class JvmMetricsService {
         this.onSample = hook;
     }
 
-    /** 启动即取首个采样，环形缓冲立即可读。 */
+    /**
+     * 启动即取首个采样，环形缓冲立即可读。
+    */
     @PostConstruct
     public void init() {
         recordSample();
     }
 
-    /** 定时采样（间隔由 {@code hotsport.jvm.sample-interval-ms} 控制，默认 5000ms）。 */
+    /**
+     * 定时采样（间隔由 {@code hotsport.jvm.sample-interval-ms} 控制，默认 5000ms）。
+    */
     @Scheduled(fixedDelayString = "${hotsport.jvm.sample-interval-ms:5000}")
     public void recordSample() {
         Map<String, Object> snapshot = snapshot();

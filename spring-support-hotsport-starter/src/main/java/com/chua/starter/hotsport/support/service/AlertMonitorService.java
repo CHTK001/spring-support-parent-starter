@@ -42,7 +42,9 @@ import java.util.concurrent.atomic.AtomicLong;
 @Service
 public class AlertMonitorService {
 
-    /** 事件环形缓冲容量。 */
+    /**
+     * 事件环形缓冲容量。
+    */
     private static final int EVENT_CAPACITY = 100;
 
     /**
@@ -87,19 +89,29 @@ public class AlertMonitorService {
         public long statusTs;
     }
 
-    /** 事件 ID 原子计数。 */
+    /**
+     * 事件 ID 原子计数。
+    */
     private final AtomicLong eventIdGen = new AtomicLong(1);
 
-    /** 规则 ID 原子计数。 */
+    /**
+     * 规则 ID 原子计数。
+    */
     private final AtomicLong ruleIdGen = new AtomicLong(1);
 
-    /** 规则表（metric → AlertRule），初始 3 条默认规则。 */
+    /**
+     * 规则表（metric → AlertRule），初始 3 条默认规则。
+    */
     private final ConcurrentHashMap<String, AlertRule> rules = new ConcurrentHashMap<>();
 
-    /** 事件环形缓冲。 */
+    /**
+     * 事件环形缓冲。
+    */
     private final ConcurrentLinkedDeque<AlertEvent> events = new ConcurrentLinkedDeque<>();
 
-    /** 各指标上次触发时间（去抖）。 */
+    /**
+     * 各指标上次触发时间（去抖）。
+    */
     private final ConcurrentHashMap<String, Long> lastFired = new ConcurrentHashMap<>();
 
     private final JvmMetricsService jvmMetricsService;
@@ -113,7 +125,9 @@ public class AlertMonitorService {
         this.jvmMetricsService = jvmMetricsService;
     }
 
-    /** 注册钩子：初始化 3 条默认规则 + 挂接 JVM 采样。 */
+    /**
+     * 注册钩子：初始化 3 条默认规则 + 挂接 JVM 采样。
+    */
     @PostConstruct
     public void init() {
         rules.put("heap_percent",

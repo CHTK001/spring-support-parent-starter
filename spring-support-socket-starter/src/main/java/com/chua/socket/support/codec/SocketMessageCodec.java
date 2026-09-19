@@ -16,20 +16,34 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class SocketMessageCodec {
 
-    /** 对象_映射器 */
+    /**
+     * 对象_映射器
+    */
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-    /** Encrypted_前缀 */
+    /**
+     * Encrypted_前缀
+    */
     private static final String ENCRYPTED_PREFIX = "02";
-    /** 状态_segment */
+    /**
+     * 状态_segment
+    */
     private static final String STATUS_SEGMENT = "200";
-    /** 后缀 */
+    /**
+     * 后缀
+    */
     private static final String SUFFIX = "ffff";
 
-    /** Encrypt模式 */
+    /**
+     * Encrypt模式
+    */
     private final SocketEncryptMode encryptMode;
-    /** Codec密钥pair */
+    /**
+     * Codec密钥pair
+    */
     private final CodecKeyPair codecKeyPair;
-    /** 公开密钥HEX */
+    /**
+     * 公开密钥HEX
+    */
     private final String publicKeyHex;
 
     /**

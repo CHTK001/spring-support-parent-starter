@@ -14,14 +14,18 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-/** @作者 CH */
+/**
+ * @作者 CH
+*/
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class MonitorMetricConfigServiceImpl implements MonitorMetricConfigService {
 
-    /** 映射器 */
+    /**
+     * 映射器
+    */
     private final MsMonitorMetricConfigMapper mapper;
 
     @Override

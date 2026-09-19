@@ -27,7 +27,9 @@ public class Emitter {
      * 事件类型集合，一个发布者可以支持多种事件类型
      */
     @Singular("event")
-    /** 事件 */
+    /**
+     * 事件
+    */
     private Set<String> event;
 
     /**
@@ -44,7 +46,9 @@ public class Emitter {
      * 创建时间，初始化为当前的纳秒数
      */
     @Builder.Default
-    /** 创建时间 */
+    /**
+     * 创建时间
+    */
     private long createTime = System.nanoTime();
 
     /**

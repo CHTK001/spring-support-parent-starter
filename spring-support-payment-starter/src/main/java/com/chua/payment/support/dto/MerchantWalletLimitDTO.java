@@ -12,25 +12,39 @@ import java.math.BigDecimal;
 @Data
 public class MerchantWalletLimitDTO {
 
-    /** Singlerecharge限制 */
+    /**
+     * Singlerecharge限制
+    */
     private BigDecimal singleRechargeLimit;
 
-    /** Dailyrecharge限制 */
+    /**
+     * Dailyrecharge限制
+    */
     private BigDecimal dailyRechargeLimit;
 
-    /** Singlewithdraw限制 */
+    /**
+     * Singlewithdraw限制
+    */
     private BigDecimal singleWithdrawLimit;
 
-    /** Dailywithdraw限制 */
+    /**
+     * Dailywithdraw限制
+    */
     private BigDecimal dailyWithdrawLimit;
 
-    /** Singletransfer限制 */
+    /**
+     * Singletransfer限制
+    */
     private BigDecimal singleTransferLimit;
 
-    /** Dailytransfer限制 */
+    /**
+     * Dailytransfer限制
+    */
     private BigDecimal dailyTransferLimit;
 
-    /** Balance限制 */
+    /**
+     * Balance限制
+    */
     private BigDecimal balanceLimit;
 }
 

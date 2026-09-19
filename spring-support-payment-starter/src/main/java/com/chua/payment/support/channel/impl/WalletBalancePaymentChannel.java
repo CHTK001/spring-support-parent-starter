@@ -22,7 +22,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  */
 public class WalletBalancePaymentChannel extends AbstractMerchantPaymentChannel implements PaymentChannel {
 
-    /** Walletaccount服务 */
+    /**
+     * Walletaccount服务
+    */
     private final WalletAccountService walletAccountService;
 
     /**
@@ -44,13 +46,17 @@ public class WalletBalancePaymentChannel extends AbstractMerchantPaymentChannel 
     }
 
     @Override
-    /** 支持 */
+    /**
+     * 支持
+    */
     public boolean supports(String channelType, String channelSubType) {
         return "WALLET".equalsIgnoreCase(channelType) && "BALANCE".equalsIgnoreCase(channelSubType);
     }
 
     @Override
-    /** 薪酬 */
+    /**
+     * 薪酬
+    */
     public PaymentResult pay(MerchantChannel channel, PaymentRequest request) {
         if (request.getUserId() == null) {
             /**
@@ -79,7 +85,9 @@ public class WalletBalancePaymentChannel extends AbstractMerchantPaymentChannel 
     }
 
     @Override
-    /** 查询 */
+    /**
+     * 查询
+    */
     public PaymentResult query(MerchantChannel channel, String orderNo) {
         WalletAccountLog log = walletAccountService.getLog("PAY", channel.getMerchantId(), null, orderNo);
         PaymentResult result = new PaymentResult();
@@ -93,7 +101,9 @@ public class WalletBalancePaymentChannel extends AbstractMerchantPaymentChannel 
     }
 
     @Override
-    /** 退税 */
+    /**
+     * 退税
+    */
     public RefundResult refund(MerchantChannel channel, RefundRequest request) {
         if (request.getUserId() == null) {
             /**
@@ -123,7 +133,9 @@ public class WalletBalancePaymentChannel extends AbstractMerchantPaymentChannel 
     }
 
     @Override
-    /** 查询退税 */
+    /**
+     * 查询退税
+    */
     public RefundResult queryRefund(MerchantChannel channel, RefundRequest request) {
         WalletAccountLog log = walletAccountService.getLog("REFUND", channel.getMerchantId(), null, request.getRefundNo());
         RefundResult result = new RefundResult();

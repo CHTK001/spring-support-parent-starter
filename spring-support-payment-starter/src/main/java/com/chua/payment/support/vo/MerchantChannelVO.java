@@ -14,78 +14,128 @@ import java.time.LocalDateTime;
 public class MerchantChannelVO implements Serializable {
     private static final long serialVersionUID = 1L; // 串行版本uid
 
-    /** 标识 */
+    /**
+     * 标识
+    */
     private Long id;
 
-    /** merchantid */
+    /**
+     * merchantid
+    */
     private Long merchantId;
 
-    /** Merchant名称 */
+    /**
+     * Merchant名称
+    */
     private String merchantName;
 
-    /** 通道类型 */
+    /**
+     * 通道类型
+    */
     private String channelType;
 
-    /** 通道SUB类型 */
+    /**
+     * 通道SUB类型
+    */
     private String channelSubType;
 
-    /** 通道名称 */
+    /**
+     * 通道名称
+    */
     private String channelName;
 
-    /** APPID */
+    /**
+     * APPID
+    */
     private String appId;
 
-    /** merchantno */
+    /**
+     * merchantno
+    */
     private String merchantNo;
 
-    /** API密钥configured */
+    /**
+     * API密钥configured
+    */
     private Boolean apiKeyConfigured;
 
-    /** 私有密钥configured */
+    /**
+     * 私有密钥configured
+    */
     private Boolean privateKeyConfigured;
 
-    /** 公开密钥configured */
+    /**
+     * 公开密钥configured
+    */
     private Boolean publicKeyConfigured;
 
-    /** 证书configured */
+    /**
+     * 证书configured
+    */
     private Boolean certConfigured;
 
-    /** Sandbox模式 */
+    /**
+     * Sandbox模式
+    */
     private Integer sandboxMode;
 
-    /** 通知url */
+    /**
+     * 通知url
+    */
     private String notifyUrl;
 
-    /** 返回值URL */
+    /**
+     * 返回值URL
+    */
     private String returnUrl;
 
-    /** 状态 */
+    /**
+     * 状态
+    */
     private Integer status;
 
-    /** 状态desc */
+    /**
+     * 状态desc
+    */
     private String statusDesc;
 
-    /** EXT配置 */
+    /**
+     * EXT配置
+    */
     private String extConfig;
 
-    /** Guide标题 */
+    /**
+     * Guide标题
+    */
     private String guideTitle;
 
-    /** guideurl */
+    /**
+     * guideurl
+    */
     private String guideUrl;
 
-    /** 通道类型desc */
+    /**
+     * 通道类型desc
+    */
     private String channelTypeDesc;
 
-    /** effectivenotifyurl */
+    /**
+     * effectivenotifyurl
+    */
     private String effectiveNotifyUrl;
 
-    /** Effective返回值URL */
+    /**
+     * Effective返回值URL
+    */
     private String effectiveReturnUrl;
 
-    /** 创建时间AT */
+    /**
+     * 创建时间AT
+    */
     private LocalDateTime createdAt;
 
-    /** 更新时间AT */
+    /**
+     * 更新时间AT
+    */
     private LocalDateTime updatedAt;
 }

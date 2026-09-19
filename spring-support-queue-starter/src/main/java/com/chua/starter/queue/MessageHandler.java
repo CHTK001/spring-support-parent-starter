@@ -48,13 +48,17 @@ public interface MessageHandler {
      */
     class AutoAcknowledgment implements Acknowledgment {
         @Override
-        /** Acknowledge */
+        /**
+         * Acknowledge
+        */
         public void acknowledge() {
             // 自动确认，无需操作
         }
 
         @Override
-        /** Nack */
+        /**
+         * Nack
+        */
         public void nack(boolean requeue) {
  // 自动确认模式下，nack 等同于 ACK
             /**
@@ -64,7 +68,9 @@ public interface MessageHandler {
         }
 
         @Override
-        /** 是否Acknowledged */
+        /**
+         * 是否Acknowledged
+        */
         public boolean isAcknowledged() {
             return true; // 自动确认模式下，始终认为已确认
         }

@@ -10,17 +10,29 @@ import com.chua.mysql.support.binlog.event.Event;
  */
 public class BinaryLogClient {
 
-    /** 主机 */
+    /**
+     * 主机
+    */
     private final String host;
-    /** 端口 */
+    /**
+     * 端口
+    */
     private final int port;
-    /** 用户名 */
+    /**
+     * 用户名
+    */
     private final String username;
-    /** 密码 */
+    /**
+     * 密码
+    */
     private final String password;
-    /** 服务器标识 */
+    /**
+     * 服务器标识
+    */
     private int serverId = 0;
-    /** 连接超时 */
+    /**
+     * 连接超时
+    */
     private int connectTimeout = 0;
 
     /**

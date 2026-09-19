@@ -53,12 +53,18 @@ public class RpcResourceAnnotationBeanPostProcessor extends AbstractAnnotationBe
     private final ConcurrentMap<InjectionMetadata.InjectedElement, String> injectedMethodReferenceBeanCache =
             new ConcurrentHashMap<>(CACHE_SIZE);
 
-    /** RPC属性 */
+    /**
+     * RPC属性
+    */
     private RpcProperties rpcProperties;
-    /** RPC客户端 */
+    /**
+     * RPC客户端
+    */
     private RpcClient rpcClient;
 
-    /** 创建 rpcresource注解Beanpost处理器 实例 */
+    /**
+     * 创建 rpcresource注解Beanpost处理器 实例
+    */
     public RpcResourceAnnotationBeanPostProcessor() {
         /**
          * 父。
@@ -69,7 +75,9 @@ public class RpcResourceAnnotationBeanPostProcessor extends AbstractAnnotationBe
 
 
     @Override
-    /** Post处理Bean工厂 */
+    /**
+     * Post处理Bean工厂
+    */
     public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
         if(!rpcProperties.isEnable()) {
             return;
@@ -111,7 +119,9 @@ public class RpcResourceAnnotationBeanPostProcessor extends AbstractAnnotationBe
     }
 
     @Override
-    /** Post处理合并Beandefinition */
+    /**
+     * Post处理合并Beandefinition
+    */
     public void postProcessMergedBeanDefinition(RootBeanDefinition beanDefinition, Class<?> beanType, String beanName) {
         if(!rpcProperties.isEnable()) {
             return;
@@ -136,7 +146,9 @@ public class RpcResourceAnnotationBeanPostProcessor extends AbstractAnnotationBe
     }
 
     @Override
-    /** Post处理属性 */
+    /**
+     * Post处理属性
+    */
     public PropertyValues postProcessProperties(PropertyValues pvs, Object bean, String beanName) throws BeansException {
         if(!rpcProperties.isEnable()) {
             return pvs;
@@ -166,7 +178,9 @@ public class RpcResourceAnnotationBeanPostProcessor extends AbstractAnnotationBe
 
 
     @Override
-    /** 执行获取injectedBean */
+    /**
+     * 执行获取injectedBean
+    */
     protected Object doGetInjectedBean(AnnotationAttributes attributes, Object bean, String beanName, Class<?> injectedType, AnnotatedInjectElement injectedElement) throws Exception {
         if(!rpcProperties.isEnable()) {
             return bean;
@@ -305,7 +319,9 @@ public class RpcResourceAnnotationBeanPostProcessor extends AbstractAnnotationBe
 
 
     @Override
-    /** 设置环境 */
+    /**
+     * 设置环境
+    */
     public void setEnvironment(Environment environment) {
         super.setEnvironment(environment);
         BindResult<RpcProperties> bindResult = Binder.get(environment).bind(RpcProperties.PRE, RpcProperties.class);

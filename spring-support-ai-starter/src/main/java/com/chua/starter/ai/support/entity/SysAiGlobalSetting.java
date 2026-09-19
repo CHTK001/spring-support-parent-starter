@@ -25,7 +25,9 @@ public class SysAiGlobalSetting {
      * 全局设置主键 标识
      */
     @TableId(value = "sys_ai_global_setting_id", type = IdType.AUTO)
-    /** SYSAI全局设置标识 */
+    /**
+     * SYSAI全局设置标识
+    */
     private Long id;
 
     /**
@@ -74,14 +76,18 @@ public class SysAiGlobalSetting {
      * 创建时间
      */
     @TableField("create_time")
-    /** 创建时间 */
+    /**
+     * 创建时间
+    */
     private LocalDateTime createTime;
 
     /**
      * 更新时间
      */
     @TableField("update_time")
-    /** 更新时间 */
+    /**
+     * 更新时间
+    */
     private LocalDateTime updateTime;
 }
 

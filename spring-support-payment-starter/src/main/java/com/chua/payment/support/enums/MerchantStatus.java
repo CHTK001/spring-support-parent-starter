@@ -32,9 +32,13 @@ public enum MerchantStatus {
      */
     CLOSED(3, "已注销");
 
-    /** 代码 */
+    /**
+     * 代码
+    */
     private final int code;
-    /** 描述 */
+    /**
+     * 描述
+    */
     private final String description;
 
     /**

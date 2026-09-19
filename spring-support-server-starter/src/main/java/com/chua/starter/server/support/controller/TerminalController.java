@@ -39,16 +39,24 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class TerminalController {
 
-    /** 会话审计服务 */
+    /**
+     * 会话审计服务
+    */
     private final TerminalSessionService terminalSessionService;
 
-    /** guacd 会话注册表 */
+    /**
+     * guacd 会话注册表
+    */
     private final GuacdSessionRegistry sessionRegistry;
 
-    /** 命令片段 映射器（简单 CRUD 直连） */
+    /**
+     * 命令片段 映射器（简单 CRUD 直连）
+    */
     private final MsTerminalSnippetMapper snippetMapper;
 
-    /** 路径书签 映射器（简单 CRUD 直连） */
+    /**
+     * 路径书签 映射器（简单 CRUD 直连）
+    */
     private final MsTerminalBookmarkMapper bookmarkMapper;
 
     /**

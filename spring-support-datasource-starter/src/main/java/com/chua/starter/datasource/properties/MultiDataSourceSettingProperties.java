@@ -18,7 +18,9 @@ public class MultiDataSourceSettingProperties {
     private boolean enable = false;
 
 
-    /** PRE */
+    /**
+     * PRE
+    */
     public static final String PRE = "plugin.multi-datasource";
 
     /**

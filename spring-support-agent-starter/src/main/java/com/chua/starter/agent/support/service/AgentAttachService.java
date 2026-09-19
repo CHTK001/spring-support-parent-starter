@@ -31,13 +31,19 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Slf4j
 public class AgentAttachService implements SmartInitializingSingleton {
 
-    /** 是否已尝试注入（幂等保护）。 */
+    /**
+     * 是否已尝试注入（幂等保护）。
+    */
     private final AtomicBoolean attachAttempted = new AtomicBoolean(false);
 
-    /** 注入是否成功。 */
+    /**
+     * 注入是否成功。
+    */
     private volatile boolean agentActive = false;
 
-    /** 配置项。 */
+    /**
+     * 配置项。
+    */
     private final com.chua.starter.agent.support.config.AgentAttachProperties properties;
 
     /**

@@ -15,7 +15,9 @@ import lombok.Getter;
 @Getter
 public class ServerConfigChangedEvent {
 
-    /** 变更的配置键集合 */
+    /**
+     * 变更的配置键集合
+    */
     private final java.util.Set<String> keys;
 
     /**

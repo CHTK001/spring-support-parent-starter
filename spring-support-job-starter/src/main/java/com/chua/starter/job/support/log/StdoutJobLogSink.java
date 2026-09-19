@@ -12,7 +12,9 @@ import lombok.extern.slf4j.Slf4j;
 public class StdoutJobLogSink implements JobLogSink {
 
     @Override
-    /** 写入 */
+    /**
+     * 写入
+    */
     public void write(JobLogEvent event) {
         if (event == null) {
             return;

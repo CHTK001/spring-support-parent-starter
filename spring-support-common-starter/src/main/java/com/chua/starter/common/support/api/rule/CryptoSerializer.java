@@ -30,7 +30,9 @@ public class CryptoSerializer extends JsonSerializer<String> implements Contextu
      */
     private final String key;
 
-    /** 密钥类型 */
+    /**
+     * 密钥类型
+    */
     private Crypto.KeyType keyType;
 
     /**

@@ -31,18 +31,26 @@ import java.lang.reflect.Method;
  */
 public class TenantedKeyGenerator implements KeyGenerator, ApplicationContextAware, InitializingBean {
 
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(TenantedKeyGenerator.class);
 
-    /** Application上下文 */
+    /**
+     * Application上下文
+    */
     private ApplicationContext applicationContext;
 
     @Value("${spring.application.name:app}")
-    /** Application名称 */
+    /**
+     * Application名称
+    */
     private String applicationName;
 
     @Value("${plugin.api.platform.platform-name:default}")
-    /** Platform名称 */
+    /**
+     * Platform名称
+    */
     private String platformName;
 
     /**
@@ -74,13 +82,17 @@ public class TenantedKeyGenerator implements KeyGenerator, ApplicationContextAwa
     }
 
     @Override
-    /** 设置application上下文 */
+    /**
+     * 设置application上下文
+    */
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
     }
 
     @Override
-    /** 之后属性设置 */
+    /**
+     * 之后属性设置
+    */
     public void afterPropertiesSet() {
  // 尝试从上下文中自动绑定租户标识提供者
         if (tenantIdProvider == null) {
@@ -114,7 +126,9 @@ public class TenantedKeyGenerator implements KeyGenerator, ApplicationContextAwa
     }
 
     @Override
-    /** Generate */
+    /**
+     * Generate
+    */
     public Object generate(Object target, Method method, Object... params) {
         StringBuilder keyBuilder = new StringBuilder();
 

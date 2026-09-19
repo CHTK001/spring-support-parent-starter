@@ -21,14 +21,22 @@ import java.util.Map;
 @RequiredArgsConstructor
 public abstract class AbstractMerchantPaymentChannel {
 
-    /** Ext_提供者_spi */
+    /**
+     * Ext_提供者_spi
+    */
     public static final String EXT_PROVIDER_SPI = "providerSpi";
-    /** 默认_提供者_spi */
+    /**
+     * 默认_提供者_spi
+    */
     public static final String DEFAULT_PROVIDER_SPI = "default";
 
-    /** Merchant通道服务 */
+    /**
+     * Merchant通道服务
+    */
     protected final MerchantChannelService merchantChannelService;
-    /** Objectmapper */
+    /**
+     * Objectmapper
+    */
     protected final ObjectMapper objectMapper;
 
     /**

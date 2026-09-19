@@ -10,14 +10,24 @@ import lombok.Data;
  */
 @Data
 public class WechatConfigDTO {
-    /** APPID */
+    /**
+     * APPID
+    */
     private String appId;
-    /** MCHID */
+    /**
+     * MCHID
+    */
     private String mchId;
-    /** API密钥 */
+    /**
+     * API密钥
+    */
     private String apiKey;
-    /** 证书路径 */
+    /**
+     * 证书路径
+    */
     private String certPath;
-    /** 通知url */
+    /**
+     * 通知url
+    */
     private String notifyUrl;
 }

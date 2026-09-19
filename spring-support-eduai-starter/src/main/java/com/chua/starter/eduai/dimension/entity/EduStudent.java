@@ -23,7 +23,9 @@ import java.time.LocalDateTime;
 public class EduStudent {
 
     @TableId(type = IdType.AUTO)
-    /** studentid */
+    /**
+     * studentid
+    */
     private Long studentId;
 
     /**
@@ -67,10 +69,14 @@ public class EduStudent {
     private Integer studentStatus;
 
     @TableField(value = "create_time", fill = com.baomidou.mybatisplus.annotation.FieldFill.INSERT)
-    /** 创建时间 */
+    /**
+     * 创建时间
+    */
     private LocalDateTime createTime;
 
     @TableField(value = "update_time", fill = com.baomidou.mybatisplus.annotation.FieldFill.INSERT_UPDATE)
-    /** 更新时间 */
+    /**
+     * 更新时间
+    */
     private LocalDateTime updateTime;
 }

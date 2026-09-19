@@ -53,46 +53,74 @@ import java.util.concurrent.atomic.AtomicInteger;
 @RequiredArgsConstructor
 public class WatchdogServiceImpl implements WatchdogService {
 
-    /** 项目 映射器 */
+    /**
+     * 项目 映射器
+    */
     private final MsProjectMapper projectMapper;
 
-    /** 部署日志 映射器 */
+    /**
+     * 部署日志 映射器
+    */
     private final MsProjectDeployLogMapper deployLogMapper;
 
-    /** 服务器主机 映射器（来自 spring-支持-服务端-启动） */
+    /**
+     * 服务器主机 映射器（来自 spring-支持-服务端-启动）
+    */
     private final MsServerHostMapper serverHostMapper;
 
-    /** 服务器主机服务（凭据解析） */
+    /**
+     * 服务器主机服务（凭据解析）
+    */
     private final ServerHostService serverHostService;
 
-    /** SSH 连接池 */
+    /**
+     * SSH 连接池
+    */
     private final ConnectionManager connectionManager;
 
-    /** 实时推送 */
+    /**
+     * 实时推送
+    */
     private final ProjectPushService pushService;
 
-    /** 告警出口（反射桥接 monitor 告警引擎，可选） */
+    /**
+     * 告警出口（反射桥接 monitor 告警引擎，可选）
+    */
     private final ProjectAlarmHook alarmHook;
 
-    /** Jackson */
+    /**
+     * Jackson
+    */
     private final ObjectMapper objectMapper;
 
-    /** 单主机守护探测超时（秒） */
+    /**
+     * 单主机守护探测超时（秒）
+    */
     private static final int PROBE_TIMEOUT_SECONDS = 30;
 
-    /** 项目连续失败计数（内存级，重启清零） */
+    /**
+     * 项目连续失败计数（内存级，重启清零）
+    */
     private final ConcurrentHashMap<Long, AtomicInteger> consecutiveFailMap = new ConcurrentHashMap<>();
 
-    /** 项目累计自动拉起次数（内存级） */
+    /**
+     * 项目累计自动拉起次数（内存级）
+    */
     private final ConcurrentHashMap<Long, AtomicInteger> restartedCountMap = new ConcurrentHashMap<>();
 
-    /** 项目最近一次检测时间 */
+    /**
+     * 项目最近一次检测时间
+    */
     private final ConcurrentHashMap<Long, LocalDateTime> lastCheckTimeMap = new ConcurrentHashMap<>();
 
-    /** 项目最近一次检测结果（HEALTHY/UNHEALTHY/RESTARTED） */
+    /**
+     * 项目最近一次检测结果（HEALTHY/UNHEALTHY/RESTARTED）
+    */
     private final ConcurrentHashMap<Long, String> lastResultMap = new ConcurrentHashMap<>();
 
-    /** 守护探测专用线程池（多项目并行探测，4 线程） */
+    /**
+     * 守护探测专用线程池（多项目并行探测，4 线程）
+    */
     private final ExecutorService probeExecutor = Executors.newFixedThreadPool(4, r -> {
         Thread t = new Thread(r, "project-watchdog-probe");
         t.setDaemon(true);

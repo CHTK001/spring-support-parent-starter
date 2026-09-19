@@ -24,7 +24,9 @@ import static com.chua.starter.common.support.logger.ModuleLog.highlight;
 public class SseSocketProvider implements SocketProvider {
 
     @Override
-    /** 获取协议 */
+    /**
+     * 获取协议
+    */
     public SocketProtocol getProtocol() {
         return SocketProtocol.SSE;
     }
@@ -57,7 +59,9 @@ public class SseSocketProvider implements SocketProvider {
     }
 
     @Override
-    /** 开始 */
+    /**
+     * 开始
+    */
     public void start(SocketSessionTemplate template) {
         if (template != null) {
             template.start();
@@ -66,7 +70,9 @@ public class SseSocketProvider implements SocketProvider {
     }
 
     @Override
-    /** 停止 */
+    /**
+     * 停止
+    */
     public void stop(SocketSessionTemplate template) {
         if (template != null) {
             template.stop();
@@ -75,7 +81,9 @@ public class SseSocketProvider implements SocketProvider {
     }
 
     @Override
-    /** 支持 */
+    /**
+     * 支持
+    */
     public boolean supports(SocketProtocol protocol) {
         return protocol == SocketProtocol.SSE;
     }

@@ -19,13 +19,19 @@ import java.util.Date;
 @Slf4j
 public class MybatisJobLogSink implements JobLogSink {
 
-    /** 日期_fmt */
+    /**
+     * 日期_fmt
+    */
     private static final DateTimeFormatter DATE_FMT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd").withZone(ZoneId.systemDefault());
 
-    /** 作业日志映射器 */
+    /**
+     * 作业日志映射器
+    */
     private final JobLogMapper jobLogMapper;
-    /** 文件日志是否启用 */
+    /**
+     * 文件日志是否启用
+    */
     private final boolean fileLoggingEnabled;
 
     /**
@@ -53,7 +59,9 @@ public class MybatisJobLogSink implements JobLogSink {
     }
 
     @Override
-    /** 写入 */
+    /**
+     * 写入
+    */
     public void write(JobLogEvent event) {
         if (event == null) {
             return;

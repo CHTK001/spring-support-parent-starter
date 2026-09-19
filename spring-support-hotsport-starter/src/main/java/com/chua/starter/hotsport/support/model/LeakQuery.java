@@ -14,30 +14,48 @@ import lombok.Data;
 @Data
 public class LeakQuery {
 
-    /** 页码，从 1 起，缺省 1。 */
+    /**
+     * 页码，从 1 起，缺省 1。
+    */
     private Integer page;
 
-    /** 每页条数，缺省 20。 */
+    /**
+     * 每页条数，缺省 20。
+    */
     private Integer size;
 
-    /** 资源类型过滤（可空）。 */
+    /**
+     * 资源类型过滤（可空）。
+    */
     private String resourceType;
 
-    /** 最小存活毫秒（可空）。 */
+    /**
+     * 最小存活毫秒（可空）。
+    */
     private Long minAgeMs;
 
-    /** 开始时间（epoch 毫秒，可空）。 */
+    /**
+     * 开始时间（epoch 毫秒，可空）。
+    */
     private Long startTime;
 
-    /** 结束时间（epoch 毫秒，可空）。 */
+    /**
+     * 结束时间（epoch 毫秒，可空）。
+    */
     private Long endTime;
 
-    /** 资源名过滤（包含匹配，可空）。 */
+    /**
+     * 资源名过滤（包含匹配，可空）。
+    */
     private String resourceName;
 
-    /** 线程名过滤（包含匹配，可空）。 */
+    /**
+     * 线程名过滤（包含匹配，可空）。
+    */
     private String thread;
 
-    /** 仅返回活跃泄漏（可空）。 */
+    /**
+     * 仅返回活跃泄漏（可空）。
+    */
     private Boolean activeOnly;
 }

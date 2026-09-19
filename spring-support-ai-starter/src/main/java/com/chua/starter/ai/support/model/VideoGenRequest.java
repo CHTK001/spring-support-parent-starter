@@ -10,14 +10,24 @@ import lombok.Data;
  */
 @Data
 public class VideoGenRequest {
-    /** 提示词 */
+    /**
+     * 提示词
+    */
     private String prompt;
-    /** 模型名称，可选 */
+    /**
+     * 模型名称，可选
+    */
     private String model;
-    /** 时长（秒），可选 */
+    /**
+     * 时长（秒），可选
+    */
     private Integer duration;
-    /** 尺寸，可选 */
+    /**
+     * 尺寸，可选
+    */
     private String size;
-    /** 风格，可选 */
+    /**
+     * 风格，可选
+    */
     private String style;
 }

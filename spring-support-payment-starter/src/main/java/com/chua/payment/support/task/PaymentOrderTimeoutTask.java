@@ -26,14 +26,22 @@ import java.util.List;
 @ConditionalOnProperty(prefix = "plugin.payment.scheduler", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class PaymentOrderTimeoutTask implements PaymentManagedTask {
 
-    /** 排序映射器 */
+    /**
+     * 排序映射器
+    */
     private final PaymentOrderMapper orderMapper;
-    /** 配置映射器 */
+    /**
+     * 配置映射器
+    */
     private final MerchantPaymentConfigMapper configMapper;
-    /** Payment排序服务 */
+    /**
+     * Payment排序服务
+    */
     private final PaymentOrderService paymentOrderService;
 
-    /** cancel超时订单 */
+    /**
+     * cancel超时订单
+    */
     public void cancelTimeoutOrders() {
         log.info("开始执行订单超时处理任务");
 
@@ -92,25 +100,33 @@ public class PaymentOrderTimeoutTask implements PaymentManagedTask {
     }
 
     @Override
-    /** 任务Key */
+    /**
+     * 任务Key
+    */
     public String taskKey() {
         return "payment-order-timeout-scan";
     }
 
     @Override
-    /** 任务名称 */
+    /**
+     * 任务名称
+    */
     public String taskName() {
         return "订单超时扫描";
     }
 
     @Override
-    /** 默认cron */
+    /**
+     * 默认cron
+    */
     public String defaultCron() {
         return "0 */10 * * * ?";
     }
 
     @Override
-    /** Description */
+    /**
+     * Description
+    */
     public String description() {
         return "按商户支付配置扫描超时订单并执行自动取消。";
     }
@@ -121,7 +137,9 @@ public class PaymentOrderTimeoutTask implements PaymentManagedTask {
             cron = "0 */10 * * * ?",
             desc = "按商户支付配置扫描超时订单并执行自动取消。"
     )
-    /** 执行 */
+    /**
+     * 执行
+    */
     public void execute() {
         /**
          * cancel超时订单。

@@ -13,7 +13,9 @@ import org.slf4j.MDC;
 public class MybatisP6SpyLogger implements MessageFormattingStrategy {
 
     @Override
-    /** 格式化消息 */
+    /**
+     * 格式化消息
+    */
     public String formatMessage(int connectionId, String now, long elapsed, String category, String prepared, String sql, String url) {
         if (StringUtils.isNotBlank(sql)) {
             String mapperMethod = MDC.get("mapper");

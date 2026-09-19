@@ -21,16 +21,24 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 public class DataSourceGroupRegistry {
 
-    /** 分组映射：群体名称 → 数据源群体 */
+    /**
+     * 分组映射：群体名称 → 数据源群体
+    */
     private static final Map<String, DataSourceGroup> GROUP_MAP = new ConcurrentHashMap<>();
 
-    /** 数据源到组的反向映射：ds名称 → 群体名称 */
+    /**
+     * 数据源到组的反向映射：ds名称 → 群体名称
+    */
     private static final Map<String, String> DS_TO_GROUP = new ConcurrentHashMap<>();
 
-    /** 分隔符 */
+    /**
+     * 分隔符
+    */
     private static final String SEPARATOR = "_";
 
-    /** 全局默认负载均衡策略（可选，为空时使用各分组自身默认值） */
+    /**
+     * 全局默认负载均衡策略（可选，为空时使用各分组自身默认值）
+    */
     private static DataSourceGroup.LoadBalanceStrategy defaultStrategy;
 
     /**

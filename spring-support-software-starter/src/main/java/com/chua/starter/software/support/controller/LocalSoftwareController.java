@@ -43,9 +43,13 @@ import java.util.List;
 @RequiredArgsConstructor
 public class LocalSoftwareController {
 
-    /** 本地software服务 */
+    /**
+     * 本地software服务
+    */
     private final LocalSoftwareService localSoftwareService;
-    /** Softsoftware服务 */
+    /**
+     * Softsoftware服务
+    */
     private final SoftSoftwareService softSoftwareService;
 
     /**

@@ -113,7 +113,9 @@ class ShardingMySqlRealTest {
         }
     }
 
-    /** 引擎激活验证：真库数据源覆写下分片引擎应可装配 */
+    /**
+     * 引擎激活验证：真库数据源覆写下分片引擎应可装配
+    */
     @Test
     void shardedEngineActivated() {
         /**
@@ -130,7 +132,9 @@ class ShardingMySqlRealTest {
                 "shardingDataSource 应为 ShardingSphere 数据源，实际: " + shardingDataSource.getClass().getName());
     }
 
-    /** 分片聚合：数量 跨两个真库分片聚合（路由可用时执行） */
+    /**
+     * 分片聚合：数量 跨两个真库分片聚合（路由可用时执行）
+    */
     @Test
     void shardedAggregateQuery() {
         /**
@@ -148,7 +152,9 @@ class ShardingMySqlRealTest {
         assertEquals(4, count, "分片聚合应统计两个真库分片的全部数据");
     }
 
-    /** 分片查询：按分片键查询可命中对应真库分片（路由可用时执行） */
+    /**
+     * 分片查询：按分片键查询可命中对应真库分片（路由可用时执行）
+    */
     @Test
     void shardedPointQuery() {
         /**
@@ -171,7 +177,9 @@ class ShardingMySqlRealTest {
         assertEquals("order-2", names.getFirst(), "分片路由应返回正确数据");
     }
 
-    /** 路由可用性门控：真库路由可用时执行断言，不可用时以明确原因跳过 */
+    /**
+     * 路由可用性门控：真库路由可用时执行断言，不可用时以明确原因跳过
+    */
     private void assumeShardingRoutable() {
         if (shardingDataSource == null) {
             Assumptions.abort("分片引擎未装配：shardingDataSource Bean 不存在");

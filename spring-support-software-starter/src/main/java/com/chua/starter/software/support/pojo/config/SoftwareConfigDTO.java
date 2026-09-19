@@ -14,6 +14,8 @@ import lombok.Data;
 @Schema(description = "软件配置响应")
 public class SoftwareConfigDTO extends SoftConfig {
 
-    /** 串行版本UID */
+    /**
+     * 串行版本UID
+    */
     private static final long serialVersionUID = 1L;
 }

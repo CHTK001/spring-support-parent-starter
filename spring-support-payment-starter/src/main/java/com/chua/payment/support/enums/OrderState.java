@@ -71,7 +71,9 @@ public enum OrderState {
      */
     REFUNDED("已退款");
 
-    /** 描述 */
+    /**
+     * 描述
+    */
     private final String description;
 
     /**

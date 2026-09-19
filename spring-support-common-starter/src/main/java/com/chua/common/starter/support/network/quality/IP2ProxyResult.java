@@ -13,14 +13,22 @@ public class IP2ProxyResult implements Serializable {
 
     private static final long serialVersionUID = 1L; // 串行版本uid
 
-    /** Not_支持 */
+    /**
+     * Not_支持
+    */
     private static final String NOT_SUPPORTED = "NOT SUPPORTED";
-    /** 是否为空 */
+    /**
+     * 是否为空
+    */
     private static final String EMPTY = "-";
 
-    /** 代理 */
+    /**
+     * 代理
+    */
     private final IP2Proxy proxy;
-    /** IP */
+    /**
+     * IP
+    */
     private final String ip;
 
     /**

@@ -22,13 +22,19 @@ import java.util.zip.GZIPOutputStream;
 @Component
 public class GzipMessageConverter implements MessageConverter {
 
-    /** 1KB */
+    /**
+     * 1KB
+    */
     private static final int MIN_COMPRESS_SIZE = 1024;
-    /** Compressed_头部 */
+    /**
+     * Compressed_头部
+    */
     private static final String COMPRESSED_HEADER = "X-Compressed";
 
     @Override
-    /** 转换之前发送 */
+    /**
+     * 转换之前发送
+    */
     public Message convertBeforeSend(Message message) {
         byte[] payload = message.getPayload();
         if (payload == null || payload.length < MIN_COMPRESS_SIZE) {
@@ -61,7 +67,9 @@ public class GzipMessageConverter implements MessageConverter {
     }
 
     @Override
-    /** 转换之后接收 */
+    /**
+     * 转换之后接收
+    */
     public Message convertAfterReceive(Message message) {
         Object compressed = message.getHeaders().get(COMPRESSED_HEADER);
         if (!"gzip".equals(compressed)) {
@@ -99,14 +107,18 @@ public class GzipMessageConverter implements MessageConverter {
     }
 
     @Override
-    /** 支持 */
+    /**
+     * 支持
+    */
     public boolean supports(Message message) {
         byte[] payload = message.getPayload();
         return payload != null && payload.length >= MIN_COMPRESS_SIZE;
     }
 
     @Override
-    /** 获取订单 */
+    /**
+     * 获取订单
+    */
     public int getOrder() {
         return 100; // 较低优先级，在加密等操作之后
     }

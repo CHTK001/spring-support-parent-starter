@@ -19,59 +19,87 @@ import java.time.LocalDateTime;
 public class WalletWithdrawApproval {
 
     @TableId(value = "pay_wallet_withdraw_approval_id", type = IdType.AUTO)
-    /** 标识 */
+    /**
+     * 标识
+    */
     private Long id;
 
     @TableField("pay_wallet_withdraw_approval_merchant_id")
-    /** merchantid */
+    /**
+     * merchantid
+    */
     private Long merchantId;
 
     @TableField("pay_wallet_withdraw_approval_user_id")
-    /** 用户标识 */
+    /**
+     * 用户标识
+    */
     private Long userId;
 
     @TableField("pay_wallet_withdraw_approval_amount")
-    /** Amount */
+    /**
+     * Amount
+    */
     private BigDecimal amount;
 
     @TableField("pay_wallet_withdraw_approval_bank_account")
-    /** Bankaccount */
+    /**
+     * Bankaccount
+    */
     private String bankAccount;
 
     @TableField("pay_wallet_withdraw_approval_bank_name")
-    /** Bank名称 */
+    /**
+     * Bank名称
+    */
     private String bankName;
 
     @TableField("pay_wallet_withdraw_approval_account_name")
-    /** 账户名称 */
+    /**
+     * 账户名称
+    */
     private String accountName;
 
     @TableField("pay_wallet_withdraw_approval_withdraw_no")
-    /** withdrawno */
+    /**
+     * withdrawno
+    */
     private String withdrawNo;
 
     @TableField("pay_wallet_withdraw_approval_status")
-    /** 状态 */
+    /**
+     * 状态
+    */
     private String status;
 
     @TableField("pay_wallet_withdraw_approval_operator")
-    /** 操作符 */
+    /**
+     * 操作符
+    */
     private String operator;
 
     @TableField("pay_wallet_withdraw_approval_remark")
-    /** 评论 */
+    /**
+     * 评论
+    */
     private String remark;
 
     @TableField("pay_wallet_withdraw_approval_approve_time")
-    /** Approve时间 */
+    /**
+     * Approve时间
+    */
     private LocalDateTime approveTime;
 
     @TableField("pay_wallet_withdraw_approval_created_at")
-    /** 创建时间AT */
+    /**
+     * 创建时间AT
+    */
     private LocalDateTime createdAt;
 
     @TableField("pay_wallet_withdraw_approval_updated_at")
-    /** 更新时间AT */
+    /**
+     * 更新时间AT
+    */
     private LocalDateTime updatedAt;
 }
 

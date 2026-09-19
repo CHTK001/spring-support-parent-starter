@@ -13,31 +13,49 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = TencentWechatPayProperties.PREFIX, ignoreInvalidFields = true)
 public class TencentWechatPayProperties {
 
-    /** 前缀 */
+    /**
+     * 前缀
+    */
     public static final String PREFIX = "plugin.tencent.wechat-pay";
 
-    /** Enable */
+    /**
+     * Enable
+    */
     private boolean enable = false;
 
-    /** 是否启用 */
+    /**
+     * 是否启用
+    */
     private boolean enabled = false;
 
-    /** APPID */
+    /**
+     * APPID
+    */
     private String appId;
 
-    /** merchantid */
+    /**
+     * merchantid
+    */
     private String merchantId;
 
-    /** 私有密钥 */
+    /**
+     * 私有密钥
+    */
     private String privateKey;
 
-    /** Merchantserial数字 */
+    /**
+     * Merchantserial数字
+    */
     private String merchantSerialNumber;
 
-    /** apiv3Key */
+    /**
+     * apiv3Key
+    */
     private String apiV3Key;
 
-    /** 通知url */
+    /**
+     * 通知url
+    */
     private String notifyUrl;
 
     /**

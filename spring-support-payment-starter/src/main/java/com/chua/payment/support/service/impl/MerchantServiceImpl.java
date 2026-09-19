@@ -31,11 +31,17 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class MerchantServiceImpl implements MerchantService {
 
-    /** Merchantmapper */
+    /**
+     * Merchantmapper
+    */
     private final MerchantMapper merchantMapper;
-    /** Merchant通道映射器 */
+    /**
+     * Merchant通道映射器
+    */
     private final MerchantChannelMapper merchantChannelMapper;
-    /** 薪酬排序映射器 */
+    /**
+     * 薪酬排序映射器
+    */
     private final PaymentOrderMapper paymentOrderMapper;
 
     @Override
@@ -118,13 +124,17 @@ public class MerchantServiceImpl implements MerchantService {
     }
 
     @Override
-    /** 获取Merchant */
+    /**
+     * 获取Merchant
+    */
     public MerchantVO getMerchant(Long id) {
         return convertToVO(requireMerchant(id));
     }
 
     @Override
-    /** 列表merchants */
+    /**
+     * 列表merchants
+    */
     public Page<MerchantVO> listMerchants(int page, int size, String merchantName, Integer status) {
         LambdaQueryWrapper<Merchant> wrapper = new LambdaQueryWrapper<>();
         if (StringUtils.hasText(merchantName)) {

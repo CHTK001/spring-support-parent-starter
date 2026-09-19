@@ -15,7 +15,9 @@ import java.util.Comparator;
  */
 public class MessagePriorityComparator implements Comparator<Message> {
 
-    /** Priority_头部 */
+    /**
+     * Priority_头部
+    */
     public static final String PRIORITY_HEADER = "X-Priority";
 
     /**
@@ -34,7 +36,9 @@ public class MessagePriorityComparator implements Comparator<Message> {
     public static final int LOWEST_PRIORITY = 10;
 
     @Override
-    /** 比较 */
+    /**
+     * 比较
+    */
     public int compare(Message m1, Message m2) {
         int priority1 = getPriority(m1);
         int priority2 = getPriority(m2);

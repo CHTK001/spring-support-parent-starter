@@ -36,19 +36,25 @@ public class FileHandler implements SyncMessageHandler {
 
 
     @Override
-    /** 获取名称 */
+    /**
+     * 获取名称
+    */
     public String getName() {
         return "fileHandler";
     }
 
     @Override
-    /** 支持 */
+    /**
+     * 支持
+    */
     public boolean supports(String topic) {
         return MonitorTopics.FILE_REQUEST.equals(topic);
     }
 
     @Override
-    /** 处理 */
+    /**
+     * 处理
+    */
     public Object handle(String topic, String sessionId, Map<String, Object> data) {
         String operation = getString(data, "operation");
         String requestId = getString(data, "requestId");

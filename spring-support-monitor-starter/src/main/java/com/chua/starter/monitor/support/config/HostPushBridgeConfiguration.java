@@ -25,10 +25,14 @@ import org.springframework.context.annotation.Configuration;
 @RequiredArgsConstructor
 public class HostPushBridgeConfiguration {
 
-    /** 检测器（服务端-启动） */
+    /**
+     * 检测器（服务端-启动）
+    */
     private final HostOnlineScheduler onlineScheduler;
 
-    /** 推送服务（监控-启动） */
+    /**
+     * 推送服务（监控-启动）
+    */
     private final MonitorPushService pushService;
 
     /**

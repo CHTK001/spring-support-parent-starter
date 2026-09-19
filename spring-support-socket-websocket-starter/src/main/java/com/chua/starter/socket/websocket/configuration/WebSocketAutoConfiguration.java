@@ -43,15 +43,21 @@ import static com.chua.starter.common.support.logger.ModuleLog.highlight;
 @ConditionalOnProperty(prefix = WebSocketProperties.PREFIX, name = "enable", havingValue = "true")
 public class WebSocketAutoConfiguration implements WebSocketConfigurer {
 
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(WebSocketAutoConfiguration.class);
 
     @Autowired
-    /** 属性 */
+    /**
+     * 属性
+    */
     private WebSocketProperties properties;
 
     @Autowired(required = false)
-    /** 处理器 */
+    /**
+     * 处理器
+    */
     private List<WebSocketMessageHandler> handlers = Collections.emptyList();
 
     @Bean
@@ -119,7 +125,9 @@ public class WebSocketAutoConfiguration implements WebSocketConfigurer {
     }
 
     @Override
-    /** 注册webSocket处理器 */
+    /**
+     * 注册webSocket处理器
+    */
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         WebSocketSessionManager sessionManager = webSocketSessionManager();
         DelegatingWebSocketHandler handler = delegatingWebSocketHandler(sessionManager);

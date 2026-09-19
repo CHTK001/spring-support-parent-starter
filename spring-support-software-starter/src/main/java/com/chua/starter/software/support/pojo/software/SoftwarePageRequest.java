@@ -22,7 +22,9 @@ public class SoftwarePageRequest extends SoftSoftware {
      * 已安装的软件标识集合，用于排序（已安装的排在前面）
      */
     @Schema(description = "已安装的软件ID集合，用于排序（已安装的排前面）")
-    /** installedsoftware标识 */
+    /**
+     * installedsoftware标识
+    */
     private java.util.Collection<String> installedSoftwareIds;
 
     /**

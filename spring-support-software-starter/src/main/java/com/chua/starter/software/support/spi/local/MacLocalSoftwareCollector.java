@@ -24,14 +24,18 @@ import java.util.List;
 public class MacLocalSoftwareCollector implements LocalSoftwareCollector {
 
     @Override
-    /** 支持 */
+    /**
+     * 支持
+    */
     public boolean support() {
         return System.getProperty("os.name", "").toLowerCase().contains("mac") ||
                 System.getProperty("os.name", "").toLowerCase().contains("darwin");
     }
 
     @Override
-    /** Collect */
+    /**
+     * Collect
+    */
     public List<SoftSoftware> collect() {
         List<SoftSoftware> list = new ArrayList<>();
         File appDir = new File("/Applications");

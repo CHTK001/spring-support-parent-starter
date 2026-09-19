@@ -25,9 +25,13 @@ import java.util.Locale;
 @RequiredArgsConstructor
 public class WalletNotifyServiceImpl implements WalletNotifyService {
 
-    /** Wallet排序服务 */
+    /**
+     * Wallet排序服务
+    */
     private final WalletOrderService walletOrderService;
-    /** Walletaccount服务 */
+    /**
+     * Walletaccount服务
+    */
     private final WalletAccountService walletAccountService;
 
     @Override

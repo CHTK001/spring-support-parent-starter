@@ -15,7 +15,9 @@ import java.util.List;
 public class RoundRobinLoadBalancer implements RpcLoadBalancer {
 
     @Override
-    /** 选择 */
+    /**
+     * 选择
+    */
     public <T> T select(List<T> providers) {
         if (providers == null || providers.isEmpty()) {
             return null;
@@ -26,7 +28,9 @@ public class RoundRobinLoadBalancer implements RpcLoadBalancer {
     }
 
     @Override
-    /** 获取名称 */
+    /**
+     * 获取名称
+    */
     public String getName() {
         return "round-robin";
     }

@@ -37,15 +37,25 @@ import static com.chua.starter.mybatis.interceptor.MybatisPlusPermissionHandler.
  * @since 4.0.0
  */
 public class MybatisPlusDataPermissionHandler implements MultiDataPermissionHandler {
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(MybatisPlusDataPermissionHandler.class);
-    /** 父_admin */
+    /**
+     * 父_admin
+    */
     private static final String SUPER_ADMIN = "SUPER_ADMIN";
-    /** Admin */
+    /**
+     * Admin
+    */
     private static final String ADMIN = "ADMIN";
-    /** Dept_leader */
+    /**
+     * Dept_leader
+    */
     private static final String DEPT_LEADER = "DEPT_LEADER";
-    /** Managed_dept_树_标识 */
+    /**
+     * Managed_dept_树_标识
+    */
     private static final String MANAGED_DEPT_TREE_IDS = "managedDeptTreeIds";
 
     /**
@@ -53,9 +63,13 @@ public class MybatisPlusDataPermissionHandler implements MultiDataPermissionHand
      */
     private static final Map<String, DataScopeInfo> DATA_SCOPE_CACHE = new ConcurrentReferenceHashMap<>(4096);
 
-    /** Meta数据作用域属性 */
+    /**
+     * Meta数据作用域属性
+    */
     private final MybatisPlusDataScopeProperties metaDataScopeProperties;
-    /** 认证服务供应商 */
+    /**
+     * 认证服务供应商
+    */
     private final Supplier<AuthService> authServiceSupplier;
 
     /**
@@ -342,15 +356,25 @@ public class MybatisPlusDataPermissionHandler implements MultiDataPermissionHand
      * @since 4.0.0
      */
     private static class DataScopeInfo {
-        /** 是否启用数据权限 */
+        /**
+         * 是否启用数据权限
+        */
         final boolean enabled;
-        /** 是否使用用户当前的数据权限 */
+        /**
+         * 是否使用用户当前的数据权限
+        */
         final boolean useUserPermission;
-        /** 数据权限类型 */
+        /**
+         * 数据权限类型
+        */
         final DataFilterTypeEnum dataFilterType;
-        /** 部门表别名，用于多表关联场景 */
+        /**
+         * 部门表别名，用于多表关联场景
+        */
         final String deptAlias;
-        /** 用户表别名，用于多表关联场景 */
+        /**
+         * 用户表别名，用于多表关联场景
+        */
         final String userAlias;
 
         /**

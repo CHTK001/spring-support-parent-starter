@@ -51,17 +51,23 @@ import java.util.Properties;
 @Slf4j
 @EnableConfigurationProperties(DiscoveryListProperties.class)
 public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionRegistryPostProcessor {
-    /** 环境 */
+    /**
+     * 环境
+    */
     private Environment environment;
 
     @Override
-    /** 设置环境 */
+    /**
+     * 设置环境
+    */
     public void setEnvironment(Environment environment) {
       this.environment = environment;
     }
 
     @Override
-    /** Post处理Beandefinitionregistry */
+    /**
+     * Post处理Beandefinitionregistry
+    */
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
         DiscoveryListProperties properties = Binder.get(environment).bindOrCreate(DiscoveryListProperties.PRE, DiscoveryListProperties.class);
         if (!properties.isEnable()) {
@@ -227,7 +233,9 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
     static class ServiceDiscovertyFactoryBean implements FactoryBean<ServiceDiscovery>, AutoCloseable{
 
         final ServiceDiscovery serviceDiscovery; // 服务discovery
-        /** Discovery列表 */
+        /**
+         * Discovery列表
+        */
         private final List<Discovery> discoveryList;
 
         /**
@@ -242,7 +250,9 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
         }
 
         @Override
-        /** 获取对象 */
+        /**
+         * 获取对象
+        */
         public ServiceDiscovery getObject() throws Exception {
             return serviceDiscovery;
         }
@@ -253,7 +263,9 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
         }
 
 
-        /** 开始 */
+        /**
+         * 开始
+        */
         public void start() throws Exception {
             serviceDiscovery.start();
             for (Discovery discovery : discoveryList) {
@@ -261,7 +273,9 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
                 if(serviceDiscovery.isSupportSubscribe()) {
                     serviceDiscovery.subscribe(discovery.getUriSpec(), new ServiceDiscoveryListener() {
                         @Override
-                        /** 监听 */
+                        /**
+                         * 监听
+                        */
                         public void listen(String s, Discovery discovery, Event event) {
                             DiscoveryConfiguration.log.info("[Discovery] 服务变更: {} -> {}", highlight(discovery.getUriSpec()), event);
                         }
@@ -271,7 +285,9 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
         }
 
         @Override
-        /** 关闭 */
+        /**
+         * 关闭
+        */
         public void close() throws Exception {
             serviceDiscovery.close();
         }

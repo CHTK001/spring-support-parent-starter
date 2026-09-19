@@ -11,10 +11,14 @@ import java.util.Map;
  */
 @Data
 public class WechatPayScoreCancelDTO {
-    /** ReasonMLmlml */
+    /**
+     * ReasonMLmlml
+    */
     private String reason;
     private Map<String, Object> extraParams; // extra参数
-    /** 评论 */
+    /**
+     * 评论
+    */
     private String remark;
 }
 

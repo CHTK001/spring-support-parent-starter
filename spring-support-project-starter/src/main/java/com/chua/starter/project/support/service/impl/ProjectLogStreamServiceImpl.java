@@ -59,22 +59,34 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Service
 public class ProjectLogStreamServiceImpl implements ProjectLogStreamService {
 
-    /** 失败退避上限（毫秒） */
+    /**
+     * 失败退避上限（毫秒）
+    */
     private static final long MAX_BACKOFF_MILLIS = 30_000L;
 
-    /** 单次首帧拉取行数的运行时上限 */
+    /**
+     * 单次首帧拉取行数的运行时上限
+    */
     private static final int MAX_TAIL_LINES = 2000;
 
-    /** 调度器首轮延迟（毫秒），避免与容器启动竞争 */
+    /**
+     * 调度器首轮延迟（毫秒），避免与容器启动竞争
+    */
     private static final long TICK_INITIAL_DELAY_MILLIS = 1_000L;
 
-    /** 项目 映射器 */
+    /**
+     * 项目 映射器
+    */
     private final MsProjectMapper projectMapper;
 
-    /** 服务器主机 映射器 */
+    /**
+     * 服务器主机 映射器
+    */
     private final MsServerHostMapper serverHostMapper;
 
-    /** 服务器主机服务（凭据解析） */
+    /**
+     * 服务器主机服务（凭据解析）
+    */
     private final ServerHostService serverHostService;
 
     /**
@@ -82,16 +94,24 @@ public class ProjectLogStreamServiceImpl implements ProjectLogStreamService {
      */
     private final HostRemoteProviderRegistry remoteRegistry;
 
-    /** 实时推送（socket 广播；宿主未装配 socket 时内部降级为空操作） */
+    /**
+     * 实时推送（socket 广播；宿主未装配 socket 时内部降级为空操作）
+    */
     private final ProjectPushService pushService;
 
-    /** 模块配置 */
+    /**
+     * 模块配置
+    */
     private final ProjectProperties projectProperties;
 
-    /** 活跃流：key = {@code projectId:hostId} */
+    /**
+     * 活跃流：key = {@code projectId:hostId}
+    */
     private final Map<String, LogStream> streams = new ConcurrentHashMap<>();
 
-    /** 采集调度器（单线程，只负责挑选到期的流并提交，不做阻塞 IO） */
+    /**
+     * 采集调度器（单线程，只负责挑选到期的流并提交，不做阻塞 IO）
+    */
     private ScheduledExecutorService ticker;
 
     /**
@@ -472,34 +492,54 @@ public class ProjectLogStreamServiceImpl implements ProjectLogStreamService {
      */
     private static final class LogStream {
 
-        /** 项目标识 */
+        /**
+         * 项目标识
+        */
         final Long projectId;
 
-        /** 主机标识 */
+        /**
+         * 主机标识
+        */
         final Long hostId;
 
-        /** 流键 */
+        /**
+         * 流键
+        */
         final String key;
 
-        /** 观察者标识 -> 最后续订毫秒 */
+        /**
+         * 观察者标识 -> 最后续订毫秒
+        */
         final Map<String, Long> subscribers = new ConcurrentHashMap<>();
 
-        /** 采集单飞标记 */
+        /**
+         * 采集单飞标记
+        */
         final AtomicBoolean inFlight = new AtomicBoolean(false);
 
-        /** 创建时间 */
+        /**
+         * 创建时间
+        */
         final long createdMs = System.currentTimeMillis();
 
-        /** 当前读取的字节偏移；null 表示尚未读取过（首帧取末尾 N 行） */
+        /**
+         * 当前读取的字节偏移；null 表示尚未读取过（首帧取末尾 N 行）
+        */
         volatile Long cursor;
 
-        /** 下次允许采集的时间（退避用） */
+        /**
+         * 下次允许采集的时间（退避用）
+        */
         volatile long nextEligibleMs;
 
-        /** 最近一次成功采集时间 */
+        /**
+         * 最近一次成功采集时间
+        */
         volatile long lastFetchMs;
 
-        /** 连续失败次数 */
+        /**
+         * 连续失败次数
+        */
         volatile int failCount;
 
         LogStream(Long projectId, Long hostId, String key) {

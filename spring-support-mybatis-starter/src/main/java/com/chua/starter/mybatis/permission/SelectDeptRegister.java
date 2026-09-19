@@ -55,7 +55,9 @@ public class SelectDeptRegister extends AbstractDeptRegister {
     }
 
     @Override
-    /** 注册 */
+    /**
+     * 注册
+    */
     public Expression register() {
         /**
          * findtable是否包含deptid。
@@ -151,7 +153,9 @@ public class SelectDeptRegister extends AbstractDeptRegister {
         findFromJoin();
     }
 
-    /** 查找从合并 */
+    /**
+     * 查找从合并
+    */
     private void findFromJoin() {
         List<Join> joins = plainSelect.getJoins();
         if (null == joins) {

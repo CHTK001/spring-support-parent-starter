@@ -23,7 +23,9 @@ public final class JobSyncTopics {
      */
     public static final String REGISTER = "job-reg";
 
-    /** 创建 作业同步topics 实例 */
+    /**
+     * 创建 作业同步topics 实例
+    */
     private JobSyncTopics() {
     }
 }
