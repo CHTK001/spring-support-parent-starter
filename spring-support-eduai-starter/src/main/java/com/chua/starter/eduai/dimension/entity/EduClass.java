@@ -68,4 +68,10 @@ public class EduClass {
      * 更新时间
     */
     private LocalDateTime updateTime;
+
+    /**
+     * 归属用户 ID（服务端按登录态写入，客户端不可指定）
+     */
+    @TableField("class_owner_user_id")
+    private String ownerUserId;
 }

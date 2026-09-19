@@ -4,6 +4,7 @@ import com.chua.common.support.lang.code.PageResult;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.eduai.model.EduExam;
 import com.chua.starter.eduai.service.IEduExamService;
+import com.chua.starter.eduai.support.util.EduUserContext;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -61,7 +62,11 @@ public class EduExamController {
     @Operation(summary = "获取考试详情")
     @GetMapping("/{id}")
     public ReturnResult<EduExam> detail(@PathVariable Long id) {
-        return ReturnResult.ok(examService.getById(id));
+        EduExam exam = examService.getById(id);
+        if (exam != null) {
+            EduUserContext.checkReadable(exam.getOwnerUserId());
+        }
+        return ReturnResult.ok(exam);
     }
 
     /**

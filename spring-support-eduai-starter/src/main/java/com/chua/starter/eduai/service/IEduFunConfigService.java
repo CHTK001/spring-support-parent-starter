@@ -21,6 +21,13 @@ public interface IEduFunConfigService extends IService<EduFunConfig> {
     List<EduFunConfig> listEnabled();
 
     /**
+     * 获取全部配置（含禁用），非管理员仅返回本人归属行与系统预置行
+     *
+     * @return 配置列表
+     */
+    List<EduFunConfig> listAllScoped();
+
+    /**
      * 根据模块编码获取配置
      *
      * @param moduleCode 模块编码

@@ -6,6 +6,7 @@ import com.chua.starter.eduai.model.EduQuestion;
 import com.chua.starter.eduai.model.dto.QuestionQueryDTO;
 import com.chua.starter.eduai.model.dto.QuestionSaveDTO;
 import com.chua.starter.eduai.service.IEduQuestionService;
+import com.chua.starter.eduai.support.util.EduUserContext;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -61,6 +62,9 @@ public class EduQuestionController {
     @GetMapping("/{id}")
     public ReturnResult<EduQuestion> detail(@PathVariable Long id) {
         EduQuestion question = questionService.getById(id);
+        if (question != null) {
+            EduUserContext.checkReadable(question.getOwnerUserId());
+        }
         return ReturnResult.ok(question);
     }
 

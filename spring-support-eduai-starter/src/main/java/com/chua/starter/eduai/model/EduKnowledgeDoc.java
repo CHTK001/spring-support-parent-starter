@@ -1,6 +1,7 @@
 package com.chua.starter.eduai.model;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
@@ -85,4 +86,10 @@ public class EduKnowledgeDoc {
      * 更新人
      */
     private String knowledgeDocUpdateBy;
+
+    /**
+     * 归属用户 ID（服务端按登录态写入，客户端不可指定）
+     */
+    @TableField("knowledge_doc_owner_user_id")
+    private String ownerUserId;
 }

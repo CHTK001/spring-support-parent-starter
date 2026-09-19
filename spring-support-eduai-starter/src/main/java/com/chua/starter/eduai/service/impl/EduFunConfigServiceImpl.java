@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.chua.starter.eduai.mapper.EduFunConfigMapper;
 import com.chua.starter.eduai.model.EduFunConfig;
 import com.chua.starter.eduai.service.IEduFunConfigService;
+import com.chua.starter.eduai.support.util.EduUserContext;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -21,15 +22,27 @@ public class EduFunConfigServiceImpl extends ServiceImpl<EduFunConfigMapper, Edu
 
     @Override
     public List<EduFunConfig> listEnabled() {
-        return list(new LambdaQueryWrapper<EduFunConfig>()
+        LambdaQueryWrapper<EduFunConfig> wrapper = new LambdaQueryWrapper<EduFunConfig>()
                 .eq(EduFunConfig::getEnabled, 1)
-                .orderByAsc(EduFunConfig::getSortOrder));
+                .orderByAsc(EduFunConfig::getSortOrder);
+        EduUserContext.scopeOwned(wrapper, EduFunConfig::getOwnerUserId);
+        return list(wrapper);
+    }
+
+    @Override
+    public List<EduFunConfig> listAllScoped() {
+        LambdaQueryWrapper<EduFunConfig> wrapper = new LambdaQueryWrapper<EduFunConfig>()
+                .orderByAsc(EduFunConfig::getSortOrder);
+        EduUserContext.scopeOwned(wrapper, EduFunConfig::getOwnerUserId);
+        return list(wrapper);
     }
 
     @Override
     public EduFunConfig getByModuleCode(String moduleCode) {
-        return getOne(new LambdaQueryWrapper<EduFunConfig>()
-                .eq(EduFunConfig::getModuleCode, moduleCode));
+        LambdaQueryWrapper<EduFunConfig> wrapper = new LambdaQueryWrapper<EduFunConfig>()
+                .eq(EduFunConfig::getModuleCode, moduleCode);
+        EduUserContext.scopeOwned(wrapper, EduFunConfig::getOwnerUserId);
+        return getOne(wrapper, false);
     }
 
     @Override
@@ -38,6 +51,7 @@ public class EduFunConfigServiceImpl extends ServiceImpl<EduFunConfigMapper, Edu
         if (config == null) {
             return false;
         }
+        EduUserContext.checkWritable(config.getOwnerUserId());
         config.setEnabled(enabled);
         return updateById(config);
     }

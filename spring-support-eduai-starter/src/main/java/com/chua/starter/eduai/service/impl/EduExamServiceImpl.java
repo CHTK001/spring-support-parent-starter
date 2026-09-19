@@ -9,6 +9,7 @@ import com.chua.starter.common.support.exception.BusinessException;
 import com.chua.starter.eduai.mapper.EduExamMapper;
 import com.chua.starter.eduai.model.EduExam;
 import com.chua.starter.eduai.service.IEduExamService;
+import com.chua.starter.eduai.support.util.EduUserContext;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -50,6 +51,7 @@ public class EduExamServiceImpl extends ServiceImpl<EduExamMapper, EduExam> impl
                 wrapper.eq(EduExam::getExamStatus, exam.getExamStatus());
             }
         }
+        EduUserContext.scopeOwned(wrapper, EduExam::getOwnerUserId);
         // 默认按创建时间倒序
         wrapper.orderByDesc(EduExam::getExamCreateTime);
 
@@ -82,6 +84,7 @@ public class EduExamServiceImpl extends ServiceImpl<EduExamMapper, EduExam> impl
             throw new BusinessException("试卷ID不能为空");
         }
         exam.setExamId(null);
+        exam.setOwnerUserId(EduUserContext.requireUserId());
         exam.setExamStatus(exam.getExamStatus() != null ? exam.getExamStatus() : 0);
         exam.setExamCreateTime(LocalDateTime.now());
         exam.setExamUpdateTime(LocalDateTime.now());
@@ -116,6 +119,8 @@ public class EduExamServiceImpl extends ServiceImpl<EduExamMapper, EduExam> impl
              */
             throw new BusinessException("考试不存在");
         }
+        EduUserContext.checkWritable(exists.getOwnerUserId());
+        exam.setOwnerUserId(exists.getOwnerUserId());
         exam.setExamUpdateTime(LocalDateTime.now());
         int rows = baseMapper.updateById(exam);
         log.info("更新考试成功，ID: {}", exam.getExamId());
@@ -140,6 +145,7 @@ public class EduExamServiceImpl extends ServiceImpl<EduExamMapper, EduExam> impl
              */
             throw new BusinessException("考试不存在");
         }
+        EduUserContext.checkWritable(exists.getOwnerUserId());
         // 逻辑删除：状态置为已结束
         exists.setExamStatus(2);
         exists.setExamUpdateTime(LocalDateTime.now());

@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.starter.common.support.exception.BusinessException;
 import com.chua.starter.eduai.dimension.entity.*;
 import com.chua.starter.eduai.dimension.mapper.*;
+import com.chua.starter.eduai.support.util.EduUserContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -66,8 +67,9 @@ public class EduDimensionService {
         if (StringUtils.hasText(gradeLevel)) {
             wrapper.like(EduSubject::getSubjectGradeLevels, gradeLevel);
         }
-        wrapper.eq(EduSubject::getSubjectStatus, 1)
-                .orderByAsc(EduSubject::getSubjectSortOrder);
+        wrapper.eq(EduSubject::getSubjectStatus, 1);
+        EduUserContext.scopeOwned(wrapper, EduSubject::getOwnerUserId);
+        wrapper.orderByAsc(EduSubject::getSubjectSortOrder);
         return subjectMapper.selectList(wrapper);
     }
 
@@ -83,6 +85,12 @@ public class EduDimensionService {
             throw new BusinessException("学科编码与名称必填");
         }
         if (entity.getSubjectId() != null && entity.getSubjectId() > 0) {
+            EduSubject exists = subjectMapper.selectById(entity.getSubjectId());
+            if (exists == null) {
+                throw new BusinessException("学科不存在");
+            }
+            EduUserContext.checkWritable(exists.getOwnerUserId());
+            entity.setOwnerUserId(exists.getOwnerUserId());
             subjectMapper.updateById(entity);
             return entity.getSubjectId();
         }
@@ -92,6 +100,7 @@ public class EduDimensionService {
         if (entity.getSubjectSortOrder() == null) {
             entity.setSubjectSortOrder(0);
         }
+        entity.setOwnerUserId(EduUserContext.requireUserId());
         subjectMapper.insert(entity);
         log.info("[EduAi] 新增学科: {} ({})", entity.getSubjectName(), entity.getSubjectCode());
         return entity.getSubjectId();
@@ -108,6 +117,11 @@ public class EduDimensionService {
         if (id == null) {
             return false;
         }
+        EduSubject exists = subjectMapper.selectById(id);
+        if (exists == null) {
+            return false;
+        }
+        EduUserContext.checkWritable(exists.getOwnerUserId());
         int rows = subjectMapper.deleteById(id);
         log.info("[EduAi] 删除学科: id={}, rows={}", id, rows);
         return rows > 0;
@@ -126,6 +140,7 @@ public class EduDimensionService {
         if (StringUtils.hasText(gradeLevel)) {
             wrapper.eq(EduGrade::getGradeLevel, gradeLevel);
         }
+        EduUserContext.scopeOwned(wrapper, EduGrade::getOwnerUserId);
         wrapper.orderByAsc(EduGrade::getGradeOrder);
         return gradeMapper.selectList(wrapper);
     }
@@ -147,8 +162,9 @@ public class EduDimensionService {
         if (teacherId != null) {
             wrapper.eq(EduClass::getClassTeacherId, teacherId);
         }
-        wrapper.eq(EduClass::getClassStatus, 1)
-                .orderByAsc(EduClass::getClassId);
+        wrapper.eq(EduClass::getClassStatus, 1);
+        EduUserContext.scopeOwned(wrapper, EduClass::getOwnerUserId);
+        wrapper.orderByAsc(EduClass::getClassId);
         return classMapper.selectList(wrapper);
     }
 
@@ -164,12 +180,19 @@ public class EduDimensionService {
             throw new BusinessException("班级编码与名称必填");
         }
         if (entity.getClassId() != null && entity.getClassId() > 0) {
+            EduClass exists = classMapper.selectById(entity.getClassId());
+            if (exists == null) {
+                throw new BusinessException("班级不存在");
+            }
+            EduUserContext.checkWritable(exists.getOwnerUserId());
+            entity.setOwnerUserId(exists.getOwnerUserId());
             classMapper.updateById(entity);
             return entity.getClassId();
         }
         if (entity.getClassStatus() == null) {
             entity.setClassStatus(1);
         }
+        entity.setOwnerUserId(EduUserContext.requireUserId());
         classMapper.insert(entity);
         log.info("[EduAi] 新增班级: {} ({})", entity.getClassName(), entity.getClassCode());
         return entity.getClassId();
@@ -186,6 +209,11 @@ public class EduDimensionService {
         if (id == null) {
             return false;
         }
+        EduClass exists = classMapper.selectById(id);
+        if (exists == null) {
+            return false;
+        }
+        EduUserContext.checkWritable(exists.getOwnerUserId());
         int rows = classMapper.deleteById(id);
         log.info("[EduAi] 删除班级: id={}, rows={}", id, rows);
         return rows > 0;
@@ -212,8 +240,9 @@ public class EduDimensionService {
         if (StringUtils.hasText(grade)) {
             wrapper.eq(EduStudent::getStudentGrade, grade);
         }
-        wrapper.eq(EduStudent::getStudentStatus, 1)
-                .orderByAsc(EduStudent::getStudentId);
+        wrapper.eq(EduStudent::getStudentStatus, 1);
+        EduUserContext.scopeOwned(wrapper, EduStudent::getOwnerUserId);
+        wrapper.orderByAsc(EduStudent::getStudentId);
         return studentMapper.selectList(wrapper);
     }
 
@@ -229,12 +258,19 @@ public class EduDimensionService {
             throw new BusinessException("学号必填");
         }
         if (entity.getStudentId() != null && entity.getStudentId() > 0) {
+            EduStudent exists = studentMapper.selectById(entity.getStudentId());
+            if (exists == null) {
+                throw new BusinessException("学生不存在");
+            }
+            EduUserContext.checkWritable(exists.getOwnerUserId());
+            entity.setOwnerUserId(exists.getOwnerUserId());
             studentMapper.updateById(entity);
             return entity.getStudentId();
         }
         if (entity.getStudentStatus() == null) {
             entity.setStudentStatus(1);
         }
+        entity.setOwnerUserId(EduUserContext.requireUserId());
         studentMapper.insert(entity);
         log.info("[EduAi] 新增学生: {} ({})", entity.getStudentName(), entity.getStudentNo());
         return entity.getStudentId();
@@ -251,6 +287,11 @@ public class EduDimensionService {
         if (id == null) {
             return false;
         }
+        EduStudent exists = studentMapper.selectById(id);
+        if (exists == null) {
+            return false;
+        }
+        EduUserContext.checkWritable(exists.getOwnerUserId());
         return studentMapper.deleteById(id) > 0;
     }
 
@@ -267,8 +308,9 @@ public class EduDimensionService {
         if (StringUtils.hasText(subjectCode)) {
             wrapper.eq(EduTeacher::getTeacherSubjectCode, subjectCode);
         }
-        wrapper.eq(EduTeacher::getTeacherStatus, 1)
-                .orderByAsc(EduTeacher::getTeacherId);
+        wrapper.eq(EduTeacher::getTeacherStatus, 1);
+        EduUserContext.scopeOwned(wrapper, EduTeacher::getOwnerUserId);
+        wrapper.orderByAsc(EduTeacher::getTeacherId);
         return teacherMapper.selectList(wrapper);
     }
 
@@ -284,12 +326,19 @@ public class EduDimensionService {
             throw new BusinessException("工号必填");
         }
         if (entity.getTeacherId() != null && entity.getTeacherId() > 0) {
+            EduTeacher exists = teacherMapper.selectById(entity.getTeacherId());
+            if (exists == null) {
+                throw new BusinessException("教师不存在");
+            }
+            EduUserContext.checkWritable(exists.getOwnerUserId());
+            entity.setOwnerUserId(exists.getOwnerUserId());
             teacherMapper.updateById(entity);
             return entity.getTeacherId();
         }
         if (entity.getTeacherStatus() == null) {
             entity.setTeacherStatus(1);
         }
+        entity.setOwnerUserId(EduUserContext.requireUserId());
         teacherMapper.insert(entity);
         log.info("[EduAi] 新增教师: {} ({})", entity.getTeacherName(), entity.getTeacherNo());
         return entity.getTeacherId();
@@ -306,6 +355,11 @@ public class EduDimensionService {
         if (id == null) {
             return false;
         }
+        EduTeacher exists = teacherMapper.selectById(id);
+        if (exists == null) {
+            return false;
+        }
+        EduUserContext.checkWritable(exists.getOwnerUserId());
         return teacherMapper.deleteById(id) > 0;
     }
 

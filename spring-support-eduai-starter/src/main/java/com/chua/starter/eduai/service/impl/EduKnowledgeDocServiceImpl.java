@@ -14,6 +14,7 @@ import com.chua.starter.eduai.model.EduKnowledgeDoc;
 import com.chua.starter.eduai.model.dto.KnowledgeDocUploadDTO;
 import com.chua.starter.eduai.model.vo.KnowledgeDocVO;
 import com.chua.starter.eduai.service.IEduKnowledgeDocService;
+import com.chua.starter.eduai.support.util.EduUserContext;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
@@ -72,6 +73,7 @@ public class EduKnowledgeDocServiceImpl extends ServiceImpl<EduKnowledgeDocMappe
                 wrapper.eq(EduKnowledgeDoc::getKnowledgeDocStatus, query.getKnowledgeDocStatus());
             }
         }
+        EduUserContext.scopeOwned(wrapper, EduKnowledgeDoc::getOwnerUserId);
         // 默认按创建时间倒序
         wrapper.orderByDesc(EduKnowledgeDoc::getKnowledgeDocCreateTime);
 
@@ -105,6 +107,7 @@ public class EduKnowledgeDocServiceImpl extends ServiceImpl<EduKnowledgeDocMappe
             throw new BusinessException("文件路径不能为空");
         }
         EduKnowledgeDoc entity = new EduKnowledgeDoc();
+        entity.setOwnerUserId(EduUserContext.requireUserId());
         entity.setKnowledgeDocName(dto.getName());
         entity.setKnowledgeDocType(dto.getType());
         entity.setKnowledgeDocFilePath(dto.getFilePath());
@@ -199,8 +202,9 @@ public class EduKnowledgeDocServiceImpl extends ServiceImpl<EduKnowledgeDocMappe
             wrapper.eq(EduKnowledgeDoc::getKnowledgeDocSubject, subject);
         }
         // 只查询已索引文档
-        wrapper.eq(EduKnowledgeDoc::getKnowledgeDocStatus, 1)
-                .orderByDesc(EduKnowledgeDoc::getKnowledgeDocCreateTime)
+        wrapper.eq(EduKnowledgeDoc::getKnowledgeDocStatus, 1);
+        EduUserContext.scopeOwned(wrapper, EduKnowledgeDoc::getOwnerUserId);
+        wrapper.orderByDesc(EduKnowledgeDoc::getKnowledgeDocCreateTime)
                 .last("limit " + (limit > 0 ? limit : 10));
         List<EduKnowledgeDoc> list = baseMapper.selectList(wrapper);
         List<KnowledgeDocVO> voList = list.stream().map(this::toVO).collect(Collectors.toList());
@@ -231,6 +235,7 @@ public class EduKnowledgeDocServiceImpl extends ServiceImpl<EduKnowledgeDocMappe
              */
             throw new BusinessException("文档不存在");
         }
+        EduUserContext.checkWritable(exists.getOwnerUserId());
         // 逻辑删除：状态置为失败
         exists.setKnowledgeDocStatus(2);
         exists.setKnowledgeDocUpdateTime(LocalDateTime.now());

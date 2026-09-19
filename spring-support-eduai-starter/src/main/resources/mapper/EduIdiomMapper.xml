@@ -10,13 +10,22 @@
         <if test="grade != null and grade != ''">
             AND g.grade = #{grade}
         </if>
+        <if test="userId != null and userId != ''">
+            AND (i.idiom_owner_user_id IS NULL OR i.idiom_owner_user_id = #{userId})
+        </if>
         ORDER BY RAND()
         LIMIT #{count}
     </select>
 
     <!-- 随机获取指定数量的成语 -->
     <select id="selectRandom" resultType="com.chua.starter.eduai.model.EduIdiom">
-        SELECT * FROM edu_idiom ORDER BY RAND() LIMIT #{count}
+        SELECT * FROM edu_idiom
+        <where>
+            <if test="userId != null and userId != ''">
+                (idiom_owner_user_id IS NULL OR idiom_owner_user_id = #{userId})
+            </if>
+        </where>
+        ORDER BY RAND() LIMIT #{count}
     </select>
 
 </mapper>
