@@ -43,8 +43,8 @@ class ApiVersionGrayRealTest {
         assertNotNull(requestMappingHandlerMapping,
                 "RequestMappingHandlerMapping 应存在");
         /**
-        * 断言not空。
-        * @param (ApiVersionRequestMappingHandlerMapping (api版本请求mapping处理器mapping
+         * 断言not空。
+         * @param (ApiVersionRequestMappingHandlerMapping (api版本请求mapping处理器mapping
          */
         assertNotNull((ApiVersionRequestMappingHandlerMapping) requestMappingHandlerMapping,
                 "映射器应为 ApiVersionRequestMappingHandlerMapping（WebMvcRegistrations 接管）");

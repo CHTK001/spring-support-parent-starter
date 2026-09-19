@@ -4,6 +4,7 @@ import com.chua.common.support.lang.json.Json;
 import com.chua.common.support.spi.annotations.Spi;
 import com.chua.common.support.utils.DigestUtils;
 import com.chua.common.support.utils.StringUtils;
+import com.chua.starter.common.support.utils.CookieUtil;
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.oauth.client.support.algorithm.TokenCipher;
 import com.chua.starter.oauth.client.support.entity.AppKeySecret;
@@ -17,11 +18,14 @@ import com.chua.starter.oauth.client.support.user.LoginAuthResult;
 import com.chua.starter.oauth.client.support.user.LoginResult;
 import com.chua.starter.oauth.client.support.user.UserResult;
 import com.chua.starter.oauth.client.support.user.UserResume;
+import com.chua.starter.oauth.client.support.session.StaticSessionRegistry;
 import com.google.common.collect.Sets;
 import jakarta.servlet.http.Cookie;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 import static com.chua.common.support.constant.NameConstant.NULL;
@@ -39,6 +43,9 @@ import static com.chua.starter.oauth.client.support.contants.AuthConstant.SUPER_
 @Spi({"Static"})
 public class StaticProtocol extends AbstractProtocol {
 
+    /** 在线会话登记表 */
+    private static final StaticSessionRegistry SESSIONS = StaticSessionRegistry.getInstance();
+
     /**
     * 构造函数
     *
@@ -50,6 +57,50 @@ public class StaticProtocol extends AbstractProtocol {
         * @param authClientProperties 认证客户端属性
         */
         super(authClientProperties);
+    }
+
+    /**
+    * 鉴权入口，先拦截已吊销令牌
+    * <p>父类实现优先读取认证缓存，吊销后必须在此处拦断，否则缓存命中仍会放行已登出的令牌</p>
+    *
+    * @param cookies     Cookie数组
+    * @param token       认证令牌
+    * @param subProtocol 子协议
+    * @return 认证信息对象
+    */
+    @Override
+    public AuthenticationInformation approve(Cookie[] cookies, String token, String subProtocol) {
+        if (isTokenRevoked(token)) {
+            clearAuthenticationInformation(getCacheKey(cookies, token));
+            return AuthenticationInformation.noAuth();
+        }
+        AuthenticationInformation information = super.approve(cookies, token, subProtocol);
+        recordSession(token, cookies, information);
+        return information;
+    }
+
+    /**
+    * 登记在线会话
+    * <p>鉴权命中缓存时不会进入 newAuthenticationInformation，因此统一在鉴权入口登记，
+    * 保证活跃用户的最后访问时间持续刷新</p>
+    *
+    * @param token       请求携带的令牌
+    * @param cookies     请求 Cookie
+    * @param information 鉴权结果
+    */
+    private void recordSession(String token, Cookie[] cookies, AuthenticationInformation information) {
+        if (null == information || null == information.getReturnResult()) {
+            return;
+        }
+        String credential = token;
+        if (StringUtils.isBlank(credential) || NULL.equals(credential)) {
+            Cookie cookie = CookieUtil.get(cookies, "x-oauth-cookie");
+            credential = null != cookie ? cookie.getValue() : null;
+        }
+        if (StringUtils.isBlank(credential) || NULL.equals(credential)) {
+            return;
+        }
+        SESSIONS.record(DigestUtils.sha256(credential), information.getReturnResult(), RequestUtils.getRequest());
     }
 
     /**
@@ -104,9 +155,16 @@ public class StaticProtocol extends AbstractProtocol {
         UserResult userResult = null;
  // 如果令牌不为空且不为"空"，则尝试解析令牌
         if (StringUtils.isNotBlank(token) && !NULL.equals(token)) {
+            if (isTokenRevoked(token)) {
+                log.warn("[StaticProtocol]令牌已吊销，拒绝认证 - token长度: {}", token.length());
+                return AuthenticationInformation.noAuth();
+            }
             userResult = TokenCipher.decryptToUser(token);
             if (null == userResult) {
-                log.error("[StaticProtocol]token解密或解析失败 - token长度: {}", token.length());
+                // 显式携带的令牌解析失败即拒绝，不得回退 Cookie：否则该令牌的任意变体（如加引号）
+                // 都会以变体字符串为缓存键写入鉴权结果，形成吊销名单覆盖不到的别名，登出后仍能放行
+                log.warn("[StaticProtocol]token解密或解析失败，拒绝认证 - token长度: {}", token.length());
+                return AuthenticationInformation.noAuth();
             }
         }
 
@@ -117,6 +175,9 @@ public class StaticProtocol extends AbstractProtocol {
                     continue;
                 }
                 if (!"JSESSIONID".equals(cookie1.getName())) {
+                    if (isTokenRevoked(cookie1.getValue())) {
+                        continue;
+                    }
                     userResult = TokenCipher.decryptToUser(cookie1.getValue());
                     if (null != userResult) {
                         break;
@@ -157,6 +218,8 @@ public class StaticProtocol extends AbstractProtocol {
         userResume.setExpireTime(userResult.getExpireTime());
         userResume.setDataPermission(userResult.getDataPermission());
         userResume.setDataPermissionRule(userResult.getDataPermissionRule());
+        // 只读标记随令牌携带，必须拷贝，否则权限拦截器读到的永远是默认 false
+        userResume.setReadonly(userResult.isReadonly());
         // 将用户信息保存到请求上下文
         com.chua.starter.oauth.client.support.execute.AuthSessionUtils.setUserInfo(userResume);
         // 返回认证成功的信息
@@ -303,6 +366,7 @@ public class StaticProtocol extends AbstractProtocol {
             userResume.setFingerprint(userResult.getFingerprint());
             userResume.setPermission(userResult.getPermission());
             userResume.setExpireTime(userResult.getExpireTime());
+            userResume.setReadonly(userResult.isReadonly());
             result.setUserResume(userResume);
             return result;
         } catch (Exception e) {
@@ -321,7 +385,80 @@ public class StaticProtocol extends AbstractProtocol {
     */
     @Override
     public LoginAuthResult logout(String uid, LogoutType logoutType, UserResult userResult) {
-        return null;
+        if (logoutType == LogoutType.KICK) {
+            return kick(uid);
+        }
+        String token = null != userResult && StringUtils.isNotBlank(userResult.getToken())
+                ? userResult.getToken() : uid;
+        if (StringUtils.isBlank(token) || NULL.equals(token)) {
+            return new LoginAuthResult(400, "未登录");
+        }
+        revokeToken(token, null != userResult ? userResult.getExpireTime() : null);
+        return new LoginAuthResult(200, "注销成功");
+    }
+
+    /**
+    * 强制下线指定用户的全部会话
+    *
+    * @param userKey 用户标识或用户名
+    * @return 登录认证结果
+    */
+    public static LoginAuthResult kick(String userKey) {
+        List<String> hashes = SESSIONS.tokenHashesOf(userKey);
+        if (hashes.isEmpty()) {
+            return new LoginAuthResult(404, "用户不在线");
+        }
+        for (String hash : hashes) {
+            AbstractProtocol.revokeTokenHash(hash, null);
+        }
+        log.info("[StaticProtocol]强制下线 - 用户: {}, 会话数: {}", userKey, hashes.size());
+        return new LoginAuthResult(200, "已下线");
+    }
+
+    /**
+    * 获取在线用户列表
+    * <p>静态协议没有中心会话存储，数据来自鉴权过程中登记的进程内会话表</p>
+    *
+    * @param query 查询参数
+    * @return 在线用户结果
+    */
+    @Override
+    public OnlineUserResult getOnlineUsers(OnlineUserQuery query) {
+        String username = null == query ? null : query.getUsername();
+        String ip = null == query ? null : query.getIp();
+        List<StaticSessionRegistry.OnlineSession> online = SESSIONS.online(username, ip);
+        List<OnlineUserInfo> users = new ArrayList<>();
+        for (StaticSessionRegistry.OnlineSession session : online) {
+            OnlineUserInfo info = new OnlineUserInfo();
+            info.setUserId(session.getUserId());
+            info.setUsername(session.getUsername());
+            info.setNickname(session.getNickname());
+            info.setLoginIp(session.getLoginIp());
+            info.setBrowser(session.getBrowser());
+            info.setOs(session.getOs());
+            info.setLoginType(session.getLoginType());
+            info.setLoginTime(session.getLoginTime());
+            info.setLastAccessTime(session.getLastAccessTime());
+            users.add(info);
+        }
+        int page = null == query || query.getPage() < 1 ? 1 : query.getPage();
+        int size = null == query || query.getSize() < 1 ? users.size() : query.getSize();
+        int from = Math.min((page - 1) * size, users.size());
+        int to = Math.min(from + size, users.size());
+        return new OnlineUserResult(new ArrayList<>(users.subList(from, to)), users.size(), page, size);
+    }
+
+    /**
+    * 获取在线状态
+    *
+    * @param uid 用户标识
+    * @return 在线状态
+    */
+    @Override
+    public OnlineStatus getOnlineStatus(String uid) {
+        OnlineStatus status = new OnlineStatus();
+        status.setOnlineCount(SESSIONS.size());
+        return status;
     }
 }
 

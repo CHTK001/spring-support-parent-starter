@@ -59,10 +59,10 @@ public class WorkshopAssetService {
     private static final int MAX_PAGE_SIZE = 200;
 
     /**
-    * 物理文件存储根目录，从全局设置读取，未配置时回退到默认值
-    *
-    * @return resolveStorageDir的结果
-    */
+     * 物理文件存储根目录，从全局设置读取，未配置时回退到默认值
+     *
+     * @return resolveStorageDir的结果
+     */
     private String resolveStorageDir() {
         try {
             return globalSettingService.getValue("workshop", "storage_dir")

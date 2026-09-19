@@ -68,6 +68,9 @@ public class ChatStreamController {
     /** 当前活跃 sessionId（用于 writeRaw 精准写入） */
     private final ThreadLocal<String> currentSessionId = new ThreadLocal<>();
 
+    /** 已请求取消的流式会话集合 */
+    private final java.util.Set<String> cancelledStreams = ConcurrentHashMap.newKeySet();
+
     /**
     * SSE 流式聊天。
     * @param body 请求体，不允许为 null
@@ -89,7 +92,39 @@ public class ChatStreamController {
             selectedModel = str(body.get("model"));
         }
 
-        // 0L = 不超时，避免前端报异步请求超时
+        
+        // 解析用户选择的模型ID为实际模型名称
+        // 前端传的 modelId 格式：providerId:modelName（如 1789547286889:agnes-3.0-flash）
+        // 或纯 providerId（如 1789547286889）
+        if (selectedModel != null && !selectedModel.isBlank()) {
+            try {
+                if (selectedModel.contains(":")) {
+                    // 格式：providerId:modelName，直接取冒号后面的模型名称
+                    String modelName = selectedModel.substring(selectedModel.indexOf(":") + 1);
+                    log.info("[ChatStream] 模型ID {} 解析为模型名称: {}", selectedModel, modelName);
+                    selectedModel = modelName;
+                } else if (selectedModel.matches("\\d+")) {
+                    // 纯数字 = providerId，查询该 provider 下第一个启用的模型
+                    com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<SysAiProviderModel> wrapper =
+                        new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<>();
+                    wrapper.eq(SysAiProviderModel::getProviderId, selectedModel)
+                           .eq(SysAiProviderModel::getEnabled, true)
+                           .orderByAsc(SysAiProviderModel::getSortOrder)
+                           .last("LIMIT 1");
+                    SysAiProviderModel pm = sysAiProviderModelMapper.selectOne(wrapper);
+                    if (pm != null && pm.getModel() != null) {
+                        log.info("[ChatStream] providerId {} 映射到模型名称: {}", selectedModel, pm.getModel());
+                        selectedModel = pm.getModel();
+                    } else {
+                        log.warn("[ChatStream] providerId {} 下未找到启用的模型", selectedModel);
+                    }
+                }
+                // 否则直接当作模型名称使用
+            } catch (Exception e) {
+                log.warn("[ChatStream] 模型ID解析失败 {}: {}", selectedModel, e.getMessage());
+            }
+        }
+// 0L = 不超时，避免前端报异步请求超时
         SseEmitter emitter = new SseEmitter(0L);
         if (sessionId != null) {
             activeStreams.put(sessionId, emitter);
@@ -108,8 +143,12 @@ public class ChatStreamController {
             dialogId = resolveDialogId(sessionId);
 
             // 1. 落库本轮用户消息
+            final Long[] userMessageIdHolder = new Long[1];
             try {
-                aiDialogRecordService.addMessage(dialogId, new ChatMessage("user", content));
+                ChatMessage userMsg = new ChatMessage("user", content);
+                aiDialogRecordService.addMessage(dialogId, userMsg);
+                userMessageIdHolder[0] = userMsg.getId();
+                log.info("[ChatStream] 用户消息已保存 id={}", userMessageIdHolder[0]);
             } catch (Exception e) {
                 log.warn("[ChatStream] 保存用户消息失败 sessionId={}: {}", sessionId, e.getMessage());
             }
@@ -188,8 +227,8 @@ public class ChatStreamController {
             // 5. 所有写 SSE 的动作放到后台线程，确保 emitter 已被 Spring 初始化后再写
             final Long did = dialogId;
             final String sid = sessionId;
-            final String userMsgId = userMessage != null && str(userMessage.get("id")) != null ? str(userMessage.get("id")) : UUID.randomUUID().toString();
             final String finalContent = content;
+            final String userMsgId = userMessage != null && str(userMessage.get("id")) != null ? str(userMessage.get("id")) : UUID.randomUUID().toString();
             CompletableFuture.runAsync(() -> {
                 currentSessionId.set(sid);
                 try {
@@ -229,6 +268,10 @@ public class ChatStreamController {
                 // 6. 调模型流式
                 aiChatFacadeService.stream(request,
                         chunk -> {
+                            // 检查是否已取消
+                            if (cancelledStreams.contains(sid)) {
+                                return;
+                            }
                             if (chunk != null && !chunk.isEmpty()) {
                                 if (!firstChunkLogged[0]) {
                                     firstChunkLogged[0] = true;
@@ -247,13 +290,33 @@ public class ChatStreamController {
                             String finalText = reply != null ? reply : fullReply.toString();
                             log.info("[ChatStream] 流式完成 sessionId={}, 回复长度={}", sid, finalText.length());
                             try {
-                                aiDialogRecordService.addMessage(did, new ChatMessage("assistant", finalText));
+                                ChatMessage assistantMsg = new ChatMessage("assistant", finalText);
+                                assistantMsg.setParentId(userMessageIdHolder[0]);
+                                assistantMsg.setModelName(modelToUse);
+                                // 估算 token 使用量
+                                int promptTokens = finalContent != null ? (int) (finalContent.length() * 1.5) : 0;
+                                int completionTokens = (int) (finalText.length() * 1.5);
+                                int totalTokens = promptTokens + completionTokens;
+                                assistantMsg.setPromptTokens(promptTokens);
+                                assistantMsg.setCompletionTokens(completionTokens);
+                                assistantMsg.setTotalTokens(totalTokens);
+                                aiDialogRecordService.addMessage(did, assistantMsg);
+                                log.info("[ChatStream] 助手消息已保存 parentId={}, tokens={}", userMessageIdHolder[0], totalTokens);
                             } catch (Exception e) {
                                 log.warn("[ChatStream] 保存助手消息失败 sessionId={}: {}", sid, e.getMessage());
                             }
                             Map<String, Object> finishEvent = new LinkedHashMap<>();
                             finishEvent.put("type", "finish");
                             finishEvent.put("finishReason", "stop");
+                            // 估算 token 使用量（粗略：中文按 1.5 字/token，英文按 4 字符/token）
+                            int promptTokens = finalContent != null ? (int) (finalContent.length() * 1.5) : 0;
+                            int completionTokens = (int) (finalText.length() * 1.5);
+                            int totalTokens = promptTokens + completionTokens;
+                            Map<String, Object> usageMap = new java.util.HashMap<>();
+                            usageMap.put("promptTokens", promptTokens);
+                            usageMap.put("completionTokens", completionTokens);
+                            usageMap.put("totalTokens", totalTokens);
+                            finishEvent.put("usage", usageMap);
                             sendEvent(emitter, finishEvent);
                             Map<String, Object> turnEndEvent = new LinkedHashMap<>();
                             turnEndEvent.put("type", "turn_end");
@@ -264,6 +327,7 @@ public class ChatStreamController {
                             sendEvent(emitter, turnEndEvent);
                             sendDone(emitter);
                             activeStreams.remove(sid);
+                            cancelledStreams.remove(sid);
                             emitter.complete();
                             currentSessionId.remove();
                         },
@@ -342,6 +406,8 @@ public class ChatStreamController {
             } catch (Exception ignored) {
             }
             activeStreams.remove(sessionId);
+            cancelledStreams.add(sessionId);
+            log.info("[ChatStream] 已停止流式 sessionId={}", sessionId);
         }
         return Map.of("success", true);
     }

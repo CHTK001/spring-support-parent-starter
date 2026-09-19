@@ -201,8 +201,8 @@ class BundleManagerRealTest {
     void invalidCoordsFailGracefully() {
         BundleManagerService.InstallResult result = bundleManager.install("bad-coords-no-version");
         /**
-        * 断言true。
-        * @param !result.success( !结果.成功(
+         * 断言true。
+         * @param !result.success( !结果.成功(
          */
         assertTrue(!result.success(), "非法坐标 install 应失败");
         /**
@@ -216,8 +216,8 @@ class BundleManagerRealTest {
     @Test
     void statusQueriesWork() {
         /**
-        * 断言true。
-        * @param ":1.0.0" ":1.0.0"
+         * 断言true。
+         * @param ":1.0.0" ":1.0.0"
          */
         assertTrue(bundleManager.install(GROUP_ID + ":" + ARTIFACT_ID + ":1.0.0").success(),
                 "install v1 应成功");

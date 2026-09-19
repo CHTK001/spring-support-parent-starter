@@ -93,9 +93,9 @@ class RealPortE2ETest {
     void dsRoutingOverRealHttp() {
         Map<?, ?> ds1 = restTemplate.getForObject(url("/api/ds/region/ds1"), Map.class);
         /**
-        * 断言not空。
-        * @param ds1 ds1
-        * @param "响应不应为空" "响应不应为空"
+         * 断言not空。
+         * @param ds1 ds1
+         * @param "响应不应为空" "响应不应为空"
          */
         assertNotNull(ds1, "响应不应为空");
         /**
@@ -118,9 +118,9 @@ class RealPortE2ETest {
     void apiVersionRoutingOverRealHttp() {
         Map<?, ?> v1 = restTemplate.getForObject(url("/api/api-version/greet?apiVersion=1"), Map.class);
         /**
-        * 断言equals。
-        * @param "1" "1"
-        * @param v1.get("version" v1.获取("版本"
+         * 断言equals。
+         * @param "1" "1"
+         * @param v1.get("version" v1.获取("版本"
          */
         assertEquals("1", v1.get("version"));
         Map<?, ?> v2 = restTemplate.getForObject(url("/api/api-version/greet?apiVersion=2"), Map.class);
@@ -137,9 +137,9 @@ class RealPortE2ETest {
     void permissionLocalDebugOverRealHttp() {
         ResponseEntity<String> response = restTemplate.getForEntity(url("/api/permission/query"), String.class);
         /**
-        * 断言equals。
-        * @param HttpStatus.OK http状态.OK
-        * @param response.getStatusCode( 响应.获取状态编码(
+         * 断言equals。
+         * @param HttpStatus.OK http状态.OK
+         * @param response.getStatusCode( 响应.获取状态编码(
          */
         assertEquals(HttpStatus.OK, response.getStatusCode(), "本地联调模式无用户上下文应注入 admin 放行");
     }

@@ -101,6 +101,7 @@ public class PosixSshHostRemoteProvider implements HostRemoteProvider {
     @Override
     public RemoteExecResult exec(MsServerHost host, SshCredential credential, String command, int timeoutSeconds) throws Exception {
         SshClients.Handle handle = null;
+        boolean broken = false;
         try {
             handle = connectionManager.borrow(host, credential);
             final SshClients.Handle borrowed = handle;
@@ -117,9 +118,17 @@ public class PosixSshHostRemoteProvider implements HostRemoteProvider {
                 borrowed.client().close();
                 throw new IllegalStateException("命令执行超时(>" + timeout + "s): " + command);
             }
+        } catch (Exception e) {
+            broken = true;
+            throw e;
         } finally {
             if (handle != null) {
                 connectionManager.release(host.getId());
+            }
+            if (broken) {
+                // 池里这条已经不可信，直接作废：否则同一主机后续命令会一直撞死连接，
+                // 要等到下一次心跳巡检才被清掉
+                connectionManager.invalidate(host.getId());
             }
         }
     }

@@ -20,8 +20,8 @@ public class DataScopeAuthService implements AuthService {
     private static volatile CurrentUser currentUser;
 
     /**
-    * 设置当前用户。
-    * @param user 用户
+     * 设置当前用户。
+     * @param user 用户
      */
     public static void setCurrentUser(CurrentUser user) {
         currentUser = user;

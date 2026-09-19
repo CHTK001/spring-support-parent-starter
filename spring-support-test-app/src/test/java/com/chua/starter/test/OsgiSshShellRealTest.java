@@ -62,8 +62,8 @@ class OsgiSshShellRealTest {
 
     static {
         /**
-        * 尝试。
-        * @param FileOutputStream(BUNDLE_FILE 文件输出流(bundle文件
+         * 尝试。
+         * @param FileOutputStream(BUNDLE_FILE 文件输出流(bundle文件
          */
         try (JarOutputStream jos = new JarOutputStream(new FileOutputStream(BUNDLE_FILE))) {
             jos.putNextEntry(new JarEntry("META-INF/MANIFEST.MF"));

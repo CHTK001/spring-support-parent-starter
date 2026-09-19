@@ -14,6 +14,11 @@ public class ChatMessage {
     private Long id;
 
     /**
+    * 父消息ID（用户消息ID，AI回复的parentId指向用户消息）
+    */
+    private Long parentId;
+
+    /**
     * 所属对话 标识
     */
     private Long dialogId;
@@ -32,6 +37,26 @@ public class ChatMessage {
     * 消息内容
     */
     private String content;
+
+    /**
+    * 模型名称（AI回复时使用的模型）
+    */
+    private String modelName;
+
+    /**
+    * Prompt tokens 数量
+    */
+    private Integer promptTokens;
+
+    /**
+    * Completion tokens 数量
+    */
+    private Integer completionTokens;
+
+    /**
+    * Total tokens 数量
+    */
+    private Integer totalTokens;
 
     /**
     * 空参构造。
@@ -65,6 +90,24 @@ public class ChatMessage {
         this.role = role;
         this.content = content;
         this.timestamp = System.currentTimeMillis();
+    }
+
+    /**
+    * 获取父消息ID。
+    *
+    * @return 父消息ID
+    */
+    public Long getParentId() {
+        return parentId;
+    }
+
+    /**
+    * 设置父消息ID。
+    *
+    * @param parentId 父消息ID
+    */
+    public void setParentId(Long parentId) {
+        this.parentId = parentId;
     }
 
     /**
@@ -155,6 +198,78 @@ public class ChatMessage {
     */
     public void setContent(String content) {
         this.content = content;
+    }
+
+    /**
+    * 获取模型名称。
+    *
+    * @return 模型名称
+    */
+    public String getModelName() {
+        return modelName;
+    }
+
+    /**
+    * 设置模型名称。
+    *
+    * @param modelName 模型名称
+    */
+    public void setModelName(String modelName) {
+        this.modelName = modelName;
+    }
+
+    /**
+    * 获取 Prompt tokens 数量。
+    *
+    * @return Prompt tokens 数量
+    */
+    public Integer getPromptTokens() {
+        return promptTokens;
+    }
+
+    /**
+    * 设置 Prompt tokens 数量。
+    *
+    * @param promptTokens Prompt tokens 数量
+    */
+    public void setPromptTokens(Integer promptTokens) {
+        this.promptTokens = promptTokens;
+    }
+
+    /**
+    * 获取 Completion tokens 数量。
+    *
+    * @return Completion tokens 数量
+    */
+    public Integer getCompletionTokens() {
+        return completionTokens;
+    }
+
+    /**
+    * 设置 Completion tokens 数量。
+    *
+    * @param completionTokens Completion tokens 数量
+    */
+    public void setCompletionTokens(Integer completionTokens) {
+        this.completionTokens = completionTokens;
+    }
+
+    /**
+    * 获取 Total tokens 数量。
+    *
+    * @return Total tokens 数量
+    */
+    public Integer getTotalTokens() {
+        return totalTokens;
+    }
+
+    /**
+    * 设置 Total tokens 数量。
+    *
+    * @param totalTokens Total tokens 数量
+    */
+    public void setTotalTokens(Integer totalTokens) {
+        this.totalTokens = totalTokens;
     }
 
     /**

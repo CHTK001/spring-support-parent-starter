@@ -139,9 +139,9 @@ public class SoftSoftware implements Serializable {
     private String softwareUpdateBy;
 
     /**
-    * 获取softwareid。
-    * @return 获取softwareid的结果
-    */
+     * 获取softwareid。
+     * @return 获取softwareid的结果
+     */
     public String getSoftwareId() {
         return softwareId;
     }

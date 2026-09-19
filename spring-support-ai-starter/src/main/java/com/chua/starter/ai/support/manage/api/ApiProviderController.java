@@ -599,11 +599,11 @@ public class ApiProviderController {
     }
 
     /**
-    * 脱敏 Key：仅保留前 6 位 + 后 4 位，避免明文回显。
-    *
-    * @param key Key
-    * @return maskKey的结果
-    */
+     * 脱敏 Key：仅保留前 6 位 + 后 4 位，避免明文回显。
+     *
+     * @param key Key
+     * @return maskKey的结果
+     */
     private static String maskKey(String key) {
         if (key == null || key.length() <= 10) {
             return "****";

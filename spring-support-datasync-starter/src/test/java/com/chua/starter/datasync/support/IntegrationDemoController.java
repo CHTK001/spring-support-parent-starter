@@ -50,8 +50,8 @@ public class IntegrationDemoController {
     private ApplicationContext applicationContext;
 
     /**
-    * 获取关键集成 Bean 信息。
-    * @return Bean的结果
+     * 获取关键集成 Bean 信息。
+     * @return Bean的结果
      */
     @GetMapping("/beans")
     public Object beans() {

@@ -1,10 +1,10 @@
 package com.chua.starter.project.support.constants;
 
 /**
-* 发布项目管理模块常量
-*
-* @author CH
-* @since 4.0.0.42
+ * 发布项目管理模块常量
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 public final class ProjectConstants {
 
@@ -95,8 +95,19 @@ public final class ProjectConstants {
     public static final String OVERWRITE_MODE_REPLACE = "REPLACE";
 
     /**
-    * 工具类禁止实例化
-    */
+     * 退出码缺失（-1）时的错误描述
+     * <p>
+     * 底层 SSH 客户端等待退出码上限 30s，超时或命令把承载它的 shell 一并终止
+     * （{@code pkill -f} 命中自身命令行即属此类）时取不到 exit-status。此时命令往往已经生效，
+     * 必须与真正的非零退出码区分，否则会出现「停止成功却报失败」且无从解释。
+     * </p>
+     */
+    public static final String EXIT_NO_STATUS_MESSAGE =
+            "远端会话未返回退出码（命令超过 30s 未结束，或命令终止了执行它的会话）：命令可能已生效，请以进程状态为准";
+
+    /**
+     * 工具类禁止实例化
+     */
     private ProjectConstants() {
     }
 }

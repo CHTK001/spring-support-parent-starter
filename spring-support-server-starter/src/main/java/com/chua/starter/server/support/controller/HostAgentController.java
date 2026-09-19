@@ -22,15 +22,15 @@ import reactor.core.publisher.Mono;
 import java.util.Map;
 
 /**
-* 服务器资产 Agent 上报接口
-* <p>
-* 目标主机上的 Agent 按 Agent键 主动推送硬件/状态数据，
-* 由 {@link AgentHostCollectProvider} 处理回写。用于 NAT / 防火墙下
-* 服务端无法直连的主机采集。
-* </p>
-*
-* @author CH
-* @since 4.0.0.42
+ * 服务器资产 Agent 上报接口
+ * <p>
+ * 目标主机上的 Agent 按 Agent键 主动推送硬件/状态数据，
+ * 由 {@link AgentHostCollectProvider} 处理回写。用于 NAT / 防火墙下
+ * 服务端无法直连的主机采集。
+ * </p>
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 @Tag(name = "服务器资产-Agent上报", description = "Agent 主动推送采集数据")
 @RestController
@@ -49,12 +49,12 @@ public class HostAgentController {
     private SeriesEngine seriesEngine;
 
     /**
-    * Agent 推送数据（按 Agent键 定位主机）
-    *
-    * @param agentKey 探针标识
-    * @param payload  上报数据（cpu核心/内存mb/diskgb/os版本/公共ip/私募ip 等）
-    * @return 处理结果
-    */
+     * Agent 推送数据（按 Agent键 定位主机）
+     *
+     * @param agentKey 探针标识
+     * @param payload  上报数据（cpu核心/内存mb/diskgb/os版本/公共ip/私募ip 等）
+     * @return 处理结果
+     */
     @Operation(summary = "Agent推送采集数据")
     @PostMapping("/{agentKey}/push")
     public Mono<ReturnResult<String>> push(@PathVariable String agentKey, @RequestBody Map<String, Object> payload) {
@@ -91,11 +91,11 @@ public class HostAgentController {
     }
 
     /**
-    * 将上报负载写入主机字段
-    *
-    * @param host    主机
-    * @param payload 上报数据
-    */
+     * 将上报负载写入主机字段
+     *
+     * @param host    主机
+     * @param payload 上报数据
+     */
     private void applyPayload(MsServerHost host, Map<String, Object> payload) {
         Integer cpuCores = toInteger(payload.get("cpuCores"));
         if (cpuCores != null) {
@@ -153,11 +153,11 @@ public class HostAgentController {
     }
 
     /**
-    * 安全转为 Integer（空/非数字返回 空）
-    *
-    * @param value 原始值
-    * @return Integer 或 空
-    */
+     * 安全转为 Integer（空/非数字返回 空）
+     *
+     * @param value 原始值
+     * @return Integer 或 空
+     */
     private Integer toInteger(Object value) {
         if (value == null) {
             return null;
@@ -175,11 +175,11 @@ public class HostAgentController {
     }
 
     /**
-    * 安全转为 Long（空/非数字返回 空）
-    *
-    * @param value 原始值
-    * @return Long 或 空
-    */
+     * 安全转为 Long（空/非数字返回 空）
+     *
+     * @param value 原始值
+     * @return Long 或 空
+     */
     private Long toLong(Object value) {
         if (value == null) {
             return null;
@@ -196,11 +196,11 @@ public class HostAgentController {
     }
 
     /**
-    * 安全转为 Double（空/非数字返回 空）
-    *
-    * @param value 原始值
-    * @return Double 或 空
-    */
+     * 安全转为 Double（空/非数字返回 空）
+     *
+     * @param value 原始值
+     * @return Double 或 空
+     */
     private Double toDouble(Object value) {
         if (value == null) {
             return null;
@@ -217,11 +217,11 @@ public class HostAgentController {
     }
 
     /**
-    * 写历史时序指标（CPU/内存/磁盘）到 SeriesEngine。
-    *
-    * @param host    主机
-    * @param payload 上报负载
-    */
+     * 写历史时序指标（CPU/内存/磁盘）到 SeriesEngine。
+     *
+     * @param host    主机
+     * @param payload 上报负载
+     */
     private void writeHistoryMetrics(MsServerHost host, Map<String, Object> payload) {
         if (seriesEngine == null || !seriesEngine.isAvailable()) {
             return;
@@ -243,12 +243,12 @@ public class HostAgentController {
                 memUsage = toDouble(payload.get("memUsedPct"));
             }
             if (memUsage != null) {
-                seriesEngine.writePoint("ms_monitor_metric_memory", monitorId, "mem_usage", memUsage, now);
+                seriesEngine.writePoint("ms_monitor_metric_memory", monitorId, "usage_percent", memUsage, now);
             }
             // 磁盘
             Double diskUsage = toDouble(payload.get("diskUsage"));
             if (diskUsage != null) {
-                seriesEngine.writePoint("ms_monitor_metric_disk", monitorId, "disk_usage", diskUsage, now);
+                seriesEngine.writePoint("ms_monitor_metric_disk", monitorId, "usage_percent", diskUsage, now);
             }
         } catch (Exception e) {
             org.slf4j.LoggerFactory.getLogger(HostAgentController.class)

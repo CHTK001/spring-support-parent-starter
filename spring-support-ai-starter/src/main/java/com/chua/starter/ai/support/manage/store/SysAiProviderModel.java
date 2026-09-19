@@ -79,8 +79,8 @@ public class SysAiProviderModel implements Serializable {
     /** frequencyPenalty */
     private Double frequencyPenalty;
     /**
-    * 任务能力JSON数组
-    */
+     * 任务能力JSON数组
+     */
     @TableField(value = "sys_ai_provider_model_capabilities", typeHandler = JacksonTypeHandler.class)
     private List<Map<String, Object>> capabilities; // capabilities
 

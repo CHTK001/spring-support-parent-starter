@@ -2,6 +2,7 @@ package com.chua.starter.server.support.terminal.handler;
 
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.server.support.config.ServerProperties;
+import com.chua.starter.server.support.entity.MsServerHost;
 import com.chua.starter.server.support.entity.MsTerminalSession;
 import com.chua.starter.server.support.enums.ProtocolType;
 import com.chua.starter.server.support.model.SshCredential;
@@ -184,7 +185,9 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
         GuacdTunnel tunnel;
         try {
             tunnel = connectionFactory.create(protocolType,
-                    hostResult.getData().getServerHostAddress(), targetPort, resolved.getData(), tunnelId);
+                    hostResult.getData().getServerHostAddress(),
+                    resolveTargetPort(hostResult.getData(), protocolType, targetPort),
+                    resolved.getData(), tunnelId);
         } catch (RuntimeException e) {
             log.warn("[terminal] guacd 握手失败 hostId={} protocol={}: {}", hostId, protocolName, e.getMessage());
             /**
@@ -336,6 +339,27 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
         } catch (IOException e) {
             log.debug("[terminal] 关闭被拒连接失败 sessionId={}", wsSession.getId());
         }
+    }
+
+    /**
+    * 解析目标端口：显式请求 > 主机远控端口 > SSH 沿用端口字段 > 协议默认
+    *
+    * @param host       主机记录
+    * @param type       协议类型
+    * @param requested  浏览器显式传入的端口，可空
+    * @return 端口，空 表示交由 guacd 按协议默认
+    */
+    private Integer resolveTargetPort(MsServerHost host, ProtocolType type, Integer requested) {
+        if (requested != null && requested > 0) {
+            return requested;
+        }
+        if (host.getServerHostRemotePort() != null && host.getServerHostRemotePort() > 0) {
+            return host.getServerHostRemotePort();
+        }
+        if (type == ProtocolType.SSH && host.getServerHostPort() != null && host.getServerHostPort() > 0) {
+            return host.getServerHostPort();
+        }
+        return null;
     }
 
     /**

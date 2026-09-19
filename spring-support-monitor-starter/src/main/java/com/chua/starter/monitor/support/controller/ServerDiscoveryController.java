@@ -14,6 +14,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -48,6 +49,9 @@ import java.util.Set;
 @Tag(name = "监控-服务发现", description = "服务发现的独立查询接口：协议枚举 / 实例查询 / 状态摘要")
 @RestController
 @RequestMapping("/ms/monitor/discovery")
+// discovery-starter 是 optional 依赖，不会进 fat jar；而 ObjectProvider 的泛型参数在解析注入点时必须被加载，
+// 缺席会让整个应用启动失败，所以按类名做条件装配，让本控制器整体不注册
+@ConditionalOnClass(name = "com.chua.starter.discovery.support.service.DiscoveryService")
 @RequiredArgsConstructor
 public class ServerDiscoveryController {
 

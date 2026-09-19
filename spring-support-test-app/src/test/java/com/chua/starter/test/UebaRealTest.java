@@ -29,7 +29,7 @@ class UebaRealTest {
             .withConfiguration(AutoConfigurations.of(UebaAutoConfiguration.class));
 
     /**
-    * 验证 uebaengine Bean 已装配。
+     * 验证 uebaengine Bean 已装配。
      */
     @Test
     void autoConfiguredEngineExists() {

@@ -35,9 +35,9 @@ public class RemoteAccessCodesController {
     private final ObjectMapper objectMapper = new ObjectMapper(); // 对象映射器
 
     /**
-    * 读取接入码列表。
-    *
-    * @return 接入码列表（无则空数组）
+     * 读取接入码列表。
+     *
+     * @return 接入码列表（无则空数组）
      */
     @GetMapping
     public List<Map<String, Object>> list() throws IOException {

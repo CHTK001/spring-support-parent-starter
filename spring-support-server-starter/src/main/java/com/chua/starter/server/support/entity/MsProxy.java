@@ -7,9 +7,9 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
-* 免费代理（每次获取免费代理时清空重录——页面从本表读取）
-* @author CH
-* @since 4.0.0
+ * 免费代理（每次获取免费代理时清空重录——页面从本表读取）
+ * @author CH
+ * @since 4.0.0
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -31,4 +31,16 @@ public class MsProxy extends SysBase {
     /** 来源 */
     @TableField("source")
     private String source; // 源
+
+    /** 延迟（毫秒） */
+    @TableField("delay")
+    private Long delay; // 延迟
+
+    /** 是否可达 */
+    @TableField("reachable")
+    private Integer reachable; // 是否可达
+
+    /** 检测时间 */
+    @TableField("check_time")
+    private Long checkTime; // 检测时间
 }

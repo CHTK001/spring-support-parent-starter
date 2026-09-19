@@ -43,15 +43,15 @@ public class SoftInstallController {
     @PostMapping("/do")
     @Permission(value = "sys:soft:install", role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
     /**
-    * Install
-    *
-    * @param @Validated(AddGroup.class @校验(添加群体.类
-    * @return install的结果
-    * @param @Validated(AddGroup.class @校验(添加群体.类
-    * @param @Validated(AddGroup.class @Validated(AddGroup.class
-    * @param request 请求，不允许为 null
-    * @param bindingResult binding结果，不允许为 null
-    */
+     * Install
+     *
+     * @param @Validated(AddGroup.class @校验(添加群体.类
+     * @return install的结果
+     * @param @Validated(AddGroup.class @校验(添加群体.类
+     * @param @Validated(AddGroup.class @Validated(AddGroup.class
+     * @param request 请求，不允许为 null
+     * @param bindingResult binding结果，不允许为 null
+     */
     public ReturnResult<InstallDetailResponse> install(@Validated(AddGroup.class) @RequestBody InstallRequest request, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
             return ReturnResult.illegal(bindingResult.getAllErrors().getFirst().getDefaultMessage());

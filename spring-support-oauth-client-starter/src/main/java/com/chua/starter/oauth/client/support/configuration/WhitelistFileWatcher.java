@@ -55,8 +55,8 @@ public class WhitelistFileWatcher {
     private final AuthClientProperties authClientProperties;
 
     /**
-    * 合并后的白名单（线程安全）
-    */
+     * 合并后的白名单（线程安全）
+     */
     private final CopyOnWriteArrayList<String> mergedWhitelist = new CopyOnWriteArrayList<>();
 
     /**

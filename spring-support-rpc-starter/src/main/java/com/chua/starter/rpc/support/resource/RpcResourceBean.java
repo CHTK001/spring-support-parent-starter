@@ -67,10 +67,10 @@ public class RpcResourceBean<T> implements FactoryBean<T>, ApplicationContextAwa
     private RpcClient rpcClient;
 
     /**
-    * 获取 标识
-    *
-    * @return ID
-    */
+     * 获取 标识
+     *
+     * @return ID
+     */
     public String getId() {
         return id;
     }
@@ -85,11 +85,11 @@ public class RpcResourceBean<T> implements FactoryBean<T>, ApplicationContextAwa
     }
 
     /**
-    * 将拦截器链（{@link RpcInterceptor}，如方法级指标统计）包装到远程调用代理外层。
-    *
-    * @param target 协议实现的远程代理对象
-    * @return 包装后的代理对象；无拦截器时返回原对象
-    */
+     * 将拦截器链（{@link RpcInterceptor}，如方法级指标统计）包装到远程调用代理外层。
+     *
+     * @param target 协议实现的远程代理对象
+     * @return 包装后的代理对象；无拦截器时返回原对象
+     */
     private T intercept(T target) {
         List<RpcInterceptor> interceptors = applicationContext.getBeanProvider(RpcInterceptor.class)
                 .orderedStream().sorted(Comparator.comparingInt(RpcInterceptor::getOrder)).toList();
@@ -198,10 +198,10 @@ public class RpcResourceBean<T> implements FactoryBean<T>, ApplicationContextAwa
     }
 
     /**
-    * 获取Bean工厂
-    *
-    * @return 获取Bean工厂的结果
-    */
+     * 获取Bean工厂
+     *
+     * @return 获取Bean工厂的结果
+     */
     private ConfigurableListableBeanFactory getBeanFactory() {
         return (ConfigurableListableBeanFactory) applicationContext.getAutowireCapableBeanFactory();
     }

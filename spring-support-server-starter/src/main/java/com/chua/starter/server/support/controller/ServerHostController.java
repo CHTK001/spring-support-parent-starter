@@ -39,11 +39,11 @@ public class ServerHostController {
     private final ServerHostService serverHostService;
 
     /**
-    * 新增主机
-    *
-    * @param host 主机
-    * @return 结果
-    */
+     * 新增主机
+     *
+     * @param host 主机
+     * @return 结果
+     */
     @Operation(summary = "新增主机")
     @PostMapping
     public ReturnResult<MsServerHost> create(@RequestBody MsServerHost host) {
