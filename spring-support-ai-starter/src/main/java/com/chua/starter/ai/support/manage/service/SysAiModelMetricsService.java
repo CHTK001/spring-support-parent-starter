@@ -245,6 +245,7 @@ public class SysAiModelMetricsService {
         if (!locked.contains("context_window_tokens")) {
             uw.set(SysAiModelMetrics::getContextWindowTokens, r.contextWindowTokens());
         }
+        uw.set(SysAiModelMetrics::getProvider, r.provider());
         uw.set(SysAiModelMetrics::getIconUrl, r.iconUrl());
         uw.set(SysAiModelMetrics::getReasoning, r.reasoning());
         uw.set(SysAiModelMetrics::getWebSearch, r.webSearch());
@@ -335,6 +336,7 @@ public class SysAiModelMetricsService {
         SysAiModelMetrics e = new SysAiModelMetrics();
         e.setModelKey(r.normalizedKey());
         e.setModelName(r.normalizedKey());
+        e.setProvider(r.provider());
         e.setPriceInputPerMusd(r.inputPerMillion());
         e.setPriceOutputPerMusd(r.outputPerMillion());
         e.setPriceCacheHitPerMusd(r.cacheHitPrice());
