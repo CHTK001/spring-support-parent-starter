@@ -127,4 +127,10 @@ public class SysAiSshHost implements Serializable {
      */
     @TableField("sys_ai_ssh_host_updated_at")
     private Long updatedAt; // 更新at
+
+    /**
+     * 归属用户标识（登录用户名，凭据仅归属者可见）
+     */
+    @TableField("sys_ai_ssh_host_user_id")
+    private String userId; // 归属用户
 }

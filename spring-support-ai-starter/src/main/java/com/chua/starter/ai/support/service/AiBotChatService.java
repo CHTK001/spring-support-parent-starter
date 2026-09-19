@@ -20,6 +20,8 @@ import com.chua.starter.ai.support.mapper.SysAiBotMessageMapper;
 import com.chua.starter.ai.support.model.BotConversation;
 import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
 import com.chua.starter.ai.support.manage.websocket.SysAiWebSocketHandler;
+import com.chua.starter.ai.support.util.ProviderCredentials;
+import com.chua.starter.ai.support.util.AiBotCaller;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.ContextRefreshedEvent;
@@ -199,14 +201,14 @@ public class AiBotChatService {
             return;
         }
         log.info("[BotChat] Bot {} 收到消息 from={}: {}", bot.getBotId(), fromUser, content);
-        recordMessage(bot.getBotId(), "IN", fromUser, content);
+        recordMessage(bot.getBotId(), "IN", fromUser, content, bot.getOwnerKey());
         try {
             String reply = aiReply(bot, content);
             if (reply != null && !reply.isBlank()) {
                 BotSendResult result = client.sendText(fromUser, reply);
                 if (result.isSuccess()) {
                     log.info("[BotChat] Bot {} 已回复 from={} text={}", bot.getBotId(), fromUser, reply);
-                    recordMessage(bot.getBotId(), "OUT", fromUser, reply);
+                    recordMessage(bot.getBotId(), "OUT", fromUser, reply, bot.getOwnerKey());
                 } else {
                     log.warn("[BotChat] Bot {} 回复发送失败 from={} code={} msg={} text={}",
                             bot.getBotId(), fromUser, result.getErrorCode(), result.getErrorMessage(), reply);
@@ -231,9 +233,13 @@ public class AiBotChatService {
      * @param botId    机器人 唯一标识
      * @param fromUser 目标微信用户 标识
      * @param content  消息内容
+     * @param caller   调用方归属（用于越权拦截）
      * @return 发送结果
      */
-    public BotSendResult sendMessage(String botId, String fromUser, String content) {
+    public BotSendResult sendMessage(String botId, String fromUser, String content, AiBotCaller caller) {
+        SysAiBotBinding binding = findBinding(botId);
+        // 以他人机器人对外发消息会消耗归属者的凭证与信任，先按绑定归属拦越权
+        caller.requireReadable(binding == null ? null : binding.getOwnerKey());
         ILinkBotClient client = runningBots.get(botId);
         if (client == null) {
             return BotSendResult.fail(-1, "Bot 未在运行，请先在 Bot 管理页启用");
@@ -243,7 +249,7 @@ public class AiBotChatService {
         }
         BotSendResult result = client.sendText(fromUser, content);
         if (result.isSuccess()) {
-            recordMessage(botId, "OUT", fromUser, content);
+            recordMessage(botId, "OUT", fromUser, content, binding == null ? null : binding.getOwnerKey());
         } else {
             log.warn("[BotChat] 主动发送失败 bot={} to={} code={} msg={}",
                     botId, fromUser, result.getErrorCode(), result.getErrorMessage());
@@ -256,9 +262,11 @@ public class AiBotChatService {
      *
      * @param botId    机器人 唯一标识
      * @param fromUser 目标微信用户 标识（可空，空则查询该 机器人 全部消息）
+     * @param caller   调用方归属（用于越权拦截）
      * @return 聊天记录列表
      */
-    public List<SysAiBotMessage> listMessages(String botId, String fromUser) {
+    public List<SysAiBotMessage> listMessages(String botId, String fromUser, AiBotCaller caller) {
+        requireBotReadable(botId, caller);
         return botMessageMapper.selectList(
                 Wrappers.<SysAiBotMessage>lambdaQuery()
                         .eq(SysAiBotMessage::getBotId, botId)
@@ -276,9 +284,12 @@ public class AiBotChatService {
      * @param fromUser 目标微信用户 标识（可空，空则查询该 机器人 全部消息）
      * @param page     页码（从 0 开始，非法值按 0 处理）
      * @param pageSize 每页条数（非法值按 50 处理）
+     * @param caller   调用方归属（用于越权拦截）
      * @return 分页结果：messages（升序）、hasMore、page、pageSize
      */
-    public Map<String, Object> listMessagesPaged(String botId, String fromUser, int page, int pageSize) {
+    public Map<String, Object> listMessagesPaged(String botId, String fromUser, int page, int pageSize,
+                                                 AiBotCaller caller) {
+        requireBotReadable(botId, caller);
         int safePage = Math.max(0, page);
         int safeSize = pageSize > 0 ? pageSize : 50;
         int offset = safePage * safeSize;
@@ -310,12 +321,14 @@ public class AiBotChatService {
      *
      * @param botId 机器人 唯一标识
      * @param text  待润色文本
+     * @param caller 调用方归属（用于越权拦截）
      * @return 润色结果，模型未配置/调用失败时返回空字符串
      */
-    public String polishText(String botId, String text) {
+    public String polishText(String botId, String text, AiBotCaller caller) {
         if (botId == null || botId.isBlank() || text == null || text.isBlank()) {
             return "";
         }
+        requireBotReadable(botId, caller);
         SysAiBotBinding bot = findBinding(botId);
         ChatClient client = buildModelChatClient(resolveModelName(bot));
         if (client == null) {
@@ -340,13 +353,14 @@ public class AiBotChatService {
      *
      * @param botId    机器人 唯一标识
      * @param fromUser 目标微信用户 标识（可空，空则总结该 机器人 全部消息）
+     * @param caller   调用方归属（用于越权拦截）
      * @return 会话摘要，无消息/模型未配置/调用失败时返回空字符串
      */
-    public String summarizeConversation(String botId, String fromUser) {
+    public String summarizeConversation(String botId, String fromUser, AiBotCaller caller) {
         if (botId == null || botId.isBlank()) {
             return "";
         }
-        List<SysAiBotMessage> messages = listMessages(botId, fromUser);
+        List<SysAiBotMessage> messages = listMessages(botId, fromUser, caller);
         if (messages.isEmpty()) {
             return "";
         }
@@ -386,6 +400,20 @@ public class AiBotChatService {
                 Wrappers.<SysAiBotBinding>lambdaQuery()
                         .eq(SysAiBotBinding::getBotId, botId)
                         .last("LIMIT 1"));
+    }
+
+    /**
+     * 校验调用方可否读取该 机器人 的聊天数据。
+     *
+     * <p>可见性随绑定归属：管理员（含本地信任）可跨归属查看，普通调用方仅能读取
+     * 归属一致的 机器人；未绑定或历史无归属记录按未归属口径处理。</p>
+     *
+     * @param botId  机器人 唯一标识
+     * @param caller 调用方归属
+     */
+    private void requireBotReadable(String botId, AiBotCaller caller) {
+        SysAiBotBinding binding = findBinding(botId);
+        caller.requireReadable(binding == null ? null : binding.getOwnerKey());
     }
 
     /**
@@ -480,10 +508,12 @@ public class AiBotChatService {
     /**
      * 查询指定 机器人 的最近联系人（去重 by 从用户）。
      *
-     * @param botId 机器人 唯一标识
+     * @param botId  机器人 唯一标识
+     * @param caller 调用方归属（用于越权拦截）
      * @return 联系人列表
      */
-    public List<String> listContacts(String botId) {
+    public List<String> listContacts(String botId, AiBotCaller caller) {
+        requireBotReadable(botId, caller);
         List<SysAiBotMessage> messages = botMessageMapper.selectList(
                 Wrappers.<SysAiBotMessage>lambdaQuery()
                         .eq(SysAiBotMessage::getBotId, botId)
@@ -501,14 +531,24 @@ public class AiBotChatService {
      *
      * <p>供 IM 页左侧会话列表使用；昵称与状态取自绑定记录（按 botId 匹配）。</p>
      *
+     * @param caller 调用方归属（用于越权拦截）
      * @return 会话列表（按最后消息时间降序）
      */
-    public List<BotConversation> listConversations() {
+    public List<BotConversation> listConversations(AiBotCaller caller) {
+        // 先取绑定归属：会话列表按 机器人 归属过滤，他人往来内容不得出现在本人列表
+        List<SysAiBotBinding> bindings = botBindingMapper.selectList(Wrappers.lambdaQuery());
+        Map<String, SysAiBotBinding> byBotId = bindings.stream()
+                .filter(b -> b.getBotId() != null)
+                .collect(Collectors.toMap(SysAiBotBinding::getBotId, b -> b, (a, b) -> a));
         List<SysAiBotMessage> all = botMessageMapper.selectList(
                 Wrappers.<SysAiBotMessage>lambdaQuery()
                         .orderByAsc(SysAiBotMessage::getCreateTime));
         Map<String, BotConversation> byKey = new LinkedHashMap<>(64); // 会话数量不可预估
         for (SysAiBotMessage m : all) {
+            SysAiBotBinding binding = byBotId.get(m.getBotId());
+            if (!caller.canRead(binding == null ? null : binding.getOwnerKey())) {
+                continue;
+            }
             String key = m.getBotId() + "|" + (m.getFromUser() == null ? "" : m.getFromUser());
             BotConversation conv = byKey.computeIfAbsent(key, k -> {
                 BotConversation c = new BotConversation();
@@ -521,10 +561,6 @@ public class AiBotChatService {
         }
         List<BotConversation> result = new ArrayList<>(byKey.values());
  // 补全在线状态（按绑定记录与 机器人标识 匹配）
-        List<SysAiBotBinding> bindings = botBindingMapper.selectList(Wrappers.lambdaQuery());
-        Map<String, SysAiBotBinding> byBotId = bindings.stream()
-                .filter(b -> b.getBotId() != null)
-                .collect(Collectors.toMap(SysAiBotBinding::getBotId, b -> b, (a, b) -> a));
         for (BotConversation c : result) {
             SysAiBotBinding binding = byBotId.get(c.getBotId());
             if (binding != null) {
@@ -585,9 +621,13 @@ public class AiBotChatService {
      *
      * @param botId    机器人 唯一标识
      * @param fromUser 微信用户 标识
+     * @param caller   调用方归属（用于越权拦截）
      * @return 删除的消息条数
      */
-    public int deleteConversation(String botId, String fromUser) {
+    public int deleteConversation(String botId, String fromUser, AiBotCaller caller) {
+        SysAiBotBinding binding = findBinding(botId);
+        // 删除只认归属本身：管理员对他人聊天记录只读
+        caller.requireWritable(binding == null ? null : binding.getOwnerKey());
         int deleted = botMessageMapper.delete(
                 Wrappers.<SysAiBotMessage>lambdaQuery()
                         .eq(SysAiBotMessage::getBotId, botId)
@@ -609,8 +649,9 @@ public class AiBotChatService {
      * @param direction 入（用户→机器人）/ 出（机器人→用户）
      * @param fromUser  微信用户 标识
      * @param content   消息内容
+     * @param ownerKey  所属 机器人 绑定的归属标识（{@code u:<userId>} / {@code fp:<指纹>}，可为空）
      */
-    private void recordMessage(String botId, String direction, String fromUser, String content) {
+    private void recordMessage(String botId, String direction, String fromUser, String content, String ownerKey) {
         try {
             SysAiBotMessage msg = new SysAiBotMessage();
             msg.setBotId(botId);
@@ -618,6 +659,8 @@ public class AiBotChatService {
             msg.setFromUser(fromUser);
             msg.setContent(content);
             msg.setCreateTime(LocalDateTime.now());
+            // 归属随 机器人 绑定：轮询线程取不到请求身份，且设备指纹流量不算到任何用户头上
+            msg.setUserId(AiBotCaller.userOf(ownerKey));
             botMessageMapper.insert(msg);
             // 广播到 IM 页（新消息 / 新会话实时刷新）
         Map<String, Object> push = new HashMap<>(4);
@@ -701,6 +744,7 @@ public class AiBotChatService {
                     response.getUsage().setFirstTokenLatencyMillis(duration);
                 }
                 try {
+                    // 归属随 机器人 绑定：轮询线程取不到请求身份，设备指纹流量不计入任何用户
                     usageRecorderInterceptor.record(
                             "bot",
                             provider.getPlatform(),
@@ -708,7 +752,7 @@ public class AiBotChatService {
                             "bot",
                             response.getUsage(),
                             UUID.randomUUID().toString(),
-                            null
+                            AiBotCaller.userOf(bot.getOwnerKey())
                     );
                 } catch (Exception e) {
                     log.warn("[BotChat] 用量记录失败 bot={} err={}", bot.getBotId(), e.getMessage());
@@ -722,23 +766,12 @@ public class AiBotChatService {
     }
 
     /**
-     * 从 提供者 凭证中提取 API 键。
-     *
-     * <p>凭证结构：{@code {"api_keys": ["sk-...", ...]}}，取第一个；
-     * 兼容 {@code apiKey} 键。</p>
+     * 从 提供者 凭证中提取 API 键（形态兼容见 {@link ProviderCredentials}）。
      * @param credentials 凭证
      * @return extractapi键的结果
      */
     private static String extractApiKey(Map<String, Object> credentials) {
-        if (credentials == null) {
-            return null;
-        }
-        Object keys = credentials.get("api_keys");
-        if (keys instanceof List<?> list && !list.isEmpty() && list.getFirst() != null) {
-            return list.getFirst().toString();
-        }
-        Object key = credentials.get("apiKey");
-        return key != null ? key.toString() : null;
+        return ProviderCredentials.firstApiKey(credentials);
     }
 
     /**

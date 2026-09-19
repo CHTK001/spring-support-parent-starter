@@ -3,6 +3,8 @@ package com.chua.starter.ai.support.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.starter.ai.support.entity.SysAiPricing;
 import com.chua.starter.ai.support.mapper.SysAiPricingMapper;
+import com.chua.starter.ai.support.manage.service.SysAiModelMetricsService;
+import com.chua.starter.ai.support.manage.store.SysAiModelMetrics;
 import com.chua.starter.ai.support.service.AiModelMetricsEnrichmentService;
 import com.chua.starter.ai.support.service.SysAiPricingService;
 import lombok.RequiredArgsConstructor;
@@ -45,6 +47,11 @@ public class SysAiPricingServiceImpl implements SysAiPricingService {
     private final AiModelMetricsEnrichmentService metricsEnrichment;
 
     /**
+     * 全量指标库服务（计费取价最终回退，预估值）
+     */
+    private final SysAiModelMetricsService modelMetricsService;
+
+    /**
      * 查询指定 提供者 + 模型 的最新官方定价记录。
      * <p>优先从 AA 缓存查找，未命中时回退到数据库。结果缓存到 Spring Cache。</p>
      *
@@ -73,13 +80,36 @@ public class SysAiPricingServiceImpl implements SysAiPricingService {
             return pricing;
         }
 
-        // 2. 回退数据库
+        // 2. 回退数据库 sys_ai_pricing
         LambdaQueryWrapper<SysAiPricing> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(SysAiPricing::getProvider, provider)
                 .eq(SysAiPricing::getModel, model)
                 .orderByDesc(SysAiPricing::getEffectiveDate)
                 .last("limit 1");
-        return pricingMapper.selectOne(wrapper);
+        SysAiPricing dbPricing = pricingMapper.selectOne(wrapper);
+        if (dbPricing != null) {
+            return dbPricing;
+        }
+
+        // 3. 回退全量指标表（按模型名关联，价格为预估值）
+        SysAiModelMetrics metric = modelMetricsService.findForEstimate(model);
+        if (metric != null && metric.getPriceInputPerMusd() != null
+                && metric.getPriceOutputPerMusd() != null) {
+            SysAiPricing estimated = new SysAiPricing();
+            estimated.setProvider(provider);
+            estimated.setModel(model);
+            BigDecimal inputPer1k = metric.getPriceInputPerMusd()
+                    .divide(BigDecimal.valueOf(1000), 10, RoundingMode.HALF_UP);
+            BigDecimal outputPer1k = metric.getPriceOutputPerMusd()
+                    .divide(BigDecimal.valueOf(1000), 10, RoundingMode.HALF_UP);
+            estimated.setInputPricePer1k(inputPer1k.doubleValue());
+            estimated.setOutputPricePer1k(outputPer1k.doubleValue());
+            estimated.setCurrency("USD");
+            estimated.setEffectiveDate(LocalDateTime.now());
+            estimated.setSource("metrics_estimate");
+            return estimated;
+        }
+        return null;
     }
 
     /**

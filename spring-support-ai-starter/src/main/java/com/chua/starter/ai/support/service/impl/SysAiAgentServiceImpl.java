@@ -16,6 +16,7 @@ import com.chua.starter.ai.support.manage.store.SysAiProvider;
 import com.chua.starter.ai.support.registry.AgentRegistry;
 import com.chua.starter.ai.support.registry.ChatClientRegistry;
 import com.chua.starter.ai.support.service.SysAiAgentService;
+import com.chua.starter.ai.support.util.ProviderCredentials;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -855,15 +856,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
      * @return extractapiKey的结果
      */
     private static String extractApiKey(Map<String, Object> credentials) {
-        if (credentials == null) {
-            return null;
-        }
-        Object keys = credentials.get("api_keys");
-        if (keys instanceof List<?> list && !list.isEmpty() && list.getFirst() != null) {
-            return list.getFirst().toString();
-        }
-        Object key = credentials.get("apiKey");
-        return key != null ? key.toString() : null;
+        return ProviderCredentials.firstApiKey(credentials);
     }
 
     @SuppressWarnings("unchecked")

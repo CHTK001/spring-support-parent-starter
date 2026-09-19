@@ -60,15 +60,25 @@ spring:
       on-profile: "local"
 plugin:
   oauth:
-    enable: false
+    enable: true
     protocol: static
+    # 静态协议自校验令牌不外呼；loginAddress 只作为「未登录跳转地址」参与前置判断，
+    # 留空会让 isFailure() 直接判为鉴权失败，故必须给出非空值
+    auth-address: http://127.0.0.1:8787/login
     temp:
-      open: true
-      user: "admin:admin123"
+      # 格式 用户名:密码;用户名:密码；用户标识取用户名，跨登录稳定，数据按此归属
+      user: "admin:admin123;alice:alice123;bob:bob123"
+    # 框架内置默认白名单混有历史应用专用路径（/api/extensions/**、/v2/usage/** 等），
+    # 本应用按自身路由显式放行，不继承
+    use-default-whitelist: false
     whitelist:
-      - /**
-    skip:
-      enabled: true
+      # OpenAI/Claude/Gemini 兼容协议：Bearer 是业务 AppKey，不是登录令牌
+      - /v2/v1/**
+      - /v2/v1beta/**
+      # 桌面端 Bot 绑定与探活、WebSocket 握手、健康检查
+      - /v2/ai/bot-binding/**
+      - /ws
+      - /actuator/**
   filesystem:
     enable: false
     dir-list: false
@@ -91,21 +101,15 @@ plugin:
     address: http://172.16.0.40:19180/oauth
     auth-address: http://172.16.0.40:19180/oauth
     oauth-url: /verify
-    # AI 协议端点（Bearer 为业务 AppKey，非 oauth token）与登录/健康检查放行
+    # 框架内置默认白名单含历史应用专用路径，本应用不继承
+    use-default-whitelist: false
     whitelist:
-      - /**
-      - /api/**
-      - /ws
+      # AI 协议端点（Bearer 为业务 AppKey，非 oauth token）
       - /v2/v1/**
-      - /provider/**
-      - /v2/manufacturer/factories
+      - /v2/v1beta/**
+      # 桌面端 Bot 绑定与探活、WebSocket 握手
       - /v2/ai/bot-binding/**
-      - /v2/ocr/**
-      - /v2/face/**
-      - /v2/image-recognition/**
-      - /v2/layout/**
-      - /v2/usage/list
-      - /v2/ai/models/**
+      - /ws
   account:
     register:
       enable: false

@@ -29,7 +29,7 @@ public class AiWebMvcConverterConfiguration implements WebMvcConfigurer {
      *
      * @param converters 方法入参 converters
      */
-    public void extendMessageConverters(List<HttpMessageConverter<?>> converters) {
+    public void configureConverters(List<HttpMessageConverter<?>> converters) {
         boolean hasResource = converters.stream()
                 .anyMatch(c -> c instanceof ResourceHttpMessageConverter);
         if (!hasResource) {

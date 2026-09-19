@@ -56,4 +56,13 @@ public class SysAiBotMessage {
      */
     @TableField("sys_ai_bot_message_create_time")
     private LocalDateTime createTime; // 创建时间
+
+    /**
+     * 归属登录用户 标识
+     *
+     * <p>随所属 机器人 绑定记录的归属写入（owner_key 的 {@code u:<userId>} 去掉前缀），
+     * 未登录（设备指纹）流量保持为空。</p>
+     */
+    @TableField("sys_ai_bot_message_user_id")
+    private String userId; // 归属用户
 }

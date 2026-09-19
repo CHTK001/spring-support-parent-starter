@@ -67,7 +67,9 @@ CREATE TABLE IF NOT EXISTS `sys_ai_conversation` (
     `sys_ai_conversation_created_at`         BIGINT       NOT NULL COMMENT '创建时间（毫秒）',
     `sys_ai_conversation_modified_at`        BIGINT       NOT NULL COMMENT '最后修改时间（毫秒）',
     `sys_ai_conversation_execution_template_id` VARCHAR(64) NULL COMMENT '执行模板ID',
-    PRIMARY KEY (`sys_ai_conversation_id`)
+    `sys_ai_conversation_user_id`            VARCHAR(64)  NULL COMMENT '归属用户 ID（登录用户名）',
+    PRIMARY KEY (`sys_ai_conversation_id`),
+    KEY `sys_ai_conversation_ai_conv_user` (`sys_ai_conversation_user_id`, `sys_ai_conversation_modified_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='AI 会话';
 CREATE TABLE IF NOT EXISTS `sys_ai_conversation_message` (
     `sys_ai_conversation_message_id`             VARCHAR(36)  NOT NULL COMMENT '消息ID（UUIDv7）',
@@ -80,8 +82,10 @@ CREATE TABLE IF NOT EXISTS `sys_ai_conversation_message` (
     `sys_ai_conversation_message_status`         VARCHAR(32)  NOT NULL DEFAULT 'finish' COMMENT '消息状态',
     `sys_ai_conversation_message_hidden`         TINYINT      NOT NULL DEFAULT 0 COMMENT '是否隐藏',
     `sys_ai_conversation_message_created_at`     BIGINT       NOT NULL COMMENT '创建时间（毫秒）',
+    `sys_ai_conversation_message_user_id`        VARCHAR(64)  NULL COMMENT '归属用户 ID（登录用户名，随所属会话）',
     PRIMARY KEY (`sys_ai_conversation_message_id`),
-    KEY `sys_ai_conversation_message_ai_conv_msg_conv` (`sys_ai_conversation_message_conversation_id`)
+    KEY `sys_ai_conversation_message_ai_conv_msg_conv` (`sys_ai_conversation_message_conversation_id`),
+    KEY `sys_ai_conversation_message_ai_conv_msg_user` (`sys_ai_conversation_message_user_id`, `sys_ai_conversation_message_conversation_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='AI 会话消息';
 CREATE TABLE IF NOT EXISTS `sys_ai_bot_binding` (
     `sys_ai_bot_binding_id`               BIGINT       NOT NULL AUTO_INCREMENT COMMENT '绑定 ID',
@@ -95,6 +99,7 @@ CREATE TABLE IF NOT EXISTS `sys_ai_bot_binding` (
     `sys_ai_bot_binding_gateway_port`    INT          NULL COMMENT '独立网关端口号',
     `sys_ai_bot_binding_status`          VARCHAR(32)  NULL DEFAULT 'offline' COMMENT '状态：online / offline / expired',
     `sys_ai_bot_binding_bind_source`     VARCHAR(32)  NULL COMMENT '绑定来源（qrcode_scan / manual_import）',
+    `sys_ai_bot_binding_model`           VARCHAR(128) NULL COMMENT '绑定的 AI 模型（用于微信聊天时 AI 回复）',
     `sys_ai_bot_binding_thinking`        TINYINT      NOT NULL DEFAULT 0 COMMENT '是否启用深度思考（默认关闭）',
     `sys_ai_bot_binding_thinking_effort` VARCHAR(16)  NULL COMMENT '深度思考强度（low / medium / high）',
     `sys_ai_bot_binding_system_prompt`   TEXT         NULL COMMENT '系统提示词（AI 回复时注入的 system prompt）',
@@ -107,7 +112,8 @@ CREATE TABLE IF NOT EXISTS `sys_ai_bot_binding` (
     `update_time`                         DATETIME     NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     `sys_ai_bot_binding_record_usage` TINYINT NOT NULL DEFAULT 1 COMMENT '是否记录AI用量（令牌/费用）',
     PRIMARY KEY (`sys_ai_bot_binding_id`),
-    KEY `sys_ai_bot_binding_sys_ai_bot_binding_bot_id` (`sys_ai_bot_binding_bot_id`)
+    KEY `sys_ai_bot_binding_sys_ai_bot_binding_bot_id` (`sys_ai_bot_binding_bot_id`),
+    KEY `sys_ai_bot_binding_sys_ai_bot_binding_user` (`sys_ai_bot_binding_user_id`)
 );
 
 CREATE TABLE IF NOT EXISTS `sys_ai_bot_message` (
@@ -116,10 +122,12 @@ CREATE TABLE IF NOT EXISTS `sys_ai_bot_message` (
     `sys_ai_bot_message_direction` VARCHAR(16) NULL COMMENT '方向：IN（用户→bot）/ OUT（bot→用户）',
     `sys_ai_bot_message_from_user` VARCHAR(128) NULL COMMENT '微信用户 ID（来源）',
     `sys_ai_bot_message_content`  TEXT      NULL COMMENT '消息内容',
+    `sys_ai_bot_message_user_id`  VARCHAR(64) NULL COMMENT '归属登录用户标识（与绑定表 owner_key 的 u:<userId> 同源）',
     `sys_ai_bot_message_create_time` DATETIME NULL COMMENT '创建时间',
     PRIMARY KEY (`sys_ai_bot_message_id`),
     KEY `sys_ai_bot_message_sys_ai_bot_message_bot` (`sys_ai_bot_message_bot_id`),
-    KEY `sys_ai_bot_message_sys_ai_bot_message_conv` (`sys_ai_bot_message_bot_id`, `sys_ai_bot_message_from_user`)
+    KEY `sys_ai_bot_message_sys_ai_bot_message_conv` (`sys_ai_bot_message_bot_id`, `sys_ai_bot_message_from_user`),
+    KEY `sys_ai_bot_message_sys_ai_bot_message_user` (`sys_ai_bot_message_user_id`, `sys_ai_bot_message_bot_id`)
 );
 CREATE TABLE IF NOT EXISTS `sys_ai_pricing` (
     `sys_ai_pricing_id`                  BIGINT       NOT NULL AUTO_INCREMENT COMMENT ' ID',
@@ -177,7 +185,8 @@ CREATE TABLE IF NOT EXISTS `sys_ai_usage` (
     `sys_ai_usage_total_latency` BIGINT NULL COMMENT '总耗时(ms)',
     PRIMARY KEY (`sys_ai_usage_id`),
     KEY `sys_ai_usage_sys_ai_usage_request_id` (`sys_ai_usage_request_id`),
-    KEY `sys_ai_usage_sys_ai_usage_call_time` (`sys_ai_usage_call_time`)
+    KEY `sys_ai_usage_sys_ai_usage_call_time` (`sys_ai_usage_call_time`),
+    KEY `sys_ai_usage_sys_ai_usage_user` (`sys_ai_usage_user_id`, `sys_ai_usage_call_time`)
 );
 CREATE TABLE IF NOT EXISTS `sys_ai_usage_daily` (
     `sys_ai_usage_daily_id`                     BIGINT       NOT NULL AUTO_INCREMENT COMMENT ' ID',
@@ -200,7 +209,9 @@ CREATE TABLE IF NOT EXISTS `sys_ai_usage_daily` (
     `sys_ai_usage_daily_total_latency` BIGINT DEFAULT 0 COMMENT '总耗时(ms)合计',
     `sys_ai_usage_daily_standard_cost` DOUBLE DEFAULT 0 COMMENT '标准费用(官方价格)',
     `sys_ai_usage_daily_total_first_token_latency` BIGINT DEFAULT 0 COMMENT '总首字延迟(ms)合计',
-    PRIMARY KEY (`sys_ai_usage_daily_id`)
+    `sys_ai_usage_daily_user_id`            VARCHAR(64)  NULL COMMENT '归属用户 ID（登录用户名，NULL 表示全局汇总）',
+    PRIMARY KEY (`sys_ai_usage_daily_id`),
+    KEY `sys_ai_usage_daily_sys_ai_usage_daily_user` (`sys_ai_usage_daily_user_id`, `sys_ai_usage_daily_stat_date`)
 );
 CREATE TABLE IF NOT EXISTS `sys_agent_browser_lane` (
     `lane_id`                 VARCHAR(64)  NOT NULL COMMENT 'Lane ID',
@@ -244,8 +255,10 @@ CREATE TABLE IF NOT EXISTS `sys_agent_browser_tab` (
     `crashed`                 BOOLEAN      DEFAULT FALSE COMMENT '是否崩溃',
     `created_at`              BIGINT       NOT NULL COMMENT '创建时间',
     `updated_at`              BIGINT       NOT NULL COMMENT '更新时间',
+    `user_id`                 VARCHAR(64)  NULL COMMENT '归属用户 ID（与所属 lane 同源）',
     PRIMARY KEY (`tab_id`),
-    INDEX `sys_agent_browser_tab_tab_lane` (`lane_id`)
+    INDEX `sys_agent_browser_tab_tab_lane` (`lane_id`),
+    INDEX `sys_agent_browser_tab_tab_user` (`user_id`, `lane_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='浏览器 Tab 信息';
 CREATE TABLE IF NOT EXISTS `sys_agent_browser_host` (
     `host_id`                 VARCHAR(64)  NOT NULL COMMENT 'Host ID',
@@ -307,23 +320,13 @@ CREATE TABLE IF NOT EXISTS `sys_ai_manufacturer` (
   `sys_ai_manufacturer_factory` VARCHAR(128) DEFAULT NULL COMMENT '',
   `sys_ai_manufacturer_base_url` VARCHAR(512) DEFAULT NULL COMMENT '',
   `sys_ai_manufacturer_app_key` VARCHAR(255) DEFAULT NULL COMMENT 'Key',
-  `sys_ai_manufacturer_app_secret` VARCHAR(255) DEFAULT NULL COMMENT 'Secret',
-  `sys_ai_manufacturer_icon` VARCHAR(1024) DEFAULT NULL COMMENT '',
   `sys_ai_manufacturer_logo` VARCHAR(1024) DEFAULT NULL COMMENT 'Logo',
-  `sys_ai_manufacturer_website` VARCHAR(1024) DEFAULT NULL COMMENT '',
   `sys_ai_manufacturer_openai_compatible` INT NOT NULL DEFAULT 0 COMMENT 'OpenAI',
   `sys_ai_manufacturer_claude_compatible` INT NOT NULL DEFAULT 0 COMMENT 'Claude',
-  `sys_ai_manufacturer_app_id` VARCHAR(255) DEFAULT NULL COMMENT 'ID',
   `sys_ai_manufacturer_api_secret` VARCHAR(255) DEFAULT NULL COMMENT 'API',
-  `sys_ai_manufacturer_api_version` VARCHAR(128) DEFAULT NULL COMMENT 'API',
-  `sys_ai_manufacturer_api_domain` VARCHAR(255) DEFAULT NULL COMMENT 'API',
-  `sys_ai_manufacturer_memory_enabled` INT NOT NULL DEFAULT 0 COMMENT '',
-  `sys_ai_manufacturer_compression_enabled` INT NOT NULL DEFAULT 0 COMMENT '',
-  `sys_ai_manufacturer_compression_threshold` INT NOT NULL DEFAULT 12 COMMENT '',
   `sys_ai_manufacturer_status` INT NOT NULL DEFAULT 1 COMMENT '',
   `sys_ai_manufacturer_sort` INT NOT NULL DEFAULT 0 COMMENT '',
   `sys_ai_manufacturer_remark` VARCHAR(512) DEFAULT NULL COMMENT '',
-  `sys_ai_manufacturer_api_expose` INT NOT NULL DEFAULT 1 COMMENT '10',
   `create_name` VARCHAR(255) DEFAULT NULL COMMENT '',
   `create_by` INT DEFAULT NULL COMMENT 'ID',
   `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '',
@@ -347,8 +350,10 @@ CREATE TABLE IF NOT EXISTS `sys_ai_session_compression` (
   `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '',
   `update_name` VARCHAR(255) DEFAULT NULL COMMENT '',
   `update_by` INT DEFAULT NULL COMMENT 'ID',
+  `sys_ai_session_compression_user_id` VARCHAR(64) DEFAULT NULL COMMENT '归属用户 ID（随所属会话）',
   PRIMARY KEY (`sys_ai_session_compression_id`),
-  UNIQUE KEY `sys_ai_session_compression_ai_session_compression_session` (`sys_ai_session_id`)
+  UNIQUE KEY `sys_ai_session_compression_ai_session_compression_session` (`sys_ai_session_id`),
+  KEY `sys_ai_session_compression_ai_session_compression_user` (`sys_ai_session_compression_user_id`, `sys_ai_session_id`)
 ) COMMENT='AI ';
 CREATE TABLE IF NOT EXISTS `sys_ai_session` (
   `sys_ai_session_id` INT NOT NULL AUTO_INCREMENT COMMENT 'ID',
@@ -386,8 +391,10 @@ CREATE TABLE IF NOT EXISTS `sys_ai_message` (
   `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '',
   `update_name` VARCHAR(255) DEFAULT NULL COMMENT '',
   `update_by` INT DEFAULT NULL COMMENT 'ID',
+  `sys_ai_message_user_id` VARCHAR(64) DEFAULT NULL COMMENT '归属用户 ID（随所属会话）',
   PRIMARY KEY (`sys_ai_message_id`),
-  KEY `sys_ai_message_ai_message_session` (`sys_ai_session_id`)
+  KEY `sys_ai_message_ai_message_session` (`sys_ai_session_id`),
+  KEY `sys_ai_message_ai_message_user` (`sys_ai_message_user_id`, `sys_ai_session_id`)
 ) COMMENT='AI ';
 CREATE TABLE IF NOT EXISTS `sys_ai_task` (
   `sys_ai_task_id` INT NOT NULL AUTO_INCREMENT COMMENT 'ID',
@@ -439,15 +446,9 @@ CREATE TABLE IF NOT EXISTS `sys_ai_template` (
   `sys_ai_template_sort` INT NOT NULL DEFAULT 0 COMMENT '',
   `sys_ai_template_name` VARCHAR(255) NOT NULL COMMENT '',
   `sys_ai_template_type` VARCHAR(64) DEFAULT NULL COMMENT '',
-  `sys_ai_template_address` VARCHAR(1024) DEFAULT NULL COMMENT '',
   `sys_ai_template_remark` VARCHAR(512) DEFAULT NULL COMMENT '',
-  `sys_ai_template_model_id` VARCHAR(255) DEFAULT NULL COMMENT 'ID',
-  `sys_ai_template_model_name` VARCHAR(255) DEFAULT NULL COMMENT '',
   `sys_ai_template_category` VARCHAR(255) DEFAULT NULL COMMENT '',
-  `sys_ai_template_train_model` VARCHAR(255) DEFAULT NULL COMMENT '',
   `sys_ai_template_recommend_prompt` LONGTEXT COMMENT '',
-  `sys_ai_template_resolutions` VARCHAR(512) DEFAULT NULL COMMENT '',
-  `sys_ai_template_word` VARCHAR(255) DEFAULT NULL COMMENT '',
   `sys_ai_template_status` INT NOT NULL DEFAULT 1 COMMENT '',
   `create_name` VARCHAR(255) DEFAULT NULL COMMENT '',
   `create_by` INT DEFAULT NULL COMMENT 'ID',
@@ -495,6 +496,27 @@ CREATE TABLE IF NOT EXISTS `sys_ai_global_setting` (
   PRIMARY KEY (`sys_ai_global_setting_id`),
   UNIQUE KEY `sys_ai_global_setting_ai_global_setting_field` (`sys_ai_global_setting_group`, `sys_ai_global_setting_field`)
 ) COMMENT='AI ';
+-- 用户覆盖层：与 sys_ai_global_setting 同构的「分组 + 字段」键值行，多一列归属用户。
+-- 读取顺序 = 用户覆盖 -> 全局默认；全局默认表不加用户列，避免与既有唯一键冲突。
+CREATE TABLE IF NOT EXISTS `sys_ai_user_setting` (
+  `sys_ai_user_setting_id` INT NOT NULL AUTO_INCREMENT COMMENT 'ID',
+  `sys_ai_user_setting_user_id` VARCHAR(64) NOT NULL COMMENT '归属用户 ID（登录用户名）',
+  `sys_ai_user_setting_group` VARCHAR(64) NOT NULL DEFAULT 'default' COMMENT '设置分组',
+  `sys_ai_user_setting_field` VARCHAR(128) NOT NULL COMMENT '字段名',
+  `sys_ai_user_setting_value` LONGTEXT COMMENT '字段值',
+  `sys_ai_user_setting_value_type` VARCHAR(32) NOT NULL DEFAULT 'STRING' COMMENT '值类型',
+  `sys_ai_user_setting_description` VARCHAR(512) DEFAULT NULL COMMENT '描述',
+  `sys_ai_user_setting_sort` INT NOT NULL DEFAULT 0 COMMENT '排序',
+  `sys_ai_user_setting_status` INT NOT NULL DEFAULT 1 COMMENT '状态：1 启用 0 停用',
+  `create_name` VARCHAR(255) DEFAULT NULL COMMENT '',
+  `create_by` INT DEFAULT NULL COMMENT 'ID',
+  `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '',
+  `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '',
+  `update_name` VARCHAR(255) DEFAULT NULL COMMENT '',
+  `update_by` INT DEFAULT NULL COMMENT 'ID',
+  PRIMARY KEY (`sys_ai_user_setting_id`),
+  UNIQUE KEY `sys_ai_user_setting_ai_user_setting_field` (`sys_ai_user_setting_user_id`, `sys_ai_user_setting_group`, `sys_ai_user_setting_field`)
+) COMMENT='AI 用户设置覆盖';
 CREATE TABLE IF NOT EXISTS `sys_ai_app_key` (
   `sys_ai_app_key_id` INT NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `sys_ai_app_key_app_id` VARCHAR(128) DEFAULT NULL COMMENT 'ID',
@@ -657,15 +679,6 @@ CREATE TABLE IF NOT EXISTS `sys_ai_knowledge_library` (
   `sys_ai_knowledge_library_name`                    VARCHAR(128)  NOT NULL COMMENT '',
   `sys_ai_knowledge_library_description`             VARCHAR(512)  DEFAULT NULL COMMENT '',
   `sys_ai_knowledge_library_summary`                 TEXT          DEFAULT NULL COMMENT 'AI',
-  `sys_ai_knowledge_library_llm_provider`            VARCHAR(64)   DEFAULT NULL COMMENT 'LLM()',
-  `sys_ai_knowledge_library_llm_model`               VARCHAR(128)  DEFAULT NULL COMMENT 'LLM()',
-  `sys_ai_knowledge_library_temperature`             DOUBLE        DEFAULT NULL COMMENT '()',
-  `sys_ai_knowledge_library_max_tokens`              INT           DEFAULT NULL COMMENT 'token()',
-  `sys_ai_knowledge_library_prompt_template`         TEXT          DEFAULT NULL COMMENT '()',
-  `sys_ai_knowledge_library_relation_extraction_enabled` INT       DEFAULT 1 COMMENT '',
-  `sys_ai_knowledge_library_max_entities_per_doc`    INT           DEFAULT 50 COMMENT '',
-  `sys_ai_knowledge_library_web_search_enabled`     INT           DEFAULT 0 COMMENT '10',
-  `sys_ai_knowledge_library_thinking_rounds`       INT           DEFAULT 4 COMMENT 'AI(1-5)4',
   `sys_ai_knowledge_library_sort`                    INT           DEFAULT 0 COMMENT '',
   `sys_ai_knowledge_library_status`                  INT           NOT NULL DEFAULT 1 COMMENT '10',
   `create_name`  VARCHAR(255) DEFAULT NULL COMMENT '',
@@ -910,7 +923,9 @@ CREATE TABLE IF NOT EXISTS `sys_ai_ssh_host` (
     `sys_ai_ssh_host_last_connected_at` BIGINT      NULL COMMENT '最后连接成功时间（毫秒）',
     `sys_ai_ssh_host_created_at`       BIGINT       NOT NULL COMMENT '创建时间（毫秒）',
     `sys_ai_ssh_host_updated_at`       BIGINT       NOT NULL COMMENT '最后更新时间（毫秒）',
-    PRIMARY KEY (`sys_ai_ssh_host_id`)
+    `sys_ai_ssh_host_user_id`          VARCHAR(64)  NULL COMMENT '归属用户 ID（登录用户名，凭证仅归属者可见）',
+    PRIMARY KEY (`sys_ai_ssh_host_id`),
+    KEY `sys_ai_ssh_host_sys_ai_ssh_host_user` (`sys_ai_ssh_host_user_id`, `sys_ai_ssh_host_created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='远程主机（SSH 主机簿）';
 CREATE TABLE IF NOT EXISTS `sys_ai_agent` (
     `sys_ai_agent_id`            VARCHAR(64)  NOT NULL COMMENT 'Agent ID（UUIDv7）',
@@ -963,17 +978,17 @@ CREATE TABLE IF NOT EXISTS `sys_ai_requirement` (
     `sys_ai_requirement_completed_at` BIGINT DEFAULT NULL COMMENT '完成时间戳',
     `sys_ai_requirement_attempt_count` INT DEFAULT 0 COMMENT '重试次数',
     `sys_ai_requirement_extra` JSON COMMENT '扩展字段 JSON',
+    `sys_ai_requirement_user_id` VARCHAR(64) DEFAULT NULL COMMENT '归属用户 ID（登录用户名）',
     `create_name` VARCHAR(100) DEFAULT NULL,
     `create_by` INT DEFAULT NULL,
     `create_time` BIGINT DEFAULT NULL,
     `update_name` VARCHAR(100) DEFAULT NULL,
     `update_by` INT DEFAULT NULL,
     `update_time` BIGINT DEFAULT NULL,
-    PRIMARY KEY (`sys_ai_requirement_id`)
+    PRIMARY KEY (`sys_ai_requirement_id`),
+    KEY `sys_ai_requirement_sys_ai_requirement_user` (`sys_ai_requirement_user_id`, `sys_ai_requirement_status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='需求条目';
-CREATE TABLE IF NOT EXISTS `sys_ai_data_source` (`sys_ai_data_source_id` VARCHAR(36) NOT NULL COMMENT '数据源 ID（UUIDv7）', `sys_ai_data_source_name` VARCHAR(128) NOT NULL COMMENT '数据源名称', `sys_ai_data_source_type` VARCHAR(64) NOT NULL COMMENT '类型: lark / jira / notion / generic', `sys_ai_data_source_config` TEXT NULL COMMENT '配置 JSON', `sys_ai_data_source_enabled` TINYINT NOT NULL DEFAULT 1 COMMENT '是否启用', `sys_ai_data_source_sync_cron` VARCHAR(64) NULL COMMENT '同步 cron 表达式', `sys_ai_data_source_last_sync_at` BIGINT NULL COMMENT '上次同步时间戳', `sys_ai_data_source_last_sync_status` VARCHAR(32) NULL COMMENT '上次同步状态', `sys_ai_data_source_last_sync_error` VARCHAR(512) NULL COMMENT '上次同步错误', `create_name` VARCHAR(64) NULL, `create_by` INT NULL, `create_time` BIGINT NULL, `update_name` VARCHAR(64) NULL, `update_by` INT NULL, `update_time` BIGINT NULL, PRIMARY KEY (`sys_ai_data_source_id`), KEY `sys_ai_data_source_sys_ai_ds_type` (`sys_ai_data_source_type`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='需求数据源提供方配置';
-ALTER TABLE `sys_ai_bot_binding`
-    ADD COLUMN `sys_ai_bot_binding_model` VARCHAR(128) NULL COMMENT '绑定的 AI 模型（用于微信聊天时 AI 回复）' AFTER `sys_ai_bot_binding_bind_source`;
+CREATE TABLE IF NOT EXISTS `sys_ai_data_source` (`sys_ai_data_source_id` VARCHAR(36) NOT NULL COMMENT '数据源 ID（UUIDv7）', `sys_ai_data_source_name` VARCHAR(128) NOT NULL COMMENT '数据源名称', `sys_ai_data_source_type` VARCHAR(64) NOT NULL COMMENT '类型: lark / jira / notion / generic', `sys_ai_data_source_config` TEXT NULL COMMENT '配置 JSON', `sys_ai_data_source_enabled` TINYINT NOT NULL DEFAULT 1 COMMENT '是否启用', `sys_ai_data_source_sync_cron` VARCHAR(64) NULL COMMENT '同步 cron 表达式', `sys_ai_data_source_last_sync_at` BIGINT NULL COMMENT '上次同步时间戳', `sys_ai_data_source_last_sync_status` VARCHAR(32) NULL COMMENT '上次同步状态', `sys_ai_data_source_last_sync_error` VARCHAR(512) NULL COMMENT '上次同步错误', `create_name` VARCHAR(64) NULL, `create_by` INT NULL, `create_time` BIGINT NULL, `update_name` VARCHAR(64) NULL, `update_by` INT NULL, `update_time` BIGINT NULL, `sys_ai_data_source_user_id` VARCHAR(64) NULL COMMENT '归属用户 ID（登录用户名，凭证仅归属者可见）', PRIMARY KEY (`sys_ai_data_source_id`), KEY `sys_ai_data_source_sys_ai_ds_type` (`sys_ai_data_source_type`), KEY `sys_ai_data_source_sys_ai_ds_user` (`sys_ai_data_source_user_id`, `sys_ai_data_source_type`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='需求数据源提供方配置';
 INSERT IGNORE INTO `sys_ai_face_group` (`sys_ai_face_group_name`, `sys_ai_face_group_sort`)
 VALUES ('default', 0);
 UPDATE `sys_ai_manufacturer`
@@ -2170,50 +2185,8 @@ INSERT INTO sys_agent_browser_setting (setting_key, setting_value, updated_at) V
     ('login_status', '{"open":false}', 0);
 INSERT INTO sys_agent_browser_host (host_id, state, epoch, headful, identity_mode, lane_count, rss_bytes, created_at, updated_at)
 VALUES ('default-host', 'running', 1, FALSE, 'anonymous', 0, 0, 0, 0);
-CREATE TABLE IF NOT EXISTS `sys_ai_requirement` (
-    `sys_ai_requirement_id` VARCHAR(36) NOT NULL COMMENT '需求 ID（UUIDv7）',
-    `sys_ai_requirement_display_no` INT NOT NULL COMMENT '展示序号（自增）',
-    `sys_ai_requirement_title` VARCHAR(255) NOT NULL COMMENT '需求标题',
-    `sys_ai_requirement_content` TEXT COMMENT '需求内容（Markdown）',
-    `sys_ai_requirement_tag` VARCHAR(64) DEFAULT NULL COMMENT '标签',
-    `sys_ai_requirement_order_key` VARCHAR(64) DEFAULT NULL COMMENT '执行次序（点分十进制）',
-    `sys_ai_requirement_status` VARCHAR(32) DEFAULT 'pending' COMMENT '状态',
-    `sys_ai_requirement_completion_note` TEXT COMMENT '完成记录',
-    `sys_ai_requirement_owner_conversation_id` VARCHAR(36) DEFAULT NULL COMMENT '来源会话 ID',
-    `sys_ai_requirement_owner_terminal_id` VARCHAR(36) DEFAULT NULL COMMENT '来源终端 ID',
-    `sys_ai_requirement_origin` VARCHAR(64) DEFAULT NULL COMMENT '创建来源',
-    `sys_ai_requirement_started_at` BIGINT DEFAULT NULL COMMENT '开始执行时间戳',
-    `sys_ai_requirement_completed_at` BIGINT DEFAULT NULL COMMENT '完成时间戳',
-    `sys_ai_requirement_attempt_count` INT DEFAULT 0 COMMENT '重试次数',
-    `sys_ai_requirement_extra` JSON COMMENT '扩展字段 JSON',
-    `create_name` VARCHAR(100) DEFAULT NULL,
-    `create_by` INT DEFAULT NULL,
-    `create_time` BIGINT DEFAULT NULL,
-    `update_name` VARCHAR(100) DEFAULT NULL,
-    `update_by` INT DEFAULT NULL,
-    `update_time` BIGINT DEFAULT NULL,
-    PRIMARY KEY (`sys_ai_requirement_id`),
-    UNIQUE KEY `sys_ai_requirement_display_no` (`sys_ai_requirement_display_no`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='需求条目';
-CREATE TABLE IF NOT EXISTS `sys_ai_data_source` (
-    `sys_ai_data_source_id` VARCHAR(36) NOT NULL COMMENT '数据源 ID（UUIDv7）',
-    `sys_ai_data_source_name` VARCHAR(128) NOT NULL COMMENT '数据源名称',
-    `sys_ai_data_source_type` VARCHAR(64) NOT NULL COMMENT '类型: lark/jira/notion/generic',
-    `sys_ai_data_source_config` TEXT NULL COMMENT '配置 JSON（app_id, app_secret, table_id, api_url 等）',
-    `sys_ai_data_source_enabled` TINYINT NOT NULL DEFAULT 1 COMMENT '是否启用',
-    `sys_ai_data_source_sync_cron` VARCHAR(64) NULL COMMENT '同步 cron 表达式',
-    `sys_ai_data_source_last_sync_at` BIGINT NULL COMMENT '上次同步时间戳',
-    `sys_ai_data_source_last_sync_status` VARCHAR(32) NULL COMMENT '上次同步状态: success/failed',
-    `sys_ai_data_source_last_sync_error` VARCHAR(512) NULL COMMENT '上次同步错误信息',
-    `create_name` VARCHAR(64) NULL,
-    `create_by` INT NULL,
-    `create_time` BIGINT NULL COMMENT '创建时间戳（epoch ms）',
-    `update_name` VARCHAR(64) NULL,
-    `update_by` INT NULL,
-    `update_time` BIGINT NULL COMMENT '更新时间戳（epoch ms）',
-    PRIMARY KEY (`sys_ai_data_source_id`),
-    KEY `sys_ai_data_source_sys_ai_ds_type` (`sys_ai_data_source_type`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='需求数据源提供方配置';
+-- sys_ai_requirement 的建表定义统一在上方那一份，此处不再重复定义
+-- sys_ai_data_source 的建表定义统一在上方单行式那一份，此处不再重复定义
 -- ---------------------------------------------------------------------
 -- 增量并入（原 V1.2/V1.3/V1.4，SET @/PREPARE 动态段转通用幂等语法）
 -- ---------------------------------------------------------------------
@@ -2246,9 +2219,11 @@ CREATE TABLE IF NOT EXISTS `sys_ai_session_group` (
     `id`          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '分组ID',
     `name`        VARCHAR(128) NOT NULL                COMMENT '分组名称',
     `sort_order`  INT          NOT NULL DEFAULT 0      COMMENT '排序序号',
+    `user_id`     VARCHAR(64)  NULL                    COMMENT '归属用户 ID（登录用户名）',
     `create_time` DATETIME     NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `update_time` DATETIME     NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    PRIMARY KEY (`id`)
+    PRIMARY KEY (`id`),
+    KEY `sys_ai_session_group_user` (`user_id`, `sort_order`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI 会话分组';
 
 CREATE TABLE IF NOT EXISTS `sys_ai_companion_shared_config` (
@@ -2275,10 +2250,12 @@ CREATE TABLE IF NOT EXISTS `workshop_asset` (
     `asset_thumb_path`   VARCHAR(1024) NULL     COMMENT '缩略图路径',
     `asset_created_at`   BIGINT        NOT NULL COMMENT '创建时间（毫秒）',
     `asset_updated_at`   BIGINT        NOT NULL COMMENT '更新时间（毫秒）',
+    `asset_user_id`      VARCHAR(64)   NULL     COMMENT '归属用户 ID（登录用户名）',
     PRIMARY KEY (`asset_id`),
     KEY `workshop_asset_collection` (`asset_collection`),
     KEY `workshop_asset_kind` (`asset_kind`),
-    KEY `workshop_asset_in_library` (`asset_in_library`)
+    KEY `workshop_asset_in_library` (`asset_in_library`),
+    KEY `workshop_asset_user` (`asset_user_id`, `asset_created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='工坊资产';
 
 
@@ -2307,7 +2284,9 @@ CREATE TABLE IF NOT EXISTS `sys_ai_companion` (
     `sys_ai_companion_conversation_id`      VARCHAR(64)  NULL     COMMENT '会话标识',
     `sys_ai_companion_created_at`           BIGINT       NULL     COMMENT '创建时间(毫秒)',
     `sys_ai_companion_updated_at`           BIGINT       NULL     COMMENT '更新时间(毫秒)',
-    PRIMARY KEY (`sys_ai_companion_id`)
+    `sys_ai_companion_user_id`              VARCHAR(64)  NULL     COMMENT '归属用户 ID（登录用户名）',
+    PRIMARY KEY (`sys_ai_companion_id`),
+    KEY `sys_ai_companion_user` (`sys_ai_companion_user_id`, `sys_ai_companion_order_index`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='数字伙伴';
 
 CREATE TABLE IF NOT EXISTS `sys_ai_companion_figure` (
@@ -2318,7 +2297,9 @@ CREATE TABLE IF NOT EXISTS `sys_ai_companion_figure` (
     `sys_ai_companion_figure_size_tier`   VARCHAR(32)  NULL     COMMENT '尺寸档位',
     `sys_ai_companion_figure_source_path` VARCHAR(512) NULL     COMMENT '源路径',
     `sys_ai_companion_figure_created_at`  BIGINT       NULL     COMMENT '创建时间(毫秒)',
-    PRIMARY KEY (`sys_ai_companion_figure_id`)
+    `sys_ai_companion_figure_user_id`     VARCHAR(64)  NULL     COMMENT '归属用户 ID（NULL 表示内置共享形象）',
+    PRIMARY KEY (`sys_ai_companion_figure_id`),
+    KEY `sys_ai_companion_figure_user` (`sys_ai_companion_figure_user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='数字伙伴形象';
 
 CREATE TABLE IF NOT EXISTS `sys_ai_companion_memory` (
@@ -2335,8 +2316,10 @@ CREATE TABLE IF NOT EXISTS `sys_ai_companion_memory` (
     `sys_ai_companion_memory_created_at`       BIGINT      NULL     COMMENT '创建时间(毫秒)',
     `sys_ai_companion_memory_updated_at`       BIGINT      NULL     COMMENT '更新时间(毫秒)',
     `sys_ai_companion_memory_last_reinforced_at` BIGINT    NULL     COMMENT '最近强化时间(毫秒)',
+    `sys_ai_companion_memory_user_id`          VARCHAR(64) NULL     COMMENT '归属用户 ID（登录用户名）',
     PRIMARY KEY (`sys_ai_companion_memory_id`),
-    KEY `idx_ai_companion_memory_companion` (`sys_ai_companion_memory_companion_id`)
+    KEY `idx_ai_companion_memory_companion` (`sys_ai_companion_memory_companion_id`),
+    KEY `idx_ai_companion_memory_user` (`sys_ai_companion_memory_user_id`, `sys_ai_companion_memory_companion_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='数字伙伴记忆';
 
 CREATE TABLE IF NOT EXISTS `sys_ai_companion_skill` (
@@ -2356,6 +2339,8 @@ CREATE TABLE IF NOT EXISTS `sys_ai_companion_skill` (
     `sys_ai_companion_skill_updated_at`           BIGINT       NULL     COMMENT '更新时间(毫秒)',
     `sys_ai_companion_skill_description`          TEXT         NULL     COMMENT '描述',
     `sys_ai_companion_skill_content`              TEXT         NULL     COMMENT '内容',
+    `sys_ai_companion_skill_user_id`              VARCHAR(64)  NULL     COMMENT '归属用户 ID（登录用户名）',
     PRIMARY KEY (`sys_ai_companion_skill_id`),
-    KEY `idx_ai_companion_skill_companion` (`sys_ai_companion_skill_companion_id`)
+    KEY `idx_ai_companion_skill_companion` (`sys_ai_companion_skill_companion_id`),
+    KEY `idx_ai_companion_skill_user` (`sys_ai_companion_skill_user_id`, `sys_ai_companion_skill_companion_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='数字伙伴技能';

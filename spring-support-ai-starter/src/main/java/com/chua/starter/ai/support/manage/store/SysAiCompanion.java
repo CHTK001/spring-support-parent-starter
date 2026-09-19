@@ -132,4 +132,10 @@ public class SysAiCompanion implements Serializable {
      */
     @TableField("sys_ai_companion_updated_at")
     private Long updatedAt; // 更新at
+
+    /**
+     * 归属用户标识（登录用户名，由服务端按当前登录用户写入）
+     */
+    @TableField("sys_ai_companion_user_id")
+    private String userId; // 归属用户
 }

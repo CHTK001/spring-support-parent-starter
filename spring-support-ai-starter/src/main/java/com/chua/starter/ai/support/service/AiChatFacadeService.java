@@ -1,5 +1,6 @@
 package com.chua.starter.ai.support.service;
 
+import com.chua.common.support.ai.AiUsage;
 import com.chua.common.support.ai.chat.ModelDefinition;
 import com.chua.starter.ai.support.model.AiChatRequest;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -7,6 +8,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 /**
@@ -92,6 +94,32 @@ public interface AiChatFacadeService {
                               Consumer<Throwable> onError,
                               Consumer<String> onThinkingChunk) {
         return stream(request, onChunk, onComplete, onError);
+    }
+
+    /**
+     * 流式对话调用（完成回调额外携带模型回传的真实用量）。
+     *
+     * <p>与 {@link #stream(AiChatRequest, Consumer, Consumer, Consumer)} 的差别只在完成回调：
+     * 落库的消息行与前端气泡里的 Token 数必须取模型回传值，用字符数估算会和 {@code sys_ai_usage}
+     * 的计量结果对不上，用户看到的用量与统计口径就成了两套数。</p>
+     *
+     * <p>默认实现退回普通流式入口并以空用量调用完成回调，实现方按需覆盖即可拿到真实用量。</p>
+     *
+     * @param request             对话请求
+     * @param onChunk             每段增量正文回调，可为 空
+     * @param onCompleteWithUsage 完成后回调（完整回复文本, 模型回传用量；客户端未回传时用量为 空），可为 空
+     * @param onError             失败回调，可为 空
+     * @param onThinkingChunk     每段思考内容增量回调，可为 空
+     * @return SSE 发射器
+     */
+    default SseEmitter streamWithUsage(AiChatRequest request,
+                                       Consumer<String> onChunk,
+                                       BiConsumer<String, AiUsage> onCompleteWithUsage,
+                                       Consumer<Throwable> onError,
+                                       Consumer<String> onThinkingChunk) {
+        return stream(request, onChunk,
+                onCompleteWithUsage == null ? null : reply -> onCompleteWithUsage.accept(reply, null),
+                onError, onThinkingChunk);
     }
 
     /**

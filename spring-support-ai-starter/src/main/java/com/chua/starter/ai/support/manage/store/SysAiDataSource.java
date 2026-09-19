@@ -94,4 +94,10 @@ public class SysAiDataSource implements Serializable {
 
     @TableField("update_time")
     private Long updateTime; // 更新时间
+
+    /**
+     * 归属用户标识（登录用户名，第三方凭证仅归属者可见）
+     */
+    @TableField("sys_ai_data_source_user_id")
+    private String userId; // 归属用户
 }

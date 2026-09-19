@@ -14,6 +14,7 @@ import com.chua.starter.ai.support.manage.store.AgentBrowserHost;
 import com.chua.starter.ai.support.manage.store.AgentBrowserLane;
 import com.chua.starter.ai.support.manage.store.AgentBrowserSetting;
 import com.chua.starter.ai.support.manage.store.AgentBrowserTab;
+import com.chua.starter.ai.support.util.AiUserContext;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -25,6 +26,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -99,12 +101,12 @@ public class AgentBrowserController {
     public ApiResult<Map<String, Object>> getOverview() {
         long now = System.currentTimeMillis();
 
-        // 统计各状态的 Lane 数量
-        int runningLanes = laneMapper.countByState("running");
-        int queuedLanes = laneMapper.countByState("queued");
-        int totalLanes = runningLanes + queuedLanes
-                + laneMapper.countByState("starting")
-                + laneMapper.countByState("frozen");
+ // 统计各状态的 Lane 数量：管理员看全量，普通用户只统计本人 Lane，避免跨用户数量泄露
+        List<AgentBrowserLane> statsLanes = laneMapper.selectList(scopeToOwner(new LambdaQueryWrapper<AgentBrowserLane>()
+                .in(AgentBrowserLane::getLifecycleState, "running", "queued", "starting", "frozen")));
+        int runningLanes = countState(statsLanes, "running");
+        int queuedLanes = countState(statsLanes, "queued");
+        int totalLanes = statsLanes.size();
 
  // 获取 主机 列表
         List<AgentBrowserHost> hosts = hostMapper.selectList(null);
@@ -175,7 +177,7 @@ public class AgentBrowserController {
     @GetMapping("/lanes")
     @Operation(summary = "获取所有 Lane", description = "返回所有浏览器 Lane 的详细信息")
     public ApiResult<List<Map<String, Object>>> getLanes() {
-        List<AgentBrowserLane> lanes = laneMapper.selectList(null);
+        List<AgentBrowserLane> lanes = laneMapper.selectList(scopeToOwner(new LambdaQueryWrapper<AgentBrowserLane>()));
         List<Map<String, Object>> result = lanes.stream()
                 .map(this::toLaneResponse)
                 .collect(Collectors.toList());
@@ -192,16 +194,7 @@ public class AgentBrowserController {
     @Operation(summary = "获取 Lane 详情", description = "根据 ID 获取单个 Lane 的详细信息")
     public ApiResult<Map<String, Object>> getLane(
             @Parameter(description = "Lane ID") @PathVariable("lane_id") String laneId) {
-        AgentBrowserLane lane = laneMapper.selectById(laneId);
-        if (lane == null) {
-            /**
-             * api异常。
-             * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
-             * @param laneId laneid
-             * @return api异常的结果
-             */
-            throw new ApiException(ApiErrorCode.NOT_FOUND, "Lane 不存在: " + laneId);
-        }
+        AgentBrowserLane lane = requireReadableLane(laneId);
         return ApiResult.ok(toLaneResponse(lane));
     }
 
@@ -222,7 +215,8 @@ public class AgentBrowserController {
         lane.setLaneName(str(body, "lane_name", "New Lane"));
         lane.setLifecycleState("running");
         lane.setBrowserEpoch(1L);
-        lane.setUserId(str(body, "user_id", null));
+ // 归属由服务端按当前登录身份写入：请求体里的 user_id 一律忽略，避免越权冒名
+        lane.setUserId(AiUserContext.requireUserId());
         lane.setConversationId(str(body, "conversation_id", null));
         lane.setRuntimeInstanceId(str(body, "runtime_instance_id", null));
         lane.setExecutionId(str(body, "execution_id", null));
@@ -242,6 +236,8 @@ public class AgentBrowserController {
         AgentBrowserTab tab = new AgentBrowserTab();
         tab.setTabId(UUID.randomUUID().toString());
         tab.setLaneId(laneId);
+ // Tab 归属随所属 Lane 同源写入，不接受客户端传值
+        tab.setUserId(lane.getUserId());
         tab.setTitle("New Tab");
         tab.setActive(true);
         tab.setCrashed(false);
@@ -268,16 +264,7 @@ public class AgentBrowserController {
     public ApiResult<Map<String, Object>> updateLane(
             @Parameter(description = "Lane ID") @PathVariable("lane_id") String laneId,
             @RequestBody Map<String, Object> body) {
-        AgentBrowserLane lane = laneMapper.selectById(laneId);
-        if (lane == null) {
-            /**
-             * api异常。
-             * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
-             * @param laneId laneid
-             * @return api异常的结果
-             */
-            throw new ApiException(ApiErrorCode.NOT_FOUND, "Lane 不存在: " + laneId);
-        }
+        AgentBrowserLane lane = requireWritableLane(laneId);
 
         long now = System.currentTimeMillis();
         if (body.containsKey("lane_name")) {
@@ -314,16 +301,7 @@ public class AgentBrowserController {
     @Transactional
     public ApiResult<Map<String, Object>> closeLane(
             @Parameter(description = "Lane ID") @PathVariable("lane_id") String laneId) {
-        AgentBrowserLane lane = laneMapper.selectById(laneId);
-        if (lane == null) {
-            /**
-             * api异常。
-             * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
-             * @param laneId laneid
-             * @return api异常的结果
-             */
-            throw new ApiException(ApiErrorCode.NOT_FOUND, "Lane 不存在: " + laneId);
-        }
+        AgentBrowserLane lane = requireWritableLane(laneId);
 
         // 删除关联的 Tab
         tabMapper.deleteByLaneId(laneId);
@@ -348,16 +326,7 @@ public class AgentBrowserController {
     @Operation(summary = "前台化 Lane", description = "将 Lane 切换到前台显示模式")
     public ApiResult<Map<String, Object>> foregroundLane(
             @Parameter(description = "Lane ID") @PathVariable("lane_id") String laneId) {
-        AgentBrowserLane lane = laneMapper.selectById(laneId);
-        if (lane == null) {
-            /**
-             * api异常。
-             * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
-             * @param laneId laneid
-             * @return api异常的结果
-             */
-            throw new ApiException(ApiErrorCode.NOT_FOUND, "Lane 不存在: " + laneId);
-        }
+        requireWritableLane(laneId);
 
  // 更新 主机 为 headful 模式
         List<AgentBrowserHost> hosts = hostMapper.selectList(null);
@@ -384,16 +353,7 @@ public class AgentBrowserController {
     @Operation(summary = "后台化 Lane", description = "将 Lane 切换到后台无头模式")
     public ApiResult<Map<String, Object>> backgroundLane(
             @Parameter(description = "Lane ID") @PathVariable("lane_id") String laneId) {
-        AgentBrowserLane lane = laneMapper.selectById(laneId);
-        if (lane == null) {
-            /**
-             * api异常。
-             * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
-             * @param laneId laneid
-             * @return api异常的结果
-             */
-            throw new ApiException(ApiErrorCode.NOT_FOUND, "Lane 不存在: " + laneId);
-        }
+        requireWritableLane(laneId);
 
  // 更新 主机 为 headless 模式
         List<AgentBrowserHost> hosts = hostMapper.selectList(null);
@@ -423,10 +383,18 @@ public class AgentBrowserController {
     @Transactional
     public ApiResult<Map<String, Object>> closeConversationLanes(
             @Parameter(description = "对话 ID") @PathVariable("conversation_id") String conversationId) {
-        List<AgentBrowserLane> lanes = laneMapper.selectByConversationId(conversationId);
+        List<AgentBrowserLane> lanes = laneMapper.selectList(new LambdaQueryWrapper<AgentBrowserLane>()
+                .eq(AgentBrowserLane::getConversationId, conversationId));
+
+        // 先整批校验归属再删除：避免中途拒绝导致部分关闭
+        List<AgentBrowserLane> writable = new ArrayList<>();
+        for (AgentBrowserLane lane : lanes) {
+            writable.add(requireWritableLane(lane.getLaneId()));
+        }
+
         int closedCount = 0;
 
-        for (AgentBrowserLane lane : lanes) {
+        for (AgentBrowserLane lane : writable) {
             tabMapper.deleteByLaneId(lane.getLaneId());
             laneMapper.deleteById(lane.getLaneId());
             closedCount++;
@@ -447,7 +415,14 @@ public class AgentBrowserController {
     @Operation(summary = "全局关闭", description = "关闭所有浏览器 Lane 和 Tab")
     @Transactional
     public ApiResult<Map<String, Object>> closeAll() {
-        List<AgentBrowserLane> lanes = laneMapper.selectAllActive();
+        if (AiUserContext.isReadonly()) {
+            throw new ApiException(ApiErrorCode.FORBIDDEN, "只读账号不允许执行写操作");
+        }
+ // 只关闭本人名下的 Lane：管理员同样不得删除他人数据
+        String userId = AiUserContext.requireUserId();
+        List<AgentBrowserLane> lanes = laneMapper.selectList(new LambdaQueryWrapper<AgentBrowserLane>()
+                .ne(AgentBrowserLane::getLifecycleState, "failed")
+                .eq(AgentBrowserLane::getUserId, userId));
         int closedCount = lanes.size();
 
         // 删除所有 Tab
@@ -455,24 +430,28 @@ public class AgentBrowserController {
             tabMapper.deleteByLaneId(lane.getLaneId());
         }
 
-        // 删除所有 Lane
-        laneMapper.delete(null);
+        // 仅删除本人 Lane
+        laneMapper.delete(new LambdaQueryWrapper<AgentBrowserLane>().eq(AgentBrowserLane::getUserId, userId));
 
- // 重置 主机 lane_数量
-        List<AgentBrowserHost> hosts = hostMapper.selectList(null);
-        long now = System.currentTimeMillis();
-        for (AgentBrowserHost host : hosts) {
-            host.setLaneCount(0);
-            host.setUpdatedAt(now);
-            hostMapper.updateById(host);
+        long remaining = laneMapper.selectCount(new LambdaQueryWrapper<AgentBrowserLane>()
+                .ne(AgentBrowserLane::getLifecycleState, "failed"));
+        if (remaining == 0) {
+ // 重置 主机 lane_数量：仅在全局确无活跃 Lane 时执行，避免越权篡改宿主统计
+            List<AgentBrowserHost> hosts = hostMapper.selectList(null);
+            long now = System.currentTimeMillis();
+            for (AgentBrowserHost host : hosts) {
+                host.setLaneCount(0);
+                host.setUpdatedAt(now);
+                hostMapper.updateById(host);
+            }
         }
 
-        log.info("All browser resources closed: {} lanes", closedCount);
+        log.info("Browser resources closed: {} lanes [{}]", closedCount, userId);
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("closed", closedCount);
-        result.put("remaining_lane_count", 0);
+        result.put("remaining_lane_count", remaining);
         result.put("remaining_cleanup_count", 0);
-        result.put("remaining_managed_host_count", hosts.size());
+        result.put("remaining_managed_host_count", hostMapper.selectCount(null));
         return ApiResult.ok(result);
     }
 
@@ -740,5 +719,79 @@ public class AgentBrowserController {
     private String str(Map<String, Object> map, String key, String defaultValue) {
         Object val = map.get(key);
         return val != null ? String.valueOf(val) : defaultValue;
+    }
+
+    /**
+     * 给 Lane 查询条件按当前登录用户收窄。
+     *
+     * <p>管理员可跨用户查看；普通用户仅本人。无身份时条件恒不匹配，读取失败即关闭。</p>
+     *
+     * @param wrapper 查询条件
+     * @return 追加归属条件后的查询条件
+     */
+    private LambdaQueryWrapper<AgentBrowserLane> scopeToOwner(LambdaQueryWrapper<AgentBrowserLane> wrapper) {
+        if (!AiUserContext.isAdmin()) {
+            wrapper.eq(AgentBrowserLane::getUserId, AiUserContext.currentUserId());
+        }
+        return wrapper;
+    }
+
+    /**
+     * 统计指定生命周期状态的 Lane 数量。
+     *
+     * @param lanes 待统计的 Lane 列表
+     * @param state 生命周期状态
+     * @return 匹配数量
+     */
+    private int countState(List<AgentBrowserLane> lanes, String state) {
+        int count = 0;
+        for (AgentBrowserLane lane : lanes) {
+            if (state.equals(lane.getLifecycleState())) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    /**
+     * 读取出口归属校验。
+     *
+     * @param laneId Lane 标识
+     * @return Lane 实体
+     */
+    private AgentBrowserLane requireReadableLane(String laneId) {
+        AgentBrowserLane lane = laneMapper.selectById(laneId);
+        if (lane == null) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "Lane 不存在: " + laneId);
+        }
+        if (AiUserContext.isAdmin()) {
+            return lane;
+        }
+        String userId = AiUserContext.requireUserId();
+        if (!userId.equals(lane.getUserId())) {
+            throw new ApiException(ApiErrorCode.FORBIDDEN, "无权访问他人浏览器实例");
+        }
+        return lane;
+    }
+
+    /**
+     * 写出口归属校验。
+     *
+     * @param laneId Lane 标识
+     * @return Lane 实体
+     */
+    private AgentBrowserLane requireWritableLane(String laneId) {
+        AgentBrowserLane lane = laneMapper.selectById(laneId);
+        if (lane == null) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "Lane 不存在: " + laneId);
+        }
+        if (AiUserContext.isReadonly()) {
+            throw new ApiException(ApiErrorCode.FORBIDDEN, "只读账号不允许执行写操作");
+        }
+        String userId = AiUserContext.requireUserId();
+        if (!userId.equals(lane.getUserId())) {
+            throw new ApiException(ApiErrorCode.FORBIDDEN, "管理员对他人数据只读，不可修改或删除");
+        }
+        return lane;
     }
 }

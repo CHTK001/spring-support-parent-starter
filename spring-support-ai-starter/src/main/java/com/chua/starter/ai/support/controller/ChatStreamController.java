@@ -3,11 +3,14 @@ package com.chua.starter.ai.support.controller;
 import com.chua.starter.ai.support.chat.ChatMessage;
 import com.chua.starter.ai.support.entity.AIDialog;
 import com.chua.starter.ai.support.model.AiChatRequest;
+import com.chua.starter.ai.support.search.WebResult;
+import com.chua.starter.ai.support.search.WebSearchService;
 import com.chua.starter.ai.support.service.AIDialogRecordService;
 import com.chua.starter.ai.support.service.AiChatFacadeService;
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
 import com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper;
 import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
+import com.chua.starter.ai.support.util.AiUserContext;
 import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -57,6 +60,7 @@ public class ChatStreamController {
     private final ObjectMapper objectMapper;
     private final SysAiGlobalSettingService sysAiGlobalSettingService;
     private final SysAiProviderModelMapper sysAiProviderModelMapper;
+    private final WebSearchService webSearchService;
 
     /**
      * 前端 sessionId(UUID) -> 后端 sys_ai_session 主键(Long) 的进程内映射
@@ -136,6 +140,15 @@ public class ChatStreamController {
                 log.warn("[ChatStream] 模型ID解析失败 {}: {}", selectedModel, e.getMessage());
             }
         }
+        // 1. 解析会话并落库本轮用户消息：这条写路径同时是会话归属校验（他人会话 403、不存在 404），
+        //    必须放在声明 SSE 响应头之前，越权请求才能拿到标准 JSON 错误而不是半个 event-stream
+        final Long dialogId = resolveDialogId(sessionId);
+        final Long[] userMessageIdHolder = new Long[1];
+        ChatMessage userChatMsg = new ChatMessage("user", content);
+        aiDialogRecordService.addMessage(dialogId, userChatMsg);
+        userMessageIdHolder[0] = userChatMsg.getId();
+        log.info("[ChatStream] 用户消息已保存 id={}", userMessageIdHolder[0]);
+
 // 0L = 不超时，避免前端报异步请求超时
         SseEmitter emitter = new SseEmitter(0L);
         if (sessionId != null) {
@@ -150,21 +163,7 @@ public class ChatStreamController {
         }
         registerCleanup(emitter, sessionId);
 
-        Long dialogId;
         try {
-            dialogId = resolveDialogId(sessionId);
-
-            // 1. 落库本轮用户消息
-            final Long[] userMessageIdHolder = new Long[1];
-            try {
-                ChatMessage userMsg = new ChatMessage("user", content);
-                aiDialogRecordService.addMessage(dialogId, userMsg);
-                userMessageIdHolder[0] = userMsg.getId();
-                log.info("[ChatStream] 用户消息已保存 id={}", userMessageIdHolder[0]);
-            } catch (Exception e) {
-                log.warn("[ChatStream] 保存用户消息失败 sessionId={}: {}", sessionId, e.getMessage());
-            }
-
             // 2. 组装历史消息（含本轮用户消息，参考 AIChatController）
             List<Map<String, Object>> msgList = new ArrayList<>();
             try {
@@ -237,11 +236,10 @@ public class ChatStreamController {
             String contentId = UUID.randomUUID().toString();
 
             // 5. 所有写 SSE 的动作放到后台线程，确保 emitter 已被 Spring 初始化后再写
-            final Long did = dialogId;
             final String sid = sessionId;
             final String finalContent = content;
             final String userMsgId = userMessage != null && str(userMessage.get("id")) != null ? str(userMessage.get("id")) : UUID.randomUUID().toString();
-            CompletableFuture.runAsync(() -> {
+            CompletableFuture.runAsync(AiUserContext.capturing(() -> {
                 currentSessionId.set(sid);
                 try {
                     // 等待 Spring 把 emitter 绑定到响应（方法返回后才初始化 handler），避免首帧 send 丢失
@@ -274,11 +272,61 @@ public class ChatStreamController {
                     log.warn("[ChatStream] 发送 create 失败: {}", e.getMessage());
                 }
 
+                // 在线检索：联网抓取实时资料并注入上下文（RAG），不依赖模型自带联网
+                if (Boolean.TRUE.equals(request.getSearch())) {
+                    try {
+                        String searchQuery = WebSearchService.refineQuery(finalContent);
+                        Map<String, Object> searchingEvent = new LinkedHashMap<>();
+                        searchingEvent.put("type", "search");
+                        searchingEvent.put("status", "searching");
+                        searchingEvent.put("query", searchQuery);
+                        sendEvent(emitter, searchingEvent);
+
+                        List<WebResult> results = webSearchService.search(searchQuery);
+                        List<Map<String, Object>> sourceList = new ArrayList<>();
+                        for (WebResult r : results) {
+                            Map<String, Object> src = new LinkedHashMap<>();
+                            src.put("title", safe(r.getTitle()));
+                            src.put("url", safe(r.getUrl()));
+                            sourceList.add(src);
+                        }
+                        if (!results.isEmpty()) {
+                            StringBuilder reference = new StringBuilder();
+                            reference.append("以下是通过联网检索获取的、与用户问题相关的实时网页资料（检索时间：")
+                                    .append(java.time.LocalDate.now()).append("）：\n");
+                            for (int i = 0; i < results.size(); i++) {
+                                WebResult r = results.get(i);
+                                reference.append('[').append(i + 1).append("] 标题：").append(safe(r.getTitle())).append('\n');
+                                if (r.getSnippet() != null && !r.getSnippet().isBlank()) {
+                                    reference.append("    摘要：").append(safe(r.getSnippet())).append('\n');
+                                }
+                                reference.append("    来源链接：").append(safe(r.getUrl())).append('\n');
+                            }
+                            reference.append("\n请严格依据上述资料回答用户问题：在关键事实后用 [n] 标注来源编号，")
+                                    .append("并在回答末尾以“参考来源”列出编号与对应链接；若资料不足以回答，请明确说明，不要编造。");
+
+                            Map<String, Object> systemReference = new LinkedHashMap<>();
+                            systemReference.put("role", "system");
+                            systemReference.put("content", reference.toString());
+                            request.getMessages().add(0, systemReference);
+                        }
+                        Map<String, Object> searchDoneEvent = new LinkedHashMap<>();
+                        searchDoneEvent.put("type", "search");
+                        searchDoneEvent.put("status", "done");
+                        searchDoneEvent.put("query", searchQuery);
+                        searchDoneEvent.put("results", sourceList);
+                        sendEvent(emitter, searchDoneEvent);
+                        log.info("[ChatStream] 在线检索完成 sessionId={}, 来源 {} 条", sid, sourceList.size());
+                    } catch (Exception e) {
+                        log.warn("[ChatStream] 在线检索失败 sessionId={}: {}", sid, e.getMessage());
+                    }
+                }
+
                 StringBuilder fullReply = new StringBuilder();
                 final boolean[] firstChunkLogged = { false };
 
                 // 6. 调模型流式
-                aiChatFacadeService.stream(request,
+                aiChatFacadeService.streamWithUsage(request,
                         chunk -> {
                             // 检查是否已取消
                             if (cancelledStreams.contains(sid)) {
@@ -298,21 +346,32 @@ public class ChatStreamController {
                                 sendEvent(emitter, textEvent);
                             }
                         },
-                        reply -> {
+                        (reply, usage) -> {
                             String finalText = reply != null ? reply : fullReply.toString();
                             log.info("[ChatStream] 流式完成 sessionId={}, 回复长度={}", sid, finalText.length());
+                            // 计量落库用的是模型回传的真实用量，气泡与消息行必须同源：
+                            // 字符数估算（×1.5）会把同一轮对话的用量算成两套数
+                            int promptTokens;
+                            int completionTokens;
+                            Integer reportedPrompt = usage == null ? null : usage.getInputTokens();
+                            Integer reportedCompletion = usage == null ? null : usage.getOutputTokens();
+                            if (reportedPrompt != null && reportedCompletion != null) {
+                                promptTokens = reportedPrompt;
+                                completionTokens = reportedCompletion;
+                            } else {
+                                promptTokens = finalContent != null ? (int) (finalContent.length() * 1.5) : 0;
+                                completionTokens = (int) (finalText.length() * 1.5);
+                                log.info("[ChatStream] 模型未回传用量，按字符数估算 tokens sessionId={}", sid);
+                            }
+                            int totalTokens = promptTokens + completionTokens;
                             try {
                                 ChatMessage assistantMsg = new ChatMessage("assistant", finalText);
                                 assistantMsg.setParentId(userMessageIdHolder[0]);
                                 assistantMsg.setModelName(modelToUse);
-                                // 估算 token 使用量
-                                int promptTokens = finalContent != null ? (int) (finalContent.length() * 1.5) : 0;
-                                int completionTokens = (int) (finalText.length() * 1.5);
-                                int totalTokens = promptTokens + completionTokens;
                                 assistantMsg.setPromptTokens(promptTokens);
                                 assistantMsg.setCompletionTokens(completionTokens);
                                 assistantMsg.setTotalTokens(totalTokens);
-                                aiDialogRecordService.addMessage(did, assistantMsg);
+                                aiDialogRecordService.addMessage(dialogId, assistantMsg);
                                 log.info("[ChatStream] 助手消息已保存 parentId={}, tokens={}", userMessageIdHolder[0], totalTokens);
                             } catch (Exception e) {
                                 log.warn("[ChatStream] 保存助手消息失败 sessionId={}: {}", sid, e.getMessage());
@@ -320,10 +379,6 @@ public class ChatStreamController {
                             Map<String, Object> finishEvent = new LinkedHashMap<>();
                             finishEvent.put("type", "finish");
                             finishEvent.put("finishReason", "stop");
-                            // 估算 token 使用量（粗略：中文按 1.5 字/token，英文按 4 字符/token）
-                            int promptTokens = finalContent != null ? (int) (finalContent.length() * 1.5) : 0;
-                            int completionTokens = (int) (finalText.length() * 1.5);
-                            int totalTokens = promptTokens + completionTokens;
                             Map<String, Object> usageMap = new java.util.HashMap<>();
                             usageMap.put("promptTokens", promptTokens);
                             usageMap.put("completionTokens", completionTokens);
@@ -372,7 +427,7 @@ public class ChatStreamController {
                             }
                         }
                 );
-            });
+            }));
         } catch (Exception e) {
             log.error("[ChatStream] 初始化流式失败 sessionId={}", sessionId, e);
             Map<String, Object> finishEvent = new LinkedHashMap<>();
@@ -432,16 +487,25 @@ public class ChatStreamController {
      * @return 结果字符串
      */
     private String getDefaultModel() {
-        // 1. 从系统设置读取
-        String configured = sysAiGlobalSettingService.getValue("runtime", "default_chat_model")
-                .map(value -> value.trim())
-                .filter(value -> !value.isEmpty())
-                .orElse(null);
-        if (configured != null) {
-            return configured;
+        // 1. 依次从系统设置读取默认模型（兼容多个字段名）
+        String[][] keys = {
+            {"runtime", "default_model"},
+            {"models", "defaultChatModelId"},
+            {"runtime", "default_chat_model"}
+        };
+        for (String[] k : keys) {
+            String configured = sysAiGlobalSettingService.getValue(k[0], k[1])
+                    .map(String::trim)
+                    .filter(value -> !value.isEmpty())
+                    .orElse(null);
+            if (configured != null) {
+                // 统一去掉 providerId: 前缀，返回纯模型名（与用户手动选模型的解析结果一致）
+                int idx = configured.indexOf(':');
+                return idx >= 0 ? configured.substring(idx + 1) : configured;
+            }
         }
-        // 2. 没配置就 fallback
-        log.warn("[ChatStream] 未配置 default_chat_model，使用 fallback: {}", DEFAULT_MODEL_FALLBACK);
+        // 2. 都没配置才 fallback
+        log.warn("[ChatStream] 未配置默认模型，使用 fallback: {}", DEFAULT_MODEL_FALLBACK);
         return DEFAULT_MODEL_FALLBACK;
     }
 
@@ -557,6 +621,16 @@ public class ChatStreamController {
      */
     private static String str(Object o) {
         return o != null ? String.valueOf(o) : null;
+    }
+
+    /**
+     * null 安全转字符串。
+     *
+     * @param s 方法入参 s
+     * @return 结果字符串，null 返回空串
+     */
+    private static String safe(String s) {
+        return s == null ? "" : s;
     }
 
     /**

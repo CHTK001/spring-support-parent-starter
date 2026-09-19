@@ -2,6 +2,7 @@ package com.chua.starter.ai.support.manage.schedule;
 
 import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
 import com.chua.starter.ai.support.manage.service.ModelMetricsSnapshotService;
+import com.chua.starter.ai.support.manage.service.SysAiModelMetricsService;
 import com.chua.starter.ai.support.service.SysAiPricingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -67,6 +68,11 @@ public class ModelMetricsPushTask implements SchedulingConfigurer {
     private final ModelMetricsSnapshotService snapshotService;
 
     /**
+     * 全量指标库同步服务
+     */
+    private final SysAiModelMetricsService metricsService;
+
+    /**
      * 官方定价同步服务（datasearch-starter 模型指标采集）
      */
     private final SysAiPricingService pricingService;
@@ -92,14 +98,21 @@ public class ModelMetricsPushTask implements SchedulingConfigurer {
             return;
         }
         try {
-            // 1. 指标快照推送 Redis
+            // 1. 全量指标同步到指标库（锁定字段跳过）
+            int synced = metricsService.syncAll();
+            log.info("[ModelMetrics] 全量指标库同步完成，共 {} 条", synced);
+        } catch (Exception e) {
+            log.warn("[ModelMetrics] 全量指标库同步失败: {}", e.getMessage());
+        }
+        try {
+            // 2. 指标快照推送 Redis（兼容）
             snapshotService.buildAndPushSnapshot();
             log.info("[ModelMetrics] 价格/指标快照已推送完成");
         } catch (Exception e) {
             log.warn("[ModelMetrics] 快照推送失败: {}", e.getMessage());
         }
         try {
-            // 2. 官方定价同步到表（datasearch-starter 模型指标采集，每次清空旧数据）
+            // 3. 官方定价同步到表（datasearch-starter 模型指标采集，每次清空旧数据）
             pricingService.syncOfficialPricing();
             log.info("[ModelMetrics] 官方定价同步完成（datasearch-starter）");
         } catch (Exception e) {

@@ -5,6 +5,7 @@ import com.chua.starter.ai.support.entity.AIDialog;
 import com.chua.starter.ai.support.model.AiChatRequest;
 import com.chua.starter.ai.support.service.AIDialogRecordService;
 import com.chua.starter.ai.support.service.AiChatFacadeService;
+import com.chua.starter.ai.support.util.AiUserContext;
 import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -77,7 +78,7 @@ public class ChatSendController {
         final String userContent = content;
         final Long did = dialogId;
         final String sid = sessionId;
-        CompletableFuture.runAsync(() -> {
+        CompletableFuture.runAsync(AiUserContext.capturing(() -> {
             try {
                 List<Map<String, Object>> msgList = new ArrayList<>();
                 List<ChatMessage> history = aiDialogRecordService.getDialogMessages(did);
@@ -106,7 +107,7 @@ public class ChatSendController {
             } catch (Exception e) {
                 log.error("[ChatSend] 异步对话启动失败 sessionId={}", sid, e);
             }
-        });
+        }));
 
         return Map.of(
             "success", true,

@@ -275,6 +275,26 @@ public class AiModelMetricsEnrichmentService {
     }
 
     /**
+     * 返回指标源中的全部模型指标记录（全量，与本地是否配置该模型无关）。
+     *
+     * @return 指标记录列表
+     */
+    public List<MetricsRecord> all() {
+        ensureLoaded();
+        return new ArrayList<>(index.values());
+    }
+
+    /**
+     * 暴露归一化键计算，供指标表按模型名匹配。
+     *
+     * @param modelId 模型标识
+     * @return 归一化键
+     */
+    public String normalizeKey(String modelId) {
+        return normalize(modelId);
+    }
+
+    /**
      * 查找。
      * @param modelId 模型标识
      * @return find的结果
@@ -370,6 +390,7 @@ public class AiModelMetricsEnrichmentService {
             if (key.isEmpty()) { continue; }
             idx.putIfAbsent(key, new MetricsRecord(
                     key,
+                    md.getProvider(),
                     /**
                      * scale。
                      * @param md.getInputUnitPrice( md.获取输入unitprice(
@@ -620,6 +641,10 @@ public class AiModelMetricsEnrichmentService {
              * 归一化键
             */
             String normalizedKey,
+            /**
+             * 提供厂商
+            */
+            String provider,
             /**
              * 输入单价（USD/百万 令牌）
             */

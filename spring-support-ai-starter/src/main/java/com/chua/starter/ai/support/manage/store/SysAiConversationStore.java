@@ -5,6 +5,7 @@ import com.chua.starter.ai.support.manage.common.ApiErrorCode;
 import com.chua.starter.ai.support.manage.common.ApiException;
 import com.chua.starter.ai.support.manage.mapper.SysAiConversationMapper;
 import com.chua.starter.ai.support.manage.mapper.SysAiConversationMessageMapper;
+import com.chua.starter.ai.support.util.AiUserContext;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -167,12 +168,18 @@ public class SysAiConversationStore {
      * @return 创建的会话
      */
     public SysAiConversation create(SysAiConversation conversation) {
+        if (conversation.getUserId() == null) {
+            // 身份由服务端按当前登录用户写入，不接受客户端传值
+            conversation.setUserId(AiUserContext.currentUserId());
+        }
         conversationMapper.insert(conversation);
         return conversation;
     }
 
     /**
      * 获取会话（不存在抛 NOT_FOUND）。
+     *
+     * <p>读出口：管理员可读全量，普通用户只能读本人会话。</p>
      *
      * @param conversationId 会话 标识
      * @return 会话
@@ -182,17 +189,53 @@ public class SysAiConversationStore {
         if (conversation == null) {
             throw new ApiException(ApiErrorCode.NOT_FOUND, "会话不存在: " + conversationId);
         }
+        if (!AiUserContext.isAdmin()) {
+            String userId = AiUserContext.currentUserId();
+            if (userId == null) {
+ // 线程池与回复回调取不到请求身份，属机器流量而非越权
+                return conversation;
+            }
+            if (!userId.equals(conversation.getUserId())) {
+                throw new ApiException(ApiErrorCode.FORBIDDEN, "无权访问他人会话");
+            }
+        }
         return conversation;
     }
 
     /**
-     * 判断会话是否存在。
+     * 写出口校验：只认归属人本身，管理员对他人数据只读，只读账号一律拒绝。
+     *
+     * @param conversationId 会话 标识
+     * @return 校验通过的会话
+     */
+    public SysAiConversation requireWritable(String conversationId) {
+        SysAiConversation conversation = get(conversationId);
+        if (AiUserContext.isReadonly()) {
+            throw new ApiException(ApiErrorCode.FORBIDDEN, "只读账号不允许执行写操作");
+        }
+        String userId = AiUserContext.currentUserId();
+        if (userId == null) {
+            return conversation;
+        }
+        if (!userId.equals(conversation.getUserId())) {
+            throw new ApiException(ApiErrorCode.FORBIDDEN, "管理员对他人数据只读，不可修改或删除");
+        }
+        return conversation;
+    }
+
+    /**
+     * 判断会话是否存在（仅对可读会话为真）。
      *
      * @param conversationId 会话 标识
      * @return 存在返回 true
      */
     public boolean exists(String conversationId) {
-        return conversationMapper.selectById(conversationId) != null;
+        try {
+            get(conversationId);
+            return true;
+        } catch (ApiException e) {
+            return false;
+        }
     }
 
     /**
@@ -201,6 +244,7 @@ public class SysAiConversationStore {
      * @param conversationId 会话 标识
      */
     public void delete(String conversationId) {
+        requireWritable(conversationId);
         conversationMapper.deleteById(conversationId);
         LambdaQueryWrapper<SysAiConversationMessage> wrapper = new LambdaQueryWrapper<SysAiConversationMessage>()
                 .eq(SysAiConversationMessage::getConversationId, conversationId);
@@ -218,7 +262,7 @@ public class SysAiConversationStore {
      * @return 更新后的会话
      */
     public SysAiConversation patch(String conversationId, SysAiConversation patch) {
-        SysAiConversation current = get(conversationId);
+        SysAiConversation current = requireWritable(conversationId);
         if (patch.getName() != null) {
             current.setName(patch.getName());
         }
@@ -259,6 +303,10 @@ public class SysAiConversationStore {
                 new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(current, size);
         LambdaQueryWrapper<SysAiConversation> wrapper = new LambdaQueryWrapper<SysAiConversation>()
                 .orderByDesc(SysAiConversation::getCreatedAt);
+ // 管理员读全量，其余仅本人会话；无身份时条件恒不匹配（失败即关闭）
+        if (!AiUserContext.isAdmin()) {
+            wrapper.eq(SysAiConversation::getUserId, AiUserContext.currentUserId());
+        }
         return conversationMapper.selectPage(paging, wrapper);
     }
 
@@ -270,6 +318,9 @@ public class SysAiConversationStore {
      * @return 追加后的消息
      */
     public SysAiConversationMessage addMessage(String conversationId, SysAiConversationMessage message) {
+        SysAiConversation conversation = requireWritable(conversationId);
+ // 归属随所属会话：回复回调在异步线程执行，取不到请求身份
+        message.setUserId(conversation.getUserId());
         messageMapper.insert(message);
         return message;
     }
@@ -284,6 +335,7 @@ public class SysAiConversationStore {
      */
     public com.baomidou.mybatisplus.extension.plugins.pagination.Page<SysAiConversationMessage> pageMessages(
             String conversationId, int page, int pageSize) {
+        get(conversationId);
         long current = page <= 0 ? 1 : page;
         long size = pageSize <= 0 ? 50 : Math.min(pageSize, MAX_PAGE_SIZE);
         com.baomidou.mybatisplus.extension.plugins.pagination.Page<SysAiConversationMessage> paging =
@@ -302,6 +354,7 @@ public class SysAiConversationStore {
      * @return 消息
      */
     public SysAiConversationMessage getMessage(String conversationId, String messageId) {
+        get(conversationId);
         LambdaQueryWrapper<SysAiConversationMessage> wrapper = new LambdaQueryWrapper<SysAiConversationMessage>()
                 .eq(SysAiConversationMessage::getConversationId, conversationId)
                 .eq(SysAiConversationMessage::getMessageId, messageId)
@@ -320,6 +373,7 @@ public class SysAiConversationStore {
      * @return 消息列表（升序）
      */
     public List<SysAiConversationMessage> allMessages(String conversationId) {
+        get(conversationId);
         LambdaQueryWrapper<SysAiConversationMessage> wrapper = new LambdaQueryWrapper<SysAiConversationMessage>()
                 .eq(SysAiConversationMessage::getConversationId, conversationId)
                 .orderByAsc(SysAiConversationMessage::getCreatedAt);
@@ -332,6 +386,7 @@ public class SysAiConversationStore {
      * @param conversationId 会话 标识
      */
     public void clearMessages(String conversationId) {
+        requireWritable(conversationId);
         LambdaQueryWrapper<SysAiConversationMessage> wrapper = new LambdaQueryWrapper<SysAiConversationMessage>()
                 .eq(SysAiConversationMessage::getConversationId, conversationId);
         messageMapper.delete(wrapper);
@@ -344,6 +399,7 @@ public class SysAiConversationStore {
      * @param messageId      消息 标识
      */
     public void removeMessage(String conversationId, String messageId) {
+        requireWritable(conversationId);
         LambdaQueryWrapper<SysAiConversationMessage> wrapper = new LambdaQueryWrapper<SysAiConversationMessage>()
                 .eq(SysAiConversationMessage::getConversationId, conversationId)
                 .eq(SysAiConversationMessage::getMessageId, messageId);
@@ -357,6 +413,7 @@ public class SysAiConversationStore {
      * @param messageId      锚点消息 标识
      */
     public void truncateAfter(String conversationId, String messageId) {
+        requireWritable(conversationId);
         List<SysAiConversationMessage> all = allMessages(conversationId);
         if (all.isEmpty()) {
             return;

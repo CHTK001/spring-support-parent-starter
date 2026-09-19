@@ -2,11 +2,14 @@ package com.chua.starter.ai.support.manage.store;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.chua.starter.ai.support.manage.common.ApiErrorCode;
+import com.chua.starter.ai.support.manage.common.ApiException;
 import com.chua.starter.ai.support.manage.mapper.SysAiDataSourceMapper;
 import com.chua.starter.ai.support.manage.mapper.SysAiRequirementMapper;
 import com.chua.starter.ai.support.manage.store.datasource.IRequirementDataSource;
 import com.chua.starter.ai.support.manage.store.datasource.LocalDbRequirementDataSource;
 import com.chua.starter.ai.support.manage.store.datasource.RequirementDataSourceRegistry;
+import com.chua.starter.ai.support.util.AiUserContext;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -86,6 +89,8 @@ public class SysAiRequirementStore {
      */
     public Map<String, Object> list(String tag, String status, String q, String orderBy, String order, int page, int pageSize) {
         LambdaQueryWrapper<SysAiRequirement> wrapper = new LambdaQueryWrapper<>();
+        // 管理员可跨用户查看，普通用户仅本人
+        scopeRequirement(wrapper);
         if (tag != null && !tag.isEmpty()) {
             wrapper.eq(SysAiRequirement::getTag, tag);
         }
@@ -145,7 +150,8 @@ public class SysAiRequirementStore {
             throw new IllegalArgumentException("requirementId 不能为空");
         }
         SysAiRequirement r = requirementMapper.selectById(requirementId);
-        if (r == null) {
+        if (r == null || !readableByCurrent(r.getUserId())) {
+            // 越权与不存在同返回，避免用状态差异探测他人需求是否存在
             return null;
         }
         return toMap(r);
@@ -160,6 +166,8 @@ public class SysAiRequirementStore {
     public Map<String, Object> create(Map<String, Object> body) {
         SysAiRequirement r = new SysAiRequirement();
         r.setRequirementId(newId());
+        // 归属由服务端按当前登录用户写入，客户端传值一律忽略
+        r.setUserId(AiUserContext.requireUserId());
         r.setDisplayNo((int) displaySeq.getAndIncrement());
         r.setTitle(getString(body, "title", "未命名需求"));
         r.setContent(getString(body, "content", ""));
@@ -190,6 +198,7 @@ public class SysAiRequirementStore {
         if (existing == null) {
             return null;
         }
+        requireWritableRequirement(existing);
         String oldStatus = existing.getStatus();
         LambdaUpdateWrapper<SysAiRequirement> update = new LambdaUpdateWrapper<>();
         update.eq(SysAiRequirement::getRequirementId, requirementId);
@@ -244,6 +253,11 @@ public class SysAiRequirementStore {
         if (requirementId == null || requirementId.isEmpty()) {
             throw new IllegalArgumentException("requirementId 不能为空");
         }
+        SysAiRequirement existing = requirementMapper.selectById(requirementId);
+        if (existing == null) {
+            return false;
+        }
+        requireWritableRequirement(existing);
         return requirementMapper.deleteById(requirementId) > 0;
     }
 
@@ -256,6 +270,13 @@ public class SysAiRequirementStore {
     public int batchDelete(List<String> requirementIds) {
         if (requirementIds == null || requirementIds.isEmpty()) {
             return 0;
+        }
+        // 先整批校验归属，再执行删除：避免中途拒绝导致部分删除
+        for (String requirementId : requirementIds) {
+            SysAiRequirement existing = requirementMapper.selectById(requirementId);
+            if (existing != null) {
+                requireWritableRequirement(existing);
+            }
         }
         LambdaQueryWrapper<SysAiRequirement> wrapper = new LambdaQueryWrapper<>();
         wrapper.in(SysAiRequirement::getRequirementId, requirementIds);
@@ -271,6 +292,7 @@ public class SysAiRequirementStore {
      */
     public List<Map<String, Object>> tags() {
         LambdaQueryWrapper<SysAiRequirement> wrapper = new LambdaQueryWrapper<>();
+        scopeRequirement(wrapper);
         wrapper.select(
                 SysAiRequirement::getTag,
                 SysAiRequirement::getStatus
@@ -317,6 +339,7 @@ public class SysAiRequirementStore {
             board.put(key, new ArrayList<>());
         }
         LambdaQueryWrapper<SysAiRequirement> wrapper = new LambdaQueryWrapper<>();
+        scopeRequirement(wrapper);
         wrapper.eq(SysAiRequirement::getTag, tag);
         List<SysAiRequirement> items = requirementMapper.selectList(wrapper);
         for (SysAiRequirement r : items) {
@@ -393,8 +416,10 @@ public class SysAiRequirementStore {
      * @return 数据源列表，每项包含 id/name/type/enabled/lastSyncStatus 等概要字段
      */
     public List<Map<String, Object>> listDataSources() {
-        List<SysAiDataSource> all = dataSourceMapper.selectList(
-                new LambdaQueryWrapper<SysAiDataSource>().orderByDesc(SysAiDataSource::getCreateTime));
+        LambdaQueryWrapper<SysAiDataSource> dsWrapper = new LambdaQueryWrapper<SysAiDataSource>()
+                .orderByDesc(SysAiDataSource::getCreateTime);
+        scopeDataSource(dsWrapper);
+        List<SysAiDataSource> all = dataSourceMapper.selectList(dsWrapper);
         List<Map<String, Object>> result = new ArrayList<>();
         for (SysAiDataSource ds : all) {
             Map<String, Object> m = new LinkedHashMap<>();
@@ -434,6 +459,8 @@ public class SysAiRequirementStore {
         Map<String, Object> config = body.containsKey("config") ? (Map<String, Object>) body.get("config") : new LinkedHashMap<>();
         SysAiDataSource ds = new SysAiDataSource();
         ds.setId(newId());
+        // 归属由服务端按当前登录用户写入：第三方凭证仅归属者可见可改
+        ds.setUserId(AiUserContext.requireUserId());
         ds.setName(name);
         ds.setType(type);
         ds.setConfig(config);
@@ -457,6 +484,7 @@ public class SysAiRequirementStore {
         if (existing == null) {
             return null;
         }
+        requireWritableDataSource(existing);
         LambdaUpdateWrapper<SysAiDataSource> update = new LambdaUpdateWrapper<>();
         update.eq(SysAiDataSource::getId, id);
         if (body.containsKey("name")) {
@@ -483,6 +511,11 @@ public class SysAiRequirementStore {
      * @return 删除成功返回 true
      */
     public boolean removeDataSource(String id) {
+        SysAiDataSource existing = dataSourceMapper.selectById(id);
+        if (existing == null) {
+            return false;
+        }
+        requireWritableDataSource(existing);
         return dataSourceMapper.deleteById(id) > 0;
     }
 
@@ -498,6 +531,8 @@ public class SysAiRequirementStore {
         if (ds == null) {
             return Map.of("id", id, "error", "数据源不存在");
         }
+        // 同步会消费归属者的第三方凭证与配额，仅归属者可触发
+        requireWritableDataSource(ds);
         if (Boolean.FALSE.equals(ds.getEnabled())) {
             return Map.of("id", id, "error", "数据源已禁用");
         }
@@ -604,6 +639,8 @@ public class SysAiRequirementStore {
         if (ds == null) {
             return false;
         }
+        // 连接测试会借用已存凭证对外发起请求，仅归属者可执行
+        requireWritableDataSource(ds);
         IRequirementDataSource provider = registry.getProvider(ds.getType());
         if (provider == null) {
             return false;
@@ -618,6 +655,66 @@ public class SysAiRequirementStore {
      */
     public List<String> availableTypes() {
         return registry.list();
+    }
+
+    /**
+     * 需求查询按当前登录用户收窄。
+     *
+     * @param wrapper 查询条件
+     */
+    private void scopeRequirement(LambdaQueryWrapper<SysAiRequirement> wrapper) {
+        if (!AiUserContext.isAdmin()) {
+            wrapper.eq(SysAiRequirement::getUserId, AiUserContext.currentUserId());
+        }
+    }
+
+    /**
+     * 数据源查询按当前登录用户收窄。
+     *
+     * @param wrapper 查询条件
+     */
+    private void scopeDataSource(LambdaQueryWrapper<SysAiDataSource> wrapper) {
+        if (!AiUserContext.isAdmin()) {
+            wrapper.eq(SysAiDataSource::getUserId, AiUserContext.currentUserId());
+        }
+    }
+
+    /**
+     * 读归属判定：管理员可跨用户读取，其余仅本人。
+     *
+     * @param owner 数据归属用户标识
+     * @return 当前用户是否可读
+     */
+    private boolean readableByCurrent(String owner) {
+        return AiUserContext.isAdmin() || AiUserContext.requireUserId().equals(owner);
+    }
+
+    /**
+     * 需求写归属校验：只读账号拒绝，仅归属者可改删（管理员对他人数据只读）。
+     *
+     * @param requirement 需求实体
+     */
+    private void requireWritableRequirement(SysAiRequirement requirement) {
+        if (AiUserContext.isReadonly()) {
+            throw new ApiException(ApiErrorCode.FORBIDDEN, "只读账号不允许执行写操作");
+        }
+        if (!AiUserContext.requireUserId().equals(requirement.getUserId())) {
+            throw new ApiException(ApiErrorCode.FORBIDDEN, "管理员对他人数据只读，不可修改或删除");
+        }
+    }
+
+    /**
+     * 数据源写归属校验：第三方凭证仅归属者可改删与使用。
+     *
+     * @param dataSource 数据源实体
+     */
+    private void requireWritableDataSource(SysAiDataSource dataSource) {
+        if (AiUserContext.isReadonly()) {
+            throw new ApiException(ApiErrorCode.FORBIDDEN, "只读账号不允许执行写操作");
+        }
+        if (!AiUserContext.requireUserId().equals(dataSource.getUserId())) {
+            throw new ApiException(ApiErrorCode.FORBIDDEN, "管理员对他人数据只读，不可修改或删除");
+        }
     }
 
     /**
