@@ -88,6 +88,33 @@ public class ConnectorController {
     }
 
     /**
+     * 获取单个连接器详情
+     */
+    @GetMapping("/{id}")
+    public ReturnResult<Map<String, Object>> getConnectorById(@PathVariable Long id) {
+        List<SysAiBotBinding> bindings = botBindingService.listAll();
+        SysAiBotBinding binding = bindings.stream()
+                .filter(b -> b.getId().equals(id))
+                .findFirst()
+                .orElse(null);
+
+        if (binding == null) {
+            return ReturnResult.error("连接器不存在");
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("id", binding.getId());
+        result.put("type", binding.getPlatform());
+        result.put("name", binding.getNickname());
+        result.put("status", binding.getStatus());
+        result.put("modelName", binding.getModel());
+        result.put("createTime", binding.getCreateTime());
+        result.put("lastActiveTime", binding.getLastActiveTime());
+
+        return ReturnResult.success(result);
+    }
+
+    /**
      * 获取微信二维码
      */
     @PostMapping("/ilink/qrcode")
@@ -107,6 +134,17 @@ public class ConnectorController {
         log.info("绑定连接器: type={}", type);
         // TODO: 调用 AiBotBindingService 的绑定方法
         return ReturnResult.success("绑定成功");
+    }
+
+    /**
+     * 发送消息到连接器
+     */
+    @PostMapping("/{id}/send")
+    public ReturnResult<String> sendMessage(@PathVariable Long id, @RequestBody Map<String, Object> request) {
+        String content = (String) request.get("content");
+        log.info("发送消息到连接器: id={}, content={}", id, content);
+        // TODO: 调用 AiBotChatService 发送消息
+        return ReturnResult.success("发送成功");
     }
 
     /**
