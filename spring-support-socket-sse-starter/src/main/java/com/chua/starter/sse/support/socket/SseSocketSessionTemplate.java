@@ -19,7 +19,6 @@ import java.util.stream.Collectors;
  * SSE Socket 会话模板实现
  * 实现 Socket会话template 接口，提供统一的消息发送能力
  *
- * @版本 1.0.0
  * @since 2024-12-24
  * @author CH
  */

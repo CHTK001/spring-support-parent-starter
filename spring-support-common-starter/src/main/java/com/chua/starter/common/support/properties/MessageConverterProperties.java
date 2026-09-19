@@ -101,7 +101,7 @@ public class MessageConverterProperties {
     }
 
     /**
-     * 获取 打开加密货币
+     * 获取是否开启加密
      *
      * @return openCrypto
      */
@@ -110,9 +110,9 @@ public class MessageConverterProperties {
     }
 
     /**
-     * 设置 打开加密货币
+     * 设置是否开启加密
      *
-     * @param openCrypto 打开加密货币
+     * @param openCrypto 是否开启加密
      */
     public void setOpenCrypto(boolean openCrypto) {
         this.openCrypto = openCrypto;

@@ -16,7 +16,6 @@ import java.util.stream.Collectors;
 /**
  * 工具工具类
  *
- * @版本 1.0.0
  * @since 2024/01/22
  * @author CH
  */

@@ -14,7 +14,6 @@ import java.lang.reflect.Method;
  * 支持配置初始化方法和销毁方法。
  * </p>
  *
- * @版本 1.0.0
  * @since 2024/03/11
  * @author CH
  */

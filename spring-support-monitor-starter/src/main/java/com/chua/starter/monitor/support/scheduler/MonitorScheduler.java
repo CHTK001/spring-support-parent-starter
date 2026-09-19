@@ -54,39 +54,28 @@ import java.util.regex.Pattern;
 public class MonitorScheduler {
 
     /** 默认调度间隔(毫秒) */
-    /** 默认_间隔_ms */
     private static final long DEFAULT_INTERVAL_MS = 10_000L;
     /** 最大并发数 */
-    /** Concurrency */
     private static final int CONCURRENCY = 50;
     /** 调度间隔配置键 */
-    /** 配置_键_间隔 */
     private static final String CONFIG_KEY_INTERVAL = "monitor.collect.interval.ms";
 
     /** 任务 服务 */
-    /** 任务服务 */
     private final MonitorTaskService taskService;
     /** 资产 服务 */
-    /** 监控服务 */
     private final MonitorService monitorService;
     /** 指标 服务 */
-    /** 指标服务 */
     private final MetricService metricService;
     /** 配置 服务 */
-    /** 配置服务 */
     private final MonitorConfigService configService;
     /** 指标配置 服务 */
-    /** 指标配置服务 */
     private final MonitorMetricConfigService metricConfigService;
     /** 提供者 注册中心 */
-    /** 提供者注册表 */
     private final ProviderRegistry providerRegistry;
     /** JSON 解析器 */
-    /** Objectmapper */
     private final ObjectMapper objectMapper;
 
     /** 上次调度时间(nano时间), 用于间隔控制 */
-    /** 最后tick时间 */
     private final AtomicLong lastTickTime = new AtomicLong(0);
 
     /**

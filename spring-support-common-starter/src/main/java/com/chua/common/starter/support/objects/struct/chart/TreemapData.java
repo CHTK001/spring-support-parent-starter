@@ -14,7 +14,6 @@ public class TreemapData implements Serializable {
     private static final long serialVersionUID = 1L; // 串行版本uid
 
     /** 矩形块集合 */
-    /** Blocks */
     private List<Block> blocks = new ArrayList<>();
 
     /**
@@ -44,7 +43,6 @@ public class TreemapData implements Serializable {
         /** 名称 */
         private String name;
         /** 数值 */
-        /** 值 */
         private Number value;
         /** 路径 */
         private String path;

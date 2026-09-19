@@ -12,75 +12,57 @@ public class IpQuality implements Serializable {
     private static final long serialVersionUID = 1L; // 串行版本uid
 
     /** IP 地址 */
-    /** IP */
     private String ip;
 
     /** 是否高危代理 */
-    /** Highriskproxy */
     private boolean highRiskProxy;
 
     /** 是否 VPN */
-    /** VPN */
     private boolean vpn;
 
     /** 是否为代理 */
-    /** 代理 */
     private boolean proxy;
 
     /** 是否为 Tor 节点 */
-    /** TOR */
     private boolean tor;
 
     /** 是否云服务 */
-    /** Cloud服务 */
     private boolean cloudService;
 
     /** 是否数据中 */
-    /** 数据center */
     private boolean dataCenter;
 
     /** 风险评分 (0-100) */
-    /** Risk分数 */
     private int riskScore;
 
     /** 风险等级 (low/medium/high) */
-    /** Risk级别 */
     private String riskLevel;
 
     /** 运营商信息 */
-    /** ISP */
     private String isp;
 
     /** 国家/地区 */
-    /** 国家 */
     private String country;
 
     /** 省份 */
-    /** 区域 */
     private String region;
 
     /** 城市 */
-    /** City */
     private String city;
 
     /** 经度 */
-    /** Longitude */
     private Double longitude;
 
     /** 纬度 */
-    /** Latitude */
     private Double latitude;
 
     /** 使用类型 */
-    /** Usage类型 */
     private String usageType;
 
     /** ASN 编号 */
-    /** ASN */
     private String asn;
 
     /**  organisation */
-    /** Organisation */
     private String organisation;
 
     /**

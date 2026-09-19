@@ -14,11 +14,9 @@ public class RelationData implements Serializable {
     private static final long serialVersionUID = 1L; // 串行版本uid
 
     /** 节点集合 */
-    /** 节点 */
     private List<Node> nodes = new ArrayList<>();
 
     /** 连线集合 */
-    /** 链接 */
     private List<Link> links = new ArrayList<>();
 
     /**

@@ -1,13 +1,11 @@
 package com.chua.starter.ai.support.controller;
 
-import com.chua.common.support.ai.chat.ChatClient;
 import com.chua.starter.common.support.annotations.Permission;
 import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
 import com.chua.starter.ai.support.chat.ChatMessage;
 import com.chua.starter.ai.support.entity.AIDialog;
 import com.chua.starter.ai.support.entity.SysAiSessionCompression;
 import com.chua.starter.ai.support.model.AiChatRequest;
-import com.chua.starter.ai.support.registry.ChatClientRegistry;
 import com.chua.starter.ai.support.service.AIDialogRecordService;
 import com.chua.starter.ai.support.service.AiChatFacadeService;
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
@@ -81,8 +79,6 @@ public class AIChatController extends BaseAiController {
     private final SysAiSessionCompressionService aiSessionCompressionService;
     /** SYSAI全局设置服务 */
     private final SysAiGlobalSettingService sysAiGlobalSettingService;
-    /** 对话客户端注册表，用于解析压缩摘要模型 */
-    private final ChatClientRegistry chatClientRegistry;
 
     // ==================== 会话管理 ====================
 
@@ -157,6 +153,7 @@ public class AIChatController extends BaseAiController {
     @PostMapping(value = "/provider/ai/chat/{dialogId}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter chat(
             @PathVariable Long dialogId,
+            @RequestParam(required = false) String model,
             @RequestBody(required = false) List<ChatMessage> messages,
             @RequestParam(required = false) List<MultipartFile> files,
             HttpServletRequest servletRequest) {
@@ -170,6 +167,9 @@ public class AIChatController extends BaseAiController {
 
  // 构建 AI对话请求
         AiChatRequest request = new AiChatRequest();
+        // 不指定模型时门面只能落到空的聚合默认客户端，对话与压缩都不会真正执行
+        String chatModel = resolveChatModel(model);
+        request.setModel(chatModel);
         List<Map<String, Object>> msgList = new ArrayList<>();
  // 命中会话压缩上下文时，用「摘要 + 最近 N 轮」压缩结果替代全量历史，真正降低发送给模型的 令牌 量
         SysAiSessionCompression compression = aiSessionCompressionService.getBySessionId(dialogId);
@@ -228,7 +228,7 @@ public class AIChatController extends BaseAiController {
              * compressand保存上下文。
              * @param dialogId dialogid
              */
-            compressAndSaveContext(dialogId);
+            compressAndSaveContext(dialogId, chatModel);
         });
     }
 
@@ -245,9 +245,10 @@ public class AIChatController extends BaseAiController {
      *   <li>{@code chat_compress_retain_rounds} — 压缩后保留的最近轮数，默认 6</li>
      * </ul></p>
      *
-     * @param dialogId 会话 标识
+     * @param dialogId     会话 标识
+     * @param currentModel 本轮对话实际使用的模型，未配置专用压缩模型时摘要按该模型生成
      */
-    private void compressAndSaveContext(Long dialogId) {
+    private void compressAndSaveContext(Long dialogId, String currentModel) {
         try {
             List<ChatMessage> history = aiDialogRecordService.getDialogMessages(dialogId);
             if (history == null || history.isEmpty()) {
@@ -301,6 +302,10 @@ public class AIChatController extends BaseAiController {
             if (!shouldCompress) {
                 return;
             }
+            // 保留尾部已覆盖全部历史时没有可摘要的头部，强行切片会越界
+            if (retainCount >= history.size()) {
+                return;
+            }
             List<ChatMessage> head = new ArrayList<>(history.subList(0, history.size() - retainCount));
             List<ChatMessage> retained = new ArrayList<>(history.subList(history.size() - retainCount, history.size()));
             // 头部（超出最近 N 轮的）压缩为摘要
@@ -314,7 +319,7 @@ public class AIChatController extends BaseAiController {
             }
             
             // 调用 AI 模型生成真正的摘要
-            String aiSummary = generateSummaryWithAI(summary.toString(), dialogId);
+            String aiSummary = generateSummaryWithAI(summary.toString(), dialogId, currentModel);
             
             // 拼接：AI 摘要 + 最近 N 轮原始对话
             StringBuilder context = new StringBuilder();
@@ -385,53 +390,66 @@ public class AIChatController extends BaseAiController {
     }
 
     /**
-     * 调用 AI 模型生成对话摘要。
-     * <p>优先使用配置的压缩模型，未配置时使用当前会话模型。
+     * 解析本轮对话使用的模型。
      *
-     * @param historyText 历史对话文本
-     * @param dialogId    会话 ID
-     * @return 生成的摘要，失败返回 null
+     * <p>优先取请求参数，其次取全局配置 {@code runtime.default_model}；两者都为空时返回空，
+     * 由对话门面自行回落。</p>
+     *
+     * @param requestedModel 请求携带的模型名，可为空
+     * @return 生效的模型名，未配置时为空串
      */
-    private String generateSummaryWithAI(String historyText, Long dialogId) {
+    private String resolveChatModel(String requestedModel) {
+        if (requestedModel != null && !requestedModel.isBlank()) {
+            return requestedModel.trim();
+        }
+        return getStringSetting("default_model", "");
+    }
+
+    /**
+     * 调用 AI 模型生成对话摘要。
+     * <p>模型取自 {@code runtime.compression_model}，未配置时回退到本轮对话使用的模型；
+     * 压缩指令作为系统提示词，历史文本超过 {@link #SUMMARY_INPUT_MAX_LENGTH} 时先截断再送入模型。
+     *
+     * @param historyText  历史对话文本
+     * @param dialogId     会话 ID
+     * @param currentModel 本轮对话使用的模型，作为压缩模型未配置时的回退
+     * @return 生成的摘要；无可用模型、返回空白或调用异常时返回 null，由调用方降级为原文截断
+     */
+    private String generateSummaryWithAI(String historyText, Long dialogId, String currentModel) {
+        if (historyText == null || historyText.isEmpty()) {
+            return null;
+        }
         try {
-            // 读取压缩模型配置
+            // 压缩模型优先取专用配置，未配置则沿用本轮对话模型
             String compressionModel = getStringSetting("compression_model", "");
-            log.info("[Compression] 使用模型: {}", compressionModel.isEmpty() ? "默认模型" : compressionModel);
-            
-            // 构造摘要提示词
-            String prompt = "请将以下对话历史压缩为简洁的摘要，保留关键信息、结论和重要决策。摘要控制在300字以内：\n\n" + historyText;
-            
-            // 构造 AI 请求
+            String summaryModel = !compressionModel.isEmpty() ? compressionModel
+                    : (currentModel == null ? "" : currentModel.trim());
+            String input = historyText.length() > SUMMARY_INPUT_MAX_LENGTH
+                    ? historyText.substring(0, SUMMARY_INPUT_MAX_LENGTH)
+                    : historyText;
             AiChatRequest chatRequest = new AiChatRequest();
-            chatRequest.setModel(compressionModel.isEmpty() ? "agnes-2.5-flash" : compressionModel);
-            chatRequest.setMessages(java.util.List.of(
-                java.util.Map.of("role", "user", "content", prompt)
-            ));
+            chatRequest.setModel(summaryModel);
+            chatRequest.setSystemPrompt(SUMMARY_SYSTEM_PROMPT);
+            chatRequest.setPrompt(input);
             chatRequest.setStream(false);
-            
-            // 调用 AI 模型生成摘要（同步方式）
             Map<String, Object> result = aiChatFacadeService.call(chatRequest);
-            
-            // 提取回复内容
-            if (result != null && result.containsKey("content")) {
-                String summary = result.get("content").toString();
-                log.info("[Compression] AI 摘要生成成功，长度: {}", summary.length());
-                return summary;
+            Object error = result == null ? null : result.get("error");
+            if (error != null) {
+                log.warn("[Compression] 会话 {} 摘要模型 {} 调用失败，降级为原文截断: {}", dialogId, summaryModel, error);
+                return null;
             }
-            
-            // 降级：如果 AI 调用失败，回退到原始截断
-            log.warn("[Compression] AI 返回为空，降级为截断");
-            if (historyText.length() > 500) {
-                return historyText.substring(0, 500) + "...\n[摘要已截断]";
+            Object text = result == null ? null : result.get("text");
+            String summary = text == null ? "" : text.toString().trim();
+            if (summary.isEmpty()) {
+                log.warn("[Compression] 会话 {} 摘要模型未返回内容，降级为原文截断", dialogId);
+                return null;
             }
-            return historyText;
+            log.info("[Compression] 会话 {} AI 摘要完成：模型 {}，历史 {} 字符 → 摘要 {} 字符",
+                    dialogId, summaryModel.isEmpty() ? "默认模型" : summaryModel, input.length(), summary.length());
+            return summary;
         } catch (Exception e) {
             log.warn("[Compression] AI 摘要生成失败: {}", e.getMessage());
-            // 降级：失败时回退到原始截断
-            if (historyText.length() > 500) {
-                return historyText.substring(0, 500) + "...\n[摘要已截断]";
-            }
-            return historyText;
+            return null;
         }
     }
 }

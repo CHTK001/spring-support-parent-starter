@@ -10,7 +10,6 @@ import java.util.concurrent.ConcurrentHashMap;
  * Socket 用户信息
  * 封装连接用户的基本信息
  *
- * @版本 1.0.0
  * @since 2024-12-04
  * @author CH
  */

@@ -23,7 +23,6 @@ import java.util.concurrent.TimeUnit;
  * 定时上报Spring应用基本信息，服务端覆盖更新
  * </p>
  *
- * @版本 1.0.0
  * @since 2024/12/05
  * @author CH
  */

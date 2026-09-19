@@ -42,7 +42,6 @@ import java.util.List;
  * </pre>
  *
  * @since 2025/12/20
- * @版本 1.0
  * @author CH
  */
 public interface DatabaseFileProvider {

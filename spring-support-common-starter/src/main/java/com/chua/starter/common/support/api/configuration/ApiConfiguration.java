@@ -42,7 +42,6 @@ import java.util.concurrent.Executors;
  * </p>
  *
  * @since 2024/12/07
- * @版本 1.0.0
  * @author CH
  */
 @EnableConfigurationProperties(ApiProperties.class)

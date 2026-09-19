@@ -15,7 +15,6 @@ import static com.chua.socket.support.properties.SocketProperties.PRE;
  * Socket 基础配置属性类
  * 提供统一的 Socket 配置，支持多种协议切换
  *
- * @版本 1.0.0
  * @since 2024-12-04
  * @author CH
  */

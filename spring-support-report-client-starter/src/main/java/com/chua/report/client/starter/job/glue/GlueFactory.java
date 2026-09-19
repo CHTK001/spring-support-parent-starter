@@ -13,7 +13,6 @@ import java.util.concurrent.ConcurrentMap;
 /**
  * 胶水厂
  *
- * @版本 1.0.0
  * @since 2024/03/11
  * @author CH
  */

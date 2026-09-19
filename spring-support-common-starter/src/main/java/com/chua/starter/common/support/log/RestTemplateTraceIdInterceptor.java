@@ -18,7 +18,6 @@ import static com.chua.starter.common.support.constant.MdcConstant.X_TRACE_ID;
  * 在RestTemplate请求中添加追踪标识头。
  * </p>
  *
- * @版本 1.0.0
  * @since 2024/01/01
  * @author CH
  */

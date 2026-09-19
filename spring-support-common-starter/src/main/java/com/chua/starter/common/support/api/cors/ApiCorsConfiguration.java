@@ -40,7 +40,6 @@ import org.slf4j.LoggerFactory;
  *         - /api/**
  * </pre>
  *
- * @版本 1.0.0
  * @since 2024/12/07
  * @author CH
  */

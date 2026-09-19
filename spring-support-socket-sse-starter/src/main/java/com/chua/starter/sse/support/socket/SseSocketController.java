@@ -17,7 +17,6 @@ import java.util.Map;
  * SSE Socket 连接控制器
  * 提供 SSE 协议的连接端点
  *
- * @版本 1.0.0
  * @since 2024-12-24
  * @author CH
  */

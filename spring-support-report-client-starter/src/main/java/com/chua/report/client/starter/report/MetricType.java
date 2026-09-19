@@ -8,7 +8,6 @@ import lombok.Getter;
  * 定义可上报的指标类型，每个指标可独立配置上报间隔
  * </p>
  *
- * @版本 1.0.0
  * @since 2025/12/08
  * @author CH
  */

@@ -14,7 +14,6 @@ import java.util.List;
  * 当响应编码开启时，返回 application/encrypted-数据 类型。
  * </p>
  *
- * @版本 1.0.0
  * @since 2025/10/10
  * @author CH
  */

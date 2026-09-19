@@ -12,7 +12,6 @@ import org.springframework.web.servlet.HandlerInterceptor;
  * 拦截所有请求并记录统计数据
  * </p>
  *
- * @版本 1.0.0
  * @since 2025/01/17
  * @author CH
  */

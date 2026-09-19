@@ -5,15 +5,10 @@ import com.chua.starter.monitor.support.service.AgentDeployService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.FileSystemResource;
-import org.springframework.core.io.buffer.DataBuffer;
-import org.springframework.core.io.buffer.DataBufferUtils;
-import org.springframework.core.io.buffer.DefaultDataBufferFactory;
-import org.springframework.http.CacheControl;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.io.*;
@@ -78,23 +73,22 @@ public class AgentController {
      * @return agent 包字节流；定位不到包时 404
      */
     @GetMapping("/package")
-    public ResponseEntity<Flux<DataBuffer>> packageFile() {
+    public void packageFile(jakarta.servlet.http.HttpServletResponse response) throws java.io.IOException {
         Path artifact;
-        long size;
         try {
             artifact = deployService.packageFile();
-            size = Files.size(artifact);
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             log.warn("[agent] 未定位到 agent 包: {}", e.getMessage());
-            return ResponseEntity.notFound().build();
+            response.sendError(jakarta.servlet.http.HttpServletResponse.SC_NOT_FOUND);
+            return;
         }
-        Flux<DataBuffer> body = DataBufferUtils.read(artifact, new DefaultDataBufferFactory(), 8192)
-                .doOnDiscard(DataBuffer.class, DataBufferUtils::release);
-        return ResponseEntity.ok()
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .contentLength(size)
-                .cacheControl(CacheControl.noStore())
-                .body(body);
+        response.setContentType(MediaType.APPLICATION_OCTET_STREAM_VALUE);
+        response.setContentLengthLong(Files.size(artifact));
+        response.setHeader("Cache-Control", "no-store");
+        try (InputStream in = Files.newInputStream(artifact); OutputStream out = response.getOutputStream()) {
+            in.transferTo(out);
+            out.flush();
+        }
     }
 
     /**

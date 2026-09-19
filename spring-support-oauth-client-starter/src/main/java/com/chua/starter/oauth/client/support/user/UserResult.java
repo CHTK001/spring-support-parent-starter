@@ -30,7 +30,6 @@ import java.io.Serializable;
  *   <li><b>refreshToken</b> - 刷新令牌(RT)，用于获取新的访问令牌，有效期较长（默认4天）</li>
  * </ul>
  *
- * @版本 1.0.0
  * @since 2022/7/23 8:48
  * @see UserResume
  * @author CH

@@ -19,7 +19,6 @@ import static com.chua.starter.sync.support.properties.SyncProperties.PRE;
  * 支持服务端多端口配置，客户端和服务端配置分离
  * </p>
  *
- * @版本 1.0.0
  * @since 2024/12/04
  * @author CH
  */
@@ -178,18 +177,18 @@ public class SyncProperties {
     }
 
     /**
-     * 获取加密货币secret
+     * 获取加密密钥
      *
-     * @return 获取加密货币secret的结果
+     * @return 加密密钥
      */
     public String getCryptoSecret() {
         return cryptoSecret;
     }
 
     /**
-     * 设置加密货币secret
+     * 设置加密密钥
      *
-     * @param cryptoSecret 加密货币secret
+     * @param cryptoSecret 加密密钥
      */
     public void setCryptoSecret(String cryptoSecret) {
         this.cryptoSecret = cryptoSecret;

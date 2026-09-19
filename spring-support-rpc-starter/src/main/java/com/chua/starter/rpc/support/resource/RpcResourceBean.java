@@ -31,7 +31,6 @@ import java.util.List;
  * 不耦合任何具体协议实现。
  * </p>
  *
- * @版本 1.0.0
  * @since 2024/04/07
  * @author CH
  */

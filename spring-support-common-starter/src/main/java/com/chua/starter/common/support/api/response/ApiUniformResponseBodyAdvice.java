@@ -46,7 +46,6 @@ import lombok.extern.slf4j.Slf4j;
  *
  * @author CH
  * @since 2024/01/01
- * @版本 1.0.0
  */
 @Slf4j
 @RestControllerAdvice

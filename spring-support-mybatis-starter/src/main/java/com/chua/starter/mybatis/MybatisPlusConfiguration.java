@@ -53,7 +53,6 @@ import java.util.function.Supplier;
 /**
  * 处理注解
  *
- * @版本 1.0.0
  * @since 2021/4/12
  * @author CH
  */

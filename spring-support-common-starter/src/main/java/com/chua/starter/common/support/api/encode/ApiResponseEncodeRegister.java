@@ -18,7 +18,6 @@ import java.util.List;
  * 提供响应数据加密功能。
  * </p>
  *
- * @版本 2.0.0
  * @since 2024/01/22
  * @author CH
  */

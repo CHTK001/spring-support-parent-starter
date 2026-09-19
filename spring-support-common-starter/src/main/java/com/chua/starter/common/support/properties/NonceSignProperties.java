@@ -23,7 +23,6 @@ public class NonceSignProperties {
     public static final String PRE = "plugin.nonce.sign";
 
     /** 备用前缀（解析失败时尝试） */
-    /** Pre_alt */
     public static final String PRE_ALT = "nonce.sign";
 
     /**

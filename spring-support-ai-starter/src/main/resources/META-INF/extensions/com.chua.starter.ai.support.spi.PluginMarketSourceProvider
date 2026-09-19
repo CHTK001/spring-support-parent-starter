@@ -1,0 +1,5 @@
+com.chua.starter.ai.support.spi.impl.OpenVsxPluginMarketSourceProvider
+com.chua.starter.ai.support.spi.impl.VscodeMarketplacePluginMarketSourceProvider
+com.chua.starter.ai.support.spi.impl.GithubPluginMarketSourceProvider
+com.chua.starter.ai.support.spi.impl.ClawHubPluginMarketSourceProvider
+com.chua.starter.ai.support.spi.impl.SkillHubPluginMarketSourceProvider

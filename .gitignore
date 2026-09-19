@@ -125,3 +125,31 @@ spring-support-monitor-starter/*.bat
 # 大 BIN 离线数据库（不进 git）
 spring-support-common-starter/src/main/resources/IP2PROXY-LITE-PX2.BIN
 spring-support-common-starter/src/main/resources/IP2PROXY-LITE-PX2.MMDB
+# ============================================================
+# 临时/构建/运行残留全量收口（跨子模块通用）
+# ============================================================
+*.log
+replay_pid*
+hs_err*
+thread-dump*
+*.pid
+*.orig
+target.locked/
+target.bak*/
+**/target.locked/
+**/BOOT-INF/
+**/flat/
+.playwright-report/
+playwright-report/
+__pycache__/
+osgi-cache/
+.turbo/
+.data/
+.cache/
+.workbuddy/
+.clinerules
+miniapps/
+skills/
+e2e/playwright-report/
+monitor-agent/
+**/monitor-agent/

@@ -21,19 +21,15 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class DataSourceGroup {
 
     /** 组名（如 slave） */
-    /** 分组名称 */
     private final String groupName;
 
     /** 组内数据源列表 */
-    /** 数据源 */
     private final List<DataSource> dataSources = new ArrayList<>();
 
     /** 数据源名称列表（用于日志） */
-    /** 数据来源名称 */
     private final List<String> dataSourceNames = new ArrayList<>();
 
     /** 轮询计数器 */
-    /** 计数器 */
     private final AtomicInteger counter = new AtomicInteger(0);
 
     /** 负载均衡策略 */

@@ -44,7 +44,6 @@ import java.util.regex.Pattern;
  * </ul>
  *
  * @since 2024-12-05
- * @版本 1.1.0
  * @author CH
  */
 @Slf4j

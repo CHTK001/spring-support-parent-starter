@@ -19,7 +19,6 @@ import org.slf4j.LoggerFactory;
  * 用于配置验证码相关的Bean。
  * </p>
  *
- * @版本 1.0.0
  * @author CH
  * @since 4.0.0
  */

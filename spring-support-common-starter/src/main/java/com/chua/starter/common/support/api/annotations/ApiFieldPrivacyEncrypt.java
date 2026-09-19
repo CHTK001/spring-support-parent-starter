@@ -48,7 +48,6 @@ import java.lang.annotation.Target;
  * </pre>
  *
  * @since 2023-01-01
- * @版本 1.0.0
  * @see PrivacyTypeEnum
  * @see PrivacySerializer
  * @author CH

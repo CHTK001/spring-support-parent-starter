@@ -22,7 +22,6 @@ import org.slf4j.LoggerFactory;
  * </p>
  *
  * @since 2024/12/08
- * @版本 1.0.0
  * @author CH
  */
 @Component

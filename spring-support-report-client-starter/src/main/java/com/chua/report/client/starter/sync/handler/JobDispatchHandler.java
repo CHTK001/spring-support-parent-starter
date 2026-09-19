@@ -20,7 +20,6 @@ import java.util.Map;
  * 接收服务端下发的任务，走 XXL-作业 原有执行逻辑
  * </p>
  *
- * @版本 1.0.0
  * @since 2024/12/05
  * @author CH
  */

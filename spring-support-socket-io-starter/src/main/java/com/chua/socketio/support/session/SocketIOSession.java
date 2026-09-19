@@ -15,7 +15,6 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Socket.IO 会话实现
  *
- * @版本 1.0.0
  * @since 2024-12-04
  * @author CH
  */

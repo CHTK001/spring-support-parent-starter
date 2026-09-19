@@ -28,7 +28,6 @@ import org.slf4j.LoggerFactory;
  * </p>
  *
  * @since 2024/12/07
- * @版本 1.0.0
  * @author CH
  */
 public class ApiRequestDecodeRegister implements Upgrade<ApiRequestDecodeSetting>  {

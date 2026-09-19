@@ -28,7 +28,6 @@ import java.util.stream.Collectors;
  * Socket 自动配置类
  * 通过 SPI 机制根据配置的协议类型创建对应的 Socket 服务
  *
- * @版本 1.0.0
  * @since 2024-12-04
  * @author CH
  */

@@ -9,7 +9,6 @@ import java.lang.annotation.Target;
  * 自定义事件注解
  * 标记方法用于处理自定义事件
  *
- * @版本 1.0.0
  * @since 2024-12-04
  * @author CH
  */

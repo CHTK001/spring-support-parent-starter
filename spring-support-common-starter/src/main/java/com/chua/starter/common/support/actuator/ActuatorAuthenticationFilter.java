@@ -21,7 +21,6 @@ import org.slf4j.LoggerFactory;
  * 用于对Actuator端点进行认证，防止未授权访问。
  * </p>
  *
- * @版本 1.0.0
  * @since 2024/6/21
  * @author CH
  */

@@ -27,7 +27,6 @@ import java.util.function.BiConsumer;
  *
  * <p>封装 {@link SyncServer} 的运行实例，管理连接、消息分发和客户端信息。</p>
  *
- * @版本 1.0.0
  * @since 2024/12/05
  * @author CH
  */

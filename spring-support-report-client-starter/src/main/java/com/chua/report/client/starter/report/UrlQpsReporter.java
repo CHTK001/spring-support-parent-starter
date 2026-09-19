@@ -19,7 +19,6 @@ import java.util.concurrent.atomic.AtomicLong;
  * 收集 URL 请求统计数据并定时上报到服务端
  * </p>
  *
- * @版本 1.0.0
  * @since 2025/01/17
  * @author CH
  */

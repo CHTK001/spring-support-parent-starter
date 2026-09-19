@@ -14,7 +14,6 @@ import java.util.concurrent.ConcurrentMap;
  * 使用并发哈希映射保证线程安全。
  * </p>
  *
- * @版本 1.0.0
  * @since 2024/03/11
  * @author CH
  */

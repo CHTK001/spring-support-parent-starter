@@ -24,7 +24,6 @@ import org.springframework.context.annotation.Configuration;
  * </p>
  *
  * @since 2024-12-05
- * @版本 1.0.0
  * @author CH
  */
 @Slf4j

@@ -1,5 +1,0 @@
-server:
-  url: http://192.168.1.100:8081
-agent:
-  port: 19876
-  token: default-token

@@ -8,7 +8,6 @@ import java.util.Date;
 /**
  * 作业日志查询请求
  *
- * @版本 1.0.0
  * @since 2024/12/06
  * @author CH
  */

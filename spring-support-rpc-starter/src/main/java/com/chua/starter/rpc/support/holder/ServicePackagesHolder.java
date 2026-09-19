@@ -9,7 +9,6 @@ import java.util.Set;
  * <p>
  * 提供单例模式以供全局访问。
  *
- * @版本 1.0.0
  * @since 2024/04/08
  * @author CH
  */

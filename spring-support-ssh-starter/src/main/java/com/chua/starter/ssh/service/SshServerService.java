@@ -24,7 +24,6 @@ import java.util.Collections;
 /**
  * SSH服务端服务
  * 
- * @版本 4.0.0.32
  * @author CH
  * @since 4.0.0
  */
