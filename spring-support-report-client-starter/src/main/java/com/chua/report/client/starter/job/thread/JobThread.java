@@ -145,7 +145,9 @@ public class JobThread extends Thread {
     }
 
     @Override
-    /** 运行 */
+    /**
+     * 运行
+    */
     public void run() {
 
  // 初始化
@@ -190,7 +192,9 @@ public class JobThread extends Thread {
                         try {
                             FutureTask<Boolean> futureTask = new FutureTask<Boolean>(new Callable<Boolean>() {
                                 @Override
-                                /** 调用 */
+                                /**
+                                 * 调用
+                                */
                                 public Boolean call() throws Exception {
 
  // 初始化 作业 上下文

@@ -97,7 +97,9 @@ class ConsoleRealTest {
         return session;
     }
 
-    /** FTL 页面鉴权：无 控制台:manage 权限 403；持有权限 200 且渲染页面 */
+    /**
+     * FTL 页面鉴权：无 控制台:manage 权限 403；持有权限 200 且渲染页面
+    */
     @Test
     void pageAuthEnforced() throws Exception {
         mockMvc.perform(get("/console/features").session(sessionWith(Set.of("user:query"))))
@@ -107,7 +109,9 @@ class ConsoleRealTest {
                 .andExpect(content().string(containsString("功能开关")));
     }
 
-    /** 覆盖生效（端到端）：控制台 把默认禁用的 beta-特征 覆盖为启用 -> 原 503 端点变 200 */
+    /**
+     * 覆盖生效（端到端）：控制台 把默认禁用的 beta-特征 覆盖为启用 -> 原 503 端点变 200
+    */
     @Test
     void featureOverrideTakesEffect() throws Exception {
         // 基线：未覆盖时 503
@@ -129,7 +133,9 @@ class ConsoleRealTest {
                 .andExpect(status().isServiceUnavailable());
     }
 
-    /** 灰度覆盖生效（端到端）：用户 白名单未命中 -> 控制台 覆盖 percentage=100 -> X-Gray-Hit 命中；清理后恢复 */
+    /**
+     * 灰度覆盖生效（端到端）：用户 白名单未命中 -> 控制台 覆盖 percentage=100 -> X-Gray-Hit 命中；清理后恢复
+    */
     @Test
     void grayOverrideTakesEffect() throws Exception {
         MockHttpSession session = sessionWith(Set.of("console:manage"));
@@ -155,7 +161,9 @@ class ConsoleRealTest {
                 .andExpect(header().doesNotExist("X-Gray-Hit"));
     }
 
-    /** 键值环境注入（启动 e2e）：预置的 控制台_kv 行经 环境post处理器 注入 环境 */
+    /**
+     * 键值环境注入（启动 e2e）：预置的 控制台_kv 行经 环境post处理器 注入 环境
+    */
     @Test
     void kvInjectedIntoEnvironment() {
         /**
@@ -167,7 +175,9 @@ class ConsoleRealTest {
                 "启动注入的键值应可经 Environment 读取（@Value/environment.getProperty）");
     }
 
-    /** 键值设置 CRUD（HTTP 接口）+ sqlite 持久化 */
+    /**
+     * 键值设置 CRUD（HTTP 接口）+ sqlite 持久化
+    */
     @Test
     void kvCrud() throws Exception {
         mockMvc.perform(post("/console/api/kv").session(sessionWith(Set.of("console:manage")))

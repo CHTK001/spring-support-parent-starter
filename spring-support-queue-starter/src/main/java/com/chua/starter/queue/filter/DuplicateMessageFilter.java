@@ -21,11 +21,15 @@ import java.util.concurrent.TimeUnit;
 public class DuplicateMessageFilter implements MessageFilter {
 
     private final ConcurrentHashMap<String, Long> processedMessages = new ConcurrentHashMap<>(); // 处理消息
-    /** 默认_ttl */
+    /**
+     * 默认_ttl
+    */
     private static final long DEFAULT_TTL = TimeUnit.MINUTES.toMillis(5);
 
     @Override
-    /** 过滤 */
+    /**
+     * 过滤
+    */
     public boolean filter(Message message) {
         String messageId = message.getId();
         if (messageId == null || messageId.isEmpty()) {
@@ -77,7 +81,9 @@ public class DuplicateMessageFilter implements MessageFilter {
     }
 
     @Override
-    /** 获取订单 */
+    /**
+     * 获取订单
+    */
     public int getOrder() {
         return -1000; // 最高优先级，最先执行
     }

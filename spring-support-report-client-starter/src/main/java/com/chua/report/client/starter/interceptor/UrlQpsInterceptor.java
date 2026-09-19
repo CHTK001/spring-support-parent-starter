@@ -19,11 +19,15 @@ import org.springframework.web.servlet.HandlerInterceptor;
 public class UrlQpsInterceptor implements HandlerInterceptor {
 
 
-    /** Attr_启动_时间 */
+    /**
+     * Attr_启动_时间
+    */
     private static final String ATTR_START_TIME = "urlQps_startTime";
 
     @Override
-    /** Pre处理 */
+    /**
+     * Pre处理
+    */
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
         // 记录请求开始时间
         request.setAttribute(ATTR_START_TIME, System.currentTimeMillis());

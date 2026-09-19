@@ -13,10 +13,14 @@ import org.springframework.core.env.Environment;
  */
 public class ServiceInfoEndpointDetector {
 
-    /** 环境 */
+    /**
+     * 环境
+    */
     private final Environment environment;
 
-    /** 是否展示基础设施连接信息 (默认 true, 且仅展示真实配置的条目) */
+    /**
+     * 是否展示基础设施连接信息 (默认 true, 且仅展示真实配置的条目)
+    */
     private boolean infrastructureEnabled = true;
 
     /**

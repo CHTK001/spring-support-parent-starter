@@ -29,7 +29,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SysAiPricingServiceImpl implements SysAiPricingService {
 
-    /** 缓存名称 */
+    /**
+     * 缓存名称
+    */
     private static final String CACHE_NAME = "aiPricing";
 
     /**

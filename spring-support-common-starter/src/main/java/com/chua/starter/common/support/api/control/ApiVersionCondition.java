@@ -28,7 +28,9 @@ import org.slf4j.LoggerFactory;
  * @author CH
  */
 public class ApiVersionCondition implements RequestCondition<ApiVersionCondition> {
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(ApiVersionCondition.class);
         /**
          * 版本参数名

@@ -10,34 +10,64 @@ import lombok.Data;
  */
 @Data
 public class ChannelConfigDTO {
-    /** merchantid */
+    /**
+     * merchantid
+    */
     private Long merchantId;
-    /** 通道类型 */
+    /**
+     * 通道类型
+    */
     private String channelType;
-    /** 通道SUB类型 */
+    /**
+     * 通道SUB类型
+    */
     private String channelSubType;
-    /** 通道名称 */
+    /**
+     * 通道名称
+    */
     private String channelName;
-    /** APPID */
+    /**
+     * APPID
+    */
     private String appId;
-    /** merchantno */
+    /**
+     * merchantno
+    */
     private String merchantNo;
-    /** API密钥 */
+    /**
+     * API密钥
+    */
     private String apiKey;
-    /** 私有密钥 */
+    /**
+     * 私有密钥
+    */
     private String privateKey;
-    /** 公开密钥 */
+    /**
+     * 公开密钥
+    */
     private String publicKey;
-    /** 证书路径 */
+    /**
+     * 证书路径
+    */
     private String certPath;
-    /** Sandbox模式 */
+    /**
+     * Sandbox模式
+    */
     private Integer sandboxMode;
-    /** 通知url */
+    /**
+     * 通知url
+    */
     private String notifyUrl;
-    /** 返回值URL */
+    /**
+     * 返回值URL
+    */
     private String returnUrl;
-    /** 状态 */
+    /**
+     * 状态
+    */
     private Integer status;
-    /** EXT配置 */
+    /**
+     * EXT配置
+    */
     private String extConfig;
 }

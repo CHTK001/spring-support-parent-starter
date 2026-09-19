@@ -12,7 +12,9 @@ import com.chua.common.support.utils.StringUtils;
  */
 final class CommonChatClientFactoryResolver {
 
-    /** 创建 通用对话客户端工厂解析器 实例 */
+    /**
+     * 创建 通用对话客户端工厂解析器 实例
+    */
     private CommonChatClientFactoryResolver() {
     }
 

@@ -42,13 +42,17 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class SoftSoftwareController {
 
-    /** Softsoftware服务 */
+    /**
+     * Softsoftware服务
+    */
     private final SoftSoftwareService softSoftwareService;
 
     @Operation(summary = "软件列表")
     @GetMapping("/page")
     @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
-    /** Page */
+    /**
+     * Page
+    */
     public ReturnPageResult<SoftSoftware> page(
             @ParameterObject Query<SoftSoftware> query,
             @ParameterObject SoftwarePageRequest request,

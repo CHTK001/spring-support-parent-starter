@@ -13,10 +13,14 @@ import java.util.List;
 public class BarChartData implements Serializable {
     private static final long serialVersionUID = 1L; // 串行版本uid
 
-    /** 分类名称 */
+    /**
+     * 分类名称
+    */
     private List<String> categories = new ArrayList<>();
 
-    /** 数值集合 */
+    /**
+     * 数值集合
+    */
     private List<Number> values = new ArrayList<>();
 
     /**

@@ -53,7 +53,9 @@ import org.slf4j.LoggerFactory;
 @SuppressWarnings({"removal", "deprecation"})
 @EnableConfigurationProperties({MessageConverterProperties.class})
 public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, ApplicationContextAware {
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(MessageConverterWebMvcConfigurer.class);
     /**
      * 构造函数
@@ -66,22 +68,30 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
 
         final MessageConverterProperties messageConverterProperties; // 消息转换器属性
     private List<HttpMessageConverter<?>> messageConverters; // 消息转换器
-    /** Application上下文 */
+    /**
+     * Application上下文
+    */
     private ApplicationContext applicationContext;
 
     @Override
-    /** 添加申报值处理器 */
+    /**
+     * 添加申报值处理器
+    */
     public void addReturnValueHandlers(List<HandlerMethodReturnValueHandler> handlers) {
         handlers.add(new ResponseModelViewMethodProcessor(messageConverters));
     }
 
     @Override
-    /** 添加参数解析器 */
+    /**
+     * 添加参数解析器
+    */
     public void addArgumentResolvers(List<HandlerMethodArgumentResolver> resolvers) {
         resolvers.add(new RequestParamsMapMethodArgumentResolver());
     }
     @Override
-    /** configure消息转换器 */
+    /**
+     * configure消息转换器
+    */
     public void configureMessageConverters(List<HttpMessageConverter<?>> converters) {
         ApiResponseEncodeRegister encodeRegister = getApiResponseEncodeRegister();
         if (encodeRegister != null) {
@@ -94,12 +104,16 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
         }
     }
     @Override
-    /** 添加拦截器 */
+    /**
+     * 添加拦截器
+    */
     public void addInterceptors(InterceptorRegistry registry) {
     }
 
     @Override
-    /** configure内容negotiation */
+    /**
+     * configure内容negotiation
+    */
     public void configureContentNegotiation(ContentNegotiationConfigurer configurer) {
         ApiResponseEncodeRegister encodeRegister = getApiResponseEncodeRegister();
         if (encodeRegister != null) {
@@ -137,7 +151,9 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
     }
 
     @Override
-    /** extend消息转换器 */
+    /**
+     * extend消息转换器
+    */
     public void extendMessageConverters(List<HttpMessageConverter<?>> converters) {
         log.info("[消息转换器]开始扩展消息转换器列表, 当前转换器数量: {}", converters.size());
         for (int i = 0; i < converters.size(); i++) {
@@ -240,14 +256,18 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
 
 
     @Override
-    /** 添加Formatters */
+    /**
+     * 添加Formatters
+    */
     public void addFormatters(FormatterRegistry registry) {
         ApplicationConversionService.configure(registry);
     }
 
 
     @Override
-    /** 设置application上下文 */
+    /**
+     * 设置application上下文
+    */
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         log.info("[消息转换器]初始化消息转换器配置");
         this.applicationContext = applicationContext;

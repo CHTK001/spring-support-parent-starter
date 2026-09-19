@@ -15,49 +15,83 @@ import java.time.LocalDateTime;
 @TableName(value = "filesystem_upload_chunk")
 public class SysFileSystemUploadChunk extends SysBase implements Serializable {
 
-    /** 串行版本UID */
+    /**
+     * 串行版本UID
+    */
     private static final long serialVersionUID = 1L;
 
     @TableId(value = "filesystem_upload_chunk_id", type = IdType.AUTO)
-    /** Filesystem上传chunkid */
+    /**
+     * Filesystem上传chunkid
+    */
     private Long filesystemUploadChunkId;
 
-    /** 上传任务标识，关联 filesystem_upload_任务.filesystem_upload_任务_upload_标识 */
+    /**
+     * 上传任务标识，关联 filesystem_upload_任务.filesystem_upload_任务_upload_标识
+    */
     @TableField("filesystem_upload_chunk_upload_id")
-    /** Filesystem上传chunk上传标识 */
+    /**
+     * Filesystem上传chunk上传标识
+    */
     private String filesystemUploadChunkUploadId;
 
-    /** 分片序号(1-based) */
+    /**
+     * 分片序号(1-based)
+    */
     @TableField("filesystem_upload_chunk_part_number")
-    /** Filesystem上传chunkpart数字 */
+    /**
+     * Filesystem上传chunkpart数字
+    */
     private Integer filesystemUploadChunkPartNumber;
 
-    /** 分片大小(字节) */
+    /**
+     * 分片大小(字节)
+    */
     @TableField("filesystem_upload_chunk_size")
-    /** Filesystem上传chunk尺寸 */
+    /**
+     * Filesystem上传chunk尺寸
+    */
     private Long filesystemUploadChunkSize;
 
-    /** 分片e标签 */
+    /**
+     * 分片e标签
+    */
     @TableField("filesystem_upload_chunk_etag")
-    /** Filesystem上传chunketag */
+    /**
+     * Filesystem上传chunketag
+    */
     private String filesystemUploadChunkEtag;
 
-    /** 分片存储路径（本地文件路径或对象存储Key） */
+    /**
+     * 分片存储路径（本地文件路径或对象存储Key）
+    */
     @TableField("filesystem_upload_chunk_storage_path")
-    /** Filesystem上传chunk存储路径 */
+    /**
+     * Filesystem上传chunk存储路径
+    */
     private String filesystemUploadChunkStoragePath;
 
-    /** 分片状态: 0-已上传, 1-已合并, -1-失败 */
+    /**
+     * 分片状态: 0-已上传, 1-已合并, -1-失败
+    */
     @TableField("filesystem_upload_chunk_status")
-    /** Filesystem上传chunk状态 */
+    /**
+     * Filesystem上传chunk状态
+    */
     private Integer filesystemUploadChunkStatus;
 
-    /** 上传时间 */
+    /**
+     * 上传时间
+    */
     @TableField("filesystem_upload_chunk_upload_time")
-    /** Filesystem上传chunk上传时间 */
+    /**
+     * Filesystem上传chunk上传时间
+    */
     private LocalDateTime filesystemUploadChunkUploadTime;
 
-    /** 创建 sys文件系统uploadchunk 实例 */
+    /**
+     * 创建 sys文件系统uploadchunk 实例
+    */
     public SysFileSystemUploadChunk() {}
 
     /**
@@ -171,11 +205,17 @@ public class SysFileSystemUploadChunk extends SysBase implements Serializable {
      * @since 4.0.0
      */
     public static class Status {
-        /** Uploaded */
+        /**
+         * Uploaded
+        */
         public static final int UPLOADED = 0;
-        /** Merged */
+        /**
+         * Merged
+        */
         public static final int MERGED = 1;
-        /** 失败 */
+        /**
+         * 失败
+        */
         public static final int FAILED = -1;
     }
 }

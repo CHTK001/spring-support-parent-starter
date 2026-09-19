@@ -18,19 +18,29 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 public class AliyunAlipayTransferRequest {
 
-    /** 商户转账唯一订单号 */
+    /**
+     * 商户转账唯一订单号
+    */
     private String outBizNo;
 
-    /** 收款方支付宝账号（手机号或邮箱） */
+    /**
+     * 收款方支付宝账号（手机号或邮箱）
+    */
     private String payeeAccount;
 
-    /** 收款方真实姓名（可选，校验姓名） */
+    /**
+     * 收款方真实姓名（可选，校验姓名）
+    */
     private String payeeName;
 
-    /** 转账金额 */
+    /**
+     * 转账金额
+    */
     private BigDecimal amount;
 
-    /** 转账备注 */
+    /**
+     * 转账备注
+    */
     private String remark;
 }
 

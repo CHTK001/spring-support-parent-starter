@@ -27,7 +27,9 @@ import java.util.Map;
 public class SseSocketController {
 
     @Autowired
-    /** sseSocket会话模板 */
+    /**
+     * sseSocket会话模板
+    */
     private SseSocketSessionTemplate sseSocketSessionTemplate;
 
     /**

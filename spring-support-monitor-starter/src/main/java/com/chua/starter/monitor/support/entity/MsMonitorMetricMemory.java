@@ -23,7 +23,9 @@ import java.time.LocalDateTime;
 @TableName("ms_monitor_metric_memory")
 public class MsMonitorMetricMemory implements Serializable {
 
-    /** 串行版本UID */
+    /**
+     * 串行版本UID
+    */
     private static final long serialVersionUID = 1L;
 
     /**
@@ -31,7 +33,9 @@ public class MsMonitorMetricMemory implements Serializable {
      */
     @TableId(value = "id", type = IdType.AUTO)
     @Schema(description = "主键", example = "1")
-    /** 标识 */
+    /**
+     * 标识
+    */
     private Long id;
 
     /**
@@ -39,7 +43,9 @@ public class MsMonitorMetricMemory implements Serializable {
      */
     @TableField("ms_monitor_metric_memory_monitor_id")
     @Schema(description = "监控主机 id", example = "1")
-    /** 监控标识 */
+    /**
+     * 监控标识
+    */
     private Long monitorId;
 
     /**
@@ -47,7 +53,9 @@ public class MsMonitorMetricMemory implements Serializable {
      */
     @TableField("ms_monitor_metric_memory_total_bytes")
     @Schema(description = "总内存(字节)", example = "17179869184")
-    /** 总数bytes */
+    /**
+     * 总数bytes
+    */
     private Long totalBytes;
 
     /**
@@ -55,7 +63,9 @@ public class MsMonitorMetricMemory implements Serializable {
      */
     @TableField("ms_monitor_metric_memory_used_bytes")
     @Schema(description = "已用(字节)", example = "8589934592")
-    /** Usedbytes */
+    /**
+     * Usedbytes
+    */
     private Long usedBytes;
 
     /**
@@ -63,7 +73,9 @@ public class MsMonitorMetricMemory implements Serializable {
      */
     @TableField("ms_monitor_metric_memory_free_bytes")
     @Schema(description = "空闲(字节)", example = "8589934592")
-    /** Freebytes */
+    /**
+     * Freebytes
+    */
     private Long freeBytes;
 
     /**
@@ -71,7 +83,9 @@ public class MsMonitorMetricMemory implements Serializable {
      */
     @TableField("ms_monitor_metric_memory_usage_percent")
     @Schema(description = "使用率", example = "50.0")
-    /** Usage百分比 */
+    /**
+     * Usage百分比
+    */
     private Double usagePercent;
 
     /**
@@ -79,6 +93,8 @@ public class MsMonitorMetricMemory implements Serializable {
      */
     @TableField("ms_monitor_metric_memory_collect_time")
     @Schema(description = "采集时间", example = "2026-08-04T10:00:00")
-    /** Collect时间 */
+    /**
+     * Collect时间
+    */
     private LocalDateTime collectTime;
 }

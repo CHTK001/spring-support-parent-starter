@@ -40,7 +40,9 @@ public class JobContext {
      * 任务标识
      */
     @Getter
-    /** 作业标识 */
+    /**
+     * 作业标识
+    */
     private final long jobId;
 
     /**
@@ -61,21 +63,27 @@ public class JobContext {
      * 日志文件名
      */
     @Getter
-    /** 作业日志文件名称 */
+    /**
+     * 作业日志文件名称
+    */
     private final String jobLogFileName;
 
     /**
      * 分片索引（从0开始）
      */
     @Getter
-    /** Shard索引 */
+    /**
+     * Shard索引
+    */
     private final int shardIndex;
 
     /**
      * 分片总数
      */
     @Getter
-    /** Shard总数 */
+    /**
+     * Shard总数
+    */
     private final int shardTotal;
 
     /**

@@ -13,7 +13,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = FileStorageUploadProperties.PREFIX)
 public class FileStorageUploadProperties {
 
-    /** 前缀 */
+    /**
+     * 前缀
+    */
     public static final String PREFIX = "plugin.filesystem.upload";
 
     /**

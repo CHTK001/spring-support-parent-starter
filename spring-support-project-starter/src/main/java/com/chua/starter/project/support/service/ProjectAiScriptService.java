@@ -16,16 +16,24 @@ import com.chua.starter.project.support.entity.MsProject;
  */
 public interface ProjectAiScriptService {
 
-    /** 脚本类型：启动 */
+    /**
+     * 脚本类型：启动
+    */
     String KIND_START = "START";
 
-    /** 脚本类型：停止 */
+    /**
+     * 脚本类型：停止
+    */
     String KIND_STOP = "STOP";
 
-    /** 脚本类型：重启 */
+    /**
+     * 脚本类型：重启
+    */
     String KIND_RESTART = "RESTART";
 
-    /** 脚本类型：状态检测（守护用，exit 0=健康） */
+    /**
+     * 脚本类型：状态检测（守护用，exit 0=健康）
+    */
     String KIND_CHECK = "CHECK";
 
     /**

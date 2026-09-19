@@ -23,16 +23,26 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 public class RSocketSessionImpl implements SocketSession {
 
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(RSocketSessionImpl.class);
-    /** Objectmapper */
+    /**
+     * Objectmapper
+    */
     private static final ObjectMapper objectMapper = new ObjectMapper();
-    /** 会话 */
+    /**
+     * 会话
+    */
     private final WebSocketSession session;
     private final Map<String, Object> attributes = new ConcurrentHashMap<>(); // attributes
-    /** 客户端标识 */
+    /**
+     * 客户端标识
+    */
     private String clientId;
-    /** 用户 */
+    /**
+     * 用户
+    */
     private SocketUser user;
 
     /**
@@ -44,37 +54,49 @@ public class RSocketSessionImpl implements SocketSession {
     }
 
     @Override
-    /** 获取标识 */
+    /**
+     * 获取标识
+    */
     public String getId() {
         return session.getId();
     }
 
     @Override
-    /** 获取客户端标识 */
+    /**
+     * 获取客户端标识
+    */
     public String getClientId() {
         return clientId;
     }
 
     @Override
-    /** 设置客户端标识 */
+    /**
+     * 设置客户端标识
+    */
     public void setClientId(String clientId) {
         this.clientId = clientId;
     }
 
     @Override
-    /** 获取用户 */
+    /**
+     * 获取用户
+    */
     public SocketUser getUser() {
         return user;
     }
 
     @Override
-    /** 设置用户 */
+    /**
+     * 设置用户
+    */
     public void setUser(SocketUser user) {
         this.user = user;
     }
 
     @Override
-    /** 设置Attribute */
+    /**
+     * 设置Attribute
+    */
     public void setAttribute(String key, Object value) {
         attributes.put(key, value);
     }
@@ -92,25 +114,33 @@ public class RSocketSessionImpl implements SocketSession {
     }
 
     @Override
-    /** 移除Attribute */
+    /**
+     * 移除Attribute
+    */
     public void removeAttribute(String key) {
         attributes.remove(key);
     }
 
     @Override
-    /** 获取Attributes */
+    /**
+     * 获取Attributes
+    */
     public Map<String, Object> getAttributes() {
         return attributes;
     }
 
     @Override
-    /** 是否连接 */
+    /**
+     * 是否连接
+    */
     public boolean isConnected() {
         return session.isOpen();
     }
 
     @Override
-    /** 断开 */
+    /**
+     * 断开
+    */
     public void disconnect() {
         try {
             session.close();
@@ -120,7 +150,9 @@ public class RSocketSessionImpl implements SocketSession {
     }
 
     @Override
-    /** 发送 */
+    /**
+     * 发送
+    */
     public void send(String event, Object data) {
         if (!session.isOpen()) {
             log.warn("[RSocket] 会话已关闭，无法发送消息: {}", getId());

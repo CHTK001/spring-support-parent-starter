@@ -17,7 +17,9 @@ import java.util.Properties;
 @SuppressWarnings("removal")
 public class FreemarkerEnvironmentPostProcessor implements EnvironmentPostProcessor {
     @Override
-    /** Post处理环境 */
+    /**
+     * Post处理环境
+    */
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
         Properties properties = new Properties();
         properties.setProperty("spring.freemarker.templateLoaderPath", "classpath:/templates/");

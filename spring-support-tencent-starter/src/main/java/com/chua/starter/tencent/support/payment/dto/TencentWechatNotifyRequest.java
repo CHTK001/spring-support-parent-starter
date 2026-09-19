@@ -9,17 +9,29 @@ import lombok.Data;
  */
 @Data
 public class TencentWechatNotifyRequest {
-    /** 串行数字 */
+    /**
+     * 串行数字
+    */
     private String serialNumber;
-    /** 时间戳 */
+    /**
+     * 时间戳
+    */
     private String timestamp;
-    /** Nonce */
+    /**
+     * Nonce
+    */
     private String nonce;
-    /** 签名 */
+    /**
+     * 签名
+    */
     private String signature;
-    /** 标志类型 */
+    /**
+     * 标志类型
+    */
     private String signType;
-    /** 请求体 */
+    /**
+     * 请求体
+    */
     private String body;
 }
 

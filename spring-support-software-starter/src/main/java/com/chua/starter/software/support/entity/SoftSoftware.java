@@ -16,100 +16,166 @@ import java.time.LocalDateTime;
 @TableName("soft_software")
 public class SoftSoftware implements Serializable {
 
-    /** 串行版本UID */
+    /**
+     * 串行版本UID
+    */
     private static final long serialVersionUID = 1L;
 
-    /** software_标识 - 主键标识 */
+    /**
+     * software_标识 - 主键标识
+    */
     @TableId(type = IdType.ASSIGN_ID)
-    /** softwareid */
+    /**
+     * softwareid
+    */
     private String softwareId;
 
-    /** software_名称 - 软件名称 */
+    /**
+     * software_名称 - 软件名称
+    */
     private String softwareName;
 
-    /** software_编码 - 软件编码 */
+    /**
+     * software_编码 - 软件编码
+    */
     private String softwareCode;
 
-    /** software_版本 - 当前版本 */
+    /**
+     * software_版本 - 当前版本
+    */
     private String softwareVersion;
 
-    /** software_latest_版本 - 最新版本 */
+    /**
+     * software_latest_版本 - 最新版本
+    */
     private String softwareLatestVersion;
 
-    /** software_description - 软件描述 */
+    /**
+     * software_description - 软件描述
+    */
     private String softwareDescription;
 
-    /** software_icon - 软件图标URL */
+    /**
+     * software_icon - 软件图标URL
+    */
     private String softwareIcon;
 
-    /** software_分类 - 软件分类 */
+    /**
+     * software_分类 - 软件分类
+    */
     private String softwareCategory;
 
-    /** software_标签 - 标签，多个用逗号分隔 */
+    /**
+     * software_标签 - 标签，多个用逗号分隔
+    */
     private String softwareTags;
 
-    /** software_download_url - 下载URL */
+    /**
+     * software_download_url - 下载URL
+    */
     private String softwareDownloadUrl;
 
-    /** software_文件_大小 - 文件大小(字节) */
+    /**
+     * software_文件_大小 - 文件大小(字节)
+    */
     private Long softwareFileSize;
 
-    /** software_md5 - 文件MD5 */
+    /**
+     * software_md5 - 文件MD5
+    */
     private String softwareMd5;
 
-    /** software_sha256 - 文件SHA256 */
+    /**
+     * software_sha256 - 文件SHA256
+    */
     private String softwareSha256;
 
-    /** software_最小_os_版本 - 最低支持系统版本 */
+    /**
+     * software_最小_os_版本 - 最低支持系统版本
+    */
     private String softwareMinOsVersion;
 
-    /** software_cpu_Arch Linux Linux Linux - 支持的CPU架构 */
+    /**
+     * software_cpu_Arch Linux Linux Linux - 支持的CPU架构
+    */
     private String softwareCpuArch;
 
-    /** software_源_标识 - 所属源标识 */
+    /**
+     * software_源_标识 - 所属源标识
+    */
     private String softwareSourceId;
 
-    /** software_install_数量 - 安装次数 */
+    /**
+     * software_install_数量 - 安装次数
+    */
     private Integer softwareInstallCount;
 
-    /** software_rating - 评分 */
+    /**
+     * software_rating - 评分
+    */
     private Double softwareRating;
 
-    /** software_是否_official - 是否官方软件 */
+    /**
+     * software_是否_official - 是否官方软件
+    */
     private Boolean softwareIsOfficial;
 
-    /** software_是否_recommended - 是否推荐软件 */
+    /**
+     * software_是否_recommended - 是否推荐软件
+    */
     private Boolean softwareIsRecommended;
 
-    /** software_是否_free - 是否免费 */
+    /**
+     * software_是否_free - 是否免费
+    */
     private Boolean softwareIsFree;
 
-    /** software_price - 价格(分) */
+    /**
+     * software_price - 价格(分)
+    */
     private Integer softwarePrice;
 
-    /** software_状态 - 状态: 0正常 1已删除 2已禁用 */
+    /**
+     * software_状态 - 状态: 0正常 1已删除 2已禁用
+    */
     private Integer softwareStatus;
 
-    /** software_排序 - 排序 */
+    /**
+     * software_排序 - 排序
+    */
     private Integer softwareSort;
 
-    /** software_extra - 扩展信息JSON */
+    /**
+     * software_extra - 扩展信息JSON
+    */
     private String softwareExtra;
 
-    /** software_创建_时间 - 创建时间 */
+    /**
+     * software_创建_时间 - 创建时间
+    */
     @TableField(fill = FieldFill.INSERT)
-    /** Softwarecreate时间 */
+    /**
+     * Softwarecreate时间
+    */
     private LocalDateTime softwareCreateTime;
 
-    /** software_更新_时间 - 更新时间 */
+    /**
+     * software_更新_时间 - 更新时间
+    */
     @TableField(fill = FieldFill.INSERT_UPDATE)
-    /** Softwareupdate时间 */
+    /**
+     * Softwareupdate时间
+    */
     private LocalDateTime softwareUpdateTime;
 
-    /** software_创建_by - 创建人 */
+    /**
+     * software_创建_by - 创建人
+    */
     private String softwareCreateBy;
 
-    /** software_更新_by - 更新人 */
+    /**
+     * software_更新_by - 更新人
+    */
     private String softwareUpdateBy;
 
     /**

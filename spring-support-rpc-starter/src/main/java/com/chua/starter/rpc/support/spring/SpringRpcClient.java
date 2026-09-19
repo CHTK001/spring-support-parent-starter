@@ -27,13 +27,21 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 public class SpringRpcClient implements RpcClient, ApplicationContextAware {
 
-    /** Application上下文 */
+    /**
+     * Application上下文
+    */
     private ApplicationContext applicationContext;
-    /** 注册表配置 */
+    /**
+     * 注册表配置
+    */
     private final List<RpcRegistryConfig> registryConfigs;
-    /** 消费者配置 */
+    /**
+     * 消费者配置
+    */
     private final RpcConsumerConfig consumerConfig;
-    /** APP名称 */
+    /**
+     * APP名称
+    */
     private final String appName;
     private final Map<Class<?>, Object> proxyCache = new ConcurrentHashMap<>(); // 代理缓存
 
@@ -57,7 +65,9 @@ public class SpringRpcClient implements RpcClient, ApplicationContextAware {
     }
 
     @Override
-    /** 设置application上下文 */
+    /**
+     * 设置application上下文
+    */
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
     }
@@ -129,7 +139,9 @@ public class SpringRpcClient implements RpcClient, ApplicationContextAware {
     }
 
     @Override
-    /** 关闭 */
+    /**
+     * 关闭
+    */
     public void close() throws Exception {
         proxyCache.clear();
         RpcClient current = delegate;

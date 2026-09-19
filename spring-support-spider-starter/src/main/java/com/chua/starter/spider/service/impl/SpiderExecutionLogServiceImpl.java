@@ -49,7 +49,9 @@ public class SpiderExecutionLogServiceImpl
     private static final String STATUS_RUNNING = "RUNNING";
 
     @Override
-    /** 列表by执行no */
+    /**
+     * 列表by执行no
+    */
     public List<SpiderExecutionLog> listByExecutionNo(String executionNo) {
         return list(Wrappers.<SpiderExecutionLog>lambdaQuery()
                 .eq(SpiderExecutionLog::getExecutionNo, executionNo)
@@ -57,7 +59,9 @@ public class SpiderExecutionLogServiceImpl
     }
 
     @Override
-    /** page执行records */
+    /**
+     * page执行records
+    */
     public PageResultVO<ExecutionRecordVO> pageExecutionRecords(long pageNo, long pageSize, String definitionCode, String status) {
         long safePageSize = pageSize <= 0 ? 10 : pageSize;
         long safePageNo = pageNo <= 0 ? 1 : pageNo;
@@ -140,7 +144,9 @@ public class SpiderExecutionLogServiceImpl
     }
 
     @Override
-    /** aggregatestats */
+    /**
+     * aggregatestats
+    */
     public List<DefinitionStatsVO> aggregateStats() {
         QueryWrapper<SpiderExecutionLog> wrapper = new QueryWrapper<>();
         wrapper.select(

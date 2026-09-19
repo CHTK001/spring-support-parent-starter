@@ -29,7 +29,9 @@ public class DefaultJobExecute implements JobExecute {
 
 
     @Override
-    /** 运行 */
+    /**
+     * 运行
+    */
     public ServletResponse run(ServletRequest request, TriggerParam triggerParam) {
         log.debug("开始执行任务, 任务ID: {}, 处理器: {}", triggerParam.getJobId(), triggerParam.getExecutorHandler());
 
@@ -152,14 +154,22 @@ public class DefaultJobExecute implements JobExecute {
  * @since 4.0.0
  */
 class HandlerResult {
-    /** 作业处理器 */
+    /**
+     * 作业处理器
+    */
     private JobHandler jobHandler;
-    /** 作业线程 */
+    /**
+     * 作业线程
+    */
     private JobThread jobThread;
-    /** 移除oldreason */
+    /**
+     * 移除oldreason
+    */
     private String removeOldReason;
 
-    /** 创建 处理器结果 实例 */
+    /**
+     * 创建 处理器结果 实例
+    */
     public HandlerResult() {
     }
 

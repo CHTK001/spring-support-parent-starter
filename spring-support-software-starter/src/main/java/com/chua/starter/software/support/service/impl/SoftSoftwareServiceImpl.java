@@ -66,7 +66,9 @@ public class SoftSoftwareServiceImpl extends ServiceImpl<SoftSoftwareMapper, Sof
      */
     private final List<SoftwareSource> softwareSources;
 
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(SoftSoftwareServiceImpl.class);
 
     /**
@@ -80,14 +82,18 @@ public class SoftSoftwareServiceImpl extends ServiceImpl<SoftSoftwareMapper, Sof
     }
 
     @Override
-    /** pagefor */
+    /**
+     * pagefor
+    */
     public IPage<SoftSoftware> pageFor(Query<SoftSoftware> query, SoftwarePageRequest request, Collection<String> installedSoftwareIds) {
         Page<SoftSoftware> page = query.createPage();
         return baseMapper.selectPageFor(page, request, installedSoftwareIds);
     }
 
     @Override
-    /** 保存Software */
+    /**
+     * 保存Software
+    */
     public ReturnResult<SoftSoftware> saveSoftware(SoftSoftware software) {
         if (StringUtils.isBlank(software.getSoftwareCode())) {
             return ReturnResult.illegal("软件编码不能为空");
@@ -111,7 +117,9 @@ public class SoftSoftwareServiceImpl extends ServiceImpl<SoftSoftwareMapper, Sof
     }
 
     @Override
-    /** 更新Software */
+    /**
+     * 更新Software
+    */
     public ReturnResult<SoftSoftware> updateSoftware(SoftSoftware software) {
         if (software.getSoftwareId() == null) {
             return ReturnResult.illegal("软件ID不能为空");
@@ -131,7 +139,9 @@ public class SoftSoftwareServiceImpl extends ServiceImpl<SoftSoftwareMapper, Sof
     }
 
     @Override
-    /** 删除Software */
+    /**
+     * 删除Software
+    */
     public ReturnResult<Boolean> deleteSoftware(String softwareId) {
         SoftSoftware exist = getById(softwareId);
         if (exist == null) {
@@ -149,19 +159,25 @@ public class SoftSoftwareServiceImpl extends ServiceImpl<SoftSoftwareMapper, Sof
     }
 
     @Override
-    /** 获取by编码 */
+    /**
+     * 获取by编码
+    */
     public SoftSoftware getByCode(String code) {
         return baseMapper.selectOne(new LambdaQueryWrapper<SoftSoftware>().eq(SoftSoftware::getSoftwareCode, code));
     }
 
     @Override
-    /** 列表by源标识 */
+    /**
+     * 列表by源标识
+    */
     public List<SoftSoftware> listBySourceId(String sourceId) {
         return baseMapper.selectList(new LambdaQueryWrapper<SoftSoftware>().eq(SoftSoftware::getSoftwareSourceId, sourceId));
     }
 
     @Override
-    /** 同步从源 */
+    /**
+     * 同步从源
+    */
     public ReturnResult<Integer> syncFromSource(String sourceId) {
         SoftSource source = sourceService.getById(sourceId);
         if (source == null) {
@@ -195,13 +211,17 @@ public class SoftSoftwareServiceImpl extends ServiceImpl<SoftSoftwareMapper, Sof
     }
 
     @Override
-    /** 索引转为Elasticsearch */
+    /**
+     * 索引转为Elasticsearch
+    */
     public void indexToElasticsearch(SoftSoftware software) {
         log.info("索引软件到ES: {}", software.getSoftwareName());
     }
 
     @Override
-    /** 索引批量转为Elasticsearch */
+    /**
+     * 索引批量转为Elasticsearch
+    */
     public void indexBatchToElasticsearch(List<SoftSoftware> softwareList) {
         if (CollectionUtils.isEmpty(softwareList)) {
             return;
@@ -216,19 +236,25 @@ public class SoftSoftwareServiceImpl extends ServiceImpl<SoftSoftwareMapper, Sof
     }
 
     @Override
-    /** 删除从Elasticsearch */
+    /**
+     * 删除从Elasticsearch
+    */
     public void deleteFromElasticsearch(String softwareId) {
         log.info("从ES删除软件: {}", softwareId);
     }
 
     @Override
-    /** 搜索从Elasticsearch */
+    /**
+     * 搜索从Elasticsearch
+    */
     public List<SoftSoftware> searchFromElasticsearch(String keyword) {
         return searchFromElasticsearch(keyword, 0, 20);
     }
 
     @Override
-    /** 搜索从Elasticsearch */
+    /**
+     * 搜索从Elasticsearch
+    */
     public List<SoftSoftware> searchFromElasticsearch(String keyword, int from, int size) {
         log.info("从ES搜索软件: keyword={}, from={}, size={}", keyword, from, size);
         return new ArrayList<>();

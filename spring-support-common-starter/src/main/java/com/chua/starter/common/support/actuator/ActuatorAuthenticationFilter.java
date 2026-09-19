@@ -26,14 +26,22 @@ import org.slf4j.LoggerFactory;
  */
 @WebFilter(filterName = "ActuatorAuthenticationFilter", urlPatterns = {"/actuator/**"})
 public class ActuatorAuthenticationFilter implements Filter  {
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(ActuatorAuthenticationFilter.class);
-        /** 授权 */
+        /**
+         * 授权
+        */
         private static final String AUTHORIZATION = "Authorization";
-    /** 基础 */
+    /**
+     * 基础
+    */
     private static final String BASIC = "Basic ";
 
-    /** Actuator属性 */
+    /**
+     * Actuator属性
+    */
     private final ActuatorProperties actuatorProperties;
 
     /**
@@ -45,7 +53,9 @@ public class ActuatorAuthenticationFilter implements Filter  {
     }
 
     @Override
-    /** 执行过滤 */
+    /**
+     * 执行过滤
+    */
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
             throws IOException, ServletException {
         HttpServletRequest httpRequest = (HttpServletRequest) request;

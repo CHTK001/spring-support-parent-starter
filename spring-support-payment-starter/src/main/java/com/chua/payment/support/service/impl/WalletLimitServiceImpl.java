@@ -28,15 +28,23 @@ import java.util.List;
 @RequiredArgsConstructor
 public class WalletLimitServiceImpl implements WalletLimitService {
 
-    /** 限制映射器 */
+    /**
+     * 限制映射器
+    */
     private final MerchantWalletLimitMapper limitMapper;
-    /** Accountmapper */
+    /**
+     * Accountmapper
+    */
     private final WalletAccountMapper accountMapper;
-    /** 日志映射器 */
+    /**
+     * 日志映射器
+    */
     private final WalletAccountLogMapper logMapper;
 
     @Override
-    /** 获取限制 */
+    /**
+     * 获取限制
+    */
     public MerchantWalletLimit getLimit(Long merchantId) {
         if (merchantId == null) {
             return null;
@@ -47,7 +55,9 @@ public class WalletLimitServiceImpl implements WalletLimitService {
     }
 
     @Override
-    /** 保存或更新 */
+    /**
+     * 保存或更新
+    */
     public void saveOrUpdate(MerchantWalletLimit limit) {
         if (limit == null || limit.getMerchantId() == null) {
             /**
@@ -73,7 +83,9 @@ public class WalletLimitServiceImpl implements WalletLimitService {
     }
 
     @Override
-    /** 校验recharge限制 */
+    /**
+     * 校验recharge限制
+    */
     public void validateRechargeLimit(Long merchantId, Long userId, BigDecimal amount) {
         MerchantWalletLimit limit = getLimit(merchantId);
         if (limit == null) {
@@ -103,7 +115,9 @@ public class WalletLimitServiceImpl implements WalletLimitService {
     }
 
     @Override
-    /** 校验withdraw限制 */
+    /**
+     * 校验withdraw限制
+    */
     public void validateWithdrawLimit(Long merchantId, Long userId, BigDecimal amount) {
         MerchantWalletLimit limit = getLimit(merchantId);
         if (limit == null) {
@@ -133,7 +147,9 @@ public class WalletLimitServiceImpl implements WalletLimitService {
     }
 
     @Override
-    /** 校验调动限制 */
+    /**
+     * 校验调动限制
+    */
     public void validateTransferLimit(Long merchantId, Long userId, BigDecimal amount) {
         MerchantWalletLimit limit = getLimit(merchantId);
         if (limit == null) {
@@ -163,7 +179,9 @@ public class WalletLimitServiceImpl implements WalletLimitService {
     }
 
     @Override
-    /** 校验balance限制 */
+    /**
+     * 校验balance限制
+    */
     public void validateBalanceLimit(Long merchantId, Long userId, BigDecimal currentBalance, BigDecimal addAmount) {
         MerchantWalletLimit limit = getLimit(merchantId);
         if (limit == null || limit.getBalanceLimit() == null) {

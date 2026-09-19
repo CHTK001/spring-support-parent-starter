@@ -28,7 +28,9 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 public class GuacdSessionRegistry {
 
-    /** 在线会话表：tunnelid -> 会话 */
+    /**
+     * 在线会话表：tunnelid -> 会话
+    */
     private final Map<String, GuacdSession> sessions = new ConcurrentHashMap<>();
 
     /**

@@ -24,7 +24,9 @@ public class SipServerManager {
      * 控制端口监听对象（当前由 {@link SipTunnel} 内部持有，此字段保留用于后续接管）
      */
     private ServerSocket controlSocket;
-    /** 服务运行标记 */
+    /**
+     * 服务运行标记
+    */
     private boolean running = false;
 
     /**

@@ -31,19 +31,25 @@ public class LayoutGlobalSettingProvider implements GlobalSettingProvider {
     private static final String GROUP_NAME = "布局识别";
 
     @Override
-    /** 分组 */
+    /**
+     * 分组
+    */
     public String group() {
         return GROUP;
     }
 
     @Override
-    /** 分组名称 */
+    /**
+     * 分组名称
+    */
     public String groupName() {
         return GROUP_NAME;
     }
 
     @Override
-    /** 获取Items */
+    /**
+     * 获取Items
+    */
     public List<GlobalSettingProvider.SettingItem> getItems() {
         return List.of(
                 new GlobalSettingProvider.SettingItem("layout_model", "pp-structurev2-layout", "STRING", "版面分析模型（pp-structurev2-layout / pp-layout-parser / yolov8-doclayout）", 1),

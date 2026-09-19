@@ -18,7 +18,9 @@ public final class OauthClientRuntimeContext {
     private static volatile ConfigurableBeanFactory beanFactory; // Bean工厂
     private static volatile AuthClientProperties authClientProperties; // 认证客户端属性
 
-    /** 创建 OAuth客户端runtime上下文 实例 */
+    /**
+     * 创建 OAuth客户端runtime上下文 实例
+    */
     private OauthClientRuntimeContext() {
     }
 

@@ -37,12 +37,18 @@ import java.util.concurrent.ConcurrentHashMap;
  * @since 4.0.0
  */
 public class MapperDataSourceInterceptor implements Interceptor {
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(MapperDataSourceInterceptor.class);
 
-    /** Application上下文 */
+    /**
+     * Application上下文
+    */
     private final ApplicationContext applicationContext;
-    /** 属性 */
+    /**
+     * 属性
+    */
     private final MultiDataSourceSettingProperties properties;
     private final Map<String, String> mapperDataSourceCache = new ConcurrentHashMap<>(); // 映射器数据源缓存
 

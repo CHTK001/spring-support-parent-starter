@@ -20,14 +20,18 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-/** @作者 CH */
+/**
+ * @作者 CH
+*/
 
 @Tag(name = "采集数据管理")
 @RestController
 @RequestMapping("${spider.path:/spider}/records")
 public class SpiderDataRecordController {
 
-    /** Record服务 */
+    /**
+     * Record服务
+    */
     private final SpiderDataRecordService recordService;
 
     /**

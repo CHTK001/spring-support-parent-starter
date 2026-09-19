@@ -45,10 +45,14 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class AiBotBindingService {
 
-    /** 机器人 绑定 映射器 */
+    /**
+     * 机器人 绑定 映射器
+    */
     private final SysAiBotBindingMapper botBindingMapper;
 
-    /** 机器人 聊天引擎（微信消息轮询 + AI 回复） */
+    /**
+     * 机器人 聊天引擎（微信消息轮询 + AI 回复）
+    */
     private final AiBotChatService aiBotChatService;
 
     /**
@@ -629,25 +633,43 @@ public class AiBotBindingService {
      */
     @Data
     static class QrSession {
-        /** 会话唯一 Key */
+        /**
+         * 会话唯一 Key
+        */
         String key;
-        /** 平台类型 */
+        /**
+         * 平台类型
+        */
         String platform;
-        /** pending / 就绪 / scanned / confirmed / expired / 错误 */
+        /**
+         * pending / 就绪 / scanned / confirmed / expired / 错误
+        */
         String status;
-        /** i链接 返回的 qrcode Key */
+        /**
+         * i链接 返回的 qrcode Key
+        */
         String qrKey;
-        /** 二维码图片 URL（i链接 返回的 qrcode_img_内容，前端 img src 直接使用） */
+        /**
+         * 二维码图片 URL（i链接 返回的 qrcode_img_内容，前端 img src 直接使用）
+        */
         String qrImageUrl;
-        /** 扫码确认后回填 */
+        /**
+         * 扫码确认后回填
+        */
         String botId;
         String botToken; // 机器人令牌
         String errorMsg; // 错误msg
-        /** 重新扫码场景：需要合并的旧 机器人 唯一标识（原绑定记录） */
+        /**
+         * 重新扫码场景：需要合并的旧 机器人 唯一标识（原绑定记录）
+        */
         String oldBotId;
-        /** 发起扫码时的归属标识（登录 u:<userId> / 匿名 fp:<fingerprint>），用于写入绑定记录 */
+        /**
+         * 发起扫码时的归属标识（登录 u:<userId> / 匿名 fp:<fingerprint>），用于写入绑定记录
+        */
         String ownerKey;
-        /** 会话超时时间戳（毫秒） */
+        /**
+         * 会话超时时间戳（毫秒）
+        */
         long expireAt;
     }
 

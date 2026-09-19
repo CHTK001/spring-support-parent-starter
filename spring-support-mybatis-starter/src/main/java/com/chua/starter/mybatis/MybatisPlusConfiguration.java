@@ -58,11 +58,17 @@ import java.util.function.Supplier;
  */
 @EnableConfigurationProperties({MybatisPlusProperties.class, MybatisPlusDataScopeProperties.class, MybatisSlowSqlProperties.class})
 public class MybatisPlusConfiguration {
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(MybatisPlusConfiguration.class);
-    /** Encryptor_密码_财产 */
+    /**
+     * Encryptor_密码_财产
+    */
     private static final String ENCRYPTOR_PASSWORD_PROPERTY = "mybatis-plus.encryptor.password";
-    /** Encryptor_mode_财产 */
+    /**
+     * Encryptor_mode_财产
+    */
     private static final String ENCRYPTOR_MODE_PROPERTY = "mybatis-plus.encryptor.mode";
 
     /**
@@ -80,11 +86,17 @@ public class MybatisPlusConfiguration {
      */
     private static final String LOGIC_NOT_DELETE_VALUE = "0";
 
-    /** MyBatis属性 */
+    /**
+     * MyBatis属性
+    */
     private final MybatisPlusProperties mybatisProperties;
-    /** Methodsecurityinterceptor */
+    /**
+     * Methodsecurityinterceptor
+    */
     private final MybatisPlusDataScopeProperties methodSecurityInterceptor;
-    /** 环境 */
+    /**
+     * 环境
+    */
     private final Environment environment;
 
     /**
@@ -366,7 +378,9 @@ public class MybatisPlusConfiguration {
         return new SqlSessionTemplate(sqlSessionFactory);
     }
 
-    /** 同步encryptor属性 */
+    /**
+     * 同步encryptor属性
+    */
     private void syncEncryptorProperties() {
         syncSystemProperty(ENCRYPTOR_PASSWORD_PROPERTY);
         /**

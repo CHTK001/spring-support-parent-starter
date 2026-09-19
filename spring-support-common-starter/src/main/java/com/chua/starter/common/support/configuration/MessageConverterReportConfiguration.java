@@ -21,7 +21,9 @@ import org.slf4j.LoggerFactory;
  */
 @Configuration
 public class MessageConverterReportConfiguration implements ApplicationListener<ApplicationReadyEvent> {
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(MessageConverterReportConfiguration.class);
     /**
      * 构造函数
@@ -32,7 +34,9 @@ public class MessageConverterReportConfiguration implements ApplicationListener<
         this.requestMappingHandlerAdapter = requestMappingHandlerAdapter;
     }
 
-        /** 请求mapping处理器适配器 */
+        /**
+         * 请求mapping处理器适配器
+        */
         private final RequestMappingHandlerAdapter requestMappingHandlerAdapter;
 
     /**

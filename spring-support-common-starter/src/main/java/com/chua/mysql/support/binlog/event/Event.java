@@ -8,7 +8,9 @@ package com.chua.mysql.support.binlog.event;
  */
 public class Event {
 
-    /** 数据 */
+    /**
+     * 数据
+    */
     private final EventData data;
 
     /**

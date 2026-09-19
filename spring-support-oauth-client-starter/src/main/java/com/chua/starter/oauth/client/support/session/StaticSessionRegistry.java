@@ -23,14 +23,22 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class StaticSessionRegistry {
 
-    /** 进程内单例 */
+    /**
+     * 进程内单例
+    */
     private static final StaticSessionRegistry INSTANCE = new StaticSessionRegistry();
-    /** 超过该空闲时长(毫秒)视为离线 */
+    /**
+     * 超过该空闲时长(毫秒)视为离线
+    */
     private static final long IDLE_MILLIS = 30L * 60 * 1000;
-    /** 会话容器，Key 为令牌 SHA-256 摘要 */
+    /**
+     * 会话容器，Key 为令牌 SHA-256 摘要
+    */
     private final Map<String, OnlineSession> sessions = new ConcurrentHashMap<>();
 
-    /** 创建登记表 */
+    /**
+     * 创建登记表
+    */
     private StaticSessionRegistry() {
     }
 
@@ -259,25 +267,45 @@ public final class StaticSessionRegistry {
      */
     @Data
     public static class OnlineSession {
-        /** 用户标识 */
+        /**
+         * 用户标识
+        */
         private String userId;
-        /** 用户名 */
+        /**
+         * 用户名
+        */
         private String username;
-        /** 昵称 */
+        /**
+         * 昵称
+        */
         private String nickname;
-        /** 登录类型 */
+        /**
+         * 登录类型
+        */
         private String loginType;
-        /** 令牌过期时间(秒级或毫秒级时间戳) */
+        /**
+         * 令牌过期时间(秒级或毫秒级时间戳)
+        */
         private Long expireTime;
-        /** 登录 IP */
+        /**
+         * 登录 IP
+        */
         private String loginIp;
-        /** 浏览器 */
+        /**
+         * 浏览器
+        */
         private String browser;
-        /** 操作系统 */
+        /**
+         * 操作系统
+        */
         private String os;
-        /** 会话建立时间(毫秒) */
+        /**
+         * 会话建立时间(毫秒)
+        */
         private long loginTime;
-        /** 最后访问时间(毫秒) */
+        /**
+         * 最后访问时间(毫秒)
+        */
         private long lastAccessTime;
     }
 }

@@ -15,45 +15,73 @@ import java.time.LocalDateTime;
 public class PaymentDashboardSummaryVO implements Serializable {
     private static final long serialVersionUID = 1L; // 串行版本uid
 
-    /** 开始时间 */
+    /**
+     * 开始时间
+    */
     private LocalDateTime startTime;
 
-    /** 结束时间 */
+    /**
+     * 结束时间
+    */
     private LocalDateTime endTime;
 
-    /** Merchant总数 */
+    /**
+     * Merchant总数
+    */
     private Long merchantTotal;
 
-    /** 是否激活merchant数量 */
+    /**
+     * 是否激活merchant数量
+    */
     private Long activeMerchantCount;
 
-    /** Configuredmerchant数量 */
+    /**
+     * Configuredmerchant数量
+    */
     private Long configuredMerchantCount;
 
-    /** Payment排序数量 */
+    /**
+     * Payment排序数量
+    */
     private Long paymentOrderCount;
 
-    /** 退税数量 */
+    /**
+     * 退税数量
+    */
     private Long refundCount;
 
-    /** Transaction数量 */
+    /**
+     * Transaction数量
+    */
     private Long transactionCount;
 
-    /** Callback请求数量 */
+    /**
+     * Callback请求数量
+    */
     private Long callbackRequestCount;
 
-    /** Successnotify数量 */
+    /**
+     * Successnotify数量
+    */
     private Long successNotifyCount;
 
-    /** Failednotify数量 */
+    /**
+     * Failednotify数量
+    */
     private Long failedNotifyCount;
 
-    /** Averageprocess持续时间MS */
+    /**
+     * Averageprocess持续时间MS
+    */
     private Long averageProcessDurationMs;
 
-    /** 总数consumeamount */
+    /**
+     * 总数consumeamount
+    */
     private BigDecimal totalConsumeAmount;
 
-    /** 总数refundamount */
+    /**
+     * 总数refundamount
+    */
     private BigDecimal totalRefundAmount;
 }

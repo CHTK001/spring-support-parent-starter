@@ -16,7 +16,9 @@ import java.util.Map;
  */
 public final class Json {
 
-    /** Jackson 对象映射器 单例 */
+    /**
+     * Jackson 对象映射器 单例
+    */
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     /**

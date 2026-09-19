@@ -584,7 +584,9 @@ public class JobAutoConfiguration {
             seed();
         }
 
-        /** Seed */
+        /**
+         * Seed
+        */
         private void seed() {
             if (!(repository instanceof InMemoryJobRepository inMemory)) {
                 return;

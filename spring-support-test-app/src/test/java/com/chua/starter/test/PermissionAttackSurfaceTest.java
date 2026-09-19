@@ -48,7 +48,9 @@ class PermissionAttackSurfaceTest {
         return session;
     }
 
-    /** 路径遍历：编码斜杠/点号拼接不得命中受保护接口（归一化后无映射 -> 404） */
+    /**
+     * 路径遍历：编码斜杠/点号拼接不得命中受保护接口（归一化后无映射 -> 404）
+    */
     @Test
     void pathTraversalTriesDoNotBypass() throws Exception {
         mockMvc.perform(get("/api/permission/%2e%2e/permission/query")
@@ -62,7 +64,9 @@ class PermissionAttackSurfaceTest {
                 .andExpect(status().isNotFound());
     }
 
-    /** 方法覆盖：X-HTTP-方法-Override 不被框架识别——获取 访问写接口 405，写操作不执行 */
+    /**
+     * 方法覆盖：X-HTTP-方法-Override 不被框架识别——获取 访问写接口 405，写操作不执行
+    */
     @Test
     void methodOverrideIgnored() throws Exception {
         mockMvc.perform(get("/api/permission/delete")
@@ -75,7 +79,9 @@ class PermissionAttackSurfaceTest {
                 .andExpect(status().isMethodNotAllowed());
     }
 
-    /** 编码/大小写/斜杠变体：无授权用户一律不得 200（未映射 404 / 归一化命中受保护端点 403） */
+    /**
+     * 编码/大小写/斜杠变体：无授权用户一律不得 200（未映射 404 / 归一化命中受保护端点 403）
+    */
     @Test
     void encodingCaseTricksDoNotBypass() throws Exception {
         MockHttpSession unauthorized = sessionWith(Set.of("USER"), Set.of());
@@ -93,7 +99,9 @@ class PermissionAttackSurfaceTest {
                 .andExpect(status().isOk());
     }
 
-    /** 越权：仅持按钮权限码的账号尝试写接口 -> 403（权限码不匹配即拒绝） */
+    /**
+     * 越权：仅持按钮权限码的账号尝试写接口 -> 403（权限码不匹配即拒绝）
+    */
     @Test
     void privilegeEscalationDenied() throws Exception {
         mockMvc.perform(post("/api/permission/delete")

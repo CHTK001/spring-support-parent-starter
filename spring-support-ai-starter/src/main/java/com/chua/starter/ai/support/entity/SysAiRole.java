@@ -27,7 +27,9 @@ public class SysAiRole {
      * 角色主键 标识
      */
     @TableId(value = "sys_ai_role_id", type = IdType.AUTO)
-    /** sysairoleid */
+    /**
+     * sysairoleid
+    */
     private Integer id;
 
     /**
@@ -89,20 +91,26 @@ public class SysAiRole {
      * 创建人名称
      */
     @TableField(fill = FieldFill.INSERT)
-    /** 创建名称 */
+    /**
+     * 创建名称
+    */
     private String createName;
 
     /**
      * 创建时间
      */
     @TableField(fill = FieldFill.INSERT)
-    /** 创建时间 */
+    /**
+     * 创建时间
+    */
     private LocalDateTime createTime;
 
     /**
      * 更新时间
      */
     @TableField(fill = FieldFill.INSERT_UPDATE)
-    /** 更新时间 */
+    /**
+     * 更新时间
+    */
     private LocalDateTime updateTime;
 }

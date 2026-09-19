@@ -12,21 +12,37 @@ import java.time.LocalDateTime;
  */
 @Data
 public class WalletAccountVO {
-    /** 标识 */
+    /**
+     * 标识
+    */
     private Long id;
-    /** merchantid */
+    /**
+     * merchantid
+    */
     private Long merchantId;
-    /** 用户标识 */
+    /**
+     * 用户标识
+    */
     private Long userId;
-    /** 可用balance */
+    /**
+     * 可用balance
+    */
     private BigDecimal availableBalance;
-    /** Frozenbalance */
+    /**
+     * Frozenbalance
+    */
     private BigDecimal frozenBalance;
-    /** 状态 */
+    /**
+     * 状态
+    */
     private Integer status;
-    /** 创建时间AT */
+    /**
+     * 创建时间AT
+    */
     private LocalDateTime createdAt;
-    /** 更新时间AT */
+    /**
+     * 更新时间AT
+    */
     private LocalDateTime updatedAt;
 }
 

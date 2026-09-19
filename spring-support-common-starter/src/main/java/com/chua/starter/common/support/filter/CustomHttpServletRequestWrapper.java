@@ -56,7 +56,9 @@ public class CustomHttpServletRequestWrapper extends HttpServletRequestWrapper {
     }
 
     @Override
-    /** 获取输入流 */
+    /**
+     * 获取输入流
+    */
     public ServletInputStream getInputStream() throws IOException {
         /**
          * 习俗servlet输入流。
@@ -67,7 +69,9 @@ public class CustomHttpServletRequestWrapper extends HttpServletRequestWrapper {
     }
 
     @Override
-    /** 获取Reader */
+    /**
+     * 获取Reader
+    */
     public BufferedReader getReader() throws IOException {
         /**
          * 缓冲读取。
@@ -78,19 +82,25 @@ public class CustomHttpServletRequestWrapper extends HttpServletRequestWrapper {
     }
 
     @Override
-    /** 获取会话 */
+    /**
+     * 获取会话
+    */
     public HttpSession getSession() {
         return super.getSession();
     }
 
     @Override
-    /** 获取参数 */
+    /**
+     * 获取参数
+    */
     public String getParameter(String name) {
         return super.getParameter(name);
     }
 
     @Override
-    /** 获取参数值 */
+    /**
+     * 获取参数值
+    */
     public String[] getParameterValues(String name) {
         return super.getParameterValues(name);
     }

@@ -13,7 +13,9 @@ import java.util.List;
  */
 public class MapperSqlMethodMarker implements SqlMethodMarker {
 
-    /** 超时 */
+    /**
+     * 超时
+    */
     private int timeout;
 
     /**
@@ -27,7 +29,9 @@ public class MapperSqlMethodMarker implements SqlMethodMarker {
     }
 
     @Override
-    /** Analysis */
+    /**
+     * Analysis
+    */
     public List<AbstractMethod> analysis(String source) {
  // 文件 文件 = 新 文件(源);
  // if(!文件.exists())  {
@@ -45,19 +49,25 @@ public class MapperSqlMethodMarker implements SqlMethodMarker {
     }
 
     @Override
-    /** Refresh */
+    /**
+     * Refresh
+    */
     public void refresh(String name) {
 
     }
 
     @Override
-    /** 销毁 */
+    /**
+     * 销毁
+    */
     public void destroy() throws Exception {
 
     }
 
     @Override
-    /** refresh全部 */
+    /**
+     * refresh全部
+    */
     public void refreshAll() {
 
     }

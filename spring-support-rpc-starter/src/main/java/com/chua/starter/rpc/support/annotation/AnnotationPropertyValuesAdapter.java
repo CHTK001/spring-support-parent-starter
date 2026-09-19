@@ -21,7 +21,9 @@ import java.util.Map;
  */
 public class AnnotationPropertyValuesAdapter implements PropertyValues {
 
-    /** Delegate */
+    /**
+     * Delegate
+    */
     private final PropertyValues delegate;
 
     /**
@@ -87,31 +89,41 @@ public class AnnotationPropertyValuesAdapter implements PropertyValues {
     }
 
     @Override
-    /** 获取财产值 */
+    /**
+     * 获取财产值
+    */
     public PropertyValue[] getPropertyValues() {
         return delegate.getPropertyValues();
     }
 
     @Override
-    /** 获取财产值 */
+    /**
+     * 获取财产值
+    */
     public PropertyValue getPropertyValue(String propertyName) {
         return delegate.getPropertyValue(propertyName);
     }
 
     @Override
-    /** 改变自 */
+    /**
+     * 改变自
+    */
     public PropertyValues changesSince(PropertyValues old) {
         return delegate.changesSince(old);
     }
 
     @Override
-    /** Contains */
+    /**
+     * Contains
+    */
     public boolean contains(String propertyName) {
         return delegate.contains(propertyName);
     }
 
     @Override
-    /** 是否空 */
+    /**
+     * 是否空
+    */
     public boolean isEmpty() {
         return delegate.isEmpty();
     }

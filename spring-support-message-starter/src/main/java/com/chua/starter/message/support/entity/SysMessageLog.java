@@ -27,7 +27,9 @@ public class SysMessageLog extends SysBase {
      * 日志标识 - 主键自增
      */
     @TableId(value = "sys_message_log_id", type = IdType.AUTO)
-    /** SYS消息日志标识 */
+    /**
+     * SYS消息日志标识
+    */
     private Integer sysMessageLogId;
 
     /**

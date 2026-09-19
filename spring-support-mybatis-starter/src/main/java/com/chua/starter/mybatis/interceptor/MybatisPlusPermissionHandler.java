@@ -30,14 +30,22 @@ import java.util.List;
  * @since 4.0.0
  */
 public class MybatisPlusPermissionHandler implements SelectDataPermissionHandler {
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(MybatisPlusPermissionHandler.class);
 
-    /** 创建_by */
+    /**
+     * 创建_by
+    */
     private static final String CREATE_BY = "rule_create_by";
-    /** Dept_标识 */
+    /**
+     * Dept_标识
+    */
     private static final String DEPT_ID = "rule_dept_id";
-    /** No_数据 */
+    /**
+     * No_数据
+    */
     public static final NotEqualsTo NO_DATA = new NotEqualsTo();
     static {
         NO_DATA.setLeftExpression(new LongValue(1));
@@ -141,7 +149,9 @@ public class MybatisPlusPermissionHandler implements SelectDataPermissionHandler
     }
 
     @Override
-    /** 获取sqlsegment */
+    /**
+     * 获取sqlsegment
+    */
     public Expression getSqlSegment(Expression where, String mappedStatementId) {
         return where;
     }

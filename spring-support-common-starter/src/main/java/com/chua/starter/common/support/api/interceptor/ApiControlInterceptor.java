@@ -45,7 +45,9 @@ import java.util.regex.Pattern;
  * @author CH
  */
 public class ApiControlInterceptor implements HandlerInterceptor  {
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(ApiControlInterceptor.class);
     /**
      * 构造函数
@@ -63,15 +65,25 @@ public class ApiControlInterceptor implements HandlerInterceptor  {
         this.overrideProvider = overrideProvider.getIfAvailable();
     }
 
-        /** API属性 */
+        /**
+         * API属性
+        */
         private final ApiProperties apiProperties;
-    /** 环境 */
+    /**
+     * 环境
+    */
     private final Environment environment;
-    /** 特征管理器 */
+    /**
+     * 特征管理器
+    */
     private final ApiFeatureManager featureManager;
-    /** 运行时覆盖提供者（可空） */
+    /**
+     * 运行时覆盖提供者（可空）
+    */
     private final ApiSwitchOverrideProvider overrideProvider;
-    /** Grayevaluator */
+    /**
+     * Grayevaluator
+    */
     private final ApiGrayEvaluator grayEvaluator = new ApiGrayEvaluator();
 
     /**
@@ -120,7 +132,9 @@ public class ApiControlInterceptor implements HandlerInterceptor  {
     public static final String ATTR_SKIP_AUTH = "API_INTERNAL_SKIP_AUTH";
 
     @Override
-    /** Pre处理 */
+    /**
+     * Pre处理
+    */
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
             throws Exception {
         if (!(handler instanceof HandlerMethod handlerMethod)) {

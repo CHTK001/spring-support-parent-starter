@@ -31,16 +31,26 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class MailboxServiceImpl implements MailboxService {
 
-    /** 身份 映射器 */
+    /**
+     * 身份 映射器
+    */
     private final MsServerIdentityMapper identityMapper;
-    /** 凭据加解密器 */
+    /**
+     * 凭据加解密器
+    */
     private final CredentialCipher cipher;
 
-    /** 收件箱默认文件夹 */
+    /**
+     * 收件箱默认文件夹
+    */
     private static final String DEFAULT_FOLDER = "INBOX";
-    /** 默认 IMAP 端口 */
+    /**
+     * 默认 IMAP 端口
+    */
     private static final int DEFAULT_IMAP_PORT = 993;
-    /** 列表正文截断长度 */
+    /**
+     * 列表正文截断长度
+    */
     private static final int CONTENT_TRUNCATE = 400;
 
     @Override

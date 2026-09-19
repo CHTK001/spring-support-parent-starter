@@ -21,10 +21,14 @@ import org.slf4j.LoggerFactory;
  * @since 4.0.0
  */
 public class JsonArrayToStringDeserialize extends JsonDeserializer<String> {
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(JsonArrayToStringDeserialize.class);
         @Override
-    /** 反序列化 */
+    /**
+     * 反序列化
+    */
     public String deserialize(JsonParser p, DeserializationContext ctxt) throws IOException, JacksonException {
         TreeNode treeNode = p.getCodec().readTree(p);
         if (log.isTraceEnabled()) {

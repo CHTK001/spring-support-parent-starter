@@ -23,12 +23,18 @@ import java.util.Map;
  * @since 4.0.0
  */
 public class DynamicSqlMethod extends AbstractMethod {
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(DynamicSqlMethod.class);
-    /** SQL来源 */
+    /**
+     * SQL来源
+    */
     private final Field sqlSource;
     private Map<String, Object> param; // 参数
-    /** Mappedstatement */
+    /**
+     * Mappedstatement
+    */
     private MappedStatement mappedStatement;
 
     private Class<?> type = MappedStatement.class; // 类型
@@ -52,7 +58,9 @@ public class DynamicSqlMethod extends AbstractMethod {
     }
 
     @Override
-    /** injectmapped对账单 */
+    /**
+     * injectmapped对账单
+    */
     public MappedStatement injectMappedStatement(Class<?> mapperClass, Class<?> modelClass, TableInfo tableInfo) {
         String sql = MapUtils.getString(param, "content");
         String type = MapUtils.getString(param, "type");

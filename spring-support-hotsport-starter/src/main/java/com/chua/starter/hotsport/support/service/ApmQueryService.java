@@ -46,25 +46,37 @@ import java.util.concurrent.ConcurrentHashMap;
 @Service
 public class ApmQueryService {
 
-    /** 是否已尝试自注入 Agent。 */
+    /**
+     * 是否已尝试自注入 Agent。
+    */
     private final AtomicBoolean attachAttempted = new AtomicBoolean(false);
 
-    /** Agent 自注入是否成功。 */
+    /**
+     * Agent 自注入是否成功。
+    */
     private volatile boolean agentActive = false;
 
     @Value("${hotsport.agent.enabled:true}")
-    /** agentEnabled */
+    /**
+     * agentEnabled
+    */
     private boolean agentEnabled;
 
     @Value("${hotsport.agent.shell-port:4567}")
-    /** shell端口 */
+    /**
+     * shell端口
+    */
     private int shellPort;
 
     @Value("${hotsport.agent.options:}")
-    /** agent选项 */
+    /**
+     * agent选项
+    */
     private String agentOptions;
 
-    /** 时间格式：epoch 毫秒 → 前端可读字符串。 */
+    /**
+     * 时间格式：epoch 毫秒 → 前端可读字符串。
+    */
     private static final DateTimeFormatter ISO_FMT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneOffset.systemDefault());
 
@@ -85,7 +97,9 @@ public class ApmQueryService {
         Thread.ofVirtual().name("hotsport-agent-attach").start(this::doAttachAgent);
     }
 
-    /** 实际自注入 + 本进程 APM 启动（虚拟线程执行）。 */
+    /**
+     * 实际自注入 + 本进程 APM 启动（虚拟线程执行）。
+    */
     private void doAttachAgent() {
         if (!attachAttempted.compareAndSet(false, true)) {
             return;
@@ -576,7 +590,9 @@ public class ApmQueryService {
     // 全量导出（不受分页限制）
     // ------------------------------------------------------------------
 
-    /** 单次导出上限 — 防止全量拉爆内存。 */
+    /**
+     * 单次导出上限 — 防止全量拉爆内存。
+    */
     private static final int EXPORT_CAP = 50000;
 
     /**
@@ -813,16 +829,24 @@ public class ApmQueryService {
     // SkyWalking 风格增强：服务聚合 / 端点分析 / 瀑布 / 健康 / 链路树 / 拓扑
     // ==================================================================
 
-    /** 服务聚合缓存（stats 窗口内复用）。 */
+    /**
+     * 服务聚合缓存（stats 窗口内复用）。
+    */
     private volatile List<Map<String, Object>> serviceCache = new ArrayList<>();
 
-    /** 端点聚合缓存。 */
+    /**
+     * 端点聚合缓存。
+    */
     private volatile List<Map<String, Object>> endpointCache = new ArrayList<>();
 
-    /** 缓存时间戳。 */
+    /**
+     * 缓存时间戳。
+    */
     private volatile long aggregateCacheAt;
 
-    /** 聚合缓存有效期（毫秒）。 */
+    /**
+     * 聚合缓存有效期（毫秒）。
+    */
     private static final long AGGREGATE_CACHE_TTL_MS = 5000L;
 
     /**
@@ -886,7 +910,9 @@ public class ApmQueryService {
         return result;
     }
 
-    /** 计算 span 深度（父链长度，上限 32 防环）。 */
+    /**
+     * 计算 span 深度（父链长度，上限 32 防环）。
+    */
     private int computeDepth(String spanId, Map<String, String> parentOf,
                              Map<String, Integer> cache, int guard) {
         if (guard > 32 || spanId == null || "null".equals(spanId) || spanId.isBlank()) {

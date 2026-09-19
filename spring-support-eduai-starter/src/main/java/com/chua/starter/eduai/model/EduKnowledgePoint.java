@@ -21,7 +21,9 @@ public class EduKnowledgePoint {
      * 知识点标识
      */
     @TableId(type = IdType.AUTO)
-    /** knowledgepointid */
+    /**
+     * knowledgepointid
+    */
     private Long knowledgePointId;
 
     /**

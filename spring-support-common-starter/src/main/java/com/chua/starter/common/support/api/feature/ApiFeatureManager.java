@@ -26,7 +26,9 @@ import org.slf4j.LoggerFactory;
  */
 @Component
 public class ApiFeatureManager {
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(ApiFeatureManager.class);
         /**
          * 功能开关状态缓存

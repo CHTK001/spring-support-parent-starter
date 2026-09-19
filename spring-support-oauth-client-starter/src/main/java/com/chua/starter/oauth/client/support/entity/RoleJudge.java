@@ -8,7 +8,9 @@ import java.util.Set;
  * @author CH
  */
 public class RoleJudge {
-    /** 角色 */
+    /**
+     * 角色
+    */
     private final Set<String> roles;
 
     /**

@@ -79,23 +79,41 @@ public interface SysAiUsageService {
      * @since 4.0.0
      */
     class UsageStatistics {
-        /** 总数calls */
+        /**
+         * 总数calls
+        */
         public Long totalCalls;
-        /** 总数prompttokens */
+        /**
+         * 总数prompttokens
+        */
         public Long totalPromptTokens;
-        /** 总数completiontokens */
+        /**
+         * 总数completiontokens
+        */
         public Long totalCompletionTokens;
-        /** 总数令牌 */
+        /**
+         * 总数令牌
+        */
         public Long totalTokens;
-        /** 总数cost */
+        /**
+         * 总数cost
+        */
         public Double totalCost;
-        /** 缓存读取令牌 */
+        /**
+         * 缓存读取令牌
+        */
         public Long totalCachedTokens;
-        /** 原始费用(未折扣) */
+        /**
+         * 原始费用(未折扣)
+        */
         public Double standardCost;
-        /** 平均耗时(ms) */
+        /**
+         * 平均耗时(ms)
+        */
         public Double avgLatency;
-        /** 平均首字延迟(ms) */
+        /**
+         * 平均首字延迟(ms)
+        */
         public Double avgFirstTokenLatency;
     }
 }

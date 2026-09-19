@@ -9,31 +9,57 @@ import lombok.Data;
  */
 @Data
 public class TencentWechatPayRequest {
-    /** 排序NO */
+    /**
+     * 排序NO
+    */
     private String orderNo;
-    /** amountfen */
+    /**
+     * amountfen
+    */
     private Long amountFen;
-    /** 货币 */
+    /**
+     * 货币
+    */
     private String currency;
-    /** 描述 */
+    /**
+     * 描述
+    */
     private String description;
-    /** 通知url */
+    /**
+     * 通知url
+    */
     private String notifyUrl;
-    /** Expire时间 */
+    /**
+     * Expire时间
+    */
     private String expireTime;
-    /** payeropenid */
+    /**
+     * payeropenid
+    */
     private String payerOpenId;
-    /** 客户端IP */
+    /**
+     * 客户端IP
+    */
     private String clientIp;
-    /** deviceid */
+    /**
+     * deviceid
+    */
     private String deviceId;
-    /** Attach */
+    /**
+     * Attach
+    */
     private String attach;
-    /** H5类型 */
+    /**
+     * H5类型
+    */
     private String h5Type;
-    /** APP名称 */
+    /**
+     * APP名称
+    */
     private String appName;
-    /** APPURL */
+    /**
+     * APPURL
+    */
     private String appUrl;
 }
 

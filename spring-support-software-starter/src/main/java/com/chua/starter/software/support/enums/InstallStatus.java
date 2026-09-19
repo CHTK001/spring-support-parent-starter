@@ -72,9 +72,13 @@ public enum InstallStatus {
      */
     UPDATE_FAILED(7, "更新失败");
 
-    /** 值 */
+    /**
+     * 值
+    */
     private final int value;
-    /** 名称 */
+    /**
+     * 名称
+    */
     private final String name;
 
     /**

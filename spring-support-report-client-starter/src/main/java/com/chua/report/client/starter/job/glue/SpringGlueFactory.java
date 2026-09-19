@@ -13,12 +13,18 @@ import org.springframework.core.annotation.AnnotationUtils;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 
-/** @作者 CH */
+/**
+ * @作者 CH
+*/
 public class SpringGlueFactory extends GlueFactory{
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(SpringGlueFactory.class);
 
-    /** 创建 spring胶水工厂 实例 */
+    /**
+     * 创建 spring胶水工厂 实例
+    */
     public SpringGlueFactory() {
     }
 

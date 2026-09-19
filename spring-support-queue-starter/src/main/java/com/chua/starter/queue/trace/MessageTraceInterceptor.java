@@ -25,7 +25,9 @@ public class MessageTraceInterceptor implements MessageInterceptor {
     private final ConcurrentHashMap<String, MessageTraceContext> traces = new ConcurrentHashMap<>(); // 追踪
 
     @Override
-    /** 之前发送 */
+    /**
+     * 之前发送
+    */
     public Message beforeSend(Message message) {
         String traceId = generateTraceId();
         String spanId = generateSpanId();
@@ -50,7 +52,9 @@ public class MessageTraceInterceptor implements MessageInterceptor {
     }
 
     @Override
-    /** 之后发送 */
+    /**
+     * 之后发送
+    */
     public void afterSend(Message message, boolean success, Throwable error) {
         MessageTraceContext context = traces.get(message.getId());
         if (context != null) {
@@ -62,7 +66,9 @@ public class MessageTraceInterceptor implements MessageInterceptor {
     }
 
     @Override
-    /** 之前接收 */
+    /**
+     * 之前接收
+    */
     public Message beforeReceive(Message message) {
         String traceId = message.getHeaderAsString("X-Trace-Id");
         String parentSpanId = message.getHeaderAsString("X-Span-Id");
@@ -87,7 +93,9 @@ public class MessageTraceInterceptor implements MessageInterceptor {
     }
 
     @Override
-    /** 之后接收 */
+    /**
+     * 之后接收
+    */
     public void afterReceive(Message message, boolean success, Throwable error) {
         MessageTraceContext context = traces.get(message.getId());
         if (context != null) {
@@ -141,7 +149,9 @@ public class MessageTraceInterceptor implements MessageInterceptor {
     }
 
     @Override
-    /** 获取订单 */
+    /**
+     * 获取订单
+    */
     public int getOrder() {
         return -1000; // 最高优先级
     }

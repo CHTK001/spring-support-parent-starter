@@ -30,10 +30,14 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class RemoteControlPageController {
 
-    /** 系统配置服务（guacd-客户端 网关动态化——配置表优先） */
+    /**
+     * 系统配置服务（guacd-客户端 网关动态化——配置表优先）
+    */
     private final ServerConfigService configService;
 
-    /** 服务属性（guacd-客户端 回落值） */
+    /**
+     * 服务属性（guacd-客户端 回落值）
+    */
     private final ServerProperties properties;
 
     /**

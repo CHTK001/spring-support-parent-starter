@@ -30,7 +30,9 @@ public class ClassUtils {
     }
 
     protected static final Map<Class<?>, Type[]> ACTUAL = new ConcurrentHashMap<>(); // ACTUAL
-    /** 空_字符串_array */
+    /**
+     * 空_字符串_array
+    */
     private static final String[] EMPTY_STRING_ARRAY = new String[0];
 
     /**

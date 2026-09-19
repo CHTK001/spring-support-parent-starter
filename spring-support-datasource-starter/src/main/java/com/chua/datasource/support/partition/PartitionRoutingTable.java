@@ -31,13 +31,21 @@ import java.util.concurrent.CopyOnWriteArrayList;
 @Slf4j
 public class PartitionRoutingTable extends AbstractTable implements ScannableTable {
 
-    /** 来源表 */
+    /**
+     * 来源表
+    */
     private final String sourceTable;
-    /** 表名称 */
+    /**
+     * 表名称
+    */
     private final List<String> tableNames = new CopyOnWriteArrayList<>();
-    /** JDBC模板 */
+    /**
+     * JDBC模板
+    */
     private final JdbcTemplate jdbcTemplate;
-    /** 表评论 */
+    /**
+     * 表评论
+    */
     private final String tableComment;
 
     private volatile RelDataType rowType; // row类型
@@ -91,7 +99,9 @@ public class PartitionRoutingTable extends AbstractTable implements ScannableTab
     }
 
     @Override
-    /** 获取row类型 */
+    /**
+     * 获取row类型
+    */
     public RelDataType getRowType(RelDataTypeFactory typeFactory) {
         if (rowType == null) {
             synchronized (this) {
@@ -104,7 +114,9 @@ public class PartitionRoutingTable extends AbstractTable implements ScannableTab
     }
 
     @Override
-    /** 扫描 */
+    /**
+     * 扫描
+    */
     public Enumerable<Object[]> scan(DataContext dataContext) {
         String sql = buildUnionAllSql();
         log.debug("[分区路由] 执行 UNION ALL 查询: {}", sql);
@@ -118,38 +130,52 @@ public class PartitionRoutingTable extends AbstractTable implements ScannableTab
         });
         return new AbstractEnumerable<Object[]>() {
             @Override
-            /** 迭代器 */
+            /**
+             * 迭代器
+            */
             public Iterator<Object[]> iterator() {
                 return rows.iterator();
             }
 
             @Override
-            /** Enumerator */
+            /**
+             * Enumerator
+            */
             public Enumerator<Object[]> enumerator() {
                 return new Enumerator<Object[]>() {
-                    /** 索引 */
+                    /**
+                     * 索引
+                    */
                     private int index = -1;
 
                     @Override
-                    /** 当前 */
+                    /**
+                     * 当前
+                    */
                     public Object[] current() {
                         return rows.get(index);
                     }
 
                     @Override
-                    /** 移动下一个 */
+                    /**
+                     * 移动下一个
+                    */
                     public boolean moveNext() {
                         return ++index < rows.size();
                     }
 
                     @Override
-                    /** 重置 */
+                    /**
+                     * 重置
+                    */
                     public void reset() {
                         index = -1;
                     }
 
                     @Override
-                    /** 关闭 */
+                    /**
+                     * 关闭
+                    */
                     public void close() {
                     }
                 };

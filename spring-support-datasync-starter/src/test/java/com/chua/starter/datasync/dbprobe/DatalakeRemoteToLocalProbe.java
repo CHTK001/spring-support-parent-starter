@@ -56,16 +56,24 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public final class DatalakeRemoteToLocalProbe {
 
-    /** Work dir */
+    /**
+     * Work dir
+    */
     private static final Path WORK_DIR = Path.of("target/datalake-remote");
 
-    /** 通过 数量 */
+    /**
+     * 通过 数量
+    */
     private static final AtomicInteger PASS = new AtomicInteger(0);
 
-    /** 失败 数量 */
+    /**
+     * 失败 数量
+    */
     private static final AtomicInteger FAIL = new AtomicInteger(0);
 
-    /** 各 Sink 写入记录 */
+    /**
+     * 各 Sink 写入记录
+    */
     private static final CopyOnWriteArrayList<String> LOG_WRITES = new CopyOnWriteArrayList<>();
     private static final CopyOnWriteArrayList<String> STATS_WRITES = new CopyOnWriteArrayList<>(); // stats写入
     private static final CopyOnWriteArrayList<String> RT_WRITES = new CopyOnWriteArrayList<>(); // rt写入

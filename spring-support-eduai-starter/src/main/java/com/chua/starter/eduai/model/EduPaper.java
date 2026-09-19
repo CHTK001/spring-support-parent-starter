@@ -21,7 +21,9 @@ public class EduPaper {
      * 试卷标识
      */
     @TableId(type = IdType.AUTO)
-    /** paperid */
+    /**
+     * paperid
+    */
     private Long paperId;
 
     /**

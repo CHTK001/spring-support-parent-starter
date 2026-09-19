@@ -26,7 +26,9 @@ public final class JobHandlerFactory {
      */
     private final ConcurrentMap<String, JobHandler> handlers = new ConcurrentHashMap<>(32);
 
-    /** 创建 作业处理器工厂 实例 */
+    /**
+     * 创建 作业处理器工厂 实例
+    */
     private JobHandlerFactory() {
     }
 

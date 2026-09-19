@@ -105,7 +105,9 @@ class ShardingRealTest {
         }
     }
 
-    /** 引擎激活验证（本专项交付物）：provided 依赖修复后 @条件on类 命中，引擎可装配 */
+    /**
+     * 引擎激活验证（本专项交付物）：provided 依赖修复后 @条件on类 命中，引擎可装配
+    */
     @Test
     void shardingEngineActivated() {
         /**
@@ -122,7 +124,9 @@ class ShardingRealTest {
                 "shardingDataSource 应为 ShardingSphere 数据源，实际: " + shardingDataSource.getClass().getName());
     }
 
-    /** 分片聚合：数量 跨两个分片库聚合（模式元数据加载可用时执行） */
+    /**
+     * 分片聚合：数量 跨两个分片库聚合（模式元数据加载可用时执行）
+    */
     @Test
     void shardedAggregateQuery() {
         /**
@@ -140,7 +144,9 @@ class ShardingRealTest {
         assertEquals(4, count, "分片聚合应统计两个分片库的全部数据");
     }
 
-    /** 分片查询：按分片键查询可命中对应分片（模式元数据加载可用时执行） */
+    /**
+     * 分片查询：按分片键查询可命中对应分片（模式元数据加载可用时执行）
+    */
     @Test
     void shardedPointQuery() {
         /**

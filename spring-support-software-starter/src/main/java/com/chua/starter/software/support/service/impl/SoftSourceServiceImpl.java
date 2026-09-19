@@ -51,7 +51,9 @@ public class SoftSourceServiceImpl extends ServiceImpl<SoftSourceMapper, SoftSou
     }
 
     @Override
-    /** pagefor */
+    /**
+     * pagefor
+    */
     public IPage<SoftSource> pageFor(com.chua.starter.mybatis.entity.Query<SoftSource> query, SoftSource request) {
         Page<SoftSource> page = query.createPage();
         LambdaQueryWrapper<SoftSource> w = new LambdaQueryWrapper<>();
@@ -73,7 +75,9 @@ public class SoftSourceServiceImpl extends ServiceImpl<SoftSourceMapper, SoftSou
     }
 
     @Override
-    /** 保存源 */
+    /**
+     * 保存源
+    */
     public ReturnResult<SoftSource> saveSource(SoftSource source) {
         if (StringUtils.isBlank(source.getSourceCode())) {
             return ReturnResult.illegal("源编码不能为空");
@@ -88,7 +92,9 @@ public class SoftSourceServiceImpl extends ServiceImpl<SoftSourceMapper, SoftSou
     }
 
     @Override
-    /** 更新源 */
+    /**
+     * 更新源
+    */
     public ReturnResult<SoftSource> updateSource(SoftSource source) {
         if (source.getSourceId() == null) {
             return ReturnResult.illegal("源ID不能为空");
@@ -103,7 +109,9 @@ public class SoftSourceServiceImpl extends ServiceImpl<SoftSourceMapper, SoftSou
     }
 
     @Override
-    /** 删除源 */
+    /**
+     * 删除源
+    */
     public ReturnResult<Boolean> deleteSource(String sourceId) {
         if (sourceId == null) {
             return ReturnResult.illegal("源ID不能为空");
@@ -117,7 +125,9 @@ public class SoftSourceServiceImpl extends ServiceImpl<SoftSourceMapper, SoftSou
     }
 
     @Override
-    /** 获取by编码 */
+    /**
+     * 获取by编码
+    */
     public SoftSource getByCode(String code) {
         return baseMapper.selectOne(new LambdaQueryWrapper<SoftSource>()
                 .eq(SoftSource::getSourceCode, code)
@@ -127,7 +137,9 @@ public class SoftSourceServiceImpl extends ServiceImpl<SoftSourceMapper, SoftSou
     }
 
     @Override
-    /** 获取默认源 */
+    /**
+     * 获取默认源
+    */
     public SoftSource getDefaultSource() {
         return baseMapper.selectOne(new LambdaQueryWrapper<SoftSource>()
                 .eq(SoftSource::getSourceIsDefault, true)
@@ -136,7 +148,9 @@ public class SoftSourceServiceImpl extends ServiceImpl<SoftSourceMapper, SoftSou
     }
 
     @Override
-    /** 列表已启用 */
+    /**
+     * 列表已启用
+    */
     public java.util.List<SoftSource> listEnabled() {
         return baseMapper.selectList(new LambdaQueryWrapper<SoftSource>()
                 .eq(SoftSource::getSourceIsEnabled, true)
@@ -146,7 +160,9 @@ public class SoftSourceServiceImpl extends ServiceImpl<SoftSourceMapper, SoftSou
     }
 
     @Override
-    /** 同步源 */
+    /**
+     * 同步源
+    */
     public ReturnResult<Integer> syncSource(String sourceId) {
         return softwareService.syncFromSource(sourceId);
     }
@@ -175,7 +191,9 @@ public class SoftSourceServiceImpl extends ServiceImpl<SoftSourceMapper, SoftSou
     }
 
     @Override
-    /** 禁用源 */
+    /**
+     * 禁用源
+    */
     public ReturnResult<Boolean> disableSource(String sourceId) {
         if (sourceId == null) {
             return ReturnResult.illegal("源ID不能为空");
@@ -194,7 +212,9 @@ public class SoftSourceServiceImpl extends ServiceImpl<SoftSourceMapper, SoftSou
     }
 
     @Override
-    /** 获取默认本地源 */
+    /**
+     * 获取默认本地源
+    */
     public SoftSource getDefaultLocalSource() {
         return baseMapper.selectOne(new LambdaQueryWrapper<SoftSource>()
                 .eq(SoftSource::getSourceType, SourceType.LOCAL.getValue())

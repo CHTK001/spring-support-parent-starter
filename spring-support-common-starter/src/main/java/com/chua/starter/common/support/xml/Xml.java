@@ -20,7 +20,9 @@ import javax.xml.transform.stream.StreamSource;
  */
 public class Xml {
 
-    /** 创建 Xml 实例 */
+    /**
+     * 创建 Xml 实例
+    */
     private Xml() {
     }
 

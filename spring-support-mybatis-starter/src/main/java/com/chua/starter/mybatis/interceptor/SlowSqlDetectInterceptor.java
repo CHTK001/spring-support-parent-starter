@@ -55,7 +55,9 @@ import static com.chua.starter.common.support.constant.MdcConstant.TRACE_ID;
  * @since 1.0.0
  */
 public class SlowSqlDetectInterceptor implements Interceptor {
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(SlowSqlDetectInterceptor.class);
 
     /**
@@ -63,9 +65,13 @@ public class SlowSqlDetectInterceptor implements Interceptor {
      */
     private static final SimpleDateFormat FORMATTER = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
-    /** 事件publisher */
+    /**
+     * 事件publisher
+    */
     private final ApplicationEventPublisher eventPublisher;
-    /** 属性 */
+    /**
+     * 属性
+    */
     private final MybatisSlowSqlProperties properties;
 
     /**
@@ -180,9 +186,13 @@ public class SlowSqlDetectInterceptor implements Interceptor {
     }
 
     private static class SqlResolveResult {
-        /** SQL */
+        /**
+         * SQL
+        */
         private final String sql;
-        /** 参数 */
+        /**
+         * 参数
+        */
         private final List<String> parameters;
 
         private SqlResolveResult(String sql, List<String> parameters) {

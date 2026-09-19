@@ -28,7 +28,9 @@ import java.util.Locale;
 @Slf4j
 public class ProcedureReader {
 
-    /** Dialect */
+    /**
+     * Dialect
+    */
     private final TriggerReader.DatabaseDialect dialect;
 
     /**
@@ -120,7 +122,9 @@ public class ProcedureReader {
         }
     }
 
-    /** 读取mysqllike */
+    /**
+     * 读取mysqllike
+    */
  // 豁免：查询 信息_模式.惯例 系统视图，无用户可控参数，仅读取数据库元数据
     /**
      * 读取mysqllike。

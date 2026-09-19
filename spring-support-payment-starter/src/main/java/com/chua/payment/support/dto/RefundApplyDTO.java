@@ -12,13 +12,19 @@ import java.math.BigDecimal;
 @Data
 public class RefundApplyDTO {
 
-    /** Refundamount */
+    /**
+     * Refundamount
+    */
     private BigDecimal refundAmount;
 
-    /** Refundreason */
+    /**
+     * Refundreason
+    */
     private String refundReason;
 
-    /** 操作符 */
+    /**
+     * 操作符
+    */
     private String operator;
 }
 

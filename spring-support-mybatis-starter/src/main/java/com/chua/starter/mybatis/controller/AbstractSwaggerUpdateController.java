@@ -37,7 +37,9 @@ public abstract class AbstractSwaggerUpdateController<S extends IService<T>, T> 
      * 事务模板，用于执行事务操作
      */
     @Autowired(required = false)
-    /** Transaction模板 */
+    /**
+     * Transaction模板
+    */
     protected TransactionTemplate transactionTemplate;
 
     /**

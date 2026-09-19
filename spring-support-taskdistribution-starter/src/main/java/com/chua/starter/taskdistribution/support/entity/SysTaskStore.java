@@ -23,7 +23,9 @@ public class SysTaskStore {
      * 任务 标识（主键）
      */
     @TableId
-    /** 任务标识 */
+    /**
+     * 任务标识
+    */
     private String taskId;
 
     /**

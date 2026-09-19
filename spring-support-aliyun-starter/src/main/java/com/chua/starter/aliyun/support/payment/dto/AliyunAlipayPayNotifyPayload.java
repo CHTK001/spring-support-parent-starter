@@ -12,17 +12,29 @@ import java.util.Map;
  */
 @Data
 public class AliyunAlipayPayNotifyPayload {
-    /** 排序NO */
+    /**
+     * 排序NO
+    */
     private String orderNo;
-    /** 贸易no */
+    /**
+     * 贸易no
+    */
     private String tradeNo;
-    /** APPID */
+    /**
+     * APPID
+    */
     private String appId;
-    /** sellerid */
+    /**
+     * sellerid
+    */
     private String sellerId;
-    /** 总数amount */
+    /**
+     * 总数amount
+    */
     private BigDecimal totalAmount;
-    /** 贸易状态 */
+    /**
+     * 贸易状态
+    */
     private String tradeStatus;
     private Map<String, String> rawParams; // raw参数
 }

@@ -51,7 +51,9 @@ public class DeviceServiceImpl implements DeviceService {
     private final List<DeviceProvider> providers;
 
     @Override
-    /** 添加Device */
+    /**
+     * 添加Device
+    */
     public DeviceInfo addDevice(DeviceConnectInfo info) {
         DeviceProvider provider = providers.stream()
                 .filter(p -> p.support(info))
@@ -77,27 +79,35 @@ public class DeviceServiceImpl implements DeviceService {
     }
 
     @Override
-    /** 更新Device */
+    /**
+     * 更新Device
+    */
     public void updateDevice(String id, DeviceInfo info) {
         info.setDeviceInfoId(id);
         deviceInfoMapper.updateById(info);
     }
 
     @Override
-    /** 删除Device */
+    /**
+     * 删除Device
+    */
     public void deleteDevice(String id) {
         deviceInfoMapper.deleteById(id);
         sessionManager.unregister(id);
     }
 
     @Override
-    /** 获取Device */
+    /**
+     * 获取Device
+    */
     public DeviceInfo getDevice(String id) {
         return deviceInfoMapper.selectById(id);
     }
 
     @Override
-    /** 列表devices */
+    /**
+     * 列表devices
+    */
     public List<DeviceInfo> listDevices(String orgId) {
         LambdaQueryWrapper<DeviceInfo> wrapper = new LambdaQueryWrapper<>();
         if (StringUtils.hasText(orgId)) {
@@ -108,7 +118,9 @@ public class DeviceServiceImpl implements DeviceService {
     }
 
     @Override
-    /** 列表by分类 */
+    /**
+     * 列表by分类
+    */
     public List<DeviceInfo> listByCategory(String category) {
         LambdaQueryWrapper<DeviceInfo> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(DeviceInfo::getDeviceInfoCategory, category);
@@ -116,7 +128,9 @@ public class DeviceServiceImpl implements DeviceService {
     }
 
     @Override
-    /** 同步组织 */
+    /**
+     * 同步组织
+    */
     public void syncOrganization() {
         for (DeviceProvider provider : providers) {
             try {
@@ -142,7 +156,9 @@ public class DeviceServiceImpl implements DeviceService {
     }
 
     @Override
-    /** 获取组织树 */
+    /**
+     * 获取组织树
+    */
     public List<DeviceOrganization> getOrganizationTree(String vendor) {
         LambdaQueryWrapper<DeviceOrganization> wrapper = new LambdaQueryWrapper<>();
         if (StringUtils.hasText(vendor)) {
@@ -152,7 +168,9 @@ public class DeviceServiceImpl implements DeviceService {
     }
 
     @Override
-    /** 更新offline阈值 */
+    /**
+     * 更新offline阈值
+    */
     public void updateOfflineThreshold(String id, int threshold) {
         DeviceInfo device = deviceInfoMapper.selectById(id);
         if (device == null) {
@@ -172,7 +190,9 @@ public class DeviceServiceImpl implements DeviceService {
     }
 
     @Override
-    /** Reconnect */
+    /**
+     * Reconnect
+    */
     public void reconnect(String id) {
         DeviceInfo device = deviceInfoMapper.selectById(id);
         if (device == null) {
@@ -215,7 +235,9 @@ public class DeviceServiceImpl implements DeviceService {
     }
 
     @Override
-    /** refresh状态 */
+    /**
+     * refresh状态
+    */
     public void refreshStatus(String id) {
         DeviceInfo device = deviceInfoMapper.selectById(id);
         if (device == null) {
@@ -237,7 +259,9 @@ public class DeviceServiceImpl implements DeviceService {
     }
 
     @Override
-    /** 测试connection */
+    /**
+     * 测试connection
+    */
     public boolean testConnection(DeviceConnectInfo info) {
         DeviceSession session = providers.stream()
                 .filter(p -> p.support(info))

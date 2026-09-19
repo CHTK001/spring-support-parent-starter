@@ -18,7 +18,9 @@ import java.util.List;
 public class JsonObject2ArrayListJacksonProblemHandler implements JacksonProblemHandler {
 
     @Override
-    /** 处理 */
+    /**
+     * 处理
+    */
     public Object handle(DeserializationContext ctxt, JavaType targetType, JsonToken t, JsonParser p, String failureMsg) {
         boolean expectedStartObjectToken = p.isExpectedStartObjectToken();
         try {

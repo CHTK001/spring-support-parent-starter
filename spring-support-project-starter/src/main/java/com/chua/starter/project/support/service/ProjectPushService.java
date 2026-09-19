@@ -23,7 +23,9 @@ import java.util.Map;
 @Service
 public class ProjectPushService {
 
-    /** Socket 模板（可空） */
+    /**
+     * Socket 模板（可空）
+    */
     private final ObjectProvider<SocketSessionTemplate> socketTemplates;
 
     /**

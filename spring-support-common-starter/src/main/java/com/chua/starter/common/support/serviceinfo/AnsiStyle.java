@@ -17,7 +17,9 @@ import org.slf4j.LoggerFactory;
  */
 public final class AnsiStyle {
 
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(AnsiStyle.class);
 
     /**
@@ -33,28 +35,50 @@ public final class AnsiStyle {
      */
     private static final ThreadLocal<Boolean> ENABLED_CACHE = new ThreadLocal<>();
 
-    /** Reset */
+    /**
+     * Reset
+    */
     public static final String RESET = "\u001B[0m";
-    /** Bold */
+    /**
+     * Bold
+    */
     public static final String BOLD = "\u001B[1m";
-    /** DIM */
+    /**
+     * DIM
+    */
     public static final String DIM = "\u001B[2m";
-    /** 红色 */
+    /**
+     * 红色
+    */
     public static final String RED = "\u001B[31m";
-    /** 绿色 */
+    /**
+     * 绿色
+    */
     public static final String GREEN = "\u001B[32m";
-    /** Yellow */
+    /**
+     * Yellow
+    */
     public static final String YELLOW = "\u001B[33m";
-    /** 蓝色 */
+    /**
+     * 蓝色
+    */
     public static final String BLUE = "\u001B[34m";
-    /** Cyan */
+    /**
+     * Cyan
+    */
     public static final String CYAN = "\u001B[36m";
-    /** Gray */
+    /**
+     * Gray
+    */
     public static final String GRAY = "\u001B[90m";
-    /** Bg_R */
+    /**
+     * Bg_R
+    */
     public static final String BG_RED = "\u001B[41m";
 
-    /** 创建 ansistyle 实例 */
+    /**
+     * 创建 ansistyle 实例
+    */
     private AnsiStyle() {}
 
     /**

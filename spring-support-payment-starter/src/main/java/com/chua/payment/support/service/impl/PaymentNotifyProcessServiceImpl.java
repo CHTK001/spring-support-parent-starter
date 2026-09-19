@@ -45,19 +45,33 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class PaymentNotifyProcessServiceImpl implements PaymentNotifyProcessService {
 
-    /** 通知日志映射器 */
+    /**
+     * 通知日志映射器
+    */
     private final PaymentNotifyLogMapper notifyLogMapper;
-    /** 通知错误映射器 */
+    /**
+     * 通知错误映射器
+    */
     private final PaymentNotifyErrorMapper notifyErrorMapper;
-    /** Paymentnotify服务 */
+    /**
+     * Paymentnotify服务
+    */
     private final PaymentNotifyService paymentNotifyService;
-    /** wechat薪酬分数通知服务 */
+    /**
+     * wechat薪酬分数通知服务
+    */
     private final WechatPayScoreNotifyService wechatPayScoreNotifyService;
-    /** Walletnotify服务 */
+    /**
+     * Walletnotify服务
+    */
     private final WalletNotifyService walletNotifyService;
-    /** Objectmapper */
+    /**
+     * Objectmapper
+    */
     private final ObjectMapper objectMapper;
-    /** 事件publisher */
+    /**
+     * 事件publisher
+    */
     private final ApplicationEventPublisher eventPublisher;
 
     @Override

@@ -59,7 +59,9 @@ class PermissionRealTest {
         return user;
     }
 
-    /** 本地联调：无会话用户 -> 注入本地 admin 上下文 -> 全部放行（配合 whitelist 防未鉴权流量） */
+    /**
+     * 本地联调：无会话用户 -> 注入本地 admin 上下文 -> 全部放行（配合 whitelist 防未鉴权流量）
+    */
     @Test
     void localDebugAllowsWithoutUser() throws Exception {
         mockMvc.perform(get("/api/permission/query")).andExpect(status().isOk());
@@ -67,7 +69,9 @@ class PermissionRealTest {
         mockMvc.perform(post("/api/permission/button-add")).andExpect(status().isOk());
     }
 
-    /** 接口权限：持有权限码 -> 放行 */
+    /**
+     * 接口权限：持有权限码 -> 放行
+    */
     @Test
     void allowWithPermission() throws Exception {
         MockHttpSession session = sessionWith(user(Set.of("USER"), Set.of("user:query", "user:delete")));
@@ -75,7 +79,9 @@ class PermissionRealTest {
         mockMvc.perform(post("/api/permission/delete").session(session)).andExpect(status().isOk());
     }
 
-    /** 接口权限：缺权限码 -> 403 拒绝 */
+    /**
+     * 接口权限：缺权限码 -> 403 拒绝
+    */
     @Test
     void denyWithoutPermission() throws Exception {
         MockHttpSession session = sessionWith(user(Set.of("USER"), Set.of("user:query")));
@@ -83,7 +89,9 @@ class PermissionRealTest {
         mockMvc.perform(post("/api/permission/delete").session(session)).andExpect(status().isForbidden());
     }
 
-    /** 按钮权限：按钮权限码（btn:用户:添加）与接口权限码同机制——持码放行、缺码 403 */
+    /**
+     * 按钮权限：按钮权限码（btn:用户:添加）与接口权限码同机制——持码放行、缺码 403
+    */
     @Test
     void buttonPermission() throws Exception {
         MockHttpSession withButton = sessionWith(user(Set.of("USER"), Set.of("btn:user:add")));

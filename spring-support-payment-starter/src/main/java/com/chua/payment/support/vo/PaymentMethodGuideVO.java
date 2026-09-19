@@ -14,36 +14,58 @@ import java.util.List;
 public class PaymentMethodGuideVO implements Serializable {
     private static final long serialVersionUID = 1L; // 串行版本uid
 
-    /** 通道类型 */
+    /**
+     * 通道类型
+    */
     private String channelType;
 
-    /** 通道SUB类型 */
+    /**
+     * 通道SUB类型
+    */
     private String channelSubType;
 
-    /** 标题 */
+    /**
+     * 标题
+    */
     private String title;
 
-    /** Official名称 */
+    /**
+     * Official名称
+    */
     private String officialName;
 
-    /** officialurl */
+    /**
+     * officialurl
+    */
     private String officialUrl;
 
-    /** applyurl */
+    /**
+     * applyurl
+    */
     private String applyUrl;
 
-    /** sandboxurl */
+    /**
+     * sandboxurl
+    */
     private String sandboxUrl;
 
-    /** Summary */
+    /**
+     * Summary
+    */
     private String summary;
 
-    /** 是否必填materials */
+    /**
+     * 是否必填materials
+    */
     private List<String> requiredMaterials;
 
-    /** Steps */
+    /**
+     * Steps
+    */
     private List<String> steps;
 
-    /** 小费 */
+    /**
+     * 小费
+    */
     private List<String> tips;
 }

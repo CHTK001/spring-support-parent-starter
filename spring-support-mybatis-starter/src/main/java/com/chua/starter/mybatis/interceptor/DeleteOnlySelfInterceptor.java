@@ -39,10 +39,14 @@ import java.util.Map;
  * @since 4.0.0
  */
 public class DeleteOnlySelfInterceptor implements Interceptor {
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(DeleteOnlySelfInterceptor.class);
 
-    /** 认证服务 */
+    /**
+     * 认证服务
+    */
     private final AuthService authService;
 
     /**

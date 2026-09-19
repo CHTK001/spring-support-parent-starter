@@ -13,48 +13,78 @@ import java.io.Serializable;
 @Data
 public class MerchantDTO implements Serializable {
     private static final long serialVersionUID = 1L; // 串行版本uid
-    /** Merchant名称 */
+    /**
+     * Merchant名称
+    */
     private String merchantName;
 
-    /** Contact名称 */
+    /**
+     * Contact名称
+    */
     private String contactName;
 
-    /** Contactphone */
+    /**
+     * Contactphone
+    */
     private String contactPhone;
 
-    /** Contactemail */
+    /**
+     * Contactemail
+    */
     private String contactEmail;
 
-    /** Businesslicense */
+    /**
+     * Businesslicense
+    */
     private String businessLicense;
 
-    /** Legalperson */
+    /**
+     * Legalperson
+    */
     private String legalPerson;
 
-    /** 默认通知url */
+    /**
+     * 默认通知url
+    */
     private String defaultNotifyUrl;
 
-    /** 默认返回值URL */
+    /**
+     * 默认返回值URL
+    */
     private String defaultReturnUrl;
 
-    /** Paymentwallet是否启用 */
+    /**
+     * Paymentwallet是否启用
+    */
     private Boolean paymentWalletEnabled;
 
-    /** Paymentautoclose是否启用 */
+    /**
+     * Paymentautoclose是否启用
+    */
     private Boolean paymentAutoCloseEnabled;
 
-    /** Paymentautocloseminutes */
+    /**
+     * Paymentautocloseminutes
+    */
     private Integer paymentAutoCloseMinutes;
 
-    /** Paymentsplit表是否启用 */
+    /**
+     * Paymentsplit表是否启用
+    */
     private Boolean paymentSplitTableEnabled;
 
-    /** Paymentprofitsharing是否启用 */
+    /**
+     * Paymentprofitsharing是否启用
+    */
     private Boolean paymentProfitSharingEnabled;
 
-    /** Paymentcoupon是否启用 */
+    /**
+     * Paymentcoupon是否启用
+    */
     private Boolean paymentCouponEnabled;
 
-    /** 评论 */
+    /**
+     * 评论
+    */
     private String remark;
 }

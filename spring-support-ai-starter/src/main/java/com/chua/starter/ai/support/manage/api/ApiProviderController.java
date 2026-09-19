@@ -568,7 +568,9 @@ public class ApiProviderController {
         return ApiResult.ok(out);
     }
 
-    /** 用指定 Key 调上游 /模型，判定该 Key 是否有效（只读、不改库）。 */
+    /**
+     * 用指定 Key 调上游 /模型，判定该 Key 是否有效（只读、不改库）。
+    */
     private Map<String, Object> testSingleKey(String platform, String baseUrl, String apiKey,
                                               String authScheme, String proxy, int index) {
         Map<String, Object> r = new LinkedHashMap<>(6);

@@ -21,7 +21,9 @@ public class EduWrongQuestion {
      * 错题记录标识
      */
     @TableId(type = IdType.AUTO)
-    /** wrongquestionid */
+    /**
+     * wrongquestionid
+    */
     private Long wrongQuestionId;
 
     /**

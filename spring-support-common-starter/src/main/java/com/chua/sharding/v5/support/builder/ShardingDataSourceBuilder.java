@@ -16,7 +16,9 @@ import java.util.Map;
 public class ShardingDataSourceBuilder {
 
     private Map<String, DataSource> dataSources; // 数据源
-    /** showsql */
+    /**
+     * showsql
+    */
     private boolean showSql;
 
     /**

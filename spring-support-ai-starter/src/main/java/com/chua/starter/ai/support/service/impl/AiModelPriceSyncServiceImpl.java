@@ -24,13 +24,19 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AiModelPriceSyncServiceImpl implements AiModelPriceSyncService {
 
-    /** SYSAI模型设置映射器 */
+    /**
+     * SYSAI模型设置映射器
+    */
     private final SysAiModelSettingMapper sysAiModelSettingMapper;
-    /** 对话客户端注册表 */
+    /**
+     * 对话客户端注册表
+    */
     private final ChatClientRegistry chatClientRegistry;
 
     @Override
-    /** 同步prices */
+    /**
+     * 同步prices
+    */
     public void syncPrices() {
         log.info("[AiModelPriceSync] 开始同步模型价格");
         try {
@@ -66,7 +72,9 @@ public class AiModelPriceSyncServiceImpl implements AiModelPriceSyncService {
     }
 
     @Override
-    /** 同步模型列表 */
+    /**
+     * 同步模型列表
+    */
     public void syncModelList() {
         log.info("[AiModelPriceSync] 开始同步模型列表");
         try {
@@ -101,7 +109,9 @@ public class AiModelPriceSyncServiceImpl implements AiModelPriceSyncService {
     }
 
     @Override
-    /** 同步prices */
+    /**
+     * 同步prices
+    */
     public void syncPrices(String code) {
         if (code == null || code.isBlank()) {
             /**

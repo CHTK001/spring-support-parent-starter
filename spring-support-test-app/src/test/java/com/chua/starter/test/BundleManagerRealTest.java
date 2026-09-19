@@ -126,7 +126,9 @@ class BundleManagerRealTest {
         }
     }
 
-    /** 真实测试：Maven 坐标 install/upgrade/uninstall 全链路 */
+    /**
+     * 真实测试：Maven 坐标 install/upgrade/uninstall 全链路
+    */
     @Test
     void installUpgradeUninstallViaMavenCoords() {
  // 1) install v1（文件: 协议本地下载 → 真实 bundle 安装自动启动）
@@ -196,7 +198,9 @@ class BundleManagerRealTest {
         assertNull(objectContext.getBeanOfTypeSafely(GreetService.class), "卸载后 ObjectContext 应查不到");
     }
 
-    /** 真实测试：非法坐标（缺 版本）install 应失败但不抛异常 */
+    /**
+     * 真实测试：非法坐标（缺 版本）install 应失败但不抛异常
+    */
     @Test
     void invalidCoordsFailGracefully() {
         BundleManagerService.InstallResult result = bundleManager.install("bad-coords-no-version");
@@ -212,7 +216,9 @@ class BundleManagerRealTest {
         assertNotNull(result.message(), "失败应携带 message");
     }
 
-    /** 真实测试：获取状态/是否installed/获取managedbundles 基础查询 */
+    /**
+     * 真实测试：获取状态/是否installed/获取managedbundles 基础查询
+    */
     @Test
     void statusQueriesWork() {
         /**
@@ -237,7 +243,9 @@ class BundleManagerRealTest {
                 "getManagedBundles 应包含 artifactId，实际: " + bundleManager.getManagedBundles());
     }
 
-    /** 真实测试：批量 install全部/uninstall全部 */
+    /**
+     * 真实测试：批量 install全部/uninstall全部
+    */
     @Test
     void installAllAndUninstallAll() throws Exception {
  // 同一仓库构造第二个 artifact：批量-artifact
@@ -293,7 +301,9 @@ class BundleManagerRealTest {
         assertTrue(!bundleManager.isInstalled("com.chua.osgi.test.batch"), "batch 应已卸载");
     }
 
-    /** 真实测试：版本语义——同版本重复 install 应成功不报错；低版本 install 不应降级 */
+    /**
+     * 真实测试：版本语义——同版本重复 install 应成功不报错；低版本 install 不应降级
+    */
     @Test
     void versionSemantics() {
         // 1) 安装 v2
@@ -334,7 +344,9 @@ class BundleManagerRealTest {
         assertEquals("mgr-v2:world", stillV2.greet("world"), "低版本 install 不应降级，仍返回 v2");
     }
 
-    /** 真实测试：autoupgrade=false 时高版本 install 不应升级（保留低版本） */
+    /**
+     * 真实测试：autoupgrade=false 时高版本 install 不应升级（保留低版本）
+    */
     @Test
     void autoUpgradeDisabledKeepsOldVersion() {
  // 覆盖 bundle属性.autoupgrade=false：install v1 后 install v2 应保留 v1

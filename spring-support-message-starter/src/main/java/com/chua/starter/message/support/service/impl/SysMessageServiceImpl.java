@@ -65,13 +65,21 @@ import java.util.regex.Pattern;
 @RequiredArgsConstructor
 public class SysMessageServiceImpl implements SysMessageService {
 
-    /** SYS消息提供者映射器 */
+    /**
+     * SYS消息提供者映射器
+    */
     private final SysMessageProviderMapper sysMessageProviderMapper;
-    /** SYS消息模板映射器 */
+    /**
+     * SYS消息模板映射器
+    */
     private final SysMessageTemplateMapper sysMessageTemplateMapper;
-    /** SYS消息日志映射器 */
+    /**
+     * SYS消息日志映射器
+    */
     private final SysMessageLogMapper sysMessageLogMapper;
-    /** 消息track属性 */
+    /**
+     * 消息track属性
+    */
     private final MessageTrackProperties messageTrackProperties;
 
     /**
@@ -102,7 +110,9 @@ public class SysMessageServiceImpl implements SysMessageService {
     }
 
     @Override
-    /** 列表for提供者 */
+    /**
+     * 列表for提供者
+    */
     public List<SysMessageProvider> listForProvider() {
         return sysMessageProviderMapper.selectList(Wrappers.<SysMessageProvider>lambdaQuery()
                 .eq(SysMessageProvider::getSysMessageProviderDelete, 0)
@@ -111,7 +121,9 @@ public class SysMessageServiceImpl implements SysMessageService {
     }
 
     @Override
-    /** 列表通道 */
+    /**
+     * 列表通道
+    */
     public List<ChannelInfo> listChannels() {
         List<ChannelInfo> result = new ArrayList<>();
         ServiceProvider.of(MessagePush.class).forDefinitionEach(definition -> result.add(new ChannelInfo(
@@ -212,7 +224,9 @@ public class SysMessageServiceImpl implements SysMessageService {
     }
 
     @Override
-    /** 列表fortemplate */
+    /**
+     * 列表fortemplate
+    */
     public List<SysMessageTemplate> listForTemplate() {
         return sysMessageTemplateMapper.selectList(Wrappers.<SysMessageTemplate>lambdaQuery()
                 .eq(SysMessageTemplate::getSysMessageTemplateDelete, 0)
@@ -733,7 +747,9 @@ public class SysMessageServiceImpl implements SysMessageService {
     }
 
     @Override
-    /** 计算数量状态消息unread */
+    /**
+     * 计算数量状态消息unread
+    */
     public ReturnResult<Long> countStationMessageUnread() {
         String userId = currentUserId();
         if (StringUtils.isBlank(userId)) {

@@ -77,38 +77,64 @@ import static org.springframework.util.ClassUtils.resolveClassName;
 public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegistryPostProcessor, EnvironmentAware,
         ResourceLoaderAware, BeanClassLoaderAware, ApplicationContextAware, InitializingBean  {
 
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(RpcServiceAnnotationBeanPostProcessor.class);
-    /** Resourceloader */
+    /**
+     * Resourceloader
+    */
     private ResourceLoader resourceLoader;
-    /** 环境 */
+    /**
+     * 环境
+    */
     private Environment environment;
-    /** 包toscan */
+    /**
+     * 包toscan
+    */
     private Set<String> packagesToScan;
-    /** 注册表 */
+    /**
+     * 注册表
+    */
     private BeanDefinitionRegistry registry;
-    /** resolvedpackagestoscan */
+    /**
+     * resolvedpackagestoscan
+    */
     private Set<String> resolvedPackagesToScan;
-    /** Scanned */
+    /**
+     * Scanned
+    */
     private boolean scanned;
     private final static List<Class<? extends Annotation>> SERVICE_ANNOTATION_TYPES = Lists.newArrayList(
             RpcService.class
     );
-    /** 服务packagesholder */
+    /**
+     * 服务packagesholder
+    */
     private final ServicePackagesHolder servicePackagesHolder = ServicePackagesHolder.getInstance();
-    /** Application上下文 */
+    /**
+     * Application上下文
+    */
     private ApplicationContext applicationContext;
-    /** Classloader */
+    /**
+     * Classloader
+    */
     private ClassLoader classLoader;
 
-    /** RPC属性 */
+    /**
+     * RPC属性
+    */
     private RpcProperties rpcProperties;
-    /** RPC服务器 */
+    /**
+     * RPC服务器
+    */
     private RpcServer rpcServer;
 
 
     @Override
-    /** 之后属性设置 */
+    /**
+     * 之后属性设置
+    */
     public void afterPropertiesSet() throws Exception {
         rpcProperties = Binder.get(this.environment).bindOrCreate(RpcProperties.PRE, RpcProperties.class);
         if(!rpcProperties.isEnable()) {
@@ -123,7 +149,9 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
     }
 
     @Override
-    /** Post处理Bean工厂 */
+    /**
+     * Post处理Bean工厂
+    */
     public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
         if(!rpcProperties.isEnable()) {
             return;
@@ -168,7 +196,9 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
     }
 
     @Override
-    /** Post处理Beandefinitionregistry */
+    /**
+     * Post处理Beandefinitionregistry
+    */
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
         if(!rpcProperties.isEnable()) {
             return;
@@ -184,12 +214,16 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
 
 
     @Override
-    /** 设置resource加载 */
+    /**
+     * 设置resource加载
+    */
     public void setResourceLoader(ResourceLoader resourceLoader) {
         this.resourceLoader = resourceLoader;
     }
     @Override
-    /** 设置环境 */
+    /**
+     * 设置环境
+    */
     public void setEnvironment(Environment environment) {
         this.environment = environment;
         this.rpcProperties = Binder.get(environment).bindOrCreate(RpcProperties.PRE, RpcProperties.class);
@@ -242,7 +276,9 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
 
 
     @Override
-    /** 设置Bean类加载 */
+    /**
+     * 设置Bean类加载
+    */
     public void setBeanClassLoader(ClassLoader classLoader) {
         this.classLoader = classLoader;
     }
@@ -663,7 +699,9 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
     }
 
     @Override
-    /** 设置application上下文 */
+    /**
+     * 设置application上下文
+    */
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
     }

@@ -38,15 +38,21 @@ import java.util.jar.JarFile;
 public class IntegrationDemoController {
 
     @Autowired(required = false)
-    /** Osgilauncher */
+    /**
+     * Osgilauncher
+    */
     private FelixOsgiLauncher osgiLauncher;
 
     @Autowired(required = false)
-    /** SSH服务器服务 */
+    /**
+     * SSH服务器服务
+    */
     private SshServerService sshServerService;
 
     @Autowired
-    /** Application上下文 */
+    /**
+     * Application上下文
+    */
     private ApplicationContext applicationContext;
 
     /**

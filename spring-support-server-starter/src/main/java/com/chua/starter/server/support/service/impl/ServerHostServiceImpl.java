@@ -64,64 +64,104 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class ServerHostServiceImpl implements ServerHostService {
 
-    /** 在线状态：未知 */
+    /**
+     * 在线状态：未知
+    */
     private static final int ONLINE_UNKNOWN = -1;
 
-    /** 在线状态：在线 */
+    /**
+     * 在线状态：在线
+    */
     private static final int ONLINE_YES = 1;
 
-    /** 启用状态：启用 */
+    /**
+     * 启用状态：启用
+    */
     private static final int STATUS_ENABLED = 1;
 
-    /** 默认 SSH 端口 */
+    /**
+     * 默认 SSH 端口
+    */
     private static final int DEFAULT_SSH_PORT = 22;
 
-    /** 默认远控模式（经 guacd 中继，与历史行为一致） */
+    /**
+     * 默认远控模式（经 guacd 中继，与历史行为一致）
+    */
     private static final String DEFAULT_REMOTE_MODE = "GUACD";
 
-    /** 远控通道取值：GUACD 中转 / DIRECT 平台原生客户端直连 / NONE 不经平台通道 */
+    /**
+     * 远控通道取值：GUACD 中转 / DIRECT 平台原生客户端直连 / NONE 不经平台通道
+    */
     private static final Set<String> REMOTE_MODES = Set.of("GUACD", "DIRECT", "NONE");
 
-    /** JSON 序列化器 */
+    /**
+     * JSON 序列化器
+    */
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
-    /** 探针标识字节长度（32 个十六进制字符） */
+    /**
+     * 探针标识字节长度（32 个十六进制字符）
+    */
     private static final int AGENT_KEY_BYTES = 16;
 
-    /** Linux 内核信息命令 */
+    /**
+     * Linux 内核信息命令
+    */
     private static final String CMD_UNAME = "uname -sr";
 
-    /** Windows（WinRM）连通性探测命令：回显计算机名即可确认通道可用 */
+    /**
+     * Windows（WinRM）连通性探测命令：回显计算机名即可确认通道可用
+    */
     private static final String CMD_COMPUTERNAME = "$env:COMPUTERNAME";
 
-    /** 连通性探测超时（秒） */
+    /**
+     * 连通性探测超时（秒）
+    */
     private static final int PROBE_TIMEOUT_SECONDS = 15;
 
-    /** 主机 映射器 */
+    /**
+     * 主机 映射器
+    */
     private final MsServerHostMapper hostMapper;
 
-    /** 身份 映射器 */
+    /**
+     * 身份 映射器
+    */
     private final MsServerIdentityMapper identityMapper;
 
-    /** 密钥 映射器 */
+    /**
+     * 密钥 映射器
+    */
     private final MsServerKeyMapper keyMapper;
 
-    /** 主机身份关联 映射器 */
+    /**
+     * 主机身份关联 映射器
+    */
     private final MsServerHostIdentityMapper hostIdentityMapper;
 
-    /** 凭据加解密器 */
+    /**
+     * 凭据加解密器
+    */
     private final CredentialCipher cipher;
 
-    /** 连接缓存管理器 */
+    /**
+     * 连接缓存管理器
+    */
     private final ConnectionManager connectionManager;
 
-    /** 主机硬件探测提供者注册中心（按系统类型 SPI 路由） */
+    /**
+     * 主机硬件探测提供者注册中心（按系统类型 SPI 路由）
+    */
     private final HostDetectProviderRegistry detectProviderRegistry;
 
-    /** 远程操作提供者注册中心（按系统类型 SPI 路由，连通性测试与部署同源） */
+    /**
+     * 远程操作提供者注册中心（按系统类型 SPI 路由，连通性测试与部署同源）
+    */
     private final HostRemoteProviderRegistry remoteProviderRegistry;
 
-    /** 探针标识随机源 */
+    /**
+     * 探针标识随机源
+    */
     private final SecureRandom secureRandom = new SecureRandom();
 
     @Override

@@ -16,22 +16,36 @@ import java.util.List;
 @Builder(toBuilder = true)
 public class MaterializedSqlRequest {
 
-    /** 对账单标识 */
+    /**
+     * 对账单标识
+    */
     private String statementId;
-    /** 来源数据来源 */
+    /**
+     * 来源数据来源
+    */
     private String sourceDataSource;
-    /** SQL */
+    /**
+     * SQL
+    */
     private String sql;
-    /** 命令类型 */
+    /**
+     * 命令类型
+    */
     private MaterializedSqlCommandType commandType;
-    /** Definition */
+    /**
+     * Definition
+    */
     private MaterializedRouteDefinition definition;
 
     @Singular("table")
-    /** Tables */
+    /**
+     * Tables
+    */
     private List<String> tables;
 
     @Singular("parameter")
-    /** 参数 */
+    /**
+     * 参数
+    */
     private List<Object> parameters;
 }

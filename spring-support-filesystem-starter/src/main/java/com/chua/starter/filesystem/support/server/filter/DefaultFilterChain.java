@@ -14,11 +14,17 @@ import java.util.List;
  */
 public class DefaultFilterChain implements FilterChain {
 
-    /** 过滤器列表 */
+    /**
+     * 过滤器列表
+    */
     private final List<ServerFilter> filters;
-    /** 终态处理器 */
+    /**
+     * 终态处理器
+    */
     private final ServerFilter finalHandler;
-    /** 当前执行到的过滤器索引 */
+    /**
+     * 当前执行到的过滤器索引
+    */
     private int index = 0;
 
     /**

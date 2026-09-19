@@ -21,7 +21,9 @@ import java.nio.file.Path;
  */
 public final class SshClients {
 
-    /** 默认 SSH 端口 */
+    /**
+     * 默认 SSH 端口
+    */
     private static final int DEFAULT_PORT = 22;
 
     /**

@@ -27,7 +27,9 @@ import java.io.IOException;
  * @author CH
  */
 public class ApiIgnoreSerializer extends JsonSerializer<Object> implements ContextualSerializer {
-    /** 请求mapping处理器mapping */
+    /**
+     * 请求mapping处理器mapping
+    */
     private final RequestMappingHandlerMapping requestMappingHandlerMapping;
     private Class<?>[] group; // 群体
 
@@ -43,13 +45,17 @@ public class ApiIgnoreSerializer extends JsonSerializer<Object> implements Conte
         this.group = group;
     }
 
-    /** 创建 apiignore序列化器 实例 */
+    /**
+     * 创建 apiignore序列化器 实例
+    */
     public ApiIgnoreSerializer() {
         requestMappingHandlerMapping = SpringBeanUtils.getRequestMappingHandlerMapping();
     }
 
     @Override
-    /** 序列化 */
+    /**
+     * 序列化
+    */
     public void serialize(Object value, JsonGenerator jsonGenerator, SerializerProvider serializers) throws IOException {
         jsonGenerator.writeNull();
     }

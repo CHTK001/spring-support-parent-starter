@@ -19,7 +19,9 @@ import java.lang.reflect.Method;
  */
 @Spi("bean")
 public class BeanJobHandler implements JobHandler {
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(BeanJobHandler.class);
 
     /**
@@ -58,7 +60,9 @@ public class BeanJobHandler implements JobHandler {
     }
 
     @Override
-    /** 执行 */
+    /**
+     * 执行
+    */
     public void execute() throws Exception {
         log.debug("开始执行Bean任务: {}#{}", target.getClass().getSimpleName(), method.getName());
         Class<?>[] paramTypes = method.getParameterTypes();
@@ -72,7 +76,9 @@ public class BeanJobHandler implements JobHandler {
     }
 
     @Override
-    /** 初始化 */
+    /**
+     * 初始化
+    */
     public void init() throws Exception {
         if (initMethod != null) {
             log.debug("执行Bean任务初始化方法: {}#{}", target.getClass().getSimpleName(), initMethod.getName());
@@ -82,7 +88,9 @@ public class BeanJobHandler implements JobHandler {
     }
 
     @Override
-    /** 销毁 */
+    /**
+     * 销毁
+    */
     public void destroy() throws Exception {
         if (destroyMethod != null) {
             log.debug("执行Bean任务销毁方法: {}#{}", target.getClass().getSimpleName(), destroyMethod.getName());
@@ -92,7 +100,9 @@ public class BeanJobHandler implements JobHandler {
     }
 
     @Override
-    /** 转为字符串 */
+    /**
+     * 转为字符串
+    */
     public String toString() {
         return super.toString() + "[" + target.getClass().getSimpleName() + "#" + method.getName() + "]";
     }

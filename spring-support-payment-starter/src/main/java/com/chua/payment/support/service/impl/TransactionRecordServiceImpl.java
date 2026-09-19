@@ -20,18 +20,24 @@ import org.springframework.util.StringUtils;
 @RequiredArgsConstructor
 public class TransactionRecordServiceImpl implements TransactionRecordService {
 
-    /** Transactionrecordmapper */
+    /**
+     * Transactionrecordmapper
+    */
     private final TransactionRecordMapper transactionRecordMapper;
 
     @Override
-    /** 创建Record */
+    /**
+     * 创建Record
+    */
     public TransactionRecord createRecord(TransactionRecord record) {
         transactionRecordMapper.insert(record);
         return record;
     }
 
     @Override
-    /** 获取byid */
+    /**
+     * 获取byid
+    */
     public TransactionRecord getById(Long id) {
         return transactionRecordMapper.selectById(id);
     }

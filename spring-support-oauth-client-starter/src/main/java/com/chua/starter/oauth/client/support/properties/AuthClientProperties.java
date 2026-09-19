@@ -23,7 +23,9 @@ public class AuthClientProperties {
      */
     private boolean enable = true;
 
-    /** PRE */
+    /**
+     * PRE
+    */
     public static final String PRE = "plugin.oauth";
 
     /**
@@ -68,7 +70,9 @@ public class AuthClientProperties {
             "/api/settings/client"
     );
 
-    /** 创建 认证客户端属性 实例 */
+    /**
+     * 创建 认证客户端属性 实例
+    */
     public AuthClientProperties() {
     }
 

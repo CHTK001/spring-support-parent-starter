@@ -31,7 +31,9 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "考试管理")
 public class EduExamController {
 
-    /** Exam服务 */
+    /**
+     * Exam服务
+    */
     private final IEduExamService examService;
 
     /**

@@ -58,28 +58,36 @@ public abstract class BaseAiController {
      * 访问守卫服务，提供 appKey 与 Bearer 令牌 校验能力
      */
     @Autowired
-    /** aiaccessguard服务 */
+    /**
+     * aiaccessguard服务
+    */
     protected AiAccessGuardService aiAccessGuardService;
 
     /**
      * appKey 服务，提供分组 标识 查询等能力
      */
     @Autowired
-    /** SYSAIAPP密钥服务 */
+    /**
+     * SYSAIAPP密钥服务
+    */
     protected SysAiAppKeyService sysAiAppKeyService;
 
     /**
      * 全局设置服务，提供运行时开关读写能力
      */
     @Autowired
-    /** SYSAI全局设置服务 */
+    /**
+     * SYSAI全局设置服务
+    */
     protected SysAiGlobalSettingService sysAiGlobalSettingService;
 
     /**
      * Jackson JSON 序列化器，用于响应构建
      */
     @Autowired
-    /** Objectmapper */
+    /**
+     * Objectmapper
+    */
     protected ObjectMapper objectMapper;
 
     /**

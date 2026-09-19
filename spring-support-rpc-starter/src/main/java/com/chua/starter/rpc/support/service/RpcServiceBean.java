@@ -17,13 +17,21 @@ import org.springframework.beans.factory.InitializingBean;
 @Getter
 public class RpcServiceBean<T> extends AbstractRpcServiceSetting<T> implements InitializingBean {
 
-    /** 类型 */
+    /**
+     * 类型
+    */
     private final Class<T> type;
-    /** RPC类型 */
+    /**
+     * RPC类型
+    */
     private RpcType rpcType;
-    /** RPC属性 */
+    /**
+     * RPC属性
+    */
     private final RpcProperties rpcProperties;
-    /** RPC服务器 */
+    /**
+     * RPC服务器
+    */
     private final RpcServer rpcServer;
     /**
      * 创建 rpc服务Bean 实例
@@ -44,7 +52,9 @@ public class RpcServiceBean<T> extends AbstractRpcServiceSetting<T> implements I
 
 
     @Override
-    /** 之后属性设置 */
+    /**
+     * 之后属性设置
+    */
     public void afterPropertiesSet() throws Exception {
         /**
          * 导出。
@@ -52,7 +62,9 @@ public class RpcServiceBean<T> extends AbstractRpcServiceSetting<T> implements I
         export();
     }
 
-    /** 导出 */
+    /**
+     * 导出
+    */
     private void export() {
         rpcServer.register(getInterfaceName(), getRef());
     }

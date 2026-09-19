@@ -91,7 +91,9 @@ class OsgiFrameworkApiRealTest {
     @Autowired
     private ObjectContext objectContext; // 对象上下文
 
-    /** 每个用例后清理本类安装的 bundle */
+    /**
+     * 每个用例后清理本类安装的 bundle
+    */
     @AfterEach
     void cleanup() {
         try {
@@ -106,7 +108,9 @@ class OsgiFrameworkApiRealTest {
         }
     }
 
-    /** 真实测试：bundlelifecycle监听器 六回调随 bundle 生命周期真实触发 */
+    /**
+     * 真实测试：bundlelifecycle监听器 六回调随 bundle 生命周期真实触发
+    */
     @Test
     void lifecycleListenerEventsFire() throws Exception {
         List<String> events = new CopyOnWriteArrayList<>();
@@ -151,7 +155,9 @@ class OsgiFrameworkApiRealTest {
         }
     }
 
-    /** 真实测试：felixbundle上下文 服务注册 → 可见 → 注销 → 不可见 */
+    /**
+     * 真实测试：felixbundle上下文 服务注册 → 可见 → 注销 → 不可见
+    */
     @Test
     void bundleContextServiceRegisterUnregister() {
  // 1) 经 felixbundle上下文 注册服务
@@ -177,7 +183,9 @@ class OsgiFrameworkApiRealTest {
                 "注销后 ctx 服务应从列表中消失");
     }
 
-    /** 真实测试：felixosgibundle 服务注册 → 可见 → 注销 → 不可见 */
+    /**
+     * 真实测试：felixosgibundle 服务注册 → 可见 → 注销 → 不可见
+    */
     @Test
     void osgiBundleServiceRegisterUnregister() throws Exception {
         // 安装并启动 bundle，取得 bundle 实例（其上下文可用）
@@ -212,7 +220,9 @@ class OsgiFrameworkApiRealTest {
                 "注销后 bundle 注册的服务应从列表中消失");
     }
 
-    /** 真实测试：osgibeandefinition注册 命名查询（类型:xxx）与只读语义 */
+    /**
+     * 真实测试：osgibeandefinition注册 命名查询（类型:xxx）与只读语义
+    */
     @Test
     void beanDefinitionNameQueryAndReadonly() throws Exception {
         // 1) 只读断言：不支持手动注册/注销
@@ -272,7 +282,9 @@ class OsgiFrameworkApiRealTest {
         assertNull(osgiBeanDefinitionRegister.getBeanDefinition(name), "卸载后命名查询应为 null");
     }
 
-    /** 真实测试：osgibeandefinition注册 关闭 后退避（新实例，不影响共享注册器） */
+    /**
+     * 真实测试：osgibeandefinition注册 关闭 后退避（新实例，不影响共享注册器）
+    */
     @Test
     void beanDefinitionCloseBackoff() throws Exception {
         OsgiBeanDefinitionRegister isolated = new OsgiBeanDefinitionRegister();
@@ -313,7 +325,9 @@ class OsgiFrameworkApiRealTest {
         assertFalse(isolated.containsBean(GREET_SERVICE_INTERFACE + ":1"), "close 后 containsBean 应为 false");
     }
 
-    /** 真实测试：bundle状态查询 框架状态查询 */
+    /**
+     * 真实测试：bundle状态查询 框架状态查询
+    */
     @Test
     void frameworkStateQuery() throws Exception {
         long before = osgiLauncher.getBundleCount();
@@ -381,7 +395,9 @@ class OsgiFrameworkApiRealTest {
         assertTrue((boolean) stats.get("active"), "统计 active 标志应为 true");
     }
 
-    /** 真实测试：osgilauncherholder 全局单例生命周期 */
+    /**
+     * 真实测试：osgilauncherholder 全局单例生命周期
+    */
     @Test
     void launcherHolderLifecycle() {
         // Spring 装配的 launcher 启动时应已注册到 Holder
@@ -406,7 +422,9 @@ class OsgiFrameworkApiRealTest {
         assertTrue(OsgiLauncherHolder.isActive(), "Holder 应报告框架激活");
     }
 
-    /** 真实测试：auto启动=false 时安装 bundle 不自动启动，需手动 启动 */
+    /**
+     * 真实测试：auto启动=false 时安装 bundle 不自动启动，需手动 启动
+    */
     @Test
     void autoStartDisabledThenManualStart() throws Exception {
         osgiLauncher.setAutoStartInstalledBundles(false);
@@ -441,7 +459,9 @@ class OsgiFrameworkApiRealTest {
         }
     }
 
-    /** 真实测试：停止 不卸载（活跃 → RESOLVED，服务注销；再 启动 恢复） */
+    /**
+     * 真实测试：停止 不卸载（活跃 → RESOLVED，服务注销；再 启动 恢复）
+    */
     @Test
     void stopWithoutUninstallThenRestart() throws Exception {
         File jar = buildBundleJar("ApiGreetV7", "api7", "7.0.0");
@@ -480,14 +500,18 @@ class OsgiFrameworkApiRealTest {
         assertNotNull(osgiLauncher.getService(GreetService.class), "重新 start 后服务应恢复");
     }
 
-    /** 真实测试：卸载不存在的 bundle 应走 warn 路径不抛异常 */
+    /**
+     * 真实测试：卸载不存在的 bundle 应走 warn 路径不抛异常
+    */
     @Test
     void uninstallNonExistentBundle() {
         assertDoesNotThrow(() -> osgiLauncher.uninstallBundle("com.chua.test.not-exists"),
                 "卸载不存在的 bundle 不应抛异常");
     }
 
-    /** 真实测试：框架未激活时 API 退避行为（独立 launcher，不影响共享实例） */
+    /**
+     * 真实测试：框架未激活时 API 退避行为（独立 launcher，不影响共享实例）
+    */
     @Test
     void inactiveLauncherBackoff() {
         FelixOsgiLauncher inactive = new FelixOsgiLauncher();
@@ -596,7 +620,9 @@ class OsgiFrameworkApiRealTest {
         assertNull(osgiLauncher.getService(GreetService.class), "卸载后 osgiLauncher 应查不到");
     }
 
-    /** 真实测试：框架停止链路 —— 是否活跃=false + Holder 清理（独立 launcher，不影响共享实例） */
+    /**
+     * 真实测试：框架停止链路 —— 是否活跃=false + Holder 清理（独立 launcher，不影响共享实例）
+    */
     @Test
     void frameworkStopChain() throws Exception {
         StopChainBundleApplication.STARTED = false;
@@ -648,12 +674,18 @@ class OsgiFrameworkApiRealTest {
         }
     }
 
-    /** bundleapplication SPI 测试辅助：静态类（可被 SPI 新instance），静态标志捕获回调 */
+    /**
+     * bundleapplication SPI 测试辅助：静态类（可被 SPI 新instance），静态标志捕获回调
+    */
     public static class StopChainBundleApplication implements com.chua.common.support.osgi.BundleApplication {
 
-        /** 是否已回调 onbundle启动 */
+        /**
+         * 是否已回调 onbundle启动
+        */
         public static volatile boolean STARTED;
-        /** 是否已回调 onbundle停止 */
+        /**
+         * 是否已回调 onbundle停止
+        */
         public static volatile boolean STOPPED;
 
         @Override
@@ -667,7 +699,9 @@ class OsgiFrameworkApiRealTest {
         }
     }
 
-    /** 真实测试：重复安装同一 位置 should be 幂等 — 返回同一 bundle，总数不变（osgi 规范） */
+    /**
+     * 真实测试：重复安装同一 位置 should be 幂等 — 返回同一 bundle，总数不变（osgi 规范）
+    */
     @Test
     void reinstallSameVersionBundle() throws Exception {
         File jar = buildBundleJar("ApiGreetV9", "api9", "9.0.0");
@@ -713,7 +747,9 @@ class OsgiFrameworkApiRealTest {
                 "清理后应无同名 bundle");
     }
 
-    /** 真实测试：osgibeandefinition注册 双参 获取Beandefinition的类型(名称, 类型名称) 重载 */
+    /**
+     * 真实测试：osgibeandefinition注册 双参 获取Beandefinition的类型(名称, 类型名称) 重载
+    */
     @Test
     void beanDefinitionByNameAndType() throws Exception {
         File jar = buildBundleJar("ApiGreetV10", "api10", "10.0.0");

@@ -8,8 +8,12 @@ package com.chua.starter.software.support.contants;
  */
 public class AuthConstant {
 
-    /** 父_admin */
+    /**
+     * 父_admin
+    */
     public static final String SUPER_ADMIN = "SUPER_ADMIN";
-    /** Admin */
+    /**
+     * Admin
+    */
     public static final String ADMIN = "ADMIN";
 }

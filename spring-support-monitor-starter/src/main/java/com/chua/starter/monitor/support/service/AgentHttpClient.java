@@ -32,13 +32,19 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AgentHttpClient {
 
-    /** JSON 解析器 */
+    /**
+     * JSON 解析器
+    */
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
-    /** 成功状态码 */
+    /**
+     * 成功状态码
+    */
     private static final int HTTP_OK = 200;
 
-    /** 模块配置 */
+    /**
+     * 模块配置
+    */
     private final AgentDeployProperties properties;
 
     /**
@@ -46,7 +52,9 @@ public class AgentHttpClient {
      */
     public static class AgentUnreachableException extends RuntimeException {
 
-        /** 串行版本UID */
+        /**
+         * 串行版本UID
+        */
         private static final long serialVersionUID = 1L;
 
         /**

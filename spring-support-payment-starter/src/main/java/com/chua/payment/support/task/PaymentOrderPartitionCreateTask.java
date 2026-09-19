@@ -3,12 +3,16 @@ package com.chua.payment.support.task;
 import com.chua.payment.support.service.OrderPartitionConfigService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-/** @作者 CH */
+/**
+ * @作者 CH
+*/
 
 @Component
 @RequiredArgsConstructor
 public class PaymentOrderPartitionCreateTask implements PaymentManagedTask {
-    /** 排序分区配置服务 */
+    /**
+     * 排序分区配置服务
+    */
     private final OrderPartitionConfigService orderPartitionConfigService;
     @Override public String taskKey() { return "payment.order.partition.create"; }
     @Override public String taskName() { return "订单分表预创建"; }

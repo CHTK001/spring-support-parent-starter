@@ -35,12 +35,18 @@ import java.util.Map;
 @Service
 public class EduAiService {
 
-    /** 对话客户端注册表 */
+    /**
+     * 对话客户端注册表
+    */
     @Autowired(required = false)
     private ChatClientRegistry chatClientRegistry;
-    /** 属性 */
+    /**
+     * 属性
+    */
     private final EduAiProperties properties;
-    /** Objectmapper */
+    /**
+     * Objectmapper
+    */
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**

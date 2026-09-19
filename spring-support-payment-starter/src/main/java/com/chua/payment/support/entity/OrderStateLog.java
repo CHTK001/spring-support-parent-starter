@@ -16,34 +16,50 @@ import java.time.LocalDateTime;
 public class OrderStateLog {
 
     @TableId(value = "pay_order_state_log_id", type = IdType.AUTO)
-    /** 标识 */
+    /**
+     * 标识
+    */
     private Long id;
 
     @TableField("pay_order_state_log_order_id")
-    /** 排序标识 */
+    /**
+     * 排序标识
+    */
     private Long orderId;
 
     @TableField("pay_order_state_log_from_state")
-    /** 从状态 */
+    /**
+     * 从状态
+    */
     private String fromState;
 
     @TableField("pay_order_state_log_to_state")
-    /** 转为状态 */
+    /**
+     * 转为状态
+    */
     private String toState;
 
     @TableField("pay_order_state_log_event")
-    /** 事件 */
+    /**
+     * 事件
+    */
     private String event;
 
     @TableField("pay_order_state_log_operator")
-    /** 操作符 */
+    /**
+     * 操作符
+    */
     private String operator;
 
     @TableField("pay_order_state_log_remark")
-    /** 评论 */
+    /**
+     * 评论
+    */
     private String remark;
 
     @TableField(value = "pay_order_state_log_created_at", fill = FieldFill.INSERT)
-    /** 创建时间AT */
+    /**
+     * 创建时间AT
+    */
     private LocalDateTime createdAt;
 }

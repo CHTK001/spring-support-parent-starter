@@ -46,22 +46,36 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 public class WalletAccountServiceImpl implements WalletAccountService {
 
-    /** 状态_已启用 */
+    /**
+     * 状态_已启用
+    */
     private static final int STATUS_ENABLED = 1;
 
-    /** Walletaccountmapper */
+    /**
+     * Walletaccountmapper
+    */
     private final WalletAccountMapper walletAccountMapper;
-    /** Walletaccount日志映射器 */
+    /**
+     * Walletaccount日志映射器
+    */
     private final WalletAccountLogMapper walletAccountLogMapper;
-    /** Merchantmapper */
+    /**
+     * Merchantmapper
+    */
     private final MerchantMapper merchantMapper;
-    /** Wallet限制服务 */
+    /**
+     * Wallet限制服务
+    */
     private final WalletLimitService walletLimitService;
-    /** 幂等模板 */
+    /**
+     * 幂等模板
+    */
     private final IdempotentTemplate idempotentTemplate;
 
     @Override
-    /** 获取账户 */
+    /**
+     * 获取账户
+    */
     public WalletAccountVO getAccount(Long merchantId, Long userId) {
         WalletAccount account = findAccount(merchantId, userId);
         if (account == null) {
@@ -616,7 +630,9 @@ public class WalletAccountServiceImpl implements WalletAccountService {
     }
 
     @Override
-    /** page账户 */
+    /**
+     * page账户
+    */
     public Page<WalletAccount> pageAccounts(int pageNum, int pageSize, Long merchantId) {
         LambdaQueryWrapper<WalletAccount> wrapper = new LambdaQueryWrapper<WalletAccount>()
                 .orderByDesc(WalletAccount::getCreatedAt);
@@ -687,7 +703,9 @@ public class WalletAccountServiceImpl implements WalletAccountService {
     }
 
     @Override
-    /** 获取记录日志 */
+    /**
+     * 获取记录日志
+    */
     public WalletAccountLog getLog(String bizType, Long merchantId, Long userId, String bizNo) {
         LambdaQueryWrapper<WalletAccountLog> wrapper = new LambdaQueryWrapper<WalletAccountLog>()
                 .eq(WalletAccountLog::getBizType, bizType)

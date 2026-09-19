@@ -21,43 +21,57 @@ import java.util.List;
 public class DefaultSoftwareSource implements SoftwareSource {
 
     @Override
-    /** 支持 */
+    /**
+     * 支持
+    */
     public boolean support(SoftSource source) {
         return false;
     }
 
     @Override
-    /** 获取software列表 */
+    /**
+     * 获取software列表
+    */
     public List<SoftSoftware> fetchSoftwareList(SoftSource source) {
         return Collections.emptyList();
     }
 
     @Override
-    /** 获取softwaredetail */
+    /**
+     * 获取softwaredetail
+    */
     public SoftSoftware fetchSoftwareDetail(SoftSource source, String softwareCode) {
         return null;
     }
 
     @Override
-    /** Install */
+    /**
+     * Install
+    */
     public SoftwareSourceResult install(SoftSource source, SoftSoftware software, String installPath) {
         return SoftwareSourceResult.fail("不支持的软件源类型");
     }
 
     @Override
-    /** Uninstall */
+    /**
+     * Uninstall
+    */
     public SoftwareSourceResult uninstall(SoftSource source, SoftSoftware software, String installPath) {
         return SoftwareSourceResult.fail("不支持的软件源类型");
     }
 
     @Override
-    /** 更新 */
+    /**
+     * 更新
+    */
     public SoftwareSourceResult update(SoftSource source, SoftSoftware software, String targetVersion, String installPath) {
         return SoftwareSourceResult.fail("不支持的软件源类型");
     }
 
     @Override
-    /** 获取latest版本 */
+    /**
+     * 获取latest版本
+    */
     public String getLatestVersion(SoftSource source, String softwareCode) {
         return null;
     }

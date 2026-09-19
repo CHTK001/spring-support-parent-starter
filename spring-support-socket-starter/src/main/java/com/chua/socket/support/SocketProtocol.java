@@ -29,7 +29,9 @@ public enum SocketProtocol {
      */
     SSE("sse");
 
-    /** 值 */
+    /**
+     * 值
+    */
     private final String value;
 
     /**

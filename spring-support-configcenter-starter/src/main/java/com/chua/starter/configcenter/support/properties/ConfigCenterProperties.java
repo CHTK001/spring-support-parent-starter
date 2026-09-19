@@ -17,7 +17,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = ConfigCenterProperties.PRE, ignoreInvalidFields = true)
 public class ConfigCenterProperties {
 
-    /** PRE */
+    /**
+     * PRE
+    */
     public static final String PRE = "plugin.config-center";
 
     /**

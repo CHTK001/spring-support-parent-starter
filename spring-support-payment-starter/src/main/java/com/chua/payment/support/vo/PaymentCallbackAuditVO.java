@@ -9,19 +9,33 @@ import lombok.Data;
  */
 @Data
 public class PaymentCallbackAuditVO {
-    /** Callback类型 */
+    /**
+     * Callback类型
+    */
     private String callbackType;
-    /** Callback名称 */
+    /**
+     * Callback名称
+    */
     private String callbackName;
-    /** Recommended模式 */
+    /**
+     * Recommended模式
+    */
     private String recommendedPattern;
-    /** Scoped标识符 */
+    /**
+     * Scoped标识符
+    */
     private String scopedIdentifier;
-    /** Strictscoped */
+    /**
+     * Strictscoped
+    */
     private Boolean strictScoped;
-    /** Effective优先级 */
+    /**
+     * Effective优先级
+    */
     private String effectivePriority;
-    /** 笔记 */
+    /**
+     * 笔记
+    */
     private String notes;
 }
 

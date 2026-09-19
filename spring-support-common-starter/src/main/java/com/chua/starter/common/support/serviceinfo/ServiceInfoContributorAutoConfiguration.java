@@ -27,10 +27,14 @@ import java.util.Map;
 @Order(Integer.MIN_VALUE + 1)
 public class ServiceInfoContributorAutoConfiguration implements ApplicationListener<ContextRefreshedEvent> {
 
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(ServiceInfoContributorAutoConfiguration.class);
 
-    /** Application上下文 */
+    /**
+     * Application上下文
+    */
     private final ApplicationContext applicationContext;
 
     /**
@@ -42,7 +46,9 @@ public class ServiceInfoContributorAutoConfiguration implements ApplicationListe
     }
 
     @Override
-    /** onapplication事件 */
+    /**
+     * onapplication事件
+    */
     public void onApplicationEvent(ContextRefreshedEvent event) {
         if (event.getApplicationContext() != this.applicationContext) {
             return;

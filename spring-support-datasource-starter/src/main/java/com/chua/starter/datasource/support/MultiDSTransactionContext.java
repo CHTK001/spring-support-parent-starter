@@ -37,10 +37,14 @@ public class MultiDSTransactionContext {
 
  // ========== thread本地 管理 ==========
 
-    /** 当前线程的 dstransactional 上下文 */
+    /**
+     * 当前线程的 dstransactional 上下文
+    */
     private static final ThreadLocal<MultiDSTransactionContext> CURRENT_CONTEXT = new ThreadLocal<>();
 
-    /** 当前线程的嵌套深度（支持 @dstransactional 嵌套） */
+    /**
+     * 当前线程的嵌套深度（支持 @dstransactional 嵌套）
+    */
     private static final ThreadLocal<Integer> NESTED_DEPTH = ThreadLocal.withInitial(() -> 0);
 
     /**
@@ -111,22 +115,34 @@ public class MultiDSTransactionContext {
 
     // ========== 实例字段 ==========
 
-    /** 数据源上下文栈（支持嵌套切换） */
+    /**
+     * 数据源上下文栈（支持嵌套切换）
+    */
     private final Deque<String> dataSourceStack = new ArrayDeque<>();
 
-    /** 事务中已使用的数据源名称（去重） */
+    /**
+     * 事务中已使用的数据源名称（去重）
+    */
     private final Set<String> usedDataSources = new LinkedHashSet<>();
 
-    /** 事务中已获取的连接（数据源名称 → Connection） */
+    /**
+     * 事务中已获取的连接（数据源名称 → Connection）
+    */
     private final Map<String, Connection> connections = new LinkedHashMap<>();
 
-    /** 事务名称 */
+    /**
+     * 事务名称
+    */
     private final String transactionName;
 
-    /** 是否已提交或回滚 */
+    /**
+     * 是否已提交或回滚
+    */
     private boolean completed = false;
 
-    /** 开始时间 */
+    /**
+     * 开始时间
+    */
     private final long startTime;
 
     /**

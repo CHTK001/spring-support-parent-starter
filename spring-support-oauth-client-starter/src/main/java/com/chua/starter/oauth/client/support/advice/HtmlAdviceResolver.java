@@ -33,19 +33,25 @@ import lombok.extern.slf4j.Slf4j;
 public class HtmlAdviceResolver implements AdviceResolver {
 
     @Override
-    /** 类型 */
+    /**
+     * 类型
+    */
     public String type() {
         return MediaType.TEXT_HTML_VALUE;
     }
 
     @Override
-    /** 解析 */
+    /**
+     * 解析
+    */
     public Object resolve(HttpServletResponse response, Integer status, String message) throws IOException {
         return null;
     }
 
     @Override
-    /** 是否HTML */
+    /**
+     * 是否HTML
+    */
     public boolean isHtml() {
         return true;
     }

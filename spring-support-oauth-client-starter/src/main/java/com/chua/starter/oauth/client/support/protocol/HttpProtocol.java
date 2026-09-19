@@ -59,7 +59,9 @@ public class HttpProtocol extends AbstractProtocol {
     }
 
     @Override
-    /** Approve */
+    /**
+     * Approve
+    */
     protected AuthenticationInformation approve(Cookie cookie, String token, String subProtocol) {
  // 如果传入的sub协议（认证类型）为空，尝试从头部读取 x-OAuth-类型
         if (StringUtils.isBlank(subProtocol)) {
@@ -85,7 +87,9 @@ public class HttpProtocol extends AbstractProtocol {
     }
 
     @Override
-    /** 认证用户编码 */
+    /**
+     * 认证用户编码
+    */
     protected AuthenticationInformation authenticationUserCode(AppKeySecret appKeySecret) {
  // 注意：指纹校验应该在过滤器层进行，因为需要比对用户信息里的指纹
         // 协议层此时还没有用户信息，无法进行真正的指纹比对
@@ -126,7 +130,9 @@ public class HttpProtocol extends AbstractProtocol {
     }
 
     @Override
-    /** upgrade信息 */
+    /**
+     * upgrade信息
+    */
     protected AuthenticationInformation upgradeInformation(Cookie cookie, String token, UpgradeType upgradeType, String refreshToken) {
         JsonObject jsonObject = new JsonObject();
         // 构建认证数据
@@ -156,7 +162,9 @@ public class HttpProtocol extends AbstractProtocol {
     }
 
     @Override
-    /** 获取access令牌 */
+    /**
+     * 获取access令牌
+    */
     public LoginAuthResult getAccessToken(String username, String password, AuthType authType, Map<String, Object> ext) {
         JsonObject jsonObject = new JsonObject();
         // 构建认证数据
@@ -213,7 +221,9 @@ public class HttpProtocol extends AbstractProtocol {
     }
 
     @Override
-    /** Logout */
+    /**
+     * Logout
+    */
     public LoginAuthResult logout(String uid, LogoutType logoutType, UserResult userResult) {
         JsonObject jsonObject = new JsonObject();
         // 构建认证数据
@@ -229,7 +239,9 @@ public class HttpProtocol extends AbstractProtocol {
     }
 
     @Override
-    /** 创建temporary令牌 */
+    /**
+     * 创建temporary令牌
+    */
     public LoginAuthResult createTemporaryToken(String sourceToken, Map<String, Object> ext) {
         JsonObject jsonObject = new JsonObject();
         // 构建请求数据
@@ -252,7 +264,9 @@ public class HttpProtocol extends AbstractProtocol {
     }
 
     @Override
-    /** 获取online用户 */
+    /**
+     * 获取online用户
+    */
     public OnlineUserResult getOnlineUsers(OnlineUserQuery query) {
         JsonObject jsonObject = new JsonObject();
         // 构建请求数据
@@ -285,7 +299,9 @@ public class HttpProtocol extends AbstractProtocol {
     }
 
     @Override
-    /** 验证Fingerprint */
+    /**
+     * 验证Fingerprint
+    */
     public FingerprintVerifyResult verifyFingerprint(String token, String fingerprint) {
         JsonObject jsonObject = new JsonObject();
         // 构建请求数据
@@ -321,7 +337,9 @@ public class HttpProtocol extends AbstractProtocol {
     }
 
     @Override
-    /** 获取online状态 */
+    /**
+     * 获取online状态
+    */
     public OnlineStatus getOnlineStatus(String uid) {
         JsonObject jsonObject = new JsonObject();
         // 构建请求数据

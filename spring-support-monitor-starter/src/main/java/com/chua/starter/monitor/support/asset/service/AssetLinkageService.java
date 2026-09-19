@@ -40,15 +40,25 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class AssetLinkageService {
 
-    /** 资产台账服务（来自 spring-支持-服务端-启动） */
+    /**
+     * 资产台账服务（来自 spring-支持-服务端-启动）
+    */
     private final ServerHostService serverHostService;
-    /** 服务节点 映射器 */
+    /**
+     * 服务节点 映射器
+    */
     private final MsServerNodeMapper nodeMapper;
-    /** 服务节点运行时注册表 */
+    /**
+     * 服务节点运行时注册表
+    */
     private final ServerNodeRegistry nodeRegistry;
-    /** 监控项 映射器 */
+    /**
+     * 监控项 映射器
+    */
     private final MsMonitorMapper monitorMapper;
-    /** 告警事件 映射器 */
+    /**
+     * 告警事件 映射器
+    */
     private final MsMonitorAlarmEventMapper alarmEventMapper;
 
     /**

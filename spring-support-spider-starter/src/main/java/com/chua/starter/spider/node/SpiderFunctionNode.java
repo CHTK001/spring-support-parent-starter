@@ -43,7 +43,9 @@ public class SpiderFunctionNode implements FlowNode {
      * Spring 容器
      */
     @Resource
-    /** Application上下文 */
+    /**
+     * Application上下文
+    */
     private ApplicationContext applicationContext;
 
     /**

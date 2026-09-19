@@ -27,13 +27,19 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class WebhookNotifySender implements NotifySender {
 
-    /** webhook 地址配置键 */
+    /**
+     * webhook 地址配置键
+    */
     public static final String CONFIG_KEY = "monitor.alert.webhook.url";
 
-    /** 全局配置服务 */
+    /**
+     * 全局配置服务
+    */
     private final MonitorConfigService monitorConfigService;
 
-    /** HTTP 客户端（短超时） */
+    /**
+     * HTTP 客户端（短超时）
+    */
     private final HttpClient httpClient = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(5))
             .build();

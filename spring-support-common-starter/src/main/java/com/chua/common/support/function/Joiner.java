@@ -14,11 +14,17 @@ import java.util.List;
  */
 public class Joiner {
 
-    /** Separator */
+    /**
+     * Separator
+    */
     private final String separator;
-    /** Omit是否为空字符串 */
+    /**
+     * Omit是否为空字符串
+    */
     private boolean omitEmptyStrings;
-    /** Trimresults */
+    /**
+     * Trimresults
+    */
     private boolean trimResults;
 
     /**

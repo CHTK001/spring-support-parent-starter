@@ -30,7 +30,9 @@ import java.util.stream.Collectors;
 public class EduKnowledgePointServiceImpl extends ServiceImpl<EduKnowledgePointMapper, EduKnowledgePoint> implements IEduKnowledgePointService {
 
     @Override
-    /** 列表树 */
+    /**
+     * 列表树
+    */
     public List<KnowledgePointVO> listTree(String subject, String gradeLevel, String grade) {
         LambdaQueryWrapper<EduKnowledgePoint> wrapper = new LambdaQueryWrapper<>();
         // 按学科筛选

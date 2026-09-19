@@ -45,19 +45,27 @@ import java.util.stream.Collectors;
 @RequestMapping("/ms/system")
 public class SystemManageController {
 
-    /** 是否 Windows 系统 */
+    /**
+     * 是否 Windows 系统
+    */
     private static final boolean IS_WINDOWS = System.getProperty("os.name").toLowerCase(Locale.ROOT).contains("win");
 
     @Autowired
-    /** localSystemInfo服务 */
+    /**
+     * localSystemInfo服务
+    */
     private LocalSystemInfoService localSystemInfoService;
 
     @Autowired
-    /** 主机Mapper */
+    /**
+     * 主机Mapper
+    */
     private MsServerHostMapper hostMapper;
 
     @Autowired
-    /** 提供者Router */
+    /**
+     * 提供者Router
+    */
     private com.chua.starter.monitor.support.spi.SystemInfoProviderRouter providerRouter;
     /**
      * 远程执行命令（通过 SSH）

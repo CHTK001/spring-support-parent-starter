@@ -10,16 +10,24 @@ import java.util.Set;
  */
 public class AuthConstant {
 
-    /** 父_admin */
+    /**
+     * 父_admin
+    */
     public static final String SUPER_ADMIN = "SUPER_ADMIN";
 
-    /** Admin */
+    /**
+     * Admin
+    */
     public static final String ADMIN = "ADMIN";
 
-    /** Ops */
+    /**
+     * Ops
+    */
     public static final String OPS = "OPS";
 
-    /** Captcha_会话_Key */
+    /**
+     * Captcha_会话_Key
+    */
     public static final String CAPTCHA_SESSION_KEY = "captcha_session_key";
 
     /**

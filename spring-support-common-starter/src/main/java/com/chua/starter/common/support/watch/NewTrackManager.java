@@ -19,7 +19,9 @@ public class NewTrackManager {
     private NewTrackManager() {
     }
 
-    /** Track_缓存 */
+    /**
+     * Track_缓存
+    */
     private static final ThreadLocal<Stack<Span>> TRACK_CACHE = new ThreadLocal<>();
 
     /**
@@ -33,7 +35,9 @@ public class NewTrackManager {
     }
 
 
-    /** 之前 */
+    /**
+     * 之前
+    */
     public static void before() {
         Span currentSpan = NewTrackManager.getCurrentSpan();
         if (null == currentSpan) {
@@ -66,7 +70,9 @@ public class NewTrackManager {
     }
 
 
-    /** Clear */
+    /**
+     * Clear
+    */
     public static void clear() {
         TRACK_CACHE.remove();
     }

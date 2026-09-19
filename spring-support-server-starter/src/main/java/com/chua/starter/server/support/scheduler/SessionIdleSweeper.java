@@ -21,10 +21,14 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class SessionIdleSweeper {
 
-    /** 会话注册表 */
+    /**
+     * 会话注册表
+    */
     private final GuacdSessionRegistry sessionRegistry;
 
-    /** 服务属性（空闲阈值） */
+    /**
+     * 服务属性（空闲阈值）
+    */
     private final ServerProperties properties;
 
     /**

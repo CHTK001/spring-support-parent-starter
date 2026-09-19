@@ -32,7 +32,9 @@ public class SysAiGroup implements Serializable {
      */
     @TableId(value = "sys_ai_group_id", type = IdType.AUTO)
     @Schema(description = "分组主键 ID")
-    /** 分组标识 */
+    /**
+     * 分组标识
+    */
     private Long groupId;
 
     /**
@@ -43,7 +45,9 @@ public class SysAiGroup implements Serializable {
      */
     @TableField("sys_ai_group_name")
     @Schema(description = "分组名称")
-    /** 分组名称 */
+    /**
+     * 分组名称
+    */
     private String groupName;
 
     /**
@@ -54,7 +58,9 @@ public class SysAiGroup implements Serializable {
      */
     @TableField("sys_ai_group_desc")
     @Schema(description = "分组描述")
-    /** 分组描述 */
+    /**
+     * 分组描述
+    */
     private String groupDescription;
 
     /**
@@ -65,7 +71,9 @@ public class SysAiGroup implements Serializable {
      */
     @TableField("sys_ai_group_models")
     @Schema(description = "关联模型列表(JSON)")
-    /** 分组模型 */
+    /**
+     * 分组模型
+    */
     private String groupModels;
 
     /**
@@ -76,7 +84,9 @@ public class SysAiGroup implements Serializable {
      */
     @TableField("sys_ai_group_app_key_ids")
     @Schema(description = "绑定 AppKey ID 列表(JSON)")
-    /** 分组APP密钥标识 */
+    /**
+     * 分组APP密钥标识
+    */
     private String groupAppKeyIds;
 
     /**
@@ -87,7 +97,9 @@ public class SysAiGroup implements Serializable {
      */
     @TableField("sys_ai_group_enabled")
     @Schema(description = "是否启用")
-    /** 分组是否启用 */
+    /**
+     * 分组是否启用
+    */
     private Boolean groupEnabled;
 
     /**
@@ -98,7 +110,9 @@ public class SysAiGroup implements Serializable {
      */
     @TableField(value = "create_time", fill = FieldFill.INSERT)
     @Schema(description = "创建时间")
-    /** 分组创建时间 */
+    /**
+     * 分组创建时间
+    */
     private LocalDateTime groupCreateTime;
 
     /**
@@ -109,7 +123,9 @@ public class SysAiGroup implements Serializable {
      */
     @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
     @Schema(description = "更新时间")
-    /** 分组更新时间 */
+    /**
+     * 分组更新时间
+    */
     private LocalDateTime groupUpdateTime;
 
     /**
@@ -121,6 +137,8 @@ public class SysAiGroup implements Serializable {
     @TableField("sys_ai_group_delete")
     @TableLogic
     @Schema(description = "逻辑删除标记")
-    /** 分组删除标记 */
+    /**
+     * 分组删除标记
+    */
     private Integer groupDeleted;
 }

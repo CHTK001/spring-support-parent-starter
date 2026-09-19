@@ -24,11 +24,17 @@ import java.util.Map;
 @WebEndpoint(id = "mybatis-extension")
 public class MybatisEndpoint {
 
-    /** Reload */
+    /**
+     * Reload
+    */
     private final Reload reload;
-    /** 配置 */
+    /**
+     * 配置
+    */
     private final Configuration configuration;
-    /** Supportinjector */
+    /**
+     * Supportinjector
+    */
     private final SupportInjector supportInjector;
 
     /**

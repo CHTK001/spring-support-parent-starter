@@ -26,7 +26,9 @@ public class InMemoryLeaderElectionResolver implements LeaderElectionResolver {
     private final ConcurrentMap<String, Long> leaseMap = new ConcurrentHashMap<>();
 
     @Override
-    /** 尝试获取 */
+    /**
+     * 尝试获取
+    */
     public boolean tryAcquire(String group, String nodeId, int leaseSeconds) {
         long now = System.currentTimeMillis();
         Long lease = leaseMap.get(group);
@@ -42,7 +44,9 @@ public class InMemoryLeaderElectionResolver implements LeaderElectionResolver {
     }
 
     @Override
-    /** 释放 */
+    /**
+     * 释放
+    */
     public void release(String group, String nodeId) {
         leaderMap.remove(group);
         leaseMap.remove(group);

@@ -47,23 +47,33 @@ import java.util.regex.Pattern;
 @Slf4j
 public class ENCEnvironmentPostProcessor implements EnvironmentPostProcessor, Ordered {
 
-    /** ENC 正则：ENC(algorithm:值) 或 ENC(值) */
+    /**
+     * ENC 正则：ENC(algorithm:值) 或 ENC(值)
+    */
     private static final Pattern ENC_PATTERN = Pattern.compile(
             "^ENC\\((?:([A-Za-z0-9]+):)?(.+)\\)$");
 
-    /** 需要解密的配置键后缀 */
+    /**
+     * 需要解密的配置键后缀
+    */
     private static final String[] SENSITIVE_KEYS = {
             "password", "pwd", "secret", "token", "apikey", "api-key", "api_key",
             "private-key", "private_key"
     };
 
-    /** ENC 功能启用配置键 */
+    /**
+     * ENC 功能启用配置键
+    */
     private static final String ENC_ENABLED_PROP = "plugin.datasource.enc.enabled";
 
-    /** 密钥配置前缀 */
+    /**
+     * 密钥配置前缀
+    */
     private static final String SECRET_KEY_PROP = "plugin.datasource.enc.secret-key";
 
-    /** Decryptor */
+    /**
+     * Decryptor
+    */
     private PasswordDecryptor decryptor;
 
     @Override

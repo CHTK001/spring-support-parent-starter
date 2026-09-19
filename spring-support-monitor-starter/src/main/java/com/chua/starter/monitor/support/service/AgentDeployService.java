@@ -17,19 +17,29 @@ import java.nio.file.Path;
  */
 public interface AgentDeployService {
 
-    /** 部署动作 */
+    /**
+     * 部署动作
+    */
     enum Action {
 
-        /** 首次安装 */
+        /**
+         * 首次安装
+        */
         INSTALL,
 
-        /** 重装（先清理再装） */
+        /**
+         * 重装（先清理再装）
+        */
         REINSTALL,
 
-        /** 升级（保留回滚点） */
+        /**
+         * 升级（保留回滚点）
+        */
         UPGRADE,
 
-        /** 卸载 */
+        /**
+         * 卸载
+        */
         UNINSTALL;
 
         /**

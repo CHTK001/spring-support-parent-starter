@@ -31,14 +31,22 @@ import java.util.List;
 @RequiredArgsConstructor
 public class MonitorServiceImpl implements MonitorService {
 
-    /** 监控 映射器 */
+    /**
+     * 监控 映射器
+    */
     private final MsMonitorMapper monitorMapper;
-    /** 任务 映射器, 用于级联删除 */
+    /**
+     * 任务 映射器, 用于级联删除
+    */
     private final MsMonitorTaskMapper monitorTaskMapper;
-    /** 网关 映射器, 用于级联删除 */
+    /**
+     * 网关 映射器, 用于级联删除
+    */
     private final MsMonitorGatewayMapper monitorGatewayMapper;
 
-    /** 探针标识随机源（静态 最终 复用，线程安全） */
+    /**
+     * 探针标识随机源（静态 最终 复用，线程安全）
+    */
     private static final java.security.SecureRandom SECURE_RANDOM = new java.security.SecureRandom();
 
     @Override

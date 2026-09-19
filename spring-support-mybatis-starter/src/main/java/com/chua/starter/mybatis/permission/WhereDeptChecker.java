@@ -12,13 +12,21 @@ import net.sf.jsqlparser.schema.Table;
  * @since 4.0.0
  */
 public class WhereDeptChecker {
-    /** Where */
+    /**
+     * Where
+    */
     private final Expression where;
-    /** 表别名 */
+    /**
+     * 表别名
+    */
     private final String tableAlias;
-    /** 列名称 */
+    /**
+     * 列名称
+    */
     private final String columnName;
-    /** 当前表 */
+    /**
+     * 当前表
+    */
     private Table currentTable;
 
     /**

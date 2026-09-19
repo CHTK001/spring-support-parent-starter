@@ -38,14 +38,22 @@ import java.util.Set;
 @WebFilter(filterName = "ServiceInfoAuthenticationFilter", urlPatterns = {"/service-info", "/service-info/**"})
 public class ServiceInfoAuthenticationFilter implements Filter {
 
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(ServiceInfoAuthenticationFilter.class);
-    /** 授权 */
+    /**
+     * 授权
+    */
     private static final String AUTHORIZATION = "Authorization";
-    /** 基础 */
+    /**
+     * 基础
+    */
     private static final String BASIC = "Basic ";
 
-    /** 属性 */
+    /**
+     * 属性
+    */
     private final ServiceInfoProperties properties;
 
     /**
@@ -57,7 +65,9 @@ public class ServiceInfoAuthenticationFilter implements Filter {
     }
 
     @Override
-    /** 执行过滤 */
+    /**
+     * 执行过滤
+    */
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
             throws IOException, ServletException {
         HttpServletRequest httpRequest = (HttpServletRequest) request;

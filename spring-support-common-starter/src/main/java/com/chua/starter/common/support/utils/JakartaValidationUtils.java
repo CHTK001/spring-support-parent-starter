@@ -27,7 +27,9 @@ public class JakartaValidationUtils {
     private JakartaValidationUtils() {
     }
 
-    /** 校验器 */
+    /**
+     * 校验器
+    */
     private static final Validator VALIDATOR;
 
     static {

@@ -22,7 +22,9 @@ import java.time.LocalDateTime;
 public class EduSubject {
 
     @TableId(type = IdType.AUTO)
-    /** 主题标识 */
+    /**
+     * 主题标识
+    */
     private Long subjectId;
 
     /**
@@ -51,10 +53,14 @@ public class EduSubject {
     private Integer subjectStatus;
 
     @TableField(value = "create_time", fill = com.baomidou.mybatisplus.annotation.FieldFill.INSERT)
-    /** 创建时间 */
+    /**
+     * 创建时间
+    */
     private LocalDateTime createTime;
 
     @TableField(value = "update_time", fill = com.baomidou.mybatisplus.annotation.FieldFill.INSERT_UPDATE)
-    /** 更新时间 */
+    /**
+     * 更新时间
+    */
     private LocalDateTime updateTime;
 }

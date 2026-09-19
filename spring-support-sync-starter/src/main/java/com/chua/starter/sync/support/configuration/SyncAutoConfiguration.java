@@ -35,15 +35,21 @@ import org.springframework.core.env.Environment;
 @EnableConfigurationProperties(SyncProperties.class)
 public class SyncAutoConfiguration {
 
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(SyncAutoConfiguration.class);
 
     @Autowired
-    /** 环境 */
+    /**
+     * 环境
+    */
     private Environment environment;
 
     @PostConstruct
-    /** 初始化 */
+    /**
+     * 初始化
+    */
     public void init() {
         String type = environment.getProperty("plugin.sync.type");
         Boolean serverEnable = environment.getProperty("plugin.sync.server.enable", Boolean.class, false);

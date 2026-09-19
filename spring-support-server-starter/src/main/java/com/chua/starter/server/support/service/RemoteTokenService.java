@@ -31,13 +31,19 @@ public class RemoteTokenService {
      */
     private static final String KEY_WEB_HOST = "guacd.client.host";
 
-    /** 配置键：web 前端端口 */
+    /**
+     * 配置键：web 前端端口
+    */
     private static final String KEY_WEB_PORT = "guacd.client.port";
 
-    /** 配置键：短令牌有效期（分钟） */
+    /**
+     * 配置键：短令牌有效期（分钟）
+    */
     private static final String KEY_TOKEN_TTL_MINUTES = "guacd.token.ttl-minutes";
 
-    /** 默认短令牌有效期（分钟） */
+    /**
+     * 默认短令牌有效期（分钟）
+    */
     private static final int DEFAULT_TOKEN_TTL_MINUTES = 60;
 
     /**
@@ -46,7 +52,9 @@ public class RemoteTokenService {
     @Getter
     private GuacamoleClient client; // 客户端
 
-    /** 服务属性（guacd 地址回落值） */
+    /**
+     * 服务属性（guacd 地址回落值）
+    */
     private final ServerProperties properties;
 
     /**

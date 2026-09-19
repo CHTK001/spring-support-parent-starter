@@ -53,7 +53,9 @@ public class EduKnowledgeDocServiceImpl extends ServiceImpl<EduKnowledgeDocMappe
     }
 
     @Override
-    /** Page查询 */
+    /**
+     * Page查询
+    */
     public PageResult<KnowledgeDocVO> pageQuery(EduKnowledgeDoc query, long page, long pageSize) {
         LambdaQueryWrapper<EduKnowledgeDoc> wrapper = new LambdaQueryWrapper<>();
         if (query != null) {
@@ -183,7 +185,9 @@ public class EduKnowledgeDocServiceImpl extends ServiceImpl<EduKnowledgeDocMappe
     }
 
     @Override
-    /** 搜索 */
+    /**
+     * 搜索
+    */
     public PageResult<KnowledgeDocVO> search(String keyword, String subject, int limit) {
         LambdaQueryWrapper<EduKnowledgeDoc> wrapper = new LambdaQueryWrapper<>();
         // 按关键字匹配文档名称

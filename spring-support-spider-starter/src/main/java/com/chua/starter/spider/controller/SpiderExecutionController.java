@@ -15,18 +15,26 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-/** @作者 CH */
+/**
+ * @作者 CH
+*/
 
 @Tag(name = "爬虫执行")
 @RestController
 @RequestMapping("${spider.path:/spider}/executions")
 public class SpiderExecutionController {
 
-    /** Definition服务 */
+    /**
+     * Definition服务
+    */
     private final SpiderDefinitionService definitionService;
-    /** Execution日志服务 */
+    /**
+     * Execution日志服务
+    */
     private final SpiderExecutionLogService executionLogService;
-    /** Flowrunner */
+    /**
+     * Flowrunner
+    */
     private final SpiderFlowRunner flowRunner;
 
     /**

@@ -8,34 +8,54 @@ package com.chua.starter.server.support.constants;
  */
 public final class ServerConstants {
 
-    /** 终端 webSocket 端点路径 */
+    /**
+     * 终端 webSocket 端点路径
+    */
     public static final String WEBSOCKET_TERMINAL_PATH = "/ws/ms/server/terminal";
 
-    /** SSH 直连终端 webSocket 端点路径（不经 guacd） */
+    /**
+     * SSH 直连终端 webSocket 端点路径（不经 guacd）
+    */
     public static final String WEBSOCKET_SSH_DIRECT_PATH = "/ws/ms/server/terminal/ssh";
 
-    /** 接口根路径 */
+    /**
+     * 接口根路径
+    */
     public static final String API_PREFIX = "/ms/server";
 
-    /** 默认 SSH 端口 */
+    /**
+     * 默认 SSH 端口
+    */
     public static final int DEFAULT_SSH_PORT = 22;
 
-    /** 会话状态：打开 */
+    /**
+     * 会话状态：打开
+    */
     public static final String SESSION_OPEN = "OPEN";
 
-    /** 会话状态：关闭 */
+    /**
+     * 会话状态：关闭
+    */
     public static final String SESSION_CLOSED = "CLOSED";
 
-    /** 执行日志类型：批量命令 */
+    /**
+     * 执行日志类型：批量命令
+    */
     public static final String EXEC_TYPE_COMMAND = "COMMAND";
 
-    /** 执行日志类型：文件分发 */
+    /**
+     * 执行日志类型：文件分发
+    */
     public static final String EXEC_TYPE_FILE = "FILE";
 
-    /** 执行日志状态：成功 */
+    /**
+     * 执行日志状态：成功
+    */
     public static final String EXEC_STATUS_SUCCESS = "SUCCESS";
 
-    /** 执行日志状态：失败 */
+    /**
+     * 执行日志状态：失败
+    */
     public static final String EXEC_STATUS_FAIL = "FAIL";
 
     /**

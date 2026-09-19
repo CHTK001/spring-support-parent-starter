@@ -15,19 +15,25 @@ import java.util.List;
 public class RagGlobalSettingProvider implements GlobalSettingProvider {
 
     @Override
-    /** 分组 */
+    /**
+     * 分组
+    */
     public String group() {
         return "rag";
     }
 
     @Override
-    /** 分组名称 */
+    /**
+     * 分组名称
+    */
     public String groupName() {
         return "RAG 知识库";
     }
 
     @Override
-    /** 获取Items */
+    /**
+     * 获取Items
+    */
     public List<SettingItem> getItems() {
         return List.of(
                 new SettingItem("rag_embedding_model", "memory", "STRING", "Embedding 模型（memory / openai / siliconflow）", 1),

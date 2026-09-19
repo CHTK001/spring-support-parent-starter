@@ -11,20 +11,36 @@ import java.math.BigDecimal;
  */
 @Data
 public class RefundRequest {
-    /** 排序NO */
+    /**
+     * 排序NO
+    */
     private String orderNo;
-    /** 用户标识 */
+    /**
+     * 用户标识
+    */
     private Long userId;
-    /** 贸易no */
+    /**
+     * 贸易no
+    */
     private String tradeNo;
-    /** 退税no */
+    /**
+     * 退税no
+    */
     private String refundNo;
-    /** Refundamount */
+    /**
+     * Refundamount
+    */
     private BigDecimal refundAmount;
-    /** 总数amount */
+    /**
+     * 总数amount
+    */
     private BigDecimal totalAmount;
-    /** ReasonMLmlml */
+    /**
+     * ReasonMLmlml
+    */
     private String reason;
-    /** 通知url */
+    /**
+     * 通知url
+    */
     private String notifyUrl;
 }

@@ -29,10 +29,14 @@ import org.apache.ibatis.plugin.Signature;
  * @since 4.0.0
  */
 public class ReadOnlyInterceptor implements Interceptor {
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(ReadOnlyInterceptor.class);
 
-    /** Mybatisplus属性 */
+    /**
+     * Mybatisplus属性
+    */
     private final MybatisPlusProperties mybatisPlusProperties;
 
     /**

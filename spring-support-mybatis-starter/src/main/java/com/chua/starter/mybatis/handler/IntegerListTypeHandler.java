@@ -22,7 +22,9 @@ import java.util.List;
 @MappedJdbcTypes(JdbcType.VARCHAR)
 public class IntegerListTypeHandler extends BaseTypeHandler<List<Integer>> {
     @Override
-    /** 设置non空参数 */
+    /**
+     * 设置non空参数
+    */
     public void setNonNullParameter(PreparedStatement ps, int i, List<Integer> parameter, JdbcType jdbcType) throws SQLException {
         StringBuilder sb = new StringBuilder();
         for (int idx = 0; idx < parameter.size(); idx++) {
@@ -35,21 +37,27 @@ public class IntegerListTypeHandler extends BaseTypeHandler<List<Integer>> {
     }
 
     @Override
-    /** 获取空结果 */
+    /**
+     * 获取空结果
+    */
     public List<Integer> getNullableResult(ResultSet rs, String columnName) throws SQLException {
         String string = rs.getString(columnName);
         return parseList(string);
     }
 
     @Override
-    /** 获取空结果 */
+    /**
+     * 获取空结果
+    */
     public List<Integer> getNullableResult(ResultSet rs, int columnIndex) throws SQLException {
         String string = rs.getString(columnIndex);
         return parseList(string);
     }
 
     @Override
-    /** 获取空结果 */
+    /**
+     * 获取空结果
+    */
     public List<Integer> getNullableResult(CallableStatement cs, int columnIndex) throws SQLException {
         String string = cs.getString(columnIndex);
         return parseList(string);

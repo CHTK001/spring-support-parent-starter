@@ -35,7 +35,9 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ServerGroupController {
 
-    /** 分组服务 */
+    /**
+     * 分组服务
+    */
     private final ServerGroupService serverGroupService;
 
     /**

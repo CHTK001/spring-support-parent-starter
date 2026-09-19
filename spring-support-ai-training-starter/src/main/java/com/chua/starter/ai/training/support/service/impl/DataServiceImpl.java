@@ -27,7 +27,9 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class DataServiceImpl implements DataService {
 
-    /** 文件名净化后为空时的回退名。 */
+    /**
+     * 文件名净化后为空时的回退名。
+    */
     static final String DEFAULT_FILE_NAME = "upload.zip";
 
     private final TrainProperties properties; // 属性

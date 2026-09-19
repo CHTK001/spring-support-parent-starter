@@ -27,11 +27,17 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Slf4j
 public class DatabaseMappingLoader implements InitializingBean {
 
-    /** 数据来源 */
+    /**
+     * 数据来源
+    */
     private final DataSource dataSource;
-    /** 属性 */
+    /**
+     * 属性
+    */
     private final DatasyncProperties properties;
-    /** Mapping管理器 */
+    /**
+     * Mapping管理器
+    */
     private final DataSyncMappingManager mappingManager;
 
     /**
@@ -49,7 +55,9 @@ public class DatabaseMappingLoader implements InitializingBean {
     }
 
     @Override
-    /** 之后属性设置 */
+    /**
+     * 之后属性设置
+    */
     public void afterPropertiesSet() {
         DatasyncProperties.DatabaseMapping config = properties.getDatabaseMapping();
         if (config == null || !config.isEnabled()) {
@@ -172,11 +180,17 @@ public class DatabaseMappingLoader implements InitializingBean {
      * @since 4.0.0
      */
     private static class DatabaseDataSyncFieldMapping implements DataSyncFieldMapping {
-        /** 来源字段 */
+        /**
+         * 来源字段
+        */
         private final String sourceField;
-        /** 目标字段 */
+        /**
+         * 目标字段
+        */
         private final String targetField;
-        /** 转换器 */
+        /**
+         * 转换器
+        */
         private final String converter;
 
         /**
@@ -192,19 +206,25 @@ public class DatabaseMappingLoader implements InitializingBean {
         }
 
         @Override
-        /** 源字段 */
+        /**
+         * 源字段
+        */
         public String sourceField() {
             return sourceField;
         }
 
         @Override
-        /** Target字段 */
+        /**
+         * Target字段
+        */
         public String targetField() {
             return targetField;
         }
 
         @Override
-        /** 转换器 */
+        /**
+         * 转换器
+        */
         public String converter() {
             return converter;
         }

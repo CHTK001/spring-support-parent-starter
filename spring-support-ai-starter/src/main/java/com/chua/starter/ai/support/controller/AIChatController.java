@@ -71,13 +71,21 @@ public class AIChatController extends BaseAiController {
                     + "已得出的结论与决策、仍在进行中的任务和未回答的问题；忽略寒暄、重复表述与冗余示例。"
                     + "只输出摘要正文，不要输出解释、前言或列表以外的额外内容，长度控制在 800 字以内。";
 
-    /** aidialogrecord服务 */
+    /**
+     * aidialogrecord服务
+    */
     private final AIDialogRecordService aiDialogRecordService;
-    /** aichatfacade服务 */
+    /**
+     * aichatfacade服务
+    */
     private final AiChatFacadeService aiChatFacadeService;
-    /** AI会话compression服务 */
+    /**
+     * AI会话compression服务
+    */
     private final SysAiSessionCompressionService aiSessionCompressionService;
-    /** SYSAI全局设置服务 */
+    /**
+     * SYSAI全局设置服务
+    */
     private final SysAiGlobalSettingService sysAiGlobalSettingService;
 
     // ==================== 会话管理 ====================

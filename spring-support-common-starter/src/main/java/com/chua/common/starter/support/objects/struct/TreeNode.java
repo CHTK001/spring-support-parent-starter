@@ -11,16 +11,24 @@ import java.util.List;
  */
 public class TreeNode<T> {
 
-    /** 节点数据 */
+    /**
+     * 节点数据
+    */
     private T data;
 
-    /** 节点标识 */
+    /**
+     * 节点标识
+    */
     private Object id;
 
-    /** 父节点标识 */
+    /**
+     * 父节点标识
+    */
     private Object parentId;
 
-    /** 子节点集合 */
+    /**
+     * 子节点集合
+    */
     private List<TreeNode<T>> children = new ArrayList<>();
 
     /**

@@ -14,69 +14,113 @@ import java.time.LocalDateTime;
 @Data
 public class MerchantVO implements Serializable {
     private static final long serialVersionUID = 1L; // 串行版本uid
-    /** 标识 */
+    /**
+     * 标识
+    */
     private Long id;
 
-    /** merchantno */
+    /**
+     * merchantno
+    */
     private String merchantNo;
 
-    /** Merchant名称 */
+    /**
+     * Merchant名称
+    */
     private String merchantName;
 
-    /** Contact名称 */
+    /**
+     * Contact名称
+    */
     private String contactName;
 
-    /** Contactphone */
+    /**
+     * Contactphone
+    */
     private String contactPhone;
 
-    /** Contactemail */
+    /**
+     * Contactemail
+    */
     private String contactEmail;
 
-    /** Businesslicense */
+    /**
+     * Businesslicense
+    */
     private String businessLicense;
 
-    /** Legalperson */
+    /**
+     * Legalperson
+    */
     private String legalPerson;
 
-    /** 默认通知url */
+    /**
+     * 默认通知url
+    */
     private String defaultNotifyUrl;
 
-    /** 默认返回值URL */
+    /**
+     * 默认返回值URL
+    */
     private String defaultReturnUrl;
 
-    /** Paymentwallet是否启用 */
+    /**
+     * Paymentwallet是否启用
+    */
     private Boolean paymentWalletEnabled;
 
-    /** Paymentautoclose是否启用 */
+    /**
+     * Paymentautoclose是否启用
+    */
     private Boolean paymentAutoCloseEnabled;
 
-    /** Paymentautocloseminutes */
+    /**
+     * Paymentautocloseminutes
+    */
     private Integer paymentAutoCloseMinutes;
 
-    /** Paymentsplit表是否启用 */
+    /**
+     * Paymentsplit表是否启用
+    */
     private Boolean paymentSplitTableEnabled;
 
-    /** Paymentprofitsharing是否启用 */
+    /**
+     * Paymentprofitsharing是否启用
+    */
     private Boolean paymentProfitSharingEnabled;
 
-    /** Paymentcoupon是否启用 */
+    /**
+     * Paymentcoupon是否启用
+    */
     private Boolean paymentCouponEnabled;
 
-    /** 评论 */
+    /**
+     * 评论
+    */
     private String remark;
 
-    /** 状态 */
+    /**
+     * 状态
+    */
     private Integer status;
 
-    /** 状态desc */
+    /**
+     * 状态desc
+    */
     private String statusDesc;
 
-    /** 通道数量 */
+    /**
+     * 通道数量
+    */
     private Integer channelCount;
 
-    /** 创建时间AT */
+    /**
+     * 创建时间AT
+    */
     private LocalDateTime createdAt;
 
-    /** 更新时间AT */
+    /**
+     * 更新时间AT
+    */
     private LocalDateTime updatedAt;
 }

@@ -24,7 +24,9 @@ public final class JsonMappers {
      */
     private static final DateTimeFormatter DTF = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
-    /** 创建 json映射器 实例 */
+    /**
+     * 创建 json映射器 实例
+    */
     private JsonMappers() {
     }
 

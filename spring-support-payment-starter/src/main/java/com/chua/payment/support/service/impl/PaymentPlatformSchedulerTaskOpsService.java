@@ -51,23 +51,39 @@ import java.util.stream.Collectors;
 @ConditionalOnProperty(prefix = "plugin.payment.scheduler", name = "engine", havingValue = "job")
 public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerTaskOpsService {
 
-    /** 默认_连接_超时 */
+    /**
+     * 默认_连接_超时
+    */
     private static final Duration DEFAULT_CONNECT_TIMEOUT = Duration.ofSeconds(5);
-    /** 默认_读取_超时 */
+    /**
+     * 默认_读取_超时
+    */
     private static final Duration DEFAULT_READ_TIMEOUT = Duration.ofSeconds(10);
-    /** 默认_控制台_用户名 */
+    /**
+     * 默认_控制台_用户名
+    */
     private static final String DEFAULT_CONSOLE_USERNAME = "admin";
-    /** 默认_控制台_密码 */
+    /**
+     * 默认_控制台_密码
+    */
     private static final String DEFAULT_CONSOLE_PASSWORD = "${payment.console.password:}";
-    /** 标准_日期_时间 */
+    /**
+     * 标准_日期_时间
+    */
     private static final DateTimeFormatter STANDARD_DATE_TIME =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
-    /** 环境 */
+    /**
+     * 环境
+    */
     private final Environment environment;
-    /** Objectmapper */
+    /**
+     * Objectmapper
+    */
     private final ObjectMapper objectMapper;
-    /** Rest模板 */
+    /**
+     * Rest模板
+    */
     private final RestTemplate restTemplate;
     private final Object consoleSessionMonitor = new Object(); // 控制台会话监控
 
@@ -95,7 +111,9 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
     }
 
     @Override
-    /** 列表任务 */
+    /**
+     * 列表任务
+    */
     public List<PaymentSchedulerTaskVO> listTasks() {
         AccessMode accessMode = resolveAccessMode();
         JsonNode data = request(HttpMethod.GET, taskListUrl(accessMode), null, accessMode);
@@ -107,14 +125,18 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
     }
 
     @Override
-    /** 更新任务 */
+    /**
+     * 更新任务
+    */
     public PaymentSchedulerTaskVO updateTask(String taskKey, PaymentSchedulerTaskUpdateDTO dto) {
         AccessMode accessMode = resolveAccessMode();
         return toTaskVO(request(HttpMethod.PUT, taskUrl(accessMode, taskKey), dto, accessMode));
     }
 
     @Override
-    /** trigger任务 */
+    /**
+     * trigger任务
+    */
     public PaymentSchedulerTaskVO triggerTask(String taskKey) {
         AccessMode accessMode = resolveAccessMode();
         return toTaskVO(request(HttpMethod.POST, taskTriggerUrl(accessMode, taskKey), null, accessMode));
@@ -275,7 +297,9 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
         }
     }
 
-    /** clear控制台会话 */
+    /**
+     * clear控制台会话
+    */
     private void clearConsoleSession() {
         synchronized (consoleSessionMonitor) {
             schedulerConsoleCookie = null;

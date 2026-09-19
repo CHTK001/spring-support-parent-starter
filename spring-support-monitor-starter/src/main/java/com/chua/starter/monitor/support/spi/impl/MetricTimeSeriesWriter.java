@@ -27,10 +27,14 @@ import java.util.List;
 @RequiredArgsConstructor
 public class MetricTimeSeriesWriter {
 
-    /** 已装配的时序 提供者（通常只有一个） */
+    /**
+     * 已装配的时序 提供者（通常只有一个）
+    */
     private final List<MetricTimeSeriesProvider> providers;
 
-    /** 时序配置 */
+    /**
+     * 时序配置
+    */
     private final MonitorTimeseriesProperties properties;
 
     /**

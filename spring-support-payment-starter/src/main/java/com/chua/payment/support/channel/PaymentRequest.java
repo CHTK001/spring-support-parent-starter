@@ -13,32 +13,60 @@ import java.time.LocalDateTime;
  */
 @Data
 public class PaymentRequest {
-    /** 排序NO */
+    /**
+     * 排序NO
+    */
     private String orderNo;
-    /** 用户标识 */
+    /**
+     * 用户标识
+    */
     private Long userId;
-    /** Amount */
+    /**
+     * Amount
+    */
     private BigDecimal amount;
-    /** 主题 */
+    /**
+     * 主题
+    */
     private String subject;
-    /** 请求体 */
+    /**
+     * 请求体
+    */
     private String body;
-    /** 通知url */
+    /**
+     * 通知url
+    */
     private String notifyUrl;
-    /** 返回值URL */
+    /**
+     * 返回值URL
+    */
     private String returnUrl;
-    /** 货币 */
+    /**
+     * 货币
+    */
     private String currency;
-    /** Expire时间 */
+    /**
+     * Expire时间
+    */
     private LocalDateTime expireTime;
-    /** payeropenid */
+    /**
+     * payeropenid
+    */
     private String payerOpenId;
-    /** 客户端IP */
+    /**
+     * 客户端IP
+    */
     private String clientIp;
-    /** deviceid */
+    /**
+     * deviceid
+    */
     private String deviceId;
-    /** 用户Agent */
+    /**
+     * 用户Agent
+    */
     private String userAgent;
-    /** Attach */
+    /**
+     * Attach
+    */
     private String attach;
 }

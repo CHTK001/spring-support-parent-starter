@@ -27,20 +27,26 @@ import java.util.concurrent.ConcurrentHashMap;
 @ConditionalOnProperty(prefix = "plugin.queue.audit", name = "enabled", havingValue = "true")
 public class MessageAuditInterceptor implements MessageInterceptor, ApplicationEventPublisherAware {
 
-    /** 事件publisher */
+    /**
+     * 事件publisher
+    */
     private ApplicationEventPublisher eventPublisher;
 
     private final ConcurrentHashMap<String, MessageAuditLog> auditLogs = new ConcurrentHashMap<>(); // 审计日志
     private final ConcurrentHashMap<String, Long> startTimes = new ConcurrentHashMap<>(); // 启动时间
 
     @Override
-    /** 设置application事件发布 */
+    /**
+     * 设置application事件发布
+    */
     public void setApplicationEventPublisher(ApplicationEventPublisher eventPublisher) {
         this.eventPublisher = eventPublisher;
     }
 
     @Override
-    /** 之前发送 */
+    /**
+     * 之前发送
+    */
     public Message beforeSend(Message message) {
         startTimes.put(message.getId(), System.currentTimeMillis());
 
@@ -54,7 +60,9 @@ public class MessageAuditInterceptor implements MessageInterceptor, ApplicationE
     }
 
     @Override
-    /** 之后发送 */
+    /**
+     * 之后发送
+    */
     public void afterSend(Message message, boolean success, Throwable error) {
         MessageAuditLog auditLog = auditLogs.get(message.getId());
         if (auditLog != null) {
@@ -82,7 +90,9 @@ public class MessageAuditInterceptor implements MessageInterceptor, ApplicationE
     }
 
     @Override
-    /** 之前接收 */
+    /**
+     * 之前接收
+    */
     public Message beforeReceive(Message message) {
         startTimes.put(message.getId() + "_receive", System.currentTimeMillis());
 
@@ -96,7 +106,9 @@ public class MessageAuditInterceptor implements MessageInterceptor, ApplicationE
     }
 
     @Override
-    /** 之后接收 */
+    /**
+     * 之后接收
+    */
     public void afterReceive(Message message, boolean success, Throwable error) {
         MessageAuditLog auditLog = auditLogs.get(message.getId() + "_receive");
         if (auditLog != null) {
@@ -221,7 +233,9 @@ public class MessageAuditInterceptor implements MessageInterceptor, ApplicationE
     }
 
     @Override
-    /** 获取订单 */
+    /**
+     * 获取订单
+    */
     public int getOrder() {
         return -500; // 高优先级
     }

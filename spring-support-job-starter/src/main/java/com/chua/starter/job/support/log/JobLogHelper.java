@@ -15,15 +15,21 @@ import java.time.format.DateTimeFormatter;
  */
 public final class JobLogHelper {
 
-    /** 时间_fmt */
+    /**
+     * 时间_fmt
+    */
     private static final DateTimeFormatter TIME_FMT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS")
                     .withZone(ZoneId.systemDefault());
 
-    /** 日志_缓冲 */
+    /**
+     * 日志_缓冲
+    */
     private static final ThreadLocal<StringBuilder> LOG_BUFFER = new ThreadLocal<>();
 
-    /** 创建 作业日志助手 实例 */
+    /**
+     * 创建 作业日志助手 实例
+    */
     private JobLogHelper() {
     }
 

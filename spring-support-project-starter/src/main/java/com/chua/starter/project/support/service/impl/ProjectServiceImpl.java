@@ -38,25 +38,39 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class ProjectServiceImpl implements ProjectService {
 
-    /** 项目 映射器 */
+    /**
+     * 项目 映射器
+    */
     private final MsProjectMapper projectMapper;
 
-    /** 模块配置（部署日志保留天数） */
+    /**
+     * 模块配置（部署日志保留天数）
+    */
     private final ProjectProperties projectProperties;
 
-    /** 部署日志 映射器（删除项目时级联清理） */
+    /**
+     * 部署日志 映射器（删除项目时级联清理）
+    */
     private final MsProjectDeployLogMapper deployLogMapper;
 
-    /** 服务器主机 映射器（来自 spring-支持-服务端-启动） */
+    /**
+     * 服务器主机 映射器（来自 spring-支持-服务端-启动）
+    */
     private final MsServerHostMapper serverHostMapper;
 
-    /** 守护时间轮（项目守护配置变更时重挂） */
+    /**
+     * 守护时间轮（项目守护配置变更时重挂）
+    */
     private final ProjectWatchdogWheel watchdogWheel;
 
-    /** 指标采集时间轮（项目指标配置变更时重挂） */
+    /**
+     * 指标采集时间轮（项目指标配置变更时重挂）
+    */
     private final ProjectMetricWheel metricWheel;
 
-    /** Jackson */
+    /**
+     * Jackson
+    */
     private final ObjectMapper objectMapper;
 
     @Override

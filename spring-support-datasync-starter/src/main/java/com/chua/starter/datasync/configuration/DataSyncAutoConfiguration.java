@@ -134,7 +134,9 @@ public class DataSyncAutoConfiguration {
      * @since 4.0.0
      */
     private static class SimpleDirectoryConfigDefinition implements DirectoryConfigDefinition {
-        /** 目录路径 */
+        /**
+         * 目录路径
+        */
         private final String directoryPath;
 
         /**
@@ -146,61 +148,81 @@ public class DataSyncAutoConfiguration {
         }
 
         @Override
-        /** 目录路径 */
+        /**
+         * 目录路径
+        */
         public String directoryPath() {
             return directoryPath;
         }
 
         @Override
-        /** 输入标识 */
+        /**
+         * 输入标识
+        */
         public String inputId() {
             return null;
         }
 
         @Override
-        /** 源标识 */
+        /**
+         * 源标识
+        */
         public String sourceId() {
             return null;
         }
 
         @Override
-        /** 输出标识 */
+        /**
+         * 输出标识
+        */
         public String outputId() {
             return null;
         }
 
         @Override
-        /** sinkid */
+        /**
+         * sinkid
+        */
         public String sinkId() {
             return null;
         }
 
         @Override
-        /** Mappings */
+        /**
+         * Mappings
+        */
         public List<DataSyncFieldMapping> mappings() {
             return List.of();
         }
 
         @Override
-        /** 批量 */
+        /**
+         * 批量
+        */
         public int batch() {
             return 100;
         }
 
         @Override
-        /** cron类型 */
+        /**
+         * cron类型
+        */
         public String cronType() {
             return null;
         }
 
         @Override
-        /** Cron */
+        /**
+         * Cron
+        */
         public String cron() {
             return null;
         }
 
         @Override
-        /** 参数 */
+        /**
+         * 参数
+        */
         public Map<String, Object> params() {
             return Map.of();
         }

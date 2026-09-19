@@ -15,26 +15,36 @@ import org.springframework.expression.spel.support.StandardEvaluationContext;
 @Spi("spring")
 public class SpringSpelExpressionParser implements com.chua.common.support.lang.ast.ExpressionParser {
 
-    /** Evaluation上下文 */
+    /**
+     * Evaluation上下文
+    */
     private final EvaluationContext evaluationContext = new StandardEvaluationContext();
-    /** 表达式解析器 */
+    /**
+     * 表达式解析器
+    */
     private final org.springframework.expression.ExpressionParser expressionParser = new org.springframework.expression.spel.standard.SpelExpressionParser();
 
     @Override
-    /** 类型 */
+    /**
+     * 类型
+    */
     public String type() {
         return "spring";
     }
 
     @Override
-    /** 解析 */
+    /**
+     * 解析
+    */
     public BTreeNode parse(String express) {
         Object value = expressionParser.parseExpression(express, new TemplateParserContext()).getValue(evaluationContext);
         return BTreeNode.value(value);
     }
 
     @Override
-    /** Generate */
+    /**
+     * Generate
+    */
     public String generate(BTreeNode node) {
         if (node == null) {
             return "";

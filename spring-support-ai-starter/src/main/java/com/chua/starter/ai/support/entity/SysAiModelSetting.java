@@ -23,7 +23,9 @@ public class SysAiModelSetting {
      * 模型设置主键 标识
      */
     @TableId(value = "sys_ai_model_setting_id", type = IdType.AUTO)
-    /** SYSAI模型设置标识 */
+    /**
+     * SYSAI模型设置标识
+    */
     private Integer id;
 
     /**
@@ -72,14 +74,18 @@ public class SysAiModelSetting {
      * 创建时间
      */
     @TableField("create_time")
-    /** 创建时间 */
+    /**
+     * 创建时间
+    */
     private LocalDateTime createTime;
 
     /**
      * 更新时间
      */
     @TableField("update_time")
-    /** 更新时间 */
+    /**
+     * 更新时间
+    */
     private LocalDateTime updateTime;
 }
 

@@ -53,34 +53,54 @@ import java.util.concurrent.atomic.AtomicInteger;
 @RequiredArgsConstructor
 public class ExecServiceImpl implements ExecService {
 
-    /** 默认单机命令超时（秒） */
+    /**
+     * 默认单机命令超时（秒）
+    */
     private static final int DEFAULT_TIMEOUT_SECONDS = 60;
 
-    /** 日志查询条数上限 */
+    /**
+     * 日志查询条数上限
+    */
     private static final int LOG_LIMIT = 200;
 
-    /** 输出落库截断长度，防止超长输出撑爆行存储 */
+    /**
+     * 输出落库截断长度，防止超长输出撑爆行存储
+    */
     private static final int OUTPUT_TRUNCATE = 64 * 1024;
 
-    /** 默认分发目标目录 */
+    /**
+     * 默认分发目标目录
+    */
     private static final String DEFAULT_DIRECTORY = "/tmp";
 
-    /** JSON 解析器（主机标识 数组解析） */
+    /**
+     * JSON 解析器（主机标识 数组解析）
+    */
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    /** 任务 映射器 */
+    /**
+     * 任务 映射器
+    */
     private final MsExecJobMapper jobMapper;
 
-    /** 执行日志 映射器 */
+    /**
+     * 执行日志 映射器
+    */
     private final MsExecLogMapper logMapper;
 
-    /** 主机服务 */
+    /**
+     * 主机服务
+    */
     private final ServerHostService serverHostService;
 
-    /** 连接缓存管理器 */
+    /**
+     * 连接缓存管理器
+    */
     private final ConnectionManager connectionManager;
 
-    /** 服务属性 */
+    /**
+     * 服务属性
+    */
     private final ServerProperties properties;
 
     @Override

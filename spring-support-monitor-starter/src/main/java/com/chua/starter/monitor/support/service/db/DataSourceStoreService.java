@@ -31,19 +31,29 @@ import java.util.concurrent.atomic.AtomicLong;
 @Service
 public class DataSourceStoreService {
 
-    /** 支持的数据源类型列表。 */
+    /**
+     * 支持的数据源类型列表。
+    */
     private static final List<String> DS_TYPES = List.of("jdbc", "redis", "influxdb", "neo4j", "nacos", "zookeeper");
 
-    /** JDBC 数据源默认端口(MySQL)。 */
+    /**
+     * JDBC 数据源默认端口(MySQL)。
+    */
     private static final int JDBC_DEFAULT_PORT = 3306;
 
-    /** 数据源配置内存存储(key 为数据源 id)。 */
+    /**
+     * 数据源配置内存存储(key 为数据源 id)。
+    */
     private final ConcurrentHashMap<Long, DataSourceConfig> dataSourceStore = new ConcurrentHashMap<>();
 
-    /** 数据源 id 生成器,从 1000 起递增。 */
+    /**
+     * 数据源 id 生成器,从 1000 起递增。
+    */
     private final AtomicLong idGenerator = new AtomicLong(1000);
 
-    /** 默认主数据源提供者(应用自身连接)。 */
+    /**
+     * 默认主数据源提供者(应用自身连接)。
+    */
     private final ObjectProvider<DataSource> defaultDataSourceProvider;
 
     /**

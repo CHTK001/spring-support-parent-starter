@@ -20,7 +20,9 @@ import java.io.Serializable;
 @Builder
 public class MsgEvent implements Serializable {
 
-    /** 串行版本UID */
+    /**
+     * 串行版本UID
+    */
     private static final long serialVersionUID = 1L;
 
     /**
@@ -79,7 +81,9 @@ public class MsgEvent implements Serializable {
     private long timestamp;
 
     @Override
-    /** 转为字符串 */
+    /**
+     * 转为字符串
+    */
     public String toString() {
         return Json.toJSONString(this);
     }

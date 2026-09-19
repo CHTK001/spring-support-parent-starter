@@ -25,7 +25,9 @@ public class SpringCompatUtils {
     private SpringCompatUtils() {
     }
 
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(SpringCompatUtils.class);
         private static volatile Boolean factoryMethodMetadataEnabled = null; // 工厂方法metadata已启用
 

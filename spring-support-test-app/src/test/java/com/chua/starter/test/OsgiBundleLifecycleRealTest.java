@@ -70,7 +70,9 @@ class OsgiBundleLifecycleRealTest {
     @Autowired
     private FelixOsgiLauncher osgiLauncher; // osgilauncher
 
-    /** 真实测试：bundle 安装 → 查询 → 启动（活跃）→ 卸载（osgi 框架级 API） */
+    /**
+     * 真实测试：bundle 安装 → 查询 → 启动（活跃）→ 卸载（osgi 框架级 API）
+    */
     @Test
     void bundleInstallStartUninstallViaFramework() {
         // 1) 安装真实 bundle

@@ -45,7 +45,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * @since 4.0.0
  */
 public class MapperReload implements Reload, DisposableBean {
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(MapperReload.class);
 
     /**

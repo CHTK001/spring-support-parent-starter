@@ -10,7 +10,9 @@ package com.chua.starter.ai.support.configuration.ocr;
  */
 public class OcrSettingsChangedEvent {
 
-    /** 变更的分组名 */
+    /**
+     * 变更的分组名
+    */
     private final String group;
 
     /**

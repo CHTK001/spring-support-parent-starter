@@ -42,65 +42,87 @@ public class InMemorySyncClient implements SyncClient {
     private final Map<String, java.util.List<Object>> sent = new ConcurrentHashMap<>();
 
     @Override
-    /** 连接 */
+    /**
+     * 连接
+    */
     public void connect() {
         connected = true;
     }
 
     @Override
-    /** 断开 */
+    /**
+     * 断开
+    */
     public void disconnect() {
         connected = false;
     }
 
     @Override
-    /** 是否连接 */
+    /**
+     * 是否连接
+    */
     public boolean isConnected() {
         return connected;
     }
 
     @Override
-    /** 获取客户端标识 */
+    /**
+     * 获取客户端标识
+    */
     public String getClientId() {
         return clientId;
     }
 
     @Override
-    /** 发送 */
+    /**
+     * 发送
+    */
     public void send(String topic, Object message) {
         sent.computeIfAbsent(topic, k -> new CopyOnWriteArrayList<>()).add(message);
     }
 
     @Override
-    /** 订阅 */
+    /**
+     * 订阅
+    */
     public void subscribe(String topic, SyncMessageHandler handler) {
         handlers.computeIfAbsent(topic, k -> new CopyOnWriteArrayList<>()).add(handler);
     }
 
     @Override
-    /** 取消订阅 */
+    /**
+     * 取消订阅
+    */
     public void unsubscribe(String topic) {
         handlers.remove(topic);
     }
 
     @Override
-    /** 添加监听器 */
+    /**
+     * 添加监听器
+    */
     public void addListener(SyncFlowListener listener) {
     }
 
     @Override
-    /** 移除监听器 */
+    /**
+     * 移除监听器
+    */
     public void removeListener(SyncFlowListener listener) {
     }
 
     @Override
-    /** 获取Metadata */
+    /**
+     * 获取Metadata
+    */
     public Map<String, Object> getMetadata() {
         return new HashMap<>();
     }
 
     @Override
-    /** 关闭 */
+    /**
+     * 关闭
+    */
     public void close() {
         connected = false;
     }

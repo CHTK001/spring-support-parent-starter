@@ -30,7 +30,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class MailService {
 
-    /** javamail发送 Bean（由 Spring Boot 自动配置） */
+    /**
+     * javamail发送 Bean（由 Spring Boot 自动配置）
+    */
     private final JavaMailSender mailSender;
 
     /**

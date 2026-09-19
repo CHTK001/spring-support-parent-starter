@@ -23,7 +23,9 @@ import org.springframework.stereotype.Component;
 @Component
 public class WindowsHostDetectProvider implements HostDetectProvider {
 
-    /** WinRM HTTP 默认端口（未配置时使用） */
+    /**
+     * WinRM HTTP 默认端口（未配置时使用）
+    */
     private static final int DEFAULT_WINRM_PORT = 5985;
 
     @Override

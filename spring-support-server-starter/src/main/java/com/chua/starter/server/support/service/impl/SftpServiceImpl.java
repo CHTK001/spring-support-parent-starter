@@ -35,13 +35,19 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class SftpServiceImpl implements SftpService {
 
-    /** 文本内容读取上限（1MB），超出截断 */
+    /**
+     * 文本内容读取上限（1MB），超出截断
+    */
     private static final int CONTENT_LIMIT_BYTES = 1024 * 1024;
 
-    /** 连接超时（秒） */
+    /**
+     * 连接超时（秒）
+    */
     private static final int CONNECT_TIMEOUT_SECONDS = 8;
 
-    /** 主机服务（凭据解析） */
+    /**
+     * 主机服务（凭据解析）
+    */
     private final ServerHostService serverHostService;
 
     @Override

@@ -23,7 +23,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class TransactionController {
 
-    /** Transactionrecord服务 */
+    /**
+     * Transactionrecord服务
+    */
     private final TransactionRecordService transactionRecordService;
 
     @GetMapping("/{id}")

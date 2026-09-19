@@ -63,7 +63,9 @@ class ReadOnlyRealTest {
         return session;
     }
 
-    /** 只读账号字段（o认证 服务端数据库返回 readonly=true，无 读取_ONLY 角色）：获取 放行、POST 拒绝 */
+    /**
+     * 只读账号字段（o认证 服务端数据库返回 readonly=true，无 读取_ONLY 角色）：获取 放行、POST 拒绝
+    */
     @Test
     void readonlyFieldBlocksWriteButAllowsRead() throws Exception {
         MockHttpSession session = sessionWith(Set.of("USER"), Set.of("user:query", "user:delete"), true);
@@ -71,7 +73,9 @@ class ReadOnlyRealTest {
         mockMvc.perform(post("/api/permission/delete").session(session)).andExpect(status().isForbidden());
     }
 
-    /** 只读角色 + 写权限：获取 放行、POST 拒绝（只读优先于权限码） */
+    /**
+     * 只读角色 + 写权限：获取 放行、POST 拒绝（只读优先于权限码）
+    */
     @Test
     void readOnlyRoleBlocksWriteButAllowsRead() throws Exception {
         MockHttpSession session = sessionWith(Set.of("READ_ONLY"), Set.of("user:query", "user:delete"));
@@ -79,14 +83,18 @@ class ReadOnlyRealTest {
         mockMvc.perform(post("/api/permission/delete").session(session)).andExpect(status().isForbidden());
     }
 
-    /** 非只读角色：正常权限流（持有 用户:删除 -> POST 放行） */
+    /**
+     * 非只读角色：正常权限流（持有 用户:删除 -> POST 放行）
+    */
     @Test
     void normalRoleAllowsWriteWithPermission() throws Exception {
         MockHttpSession session = sessionWith(Set.of("USER"), Set.of("user:delete"));
         mockMvc.perform(post("/api/permission/delete").session(session)).andExpect(status().isOk());
     }
 
-    /** 只读 + 超管：写操作仍拒绝（只读优先于所有权限，超管也不例外） */
+    /**
+     * 只读 + 超管：写操作仍拒绝（只读优先于所有权限，超管也不例外）
+    */
     @Test
     void readOnlyOverridesSuperAdmin() throws Exception {
         MockHttpSession session = sessionWith(Set.of("READ_ONLY", "SUPER_ADMIN"), null);

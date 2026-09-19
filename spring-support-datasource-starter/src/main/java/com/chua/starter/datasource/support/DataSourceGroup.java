@@ -20,19 +20,29 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Slf4j
 public class DataSourceGroup {
 
-    /** 组名（如 slave） */
+    /**
+     * 组名（如 slave）
+    */
     private final String groupName;
 
-    /** 组内数据源列表 */
+    /**
+     * 组内数据源列表
+    */
     private final List<DataSource> dataSources = new ArrayList<>();
 
-    /** 数据源名称列表（用于日志） */
+    /**
+     * 数据源名称列表（用于日志）
+    */
     private final List<String> dataSourceNames = new ArrayList<>();
 
-    /** 轮询计数器 */
+    /**
+     * 轮询计数器
+    */
     private final AtomicInteger counter = new AtomicInteger(0);
 
-    /** 负载均衡策略 */
+    /**
+     * 负载均衡策略
+    */
     private volatile LoadBalanceStrategy strategy = LoadBalanceStrategy.ROUND_ROBIN;
 
     /**
@@ -123,9 +133,13 @@ public class DataSourceGroup {
      * @since 4.0.0
      */
     public enum LoadBalanceStrategy {
-        /** 轮询 */
+        /**
+         * 轮询
+        */
         ROUND_ROBIN,
-        /** 随机 */
+        /**
+         * 随机
+        */
         RANDOM
     }
 }

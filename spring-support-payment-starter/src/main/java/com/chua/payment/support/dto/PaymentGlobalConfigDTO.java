@@ -10,22 +10,34 @@ import lombok.Data;
 @Data
 public class PaymentGlobalConfigDTO {
 
-    /** paymentnotifybaseurl */
+    /**
+     * paymentnotifybaseurl
+    */
     private String paymentNotifyBaseUrl;
 
-    /** Payment返回值URL */
+    /**
+     * Payment返回值URL
+    */
     private String paymentReturnUrl;
 
-    /** Paymentcallback路径模板 */
+    /**
+     * Paymentcallback路径模板
+    */
     private String paymentCallbackPathTemplate;
 
-    /** Paymentautorefresh秒 */
+    /**
+     * Paymentautorefresh秒
+    */
     private Integer paymentAutoRefreshSeconds;
 
-    /** Coupondeductwithdrawable */
+    /**
+     * Coupondeductwithdrawable
+    */
     private Boolean couponDeductWithdrawable;
 
-    /** 评论 */
+    /**
+     * 评论
+    */
     private String remark;
 }
 

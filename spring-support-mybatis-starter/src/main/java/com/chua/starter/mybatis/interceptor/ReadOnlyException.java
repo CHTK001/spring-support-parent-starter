@@ -9,7 +9,9 @@ package com.chua.starter.mybatis.interceptor;
  */
 public class ReadOnlyException extends RuntimeException {
 
-    /** 串行版本UID */
+    /**
+     * 串行版本UID
+    */
     private static final long serialVersionUID = 1L;
 
     /**

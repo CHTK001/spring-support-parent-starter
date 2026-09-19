@@ -1,18 +1,32 @@
 package com.chua.starter.spider.dto;
 
-/** @作者 CH */
+/**
+ * @作者 CH
+*/
 public class ExecutionStatusVO {
-    /** 状态 */
+    /**
+     * 状态
+    */
     private String status;
-    /** Completed数量 */
+    /**
+     * Completed数量
+    */
     private Integer completedCount;
-    /** 总数数量 */
+    /**
+     * 总数数量
+    */
     private Integer totalCount;
-    /** Collected数量 */
+    /**
+     * Collected数量
+    */
     private Integer collectedCount;
-    /** 最大值深度reached */
+    /**
+     * 最大值深度reached
+    */
     private Integer maxDepthReached;
-    /** 蜘蛛代码 */
+    /**
+     * 蜘蛛代码
+    */
     private String spiderCode;
 
     /**

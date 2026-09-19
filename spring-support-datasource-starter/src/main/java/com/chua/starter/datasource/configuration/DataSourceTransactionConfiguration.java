@@ -63,12 +63,18 @@ public class DataSourceTransactionConfiguration implements
      * 写事务的超时时间为10秒
      */
     private static final int TX_METHOD_TIMEOUT = 10;
-    /** Advisor */
+    /**
+     * Advisor
+    */
     private static final String ADVISOR = "_advisor";
-    /** 拦截器 */
+    /**
+     * 拦截器
+    */
     private static final String INTERCEPTOR = "_interceptor";
 
-    /** Transaction属性 */
+    /**
+     * Transaction属性
+    */
     private TransactionProperties transactionProperties;
     /**
      * 只读事务

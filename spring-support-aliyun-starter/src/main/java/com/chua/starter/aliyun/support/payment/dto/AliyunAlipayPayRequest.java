@@ -11,21 +11,37 @@ import java.math.BigDecimal;
  */
 @Data
 public class AliyunAlipayPayRequest {
-    /** 排序NO */
+    /**
+     * 排序NO
+    */
     private String orderNo;
-    /** 总数amount */
+    /**
+     * 总数amount
+    */
     private BigDecimal totalAmount;
-    /** 主题 */
+    /**
+     * 主题
+    */
     private String subject;
-    /** 请求体 */
+    /**
+     * 请求体
+    */
     private String body;
-    /** 通知url */
+    /**
+     * 通知url
+    */
     private String notifyUrl;
-    /** 返回值URL */
+    /**
+     * 返回值URL
+    */
     private String returnUrl;
-    /** Product代码 */
+    /**
+     * Product代码
+    */
     private String productCode;
-    /** payeropenid */
+    /**
+     * payeropenid
+    */
     private String payerOpenId;
 }
 

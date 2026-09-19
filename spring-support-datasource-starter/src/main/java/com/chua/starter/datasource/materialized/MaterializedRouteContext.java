@@ -10,10 +10,14 @@ import com.chua.common.support.data.materialized.MaterializedRouteDefinition;
  */
 public final class MaterializedRouteContext {
 
-    /** Holder */
+    /**
+     * Holder
+    */
     private static final ThreadLocal<MaterializedRouteDefinition> HOLDER = new ThreadLocal<>();
 
-    /** 创建 物化route上下文 实例 */
+    /**
+     * 创建 物化route上下文 实例
+    */
     private MaterializedRouteContext() {
     }
 
@@ -35,7 +39,9 @@ public final class MaterializedRouteContext {
         return HOLDER.get();
     }
 
-    /** Clear */
+    /**
+     * Clear
+    */
     public static void clear() {
         HOLDER.remove();
     }

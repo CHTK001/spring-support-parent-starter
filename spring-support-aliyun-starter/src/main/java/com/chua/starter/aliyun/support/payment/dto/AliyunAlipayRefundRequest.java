@@ -11,13 +11,21 @@ import java.math.BigDecimal;
  */
 @Data
 public class AliyunAlipayRefundRequest {
-    /** 排序NO */
+    /**
+     * 排序NO
+    */
     private String orderNo;
-    /** 退税no */
+    /**
+     * 退税no
+    */
     private String refundNo;
-    /** Refundamount */
+    /**
+     * Refundamount
+    */
     private BigDecimal refundAmount;
-    /** ReasonMLmlml */
+    /**
+     * ReasonMLmlml
+    */
     private String reason;
 }
 

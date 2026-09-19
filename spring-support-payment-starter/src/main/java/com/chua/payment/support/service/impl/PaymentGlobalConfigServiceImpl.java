@@ -22,22 +22,32 @@ import org.springframework.util.StringUtils;
 @RequiredArgsConstructor
 public class PaymentGlobalConfigServiceImpl implements PaymentGlobalConfigService {
 
-    /** 默认_Key */
+    /**
+     * 默认_Key
+    */
     private static final String DEFAULT_KEY = "DEFAULT";
 
-    /** 薪酬全局配置映射器 */
+    /**
+     * 薪酬全局配置映射器
+    */
     private final PaymentGlobalConfigMapper paymentGlobalConfigMapper;
-    /** Paymentcallback属性 */
+    /**
+     * Paymentcallback属性
+    */
     private final PaymentCallbackProperties paymentCallbackProperties;
 
     @Override
-    /** 获取配置 */
+    /**
+     * 获取配置
+    */
     public PaymentGlobalConfigVO getConfig() {
         return toVO(getConfigEntity());
     }
 
     @Override
-    /** 获取配置实体 */
+    /**
+     * 获取配置实体
+    */
     public PaymentGlobalConfig getConfigEntity() {
         PaymentGlobalConfig entity = paymentGlobalConfigMapper.selectOne(new LambdaQueryWrapper<PaymentGlobalConfig>()
                 .eq(PaymentGlobalConfig::getConfigKey, DEFAULT_KEY)
@@ -55,7 +65,9 @@ public class PaymentGlobalConfigServiceImpl implements PaymentGlobalConfigServic
     }
 
     @Override
-    /** 保存或更新 */
+    /**
+     * 保存或更新
+    */
     public PaymentGlobalConfigVO saveOrUpdate(PaymentGlobalConfigDTO dto) {
         PaymentGlobalConfig entity = paymentGlobalConfigMapper.selectOne(new LambdaQueryWrapper<PaymentGlobalConfig>()
                 .eq(PaymentGlobalConfig::getConfigKey, DEFAULT_KEY)

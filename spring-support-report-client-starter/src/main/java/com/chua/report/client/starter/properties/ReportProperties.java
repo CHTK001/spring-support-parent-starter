@@ -18,7 +18,9 @@ import java.util.Set;
 @ConfigurationProperties(prefix = ReportProperties.PRE)
 public class ReportProperties {
 
-    /** PRE */
+    /**
+     * PRE
+    */
     public static final String PRE = "plugin.report.client";
 
     /**

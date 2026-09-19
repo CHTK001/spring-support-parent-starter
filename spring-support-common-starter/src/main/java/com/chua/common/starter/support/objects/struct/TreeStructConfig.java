@@ -10,16 +10,24 @@ import java.util.function.Function;
  */
 public class TreeStructConfig<T> {
 
-    /** 标识提取器 */
+    /**
+     * 标识提取器
+    */
     private Function<T, ?> idExtractor;
 
-    /** 父标识提取器 */
+    /**
+     * 父标识提取器
+    */
     private Function<T, ?> parentIdExtractor;
 
-    /** 名称提取器 */
+    /**
+     * 名称提取器
+    */
     private Function<T, String> nameExtractor;
 
-    /** 数值提取器 */
+    /**
+     * 数值提取器
+    */
     private Function<T, Number> valueExtractor;
 
     /**

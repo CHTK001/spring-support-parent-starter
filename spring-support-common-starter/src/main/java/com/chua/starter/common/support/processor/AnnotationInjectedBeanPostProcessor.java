@@ -52,21 +52,35 @@ import java.util.concurrent.ConcurrentMap;
 @SuppressWarnings("ALL")
 public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> implements MergedBeanDefinitionPostProcessor, PriorityOrdered, BeanFactoryAware, BeanClassLoaderAware, EnvironmentAware, DisposableBean, SmartInstantiationAwareBeanPostProcessor {
 
-    /** 缓存_大小 */
+    /**
+     * 缓存_大小
+    */
     private static final int CACHE_SIZE = Integer.getInteger("", 32);
-    /** 日志记录器 */
+    /**
+     * 日志记录器
+    */
     private final Log logger = LogFactory.getLog(this.getClass());
-    /** 注解类型 */
+    /**
+     * 注解类型
+    */
     private final Class<A> annotationType;
     private final ConcurrentMap<String, AnnotatedInjectionMetadata> injectionMetadataCache; // injectionmetadata缓存
     private final ConcurrentMap<String, Object> injectedObjectsCache; // injected对象缓存
-    /** Bean工厂 */
+    /**
+     * Bean工厂
+    */
     private ConfigurableListableBeanFactory beanFactory;
-    /** 环境 */
+    /**
+     * 环境
+    */
     private Environment environment;
-    /** Classloader */
+    /**
+     * Classloader
+    */
     private ClassLoader classLoader;
-    /** 排序 */
+    /**
+     * 排序
+    */
     private int order;
 
     /**
@@ -438,9 +452,13 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
      * @since 4.0.0
      */
     public class AnnotatedFieldElement extends InjectionMetadata.InjectedElement {
-        /** 字段 */
+        /**
+         * 字段
+        */
         private final Field field;
-        /** 注解 */
+        /**
+         * 注解
+        */
         private final A annotation;
         private volatile Object bean; // Bean
 
@@ -475,9 +493,13 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
      * @since 4.0.0
      */
     private class AnnotatedMethodElement extends InjectionMetadata.InjectedElement {
-        /** 方法 */
+        /**
+         * 方法
+        */
         private final Method method;
-        /** 注解 */
+        /**
+         * 注解
+        */
         private final A annotation;
         private volatile Object object; // 对象
 
@@ -513,9 +535,13 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
      * @since 4.0.0
      */
     private class AnnotatedInjectionMetadata extends InjectionMetadata {
-        /** Fieldelements */
+        /**
+         * Fieldelements
+        */
         private final Collection<AnnotatedFieldElement> fieldElements;
-        /** Methodelements */
+        /**
+         * Methodelements
+        */
         private final Collection<AnnotatedMethodElement> methodElements;
 
         /**

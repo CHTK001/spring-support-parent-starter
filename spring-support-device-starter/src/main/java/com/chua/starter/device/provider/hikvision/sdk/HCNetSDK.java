@@ -22,35 +22,55 @@ import java.util.List;
  */
 public interface HCNetSDK extends Library {
 
-    /** 设备地址最大长度 */
+    /**
+     * 设备地址最大长度
+    */
     int NET_DVR_DEV_ADDRESS_MAX_LEN = 129;
 
-    /** 登录用户名最大长度 */
+    /**
+     * 登录用户名最大长度
+    */
     int NET_DVR_LOGIN_USERNAME_MAX_LEN = 64;
 
-    /** 登录密码最大长度 */
+    /**
+     * 登录密码最大长度
+    */
     int NET_DVR_LOGIN_PASSWD_MAX_LEN = 64;
 
-    /** 通道号最大值 */
+    /**
+     * 通道号最大值
+    */
     int MAX_CHANNUM = 16;
 
-    /** 预览：获取系统头 */
+    /**
+     * 预览：获取系统头
+    */
     int NET_DVR_SYSHEAD = 1;
 
-    /** 预览：流数据 */
+    /**
+     * 预览：流数据
+    */
     int NET_DVR_STREAMDATA = 2;
 
-    /** TCP 连接 */
+    /**
+     * TCP 连接
+    */
     int NET_DVR_NETWORK_TCP = 1;
 
-    /** 码流类型：主码流 */
+    /**
+     * 码流类型：主码流
+    */
     int NET_DVR_MAIN_STREAM = 0;
 
-    /** 云台指令：开始/停止 */
+    /**
+     * 云台指令：开始/停止
+    */
     byte NET_DVR_PTZ_START = 1;
     byte NET_DVR_PTZ_STOP = 0; // netdvrptz停止
 
-    /** 云台预置位操作 */
+    /**
+     * 云台预置位操作
+    */
     int NET_DVR_PTZ_PRESET_OTHER = 0x0E;
     int NET_DVR_GOTO_PRESET = 0x00; // NET_DVR_GOTO_PRESET
     int NET_DVR_SET_PRESET = 0x01; // netdvr设置preset
@@ -248,37 +268,59 @@ public interface HCNetSDK extends Library {
      */
     class NET_DVR_USER_LOGIN_INFO extends Structure {
 
-        /** 设备 IP 地址 */
+        /**
+         * 设备 IP 地址
+        */
         public byte[] sDeviceAddress = new byte[NET_DVR_DEV_ADDRESS_MAX_LEN];
 
-        /** 是否使用传输协议 */
+        /**
+         * 是否使用传输协议
+        */
         public byte byUseTransport;
 
-        /** 设备端口 */
+        /**
+         * 设备端口
+        */
         public short wPort;
 
-        /** 登录用户名 */
+        /**
+         * 登录用户名
+        */
         public byte[] sUserName = new byte[NET_DVR_LOGIN_USERNAME_MAX_LEN];
 
-        /** 登录密码 */
+        /**
+         * 登录密码
+        */
         public byte[] sPassword = new byte[NET_DVR_LOGIN_PASSWD_MAX_LEN];
 
-        /** 登录模式 */
+        /**
+         * 登录模式
+        */
         public int dwLoginMode;
 
-        /** 是否使用 HTTPS */
+        /**
+         * 是否使用 HTTPS
+        */
         public byte byHttps;
 
-        /** 代理 标识 */
+        /**
+         * 代理 标识
+        */
         public int iProxyID;
 
-        /** 校验模式 */
+        /**
+         * 校验模式
+        */
         public byte byVerifyMode;
 
-        /** 保留字节 */
+        /**
+         * 保留字节
+        */
         public byte[] byReserved = new byte[127];
 
-        /** 保留字节 2 */
+        /**
+         * 保留字节 2
+        */
         public byte[] byReserved2 = new byte[64];
 
         /**
@@ -324,79 +366,129 @@ public interface HCNetSDK extends Library {
      */
     class NET_DVR_DEVICEINFO_V40 extends Structure {
 
-        /** 设备序列号 */
+        /**
+         * 设备序列号
+        */
         public byte[] sSerialNumber = new byte[48];
 
-        /** 报警输入口个数 */
+        /**
+         * 报警输入口个数
+        */
         public byte byAlarmInPortNum;
 
-        /** 报警输出口个数 */
+        /**
+         * 报警输出口个数
+        */
         public byte byAlarmOutPortNum;
 
-        /** 硬盘个数 */
+        /**
+         * 硬盘个数
+        */
         public byte byDiskNum;
 
-        /** 设备类型 */
+        /**
+         * 设备类型
+        */
         public byte byDVRType;
 
-        /** 模拟通道个数 */
+        /**
+         * 模拟通道个数
+        */
         public byte byChanNum;
 
-        /** 起始通道号 */
+        /**
+         * 起始通道号
+        */
         public byte byStartChan;
 
-        /** 语音通道数 */
+        /**
+         * 语音通道数
+        */
         public byte byAudioChanNum;
 
-        /** 数字通道个数 */
+        /**
+         * 数字通道个数
+        */
         public byte byIPChanNum;
 
-        /** 零通道编码个数 */
+        /**
+         * 零通道编码个数
+        */
         public byte byZeroChanNum;
 
-        /** 主协议 */
+        /**
+         * 主协议
+        */
         public byte byMainProto;
 
-        /** 子协议 */
+        /**
+         * 子协议
+        */
         public byte bySubProto;
 
-        /** 支持能力 */
+        /**
+         * 支持能力
+        */
         public byte bySupport;
 
-        /** 支持能力 1 */
+        /**
+         * 支持能力 1
+        */
         public byte bySupport1;
 
-        /** 支持能力 2 */
+        /**
+         * 支持能力 2
+        */
         public byte bySupport2;
 
-        /** 设备类型 */
+        /**
+         * 设备类型
+        */
         public short wDevType;
 
-        /** 支持能力 3 */
+        /**
+         * 支持能力 3
+        */
         public byte bySupport3;
 
-        /** 多码流能力 */
+        /**
+         * 多码流能力
+        */
         public byte byMultiStreamProto;
 
-        /** 起始数字通道 */
+        /**
+         * 起始数字通道
+        */
         public byte byStartDChan;
 
-        /** 起始数字对讲通道 */
+        /**
+         * 起始数字对讲通道
+        */
         public byte byStartDTalkChan;
 
-        /** 高清数字通道数 */
+        /**
+         * 高清数字通道数
+        */
         public byte byHighDChanNum;
 
-        /** 支持能力 4 */
+        /**
+         * 支持能力 4
+        */
         public byte bySupport4;
 
-        /** 支持能力 5 */
+        /**
+         * 支持能力 5
+        */
         public byte bySupport5;
 
-        /** 高清数字通道最大值 */
+        /**
+         * 高清数字通道最大值
+        */
         public byte byIPChanInHighMax;
 
-        /** 保留字节 */
+        /**
+         * 保留字节
+        */
         public byte[] byReserved1 = new byte[24];
 
         @Override
@@ -422,43 +514,69 @@ public interface HCNetSDK extends Library {
      */
     class NET_DVR_PREVIEWINFO extends Structure {
 
-        /** 通道号 */
+        /**
+         * 通道号
+        */
         public int lChannel;
 
-        /** 码流类型 */
+        /**
+         * 码流类型
+        */
         public int dwStreamType;
 
-        /** 连接方式 */
+        /**
+         * 连接方式
+        */
         public int dwLinkMode;
 
-        /** 播放窗口句柄 */
+        /**
+         * 播放窗口句柄
+        */
         public Pointer hPlayWnd;
 
-        /** 阻塞播放 */
+        /**
+         * 阻塞播放
+        */
         public byte bBlocked;
 
-        /** 是否回放录像 */
+        /**
+         * 是否回放录像
+        */
         public byte bPassbackRecord;
 
-        /** 预览模式 */
+        /**
+         * 预览模式
+        */
         public byte byPreviewMode;
 
-        /** 流 标识 */
+        /**
+         * 流 标识
+        */
         public byte[] byStreamID = new byte[32];
 
-        /** 协议类型 */
+        /**
+         * 协议类型
+        */
         public byte byProtoType;
 
-        /** 保留 1 */
+        /**
+         * 保留 1
+        */
         public byte byRes1;
 
-        /** 保留 2 */
+        /**
+         * 保留 2
+        */
         public byte byRes2;
 
-        /** 播放缓冲帧数 */
+        /**
+         * 播放缓冲帧数
+        */
         public int dwDisplayBufNum;
 
-        /** 保留 */
+        /**
+         * 保留
+        */
         public byte[] byRes = new byte[216];
 
         /**
@@ -497,28 +615,44 @@ public interface HCNetSDK extends Library {
      */
     class NET_DVR_PLAYBACK_COND extends Structure {
 
-        /** 码流类型 */
+        /**
+         * 码流类型
+        */
         public byte byStreamType;
 
-        /** 是否按时间 */
+        /**
+         * 是否按时间
+        */
         public byte bByTime;
 
-        /** 是否解密 */
+        /**
+         * 是否解密
+        */
         public byte bNeedDecrypt;
 
-        /** 流 标识 */
+        /**
+         * 流 标识
+        */
         public byte[] byStreamID = new byte[32];
 
-        /** 通道号 */
+        /**
+         * 通道号
+        */
         public int lChannel;
 
-        /** 位置 */
+        /**
+         * 位置
+        */
         public int dwPos;
 
-        /** 开始时间 */
+        /**
+         * 开始时间
+        */
         public NET_DVR_TIME startTime = new NET_DVR_TIME();
 
-        /** 结束时间 */
+        /**
+         * 结束时间
+        */
         public NET_DVR_TIME stopTime = new NET_DVR_TIME();
 
         @Override
@@ -541,40 +675,64 @@ public interface HCNetSDK extends Library {
      */
     class NET_DVR_TIME extends Structure {
 
-        /** 年 */
+        /**
+         * 年
+        */
         public byte byYear;
 
-        /** 月 */
+        /**
+         * 月
+        */
         public byte byMonth;
 
-        /** 日 */
+        /**
+         * 日
+        */
         public byte byDay;
 
-        /** 时 */
+        /**
+         * 时
+        */
         public byte byHour;
 
-        /** 分 */
+        /**
+         * 分
+        */
         public byte byMinute;
 
-        /** 秒 */
+        /**
+         * 秒
+        */
         public byte bySecond;
 
-        /** 保留 */
+        /**
+         * 保留
+        */
         public byte byRes;
 
-        /** ISO8601 */
+        /**
+         * ISO8601
+        */
         public byte byISO8601;
 
-        /** 毫秒 */
+        /**
+         * 毫秒
+        */
         public short wMillisecond;
 
-        /** 时区 */
+        /**
+         * 时区
+        */
         public byte cTimeZoneID;
 
-        /** 保留 1 */
+        /**
+         * 保留 1
+        */
         public byte byRes1;
 
-        /** 保留 2 */
+        /**
+         * 保留 2
+        */
         public byte byRes2;
 
         /**
@@ -613,88 +771,144 @@ public interface HCNetSDK extends Library {
      */
     class NET_DVR_ALARMER extends Structure {
 
-        /** 用户 标识 有效 */
+        /**
+         * 用户 标识 有效
+        */
         public byte byUserIDValid;
 
-        /** 序列号有效 */
+        /**
+         * 序列号有效
+        */
         public byte bySerialValid;
 
-        /** 版本有效 */
+        /**
+         * 版本有效
+        */
         public byte byVersionValid;
 
-        /** 设备名有效 */
+        /**
+         * 设备名有效
+        */
         public byte byDeviceNameValid;
 
-        /** MAC 有效 */
+        /**
+         * MAC 有效
+        */
         public byte byMacAddrValid;
 
-        /** 连接端口有效 */
+        /**
+         * 连接端口有效
+        */
         public byte byLinkPortValid;
 
-        /** 设备 IP */
+        /**
+         * 设备 IP
+        */
         public byte[] byDeviceIP = new byte[4];
 
-        /** Socket IP */
+        /**
+         * Socket IP
+        */
         public byte[] bySocketIP = new byte[4];
 
-        /** 连接端口 */
+        /**
+         * 连接端口
+        */
         public short wLinkPort;
 
-        /** 序列号 */
+        /**
+         * 序列号
+        */
         public byte[] sSerialNumber = new byte[48];
 
-        /** 报警输入数 */
+        /**
+         * 报警输入数
+        */
         public byte byAlarmInPortNum;
 
-        /** 报警输出数 */
+        /**
+         * 报警输出数
+        */
         public byte byAlarmOutPortNum;
 
-        /** 硬盘数 */
+        /**
+         * 硬盘数
+        */
         public byte byDiskNum;
 
-        /** 设备类型 */
+        /**
+         * 设备类型
+        */
         public byte byDVRType;
 
-        /** 通道数 */
+        /**
+         * 通道数
+        */
         public byte byChanNum;
 
-        /** 起始通道 */
+        /**
+         * 起始通道
+        */
         public byte byStartChan;
 
-        /** 语音通道数 */
+        /**
+         * 语音通道数
+        */
         public byte byAudioChanNum;
 
-        /** 数字通道数 */
+        /**
+         * 数字通道数
+        */
         public byte byIPChanNum;
 
-        /** 零通道数 */
+        /**
+         * 零通道数
+        */
         public byte byZeroChanNum;
 
-        /** 主协议 */
+        /**
+         * 主协议
+        */
         public byte byMainProto;
 
-        /** 子协议 */
+        /**
+         * 子协议
+        */
         public byte bySubProto;
 
-        /** 支持能力 */
+        /**
+         * 支持能力
+        */
         public byte bySupport;
 
-        /** 设备类型 */
+        /**
+         * 设备类型
+        */
         public short wDevType;
 
-        /** 设备名称 */
+        /**
+         * 设备名称
+        */
         public byte[] sDeviceName = new byte[32];
 
-        /** MAC 地址 */
+        /**
+         * MAC 地址
+        */
         public byte[] byMacAddr = new byte[6];
 
-        /** 保留 1 */
+        /**
+         * 保留 1
+        */
         public byte[] byRes1 = new byte[2];
 
-        /** 版本 */
+        /**
+         * 版本
+        */
         public byte[] sVersion = new byte[16];
 
-        /** 保留 2 */
+        /**
+         * 保留 2
+        */
         public byte[] byRes2 = new byte[188];
 
         @Override

@@ -29,9 +29,13 @@ import java.util.concurrent.ConcurrentHashMap;
 @RequiredArgsConstructor
 public class ApplicationEventToQueueListener {
 
-    /** 消息templates */
+    /**
+     * 消息templates
+    */
     private final List<MessageTemplate> messageTemplates;
-    /** 队列属性 */
+    /**
+     * 队列属性
+    */
     private final QueueProperties queueProperties;
     private final Map<String, MessageTemplate> templateCache = new ConcurrentHashMap<>(); // template缓存
 

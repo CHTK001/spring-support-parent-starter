@@ -45,7 +45,9 @@ class OsgiTelnetFallbackRealTest {
     @Autowired
     private ObjectProvider<com.chua.osgi.support.FelixOsgiLauncher> osgiLauncherProvider; // osgilauncher提供者
 
-    /** 真实测试：telnet 模式下 SSH Shell Bean 应退避为 空（协议二选一） */
+    /**
+     * 真实测试：telnet 模式下 SSH Shell Bean 应退避为 空（协议二选一）
+    */
     @Test
     void sshShellBackedOffInTelnetMode() {
         /**
@@ -56,7 +58,9 @@ class OsgiTelnetFallbackRealTest {
                 "protocol=telnet 时 GogoSshShellServer 不应装配");
     }
 
-    /** 真实测试：telnet 模式下 Felix 框架应正常启动（含 Gogo bundle 套件） */
+    /**
+     * 真实测试：telnet 模式下 Felix 框架应正常启动（含 Gogo bundle 套件）
+    */
     @Test
     void felixStartsInTelnetMode() {
         com.chua.osgi.support.FelixOsgiLauncher launcher = osgiLauncherProvider.getIfAvailable();
@@ -67,7 +71,9 @@ class OsgiTelnetFallbackRealTest {
         assertTrue(launcher != null && launcher.isActive(), "telnet 模式下 Felix 框架应激活");
     }
 
-    /** 真实测试：telnet 模式默认端口 6666 无监听（记录端口未被占用设计缺口） */
+    /**
+     * 真实测试：telnet 模式默认端口 6666 无监听（记录端口未被占用设计缺口）
+    */
     @Test
     void telnetPortHasNoListener() {
         // 127.0.0.1:6666 尝试连接：预期拒绝（Connection refused）或超时；

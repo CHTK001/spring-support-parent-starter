@@ -24,7 +24,9 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 public class AiAccessGuardServiceImpl implements AiAccessGuardService {
 
-    /** Bearer_前缀 */
+    /**
+     * Bearer_前缀
+    */
     private static final String BEARER_PREFIX = "Bearer ";
 
     /**
@@ -44,22 +46,32 @@ public class AiAccessGuardServiceImpl implements AiAccessGuardService {
             .maximumSize(1000)
             .build();
 
-    /** SYSAI全局设置服务 */
+    /**
+     * SYSAI全局设置服务
+    */
     private final SysAiGlobalSettingService sysAiGlobalSettingService;
-    /** SYSAIAPP密钥服务 */
+    /**
+     * SYSAIAPP密钥服务
+    */
     private final SysAiAppKeyService sysAiAppKeyService;
-    /** SYSAI令牌服务 */
+    /**
+     * SYSAI令牌服务
+    */
     private final SysAiTokenService sysAiTokenService;
 
     @Override
-    /** 是否appKey已启用 */
+    /**
+     * 是否appKey已启用
+    */
     public boolean isAppKeyEnabled() {
         return APP_KEY_ENABLED_CACHE.get("app_key_enabled", k ->
                 sysAiGlobalSettingService.getBoolean("runtime", "app_key_enabled", true));
     }
 
     @Override
-    /** 验证appKey */
+    /**
+     * 验证appKey
+    */
     public boolean verifyAppKey(String appKey, String appSecret, String clientIp) {
         if (!isAppKeyEnabled()) {
             return true;
@@ -75,7 +87,9 @@ public class AiAccessGuardServiceImpl implements AiAccessGuardService {
     }
 
     @Override
-    /** 验证bearer令牌 */
+    /**
+     * 验证bearer令牌
+    */
     public boolean verifyBearerToken(String authorizationHeader, String clientIp) {
  // 与 验证appKey 保持一致：app_Key_已启用 关闭时免鉴权（仅当管理员显式关闭）
         if (!isAppKeyEnabled()) {

@@ -21,23 +21,31 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class ApiFeatureHandler implements SyncMessageHandler {
 
-    /** 特征管理器 */
+    /**
+     * 特征管理器
+    */
     private final ApiFeatureManager featureManager;
 
     @Override
-    /** 获取名称 */
+    /**
+     * 获取名称
+    */
     public String getName() {
         return "api-feature";
     }
 
     @Override
-    /** 支持 */
+    /**
+     * 支持
+    */
     public boolean supports(String topic) {
         return "monitor/control/api-feature".equals(topic);
     }
 
     @Override
-    /** 处理 */
+    /**
+     * 处理
+    */
     public Object handle(String topic, String sessionId, Map<String, Object> data) {
         try {
             if (data == null) {
@@ -131,7 +139,9 @@ public class ApiFeatureHandler implements SyncMessageHandler {
     }
 
     @Override
-    /** 获取订单 */
+    /**
+     * 获取订单
+    */
     public int getOrder() {
         return 100;
     }

@@ -11,18 +11,32 @@ import lombok.Data;
 @Data
 public class QuestionVO {
 
-    /** 标识 */
+    /**
+     * 标识
+    */
     private Long id;
-    /** 类型 */
+    /**
+     * 类型
+    */
     private String type;
-    /** Stem */
+    /**
+     * Stem
+    */
     private String stem;
-    /** 期权 */
+    /**
+     * 期权
+    */
     private String options;
-    /** Answer */
+    /**
+     * Answer
+    */
     private String answer;
-    /** Analysis */
+    /**
+     * Analysis
+    */
     private String analysis;
-    /** 分数 */
+    /**
+     * 分数
+    */
     private Integer score;
 }

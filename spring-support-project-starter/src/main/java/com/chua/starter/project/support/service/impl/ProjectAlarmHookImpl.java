@@ -27,11 +27,15 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class ProjectAlarmHookImpl implements ProjectAlarmHook {
 
-    /** 告警引擎 bean 类型（全限定名，反射查找） */
+    /**
+     * 告警引擎 bean 类型（全限定名，反射查找）
+    */
     private static final String ALARM_ENGINE_CLASS =
             "com.chua.starter.monitor.support.service.alarm.AlarmEngineService";
 
-    /** Spring 应用上下文（运行时反射查找告警引擎 bean） */
+    /**
+     * Spring 应用上下文（运行时反射查找告警引擎 bean）
+    */
     private final ApplicationContext applicationContext;
 
     @Override

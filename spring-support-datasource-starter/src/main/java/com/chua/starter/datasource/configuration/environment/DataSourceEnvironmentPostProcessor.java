@@ -19,7 +19,9 @@ import java.util.Properties;
  */
 public class DataSourceEnvironmentPostProcessor implements EnvironmentPostProcessor, Ordered {
     @Override
-    /** Post处理环境 */
+    /**
+     * Post处理环境
+    */
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
         Properties properties = new Properties();
 
@@ -52,7 +54,9 @@ public class DataSourceEnvironmentPostProcessor implements EnvironmentPostProces
     }
 
     @Override
-    /** 获取订单 */
+    /**
+     * 获取订单
+    */
     public int getOrder() {
         return ConfigDataEnvironmentPostProcessor.ORDER + 10;
     }

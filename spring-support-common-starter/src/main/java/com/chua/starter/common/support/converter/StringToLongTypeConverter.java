@@ -33,7 +33,9 @@ public class StringToLongTypeConverter implements Converter<String, Long> {
      * @return 转换后的 Long 值；无法转换时返回 空
      */
     @Override
-    /** 转换：字符串 -> Java.lang.Long */
+    /**
+     * 转换：字符串 -> Java.lang.Long
+    */
     public Long convert(String source) {
         // 优先尝试作为数字解析
         if (NumberUtils.isNumber(source)) {

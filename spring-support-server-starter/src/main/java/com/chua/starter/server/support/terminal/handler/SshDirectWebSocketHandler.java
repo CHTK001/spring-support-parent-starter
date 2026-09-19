@@ -46,20 +46,30 @@ import java.util.concurrent.ConcurrentHashMap;
 @RequiredArgsConstructor
 public class SshDirectWebSocketHandler extends AbstractWebSocketHandler {
 
-    /** 单帧文本上限（控制指令很短，留余量即可） */
+    /**
+     * 单帧文本上限（控制指令很短，留余量即可）
+    */
     private static final int MAX_TEXT_BUFFER = 64 * 1024;
 
-    /** 初始终端尺寸兜底 */
+    /**
+     * 初始终端尺寸兜底
+    */
     private static final int DEFAULT_COLS = 120;
     private static final int DEFAULT_ROWS = 30;
 
-    /** 主机服务（地址/端口/凭据解析） */
+    /**
+     * 主机服务（地址/端口/凭据解析）
+    */
     private final ServerHostService serverHostService;
 
-    /** 会话审计服务 */
+    /**
+     * 会话审计服务
+    */
     private final TerminalSessionService terminalSessionService;
 
-    /** 活跃直连会话：WS 会话 标识 -> 桥接上下文 */
+    /**
+     * 活跃直连会话：WS 会话 标识 -> 桥接上下文
+    */
     private final Map<String, Bridge> bridges = new ConcurrentHashMap<>();
 
     /**
@@ -396,25 +406,39 @@ public class SshDirectWebSocketHandler extends AbstractWebSocketHandler {
      */
     private static final class Bridge {
 
-        /** SSH 句柄 */
+        /**
+         * SSH 句柄
+        */
         private final SshClients.Handle handle;
 
-        /** 浏览器 WS 会话 */
+        /**
+         * 浏览器 WS 会话
+        */
         private final WebSocketSession wsSession;
 
-        /** 远端 PTY 操作，可空（握手未完成时） */
+        /**
+         * 远端 PTY 操作，可空（握手未完成时）
+        */
         private volatile SshClient.TerminalOperation operation;
 
-        /** 审计记录 标识，可空 */
+        /**
+         * 审计记录 标识，可空
+        */
         private volatile Long recordId;
 
-        /** 当前列数 */
+        /**
+         * 当前列数
+        */
         private volatile int cols = DEFAULT_COLS;
 
-        /** 当前行数 */
+        /**
+         * 当前行数
+        */
         private volatile int rows = DEFAULT_ROWS;
 
-        /** 是否已关闭（幂等标记） */
+        /**
+         * 是否已关闭（幂等标记）
+        */
         private volatile boolean closed;
 
         /**

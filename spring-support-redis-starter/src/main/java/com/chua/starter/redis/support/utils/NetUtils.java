@@ -11,7 +11,9 @@ import java.net.Socket;
  */
 public final class NetUtils {
 
-    /** 创建 net工具 实例 */
+    /**
+     * 创建 net工具 实例
+    */
     private NetUtils() {
     }
 

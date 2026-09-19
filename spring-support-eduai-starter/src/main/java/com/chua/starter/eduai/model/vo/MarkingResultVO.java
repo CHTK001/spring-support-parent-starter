@@ -23,17 +23,29 @@ import java.util.List;
 @Data
 public class MarkingResultVO {
 
-    /** 任务标识 */
+    /**
+     * 任务标识
+    */
     private String taskId;
-    /** 状态 */
+    /**
+     * 状态
+    */
     private Integer status;
-    /** 总数分数 */
+    /**
+     * 总数分数
+    */
     private Integer totalScore;
-    /** 总数 */
+    /**
+     * 总数
+    */
     private Integer total;
-    /** 饰面 */
+    /**
+     * 饰面
+    */
     private Boolean finished;
-    /** 结果 */
+    /**
+     * 结果
+    */
     private List<QuestionResult> results;
 
     @Data
@@ -44,17 +56,29 @@ public class MarkingResultVO {
      * @since 4.0.0
      */
     public static class QuestionResult {
-        /** 结果标识（对应 edu_marking_result 主键，教师确认时回传） */
+        /**
+         * 结果标识（对应 edu_marking_result 主键，教师确认时回传）
+        */
         private Long resultId;
-        /** questionid */
+        /**
+         * questionid
+        */
         private Long questionId;
-        /** 分数 */
+        /**
+         * 分数
+        */
         private Integer score;
-        /** 评论 */
+        /**
+         * 评论
+        */
         private String comment;
-        /** Teacher分数 */
+        /**
+         * Teacher分数
+        */
         private Integer teacherScore;
-        /** Teachercomment */
+        /**
+         * Teachercomment
+        */
         private String teacherComment;
     }
 }

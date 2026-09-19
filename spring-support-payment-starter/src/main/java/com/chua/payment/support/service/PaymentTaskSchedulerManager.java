@@ -41,9 +41,13 @@ import java.util.concurrent.ScheduledFuture;
 @ConditionalOnProperty(prefix = "plugin.payment.scheduler", name = "engine", havingValue = "internal", matchIfMissing = true)
 public class PaymentTaskSchedulerManager implements SmartInitializingSingleton {
 
-    /** 薪酬调度器配置映射器 */
+    /**
+     * 薪酬调度器配置映射器
+    */
     private final PaymentSchedulerConfigMapper paymentSchedulerConfigMapper;
-    /** 任务调度器 */
+    /**
+     * 任务调度器
+    */
     private final ThreadPoolTaskScheduler taskScheduler;
     private final Map<String, PaymentManagedTask> taskRegistry = new LinkedHashMap<>(); // 任务registry
     private final Map<String, ScheduledFuture<?>> scheduledFutures = new ConcurrentHashMap<>(); // 调度期货
@@ -65,7 +69,9 @@ public class PaymentTaskSchedulerManager implements SmartInitializingSingleton {
     }
 
     @Override
-    /** 之后单例instantiated */
+    /**
+     * 之后单例instantiated
+    */
     public void afterSingletonsInstantiated() {
         /**
          * 同步默认。
@@ -149,7 +155,9 @@ public class PaymentTaskSchedulerManager implements SmartInitializingSingleton {
         return toTaskVO(task, requireConfig(taskKey));
     }
 
-    /** refresh全部 */
+    /**
+     * refresh全部
+    */
     public synchronized void refreshAll() {
         taskRegistry.keySet().forEach(this::refreshTask);
     }
@@ -211,7 +219,9 @@ public class PaymentTaskSchedulerManager implements SmartInitializingSingleton {
         }
     }
 
-    /** 同步默认 */
+    /**
+     * 同步默认
+    */
     private synchronized void syncDefaults() {
         Map<String, PaymentSchedulerConfig> configMap = loadConfigMap();
         for (PaymentManagedTask task : taskRegistry.values()) {

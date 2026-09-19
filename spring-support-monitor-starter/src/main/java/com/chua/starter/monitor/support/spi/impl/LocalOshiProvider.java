@@ -27,7 +27,9 @@ import java.util.*;
 @RequiredArgsConstructor
 public class LocalOshiProvider implements SystemInfoProvider {
 
-    /** 本机系统信息采集服务 */
+    /**
+     * 本机系统信息采集服务
+    */
     private final LocalSystemInfoService localService;
 
     /**

@@ -28,9 +28,13 @@ import java.util.Map;
  */
 public class CompositeAggregateRoutePaymentChannel extends AbstractMerchantPaymentChannel implements PaymentChannel {
 
-    /** Merchant通道映射器 */
+    /**
+     * Merchant通道映射器
+    */
     private final MerchantChannelMapper merchantChannelMapper;
-    /** Payment通道注册表 */
+    /**
+     * Payment通道注册表
+    */
     private final PaymentChannelRegistry paymentChannelRegistry;
 
     /**
@@ -55,48 +59,62 @@ public class CompositeAggregateRoutePaymentChannel extends AbstractMerchantPayme
     }
 
     @Override
-    /** 支持 */
+    /**
+     * 支持
+    */
     public boolean supports(String channelType, String channelSubType) {
         return "COMPOSITE".equalsIgnoreCase(channelType) && "AGGREGATE_ROUTE".equalsIgnoreCase(channelSubType);
     }
 
     @Override
-    /** 创建订单 */
+    /**
+     * 创建订单
+    */
     public OrderCreateResult createOrder(MerchantChannel channel, OrderCreateRequest request) {
         MerchantChannel targetChannel = resolveTargetChannel(channel);
         return delegate(targetChannel).createOrder(targetChannel, request);
     }
 
     @Override
-    /** 薪酬 */
+    /**
+     * 薪酬
+    */
     public PaymentResult pay(MerchantChannel channel, PaymentRequest request) {
         MerchantChannel targetChannel = resolveTargetChannel(channel);
         return delegate(targetChannel).pay(targetChannel, request);
     }
 
     @Override
-    /** 查询 */
+    /**
+     * 查询
+    */
     public PaymentResult query(MerchantChannel channel, String orderNo) {
         MerchantChannel targetChannel = resolveTargetChannel(channel);
         return delegate(targetChannel).query(targetChannel, orderNo);
     }
 
     @Override
-    /** 关闭 */
+    /**
+     * 关闭
+    */
     public boolean close(MerchantChannel channel, String orderNo) {
         MerchantChannel targetChannel = resolveTargetChannel(channel);
         return delegate(targetChannel).close(targetChannel, orderNo);
     }
 
     @Override
-    /** 退税 */
+    /**
+     * 退税
+    */
     public RefundResult refund(MerchantChannel channel, RefundRequest request) {
         MerchantChannel targetChannel = resolveTargetChannel(channel);
         return delegate(targetChannel).refund(targetChannel, request);
     }
 
     @Override
-    /** 查询退税 */
+    /**
+     * 查询退税
+    */
     public RefundResult queryRefund(MerchantChannel channel, RefundRequest request) {
         MerchantChannel targetChannel = resolveTargetChannel(channel);
         return delegate(targetChannel).queryRefund(targetChannel, request);

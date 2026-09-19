@@ -22,7 +22,9 @@ import java.util.Map;
 @Slf4j
 public class TableGraphReader {
 
-    /** 数据来源 */
+    /**
+     * 数据来源
+    */
     private final DataSource dataSource;
 
     /**
@@ -230,9 +232,13 @@ public class TableGraphReader {
      * @since 4.0.0
      */
     public static class GraphReadResult {
-        /** Tables */
+        /**
+         * Tables
+        */
         public final List<TableNodeInfo> tables;
-        /** Edges */
+        /**
+         * Edges
+        */
         public final List<GraphEdge> edges;
 
         /**

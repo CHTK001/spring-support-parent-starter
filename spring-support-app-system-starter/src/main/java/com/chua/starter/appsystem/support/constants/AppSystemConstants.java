@@ -17,10 +17,14 @@ public final class AppSystemConstants {
      */
     public static final String API_PREFIX = "/ms/app-system";
 
-    /** 操作系统标签：Linux */
+    /**
+     * 操作系统标签：Linux
+    */
     public static final String TYPE_LINUX = "LINUX";
 
-    /** 操作系统标签：Windows */
+    /**
+     * 操作系统标签：Windows
+    */
     public static final String TYPE_WINDOWS = "WINDOWS";
 
     /**

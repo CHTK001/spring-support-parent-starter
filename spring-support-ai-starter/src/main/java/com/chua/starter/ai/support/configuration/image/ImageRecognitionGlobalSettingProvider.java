@@ -32,19 +32,25 @@ public class ImageRecognitionGlobalSettingProvider implements GlobalSettingProvi
     private static final String GROUP_NAME = "图片识别";
 
     @Override
-    /** 分组 */
+    /**
+     * 分组
+    */
     public String group() {
         return GROUP;
     }
 
     @Override
-    /** 分组名称 */
+    /**
+     * 分组名称
+    */
     public String groupName() {
         return GROUP_NAME;
     }
 
     @Override
-    /** 获取Items */
+    /**
+     * 获取Items
+    */
     public List<GlobalSettingProvider.SettingItem> getItems() {
         return List.of(
                 new GlobalSettingProvider.SettingItem("classify_model", "", "STRING", "图像分类模型（如 google-vit / mobilenet-classify，留空关闭）", 1),

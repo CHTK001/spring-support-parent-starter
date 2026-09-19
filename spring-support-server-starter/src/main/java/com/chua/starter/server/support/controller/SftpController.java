@@ -40,7 +40,9 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class SftpController {
 
-    /** SFTP 服务 */
+    /**
+     * SFTP 服务
+    */
     private final SftpService sftpService;
 
     /**

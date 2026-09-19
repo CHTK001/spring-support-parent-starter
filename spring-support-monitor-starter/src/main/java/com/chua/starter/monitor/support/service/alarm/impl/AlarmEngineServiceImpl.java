@@ -62,13 +62,19 @@ import java.util.concurrent.atomic.AtomicInteger;
 @RequiredArgsConstructor
 public class AlarmEngineServiceImpl implements AlarmEngineService {
 
-    /** 事件查询条数上限 */
+    /**
+     * 事件查询条数上限
+    */
     private static final int EVENT_LIMIT = 200;
 
-    /** 趋势统计最大回溯小时数 */
+    /**
+     * 趋势统计最大回溯小时数
+    */
     private static final int MAX_TREND_HOURS = 720;
 
-    /** 趋势跨度不超过该小时数时，横轴标签省略日期 */
+    /**
+     * 趋势跨度不超过该小时数时，横轴标签省略日期
+    */
     private static final int DAY_SPAN_HOURS = 24;
 
     /**
@@ -76,31 +82,49 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
      */
     private static final String SILENCE_KEY_PREFIX = "monitor:alarm:silence:";
 
-    /** 策略 映射器 */
+    /**
+     * 策略 映射器
+    */
     private final MsMonitorAlarmPolicyMapper policyMapper;
 
-    /** 规则 映射器 */
+    /**
+     * 规则 映射器
+    */
     private final MsMonitorAlarmRuleMapper ruleMapper;
 
-    /** 事件 映射器 */
+    /**
+     * 事件 映射器
+    */
     private final MsMonitorAlarmEventMapper eventMapper;
 
-    /** 监控目标 映射器（事件冗余名称用） */
+    /**
+     * 监控目标 映射器（事件冗余名称用）
+    */
     private final MsMonitorMapper monitorMapper;
 
-    /** Redis 模板（静默期 设置nx） */
+    /**
+     * Redis 模板（静默期 设置nx）
+    */
     private final StringRedisTemplate redisTemplate;
 
-    /** 通知渠道集合（Spring 收集全部实现） */
+    /**
+     * 通知渠道集合（Spring 收集全部实现）
+    */
     private final List<NotifySender> notifySenders;
 
-    /** 实时推送服务（Socket 未启用时静默跳过） */
+    /**
+     * 实时推送服务（Socket 未启用时静默跳过）
+    */
     private final MonitorPushService monitorPushService;
 
-    /** 规则缓存：指标名称 -> 启用中的规则列表 */
+    /**
+     * 规则缓存：指标名称 -> 启用中的规则列表
+    */
     private volatile Map<String, List<MsMonitorAlarmRule>> ruleCache = Map.of();
 
-    /** 连续触发计数器：ruleid:监控标识 -> 计数 */
+    /**
+     * 连续触发计数器：ruleid:监控标识 -> 计数
+    */
     private final Map<String, AtomicInteger> consecutiveCounter = new ConcurrentHashMap<>();
 
     /**
@@ -110,7 +134,9 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
      */
     private final Map<String, Long> memorySilence = new ConcurrentHashMap<>();
 
-    /** 维护窗口 映射器 */
+    /**
+     * 维护窗口 映射器
+    */
     private final MsMonitorAlarmMaintenanceWindowMapper maintenanceWindowMapper;
 
     /**
@@ -653,7 +679,9 @@ private void fireIfNotSilent(MsMonitorAlarmRule rule, Long monitorId, String mon
     }
 
     @Override
-    /** 新增维护窗口 */
+    /**
+     * 新增维护窗口
+    */
     public ReturnResult<MsMonitorAlarmMaintenanceWindow> createMaintenanceWindow(
             MsMonitorAlarmMaintenanceWindow window) {
         if (window == null || isBlank(window.getWindowName())) {
@@ -665,7 +693,9 @@ private void fireIfNotSilent(MsMonitorAlarmRule rule, Long monitorId, String mon
     }
 
     @Override
-    /** 更新维护窗口 */
+    /**
+     * 更新维护窗口
+    */
     public ReturnResult<MsMonitorAlarmMaintenanceWindow> updateMaintenanceWindow(Long id,
                                                                               MsMonitorAlarmMaintenanceWindow window) {
         MsMonitorAlarmMaintenanceWindow exists = maintenanceWindowMapper.selectById(id);
@@ -698,14 +728,18 @@ private void fireIfNotSilent(MsMonitorAlarmRule rule, Long monitorId, String mon
     }
 
     @Override
-    /** 删除维护窗口 */
+    /**
+     * 删除维护窗口
+    */
     public ReturnResult<Void> deleteMaintenanceWindow(Long id) {
         maintenanceWindowMapper.deleteById(id);
         return ReturnResult.success();
     }
 
     @Override
-    /** 维护窗口列表 */
+    /**
+     * 维护窗口列表
+    */
     public ReturnResult<List<MsMonitorAlarmMaintenanceWindow>> listMaintenanceWindows(
             Long policyId) {
         LambdaQueryWrapper<MsMonitorAlarmMaintenanceWindow> wrapper = new LambdaQueryWrapper<MsMonitorAlarmMaintenanceWindow>()
@@ -716,7 +750,9 @@ private void fireIfNotSilent(MsMonitorAlarmRule rule, Long monitorId, String mon
     }
 
     @Override
-    /** 测试告警规则 */
+    /**
+     * 测试告警规则
+    */
     public ReturnResult<Boolean> testRule(Long ruleId, Long monitorId, String metricName, Double value) {
         try {
             // 1. 获取规则详情

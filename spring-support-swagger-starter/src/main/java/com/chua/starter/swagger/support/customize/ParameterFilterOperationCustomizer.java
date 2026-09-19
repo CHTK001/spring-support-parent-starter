@@ -48,7 +48,9 @@ public class ParameterFilterOperationCustomizer implements GlobalOperationCustom
         }
     }
 
-    /** 刀4j属性 */
+    /**
+     * 刀4j属性
+    */
     private final Knife4jProperties knife4jProperties;
     private final Map<String, String> defaultHeaders; // 默认头部
 

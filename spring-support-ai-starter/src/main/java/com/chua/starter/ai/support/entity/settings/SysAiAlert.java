@@ -32,7 +32,9 @@ public class SysAiAlert implements Serializable {
      */
     @TableId(value = "sys_ai_alert_id", type = IdType.AUTO)
     @Schema(description = "告警规则 ID")
-    /** alertid */
+    /**
+     * alertid
+    */
     private Long alertId;
 
     /**
@@ -43,7 +45,9 @@ public class SysAiAlert implements Serializable {
      */
     @TableField("sys_ai_alert_name")
     @Schema(description = "告警规则名称")
-    /** Alert名称 */
+    /**
+     * Alert名称
+    */
     private String alertName;
 
     /**
@@ -54,7 +58,9 @@ public class SysAiAlert implements Serializable {
      */
     @TableField("sys_ai_alert_app_key_id")
     @Schema(description = "关联 AppKey ID")
-    /** alertapp密钥标识 */
+    /**
+     * alertapp密钥标识
+    */
     private Long alertAppKeyId;
 
     /**
@@ -65,7 +71,9 @@ public class SysAiAlert implements Serializable {
      */
     @TableField("sys_ai_alert_condition")
     @Schema(description = "告警条件（表达式）")
-    /** Alert条件 */
+    /**
+     * Alert条件
+    */
     private String alertCondition;
 
     /**
@@ -76,7 +84,9 @@ public class SysAiAlert implements Serializable {
      */
     @TableField("sys_ai_alert_threshold")
     @Schema(description = "告警阈值")
-    /** Alert阈值 */
+    /**
+     * Alert阈值
+    */
     private Long alertThreshold;
 
     /**
@@ -87,7 +97,9 @@ public class SysAiAlert implements Serializable {
      */
     @TableField("sys_ai_alert_channels")
     @Schema(description = "通知渠道(JSON)")
-    /** Alertchannels */
+    /**
+     * Alertchannels
+    */
     private String alertChannels;
 
     /**
@@ -98,7 +110,9 @@ public class SysAiAlert implements Serializable {
      */
     @TableField("sys_ai_alert_enabled")
     @Schema(description = "是否启用")
-    /** Alert是否启用 */
+    /**
+     * Alert是否启用
+    */
     private Boolean alertEnabled;
 
     /**
@@ -109,7 +123,9 @@ public class SysAiAlert implements Serializable {
      */
     @TableField(value = "sys_ai_alert_create_time", fill = FieldFill.INSERT)
     @Schema(description = "创建时间")
-    /** Alertcreate时间 */
+    /**
+     * Alertcreate时间
+    */
     private LocalDateTime alertCreateTime;
 
     /**
@@ -120,7 +136,9 @@ public class SysAiAlert implements Serializable {
      */
     @TableField(value = "sys_ai_alert_update_time", fill = FieldFill.INSERT_UPDATE)
     @Schema(description = "更新时间")
-    /** Alertupdate时间 */
+    /**
+     * Alertupdate时间
+    */
     private LocalDateTime alertUpdateTime;
 
     /**
@@ -132,6 +150,8 @@ public class SysAiAlert implements Serializable {
     @TableField("sys_ai_alert_deleted")
     @TableLogic
     @Schema(description = "逻辑删除标记")
-    /** Alert删除标记 */
+    /**
+     * Alert删除标记
+    */
     private Integer alertDeleted;
 }

@@ -52,14 +52,22 @@ public abstract class AbstractProtocol implements Protocol {
      * 认证信息缓存（线程安全的单例初始化）
      */
     protected static volatile CacheProvider CACHEABLE;
-    /** 缓存_锁 */
+    /**
+     * 缓存_锁
+    */
     private static final Object CACHE_LOCK = new Object();
     
-    /** Enable加密 */
+    /**
+     * Enable加密
+    */
     private final boolean enableEncryption;
-    /** 认证客户端属性 */
+    /**
+     * 认证客户端属性
+    */
     protected AuthClientProperties authClientProperties;
-    /** 加密 */
+    /**
+     * 加密
+    */
     private final String encryption;
 
     /**
@@ -108,16 +116,22 @@ public abstract class AbstractProtocol implements Protocol {
         }
     }
 
-    /** 令牌吊销名单键前缀 */
+    /**
+     * 令牌吊销名单键前缀
+    */
     private static final String REVOKED_PREFIX = "oauth:revoked:";
     /**
      * 令牌吊销名单
      * <p>与认证缓存分开存放：清除认证缓存(如全端登出)不得让已吊销令牌复活</p>
      */
     private static final CacheProvider REVOKED = CacheProvider.auto();
-    /** 秒级/毫秒级时间戳判定阈值 */
+    /**
+     * 秒级/毫秒级时间戳判定阈值
+    */
     private static final long MILLIS_EPOCH_THRESHOLD = 100_000_000_000L;
-    /** 吊销名单兜底存活时间(秒)，与静态令牌最长有效期一致 */
+    /**
+     * 吊销名单兜底存活时间(秒)，与静态令牌最长有效期一致
+    */
     private static final long REVOKE_FALLBACK_SECONDS = 7L * 24 * 60 * 60;
 
     /**
@@ -355,7 +369,9 @@ public abstract class AbstractProtocol implements Protocol {
 
 
     @Override
-    /** Approve */
+    /**
+     * Approve
+    */
     public AuthenticationInformation approve(Cookie[] cookies, String token, String subProtocol) {
         Cookie cookie = CookieUtil.get(cookies, "x-oauth-cookie");
         String cacheKey = getCacheKey(cookies, token);
@@ -419,7 +435,9 @@ public abstract class AbstractProtocol implements Protocol {
     }
 
     @Override
-    /** Upgrade */
+    /**
+     * Upgrade
+    */
     public LoginResult upgrade(Cookie[] cookies, String token, UpgradeType upgradeType, String refreshToken) {
         Cookie cookie = CookieUtil.get(cookies, "x-oauth-cookie");
  // REFRESH 类型只需要 refresh令牌，不需要现有的 Cookie/access令牌

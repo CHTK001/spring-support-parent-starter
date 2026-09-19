@@ -23,11 +23,15 @@ import java.time.format.DateTimeFormatter;
 @Slf4j
 public class FileJobLogSink implements JobLogSink {
 
-    /** 日期_fmt */
+    /**
+     * 日期_fmt
+    */
     private static final DateTimeFormatter DATE_FMT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd").withZone(ZoneId.systemDefault());
 
-    /** 基础路径 */
+    /**
+     * 基础路径
+    */
     private final Path basePath;
 
     /**
@@ -46,7 +50,9 @@ public class FileJobLogSink implements JobLogSink {
     }
 
     @Override
-    /** 写入 */
+    /**
+     * 写入
+    */
     public void write(JobLogEvent event) {
         if (event == null) {
             return;

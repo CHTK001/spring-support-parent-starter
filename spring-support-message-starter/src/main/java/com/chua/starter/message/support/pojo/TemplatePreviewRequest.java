@@ -17,7 +17,9 @@ public class TemplatePreviewRequest {
      * 模板标识
      */
     @Schema(description = "模板ID")
-    /** SYS消息模板标识 */
+    /**
+     * SYS消息模板标识
+    */
     private Integer sysMessageTemplateId;
 
     /**

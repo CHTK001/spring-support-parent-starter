@@ -29,7 +29,9 @@ public enum SoftwareStatus {
      */
     DISABLED(2);
 
-    /** 值 */
+    /**
+     * 值
+    */
     private final int value;
 
     /**

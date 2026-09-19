@@ -46,12 +46,18 @@ import java.util.function.Supplier;
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true)
 public class MybatisPlusPermissionInterceptor extends JsqlParserSupport implements InnerInterceptor {
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(MybatisPlusPermissionInterceptor.class);
 
-    /** Mybatispluspermission处理器 */
+    /**
+     * Mybatispluspermission处理器
+    */
     private DataPermissionHandler mybatisPlusPermissionHandler;
-    /** 认证服务供应商 */
+    /**
+     * 认证服务供应商
+    */
     private Supplier<AuthService> authServiceSupplier;
     static final Map<String, Expression> MAPPED_STATEMENT_ID = new ConcurrentReferenceHashMap<>(4096); // mapped对账单标识
 

@@ -46,17 +46,27 @@ import java.util.Map;
 @Spi({"default", "wechat-pay"})
 public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
 
-    /** 默认_标志_类型 */
+    /**
+     * 默认_标志_类型
+    */
     private static final String DEFAULT_SIGN_TYPE = "WECHATPAY2-SHA256-RSA2048";
-    /** Wechat_薪酬_基础_url */
+    /**
+     * Wechat_薪酬_基础_url
+    */
     private static final String WECHAT_PAY_BASE_URL = "https://api.mch.weixin.qq.com";
-    /** 客户端工厂 */
+    /**
+     * 客户端工厂
+    */
     private final TencentWechatPayClientFactory clientFactory = new TencentWechatPayClientFactory();
-    /** Objectmapper */
+    /**
+     * Objectmapper
+    */
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
-    /** jsapi薪酬 */
+    /**
+     * jsapi薪酬
+    */
     public TencentWechatPayResponse jsapiPay(TencentWechatPayProperties properties, TencentWechatPayRequest request) {
         Config config = clientFactory.createAutoCertificateConfig(properties);
         var service = clientFactory.createJsapiService(config);
@@ -101,7 +111,9 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
     }
 
     @Override
-    /** h薪酬 */
+    /**
+     * h薪酬
+    */
     public TencentWechatPayResponse h5Pay(TencentWechatPayProperties properties, TencentWechatPayRequest request) {
         Config config = clientFactory.createAutoCertificateConfig(properties);
         H5Service service = clientFactory.createH5Service(config);
@@ -139,7 +151,9 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
     }
 
     @Override
-    /** 查询jsapi订单 */
+    /**
+     * 查询jsapi订单
+    */
     public TencentWechatOrderResponse queryJsapiOrder(TencentWechatPayProperties properties, String orderNo) {
         Config config = clientFactory.createAutoCertificateConfig(properties);
         var service = clientFactory.createJsapiService(config);
@@ -151,7 +165,9 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
     }
 
     @Override
-    /** 查询订单 */
+    /**
+     * 查询订单
+    */
     public TencentWechatOrderResponse queryH5Order(TencentWechatPayProperties properties, String orderNo) {
         Config config = clientFactory.createAutoCertificateConfig(properties);
         H5Service service = clientFactory.createH5Service(config);
@@ -163,7 +179,9 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
     }
 
     @Override
-    /** 关闭jsapi订单 */
+    /**
+     * 关闭jsapi订单
+    */
     public boolean closeJsapiOrder(TencentWechatPayProperties properties, String orderNo) {
         Config config = clientFactory.createAutoCertificateConfig(properties);
         var service = clientFactory.createJsapiService(config);
@@ -175,7 +193,9 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
     }
 
     @Override
-    /** 关闭订单 */
+    /**
+     * 关闭订单
+    */
     public boolean closeH5Order(TencentWechatPayProperties properties, String orderNo) {
         Config config = clientFactory.createAutoCertificateConfig(properties);
         H5Service service = clientFactory.createH5Service(config);
@@ -187,7 +207,9 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
     }
 
     @Override
-    /** NAT薪酬 */
+    /**
+     * NAT薪酬
+    */
     public TencentWechatPayResponse nativePay(TencentWechatPayProperties properties, TencentWechatPayRequest request) {
         Config config = clientFactory.createAutoCertificateConfig(properties);
         NativePayService service = clientFactory.createNativePayService(config);
@@ -213,7 +235,9 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
     }
 
     @Override
-    /** 查询NAT订单 */
+    /**
+     * 查询NAT订单
+    */
     public TencentWechatOrderResponse queryNativeOrder(TencentWechatPayProperties properties, String orderNo) {
         Config config = clientFactory.createAutoCertificateConfig(properties);
         NativePayService service = clientFactory.createNativePayService(config);
@@ -225,7 +249,9 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
     }
 
     @Override
-    /** 关闭NAT订单 */
+    /**
+     * 关闭NAT订单
+    */
     public boolean closeNativeOrder(TencentWechatPayProperties properties, String orderNo) {
         Config config = clientFactory.createAutoCertificateConfig(properties);
         NativePayService service = clientFactory.createNativePayService(config);
@@ -237,7 +263,9 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
     }
 
     @Override
-    /** app薪酬 */
+    /**
+     * app薪酬
+    */
     public TencentWechatPayResponse appPay(TencentWechatPayProperties properties, TencentWechatPayRequest request) {
         Config config = clientFactory.createAutoCertificateConfig(properties);
         var service = clientFactory.createAppServiceExtension(config);
@@ -271,7 +299,9 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
     }
 
     @Override
-    /** 查询app订单 */
+    /**
+     * 查询app订单
+    */
     public TencentWechatOrderResponse queryAppOrder(TencentWechatPayProperties properties, String orderNo) {
         Config config = clientFactory.createAutoCertificateConfig(properties);
         var service = clientFactory.createAppService(config);
@@ -283,7 +313,9 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
     }
 
     @Override
-    /** 关闭app订单 */
+    /**
+     * 关闭app订单
+    */
     public boolean closeAppOrder(TencentWechatPayProperties properties, String orderNo) {
         Config config = clientFactory.createAutoCertificateConfig(properties);
         var service = clientFactory.createAppService(config);
@@ -295,26 +327,34 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
     }
 
     @Override
-    /** miniprogram薪酬 */
+    /**
+     * miniprogram薪酬
+    */
     public TencentWechatPayResponse miniProgramPay(TencentWechatPayProperties properties, TencentWechatPayRequest request) {
  // 小程序支付与 JSAPI 使用相同通道，打开标识 必须是小程序 打开标识
         return jsapiPay(properties, request);
     }
 
     @Override
-    /** 查询miniprogram订单 */
+    /**
+     * 查询miniprogram订单
+    */
     public TencentWechatOrderResponse queryMiniProgramOrder(TencentWechatPayProperties properties, String orderNo) {
         return queryJsapiOrder(properties, orderNo);
     }
 
     @Override
-    /** 关闭miniprogram订单 */
+    /**
+     * 关闭miniprogram订单
+    */
     public boolean closeMiniProgramOrder(TencentWechatPayProperties properties, String orderNo) {
         return closeJsapiOrder(properties, orderNo);
     }
 
     @Override
-    /** 创建薪酬score订单 */
+    /**
+     * 创建薪酬score订单
+    */
     public TencentWechatPayScoreResponse createPayScoreOrder(TencentWechatPayProperties properties, TencentWechatPayScoreRequest request) {
         Map<String, Object> body = new LinkedHashMap<>();
         /**
@@ -392,7 +432,9 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
     }
 
     @Override
-    /** 查询薪酬score订单 */
+    /**
+     * 查询薪酬score订单
+    */
     public TencentWechatPayScoreResponse queryPayScoreOrder(TencentWechatPayProperties properties, TencentWechatPayScoreRequest request) {
         Config config = clientFactory.createAutoCertificateConfig(properties);
         HttpClient client = clientFactory.createHttpClient(config);
@@ -405,7 +447,9 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
     }
 
     @Override
-    /** 完成薪酬score订单 */
+    /**
+     * 完成薪酬score订单
+    */
     public TencentWechatPayScoreResponse completePayScoreOrder(TencentWechatPayProperties properties, TencentWechatPayScoreRequest request) {
         Map<String, Object> body = new LinkedHashMap<>();
         /**
@@ -463,7 +507,9 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
     }
 
     @Override
-    /** cancel薪酬score订单 */
+    /**
+     * cancel薪酬score订单
+    */
     public TencentWechatPayScoreResponse cancelPayScoreOrder(TencentWechatPayProperties properties, TencentWechatPayScoreRequest request) {
         Map<String, Object> body = new LinkedHashMap<>();
         /**
@@ -501,7 +547,9 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
     }
 
     @Override
-    /** 解析薪酬score通知 */
+    /**
+     * 解析薪酬score通知
+    */
     public TencentWechatPayScoreNotifyPayload parsePayScoreNotify(TencentWechatPayProperties properties, TencentWechatNotifyRequest request) {
         Map<String, Object> notification = createNotificationParser(properties).parse(toRequestParam(request), Map.class);
         TencentWechatPayScoreNotifyPayload payload = new TencentWechatPayScoreNotifyPayload();
@@ -517,7 +565,9 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
     }
 
     @Override
-    /** 退税 */
+    /**
+     * 退税
+    */
     public TencentWechatRefundResponse refund(TencentWechatPayProperties properties, TencentWechatRefundRequest request) {
         RefundService service = clientFactory.createRefundService(clientFactory.createAutoCertificateConfig(properties));
         var createRequest = new com.wechat.pay.java.service.refund.model.CreateRequest();
@@ -538,7 +588,9 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
     }
 
     @Override
-    /** 查询退税 */
+    /**
+     * 查询退税
+    */
     public TencentWechatRefundResponse queryRefund(TencentWechatPayProperties properties, TencentWechatRefundRequest request) {
         RefundService service = clientFactory.createRefundService(clientFactory.createAutoCertificateConfig(properties));
         var queryRequest = new com.wechat.pay.java.service.refund.model.QueryByOutRefundNoRequest();
@@ -548,7 +600,9 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
     }
 
     @Override
-    /** 解析薪酬通知 */
+    /**
+     * 解析薪酬通知
+    */
     public TencentWechatPayNotifyPayload parsePayNotify(TencentWechatPayProperties properties, TencentWechatNotifyRequest request) {
         Transaction transaction = createNotificationParser(properties).parse(toRequestParam(request), Transaction.class);
         TencentWechatPayNotifyPayload payload = new TencentWechatPayNotifyPayload();
@@ -566,7 +620,9 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
     }
 
     @Override
-    /** 解析退税通知 */
+    /**
+     * 解析退税通知
+    */
     public TencentWechatRefundNotifyPayload parseRefundNotify(TencentWechatPayProperties properties, TencentWechatNotifyRequest request) {
         RefundNotification notification = createNotificationParser(properties).parse(toRequestParam(request), RefundNotification.class);
         TencentWechatRefundNotifyPayload payload = new TencentWechatRefundNotifyPayload();

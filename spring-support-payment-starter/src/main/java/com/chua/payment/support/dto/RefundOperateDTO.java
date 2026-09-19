@@ -12,16 +12,24 @@ import java.math.BigDecimal;
 @Data
 public class RefundOperateDTO {
 
-    /** 操作符 */
+    /**
+     * 操作符
+    */
     private String operator;
 
-    /** 评论 */
+    /**
+     * 评论
+    */
     private String remark;
 
-    /** Refundamount */
+    /**
+     * Refundamount
+    */
     private BigDecimal refundAmount;
 
-    /** thirdpartyrefundno */
+    /**
+     * thirdpartyrefundno
+    */
     private String thirdPartyRefundNo;
 }
 

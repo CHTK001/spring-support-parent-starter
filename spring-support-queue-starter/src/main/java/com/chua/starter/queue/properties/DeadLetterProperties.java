@@ -16,7 +16,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = DeadLetterProperties.PREFIX)
 public class DeadLetterProperties {
 
-    /** 前缀 */
+    /**
+     * 前缀
+    */
     public static final String PREFIX = "plugin.dead-letter";
 
     /**

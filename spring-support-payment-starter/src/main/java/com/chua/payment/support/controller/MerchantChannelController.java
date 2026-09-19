@@ -31,7 +31,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class MerchantChannelController {
 
-    /** 通道服务 */
+    /**
+     * 通道服务
+    */
     private final MerchantChannelService channelService;
 
     @Operation(summary = "创建渠道配置")

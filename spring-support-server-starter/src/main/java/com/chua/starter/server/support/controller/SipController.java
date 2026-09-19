@@ -28,9 +28,13 @@ public class SipController {
 
     private static final Logger log = LoggerFactory.getLogger(SipController.class);
 
-    /** 服务器配置服务 */
+    /**
+     * 服务器配置服务
+    */
     private final ServerConfigService configService;
-    /** SIP 中继服务管理器 */
+    /**
+     * SIP 中继服务管理器
+    */
     private final SipServiceManager sipManager;
 
     /**

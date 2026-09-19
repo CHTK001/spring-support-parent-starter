@@ -11,14 +11,24 @@ import lombok.Data;
 @Data
 public class WrongQueryDTO {
 
-    /** 页NUM */
+    /**
+     * 页NUM
+    */
     private Integer pageNum = 1;
-    /** 每页大小 */
+    /**
+     * 每页大小
+    */
     private Integer pageSize = 10;
-    /** studentid */
+    /**
+     * studentid
+    */
     private String studentId;
-    /** 主题 */
+    /**
+     * 主题
+    */
     private String subject;
-    /** Mastery级别 */
+    /**
+     * Mastery级别
+    */
     private Integer masteryLevel;
 }

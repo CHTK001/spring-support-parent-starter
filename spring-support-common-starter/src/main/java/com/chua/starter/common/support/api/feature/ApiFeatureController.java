@@ -29,7 +29,9 @@ import java.util.Set;
 @ConditionalOnProperty(name = "plugin.api.feature.enable", havingValue = "true", matchIfMissing = false)
 public class ApiFeatureController {
 
-    /** 特征管理器 */
+    /**
+     * 特征管理器
+    */
     private final ApiFeatureManager featureManager;
 
     /**

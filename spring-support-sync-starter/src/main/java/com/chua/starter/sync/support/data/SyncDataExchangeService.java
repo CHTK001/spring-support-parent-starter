@@ -25,14 +25,22 @@ import java.util.function.Predicate;
  */
 public class SyncDataExchangeService {
 
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(SyncDataExchangeService.class);
 
-    /** 同步客户端提供者 */
+    /**
+     * 同步客户端提供者
+    */
     private final ObjectProvider<SyncClient> syncClientProvider;
-    /** 同步服务器提供者 */
+    /**
+     * 同步服务器提供者
+    */
     private final ObjectProvider<SyncServer> syncServerProvider;
-    /** 同步属性 */
+    /**
+     * 同步属性
+    */
     private final SyncProperties syncProperties;
 
     /**

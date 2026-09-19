@@ -47,28 +47,44 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AgentEndpointController {
 
-    /** Agent 鉴权请求头 */
+    /**
+     * Agent 鉴权请求头
+    */
     private static final String AGENT_KEY_HEADER = "X-Agent-Key";
 
-    /** 监控目标 映射器 */
+    /**
+     * 监控目标 映射器
+    */
     private final MsMonitorMapper monitorMapper;
 
-    /** 指标服务 */
+    /**
+     * 指标服务
+    */
     private final MetricService metricService;
 
-    /** 探针上下文（心跳/在线状态） */
+    /**
+     * 探针上下文（心跳/在线状态）
+    */
     private final MonitorAgentContext agentContext;
 
-    /** 采集任务服务 */
+    /**
+     * 采集任务服务
+    */
     private final MonitorTaskService taskService;
 
-    /** 全局配置服务 */
+    /**
+     * 全局配置服务
+    */
     private final MonitorConfigService configService;
 
-    /** 采集间隔配置键 */
+    /**
+     * 采集间隔配置键
+    */
     private static final String CONFIG_KEY_INTERVAL = "monitor.collect.interval.ms";
 
-    /** 采集间隔默认值(毫秒) */
+    /**
+     * 采集间隔默认值(毫秒)
+    */
     private static final long DEFAULT_INTERVAL_MS = 10_000L;
 
     /**

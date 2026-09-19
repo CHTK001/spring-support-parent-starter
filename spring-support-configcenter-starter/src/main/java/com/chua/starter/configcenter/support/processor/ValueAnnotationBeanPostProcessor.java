@@ -468,7 +468,9 @@ public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, Envi
      */
     private class ValueConfigListener implements ConfigListener {
 
-        /** 配置密钥 */
+        /**
+         * 配置密钥
+        */
         private final String configKey;
 
         /**

@@ -16,14 +16,18 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-/** @作者 CH */
+/**
+ * @作者 CH
+*/
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class MonitorConfigServiceImpl implements MonitorConfigService {
 
-    /** 配置映射器 */
+    /**
+     * 配置映射器
+    */
     private final MsMonitorConfigMapper configMapper;
 
     @Override
@@ -45,14 +49,18 @@ public class MonitorConfigServiceImpl implements MonitorConfigService {
     @Override public String getString(String key) { return getString(key, ""); }
 
     @Override
-    /** 获取字符串 */
+    /**
+     * 获取字符串
+    */
     public String getString(String key, String defaultValue) {
         Optional<MsMonitorConfig> opt = Optional.ofNullable(findByKey(key).getData());
         return opt.map(MsMonitorConfig::getMonitorConfigValue).orElse(defaultValue);
     }
 
     @Override
-    /** 获取Int */
+    /**
+     * 获取Int
+    */
     public int getInt(String key, int defaultValue) {
         try {
             return Integer.parseInt(getString(key));
@@ -62,7 +70,9 @@ public class MonitorConfigServiceImpl implements MonitorConfigService {
     }
 
     @Override
-    /** 获取Long */
+    /**
+     * 获取Long
+    */
     public long getLong(String key, long defaultValue) {
         try {
             return Long.parseLong(getString(key));
@@ -72,7 +82,9 @@ public class MonitorConfigServiceImpl implements MonitorConfigService {
     }
 
     @Override
-    /** 获取布尔值 */
+    /**
+     * 获取布尔值
+    */
     public boolean getBoolean(String key, boolean defaultValue) {
         String val = getString(key);
         return val == null || val.isEmpty() ? defaultValue : Boolean.parseBoolean(val);
@@ -96,7 +108,9 @@ public class MonitorConfigServiceImpl implements MonitorConfigService {
     }
 
     @Override
-    /** 列表全部 */
+    /**
+     * 列表全部
+    */
     public List<MsMonitorConfig> listAll() { return configMapper.selectList(null); }
 
     @Override

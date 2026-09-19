@@ -47,12 +47,18 @@ import org.slf4j.LoggerFactory;
 @EnableConfigurationProperties(ApiCorsProperties.class)
 @ConditionalOnProperty(name = "plugin.api.cors.enable", matchIfMissing = true, havingValue = "true")
 public class ApiCorsConfiguration  {
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(ApiCorsConfiguration.class);
-        /** X_头部_版本 */
+        /**
+         * X_头部_版本
+        */
         private static final String X_HEADER_VERSION = "x-response-version";
 
-    /** 跨域资源共享属性 */
+    /**
+     * 跨域资源共享属性
+    */
     private final ApiCorsProperties corsProperties;
 
     /**

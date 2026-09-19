@@ -19,7 +19,9 @@ import java.nio.charset.StandardCharsets;
 @Component
 public class CredentialCipher {
 
-    /** 编解码器 */
+    /**
+     * 编解码器
+    */
     private final AesCodec codec;
 
     /**

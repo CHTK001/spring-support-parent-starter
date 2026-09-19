@@ -1,7 +1,9 @@
 package com.chua.starter.device.spi;
 
 import com.chua.starter.device.spi.model.DeviceEvent;
-/** @作者 CH */
+/**
+ * @作者 CH
+*/
 
 @FunctionalInterface
 public interface EventListener {

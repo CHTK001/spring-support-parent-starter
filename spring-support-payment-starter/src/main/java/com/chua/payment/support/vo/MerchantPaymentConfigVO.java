@@ -13,18 +13,28 @@ import java.io.Serializable;
 public class MerchantPaymentConfigVO implements Serializable {
     private static final long serialVersionUID = 1L; // 串行版本uid
 
-    /** merchantid */
+    /**
+     * merchantid
+    */
     private Long merchantId;
 
-    /** 排序reusable */
+    /**
+     * 排序reusable
+    */
     private Boolean orderReusable;
 
-    /** 排序超时minutes */
+    /**
+     * 排序超时minutes
+    */
     private Integer orderTimeoutMinutes;
 
-    /** Pending排序限制 */
+    /**
+     * Pending排序限制
+    */
     private Integer pendingOrderLimit;
 
-    /** Autocancel超时排序 */
+    /**
+     * Autocancel超时排序
+    */
     private Boolean autoCancelTimeoutOrder;
 }

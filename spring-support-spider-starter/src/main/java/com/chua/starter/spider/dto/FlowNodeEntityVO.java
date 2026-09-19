@@ -1,20 +1,36 @@
 package com.chua.starter.spider.dto;
 
-/** @作者 CH */
+/**
+ * @作者 CH
+*/
 public class FlowNodeEntityVO {
-    /** 流节点密钥 */
+    /**
+     * 流节点密钥
+    */
     private String flowNodeKey;
-    /** 流节点类型 */
+    /**
+     * 流节点类型
+    */
     private String flowNodeType;
-    /** 流节点名称 */
+    /**
+     * 流节点名称
+    */
     private String flowNodeName;
-    /** 流节点X坐标 */
+    /**
+     * 流节点X坐标
+    */
     private Integer flowNodeX;
-    /** 流节点Y坐标 */
+    /**
+     * 流节点Y坐标
+    */
     private Integer flowNodeY;
-    /** 流节点配置 */
+    /**
+     * 流节点配置
+    */
     private String flowNodeConfig;
-    /** 流节点状态 */
+    /**
+     * 流节点状态
+    */
     private String flowNodeStatus;
 
     /**

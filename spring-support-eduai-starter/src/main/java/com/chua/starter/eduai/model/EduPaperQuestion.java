@@ -21,7 +21,9 @@ public class EduPaperQuestion {
      * 关联标识
      */
     @TableId(type = IdType.AUTO)
-    /** paperquestionid */
+    /**
+     * paperquestionid
+    */
     private Long paperQuestionId;
 
     /**

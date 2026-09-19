@@ -73,7 +73,9 @@ class MultiDatasourceRealTest {
         }
     }
 
-    /** 接口级：获取 /api/ds/region/ds1、/ds2 -> 服务 级 @DS 路由到对应数据源 */
+    /**
+     * 接口级：获取 /api/ds/region/ds1、/ds2 -> 服务 级 @DS 路由到对应数据源
+    */
     @Test
     void serviceLevelDsRouting() throws Exception {
         mockMvc.perform(get("/api/ds/region/ds1"))
@@ -84,7 +86,9 @@ class MultiDatasourceRealTest {
                 .andExpect(jsonPath("$.data").value("ds2-data"));
     }
 
-    /** 接口级：获取 /api/ds/region/映射器/ds1、/ds2 -> 映射器 级 @DS 路由 */
+    /**
+     * 接口级：获取 /api/ds/region/映射器/ds1、/ds2 -> 映射器 级 @DS 路由
+    */
     @Test
     void mapperLevelDsRouting() throws Exception {
         mockMvc.perform(get("/api/ds/region/mapper/ds1"))
@@ -95,7 +99,9 @@ class MultiDatasourceRealTest {
                 .andExpect(jsonPath("$.data").value("ds2-data"));
     }
 
-    /** 接口级：获取 /api/ds/region（无 @DS）-> 主数据源（master = spring.datasource） */
+    /**
+     * 接口级：获取 /api/ds/region（无 @DS）-> 主数据源（master = spring.datasource）
+    */
     @Test
     void defaultRouting() throws Exception {
         mockMvc.perform(get("/api/ds/region"))

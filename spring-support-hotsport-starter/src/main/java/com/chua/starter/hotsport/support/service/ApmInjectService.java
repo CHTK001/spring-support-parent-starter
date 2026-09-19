@@ -29,7 +29,9 @@ import java.util.concurrent.ThreadLocalRandom;
 @Service
 public class ApmInjectService {
 
-    /** 注入一条传输记录（自动聚合进依赖图）。 */
+    /**
+     * 注入一条传输记录（自动聚合进依赖图）。
+    */
     public Map<String, Object> injectTransmission(String source, String target,
                                                   String protocol, String operation,
                                                   boolean error) {
@@ -215,7 +217,9 @@ public class ApmInjectService {
         }
     }
 
-    /** 协议 → 默认软件实现映射（Software 枚举名与协议名不一致时取映射）。 */
+    /**
+     * 协议 → 默认软件实现映射（Software 枚举名与协议名不一致时取映射）。
+    */
     private static final Map<String, String> PROTO_SOFTWARE = Map.of(
             "REDIS", "JEDIS",
             "KAFKA", "KAFKA_PRODUCER",

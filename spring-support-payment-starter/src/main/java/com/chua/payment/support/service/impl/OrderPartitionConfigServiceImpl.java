@@ -39,23 +39,37 @@ import java.util.regex.Pattern;
 @RequiredArgsConstructor
 public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigService {
 
-    /** Safe_table */
+    /**
+     * Safe_table
+    */
     private static final Pattern SAFE_TABLE = Pattern.compile("^[a-zA-Z0-9_]+$");
-    /** Month_格式化 */
+    /**
+     * Month_格式化
+    */
     private static final DateTimeFormatter MONTH_FORMAT = DateTimeFormatter.ofPattern("yyyyMM");
-    /** Day_格式化 */
+    /**
+     * Day_格式化
+    */
     private static final DateTimeFormatter DAY_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd");
     private static final Map<String, OrderPartitionConfig> DEFAULTS = createDefaults(); // 默认
 
-    /** 排序分区配置映射器 */
+    /**
+     * 排序分区配置映射器
+    */
     private final OrderPartitionConfigMapper orderPartitionConfigMapper;
-    /** JDBC模板 */
+    /**
+     * JDBC模板
+    */
     private final JdbcTemplate jdbcTemplate;
-    /** 数据来源 */
+    /**
+     * 数据来源
+    */
     private final DataSource dataSource;
 
     @PostConstruct
-    /** 初始化默认 */
+    /**
+     * 初始化默认
+    */
     public void initDefaults() {
         /**
          * 同步默认。
@@ -64,7 +78,9 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
     }
 
     @Override
-    /** 列表配置 */
+    /**
+     * 列表配置
+    */
     public List<OrderPartitionConfigVO> listConfigs() {
         /**
          * 同步默认。
@@ -110,7 +126,9 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
     }
 
     @Override
-    /** Preview */
+    /**
+     * Preview
+    */
     public OrderPartitionPreviewVO preview(String businessType) {
         OrderPartitionConfig config = requireConfig(businessType);
         LocalDateTime migrateBeforeTime = LocalDateTime.now().minusDays(config.getMigrateBeforeDays());
@@ -233,12 +251,16 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
     }
 
     @Override
-    /** 获取配置实体 */
+    /**
+     * 获取配置实体
+    */
     public OrderPartitionConfig getConfigEntity(String businessType) {
         return requireConfig(businessType);
     }
 
-    /** 同步默认 */
+    /**
+     * 同步默认
+    */
     private void syncDefaults() {
         for (OrderPartitionConfig item : DEFAULTS.values()) {
             OrderPartitionConfig existing = orderPartitionConfigMapper.selectOne(new LambdaQueryWrapper<OrderPartitionConfig>()

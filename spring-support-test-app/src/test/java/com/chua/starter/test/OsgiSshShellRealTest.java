@@ -57,7 +57,9 @@ class OsgiSshShellRealTest {
     private static final String SSH_PASSWORD = "admin"; // ssh密码
     private static final String BUNDLE_SYMBOLIC_NAME = "com.chua.test.bundle"; // bundlesymbolic名称
 
-    /** 真实 bundle jar：动态生成合法 osgi bundle（MANIFEST 含 Bundle-symbolic名称） */
+    /**
+     * 真实 bundle jar：动态生成合法 osgi bundle（MANIFEST 含 Bundle-symbolic名称）
+    */
     private static final File BUNDLE_FILE = new File("target/test-bundle-1.0.0.jar");
 
     static {
@@ -153,7 +155,9 @@ class OsgiSshShellRealTest {
         }
     }
 
-    /** 真实测试：bundle 安装/卸载经 SSH Shell 模式（Gogo 命令驱动） */
+    /**
+     * 真实测试：bundle 安装/卸载经 SSH Shell 模式（Gogo 命令驱动）
+    */
     @Test
     void bundleInstallUninstallViaSshShell() throws Exception {
         // 1) 经 SSH shell 安装真实 bundle
@@ -213,7 +217,9 @@ class OsgiSshShellRealTest {
         return matcher.find() ? Long.parseLong(matcher.group(1)) : -1;
     }
 
-    /** 真实测试：SSH 认证失败（错误密码）应被拒绝 */
+    /**
+     * 真实测试：SSH 认证失败（错误密码）应被拒绝
+    */
     @Test
     void authFailureRejected() {
         JSch jsch = new JSch();
@@ -232,7 +238,9 @@ class OsgiSshShellRealTest {
         }, "错误密码的 SSH 连接应被拒绝");
     }
 
-    /** 真实测试：Gogo 非 bundle: 命令经 SSH Shell 执行（执行viagogo 反射路径） */
+    /**
+     * 真实测试：Gogo 非 bundle: 命令经 SSH Shell 执行（执行viagogo 反射路径）
+    */
     @Test
     void gogoNonBundleCommandExecuted() throws Exception {
  // help 为 Gogo runtime 内置命令，不以 bundle: 开头，需走 命令处理器 反射执行

@@ -71,13 +71,17 @@ public class LocalFileStorage extends AbstractFileStorage {
     }
 
     @Override
-    /** 创建multipartstorage */
+    /**
+     * 创建multipartstorage
+    */
     public MultipartStorage createMultipartStorage() {
         return new LocalMultipartStorage();
     }
 
     @Override
-    /** 放入对象 */
+    /**
+     * 放入对象
+    */
     public PutObjectResult putObject(PutObjectRequest request) {
         try {
             String key = resolveKey(request.getFilePath(), request.getFileName());
@@ -117,7 +121,9 @@ public class LocalFileStorage extends AbstractFileStorage {
     }
 
     @Override
-    /** 获取对象 */
+    /**
+     * 获取对象
+    */
     public GetObjectResult getObject(String key) {
         Path target = rootPath.resolve(key);
         if (!Files.exists(target)) {
@@ -140,13 +146,17 @@ public class LocalFileStorage extends AbstractFileStorage {
     }
 
     @Override
-    /** 获取对象 */
+    /**
+     * 获取对象
+    */
     public GetObjectResult getObject(GetObjectRequest request) {
         return getObject(request.getKey());
     }
 
     @Override
-    /** 删除对象 */
+    /**
+     * 删除对象
+    */
     public DeleteObjectResult deleteObject(String key) {
         try {
             Files.deleteIfExists(rootPath.resolve(key));
@@ -162,7 +172,9 @@ public class LocalFileStorage extends AbstractFileStorage {
     }
 
     @Override
-    /** exist对象 */
+    /**
+     * exist对象
+    */
     public ExistObjectResult existObject(ExistObjectRequest request) {
         String key = request.getKey();
         boolean exists = key != null && Files.exists(rootPath.resolve(key));
@@ -173,7 +185,9 @@ public class LocalFileStorage extends AbstractFileStorage {
     }
 
     @Override
-    /** 列表对象 */
+    /**
+     * 列表对象
+    */
     public ListObjectResult listObject(ListObjectRequest request) {
         try {
             List<Metadata> metadataList = new java.util.ArrayList<>();
@@ -242,7 +256,9 @@ public class LocalFileStorage extends AbstractFileStorage {
     private class LocalMultipartStorage implements MultipartStorage {
 
         @Override
-        /** Initiate */
+        /**
+         * Initiate
+        */
         public MultipartPartResult initiate(PutObjectRequest request) {
             String uploadId = UUID.randomUUID().toString().replace("-", "");
             multipartMap.put(uploadId, new ConcurrentHashMap<>());
@@ -253,7 +269,9 @@ public class LocalFileStorage extends AbstractFileStorage {
         }
 
         @Override
-        /** uploadpart */
+        /**
+         * uploadpart
+        */
         public MultipartPartResult uploadPart(MultipartUploadPartRequest request) {
             String uploadId = request.getUploadId();
             Map<Integer, Path> parts = multipartMap.get(uploadId);
@@ -281,7 +299,9 @@ public class LocalFileStorage extends AbstractFileStorage {
         }
 
         @Override
-        /** 完成 */
+        /**
+         * 完成
+        */
         public PutObjectResult complete(String uploadId, List<PartETag> parts) {
             Map<Integer, Path> partMap = multipartMap.remove(uploadId);
             if (partMap == null) {
@@ -320,7 +340,9 @@ public class LocalFileStorage extends AbstractFileStorage {
         }
 
         @Override
-        /** Abort */
+        /**
+         * Abort
+        */
         public DeleteObjectResult abort(String uploadId) {
             Map<Integer, Path> parts = multipartMap.remove(uploadId);
             if (parts != null) {

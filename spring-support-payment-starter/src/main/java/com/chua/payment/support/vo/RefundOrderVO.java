@@ -15,69 +15,113 @@ import java.time.LocalDateTime;
 public class RefundOrderVO implements Serializable {
     private static final long serialVersionUID = 1L; // 串行版本uid
 
-    /** 标识 */
+    /**
+     * 标识
+    */
     private Long id;
 
-    /** 退税no */
+    /**
+     * 退税no
+    */
     private String refundNo;
 
-    /** 排序标识 */
+    /**
+     * 排序标识
+    */
     private Long orderId;
 
-    /** 排序NO */
+    /**
+     * 排序NO
+    */
     private String orderNo;
 
-    /** merchantid */
+    /**
+     * merchantid
+    */
     private Long merchantId;
 
-    /** Merchant名称 */
+    /**
+     * Merchant名称
+    */
     private String merchantName;
 
-    /** 通道标识 */
+    /**
+     * 通道标识
+    */
     private Long channelId;
 
-    /** 通道名称 */
+    /**
+     * 通道名称
+    */
     private String channelName;
 
-    /** 来源排序状态 */
+    /**
+     * 来源排序状态
+    */
     private String sourceOrderStatus;
 
-    /** 来源排序状态desc */
+    /**
+     * 来源排序状态desc
+    */
     private String sourceOrderStatusDesc;
 
-    /** thirdpartyrefundno */
+    /**
+     * thirdpartyrefundno
+    */
     private String thirdPartyRefundNo;
 
-    /** Refundamount */
+    /**
+     * Refundamount
+    */
     private BigDecimal refundAmount;
 
-    /** 状态 */
+    /**
+     * 状态
+    */
     private String status;
 
-    /** 状态desc */
+    /**
+     * 状态desc
+    */
     private String statusDesc;
 
-    /** ReasonMLmlml */
+    /**
+     * ReasonMLmlml
+    */
     private String reason;
 
-    /** 通知状态 */
+    /**
+     * 通知状态
+    */
     private Integer notifyStatus;
 
-    /** 请求payload */
+    /**
+     * 请求payload
+    */
     private String requestPayload;
 
-    /** 响应payload */
+    /**
+     * 响应payload
+    */
     private String responsePayload;
 
-    /** 操作符 */
+    /**
+     * 操作符
+    */
     private String operator;
 
-    /** 评论 */
+    /**
+     * 评论
+    */
     private String remark;
 
-    /** 创建时间AT */
+    /**
+     * 创建时间AT
+    */
     private LocalDateTime createdAt;
 
-    /** 更新时间AT */
+    /**
+     * 更新时间AT
+    */
     private LocalDateTime updatedAt;
 }

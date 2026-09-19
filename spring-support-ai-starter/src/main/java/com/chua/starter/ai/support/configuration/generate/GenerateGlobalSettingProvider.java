@@ -32,19 +32,25 @@ public class GenerateGlobalSettingProvider implements GlobalSettingProvider {
     private static final String GROUP_NAME = "文生图 / 文生视频";
 
     @Override
-    /** 分组 */
+    /**
+     * 分组
+    */
     public String group() {
         return GROUP;
     }
 
     @Override
-    /** 分组名称 */
+    /**
+     * 分组名称
+    */
     public String groupName() {
         return GROUP_NAME;
     }
 
     @Override
-    /** 获取Items */
+    /**
+     * 获取Items
+    */
     public List<GlobalSettingProvider.SettingItem> getItems() {
         return List.of(
                 // ==================== 文生图 ====================

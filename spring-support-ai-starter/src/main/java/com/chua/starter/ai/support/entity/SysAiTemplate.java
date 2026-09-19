@@ -23,14 +23,18 @@ public class SysAiTemplate {
      * 模板主键 标识
      */
     @TableId(value = "sys_ai_template_id", type = IdType.AUTO)
-    /** SYSAI模板标识 */
+    /**
+     * SYSAI模板标识
+    */
     private Integer id;
 
     /**
      * 所属模块 标识
      */
     @TableField("sys_ai_module_id")
-    /** sysaimoduleid */
+    /**
+     * sysaimoduleid
+    */
     private Integer sysAiModuleId;
 
     /**
@@ -79,14 +83,18 @@ public class SysAiTemplate {
      * 创建时间
      */
     @TableField("create_time")
-    /** 创建时间 */
+    /**
+     * 创建时间
+    */
     private LocalDateTime createTime;
 
     /**
      * 更新时间
      */
     @TableField("update_time")
-    /** 更新时间 */
+    /**
+     * 更新时间
+    */
     private LocalDateTime updateTime;
 }
 

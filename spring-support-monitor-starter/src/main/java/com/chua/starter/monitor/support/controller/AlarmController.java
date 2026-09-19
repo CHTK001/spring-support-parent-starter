@@ -35,7 +35,9 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AlarmController {
 
-    /** 告警引擎服务 */
+    /**
+     * 告警引擎服务
+    */
     private final AlarmEngineService alarmEngineService;
 
     /**

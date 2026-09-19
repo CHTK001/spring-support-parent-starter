@@ -30,9 +30,13 @@ import java.util.Collections;
 @Slf4j
 public class SshServerService implements InitializingBean, DisposableBean {
 
-    /** 属性 */
+    /**
+     * 属性
+    */
     private final SshServerProperties properties;
-    /** SSH服务器 */
+    /**
+     * SSH服务器
+    */
     private SshServer sshServer;
 
     /**
@@ -44,7 +48,9 @@ public class SshServerService implements InitializingBean, DisposableBean {
     }
 
     @Override
-    /** 之后属性设置 */
+    /**
+     * 之后属性设置
+    */
     public void afterPropertiesSet() throws Exception {
         if (properties.isEnabled()) {
             /**
@@ -57,7 +63,9 @@ public class SshServerService implements InitializingBean, DisposableBean {
     }
 
     @Override
-    /** 销毁 */
+    /**
+     * 销毁
+    */
     public void destroy() throws Exception {
         /**
          * 停止ssh服务端。
@@ -128,7 +136,9 @@ public class SshServerService implements InitializingBean, DisposableBean {
             // 配置密码认证
             sshServer.setPasswordAuthenticator(new PasswordAuthenticator() {
                 @Override
-                /** Authenticate */
+                /**
+                 * Authenticate
+                */
                 public boolean authenticate(String username, String password, ServerSession session) {
                     // 简单的用户名密码验证
                     boolean authenticated = auth.getUsername().equals(username) && 

@@ -11,10 +11,16 @@ import lombok.Data;
 @Data
 public class MaterializedSqlOptions {
 
-    /** 默认阈值 */
+    /**
+     * 默认阈值
+    */
     private long defaultThreshold = 1000L;
-    /** Refresh间隔秒 */
+    /**
+     * Refresh间隔秒
+    */
     private long refreshIntervalSeconds = 300L;
-    /** 缓存数据来源前缀 */
+    /**
+     * 缓存数据来源前缀
+    */
     private String cacheDataSourcePrefix = "materialized#";
 }

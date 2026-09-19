@@ -47,7 +47,9 @@ class OsgiDisabledRealTest {
     @Autowired
     private ObjectContext objectContext; // 对象上下文
 
-    /** 真实测试：已启用=false 时各 osgi Bean 均不应装配 */
+    /**
+     * 真实测试：已启用=false 时各 osgi Bean 均不应装配
+    */
     @Test
     void osgiBeansNotProvisionedWhenDisabled() {
         /**
@@ -70,7 +72,9 @@ class OsgiDisabledRealTest {
                 "plugin.osgi.enabled=false 时不应装配 GogoSshShellServer");
     }
 
-    /** 真实测试：已启用=false 时 对象上下文 不应桥接任何 osgi 类型服务 */
+    /**
+     * 真实测试：已启用=false 时 对象上下文 不应桥接任何 osgi 类型服务
+    */
     @Test
     void noOsgiBeanBridgedInObjectContext() {
         /**

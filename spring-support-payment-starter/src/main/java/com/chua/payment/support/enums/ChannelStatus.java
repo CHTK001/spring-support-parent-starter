@@ -20,9 +20,13 @@ public enum ChannelStatus {
      */
     ENABLED(1, "已启用");
 
-    /** 代码 */
+    /**
+     * 代码
+    */
     private final int code;
-    /** 描述 */
+    /**
+     * 描述
+    */
     private final String description;
 
     /**

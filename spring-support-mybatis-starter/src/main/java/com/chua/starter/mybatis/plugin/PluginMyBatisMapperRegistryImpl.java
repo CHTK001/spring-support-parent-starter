@@ -33,7 +33,9 @@ import java.util.Enumeration;
  */
 @Spi("default")
 public class PluginMyBatisMapperRegistryImpl implements PluginMyBatisMapperRegistry {
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(PluginMyBatisMapperRegistryImpl.class);
 
     /**

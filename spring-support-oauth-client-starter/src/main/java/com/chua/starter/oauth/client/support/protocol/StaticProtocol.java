@@ -43,7 +43,9 @@ import static com.chua.starter.oauth.client.support.contants.AuthConstant.SUPER_
 @Spi({"Static"})
 public class StaticProtocol extends AbstractProtocol {
 
-    /** 在线会话登记表 */
+    /**
+     * 在线会话登记表
+    */
     private static final StaticSessionRegistry SESSIONS = StaticSessionRegistry.getInstance();
 
     /**
@@ -122,7 +124,9 @@ public class StaticProtocol extends AbstractProtocol {
     }
 
     @Override
-    /** 认证用户编码 */
+    /**
+     * 认证用户编码
+    */
     protected AuthenticationInformation authenticationUserCode(AppKeySecret appKeySecret) {
         log.warn("[StaticProtocol]静态协议不支持AppKey认证 - appId: {}",
                 appKeySecret != null ? appKeySecret.getAppId() : null);

@@ -25,7 +25,9 @@ public class SysMessageProvider extends SysBase {
      * 提供商标识 - 主键自增
      */
     @TableId(value = "sys_message_provider_id", type = IdType.AUTO)
-    /** SYS消息提供者标识 */
+    /**
+     * SYS消息提供者标识
+    */
     private Integer sysMessageProviderId;
 
     /**

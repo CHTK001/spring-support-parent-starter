@@ -35,7 +35,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ServerHostController {
 
-    /** 主机服务 */
+    /**
+     * 主机服务
+    */
     private final ServerHostService serverHostService;
 
     /**

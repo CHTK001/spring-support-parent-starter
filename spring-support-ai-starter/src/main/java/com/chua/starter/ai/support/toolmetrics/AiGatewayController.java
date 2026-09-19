@@ -28,10 +28,14 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AiGatewayController {
 
-    /** Spring 应用上下文 */
+    /**
+     * Spring 应用上下文
+    */
     private final ApplicationContext applicationContext;
 
-    /** 当前 Connector 引用（跨请求保持） */
+    /**
+     * 当前 Connector 引用（跨请求保持）
+    */
     private volatile Object activeConnector;
 
     /**

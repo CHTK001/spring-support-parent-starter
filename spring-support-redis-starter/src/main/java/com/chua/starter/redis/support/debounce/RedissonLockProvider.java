@@ -18,12 +18,18 @@ import java.util.concurrent.TimeUnit;
 public class RedissonLockProvider implements LockProvider {
 
     @AutoInject
-    /** Redisson客户端 */
+    /**
+     * Redisson客户端
+    */
     private RedissonClient redissonClient;
-    /** 锁 */
+    /**
+     * 锁
+    */
     private RLock lock;
     boolean isLocked = false; // 是否锁
-    /** 密钥 */
+    /**
+     * 密钥
+    */
     private String key;
 
     /**
@@ -35,7 +41,9 @@ public class RedissonLockProvider implements LockProvider {
     }
 
     @Override
-    /** 尝试锁 */
+    /**
+     * 尝试锁
+    */
     public boolean tryLock(int timeout, TimeUnit timeUnit)  {
         this.lock = redissonClient.getLock(key);
         //尝试抢占锁
@@ -60,7 +68,9 @@ public class RedissonLockProvider implements LockProvider {
     }
 
     @Override
-    /** 解锁 */
+    /**
+     * 解锁
+    */
     public void unlock() {
         if (isLocked && lock.isHeldByCurrentThread()) {
             lock.unlock();
@@ -68,13 +78,17 @@ public class RedissonLockProvider implements LockProvider {
     }
 
     @Override
-    /** 获取名称 */
+    /**
+     * 获取名称
+    */
     public String getName() {
         return "redisson";
     }
 
     @Override
-    /** 获取类型 */
+    /**
+     * 获取类型
+    */
     public String getType() {
         return "redisson";
     }

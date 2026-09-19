@@ -23,7 +23,9 @@ public class SysAiManufacturer {
      * 厂商主键 标识
      */
     @TableId(value = "sys_ai_manufacturer_id", type = IdType.AUTO)
-    /** sysaimanufacturerid */
+    /**
+     * sysaimanufacturerid
+    */
     private Integer id;
 
     /**
@@ -96,14 +98,18 @@ public class SysAiManufacturer {
      * 创建时间
      */
     @TableField("create_time")
-    /** 创建时间 */
+    /**
+     * 创建时间
+    */
     private LocalDateTime createTime;
 
     /**
      * 更新时间
      */
     @TableField("update_time")
-    /** 更新时间 */
+    /**
+     * 更新时间
+    */
     private LocalDateTime updateTime;
 }
 

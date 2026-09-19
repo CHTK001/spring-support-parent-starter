@@ -20,7 +20,9 @@ public class DiscoveryListProperties {
     private boolean enable = false;
 
 
-    /** PRE */
+    /**
+     * PRE
+    */
     public static final String PRE = "plugin.discovery";
 
     /**

@@ -96,7 +96,9 @@ class BundleStartupInstallRealTest {
     @Autowired
     private ObjectContext objectContext; // 对象上下文
 
-    /** 真实测试：上下文 启动后 install-at-startup 指定的 bundle 已自动安装且服务可用 */
+    /**
+     * 真实测试：上下文 启动后 install-at-startup 指定的 bundle 已自动安装且服务可用
+    */
     @Test
     void startupInstalledBundleAvailable() {
         /**
@@ -146,7 +148,9 @@ class BundleStartupInstallRealTest {
 
     // ==================== 伪仓库构造 ====================
 
-    /** 生成启动测试用的 bundle jar（坐标 com.chua.osgi.测试:startup:1.0.0） */
+    /**
+     * 生成启动测试用的 bundle jar（坐标 com.chua.osgi.测试:startup:1.0.0）
+    */
     private static void putStartupRepoJar() throws Exception {
         String className = "StartupGreet1_0_0";
         Path srcFile = Paths.get("target", "bundle-mgr-src", className + ".java");

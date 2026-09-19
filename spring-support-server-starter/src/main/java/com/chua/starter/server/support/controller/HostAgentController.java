@@ -38,13 +38,19 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class HostAgentController {
 
-    /** Agent 采集 提供者 */
+    /**
+     * Agent 采集 提供者
+    */
     private final AgentHostCollectProvider agentProvider;
 
-    /** 主机 映射器 */
+    /**
+     * 主机 映射器
+    */
     private final MsServerHostMapper hostMapper;
 
-    /** 时序引擎（可选，未配置时为 null） */
+    /**
+     * 时序引擎（可选，未配置时为 null）
+    */
     @Autowired(required = false)
     private SeriesEngine seriesEngine;
 

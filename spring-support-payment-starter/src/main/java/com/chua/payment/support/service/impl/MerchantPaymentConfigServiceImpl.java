@@ -23,13 +23,19 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class MerchantPaymentConfigServiceImpl implements MerchantPaymentConfigService {
 
-    /** 配置映射器 */
+    /**
+     * 配置映射器
+    */
     private final MerchantPaymentConfigMapper configMapper;
-    /** 排序映射器 */
+    /**
+     * 排序映射器
+    */
     private final PaymentOrderMapper orderMapper;
 
     @Override
-    /** 获取配置 */
+    /**
+     * 获取配置
+    */
     public MerchantPaymentConfig getConfig(Long merchantId) {
         if (merchantId == null) {
             return getDefaultConfig();
@@ -71,7 +77,9 @@ public class MerchantPaymentConfigServiceImpl implements MerchantPaymentConfigSe
     }
 
     @Override
-    /** 校验是否可以创建订单 */
+    /**
+     * 校验是否可以创建订单
+    */
     public void checkCanCreateOrder(Long merchantId, Long userId) {
         MerchantPaymentConfig config = getConfig(merchantId);
 
@@ -93,7 +101,9 @@ public class MerchantPaymentConfigServiceImpl implements MerchantPaymentConfigSe
     }
 
     @Override
-    /** 校验是否可以薪酬订单 */
+    /**
+     * 校验是否可以薪酬订单
+    */
     public void checkCanPayOrder(Long orderId) {
         PaymentOrder order = orderMapper.selectById(orderId);
         if (order == null) {
@@ -133,7 +143,9 @@ public class MerchantPaymentConfigServiceImpl implements MerchantPaymentConfigSe
     }
 
     @Override
-    /** 获取订单超时minutes */
+    /**
+     * 获取订单超时minutes
+    */
     public Integer getOrderTimeoutMinutes(Long merchantId) {
         MerchantPaymentConfig config = getConfig(merchantId);
         return config.getOrderTimeoutMinutes();

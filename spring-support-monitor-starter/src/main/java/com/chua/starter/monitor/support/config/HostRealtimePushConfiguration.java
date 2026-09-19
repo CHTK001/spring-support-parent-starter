@@ -35,31 +35,49 @@ import org.springframework.context.annotation.Configuration;
 @RequiredArgsConstructor
 public class HostRealtimePushConfiguration {
 
-    /** 实时推送服务 */
+    /**
+     * 实时推送服务
+    */
     private final MonitorPushService monitorPushService;
 
-    /** 告警规则引擎（评估主机延迟/在线/使用率规则） */
+    /**
+     * 告警规则引擎（评估主机延迟/在线/使用率规则）
+    */
     private final ObjectProvider<AlarmEngineService> alarmEngineProvider;
 
-    /** 主机 映射器（采集后重读最新台账） */
+    /**
+     * 主机 映射器（采集后重读最新台账）
+    */
     private final MsServerHostMapper hostMapper;
 
-    /** 主机画像服务（AGENT 方式采集时拉 agent 快照，可能未装配） */
+    /**
+     * 主机画像服务（AGENT 方式采集时拉 agent 快照，可能未装配）
+    */
     private final ObjectProvider<HostProfileService> profileServiceProvider;
 
-    /** 主机延迟指标名（毫秒，告警规则 GT 阈值） */
+    /**
+     * 主机延迟指标名（毫秒，告警规则 GT 阈值）
+    */
     private static final String METRIC_HOST_DELAY_MS = "host.delay.ms";
 
-    /** 主机在线指标名（1 在线 / 0 离线，离线告警 LT 阈值 1） */
+    /**
+     * 主机在线指标名（1 在线 / 0 离线，离线告警 LT 阈值 1）
+    */
     private static final String METRIC_HOST_ONLINE = "host.online";
 
-    /** 主机 CPU 使用率指标名（%，告警规则 GT 阈值） */
+    /**
+     * 主机 CPU 使用率指标名（%，告警规则 GT 阈值）
+    */
     private static final String METRIC_HOST_CPU_USAGE = "host.cpu.usage";
 
-    /** 主机内存使用率指标名（%，告警规则 GT 阈值） */
+    /**
+     * 主机内存使用率指标名（%，告警规则 GT 阈值）
+    */
     private static final String METRIC_HOST_MEM_USAGE = "host.mem.usage";
 
-    /** 主机磁盘使用率指标名（%，告警规则 GT 阈值） */
+    /**
+     * 主机磁盘使用率指标名（%，告警规则 GT 阈值）
+    */
     private static final String METRIC_HOST_DISK_USAGE = "host.disk.usage";
 
     /**

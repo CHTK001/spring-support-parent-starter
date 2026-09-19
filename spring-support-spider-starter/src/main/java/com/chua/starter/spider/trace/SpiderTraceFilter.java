@@ -35,7 +35,9 @@ public class SpiderTraceFilter implements Filter {
     private static final String TRACE_ID_MDC_KEY = "traceId";
 
     @Override
-    /** 执行过滤 */
+    /**
+     * 执行过滤
+    */
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
             throws IOException, ServletException {
         HttpServletRequest httpRequest = (HttpServletRequest) request;

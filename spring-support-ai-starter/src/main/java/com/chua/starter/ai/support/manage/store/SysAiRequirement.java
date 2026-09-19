@@ -22,63 +22,93 @@ public class SysAiRequirement implements Serializable {
 
     private static final long serialVersionUID = 1L; // 串行版本uid
 
-    /** 需求 标识（uuidv7） */
+    /**
+     * 需求 标识（uuidv7）
+    */
     @TableId(value = "sys_ai_requirement_id", type = IdType.INPUT)
     private String requirementId; // requirementid
 
-    /** 展示序号（自增） */
+    /**
+     * 展示序号（自增）
+    */
     @TableField("sys_ai_requirement_display_no")
     private Integer displayNo; // displayno
 
-    /** 需求标题 */
+    /**
+     * 需求标题
+    */
     @TableField("sys_ai_requirement_title")
     private String title; // title
 
-    /** 需求内容（Markdown） */
+    /**
+     * 需求内容（Markdown）
+    */
     @TableField("sys_ai_requirement_content")
     private String content; // 内容
 
-    /** 标签 */
+    /**
+     * 标签
+    */
     @TableField("sys_ai_requirement_tag")
     private String tag; // 标签
 
-    /** 执行次序（点分十进制） */
+    /**
+     * 执行次序（点分十进制）
+    */
     @TableField("sys_ai_requirement_order_key")
     private String orderKey; // 订单Key
 
-    /** 状态 */
+    /**
+     * 状态
+    */
     @TableField("sys_ai_requirement_status")
     private String status; // 状态
 
-    /** 完成记录 */
+    /**
+     * 完成记录
+    */
     @TableField("sys_ai_requirement_completion_note")
     private String completionNote; // 完成笔记
 
-    /** 来源会话 标识 */
+    /**
+     * 来源会话 标识
+    */
     @TableField("sys_ai_requirement_owner_conversation_id")
     private String ownerConversationId; // ownerconversationid
 
-    /** 来源终端 标识 */
+    /**
+     * 来源终端 标识
+    */
     @TableField("sys_ai_requirement_owner_terminal_id")
     private String ownerTerminalId; // ownerterminalid
 
-    /** 创建来源 */
+    /**
+     * 创建来源
+    */
     @TableField("sys_ai_requirement_origin")
     private String origin; // origin
 
-    /** 开始执行时间戳 */
+    /**
+     * 开始执行时间戳
+    */
     @TableField("sys_ai_requirement_started_at")
     private Long startedAt; // 启动at
 
-    /** 完成时间戳 */
+    /**
+     * 完成时间戳
+    */
     @TableField("sys_ai_requirement_completed_at")
     private Long completedAt; // 完成at
 
-    /** 重试次数 */
+    /**
+     * 重试次数
+    */
     @TableField("sys_ai_requirement_attempt_count")
     private Integer attemptCount; // 尝试数量
 
-    /** 扩展字段（附件、自定义字段等） */
+    /**
+     * 扩展字段（附件、自定义字段等）
+    */
     @TableField(value = "sys_ai_requirement_extra", typeHandler = JacksonTypeHandler.class)
     private Map<String, Object> extra; // extra
 

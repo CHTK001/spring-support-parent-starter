@@ -11,10 +11,14 @@ import lombok.Getter;
 @Getter
 public class CollectOutcome {
 
-    /** 是否成功 */
+    /**
+     * 是否成功
+    */
     private final boolean success;
 
-    /** 结果消息 */
+    /**
+     * 结果消息
+    */
     private final String message;
 
     /**

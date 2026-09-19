@@ -395,7 +395,9 @@ public class Version implements Comparable<Version> {
     }
 
     @Override
-    /** 判断相等 */
+    /**
+     * 判断相等
+    */
     public boolean equals(Object o) {
         if (this == o) {
             return true;
@@ -408,13 +410,17 @@ public class Version implements Comparable<Version> {
     }
 
     @Override
-    /** 哈希编码 */
+    /**
+     * 哈希编码
+    */
     public int hashCode() {
         return Objects.hash(major, minor, patch, prerelease);
     }
 
     @Override
-    /** 转为字符串 */
+    /**
+     * 转为字符串
+    */
     public String toString() {
         return original;
     }

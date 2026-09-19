@@ -29,36 +29,52 @@ import java.util.regex.Pattern;
 @RequiredArgsConstructor
 public class PrometheusHostCollectProvider implements HostCollectProvider {
 
-    /** Prometheus 指标端点路径 */
+    /**
+     * Prometheus 指标端点路径
+    */
     private static final String METRICS_PATH = "/metrics";
 
-    /** 主机 映射器 */
+    /**
+     * 主机 映射器
+    */
     private final MsServerHostMapper hostMapper;
 
-    /** CPU 空闲秒数指标 */
+    /**
+     * CPU 空闲秒数指标
+    */
     private static final Pattern CPU_IDLE = Pattern.compile(
             "^node_cpu_seconds_total\\{.*?cpu=\"[0-9]+\",.*?mode=\"idle\".*?\\}\\s+([0-9.eE+-]+)",
             Pattern.MULTILINE);
 
-    /** 全部 CPU 秒数指标 */
+    /**
+     * 全部 CPU 秒数指标
+    */
     private static final Pattern CPU_TOTAL = Pattern.compile(
             "^node_cpu_seconds_total\\{.*?mode=\"[a-z]+\".*?\\}\\s+([0-9.eE+-]+)",
             Pattern.MULTILINE);
 
-    /** 内存总量(字节) */
+    /**
+     * 内存总量(字节)
+    */
     private static final Pattern MEM_TOTAL = Pattern.compile(
             "^node_memory_MemTotal_bytes\\s+([0-9.eE+-]+)", Pattern.MULTILINE);
 
-    /** 内存可用量(字节) */
+    /**
+     * 内存可用量(字节)
+    */
     private static final Pattern MEM_AVAILABLE = Pattern.compile(
             "^node_memory_MemAvailable_bytes\\s+([0-9.eE+-]+)", Pattern.MULTILINE);
 
-    /** 磁盘总量(字节) */
+    /**
+     * 磁盘总量(字节)
+    */
     private static final Pattern DISK_TOTAL = Pattern.compile(
             "^node_filesystem_size_bytes\\{.*?mountpoint=\"/\".*?\\}\\s+([0-9.eE+-]+)",
             Pattern.MULTILINE);
 
-    /** 磁盘可用量(字节) */
+    /**
+     * 磁盘可用量(字节)
+    */
     private static final Pattern DISK_AVAILABLE = Pattern.compile(
             "^node_filesystem_avail_bytes\\{.*?mountpoint=\"/\".*?\\}\\s+([0-9.eE+-]+)",
             Pattern.MULTILINE);

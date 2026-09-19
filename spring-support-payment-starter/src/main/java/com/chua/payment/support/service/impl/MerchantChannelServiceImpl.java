@@ -41,18 +41,30 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class MerchantChannelServiceImpl implements MerchantChannelService {
 
-    /** 通道映射器 */
+    /**
+     * 通道映射器
+    */
     private final MerchantChannelMapper channelMapper;
-    /** Merchantmapper */
+    /**
+     * Merchantmapper
+    */
     private final MerchantMapper merchantMapper;
-    /** 薪酬排序映射器 */
+    /**
+     * 薪酬排序映射器
+    */
     private final PaymentOrderMapper paymentOrderMapper;
-    /** Objectmapper */
+    /**
+     * Objectmapper
+    */
     private final ObjectMapper objectMapper;
-    /** Payment加密服务 */
+    /**
+     * Payment加密服务
+    */
     private final PaymentCipherService paymentCipherService;
     @Lazy
-    /** Payment通道注册表 */
+    /**
+     * Payment通道注册表
+    */
     private final PaymentChannelRegistry paymentChannelRegistry;
 
     @Override
@@ -121,7 +133,9 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
     }
 
     @Override
-    /** 获取通道 */
+    /**
+     * 获取通道
+    */
     public MerchantChannelVO getChannel(Long id) {
         MerchantChannel channel = requireChannel(id);
         Merchant merchant = merchantMapper.selectById(channel.getMerchantId());
@@ -129,7 +143,9 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
     }
 
     @Override
-    /** 列表通道 */
+    /**
+     * 列表通道
+    */
     public List<MerchantChannelVO> listChannels(Long merchantId, String channelType, Integer status) {
         LambdaQueryWrapper<MerchantChannel> wrapper = new LambdaQueryWrapper<>();
         if (merchantId != null) {
@@ -217,7 +233,9 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
     }
 
     @Override
-    /** 列表catalog */
+    /**
+     * 列表catalog
+    */
     public List<PaymentMethodGuideVO> listCatalog() {
         List<PaymentMethodGuideVO> list = new ArrayList<>();
         list.add(guide("WECHAT", "MINI_PROGRAM", "微信小程序支付开通", "微信支付", "https://pay.wechatpay.cn/", "https://pay.wechatpay.cn/static/applyment_guide/applyment_detail_miniapp.shtml", null,
@@ -297,13 +315,17 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
     }
 
     @Override
-    /** encryptapiKey */
+    /**
+     * encryptapiKey
+    */
     public String encryptApiKey(String apiKey) {
         return paymentCipherService.encrypt(apiKey);
     }
 
     @Override
-    /** decryptapiKey */
+    /**
+     * decryptapiKey
+    */
     public String decryptApiKey(String encryptedKey) {
         return paymentCipherService.decrypt(encryptedKey);
     }
@@ -777,7 +799,9 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
     }
 
     @Override
-    /** 获取wallet通道 */
+    /**
+     * 获取wallet通道
+    */
     public MerchantChannel getWalletChannel(Long merchantId) {
         if (merchantId == null) {
             /**

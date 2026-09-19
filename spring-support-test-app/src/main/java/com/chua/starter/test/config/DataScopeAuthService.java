@@ -16,7 +16,9 @@ import org.springframework.stereotype.Component;
 @Component("authService")
 public class DataScopeAuthService implements AuthService {
 
-    /** 当前用户持有器（测试按用例设置） */
+    /**
+     * 当前用户持有器（测试按用例设置）
+    */
     private static volatile CurrentUser currentUser;
 
     /**

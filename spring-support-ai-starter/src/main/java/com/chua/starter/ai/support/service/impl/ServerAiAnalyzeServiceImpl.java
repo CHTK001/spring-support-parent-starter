@@ -18,25 +18,33 @@ import org.springframework.stereotype.Service;
 public class ServerAiAnalyzeServiceImpl implements ServerAiAnalyzeService {
 
     @Override
-    /** 分析主机stability */
+    /**
+     * 分析主机stability
+    */
     public ServerAiStructuredAdvice analyzeHostStability(ServerHostStabilityAnalyzeRequest request) {
         return null;
     }
 
     @Override
-    /** 分析指标历史 */
+    /**
+     * 分析指标历史
+    */
     public ServerAiStructuredAdvice analyzeMetricHistory(ServerMetricHistoryAnalyzeRequest request) {
         return null;
     }
 
     @Override
-    /** 分析alert历史 */
+    /**
+     * 分析alert历史
+    */
     public ServerAiStructuredAdvice analyzeAlertHistory(ServerAlertHistoryAnalyzeRequest request) {
         return null;
     }
 
     @Override
-    /** 分析处理 */
+    /**
+     * 分析处理
+    */
     public ServerAiStructuredAdvice analyzeProcess(ServerProcessAnalyzeRequest request) {
         return null;
     }

@@ -34,12 +34,16 @@ import lombok.EqualsAndHashCode;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class MsServerNode extends SysBase {
 
-    /** 主键 */
+    /**
+     * 主键
+    */
     @TableId(value = "id", type = IdType.AUTO)
     @Schema(description = "主键", example = "1")
     private Long id; // 标识
 
-    /** 节点名称（唯一） */
+    /**
+     * 节点名称（唯一）
+    */
     @TableField("ms_server_node_name")
     @Schema(description = "节点名称（唯一）", example = "fileserver-01")
     private String name; // 名称
@@ -58,22 +62,30 @@ public class MsServerNode extends SysBase {
     @Schema(description = "传输引擎: http= jdk/nio/aio，代理= jdk，sip= sip", example = "jdk")
     private String engine; // engine
 
-    /** 监听地址 */
+    /**
+     * 监听地址
+    */
     @TableField("ms_server_node_host")
     @Schema(description = "监听地址", example = "0.0.0.0")
     private String host; // 主机
 
-    /** 监听端口 */
+    /**
+     * 监听端口
+    */
     @TableField("ms_server_node_port")
     @Schema(description = "监听端口", example = "18080")
     private Integer port; // 端口
 
-    /** 是否启用(1 启用：启动期自动拉起；0 停用) */
+    /**
+     * 是否启用(1 启用：启动期自动拉起；0 停用)
+    */
     @TableField("ms_server_node_enabled")
     @Schema(description = "是否启用: 1 启用并随应用启动自动拉起，0 停用", example = "1")
     private Integer enabled; // 启用
 
-    /** 备注 */
+    /**
+     * 备注
+    */
     @TableField("ms_server_node_remark")
     @Schema(description = "备注")
     private String remark; // 评论
@@ -85,7 +97,9 @@ public class MsServerNode extends SysBase {
     @Schema(description = "协议专属配置(JSON): sip.token、proxy.backendHost/backendPort、ssl 等")
     private String config; // 配置
 
-    /** 服务端过滤器 插件配置(JSON 数组) */
+    /**
+     * 服务端过滤器 插件配置(JSON 数组)
+    */
     @TableField("ms_server_node_filters")
     @Schema(description = "ServerFilter 插件配置(JSON 数组)")
     private String filters; // 过滤器

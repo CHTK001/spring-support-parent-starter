@@ -34,7 +34,9 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public final class DatalakePipelineBenchProbe {
 
-    /** Work dir */
+    /**
+     * Work dir
+    */
     private static final Path WORK_DIR = Path.of("target/datalake-bench");
 
     /**

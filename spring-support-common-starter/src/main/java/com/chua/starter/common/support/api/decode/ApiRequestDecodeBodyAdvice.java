@@ -40,14 +40,22 @@ import org.slf4j.LoggerFactory;
 @RestControllerAdvice
 @SuppressWarnings({"unchecked", "rawtypes"})
 public class ApiRequestDecodeBodyAdvice implements RequestBodyAdvice  {
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(ApiRequestDecodeBodyAdvice.class);
-    /** 对象_映射器 */
+    /**
+     * 对象_映射器
+    */
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-    /** Encrypted_请求_字段 */
+    /**
+     * Encrypted_请求_字段
+    */
     private static final String ENCRYPTED_REQUEST_FIELD = "data";
 
-    /** Decoderegister */
+    /**
+     * Decoderegister
+    */
     private final ApiRequestDecodeRegister decodeRegister;
 
     /**
@@ -285,9 +293,13 @@ public class ApiRequestDecodeBodyAdvice implements RequestBodyAdvice  {
      * @since 4.0.0
      */
     static class DecodedHttpInputMessage implements HttpInputMessage {
-        /** 头部 */
+        /**
+         * 头部
+        */
         private final HttpHeaders headers = new HttpHeaders();
-        /** 请求体 */
+        /**
+         * 请求体
+        */
         private final byte[] body;
 
         /**
@@ -304,7 +316,9 @@ public class ApiRequestDecodeBodyAdvice implements RequestBodyAdvice  {
         }
 
         @Override
-        /** 获取主体 */
+        /**
+         * 获取主体
+        */
         public InputStream getBody() {
             /**
              * bytearray输入流。
@@ -315,7 +329,9 @@ public class ApiRequestDecodeBodyAdvice implements RequestBodyAdvice  {
         }
 
         @Override
-        /** 获取头部 */
+        /**
+         * 获取头部
+        */
         public HttpHeaders getHeaders() {
             return headers;
         }
@@ -328,21 +344,31 @@ public class ApiRequestDecodeBodyAdvice implements RequestBodyAdvice  {
      * @since 4.0.0
      */
     static class EmptyHttpInputMessage implements HttpInputMessage {
-        /** 空_消息 */
+        /**
+         * 空_消息
+        */
         private static final EmptyHttpInputMessage EMPTY_MESSAGE = new EmptyHttpInputMessage();
-        /** 是否为空 */
+        /**
+         * 是否为空
+        */
         private static final InputStream EMPTY = new ByteArrayInputStream(new byte[0]);
-        /** 空_头部 */
+        /**
+         * 空_头部
+        */
         private static final org.springframework.http.HttpHeaders EMPTY_HEADER = new org.springframework.http.HttpHeaders();
 
         @Override
-        /** 获取主体 */
+        /**
+         * 获取主体
+        */
         public InputStream getBody() throws IOException {
             return EMPTY;
         }
 
         @Override
-        /** 获取头部 */
+        /**
+         * 获取头部
+        */
         public org.springframework.http.HttpHeaders getHeaders() {
             return EMPTY_HEADER;
         }

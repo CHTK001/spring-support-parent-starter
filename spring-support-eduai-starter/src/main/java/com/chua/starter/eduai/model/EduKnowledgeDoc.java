@@ -21,7 +21,9 @@ public class EduKnowledgeDoc {
      * 文档标识
      */
     @TableId(type = IdType.AUTO)
-    /** 知识docid */
+    /**
+     * 知识docid
+    */
     private Long knowledgeDocId;
 
     /**

@@ -31,11 +31,17 @@ public class MarkingConfirmDTO {
      * @since 4.0.0
      */
     public static class ScoreAdjustment {
-        /** 结果标识 */
+        /**
+         * 结果标识
+        */
         private Long resultId;
-        /** 分数 */
+        /**
+         * 分数
+        */
         private Integer score;
-        /** 评论 */
+        /**
+         * 评论
+        */
         private String comment;
     }
 }

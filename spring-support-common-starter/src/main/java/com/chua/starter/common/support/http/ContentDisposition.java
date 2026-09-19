@@ -7,11 +7,17 @@ package com.chua.starter.common.support.http;
  */
 public class ContentDisposition {
 
-    /** 文件名 */
+    /**
+     * 文件名
+    */
     private final String filename;
-    /** 字符集 */
+    /**
+     * 字符集
+    */
     private final String charset;
-    /** 名称 */
+    /**
+     * 名称
+    */
     private final String name;
 
     /**

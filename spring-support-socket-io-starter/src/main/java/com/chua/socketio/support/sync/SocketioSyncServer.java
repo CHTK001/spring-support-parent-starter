@@ -30,17 +30,23 @@ public class SocketioSyncServer extends AbstractSyncServer {
     }
 
     @Override
-    /** 执行开始 */
+    /**
+     * 执行开始
+    */
     protected void doStart() {
     }
 
     @Override
-    /** 执行停止 */
+    /**
+     * 执行停止
+    */
     protected void doStop() {
     }
 
     @Override
-    /** 执行发送 */
+    /**
+     * 执行发送
+    */
     protected void doSend(String sessionId, String topic, Object data) {
         String payload = data instanceof String ? (String) data : String.valueOf(data);
         sessionTemplate.send(sessionId, topic, payload);

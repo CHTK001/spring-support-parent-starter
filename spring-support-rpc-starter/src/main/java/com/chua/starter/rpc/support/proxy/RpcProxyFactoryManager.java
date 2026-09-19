@@ -17,16 +17,24 @@ import java.util.List;
  */
 public class RpcProxyFactoryManager {
 
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(RpcProxyFactoryManager.class);
 
-    /** 实例 */
+    /**
+     * 实例
+    */
     private static final RpcProxyFactoryManager INSTANCE = new RpcProxyFactoryManager();
 
-    /** Factories */
+    /**
+     * Factories
+    */
     private final List<RpcProxyFactory> factories;
 
-    /** 创建 rpc代理工厂管理器 实例 */
+    /**
+     * 创建 rpc代理工厂管理器 实例
+    */
     private RpcProxyFactoryManager() {
         this.factories = new ArrayList<>();
         // 注册默认工厂

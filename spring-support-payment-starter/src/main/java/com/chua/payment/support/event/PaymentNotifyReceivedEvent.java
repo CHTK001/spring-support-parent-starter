@@ -10,19 +10,33 @@ import lombok.Getter;
 @Getter
 public class PaymentNotifyReceivedEvent extends PaymentEvent {
 
-    /** 通知日志标识 */
+    /**
+     * 通知日志标识
+    */
     private final Long notifyLogId;
-    /** 通知类型 */
+    /**
+     * 通知类型
+    */
     private final String notifyType;
-    /** 通道类型 */
+    /**
+     * 通道类型
+    */
     private final String channelType;
-    /** 通道SUB类型 */
+    /**
+     * 通道SUB类型
+    */
     private final String channelSubType;
-    /** 排序NO */
+    /**
+     * 排序NO
+    */
     private final String orderNo;
-    /** 退税no */
+    /**
+     * 退税no
+    */
     private final String refundNo;
-    /** Signverified */
+    /**
+     * Signverified
+    */
     private final Boolean signVerified;
 
     /**

@@ -30,29 +30,53 @@ import static com.chua.starter.mybatis.interceptor.MybatisPlusPermissionHandler.
  * @since 4.0.0
  */
 public abstract class AbstractDeptRegister implements DeptRegister {
-    /** Plainselect */
+    /**
+     * Plainselect
+    */
     protected final PlainSelect plainSelect;
-    /** Where */
+    /**
+     * Where
+    */
     protected final Expression where;
-    /** 用户 */
+    /**
+     * 用户
+    */
     protected final CurrentUser user;
-    /** 数据权限 */
+    /**
+     * 数据权限
+    */
     protected final DataFilterTypeEnum dataPermission;
-    /** 表名称 */
+    /**
+     * 表名称
+    */
     protected final String tableName;
-    /** deptid列 */
+    /**
+     * deptid列
+    */
     protected final String deptIdColumn;
-    /** depttreeid列 */
+    /**
+     * depttreeid列
+    */
     protected final String deptTreeIdColumn;
-    /** 创建by列 */
+    /**
+     * 创建by列
+    */
     protected final String createByColumn;
-    /** 表别名 */
+    /**
+     * 表别名
+    */
     protected final String tableAlias;
-    /** hasdeptid表别名 */
+    /**
+     * hasdeptid表别名
+    */
     protected String hasDeptIdTableAlias;
-    /** hasdeptid表表 */
+    /**
+     * hasdeptid表表
+    */
     protected Table hasDeptIdTableTable;
-    /** Dept表 */
+    /**
+     * Dept表
+    */
     protected Table deptTable;
 
     /**

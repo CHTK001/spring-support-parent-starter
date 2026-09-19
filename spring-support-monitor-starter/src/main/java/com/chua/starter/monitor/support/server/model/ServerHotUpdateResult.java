@@ -23,23 +23,33 @@ import java.util.List;
 @Schema(description = "服务管理-热更新结果")
 public class ServerHotUpdateResult {
 
-    /** 更新后的节点视图 */
+    /**
+     * 更新后的节点视图
+    */
     @Schema(description = "更新后的节点视图")
     private ServerNodeView node;
 
-    /** 是否已热应用（未重启，仅过滤器链重建） */
+    /**
+     * 是否已热应用（未重启，仅过滤器链重建）
+    */
     @Schema(description = "是否已热应用(未重启, 仅过滤器链重建)")
     private boolean hotApplied;
 
-    /** 是否已重启（监听参数变更触发） */
+    /**
+     * 是否已重启（监听参数变更触发）
+    */
     @Schema(description = "是否已重启(监听参数变更触发)")
     private boolean restarted;
 
-    /** 本次实际生效的改动项描述 */
+    /**
+     * 本次实际生效的改动项描述
+    */
     @Schema(description = "本次实际生效的改动项描述")
     private List<String> appliedItems = new ArrayList<>();
 
-    /** 结果说明文案 */
+    /**
+     * 结果说明文案
+    */
     @Schema(description = "结果说明文案")
     private String message;
 

@@ -21,7 +21,9 @@ import java.time.LocalDate;
 public class CommonLocalDateDeserializer extends LocalDateDeserializer {
 
     @Override
-    /** 反序列化 */
+    /**
+     * 反序列化
+    */
     public LocalDate deserialize(JsonParser parser, DeserializationContext context) throws IOException {
         IOException ex;
         try {

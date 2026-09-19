@@ -23,9 +23,13 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class PaymentNotifyLogServiceImpl implements PaymentNotifyLogService {
 
-    /** Paymentnotify日志映射器 */
+    /**
+     * Paymentnotify日志映射器
+    */
     private final PaymentNotifyLogMapper paymentNotifyLogMapper;
-    /** Merchant通道映射器 */
+    /**
+     * Merchant通道映射器
+    */
     private final MerchantChannelMapper merchantChannelMapper;
 
     @Override

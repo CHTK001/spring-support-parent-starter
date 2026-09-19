@@ -26,22 +26,32 @@ import java.util.regex.Pattern;
 @Component
 public class LinuxLocalSoftwareCollector implements LocalSoftwareCollector {
 
-    /** Desktop_名称 */
+    /**
+     * Desktop_名称
+    */
     private static final Pattern DESKTOP_NAME = Pattern.compile("^Name=(.+)$", Pattern.CASE_INSENSITIVE);
-    /** Desktop_icon */
+    /**
+     * Desktop_icon
+    */
     private static final Pattern DESKTOP_ICON = Pattern.compile("^Icon=(.+)$", Pattern.CASE_INSENSITIVE);
-    /** Desktop_执行 */
+    /**
+     * Desktop_执行
+    */
     private static final Pattern DESKTOP_EXEC = Pattern.compile("^Exec=(.+)$", Pattern.CASE_INSENSITIVE);
 
     @Override
-    /** 支持 */
+    /**
+     * 支持
+    */
     public boolean support() {
         String os = System.getProperty("os.name", "").toLowerCase();
         return os.contains("linux") && !os.contains("darwin");
     }
 
     @Override
-    /** Collect */
+    /**
+     * Collect
+    */
     public List<SoftSoftware> collect() {
         List<SoftSoftware> result = new ArrayList<>();
         result.addAll(scanDpkg());

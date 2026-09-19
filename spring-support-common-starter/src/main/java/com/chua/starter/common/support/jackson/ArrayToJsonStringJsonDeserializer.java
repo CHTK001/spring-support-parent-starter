@@ -28,7 +28,9 @@ public class ArrayToJsonStringJsonDeserializer extends JsonDeserializer<Object> 
 
 
     @Override
-    /** 反序列化 */
+    /**
+     * 反序列化
+    */
     public Object deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws IOException, JacksonException {
         TreeNode treeNode = jsonParser.getCodec().readTree(jsonParser);
         Object o = treeNodeToValue(treeNode);

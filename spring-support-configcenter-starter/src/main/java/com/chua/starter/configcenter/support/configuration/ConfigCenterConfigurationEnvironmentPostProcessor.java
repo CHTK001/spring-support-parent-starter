@@ -48,7 +48,9 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
     private static volatile ConfigurableEnvironment environmentRef;
 
     @Override
-    /** Post处理环境 */
+    /**
+     * Post处理环境
+    */
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
         log.info("[配置中心]开始处理配置中心");
         environmentRef = environment;
@@ -260,11 +262,17 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
      */
     private static class EnvironmentConfigListener implements ConfigListener {
         
-        /** 配置名称 */
+        /**
+         * 配置名称
+        */
         private final String configName;
-        /** refreshdelayms */
+        /**
+         * refreshdelayms
+        */
         private final long refreshDelayMs;
-        /** 日志onchange */
+        /**
+         * 日志onchange
+        */
         private final boolean logOnChange;
         private volatile long lastRefreshTime = 0; // 最后一个refresh时间
 
@@ -281,7 +289,9 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
         }
 
         @Override
-        /** on改变 */
+        /**
+         * on改变
+        */
         public void onChange(String key, String oldValue, String newValue) {
             if (logOnChange) {
                 log.info("[配置中心]配置变更: configName={}, key={}, oldValue={}, newValue={}", 
@@ -290,7 +300,9 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
         }
 
         @Override
-        /** On更新 */
+        /**
+         * On更新
+        */
         public void onUpdate(String key, String oldValue, String newValue) {
             if (environmentRef == null) {
                 return;
@@ -333,7 +345,9 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
         }
 
         @Override
-        /** On删除 */
+        /**
+         * On删除
+        */
         public void onDelete(String key, String oldValue) {
             if (logOnChange) {
                 log.info("[配置中心]配置删除: configName={}, key={}", configName, key);
@@ -342,7 +356,9 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
     }
 
     @Override
-    /** 获取订单 */
+    /**
+     * 获取订单
+    */
     public int getOrder() {
         return Ordered.LOWEST_PRECEDENCE - 100;
     }

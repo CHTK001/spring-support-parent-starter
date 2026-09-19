@@ -33,14 +33,22 @@ import java.util.concurrent.CopyOnWriteArrayList;
 @Slf4j
 public class SocketIOSessionTemplate implements SocketSessionTemplate {
 
-    /** 日志 */
+    /**
+     * 日志
+    */
     private static final Logger log = LoggerFactory.getLogger(SocketIOSessionTemplate.class);
-    /** 属性 */
+    /**
+     * 属性
+    */
     private final SocketProperties properties;
-    /** 监听器 */
+    /**
+     * 监听器
+    */
     private final List<SocketListener> listeners;
     private final Map<String, List<SocketIOSession>> sessionCache = new ConcurrentHashMap<>(); // 会话缓存
-    /** 事件监听器处理器 */
+    /**
+     * 事件监听器处理器
+    */
     private final EventListenerProcessor eventListenerProcessor;
     
     /**
@@ -61,7 +69,9 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
     }
 
     @Override
-    /** 保存 */
+    /**
+     * 保存
+    */
     public SocketSession save(String clientId, SocketSession session) {
         if (session instanceof SocketIOSession ioSession) {
             sessionCache.computeIfAbsent(clientId, k -> new CopyOnWriteArrayList<>()).add(ioSession);
@@ -70,7 +80,9 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
     }
 
     @Override
-    /** 移除 */
+    /**
+     * 移除
+    */
     public void remove(String clientId, SocketSession session) {
         List<SocketIOSession> sessions = sessionCache.get(clientId);
         if (sessions != null && session instanceof SocketIOSession ioSession) {
@@ -83,7 +95,9 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
     }
 
     @Override
-    /** 获取会话 */
+    /**
+     * 获取会话
+    */
     public SocketSession getSession(String sessionId) {
         for (List<SocketIOSession> sessions : sessionCache.values()) {
             for (SocketIOSession session : sessions) {
@@ -96,7 +110,9 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
     }
 
     @Override
-    /** 发送 */
+    /**
+     * 发送
+    */
     public void send(String sessionId, String event, String msg) {
         SocketSession session = getSession(sessionId);
         if (session != null) {
@@ -105,7 +121,9 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
     }
 
     @Override
-    /** Broadcast */
+    /**
+     * Broadcast
+    */
     public void broadcast(String event, String msg) {
         for (List<SocketIOSession> sessions : sessionCache.values()) {
             for (SocketIOSession session : sessions) {
@@ -125,7 +143,9 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
     }
 
     @Override
-    /** 发送转为用户 */
+    /**
+     * 发送转为用户
+    */
     public void sendToUser(String userId, String event, String msg) {
         for (List<SocketIOSession> sessions : sessionCache.values()) {
             for (SocketIOSession session : sessions) {
@@ -143,7 +163,9 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
     }
 
     @Override
-    /** 获取online会话 */
+    /**
+     * 获取online会话
+    */
     public List<SocketSession> getOnlineSessions() {
         List<SocketSession> result = new java.util.ArrayList<>();
         for (List<SocketIOSession> sessions : sessionCache.values()) {
@@ -153,7 +175,9 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
     }
 
     @Override
-    /** 获取online会话 */
+    /**
+     * 获取online会话
+    */
     public List<SocketSession> getOnlineSession(String type, String roomId) {
         List<SocketIOSession> sessions = sessionCache.get(type);
         if (sessions == null) {
@@ -176,7 +200,9 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
     }
 
     @Override
-    /** 获取online用户 */
+    /**
+     * 获取online用户
+    */
     public List<SocketUser> getOnlineUsers(String type) {
         List<SocketUser> result = new java.util.ArrayList<>();
         java.util.Set<String> userIds = new java.util.HashSet<>();
@@ -196,7 +222,9 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
     }
 
     @Override
-    /** 获取Online计算数量 */
+    /**
+     * 获取Online计算数量
+    */
     public int getOnlineCount() {
         int count = 0;
         for (List<SocketIOSession> sessions : sessionCache.values()) {
@@ -208,7 +236,9 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
     }
 
     @Override
-    /** 开始 */
+    /**
+     * 开始
+    */
     public void start() {
         if (!servers.isEmpty()) {
             log.warn("[SocketIO] 服务已启动");
@@ -347,7 +377,9 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
     }
 
     @Override
-    /** 停止 */
+    /**
+     * 停止
+    */
     public void stop() {
         if (servers.isEmpty()) {
             return;

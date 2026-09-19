@@ -478,7 +478,9 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
      */
     private class ConfigValueListener implements ConfigListener {
 
-        /** 配置密钥 */
+        /**
+         * 配置密钥
+        */
         private final String configKey;
 
         /**

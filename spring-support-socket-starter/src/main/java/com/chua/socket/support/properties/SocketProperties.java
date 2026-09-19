@@ -22,7 +22,9 @@ import static com.chua.socket.support.properties.SocketProperties.PRE;
 @ConfigurationProperties(prefix = PRE, ignoreInvalidFields = true)
 public class SocketProperties {
 
-    /** PRE */
+    /**
+     * PRE
+    */
     public static final String PRE = "plugin.socket";
 
     /**

@@ -11,7 +11,9 @@ import java.util.Map;
  */
 public final class ImmutableBuilder {
 
-    /** 创建 immutable构建器 实例 */
+    /**
+     * 创建 immutable构建器 实例
+    */
     private ImmutableBuilder() {
     }
 

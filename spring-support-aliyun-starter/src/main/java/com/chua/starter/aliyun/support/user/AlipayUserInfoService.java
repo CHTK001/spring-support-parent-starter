@@ -20,7 +20,9 @@ import java.util.Map;
 public class AlipayUserInfoService implements UserInfoService {
 
     @Override
-    /** 校验Login */
+    /**
+     * 校验Login
+    */
     public UserResume checkLogin(String principal, String credential, String address, Object ext) {
         String alipayUserId = principal;
         if (!StringUtils.hasText(alipayUserId)) {
@@ -56,7 +58,9 @@ public class AlipayUserInfoService implements UserInfoService {
     }
 
     @Override
-    /** Upgrade */
+    /**
+     * Upgrade
+    */
     public UserResume upgrade(UserResult userResult) {
         return null;
     }

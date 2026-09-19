@@ -22,13 +22,17 @@ public class Dbcp2DataSourcePropertyProvider implements DataSourcePropertyProvid
     );
 
     @Override
-    /** 获取数据源类型 */
+    /**
+     * 获取数据源类型
+    */
     public Class<BasicDataSource> getDataSourceType() {
         return BasicDataSource.class;
     }
 
     @Override
-    /** 获取属性 */
+    /**
+     * 获取属性
+    */
     public Map<String, Object> getProperties(BasicDataSource dataSource) {
         Map<String, Object> properties = new HashMap<>();
         
@@ -64,13 +68,17 @@ public class Dbcp2DataSourcePropertyProvider implements DataSourcePropertyProvid
     }
 
     @Override
-    /** 设置属性 */
+    /**
+     * 设置属性
+    */
     public void setProperties(BasicDataSource dataSource, Map<String, Object> properties) {
         properties.forEach((name, value) -> setProperty(dataSource, name, value));
     }
 
     @Override
-    /** 设置财产 */
+    /**
+     * 设置财产
+    */
     public void setProperty(BasicDataSource dataSource, String name, Object value) {
         if (value == null) {
             return;
@@ -112,13 +120,17 @@ public class Dbcp2DataSourcePropertyProvider implements DataSourcePropertyProvid
     }
 
     @Override
-    /** 获取财产名称mapping */
+    /**
+     * 获取财产名称mapping
+    */
     public Map<String, String> getPropertyNameMapping() {
         return PROPERTY_MAPPING;
     }
 
     @Override
-    /** 获取订单 */
+    /**
+     * 获取订单
+    */
     public int getOrder() {
         return 20;
     }

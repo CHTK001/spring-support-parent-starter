@@ -69,7 +69,9 @@ class DataScopeRealTest {
         return user;
     }
 
-    /** DEPT 数据权限：只返回本部门（10）数据 */
+    /**
+     * DEPT 数据权限：只返回本部门（10）数据
+    */
     @Test
     void deptScopeFiltersRows() {
         DataScopeAuthService.setCurrentUser(user(DataFilterTypeEnum.DEPT, "10", Set.of("USER")));
@@ -84,7 +86,9 @@ class DataScopeRealTest {
                 "返回数据应全部属于当前部门");
     }
 
-    /** 超级管理员：无视数据权限，返回全部数据 */
+    /**
+     * 超级管理员：无视数据权限，返回全部数据
+    */
     @Test
     void superAdminSeesAll() {
         DataScopeAuthService.setCurrentUser(user(DataFilterTypeEnum.DEPT, "10", Set.of("SUPER_ADMIN")));
@@ -97,7 +101,9 @@ class DataScopeRealTest {
         assertEquals(3, users.size(), "超级管理员应看到全部数据");
     }
 
-    /** @数据scope(已启用=false)：显式禁用数据权限，返回全部数据 */
+    /**
+     * @数据scope(已启用=false)：显式禁用数据权限，返回全部数据
+    */
     @Test
     void disabledScopeSeesAll() {
         DataScopeAuthService.setCurrentUser(user(DataFilterTypeEnum.DEPT, "10", Set.of("USER")));
@@ -110,7 +116,9 @@ class DataScopeRealTest {
         assertEquals(3, users.size(), "@DataScope(enabled=false) 应禁用数据权限过滤");
     }
 
-    /** 全部 数据权限：返回全部数据 */
+    /**
+     * 全部 数据权限：返回全部数据
+    */
     @Test
     void allPermissionSeesAll() {
         DataScopeAuthService.setCurrentUser(user(DataFilterTypeEnum.ALL, "10", Set.of("USER")));

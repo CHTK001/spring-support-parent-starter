@@ -123,12 +123,18 @@ public class ServerWebSocketMessage {
      * @since 4.0.0
      */
     public static class Builder {
-        /** 消息类型 */
+        /**
+         * 消息类型
+        */
         private String messageType;
-        /** 数据标识 */
+        /**
+         * 数据标识
+        */
         private String dataId;
         private Map<String, Object> data; // 数据
-        /** 时间戳 */
+        /**
+         * 时间戳
+        */
         private long timestamp;
 
         /**

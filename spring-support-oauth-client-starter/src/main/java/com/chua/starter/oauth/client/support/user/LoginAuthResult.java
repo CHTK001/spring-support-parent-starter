@@ -15,7 +15,9 @@ import lombok.*;
 @EqualsAndHashCode(callSuper = true)
 public class LoginAuthResult extends LoginResult {
 
-    /** OK */
+    /**
+     * OK
+    */
     public static final LoginAuthResult OK = new LoginAuthResult(
             200, "成功"
     );
@@ -24,7 +26,9 @@ public class LoginAuthResult extends LoginResult {
      * 编码
      */
     @NonNull
-    /** 代码 */
+    /**
+     * 代码
+    */
     private Integer code;
     /**
      * 错误信息

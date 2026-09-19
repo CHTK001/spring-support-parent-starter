@@ -18,7 +18,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SystemInfoProviderRouter {
 
-    /** 所有可用的 Provider（Spring 注入，顺序即优先级） */
+    /**
+     * 所有可用的 Provider（Spring 注入，顺序即优先级）
+    */
     private final List<SystemInfoProvider> providers;
 
     /**

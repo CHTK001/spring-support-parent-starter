@@ -3,23 +3,39 @@ package com.chua.payment.support.vo;
 import lombok.Data;
 
 import java.time.LocalDateTime;
-/** @作者 CH */
+/**
+ * @作者 CH
+*/
 
 @Data
 public class OrderPartitionPreviewVO {
-    /** 业务类型 */
+    /**
+     * 业务类型
+    */
     private String businessType;
-    /** 来源表 */
+    /**
+     * 来源表
+    */
     private String sourceTable;
-    /** 下一个分区表 */
+    /**
+     * 下一个分区表
+    */
     private String nextPartitionTable;
-    /** Migrate目标表 */
+    /**
+     * Migrate目标表
+    */
     private String migrateTargetTable;
-    /** Migratebefore时间 */
+    /**
+     * Migratebefore时间
+    */
     private LocalDateTime migrateBeforeTime;
-    /** 创建任务密钥 */
+    /**
+     * 创建任务密钥
+    */
     private String createTaskKey;
-    /** Migrate任务密钥 */
+    /**
+     * Migrate任务密钥
+    */
     private String migrateTaskKey;
 }
 

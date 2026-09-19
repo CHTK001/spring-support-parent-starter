@@ -16,7 +16,9 @@ public class JacksonProperties {
     private boolean enable = false;
 
 
-    /** PRE */
+    /**
+     * PRE
+    */
     public static final String PRE = "plugin.jackson";
 
     /**

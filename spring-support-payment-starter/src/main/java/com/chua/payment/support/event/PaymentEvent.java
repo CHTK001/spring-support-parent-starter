@@ -13,13 +13,21 @@ import java.time.LocalDateTime;
 @Getter
 public abstract class PaymentEvent extends ApplicationEvent {
 
-    /** 事件类型 */
+    /**
+     * 事件类型
+    */
     private final String eventType;
-    /** tenantid */
+    /**
+     * tenantid
+    */
     private final Long tenantId;
-    /** merchantid */
+    /**
+     * merchantid
+    */
     private final Long merchantId;
-    /** occurredat */
+    /**
+     * occurredat
+    */
     private final LocalDateTime occurredAt;
 
     /**

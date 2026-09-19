@@ -13,20 +13,26 @@ import lombok.Data;
 @Schema(description = "软件信息响应")
 public class SoftwareDTO extends com.chua.starter.software.support.entity.SoftSoftware {
 
-    /** 串行版本UID */
+    /**
+     * 串行版本UID
+    */
     private static final long serialVersionUID = 1L;
 
     /**
      * 软件源名称
      */
     @Schema(description = "软件源名称")
-    /** 来源名称 */
+    /**
+     * 来源名称
+    */
     private String sourceName;
 
     /**
      * 是否已安装
      */
     @Schema(description = "是否已安装")
-    /** Installed */
+    /**
+     * Installed
+    */
     private Boolean installed;
 }

@@ -14,7 +14,9 @@ import java.util.Set;
  */
 public class ServicePackagesHolder {
 
-    /** Bean_名称 */
+    /**
+     * Bean_名称
+    */
     public static final String BEAN_NAME = "servicePackagesHolder";
 
     /**
@@ -27,7 +29,9 @@ public class ServicePackagesHolder {
      */
     private final Set<String> scannedClasses = new HashSet<>();
 
-    /** 默认 */
+    /**
+     * 默认
+    */
     private static final ServicePackagesHolder DEFAULT = new ServicePackagesHolder();
 
     /**

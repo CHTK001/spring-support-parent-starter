@@ -32,7 +32,9 @@ import java.util.List;
 public class EduQuestionServiceImpl extends ServiceImpl<EduQuestionMapper, EduQuestion> implements IEduQuestionService {
 
     @Override
-    /** Page查询 */
+    /**
+     * Page查询
+    */
     public PageResult<EduQuestion> pageQuery(QuestionQueryDTO query) {
         LambdaQueryWrapper<EduQuestion> wrapper = new LambdaQueryWrapper<>();
 

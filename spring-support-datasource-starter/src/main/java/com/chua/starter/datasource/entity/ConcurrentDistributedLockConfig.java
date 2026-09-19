@@ -16,27 +16,43 @@ import lombok.Data;
 @Data
 public class ConcurrentDistributedLockConfig {
 
-    /** 锁名称，对应 @distributed锁(名称 = "...")，也是缓存键 */
+    /**
+     * 锁名称，对应 @distributed锁(名称 = "...")，也是缓存键
+    */
     private String name;
 
-    /** 锁类型标识：对象（内置 reentrant锁）、Redis、redisson 等，默认 对象 */
+    /**
+     * 锁类型标识：对象（内置 reentrant锁）、Redis、redisson 等，默认 对象
+    */
     private String lockType;
 
-    /** 是否公平锁，true 按请求顺序获取锁，默认 false */
+    /**
+     * 是否公平锁，true 按请求顺序获取锁，默认 false
+    */
     private boolean fair;
 
-    /** 等待锁的最长时间（毫秒），0 表示立即返回 */
+    /**
+     * 等待锁的最长时间（毫秒），0 表示立即返回
+    */
     private long waitTimeMs;
 
-    /** 锁租约时间（毫秒），-1 表示永不过期；Redis 锁常用此值防止死锁 */
+    /**
+     * 锁租约时间（毫秒），-1 表示永不过期；Redis 锁常用此值防止死锁
+    */
     private long leaseTimeMs;
 
-    /** 是否启用；false 时该锁配置不加载到运行时缓存 */
+    /**
+     * 是否启用；false 时该锁配置不加载到运行时缓存
+    */
     private boolean enabled;
 
-    /** 记录创建时间（sqlite datetime('now')） */
+    /**
+     * 记录创建时间（sqlite datetime('now')）
+    */
     private long createdAt;
 
-    /** 记录更新时间（sqlite datetime('now')） */
+    /**
+     * 记录更新时间（sqlite datetime('now')）
+    */
     private long updatedAt;
 }

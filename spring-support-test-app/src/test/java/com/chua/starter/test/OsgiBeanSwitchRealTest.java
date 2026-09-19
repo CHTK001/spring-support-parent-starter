@@ -81,7 +81,9 @@ class OsgiBeanSwitchRealTest {
     @Autowired
     private ObjectContext objectContext; // 对象上下文
 
-    /** 真实测试：安装 → Bean 出现；卸载 → Bean 消失；换版本 → Bean 切换 */
+    /**
+     * 真实测试：安装 → Bean 出现；卸载 → Bean 消失；换版本 → Bean 切换
+    */
     @Test
     void greetBeanSwitchesWithBundleLifecycle() throws Exception {
  // 1) 初始：无 greet服务 服务与 Bean
@@ -229,7 +231,9 @@ class OsgiBeanSwitchRealTest {
         assertNull(objectContext.getBeanOfTypeSafely(GreetService.class), "卸载 v2 后 ObjectContext 应查不到 GreetService");
     }
 
-    /** 真实测试：同一 symbolic名称 的两个不同版本 bundle 可共存，服务/Bean 均为双份，卸载按版本精确处理 */
+    /**
+     * 真实测试：同一 symbolic名称 的两个不同版本 bundle 可共存，服务/Bean 均为双份，卸载按版本精确处理
+    */
     @Test
     void twoVersionsCoexistAndUninstallOne() throws Exception {
  // 1) 同时安装 v1 与 v2（同 symbolic名称，不同 版本）

@@ -84,7 +84,9 @@ public class SeriesEngineConfiguration {
      */
     private static final class ProviderBackedSeriesEngine implements SeriesEngine {
 
-        /** 被适配的提供者 */
+        /**
+         * 被适配的提供者
+        */
         private final MetricTimeSeriesProvider provider;
 
         /**
@@ -131,7 +133,9 @@ public class SeriesEngineConfiguration {
      */
     private static final class NoopSeriesEngine implements SeriesEngine {
 
-        /** 配置的引擎名 */
+        /**
+         * 配置的引擎名
+        */
         private final String engineName;
 
         /**

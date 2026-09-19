@@ -12,18 +12,32 @@ import java.math.BigDecimal;
  */
 @Data
 public class RefundResult {
-    /** 成功 */
+    /**
+     * 成功
+    */
     private boolean success;
-    /** 退税no */
+    /**
+     * 退税no
+    */
     private String refundNo;
-    /** 贸易no */
+    /**
+     * 贸易no
+    */
     private String tradeNo;
-    /** 消息 */
+    /**
+     * 消息
+    */
     private String message;
-    /** Refundamount */
+    /**
+     * Refundamount
+    */
     private BigDecimal refundAmount;
-    /** 状态 */
+    /**
+     * 状态
+    */
     private String status;
-    /** RAW响应 */
+    /**
+     * RAW响应
+    */
     private String rawResponse;
 }

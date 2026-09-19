@@ -19,7 +19,9 @@ import java.util.regex.Pattern;
  */
 public final class IpUtils {
 
-    /** 创建 ip工具 实例 */
+    /**
+     * 创建 ip工具 实例
+    */
     private IpUtils() {}
 
     /**
