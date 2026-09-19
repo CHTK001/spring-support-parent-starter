@@ -49,10 +49,10 @@ public class FileStorageSetting {
     private String imageFilter = "NONE";
 
     /**
-    * 文件列表布局类型。
-    * @author CH
-    * @since 4.0.0
-    */
+     * 文件列表布局类型。
+     * @author CH
+     * @since 4.0.0
+     */
     public enum LayoutType {
         /**
          * 简单文件列表树

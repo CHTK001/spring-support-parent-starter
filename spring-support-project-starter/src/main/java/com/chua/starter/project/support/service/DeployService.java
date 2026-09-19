@@ -89,19 +89,4 @@ public interface DeployService {
     * @return 每台主机的部署日志
     */
     ReturnResult<List<MsProjectDeployLog>> rollback(Long projectId, Long archiveId);
-
-    /**
-    * 实时查看项目日志（tail）
-    * <p>
-    * 基于项目配置的日志目录与文件名，SSH 执行 {@code tail} 读取最近内容。
-    * Cursor 不为空时返回从该字节偏移起的增量内容（增量轮询）。
-    * </p>
-    *
-    * @param projectId 项目 标识
-    * @param hostId    目标主机 标识
-    * @param cursor    上次读取的字节偏移，可为空
-    * @param lines     拉取行数，默认 500
-    * @return 日志内容（content / Cursor / eof）
-    */
-    ReturnResult<Map<String, Object>> tailLog(Long projectId, Long hostId, Long cursor, Integer lines);
 }

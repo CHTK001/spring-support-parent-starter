@@ -51,11 +51,11 @@ public class RequestFingerprintAutoConfiguration {
     private ScheduledExecutorService fingerprintCleaner;
 
     /**
-    * 创建请求指纹过滤器
-    *
-    * @param props 指纹配置
-    * @return 过滤器
-    */
+     * 创建请求指纹过滤器
+     *
+     * @param props 指纹配置
+     * @return 过滤器
+     */
     @Bean
     @Order(Ordered.HIGHEST_PRECEDENCE + 20)
     public Filter requestFingerprintFilter(FingerprintProps props) {
@@ -253,10 +253,10 @@ public class RequestFingerprintAutoConfiguration {
         private boolean rejectDuplicate = false;
 
         /**
-        * 是否已启用
-        *
-        * @return 是否已启用的结果
-        */
+         * 是否已启用
+         *
+         * @return 是否已启用的结果
+         */
         public boolean isEnabled() {
             return enabled;
         }
@@ -506,11 +506,11 @@ public class RequestFingerprintAutoConfiguration {
         /** Cached请求体 */
         private final byte[] cachedBody;
         /**
-        * 构造
-        *
-        * @param request 原请求
-        * @param maxBytes 最大读取字节数（<=0 表示不限制）
-        */
+         * 构造
+         *
+         * @param request 原请求
+         * @param maxBytes 最大读取字节数（<=0 表示不限制）
+         */
         CachedBodyHttpServletRequest(HttpServletRequest request, long maxBytes) throws java.io.IOException {
             super(request);
             java.io.InputStream is = request.getInputStream();

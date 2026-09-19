@@ -66,8 +66,8 @@ public class ProjectMetricWheel {
     private int cursor = 0;
 
     /**
-    * 应用就绪后启动时间轮
-    */
+     * 应用就绪后启动时间轮
+     */
     @EventListener(ApplicationReadyEvent.class)
     public void start() {
         wheelExecutor = Executors.newSingleThreadScheduledExecutor(r -> {

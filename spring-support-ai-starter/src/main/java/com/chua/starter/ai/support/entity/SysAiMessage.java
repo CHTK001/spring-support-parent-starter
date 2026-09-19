@@ -29,6 +29,12 @@ public class SysAiMessage {
     private Long id;
 
     /**
+    * 父消息ID（用户消息ID，AI回复的parent_id指向用户消息）
+    */
+    @TableField("parent_id")
+    private Long parentId;
+
+    /**
     * 会话 标识
     */
     @TableField("sys_ai_session_id")
@@ -52,6 +58,30 @@ public class SysAiMessage {
     */
     @TableField("sys_ai_message_content")
     private String content; // 内容
+
+    /**
+    * 模型名称（AI回复时使用的模型）
+    */
+    @TableField("model_name")
+    private String modelName; // 模型名称
+
+    /**
+    * Prompt tokens 数量
+    */
+    @TableField("prompt_tokens")
+    private Integer promptTokens; // Prompt tokens 数量
+
+    /**
+    * Completion tokens 数量
+    */
+    @TableField("completion_tokens")
+    private Integer completionTokens; // Completion tokens 数量
+
+    /**
+    * Total tokens 数量
+    */
+    @TableField("total_tokens")
+    private Integer totalTokens; // Total tokens 数量
 
     /**
     * 附件地址

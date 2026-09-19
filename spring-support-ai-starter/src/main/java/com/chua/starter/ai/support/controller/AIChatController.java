@@ -1,11 +1,13 @@
 package com.chua.starter.ai.support.controller;
 
+import com.chua.common.support.ai.chat.ChatClient;
 import com.chua.starter.common.support.annotations.Permission;
 import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
 import com.chua.starter.ai.support.chat.ChatMessage;
 import com.chua.starter.ai.support.entity.AIDialog;
 import com.chua.starter.ai.support.entity.SysAiSessionCompression;
 import com.chua.starter.ai.support.model.AiChatRequest;
+import com.chua.starter.ai.support.registry.ChatClientRegistry;
 import com.chua.starter.ai.support.service.AIDialogRecordService;
 import com.chua.starter.ai.support.service.AiChatFacadeService;
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
@@ -33,13 +35,13 @@ import java.util.List;
 import java.util.Map;
 
 /**
-* AI 对话聊天控制器。
-* <p>
-* 提供会话管理（创建/删除/查询）和基于 SSE 的流式聊天能力。
-* 继承 {@link BaseAiController} 以便统一使用基础服务能力。
-*
-* @author CH
-* @since 4.0.0
+ * AI 对话聊天控制器。
+ * <p>
+ * 提供会话管理（创建/删除/查询）和基于 SSE 的流式聊天能力。
+ * 继承 {@link BaseAiController} 以便统一使用基础服务能力。
+ *
+ * @author CH
+ * @since 4.0.0
  */
 @Tag(name = "AI Chat Dialog Controller", description = "AI 对话聊天接口")
 @RestController
@@ -49,14 +51,27 @@ import java.util.Map;
 public class AIChatController extends BaseAiController {
 
     /**
-    * 压缩上下文拼接时的摘要最大长度
-    */
+     * 压缩上下文拼接时的摘要最大长度
+     */
     private static final int SUMMARY_MAX_LENGTH = 4000;
 
     /**
-    * 压缩上下文总量上限
-    */
+     * 压缩上下文总量上限
+     */
     private static final int COMPRESSED_CONTEXT_MAX_LENGTH = 16000;
+
+    /**
+     * 摘要模型单次可接收的历史文本上限，超出部分先截断再送入模型
+     */
+    private static final int SUMMARY_INPUT_MAX_LENGTH = 12000;
+
+    /**
+     * 生成对话摘要时使用的系统提示词
+     */
+    private static final String SUMMARY_SYSTEM_PROMPT =
+            "你是对话历史压缩器。请把给定的历史对话压缩成简洁的中文摘要，必须保留：用户的关键事实与偏好、"
+                    + "已得出的结论与决策、仍在进行中的任务和未回答的问题；忽略寒暄、重复表述与冗余示例。"
+                    + "只输出摘要正文，不要输出解释、前言或列表以外的额外内容，长度控制在 800 字以内。";
 
     /** aidialogrecord服务 */
     private final AIDialogRecordService aiDialogRecordService;
@@ -66,17 +81,19 @@ public class AIChatController extends BaseAiController {
     private final SysAiSessionCompressionService aiSessionCompressionService;
     /** SYSAI全局设置服务 */
     private final SysAiGlobalSettingService sysAiGlobalSettingService;
+    /** 对话客户端注册表，用于解析压缩摘要模型 */
+    private final ChatClientRegistry chatClientRegistry;
 
     // ==================== 会话管理 ====================
 
     /**
-    * 创建新会话。
-    * @param "新对话" "新对话"
-    * @return 创建dialog的结果
-    * @param "新对话" "新对话"
-    * @param "新对话" "新对话"
-    * @param name 名称，不允许为 null
-    */
+     * 创建新会话。
+     * @param "新对话" "新对话"
+     * @return 创建dialog的结果
+     * @param "新对话" "新对话"
+     * @param "新对话" "新对话"
+     * @param name 名称，不允许为 null
+     */
     @Operation(summary = "创建会话", description = "创建新的对话会话")
     @Permission("admin")
     @PostMapping("/provider/ai/chat/dialog")
@@ -90,10 +107,10 @@ public class AIChatController extends BaseAiController {
     }
 
     /**
-    * 删除指定会话。
-    * @param dialogId dialogid
-    * @return 删除dialog的结果
-    */
+     * 删除指定会话。
+     * @param dialogId dialogid
+     * @return 删除dialog的结果
+     */
     @Operation(summary = "删除会话", description = "删除指定对话会话及其所有消息")
     @Permission("admin")
     @DeleteMapping("/provider/ai/chat/dialog/{dialogId}")
@@ -103,9 +120,9 @@ public class AIChatController extends BaseAiController {
     }
 
     /**
-    * 获取所有会话列表。
-    * @return 获取dialog的结果
-    */
+     * 获取所有会话列表。
+     * @return 获取dialog的结果
+     */
     @Operation(summary = "获取会话列表", description = "获取所有对话会话列表")
     @Permission("admin")
     @GetMapping("/provider/ai/chat/dialog")
@@ -115,10 +132,10 @@ public class AIChatController extends BaseAiController {
     }
 
     /**
-    * 获取指定会话的消息记录。
-    * @param dialogId dialogid
-    * @return 获取dialogrecord的结果
-    */
+     * 获取指定会话的消息记录。
+     * @param dialogId dialogid
+     * @return 获取dialogrecord的结果
+     */
     @Operation(summary = "获取会话消息", description = "获取指定会话的所有消息记录")
     @Permission("admin")
     @GetMapping("/provider/ai/chat/dialog/{dialogId}")
@@ -130,11 +147,11 @@ public class AIChatController extends BaseAiController {
     // ==================== 聊天（SSE 流式） ====================
 
     /**
-    * 流式聊天接口。
-    * <p>
-    * 将用户消息保存到会话记录，调用 AI 门面服务进行流式推理，
-    * 并将 AI 回复也保存到消息记录。
-    */
+     * 流式聊天接口。
+     * <p>
+     * 将用户消息保存到会话记录，调用 AI 门面服务进行流式推理，
+     * 并将 AI 回复也保存到消息记录。
+     */
     @Operation(summary = "AI 聊天", description = "向指定会话发送消息并获取 AI 流式回复（SSE）")
     @Permission("admin")
     @PostMapping(value = "/provider/ai/chat/{dialogId}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
@@ -208,28 +225,28 @@ public class AIChatController extends BaseAiController {
             }
             // 回复完成后，将历史压缩为「摘要 + 最近 N 轮」写入上下文表
             /**
-            * compressand保存上下文。
-            * @param dialogId dialogid
-            */
+             * compressand保存上下文。
+             * @param dialogId dialogid
+             */
             compressAndSaveContext(dialogId);
         });
     }
 
     /**
-    * 将历史消息压缩为摘要并写入会话压缩上下文表。
-    *
-    * <p>规则：会话累计达到 {@code chat_compress_trigger_rounds} 轮后才触发压缩，
-    * 保留最近 {@code chat_compress_retain_rounds} 轮原始对话，之前的历史压缩为摘要，
-    * 以「摘要 + 最近 N 轮原始对话」拼接后作为后续聊天上下文落库。</p>
-    *
-    * <p>阈值与保留轮数均可通过全局设置（runtime 分组）配置：
-    * <ul>
-    *   <li>{@code chat_compress_trigger_rounds} — 触发压缩的累计轮数，默认 100</li>
-    *   <li>{@code chat_compress_retain_rounds} — 压缩后保留的最近轮数，默认 6</li>
-    * </ul></p>
-    *
-    * @param dialogId 会话 标识
-    */
+     * 将历史消息压缩为摘要并写入会话压缩上下文表。
+     *
+     * <p>规则：会话累计达到 {@code chat_compress_trigger_rounds} 轮后才触发压缩，
+     * 保留最近 {@code chat_compress_retain_rounds} 轮原始对话，之前的历史压缩为摘要，
+     * 以「摘要 + 最近 N 轮原始对话」拼接后作为后续聊天上下文落库。</p>
+     *
+     * <p>阈值与保留轮数均可通过全局设置（runtime 分组）配置：
+     * <ul>
+     *   <li>{@code chat_compress_trigger_rounds} — 触发压缩的累计轮数，默认 100</li>
+     *   <li>{@code chat_compress_retain_rounds} — 压缩后保留的最近轮数，默认 6</li>
+     * </ul></p>
+     *
+     * @param dialogId 会话 标识
+     */
     private void compressAndSaveContext(Long dialogId) {
         try {
             List<ChatMessage> history = aiDialogRecordService.getDialogMessages(dialogId);
@@ -295,9 +312,16 @@ public class AIChatController extends BaseAiController {
                     summary.append("[").append(role).append("]: ").append(content).append("\n");
                 }
             }
-            // 拼接：摘要 + 最近 N 轮原始对话
+            
+            // 调用 AI 模型生成真正的摘要
+            String aiSummary = generateSummaryWithAI(summary.toString(), dialogId);
+            
+            // 拼接：AI 摘要 + 最近 N 轮原始对话
             StringBuilder context = new StringBuilder();
-            if (summary.length() > 0) {
+            if (aiSummary != null && !aiSummary.isEmpty()) {
+                context.append("[Compressed Context]\n").append(aiSummary);
+            } else if (summary.length() > 0) {
+                // 降级：如果 AI 摘要失败，用原始截断
                 context.append("[Compressed Context]\n")
                         .append(summary.length() > SUMMARY_MAX_LENGTH ? summary.substring(0, SUMMARY_MAX_LENGTH) : summary);
             }
@@ -328,12 +352,12 @@ public class AIChatController extends BaseAiController {
     }
 
     /**
-    * 从全局设置读取整数配置，解析失败或未配置时返回默认值。
-    *
-    * @param field        配置字段名（runtime 分组）
-    * @param defaultValue 默认值
-    * @return 配置值
-    */
+     * 从全局设置读取整数配置，解析失败或未配置时返回默认值。
+     *
+     * @param field        配置字段名（runtime 分组）
+     * @param defaultValue 默认值
+     * @return 配置值
+     */
     private int parseIntSetting(String field, int defaultValue) {
         return sysAiGlobalSettingService.getValue("runtime", field)
                 .map(value -> {
@@ -347,17 +371,68 @@ public class AIChatController extends BaseAiController {
     }
 
     /**
-    * 从全局设置读取字符串配置，未配置时返回默认值。
-    *
-    * @param field        配置字段名（runtime 分组）
-    * @param defaultValue 默认值
-    * @return 配置值
-    */
+     * 从全局设置读取字符串配置，未配置时返回默认值。
+     *
+     * @param field        配置字段名（runtime 分组）
+     * @param defaultValue 默认值
+     * @return 配置值
+     */
     private String getStringSetting(String field, String defaultValue) {
         return sysAiGlobalSettingService.getValue("runtime", field)
                 .map(value -> value.trim())
                 .filter(value -> !value.isEmpty())
                 .orElse(defaultValue);
+    }
+
+    /**
+     * 调用 AI 模型生成对话摘要。
+     * <p>优先使用配置的压缩模型，未配置时使用当前会话模型。
+     *
+     * @param historyText 历史对话文本
+     * @param dialogId    会话 ID
+     * @return 生成的摘要，失败返回 null
+     */
+    private String generateSummaryWithAI(String historyText, Long dialogId) {
+        try {
+            // 读取压缩模型配置
+            String compressionModel = getStringSetting("compression_model", "");
+            log.info("[Compression] 使用模型: {}", compressionModel.isEmpty() ? "默认模型" : compressionModel);
+            
+            // 构造摘要提示词
+            String prompt = "请将以下对话历史压缩为简洁的摘要，保留关键信息、结论和重要决策。摘要控制在300字以内：\n\n" + historyText;
+            
+            // 构造 AI 请求
+            AiChatRequest chatRequest = new AiChatRequest();
+            chatRequest.setModel(compressionModel.isEmpty() ? "agnes-2.5-flash" : compressionModel);
+            chatRequest.setMessages(java.util.List.of(
+                java.util.Map.of("role", "user", "content", prompt)
+            ));
+            chatRequest.setStream(false);
+            
+            // 调用 AI 模型生成摘要（同步方式）
+            Map<String, Object> result = aiChatFacadeService.call(chatRequest);
+            
+            // 提取回复内容
+            if (result != null && result.containsKey("content")) {
+                String summary = result.get("content").toString();
+                log.info("[Compression] AI 摘要生成成功，长度: {}", summary.length());
+                return summary;
+            }
+            
+            // 降级：如果 AI 调用失败，回退到原始截断
+            log.warn("[Compression] AI 返回为空，降级为截断");
+            if (historyText.length() > 500) {
+                return historyText.substring(0, 500) + "...\n[摘要已截断]";
+            }
+            return historyText;
+        } catch (Exception e) {
+            log.warn("[Compression] AI 摘要生成失败: {}", e.getMessage());
+            // 降级：失败时回退到原始截断
+            if (historyText.length() > 500) {
+                return historyText.substring(0, 500) + "...\n[摘要已截断]";
+            }
+            return historyText;
+        }
     }
 }
 

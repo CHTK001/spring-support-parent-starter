@@ -33,9 +33,9 @@ public class RemoteConfigController {
     private final ObjectMapper objectMapper = new ObjectMapper(); // 对象映射器
 
     /**
-    * 回显配置。
-    *
-    * @return 已保存的配置（无则空对象）
+     * 回显配置。
+     *
+     * @return 已保存的配置（无则空对象）
      */
     @GetMapping
     public Map<String, Object> getConfig() throws IOException {

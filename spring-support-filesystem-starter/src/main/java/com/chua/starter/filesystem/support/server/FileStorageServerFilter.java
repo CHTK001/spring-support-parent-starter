@@ -744,13 +744,13 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
     }
 
     /**
-        * 为响应追加 跨域资源共享 头（回显 Origin，支持任意来源跨域）。
-        *
-        * <p>无 Origin 头的请求（同源/直连工具）不做任何处理。</p>
-        *
-        * @param request  请求
-        * @param response 响应
-        */
+     * 为响应追加 跨域资源共享 头（回显 Origin，支持任意来源跨域）。
+     *
+     * <p>无 Origin 头的请求（同源/直连工具）不做任何处理。</p>
+     *
+     * @param request  请求
+     * @param response 响应
+     */
     private void applyCorsHeaders(ServerRequest request, ServerResponse response) {
         String origin = request.getHeader("Origin");
         if (origin == null || origin.isEmpty()) {

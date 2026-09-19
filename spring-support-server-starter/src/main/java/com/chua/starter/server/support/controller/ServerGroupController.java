@@ -39,11 +39,11 @@ public class ServerGroupController {
     private final ServerGroupService serverGroupService;
 
     /**
-    * 新增分组
-    *
-    * @param group 分组
-    * @return 结果
-    */
+     * 新增分组
+     *
+     * @param group 分组
+     * @return 结果
+     */
     @Operation(summary = "新增分组")
     @PostMapping
     public ReturnResult<MsServerGroup> create(@RequestBody MsServerGroup group) {

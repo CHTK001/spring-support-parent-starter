@@ -13,6 +13,7 @@ import com.chua.starter.server.support.entity.MsServerHostIdentity;
 import com.chua.starter.server.support.entity.MsServerIdentity;
 import com.chua.starter.server.support.entity.MsServerKey;
 import com.chua.starter.server.support.enums.AuthType;
+import com.chua.starter.server.support.enums.ProtocolType;
 import com.chua.starter.server.support.mapper.MsServerHostIdentityMapper;
 import com.chua.starter.server.support.mapper.MsServerHostMapper;
 import com.chua.starter.server.support.mapper.MsServerIdentityMapper;
@@ -21,6 +22,10 @@ import com.chua.starter.server.support.model.SshCredential;
 import com.chua.starter.server.support.service.ServerHostService;
 import com.chua.starter.server.support.spi.HostDetectProvider;
 import com.chua.starter.server.support.spi.HostDetectProviderRegistry;
+import com.chua.starter.server.support.spi.HostRemoteProvider;
+import com.chua.starter.server.support.spi.HostRemoteProviderRegistry;
+import com.chua.starter.server.support.spi.HostShellDialect;
+import com.chua.starter.server.support.spi.RemoteExecResult;
 import com.chua.starter.server.support.util.CredentialCipher;
 import com.chua.starter.server.support.util.SshClients;
 import com.chua.winrm.support.client.WinRmExecClient;
@@ -39,15 +44,15 @@ import java.util.List;
 import java.util.Map;
 
 /**
-* 服务器主机服务实现
-* <p>
-* 主机台账的增删改查、连通性探测、身份绑定与凭据解析。
-* 凭据解析策略：指定身份优先；未指定时取优先级最高的绑定身份。
-* 解密失败、缺少绑定、密钥缺失均以业务错误返回，不抛裸异常。
-* </p>
-*
-* @author CH
-* @since 4.0.0.42
+ * 服务器主机服务实现
+ * <p>
+ * 主机台账的增删改查、连通性探测、身份绑定与凭据解析。
+ * 凭据解析策略：指定身份优先；未指定时取优先级最高的绑定身份。
+ * 解密失败、缺少绑定、密钥缺失均以业务错误返回，不抛裸异常。
+ * </p>
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 @Slf4j
 @Service
@@ -66,6 +71,9 @@ public class ServerHostServiceImpl implements ServerHostService {
     /** 默认 SSH 端口 */
     private static final int DEFAULT_SSH_PORT = 22;
 
+    /** 默认远控模式（经 guacd 中继，与历史行为一致） */
+    private static final String DEFAULT_REMOTE_MODE = "GUACD";
+
     /** JSON 序列化器 */
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
@@ -74,6 +82,12 @@ public class ServerHostServiceImpl implements ServerHostService {
 
     /** Linux 内核信息命令 */
     private static final String CMD_UNAME = "uname -sr";
+
+    /** Windows（WinRM）连通性探测命令：回显计算机名即可确认通道可用 */
+    private static final String CMD_COMPUTERNAME = "$env:COMPUTERNAME";
+
+    /** 连通性探测超时（秒） */
+    private static final int PROBE_TIMEOUT_SECONDS = 15;
 
     /** 主机 映射器 */
     private final MsServerHostMapper hostMapper;
@@ -96,16 +110,19 @@ public class ServerHostServiceImpl implements ServerHostService {
     /** 主机硬件探测提供者注册中心（按系统类型 SPI 路由） */
     private final HostDetectProviderRegistry detectProviderRegistry;
 
+    /** 远程操作提供者注册中心（按系统类型 SPI 路由，连通性测试与部署同源） */
+    private final HostRemoteProviderRegistry remoteProviderRegistry;
+
     /** 探针标识随机源 */
     private final SecureRandom secureRandom = new SecureRandom();
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-    * 创建。
-    * @param host 主机
-    * @return 创建的结果
-    */
+     * 创建。
+     * @param host 主机
+     * @return 创建的结果
+     */
     public ReturnResult<MsServerHost> create(MsServerHost host) {
         // 参数校验前置
         if (host == null || isBlank(host.getServerHostName()) || isBlank(host.getServerHostAddress())) {
@@ -145,6 +162,13 @@ public class ServerHostServiceImpl implements ServerHostService {
         if (host.getServerHostRemoteEnabled() == null) {
             host.setServerHostRemoteEnabled(1);
         }
+        if (isBlank(host.getServerHostRemoteMode())) {
+            host.setServerHostRemoteMode(DEFAULT_REMOTE_MODE);
+        }
+        // VNC 口令密文落库（前端提交明文，禁止原样入库）
+        if (!isBlank(host.getServerHostVncPassword())) {
+            host.setServerHostVncPassword(cipher.encrypt(host.getServerHostVncPassword().trim()));
+        }
         // 延迟检测默认值
         if (host.getServerHostDelayEnabled() == null) {
             host.setServerHostDelayEnabled(0);
@@ -157,21 +181,21 @@ public class ServerHostServiceImpl implements ServerHostService {
         hostMapper.insert(host);
         // 携带账号密码/PEM 时自动建身份并绑定，保证新增即可测连/远控
         /**
-        * auto创建identity。
-        * @param host 主机
-        */
+         * auto创建identity。
+         * @param host 主机
+         */
         autoCreateIdentity(host);
-        return ReturnResult.ok(hostMapper.selectById(host.getId()));
+        return ReturnResult.ok(decryptRemoteCredential(hostMapper.selectById(host.getId())));
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-    * 更新。
-    * @param id 标识
-    * @param host 主机
-    * @return 更新的结果
-    */
+     * 更新。
+     * @param id 标识
+     * @param host 主机
+     * @return 更新的结果
+     */
     public ReturnResult<MsServerHost> update(Long id, MsServerHost host) {
         MsServerHost exists = hostMapper.selectById(id);
         if (exists == null) {
@@ -227,6 +251,22 @@ public class ServerHostServiceImpl implements ServerHostService {
         if (host.getServerHostRemoteEnabled() != null) {
             exists.setServerHostRemoteEnabled(host.getServerHostRemoteEnabled());
         }
+        // 远控配置：协议/端口留空表示按系统类型与协议默认值推断，不覆盖已有值
+        if (!isBlank(host.getServerHostRemoteProtocol())) {
+            exists.setServerHostRemoteProtocol(host.getServerHostRemoteProtocol().trim());
+        }
+        if (host.getServerHostRemotePort() != null && host.getServerHostRemotePort() > 0) {
+            exists.setServerHostRemotePort(host.getServerHostRemotePort());
+        }
+        if (!isBlank(host.getServerHostRemoteMode())) {
+            exists.setServerHostRemoteMode(host.getServerHostRemoteMode().trim());
+        } else if (isBlank(exists.getServerHostRemoteMode())) {
+            exists.setServerHostRemoteMode(DEFAULT_REMOTE_MODE);
+        }
+        // VNC 口令：仅在表单提交新值时重新加密覆盖，留空表示保留库中密文
+        if (!isBlank(host.getServerHostVncPassword())) {
+            exists.setServerHostVncPassword(cipher.encrypt(host.getServerHostVncPassword().trim()));
+        }
         // 延迟检测配置（开关可为 0/1，间隔需大于 0）
         if (host.getServerHostDelayEnabled() != null) {
             exists.setServerHostDelayEnabled(host.getServerHostDelayEnabled());
@@ -241,20 +281,20 @@ public class ServerHostServiceImpl implements ServerHostService {
         hostMapper.updateById(exists);
         // 携带账号密码/PEM 时自动创建/更新登录身份并绑定（编辑时亦可调整凭据）
         /**
-        * auto创建identity。
-        * @param exists exists
-        */
+         * auto创建identity。
+         * @param exists exists
+         */
         autoCreateIdentity(exists);
-        return ReturnResult.ok(hostMapper.selectById(id));
+        return ReturnResult.ok(decryptRemoteCredential(hostMapper.selectById(id)));
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-    * 删除。
-    * @param id 标识
-    * @return 删除的结果
-    */
+     * 删除。
+     * @param id 标识
+     * @return 删除的结果
+     */
     public ReturnResult<Void> delete(Long id) {
         // 先解除身份绑定再删除主机，避免遗留孤儿关联
         hostIdentityMapper.delete(new LambdaQueryWrapper<MsServerHostIdentity>()
@@ -269,7 +309,8 @@ public class ServerHostServiceImpl implements ServerHostService {
         if (host == null) {
             return ReturnResult.error("主机不存在: " + id);
         }
-        return ReturnResult.ok(host);
+        // 详情接口供编辑弹窗回显，VNC 口令解密后返回（失败降级为空不阻断）
+        return ReturnResult.ok(decryptRemoteCredential(host));
     }
 
     @Override
@@ -288,17 +329,20 @@ public class ServerHostServiceImpl implements ServerHostService {
             wrapper.eq(MsServerHost::getServerHostStatus, status);
         }
         wrapper.orderByDesc(MsServerHost::getId);
-        return ReturnResult.ok(hostMapper.selectList(wrapper));
+        List<MsServerHost> hosts = hostMapper.selectList(wrapper);
+        // 列表接口不下发任何凭据（含 VNC 口令密文）
+        hosts.forEach(this::mask);
+        return ReturnResult.ok(hosts);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-    * 更新状态。
-    * @param id 标识
-    * @param enabled 启用
-    * @return 更新状态的结果
-    */
+     * 更新状态。
+     * @param id 标识
+     * @param enabled 启用
+     * @return 更新状态的结果
+     */
     public ReturnResult<Void> updateStatus(Long id, boolean enabled) {
         MsServerHost host = hostMapper.selectById(id);
         if (host == null) {
@@ -319,6 +363,11 @@ public class ServerHostServiceImpl implements ServerHostService {
         if (!resolved.isOk()) {
             return ReturnResult.error(resolved.getMsg());
         }
+        // Windows 主机没有 SSH 服务，必须按 SPI 走 WinRM，否则会误报「SSH 连接失败」并错标离线
+        HostRemoteProvider provider = remoteProviderRegistry.resolve(host).orElse(null);
+        if (provider != null && provider.shellDialect() == HostShellDialect.POWERSHELL) {
+            return testRemoteExec(host, provider, resolved.getData());
+        }
         SshClients.Handle handle = null;
         try {
             handle = connectionManager.borrow(host, resolved.getData());
@@ -336,9 +385,9 @@ public class ServerHostServiceImpl implements ServerHostService {
                 }
             }
             /**
-            * markonline。
-            * @param host.getId( 主机.获取标识(
-            */
+             * markonline。
+             * @param host.getId( 主机.获取标识(
+             */
             markOnline(host.getId(), true);
             return ReturnResult.ok(banner, "测试成功");
         } catch (Exception e) {
@@ -352,15 +401,41 @@ public class ServerHostServiceImpl implements ServerHostService {
         }
     }
 
+    /**
+     * 按远程操作 Provider 判定连通性（Windows 等无 SSH 服务的主机走此路径）
+     *
+     * @param host       主机
+     * @param provider   远程操作实现
+     * @param credential 凭据
+     * @return 连通结果
+     */
+    private ReturnResult<String> testRemoteExec(MsServerHost host, HostRemoteProvider provider, SshCredential credential) {
+        try {
+            RemoteExecResult result = provider.exec(host, credential, CMD_COMPUTERNAME, PROBE_TIMEOUT_SECONDS);
+            if (!result.success()) {
+                markOnline(host.getId(), false);
+                return ReturnResult.error("连接失败: " + result.failureMessage());
+            }
+            String banner = isBlank(result.stdout()) ? "connected" : result.stdout().trim();
+            markOnline(host.getId(), true);
+            return ReturnResult.ok(banner, "测试成功");
+        } catch (Exception e) {
+            markOnline(host.getId(), false);
+            log.warn("[server] 连通性测试失败 hostId={} address={}: {}",
+                    host.getId(), host.getServerHostAddress(), e.getMessage());
+            return ReturnResult.error("连接失败: " + e.getMessage());
+        }
+    }
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-    * bindidentity。
-    * @param hostId 主机标识
-    * @param identityId identityid
-    * @param sort 排序
-    * @return bindIdentity的结果
-    */
+     * bindidentity。
+     * @param hostId 主机标识
+     * @param identityId identityid
+     * @param sort 排序
+     * @return bindIdentity的结果
+     */
     public ReturnResult<Void> bindIdentity(Long hostId, Long identityId, Integer sort) {
         if (hostId == null || identityId == null) {
             return ReturnResult.error("主机ID与身份ID不能为空");
@@ -388,11 +463,11 @@ public class ServerHostServiceImpl implements ServerHostService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-    * unbindidentity。
-    * @param hostId 主机标识
-    * @param identityId identityid
-    * @return unbindIdentity的结果
-    */
+     * unbindidentity。
+     * @param hostId 主机标识
+     * @param identityId identityid
+     * @return unbindIdentity的结果
+     */
     public ReturnResult<Void> unbindIdentity(Long hostId, Long identityId) {
         if (hostId == null || identityId == null) {
             return ReturnResult.error("主机ID与身份ID不能为空");
@@ -427,6 +502,14 @@ public class ServerHostServiceImpl implements ServerHostService {
                         .eq(MsServerHostIdentity::getMsServerHostIdentityHostId, hostId)
                         .orderByAsc(MsServerHostIdentity::getMsServerHostIdentitySort));
         if (relations.isEmpty()) {
+            // 纯 VNC 主机（如 Windows 桌面共享）可只配 VNC 口令而不绑定登录身份，
+            // 此时回落主机级 VNC 凭据；其余场景仍按未绑定身份报错
+            boolean vncProtocol = isBlank(host.getServerHostRemoteProtocol())
+                    || ProtocolType.VNC.name().equalsIgnoreCase(host.getServerHostRemoteProtocol().trim());
+            if (vncProtocol && !isBlank(host.getServerHostVncPassword())) {
+                return ReturnResult.ok(new SshCredential("",
+                        decryptQuietly(host.getServerHostVncPassword(), host.getId()), null));
+            }
             return ReturnResult.error("主机未绑定登录身份: " + host.getServerHostName());
         }
         // 指定身份时精确匹配绑定关系；未指定时按优先级取第一个
@@ -448,6 +531,14 @@ public class ServerHostServiceImpl implements ServerHostService {
             return ReturnResult.error("绑定的身份已被删除");
         }
         String username = identity.getMsServerIdentityUsername();
+        // VNC 桌面认证与 SSH/RDP 登录口令不同源：主机配了 VNC 口令时优先取它
+        boolean vncOnly = !isBlank(host.getServerHostRemoteProtocol())
+                && ProtocolType.VNC.name().equalsIgnoreCase(host.getServerHostRemoteProtocol().trim())
+                && !isBlank(host.getServerHostVncPassword());
+        if (vncOnly) {
+            return ReturnResult.ok(new SshCredential(username,
+                    decryptQuietly(host.getServerHostVncPassword(), hostId), null));
+        }
         // 公钥认证：解密引用密钥的私钥内容与口令
         if (AuthType.PUBLIC_KEY.name().equals(identity.getMsServerIdentityAuthType())) {
             MsServerKey key = identity.getMsServerIdentityKeyId() == null
@@ -500,11 +591,11 @@ public class ServerHostServiceImpl implements ServerHostService {
     }
 
     /**
-    * 端口扫描结果列表序列化为 JSON 数组字符串
-    *
-    * @param ports 端口列表
-    * @return JSON 字符串
-    */
+     * 端口扫描结果列表序列化为 JSON 数组字符串
+     *
+     * @param ports 端口列表
+     * @return JSON 字符串
+     */
     private String toPortsJson(List<NmapScanner.PortInfo> ports) {
         if (ports == null || ports.isEmpty()) {
             return "[]";
@@ -556,12 +647,12 @@ public class ServerHostServiceImpl implements ServerHostService {
     }
 
     /**
-    * 按系统类型 SPI 路由执行硬件探测，探测结果回写到传入主机对象
-    *
-    * @param host       目标主机，不能为 null
-    * @param credential 登录凭据，不能为 null
-    * @return 探测结果；探测成功返回包含已回写硬件字段的主机
-    */
+     * 按系统类型 SPI 路由执行硬件探测，探测结果回写到传入主机对象
+     *
+     * @param host       目标主机，不能为 null
+     * @param credential 登录凭据，不能为 null
+     * @return 探测结果；探测成功返回包含已回写硬件字段的主机
+     */
     private ReturnResult<MsServerHost> detectByProvider(MsServerHost host, SshCredential credential) {
         String osType = host.getServerHostOsType();
         var providerOpt = detectProviderRegistry.resolve(osType);
@@ -590,8 +681,8 @@ public class ServerHostServiceImpl implements ServerHostService {
     }
 
     /**
-    * 批量同步虚拟线程执行器（SSH 探测为阻塞 IO，虚拟线程并发最合适）
-    */
+     * 批量同步虚拟线程执行器（SSH 探测为阻塞 IO，虚拟线程并发最合适）
+     */
     private static final java.util.concurrent.ExecutorService SYNC_EXECUTOR =
             java.util.concurrent.Executors.newThreadPerTaskExecutor(
                     Thread.ofVirtual().name("host-sync-").factory());
@@ -647,16 +738,16 @@ public class ServerHostServiceImpl implements ServerHostService {
     }
 
     /**
-    * 同步单台主机资产（SSH 硬件探测 + 公网/内网 IP，信息无变化时跳过回写）
-    * <p>
-    * 探测到的主机信息 / 硬件规格 / IP 会同步回资产表；当公网 IP 或内网 IP
-    * 与库中不一致时触发更新并记录变更明细，其他字段仅在探测值有效且不同时覆盖。
-    * </p>
-    *
-    * @param target  目标主机
-    * @param changes 变更明细收集器
-    * @return true=有字段更新，false=无变化跳过
-    */
+     * 同步单台主机资产（SSH 硬件探测 + 公网/内网 IP，信息无变化时跳过回写）
+     * <p>
+     * 探测到的主机信息 / 硬件规格 / IP 会同步回资产表；当公网 IP 或内网 IP
+     * 与库中不一致时触发更新并记录变更明细，其他字段仅在探测值有效且不同时覆盖。
+     * </p>
+     *
+     * @param target  目标主机
+     * @param changes 变更明细收集器
+     * @return true=有字段更新，false=无变化跳过
+     */
     private boolean syncSingleHost(MsServerHost target, java.util.List<java.util.Map<String, Object>> changes) {
         // 保存探测前 IP 快照（用于判断是否发生变更）
         String oldPublicIp = target.getServerHostPublicIp();
@@ -686,15 +777,15 @@ public class ServerHostServiceImpl implements ServerHostService {
     }
 
 /**
-     * 采集目标主机出口公网 IP
-     * <p>
-      * 优先走 SSH（cURL ifconfig.me / ipinfo.io），SSH 不可用时回退到本机出口 IP 探测。
-     * 127/localhost 等本地地址直接返回空串不探测。
-     * </p>
-     *
-     * @param host 主机
-     * @return 公网 IP，获取失败返回空串
-     */
+ * 采集目标主机出口公网 IP
+ * <p>
+ * 优先走 SSH（cURL ifconfig.me / ipinfo.io），SSH 不可用时回退到本机出口 IP 探测。
+ * 127/localhost 等本地地址直接返回空串不探测。
+ * </p>
+ *
+ * @param host 主机
+ * @return 公网 IP，获取失败返回空串
+ */
     private String fetchPublicIp(MsServerHost host) {
         String address = host.getServerHostAddress();
         if (isBlank(address) || "127.0.0.1".equals(address.trim()) || "localhost".equalsIgnoreCase(address.trim())) {
@@ -739,11 +830,11 @@ public class ServerHostServiceImpl implements ServerHostService {
     }
 
     /**
-    * 通过 HTTP 获取 获取文本响应
-    *
-    * @param url 地址
-    * @return 响应文本，失败返回空串
-    */
+     * 通过 HTTP 获取 获取文本响应
+     *
+     * @param url 地址
+     * @return 响应文本，失败返回空串
+     */
     private String fetchViaHttp(String url) {
         try {
             java.net.HttpURLConnection conn = (java.net.HttpURLConnection) new java.net.URL(url).openConnection();
@@ -751,9 +842,9 @@ public class ServerHostServiceImpl implements ServerHostService {
             conn.setReadTimeout(5000);
             conn.setRequestMethod("GET");
             /**
-            * 尝试。
-            * @param conn.getInputStream( conn.获取输入流(
-            */
+             * 尝试。
+             * @param conn.getInputStream( conn.获取输入流(
+             */
             try (var in = conn.getInputStream()) {
                 return new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8).trim();
             }
@@ -763,11 +854,11 @@ public class ServerHostServiceImpl implements ServerHostService {
     }
 
     /**
-    * 判断字符串是否为 ipv4
-    *
-    * @param value 字符串
-    * @return 是否为 IP
-    */
+     * 判断字符串是否为 ipv4
+     *
+     * @param value 字符串
+     * @return 是否为 IP
+     */
     private boolean isIp(String value) {
         if (value == null) {
             return false;
@@ -844,11 +935,11 @@ public class ServerHostServiceImpl implements ServerHostService {
     }
 
     /**
-    * 从 PEM 私钥内容推断密钥类型
-    *
-    * @param privateKey PEM 私钥
-    * @return RSA / ED25519 / ECDSA
-    */
+     * 从 PEM 私钥内容推断密钥类型
+     *
+     * @param privateKey PEM 私钥
+     * @return RSA / ED25519 / ECDSA
+     */
     private String detectKeyType(String privateKey) {
         String t = privateKey == null ? "" : privateKey;
         if (t.contains("ED25519")) {
@@ -861,12 +952,12 @@ public class ServerHostServiceImpl implements ServerHostService {
     }
 
     /**
-    * 静默执行命令并返回输出（失败返回空串）
-    *
-    * @param handle  SSH 句柄
-    * @param command 命令
-    * @return 标准输出，异常返回空串
-    */
+     * 静默执行命令并返回输出（失败返回空串）
+     *
+     * @param handle  SSH 句柄
+     * @param command 命令
+     * @return 标准输出，异常返回空串
+     */
     private String execQuiet(SshClients.Handle handle, String command) {
         try {
             return handle.client().exec().command(command).executeAndGetOutput();
@@ -876,11 +967,11 @@ public class ServerHostServiceImpl implements ServerHostService {
     }
 
     /**
-    * 判断字符串是否为纯数字
-    *
-    * @param value 字符串
-    * @return 是否纯数字
-    */
+     * 判断字符串是否为纯数字
+     *
+     * @param value 字符串
+     * @return 是否纯数字
+     */
     private boolean isNumeric(String value) {
         if (value == null) {
             return false;
@@ -898,11 +989,11 @@ public class ServerHostServiceImpl implements ServerHostService {
     }
 
     /**
-    * 回写主机在线状态与最近在线时间
-    *
-    * @param hostId 主机 标识
-    * @param online 是否在线
-    */
+     * 回写主机在线状态与最近在线时间
+     *
+     * @param hostId 主机 标识
+     * @param online 是否在线
+     */
     private void markOnline(Long hostId, boolean online) {
         try {
             MsServerHost host = hostMapper.selectById(hostId);
@@ -918,11 +1009,11 @@ public class ServerHostServiceImpl implements ServerHostService {
     }
 
     /**
-    * 计算主机当前最大绑定优先级加一
-    *
-    * @param hostId 主机 标识
-    * @return 下一个优先级值
-    */
+     * 计算主机当前最大绑定优先级加一
+     *
+     * @param hostId 主机 标识
+     * @return 下一个优先级值
+     */
     private int nextSort(Long hostId) {
         List<MsServerHostIdentity> relations = hostIdentityMapper.selectList(
                 new LambdaQueryWrapper<MsServerHostIdentity>()
@@ -937,10 +1028,10 @@ public class ServerHostServiceImpl implements ServerHostService {
     }
 
     /**
-    * 生成 32 位十六进制探针标识
-    *
-    * @return agentKey
-    */
+     * 生成 32 位十六进制探针标识
+     *
+     * @return agentKey
+     */
     private String generateAgentKey() {
         byte[] bytes = new byte[AGENT_KEY_BYTES];
         secureRandom.nextBytes(bytes);
@@ -948,11 +1039,57 @@ public class ServerHostServiceImpl implements ServerHostService {
     }
 
     /**
-    * Prometheus 凭据校验：GET 目标主机 /metrics 端点
-    *
-    * @param id 主机主键
-    * @return 校验结果
-    */
+     * 静默解密凭据（失败仅告警，避免详情接口/凭据解析被裸异常打断）
+     *
+     * @param cipherText 密文
+     * @param hostId     主机标识（仅日志定位）
+     * @return 明文，解密失败返回空
+     */
+    private String decryptQuietly(String cipherText, Long hostId) {
+        if (isBlank(cipherText)) {
+            return cipherText;
+        }
+        try {
+            return cipher.decrypt(cipherText);
+        } catch (Exception e) {
+            log.warn("[server] VNC 口令解密失败 hostId={}: {}", hostId, e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 回显远控凭据：把库中 VNC 口令解密成明文供编辑弹窗使用
+     *
+     * @param host 主机（可为空，原地修改）
+     * @return 同一对象（已回填明文，解密失败置空）
+     */
+    private MsServerHost decryptRemoteCredential(MsServerHost host) {
+        if (host == null) {
+            return host;
+        }
+        if (!isBlank(host.getServerHostVncPassword())) {
+            host.setServerHostVncPassword(decryptQuietly(host.getServerHostVncPassword(), host.getId()));
+        }
+        return host;
+    }
+
+    /**
+     * 脱敏：清除 VNC 口令，列表与导出接口不下发任何凭据
+     *
+     * @param host 主机
+     * @return 同一对象（已脱敏）
+     */
+    private MsServerHost mask(MsServerHost host) {
+        host.setServerHostVncPassword(null);
+        return host;
+    }
+
+    /**
+     * Prometheus 凭据校验：GET 目标主机 /metrics 端点
+     *
+     * @param id 主机主键
+     * @return 校验结果
+     */
     @Override
     public ReturnResult<String> testPrometheus(Long id) {
         MsServerHost host = hostMapper.selectById(id);
@@ -990,11 +1127,11 @@ public class ServerHostServiceImpl implements ServerHostService {
         }
     }
     /**
-    * 空串判断
-    *
-    * @param value 待判断字符串
-    * @return 是否为空
-    */
+     * 空串判断
+     *
+     * @param value 待判断字符串
+     * @return 是否为空
+     */
     private boolean isBlank(String value) {
         return value == null || value.isBlank();
     }

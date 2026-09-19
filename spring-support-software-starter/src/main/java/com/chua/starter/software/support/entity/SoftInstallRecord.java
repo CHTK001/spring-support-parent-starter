@@ -111,9 +111,9 @@ public class SoftInstallRecord implements Serializable {
     private LocalDateTime installRecordUpdateTime;
 
     /**
-    * 获取installrecordid。
-    * @return 获取installrecordid的结果
-    */
+     * 获取installrecordid。
+     * @return 获取installrecordid的结果
+     */
     public String getInstallRecordId() {
         return installRecordId;
     }

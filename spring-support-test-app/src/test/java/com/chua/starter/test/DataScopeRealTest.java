@@ -75,9 +75,9 @@ class DataScopeRealTest {
         DataScopeAuthService.setCurrentUser(user(DataFilterTypeEnum.DEPT, "10", Set.of("USER")));
         List<SysUser> users = sysUserMapper.selectByScope();
         /**
-        * 断言equals。
-        * @param 2 2
-        * @param users.size( 用户.大小(
+         * 断言equals。
+         * @param 2 2
+         * @param users.size( 用户.大小(
          */
         assertEquals(2, users.size(), "DEPT 范围应只返回本部门数据");
         assertTrue(users.stream().allMatch(u -> "10".equals(u.getSysDeptId())),
@@ -90,9 +90,9 @@ class DataScopeRealTest {
         DataScopeAuthService.setCurrentUser(user(DataFilterTypeEnum.DEPT, "10", Set.of("SUPER_ADMIN")));
         List<SysUser> users = sysUserMapper.selectByScope();
         /**
-        * 断言equals。
-        * @param 3 3
-        * @param users.size( 用户.大小(
+         * 断言equals。
+         * @param 3 3
+         * @param users.size( 用户.大小(
          */
         assertEquals(3, users.size(), "超级管理员应看到全部数据");
     }
@@ -103,9 +103,9 @@ class DataScopeRealTest {
         DataScopeAuthService.setCurrentUser(user(DataFilterTypeEnum.DEPT, "10", Set.of("USER")));
         List<SysUser> users = sysUserMapper.selectIgnoreScope();
         /**
-        * 断言equals。
-        * @param 3 3
-        * @param users.size( 用户.大小(
+         * 断言equals。
+         * @param 3 3
+         * @param users.size( 用户.大小(
          */
         assertEquals(3, users.size(), "@DataScope(enabled=false) 应禁用数据权限过滤");
     }
@@ -116,9 +116,9 @@ class DataScopeRealTest {
         DataScopeAuthService.setCurrentUser(user(DataFilterTypeEnum.ALL, "10", Set.of("USER")));
         List<SysUser> users = sysUserMapper.selectByScope();
         /**
-        * 断言equals。
-        * @param 3 3
-        * @param users.size( 用户.大小(
+         * 断言equals。
+         * @param 3 3
+         * @param users.size( 用户.大小(
          */
         assertEquals(3, users.size(), "ALL 数据权限应看到全部数据");
     }

@@ -38,10 +38,10 @@ public final class DatalakePipelineBenchProbe {
     private static final Path WORK_DIR = Path.of("target/datalake-bench");
 
     /**
-    * 入口。
-    *
-    * @param args 命令行参数
-    * @throws Exception 异常
+     * 入口。
+     *
+     * @param args 命令行参数
+     * @throws Exception 异常
      */
     public static void main(String[] args) throws Exception {
         Files.createDirectories(WORK_DIR);

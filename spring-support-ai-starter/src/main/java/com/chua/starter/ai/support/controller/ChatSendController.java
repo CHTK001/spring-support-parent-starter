@@ -42,10 +42,10 @@ public class ChatSendController {
     private final Map<String, Long> sessionDialogMap = new ConcurrentHashMap<>();
 
     /**
-    * 发送消息（非流式，异步触发模型对话并落库）。
-    * @param request 请求，不允许为 null
-    * @return 结果映射，无数据时为空映射
-    */
+     * 发送消息（非流式，异步触发模型对话并落库）。
+     * @param request 请求，不允许为 null
+     * @return 结果映射，无数据时为空映射
+     */
     @PostMapping("/send")
     public Map<String, Object> send(@RequestBody Map<String, Object> request) {
         log.info("[ChatSend] 收到消息: {}", request);

@@ -68,10 +68,10 @@ public class SocketServerRegistry {
     private long lastHeartbeat = System.currentTimeMillis(); // 最后一个心跳
 
     /**
-    * Socket服务端registry。
-    * @param redisTemplate redistemplate
-    * @param properties 属性
-    */
+     * Socket服务端registry。
+     * @param redisTemplate redistemplate
+     * @param properties 属性
+     */
     public SocketServerRegistry(RedisTemplate<String, Object> redisTemplate, SocketProperties properties) {
         this.redisTemplate = redisTemplate;
         this.properties = properties;

@@ -74,9 +74,9 @@ public class AiManufacturerController {
     @Operation(summary = "获取厂商列表")
     @GetMapping("list")
     /**
-    * 列表。
-    * @return 列表的结果
-    */
+     * 列表。
+     * @return 列表的结果
+     */
     public ReturnResult<?> list() {
         return ReturnResult.ok(aiManufacturerFacadeService.list());
     }

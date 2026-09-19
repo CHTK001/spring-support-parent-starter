@@ -159,9 +159,9 @@ class ConsoleRealTest {
     @Test
     void kvInjectedIntoEnvironment() {
         /**
-        * 断言equals。
-        * @param "from-sqlite" "从-sqlite"
-        * @param environment.getProperty("console.e2e.kv" 环境.获取财产("控制台.e2e.kv"
+         * 断言equals。
+         * @param "from-sqlite" "从-sqlite"
+         * @param environment.getProperty("console.e2e.kv" 环境.获取财产("控制台.e2e.kv"
          */
         assertEquals("from-sqlite", environment.getProperty("console.e2e.kv"),
                 "启动注入的键值应可经 Environment 读取（@Value/environment.getProperty）");
@@ -175,9 +175,9 @@ class ConsoleRealTest {
                         .param("value", "v1"))
                 .andExpect(status().is3xxRedirection());
         /**
-        * 断言equals。
-        * @param "v1" "v1"
-        * @param store.getKv("console.test.key" 存储.获取kv("控制台.测试.键"
+         * 断言equals。
+         * @param "v1" "v1"
+         * @param store.getKv("console.test.key" 存储.获取kv("控制台.测试.键"
          */
         assertEquals("v1", store.getKv("console.test.key"), "键值应写入 SQLite");
 

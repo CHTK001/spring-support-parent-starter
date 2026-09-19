@@ -279,8 +279,8 @@ class OsgiFrameworkApiRealTest {
         isolated.setOsgiLauncher(osgiLauncher);
         isolated.initialize();
         /**
-        * 断言false。
-        * @param isolated.isClosed( isolated.是否关闭(
+         * 断言false。
+         * @param isolated.isClosed( isolated.是否关闭(
          */
         assertFalse(isolated.isClosed(), "初始化后不应关闭");
 
@@ -318,8 +318,8 @@ class OsgiFrameworkApiRealTest {
     void frameworkStateQuery() throws Exception {
         long before = osgiLauncher.getBundleCount();
         /**
-        * 断言true。
-        * @param before 之前
+         * 断言true。
+         * @param before 之前
          */
         assertTrue(before > 0, "系统 bundle 存在，数量应 > 0，实际: " + before);
 
@@ -414,8 +414,8 @@ class OsgiFrameworkApiRealTest {
             File jar = buildBundleJar("ApiGreetV6", "api6", "6.0.0");
             OsgiBundle bundle = osgiLauncher.installBundle("file:" + jar.getAbsolutePath());
             /**
-            * 断言false。
-            * @param "ACTIVE".equals(bundle.getState( "活跃".equals(bundle.获取状态(
+             * 断言false。
+             * @param "ACTIVE".equals(bundle.getState( "活跃".equals(bundle.获取状态(
              */
             assertFalse("ACTIVE".equals(bundle.getState()), "autoStart=false 时不应自动启动，实际: " + bundle.getState());
             /**
@@ -447,9 +447,9 @@ class OsgiFrameworkApiRealTest {
         File jar = buildBundleJar("ApiGreetV7", "api7", "7.0.0");
         OsgiBundle bundle = osgiLauncher.installBundle("file:" + jar.getAbsolutePath());
         /**
-        * 断言equals。
-        * @param "ACTIVE" "活跃"
-        * @param bundle.getState( bundle.获取状态(
+         * 断言equals。
+         * @param "ACTIVE" "活跃"
+         * @param bundle.getState( bundle.获取状态(
          */
         assertEquals("ACTIVE", bundle.getState(), "安装后应为 ACTIVE");
 

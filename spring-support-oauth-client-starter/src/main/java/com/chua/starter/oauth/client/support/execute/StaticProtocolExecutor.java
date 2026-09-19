@@ -11,6 +11,8 @@ import com.chua.starter.oauth.client.support.algorithm.TokenCipher;
 import com.chua.starter.oauth.client.support.enums.AuthType;
 import com.chua.starter.oauth.client.support.enums.LogoutType;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
+import com.chua.starter.oauth.client.support.protocol.AbstractProtocol;
+import com.chua.starter.oauth.client.support.protocol.StaticProtocol;
 import com.chua.starter.oauth.client.support.runtime.OauthClientRuntimeContext;
 import com.chua.starter.oauth.client.support.user.LoginAuthResult;
 import com.chua.starter.oauth.client.support.user.UserResult;
@@ -57,6 +59,19 @@ public class StaticProtocolExecutor implements ProtocolExecutor {
         Cookie cookie = CookieUtil.get(RequestUtils.getRequest(), "x-oauth-cookie");
         if (null != cookie) {
             CookieUtil.remove(RequestUtils.getRequest(), ResponseUtils.getResponse(), "x-oauth-cookie");
+        }
+ // 强制下线：uid 是被踢用户标识，此时 userResult 是操作人自己的会话，不能吊销错令牌
+        if (logoutType == LogoutType.KICK) {
+            return StaticProtocol.kick(uid);
+        }
+ // 静态令牌自身无状态，必须登记进吊销名单，否则登出后旧令牌仍然可用
+        String token = null != userResult && StringUtils.isNotBlank(userResult.getToken())
+                ? userResult.getToken() : uid;
+        if (StringUtils.isNotBlank(token) && !"null".equals(token)) {
+            AbstractProtocol.revokeToken(token, null != userResult ? userResult.getExpireTime() : null);
+        }
+        if (logoutType == LogoutType.LOGOUT_ALL) {
+            AbstractProtocol.invalidateAllCache();
         }
         /**
     * login认证结果。

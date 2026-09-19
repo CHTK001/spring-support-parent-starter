@@ -19,6 +19,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -51,6 +52,15 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
     private static final String PROPERTY_SOURCE_NAME = "database-startup-config";
     /** Ops_源_前缀 */
     private static final String OPS_SOURCE_PREFIX = "ops-config-";
+
+    /**
+     * 旧库缺失的配置列：本类早期版本的建表语句未声明这些列，而模块脚本的
+     * {@code CREATE TABLE IF NOT EXISTS} 对已存在的表不生效，需在此补齐到 {@code SysSetting} 实体的形状。
+     */
+    private static final Map<String, String> SETTING_MISSING_COLUMNS = Map.of(
+            "sys_setting_code", "VARCHAR(255)",
+            "sys_setting_is_sensitive", "INT DEFAULT 0",
+            "sys_setting_validate", "VARCHAR(512)");
 
     /** 默认_群体 */
     private static final List<GroupDefinition> DEFAULT_GROUPS = List.of(
@@ -213,16 +223,60 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
     */
     private void ensureSettingTable(Connection connection) throws SQLException {
         if (tableExists(connection, SETTING_TABLE)) {
+            addMissingColumns(connection, SETTING_TABLE, SETTING_MISSING_COLUMNS);
             return;
         }
-        /**
-        * 尝试。
-        * @param connection.createStatement( connection.创建对账单(
-        */
         try (Statement statement = connection.createStatement()) {
             statement.execute(createSettingTableSql(connection));
         }
         log.info("[数据库配置]已创建配置表 {}", SETTING_TABLE);
+    }
+
+    /**
+    * 补齐表中缺失的列（逐列容错，单列失败不阻断启动）
+    *
+    * @param connection connection
+    * @param tableName table名称
+    * @param columns 列名 → 列定义片段
+    */
+    private void addMissingColumns(Connection connection, String tableName, Map<String, String> columns) throws SQLException {
+        List<String> existing = columnNames(connection, tableName);
+        for (Map.Entry<String, String> entry : columns.entrySet()) {
+            if (existing.contains(entry.getKey())) {
+                continue;
+            }
+            try (Statement statement = connection.createStatement()) {
+                statement.execute("ALTER TABLE " + tableName + " ADD COLUMN " + entry.getKey() + " " + entry.getValue());
+                log.info("[数据库配置]已补齐表 {} 缺失列 {}", tableName, entry.getKey());
+            } catch (SQLException e) {
+                log.warn("[数据库配置]补齐表 {} 缺失列 {} 失败: {}", tableName, entry.getKey(), e.getMessage());
+            }
+        }
+    }
+
+    /**
+    * 读取表的列名（小写），按 tableExists 同样的大小写候选逐一尝试
+    *
+    * @param connection connection
+    * @param tableName table名称
+    * @return 列名列表（小写）
+    */
+    private List<String> columnNames(Connection connection, String tableName) throws SQLException {
+        DatabaseMetaData metaData = connection.getMetaData();
+        String catalog = connection.getCatalog();
+        String schema = connection.getSchema();
+        List<String> columns = new ArrayList<>();
+        for (String candidate : List.of(tableName, tableName.toUpperCase(Locale.ROOT), tableName.toLowerCase(Locale.ROOT))) {
+            try (ResultSet resultSet = metaData.getColumns(catalog, schema, candidate, null)) {
+                while (resultSet.next()) {
+                    columns.add(resultSet.getString("COLUMN_NAME").toLowerCase(Locale.ROOT));
+                }
+            }
+            if (!columns.isEmpty()) {
+                return columns;
+            }
+        }
+        return columns;
     }
 
     /**
@@ -525,71 +579,28 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
         return """
                 CREATE TABLE IF NOT EXISTS sys_setting (
                     %s,
-                    /**
-                    * VARCHAR。
-                    * @param 255 255
-                    * @return VARCHAR的结果
-                    */
                     sys_setting_name VARCHAR(255),
-                    /**
-                    * VARCHAR。
-                    * @param 255 255
-                    * @return VARCHAR的结果
-                    */
+                    sys_setting_code VARCHAR(255),
                     sys_setting_value VARCHAR(255),
-                    /**
-                    * VARCHAR。
-                    * @param 255 255
-                    * @return VARCHAR的结果
-                    */
                     sys_setting_config VARCHAR(255),
-                    /**
-                    * VARCHAR。
-                    * @param 255 255
-                    * @return VARCHAR的结果
-                    */
                     sys_setting_remark VARCHAR(255),
                     sys_setting_sort INT,
                     sys_setting_version INT,
                     sys_setting_status INT,
                     sys_setting_admin INT,
-                    /**
-                    * VARCHAR。
-                    * @param 255 255
-                    * @return VARCHAR的结果
-                    */
                     sys_setting_value_type VARCHAR(255),
-                    /**
-                    * VARCHAR。
-                    * @param 255 255
-                    * @return VARCHAR的结果
-                    */
                     sys_setting_group VARCHAR(255),
                     sys_setting_collect INT,
                     sys_setting_in_system INT,
                     sys_setting_app_inner INT,
-                    /**
-                    * VARCHAR。
-                    * @param 255 255
-                    * @return VARCHAR的结果
-                    */
                     create_name VARCHAR(255),
                     create_by INT,
                     create_time TIMESTAMP,
-                    /**
-                    * VARCHAR。
-                    * @param 255 255
-                    * @return VARCHAR的结果
-                    */
                     update_name VARCHAR(255),
                     update_by INT,
                     update_time TIMESTAMP,
-                    /**
-                    * UNIQUE。
-                    * @param sys_setting_name syssetting名称
-                    * @param sys_setting_group syssetting群体
-                    * @return UNIQUE的结果
-                    */
+                    sys_setting_is_sensitive INT DEFAULT 0,
+                    sys_setting_validate VARCHAR(512),
                     CONSTRAINT uk_sys_setting_name_group UNIQUE (sys_setting_name, sys_setting_group)
                 )
                 """.formatted(idColumn);

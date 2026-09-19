@@ -21,6 +21,7 @@ import com.chua.starter.oauth.client.support.infomation.AuthenticationInformatio
 import com.chua.starter.oauth.client.support.infomation.Information;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
 import com.chua.starter.oauth.client.support.runtime.OauthClientRuntimeContext;
+import com.chua.starter.oauth.client.support.session.StaticSessionRegistry;
 import com.chua.starter.oauth.client.support.user.LoginAuthResult;
 import com.chua.starter.oauth.client.support.user.LoginResult;
 import com.chua.starter.oauth.client.support.user.UserResult;
@@ -105,6 +106,65 @@ public abstract class AbstractProtocol implements Protocol {
             CACHEABLE.clear();
             log.info("[OAuth客户端]已清除所有缓存");
         }
+    }
+
+    /** 令牌吊销名单键前缀 */
+    private static final String REVOKED_PREFIX = "oauth:revoked:";
+    /**
+    * 令牌吊销名单
+    * <p>与认证缓存分开存放：清除认证缓存(如全端登出)不得让已吊销令牌复活</p>
+    */
+    private static final CacheProvider REVOKED = CacheProvider.auto();
+    /** 秒级/毫秒级时间戳判定阈值 */
+    private static final long MILLIS_EPOCH_THRESHOLD = 100_000_000_000L;
+    /** 吊销名单兜底存活时间(秒)，与静态令牌最长有效期一致 */
+    private static final long REVOKE_FALLBACK_SECONDS = 7L * 24 * 60 * 60;
+
+    /**
+    * 吊销令牌：登记进吊销名单并清除该令牌的认证缓存
+    * <p>静态令牌自身无状态，必须依赖吊销名单才能在服务端提前失效</p>
+    *
+    * @param token      待吊销令牌
+    * @param expireTime 令牌过期时间(秒级或毫秒级时间戳)，可为空
+    */
+    public static void revokeToken(String token, Long expireTime) {
+        if (StringUtils.isBlank(token)) {
+            return;
+        }
+        revokeTokenHash(DigestUtils.sha256(token), expireTime);
+        invalidateCache(token);
+    }
+
+    /**
+    * 按令牌摘要吊销（强制下线时只持有摘要）
+    *
+    * @param tokenHash  令牌 SHA-256 摘要
+    * @param expireTime 令牌过期时间(秒级或毫秒级时间戳)，可为空
+    */
+    public static void revokeTokenHash(String tokenHash, Long expireTime) {
+        if (null == tokenHash) {
+            return;
+        }
+        long nowSeconds = System.currentTimeMillis() / 1000L;
+        long expiresAt = null == expireTime ? 0L
+                : (expireTime > MILLIS_EPOCH_THRESHOLD ? expireTime / 1000L : expireTime);
+        long seconds = expiresAt > nowSeconds ? expiresAt - nowSeconds : REVOKE_FALLBACK_SECONDS;
+        REVOKED.put(REVOKED_PREFIX + tokenHash, "1", seconds);
+        StaticSessionRegistry.getInstance().remove(tokenHash);
+        log.info("[OAuth客户端]令牌已吊销 - 摘要: {}", tokenHash.substring(0, Math.min(8, tokenHash.length())));
+    }
+
+    /**
+    * 令牌是否已被吊销
+    *
+    * @param token 待检查令牌
+    * @return 是否已吊销
+    */
+    public static boolean isTokenRevoked(String token) {
+        if (StringUtils.isBlank(token)) {
+            return false;
+        }
+        return null != REVOKED.get(REVOKED_PREFIX + DigestUtils.sha256(token), String.class);
     }
 
 

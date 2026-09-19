@@ -30,8 +30,9 @@ import java.util.Base64;
  * </p>
  *
  * <p>
- * 文件传输说明：WinRM 协议本身不提供文件传输能力，故上传采用
- * 「Base64 分块 + PowerShell 追加写入」实现，并对上传结果做字节数校验。
+ * 文件传输说明：WinRM 协议本身不提供文件传输能力，上传只能以「Base64 分块 + PowerShell 追加写入」
+ * 实现，并受单条命令行长上限约束，因此仅适用于配置/脚本这类小文件；
+ * 大文件（如 agent 包）必须由目标机经 HTTP 自行拉取，超过阈值本实现直接快速失败。
  * </p>
  *
  * @author CH
@@ -59,11 +60,20 @@ public class WindowsHostRemoteProvider implements HostRemoteProvider {
     /**
     * 单次上传分块字节数
     * <p>
-    * WinRM 单条命令有长度上限（默认 MaxEnvelopeSizekb 约 500KB），
-    * Base64 膨胀 4/3，取 24KB 原始字节 ≈ 32KB 文本，留有充足余量。
+    * 瓶颈不是 WinRM 报文额度，而是最终落到远端 cmd.exe 的命令行长（上限 8191 字符）：
+    * 脚本本身还要经 {@code -EncodedCommand} 再 Base64 一次，命令行按原始字节约 2.67 倍膨胀。
+    * 实测 6KB 块报「The command line is too long.」、12KB 块直接 SoapFault，故取 1536 字节。
     * </p>
     */
-    private static final int UPLOAD_CHUNK_BYTES = 24 * 1024;
+    private static final int UPLOAD_CHUNK_BYTES = 1536;
+
+    /**
+    * 分块上传可接受的文件大小上限（约 170 次往返）
+    * <p>
+    * 超过这个规模的文件必须由目标机自行 HTTP 拉取，不能靠命令行搬运。
+    * </p>
+    */
+    private static final long MAX_UPLOAD_BYTES = 256 * 1024L;
 
     /** 远端临时目录 */
     private static final String TEMP_DIR = "C:\\Windows\\Temp";
@@ -97,6 +107,11 @@ public class WindowsHostRemoteProvider implements HostRemoteProvider {
     @Override
     public RemoteExecResult upload(MsServerHost host, SshCredential credential, String remotePath, Path localFile) throws Exception {
         long localSize = Files.size(localFile);
+        if (localSize > MAX_UPLOAD_BYTES) {
+            // 上千次命令行往返不是「慢」而是必然超时，直接给出可执行的处置方式
+            throw new IllegalStateException("WinRM 通道不支持传输 " + localSize + " 字节的文件（上限 "
+                    + MAX_UPLOAD_BYTES + " 字节），请配置 monitor.agent.jar-url 让目标机自行下载");
+        }
         try (WinRmExecClient client = open(host, credential, 0)) {
             String parent = parentOf(remotePath);
             if (parent != null) {

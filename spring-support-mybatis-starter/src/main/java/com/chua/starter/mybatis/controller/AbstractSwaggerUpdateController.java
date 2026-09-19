@@ -41,14 +41,14 @@ public abstract class AbstractSwaggerUpdateController<S extends IService<T>, T> 
     protected TransactionTemplate transactionTemplate;
 
     /**
-    * 根据主键删除数据
-    *
-    * @param id 页码
-    * @return 分页结果
-    * @param "主键" "主键"
-    * @param "主键" "主键"
-    * @param "主键" "主键"
-    */
+     * 根据主键删除数据
+     *
+     * @param id 页码
+     * @return 分页结果
+     * @param "主键" "主键"
+     * @param "主键" "主键"
+     * @param "主键" "主键"
+     */
     @ResponseBody
     @Operation(summary = "删除数据")
     @DeleteMapping("delete")

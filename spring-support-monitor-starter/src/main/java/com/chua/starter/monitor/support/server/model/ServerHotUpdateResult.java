@@ -44,10 +44,10 @@ public class ServerHotUpdateResult {
     private String message;
 
     /**
-    * 追加一条生效项。
-    *
-    * @param item 生效项描述
-    */
+     * 追加一条生效项。
+     *
+     * @param item 生效项描述
+     */
     public void addAppliedItem(String item) {
         if (appliedItems == null) {
             appliedItems = new ArrayList<>();

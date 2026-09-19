@@ -372,6 +372,10 @@ public interface Protocol {
         */
         private Long loginTime;
         /**
+        * 最后访问时间（时间戳）
+        */
+        private Long lastAccessTime;
+        /**
         * 令牌
         */
         private String token;

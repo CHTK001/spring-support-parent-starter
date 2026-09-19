@@ -122,7 +122,7 @@ public class DemoJobs {
     }
 
     /**
-    * 生命周期 初始化 钩子 (无参)。
+     * 生命周期 初始化 钩子 (无参)。
      */
     public void lifecycleInit() {
         log.info("[example] lifecycle init 钩子被调用");

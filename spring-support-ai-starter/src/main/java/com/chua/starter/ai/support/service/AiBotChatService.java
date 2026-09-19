@@ -432,9 +432,9 @@ public class AiBotChatService {
      * @return 命令列表（prefix / 名称 / description）
      * @param commands 命令
      /**
-    * 列表命令。
-    * @return 列表命令的结果
-    */
+      * 列表命令。
+      * @return 列表命令的结果
+      */
     public List<Map<String, Object>> listCommands() {
         List<Map<String, Object>> commands = new ArrayList<>(8); // 命令数量不可预估
         addCommand(commands, "/", "reset", "清空当前会话上下文");

@@ -7,6 +7,7 @@ import com.chua.starter.project.support.entity.MsProjectDeployLog;
 import com.chua.starter.project.support.entity.MsProjectUploadArchive;
 import com.chua.starter.project.support.service.DeployService;
 import com.chua.starter.project.support.service.ProjectAiScriptService;
+import com.chua.starter.project.support.service.ProjectLogStreamService;
 import com.chua.starter.project.support.service.ProjectMetricService;
 import com.chua.starter.project.support.service.ProjectService;
 import com.chua.starter.project.support.service.WatchdogService;
@@ -47,6 +48,9 @@ public class ProjectController {
 
     /** 部署操作服务 */
     private final DeployService deployService;
+
+    /** 实时日志流服务 */
+    private final ProjectLogStreamService logStreamService;
 
     /** AI 脚本生成服务 */
     private final ProjectAiScriptService aiScriptService;
@@ -259,6 +263,10 @@ public class ProjectController {
 
     /**
     * 实时查看项目日志（tail）
+    * <p>
+    * 降级通道：socket 推送不可用时前端轮询它。游标为日志文件的绝对字节偏移，
+    * 由远程 provider 用 {@code wc -c} 标定，因此增量读取不会重复已展示的内容。
+    * </p>
     *
     * @param id     项目 标识
     * @param hostId 目标主机 标识
@@ -272,7 +280,43 @@ public class ProjectController {
                                                      @RequestParam Long hostId,
                                                      @RequestParam(required = false) Long cursor,
                                                      @RequestParam(required = false) Integer lines) {
-        return deployService.tailLog(id, hostId, cursor, lines);
+        return logStreamService.readOnce(id, hostId, cursor, lines);
+    }
+
+    /**
+    * 订阅项目实时日志推送
+    * <p>
+    * 后端按 projectId+hostId 维护一条共享采集流并经 socket 广播，多个观察者共用；
+    * 前端需周期性重复调用续订（心跳），超时未续订的观察者会被剔除。
+    * </p>
+    *
+    * @param id           项目 标识
+    * @param hostId       目标主机 标识
+    * @param subscriberId 观察者标识（同一日志窗口复用，可为空）
+    * @return 流信息（采集间隔、续订超时、观察者数）
+    */
+    @Operation(summary = "订阅项目实时日志")
+    @PostMapping("/{id}/log/subscribe")
+    public ReturnResult<Map<String, Object>> subscribeLog(@PathVariable Long id,
+                                                          @RequestParam Long hostId,
+                                                          @RequestParam(required = false) String subscriberId) {
+        return logStreamService.subscribe(id, hostId, subscriberId);
+    }
+
+    /**
+    * 取消项目实时日志订阅（幂等；最后一个观察者退订时停止采集）
+    *
+    * @param id           项目 标识
+    * @param hostId       目标主机 标识
+    * @param subscriberId 观察者标识
+    * @return 是否已停止采集与剩余观察者数
+    */
+    @Operation(summary = "取消项目实时日志订阅")
+    @PostMapping("/{id}/log/unsubscribe")
+    public ReturnResult<Map<String, Object>> unsubscribeLog(@PathVariable Long id,
+                                                            @RequestParam Long hostId,
+                                                            @RequestParam(required = false) String subscriberId) {
+        return logStreamService.unsubscribe(id, hostId, subscriberId);
     }
 
     /**

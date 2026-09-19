@@ -40,10 +40,10 @@ public class LocalSystemInfoService {
     private volatile SystemInfo si;
 
     /**
-    * 懒加载并缓存 OSHI {@link SystemInfo} 实例（双重检查锁）。
-    *
-    * @return SystemInfo 实例；初始化失败时返回 null
-    */
+     * 懒加载并缓存 OSHI {@link SystemInfo} 实例（双重检查锁）。
+     *
+     * @return SystemInfo 实例；初始化失败时返回 null
+     */
     private SystemInfo getSi() {
         if (si == null) {
             synchronized (this) {

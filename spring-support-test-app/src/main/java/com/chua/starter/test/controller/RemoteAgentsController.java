@@ -35,9 +35,9 @@ public class RemoteAgentsController {
     private final ObjectMapper objectMapper = new ObjectMapper(); // 对象映射器
 
     /**
-    * 读取被控端列表。
-    *
-    * @return 被控端列表（无则空数组）
+     * 读取被控端列表。
+     *
+     * @return 被控端列表（无则空数组）
      */
     @GetMapping
     public List<Map<String, Object>> list() throws IOException {

@@ -30,7 +30,7 @@ class UebaControllerRealTest {
     private MockMvc mockMvc; // mockmvc
 
     /**
-    * 正常 获取 /索引 请求应返回 NORMAL 或低风险等级。
+     * 正常 获取 /索引 请求应返回 NORMAL 或低风险等级。
      */
     @Test
     void analyzeNormalEvent() throws Exception {

@@ -51,8 +51,8 @@ class OsgiDisabledRealTest {
     @Test
     void osgiBeansNotProvisionedWhenDisabled() {
         /**
-        * 断言空。
-        * @param osgiLauncherProvider.getIfAvailable( osgilauncher提供者.获取if可用(
+         * 断言空。
+         * @param osgiLauncherProvider.getIfAvailable( osgilauncher提供者.获取if可用(
          */
         assertNull(osgiLauncherProvider.getIfAvailable(),
                 "plugin.osgi.enabled=false 时不应装配 FelixOsgiLauncher");
@@ -74,8 +74,8 @@ class OsgiDisabledRealTest {
     @Test
     void noOsgiBeanBridgedInObjectContext() {
         /**
-        * 断言true。
-        * @param objectContext.getBeanOfTypeCollection(FelixOsgiLauncher.class 对象上下文.获取Bean的类型集合(felixosgilauncher.类
+         * 断言true。
+         * @param objectContext.getBeanOfTypeCollection(FelixOsgiLauncher.class 对象上下文.获取Bean的类型集合(felixosgilauncher.类
          */
         assertTrue(objectContext.getBeanOfTypeCollection(FelixOsgiLauncher.class).isEmpty(),
                 "ObjectContext 不应桥接 FelixOsgiLauncher");

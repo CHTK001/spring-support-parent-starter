@@ -139,7 +139,8 @@ public class AiSessionController {
     @GetMapping("/{id}/messages")
     public ReturnResult<Map<String, Object>> messages(
             @PathVariable("id") String id,
-            @RequestParam(required = false) Integer limit) {
+            @RequestParam(required = false) Integer limit,
+            @RequestParam(required = false) String beforeMessageId) {
 
         log.info("[Messages] Loading messages for sessionId: {}", id);
         Long sessionId;
@@ -180,6 +181,13 @@ public class AiSessionController {
         log.info("[Messages] Querying messages for sessionId (Long): {}", sessionId);
         LambdaQueryWrapper<SysAiMessage> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(SysAiMessage::getSysAiSessionId, sessionId);
+        
+        // 如果有 beforeMessageId，查询该消息之前的消息
+        if (beforeMessageId != null && beforeMessageId.matches("\\d+")) {
+            Long beforeId = Long.parseLong(beforeMessageId);
+            wrapper.lt(SysAiMessage::getId, beforeId);
+        }
+        
         wrapper.orderByDesc(SysAiMessage::getCreateTime);
         if (limit != null) {
             wrapper.last("LIMIT " + limit);
@@ -216,16 +224,33 @@ public class AiSessionController {
             content.put("id", String.valueOf(msg.getId()));
             content.put("content", msg.getContent());
             content.put("state", Map.of("isStreaming", false));
+            // 在 content 级别也添加 metadata，包含 usage
+            Map<String, Object> contentMetadata = new HashMap<>();
+            if ("assistant".equals(msg.getRole())) {
+                Map<String, Object> usage = new HashMap<>();
+                usage.put("promptTokens", msg.getPromptTokens());
+                usage.put("completionTokens", msg.getCompletionTokens());
+                usage.put("totalTokens", msg.getTotalTokens());
+                contentMetadata.put("usage", usage);
+            }
+            content.put("metadata", contentMetadata);
             contents.add(content);
             item.put("contents", contents);
             
             item.put("state", Map.of("isStreaming", false));
             item.put("createdAt", msg.getCreateTime());
             
-            // 添加 metadata，包含模型信息
+            // 添加 metadata，包含模型信息和 token 使用量
             Map<String, Object> metadata = new HashMap<>();
+            if ("assistant".equals(msg.getRole()) && msg.getModelName() != null) {
+                metadata.put("modelName", msg.getModelName());
+            }
             if ("assistant".equals(msg.getRole())) {
-                metadata.put("modelName", "agnes-2.5-flash");
+                Map<String, Object> usage = new HashMap<>();
+                usage.put("promptTokens", msg.getPromptTokens());
+                usage.put("completionTokens", msg.getCompletionTokens());
+                usage.put("totalTokens", msg.getTotalTokens());
+                metadata.put("usage", usage);
             }
             item.put("metadata", metadata);
             items.add(item);
@@ -244,16 +269,28 @@ public class AiSessionController {
     */
     @GetMapping("/{id}")
     public ReturnResult<Map<String, Object>> detail(@PathVariable("id") String id) {
-        Map<String, Object> session = new HashMap<>();
-        session.put("id", id);
-        session.put("title", "会话 " + id);
-        session.put("roleId", "");
-        session.put("model", "agnes-2.5-flash");
-        session.put("modelId", "1789547286889");
-        session.put("settings", new HashMap<>());
-        session.put("createdAt", System.currentTimeMillis());
-        session.put("updatedAt", System.currentTimeMillis());
-        return ReturnResult.ok(session);
+        Long sessionId = Long.parseLong(id);
+        SysAiSession session = sessionMapper.selectById(sessionId);
+        
+        Map<String, Object> result = new HashMap<>();
+        result.put("id", String.valueOf(sessionId));
+        
+        if (session != null) {
+            result.put("title", session.getTitle());
+            result.put("modelId", session.getModelId());
+            result.put("groupId", session.getSysAiModuleCode());
+            result.put("createdAt", session.getCreateTime() != null ? session.getCreateTime().atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli() : System.currentTimeMillis());
+            result.put("updatedAt", session.getUpdateTime() != null ? session.getUpdateTime().atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli() : System.currentTimeMillis());
+        } else {
+            result.put("title", "会话 " + id);
+            result.put("modelId", null);
+            result.put("groupId", null);
+            result.put("createdAt", System.currentTimeMillis());
+            result.put("updatedAt", System.currentTimeMillis());
+        }
+        
+        result.put("settings", new HashMap<>());
+        return ReturnResult.ok(result);
     }
 
     /**
@@ -290,6 +327,16 @@ public class AiSessionController {
             }
         }
         
+        // 更新模型ID
+        if (body.containsKey("modelId")) {
+            Object modelId = body.get("modelId");
+            if (modelId != null && !"null".equals(modelId.toString())) {
+                session.setModelId(modelId.toString());
+            } else {
+                session.setModelId(null);
+            }
+        }
+        
         session.setUpdateTime(LocalDateTime.now());
         sessionMapper.updateById(session);
         
@@ -298,6 +345,7 @@ public class AiSessionController {
         result.put("id", String.valueOf(session.getId()));
         result.put("title", session.getTitle());
         result.put("groupId", session.getSysAiModuleCode());
+        result.put("modelId", session.getModelId());
         return ReturnResult.ok(result);
     }
 
@@ -309,23 +357,33 @@ public class AiSessionController {
      */
     @PostMapping
     public ReturnResult<Map<String, Object>> create(@RequestBody Map<String, Object> body) {
-        String sessionId = UUID.randomUUID().toString();
         String title = body.getOrDefault("title", "新会话").toString();
         String roleId = body.getOrDefault("roleId", "").toString();
-        String model = body.getOrDefault("model", "").toString();
+        String modelId = body.getOrDefault("modelId", "").toString();
 
-        Map<String, Object> session = new HashMap<>();
-        session.put("id", sessionId);
-        session.put("title", title);
-        session.put("roleId", roleId);
-        session.put("model", model);
-        session.put("modelId", "1789547286889");
-        session.put("settings", new HashMap<>());
-        session.put("createdAt", System.currentTimeMillis());
-        session.put("updatedAt", System.currentTimeMillis());
+        // 真正保存到数据库
+        SysAiSession session = new SysAiSession();
+        session.setTitle(title);
+        session.setSysAiModuleCode(null);
+        session.setModelId(modelId);
+        session.setSysUserId("1"); // 默认用户ID
+        session.setCreateTime(LocalDateTime.now());
+        session.setUpdateTime(LocalDateTime.now());
+        session.setStatus(1);
+        session.setIsArchived(false);
+        sessionMapper.insert(session);
 
-        log.info("[Session] 创建会话: id={}, title={}", sessionId, title);
-        return ReturnResult.ok(session);
+        Map<String, Object> result = new HashMap<>();
+        result.put("id", String.valueOf(session.getId()));
+        result.put("title", session.getTitle());
+        result.put("groupId", session.getSysAiModuleCode());
+        result.put("modelId", session.getModelId());
+        result.put("settings", new HashMap<>());
+        result.put("createdAt", session.getCreateTime().atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli());
+        result.put("updatedAt", session.getUpdateTime().atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli());
+
+        log.info("[Session] 创建会话: id={}, title={}", session.getId(), title);
+        return ReturnResult.ok(result);
     }
 
     /**
@@ -336,7 +394,42 @@ public class AiSessionController {
     @DeleteMapping("/messages/{messageId}")
     public ReturnResult<Map<String, Object>> deleteMessage(@PathVariable("messageId") String messageId) {
         Long mid = Long.parseLong(messageId);
-        messageMapper.deleteById(mid);
+        
+        // 先查询这条消息
+        SysAiMessage message = messageMapper.selectById(mid);
+        if (message != null) {
+            // 如果是用户消息，同时删除对应的 AI 回复（通过 parent_id 关联）
+            if ("user".equals(message.getRole())) {
+                LambdaQueryWrapper<SysAiMessage> assistantWrapper = new LambdaQueryWrapper<>();
+                assistantWrapper.eq(SysAiMessage::getParentId, mid);
+                messageMapper.delete(assistantWrapper);
+            }
+            // 删除消息本身
+            messageMapper.deleteById(mid);
+        }
+        
+        Map<String, Object> result = new HashMap<>();
+        result.put("success", true);
+        return ReturnResult.ok(result);
+    }
+
+    /**
+     * 更新消息内容
+     * @param messageId 消息ID，不允许为 null
+     * @param body 请求体，包含 content 字段
+     * @return ReturnResult 对象
+     */
+    @PutMapping("/messages/{messageId}")
+    public ReturnResult<Map<String, Object>> updateMessage(
+            @PathVariable("messageId") String messageId,
+            @RequestBody Map<String, Object> body) {
+        Long mid = Long.parseLong(messageId);
+        String content = (String) body.get("content");
+        SysAiMessage message = messageMapper.selectById(mid);
+        if (message != null) {
+            message.setContent(content);
+            messageMapper.updateById(message);
+        }
         Map<String, Object> result = new HashMap<>();
         result.put("success", true);
         return ReturnResult.ok(result);
