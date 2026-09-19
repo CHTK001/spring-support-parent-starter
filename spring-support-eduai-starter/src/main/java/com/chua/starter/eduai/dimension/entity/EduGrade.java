@@ -47,4 +47,10 @@ public class EduGrade {
      * 创建时间
     */
     private LocalDateTime createTime;
+
+    /**
+     * 归属用户 ID（服务端按登录态写入，客户端不可指定）
+     */
+    @TableField("grade_owner_user_id")
+    private String ownerUserId;
 }

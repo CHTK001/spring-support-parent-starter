@@ -11,6 +11,7 @@ import com.chua.starter.eduai.model.EduQuestion;
 import com.chua.starter.eduai.model.dto.QuestionQueryDTO;
 import com.chua.starter.eduai.model.dto.QuestionSaveDTO;
 import com.chua.starter.eduai.service.IEduQuestionService;
+import com.chua.starter.eduai.support.util.EduUserContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -70,6 +71,8 @@ public class EduQuestionServiceImpl extends ServiceImpl<EduQuestionMapper, EduQu
         if (query.getStatus() != null) {
             wrapper.eq(EduQuestion::getQuestionStatus, query.getStatus());
         }
+        // 归属隔离：非管理员只看到自己的题
+        EduUserContext.scopeOwned(wrapper, EduQuestion::getOwnerUserId);
 
         // 默认按创建时间倒序
         wrapper.orderByDesc(EduQuestion::getQuestionCreateTime);
@@ -113,14 +116,25 @@ public class EduQuestionServiceImpl extends ServiceImpl<EduQuestionMapper, EduQu
         entity.setQuestionStatus(dto.getQuestionStatus() != null ? dto.getQuestionStatus() : 1);
 
         if (dto.getQuestionId() != null && dto.getQuestionId() > 0) {
-            // 更新
+            // 更新：归属校验后锁定为原归属，客户端传值无效
+            EduQuestion exists = baseMapper.selectById(dto.getQuestionId());
+            if (exists == null) {
+                throw new BusinessException("题目不存在");
+            }
+            EduUserContext.checkWritable(exists.getOwnerUserId());
+            entity.setOwnerUserId(exists.getOwnerUserId());
             entity.setQuestionId(dto.getQuestionId());
             entity.setQuestionUpdateTime(LocalDateTime.now());
             baseMapper.updateById(entity);
             log.info("更新题目成功，ID: {}", dto.getQuestionId());
             return dto.getQuestionId();
         } else {
-            // 新增
+            // 新增：请求线程以登录态为准；异步链路（采集）继承任务归属，二者皆无则拒绝
+            String owner = EduUserContext.currentUserId();
+            if (!StringUtils.hasText(owner)) {
+                owner = StringUtils.hasText(dto.getOwnerUserId()) ? dto.getOwnerUserId() : EduUserContext.requireUserId();
+            }
+            entity.setOwnerUserId(owner);
             entity.setQuestionUseCount(0);
             entity.setQuestionCreateTime(LocalDateTime.now());
             entity.setQuestionUpdateTime(LocalDateTime.now());
@@ -174,6 +188,7 @@ public class EduQuestionServiceImpl extends ServiceImpl<EduQuestionMapper, EduQu
              */
             throw new BusinessException("题目不存在");
         }
+        EduUserContext.checkWritable(entity.getOwnerUserId());
         // 逻辑删除：将状态置为0
         entity.setQuestionStatus(0);
         entity.setQuestionUpdateTime(LocalDateTime.now());

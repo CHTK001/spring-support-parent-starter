@@ -8,6 +8,8 @@
 -- 知识点表
 -- ----------------------------
 CREATE TABLE IF NOT EXISTS edu_knowledge_point (
+    knowledge_point_owner_user_id VARCHAR(64) COMMENT '归属用户 ID',
+    KEY edu_knowledge_point_owner (knowledge_point_owner_user_id),
     knowledge_point_id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '知识点ID',
     knowledge_point_name VARCHAR(200) NOT NULL COMMENT '知识点名称',
     knowledge_point_code VARCHAR(100) COMMENT '知识点编码',
@@ -33,6 +35,8 @@ CREATE TABLE IF NOT EXISTS edu_knowledge_point (
 -- 题目库表
 -- ----------------------------
 CREATE TABLE IF NOT EXISTS edu_question (
+    question_owner_user_id VARCHAR(64) COMMENT '归属用户 ID',
+    KEY edu_question_owner (question_owner_user_id),
     question_id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '题目ID',
     question_type VARCHAR(30) NOT NULL COMMENT '题型: SINGLE_CHOICE/MULTIPLE_CHOICE/JUDGE/FILL/BLANK/SHORT_ANSWER/ESSAY',
     question_subject VARCHAR(50) NOT NULL COMMENT '学科',
@@ -70,6 +74,8 @@ CREATE TABLE IF NOT EXISTS edu_question (
 -- 试卷表
 -- ----------------------------
 CREATE TABLE IF NOT EXISTS edu_paper (
+    paper_owner_user_id VARCHAR(64) COMMENT '归属用户 ID',
+    KEY edu_paper_owner (paper_owner_user_id),
     paper_id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '试卷ID',
     paper_name VARCHAR(200) NOT NULL COMMENT '试卷名称',
     paper_subject VARCHAR(50) NOT NULL COMMENT '学科',
@@ -94,6 +100,8 @@ CREATE TABLE IF NOT EXISTS edu_paper (
 -- 试卷-题目关联表
 -- ----------------------------
 CREATE TABLE IF NOT EXISTS edu_paper_question (
+    paper_question_owner_user_id VARCHAR(64) COMMENT '归属用户 ID',
+    KEY edu_paper_question_owner (paper_question_owner_user_id),
     paper_question_id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '关联ID',
     paper_question_paper_id BIGINT NOT NULL COMMENT '试卷ID',
     paper_question_question_id BIGINT NOT NULL COMMENT '题目ID',
@@ -109,6 +117,8 @@ CREATE TABLE IF NOT EXISTS edu_paper_question (
 -- 考试表
 -- ----------------------------
 CREATE TABLE IF NOT EXISTS edu_exam (
+    exam_owner_user_id VARCHAR(64) COMMENT '归属用户 ID',
+    KEY edu_exam_owner (exam_owner_user_id),
     exam_id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '考试ID',
     exam_paper_id BIGINT NOT NULL COMMENT '试卷ID',
     exam_name VARCHAR(200) NOT NULL COMMENT '考试名称',
@@ -130,6 +140,8 @@ CREATE TABLE IF NOT EXISTS edu_exam (
 -- 答题卡表
 -- ----------------------------
 CREATE TABLE IF NOT EXISTS edu_answer_sheet (
+    answer_sheet_owner_user_id VARCHAR(64) COMMENT '归属用户 ID',
+    KEY edu_answer_sheet_owner (answer_sheet_owner_user_id),
     answer_sheet_id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '答题卡ID',
     answer_sheet_exam_id BIGINT NOT NULL COMMENT '考试ID',
     answer_sheet_student_id VARCHAR(64) NOT NULL COMMENT '学生ID',
@@ -147,6 +159,8 @@ CREATE TABLE IF NOT EXISTS edu_answer_sheet (
 -- 阅卷结果表
 -- ----------------------------
 CREATE TABLE IF NOT EXISTS edu_marking_result (
+    marking_result_owner_user_id VARCHAR(64) COMMENT '归属用户 ID',
+    KEY edu_marking_result_owner (marking_result_owner_user_id),
     marking_result_id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '阅卷结果ID',
     marking_result_answer_sheet_id BIGINT NOT NULL COMMENT '答题卡ID',
     marking_result_question_id BIGINT NOT NULL COMMENT '题目ID',
@@ -170,6 +184,8 @@ CREATE TABLE IF NOT EXISTS edu_marking_result (
 -- 错题记录表
 -- ----------------------------
 CREATE TABLE IF NOT EXISTS edu_wrong_question (
+    wrong_question_owner_user_id VARCHAR(64) COMMENT '归属用户 ID',
+    KEY edu_wrong_question_owner (wrong_question_owner_user_id),
     wrong_question_id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '错题记录ID',
     wrong_question_student_id VARCHAR(64) NOT NULL COMMENT '学生ID',
     wrong_question_question_id BIGINT NOT NULL COMMENT '题目ID',
@@ -192,6 +208,8 @@ CREATE TABLE IF NOT EXISTS edu_wrong_question (
 -- 知识库文档表
 -- ----------------------------
 CREATE TABLE IF NOT EXISTS edu_knowledge_doc (
+    knowledge_doc_owner_user_id VARCHAR(64) COMMENT '归属用户 ID',
+    KEY edu_knowledge_doc_owner (knowledge_doc_owner_user_id),
     knowledge_doc_id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '文档ID',
     knowledge_doc_name VARCHAR(200) NOT NULL COMMENT '文档名称',
     knowledge_doc_type VARCHAR(50) NOT NULL COMMENT '文档类型: PDF/WORD/TXT/MARKDOWN',
@@ -218,6 +236,8 @@ CREATE TABLE IF NOT EXISTS edu_knowledge_doc (
 -- 学科表
 -- ----------------------------
 CREATE TABLE IF NOT EXISTS edu_subject (
+    subject_owner_user_id VARCHAR(64) COMMENT '归属用户 ID',
+    KEY edu_subject_owner (subject_owner_user_id),
     subject_id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '学科ID',
     subject_code VARCHAR(64) NOT NULL COMMENT '学科编码',
     subject_name VARCHAR(100) NOT NULL COMMENT '学科名',
@@ -233,6 +253,8 @@ CREATE TABLE IF NOT EXISTS edu_subject (
 -- 年级表
 -- ----------------------------
 CREATE TABLE IF NOT EXISTS edu_grade (
+    grade_owner_user_id VARCHAR(64) COMMENT '归属用户 ID',
+    KEY edu_grade_owner (grade_owner_user_id),
     grade_id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '年级ID',
     grade_level VARCHAR(20) NOT NULL COMMENT '学段 PRIMARY/JUNIOR/SENIOR/UNIVERSITY',
     grade_name VARCHAR(20) NOT NULL COMMENT '年级名 1-12 或 大一-大四',
@@ -245,6 +267,8 @@ CREATE TABLE IF NOT EXISTS edu_grade (
 -- 班级表
 -- ----------------------------
 CREATE TABLE IF NOT EXISTS edu_class (
+    class_owner_user_id VARCHAR(64) COMMENT '归属用户 ID',
+    KEY edu_class_owner (class_owner_user_id),
     class_id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '班级ID',
     class_code VARCHAR(64) NOT NULL COMMENT '班级编码',
     class_name VARCHAR(100) NOT NULL COMMENT '班级名',
@@ -262,6 +286,8 @@ CREATE TABLE IF NOT EXISTS edu_class (
 -- 学生表
 -- ----------------------------
 CREATE TABLE IF NOT EXISTS edu_student (
+    student_owner_user_id VARCHAR(64) COMMENT '归属用户 ID',
+    KEY edu_student_owner (student_owner_user_id),
     student_id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '学生ID',
     student_user_id BIGINT COMMENT '关联系统 userId',
     student_no VARCHAR(64) NOT NULL COMMENT '学号',
@@ -282,6 +308,8 @@ CREATE TABLE IF NOT EXISTS edu_student (
 -- 教师表
 -- ----------------------------
 CREATE TABLE IF NOT EXISTS edu_teacher (
+    teacher_owner_user_id VARCHAR(64) COMMENT '归属用户 ID',
+    KEY edu_teacher_owner (teacher_owner_user_id),
     teacher_id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '教师ID',
     teacher_user_id BIGINT COMMENT '关联系统 userId',
     teacher_no VARCHAR(64) NOT NULL COMMENT '工号',
@@ -299,6 +327,8 @@ CREATE TABLE IF NOT EXISTS edu_teacher (
 -- 趣味模块配置表
 -- ----------------------------
 CREATE TABLE IF NOT EXISTS edu_fun_config (
+    fun_config_owner_user_id VARCHAR(64) COMMENT '归属用户 ID',
+    KEY edu_fun_config_owner (fun_config_owner_user_id),
     config_id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '配置ID',
     module_code VARCHAR(64) NOT NULL COMMENT '模块编码: INSECT/IDIOM/IDIOM_GAME',
     module_name VARCHAR(100) COMMENT '模块名称',
@@ -317,6 +347,8 @@ CREATE TABLE IF NOT EXISTS edu_fun_config (
 -- 成语表
 -- ----------------------------
 CREATE TABLE IF NOT EXISTS edu_idiom (
+    idiom_owner_user_id VARCHAR(64) COMMENT '归属用户 ID',
+    KEY edu_idiom_owner (idiom_owner_user_id),
     idiom_id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '成语ID',
     idiom_content VARCHAR(64) NOT NULL COMMENT '成语内容',
     idiom_pinyin VARCHAR(255) COMMENT '拼音',
@@ -337,6 +369,8 @@ CREATE TABLE IF NOT EXISTS edu_idiom (
 -- 成语学段映射表
 -- ----------------------------
 CREATE TABLE IF NOT EXISTS edu_idiom_grade (
+    idiom_grade_owner_user_id VARCHAR(64) COMMENT '归属用户 ID',
+    KEY edu_idiom_grade_owner (idiom_grade_owner_user_id),
     map_id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '映射ID',
     idiom_id BIGINT NOT NULL COMMENT '成语ID',
     grade_level VARCHAR(20) COMMENT '学段: PRIMARY/JUNIOR/SENIOR',
@@ -347,6 +381,58 @@ CREATE TABLE IF NOT EXISTS edu_idiom_grade (
     KEY edu_idiom_grade_idiom (idiom_id),
     KEY edu_idiom_grade_level (grade_level)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='成语学段映射表';
+
+-- ----------------------------
+-- 题库采集任务表
+-- ----------------------------
+CREATE TABLE IF NOT EXISTS edu_collect_task (
+    collect_task_owner_user_id VARCHAR(64) COMMENT '归属用户 ID',
+    KEY edu_collect_task_owner (collect_task_owner_user_id),
+    collect_task_id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '采集任务ID',
+    collect_task_name VARCHAR(100) NOT NULL COMMENT '任务名称',
+    collect_task_source_type VARCHAR(50) NOT NULL COMMENT '来源类型(即SPI Provider type): TEXT/URL/API/FILE 或第三方扩展',
+    collect_task_source_config TEXT COMMENT '来源配置（JSON: {text}/{url}/{apiUrl,method}/{path}，含义由Provider解析）',
+    collect_task_subject VARCHAR(50) COMMENT '学科（落题默认值）',
+    collect_task_grade_level VARCHAR(20) COMMENT '学段: PRIMARY/JUNIOR/SENIOR/UNIVERSITY',
+    collect_task_grade VARCHAR(20) COMMENT '年级',
+    collect_task_difficulty TINYINT DEFAULT 3 COMMENT '难度: 1-5',
+    collect_task_cron VARCHAR(50) COMMENT '定时Cron（Spring 6，留空使用 plugin.eduai.collect.default-cron）',
+    collect_task_next_run_time DATETIME COMMENT '下次执行时间（调度器扫描依据）',
+    collect_task_status TINYINT DEFAULT 1 COMMENT '状态: 0-禁用 1-启用',
+    collect_task_remark VARCHAR(500) COMMENT '备注',
+    collect_task_total_count INT DEFAULT 0 COMMENT '累计采集题数',
+    collect_task_last_run_time DATETIME COMMENT '最近执行时间',
+    collect_task_last_run_status TINYINT COMMENT '最近执行结果: 0-失败 1-成功',
+    collect_task_last_run_count INT COMMENT '最近执行采集题数',
+    collect_task_create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    collect_task_update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    collect_task_create_by VARCHAR(64) COMMENT '创建人',
+    collect_task_update_by VARCHAR(64) COMMENT '更新人',
+    KEY edu_collect_task_status (collect_task_status),
+    KEY edu_collect_task_next_run_time (collect_task_next_run_time),
+    KEY edu_collect_task_source_type (collect_task_source_type)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='题库采集任务表';
+
+-- ----------------------------
+-- 题库采集执行日志表
+-- ----------------------------
+CREATE TABLE IF NOT EXISTS edu_collect_log (
+    collect_log_owner_user_id VARCHAR(64) COMMENT '归属用户 ID',
+    KEY edu_collect_log_owner (collect_log_owner_user_id),
+    collect_log_id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '日志ID',
+    collect_log_task_id BIGINT NOT NULL COMMENT '采集任务ID',
+    collect_log_task_name VARCHAR(100) COMMENT '任务名称快照',
+    collect_log_trigger_type VARCHAR(10) DEFAULT 'AUTO' COMMENT '触发方式: AUTO-定时 MANUAL-手动',
+    collect_log_source_type VARCHAR(50) COMMENT '来源类型快照',
+    collect_log_status TINYINT DEFAULT 0 COMMENT '执行状态: 0-执行中 1-成功 2-失败',
+    collect_log_question_count INT DEFAULT 0 COMMENT '本次采集入库题数',
+    collect_log_error_msg VARCHAR(2000) COMMENT '失败原因',
+    collect_log_start_time DATETIME COMMENT '开始时间',
+    collect_log_end_time DATETIME COMMENT '结束时间',
+    collect_log_create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    KEY edu_collect_log_task_id (collect_log_task_id),
+    KEY edu_collect_log_status (collect_log_status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='题库采集执行日志表';
 
 -- ----------------------------
 -- 初始数据 (种子)

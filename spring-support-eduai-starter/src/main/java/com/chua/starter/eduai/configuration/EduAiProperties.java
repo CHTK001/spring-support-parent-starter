@@ -25,9 +25,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *       model: gpt-3.5-turbo
  *       temperature: 0.3
  *       enabled: true              # 关闭后回退到字符串匹配
- * }</pre>rbo
- *       temperature: 0.3
- *       enabled: true              # 关闭后回退到字符串匹配
+ *     collect:
+ *       default-cron: 0 0/30 * * * ?  # 采集任务未填 Cron 时的默认调度周期
  * }</pre>
  *
  * @since 4.0.0.42
@@ -56,6 +55,11 @@ public class EduAiProperties {
      * AI 引擎配置
      */
     private Ai ai = new Ai();
+
+    /**
+     * 题库采集配置
+     */
+    private Collect collect = new Collect();
 
     @Data
     /**
@@ -146,5 +150,19 @@ public class EduAiProperties {
          * 温度参数
          */
         private Double temperature = 0.3;
+    }
+
+    @Data
+    /**
+     * 采集类。
+     *
+     * @author CH
+     * @since 4.0.0
+     */
+    public static class Collect {
+        /**
+         * 采集任务未配置 Cron 时的默认调度周期（Spring 6 Cron）
+         */
+        private String defaultCron = "0 */30 * * * ?";
     }
 }

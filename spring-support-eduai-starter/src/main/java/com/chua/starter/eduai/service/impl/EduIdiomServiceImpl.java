@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.chua.starter.eduai.mapper.EduIdiomMapper;
 import com.chua.starter.eduai.model.EduIdiom;
 import com.chua.starter.eduai.service.IEduIdiomService;
+import com.chua.starter.eduai.support.util.EduUserContext;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -25,10 +26,11 @@ public class EduIdiomServiceImpl extends ServiceImpl<EduIdiomMapper, EduIdiom>
 
     @Override
     public List<EduIdiom> listByGradeLevel(String gradeLevel, String grade, int count) {
+        String userId = EduUserContext.isAdmin() ? null : EduUserContext.currentUserId();
         if (gradeLevel == null || gradeLevel.isEmpty()) {
-            return baseMapper.selectRandom(count);
+            return baseMapper.selectRandom(count, userId);
         }
-        return baseMapper.selectByGradeLevel(gradeLevel, grade, count);
+        return baseMapper.selectByGradeLevel(gradeLevel, grade, count, userId);
     }
 
     @Override
@@ -49,7 +51,8 @@ public class EduIdiomServiceImpl extends ServiceImpl<EduIdiomMapper, EduIdiom>
         }
 
         // 生成干扰项（其他成语的拼音和释义）
-        List<EduIdiom> distractors = baseMapper.selectRandom(count * 2);
+        List<EduIdiom> distractors = baseMapper.selectRandom(count * 2,
+                EduUserContext.isAdmin() ? null : EduUserContext.currentUserId());
         List<String> distractorPinyin = distractors.stream()
                 .map(EduIdiom::getIdiomPinyin)
                 .filter(Objects::nonNull)

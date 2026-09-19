@@ -22,17 +22,20 @@ public interface EduIdiomMapper extends BaseMapper<EduIdiom> {
      * @param gradeLevel 学段
      * @param grade      年级，可为空，为空时不参与过滤
      * @param count      数量
+     * @param userId     归属隔离：非空时只返回系统成语与该用户的成语；管理员传空看全部
      * @return 成语列表
      */
     List<EduIdiom> selectByGradeLevel(@Param("gradeLevel") String gradeLevel,
                                        @Param("grade") String grade,
-                                       @Param("count") int count);
+                                       @Param("count") int count,
+                                       @Param("userId") String userId);
 
     /**
      * 随机获取指定数量的成语
      *
-     * @param count 数量
+     * @param count  数量
+     * @param userId 归属隔离：非空时只返回系统成语与该用户的成语；管理员传空看全部
      * @return 成语列表
      */
-    List<EduIdiom> selectRandom(@Param("count") int count);
+    List<EduIdiom> selectRandom(@Param("count") int count, @Param("userId") String userId);
 }

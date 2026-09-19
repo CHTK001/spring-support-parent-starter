@@ -8,6 +8,7 @@ import com.chua.starter.eduai.model.EduKnowledgePoint;
 import com.chua.starter.eduai.model.dto.KnowledgePointSaveDTO;
 import com.chua.starter.eduai.model.vo.KnowledgePointVO;
 import com.chua.starter.eduai.service.IEduKnowledgePointService;
+import com.chua.starter.eduai.support.util.EduUserContext;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -48,8 +49,9 @@ public class EduKnowledgePointServiceImpl extends ServiceImpl<EduKnowledgePointM
             wrapper.eq(EduKnowledgePoint::getKnowledgePointGrade, grade);
         }
         // 只查询启用状态
-        wrapper.eq(EduKnowledgePoint::getKnowledgePointStatus, 1)
-                .orderByAsc(EduKnowledgePoint::getKnowledgePointSortOrder)
+        wrapper.eq(EduKnowledgePoint::getKnowledgePointStatus, 1);
+        EduUserContext.scopeOwned(wrapper, EduKnowledgePoint::getOwnerUserId);
+        wrapper.orderByAsc(EduKnowledgePoint::getKnowledgePointSortOrder)
                 .orderByAsc(EduKnowledgePoint::getKnowledgePointId);
         List<EduKnowledgePoint> list = baseMapper.selectList(wrapper);
 
@@ -115,7 +117,13 @@ public class EduKnowledgePointServiceImpl extends ServiceImpl<EduKnowledgePointM
         entity.setKnowledgePointSortOrder(dto.getKnowledgePointSortOrder() != null ? dto.getKnowledgePointSortOrder() : 0);
 
         if (dto.getKnowledgePointId() != null && dto.getKnowledgePointId() > 0) {
-            // 更新
+            // 更新：校验归属并锁定原归属
+            EduKnowledgePoint exists = baseMapper.selectById(dto.getKnowledgePointId());
+            if (exists == null) {
+                throw new BusinessException("知识点不存在");
+            }
+            EduUserContext.checkWritable(exists.getOwnerUserId());
+            entity.setOwnerUserId(exists.getOwnerUserId());
             entity.setKnowledgePointId(dto.getKnowledgePointId());
             entity.setKnowledgePointStatus(dto.getKnowledgePointStatus() != null ? dto.getKnowledgePointStatus() : 1);
             entity.setKnowledgePointUpdateTime(LocalDateTime.now());
@@ -124,6 +132,7 @@ public class EduKnowledgePointServiceImpl extends ServiceImpl<EduKnowledgePointM
             return dto.getKnowledgePointId();
         } else {
             // 新增
+            entity.setOwnerUserId(EduUserContext.requireUserId());
             entity.setKnowledgePointStatus(dto.getKnowledgePointStatus() != null ? dto.getKnowledgePointStatus() : 1);
             entity.setKnowledgePointCreateTime(LocalDateTime.now());
             entity.setKnowledgePointUpdateTime(LocalDateTime.now());
@@ -151,6 +160,7 @@ public class EduKnowledgePointServiceImpl extends ServiceImpl<EduKnowledgePointM
              */
             throw new BusinessException("知识点不存在");
         }
+        EduUserContext.checkWritable(exists.getOwnerUserId());
         // 逻辑删除：状态置为停用
         exists.setKnowledgePointStatus(0);
         exists.setKnowledgePointUpdateTime(LocalDateTime.now());

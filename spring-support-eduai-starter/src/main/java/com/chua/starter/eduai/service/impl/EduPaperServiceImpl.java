@@ -19,6 +19,7 @@ import com.chua.starter.eduai.model.dto.PaperQueryDTO;
 import com.chua.starter.eduai.model.vo.PaperVO;
 import com.chua.starter.eduai.model.vo.QuestionVO;
 import com.chua.starter.eduai.service.IEduPaperService;
+import com.chua.starter.eduai.support.util.EduUserContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -81,6 +82,7 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
         if (query.getStatus() != null) {
             wrapper.eq(EduPaper::getPaperStatus, query.getStatus());
         }
+        EduUserContext.scopeOwned(wrapper, EduPaper::getOwnerUserId);
         wrapper.orderByDesc(EduPaper::getPaperCreateTime);
 
         Page<EduPaper> page = new Page<>(query.getPageNum(), query.getPageSize());
@@ -110,6 +112,7 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
              */
             throw new BusinessException("试卷不存在");
         }
+        EduUserContext.checkReadable(paper.getOwnerUserId());
         PaperVO vo = toVO(paper);
 
         LambdaQueryWrapper<EduPaperQuestion> pqWrapper = new LambdaQueryWrapper<>();
@@ -162,6 +165,7 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
         paper.setPaperDuration(dto.getDuration());
         paper.setPaperStatus(0); // 草稿
         paper.setPaperSource("AI");
+        paper.setOwnerUserId(EduUserContext.requireUserId());
         paper.setPaperCreateTime(LocalDateTime.now());
         paper.setPaperUpdateTime(LocalDateTime.now());
         baseMapper.insert(paper);
@@ -169,11 +173,12 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
         int count = dto.getQuestionCount() != null ? dto.getQuestionCount() : properties.getPaper().getDefaultQuestionCount();
         int perScore = dto.getScorePerQuestion() != null ? dto.getScorePerQuestion() : properties.getPaper().getDefaultScorePerQuestion();
 
-        // 2) 候选题目（兜底数据）
+        // 2) 候选题目（兜底数据，仅本人题库）
         LambdaQueryWrapper<EduQuestion> candidateWrapper = new LambdaQueryWrapper<EduQuestion>()
                 .eq(EduQuestion::getQuestionSubject, dto.getSubject())
-                .eq(EduQuestion::getQuestionStatus, 1)
-                .orderByAsc(EduQuestion::getQuestionId)
+                .eq(EduQuestion::getQuestionStatus, 1);
+        EduUserContext.scopeOwned(candidateWrapper, EduQuestion::getOwnerUserId);
+        candidateWrapper.orderByAsc(EduQuestion::getQuestionId)
                 .last("limit " + Math.max(count * 3, count));
         List<EduQuestion> candidates = questionMapper.selectList(candidateWrapper);
         if (candidates.isEmpty()) {
@@ -227,6 +232,7 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
             pq.setPaperQuestionQuestionId(qid);
             pq.setPaperQuestionOrder(order++);
             pq.setPaperQuestionScore(perScore);
+            pq.setOwnerUserId(paper.getOwnerUserId());
             pq.setPaperQuestionCreateTime(LocalDateTime.now());
             paperQuestionMapper.insert(pq);
             totalScore += perScore;
@@ -253,6 +259,11 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
      * @return 替换question的结果
      */
     public boolean replaceQuestion(Long paperId, Long oldQuestionId, Long newQuestionId) {
+        EduPaper paper = baseMapper.selectById(paperId);
+        if (paper == null) {
+            throw new BusinessException("试卷不存在");
+        }
+        EduUserContext.checkWritable(paper.getOwnerUserId());
         LambdaQueryWrapper<EduPaperQuestion> delWrapper = new LambdaQueryWrapper<>();
         delWrapper.eq(EduPaperQuestion::getPaperQuestionPaperId, paperId)
                 .eq(EduPaperQuestion::getPaperQuestionQuestionId, oldQuestionId);
@@ -263,6 +274,7 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
         pq.setPaperQuestionQuestionId(newQuestionId);
         pq.setPaperQuestionOrder(0);
         pq.setPaperQuestionScore(properties.getPaper().getDefaultScorePerQuestion());
+        pq.setOwnerUserId(paper.getOwnerUserId());
         pq.setPaperQuestionCreateTime(LocalDateTime.now());
         paperQuestionMapper.insert(pq);
 
