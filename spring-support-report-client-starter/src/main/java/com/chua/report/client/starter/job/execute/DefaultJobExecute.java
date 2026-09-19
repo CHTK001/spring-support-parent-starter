@@ -21,7 +21,6 @@ import lombok.extern.slf4j.Slf4j;
  * 支持处理器热更新和版本管理。
  * </p>
  *
- * @版本 1.0.0
  * @since 2024/03/11
  * @author CH
  */

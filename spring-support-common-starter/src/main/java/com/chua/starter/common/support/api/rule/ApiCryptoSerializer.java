@@ -55,7 +55,7 @@ public class ApiCryptoSerializer extends JsonSerializer<String> implements Conte
         this.key = key;
     }
 
-    /** 创建 api加密货币序列化器 实例 */
+    /** 私有构造器，公钥可为空（由静态工厂创建实例） */
     private ApiCryptoSerializer() {
         this.publicKeyHex = null;
         this.cryptoType = null;
@@ -193,11 +193,6 @@ public class ApiCryptoSerializer extends JsonSerializer<String> implements Conte
                 }
                 if (crypto != null) {
                     String key = SpringBeanUtils.getEnvironment().resolvePlaceholders(crypto.key());
-                    /**
-                     * api加密货币序列化器。
-                     * @param null 空
-                     * @param crypto.cryptoType( 加密货币.加密货币类型(
-                     */
                     return new ApiCryptoSerializer(null, crypto.cryptoType(), key);
                 }
             }

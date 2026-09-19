@@ -11,7 +11,6 @@ import java.util.concurrent.TimeUnit;
 /**
  * Redis反跳密钥生成器
  *
- * @版本 1.0.0
  * @since 2024/03/10
  * @author CH
  */

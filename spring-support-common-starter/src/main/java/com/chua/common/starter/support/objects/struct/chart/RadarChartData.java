@@ -14,11 +14,9 @@ public class RadarChartData implements Serializable {
     private static final long serialVersionUID = 1L; // 串行版本uid
 
     /** 指标名称 */
-    /** Indicators */
     private List<String> indicators = new ArrayList<>();
 
     /** 数值集合 */
-    /** 值 */
     private List<Number> values = new ArrayList<>();
 
     /**

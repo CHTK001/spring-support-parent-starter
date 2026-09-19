@@ -37,7 +37,6 @@ import java.util.Map;
  * 主体 为加密后的 JSON 请求体；服务端响应同样走长度帧，客户端解帧后解析 JSON。
  * </p>
  *
- * @版本 1.0.0
  * @since 2026-09-05
  * @author CH
  */

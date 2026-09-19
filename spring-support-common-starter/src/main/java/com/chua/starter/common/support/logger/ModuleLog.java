@@ -14,7 +14,6 @@ import org.slf4j.LoggerFactory;
  * </ul>
  * </p>
  *
- * @版本 1.0.0
  * @since 2024-12-28
  * @author CH
  */

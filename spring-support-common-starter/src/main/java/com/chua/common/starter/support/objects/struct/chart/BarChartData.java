@@ -14,11 +14,9 @@ public class BarChartData implements Serializable {
     private static final long serialVersionUID = 1L; // 串行版本uid
 
     /** 分类名称 */
-    /** Categories */
     private List<String> categories = new ArrayList<>();
 
     /** 数值集合 */
-    /** 值 */
     private List<Number> values = new ArrayList<>();
 
     /**

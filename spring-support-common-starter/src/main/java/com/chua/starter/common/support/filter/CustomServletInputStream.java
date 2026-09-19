@@ -13,7 +13,6 @@ import java.io.IOException;
  * </p>
  *
  * @since 2023/09/08
- * @版本 1.0.0
  * @see CustomHttpServletRequestWrapper
  * @author CH
  */

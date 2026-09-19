@@ -52,7 +52,6 @@ import lombok.extern.slf4j.Slf4j;
  * </pre>
  *
  * @author CH
- * @版本 1.0.0
  * @since 2023/09/08
  */
 @Slf4j

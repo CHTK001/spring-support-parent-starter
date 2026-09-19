@@ -52,10 +52,11 @@ public class UsageGlobalSettingProvider implements GlobalSettingProvider {
     /** 获取Items */
     public List<SettingItem> getItems() {
         return List.of(
-                new SettingItem("enable_usage_analysis", "true", "BOOLEAN", "用量开关：关闭后跳过定时同步与聚合", 1),
-                new SettingItem("usage_report_interval", "300", "NUMBER", "定时同步时间（秒），最小 10 秒，未配置默认 300", 2),
-                new SettingItem("usage_sync_providers", "", "STRING", "Provider SPI 配置开关：逗号分隔的数据源白名单，留空 = 全部启用", 3),
-                new SettingItem("usage_timewheel_enabled", "false", "BOOLEAN", "后台时间轮：开启后用量同步改用时间轮调度", 4)
+                new SettingItem("enable_usage_analysis", "true", "BOOLEAN", "用量分析开关：关闭后跳过定时同步与聚合", 1),
+                new SettingItem("enable_usage_recorder", "true", "BOOLEAN", "会话用量写入开关：关闭后不记录每次调用到明细表", 2),
+                new SettingItem("usage_report_interval", "3600", "NUMBER", "定时聚合时间（秒），最小 60 秒，未配置默认 3600（1小时）", 3),
+                new SettingItem("usage_sync_providers", "", "STRING", "Provider SPI 配置开关：逗号分隔的数据源白名单，留空 = 全部启用", 4),
+                new SettingItem("usage_timewheel_enabled", "false", "BOOLEAN", "后台时间轮：开启后用量同步改用时间轮调度", 5)
         );
     }
 }

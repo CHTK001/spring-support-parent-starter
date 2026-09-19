@@ -84,10 +84,6 @@ public class CryptoSerializer extends JsonSerializer<String> implements Contextu
                 }
                 if (crypto != null) {
                     String key = SpringBeanUtils.getEnvironment().resolvePlaceholders(crypto.key());
-                    /**
-                     * 加密货币序列化器。
-                     * @param key Key
-                     */
                     return new CryptoSerializer(Codec.build("sm4", key), key, crypto.keyType());
                 }
             }

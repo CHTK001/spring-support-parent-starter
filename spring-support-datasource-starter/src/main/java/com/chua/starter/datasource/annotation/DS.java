@@ -28,7 +28,6 @@ import java.lang.annotation.*;
  * public List&lt;User&gt; queryAll() { ... }
  * </pre>
  *
- * @版本 1.0.0
  * @since 2024/01/01
  * @author CH
  */

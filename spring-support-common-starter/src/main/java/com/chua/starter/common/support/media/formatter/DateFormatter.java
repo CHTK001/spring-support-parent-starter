@@ -16,7 +16,6 @@ import java.time.format.DateTimeFormatter;
  * 支持 日期、本地日期、本地日期时间、本地时间 等类型。
  * </p>
  *
- * @版本 1.0.0
  * @see Formatter
  * @author CH
  * @since 4.0.0

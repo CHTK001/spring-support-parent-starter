@@ -25,63 +25,48 @@ public class SoftConfig implements Serializable {
     private String configId;
 
     /** 配置_software_标识 - 软件标识 */
-    /** 配置softwareid */
     private String configSoftwareId;
 
     /** 配置_用户_标识 - 用户标识 */
-    /** 配置用户标识 */
     private String configUserId;
 
     /** 配置_device_标识 - 设备标识 */
-    /** 配置deviceid */
     private String configDeviceId;
 
     /** 配置_Key - 配置键 */
-    /** 配置密钥 */
     private String configKey;
 
     /** 配置_值 - 配置值 */
-    /** 配置值 */
     private String configValue;
 
     /** 配置_类型 - 配置类型: 字符串/数字/布尔值/json/array */
-    /** 配置类型 */
     private String configType;
 
     /** 配置_标签 - 配置标签 */
-    /** 配置标签 */
     private String configLabel;
 
     /** 配置_description - 配置描述 */
-    /** 配置描述 */
     private String configDescription;
 
     /** 配置_群体 - 配置分组 */
-    /** 配置分组 */
     private String configGroup;
 
     /** 配置_排序 - 排序 */
-    /** 配置排序 */
     private Integer configSort;
 
     /** 配置_是否_visible - 是否可见 */
-    /** 配置isvisible */
     private Boolean configIsVisible;
 
     /** 配置_是否_editable - 是否可编辑 */
-    /** 配置iseditable */
     private Boolean configIsEditable;
 
     /** 配置_默认_值 - 默认值 */
-    /** 配置默认值 */
     private String configDefaultValue;
 
     /** 配置_范围 - 取值范围JSON */
-    /** 配置范围 */
     private String configRange;
 
     /** 配置_extra - 扩展信息JSON */
-    /** 配置extra */
     private String configExtra;
 
     /** 配置_创建_时间 - 创建时间 */
@@ -95,11 +80,9 @@ public class SoftConfig implements Serializable {
     private LocalDateTime configUpdateTime;
 
     /** 配置_创建_by - 创建人 */
-    /** 配置创建by */
     private String configCreateBy;
 
     /** 配置_更新_by - 更新人 */
-    /** 配置更新by */
     private String configUpdateBy;
 
     /**

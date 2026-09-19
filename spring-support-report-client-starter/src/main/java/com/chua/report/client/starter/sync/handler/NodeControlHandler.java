@@ -32,7 +32,6 @@ import java.util.concurrent.TimeUnit;
  * 包含重启保全机制：生成守护脚本检测应用启动状态
  * </p>
  *
- * @版本 1.0.0
  * @since 2025/01/17
  * @author CH
  */

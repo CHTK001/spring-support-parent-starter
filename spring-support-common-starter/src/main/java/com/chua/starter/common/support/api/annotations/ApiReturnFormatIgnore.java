@@ -49,7 +49,6 @@ import java.lang.annotation.*;
  * </pre>
  *
  * @since 2020-09-23
- * @版本 1.0.0
  * @see com.chua.starter.common.support.api.response.ApiUniformResponseBodyAdvice
  * @author CH
  */

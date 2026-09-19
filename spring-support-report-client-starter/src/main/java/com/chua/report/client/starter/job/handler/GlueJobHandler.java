@@ -11,7 +11,6 @@ import lombok.extern.slf4j.Slf4j;
  * 每次代码更新会生成新的版本号，确保执行的是最新代码。
  * </p>
  *
- * @版本 1.0.0
  * @since 2024/03/11
  * @author CH
  */

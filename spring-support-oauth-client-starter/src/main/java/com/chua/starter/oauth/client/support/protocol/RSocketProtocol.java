@@ -36,7 +36,6 @@ import java.util.Map;
  * rSocket 协议实现
  * 使用 rSocket 进行 o认证 认证，支持响应式通信
  *
- * @版本 1.0.0
  * @since 2025-12-02
  * @author CH
  */

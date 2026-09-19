@@ -8,7 +8,6 @@ import java.util.Set;
  * API 功能开关信息
  *
  * @since 2024/12/08
- * @版本 1.0.0
  * @author CH
  */
 public class ApiFeatureInfo implements Serializable {

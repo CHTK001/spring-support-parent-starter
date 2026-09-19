@@ -12,7 +12,6 @@ import java.util.Map;
  * 用于在异步任务中传递MDC上下文。
  * </p>
  *
- * @版本 1.0.0
  * @since 2024/01/01
  * @author CH
  */

@@ -4,7 +4,6 @@ package com.chua.starter.rpc.support.exception;
  * RPC 服务异常
  * <p>用于 RPC 服务注册、发现等操作时的异常</p>
  *
- * @版本 1.0.0
  * @since 2024/04/07
  * @author CH
  */

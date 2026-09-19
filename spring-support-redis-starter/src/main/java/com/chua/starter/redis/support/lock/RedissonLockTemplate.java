@@ -16,7 +16,6 @@ import java.util.function.Supplier;
  * 使用 Redis 实现分布式锁，适用于分布式环境。
  * </p>
  *
- * @版本 1.0.0
  * @since 2025-12-25
  * @author CH
  */

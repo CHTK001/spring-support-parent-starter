@@ -21,7 +21,6 @@ import java.util.Map;
  * </p>
  *
  * @since 2025/6/3
- * @版本 2.0.0
  * @author CH
  */
     @Validated

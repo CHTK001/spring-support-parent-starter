@@ -27,7 +27,6 @@ import java.util.Map;
 public class GracefulShutdownListener implements ApplicationListener<ContextClosedEvent> {
 
     /** 关闭超时（秒） */
-    /** 关闭_超时_seconds */
     private static final int SHUTDOWN_TIMEOUT_SECONDS = 30;
 
     @Override

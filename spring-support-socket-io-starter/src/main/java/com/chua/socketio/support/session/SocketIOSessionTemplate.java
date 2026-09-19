@@ -27,7 +27,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * Socket.IO 会话模板实现
  * 基于 Netty-Socket.IO 实现，支持多房间配置
  *
- * @版本 1.0.0
  * @since 2024-12-04
  * @author CH
  */

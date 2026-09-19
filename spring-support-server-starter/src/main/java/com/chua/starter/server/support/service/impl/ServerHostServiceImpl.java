@@ -35,13 +35,18 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.net.InetAddress;
+import java.net.InterfaceAddress;
+import java.net.NetworkInterface;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 服务器主机服务实现
@@ -73,6 +78,9 @@ public class ServerHostServiceImpl implements ServerHostService {
 
     /** 默认远控模式（经 guacd 中继，与历史行为一致） */
     private static final String DEFAULT_REMOTE_MODE = "GUACD";
+
+    /** 远控通道取值：GUACD 中转 / DIRECT 平台原生客户端直连 / NONE 不经平台通道 */
+    private static final Set<String> REMOTE_MODES = Set.of("GUACD", "DIRECT", "NONE");
 
     /** JSON 序列化器 */
     private static final ObjectMapper MAPPER = new ObjectMapper();
@@ -164,6 +172,14 @@ public class ServerHostServiceImpl implements ServerHostService {
         }
         if (isBlank(host.getServerHostRemoteMode())) {
             host.setServerHostRemoteMode(DEFAULT_REMOTE_MODE);
+        }
+        String channelError = validateRemoteChannel(host);
+        if (channelError != null) {
+            return ReturnResult.error(channelError);
+        }
+        String localError = validateLocalAddress(host);
+        if (localError != null) {
+            return ReturnResult.error(localError);
         }
         // VNC 口令密文落库（前端提交明文，禁止原样入库）
         if (!isBlank(host.getServerHostVncPassword())) {
@@ -278,6 +294,15 @@ public class ServerHostServiceImpl implements ServerHostService {
         exists.setServerHostAccount(host.getServerHostAccount());
         exists.setServerHostPassword(host.getServerHostPassword());
         exists.setServerHostPrivateKey(host.getServerHostPrivateKey());
+        // 合并后再校验：局部提交可能只改协议或只改通道，单看请求体判不出矛盾组合
+        String channelError = validateRemoteChannel(exists);
+        if (channelError != null) {
+            return ReturnResult.error(channelError);
+        }
+        String localError = validateLocalAddress(exists);
+        if (localError != null) {
+            return ReturnResult.error(localError);
+        }
         hostMapper.updateById(exists);
         // 携带账号密码/PEM 时自动创建/更新登录身份并绑定（编辑时亦可调整凭据）
         /**
@@ -1126,6 +1151,142 @@ public class ServerHostServiceImpl implements ServerHostService {
             return ReturnResult.error("连接失败: " + e.getMessage());
         }
     }
+    /**
+     * 校验远控通道与协议的搭配
+     * <p>
+     * RDP 只能由 guacd 中转渲染，平台没有原生 RDP 客户端；DIRECT 是平台自研 SSH 通道，
+     * 仅 SSH 可用；NONE 表示不经平台通道（SSH 用平台终端、VNC 用本机客户端）。
+     * </p>
+     *
+     * @param host 主机（取远控协议、通道与系统类型）
+     * @return 错误文案，通过校验返回 null
+     */
+    private String validateRemoteChannel(MsServerHost host) {
+        String mode = upper(host.getServerHostRemoteMode());
+        if (mode.isEmpty()) {
+            return null;
+        }
+        if (!REMOTE_MODES.contains(mode)) {
+            return "远控通道只能是 GUACD/DIRECT/NONE，当前值: " + mode;
+        }
+        String protocol = effectiveRemoteProtocol(host);
+        if ("RDP".equals(protocol) && !"GUACD".equals(mode)) {
+            return "RDP 必须经 guacd 中转通道，远控通道不能设为 " + mode;
+        }
+        if ("DIRECT".equals(mode) && !"SSH".equals(protocol)) {
+            return protocol + " 不支持平台直连通道，请改为 guacd 中转或无需通道";
+        }
+        return null;
+    }
+
+    /**
+     * 校验「本机」主机的地址确实是平台所在机器
+     * <p>
+     * 本机台账会走 OSHI 自采集并绑 127.0.0.1 上的探针端口，地址填成远端 IP 时
+     * 采集到的是本机数据却记在远端 IP 名下，台账与画像全部错位，必须在入口拦住。
+     * </p>
+     *
+     * @param host 主机
+     * @return 错误文案，非本机类型或校验通过返回 null
+     */
+    private String validateLocalAddress(MsServerHost host) {
+        if (!"LOCAL".equals(upper(host.getServerHostOsType()))) {
+            return null;
+        }
+        String address = host.getServerHostAddress() == null ? "" : host.getServerHostAddress().trim();
+        if (isLocalAddress(address)) {
+            return null;
+        }
+        return "平台类型为「本机」但地址 " + address + " 不是本机地址；本机请使用 127.0.0.1 或本机网卡地址（"
+                + localAddressesHint() + "）";
+    }
+
+    /**
+     * 生效远控协议：显式配置优先，留空按系统类型推断（与前端推断口径一致）
+     *
+     * @param host 主机
+     * @return SSH/RDP/VNC
+     */
+    private String effectiveRemoteProtocol(MsServerHost host) {
+        String protocol = upper(host.getServerHostRemoteProtocol());
+        if (!protocol.isEmpty()) {
+            return protocol;
+        }
+        String os = upper(host.getServerHostOsType());
+        if (os.contains("WIN")) {
+            return "RDP";
+        }
+        if (os.contains("MAC") || os.contains("DARWIN")) {
+            return "VNC";
+        }
+        return "SSH";
+    }
+
+    /**
+     * 判断地址是否指向本机（回环地址或本机任一网卡地址）
+     *
+     * @param address 主机地址
+     * @return 是否本机地址
+     */
+    private boolean isLocalAddress(String address) {
+        if (address.isEmpty()) {
+            return false;
+        }
+        try {
+            InetAddress target = InetAddress.getByName(address);
+            if (target.isLoopbackAddress() || target.isAnyLocalAddress()) {
+                return true;
+            }
+            for (Enumeration<NetworkInterface> nics = NetworkInterface.getNetworkInterfaces(); nics.hasMoreElements(); ) {
+                NetworkInterface nic = nics.nextElement();
+                if (!nic.isUp()) {
+                    continue;
+                }
+                for (InterfaceAddress assigned : nic.getInterfaceAddresses()) {
+                    if (assigned.getAddress().equals(target)) {
+                        return true;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.debug("[server] 本机地址判定失败 {}: {}", address, e.getMessage());
+        }
+        return false;
+    }
+
+    /**
+     * 列出本机网卡地址，供校验失败时给出可直接照抄的提示
+     *
+     * @return 逗号分隔地址串，取不到时返回「未知」
+     */
+    private String localAddressesHint() {
+        List<String> addresses = new ArrayList<>();
+        try {
+            for (Enumeration<NetworkInterface> nics = NetworkInterface.getNetworkInterfaces(); nics.hasMoreElements(); ) {
+                NetworkInterface nic = nics.nextElement();
+                if (!nic.isUp()) {
+                    continue;
+                }
+                for (InterfaceAddress assigned : nic.getInterfaceAddresses()) {
+                    addresses.add(assigned.getAddress().getHostAddress());
+                }
+            }
+        } catch (Exception e) {
+            log.debug("[server] 枚举本机网卡失败: {}", e.getMessage());
+        }
+        return addresses.isEmpty() ? "未知" : String.join(", ", addresses);
+    }
+
+    /**
+     * 去空白并转大写
+     *
+     * @param value 原值
+     * @return 大写文本，null 折算为空串
+     */
+    private String upper(String value) {
+        return value == null ? "" : value.trim().toUpperCase(java.util.Locale.ROOT);
+    }
+
     /**
      * 空串判断
      *

@@ -47,7 +47,6 @@ import java.util.concurrent.ConcurrentMap;
  *
  * @param <A> 注解类型
  * @since 2022/7/30 11:36
- * @版本 1.0.0
  * @author CH
  */
 @SuppressWarnings("ALL")

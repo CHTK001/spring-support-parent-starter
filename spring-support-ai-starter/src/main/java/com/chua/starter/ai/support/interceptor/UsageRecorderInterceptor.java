@@ -1,6 +1,7 @@
 package com.chua.starter.ai.support.interceptor;
 
 import com.chua.common.support.ai.AiUsage;
+import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
 import com.chua.starter.ai.support.service.SysAiUsageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +26,11 @@ public class UsageRecorderInterceptor {
     private final SysAiUsageService usageService;
 
     /**
+     * 配置读取器
+     */
+    private final GlobalSettingReader settingReader;
+
+    /**
      * 异步记录用量
      *
      * @param groupName 分组
@@ -39,6 +45,12 @@ public class UsageRecorderInterceptor {
     public void record(String groupName, String provider, String model, String callType,
                        AiUsage usage, String requestId, String userId) {
         if (usage == null) {
+            return;
+        }
+        // 检查会话用量写入开关
+        boolean enabled = settingReader.getBool("global", "enable_usage_recorder", true);
+        if (!enabled) {
+            log.debug("[UsageRecorder] 用量记录已关闭，跳过: model={}", model);
             return;
         }
         try {

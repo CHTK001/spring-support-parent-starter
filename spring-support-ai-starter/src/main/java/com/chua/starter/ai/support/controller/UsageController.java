@@ -210,6 +210,25 @@ public class UsageController {
         return ReturnResult.ok(result);
     }
 
+    /**
+     * 全量同步任务 Future（用于取消前一次任务）
+     */
+    private volatile java.util.concurrent.Future<?> aggregateAllFuture;
+
+    /**
+     * 定时聚合任务 Future
+     */
+    private volatile java.util.concurrent.Future<?> aggregateFuture;
+
+    /**
+     * 异步执行器
+     */
+    private final java.util.concurrent.ExecutorService taskExecutor = java.util.concurrent.Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "usage-task-executor");
+        t.setDaemon(true);
+        return t;
+    });
+
     @Permission("admin")
     @Operation(summary = "手动触发同步聚合", description = "立即执行外部数据同步与当天日汇总表聚合（异步执行）")
     @PostMapping("/trigger")
@@ -237,34 +256,124 @@ public class UsageController {
      * @return aggregate的结果
      */
     public ReturnResult<String> aggregate() {
+        // 取消前一次任务
+        if (aggregateFuture != null && !aggregateFuture.isDone()) {
+            aggregateFuture.cancel(true);
+            log.info("[UsageAggregate] 已取消前一次聚合任务");
+        }
         UsageAggregationTask task = applicationContext.getBean(UsageAggregationTask.class);
-        new Thread(() -> {
+        aggregateFuture = taskExecutor.submit(() -> {
             try {
                 task.aggregate();
             } catch (Exception e) {
                 log.error("[UsageAggregate] 聚合失败: {}", e.getMessage(), e);
             }
-        }, "usage-aggregate").start();
+        });
         return ReturnResult.ok("已触发当天聚合（后台执行）");
     }
 
     @Permission("admin")
-    @Operation(summary = "手动全量同步", description = "对全部历史用量明细执行全量聚合回填日汇总表（异步执行）")
+    @Operation(summary = "手动全量同步", description = "对全部历史用量明细执行全量聚合回填日汇总表（异步执行，重复点击会取消前一次任务）")
     @PostMapping("/aggregate-all")
     /**
      * aggregate全部。
      * @return aggregate全部的结果
      */
     public ReturnResult<String> aggregateAll() {
+        // 取消前一次任务
+        if (aggregateAllFuture != null && !aggregateAllFuture.isDone()) {
+            aggregateAllFuture.cancel(true);
+            log.info("[UsageAggregateAll] 已取消前一次全量同步任务");
+        }
         UsageAggregationTask task = applicationContext.getBean(UsageAggregationTask.class);
-        new Thread(() -> {
+        aggregateAllFuture = taskExecutor.submit(() -> {
             try {
                 task.aggregateAll();
             } catch (Exception e) {
                 log.error("[UsageAggregateAll] 全量聚合失败: {}", e.getMessage(), e);
+            } finally {
+                broadcastTaskStatus();
             }
-        }, "usage-aggregate-all").start();
-        return ReturnResult.ok("已触发全量同步（后台执行）");
+        });
+        broadcastTaskStatus();
+        return ReturnResult.ok("已触发全量同步（后台执行，重复点击会取消前一次任务）");
+    }
+
+    @Permission("admin")
+    @Operation(summary = "取消全量同步任务", description = "取消正在执行的全量同步任务")
+    @PostMapping("/aggregate-all/cancel")
+    /**
+     * cancel aggregate all。
+     * @return cancel的结果
+     */
+    public ReturnResult<String> cancelAggregateAll() {
+        if (aggregateAllFuture != null && !aggregateAllFuture.isDone()) {
+            aggregateAllFuture.cancel(true);
+            broadcastTaskStatus();
+            return ReturnResult.ok("已取消全量同步任务");
+        }
+        return ReturnResult.ok("没有正在执行的全量同步任务");
+    }
+
+    @Permission("admin")
+    @Operation(summary = "查询同步任务状态", description = "查询当前是否有正在执行的同步任务")
+    @GetMapping("/task-status")
+    /**
+     * task status。
+     * @return task status的结果
+     */
+    public ReturnResult<Map<String, Object>> taskStatus() {
+        Map<String, Object> status = new java.util.LinkedHashMap<>();
+        status.put("aggregateRunning", aggregateFuture != null && !aggregateFuture.isDone());
+        status.put("aggregateAllRunning", aggregateAllFuture != null && !aggregateAllFuture.isDone());
+        return ReturnResult.ok(status);
+    }
+
+    /**
+     * SSE 推送任务状态
+     */
+    private final List<org.springframework.web.servlet.mvc.method.annotation.SseEmitter> sseEmitors = new java.util.concurrent.CopyOnWriteArrayList<>();
+
+    @Permission("admin")
+    @Operation(summary = "SSE订阅任务状态", description = "通过SSE实时推送任务状态变化")
+    @GetMapping(value = "/task-status/stream", produces = org.springframework.http.MediaType.TEXT_EVENT_STREAM_VALUE)
+    /**
+     * task status stream。
+     * @return SseEmitter
+     */
+    public org.springframework.web.servlet.mvc.method.annotation.SseEmitter taskStatusStream() {
+        org.springframework.web.servlet.mvc.method.annotation.SseEmitter emitter = new org.springframework.web.servlet.mvc.method.annotation.SseEmitter(0L);
+        sseEmitors.add(emitter);
+        emitter.onCompletion(() -> sseEmitors.remove(emitter));
+        emitter.onTimeout(() -> sseEmitors.remove(emitter));
+        emitter.onError(e -> sseEmitors.remove(emitter));
+        // 立即推送一次当前状态
+        try {
+            Map<String, Object> status = new java.util.LinkedHashMap<>();
+            status.put("aggregateRunning", aggregateFuture != null && !aggregateFuture.isDone());
+            status.put("aggregateAllRunning", aggregateAllFuture != null && !aggregateAllFuture.isDone());
+            emitter.send(org.springframework.web.servlet.mvc.method.annotation.SseEmitter.event().name("status").data(status));
+        } catch (Exception e) {
+            // 忽略
+        }
+        return emitter;
+    }
+
+    /**
+     * 广播任务状态变化
+     */
+    private void broadcastTaskStatus() {
+        if (sseEmitors.isEmpty()) return;
+        Map<String, Object> status = new java.util.LinkedHashMap<>();
+        status.put("aggregateRunning", aggregateFuture != null && !aggregateFuture.isDone());
+        status.put("aggregateAllRunning", aggregateAllFuture != null && !aggregateAllFuture.isDone());
+        for (org.springframework.web.servlet.mvc.method.annotation.SseEmitter emitter : sseEmitors) {
+            try {
+                emitter.send(org.springframework.web.servlet.mvc.method.annotation.SseEmitter.event().name("status").data(status));
+            } catch (Exception e) {
+                sseEmitors.remove(emitter);
+            }
+        }
     }
 
     @Permission("admin")

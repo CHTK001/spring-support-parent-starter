@@ -249,47 +249,36 @@ public interface HCNetSDK extends Library {
     class NET_DVR_USER_LOGIN_INFO extends Structure {
 
         /** 设备 IP 地址 */
-        /** Sdevice地址 */
         public byte[] sDeviceAddress = new byte[NET_DVR_DEV_ADDRESS_MAX_LEN];
 
         /** 是否使用传输协议 */
-        /** byusetransport */
         public byte byUseTransport;
 
         /** 设备端口 */
-        /** W端口 */
         public short wPort;
 
         /** 登录用户名 */
-        /** S用户名称 */
         public byte[] sUserName = new byte[NET_DVR_LOGIN_USERNAME_MAX_LEN];
 
         /** 登录密码 */
-        /** S密码 */
         public byte[] sPassword = new byte[NET_DVR_LOGIN_PASSWD_MAX_LEN];
 
         /** 登录模式 */
-        /** dwlogin模式 */
         public int dwLoginMode;
 
         /** 是否使用 HTTPS */
-        /** BYHTTPS */
         public byte byHttps;
 
         /** 代理 标识 */
-        /** iproxyid */
         public int iProxyID;
 
         /** 校验模式 */
-        /** byverify模式 */
         public byte byVerifyMode;
 
         /** 保留字节 */
-        /** byreserved */
         public byte[] byReserved = new byte[127];
 
         /** 保留字节 2 */
-        /** byreserved2 */
         public byte[] byReserved2 = new byte[64];
 
         /**
@@ -336,103 +325,78 @@ public interface HCNetSDK extends Library {
     class NET_DVR_DEVICEINFO_V40 extends Structure {
 
         /** 设备序列号 */
-        /** Sserial数字 */
         public byte[] sSerialNumber = new byte[48];
 
         /** 报警输入口个数 */
-        /** byalarm入端口NUM */
         public byte byAlarmInPortNum;
 
         /** 报警输出口个数 */
-        /** byalarm出端口NUM */
         public byte byAlarmOutPortNum;
 
         /** 硬盘个数 */
-        /** bydisknum */
         public byte byDiskNum;
 
         /** 设备类型 */
-        /** bydvrtype */
         public byte byDVRType;
 
         /** 模拟通道个数 */
-        /** bychannum */
         public byte byChanNum;
 
         /** 起始通道号 */
-        /** BY开始chan */
         public byte byStartChan;
 
         /** 语音通道数 */
-        /** BY音频channum */
         public byte byAudioChanNum;
 
         /** 数字通道个数 */
-        /** byipchannum */
         public byte byIPChanNum;
 
         /** 零通道编码个数 */
-        /** byzerochannum */
         public byte byZeroChanNum;
 
         /** 主协议 */
-        /** bymainproto */
         public byte byMainProto;
 
         /** 子协议 */
-        /** bysubproto */
         public byte bySubProto;
 
         /** 支持能力 */
-        /** bysupport */
         public byte bySupport;
 
         /** 支持能力 1 */
-        /** bysupport1 */
         public byte bySupport1;
 
         /** 支持能力 2 */
-        /** bysupport2 */
         public byte bySupport2;
 
         /** 设备类型 */
-        /** WDEV类型 */
         public short wDevType;
 
         /** 支持能力 3 */
-        /** bysupport3 */
         public byte bySupport3;
 
         /** 多码流能力 */
-        /** bymulti流Proto.io.io */
         public byte byMultiStreamProto;
 
         /** 起始数字通道 */
-        /** BY开始dchan */
         public byte byStartDChan;
 
         /** 起始数字对讲通道 */
-        /** BY开始dtalkchan */
         public byte byStartDTalkChan;
 
         /** 高清数字通道数 */
-        /** byhighdchannum */
         public byte byHighDChanNum;
 
         /** 支持能力 4 */
-        /** bysupport4 */
         public byte bySupport4;
 
         /** 支持能力 5 */
-        /** bysupport5 */
         public byte bySupport5;
 
         /** 高清数字通道最大值 */
-        /** byipchaninhigh最大值 */
         public byte byIPChanInHighMax;
 
         /** 保留字节 */
-        /** byreserved1 */
         public byte[] byReserved1 = new byte[24];
 
         @Override
@@ -459,55 +423,42 @@ public interface HCNetSDK extends Library {
     class NET_DVR_PREVIEWINFO extends Structure {
 
         /** 通道号 */
-        /** L通道 */
         public int lChannel;
 
         /** 码流类型 */
-        /** DW流类型 */
         public int dwStreamType;
 
         /** 连接方式 */
-        /** dwlink模式 */
         public int dwLinkMode;
 
         /** 播放窗口句柄 */
-        /** hplaywnd */
         public Pointer hPlayWnd;
 
         /** 阻塞播放 */
-        /** Bblocked */
         public byte bBlocked;
 
         /** 是否回放录像 */
-        /** Bpassbackrecord */
         public byte bPassbackRecord;
 
         /** 预览模式 */
-        /** bypreview模式 */
         public byte byPreviewMode;
 
         /** 流 标识 */
-        /** BY流标识 */
         public byte[] byStreamID = new byte[32];
 
         /** 协议类型 */
-        /** byproto类型 */
         public byte byProtoType;
 
         /** 保留 1 */
-        /** byres1 */
         public byte byRes1;
 
         /** 保留 2 */
-        /** byres2 */
         public byte byRes2;
 
         /** 播放缓冲帧数 */
-        /** dwdisplaybufnum */
         public int dwDisplayBufNum;
 
         /** 保留 */
-        /** BYRES */
         public byte[] byRes = new byte[216];
 
         /**
@@ -547,34 +498,27 @@ public interface HCNetSDK extends Library {
     class NET_DVR_PLAYBACK_COND extends Structure {
 
         /** 码流类型 */
-        /** BY流类型 */
         public byte byStreamType;
 
         /** 是否按时间 */
-        /** BBY时间 */
         public byte bByTime;
 
         /** 是否解密 */
-        /** Bneeddecrypt */
         public byte bNeedDecrypt;
 
         /** 流 标识 */
-        /** BY流标识 */
         public byte[] byStreamID = new byte[32];
 
         /** 通道号 */
-        /** L通道 */
         public int lChannel;
 
         /** 位置 */
-        /** DWPOS */
         public int dwPos;
 
         /** 开始时间 */
         public NET_DVR_TIME startTime = new NET_DVR_TIME();
 
         /** 结束时间 */
-        /** 停止时间 */
         public NET_DVR_TIME stopTime = new NET_DVR_TIME();
 
         @Override
@@ -598,51 +542,39 @@ public interface HCNetSDK extends Library {
     class NET_DVR_TIME extends Structure {
 
         /** 年 */
-        /** byyear */
         public byte byYear;
 
         /** 月 */
-        /** bymonth */
         public byte byMonth;
 
         /** 日 */
-        /** BYDAY */
         public byte byDay;
 
         /** 时 */
-        /** byhour */
         public byte byHour;
 
         /** 分 */
-        /** byminute */
         public byte byMinute;
 
         /** 秒 */
-        /** bysecond */
         public byte bySecond;
 
         /** 保留 */
-        /** BYRES */
         public byte byRes;
 
         /** ISO8601 */
-        /** byiso8601 */
         public byte byISO8601;
 
         /** 毫秒 */
-        /** Wmillisecond */
         public short wMillisecond;
 
         /** 时区 */
-        /** C时间zoneid */
         public byte cTimeZoneID;
 
         /** 保留 1 */
-        /** byres1 */
         public byte byRes1;
 
         /** 保留 2 */
-        /** byres2 */
         public byte byRes2;
 
         /**
@@ -682,115 +614,87 @@ public interface HCNetSDK extends Library {
     class NET_DVR_ALARMER extends Structure {
 
         /** 用户 标识 有效 */
-        /** BY用户idvalid */
         public byte byUserIDValid;
 
         /** 序列号有效 */
-        /** byserial是否有效 */
         public byte bySerialValid;
 
         /** 版本有效 */
-        /** BY版本是否有效 */
         public byte byVersionValid;
 
         /** 设备名有效 */
-        /** bydevice名称是否有效 */
         public byte byDeviceNameValid;
 
         /** MAC 有效 */
-        /** bymacaddr是否有效 */
         public byte byMacAddrValid;
 
         /** 连接端口有效 */
-        /** bylink端口是否有效 */
         public byte byLinkPortValid;
 
         /** 设备 IP */
-        /** bydeviceip */
         public byte[] byDeviceIP = new byte[4];
 
         /** Socket IP */
-        /** bySocketip */
         public byte[] bySocketIP = new byte[4];
 
         /** 连接端口 */
-        /** Wlink端口 */
         public short wLinkPort;
 
         /** 序列号 */
-        /** Sserial数字 */
         public byte[] sSerialNumber = new byte[48];
 
         /** 报警输入数 */
-        /** byalarm入端口NUM */
         public byte byAlarmInPortNum;
 
         /** 报警输出数 */
-        /** byalarm出端口NUM */
         public byte byAlarmOutPortNum;
 
         /** 硬盘数 */
-        /** bydisknum */
         public byte byDiskNum;
 
         /** 设备类型 */
-        /** bydvrtype */
         public byte byDVRType;
 
         /** 通道数 */
-        /** bychannum */
         public byte byChanNum;
 
         /** 起始通道 */
-        /** BY开始chan */
         public byte byStartChan;
 
         /** 语音通道数 */
-        /** BY音频channum */
         public byte byAudioChanNum;
 
         /** 数字通道数 */
-        /** byipchannum */
         public byte byIPChanNum;
 
         /** 零通道数 */
-        /** byzerochannum */
         public byte byZeroChanNum;
 
         /** 主协议 */
-        /** bymainproto */
         public byte byMainProto;
 
         /** 子协议 */
-        /** bysubproto */
         public byte bySubProto;
 
         /** 支持能力 */
-        /** bysupport */
         public byte bySupport;
 
         /** 设备类型 */
-        /** WDEV类型 */
         public short wDevType;
 
         /** 设备名称 */
-        /** Sdevice名称 */
         public byte[] sDeviceName = new byte[32];
 
         /** MAC 地址 */
-        /** bymacaddr */
         public byte[] byMacAddr = new byte[6];
 
         /** 保留 1 */
-        /** byres1 */
         public byte[] byRes1 = new byte[2];
 
         /** 版本 */
-        /** S版本 */
         public byte[] sVersion = new byte[16];
 
         /** 保留 2 */
-        /** byres2 */
         public byte[] byRes2 = new byte[188];
 
         @Override

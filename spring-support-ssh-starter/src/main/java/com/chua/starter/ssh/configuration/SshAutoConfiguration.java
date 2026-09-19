@@ -20,7 +20,6 @@ import org.springframework.context.annotation.Bean;
  * - 文件传输配置
  * - 安全配置
  * 
- * @版本 4.0.0.32
  * @author CH
  * @since 4.0.0
  */

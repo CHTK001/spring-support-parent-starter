@@ -43,7 +43,6 @@ public class NonceUtils {
     private static final Logger log = LoggerFactory.getLogger(NonceUtils.class);
 
     /** 请求签名已在前置过滤器通过校验的标记 */
-    /** 请求_标志_校验_attribute */
     public static final String REQUEST_SIGN_VALIDATED_ATTRIBUTE =
             NonceUtils.class.getName() + ".requestSignValidated";
 
@@ -51,14 +50,12 @@ public class NonceUtils {
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     /** 排除的参数字段（与前端 collect参数 中 /^文件$/i 正则一致，仅排除 文件） */
-    /** Excluded_参数_Key */
     private static final Set<String> EXCLUDED_PARAM_KEYS = Set.of("file");
 
     /** 签名密钥，可通过 设置secretKey 或配置注入，默认与 nonce标志属性.默认_SECRET 保持一致 */
     private static volatile String secretKey = NonceSignProperties.DEFAULT_SECRET;
 
     /** 默认有效期 5 分钟 */
-    /** 默认_最大_age_ms */
     private static final long DEFAULT_MAX_AGE_MS = 5 * 60 * 1000L;
 
     /** 已使用的 nonce 缓存，用于防 XHR 重放（TTL 与 时间戳 有效期一致） */

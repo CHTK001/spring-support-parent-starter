@@ -28,7 +28,6 @@ import org.springframework.core.env.Environment;
  * 支持 服务端、客户端、both 三种模式，同时判断对应的 enable 属性
  * </p>
  *
- * @版本 1.0.0
  * @since 2024/12/04
  * @author CH
  */

@@ -26,7 +26,6 @@ import java.util.Map;
  * </ul>
  *
  * @since 2024/12/11
- * @版本 4.0.0.34
  * @author CH
  */
 public interface Protocol {

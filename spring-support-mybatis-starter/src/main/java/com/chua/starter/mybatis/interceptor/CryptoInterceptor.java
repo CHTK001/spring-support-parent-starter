@@ -36,7 +36,7 @@ import java.util.Map;
                 args = {Statement.class})
 })
 /**
- * 加密货币拦截器类。
+ * 字段加密拦截器类。
  *
  * @author CH
  * @since 4.0.0
@@ -46,7 +46,7 @@ public class CryptoInterceptor implements Interceptor {
     private static final Logger log = LoggerFactory.getLogger(CryptoInterceptor.class);
 
     /**
-     * 缓存类对应的加密字段列表，Key为类对象，值为该类所有带@加密货币注解的字段列表
+     * 缓存类对应的加密字段列表，Key为类对象，值为该类所有带@Crypto注解的字段列表
      */
     private static final Map<Class<?>, List<CryptoFieldInfo>> CRYPTO_FIELD_CACHE = new ConcurrentReferenceHashMap<>(256);
 
@@ -54,7 +54,7 @@ public class CryptoInterceptor implements Interceptor {
      * 加密字段信息
      * @param field 字段
      * @param annotation 注解
-     * @return 加密货币字段信息的结果
+     * @return 加密字段信息的结果
      */
     private record CryptoFieldInfo(Field field, Crypto annotation) {
     }
@@ -97,24 +97,14 @@ public class CryptoInterceptor implements Interceptor {
         if (param == null) {
             return;
         }
- // 只处理 映射（MyBatis 默认把多参数封装成 映射）
+ // 只处理 Map（MyBatis 默认把多参数封装成 Map）
         if (param instanceof Map<?, ?> map) {
             map.forEach((k, v) -> {
                 if (v != null) {
-                    /**
-                     * 处理加密货币字段。
-                     * @param v v
-                     * @param true true
-                     */
                     processCryptoFields(v, true);
                 }
             });
         } else {
-            /**
-             * 处理加密货币字段。
-             * @param param 参数
-             * @param true true
-             */
             processCryptoFields(param, true);
         }
     }
@@ -128,11 +118,6 @@ public class CryptoInterceptor implements Interceptor {
         if (obj == null) {
             return;
         }
-        /**
-         * 处理加密货币字段。
-         * @param obj obj
-         * @param false false
-         */
         processCryptoFields(obj, false);
     }
 
@@ -192,7 +177,7 @@ public class CryptoInterceptor implements Interceptor {
     }
 
     /**
-     * 扫描类中所有带@加密货币注解的字段
+     * 扫描类中所有带@Crypto注解的字段
      *
      * @param clazz 目标类
      * @return 加密字段信息列表

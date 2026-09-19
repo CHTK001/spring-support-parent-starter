@@ -55,7 +55,6 @@ import org.slf4j.LoggerFactory;
  * </p>
  *
  * @since 2024/12/4
- * @版本 2.0.0
  * @author CH
  */
 @SuppressWarnings("removal")
