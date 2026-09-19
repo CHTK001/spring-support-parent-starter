@@ -134,6 +134,35 @@ public class ModelMetricsSnapshotService {
     private static final long REDIS_TTL_SECONDS = 12L * 60 * 60;
 
     /**
+     * 手动锁定字段在模型 metrics JSON 中的键（值为被锁定字段名数组）
+     */
+    public static final String MANUAL_LOCKED_KEY = "manual_locked";
+
+    /**
+     * 手动修改时间（毫秒）键
+     */
+    public static final String MANUAL_AT_KEY = "manual_updated_at";
+
+    /**
+     * 手动修改人键
+     */
+    public static final String MANUAL_BY_KEY = "manual_updated_by";
+
+    /**
+     * 允许手动锁定（定时同步不再覆盖）的指标字段集合
+     */
+    public static final java.util.Set<String> MANUAL_FIELDS = java.util.Set.of(
+            "price_input_per_musd",
+            "price_output_per_musd",
+            "price_cache_hit_per_musd",
+            "price_cache_write_per_musd",
+            "intelligence_index",
+            "output_speed_tps",
+            "latency_first_token_seconds",
+            "context_window_tokens",
+            "latency_ms");
+
+    /**
      * 提供商 映射器
      */
     private final SysAiProviderMapper providerMapper;
@@ -360,7 +389,48 @@ public class ModelMetricsSnapshotService {
         if (cache != null) {
             out.put("price_cache_per_musd", cache);
         }
+
+        // 手动覆盖优先：被锁定的字段使用手动值，定时同步/探测不再更新这些字段
+        applyManualOverrides(out, metrics);
         return out;
+    }
+
+    /**
+     * 应用手动覆盖：模型 metrics 中 {@link #MANUAL_LOCKED_KEY} 列出的字段，
+     * 用其保存的手动值覆盖 enrich/探测得到的同步值，并把锁定标记与修改信息透传到快照行，
+     * 供前端展示「手动修改」状态。
+     *
+     * @param out     快照行
+     * @param metrics 模型持久化的指标 JSON
+     */
+    private void applyManualOverrides(Map<String, Object> out, Map<String, Object> metrics) {
+        if (metrics == null) {
+            return;
+        }
+        Object lockedObj = metrics.get(MANUAL_LOCKED_KEY);
+        if (!(lockedObj instanceof List<?> lockedList) || lockedList.isEmpty()) {
+            return;
+        }
+        List<String> applied = new ArrayList<>();
+        for (Object item : lockedList) {
+            String field = String.valueOf(item);
+            if (MANUAL_FIELDS.contains(field) && metrics.get(field) != null) {
+                out.put(field, metrics.get(field));
+                applied.add(field);
+            }
+        }
+        if (applied.isEmpty()) {
+            return;
+        }
+        out.put(MANUAL_LOCKED_KEY, applied);
+        Object at = metrics.get(MANUAL_AT_KEY);
+        if (at != null) {
+            out.put(MANUAL_AT_KEY, at);
+        }
+        Object by = metrics.get(MANUAL_BY_KEY);
+        if (by != null) {
+            out.put(MANUAL_BY_KEY, by);
+        }
     }
 
     /**

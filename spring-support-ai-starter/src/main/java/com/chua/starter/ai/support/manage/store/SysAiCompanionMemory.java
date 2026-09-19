@@ -101,4 +101,10 @@ public class SysAiCompanionMemory implements Serializable {
      */
     @TableField("sys_ai_companion_memory_last_reinforced_at")
     private Long lastReinforcedAt; // 最后一个reinforcedat
+
+    /**
+     * 归属用户标识（随所属伙伴写入，非客户端传入）
+     */
+    @TableField("sys_ai_companion_memory_user_id")
+    private String userId; // 归属用户
 }

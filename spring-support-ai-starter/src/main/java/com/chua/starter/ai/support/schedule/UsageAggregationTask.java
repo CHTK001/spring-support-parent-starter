@@ -29,6 +29,7 @@ import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -192,19 +193,12 @@ public class UsageAggregationTask implements SchedulingConfigurer {
 
     /**
      * 调度入口：先校验开关，关闭时跳过。
-     * <p>定时任务只做当天轻量聚合（DB 端 GROUP BY，秒级、低压力）；
-     * 重的外部工具用量全量拉取 {@link #syncExternalUsage()} 仅由手动接口触发，
-     * 避免定时任务长连接把数据库连接池耗尽。</p>
+     * <p>只有控制台「手动触发」或显式打开时间轮开关才会走到这里；定时任务只做当天轻量聚合
+     * （DB 端 GROUP BY，秒级、低压力），重的外部工具用量全量拉取 {@link #syncExternalUsage()}
+     * 避免长连接把数据库连接池耗尽。</p>
      */
     public void run() {
         try {
-            // 临时禁用用量分析定时任务，防止JVM崩溃
-            boolean disabled = true;
-            if (disabled) {
-                log.debug("[UsageAggregation] 用量分析定时任务已临时禁用");
-                return;
-            }
-            
             if (!isUsageEnabled()) {
                 log.debug("[UsageAggregation] 用量分析未启用，跳过本次执行");
                 recordLog(LOG_LEVEL_WARN, "用量分析未启用，跳过本次执行");
@@ -714,10 +708,16 @@ public class UsageAggregationTask implements SchedulingConfigurer {
         Objects.requireNonNull(start, "start must not be null");
         Objects.requireNonNull(end, "end must not be null");
 
+        // 日汇总表按自然日存，只能整天重建：窗口不对齐到整天时，重插只覆盖窗口内几小时，
+        // 会把同一天已汇总的其它小时抹掉，统计出口随之少算
+        LocalDateTime dayStart = start.toLocalDate().atStartOfDay();
+        LocalDateTime dayEnd = LocalTime.MIDNIGHT.equals(end.toLocalTime())
+                ? end : end.toLocalDate().plusDays(1).atStartOfDay();
+
  // 数据库端 群体 BY 聚合，一次返回全部日汇总数据，避免全量装载到 JVM
-        List<SysAiUsageMapper.DailyAggregateRow> rows = usageMapper.selectDailyAggregate(start, end);
+        List<SysAiUsageMapper.DailyAggregateRow> rows = usageMapper.selectDailyAggregate(dayStart, dayEnd);
         if (rows.isEmpty()) {
-            log.info("[UsageAggregation] {} ~ {} 无数据，跳过聚合", start, end);
+            log.info("[UsageAggregation] {} ~ {} 无数据，跳过聚合", dayStart, dayEnd);
             return 0;
         }
 
@@ -775,7 +775,7 @@ public class UsageAggregationTask implements SchedulingConfigurer {
                     row.statDate(), row.groupName(), row.provider(), row.model(), row.totalCalls());
         }
 
-        log.info("[UsageAggregation] {} ~ {} 聚合完成，共 {} 条记录", start, end, totalAggregated);
+        log.info("[UsageAggregation] {} ~ {} 聚合完成，共 {} 条记录", dayStart, dayEnd, totalAggregated);
         return totalAggregated;
     }
 }

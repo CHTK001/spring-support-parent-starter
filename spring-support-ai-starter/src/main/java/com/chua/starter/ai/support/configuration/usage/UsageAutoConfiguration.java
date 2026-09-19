@@ -7,6 +7,7 @@ import com.chua.starter.ai.support.mapper.SysAiUsageDailyMapper;
 import com.chua.starter.ai.support.mapper.SysAiUsageMapper;
 import com.chua.starter.ai.support.mapper.SysAiUsageSyncLogMapper;
 import com.chua.starter.ai.support.schedule.UsageAggregationTask;
+import com.chua.starter.ai.support.manage.service.SysAiModelMetricsService;
 import com.chua.starter.ai.support.service.AiModelMetricsEnrichmentService;
 import com.chua.starter.ai.support.service.SysAiPricingService;
 import com.chua.starter.ai.support.service.SysAiUsageService;
@@ -67,14 +68,16 @@ public class UsageAutoConfiguration {
      * @param metricsEnrichment AA 模型指标服务（含定价缓存）
      */
     public SysAiPricingService sysAiPricingService(SysAiPricingMapper pricingMapper,
-                                                   AiModelMetricsEnrichmentService metricsEnrichment) {
+                                                   AiModelMetricsEnrichmentService metricsEnrichment,
+                                                   SysAiModelMetricsService modelMetricsService) {
         /**
          * sysaipricing服务impl。
          * @param pricingMapper pricing映射器
          * @param metricsEnrichment 指标enrichment
+         * @param modelMetricsService 全量指标库服务
          * @return sysAIpricing服务impl的结果
          */
-        return new SysAiPricingServiceImpl(pricingMapper, metricsEnrichment);
+        return new SysAiPricingServiceImpl(pricingMapper, metricsEnrichment, modelMetricsService);
     }
 
     @Bean

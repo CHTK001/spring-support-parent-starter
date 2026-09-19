@@ -94,6 +94,12 @@ public class SysAiMessage {
     private String attachment; // attachment
 
     /**
+     * 归属用户标识（随所属会话写入，非客户端传入）
+     */
+    @TableField("sys_ai_message_user_id")
+    private String userId; // 归属用户
+
+    /**
      * 创建时间
      */
     @TableField(value = "create_time", fill = FieldFill.INSERT)

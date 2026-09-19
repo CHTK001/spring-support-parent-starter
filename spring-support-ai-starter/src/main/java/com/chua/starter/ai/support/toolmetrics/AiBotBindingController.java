@@ -7,6 +7,8 @@ import com.chua.starter.ai.support.model.BotBindingCreateRequest;
 import com.chua.starter.ai.support.model.BotBindingListResponse;
 import com.chua.starter.ai.support.model.BotConversation;
 import com.chua.starter.ai.support.entity.SysAiBotBinding;
+import com.chua.starter.ai.support.manage.common.ApiErrorCode;
+import com.chua.starter.ai.support.manage.common.ApiException;
 import com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper;
 import com.chua.starter.ai.support.manage.store.BotUserSummary;
 import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
@@ -15,6 +17,7 @@ import com.chua.starter.ai.support.service.AiBotChatService;
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
 import com.chua.common.support.ai.bot.BotSendResult;
 import com.chua.starter.ai.support.manage.LocalTrustAuthFilter;
+import com.chua.starter.ai.support.util.AiBotCaller;
 import com.chua.starter.oauth.client.support.execute.AuthClientExecute;
 import com.chua.starter.oauth.client.support.user.UserResult;
 import jakarta.servlet.http.HttpServletRequest;
@@ -137,10 +140,16 @@ public class AiBotBindingController {
     /**
      * 管理员视角的用户聚合列表（每个用户绑定了多少 机器人、多少在线）。
      *
+     * @param httpRequest HTTP 请求（用于解析当前身份）
      * @return 用户摘要列表
      */
     @GetMapping("/users")
-    public ReturnResult<List<BotUserSummary>> users() {
+    public ReturnResult<List<BotUserSummary>> users(HttpServletRequest httpRequest) {
+        AiBotCaller caller = caller(httpRequest);
+        if (!caller.admin()) {
+            // 用户维度统计属管理员视角数据，普通归属者只能看本人绑定
+            throw new ApiException(ApiErrorCode.FORBIDDEN, "无权访问他人数据");
+        }
         return ReturnResult.ok(botBindingService.listUserSummaries());
     }
 
@@ -151,14 +160,15 @@ public class AiBotBindingController {
      * @return 发送结果（含 消息_标识）
      */
     @PostMapping("/send")
-    public ReturnResult<Map<String, Object>> send(@RequestBody Map<String, String> body) {
+    public ReturnResult<Map<String, Object>> send(@RequestBody Map<String, String> body,
+                                                  HttpServletRequest httpRequest) {
         String botId = body.get("botId");
         String fromUser = body.get("fromUser");
         String content = body.get("content");
         if (StringUtils.isBlank(botId) || StringUtils.isBlank(fromUser) || StringUtils.isBlank(content)) {
             return sendFailure("botId / fromUser / content 不能为空");
         }
-        BotSendResult result = aiBotChatService.sendMessage(botId, fromUser, content);
+        BotSendResult result = aiBotChatService.sendMessage(botId, fromUser, content, caller(httpRequest));
         if (!result.isSuccess()) {
             return sendFailure(result.getErrorMessage() != null ? result.getErrorMessage() : "发送失败");
         }
@@ -195,32 +205,36 @@ public class AiBotBindingController {
      * @param fromUser 微信用户 标识（可空，空则查全部）
      * @param page     页码（从 0 开始，默认 0）
      * @param pageSize 每页条数（默认 50）
+     * @param httpRequest HTTP 请求（用于解析当前身份）
      * @return 分页聊天记录
      */
     @GetMapping("/messages")
     public ReturnResult<Map<String, Object>> messages(@RequestParam String botId,
                                                       @RequestParam(required = false) String fromUser,
                                                       @RequestParam(required = false, defaultValue = "0") Integer page,
-                                                      @RequestParam(required = false, defaultValue = "50") Integer pageSize) {
+                                                      @RequestParam(required = false, defaultValue = "50") Integer pageSize,
+                                                      HttpServletRequest httpRequest) {
         return ReturnResult.ok(aiBotChatService.listMessagesPaged(botId, fromUser,
-                page != null ? page : 0, pageSize != null ? pageSize : 50));
+                page != null ? page : 0, pageSize != null ? pageSize : 50, caller(httpRequest)));
     }
 
     /**
      * 润色一段文本（IM 输入框「润色」按钮）。
      *
      * @param body 请求体：机器人标识 / 文本
+     * @param httpRequest HTTP 请求（用于解析当前身份）
      * @return 润色结果（{@code result} 字段）
      */
     @PostMapping("/polish")
-    public ReturnResult<Map<String, Object>> polish(@RequestBody Map<String, String> body) {
+    public ReturnResult<Map<String, Object>> polish(@RequestBody Map<String, String> body,
+                                                    HttpServletRequest httpRequest) {
         String botId = body.get("botId");
         String text = body.get("text");
         if (StringUtils.isBlank(botId) || StringUtils.isBlank(text)) {
             return ReturnResult.illegal("botId / text 不能为空");
         }
         Map<String, Object> data = new LinkedHashMap<>();
-        data.put("result", aiBotChatService.polishText(botId.trim(), text));
+        data.put("result", aiBotChatService.polishText(botId.trim(), text, caller(httpRequest)));
         return ReturnResult.ok(data);
     }
 
@@ -228,28 +242,31 @@ public class AiBotBindingController {
      * 总结指定会话的聊天记录（IM 页「上下文总结」按钮）。
      *
      * @param body 请求体：机器人标识 / 从用户
+     * @param httpRequest HTTP 请求（用于解析当前身份）
      * @return 会话摘要（{@code summary} 字段）
      */
     @PostMapping("/summarize")
-    public ReturnResult<Map<String, Object>> summarize(@RequestBody Map<String, String> body) {
+    public ReturnResult<Map<String, Object>> summarize(@RequestBody Map<String, String> body,
+                                                       HttpServletRequest httpRequest) {
         String botId = body.get("botId");
         String fromUser = body.get("fromUser");
         if (StringUtils.isBlank(botId)) {
             return ReturnResult.illegal("botId 不能为空");
         }
         Map<String, Object> data = new LinkedHashMap<>();
-        data.put("summary", aiBotChatService.summarizeConversation(botId.trim(), fromUser));
+        data.put("summary", aiBotChatService.summarizeConversation(botId.trim(), fromUser, caller(httpRequest)));
         return ReturnResult.ok(data);
     }
 
     /**
      * 会话列表（IM 左侧）：按 机器人 + 微信用户聚合，取最后一条消息。
      *
+     * @param httpRequest HTTP 请求（用于解析当前身份）
      * @return 会话列表（按最后消息时间降序）
      */
     @GetMapping("/conversations")
-    public ReturnResult<List<BotConversation>> conversations() {
-        return ReturnResult.ok(aiBotChatService.listConversations());
+    public ReturnResult<List<BotConversation>> conversations(HttpServletRequest httpRequest) {
+        return ReturnResult.ok(aiBotChatService.listConversations(caller(httpRequest)));
     }
 
     /**
@@ -266,14 +283,15 @@ public class AiBotBindingController {
      * 指定 机器人 的最近联系人（按 机器人标识 去重 从用户）。
      *
      * @param botId 机器人 唯一标识
+     * @param httpRequest HTTP 请求（用于解析当前身份）
      * @return 联系人列表
      */
     @GetMapping("/contacts")
-    public ReturnResult<List<String>> contacts(@RequestParam String botId) {
+    public ReturnResult<List<String>> contacts(@RequestParam String botId, HttpServletRequest httpRequest) {
         if (StringUtils.isBlank(botId)) {
             return ReturnResult.illegal("botId 不能为空");
         }
-        return ReturnResult.ok(aiBotChatService.listContacts(botId.trim()));
+        return ReturnResult.ok(aiBotChatService.listContacts(botId.trim(), caller(httpRequest)));
     }
 
     /**
@@ -302,12 +320,14 @@ public class AiBotBindingController {
      *
      * @param botId    机器人 唯一标识
      * @param fromUser 微信用户 标识（可空，空则删除该 机器人 全部会话）
+     * @param httpRequest HTTP 请求（用于解析当前身份）
      * @return 删除的消息条数
      */
     @DeleteMapping("/conversations")
     public ReturnResult<Integer> deleteConversation(@RequestParam String botId,
-                                                    @RequestParam(required = false) String fromUser) {
-        return ReturnResult.ok(aiBotChatService.deleteConversation(botId, fromUser));
+                                                    @RequestParam(required = false) String fromUser,
+                                                    HttpServletRequest httpRequest) {
+        return ReturnResult.ok(aiBotChatService.deleteConversation(botId, fromUser, caller(httpRequest)));
     }
 
     /**
@@ -491,18 +511,25 @@ public class AiBotBindingController {
      * 按 标识 获取绑定详情。
      *
      * @param id 绑定 标识
+     * @param httpRequest HTTP 请求（用于解析当前身份）
      * @return 绑定信息
      */
     @GetMapping("/{id}")
-    public ReturnResult<BotBindingListResponse> get(@PathVariable Long id) {
+    public ReturnResult<BotBindingListResponse> get(@PathVariable Long id, HttpServletRequest httpRequest) {
         SysAiBotBinding entity = botBindingService.getById(id);
-        return ReturnResult.ok(entity != null ? toResponse(entity) : null);
+        if (entity == null) {
+            return ReturnResult.ok(null);
+        }
+        // 绑定含模型与提示词配置，读出口按归属拦越权
+        caller(httpRequest).requireReadable(entity.getOwnerKey());
+        return ReturnResult.ok(toResponse(entity));
     }
 
     /**
      * 创建绑定。
      *
      * @param request 绑定请求
+     * @param httpRequest HTTP 请求（用于解析当前身份）
      * @return 数据库 标识
      */
     @PostMapping("/create")
@@ -510,8 +537,12 @@ public class AiBotBindingController {
                                      HttpServletRequest httpRequest) {
         SysAiBotBinding entity = new SysAiBotBinding();
         BeanUtils.copyProperties(body, entity);
-        // 归属标识由服务端根据当前身份写入，不接受前端指定
-        entity.setOwnerKey(resolveIdentity(httpRequest).ownerKey());
+        AiBotCaller caller = caller(httpRequest);
+        // 保存按 botId upsert：命中他人已绑定记录等同于改写他人资源，先按原归属拦越权
+        SysAiBotBinding existing = findExisting(entity.getBotId());
+        requireSaveAllowed(caller, existing);
+        // 归属标识由服务端根据当前身份写入，不接受前端指定（重绑时保留原归属）
+        entity.setOwnerKey(existing == null ? caller.ownerKey() : existing.getOwnerKey());
         return ReturnResult.ok(botBindingService.saveOrUpdate(entity));
     }
 
@@ -519,23 +550,65 @@ public class AiBotBindingController {
      * 更新绑定。
      *
      * @param request 绑定请求（含 标识）
+     * @param httpRequest HTTP 请求（用于解析当前身份）
      * @return 数据库 标识
      */
     @PutMapping("/update")
-    public ReturnResult<Long> update(@RequestBody BotBindingCreateRequest request) {
+    public ReturnResult<Long> update(@RequestBody BotBindingCreateRequest request,
+                                     HttpServletRequest httpRequest) {
         SysAiBotBinding entity = new SysAiBotBinding();
         BeanUtils.copyProperties(request, entity);
+        AiBotCaller caller = caller(httpRequest);
+        // 写出口只认归属：管理员对他人绑定同样不可改，归属不接受前端传值
+        SysAiBotBinding existing = findExisting(entity.getBotId());
+        requireSaveAllowed(caller, existing);
+        entity.setOwnerKey(existing == null ? caller.ownerKey() : existing.getOwnerKey());
         return ReturnResult.ok(botBindingService.saveOrUpdate(entity));
+    }
+
+    /**
+     * 保存（按 botId upsert）前的越权闸门。
+     *
+     * <p>命中既有绑定时按<b>原归属</b>校验写权限，客户端改归属无效；未命中则是新建，
+     * 没有他人资源可改写，只拦只读账号。</p>
+     *
+     * @param caller   当前调用方归属
+     * @param existing 既有绑定记录，新建时为 {@code null}
+     */
+    private void requireSaveAllowed(AiBotCaller caller, SysAiBotBinding existing) {
+        if (existing == null) {
+            caller.requireCreatable();
+            return;
+        }
+        caller.requireWritable(existing.getOwnerKey());
+    }
+
+    /**
+     * 按 机器人 唯一标识取既有绑定记录。
+     *
+     * @param botId 机器人 唯一标识，可为空
+     * @return 既有绑定记录，不存在时返回 {@code null}
+     */
+    private SysAiBotBinding findExisting(String botId) {
+        if (StringUtils.isBlank(botId)) {
+            return null;
+        }
+        return botBindingService.findByBotId(botId.trim());
     }
 
     /**
      * 删除绑定。
      *
      * @param id 数据库 标识
+     * @param httpRequest HTTP 请求（用于解析当前身份）
      * @return 操作结果
      */
     @DeleteMapping("/{id}")
-    public ReturnResult<Void> delete(@PathVariable Long id) {
+    public ReturnResult<Void> delete(@PathVariable Long id, HttpServletRequest httpRequest) {
+        SysAiBotBinding entity = botBindingService.getById(id);
+        if (entity != null) {
+            caller(httpRequest).requireWritable(entity.getOwnerKey());
+        }
         botBindingService.delete(id);
         return ReturnResult.ok(null);
     }
@@ -697,6 +770,20 @@ public class AiBotBindingController {
          * @return Identity的结果
          */
         return new Identity(null, false);
+    }
+
+    /**
+     * 解析当前请求的调用方归属，供 机器人 数据的越权拦截使用。
+     *
+     * <p>本控制器在鉴权白名单内，身份沿用 {@link #resolveIdentity(HttpServletRequest)} 的口径
+     * （本地信任 → 登录 令牌 → 设备指纹），不能改读鉴权过滤器写入的请求属性。</p>
+     *
+     * @param request HTTP 请求
+     * @return 调用方归属
+     */
+    private AiBotCaller caller(HttpServletRequest request) {
+        Identity identity = resolveIdentity(request);
+        return new AiBotCaller(identity.ownerKey(), identity.admin());
     }
 
     /**

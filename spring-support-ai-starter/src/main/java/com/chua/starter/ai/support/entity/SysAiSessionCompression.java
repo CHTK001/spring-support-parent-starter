@@ -101,4 +101,15 @@ public class SysAiSessionCompression {
      * 更新时间
     */
     private LocalDateTime updateTime;
+
+    /**
+     * 归属用户 标识
+     *
+     * <p>随所属会话（{@code sys_ai_session.sys_user_id}）写入，用于按用户隔离压缩上下文。</p>
+     */
+    @TableField("sys_ai_session_compression_user_id")
+    /**
+     * 归属用户
+    */
+    private String userId;
 }

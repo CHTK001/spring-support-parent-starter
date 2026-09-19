@@ -2,7 +2,10 @@ package com.chua.starter.ai.support.controller;
 
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.ai.support.entity.SysAiBotBinding;
+import com.chua.starter.ai.support.entity.SysAiBotMessage;
 import com.chua.starter.ai.support.service.AiBotBindingService;
+import com.chua.starter.ai.support.service.AiBotChatService;
+import com.chua.starter.ai.support.util.AiBotCaller;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
@@ -27,6 +30,7 @@ import java.util.Map;
 public class ConnectorController {
 
     private final AiBotBindingService botBindingService;
+    private final AiBotChatService aiBotChatService;
 
     /**
      * 获取所有可用的连接器类型（从 SPI BotClient 获取）
@@ -72,8 +76,13 @@ public class ConnectorController {
     public ReturnResult<List<Map<String, Object>>> getBoundConnectors() {
         List<SysAiBotBinding> bindings = botBindingService.listAll();
         List<Map<String, Object>> result = new ArrayList<>();
+        AiBotCaller caller = AiBotCaller.fromLogin();
 
         for (SysAiBotBinding binding : bindings) {
+            // 管理员可见全量，普通用户仅本人归属的连接器
+            if (!caller.canRead(binding.getOwnerKey())) {
+                continue;
+            }
             Map<String, Object> item = new HashMap<>();
             item.put("id", binding.getId());
             item.put("type", binding.getPlatform());
@@ -92,15 +101,11 @@ public class ConnectorController {
      */
     @GetMapping("/{id}")
     public ReturnResult<Map<String, Object>> getConnectorById(@PathVariable Long id) {
-        List<SysAiBotBinding> bindings = botBindingService.listAll();
-        SysAiBotBinding binding = bindings.stream()
-                .filter(b -> b.getId().equals(id))
-                .findFirst()
-                .orElse(null);
-
+        SysAiBotBinding binding = botBindingService.getById(id);
         if (binding == null) {
             return ReturnResult.error("连接器不存在");
         }
+        AiBotCaller.fromLogin().requireReadable(binding.getOwnerKey());
 
         Map<String, Object> result = new HashMap<>();
         result.put("id", binding.getId());
@@ -110,6 +115,40 @@ public class ConnectorController {
         result.put("modelName", binding.getModel());
         result.put("createTime", binding.getCreateTime());
         result.put("lastActiveTime", binding.getLastActiveTime());
+
+        return ReturnResult.success(result);
+    }
+
+    /**
+     * 获取连接器消息列表
+     */
+    @GetMapping("/{id}/messages")
+    public ReturnResult<List<Map<String, Object>>> getConnectorMessages(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "50") Integer limit) {
+        SysAiBotBinding binding = botBindingService.getById(id);
+        if (binding == null) {
+            return ReturnResult.error("连接器不存在");
+        }
+        AiBotCaller caller = AiBotCaller.fromLogin();
+        caller.requireReadable(binding.getOwnerKey());
+
+        List<SysAiBotMessage> messages = aiBotChatService.listMessages(
+                binding.getBotId(), binding.getNickname(), caller);
+        
+        // 只返回最近的 limit 条
+        int fromIndex = Math.max(0, messages.size() - limit);
+        List<SysAiBotMessage> recentMessages = messages.subList(fromIndex, messages.size());
+
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (SysAiBotMessage message : recentMessages) {
+            Map<String, Object> item = new HashMap<>();
+            item.put("id", message.getId());
+            item.put("role", "IN".equals(message.getDirection()) ? "user" : "assistant");
+            item.put("content", message.getContent());
+            item.put("createTime", message.getCreateTime());
+            result.add(item);
+        }
 
         return ReturnResult.success(result);
     }
@@ -152,8 +191,14 @@ public class ConnectorController {
      */
     @DeleteMapping("/{id}")
     public ReturnResult<String> unbindConnector(@PathVariable Long id) {
+        SysAiBotBinding binding = botBindingService.getById(id);
+        if (binding == null) {
+            return ReturnResult.error("连接器不存在");
+        }
+        // 解绑会停止他人 机器人 的消息轮询，写出口只认归属
+        AiBotCaller.fromLogin().requireWritable(binding.getOwnerKey());
         log.info("解绑连接器: id={}", id);
-        // TODO: 调用 AiBotBindingService 的解绑方法
+        botBindingService.delete(id);
         return ReturnResult.success("解绑成功");
     }
 }
