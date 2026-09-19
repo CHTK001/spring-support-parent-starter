@@ -33,7 +33,6 @@ spring:
       schema-locations:
         - classpath:db/init/V1.0__init_all_monitor.sql
         - classpath:db/init/V1.0__init_all_server.sql
-        - classpath:db/init/V1.0__init_all_project.sql
         - classpath:db/init/V1.0__init_all_ai.sql
         # TShark 抓包两张表（本模块自有，全量脚本未包含）
         - classpath:db/init/V1.5__init_tshark.sql

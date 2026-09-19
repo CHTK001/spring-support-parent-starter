@@ -3,19 +3,18 @@ package com.chua.starter.monitor.support.provider.server;
 import com.chua.common.support.lang.json.Json;
 import com.chua.common.support.lang.json.JsonObject;
 import com.chua.common.support.network.protocol.ClientSetting;
+import com.chua.common.support.spi.annotations.Spi;
+import com.chua.ssh.support.client.LinuxExecClient;
+import com.chua.ssh.support.client.SshClient;
 import com.chua.starter.monitor.support.enums.ProviderType;
 import com.chua.starter.monitor.support.enums.ServiceType;
 import com.chua.starter.monitor.support.spi.CollectContext;
 import com.chua.starter.monitor.support.spi.CollectResult;
 import com.chua.starter.monitor.support.spi.MetricProvider;
-import com.chua.ssh.support.client.LinuxExecClient;
-import com.chua.ssh.support.client.SshClient;
+import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
-
-import java.util.Set;
 
 /**
  * 服务器终端采集 提供者(SSH)
@@ -28,7 +27,7 @@ import java.util.Set;
  * @author CH
  */
 @Slf4j
-@Component
+@Spi(value = "server-terminal", order = 100)
 public class ServerTerminalProvider implements MetricProvider {
 
     /**

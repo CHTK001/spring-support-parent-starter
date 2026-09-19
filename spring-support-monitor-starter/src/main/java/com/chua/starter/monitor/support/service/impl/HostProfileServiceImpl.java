@@ -2,8 +2,19 @@ package com.chua.starter.monitor.support.service.impl;
 
 import com.chua.common.support.lang.code.ReturnResult;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.chua.starter.monitor.support.model.DiskRowVO;
+import com.chua.starter.monitor.support.model.EnvVarVO;
+import com.chua.starter.monitor.support.model.HostInfoVO;
+import com.chua.starter.monitor.support.model.HostMetricsVO;
+import com.chua.starter.monitor.support.model.HostProfileVO;
+import com.chua.starter.monitor.support.model.NetProcessRowVO;
+import com.chua.starter.monitor.support.model.NetworkInterfaceRowVO;
+import com.chua.starter.monitor.support.model.ProcessRowVO;
+import com.chua.starter.monitor.support.model.ServiceRowVO;
 import com.chua.starter.monitor.support.service.AgentHttpClient;
 import com.chua.starter.monitor.support.service.HostProfileService;
+import com.chua.starter.monitor.support.spi.SystemInfoProvider;
+import com.chua.starter.monitor.support.spi.SystemInfoProviderRouter;
 import com.chua.starter.server.support.entity.MsServerHost;
 import com.chua.starter.server.support.mapper.MsServerHostMapper;
 import lombok.RequiredArgsConstructor;
@@ -11,14 +22,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
+import java.util.function.BiFunction;
 
 /**
- * 主机画像服务实现
+ * 主机画像服务实现：所有分区数据经 {@link SystemInfoProvider} 通道取得。
  *
  * @author CH
  * @since 4.0.0.42
@@ -29,141 +38,226 @@ import java.util.Map;
 public class HostProfileServiceImpl implements HostProfileService {
 
     /**
+     * Agent 接入的主机台账值：仅该通道回写 Agent 安装状态与端口
+     */
+    private static final String CHANNEL_AGENT = "AGENT";
+
+    /**
+     * 进程/服务分区的默认抓取条数
+     */
+    private static final int DEFAULT_SECTION_SIZE = 50;
+
+    /**
      * 主机 映射器
-    */
+     */
     private final MsServerHostMapper hostMapper;
 
     /**
-     * agent HTTP 客户端
-    */
+     * agent HTTP 客户端（仅用于取 Agent 端口）
+     */
     private final AgentHttpClient agentClient;
 
+    /**
+     * 采集通道路由器
+     */
+    private final SystemInfoProviderRouter providerRouter;
+
     @Override
-    public ReturnResult<Map<String, Object>> refresh(Long hostId, boolean persist) {
+    public ReturnResult<HostProfileVO> refresh(Long hostId, boolean persist) {
         MsServerHost host = hostMapper.selectById(hostId);
         if (host == null) {
             return ReturnResult.error("主机不存在: " + hostId);
         }
-        Map<String, Object> info;
-        Map<String, Object> metrics;
+        SystemInfoProvider provider;
+        HostInfoVO info;
         try {
-            info = agentClient.getMap(host, "/info");
-            metrics = agentClient.getMap(host, "/metrics");
+            provider = providerRouter.route(host);
+            info = provider.hostInfo(host);
         } catch (Exception e) {
             String reason = cut(e.getMessage());
             if (persist) {
                 markError(hostId, reason);
             }
-            return ReturnResult.error("Agent 不可达: " + reason);
+            return ReturnResult.error("通道不可达: " + reason);
         }
+        if (info == null) {
+            if (persist) {
+                markError(hostId, "通道返回空的基础信息");
+            }
+            return ReturnResult.error("通道未返回主机基础信息");
+        }
+        HostMetricsVO metrics;
+        try {
+            metrics = metrics(provider, host, info);
+        } catch (Exception e) {
+            String reason = cut(e.getMessage());
+            if (persist) {
+                markError(hostId, reason);
+            }
+            return ReturnResult.error("指标采集失败: " + reason);
+        }
+
+        HostProfileVO vo = new HostProfileVO();
+        vo.setInfo(info);
+        vo.setMetrics(metrics);
+        vo.setHost(host);
+        if (isAgentChannel(host)) {
+            vo.setPort(agentClient.portOf(host));
+        }
+        vo.setOsMismatch(osMismatch(host, info));
+        vo.setCollectedAt(LocalDateTime.now().toString());
         if (persist) {
             persistSnapshot(host, info, metrics);
+        } else {
+            clearError(hostId);
         }
-        Map<String, Object> data = new LinkedHashMap<>(6);
-        data.put("info", info);
-        data.put("metrics", metrics);
-        data.put("host", host);
-        data.put("port", agentClient.portOf(host));
-        data.put("osMismatch", osMismatch(host, info));
-        data.put("collectedAt", LocalDateTime.now().toString());
-        return ReturnResult.ok(data);
+        return ReturnResult.ok(vo);
     }
 
     @Override
-    public ReturnResult<List<Map<String, Object>>> section(Long hostId, String section, Integer page, Integer size) {
+    public ReturnResult<List<NetProcessRowVO>> ports(Long hostId) {
+        return collect(hostId, (provider, host) -> provider.netProcesses(host));
+    }
+
+    @Override
+    public ReturnResult<List<ProcessRowVO>> processes(Long hostId, Integer page, Integer size) {
+        int no = page == null || page < 1 ? 1 : page;
+        int limit = size == null || size < 1 ? DEFAULT_SECTION_SIZE : Math.min(size, 500);
+        return collect(hostId, (provider, host) -> provider.processes(host, no, limit));
+    }
+
+    @Override
+    public ReturnResult<List<ServiceRowVO>> services(Long hostId, Integer page, Integer size) {
+        int no = page == null || page < 1 ? 1 : page;
+        int limit = size == null || size < 1 ? DEFAULT_SECTION_SIZE : Math.min(size, 500);
+        return collect(hostId, (provider, host) -> provider.services(host, no, limit));
+    }
+
+    @Override
+    public ReturnResult<List<DiskRowVO>> disks(Long hostId) {
+        return collect(hostId, (provider, host) -> provider.disks(host));
+    }
+
+    @Override
+    public ReturnResult<List<NetworkInterfaceRowVO>> network(Long hostId) {
+        return collect(hostId, (provider, host) -> provider.networkInterfaces(host));
+    }
+
+    @Override
+    public ReturnResult<List<EnvVarVO>> env(Long hostId) {
+        return collect(hostId, (provider, host) -> provider.env(host));
+    }
+
+    /**
+     * 统一执行一次分区采集：失败原因写回台账，成功清除历史失败。
+     *
+     * @param hostId 主机标识
+     * @param reader 采集动作
+     * @param <R>    返回类型
+     * @return 分区数据
+     */
+    private <R> ReturnResult<R> collect(Long hostId, BiFunction<SystemInfoProvider, MsServerHost, R> reader) {
         MsServerHost host = hostMapper.selectById(hostId);
         if (host == null) {
             return ReturnResult.error("主机不存在: " + hostId);
         }
-        String name = section == null ? "" : section.trim().toLowerCase(Locale.ROOT);
-        String path = switch (name) {
-            case SECTION_PORTS -> "/ports";
-            case SECTION_PROCESSES -> "/processes";
-            case SECTION_SERVICES -> "/services";
-            case SECTION_DISKS -> "/disks";
-            case SECTION_NETWORK -> "/network";
-            case SECTION_ENV -> "/env";
-            default -> null;
-        };
-        if (path == null) {
-            return ReturnResult.error("不支持的画像分区: " + section);
-        }
-        Map<String, String> query = null;
-        if (SECTION_PROCESSES.equals(name) || SECTION_SERVICES.equals(name)) {
-            query = new LinkedHashMap<>(2);
-            query.put("page", String.valueOf(page == null || page < 1 ? 1 : page));
-            query.put("pageSize", String.valueOf(size == null || size < 1 ? 50 : Math.min(size, 500)));
-        }
         try {
-            List<Map<String, Object>> list = agentClient.getList(host, path, query);
+            R rows = reader.apply(providerRouter.route(host), host);
             clearError(hostId);
-            return ReturnResult.ok(list);
+            return ReturnResult.ok(rows);
         } catch (Exception e) {
-            markError(hostId, cut(e.getMessage()));
-            return ReturnResult.error("Agent 不可达: " + cut(e.getMessage()));
+            String reason = cut(e.getMessage());
+            markError(hostId, reason);
+            return ReturnResult.error("通道不可达: " + reason);
         }
     }
 
     /**
-     * 把 agent 回报的硬件与用量快照写回主机台账。
+     * 由同一次采集的基础信息、磁盘与进程结果推导实时指标。
+     *
+     * @param provider 采集通道
+     * @param host     目标主机
+     * @param info     基础信息
+     * @return 实时指标
+     */
+    private HostMetricsVO metrics(SystemInfoProvider provider, MsServerHost host, HostInfoVO info) {
+        HostMetricsVO metrics = new HostMetricsVO();
+        metrics.setCpuPercent(value(info.getCpuPercent()));
+        metrics.setMemoryTotalMb(value(info.getMemoryTotalMb()));
+        metrics.setMemoryUsedMb(value(info.getMemoryUsedMb()));
+        metrics.setMemoryPercent(value(info.getMemoryUsage()));
+        metrics.setUptimeSec(value(info.getUptimeSec()));
+        metrics.setCollectTime(LocalDateTime.now().toString());
+
+        double diskTotal = 0.0;
+        double diskUsed = 0.0;
+        List<DiskRowVO> disks = provider.disks(host);
+        if (disks != null) {
+            for (DiskRowVO disk : disks) {
+                diskTotal += disk.getTotalGb();
+                diskUsed += disk.getUsedGb();
+            }
+        }
+        metrics.setDiskTotalGb(round(diskTotal));
+        metrics.setDiskUsedGb(round(diskUsed));
+        metrics.setDiskPercent(diskTotal <= 0 ? 0.0 : round(diskUsed * 100.0 / diskTotal));
+
+        List<ProcessRowVO> processes = provider.processes(host, 1, 10000);
+        if (processes != null) {
+            long threads = 0L;
+            for (ProcessRowVO process : processes) {
+                threads += process.getThreads();
+            }
+            metrics.setProcessCount(processes.size());
+            metrics.setThreadCount((int) threads);
+        }
+        return metrics;
+    }
+
+    /**
+     * 把采集到的硬件与用量快照写回主机台账。
      *
      * @param host    主机
-     * @param info    /info 负载
-     * @param metrics /metrics 负载
+     * @param info    基础信息
+     * @param metrics 实时指标
      */
-    private void persistSnapshot(MsServerHost host, Map<String, Object> info, Map<String, Object> metrics) {
-        String osVersion = text(info.get("osVersion"));
-        if (!osVersion.isEmpty()) {
-            host.setServerHostOsVersion(osVersion);
+    private void persistSnapshot(MsServerHost host, HostInfoVO info, HostMetricsVO metrics) {
+        if (notEmpty(info.getOsVersion())) {
+            host.setServerHostOsVersion(info.getOsVersion());
         }
-        String arch = text(info.get("arch"));
-        if (!arch.isEmpty()) {
-            host.setServerHostOsArch(arch);
+        if (notEmpty(info.getArch())) {
+            host.setServerHostOsArch(info.getArch());
         }
-        Long cores = asLong(info.get("cpuCores"));
-        if (cores != null && cores > 0) {
-            host.setServerHostCpuCores(cores.intValue());
+        if (info.getCpuCores() != null && info.getCpuCores() > 0) {
+            host.setServerHostCpuCores(info.getCpuCores());
         }
-        Long memoryMb = asLong(info.get("memoryMb"));
-        if (memoryMb != null && memoryMb > 0) {
-            host.setServerHostMemoryMb(memoryMb);
+        if (info.getMemoryMb() != null && info.getMemoryMb() > 0) {
+            host.setServerHostMemoryMb(info.getMemoryMb());
         }
-        Double diskGb = asDouble(info.get("diskTotalGb"));
-        if (diskGb != null && diskGb > 0) {
-            host.setServerHostDiskGb((long) Math.round(diskGb));
+        if (metrics.getDiskTotalGb() > 0) {
+            host.setServerHostDiskGb((long) Math.round(metrics.getDiskTotalGb()));
         }
-        String privateIp = text(info.get("privateIp"));
-        if (!privateIp.isEmpty()) {
-            host.setServerHostPrivateIp(privateIp);
+        if (notEmpty(info.getPrivateIp())) {
+            host.setServerHostPrivateIp(info.getPrivateIp());
         }
-        String publicIp = text(info.get("publicIp"));
-        if (!publicIp.isEmpty()) {
-            host.setServerHostPublicIp(publicIp);
+        if (notEmpty(info.getPublicIp())) {
+            host.setServerHostPublicIp(info.getPublicIp());
         }
-
-        Double cpuPercent = asDouble(metrics.get("cpuPercent"));
-        if (cpuPercent != null) {
-            host.setServerHostCpuUsage(cpuPercent);
-        }
-        Double memPercent = asDouble(metrics.get("memoryPercent"));
-        if (memPercent != null) {
-            host.setServerHostMemUsage(memPercent);
-        }
-        Double diskPercent = asDouble(metrics.get("diskPercent"));
-        if (diskPercent != null) {
-            host.setServerHostDiskUsage(diskPercent);
-        }
+        host.setServerHostCpuUsage(metrics.getCpuPercent());
+        host.setServerHostMemUsage(metrics.getMemoryPercent());
+        host.setServerHostDiskUsage(metrics.getDiskPercent());
 
         LocalDateTime now = LocalDateTime.now();
         host.setServerHostOnline(1);
         host.setServerHostOnlineTime(now);
         host.setServerHostLastCollectTime(now);
-        host.setServerHostAgentTime(now);
-        host.setServerHostAgentInstalled(1);
-        host.setServerHostAgentPort(agentClient.portOf(host));
-        String version = text(info.get("agentVersion"));
-        if (!version.isEmpty()) {
-            host.setServerHostAgentVersion(version);
+        if (isAgentChannel(host)) {
+            host.setServerHostAgentTime(now);
+            host.setServerHostAgentInstalled(1);
+            host.setServerHostAgentPort(agentClient.portOf(host));
+            if (notEmpty(info.getAgentVersion())) {
+                host.setServerHostAgentVersion(info.getAgentVersion());
+            }
         }
         hostMapper.updateById(host);
         // 采集成功即清掉历史失败原因（updateById 会跳过 null 字段，必须走显式置空）
@@ -171,29 +265,40 @@ public class HostProfileServiceImpl implements HostProfileService {
     }
 
     /**
-     * agent 回报的系统族与台账 osType 不一致时给出提示。
+     * 采集回报的系统族与台账 osType 不一致时给出提示。
      * <p>
      * 不自动改写 osType：它决定走 SSH 还是 WinRM、绑定哪套凭据，静默改写会让下一次连接直接失败。
      * </p>
      *
      * @param host 主机
-     * @param info /info 负载
+     * @param info 基础信息
      * @return 不一致时返回提示文案，一致时返回 null
      */
-    private String osMismatch(MsServerHost host, Map<String, Object> info) {
-        String reported = text(info.get("os")).toUpperCase(Locale.ROOT);
+    private String osMismatch(MsServerHost host, HostInfoVO info) {
+        String reported = info.getOs() == null ? "" : info.getOs().toUpperCase(Locale.ROOT);
         String recorded = host.getServerHostOsType() == null ? "" : host.getServerHostOsType().toUpperCase(Locale.ROOT);
-        if (reported.isEmpty() || recorded.isEmpty()) {
+        if (reported.isEmpty() || recorded.isEmpty() || CHANNEL_AGENT.equals(recorded) || "LOCAL".equals(recorded)) {
+            // 台账里存的是接入方式时，osType 本身不表达平台，无从比对
             return null;
         }
         boolean same = (reported.contains("WINDOWS") && recorded.contains("WIN"))
                 || (!reported.contains("WINDOWS") && !recorded.contains("WIN"));
-        return same ? null : "Agent 回报系统为 " + text(info.get("os")) + "，台账记录为 "
+        return same ? null : "采集回报系统为 " + info.getOs() + "，台账记录为 "
                 + host.getServerHostOsType() + "，请确认远程通道配置";
     }
 
     /**
-     * 记录 agent 访问失败原因。
+     * 主机是否经 Agent 接入。
+     *
+     * @param host 主机
+     * @return 台账 osType 为 AGENT 时返回 true
+     */
+    private static boolean isAgentChannel(MsServerHost host) {
+        return CHANNEL_AGENT.equalsIgnoreCase(host.getServerHostOsType());
+    }
+
+    /**
+     * 记录通道访问失败原因。
      *
      * @param hostId 主机标识
      * @param reason 原因
@@ -204,7 +309,9 @@ public class HostProfileServiceImpl implements HostProfileService {
             return;
         }
         host.setServerHostAgentError(cut(reason));
-        host.setServerHostAgentInstalled(0);
+        if (isAgentChannel(host)) {
+            host.setServerHostAgentInstalled(0);
+        }
         hostMapper.updateById(host);
     }
 
@@ -223,45 +330,43 @@ public class HostProfileServiceImpl implements HostProfileService {
     }
 
     /**
-     * 取文本。
+     * 文本非空判断。
      *
-     * @param value 原值
-     * @return 文本，null 转空串
+     * @param value 文本
+     * @return 非空白返回 true
      */
-    private String text(Object value) {
-        return value == null ? "" : String.valueOf(value).trim();
+    private static boolean notEmpty(String value) {
+        return value != null && !value.trim().isEmpty();
     }
 
     /**
-     * 取长整数。
+     * 可空数值取值。
      *
      * @param value 原值
-     * @return 长整数，取不到返回 null
+     * @return 数值，为空返回 0
      */
-    private Long asLong(Object value) {
-        Double number = asDouble(value);
-        return number == null ? null : (long) Math.round(number);
+    private static double value(Double value) {
+        return value == null ? 0.0 : value;
     }
 
     /**
-     * 取小数。
+     * 可空长整取值。
      *
      * @param value 原值
-     * @return 小数，取不到返回 null
+     * @return 数值，为空返回 0
      */
-    private Double asDouble(Object value) {
-        if (value instanceof Number number) {
-            return number.doubleValue();
-        }
-        String text = text(value);
-        if (text.isEmpty()) {
-            return null;
-        }
-        try {
-            return Double.parseDouble(text.replace("%", ""));
-        } catch (NumberFormatException e) {
-            return null;
-        }
+    private static long value(Long value) {
+        return value == null ? 0L : value;
+    }
+
+    /**
+     * 保留一位小数。
+     *
+     * @param value 原值
+     * @return 归一后的值
+     */
+    private static double round(double value) {
+        return Math.round(value * 10.0) / 10.0;
     }
 
     /**

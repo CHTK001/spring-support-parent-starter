@@ -8,6 +8,7 @@ import com.chua.metrics.support.MetricsService;
 import com.chua.metrics.support.MetricsSnapshot;
 import com.chua.metrics.support.NetworkInterface;
 import com.chua.metrics.support.SystemLoad;
+import com.chua.common.support.spi.annotations.Spi;
 import com.chua.starter.monitor.support.enums.ProviderType;
 import com.chua.starter.monitor.support.enums.ServiceType;
 import com.chua.starter.monitor.support.service.MonitorConfigService;
@@ -18,7 +19,6 @@ import com.chua.starter.monitor.support.spi.MetricProvider;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
@@ -38,7 +38,7 @@ import java.util.Set;
  * @author CH
  */
 @Slf4j
-@Component
+@Spi(value = "server-local", order = 100)
 public class ServerLocalProvider implements MetricProvider {
 
     /**
@@ -49,25 +49,14 @@ public class ServerLocalProvider implements MetricProvider {
     /**
      * 指标服务 提供者(可能未启用)
      */
-    private final ObjectProvider<MetricsService> metricsServiceProvider;
+    @Autowired
+    private ObjectProvider<MetricsService> metricsServiceProvider;
 
     /**
      * 全局配置 服务
      */
-    private final MonitorConfigService configService;
-
-    /**
-     * 构造方法
-     *
-     * @param metricsServiceProvider 指标服务 提供者
-     * @param configService          全局配置 服务
-     */
     @Autowired
-    public ServerLocalProvider(ObjectProvider<MetricsService> metricsServiceProvider,
-                               MonitorConfigService configService) {
-        this.metricsServiceProvider = metricsServiceProvider;
-        this.configService = configService;
-    }
+    private MonitorConfigService configService;
 
     @Override
     /**

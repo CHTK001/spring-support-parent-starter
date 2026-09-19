@@ -30,7 +30,7 @@ public class IpProperties {
     /**
      * ip翻译实现方式
      */
-    private String ipType = "qqwry";
+    private String ipType = "ip2region";
 
     /**
      * 获取 enable

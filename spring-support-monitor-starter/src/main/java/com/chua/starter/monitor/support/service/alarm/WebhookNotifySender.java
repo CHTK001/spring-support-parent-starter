@@ -1,9 +1,9 @@
 package com.chua.starter.monitor.support.service.alarm;
 
+import com.chua.common.support.spi.annotations.Spi;
 import com.chua.starter.monitor.support.service.MonitorConfigService;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -23,8 +23,7 @@ import java.util.Map;
  * @since 4.0.0.42
  */
 @Slf4j
-@Component
-@RequiredArgsConstructor
+@Spi(value = "webhook", order = 100)
 public class WebhookNotifySender implements NotifySender {
 
     /**
@@ -35,7 +34,8 @@ public class WebhookNotifySender implements NotifySender {
     /**
      * 全局配置服务
     */
-    private final MonitorConfigService monitorConfigService;
+    @Autowired
+    private MonitorConfigService monitorConfigService;
 
     /**
      * HTTP 客户端（短超时）

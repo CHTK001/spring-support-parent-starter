@@ -8,6 +8,7 @@ import com.chua.starter.common.support.serviceinfo.ServiceInfoRegistry;
 import com.chua.starter.oauth.client.support.appkey.AiAppKeySupport;
 import com.chua.starter.oauth.client.support.filter.AuthFilter;
 import com.chua.starter.oauth.client.support.interceptor.PermissionInterceptor;
+import com.chua.starter.oauth.client.support.exception.OauthExceptionAdvice;
 import com.chua.starter.oauth.client.support.interceptor.TokenForTypeInterceptor;
 import com.chua.starter.oauth.client.support.oauth.OauthAuthService;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
@@ -105,6 +106,21 @@ public class AuthClientConfiguration
          * @return 权限拦截器的结果
          */
         return new PermissionInterceptor();
+    }
+
+    /**
+     * o认证 异常全局处理器
+     * <p>
+     * 本模块不在业务应用的组件扫描范围内，故显式装配，令权限拦截器抛出的
+     * {@link OauthException} 按自带状态码返回而不是退化为 500。
+     * </p>
+     *
+     * @return 认证异常处理器实例
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public OauthExceptionAdvice oauthExceptionAdvice() {
+        return new OauthExceptionAdvice();
     }
 
     /**
@@ -309,9 +325,10 @@ public class AuthClientConfiguration
     */
     public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
         OauthClientRuntimeContext.setBeanFactory(beanFactory);
- // BDRPP 阶段 @配置属性 Bean 可能尚未完成绑定，优先使用 Binder 绑定成功的实例
-        AuthClientProperties bean = (null != this.authProperties && null != this.authProperties.getAddress())
-                ? this.authProperties : getSpringBean();
+ // BDRPP 阶段 @配置属性 Bean 可能尚未完成绑定，优先使用 Binder 绑定成功的实例。
+ // 此处绝不可调用 getSpringBean()：该阶段配置绑定处理器尚未注册，getBean 会提前实例化
+ // AuthClientProperties 单例并缓存，令其永久停留在默认值（协议 tcp、临时账号默认口令）。
+        AuthClientProperties bean = null != this.authProperties ? this.authProperties : getSpringBean();
         log.info("[AuthClientConfiguration] postProcessBeanFactory - 协议: {}, 地址: {}", bean.getProtocol(), bean.getAddress());
         OauthClientRuntimeContext.setAuthClientProperties(bean);
     }

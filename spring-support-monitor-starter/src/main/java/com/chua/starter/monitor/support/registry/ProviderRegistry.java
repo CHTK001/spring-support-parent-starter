@@ -1,27 +1,28 @@
 package com.chua.starter.monitor.support.registry;
 
+import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.spi.definition.ServiceDefinition;
 import com.chua.starter.monitor.support.enums.ProviderType;
 import com.chua.starter.monitor.support.enums.ServiceType;
 import com.chua.starter.monitor.support.spi.MetricProvider;
 import com.chua.starter.monitor.support.spi.OperationProvider;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.HashMap;
-import java.util.List;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 提供者 注册中心
  * <p>
- * 启动时扫描所有 {@link MetricProvider} / {@link OperationProvider} Bean,
- * 分别建立双键索引, 供调度器与控制器路由使用。
+ * 从 {@link MetricProvider} / {@link OperationProvider} 两个 SPI 扩展点取实现，
+ * 分别建立双键索引, 供调度器与控制器路由使用。新增采集方式或服务类型只需提交实现类，
+ * 不必改动本类。
  * </p>
  *
  * <h3>MetricProvider 路由</h3>
@@ -34,6 +35,10 @@ import java.util.concurrent.ConcurrentHashMap;
  *   Map&lt;ServiceType, OperationProvider&gt;
  * </pre>
  *
+ * <p>
+ * 索引在首次解析时构建：SPI 实例的依赖由 Spring 装配链注入，容器就绪前构建会得到半初始化实例。
+ * </p>
+ *
  * @since 2026/8/4
  * @author CH
  */
@@ -42,72 +47,24 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ProviderRegistry {
 
     /**
-     * 指标 提供者 索引
+     * 指标采集扩展点
      */
-    private final Map<ServiceType, Map<ProviderType, MetricProvider>> metricIndex = new EnumMap<>(ServiceType.class);
+    private final ServiceProvider<MetricProvider> metricExtensions = ServiceProvider.of(MetricProvider.class);
 
     /**
-     * 操作 提供者 索引
+     * 操作扩展点
      */
-    private final Map<ServiceType, OperationProvider> operationIndex = new ConcurrentHashMap<>();
+    private final ServiceProvider<OperationProvider> operationExtensions = ServiceProvider.of(OperationProvider.class);
 
     /**
-     * 构造方法, 自动注入所有 提供者 实现
-     *
-     * @param metricProviders 指标 提供者 列表
-     * @param operationProviders 操作 提供者 列表
+     * 指标 提供者 索引，首次使用时构建
      */
-    @Autowired
-    public ProviderRegistry(List<MetricProvider> metricProviders, List<OperationProvider> operationProviders) {
-        /**
-         * 注册指标。
-         * @param metricProviders 指标提供者
-         */
-        registerMetric(metricProviders);
-        /**
-         * 注册operation。
-         * @param operationProviders operation提供者
-         */
-        registerOperation(operationProviders);
-    }
+    private volatile Map<ServiceType, Map<ProviderType, MetricProvider>> metricIndex;
 
     /**
-     * 注册指标 提供者
-     *
-     * @param providers 提供者 列表
+     * 操作 提供者 索引，首次使用时构建
      */
-    private void registerMetric(List<MetricProvider> providers) {
-        if (providers == null || providers.isEmpty()) {
-            log.warn("[ProviderRegistry] 未发现 MetricProvider 实现, 采集调度将无实现可用");
-            return;
-        }
-        for (MetricProvider provider : providers) {
-            ProviderType pt = provider.providerType();
-            for (ServiceType st : provider.supportServiceTypes()) {
-                metricIndex.computeIfAbsent(st, k -> new EnumMap<>(ProviderType.class)).put(pt, provider);
-                log.info("[ProviderRegistry] 注册 MetricProvider: service={}, provider={}, impl={}",
-                        st, pt, provider.getClass().getSimpleName());
-            }
-        }
-    }
-
-    /**
-     * 注册操作 提供者
-     *
-     * @param providers 提供者 列表
-     */
-    private void registerOperation(List<OperationProvider> providers) {
-        if (providers == null || providers.isEmpty()) {
-            log.warn("[ProviderRegistry] 未发现 OperationProvider 实现, Redis/DB 操作将无实现可用");
-            return;
-        }
-        for (OperationProvider provider : providers) {
-            ServiceType st = provider.serviceType();
-            operationIndex.put(st, provider);
-            log.info("[ProviderRegistry] 注册 OperationProvider: service={}, impl={}",
-                    st, provider.getClass().getSimpleName());
-        }
-    }
+    private volatile Map<ServiceType, OperationProvider> operationIndex;
 
     /**
      * 解析指标 提供者
@@ -117,7 +74,7 @@ public class ProviderRegistry {
      * @return Optional, 可能为空
      */
     public Optional<MetricProvider> resolveMetric(ServiceType serviceType, ProviderType providerType) {
-        Map<ProviderType, MetricProvider> inner = metricIndex.get(serviceType);
+        Map<ProviderType, MetricProvider> inner = metricRegistry().get(serviceType);
         if (inner == null) {
             return Optional.empty();
         }
@@ -131,7 +88,7 @@ public class ProviderRegistry {
      * @return Optional, 可能为空
      */
     public Optional<OperationProvider> resolveOperation(ServiceType serviceType) {
-        return Optional.ofNullable(operationIndex.get(serviceType));
+        return Optional.ofNullable(operationRegistry().get(serviceType));
     }
 
     /**
@@ -140,7 +97,7 @@ public class ProviderRegistry {
      * @return 不可变视图
      */
     public Set<ServiceType> metricServices() {
-        return Collections.unmodifiableSet(metricIndex.keySet());
+        return Collections.unmodifiableSet(metricRegistry().keySet());
     }
 
     /**
@@ -150,10 +107,99 @@ public class ProviderRegistry {
      */
     public Map<String, String> describe() {
         Map<String, String> out = new HashMap<>();
-        metricIndex.forEach((st, inner) -> inner.forEach((pt, p) ->
+        metricRegistry().forEach((st, inner) -> inner.forEach((pt, p) ->
                 out.put(st.name() + ":" + pt.name(), p.getClass().getSimpleName())));
-        operationIndex.forEach((st, p) ->
+        operationRegistry().forEach((st, p) ->
                 out.put(st.name() + ":OP", p.getClass().getSimpleName()));
         return out;
+    }
+
+    /**
+     * 取指标索引，必要时构建。
+     *
+     * @return 服务类型 -> (采集方式 -> 实现)
+     */
+    private Map<ServiceType, Map<ProviderType, MetricProvider>> metricRegistry() {
+        Map<ServiceType, Map<ProviderType, MetricProvider>> current = metricIndex;
+        if (current != null) {
+            return current;
+        }
+        synchronized (this) {
+            if (metricIndex == null) {
+                metricIndex = buildMetric();
+            }
+            return metricIndex;
+        }
+    }
+
+    /**
+     * 取操作索引，必要时构建。
+     *
+     * @return 服务类型 -> 实现
+     */
+    private Map<ServiceType, OperationProvider> operationRegistry() {
+        Map<ServiceType, OperationProvider> current = operationIndex;
+        if (current != null) {
+            return current;
+        }
+        synchronized (this) {
+            if (operationIndex == null) {
+                operationIndex = buildOperation();
+            }
+            return operationIndex;
+        }
+    }
+
+    /**
+     * 注册指标 提供者：同一实现类的多个别名只登记一次。
+     *
+     * @return 不可变索引
+     */
+    private Map<ServiceType, Map<ProviderType, MetricProvider>> buildMetric() {
+        Map<ServiceType, Map<ProviderType, MetricProvider>> index = new EnumMap<>(ServiceType.class);
+        Set<Class<?>> seen = new HashSet<>();
+        for (ServiceDefinition definition : metricExtensions.getPriorityServiceDefinitions()) {
+            MetricProvider provider = definition.getObj(metricExtensions.getServiceAutowire());
+            if (provider == null || !seen.add(provider.getClass())) {
+                continue;
+            }
+            ProviderType pt = provider.providerType();
+            for (ServiceType st : provider.supportServiceTypes()) {
+                index.computeIfAbsent(st, k -> new EnumMap<>(ProviderType.class)).put(pt, provider);
+                log.info("[ProviderRegistry] 注册 MetricProvider: service={}, provider={}, impl={}",
+                        st, pt, provider.getClass().getSimpleName());
+            }
+        }
+        if (index.isEmpty()) {
+            log.warn("[ProviderRegistry] MetricProvider 扩展点无任何实现, 采集调度将无实现可用");
+        }
+        return Collections.unmodifiableMap(index);
+    }
+
+    /**
+     * 注册操作 提供者：同一实现类的多个别名只登记一次。
+     *
+     * @return 不可变索引
+     */
+    private Map<ServiceType, OperationProvider> buildOperation() {
+        Map<ServiceType, OperationProvider> index = new EnumMap<>(ServiceType.class);
+        Set<Class<?>> seen = new HashSet<>();
+        for (ServiceDefinition definition : operationExtensions.getPriorityServiceDefinitions()) {
+            OperationProvider provider = definition.getObj(operationExtensions.getServiceAutowire());
+            if (provider == null || !seen.add(provider.getClass())) {
+                continue;
+            }
+            ServiceType st = provider.serviceType();
+            if (st == null) {
+                continue;
+            }
+            index.put(st, provider);
+            log.info("[ProviderRegistry] 注册 OperationProvider: service={}, impl={}",
+                    st, provider.getClass().getSimpleName());
+        }
+        if (index.isEmpty()) {
+            log.warn("[ProviderRegistry] OperationProvider 扩展点无任何实现, Redis/DB 操作将无实现可用");
+        }
+        return Collections.unmodifiableMap(index);
     }
 }

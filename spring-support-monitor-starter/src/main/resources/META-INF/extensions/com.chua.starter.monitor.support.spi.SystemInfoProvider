@@ -1,0 +1,4 @@
+com.chua.starter.monitor.support.spi.impl.LocalOshiProvider
+com.chua.starter.monitor.support.spi.impl.AgentProvider
+com.chua.starter.monitor.support.spi.impl.UnixSshProvider
+com.chua.starter.monitor.support.spi.impl.WindowsWinrmProvider

@@ -3,6 +3,8 @@ package com.chua.starter.monitor.support.service.alarm.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.spi.definition.ServiceDefinition;
 import com.chua.starter.monitor.support.entity.MsMonitor;
 import com.chua.starter.monitor.support.entity.MsMonitorAlarmEvent;
 import com.chua.starter.monitor.support.entity.MsMonitorAlarmMaintenanceWindow;
@@ -32,9 +34,11 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -108,9 +112,14 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
     private final StringRedisTemplate redisTemplate;
 
     /**
-     * 通知渠道集合（Spring 收集全部实现）
+     * 通知渠道 扩展点（@Spi 发现，首次投递时解析）
     */
-    private final List<NotifySender> notifySenders;
+    private final ServiceProvider<NotifySender> notifyExtensions = ServiceProvider.of(NotifySender.class);
+
+    /**
+     * 通知渠道实现缓存（容器就绪后首次投递时构建）
+    */
+    private volatile List<NotifySender> cachedSenders;
 
     /**
      * 实时推送服务（Socket 未启用时静默跳过）
@@ -582,15 +591,57 @@ private void fireIfNotSilent(MsMonitorAlarmRule rule, Long monitorId, String mon
             String content = String.format("指标 %s 当前值 %s 已连续超过阈值 %s（条件 %s），请及时处理。",
                     metricName, value.toPlainString(), rule.getMsMonitorAlarmRuleThreshold().toPlainString(),
                     rule.getMsMonitorAlarmRuleCondition());
-            for (NotifySender sender : notifySenders) {
-                try {
-                    sender.send(title, content, null);
-                } catch (Exception e) {
-                    log.warn("[alarm] 通知渠道 {} 发送失败: {}", sender.channel(), e.getMessage());
-                }
-            }
+            dispatch(title, content);
             log.info("[alarm] 告警触发 rule={} monitor={} metric={} value={}",
                     rule.getId(), monitorId, metricName, value);
+    }
+
+    /**
+     * 遍历全部通知渠道投递（单渠道失败不影响其他渠道）
+     *
+     * @param title   标题
+     * @param content 内容
+     */
+    private void dispatch(String title, String content) {
+        for (NotifySender sender : notifySenders()) {
+            try {
+                sender.send(title, content, null);
+            } catch (Exception e) {
+                log.warn("[alarm] 通知渠道 {} 发送失败: {}", sender.channel(), e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * 解析通知渠道实现列表（同一实现可能经多个解析器命中，按类去重）
+     *
+     * @return 通知渠道实现
+     */
+    private List<NotifySender> notifySenders() {
+        List<NotifySender> senders = this.cachedSenders;
+        if (senders != null) {
+            return senders;
+        }
+        synchronized (this) {
+            if (this.cachedSenders != null) {
+                return this.cachedSenders;
+            }
+            List<NotifySender> resolved = new ArrayList<>();
+            Set<Class<?>> seen = new HashSet<>();
+            for (ServiceDefinition definition : notifyExtensions.getPriorityServiceDefinitions()) {
+                NotifySender sender = definition.getObj(notifyExtensions.getServiceAutowire());
+                if (sender == null || !seen.add(sender.getClass())) {
+                    continue;
+                }
+                resolved.add(sender);
+                log.info("[alarm] 注册通知渠道: channel={}, impl={}", sender.channel(), sender.getClass().getSimpleName());
+            }
+            if (resolved.isEmpty()) {
+                log.warn("[alarm] NotifySender 扩展点无任何实现，告警事件没有通知出口");
+            }
+            this.cachedSenders = resolved = List.copyOf(resolved);
+            return resolved;
+        }
     }
 
     /**

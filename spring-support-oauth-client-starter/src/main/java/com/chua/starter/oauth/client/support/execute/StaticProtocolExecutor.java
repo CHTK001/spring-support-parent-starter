@@ -1,13 +1,10 @@
 package com.chua.starter.oauth.client.support.execute;
 
 import com.chua.common.support.spi.annotations.Spi;
-import com.chua.common.support.utils.CollectionUtils;
-import com.chua.common.support.utils.DigestUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.utils.CookieUtil;
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.common.support.utils.ResponseUtils;
-import com.chua.starter.oauth.client.support.algorithm.TokenCipher;
 import com.chua.starter.oauth.client.support.enums.AuthType;
 import com.chua.starter.oauth.client.support.enums.LogoutType;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
@@ -15,16 +12,11 @@ import com.chua.starter.oauth.client.support.protocol.AbstractProtocol;
 import com.chua.starter.oauth.client.support.protocol.StaticProtocol;
 import com.chua.starter.oauth.client.support.runtime.OauthClientRuntimeContext;
 import com.chua.starter.oauth.client.support.user.LoginAuthResult;
+import com.chua.starter.oauth.client.support.user.StaticTempLogin;
 import com.chua.starter.oauth.client.support.user.UserResult;
-import com.google.common.collect.Sets;
-import com.google.common.base.Splitter;
 import jakarta.servlet.http.Cookie;
 
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * 实现了协议执行器接口的静态协议执行器类。
@@ -40,15 +32,28 @@ import java.util.Set;
 public class StaticProtocolExecutor implements ProtocolExecutor {
 
     /**
-     * 认证客户端属性
+     * 认证客户端属性（最近一次从运行时上下文取到的快照）
     */
-    private final AuthClientProperties authClientProperties;
+    private AuthClientProperties authClientProperties;
 
     /**
      * 创建 静态协议执行器 实例
     */
     public StaticProtocolExecutor() {
-        this.authClientProperties = OauthClientRuntimeContext.getAuthClientProperties();
+    }
+
+    /**
+     * 认证客户端属性。
+     * <p>本实例可能早于 Spring 绑定完成而构造，故每次取用与运行时上下文对齐。</p>
+     *
+     * @return 认证客户端属性
+     */
+    private AuthClientProperties getAuthClientProperties() {
+        AuthClientProperties current = OauthClientRuntimeContext.getAuthClientProperties();
+        if (current != null && current != authClientProperties) {
+            authClientProperties = current;
+        }
+        return authClientProperties;
     }
 
     @Override
@@ -56,7 +61,23 @@ public class StaticProtocolExecutor implements ProtocolExecutor {
      * 获取access令牌
     */
     public LoginAuthResult getAccessToken(String username, String password, AuthType authType, Map<String, Object> ext) {
-        return newLoginAuthResult(username, password);
+        AuthClientProperties.TempUser temp = getAuthClientProperties().getTemp();
+        String rawUsers = temp != null ? temp.getUser() : null;
+        if (StringUtils.isBlank(rawUsers)) {
+            LoginAuthResult empty = new LoginAuthResult();
+            empty.setCode(403);
+            empty.setMessage("静态临时账号未配置");
+            return empty;
+        }
+        LoginAuthResult result = StaticTempLogin.login(rawUsers, username, password,
+                authType != null ? authType.getCode() : "STATIC");
+        if (result == null) {
+            LoginAuthResult denied = new LoginAuthResult();
+            denied.setCode(403);
+            denied.setMessage("账号或密码错误");
+            return denied;
+        }
+        return result;
     }
 
     @Override
@@ -88,93 +109,5 @@ public class StaticProtocolExecutor implements ProtocolExecutor {
          * @return login认证结果的结果
          */
         return new LoginAuthResult(200, "");
-    }
-
-    /**
-     * 新登录身份验证结果
-     *
-     * @param username 用户名
-     * @param password 暗语
-     * @return {@link login认证结果}
-     */
-    private LoginAuthResult newLoginAuthResult(String username, String password) {
-        AuthClientProperties.TempUser temp = authClientProperties.getTemp();
-        LoginAuthResult loginAuthResult = new LoginAuthResult();
-        String user = temp.getUser();
-        if (StringUtils.isNotEmpty(user)) {
-            Set<String> strings = new HashSet<>(Splitter.on(";").omitEmptyStrings().trimResults().splitToList(user));
-            for (String string : strings) {
-                List<String> userAndPassword = Splitter.on(":").omitEmptyStrings().limit(2).trimResults().splitToList(string);
-                if (isMatch(userAndPassword, username, password)) {
-                    loginAuthResult.setCode(200);
-                    UserResult userResult = new UserResult();
-                    userResult.setUserId("1");
-                    userResult.setLoginType("STATIC");
-                    userResult.setUsername(username);
-                    userResult.setNickName(username);
-                    userResult.setPermission(Collections.emptySet());
-                    userResult.setExpireTime(System.currentTimeMillis() / 1000 + 7L * 24 * 60 * 60);
-                    if ("admin".equalsIgnoreCase(username)) {
-                        userResult.setRoles(Sets.newHashSet("SUPER_ADMIN", "ADMIN"));
-                    } else {
-                        userResult.setRoles(Sets.newHashSet("OPS"));
-                    }
-
-                    userResult.setUid(DigestUtils.md5(userResult.getUserId()));
-                    userResult.setExt(Map.of(
-                            "sysUserId", 1,
-                            "sysUserUsername", userResult.getUsername(),
-                            "sysUserNickname", userResult.getNickName(),
-                            "sysUserAvatar", "",
-                            "avatar", ""
-                    ));
-                    userResult.setOpenId(userResult.getUid());
-                    userResult.setUnionId(userResult.getUid());
-
-                    String token = TokenCipher.encrypt(userResult);
-                    if (StringUtils.isBlank(token)) {
-                        loginAuthResult.setCode(500);
-                        loginAuthResult.setMessage("静态登录令牌生成失败");
-                        return loginAuthResult;
-                    }
-
-                    userResult.setToken(token);
-                    userResult.setRefreshToken(token);
-                    loginAuthResult.setUserResume(userResult);
-                    loginAuthResult.setToken(token);
-                    loginAuthResult.setRefreshToken(token);
-                    return loginAuthResult;
-                }
-            }
-        }
-
-        loginAuthResult.setCode(403);
-        loginAuthResult.setMessage("账号或密码错误");
-        return loginAuthResult;
-
-    }
-
-    /**
-     * 匹配用户与密码
-     *
-     * @param userAndPassword 用户和密码列表
-     * @param username        用户名
-     * @param password        密码
-     * @return 是否匹配
-     */
-    private boolean isMatch(List<String> userAndPassword, String username, String password) {
-        if (userAndPassword.isEmpty()) {
-            return false;
-        }
-
-        String user = CollectionUtils.find(userAndPassword, 0);
-        if (userAndPassword.size() == 1) {
-            return user.equals(username) && user.equals(password);
-        }
-
-        String passwd = CollectionUtils.find(userAndPassword, 1);
-        // 兼容明文与 md5 两种密码提交方式（前端登录页通常提交明文）
-        return user.equals(username)
-                && (passwd.equals(password) || DigestUtils.md5(passwd).equals(password));
     }
 }
