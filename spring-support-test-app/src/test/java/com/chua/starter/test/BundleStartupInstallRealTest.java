@@ -100,8 +100,8 @@ class BundleStartupInstallRealTest {
     @Test
     void startupInstalledBundleAvailable() {
         /**
-        * 断言true。
-        * @param osgiLauncher.isActive( osgilauncher.是否活跃(
+         * 断言true。
+         * @param osgiLauncher.isActive( osgilauncher.是否活跃(
          */
         assertTrue(osgiLauncher.isActive(), "Felix 框架应激活");
         GreetService service = osgiLauncher.getService(GreetService.class);
@@ -156,8 +156,8 @@ class BundleStartupInstallRealTest {
         Path classOut = Paths.get("target", "bundle-mgr-classes", className);
         if (Files.exists(classOut)) {
             /**
-            * 尝试。
-            * @param Files.walk(classOut 文件.walk(类出
+             * 尝试。
+             * @param Files.walk(classOut 文件.walk(类出
              */
             try (var walk = Files.walk(classOut)) {
                 walk.sorted(Comparator.reverseOrder()).forEach(p -> {

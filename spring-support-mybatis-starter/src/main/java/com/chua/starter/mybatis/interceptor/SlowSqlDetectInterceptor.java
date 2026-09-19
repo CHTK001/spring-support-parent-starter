@@ -59,8 +59,8 @@ public class SlowSqlDetectInterceptor implements Interceptor {
     private static final Logger log = LoggerFactory.getLogger(SlowSqlDetectInterceptor.class);
 
     /**
-    * 日期格式化器（仅用于参数格式化）。
-    */
+     * 日期格式化器（仅用于参数格式化）。
+     */
     private static final SimpleDateFormat FORMATTER = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
     /** 事件publisher */

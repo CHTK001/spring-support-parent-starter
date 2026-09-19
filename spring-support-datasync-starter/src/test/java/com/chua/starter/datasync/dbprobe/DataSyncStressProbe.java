@@ -32,9 +32,9 @@ public final class DataSyncStressProbe {
     private static final Path WORK_DIR = Paths.get("target/stress-full");
 
     /**
-    * Main
-    *
-    * @param args 参数
+     * Main
+     *
+     * @param args 参数
      */
     public static void main(String[] args) throws Exception {
         Files.createDirectories(WORK_DIR);

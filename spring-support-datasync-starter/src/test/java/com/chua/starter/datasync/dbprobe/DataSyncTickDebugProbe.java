@@ -34,10 +34,10 @@ public final class DataSyncTickDebugProbe {
     private static final Path WORK_DIR = Paths.get("target/tick-debug");
 
     /**
-    * 入口。
-    *
-    * @param args 命令行参数
-    * @throws Exception 异常
+     * 入口。
+     *
+     * @param args 命令行参数
+     * @throws Exception 异常
      */
     public static void main(String[] args) throws Exception {
         Files.createDirectories(WORK_DIR);

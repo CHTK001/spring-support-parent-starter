@@ -169,6 +169,7 @@ public class WatchdogServiceImpl implements WatchdogService {
             };
         }
         SshClients.Handle handle = null;
+        boolean connectionBroken = false;
         try {
             handle = connectionManager.borrow(host, credential);
             final SshClients.Handle borrowed = handle;
@@ -183,9 +184,16 @@ public class WatchdogServiceImpl implements WatchdogService {
                 borrowed.client().close();
                 throw new IllegalStateException("探测命令超时(>" + PROBE_TIMEOUT_SECONDS + "s)");
             }
+        } catch (Exception e) {
+            connectionBroken = true;
+            throw e;
         } finally {
             if (handle != null) {
                 connectionManager.release(host.getId());
+            }
+            if (connectionBroken) {
+                // 探测抛错说明这条连接已经废了：作废它，别等到心跳发现才恢复
+                connectionManager.invalidate(host.getId());
             }
         }
     }
@@ -329,7 +337,13 @@ public class WatchdogServiceImpl implements WatchdogService {
                     item.setMsProjectDeployLogStatus(ProjectConstants.LOG_STATUS_SUCCESS);
                 } else {
                     item.setMsProjectDeployLogStatus(ProjectConstants.LOG_STATUS_FAIL);
-                    item.setMsProjectDeployLogError(result.stderr());
+                    String stderr = result.stderr();
+                    if (stderr != null && !stderr.isBlank()) {
+                        item.setMsProjectDeployLogError(stderr);
+                    } else {
+                        item.setMsProjectDeployLogError(result.exitCode() == -1
+                                ? ProjectConstants.EXIT_NO_STATUS_MESSAGE : "退出码非0: " + result.exitCode());
+                    }
                 }
             }
         } catch (Exception e) {

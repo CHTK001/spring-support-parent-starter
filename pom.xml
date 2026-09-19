@@ -193,6 +193,11 @@
         <utils.version>4.0.0.42</utils.version>
         <spring.boot.version>4.1.0</spring.boot.version>
         <reactor.core.version>3.8.6</reactor.core.version>
+        <!-- javax 命名空间的 JAXB 实现版本：winrm4j/CXF 走 javax.xml.bind，
+             Boot BOM 默认把 com.sun.xml.bind:jaxb-impl 管到 jakarta 系 4.x，故显式钉版 -->
+        <javax.jaxb.version>2.3.1</javax.jaxb.version>
+        <javax.jaxb.core.version>2.3.0.1</javax.jaxb.core.version>
+        <javax.saaj.version>1.5.1</javax.saaj.version>
         <!-- ============================================================
             版本架构说明
             ============================================================
@@ -313,6 +318,24 @@
                 <version>${spring.boot.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
+            </dependency>
+
+            <!-- WinRM 依赖 javax.xml.bind：Boot BOM 会把这两个坐标管成 jakarta 系实现，此处钉回 javax 系 -->
+            <dependency>
+                <groupId>com.sun.xml.bind</groupId>
+                <artifactId>jaxb-impl</artifactId>
+                <version>${javax.jaxb.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.sun.xml.bind</groupId>
+                <artifactId>jaxb-core</artifactId>
+                <version>${javax.jaxb.core.version}</version>
+            </dependency>
+            <!-- 同理，winrm4j 需要 javax.xml.soap 的 SAAJ 实现，3.x 是 jakarta 系会报 SAAJMetaFactoryImpl not found -->
+            <dependency>
+                <groupId>com.sun.xml.messaging.saaj</groupId>
+                <artifactId>saaj-impl</artifactId>
+                <version>${javax.saaj.version}</version>
             </dependency>
             
             <!-- 第三方依赖版本管理（直接在父POM中管理，避免BOM循环依赖） -->

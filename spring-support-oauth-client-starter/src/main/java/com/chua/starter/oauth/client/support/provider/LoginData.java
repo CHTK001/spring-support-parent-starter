@@ -72,9 +72,9 @@ public class LoginData {
     /**
     * 谷歌验证码
     */
- // @api模型财产(值 = "谷歌/其它验证码")
- // @模式(description = "谷歌/其它验证码")
- // 私募 字符串 totp编码;
+    @Schema(description = "谷歌/其它验证码(2FA 动态码), 由服务器决定是否必填")
+    /** otp编码 */
+    private String otpCode;
     /**
     * 登录凭证
     */

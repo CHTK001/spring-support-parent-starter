@@ -31,11 +31,11 @@ public class LocalOshiProvider implements SystemInfoProvider {
     private final LocalSystemInfoService localService;
 
     /**
-    * 目标主机是否为本机。
-    *
-    * @param host 目标主机
-    * @return 127.0.0.1 / localhost 或命中本机网卡地址时返回 true
-    */
+     * 目标主机是否为本机。
+     *
+     * @param host 目标主机
+     * @return 127.0.0.1 / localhost 或命中本机网卡地址时返回 true
+     */
     @Override
     public boolean supports(MsServerHost host) {
         if (host.getServerHostAddress() == null) {

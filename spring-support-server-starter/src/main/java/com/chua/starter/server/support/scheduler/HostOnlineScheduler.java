@@ -67,8 +67,8 @@ public class HostOnlineScheduler {
     private Consumer<MsServerHost> onlineHook; // onlinehook
 
     /**
-    * 采集完成钩子（监控 侧注册；每次定时采集落库后回调，含最新硬件/使用率数据）
-    */
+     * 采集完成钩子（监控 侧注册；每次定时采集落库后回调，含最新硬件/使用率数据）
+     */
     @Setter
     private Consumer<MsServerHost> collectHook; // collecthook
 
@@ -96,9 +96,9 @@ public class HostOnlineScheduler {
                     Thread.ofVirtual().name("host-online-").factory());
 
     /**
-    * 存在仅用于占位的统一入口（兼容旧调用）：
-    * 拆分的 tick / delayTick / collectTick 由时间轮分别调度。
-    */
+     * 存在仅用于占位的统一入口（兼容旧调用）：
+     * 拆分的 tick / delayTick / collectTick 由时间轮分别调度。
+     */
 
     /**
      * 在离线检测：扫描所有启用主机，按各自开关/间隔决定是否探测

@@ -117,9 +117,9 @@ class ShardingMySqlRealTest {
     @Test
     void shardedEngineActivated() {
         /**
-        * 断言not空。
-        * @param shardingDataSource 分库分表数据源
-        * @param "分片引擎应已装配" "分片引擎应已装配"
+         * 断言not空。
+         * @param shardingDataSource 分库分表数据源
+         * @param "分片引擎应已装配" "分片引擎应已装配"
          */
         assertNotNull(shardingDataSource, "分片引擎应已装配");
         /**
@@ -134,7 +134,7 @@ class ShardingMySqlRealTest {
     @Test
     void shardedAggregateQuery() {
         /**
-        * assume分库分表routable。
+         * assume分库分表routable。
          */
         assumeShardingRoutable();
         JdbcTemplate shardedJdbc = new JdbcTemplate(shardingDataSource);
@@ -152,7 +152,7 @@ class ShardingMySqlRealTest {
     @Test
     void shardedPointQuery() {
         /**
-        * assume分库分表routable。
+         * assume分库分表routable。
          */
         assumeShardingRoutable();
         JdbcTemplate shardedJdbc = new JdbcTemplate(shardingDataSource);

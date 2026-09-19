@@ -67,8 +67,8 @@ public class MybatisPlusConfiguration {
     private static final String ENCRYPTOR_MODE_PROPERTY = "mybatis-plus.encryptor.mode";
 
     /**
-    * 逻辑删除字段名
-    */
+     * 逻辑删除字段名
+     */
     private static final String LOGIC_DELETE_FIELD = "sys_deleted";
 
     /**
@@ -89,11 +89,11 @@ public class MybatisPlusConfiguration {
     private final Environment environment;
 
     /**
-    * 构造函数
-    *
-    * @param mybatisProperties MyBatis Plus配置属性
-    * @param methodSecurityInterceptor 数据权限配置属性
-    */
+     * 构造函数
+     *
+     * @param mybatisProperties MyBatis Plus配置属性
+     * @param methodSecurityInterceptor 数据权限配置属性
+     */
     public MybatisPlusConfiguration(MybatisPlusProperties mybatisProperties,
                                     MybatisPlusDataScopeProperties methodSecurityInterceptor,
                                     Environment environment) {
@@ -371,9 +371,9 @@ public class MybatisPlusConfiguration {
     private void syncEncryptorProperties() {
         syncSystemProperty(ENCRYPTOR_PASSWORD_PROPERTY);
         /**
-        * 同步系统财产。
-        * @param ENCRYPTOR_MODE_PROPERTY encryptormode财产
-        */
+         * 同步系统财产。
+         * @param ENCRYPTOR_MODE_PROPERTY encryptormode财产
+         */
         syncSystemProperty(ENCRYPTOR_MODE_PROPERTY);
     }
 

@@ -604,8 +604,8 @@ public class JobAutoConfiguration {
     }
 
     /**
-        * 启动期声明。
-        */
+     * 启动期声明。
+     */
     @PostConstruct
     public void describeOnStart() {
         com.chua.starter.common.support.serviceinfo.ServiceInfoRegistry.getInstance().registerFlag(

@@ -11,6 +11,9 @@ public final class ServerConstants {
     /** 终端 webSocket 端点路径 */
     public static final String WEBSOCKET_TERMINAL_PATH = "/ws/ms/server/terminal";
 
+    /** SSH 直连终端 webSocket 端点路径（不经 guacd） */
+    public static final String WEBSOCKET_SSH_DIRECT_PATH = "/ws/ms/server/terminal/ssh";
+
     /** 接口根路径 */
     public static final String API_PREFIX = "/ms/server";
 

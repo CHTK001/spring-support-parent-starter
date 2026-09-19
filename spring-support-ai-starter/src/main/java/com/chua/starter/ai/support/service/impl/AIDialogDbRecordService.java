@@ -101,6 +101,11 @@ public class AIDialogDbRecordService implements AIDialogRecordService {
         entity.setRole(message.getRole() != null ? message.getRole() : "user");
         entity.setType("TEXT");
         entity.setContent(message.getContent());
+        entity.setParentId(message.getParentId());
+        entity.setModelName(message.getModelName());
+        entity.setPromptTokens(message.getPromptTokens());
+        entity.setCompletionTokens(message.getCompletionTokens());
+        entity.setTotalTokens(message.getTotalTokens());
         LocalDateTime now = LocalDateTime.now();
         entity.setCreateTime(now);
         entity.setUpdateTime(now);
@@ -141,6 +146,10 @@ public class AIDialogDbRecordService implements AIDialogRecordService {
         message.setDialogId(entity.getSysAiSessionId());
         message.setRole(entity.getRole());
         message.setContent(entity.getContent());
+        message.setModelName(entity.getModelName());
+        message.setPromptTokens(entity.getPromptTokens());
+        message.setCompletionTokens(entity.getCompletionTokens());
+        message.setTotalTokens(entity.getTotalTokens());
         message.setTimestamp(entity.getCreateTime() != null
                 ? entity.getCreateTime().atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
                 : System.currentTimeMillis());

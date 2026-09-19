@@ -327,10 +327,10 @@ public class EduDimensionService {
         /** Grades */
         private List<EduGrade> grades;
         /**
-        * 获取grade级别
-        *
-        * @return 获取grade级别的结果
-        */
+         * 获取grade级别
+         *
+         * @return 获取grade级别的结果
+         */
         public List<EnumOption> getGradeLevels() { return gradeLevels; }
         /**
          * 设置grade级别
@@ -374,11 +374,11 @@ public class EduDimensionService {
         /** 创建 enum期权 实例 */
         public EnumOption() {}
         /**
-        * 创建 enum期权 实例
-        * @param value 值
-        * @param value 字符串
-        * @param label 标签
-        */
+         * 创建 enum期权 实例
+         * @param value 值
+         * @param value 字符串
+         * @param label 标签
+         */
         public EnumOption(String value, String label) {
             this.value = value;
             this.label = label;

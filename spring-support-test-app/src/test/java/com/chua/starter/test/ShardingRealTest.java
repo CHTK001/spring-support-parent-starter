@@ -109,9 +109,9 @@ class ShardingRealTest {
     @Test
     void shardingEngineActivated() {
         /**
-        * 断言not空。
-        * @param shardingDataSource 分库分表数据源
-        * @param 依赖修复后引擎激活）" 依赖修复后引擎激活）"
+         * 断言not空。
+         * @param shardingDataSource 分库分表数据源
+         * @param 依赖修复后引擎激活）" 依赖修复后引擎激活）"
          */
         assertNotNull(shardingDataSource, "分片引擎应已装配（provided 依赖修复后引擎激活）");
         /**
@@ -126,7 +126,7 @@ class ShardingRealTest {
     @Test
     void shardedAggregateQuery() {
         /**
-        * assume分库分表routable。
+         * assume分库分表routable。
          */
         assumeShardingRoutable();
         JdbcTemplate shardedJdbc = new JdbcTemplate(shardingDataSource);
@@ -144,7 +144,7 @@ class ShardingRealTest {
     @Test
     void shardedPointQuery() {
         /**
-        * assume分库分表routable。
+         * assume分库分表routable。
          */
         assumeShardingRoutable();
         JdbcTemplate shardedJdbc = new JdbcTemplate(shardingDataSource);

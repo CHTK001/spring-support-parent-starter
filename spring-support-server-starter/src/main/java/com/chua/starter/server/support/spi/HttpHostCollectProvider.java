@@ -25,8 +25,11 @@ import reactor.core.scheduler.Schedulers;
 @RequiredArgsConstructor
 public class HttpHostCollectProvider implements HostCollectProvider {
 
-    /** 采集端点路径 */
-    private static final String METRICS_PATH = "/agent/metrics";
+    /** 采集端点路径（与 AgentMain 注册的路由一致） */
+    private static final String METRICS_PATH = "/metrics";
+
+    /** agent 默认 HTTP 端口 */
+    private static final int DEFAULT_AGENT_PORT = 19876;
 
     /** 主机 映射器 */
     private final MsServerHostMapper hostMapper;
@@ -57,7 +60,9 @@ public class HttpHostCollectProvider implements HostCollectProvider {
         if (address == null || address.isBlank()) {
             return CollectOutcome.fail("主机地址为空");
         }
-        int port = host.getServerHostPort() == null || host.getServerHostPort() <= 0 ? 8080 : host.getServerHostPort();
+        // serverHostPort 是 SSH/WinRM 的连接端口，采集要打到 agent 自己的 HTTP 端口
+        int port = host.getServerHostAgentPort() == null || host.getServerHostAgentPort() <= 0
+                ? DEFAULT_AGENT_PORT : host.getServerHostAgentPort();
         String url = "http://" + address.trim() + ":" + port + METRICS_PATH;
         try {
             java.net.HttpURLConnection conn = (java.net.HttpURLConnection) new java.net.URL(url).openConnection();

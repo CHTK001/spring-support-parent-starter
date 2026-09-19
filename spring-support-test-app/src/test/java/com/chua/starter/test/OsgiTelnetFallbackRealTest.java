@@ -49,8 +49,8 @@ class OsgiTelnetFallbackRealTest {
     @Test
     void sshShellBackedOffInTelnetMode() {
         /**
-        * 断言空。
-        * @param sshShellProvider.getIfAvailable( sshshell提供者.获取if可用(
+         * 断言空。
+         * @param sshShellProvider.getIfAvailable( sshshell提供者.获取if可用(
          */
         assertNull(sshShellProvider.getIfAvailable(),
                 "protocol=telnet 时 GogoSshShellServer 不应装配");
@@ -61,8 +61,8 @@ class OsgiTelnetFallbackRealTest {
     void felixStartsInTelnetMode() {
         com.chua.osgi.support.FelixOsgiLauncher launcher = osgiLauncherProvider.getIfAvailable();
         /**
-        * 断言true。
-        * @param launcher.isActive( launcher.是否活跃(
+         * 断言true。
+         * @param launcher.isActive( launcher.是否活跃(
          */
         assertTrue(launcher != null && launcher.isActive(), "telnet 模式下 Felix 框架应激活");
     }

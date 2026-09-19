@@ -48,6 +48,12 @@ public class SysAiSession {
     private String sysAiModuleCode;
 
     /**
+    * 会话默认模型ID
+    */
+    @TableField("model_id")
+    private String modelId;
+
+    /**
     * 关联用户 标识
     */
     @TableField("sys_user_id")
