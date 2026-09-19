@@ -19,8 +19,8 @@ public class JobCat implements Serializable {
     private static final long serialVersionUID = 1L;
 
     /**
-    * 日志标识
-    */
+     * 日志标识
+     */
     private Integer logId;
 
     /**

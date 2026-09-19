@@ -85,11 +85,11 @@ public class ServerManageServiceImpl implements ServerManageService {
     }
 
     /**
-    * 判断协议是否属于代理类（反向代理 / TCP 代理 / socks 等）。
-    *
-    * @param protocol 协议编码
-    * @return 是代理类返回 真
-    */
+     * 判断协议是否属于代理类（反向代理 / TCP 代理 / socks 等）。
+     *
+     * @param protocol 协议编码
+     * @return 是代理类返回 真
+     */
     private boolean isProxyProtocol(String protocol) {
         if (protocol == null) {
             return false;

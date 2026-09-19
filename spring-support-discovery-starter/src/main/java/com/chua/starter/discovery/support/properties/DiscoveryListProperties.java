@@ -24,8 +24,8 @@ public class DiscoveryListProperties {
     public static final String PRE = "plugin.discovery";
 
     /**
-    * 发现配置
-    */
+     * 发现配置
+     */
     private List<DiscoveryProperties> properties = new LinkedList<>();
     
  // Lombok @数据 生成的 getter/setter 方法（如果 Lombok 未生效，这些方法会被使用）

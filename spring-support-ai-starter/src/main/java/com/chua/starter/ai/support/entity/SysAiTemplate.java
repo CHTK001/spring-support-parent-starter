@@ -27,15 +27,15 @@ public class SysAiTemplate {
     private Integer id;
 
     /**
-    * 所属模块 标识
-    */
+     * 所属模块 标识
+     */
     @TableField("sys_ai_module_id")
     /** sysaimoduleid */
     private Integer sysAiModuleId;
 
     /**
-    * 模板类型
-    */
+     * 模板类型
+     */
     @TableField("sys_ai_template_type")
     private String type; // 类型
 
@@ -83,8 +83,8 @@ public class SysAiTemplate {
     private LocalDateTime createTime;
 
     /**
-    * 更新时间
-    */
+     * 更新时间
+     */
     @TableField("update_time")
     /** 更新时间 */
     private LocalDateTime updateTime;

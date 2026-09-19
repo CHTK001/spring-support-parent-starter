@@ -25,29 +25,29 @@ public class DeviceDoor {
     private String deviceDoorId;
 
     /**
-    * 所属设备 标识
-    */
+     * 所属设备 标识
+     */
     @TableField("device_door_device_id")
     /** devicedoordeviceid */
     private String deviceDoorDeviceId;
 
     /**
-    * 门编号
-    */
+     * 门编号
+     */
     @TableField("device_door_no")
     /** devicedoorno */
     private Integer deviceDoorNo;
 
     /**
-    * 门名称
-    */
+     * 门名称
+     */
     @TableField("device_door_name")
     /** Devicedoor名称 */
     private String deviceDoorName;
 
     /**
-    * 门状态，例如 锁、unlocked
-    */
+     * 门状态，例如 锁、unlocked
+     */
     @TableField("device_door_status")
     /** Devicedoor状态 */
     private String deviceDoorStatus;

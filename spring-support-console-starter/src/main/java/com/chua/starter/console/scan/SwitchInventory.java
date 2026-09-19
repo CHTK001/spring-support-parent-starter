@@ -57,10 +57,10 @@ public class SwitchInventory {
         private List<String> patterns;
 
         /**
-    * 规范化描述（参与指纹计算）
-    *
-    * @return canonical的结果
-    */
+         * 规范化描述（参与指纹计算）
+         *
+         * @return canonical的结果
+         */
         public String canonical() {
             return "feature:" + featureId + ":enabled=" + defaultEnabled
                     + ":message=" + nvl(disabledMessage)
@@ -100,10 +100,10 @@ public class SwitchInventory {
         private List<String> patterns;
 
         /**
-    * 规范化描述（参与指纹计算）
-    *
-    * @return canonical的结果
-    */
+         * 规范化描述（参与指纹计算）
+         *
+         * @return canonical的结果
+         */
         public String canonical() {
             return "gray:" + pattern + ":percentage=" + percentage
                     + ":roles=" + join(roles) + ":users=" + join(users)

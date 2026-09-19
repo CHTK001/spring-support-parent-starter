@@ -483,9 +483,9 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
         private final String configKey;
 
         /**
-        * 配置值监听器。
-        * @param configKey 配置Key
-        */
+         * 配置值监听器。
+         * @param configKey 配置Key
+         */
         ConfigValueListener(String configKey) {
             this.configKey = configKey;
         }

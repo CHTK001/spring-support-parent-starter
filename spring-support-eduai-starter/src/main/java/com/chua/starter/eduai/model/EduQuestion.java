@@ -26,8 +26,8 @@ public class EduQuestion {
     private Long questionId;
 
     /**
-    * 题型
-    */
+     * 题型
+     */
     private String questionType;
 
     /**

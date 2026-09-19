@@ -57,10 +57,10 @@ public class WebSocketAutoConfiguration implements WebSocketConfigurer {
     @Bean
     @ConditionalOnMissingBean
     /**
-    * webSocket会话管理器
-    *
-    * @return webSocket会话管理器的结果
-    */
+     * webSocket会话管理器
+     *
+     * @return webSocket会话管理器的结果
+     */
     public WebSocketSessionManager webSocketSessionManager() {
         /**
          * webSocket会话管理器。

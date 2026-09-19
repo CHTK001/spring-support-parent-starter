@@ -29,21 +29,21 @@ import java.util.Map;
 import java.util.Set;
 
 /**
-* 服务管理 —— 服务发现的独立查询接口。
-*
-* <p>「服务发现」不只是 ServerFilter 的配置项，还需要独立接口对外暴露运行态：
-* 启用的发现协议、按服务标识实时查询实例列表、以及整体状态摘要。前端
-* {@code ScFilterConfigPanel} 的「服务实例（实时查询）」分区即消费本接口。</p>
-*
-* <p>实例来源按优先级解析：</p>
-* <ol>
-*   <li>运行中节点上挂载的 {@link ServiceDiscoveryServerFilter}（复用其已建立的发现连接，
-*       能拿到真正注册过的实例）；</li>
-*   <li>Spring 容器中的 {@link DiscoveryService}（{@code spring-support-discovery-starter} 提供）。</li>
-* </ol>
-*
-* @author CH
-* @since 4.0.0.42
+ * 服务管理 —— 服务发现的独立查询接口。
+ *
+ * <p>「服务发现」不只是 ServerFilter 的配置项，还需要独立接口对外暴露运行态：
+ * 启用的发现协议、按服务标识实时查询实例列表、以及整体状态摘要。前端
+ * {@code ScFilterConfigPanel} 的「服务实例（实时查询）」分区即消费本接口。</p>
+ *
+ * <p>实例来源按优先级解析：</p>
+ * <ol>
+ *   <li>运行中节点上挂载的 {@link ServiceDiscoveryServerFilter}（复用其已建立的发现连接，
+ *       能拿到真正注册过的实例）；</li>
+ *   <li>Spring 容器中的 {@link DiscoveryService}（{@code spring-support-discovery-starter} 提供）。</li>
+ * </ol>
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 @Slf4j
 @Tag(name = "监控-服务发现", description = "服务发现的独立查询接口：协议枚举 / 实例查询 / 状态摘要")
@@ -61,13 +61,13 @@ public class ServerDiscoveryController {
     private final ObjectProvider<DiscoveryService> discoveryServiceProvider;
 
     /**
-    * 启用的发现协议列表。
-    *
-    * <p>由两部分合并：SPI 注册的 {@link ServiceDiscovery} 实现名，以及运行中节点
-    * 实际使用的发现源名称。</p>
-    *
-    * @return 协议名列表
-    */
+     * 启用的发现协议列表。
+     *
+     * <p>由两部分合并：SPI 注册的 {@link ServiceDiscovery} 实现名，以及运行中节点
+     * 实际使用的发现源名称。</p>
+     *
+     * @return 协议名列表
+     */
     @Operation(summary = "启用的发现协议", description = "SPI 实现名 + 运行中节点实际使用的发现源")
     @GetMapping("/protocols")
     public ReturnResult<List<String>> protocols() {
@@ -97,12 +97,12 @@ public class ServerDiscoveryController {
     }
 
     /**
-    * 按发现协议 / 服务标识实时查询实例。
-    *
-    * @param protocol 发现协议（SPI 名，可为空表示不限）
-    * @param uriSpec  服务标识（注册时使用的服务路径）
-    * @return 实例列表与说明
-    */
+     * 按发现协议 / 服务标识实时查询实例。
+     *
+     * @param protocol 发现协议（SPI 名，可为空表示不限）
+     * @param uriSpec  服务标识（注册时使用的服务路径）
+     * @return 实例列表与说明
+     */
     @Operation(summary = "查询服务实例", description = "按发现协议与/或服务标识查询实时实例；复用运行中节点的发现连接")
     @GetMapping("/services")
     public ReturnResult<Map<String, Object>> services(@RequestParam(required = false) String protocol,
@@ -173,10 +173,10 @@ public class ServerDiscoveryController {
     }
 
     /**
-    * 发现服务状态摘要。
-    *
-    * @return 状态
-    */
+     * 发现服务状态摘要。
+     *
+     * @return 状态
+     */
     @Operation(summary = "发现服务状态", description = "运行中的发现插件数量、可用协议数、容器内是否装配 DiscoveryService")
     @GetMapping("/status")
     public ReturnResult<Map<String, Object>> status() {
@@ -200,11 +200,11 @@ public class ServerDiscoveryController {
     }
 
     /**
-    * 收集运行中节点上挂载的发现过滤器。
-    *
-    * @param protocol 发现协议过滤（SPI 名，可为空表示不限）
-    * @return 发现过滤器列表
-    */
+     * 收集运行中节点上挂载的发现过滤器。
+     *
+     * @param protocol 发现协议过滤（SPI 名，可为空表示不限）
+     * @return 发现过滤器列表
+     */
     private List<ServiceDiscoveryServerFilter> liveDiscoveryFilters(String protocol) {
         List<ServiceDiscoveryServerFilter> result = new ArrayList<>();
         Collection<RuntimeServer> runtimes;
@@ -247,11 +247,11 @@ public class ServerDiscoveryController {
     }
 
     /**
-    * {@link Discovery} → 前端实例视图。
-    *
-    * @param d 发现信息
-    * @return 实例视图
-    */
+     * {@link Discovery} → 前端实例视图。
+     *
+     * @param d 发现信息
+     * @return 实例视图
+     */
     private Map<String, Object> toInstance(Discovery d) {
         Map<String, Object> item = new LinkedHashMap<>();
         item.put("id", d.getId());

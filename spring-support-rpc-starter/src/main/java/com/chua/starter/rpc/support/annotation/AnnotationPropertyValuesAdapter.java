@@ -26,11 +26,11 @@ public class AnnotationPropertyValuesAdapter implements PropertyValues {
     private final PropertyValues delegate;
 
     /**
-    * @param attributes
-    * @param propertyResolver
-    * @param ignoreAttributeNames
-    * @since 2.7.3
-    */
+     * @param attributes
+     * @param propertyResolver
+     * @param ignoreAttributeNames
+     * @since 2.7.3
+     */
     public AnnotationPropertyValuesAdapter(
             Map<String, Object> attributes, PropertyResolver propertyResolver, String... ignoreAttributeNames) {
         this.delegate = new MutablePropertyValues(attributes);

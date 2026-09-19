@@ -33,13 +33,13 @@ public class SysFileSystemUploadFileServiceImpl
     private final SysFileSystemUploadService uploadService;
 
     /**
-    * 从上传任务创建文件记录。
-    *
-    * @param uploadId 上传任务 标识
-    * @param url      文件来源 URL
-    * @param etag     文件 e标签
-    * @return 是否保存成功
-    */
+     * 从上传任务创建文件记录。
+     *
+     * @param uploadId 上传任务 标识
+     * @param url      文件来源 URL
+     * @param etag     文件 e标签
+     * @return 是否保存成功
+     */
     @Override
     @Transactional
     public boolean createFromTask(String uploadId, String url, String etag) {

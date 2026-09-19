@@ -34,8 +34,8 @@ public class SysAiSettingUsage implements Serializable {
     private Long usageId;
 
     /**
-    * 模型名称
-    */
+     * 模型名称
+     */
     /**
      * 模型名称
      */
@@ -45,8 +45,8 @@ public class SysAiSettingUsage implements Serializable {
     private String usageModel;
 
     /**
-    * 请求次数（无独立列，统计时按明细行数计算）
-    */
+     * 请求次数（无独立列，统计时按明细行数计算）
+     */
     /**
      * 请求次数
      */
@@ -56,8 +56,8 @@ public class SysAiSettingUsage implements Serializable {
     private Long usageRequestCount;
 
     /**
-    * 提示 令牌
-    */
+     * 提示 令牌
+     */
     /**
      * 提示 令牌
      */
@@ -67,8 +67,8 @@ public class SysAiSettingUsage implements Serializable {
     private Long usagePromptTokens;
 
     /**
-    * 生成 令牌
-    */
+     * 生成 令牌
+     */
     /**
      * 生成 令牌
      */
@@ -78,8 +78,8 @@ public class SysAiSettingUsage implements Serializable {
     private Long usageCompletionTokens;
 
     /**
-    * 总 令牌
-    */
+     * 总 令牌
+     */
     /**
      * 总 令牌
      */
@@ -89,8 +89,8 @@ public class SysAiSettingUsage implements Serializable {
     private Long usageTotalTokens;
 
     /**
-    * 统计时间戳
-    */
+     * 统计时间戳
+     */
     /**
      * 统计时间戳
      */

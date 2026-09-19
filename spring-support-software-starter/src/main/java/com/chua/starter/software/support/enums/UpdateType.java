@@ -40,9 +40,9 @@ public enum UpdateType {
     private final int value;
 
     /**
-    * 更新类型。
-    * @param value 值
-    */
+     * 更新类型。
+     * @param value 值
+     */
     UpdateType(int value) {
         this.value = value;
     }

@@ -28,11 +28,11 @@ public class TransactionController {
 
     @GetMapping("/{id}")
     /**
-    * 获取byid
-    *
-    * @param id 标识
-    * @return 获取byid的结果
-    */
+     * 获取byid
+     *
+     * @param id 标识
+     * @return 获取byid的结果
+     */
     public Result<TransactionRecord> getById(@PathVariable Long id) {
         TransactionRecord record = transactionRecordService.getById(id);
         return record != null ? Result.success(record) : Result.error("流水记录不存在");

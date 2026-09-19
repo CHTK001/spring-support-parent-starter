@@ -27,10 +27,10 @@ public class WebSocketTemplate {
     private final WebSocketSessionManager sessionManager;
 
     /**
-    * 构造器
-    *
-    * @param sessionManager 会话管理器
-    */
+     * 构造器
+     *
+     * @param sessionManager 会话管理器
+     */
     public WebSocketTemplate(WebSocketSessionManager sessionManager) {
         this.sessionManager = sessionManager;
     }

@@ -37,9 +37,9 @@ public class RSocketSessionImpl implements SocketSession {
     private SocketUser user;
 
     /**
-    * 创建 rSocket会话impl 实例
-    * @param session 会话
-    */
+     * 创建 rSocket会话impl 实例
+     * @param session 会话
+     */
     public RSocketSessionImpl(WebSocketSession session) {
         this.session = session;
     }
@@ -137,10 +137,10 @@ public class RSocketSessionImpl implements SocketSession {
     }
 
     /**
-    * 发送原始消息
-    *
-    * @param message 消息内容
-    */
+     * 发送原始消息
+     *
+     * @param message 消息内容
+     */
     public void sendRaw(String message) {
         if (!session.isOpen()) {
             return;

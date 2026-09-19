@@ -20,13 +20,13 @@ public class PageUtils {
     }
 
     /**
-    * 分页复制
-    * @param page 分页
-    * @param type 类型
-    * @param <E> E 原始类型
-    * @param <R> R 返回类型
-    * @return IPage
-    */
+     * 分页复制
+     * @param page 分页
+     * @param type 类型
+     * @param <E> E 原始类型
+     * @param <R> R 返回类型
+     * @return IPage
+     */
     public static <E, R>IPage<R> copyProperties(IPage<E> page, Supplier<R> type) {
         IPage<R> rs = new Page<>();
         rs.setPages(page.getPages());

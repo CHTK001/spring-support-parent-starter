@@ -25,8 +25,8 @@ public class MessageConverterProperties {
     public static final String PRE = "plugin.message";
 
     /**
-    * 日期默认格式
-    */
+     * 日期默认格式
+     */
     private String dataFormat = "yyyy-MM-dd HH:mm:ss";
 
 

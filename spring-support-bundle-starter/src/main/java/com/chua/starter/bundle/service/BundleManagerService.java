@@ -35,10 +35,10 @@ public class BundleManagerService {
     private final java.util.concurrent.ConcurrentHashMap<String, Long> installedBundles = new java.util.concurrent.ConcurrentHashMap<>(); // installedbundles
 
     /**
-    * bundle管理器服务。
-    * @param launcher launcher
-    * @param properties 属性
-    */
+     * bundle管理器服务。
+     * @param launcher launcher
+     * @param properties 属性
+     */
     public BundleManagerService(OsgiLauncher launcher, BundleProperties properties) {
         this.launcher = launcher;
         this.properties = properties;

@@ -25,8 +25,8 @@ public class EduExam {
     private Long examId;
 
     /**
-    * 试卷标识
-    */
+     * 试卷标识
+     */
     private Long examPaperId;
 
     /**

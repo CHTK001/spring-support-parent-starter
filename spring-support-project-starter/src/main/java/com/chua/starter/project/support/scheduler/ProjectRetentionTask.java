@@ -44,11 +44,11 @@ public class ProjectRetentionTask {
     private ScheduledExecutorService executor;
 
     /**
-    * 应用就绪后启动定期清理
-    * <p>
-    * 首次执行延迟一个间隔，避免与应用启动时的其它初始化争抢数据库连接。
-    * </p>
-    */
+     * 应用就绪后启动定期清理
+     * <p>
+     * 首次执行延迟一个间隔，避免与应用启动时的其它初始化争抢数据库连接。
+     * </p>
+     */
     @EventListener(ApplicationReadyEvent.class)
     public void start() {
         int retentionDays = projectProperties.getDeployLogRetentionDays();

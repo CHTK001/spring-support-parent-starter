@@ -25,8 +25,8 @@ public class EduWrongQuestion {
     private Long wrongQuestionId;
 
     /**
-    * 学生标识
-    */
+     * 学生标识
+     */
     private String wrongQuestionStudentId;
 
     /**

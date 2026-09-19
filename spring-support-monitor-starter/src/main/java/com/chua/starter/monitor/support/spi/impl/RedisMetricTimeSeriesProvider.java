@@ -48,10 +48,10 @@ public class RedisMetricTimeSeriesProvider implements MetricTimeSeriesProvider {
     private final boolean available;
 
     /**
-    * 构造
-    *
-    * @param redisTemplate Redis 模板
-    */
+     * 构造
+     *
+     * @param redisTemplate Redis 模板
+     */
     public RedisMetricTimeSeriesProvider(StringRedisTemplate redisTemplate) {
         this.redisTemplate = redisTemplate;
         boolean ok = false;

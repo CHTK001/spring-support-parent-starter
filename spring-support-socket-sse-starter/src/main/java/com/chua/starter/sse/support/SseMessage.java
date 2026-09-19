@@ -28,8 +28,8 @@ public class SseMessage {
     /** 事件 */
     private String event = "message";
     /**
-    * 状态
-    */
+     * 状态
+     */
     private SseMessageStatus status;
     /**
      * 任务标识

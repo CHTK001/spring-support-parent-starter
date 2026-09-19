@@ -176,10 +176,10 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
         }
         this.registry = registry;
         /**
-    * 扫描服务Bean。
-    * @param resolvedPackagesToScan resolved包转为扫描
-    * @param registry registry
-    */
+         * 扫描服务Bean。
+         * @param resolvedPackagesToScan resolved包转为扫描
+         * @param registry registry
+         */
         scanServiceBeans(resolvedPackagesToScan, registry);
     }
 
@@ -249,12 +249,12 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
     }
 
     /**
-    * 处理annotatedbeandefinition
-    *
-    * @param refServiceBeanName ref服务Bean名称
-    * @param refServiceBeanDefinition ref服务Beandefinition
-    * @param attributes attributes
-    */
+     * 处理annotatedbeandefinition
+     *
+     * @param refServiceBeanName ref服务Bean名称
+     * @param refServiceBeanDefinition ref服务Beandefinition
+     * @param attributes attributes
+     */
     private void processAnnotatedBeanDefinition(String refServiceBeanName, AnnotatedBeanDefinition refServiceBeanDefinition, Map<String, Object> attributes) {
 
         Map<String, Object> serviceAnnotationAttributes = new LinkedHashMap<>(attributes);
@@ -670,12 +670,12 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
     }
 
     /**
-    * 从服务注解属性与默认接口类解析出实际服务接口的全限定名。
-    *
-    * @param attributes              服务注解属性映射
-    * @param defaultInterfaceClass   默认接口类（Bean 实现类）
-    * @return 解析得到的接口全限定名
-    */
+     * 从服务注解属性与默认接口类解析出实际服务接口的全限定名。
+     *
+     * @param attributes              服务注解属性映射
+     * @param defaultInterfaceClass   默认接口类（Bean 实现类）
+     * @return 解析得到的接口全限定名
+     */
     private static String resolveServiceInterfaceName(Map<String, Object> attributes, Class<?> defaultInterfaceClass) {
         if (attributes != null) {
             String interfaceClassName = (String) attributes.get("interfaceName");

@@ -68,10 +68,10 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
             log.info("[Discovery] 服务状态 [{}]", disabled());
             registry.registerBeanDefinition("discoveryService#embedd", BeanDefinitionBuilder.rootBeanDefinition(DiscoveryService.class, () -> {
                         /**
-    * discovery服务。
-    * @param DefaultServiceDiscovery( 默认服务discovery(
-    * @return discovery服务的结果
-    */
+                         * discovery服务。
+                         * @param DefaultServiceDiscovery( 默认服务discovery(
+                         * @return discovery服务的结果
+                         */
                         return new DiscoveryService(new DefaultServiceDiscovery());
                     })
                     .setAutowireMode(AutowireCapableBeanFactory.AUTOWIRE_BY_TYPE)
@@ -231,11 +231,11 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
         private final List<Discovery> discoveryList;
 
         /**
-        * 创建 服务discoverty工厂Bean 实例
-        * @param serviceDiscovery 服务discovery
-        * @param discoveryList 列表
-        * @param discoveryList discovery列表
-        */
+         * 创建 服务discoverty工厂Bean 实例
+         * @param serviceDiscovery 服务discovery
+         * @param discoveryList 列表
+         * @param discoveryList discovery列表
+         */
         public ServiceDiscovertyFactoryBean(ServiceDiscovery serviceDiscovery, List<Discovery> discoveryList) {
             this.serviceDiscovery = serviceDiscovery;
             this.discoveryList = discoveryList;

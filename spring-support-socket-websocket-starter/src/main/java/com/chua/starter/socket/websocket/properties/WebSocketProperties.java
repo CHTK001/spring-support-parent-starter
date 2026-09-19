@@ -20,8 +20,8 @@ public class WebSocketProperties {
     public static final String PREFIX = "plugin.websocket";
 
     /**
-    * 是否启用
-    */
+     * 是否启用
+     */
     private boolean enable = false;
 
     /**

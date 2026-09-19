@@ -63,19 +63,19 @@ public class PaymentNotifyProcessServiceImpl implements PaymentNotifyProcessServ
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-    * 日志通知
-    * @param notifyType 通知类型
-    * @param merchantId merchantid
-    * @param channelId 通道标识
-    * @param channelType 通道类型
-    * @param channelSubType 通道sub类型
-    * @param orderNo 订单no
-    * @param refundNo 退税no
-    * @param request 请求
-    * @param body 主体
-    * @param dto dto
-    * @return 日志通知的结果
-    */
+     * 日志通知
+     * @param notifyType 通知类型
+     * @param merchantId merchantid
+     * @param channelId 通道标识
+     * @param channelType 通道类型
+     * @param channelSubType 通道sub类型
+     * @param orderNo 订单no
+     * @param refundNo 退税no
+     * @param request 请求
+     * @param body 主体
+     * @param dto dto
+     * @return 日志通知的结果
+     */
     public PaymentNotifyLog logNotify(LogNotifyDTO dto) {
         PaymentNotifyLog notifyLog = new PaymentNotifyLog();
         notifyLog.setNotifyType(dto.notifyType());

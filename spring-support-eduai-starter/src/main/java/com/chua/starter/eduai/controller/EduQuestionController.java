@@ -37,11 +37,11 @@ public class EduQuestionController {
     private final IEduQuestionService questionService;
 
     /**
-    * 分页查询题目
-    *
-    * @param query 查询条件
-    * @return 分页结果
-    */
+     * 分页查询题目
+     *
+     * @param query 查询条件
+     * @return 分页结果
+     */
     @Operation(summary = "分页查询题目")
     @GetMapping("/page")
     public ReturnResult<PageResult<EduQuestion>> page(QuestionQueryDTO query) {

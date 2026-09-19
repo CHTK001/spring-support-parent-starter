@@ -24,8 +24,8 @@ public class WebSocketSessionManager {
     private static final Logger log = LoggerFactory.getLogger(WebSocketSessionManager.class);
 
     /**
-    * 所有会话：会话标识 -> 会话
-    */
+     * 所有会话：会话标识 -> 会话
+     */
     private final Map<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
 
     /**

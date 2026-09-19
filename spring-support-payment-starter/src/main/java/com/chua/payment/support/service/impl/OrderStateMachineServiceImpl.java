@@ -43,13 +43,13 @@ public class OrderStateMachineServiceImpl implements OrderStateMachineService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-    * 发送事件
-    *
-    * @param orderId 订单标识
-    * @param event 事件
-    * @param operator 操作符
-    * @return 发送事件的结果
-    */
+     * 发送事件
+     *
+     * @param orderId 订单标识
+     * @param event 事件
+     * @param operator 操作符
+     * @return 发送事件的结果
+     */
     public OrderTransitionResult sendEvent(Long orderId, OrderEvent event, String operator) {
         PaymentOrder order = paymentOrderMapper.selectById(orderId);
         if (order == null) {
@@ -115,12 +115,12 @@ public class OrderStateMachineServiceImpl implements OrderStateMachineService {
     }
 
     /**
-    * 是否重复Target状态
-    *
-    * @param event 事件
-    * @param order 订单
-    * @return 是否重复Target状态的结果
-    */
+     * 是否重复Target状态
+     *
+     * @param event 事件
+     * @param order 订单
+     * @return 是否重复Target状态的结果
+     */
     private boolean isDuplicateTargetState(OrderEvent event, PaymentOrder order) {
         if (order == null) {
             return false;

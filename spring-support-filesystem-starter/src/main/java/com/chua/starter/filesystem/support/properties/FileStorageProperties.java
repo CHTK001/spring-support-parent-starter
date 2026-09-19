@@ -60,8 +60,8 @@ public class FileStorageProperties {
     public static final String PREFIX = "plugin.filesystem";
 
     /**
-    * 是否启用文件存储模块
-    */
+     * 是否启用文件存储模块
+     */
     private boolean enable = false;
 
     /**
@@ -304,8 +304,8 @@ public class FileStorageProperties {
         /** 过滤器 */
         private List<String> filters = new ArrayList<>();
         /**
-        * 最大请求大小（字节）
-        */
+         * 最大请求大小（字节）
+         */
         private long maxRequestSize = 10L * 1024 * 1024;
         /**
          * 最大连接数
@@ -348,10 +348,10 @@ public class FileStorageProperties {
     private List<LegacyStorageConfig> storages = new ArrayList<>();
 
     /**
-    * 旧版单存储配置 (用于平滑迁移)。
-    * @author CH
-    * @since 4.0.0
-    */
+     * 旧版单存储配置 (用于平滑迁移)。
+     * @author CH
+     * @since 4.0.0
+     */
     @Data
     @Getter
     @Setter

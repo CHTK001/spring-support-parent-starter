@@ -74,11 +74,11 @@ public class MyBatisConfigHandler implements SyncMessageHandler, ApplicationCont
     }
 
     /**
-    * 刷新指定的 XML 文件
-    *
-    * @param data 请求数据，包含 resource路径
-    * @return 刷新结果
-    */
+     * 刷新指定的 XML 文件
+     *
+     * @param data 请求数据，包含 resource路径
+     * @return 刷新结果
+     */
     private Object handleRefreshXml(Map<String, Object> data) {
         String resourcePath = MapUtils.getString(data, "resourcePath");
 

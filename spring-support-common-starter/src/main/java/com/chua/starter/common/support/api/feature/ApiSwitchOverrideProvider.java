@@ -36,10 +36,10 @@ public interface ApiSwitchOverrideProvider {
     interface FeatureOverride {
 
         /**
-    * 覆盖后的开关状态
-    *
-    * @return 是否启用
-    */
+         * 覆盖后的开关状态
+         *
+         * @return 是否启用
+         */
         boolean isEnabled();
 
         /**
@@ -65,10 +65,10 @@ public interface ApiSwitchOverrideProvider {
     interface GrayOverride {
 
         /**
-    * 覆盖后的灰度比例（空 表示沿用注解）
-    *
-    * @return 灰度比例
-    */
+         * 覆盖后的灰度比例（空 表示沿用注解）
+         *
+         * @return 灰度比例
+         */
         default Integer percentage() {
             return null;
         }

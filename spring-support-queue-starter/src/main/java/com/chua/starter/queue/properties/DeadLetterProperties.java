@@ -20,8 +20,8 @@ public class DeadLetterProperties {
     public static final String PREFIX = "plugin.dead-letter";
 
     /**
-    * 是否启用
-    */
+     * 是否启用
+     */
     private boolean enable = false;
 
     /**

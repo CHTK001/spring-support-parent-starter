@@ -50,11 +50,11 @@ public class WindowsLocalSoftwareCollector implements LocalSoftwareCollector {
     }
 
     /**
-    * 扫描uninstallKey
-    *
-    * @param baseKey 基础Key
-    * @return 扫描uninstallKey的结果
-    */
+     * 扫描uninstallKey
+     *
+     * @param baseKey 基础Key
+     * @return 扫描uninstallKey的结果
+     */
     private List<SoftSoftware> scanUninstallKey(String baseKey) {
         List<SoftSoftware> list = new ArrayList<>();
         try {

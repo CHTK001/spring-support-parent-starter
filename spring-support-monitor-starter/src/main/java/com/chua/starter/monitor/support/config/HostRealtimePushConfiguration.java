@@ -55,11 +55,11 @@ public class HostRealtimePushConfiguration {
     private static final String METRIC_HOST_DISK_USAGE = "host.disk.usage";
 
     /**
-    * 注册主机实时状态 hooks（延迟/在线/采集 → socket 推送 + 告警评估）
-    *
-    * @param onlineSchedulerProvider 在离线/延迟/采集调度器（server-starter，可能未装配）
-    * @return 启动时执行的注册器
-    */
+     * 注册主机实时状态 hooks（延迟/在线/采集 → socket 推送 + 告警评估）
+     *
+     * @param onlineSchedulerProvider 在离线/延迟/采集调度器（server-starter，可能未装配）
+     * @return 启动时执行的注册器
+     */
     @Bean
     @ConditionalOnBean(HostOnlineScheduler.class)
     public ApplicationRunner hostRealtimePushBinder(ObjectProvider<HostOnlineScheduler> onlineSchedulerProvider) {

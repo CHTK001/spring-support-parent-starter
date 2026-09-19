@@ -66,11 +66,11 @@ public class JacksonConfiguration {
     private static final SimpleDateFormat SIMPLE_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
     /**
-    * 创建对象映射器
-    *
-    * @param forEverything foreverything
-    * @return 创建对象映射器的结果
-    */
+     * 创建对象映射器
+     *
+     * @param forEverything foreverything
+     * @return 创建对象映射器的结果
+     */
     public static ObjectMapper createObjectMapper(boolean forEverything) {
         return createObjectMapper(forEverything, false);
     }
@@ -231,11 +231,11 @@ public class JacksonConfiguration {
     }
 
     /**
-        * 空字段deserializationproblem处理器类。
-        *
-        * @author CH
-        * @since 4.0.0
-        */
+     * 空字段deserializationproblem处理器类。
+     *
+     * @author CH
+     * @since 4.0.0
+     */
     static class NullableFieldsDeserializationProblemHandler extends DeserializationProblemHandler {
 
         static Table<String, Class<?>, Class<? extends JacksonProblemHandler>> NULLABLE_FIELDS = HashBasedTable.create(); // 空字段

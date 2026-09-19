@@ -16,11 +16,11 @@ public final class NetUtils {
     }
 
     /**
-    * 检查端口是否被占用
-    *
-    * @param port 端口号
-    * @return 如果端口被占用返回 true，否则返回 false
-    */
+     * 检查端口是否被占用
+     *
+     * @param port 端口号
+     * @return 如果端口被占用返回 true，否则返回 false
+     */
     public static boolean isPortInUsed(int port) {
         /**
          * 尝试。

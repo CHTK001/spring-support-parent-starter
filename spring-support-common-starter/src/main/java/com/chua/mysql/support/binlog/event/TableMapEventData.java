@@ -12,10 +12,10 @@ public class TableMapEventData implements EventData {
     private final String table;
 
     /**
-    * 创建表映射事件数据
-    *
-    * @param table 表名
-    */
+     * 创建表映射事件数据
+     *
+     * @param table 表名
+     */
     public TableMapEventData(String table) {
         this.table = table;
     }

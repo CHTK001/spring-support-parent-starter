@@ -69,11 +69,11 @@ public class FileJobLogSink implements JobLogSink {
     }
 
     /**
-    * 获取文件路径 (用于写入 DB)。
-    *
-    * @param event 事件
-    * @return 相对路径字符串
-    */
+     * 获取文件路径 (用于写入 DB)。
+     *
+     * @param event 事件
+     * @return 相对路径字符串
+     */
     public String resolveRelativePath(JobLogEvent event) {
         String dateDir = DATE_FMT.format(Instant.now());
         String jobName = sanitize(event.jobName() != null ? event.jobName() : "unknown");

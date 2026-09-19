@@ -115,10 +115,10 @@ public class AsyncThreadPoolConfiguration implements AsyncConfigurer {
     }
 
     /**
-    * 异步线程池的 服务信息 贡献者。
-    *
-    * @return ServiceInfoContributor
-    */
+     * 异步线程池的 服务信息 贡献者。
+     *
+     * @return ServiceInfoContributor
+     */
     @Bean
     public ServiceInfoContributor asyncThreadPoolServiceInfoContributor() {
         return registry -> registry.registerFlag("async", "异步",

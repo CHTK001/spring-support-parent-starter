@@ -65,12 +65,12 @@ public class ReportClientConfiguration implements ApplicationContextAware {
     private ApplicationContext applicationContext;
 
     /**
-    * 创建 report客户端配置 实例
-    * @param syncClient 同步客户端
-    * @param environment 环境
-    * @param reportProperties report属性
-    * @param featureManagerProvider 特征管理器提供者
-    */
+     * 创建 report客户端配置 实例
+     * @param syncClient 同步客户端
+     * @param environment 环境
+     * @param reportProperties report属性
+     * @param featureManagerProvider 特征管理器提供者
+     */
     public ReportClientConfiguration(SyncClient syncClient, Environment environment,
                                       ReportProperties reportProperties,
                                       ObjectProvider<ApiFeatureManager> featureManagerProvider) {

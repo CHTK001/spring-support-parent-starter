@@ -25,8 +25,8 @@ public class EduPaper {
     private Long paperId;
 
     /**
-    * 试卷名称
-    */
+     * 试卷名称
+     */
     private String paperName;
 
     /**

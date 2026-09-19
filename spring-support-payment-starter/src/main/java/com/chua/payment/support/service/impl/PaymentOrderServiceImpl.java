@@ -102,11 +102,11 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-    * 创建订单
-    *
-    * @param dto dto
-    * @return 创建订单的结果
-    */
+     * 创建订单
+     *
+     * @param dto dto
+     * @return 创建订单的结果
+     */
     public OrderVO createOrder(OrderCreateDTO dto) {
         if (dto.getMerchantId() == null) {
             /**
@@ -234,10 +234,10 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
     public Page<OrderVO> listOrders(PaymentOrderPageRequest request) {
         if (request == null) {
             /**
-    * 薪酬异常。
-    * @param "查询参数不能为空" "查询参数不能为空"
-    * @return 薪酬异常的结果
-    */
+             * 薪酬异常。
+             * @param "查询参数不能为空" "查询参数不能为空"
+             * @return 薪酬异常的结果
+             */
             throw new PaymentException("查询参数不能为空");
         }
         LambdaQueryWrapper<PaymentOrder> wrapper = baseOrderWrapper()
@@ -266,9 +266,9 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
     /** 列表订单日志 */
     public List<OrderStateLogVO> listOrderLogs(Long id) {
         /**
-    * require订单。
-    * @param id 标识
-    */
+         * require订单。
+         * @param id 标识
+         */
         requireOrder(id);
         return orderStateLogService.listByOrderId(id).stream().map(this::convertLogToVO).toList();
     }
@@ -1202,10 +1202,10 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-    * 超时订单
-    *
-    * @param id 标识
-    */
+     * 超时订单
+     *
+     * @param id 标识
+     */
     public void timeoutOrder(Long id) {
         PaymentOrder order = requireOrder(id);
         if (!OrderState.PENDING.name().equals(order.getStatus())) {

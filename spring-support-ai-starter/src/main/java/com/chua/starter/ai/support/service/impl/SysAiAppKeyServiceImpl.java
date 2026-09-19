@@ -76,11 +76,11 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
     @Override
     @CacheEvict(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS, allEntries = true)
     /**
-    * 保存
-    *
-    * @param entity 实体
-    * @return 保存的结果
-    */
+     * 保存
+     *
+     * @param entity 实体
+     * @return 保存的结果
+     */
     public SysAiAppKey save(SysAiAppKey entity) {
         // 自动生成 sk- 格式密钥
         if (StringUtils.isBlank(entity.getAppKey())) {

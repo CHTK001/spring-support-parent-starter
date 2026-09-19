@@ -46,8 +46,8 @@ public class ServerTaskScheduler {
     private static final int MIN_INTERVAL_SECONDS = 5;
 
     /**
-    * 主机级检测/采集扫描粒度（秒）：每 5s 扫描一次所有启用主机，按各自间隔决定是否执行
-    */
+     * 主机级检测/采集扫描粒度（秒）：每 5s 扫描一次所有启用主机，按各自间隔决定是否执行
+     */
     private static final int HOST_SCAN_INTERVAL_SECONDS = 5;
 
     /** 系统配置服务 */

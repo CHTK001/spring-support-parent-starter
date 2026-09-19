@@ -23,10 +23,10 @@ public class GlueFactory {
     /** 胶水工厂（volatile 保证多线程可见性，refreshinstance 会重新赋值） */
     private static volatile GlueFactory glueFactory = new GlueFactory();
     /**
-    * 获取Instance
-    *
-    * @return 获取instance的结果
-    */
+     * 获取Instance
+     *
+     * @return 获取instance的结果
+     */
     public static GlueFactory getInstance(){
         return glueFactory;
     }

@@ -15,11 +15,11 @@ public final class NumberUtils {
     }
 
     /**
-    * 判断字符串是否为数字
-    *
-    * @param str 待判断的字符串
-    * @return 如果字符串可以解析为数字，返回 true；否则返回 false
-    */
+     * 判断字符串是否为数字
+     *
+     * @param str 待判断的字符串
+     * @return 如果字符串可以解析为数字，返回 true；否则返回 false
+     */
     public static boolean isNumber(String str) {
         if (StringUtils.isBlank(str)) {
             return false;

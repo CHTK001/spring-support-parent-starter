@@ -51,10 +51,10 @@ public class AccountPaymentQueryServiceImpl implements AccountPaymentQueryServic
     public Page<OrderVO> listOrdersByUser(UserOrderQueryRequest request) {
         if (request == null) {
             /**
-    * 薪酬异常。
-    * @param "查询参数不能为空" "查询参数不能为空"
-    * @return 薪酬异常的结果
-    */
+             * 薪酬异常。
+             * @param "查询参数不能为空" "查询参数不能为空"
+             * @return 薪酬异常的结果
+             */
             throw new PaymentException("查询参数不能为空");
         }
         Page<PaymentOrder> source = paymentOrderMapper.selectPage(new Page<>(request.page(), request.size()), baseOrderWrapper(request.userId(), request.orderNo(), request.status()));

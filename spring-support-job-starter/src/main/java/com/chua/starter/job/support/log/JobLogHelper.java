@@ -28,10 +28,10 @@ public final class JobLogHelper {
     }
 
     /**
-    * 写入一行日志文本。
-    *
-    * @param msg 日志消息
-    */
+     * 写入一行日志文本。
+     *
+     * @param msg 日志消息
+     */
     public static void log(String msg) {
         StringBuilder sb = LOG_BUFFER.get();
         if (sb == null) {

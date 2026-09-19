@@ -17,11 +17,11 @@ public class MapperSqlMethodMarker implements SqlMethodMarker {
     private int timeout;
 
     /**
-    * 创建 映射器SQL方法记号笔 实例
-    * @param timeout 超时
-    * @param watchdog 布尔值
-    * @param watchdog watchdog
-    */
+     * 创建 映射器SQL方法记号笔 实例
+     * @param timeout 超时
+     * @param watchdog 布尔值
+     * @param watchdog watchdog
+     */
     public MapperSqlMethodMarker(int timeout, boolean watchdog) {
         this.timeout = timeout;
     }

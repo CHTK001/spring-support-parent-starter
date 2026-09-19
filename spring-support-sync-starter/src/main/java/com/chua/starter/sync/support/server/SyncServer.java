@@ -61,9 +61,9 @@ public class SyncServer implements InitializingBean, DisposableBean {
     private final List<BiConsumer<String, ClientInfo>> disconnectListeners = new CopyOnWriteArrayList<>(); // 断开连接监听器
 
     /**
-    * 创建 同步服务端 实例
-    * @param syncProperties 同步属性
-    */
+     * 创建 同步服务端 实例
+     * @param syncProperties 同步属性
+     */
     public SyncServer(SyncProperties syncProperties) {
         this.syncProperties = SyncProperties.copyOf(syncProperties);
     }
@@ -94,8 +94,8 @@ public class SyncServer implements InitializingBean, DisposableBean {
             return;
         }
         /**
-    * 启动全部instances。
-    */
+         * 启动全部instances。
+         */
         startAllInstances();
     }
 
@@ -111,10 +111,10 @@ public class SyncServer implements InitializingBean, DisposableBean {
 
             SyncServerInstance instance = new SyncServerInstance(config, syncProperties);
             /**
-    * 注册处理器转为instance。
-    * @param instance instance
-    * @param config 配置
-    */
+             * 注册处理器转为instance。
+             * @param instance instance
+             * @param config 配置
+             */
             registerHandlersToInstance(instance, config);
 
             instance.addConnectListener((sessionId, clientInfo) -> {

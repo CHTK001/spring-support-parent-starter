@@ -185,11 +185,11 @@ public class SpiderExecutionLogServiceImpl
     }
 
     /**
-    * 推导整体执行状态：任一节点 失败 则整体 失败；否则若有 RUNNING 则 RUNNING；全 成功 则 成功。
-    *
-    * @param row 聚合行
-    * @return 状态字符串
-    */
+     * 推导整体执行状态：任一节点 失败 则整体 失败；否则若有 RUNNING 则 RUNNING；全 成功 则 成功。
+     *
+     * @param row 聚合行
+     * @return 状态字符串
+     */
     private String deriveOverallStatus(Map<String, Object> row) {
         long fail = NumberUtils.toLong(ObjectUtils.defaultIfStringNull(row.get("fail_cnt"), "0"), 0L);
         long running = NumberUtils.toLong(ObjectUtils.defaultIfStringNull(row.get("running_cnt"), "0"), 0L);

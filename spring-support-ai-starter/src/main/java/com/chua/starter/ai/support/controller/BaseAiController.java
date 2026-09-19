@@ -62,35 +62,35 @@ public abstract class BaseAiController {
     protected AiAccessGuardService aiAccessGuardService;
 
     /**
-    * appKey 服务，提供分组 标识 查询等能力
-    */
+     * appKey 服务，提供分组 标识 查询等能力
+     */
     @Autowired
     /** SYSAIAPP密钥服务 */
     protected SysAiAppKeyService sysAiAppKeyService;
 
     /**
-    * 全局设置服务，提供运行时开关读写能力
-    */
+     * 全局设置服务，提供运行时开关读写能力
+     */
     @Autowired
     /** SYSAI全局设置服务 */
     protected SysAiGlobalSettingService sysAiGlobalSettingService;
 
     /**
-    * Jackson JSON 序列化器，用于响应构建
-    */
+     * Jackson JSON 序列化器，用于响应构建
+     */
     @Autowired
     /** Objectmapper */
     protected ObjectMapper objectMapper;
 
     /**
-    * Bearer 令牌 鉴权校验。
-    *
-    * <p>从请求头 {@code Authorization} 中提取 Bearer Token，
-    * 委托 {@link AiAccessGuardService#verifyBearerToken(String, String)} 进行校验。</p>
-    *
-    * @param request HTTP 请求
-    * @return 校验通过返回 {@code true}，否则返回 {@code false}
-    */
+     * Bearer 令牌 鉴权校验。
+     *
+     * <p>从请求头 {@code Authorization} 中提取 Bearer Token，
+     * 委托 {@link AiAccessGuardService#verifyBearerToken(String, String)} 进行校验。</p>
+     *
+     * @param request HTTP 请求
+     * @return 校验通过返回 {@code true}，否则返回 {@code false}
+     */
     protected boolean authCheck(HttpServletRequest request) {
  // Tauri / 本地开发模式：本地信任认证过滤器 已置位 nomifun.本地.信任=true，直接放行
         Object trusted = request.getAttribute(LocalTrustAuthFilter.TRUSTED_ATTR);

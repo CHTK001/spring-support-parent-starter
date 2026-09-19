@@ -21,9 +21,9 @@ public class DelegateSocketIOServer extends SocketIOServer implements Initializi
     private static final Logger log = LoggerFactory.getLogger(DelegateSocketIOServer.class);
 
     /**
-    * 创建 delegateSocketio服务端 实例
-    * @param configuration 配置
-    */
+     * 创建 delegateSocketio服务端 实例
+     * @param configuration 配置
+     */
     public DelegateSocketIOServer(Configuration configuration) {
         /**
          * 父。

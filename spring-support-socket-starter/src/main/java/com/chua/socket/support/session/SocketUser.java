@@ -21,8 +21,8 @@ public class SocketUser implements Serializable {
     private static final long serialVersionUID = 1L;
 
     /**
-    * room
-    */
+     * room
+     */
     private String roomId;
     /**
      * 用户标识
@@ -72,9 +72,9 @@ public class SocketUser implements Serializable {
     }
 
     /**
-    * 创建 Socket用户 实例
-    * @param userId 用户标识
-    */
+     * 创建 Socket用户 实例
+     * @param userId 用户标识
+     */
     public SocketUser(String userId) {
         this.userId = userId;
     }

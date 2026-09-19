@@ -20,8 +20,8 @@ public class MybatisPlusDataScopeProperties {
     public static final String PRE = "plugin.mybatis.data.scope";
 
     /**
-    * 是否启用
-    */
+     * 是否启用
+     */
     private boolean enable = false;
     /**
      * 表名

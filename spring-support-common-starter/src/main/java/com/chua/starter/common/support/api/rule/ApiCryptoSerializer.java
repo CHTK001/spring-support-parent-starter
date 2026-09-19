@@ -66,11 +66,11 @@ public class ApiCryptoSerializer extends JsonSerializer<String> implements Conte
 
     @Override
     /**
-    * 序列化
-    * @param origin origin
-    * @param jsonGenerator json生成器
-    * @param serializerProvider 序列化器提供者
-    */
+     * 序列化
+     * @param origin origin
+     * @param jsonGenerator json生成器
+     * @param serializerProvider 序列化器提供者
+     */
     public void serialize(final String origin, final JsonGenerator jsonGenerator,
                           final SerializerProvider serializerProvider) throws IOException {
 

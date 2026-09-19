@@ -26,15 +26,15 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 /**
-* POSIX 系主机远程操作实现（SSH + SFTP）
-* <p>
-* 覆盖 Linux/macOS/FreeBSD/AIX/Solaris：这些系统的 shell 语义、路径分隔符、
-* 归档工具基本一致，故由同一实现声明多个 {@link #osTypes()}。
-* 同时作为 {@link #fallback()} 兜底实现，处理未登记的系统类型（会打告警日志）。
-* </p>
-*
-* @author CH
-* @since 4.0.0.42
+ * POSIX 系主机远程操作实现（SSH + SFTP）
+ * <p>
+ * 覆盖 Linux/macOS/FreeBSD/AIX/Solaris：这些系统的 shell 语义、路径分隔符、
+ * 归档工具基本一致，故由同一实现声明多个 {@link #osTypes()}。
+ * 同时作为 {@link #fallback()} 兜底实现，处理未登记的系统类型（会打告警日志）。
+ * </p>
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 @Slf4j
 @Component
@@ -75,10 +75,10 @@ public class PosixSshHostRemoteProvider implements HostRemoteProvider {
     });
 
     /**
-    * 构造
-    *
-    * @param connectionManager SSH 连接缓存管理器
-    */
+     * 构造
+     *
+     * @param connectionManager SSH 连接缓存管理器
+     */
     public PosixSshHostRemoteProvider(ConnectionManager connectionManager) {
         this.connectionManager = connectionManager;
     }
@@ -249,15 +249,15 @@ public class PosixSshHostRemoteProvider implements HostRemoteProvider {
     }
 
     /**
-    * 解析指标采集输出
-    * <p>
-    * 取首个空白分隔的数值；输出为空、非数值或负值（-1 表示目标不存在）时返回
-    * {@link Double#NaN} 表示本轮无数据。
-    * </p>
-    *
-    * @param output 命令标准输出
-    * @return 指标数值
-    */
+     * 解析指标采集输出
+     * <p>
+     * 取首个空白分隔的数值；输出为空、非数值或负值（-1 表示目标不存在）时返回
+     * {@link Double#NaN} 表示本轮无数据。
+     * </p>
+     *
+     * @param output 命令标准输出
+     * @return 指标数值
+     */
     private double parseMetric(String output) {
         if (output == null || output.isBlank()) {
             return Double.NaN;
@@ -300,13 +300,13 @@ public class PosixSshHostRemoteProvider implements HostRemoteProvider {
     }
 
     /**
-    * 构建并连接 SFTP 客户端（凭据装配后立即清理私钥临时文件）
-    *
-    * @param host       主机
-    * @param credential 凭据
-    * @return 已连接的 SFTP 客户端（调用方负责关闭）
-    * @throws IOException 连接失败时抛出
-    */
+     * 构建并连接 SFTP 客户端（凭据装配后立即清理私钥临时文件）
+     *
+     * @param host       主机
+     * @param credential 凭据
+     * @return 已连接的 SFTP 客户端（调用方负责关闭）
+     * @throws IOException 连接失败时抛出
+     */
     private SftpClient buildConnectedSftp(MsServerHost host, SshCredential credential) throws IOException {
         var builder = SftpClient.builder()
                 .host(host.getServerHostAddress())

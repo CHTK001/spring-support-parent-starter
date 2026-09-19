@@ -27,8 +27,8 @@ public class SysAiGroup {
     private Integer id;
 
     /**
-    * 分组名称
-    */
+     * 分组名称
+     */
     @TableField("sys_ai_group_name")
     private String name; // 名称
 
@@ -64,22 +64,22 @@ public class SysAiGroup {
     private LocalDateTime createTime;
 
     /**
-    * 创建人
-    */
+     * 创建人
+     */
     @TableField(fill = FieldFill.INSERT)
     /** 创建by */
     private String createBy;
 
     /**
-    * 更新时间
-    */
+     * 更新时间
+     */
     @TableField(fill = FieldFill.INSERT_UPDATE)
     /** 更新时间 */
     private LocalDateTime updateTime;
 
     /**
-    * 更新人
-    */
+     * 更新人
+     */
     @TableField(fill = FieldFill.INSERT_UPDATE)
     /** 更新by */
     private String updateBy;

@@ -21,8 +21,8 @@ public class ConfigCenterProperties {
     public static final String PRE = "plugin.config-center";
 
     /**
-    * 是否启用配置中心
-    */
+     * 是否启用配置中心
+     */
     private boolean enable = false;
 
     /**

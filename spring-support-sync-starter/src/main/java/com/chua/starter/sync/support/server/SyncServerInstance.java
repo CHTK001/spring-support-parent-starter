@@ -257,12 +257,12 @@ public class SyncServerInstance {
     }
 
     /**
-    * 发送
-    *
-    * @param sessionId 会话标识
-    * @param topic topic
-    * @param data 数据
-    */
+     * 发送
+     *
+     * @param sessionId 会话标识
+     * @param topic topic
+     * @param data 数据
+     */
     public void send(String sessionId, String topic, Object data) {
         if (syncServer == null || !running) {
             return;
@@ -368,11 +368,11 @@ public class SyncServerInstance {
         /** on消息 */
         public void onMessage(String clientId, String topic, Object message) {
             /**
-        * 把手服务端消息。
-        * @param clientId 客户端标识
-        * @param topic topic
-        * @param message 消息
-        */
+             * 把手服务端消息。
+             * @param clientId 客户端标识
+             * @param topic topic
+             * @param message 消息
+             */
             handleServerMessage(clientId, topic, message);
         }
 
@@ -385,12 +385,12 @@ public class SyncServerInstance {
 
     @SuppressWarnings("unchecked")
     /**
-        * 处理服务端消息
-        *
-        * @param clientId 客户端标识
-        * @param topic topic
-        * @param data 数据
-        */
+     * 处理服务端消息
+     *
+     * @param clientId 客户端标识
+     * @param topic topic
+     * @param data 数据
+     */
     private void handleServerMessage(String clientId, String topic, Object data) {
         data = SyncCryptoUtils.decrypt(parseIfNeeded(data), syncProperties);
         log.info("[SyncServer:{}] 收到消息: clientId={}, topic={}, data={}",

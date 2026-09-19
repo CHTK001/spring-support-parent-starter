@@ -31,9 +31,9 @@ public class ServerConfigController {
     private final ServerConfigService configService;
 
     /**
-    * 查询全部配置
-    * @return 列表的结果
-    */
+     * 查询全部配置
+     * @return 列表的结果
+     */
     @Operation(summary = "查询全部配置")
     @GetMapping
     public ReturnResult<List<MsServerConfig>> list() {

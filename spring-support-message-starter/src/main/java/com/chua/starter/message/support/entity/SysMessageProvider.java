@@ -29,8 +29,8 @@ public class SysMessageProvider extends SysBase {
     private Integer sysMessageProviderId;
 
     /**
-    * 提供商编码 - 唯一标识，如 阿里云/腾讯云/smtp
-    */
+     * 提供商编码 - 唯一标识，如 阿里云/腾讯云/smtp
+     */
     private String sysMessageProviderCode;
 
     /**

@@ -54,15 +54,15 @@ public class SyncAutoConfiguration {
     }
 
     /**
-    * 创建同步服务端
-    * <p>
-    * 条件：类型 为 服务端 或 both，且 服务端.enable = true
-    * </p>
-    *
-    * @param syncProperties 同步配置属性
-    * @return 同步服务端实例，如果未启用则返回 空
-    * @since 1.0.0
-    */
+     * 创建同步服务端
+     * <p>
+     * 条件：类型 为 服务端 或 both，且 服务端.enable = true
+     * </p>
+     *
+     * @param syncProperties 同步配置属性
+     * @return 同步服务端实例，如果未启用则返回 空
+     * @since 1.0.0
+     */
     @Bean
     @ConditionalOnMissingBean
     @Conditional(SyncServerCondition.class)

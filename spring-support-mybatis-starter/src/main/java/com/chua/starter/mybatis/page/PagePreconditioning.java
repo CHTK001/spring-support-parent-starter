@@ -23,9 +23,9 @@ public class PagePreconditioning<T> {
     private final IPage<T> page;
 
     /**
-    * 创建 pagepreconditioning 实例
-    * @param page page
-    */
+     * 创建 pagepreconditioning 实例
+     * @param page page
+     */
     public PagePreconditioning(IPage<T> page) {
         this.page = page;
     }

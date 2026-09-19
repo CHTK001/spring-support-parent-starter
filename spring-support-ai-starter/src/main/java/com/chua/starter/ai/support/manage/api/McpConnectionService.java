@@ -38,13 +38,13 @@ public class McpConnectionService {
     private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(15);
 
     /**
-    * 连接 MCP 服务器并列举其工具。
-    *
-    * @param name      服务器名称（仅用于日志）
-    * @param transport transport 配置（类型 + url + 头部）
-    * @return 前端约定的连接测试结果：
-    *         {@code { success, tools?: [{name, description, input_schema}], error?, code? }}
-    */
+     * 连接 MCP 服务器并列举其工具。
+     *
+     * @param name      服务器名称（仅用于日志）
+     * @param transport transport 配置（类型 + url + 头部）
+     * @return 前端约定的连接测试结果：
+     *         {@code { success, tools?: [{name, description, input_schema}], error?, code? }}
+     */
     public Map<String, Object> testConnection(String name, Map<String, Object> transport) {
         Map<String, Object> result = new LinkedHashMap<>(4);
         String type = transport == null ? "" : String.valueOf(transport.getOrDefault("type", ""));

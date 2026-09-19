@@ -449,10 +449,10 @@ public class HikvisionRealSession implements DeviceSession {
     }
 
     /**
-    * 获取设备序列号
-    *
-    * @return 序列号
-    */
+     * 获取设备序列号
+     *
+     * @return 序列号
+     */
     public String getSerial() {
         return serial;
     }

@@ -51,13 +51,13 @@ public class HtmlAdviceResolver implements AdviceResolver {
     }
 
     /**
-    * HTML
-    *
-    * @param request        请求
-    * @param response       响应
-    * @param code           错误码
-    * @param authProperties 认证属性
-    */
+     * HTML
+     *
+     * @param request        请求
+     * @param response       响应
+     * @param code           错误码
+     * @param authProperties 认证属性
+     */
     public void resolve(HttpServletRequest request, HttpServletResponse response, int code, AuthClientProperties authProperties) {
         String url1 = authProperties.getLoginPage();
         if (code == 403) {

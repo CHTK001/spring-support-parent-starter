@@ -18,10 +18,10 @@ public class FlowNodeLogVO {
     private String flowNodeMessage;
 
     /**
-    * 获取流节点Key
-    *
-    * @return 获取流节点Key的结果
-    */
+     * 获取流节点Key
+     *
+     * @return 获取流节点Key的结果
+     */
     public String getFlowNodeKey() { return flowNodeKey; }
     /**
      * 设置流节点Key

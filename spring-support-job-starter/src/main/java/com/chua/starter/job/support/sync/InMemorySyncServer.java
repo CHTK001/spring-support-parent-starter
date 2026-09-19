@@ -172,11 +172,11 @@ public class InMemorySyncServer implements SyncServer {
     }
 
     /**
-    * 读取已发布的消息。
-    *
-    * @param topic 主题
-    * @return 消息列表
-    */
+     * 读取已发布的消息。
+     *
+     * @param topic 主题
+     * @return 消息列表
+     */
     public List<Object> getPublished(String topic) {
         return Collections.unmodifiableList(published.getOrDefault(topic, List.of()));
     }

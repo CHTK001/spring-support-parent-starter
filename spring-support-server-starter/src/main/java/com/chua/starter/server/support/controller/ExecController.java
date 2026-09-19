@@ -38,11 +38,11 @@ public class ExecController {
     private final ExecService execService;
 
     /**
-    * 批量执行命令
-    *
-    * @param body 请求体：主机标识 / 命令 / 超时seconds
-    * @return 各主机日志
-    */
+     * 批量执行命令
+     *
+     * @param body 请求体：主机标识 / 命令 / 超时seconds
+     * @return 各主机日志
+     */
     @Operation(summary = "批量执行命令")
     @PostMapping("/command")
     public ReturnResult<List<MsExecLog>> runCommand(@RequestBody Map<String, Object> body) {

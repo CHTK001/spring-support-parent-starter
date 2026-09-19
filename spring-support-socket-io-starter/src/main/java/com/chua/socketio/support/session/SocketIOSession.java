@@ -38,11 +38,11 @@ public class SocketIOSession implements SocketSession {
     private SocketUser user;
 
     /**
-    * 创建 Socketio会话 实例
-    * @param client 客户端
-    * @param properties Socket属性
-    * @param properties 属性
-    */
+     * 创建 Socketio会话 实例
+     * @param client 客户端
+     * @param properties Socket属性
+     * @param properties 属性
+     */
     public SocketIOSession(SocketIOClient client, SocketProperties properties) {
         this.client = client;
         this.properties = properties;

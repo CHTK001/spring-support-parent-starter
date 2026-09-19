@@ -24,8 +24,8 @@ public class BeanJobHandler implements JobHandler {
     private static final Logger log = LoggerFactory.getLogger(BeanJobHandler.class);
 
     /**
-    * 目标Bean对象
-    */
+     * 目标Bean对象
+     */
     private final Object target;
 
     /**

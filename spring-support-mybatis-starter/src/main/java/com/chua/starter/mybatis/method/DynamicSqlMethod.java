@@ -36,10 +36,10 @@ public class DynamicSqlMethod extends AbstractMethod {
     private Class<?> mapperClass; // 映射器类
 
     /**
-    * @param methodName 方法名
-    * @since 3.5.0
-    * @param param 参数
-    */
+     * @param methodName 方法名
+     * @since 3.5.0
+     * @param param 参数
+     */
     public DynamicSqlMethod(String methodName, Map<String, Object> param) {
         /**
          * 父。

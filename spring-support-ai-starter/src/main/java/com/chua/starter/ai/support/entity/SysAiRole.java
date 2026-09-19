@@ -31,8 +31,8 @@ public class SysAiRole {
     private Integer id;
 
     /**
-    * 角色名称（如 Java 开发助理）
-    */
+     * 角色名称（如 Java 开发助理）
+     */
     @TableField("sys_ai_role_name")
     private String name; // 名称
 
@@ -93,15 +93,15 @@ public class SysAiRole {
     private String createName;
 
     /**
-    * 创建时间
-    */
+     * 创建时间
+     */
     @TableField(fill = FieldFill.INSERT)
     /** 创建时间 */
     private LocalDateTime createTime;
 
     /**
-    * 更新时间
-    */
+     * 更新时间
+     */
     @TableField(fill = FieldFill.INSERT_UPDATE)
     /** 更新时间 */
     private LocalDateTime updateTime;

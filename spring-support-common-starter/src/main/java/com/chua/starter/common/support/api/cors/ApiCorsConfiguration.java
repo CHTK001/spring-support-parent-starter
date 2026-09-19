@@ -57,9 +57,9 @@ public class ApiCorsConfiguration  {
     private final ApiCorsProperties corsProperties;
 
     /**
-    * 创建 apicors配置 实例
-    * @param corsProperties 跨域资源共享属性
-    */
+     * 创建 apicors配置 实例
+     * @param corsProperties 跨域资源共享属性
+     */
     public ApiCorsConfiguration(ApiCorsProperties corsProperties) {
         this.corsProperties = corsProperties;
     }

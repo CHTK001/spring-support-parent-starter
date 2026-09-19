@@ -26,9 +26,9 @@ public class TableGraphReader {
     private final DataSource dataSource;
 
     /**
-    * 创建 table图计算读取 实例
-    * @param dataSource 数据源
-    */
+     * 创建 table图计算读取 实例
+     * @param dataSource 数据源
+     */
     public TableGraphReader(DataSource dataSource) {
         this.dataSource = dataSource;
     }

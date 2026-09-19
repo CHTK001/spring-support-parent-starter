@@ -54,8 +54,8 @@ public class LogPushHandler implements SyncMessageHandler, ApplicationContextAwa
     private Integer serverPort;
 
     /**
-    * 订阅状态（会话标识 -> 是否订阅）
-    */
+     * 订阅状态（会话标识 -> 是否订阅）
+     */
     private final ConcurrentHashMap<String, AtomicBoolean> subscriptions = new ConcurrentHashMap<>();
 
     /**
@@ -233,8 +233,8 @@ public class LogPushHandler implements SyncMessageHandler, ApplicationContextAwa
     /** 销毁 */
     public void destroy() {
         /**
-    * 停止日志追加。
-    */
+         * 停止日志追加。
+         */
         stopLogAppender();
         subscriptions.clear();
     }

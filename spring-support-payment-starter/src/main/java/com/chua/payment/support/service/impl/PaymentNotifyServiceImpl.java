@@ -56,15 +56,15 @@ public class PaymentNotifyServiceImpl extends AbstractMerchantPaymentChannel imp
     private final PaymentProviderGatewayRegistry providerGatewayRegistry;
 
     /**
-    * 创建 薪酬通知服务impl 实例
-    * @param merchantChannelService merchant通道服务
-    * @param objectMapper 对象映射器
-    * @param merchantChannelMapper merchant通道映射器
-    * @param paymentOrderMapper 薪酬订单映射器
-    * @param paymentOrderService 薪酬订单服务
-    * @param paymentRefundOrderService 薪酬退税订单服务
-    * @param providerGatewayRegistry 提供者gatewayregistry
-    */
+     * 创建 薪酬通知服务impl 实例
+     * @param merchantChannelService merchant通道服务
+     * @param objectMapper 对象映射器
+     * @param merchantChannelMapper merchant通道映射器
+     * @param paymentOrderMapper 薪酬订单映射器
+     * @param paymentOrderService 薪酬订单服务
+     * @param paymentRefundOrderService 薪酬退税订单服务
+     * @param providerGatewayRegistry 提供者gatewayregistry
+     */
     public PaymentNotifyServiceImpl(MerchantChannelService merchantChannelService,
                                     ObjectMapper objectMapper,
                                     MerchantChannelMapper merchantChannelMapper,

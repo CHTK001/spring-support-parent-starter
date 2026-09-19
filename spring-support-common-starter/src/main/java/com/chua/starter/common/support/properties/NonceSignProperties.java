@@ -27,9 +27,9 @@ public class NonceSignProperties {
     public static final String PRE_ALT = "nonce.sign";
 
     /**
-    * 默认签名密钥，与前端 默认_SECRET_Key 保持一致。
-    * 仅用于开发或未显式配置时的兜底，生产环境请通过配置覆盖。
-    */
+     * 默认签名密钥，与前端 默认_SECRET_Key 保持一致。
+     * 仅用于开发或未显式配置时的兜底，生产环境请通过配置覆盖。
+     */
     public static final String DEFAULT_SECRET = "aP9xL3sV7mQ2zT5kB8nR1cY4wH6eD0fJ";
 
     /**

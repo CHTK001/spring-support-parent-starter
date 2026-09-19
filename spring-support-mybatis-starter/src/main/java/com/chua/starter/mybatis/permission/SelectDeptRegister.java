@@ -58,8 +58,8 @@ public class SelectDeptRegister extends AbstractDeptRegister {
     /** 注册 */
     public Expression register() {
         /**
-    * findtable是否包含deptid。
-    */
+         * findtable是否包含deptid。
+         */
         findTableHasDeptId();
         if (null == hasDeptIdTableAlias) {
             if (where == null) {
@@ -175,10 +175,10 @@ public class SelectDeptRegister extends AbstractDeptRegister {
     }
 
     /**
-    * 查找表是否有部门标识
-    *
-    * @return
-    */
+     * 查找表是否有部门标识
+     *
+     * @return
+     */
     private boolean findFromFrom() {
         FromItem fromItem = plainSelect.getFromItem();
         if (fromItem == null) {

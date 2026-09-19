@@ -57,9 +57,9 @@ public class TsharkCaptureService {
     }
 
     /**
-    * 列表接口。
-    * @return 列表接口的结果
-    */
+     * 列表接口。
+     * @return 列表接口的结果
+     */
     public ReturnResult<List<String>> listInterfaces() {
         try {
             ProcessBuilder pb = new ProcessBuilder(TSHARK_BIN, "-D");

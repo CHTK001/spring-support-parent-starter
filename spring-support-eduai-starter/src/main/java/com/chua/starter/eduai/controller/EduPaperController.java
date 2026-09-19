@@ -36,11 +36,11 @@ public class EduPaperController {
     private final IEduPaperService paperService;
 
     /**
-    * 分页查询试卷
-    *
-    * @param query 查询条件
-    * @return 分页结果
-    */
+     * 分页查询试卷
+     *
+     * @param query 查询条件
+     * @return 分页结果
+     */
     @Operation(summary = "分页查询试卷")
     @GetMapping("/page")
     public ReturnResult<PageResult<PaperVO>> page(PaperQueryDTO query) {

@@ -66,10 +66,10 @@ public class WalletAccountServiceImpl implements WalletAccountService {
         WalletAccount account = findAccount(merchantId, userId);
         if (account == null) {
             /**
-    * 薪酬异常。
-    * @param "钱包账户不存在" "钱包账户不存在"
-    * @return 薪酬异常的结果
-    */
+             * 薪酬异常。
+             * @param "钱包账户不存在" "钱包账户不存在"
+             * @return 薪酬异常的结果
+             */
             throw new PaymentException("钱包账户不存在");
         }
         return toVO(account);
@@ -629,10 +629,10 @@ public class WalletAccountServiceImpl implements WalletAccountService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-    * Freeze
-    *
-    * @param id 标识
-    */
+     * Freeze
+     *
+     * @param id 标识
+     */
     public void freeze(Long id) {
         WalletAccount account = walletAccountMapper.selectById(id);
         if (account == null) {
@@ -704,10 +704,10 @@ public class WalletAccountServiceImpl implements WalletAccountService {
     public Page<WalletAccountLog> pageLogs(WalletLogQueryRequest request) {
         if (request == null) {
             /**
-    * 薪酬异常。
-    * @param "查询参数不能为空" "查询参数不能为空"
-    * @return 薪酬异常的结果
-    */
+             * 薪酬异常。
+             * @param "查询参数不能为空" "查询参数不能为空"
+             * @return 薪酬异常的结果
+             */
             throw new PaymentException("查询参数不能为空");
         }
         LambdaQueryWrapper<WalletAccountLog> wrapper = new LambdaQueryWrapper<WalletAccountLog>()

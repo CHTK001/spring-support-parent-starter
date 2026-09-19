@@ -35,8 +35,8 @@ public class ApiRequestDecodeRegister implements Upgrade<ApiRequestDecodeSetting
     /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(ApiRequestDecodeRegister.class);
         /**
-    * 请求时间戳有效期(毫秒) - 默认10分钟
-    */
+         * 请求时间戳有效期(毫秒) - 默认10分钟
+         */
     private static final long REQUEST_TIMESTAMP_TTL_MS = 10 * 60 * 1000L;
 
     /**
@@ -114,10 +114,10 @@ public class ApiRequestDecodeRegister implements Upgrade<ApiRequestDecodeSetting
     }
 
     /**
-    * 获取或创建Setting
-    *
-    * @return 获取or创建setting的结果
-    */
+     * 获取或创建Setting
+     *
+     * @return 获取or创建setting的结果
+     */
     private ApiRequestDecodeSetting getOrCreateSetting() {
         ApiRequestDecodeSetting setting = globalSettingFactory.get("config", ApiRequestDecodeSetting.class);
         if (setting == null) {
@@ -271,8 +271,8 @@ public class ApiRequestDecodeRegister implements Upgrade<ApiRequestDecodeSetting
     }
 
     /**
-    * 清理过期的请求记录
-    */
+     * 清理过期的请求记录
+     */
     private void cleanupExpiredRequests() {
         try {
             long currentTime = System.currentTimeMillis();

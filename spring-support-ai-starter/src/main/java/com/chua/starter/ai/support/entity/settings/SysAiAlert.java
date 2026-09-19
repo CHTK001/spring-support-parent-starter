@@ -36,8 +36,8 @@ public class SysAiAlert implements Serializable {
     private Long alertId;
 
     /**
-    * 告警规则名称
-    */
+     * 告警规则名称
+     */
     /**
      * 告警规则名称
      */
@@ -47,8 +47,8 @@ public class SysAiAlert implements Serializable {
     private String alertName;
 
     /**
-    * 关联 appKey 标识（0 表示全局）
-    */
+     * 关联 appKey 标识（0 表示全局）
+     */
     /**
      * 关联 appKey 标识
      */
@@ -58,8 +58,8 @@ public class SysAiAlert implements Serializable {
     private Long alertAppKeyId;
 
     /**
-    * 告警条件（表达式）
-    */
+     * 告警条件（表达式）
+     */
     /**
      * 告警条件（表达式）
      */
@@ -69,8 +69,8 @@ public class SysAiAlert implements Serializable {
     private String alertCondition;
 
     /**
-    * 告警阈值
-    */
+     * 告警阈值
+     */
     /**
      * 告警阈值
      */
@@ -80,8 +80,8 @@ public class SysAiAlert implements Serializable {
     private Long alertThreshold;
 
     /**
-    * 通知渠道（JSON 数组字符串）
-    */
+     * 通知渠道（JSON 数组字符串）
+     */
     /**
      * 通知渠道(JSON)
      */
@@ -91,8 +91,8 @@ public class SysAiAlert implements Serializable {
     private String alertChannels;
 
     /**
-    * 是否启用
-    */
+     * 是否启用
+     */
     /**
      * 是否启用
      */
@@ -102,8 +102,8 @@ public class SysAiAlert implements Serializable {
     private Boolean alertEnabled;
 
     /**
-    * 创建时间
-    */
+     * 创建时间
+     */
     /**
      * 创建时间
      */
@@ -113,8 +113,8 @@ public class SysAiAlert implements Serializable {
     private LocalDateTime alertCreateTime;
 
     /**
-    * 更新时间
-    */
+     * 更新时间
+     */
     /**
      * 更新时间
      */
@@ -124,8 +124,8 @@ public class SysAiAlert implements Serializable {
     private LocalDateTime alertUpdateTime;
 
     /**
-    * 逻辑删除标记
-    */
+     * 逻辑删除标记
+     */
     /**
      * 逻辑删除标记
      */

@@ -382,11 +382,11 @@ public class MetricServiceImpl implements MetricService {
     @Override
     @Cacheable(cacheNames = "monitor:metric:latest", key = "'cpu:' + #monitorId", unless = "#result == null || #result.data == null")
     /**
-    * 获取latestcpu
-    *
-    * @param monitorId 监控标识
-    * @return 获取latestcpu的结果
-    */
+     * 获取latestcpu
+     *
+     * @param monitorId 监控标识
+     * @return 获取latestcpu的结果
+     */
     public ReturnResult<MsMonitorMetricCpu> getLatestCpu(Long monitorId) {
         return ReturnResult.ok(cpuMapper.selectOne(
                 new LambdaQueryWrapper<MsMonitorMetricCpu>()

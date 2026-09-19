@@ -16,10 +16,10 @@ public class WriteRowsEventData implements EventData {
     private final List<Serializable[]> rows;
 
     /**
-    * 创建写入行事件数据
-    *
-    * @param rows 写入的行数据
-    */
+     * 创建写入行事件数据
+     *
+     * @param rows 写入的行数据
+     */
     public WriteRowsEventData(List<Serializable[]> rows) {
         this.rows = rows;
     }

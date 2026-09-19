@@ -26,18 +26,18 @@ public class PaymentNotifyReceivedEvent extends PaymentEvent {
     private final Boolean signVerified;
 
     /**
-    * 创建 薪酬通知接收事件 实例
-    * @param source 源
-    * @param tenantId tenantid
-    * @param merchantId merchantid
-    * @param notifyLogId 通知日志标识
-    * @param notifyType 通知类型
-    * @param channelType 通道类型
-    * @param channelSubType 通道sub类型
-    * @param orderNo 订单no
-    * @param refundNo 退税no
-    * @param signVerified 标志verified
-    */
+     * 创建 薪酬通知接收事件 实例
+     * @param source 源
+     * @param tenantId tenantid
+     * @param merchantId merchantid
+     * @param notifyLogId 通知日志标识
+     * @param notifyType 通知类型
+     * @param channelType 通道类型
+     * @param channelSubType 通道sub类型
+     * @param orderNo 订单no
+     * @param refundNo 退税no
+     * @param signVerified 标志verified
+     */
     public PaymentNotifyReceivedEvent(Object source, Long tenantId, Long merchantId, Long notifyLogId,
                                       String notifyType, String channelType, String channelSubType,
                                       String orderNo, String refundNo, Boolean signVerified) {

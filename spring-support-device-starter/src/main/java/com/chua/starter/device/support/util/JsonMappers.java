@@ -29,11 +29,11 @@ public final class JsonMappers {
     }
 
     /**
-    * 解析 JSON 数组为预置位列表。
-    *
-    * @param data JSON 节点
-    * @return 预置位列表
-    */
+     * 解析 JSON 数组为预置位列表。
+     *
+     * @param data JSON 节点
+     * @return 预置位列表
+     */
     public static List<PresetInfo> parsePresets(JsonNode data) {
         if (data == null || data.isNull()) {
             return Collections.emptyList();

@@ -56,11 +56,11 @@ public class StringListTypeHandler implements TypeHandler<List<String>> {
     }
 
     /**
-    * 获取结果
-    *
-    * @param value 值
-    * @return 获取结果的结果
-    */
+     * 获取结果
+     *
+     * @param value 值
+     * @return 获取结果的结果
+     */
     private List<String> getResult(String value) {
         if (value == null) {
             return null;

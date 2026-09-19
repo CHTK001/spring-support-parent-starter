@@ -21,8 +21,8 @@ public class TemplatePreviewRequest {
     private Integer sysMessageTemplateId;
 
     /**
-    * 模板参数
-    */
+     * 模板参数
+     */
     @Schema(description = "模板参数")
     private java.util.Map<String, Object> params; // 参数
 }

@@ -35,13 +35,13 @@ public class WechatPayScoreNotifyServiceImpl extends AbstractMerchantPaymentChan
     private final WechatPayScoreOrderService wechatPayScoreOrderService;
 
     /**
-    * 创建 wechat薪酬score通知服务impl 实例
-    * @param merchantChannelService merchant通道服务
-    * @param objectMapper 对象映射器
-    * @param merchantChannelMapper merchant通道映射器
-    * @param providerGatewayRegistry 提供者gatewayregistry
-    * @param wechatPayScoreOrderService wechat薪酬score订单服务
-    */
+     * 创建 wechat薪酬score通知服务impl 实例
+     * @param merchantChannelService merchant通道服务
+     * @param objectMapper 对象映射器
+     * @param merchantChannelMapper merchant通道映射器
+     * @param providerGatewayRegistry 提供者gatewayregistry
+     * @param wechatPayScoreOrderService wechat薪酬score订单服务
+     */
     public WechatPayScoreNotifyServiceImpl(MerchantChannelService merchantChannelService,
                                            ObjectMapper objectMapper,
                                            MerchantChannelMapper merchantChannelMapper,

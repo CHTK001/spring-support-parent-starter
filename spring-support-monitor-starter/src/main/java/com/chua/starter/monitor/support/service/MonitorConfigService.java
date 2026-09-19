@@ -9,10 +9,10 @@ import java.util.Map;
 /** @作者 CH */
 public interface MonitorConfigService {
     /**
-    * findby键。
-    * @param key 键
-    * @return findby键的结果
-    */
+     * findby键。
+     * @param key 键
+     * @return findby键的结果
+     */
     ReturnResult<MsMonitorConfig> findByKey(String key);
     /**
      * 获取字符串。

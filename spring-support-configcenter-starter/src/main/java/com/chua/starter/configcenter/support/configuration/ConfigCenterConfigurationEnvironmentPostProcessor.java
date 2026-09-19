@@ -269,11 +269,11 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
         private volatile long lastRefreshTime = 0; // 最后一个refresh时间
 
         /**
-        * 环境配置监听器。
-        * @param configName 配置名称
-        * @param refreshDelayMs refresh延迟ms
-        * @param logOnChange 日志on改变
-        */
+         * 环境配置监听器。
+         * @param configName 配置名称
+         * @param refreshDelayMs refresh延迟ms
+         * @param logOnChange 日志on改变
+         */
         EnvironmentConfigListener(String configName, long refreshDelayMs, boolean logOnChange) {
             this.configName = configName;
             this.refreshDelayMs = refreshDelayMs;

@@ -20,10 +20,10 @@ public class ShardingDataSourceBuilder {
     private boolean showSql;
 
     /**
-    * 创建构建器实例
-    *
-    * @return 构建器实例
-    */
+     * 创建构建器实例
+     *
+     * @return 构建器实例
+     */
     public static ShardingDataSourceBuilder newBuilder() {
         /**
          * 分库分表数据源构建器。

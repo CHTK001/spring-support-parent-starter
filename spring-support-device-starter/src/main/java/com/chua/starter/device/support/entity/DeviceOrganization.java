@@ -25,29 +25,29 @@ public class DeviceOrganization {
     private String deviceOrganizationId;
 
     /**
-    * 父级组织 标识
-    */
+     * 父级组织 标识
+     */
     @TableField("device_organization_parent_id")
     /** Deviceorganization父级标识 */
     private String deviceOrganizationParentId;
 
     /**
-    * 组织名称
-    */
+     * 组织名称
+     */
     @TableField("device_organization_name")
     /** Deviceorganization名称 */
     private String deviceOrganizationName;
 
     /**
-    * 路径，例 1/2/3
-    */
+     * 路径，例 1/2/3
+     */
     @TableField("device_organization_path")
     /** Deviceorganization路径 */
     private String deviceOrganizationPath;
 
     /**
-    * 所属厂商，例如 hikvision、dahua
-    */
+     * 所属厂商，例如 hikvision、dahua
+     */
     @TableField("device_organization_vendor")
     /** Deviceorganizationvendor */
     private String deviceOrganizationVendor;

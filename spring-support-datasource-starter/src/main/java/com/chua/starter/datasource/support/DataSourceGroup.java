@@ -40,9 +40,9 @@ public class DataSourceGroup {
     private volatile LoadBalanceStrategy strategy = LoadBalanceStrategy.ROUND_ROBIN;
 
     /**
-    * 数据源群体。
-    * @param groupName 群体名称
-    */
+     * 数据源群体。
+     * @param groupName 群体名称
+     */
     public DataSourceGroup(String groupName) {
         this.groupName = groupName;
     }

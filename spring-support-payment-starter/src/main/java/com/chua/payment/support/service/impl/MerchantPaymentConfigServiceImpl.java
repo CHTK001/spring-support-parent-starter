@@ -43,10 +43,10 @@ public class MerchantPaymentConfigServiceImpl implements MerchantPaymentConfigSe
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-    * 保存或更新
-    *
-    * @param config 配置
-    */
+     * 保存或更新
+     *
+     * @param config 配置
+     */
     public void saveOrUpdate(MerchantPaymentConfig config) {
         if (config == null || config.getMerchantId() == null) {
             /**
@@ -83,10 +83,10 @@ public class MerchantPaymentConfigServiceImpl implements MerchantPaymentConfigSe
 
             if (pendingCount >= config.getPendingOrderLimit()) {
                 /**
-    * 薪酬异常。
-    * @param "待支付订单数量已达上限，请先完成或取消现有订单" "待支付订单数量已达上限，请先完成或取消现有订单"
-    * @return 薪酬异常的结果
-    */
+                 * 薪酬异常。
+                 * @param "待支付订单数量已达上限，请先完成或取消现有订单" "待支付订单数量已达上限，请先完成或取消现有订单"
+                 * @return 薪酬异常的结果
+                 */
                 throw new PaymentException("待支付订单数量已达上限，请先完成或取消现有订单");
             }
         }
@@ -98,10 +98,10 @@ public class MerchantPaymentConfigServiceImpl implements MerchantPaymentConfigSe
         PaymentOrder order = orderMapper.selectById(orderId);
         if (order == null) {
             /**
-    * 薪酬异常。
-    * @param "订单不存在" "订单不存在"
-    * @return 薪酬异常的结果
-    */
+             * 薪酬异常。
+             * @param "订单不存在" "订单不存在"
+             * @return 薪酬异常的结果
+             */
             throw new PaymentException("订单不存在");
         }
 
@@ -140,10 +140,10 @@ public class MerchantPaymentConfigServiceImpl implements MerchantPaymentConfigSe
     }
 
     /**
-    * 获取默认配置
-    *
-    * @return 获取默认配置的结果
-    */
+     * 获取默认配置
+     *
+     * @return 获取默认配置的结果
+     */
     private MerchantPaymentConfig getDefaultConfig() {
         MerchantPaymentConfig config = new MerchantPaymentConfig();
         config.setOrderReusable(true);

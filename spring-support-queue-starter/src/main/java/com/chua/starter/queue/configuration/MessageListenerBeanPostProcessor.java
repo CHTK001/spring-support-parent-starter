@@ -44,11 +44,11 @@ public class MessageListenerBeanPostProcessor implements BeanPostProcessor {
     private final Map<String, MessageTemplate> templateMap = new ConcurrentHashMap<>(); // template映射
 
     /**
-    * 创建 消息监听器Beanpost处理器 实例
-    * @param messageTemplates 消息templates
-    * @param queueProperties 队列属性
-    * @param eventPublisher 事件发布
-    */
+     * 创建 消息监听器Beanpost处理器 实例
+     * @param messageTemplates 消息templates
+     * @param queueProperties 队列属性
+     * @param eventPublisher 事件发布
+     */
     public MessageListenerBeanPostProcessor(List<MessageTemplate> messageTemplates,
                                            QueueProperties queueProperties,
                                            ApplicationEventPublisher eventPublisher) {

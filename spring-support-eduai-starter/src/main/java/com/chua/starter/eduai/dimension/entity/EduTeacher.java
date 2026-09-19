@@ -26,8 +26,8 @@ public class EduTeacher {
     private Long teacherId;
 
     /**
-    * 系统用户 用户标识
-    */
+     * 系统用户 用户标识
+     */
     private Long teacherUserId;
 
     /**

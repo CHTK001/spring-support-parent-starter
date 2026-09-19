@@ -23,9 +23,9 @@ public final class IpUtils {
     private IpUtils() {}
 
     /**
-    * 内网 IP 正则（预编译）
-    * 覆盖范围：127.x、10.x、172.16-31.x、192.168.x、ipv6 回环/本地
-    */
+     * 内网 IP 正则（预编译）
+     * 覆盖范围：127.x、10.x、172.16-31.x、192.168.x、ipv6 回环/本地
+     */
     private static final Pattern PRIVATE_IP_PATTERN = Pattern.compile(
             "^(127\\.)|(10\\.)|(172\\.(1[6-9]|2[0-9]|3[0-1])\\.)|(192\\.168\\.)|(::1$)|(fc00:)|(fe80:)"
     );

@@ -30,10 +30,10 @@ public class AgentTcpServerConfiguration {
     private int tcpPort;
 
     /**
-    * 启动 TcpSyncServer。
-    *
-    * @return SyncServer Bean
-    */
+     * 启动 TcpSyncServer。
+     *
+     * @return SyncServer Bean
+     */
     @Bean(initMethod = "start", destroyMethod = "stop")
     public SyncServer agentTcpSyncServer() {
         ServerSetting setting = ServerSetting.defaults();

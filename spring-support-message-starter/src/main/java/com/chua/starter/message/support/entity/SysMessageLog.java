@@ -31,8 +31,8 @@ public class SysMessageLog extends SysBase {
     private Integer sysMessageLogId;
 
     /**
-    * 接收人 - 手机号/邮箱/用户标识等
-    */
+     * 接收人 - 手机号/邮箱/用户标识等
+     */
     private String sysMessageLogTarget;
 
     /**

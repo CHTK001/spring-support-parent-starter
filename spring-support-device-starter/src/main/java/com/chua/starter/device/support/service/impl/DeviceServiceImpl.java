@@ -157,10 +157,10 @@ public class DeviceServiceImpl implements DeviceService {
         DeviceInfo device = deviceInfoMapper.selectById(id);
         if (device == null) {
             /**
-    * runtime异常。
-    * @param id 标识
-    * @return runtime异常的结果
-    */
+             * runtime异常。
+             * @param id 标识
+             * @return runtime异常的结果
+             */
             throw new RuntimeException("设备不存在: " + id);
         }
         DeviceInfo update = new DeviceInfo();
@@ -177,10 +177,10 @@ public class DeviceServiceImpl implements DeviceService {
         DeviceInfo device = deviceInfoMapper.selectById(id);
         if (device == null) {
             /**
-    * runtime异常。
-    * @param id 标识
-    * @return runtime异常的结果
-    */
+             * runtime异常。
+             * @param id 标识
+             * @return runtime异常的结果
+             */
             throw new RuntimeException("设备不存在: " + id);
         }
         // 关闭旧会话
@@ -220,10 +220,10 @@ public class DeviceServiceImpl implements DeviceService {
         DeviceInfo device = deviceInfoMapper.selectById(id);
         if (device == null) {
             /**
-    * runtime异常。
-    * @param id 标识
-    * @return runtime异常的结果
-    */
+             * runtime异常。
+             * @param id 标识
+             * @return runtime异常的结果
+             */
             throw new RuntimeException("设备不存在: " + id);
         }
         DeviceSession session = sessionManager.getSession(id);

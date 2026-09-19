@@ -41,9 +41,9 @@ public class TencentWechatPayProperties {
     private String notifyUrl;
 
     /**
-    * 沙箱模式
-    * <p>true = 使用沙箱环境 (https://api.mch.weixin.qq.com/sandboxnew/)</p>
-    */
+     * 沙箱模式
+     * <p>true = 使用沙箱环境 (https://api.mch.weixin.qq.com/sandboxnew/)</p>
+     */
     private boolean sandbox = false;
 
     /**

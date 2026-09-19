@@ -585,8 +585,8 @@ public interface HCNetSDK extends Library {
     }
 
     /**
-        * 时间结构体
-        */
+     * 时间结构体
+     */
     @Structure.FieldOrder({"byYear", "byMonth", "byDay", "byHour", "byMinute", "bySecond", "byRes", "byISO8601",
             "wMillisecond", "cTimeZoneID", "byRes1", "byRes2"})
     /**

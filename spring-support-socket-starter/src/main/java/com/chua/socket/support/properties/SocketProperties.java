@@ -27,8 +27,8 @@ public class SocketProperties {
     public static final String PRE = "plugin.socket";
 
     /**
-    * 是否开启
-    */
+     * 是否开启
+     */
     private boolean enable;
 
     /**

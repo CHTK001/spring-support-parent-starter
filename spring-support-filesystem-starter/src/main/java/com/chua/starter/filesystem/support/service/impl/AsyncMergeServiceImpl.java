@@ -98,9 +98,9 @@ public class AsyncMergeServiceImpl implements AsyncMergeService {
         for (SysFileSystemUpload task : tasks) {
             try {
                 /**
-    * 合并任务。
-    * @param task 任务
-    */
+                 * 合并任务。
+                 * @param task 任务
+                 */
                 mergeTask(task);
             } catch (Exception e) {
                 log.error("异步合并失败: {}", task.getFilesystemUploadTaskUploadId(), e);
@@ -122,9 +122,9 @@ public class AsyncMergeServiceImpl implements AsyncMergeService {
         for (SysFileSystemUpload task : tasks) {
             try {
                 /**
-    * upload任务。
-    * @param task 任务
-    */
+                 * upload任务。
+                 * @param task 任务
+                 */
                 uploadTask(task);
             } catch (Exception e) {
                 log.error("异步上传OSS失败: {}", task.getFilesystemUploadTaskUploadId(), e);
@@ -148,9 +148,9 @@ public class AsyncMergeServiceImpl implements AsyncMergeService {
                 Integer stage = task.getFilesystemUploadTaskStage();
                 if (stage != null && stage == SysFileSystemUpload.Stage.MERGE) {
                     /**
-    * 合并任务。
-    * @param task 任务
-    */
+                     * 合并任务。
+                     * @param task 任务
+                     */
                     mergeTask(task);
                 } else if (stage != null && stage == SysFileSystemUpload.Stage.UPLOAD_TO_OSS) {
                     /**

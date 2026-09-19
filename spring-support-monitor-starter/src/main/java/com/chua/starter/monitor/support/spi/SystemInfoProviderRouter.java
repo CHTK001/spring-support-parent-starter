@@ -22,12 +22,12 @@ public class SystemInfoProviderRouter {
     private final List<SystemInfoProvider> providers;
 
     /**
-    * 为指定主机选择可用的 Provider。
-    *
-    * @param host 目标主机
-    * @return 匹配到的 Provider
-    * @throws IllegalStateException 无任何 Provider 支持该主机
-    */
+     * 为指定主机选择可用的 Provider。
+     *
+     * @param host 目标主机
+     * @return 匹配到的 Provider
+     * @throws IllegalStateException 无任何 Provider 支持该主机
+     */
     public SystemInfoProvider route(MsServerHost host) {
         for (SystemInfoProvider p : providers) {
             try {

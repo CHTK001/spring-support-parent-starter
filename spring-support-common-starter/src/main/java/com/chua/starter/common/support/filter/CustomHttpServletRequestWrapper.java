@@ -60,10 +60,10 @@ public class CustomHttpServletRequestWrapper extends HttpServletRequestWrapper {
     /** 获取输入流 */
     public ServletInputStream getInputStream() throws IOException {
         /**
-    * 习俗servlet输入流。
-    * @param body 主体
-    * @return 习俗servlet输入流的结果
-    */
+         * 习俗servlet输入流。
+         * @param body 主体
+         * @return 习俗servlet输入流的结果
+         */
         return new CustomServletInputStream(body);
     }
 
@@ -71,10 +71,10 @@ public class CustomHttpServletRequestWrapper extends HttpServletRequestWrapper {
     /** 获取Reader */
     public BufferedReader getReader() throws IOException {
         /**
-    * 缓冲读取。
-    * @param InputStreamReader(getInputStream( 输入流读取(获取输入流(
-    * @return 缓冲读取的结果
-    */
+         * 缓冲读取。
+         * @param InputStreamReader(getInputStream( 输入流读取(获取输入流(
+         * @return 缓冲读取的结果
+         */
         return new BufferedReader(new InputStreamReader(getInputStream(), getCharacterEncoding()));
     }
 
@@ -97,10 +97,10 @@ public class CustomHttpServletRequestWrapper extends HttpServletRequestWrapper {
     }
 
     /**
-    * 获取主体
-    *
-    * @return 获取主体的结果
-    */
+     * 获取主体
+     *
+     * @return 获取主体的结果
+     */
     public String getBody() {
         /**
          * 字符串。

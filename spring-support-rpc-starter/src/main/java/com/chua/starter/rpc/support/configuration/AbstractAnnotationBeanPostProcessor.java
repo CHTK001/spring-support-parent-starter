@@ -456,11 +456,11 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
         private Class<?> injectedType; // injected类型
 
         /**
-        * annotatedinjectelement。
-        * @param member member
-        * @param pd pd
-        * @param attributes attributes
-        */
+         * annotatedinjectelement。
+         * @param member member
+         * @param pd pd
+         * @param attributes attributes
+         */
         protected AnnotatedInjectElement(Member member, PropertyDescriptor pd, AnnotationAttributes attributes) {
             /**
              * 父。
@@ -542,11 +542,11 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
         public final Method method;
 
         /**
-        * annotated方法element。
-        * @param method 方法
-        * @param pd pd
-        * @param attributes attributes
-        */
+         * annotated方法element。
+         * @param method 方法
+         * @param pd pd
+         * @param attributes attributes
+         */
         protected AnnotatedMethodElement(Method method, PropertyDescriptor pd, AnnotationAttributes attributes) {
             /**
              * 父。
@@ -571,10 +571,10 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
         public final Field field;
 
         /**
-        * annotated字段element。
-        * @param field 字段
-        * @param attributes attributes
-        */
+         * annotated字段element。
+         * @param field 字段
+         * @param attributes attributes
+         */
         protected AnnotatedFieldElement(Field field, AnnotationAttributes attributes) {
             /**
              * 父。

@@ -26,8 +26,8 @@ public class EduClass {
     private Long classId;
 
     /**
-    * 班级编码（业务唯一）
-    */
+     * 班级编码（业务唯一）
+     */
     private String classCode;
 
     /**

@@ -29,9 +29,9 @@ public class LocalSoftwareSource implements SoftwareSource {
 
     @Autowired
     /**
-    * 创建 本地software源 实例
-    * @param collectors collectors
-    */
+     * 创建 本地software源 实例
+     * @param collectors collectors
+     */
     public LocalSoftwareSource(List<LocalSoftwareCollector> collectors) {
         this.collectors = collectors;
     }

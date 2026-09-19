@@ -22,10 +22,10 @@ public class Joiner {
     private boolean trimResults;
 
     /**
-    * 构造连接器
-    *
-    * @param separator 分隔符
-    */
+     * 构造连接器
+     *
+     * @param separator 分隔符
+     */
     public Joiner(String separator) {
         this.separator = separator;
     }

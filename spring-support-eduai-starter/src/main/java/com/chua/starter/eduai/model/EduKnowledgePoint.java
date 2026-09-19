@@ -25,8 +25,8 @@ public class EduKnowledgePoint {
     private Long knowledgePointId;
 
     /**
-    * 知识点名称
-    */
+     * 知识点名称
+     */
     private String knowledgePointName;
 
     /**

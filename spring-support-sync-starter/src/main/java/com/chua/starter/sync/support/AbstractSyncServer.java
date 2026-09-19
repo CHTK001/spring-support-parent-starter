@@ -84,11 +84,11 @@ public abstract class AbstractSyncServer extends AbstractServer implements SyncS
     /** 发送 */
     public void send(String clientId, String topic, Object message) {
         /**
-    * 执行发送。
-    * @param clientId 客户端标识
-    * @param topic topic
-    * @param message 消息
-    */
+         * 执行发送。
+         * @param clientId 客户端标识
+         * @param topic topic
+         * @param message 消息
+         */
         doSend(clientId, topic, message);
     }
 

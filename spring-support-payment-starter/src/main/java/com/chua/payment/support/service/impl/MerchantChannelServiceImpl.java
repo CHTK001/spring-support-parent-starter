@@ -309,11 +309,11 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
     }
 
     /**
-    * requiremerchant
-    *
-    * @param merchantId merchantid
-    * @return requireMerchant的结果
-    */
+     * requiremerchant
+     *
+     * @param merchantId merchantid
+     * @return requireMerchant的结果
+     */
     private Merchant requireMerchant(Long merchantId) {
         if (merchantId == null) {
             /**
@@ -781,10 +781,10 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
     public MerchantChannel getWalletChannel(Long merchantId) {
         if (merchantId == null) {
             /**
-    * 薪酬异常。
-    * @param "商户ID不能为空" "商户标识不能为空"
-    * @return 薪酬异常的结果
-    */
+             * 薪酬异常。
+             * @param "商户ID不能为空" "商户标识不能为空"
+             * @return 薪酬异常的结果
+             */
             throw new PaymentException("商户ID不能为空");
         }
         MerchantChannel channel = channelMapper.selectOne(new LambdaQueryWrapper<MerchantChannel>()

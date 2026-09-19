@@ -63,9 +63,9 @@ public enum ProjectType {
     private final String desc;
 
     /**
-    * project类型。
-    * @param desc desc
-    */
+     * project类型。
+     * @param desc desc
+     */
     ProjectType(String desc) {
         this.desc = desc;
     }

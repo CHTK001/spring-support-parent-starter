@@ -12,10 +12,10 @@ public class Event {
     private final EventData data;
 
     /**
-    * 创建事件
-    *
-    * @param data 事件数据
-    */
+     * 创建事件
+     *
+     * @param data 事件数据
+     */
     public Event(EventData data) {
         this.data = data;
     }

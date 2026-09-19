@@ -55,18 +55,18 @@ public class PaymentNotifyController {
     private final ObjectMapper objectMapper;
 
     /**
-    * 处理微信支付支付通知（按 通道 标识 路由，无 订单no 时由通知体决定订单）。
-    *
-    * @param channelId      支付通道 标识
-    * @param serialNumber   Wechatpay-串行 请求头
-    * @param timestamp      Wechatpay-时间戳 请求头
-    * @param nonce          Wechatpay-Nonce 请求头
-    * @param signature      Wechatpay-签名 请求头
-    * @param signType       Wechatpay-签名-类型 请求头
-    * @param body           微信通知报文
-    * @param request        原始 HTTP 请求
-    * @return 微信支付要求的不重复响应体（通常为空）
-    */
+     * 处理微信支付支付通知（按 通道 标识 路由，无 订单no 时由通知体决定订单）。
+     *
+     * @param channelId      支付通道 标识
+     * @param serialNumber   Wechatpay-串行 请求头
+     * @param timestamp      Wechatpay-时间戳 请求头
+     * @param nonce          Wechatpay-Nonce 请求头
+     * @param signature      Wechatpay-签名 请求头
+     * @param signType       Wechatpay-签名-类型 请求头
+     * @param body           微信通知报文
+     * @param request        原始 HTTP 请求
+     * @return 微信支付要求的不重复响应体（通常为空）
+     */
     @PostMapping("/wechat/pay/{channelId}")
     public ResponseEntity<String> handleWechatPayNotify(@PathVariable Long channelId,
                                                          @RequestHeader(value = "Wechatpay-Serial", required = false) String serialNumber,

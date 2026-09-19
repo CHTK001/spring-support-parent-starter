@@ -52,12 +52,12 @@ public class SipServiceManager {
     });
 
     /**
-    * 启动中继服务并开始接收控制连接
-    *
-    * @param port   控制端口
-    * @param secret 鉴权密钥
-    * @throws IOException 端口占用或监听失败
-    */
+     * 启动中继服务并开始接收控制连接
+     *
+     * @param port   控制端口
+     * @param secret 鉴权密钥
+     * @throws IOException 端口占用或监听失败
+     */
     public synchronized void start(int port, String secret) throws IOException {
         if (running.get()) {
             log.warn("[SIP] 已在运行中");
@@ -248,12 +248,12 @@ public class SipServiceManager {
         String services;
 
         /**
-        * 构造 Provider 注册信息
-        *
-        * @param s   控制连接
-        * @param o   控制连接输出流（自动 flush）
-        * @param svc 服务列表
-        */
+         * 构造 Provider 注册信息
+         *
+         * @param s   控制连接
+         * @param o   控制连接输出流（自动 flush）
+         * @param svc 服务列表
+         */
         ProviderInfo(Socket s, java.io.PrintWriter o, String svc) {
             socket = s;
             out = o;

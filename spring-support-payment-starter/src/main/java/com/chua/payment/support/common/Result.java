@@ -40,13 +40,13 @@ public class Result<T> implements Serializable {
     }
 
     /**
-    * 创建 结果 实例
-    * @param code 编码
-    * @param message 字符串
-    * @param data T
-    * @param message 消息
-    * @param data 数据
-    */
+     * 创建 结果 实例
+     * @param code 编码
+     * @param message 字符串
+     * @param data T
+     * @param message 消息
+     * @param data 数据
+     */
     public Result(Integer code, String message, T data) {
         this.code = code;
         this.message = message;

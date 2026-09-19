@@ -124,8 +124,8 @@ public class SysFileSystemUpload extends SysBase implements Serializable {
     private Integer filesystemUploadTaskRetryCount; // filesystemupload任务重试数量
 
     /**
-    * sys文件系统upload。
-    */
+     * sys文件系统upload。
+     */
     public SysFileSystemUpload() {
     }
 

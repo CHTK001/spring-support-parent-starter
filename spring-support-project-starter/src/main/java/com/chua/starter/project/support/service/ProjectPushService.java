@@ -27,10 +27,10 @@ public class ProjectPushService {
     private final ObjectProvider<SocketSessionTemplate> socketTemplates;
 
     /**
-    * 构造器注入
-    *
-    * @param socketTemplates Socket 模板
-    */
+     * 构造器注入
+     *
+     * @param socketTemplates Socket 模板
+     */
     public ProjectPushService(ObjectProvider<SocketSessionTemplate> socketTemplates) {
         this.socketTemplates = socketTemplates;
     }

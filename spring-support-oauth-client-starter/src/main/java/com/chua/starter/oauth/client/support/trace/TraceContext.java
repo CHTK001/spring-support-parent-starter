@@ -37,8 +37,8 @@ public class TraceContext {
     private final String traceId;
 
     /**
-    * 当前 Span 标识 计数器
-    */
+     * 当前 Span 标识 计数器
+     */
     private final AtomicInteger spanCounter = new AtomicInteger(0);
 
     /**
@@ -49,15 +49,15 @@ public class TraceContext {
     private final long startTimestamp;
 
     /**
-    * 追踪的 Span 列表
-    */
+     * 追踪的 Span 列表
+     */
     @Getter
     /** Spans */
     private final List<TraceSpan> spans = new ArrayList<>();
 
     /**
-    * 当前活跃的 Span
-    */
+     * 当前活跃的 Span
+     */
     private TraceSpan currentSpan;
 
     /**
@@ -68,16 +68,16 @@ public class TraceContext {
     private String clientAppName;
 
     /**
-    * 客户端IP
-    */
+     * 客户端IP
+     */
     @Getter
     /** 客户端IP */
     private String clientIp;
 
     /**
-    * 私有构造
-    * @param traceId 追踪标识
-    */
+     * 私有构造
+     * @param traceId 追踪标识
+     */
     private TraceContext(String traceId) {
         this.traceId = traceId != null ? traceId : UUID.randomUUID().toString().replace("-", "");
         this.startTimestamp = System.currentTimeMillis();

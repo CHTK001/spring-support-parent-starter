@@ -48,8 +48,8 @@ public class ServiceInfoContributorAutoConfiguration implements ApplicationListe
             return;
         }
         /**
-    * collect。
-    */
+         * collect。
+         */
         collect();
     }
 

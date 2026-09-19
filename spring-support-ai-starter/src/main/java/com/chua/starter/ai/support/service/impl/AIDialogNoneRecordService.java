@@ -21,11 +21,11 @@ public class AIDialogNoneRecordService implements AIDialogRecordService {
     /** 创建Dialog */
     public AIDialog createDialog(String name) {
         /**
-    * aidialog。
-    * @param 0L 0L
-    * @param name 名称
-    * @return AIdialog的结果
-    */
+         * aidialog。
+         * @param 0L 0L
+         * @param name 名称
+         * @return AIdialog的结果
+         */
         return new AIDialog(0L, name);
     }
 

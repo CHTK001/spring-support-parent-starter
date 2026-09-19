@@ -41,10 +41,10 @@ public class OpenApiConverter {
     private static final ObjectMapper JSON = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
 
     /**
-    * 将 springdoc 收集的 {@link OpenAPI} 转换为通用文档模型。
-    * @param openAPI 打开api
-    * @return 从打开api的结果
-    */
+     * 将 springdoc 收集的 {@link OpenAPI} 转换为通用文档模型。
+     * @param openAPI 打开api
+     * @return 从打开api的结果
+     */
     public static OpenApiDocumentData fromOpenApi(OpenAPI openAPI) {
         if (openAPI == null) {
             return new OpenApiDocumentData();

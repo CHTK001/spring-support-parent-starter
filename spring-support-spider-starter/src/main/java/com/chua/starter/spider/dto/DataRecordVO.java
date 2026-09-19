@@ -22,10 +22,10 @@ public class DataRecordVO {
     private String spiderDataPayload;
 
     /**
-    * 获取蜘蛛标识
-    *
-    * @return 获取蜘蛛id的结果
-    */
+     * 获取蜘蛛标识
+     *
+     * @return 获取蜘蛛id的结果
+     */
     public Long getSpiderId() { return spiderId; }
     /**
      * 设置蜘蛛标识

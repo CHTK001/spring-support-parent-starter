@@ -32,8 +32,8 @@ public class GuacdSessionRegistry {
     private final Map<String, GuacdSession> sessions = new ConcurrentHashMap<>();
 
     /**
-    * 审计记录 标识 -> tunnelid 索引（供管理端按记录强制关闭）
-    */
+     * 审计记录 标识 -> tunnelid 索引（供管理端按记录强制关闭）
+     */
     private final Map<Long, String> sessionRecordIndex = new ConcurrentHashMap<>();
 
     /**

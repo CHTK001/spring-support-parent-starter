@@ -38,9 +38,9 @@ public final class ServiceInfoRegistry {
     private static final ServiceInfoRegistry INSTANCE = new ServiceInfoRegistry();
 
     /**
-    * 映射 键 分隔符: 使用 NUL 字符避免与 {@code group} 或 {@code name} 中的
-    * 常见字符 (如 '/'、'-') 冲突。
-    */
+     * 映射 键 分隔符: 使用 NUL 字符避免与 {@code group} 或 {@code name} 中的
+     * 常见字符 (如 '/'、'-') 冲突。
+     */
     private static final String KEY_SEP = "\u0000";
 
     private final Map<String, EndpointInfo> endpoints = new LinkedHashMap<>(); // 端点
@@ -50,10 +50,10 @@ public final class ServiceInfoRegistry {
     private ServiceInfoRegistry() {}
 
     /**
-    * 获取Instance
-    *
-    * @return 获取instance的结果
-    */
+     * 获取Instance
+     *
+     * @return 获取instance的结果
+     */
     public static ServiceInfoRegistry getInstance() {
         return INSTANCE;
     }
@@ -244,12 +244,12 @@ public final class ServiceInfoRegistry {
 
         @Override
         /**
-        * 哈希编码
-        *
-        * @return 哈希编码的结果
-        * @author CH
-        * @since 4.0.0
-        */
+         * 哈希编码
+         *
+         * @return 哈希编码的结果
+         * @author CH
+         * @since 4.0.0
+         */
         public int hashCode() {
             return Objects.hash(group, name);
         }
@@ -268,17 +268,17 @@ public final class ServiceInfoRegistry {
         private final String suffix;
 
         /**
-        * 创建 flag信息 实例
-        * @param name 名称
-        * @param name 字符串
-        * @param value 布尔值
-        * @param name 字符串
-        * @param name 字符串
-        * @param group 群体
-        * @param value 值
-        * @param description description
-        * @param suffix 后缀
-        */
+         * 创建 flag信息 实例
+         * @param name 名称
+         * @param name 字符串
+         * @param value 布尔值
+         * @param name 字符串
+         * @param name 字符串
+         * @param group 群体
+         * @param value 值
+         * @param description description
+         * @param suffix 后缀
+         */
         public FlagInfo(String name, String group, Boolean value, String description, String suffix) {
             this.name = name;
             this.group = group;

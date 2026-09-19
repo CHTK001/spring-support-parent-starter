@@ -30,8 +30,8 @@ public class SseSocketSessionTemplate implements SocketSessionTemplate {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     /**
-    * SSE 连接超时时间（毫秒），默认30分钟
-    */
+     * SSE 连接超时时间（毫秒），默认30分钟
+     */
     private final long timeout;
 
     /**
@@ -49,9 +49,9 @@ public class SseSocketSessionTemplate implements SocketSessionTemplate {
     /** 创建 sseSocket会话template 实例 */
     public SseSocketSessionTemplate() {
         /**
-    * this。
-    * @param 1000L 1000L
-    */
+         * this。
+         * @param 1000L 1000L
+         */
         this(30 * 60 * 1000L);
     }
 
@@ -185,11 +185,11 @@ public class SseSocketSessionTemplate implements SocketSessionTemplate {
         String clientId = userSessionMap.get(userId);
         if (clientId != null) {
             /**
-    * 发送。
-    * @param clientId 客户端标识
-    * @param event 事件
-    * @param msg msg
-    */
+             * 发送。
+             * @param clientId 客户端标识
+             * @param event 事件
+             * @param msg msg
+             */
             send(clientId, event, msg);
         }
     }

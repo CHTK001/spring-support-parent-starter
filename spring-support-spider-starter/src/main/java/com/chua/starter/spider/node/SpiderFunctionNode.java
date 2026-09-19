@@ -47,10 +47,10 @@ public class SpiderFunctionNode implements FlowNode {
     private ApplicationContext applicationContext;
 
     /**
-    * 节点类型标识。
-    *
-    * @return 节点类型
-    */
+     * 节点类型标识。
+     *
+     * @return 节点类型
+     */
     @Override
     public String type() {
         return "spider.function";

@@ -12,9 +12,9 @@ public class RoleJudge {
     private final Set<String> roles;
 
     /**
-    * 创建 角色judge 实例
-    * @param roles 角色
-    */
+     * 创建 角色judge 实例
+     * @param roles 角色
+     */
     public RoleJudge(Set<String> roles) {
         this.roles = roles;
     }

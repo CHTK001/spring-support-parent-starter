@@ -44,12 +44,12 @@ public class SpringRpcInvocationHandler<T> implements InvocationHandler {
     private List<RpcInterceptor> interceptors;
 
     /**
-    * 创建 springrpcinvocation处理器 实例
-    * @param targetType 目标类型
-    * @param rpcClient rpc客户端
-    * @param applicationContext application上下文
-    * @param consumerConfig consumer配置
-    */
+     * 创建 springrpcinvocation处理器 实例
+     * @param targetType 目标类型
+     * @param rpcClient rpc客户端
+     * @param applicationContext application上下文
+     * @param consumerConfig consumer配置
+     */
     public SpringRpcInvocationHandler(Class<T> targetType,
                                       RpcClient rpcClient,
                                       ApplicationContext applicationContext,

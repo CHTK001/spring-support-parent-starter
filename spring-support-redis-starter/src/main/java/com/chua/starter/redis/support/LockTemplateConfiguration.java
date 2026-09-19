@@ -29,14 +29,14 @@ public class LockTemplateConfiguration {
     private RedissonClient redissonClient;
 
     /**
-    * 基于 Redisson 的分布式锁模板。
-    *
-    * <p>注册名为 {@code customLockTemplate} 的锁模板 Bean；当容器中存在
-    * {@link RedissonClient} 时返回 {@link RedissonLockTemplate}，否则回退
-    * {@link NoopLockTemplate}（不持锁，仅用于无 Redis 环境下的降级）。</p>
-    *
-    * @return 分布式锁模板实例
-    */
+     * 基于 Redisson 的分布式锁模板。
+     *
+     * <p>注册名为 {@code customLockTemplate} 的锁模板 Bean；当容器中存在
+     * {@link RedissonClient} 时返回 {@link RedissonLockTemplate}，否则回退
+     * {@link NoopLockTemplate}（不持锁，仅用于无 Redis 环境下的降级）。</p>
+     *
+     * @return 分布式锁模板实例
+     */
     @Bean("customLockTemplate")
     @ConditionalOnMissingBean
     public LockTemplate lockTemplate() {

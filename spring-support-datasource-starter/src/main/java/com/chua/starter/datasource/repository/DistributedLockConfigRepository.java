@@ -26,10 +26,10 @@ public class DistributedLockConfigRepository {
     private final JdbcTemplate jdbcTemplate;
 
     /**
-    * 构造方法，注入 jdbctemplate。
-    *
-    * @param jdbcTemplate Spring 容器提供的 jdbctemplate Bean
-    */
+     * 构造方法，注入 jdbctemplate。
+     *
+     * @param jdbcTemplate Spring 容器提供的 jdbctemplate Bean
+     */
     public DistributedLockConfigRepository(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
     }

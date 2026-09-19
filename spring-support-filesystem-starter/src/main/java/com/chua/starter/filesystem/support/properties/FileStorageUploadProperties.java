@@ -17,8 +17,8 @@ public class FileStorageUploadProperties {
     public static final String PREFIX = "plugin.filesystem.upload";
 
     /**
-    * 分片大小（字节），默认 5MB
-    */
+     * 分片大小（字节），默认 5MB
+     */
     private long chunkSize = 5 * 1024 * 1024;
 
     /**

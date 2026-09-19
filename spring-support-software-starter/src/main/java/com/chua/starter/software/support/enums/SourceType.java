@@ -40,9 +40,9 @@ public enum SourceType {
     private final int value;
 
     /**
-    * 源类型。
-    * @param value 值
-    */
+     * 源类型。
+     * @param value 值
+     */
     SourceType(int value) {
         this.value = value;
     }

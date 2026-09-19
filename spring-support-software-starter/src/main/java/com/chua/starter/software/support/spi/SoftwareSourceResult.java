@@ -37,15 +37,15 @@ public class SoftwareSourceResult {
     }
 
     /**
-    * 创建 software源结果 实例
-    * @param success 成功
-    * @param message 字符串
-    * @param message 字符串
-    * @param downloadedFile 文件
-    * @param message 消息
-    * @param installPath install路径
-    * @param downloadedFile downloaded文件
-    */
+     * 创建 software源结果 实例
+     * @param success 成功
+     * @param message 字符串
+     * @param message 字符串
+     * @param downloadedFile 文件
+     * @param message 消息
+     * @param installPath install路径
+     * @param downloadedFile downloaded文件
+     */
     public SoftwareSourceResult(boolean success, String message, String installPath, File downloadedFile) {
         this.success = success;
         this.message = message;

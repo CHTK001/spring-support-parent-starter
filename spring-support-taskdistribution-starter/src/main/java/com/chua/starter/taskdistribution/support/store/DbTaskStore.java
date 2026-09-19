@@ -95,9 +95,9 @@ public class DbTaskStore implements TaskStore {
                 MDC.put(MdcDecorator.KEY_TRACE_ID, task.getTraceId());
             }
             /**
-    * upsert。
-    * @param entity 实体
-    */
+             * upsert。
+             * @param entity 实体
+             */
             upsert(entity);
         } catch (Exception e) {
             log.warn("保存任务失败: {}", task.getTaskId(), e);
@@ -231,10 +231,10 @@ public class DbTaskStore implements TaskStore {
     @Override
     @SuppressWarnings("unchecked")
     /**
-    * 获取结果。
-    * @param taskId 任务标识
-    * @return 获取结果的结果
-    */
+     * 获取结果。
+     * @param taskId 任务标识
+     * @return 获取结果的结果
+     */
     public TaskResult<?> getResult(String taskId) {
         SysTaskStore entity = cache.get(taskId);
         if (entity == null) {

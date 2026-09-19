@@ -27,10 +27,10 @@ public class HostDetectProviderRegistry {
     private final Map<String, HostDetectProvider> index = new ConcurrentHashMap<>();
 
     /**
-    * 构造：注册全部探测提供者
-    *
-    * @param providers 探测提供者列表
-    */
+     * 构造：注册全部探测提供者
+     *
+     * @param providers 探测提供者列表
+     */
     @Autowired
     public HostDetectProviderRegistry(List<HostDetectProvider> providers) {
         if (providers == null || providers.isEmpty()) {

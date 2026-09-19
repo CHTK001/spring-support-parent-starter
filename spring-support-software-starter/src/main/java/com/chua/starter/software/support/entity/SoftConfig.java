@@ -103,9 +103,9 @@ public class SoftConfig implements Serializable {
     private String configUpdateBy;
 
     /**
-    * 获取配置标识。
-    * @return 获取配置id的结果
-    */
+     * 获取配置标识。
+     * @return 获取配置id的结果
+     */
     public String getConfigId() {
         return configId;
     }

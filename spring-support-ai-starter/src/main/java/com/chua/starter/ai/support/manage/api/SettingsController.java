@@ -29,11 +29,11 @@ public class SettingsController {
     private final SysAiGlobalSettingService globalSettingService;
 
     /**
-    * 获取指定分组的所有设置
-    *
-    * @param group 设置分组名称（如 models）
-    * @return 分组下 field -> value 的键值对
-    */
+     * 获取指定分组的所有设置
+     *
+     * @param group 设置分组名称（如 models）
+     * @return 分组下 field -> value 的键值对
+     */
     @GetMapping("/{group}")
     public ApiResult<Map<String, Object>> getGroupSettings(@PathVariable String group) {
         List<Map<String, Object>> settings = globalSettingService.list(group);

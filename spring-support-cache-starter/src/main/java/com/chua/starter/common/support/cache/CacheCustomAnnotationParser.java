@@ -50,11 +50,11 @@ public class CacheCustomAnnotationParser implements CacheAnnotationParser, Seria
     @Override
     @Nullable
     /**
-    * 解析缓存注解
-    *
-    * @param type 类型
-    * @return 解析缓存注解的结果
-    */
+     * 解析缓存注解
+     *
+     * @param type 类型
+     * @return 解析缓存注解的结果
+     */
     public Collection<CacheOperation> parseCacheAnnotations(Class<?> type) {
         DefaultCacheConfig defaultConfig = new DefaultCacheConfig(type);
         return parseCacheAnnotations(defaultConfig, type);
@@ -327,9 +327,9 @@ public class CacheCustomAnnotationParser implements CacheAnnotationParser, Seria
         private boolean initialized = false;
 
         /**
-        * 创建 默认缓存配置 实例
-        * @param target Target
-        */
+         * 创建 默认缓存配置 实例
+         * @param target Target
+         */
         public DefaultCacheConfig(Class<?> target) {
             this.target = target;
         }

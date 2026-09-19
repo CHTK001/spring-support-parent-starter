@@ -68,11 +68,11 @@ public class MultiDataSource implements DataSource {
     }
 
     /**
-    * 创建 multi数据源 实例
-    * @param dataSources 数据源
-    * @param applicationContext application上下文
-    * @param applicationContext application上下文
-    */
+     * 创建 multi数据源 实例
+     * @param dataSources 数据源
+     * @param applicationContext application上下文
+     * @param applicationContext application上下文
+     */
     public MultiDataSource(List<DataSource> dataSources, ApplicationContext applicationContext) {
         this.dataSources = dataSources;
         this.applicationContext = applicationContext;
@@ -237,9 +237,9 @@ public class MultiDataSource implements DataSource {
                     Connection connection = DriverManager.getConnection("jdbc:calcite:", info).unwrap(CalciteConnection.class);
                     CalciteConnection calciteConnection = connection.unwrap(CalciteConnection.class);
                     /**
-            * refresh数据源。
-            * @param calciteConnection.getRootSchema( calciteconnection.获取根模式(
-            */
+                     * refresh数据源。
+                     * @param calciteConnection.getRootSchema( calciteconnection.获取根模式(
+                     */
                     refreshDataSource(calciteConnection.getRootSchema());
                     return calciteConnection;
                 } catch (SQLException e) {

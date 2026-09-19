@@ -243,12 +243,12 @@ public class MockTencentWechatPayGateway implements TencentWechatPayGateway {
     }
 
     /**
-    * 构建sdk参数
-    *
-    * @param orderNo 订单no
-    * @param appId appid
-    * @return 构建sdk参数的结果
-    */
+     * 构建sdk参数
+     *
+     * @param orderNo 订单no
+     * @param appId appid
+     * @return 构建sdk参数的结果
+     */
     private Map<String, Object> buildSdkParams(String orderNo, String appId) {
         Map<String, Object> params = new LinkedHashMap<>();
         params.put("appId", firstNonBlank(appId, "mock-app-id"));

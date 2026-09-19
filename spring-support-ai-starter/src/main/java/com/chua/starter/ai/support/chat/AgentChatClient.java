@@ -33,10 +33,10 @@ public class AgentChatClient implements ChatClient {
     private String model = DEFAULT_MODEL;
 
     /**
-    * 创建 Agent对话客户端 实例
-    *
-    * @param agent Agent 运行时实例
-    */
+     * 创建 Agent对话客户端 实例
+     *
+     * @param agent Agent 运行时实例
+     */
     public AgentChatClient(Agent agent) {
         this.agent = agent;
     }

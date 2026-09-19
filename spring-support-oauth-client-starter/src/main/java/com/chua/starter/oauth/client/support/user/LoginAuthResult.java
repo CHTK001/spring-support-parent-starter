@@ -21,13 +21,13 @@ public class LoginAuthResult extends LoginResult {
     );
 
     /**
-    * 编码
-    */
+     * 编码
+     */
     @NonNull
     /** 代码 */
     private Integer code;
     /**
-    * 错误信息
-    */
+     * 错误信息
+     */
     private String message;
 }

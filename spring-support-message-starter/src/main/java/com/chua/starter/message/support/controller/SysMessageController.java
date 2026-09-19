@@ -53,13 +53,13 @@ public class SysMessageController {
     private final SysMessageService sysMessageService;
 
     /**
-    * 提供商分页查询
-    *
-    * @param provider 查询条件
-    * @param page     页码
-    * @param pageSize 每页条数
-    * @return 分页结果
-    */
+     * 提供商分页查询
+     *
+     * @param provider 查询条件
+     * @param page     页码
+     * @param pageSize 每页条数
+     * @return 分页结果
+     */
     @Operation(summary = "提供商分页查询")
     @GetMapping("/provider/page")
     @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})

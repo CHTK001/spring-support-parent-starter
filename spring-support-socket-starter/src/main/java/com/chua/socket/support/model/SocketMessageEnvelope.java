@@ -23,8 +23,8 @@ public class SocketMessageEnvelope implements Serializable {
     private static final long serialVersionUID = 1L;
 
     /**
-    * 传输数据
-    */
+     * 传输数据
+     */
     private String data;
 
     /**

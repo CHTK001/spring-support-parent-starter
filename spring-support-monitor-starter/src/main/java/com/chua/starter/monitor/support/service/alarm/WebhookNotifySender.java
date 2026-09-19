@@ -39,10 +39,10 @@ public class WebhookNotifySender implements NotifySender {
             .build();
 
     /**
-    * 渠道名称
-    *
-    * @return 渠道标识
-    */
+     * 渠道名称
+     *
+     * @return 渠道标识
+     */
     @Override
     public String channel() {
         return "webhook";

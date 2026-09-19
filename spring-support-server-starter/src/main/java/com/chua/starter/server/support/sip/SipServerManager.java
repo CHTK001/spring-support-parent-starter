@@ -28,9 +28,9 @@ public class SipServerManager {
     private boolean running = false;
 
     /**
-    * 应用启动后延迟 10s 尝试自动拉起 SIP 中继服务
-    * 延迟用于等待配置加载完成，避免读到默认值
-    */
+     * 应用启动后延迟 10s 尝试自动拉起 SIP 中继服务
+     * 延迟用于等待配置加载完成，避免读到默认值
+     */
     @PostConstruct
     public void init() {
         // 延迟启动，等待配置加载

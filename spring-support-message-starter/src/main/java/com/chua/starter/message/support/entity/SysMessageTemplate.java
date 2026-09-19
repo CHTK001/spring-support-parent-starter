@@ -29,8 +29,8 @@ public class SysMessageTemplate extends SysBase {
     private Integer sysMessageTemplateId;
 
     /**
-    * 提供商标识 - 关联sys_消息_提供者表
-    */
+     * 提供商标识 - 关联sys_消息_提供者表
+     */
     private Integer sysMessageProviderId;
 
     /**

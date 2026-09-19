@@ -27,8 +27,8 @@ public class EduStudent {
     private Long studentId;
 
     /**
-    * 系统用户 用户标识（关联 spring-支持 用户体系，可为空表示待注册）
-    */
+     * 系统用户 用户标识（关联 spring-支持 用户体系，可为空表示待注册）
+     */
     private Long studentUserId;
 
     /**
