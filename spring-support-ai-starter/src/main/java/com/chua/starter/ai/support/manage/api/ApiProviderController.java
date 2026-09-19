@@ -241,8 +241,8 @@ public class ApiProviderController {
         entity.setProxy(str(body, "proxy"));
         entity.setExtra(uncheckedCast(body.get("extra")));
         entity.setSortOrder(intv(body, "sort_order", providerMapper.selectCount(null).intValue()));
-        entity.setCreatedAt(null);
-        entity.setUpdatedAt(null);
+        entity.setCreatedAt(now);
+        entity.setUpdatedAt(now);
         providerMapper.insert(entity);
 
         // 初始模型（可选，用户可以后续手动添加）
