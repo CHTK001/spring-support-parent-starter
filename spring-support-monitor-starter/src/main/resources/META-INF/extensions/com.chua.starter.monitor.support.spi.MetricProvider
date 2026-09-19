@@ -1,0 +1,5 @@
+com.chua.starter.monitor.support.provider.PrometheusProvider
+com.chua.starter.monitor.support.provider.server.ServerLocalProvider
+com.chua.starter.monitor.support.provider.server.ServerHttpProvider
+com.chua.starter.monitor.support.provider.server.ServerTerminalProvider
+com.chua.starter.monitor.support.provider.redis.RedisLocalProvider

@@ -88,18 +88,29 @@ public class PermissionInterceptor extends StaticMethodMatcherPointcutAdvisor im
                          Arrays.toString(permission.value()));
                 
                 UserResume userInfo = com.chua.starter.oauth.client.support.execute.AuthSessionUtils.getUserInfo(UserResume.class);
-                if(null == userInfo) {
- // 本地联调模式（无远程 o认证 服务）下 thread本地 无 用户resume；
- // 注入 admin 角色以放行所有 @权限 拦截，配合 whitelist 防止未鉴权流量。
-                    log.debug("[权限拦截器]用户信息为空，注入本地 admin 上下文 - 方法: {}", methodName);
-                    userInfo = new UserResume();
-                    userInfo.setUserId("1");
-                    userInfo.setUsername("admin");
-                    userInfo.setUid("1");
-                    userInfo.setRoles(com.google.common.collect.Sets.newHashSet(
-                            com.chua.starter.oauth.client.support.contants.AuthConstant.SUPER_ADMIN,
-                            com.chua.starter.common.support.constant.Constant.ADMIN));
-                    com.chua.starter.oauth.client.support.execute.AuthSessionUtils.setUserInfo(userInfo);
+                if (null == userInfo) {
+                    if (isLocalAdminFallback()) {
+ // 本地联调模式（无远程 o认证 服务）显式开启兜底：注入 admin 角色以放行 @权限 拦截。
+                        log.warn("[权限拦截器]已开启本地 admin 兜底，注入 admin 上下文 - 方法: {}", methodName);
+                        userInfo = new UserResume();
+                        userInfo.setUserId("1");
+                        userInfo.setUsername("admin");
+                        userInfo.setUid("1");
+                        userInfo.setRoles(com.google.common.collect.Sets.newHashSet(
+                                com.chua.starter.oauth.client.support.contants.AuthConstant.SUPER_ADMIN,
+                                com.chua.starter.common.support.constant.Constant.ADMIN));
+                        com.chua.starter.oauth.client.support.execute.AuthSessionUtils.setUserInfo(userInfo);
+                    } else if (currentRequest() != null) {
+ // HTTP 请求无用户上下文即未登录，不得伪造身份放行
+                        log.warn("[权限拦截器]无用户上下文且未开启本地兜底，拒绝访问 - 方法: {}", methodName);
+                        /**
+                         * OAuth异常。
+                         * @param "登录状态已失效，请重新登录" "登录状态已失效，请重新登录"
+                         * @return oauth异常的结果
+                         */
+                        throw new OauthException("登录状态已失效，请重新登录", 401);
+                    }
+                    // 非 HTTP 调用（定时任务、异步线程）无请求上下文，按原样放行且不带身份
                 }
                 
                 log.debug("[权限拦截器]当前用户 - 用户名: {}, 用户ID: {}", 
@@ -184,6 +195,17 @@ public class PermissionInterceptor extends StaticMethodMatcherPointcutAdvisor im
 
 
         });
+    }
+
+    /**
+     * 是否开启「无用户上下文即本地 admin」兜底
+     *
+     * @return 是否开启兜底的结果
+     */
+    private boolean isLocalAdminFallback() {
+        com.chua.starter.oauth.client.support.properties.AuthClientProperties properties =
+                com.chua.starter.oauth.client.support.runtime.OauthClientRuntimeContext.getAuthClientProperties();
+        return properties != null && properties.isLocalAdminFallback();
     }
 
     /**

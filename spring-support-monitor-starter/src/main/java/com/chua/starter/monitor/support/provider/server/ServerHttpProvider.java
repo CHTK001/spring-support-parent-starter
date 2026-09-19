@@ -2,26 +2,25 @@ package com.chua.starter.monitor.support.provider.server;
 
 import com.chua.common.support.lang.json.Json;
 import com.chua.common.support.lang.json.JsonObject;
+import com.chua.common.support.spi.annotations.Spi;
 import com.chua.starter.monitor.support.enums.ProviderType;
 import com.chua.starter.monitor.support.enums.ServiceType;
 import com.chua.starter.monitor.support.spi.CollectContext;
 import com.chua.starter.monitor.support.spi.CollectResult;
 import com.chua.starter.monitor.support.spi.MetricPoint;
 import com.chua.starter.monitor.support.spi.MetricProvider;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
-import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
-
 import java.io.IOException;
-import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.net.URI;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 /**
  * 服务器 HTTP 采集 提供者
@@ -34,7 +33,7 @@ import java.util.Set;
  * @author CH
  */
 @Slf4j
-@Component
+@Spi(value = "server-http", order = 100)
 public class ServerHttpProvider implements MetricProvider {
 
     /**

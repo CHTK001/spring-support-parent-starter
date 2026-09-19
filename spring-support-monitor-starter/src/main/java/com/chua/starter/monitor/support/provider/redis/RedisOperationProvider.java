@@ -2,6 +2,7 @@ package com.chua.starter.monitor.support.provider.redis;
 
 import com.chua.common.support.lang.json.Json;
 import com.chua.common.support.lang.json.JsonObject;
+import com.chua.common.support.spi.annotations.Spi;
 import com.chua.common.support.utils.NumberUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.redis.support.client.RedisClient;
@@ -9,15 +10,13 @@ import com.chua.starter.monitor.support.enums.ServiceType;
 import com.chua.starter.monitor.support.service.MonitorConfigService;
 import com.chua.starter.monitor.support.spi.CollectContext;
 import com.chua.starter.monitor.support.spi.OperationProvider;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
-import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
-
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 /**
  * Redis 操作 提供者
@@ -30,8 +29,7 @@ import java.util.List;
  * @author CH
  */
 @Slf4j
-@Component
-@RequiredArgsConstructor
+@Spi(value = "redis", order = 100)
 public class RedisOperationProvider implements OperationProvider {
 
     /**
@@ -42,7 +40,8 @@ public class RedisOperationProvider implements OperationProvider {
     /**
      * 全局配置 服务
      */
-    private final MonitorConfigService configService;
+    @Autowired
+    private MonitorConfigService configService;
 
     @Override
     /**

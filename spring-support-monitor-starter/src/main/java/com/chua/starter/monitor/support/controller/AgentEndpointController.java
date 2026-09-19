@@ -6,6 +6,12 @@ import com.chua.starter.monitor.support.context.MonitorAgentContext;
 import com.chua.starter.monitor.support.entity.MsMonitor;
 import com.chua.starter.monitor.support.entity.MsMonitorTask;
 import com.chua.starter.monitor.support.mapper.MsMonitorMapper;
+import com.chua.starter.monitor.support.model.AgentConfigVO;
+import com.chua.starter.monitor.support.model.AgentHeartbeatVO;
+import com.chua.starter.monitor.support.model.AgentListItemVO;
+import com.chua.starter.monitor.support.model.AgentMetricsPushVO;
+import com.chua.starter.monitor.support.model.AgentStatusVO;
+import com.chua.starter.monitor.support.model.AgentTaskVO;
 import com.chua.starter.monitor.support.service.MetricService;
 import com.chua.starter.monitor.support.service.MonitorConfigService;
 import com.chua.starter.monitor.support.service.MonitorTaskService;
@@ -23,9 +29,8 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -88,6 +93,11 @@ public class AgentEndpointController {
     private static final long DEFAULT_INTERVAL_MS = 10_000L;
 
     /**
+     * 指标点未指定落库表时的通用表
+    */
+    private static final String DEFAULT_TARGET_TABLE = "ms_monitor_metric";
+
+    /**
      * 心跳：探针周期性上报存活并刷新在线状态
      *
      * @param agentKey 探针标识
@@ -95,15 +105,14 @@ public class AgentEndpointController {
      */
     @Operation(summary = "Agent 心跳")
     @GetMapping("/heartbeat")
-    public ReturnResult<Map<String, Object>> heartbeat(
+    public ReturnResult<AgentHeartbeatVO> heartbeat(
             @RequestHeader(value = AGENT_KEY_HEADER, required = false) String agentKey) {
         MsMonitor monitor = requireByAgentKey(agentKey);
         if (monitor == null) {
             return ReturnResult.error("无效的探针标识");
         }
         agentContext.markActive(monitor.getId());
-        return ReturnResult.ok(Map.of("serverTime", LocalDateTime.now().toString(),
-                "monitorId", monitor.getId()));
+        return ReturnResult.ok(AgentHeartbeatVO.of(monitor.getId()));
     }
 
     /**
@@ -113,14 +122,10 @@ public class AgentEndpointController {
      */
     @Operation(summary = "探针在线状态")
     @GetMapping("/status")
-    public ReturnResult<List<Map<String, Object>>> status() {
-        List<Map<String, Object>> result = new java.util.ArrayList<>();
+    public ReturnResult<List<AgentStatusVO>> status() {
+        List<AgentStatusVO> result = new ArrayList<>();
         for (MonitorAgentContext.AgentStatus status : agentContext.snapshot()) {
-            Map<String, Object> item = new LinkedHashMap<>();
-            item.put("monitorId", status.monitorId());
-            item.put("lastHeartbeat", status.lastHeartbeat());
-            item.put("online", status.online());
-            result.add(item);
+            result.add(new AgentStatusVO(status.monitorId(), status.lastHeartbeat(), status.online()));
         }
         return ReturnResult.list(result);
     }
@@ -132,25 +137,21 @@ public class AgentEndpointController {
      */
     @Operation(summary = "Agent 列表")
     @GetMapping("/list")
-    public ReturnResult<List<Map<String, Object>>> listAgents() {
-        Map<Long, MonitorAgentContext.AgentStatus> statusById = new LinkedHashMap<>();
+    public ReturnResult<List<AgentListItemVO>> listAgents() {
+        Map<Long, MonitorAgentContext.AgentStatus> statusById = new HashMap<>();
         for (MonitorAgentContext.AgentStatus status : agentContext.snapshot()) {
             statusById.put(status.monitorId(), status);
         }
         List<MsMonitor> monitors = monitorMapper.selectList(new LambdaQueryWrapper<MsMonitor>()
                 .isNotNull(MsMonitor::getMonitorAgentKey)
                 .ne(MsMonitor::getMonitorAgentKey, ""));
-        List<Map<String, Object>> result = new ArrayList<>(monitors.size());
+        List<AgentListItemVO> result = new ArrayList<>(monitors.size());
         for (MsMonitor monitor : monitors) {
             MonitorAgentContext.AgentStatus status = statusById.get(monitor.getId());
-            Map<String, Object> item = new LinkedHashMap<>();
-            item.put("monitorId", monitor.getId());
-            item.put("monitorName", monitor.getMonitorName());
-            item.put("monitorHost", monitor.getMonitorHost());
-            item.put("monitorAgentKey", monitor.getMonitorAgentKey());
-            item.put("online", status != null && status.online());
-            item.put("lastHeartbeat", status == null ? null : status.lastHeartbeat());
-            result.add(item);
+            result.add(new AgentListItemVO(monitor.getId(), monitor.getMonitorName(), monitor.getMonitorHost(),
+                    monitor.getMonitorAgentKey(),
+                    status != null && status.online(),
+                    status == null ? null : status.lastHeartbeat()));
         }
         return ReturnResult.list(result);
     }
@@ -159,34 +160,26 @@ public class AgentEndpointController {
      * Agent 配置：采集间隔与该资产下的采集任务
      *
      * @param monitorId 监控目标 标识
-     * @return intervals + tasks，任务字段已归一化为 taskName/taskType/taskCron
+     * @return 采集间隔 collectIntervalMs + 归一化为 taskName/taskType/taskCron 的任务列表
      */
     @Operation(summary = "Agent 配置")
     @GetMapping("/config/{monitorId}")
-    public ReturnResult<Map<String, Object>> agentConfig(@PathVariable Long monitorId) {
+    public ReturnResult<AgentConfigVO> agentConfig(@PathVariable Long monitorId) {
         MsMonitor monitor = monitorMapper.selectById(monitorId);
         if (monitor == null) {
             return ReturnResult.error("监控目标不存在: " + monitorId);
         }
-        Map<String, Object> intervals = new LinkedHashMap<>();
-        intervals.put("采集间隔", configService.getLong(CONFIG_KEY_INTERVAL, DEFAULT_INTERVAL_MS));
+        Long intervalMs = configService.getLong(CONFIG_KEY_INTERVAL, DEFAULT_INTERVAL_MS);
 
         List<MsMonitorTask> tasks = taskService.listByMonitor(monitorId).getData();
-        List<Map<String, Object>> taskViews = new ArrayList<>();
+        List<AgentTaskVO> taskViews = new ArrayList<>();
         if (tasks != null) {
             for (MsMonitorTask task : tasks) {
-                Map<String, Object> view = new LinkedHashMap<>();
-                view.put("taskName", task.getMonitorTaskName());
-                view.put("taskType", task.getServiceType());
-                view.put("taskCron", task.getMonitorTaskCron());
-                taskViews.add(view);
+                taskViews.add(new AgentTaskVO(task.getMonitorTaskName(), task.getServiceType(),
+                        task.getMonitorTaskCron()));
             }
         }
-
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("intervals", intervals);
-        result.put("tasks", taskViews);
-        return ReturnResult.ok(result);
+        return ReturnResult.ok(new AgentConfigVO(intervalMs, taskViews));
     }
 
     /**
@@ -200,9 +193,8 @@ public class AgentEndpointController {
      *       "tags": {"model":"x86"}, "targetTable": "ms_monitor_metric_cpu" }
      *   ]
      * }
-     * }</pre>   * }
      * }</pre>
-     * Targettable 缺省时落通用表 ms_监控_指标。
+     * targetTable 缺省时落通用表 ms_monitor_metric。
      * </p>
      *
      * @param agentKey 探针标识
@@ -213,7 +205,7 @@ public class AgentEndpointController {
     @PostMapping("/metrics")
     public ReturnResult<Void> pushMetrics(
             @RequestHeader(value = AGENT_KEY_HEADER, required = false) String agentKey,
-            @RequestBody Map<String, Object> body) {
+            @RequestBody AgentMetricsPushVO body) {
         MsMonitor monitor = requireByAgentKey(agentKey);
         if (monitor == null) {
             return ReturnResult.error("无效的探针标识");
@@ -222,7 +214,7 @@ public class AgentEndpointController {
         agentContext.markActive(monitor.getId());
         CollectResult result = new CollectResult();
         result.setMonitor(monitor);
-        List<MetricPoint> points = parsePoints(body.get("points"));
+        List<MetricPoint> points = normalizePoints(body);
         if (points.isEmpty()) {
             return ReturnResult.error("points 为空或格式非法");
         }
@@ -251,42 +243,24 @@ public class AgentEndpointController {
     }
 
     /**
-     * 宽松解析指标点数组
+     * 归一化上报指标点：丢弃缺指标名或缺数值的项，补齐缺省落库表
      *
-     * @param raw 原始 JSON 数组对象
-     * @return 指标点列表（非法项跳过）
+     * @param body 指标载荷，可为 空
+     * @return 可入库的指标点列表
      */
-    @SuppressWarnings("unchecked")
-    private List<MetricPoint> parsePoints(Object raw) {
-        List<MetricPoint> points = new java.util.ArrayList<>();
-        if (!(raw instanceof List<?> list)) {
+    private List<MetricPoint> normalizePoints(AgentMetricsPushVO body) {
+        List<MetricPoint> points = new ArrayList<>();
+        if (body == null || body.points() == null) {
             return points;
         }
-        for (Object item : list) {
-            if (!(item instanceof Map<?, ?> map)) {
+        for (MetricPoint point : body.points()) {
+            if (point == null || point.getMetricName() == null || point.getValue() == null) {
                 continue;
             }
-            try {
-                var point = new MetricPoint();
-                point.setMetricName(String.valueOf(map.get("metricName")));
-                point.setValue(Double.parseDouble(String.valueOf(map.get("value"))));
-                Object unit = map.get("unit");
-                if (unit != null) {
-                    point.setUnit(unit.toString());
-                }
-                Object tags = map.get("tags");
-                if (tags instanceof Map<?, ?> tagMap) {
-                    for (Map.Entry<?, ?> entry : tagMap.entrySet()) {
-                        point.getTags().put(String.valueOf(entry.getKey()), String.valueOf(entry.getValue()));
-                    }
-                }
-                Object targetTable = map.get("targetTable");
-                point.setTargetTable(targetTable == null || targetTable.toString().isBlank()
-                        ? "ms_monitor_metric" : targetTable.toString());
-                points.add(point);
-            } catch (Exception e) {
-                log.warn("[agent] 指标点解析失败: {}", e.getMessage());
+            if (point.getTargetTable() == null || point.getTargetTable().isBlank()) {
+                point.setTargetTable(DEFAULT_TARGET_TABLE);
             }
+            points.add(point);
         }
         return points;
     }

@@ -3,6 +3,7 @@ package com.chua.starter.monitor.support.provider;
 import com.chua.common.support.lang.json.Json;
 import com.chua.common.support.lang.json.JsonArray;
 import com.chua.common.support.lang.json.JsonObject;
+import com.chua.common.support.spi.annotations.Spi;
 import com.chua.prometheus.support.client.PrometheusClient;
 import com.chua.prometheus.support.model.PrometheusMetric;
 import com.chua.prometheus.support.model.QueryResult;
@@ -16,7 +17,6 @@ import com.chua.starter.monitor.support.spi.MetricProvider;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
@@ -37,7 +37,7 @@ import java.util.Set;
  * @author CH
  */
 @Slf4j
-@Component
+@Spi(value = "prometheus", order = 100)
 public class PrometheusProvider implements MetricProvider {
 
     /**
@@ -48,25 +48,14 @@ public class PrometheusProvider implements MetricProvider {
     /**
      * Prometheus 客户端提供者
      */
-    private final ObjectProvider<PrometheusClient> clientProvider;
+    @Autowired
+    private ObjectProvider<PrometheusClient> clientProvider;
 
     /**
      * 全局配置 服务
      */
-    private final MonitorConfigService configService;
-
-    /**
-     * 构造方法
-     *
-     * @param clientProvider Prometheus 客户端提供者
-     * @param configService  全局配置 服务
-     */
     @Autowired
-    public PrometheusProvider(ObjectProvider<PrometheusClient> clientProvider,
-                              MonitorConfigService configService) {
-        this.clientProvider = clientProvider;
-        this.configService = configService;
-    }
+    private MonitorConfigService configService;
 
     @Override
     /**

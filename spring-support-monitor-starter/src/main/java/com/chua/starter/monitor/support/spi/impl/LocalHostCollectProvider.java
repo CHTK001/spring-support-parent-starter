@@ -1,20 +1,23 @@
 package com.chua.starter.monitor.support.spi.impl;
 
+
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.chua.common.support.spi.annotations.Spi;
+import com.chua.starter.monitor.support.model.DiskRowVO;
+import com.chua.starter.monitor.support.model.HostInfoVO;
+import com.chua.starter.monitor.support.service.LocalSystemInfoService;
 import com.chua.starter.server.support.entity.MsServerHost;
 import com.chua.starter.server.support.enums.HostCollectType;
 import com.chua.starter.server.support.mapper.MsServerHostMapper;
 import com.chua.starter.server.support.spi.CollectOutcome;
 import com.chua.starter.server.support.spi.HostCollectContext;
 import com.chua.starter.server.support.spi.HostCollectProvider;
-import com.chua.starter.monitor.support.service.LocalSystemInfoService;
-import lombok.RequiredArgsConstructor;
+import java.time.LocalDateTime;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Autowired;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
-
-import java.time.LocalDateTime;
-import java.util.Map;
 
 /**
  * 本机自采集 提供者（LOCAL / OSHI）。
@@ -27,19 +30,20 @@ import java.util.Map;
  * @since 4.0.0.42
  */
 @Slf4j
-@Component
-@RequiredArgsConstructor
+@Spi(value = "local", order = 100)
 public class LocalHostCollectProvider implements HostCollectProvider {
 
     /**
      * 本机系统信息采集服务（OSHI）
     */
-    private final LocalSystemInfoService localService;
+    @Autowired
+    private LocalSystemInfoService localService;
 
     /**
      * 主机 映射器（回写硬件字段）
     */
-    private final MsServerHostMapper hostMapper;
+    @Autowired
+    private MsServerHostMapper hostMapper;
 
     @Override
     public HostCollectType type() {
@@ -64,29 +68,32 @@ public class LocalHostCollectProvider implements HostCollectProvider {
         }
         try {
             MsServerHost host = context.getHost();
-            Map<String, Object> info = localService.getHostInfo();
+            HostInfoVO info = localService.getHostInfo();
+            LambdaUpdateWrapper<MsServerHost> write = new LambdaUpdateWrapper<>();
             // 回写 CPU 核数（OSHI 本机逻辑处理器数）
-            Object cores = info == null ? null : info.get("cpuCores");
-            if (cores instanceof Number n) {
-                host.setServerHostCpuCores(n.intValue());
+            if (info != null && info.getCpuCores() != null) {
+                host.setServerHostCpuCores(info.getCpuCores());
+                write.set(MsServerHost::getServerHostCpuCores, host.getServerHostCpuCores());
             }
             // 回写实时使用率：CPU / 内存 / 磁盘（供 collectHook 推送到前端 socket host-metrics）
             double cpuPct = localService.getCpuPercent();
             host.setServerHostCpuUsage((double) Math.round(cpuPct));
-            Object memUsage = info == null ? null : info.get("memoryUsage");
-            if (memUsage instanceof Number n) {
-                host.setServerHostMemUsage((double) Math.round(n.doubleValue()));
+            write.set(MsServerHost::getServerHostCpuUsage, host.getServerHostCpuUsage());
+            if (info != null && info.getMemoryUsage() != null) {
+                host.setServerHostMemUsage((double) Math.round(info.getMemoryUsage()));
+                write.set(MsServerHost::getServerHostMemUsage, host.getServerHostMemUsage());
             }
-            java.util.List<java.util.Map<String, Object>> disks = localService.getDisks();
+            List<DiskRowVO> disks = localService.getDisks();
             if (disks != null && !disks.isEmpty()) {
-                Object du = disks.get(0).get("usage");
-                if (du instanceof Number n) {
-                    host.setServerHostDiskUsage((double) Math.round(n.doubleValue()));
-                }
+                host.setServerHostDiskUsage((double) Math.round(disks.get(0).getUsage()));
+                write.set(MsServerHost::getServerHostDiskUsage, host.getServerHostDiskUsage());
             }
             host.setServerHostOnline(1);
             host.setServerHostOnlineTime(LocalDateTime.now());
-            hostMapper.updateById(host);
+            write.set(MsServerHost::getServerHostOnline, host.getServerHostOnline());
+            write.set(MsServerHost::getServerHostOnlineTime, host.getServerHostOnlineTime());
+            // 只写本次采到的列：updateById 会用这份旧快照覆盖并发路径刚改过的列
+            hostMapper.update(null, write.eq(MsServerHost::getId, host.getId()));
             log.info("[collect] LOCAL(OSHI) 本机采集成功 hostId={}, cpu={}%, mem={}%, disk={}%",
                     host.getId(), host.getServerHostCpuUsage(), host.getServerHostMemUsage(), host.getServerHostDiskUsage());
             return CollectOutcome.ok("本机 OSHI 采集成功");

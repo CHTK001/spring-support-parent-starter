@@ -47,9 +47,11 @@ import static com.chua.starter.common.support.utils.RequestUtils.*;
 public class AuthClientExecute {
 
     /**
-     * 认证客户端属性
+     * 认证客户端属性（最近一次从运行时上下文取到的快照）
+     * <p>{@code INSTANCE} 在类初始化期创建，此时 Spring 可能还没完成 {@code plugin.oauth} 绑定，
+     * 因此不能一次性冻结；由 {@link #getAuthClientProperties()} 每次与上下文对齐。</p>
     */
-    private final AuthClientProperties authClientProperties;
+    private AuthClientProperties authClientProperties;
 
     /**
      * 实例
@@ -79,7 +81,20 @@ public class AuthClientExecute {
      * 创建 认证客户端执行 实例
     */
     public AuthClientExecute() {
-        this.authClientProperties = OauthClientRuntimeContext.getAuthClientProperties();
+    }
+
+    /**
+     * 认证客户端属性。
+     * <p>上下文未就绪时会返回默认属性；一旦 Spring 完成绑定并写入上下文，这里自动切到真实配置。</p>
+     *
+     * @return 认证客户端属性
+     */
+    private AuthClientProperties getAuthClientProperties() {
+        AuthClientProperties current = OauthClientRuntimeContext.getAuthClientProperties();
+        if (current != null && current != authClientProperties) {
+            authClientProperties = current;
+        }
+        return authClientProperties;
     }
 
 
@@ -157,7 +172,7 @@ public class AuthClientExecute {
         }
 
         // 请求服务器验证
-        WebRequest webRequest = new WebRequest(authClientProperties, request, null);
+        WebRequest webRequest = new WebRequest(getAuthClientProperties(), request, null);
         return webRequest.getUserResult(throwOnFailure);
     }
 
@@ -170,7 +185,7 @@ public class AuthClientExecute {
      * @return 登录认证结果
      */
     public LoginAuthResult logout(String uid, String loginType, LogoutType logoutType) {
-        String protocol = authClientProperties.getProtocol();
+        String protocol = getAuthClientProperties().getProtocol();
         ProtocolExecutor protocolExecutor = ServiceProvider.of(ProtocolExecutor.class).getExtension(protocol);
         if (protocolExecutor == null) {
             protocolExecutor = ServiceProvider.of(ProtocolExecutor.class).getExtension("default");
@@ -211,7 +226,7 @@ public class AuthClientExecute {
      */
     private String getTokenFromRequest(HttpServletRequest request) {
  // 从 头部 获取
-        String token = request.getHeader(authClientProperties.getTokenName());
+        String token = request.getHeader(getAuthClientProperties().getTokenName());
         if (StringUtils.isNotBlank(token)) {
             return token;
         }
@@ -220,14 +235,14 @@ public class AuthClientExecute {
         Cookie[] cookies = request.getCookies();
         if (cookies != null) {
             for (Cookie cookie : cookies) {
-                if (authClientProperties.getCookieName().equals(cookie.getName())) {
+                if (getAuthClientProperties().getCookieName().equals(cookie.getName())) {
                     return cookie.getValue();
                 }
             }
         }
         
         // 从参数获取
-        return request.getParameter(authClientProperties.getTokenName());
+        return request.getParameter(getAuthClientProperties().getTokenName());
     }
 
     /**
@@ -360,7 +375,7 @@ public class AuthClientExecute {
             return locked;
         }
 
-        String protocol = authClientProperties.getProtocol();
+        String protocol = getAuthClientProperties().getProtocol();
         ProtocolExecutor protocolExecutor = ServiceProvider.of(ProtocolExecutor.class).getExtension(protocol);
         if (protocolExecutor == null) {
             protocolExecutor = ServiceProvider.of(ProtocolExecutor.class).getExtension("default");
@@ -452,7 +467,7 @@ public class AuthClientExecute {
             return null;
         }
         try {
-            Protocol protocol = WebRequest.getProtocolExtension(authClientProperties);
+            Protocol protocol = WebRequest.getProtocolExtension(getAuthClientProperties());
             if (protocol == null) {
                 return null;
             }
@@ -530,7 +545,7 @@ public class AuthClientExecute {
      */
     public Protocol.OnlineUserResult getOnlineUsers(Protocol.OnlineUserQuery query) {
         try {
-            Protocol protocol = WebRequest.getProtocolExtension(authClientProperties);
+            Protocol protocol = WebRequest.getProtocolExtension(getAuthClientProperties());
             if (protocol == null) {
                 return Protocol.OnlineUserResult.empty();
             }
@@ -626,7 +641,7 @@ public class AuthClientExecute {
         int actualExpire = Math.max(1, Math.min(expireSeconds, MAX_TEMPORARY_TOKEN_EXPIRE));
 
         try {
-            Protocol protocol = WebRequest.getProtocolExtension(authClientProperties);
+            Protocol protocol = WebRequest.getProtocolExtension(getAuthClientProperties());
             if (protocol == null) {
                 /**
                  * login认证结果。
@@ -696,7 +711,7 @@ public class AuthClientExecute {
         ServletRequestAttributes attributes = (ServletRequestAttributes) requestAttributes;
         HttpServletRequest request = attributes.getRequest();
         WebRequest webRequest1 = new WebRequest(
-                authClientProperties,
+                getAuthClientProperties(),
                 request, null);
 
         return webRequest1.upgrade(upgradeType, refreshToken);
@@ -729,7 +744,7 @@ public class AuthClientExecute {
             protocolName = request.getHeader("x-oauth-protocol");
         }
 
-        Protocol protocol = WebRequest.getProtocolExtension(authClientProperties);
+        Protocol protocol = WebRequest.getProtocolExtension(getAuthClientProperties());
         if (protocol == null) {
             return null;
         }
@@ -835,10 +850,10 @@ public class AuthClientExecute {
         if (null == request) {
             return null;
         }
-        String header = request.getHeader(authClientProperties.getTokenName());
+        String header = request.getHeader(getAuthClientProperties().getTokenName());
         String token = Strings.isNullOrEmpty(header) ? StringUtils.defaultString(
-                request.getParameter(authClientProperties.getTokenName()),
-                (String) request.getAttribute(authClientProperties.getTokenName())
+                request.getParameter(getAuthClientProperties().getTokenName()),
+                (String) request.getAttribute(getAuthClientProperties().getTokenName())
         ) : header;
 
         if (StringUtils.isNotBlank(token)) {
@@ -861,7 +876,7 @@ public class AuthClientExecute {
             return true;
         }
         WebRequest webRequest1 = new WebRequest(
-                authClientProperties,
+                getAuthClientProperties(),
                 request, null);
         return webRequest1.isPass();
     }

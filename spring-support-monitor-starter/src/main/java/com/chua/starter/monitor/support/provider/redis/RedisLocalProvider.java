@@ -2,6 +2,7 @@ package com.chua.starter.monitor.support.provider.redis;
 
 import com.chua.common.support.lang.json.Json;
 import com.chua.common.support.lang.json.JsonObject;
+import com.chua.common.support.spi.annotations.Spi;
 import com.chua.common.support.utils.NumberUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.redis.support.client.RedisClient;
@@ -11,14 +12,12 @@ import com.chua.starter.monitor.support.spi.CollectContext;
 import com.chua.starter.monitor.support.spi.CollectResult;
 import com.chua.starter.monitor.support.spi.MetricPoint;
 import com.chua.starter.monitor.support.spi.MetricProvider;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
-import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 /**
  * Redis 本地采集 提供者
@@ -31,7 +30,7 @@ import java.util.Set;
  * @author CH
  */
 @Slf4j
-@Component
+@Spi(value = "redis-local", order = 100)
 public class RedisLocalProvider implements MetricProvider {
 
     @Override

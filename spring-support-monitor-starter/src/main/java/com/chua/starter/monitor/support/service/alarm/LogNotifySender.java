@@ -1,20 +1,20 @@
 package com.chua.starter.monitor.support.service.alarm;
 
+import com.chua.common.support.spi.annotations.Spi;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
 
 /**
  * 日志通知发送器（兜底渠道）
  * <p>
  * 始终生效：保证告警事件至少有可观测出口；其他渠道（webhook 等）
- * 作为额外 Bean 并行投递。
+ * 作为额外扩展实现并行投递。
  * </p>
  *
  * @author CH
  * @since 4.0.0.42
  */
 @Slf4j
-@Component
+@Spi(value = "log", order = 100)
 public class LogNotifySender implements NotifySender {
 
     /**

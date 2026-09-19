@@ -1,6 +1,5 @@
 package com.chua.starter.monitor.support.controller;
 
-import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.monitor.support.service.AgentDeployService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -9,12 +8,10 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import reactor.core.publisher.Mono;
 
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Map;
 
 /**
  * Agent 接收端
@@ -29,41 +26,6 @@ public class AgentController {
      * 部署服务（提供 agent 包定位）
     */
     private final AgentDeployService deployService;
-
-    /**
-     * 注册。
-     *
-     * @param body 请求体，不允许为 null
-     * @return Mono 对象
-     */
-    @PostMapping("/register")
-    public Mono<ReturnResult<?>> register(@RequestBody Map<String, Object> body) {
-        log.info("Agent registered: {}", body);
-        return Mono.just(ReturnResult.success("ok"));
-    }
-
-    /**
-     * metrics。
-     *
-     * @param body 请求体，不允许为 null
-     * @return Mono 对象
-     */
-    @PostMapping("/metrics")
-    public Mono<ReturnResult<?>> metrics(@RequestBody Map<String, Object> body) {
-        return Mono.just(ReturnResult.success("ok"));
-    }
-
-    /**
-     * hostinfo。
-     *
-     * @param body 请求体，不允许为 null
-     * @return Mono 对象
-     */
-    @PostMapping("/hostinfo")
-    public Mono<ReturnResult<?>> hostinfo(@RequestBody Map<String, Object> body) {
-        log.info("Agent hostinfo: {}", body);
-        return Mono.just(ReturnResult.success("ok"));
-    }
 
     /**
      * 下载 agent 安装包（部署时由目标机自取）

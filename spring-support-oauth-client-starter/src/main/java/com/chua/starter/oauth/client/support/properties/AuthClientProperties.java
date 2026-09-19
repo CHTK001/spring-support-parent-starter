@@ -24,6 +24,13 @@ public class AuthClientProperties {
     private boolean enable = true;
 
     /**
+     * 权限拦截器是否允许「无用户上下文即本地 admin」兜底
+     * <p>该兜底等价于绕过鉴权，仅供没有 oauth 服务端的本地联调显式打开；
+     * 默认 false：取不到用户上下文即拒绝。</p>
+     */
+    private boolean localAdminFallback = false;
+
+    /**
      * PRE
     */
     public static final String PRE = "plugin.oauth";
@@ -71,6 +78,14 @@ public class AuthClientProperties {
     );
 
     /**
+     * 是否启用框架内置默认白名单
+     * <p>内置清单混有历史应用专用路径（如 /api/extensions/**、/v2/usage/**），
+     * 新应用需要按自身路由收紧时置 false，此时仅 yaml 与动态白名单生效。
+     * 默认 true，保持既有应用行为不变。</p>
+     */
+    private boolean useDefaultWhitelist = true;
+
+    /**
      * 创建 认证客户端属性 实例
     */
     public AuthClientProperties() {
@@ -81,7 +96,8 @@ public class AuthClientProperties {
      * @return 获取effectivewhitelist的结果
      */
     public List<String> getEffectiveWhitelist() {
-        List<String> effective = new java.util.ArrayList<>(DEFAULT_WHITELIST);
+        List<String> effective = new java.util.ArrayList<>(
+                useDefaultWhitelist ? DEFAULT_WHITELIST : List.of());
         if (whitelist != null) {
             effective.addAll(whitelist);
         }

@@ -1,7 +1,9 @@
 package com.chua.starter.monitor.support.service;
 
 import com.chua.starter.monitor.support.config.AgentDeployProperties;
+import com.chua.starter.monitor.support.model.AgentHealthVO;
 import com.chua.starter.server.support.entity.MsServerHost;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -12,9 +14,6 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -33,9 +32,10 @@ import java.util.Map;
 public class AgentHttpClient {
 
     /**
-     * JSON 解析器
+     * JSON 解析器（忽略未知字段，避免探针新增字段被判为不可达）
     */
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = new ObjectMapper()
+            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
     /**
      * 成功状态码
@@ -133,45 +133,14 @@ public class AgentHttpClient {
     }
 
     /**
-     * GET 一个返回对象的端点。
-     *
-     * @param host 主机
-     * @param path 端点路径
-     * @return 字段映射
-     */
-    public Map<String, Object> getMap(MsServerHost host, String path) {
-        return toMap(get(host, path, null));
-    }
-
-    /**
-     * GET 一个返回列表的端点；{@code {list:[],total:n}} 包装会自动拆封。
-     *
-     * @param host  主机
-     * @param path  端点路径
-     * @param query 查询参数，可为 null
-     * @return 条目列表
-     */
-    public List<Map<String, Object>> getList(MsServerHost host, String path, Map<String, String> query) {
-        JsonNode node = get(host, path, query);
-        List<Map<String, Object>> list = new ArrayList<>();
-        JsonNode array = node.isArray() ? node : node.path("list");
-        if (array.isArray()) {
-            for (JsonNode item : array) {
-                list.add(toMap(item));
-            }
-        }
-        return list;
-    }
-
-    /**
      * 探测 /health，失败时返回 null（用于「能不能连通」这类非致命判断）。
      *
      * @param host 主机
      * @return 健康信息（status/version/buildTime/port），不可达时为 null
      */
-    public Map<String, Object> health(MsServerHost host) {
+    public AgentHealthVO health(MsServerHost host) {
         try {
-            return getMap(host, "/health");
+            return MAPPER.convertValue(get(host, "/health", null), AgentHealthVO.class);
         } catch (Exception e) {
             log.debug("[agent] /health 探测失败 hostId={}: {}", host.getId(), e.getMessage());
             return null;
@@ -186,15 +155,14 @@ public class AgentHttpClient {
      * @param expectVersion  期望版本，空则只要求可达
      * @return 就绪后的健康信息；超时仍不可达时返回 null
      */
-    public Map<String, Object> awaitHealthy(MsServerHost host, int seconds, String expectVersion) {
+    public AgentHealthVO awaitHealthy(MsServerHost host, int seconds, String expectVersion) {
         long deadline = System.currentTimeMillis() + Math.max(1, seconds) * 1000L;
-        Map<String, Object> last = null;
+        AgentHealthVO last = null;
         while (System.currentTimeMillis() < deadline) {
-            Map<String, Object> info = health(host);
+            AgentHealthVO info = health(host);
             if (info != null) {
                 last = info;
-                String version = text(info.get("version"));
-                if (expectVersion == null || expectVersion.isBlank() || expectVersion.equals(version)) {
+                if (expectVersion == null || expectVersion.isBlank() || expectVersion.equals(info.version())) {
                     return info;
                 }
             }
@@ -252,46 +220,6 @@ public class AgentHttpClient {
     }
 
     /**
-     * JSON 节点转 Map。
-     *
-     * @param node 节点
-     * @return 字段映射
-     */
-    private Map<String, Object> toMap(JsonNode node) {
-        Map<String, Object> map = new LinkedHashMap<>();
-        if (node == null || !node.isObject()) {
-            return map;
-        }
-        node.fields().forEachRemaining(entry -> map.put(entry.getKey(), toValue(entry.getValue())));
-        return map;
-    }
-
-    /**
-     * JSON 标量转 Java 值。
-     *
-     * @param node 节点
-     * @return 值
-     */
-    private Object toValue(JsonNode node) {
-        if (node == null || node.isNull()) {
-            return null;
-        }
-        if (node.isInt() || node.isLong()) {
-            return node.asLong();
-        }
-        if (node.isNumber()) {
-            return node.asDouble();
-        }
-        if (node.isBoolean()) {
-            return node.asBoolean();
-        }
-        if (node.isArray() || node.isObject()) {
-            return node.toString();
-        }
-        return node.asText();
-    }
-
-    /**
      * 读取全部响应体。
      *
      * @param in 输入流
@@ -325,15 +253,5 @@ public class AgentHttpClient {
         }
         String one = text.replaceAll("\\s+", " ").trim();
         return one.length() > 200 ? one.substring(0, 200) + "..." : one;
-    }
-
-    /**
-     * 取文本值。
-     *
-     * @param value 原值
-     * @return 文本，null 转空串
-     */
-    private String text(Object value) {
-        return value == null ? "" : String.valueOf(value);
     }
 }
