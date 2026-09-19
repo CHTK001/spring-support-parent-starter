@@ -65,73 +65,73 @@ import com.chua.starter.ai.support.chat.ChatClient;
 public class MonitorController {
 
     /**
-    * 监控资产服务（CRUD）
-    */
+     * 监控资产服务（CRUD）
+     */
     private final MonitorService monitorService;
 
     /**
-    * 监控任务服务（CRUD）
-    */
+     * 监控任务服务（CRUD）
+     */
     private final MonitorTaskService taskService;
 
     /**
-    * 指标配置服务（解析规则）
-    */
+     * 指标配置服务（解析规则）
+     */
     private final MonitorMetricConfigService metricConfigService;
 
     /**
-    * 全局配置服务（键值对）
-    */
+     * 全局配置服务（键值对）
+     */
     private final MonitorConfigService configService;
 
     /**
-    * 网关服务（CRUD）
-    */
+     * 网关服务（CRUD）
+     */
     private final MonitorGatewayService gatewayService;
 
     /**
-    * 指标服务（查询/聚合/导出）
-    */
+     * 指标服务（查询/聚合/导出）
+     */
     private final MetricService metricService;
 
     /**
-    * 提供者注册表（SPI 操作路由）
-    */
+     * 提供者注册表（SPI 操作路由）
+     */
     private final ProviderRegistry providerRegistry;
 
     /**
-    * 采集调度器（手动触发复用其采集管道）
-    */
+     * 采集调度器（手动触发复用其采集管道）
+     */
     private final MonitorScheduler scheduler;
 
     /**
-    * 服务器主机服务（资产联动，服务端主机查询）
-    */
+     * 服务器主机服务（资产联动，服务端主机查询）
+     */
     private final ServerHostService serverHostService;
 
     /**
-    * 系统 Redis 连接（应用自身连接的 Redis，未配置时为空，前端据此隐藏菜单）
-    */
+     * 系统 Redis 连接（应用自身连接的 Redis，未配置时为空，前端据此隐藏菜单）
+     */
     private final ObjectProvider<StringRedisTemplate> redisTemplateProvider;
 
     /**
-    * 默认主数据源（用于数据库 web 管理器）
-    */
+     * 默认主数据源（用于数据库 web 管理器）
+     */
     private final ObjectProvider<DataSource> dataSourceProvider;
 
     /**
-    * AI 对话客户端（未配置 AI 模型时为 null，接口返回未启用提示）
-    */
+     * AI 对话客户端（未配置 AI 模型时为 null，接口返回未启用提示）
+     */
     private final ObjectProvider<ChatClient> chatClientProvider;
 
     // ==================== 资产 CRUD ====================
 
     /**
-    * 创建监控资产。
-    *
-    * @param monitor 监控资产请求体，不能为 null
-    * @return 创建成功返回新建资产，失败返回错误码
-    */
+     * 创建监控资产。
+     *
+     * @param monitor 监控资产请求体，不能为 null
+     * @return 创建成功返回新建资产，失败返回错误码
+     */
     @Operation(summary = "新增资产")
     @PostMapping
     public ReturnResult<MsMonitor> createMonitor(@RequestBody MsMonitor monitor) {
@@ -139,12 +139,12 @@ public class MonitorController {
     }
 
     /**
-    * 更新监控资产。
-    *
-    * @param id 监控资产 ID，路径参数，不能为 null
-    * @param monitor 监控资产请求体，不能为 null
-    * @return 更新成功返回更新后的资产，失败返回错误码
-    */
+     * 更新监控资产。
+     *
+     * @param id 监控资产 ID，路径参数，不能为 null
+     * @param monitor 监控资产请求体，不能为 null
+     * @return 更新成功返回更新后的资产，失败返回错误码
+     */
     @Operation(summary = "更新资产")
     @PutMapping("/{id}")
     public ReturnResult<MsMonitor> updateMonitor(@PathVariable Long id, @RequestBody MsMonitor monitor) {
@@ -153,11 +153,11 @@ public class MonitorController {
     }
 
     /**
-    * 删除监控资产。
-    *
-    * @param id 监控资产 ID，路径参数，不能为 null
-    * @return 删除成功返回空结果，失败返回错误码
-    */
+     * 删除监控资产。
+     *
+     * @param id 监控资产 ID，路径参数，不能为 null
+     * @return 删除成功返回空结果，失败返回错误码
+     */
     @Operation(summary = "删除资产")
     @DeleteMapping("/{id}")
     public ReturnResult<Void> deleteMonitor(@PathVariable Long id) {
@@ -165,11 +165,11 @@ public class MonitorController {
     }
 
     /**
-    * 查询单个监控资产。
-    *
-    * @param id 监控资产 ID，路径参数，不能为 null
-    * @return 监控资产详情；ID 不存在时 data 为 null
-    */
+     * 查询单个监控资产。
+     *
+     * @param id 监控资产 ID，路径参数，不能为 null
+     * @return 监控资产详情；ID 不存在时 data 为 null
+     */
     @Operation(summary = "查询单个资产")
     @GetMapping("/{id}")
     public ReturnResult<MsMonitor> getMonitor(@PathVariable Long id) {
@@ -177,10 +177,10 @@ public class MonitorController {
     }
 
     /**
-    * 监控资产列表。
-    *
-    * @return 全部监控资产列表，无数据时为空列表
-    */
+     * 监控资产列表。
+     *
+     * @return 全部监控资产列表，无数据时为空列表
+     */
     @Operation(summary = "资产列表")
     @GetMapping
     public ReturnResult<List<MsMonitor>> listMonitor() {
@@ -190,10 +190,10 @@ public class MonitorController {
     // ==================== 关联服务器台账 ====================
 
     /**
-    * 查询可用服务器主机列表（资产表单联动下拉）。
-    *
-    * @return 主机简表列表（id/name/address/port/osType）
-    */
+     * 查询可用服务器主机列表（资产表单联动下拉）。
+     *
+     * @return 主机简表列表（id/name/address/port/osType）
+     */
     @Operation(summary = "查询可用服务器主机列表")
     @GetMapping("/server-hosts")
     public ReturnResult<List<Map<String, Object>>> listServerHosts() {
@@ -219,11 +219,11 @@ public class MonitorController {
     }
 
     /**
-    * 获取指定服务器主机详情（资产联动回填）。
-    *
-    * @param id id ID，路径参数
-    * @return 主机详情
-    */
+     * 获取指定服务器主机详情（资产联动回填）。
+     *
+     * @param id id ID，路径参数
+     * @return 主机详情
+     */
     @Operation(summary = "获取服务器主机详情")
     @GetMapping("/server-host/{id}")
     public ReturnResult<MsServerHost> getServerHost(@PathVariable Long id) {
@@ -240,10 +240,10 @@ public class MonitorController {
     // ==================== 任务 CRUD ====================
 
     /**
-    * 创建监控任务。
-    * @param task 任务
-    * @return 创建任务的结果
-    */
+     * 创建监控任务。
+     * @param task 任务
+     * @return 创建任务的结果
+     */
     @Operation(summary = "新增任务")
     @PostMapping("/task")
     public ReturnResult<MsMonitorTask> createTask(@RequestBody MsMonitorTask task) {
@@ -251,11 +251,11 @@ public class MonitorController {
     }
 
     /**
-    * 更新监控任务。
-    * @param id 任务 ID，路径参数，不能为 null
-    * @param task 任务请求体，含需更新的字段，不能为 null
-    * @return 更新结果，data 为更新后的任务
-    */
+     * 更新监控任务。
+     * @param id 任务 ID，路径参数，不能为 null
+     * @param task 任务请求体，含需更新的字段，不能为 null
+     * @return 更新结果，data 为更新后的任务
+     */
     @Operation(summary = "更新任务")
     @PutMapping("/task/{id}")
     public ReturnResult<MsMonitorTask> updateTask(@PathVariable Long id, @RequestBody MsMonitorTask task) {
@@ -264,10 +264,10 @@ public class MonitorController {
     }
 
     /**
-    * 删除监控任务。
-    * @param id 任务 ID，路径参数，不能为 null
-    * @return 删除结果，data 为 null
-    */
+     * 删除监控任务。
+     * @param id 任务 ID，路径参数，不能为 null
+     * @return 删除结果，data 为 null
+     */
     @Operation(summary = "删除任务")
     @DeleteMapping("/task/{id}")
     public ReturnResult<Void> deleteTask(@PathVariable Long id) {
@@ -275,10 +275,10 @@ public class MonitorController {
     }
 
     /**
-    * 查询监控任务。
-    * @param id 任务 ID，路径参数，不能为 null
-    * @return 任务详情；ID 不存在时 data 为 null
-    */
+     * 查询监控任务。
+     * @param id 任务 ID，路径参数，不能为 null
+     * @return 任务详情；ID 不存在时 data 为 null
+     */
     @Operation(summary = "查询单个任务")
     @GetMapping("/task/{id}")
     public ReturnResult<MsMonitorTask> getTask(@PathVariable Long id) {
@@ -286,11 +286,11 @@ public class MonitorController {
     }
 
     /**
-    * 设置任务启用或禁用。
-    * @param id 任务 ID，路径参数，不能为 null
-    * @param enabled 启用状态，前端以 true/false 传参
-    * @return 设置结果，data 为 null
-    */
+     * 设置任务启用或禁用。
+     * @param id 任务 ID，路径参数，不能为 null
+     * @param enabled 启用状态，前端以 true/false 传参
+     * @return 设置结果，data 为 null
+     */
     @Operation(summary = "启用/禁用任务")
     @PutMapping("/task/{id}/enabled")
     public ReturnResult<Void> setTaskEnabled(@PathVariable Long id, @RequestParam Boolean enabled) {
@@ -298,10 +298,10 @@ public class MonitorController {
     }
 
     /**
-    * 按主机查询任务列表。
-    * @param monitorId 监控资产 ID，可选；非 null 时返回该资产下的任务，null 时返回全部启用任务
-    * @return 任务列表
-    */
+     * 按主机查询任务列表。
+     * @param monitorId 监控资产 ID，可选；非 null 时返回该资产下的任务，null 时返回全部启用任务
+     * @return 任务列表
+     */
     @Operation(summary = "查询任务列表")
     @GetMapping("/task")
     public ReturnResult<List<MsMonitorTask>> listTask(@RequestParam(required = false) Long monitorId) {
@@ -312,10 +312,10 @@ public class MonitorController {
     }
 
     /**
-    * 手动触发一次采集。
-    * @param id 任务 ID，路径参数，不能为 null
-    * @return 受理结果；采集本身异步执行
-    */
+     * 手动触发一次采集。
+     * @param id 任务 ID，路径参数，不能为 null
+     * @return 受理结果；采集本身异步执行
+     */
     @Operation(summary = "手动触发采集")
     @PostMapping("/task/{id}/trigger")
     public ReturnResult<Void> triggerTask(@PathVariable Long id) {
@@ -330,10 +330,10 @@ public class MonitorController {
     // ==================== 解析规则 ====================
 
     /**
-    * 创建指标配置。
-    * @param config 配置
-    * @return 创建指标配置的结果
-    */
+     * 创建指标配置。
+     * @param config 配置
+     * @return 创建指标配置的结果
+     */
     @Operation(summary = "新增解析规则")
     @PostMapping("/metric-config")
     public ReturnResult<MsMonitorMetricConfig> createMetricConfig(@RequestBody MsMonitorMetricConfig config) {
@@ -341,11 +341,11 @@ public class MonitorController {
     }
 
     /**
-    * 更新指标配置。
-    * @param id id ID，路径参数
-    * @param config 配置
-    * @return 更新指标配置的结果
-    */
+     * 更新指标配置。
+     * @param id id ID，路径参数
+     * @param config 配置
+     * @return 更新指标配置的结果
+     */
     @Operation(summary = "更新解析规则")
     @PutMapping("/metric-config/{id}")
     public ReturnResult<MsMonitorMetricConfig> updateMetricConfig(@PathVariable Long id, @RequestBody MsMonitorMetricConfig config) {
@@ -354,10 +354,10 @@ public class MonitorController {
     }
 
     /**
-    * 删除指标配置。
-    * @param id id ID，路径参数
-    * @return 删除指标配置的结果
-    */
+     * 删除指标配置。
+     * @param id id ID，路径参数
+     * @return 删除指标配置的结果
+     */
     @Operation(summary = "删除解析规则")
     @DeleteMapping("/metric-config/{id}")
     public ReturnResult<Void> deleteMetricConfig(@PathVariable Long id) {
@@ -365,10 +365,10 @@ public class MonitorController {
     }
 
     /**
-    * 列表指标配置。
-    * @param taskId 任务 ID
-    * @return 列表指标配置的结果
-    */
+     * 列表指标配置。
+     * @param taskId 任务 ID
+     * @return 列表指标配置的结果
+     */
     @Operation(summary = "按任务查询解析规则")
     @GetMapping("/metric-config")
     public ReturnResult<List<MsMonitorMetricConfig>> listMetricConfig(@RequestParam Long taskId) {
@@ -378,9 +378,9 @@ public class MonitorController {
     // ==================== 全局配置 ====================
 
     /**
-    * 获取全部全局配置。
-    * @return 配置键值对 Map，无配置时为空 Map
-    */
+     * 获取全部全局配置。
+     * @return 配置键值对 Map，无配置时为空 Map
+     */
     @Operation(summary = "获取所有配置")
     @GetMapping("/config")
     public ReturnResult<Map<String, String>> getAllConfig() {
@@ -388,10 +388,10 @@ public class MonitorController {
     }
 
     /**
-    * 获取单个配置项。
-    * @param key 配置键名，路径参数，不能为 null
-    * @return 配置值；键不存在时 data 为 null
-    */
+     * 获取单个配置项。
+     * @param key 配置键名，路径参数，不能为 null
+     * @return 配置值；键不存在时 data 为 null
+     */
     @Operation(summary = "获取单个配置")
     @GetMapping("/config/{key}")
     public ReturnResult<String> getConfig(@PathVariable String key) {
@@ -399,10 +399,10 @@ public class MonitorController {
     }
 
     /**
-    * 写入（或更新）单个配置项。
-    * @param config 配置项请求体，含 key/value，不能为 null
-    * @return 写入结果，data 为配置项
-    */
+     * 写入（或更新）单个配置项。
+     * @param config 配置项请求体，含 key/value，不能为 null
+     * @return 写入结果，data 为配置项
+     */
     @Operation(summary = "写入配置")
     @PostMapping("/config")
     public ReturnResult<MsMonitorConfig> upsertConfig(@RequestBody MsMonitorConfig config) {
@@ -410,10 +410,10 @@ public class MonitorController {
     }
 
     /**
-    * 批量写入（或更新）配置项。
-    * @param configs 配置项列表，不能为 null 或空
-    * @return 写入成功的条数
-    */
+     * 批量写入（或更新）配置项。
+     * @param configs 配置项列表，不能为 null 或空
+     * @return 写入成功的条数
+     */
     @Operation(summary = "批量写入配置")
     @PostMapping("/config/batch")
     public ReturnResult<Integer> upsertConfigs(@RequestBody List<MsMonitorConfig> configs) {
@@ -423,10 +423,10 @@ public class MonitorController {
     // ==================== 网关 ====================
 
     /**
-    * 创建gateway。
-    * @param gateway gateway
-    * @return 创建gateway的结果
-    */
+     * 创建gateway。
+     * @param gateway gateway
+     * @return 创建gateway的结果
+     */
     @Operation(summary = "新增网关")
     @PostMapping("/gateway")
     public ReturnResult<MsMonitorGateway> createGateway(@RequestBody MsMonitorGateway gateway) {
@@ -434,10 +434,10 @@ public class MonitorController {
     }
 
     /**
-    * 删除gateway。
-    * @param id id ID，路径参数
-    * @return 删除gateway的结果
-    */
+     * 删除gateway。
+     * @param id id ID，路径参数
+     * @return 删除gateway的结果
+     */
     @Operation(summary = "删除网关")
     @DeleteMapping("/gateway/{id}")
     public ReturnResult<Void> deleteGateway(@PathVariable Long id) {
@@ -445,11 +445,11 @@ public class MonitorController {
     }
 
     /**
-    * 更新gateway。
-    * @param id id ID，路径参数
-    * @param gateway gateway
-    * @return 更新gateway的结果
-    */
+     * 更新gateway。
+     * @param id id ID，路径参数
+     * @param gateway gateway
+     * @return 更新gateway的结果
+     */
     @Operation(summary = "更新网关")
     @PutMapping("/gateway/{id}")
     public ReturnResult<MsMonitorGateway> updateGateway(@PathVariable Long id, @RequestBody MsMonitorGateway gateway) {
@@ -458,10 +458,10 @@ public class MonitorController {
     }
 
     /**
-    * 列表gateway。
-    * @param monitorId 监控资产 ID
-    * @return 列表gateway的结果
-    */
+     * 列表gateway。
+     * @param monitorId 监控资产 ID
+     * @return 列表gateway的结果
+     */
     @Operation(summary = "按资产查询网关")
     @GetMapping("/gateway")
     public ReturnResult<List<MsMonitorGateway>> listGateway(@RequestParam Long monitorId) {
@@ -471,10 +471,10 @@ public class MonitorController {
     // ==================== 指标查询 ====================
 
     /**
-    * 获取latestcpu。
-    * @param monitorId 监控资产 ID
-    * @return 获取latestcpu的结果
-    */
+     * 获取latestcpu。
+     * @param monitorId 监控资产 ID
+     * @return 获取latestcpu的结果
+     */
     @Operation(summary = "获取 CPU 最新指标")
     @GetMapping("/metric/cpu/{monitorId}")
     public ReturnResult<MsMonitorMetricCpu> getLatestCpu(@PathVariable Long monitorId) {
@@ -482,10 +482,10 @@ public class MonitorController {
     }
 
     /**
-    * 获取latest内存。
-    * @param monitorId 监控资产 ID
-    * @return 获取latest内存的结果
-    */
+     * 获取latest内存。
+     * @param monitorId 监控资产 ID
+     * @return 获取latest内存的结果
+     */
     @Operation(summary = "获取内存最新指标")
     @GetMapping("/metric/memory/{monitorId}")
     public ReturnResult<MsMonitorMetricMemory> getLatestMemory(@PathVariable Long monitorId) {
@@ -493,10 +493,10 @@ public class MonitorController {
     }
 
     /**
-    * 获取latestdisk。
-    * @param monitorId 监控资产 ID
-    * @return 获取latestdisk的结果
-    */
+     * 获取latestdisk。
+     * @param monitorId 监控资产 ID
+     * @return 获取latestdisk的结果
+     */
     @Operation(summary = "获取磁盘最新指标")
     @GetMapping("/metric/disk/{monitorId}")
     public ReturnResult<List<MsMonitorMetricDisk>> getLatestDisk(@PathVariable Long monitorId) {
@@ -504,10 +504,10 @@ public class MonitorController {
     }
 
     /**
-    * 获取latestnetwork。
-    * @param monitorId 监控资产 ID
-    * @return 获取latestnetwork的结果
-    */
+     * 获取latestnetwork。
+     * @param monitorId 监控资产 ID
+     * @return 获取latestnetwork的结果
+     */
     @Operation(summary = "获取网络最新指标")
     @GetMapping("/metric/network/{monitorId}")
     public ReturnResult<MsMonitorMetricNetwork> getLatestNetwork(@PathVariable Long monitorId) {
@@ -515,10 +515,10 @@ public class MonitorController {
     }
 
     /**
-    * 获取latestjvm。
-    * @param monitorId 监控资产 ID
-    * @return 获取latestjvm的结果
-    */
+     * 获取latestjvm。
+     * @param monitorId 监控资产 ID
+     * @return 获取latestjvm的结果
+     */
     @Operation(summary = "获取 JVM 最新指标")
     @GetMapping("/metric/jvm/{monitorId}")
     public ReturnResult<MsMonitorMetricJvm> getLatestJvm(@PathVariable Long monitorId) {
@@ -562,12 +562,12 @@ public class MonitorController {
     }
 
     /**
-    * 获取磁盘历史指标
-    *
-    * @param monitorId monitorId ID，路径参数
-    * @param hours     过去 N 小时（可选）
-    * @return 磁盘历史指标列表
-    */
+     * 获取磁盘历史指标
+     *
+     * @param monitorId monitorId ID，路径参数
+     * @param hours     过去 N 小时（可选）
+     * @return 磁盘历史指标列表
+     */
     @Operation(summary = "获取磁盘历史指标")
     @GetMapping("/metric/disk/history/{monitorId}")
     public ReturnResult<List<MsMonitorMetricDisk>> getDiskHistory(
@@ -578,10 +578,10 @@ public class MonitorController {
     }
 
     /**
-    * 获取latestredis指标。
-    * @param monitorId 监控资产 ID
-    * @return 获取latestredis指标的结果
-    */
+     * 获取latestredis指标。
+     * @param monitorId 监控资产 ID
+     * @return 获取latestredis指标的结果
+     */
     @Operation(summary = "获取 Redis 最新指标")
     @GetMapping("/metric/redis/{monitorId}")
     public ReturnResult<MsMonitorRedisMetric> getLatestRedisMetric(@PathVariable Long monitorId) {
@@ -598,13 +598,13 @@ public class MonitorController {
     }
 
     /**
-    * 获取通用指标历史
-    *
-    * @param monitorId monitorId ID，路径参数
-    * @param metricName 指标名（可选）
-    * @param hours      过去 N 小时（可选）
-    * @return 通用指标列表
-    */
+     * 获取通用指标历史
+     *
+     * @param monitorId monitorId ID，路径参数
+     * @param metricName 指标名（可选）
+     * @param hours      过去 N 小时（可选）
+     * @return 通用指标列表
+     */
     @Operation(summary = "获取通用指标历史")
     @GetMapping("/metric/generic/history/{monitorId}")
     public ReturnResult<List<MsMonitorMetric>> getGenericMetricHistory(
@@ -616,13 +616,13 @@ public class MonitorController {
     }
 
     /**
-    * 获取通用指标小时聚合统计
-    *
-    * @param monitorId monitorId ID，路径参数
-    * @param metricName 指标名（可选）
-    * @param hours      过去 N 小时（可选，默认 24）
-    * @return 聚合统计列表
-    */
+     * 获取通用指标小时聚合统计
+     *
+     * @param monitorId monitorId ID，路径参数
+     * @param metricName 指标名（可选）
+     * @param hours      过去 N 小时（可选，默认 24）
+     * @return 聚合统计列表
+     */
     @Operation(summary = "获取通用指标小时聚合统计")
     @GetMapping("/metric/statistics/{monitorId}")
     public ReturnResult<List<MsMonitorMetricStatistics>> getMetricStatistics(
@@ -634,13 +634,13 @@ public class MonitorController {
     }
 
     /**
-    * 获取 Redis 指标小时聚合统计
-    *
-    * @param monitorId monitorId ID，路径参数
-    * @param metricName 指标名（可选）
-    * @param hours      过去 N 小时（可选，默认 24）
-    * @return Redis 聚合统计列表
-    */
+     * 获取 Redis 指标小时聚合统计
+     *
+     * @param monitorId monitorId ID，路径参数
+     * @param metricName 指标名（可选）
+     * @param hours      过去 N 小时（可选，默认 24）
+     * @return Redis 聚合统计列表
+     */
     @Operation(summary = "获取 Redis 指标小时聚合统计")
     @GetMapping("/metric/redis-statistics/{monitorId}")
     public ReturnResult<List<MsMonitorRedisMetricStatistics>> getRedisMetricStatistics(
@@ -652,13 +652,13 @@ public class MonitorController {
     }
 
     /**
-    * 导出指标历史数据 CSV（直接写文件流，前端以 blob 下载）
-    *
-    * @param monitorId  监控资产 ID，可缺省表示导出全部
-    * @param metricName 指标名（可选，为空则导出所有）
-    * @param hours      过去 N 小时（可选）
-    * @param response   HTTP 响应
-    */
+     * 导出指标历史数据 CSV（直接写文件流，前端以 blob 下载）
+     *
+     * @param monitorId  监控资产 ID，可缺省表示导出全部
+     * @param metricName 指标名（可选，为空则导出所有）
+     * @param hours      过去 N 小时（可选）
+     * @param response   HTTP 响应
+     */
     @Operation(summary = "导出指标历史数据")
     @GetMapping({"/metric/export", "/metric/export/{monitorId}"})
     public void exportMetricHistory(
@@ -685,21 +685,21 @@ public class MonitorController {
     // ==================== 数据源管理（内存存储，支持 jdbc/redis/influxdb/neo4j/nacos/zookeeper） ====================
 
     /**
-    * 数据源内存存储（简化实现，后续可改为数据库存储）
-    */
+     * 数据源内存存储（简化实现，后续可改为数据库存储）
+     */
     private static final java.util.concurrent.ConcurrentHashMap<Long, Map<String, Object>> DATA_SOURCE_STORE = new java.util.concurrent.ConcurrentHashMap<>();
     private static final java.util.concurrent.atomic.AtomicLong DS_ID_GENERATOR = new java.util.concurrent.atomic.AtomicLong(1000);
 
     /**
-    * 支持的数据源类型
-    */
+     * 支持的数据源类型
+     */
     private static final java.util.List<String> DS_TYPES = java.util.List.of("jdbc", "redis", "influxdb", "neo4j", "nacos", "zookeeper");
 
     /**
-    * 获取所有数据源列表。
-    *
-    * @return 数据源列表
-    */
+     * 获取所有数据源列表。
+     *
+     * @return 数据源列表
+     */
     @Operation(summary = "获取所有数据源")
     @GetMapping({"/datasource", "/datasource/list"})
     public ReturnResult<java.util.List<Map<String, Object>>> listDataSources() {
@@ -707,11 +707,11 @@ public class MonitorController {
     }
 
     /**
-    * 获取数据源详情。
-    *
-    * @param id 数据源 ID
-    * @return 数据源详情
-    */
+     * 获取数据源详情。
+     *
+     * @param id 数据源 ID
+     * @return 数据源详情
+     */
     @Operation(summary = "获取数据源详情")
     @GetMapping("/datasource/{id}")
     public ReturnResult<Map<String, Object>> getDataSource(@PathVariable Long id) {
@@ -723,11 +723,11 @@ public class MonitorController {
     }
 
     /**
-    * 创建数据源。
-    *
-    * @param data 数据源配置
-    * @return 创建的数据源
-    */
+     * 创建数据源。
+     *
+     * @param data 数据源配置
+     * @return 创建的数据源
+     */
     @Operation(summary = "创建数据源")
     @PostMapping("/datasource")
     public ReturnResult<Map<String, Object>> createDataSource(@RequestBody Map<String, Object> data) {
@@ -739,12 +739,12 @@ public class MonitorController {
     }
 
     /**
-    * 更新数据源。
-    *
-    * @param id   数据源 ID
-    * @param data 数据源配置
-    * @return 更新后的数据源
-    */
+     * 更新数据源。
+     *
+     * @param id   数据源 ID
+     * @param data 数据源配置
+     * @return 更新后的数据源
+     */
     @Operation(summary = "更新数据源")
     @PutMapping("/datasource/{id}")
     public ReturnResult<Map<String, Object>> updateDataSource(@PathVariable Long id, @RequestBody Map<String, Object> data) {
@@ -758,11 +758,11 @@ public class MonitorController {
     }
 
     /**
-    * 删除数据源。
-    *
-    * @param id 数据源 ID
-    * @return 是否成功
-    */
+     * 删除数据源。
+     *
+     * @param id 数据源 ID
+     * @return 是否成功
+     */
     @Operation(summary = "删除数据源")
     @DeleteMapping("/datasource/{id}")
     public ReturnResult<Boolean> deleteDataSource(@PathVariable Long id) {
@@ -771,11 +771,11 @@ public class MonitorController {
     }
 
     /**
-    * 测试数据源连接。
-    *
-    * @param id 数据源 ID
-    * @return 测试结果
-    */
+     * 测试数据源连接。
+     *
+     * @param id 数据源 ID
+     * @return 测试结果
+     */
     @Operation(summary = "测试数据源连接")
     @PostMapping("/datasource/{id}/test")
     public ReturnResult<Map<String, Object>> testDataSource(@PathVariable Long id) {
@@ -792,10 +792,10 @@ public class MonitorController {
     }
 
     /**
-    * 获取支持的数据源类型。
-    *
-    * @return 数据源类型列表
-    */
+     * 获取支持的数据源类型。
+     *
+     * @return 数据源类型列表
+     */
     @Operation(summary = "获取支持的数据源类型")
     @GetMapping("/datasource/types")
     public ReturnResult<java.util.List<String>> getDataSourceTypes() {
@@ -805,11 +805,11 @@ public class MonitorController {
     // ==================== 数据库 web 管理器（支持按数据源 ID 连接，navicat 风格） ====================
 
     /**
-    * 根据数据源 ID 获取数据库连接。
-    * datasourceId 为 null 或 0 时使用默认主数据源。
-    * @param datasourceId datasourceID，不允许为 null
-    * @return 结果值
-    */
+     * 根据数据源 ID 获取数据库连接。
+     * datasourceId 为 null 或 0 时使用默认主数据源。
+     * @param datasourceId datasourceID，不允许为 null
+     * @return 结果值
+     */
     private java.sql.Connection getDbConnection(Long datasourceId) throws Exception {
         if (datasourceId == null || datasourceId == 0) {
             javax.sql.DataSource ds = dataSourceProvider.getIfAvailable();
@@ -840,10 +840,10 @@ public class MonitorController {
     }
 
     /**
-    * 获取数据库列表。
-    * @param datasourceId datasourceID，不允许为 null
-    * @return Return结果 对象
-    */
+     * 获取数据库列表。
+     * @param datasourceId datasourceID，不允许为 null
+     * @return Return结果 对象
+     */
     @Operation(summary = "获取数据库列表")
     @GetMapping("/db/databases")
     public ReturnResult<java.util.List<String>> getDbDatabases(@RequestParam(required = false) Long datasourceId) {
@@ -860,8 +860,8 @@ public class MonitorController {
     }
 
     /**
-    * 获取数据库表列表。
-    */
+     * 获取数据库表列表。
+     */
     @Operation(summary = "获取数据库表列表")
     @GetMapping("/db/tables")
     public ReturnResult<java.util.List<Map<String, Object>>> getDbTables(
@@ -884,8 +884,8 @@ public class MonitorController {
     }
 
     /**
-    * 获取表结构。
-    */
+     * 获取表结构。
+     */
     @Operation(summary = "获取表结构")
     @GetMapping("/db/table/{tableName}/columns")
     public ReturnResult<java.util.List<Map<String, Object>>> getTableColumns(
@@ -924,8 +924,8 @@ public class MonitorController {
     }
 
     /**
-    * 获取表数据（分页）。
-    */
+     * 获取表数据（分页）。
+     */
     @Operation(summary = "获取表数据")
     @GetMapping("/db/table/{tableName}/data")
     public ReturnResult<Map<String, Object>> getTableData(
@@ -979,10 +979,10 @@ public class MonitorController {
     }
 
     /**
-    * 执行 SQL（支持 SELECT/INSERT/UPDATE/DELETE/CREATE/ALTER/DROP）。
-    * @param request 请求，不允许为 null
-    * @return Return结果 对象
-    */
+     * 执行 SQL（支持 SELECT/INSERT/UPDATE/DELETE/CREATE/ALTER/DROP）。
+     * @param request 请求，不允许为 null
+     * @return Return结果 对象
+     */
     @Operation(summary = "执行 SQL")
     @PostMapping("/db/execute")
     public ReturnResult<Map<String, Object>> executeDbSql(@RequestBody Map<String, Object> request) {
@@ -1032,8 +1032,8 @@ public class MonitorController {
     }
 
     /**
-    * 删除表。
-    */
+     * 删除表。
+     */
     @Operation(summary = "删除表")
     @DeleteMapping("/db/table/{tableName}")
     public ReturnResult<Boolean> dropTable(
@@ -1052,14 +1052,14 @@ public class MonitorController {
     // ==================== Redis 操作 ====================
 
     /**
-    * 获取当前系统 Redis 信息（信息 关键指标）。
-    * <p>
-    * 直接读取应用自身连接的 Redis（spring.数据.Redis），与监控资产/Agent 无关；
-    * 无 Redis 配置时前端不显示该菜单。
-    * </p>
-    *
-    * @return Redis 信息 关键指标
-    */
+     * 获取当前系统 Redis 信息（信息 关键指标）。
+     * <p>
+     * 直接读取应用自身连接的 Redis（spring.数据.Redis），与监控资产/Agent 无关；
+     * 无 Redis 配置时前端不显示该菜单。
+     * </p>
+     *
+     * @return Redis 信息 关键指标
+     */
     @Operation(summary = "获取当前系统 Redis 信息")
     @GetMapping("/system/redis-info")
     public ReturnResult<Map<String, Object>> getSystemRedisInfo() {
@@ -1069,9 +1069,9 @@ public class MonitorController {
             return ReturnResult.ok(data);
         }
         /**
-        * 尝试。
-        * @param redisTemplate.getConnectionFactory( redistemplate.获取connection工厂(
-        */
+         * 尝试。
+         * @param redisTemplate.getConnectionFactory( redistemplate.获取connection工厂(
+         */
         try (var connection = redisTemplate.getConnectionFactory().getConnection()) {
             if (connection == null) {
                 return ReturnResult.ok(data);
@@ -1097,13 +1097,13 @@ public class MonitorController {
     // ==================== 系统 Redis KV 操作（直接操作当前应用连接的 Redis） ====================
 
     /**
-    * 扫描当前系统 Redis 的 Keys。
-    *
-    * @param pattern 匹配模式，默认 *
-    * @param cursor  游标，默认 0
-    * @param count   每次扫描数量，默认 100
-    * @return 扫描结果（keys + nextCursor）
-    */
+     * 扫描当前系统 Redis 的 Keys。
+     *
+     * @param pattern 匹配模式，默认 *
+     * @param cursor  游标，默认 0
+     * @param count   每次扫描数量，默认 100
+     * @return 扫描结果（keys + nextCursor）
+     */
     @Operation(summary = "扫描当前系统 Redis Keys")
     @GetMapping("/system/redis/keys")
     public ReturnResult<Map<String, Object>> scanSystemRedisKeys(
@@ -1138,11 +1138,11 @@ public class MonitorController {
     }
 
     /**
-    * 读取当前系统 Redis 的 Key 值。
-    *
-    * @param key 键名
-    * @return 值
-    */
+     * 读取当前系统 Redis 的 Key 值。
+     *
+     * @param key 键名
+     * @return 值
+     */
     @Operation(summary = "读取当前系统 Redis Key")
     @GetMapping("/system/redis/kv/{key}")
     public ReturnResult<String> getSystemRedisKey(@PathVariable String key) {
@@ -1159,11 +1159,11 @@ public class MonitorController {
     }
 
     /**
-    * 获取当前系统 Redis Key 的详细信息（类型、TTL、值）。
-    *
-    * @param key 键名
-    * @return 详细信息
-    */
+     * 获取当前系统 Redis Key 的详细信息（类型、TTL、值）。
+     *
+     * @param key 键名
+     * @return 详细信息
+     */
     @Operation(summary = "获取当前系统 Redis Key 详细信息")
     @GetMapping("/system/redis/kv/{key}/detail")
     public ReturnResult<Map<String, Object>> getSystemRedisKeyDetail(@PathVariable String key) {
@@ -1215,13 +1215,13 @@ public class MonitorController {
     }
 
     /**
-    * 写入当前系统 Redis Key。
-    *
-    * @param key   键名
-    * @param value 值（请求体）
-    * @param ttl   过期时间（秒），可选，-1 表示永不过期
-    * @return 是否成功
-    */
+     * 写入当前系统 Redis Key。
+     *
+     * @param key   键名
+     * @param value 值（请求体）
+     * @param ttl   过期时间（秒），可选，-1 表示永不过期
+     * @return 是否成功
+     */
     @Operation(summary = "写入当前系统 Redis Key")
     @PutMapping("/system/redis/kv/{key}")
     public ReturnResult<Boolean> setSystemRedisKey(
@@ -1245,11 +1245,11 @@ public class MonitorController {
     }
 
     /**
-    * 删除当前系统 Redis Keys。
-    *
-    * @param keys 键名列表
-    * @return 删除数量
-    */
+     * 删除当前系统 Redis Keys。
+     *
+     * @param keys 键名列表
+     * @return 删除数量
+     */
     @Operation(summary = "删除当前系统 Redis Keys")
     @DeleteMapping("/system/redis/keys")
     public ReturnResult<Long> deleteSystemRedisKeys(@RequestBody List<String> keys) {
@@ -1266,12 +1266,12 @@ public class MonitorController {
     }
 
     /**
-    * 设置当前系统 Redis Key 过期时间。
-    *
-    * @param key 键名
-    * @param ttl 过期时间（秒）
-    * @return 是否成功
-    */
+     * 设置当前系统 Redis Key 过期时间。
+     *
+     * @param key 键名
+     * @param ttl 过期时间（秒）
+     * @return 是否成功
+     */
     @Operation(summary = "设置当前系统 Redis Key 过期时间")
     @PostMapping("/system/redis/expire/{key}")
     public ReturnResult<Boolean> expireSystemRedisKey(
@@ -1290,11 +1290,11 @@ public class MonitorController {
     }
 
     /**
-    * 解析 Redis 数值（兼容 1.5M / 2G 等单位后缀）
-    *
-    * @param raw 原始值
-    * @return 数值或 空
-    */
+     * 解析 Redis 数值（兼容 1.5M / 2G 等单位后缀）
+     *
+     * @param raw 原始值
+     * @return 数值或 空
+     */
     private static Double parseRedisDouble(String raw) {
         if (raw == null || raw.isEmpty()) {
             return null;
@@ -1339,11 +1339,11 @@ public class MonitorController {
     }
 
     /**
-    * 获取 Redis Key 的当前值。
-    * @param taskId 任务 ID，路径参数，不能为 null
-    * @param key 配置键名，路径参数，不能为 null
-    * @return 键值结构 {key, value, ttl, type, size}；Key 不存在时 value 为空串
-    */
+     * 获取 Redis Key 的当前值。
+     * @param taskId 任务 ID，路径参数，不能为 null
+     * @param key 配置键名，路径参数，不能为 null
+     * @return 键值结构 {key, value, ttl, type, size}；Key 不存在时 value 为空串
+     */
     @Operation(summary = "读取 Redis Key")
     @GetMapping("/operation/redis/{taskId}/kv/{key}")
     public Mono<Map<String, Object>> getValue(@PathVariable Long taskId, @PathVariable String key) {
@@ -1363,11 +1363,11 @@ public class MonitorController {
     }
 
     /**
-    * 批量删除指定 Redis Key。
-    * @param taskId 任务 ID，路径参数，不能为 null
-    * @param keys 待删除的 Redis Key 列表，不能为 null 或空
-    * @return 实际删除的 Key 数量
-    */
+     * 批量删除指定 Redis Key。
+     * @param taskId 任务 ID，路径参数，不能为 null
+     * @param keys 待删除的 Redis Key 列表，不能为 null 或空
+     * @return 实际删除的 Key 数量
+     */
     @Operation(summary = "批量删除 Redis Key")
     @DeleteMapping("/operation/redis/{taskId}/keys")
     public Mono<Long> deleteKeys(@PathVariable Long taskId, @RequestBody List<String> keys) {
@@ -1388,12 +1388,12 @@ public class MonitorController {
     }
 
     /**
-    * 获取缓存前缀汇总（按前缀分组统计 Key 数量）
-    *
-    * @param taskId 任务 ID，路径参数，不能为 null
-    * @param prefix 前缀匹配模式（可选，默认 "*"）
-    * @return 缓存前缀汇总列表
-    */
+     * 获取缓存前缀汇总（按前缀分组统计 Key 数量）
+     *
+     * @param taskId 任务 ID，路径参数，不能为 null
+     * @param prefix 前缀匹配模式（可选，默认 "*"）
+     * @return 缓存前缀汇总列表
+     */
     @Operation(summary = "获取缓存前缀汇总")
     @GetMapping("/operation/redis/{taskId}/cache-summary")
     public Mono<List<Map<String, Object>>> getCacheSummary(
@@ -1441,12 +1441,12 @@ public class MonitorController {
     }
 
     /**
-    * 获取指定 Redis Key 的详细信息（类型、TTL、大小、值）
-    *
-    * @param taskId 任务 ID，路径参数，不能为 null
-    * @param key    配置键名，路径参数，不能为 null
-    * @return key 详细信息
-    */
+     * 获取指定 Redis Key 的详细信息（类型、TTL、大小、值）
+     *
+     * @param taskId 任务 ID，路径参数，不能为 null
+     * @param key    配置键名，路径参数，不能为 null
+     * @return key 详细信息
+     */
     @Operation(summary = "获取 Redis key 详细信息")
     @GetMapping("/operation/redis/{taskId}/kv/{key}/detail")
     public Mono<Map<String, Object>> getKeyDetail(@PathVariable Long taskId, @PathVariable String key) {
@@ -1469,11 +1469,11 @@ public class MonitorController {
     }
 
     /**
-    * 解析 Redis 操作 提供者
-    *
-    * @param taskId taskId ID，路径参数
-    * @return 响应式操作 提供者
-    */
+     * 解析 Redis 操作 提供者
+     *
+     * @param taskId taskId ID，路径参数
+     * @return 响应式操作 提供者
+     */
     private Mono<OperationProvider> resolveOperation(Long taskId) {
         MsMonitorTask task = taskService.findById(taskId).getData();
         if (task == null) {
@@ -1487,11 +1487,11 @@ public class MonitorController {
     }
 
     /**
-    * 构建采集上下文
-    *
-    * @param taskId taskId ID，路径参数
-    * @return 采集上下文
-    */
+     * 构建采集上下文
+     *
+     * @param taskId taskId ID，路径参数
+     * @return 采集上下文
+     */
     private CollectContext buildContext(Long taskId) {
         MsMonitorTask task = taskService.findById(taskId).getData();
         MsMonitor monitor = task != null ? monitorService.findById(task.getMonitorId()).getData() : null;
@@ -1501,9 +1501,9 @@ public class MonitorController {
     // ==================== 全局概览 ====================
 
     /**
-    * 全局概览统计。
-    * @return 资产总数、启用/停用数与服务器/Redis/数据库分类计数
-    */
+     * 全局概览统计。
+     * @return 资产总数、启用/停用数与服务器/Redis/数据库分类计数
+     */
     @Operation(summary = "全局概览统计")
     @GetMapping("/dashboard/overview")
     public ReturnResult<Map<String, Object>> dashboardOverview() {

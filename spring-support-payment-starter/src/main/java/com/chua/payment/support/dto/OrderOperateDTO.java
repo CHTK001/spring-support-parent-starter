@@ -5,9 +5,9 @@ import lombok.Data;
 import java.math.BigDecimal;
 
 /**
-* 订单操作通用 DTO
-* @author CH
-* @since 4.0.0
+ * 订单操作通用 DTO
+ * @author CH
+ * @since 4.0.0
  */
 @Data
 public class OrderOperateDTO {

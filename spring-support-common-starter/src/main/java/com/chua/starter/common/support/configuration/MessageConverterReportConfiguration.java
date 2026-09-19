@@ -12,12 +12,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
-* 消息转换器报告配置
-*
-* <p>在应用启动完成后，统一输出最终生效的消息转换器列表和顺序，方便排查三方覆盖问题。</p>
-*
-* @since 2026/01/14
-* @author CH
+ * 消息转换器报告配置
+ *
+ * <p>在应用启动完成后，统一输出最终生效的消息转换器列表和顺序，方便排查三方覆盖问题。</p>
+ *
+ * @since 2026/01/14
+ * @author CH
  */
 @Configuration
 public class MessageConverterReportConfiguration implements ApplicationListener<ApplicationReadyEvent> {

@@ -11,40 +11,40 @@ import java.util.Map;
 import java.util.Set;
 
 /**
-* OAuth Principal实现
-* 
-* 实现Java.安全性.Principal接口，集成OAuth用户信息，
-* 提供用户身份验证和权限管理功能。
-* 
-* @since 2024/12/20
-* @author CH
+ * OAuth Principal实现
+ * 
+ * 实现Java.安全性.Principal接口，集成OAuth用户信息，
+ * 提供用户身份验证和权限管理功能。
+ * 
+ * @since 2024/12/20
+ * @author CH
  */
 @Slf4j
 @Getter
 public class OAuthPrincipal implements Principal {
 
     /**
-    * 用户信息
-    */
+     * 用户信息
+     */
     private final UserResume userResume;
 
     /**
-    * 认证类型
-    */
+     * 认证类型
+     */
     private final String authType;
 
     /**
-    * 是否已认证
-    */
+     * 是否已认证
+     */
     private final boolean authenticated;
 
     /**
-    * 构造函数
-    *
-    * @param userResume    用户信息
-    * @param authType      认证类型
-    * @param authenticated 是否已认证
-    */
+     * 构造函数
+     *
+     * @param userResume    用户信息
+     * @param authType      认证类型
+     * @param authenticated 是否已认证
+     */
     public OAuthPrincipal(UserResume userResume, String authType, boolean authenticated) {
         this.userResume = userResume;
         this.authType = authType;
@@ -57,13 +57,13 @@ public class OAuthPrincipal implements Principal {
     }
 
     /**
-    * 创建OAuth Principal实例
-    * 
-    * @param userResume 用户信息
-    * @param authType 认证类型
-    * @param authenticated 是否已认证
-    * @return OAuthPrincipal实例
-    */
+     * 创建OAuth Principal实例
+     * 
+     * @param userResume 用户信息
+     * @param authType 认证类型
+     * @param authenticated 是否已认证
+     * @return OAuthPrincipal实例
+     */
     public static OAuthPrincipal create(UserResume userResume, String authType, boolean authenticated) {
         log.info("[Principal创建]创建OAuth Principal - 用户: {}, 认证类型: {}, 认证状态: {}", 
                 userResume != null ? userResume.getUsername() : "anonymous",
@@ -80,12 +80,12 @@ public class OAuthPrincipal implements Principal {
     }
 
     /**
-    * 创建已认证的OAuth Principal实例
-    * 
-    * @param userResume 用户信息
-    * @param authType 认证类型
-    * @return 已认证的OAuthPrincipal实例
-    */
+     * 创建已认证的OAuth Principal实例
+     * 
+     * @param userResume 用户信息
+     * @param authType 认证类型
+     * @return 已认证的OAuthPrincipal实例
+     */
     public static OAuthPrincipal authenticated(UserResume userResume, String authType) {
         log.info("[Principal认证]创建已认证的OAuth Principal - 用户: {}, 认证类型: {}", 
                 userResume != null ? userResume.getUsername() : "anonymous",
@@ -145,19 +145,19 @@ public class OAuthPrincipal implements Principal {
     }
     
     /**
-    * 判断字符串是否有值
-    * @param value 值
-    * @return 是否包含值的结果
-    */
+     * 判断字符串是否有值
+     * @param value 值
+     * @return 是否包含值的结果
+     */
     private static boolean hasValue(String value) {
         return value != null && !value.isEmpty();
     }
 
     /**
-    * 创建未认证的OAuth Principal实例
-    * 
-    * @return 未认证的OAuthPrincipal实例
-    */
+     * 创建未认证的OAuth Principal实例
+     * 
+     * @return 未认证的OAuthPrincipal实例
+     */
     public static OAuthPrincipal unauthenticated() {
         log.info("[Principal未认证]创建未认证的OAuth Principal (匿名用户)");
         log.debug("[Principal未认证]用户信息为空, 认证类型为空, 认证状态: 未认证");
@@ -184,10 +184,10 @@ public class OAuthPrincipal implements Principal {
     }
 
     /**
-    * 获取用户真实姓名
-    * 
-    * @return 用户真实姓名
-    */
+     * 获取用户真实姓名
+     * 
+     * @return 用户真实姓名
+     */
     public String getRealName() {
         String realName = userResume != null ? userResume.getNickName() : null;
         log.debug("[Principal获取]获取真实姓名: {}", realName);
@@ -195,10 +195,10 @@ public class OAuthPrincipal implements Principal {
     }
 
     /**
-    * 获取租户标识
-    * 
-    * @return 租户ID
-    */
+     * 获取租户标识
+     * 
+     * @return 租户ID
+     */
     public String getTenantId() {
         String tenantId = userResume != null ? userResume.getTenantId() : null;
         log.debug("[Principal获取]获取租户ID: {}", tenantId);
@@ -206,10 +206,10 @@ public class OAuthPrincipal implements Principal {
     }
 
     /**
-    * 获取部门标识
-    * 
-    * @return 部门ID
-    */
+     * 获取部门标识
+     * 
+     * @return 部门ID
+     */
     public String getDeptId() {
         String deptId = userResume != null ? userResume.getDeptId() : null;
         log.debug("[Principal获取]获取部门ID: {}", deptId);
@@ -217,10 +217,10 @@ public class OAuthPrincipal implements Principal {
     }
 
     /**
-    * 获取用户角色
-    * 
-    * @return 用户角色集合
-    */
+     * 获取用户角色
+     * 
+     * @return 用户角色集合
+     */
     public Set<String> getRoles() {
         Set<String> roles = userResume != null && userResume.getRoles() != null ? 
                userResume.getRoles() : Collections.emptySet();
@@ -230,10 +230,10 @@ public class OAuthPrincipal implements Principal {
     }
 
     /**
-    * 获取用户权限
-    * 
-    * @return 用户权限集合
-    */
+     * 获取用户权限
+     * 
+     * @return 用户权限集合
+     */
     public Set<String> getPermissions() {
         Set<String> permissions = userResume != null && userResume.getPermission() != null ? 
                userResume.getPermission() : Collections.emptySet();
@@ -245,10 +245,10 @@ public class OAuthPrincipal implements Principal {
     }
 
     /**
-    * 获取扩展属性
-    * 
-    * @return 扩展属性Map
-    */
+     * 获取扩展属性
+     * 
+     * @return 扩展属性Map
+     */
     public Map<String, Object> getExtensions() {
         Map<String, Object> extensions = userResume != null && userResume.getExt() != null ? 
                userResume.getExt() : Collections.emptyMap();
@@ -258,11 +258,11 @@ public class OAuthPrincipal implements Principal {
     }
 
     /**
-    * 检查用户是否具有指定角色
-    * 
-    * @param role 角色名称
-    * @return 是否具有该角色
-    */
+     * 检查用户是否具有指定角色
+     * 
+     * @param role 角色名称
+     * @return 是否具有该角色
+     */
     public boolean hasRole(String role) {
         boolean result = userResume != null && userResume.hasRole(role);
         
@@ -279,11 +279,11 @@ public class OAuthPrincipal implements Principal {
     }
 
     /**
-    * 检查用户是否具有指定角色中的任意一个
-    * 
-    * @param roles 角色名称数组
-    * @return 是否具有任意一个角色
-    */
+     * 检查用户是否具有指定角色中的任意一个
+     * 
+     * @param roles 角色名称数组
+     * @return 是否具有任意一个角色
+     */
     public boolean hasAnyRole(String... roles) {
         boolean result = userResume != null && userResume.hasRole(roles);
         String rolesStr = Arrays.toString(roles);
@@ -301,11 +301,11 @@ public class OAuthPrincipal implements Principal {
     }
 
     /**
-    * 检查用户是否具有指定权限
-    * 
-    * @param permission 权限名称
-    * @return 是否具有该权限
-    */
+     * 检查用户是否具有指定权限
+     * 
+     * @param permission 权限名称
+     * @return 是否具有该权限
+     */
     public boolean hasPermission(String permission) {
         boolean result = userResume != null && userResume.hasPermission(permission);
         
@@ -322,11 +322,11 @@ public class OAuthPrincipal implements Principal {
     }
 
     /**
-    * 检查用户是否具有指定权限中的任意一个
-    * 
-    * @param permissions 权限名称数组
-    * @return 是否具有任意一个权限
-    */
+     * 检查用户是否具有指定权限中的任意一个
+     * 
+     * @param permissions 权限名称数组
+     * @return 是否具有任意一个权限
+     */
     public boolean hasAnyPermission(String... permissions) {
         boolean result = userResume != null && userResume.hasPermission(permissions);
         String permissionsStr = Arrays.toString(permissions);
@@ -344,10 +344,10 @@ public class OAuthPrincipal implements Principal {
     }
 
     /**
-    * 检查用户是否为管理员
-    * 
-    * @return 是否为管理员
-    */
+     * 检查用户是否为管理员
+     * 
+     * @return 是否为管理员
+     */
     public boolean isAdmin() {
         boolean result = userResume != null && userResume.isAdmin();
         
@@ -361,10 +361,10 @@ public class OAuthPrincipal implements Principal {
     }
 
     /**
-    * 获取用户手机号
-    * 
-    * @return 手机号
-    */
+     * 获取用户手机号
+     * 
+     * @return 手机号
+     */
     public String getPhone() {
         String phone = userResume != null ? userResume.getPhone() : null;
         log.debug("[Principal获取]获取手机号: {}", phone != null ? maskPhone(phone) : "null");
@@ -372,10 +372,10 @@ public class OAuthPrincipal implements Principal {
     }
 
     /**
-    * 获取用户身份证号
-    * 
-    * @return 身份证号
-    */
+     * 获取用户身份证号
+     * 
+     * @return 身份证号
+     */
     public String getCard() {
         String card = userResume != null ? null : null;
         log.debug("[Principal获取]获取身份证号: {}", card != null ? maskCard(card) : "null");
@@ -383,10 +383,10 @@ public class OAuthPrincipal implements Principal {
     }
 
     /**
-    * 获取用户性别
-    * 
-    * @return 性别
-    */
+     * 获取用户性别
+     * 
+     * @return 性别
+     */
     public String getSex() {
         String sex = userResume != null ? userResume.getSex() : null;
         log.debug("[Principal获取]获取性别: {}", sex);
@@ -394,10 +394,10 @@ public class OAuthPrincipal implements Principal {
     }
 
     /**
-    * 获取最后登录IP
-    * 
-    * @return 最后登录IP
-    */
+     * 获取最后登录IP
+     * 
+     * @return 最后登录IP
+     */
     public String getLastIp() {
         String lastIp = userResume != null ? userResume.getAddress() : null;
         log.debug("[Principal获取]获取最后登录IP: {}", lastIp);
@@ -405,10 +405,10 @@ public class OAuthPrincipal implements Principal {
     }
     
     /**
-    * 脱敏手机号
-    * @param phone phone
-    * @return maskPhone的结果
-    */
+     * 脱敏手机号
+     * @param phone phone
+     * @return maskPhone的结果
+     */
     private String maskPhone(String phone) {
         if (phone == null || phone.length() < 7) {
             return phone;
@@ -417,10 +417,10 @@ public class OAuthPrincipal implements Principal {
     }
     
     /**
-    * 脱敏身份证号
-    * @param card 卡片
-    * @return mask卡片的结果
-    */
+     * 脱敏身份证号
+     * @param card 卡片
+     * @return mask卡片的结果
+     */
     private String maskCard(String card) {
         if (card == null || card.length() < 10) {
             return card;

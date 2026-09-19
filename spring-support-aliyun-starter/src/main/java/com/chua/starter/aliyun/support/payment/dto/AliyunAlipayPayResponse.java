@@ -3,9 +3,9 @@ package com.chua.starter.aliyun.support.payment.dto;
 import lombok.Data;
 
 /**
-* 支付宝下单响应
-* @author CH
-* @since 4.0.0
+ * 支付宝下单响应
+ * @author CH
+ * @since 4.0.0
  */
 @Data
 public class AliyunAlipayPayResponse {

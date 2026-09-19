@@ -25,12 +25,12 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
-* Socket 自动配置类
-* 通过 SPI 机制根据配置的协议类型创建对应的 Socket 服务
-*
-* @版本 1.0.0
-* @since 2024-12-04
-* @author CH
+ * Socket 自动配置类
+ * 通过 SPI 机制根据配置的协议类型创建对应的 Socket 服务
+ *
+ * @版本 1.0.0
+ * @since 2024-12-04
+ * @author CH
  */
 @Slf4j
 @EnableConfigurationProperties(SocketProperties.class)
@@ -38,13 +38,13 @@ import java.util.stream.Collectors;
 public class SocketConfiguration {
 
     /**
-    * 创建多协议 Socket 会话模板集合
-    * 根据配置的协议类型通过 SPI 获取对应的提供者
-    *
-    * @param properties 配置属性
-    * @param listeners  监听器列表
-    * @return 协议名称到会话模板实例的映射
-    */
+     * 创建多协议 Socket 会话模板集合
+     * 根据配置的协议类型通过 SPI 获取对应的提供者
+     *
+     * @param properties 配置属性
+     * @param listeners  监听器列表
+     * @return 协议名称到会话模板实例的映射
+     */
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = SocketProperties.PRE, name = "enable", havingValue = "true")
@@ -88,12 +88,12 @@ public class SocketConfiguration {
     }
 
     /**
-    * 创建单一协议的会话模板（兼容旧代码）
-    * 返回第一个协议的模板作为默认模板
-    *
-    * @param templates 所有协议模板映射
-    * @return 默认会话模板实例
-    */
+     * 创建单一协议的会话模板（兼容旧代码）
+     * 返回第一个协议的模板作为默认模板
+     *
+     * @param templates 所有协议模板映射
+     * @return 默认会话模板实例
+     */
     @Bean
     @Primary
     @ConditionalOnProperty(prefix = SocketProperties.PRE, name = "enable", havingValue = "true")
@@ -107,12 +107,12 @@ public class SocketConfiguration {
     }
 
     /**
-    * 根据协议配置创建独立的属性对象
-    *
-    * @param baseProperties 基础属性
-    * @param protocolConfig 协议配置
-    * @return 协议特定的属性对象
-    */
+     * 根据协议配置创建独立的属性对象
+     *
+     * @param baseProperties 基础属性
+     * @param protocolConfig 协议配置
+     * @return 协议特定的属性对象
+     */
     private SocketProperties createProtocolProperties(
             SocketProperties baseProperties,
             SocketProperties.ProtocolConfig protocolConfig) {
@@ -138,32 +138,32 @@ public class SocketConfiguration {
     }
 
     /**
-    * Socket 生命周期管理
-    *
-    * @param templates  所有协议模板映射
-    * @param properties 配置属性
-    * @return 生命周期 Bean
-    */
+     * Socket 生命周期管理
+     *
+     * @param templates  所有协议模板映射
+     * @param properties 配置属性
+     * @return 生命周期 Bean
+     */
     @Bean
     @ConditionalOnProperty(prefix = SocketProperties.PRE, name = "enable", havingValue = "true")
     public SocketLifecycle socketLifecycle(
             Map<String, SocketSessionTemplate> templates,
             SocketProperties properties) {
         /**
-        * Socketlifecycle。
-        * @param templates templates
-        * @param properties 属性
-        * @return Socketlifecycle的结果
-        */
+         * Socketlifecycle。
+         * @param templates templates
+         * @param properties 属性
+         * @return Socketlifecycle的结果
+         */
         return new SocketLifecycle(templates, properties);
     }
 
     /**
-    * Socket 生命周期管理类
-    * 支持管理多个协议模板的启动和停止
-    * @author CH
-    * @since 4.0.0
-    */
+     * Socket 生命周期管理类
+     * 支持管理多个协议模板的启动和停止
+     * @author CH
+     * @since 4.0.0
+     */
     @Slf4j
     public static class SocketLifecycle implements InitializingBean, DisposableBean {
         private final Map<String, SocketSessionTemplate> templates; // templates
@@ -216,10 +216,10 @@ public class SocketConfiguration {
 
     @Bean
     /**
-        * Socket服务信息contributor
-        *
-        * @return Socket服务信息contributor的结果
-        */
+     * Socket服务信息contributor
+     *
+     * @return Socket服务信息contributor的结果
+     */
     public ServiceInfoContributor socketServiceInfoContributor() {
         return registry -> {
             registry.registerFlag("socket", "Socket通信", true, "Socket通信模块");

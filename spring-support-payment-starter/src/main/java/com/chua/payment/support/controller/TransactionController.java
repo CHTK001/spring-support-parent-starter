@@ -14,9 +14,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
-* 交易流水控制器
-* @author CH
-* @since 4.0.0
+ * 交易流水控制器
+ * @author CH
+ * @since 4.0.0
  */
 @RestController
 @RequestMapping("/transaction")
@@ -40,11 +40,11 @@ public class TransactionController {
 
     @GetMapping("/order/{orderNo}")
     /**
-    * 列表by订单no
-    * @param orderNo 订单no
-    * @param pageNum pagenum
-    * @param pageSize page大小
-    */
+     * 列表by订单no
+     * @param orderNo 订单no
+     * @param pageNum pagenum
+     * @param pageSize page大小
+     */
     public Result<PageResult<TransactionRecord>> listByOrderNo(@PathVariable String orderNo,
                                                                @RequestParam(defaultValue = "1") int pageNum,
                                                                @RequestParam(defaultValue = "10") int pageSize) {
@@ -53,11 +53,11 @@ public class TransactionController {
 
     @GetMapping("/merchant/{merchantId}")
     /**
-    * 列表bymerchantid
-    * @param merchantId merchantid
-    * @param pageNum pagenum
-    * @param pageSize page大小
-    */
+     * 列表bymerchantid
+     * @param merchantId merchantid
+     * @param pageNum pagenum
+     * @param pageSize page大小
+     */
     public Result<PageResult<TransactionRecord>> listByMerchantId(@PathVariable Long merchantId,
                                                                   @RequestParam(defaultValue = "1") int pageNum,
                                                                   @RequestParam(defaultValue = "10") int pageSize) {
@@ -66,11 +66,11 @@ public class TransactionController {
 
     @GetMapping("/page")
     /**
-    * Page
-    *
-    * @param "1" "1"
-    * @return page的结果
-    */
+     * Page
+     *
+     * @param "1" "1"
+     * @return page的结果
+     */
     public Result<PageResult<TransactionRecord>> page(@RequestParam(defaultValue = "1") int pageNum,
                                                       @RequestParam(defaultValue = "10") int pageSize,
                                                       @RequestParam(required = false) Long merchantId,

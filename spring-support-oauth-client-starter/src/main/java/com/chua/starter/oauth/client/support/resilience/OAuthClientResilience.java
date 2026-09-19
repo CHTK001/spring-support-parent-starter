@@ -12,14 +12,14 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 
 /**
-* o认证客户端弹性处理器
-* <p>
-* 提供熔断降级、重试机制，增强客户端的容错能力。
-* 基于滑动窗口实现简单的熔断器。
-* </p>
-*
-* @since 2024/12/07
-* @author CH
+ * o认证客户端弹性处理器
+ * <p>
+ * 提供熔断降级、重试机制，增强客户端的容错能力。
+ * 基于滑动窗口实现简单的熔断器。
+ * </p>
+ *
+ * @since 2024/12/07
+ * @author CH
  */
 @Slf4j
 public class OAuthClientResilience {
@@ -30,10 +30,10 @@ public class OAuthClientResilience {
     private final AuthClientProperties.CircuitBreakerConfig circuitBreakerConfig;
 
     /**
-    * 熔断器状态
-    * @author CH
-    * @since 4.0.0
-    */
+     * 熔断器状态
+     * @author CH
+     * @since 4.0.0
+     */
     private enum CircuitState {
         CLOSED,      // 关闭状态（正常）
         OPEN,        // 打开状态（熔断中）
@@ -65,12 +65,12 @@ public class OAuthClientResilience {
     }
 
     /**
-    * 带弹性保护的执行
-    *
-    * @param supplier    认证操作
-    * @param fallback    降级响应
-    * @return 认证信息
-    */
+     * 带弹性保护的执行
+     *
+     * @param supplier    认证操作
+     * @param fallback    降级响应
+     * @return 认证信息
+     */
     public AuthenticationInformation executeWithResilience(
             Supplier<AuthenticationInformation> supplier,
             Supplier<AuthenticationInformation> fallback) {
@@ -87,9 +87,9 @@ public class OAuthClientResilience {
         // 更新熔断器状态
         if (circuitBreakerConfig.isEnabled()) {
             /**
-            * record结果。
-            * @param result 结果
-            */
+             * record结果。
+             * @param result 结果
+             */
             recordResult(result);
         }
 
@@ -97,10 +97,10 @@ public class OAuthClientResilience {
     }
 
     /**
-    * 带重试的执行
-    * @param supplier 供应商
-    * @return 执行with重试的结果
-    */
+     * 带重试的执行
+     * @param supplier 供应商
+     * @return 执行with重试的结果
+     */
     private AuthenticationInformation executeWithRetry(Supplier<AuthenticationInformation> supplier) {
         if (!retryConfig.isEnabled()) {
             return supplier.get();
@@ -161,9 +161,9 @@ public class OAuthClientResilience {
     }
 
     /**
-    * 检查熔断器是否打开
-    * @return 是否熔断打开的结果
-    */
+     * 检查熔断器是否打开
+     * @return 是否熔断打开的结果
+     */
     private boolean isCircuitOpen() {
         if (state == CircuitState.CLOSED) {
             return false;
@@ -191,9 +191,9 @@ public class OAuthClientResilience {
     }
 
     /**
-    * 记录请求结果，更新熔断器状态
-    * @param result 结果
-    */
+     * 记录请求结果，更新熔断器状态
+     * @param result 结果
+     */
     private void recordResult(AuthenticationInformation result) {
         requestCount.incrementAndGet();
 
@@ -208,8 +208,8 @@ public class OAuthClientResilience {
                 // 半开状态成功，恢复关闭状态
                 if (successCount.get() >= circuitBreakerConfig.getPermittedCallsInHalfOpenState()) {
                     /**
-                    * reset。
-                    */
+                     * reset。
+                     */
                     reset();
                     log.info("[熔断器]服务恢复，熔断器关闭");
                 }
@@ -241,8 +241,8 @@ public class OAuthClientResilience {
     }
 
     /**
-    * 重置熔断器状态
-    */
+     * 重置熔断器状态
+     */
     private void reset() {
         state = CircuitState.CLOSED;
         failureCount.set(0);
@@ -252,35 +252,35 @@ public class OAuthClientResilience {
     }
 
     /**
-    * 获取当前熔断器状态
-    * @return 获取熔断状态的结果
-    */
+     * 获取当前熔断器状态
+     * @return 获取熔断状态的结果
+     */
     public String getCircuitState() {
         return state.name();
     }
 
     /**
-    * 获取统计信息
-    * @return 获取stats的结果
-    */
+     * 获取统计信息
+     * @return 获取stats的结果
+     */
     public String getStats() {
         return String.format("state=%s, requests=%d, failures=%d, successes=%d",
                 state, requestCount.get(), failureCount.get(), successCount.get());
     }
 
     /**
-    * 创建降级响应
-    * @param message 消息
-    * @return 创建降级响应的结果
-    */
+     * 创建降级响应
+     * @param message 消息
+     * @return 创建降级响应的结果
+     */
     public static AuthenticationInformation createFallbackResponse(String message) {
         log.warn("[降级处理]返回降级响应: {}", message);
         /**
-        * 认证信息。
-        * @param Information.AUTHENTICATION_SERVER_EXCEPTION 信息.认证服务端异常
-        * @param null 空
-        * @return 认证信息的结果
-        */
+         * 认证信息。
+         * @param Information.AUTHENTICATION_SERVER_EXCEPTION 信息.认证服务端异常
+         * @param null 空
+         * @return 认证信息的结果
+         */
         return new AuthenticationInformation(Information.AUTHENTICATION_SERVER_EXCEPTION, null);
     }
 }

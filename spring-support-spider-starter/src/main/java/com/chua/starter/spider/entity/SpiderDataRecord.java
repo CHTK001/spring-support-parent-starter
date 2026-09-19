@@ -13,13 +13,13 @@ import lombok.EqualsAndHashCode;
 import java.time.LocalDateTime;
 
 /**
-* 采集数据记录实体。
-*
-* <p>对应 {@code spider_data_record} 表，由 spider.output 节点写入采集结果，
-* raw_数据 以 JSON 保存完整原始数据，供前端检索。</p>
-*
-* @since 4.0.0.42
-* @author CH
+ * 采集数据记录实体。
+ *
+ * <p>对应 {@code spider_data_record} 表，由 spider.output 节点写入采集结果，
+ * raw_数据 以 JSON 保存完整原始数据，供前端检索。</p>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -28,8 +28,8 @@ import java.time.LocalDateTime;
 public class SpiderDataRecord extends SysBase {
 
     /**
-    * 主键 标识（自增）
-    */
+     * 主键 标识（自增）
+     */
     @TableId(type = IdType.AUTO)
     @Schema(description = "主键 ID")
     /** 标识 */

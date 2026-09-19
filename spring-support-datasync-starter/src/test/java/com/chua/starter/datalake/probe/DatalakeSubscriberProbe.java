@@ -22,20 +22,20 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
 /**
-* 实时订阅器与多 Sink 容错全面探测。
-*
-* <ul>
-*   <li>S01~S05: RealTimeDatalakeSubscriber push 行为</li>
-*   <li>S06~S07: pushBatch 批量推送</li>
-*   <li>S08~S09: offset 推进与 reset</li>
-*   <li>S10~S12: 多 Sink 容错（一个失败其余正常）</li>
-*   <li>S13~S14: 非法管线 JSON 容错</li>
-*   <li>S15~S16: SPI 自动发现 Sink</li>
-*   <li>S17~S20: Webhook 边界（非法 JSON/空 body/超大 payload/并发连接）</li>
-* </ul>
-*
-* @author CH
-* @since 4.0.0.42
+ * 实时订阅器与多 Sink 容错全面探测。
+ *
+ * <ul>
+ *   <li>S01~S05: RealTimeDatalakeSubscriber push 行为</li>
+ *   <li>S06~S07: pushBatch 批量推送</li>
+ *   <li>S08~S09: offset 推进与 reset</li>
+ *   <li>S10~S12: 多 Sink 容错（一个失败其余正常）</li>
+ *   <li>S13~S14: 非法管线 JSON 容错</li>
+ *   <li>S15~S16: SPI 自动发现 Sink</li>
+ *   <li>S17~S20: Webhook 边界（非法 JSON/空 body/超大 payload/并发连接）</li>
+ * </ul>
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 @Slf4j
 public class DatalakeSubscriberProbe {
@@ -54,8 +54,8 @@ public class DatalakeSubscriberProbe {
     private static OffsetFlow offsetFlow; // 偏移量流
 
     /**
-    * main。
-    * @param args 参数
+     * main。
+     * @param args 参数
      */
     public static void main(String[] args) throws Exception {
         log.info("═══════════════════════════════════════════════════════");
@@ -86,7 +86,7 @@ public class DatalakeSubscriberProbe {
     // ━━━━━━━━━━━━━━━ 基础设施 ━━━━━━━━━━━━━━━
 
     /**
-    * setupinfrastructure。
+     * setupinfrastructure。
      */
     private static void setupInfrastructure() {
         pipelineManager = new DefaultPipelineManager();
@@ -106,18 +106,18 @@ public class DatalakeSubscriberProbe {
     }
 
     /**
-    * 单个sinkpipeline。
-    * @param sinkType sink类型
-    * @return 单个sinkpipeline的结果
+     * 单个sinkpipeline。
+     * @param sinkType sink类型
+     * @return 单个sinkpipeline的结果
      */
     private static String singleSinkPipeline(String sinkType) {
         return "{\"stages\":{\"default\":{\"sink\":[{\"type\":\"" + sinkType + "\"}]}}}";
     }
 
     /**
-    * multisinkpipeline。
-    * @param sinkTypes sink类型
-    * @return multiSinkPipeline的结果
+     * multisinkpipeline。
+     * @param sinkTypes sink类型
+     * @return multiSinkPipeline的结果
      */
     private static String multiSinkPipeline(String... sinkTypes) {
         StringBuilder sb = new StringBuilder("{\"stages\":{\"default\":{\"sink\":[");
@@ -134,7 +134,7 @@ public class DatalakeSubscriberProbe {
  // ━━━━━━━━━━━━━━━ S01~S05: real时间数据湖subscriber push 行为 ━━━━━━━━━━━━━━━
 
     /**
-    * 测试subscriberpush。
+     * 测试subscriberpush。
      */
     private static void testSubscriberPush() {
         log.info("───── S01~S05: RealTimeDatalakeSubscriber push 行为 ─────");
@@ -205,7 +205,7 @@ public class DatalakeSubscriberProbe {
  // ━━━━━━━━━━━━━━━ S06~S07: pushbatch ━━━━━━━━━━━━━━━
 
     /**
-    * 测试pushbatch。
+     * 测试pushbatch。
      */
     private static void testPushBatch() {
         log.info("───── S06~S07: pushBatch 批量推送 ─────");
@@ -239,7 +239,7 @@ public class DatalakeSubscriberProbe {
  // ━━━━━━━━━━━━━━━ S08~S09: 偏移量 推进 ━━━━━━━━━━━━━━━
 
     /**
-    * 测试偏移量advance。
+     * 测试偏移量advance。
      */
     private static void testOffsetAdvance() {
         log.info("───── S08~S09: offset 推进与 reset ─────");
@@ -268,7 +268,7 @@ public class DatalakeSubscriberProbe {
     // ━━━━━━━━━━━━━━━ S10~S12: 多 Sink 容错 ━━━━━━━━━━━━━━━
 
     /**
-    * 测试multisinkfault容错。
+     * 测试multisinkfault容错。
      */
     private static void testMultiSinkFaultTolerance() {
         log.info("───── S10~S12: 多 Sink 容错 ─────");
@@ -324,7 +324,7 @@ public class DatalakeSubscriberProbe {
     // ━━━━━━━━━━━━━━━ S13~S14: 非法管线 JSON 容错 ━━━━━━━━━━━━━━━
 
     /**
-    * 测试invalidpipelinejson。
+     * 测试invalidpipelinejson。
      */
     private static void testInvalidPipelineJson() {
         log.info("───── S13~S14: 非法管线 JSON 容错 ─────");
@@ -357,7 +357,7 @@ public class DatalakeSubscriberProbe {
     // ━━━━━━━━━━━━━━━ S15~S16: SPI 自动发现 ━━━━━━━━━━━━━━━
 
     /**
-    * 测试spidiscovery。
+     * 测试spidiscovery。
      */
     private static void testSpiDiscovery() {
         log.info("───── S15~S16: SPI 自动发现 Sink ─────");
@@ -390,7 +390,7 @@ public class DatalakeSubscriberProbe {
     // ━━━━━━━━━━━━━━━ S17~S20: Webhook 边界 ━━━━━━━━━━━━━━━
 
     /**
-    * 测试webhookedgecas。
+     * 测试webhookedgecas。
      */
     private static void testWebhookEdgeCases() throws Exception {
         log.info("───── S17~S20: Webhook 边界 ─────");
@@ -522,12 +522,12 @@ public class DatalakeSubscriberProbe {
 
     // ━━━━━━━━━━━━━━━ 辅助 ━━━━━━━━━━━━━━━
     /**
-    * 探针检查接口。
-    *
-    * @author CH
-    * @since 4.0.0
-    * @param name 名称
-    * @param check 检查
+     * 探针检查接口。
+     *
+     * @author CH
+     * @since 4.0.0
+     * @param name 名称
+     * @param check 检查
      */
 
     private static void check(String name, ProbeCheck check) {
@@ -567,27 +567,27 @@ public class DatalakeSubscriberProbe {
         private volatile Map<String, Object> lastConfig;
 
         /**
-        * capturingsink。
-        * @param type 类型
+         * capturingsink。
+         * @param type 类型
          */
         public CapturingSink(String type) { this.type = type; }
         /**
-        * reset。
+         * reset。
          */
         public void reset() {
             count.set(0);
             lastConfig = null;
         }
         /**
-        * 获取数量。
-        * @return 获取数量的结果
+         * 获取数量。
+         * @return 获取数量的结果
          */
         public int getCount() { return count.get(); }
         /**
-        * 获取最后一个配置。
-        * @return 获取最后一个配置的结果
-        * @author CH
-        * @since 4.0.0
+         * 获取最后一个配置。
+         * @return 获取最后一个配置的结果
+         * @author CH
+         * @since 4.0.0
          */
         public Map<String, Object> getLastConfig() { return lastConfig; }
 
@@ -616,12 +616,12 @@ public class DatalakeSubscriberProbe {
     public static class FailingSink implements DataSink {
         private final AtomicInteger count = new AtomicInteger(0);
         /**
-        * reset。
+         * reset。
          */
         public void reset() { count.set(0); }
         /**
-        * 获取数量。
-        * @return 获取数量的结果
+         * 获取数量。
+         * @return 获取数量的结果
          */
         public int getCount() { return count.get(); }
         @Override

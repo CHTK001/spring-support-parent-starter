@@ -13,11 +13,11 @@ import java.util.List;
 import java.util.Map;
 
 /**
-* 读取数据库全部表 → 表节点信息
-* <p>基于 JDBC 标准 {@link DatabaseMetaData}，跨数据库通用（MySQL/PG/Oracle/SQLServer/H2/SQLite/DM/Kingbase）。</p>
-*
-* @since 2026/8/5
-* @author CH
+ * 读取数据库全部表 → 表节点信息
+ * <p>基于 JDBC 标准 {@link DatabaseMetaData}，跨数据库通用（MySQL/PG/Oracle/SQLServer/H2/SQLite/DM/Kingbase）。</p>
+ *
+ * @since 2026/8/5
+ * @author CH
  */
 @Slf4j
 public class TableGraphReader {
@@ -34,14 +34,14 @@ public class TableGraphReader {
     }
 
     /**
-    * 读取全部表节点 + 外键边
-    * @return 读取的结果
-    */
+     * 读取全部表节点 + 外键边
+     * @return 读取的结果
+     */
     public GraphReadResult read() throws SQLException {
         /**
-        * 尝试。
-        * @param dataSource.getConnection( 数据源.getconnection(
-        */
+         * 尝试。
+         * @param dataSource.getConnection( 数据源.getconnection(
+         */
         try (Connection conn = dataSource.getConnection()) {
             DatabaseMetaData meta = conn.getMetaData();
             String catalog = conn.getCatalog();
@@ -51,9 +51,9 @@ public class TableGraphReader {
             Map<String, TableNodeInfo> tableMap = new LinkedHashMap<>();
             List<GraphEdge> edges = new ArrayList<>();
             /**
-            * 尝试。
-            * @param String[]{"TABLE"} 字符串[]{"TABLE"}
-            */
+             * 尝试。
+             * @param String[]{"TABLE"} 字符串[]{"TABLE"}
+             */
             try (ResultSet rs = meta.getTables(catalog, schema, "%", new String[]{"TABLE"})) {
                 while (rs.next()) {
                     String name = rs.getString("TABLE_NAME");
@@ -72,24 +72,24 @@ public class TableGraphReader {
             // 2) 填充列、主键、外键
             for (TableNodeInfo t : tableMap.values()) {
                 /**
-                * fillcolumns。
-                * @param meta meta
-                * @param t t
-                */
+                 * fillcolumns。
+                 * @param meta meta
+                 * @param t t
+                 */
                 fillColumns(meta, t);
                 /**
-                * fillprimaryKey。
-                * @param meta meta
-                * @param t t
-                */
+                 * fillprimaryKey。
+                 * @param meta meta
+                 * @param t t
+                 */
                 fillPrimaryKeys(meta, t);
                 /**
-                * fill导入Key。
-                * @param meta meta
-                * @param t t
-                * @param edges edges
-                * @param tableMap table映射
-                */
+                 * fill导入Key。
+                 * @param meta meta
+                 * @param t t
+                 * @param edges edges
+                 * @param tableMap table映射
+                 */
                 fillImportedKeys(meta, t, edges, tableMap);
             }
 
@@ -109,25 +109,25 @@ public class TableGraphReader {
             log.debug("TableGraphReader: 读取 {} 张表，{} 条外键边",
                     tableMap.size(), edges.size());
             /**
-            * 图计算读取结果。
-            * @param ArrayList<>(tableMap.values( array列表<>(table映射.值(
-            * @return 图计算读取结果的结果
-            */
+             * 图计算读取结果。
+             * @param ArrayList<>(tableMap.values( array列表<>(table映射.值(
+             * @return 图计算读取结果的结果
+             */
             return new GraphReadResult(new ArrayList<>(tableMap.values()), edges);
         }
     }
 
     /**
-    * fillcolumns
-    *
-    * @param meta meta
-    * @param t t
-    */
+     * fillcolumns
+     *
+     * @param meta meta
+     * @param t t
+     */
     private void fillColumns(DatabaseMetaData meta, TableNodeInfo t) throws SQLException {
         /**
-        * 尝试。
-        * @param meta.getColumns(t.getSchema( meta.获取columns(t.获取模式(
-        */
+         * 尝试。
+         * @param meta.getColumns(t.getSchema( meta.获取columns(t.获取模式(
+         */
         try (ResultSet rs = meta.getColumns(t.getSchema(), null, t.getName(), "%")) {
             int ord = 0;
             while (rs.next()) {
@@ -142,16 +142,16 @@ public class TableGraphReader {
     }
 
     /**
-    * fillprimaryKey
-    *
-    * @param meta meta
-    * @param t t
-    */
+     * fillprimaryKey
+     *
+     * @param meta meta
+     * @param t t
+     */
     private void fillPrimaryKeys(DatabaseMetaData meta, TableNodeInfo t) throws SQLException {
         /**
-        * 尝试。
-        * @param meta.getPrimaryKeys(t.getSchema( meta.获取primary键(t.获取模式(
-        */
+         * 尝试。
+         * @param meta.getPrimaryKeys(t.getSchema( meta.获取primary键(t.获取模式(
+         */
         try (ResultSet rs = meta.getPrimaryKeys(t.getSchema(), null, t.getName())) {
             Map<Short, String> ordered = new LinkedHashMap<>();
             while (rs.next()) {
@@ -162,18 +162,18 @@ public class TableGraphReader {
     }
 
     /**
-    * fill导入Key
-    * @param meta meta
-    * @param t t
-    * @param edges edges
-    * @param tableMap table映射
-    */
+     * fill导入Key
+     * @param meta meta
+     * @param t t
+     * @param edges edges
+     * @param tableMap table映射
+     */
     private void fillImportedKeys(DatabaseMetaData meta, TableNodeInfo t,
                                   List<GraphEdge> edges, Map<String, TableNodeInfo> tableMap) throws SQLException {
         /**
-        * 尝试。
-        * @param meta.getImportedKeys(t.getSchema( meta.获取导入键(t.getschema(
-        */
+         * 尝试。
+         * @param meta.getImportedKeys(t.getSchema( meta.获取导入键(t.getschema(
+         */
         try (ResultSet rs = meta.getImportedKeys(t.getSchema(), null, t.getName())) {
             while (rs.next()) {
                 String pkTable = rs.getString("PKTABLE_NAME");
@@ -198,11 +198,11 @@ public class TableGraphReader {
     }
 
     /**
-    * 解析Rule
-    *
-    * @param rule rule
-    * @return resolveRule的结果
-    */
+     * 解析Rule
+     *
+     * @param rule rule
+     * @return resolveRule的结果
+     */
     private static String resolveRule(short rule) {
         switch (rule) {
             case DatabaseMetaData.importedKeyCascade: return "CASCADE";
@@ -215,20 +215,20 @@ public class TableGraphReader {
     }
 
     /**
-    * 空转为空
-    *
-    * @param s s
-    * @return 空转为空的结果
-    */
+     * 空转为空
+     *
+     * @param s s
+     * @return 空转为空的结果
+     */
     private static String emptyToNull(String s) {
         return (s == null || s.isEmpty()) ? null : s;
     }
 
     /**
-    * 读取结果封装
-    * @author CH
-    * @since 4.0.0
-    */
+     * 读取结果封装
+     * @author CH
+     * @since 4.0.0
+     */
     public static class GraphReadResult {
         /** Tables */
         public final List<TableNodeInfo> tables;
@@ -236,11 +236,11 @@ public class TableGraphReader {
         public final List<GraphEdge> edges;
 
         /**
-        * 创建 图计算读取结果 实例
-        * @param tables tables
-        * @param tables 列表
-        * @param edges edges
-        */
+         * 创建 图计算读取结果 实例
+         * @param tables tables
+         * @param tables 列表
+         * @param edges edges
+         */
         public GraphReadResult(List<TableNodeInfo> tables, List<GraphEdge> edges) {
             this.tables = tables;
             this.edges = edges;

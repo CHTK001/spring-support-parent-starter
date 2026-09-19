@@ -6,10 +6,10 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
-* 告警历史分析请求
-*
-* @since 2026/7/30
-* @author CH
+ * 告警历史分析请求
+ *
+ * @since 2026/7/30
+ * @author CH
  */
 @Data
 @Builder
@@ -18,27 +18,27 @@ import lombok.NoArgsConstructor;
 public class ServerAlertHistoryAnalyzeRequest {
 
     /**
-    * 服务器名称
-    */
+     * 服务器名称
+     */
     private String serverName;
 
     /**
-    * 服务器编码
-    */
+     * 服务器编码
+     */
     private String serverCode;
 
     /**
-    * 主机地址
-    */
+     * 主机地址
+     */
     private String host;
 
     /**
-    * 告警次数
-    */
+     * 告警次数
+     */
     private Integer alertCount;
 
     /**
-    * 告警时间线摘要
-    */
+     * 告警时间线摘要
+     */
     private String alertTimeline;
 }

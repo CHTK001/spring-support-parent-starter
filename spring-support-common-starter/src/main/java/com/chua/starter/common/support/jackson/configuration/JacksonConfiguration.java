@@ -46,10 +46,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
-* Jackson配置
-*
-* @since 2024/7/19
-* @author CH
+ * Jackson配置
+ *
+ * @since 2024/7/19
+ * @author CH
  */
 @EnableConfigurationProperties(JacksonProperties.class)
 @SuppressWarnings({"removal"})
@@ -76,12 +76,12 @@ public class JacksonConfiguration {
     }
 
     /**
-    * 创建对象映射器
-    *
-    * @param forEverything foreverything
-    * @param includeNull include空
-    * @return 创建对象映射器的结果
-    */
+     * 创建对象映射器
+     *
+     * @param forEverything foreverything
+     * @param includeNull include空
+     * @return 创建对象映射器的结果
+     */
     public static ObjectMapper createObjectMapper(boolean forEverything, boolean includeNull) {
         log.trace("[Jackson配置]开始创建 ObjectMapper, forEverything={}, includeNull={}", forEverything, includeNull);
         ObjectMapper objectMapper = JsonMapper.builder()
@@ -176,11 +176,11 @@ public class JacksonConfiguration {
     @Bean
     @ConditionalOnMissingBean
     /**
-    * 默认对象映射器
-    *
-    * @param jacksonProperties jackson属性
-    * @return 默认对象映射器的结果
-    */
+     * 默认对象映射器
+     *
+     * @param jacksonProperties jackson属性
+     * @return 默认对象映射器的结果
+     */
     public ObjectMapper defaultObjectMapper(JacksonProperties jacksonProperties) {
         log.debug("[Jackson配置]创建默认 ObjectMapper Bean, includeNull={}", jacksonProperties.isIncludeNull());
         ObjectMapper objectMapper = createObjectMapper(false, jacksonProperties.isIncludeNull());
@@ -191,11 +191,11 @@ public class JacksonConfiguration {
     @Bean
     @ConditionalOnMissingBean
     /**
-    * 对象映射器构建器
-    *
-    * @param objectMapper 对象映射器
-    * @return 对象映射器构建器的结果
-    */
+     * 对象映射器构建器
+     *
+     * @param objectMapper 对象映射器
+     * @return 对象映射器构建器的结果
+     */
     public Jackson2ObjectMapperBuilder objectMapperBuilder(ObjectMapper objectMapper) {
         log.debug("[Jackson配置]创建 Jackson2ObjectMapperBuilder, 使用 ObjectMapper: {}", objectMapper.getClass().getName());
         Jackson2ObjectMapperBuilder builder = new Jackson2ObjectMapperBuilder();
@@ -205,11 +205,11 @@ public class JacksonConfiguration {
     }
 
     /**
-    * transient字段ignoring反序列化器类。
-    *
-    * @author CH
-    * @since 4.0.0
-    */
+     * transient字段ignoring反序列化器类。
+     *
+     * @author CH
+     * @since 4.0.0
+     */
     static class TransientFieldIgnoringDeserializer extends StdDeserializer<Object> {
         /** 串行版本UID */
         private static final long serialVersionUID = 1L;
@@ -217,9 +217,9 @@ public class JacksonConfiguration {
         /** 创建 transient字段ignoring反序列化器 实例 */
         public TransientFieldIgnoringDeserializer() {
             /**
-        * 父。
-        * @param Object.class 对象.类
-        */
+             * 父。
+             * @param Object.class 对象.类
+             */
             super(Object.class);
         }
 

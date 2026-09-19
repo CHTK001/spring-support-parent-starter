@@ -14,13 +14,13 @@ import java.math.BigDecimal;
 import java.util.Date;
 
 /**
-* sys_作业_日志 任务执行日志实体。
-*
-* <p>字段以表名 {@code sys_job_log} 作为前缀; 审计字段来自 {@link SysBase}。
-* 跨数据库 SQL 见 {@code V1.0__init_job.sql}。</p>
-*
-* @since 4.0.0.42
-* @author CH
+ * sys_作业_日志 任务执行日志实体。
+ *
+ * <p>字段以表名 {@code sys_job_log} 作为前缀; 审计字段来自 {@link SysBase}。
+ * 跨数据库 SQL 见 {@code V1.0__init_job.sql}。</p>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -28,8 +28,8 @@ import java.util.Date;
 public class JobLogEntity extends SysBase implements Serializable {
 
     /**
-    * 序列化版本
-    */
+     * 序列化版本
+     */
     @Serial
     /** 串行版本UID */
     private static final long serialVersionUID = 1L;

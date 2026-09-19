@@ -56,29 +56,29 @@ public class DataSourceStoreService {
     }
 
     /**
-    * 获取所有支持的数据源类型。
-    *
-    * @return 数据源类型列表(不可变)
-    */
+     * 获取所有支持的数据源类型。
+     *
+     * @return 数据源类型列表(不可变)
+     */
     public List<String> supportedTypes() {
         return DS_TYPES;
     }
 
     /**
-    * 列出全部数据源配置。
-    *
-    * @return 数据源配置列表(副本),无数据时为空列表,不为 null
-    */
+     * 列出全部数据源配置。
+     *
+     * @return 数据源配置列表(副本),无数据时为空列表,不为 null
+     */
     public List<DataSourceConfig> listAll() {
         return List.copyOf(dataSourceStore.values());
     }
 
     /**
-    * 根据 id 获取数据源配置。
-    *
-    * @param id 数据源 id,不能为 null
-    * @return 配置存在时返回结果,否则返回错误码"数据源不存在"
-    */
+     * 根据 id 获取数据源配置。
+     *
+     * @param id 数据源 id,不能为 null
+     * @return 配置存在时返回结果,否则返回错误码"数据源不存在"
+     */
     public ReturnResult<DataSourceConfig> get(Long id) {
         if (id == null) {
             return ReturnResult.error("数据源 id 不能为空");
@@ -91,13 +91,13 @@ public class DataSourceStoreService {
     }
 
     /**
-    * 创建数据源配置。
-    *
-    * <p>{@code id} 由本服务分配并回写;{@code createTime} 由本服务写入当前时间。</p>
-    *
-    * @param config 数据源配置,{@code type} 不能为空且须在支持列表内
-    * @return 创建成功的配置(含分配的 id),参数非法时返回错误
-    */
+     * 创建数据源配置。
+     *
+     * <p>{@code id} 由本服务分配并回写;{@code createTime} 由本服务写入当前时间。</p>
+     *
+     * @param config 数据源配置,{@code type} 不能为空且须在支持列表内
+     * @return 创建成功的配置(含分配的 id),参数非法时返回错误
+     */
     public ReturnResult<DataSourceConfig> create(DataSourceConfig config) {
         if (config == null) {
             return ReturnResult.error("数据源配置不能为空");
@@ -123,12 +123,12 @@ public class DataSourceStoreService {
     }
 
     /**
-    * 更新数据源配置。
-    *
-    * @param id 数据源 id,不能为 null
-    * @param config 数据源配置,不能为 null
-    * @return 更新成功的配置(含原 id 与 updateTime),id 不存在时返回错误
-    */
+     * 更新数据源配置。
+     *
+     * @param id 数据源 id,不能为 null
+     * @param config 数据源配置,不能为 null
+     * @return 更新成功的配置(含原 id 与 updateTime),id 不存在时返回错误
+     */
     public ReturnResult<DataSourceConfig> update(Long id, DataSourceConfig config) {
         if (id == null) {
             return ReturnResult.error("数据源 id 不能为空");
@@ -156,11 +156,11 @@ public class DataSourceStoreService {
     }
 
     /**
-    * 删除数据源配置。
-    *
-    * @param id 数据源 id,不能为 null
-    * @return 成功(恒为 true,重复删除不报错)
-    */
+     * 删除数据源配置。
+     *
+     * @param id 数据源 id,不能为 null
+     * @return 成功(恒为 true,重复删除不报错)
+     */
     public boolean delete(Long id) {
         if (id == null) {
             return false;
@@ -169,12 +169,12 @@ public class DataSourceStoreService {
     }
 
     /**
-    * 测试数据源连接(jdbc 类型真实建立连接并校验可达,非 jdbc 类型暂不支持)。
-    *
-    * @param id 数据源 id,不能为 null
-    * @return 测试结果:{@code success} 表示是否连通,{@code message} 为说明,
-    *         {@code type} 为数据源类型;id 不存在或类型不受支持时 success=false
-    */
+     * 测试数据源连接(jdbc 类型真实建立连接并校验可达,非 jdbc 类型暂不支持)。
+     *
+     * @param id 数据源 id,不能为 null
+     * @return 测试结果:{@code success} 表示是否连通,{@code message} 为说明,
+     *         {@code type} 为数据源类型;id 不存在或类型不受支持时 success=false
+     */
     public Map<String, Object> test(Long id) {
         ReturnResult<DataSourceConfig> result = get(id);
         if (result.getData() == null) {
@@ -205,16 +205,16 @@ public class DataSourceStoreService {
     }
 
     /**
-    * 构建 JDBC 连接。
-    *
-    * <p>连接优先级:数据源 id 为 null/0 时使用默认主数据源;
-    * 否则按 {@link DataSourceConfig#url()} 优先、host/port/database 拼接次之。</p>
-    *
-    * @param datasourceId 数据源 id,null 或 0 表示使用默认主数据源
-    * @return JDBC 连接,调用方负责关闭
-    * @throws SQLException 连接构建或获取失败
-    * @throws UnsupportedOperationException 非 jdbc 类型或不支持的主数据源
-    */
+     * 构建 JDBC 连接。
+     *
+     * <p>连接优先级:数据源 id 为 null/0 时使用默认主数据源;
+     * 否则按 {@link DataSourceConfig#url()} 优先、host/port/database 拼接次之。</p>
+     *
+     * @param datasourceId 数据源 id,null 或 0 表示使用默认主数据源
+     * @return JDBC 连接,调用方负责关闭
+     * @throws SQLException 连接构建或获取失败
+     * @throws UnsupportedOperationException 非 jdbc 类型或不支持的主数据源
+     */
     public Connection buildConnection(Long datasourceId) throws SQLException {
         if (datasourceId == null || datasourceId == 0) {
             DataSource defaultDs = defaultDataSourceProvider.getIfAvailable();
@@ -246,13 +246,13 @@ public class DataSourceStoreService {
     }
 
     /**
-    * 获取必填文本字段的非空值。
-    *
-    * @param value 待校验文本
-    * @param fieldName 字段名(用于异常信息)
-    * @return 非空文本
-    * @throws SQLException 字段为空时
-    */
+     * 获取必填文本字段的非空值。
+     *
+     * @param value 待校验文本
+     * @param fieldName 字段名(用于异常信息)
+     * @return 非空文本
+     * @throws SQLException 字段为空时
+     */
     private String requireText(String value, String fieldName) throws SQLException {
         if (value == null || value.isBlank()) {
             throw new SQLException("数据源配置缺少必填项: " + fieldName);

@@ -48,20 +48,20 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 /**
-* AI 对话门面服务实现。
-*
-* <p>通过 {@link ChatClientRegistry} 路由到对应的 {@link ChatClient}，
-* 完成同步/流式对话、模型列表查询与模型定义查询。</p>
-*
-* <p>当请求指定的模型/提供商在模型管理（DB provider）中配置时，优先按 DB
-* 中的平台/地址/凭证/代理动态构建 对话客户端，使每个提供商可独立配置代理
-* （如 Google 需要单独走代理）。DB 未命中时回退全局注册中心。</p>
-*
-* <p>对话统一走底层 {@link com.chua.common.support.ai.chat.ChatClient} 的
-* {@code chatSyncWithResponse} / {@code chat} API，保证任意 SPI 客户端可被调用。</p>
-*
-* @since 4.0.0.42
-* @author CH
+ * AI 对话门面服务实现。
+ *
+ * <p>通过 {@link ChatClientRegistry} 路由到对应的 {@link ChatClient}，
+ * 完成同步/流式对话、模型列表查询与模型定义查询。</p>
+ *
+ * <p>当请求指定的模型/提供商在模型管理（DB provider）中配置时，优先按 DB
+ * 中的平台/地址/凭证/代理动态构建 对话客户端，使每个提供商可独立配置代理
+ * （如 Google 需要单独走代理）。DB 未命中时回退全局注册中心。</p>
+ *
+ * <p>对话统一走底层 {@link com.chua.common.support.ai.chat.ChatClient} 的
+ * {@code chatSyncWithResponse} / {@code chat} API，保证任意 SPI 客户端可被调用。</p>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @Service
@@ -81,24 +81,24 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     private final AiModelMapper aiModelMapper; // 模型定义映射器（加载别名→主模型映射）
 
     /**
-    * DB 提供者 多 appKey 聚合客户端缓存（提供者标识::模型 → 客户端，5 分钟 TTL）。
-    * 避免每次对话都重建多客户端聚合实例；凭证变更后最多延迟 5 分钟生效。
-    */
+     * DB 提供者 多 appKey 聚合客户端缓存（提供者标识::模型 → 客户端，5 分钟 TTL）。
+     * 避免每次对话都重建多客户端聚合实例；凭证变更后最多延迟 5 分钟生效。
+     */
     private static final long DB_CLIENT_CACHE_TTL_MILLIS = 5 * 60 * 1000L;
     /**
-    * 别名映射缓存 TTL（5 分钟）：别名 → 主模型 code，从 sys_ai_model.sys_ai_model_aliases 加载。
-    */
+     * 别名映射缓存 TTL（5 分钟）：别名 → 主模型 code，从 sys_ai_model.sys_ai_model_aliases 加载。
+     */
     private static final long ALIAS_CACHE_TTL_MILLIS = 5 * 60 * 1000L;
     private volatile Map<String, String> aliasToModelCache;
     private volatile long aliasCacheLoadedAt;
     private final Map<String, CachedDbClient> dbClientCache = new ConcurrentHashMap<>(); // db客户端缓存
 
     /**
-    * DB 提供者 客户端缓存项。
-    * @param client 客户端
-    * @param builtAt builtat
-    * @return 缓存db客户端的结果
-    */
+     * DB 提供者 客户端缓存项。
+     * @param client 客户端
+     * @param builtAt builtat
+     * @return 缓存db客户端的结果
+     */
     private record CachedDbClient(ChatClient client, long builtAt) {
     }
 
@@ -116,16 +116,16 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
             ChatSyncResponse response = configured.chatSyncWithResponse(promptOf(request));
             long end = System.currentTimeMillis();
             /**
-            * enrich延迟。
-            * @param response.getUsage( 响应.获取usage(
-            */
+             * enrich延迟。
+             * @param response.getUsage( 响应.获取usage(
+             */
             enrichLatency(response != null ? response.getUsage() : null, start, end, 0L);
             /**
-            * recordusage。
-            * @param configured configured
-            * @param "chat" "对话"
-            * @param response 响应
-            */
+             * recordusage。
+             * @param configured configured
+             * @param "chat" "对话"
+             * @param response 响应
+             */
             recordUsage(configured, "chat", response);
             return buildResult(response);
         } catch (Exception e) {
@@ -185,9 +185,9 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                             if (lastUsage[0] != null) {
                                 enrichLatency(lastUsage[0], start, System.currentTimeMillis(), firstTokenAt[0]);
                                 /**
-                                * recordusage。
-                                * @param lastUsage[0] 最后一个usage[0]
-                                */
+                                 * recordusage。
+                                 * @param lastUsage[0] 最后一个usage[0]
+                                 */
                                 recordUsage(lastUsage[0]);
                             }
                             String reply = fullResponse.toString();
@@ -274,14 +274,14 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     // ==================== 内部方法 ====================
 
     /**
-    * 解析对话 对话客户端。
-    *
-    * <p>优先按请求模型名从 DB 动态构建（支持每个提供商独立代理），
-    * DB 未命中时回退注册中心按模型/提供商/默认顺序查找。</p>
-    *
-    * @param request 对话请求
-    * @return 底层 对话客户端，找不到返回 空
-    */
+     * 解析对话 对话客户端。
+     *
+     * <p>优先按请求模型名从 DB 动态构建（支持每个提供商独立代理），
+     * DB 未命中时回退注册中心按模型/提供商/默认顺序查找。</p>
+     *
+     * @param request 对话请求
+     * @return 底层 对话客户端，找不到返回 空
+     */
     private ChatClient resolveChatClient(AiChatRequest request) {
         String model = resolveModelAlias(request.getModel());
         if (model != null && !model.equals(request.getModel())) {
@@ -316,19 +316,19 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     }
 
     /**
-    * 按模型名查询 DB 中启用的 提供者 配置。
-    *
-    * @param model 模型名称
-    * @return DB 中启用的 提供者，未命中返回 空
-    */
+     * 按模型名查询 DB 中启用的 提供者 配置。
+     *
+     * @param model 模型名称
+     * @return DB 中启用的 提供者，未命中返回 空
+     */
     /**
-    * 解析模型别名：若请求模型名命中 sys_ai_model.sys_ai_model_aliases 中的某个别名，
-    * 则返回其对应的主模型 code；否则原样返回。
-    *
-    * <p>映射表带 5 分钟 TTL 缓存，避免每次对话都全表扫描模型定义。</p>
-    * @param model 请求模型名（可为空）
-    * @return 主模型 code 或原模型名
-    */
+     * 解析模型别名：若请求模型名命中 sys_ai_model.sys_ai_model_aliases 中的某个别名，
+     * 则返回其对应的主模型 code；否则原样返回。
+     *
+     * <p>映射表带 5 分钟 TTL 缓存，避免每次对话都全表扫描模型定义。</p>
+     * @param model 请求模型名（可为空）
+     * @return 主模型 code 或原模型名
+     */
     private String resolveModelAlias(String model) {
         if (model == null || model.isBlank()) {
             return model;
@@ -339,9 +339,9 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     }
 
     /**
-    * 加载别名→主模型映射（带 TTL 缓存）。
-    * @return 只读映射，永不返回空
-    */
+     * 加载别名→主模型映射（带 TTL 缓存）。
+     * @return 只读映射，永不返回空
+     */
     private Map<String, String> loadAliasMap() {
         long now = System.currentTimeMillis();
         Map<String, String> cached = aliasToModelCache;
@@ -433,17 +433,17 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     }
 
     /**
-    * 从 DB 提供者 动态构建带代理的 对话客户端。
-    *
-    * <p>支持多 AppKey：聚合 provider 级凭证（{@code api_keys} 数组 / {@code apiKey}）
-    * 与其所有 connection 级凭证中的全部可用密钥。单密钥时直接构建普通客户端；
-    * 多密钥时每个密钥构建一个客户端并以 {@link AggregateChatClient}（failover 策略）
-    * 聚合，某密钥 401/429/额度耗尽时自动切换下一密钥。</p>
-    *
-    * @param provider DB 提供者 配置
-    * @param model    模型名称
-    * @return 底层 对话客户端，构建失败返回 空
-    */
+     * 从 DB 提供者 动态构建带代理的 对话客户端。
+     *
+     * <p>支持多 AppKey：聚合 provider 级凭证（{@code api_keys} 数组 / {@code apiKey}）
+     * 与其所有 connection 级凭证中的全部可用密钥。单密钥时直接构建普通客户端；
+     * 多密钥时每个密钥构建一个客户端并以 {@link AggregateChatClient}（failover 策略）
+     * 聚合，某密钥 401/429/额度耗尽时自动切换下一密钥。</p>
+     *
+     * @param provider DB 提供者 配置
+     * @param model    模型名称
+     * @return 底层 对话客户端，构建失败返回 空
+     */
     private ChatClient buildProviderChatClient(SysAiProvider provider, String model) {
         try {
             List<String> keys = collectAllApiKeys(provider);
@@ -507,13 +507,13 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     }
 
     /**
-    * 解析 提供者 的多 Key 负载均衡算法。
-    *
-    * <p>读 {@code extra.load_strategy}，缺省或非法时回退 {@code failover}（按序取第一个可用 key）。
-    * 可选值：{@code failover} / {@code round_robin} / {@code weighted} / {@code latency} / {@code cost} / {@code hybrid}。</p>
-    * @param provider 提供者
-    * @return resolve加载strategy的结果
-    */
+     * 解析 提供者 的多 Key 负载均衡算法。
+     *
+     * <p>读 {@code extra.load_strategy}，缺省或非法时回退 {@code failover}（按序取第一个可用 key）。
+     * 可选值：{@code failover} / {@code round_robin} / {@code weighted} / {@code latency} / {@code cost} / {@code hybrid}。</p>
+     * @param provider 提供者
+     * @return resolve加载strategy的结果
+     */
     private String resolveLoadStrategy(SysAiProvider provider) {
         String s = null;
         try {
@@ -534,12 +534,12 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     }
 
     /**
-    * 收集 提供者 全部可用 appKey（去重、保序）：
-    * 提供者 级凭证（{@code api_keys} 数组 + {@code apiKey} 标量）+ 各 connection 级凭证。
-    *
-    * @param provider DB 提供者
-    * @return 全部可用密钥列表（可能为空）
-    */
+     * 收集 提供者 全部可用 appKey（去重、保序）：
+     * 提供者 级凭证（{@code api_keys} 数组 + {@code apiKey} 标量）+ 各 connection 级凭证。
+     *
+     * @param provider DB 提供者
+     * @return 全部可用密钥列表（可能为空）
+     */
     private List<String> collectAllApiKeys(SysAiProvider provider) {
         LinkedHashSet<String> keys = new LinkedHashSet<>();
         for (String k : extractApiKeys(provider.getCredentials())) {
@@ -563,10 +563,10 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     }
 
     /**
-    * 从凭证中提取全部 API Key（兼容 {@code api_keys} 数组与 {@code apiKey} 键）。
-    * @param credentials 凭证
-    * @return extractapiKey的结果
-    */
+     * 从凭证中提取全部 API Key（兼容 {@code api_keys} 数组与 {@code apiKey} 键）。
+     * @param credentials 凭证
+     * @return extractapiKey的结果
+     */
     private static List<String> extractApiKeys(Map<String, Object> credentials) {
         if (credentials == null) {
             return new ArrayList<>(1);
@@ -588,12 +588,12 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     }
 
     /**
-    * 应用请求级参数（模型/系统提示词/温度/最大 令牌/历史/思考/搜索）到客户端。
-    *
-    * @param client  客户端
-    * @param request 对话请求
-    * @return 配置后的客户端
-    */
+     * 应用请求级参数（模型/系统提示词/温度/最大 令牌/历史/思考/搜索）到客户端。
+     *
+     * @param client  客户端
+     * @param request 对话请求
+     * @return 配置后的客户端
+     */
     private ChatClient configureClient(ChatClient client, AiChatRequest request) {
         ChatClient c = client;
         if (request.getModel() != null && !request.getModel().isBlank()) {
@@ -645,31 +645,31 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     }
 
     /**
-    * 提取用户本次输入文本。
-    *
-    * @param request 对话请求
-    * @return 用户输入（可为空字符串）
-    */
+     * 提取用户本次输入文本。
+     *
+     * @param request 对话请求
+     * @return 用户输入（可为空字符串）
+     */
     private static String promptOf(AiChatRequest request) {
         return request.getPrompt() != null ? request.getPrompt() : "";
     }
 
     /**
-    * recordusage。
-    * @param client 客户端
-    * @param callType call类型
-    * @param response 响应
-    */
+     * recordusage。
+     * @param client 客户端
+     * @param callType call类型
+     * @param response 响应
+     */
     private void recordUsage(ChatClient client, String callType, ChatSyncResponse response) {
         recordUsage(client, callType, response != null ? response.getUsage() : null);
     }
 
     /**
-    * recordusage。
-    * @param client 客户端
-    * @param callType call类型
-    * @param usage usage
-    */
+     * recordusage。
+     * @param client 客户端
+     * @param callType call类型
+     * @param usage usage
+     */
     private void recordUsage(ChatClient client, String callType, com.chua.common.support.ai.AiUsage usage) {
         if (usage == null) {
             return;
@@ -690,18 +690,18 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     }
 
     /**
-    * recordusage。
-    * @param usage usage
-    */
+     * recordusage。
+     * @param usage usage
+     */
     private void recordUsage(com.chua.common.support.ai.AiUsage usage) {
         recordUsage(usage, "chat_stream");
     }
 
     /**
-    * recordusage。
-    * @param usage usage
-    * @param callType call类型
-    */
+     * recordusage。
+     * @param usage usage
+     * @param callType call类型
+     */
     private void recordUsage(com.chua.common.support.ai.AiUsage usage, String callType) {
         if (usage == null) {
             return;
@@ -722,14 +722,14 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     }
 
     /**
-    * 回填调用时延（总耗时 / 首字时延）到 {@link com.chua.common.support.ai.AiUsage}，
-    * 使持久化的 sys_AI_usage 携带 第一个_令牌_延迟 / total_延迟。
-    *
-    * @param usage       待回填的用量（可为 空）
-    * @param start       调用开始时间戳（ms）
-    * @param end         调用结束时间戳（ms）
-    * @param firstTokenAt 首个内容 chunk 到达时间戳（ms）；0 表示未知（同步调用）
-    */
+     * 回填调用时延（总耗时 / 首字时延）到 {@link com.chua.common.support.ai.AiUsage}，
+     * 使持久化的 sys_AI_usage 携带 第一个_令牌_延迟 / total_延迟。
+     *
+     * @param usage       待回填的用量（可为 空）
+     * @param start       调用开始时间戳（ms）
+     * @param end         调用结束时间戳（ms）
+     * @param firstTokenAt 首个内容 chunk 到达时间戳（ms）；0 表示未知（同步调用）
+     */
     private void enrichLatency(com.chua.common.support.ai.AiUsage usage, long start, long end, long firstTokenAt) {
         if (usage == null) {
             return;
@@ -745,12 +745,12 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     }
 
     /**
-    * 获取（带缓存的）DB 提供者 对话客户端。
-    *
-    * @param provider DB 提供者
-    * @param model    模型名称
-    * @return 底层 对话客户端，构建失败返回 空
-    */
+     * 获取（带缓存的）DB 提供者 对话客户端。
+     *
+     * @param provider DB 提供者
+     * @param model    模型名称
+     * @return 底层 对话客户端，构建失败返回 空
+     */
     private ChatClient getCachedDbClient(SysAiProvider provider, String model) {
         String cacheKey = provider.getProviderId() + "::" + model;
         long now = System.currentTimeMillis();
@@ -766,10 +766,10 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     }
 
     /**
-    * 从 提供者 extra 中提取 {@code custom_headers}。
-    * @param extra extra
-    * @return extractextra头部的结果
-    */
+     * 从 提供者 extra 中提取 {@code custom_headers}。
+     * @param extra extra
+     * @return extractextra头部的结果
+     */
     @SuppressWarnings("unchecked")
     private static Map<String, String> extractExtraHeaders(Map<String, Object> extra) {
         if (extra == null) {
@@ -789,10 +789,10 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     }
 
     /**
-    * 构建结果。
-    * @param response 响应
-    * @return 构建结果的结果
-    */
+     * 构建结果。
+     * @param response 响应
+     * @return 构建结果的结果
+     */
     private Map<String, Object> buildResult(ChatSyncResponse response) {
         Map<String, Object> result = new LinkedHashMap<>(4);
         if (response.getUsage() != null) {
@@ -808,10 +808,10 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     }
 
     /**
-    * 构建错误结果。
-    * @param e e
-    * @return 构建错误结果的结果
-    */
+     * 构建错误结果。
+     * @param e e
+     * @return 构建错误结果的结果
+     */
     private Map<String, Object> buildErrorResult(Exception e) {
         Map<String, Object> result = new LinkedHashMap<>(4);
         result.put("text", "");

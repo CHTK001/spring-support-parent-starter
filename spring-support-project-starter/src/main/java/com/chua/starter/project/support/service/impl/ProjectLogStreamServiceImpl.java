@@ -78,8 +78,8 @@ public class ProjectLogStreamServiceImpl implements ProjectLogStreamService {
     private final ServerHostService serverHostService;
 
     /**
-    * 远程操作 SPI 注册中心（按系统类型路由，本类不关心是 SSH 还是 WinRM）
-    */
+     * 远程操作 SPI 注册中心（按系统类型路由，本类不关心是 SSH 还是 WinRM）
+     */
     private final HostRemoteProviderRegistry remoteRegistry;
 
     /** 实时推送（socket 广播；宿主未装配 socket 时内部降级为空操作） */
@@ -95,20 +95,20 @@ public class ProjectLogStreamServiceImpl implements ProjectLogStreamService {
     private ScheduledExecutorService ticker;
 
     /**
-    * 采集线程池（真正执行远程 tail；大小受 logStreamMaxStreams 约束）
-    */
+     * 采集线程池（真正执行远程 tail；大小受 logStreamMaxStreams 约束）
+     */
     private ExecutorService workers;
 
     /**
-    * 构造器注入
-    *
-    * @param projectMapper    项目映射器
-    * @param serverHostMapper 主机映射器
-    * @param serverHostService 主机服务（凭据解析）
-    * @param remoteRegistry   远程操作 SPI 注册中心
-    * @param pushService      实时推送
-    * @param projectProperties 模块配置
-    */
+     * 构造器注入
+     *
+     * @param projectMapper    项目映射器
+     * @param serverHostMapper 主机映射器
+     * @param serverHostService 主机服务（凭据解析）
+     * @param remoteRegistry   远程操作 SPI 注册中心
+     * @param pushService      实时推送
+     * @param projectProperties 模块配置
+     */
     public ProjectLogStreamServiceImpl(MsProjectMapper projectMapper,
                                        MsServerHostMapper serverHostMapper,
                                        ServerHostService serverHostService,
@@ -124,8 +124,8 @@ public class ProjectLogStreamServiceImpl implements ProjectLogStreamService {
     }
 
     /**
-    * 启动采集调度
-    */
+     * 启动采集调度
+     */
     @PostConstruct
     public void start() {
         int maxStreams = Math.max(1, projectProperties.getLogStreamMaxStreams());
@@ -139,8 +139,8 @@ public class ProjectLogStreamServiceImpl implements ProjectLogStreamService {
     }
 
     /**
-    * 停止采集调度并释放线程
-    */
+     * 停止采集调度并释放线程
+     */
     @PreDestroy
     public void stop() {
         if (ticker != null) {
@@ -266,8 +266,8 @@ public class ProjectLogStreamServiceImpl implements ProjectLogStreamService {
     }
 
     /**
-    * 调度节拍：剔除超时观察者 → 挑出到期的流提交采集
-    */
+     * 调度节拍：剔除超时观察者 → 挑出到期的流提交采集
+     */
     private void tick() {
         try {
             long now = System.currentTimeMillis();
@@ -290,11 +290,11 @@ public class ProjectLogStreamServiceImpl implements ProjectLogStreamService {
     }
 
     /**
-    * 提交一次采集任务（inFlight 单飞，同一流不允许并发采集）
-    *
-    * @param stream    目标流
-    * @param immediate 是否无视退避立即执行
-    */
+     * 提交一次采集任务（inFlight 单飞，同一流不允许并发采集）
+     *
+     * @param stream    目标流
+     * @param immediate 是否无视退避立即执行
+     */
     private void scheduleFetch(LogStream stream, boolean immediate) {
         if (!stream.inFlight.compareAndSet(false, true)) {
             return;
@@ -314,10 +314,10 @@ public class ProjectLogStreamServiceImpl implements ProjectLogStreamService {
     }
 
     /**
-    * 执行一次增量采集并推送
-    *
-    * @param stream 目标流
-    */
+     * 执行一次增量采集并推送
+     *
+     * @param stream 目标流
+     */
     private void fetch(LogStream stream) {
         try {
             ReturnResult<StreamContext> resolved = resolveContext(stream.projectId, stream.hostId);
@@ -349,15 +349,15 @@ public class ProjectLogStreamServiceImpl implements ProjectLogStreamService {
     }
 
     /**
-    * 采集失败：累计失败次数、按 2^n 退避，并把原因推给观察者
-    * <p>
-    * 推错误帧而不是静默：前端要能区分「确实没有日志」与「连不上/配置错」，
-    * 否则用户只会看到一个永远空着的面板。
-    * </p>
-    *
-    * @param stream  目标流
-    * @param message 错误原因
-    */
+     * 采集失败：累计失败次数、按 2^n 退避，并把原因推给观察者
+     * <p>
+     * 推错误帧而不是静默：前端要能区分「确实没有日志」与「连不上/配置错」，
+     * 否则用户只会看到一个永远空着的面板。
+     * </p>
+     *
+     * @param stream  目标流
+     * @param message 错误原因
+     */
     private void onFailure(LogStream stream, String message) {
         stream.failCount++;
         long factor = 1L << Math.min(stream.failCount, 5);
@@ -371,11 +371,11 @@ public class ProjectLogStreamServiceImpl implements ProjectLogStreamService {
     }
 
     /**
-    * 剔除长时间未续订的观察者
-    *
-    * @param stream 目标流
-    * @param now    当前毫秒
-    */
+     * 剔除长时间未续订的观察者
+     *
+     * @param stream 目标流
+     * @param now    当前毫秒
+     */
     private void pruneSubscribers(LogStream stream, long now) {
         // 下限取 3 个采集周期：避免用户把 idle 配得比 interval 还小导致刚订阅就被踢
         long idle = Math.max(projectProperties.getLogStreamIdleMillis(), intervalMillis() * 3);
@@ -383,12 +383,12 @@ public class ProjectLogStreamServiceImpl implements ProjectLogStreamService {
     }
 
     /**
-    * 解析项目 / 主机 / 凭据 / 日志文件全路径
-    *
-    * @param projectId 项目标识
-    * @param hostId    主机标识
-    * @return 上下文；配置缺失或主机不可用时返回错误
-    */
+     * 解析项目 / 主机 / 凭据 / 日志文件全路径
+     *
+     * @param projectId 项目标识
+     * @param hostId    主机标识
+     * @return 上下文；配置缺失或主机不可用时返回错误
+     */
     private ReturnResult<StreamContext> resolveContext(Long projectId, Long hostId) {
         MsProject project = projectMapper.selectById(projectId);
         if (project == null) {
@@ -412,19 +412,19 @@ public class ProjectLogStreamServiceImpl implements ProjectLogStreamService {
     }
 
     /**
-    * 采集间隔（毫秒），带下限保护
-    *
-    * @return 毫秒
-    */
+     * 采集间隔（毫秒），带下限保护
+     *
+     * @return 毫秒
+     */
     private long intervalMillis() {
         return Math.max(projectProperties.getLogStreamIntervalMillis(), 200);
     }
 
     /**
-    * 首帧拉取行数，带上限保护
-    *
-    * @return 行数
-    */
+     * 首帧拉取行数，带上限保护
+     *
+     * @return 行数
+     */
     private int tailLines() {
         int lines = projectProperties.getLogStreamTailLines();
         if (lines <= 0) {
@@ -434,33 +434,33 @@ public class ProjectLogStreamServiceImpl implements ProjectLogStreamService {
     }
 
     /**
-    * 流键
-    *
-    * @param projectId 项目标识
-    * @param hostId    主机标识
-    * @return {@code projectId:hostId}
-    */
+     * 流键
+     *
+     * @param projectId 项目标识
+     * @param hostId    主机标识
+     * @return {@code projectId:hostId}
+     */
     private String keyOf(Long projectId, Long hostId) {
         return projectId + ":" + hostId;
     }
 
     /**
-    * 空串判断
-    *
-    * @param value 字符串
-    * @return 是否为空
-    */
+     * 空串判断
+     *
+     * @param value 字符串
+     * @return 是否为空
+     */
     private boolean isBlank(String value) {
         return value == null || value.isBlank();
     }
 
     /**
-    * 构造守护线程
-    *
-    * @param runnable 任务
-    * @param name     线程名
-    * @return 线程
-    */
+     * 构造守护线程
+     *
+     * @param runnable 任务
+     * @param name     线程名
+     * @return 线程
+     */
     private Thread daemonOf(Runnable runnable, String name) {
         Thread thread = new Thread(runnable, name);
         thread.setDaemon(true);
@@ -468,8 +468,8 @@ public class ProjectLogStreamServiceImpl implements ProjectLogStreamService {
     }
 
     /**
-    * 一条共享采集流
-    */
+     * 一条共享采集流
+     */
     private static final class LogStream {
 
         /** 项目标识 */
@@ -510,13 +510,13 @@ public class ProjectLogStreamServiceImpl implements ProjectLogStreamService {
     }
 
     /**
-        * 解析后的采集上下文
-        *
-        * @param host       主机
-        * @param credential 凭据
-        * @param provider   该主机的远程操作实现
-        * @param logFile    日志文件绝对路径
-        */
+     * 解析后的采集上下文
+     *
+     * @param host       主机
+     * @param credential 凭据
+     * @param provider   该主机的远程操作实现
+     * @param logFile    日志文件绝对路径
+     */
     private record StreamContext(MsServerHost host, SshCredential credential,
                                  HostRemoteProvider provider, String logFile) {
     }

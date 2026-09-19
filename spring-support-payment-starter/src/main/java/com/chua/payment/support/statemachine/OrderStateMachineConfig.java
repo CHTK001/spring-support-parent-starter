@@ -13,10 +13,10 @@ import org.springframework.statemachine.config.builders.StateMachineTransitionCo
 import java.util.EnumSet;
 
 /**
-* 订单状态机配置类
-*
-* @since 2026-03-18
-* @author CH
+ * 订单状态机配置类
+ *
+ * @since 2026-03-18
+ * @author CH
  */
 @Slf4j
 @Configuration
@@ -24,8 +24,8 @@ import java.util.EnumSet;
 public class OrderStateMachineConfig extends EnumStateMachineConfigurerAdapter<OrderState, OrderEvent> {
 
     /**
-    * 配置状态
-    */
+     * 配置状态
+     */
     @Override
     public void configure(StateMachineStateConfigurer<OrderState, OrderEvent> states) throws Exception {
         states
@@ -37,8 +37,8 @@ public class OrderStateMachineConfig extends EnumStateMachineConfigurerAdapter<O
     }
 
     /**
-    * 配置状态转换
-    */
+     * 配置状态转换
+     */
     @Override
     public void configure(StateMachineTransitionConfigurer<OrderState, OrderEvent> transitions) throws Exception {
         transitions

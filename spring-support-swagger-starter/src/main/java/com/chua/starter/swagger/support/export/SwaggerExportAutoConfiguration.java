@@ -6,12 +6,12 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Configuration;
 
 /**
-* Swagger 导出自动配置。
-*
-* <p>启用 {@link SwaggerExportProperties} + {@link SwaggerExportRunner}。</p>
-*
-* @since 4.0.0.42
-* @author CH
+ * Swagger 导出自动配置。
+ *
+ * <p>启用 {@link SwaggerExportProperties} + {@link SwaggerExportRunner}。</p>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Configuration(proxyBeanMethods = false)
 @ConditionalOnWebApplication

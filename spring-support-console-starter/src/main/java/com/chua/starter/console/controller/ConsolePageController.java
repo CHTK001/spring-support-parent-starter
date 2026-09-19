@@ -17,14 +17,14 @@ import java.util.List;
 import java.util.Map;
 
 /**
-* 管理控制台 FTL 页面控制器。
-*
-* <p>页面与调整接口统一以 {@link #CONSOLE_PERMISSION} 权限码鉴权（oauth-client
-* {@code @Permission} + PermissionInterceptor）；页面临时调整写入 SQLite 覆盖库，
-* 经 {@code ConsoleOverrideProvider} 接入 通用 拦截器判定即时生效。</p>
-*
-* @author CH
-* @since 2026/09/04
+ * 管理控制台 FTL 页面控制器。
+ *
+ * <p>页面与调整接口统一以 {@link #CONSOLE_PERMISSION} 权限码鉴权（oauth-client
+ * {@code @Permission} + PermissionInterceptor）；页面临时调整写入 SQLite 覆盖库，
+ * 经 {@code ConsoleOverrideProvider} 接入 通用 拦截器判定即时生效。</p>
+ *
+ * @author CH
+ * @since 2026/09/04
  */
 @Controller
 @RequestMapping("/console")
@@ -49,9 +49,9 @@ public class ConsolePageController {
     @GetMapping("/")
     @Permission(CONSOLE_PERMISSION)
     /**
-    * 索引。
-    * @return 索引的结果
-    */
+     * 索引。
+     * @return 索引的结果
+     */
     public String index() {
         return "redirect:/console/features";
     }
@@ -59,11 +59,11 @@ public class ConsolePageController {
     // ==================== 页面 ====================
 
     /**
-    * @api特征 功能开关管理页
-    *
-    * @param model 模型
-    * @return 特征的结果
-    */
+     * @api特征 功能开关管理页
+     *
+     * @param model 模型
+     * @return 特征的结果
+     */
     @GetMapping("/features")
     @Permission(CONSOLE_PERMISSION)
     public String features(Model model) {
@@ -92,11 +92,11 @@ public class ConsolePageController {
     }
 
     /**
-    * @apigray 灰度规则管理页
-    *
-    * @param model 模型
-    * @return grays的结果
-    */
+     * @apigray 灰度规则管理页
+     *
+     * @param model 模型
+     * @return grays的结果
+     */
     @GetMapping("/grays")
     @Permission(CONSOLE_PERMISSION)
     public String grays(Model model) {
@@ -127,11 +127,11 @@ public class ConsolePageController {
     }
 
     /**
-    * 通用键值运行设置管理页
-    *
-    * @param model 模型
-    * @return kv的结果
-    */
+     * 通用键值运行设置管理页
+     *
+     * @param model 模型
+     * @return kv的结果
+     */
     @GetMapping("/kv")
     @Permission(CONSOLE_PERMISSION)
     public String kv(Model model) {
@@ -194,12 +194,12 @@ public class ConsolePageController {
     }
 
     /**
-    * 写入通用键值
-    *
-    * @param key Key
-    * @param value 值
-    * @return upsertKv的结果
-    */
+     * 写入通用键值
+     *
+     * @param key Key
+     * @param value 值
+     * @return upsertKv的结果
+     */
     @PostMapping("/api/kv")
     @Permission(CONSOLE_PERMISSION)
     public String upsertKv(@RequestParam String key, @RequestParam String value) {
@@ -208,11 +208,11 @@ public class ConsolePageController {
     }
 
     /**
-    * 删除通用键值
-    *
-    * @param key Key
-    * @return 删除kv的结果
-    */
+     * 删除通用键值
+     *
+     * @param key Key
+     * @return 删除kv的结果
+     */
     @PostMapping("/api/kv/delete")
     @Permission(CONSOLE_PERMISSION)
     public String deleteKv(@RequestParam String key) {
@@ -223,10 +223,10 @@ public class ConsolePageController {
     // ==================== 工具 ====================
 
     /**
-    * 连接。
-    * @param arr arr
-    * @return 连接的结果
-    */
+     * 连接。
+     * @param arr arr
+     * @return 连接的结果
+     */
     private static String join(String[] arr) {
         if (arr == null || arr.length == 0) {
             return "";
@@ -235,10 +235,10 @@ public class ConsolePageController {
     }
 
     /**
-    * 分割。
-    * @param s s
-    * @return 分割的结果
-    */
+     * 分割。
+     * @param s s
+     * @return 分割的结果
+     */
     private static String[] split(String s) {
         if (s == null || s.trim().isEmpty()) {
             return new String[0];

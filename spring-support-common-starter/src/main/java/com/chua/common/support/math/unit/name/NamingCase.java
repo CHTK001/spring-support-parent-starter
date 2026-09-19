@@ -3,26 +3,26 @@ package com.chua.common.support.math.unit.name;
 import com.chua.common.support.lang.bean.NamingStyle;
 
 /**
-* 命名格式转换工具类，提供驼峰命名等多种命名格式转换功能
-*
-* @author CH
-* @since 4.0.0
-  */
+ * 命名格式转换工具类，提供驼峰命名等多种命名格式转换功能
+ *
+ * @author CH
+ * @since 4.0.0
+ */
 public class NamingCase {
 
     /**
-    * 私有构造函数，防止实例化
-    */
+     * 私有构造函数，防止实例化
+     */
     private NamingCase() {
     }
 
     /**
-    * 将带分隔符的命名（如下划线、短横线、空格）转换为驼峰命名
-    * <p>示例：toCamelCase("hello_world") 返回 "helloWorld"。</p>
-    *
-    * @param name 原始名称
-    * @return 驼峰格式的名称
-    */
+     * 将带分隔符的命名（如下划线、短横线、空格）转换为驼峰命名
+     * <p>示例：toCamelCase("hello_world") 返回 "helloWorld"。</p>
+     *
+     * @param name 原始名称
+     * @return 驼峰格式的名称
+     */
     public static String toCamelCase(String name) {
         if (name == null || name.isEmpty()) {
             return name;
@@ -36,12 +36,12 @@ public class NamingCase {
     }
 
     /**
-    * 将字符串的首字母转换为大写
-    * <p>示例：toFirstUpperCase("hello") 返回 "Hello"。</p>
-    *
-    * @param name 原始字符串
-    * @return 首字母大写后的字符串
-    */
+     * 将字符串的首字母转换为大写
+     * <p>示例：toFirstUpperCase("hello") 返回 "Hello"。</p>
+     *
+     * @param name 原始字符串
+     * @return 首字母大写后的字符串
+     */
     public static String toFirstUpperCase(String name) {
         if (name == null || name.isEmpty()) {
             return name;

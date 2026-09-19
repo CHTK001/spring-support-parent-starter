@@ -7,10 +7,10 @@ import lombok.NoArgsConstructor;
 import java.util.Map;
 
 /**
-* ak/sk
-*
-* @author CH
-* @since 4.0.0
+ * ak/sk
+ *
+ * @author CH
+ * @since 4.0.0
  */
 @Data
 @NoArgsConstructor
@@ -18,17 +18,17 @@ import java.util.Map;
 public class AccessSecret {
 
     /**
-    * ak
-    */
+     * ak
+     */
     private String accessKey;
 
     /**
-    * sk
-    */
+     * sk
+     */
     private String secretKey;
     /**
-    * Key
-    */
+     * Key
+     */
     private String uKey;
 
     /** 密码 */

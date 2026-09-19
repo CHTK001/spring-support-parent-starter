@@ -29,15 +29,15 @@ import java.util.Map;
 public class GlobalModelController {
 
     /**
-    * 全局模型服务
-    */
+     * 全局模型服务
+     */
     private final GlobalModelService globalModelService;
 
     /**
-    * 获取配置摘要。
-    *
-    * @return 分组 → 配置摘要
-    */
+     * 获取配置摘要。
+     *
+     * @return 分组 → 配置摘要
+     */
     @Operation(summary = "获取配置摘要", description = "获取所有默认模型分组的配置摘要")
     @GetMapping("/summary")
     public ReturnResult<Map<String, Map<String, String>>> summary() {
@@ -45,12 +45,12 @@ public class GlobalModelController {
     }
 
     /**
-    * 获取配置值。
-    *
-    * @param group 分组
-    * @param field 字段名
-    * @return 配置值
-    */
+     * 获取配置值。
+     *
+     * @param group 分组
+     * @param field 字段名
+     * @return 配置值
+     */
     @Operation(summary = "获取配置值", description = "获取指定分组指定字段的配置值")
     @GetMapping("/config")
     public ReturnResult<String> getConfig(
@@ -61,13 +61,13 @@ public class GlobalModelController {
     }
 
     /**
-    * 获取布尔类型配置值。
-    *
-    * @param group 分组
-    * @param field 字段名
-    * @param defaultValue 默认值
-    * @return 配置值
-    */
+     * 获取布尔类型配置值。
+     *
+     * @param group 分组
+     * @param field 字段名
+     * @param defaultValue 默认值
+     * @return 配置值
+     */
     @Operation(summary = "获取布尔类型配置值", description = "获取指定分组指定字段的布尔类型配置值")
     @GetMapping("/config/bool")
     public ReturnResult<Boolean> getBoolConfig(
@@ -79,13 +79,13 @@ public class GlobalModelController {
     }
 
     /**
-    * 获取整数类型配置值。
-    *
-    * @param group 分组
-    * @param field 字段名
-    * @param defaultValue 默认值
-    * @return 配置值
-    */
+     * 获取整数类型配置值。
+     *
+     * @param group 分组
+     * @param field 字段名
+     * @param defaultValue 默认值
+     * @return 配置值
+     */
     @Operation(summary = "获取整数类型配置值", description = "获取指定分组指定字段的整数类型配置值")
     @GetMapping("/config/int")
     public ReturnResult<Integer> getIntConfig(

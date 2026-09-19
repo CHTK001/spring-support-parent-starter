@@ -5,10 +5,10 @@ import com.chua.common.support.ai.chat.ChatClient;
 import com.chua.common.support.utils.StringUtils;
 
 /**
-* 通用 对话客户端 SPI 解析器。
-*
-* @since 2026/04/03
-* @author CH
+ * 通用 对话客户端 SPI 解析器。
+ *
+ * @since 2026/04/03
+ * @author CH
  */
 final class CommonChatClientFactoryResolver {
 
@@ -33,12 +33,12 @@ final class CommonChatClientFactoryResolver {
     }
 
     /**
-    * 创建Raw
-    *
-    * @param factoryName 工厂名称
-    * @param setting setting
-    * @return 创建raw的结果
-    */
+     * 创建Raw
+     *
+     * @param factoryName 工厂名称
+     * @param setting setting
+     * @return 创建raw的结果
+     */
     private static com.chua.common.support.ai.chat.ChatClient createRaw(String factoryName, ChatClientSetting setting) {
         String provider = setting != null && StringUtils.isNotBlank(setting.getProvider())
                 ? setting.getProvider()

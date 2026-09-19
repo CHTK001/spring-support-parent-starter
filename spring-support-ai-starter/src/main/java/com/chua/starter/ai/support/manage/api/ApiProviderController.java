@@ -46,17 +46,17 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
-* 前端 提供者 / 模型 / 协议管理控制器（对接 nomicore 契约）。
-*
-* <p>替代原 Rust 后端的厂商管理能力，提供 providers、provider-models、provider 连接、
-* 托管免费模型服务以及模型协议清单五类纯 Spring 接口。数据通过 MyBatis-Plus 持久化到
-* {@code sys_nomifun_provider} / {@code sys_nomifun_provider_model} /
-* {@code sys_nomifun_provider_connection} 三张表。</p>
-*
-* <p>凭证字段（credentials）写入后不回显，响应仅以 {@code has_credentials} 布尔标识是否存在。</p>
-*
-* @since 4.0.0.42
-* @author CH
+ * 前端 提供者 / 模型 / 协议管理控制器（对接 nomicore 契约）。
+ *
+ * <p>替代原 Rust 后端的厂商管理能力，提供 providers、provider-models、provider 连接、
+ * 托管免费模型服务以及模型协议清单五类纯 Spring 接口。数据通过 MyBatis-Plus 持久化到
+ * {@code sys_nomifun_provider} / {@code sys_nomifun_provider_model} /
+ * {@code sys_nomifun_provider_connection} 三张表。</p>
+ *
+ * <p>凭证字段（credentials）写入后不回显，响应仅以 {@code has_credentials} 布尔标识是否存在。</p>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @ApiReturnFormatIgnore
 @RestController
@@ -66,67 +66,67 @@ import java.util.stream.Collectors;
 public class ApiProviderController {
 
     /**
-    * 提供商 映射器
-    */
+     * 提供商 映射器
+     */
     private final SysAiProviderMapper providerMapper;
 
     /**
-    * 提供商模型 映射器
-    */
+     * 提供商模型 映射器
+     */
     private final SysAiProviderModelMapper modelMapper;
 
     /**
-    * 提供商连接 映射器
-    */
+     * 提供商连接 映射器
+     */
     private final SysAiProviderConnectionMapper connectionMapper;
 
     /**
-    * 模型价格/指标快照服务（读取 Redis 缓存，含价格/延迟/速度/智能等指标）
-    */
+     * 模型价格/指标快照服务（读取 Redis 缓存，含价格/延迟/速度/智能等指标）
+     */
     private final ModelMetricsSnapshotService metricsSnapshotService;
 
     /**
-    * Agent 模型注册中心（动态注入 Agent 虚拟 提供者）
-    */
+     * Agent 模型注册中心（动态注入 Agent 虚拟 提供者）
+     */
     private final com.chua.starter.ai.support.registry.ChatClientRegistry chatClientRegistry;
 
     /**
-    * 拉取模型列表使用的 HTTP 客户端（连接池复用）
-    */
+     * 拉取模型列表使用的 HTTP 客户端（连接池复用）
+     */
     private final HttpClient upstreamHttpClient = HttpClient.newBuilder()
             .followRedirects(HttpClient.Redirect.NORMAL)
             .connectTimeout(Duration.ofSeconds(10))
             .build();
 
     /**
-    * 上游模型列表接口超时时间（秒）
-    */
+     * 上游模型列表接口超时时间（秒）
+     */
     private static final Duration UPSTREAM_TIMEOUT = Duration.ofSeconds(15);
 
     /**
-    * uuidv7 格式正则：xxxxxxxx-xxxx-7xxx-xxxx-xxxxxxxxxxxx
-    */
+     * uuidv7 格式正则：xxxxxxxx-xxxx-7xxx-xxxx-xxxxxxxxxxxx
+     */
     private static final java.util.regex.Pattern UUID_V7_PATTERN = 
         java.util.regex.Pattern.compile("^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$");
 
     /**
-    * 指标索引构建时间戳（毫秒）
-    */
+     * 指标索引构建时间戳（毫秒）
+     */
     private volatile long metricsIndexLoadedAt = 0;
 
     /**
-    * 指标索引（提供者标识::模型 → 快照行），供查询接口从 Redis 缓存组装指标
-    */
+     * 指标索引（提供者标识::模型 → 快照行），供查询接口从 Redis 缓存组装指标
+     */
     private volatile Map<String, Map<String, Object>> metricsIndex = Map.of();
 
     /**
-    * 指标索引 TTL（毫秒）：30 秒
-    */
+     * 指标索引 TTL（毫秒）：30 秒
+     */
     private static final long METRICS_INDEX_TTL_MILLIS = 30_000;
 
     /**
-    * 需要合并进模型行 指标 的快照指标键。
-    */
+     * 需要合并进模型行 指标 的快照指标键。
+     */
     private static final String[] METRIC_KEYS = {
             "price_input_per_musd", "price_output_per_musd",
             "price_cache_hit_per_musd", "price_cache_write_per_musd",
@@ -138,14 +138,14 @@ public class ApiProviderController {
  // ==================== 提供者 ====================
 
     /**
-    * 获取 提供者 凭证明文（仅限本地可信客户端调用）。
-    *
-    * @param providerId 提供者 标识
-    * @return 凭证 映射（含 api_Key 明文）
-    * @param @PathVariable("provider_id" @路径变量("提供者_标识"
-    * @param @PathVariable("provider_id" @路径变量("提供者_标识"
-    * @param @PathVariable("provider_id" @PathVariable("provider_id"
-    */
+     * 获取 提供者 凭证明文（仅限本地可信客户端调用）。
+     *
+     * @param providerId 提供者 标识
+     * @return 凭证 映射（含 api_Key 明文）
+     * @param @PathVariable("provider_id" @路径变量("提供者_标识"
+     * @param @PathVariable("provider_id" @路径变量("提供者_标识"
+     * @param @PathVariable("provider_id" @PathVariable("provider_id"
+     */
     @GetMapping("/providers/{provider_id}/credentials")
     public ApiResult<Map<String, Object>> getProviderCredentials(@PathVariable("provider_id") String providerId) {
         SysAiProvider entity = requireProvider(providerId);
@@ -157,10 +157,10 @@ public class ApiProviderController {
     }
 
     /**
-    * 列举全部 提供者（按 排序_订单 升序）。
-    *
-    * @return ProviderResponse 列表
-    */
+     * 列举全部 提供者（按 排序_订单 升序）。
+     *
+     * @return ProviderResponse 列表
+     */
     @GetMapping("/providers")
     public ApiResult<List<Map<String, Object>>> listProviders() {
         List<SysAiProvider> providers = providerMapper.selectList(
@@ -190,14 +190,14 @@ public class ApiProviderController {
     }
 
     /**
-    * 获取单个 提供者 详情。
-    *
-    * @param providerId 提供者 标识
-    * @return ProviderResponse
-    * @param @PathVariable("provider_id" @路径变量("提供者_标识"
-    * @param @PathVariable("provider_id" @路径变量("提供者_标识"
-    * @param @PathVariable("provider_id" @PathVariable("provider_id"
-    */
+     * 获取单个 提供者 详情。
+     *
+     * @param providerId 提供者 标识
+     * @return ProviderResponse
+     * @param @PathVariable("provider_id" @路径变量("提供者_标识"
+     * @param @PathVariable("provider_id" @路径变量("提供者_标识"
+     * @param @PathVariable("provider_id" @PathVariable("provider_id"
+     */
     @GetMapping("/providers/{provider_id}")
     public ApiResult<Map<String, Object>> getProvider(@PathVariable("provider_id") String providerId) {
         SysAiProvider entity = requireProvider(providerId);
@@ -211,11 +211,11 @@ public class ApiProviderController {
     }
 
     /**
-    * 创建 提供者（原子包含 initial_模型 与可选 connections）。
-    *
-    * @param body 创建请求
-    * @return 创建后的 提供者响应
-    */
+     * 创建 提供者（原子包含 initial_模型 与可选 connections）。
+     *
+     * @param body 创建请求
+     * @return 创建后的 提供者响应
+     */
     @PostMapping("/providers")
     @Transactional
     public ApiResult<Map<String, Object>> createProvider(@RequestBody Map<String, Object> body) {
@@ -270,13 +270,13 @@ public class ApiProviderController {
     }
 
     /**
-    * 更新 提供者（凭证缺省时保留既有凭证）。
-    *
-    * @param providerId 提供者 标识
-    * @param body       更新请求
-    * @return 更新后的 提供者响应
-    * @param @PathVariable("provider_id" @路径变量("提供者_标识"
-    */
+     * 更新 提供者（凭证缺省时保留既有凭证）。
+     *
+     * @param providerId 提供者 标识
+     * @param body       更新请求
+     * @return 更新后的 提供者响应
+     * @param @PathVariable("provider_id" @路径变量("提供者_标识"
+     */
     @PutMapping("/providers/{provider_id}")
     @Transactional
     public ApiResult<Map<String, Object>> updateProvider(@PathVariable("provider_id") String providerId,
@@ -325,14 +325,14 @@ public class ApiProviderController {
     }
 
     /**
-    * 删除 提供者（级联删除模型和连接）。
-    *
-    * @param providerId 提供者 标识
-    * @return 成功
-    * @param @PathVariable("provider_id" @路径变量("提供者_标识"
-    * @param @PathVariable("provider_id" @路径变量("提供者_标识"
-    * @param @PathVariable("provider_id" @PathVariable("provider_id"
-    */
+     * 删除 提供者（级联删除模型和连接）。
+     *
+     * @param providerId 提供者 标识
+     * @return 成功
+     * @param @PathVariable("provider_id" @路径变量("提供者_标识"
+     * @param @PathVariable("provider_id" @路径变量("提供者_标识"
+     * @param @PathVariable("provider_id" @PathVariable("provider_id"
+     */
     @DeleteMapping("/providers/{provider_id}")
     @Transactional
     public ApiResult<Void> deleteProvider(@PathVariable("provider_id") String providerId) {
@@ -346,13 +346,13 @@ public class ApiProviderController {
     }
 
     /**
-    * 克隆 提供者（连同其模型能力与连接一并复制）。
-    *
-    * @param providerId 提供者 标识
-    * @param body       可选 { 名称 }
-    * @return 克隆后的 提供者响应
-    * @param @PathVariable("provider_id" @路径变量("提供者_标识"
-    */
+     * 克隆 提供者（连同其模型能力与连接一并复制）。
+     *
+     * @param providerId 提供者 标识
+     * @param body       可选 { 名称 }
+     * @return 克隆后的 提供者响应
+     * @param @PathVariable("provider_id" @路径变量("提供者_标识"
+     */
     @PostMapping("/providers/{provider_id}/clone")
     @Transactional
     public ApiResult<Map<String, Object>> cloneProvider(@PathVariable("provider_id") String providerId,
@@ -428,16 +428,16 @@ public class ApiProviderController {
     }
 
     /**
-    * 拉取 提供者 远端模型清单（需 提供者 已存在）。
-    *
-    * <p>使用 Provider 持久化的 base_url 与凭证真实调用上游 {@code GET {base_url}/models}
-    * 接口，返回实时模型目录；不使用任何写死的兜底数据。</p>
-    *
-    * @param providerId 提供者 标识
-    * @param body       可选 { 尝试_fix }
-    * @return FetchModelsResponse
-    * @param @PathVariable("provider_id" @路径变量("提供者_标识"
-    */
+     * 拉取 提供者 远端模型清单（需 提供者 已存在）。
+     *
+     * <p>使用 Provider 持久化的 base_url 与凭证真实调用上游 {@code GET {base_url}/models}
+     * 接口，返回实时模型目录；不使用任何写死的兜底数据。</p>
+     *
+     * @param providerId 提供者 标识
+     * @param body       可选 { 尝试_fix }
+     * @return FetchModelsResponse
+     * @param @PathVariable("provider_id" @路径变量("提供者_标识"
+     */
     @PostMapping("/providers/{provider_id}/models")
     public ApiResult<Map<String, Object>> fetchProviderModels(@PathVariable("provider_id") String providerId,
                                                               @RequestBody(required = false) Map<String, Object> body) {
@@ -448,15 +448,15 @@ public class ApiProviderController {
     }
 
     /**
-    * 从提供商远程获取模型列表（GET接口，兼容前端调用）。
-    *
-    * <p>前端guada版本调用的是 GET /providers/{id}/remote_models，
-    * 这里提供兼容的GET接口，内部调用同样的逻辑，
-    * 并将返回格式转换成前端期望的 items[].modelName 格式。</p>
-    *
-    * @param providerId 提供者 标识
-    * @return FetchModelsResponse
-    */
+     * 从提供商远程获取模型列表（GET接口，兼容前端调用）。
+     *
+     * <p>前端guada版本调用的是 GET /providers/{id}/remote_models，
+     * 这里提供兼容的GET接口，内部调用同样的逻辑，
+     * 并将返回格式转换成前端期望的 items[].modelName 格式。</p>
+     *
+     * @param providerId 提供者 标识
+     * @return FetchModelsResponse
+     */
     @GetMapping("/providers/{provider_id}/remote_models")
     public ApiResult<Map<String, Object>> fetchRemoteModels(@PathVariable("provider_id") String providerId) {
         SysAiProvider entity = requireProvider(providerId);
@@ -478,14 +478,14 @@ public class ApiProviderController {
     }
 
     /**
-    * 匿名预拉取模型清单（创建前预览，不需要 提供者 行）。
-    *
-    * <p>直接使用请求体中的 base_url 与凭证真实调用上游 {@code GET {base_url}/models}
-    * 接口，用于「添加模型」弹窗在下拉框中实时预览供应商可用模型。</p>
-    *
-    * @param body 获取模型anonymous请求
-    * @return FetchModelsResponse
-    */
+     * 匿名预拉取模型清单（创建前预览，不需要 提供者 行）。
+     *
+     * <p>直接使用请求体中的 base_url 与凭证真实调用上游 {@code GET {base_url}/models}
+     * 接口，用于「添加模型」弹窗在下拉框中实时预览供应商可用模型。</p>
+     *
+     * @param body 获取模型anonymous请求
+     * @return FetchModelsResponse
+     */
     @PostMapping("/providers/fetch-models")
     public ApiResult<Map<String, Object>> fetchModelsAnonymous(@RequestBody Map<String, Object> body) {
         String platform = requireStr(body, "platform");
@@ -503,19 +503,19 @@ public class ApiProviderController {
     }
 
     /**
-    * 逐个测试 提供者 凭证中的每个 API Key（多 Key 有效标记）。
-    *
-    * <p>对 {@code credentials.api_keys} 中的每个 key 单独调用上游
-    * {@code GET {base_url}/models}，返回每个 key 的连通性结果
-    * （{@code ok} / {@code error}），供前端标记「哪个 Key 有效、哪个无效」。
-    * 只读，不修改数据库。</p>
-    *
-    * @param providerId 提供者 标识
-    * @return 每个 Key 的测试结果列表 + 汇总
-    * @param @PathVariable("provider_id" @路径变量("提供者_标识"
-    * @param @PathVariable("provider_id" @路径变量("提供者_标识"
-    * @param @PathVariable("provider_id" @PathVariable("provider_id"
-    */
+     * 逐个测试 提供者 凭证中的每个 API Key（多 Key 有效标记）。
+     *
+     * <p>对 {@code credentials.api_keys} 中的每个 key 单独调用上游
+     * {@code GET {base_url}/models}，返回每个 key 的连通性结果
+     * （{@code ok} / {@code error}），供前端标记「哪个 Key 有效、哪个无效」。
+     * 只读，不修改数据库。</p>
+     *
+     * @param providerId 提供者 标识
+     * @return 每个 Key 的测试结果列表 + 汇总
+     * @param @PathVariable("provider_id" @路径变量("提供者_标识"
+     * @param @PathVariable("provider_id" @路径变量("提供者_标识"
+     * @param @PathVariable("provider_id" @PathVariable("provider_id"
+     */
     @PostMapping("/providers/{provider_id}/test-keys")
     public ApiResult<Map<String, Object>> testProviderKeys(@PathVariable("provider_id") String providerId) {
         SysAiProvider entity = requireProvider(providerId);
@@ -612,11 +612,11 @@ public class ApiProviderController {
     }
 
     /**
-    * 提取凭证中全部 Key（api_Key 数组 + api_Key 标量，去重保序）。
-    *
-    * @param credentials 凭证
-    * @return extract全部Key的结果
-    */
+     * 提取凭证中全部 Key（api_Key 数组 + api_Key 标量，去重保序）。
+     *
+     * @param credentials 凭证
+     * @return extract全部Key的结果
+     */
     private List<String> extractAllKeys(Map<String, Object> credentials) {
         java.util.LinkedHashSet<String> set = new java.util.LinkedHashSet<>();
         if (credentials != null) {
@@ -639,14 +639,14 @@ public class ApiProviderController {
  // ==================== 提供者 Connections ====================
 
     /**
-    * 列举 提供者 的额外连接（按 角色）。
-    *
-    * @param providerId 提供者 标识
-    * @return ProviderConnectionResponse 列表
-    * @param @PathVariable("provider_id" @路径变量("提供者_标识"
-    * @param @PathVariable("provider_id" @路径变量("提供者_标识"
-    * @param @PathVariable("provider_id" @PathVariable("provider_id"
-    */
+     * 列举 提供者 的额外连接（按 角色）。
+     *
+     * @param providerId 提供者 标识
+     * @return ProviderConnectionResponse 列表
+     * @param @PathVariable("provider_id" @路径变量("提供者_标识"
+     * @param @PathVariable("provider_id" @路径变量("提供者_标识"
+     * @param @PathVariable("provider_id" @PathVariable("provider_id"
+     */
     @GetMapping("/providers/{provider_id}/connections")
     public ApiResult<List<Map<String, Object>>> listConnections(@PathVariable("provider_id") String providerId) {
         requireProvider(providerId);
@@ -661,13 +661,13 @@ public class ApiProviderController {
     }
 
     /**
-    * 获取单条 提供者 连接。
-    *
-    * @param providerId 提供者 标识
-    * @param role       连接角色
-    * @return ProviderConnectionResponse
-    * @param @PathVariable("provider_id" @路径变量("提供者_标识"
-    */
+     * 获取单条 提供者 连接。
+     *
+     * @param providerId 提供者 标识
+     * @param role       连接角色
+     * @return ProviderConnectionResponse
+     * @param @PathVariable("provider_id" @路径变量("提供者_标识"
+     */
     @GetMapping("/providers/{provider_id}/connections/{role}")
     public ApiResult<Map<String, Object>> getConnection(@PathVariable("provider_id") String providerId,
                                                         @PathVariable("role") String role) {
@@ -683,13 +683,13 @@ public class ApiProviderController {
     }
 
     /**
-    * 保存（新建或更新）提供者 连接。
-    *
-    * @param providerId 提供者 标识
-    * @param body       保存提供者connection请求
-    * @return ProviderConnectionResponse
-    * @param @PathVariable("provider_id" @路径变量("提供者_标识"
-    */
+     * 保存（新建或更新）提供者 连接。
+     *
+     * @param providerId 提供者 标识
+     * @param body       保存提供者connection请求
+     * @return ProviderConnectionResponse
+     * @param @PathVariable("provider_id" @路径变量("提供者_标识"
+     */
     @PutMapping("/providers/{provider_id}/connections")
     @Transactional
     public ApiResult<Map<String, Object>> saveConnection(@PathVariable("provider_id") String providerId,
@@ -734,13 +734,13 @@ public class ApiProviderController {
     }
 
     /**
-    * 删除 提供者 连接。
-    *
-    * @param providerId 提供者 标识
-    * @param role       连接角色
-    * @return 成功
-    * @param @PathVariable("provider_id" @路径变量("提供者_标识"
-    */
+     * 删除 提供者 连接。
+     *
+     * @param providerId 提供者 标识
+     * @param role       连接角色
+     * @return 成功
+     * @param @PathVariable("provider_id" @路径变量("提供者_标识"
+     */
     @DeleteMapping("/providers/{provider_id}/connections/{role}")
     @Transactional
     public ApiResult<Void> deleteConnection(@PathVariable("provider_id") String providerId,
@@ -759,11 +759,11 @@ public class ApiProviderController {
  // ==================== 提供者 模型 ====================
 
     /**
-    * 列举 提供者_模型 行（可按 提供者_标识 过滤）。
-    *
-    * @param providerId 可选过滤
-    * @return ProviderModelResponse 列表
-    */
+     * 列举 提供者_模型 行（可按 提供者_标识 过滤）。
+     *
+     * @param providerId 可选过滤
+     * @return ProviderModelResponse 列表
+     */
     @GetMapping("/provider-models")
     public ApiResult<List<Map<String, Object>>> listProviderModels(
             @RequestParam(required = false) String provider_id) {
@@ -785,11 +785,11 @@ public class ApiProviderController {
     }
 
     /**
-    * 全量保存（upsert）某 提供者 下某模型的完整能力集。
-    *
-    * @param body 保存提供者模型请求
-    * @return ProviderModelResponse
-    */
+     * 全量保存（upsert）某 提供者 下某模型的完整能力集。
+     *
+     * @param body 保存提供者模型请求
+     * @return ProviderModelResponse
+     */
     @PutMapping("/provider-models")
     @Transactional
     public ApiResult<Map<String, Object>> saveProviderModel(@RequestBody Map<String, Object> body) {
@@ -812,10 +812,10 @@ public class ApiProviderController {
             return ApiResult.ok(toProviderModelResponse(provider, newModel));
         } else {
             /**
-            * apply模型输入。
-            * @param existing existing
-            * @param modelInput 模型输入
-            */
+             * apply模型输入。
+             * @param existing existing
+             * @param modelInput 模型输入
+             */
             applyModelInput(existing, modelInput);
             existing.setUpdatedAt(System.currentTimeMillis());
  // 复合主键 (提供者_id, 模型)：显式按双键更新，避免同名模型跨供应商误伤
@@ -827,11 +827,11 @@ public class ApiProviderController {
     }
 
     /**
-    * 重命名模型 标识（复合主键变更：复制行到新 标识 并删除旧行，原子完成）。
-    *
-    * @param body { 提供者_标识, 模型, 新_模型 }
-    * @return 重命名后的 提供者模型响应
-    */
+     * 重命名模型 标识（复合主键变更：复制行到新 标识 并删除旧行，原子完成）。
+     *
+     * @param body { 提供者_标识, 模型, 新_模型 }
+     * @return 重命名后的 提供者模型响应
+     */
     @PostMapping("/provider-models/rename")
     @Transactional
     public ApiResult<Map<String, Object>> renameProviderModel(@RequestBody Map<String, Object> body) {
@@ -869,13 +869,13 @@ public class ApiProviderController {
     }
 
     /**
-    * 删除 提供者_模型 行（按复合主键 提供者_标识 + 模型）。
-    *
-    * @param providerId 提供者 标识
-    * @param model      模型名
-    * @return 成功
-    * @param @RequestParam("provider_id" @请求参数("提供者_标识"
-    */
+     * 删除 提供者_模型 行（按复合主键 提供者_标识 + 模型）。
+     *
+     * @param providerId 提供者 标识
+     * @param model      模型名
+     * @return 成功
+     * @param @RequestParam("provider_id" @请求参数("提供者_标识"
+     */
     @DeleteMapping("/provider-models")
     @Transactional
     public ApiResult<Void> deleteProviderModel(@RequestParam("provider_id") String providerId,
@@ -894,13 +894,13 @@ public class ApiProviderController {
  // ==================== 模型 协议 ====================
 
     /**
-    * 模型协议能力清单（服务端运营默认）。
-    *
-    * @param preset  平台预设
-    * @param task    请求任务
-    * @param baseUrl 已存在 提供者 URL 提示
-    * @return ModelProtocolManifestResponse
-    */
+     * 模型协议能力清单（服务端运营默认）。
+     *
+     * @param preset  平台预设
+     * @param task    请求任务
+     * @param baseUrl 已存在 提供者 URL 提示
+     * @return ModelProtocolManifestResponse
+     */
     @GetMapping("/model-protocols")
     public ApiResult<Map<String, Object>> modelProtocols(@RequestParam String preset,
                                                          @RequestParam String task,
@@ -909,8 +909,8 @@ public class ApiProviderController {
     }
 
     /**
-    * 构造 提供者响应（含模型行与连接档案）。
-    */
+     * 构造 提供者响应（含模型行与连接档案）。
+     */
     private Map<String, Object> toProviderResponse(SysAiProvider provider,
                                                    List<SysAiProviderModel> models,
                                                    List<SysAiProviderConnection> connections) {
@@ -987,11 +987,11 @@ public class ApiProviderController {
     }
 
     /**
-    * 构造 提供者模型响应（含任务能力数组），并从缓存快照合并价格/延迟/速度等指标。
-    * @param provider 提供者
-    * @param model 模型
-    * @return 转为提供者模型响应的结果
-    */
+     * 构造 提供者模型响应（含任务能力数组），并从缓存快照合并价格/延迟/速度等指标。
+     * @param provider 提供者
+     * @param model 模型
+     * @return 转为提供者模型响应的结果
+     */
     private Map<String, Object> toProviderModelResponse(SysAiProvider provider, SysAiProviderModel model) {
         Map<String, Object> map = new LinkedHashMap<>(12);
         map.put("provider_id", provider.getProviderId());
@@ -1029,13 +1029,13 @@ public class ApiProviderController {
     }
 
     /**
-    * 构建（带 TTL 缓存）提供者标识::模型 → 缓存快照行的索引。
-    *
-    * <p>指标由 {@link ModelMetricsPushTask} 定时写入 Redis，本方法优先读取
-    * Redis 快照并本地缓存 30 秒，避免每个模型行重复解析快照。</p>
-    *
-    * @return 指标索引，快照为空时返回空 映射
-    */
+     * 构建（带 TTL 缓存）提供者标识::模型 → 缓存快照行的索引。
+     *
+     * <p>指标由 {@link ModelMetricsPushTask} 定时写入 Redis，本方法优先读取
+     * Redis 快照并本地缓存 30 秒，避免每个模型行重复解析快照。</p>
+     *
+     * @return 指标索引，快照为空时返回空 映射
+     */
     private Map<String, Map<String, Object>> metricIndex() {
         long now = System.currentTimeMillis();
         if (now - metricsIndexLoadedAt <= METRICS_INDEX_TTL_MILLIS && !metricsIndex.isEmpty()) {
@@ -1073,10 +1073,10 @@ public class ApiProviderController {
     }
 
     /**
-    * 构造单任务能力响应（含最近健康探测结果回显）。
-    * @param cap cap
-    * @return 转为capability响应的结果
-    */
+     * 构造单任务能力响应（含最近健康探测结果回显）。
+     * @param cap cap
+     * @return 转为capability响应的结果
+     */
     private Map<String, Object> toCapabilityResponse(Map<String, Object> cap) {
         Map<String, Object> map = new LinkedHashMap<>(14);
         map.put("task", cap.get("task"));
@@ -1117,10 +1117,10 @@ public class ApiProviderController {
     }
 
     /**
-    * 构造 提供者connection响应（不回显 凭证）。
-    * @param conn conn
-    * @return 转为connection响应的结果
-    */
+     * 构造 提供者connection响应（不回显 凭证）。
+     * @param conn conn
+     * @return 转为connection响应的结果
+     */
     private Map<String, Object> toConnectionResponse(SysAiProviderConnection conn) {
         Map<String, Object> map = new LinkedHashMap<>(10);
         map.put("connection_id", conn.getConnectionId());
@@ -1141,12 +1141,12 @@ public class ApiProviderController {
     // ==================== 实体构建 ====================
 
     /**
-    * 由模型输入构造模型实体（新建）。
-    * @param providerId 提供者标识
-    * @param input 输入
-    * @param now now
-    * @return 转为模型实体的结果
-    */
+     * 由模型输入构造模型实体（新建）。
+     * @param providerId 提供者标识
+     * @param input 输入
+     * @param now now
+     * @return 转为模型实体的结果
+     */
     @SuppressWarnings("unchecked")
     private SysAiProviderModel toModelEntity(String providerId, Map<String, Object> input, long now) {
         SysAiProviderModel e = new SysAiProviderModel();
@@ -1179,10 +1179,10 @@ public class ApiProviderController {
     }
 
     /**
-    * 把模型输入应用到已有实体（更新，替换完整能力集）。
-    * @param e e
-    * @param input 输入
-    */
+     * 把模型输入应用到已有实体（更新，替换完整能力集）。
+     * @param e e
+     * @param input 输入
+     */
     @SuppressWarnings("unchecked")
     private void applyModelInput(SysAiProviderModel e, Map<String, Object> input) {
         if (input.containsKey("enabled")) {
@@ -1217,12 +1217,12 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
     }
 
     /**
-    * 由连接输入构造连接实体（新建）。
-    * @param providerId 提供者标识
-    * @param input 输入
-    * @param now now
-    * @return 转为connection实体的结果
-    */
+     * 由连接输入构造连接实体（新建）。
+     * @param providerId 提供者标识
+     * @param input 输入
+     * @param now now
+     * @return 转为connection实体的结果
+     */
     private SysAiProviderConnection toConnectionEntity(String providerId, Map<String, Object> input, long now) {
         SysAiProviderConnection e = new SysAiProviderConnection();
         e.setConnectionId(String.valueOf(System.currentTimeMillis() + (int)(Math.random() * 1000)));
@@ -1241,12 +1241,12 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
     // ==================== 模型协议清单 ====================
 
     /**
-    * 构建manifest。
-    * @param preset preset
-    * @param task 任务
-    * @param baseUrl baseurl
-    * @return 构建manifest的结果
-    */
+     * 构建manifest。
+     * @param preset preset
+     * @param task 任务
+     * @param baseUrl baseurl
+     * @return 构建manifest的结果
+     */
     private Map<String, Object> buildManifest(String preset, String task, String baseUrl) {
         // 前端 preset 可能传大写形式（如 Zhipu），统一转小写后匹配
         String presetKey = preset == null ? null : preset.toLowerCase();
@@ -1278,12 +1278,12 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
     }
 
     /**
-    * 构建协议。
-    * @param pp pp
-    * @param task 任务
-    * @param defaultAuthScheme 默认认证scheme
-    * @return 构建协议的结果
-    */
+     * 构建协议。
+     * @param pp pp
+     * @param task 任务
+     * @param defaultAuthScheme 默认认证scheme
+     * @return 构建协议的结果
+     */
     private Map<String, Object> buildProtocol(ProtocolPreset pp, String task, String defaultAuthScheme) {
         Map<String, Object> protocol = new LinkedHashMap<>(8);
         protocol.put("protocol_id", pp.platform + "-openai-compat");
@@ -1309,44 +1309,44 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
     }
 
     /**
-    * 认证schemes。
-    * @return 认证schemes的结果
-    */
+     * 认证schemes。
+     * @return 认证schemes的结果
+     */
     private List<Map<String, Object>> authSchemes() {
         return List.of(
                 /**
-                * 认证scheme。
-                * @param "api_key" "api_键"
-                * @param true true
-                */
+                 * 认证scheme。
+                 * @param "api_key" "api_键"
+                 * @param true true
+                 */
                 authScheme("api_key", true),
                 /**
-                * 认证scheme。
-                * @param "bearer" "bearer"
-                * @param true true
-                */
+                 * 认证scheme。
+                 * @param "bearer" "bearer"
+                 * @param true true
+                 */
                 authScheme("bearer", true),
                 /**
-                * 认证scheme。
-                * @param "oauth" "OAuth"
-                * @param true true
-                */
+                 * 认证scheme。
+                 * @param "oauth" "OAuth"
+                 * @param true true
+                 */
                 authScheme("oauth", true),
                 /**
-                * 认证scheme。
-                * @param "none" "无"
-                * @param false false
-                */
+                 * 认证scheme。
+                 * @param "none" "无"
+                 * @param false false
+                 */
                 authScheme("none", false)
         );
     }
 
     /**
-    * 认证scheme。
-    * @param scheme scheme
-    * @param parameterized parameterized
-    * @return 认证scheme的结果
-    */
+     * 认证scheme。
+     * @param scheme scheme
+     * @param parameterized parameterized
+     * @return 认证scheme的结果
+     */
     private Map<String, Object> authScheme(String scheme, boolean parameterized) {
         Map<String, Object> m = new LinkedHashMap<>(4);
         m.put("parameterized", parameterized);
@@ -1354,11 +1354,11 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
     }
 
     /**
-    * 协议preset。
-    * @param platform platform
-    * @param defaultBaseUrl 默认baseurl
-    * @return 协议preset的结果
-    */
+     * 协议preset。
+     * @param platform platform
+     * @param defaultBaseUrl 默认baseurl
+     * @return 协议preset的结果
+     */
     private record ProtocolPreset(String platform, String defaultBaseUrl) {
     }
 
@@ -1429,20 +1429,20 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
     // ==================== 模型拉取 ====================
 
     /**
-    * 真实调用上游 {@code GET {base_url}/模型} 拉取模型目录。
-    *
-    * <p>OpenAI 兼容协议：{@code Authorization: Bearer <key>}，响应 {@code data[].id}；
-    * Google Gemini 协议：{@code ?key=<key>} 查询参数，响应 {@code models[].name}（形如 模型/gemini-xx）。
-    * 拉取失败时抛出与前端契约对应的错误码（UNAUTHORIZED / FORBIDDEN / RATE_限制 / 超时 / BAD_GATEWAY）。</p>
-    *
-    * @param platform    平台标识（zhipu/openai/google/...）
-    * @param baseUrl     供应商 API 基础地址
-    * @param credentials 凭证（兼容 api_Key 字符串与 api_Key 数组两种形态）
-    * @param authScheme  鉴权方式（api_Key 等）
-    * @param proxy       HTTP 代理地址（可为空）
-    * @param tryFix      是否在 404 时尝试补全 /v1 后重试
-    * @return FetchModelsResponse（models + 可选 fixed_基础_url）
-    */
+     * 真实调用上游 {@code GET {base_url}/模型} 拉取模型目录。
+     *
+     * <p>OpenAI 兼容协议：{@code Authorization: Bearer <key>}，响应 {@code data[].id}；
+     * Google Gemini 协议：{@code ?key=<key>} 查询参数，响应 {@code models[].name}（形如 模型/gemini-xx）。
+     * 拉取失败时抛出与前端契约对应的错误码（UNAUTHORIZED / FORBIDDEN / RATE_限制 / 超时 / BAD_GATEWAY）。</p>
+     *
+     * @param platform    平台标识（zhipu/openai/google/...）
+     * @param baseUrl     供应商 API 基础地址
+     * @param credentials 凭证（兼容 api_Key 字符串与 api_Key 数组两种形态）
+     * @param authScheme  鉴权方式（api_Key 等）
+     * @param proxy       HTTP 代理地址（可为空）
+     * @param tryFix      是否在 404 时尝试补全 /v1 后重试
+     * @return FetchModelsResponse（models + 可选 fixed_基础_url）
+     */
     private Map<String, Object> fetchModelsFromUpstream(String platform, String baseUrl,
                                                         Map<String, Object> credentials,
                                                         String authScheme, String proxy, boolean tryFix) {
@@ -1492,13 +1492,13 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
     }
 
     /**
-    * 请求 Ollama 原生 {@code GET {base}/api/标签} 模型列表。
-    *
-    * @param baseUrl 基础地址（不含 /v1）
-    * @param apiKey  API Key（Ollama 通常无需鉴权，可为 空）
-    * @param proxy   HTTP 代理地址（可为空）
-    * @return 模型条目列表；请求失败返回 空
-    */
+     * 请求 Ollama 原生 {@code GET {base}/api/标签} 模型列表。
+     *
+     * @param baseUrl 基础地址（不含 /v1）
+     * @param apiKey  API Key（Ollama 通常无需鉴权，可为 空）
+     * @param proxy   HTTP 代理地址（可为空）
+     * @return 模型条目列表；请求失败返回 空
+     */
     private List<Map<String, Object>> requestOllamaTags(String baseUrl, String apiKey, String proxy) {
         String url = baseUrl.endsWith("/") ? baseUrl + "api/tags" : baseUrl + "/api/tags";
         HttpRequest.Builder builder = HttpRequest.newBuilder()
@@ -1536,14 +1536,14 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
     }
 
     /**
-    * 请求上游模型列表接口。
-    *
-    * @param baseUrl        基础地址
-    * @param apiKey         API Key（可能为 空，如 Ollama 本地实例）
-    * @param googleProtocol 是否使用 Gemini 协议
-    * @param proxy          HTTP 代理地址（可为空）
-    * @return 模型条目列表；请求失败返回 空（由调用方决定是否重试/报错）
-    */
+     * 请求上游模型列表接口。
+     *
+     * @param baseUrl        基础地址
+     * @param apiKey         API Key（可能为 空，如 Ollama 本地实例）
+     * @param googleProtocol 是否使用 Gemini 协议
+     * @param proxy          HTTP 代理地址（可为空）
+     * @return 模型条目列表；请求失败返回 空（由调用方决定是否重试/报错）
+     */
     private List<Map<String, Object>> requestUpstreamModels(String baseUrl, String apiKey, boolean googleProtocol, String proxy) {
  // 拼接模型列表 URL：打开AI 兼容为 {base}/模型，Gemini 为 {base}/模型?Key=xxx
         StringBuilder url = new StringBuilder(baseUrl.endsWith("/") ? baseUrl + "models" : baseUrl + "/models");
@@ -1579,10 +1579,10 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
                 throw new ApiException(ApiErrorCode.BAD_GATEWAY, "供应商模型接口返回 " + status);
             }
             /**
-            * 解析google模型。
-            * @param response.body( 响应.主体(
-            * @return 解析google模型的结果
-            */
+             * 解析google模型。
+             * @param response.body( 响应.主体(
+             * @return 解析google模型的结果
+             */
             return googleProtocol ? parseGoogleModels(response.body()) : parseOpenAiModels(response.body());
         } catch (ApiException e) {
             // 业务异常直接向上抛出
@@ -1592,21 +1592,21 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
         } catch (Exception e) {
             // 网络层异常统一按网关错误处理
             /**
-            * api异常。
-            * @param ApiErrorCode.BAD_GATEWAY api错误编码.badgateway
-            * @param e.getMessage( e.获取消息(
-            * @return api异常的结果
-            */
+             * api异常。
+             * @param ApiErrorCode.BAD_GATEWAY api错误编码.badgateway
+             * @param e.getMessage( e.获取消息(
+             * @return api异常的结果
+             */
             throw new ApiException(ApiErrorCode.BAD_GATEWAY, "无法连接供应商模型接口: " + e.getMessage());
         }
     }
 
     /**
-    * 解析 打开AI 兼容的模型列表响应（数据[].标识）。
-    *
-    * @param body 响应体 JSON
-    * @return 模型条目列表
-    */
+     * 解析 打开AI 兼容的模型列表响应（数据[].标识）。
+     *
+     * @param body 响应体 JSON
+     * @return 模型条目列表
+     */
     private List<Map<String, Object>> parseOpenAiModels(String body) {
         List<Map<String, Object>> models = new ArrayList<>(8); // 模型数量不可预估
         com.fasterxml.jackson.databind.JsonNode root = readJson(body);
@@ -1631,11 +1631,11 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
     }
 
     /**
-    * 解析 Google Gemini 的模型列表响应（模型[].名称，形如 模型/gemini-xx）。
-    *
-    * @param body 响应体 JSON
-    * @return 模型条目列表
-    */
+     * 解析 Google Gemini 的模型列表响应（模型[].名称，形如 模型/gemini-xx）。
+     *
+     * @param body 响应体 JSON
+     * @return 模型条目列表
+     */
     private List<Map<String, Object>> parseGoogleModels(String body) {
         List<Map<String, Object>> models = new ArrayList<>(8); // 模型数量不可预估
         com.fasterxml.jackson.databind.JsonNode root = readJson(body);
@@ -1660,11 +1660,11 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
     }
 
     /**
-    * 解析 JSON 字符串，失败返回 空。
-    *
-    * @param body JSON 字符串
-    * @return JsonNode 或 空
-    */
+     * 解析 JSON 字符串，失败返回 空。
+     *
+     * @param body JSON 字符串
+     * @return JsonNode 或 空
+     */
     private com.fasterxml.jackson.databind.JsonNode readJson(String body) {
         try {
             return new com.fasterxml.jackson.databind.ObjectMapper().readTree(body);
@@ -1674,11 +1674,11 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
     }
 
     /**
-    * 依据模型 标识 关键字推断任务类型。
-    *
-    * @param modelId 模型 标识
-    * @return 任务类型列表（默认 对话）
-    */
+     * 依据模型 标识 关键字推断任务类型。
+     *
+     * @param modelId 模型 标识
+     * @return 任务类型列表（默认 对话）
+     */
     private List<String> inferTasks(String modelId) {
         String lower = modelId.toLowerCase();
         // 按关键字匹配任务类型
@@ -1707,11 +1707,11 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
     }
 
     /**
-    * 从凭证 映射 中提取 API Key，兼容 api_Key（字符串）与 api_Key（数组）两种形态。
-    *
-    * @param credentials 凭证 映射（可能为 空）
-    * @return API Key 或 空
-    */
+     * 从凭证 映射 中提取 API Key，兼容 api_Key（字符串）与 api_Key（数组）两种形态。
+     *
+     * @param credentials 凭证 映射（可能为 空）
+     * @return API Key 或 空
+     */
     private String extractApiKey(Map<String, Object> credentials) {
  // 无凭证直接返回 空
         if (credentials == null || credentials.isEmpty()) {
@@ -1735,10 +1735,10 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
     // ==================== 工具方法 ====================
 
     /**
-    * 获取 提供者 实体，不存在则抛 NOT_FOUND。
-    * @param providerId 提供者标识
-    * @return require提供者的结果
-    */
+     * 获取 提供者 实体，不存在则抛 NOT_FOUND。
+     * @param providerId 提供者标识
+     * @return require提供者的结果
+     */
     private SysAiProvider requireProvider(String providerId) {
         SysAiProvider e = providerMapper.selectById(providerId);
         if (e == null) {
@@ -1748,11 +1748,11 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
     }
 
     /**
-    * str。
-    * @param map 映射
-    * @param key Key
-    * @return str的结果
-    */
+     * str。
+     * @param map 映射
+     * @param key Key
+     * @return str的结果
+     */
     private String str(Map<String, Object> map, String key) {
         Object v = map.get(key);
         if (v == null) {
@@ -1763,11 +1763,11 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
     }
 
     /**
-    * requirestr。
-    * @param map 映射
-    * @param key Key
-    * @return requireStr的结果
-    */
+     * requirestr。
+     * @param map 映射
+     * @param key Key
+     * @return requireStr的结果
+     */
     private String requireStr(Map<String, Object> map, String key) {
         String s = str(map, key);
         if (s == null) {
@@ -1777,12 +1777,12 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
     }
 
     /**
-    * bool。
-    * @param map 映射
-    * @param key Key
-    * @param def def
-    * @return bool的结果
-    */
+     * bool。
+     * @param map 映射
+     * @param key Key
+     * @param def def
+     * @return bool的结果
+     */
     private boolean bool(Map<String, Object> map, String key, boolean def) {
         Object v = map.get(key);
         if (v == null) {
@@ -1795,12 +1795,12 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
     }
 
     /**
-    * intv。
-    * @param map 映射
-    * @param key Key
-    * @param def def
-    * @return intv的结果
-    */
+     * intv。
+     * @param map 映射
+     * @param key Key
+     * @param def def
+     * @return intv的结果
+     */
     private int intv(Map<String, Object> map, String key, int def) {
         Object v = map.get(key);
         if (v == null) {
@@ -1818,11 +1818,11 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
 
     @SuppressWarnings("unchecked")
     /**
-    * 列表的str。
-    * @param map 映射
-    * @param key Key
-    * @return 列表的str的结果
-    */
+     * 列表的str。
+     * @param map 映射
+     * @param key Key
+     * @return 列表的str的结果
+     */
     private List<String> listOfStr(Map<String, Object> map, String key) {
         Object v = map.get(key);
         if (!(v instanceof List<?> list)) {
@@ -1839,11 +1839,11 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
 
     @SuppressWarnings("unchecked")
     /**
-    * 列表的映射。
-    * @param map 映射
-    * @param key Key
-    * @return 列表的映射的结果
-    */
+     * 列表的映射。
+     * @param map 映射
+     * @param key Key
+     * @return 列表的映射的结果
+     */
     private List<Map<String, Object>> listOfMap(Map<String, Object> map, String key) {
         Object v = map.get(key);
         if (!(v instanceof List<?> list)) {
@@ -1860,24 +1860,24 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
 
     @SuppressWarnings("unchecked")
     /**
-    * uncheckedcast。
-    * @param obj obj
-    * @return uncheckedCast的结果
-    */
+     * uncheckedcast。
+     * @param obj obj
+     * @return uncheckedCast的结果
+     */
     private <T> T uncheckedCast(Object obj) {
         return (T) obj;
     }
 
     /**
-    * 按代理地址获取（缓存）的 HTTP 客户端。
-    *
-    * <p>未配置代理时返回共享 {@link #upstreamHttpClient}；配置了代理（如
-    * {@code http://127.0.0.1:7890}、{@code socks5://127.0.0.1:1080}）时按代理地址
-    * 复用缓存的带 {@link ProxySelector} 客户端，避免每个请求重复创建。</p>
-    *
-    * @param proxy HTTP 代理地址，可为空
-    * @return HttpClient
-    */
+     * 按代理地址获取（缓存）的 HTTP 客户端。
+     *
+     * <p>未配置代理时返回共享 {@link #upstreamHttpClient}；配置了代理（如
+     * {@code http://127.0.0.1:7890}、{@code socks5://127.0.0.1:1080}）时按代理地址
+     * 复用缓存的带 {@link ProxySelector} 客户端，避免每个请求重复创建。</p>
+     *
+     * @param proxy HTTP 代理地址，可为空
+     * @return HttpClient
+     */
     private HttpClient httpClient(String proxy) {
         if (proxy == null || proxy.isBlank()) {
             return upstreamHttpClient;
@@ -1891,10 +1891,10 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
     }
 
     /**
-    * 解析代理地址的主机名（支持 {@code http://host:port} 与 {@code socks5://host:port}）。
-    * @param proxy 代理
-    * @return 代理主机的结果
-    */
+     * 解析代理地址的主机名（支持 {@code http://host:port} 与 {@code socks5://host:port}）。
+     * @param proxy 代理
+     * @return 代理主机的结果
+     */
     private static String proxyHost(String proxy) {
         String trimmed = proxy.trim();
         int scheme = trimmed.indexOf("://");
@@ -1904,10 +1904,10 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
     }
 
     /**
-    * 解析代理地址的端口（默认 8080）。
-    * @param proxy 代理
-    * @return 代理端口的结果
-    */
+     * 解析代理地址的端口（默认 8080）。
+     * @param proxy 代理
+     * @return 代理端口的结果
+     */
     private static int proxyPort(String proxy) {
         String trimmed = proxy.trim();
         int scheme = trimmed.indexOf("://");
@@ -1924,15 +1924,15 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
     }
 
     /**
-    * 所有已注册的 对话客户端 列表
-    */
+     * 所有已注册的 对话客户端 列表
+     */
     private final Map<String, HttpClient> proxyHttpClients = new java.util.concurrent.ConcurrentHashMap<>();
 
     /**
-    * 构建 Agent 虚拟 提供者（含已注册的 Agent 模型列表）。
-    * @param modelNames 模型名称
-    * @return 构建Agent提供者的结果
-    */
+     * 构建 Agent 虚拟 提供者（含已注册的 Agent 模型列表）。
+     * @param modelNames 模型名称
+     * @return 构建Agent提供者的结果
+     */
     private Map<String, Object> buildAgentProvider(List<String> modelNames) {
         long now = System.currentTimeMillis();
         List<Map<String, Object>> models = new ArrayList<>(8); // 模型数量不可预估

@@ -6,9 +6,9 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 
 /**
-* 商户钱包限额 VO
-* @author CH
-* @since 4.0.0
+ * 商户钱包限额 VO
+ * @author CH
+ * @since 4.0.0
  */
 @Data
 public class MerchantWalletLimitVO implements Serializable {

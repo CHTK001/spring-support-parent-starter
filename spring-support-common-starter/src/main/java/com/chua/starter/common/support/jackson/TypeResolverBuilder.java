@@ -8,38 +8,38 @@ import org.springframework.core.KotlinDetector;
 import org.springframework.util.ClassUtils;
 
 /**
-* @since 2024/8/24
-* @author CH
+ * @since 2024/8/24
+ * @author CH
  */
 public class TypeResolverBuilder  extends ObjectMapper.DefaultTypeResolverBuilder {
 
     /**
-    * foreverything
-    *
-    * @param mapper 映射器
-    * @return forEverything的结果
-    */
+     * foreverything
+     *
+     * @param mapper 映射器
+     * @return forEverything的结果
+     */
     public static TypeResolverBuilder forEverything(ObjectMapper mapper) {
         /**
-        * 类型解析器构建器。
-        * @param ObjectMapper.DefaultTyping.EVERYTHING 对象映射器.defaulttyping.everything
-        * @param mapper.getPolymorphicTypeValidator( 映射器.getpolymorphic类型validator(
-        */
+         * 类型解析器构建器。
+         * @param ObjectMapper.DefaultTyping.EVERYTHING 对象映射器.defaulttyping.everything
+         * @param mapper.getPolymorphicTypeValidator( 映射器.getpolymorphic类型validator(
+         */
         return new TypeResolverBuilder(ObjectMapper.DefaultTyping.EVERYTHING, mapper.getPolymorphicTypeValidator());
     }
 
     /**
-    * 创建 类型解析器构建器 实例
-    * @param typing typing
-    * @param polymorphicTypeValidator polymorphic类型validator
-    * @param polymorphicTypeValidator polymorphic类型validator
-    */
+     * 创建 类型解析器构建器 实例
+     * @param typing typing
+     * @param polymorphicTypeValidator polymorphic类型validator
+     * @param polymorphicTypeValidator polymorphic类型validator
+     */
     public TypeResolverBuilder(ObjectMapper.DefaultTyping typing, PolymorphicTypeValidator polymorphicTypeValidator) {
         /**
-        * 父。
-        * @param typing 类型
-        * @param polymorphicTypeValidator polymorphic类型validator
-        */
+         * 父。
+         * @param typing 类型
+         * @param polymorphicTypeValidator polymorphic类型validator
+         */
         super(typing, polymorphicTypeValidator);
     }
 
@@ -78,11 +78,11 @@ public class TypeResolverBuilder  extends ObjectMapper.DefaultTypeResolverBuilde
     }
 
     /**
-    * 解析arrayor包装器
-    *
-    * @param type 类型
-    * @return resolvearrayor包装器的结果
-    */
+     * 解析arrayor包装器
+     *
+     * @param type 类型
+     * @return resolvearrayor包装器的结果
+     */
     private JavaType resolveArrayOrWrapper(JavaType type) {
 
         while (type.isArrayType()) {

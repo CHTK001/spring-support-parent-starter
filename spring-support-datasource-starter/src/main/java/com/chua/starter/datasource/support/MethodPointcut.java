@@ -8,10 +8,10 @@ import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.Bean;
 
 /**
-* 切入点
-*
-* @author CH
-* @since 4.0.0
+ * 切入点
+ *
+ * @author CH
+ * @since 4.0.0
  */
 public class MethodPointcut implements ApplicationContextAware {
 

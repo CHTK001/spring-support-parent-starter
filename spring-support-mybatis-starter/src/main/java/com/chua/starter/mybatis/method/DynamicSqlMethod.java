@@ -17,10 +17,10 @@ import java.lang.reflect.Field;
 import java.util.Map;
 
 /**
-* 动态方法
-*
-* @author CH
-* @since 4.0.0
+ * 动态方法
+ *
+ * @author CH
+ * @since 4.0.0
  */
 public class DynamicSqlMethod extends AbstractMethod {
     /** 日志 */
@@ -42,9 +42,9 @@ public class DynamicSqlMethod extends AbstractMethod {
     */
     public DynamicSqlMethod(String methodName, Map<String, Object> param) {
         /**
-        * 父。
-        * @param methodName 方法名称
-        */
+         * 父。
+         * @param methodName 方法名称
+         */
         super(methodName);
         this.param = param;
         this.sqlSource = ReflectionUtils.findField(type, "sqlSource");
@@ -81,20 +81,20 @@ public class DynamicSqlMethod extends AbstractMethod {
     }
 
     /**
-    * 获取名称
-    *
-    * @return 获取名称的结果
-    */
+     * 获取名称
+     *
+     * @return 获取名称的结果
+     */
     public String getName() {
         return methodName;
     }
 
     /**
-    * Refresh
-    *
-    * @param sql SQL
-    * @param type 类型
-    */
+     * Refresh
+     *
+     * @param sql SQL
+     * @param type 类型
+     */
     public void refresh(String sql, String type) {
         log.info("动态刷新Mapper语句[{}]", mapperClass.getTypeName() + "." + methodName);
         SqlSource sqlSource = null;

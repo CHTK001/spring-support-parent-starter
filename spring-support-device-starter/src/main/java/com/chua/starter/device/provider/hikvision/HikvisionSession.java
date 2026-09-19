@@ -19,34 +19,34 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
-* 海康设备会话实现（模拟）
-* <p>实际应调用海康 HCNetSDK / ISUP / 萤石云 SDK。</p>
-*
-* @since 4.0.0.42
-* @author CH
+ * 海康设备会话实现（模拟）
+ * <p>实际应调用海康 HCNetSDK / ISUP / 萤石云 SDK。</p>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 public class HikvisionSession implements DeviceSession {
 
     /**
-    * 设备连接信息
-    */
+     * 设备连接信息
+     */
     private final DeviceConnectInfo info;
 
     /**
-    * 在线状态
-    */
+     * 在线状态
+     */
     private boolean online = true;
 
     /**
-    * 事件订阅映射表
-    */
+     * 事件订阅映射表
+     */
     private final Map<EventType, List<EventListener>> listeners = new ConcurrentHashMap<>();
 
     /**
-    * 创建 hikvision会话 实例
-    * @param info 信息
-    */
+     * 创建 hikvision会话 实例
+     * @param info 信息
+     */
     public HikvisionSession(DeviceConnectInfo info) {
         this.info = info;
         log.info("海康设备连接成功: {}", info.getIp());

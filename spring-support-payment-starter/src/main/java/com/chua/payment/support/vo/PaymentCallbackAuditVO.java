@@ -3,9 +3,9 @@ package com.chua.payment.support.vo;
 import lombok.Data;
 
 /**
-* 回调策略审计视图
-* @author CH
-* @since 4.0.0
+ * 回调策略审计视图
+ * @author CH
+ * @since 4.0.0
  */
 @Data
 public class PaymentCallbackAuditVO {

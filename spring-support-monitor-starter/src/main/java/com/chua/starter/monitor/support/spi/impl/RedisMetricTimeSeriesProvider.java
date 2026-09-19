@@ -13,19 +13,19 @@ import java.util.List;
 import java.util.Set;
 
 /**
-* Redis 时序存储实现（基于 ZSET 简化时序）
-* <p>
-* 由 {@code monitor.timeseries.engine=redis} 条件装配。
-* 每个指标一条 ZSET（member=时间戳, score=时间戳），值 存于 member，
-* 以 {@code monitor:metric:<target>:<monitorId>:<metricName>} 为键。
-* 查询按时间范围 {@code ZRANGEBYSCORE} 取点，按窗口抽样返回（简化 mean 聚合）。
-* </p>
-* <p>
-* 注意：Redis 版为轻量实现，适合小规模指标；大规模场景建议 influxdb 等专用时序库。
-* </p>
-*
-* @author CH
-* @since 4.0.0.42
+ * Redis 时序存储实现（基于 ZSET 简化时序）
+ * <p>
+ * 由 {@code monitor.timeseries.engine=redis} 条件装配。
+ * 每个指标一条 ZSET（member=时间戳, score=时间戳），值 存于 member，
+ * 以 {@code monitor:metric:<target>:<monitorId>:<metricName>} 为键。
+ * 查询按时间范围 {@code ZRANGEBYSCORE} 取点，按窗口抽样返回（简化 mean 聚合）。
+ * </p>
+ * <p>
+ * 注意：Redis 版为轻量实现，适合小规模指标；大规模场景建议 influxdb 等专用时序库。
+ * </p>
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 @Slf4j
 @Component
@@ -89,11 +89,11 @@ public class RedisMetricTimeSeriesProvider implements MetricTimeSeriesProvider {
                 : System.currentTimeMillis();
         for (MetricPoint point : result.getPoints()) {
             /**
-            * 写入point。
-            * @param monitorId 监控标识
-            * @param point point
-            * @param timestamp 时间戳
-            */
+             * 写入point。
+             * @param monitorId 监控标识
+             * @param point point
+             * @param timestamp 时间戳
+             */
             writePoint(monitorId, point, timestamp);
         }
     }
@@ -172,10 +172,10 @@ public class RedisMetricTimeSeriesProvider implements MetricTimeSeriesProvider {
         } catch (Exception e) {
             log.warn("[monitor] Redis 时序查询失败 target={} monitor={}: {}", target, monitorId, e.getMessage());
             /**
-            * runtime异常。
-            * @param e.getMessage( e.获取消息(
-            * @return runtime异常的结果
-            */
+             * runtime异常。
+             * @param e.getMessage( e.获取消息(
+             * @return runtime异常的结果
+             */
             throw new RuntimeException("查询失败: " + e.getMessage(), e);
         }
         points.sort((a, b) -> Long.compare(((Number) a.getFirst()).longValue(), ((Number) b.getFirst()).longValue()));
@@ -192,13 +192,13 @@ public class RedisMetricTimeSeriesProvider implements MetricTimeSeriesProvider {
     }
 
     /**
-    * 构造 ZSET 键
-    *
-    * @param target    目标表
-    * @param monitorId 监控 标识
-    * @param metric    指标名
-    * @return key
-    */
+     * 构造 ZSET 键
+     *
+     * @param target    目标表
+     * @param monitorId 监控 标识
+     * @param metric    指标名
+     * @return key
+     */
     private String key(String target, Long monitorId, String metric) {
         return KEY_PREFIX + target + ":" + monitorId + ":" + metric;
     }

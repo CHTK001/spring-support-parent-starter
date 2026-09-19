@@ -153,11 +153,11 @@ public class SshConnectionCache {
     }
 
     /**
-    * 获取（或新建）主机的 SSH 会话。
-    *
-    * @param host 目标主机
-    * @return 可用的 SSH 会话
-    */
+     * 获取（或新建）主机的 SSH 会话。
+     *
+     * @param host 目标主机
+     * @return 可用的 SSH 会话
+     */
     public synchronized com.chua.ssh.support.client.SshClient getSsh(MsServerHost host) {
         Object key = host.getId();
         CachedSession c = cache.get(key);
@@ -216,11 +216,11 @@ public class SshConnectionCache {
     }
 
     /**
-    * 获取（或新建）主机的 SFTP 会话。
-    *
-    * @param host 目标主机
-    * @return 可用的 SFTP 会话
-    */
+     * 获取（或新建）主机的 SFTP 会话。
+     *
+     * @param host 目标主机
+     * @return 可用的 SFTP 会话
+     */
     public synchronized com.chua.ssh.support.client.SftpClient getSftp(MsServerHost host) {
         Object key = host.getId();
         CachedSession c = cache.computeIfAbsent(key, k -> new CachedSession());
@@ -258,13 +258,13 @@ public class SshConnectionCache {
     }
 
     /**
-    * 在目标主机执行命令并返回标准输出。
-    *
-    * @param host      目标主机
-    * @param cmd       命令
-    * @param timeoutMs 超时时间（毫秒）
-    * @return 标准输出（已 trim）；执行失败返回空字符串
-    */
+     * 在目标主机执行命令并返回标准输出。
+     *
+     * @param host      目标主机
+     * @param cmd       命令
+     * @param timeoutMs 超时时间（毫秒）
+     * @return 标准输出（已 trim）；执行失败返回空字符串
+     */
     public String exec(MsServerHost host, String cmd, long timeoutMs) {
         try {
             com.chua.ssh.support.client.SshClient ssh = getSsh(host);
@@ -277,10 +277,10 @@ public class SshConnectionCache {
     }
 
     /**
-    * 静默关闭会话，忽略关闭过程中的异常。
-    *
-    * @param c 缓存项
-    */
+     * 静默关闭会话，忽略关闭过程中的异常。
+     *
+     * @param c 缓存项
+     */
     private static void closeQuietly(CachedSession c) {
         try {
             if (c.ssh != null) {

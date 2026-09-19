@@ -12,10 +12,10 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
-* 监控通用时序指标
-*
-* @since 2026/8/4
-* @author CH
+ * 监控通用时序指标
+ *
+ * @since 2026/8/4
+ * @author CH
  */
 @Data
 @Schema(description = "监控通用时序")

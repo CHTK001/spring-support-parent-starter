@@ -6,9 +6,9 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
-* 支付全局配置 VO
-* @author CH
-* @since 4.0.0
+ * 支付全局配置 VO
+ * @author CH
+ * @since 4.0.0
  */
 @Data
 public class PaymentGlobalConfigVO implements Serializable {

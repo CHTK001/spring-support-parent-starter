@@ -5,13 +5,13 @@ import com.chua.starter.common.support.oauth.CurrentUser;
 import org.springframework.stereotype.Component;
 
 /**
-* 可控的当前用户提供者：测试按场景切换 {@link CurrentUser}。
-*
-* <p>作为名为 {@code authService} 的 Bean 提供，供数据权限拦截器
-* （{@code MybatisPlusDataPermissionHandler} 的 认证服务供应商）读取。</p>
-*
-* @author CH
-* @since 2026/09/04
+ * 可控的当前用户提供者：测试按场景切换 {@link CurrentUser}。
+ *
+ * <p>作为名为 {@code authService} 的 Bean 提供，供数据权限拦截器
+ * （{@code MybatisPlusDataPermissionHandler} 的 认证服务供应商）读取。</p>
+ *
+ * @author CH
+ * @since 2026/09/04
  */
 @Component("authService")
 public class DataScopeAuthService implements AuthService {

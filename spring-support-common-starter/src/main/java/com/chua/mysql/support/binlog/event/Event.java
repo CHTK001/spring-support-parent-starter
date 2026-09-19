@@ -1,10 +1,10 @@
 package com.chua.mysql.support.binlog.event;
 
 /**
-* Binary 日志 事件
-*
-* @author CH
-* @since 4.0.0
+ * Binary 日志 事件
+ *
+ * @author CH
+ * @since 4.0.0
  */
 public class Event {
 
@@ -21,10 +21,10 @@ public class Event {
     }
 
     /**
-    * 获取事件数据
-    *
-    * @return 事件数据
-    */
+     * 获取事件数据
+     *
+     * @return 事件数据
+     */
     public EventData getData() {
         return data;
     }

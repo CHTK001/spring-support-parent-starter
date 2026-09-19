@@ -16,11 +16,11 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
-* 操作定制器
-* 用于处理刀4j的apioperation支持和api支持注解，支持作者和排序
-*
-* @since 2025/5/27 13:37
-* @author CH
+ * 操作定制器
+ * 用于处理刀4j的apioperation支持和api支持注解，支持作者和排序
+ *
+ * @since 2025/5/27 13:37
+ * @author CH
  */
 public class CustomOperationCustomizer implements GlobalOperationCustomizer {
 
@@ -40,14 +40,14 @@ public class CustomOperationCustomizer implements GlobalOperationCustomizer {
     }
 
     /**
-    * 定制操作
-    * 解析支持作者、接口排序
-    * 参考：https://gitee.com/xiaoym/knife4j/issues/I6FB9I
-    *
-    * @param operation 操作对象
-    * @param handlerMethod 处理器方法
-    * @return 定制后的操作对象
-    */
+     * 定制操作
+     * 解析支持作者、接口排序
+     * 参考：https://gitee.com/xiaoym/knife4j/issues/I6FB9I
+     *
+     * @param operation 操作对象
+     * @param handlerMethod 处理器方法
+     * @return 定制后的操作对象
+     */
     @Override
     public Operation customize(Operation operation, HandlerMethod handlerMethod) {
         ApiOperationSupport operationSupport = AnnotationUtils.findAnnotation(handlerMethod.getMethod(), ApiOperationSupport.class);

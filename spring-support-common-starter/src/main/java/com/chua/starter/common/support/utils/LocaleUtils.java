@@ -9,16 +9,16 @@ import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 
 /**
-* 本地工具
-*
-* @author CH
-* @since 4.0.0
+ * 本地工具
+ *
+ * @author CH
+ * @since 4.0.0
  */
 public class LocaleUtils {
 
     /**
-    * 区域工具。
-    */
+     * 区域工具。
+     */
     private LocaleUtils() {
     }
 
@@ -29,11 +29,11 @@ public class LocaleUtils {
         messageSource.setBasename("i18n/message");
     }
     /**
-    * 获取 国际化后内容信息
-    *
-    * @param code 国际化Key
-    * @return 国际化后内容信息
-    */
+     * 获取 国际化后内容信息
+     *
+     * @param code 国际化Key
+     * @return 国际化后内容信息
+     */
     public static String getMessage(String code) {
         Locale locale = getLocate();
         try {
@@ -44,10 +44,10 @@ public class LocaleUtils {
     }
 
     /**
-    * 获取Locate
-    *
-    * @return 获取locate的结果
-    */
+     * 获取Locate
+     *
+     * @return 获取locate的结果
+     */
     public static Locale getLocate() {
         HttpServletRequest request = RequestUtils.getRequest();
         if(null == request) {

@@ -5,18 +5,18 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 /**
-* 软件源分页查询请求
-*
-* @since 2026/7/25
-* @author CH
+ * 软件源分页查询请求
+ *
+ * @since 2026/7/25
+ * @author CH
  */
 @Data
 @Schema(description = "软件源分页查询请求")
 public class SoftwareSourcePageRequest extends Query {
 
     /**
-    * 源编码
-    */
+     * 源编码
+     */
     @Schema(description = "源编码")
     /** 来源代码 */
     private String sourceCode;

@@ -45,20 +45,20 @@ public class IP2ProxyLiteIpQualityDetector implements IpQualityDetector {
     }
 
     /**
-    * 从指定 BIN 文件创建实例。
-    *
-    * @param binPath BIN 文件路径
-    */
+     * 从指定 BIN 文件创建实例。
+     *
+     * @param binPath BIN 文件路径
+     */
     public IP2ProxyLiteIpQualityDetector(Path binPath) {
         this.ip2Proxy = open(binPath, null);
     }
 
     /**
-    * 从 BIN 输入流创建实例。
-    *
-    * @param binStream BIN 输入流
-    * @throws IOException 读取流失败时抛出
-    */
+     * 从 BIN 输入流创建实例。
+     *
+     * @param binStream BIN 输入流
+     * @throws IOException 读取流失败时抛出
+     */
     public IP2ProxyLiteIpQualityDetector(InputStream binStream) throws IOException {
         try {
             byte[] bytes = binStream.readAllBytes();
@@ -69,12 +69,12 @@ public class IP2ProxyLiteIpQualityDetector implements IpQualityDetector {
     }
 
     /**
-    * 打开 BIN（文件或字节），失败时返回 null 并记录日志（降级）。
-    *
-    * @param path     BIN 文件路径（与 bytes 二选一）
-    * @param bytes    BIN 字节（与 path 二选一）
-    * @return 打开成功返回 IP2Proxy，失败返回 null
-    */
+     * 打开 BIN（文件或字节），失败时返回 null 并记录日志（降级）。
+     *
+     * @param path     BIN 文件路径（与 bytes 二选一）
+     * @param bytes    BIN 字节（与 path 二选一）
+     * @return 打开成功返回 IP2Proxy，失败返回 null
+     */
     private static IP2Proxy open(Path path, byte[] bytes) {
         try {
             IP2Proxy proxy = new IP2Proxy();
@@ -92,10 +92,10 @@ public class IP2ProxyLiteIpQualityDetector implements IpQualityDetector {
     }
 
     /**
-    * 查找默认 classpath BIN 资源，缺失时返回 null（不抛异常）。
-    *
-    * @return BIN 路径；不存在返回 null
-    */
+     * 查找默认 classpath BIN 资源，缺失时返回 null（不抛异常）。
+     *
+     * @return BIN 路径；不存在返回 null
+     */
     private static Path findDefaultResource() {
         URL resource = IP2ProxyLiteIpQualityDetector.class.getClassLoader().getResource(DEFAULT_BIN);
         if (resource == null) {
@@ -143,11 +143,11 @@ public class IP2ProxyLiteIpQualityDetector implements IpQualityDetector {
     }
 
     /**
-    * 构造空检测结果。
-    *
-    * @param ip IP
-    * @return 空结果
-    */
+     * 构造空检测结果。
+     *
+     * @param ip IP
+     * @return 空结果
+     */
     private static IpQuality emptyQuality(String ip) {
         IpQuality q = new IpQuality();
         q.setIp(ip);
@@ -155,12 +155,12 @@ public class IP2ProxyLiteIpQualityDetector implements IpQualityDetector {
     }
 
     /**
-    * 将 IP2Proxy 结果映射为 IpQuality。
-    *
-    * @param ip 原始 IP
-    * @param r  IP2Proxy 结果
-    * @return IpQuality
-    */
+     * 将 IP2Proxy 结果映射为 IpQuality。
+     *
+     * @param ip 原始 IP
+     * @param r  IP2Proxy 结果
+     * @return IpQuality
+     */
     private static IpQuality mapResult(String ip, IP2ProxyResult r) {
         IpQuality q = new IpQuality();
         q.setIp(ip);

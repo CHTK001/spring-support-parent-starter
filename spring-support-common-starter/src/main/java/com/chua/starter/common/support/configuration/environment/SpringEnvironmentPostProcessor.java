@@ -10,10 +10,10 @@ import org.springframework.core.env.PropertiesPropertySource;
 import java.util.Properties;
 
 /**
-* spring环境后处理器
-*
-* @author CH
-* @since 4.0.0
+ * spring环境后处理器
+ *
+ * @author CH
+ * @since 4.0.0
  */
 @SuppressWarnings("removal")
 public class SpringEnvironmentPostProcessor implements EnvironmentPostProcessor {

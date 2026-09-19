@@ -40,12 +40,12 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
-* AI 厂商管理控制器。
-* <p>
-* 提供 AI 模型厂商的增删改查、工厂列表查询以及 Logo 上传下载接口。
-*
-* @since 2026/04/03
-* @author CH
+ * AI 厂商管理控制器。
+ * <p>
+ * 提供 AI 模型厂商的增删改查、工厂列表查询以及 Logo 上传下载接口。
+ *
+ * @since 2026/04/03
+ * @author CH
  */
 @Tag(name = "AI Manufacturer Controller", description = "AI 厂商管理相关接口")
 @RestController
@@ -54,18 +54,18 @@ import java.util.UUID;
 public class AiManufacturerController {
 
     /**
-    * 厂商门面服务
-    */
+     * 厂商门面服务
+     */
     private final AiManufacturerFacadeService aiManufacturerFacadeService;
 
     /**
-    * 模型价格同步服务
-    */
+     * 模型价格同步服务
+     */
     private final AiModelPriceSyncService aiModelPriceSyncService;
 
     /**
-    * 运行目录（用于 Logo 文件存储）
-    */
+     * 运行目录（用于 Logo 文件存储）
+     */
     @Value("${user.dir:.}")
     /** 用户目录 */
     private String userDir;
@@ -85,9 +85,9 @@ public class AiManufacturerController {
     @Operation(summary = "获取支持的工厂列表")
     @GetMapping("factories")
     /**
-    * 工厂。
-    * @return 工厂的结果
-    */
+     * 工厂。
+     * @return 工厂的结果
+     */
     public ReturnResult<?> factories() {
         List<String> names = new ArrayList<>(ServiceProvider.of(ChatClient.class).getExtensions());
         if (!names.contains("siliconflow")) {
@@ -128,13 +128,13 @@ public class AiManufacturerController {
     @Operation(summary = "保存厂商信息")
     @PostMapping("save")
     /**
-    * 保存。
-    * @param "厂商实体" "厂商实体"
-    * @return 保存的结果
-    * @param "厂商实体" "厂商实体"
-    * @param "厂商实体" "厂商实体"
-    * @param manufacturer 方法入参 manufacturer
-    */
+     * 保存。
+     * @param "厂商实体" "厂商实体"
+     * @return 保存的结果
+     * @param "厂商实体" "厂商实体"
+     * @param "厂商实体" "厂商实体"
+     * @param manufacturer 方法入参 manufacturer
+     */
     public ReturnResult<?> save(@Parameter(description = "厂商实体") @RequestBody SysAiManufacturer manufacturer) {
         return ReturnResult.ok(aiManufacturerFacadeService.save(manufacturer));
     }
@@ -143,13 +143,13 @@ public class AiManufacturerController {
     @Operation(summary = "更新厂商信息")
     @PutMapping("update")
     /**
-    * 更新。
-    * @param "厂商实体" "厂商实体"
-    * @return 更新的结果
-    * @param "厂商实体" "厂商实体"
-    * @param "厂商实体" "厂商实体"
-    * @param manufacturer 方法入参 manufacturer
-    */
+     * 更新。
+     * @param "厂商实体" "厂商实体"
+     * @return 更新的结果
+     * @param "厂商实体" "厂商实体"
+     * @param "厂商实体" "厂商实体"
+     * @param manufacturer 方法入参 manufacturer
+     */
     public ReturnResult<?> update(@Parameter(description = "厂商实体") @RequestBody SysAiManufacturer manufacturer) {
         return ReturnResult.of(aiManufacturerFacadeService.update(manufacturer));
     }
@@ -158,13 +158,13 @@ public class AiManufacturerController {
     @Operation(summary = "删除厂商")
     @DeleteMapping("delete")
     /**
-    * 删除。
-    * @param "厂商标识" "厂商标识"
-    * @return 删除的结果
-    * @param "厂商标识" "厂商标识"
-    * @param "厂商标识" "厂商标识"
-    * @param sysAiManufacturerId sysAiManufacturerID，不允许为 null
-    */
+     * 删除。
+     * @param "厂商标识" "厂商标识"
+     * @return 删除的结果
+     * @param "厂商标识" "厂商标识"
+     * @param "厂商标识" "厂商标识"
+     * @param sysAiManufacturerId sysAiManufacturerID，不允许为 null
+     */
     public ReturnResult<?> delete(@Parameter(description = "厂商标识") @RequestParam Integer sysAiManufacturerId) {
         return ReturnResult.of(aiManufacturerFacadeService.delete(sysAiManufacturerId));
     }
@@ -174,13 +174,13 @@ public class AiManufacturerController {
     @SneakyThrows
     @PostMapping(value = "upload-logo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     /**
-    * uploadlogo。
-    * @param "标志文件" "标志文件"
-    * @return uploadLogo的结果
-    * @param "标志文件" "标志文件"
-    * @param "标志文件" "标志文件"
-    * @param file 文件，不允许为 null
-    */
+     * uploadlogo。
+     * @param "标志文件" "标志文件"
+     * @return uploadLogo的结果
+     * @param "标志文件" "标志文件"
+     * @param "标志文件" "标志文件"
+     * @param file 文件，不允许为 null
+     */
     public ReturnResult<?> uploadLogo(@Parameter(description = "标志文件") @RequestParam("file") MultipartFile file) {
         if (file == null || file.isEmpty()) {
             return ReturnResult.illegal("文件不能为空");
@@ -210,14 +210,14 @@ public class AiManufacturerController {
     @SneakyThrows
     @GetMapping(value = "logo/{fileName:.+}")
     /**
-    * Logo
-    *
-    * @param "文件名称" "文件名称"
-    * @return logo的结果
-    * @param "文件名称" "文件名称"
-    * @param "文件名称" "文件名称"
-    * @param fileName 文件名称，不允许为 null
-    */
+     * Logo
+     *
+     * @param "文件名称" "文件名称"
+     * @return logo的结果
+     * @param "文件名称" "文件名称"
+     * @param "文件名称" "文件名称"
+     * @param fileName 文件名称，不允许为 null
+     */
     public ResponseEntity<Resource> logo(@Parameter(description = "文件名称") @PathVariable String fileName) {
         Path folder = Paths.get(userDir, ".runtime", "ai", "manufacturer", "logo").toAbsolutePath().normalize();
         Path file = folder.resolve(fileName).normalize();
@@ -238,8 +238,8 @@ public class AiManufacturerController {
     }
 
     /**
-    * 允许上传的厂商标志扩展名白名单。
-    */
+     * 允许上传的厂商标志扩展名白名单。
+     */
     private static final Set<String> ALLOWED_LOGO_EXTENSIONS = Set.of(
             ".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico"
     );

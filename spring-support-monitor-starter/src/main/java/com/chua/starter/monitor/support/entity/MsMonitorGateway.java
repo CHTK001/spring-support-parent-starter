@@ -10,10 +10,10 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
-* 监控网关实体(Guacamole)
-*
-* @since 2026/8/4
-* @author CH
+ * 监控网关实体(Guacamole)
+ *
+ * @since 2026/8/4
+ * @author CH
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

@@ -44,14 +44,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 /**
-* 数据源脚本配置类
-* <p>
-* 实现 Beanpost处理器 接口，在 数据源 初始化完成后立即执行数据库脚本，
-* 确保脚本在其他依赖数据库的 Bean（如 实体管理器工厂、SQL会话工厂）之前执行。
-* </p>
-*
-* @since 2025/9/3 9:07
-* @author CH
+ * 数据源脚本配置类
+ * <p>
+ * 实现 Beanpost处理器 接口，在 数据源 初始化完成后立即执行数据库脚本，
+ * 确保脚本在其他依赖数据库的 Bean（如 实体管理器工厂、SQL会话工厂）之前执行。
+ * </p>
+ *
+ * @since 2025/9/3 9:07
+ * @author CH
  */
 @Slf4j
 public class DataSourceScriptConfiguration implements BeanPostProcessor {
@@ -64,14 +64,14 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
     */
     private final Set<String> processedDataSources = Collections.synchronizedSet(new HashSet<>());
     /**
-    * 已提示过禁用状态的 数据源 Bean 名称集合，避免重复打印日志
-    */
+     * 已提示过禁用状态的 数据源 Bean 名称集合，避免重复打印日志
+     */
     private final Set<String> skippedDataSources = Collections.synchronizedSet(new HashSet<>());
 
     /**
-    * 创建 数据源script配置 实例
-    * @param dataSourceScriptProperties 数据源script属性
-    */
+     * 创建 数据源script配置 实例
+     * @param dataSourceScriptProperties 数据源script属性
+     */
     public DataSourceScriptConfiguration(DataSourceScriptProperties dataSourceScriptProperties) {
         this.dataSourceScriptProperties = dataSourceScriptProperties;
     }
@@ -106,11 +106,11 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
                     log.warn("执行数据库脚本失败: {}", beanName, e);
                     if (!dataSourceScriptProperties.isContinueOnError()) {
                         /**
-    * illegal状态异常。
-    * @param beanName Bean名称
-    * @param e e
-    * @return illegal状态异常的结果
-    */
+                         * illegal状态异常。
+                         * @param beanName Bean名称
+                         * @param e e
+                         * @return illegal状态异常的结果
+                         */
                         throw new IllegalStateException("执行数据库脚本失败: " + beanName, e);
                     }
                 }
@@ -120,14 +120,14 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
     }
 
     /**
-    * 尝试通过 SPI 获取 Flyway 高优先级实现并执行迁移。
-    * <p>仅在存在可用 SPI 实现（如 utils-support-flyway-starter 的 DataSourceFlyway）
-    * 且能成功实例化时委托；否则返回 false 由内置 flywaylikepopulator 兜底。</p>
-    *
-    * @param ds       数据源
-    * @param beanName Bean 名称
-    * @return true 表示已由 SPI Flyway 完成迁移
-    */
+     * 尝试通过 SPI 获取 Flyway 高优先级实现并执行迁移。
+     * <p>仅在存在可用 SPI 实现（如 utils-support-flyway-starter 的 DataSourceFlyway）
+     * 且能成功实例化时委托；否则返回 false 由内置 flywaylikepopulator 兜底。</p>
+     *
+     * @param ds       数据源
+     * @param beanName Bean 名称
+     * @return true 表示已由 SPI Flyway 完成迁移
+     */
     private boolean tryMigrateWithSpiFlyway(DataSource ds, String beanName) {
         try {
             List<Flyway> extensions = ServiceProvider.of(Flyway.class)
@@ -151,14 +151,14 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
     }
 
     /**
-    * 依据目标库产品名解析 {@link com.chua.common.support.lang.datasource.flyway.ScriptConverter} 协议名。
-    * <p>仅为需要方言转换的引擎返回非空协议：MySQL 系（mysql/mariadb/tidb/oceanbase）与 H2 返回
-    * {@code null}，保持原样执行既有行为（MySQL 原生兼容、H2 以 {@code MODE=MySQL} 兼容）；
-    * 其余引擎（sqlite/postgresql/oracle/sqlserver）返回对应协议名以启用 ScriptConverter 转换。</p>
-    *
-    * @param ds 数据源
-    * @return 协议名；无需转换或无法判定时为 {@code null}
-    */
+     * 依据目标库产品名解析 {@link com.chua.common.support.lang.datasource.flyway.ScriptConverter} 协议名。
+     * <p>仅为需要方言转换的引擎返回非空协议：MySQL 系（mysql/mariadb/tidb/oceanbase）与 H2 返回
+     * {@code null}，保持原样执行既有行为（MySQL 原生兼容、H2 以 {@code MODE=MySQL} 兼容）；
+     * 其余引擎（sqlite/postgresql/oracle/sqlserver）返回对应协议名以启用 ScriptConverter 转换。</p>
+     *
+     * @param ds 数据源
+     * @return 协议名；无需转换或无法判定时为 {@code null}
+     */
     private String resolveProtocol(DataSource ds) {
         String product;
         try (java.sql.Connection connection = ds.getConnection()) {
@@ -191,11 +191,11 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
     }
 
     /**
-    * 将逗号分隔的脚本路径拆分为 位置 列表。
-    *
-    * @param scriptPath 脚本路径配置（可逗号分隔多个 类路径 目录）
-    * @return location 列表
-    */
+     * 将逗号分隔的脚本路径拆分为 位置 列表。
+     *
+     * @param scriptPath 脚本路径配置（可逗号分隔多个 类路径 目录）
+     * @return location 列表
+     */
     private List<String> splitLocations(String scriptPath) {
         if (scriptPath == null || scriptPath.isBlank()) {
             return List.of();
@@ -209,12 +209,12 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
     }
 
     /**
-    * 去除 类路径 通配符文件匹配（如 类路径*:db/初始化/*.SQL → 类路径:db/初始化），
-    * 使 SPI Flyway 能按目录扫描 V*__*.SQL。
-    *
-    * @param location 原始 位置
-    * @return 目录形式 位置
-    */
+     * 去除 类路径 通配符文件匹配（如 类路径*:db/初始化/*.SQL → 类路径:db/初始化），
+     * 使 SPI Flyway 能按目录扫描 V*__*.SQL。
+     *
+     * @param location 原始 位置
+     * @return 目录形式 位置
+     */
     private String stripWildcard(String location) {
         String result = location.trim();
         if (result.startsWith("classpath*:")) {
@@ -229,43 +229,43 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
     }
 
     /**
-    * Flyway风格数据库脚本迁移器
-    *
-    * <h3>支持以下功能：</h3>
-    * <ol>
-    *   <li>自动创建版本记录表</li>
-    *   <li>支持多路径脚本扫描（db/init, db/migration等）</li>
-    *   <li>支持数据库特定脚本</li>
-    *   <li>支持校验和验证</li>
-    *   <li>支持基线版本</li>
-    * </ol>
-    *
-    * <h3>脚本命名规范：</h3>
-    * <pre>
-    * 1. V版本号__init_任意.sql  - 初始化脚本（同名只执行最高版本）
-    *    示例：V1.0.0__init_user.sql, V2.0.0__init_user.sql → 只执行V2.0.0版本
-    *
-    * 2. V版本号__initdata_任意.sql - 初始化数据脚本（异步执行，使用虚拟线程）
-    *    示例：V1.0.0__initdata_dict.sql → 表结构创建后异步执行
-    *
-    * 3. V版本号__add_任意.sql   - 增量脚本（全部执行，按脚本名+版本判断）
-    *    示例：V1.0.0__add_index.sql, V1.0.1__add_index.sql → 两个都执行
-    *
-    * 4. V版本号__任意.sql       - 普通脚本（全部执行，按脚本名+版本判断）
-    *    示例：V1.0.0__update_data.sql → 执行一次
-    * </pre>
-    *
-    * <h3>执行顺序：</h3>
-    * <ol>
-    *   <li>同步执行 INIT 脚本（表结构，按版本号排序，同名只执行最高版本）</li>
-    *   <li>同步执行 ADD 和普通脚本（按文件名排序）</li>
-    *   <li>异步执行 INITDATA 脚本（初始化数据，使用虚拟线程）</li>
-    * </ol>
-    *
-    * @版本 1.2.0
-    * @since 2025/9/3 9:07
-    * @author CH
-    */
+     * Flyway风格数据库脚本迁移器
+     *
+     * <h3>支持以下功能：</h3>
+     * <ol>
+     *   <li>自动创建版本记录表</li>
+     *   <li>支持多路径脚本扫描（db/init, db/migration等）</li>
+     *   <li>支持数据库特定脚本</li>
+     *   <li>支持校验和验证</li>
+     *   <li>支持基线版本</li>
+     * </ol>
+     *
+     * <h3>脚本命名规范：</h3>
+     * <pre>
+     * 1. V版本号__init_任意.sql  - 初始化脚本（同名只执行最高版本）
+     *    示例：V1.0.0__init_user.sql, V2.0.0__init_user.sql → 只执行V2.0.0版本
+     *
+     * 2. V版本号__initdata_任意.sql - 初始化数据脚本（异步执行，使用虚拟线程）
+     *    示例：V1.0.0__initdata_dict.sql → 表结构创建后异步执行
+     *
+     * 3. V版本号__add_任意.sql   - 增量脚本（全部执行，按脚本名+版本判断）
+     *    示例：V1.0.0__add_index.sql, V1.0.1__add_index.sql → 两个都执行
+     *
+     * 4. V版本号__任意.sql       - 普通脚本（全部执行，按脚本名+版本判断）
+     *    示例：V1.0.0__update_data.sql → 执行一次
+     * </pre>
+     *
+     * <h3>执行顺序：</h3>
+     * <ol>
+     *   <li>同步执行 INIT 脚本（表结构，按版本号排序，同名只执行最高版本）</li>
+     *   <li>同步执行 ADD 和普通脚本（按文件名排序）</li>
+     *   <li>异步执行 INITDATA 脚本（初始化数据，使用虚拟线程）</li>
+     * </ol>
+     *
+     * @版本 1.2.0
+     * @since 2025/9/3 9:07
+     * @author CH
+     */
     @Slf4j
     static class FlywayLikePopulator {
 
@@ -289,10 +289,10 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         }
 
         /**
-        * 执行数据库脚本迁移
-        *
-        * @throws SQLException SQL异常
-        */
+         * 执行数据库脚本迁移
+         *
+         * @throws SQLException SQL异常
+         */
         public void populate() throws SQLException {
             try {
                 DataSourceScriptProperties.ScanMode schemaScanMode = dataSourceScriptProperties.getEffectiveSchemaScanMode();
@@ -327,14 +327,14 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
 
                 // 1. 创建版本记录表（兼容多种数据库）
                 /**
-                * 创建版本table。
-                */
+                 * 创建版本table。
+                 */
                 createVersionTable();
 
                 // 2. 如果启用基线且表为空，插入基线记录
                 /**
-                * 插入baselineifneeded。
-                */
+                 * 插入baselineifneeded。
+                 */
                 insertBaselineIfNeeded();
 
  // 3. 扫描脚本（包括db/初始化、db/migration、db/同步和配置的脚本路径）
@@ -473,12 +473,12 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
 
                     ScriptExecutionRecord executionRecord =
                             /**
-                            * findscript执行record。
-                            * @param tableName table名称
-                            * @param tablePrefix table前缀
-                            * @param fileName 文件名称
-                            * @param version 版本
-                            */
+                             * findscript执行record。
+                             * @param tableName table名称
+                             * @param tablePrefix table前缀
+                             * @param fileName 文件名称
+                             * @param version 版本
+                             */
                             findScriptExecutionRecord(tableName, tablePrefix, fileName, version);
                     if (needsExecution(executionRecord)) {
                         actualScriptsToExecute++;
@@ -506,22 +506,22 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
                         String currentChecksum = checksum(res);
                         ScriptExecutionRecord executionRecord =
                                 /**
-                                * findscript执行record。
-                                * @param tableName table名称
-                                * @param tablePrefix table前缀
-                                * @param fileName 文件名称
-                                * @param version 版本
-                                */
+                                 * findscript执行record。
+                                 * @param tableName table名称
+                                 * @param tablePrefix table前缀
+                                 * @param fileName 文件名称
+                                 * @param version 版本
+                                 */
                                 findScriptExecutionRecord(tableName, tablePrefix, fileName, version);
 
                         if (hasSuccessfulExecution(executionRecord)) {
                             /**
-                            * 校验校验和ifnecessary。
-                            * @param executionRecord 执行record
-                            * @param currentChecksum 当前校验和
-                            * @param fileName 文件名称
-                            * @param version 版本
-                            */
+                             * 校验校验和ifnecessary。
+                             * @param executionRecord 执行record
+                             * @param currentChecksum 当前校验和
+                             * @param fileName 文件名称
+                             * @param version 版本
+                             */
                             validateChecksumIfNecessary(executionRecord, currentChecksum, fileName, version);
 
                             if (dataSourceScriptProperties.isVerbose()) {
@@ -554,9 +554,9 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
                             }
 
                             /**
-                            * 尝试。
-                            * @param ds.getConnection( ds.获取connection(
-                            */
+                             * 尝试。
+                             * @param ds.getConnection( ds.获取connection(
+                             */
                             try (Connection scriptConnection = ds.getConnection()) {
                                 // 禁用自动提交以提高性能
                                 boolean originalAutoCommit = scriptConnection.getAutoCommit();
@@ -643,11 +643,11 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
 
                             if (!dataSourceScriptProperties.isContinueOnError()) {
                                 /**
-                                * SQL异常。
-                                * @param fileName 文件名称
-                                * @param e e
-                                * @return sql异常的结果
-                                */
+                                 * SQL异常。
+                                 * @param fileName 文件名称
+                                 * @param e e
+                                 * @return sql异常的结果
+                                 */
                                 throw new SQLException("脚本迁移失败: " + fileName, e);
                             }
                         }
@@ -661,34 +661,34 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
                 // 同步脚本执行完成后，异步执行 INITDATA 脚本
                 if (!initDataScriptsToExecute.isEmpty()) {
                     /**
-                    * 执行初始化数据script异步。
-                    * @param initDataScriptsToExecute 初始化数据script转为执行
-                    * @param tableName table名称
-                    * @param tablePrefix table前缀
-                    */
+                     * 执行初始化数据script异步。
+                     * @param initDataScriptsToExecute 初始化数据script转为执行
+                     * @param tableName table名称
+                     * @param tablePrefix table前缀
+                     */
                     executeInitDataScriptsAsync(initDataScriptsToExecute, tableName, tablePrefix);
                 }
             } catch (IOException e) {
                 /**
-                * runtime异常。
-                * @param "读取脚本资源失败" "读取脚本资源失败"
-                * @param e e
-                * @return runtime异常的结果
-                */
+                 * runtime异常。
+                 * @param "读取脚本资源失败" "读取脚本资源失败"
+                 * @param e e
+                 * @return runtime异常的结果
+                 */
                 throw new RuntimeException("读取脚本资源失败", e);
             }
         }
 
         /**
-        * 使用虚拟线程异步执行 INITDATA 脚本
-        * <p>
-        * 这些脚本主要是初始化数据（插入语句），不影响系统启动
-        * </p>
-        *
-        * @param scripts     待执行的 INITDATA 脚本列表
-        * @param tableName   版本记录表名
-        * @param tablePrefix 表字段前缀
-        */
+         * 使用虚拟线程异步执行 INITDATA 脚本
+         * <p>
+         * 这些脚本主要是初始化数据（插入语句），不影响系统启动
+         * </p>
+         *
+         * @param scripts     待执行的 INITDATA 脚本列表
+         * @param tableName   版本记录表名
+         * @param tablePrefix 表字段前缀
+         */
         private void executeInitDataScriptsAsync(List<Resource> scripts, String tableName, String tablePrefix) {
             int parallelism = dataSourceScriptProperties.getInitdataParallelism();
             int timeoutMinutes = dataSourceScriptProperties.getInitdataTimeoutMinutes();
@@ -731,12 +731,12 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
 
                         ScriptExecutionRecord executionRecord =
                                 /**
-                                * findscript执行record。
-                                * @param tableName table名称
-                                * @param tablePrefix table前缀
-                                * @param fileName 文件名称
-                                * @param version 版本
-                                */
+                                 * findscript执行record。
+                                 * @param tableName table名称
+                                 * @param tablePrefix table前缀
+                                 * @param fileName 文件名称
+                                 * @param version 版本
+                                 */
                                 findScriptExecutionRecord(tableName, tablePrefix, fileName, version);
                         if (hasSuccessfulExecution(executionRecord)) {
                             if (dataSourceScriptProperties.isVerbose()) {
@@ -753,9 +753,9 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
                         String success = "false";
                         
                         /**
-                        * 尝试。
-                        * @param ds.getConnection( ds.获取connection(
-                        */
+                         * 尝试。
+                         * @param ds.getConnection( ds.获取connection(
+                         */
                         try (Connection scriptConnection = ds.getConnection()) {
                             boolean originalAutoCommit = scriptConnection.getAutoCommit();
                             scriptConnection.setAutoCommit(false);
@@ -763,11 +763,11 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
                             try {
                                 EncodedResource encodedResource = new EncodedResource(res, dataSourceScriptProperties.getSqlScriptEncoding());
                                 /**
-                                * 执行scriptwith进步。
-                                * @param scriptConnection scriptconnection
-                                * @param encodedResource encodedresource
-                                * @param fileName 文件名称
-                                */
+                                 * 执行scriptwith进步。
+                                 * @param scriptConnection scriptconnection
+                                 * @param encodedResource encodedresource
+                                 * @param fileName 文件名称
+                                 */
                                 executeScriptWithProgress(scriptConnection, encodedResource, fileName);
                                 scriptConnection.commit();
                                 success = "true";
@@ -850,14 +850,14 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         }
 
         /**
-        * 执行SQL脚本并显示进度
-        * 优化版本：使用批量执行提高性能，使用进步bar显示详细进度
-        *
-        * @param connection 数据库连接
-        * @param resource 脚本资源
-        * @param fileName 文件名（用于日志）
-        * @throws SQLException SQL执行异常
-        */
+         * 执行SQL脚本并显示进度
+         * 优化版本：使用批量执行提高性能，使用进步bar显示详细进度
+         *
+         * @param connection 数据库连接
+         * @param resource 脚本资源
+         * @param fileName 文件名（用于日志）
+         * @throws SQLException SQL执行异常
+         */
         private void executeScriptWithProgress(
                 Connection connection,
                 EncodedResource resource,
@@ -875,158 +875,158 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         }
 
         /**
-        * needs执行
-        *
-        * @param executionRecord 执行record
-        * @return needs执行的结果
-        */
+         * needs执行
+         *
+         * @param executionRecord 执行record
+         * @return needs执行的结果
+         */
         private boolean needsExecution(ScriptExecutionRecord executionRecord) {
             return executionRecord == null || !executionRecord.isSuccess();
         }
 
         /**
-        * 是否拥有成功执行
-        *
-        * @param executionRecord 执行record
-        * @return 是否包含成功执行的结果
-        */
+         * 是否拥有成功执行
+         *
+         * @param executionRecord 执行record
+         * @return 是否包含成功执行的结果
+         */
         private boolean hasSuccessfulExecution(ScriptExecutionRecord executionRecord) {
             return executionRecord != null && executionRecord.isSuccess();
         }
 
         /**
-        * 查找script执行record
-        * @param tableName table名称
-        * @param tablePrefix table前缀
-        * @param fileName 文件名称
-        * @param version 版本
-        * @param checksum 校验和
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tableName table名称
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param fileName 文件名称
-        * @param version 版本
-        * @param null 空
-        * @param null 空
-        * @param executionRecord 执行record
-        * @param currentChecksum 当前校验和
-        * @param fileName 文件名称
-        * @param version 版本
-        * @param storedChecksum 存储校验和
-        * @param fileName 文件名称
-        * @param version 版本
-        * @param storedChecksum 存储校验和
-        * @param currentChecksum 当前校验和
-        * @param tableName table名称
-        * @param tablePrefix table前缀
-        * @param version 版本
-        * @param fileName 文件名称
-        * @param scriptType script类型
-        * @param description description
-        * @param checksum 校验和
-        * @param success 成功
-        * @param tableName table名称
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param scriptType script类型
-        * @param description description
-        * @param checksum 校验和
-        * @param success 成功
-        * @param fileName 文件名称
-        * @param version 版本
-        * @param 0 0
-        * @param tableName table名称
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param version 版本
-        * @param fileName 文件名称
-        * @param scriptType script类型
-        * @param description description
-        * @param checksum 校验和
-        * @param success 成功
-        * @param checksum 校验和
-        * @param success 成功
-        * @param scripts script
-        * @param scanMode 扫描mode
-        * @param emptyDatabase 空database
-        * @param scripts script
-        * @param scanMode 扫描mode
-        * @param scripts script
-        * @param scanMode 扫描mode
-        * @param hasBusinessData 是否包含业务数据
-        * @param schema 模式
-        * @param e e
-        * @param e e
-        * @param 列注释 列注释
-        * @param KEY Key
-        * @param AUTOINCREMENT AUTOINCREMENT
-        * @param NULL 空
-        * @param CURRENT_TIMESTAMP 当前_时间戳
-        * @param tableName table名称
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tableName table名称
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tableName table名称
-        * @param e e
-        * @param e e
-        * @param tableName table名称
-        * @param tableName table名称
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param e e
-        * @param e e
-        * @param resolver 解析器
-        * @param paths 路径
-        * @param e e
-        * @param path 路径
-        * @param rawPaths raw路径
-        * @param fileName 文件名称
-        * @param fileName 文件名称
-        * @param fileName 文件名称
-        * @param versionStart 版本启动
-        * @param 0 0
-        * @param separatorIndex separator索引
-        * @param fileName 文件名称
-        * @param 0 0
-        * @param descriptionEnd description结束
-        * @param res res
-        * @param tableName table名称
-        * @param originalPath 原始路径
-        * @param databaseType database类型
-        * @param lastDotIndex 最后一个dot索引
-        */
+         * 查找script执行record
+         * @param tableName table名称
+         * @param tablePrefix table前缀
+         * @param fileName 文件名称
+         * @param version 版本
+         * @param checksum 校验和
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tableName table名称
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param fileName 文件名称
+         * @param version 版本
+         * @param null 空
+         * @param null 空
+         * @param executionRecord 执行record
+         * @param currentChecksum 当前校验和
+         * @param fileName 文件名称
+         * @param version 版本
+         * @param storedChecksum 存储校验和
+         * @param fileName 文件名称
+         * @param version 版本
+         * @param storedChecksum 存储校验和
+         * @param currentChecksum 当前校验和
+         * @param tableName table名称
+         * @param tablePrefix table前缀
+         * @param version 版本
+         * @param fileName 文件名称
+         * @param scriptType script类型
+         * @param description description
+         * @param checksum 校验和
+         * @param success 成功
+         * @param tableName table名称
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param scriptType script类型
+         * @param description description
+         * @param checksum 校验和
+         * @param success 成功
+         * @param fileName 文件名称
+         * @param version 版本
+         * @param 0 0
+         * @param tableName table名称
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param version 版本
+         * @param fileName 文件名称
+         * @param scriptType script类型
+         * @param description description
+         * @param checksum 校验和
+         * @param success 成功
+         * @param checksum 校验和
+         * @param success 成功
+         * @param scripts script
+         * @param scanMode 扫描mode
+         * @param emptyDatabase 空database
+         * @param scripts script
+         * @param scanMode 扫描mode
+         * @param scripts script
+         * @param scanMode 扫描mode
+         * @param hasBusinessData 是否包含业务数据
+         * @param schema 模式
+         * @param e e
+         * @param e e
+         * @param 列注释 列注释
+         * @param KEY Key
+         * @param AUTOINCREMENT AUTOINCREMENT
+         * @param NULL 空
+         * @param CURRENT_TIMESTAMP 当前_时间戳
+         * @param tableName table名称
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tableName table名称
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tableName table名称
+         * @param e e
+         * @param e e
+         * @param tableName table名称
+         * @param tableName table名称
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param e e
+         * @param e e
+         * @param resolver 解析器
+         * @param paths 路径
+         * @param e e
+         * @param path 路径
+         * @param rawPaths raw路径
+         * @param fileName 文件名称
+         * @param fileName 文件名称
+         * @param fileName 文件名称
+         * @param versionStart 版本启动
+         * @param 0 0
+         * @param separatorIndex separator索引
+         * @param fileName 文件名称
+         * @param 0 0
+         * @param descriptionEnd description结束
+         * @param res res
+         * @param tableName table名称
+         * @param originalPath 原始路径
+         * @param databaseType database类型
+         * @param lastDotIndex 最后一个dot索引
+         */
         private ScriptExecutionRecord findScriptExecutionRecord(
                 String tableName,
                 String tablePrefix,
@@ -1047,124 +1047,124 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         }
 
         /**
-        * 校验校验和ifnecessary
-        * @param executionRecord 执行record
-        * @param currentChecksum 当前校验和
-        * @param fileName 文件名称
-        * @param version 版本
-        * @param storedChecksum 存储校验和
-        * @param fileName 文件名称
-        * @param version 版本
-        * @param storedChecksum 存储校验和
-        * @param currentChecksum 当前校验和
-        * @param tableName table名称
-        * @param tablePrefix table前缀
-        * @param version 版本
-        * @param fileName 文件名称
-        * @param scriptType script类型
-        * @param description description
-        * @param checksum 校验和
-        * @param success 成功
-        * @param tableName table名称
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param scriptType script类型
-        * @param description description
-        * @param checksum 校验和
-        * @param success 成功
-        * @param fileName 文件名称
-        * @param version 版本
-        * @param 0 0
-        * @param tableName table名称
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param version 版本
-        * @param fileName 文件名称
-        * @param scriptType script类型
-        * @param description description
-        * @param checksum 校验和
-        * @param success 成功
-        * @param checksum 校验和
-        * @param success 成功
-        * @param scripts script
-        * @param scanMode 扫描mode
-        * @param emptyDatabase 空database
-        * @param scripts script
-        * @param scanMode 扫描mode
-        * @param scripts script
-        * @param scanMode 扫描mode
-        * @param hasBusinessData 是否包含业务数据
-        * @param schema 模式
-        * @param e e
-        * @param e e
-        * @param 列注释 列注释
-        * @param KEY Key
-        * @param AUTOINCREMENT AUTOINCREMENT
-        * @param NULL 空
-        * @param CURRENT_TIMESTAMP 当前_时间戳
-        * @param tableName table名称
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tableName table名称
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tableName table名称
-        * @param e e
-        * @param e e
-        * @param tableName table名称
-        * @param tableName table名称
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param e e
-        * @param e e
-        * @param resolver 解析器
-        * @param paths 路径
-        * @param e e
-        * @param path 路径
-        * @param rawPaths raw路径
-        * @param fileName 文件名称
-        * @param fileName 文件名称
-        * @param fileName 文件名称
-        * @param versionStart 版本启动
-        * @param 0 0
-        * @param separatorIndex separator索引
-        * @param fileName 文件名称
-        * @param 0 0
-        * @param descriptionEnd description结束
-        * @param res res
-        * @param tableName table名称
-        * @param originalPath 原始路径
-        * @param databaseType database类型
-        * @param lastDotIndex 最后一个dot索引
-        */
+         * 校验校验和ifnecessary
+         * @param executionRecord 执行record
+         * @param currentChecksum 当前校验和
+         * @param fileName 文件名称
+         * @param version 版本
+         * @param storedChecksum 存储校验和
+         * @param fileName 文件名称
+         * @param version 版本
+         * @param storedChecksum 存储校验和
+         * @param currentChecksum 当前校验和
+         * @param tableName table名称
+         * @param tablePrefix table前缀
+         * @param version 版本
+         * @param fileName 文件名称
+         * @param scriptType script类型
+         * @param description description
+         * @param checksum 校验和
+         * @param success 成功
+         * @param tableName table名称
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param scriptType script类型
+         * @param description description
+         * @param checksum 校验和
+         * @param success 成功
+         * @param fileName 文件名称
+         * @param version 版本
+         * @param 0 0
+         * @param tableName table名称
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param version 版本
+         * @param fileName 文件名称
+         * @param scriptType script类型
+         * @param description description
+         * @param checksum 校验和
+         * @param success 成功
+         * @param checksum 校验和
+         * @param success 成功
+         * @param scripts script
+         * @param scanMode 扫描mode
+         * @param emptyDatabase 空database
+         * @param scripts script
+         * @param scanMode 扫描mode
+         * @param scripts script
+         * @param scanMode 扫描mode
+         * @param hasBusinessData 是否包含业务数据
+         * @param schema 模式
+         * @param e e
+         * @param e e
+         * @param 列注释 列注释
+         * @param KEY Key
+         * @param AUTOINCREMENT AUTOINCREMENT
+         * @param NULL 空
+         * @param CURRENT_TIMESTAMP 当前_时间戳
+         * @param tableName table名称
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tableName table名称
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tableName table名称
+         * @param e e
+         * @param e e
+         * @param tableName table名称
+         * @param tableName table名称
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param e e
+         * @param e e
+         * @param resolver 解析器
+         * @param paths 路径
+         * @param e e
+         * @param path 路径
+         * @param rawPaths raw路径
+         * @param fileName 文件名称
+         * @param fileName 文件名称
+         * @param fileName 文件名称
+         * @param versionStart 版本启动
+         * @param 0 0
+         * @param separatorIndex separator索引
+         * @param fileName 文件名称
+         * @param 0 0
+         * @param descriptionEnd description结束
+         * @param res res
+         * @param tableName table名称
+         * @param originalPath 原始路径
+         * @param databaseType database类型
+         * @param lastDotIndex 最后一个dot索引
+         */
         private void validateChecksumIfNecessary(
                 ScriptExecutionRecord executionRecord,
                 String currentChecksum,
@@ -1184,124 +1184,124 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
             log.error(errorMsg);
             if (!dataSourceScriptProperties.isContinueOnError()) {
                 /**
-                * SQL异常。
-                * @param errorMsg 错误msg
-                * @return sql异常的结果
-                */
+                 * SQL异常。
+                 * @param errorMsg 错误msg
+                 * @return sql异常的结果
+                 */
                 throw new SQLException(errorMsg);
             }
         }
 
         /**
-        * 保存script执行record
-        * @param tableName table名称
-        * @param tablePrefix table前缀
-        * @param version 版本
-        * @param fileName 文件名称
-        * @param scriptType script类型
-        * @param description description
-        * @param checksum 校验和
-        * @param success 成功
-        * @param tableName table名称
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param scriptType script类型
-        * @param description description
-        * @param checksum 校验和
-        * @param success 成功
-        * @param fileName 文件名称
-        * @param version 版本
-        * @param 0 0
-        * @param tableName table名称
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param version 版本
-        * @param fileName 文件名称
-        * @param scriptType script类型
-        * @param description description
-        * @param checksum 校验和
-        * @param success 成功
-        * @param checksum 校验和
-        * @param success 成功
-        * @param scripts script
-        * @param scanMode 扫描mode
-        * @param emptyDatabase 空database
-        * @param scripts script
-        * @param scanMode 扫描mode
-        * @param scripts script
-        * @param scanMode 扫描mode
-        * @param hasBusinessData 是否包含业务数据
-        * @param schema 模式
-        * @param e e
-        * @param e e
-        * @param 列注释 列注释
-        * @param KEY Key
-        * @param AUTOINCREMENT AUTOINCREMENT
-        * @param NULL 空
-        * @param CURRENT_TIMESTAMP 当前_时间戳
-        * @param tableName table名称
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tableName table名称
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tableName table名称
-        * @param e e
-        * @param e e
-        * @param tableName table名称
-        * @param tableName table名称
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param e e
-        * @param e e
-        * @param resolver 解析器
-        * @param paths 路径
-        * @param e e
-        * @param path 路径
-        * @param rawPaths raw路径
-        * @param fileName 文件名称
-        * @param fileName 文件名称
-        * @param fileName 文件名称
-        * @param versionStart 版本启动
-        * @param 0 0
-        * @param separatorIndex separator索引
-        * @param fileName 文件名称
-        * @param 0 0
-        * @param descriptionEnd description结束
-        * @param res res
-        * @param tableName table名称
-        * @param originalPath 原始路径
-        * @param databaseType database类型
-        * @param lastDotIndex 最后一个dot索引
-        */
+         * 保存script执行record
+         * @param tableName table名称
+         * @param tablePrefix table前缀
+         * @param version 版本
+         * @param fileName 文件名称
+         * @param scriptType script类型
+         * @param description description
+         * @param checksum 校验和
+         * @param success 成功
+         * @param tableName table名称
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param scriptType script类型
+         * @param description description
+         * @param checksum 校验和
+         * @param success 成功
+         * @param fileName 文件名称
+         * @param version 版本
+         * @param 0 0
+         * @param tableName table名称
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param version 版本
+         * @param fileName 文件名称
+         * @param scriptType script类型
+         * @param description description
+         * @param checksum 校验和
+         * @param success 成功
+         * @param checksum 校验和
+         * @param success 成功
+         * @param scripts script
+         * @param scanMode 扫描mode
+         * @param emptyDatabase 空database
+         * @param scripts script
+         * @param scanMode 扫描mode
+         * @param scripts script
+         * @param scanMode 扫描mode
+         * @param hasBusinessData 是否包含业务数据
+         * @param schema 模式
+         * @param e e
+         * @param e e
+         * @param 列注释 列注释
+         * @param KEY Key
+         * @param AUTOINCREMENT AUTOINCREMENT
+         * @param NULL 空
+         * @param CURRENT_TIMESTAMP 当前_时间戳
+         * @param tableName table名称
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tableName table名称
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tableName table名称
+         * @param e e
+         * @param e e
+         * @param tableName table名称
+         * @param tableName table名称
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param e e
+         * @param e e
+         * @param resolver 解析器
+         * @param paths 路径
+         * @param e e
+         * @param path 路径
+         * @param rawPaths raw路径
+         * @param fileName 文件名称
+         * @param fileName 文件名称
+         * @param fileName 文件名称
+         * @param versionStart 版本启动
+         * @param 0 0
+         * @param separatorIndex separator索引
+         * @param fileName 文件名称
+         * @param 0 0
+         * @param descriptionEnd description结束
+         * @param res res
+         * @param tableName table名称
+         * @param originalPath 原始路径
+         * @param databaseType database类型
+         * @param lastDotIndex 最后一个dot索引
+         */
         private void saveScriptExecutionRecord(
                 String tableName,
                 String tablePrefix,
@@ -1328,95 +1328,95 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         /* ---------- 工具方法 ---------- */
 
         /**
-        * script执行record
-        * @param checksum 校验和
-        * @param checksum 字符串
-        * @param success 成功
-        * @return script执行record的结果
-        */
+         * script执行record
+         * @param checksum 校验和
+         * @param checksum 字符串
+         * @param success 成功
+         * @return script执行record的结果
+         */
         private record ScriptExecutionRecord(String checksum, String success) {
             /**
-            * 是否成功
-            *
-            * @return 是否成功的结果
-            */
+             * 是否成功
+             *
+             * @return 是否成功的结果
+             */
             private boolean isSuccess() {
                 return "true".equalsIgnoreCase(success);
             }
         }
 
         /**
-        * 过滤模式script
-        * @param scripts script
-        * @param scanMode 扫描mode
-        * @param emptyDatabase 空database
-        * @param scripts script
-        * @param scanMode 扫描mode
-        * @param scripts script
-        * @param scanMode 扫描mode
-        * @param hasBusinessData 是否包含业务数据
-        * @param schema 模式
-        * @param e e
-        * @param e e
-        * @param 列注释 列注释
-        * @param KEY Key
-        * @param AUTOINCREMENT AUTOINCREMENT
-        * @param NULL 空
-        * @param CURRENT_TIMESTAMP 当前_时间戳
-        * @param tableName table名称
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tableName table名称
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tableName table名称
-        * @param e e
-        * @param e e
-        * @param tableName table名称
-        * @param tableName table名称
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param e e
-        * @param e e
-        * @param resolver 解析器
-        * @param paths 路径
-        * @param e e
-        * @param path 路径
-        * @param rawPaths raw路径
-        * @param fileName 文件名称
-        * @param fileName 文件名称
-        * @param fileName 文件名称
-        * @param versionStart 版本启动
-        * @param 0 0
-        * @param separatorIndex separator索引
-        * @param fileName 文件名称
-        * @param 0 0
-        * @param descriptionEnd description结束
-        * @param res res
-        * @param tableName table名称
-        * @param originalPath 原始路径
-        * @param databaseType database类型
-        * @param lastDotIndex 最后一个dot索引
-        */
+         * 过滤模式script
+         * @param scripts script
+         * @param scanMode 扫描mode
+         * @param emptyDatabase 空database
+         * @param scripts script
+         * @param scanMode 扫描mode
+         * @param scripts script
+         * @param scanMode 扫描mode
+         * @param hasBusinessData 是否包含业务数据
+         * @param schema 模式
+         * @param e e
+         * @param e e
+         * @param 列注释 列注释
+         * @param KEY Key
+         * @param AUTOINCREMENT AUTOINCREMENT
+         * @param NULL 空
+         * @param CURRENT_TIMESTAMP 当前_时间戳
+         * @param tableName table名称
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tableName table名称
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tableName table名称
+         * @param e e
+         * @param e e
+         * @param tableName table名称
+         * @param tableName table名称
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param e e
+         * @param e e
+         * @param resolver 解析器
+         * @param paths 路径
+         * @param e e
+         * @param path 路径
+         * @param rawPaths raw路径
+         * @param fileName 文件名称
+         * @param fileName 文件名称
+         * @param fileName 文件名称
+         * @param versionStart 版本启动
+         * @param 0 0
+         * @param separatorIndex separator索引
+         * @param fileName 文件名称
+         * @param 0 0
+         * @param descriptionEnd description结束
+         * @param res res
+         * @param tableName table名称
+         * @param originalPath 原始路径
+         * @param databaseType database类型
+         * @param lastDotIndex 最后一个dot索引
+         */
         private List<Resource> filterSchemaScripts(
                 Collection<Resource> scripts,
                 DataSourceScriptProperties.ScanMode scanMode,
@@ -1439,74 +1439,74 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         }
 
         /**
-        * 过滤migrationscript
-        * @param scripts script
-        * @param scanMode 扫描mode
-        * @param scripts script
-        * @param scanMode 扫描mode
-        * @param hasBusinessData 是否包含业务数据
-        * @param schema 模式
-        * @param e e
-        * @param e e
-        * @param 列注释 列注释
-        * @param KEY Key
-        * @param AUTOINCREMENT AUTOINCREMENT
-        * @param NULL 空
-        * @param CURRENT_TIMESTAMP 当前_时间戳
-        * @param tableName table名称
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tableName table名称
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tableName table名称
-        * @param e e
-        * @param e e
-        * @param tableName table名称
-        * @param tableName table名称
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param e e
-        * @param e e
-        * @param resolver 解析器
-        * @param paths 路径
-        * @param e e
-        * @param path 路径
-        * @param rawPaths raw路径
-        * @param fileName 文件名称
-        * @param fileName 文件名称
-        * @param fileName 文件名称
-        * @param versionStart 版本启动
-        * @param 0 0
-        * @param separatorIndex separator索引
-        * @param fileName 文件名称
-        * @param 0 0
-        * @param descriptionEnd description结束
-        * @param res res
-        * @param tableName table名称
-        * @param originalPath 原始路径
-        * @param databaseType database类型
-        * @param lastDotIndex 最后一个dot索引
-        */
+         * 过滤migrationscript
+         * @param scripts script
+         * @param scanMode 扫描mode
+         * @param scripts script
+         * @param scanMode 扫描mode
+         * @param hasBusinessData 是否包含业务数据
+         * @param schema 模式
+         * @param e e
+         * @param e e
+         * @param 列注释 列注释
+         * @param KEY Key
+         * @param AUTOINCREMENT AUTOINCREMENT
+         * @param NULL 空
+         * @param CURRENT_TIMESTAMP 当前_时间戳
+         * @param tableName table名称
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tableName table名称
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tableName table名称
+         * @param e e
+         * @param e e
+         * @param tableName table名称
+         * @param tableName table名称
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param e e
+         * @param e e
+         * @param resolver 解析器
+         * @param paths 路径
+         * @param e e
+         * @param path 路径
+         * @param rawPaths raw路径
+         * @param fileName 文件名称
+         * @param fileName 文件名称
+         * @param fileName 文件名称
+         * @param versionStart 版本启动
+         * @param 0 0
+         * @param separatorIndex separator索引
+         * @param fileName 文件名称
+         * @param 0 0
+         * @param descriptionEnd description结束
+         * @param res res
+         * @param tableName table名称
+         * @param originalPath 原始路径
+         * @param databaseType database类型
+         * @param lastDotIndex 最后一个dot索引
+         */
         private List<Resource> filterMigrationScripts(
                 Collection<Resource> scripts,
                 DataSourceScriptProperties.RepeatableScanMode scanMode) {
@@ -1520,72 +1520,72 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         }
 
         /**
-        * 过滤数据script
-        * @param scripts script
-        * @param scanMode 扫描mode
-        * @param hasBusinessData 是否包含业务数据
-        * @param schema 模式
-        * @param e e
-        * @param e e
-        * @param 列注释 列注释
-        * @param KEY Key
-        * @param AUTOINCREMENT AUTOINCREMENT
-        * @param NULL 空
-        * @param CURRENT_TIMESTAMP 当前_时间戳
-        * @param tableName table名称
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tableName table名称
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tableName table名称
-        * @param e e
-        * @param e e
-        * @param tableName table名称
-        * @param tableName table名称
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param tablePrefix table前缀
-        * @param e e
-        * @param e e
-        * @param resolver 解析器
-        * @param paths 路径
-        * @param e e
-        * @param path 路径
-        * @param rawPaths raw路径
-        * @param fileName 文件名称
-        * @param fileName 文件名称
-        * @param fileName 文件名称
-        * @param versionStart 版本启动
-        * @param 0 0
-        * @param separatorIndex separator索引
-        * @param fileName 文件名称
-        * @param 0 0
-        * @param descriptionEnd description结束
-        * @param res res
-        * @param tableName table名称
-        * @param originalPath 原始路径
-        * @param databaseType database类型
-        * @param lastDotIndex 最后一个dot索引
-        */
+         * 过滤数据script
+         * @param scripts script
+         * @param scanMode 扫描mode
+         * @param hasBusinessData 是否包含业务数据
+         * @param schema 模式
+         * @param e e
+         * @param e e
+         * @param 列注释 列注释
+         * @param KEY Key
+         * @param AUTOINCREMENT AUTOINCREMENT
+         * @param NULL 空
+         * @param CURRENT_TIMESTAMP 当前_时间戳
+         * @param tableName table名称
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tableName table名称
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tableName table名称
+         * @param e e
+         * @param e e
+         * @param tableName table名称
+         * @param tableName table名称
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param tablePrefix table前缀
+         * @param e e
+         * @param e e
+         * @param resolver 解析器
+         * @param paths 路径
+         * @param e e
+         * @param path 路径
+         * @param rawPaths raw路径
+         * @param fileName 文件名称
+         * @param fileName 文件名称
+         * @param fileName 文件名称
+         * @param versionStart 版本启动
+         * @param 0 0
+         * @param separatorIndex separator索引
+         * @param fileName 文件名称
+         * @param 0 0
+         * @param descriptionEnd description结束
+         * @param res res
+         * @param tableName table名称
+         * @param originalPath 原始路径
+         * @param databaseType database类型
+         * @param lastDotIndex 最后一个dot索引
+         */
         private List<Resource> filterDataScripts(
                 Collection<Resource> scripts,
                 DataSourceScriptProperties.ScanMode scanMode,
@@ -1608,22 +1608,22 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         }
 
         /**
-        * 判断当前数据源对应的库是否为空
-        * <p>
-        * 根据 scope 配置决定判断方式：
-        * <ul>
-        *   <li>scope=table（默认）：排除配置的系统表前缀（如 sys_），仅检查业务表是否存在</li>
-        *   <li>scope=file：检查所有表，只要有一个表就认为非空（原行为）</li>
-        * </ul>
-        * </p>
-        *
-        * @return true-空库, false-已有表, 空-无法判断
-        */
+         * 判断当前数据源对应的库是否为空
+         * <p>
+         * 根据 scope 配置决定判断方式：
+         * <ul>
+         *   <li>scope=table（默认）：排除配置的系统表前缀（如 sys_），仅检查业务表是否存在</li>
+         *   <li>scope=file：检查所有表，只要有一个表就认为非空（原行为）</li>
+         * </ul>
+         * </p>
+         *
+         * @return true-空库, false-已有表, 空-无法判断
+         */
         private Boolean isDatabaseEmpty() {
             /**
-            * 尝试。
-            * @param ds.getConnection( ds.获取connection(
-            */
+             * 尝试。
+             * @param ds.getConnection( ds.获取connection(
+             */
             try (Connection connection = ds.getConnection()) {
                 String catalog = connection.getCatalog();
                 String schema = connection.getSchema();
@@ -1631,9 +1631,9 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
                 String[] excludePrefixes = dataSourceScriptProperties.getExcludeTablePrefixes();
 
                 /**
-                * 尝试。
-                * @param connection.getMetaData( connection.获取meta数据(
-                */
+                 * 尝试。
+                 * @param connection.getMetaData( connection.获取meta数据(
+                 */
                 try (var tables = connection.getMetaData().getTables(catalog, schema, "%", new String[]{"TABLE"})) {
                     tableLoop:
                     while (tables.next()) {
@@ -1660,26 +1660,26 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         }
 
         /**
-        * 判断当前库是否已有业务数据
-        * <p>
-        * 根据 scope 配置决定判断方式：
-        * <ul>
-        *   <li>scope=table（默认）：排除配置的系统表前缀（如 sys_），仅检查业务表是否有数据</li>
-        *   <li>scope=file：检查所有表（原行为）</li>
-        * </ul>
-        * </p>
-        *
-        * @return true-已有数据, false-无数据, 空-无法判断
-        */
+         * 判断当前库是否已有业务数据
+         * <p>
+         * 根据 scope 配置决定判断方式：
+         * <ul>
+         *   <li>scope=table（默认）：排除配置的系统表前缀（如 sys_），仅检查业务表是否有数据</li>
+         *   <li>scope=file：检查所有表（原行为）</li>
+         * </ul>
+         * </p>
+         *
+         * @return true-已有数据, false-无数据, 空-无法判断
+         */
         private Boolean hasBusinessData() {
             String versionTableName = extractTablePrefix(dataSourceScriptProperties.getVersionTable());
             boolean isTableScope = "table".equals(dataSourceScriptProperties.getScope());
             String[] excludePrefixes = dataSourceScriptProperties.getExcludeTablePrefixes();
 
             /**
-            * 尝试。
-            * @param ds.getConnection( ds.获取connection(
-            */
+             * 尝试。
+             * @param ds.getConnection( ds.获取connection(
+             */
             try (Connection connection = ds.getConnection();
                  var tables = connection.getMetaData().getTables(
                          connection.getCatalog(),
@@ -1703,9 +1703,9 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
                     }
 
                     /**
-                    * 尝试。
-                    * @param connection.createStatement( connection.创建对账单(
-                    */
+                     * 尝试。
+                     * @param connection.createStatement( connection.创建对账单(
+                     */
                     try (var statement = connection.createStatement();
                          var rows = statement.executeQuery("SELECT 1 FROM " + tableName + " LIMIT 1")) {
                         if (rows.next()) {
@@ -1721,13 +1721,13 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         }
 
         /**
-        * 创建版本记录表
-        * <p>
-        * 兼容多种数据库类型, 字段名使用表名前缀。
-        * MySQL/PostgreSQL 保持原语法 (含 评论 列注释);
-        * sqlite/H2 不支持列注释和 UNIQUE Key, 自动降级为方言兼容语法。
-        * </p>
-        */
+         * 创建版本记录表
+         * <p>
+         * 兼容多种数据库类型, 字段名使用表名前缀。
+         * MySQL/PostgreSQL 保持原语法 (含 评论 列注释);
+         * sqlite/H2 不支持列注释和 UNIQUE Key, 自动降级为方言兼容语法。
+         * </p>
+         */
         private void createVersionTable() {
             String tableName = dataSourceScriptProperties.getVersionTable();
  // 提取表名作为字段前缀（去掉可能的模式前缀）
@@ -1777,15 +1777,15 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         }
 
         /**
-        * 判断当前数据源是否 sqlite。
-        *
-        * @return 是否 sqlite
-        */
+         * 判断当前数据源是否 sqlite。
+         *
+         * @return 是否 sqlite
+         */
         private boolean isSqliteDatabase() {
             /**
-            * 尝试。
-            * @param ds.getConnection( ds.获取connection(
-            */
+             * 尝试。
+             * @param ds.getConnection( ds.获取connection(
+             */
             try (java.sql.Connection connection = ds.getConnection()) {
                 String productName = connection.getMetaData().getDatabaseProductName();
                 if (productName == null) {
@@ -1799,8 +1799,8 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         }
 
         /**
-        * 插入基线版本记录（如果需要）
-        */
+         * 插入基线版本记录（如果需要）
+         */
         private void insertBaselineIfNeeded() {
             if (!dataSourceScriptProperties.isBaselineOnMigrate()) {
                 return;
@@ -1833,13 +1833,13 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         }
 
         /**
-        * 通过 服务加载 加载各模块提供的数据库脚本
-        * <p>
-        * 使用 SPI 机制自动发现并加载实现了 database文件提供者 接口的模块
-        * </p>
-        *
-        * @return 所有模块提供的脚本资源列表
-        */
+         * 通过 服务加载 加载各模块提供的数据库脚本
+         * <p>
+         * 使用 SPI 机制自动发现并加载实现了 database文件提供者 接口的模块
+         * </p>
+         *
+         * @return 所有模块提供的脚本资源列表
+         */
         private List<Resource> loadResourcesFromProviders() {
             List<Resource> resources = new ArrayList<>();
             ServiceLoader<DatabaseFileProvider> providers = ServiceLoader.load(DatabaseFileProvider.class);
@@ -1878,13 +1878,13 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         }
 
         /**
-        * 扫描多个路径下的脚本资源
-        *
-        * @param resolver 资源解析器
-        * @param paths    脚本路径列表
-        * @return 脚本资源列表
-        * @throws IOException IO异常
-        */
+         * 扫描多个路径下的脚本资源
+         *
+         * @param resolver 资源解析器
+         * @param paths    脚本路径列表
+         * @return 脚本资源列表
+         * @throws IOException IO异常
+         */
         private List<Resource> scanScripts(PathMatchingResourcePatternResolver resolver, String... paths)
                 throws IOException {
             List<Resource> allResources = new ArrayList<>();
@@ -1906,11 +1906,11 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         }
 
         /**
-        * 分割script路径
-        *
-        * @param rawPaths raw路径
-        * @return 分割script路径的结果
-        */
+         * 分割script路径
+         *
+         * @param rawPaths raw路径
+         * @return 分割script路径的结果
+         */
         private List<String> splitScriptPaths(String rawPaths) {
             if (!StringUtils.hasText(rawPaths)) {
                 return List.of(DataSourceScriptProperties.DEFAULT_SCRIPT_PATH.split(","));
@@ -1930,19 +1930,19 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         }
 
         /**
-        * 获取脚本类型
-        * 根据文件名格式判断：
-        * <ul>
-        *   <li>V版本号__init_任意.sql     → INIT（初始化表结构脚本，同步执行）</li>
-        *   <li>V版本号__initdata_任意.sql → INITDATA（初始化数据脚本，异步执行）</li>
-        *   <li>V版本号__add_任意.sql      → ADD（增量脚本，同步执行）</li>
-        *   <li>V版本号__任意.sql          → NORMAL（普通脚本，同步执行）</li>
-        *   <li>其他格式                  → null（不执行）</li>
-        * </ul>
-        *
-        * @param fileName 文件名
-        * @return 脚本类型：INIT、INITDATA、ADD、NORMAL 或 空（不符合格式）
-        */
+         * 获取脚本类型
+         * 根据文件名格式判断：
+         * <ul>
+         *   <li>V版本号__init_任意.sql     → INIT（初始化表结构脚本，同步执行）</li>
+         *   <li>V版本号__initdata_任意.sql → INITDATA（初始化数据脚本，异步执行）</li>
+         *   <li>V版本号__add_任意.sql      → ADD（增量脚本，同步执行）</li>
+         *   <li>V版本号__任意.sql          → NORMAL（普通脚本，同步执行）</li>
+         *   <li>其他格式                  → null（不执行）</li>
+         * </ul>
+         *
+         * @param fileName 文件名
+         * @return 脚本类型：INIT、INITDATA、ADD、NORMAL 或 空（不符合格式）
+         */
         private String getScriptType(String fileName) {
             String separator = dataSourceScriptProperties.getVersionSeparator();
             
@@ -1973,12 +1973,12 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         }
 
         /**
-        * 检查脚本的版本类型是否允许执行
-        * 根据配置的 release类型 或 allowedrelease类型 判断
-        *
-        * @param fileName 文件名
-        * @return 是否允许执行
-        */
+         * 检查脚本的版本类型是否允许执行
+         * 根据配置的 release类型 或 allowedrelease类型 判断
+         *
+         * @param fileName 文件名
+         * @return 是否允许执行
+         */
         private boolean isReleaseTypeAllowed(String fileName) {
             // 解析版本号
             String versionStr = versionOf(fileName);
@@ -2003,12 +2003,12 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         }
 
         /**
-        * 从文件名中提取版本号
-        * 例如: V1.0.0__创建_用户.SQL -> 1.0.0
-        *
-        * @param fileName 文件名
-        * @return 版本号
-        */
+         * 从文件名中提取版本号
+         * 例如: V1.0.0__创建_用户.SQL -> 1.0.0
+         *
+         * @param fileName 文件名
+         * @return 版本号
+         */
         private String versionOf(String fileName) {
             String prefix = dataSourceScriptProperties.getScriptPrefix();
             String suffix = dataSourceScriptProperties.getScriptSuffix();
@@ -2027,12 +2027,12 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         }
 
         /**
-        * 从文件名中提取描述信息
-        * 例如: V1.0.0__创建_用户.SQL -> 创建_用户
-        *
-        * @param fileName 文件名
-        * @return 描述信息
-        */
+         * 从文件名中提取描述信息
+         * 例如: V1.0.0__创建_用户.SQL -> 创建_用户
+         *
+         * @param fileName 文件名
+         * @return 描述信息
+         */
         private String descriptionOf(String fileName) {
             String suffix = dataSourceScriptProperties.getScriptSuffix();
             String separator = dataSourceScriptProperties.getVersionSeparator();
@@ -2057,24 +2057,24 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         }
 
         /**
-        * 计算资源文件的MD5校验和
-        *
-        * @param res 资源文件
-        * @return MD5校验和
-        * @throws IOException 读取资源文件时发生IO异常
-        */
+         * 计算资源文件的MD5校验和
+         *
+         * @param res 资源文件
+         * @return MD5校验和
+         * @throws IOException 读取资源文件时发生IO异常
+         */
         private String checksum(Resource res) throws IOException {
             return DigestUtils.md5DigestAsHex(res.getInputStream());
         }
 
         /**
-        * 提取表名前缀
-        * 例如：db_版本_历史 -> db_版本_历史
-        * 模式.db_版本 -> db_版本
-        *
-        * @param tableName 表名（可能包含模式）
-        * @return 表名前缀
-        */
+         * 提取表名前缀
+         * 例如：db_版本_历史 -> db_版本_历史
+         * 模式.db_版本 -> db_版本
+         *
+         * @param tableName 表名（可能包含模式）
+         * @return 表名前缀
+         */
         private String extractTablePrefix(String tableName) {
  // 如果包含模式前缀（如 模式.table），只取表名部分
             if (tableName.contains(".")) {
@@ -2086,12 +2086,12 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         }
 
         /**
-        * 构建数据库特定的脚本路径
-        *
-        * @param originalPath 原始路径
-        * @param databaseType 数据库类型
-        * @return 数据库特定的路径
-        */
+         * 构建数据库特定的脚本路径
+         *
+         * @param originalPath 原始路径
+         * @param databaseType 数据库类型
+         * @return 数据库特定的路径
+         */
         private String buildDatabaseSpecificPath(String originalPath, String databaseType) {
             // 查找文件扩展名的位置
             int lastDotIndex = originalPath.lastIndexOf('.');

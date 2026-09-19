@@ -7,17 +7,17 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
-* 服务管理 —— 热更新结果。
-*
-* <p>区分三种落地方式，便于前端提示「哪些改动即时生效、哪些需要重启」：</p>
-* <ul>
-*   <li>{@code hotApplied = true}：监听参数未变，仅重建过滤器链（不重启服务器）</li>
-*   <li>{@code restarted = true}：监听地址/端口/引擎变更，服务器已按新配置重启</li>
-*   <li>二者皆 假：节点未运行，定义已保存，等待下次启动生效</li>
-* </ul>
-*
-* @author CH
-* @since 4.0.0.42
+ * 服务管理 —— 热更新结果。
+ *
+ * <p>区分三种落地方式，便于前端提示「哪些改动即时生效、哪些需要重启」：</p>
+ * <ul>
+ *   <li>{@code hotApplied = true}：监听参数未变，仅重建过滤器链（不重启服务器）</li>
+ *   <li>{@code restarted = true}：监听地址/端口/引擎变更，服务器已按新配置重启</li>
+ *   <li>二者皆 假：节点未运行，定义已保存，等待下次启动生效</li>
+ * </ul>
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 @Data
 @Schema(description = "服务管理-热更新结果")

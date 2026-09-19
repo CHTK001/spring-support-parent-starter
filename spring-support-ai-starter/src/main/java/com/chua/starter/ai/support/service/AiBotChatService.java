@@ -38,16 +38,16 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
-* 微信 i链接 机器人 聊天引擎。
-*
-* <p>为每个已绑定的微信 Bot 启动 iLink 消息轮询（getupdates），
-* 收到微信消息后调用配置的 AI 模型生成回复，并通过 sendmessage 回发。</p>
-*
-* <p>每个 Bot 可配置独立的 AI 模型（{@link SysAiBotBinding#getModel()}），
-* AI 客户端基于模型管理配置的 提供者（DB）即时构建。</p>
-*
-* @author CH
-* @since 4.0.0.42
+ * 微信 i链接 机器人 聊天引擎。
+ *
+ * <p>为每个已绑定的微信 Bot 启动 iLink 消息轮询（getupdates），
+ * 收到微信消息后调用配置的 AI 模型生成回复，并通过 sendmessage 回发。</p>
+ *
+ * <p>每个 Bot 可配置独立的 AI 模型（{@link SysAiBotBinding#getModel()}），
+ * AI 客户端基于模型管理配置的 提供者（DB）即时构建。</p>
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 @Slf4j
 @Service
@@ -79,11 +79,11 @@ public class AiBotChatService {
     private final Map<String, ILinkBotClient> runningBots = new ConcurrentHashMap<>();
 
     /**
-    * 应用上下文刷新后加载所有已绑定的微信 机器人 并启动消息轮询。
-    *
-    * <p>使用 {@link ContextRefreshedEvent} 而非 {@code @PostConstruct}，
-    * 确保 对话客户端registry 已初始化完成。</p>
-    */
+     * 应用上下文刷新后加载所有已绑定的微信 机器人 并启动消息轮询。
+     *
+     * <p>使用 {@link ContextRefreshedEvent} 而非 {@code @PostConstruct}，
+     * 确保 对话客户端registry 已初始化完成。</p>
+     */
     @EventListener(ContextRefreshedEvent.class)
     public void init() {
         log.info("[BotChat] 启动微信 Bot 聊天引擎，加载已绑定 Bot...");
@@ -99,12 +99,12 @@ public class AiBotChatService {
     }
 
     /**
-    * 启动单个 机器人 的消息轮询与 AI 回复。
-    *
-    * <p>若该 Bot 已在运行则先停止，避免重复轮询。</p>
-    *
-    * @param bot 机器人 绑定记录
-    */
+     * 启动单个 机器人 的消息轮询与 AI 回复。
+     *
+     * <p>若该 Bot 已在运行则先停止，避免重复轮询。</p>
+     *
+     * @param bot 机器人 绑定记录
+     */
     public void startBot(SysAiBotBinding bot) {
         if (bot == null || bot.getBotId() == null || bot.getBotToken() == null) {
             return;
@@ -135,14 +135,14 @@ public class AiBotChatService {
     }
 
     /**
-    * 查询 机器人 运行状态（i链接 会话是否存活）。
-    *
-    * <p>ILink 会话超时（errcode=-14）后客户端停止轮询并从 runningBots 移除，
-    * 前端据此提示「会话已过期，请重新扫码绑定」。</p>
-    *
-    * @param botId 机器人 唯一标识
-    * @return running=会话存活；stopped=未在运行（超时/停止），需重新扫码
-    */
+     * 查询 机器人 运行状态（i链接 会话是否存活）。
+     *
+     * <p>ILink 会话超时（errcode=-14）后客户端停止轮询并从 runningBots 移除，
+     * 前端据此提示「会话已过期，请重新扫码绑定」。</p>
+     *
+     * @param botId 机器人 唯一标识
+     * @return running=会话存活；stopped=未在运行（超时/停止），需重新扫码
+     */
     public String runtimeStatus(String botId) {
         ILinkBotClient client = runningBots.get(botId);
  // 只用对象存在判断不够：会话超时（-14）后 客户端 仍留在 映射 中，
@@ -158,10 +158,10 @@ public class AiBotChatService {
     }
 
     /**
-    * 停止指定 机器人 的消息轮询。
-    *
-    * @param botId 机器人 唯一标识
-    */
+     * 停止指定 机器人 的消息轮询。
+     *
+     * @param botId 机器人 唯一标识
+     */
     public void stopBot(String botId) {
         ILinkBotClient client = runningBots.remove(botId);
         if (client != null) {
@@ -171,11 +171,11 @@ public class AiBotChatService {
     }
 
     /**
-    * 处理微信入站消息：调用 AI 生成回复并回发。
-    * @param bot 机器人
-    * @param client 客户端
-    * @param message 消息
-    */
+     * 处理微信入站消息：调用 AI 生成回复并回发。
+     * @param bot 机器人
+     * @param client 客户端
+     * @param message 消息
+     */
     private void handleMessage(SysAiBotBinding bot, ILinkBotClient client, BotInboundMessage message) {
         String content = message.getContent();
         String fromUser = message.getFromUser();
@@ -210,13 +210,13 @@ public class AiBotChatService {
     }
 
     /**
-    * 主动向指定微信用户发送一条消息（聊天框手动发送 / 主动触达）。
-    *
-    * @param botId    机器人 唯一标识
-    * @param fromUser 目标微信用户 标识
-    * @param content  消息内容
-    * @return 发送结果
-    */
+     * 主动向指定微信用户发送一条消息（聊天框手动发送 / 主动触达）。
+     *
+     * @param botId    机器人 唯一标识
+     * @param fromUser 目标微信用户 标识
+     * @param content  消息内容
+     * @return 发送结果
+     */
     public BotSendResult sendMessage(String botId, String fromUser, String content) {
         ILinkBotClient client = runningBots.get(botId);
         if (client == null) {
@@ -236,12 +236,12 @@ public class AiBotChatService {
     }
 
     /**
-    * 查询指定 机器人 与某用户的聊天记录（按时间升序）。
-    *
-    * @param botId    机器人 唯一标识
-    * @param fromUser 目标微信用户 标识（可空，空则查询该 机器人 全部消息）
-    * @return 聊天记录列表
-    */
+     * 查询指定 机器人 与某用户的聊天记录（按时间升序）。
+     *
+     * @param botId    机器人 唯一标识
+     * @param fromUser 目标微信用户 标识（可空，空则查询该 机器人 全部消息）
+     * @return 聊天记录列表
+     */
     public List<SysAiBotMessage> listMessages(String botId, String fromUser) {
         return botMessageMapper.selectList(
                 Wrappers.<SysAiBotMessage>lambdaQuery()
@@ -251,17 +251,17 @@ public class AiBotChatService {
     }
 
     /**
-    * 分页查询指定 机器人 与某用户的聊天记录（供 IM 页滚动加载历史）。
-    *
-    * <p>第 0 页为最近 {@code pageSize} 条；页码越大越早（按时间倒序取窗口后反转升序），
-    * 保证前端「先显示最新、向上滚动加载更早」的展示语义。</p>
-    *
-    * @param botId    机器人 唯一标识
-    * @param fromUser 目标微信用户 标识（可空，空则查询该 机器人 全部消息）
-    * @param page     页码（从 0 开始，非法值按 0 处理）
-    * @param pageSize 每页条数（非法值按 50 处理）
-    * @return 分页结果：messages（升序）、hasMore、page、pageSize
-    */
+     * 分页查询指定 机器人 与某用户的聊天记录（供 IM 页滚动加载历史）。
+     *
+     * <p>第 0 页为最近 {@code pageSize} 条；页码越大越早（按时间倒序取窗口后反转升序），
+     * 保证前端「先显示最新、向上滚动加载更早」的展示语义。</p>
+     *
+     * @param botId    机器人 唯一标识
+     * @param fromUser 目标微信用户 标识（可空，空则查询该 机器人 全部消息）
+     * @param page     页码（从 0 开始，非法值按 0 处理）
+     * @param pageSize 每页条数（非法值按 50 处理）
+     * @return 分页结果：messages（升序）、hasMore、page、pageSize
+     */
     public Map<String, Object> listMessagesPaged(String botId, String fromUser, int page, int pageSize) {
         int safePage = Math.max(0, page);
         int safeSize = pageSize > 0 ? pageSize : 50;
@@ -288,14 +288,14 @@ public class AiBotChatService {
     }
 
     /**
-    * 用 机器人 配置（或全局默认）的 AI 模型润色一段文本。
-    *
-    * <p>用于 IM 输入框的「润色」按钮：不落库、不回发，仅返回润色后的文本。</p>
-    *
-    * @param botId 机器人 唯一标识
-    * @param text  待润色文本
-    * @return 润色结果，模型未配置/调用失败时返回空字符串
-    */
+     * 用 机器人 配置（或全局默认）的 AI 模型润色一段文本。
+     *
+     * <p>用于 IM 输入框的「润色」按钮：不落库、不回发，仅返回润色后的文本。</p>
+     *
+     * @param botId 机器人 唯一标识
+     * @param text  待润色文本
+     * @return 润色结果，模型未配置/调用失败时返回空字符串
+     */
     public String polishText(String botId, String text) {
         if (botId == null || botId.isBlank() || text == null || text.isBlank()) {
             return "";
@@ -317,15 +317,15 @@ public class AiBotChatService {
     }
 
     /**
-    * 用 机器人 配置（或全局默认）的 AI 模型总结指定会话的聊天记录。
-    *
-    * <p>供 IM 页「上下文总结」按钮使用：将历史消息拼接后交给模型生成要点摘要，
-    * 便于用户将摘要粘贴回输入框继续对话。最多取最近 200 条消息。</p>
-    *
-    * @param botId    机器人 唯一标识
-    * @param fromUser 目标微信用户 标识（可空，空则总结该 机器人 全部消息）
-    * @return 会话摘要，无消息/模型未配置/调用失败时返回空字符串
-    */
+     * 用 机器人 配置（或全局默认）的 AI 模型总结指定会话的聊天记录。
+     *
+     * <p>供 IM 页「上下文总结」按钮使用：将历史消息拼接后交给模型生成要点摘要，
+     * 便于用户将摘要粘贴回输入框继续对话。最多取最近 200 条消息。</p>
+     *
+     * @param botId    机器人 唯一标识
+     * @param fromUser 目标微信用户 标识（可空，空则总结该 机器人 全部消息）
+     * @return 会话摘要，无消息/模型未配置/调用失败时返回空字符串
+     */
     public String summarizeConversation(String botId, String fromUser) {
         if (botId == null || botId.isBlank()) {
             return "";
@@ -357,11 +357,11 @@ public class AiBotChatService {
     }
 
     /**
-    * 按 机器人标识 查询 机器人 绑定记录。
-    *
-    * @param botId 机器人 唯一标识
-    * @return 绑定记录，未找到返回 空
-    */
+     * 按 机器人标识 查询 机器人 绑定记录。
+     *
+     * @param botId 机器人 唯一标识
+     * @return 绑定记录，未找到返回 空
+     */
     private SysAiBotBinding findBinding(String botId) {
         if (botId == null || botId.isBlank()) {
             return null;
@@ -373,11 +373,11 @@ public class AiBotChatService {
     }
 
     /**
-    * 解析 机器人 使用的模型名：优先 机器人 单独配置，其次全局默认模型。
-    *
-    * @param bot 机器人 绑定记录（可为 空）
-    * @return 模型名，无法解析时返回 空
-    */
+     * 解析 机器人 使用的模型名：优先 机器人 单独配置，其次全局默认模型。
+     *
+     * @param bot 机器人 绑定记录（可为 空）
+     * @return 模型名，无法解析时返回 空
+     */
     private String resolveModelName(SysAiBotBinding bot) {
         if (bot != null && bot.getModel() != null && !bot.getModel().isBlank()) {
             return bot.getModel();
@@ -386,14 +386,14 @@ public class AiBotChatService {
     }
 
     /**
-    * 按模型名从模型管理配置（提供者_模型 → 提供者）构建不带 系统 提示符 的 对话客户端。
-    *
-    * <p>供润色/摘要等辅助场景复用：只负责「模型→供应商→凭证」的解析与客户端构建，
-    * 系统提示词由调用方按场景注入。</p>
-    *
-    * @param modelName 模型名称
-    * @return ChatClient，模型未配置/供应商不存在时返回 空
-    */
+     * 按模型名从模型管理配置（提供者_模型 → 提供者）构建不带 系统 提示符 的 对话客户端。
+     *
+     * <p>供润色/摘要等辅助场景复用：只负责「模型→供应商→凭证」的解析与客户端构建，
+     * 系统提示词由调用方按场景注入。</p>
+     *
+     * @param modelName 模型名称
+     * @return ChatClient，模型未配置/供应商不存在时返回 空
+     */
     private ChatClient buildModelChatClient(String modelName) {
         if (modelName == null || modelName.isBlank()) {
             return null;
@@ -427,10 +427,10 @@ public class AiBotChatService {
     }
 
     /**
-    * 查询 机器人 内置命令清单（供 IM 输入框斜杠命令面板）。
-    *
-    * @return 命令列表（prefix / 名称 / description）
-    * @param commands 命令
+     * 查询 机器人 内置命令清单（供 IM 输入框斜杠命令面板）。
+     *
+     * @return 命令列表（prefix / 名称 / description）
+     * @param commands 命令
      /**
     * 列表命令。
     * @return 列表命令的结果
@@ -462,11 +462,11 @@ public class AiBotChatService {
     }
 
     /**
-    * 查询指定 机器人 的最近联系人（去重 by 从用户）。
-    *
-    * @param botId 机器人 唯一标识
-    * @return 联系人列表
-    */
+     * 查询指定 机器人 的最近联系人（去重 by 从用户）。
+     *
+     * @param botId 机器人 唯一标识
+     * @return 联系人列表
+     */
     public List<String> listContacts(String botId) {
         List<SysAiBotMessage> messages = botMessageMapper.selectList(
                 Wrappers.<SysAiBotMessage>lambdaQuery()
@@ -481,12 +481,12 @@ public class AiBotChatService {
     }
 
     /**
-    * 会话列表：按 机器人 + 微信用户聚合，取每个会话最后一条消息。
-    *
-    * <p>供 IM 页左侧会话列表使用；昵称与状态取自绑定记录（按 botId 匹配）。</p>
-    *
-    * @return 会话列表（按最后消息时间降序）
-    */
+     * 会话列表：按 机器人 + 微信用户聚合，取每个会话最后一条消息。
+     *
+     * <p>供 IM 页左侧会话列表使用；昵称与状态取自绑定记录（按 botId 匹配）。</p>
+     *
+     * @return 会话列表（按最后消息时间降序）
+     */
     public List<BotConversation> listConversations() {
         List<SysAiBotMessage> all = botMessageMapper.selectList(
                 Wrappers.<SysAiBotMessage>lambdaQuery()
@@ -537,15 +537,15 @@ public class AiBotChatService {
     }
 
     /**
-    * 将消息记录从旧 机器人 迁移到新 机器人（重新扫码后 机器人标识 变化时保留历史聊天）。
-    *
-    * <p>微信扫码会话过期重新绑定后，iLink 分配的 botId 可能变化；
-    * 调用此方法把旧 机器人标识 下的聊天记录批量改写到新 机器人标识，保证前端历史不断裂。</p>
-    *
-    * @param oldBotId 原 机器人 唯一标识（允许为 空，为空时跳过）
-    * @param newBotId 新 机器人 唯一标识（不能为空）
-    * @return 迁移的消息条数
-    */
+     * 将消息记录从旧 机器人 迁移到新 机器人（重新扫码后 机器人标识 变化时保留历史聊天）。
+     *
+     * <p>微信扫码会话过期重新绑定后，iLink 分配的 botId 可能变化；
+     * 调用此方法把旧 机器人标识 下的聊天记录批量改写到新 机器人标识，保证前端历史不断裂。</p>
+     *
+     * @param oldBotId 原 机器人 唯一标识（允许为 空，为空时跳过）
+     * @param newBotId 新 机器人 唯一标识（不能为空）
+     * @return 迁移的消息条数
+     */
     public int migrateMessages(String oldBotId, String newBotId) {
         if (newBotId == null || newBotId.isBlank() || oldBotId == null || oldBotId.isBlank()
                 || oldBotId.equals(newBotId)) {
@@ -562,15 +562,15 @@ public class AiBotChatService {
     }
 
     /**
-    * 删除单个会话的聊天记录（按 机器人 + 微信用户），并广播到 IM 页。
-    *
-    * <p>用于清理僵尸会话：绑定记录已删除后，消息表仍残留历史，
-    * 通过此接口按 机器人标识 + 从用户 定向清除。</p>
-    *
-    * @param botId    机器人 唯一标识
-    * @param fromUser 微信用户 标识
-    * @return 删除的消息条数
-    */
+     * 删除单个会话的聊天记录（按 机器人 + 微信用户），并广播到 IM 页。
+     *
+     * <p>用于清理僵尸会话：绑定记录已删除后，消息表仍残留历史，
+     * 通过此接口按 机器人标识 + 从用户 定向清除。</p>
+     *
+     * @param botId    机器人 唯一标识
+     * @param fromUser 微信用户 标识
+     * @return 删除的消息条数
+     */
     public int deleteConversation(String botId, String fromUser) {
         int deleted = botMessageMapper.delete(
                 Wrappers.<SysAiBotMessage>lambdaQuery()
@@ -587,13 +587,13 @@ public class AiBotChatService {
     }
 
     /**
-    * 落库一条 机器人 聊天消息（失败不阻断主流程），并广播到 IM 页。
-    *
-    * @param botId    机器人 唯一标识
-    * @param direction 入（用户→机器人）/ 出（机器人→用户）
-    * @param fromUser  微信用户 标识
-    * @param content   消息内容
-    */
+     * 落库一条 机器人 聊天消息（失败不阻断主流程），并广播到 IM 页。
+     *
+     * @param botId    机器人 唯一标识
+     * @param direction 入（用户→机器人）/ 出（机器人→用户）
+     * @param fromUser  微信用户 标识
+     * @param content   消息内容
+     */
     private void recordMessage(String botId, String direction, String fromUser, String content) {
         try {
             SysAiBotMessage msg = new SysAiBotMessage();
@@ -618,15 +618,15 @@ public class AiBotChatService {
     }
 
     /**
-    * 用 机器人 配置的模型生成 AI 回复。
-    *
-    * <p>基于模型管理配置的 provider（DB）即时构建 ChatClient：
-    * 根据模型名查 提供者_模型 → 提供者（platform/baseurl/凭证），
-    * 用 {@link ChatClient#create(String, String, String)} 构建并调用。</p>
-    * @param bot 机器人
-    * @param userMsg 用户msg
-    * @return AIreply的结果
-    */
+     * 用 机器人 配置的模型生成 AI 回复。
+     *
+     * <p>基于模型管理配置的 provider（DB）即时构建 ChatClient：
+     * 根据模型名查 提供者_模型 → 提供者（platform/baseurl/凭证），
+     * 用 {@link ChatClient#create(String, String, String)} 构建并调用。</p>
+     * @param bot 机器人
+     * @param userMsg 用户msg
+     * @return AIreply的结果
+     */
     private String aiReply(SysAiBotBinding bot, String userMsg) {
  // 优先用 机器人 单独配置的模型，未配置则回退全局默认模型（机器人.默认_模型）
         String modelName = bot.getModel();
@@ -706,13 +706,13 @@ public class AiBotChatService {
     }
 
     /**
-    * 从 提供者 凭证中提取 API 键。
-    *
-    * <p>凭证结构：{@code {"api_keys": ["sk-...", ...]}}，取第一个；
-    * 兼容 {@code apiKey} 键。</p>
-    * @param credentials 凭证
-    * @return extractapi键的结果
-    */
+     * 从 提供者 凭证中提取 API 键。
+     *
+     * <p>凭证结构：{@code {"api_keys": ["sk-...", ...]}}，取第一个；
+     * 兼容 {@code apiKey} 键。</p>
+     * @param credentials 凭证
+     * @return extractapi键的结果
+     */
     private static String extractApiKey(Map<String, Object> credentials) {
         if (credentials == null) {
             return null;
@@ -726,12 +726,12 @@ public class AiBotChatService {
     }
 
     /**
-    * 从 提供者 extra 中提取 习俗_头部。
-    *
-    * <p>extra 结构：{@code {"custom_headers": {"X-Key": "value", ...}}}</p>
-    * @param extra extra
-    * @return extractextra头部的结果
-    */
+     * 从 提供者 extra 中提取 习俗_头部。
+     *
+     * <p>extra 结构：{@code {"custom_headers": {"X-Key": "value", ...}}}</p>
+     * @param extra extra
+     * @return extractextra头部的结果
+     */
     @SuppressWarnings("unchecked")
     private static Map<String, String> extractExtraHeaders(Map<String, Object> extra) {
         if (extra == null) {

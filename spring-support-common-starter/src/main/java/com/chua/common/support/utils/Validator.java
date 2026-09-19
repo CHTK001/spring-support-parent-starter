@@ -3,13 +3,13 @@ package com.chua.common.support.utils;
 import java.util.regex.Pattern;
 
 /**
-* 验证器工具类
-* <p>
-* 提供手机号、邮箱、身份证号等常见格式的验证
-* </p>
-*
-* @author CH
-* @since 2025-07-22
+ * 验证器工具类
+ * <p>
+ * 提供手机号、邮箱、身份证号等常见格式的验证
+ * </p>
+ *
+ * @author CH
+ * @since 2025-07-22
  */
 public class Validator {
 
@@ -19,17 +19,17 @@ public class Validator {
     private static final Pattern IP_PATTERN = Pattern.compile("^(25[0-5]|2[0-4]\\d|[01]?\\d\\d?)\\.(25[0-5]|2[0-4]\\d|[01]?\\d\\d?)\\.(25[0-5]|2[0-4]\\d|[01]?\\d\\d?)\\.(25[0-5]|2[0-4]\\d|[01]?\\d\\d?)$");
 
     /**
-    * Validator。
-    */
+     * Validator。
+     */
     private Validator() {
     }
 
     /**
-    * 验证手机号格式（中国）
-    *
-    * @param phone 手机号
-    * @return 格式正确返回 true，否则返回 false
-    */
+     * 验证手机号格式（中国）
+     *
+     * @param phone 手机号
+     * @return 格式正确返回 true，否则返回 false
+     */
     public static boolean isMobile(String phone) {
         if (phone == null) {
             return false;
@@ -38,11 +38,11 @@ public class Validator {
     }
 
     /**
-    * 验证邮箱格式
-    *
-    * @param email 邮箱地址
-    * @return 格式正确返回 true，否则返回 false
-    */
+     * 验证邮箱格式
+     *
+     * @param email 邮箱地址
+     * @return 格式正确返回 true，否则返回 false
+     */
     public static boolean isEmail(String email) {
         if (email == null) {
             return false;
@@ -51,11 +51,11 @@ public class Validator {
     }
 
     /**
-    * 验证身份证号格式（18 位）
-    *
-    * @param idCard 身份证号
-    * @return 格式正确返回 true，否则返回 false
-    */
+     * 验证身份证号格式（18 位）
+     *
+     * @param idCard 身份证号
+     * @return 格式正确返回 true，否则返回 false
+     */
     public static boolean isIdCard(String idCard) {
         if (idCard == null) {
             return false;
@@ -64,11 +64,11 @@ public class Validator {
     }
 
     /**
-    * 验证 ipv4 地址格式
-    *
-    * @param ip IP 地址
-    * @return 格式正确返回 true，否则返回 false
-    */
+     * 验证 ipv4 地址格式
+     *
+     * @param ip IP 地址
+     * @return 格式正确返回 true，否则返回 false
+     */
     public static boolean isIp(String ip) {
         if (ip == null) {
             return false;
@@ -77,11 +77,11 @@ public class Validator {
     }
 
     /**
-    * 验证字符串是否全部由数字组成
-    *
-    * @param str 字符串
-    * @return 全部为数字返回 true，否则返回 false
-    */
+     * 验证字符串是否全部由数字组成
+     *
+     * @param str 字符串
+     * @return 全部为数字返回 true，否则返回 false
+     */
     public static boolean isNumeric(String str) {
         if (str == null || str.isEmpty()) {
             return false;
@@ -95,11 +95,11 @@ public class Validator {
     }
 
     /**
-    * 验证字符串是否为纯字母
-    *
-    * @param str 字符串
-    * @return 全部为字母返回 true，否则返回 false
-    */
+     * 验证字符串是否为纯字母
+     *
+     * @param str 字符串
+     * @return 全部为字母返回 true，否则返回 false
+     */
     public static boolean isAlpha(String str) {
         if (str == null || str.isEmpty()) {
             return false;
@@ -113,11 +113,11 @@ public class Validator {
     }
 
     /**
-    * 验证字符串是否为字母数字组合
-    *
-    * @param str 字符串
-    * @return 全部为字母或数字返回 true，否则返回 false
-    */
+     * 验证字符串是否为字母数字组合
+     *
+     * @param str 字符串
+     * @return 全部为字母或数字返回 true，否则返回 false
+     */
     public static boolean isAlphanumeric(String str) {
         if (str == null || str.isEmpty()) {
             return false;
@@ -131,11 +131,11 @@ public class Validator {
     }
 
     /**
-    * 验证 URL 格式（http/https 开头）
-    *
-    * @param url URL 字符串
-    * @return 格式正确返回 true，否则返回 false
-    */
+     * 验证 URL 格式（http/https 开头）
+     *
+     * @param url URL 字符串
+     * @return 格式正确返回 true，否则返回 false
+     */
     public static boolean isUrl(String url) {
         if (url == null) {
             return false;
@@ -145,11 +145,11 @@ public class Validator {
     }
 
     /**
-    * 判断字符串是否包含中文字符
-    *
-    * @param str 字符串
-    * @return 包含中文字符返回 true，否则返回 false
-    */
+     * 判断字符串是否包含中文字符
+     *
+     * @param str 字符串
+     * @return 包含中文字符返回 true，否则返回 false
+     */
     public static boolean hasChinese(String str) {
         if (str == null) {
             return false;

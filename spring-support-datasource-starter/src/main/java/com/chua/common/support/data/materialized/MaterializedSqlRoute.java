@@ -4,10 +4,10 @@ import lombok.Builder;
 import lombok.Data;
 
 /**
-* SQL 路由结果。
-*
-* @since 2026/4/2
-* @author CH
+ * SQL 路由结果。
+ *
+ * @since 2026/4/2
+ * @author CH
  */
 @Data
 @Builder
@@ -30,11 +30,11 @@ public class MaterializedSqlRoute {
     }
 
     /**
-    * Routed
-    *
-    * @param dataSource 数据源
-    * @return routed的结果
-    */
+     * Routed
+     *
+     * @param dataSource 数据源
+     * @return routed的结果
+     */
     public static MaterializedSqlRoute routed(String dataSource) {
         return MaterializedSqlRoute.builder()
                 .routed(true)
@@ -43,12 +43,12 @@ public class MaterializedSqlRoute {
     }
 
     /**
-    * Routed
-    *
-    * @param dataSource 数据源
-    * @param cacheKey 缓存Key
-    * @return routed的结果
-    */
+     * Routed
+     *
+     * @param dataSource 数据源
+     * @param cacheKey 缓存Key
+     * @return routed的结果
+     */
     public static MaterializedSqlRoute routed(String dataSource, String cacheKey) {
         return MaterializedSqlRoute.builder()
                 .routed(true)

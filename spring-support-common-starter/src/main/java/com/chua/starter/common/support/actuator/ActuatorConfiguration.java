@@ -13,32 +13,32 @@ import org.slf4j.LoggerFactory;
 
 
 /**
-* Actuator 配置类
-* <p>
-* 统一管理 Actuator 相关的配置，包括：
-* <ul>
-*     <li>认证过滤器 - 保护 Actuator 端点</li>
-*     <li>IP 白名单 - 限制访问来源</li>
-* </ul>
-* </p>
-*
-* <h3>配置示例：</h3>
-* <pre>
-* plugin:
-*   actuator:
-*     enable-auth: true          # 是否开启认证
-*     username: admin            # 用户名
-*     password: admin123         # 密码
-*     ip-whitelist:              # IP 白名单
-*       - 127.0.0.1
-*       - 192.168.1.0/24
-*     exclude-paths:             # 排除的路径
-*       - /actuator/health
-* </pre>
-*
-* @版本 1.0.0
-* @since 2024/06/21
-* @author CH
+ * Actuator 配置类
+ * <p>
+ * 统一管理 Actuator 相关的配置，包括：
+ * <ul>
+ *     <li>认证过滤器 - 保护 Actuator 端点</li>
+ *     <li>IP 白名单 - 限制访问来源</li>
+ * </ul>
+ * </p>
+ *
+ * <h3>配置示例：</h3>
+ * <pre>
+ * plugin:
+ *   actuator:
+ *     enable-auth: true          # 是否开启认证
+ *     username: admin            # 用户名
+ *     password: admin123         # 密码
+ *     ip-whitelist:              # IP 白名单
+ *       - 127.0.0.1
+ *       - 192.168.1.0/24
+ *     exclude-paths:             # 排除的路径
+ *       - /actuator/health
+ * </pre>
+ *
+ * @版本 1.0.0
+ * @since 2024/06/21
+ * @author CH
  */
 @ConditionalOnProperty(prefix = "plugin.actuator", name = "enable", havingValue = "true", matchIfMissing = true)
 @EnableConfigurationProperties(ActuatorProperties.class)
@@ -69,14 +69,14 @@ public class ActuatorConfiguration  {
     }
 
     /**
-    * Actuator 认证过滤器
-    * <p>
-    * 对 /actuator/* 端点进行 基础 认证 认证，防止未授权访问。
-    * 支持 IP 白名单和路径排除。
-    * </p>
-    *
-    * @return FilterRegistrationBean 过滤器注册 Bean
-    */
+     * Actuator 认证过滤器
+     * <p>
+     * 对 /actuator/* 端点进行 基础 认证 认证，防止未授权访问。
+     * 支持 IP 白名单和路径排除。
+     * </p>
+     *
+     * @return FilterRegistrationBean 过滤器注册 Bean
+     */
     @Bean
     @ConditionalOnMissingBean(name = "actuatorAuthenticationFilterRegistration")
     @ConditionalOnProperty(name = "plugin.actuator.enable-auth", havingValue = "true")

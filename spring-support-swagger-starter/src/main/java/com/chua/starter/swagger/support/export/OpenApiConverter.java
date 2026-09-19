@@ -27,13 +27,13 @@ import java.util.Map;
 import java.util.TreeMap;
 
 /**
-* Swagger / 打开api 3.x → 通用 {@link OpenApiDocumentData} 转换器。
-*
-* <p>作为通用 OpenApiDocumentProvider 体系的入参适配层,
-* 与具体协议栈（springdoc / NAT spec / 刀4j）解耦。</p>
-*
-* @since 4.0.0.42
-* @author CH
+ * Swagger / 打开api 3.x → 通用 {@link OpenApiDocumentData} 转换器。
+ *
+ * <p>作为通用 OpenApiDocumentProvider 体系的入参适配层,
+ * 与具体协议栈（springdoc / NAT spec / 刀4j）解耦。</p>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 public class OpenApiConverter {
 
@@ -87,13 +87,13 @@ public class OpenApiConverter {
     }
 
     /**
-    * eachhttp方法
-    *
-    * @param path 路径
-    * @param op op
-    * @param method 方法
-    * @param data 数据
-    */
+     * eachhttp方法
+     *
+     * @param path 路径
+     * @param op op
+     * @param method 方法
+     * @param data 数据
+     */
     private static void eachHttpMethod(String path, Operation op, String method, OpenApiDocumentData data) {
         if (op == null) {
             return;
@@ -180,21 +180,21 @@ public class OpenApiConverter {
     }
 
     /**
-    * 前缀
-    *
-    * @param s s
-    * @return 前缀的结果
-    */
+     * 前缀
+     *
+     * @param s s
+     * @return 前缀的结果
+     */
     private static String prefix(String s) {
         return s == null ? "" : s;
     }
 
     /**
-    * 模式类型
-    *
-    * @param schema 模式
-    * @return 模式类型的结果
-    */
+     * 模式类型
+     *
+     * @param schema 模式
+     * @return 模式类型的结果
+     */
     private static String schemaType(Schema<?> schema) {
         if (schema == null) {
             return "";
@@ -207,12 +207,12 @@ public class OpenApiConverter {
     }
 
     /**
-    * examplefor模式
-    *
-    * @param schema 模式
-    * @param out 出
-    * @return examplefor模式的结果
-    */
+     * examplefor模式
+     *
+     * @param schema 模式
+     * @param out 出
+     * @return examplefor模式的结果
+     */
     private static Map<String, Object> exampleForSchema(Schema<?> schema, Map<String, Object> out) {
         if (schema == null) {
             return out;
@@ -231,11 +231,11 @@ public class OpenApiConverter {
     }
 
     /**
-    * examplefor
-    *
-    * @param schema 模式
-    * @return exampleFor的结果
-    */
+     * examplefor
+     *
+     * @param schema 模式
+     * @return exampleFor的结果
+     */
     private static Object exampleFor(Schema<?> schema) {
         if (schema == null) {
             return null;
@@ -258,13 +258,13 @@ public class OpenApiConverter {
     }
 
     /**
-    * 扁平化模式
-    *
-    * @param prefix 前缀
-    * @param schema 模式
-    * @param out 出
-    * @return flatten模式的结果
-    */
+     * 扁平化模式
+     *
+     * @param prefix 前缀
+     * @param schema 模式
+     * @param out 出
+     * @return flatten模式的结果
+     */
     private static Map<String, Object> flattenSchema(String prefix, Schema<?> schema, Map<String, Object> out) {
         if (schema == null) {
             return out;

@@ -12,12 +12,12 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.List;
 
 /**
-* rSocket 协议提供者
-* 实现基础 Socket 模块的 SPI 接口
-*
-* @版本 1.0.0
-* @since 2024-12-04
-* @author CH
+ * rSocket 协议提供者
+ * 实现基础 Socket 模块的 SPI 接口
+ *
+ * @版本 1.0.0
+ * @since 2024-12-04
+ * @author CH
  */
 @Slf4j
 @Spi("rsocket")
@@ -43,11 +43,11 @@ public class RSocketProvider implements SocketProvider {
             List<SocketListener> listeners) {
         log.info("[RSocket] 创建 RSocket 会话模板");
         /**
-        * rSocket会话templateimpl。
-        * @param properties 属性
-        * @param listeners 监听器
-        * @return rSocket会话templateimpl的结果
-        */
+         * rSocket会话templateimpl。
+         * @param properties 属性
+         * @param listeners 监听器
+         * @return rSocket会话templateimpl的结果
+         */
         return new RSocketSessionTemplateImpl(properties, listeners);
     }
 

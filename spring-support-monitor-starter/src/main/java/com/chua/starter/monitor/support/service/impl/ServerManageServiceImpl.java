@@ -31,14 +31,14 @@ import java.util.Map;
 import java.util.Set;
 
 /**
-* 服务管理 —— 协议服务器节点管理服务实现。
-*
-* <p>定义持久化到 {@code ms_server_node}（MyBatis-Plus），运行期实例托管在
-* {@link ServerNodeRegistry}。更新语义：先停运行实例 → 全量替换定义 →
-* 启用=1 时按新配置重新拉起。</p>
-*
-* @author CH
-* @since 4.0.0.42
+ * 服务管理 —— 协议服务器节点管理服务实现。
+ *
+ * <p>定义持久化到 {@code ms_server_node}（MyBatis-Plus），运行期实例托管在
+ * {@link ServerNodeRegistry}。更新语义：先停运行实例 → 全量替换定义 →
+ * 启用=1 时按新配置重新拉起。</p>
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 @Slf4j
 @Service
@@ -116,17 +116,17 @@ public class ServerManageServiceImpl implements ServerManageService {
         try {
             ServerNodeProtocol protocol = requireProtocol(request);
             /**
-            * requireunique名称。
-            * @param request.getName( 请求.获取名称(
-            */
+             * requireunique名称。
+             * @param request.getName( 请求.获取名称(
+             */
             requireUniqueName(request.getName(), null);
             MsServerNode node = new MsServerNode();
             /**
-            * apply请求。
-            * @param node 节点
-            * @param request 请求
-            * @param protocol 协议
-            */
+             * apply请求。
+             * @param node 节点
+             * @param request 请求
+             * @param protocol 协议
+             */
             applyRequest(node, request, protocol);
             nodeMapper.insert(node);
             return startIfEnabled(node);
@@ -144,20 +144,20 @@ public class ServerManageServiceImpl implements ServerManageService {
             }
             ServerNodeProtocol protocol = requireProtocol(request);
             /**
-            * requireunique名称。
-            * @param request.getName( 请求.获取名称(
-            */
+             * requireunique名称。
+             * @param request.getName( 请求.获取名称(
+             */
             requireUniqueName(request.getName(), id);
             // 先停运行实例
             nodeRegistry.stop(id);
             MsServerNode node = new MsServerNode();
             node.setId(id);
             /**
-            * apply请求。
-            * @param node 节点
-            * @param request 请求
-            * @param protocol 协议
-            */
+             * apply请求。
+             * @param node 节点
+             * @param request 请求
+             * @param protocol 协议
+             */
             applyRequest(node, request, protocol);
             node.setCreateName(exists.getCreateName());
             node.setCreateBy(exists.getCreateBy());
@@ -346,13 +346,13 @@ public class ServerManageServiceImpl implements ServerManageService {
     }
 
     /**
-    * 判断本次更新是否触发了监听参数变更（需要重启服务器）。
-    *
-    * @param exists   原实体
-    * @param request  新请求
-    * @param protocol 协议枚举
-    * @return 变更返回 真
-    */
+     * 判断本次更新是否触发了监听参数变更（需要重启服务器）。
+     *
+     * @param exists   原实体
+     * @param request  新请求
+     * @param protocol 协议枚举
+     * @return 变更返回 真
+     */
     private boolean listeningChanged(MsServerNode exists, ServerNodeRequest request, ServerNodeProtocol protocol) {
         if (!equalsText(exists.getProtocol(), request.getProtocol())) {
             return true;
@@ -374,12 +374,12 @@ public class ServerManageServiceImpl implements ServerManageService {
     }
 
     /**
-    * 忽略大小写的文本比较（双方均视为小写比较，避免仅大小写差异触发重启）。
-    *
-    * @param left  左值
-    * @param right 右值
-    * @return 相等返回 真
-    */
+     * 忽略大小写的文本比较（双方均视为小写比较，避免仅大小写差异触发重启）。
+     *
+     * @param left  左值
+     * @param right 右值
+     * @return 相等返回 真
+     */
     private boolean equalsText(String left, String right) {
         String l = left == null ? null : left.trim().toLowerCase();
         String r = right == null ? null : right.trim().toLowerCase();
@@ -433,22 +433,22 @@ public class ServerManageServiceImpl implements ServerManageService {
     }
 
     /**
-    * 过滤器类型 → 深度查看页路由（前端校验路由存在后才跳转）。
-    *
-    * <p>仅适用于「深度页面由当前宿主应用托管」的插件。file-storage 不在此列：
-    * 其 SYSTEM 布局由 FileStorageServerFilter 自身在 {@code /{bucket}} 上直接托管 Vue 独立构建，
-    * 与宿主应用无关，因此改走 {@link #FILTER_NODE_DETAIL_TYPES} 的节点地址直开。</p>
-    */
+     * 过滤器类型 → 深度查看页路由（前端校验路由存在后才跳转）。
+     *
+     * <p>仅适用于「深度页面由当前宿主应用托管」的插件。file-storage 不在此列：
+     * 其 SYSTEM 布局由 FileStorageServerFilter 自身在 {@code /{bucket}} 上直接托管 Vue 独立构建，
+     * 与宿主应用无关，因此改走 {@link #FILTER_NODE_DETAIL_TYPES} 的节点地址直开。</p>
+     */
     private static final Map<String, String> FILTER_DETAIL_PAGES = Map.of(
             "service-discovery", "/discovery",
             "reverse-proxy", "/proxy");
     /**
-    * 过滤器类型 → 深度查看目标为「节点自身访问地址」。
-    *
-    * <p>这些插件的深度页面由插件自己的 HTTP 服务提供（FileStorageServerFilter 的 SYSTEM 布局
-    * 在 {@code {serverUrl}{bucket}} 上返回 classpath {@code static/index.html}），
-    * 因此前端应新窗口直开节点地址，而不是跳宿主路由——宿主未挂载该页时同样可用，不会死链。</p>
-    */
+     * 过滤器类型 → 深度查看目标为「节点自身访问地址」。
+     *
+     * <p>这些插件的深度页面由插件自己的 HTTP 服务提供（FileStorageServerFilter 的 SYSTEM 布局
+     * 在 {@code {serverUrl}{bucket}} 上返回 classpath {@code static/index.html}），
+     * 因此前端应新窗口直开节点地址，而不是跳宿主路由——宿主未挂载该页时同样可用，不会死链。</p>
+     */
     private static final Set<String> FILTER_NODE_DETAIL_TYPES = Set.of("file-storage");
     /** 过滤器类型 → 深度查看入口文案 */
     private static final Map<String, String> FILTER_DETAIL_LABELS = Map.of(
@@ -515,10 +515,10 @@ public class ServerManageServiceImpl implements ServerManageService {
     }
 
     /**
-    * 文件服务器预设参数（含枚举选项，前端可直接渲染下拉）。
-    *
-    * @return 参数列表
-    */
+     * 文件服务器预设参数（含枚举选项，前端可直接渲染下拉）。
+     *
+     * @return 参数列表
+     */
     private List<Map<String, Object>> fileStorageParams() {
         List<Map<String, Object>> params = new ArrayList<>();
         params.add(param("openPreview", "true", "是否允许内联预览", "boolean"));
@@ -539,14 +539,14 @@ public class ServerManageServiceImpl implements ServerManageService {
     }
 
     /**
-    * 构造一个普通参数描述。
-    *
-    * @param name         参数名
-    * @param defaultValue 默认值
-    * @param desc         说明
-    * @param type         类型(boolean/string/number/enum)
-    * @return 参数描述
-    */
+     * 构造一个普通参数描述。
+     *
+     * @param name         参数名
+     * @param defaultValue 默认值
+     * @param desc         说明
+     * @param type         类型(boolean/string/number/enum)
+     * @return 参数描述
+     */
     private Map<String, Object> param(String name, String defaultValue, String desc, String type) {
         Map<String, Object> item = new LinkedHashMap<>();
         item.put("name", name);
@@ -557,15 +557,15 @@ public class ServerManageServiceImpl implements ServerManageService {
     }
 
     /**
-    * 构造一个枚举参数描述（携带 options）。
-    *
-    * @param name         参数名
-    * @param defaultValue 默认值
-    * @param desc         说明
-    * @param type         类型
-    * @param options      可选项
-    * @return 参数描述
-    */
+     * 构造一个枚举参数描述（携带 options）。
+     *
+     * @param name         参数名
+     * @param defaultValue 默认值
+     * @param desc         说明
+     * @param type         类型
+     * @param options      可选项
+     * @return 参数描述
+     */
     private Map<String, Object> paramEnum(String name, String defaultValue, String desc, String type,
                                           List<String> options) {
         Map<String, Object> item = param(name, defaultValue, desc, type);
@@ -574,25 +574,25 @@ public class ServerManageServiceImpl implements ServerManageService {
     }
 
     /**
-    * 过滤器类型 → 深度查看页路由。
-    *
-    * @param type 过滤器类型
-    * @return 路由，无则 空
-    */
+     * 过滤器类型 → 深度查看页路由。
+     *
+     * @param type 过滤器类型
+     * @return 路由，无则 空
+     */
     private String detailPageOf(String type) {
         return type == null ? null : FILTER_DETAIL_PAGES.get(normalizeType(type));
     }
 
     /**
-    * 过滤器类型 → 深度查看目标类型。
-    *
-    * <p>{@code node} 表示深度页面由插件自身 HTTP 服务提供，前端应新窗口直开节点访问地址；
-    * {@code route} 表示深度页面由宿主应用托管，前端应校验路由存在后跳转；
-    * 空 表示该插件没有深度查看入口。</p>
-    *
-    * @param type 过滤器类型
-    * @return node / route / 空
-    */
+     * 过滤器类型 → 深度查看目标类型。
+     *
+     * <p>{@code node} 表示深度页面由插件自身 HTTP 服务提供，前端应新窗口直开节点访问地址；
+     * {@code route} 表示深度页面由宿主应用托管，前端应校验路由存在后跳转；
+     * 空 表示该插件没有深度查看入口。</p>
+     *
+     * @param type 过滤器类型
+     * @return node / route / 空
+     */
     private String detailKindOf(String type) {
         if (type == null) {
             return null;
@@ -605,22 +605,22 @@ public class ServerManageServiceImpl implements ServerManageService {
     }
 
     /**
-    * 过滤器类型 → 深度查看入口文案。
-    *
-    * @param type 过滤器类型
-    * @return 文案，无则 空
-    */
+     * 过滤器类型 → 深度查看入口文案。
+     *
+     * @param type 过滤器类型
+     * @return 文案，无则 空
+     */
     private String detailLabelOf(String type) {
         return type == null ? null : FILTER_DETAIL_LABELS.get(normalizeType(type));
     }
 
     /**
-    * 过滤器类型 → 前端分组：优先内置映射，其次 @SpiDescribe.type，最后 other。
-    *
-    * @param definition SPI 定义（内置预设传 空）
-    * @param type       过滤器类型
-    * @return 分组标识
-    */
+     * 过滤器类型 → 前端分组：优先内置映射，其次 @SpiDescribe.type，最后 other。
+     *
+     * @param definition SPI 定义（内置预设传 空）
+     * @param type       过滤器类型
+     * @return 分组标识
+     */
     private String groupOf(ServiceDefinition definition, String type) {
         String group = type == null ? null : FILTER_GROUPS.get(normalizeType(type));
         if (group != null) {
@@ -636,27 +636,27 @@ public class ServerManageServiceImpl implements ServerManageService {
     }
 
     /**
-    * 归一化过滤器类型，用于映射查找。
-    *
-    * <p>SPI 框架会把 {@code @Spi} 别名统一转成大写
-    * （{@code ServiceDefinitionUtils} 中 {@code setName(alias.toUpperCase())}），
-    * 而内置预设别名是小写（如 {@code file-storage}），因此查找前统一转小写，
-    * 否则 SPI 发现的插件（SERVICE-DISCOVERY / REVERSE-PROXY 等）会全部匹配不上，
-    * 导致分组落到 other、深度查看入口直接消失。</p>
-    *
-    * @param type 过滤器类型
-    * @return 归一化后的类型
-    */
+     * 归一化过滤器类型，用于映射查找。
+     *
+     * <p>SPI 框架会把 {@code @Spi} 别名统一转成大写
+     * （{@code ServiceDefinitionUtils} 中 {@code setName(alias.toUpperCase())}），
+     * 而内置预设别名是小写（如 {@code file-storage}），因此查找前统一转小写，
+     * 否则 SPI 发现的插件（SERVICE-DISCOVERY / REVERSE-PROXY 等）会全部匹配不上，
+     * 导致分组落到 other、深度查看入口直接消失。</p>
+     *
+     * @param type 过滤器类型
+     * @return 归一化后的类型
+     */
     private static String normalizeType(String type) {
         return type.trim().toLowerCase(java.util.Locale.ROOT);
     }
 
     /**
-    * 启用=1 时按定义拉起节点并返回视图。
-    *
-    * @param node 节点定义
-    * @return 节点视图
-    */
+     * 启用=1 时按定义拉起节点并返回视图。
+     *
+     * @param node 节点定义
+     * @return 节点视图
+     */
     private ReturnResult<ServerNodeView> startIfEnabled(MsServerNode node) {
         if (node.getEnabled() != null && node.getEnabled() == 1) {
             try {
@@ -669,11 +669,11 @@ public class ServerManageServiceImpl implements ServerManageService {
     }
 
     /**
-    * 解析并校验协议类型。
-    *
-    * @param request 请求体
-    * @return 协议枚举（SPI 动态协议返回 空）
-    */
+     * 解析并校验协议类型。
+     *
+     * @param request 请求体
+     * @return 协议枚举（SPI 动态协议返回 空）
+     */
     private ServerNodeProtocol requireProtocol(ServerNodeRequest request) {
         ServerNodeProtocol protocol = ServerNodeProtocol.of(request.getProtocol());
         if (protocol != null) {
@@ -686,11 +686,11 @@ public class ServerManageServiceImpl implements ServerManageService {
     }
 
     /**
-    * 校验节点名称唯一。
-    *
-    * @param name      名称
-    * @param excludeId 排除的节点 标识(更新场景)
-    */
+     * 校验节点名称唯一。
+     *
+     * @param name      名称
+     * @param excludeId 排除的节点 标识(更新场景)
+     */
     private void requireUniqueName(String name, Long excludeId) {
         if (name == null || name.isBlank()) {
             throw new IllegalArgumentException("节点名称不能为空");
@@ -706,12 +706,12 @@ public class ServerManageServiceImpl implements ServerManageService {
     }
 
     /**
-    * 请求体 → 实体(全量替换)。
-    *
-    * @param node     目标实体
-    * @param request  请求体
-    * @param protocol 协议枚举
-    */
+     * 请求体 → 实体(全量替换)。
+     *
+     * @param node     目标实体
+     * @param request  请求体
+     * @param protocol 协议枚举
+     */
     private void applyRequest(MsServerNode node, ServerNodeRequest request, ServerNodeProtocol protocol) {
         node.setName(request.getName().trim());
         node.setProtocol(request.getProtocol().trim().toLowerCase());
@@ -734,11 +734,11 @@ public class ServerManageServiceImpl implements ServerManageService {
     }
 
     /**
-    * 实体 + 运行时 → 视图。
-    *
-    * @param node 节点定义
-    * @return 视图
-    */
+     * 实体 + 运行时 → 视图。
+     *
+     * @param node 节点定义
+     * @return 视图
+     */
     private ServerNodeView toView(MsServerNode node) {
         ServerNodeView view = new ServerNodeView();
         view.setId(node.getId());
@@ -774,12 +774,12 @@ public class ServerManageServiceImpl implements ServerManageService {
     }
 
     /**
-    * SPI 定义的描述文案：优先 @SpiDescribe，其次类简单名。
-    *
-    * @param definition SPI 定义
-    * @param alias      小写别名
-    * @return 描述
-    */
+     * SPI 定义的描述文案：优先 @SpiDescribe，其次类简单名。
+     *
+     * @param definition SPI 定义
+     * @param alias      小写别名
+     * @return 描述
+     */
     private String describeOf(ServiceDefinition definition, String alias) {
         String describe = definition.getDescribe();
         if (describe != null && !describe.isBlank()) {
@@ -790,11 +790,11 @@ public class ServerManageServiceImpl implements ServerManageService {
     }
 
     /**
-    * SPI 定义的配置模板（来自 @SpiDescribe.optional / @SpiParam）。
-    *
-    * @param definition SPI 定义
-    * @return 参数列表（name/defaultValue/desc/type）
-    */
+     * SPI 定义的配置模板（来自 @SpiDescribe.optional / @SpiParam）。
+     *
+     * @param definition SPI 定义
+     * @return 参数列表（name/defaultValue/desc/type）
+     */
     private List<Map<String, Object>> paramsOf(ServiceDefinition definition) {
         List<Map<String, Object>> params = new ArrayList<>();
         List<DescribeOptional> optional = definition.getDescribeOptional();

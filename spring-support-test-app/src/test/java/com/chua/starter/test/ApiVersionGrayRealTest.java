@@ -18,14 +18,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
-* api 版本/灰度真实测试（@springboot测试 + mockmvc + 真实版本映射与 apicontrol拦截器）。
-*
-* <p>版本路由经查询参数/请求头验证；灰度经会话用户名单验证（名单内 200、名单外 403）。
-* {@code ApiConfiguration}/{@code ApiFeatureConfiguration} 未自动注册，此处显式导入
-* （框架观察：api 增强配置需应用侧 @导入 或自行注册）。</p>
-*
-* @author CH
-* @since 2026/09/04
+ * api 版本/灰度真实测试（@springboot测试 + mockmvc + 真实版本映射与 apicontrol拦截器）。
+ *
+ * <p>版本路由经查询参数/请求头验证；灰度经会话用户名单验证（名单内 200、名单外 403）。
+ * {@code ApiConfiguration}/{@code ApiFeatureConfiguration} 未自动注册，此处显式导入
+ * （框架观察：api 增强配置需应用侧 @导入 或自行注册）。</p>
+ *
+ * @author CH
+ * @since 2026/09/04
  */
 @SpringBootTest
 @AutoConfigureMockMvc

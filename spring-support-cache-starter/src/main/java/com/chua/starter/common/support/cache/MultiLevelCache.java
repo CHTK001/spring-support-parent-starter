@@ -10,22 +10,22 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.LongAdder;
 
 /**
-* 多级缓存实现
-* <p>
-* 支持多级缓存查询与回填。从 L1 开始查找，未命中则向更高层级查找，
-* 命中后自动回填到更低层级的缓存中，提升下一次访问的命中率。
-* </p>
-*
-* <h3>特性：</h3>
-* <ul>
-*   <li>多层级读写：L1 命中直接返回；L1 未命中则查询 L2 并回填到 L1。</li>
-*   <li>空值保护：可选地缓存空值占位符，防止缓存穿透。</li>
-*   <li>命中统计：内置命中/未命中计数器与命中率计算。</li>
-*   <li>异常隔离：单层失败不影响其他层级。</li>
-* </ul>
-*
-* @since 2024/7/22
-* @author CH
+ * 多级缓存实现
+ * <p>
+ * 支持多级缓存查询与回填。从 L1 开始查找，未命中则向更高层级查找，
+ * 命中后自动回填到更低层级的缓存中，提升下一次访问的命中率。
+ * </p>
+ *
+ * <h3>特性：</h3>
+ * <ul>
+ *   <li>多层级读写：L1 命中直接返回；L1 未命中则查询 L2 并回填到 L1。</li>
+ *   <li>空值保护：可选地缓存空值占位符，防止缓存穿透。</li>
+ *   <li>命中统计：内置命中/未命中计数器与命中率计算。</li>
+ *   <li>异常隔离：单层失败不影响其他层级。</li>
+ * </ul>
+ *
+ * @since 2024/7/22
+ * @author CH
  */
 public class MultiLevelCache implements Cache {
 
@@ -58,34 +58,34 @@ public class MultiLevelCache implements Cache {
     private final LongAdder backfillCount = new LongAdder();
 
     /**
-    * 是否缓存空值
-    */
+     * 是否缓存空值
+     */
     private final boolean cacheNullValues;
 
     /**
-    * 创建 multi水平仪缓存 实例
-    * @param name 名称
-    * @param caches 列表
-    * @param caches 缓存
-    */
+     * 创建 multi水平仪缓存 实例
+     * @param name 名称
+     * @param caches 列表
+     * @param caches 缓存
+     */
     public MultiLevelCache(String name, List<Cache> caches) {
         /**
-        * this。
-        * @param name 名称
-        * @param caches 缓存
-        * @param false false
-        */
+         * this。
+         * @param name 名称
+         * @param caches 缓存
+         * @param false false
+         */
         this(name, caches, false);
     }
 
     /**
-    * 创建 multi水平仪缓存 实例
-    * @param name 名称
-    * @param caches 列表
-    * @param caches 缓存
-    * @param cacheNullValues 布尔值
-    * @param cacheNullValues 缓存空值
-    */
+     * 创建 multi水平仪缓存 实例
+     * @param name 名称
+     * @param caches 列表
+     * @param caches 缓存
+     * @param cacheNullValues 布尔值
+     * @param cacheNullValues 缓存空值
+     */
     public MultiLevelCache(String name, List<Cache> caches, boolean cacheNullValues) {
         this.name = name;
         this.caches = Objects.requireNonNull(caches, "缓存层级不能为空");
@@ -148,11 +148,11 @@ public class MultiLevelCache implements Cache {
             log.debug("缓存命中: cache={}, level={}, key={}", name, i, key);
             // 回填到更低层级
             /**
-            * backfill。
-            * @param key Key
-            * @param value 值
-            * @param 1 1
-            */
+             * backfill。
+             * @param key Key
+             * @param value 值
+             * @param 1 1
+             */
             backfill(key, value, i - 1);
             return wrapper;
         }
@@ -163,12 +163,12 @@ public class MultiLevelCache implements Cache {
     }
 
     /**
-    * 获取内部类型
-    *
-    * @param key Key
-    * @param type 类型
-    * @return 获取内部类型的结果
-    */
+     * 获取内部类型
+     *
+     * @param key Key
+     * @param type 类型
+     * @return 获取内部类型的结果
+     */
     private <T> T getInternalTyped(Object key, Class<T> type) {
         if (key == null || type == null) {
             missCount.increment();
@@ -192,11 +192,11 @@ public class MultiLevelCache implements Cache {
             hitCount.increment();
             log.debug("缓存命中: cache={}, level={}, key={}", name, i, key);
             /**
-            * backfill。
-            * @param key Key
-            * @param value 值
-            * @param 1 1
-            */
+             * backfill。
+             * @param key Key
+             * @param value 值
+             * @param 1 1
+             */
             backfill(key, value, i - 1);
             return value;
         }
@@ -241,11 +241,11 @@ public class MultiLevelCache implements Cache {
                     hitCount.increment();
                     T value = (T) cached;
                     /**
-                    * backfill。
-                    * @param key Key
-                    * @param value 值
-                    * @param 1 1
-                    */
+                     * backfill。
+                     * @param key Key
+                     * @param value 值
+                     * @param 1 1
+                     */
                     backfill(key, value, i - 1);
                     log.debug("缓存命中: cache={}, level={}, key={}", name, i, key);
                     return value;
@@ -266,28 +266,28 @@ public class MultiLevelCache implements Cache {
 
         if (value != null) {
             /**
-            * 放入。
-            * @param key Key
-            * @param value 值
-            */
+             * 放入。
+             * @param key Key
+             * @param value 值
+             */
             put(key, value);
         } else if (cacheNullValues) {
             // 防缓存穿透：写入空值占位符
             /**
-            * 放入空。
-            * @param key Key
-            */
+             * 放入空。
+             * @param key Key
+             */
             putNull(key);
         }
         return value;
     }
 
     /**
-    * 回填缓存到指定层级及以下
-    * @param key Key
-    * @param value 值
-    * @param toIndex 转为索引
-    */
+     * 回填缓存到指定层级及以下
+     * @param key Key
+     * @param value 值
+     * @param toIndex 转为索引
+     */
     private void backfill(Object key, Object value, int toIndex) {
         if (value == null || toIndex < 0) {
             return;
@@ -326,10 +326,10 @@ public class MultiLevelCache implements Cache {
     }
 
     /**
-    * 写入空值占位符（防缓存穿透）。
-    *
-    * @param key 缓存键
-    */
+     * 写入空值占位符（防缓存穿透）。
+     *
+     * @param key 缓存键
+     */
     public void putNull(Object key) {
         if (key == null) {
             return;
@@ -371,11 +371,11 @@ public class MultiLevelCache implements Cache {
     }
 
     /**
-    * 按模式清除缓存（尽力而为，不保证完全匹配）。
-    *
-    * @param pattern 模式字符串（不区分大小写 contains 匹配）
-    * @return 受影响的缓存层级数量
-    */
+     * 按模式清除缓存（尽力而为，不保证完全匹配）。
+     *
+     * @param pattern 模式字符串（不区分大小写 contains 匹配）
+     * @return 受影响的缓存层级数量
+     */
     public int evictByPattern(String pattern) {
         if (pattern == null || pattern.isEmpty()) {
             return 0;
@@ -400,28 +400,28 @@ public class MultiLevelCache implements Cache {
     }
 
     /**
-    * 获取命中次数
-    *
-    * @return 命中次数
-    */
+     * 获取命中次数
+     *
+     * @return 命中次数
+     */
     public long getHitCount() {
         return hitCount.sum();
     }
 
     /**
-    * 获取未命中次数
-    *
-    * @return 未命中次数
-    */
+     * 获取未命中次数
+     *
+     * @return 未命中次数
+     */
     public long getMissCount() {
         return missCount.sum();
     }
 
     /**
-    * 获取命中率
-    *
-    * @return 命中率（0-1）
-    */
+     * 获取命中率
+     *
+     * @return 命中率（0-1）
+     */
     public double getHitRate() {
         long hits = hitCount.sum();
         long total = hits + missCount.sum();
@@ -429,17 +429,17 @@ public class MultiLevelCache implements Cache {
     }
 
     /**
-    * 获取回填次数
-    *
-    * @return 回填次数
-    */
+     * 获取回填次数
+     *
+     * @return 回填次数
+     */
     public long getBackfillCount() {
         return backfillCount.sum();
     }
 
     /**
-    * 重置统计
-    */
+     * 重置统计
+     */
     public void resetStats() {
         hitCount.reset();
         missCount.reset();
@@ -447,32 +447,32 @@ public class MultiLevelCache implements Cache {
     }
 
     /**
-    * 获取缓存层级数
-    *
-    * @return 缓存层级数
-    */
+     * 获取缓存层级数
+     *
+     * @return 缓存层级数
+     */
     public int getLevelCount() {
         return caches.size();
     }
 
     /**
-    * 获取只读快照。
-    *
-    * @return 缓存层级快照
-    */
+     * 获取只读快照。
+     *
+     * @return 缓存层级快照
+     */
     public List<Cache> getCaches() {
         return List.copyOf(caches);
     }
 
     /**
-    * 空值包装器
-    * @author CH
-    * @since 4.0.0
-    */
+     * 空值包装器
+     * @author CH
+     * @since 4.0.0
+     */
     private enum NullValueWrapper implements ValueWrapper {
         /**
-        * 单例空值包装器
-        */
+         * 单例空值包装器
+         */
         INSTANCE;
 
         @Override
@@ -490,10 +490,10 @@ public class MultiLevelCache implements Cache {
     public interface PatternEvictable {
 
         /**
-        * 按模式清除缓存
-        *
-        * @param pattern 模式字符串（小写）
-        */
+         * 按模式清除缓存
+         *
+         * @param pattern 模式字符串（小写）
+         */
         void evictByPattern(String pattern);
     }
 }

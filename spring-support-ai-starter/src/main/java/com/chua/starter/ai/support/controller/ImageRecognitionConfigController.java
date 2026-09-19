@@ -6,12 +6,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
-* 图片识别配置控制器。
-*
-* <p>提供 {@code image} 分组全局配置的读取与更新（classify/detect/segment/captioning/depth/pedestrian/quality/device）。</p>
-*
-* @since 4.0.0.42
-* @author CH
+ * 图片识别配置控制器。
+ *
+ * <p>提供 {@code image} 分组全局配置的读取与更新（classify/detect/segment/captioning/depth/pedestrian/quality/device）。</p>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @RestController
 @RequestMapping("/v2/image-recognition/config")
@@ -19,19 +19,19 @@ import org.springframework.web.bind.annotation.RestController;
 public class ImageRecognitionConfigController extends AbstractCapabilityConfigController {
 
     /**
-    * 图片识别配置分组
-    */
+     * 图片识别配置分组
+     */
     private static final String GROUP = "image";
 
     /**
-    * 镜像认可配置控制器。
-    * @param settingService setting服务
-    */
+     * 镜像认可配置控制器。
+     * @param settingService setting服务
+     */
     public ImageRecognitionConfigController(SysAiGlobalSettingService settingService) {
         /**
-        * 父。
-        * @param settingService setting服务
-        */
+         * 父。
+         * @param settingService setting服务
+         */
         super(settingService);
     }
 

@@ -5,10 +5,10 @@ import lombok.Data;
 import java.io.Serializable;
 
 /**
-* 商户数据传输对象
-*
-* @since 2026-03-18
-* @author CH
+ * 商户数据传输对象
+ *
+ * @since 2026-03-18
+ * @author CH
  */
 @Data
 public class MerchantDTO implements Serializable {

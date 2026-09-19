@@ -14,10 +14,10 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 /**
-* 序列化实现基准测试 — 使用 datasync 实际数据格式 {@code List<Map<String, Object>>}。
-*
-* @since 4.0.0.42
-* @author CH
+ * 序列化实现基准测试 — 使用 datasync 实际数据格式 {@code List<Map<String, Object>>}。
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 public final class DataSyncSerialBenchProbe {
 
@@ -28,9 +28,9 @@ public final class DataSyncSerialBenchProbe {
     static final ObjectMapper MAPPER = new ObjectMapper(); // 映射器
 
     /**
-    * Main
-    *
-    * @param args 参数
+     * Main
+     *
+     * @param args 参数
      */
     public static void main(String[] args) throws Exception {
         // 构造 datasync 实际数据：1000 行，每行 6 个字段
@@ -80,9 +80,9 @@ public final class DataSyncSerialBenchProbe {
     }
 
     /**
-    * benchjackson
-    *
-    * @param data 数据
+     * benchjackson
+     *
+     * @param data 数据
      */
     static void benchJackson(List<Map<String, Object>> data) throws Exception {
         String json = MAPPER.writeValueAsString(data);
@@ -115,11 +115,11 @@ public final class DataSyncSerialBenchProbe {
 
     @SuppressWarnings("unchecked")
     /**
-    * benchbinary
-    *
-    * @param label 标签
-    * @param s s
-    * @param data 数据
+     * benchbinary
+     *
+     * @param label 标签
+     * @param s s
+     * @param data 数据
      */
     static void benchBinary(String label, Serialization s, List<Map<String, Object>> data) throws Exception {
         byte[] bytes = s.serialize(data);
@@ -146,11 +146,11 @@ public final class DataSyncSerialBenchProbe {
 
     @SuppressWarnings("unchecked")
     /**
-    * benchjson提供者
-    *
-    * @param label 标签
-    * @param p p
-    * @param data 数据
+     * benchjson提供者
+     *
+     * @param label 标签
+     * @param p p
+     * @param data 数据
      */
     static void benchJsonProvider(String label, JsonProvider p, List<Map<String, Object>> data) throws Exception {
         String json = p.toJson(data);
@@ -177,9 +177,9 @@ public final class DataSyncSerialBenchProbe {
 
     @SuppressWarnings("unchecked")
     /**
-    * benchkryo
-    *
-    * @param data 数据
+     * benchkryo
+     *
+     * @param data 数据
      */
     static void benchKryo(List<Map<String, Object>> data) throws Exception {
         KryoSerializer<Serializable> ks = new KryoSerializer<>((Class<Serializable>)(Class<?>)List.class);
@@ -206,13 +206,13 @@ public final class DataSyncSerialBenchProbe {
     }
 
     /**
-    * Report
-    *
-    * @param label 标签
-    * @param size 大小
-    * @param ser ser
-    * @param des des
-    * @param ok ok
+     * Report
+     *
+     * @param label 标签
+     * @param size 大小
+     * @param ser ser
+     * @param des des
+     * @param ok ok
      */
     static void report(String label, long size, Runnable ser, Runnable des, boolean ok) {
         warmup(ser, WARMUP_MS);
@@ -225,10 +225,10 @@ public final class DataSyncSerialBenchProbe {
     }
 
     /**
-    * Warmup
-    *
-    * @param task 任务
-    * @param ms ms
+     * Warmup
+     *
+     * @param task 任务
+     * @param ms ms
      */
     static void warmup(Runnable task, long ms) {
         long deadline = System.nanoTime() + ms * 1_000_000L;
@@ -238,11 +238,11 @@ public final class DataSyncSerialBenchProbe {
     }
 
     /**
-    * 测量ops
-    *
-    * @param task 任务
-    * @param ms ms
-    * @return 测量ops的结果
+     * 测量ops
+     *
+     * @param task 任务
+     * @param ms ms
+     * @return 测量ops的结果
      */
     static long measureOps(Runnable task, long ms) {
         long start = System.nanoTime();
@@ -256,12 +256,12 @@ public final class DataSyncSerialBenchProbe {
     }
 
     /**
-    * best的
-    *
-    * @param task 任务
-    * @param ms ms
-    * @param rounds rounds
-    * @return best的的结果
+     * best的
+     *
+     * @param task 任务
+     * @param ms ms
+     * @param rounds rounds
+     * @return best的的结果
      */
     static long bestOf(Runnable task, long ms, int rounds) {
         long best = 0;

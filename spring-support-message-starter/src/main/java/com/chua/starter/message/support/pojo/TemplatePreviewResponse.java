@@ -5,10 +5,10 @@ import lombok.Builder;
 import lombok.Data;
 
 /**
-* 模板预览响应
-*
-* @since 2026/08/03
-* @author CH
+ * 模板预览响应
+ *
+ * @since 2026/08/03
+ * @author CH
  */
 @Data
 @Builder
@@ -16,8 +16,8 @@ import lombok.Data;
 public class TemplatePreviewResponse {
 
     /**
-    * 渲染后的模板内容
-    */
+     * 渲染后的模板内容
+     */
     @Schema(description = "渲染后的模板内容")
     /** 内容 */
     private String content;

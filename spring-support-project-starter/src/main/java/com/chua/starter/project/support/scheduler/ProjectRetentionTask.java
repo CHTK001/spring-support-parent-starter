@@ -13,21 +13,21 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
-* 部署日志保留清理任务
-* <p>
-* 背景：{@code ms_project_deploy_log} 每次部署/启停/守护探测都会写入若干行，且带完整命令输出。
-* 项目数与主机数一多，单表会持续增长（多项目 × 多主机 × 每日多次），而删项目才级联清理 ——
-* 缺少保留策略。指标表 {@code ms_project_metric} 已有同类清理（见 ProjectMetricWheel），
-* 本类补齐部署日志侧，保持两者一致。
-* </p>
-* <p>
-* 保留天数与执行间隔分别取 {@code project.support.deploy-log-retention-days}
-* 与 {@code project.support.deploy-log-cleanup-interval-seconds}；
-* 任一项 &lt;=0 即不启用（保留天数 &lt;=0 表示永久保留，间隔 &lt;=0 表示不定时执行）。
-* </p>
-*
-* @author CH
-* @since 4.0.0.42
+ * 部署日志保留清理任务
+ * <p>
+ * 背景：{@code ms_project_deploy_log} 每次部署/启停/守护探测都会写入若干行，且带完整命令输出。
+ * 项目数与主机数一多，单表会持续增长（多项目 × 多主机 × 每日多次），而删项目才级联清理 ——
+ * 缺少保留策略。指标表 {@code ms_project_metric} 已有同类清理（见 ProjectMetricWheel），
+ * 本类补齐部署日志侧，保持两者一致。
+ * </p>
+ * <p>
+ * 保留天数与执行间隔分别取 {@code project.support.deploy-log-retention-days}
+ * 与 {@code project.support.deploy-log-cleanup-interval-seconds}；
+ * 任一项 &lt;=0 即不启用（保留天数 &lt;=0 表示永久保留，间隔 &lt;=0 表示不定时执行）。
+ * </p>
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 @Slf4j
 @Component

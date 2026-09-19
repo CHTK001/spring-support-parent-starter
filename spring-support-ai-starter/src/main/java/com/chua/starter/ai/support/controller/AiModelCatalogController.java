@@ -14,13 +14,13 @@ import java.util.List;
 import java.util.Map;
 
 /**
-* AI 统一能力模型清单控制器。
-*
-* <p>聚合系统全部能力门面的模型清单，按能力标签分组（detect/feature/classify/enhance/ocr/
-* 对话/文本-转为-镜像/文本-转为-视频/嵌入 等），供前端按能力筛选与统一配置使用。</p>
-*
-* @since 4.0.0.42
-* @author CH
+ * AI 统一能力模型清单控制器。
+ *
+ * <p>聚合系统全部能力门面的模型清单，按能力标签分组（detect/feature/classify/enhance/ocr/
+ * 对话/文本-转为-镜像/文本-转为-视频/嵌入 等），供前端按能力筛选与统一配置使用。</p>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @RestController
 @RequestMapping("/v2/ai/models")
@@ -29,15 +29,15 @@ import java.util.Map;
 public class AiModelCatalogController {
 
     /**
-    * 统一能力模型清单服务
-    */
+     * 统一能力模型清单服务
+     */
     private final AiModelCatalogService aiModelCatalogService;
 
     /**
-    * 获取按能力分组的所有模型清单。
-    *
-    * @return 能力 → 模型 标识 列表
-    */
+     * 获取按能力分组的所有模型清单。
+     *
+     * @return 能力 → 模型 标识 列表
+     */
     @Permission("admin")
     @Operation(summary = "按能力分组的所有模型清单", description = "聚合本地 + 云端全部能力门面的模型")
     @GetMapping("/capabilities")
@@ -46,11 +46,11 @@ public class AiModelCatalogController {
     }
 
     /**
-    * 获取指定能力的模型清单。
-    *
-    * @param capability 能力标签（如 detect / 特征 / 对话 / 文本-转为-镜像）
-    * @return 模型 标识 列表
-    */
+     * 获取指定能力的模型清单。
+     *
+     * @param capability 能力标签（如 detect / 特征 / 对话 / 文本-转为-镜像）
+     * @return 模型 标识 列表
+     */
     @Permission("admin")
     @Operation(summary = "指定能力的模型清单")
     @GetMapping("/capability/{capability}")
@@ -59,10 +59,10 @@ public class AiModelCatalogController {
     }
 
     /**
-    * 获取全部能力标签。
-    *
-    * @return 能力标签列表
-    */
+     * 获取全部能力标签。
+     *
+     * @return 能力标签列表
+     */
     @Permission("admin")
     @Operation(summary = "全部能力标签")
     @GetMapping("/capability-names")

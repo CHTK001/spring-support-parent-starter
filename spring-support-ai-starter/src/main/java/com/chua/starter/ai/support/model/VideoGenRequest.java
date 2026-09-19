@@ -3,10 +3,10 @@ package com.chua.starter.ai.support.model;
 import lombok.Data;
 
 /**
-* 文生视频请求参数
-*
-* @author CH
-* @since 4.0.0
+ * 文生视频请求参数
+ *
+ * @author CH
+ * @since 4.0.0
  */
 @Data
 public class VideoGenRequest {

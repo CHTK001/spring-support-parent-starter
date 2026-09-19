@@ -18,10 +18,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
-* 订单状态机服务实现，基于Spring Statemachine管理订单生命周期状态流转。
-*
-* @author CH
-* @since 4.0.0.50
+ * 订单状态机服务实现，基于Spring Statemachine管理订单生命周期状态流转。
+ *
+ * @author CH
+ * @since 4.0.0.50
  */
 @Slf4j
 @Service

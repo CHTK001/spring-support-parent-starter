@@ -9,11 +9,11 @@ import org.redisson.api.RedissonClient;
 import java.util.concurrent.TimeUnit;
 
 /**
-* Redis反跳密钥生成器
-*
-* @版本 1.0.0
-* @since 2024/03/10
-* @author CH
+ * Redis反跳密钥生成器
+ *
+ * @版本 1.0.0
+ * @since 2024/03/10
+ * @author CH
  */
 @Spi(value = "redisson", order = 100)
 public class RedissonLockProvider implements LockProvider {
@@ -44,11 +44,11 @@ public class RedissonLockProvider implements LockProvider {
         //没有拿到锁说明已经有了请求了
         if (!isLocked) {
             /**
-    * runtime异常。
-    * @param "您的操作太快了 "您的操作太快了
-    * @param 请稍后重试" 请稍后重试"
-    * @return runtime异常的结果
-    */
+             * runtime异常。
+             * @param "您的操作太快了 "您的操作太快了
+             * @param 请稍后重试" 请稍后重试"
+             * @return runtime异常的结果
+             */
             throw new RuntimeException("您的操作太快了,请稍后重试");
         }
         //拿到锁后设置过期时间

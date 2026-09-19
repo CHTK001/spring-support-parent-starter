@@ -15,13 +15,13 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
-* 远控管理台配置接口（保存配置到后台）。
-*
-* <p>远控页面的连接配置（网关地址/接入令牌/目标被控端/验证码/画面源）经
-* {@code POST /api/remote/config} 持久化到本地文件，启动时经 {@code GET} 回显。</p>
-*
-* @author CH
-* @since 4.0.0.42
+ * 远控管理台配置接口（保存配置到后台）。
+ *
+ * <p>远控页面的连接配置（网关地址/接入令牌/目标被控端/验证码/画面源）经
+ * {@code POST /api/remote/config} 持久化到本地文件，启动时经 {@code GET} 回显。</p>
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 @RestController
 @RequestMapping("/api/remote/config")
@@ -46,10 +46,10 @@ public class RemoteConfigController {
     }
 
     /**
-    * 保存配置（持久化到本地文件）。
-    *
-    * @param config 远控连接配置
-    * @return 保存结果
+     * 保存配置（持久化到本地文件）。
+     *
+     * @param config 远控连接配置
+     * @return 保存结果
      */
     @PostMapping
     public Map<String, Object> saveConfig(@RequestBody Map<String, Object> config) throws IOException {

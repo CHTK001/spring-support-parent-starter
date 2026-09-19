@@ -24,10 +24,10 @@ import java.nio.charset.StandardCharsets;
 import lombok.extern.slf4j.Slf4j;
 
 /**
-* HTML
-*
-* @since 2022/7/29 10:24
-* @author CH
+ * HTML
+ *
+ * @since 2022/7/29 10:24
+ * @author CH
  */
 @Slf4j
 public class HtmlAdviceResolver implements AdviceResolver {
@@ -91,17 +91,17 @@ public class HtmlAdviceResolver implements AdviceResolver {
             String url = address;
             if (Strings.isNullOrEmpty(url)) {
                 /**
-                * 尝试。
-                * @param response.getOutputStream( 响应.获取输出流(
-                */
+                 * 尝试。
+                 * @param response.getOutputStream( 响应.获取输出流(
+                 */
                 try (OutputStream writer = response.getOutputStream()) {
                     writer.write(Xml.toXmlByte(Json.getJsonObject(Json.toJson(ReturnResult.error("未授权")))));
                 } catch (Exception e) {
                     /**
-                    * runtime异常。
-                    * @param e e
-                    * @return runtime异常的结果
-                    */
+                     * runtime异常。
+                     * @param e e
+                     * @return runtime异常的结果
+                     */
                     throw new RuntimeException(e);
                 }
                 return;
@@ -116,11 +116,11 @@ public class HtmlAdviceResolver implements AdviceResolver {
     }
 
     /**
-    * 是否本地
-    *
-    * @param request 请求
-    * @return 是否本地
-    */
+     * 是否本地
+     *
+     * @param request 请求
+     * @return 是否本地
+     */
     private boolean isLocalhost(HttpServletRequest request) {
         String ipAddress = RequestUtils.getIpAddress(request);
         return null == ipAddress || "localhost".equalsIgnoreCase(ipAddress) || "127.0.0.1".equalsIgnoreCase(ipAddress);

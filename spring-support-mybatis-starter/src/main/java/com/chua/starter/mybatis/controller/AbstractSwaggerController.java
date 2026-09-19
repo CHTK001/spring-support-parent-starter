@@ -20,24 +20,24 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import java.util.List;
 
 /**
-* 超类
-*
-* @author CH
-* @since 4.0.0
+ * 超类
+ *
+ * @author CH
+ * @since 4.0.0
  */
 public abstract class AbstractSwaggerController<S extends IService<T>, T> extends AbstractSwaggerUpdateController<S, T>{
 
     /**
-    * 分页查询数据
-    *
-    * @param entity 结果
-    * @return 分页结果
-    * @param page page
-    * @param @Validated(SelectGroup.class @校验(选择群体.类
-    * @param @Validated(SelectGroup.class @校验(选择群体.类
-    * @param @Validated(SelectGroup.class @Validated(SelectGroup.class
-    * @param bindingResult binding结果，不允许为 null
-    */
+     * 分页查询数据
+     *
+     * @param entity 结果
+     * @return 分页结果
+     * @param page page
+     * @param @Validated(SelectGroup.class @校验(选择群体.类
+     * @param @Validated(SelectGroup.class @校验(选择群体.类
+     * @param @Validated(SelectGroup.class @Validated(SelectGroup.class
+     * @param bindingResult binding结果，不允许为 null
+     */
     @ResponseBody
     @Operation(summary = "分页查询基础数据")
     @GetMapping("page")
@@ -54,22 +54,22 @@ public abstract class AbstractSwaggerController<S extends IService<T>, T> extend
             return PageResultUtils.ok();
         }
         /**
-        * page之后。
-        * @param records records
-        */
+         * page之后。
+         * @param records records
+         */
         pageAfter(records);
         return PageResultUtils.ok(tPage);
     }
     /**
-    * 查询基础数据
-    *
-    * @param entity 结果
-    * @return 分页结果
-    * @param @Validated(SelectGroup.class @校验(选择群体.类
-    * @param @Validated(SelectGroup.class @校验(选择群体.类
-    * @param @Validated(SelectGroup.class @Validated(SelectGroup.class
-    * @param bindingResult binding结果，不允许为 null
-    */
+     * 查询基础数据
+     *
+     * @param entity 结果
+     * @return 分页结果
+     * @param @Validated(SelectGroup.class @校验(选择群体.类
+     * @param @Validated(SelectGroup.class @校验(选择群体.类
+     * @param @Validated(SelectGroup.class @Validated(SelectGroup.class
+     * @param bindingResult binding结果，不允许为 null
+     */
     @ResponseBody
     @Operation(summary = "查询基础数据")
     @GetMapping("list")
@@ -83,27 +83,27 @@ public abstract class AbstractSwaggerController<S extends IService<T>, T> extend
     }
 
     /**
-    * 创建查询条件
-    * @param entity 实体
-    * @return 查询条件
-    */
+     * 创建查询条件
+     * @param entity 实体
+     * @return 查询条件
+     */
     protected Wrapper<T> createWrapper(T entity) {
         return Wrappers.lambdaQuery(entity);
     }
 
 
     /**
-    * 分页查询后
-    * @param page 分页
-    */
+     * 分页查询后
+     * @param page 分页
+     */
     protected void pageAfter(List<T> page) {
 
     }
     /**
-    * 查询详细信息
-    * @param id 标识
-    * @return 结果
-    */
+     * 查询详细信息
+     * @param id 标识
+     * @return 结果
+     */
     @Operation(summary = "查询详细信息")
     @GetMapping("get")
     public ReturnResult<T> get(String id) {

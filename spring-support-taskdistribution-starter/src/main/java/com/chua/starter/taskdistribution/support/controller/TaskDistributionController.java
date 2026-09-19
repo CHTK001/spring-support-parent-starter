@@ -27,12 +27,12 @@ import java.util.List;
 import java.util.Map;
 
 /**
-* 任务分发管理接口。
-*
-* <p>提供任务清单、节点清单、任务状态查询、暂停/恢复/取消等管理能力。</p>
-*
-* @since 4.0.0.42
-* @author CH
+ * 任务分发管理接口。
+ *
+ * <p>提供任务清单、节点清单、任务状态查询、暂停/恢复/取消等管理能力。</p>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @RestController
@@ -42,30 +42,30 @@ import java.util.Map;
 public class TaskDistributionController {
 
     /**
-    * 任务管理器
-    */
+     * 任务管理器
+     */
     private final TaskManager taskManager;
 
     /**
-    * 节点注册表
-    */
+     * 节点注册表
+     */
     private final NodeTable nodeTable;
 
     /**
-    * 派发提供者
-    */
+     * 派发提供者
+     */
     private final DispatcherProvider dispatcherProvider;
 
     /**
-    * 结果缓冲器
-    */
+     * 结果缓冲器
+     */
     private final ResultBuffer resultBuffer;
 
     /**
-    * 查询任务清单。
-    *
-    * @return 任务列表
-    */
+     * 查询任务清单。
+     *
+     * @return 任务列表
+     */
     @GetMapping("/task/list")
     @Operation(summary = "查询任务清单")
     @Permission(value = "taskdistribution:task:list")
@@ -86,11 +86,11 @@ public class TaskDistributionController {
     }
 
     /**
-    * 查询单个任务详情。
-    *
-    * @param taskId 任务 标识
-    * @return 任务详情
-    */
+     * 查询单个任务详情。
+     *
+     * @param taskId 任务 标识
+     * @return 任务详情
+     */
     @GetMapping("/task/{taskId}")
     @Operation(summary = "查询任务详情")
     @Permission(value = "taskdistribution:task:get")
@@ -108,11 +108,11 @@ public class TaskDistributionController {
     }
 
     /**
-    * 取消任务。
-    *
-    * @param taskId 任务 标识
-    * @return 操作结果
-    */
+     * 取消任务。
+     *
+     * @param taskId 任务 标识
+     * @return 操作结果
+     */
     @PostMapping("/task/{taskId}/cancel")
     @Operation(summary = "取消任务")
     @Permission(value = "taskdistribution:task:cancel")
@@ -126,11 +126,11 @@ public class TaskDistributionController {
     }
 
     /**
-    * 暂停任务。
-    *
-    * @param taskId 任务 标识
-    * @return 操作结果
-    */
+     * 暂停任务。
+     *
+     * @param taskId 任务 标识
+     * @return 操作结果
+     */
     @PostMapping("/task/{taskId}/pause")
     @Operation(summary = "暂停任务")
     @Permission(value = "taskdistribution:task:pause")
@@ -144,11 +144,11 @@ public class TaskDistributionController {
     }
 
     /**
-    * 恢复暂停的任务。
-    *
-    * @param taskId 任务 标识
-    * @return 操作结果
-    */
+     * 恢复暂停的任务。
+     *
+     * @param taskId 任务 标识
+     * @return 操作结果
+     */
     @PostMapping("/task/{taskId}/resume")
     @Operation(summary = "恢复任务")
     @Permission(value = "taskdistribution:task:resume")
@@ -162,11 +162,11 @@ public class TaskDistributionController {
     }
 
     /**
-    * 删除任务记录。
-    *
-    * @param taskId 任务 标识
-    * @return 操作结果
-    */
+     * 删除任务记录。
+     *
+     * @param taskId 任务 标识
+     * @return 操作结果
+     */
     @DeleteMapping("/task/{taskId}")
     @Operation(summary = "删除任务记录")
     @Permission(value = "taskdistribution:task:delete")
@@ -179,10 +179,10 @@ public class TaskDistributionController {
     }
 
     /**
-    * 查询节点清单。
-    *
-    * @return 节点列表
-    */
+     * 查询节点清单。
+     *
+     * @return 节点列表
+     */
     @GetMapping("/node/list")
     @Operation(summary = "查询节点清单")
     @Permission(value = "taskdistribution:node:list")
@@ -205,11 +205,11 @@ public class TaskDistributionController {
     }
 
     /**
-    * 注销节点。
-    *
-    * @param nodeId 节点 标识
-    * @return 操作结果
-    */
+     * 注销节点。
+     *
+     * @param nodeId 节点 标识
+     * @return 操作结果
+     */
     @DeleteMapping("/node/{nodeId}")
     @Operation(summary = "注销节点")
     @Permission(value = "taskdistribution:node:delete")

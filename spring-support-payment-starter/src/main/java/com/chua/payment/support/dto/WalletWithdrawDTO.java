@@ -8,9 +8,9 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 
 /**
-* 钱包提现DTO
-* @author CH
-* @since 4.0.0
+ * 钱包提现DTO
+ * @author CH
+ * @since 4.0.0
  */
 @Data
 @Builder

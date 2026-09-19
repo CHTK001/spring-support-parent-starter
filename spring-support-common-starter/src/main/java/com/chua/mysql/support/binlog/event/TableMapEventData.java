@@ -1,10 +1,10 @@
 package com.chua.mysql.support.binlog.event;
 
 /**
-* 表映射事件数据
-*
-* @author CH
-* @since 4.0.0
+ * 表映射事件数据
+ *
+ * @author CH
+ * @since 4.0.0
  */
 public class TableMapEventData implements EventData {
 
@@ -21,10 +21,10 @@ public class TableMapEventData implements EventData {
     }
 
     /**
-    * 获取表名
-    *
-    * @return 表名
-    */
+     * 获取表名
+     *
+     * @return 表名
+     */
     public String getTable() {
         return table;
     }

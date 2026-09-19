@@ -11,10 +11,10 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
-* 终端片段实体
-*
-* @author CH
-* @since 4.0.0.42
+ * 终端片段实体
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -34,22 +34,22 @@ public class MsTerminalSnippet extends SysBase {
     private Long id; // 标识
 
     /**
-    * 片段名称
-    */
+     * 片段名称
+     */
     @TableField("ms_terminal_snippet_name")
     @Schema(description = "片段名称", example = "查看磁盘占用")
     private String msTerminalSnippetName; // msterminalsnippet名称
 
     /**
-    * 片段内容
-    */
+     * 片段内容
+     */
     @TableField("ms_terminal_snippet_content")
     @Schema(description = "片段内容", example = "df -h")
     private String msTerminalSnippetContent; // msterminalsnippet内容
 
     /**
-    * 备注
-    */
+     * 备注
+     */
     @TableField("ms_terminal_snippet_remark")
     @Schema(description = "备注")
     private String msTerminalSnippetRemark; // msterminalsnippet评论

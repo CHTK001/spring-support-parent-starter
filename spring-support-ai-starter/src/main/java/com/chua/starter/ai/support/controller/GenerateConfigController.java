@@ -22,14 +22,14 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
-* AI 文生图 / 文生视频全局配置控制器。
-*
-* <p>提供 {@code generate} 分组全局 Bean 配置的读取与更新。
-* 该分组为系统内部使用的全局 镜像客户端 / 视频客户端 会话配置，
-* 供文生图、文生视频管线在后台调用。</p>
-*
-* @author CH
-* @since 4.0.0.42
+ * AI 文生图 / 文生视频全局配置控制器。
+ *
+ * <p>提供 {@code generate} 分组全局 Bean 配置的读取与更新。
+ * 该分组为系统内部使用的全局 镜像客户端 / 视频客户端 会话配置，
+ * 供文生图、文生视频管线在后台调用。</p>
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 @Slf4j
 @RestController
@@ -39,20 +39,20 @@ import java.util.stream.Collectors;
 public class GenerateConfigController {
 
     /**
-    * 生成配置分组
-    */
+     * 生成配置分组
+     */
     private static final String GROUP = "generate";
 
     /**
-    * 全局设置服务
-    */
+     * 全局设置服务
+     */
     private final SysAiGlobalSettingService settingService;
 
     /**
-    * 获取生成配置项定义与当前值。
-    *
-    * @return 配置列表（field/value/valueType/description/sort）
-    */
+     * 获取生成配置项定义与当前值。
+     *
+     * @return 配置列表（field/value/valueType/description/sort）
+     */
     @Permission("admin")
     @Operation(summary = "获取文生图/文生视频全局配置", description = "返回 generate 分组全部配置项及当前值")
     @GetMapping
@@ -85,11 +85,11 @@ public class GenerateConfigController {
     }
 
     /**
-    * 更新生成配置（整组替换）。
-    *
-    * @param body 配置请求（群体 + 字段）
-    * @return 更新结果
-    */
+     * 更新生成配置（整组替换）。
+     *
+     * @param body 配置请求（群体 + 字段）
+     * @return 更新结果
+     */
     @Permission("admin")
     @Operation(summary = "更新文生图/文生视频全局配置", description = "整组替换 generate 配置")
     @PutMapping
@@ -103,11 +103,11 @@ public class GenerateConfigController {
     }
 
     /**
-    * 转为int
-    *
-    * @param obj obj
-    * @return 转为int的结果
-    */
+     * 转为int
+     *
+     * @param obj obj
+     * @return 转为int的结果
+     */
     private static int toInt(Object obj) {
         if (obj instanceof Number n) {
             return n.intValue();

@@ -20,10 +20,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
-* 试卷管理控制器
-*
-* @since 4.0.0.42
-* @author CH
+ * 试卷管理控制器
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @RestController
@@ -48,11 +48,11 @@ public class EduPaperController {
     }
 
     /**
-    * 获取试卷详情
-    *
-    * @param id 试卷标识
-    * @return 试卷详情
-    */
+     * 获取试卷详情
+     *
+     * @param id 试卷标识
+     * @return 试卷详情
+     */
     @Operation(summary = "获取试卷详情")
     @GetMapping("/{id}")
     public ReturnResult<PaperVO> detail(@PathVariable Long id) {
@@ -60,11 +60,11 @@ public class EduPaperController {
     }
 
     /**
-    * AI生成试卷
-    *
-    * @param dto 组卷配置
-    * @return 试卷ID
-    */
+     * AI生成试卷
+     *
+     * @param dto 组卷配置
+     * @return 试卷ID
+     */
     @Operation(summary = "AI生成试卷")
     @PostMapping("/generate")
     public ReturnResult<Long> generate(@RequestBody PaperGenerateDTO dto) {
@@ -72,13 +72,13 @@ public class EduPaperController {
     }
 
     /**
-    * 替换试卷中的某道题
-    *
-    * @param id    试卷标识
-    * @param oldId 旧题目标识
-    * @param newId 新题目标识
-    * @return 是否成功
-    */
+     * 替换试卷中的某道题
+     *
+     * @param id    试卷标识
+     * @param oldId 旧题目标识
+     * @param newId 新题目标识
+     * @return 是否成功
+     */
     @Operation(summary = "替换试卷中的某道题")
     @PutMapping("/{id}/replace")
     public ReturnResult<Boolean> replace(@PathVariable Long id, @RequestParam Long oldId, @RequestParam Long newId) {

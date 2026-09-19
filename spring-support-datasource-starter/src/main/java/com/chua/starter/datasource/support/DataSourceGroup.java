@@ -8,14 +8,14 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
-* 数据源分组
-* <p>
-* 将多个同组数据源聚合为一个逻辑组，支持负载均衡策略。
-* 例如 slave_1、slave_2 自动归入 slave 组，{@code @DS("slave")} 时自动负载均衡。
-* </p>
-*
-* @since 2026/07/14
-* @author CH
+ * 数据源分组
+ * <p>
+ * 将多个同组数据源聚合为一个逻辑组，支持负载均衡策略。
+ * 例如 slave_1、slave_2 自动归入 slave 组，{@code @DS("slave")} 时自动负载均衡。
+ * </p>
+ *
+ * @since 2026/07/14
+ * @author CH
  */
 @Slf4j
 public class DataSourceGroup {
@@ -48,11 +48,11 @@ public class DataSourceGroup {
     }
 
     /**
-    * 添加组成员（幂等，同名数据源不重复添加）
-    *
-    * @param dataSource     数据源实例
-    * @param dataSourceName 数据源名称
-    */
+     * 添加组成员（幂等，同名数据源不重复添加）
+     *
+     * @param dataSource     数据源实例
+     * @param dataSourceName 数据源名称
+     */
     public void addMember(DataSource dataSource, String dataSourceName) {
         int index = dataSourceNames.indexOf(dataSourceName);
         if (index >= 0) {
@@ -69,17 +69,17 @@ public class DataSourceGroup {
     }
 
     /**
-    * 根据负载均衡策略选择一个数据源
-    *
-    * @return 选中的数据源
-    */
+     * 根据负载均衡策略选择一个数据源
+     *
+     * @return 选中的数据源
+     */
     public DataSource select() {
         if (dataSources.isEmpty()) {
             /**
-            * illegal状态异常。
-            * @param 中没有可用的数据源" 中没有可用的数据源"
-            * @return illegal状态异常的结果
-            */
+             * illegal状态异常。
+             * @param 中没有可用的数据源" 中没有可用的数据源"
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("数据源分组 '" + groupName + "' 中没有可用的数据源");
         }
         if (dataSources.size() == 1) {
@@ -94,38 +94,38 @@ public class DataSourceGroup {
     }
 
     /**
-    * 获取组名
-    *
-    * @return 组名
-    */
+     * 获取组名
+     *
+     * @return 组名
+     */
     public String getGroupName() {
         return groupName;
     }
 
     /**
-    * 获取组内数据源数量
-    *
-    * @return 数据源数量
-    */
+     * 获取组内数据源数量
+     *
+     * @return 数据源数量
+     */
     public int size() {
         return dataSources.size();
     }
 
     /**
-    * 设置负载均衡策略
-    *
-    * @param strategy 策略
-    */
+     * 设置负载均衡策略
+     *
+     * @param strategy 策略
+     */
     public void setStrategy(LoadBalanceStrategy strategy) {
         this.strategy = strategy;
         log.info("[数据源分组] 分组 '{}' 切换策略为: {}", groupName, strategy);
     }
 
     /**
-    * 负载均衡策略
-    * @author CH
-    * @since 4.0.0
-    */
+     * 负载均衡策略
+     * @author CH
+     * @since 4.0.0
+     */
     public enum LoadBalanceStrategy {
         /** 轮询 */
         ROUND_ROBIN,

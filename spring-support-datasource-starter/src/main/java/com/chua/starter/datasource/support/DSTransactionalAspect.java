@@ -15,28 +15,28 @@ import java.lang.reflect.Method;
 import java.util.Optional;
 
 /**
-* {@code @DSTransactional} 注解的切面实现
-* <p>
-* 负责管理多数据源事务的生命周期：
-* <ul>
-*   <li>建立事务上下文，跟踪事务中使用的所有数据源</li>
-*   <li>为已使用的数据源建立非自动提交连接</li>
-*   <li>方法正常返回时提交所有连接</li>
-*   <li>方法抛出异常时回滚所有连接</li>
-*   <li>清理连接资源</li>
-* </ul>
-* </p>
-*
-* <h3>优先级说明</h3>
-* <p>
-* 优先级 ({@code @Order}) 必须高于 Spring 的 {@code TransactionInterceptor}
-* （默认最低优先级 {@code Ordered.LOWEST_PRECEDENCE}），
-* 以确保在 Spring 事务绑定之前完成数据源上下文建立。
-* 设置为 {@link Ordered#LOWEST_PRECEDENCE} - 10。
-* </p>
-*
-* @since 2026/07/14
-* @author CH
+ * {@code @DSTransactional} 注解的切面实现
+ * <p>
+ * 负责管理多数据源事务的生命周期：
+ * <ul>
+ *   <li>建立事务上下文，跟踪事务中使用的所有数据源</li>
+ *   <li>为已使用的数据源建立非自动提交连接</li>
+ *   <li>方法正常返回时提交所有连接</li>
+ *   <li>方法抛出异常时回滚所有连接</li>
+ *   <li>清理连接资源</li>
+ * </ul>
+ * </p>
+ *
+ * <h3>优先级说明</h3>
+ * <p>
+ * 优先级 ({@code @Order}) 必须高于 Spring 的 {@code TransactionInterceptor}
+ * （默认最低优先级 {@code Ordered.LOWEST_PRECEDENCE}），
+ * 以确保在 Spring 事务绑定之前完成数据源上下文建立。
+ * 设置为 {@link Ordered#LOWEST_PRECEDENCE} - 10。
+ * </p>
+ *
+ * @since 2026/07/14
+ * @author CH
  */
 @Slf4j
 @Aspect
@@ -44,25 +44,25 @@ import java.util.Optional;
 public class DSTransactionalAspect {
 
     /**
-    * 环绕通知：拦截所有标注 {@code @DSTransactional} 的方法
-    * <p>
-    * 同时支持类级别和方法级别 {@code @DSTransactional} 注解。
-    * 方法级别注解优先级高于类级别。
-    * </p>
-    *
-    * @param pjp 连接点
-    * @return 方法执行结果
-    * @throws Throwable 任何异常都会触发回滚
-    */
+     * 环绕通知：拦截所有标注 {@code @DSTransactional} 的方法
+     * <p>
+     * 同时支持类级别和方法级别 {@code @DSTransactional} 注解。
+     * 方法级别注解优先级高于类级别。
+     * </p>
+     *
+     * @param pjp 连接点
+     * @return 方法执行结果
+     * @throws Throwable 任何异常都会触发回滚
+     */
     @Around("execution(* *(..)) && " +
             "(@annotation(com.chua.starter.datasource.annotation.DSTransactional) || " +
             "@within(com.chua.starter.datasource.annotation.DSTransactional))")
     /**
-    * Around
-    *
-    * @param pjp pjp
-    * @return around的结果
-    */
+     * Around
+     *
+     * @param pjp pjp
+     * @return around的结果
+     */
     public Object around(ProceedingJoinPoint pjp) throws Throwable {
         // 解析注解（方法优先 -> 类级别回退）
         DSTransactional dsTransactional = resolveAnnotation(pjp);
@@ -113,11 +113,11 @@ public class DSTransactionalAspect {
     }
 
     /**
-    * 解析 {@code @DSTransactional} 注解
-    * <p>方法级别优先级高于类级别。</p>
-    * @param pjp pjp
-    * @return resolve注解的结果
-    */
+     * 解析 {@code @DSTransactional} 注解
+     * <p>方法级别优先级高于类级别。</p>
+     * @param pjp pjp
+     * @return resolve注解的结果
+     */
     private DSTransactional resolveAnnotation(ProceedingJoinPoint pjp) {
         // 方法级别
         MethodSignature signature = (MethodSignature) pjp.getSignature();
@@ -131,11 +131,11 @@ public class DSTransactionalAspect {
     }
 
     /**
-    * 获取事务名称
-    * @param pjp pjp
-    * @param dsTransactional dstransactional
-    * @return 获取transaction名称的结果
-    */
+     * 获取事务名称
+     * @param pjp pjp
+     * @param dsTransactional dstransactional
+     * @return 获取transaction名称的结果
+     */
     private String getTransactionName(ProceedingJoinPoint pjp, DSTransactional dsTransactional) {
         String name = dsTransactional.value();
         if (name == null || name.isEmpty()) {

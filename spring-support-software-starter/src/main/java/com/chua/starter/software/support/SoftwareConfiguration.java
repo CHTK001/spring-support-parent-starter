@@ -9,10 +9,10 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 
 /**
-* 软件管理配置
-*
-* @since 2026/7/25
-* @author CH
+ * 软件管理配置
+ *
+ * @since 2026/7/25
+ * @author CH
  */
 @Slf4j
 @AutoConfiguration
@@ -22,10 +22,10 @@ public class SoftwareConfiguration {
 
     @Bean
     /**
-    * software服务信息contributor
-    *
-    * @return software服务信息contributor的结果
-    */
+     * software服务信息contributor
+     *
+     * @return software服务信息contributor的结果
+     */
     public ServiceInfoContributor softwareServiceInfoContributor() {
         return registry -> {
             registry.registerFlag("software", "软件管理", true, "软件管理模块");

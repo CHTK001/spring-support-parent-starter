@@ -9,12 +9,12 @@ import com.wechat.pay.java.core.http.RequestBody;
 import java.io.InputStream;
 
 /**
-* 微信支付沙箱环境 http客户端 包装器
-* <p>将生产环境 URL {@code api.mch.weixin.qq.com/...} 重写为沙箱环境 URL
-* {@code api.mch.weixin.qq.com/sandboxnew/...}，使 SDK 服务类可在沙箱环境下工作。</p>
-*
-* @since 4.0.0.41
-* @author CH
+ * 微信支付沙箱环境 http客户端 包装器
+ * <p>将生产环境 URL {@code api.mch.weixin.qq.com/...} 重写为沙箱环境 URL
+ * {@code api.mch.weixin.qq.com/sandboxnew/...}，使 SDK 服务类可在沙箱环境下工作。</p>
+ *
+ * @since 4.0.0.41
+ * @author CH
  */
 public class SandboxWechatHttpClient implements HttpClient {
 
@@ -97,11 +97,11 @@ public class SandboxWechatHttpClient implements HttpClient {
     }
 
     /**
-    * rewriteurl
-    *
-    * @param url url
-    * @return rewriteUrl的结果
-    */
+     * rewriteurl
+     *
+     * @param url url
+     * @return rewriteUrl的结果
+     */
     private String rewriteUrl(String url) {
         if (url == null || url.contains(SANDBOX_PATH)) {
             return url;

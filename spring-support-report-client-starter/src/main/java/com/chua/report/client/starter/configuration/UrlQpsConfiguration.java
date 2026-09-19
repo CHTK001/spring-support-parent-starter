@@ -14,14 +14,14 @@ import java.util.List;
 import java.util.Set;
 
 /**
-* URL QPS 统计配置
-* <p>
-* 配置 URL QPS 拦截器
-* </p>
-*
-* @版本 1.0.0
-* @since 2025/01/17
-* @author CH
+ * URL QPS 统计配置
+ * <p>
+ * 配置 URL QPS 拦截器
+ * </p>
+ *
+ * @版本 1.0.0
+ * @since 2025/01/17
+ * @author CH
  */
 @Slf4j
 @Configuration

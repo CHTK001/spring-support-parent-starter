@@ -9,17 +9,17 @@ import java.util.List;
 import java.util.Map;
 
 /**
-* 服务管理 —— 创建/更新服务器请求体。
-*
-* <p>配置约定：</p>
-* <ul>
-*   <li>proxy（HTTP_PROXY/TCP_PROXY）：{@code config.backendHost} + {@code config.backendPort} 必填</li>
-*   <li>SIP：{@code config.token} 可选（缺省使用框架默认令牌）</li>
-*   <li>HTTP 通用项：{@code config.contextPath}、{@code readTimeout}、{@code gzipEnabled}、{@code reactor} 等</li>
-* </ul>
-*
-* @author CH
-* @since 4.0.0.42
+ * 服务管理 —— 创建/更新服务器请求体。
+ *
+ * <p>配置约定：</p>
+ * <ul>
+ *   <li>proxy（HTTP_PROXY/TCP_PROXY）：{@code config.backendHost} + {@code config.backendPort} 必填</li>
+ *   <li>SIP：{@code config.token} 可选（缺省使用框架默认令牌）</li>
+ *   <li>HTTP 通用项：{@code config.contextPath}、{@code readTimeout}、{@code gzipEnabled}、{@code reactor} 等</li>
+ * </ul>
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 @Data
 @Schema(description = "服务管理-创建/更新服务器请求")

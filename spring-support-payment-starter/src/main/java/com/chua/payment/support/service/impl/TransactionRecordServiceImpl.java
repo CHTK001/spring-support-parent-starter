@@ -11,10 +11,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 /**
-* 交易流水服务实现，提供支付、退款、充值、转账等交易记录的分页查询。
-*
-* @author CH
-* @since 4.0.0.50
+ * 交易流水服务实现，提供支付、退款、充值、转账等交易记录的分页查询。
+ *
+ * @author CH
+ * @since 4.0.0.50
  */
 @Service
 @RequiredArgsConstructor

@@ -17,77 +17,77 @@ import java.util.List;
 import java.util.Map;
 
 /**
-* 服务管理 —— 服务端过滤器 插件工厂。
-*
-* <p>依据 {@link ServerFilterDescriptor} 实例化过滤器：</p>
-* <ul>
-*   <li><b>file-storage 预设</b>：反射创建 filesystem-starter 的
-*       {@code FileStorageServerFilter}（classpath 存在该模块时可用），
-* 参数 映射到 {@code FileStorageSetting}，并自动发现 Spring 容器中的
-*       {@code FileStorage} Bean 注册为存储桶，使 HTTP 服务器变成文件服务器</li>
-*   <li><b>通用插件</b>：type 视为 ServerFilter 全限定类名，反射实例化
-* （优先无参构造，其次 (服务端setting) 构造），参数 经
-*       {@code init(ServerFilterConfig)} 注入</li>
-* </ul>
-*
-* @author CH
-* @since 4.0.0.42
+ * 服务管理 —— 服务端过滤器 插件工厂。
+ *
+ * <p>依据 {@link ServerFilterDescriptor} 实例化过滤器：</p>
+ * <ul>
+ *   <li><b>file-storage 预设</b>：反射创建 filesystem-starter 的
+ *       {@code FileStorageServerFilter}（classpath 存在该模块时可用），
+ * 参数 映射到 {@code FileStorageSetting}，并自动发现 Spring 容器中的
+ *       {@code FileStorage} Bean 注册为存储桶，使 HTTP 服务器变成文件服务器</li>
+ *   <li><b>通用插件</b>：type 视为 ServerFilter 全限定类名，反射实例化
+ * （优先无参构造，其次 (服务端setting) 构造），参数 经
+ *       {@code init(ServerFilterConfig)} 注入</li>
+ * </ul>
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 @Slf4j
 @Component
 public class ServerFilterFactory {
 
     /**
-    * 文件服务器预设别名
-    */
+     * 文件服务器预设别名
+     */
     public static final String FILE_STORAGE_ALIAS = "file-storage";
     /**
-    * 文件storage服务端过滤器 全限定类名（spring-支持-filesystem-启动）
-    */
+     * 文件storage服务端过滤器 全限定类名（spring-支持-filesystem-启动）
+     */
     public static final String FILE_STORAGE_FILTER_CLASS = "com.chua.starter.filesystem.support.server.FileStorageServerFilter";
     /**
-    * 文件storagesetting 全限定类名（spring-支持-filesystem-启动）
-    */
+     * 文件storagesetting 全限定类名（spring-支持-filesystem-启动）
+     */
     private static final String FILE_STORAGE_SETTING_CLASS = "com.chua.starter.filesystem.support.server.FileStorageSetting";
     /**
-    * 文件storage 全限定类名（common-starter）
-    */
+     * 文件storage 全限定类名（common-starter）
+     */
     private static final String FILE_STORAGE_CLASS = "com.chua.common.support.storage.FileStorage";
 
     /**
-    * 文件storagesetting 布尔开关映射的参数名
-    */
+     * 文件storagesetting 布尔开关映射的参数名
+     */
     private static final List<String> SETTING_BOOLEAN_KEYS = List.of(
             "openPreview", "openDownload", "openRange", "openWatermark", "openRemoteFile", "openWebjars", "layout");
 
     /**
-    * 文件storagesetting 字符串参数映射的参数名
-    */
+     * 文件storagesetting 字符串参数映射的参数名
+     */
     private static final List<String> SETTING_STRING_KEYS = List.of("watermark", "layoutType");
 
     /**
-    * 应用上下文
-    */
+     * 应用上下文
+     */
     private final ApplicationContext applicationContext;
 
     /**
-    * 创建插件工厂
-    *
-    * @param applicationContext 应用上下文
-    */
+     * 创建插件工厂
+     *
+     * @param applicationContext 应用上下文
+     */
     @Autowired
     public ServerFilterFactory(ApplicationContext applicationContext) {
         this.applicationContext = applicationContext;
     }
 
     /**
-    * 按描述列表实例化全部过滤器（按 订单 升序返回）。
-    *
-    * @param descriptors 插件描述列表
-    * @param setting     所属服务器配置
-    * @return 过滤器实例列表
-    * @throws IllegalArgumentException 某插件无法实例化时抛出（携带明确原因）
-    */
+     * 按描述列表实例化全部过滤器（按 订单 升序返回）。
+     *
+     * @param descriptors 插件描述列表
+     * @param setting     所属服务器配置
+     * @return 过滤器实例列表
+     * @throws IllegalArgumentException 某插件无法实例化时抛出（携带明确原因）
+     */
     public List<ServerFilter> createFilters(List<ServerFilterDescriptor> descriptors, ServerSetting setting) {
         List<ServerFilter> filters = new ArrayList<>();
         if (descriptors == null || descriptors.isEmpty()) {
@@ -116,12 +116,12 @@ public class ServerFilterFactory {
     }
 
     /**
-    * 实例化单个插件。
-    *
-    * @param descriptor 插件描述
-    * @param setting    所属服务器配置
-    * @return 过滤器实例
-    */
+     * 实例化单个插件。
+     *
+     * @param descriptor 插件描述
+     * @param setting    所属服务器配置
+     * @return 过滤器实例
+     */
     private ServerFilter instantiate(ServerFilterDescriptor descriptor, ServerSetting setting) {
         String type = descriptor.resolveType();
         if (type == null || type.isBlank()) {
@@ -141,16 +141,16 @@ public class ServerFilterFactory {
     }
 
     /**
-    * 按 ServerFilter SPI 名称实例化过滤器。
-    *
-    * <p>优先尝试无参构造（插件自行在 {@code init} 阶段接收参数），
-    * 失败再尝试 {@code (ServerSetting)} 构造。</p>
-    *
-    * @param type       SPI 名称(如 url-mapping/shell-url-mapping/service-discovery/reverse-proxy)
-    * @param descriptor 插件描述
-    * @param setting    所属服务器配置
-    * @return 过滤器实例, SPI 未注册或实例化失败返回 空
-    */
+     * 按 ServerFilter SPI 名称实例化过滤器。
+     *
+     * <p>优先尝试无参构造（插件自行在 {@code init} 阶段接收参数），
+     * 失败再尝试 {@code (ServerSetting)} 构造。</p>
+     *
+     * @param type       SPI 名称(如 url-mapping/shell-url-mapping/service-discovery/reverse-proxy)
+     * @param descriptor 插件描述
+     * @param setting    所属服务器配置
+     * @return 过滤器实例, SPI 未注册或实例化失败返回 空
+     */
     private ServerFilter createSpiFilter(String type, ServerFilterDescriptor descriptor, ServerSetting setting) {
         ServerFilter filter = tryCreateSpi(type);
         if (filter == null) {
@@ -164,12 +164,12 @@ public class ServerFilterFactory {
     }
 
     /**
-    * 尝试按 SPI 名称与构造参数实例化，异常时返回 空 以便上层回退。
-    *
-    * @param type 类型
-    * @param args 构造参数
-    * @return 过滤器实例或 空
-    */
+     * 尝试按 SPI 名称与构造参数实例化，异常时返回 空 以便上层回退。
+     *
+     * @param type 类型
+     * @param args 构造参数
+     * @return 过滤器实例或 空
+     */
     private ServerFilter tryCreateSpi(String type, Object... args) {
         try {
             return ServiceProvider.of(ServerFilter.class).getNewExtension(type, args);
@@ -180,11 +180,11 @@ public class ServerFilterFactory {
     }
 
     /**
-    * 反射创建 文件storage服务端过滤器（可选插件，类路径 含 spring-支持-filesystem-启动 时可用）。
-    *
-    * @param descriptor 插件描述
-    * @return 过滤器实例
-    */
+     * 反射创建 文件storage服务端过滤器（可选插件，类路径 含 spring-支持-filesystem-启动 时可用）。
+     *
+     * @param descriptor 插件描述
+     * @return 过滤器实例
+     */
     private ServerFilter createFileStorageFilter(ServerFilterDescriptor descriptor) {
         Class<?> filterClass = ReflectUtils.forName(FILE_STORAGE_FILTER_CLASS);
         Class<?> settingClass = ReflectUtils.forName(FILE_STORAGE_SETTING_CLASS);
@@ -196,17 +196,17 @@ public class ServerFilterFactory {
         try {
             Object storageSetting = ReflectUtils.instantiate(settingClass);
             /**
-            * applysetting参数。
-            * @param storageSetting storagesetting
-            * @param descriptor.getParams( descriptor.获取参数(
-            */
+             * applysetting参数。
+             * @param storageSetting storagesetting
+             * @param descriptor.getParams( descriptor.获取参数(
+             */
             applySettingParams(storageSetting, descriptor.getParams());
             Object filter = ReflectUtils.instantiate(filterClass, storageSetting);
             /**
-            * wirestorages。
-            * @param filterClass 过滤器类
-            * @param filter 过滤器
-            */
+             * wirestorages。
+             * @param filterClass 过滤器类
+             * @param filter 过滤器
+             */
             wireStorages(filterClass, filter);
             log.info("[ServerFilterFactory] file-storage 插件已创建: name={}, params={}",
                     descriptor.getName(), descriptor.getParams());
@@ -219,11 +219,11 @@ public class ServerFilterFactory {
     }
 
     /**
-    * 将 参数 映射到 文件storagesetting。
-    *
-    * @param storageSetting 文件storagesetting 实例
-    * @param params         参数
-    */
+     * 将 参数 映射到 文件storagesetting。
+     *
+     * @param storageSetting 文件storagesetting 实例
+     * @param params         参数
+     */
     private void applySettingParams(Object storageSetting, Map<String, String> params) {
         if (params == null || params.isEmpty()) {
             return;
@@ -255,11 +255,11 @@ public class ServerFilterFactory {
     }
 
     /**
-    * 自动发现 Spring 容器中的 文件storage Bean 并注册为存储桶。
-    *
-    * @param filterClass 过滤器类
-    * @param filter      过滤器实例
-    */
+     * 自动发现 Spring 容器中的 文件storage Bean 并注册为存储桶。
+     *
+     * @param filterClass 过滤器类
+     * @param filter      过滤器实例
+     */
     private void wireStorages(Class<?> filterClass, Object filter) {
         try {
             Class<?> storageClass = ReflectUtils.forName(FILE_STORAGE_CLASS);
@@ -310,13 +310,13 @@ public class ServerFilterFactory {
     }
 
     /**
-    * 反射创建通用 服务端过滤器 插件（类型 为全限定类名）。
-    *
-    * @param type       全限定类名
-    * @param descriptor 插件描述
-    * @param setting    所属服务器配置
-    * @return 过滤器实例
-    */
+     * 反射创建通用 服务端过滤器 插件（类型 为全限定类名）。
+     *
+     * @param type       全限定类名
+     * @param descriptor 插件描述
+     * @param setting    所属服务器配置
+     * @return 过滤器实例
+     */
     private ServerFilter createGenericFilter(String type, ServerFilterDescriptor descriptor, ServerSetting setting) {
         Class<?> clazz = ReflectUtils.forName(type);
         if (clazz == null) {
@@ -339,13 +339,13 @@ public class ServerFilterFactory {
     }
 
     /**
-    * 按构造器优先级实例化：无参构造 → (服务端setting) 构造。
-    *
-    * @param clazz   目标类
-    * @param setting 服务器配置
-    * @return 实例
-    * @throws Exception 反射异常
-    */
+     * 按构造器优先级实例化：无参构造 → (服务端setting) 构造。
+     *
+     * @param clazz   目标类
+     * @param setting 服务器配置
+     * @return 实例
+     * @throws Exception 反射异常
+     */
     private Object newInstance(Class<?> clazz, ServerSetting setting) throws Exception {
  // 先试无参构造、再试 (ServerSetting) 构造的优先级探测，ReflectUtils 无法表达该语义
         try {
@@ -361,11 +361,11 @@ public class ServerFilterFactory {
     }
 
     /**
-    * 解析布尔参数（true/1/yes/on 均为真）。
-    *
-    * @param value 原始值
-    * @return 布尔结果
-    */
+     * 解析布尔参数（true/1/yes/on 均为真）。
+     *
+     * @param value 原始值
+     * @return 布尔结果
+     */
     private boolean parseBoolean(String value) {
         String v = value.trim().toLowerCase();
         return v.isEmpty() || "true".equals(v) || "1".equals(v) || "yes".equals(v) || "on".equals(v);

@@ -13,11 +13,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
-* api 功能开关（@api特征）真实测试：经真实 apicontrol拦截器 拦截链验证
-* 开关开放/关闭的放行与拒绝路径。
-*
-* @author CH
-* @since 2026/09/04
+ * api 功能开关（@api特征）真实测试：经真实 apicontrol拦截器 拦截链验证
+ * 开关开放/关闭的放行与拒绝路径。
+ *
+ * @author CH
+ * @since 2026/09/04
  */
 @SpringBootTest
 @AutoConfigureMockMvc

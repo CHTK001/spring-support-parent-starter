@@ -7,9 +7,9 @@ import java.time.Duration;
 import java.util.function.Supplier;
 
 /**
-* 无 Redis 环境下的本地锁模板兜底实现。
-* @author CH
-* @since 4.0.0
+ * 无 Redis 环境下的本地锁模板兜底实现。
+ * @author CH
+ * @since 4.0.0
  */
 @Slf4j
 public class NoopLockTemplate implements LockTemplate {

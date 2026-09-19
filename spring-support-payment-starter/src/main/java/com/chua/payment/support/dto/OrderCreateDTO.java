@@ -6,10 +6,10 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 
 /**
-* 订单创建数据传输对象
-*
-* @since 2026-03-18
-* @author CH
+ * 订单创建数据传输对象
+ *
+ * @since 2026-03-18
+ * @author CH
  */
 @Data
 public class OrderCreateDTO implements Serializable {

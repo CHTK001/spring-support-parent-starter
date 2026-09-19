@@ -23,10 +23,10 @@ import java.util.List;
 import java.util.Map;
 
 /**
-* 批量执行接口：批量命令、文件分发与计划任务
-*
-* @author CH
-* @since 4.0.0.42
+ * 批量执行接口：批量命令、文件分发与计划任务
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 @Tag(name = "服务器资产-批量作业", description = "批量命令/文件分发/cron 计划任务")
 @RestController
@@ -53,14 +53,14 @@ public class ExecController {
     }
 
     /**
-    * 文件分发
-    *
-    * @param hostIds   主机 标识 集合（逗号分隔）
-    * @param directory 目标目录
-    * @param file      文件
-    * @return 各主机日志
-    * @param @RequestParam("hostIds" @请求参数("主机标识"
-    */
+     * 文件分发
+     *
+     * @param hostIds   主机 标识 集合（逗号分隔）
+     * @param directory 目标目录
+     * @param file      文件
+     * @return 各主机日志
+     * @param @RequestParam("hostIds" @请求参数("主机标识"
+     */
     @Operation(summary = "文件分发")
     @PostMapping("/file")
     public ReturnResult<List<MsExecLog>> distributeFile(@RequestParam("hostIds") String hostIds,
@@ -70,11 +70,11 @@ public class ExecController {
     }
 
     /**
-    * 新增计划任务
-    *
-    * @param job 任务
-    * @return 结果
-    */
+     * 新增计划任务
+     *
+     * @param job 任务
+     * @return 结果
+     */
     @Operation(summary = "新增计划任务")
     @PostMapping("/job")
     public ReturnResult<MsExecJob> createJob(@RequestBody MsExecJob job) {
@@ -82,12 +82,12 @@ public class ExecController {
     }
 
     /**
-    * 更新计划任务
-    *
-    * @param id  主键
-    * @param job 任务
-    * @return 结果
-    */
+     * 更新计划任务
+     *
+     * @param id  主键
+     * @param job 任务
+     * @return 结果
+     */
     @Operation(summary = "更新计划任务")
     @PutMapping("/job/{id}")
     public ReturnResult<MsExecJob> updateJob(@PathVariable Long id, @RequestBody MsExecJob job) {
@@ -95,11 +95,11 @@ public class ExecController {
     }
 
     /**
-    * 删除计划任务
-    *
-    * @param id 主键
-    * @return 结果
-    */
+     * 删除计划任务
+     *
+     * @param id 主键
+     * @return 结果
+     */
     @Operation(summary = "删除计划任务")
     @DeleteMapping("/job/{id}")
     public ReturnResult<Void> deleteJob(@PathVariable Long id) {
@@ -107,10 +107,10 @@ public class ExecController {
     }
 
     /**
-    * 计划任务列表
-    *
-    * @return 任务列表
-    */
+     * 计划任务列表
+     *
+     * @return 任务列表
+     */
     @Operation(summary = "计划任务列表")
     @GetMapping("/job")
     public ReturnResult<List<MsExecJob>> listJobs() {
@@ -118,11 +118,11 @@ public class ExecController {
     }
 
     /**
-    * 立即触发任务
-    *
-    * @param id 主键
-    * @return 执行日志
-    */
+     * 立即触发任务
+     *
+     * @param id 主键
+     * @return 执行日志
+     */
     @Operation(summary = "立即触发任务")
     @PostMapping("/job/{id}/run")
     public ReturnResult<List<MsExecLog>> runJobNow(@PathVariable Long id) {
@@ -130,13 +130,13 @@ public class ExecController {
     }
 
     /**
-    * 执行日志查询
-    *
-    * @param type   类型过滤，可为空
-    * @param hostId 主机过滤，可为空
-    * @return 日志列表
-    * @param false false
-    */
+     * 执行日志查询
+     *
+     * @param type   类型过滤，可为空
+     * @param hostId 主机过滤，可为空
+     * @return 日志列表
+     * @param false false
+     */
     @Operation(summary = "执行日志查询")
     @GetMapping("/log")
     public ReturnResult<List<MsExecLog>> listLogs(@RequestParam(required = false) String type,
@@ -145,11 +145,11 @@ public class ExecController {
     }
 
     /**
-    * 解析对象为长整型列表（JSON 数组或字符串）
-    *
-    * @param value 原始值
-    * @return 长整型列表，非法输入返回空列表
-    */
+     * 解析对象为长整型列表（JSON 数组或字符串）
+     *
+     * @param value 原始值
+     * @return 长整型列表，非法输入返回空列表
+     */
     @SuppressWarnings("unchecked")
     private List<Long> parseLongList(Object value) {
         if (value instanceof List<?> rawList) {
@@ -166,11 +166,11 @@ public class ExecController {
     }
 
     /**
-    * 解析逗号分隔的主机 标识
-    *
-    * @param csv 逗号分隔串
-    * @return 长整型列表
-    */
+     * 解析逗号分隔的主机 标识
+     *
+     * @param csv 逗号分隔串
+     * @return 长整型列表
+     */
     private List<Long> parseLongCsv(String csv) {
         List<Long> ids = new java.util.ArrayList<>();
         if (csv == null || csv.isBlank()) {
@@ -186,11 +186,11 @@ public class ExecController {
     }
 
     /**
-    * 安全转换长整型
-    *
-    * @param value 原始值
-    * @return 长整型或 空
-    */
+     * 安全转换长整型
+     *
+     * @param value 原始值
+     * @return 长整型或 空
+     */
     private Long toLong(Object value) {
         if (value == null) {
             return null;
@@ -203,11 +203,11 @@ public class ExecController {
     }
 
     /**
-    * 安全转换整型
-    *
-    * @param value 原始值
-    * @return 整型或 空
-    */
+     * 安全转换整型
+     *
+     * @param value 原始值
+     * @return 整型或 空
+     */
     private Integer toInteger(Object value) {
         Long parsed = toLong(value);
         return parsed == null ? null : parsed.intValue();

@@ -19,18 +19,18 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 /**
-* Socket 服务器动态注册服务
-* <p>
-* 服务器启动时向 Redis 注册本实例的 Socket 配置（协议/地址/端口/路径/上下文 等），
-* 并启动心跳定时任务保持在线。支持多个服务器实例同时运行，并按协议/地址汇聚供前端获取。
-* </p>
-* <p>
-* 前端从接口获取所有在线 Socket 服务器地址时，自动合并数据库配置（默认为空），
-* 前端根据 URL scheme 决定协议，不再固定死 协议。
-* </p>
-*
-* @author CH
-* @since 4.0.0.42
+ * Socket 服务器动态注册服务
+ * <p>
+ * 服务器启动时向 Redis 注册本实例的 Socket 配置（协议/地址/端口/路径/上下文 等），
+ * 并启动心跳定时任务保持在线。支持多个服务器实例同时运行，并按协议/地址汇聚供前端获取。
+ * </p>
+ * <p>
+ * 前端从接口获取所有在线 Socket 服务器地址时，自动合并数据库配置（默认为空），
+ * 前端根据 URL scheme 决定协议，不再固定死 协议。
+ * </p>
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 @Slf4j
 @Service
@@ -99,10 +99,10 @@ public class SocketServerRegistry {
     }
 
     /**
-    * 获取所有在线 Socket 服务器地址（合并数据库配置）
-    *
-    * @return 获取全部online服务端的结果
-    */
+     * 获取所有在线 Socket 服务器地址（合并数据库配置）
+     *
+     * @return 获取全部online服务端的结果
+     */
     public List<SocketServerInfo> getAllOnlineServers() {
         List<SocketServerInfo> result = new ArrayList<>();
 
@@ -160,9 +160,9 @@ public class SocketServerRegistry {
     // ======================== 辅助方法 ========================
 
     /**
-    * generate服务端标识。
-    * @return generate服务端id的结果
-    */
+     * generate服务端标识。
+     * @return generate服务端id的结果
+     */
     private String generateServerId() {
         String host = getLocalHost();
         int port = getActualPort();
@@ -170,9 +170,9 @@ public class SocketServerRegistry {
     }
 
     /**
-    * 获取本地主机。
-    * @return 获取本地主机的结果
-    */
+     * 获取本地主机。
+     * @return 获取本地主机的结果
+     */
     private String getLocalHost() {
         try {
             return InetAddress.getLocalHost().getHostAddress();
@@ -183,9 +183,9 @@ public class SocketServerRegistry {
     }
 
     /**
-    * 获取actual端口。
-    * @return 获取actual端口的结果
-    */
+     * 获取actual端口。
+     * @return 获取actual端口的结果
+     */
     private int getActualPort() {
         if (properties.getRoom() != null && !properties.getRoom().isEmpty()) {
             SocketProperties.Room room = properties.getRoom().getFirst();
@@ -196,9 +196,9 @@ public class SocketServerRegistry {
     }
 
     /**
-    * 获取路径。
-    * @return 获取路径的结果
-    */
+     * 获取路径。
+     * @return 获取路径的结果
+     */
     private String getPath() {
         if (properties.getRoom() != null && !properties.getRoom().isEmpty()) {
             SocketProperties.Room room = properties.getRoom().getFirst();
@@ -208,17 +208,17 @@ public class SocketServerRegistry {
     }
 
     /**
-    * 获取上下文。
-    * @return 获取上下文的结果
-    */
+     * 获取上下文。
+     * @return 获取上下文的结果
+     */
     private String getContext() {
         return getPath();
     }
 
     /**
-    * 获取服务端名称。
-    * @return 获取服务端名称的结果
-    */
+     * 获取服务端名称。
+     * @return 获取服务端名称的结果
+     */
     private String getServerName() {
         if (properties.getRoom() != null && !properties.getRoom().isEmpty()) {
             SocketProperties.Room room = properties.getRoom().getFirst();
@@ -228,10 +228,10 @@ public class SocketServerRegistry {
     }
 
     /**
-    * 解析服务端信息。
-    * @param info 信息
-    * @return 解析服务端信息的结果
-    */
+     * 解析服务端信息。
+     * @param info 信息
+     * @return 解析服务端信息的结果
+     */
     private SocketServerInfo parseServerInfo(Map<Object, Object> info) {
         try {
             SocketServerInfo server = new SocketServerInfo();
@@ -253,10 +253,10 @@ public class SocketServerRegistry {
     }
 
     /**
-    * 解析int。
-    * @param value 值
-    * @return 解析int的结果
-    */
+     * 解析int。
+     * @param value 值
+     * @return 解析int的结果
+     */
     private int parseInt(Object value) {
         if (value == null) {
             return 0;
@@ -272,10 +272,10 @@ public class SocketServerRegistry {
     }
 
     /**
-    * 解析long。
-    * @param value 值
-    * @return 解析long的结果
-    */
+     * 解析long。
+     * @param value 值
+     * @return 解析long的结果
+     */
     private long parseLong(Object value) {
         if (value == null) {
             return 0L;
@@ -291,10 +291,10 @@ public class SocketServerRegistry {
     }
 
     /**
-    * 是否online。
-    * @param server 服务端
-    * @return 是否online的结果
-    */
+     * 是否online。
+     * @param server 服务端
+     * @return 是否online的结果
+     */
     private boolean isOnline(SocketServerInfo server) {
         if (server.getHeartbeat() == 0) {
             return false;
@@ -303,10 +303,10 @@ public class SocketServerRegistry {
     }
 
      /**
-     * 获取数据库中的服务端
-     *
-     * @return 服务端标识
-     */
+      * 获取数据库中的服务端
+      *
+      * @return 服务端标识
+      */
     protected List<SocketServerInfo> getDatabaseServers() {
         return Collections.emptyList();
     }
@@ -332,14 +332,14 @@ public class SocketServerRegistry {
     // ======================== SocketServerInfo ========================
 
     /**
-    * Socket 服务器在线信息
-    *
-    * @param name 名称
-    * @return 设置ttl的结果
-    * @param ttl ttl
-    * @author CH
-    * @since 4.0.0
-    */
+     * Socket 服务器在线信息
+     *
+     * @param name 名称
+     * @return 设置ttl的结果
+     * @param ttl ttl
+     * @author CH
+     * @since 4.0.0
+     */
     public static class SocketServerInfo {
         private String id; // 标识
         private String protocol; // 协议
@@ -347,166 +347,166 @@ public class SocketServerRegistry {
         private int port; // 端口
         private String path; // 路径
         /**
-        * 获取标识。
-        * @return 获取id的结果
-        */
+         * 获取标识。
+         * @return 获取id的结果
+         */
         private String context;
         private boolean enable; // enable
         private long heartbeat; // 心跳
         private int ttl; // ttl
         /**
-        * 设置标识。
-        * @param id 标识
-        */
+         * 设置标识。
+         * @param id 标识
+         */
         private String name;
 
         /**
-        * 获取id。
-        * @return 获取id的结果
-        */
+         * 获取id。
+         * @return 获取id的结果
+         */
         public String getId() {
             return id;
         /**
-        * 获取协议。
-        * @return 获取协议的结果
-        * @param id id
-        */
+         * 获取协议。
+         * @return 获取协议的结果
+         * @param id id
+         */
         }
 
         public void setId(String id) {
             this.id = id;
         /**
-        * 设置协议。
-        * @param protocol 协议
-        * @return 获取协议的结果
-        */
+         * 设置协议。
+         * @param protocol 协议
+         * @return 获取协议的结果
+         */
         }
 
         public String getProtocol() {
             return protocol;
         /**
-        * 获取主机。
-        * @return 获取主机的结果
-        * @param protocol 协议
-        */
+         * 获取主机。
+         * @return 获取主机的结果
+         * @param protocol 协议
+         */
         }
 
         public void setProtocol(String protocol) {
             this.protocol = protocol;
         /**
-        * 设置主机。
-        * @param host 主机
-        * @return 获取主机的结果
-        */
+         * 设置主机。
+         * @param host 主机
+         * @return 获取主机的结果
+         */
         }
 
         public String getHost() {
             return host;
         /**
-        * 获取端口。
-        * @return 获取端口的结果
-        * @param host 主机
-        */
+         * 获取端口。
+         * @return 获取端口的结果
+         * @param host 主机
+         */
         }
 
         public void setHost(String host) {
             this.host = host;
         /**
-        * 设置端口。
-        * @param port 端口
-        * @return 获取端口的结果
-        */
+         * 设置端口。
+         * @param port 端口
+         * @return 获取端口的结果
+         */
         }
 
         public int getPort() {
             return port;
         /**
-        * 获取路径。
-        * @return 获取路径的结果
-        * @param port 端口
-        */
+         * 获取路径。
+         * @return 获取路径的结果
+         * @param port 端口
+         */
         }
 
         public void setPort(int port) {
             this.port = port;
         /**
-        * 设置路径。
-        * @param path 路径
-        * @return 获取路径的结果
-        */
+         * 设置路径。
+         * @param path 路径
+         * @return 获取路径的结果
+         */
         }
 
         public String getPath() {
             return path;
         /**
-        * 获取上下文。
-        * @return 获取上下文的结果
-        * @param path 路径
-        */
+         * 获取上下文。
+         * @return 获取上下文的结果
+         * @param path 路径
+         */
         }
 
         public void setPath(String path) {
             this.path = path;
         /**
-        * 设置上下文。
-        * @param context 上下文
-        * @return 获取上下文的结果
-        */
+         * 设置上下文。
+         * @param context 上下文
+         * @return 获取上下文的结果
+         */
         }
 
         public String getContext() {
             return context;
         /**
-        * 是否enable。
-        * @return 是否enable的结果
-        * @param context 上下文
-        */
+         * 是否enable。
+         * @return 是否enable的结果
+         * @param context 上下文
+         */
         }
 
         public void setContext(String context) {
             this.context = context;
         /**
-        * 设置enable。
-        * @param enable enable
-        * @return 是否enable的结果
-        */
+         * 设置enable。
+         * @param enable enable
+         * @return 是否enable的结果
+         */
         }
 
         public boolean isEnable() {
             return enable;
         /**
-        * 获取心跳。
-        * @return 获取心跳的结果
-        * @param enable enable
-        */
+         * 获取心跳。
+         * @return 获取心跳的结果
+         * @param enable enable
+         */
         }
 
         public void setEnable(boolean enable) {
             this.enable = enable;
         /**
-        * 设置心跳。
-        * @param heartbeat 心跳
-        * @return 获取心跳的结果
-        */
+         * 设置心跳。
+         * @param heartbeat 心跳
+         * @return 获取心跳的结果
+         */
         }
 
         public long getHeartbeat() {
             return heartbeat;
         /**
-        * 获取ttl。
-        * @return 获取ttl的结果
-        * @param name 名称
-        * @param ttl ttl
-        * @param heartbeat 心跳
-        */
+         * 获取ttl。
+         * @return 获取ttl的结果
+         * @param name 名称
+         * @param ttl ttl
+         * @param heartbeat 心跳
+         */
         }
 
         public void setHeartbeat(long heartbeat) {
             this.heartbeat = heartbeat;
         /**
-        * 获取ttl。
-        * @return 获取ttl的结果
-        */
+         * 获取ttl。
+         * @return 获取ttl的结果
+         */
         }
 
         public int getTtl() {

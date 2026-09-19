@@ -25,10 +25,10 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
-* 软件安装接口
-*
-* @since 2026/7/25
-* @author CH
+ * 软件安装接口
+ *
+ * @since 2026/7/25
+ * @author CH
  */
 @Tag(name = "软件安装接口")
 @RestController
@@ -63,23 +63,23 @@ public class SoftInstallController {
     @DeleteMapping("/uninstall")
     @Permission(value = "sys:soft:uninstall", role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
     /**
-    * Uninstall
-    * @param softwareId softwareid
-    * @param userId 用户标识
-    * @param deviceId deviceid
-    * @param userId 用户标识
-    * @param deviceId deviceid
-    * @param softwareId softwareid
-    * @param userId 用户标识
-    * @param deviceId deviceid
-    * @param targetVersion Target版本
-    * @param userId 用户标识
-    * @param deviceId deviceid
-    * @param targetVersion Target版本
-    * @param recordId recordid
-    * @param softwareId softwareid
-    * @param userId 用户标识
-    */
+     * Uninstall
+     * @param softwareId softwareid
+     * @param userId 用户标识
+     * @param deviceId deviceid
+     * @param userId 用户标识
+     * @param deviceId deviceid
+     * @param softwareId softwareid
+     * @param userId 用户标识
+     * @param deviceId deviceid
+     * @param targetVersion Target版本
+     * @param userId 用户标识
+     * @param deviceId deviceid
+     * @param targetVersion Target版本
+     * @param recordId recordid
+     * @param softwareId softwareid
+     * @param userId 用户标识
+     */
     public ReturnResult<InstallDetailResponse> uninstall(
             @Parameter(description = "软件ID") String softwareId,
             @Parameter(description = "用户ID") String userId,
@@ -91,18 +91,18 @@ public class SoftInstallController {
     @PutMapping("/update")
     @Permission(value = "sys:soft:update", role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
     /**
-    * 更新版本
-    * @param softwareId softwareid
-    * @param userId 用户标识
-    * @param deviceId deviceid
-    * @param targetVersion Target版本
-    * @param userId 用户标识
-    * @param deviceId deviceid
-    * @param targetVersion Target版本
-    * @param recordId recordid
-    * @param softwareId softwareid
-    * @param userId 用户标识
-    */
+     * 更新版本
+     * @param softwareId softwareid
+     * @param userId 用户标识
+     * @param deviceId deviceid
+     * @param targetVersion Target版本
+     * @param userId 用户标识
+     * @param deviceId deviceid
+     * @param targetVersion Target版本
+     * @param recordId recordid
+     * @param softwareId softwareid
+     * @param userId 用户标识
+     */
     public ReturnResult<InstallDetailResponse> updateVersion(
             @Parameter(description = "软件ID") String softwareId,
             @Parameter(description = "用户ID") String userId,
@@ -115,11 +115,11 @@ public class SoftInstallController {
     @GetMapping("/detail")
     @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
     /**
-    * Detail
-    *
-    * @param recordId recordid
-    * @return detail的结果
-    */
+     * Detail
+     *
+     * @param recordId recordid
+     * @return detail的结果
+     */
     public ReturnResult<InstallDetailResponse> detail(String recordId) {
         return installRecordService.getInstallDetail(recordId);
     }
@@ -128,11 +128,11 @@ public class SoftInstallController {
     @GetMapping("/list")
     @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
     /**
-    * 列表bysoftware
-    *
-    * @param softwareId softwareid
-    * @return 列表bysoftware的结果
-    */
+     * 列表bysoftware
+     *
+     * @param softwareId softwareid
+     * @return 列表bysoftware的结果
+     */
     public ReturnResult<List<SoftInstallRecord>> listBySoftware(String softwareId) {
         return ReturnResult.ok(installRecordService.listBySoftwareId(softwareId));
     }
@@ -141,11 +141,11 @@ public class SoftInstallController {
     @GetMapping("/installed")
     @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
     /**
-    * 列表installed
-    *
-    * @param userId 用户标识
-    * @return 列表installed的结果
-    */
+     * 列表installed
+     *
+     * @param userId 用户标识
+     * @return 列表installed的结果
+     */
     public ReturnResult<List<SoftInstallRecord>> listInstalled(String userId) {
         return ReturnResult.ok(installRecordService.listInstalledByUserId(userId));
     }

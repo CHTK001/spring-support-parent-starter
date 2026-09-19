@@ -21,10 +21,10 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
-* 错题库管理控制器
-*
-* @since 4.0.0.42
-* @author CH
+ * 错题库管理控制器
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @RestController
@@ -49,11 +49,11 @@ public class EduWrongQuestionController {
     }
 
     /**
-    * 生成复习卷
-    *
-    * @param dto 复习卷配置
-    * @return 题目ID列表
-    */
+     * 生成复习卷
+     *
+     * @param dto 复习卷配置
+     * @return 题目ID列表
+     */
     @Operation(summary = "生成复习卷")
     @PostMapping("/review")
     public ReturnResult<List<Long>> generateReview(@RequestBody ReviewPaperDTO dto) {
@@ -61,12 +61,12 @@ public class EduWrongQuestionController {
     }
 
     /**
-    * 更新掌握度
-    *
-    * @param wrongId      错题记录标识
-    * @param masteryLevel 掌握度
-    * @return 是否成功
-    */
+     * 更新掌握度
+     *
+     * @param wrongId      错题记录标识
+     * @param masteryLevel 掌握度
+     * @return 是否成功
+     */
     @Operation(summary = "更新掌握度")
     @PutMapping("/mastery")
     public ReturnResult<Boolean> updateMastery(@RequestParam Long wrongId, @RequestParam Integer masteryLevel) {

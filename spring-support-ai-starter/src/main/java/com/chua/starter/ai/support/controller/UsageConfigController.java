@@ -22,13 +22,13 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
-* AI 用量配置控制器。
-*
-* <p>提供 {@code global} 分组用量配置的读取与更新：用量开关、定时同步时间、
-* 提供者 SPI 开关、后台时间轮。</p>
-*
-* @author CH
-* @since 4.0.0.42
+ * AI 用量配置控制器。
+ *
+ * <p>提供 {@code global} 分组用量配置的读取与更新：用量开关、定时同步时间、
+ * 提供者 SPI 开关、后台时间轮。</p>
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 @Slf4j
 @RestController
@@ -38,20 +38,20 @@ import java.util.stream.Collectors;
 public class UsageConfigController {
 
     /**
-    * 用量配置分组
-    */
+     * 用量配置分组
+     */
     private static final String GROUP = "global";
 
     /**
-    * 全局设置服务
-    */
+     * 全局设置服务
+     */
     private final SysAiGlobalSettingService settingService;
 
     /**
-    * 获取用量配置项定义与当前值。
-    *
-    * @return 配置列表（field/value/valueType/description/sort）
-    */
+     * 获取用量配置项定义与当前值。
+     *
+     * @return 配置列表（field/value/valueType/description/sort）
+     */
     @Permission("admin")
     @Operation(summary = "获取用量配置", description = "用量开关 / 定时同步时间 / Provider SPI 开关 / 后台时间轮")
     @GetMapping
@@ -84,11 +84,11 @@ public class UsageConfigController {
     }
 
     /**
-    * 更新用量配置（整组替换）。
-    *
-    * @param body 配置请求（群体 + 字段）
-    * @return 更新结果
-    */
+     * 更新用量配置（整组替换）。
+     *
+     * @param body 配置请求（群体 + 字段）
+     * @return 更新结果
+     */
     @Permission("admin")
     @Operation(summary = "更新用量配置", description = "整组替换 global 用量配置")
     @PutMapping
@@ -102,11 +102,11 @@ public class UsageConfigController {
     }
 
     /**
-    * 转为int
-    *
-    * @param obj obj
-    * @return 转为int的结果
-    */
+     * 转为int
+     *
+     * @param obj obj
+     * @return 转为int的结果
+     */
     private static int toInt(Object obj) {
         if (obj instanceof Number n) {
             return n.intValue();

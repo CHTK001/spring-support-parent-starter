@@ -13,10 +13,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
-* resource
-*
-* @author CH
-* @since 4.0.0
+ * resource
+ *
+ * @author CH
+ * @since 4.0.0
  */
 public class ResourceWebMvcConfigurer implements WebMvcConfigurer  {
     /** 日志 */

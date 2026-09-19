@@ -13,12 +13,12 @@ import java.util.List;
 import static com.chua.starter.common.support.logger.ModuleLog.highlight;
 
 /**
-* SSE Socket 服务提供者
-* 实现 Socket提供者 SPI，提供 SSE 协议支持
-*
-* @版本 1.0.0
-* @since 2024-12-24
-* @author CH
+ * SSE Socket 服务提供者
+ * 实现 Socket提供者 SPI，提供 SSE 协议支持
+ *
+ * @版本 1.0.0
+ * @since 2024-12-24
+ * @author CH
  */
 @Slf4j
 @Spi("sse")

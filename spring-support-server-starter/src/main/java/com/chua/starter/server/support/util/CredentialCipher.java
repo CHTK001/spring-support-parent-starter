@@ -7,14 +7,14 @@ import org.springframework.stereotype.Component;
 import java.nio.charset.StandardCharsets;
 
 /**
-* 凭据加解密器
-* <p>
-* 基于 AES-CBC 对密钥私钥、登录密码进行加密落库与解密还原，
-* 密钥来源于 {@code server.support.credential-key} 配置。
-* </p>
-*
-* @author CH
-* @since 4.0.0.42
+ * 凭据加解密器
+ * <p>
+ * 基于 AES-CBC 对密钥私钥、登录密码进行加密落库与解密还原，
+ * 密钥来源于 {@code server.support.credential-key} 配置。
+ * </p>
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 @Component
 public class CredentialCipher {
@@ -33,11 +33,11 @@ public class CredentialCipher {
     }
 
     /**
-    * 加密明文
-    *
-    * @param plain 明文
-    * @return 密文（hex），入参为空时原样返回
-    */
+     * 加密明文
+     *
+     * @param plain 明文
+     * @return 密文（hex），入参为空时原样返回
+     */
     public String encrypt(String plain) {
         if (plain == null || plain.isEmpty()) {
             return plain;
@@ -46,11 +46,11 @@ public class CredentialCipher {
     }
 
     /**
-    * 解密密文
-    *
-    * @param hex 密文（hex）
-    * @return 明文，入参为空时原样返回
-    */
+     * 解密密文
+     *
+     * @param hex 密文（hex）
+     * @return 明文，入参为空时原样返回
+     */
     public String decrypt(String hex) {
         if (hex == null || hex.isEmpty()) {
             return hex;
@@ -59,11 +59,11 @@ public class CredentialCipher {
             return codec.decodeHex(hex);
         } catch (Exception e) {
             /**
-            * illegal状态异常。
-            * @param 配置是否与加密时一致" 配置是否与加密时一致"
-            * @param e e
-            * @return illegal状态异常的结果
-            */
+             * illegal状态异常。
+             * @param 配置是否与加密时一致" 配置是否与加密时一致"
+             * @param e e
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("凭据解密失败，请检查 server.support.credential-key 配置是否与加密时一致", e);
         }
     }

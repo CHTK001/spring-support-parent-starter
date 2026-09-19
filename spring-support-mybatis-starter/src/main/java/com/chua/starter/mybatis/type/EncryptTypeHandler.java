@@ -15,12 +15,12 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 
 /**
-* 字段字段的 类型处理器 实现类，基于 实现
-* 可通过 jasypt.encryptor.密码 配置项，设置密钥
-*
-* @author 芋道源码
-* @author CH
-* @since 4.0.0
+ * 字段字段的 类型处理器 实现类，基于 实现
+ * 可通过 jasypt.encryptor.密码 配置项，设置密钥
+ *
+ * @author 芋道源码
+ * @author CH
+ * @since 4.0.0
  */
 public class EncryptTypeHandler extends BaseTypeHandler<String> {
 
@@ -62,11 +62,11 @@ public class EncryptTypeHandler extends BaseTypeHandler<String> {
     }
 
     /**
-    * Decrypt
-    *
-    * @param value 值
-    * @return decrypt的结果
-    */
+     * Decrypt
+     *
+     * @param value 值
+     * @return decrypt的结果
+     */
     private static String decrypt(String value) {
         if (value == null) {
             return null;
@@ -78,11 +78,11 @@ public class EncryptTypeHandler extends BaseTypeHandler<String> {
         try {
             byte[] decoded = com.chua.common.support.lang.algorithm.crypto.Hex.decodeHex(value);
             /**
-            * 字符串。
-            * @param decoded decoded
-            * @param java.nio.charset.StandardCharsets.UTF_8 Java.nio.字符集.标准字符集.UTF_8
-            * @return 字符串的结果
-            */
+             * 字符串。
+             * @param decoded decoded
+             * @param java.nio.charset.StandardCharsets.UTF_8 Java.nio.字符集.标准字符集.UTF_8
+             * @return 字符串的结果
+             */
             return new String(decoded, java.nio.charset.StandardCharsets.UTF_8);
         } catch (RuntimeException ex) {
             if (encryptMode == EncryptMode.AUTO) {
@@ -93,11 +93,11 @@ public class EncryptTypeHandler extends BaseTypeHandler<String> {
     }
 
     /**
-    * Encrypt
-    *
-    * @param rawValue raw值
-    * @return encrypt的结果
-    */
+     * Encrypt
+     *
+     * @param rawValue raw值
+     * @return encrypt的结果
+     */
     public static String encrypt(String rawValue) {
         if (rawValue == null) {
             return null;
@@ -111,20 +111,20 @@ public class EncryptTypeHandler extends BaseTypeHandler<String> {
             return Hex.encodeHexString(encrypted);
         } catch (Exception e) {
             /**
-            * runtime异常。
-            * @param "加密失败" "加密失败"
-            * @param e e
-            * @return runtime异常的结果
-            */
+             * runtime异常。
+             * @param "加密失败" "加密失败"
+             * @param e e
+             * @return runtime异常的结果
+             */
             throw new RuntimeException("加密失败", e);
         }
     }
 
     /**
-    * 获取Encryptor
-    *
-    * @return 获取encryptor的结果
-    */
+     * 获取Encryptor
+     *
+     * @return 获取encryptor的结果
+     */
     private static AesCipher getEncryptor() {
         if (aesCodec != null) {
             return aesCodec;
@@ -137,10 +137,10 @@ public class EncryptTypeHandler extends BaseTypeHandler<String> {
     }
 
     /**
-    * 解析encryptmode
-    *
-    * @return resolveEncryptMode的结果
-    */
+     * 解析encryptmode
+     *
+     * @return resolveEncryptMode的结果
+     */
     private static EncryptMode resolveEncryptMode() {
         String mode = System.getProperty(ENCRYPTOR_MODE_PROPERTY_NAME);
         if (!StringUtils.hasText(mode)) {
@@ -154,11 +154,11 @@ public class EncryptTypeHandler extends BaseTypeHandler<String> {
     }
 
     /**
-    * encryptmode枚举。
-    *
-    * @author CH
-    * @since 4.0.0
-    */
+     * encryptmode枚举。
+     *
+     * @author CH
+     * @since 4.0.0
+     */
     private enum EncryptMode {
         ENCRYPT,
         PLAIN,

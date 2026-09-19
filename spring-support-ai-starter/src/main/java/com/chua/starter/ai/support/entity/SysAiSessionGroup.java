@@ -18,32 +18,32 @@ import java.time.LocalDateTime;
 public class SysAiSessionGroup {
 
     /**
-    * 分组主键
-    */
+     * 分组主键
+     */
     @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
     /**
-    * 分组名称
-    */
+     * 分组名称
+     */
     @TableField("name")
     private String name;
 
     /**
-    * 排序顺序
-    */
+     * 排序顺序
+     */
     @TableField("sort_order")
     private Integer sortOrder;
 
     /**
-    * 创建时间
-    */
+     * 创建时间
+     */
     @TableField("create_time")
     private LocalDateTime createTime;
 
     /**
-    * 更新时间
-    */
+     * 更新时间
+     */
     @TableField("update_time")
     private LocalDateTime updateTime;
 }

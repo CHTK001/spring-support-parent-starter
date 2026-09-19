@@ -7,10 +7,10 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
-* soft_源 软件源表
-*
-* @since 2026/7/25
-* @author CH
+ * soft_源 软件源表
+ *
+ * @since 2026/7/25
+ * @author CH
  */
 @Data
 @TableName("soft_source")

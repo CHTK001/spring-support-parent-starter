@@ -7,10 +7,10 @@ import org.springframework.expression.common.TemplateParserContext;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
 
 /**
-* spel 表达式解析器适配。
-*
-* @since 2024/01/01
-* @author CH
+ * spel 表达式解析器适配。
+ *
+ * @since 2024/01/01
+ * @author CH
  */
 @Spi("spring")
 public class SpringSpelExpressionParser implements com.chua.common.support.lang.ast.ExpressionParser {

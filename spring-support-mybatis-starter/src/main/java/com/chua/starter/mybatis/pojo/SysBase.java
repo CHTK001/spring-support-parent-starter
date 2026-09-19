@@ -16,9 +16,9 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
-* 基础信息
-* @author CH
-* @since 4.0.0
+ * 基础信息
+ * @author CH
+ * @since 4.0.0
  */
 @Data
 public class SysBase implements Serializable {

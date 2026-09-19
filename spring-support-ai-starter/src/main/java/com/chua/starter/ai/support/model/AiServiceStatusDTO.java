@@ -6,10 +6,10 @@ import lombok.Data;
 import java.io.Serializable;
 
 /**
-* 服务运行状态 DTO，字段命名与前端面板对齐。
-*
-* @since 2026-08-03
-* @author CH
+ * 服务运行状态 DTO，字段命名与前端面板对齐。
+ *
+ * @since 2026-08-03
+ * @author CH
  */
 @Data
 @Schema(name = "服务运行状态 DTO")
@@ -17,8 +17,8 @@ public class AiServiceStatusDTO implements Serializable {
     private static final long serialVersionUID = 1L; // 串行版本uid
 
     /**
-    * 服务名称
-    */
+     * 服务名称
+     */
     @Schema(description = "服务名称")
     /** 名称 */
     private String name;

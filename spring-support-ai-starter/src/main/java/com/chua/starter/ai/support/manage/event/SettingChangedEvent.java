@@ -16,22 +16,22 @@ import java.util.Map;
 public class SettingChangedEvent extends ApplicationEvent {
 
     /**
-    * 设置分组
-    */
+     * 设置分组
+     */
     private final String group;
 
     /**
-    * 变更的字段
-    */
+     * 变更的字段
+     */
     private final Map<String, Object> changedSettings;
 
     /**
-    * 构造设置变更事件
-    *
-    * @param source          事件源
-    * @param group           设置分组名称
-    * @param changedSettings 本次变更的字段集合
-    */
+     * 构造设置变更事件
+     *
+     * @param source          事件源
+     * @param group           设置分组名称
+     * @param changedSettings 本次变更的字段集合
+     */
     public SettingChangedEvent(Object source, String group, Map<String, Object> changedSettings) {
         super(source);
         this.group = group;

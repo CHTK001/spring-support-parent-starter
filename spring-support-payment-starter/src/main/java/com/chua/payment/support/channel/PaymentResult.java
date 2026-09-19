@@ -6,10 +6,10 @@ import java.math.BigDecimal;
 import java.util.Map;
 
 /**
-* 支付结果
-*
-* @since 2026-03-18
-* @author CH
+ * 支付结果
+ *
+ * @since 2026-03-18
+ * @author CH
  */
 @Data
 public class PaymentResult {

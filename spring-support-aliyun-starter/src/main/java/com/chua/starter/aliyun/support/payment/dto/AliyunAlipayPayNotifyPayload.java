@@ -6,9 +6,9 @@ import java.math.BigDecimal;
 import java.util.Map;
 
 /**
-* 支付宝支付通知解析结果
-* @author CH
-* @since 4.0.0
+ * 支付宝支付通知解析结果
+ * @author CH
+ * @since 4.0.0
  */
 @Data
 public class AliyunAlipayPayNotifyPayload {

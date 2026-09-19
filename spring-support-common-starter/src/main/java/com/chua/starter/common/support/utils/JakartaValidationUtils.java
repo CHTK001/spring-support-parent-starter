@@ -14,16 +14,16 @@ import java.util.Set;
 import java.util.function.Predicate;
 
 /**
-* Jakarta Validation 工具类
-*
-* @since 2024/12/20
-* @author CH
+ * Jakarta Validation 工具类
+ *
+ * @since 2024/12/20
+ * @author CH
  */
 public class JakartaValidationUtils {
 
     /**
-    * jakarta校验工具。
-    */
+     * jakarta校验工具。
+     */
     private JakartaValidationUtils() {
     }
 
@@ -41,15 +41,15 @@ public class JakartaValidationUtils {
     }
 
     /**
-    * 验证对象
-    *
-    * @param object           要验证的对象
-    * @param condition        条件判断器，用于决定使用哪个验证组
-    * @param updateGroupClass 更新组类
-    * @param addGroupClass    添加组类
-    * @param <T>              对象类型
-    * @return 验证错误
-    */
+     * 验证对象
+     *
+     * @param object           要验证的对象
+     * @param condition        条件判断器，用于决定使用哪个验证组
+     * @param updateGroupClass 更新组类
+     * @param addGroupClass    添加组类
+     * @param <T>              对象类型
+     * @return 验证错误
+     */
     public static <T> Errors validate(T object, Predicate<T> condition, Class<?> updateGroupClass, Class<?> addGroupClass) {
         BeanPropertyBindingResult errors = new BeanPropertyBindingResult(object, object.getClass().getSimpleName());
         
@@ -69,13 +69,13 @@ public class JakartaValidationUtils {
     }
 
     /**
-    * 验证对象
-    *
-    * @param object 要验证的对象
-    * @param groups 验证组
-    * @param <T>    对象类型
-    * @return 验证错误
-    */
+     * 验证对象
+     *
+     * @param object 要验证的对象
+     * @param groups 验证组
+     * @param <T>    对象类型
+     * @return 验证错误
+     */
     public static <T> Errors validate(T object, Class<?>... groups) {
         BeanPropertyBindingResult errors = new BeanPropertyBindingResult(object, object.getClass().getSimpleName());
         
@@ -91,12 +91,12 @@ public class JakartaValidationUtils {
     }
 
     /**
-    * 将验证错误转换为 申报结果
-    *
-    * @param errors 验证错误
-    * @param <T>    结果类型
-    * @return ReturnResult
-    */
+     * 将验证错误转换为 申报结果
+     *
+     * @param errors 验证错误
+     * @param <T>    结果类型
+     * @return ReturnResult
+     */
     public static <T> ReturnResult<T> toReturnResult(Errors errors) {
         if (errors == null || !errors.hasErrors()) {
             return ReturnResult.success();

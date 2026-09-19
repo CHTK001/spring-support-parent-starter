@@ -18,13 +18,13 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
-* 教育 AI 维度管理 REST 控制器。
-*
-* <p>对外暴露：学科 / 年级 / 班级 / 学生 / 教师 5 个维度的 CRUD；
-* 路径前缀 {@code /v2/edu/dimension/**}。</p>
-*
-* @since 4.0.0.42
-* @author CH
+ * 教育 AI 维度管理 REST 控制器。
+ *
+ * <p>对外暴露：学科 / 年级 / 班级 / 学生 / 教师 5 个维度的 CRUD；
+ * 路径前缀 {@code /v2/edu/dimension/**}。</p>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @RestController
 @RequestMapping("/v2/edu/dimension")
@@ -38,9 +38,9 @@ public class EduDimensionController {
     // ===== 字典下拉 =====
 
     /**
-    * 全量字典下拉（学段 + 学科 + 年级）。
-    * @return dropdown的结果
-    */
+     * 全量字典下拉（学段 + 学科 + 年级）。
+     * @return dropdown的结果
+     */
     @Operation(summary = "全量字典下拉")
     @GetMapping("/dropdown")
     public ReturnResult<EduDimensionService.DimensionDropdown> dropdown() {
@@ -52,12 +52,12 @@ public class EduDimensionController {
     @Operation(summary = "学科列表")
     @GetMapping("/subjects")
     /**
-    * 列表主题
-    *
-    * @param false false
-    * @return 列表主题的结果
-    * @param gradeLevel grade级别，不允许为 null
-    */
+     * 列表主题
+     *
+     * @param false false
+     * @return 列表主题的结果
+     * @param gradeLevel grade级别，不允许为 null
+     */
     public ReturnResult<List<EduSubject>> listSubjects(@RequestParam(required = false) String gradeLevel) {
         return ReturnResult.ok(dimensionService.listSubjects(gradeLevel));
     }
@@ -65,11 +65,11 @@ public class EduDimensionController {
     @Operation(summary = "保存学科")
     @PostMapping("/subjects/save")
     /**
-    * 保存主题
-    *
-    * @param entity 实体
-    * @return 保存主题的结果
-    */
+     * 保存主题
+     *
+     * @param entity 实体
+     * @return 保存主题的结果
+     */
     public ReturnResult<Long> saveSubject(@RequestBody EduSubject entity) {
         return ReturnResult.ok(dimensionService.saveSubject(entity));
     }
@@ -77,11 +77,11 @@ public class EduDimensionController {
     @Operation(summary = "删除学科")
     @DeleteMapping("/subjects/{id}")
     /**
-    * 删除主题
-    *
-    * @param id 标识
-    * @return 删除主题的结果
-    */
+     * 删除主题
+     *
+     * @param id 标识
+     * @return 删除主题的结果
+     */
     public ReturnResult<Boolean> deleteSubject(@PathVariable Long id) {
         return ReturnResult.ok(dimensionService.deleteSubject(id));
     }
@@ -91,12 +91,12 @@ public class EduDimensionController {
     @Operation(summary = "年级列表")
     @GetMapping("/grades")
     /**
-    * 列表grades
-    *
-    * @param false false
-    * @return 列表grades的结果
-    * @param gradeLevel grade级别，不允许为 null
-    */
+     * 列表grades
+     *
+     * @param false false
+     * @return 列表grades的结果
+     * @param gradeLevel grade级别，不允许为 null
+     */
     public ReturnResult<List<EduGrade>> listGrades(@RequestParam(required = false) String gradeLevel) {
         return ReturnResult.ok(dimensionService.listGrades(gradeLevel));
     }
@@ -106,23 +106,23 @@ public class EduDimensionController {
     @Operation(summary = "班级列表")
     @GetMapping("/classes")
     /**
-    * 列表类
-    * @param gradeLevel grade水平仪
-    * @param teacherId teacherid
-    * @param teacherId teacherid
-    * @param entity 实体
-    * @param id 标识
-    * @param classId 类标识
-    * @param gradeLevel grade水平仪
-    * @param grade grade
-    * @param gradeLevel grade水平仪
-    * @param grade grade
-    * @param entity 实体
-    * @param id 标识
-    * @param subjectCode 主题编码
-    * @param entity 实体
-    * @param id 标识
-    */
+     * 列表类
+     * @param gradeLevel grade水平仪
+     * @param teacherId teacherid
+     * @param teacherId teacherid
+     * @param entity 实体
+     * @param id 标识
+     * @param classId 类标识
+     * @param gradeLevel grade水平仪
+     * @param grade grade
+     * @param gradeLevel grade水平仪
+     * @param grade grade
+     * @param entity 实体
+     * @param id 标识
+     * @param subjectCode 主题编码
+     * @param entity 实体
+     * @param id 标识
+     */
     public ReturnResult<List<EduClass>> listClasses(
             @RequestParam(required = false) String gradeLevel,
             @RequestParam(required = false) Long teacherId) {
@@ -132,11 +132,11 @@ public class EduDimensionController {
     @Operation(summary = "保存班级")
     @PostMapping("/classes/save")
     /**
-    * 保存类
-    *
-    * @param entity 实体
-    * @return 保存类的结果
-    */
+     * 保存类
+     *
+     * @param entity 实体
+     * @return 保存类的结果
+     */
     public ReturnResult<Long> saveClass(@RequestBody EduClass entity) {
         return ReturnResult.ok(dimensionService.saveClass(entity));
     }
@@ -144,11 +144,11 @@ public class EduDimensionController {
     @Operation(summary = "删除班级")
     @DeleteMapping("/classes/{id}")
     /**
-    * 删除类
-    *
-    * @param id 标识
-    * @return 删除类的结果
-    */
+     * 删除类
+     *
+     * @param id 标识
+     * @return 删除类的结果
+     */
     public ReturnResult<Boolean> deleteClass(@PathVariable Long id) {
         return ReturnResult.ok(dimensionService.deleteClass(id));
     }
@@ -158,18 +158,18 @@ public class EduDimensionController {
     @Operation(summary = "学生列表")
     @GetMapping("/students")
     /**
-    * 列表students
-    * @param classId 类标识
-    * @param gradeLevel grade水平仪
-    * @param grade grade
-    * @param gradeLevel grade水平仪
-    * @param grade grade
-    * @param entity 实体
-    * @param id 标识
-    * @param subjectCode 主题编码
-    * @param entity 实体
-    * @param id 标识
-    */
+     * 列表students
+     * @param classId 类标识
+     * @param gradeLevel grade水平仪
+     * @param grade grade
+     * @param gradeLevel grade水平仪
+     * @param grade grade
+     * @param entity 实体
+     * @param id 标识
+     * @param subjectCode 主题编码
+     * @param entity 实体
+     * @param id 标识
+     */
     public ReturnResult<List<EduStudent>> listStudents(
             @RequestParam(required = false) Long classId,
             @RequestParam(required = false) String gradeLevel,
@@ -180,11 +180,11 @@ public class EduDimensionController {
     @Operation(summary = "保存学生")
     @PostMapping("/students/save")
     /**
-    * 保存Student
-    *
-    * @param entity 实体
-    * @return 保存student的结果
-    */
+     * 保存Student
+     *
+     * @param entity 实体
+     * @return 保存student的结果
+     */
     public ReturnResult<Long> saveStudent(@RequestBody EduStudent entity) {
         return ReturnResult.ok(dimensionService.saveStudent(entity));
     }
@@ -192,11 +192,11 @@ public class EduDimensionController {
     @Operation(summary = "删除学生")
     @DeleteMapping("/students/{id}")
     /**
-    * 删除Student
-    *
-    * @param id 标识
-    * @return 删除student的结果
-    */
+     * 删除Student
+     *
+     * @param id 标识
+     * @return 删除student的结果
+     */
     public ReturnResult<Boolean> deleteStudent(@PathVariable Long id) {
         return ReturnResult.ok(dimensionService.deleteStudent(id));
     }
@@ -206,12 +206,12 @@ public class EduDimensionController {
     @Operation(summary = "教师列表")
     @GetMapping("/teachers")
     /**
-    * 列表teachers
-    *
-    * @param false false
-    * @return 列表teachers的结果
-    * @param subjectCode subject编码，不允许为 null
-    */
+     * 列表teachers
+     *
+     * @param false false
+     * @return 列表teachers的结果
+     * @param subjectCode subject编码，不允许为 null
+     */
     public ReturnResult<List<EduTeacher>> listTeachers(@RequestParam(required = false) String subjectCode) {
         return ReturnResult.ok(dimensionService.listTeachers(subjectCode));
     }
@@ -219,11 +219,11 @@ public class EduDimensionController {
     @Operation(summary = "保存教师")
     @PostMapping("/teachers/save")
     /**
-    * 保存Teacher
-    *
-    * @param entity 实体
-    * @return 保存teacher的结果
-    */
+     * 保存Teacher
+     *
+     * @param entity 实体
+     * @return 保存teacher的结果
+     */
     public ReturnResult<Long> saveTeacher(@RequestBody EduTeacher entity) {
         return ReturnResult.ok(dimensionService.saveTeacher(entity));
     }
@@ -231,11 +231,11 @@ public class EduDimensionController {
     @Operation(summary = "删除教师")
     @DeleteMapping("/teachers/{id}")
     /**
-    * 删除Teacher
-    *
-    * @param id 标识
-    * @return 删除teacher的结果
-    */
+     * 删除Teacher
+     *
+     * @param id 标识
+     * @return 删除teacher的结果
+     */
     public ReturnResult<Boolean> deleteTeacher(@PathVariable Long id) {
         return ReturnResult.ok(dimensionService.deleteTeacher(id));
     }

@@ -5,10 +5,10 @@ import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.fasterxml.jackson.databind.util.Converter;
 
 /**
-* 数组解析
-*
-* @author CH
-* @since 4.0.0
+ * 数组解析
+ *
+ * @author CH
+ * @since 4.0.0
  */
 public class JsonArrayConverter implements Converter<Object[], String> {
     @Override

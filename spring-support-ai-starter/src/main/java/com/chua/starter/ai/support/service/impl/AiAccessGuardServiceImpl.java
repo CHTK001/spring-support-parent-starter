@@ -14,10 +14,10 @@ import org.springframework.stereotype.Service;
 import java.util.concurrent.TimeUnit;
 
 /**
-* AI 访问守卫服务实现。
-*
-* @author CH
-* @since 4.0.0
+ * AI 访问守卫服务实现。
+ *
+ * @author CH
+ * @since 4.0.0
  */
 @Service
 @RequiredArgsConstructor
@@ -36,9 +36,9 @@ public class AiAccessGuardServiceImpl implements AiAccessGuardService {
             .build();
 
     /**
-    * Bearer 令牌 校验缓存，2s TTL — 尽量缩短"禁用/删除 Key 后僵尸窗口"，
-    * 同时避免每次请求都查询远端 DB/Redis
-    */
+     * Bearer 令牌 校验缓存，2s TTL — 尽量缩短"禁用/删除 Key 后僵尸窗口"，
+     * 同时避免每次请求都查询远端 DB/Redis
+     */
     private static final Cache<String, Boolean> BEARER_TOKEN_CACHE = Caffeine.newBuilder()
             .expireAfterWrite(2, TimeUnit.SECONDS)
             .maximumSize(1000)
@@ -102,11 +102,11 @@ public class AiAccessGuardServiceImpl implements AiAccessGuardService {
     }
 
     /**
-    * 按 appKey 绑定分组的 令牌 限流检查。
-    *
-    * @param appKey appKey
-    * @return 未触发限流返回 true
-    */
+     * 按 appKey 绑定分组的 令牌 限流检查。
+     *
+     * @param appKey appKey
+     * @return 未触发限流返回 true
+     */
     private boolean isGroupRateLimited(String appKey) {
         try {
             Integer groupId = sysAiAppKeyService.getGroupIdByAppKey(appKey);

@@ -27,14 +27,14 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
-* 定时任务（Cron）控制器，替代 nomicore 的 {@code /api/cron/jobs} 契约。
-*
-* <p>维护定时任务（{@code cron_job_id} 主键）、立即执行、运行记录与技能脚本。
-* 关键变更推送 {@code cron.job-created / cron.job-updated / cron.job-removed / cron.job-executed}
-* 事件。当前为进程内内存实现。</p>
-*
-* @since 4.0.0.42
-* @author CH
+ * 定时任务（Cron）控制器，替代 nomicore 的 {@code /api/cron/jobs} 契约。
+ *
+ * <p>维护定时任务（{@code cron_job_id} 主键）、立即执行、运行记录与技能脚本。
+ * 关键变更推送 {@code cron.job-created / cron.job-updated / cron.job-removed / cron.job-executed}
+ * 事件。当前为进程内内存实现。</p>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @ApiReturnFormatIgnore
 @RestController
@@ -44,27 +44,27 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ApiCronController {
 
     /**
-    * 主键生成与基础存储工具
-    */
+     * 主键生成与基础存储工具
+     */
     private final SysAiConversationStore conversationStore;
 
     /**
-    * WS 事件推送服务
-    */
+     * WS 事件推送服务
+     */
     private final ApiWebSocketPushService pushService;
 
     /**
-    * 定时任务：cron_作业_标识 → 任务
-    */
+     * 定时任务：cron_作业_标识 → 任务
+     */
     private final Map<String, Map<String, Object>> jobs = new ConcurrentHashMap<>();
 
     @GetMapping
     /**
-    * 列表。
-    * @param false false
-    * @return 列表的结果
-    * @param conversation_id conversationID，不允许为 null
-    */
+     * 列表。
+     * @param false false
+     * @return 列表的结果
+     * @param conversation_id conversationID，不允许为 null
+     */
     public ApiResult<List<Map<String, Object>>> list(@RequestParam(required = false) String conversation_id) {
         List<Map<String, Object>> result = new ArrayList<>();
         for (Map<String, Object> job : jobs.values()) {
@@ -78,10 +78,10 @@ public class ApiCronController {
 
     @PostMapping
     /**
-    * 添加。
-    * @param body 主体
-    * @return 添加的结果
-    */
+     * 添加。
+     * @param body 主体
+     * @return 添加的结果
+     */
     public ApiResult<Map<String, Object>> add(@RequestBody Map<String, Object> body) {
         String jobId = conversationStore.newId();
         Map<String, Object> job = new LinkedHashMap<>();
@@ -124,10 +124,10 @@ public class ApiCronController {
 
     @GetMapping("/{cronJobId}")
     /**
-    * 获取。
-    * @param cronJobId cron作业标识
-    * @return 获取的结果
-    */
+     * 获取。
+     * @param cronJobId cron作业标识
+     * @return 获取的结果
+     */
     public ApiResult<Map<String, Object>> get(@PathVariable String cronJobId) {
         return ApiResult.ok(requireJob(cronJobId));
     }
@@ -167,10 +167,10 @@ public class ApiCronController {
 
     @DeleteMapping("/{cronJobId}")
     /**
-    * 移除。
-    * @param cronJobId cron作业标识
-    * @return 移除的结果
-    */
+     * 移除。
+     * @param cronJobId cron作业标识
+     * @return 移除的结果
+     */
     public ApiResult<Void> remove(@PathVariable String cronJobId) {
         requireJob(cronJobId);
         jobs.remove(cronJobId);
@@ -225,10 +225,10 @@ public class ApiCronController {
 
     @GetMapping("/{cronJobId}/runs")
     /**
-    * 运行。
-    * @param cronJobId cron作业标识
-    * @return 运行的结果
-    */
+     * 运行。
+     * @param cronJobId cron作业标识
+     * @return 运行的结果
+     */
     public ApiResult<List<Map<String, Object>>> runs(@PathVariable String cronJobId) {
         requireJob(cronJobId);
         return ApiResult.ok(new ArrayList<>());
@@ -243,10 +243,10 @@ public class ApiCronController {
 
     @GetMapping("/{cronJobId}/skill")
     /**
-    * 是否包含skill。
-    * @param cronJobId cron作业标识
-    * @return 是否包含skill的结果
-    */
+     * 是否包含skill。
+     * @param cronJobId cron作业标识
+     * @return 是否包含skill的结果
+     */
     public ApiResult<Map<String, Object>> hasSkill(@PathVariable String cronJobId) {
         requireJob(cronJobId);
         Map<String, Object> result = new LinkedHashMap<>();
@@ -256,21 +256,21 @@ public class ApiCronController {
 
     @DeleteMapping("/{cronJobId}/skill")
     /**
-    * 删除skill。
-    * @param cronJobId cron作业标识
-    * @return 删除skill的结果
-    */
+     * 删除skill。
+     * @param cronJobId cron作业标识
+     * @return 删除skill的结果
+     */
     public ApiResult<Void> deleteSkill(@PathVariable String cronJobId) {
         requireJob(cronJobId);
         return ApiResult.ok();
     }
 
     /**
-    * 作业路径。
-    * @param job 作业
-    * @param key Key
-    * @return 作业路径的结果
-    */
+     * 作业路径。
+     * @param job 作业
+     * @param key Key
+     * @return 作业路径的结果
+     */
     private String jobPath(Map<String, Object> job, String key) {
         Object metadata = job.get("metadata");
         if (metadata instanceof Map) {
@@ -281,10 +281,10 @@ public class ApiCronController {
     }
 
     /**
-    * require作业。
-    * @param cronJobId cron作业标识
-    * @return require作业的结果
-    */
+     * require作业。
+     * @param cronJobId cron作业标识
+     * @return require作业的结果
+     */
     private Map<String, Object> requireJob(String cronJobId) {
         Map<String, Object> job = jobs.get(cronJobId);
         if (job == null) {
@@ -294,10 +294,10 @@ public class ApiCronController {
     }
 
     /**
-    * uncheckedcast。
-    * @param obj obj
-    * @return uncheckedCast的结果
-    */
+     * uncheckedcast。
+     * @param obj obj
+     * @return uncheckedCast的结果
+     */
     private static Map<String, Object> uncheckedCast(Object obj) {
         return (Map<String, Object>) obj;
     }

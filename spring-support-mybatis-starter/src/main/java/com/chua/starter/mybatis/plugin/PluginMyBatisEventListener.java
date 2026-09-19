@@ -18,13 +18,13 @@ import java.util.List;
 import java.util.Set;
 
 /**
-* 插件 MyBatis 映射器 事件监听器
-* <p>
-* 监听插件 Bean 注册/卸载事件，自动处理 MyBatis 映射器 的注册和卸载
-* </p>
-*
-* @author CH
-* @since 2025/01/15
+ * 插件 MyBatis 映射器 事件监听器
+ * <p>
+ * 监听插件 Bean 注册/卸载事件，自动处理 MyBatis 映射器 的注册和卸载
+ * </p>
+ *
+ * @author CH
+ * @since 2025/01/15
  */
 @Slf4j
 @Component
@@ -32,31 +32,31 @@ import java.util.Set;
 public class PluginMyBatisEventListener {
 
     /**
-    * SQL会话工厂 列表
-    */
+     * SQL会话工厂 列表
+     */
     @Autowired(required = false)
     private List<SqlSessionFactory> sqlSessionFactories; // SQL会话工厂
 
     /**
-    * MyBatis 映射器 注册器
-    */
+     * MyBatis 映射器 注册器
+     */
     private final PluginMyBatisMapperRegistry mapperRegistry;
 
     /**
-    * pluginmybatis事件监听器。
-    */
+     * pluginmybatis事件监听器。
+     */
     public PluginMyBatisEventListener() {
         this.mapperRegistry = ServiceProvider.of(PluginMyBatisMapperRegistry.class).getExtension();
     }
 
     /**
-    * 处理插件 Bean 注册事件
-    * <p>
-    * 当插件 Bean 注册到 Spring 容器时，检查是否为 映射器 接口，如果是则注册到 MyBatis
-    * </p>
-    *
-    * @param event 插件 Bean 注册事件
-    */
+     * 处理插件 Bean 注册事件
+     * <p>
+     * 当插件 Bean 注册到 Spring 容器时，检查是否为 映射器 接口，如果是则注册到 MyBatis
+     * </p>
+     *
+     * @param event 插件 Bean 注册事件
+     */
     @EventListener
     public void onPluginBeanRegistered(PluginBeanRegisteredEvent event) {
         if (sqlSessionFactories == null || sqlSessionFactories.isEmpty()) {
@@ -95,13 +95,13 @@ public class PluginMyBatisEventListener {
     }
 
     /**
-    * 处理插件 Bean 卸载事件
-    * <p>
-    * 当插件 Bean 从 Spring 容器卸载时，从 MyBatis 配置中移除对应的 映射器
-    * </p>
-    *
-    * @param event 插件 Bean 卸载事件
-    */
+     * 处理插件 Bean 卸载事件
+     * <p>
+     * 当插件 Bean 从 Spring 容器卸载时，从 MyBatis 配置中移除对应的 映射器
+     * </p>
+     *
+     * @param event 插件 Bean 卸载事件
+     */
     @EventListener
     public void onPluginBeanUnregistered(PluginBeanUnregisteredEvent event) {
         if (sqlSessionFactories == null || sqlSessionFactories.isEmpty()) {
@@ -133,10 +133,10 @@ public class PluginMyBatisEventListener {
                 for (SqlSessionFactory sqlSessionFactory : sqlSessionFactories) {
                     try {
                         /**
-                        * 注销映射器。
-                        * @param sqlSessionFactory SQL会话工厂
-                        * @param beanType Bean类型
-                        */
+                         * 注销映射器。
+                         * @param sqlSessionFactory SQL会话工厂
+                         * @param beanType Bean类型
+                         */
                         unregisterMapper(sqlSessionFactory, beanType);
                         log.info("[PluginMyBatis][事件]插件 Mapper 接口卸载成功: {} 插件: {}", beanName, pluginFilePath);
                     } catch (Exception e) {
@@ -150,11 +150,11 @@ public class PluginMyBatisEventListener {
     }
 
     /**
-    * 获取 Bean 类型
-    *
-    * @param beanName Bean 名称
-    * @return Bean 类型
-    */
+     * 获取 Bean 类型
+     *
+     * @param beanName Bean 名称
+     * @return Bean 类型
+     */
     private Class<?> getBeanType(String beanName) {
         try {
             // 首先尝试从 Spring 容器获取
@@ -175,14 +175,14 @@ public class PluginMyBatisEventListener {
     }
 
     /**
-    * 检查是否为 映射器 接口
-    * <p>
-    * 简单判断：是否为接口且名称包含 映射器
-    * </p>
-    *
-    * @param beanType Bean 类型
-    * @return 是否为 映射器 接口
-    */
+     * 检查是否为 映射器 接口
+     * <p>
+     * 简单判断：是否为接口且名称包含 映射器
+     * </p>
+     *
+     * @param beanType Bean 类型
+     * @return 是否为 映射器 接口
+     */
     private boolean isMapperInterface(Class<?> beanType) {
         if (beanType == null) {
             return false;
@@ -191,11 +191,11 @@ public class PluginMyBatisEventListener {
     }
 
     /**
-    * 从 MyBatis 配置中移除 映射器
-    *
-    * @param sqlSessionFactory SQL会话工厂 实例
-    * @param mapperClass       映射器 接口类
-    */
+     * 从 MyBatis 配置中移除 映射器
+     *
+     * @param sqlSessionFactory SQL会话工厂 实例
+     * @param mapperClass       映射器 接口类
+     */
     private void unregisterMapper(SqlSessionFactory sqlSessionFactory, Class<?> mapperClass) {
         if (sqlSessionFactory == null || mapperClass == null) {
             return;

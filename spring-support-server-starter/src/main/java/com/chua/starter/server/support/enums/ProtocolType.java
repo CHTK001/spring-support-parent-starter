@@ -1,10 +1,10 @@
 package com.chua.starter.server.support.enums;
 
 /**
-* 远控协议类型
-*
-* @author CH
-* @since 4.0.0.42
+ * 远控协议类型
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 public enum ProtocolType {
 
@@ -21,10 +21,10 @@ public enum ProtocolType {
     VNC;
 
     /**
-    * 判断是否为 guacd 承载的图形协议
-    *
-    * @return 是否经 guacd
-    */
+     * 判断是否为 guacd 承载的图形协议
+     *
+     * @return 是否经 guacd
+     */
     public boolean isGuacdProtocol() {
         return this == SSH || this == RDP || this == VNC;
     }

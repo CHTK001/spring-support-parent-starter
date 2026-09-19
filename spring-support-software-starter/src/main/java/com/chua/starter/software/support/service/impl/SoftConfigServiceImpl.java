@@ -17,18 +17,18 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
-* 软件配置表 服务 实现
-*
-* @since 2026/7/25
-* @author CH
+ * 软件配置表 服务 实现
+ *
+ * @since 2026/7/25
+ * @author CH
  */
 @Service
 @RequiredArgsConstructor
 public class SoftConfigServiceImpl extends ServiceImpl<SoftConfigMapper, SoftConfig> implements SoftConfigService {
 
     /**
-    * 事务模板
-    */
+     * 事务模板
+     */
     private final TransactionTemplate transactionTemplate;
 
     @Override

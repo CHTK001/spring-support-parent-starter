@@ -28,10 +28,10 @@ public class AiSessionEventController {
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
     /**
-    * 建立 SSE 连接
-    *
-    * @return SseEmitter
-    */
+     * 建立 SSE 连接
+     *
+     * @return SseEmitter
+     */
     @GetMapping(value = "/sessions", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter sessions() {
         SseEmitter emitter = new SseEmitter(0L); // 不超时

@@ -19,12 +19,12 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
-* o认证 客户端白名单管理控制器。
-*
-* <p>提供白名单规则的动态添加、删除与查询能力，规则变更实时生效，无需重启。</p>
-*
-* @since 4.0.0.42
-* @author CH
+ * o认证 客户端白名单管理控制器。
+ *
+ * <p>提供白名单规则的动态添加、删除与查询能力，规则变更实时生效，无需重启。</p>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @RestController
@@ -34,29 +34,29 @@ import java.util.List;
 public class OAuthWhitelistController {
 
     /**
-    * 认证过滤器（支持动态添加/删除白名单）
-    */
+     * 认证过滤器（支持动态添加/删除白名单）
+     */
     private final AuthFilter authFilter;
 
     /**
-    * 白名单文件监听器（合并配置文件与外部文件白名单）
-    */
+     * 白名单文件监听器（合并配置文件与外部文件白名单）
+     */
     private final WhitelistFileWatcher whitelistFileWatcher;
 
     /**
-    * o认证 客户端配置
-    */
+     * o认证 客户端配置
+     */
     private final AuthClientProperties authClientProperties;
 
     /**
-    * 动态添加白名单规则。
-    *
-    * @param pattern URL 模式，支持 Ant 风格，例如 /v2/face/**
-    * @return 添加结果
-    * @param @RequestParam("pattern" @请求参数("模式"
-    * @param @RequestParam("pattern" @请求参数("模式"
-    * @param @RequestParam("pattern" @RequestParam("pattern"
-    */
+     * 动态添加白名单规则。
+     *
+     * @param pattern URL 模式，支持 Ant 风格，例如 /v2/face/**
+     * @return 添加结果
+     * @param @RequestParam("pattern" @请求参数("模式"
+     * @param @RequestParam("pattern" @请求参数("模式"
+     * @param @RequestParam("pattern" @RequestParam("pattern"
+     */
     @Permission("admin")
     @Operation(summary = "动态添加白名单规则")
     @PostMapping
@@ -71,14 +71,14 @@ public class OAuthWhitelistController {
     }
 
     /**
-    * 动态删除白名单规则。
-    *
-    * @param pattern URL 模式
-    * @return 删除结果
-    * @param @RequestParam("pattern" @请求参数("模式"
-    * @param @RequestParam("pattern" @请求参数("模式"
-    * @param @RequestParam("pattern" @RequestParam("pattern"
-    */
+     * 动态删除白名单规则。
+     *
+     * @param pattern URL 模式
+     * @return 删除结果
+     * @param @RequestParam("pattern" @请求参数("模式"
+     * @param @RequestParam("pattern" @请求参数("模式"
+     * @param @RequestParam("pattern" @RequestParam("pattern"
+     */
     @Permission("admin")
     @Operation(summary = "动态删除白名单规则")
     @DeleteMapping
@@ -90,10 +90,10 @@ public class OAuthWhitelistController {
     }
 
     /**
-    * 查询当前生效的全部白名单规则。
-    *
-    * @return 白名单规则列表
-    */
+     * 查询当前生效的全部白名单规则。
+     *
+     * @return 白名单规则列表
+     */
     @Permission("admin")
     @Operation(summary = "查询生效中的白名单规则")
     @GetMapping

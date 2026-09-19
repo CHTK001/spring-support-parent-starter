@@ -38,10 +38,10 @@ import java.util.Collection;
 import java.util.List;
 
 /**
-* 刀4j 配置
-*
-* @author CH
-* @since 4.0.0
+ * 刀4j 配置
+ *
+ * @author CH
+ * @since 4.0.0
  */
 @Slf4j
 @EnableKnife4j
@@ -51,16 +51,16 @@ import java.util.List;
 public class Knife4jConfiguration implements BeanDefinitionRegistryPostProcessor, ApplicationContextAware {
 
     /**
-    * 刀4j配置属性
-    */
+     * 刀4j配置属性
+     */
     private Knife4jProperties knife4jProperties;
 
     /**
-    * 后处理Bean定义注册表
-    *
-    * @param registry Bean定义注册表
-    * @throws BeansException Bean异常
-    */
+     * 后处理Bean定义注册表
+     *
+     * @param registry Bean定义注册表
+     * @throws BeansException Bean异常
+     */
     @Override
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
         List<Knife4jProperties.Knife4j> knife4jList = knife4jProperties.getKnife4j();
@@ -79,11 +79,11 @@ public class Knife4jConfiguration implements BeanDefinitionRegistryPostProcessor
     }
 
     /**
-    * 设置应用上下文
-    *
-    * @param applicationContext 应用上下文
-    * @throws BeansException Bean异常
-    */
+     * 设置应用上下文
+     *
+     * @param applicationContext 应用上下文
+     * @throws BeansException Bean异常
+     */
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         knife4jProperties = Binder.get(applicationContext.getEnvironment())
@@ -91,15 +91,15 @@ public class Knife4jConfiguration implements BeanDefinitionRegistryPostProcessor
     }
 
     /**
-    * 增加如下配置可解决Spring Boot与Swagger 3.0.0不兼容问题
-    *
-    * @param webEndpointsSupplier Web端点提供者
-    * @param endpointMediaTypes 端点媒体类型
-    * @param corsProperties 跨域资源共享配置
-    * @param webEndpointProperties Web端点属性
-    * @param environment 环境变量
-    * @return WebMvc端点处理器映射
-    */
+     * 增加如下配置可解决Spring Boot与Swagger 3.0.0不兼容问题
+     *
+     * @param webEndpointsSupplier Web端点提供者
+     * @param endpointMediaTypes 端点媒体类型
+     * @param corsProperties 跨域资源共享配置
+     * @param webEndpointProperties Web端点属性
+     * @param environment 环境变量
+     * @return WebMvc端点处理器映射
+     */
     @Bean
     public WebMvcEndpointHandlerMapping webEndpointServletHandlerMapping(
             WebEndpointsSupplier webEndpointsSupplier,
@@ -123,13 +123,13 @@ public class Knife4jConfiguration implements BeanDefinitionRegistryPostProcessor
     }
 
     /**
-    * 判断是否应该注册链接映射
-    *
-    * @param webEndpointProperties Web端点属性
-    * @param environment 环境变量
-    * @param basePath 基础路径
-    * @return 是否应该注册
-    */
+     * 判断是否应该注册链接映射
+     *
+     * @param webEndpointProperties Web端点属性
+     * @param environment 环境变量
+     * @param basePath 基础路径
+     * @return 是否应该注册
+     */
     private boolean shouldRegisterLinksMapping(WebEndpointProperties webEndpointProperties, 
                                                Environment environment, 
                                                String basePath) {
@@ -139,19 +139,19 @@ public class Knife4jConfiguration implements BeanDefinitionRegistryPostProcessor
     }
 
     /**
-    * 刀4j 模块开关。
-    *
-    * <p>只注册"模块开关": 端点 (含 host:port 的完整 URL) 由
-    * {@code ServiceInfoEndpointDetector} 统一探测注册, 此处不再重复注册, 否则横幅会出现两行 doc.html。</p>
-    *
-    * @return ServiceInfoContributor
-    */
+     * 刀4j 模块开关。
+     *
+     * <p>只注册"模块开关": 端点 (含 host:port 的完整 URL) 由
+     * {@code ServiceInfoEndpointDetector} 统一探测注册, 此处不再重复注册, 否则横幅会出现两行 doc.html。</p>
+     *
+     * @return ServiceInfoContributor
+     */
     @Bean
     /**
-    * knifej服务信息contributor
-    *
-    * @return knife4j服务信息contributor的结果
-    */
+     * knifej服务信息contributor
+     *
+     * @return knife4j服务信息contributor的结果
+     */
     public ServiceInfoContributor knife4jServiceInfoContributor() {
         return registry -> registry.registerFlag("knife4j", "文档", true, "Knife4j接口文档");
     }

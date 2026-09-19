@@ -23,10 +23,10 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
-* 错题库服务实现
-*
-* @since 4.0.0.42
-* @author CH
+ * 错题库服务实现
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @Service
@@ -36,12 +36,12 @@ public class EduWrongQuestionServiceImpl extends ServiceImpl<EduWrongQuestionMap
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-    * recordwrongquestion
-    *
-    * @param studentId studentid
-    * @param questionId questionid
-    * @param examId examid
-    */
+     * recordwrongquestion
+     *
+     * @param studentId studentid
+     * @param questionId questionid
+     * @param examId examid
+     */
     public void recordWrongQuestion(String studentId, Long questionId, Long examId) {
         LambdaQueryWrapper<EduWrongQuestion> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(EduWrongQuestion::getWrongQuestionStudentId, studentId)
@@ -135,11 +135,11 @@ public class EduWrongQuestionServiceImpl extends ServiceImpl<EduWrongQuestionMap
     }
 
     /**
-    * 转为vo
-    *
-    * @param entity 实体
-    * @return 转为vo的结果
-    */
+     * 转为vo
+     *
+     * @param entity 实体
+     * @return 转为vo的结果
+     */
     private WrongQuestionVO toVO(EduWrongQuestion entity) {
         WrongQuestionVO vo = new WrongQuestionVO();
         vo.setWrongQuestionId(entity.getWrongQuestionId());

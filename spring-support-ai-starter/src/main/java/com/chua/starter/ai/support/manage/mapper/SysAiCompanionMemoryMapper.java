@@ -5,10 +5,10 @@ import com.chua.starter.ai.support.manage.store.SysAiCompanionMemory;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
-* 桌面伙伴记忆表 映射器（MyBatis-Plus 标准 CRUD）。
-*
-* @since 4.0.0.42
-* @author CH
+ * 桌面伙伴记忆表 映射器（MyBatis-Plus 标准 CRUD）。
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Mapper
 public interface SysAiCompanionMemoryMapper extends BaseMapper<SysAiCompanionMemory> {

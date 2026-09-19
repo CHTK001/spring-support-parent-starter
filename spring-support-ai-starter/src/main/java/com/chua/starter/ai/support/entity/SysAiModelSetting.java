@@ -10,18 +10,18 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 /**
-* AI 模型设置实体，对应表 {@code sys_ai_model_setting}。
-*
-* @since 4.0.0.42
-* @author CH
+ * AI 模型设置实体，对应表 {@code sys_ai_model_setting}。
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Data
 @TableName("sys_ai_model_setting")
 public class SysAiModelSetting {
 
     /**
-    * 模型设置主键 标识
-    */
+     * 模型设置主键 标识
+     */
     @TableId(value = "sys_ai_model_setting_id", type = IdType.AUTO)
     /** SYSAI模型设置标识 */
     private Integer id;
@@ -33,44 +33,44 @@ public class SysAiModelSetting {
     private Integer moduleId; // moduleid
 
     /**
-    * 模型编码
-    */
+     * 模型编码
+     */
     @TableField("model_code")
     private String code; // 编码
 
     /**
-    * 模型名称
-    */
+     * 模型名称
+     */
     @TableField("model_name")
     private String name; // 名称
 
     /**
-    * 模型厂商
-    */
+     * 模型厂商
+     */
     @TableField("model_provider")
     private String provider; // 提供者
 
     /**
-    * 模型值（如 baseurl / 模型 标识）
-    */
+     * 模型值（如 baseurl / 模型 标识）
+     */
     @TableField("model_value")
     private String value; // 值
 
     /**
-    * 状态：1 启用，0 停用
-    */
+     * 状态：1 启用，0 停用
+     */
     @TableField("status")
     private Integer status; // 状态
 
     /**
-    * 排序值
-    */
+     * 排序值
+     */
     @TableField("sort")
     private Integer sort; // 排序
 
     /**
-    * 创建时间
-    */
+     * 创建时间
+     */
     @TableField("create_time")
     /** 创建时间 */
     private LocalDateTime createTime;

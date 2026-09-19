@@ -11,22 +11,22 @@ import org.springframework.web.method.support.ModelAndViewContainer;
 import java.lang.reflect.Parameter;
 
 /**
-* 用户信息
-*
-* @since 2022/7/25 16:48
-* @author CH
+ * 用户信息
+ *
+ * @since 2022/7/25 16:48
+ * @author CH
  */
 public class TokenRequestHandlerMethodArgumentResolver extends UserRequestHandlerMethodArgumentResolver {
 
     /**
-    * 创建 令牌请求处理器方法参数解析器 实例
-    * @param webRequest web请求
-    */
+     * 创建 令牌请求处理器方法参数解析器 实例
+     * @param webRequest web请求
+     */
     public TokenRequestHandlerMethodArgumentResolver(WebRequest webRequest) {
         /**
-        * 父。
-        * @param webRequest web请求
-        */
+         * 父。
+         * @param webRequest web请求
+         */
         super(webRequest);
     }
 

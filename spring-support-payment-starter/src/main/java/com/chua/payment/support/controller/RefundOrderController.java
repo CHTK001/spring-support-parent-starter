@@ -26,9 +26,9 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
-* 退款单管理控制器
-* @author CH
-* @since 4.0.0
+ * 退款单管理控制器
+ * @author CH
+ * @since 4.0.0
  */
 @Tag(name = "退款管理", description = "支付退款单相关接口")
 @RestController
@@ -45,11 +45,11 @@ public class RefundOrderController {
     @GetMapping("/{id}")
     @Permission(value = "payment:refund:view", role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN, AuthConstant.OPS})
     /**
-    * 获取byid
-    *
-    * @param id 标识
-    * @return 获取byid的结果
-    */
+     * 获取byid
+     *
+     * @param id 标识
+     * @return 获取byid的结果
+     */
     public Result<RefundOrderVO> getById(@PathVariable Long id) {
         return Result.success(paymentRefundOrderService.getDetail(id));
     }
@@ -58,11 +58,11 @@ public class RefundOrderController {
     @GetMapping("/order/{orderId}")
     @Permission(value = "payment:refund:view", role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN, AuthConstant.OPS})
     /**
-    * 列表by订单标识
-    *
-    * @param orderId 订单标识
-    * @return 列表by订单id的结果
-    */
+     * 列表by订单标识
+     *
+     * @param orderId 订单标识
+     * @return 列表by订单id的结果
+     */
     public Result<List<RefundOrderVO>> listByOrderId(@PathVariable Long orderId) {
         return Result.success(paymentRefundOrderService.listVoByOrderId(orderId));
     }
@@ -71,11 +71,11 @@ public class RefundOrderController {
     @GetMapping("/page")
     @Permission(value = "payment:refund:view", role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN, AuthConstant.OPS})
     /**
-    * Page
-    *
-    * @param "1" "1"
-    * @return page的结果
-    */
+     * Page
+     *
+     * @param "1" "1"
+     * @return page的结果
+     */
     public Result<PageResult<RefundOrderVO>> page(@RequestParam(defaultValue = "1") int pageNum,
                                                   @RequestParam(defaultValue = "10") int pageSize,
                                                   @RequestParam(required = false) Long merchantId,
@@ -90,10 +90,10 @@ public class RefundOrderController {
     @PutMapping("/{id}/success")
     @Permission(value = "payment:refund:success", role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
     /**
-    * mark退税成功
-    * @param id 标识
-    * @param dto dto
-    */
+     * mark退税成功
+     * @param id 标识
+     * @param dto dto
+     */
     public Result<Boolean> markRefundSuccess(@PathVariable Long id,
                                              @RequestBody(required = false) RefundOperateDTO dto) {
         PaymentRefundOrder refundOrder = paymentRefundOrderService.getById(id);
@@ -110,10 +110,10 @@ public class RefundOrderController {
     @PutMapping("/{id}/fail")
     @Permission(value = "payment:refund:fail", role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
     /**
-    * mark退税失败
-    * @param id 标识
-    * @param dto dto
-    */
+     * mark退税失败
+     * @param id 标识
+     * @param dto dto
+     */
     public Result<Boolean> markRefundFail(@PathVariable Long id,
                                           @RequestBody(required = false) RefundOperateDTO dto) {
         PaymentRefundOrder refundOrder = paymentRefundOrderService.getById(id);

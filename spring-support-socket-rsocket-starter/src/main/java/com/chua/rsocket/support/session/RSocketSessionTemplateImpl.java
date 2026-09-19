@@ -26,12 +26,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
-* rSocket 会话模板实现
-* 基于 Spring webSocket 实现，支持多房间配置
-*
-* @版本 1.0.0
-* @since 2024-12-04
-* @author CH
+ * rSocket 会话模板实现
+ * 基于 Spring webSocket 实现，支持多房间配置
+ *
+ * @版本 1.0.0
+ * @since 2024-12-04
+ * @author CH
  */
 @Slf4j
 public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements SocketSessionTemplate {
@@ -46,28 +46,28 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
     private final List<SocketListener> listeners;
 
     /**
-    * 事件监听器处理器（扫描 @on事件 注解并分发事件）
-    */
+     * 事件监听器处理器（扫描 @on事件 注解并分发事件）
+     */
     private final EventListenerProcessor eventListenerProcessor;
     
     /**
-    * 会话缓存：客户端标识 -> 会话
-    */
+     * 会话缓存：客户端标识 -> 会话
+     */
     private final Map<String, List<RSocketSessionImpl>> sessionCache = new ConcurrentHashMap<>();
     
     /**
-    * 会话标识到客户端标识的映射
-    */
+     * 会话标识到客户端标识的映射
+     */
     private final Map<String, String> sessionClientMap = new ConcurrentHashMap<>();
     
     private volatile boolean running = false; // running
 
     /**
-    * 创建 rSocket会话templateimpl 实例
-    * @param properties 属性
-    * @param listeners 列表
-    * @param listeners 监听器
-    */
+     * 创建 rSocket会话templateimpl 实例
+     * @param properties 属性
+     * @param listeners 列表
+     * @param listeners 监听器
+     */
     public RSocketSessionTemplateImpl(SocketProperties properties, List<SocketListener> listeners) {
         this.properties = properties;
         this.listeners = listeners;
@@ -334,11 +334,11 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
     }
 
     /**
-    * 创建消息
-    * @param event 事件
-    * @param data 数据
-    * @return 创建消息的结果
-    */
+     * 创建消息
+     * @param event 事件
+     * @param data 数据
+     * @return 创建消息的结果
+     */
     private String createMessage(String event, Object data) {
         try {
             Map<String, Object> msg = Map.of(

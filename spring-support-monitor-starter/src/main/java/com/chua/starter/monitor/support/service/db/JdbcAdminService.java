@@ -59,21 +59,21 @@ public class JdbcAdminService {
     private final DataSourceStoreService dataSourceStoreService;
 
     /**
-    * 构造数据库 Web 管理服务。
-    *
-    * @param dataSourceStoreService 数据源配置存储服务,不能为 null
-    */
+     * 构造数据库 Web 管理服务。
+     *
+     * @param dataSourceStoreService 数据源配置存储服务,不能为 null
+     */
     public JdbcAdminService(DataSourceStoreService dataSourceStoreService) {
         this.dataSourceStoreService = dataSourceStoreService;
     }
 
     /**
-    * 获取指定数据源的数据库(目录)列表。
-    *
-    * @param datasourceId 数据源 id,null 或 0 表示默认主数据源
-    * @return 数据库名列表,无数据时为空列表
-    * @throws SQLException 连接或查询失败
-    */
+     * 获取指定数据源的数据库(目录)列表。
+     *
+     * @param datasourceId 数据源 id,null 或 0 表示默认主数据源
+     * @return 数据库名列表,无数据时为空列表
+     * @throws SQLException 连接或查询失败
+     */
     public List<String> listDatabases(Long datasourceId) throws SQLException {
         try (Connection conn = dataSourceStoreService.buildConnection(datasourceId);
              ResultSet rs = conn.getMetaData().getCatalogs()) {
@@ -86,13 +86,13 @@ public class JdbcAdminService {
     }
 
     /**
-    * 获取指定库的表列表。
-    *
-    * @param datasourceId 数据源 id,null 或 0 表示默认主数据源
-    * @param database     数据库名,允许为空(使用连接当前目录)
-    * @return 表信息列表(每项含 name/type/remark),无数据时为空列表
-    * @throws SQLException 连接或查询失败
-    */
+     * 获取指定库的表列表。
+     *
+     * @param datasourceId 数据源 id,null 或 0 表示默认主数据源
+     * @param database     数据库名,允许为空(使用连接当前目录)
+     * @return 表信息列表(每项含 name/type/remark),无数据时为空列表
+     * @throws SQLException 连接或查询失败
+     */
     public List<Map<String, Object>> listTables(Long datasourceId, String database) throws SQLException {
         requireIdentifier(database, "database");
         try (Connection conn = dataSourceStoreService.buildConnection(datasourceId);
@@ -112,14 +112,14 @@ public class JdbcAdminService {
     }
 
     /**
-    * 获取指定表的结构(列信息,含主键标记)。
-    *
-    * @param datasourceId 数据源 id,null 或 0 表示默认主数据源
-    * @param database     数据库名,允许为空
-    * @param tableName    表名,必须符合标识符规范
-    * @return 列信息列表(每项含 name/type/size/nullable/default/position/isPrimaryKey/remark)
-    * @throws SQLException 连接或查询失败
-    */
+     * 获取指定表的结构(列信息,含主键标记)。
+     *
+     * @param datasourceId 数据源 id,null 或 0 表示默认主数据源
+     * @param database     数据库名,允许为空
+     * @param tableName    表名,必须符合标识符规范
+     * @return 列信息列表(每项含 name/type/size/nullable/default/position/isPrimaryKey/remark)
+     * @throws SQLException 连接或查询失败
+     */
     public List<Map<String, Object>> getTableColumns(Long datasourceId, String database, String tableName) throws SQLException {
         requireIdentifier(database, "database");
         requireIdentifier(tableName, "tableName");
@@ -155,18 +155,18 @@ public class JdbcAdminService {
     }
 
     /**
-    * 获取指定表的数据(分页)。
-    *
-    * @param datasourceId 数据源 id,null 或 0 表示默认主数据源
-    * @param database     数据库名,允许为空
-    * @param tableName    表名,必须符合标识符规范
-    * @param page         页码(从 1 起),小于 1 时按 1 处理
-    * @param pageSize     每页行数,小于 1 时按 50 处理,超过 1000 时按 1000 处理
-    * @param orderBy      排序列(逗号分隔,白名单校验),允许为空
-    * @param orderDir     排序方向,只允许 ASC/DESC(大小写不敏感),允许为空
-    * @return 查询结果(含 columns/rows/total/page/pageSize),无数据时 rows 为空列表
-    * @throws SQLException 连接或查询失败
-    */
+     * 获取指定表的数据(分页)。
+     *
+     * @param datasourceId 数据源 id,null 或 0 表示默认主数据源
+     * @param database     数据库名,允许为空
+     * @param tableName    表名,必须符合标识符规范
+     * @param page         页码(从 1 起),小于 1 时按 1 处理
+     * @param pageSize     每页行数,小于 1 时按 50 处理,超过 1000 时按 1000 处理
+     * @param orderBy      排序列(逗号分隔,白名单校验),允许为空
+     * @param orderDir     排序方向,只允许 ASC/DESC(大小写不敏感),允许为空
+     * @return 查询结果(含 columns/rows/total/page/pageSize),无数据时 rows 为空列表
+     * @throws SQLException 连接或查询失败
+     */
     public Map<String, Object> getTableData(
             Long datasourceId,
             String database,
@@ -225,16 +225,16 @@ public class JdbcAdminService {
     }
 
     /**
-    * 执行单条 SQL(白名单校验)。
-    *
-    * <p>允许 SELECT/SHOW/DESC/EXPLAIN/INSERT/UPDATE/DELETE/CREATE/ALTER/DROP/TRUNCATE;
-    * 禁止多语句(分号)、禁止 SET。查询语句最多返回 {@value #MAX_ROWS} 行。</p>
-    *
-    * @param datasourceId 数据源 id,null 或 0 表示默认主数据源
-    * @param sql          待执行 SQL(单条)
-    * @return 执行结果:查询含 columns/rows/rowCount/truncated,非查询含 affectedRows/message
-    * @throws SQLException 执行失败或 SQL 不合法
-    */
+     * 执行单条 SQL(白名单校验)。
+     *
+     * <p>允许 SELECT/SHOW/DESC/EXPLAIN/INSERT/UPDATE/DELETE/CREATE/ALTER/DROP/TRUNCATE;
+     * 禁止多语句(分号)、禁止 SET。查询语句最多返回 {@value #MAX_ROWS} 行。</p>
+     *
+     * @param datasourceId 数据源 id,null 或 0 表示默认主数据源
+     * @param sql          待执行 SQL(单条)
+     * @return 执行结果:查询含 columns/rows/rowCount/truncated,非查询含 affectedRows/message
+     * @throws SQLException 执行失败或 SQL 不合法
+     */
     public Map<String, Object> executeSql(Long datasourceId, String sql) throws SQLException {
         validateSql(sql);
         boolean isQuery = isQueryStatement(sql);
@@ -274,13 +274,13 @@ public class JdbcAdminService {
     }
 
     /**
-    * 删除指定表。
-    *
-    * @param datasourceId 数据源 id,null 或 0 表示默认主数据源
-    * @param database     数据库名,允许为空
-    * @param tableName    表名,必须符合标识符规范
-    * @throws SQLException 执行失败
-    */
+     * 删除指定表。
+     *
+     * @param datasourceId 数据源 id,null 或 0 表示默认主数据源
+     * @param database     数据库名,允许为空
+     * @param tableName    表名,必须符合标识符规范
+     * @throws SQLException 执行失败
+     */
     public void dropTable(Long datasourceId, String database, String tableName) throws SQLException {
         requireIdentifier(database, "database");
         requireIdentifier(tableName, "tableName");
@@ -292,11 +292,11 @@ public class JdbcAdminService {
     }
 
     /**
-    * 校验 SQL 语句合法性(白名单 + 单语句 + 长度)。
-    *
-    * @param sql 待校验 SQL,不能为空
-    * @throws SQLException SQL 不合法时抛出
-    */
+     * 校验 SQL 语句合法性(白名单 + 单语句 + 长度)。
+     *
+     * @param sql 待校验 SQL,不能为空
+     * @throws SQLException SQL 不合法时抛出
+     */
     private void validateSql(String sql) throws SQLException {
         if (sql == null || sql.isBlank()) {
             throw new SQLException("SQL 不能为空");
@@ -319,11 +319,11 @@ public class JdbcAdminService {
     }
 
     /**
-    * 提取 SQL 首关键字(小写)。
-    *
-    * @param sql 单条 SQL
-    * @return 首关键字
-    */
+     * 提取 SQL 首关键字(小写)。
+     *
+     * @param sql 单条 SQL
+     * @return 首关键字
+     */
     private String extractKeyword(String sql) {
         String upper = sql.trim();
         int end = 0;
@@ -334,11 +334,11 @@ public class JdbcAdminService {
     }
 
     /**
-    * 判断 SQL 是否为查询语句。
-    *
-    * @param sql 单条 SQL
-    * @return SELECT/SHOW/DESC/EXPLAIN 为 true
-    */
+     * 判断 SQL 是否为查询语句。
+     *
+     * @param sql 单条 SQL
+     * @return SELECT/SHOW/DESC/EXPLAIN 为 true
+     */
     private boolean isQueryStatement(String sql) {
         String keyword = extractKeyword(sql);
         return "select".equals(keyword)
@@ -349,12 +349,12 @@ public class JdbcAdminService {
     }
 
     /**
-    * 校验 ORDER BY 列白名单与方向。
-    *
-    * @param orderBy  排序列(逗号分隔),允许为空
-    * @param orderDir 排序方向,只允许 ASC/DESC(大小写不敏感),允许为空
-    * @throws SQLException 非法时抛出
-    */
+     * 校验 ORDER BY 列白名单与方向。
+     *
+     * @param orderBy  排序列(逗号分隔),允许为空
+     * @param orderDir 排序方向,只允许 ASC/DESC(大小写不敏感),允许为空
+     * @throws SQLException 非法时抛出
+     */
     private void requireOrderBy(String orderBy, String orderDir) throws SQLException {
         if (orderBy != null && !orderBy.isBlank() && !ORDER_BY_COLUMNS.matcher(orderBy).matches()) {
             throw new SQLException("ORDER BY 列包含非法字符: " + orderBy);
@@ -368,12 +368,12 @@ public class JdbcAdminService {
     }
 
     /**
-    * 校验标识符(表名/库名)合法。
-    *
-    * @param value     待校验标识符,允许为 null(表示使用当前目录)
-    * @param fieldName 字段名(异常信息用)
-    * @throws SQLException 非法时抛出
-    */
+     * 校验标识符(表名/库名)合法。
+     *
+     * @param value     待校验标识符,允许为 null(表示使用当前目录)
+     * @param fieldName 字段名(异常信息用)
+     * @throws SQLException 非法时抛出
+     */
     private void requireIdentifier(String value, String fieldName) throws SQLException {
         if (value != null && !value.isBlank() && !IDENTIFIER.matcher(value).matches()) {
             throw new SQLException("非法标识符(" + fieldName + "): " + value);

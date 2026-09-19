@@ -12,10 +12,10 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
-* 告警静默/维护窗口实体
-*
-* @since 2026/8/4
-* @author CH
+ * 告警静默/维护窗口实体
+ *
+ * @since 2026/8/4
+ * @author CH
  */
 @Data
 @EqualsAndHashCode(callSuper = false)
@@ -26,78 +26,78 @@ public class MsMonitorAlarmMaintenanceWindow implements Serializable {
     private static final long serialVersionUID = 1L; // 串行版本uid
 
     /**
-    * 主键
-    */
+     * 主键
+     */
     @TableId(value = "id", type = IdType.AUTO)
     @Schema(description = "主键", example = "1")
     private Long id; // 标识
 
     /**
-    * 策略 标识
-    */
+     * 策略 标识
+     */
     @TableField("ms_monitor_alarm_maintenance_window_policy_id")
     @Schema(description = "策略 ID", example = "1")
     private Long policyId; // policyid
 
     /**
-    * 窗口名称
-    */
+     * 窗口名称
+     */
     @TableField("ms_monitor_alarm_maintenance_window_name")
     @Schema(description = "窗口名称", example = "例行维护窗口")
     private String windowName; // 窗口名称
 
     /**
-    * 告警级别（为空则全局静默，否则仅对应级别规则）
-    */
+     * 告警级别（为空则全局静默，否则仅对应级别规则）
+     */
     @TableField("ms_monitor_alarm_maintenance_window_level")
     @Schema(description = "告警级别", example = "P2")
     private String msMonitorAlarmMaintenanceWindowLevel; // ms监控报警器maintenance窗口水平仪
 
     /**
-    * 起始时间（每天）
-    */
+     * 起始时间（每天）
+     */
     @TableField("ms_monitor_alarm_maintenance_window_start_time")
     @Schema(description = "起始时间", example = "22:00")
     private String startTime; // 启动时间
 
     /**
-    * 结束时间（每天）
-    */
+     * 结束时间（每天）
+     */
     @TableField("ms_monitor_alarm_maintenance_window_end_time")
     @Schema(description = "结束时间", example = "06:00")
     private String endTime; // 结束时间
 
     /**
-    * 一周中的哪几天（0-6, 逗号分隔，为空则每天）
-    */
+     * 一周中的哪几天（0-6, 逗号分隔，为空则每天）
+     */
     @TableField("ms_monitor_alarm_maintenance_window_weekdays")
     @Schema(description = "一周中的哪天", example = "0,1,2,3,4,5,6")
     private String weekdays; // weekdays
 
     /**
-    * 是否启用
-    */
+     * 是否启用
+     */
     @TableField("ms_monitor_alarm_maintenance_window_enabled")
     @Schema(description = "是否启用", example = "1")
     private Integer msMonitorAlarmMaintenanceWindowEnabled; // ms监控报警器maintenance窗口启用
 
     /**
-    * 备注
-    */
+     * 备注
+     */
     @TableField("ms_monitor_alarm_maintenance_window_remark")
     @Schema(description = "备注", example = "系统升级维护期")
     private String remark; // 评论
 
     /**
-    * 创建时间
-    */
+     * 创建时间
+     */
     @TableField("ms_monitor_alarm_maintenance_window_create_time")
     @Schema(description = "创建时间", example = "2026-08-04T10:00:00")
     private LocalDateTime createTime; // 创建时间
 
     /**
-    * 更新时间
-    */
+     * 更新时间
+     */
     @TableField("ms_monitor_alarm_maintenance_window_update_time")
     @Schema(description = "更新时间", example = "2026-08-04T10:00:00")
     private LocalDateTime updateTime; // 更新时间

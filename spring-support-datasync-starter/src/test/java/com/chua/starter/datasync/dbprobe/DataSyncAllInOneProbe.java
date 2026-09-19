@@ -28,10 +28,10 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.LongAdder;
 
 /**
-* 全能力标准测试：覆盖文件格式、转换器、边界、调度、多数据源。
-*
-* @since 4.0.0.42
-* @author CH
+ * 全能力标准测试：覆盖文件格式、转换器、边界、调度、多数据源。
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 public final class DataSyncAllInOneProbe {
@@ -46,8 +46,8 @@ public final class DataSyncAllInOneProbe {
     private final List<String> info = new CopyOnWriteArrayList<>();
 
     /**
-    * main。
-    * @param args 参数
+     * main。
+     * @param args 参数
      */
     public static void main(String[] args) throws Exception {
         Files.createDirectories(WORK_DIR);
@@ -83,7 +83,7 @@ public final class DataSyncAllInOneProbe {
 
     // ========== 1. 文件格式解析 ==========
     /**
-    * 测试文件解析。
+     * 测试文件解析。
      */
     private void testFileParsing() throws Exception {
         Path mappingDir = Paths.get("src/main/resources/datasync/mappings");
@@ -127,7 +127,7 @@ public final class DataSyncAllInOneProbe {
 
     // ========== 2. 字段转换器 ==========
     /**
-    * 测试转换器。
+     * 测试转换器。
      */
     private void testConverters() throws Exception {
         Path csv = WORK_DIR.resolve("convert.csv");
@@ -162,7 +162,7 @@ public final class DataSyncAllInOneProbe {
 
     // ========== 3. 边界场景 ==========
     /**
-    * 测试edgecas。
+     * 测试edgecas。
      */
     private void testEdgeCases() throws Exception {
         // 3a. 空 CSV
@@ -234,7 +234,7 @@ public final class DataSyncAllInOneProbe {
 
     // ========== 4. 调度策略 ==========
     /**
-    * 测试调度。
+     * 测试调度。
      */
     private void testSchedules() throws Exception {
         Path csv = WORK_DIR.resolve("schedule.csv");
@@ -291,7 +291,7 @@ public final class DataSyncAllInOneProbe {
 
     // ========== 5. 多映射并发 ==========
     /**
-    * 测试concurrency。
+     * 测试concurrency。
      */
     private void testConcurrency() throws Exception {
         Path csv = WORK_DIR.resolve("concurrent.csv");
@@ -322,12 +322,12 @@ public final class DataSyncAllInOneProbe {
     }
 
     /**
-    * 映射。
-    * @param id 标识
-    * @param cron cron
-    * @param srcId srcid
-    * @param sinkId sinkid
-    * @return 映射的结果
+     * 映射。
+     * @param id 标识
+     * @param cron cron
+     * @param srcId srcid
+     * @param sinkId sinkid
+     * @return 映射的结果
      */
     private static DataSyncMapping map(String id, String cron, String srcId, String sinkId) {
         return new DefaultDataSyncMapping(id, id + "-input", srcId, id + "-output", sinkId,
@@ -335,10 +335,10 @@ public final class DataSyncAllInOneProbe {
     }
 
     /**
-    * 映射。
-    * @param id 标识
-    * @param cron cron
-    * @return 映射的结果
+     * 映射。
+     * @param id 标识
+     * @param cron cron
+     * @return 映射的结果
      */
     private static DataSyncMapping map(String id, String cron) {
         return map(id, cron, id + "-src", id + "-sink");

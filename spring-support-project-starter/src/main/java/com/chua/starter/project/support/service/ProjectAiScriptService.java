@@ -29,11 +29,11 @@ public interface ProjectAiScriptService {
     String KIND_CHECK = "CHECK";
 
     /**
-    * 生成指定类型的运维脚本
-    *
-    * @param project 项目（类型/目录/OS/健康目标等上下文）
-    * @param kind    脚本类型 START/STOP/RESTART/CHECK
-    * @return 生成的脚本文本；AI 未装配或失败返回错误提示
-    */
+     * 生成指定类型的运维脚本
+     *
+     * @param project 项目（类型/目录/OS/健康目标等上下文）
+     * @param kind    脚本类型 START/STOP/RESTART/CHECK
+     * @return 生成的脚本文本；AI 未装配或失败返回错误提示
+     */
     ReturnResult<String> generate(MsProject project, String kind);
 }

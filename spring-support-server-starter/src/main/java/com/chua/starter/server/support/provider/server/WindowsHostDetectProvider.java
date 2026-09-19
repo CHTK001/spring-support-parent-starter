@@ -10,14 +10,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
-* Windows 主机硬件探测提供者（WinRM 采集）
-* <p>
-* 通过 WinRM（Windows Remote Management，Windows 远程管理）连接目标 Windows 主机，
-* 使用 PowerShell 单条命令批量采集 CPU/内存/磁盘/系统版本/架构/内网 IP 并回写资产字段。
-* </p>
-*
-* @author CH
-* @since 4.0.0.42
+ * Windows 主机硬件探测提供者（WinRM 采集）
+ * <p>
+ * 通过 WinRM（Windows Remote Management，Windows 远程管理）连接目标 Windows 主机，
+ * 使用 PowerShell 单条命令批量采集 CPU/内存/磁盘/系统版本/架构/内网 IP 并回写资产字段。
+ * </p>
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 @Slf4j
 @Component
@@ -68,11 +68,11 @@ public class WindowsHostDetectProvider implements HostDetectProvider {
     }
 
     /**
-    * 解析 WinRM PowerShell 输出为硬件字段（| 分隔的 k=v 段）
-    *
-    * @param output 原始输出，可为 null
-    * @param host   待回写的主机，不能为 null
-    */
+     * 解析 WinRM PowerShell 输出为硬件字段（| 分隔的 k=v 段）
+     *
+     * @param output 原始输出，可为 null
+     * @param host   待回写的主机，不能为 null
+     */
     private void parseWinrmOutput(String output, MsServerHost host) {
         if (StringUtils.isBlank(output)) {
             return;
@@ -163,11 +163,11 @@ public class WindowsHostDetectProvider implements HostDetectProvider {
     }
 
     /**
-    * 将 WinRM 网卡字符串（别名:IP 逗号拼接）转为 JSON 数组
-    *
-    * @param value 网卡字符串，如 "以太网:10.0.0.3,WLAN:192.168.1.5"
-    * @return JSON 数组字符串，解析失败返回 null
-    */
+     * 将 WinRM 网卡字符串（别名:IP 逗号拼接）转为 JSON 数组
+     *
+     * @param value 网卡字符串，如 "以太网:10.0.0.3,WLAN:192.168.1.5"
+     * @return JSON 数组字符串，解析失败返回 null
+     */
     private String toNetworksJson(String value) {
         try {
             StringBuilder sb = new StringBuilder("[");
@@ -196,21 +196,21 @@ public class WindowsHostDetectProvider implements HostDetectProvider {
     }
 
     /**
-    * 转义 JSON 字符串中的双引号与反斜杠
-    *
-    * @param value 原始字符串
-    * @return 转义后的字符串
-    */
+     * 转义 JSON 字符串中的双引号与反斜杠
+     *
+     * @param value 原始字符串
+     * @return 转义后的字符串
+     */
     private String escapeJson(String value) {
         return value.replace("\\", "\\\\").replace("\"", "\\\"");
     }
 
     /**
-    * 解析百分比字符串为 Double，非法返回 -1
-    *
-    * @param value 百分比字符串
-    * @return Double，非法返回 -1
-    */
+     * 解析百分比字符串为 Double，非法返回 -1
+     *
+     * @param value 百分比字符串
+     * @return Double，非法返回 -1
+     */
     private double parseRatio(String value) {
         try {
             double d = Double.parseDouble(value.trim());

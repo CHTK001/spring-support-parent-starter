@@ -25,12 +25,12 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
-* 爬虫定义管理接口。
-*
-* <p>提供爬虫定义的增删改查与启用列表查询，路径前缀 {@code /spider/definitions}。</p>
-*
-* @since 4.0.0.42
-* @author CH
+ * 爬虫定义管理接口。
+ *
+ * <p>提供爬虫定义的增删改查与启用列表查询，路径前缀 {@code /spider/definitions}。</p>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Tag(name = "爬虫定义管理")
 @RestController
@@ -38,27 +38,27 @@ import java.util.List;
 public class SpiderDefinitionController {
 
     /**
-    * 爬虫定义服务
-    */
+     * 爬虫定义服务
+     */
     private final SpiderDefinitionService definitionService;
 
     /**
-    * 构造方法。
-    *
-    * @param definitionService 爬虫定义服务
-    */
+     * 构造方法。
+     *
+     * @param definitionService 爬虫定义服务
+     */
     public SpiderDefinitionController(SpiderDefinitionService definitionService) {
         this.definitionService = definitionService;
     }
 
     /**
-    * 分页查询爬虫定义。
-    *
-    * @param pageNo   页码
-    * @param pageSize 每页条数
-    * @param keyword  关键字（编码/名称模糊匹配）
-    * @return 分页结果
-    */
+     * 分页查询爬虫定义。
+     *
+     * @param pageNo   页码
+     * @param pageSize 每页条数
+     * @param keyword  关键字（编码/名称模糊匹配）
+     * @return 分页结果
+     */
     @GetMapping("/page")
     @Operation(summary = "分页查询爬虫定义")
     public ReturnResult<PageResultVO<SpiderDefinitionVO>> page(
@@ -85,11 +85,11 @@ public class SpiderDefinitionController {
     }
 
     /**
-    * 按编码查询爬虫定义详情。
-    *
-    * @param spiderCode 爬虫编码
-    * @return 爬虫定义视图
-    */
+     * 按编码查询爬虫定义详情。
+     *
+     * @param spiderCode 爬虫编码
+     * @return 爬虫定义视图
+     */
     @GetMapping("/detail")
     @Operation(summary = "按编码查询爬虫定义详情")
     public ReturnResult<SpiderDefinitionVO> detail(@RequestParam String spiderCode) {
@@ -99,11 +99,11 @@ public class SpiderDefinitionController {
     }
 
     /**
-    * 保存爬虫定义（新增或更新）。
-    *
-    * @param vo 爬虫定义视图
-    * @return 保存后的爬虫定义
-    */
+     * 保存爬虫定义（新增或更新）。
+     *
+     * @param vo 爬虫定义视图
+     * @return 保存后的爬虫定义
+     */
     @PostMapping("/save")
     @Operation(summary = "保存爬虫定义")
     public ReturnResult<SpiderDefinitionVO> save(@RequestBody SpiderDefinitionVO vo) {
@@ -118,11 +118,11 @@ public class SpiderDefinitionController {
     }
 
     /**
-    * 按编码删除爬虫定义。
-    *
-    * @param spiderCode 爬虫编码
-    * @return 是否成功
-    */
+     * 按编码删除爬虫定义。
+     *
+     * @param spiderCode 爬虫编码
+     * @return 是否成功
+     */
     @DeleteMapping("/delete")
     @Operation(summary = "按编码删除爬虫定义")
     public ReturnResult<Boolean> delete(@RequestParam String spiderCode) {
@@ -135,12 +135,12 @@ public class SpiderDefinitionController {
     }
 
     /**
-    * 启停切换。
-    *
-    * @param spiderCode   爬虫编码
-    * @param spiderStatus 目标状态（1 启用 / 0 禁用）
-    * @return 是否成功
-    */
+     * 启停切换。
+     *
+     * @param spiderCode   爬虫编码
+     * @param spiderStatus 目标状态（1 启用 / 0 禁用）
+     * @return 是否成功
+     */
     @PostMapping("/status")
     @Operation(summary = "启用/禁用爬虫定义")
     public ReturnResult<Boolean> status(@RequestParam String spiderCode,
@@ -157,10 +157,10 @@ public class SpiderDefinitionController {
     }
 
     /**
-    * 查询全部爬虫定义。
-    *
-    * @return 爬虫定义列表
-    */
+     * 查询全部爬虫定义。
+     *
+     * @return 爬虫定义列表
+     */
     @GetMapping("/list")
     @Operation(summary = "查询全部爬虫定义")
     public ReturnResult<List<SpiderDefinitionVO>> list() {
@@ -169,10 +169,10 @@ public class SpiderDefinitionController {
     }
 
     /**
-    * 查询全部已启用爬虫定义（供调度器使用）。
-    *
-    * @return 已启用爬虫定义列表
-    */
+     * 查询全部已启用爬虫定义（供调度器使用）。
+     *
+     * @return 已启用爬虫定义列表
+     */
     @GetMapping("/list-enabled")
     @Operation(summary = "查询全部已启用爬虫定义")
     public ReturnResult<List<SpiderDefinitionVO>> listEnabled() {
@@ -181,11 +181,11 @@ public class SpiderDefinitionController {
     }
 
     /**
-    * 按 标识 查询爬虫定义。
-    *
-    * @param id 主键 标识
-    * @return 爬虫定义
-    */
+     * 按 标识 查询爬虫定义。
+     *
+     * @param id 主键 标识
+     * @return 爬虫定义
+     */
     @GetMapping("/{id}")
     @Operation(summary = "按 ID 查询爬虫定义")
     public ReturnResult<SpiderDefinitionVO> get(@PathVariable Long id) {
@@ -193,11 +193,11 @@ public class SpiderDefinitionController {
     }
 
     /**
-    * 新增爬虫定义。
-    *
-    * @param entity 爬虫定义
-    * @return 是否成功
-    */
+     * 新增爬虫定义。
+     *
+     * @param entity 爬虫定义
+     * @return 是否成功
+     */
     @PostMapping
     @Operation(summary = "新增爬虫定义")
     public ReturnResult<Boolean> saveEntity(@RequestBody SpiderDefinition entity) {
@@ -205,11 +205,11 @@ public class SpiderDefinitionController {
     }
 
     /**
-    * 更新爬虫定义。
-    *
-    * @param entity 爬虫定义
-    * @return 是否成功
-    */
+     * 更新爬虫定义。
+     *
+     * @param entity 爬虫定义
+     * @return 是否成功
+     */
     @PutMapping
     @Operation(summary = "更新爬虫定义")
     public ReturnResult<Boolean> update(@RequestBody SpiderDefinition entity) {
@@ -217,11 +217,11 @@ public class SpiderDefinitionController {
     }
 
     /**
-    * 删除爬虫定义。
-    *
-    * @param id 主键 标识
-    * @return 是否成功
-    */
+     * 删除爬虫定义。
+     *
+     * @param id 主键 标识
+     * @return 是否成功
+     */
     @DeleteMapping("/{id}")
     @Operation(summary = "删除爬虫定义")
     public ReturnResult<Boolean> remove(@PathVariable Long id) {

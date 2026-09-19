@@ -16,9 +16,9 @@ import com.chua.payment.support.service.WalletAccountService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
-* 钱包余额支付
-* @author CH
-* @since 4.0.0
+ * 钱包余额支付
+ * @author CH
+ * @since 4.0.0
  */
 public class WalletBalancePaymentChannel extends AbstractMerchantPaymentChannel implements PaymentChannel {
 
@@ -35,10 +35,10 @@ public class WalletBalancePaymentChannel extends AbstractMerchantPaymentChannel 
                                        ObjectMapper objectMapper,
                                        WalletAccountService walletAccountService) {
         /**
-        * 父。
-        * @param merchantChannelService merchant通道服务
-        * @param objectMapper 对象映射器
-        */
+         * 父。
+         * @param merchantChannelService merchant通道服务
+         * @param objectMapper 对象映射器
+         */
         super(merchantChannelService, objectMapper);
         this.walletAccountService = walletAccountService;
     }
@@ -54,10 +54,10 @@ public class WalletBalancePaymentChannel extends AbstractMerchantPaymentChannel 
     public PaymentResult pay(MerchantChannel channel, PaymentRequest request) {
         if (request.getUserId() == null) {
             /**
-    * 薪酬异常。
-    * @param userId" 用户标识"
-    * @return 薪酬异常的结果
-    */
+             * 薪酬异常。
+             * @param userId" 用户标识"
+             * @return 薪酬异常的结果
+             */
             throw new PaymentException("钱包支付必须提供 userId");
         }
         walletAccountService.pay(new WalletPayRequest(
@@ -97,10 +97,10 @@ public class WalletBalancePaymentChannel extends AbstractMerchantPaymentChannel 
     public RefundResult refund(MerchantChannel channel, RefundRequest request) {
         if (request.getUserId() == null) {
             /**
-    * 薪酬异常。
-    * @param "钱包退款缺少用户上下文" "钱包退款缺少用户上下文"
-    * @return 薪酬异常的结果
-    */
+             * 薪酬异常。
+             * @param "钱包退款缺少用户上下文" "钱包退款缺少用户上下文"
+             * @return 薪酬异常的结果
+             */
             throw new PaymentException("钱包退款缺少用户上下文");
         }
         walletAccountService.refund(new WalletRefundRequest(

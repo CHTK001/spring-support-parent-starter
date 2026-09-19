@@ -7,11 +7,11 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.scheduling.config.ScheduledTaskRegistrar;
 
 /**
-* 作业配置
-*
-* @版本 1.0.0
-* @since 2024/03/05
-* @author CH
+ * 作业配置
+ *
+ * @版本 1.0.0
+ * @since 2024/03/05
+ * @author CH
  */
 public class JobConfiguration implements SchedulingConfigurer {
     /** 任务registrar */

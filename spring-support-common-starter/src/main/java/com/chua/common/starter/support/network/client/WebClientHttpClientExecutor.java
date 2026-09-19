@@ -16,10 +16,10 @@ import java.util.List;
 import java.util.Map;
 
 /**
-* 基于 Spring web客户端 的 HTTP 客户端执行器。
-*
-* @since 4.0.0.42
-* @author CH
+ * 基于 Spring web客户端 的 HTTP 客户端执行器。
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Spi("webclient")
 @ConditionalOnClass("org.springframework.web.reactive.function.client.WebClient")
@@ -81,11 +81,11 @@ public class WebClientHttpClientExecutor implements HttpClientExecutor {
     }
 
     /**
-    * 构建Spec
-    *
-    * @param request 请求
-    * @return 构建spec的结果
-    */
+     * 构建Spec
+     *
+     * @param request 请求
+     * @return 构建spec的结果
+     */
     private WebClient.RequestBodySpec buildSpec(ClientRequest request) {
         WebClient.RequestBodySpec spec = webClient
                 .method(toHttpMethod(request.getMethod()))
@@ -102,11 +102,11 @@ public class WebClientHttpClientExecutor implements HttpClientExecutor {
     }
 
     /**
-    * 映射响应
-    *
-    * @param resp resp
-    * @return 映射响应的结果
-    */
+     * 映射响应
+     *
+     * @param resp resp
+     * @return 映射响应的结果
+     */
     private Mono<ClientResponse> mapResponse(org.springframework.web.reactive.function.client.ClientResponse resp) {
         ClientResponse cr = new ClientResponse();
         cr.setStatusCode(resp.statusCode().value());
@@ -126,11 +126,11 @@ public class WebClientHttpClientExecutor implements HttpClientExecutor {
     }
 
     /**
-    * 转为http方法
-    *
-    * @param method 方法
-    * @return 转为http方法的结果
-    */
+     * 转为http方法
+     *
+     * @param method 方法
+     * @return 转为http方法的结果
+     */
     private static HttpMethod toHttpMethod(com.chua.common.support.network.http.HttpMethod method) {
         return switch (method) {
             case GET -> HttpMethod.GET;
@@ -144,11 +144,11 @@ public class WebClientHttpClientExecutor implements HttpClientExecutor {
     }
 
     /**
-    * 转为客户端响应
-    *
-    * @param response 响应
-    * @return 转为客户端响应的结果
-    */
+     * 转为客户端响应
+     *
+     * @param response 响应
+     * @return 转为客户端响应的结果
+     */
     private static ClientResponse toClientResponse(ClientResponse response) {
         return response;
     }

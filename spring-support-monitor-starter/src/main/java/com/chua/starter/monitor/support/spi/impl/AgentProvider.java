@@ -39,24 +39,24 @@ public class AgentProvider implements SystemInfoProvider {
     }
 
     /**
-    * 主机类型是否为 AGENT。
-    *
-    * @param host 目标主机
-    * @return 类型为 AGENT 时返回 true
-    */
+     * 主机类型是否为 AGENT。
+     *
+     * @param host 目标主机
+     * @return 类型为 AGENT 时返回 true
+     */
     @Override
     public boolean supports(MsServerHost host) {
         return "AGENT".equalsIgnoreCase(host.getServerHostOsType());
     }
 
     /**
-    * 发起 GET 请求并把响应反序列化为指定类型。
-    *
-    * @param url  请求地址
-    * @param type 目标类型
-    * @param <T>  返回类型
-    * @return 反序列化结果；请求失败返回 null
-    */
+     * 发起 GET 请求并把响应反序列化为指定类型。
+     *
+     * @param url  请求地址
+     * @param type 目标类型
+     * @param <T>  返回类型
+     * @return 反序列化结果；请求失败返回 null
+     */
     @SuppressWarnings("unchecked")
     private <T> T get(String url, Class<T> type) {
         try {

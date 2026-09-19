@@ -26,10 +26,10 @@ import java.util.List;
 import java.util.Map;
 
 /**
-* 数据同步 自动配置。
-*
-* @since 4.0.0.42
-* @author CH
+ * 数据同步 自动配置。
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @AutoConfiguration
 @ConditionalOnClass(name = "com.chua.starter.datasync.DataSyncServer")
@@ -40,25 +40,25 @@ public class DataSyncAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     /**
-    * 数据同步mapping管理器
-    *
-    * @return 数据同步mapping管理器的结果
-    */
+     * 数据同步mapping管理器
+     *
+     * @return 数据同步mapping管理器的结果
+     */
     public DataSyncMappingManager dataSyncMappingManager() {
         /**
-        * 默认数据同步mapping管理器。
-        * @return 默认数据同步mapping管理器的结果
-        */
+         * 默认数据同步mapping管理器。
+         * @return 默认数据同步mapping管理器的结果
+         */
         return new DefaultDataSyncMappingManager();
     }
 
     @Bean
     @ConditionalOnMissingBean
     /**
-    * 数据同步服务端
-    * @param agentServerManager Agent服务端管理器
-    * @param mappingManager mapping管理器
-    */
+     * 数据同步服务端
+     * @param agentServerManager Agent服务端管理器
+     * @param mappingManager mapping管理器
+     */
     public com.chua.starter.datasync.DataSyncServer dataSyncServer(AgentServerManager agentServerManager,
                                                                    DataSyncMappingManager mappingManager) {
         com.chua.starter.datasync.DefaultDataSyncServer server = new com.chua.starter.datasync.DefaultDataSyncServer(agentServerManager);
@@ -69,18 +69,18 @@ public class DataSyncAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     /**
-    * Agent服务端管理器
-    *
-    * @return Agent服务端管理器的结果
-    */
+     * Agent服务端管理器
+     *
+     * @return Agent服务端管理器的结果
+     */
     public AgentServerManager agentServerManager() {
         /**
-        * 数据同步Agent服务端。
-        * @param null 空
-        * @param null 空
-        * @param "default-server" "默认-服务端"
-        * @return 数据同步Agent服务端的结果
-        */
+         * 数据同步Agent服务端。
+         * @param null 空
+         * @param null 空
+         * @param "default-server" "默认-服务端"
+         * @return 数据同步Agent服务端的结果
+         */
         return new DataSyncAgentServer(null, null, "default-server");
     }
 
@@ -88,10 +88,10 @@ public class DataSyncAutoConfiguration {
     @ConditionalOnProperty(prefix = "plugin.datasync", name = "mapping-source", havingValue = "file")
     @ConditionalOnMissingBean
     /**
-    * 目录数据同步mappingscanner
-    * @param properties 属性
-    * @param mappingManager mapping管理器
-    */
+     * 目录数据同步mappingscanner
+     * @param properties 属性
+     * @param mappingManager mapping管理器
+     */
     public DirectoryDataSyncMappingScanner directoryDataSyncMappingScanner(DatasyncProperties properties,
                                                                           DataSyncMappingManager mappingManager) {
         return new DirectoryDataSyncMappingScanner(
@@ -109,30 +109,30 @@ public class DataSyncAutoConfiguration {
     @ConditionalOnProperty(prefix = "plugin.datasync.database-mapping", name = "enabled", havingValue = "true")
     @ConditionalOnMissingBean
     /**
-    * databasemapping加载
-    * @param dataSource 数据源
-    * @param properties 属性
-    * @param mappingManager mapping管理器
-    */
+     * databasemapping加载
+     * @param dataSource 数据源
+     * @param properties 属性
+     * @param mappingManager mapping管理器
+     */
     public DatabaseMappingLoader databaseMappingLoader(javax.sql.DataSource dataSource,
                                                        DatasyncProperties properties,
                                                        DataSyncMappingManager mappingManager) {
         /**
-        * databasemapping加载。
-        * @param dataSource 数据源
-        * @param properties 属性
-        * @param mappingManager mapping管理器
-        * @return databasemapping加载的结果
-        */
+         * databasemapping加载。
+         * @param dataSource 数据源
+         * @param properties 属性
+         * @param mappingManager mapping管理器
+         * @return databasemapping加载的结果
+         */
         return new DatabaseMappingLoader(dataSource, properties, mappingManager);
     }
 
     /**
-    * 简单目录配置definition类。
-    *
-    * @author CH
-    * @since 4.0.0
-    */
+     * 简单目录配置definition类。
+     *
+     * @author CH
+     * @since 4.0.0
+     */
     private static class SimpleDirectoryConfigDefinition implements DirectoryConfigDefinition {
         /** 目录路径 */
         private final String directoryPath;
@@ -208,10 +208,10 @@ public class DataSyncAutoConfiguration {
 
     @Bean
     /**
-        * 数据同步服务信息contributor
-        *
-        * @return 数据同步服务信息contributor的结果
-        */
+     * 数据同步服务信息contributor
+     *
+     * @return 数据同步服务信息contributor的结果
+     */
     public ServiceInfoContributor dataSyncServiceInfoContributor() {
         return registry -> {
             registry.registerFlag("datasync", "数据同步", true, "数据同步模块");

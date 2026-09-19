@@ -22,48 +22,48 @@ import java.util.Map;
 public interface WatchdogService {
 
     /**
-    * 对单个项目执行一轮守护检测（时间轮到期回调）
-    *
-    * @param project 项目
-    */
+     * 对单个项目执行一轮守护检测（时间轮到期回调）
+     *
+     * @param project 项目
+     */
     void checkOne(MsProject project);
 
     /**
-    * 全量启用守护的项目（启动时批量入轮用）
-    *
-    * @return 项目列表
-    */
+     * 全量启用守护的项目（启动时批量入轮用）
+     *
+     * @return 项目列表
+     */
     List<MsProject> enabledProjects();
 
     /**
-    * 重新加载项目并校验守护启用状态（入轮后失效检测用）
-    *
-    * @param projectId 项目 标识
-    * @return 启用守护的项目，未启用/不存在返回 空
-    */
+     * 重新加载项目并校验守护启用状态（入轮后失效检测用）
+     *
+     * @param projectId 项目 标识
+     * @return 启用守护的项目，未启用/不存在返回 空
+     */
     MsProject reloadEnabled(Long projectId);
 
     /**
-    * 项目守护是否启用
-    *
-    * @param projectId 项目 标识
-    * @return 是否启用
-    */
+     * 项目守护是否启用
+     *
+     * @param projectId 项目 标识
+     * @return 是否启用
+     */
     boolean isEnabled(Long projectId);
 
     /**
-    * 项目守护检测间隔（秒，归一化后：空/小于 5 按 30）
-    *
-    * @param projectId 项目 标识
-    * @return 间隔秒数
-    */
+     * 项目守护检测间隔（秒，归一化后：空/小于 5 按 30）
+     *
+     * @param projectId 项目 标识
+     * @return 间隔秒数
+     */
     int watchdogIntervalOf(Long projectId);
 
     /**
-    * 守护运行状态快照（内存计数，供前端/接口查询）
-    *
-    * @param projectId 项目 标识
-    * @return 状态：consecutiveFail / lastCheckTime / lastResult / restartedCount
-    */
+     * 守护运行状态快照（内存计数，供前端/接口查询）
+     *
+     * @param projectId 项目 标识
+     * @return 状态：consecutiveFail / lastCheckTime / lastResult / restartedCount
+     */
     Map<String, Object> statusOf(Long projectId);
 }

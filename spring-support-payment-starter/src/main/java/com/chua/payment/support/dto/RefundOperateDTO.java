@@ -5,9 +5,9 @@ import lombok.Data;
 import java.math.BigDecimal;
 
 /**
-* 退款单操作 DTO
-* @author CH
-* @since 4.0.0
+ * 退款单操作 DTO
+ * @author CH
+ * @since 4.0.0
  */
 @Data
 public class RefundOperateDTO {

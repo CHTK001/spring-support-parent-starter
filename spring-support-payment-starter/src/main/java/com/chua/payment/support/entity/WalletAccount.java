@@ -11,9 +11,9 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
-* 钱包账户
-* @author CH
-* @since 4.0.0
+ * 钱包账户
+ * @author CH
+ * @since 4.0.0
  */
 @Data
 @TableName("pay_wallet_account")

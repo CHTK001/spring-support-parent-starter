@@ -5,9 +5,9 @@ import lombok.Data;
 import java.util.List;
 
 /**
-* 支付运营总览视图
-* @author CH
-* @since 4.0.0
+ * 支付运营总览视图
+ * @author CH
+ * @since 4.0.0
  */
 @Data
 public class PaymentOpsOverviewVO {

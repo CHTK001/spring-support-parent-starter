@@ -30,11 +30,11 @@ public class SpiderExecutionController {
     private final SpiderFlowRunner flowRunner;
 
     /**
-    * 创建 蜘蛛执行控制器 实例
-    * @param definitionService definition服务
-    * @param executionLogService 执行日志服务
-    * @param flowRunner 流runner
-    */
+     * 创建 蜘蛛执行控制器 实例
+     * @param definitionService definition服务
+     * @param executionLogService 执行日志服务
+     * @param flowRunner 流runner
+     */
     public SpiderExecutionController(SpiderDefinitionService definitionService,
                                      SpiderExecutionLogService executionLogService,
                                      SpiderFlowRunner flowRunner) {
@@ -46,11 +46,11 @@ public class SpiderExecutionController {
     @PostMapping("/start")
     @Operation(summary = "手动触发一次执行")
     /**
-    * 开始
-    *
-    * @param spiderCode 蜘蛛编码
-    * @return 启动的结果
-    */
+     * 开始
+     *
+     * @param spiderCode 蜘蛛编码
+     * @return 启动的结果
+     */
     public ReturnResult<String> start(@RequestParam String spiderCode) {
         SpiderDefinition definition = definitionService.lambdaQuery()
                 .eq(SpiderDefinition::getCode, spiderCode).one();
@@ -63,11 +63,11 @@ public class SpiderExecutionController {
     @PostMapping("/stop")
     @Operation(summary = "停止执行")
     /**
-    * 停止
-    *
-    * @param executionNo 执行no
-    * @return 停止的结果
-    */
+     * 停止
+     *
+     * @param executionNo 执行no
+     * @return 停止的结果
+     */
     public ReturnResult<Boolean> stop(@RequestParam String executionNo) {
         return ReturnResult.ok(Boolean.TRUE);
     }
@@ -75,11 +75,11 @@ public class SpiderExecutionController {
     @GetMapping("/status")
     @Operation(summary = "查询执行状态")
     /**
-    * 状态
-    *
-    * @param executionNo 执行no
-    * @return 状态的结果
-    */
+     * 状态
+     *
+     * @param executionNo 执行no
+     * @return 状态的结果
+     */
     public ReturnResult<ExecutionStatusVO> status(@RequestParam String executionNo) {
         ExecutionStatusVO vo = new ExecutionStatusVO();
         vo.setStatus("COMPLETED");
@@ -93,10 +93,10 @@ public class SpiderExecutionController {
     @GetMapping("/running")
     @Operation(summary = "列出正在执行")
     /**
-    * Running
-    *
-    * @return running的结果
-    */
+     * Running
+     *
+     * @return running的结果
+     */
     public ReturnResult<List<ExecutionStatusVO>> running() {
         return ReturnResult.ok(List.of());
     }

@@ -12,20 +12,20 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 /**
-* AI 输入优化服务实现。
-*
-* <p>读取 {@code input} 分组全局设置（sys_ai_global_setting）：
-* <ul>
-*   <li>optimizer_model：优化模型，为空时回退到 {@code runtime} 分组默认对话模型；</li>
-*   <li>optimizer_prompt：自定义优化提示词，为空时使用内置默认提示词；</li>
-*   <li>optimizer_temperature：优化温度；</li>
-*   <li>optimizer_enabled：优化开关。</li>
-* </ul>
-* 通过 {@link ChatClientRegistry} 获取 对话客户端 后，以系统提示词 + 用户输入的方式执行一次同步对话，
-* 返回改写后的文本。</p>
-*
-* @since 4.0.0.42
-* @author CH
+ * AI 输入优化服务实现。
+ *
+ * <p>读取 {@code input} 分组全局设置（sys_ai_global_setting）：
+ * <ul>
+ *   <li>optimizer_model：优化模型，为空时回退到 {@code runtime} 分组默认对话模型；</li>
+ *   <li>optimizer_prompt：自定义优化提示词，为空时使用内置默认提示词；</li>
+ *   <li>optimizer_temperature：优化温度；</li>
+ *   <li>optimizer_enabled：优化开关。</li>
+ * </ul>
+ * 通过 {@link ChatClientRegistry} 获取 对话客户端 后，以系统提示词 + 用户输入的方式执行一次同步对话，
+ * 返回改写后的文本。</p>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @Service
@@ -33,23 +33,23 @@ import org.springframework.stereotype.Service;
 public class AiInputOptimizeServiceImpl implements AiInputOptimizeService {
 
     /**
-    * 输入优化配置分组
-    */
+     * 输入优化配置分组
+     */
     private static final String GROUP = "input";
 
     /**
-    * runtime 分组（全局对话路由配置）
-    */
+     * runtime 分组（全局对话路由配置）
+     */
     private static final String RUNTIME_GROUP = "runtime";
 
     /**
-    * 默认优化温度
-    */
+     * 默认优化温度
+     */
     private static final double DEFAULT_OPTIMIZE_TEMPERATURE = 0.3;
 
     /**
-    * 内置默认优化提示词
-    */
+     * 内置默认优化提示词
+     */
     private static final String DEFAULT_OPTIMIZE_PROMPT = """
             你是一个输入优化助手。
             在不改变用户真实意图的前提下，将用户输入改写为更清晰、更准确、更适合模型理解的版本。
@@ -60,21 +60,21 @@ public class AiInputOptimizeServiceImpl implements AiInputOptimizeService {
             """;
 
     /**
-    * 全局设置读取器
-    */
+     * 全局设置读取器
+     */
     private final GlobalSettingReader globalSettingReader;
 
     /**
-    * 全局 对话客户端 注册中心
-    */
+     * 全局 对话客户端 注册中心
+     */
     private final ChatClientRegistry chatClientRegistry;
 
     /**
-    * 执行输入优化。
-    *
-    * @param request 优化请求
-    * @return 优化结果
-    */
+     * 执行输入优化。
+     *
+     * @param request 优化请求
+     * @return 优化结果
+     */
     @Override
     public InputOptimizeResponse optimize(InputOptimizeRequest request) {
         String input = StringUtils.defaultString(request.getInput(), "");
@@ -133,14 +133,14 @@ public class AiInputOptimizeServiceImpl implements AiInputOptimizeService {
     }
 
     /**
-    * 解析优化用 对话客户端。
-    *
-    * <p>指定模型时优先按模型查找注册实例；否则使用全局聚合 ChatClient。
-    * 全局配置未配置模型时，从 {@code runtime} 分组读取默认模型名。</p>
-    *
-    * @param model 配置的模型名（可能为空）
-    * @return ChatClient 实例；不可用时返回 空
-    */
+     * 解析优化用 对话客户端。
+     *
+     * <p>指定模型时优先按模型查找注册实例；否则使用全局聚合 ChatClient。
+     * 全局配置未配置模型时，从 {@code runtime} 分组读取默认模型名。</p>
+     *
+     * @param model 配置的模型名（可能为空）
+     * @return ChatClient 实例；不可用时返回 空
+     */
     private ChatClient resolveChatClient(String model) {
         String effectiveModel = model;
         if (StringUtils.isBlank(effectiveModel)) {

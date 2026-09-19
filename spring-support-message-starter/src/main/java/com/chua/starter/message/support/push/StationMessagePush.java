@@ -19,21 +19,21 @@ import java.util.List;
 import java.util.Map;
 
 /**
-* 站内消息推送实现
-* <p>
-* 作为消息推送的站内渠道（SPI 标识 {@code station}），通过 Socket 将消息推送到
-* 目标用户已登录的前端页面。推送执行器由 Spring 环境注入（见
-* {@code MessageAutoConfiguration}），未接入 Socket 服务时推送返回失败，不影响其他渠道。
-* </p>
-*
-* <h3>对接协议</h3>
-* <pre>
-*   event: message
-*   payload: { module: "message", event: "push", content, subject, target, sendTime }
-*   前端通过 socket.subscribe("message", "push", handler) 接收
-* </pre>
-*
-* @since 2026/08/03
+ * 站内消息推送实现
+ * <p>
+ * 作为消息推送的站内渠道（SPI 标识 {@code station}），通过 Socket 将消息推送到
+ * 目标用户已登录的前端页面。推送执行器由 Spring 环境注入（见
+ * {@code MessageAutoConfiguration}），未接入 Socket 服务时推送返回失败，不影响其他渠道。
+ * </p>
+ *
+ * <h3>对接协议</h3>
+ * <pre>
+ *   event: message
+ *   payload: { module: "message", event: "push", content, subject, target, sendTime }
+ *   前端通过 socket.subscribe("message", "push", handler) 接收
+ * </pre>
+ *
+ * @since 2026/08/03
  */
 @Spi("station")
 @SpiDescribe(
@@ -46,66 +46,66 @@ import java.util.Map;
 )
 @Slf4j
 /**
-* 状态消息push类。
-*
-* @author CH
-* @since 4.0.0
+ * 状态消息push类。
+ *
+ * @author CH
+ * @since 4.0.0
  */
 public class StationMessagePush implements MessagePush {
 
     /**
-    * 渠道标识
-    */
+     * 渠道标识
+     */
     private static final String PROVIDER = "station";
 
     /**
-    * Socket 事件名（与前端监听保持一致）
-    */
+     * Socket 事件名（与前端监听保持一致）
+     */
     private static final String SOCKET_EVENT = "message";
 
     /**
-    * 站内消息模块标识
-    */
+     * 站内消息模块标识
+     */
     private static final String MODULE = "message";
 
     /**
-    * 站内消息推送事件
-    */
+     * 站内消息推送事件
+     */
     private static final String PUSH_EVENT = "push";
 
     /**
-    * 时间格式
-    */
+     * 时间格式
+     */
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     /**
-    * 站内推送执行器（由 Spring 环境注入，未注入时推送失败）
-    */
+     * 站内推送执行器（由 Spring 环境注入，未注入时推送失败）
+     */
     private static volatile StationPusher pusher;
 
     /**
-    * 注入站内推送执行器
-    *
-    * @param pusher 推送执行器
-    */
+     * 注入站内推送执行器
+     *
+     * @param pusher 推送执行器
+     */
     public static void setPusher(StationPusher pusher) {
         StationMessagePush.pusher = pusher;
     }
 
     /**
-    * 站内推送执行器
-    * @author CH
-    * @since 4.0.0
-    */
+     * 站内推送执行器
+     * @author CH
+     * @since 4.0.0
+     */
     @FunctionalInterface
     public interface StationPusher {
 
         /**
-        * 向指定用户推送消息
-        *
-        * @param userId  目标用户 标识
-        * @param payload 消息体（JSON 字符串）
-        */
+         * 向指定用户推送消息
+         *
+         * @param userId  目标用户 标识
+         * @param payload 消息体（JSON 字符串）
+         */
         void push(String userId, String payload);
     }
 

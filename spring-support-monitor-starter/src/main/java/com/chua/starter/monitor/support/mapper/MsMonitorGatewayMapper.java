@@ -3,9 +3,9 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.chua.starter.monitor.support.entity.MsMonitorGateway;
 
 /**
-* 监控网关 映射器
-*
-* @since 2026/8/4
-* @author CH
+ * 监控网关 映射器
+ *
+ * @since 2026/8/4
+ * @author CH
  */
 public interface MsMonitorGatewayMapper extends BaseMapper<MsMonitorGateway> {}

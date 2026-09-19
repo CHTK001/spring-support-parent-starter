@@ -10,27 +10,27 @@ import com.chua.starter.aliyun.support.payment.dto.AliyunAlipayPayResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
-* 支付宝手机网站支付
-* @author CH
-* @since 4.0.0
+ * 支付宝手机网站支付
+ * @author CH
+ * @since 4.0.0
  */
 public class AlipayWapPaymentChannel extends AlipayWebPaymentChannel implements PaymentChannel {
 
     /**
-    * 创建 alipaywap薪酬通道 实例
-    * @param merchantChannelService merchant通道服务
-    * @param objectMapper 对象映射器
-    * @param providerGatewayRegistry 提供者gatewayregistry
-    */
+     * 创建 alipaywap薪酬通道 实例
+     * @param merchantChannelService merchant通道服务
+     * @param objectMapper 对象映射器
+     * @param providerGatewayRegistry 提供者gatewayregistry
+     */
     public AlipayWapPaymentChannel(MerchantChannelService merchantChannelService,
                                    ObjectMapper objectMapper,
                                    PaymentProviderGatewayRegistry providerGatewayRegistry) {
         /**
-        * 父。
-        * @param merchantChannelService merchant通道服务
-        * @param objectMapper 对象映射器
-        * @param providerGatewayRegistry 提供者gatewayregistry
-        */
+         * 父。
+         * @param merchantChannelService merchant通道服务
+         * @param objectMapper 对象映射器
+         * @param providerGatewayRegistry 提供者gatewayregistry
+         */
         super(merchantChannelService, objectMapper, providerGatewayRegistry);
     }
 

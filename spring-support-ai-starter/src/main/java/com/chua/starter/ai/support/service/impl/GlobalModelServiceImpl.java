@@ -27,23 +27,23 @@ import java.util.Map;
 public class GlobalModelServiceImpl implements GlobalModelService {
 
     /**
-    * 全局设置读取工具
-    */
+     * 全局设置读取工具
+     */
     private final GlobalSettingReader settingReader;
 
     /**
-    * OCR 客户端管理器
-    */
+     * OCR 客户端管理器
+     */
     private final OcrClientManager ocrClientManager;
 
     /**
-    * 人脸客户端管理器
-    */
+     * 人脸客户端管理器
+     */
     private final FaceClientManager faceClientManager;
 
     /**
-    * 全局对话客户端
-    */
+     * 全局对话客户端
+     */
     private volatile ChatClient chatClient;
 
     @Override

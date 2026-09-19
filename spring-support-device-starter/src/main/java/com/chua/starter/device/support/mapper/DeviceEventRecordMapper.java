@@ -5,10 +5,10 @@ import com.chua.starter.device.support.entity.DeviceEventRecord;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
-* 设备事件记录 映射器
-*
-* @since 4.0.0.42
-* @author CH
+ * 设备事件记录 映射器
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Mapper
 public interface DeviceEventRecordMapper extends BaseMapper<DeviceEventRecord> {

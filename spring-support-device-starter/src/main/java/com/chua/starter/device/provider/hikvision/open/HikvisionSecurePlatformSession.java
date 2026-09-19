@@ -12,45 +12,45 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
-* 海康安防平台（isecure Center / 综合安防管理平台）打开api 会话
-* <p>对接海康综合安防平台 OpenAPI（artemis 协议），基于 common-starter HttpClient，全平台可用。</p>
-*
-* <h3>接入说明</h3>
-* <ul>
-*   <li>endpoint、AppKey/AppSecret、签名算法需按安防平台官方 OpenAPI 文档配置</li>
-*   <li>常见签名：x-ca-key + x-ca-signature-headers + HMAC-SHA256（artemis 网关）</li>
-* </ul>
-*
-* @since 4.0.0.42
-* @author CH
+ * 海康安防平台（isecure Center / 综合安防管理平台）打开api 会话
+ * <p>对接海康综合安防平台 OpenAPI（artemis 协议），基于 common-starter HttpClient，全平台可用。</p>
+ *
+ * <h3>接入说明</h3>
+ * <ul>
+ *   <li>endpoint、AppKey/AppSecret、签名算法需按安防平台官方 OpenAPI 文档配置</li>
+ *   <li>常见签名：x-ca-key + x-ca-signature-headers + HMAC-SHA256（artemis 网关）</li>
+ * </ul>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 public class HikvisionSecurePlatformSession extends AbstractOpenApiSession {
 
     /**
-    * 海康安防平台默认 baseurl（按官方文档配置）
-    */
+     * 海康安防平台默认 baseurl（按官方文档配置）
+     */
     private static final String DEFAULT_BASE_URL = "https://artemis.hikvision.com";
 
     /**
-    * 视频取流接口
-    */
+     * 视频取流接口
+     */
     private static final String PATH_VIDEO_STREAM = "/api/video/v1/cameras/previewURLs";
 
     /**
-    * 云台控制接口
-    */
+     * 云台控制接口
+     */
     private static final String PATH_PTZ_CONTROL = "/api/video/v1/ptz/channels/controllable";
 
     /**
-    * 门禁控制接口
-    */
+     * 门禁控制接口
+     */
     private static final String PATH_DOOR_CONTROL = "/api/access/v1/door/control";
 
     /**
-    * 创建 hikvisionsecureplatform会话 实例
-    * @param info 信息
-    */
+     * 创建 hikvisionsecureplatform会话 实例
+     * @param info 信息
+     */
     public HikvisionSecurePlatformSession(DeviceConnectInfo info) {
         super(info, DEFAULT_BASE_URL);
  // 安防平台通常无独立登录，app键/appsecret 通过签名头传递
@@ -59,12 +59,12 @@ public class HikvisionSecurePlatformSession extends AbstractOpenApiSession {
     }
 
     /**
-    * Artemis 网关签名：x-ca-签名 = 基础64(HMAC-SHA256(appsecret, 字符串转为标志))
-    * @param method 方法
-    * @param path 路径
-    * @param headers 头部
-    * @return Artemis标志的结果
-    */
+     * Artemis 网关签名：x-ca-签名 = 基础64(HMAC-SHA256(appsecret, 字符串转为标志))
+     * @param method 方法
+     * @param path 路径
+     * @param headers 头部
+     * @return Artemis标志的结果
+     */
     private String artemisSign(String method, String path, Map<String, String> headers) {
         String stringToSign = method + "\n"
                 + headers.getOrDefault("x-ca-key", "") + "\n"

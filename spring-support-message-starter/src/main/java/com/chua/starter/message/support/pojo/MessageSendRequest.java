@@ -4,18 +4,18 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 /**
-* 消息发送请求
-*
-* @since 2026/08/03
-* @author CH
+ * 消息发送请求
+ *
+ * @since 2026/08/03
+ * @author CH
  */
 @Data
 @Schema(description = "消息发送请求")
 public class MessageSendRequest {
 
     /**
-    * 接收人
-    */
+     * 接收人
+     */
     @Schema(description = "接收人")
     /** 目标 */
     private String[] target;

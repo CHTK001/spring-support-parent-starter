@@ -6,10 +6,10 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 /**
-* 监控模块独立测试启动类
-*
-* @since 2026/8/5
-* @author CH
+ * 监控模块独立测试启动类
+ *
+ * @since 2026/8/5
+ * @author CH
  */
 @SpringBootApplication
 @EnableTransactionManagement
@@ -17,10 +17,10 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 public class MonitorApplication {
 
     /**
-    * Main
-    *
-    * @param args 参数
-    */
+     * Main
+     *
+     * @param args 参数
+     */
     public static void main(String[] args) {
         SpringApplication.run(MonitorApplication.class, args);
     }

@@ -13,20 +13,20 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
-* 主机实时状态 → Socket 推送 + 告警规则评估桥接
-* <p>
-* 向 server-starter 的 {@link HostOnlineScheduler} 注册延迟/在线/采集 hooks：
-* <ul>
-*   <li>延迟 hook：实时延迟推送 socket + 喂入告警规则引擎（指标名 host.delay.ms）</li>
-*   <li>在线 hook：在线状态翻转推送 socket + 判定离线告警（指标名 host.online）</li>
-*   <li>采集 hook：采集完成使用率评估（指标名 host.cpu.usage / host.mem.usage / host.disk.usage）</li>
-* </ul>
-* 前端 subscribe("monitor", "host-delay" / "host-online") 接收推送；
-* 告警规则引擎未装配或 socket 未启用时静默跳过，不影响主链路。
-* </p>
-*
-* @author CH
-* @since 4.0.0.42
+ * 主机实时状态 → Socket 推送 + 告警规则评估桥接
+ * <p>
+ * 向 server-starter 的 {@link HostOnlineScheduler} 注册延迟/在线/采集 hooks：
+ * <ul>
+ *   <li>延迟 hook：实时延迟推送 socket + 喂入告警规则引擎（指标名 host.delay.ms）</li>
+ *   <li>在线 hook：在线状态翻转推送 socket + 判定离线告警（指标名 host.online）</li>
+ *   <li>采集 hook：采集完成使用率评估（指标名 host.cpu.usage / host.mem.usage / host.disk.usage）</li>
+ * </ul>
+ * 前端 subscribe("monitor", "host-delay" / "host-online") 接收推送；
+ * 告警规则引擎未装配或 socket 未启用时静默跳过，不影响主链路。
+ * </p>
+ *
+ * @author CH
+ * @since 4.0.0.42
  */
 @Slf4j
 @Configuration

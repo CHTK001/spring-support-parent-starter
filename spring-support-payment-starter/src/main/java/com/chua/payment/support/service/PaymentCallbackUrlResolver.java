@@ -9,9 +9,9 @@ import org.springframework.util.StringUtils;
 import java.util.Locale;
 
 /**
-* 统一生成支付回调地址
-* @author CH
-* @since 4.0.0
+ * 统一生成支付回调地址
+ * @author CH
+ * @since 4.0.0
  */
 @Component
 @RequiredArgsConstructor
@@ -38,26 +38,26 @@ public class PaymentCallbackUrlResolver {
     }
 
     /**
-    * 解析退税通知Url
-    *
-    * @param channel 通道
-    * @param merchantId merchantid
-    * @param refundNo 退税no
-    * @param fallbackNotifyUrl 降级通知url
-    * @return resolve退税通知url的结果
-    */
+     * 解析退税通知Url
+     *
+     * @param channel 通道
+     * @param merchantId merchantid
+     * @param refundNo 退税no
+     * @param fallbackNotifyUrl 降级通知url
+     * @return resolve退税通知url的结果
+     */
     public String resolveRefundNotifyUrl(MerchantChannel channel, Long merchantId, String refundNo, String fallbackNotifyUrl) {
         return firstNonBlank(defaultRefundNotifyUrl(channel, merchantId, refundNo), fallbackNotifyUrl);
     }
 
     /**
-    * 默认薪酬通知Url
-    *
-    * @param channel 通道
-    * @param merchant merchant
-    * @param orderNo 订单no
-    * @return 默认薪酬通知url的结果
-    */
+     * 默认薪酬通知Url
+     *
+     * @param channel 通道
+     * @param merchant merchant
+     * @param orderNo 订单no
+     * @return 默认薪酬通知url的结果
+     */
     public String defaultPayNotifyUrl(MerchantChannel channel, Merchant merchant, String orderNo) {
         if (channel == null || merchant == null || merchant.getId() == null || !StringUtils.hasText(orderNo)) {
             return null;
@@ -77,13 +77,13 @@ public class PaymentCallbackUrlResolver {
     }
 
     /**
-    * 默认退税通知Url
-    *
-    * @param channel 通道
-    * @param merchantId merchantid
-    * @param refundNo 退税no
-    * @return 默认退税通知url的结果
-    */
+     * 默认退税通知Url
+     *
+     * @param channel 通道
+     * @param merchantId merchantid
+     * @param refundNo 退税no
+     * @return 默认退税通知url的结果
+     */
     public String defaultRefundNotifyUrl(MerchantChannel channel, Long merchantId, String refundNo) {
         if (channel == null || merchantId == null || !StringUtils.hasText(refundNo)) {
             return null;
@@ -99,12 +99,12 @@ public class PaymentCallbackUrlResolver {
     }
 
     /**
-    * 默认wallet通知Url
-    *
-    * @param orderType 订单类型
-    * @param orderNo 订单no
-    * @return 默认wallet通知url的结果
-    */
+     * 默认wallet通知Url
+     *
+     * @param orderType 订单类型
+     * @param orderNo 订单no
+     * @return 默认wallet通知url的结果
+     */
     public String defaultWalletNotifyUrl(String orderType, String orderNo) {
         if (!StringUtils.hasText(orderType) || !StringUtils.hasText(orderNo)) {
             return null;
@@ -121,12 +121,12 @@ public class PaymentCallbackUrlResolver {
     }
 
     /**
-    * 默认wechat薪酬score通知Url
-    *
-    * @param channelId 通道标识
-    * @param outOrderNo 出订单no
-    * @return 默认wechat薪酬score通知url的结果
-    */
+     * 默认wechat薪酬score通知Url
+     *
+     * @param channelId 通道标识
+     * @param outOrderNo 出订单no
+     * @return 默认wechat薪酬score通知url的结果
+     */
     public String defaultWechatPayScoreNotifyUrl(Long channelId, String outOrderNo) {
         if (channelId == null || !StringUtils.hasText(outOrderNo)) {
             return null;
@@ -139,10 +139,10 @@ public class PaymentCallbackUrlResolver {
     }
 
     /**
-    * normalizedbaseurl
-    *
-    * @return normalizedBaseUrl的结果
-    */
+     * normalizedbaseurl
+     *
+     * @return normalizedBaseUrl的结果
+     */
     private String normalizedBaseUrl() {
         String baseUrl = paymentGlobalConfigService.getConfigEntity().getPaymentNotifyBaseUrl();
         if (!StringUtils.hasText(baseUrl)) {
@@ -152,11 +152,11 @@ public class PaymentCallbackUrlResolver {
     }
 
     /**
-    * 第一个nonblank
-    *
-    * @param values 值
-    * @return 第一个nonblank的结果
-    */
+     * 第一个nonblank
+     *
+     * @param values 值
+     * @return 第一个nonblank的结果
+     */
     private String firstNonBlank(String... values) {
         if (values == null) {
             return null;
@@ -170,11 +170,11 @@ public class PaymentCallbackUrlResolver {
     }
 
     /**
-    * 大写
-    *
-    * @param value 值
-    * @return 大写的结果
-    */
+     * 大写
+     *
+     * @param value 值
+     * @return 大写的结果
+     */
     private String upper(String value) {
         return value == null ? null : value.toUpperCase(Locale.ROOT);
     }

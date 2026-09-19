@@ -18,14 +18,14 @@ import java.util.concurrent.TimeUnit;
 import static com.chua.starter.common.support.constant.CacheConstant.*;
 
 /**
-* 缓存自动配置
-* <p>
-* 根据 {@link CacheProperties} 配置动态创建 Caffeine、Redis 以及多级缓存管理器。
-* 支持自定义缓存管理器 Bean 名称，便于 multi水平仪缓存管理器 按名称查找。
-* </p>
-*
-* @since 2024/7/22
-* @author CH
+ * 缓存自动配置
+ * <p>
+ * 根据 {@link CacheProperties} 配置动态创建 Caffeine、Redis 以及多级缓存管理器。
+ * 支持自定义缓存管理器 Bean 名称，便于 multi水平仪缓存管理器 按名称查找。
+ * </p>
+ *
+ * @since 2024/7/22
+ * @author CH
  */
 @Configuration
 @EnableConfigurationProperties(CacheProperties.class)
@@ -33,13 +33,13 @@ import static com.chua.starter.common.support.constant.CacheConstant.*;
 public class CacheConfiguration {
 
     /**
-    * Caffeine 缓存管理器
-    * <p>
-    * 当未显式定义 caffeine缓存管理器 Bean 时，根据 缓存属性 创建。
-    * </p>
-    * @param properties 属性
-    * @return caffeine缓存管理器的结果
-    */
+     * Caffeine 缓存管理器
+     * <p>
+     * 当未显式定义 caffeine缓存管理器 Bean 时，根据 缓存属性 创建。
+     * </p>
+     * @param properties 属性
+     * @return caffeine缓存管理器的结果
+     */
     @Bean(name = CacheProperties.CAFFEINE_BEAN_NAME)
     @ConditionalOnMissingBean(name = CacheProperties.CAFFEINE_BEAN_NAME)
     @ConditionalOnClass(Caffeine.class)
@@ -74,14 +74,14 @@ public class CacheConfiguration {
     }
 
     /**
-    * 多级缓存管理器
-    * <p>
-    * 作为主缓存管理器，按配置的层级顺序组合 Caffeine、Redis 等。
-    * 当未显式定义 multi水平仪缓存管理器 Bean 时创建。
-    * </p>
-    * @param applicationContext application上下文
-    * @return multi水平仪缓存管理器的结果
-    */
+     * 多级缓存管理器
+     * <p>
+     * 作为主缓存管理器，按配置的层级顺序组合 Caffeine、Redis 等。
+     * 当未显式定义 multi水平仪缓存管理器 Bean 时创建。
+     * </p>
+     * @param applicationContext application上下文
+     * @return multi水平仪缓存管理器的结果
+     */
     @Primary
     @Bean(name = CACHE_MANAGER_FOR_MULTI)
     @ConditionalOnMissingBean(name = CACHE_MANAGER_FOR_MULTI)
@@ -94,11 +94,11 @@ public class CacheConfiguration {
     }
 
     /**
-    * 租户缓存键生成器
-    * <p>
-    * 用于生成包含租户、应用、平台等上下文的缓存键。
-    * </p>
-    */
+     * 租户缓存键生成器
+     * <p>
+     * 用于生成包含租户、应用、平台等上下文的缓存键。
+     * </p>
+     */
     @Bean("tenantedKeyGenerator")
     @ConditionalOnMissingBean(name = "tenantedKeyGenerator")
     public TenantedKeyGenerator tenantedKeyGenerator(
@@ -113,11 +113,11 @@ public class CacheConfiguration {
     }
 
     /**
-    * 兼容旧版的自定义缓存键生成器 Bean（返回 简单Key生成器）。
-    *
-    * <p>保留供既有 @Cacheable(keyGenerator = "customTenantedKeyGenerator") 引用兼容。</p>
-    * @return 习俗tenantedKey生成器的结果
-    */
+     * 兼容旧版的自定义缓存键生成器 Bean（返回 简单Key生成器）。
+     *
+     * <p>保留供既有 @Cacheable(keyGenerator = "customTenantedKeyGenerator") 引用兼容。</p>
+     * @return 习俗tenantedKey生成器的结果
+     */
     @Bean("customTenantedKeyGenerator")
     @ConditionalOnMissingBean(name = "customTenantedKeyGenerator")
     public org.springframework.cache.interceptor.KeyGenerator customTenantedKeyGenerator() {
@@ -125,28 +125,28 @@ public class CacheConfiguration {
     }
 
     /**
-    * 自定义缓存注解解析器
-    * <p>
-    * 支持 Key 和 Key生成器 同时使用，默认使用 tenantedKey生成器。
-    * </p>
-    * @return 缓存习俗注解parser的结果
-    */
+     * 自定义缓存注解解析器
+     * <p>
+     * 支持 Key 和 Key生成器 同时使用，默认使用 tenantedKey生成器。
+     * </p>
+     * @return 缓存习俗注解parser的结果
+     */
     @Bean
     @ConditionalOnMissingBean(CacheCustomAnnotationParser.class)
     public CacheCustomAnnotationParser cacheCustomAnnotationParser() {
         /**
-        * 缓存习俗注解parser。
-        * @return 缓存习俗注解parser的结果
-        */
+         * 缓存习俗注解parser。
+         * @return 缓存习俗注解parser的结果
+         */
         return new CacheCustomAnnotationParser();
     }
 
 /**
-* 缓存操作模板
-* <p>
-* 提供手动缓存操作方法，内部自动使用 tenantedKey生成器 拼接完整缓存键，
-* 保证手动操作与 {@code @Cacheable} 等注解生成的 Key 一致。
-* </p>
+ * 缓存操作模板
+ * <p>
+ * 提供手动缓存操作方法，内部自动使用 tenantedKey生成器 拼接完整缓存键，
+ * 保证手动操作与 {@code @Cacheable} 等注解生成的 Key 一致。
+ * </p>
  */
 @Bean
 @ConditionalOnMissingBean(CacheTemplate.class)
@@ -155,21 +155,21 @@ public CacheTemplate cacheTemplate(
         MultiLevelCacheManager multiLevelCacheManager,
         TenantedKeyGenerator tenantedKeyGenerator) {
     /**
-    * 缓存template。
-    * @param multiLevelCacheManager multi水平仪缓存管理器
-    * @param tenantedKeyGenerator tenantedKey生成器
-    * @return 缓存template的结果
-    */
+     * 缓存template。
+     * @param multiLevelCacheManager multi水平仪缓存管理器
+     * @param tenantedKeyGenerator tenantedKey生成器
+     * @return 缓存template的结果
+     */
     return new CacheTemplate(multiLevelCacheManager, tenantedKeyGenerator);
 }
 
 /**
-* 缓存操作源（覆盖默认，使用自定义解析器）
-* <p>无条件创建并标记 @Primary，确保 CacheInterceptor 始终使用
-* 支持 Key 与 Key生成器 共用的 缓存习俗注解parser；
-* 若依赖 @条件onmissingBean 会被 @enable缓存 默认的标准解析器抢注，
-* 导致 Key+Key生成器 同时使用时报 illegal状态异常。</p>
-     */
+ * 缓存操作源（覆盖默认，使用自定义解析器）
+ * <p>无条件创建并标记 @Primary，确保 CacheInterceptor 始终使用
+ * 支持 Key 与 Key生成器 共用的 缓存习俗注解parser；
+ * 若依赖 @条件onmissingBean 会被 @enable缓存 默认的标准解析器抢注，
+ * 导致 Key+Key生成器 同时使用时报 illegal状态异常。</p>
+ */
     @Bean
     @Primary
     public org.springframework.cache.interceptor.CacheOperationSource customCacheOperationSource(
@@ -178,10 +178,10 @@ public CacheTemplate cacheTemplate(
     }
 
     /**
-    * 注册缓存模块服务信息。
-    *
-    * @return 服务信息贡献器
-    */
+     * 注册缓存模块服务信息。
+     *
+     * @return 服务信息贡献器
+     */
     @Bean
     public com.chua.starter.common.support.serviceinfo.ServiceInfoContributor cacheServiceInfoContributor() {
         return registry -> registry.registerFlag("cache", "缓存", true, "缓存模块");

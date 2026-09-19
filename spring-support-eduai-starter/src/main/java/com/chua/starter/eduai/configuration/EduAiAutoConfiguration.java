@@ -10,13 +10,13 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.scheduling.annotation.EnableAsync;
 
 /**
-* 教育AI模块自动配置
-* <p>
-* 自动扫描教育AI模块的 控制器 与 服务，并注册 映射器，
-* 提供题库管理、AI组卷、AI阅卷、知识库、错题库等 AI 教学能力。
-* </p>
-*
-* @since 4.0.0.42
+ * 教育AI模块自动配置
+ * <p>
+ * 自动扫描教育AI模块的 控制器 与 服务，并注册 映射器，
+ * 提供题库管理、AI组卷、AI阅卷、知识库、错题库等 AI 教学能力。
+ * </p>
+ *
+ * @since 4.0.0.42
  */
 @Slf4j
 @AutoConfiguration
@@ -34,17 +34,17 @@ import org.springframework.scheduling.annotation.EnableAsync;
 @EnableConfigurationProperties(EduAiProperties.class)
 @EnableAsync
 /**
-* eduaiauto配置类。
-*
-* @author CH
-* @since 4.0.0
+ * eduaiauto配置类。
+ *
+ * @author CH
+ * @since 4.0.0
  */
 public class EduAiAutoConfiguration {
 
     /**
-    * 注册教育AI模块的服务信息贡献者。
-    * @return eduAI服务信息contributor的结果
-    */
+     * 注册教育AI模块的服务信息贡献者。
+     * @return eduAI服务信息contributor的结果
+     */
     @Bean
     public ServiceInfoContributor eduAiServiceInfoContributor() {
         return registry -> {

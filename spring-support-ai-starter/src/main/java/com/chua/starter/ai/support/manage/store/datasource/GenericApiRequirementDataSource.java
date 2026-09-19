@@ -17,40 +17,40 @@ import java.util.List;
 import java.util.Map;
 
 /**
-* 通用 REST API 需求数据源提供方。
-*
-* <p>支持从任意 REST API 拉取需求数据（Jira、Notion、GitHub Issues、TAPD 等）。
-* 通过配置字段指定 API 端点、认证方式、字段映射规则。</p>
-*
-* <h3>配置字段（JSON 存入 sys_ai_data_source_config）：</h3>
-* <pre>
-* {
-*   "api_url":          "https://jira.example.com/rest/api/2/search",
-*   "api_method":       "GET",
-*   "api_auth_type":    "basic|bearer|token|none",
-*   "api_auth_value":   "user:password 或 token 值",
-*   "api_query_params": {"jql": "project=DEMO AND status != Done"},
-*   "api_headers":      {"X-Custom-Header": "value"},
-*   "field_mapping": {
-*     "title":       "summary",
-*     "content":     "description",
-*     "tag":         "labels",
-*     "status":      "status.name",
-*     "remote_id":   "key"
-*   },
-*   "status_map": {
-*     "To Do": "pending",
-*     "In Progress": "in_progress",
-*     "Done": "done"
-*   }
-* }
-* </pre>
-*
-* @since 4.0.0.42
-* @author CH
-* @param config 配置
-* @param lastSyncAt 最后一个同步at
-* @return 同步的结果
+ * 通用 REST API 需求数据源提供方。
+ *
+ * <p>支持从任意 REST API 拉取需求数据（Jira、Notion、GitHub Issues、TAPD 等）。
+ * 通过配置字段指定 API 端点、认证方式、字段映射规则。</p>
+ *
+ * <h3>配置字段（JSON 存入 sys_ai_data_source_config）：</h3>
+ * <pre>
+ * {
+ *   "api_url":          "https://jira.example.com/rest/api/2/search",
+ *   "api_method":       "GET",
+ *   "api_auth_type":    "basic|bearer|token|none",
+ *   "api_auth_value":   "user:password 或 token 值",
+ *   "api_query_params": {"jql": "project=DEMO AND status != Done"},
+ *   "api_headers":      {"X-Custom-Header": "value"},
+ *   "field_mapping": {
+ *     "title":       "summary",
+ *     "content":     "description",
+ *     "tag":         "labels",
+ *     "status":      "status.name",
+ *     "remote_id":   "key"
+ *   },
+ *   "status_map": {
+ *     "To Do": "pending",
+ *     "In Progress": "in_progress",
+ *     "Done": "done"
+ *   }
+ * }
+ * </pre>
+ *
+ * @since 4.0.0.42
+ * @author CH
+ * @param config 配置
+ * @param lastSyncAt 最后一个同步at
+ * @return 同步的结果
  */
 @Slf4j
 @Component
@@ -60,15 +60,15 @@ public class GenericApiRequirementDataSource implements IRequirementDataSource {
     private static final String TYPE = "generic"; // 类型
     private static final Duration HTTP_TIMEOUT = Duration.ofSeconds(30); // http超时
     /**
-    * 类型。
-    * @return 类型的结果
-    * @param config 配置
-    * @param lastSyncAt 最后一个同步at
-    */
+     * 类型。
+     * @return 类型的结果
+     * @param config 配置
+     * @param lastSyncAt 最后一个同步at
+     */
     private static final com.fasterxml.jackson.databind.ObjectMapper JSON = new com.fasterxml.jackson.databind.ObjectMapper();
 /**
-* 类型。
-* @return 类型的结果
+ * 类型。
+ * @return 类型的结果
  */
 
     @Override
@@ -187,11 +187,11 @@ public class GenericApiRequirementDataSource implements IRequirementDataSource {
     }
 
     /**
-    * 测试与数据源的连接是否可用。
-    *
-    * @param config 数据源配置
-    * @return 连接成功返回 true
-    */
+     * 测试与数据源的连接是否可用。
+     *
+     * @param config 数据源配置
+     * @return 连接成功返回 true
+     */
     @Override
     public boolean testConnection(Map<String, Object> config) {
         try {
@@ -215,10 +215,10 @@ public class GenericApiRequirementDataSource implements IRequirementDataSource {
     }
 
     /**
-    * 从 API 响应中提取记录列表，兼容多种常见格式。
-    * @param resp resp
-    * @return extractRecords的结果
-    */
+     * 从 API 响应中提取记录列表，兼容多种常见格式。
+     * @param resp resp
+     * @return extractRecords的结果
+     */
     @SuppressWarnings("unchecked")
     private List<Map<String, Object>> extractRecords(Map<String, Object> resp) {
         // 常见格式1: { "data": [...] }
@@ -254,11 +254,11 @@ public class GenericApiRequirementDataSource implements IRequirementDataSource {
 
     @SuppressWarnings("unchecked")
     /**
-    * 映射字段。
-    * @param raw raw
-    * @param fieldMapping 字段mapping
-    * @return 映射字段的结果
-    */
+     * 映射字段。
+     * @param raw raw
+     * @param fieldMapping 字段mapping
+     * @return 映射字段的结果
+     */
     private Map<String, Object> mapFields(Map<String, Object> raw, Map<String, String> fieldMapping) {
         Map<String, Object> mapped = new LinkedHashMap<>();
         if (fieldMapping == null) {
@@ -277,12 +277,12 @@ public class GenericApiRequirementDataSource implements IRequirementDataSource {
     }
 
     /**
-    * 通过点分路径从嵌套 映射 中取值：如 "状态.名称" → 映射.获取("状态").获取("名称")
-    *
-    * @param map 映射
-    * @param path 点分路径
-    * @return 路径处的值（不存在返回 null）
-    */
+     * 通过点分路径从嵌套 映射 中取值：如 "状态.名称" → 映射.获取("状态").获取("名称")
+     *
+     * @param map 映射
+     * @param path 点分路径
+     * @return 路径处的值（不存在返回 null）
+     */
     @SuppressWarnings("unchecked")
     private Object getByDotPath(Map<String, Object> map, String path) {
         if (map == null || path == null) {

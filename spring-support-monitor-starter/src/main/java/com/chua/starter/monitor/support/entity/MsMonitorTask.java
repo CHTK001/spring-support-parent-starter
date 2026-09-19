@@ -12,10 +12,10 @@ import lombok.EqualsAndHashCode;
 import java.time.LocalDateTime;
 
 /**
-* 监控采集任务实体
-*
-* @since 2026/8/4
-* @author CH
+ * 监控采集任务实体
+ *
+ * @since 2026/8/4
+ * @author CH
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

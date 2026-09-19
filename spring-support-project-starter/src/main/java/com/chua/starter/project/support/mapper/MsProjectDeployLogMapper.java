@@ -13,10 +13,10 @@ import org.apache.ibatis.annotations.Param;
 public interface MsProjectDeployLogMapper extends BaseMapper<MsProjectDeployLog> {
 
     /**
-    * 删除指定时间之前创建的部署日志（保留期清理用）
-    *
-    * @param beforeTime 时间界限
-    * @return 删除的行数
-    */
+     * 删除指定时间之前创建的部署日志（保留期清理用）
+     *
+     * @param beforeTime 时间界限
+     * @return 删除的行数
+     */
     int deleteByTimeBefore(@Param("beforeTime") java.time.LocalDateTime beforeTime);
 }

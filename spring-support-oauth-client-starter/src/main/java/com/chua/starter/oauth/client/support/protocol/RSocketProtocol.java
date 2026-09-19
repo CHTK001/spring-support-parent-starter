@@ -33,12 +33,12 @@ import java.time.Duration;
 import java.util.Map;
 
 /**
-* rSocket 协议实现
-* 使用 rSocket 进行 o认证 认证，支持响应式通信
-*
-* @版本 1.0.0
-* @since 2025-12-02
-* @author CH
+ * rSocket 协议实现
+ * 使用 rSocket 进行 o认证 认证，支持响应式通信
+ *
+ * @版本 1.0.0
+ * @since 2025-12-02
+ * @author CH
  */
 @Spi({"rsocket"})
 @Slf4j
@@ -47,21 +47,21 @@ public class RSocketProtocol extends AbstractProtocol {
     private volatile RSocket rSocket; // rSocket
 
     /**
-    * 构造函数
-    *
-    * @param authClientProperties 认证客户端配置
-    */
+     * 构造函数
+     *
+     * @param authClientProperties 认证客户端配置
+     */
     public RSocketProtocol(AuthClientProperties authClientProperties) {
         /**
-        * 父。
-        * @param authClientProperties 认证客户端属性
-        */
+         * 父。
+         * @param authClientProperties 认证客户端属性
+         */
         super(authClientProperties);
     }
 
     /**
-    * 初始化 rSocket 连接
-    */
+     * 初始化 rSocket 连接
+     */
     private void initializeRSocket() {
         if (rSocket == null || rSocket.isDisposed()) {
             synchronized (this) {
@@ -69,10 +69,10 @@ public class RSocketProtocol extends AbstractProtocol {
                     String selectedUrl = selectUrl();
                     if (selectedUrl == null) {
                         /**
-                        * illegal状态异常。
-                        * @param 服务器地址不存在" 服务器地址不存在"
-                        * @return illegal状态异常的结果
-                        */
+                         * illegal状态异常。
+                         * @param 服务器地址不存在" 服务器地址不存在"
+                         * @return illegal状态异常的结果
+                         */
                         throw new IllegalStateException("OAuth 服务器地址不存在");
                     }
 
@@ -152,24 +152,24 @@ public class RSocketProtocol extends AbstractProtocol {
                 String cacheKey = getCacheKey(new Cookie[] { cookie }, token);
                 if (hasCache(cacheKey)) {
                     /**
-                    * clear认证信息。
-                    * @param cacheKey 缓存Key
-                    */
+                     * clear认证信息。
+                     * @param cacheKey 缓存Key
+                     */
                     clearAuthenticationInformation(cacheKey);
                 }
             } else if (upgradeType == UpgradeType.REFRESH) {
                 String cacheKey = getCacheKey(new Cookie[] { cookie }, token);
                 if (hasCache(cacheKey)) {
                     /**
-                    * clear认证信息。
-                    * @param cacheKey 缓存Key
-                    */
+                     * clear认证信息。
+                     * @param cacheKey 缓存Key
+                     */
                     clearAuthenticationInformation(cacheKey);
                 }
                 /**
-                * invalidate缓存。
-                * @param token 令牌
-                */
+                 * invalidate缓存。
+                 * @param token 令牌
+                 */
                 invalidateCache(token);
             }
         }
@@ -178,12 +178,12 @@ public class RSocketProtocol extends AbstractProtocol {
 
     @Override
     /**
-    * 获取access令牌
-    * @param username 用户名
-    * @param password 密码
-    * @param authType 认证类型
-    * @param ext ext
-    */
+     * 获取access令牌
+     * @param username 用户名
+     * @param password 密码
+     * @param authType 认证类型
+     * @param ext ext
+     */
     public LoginAuthResult getAccessToken(String username, String password, AuthType authType,
             Map<String, Object> ext) {
         JsonObject jsonObject = new JsonObject();
@@ -265,8 +265,8 @@ public class RSocketProtocol extends AbstractProtocol {
     */
     protected AuthenticationInformation sendRSocketRequest(String route, JsonObject jsonObject, UpgradeType upgradeType) {
         /**
-        * 初始化rSocket。
-        */
+         * 初始化rSocket。
+         */
         initializeRSocket();
 
         try {
@@ -344,10 +344,10 @@ public class RSocketProtocol extends AbstractProtocol {
     }
 
     /**
-    * 提取主机名
-    * @param url url
-    * @return extract主机的结果
-    */
+     * 提取主机名
+     * @param url url
+     * @return extract主机的结果
+     */
     private String extractHost(String url) {
         if (url.startsWith("rsocket://")) {
             url = url.substring(10);
@@ -371,11 +371,11 @@ public class RSocketProtocol extends AbstractProtocol {
     }
 
     /**
-    * 提取端口
-    * @param url url
-    * @param defaultPort 默认端口
-    * @return extract端口的结果
-    */
+     * 提取端口
+     * @param url url
+     * @param defaultPort 默认端口
+     * @return extract端口的结果
+     */
     private int extractPort(String url, int defaultPort) {
         if (url.startsWith("rsocket://")) {
             url = url.substring(10);
@@ -400,8 +400,8 @@ public class RSocketProtocol extends AbstractProtocol {
     }
 
     /**
-    * 关闭 rSocket 连接
-    */
+     * 关闭 rSocket 连接
+     */
     public void shutdown() {
         if (rSocket != null && !rSocket.isDisposed()) {
             rSocket.dispose();

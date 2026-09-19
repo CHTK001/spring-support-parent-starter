@@ -12,13 +12,13 @@ import java.io.Serial;
 import java.io.Serializable;
 
 /**
-* sys_作业_cluster 集群选主表实体。
-*
-* <p>字段以表名 {@code sys_job_cluster} 作为前缀;
-* 审计字段来自 {@link SysBase}。</p>
-*
-* @since 4.0.0.42
-* @author CH
+ * sys_作业_cluster 集群选主表实体。
+ *
+ * <p>字段以表名 {@code sys_job_cluster} 作为前缀;
+ * 审计字段来自 {@link SysBase}。</p>
+ *
+ * @since 4.0.0.42
+ * @author CH
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -26,8 +26,8 @@ import java.io.Serializable;
 public class ClusterEntity extends SysBase implements Serializable {
 
     /**
-    * 序列化版本
-    */
+     * 序列化版本
+     */
     @Serial
     /** 串行版本UID */
     private static final long serialVersionUID = 1L;

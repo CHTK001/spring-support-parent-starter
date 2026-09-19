@@ -9,12 +9,12 @@ import java.util.Comparator;
 import java.util.List;
 
 /**
-* RPC 代理工厂管理器
-* <p>按优先级尝试不同的代理工厂创建代理</p>
-*
-* @版本 1.0.0
-* @since 2024/04/07
-* @author CH
+ * RPC 代理工厂管理器
+ * <p>按优先级尝试不同的代理工厂创建代理</p>
+ *
+ * @版本 1.0.0
+ * @since 2024/04/07
+ * @author CH
  */
 public class RpcProxyFactoryManager {
 
@@ -40,24 +40,24 @@ public class RpcProxyFactoryManager {
     }
 
     /**
-    * 获取Instance
-    *
-    * @return 获取instance的结果
-    */
+     * 获取Instance
+     *
+     * @return 获取instance的结果
+     */
     public static RpcProxyFactoryManager getInstance() {
         return INSTANCE;
     }
 
     /**
-    * 创建代理对象
-    * <p>按优先级依次尝试各代理工厂，直到成功创建</p>
-    *
-    * @param classLoader 类加载器
-    * @param interfaces  接口列表
-    * @param handler     调用处理器
-    * @return 代理对象
-    * @throws RpcProxyCreationException 如果所有工厂都创建失败
-    */
+     * 创建代理对象
+     * <p>按优先级依次尝试各代理工厂，直到成功创建</p>
+     *
+     * @param classLoader 类加载器
+     * @param interfaces  接口列表
+     * @param handler     调用处理器
+     * @return 代理对象
+     * @throws RpcProxyCreationException 如果所有工厂都创建失败
+     */
     public Object createProxy(ClassLoader classLoader, List<Class<?>> interfaces, InvocationHandler handler) {
         Exception lastException = null;
 
@@ -76,19 +76,19 @@ public class RpcProxyFactoryManager {
         }
 
         /**
-        * rpc代理创建异常。
-        * @param interfaces 接口
-        * @param lastException 最后一个异常
-        * @return rpc代理创建异常的结果
-        */
+         * rpc代理创建异常。
+         * @param interfaces 接口
+         * @param lastException 最后一个异常
+         * @return rpc代理创建异常的结果
+         */
         throw new RpcProxyCreationException("Failed to create proxy with all available factories. Interfaces: " + interfaces, lastException);
     }
 
     /**
-    * 注册自定义代理工厂
-    *
-    * @param factory 代理工厂
-    */
+     * 注册自定义代理工厂
+     *
+     * @param factory 代理工厂
+     */
     public void registerFactory(RpcProxyFactory factory) {
         factories.add(factory);
         factories.sort(Comparator.comparingInt(RpcProxyFactory::getOrder));

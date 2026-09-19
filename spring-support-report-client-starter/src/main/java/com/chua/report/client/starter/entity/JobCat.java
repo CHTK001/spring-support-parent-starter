@@ -6,11 +6,11 @@ import java.io.Serializable;
 import java.util.Date;
 
 /**
-* 作业日志查询请求
-*
-* @版本 1.0.0
-* @since 2024/12/06
-* @author CH
+ * 作业日志查询请求
+ *
+ * @版本 1.0.0
+ * @since 2024/12/06
+ * @author CH
  */
 @Data
 public class JobCat implements Serializable {
@@ -24,12 +24,12 @@ public class JobCat implements Serializable {
     private Integer logId;
 
     /**
-    * 起始行号
-    */
+     * 起始行号
+     */
     private Integer fromLineNum;
 
     /**
-    * 触发时间
-    */
+     * 触发时间
+     */
     private Date date;
 }
