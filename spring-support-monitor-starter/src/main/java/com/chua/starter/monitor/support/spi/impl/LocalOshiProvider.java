@@ -1,10 +1,20 @@
 package com.chua.starter.monitor.support.spi.impl;
 
+import com.chua.common.support.spi.annotations.Spi;
+import com.chua.spring.support.configuration.SpringBeanUtils;
+import com.chua.starter.monitor.support.model.DiskRowVO;
+import com.chua.starter.monitor.support.model.EnvVarVO;
+import com.chua.starter.monitor.support.model.FileEntryVO;
+import com.chua.starter.monitor.support.model.HostInfoVO;
+import com.chua.starter.monitor.support.model.NetProcessRowVO;
+import com.chua.starter.monitor.support.model.NetworkInterfaceRowVO;
+import com.chua.starter.monitor.support.model.ProcessRowVO;
+import com.chua.starter.monitor.support.model.ServiceRowVO;
 import com.chua.starter.monitor.support.service.LocalSystemInfoService;
+import com.chua.starter.monitor.support.spi.Platforms;
 import com.chua.starter.monitor.support.spi.SystemInfoProvider;
 import com.chua.starter.server.support.entity.MsServerHost;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Component;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -12,25 +22,43 @@ import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
-import java.util.*;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.List;
 
 /**
- * 本机 OSHI 系统信息 Provider（优先级最高）。
+ * 本机 OSHI 系统信息 Provider（SPI 优先级最高）。
  *
- * <p>当目标主机地址为回环地址或本机网卡地址时命中，数据由
- * {@link LocalSystemInfoService} 直接采集。</p>
+ * <p>当目标主机地址为回环地址或本机网卡地址时命中，数据由 {@link LocalSystemInfoService} 采集；
+ * 文件、环境变量与命令执行走 JDK 本地能力。</p>
  *
  * @author CH
  * @since 4.0.0.42
  */
-@Component
-@RequiredArgsConstructor
+@Slf4j
+@Spi(value = "local", order = 400)
 public class LocalOshiProvider implements SystemInfoProvider {
 
     /**
-     * 本机系统信息采集服务
-    */
-    private final LocalSystemInfoService localService;
+     * 本机采集服务，首次使用时从 Spring 容器解析
+     */
+    private volatile LocalSystemInfoService resolvedService;
+
+    /**
+     * 懒取本机系统信息采集服务。
+     *
+     * @return 采集服务
+     */
+    private LocalSystemInfoService localService() {
+        LocalSystemInfoService service = resolvedService;
+        if (service == null) {
+            service = SpringBeanUtils.getBean(LocalSystemInfoService.class);
+            resolvedService = service;
+        }
+        return service;
+    }
 
     /**
      * 目标主机是否为本机。
@@ -40,78 +68,93 @@ public class LocalOshiProvider implements SystemInfoProvider {
      */
     @Override
     public boolean supports(MsServerHost host) {
-        if (host.getServerHostAddress() == null) {
+        if (host == null || host.getServerHostAddress() == null) {
             return false;
         }
         try {
             String addr = host.getServerHostAddress();
-            if (addr.equals("127.0.0.1") || addr.equals("localhost")) {
+            if ("127.0.0.1".equals(addr) || "localhost".equals(addr)) {
                 return true;
             }
             for (NetworkInterface ni : Collections.list(NetworkInterface.getNetworkInterfaces())) {
                 for (InetAddress ia : Collections.list(ni.getInetAddresses())) {
-                    if (addr.equals(ia.getHostAddress())) return true;
+                    if (addr.equals(ia.getHostAddress())) {
+                        return true;
+                    }
                 }
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+            // 枚举本机网卡失败只影响本机判定，不影响其他通道
+        }
         return false;
     }
 
+    /**
+     * 本机通道直接读 JVM 的操作系统属性。
+     *
+     * @param host 目标主机
+     * @return WINDOWS / LINUX / MAC
+     */
     @Override
-    public Map<String, Object> hostInfo(MsServerHost host) {
-        return localService.getHostInfo();
+    public String platform(MsServerHost host) {
+        return Platforms.normalize(System.getProperty("os.name"));
     }
 
     @Override
-    public List<Map<String, Object>> processes(MsServerHost host, int page, int pageSize) {
-        return localService.getProcesses("", Math.max(pageSize, 500));
+    public HostInfoVO hostInfo(MsServerHost host) {
+        return localService().getHostInfo();
     }
 
     @Override
-    public List<Map<String, Object>> services(MsServerHost host, int page, int pageSize) {
-        List<Map<String, Object>> all = localService.getServices();
+    public List<ProcessRowVO> processes(MsServerHost host, int page, int pageSize) {
+        return localService().getProcesses("", Math.max(pageSize, 500));
+    }
+
+    @Override
+    public List<ServiceRowVO> services(MsServerHost host, int page, int pageSize) {
+        List<ServiceRowVO> all = localService().getServices();
         int from = (page - 1) * pageSize;
-        return from >= all.size() ? Collections.emptyList() : all.subList(from, Math.min(from + pageSize, all.size()));
+        return from >= all.size() ? Collections.emptyList()
+                : new ArrayList<>(all.subList(from, Math.min(from + pageSize, all.size())));
     }
 
     @Override
-    public List<Map<String, Object>> disks(MsServerHost host) {
-        return localService.getDisks();
+    public List<DiskRowVO> disks(MsServerHost host) {
+        return localService().getDisks();
     }
 
     @Override
-    public List<Map<String, Object>> networkInterfaces(MsServerHost host) {
-        return localService.getNetworkInterfaces();
+    public List<NetworkInterfaceRowVO> networkInterfaces(MsServerHost host) {
+        return localService().getNetworkInterfaces();
     }
 
     @Override
-    public List<Map<String, Object>> netProcesses(MsServerHost host) {
-        return localService.getNetworkConnections();
+    public List<NetProcessRowVO> netProcesses(MsServerHost host) {
+        return localService().getNetworkConnections();
     }
 
     @Override
-    public List<Map<String, Object>> files(MsServerHost host, String path) {
-        List<Map<String, Object>> list = new ArrayList<>();
+    public List<FileEntryVO> files(MsServerHost host, String path) {
+        List<FileEntryVO> list = new ArrayList<>();
         File dir = new File(path);
-        File[] files = dir.listFiles();
-        if (files == null) {
+        File[] children = dir.listFiles();
+        if (children == null) {
             return list;
         }
-        for (File f : files) {
-            Map<String, Object> m = new LinkedHashMap<>();
-            m.put("name", f.getName());
-            m.put("isDir", f.isDirectory());
-            m.put("size", f.length());
-            m.put("modified", new Date(f.lastModified()).toString());
-            m.put("owner", System.getProperty("user.name"));
-            list.add(m);
+        for (File f : children) {
+            FileEntryVO vo = new FileEntryVO();
+            vo.setName(f.getName());
+            vo.setDirectory(f.isDirectory());
+            vo.setSize(f.length());
+            vo.setModified(new Date(f.lastModified()).toString());
+            vo.setOwner(System.getProperty("user.name"));
+            list.add(vo);
         }
         list.sort((a, b) -> {
-            boolean ad = (boolean) a.get("isDir"), bd = (boolean) b.get("isDir");
-            if (ad != bd) {
-                return ad ? -1 : 1;
+            if (a.isDirectory() != b.isDirectory()) {
+                return a.isDirectory() ? -1 : 1;
             }
-            return ((String) a.get("name")).compareToIgnoreCase((String) b.get("name"));
+            return a.getName().compareToIgnoreCase(b.getName());
         });
         return list;
     }
@@ -141,24 +184,28 @@ public class LocalOshiProvider implements SystemInfoProvider {
 
     @Override
     public String exec(MsServerHost host, String cmd) {
+        // 经 shell 执行：管控端下发的命令普遍带管道、&& 与引号
+        String[] shell;
+        if (Platforms.WINDOWS.equals(platform(host))) {
+            shell = new String[]{"cmd.exe", "/c", "chcp 65001 >nul && " + cmd};
+        } else {
+            shell = new String[]{"/bin/sh", "-c", cmd};
+        }
         try {
-            Process p = Runtime.getRuntime().exec(cmd);
-            byte[] out = p.getInputStream().readAllBytes();
-            return new String(out);
+            ProcessBuilder builder = new ProcessBuilder(shell);
+            builder.redirectErrorStream(true);
+            Process process = builder.start();
+            String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+            process.waitFor();
+            return output;
         } catch (Exception e) {
+            log.warn("[local] 命令执行失败 cmd={}: {}", cmd, e.getMessage());
             return "";
         }
     }
 
     @Override
-    public List<Map<String, Object>> env(MsServerHost host) {
-        List<Map<String, Object>> list = new ArrayList<>();
-        System.getenv().forEach((k, v) -> {
-            Map<String, Object> m = new LinkedHashMap<>();
-            m.put("name", k);
-            m.put("value", v);
-            list.add(m);
-        });
-        return list;
+    public List<EnvVarVO> env(MsServerHost host) {
+        return localService().getEnvVars();
     }
 }

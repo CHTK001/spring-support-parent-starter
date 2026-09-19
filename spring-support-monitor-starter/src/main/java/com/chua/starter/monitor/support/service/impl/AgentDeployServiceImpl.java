@@ -3,6 +3,8 @@ package com.chua.starter.monitor.support.service.impl;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.chua.starter.monitor.support.config.AgentDeployProperties;
+import com.chua.starter.monitor.support.model.AgentDeployProgressVO;
+import com.chua.starter.monitor.support.model.AgentHealthVO;
 import com.chua.starter.monitor.support.service.AgentDeployService;
 import com.chua.starter.monitor.support.service.AgentHttpClient;
 import com.chua.starter.server.support.entity.MsServerHost;
@@ -25,9 +27,7 @@ import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -261,8 +261,8 @@ public class AgentDeployServiceImpl implements AgentDeployService {
         Path artifact = resolveArtifact();
         String targetVersion = readArtifactVersion(artifact);
 
-        Map<String, Object> before = agentClient.health(session.host);
-        String currentVersion = before == null ? "" : nullToEmpty(before.get("version"));
+        AgentHealthVO before = agentClient.health(session.host);
+        String currentVersion = before == null ? "" : nullToEmpty(before.version());
         push(hostId, 12, "当前版本 " + (currentVersion.isEmpty() ? "未知/不可达" : currentVersion)
                 + " → 目标 " + nullToEmpty(targetVersion), "info");
         if (!currentVersion.isEmpty() && currentVersion.equals(targetVersion)) {
@@ -363,22 +363,22 @@ public class AgentDeployServiceImpl implements AgentDeployService {
     private void verifyHealth(Session session, String label, String expectVersion) {
         Long hostId = session.host.getId();
         push(hostId, 84, "等待 agent 就绪（/health）...", "info");
-        Map<String, Object> health = agentClient.awaitHealthy(session.host, properties.getHealthWaitSeconds(), expectVersion);
+        AgentHealthVO health = agentClient.awaitHealthy(session.host, properties.getHealthWaitSeconds(), expectVersion);
         if (health == null) {
             markFailure(hostId, label + "失败：agent 启动后 " + properties.getHealthWaitSeconds() + "s 内未响应 /health");
             throw new IllegalStateException(label + "失败：agent 未响应 /health（端口 "
                     + agentClient.portOf(session.host) + "），请检查远端 Java 与服务日志");
         }
-        if (expectVersion != null && !expectVersion.isBlank() && !expectVersion.equals(nullToEmpty(health.get("version")))) {
-            markFailure(hostId, label + "失败：版本仍为 " + nullToEmpty(health.get("version")));
+        if (expectVersion != null && !expectVersion.isBlank() && !expectVersion.equals(nullToEmpty(health.version()))) {
+            markFailure(hostId, label + "失败：版本仍为 " + nullToEmpty(health.version()));
             throw new IllegalStateException(label + "失败：期望版本 " + expectVersion
-                    + "，实际 " + nullToEmpty(health.get("version")));
+                    + "，实际 " + nullToEmpty(health.version()));
         }
         MsServerHost host = session.host;
         host.setServerHostAgentInstalled(1);
         host.setServerHostAgentEnabled(1);
         host.setServerHostAgentPort(agentClient.portOf(host));
-        host.setServerHostAgentVersion(nullToEmpty(health.get("version")));
+        host.setServerHostAgentVersion(nullToEmpty(health.version()));
         host.setServerHostAgentTime(LocalDateTime.now());
         hostMapper.updateById(host);
         // 成功后清掉历史失败原因（updateById 跳过 null，必须显式置空）
@@ -822,13 +822,9 @@ public class AgentDeployServiceImpl implements AgentDeployService {
      */
     private void push(Long hostId, int progress, String message, String status) {
         try {
-            Map<String, Object> data = new LinkedHashMap<>(6);
-            data.put("hostId", hostId);
-            data.put("progress", progress);
-            data.put("message", message);
-            data.put("status", status);
-            data.put("timestamp", System.currentTimeMillis());
-            pushService.broadcast(EVENT_DEPLOY, data, hostId == null ? null : String.valueOf(hostId));
+            pushService.broadcast(EVENT_DEPLOY,
+                    new AgentDeployProgressVO(hostId, progress, message, status, System.currentTimeMillis()),
+                    hostId == null ? null : String.valueOf(hostId));
         } catch (Exception ignore) {
             // socket 未启用时静默，不影响部署本身
         }

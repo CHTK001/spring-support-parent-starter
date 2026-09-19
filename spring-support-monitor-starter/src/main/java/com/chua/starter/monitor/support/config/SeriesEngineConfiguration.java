@@ -3,24 +3,24 @@ package com.chua.starter.monitor.support.config;
 import com.chua.common.support.lang.datasource.engine.Engine;
 import com.chua.common.support.lang.datasource.series.SeriesEngine;
 import com.chua.common.support.lang.datasource.series.impl.DataSourceSeriesEngine;
-import com.chua.starter.monitor.support.spi.MetricPoint;
-import com.chua.starter.monitor.support.spi.MetricTimeSeriesProvider;
+import com.chua.common.support.spi.ServiceProvider;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 
-import java.util.Collections;
-import java.util.List;
+import java.util.Properties;
 
 /**
- * 时序引擎配置。
+ * 时序引擎装配。
  *
- * <p>按 {@code monitor.timeseries.engine} 配置初始化对应的 {@link SeriesEngine} Spring Bean：</p>
+ * <p>全系统只有一个时序契约 {@link SeriesEngine}，按 {@code monitor.timeseries.engine} 装配唯一实现：</p>
  * <ul>
- *   <li>{@code datasource}：JDBC DataSource 存储（用 Engine + SqlExecutor 直写明细表）</li>
- *   <li>{@code influxdb} / {@code redis}：桥接到已装配的 {@link MetricTimeSeriesProvider}</li>
- *   <li>{@code none} 或依赖缺失：空实现（不影响主链路）</li>
+ *   <li>{@code datasource}：JDBC 明细表，需要容器里的 {@link Engine} 数据源引擎，故由 Spring 构造</li>
+ *   <li>{@code influxdb} / {@code redis}：走自研 SPI 发现（各 starter 的
+ *       {@code META-INF/extensions/…SeriesEngine}），以 {@link Properties} 传连接参数</li>
+ *   <li>{@code none} / 空 / 扩展缺失：空实现，保证消费方注入不为 null</li>
  * </ul>
  *
  * @author CH
@@ -31,111 +31,104 @@ import java.util.List;
 public class SeriesEngineConfiguration {
 
     /**
-     * 初始化 SeriesEngine：datasource 走 JDBC 明细表，其余配置桥接到时序提供者。
+     * JDBC 明细表引擎名
+     */
+    private static final String ENGINE_DATASOURCE = "datasource";
+
+    /**
+     * Redis 引擎名
+     */
+    private static final String ENGINE_REDIS = "redis";
+
+    /**
+     * 装配唯一时序引擎。
      *
-     * @param properties 时序配置
-     * @param engine     数据源引擎（可选，仅 datasource 使用）
-     * @param providers  已装配的时序提供者（可为空）
-     * @return SeriesEngine Bean（永不为 null）
+     * @param properties  时序配置
+     * @param engine      数据源引擎（可选，仅 datasource 使用）
+     * @param environment 容器环境（redis 复用 spring.data.redis 连接参数）
+     * @return SeriesEngine Bean，永不为 null
      */
     @Bean
     public SeriesEngine seriesEngine(MonitorTimeseriesProperties properties,
                                      @Autowired(required = false) Engine engine,
-                                     @Autowired(required = false) List<MetricTimeSeriesProvider> providers) {
-        String selected = properties.getEngine() == null ? "" : properties.getEngine().trim().toLowerCase();
-        if ("datasource".equals(selected)) {
+                                     Environment environment) {
+        String selected = normalize(properties.getEngine());
+        if (selected.isEmpty() || "none".equals(selected)) {
+            log.info("[SeriesEngine] 未启用时序双写（engine={}）", properties.getEngine());
+            return new NoopSeriesEngine("none");
+        }
+        if (ENGINE_DATASOURCE.equals(selected)) {
             if (engine == null) {
                 log.warn("[SeriesEngine] engine=datasource 但未找到 Engine Bean，时序存储不可用");
                 return new NoopSeriesEngine(selected);
             }
-            log.info("[SeriesEngine] 初始化 DataSourceSeriesEngine（JDBC 时序存储）");
+            log.info("[SeriesEngine] 装配 DataSourceSeriesEngine（JDBC 明细表）");
             return new DataSourceSeriesEngine(engine);
         }
-        MetricTimeSeriesProvider provider = resolveProvider(selected, providers);
-        if (provider == null) {
-            log.info("[SeriesEngine] 时序引擎 {} 无可用实现，装配空实现", selected);
+
+        SeriesEngine seriesEngine = ServiceProvider.of(SeriesEngine.class)
+                .getNewExtension(selected, spiProperties(selected, properties, environment));
+        if (seriesEngine == null) {
+            log.warn("[SeriesEngine] 扩展点无 engine={} 的实现（检查对应 starter 与注册文件），装配空实现", selected);
             return new NoopSeriesEngine(selected);
         }
-        log.info("[SeriesEngine] 桥接 SeriesEngine 到提供者 {}", provider.engine());
-        return new ProviderBackedSeriesEngine(provider);
+        log.info("[SeriesEngine] 装配 {}（engine={}，可用={})",
+                seriesEngine.getClass().getSimpleName(), seriesEngine.engine(), seriesEngine.isAvailable());
+        return seriesEngine;
     }
 
     /**
-     * 按配置选择引擎标识匹配且可用的提供者（可用性每次调用时动态复核）。
+     * 组装 SPI 构造参数：各引擎的 url 语义不同，redis 取容器已配的 Redis 地址。
      *
-     * @param selected  配置的引擎名
-     * @param providers 已装配的提供者列表
-     * @return 匹配的提供者，无则 空
+     * @param selected    配置的引擎名
+     * @param properties  时序配置
+     * @param environment 容器环境
+     * @return 构造参数
      */
-    private MetricTimeSeriesProvider resolveProvider(String selected, List<MetricTimeSeriesProvider> providers) {
-        if (selected.isEmpty() || "none".equals(selected) || providers == null) {
-            return null;
+    private Properties spiProperties(String selected, MonitorTimeseriesProperties properties, Environment environment) {
+        Properties props = new Properties();
+        if (ENGINE_REDIS.equals(selected)) {
+            props.setProperty("url", redisUrl(environment));
+            return props;
         }
-        for (MetricTimeSeriesProvider provider : providers) {
-            if (selected.equals(provider.engine())) {
-                return provider;
-            }
-        }
-        return null;
+        props.setProperty("url", properties.getUrl());
+        props.setProperty("database", properties.getDatabase());
+        return props;
     }
 
     /**
-     * 将 {@link MetricTimeSeriesProvider} 适配为 {@link SeriesEngine} 契约。
+     * 从 {@code spring.data.redis.*} 拼出 Lettuce 连接串，与告警静默期共用同一 Redis。
+     *
+     * @param environment 容器环境
+     * @return redis:// 或 rediss:// 连接串
      */
-    private static final class ProviderBackedSeriesEngine implements SeriesEngine {
-
-        /**
-         * 被适配的提供者
-        */
-        private final MetricTimeSeriesProvider provider;
-
-        /**
-         * 构造桥接引擎。
-         *
-         * @param provider 提供者
-         */
-        private ProviderBackedSeriesEngine(MetricTimeSeriesProvider provider) {
-            this.provider = provider;
-        }
-
-        @Override
-        public String engine() {
-            return provider.engine();
-        }
-
-        @Override
-        public boolean isAvailable() {
-            return provider.isAvailable();
-        }
-
-        @Override
-        public void writePoint(String target, Long monitorId, String metricName, double value, long timestamp) {
-            if (target == null || monitorId == null || metricName == null) {
-                return;
-            }
-            MetricPoint point = MetricPoint.builder()
-                    .metricName(metricName)
-                    .value(value)
-                    .targetTable(target)
-                    .tags(Collections.emptyMap())
-                    .build();
-            provider.writePoint(monitorId, point, timestamp);
-        }
-
-        @Override
-        public List<List<Object>> series(String target, Long monitorId, int hours, String window) {
-            return provider.series(target, monitorId, hours, window);
-        }
+    private String redisUrl(Environment environment) {
+        String host = environment.getProperty("spring.data.redis.host", "127.0.0.1");
+        String port = environment.getProperty("spring.data.redis.port", "6379");
+        String password = environment.getProperty("spring.data.redis.password", "");
+        boolean ssl = Boolean.parseBoolean(environment.getProperty("spring.data.redis.ssl.enabled", "false"));
+        String authority = password.isEmpty() ? "" : ":" + password + "@";
+        return (ssl ? "rediss://" : "redis://") + authority + host + ":" + port;
     }
 
     /**
-     * 时序存储空实现：配置为 none 或依赖缺失时装配，保证消费方注入不为 null。
+     * 归一化引擎名。
+     *
+     * @param engine 配置值
+     * @return 去空白转小写后的引擎名
+     */
+    private static String normalize(String engine) {
+        return engine == null ? "" : engine.trim().toLowerCase();
+    }
+
+    /**
+     * 时序存储空实现：配置为 none 或实现缺失时装配，保证消费方注入不为 null。
      */
     private static final class NoopSeriesEngine implements SeriesEngine {
 
         /**
          * 配置的引擎名
-        */
+         */
         private final String engineName;
 
         /**
@@ -163,8 +156,8 @@ public class SeriesEngineConfiguration {
         }
 
         @Override
-        public List<List<Object>> series(String target, Long monitorId, int hours, String window) {
-            return List.of();
+        public java.util.List<java.util.List<Object>> series(String target, Long monitorId, int hours, String window) {
+            return java.util.List.of();
         }
     }
 }

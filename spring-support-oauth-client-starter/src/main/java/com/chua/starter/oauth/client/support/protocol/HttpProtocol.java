@@ -177,16 +177,18 @@ public class HttpProtocol extends AbstractProtocol {
         jsonObject.put("x-oauth-auth-type", authTypeCode);
         // 将 ext 中携带的浏览器/系统信息同步到请求体，方便服务端记录登录日志
         if (ext != null) {
-            jsonObject.put("x-oauth-ext", ext);
-            if (!ext.containsKey("ua")) {
+            // ext 由调用方持有，可能是不可变映射，只能复制后补 ua
+            Map<String, Object> payload = new java.util.HashMap<>(ext);
+            if (!payload.containsKey("ua")) {
                 jakarta.servlet.http.HttpServletRequest request = RequestUtils.getRequest();
                 if (request != null) {
                     String ua = request.getHeader("User-Agent");
                     if (StringUtils.isNotBlank(ua)) {
-                        ext.put("ua", ua);
+                        payload.put("ua", ua);
                     }
                 }
             }
+            jsonObject.put("x-oauth-ext", payload);
         } else {
             jakarta.servlet.http.HttpServletRequest request = RequestUtils.getRequest();
             Map<String, Object> newExt = new java.util.HashMap<>();

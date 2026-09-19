@@ -4,7 +4,8 @@ package com.chua.starter.monitor.support.service.alarm;
  * 告警通知发送器 SPI
  * <p>
  * 告警事件真实触发后由引擎回调；实现方可对接钉钉/飞书/webhook 等渠道。
- * 通过 Spring Bean 收集全部实现，逐一投递，单个渠道失败不影响其他渠道。
+ * 实现类标注 {@code @Spi} 并登记到 {@code META-INF/extensions} 由扩展点发现，
+ * 引擎逐一投递，单个渠道失败不影响其他渠道。
  * </p>
  *
  * @author CH

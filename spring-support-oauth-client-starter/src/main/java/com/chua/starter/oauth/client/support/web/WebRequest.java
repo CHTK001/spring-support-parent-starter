@@ -165,17 +165,9 @@ public class WebRequest {
             try {
                 handlerMethod = (HandlerMethod) requestMappingHandlerMapping.getHandler(request).getHandler();
             } catch (HttpRequestMethodNotSupportedException exception) {
+                // 路径有处理器但方法不支持：不是白名单命中，保持 handlerMethod 为空继续按需要认证处理，
+                // 认证通过后由 SpringMVC 返回 405。在此抛运行时异常会让鉴权层把 405 变成 500
                 log.warn("[WebRequest白名单]请求方法不支持 - URI: {}, 方法: {}", uri, request.getMethod());
-                try {
-                    throw exception;
-                } catch (HttpRequestMethodNotSupportedException e) {
-                    /**
-                     * runtime异常。
-                     * @param e.getMessage( e.获取消息(
-                     * @return runtime异常的结果
-                     */
-                    throw new RuntimeException(e.getMessage());
-                }
             } catch (Exception ignored) {
             }
             if (null != handlerMethod) {

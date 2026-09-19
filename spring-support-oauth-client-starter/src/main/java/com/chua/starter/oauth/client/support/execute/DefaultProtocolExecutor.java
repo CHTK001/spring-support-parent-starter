@@ -24,15 +24,28 @@ import java.util.Map;
 public class DefaultProtocolExecutor implements ProtocolExecutor{
 
     /**
-     * 认证客户端属性
+     * 认证客户端属性（最近一次从运行时上下文取到的快照）
     */
-    private final AuthClientProperties authClientProperties;
+    private AuthClientProperties authClientProperties;
 
     /**
      * 创建 默认协议执行器 实例
     */
     public DefaultProtocolExecutor() {
-        this.authClientProperties = OauthClientRuntimeContext.getAuthClientProperties();
+    }
+
+    /**
+     * 认证客户端属性。
+     * <p>本实例可能早于 Spring 绑定完成而构造，故每次取用与运行时上下文对齐。</p>
+     *
+     * @return 认证客户端属性
+     */
+    private AuthClientProperties getAuthClientProperties() {
+        AuthClientProperties current = OauthClientRuntimeContext.getAuthClientProperties();
+        if (current != null && current != authClientProperties) {
+            authClientProperties = current;
+        }
+        return authClientProperties;
     }
 
     @Override
@@ -40,7 +53,7 @@ public class DefaultProtocolExecutor implements ProtocolExecutor{
      * 获取access令牌
     */
     public LoginAuthResult getAccessToken(String username, String password, AuthType authType, Map<String, Object> ext) {
-        return WebRequest.getProtocolExtension(authClientProperties)
+        return WebRequest.getProtocolExtension(getAuthClientProperties())
                 .getAccessToken(username, password, authType, ext);
     }
 
@@ -49,7 +62,7 @@ public class DefaultProtocolExecutor implements ProtocolExecutor{
      * Logout
     */
     public LoginAuthResult logout(String uid, LogoutType logoutType, UserResult userResult ) {
-        return WebRequest.getProtocolExtension(authClientProperties)
+        return WebRequest.getProtocolExtension(getAuthClientProperties())
                 .logout(uid, logoutType, userResult);
     }
 

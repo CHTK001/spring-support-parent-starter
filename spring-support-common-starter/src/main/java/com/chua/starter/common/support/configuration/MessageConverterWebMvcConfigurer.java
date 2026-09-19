@@ -21,6 +21,8 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.Bean;
 import org.springframework.format.FormatterRegistry;
+import org.springframework.http.MediaType;
+import org.springframework.http.converter.ByteArrayHttpMessageConverter;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.http.converter.cbor.MappingJackson2CborHttpMessageConverter;
@@ -102,6 +104,17 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
         } else {
             log.debug("[消息转换器]ApiResponseEncodeRegister 未配置, 跳过二进制转换器注册");
         }
+ // 向列表添加转换器会让 Spring 跳过全部默认转换器，必须自行补回文本/字节/表单三类请求体转换器，
+ // 否则 @RequestBody String 等端点对 text/plain 一律抛 HttpMediaTypeNotSupportedException。
+ // 只放开各自的专属媒体类型，JSON 仍由后注册的 Jackson 转换器处理，行为与默认列表一致。
+        StringHttpMessageConverter textConverter = new StringHttpMessageConverter(StandardCharsets.UTF_8);
+        textConverter.setSupportedMediaTypes(List.of(MediaType.TEXT_PLAIN));
+        converters.add(textConverter);
+        ByteArrayHttpMessageConverter byteConverter = new ByteArrayHttpMessageConverter();
+        byteConverter.setSupportedMediaTypes(List.of(MediaType.APPLICATION_OCTET_STREAM));
+        converters.add(byteConverter);
+        converters.add(new AllEncompassingFormHttpMessageConverter());
+        log.info("[消息转换器]补注默认请求体转换器: String/ByteArray/Form");
     }
     @Override
     /**

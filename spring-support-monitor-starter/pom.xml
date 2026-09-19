@@ -31,12 +31,6 @@
             <artifactId>spring-support-server-starter</artifactId>
             <version>${project.version}</version>
         </dependency>
-        <!-- 发布项目管理（软件部署/升级/启停） -->
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>spring-support-project-starter</artifactId>
-            <version>${project.version}</version>
-        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-autoconfigure</artifactId>
