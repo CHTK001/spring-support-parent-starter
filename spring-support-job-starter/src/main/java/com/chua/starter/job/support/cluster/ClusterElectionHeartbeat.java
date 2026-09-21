@@ -14,7 +14,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Leader 续约心跳守护线程。
  *
  * <p>每 {@code leaseSeconds/3} 秒由守护线程主动调用 {@link LeaderElectionResolver#tryAcquire}
- * (CAS 重入实现) 续约; 若失败则释放本地 铅 状态。</p>
+ * (CAS 重入实现)：已是 Leader 时等于续约，不是 Leader 时等于接管；抢占失败则释放本地 铅 状态。</p>
  *
  * <h3>行为</h3>
  * <ul>
@@ -112,14 +112,20 @@ public class ClusterElectionHeartbeat {
     }
 
     /**
-     * 单拍续约。
+     * 单拍抢占/续约。
+     *
+     * <p>不是 Leader 时同样要抢：进程被强杀不会走 {@link #stop()} 释放租约，接替者启动时
+     * 前任的租约往往还没到期，这一拍抢不到若就此收手，就再也没有节点派发任务了。</p>
      */
     private void tick() {
-        if (!leaderElector.isLeader()) {
+        boolean ok = resolver.tryAcquire(clusterGroup, leaderElector.nodeId(), leaseSeconds);
+        if (ok) {
+            if (!leaderElector.isLeader()) {
+                leaderElector.markLeader(clusterGroup);
+            }
             return;
         }
-        boolean ok = resolver.tryAcquire(clusterGroup, leaderElector.nodeId(), leaseSeconds);
-        if (!ok) {
+        if (leaderElector.isLeader()) {
             log.warn("[job] Leader 续约失败, 放弃本地 Leader 状态");
             leaderElector.release();
         }
