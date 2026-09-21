@@ -98,7 +98,7 @@ public class EduKnowledgeDocServiceImpl extends ServiceImpl<EduKnowledgeDocMappe
      * @return uploadDoc的结果
      */
     public Long uploadDoc(KnowledgeDocUploadDTO dto) {
-        if (!StringUtils.hasText(dto.getFilePath())) {
+        if (!StringUtils.hasText(dto.filePath())) {
             /**
              * 业务异常。
              * @param "文件路径不能为空" "文件路径不能为空"
@@ -108,12 +108,12 @@ public class EduKnowledgeDocServiceImpl extends ServiceImpl<EduKnowledgeDocMappe
         }
         EduKnowledgeDoc entity = new EduKnowledgeDoc();
         entity.setOwnerUserId(EduUserContext.requireUserId());
-        entity.setKnowledgeDocName(dto.getName());
-        entity.setKnowledgeDocType(dto.getType());
-        entity.setKnowledgeDocFilePath(dto.getFilePath());
-        entity.setKnowledgeDocFileSize(dto.getFileSize());
-        entity.setKnowledgeDocSubject(dto.getSubject());
-        entity.setKnowledgeDocGradeLevel(dto.getGradeLevel());
+        entity.setKnowledgeDocName(dto.name());
+        entity.setKnowledgeDocType(dto.type());
+        entity.setKnowledgeDocFilePath(dto.filePath());
+        entity.setKnowledgeDocFileSize(dto.fileSize());
+        entity.setKnowledgeDocSubject(dto.subject());
+        entity.setKnowledgeDocGradeLevel(dto.gradeLevel());
         // 调用 RAG 向量化服务进行文档切片与向量存储（可选，未配置 RAG 时直接入库）
         String vectorStoreId = vectorize(dto);
         entity.setKnowledgeDocVectorStoreId(vectorStoreId);
@@ -121,7 +121,7 @@ public class EduKnowledgeDocServiceImpl extends ServiceImpl<EduKnowledgeDocMappe
         entity.setKnowledgeDocCreateTime(LocalDateTime.now());
         entity.setKnowledgeDocUpdateTime(LocalDateTime.now());
         baseMapper.insert(entity);
-        log.info("上传知识库文档成功，ID: {}, 名称: {}, 向量化: {}", entity.getKnowledgeDocId(), dto.getName(), vectorStoreId != null);
+        log.info("上传知识库文档成功，ID: {}, 名称: {}, 向量化: {}", entity.getKnowledgeDocId(), dto.name(), vectorStoreId != null);
         return entity.getKnowledgeDocId();
     }
 
@@ -142,14 +142,14 @@ public class EduKnowledgeDocServiceImpl extends ServiceImpl<EduKnowledgeDocMappe
             log.warn("[EduKnowledgeDoc] RAG 客户端不可用，跳过向量化");
             return null;
         }
-        byte[] content = readFile(dto.getFilePath());
+        byte[] content = readFile(dto.filePath());
         if (content == null || content.length == 0) {
-            log.warn("[EduKnowledgeDoc] 文件读取为空，跳过向量化: {}", dto.getFilePath());
+            log.warn("[EduKnowledgeDoc] 文件读取为空，跳过向量化: {}", dto.filePath());
             return null;
         }
         try {
             RagDocument document = ragClient.uploadDocument(
-                    StringUtils.hasText(dto.getName()) ? dto.getName() : dto.getFilePath(), content);
+                    StringUtils.hasText(dto.name()) ? dto.name() : dto.filePath(), content);
             if (document != null) {
                 return document.id();
             }
