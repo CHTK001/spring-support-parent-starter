@@ -135,12 +135,12 @@ public class JobLeaderLoop {
      */
     private void tick(long preReadMs) {
         if (!leaderElector.isLeader()) {
-            log.warn("[job] tick 跳过 (非 Leader) nodeId={}", nodeId);
+ // Follower 每秒都走到这里, 是集群常态而非异常; 降级由 LeaderElector 打 INFO, 抢占异常由解析器打 ERROR
+            log.debug("[job] tick 跳过 (非 Leader) nodeId={}", nodeId);
             return;
         }
         long now = System.currentTimeMillis();
         List<JobDefinition> due = repository.findDue(now, preReadMs, DEFAULT_PRE_READ);
-        log.info("[job] tick leader=true due.size={} now={}", due.size(), now);
         if (due.isEmpty()) {
             return;
         }

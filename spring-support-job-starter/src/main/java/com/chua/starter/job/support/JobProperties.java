@@ -47,6 +47,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *       core-size: 16
  *       max-size: 64
  *       queue-size: 128
+ *     manage:
+ *       enable: false   # 开启后暴露 /v2/job/** 任务治理接口 (仅管理员)
  * </pre>
  *
  * @since 4.0.0.42
@@ -95,6 +97,11 @@ public class JobProperties {
      * 日志配置
      */
     private final LogConfig log = new LogConfig();
+
+    /**
+     * 外部治理接口配置 (HTTP /v2/job/**)
+     */
+    private final ManageConfig manage = new ManageConfig();
 
     /**
      * 当前角色是否为 调度器
@@ -390,5 +397,23 @@ public class JobProperties {
          * 日志清理定时 cron 表达式
          */
         private String cleanupCron = DEFAULT_CLEANUP_CRON;
+    }
+
+    /**
+     * 外部治理接口配置。
+     *
+     * <p>只影响 HTTP 出口 {@code /v2/job/**} 是否装配; 进程内治理始终可用
+     * ({@link com.chua.starter.job.support.operate.JobOperator}), 不受本开关约束。</p>
+     *
+     * @since 4.0.0.42
+     * @author CH
+     */
+    @Data
+    public static class ManageConfig {
+
+        /**
+         * 是否暴露任务治理 HTTP 接口, 默认 false (需应用显式开启)
+         */
+        private boolean enable = false;
     }
 }

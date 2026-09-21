@@ -69,8 +69,13 @@ public class MysqlLeaderElectionResolver implements LeaderElectionResolver {
                                     .or().lt(ClusterEntity::getSysJobClusterLeaseUntilMs, now))
             );
             if (rows > 0) {
-                log.info("[job] 抢占 Leader 成功 (MySQL) group={} nodeId={} lease={}s",
-                        group, nodeId, leaseSeconds);
+                if (existing != null && nodeId.equals(existing.getSysJobClusterLeaderNode())) {
+                    log.debug("[job] Leader 续约成功 (MySQL) group={} nodeId={} lease={}s",
+                            group, nodeId, leaseSeconds);
+                } else {
+                    log.info("[job] 抢占 Leader 成功 (MySQL) group={} nodeId={} lease={}s",
+                            group, nodeId, leaseSeconds);
+                }
                 return true;
             }
             return false;
