@@ -249,6 +249,12 @@
       <artifactId>okio-jvm</artifactId>
       <version>3.16.4</version>
     </dependency>
+    <!-- 单元测试：版本由继承的 spring-boot-dependencies 统一管理 -->
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
   <build>
     <plugins>
