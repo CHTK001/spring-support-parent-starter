@@ -107,33 +107,33 @@ public class EduKnowledgePointServiceImpl extends ServiceImpl<EduKnowledgePointM
      */
     public Long saveKnowledgePoint(KnowledgePointSaveDTO dto) {
         EduKnowledgePoint entity = new EduKnowledgePoint();
-        entity.setKnowledgePointName(dto.getKnowledgePointName());
-        entity.setKnowledgePointCode(dto.getKnowledgePointCode());
-        entity.setKnowledgePointParentId(dto.getKnowledgePointParentId() != null ? dto.getKnowledgePointParentId() : 0L);
-        entity.setKnowledgePointSubject(dto.getKnowledgePointSubject());
-        entity.setKnowledgePointGradeLevel(dto.getKnowledgePointGradeLevel());
-        entity.setKnowledgePointGrade(dto.getKnowledgePointGrade());
-        entity.setKnowledgePointDescription(dto.getKnowledgePointDescription());
-        entity.setKnowledgePointSortOrder(dto.getKnowledgePointSortOrder() != null ? dto.getKnowledgePointSortOrder() : 0);
+        entity.setKnowledgePointName(dto.knowledgePointName());
+        entity.setKnowledgePointCode(dto.knowledgePointCode());
+        entity.setKnowledgePointParentId(dto.knowledgePointParentId() != null ? dto.knowledgePointParentId() : 0L);
+        entity.setKnowledgePointSubject(dto.knowledgePointSubject());
+        entity.setKnowledgePointGradeLevel(dto.knowledgePointGradeLevel());
+        entity.setKnowledgePointGrade(dto.knowledgePointGrade());
+        entity.setKnowledgePointDescription(dto.knowledgePointDescription());
+        entity.setKnowledgePointSortOrder(dto.knowledgePointSortOrder() != null ? dto.knowledgePointSortOrder() : 0);
 
-        if (dto.getKnowledgePointId() != null && dto.getKnowledgePointId() > 0) {
+        if (dto.knowledgePointId() != null && dto.knowledgePointId() > 0) {
             // 更新：校验归属并锁定原归属
-            EduKnowledgePoint exists = baseMapper.selectById(dto.getKnowledgePointId());
+            EduKnowledgePoint exists = baseMapper.selectById(dto.knowledgePointId());
             if (exists == null) {
                 throw new BusinessException("知识点不存在");
             }
             EduUserContext.checkWritable(exists.getOwnerUserId());
             entity.setOwnerUserId(exists.getOwnerUserId());
-            entity.setKnowledgePointId(dto.getKnowledgePointId());
-            entity.setKnowledgePointStatus(dto.getKnowledgePointStatus() != null ? dto.getKnowledgePointStatus() : 1);
+            entity.setKnowledgePointId(dto.knowledgePointId());
+            entity.setKnowledgePointStatus(dto.knowledgePointStatus() != null ? dto.knowledgePointStatus() : 1);
             entity.setKnowledgePointUpdateTime(LocalDateTime.now());
             baseMapper.updateById(entity);
-            log.info("更新知识点成功，ID: {}", dto.getKnowledgePointId());
-            return dto.getKnowledgePointId();
+            log.info("更新知识点成功，ID: {}", dto.knowledgePointId());
+            return dto.knowledgePointId();
         } else {
             // 新增
             entity.setOwnerUserId(EduUserContext.requireUserId());
-            entity.setKnowledgePointStatus(dto.getKnowledgePointStatus() != null ? dto.getKnowledgePointStatus() : 1);
+            entity.setKnowledgePointStatus(dto.knowledgePointStatus() != null ? dto.knowledgePointStatus() : 1);
             entity.setKnowledgePointCreateTime(LocalDateTime.now());
             entity.setKnowledgePointUpdateTime(LocalDateTime.now());
             baseMapper.insert(entity);
