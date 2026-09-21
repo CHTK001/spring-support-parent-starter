@@ -102,11 +102,15 @@ public class LocalToolUsageSyncService {
         row.setSysAiUsagePromptTokens(u.getInputTokens());
         row.setSysAiUsageCompletionTokens(u.getOutputTokens());
         row.setSysAiUsageTotalTokens(u.getTotalTokens());
+        row.setSysAiUsageCachedTokens(u.getCacheTokens());
+        row.setSysAiUsageTotalLatency(u.getDurationMillis());
+        row.setSysAiUsageFirstTokenLatency(u.getFirstTokenLatencyMillis());
         Double inCost = u.getInputCost() == null ? null : u.getInputCost().doubleValue();
         Double outCost = u.getOutputCost() == null ? null : u.getOutputCost().doubleValue();
-        Double totCost = u.getTotalCost() == null
-                ? ((inCost == null && outCost == null) ? null : nvl(inCost) + nvl(outCost))
-                : u.getTotalCost().doubleValue();
+        Double totCost = u.getTotalCost() == null ? null : u.getTotalCost().doubleValue();
+        if (totCost == null && (inCost != null || outCost != null)) {
+            totCost = nvl(inCost) + nvl(outCost);
+        }
         row.setSysAiUsageInputCost(inCost);
         row.setSysAiUsageOutputCost(outCost);
         row.setSysAiUsageTotalCost(totCost);
