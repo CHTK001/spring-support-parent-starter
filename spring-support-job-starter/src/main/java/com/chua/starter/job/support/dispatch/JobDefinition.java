@@ -11,9 +11,15 @@ import java.util.Objects;
 public class JobDefinition {
 
     /**
-     * 任务名称 (与 {@link com.chua.starter.job.support.annotation.Job#value()} 对齐)
+     * 任务名称 (派发标识; 与 {@link com.chua.starter.job.support.annotation.Job#value()} 对齐,
+     * 从持久化行还原时取执行器 Bean 名)
      */
     private String name;
+
+    /**
+     * 任务显示名 (对应 {@code sys_job_name}), 仅用于展示, 不参与派发
+     */
+    private String jobName;
 
     /**
      * cron 表达式 (三选一; 优先级 cron > fixed延迟 > fixedrate)
@@ -56,6 +62,24 @@ public class JobDefinition {
      */
     public void setName(String name) {
         this.name = name;
+    }
+
+    /**
+     * 获取任务显示名。
+     *
+     * @return 显示名, 注解任务可为空
+     */
+    public String getJobName() {
+        return jobName;
+    }
+
+    /**
+     * 设置任务显示名。
+     *
+     * @param jobName 显示名
+     */
+    public void setJobName(String jobName) {
+        this.jobName = jobName;
     }
 
     /**

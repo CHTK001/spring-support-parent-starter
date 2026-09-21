@@ -61,10 +61,18 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- 任务治理 HTTP 接口 (/v2/job/**) 所需, 可选依赖: 非 Web 应用不引入也不会装配 -->
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-webmvc</artifactId>
-            <scope>test</scope>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- Swagger 注解 - 仅 API 文档标记, 运行期缺失不影响 -->
+        <dependency>
+            <groupId>io.swagger.core.v3</groupId>
+            <artifactId>swagger-annotations</artifactId>
+            <scope>provided</scope>
         </dependency>
 
         <dependency>

@@ -102,7 +102,9 @@ public final class JobTriggering {
         if (definition == null || trigger == null) {
             return -1L;
         }
-        long reference = lastFireMs > 0L ? lastFireMs : now;
+        // 基准须严格晚于上一个已派发触发点：毫秒时间戳还原成 LocalDateTime 会丢掉亚毫秒，
+        // 恰落在固定间隔网格边界之前，触发器会永远算回同一个触发点（表现为逐拍重复派发）。
+        long reference = lastFireMs > 0L ? lastFireMs + 1L : now;
         try {
             LocalDateTime from = Instant.ofEpochMilli(reference)
                     .atZone(ZoneId.systemDefault()).toLocalDateTime();

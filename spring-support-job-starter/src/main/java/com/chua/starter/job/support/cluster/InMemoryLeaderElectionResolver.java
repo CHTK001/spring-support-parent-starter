@@ -29,7 +29,7 @@ public class InMemoryLeaderElectionResolver implements LeaderElectionResolver {
     /**
      * 尝试获取
     */
-    public boolean tryAcquire(String group, String nodeId, int leaseSeconds) {
+    public synchronized boolean tryAcquire(String group, String nodeId, int leaseSeconds) {
         long now = System.currentTimeMillis();
         Long lease = leaseMap.get(group);
         String currentLeader = leaderMap.get(group);
@@ -47,7 +47,11 @@ public class InMemoryLeaderElectionResolver implements LeaderElectionResolver {
     /**
      * 释放
     */
-    public void release(String group, String nodeId) {
+    public synchronized void release(String group, String nodeId) {
+        if (nodeId != null && !nodeId.equals(leaderMap.get(group))) {
+ // 租约已被其他节点接管, 释放只能清自己的那一份
+            return;
+        }
         leaderMap.remove(group);
         leaseMap.remove(group);
     }

@@ -1,5 +1,6 @@
 package com.chua.starter.job.support.store;
 
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.chua.starter.job.support.log.JobLogEvent;
 import com.chua.starter.job.support.log.JobLogSink;
 import lombok.extern.slf4j.Slf4j;
@@ -30,6 +31,10 @@ public class MybatisJobLogSink implements JobLogSink {
     */
     private final JobLogMapper jobLogMapper;
     /**
+     * 作业映射器, 用于把日志行关联到任务台账 (可为空)
+    */
+    private final JobMapper jobMapper;
+    /**
      * 文件日志是否启用
     */
     private final boolean fileLoggingEnabled;
@@ -39,22 +44,28 @@ public class MybatisJobLogSink implements JobLogSink {
      * @param jobLogMapper 作业日志映射器
      */
     public MybatisJobLogSink(JobLogMapper jobLogMapper) {
-        /**
-         * this。
-         * @param jobLogMapper 作业日志映射器
-         * @param true true
-         */
-        this(jobLogMapper, true);
+        this(jobLogMapper, null, true);
     }
 
     /**
      * 创建 MyBatis作业日志sink 实例
      * @param jobLogMapper 作业日志映射器
-     * @param fileLoggingEnabled 布尔值
      * @param fileLoggingEnabled 文件日志已启用
      */
     public MybatisJobLogSink(JobLogMapper jobLogMapper, boolean fileLoggingEnabled) {
+        this(jobLogMapper, null, fileLoggingEnabled);
+    }
+
+    /**
+     * 创建带台账关联的 MyBatis 作业日志 sink 实例。
+     *
+     * @param jobLogMapper       作业日志映射器
+     * @param jobMapper          作业映射器, 为空则日志行不落任务编号
+     * @param fileLoggingEnabled 文件日志已启用
+     */
+    public MybatisJobLogSink(JobLogMapper jobLogMapper, JobMapper jobMapper, boolean fileLoggingEnabled) {
         this.jobLogMapper = jobLogMapper;
+        this.jobMapper = jobMapper;
         this.fileLoggingEnabled = fileLoggingEnabled;
     }
 
@@ -85,6 +96,7 @@ public class MybatisJobLogSink implements JobLogSink {
         entity.setSysJobLogNo("JOBLOG" + System.currentTimeMillis());
         entity.setSysJobLogApp("scheduler");
         entity.setSysJobLogTriggerBean(event.jobName());
+        attachLedger(entity, event.jobName());
         entity.setSysJobLogTriggerType("CRON");
         entity.setSysJobLogTriggerCode(event.status().name());
         entity.setSysJobLogExecuteCode(event.status().name());
@@ -99,6 +111,34 @@ public class MybatisJobLogSink implements JobLogSink {
         }
         entity.setSysJobLogIsDeleted(0);
         return entity;
+    }
+
+    /**
+     * 回查任务台账, 把任务主键与任务编号补到日志行。
+     *
+     * <p>派发事件只携带执行器 Bean 名, 台账名称与台账编号只能靠 {@code sys_job_execute_bean}
+     * 反查。控制台的按分组过滤和「任务编号」列都读 {@code sys_job_no}, 不补这一列日志行就是孤儿行。</p>
+     *
+     * @param entity 日志实体
+     * @param jobKey 执行器 Bean 名
+     */
+    private void attachLedger(JobLogEntity entity, String jobKey) {
+        if (jobMapper == null || jobKey == null || jobKey.isEmpty()) {
+            return;
+        }
+        try {
+            JobEntity job = jobMapper.selectOne(Wrappers.<JobEntity>lambdaQuery()
+                    .and(w -> w.eq(JobEntity::getSysJobExecuteBean, jobKey)
+                            .or().eq(JobEntity::getSysJobName, jobKey))
+                    .eq(JobEntity::getSysJobIsDeleted, 0)
+                    .last("LIMIT 1"));
+            if (job != null) {
+                entity.setSysJobId(job.getSysJobId());
+                entity.setSysJobNo(job.getSysJobNo());
+            }
+        } catch (Throwable ex) {
+            log.debug("[job] 日志行关联台账失败 job={} cause={}", jobKey, ex.getMessage());
+        }
     }
 
     /**

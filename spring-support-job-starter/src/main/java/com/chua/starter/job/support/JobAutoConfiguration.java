@@ -14,8 +14,12 @@ import com.chua.starter.job.support.handler.JobHandlerFactory;
 import com.chua.starter.job.support.log.AsyncLogWriter;
 import com.chua.starter.job.support.log.FileJobLogSink;
 import com.chua.starter.job.support.log.JobLogSink;
+import com.chua.starter.job.support.log.LocalJobLogBinder;
 import com.chua.starter.job.support.log.StdoutJobLogSink;
 import com.chua.starter.job.support.loop.JobLeaderLoop;
+import com.chua.starter.job.support.manage.JobManageController;
+import com.chua.starter.job.support.operate.DefaultJobOperator;
+import com.chua.starter.job.support.operate.JobOperator;
 import com.chua.starter.job.support.schedule.ScheduledAnnotationScanner;
 import com.chua.starter.job.support.sync.ExecutorSyncBinder;
 import com.chua.starter.job.support.sync.InMemorySyncClient;
@@ -29,6 +33,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -148,6 +153,42 @@ public class JobAutoConfiguration {
     }
 
     /**
+     * 任务操作器：登记任务、改调度时间、启停、立即派发、删除。
+     *
+     * <p>调度层的唯一写入口，业务模块（采集等）与对外 HTTP 接口共用同一实现，
+     * 保证"改了时间/点了启停"在两条路径上的生效语义完全一致。</p>
+     *
+     * @param repository 任务仓库
+     * @param jobSyncBus 事件总线
+     * @param jobNodeId  当前节点标识
+     * @return 作业operator的结果
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public JobOperator jobOperator(JobRepository repository, JobSyncBus jobSyncBus, String jobNodeId) {
+        return new DefaultJobOperator(repository, jobSyncBus, jobNodeId);
+    }
+
+    /**
+     * 任务治理外部接口 (HTTP)。
+     *
+     * <p>装配门槛：Servlet 应用 + classpath 有 spring-webmvc + 显式开启
+     * {@code plugin.job.manage.enable=true}。{@code sys_job} 是全局资源 (无归属列)，
+     * 出口整体要求管理员权限，故默认关闭、按需开启。</p>
+     *
+     * @param jobOperator 任务治理接口
+     * @return 任务治理控制器
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
+    @ConditionalOnClass(name = "org.springframework.web.servlet.DispatcherServlet")
+    @ConditionalOnProperty(prefix = JobProperties.PRE, name = "manage.enable", havingValue = "true")
+    public JobManageController jobManageController(JobOperator jobOperator) {
+        return new JobManageController(jobOperator);
+    }
+
+    /**
      * 任务仓库默认实现 (入内存 兜底), MyBatis-Plus 存在时被 MyBatis 版覆盖。
      * @return 入内存作业仓库的结果
      */
@@ -200,16 +241,19 @@ public class JobAutoConfiguration {
      * MyBatis-Plus 任务日志落库 (覆盖默认 stdout)。
      * 当 {@code plugin.job.log.enabled=true} 时额外启用文件日志和异步写入。
      * @param jobLogMapper 作业日志映射器
+     * @param jobMapperProvider 作业映射器提供者, 缺失时日志行不落任务编号
      * @return mybatis作业日志sink的结果
      */
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnClass(name = "com.baomidou.mybatisplus.core.mapper.BaseMapper")
     @org.springframework.context.annotation.Primary
-    public JobLogSink mybatisJobLogSink(com.chua.starter.job.support.store.JobLogMapper jobLogMapper) {
+    public JobLogSink mybatisJobLogSink(com.chua.starter.job.support.store.JobLogMapper jobLogMapper,
+                                        org.springframework.beans.factory.ObjectProvider<com.chua.starter.job.support.store.JobMapper> jobMapperProvider) {
         List<JobLogSink> sinks = new ArrayList<>(2);
         com.chua.starter.job.support.store.MybatisJobLogSink dbSink =
-                new com.chua.starter.job.support.store.MybatisJobLogSink(jobLogMapper, properties.getLog().isEnabled());
+                new com.chua.starter.job.support.store.MybatisJobLogSink(jobLogMapper,
+                        jobMapperProvider.getIfAvailable(), properties.getLog().isEnabled());
         sinks.add(dbSink);
         if (properties.getLog().isEnabled()) {
             FileJobLogSink fileSink = new FileJobLogSink(properties.getLog().getBasePath());
@@ -523,6 +567,23 @@ public class JobAutoConfiguration {
                                           JobSyncBus jobSyncBus,
                                           String jobNodeId) {
         return new JobExecutor(jobHandlerFactory, jobSyncBus, jobNodeId, buildExecutor());
+    }
+
+    /**
+     * 单个 角色: 本机执行日志落地桥。
+     *
+     * <p>执行结果只发到本地总线, 而 TASK_LOG 的订阅者只在 调度器 角色装配;
+     * 缺这座桥时单机角色自己的每次执行都不会进 {@code sys_job_log}。</p>
+     *
+     * @param jobSyncBus  作业同步bus
+     * @param jobLogSink  日志落地目标
+     * @return 单机日志桥的结果
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnProperty(prefix = JobProperties.PRE, name = "role", havingValue = "SINGLE", matchIfMissing = true)
+    public LocalJobLogBinder jobSingleLogBinder(JobSyncBus jobSyncBus, JobLogSink jobLogSink) {
+        return new LocalJobLogBinder(jobSyncBus, jobLogSink);
     }
 
     // ====================================================================
