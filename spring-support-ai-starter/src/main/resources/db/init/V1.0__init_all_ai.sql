@@ -103,6 +103,11 @@ CREATE TABLE IF NOT EXISTS `sys_ai_bot_binding` (
     `sys_ai_bot_binding_thinking`        TINYINT      NOT NULL DEFAULT 0 COMMENT '是否启用深度思考（默认关闭）',
     `sys_ai_bot_binding_thinking_effort` VARCHAR(16)  NULL COMMENT '深度思考强度（low / medium / high）',
     `sys_ai_bot_binding_system_prompt`   TEXT         NULL COMMENT '系统提示词（AI 回复时注入的 system prompt）',
+    `sys_ai_bot_binding_mention_only`    TINYINT      NOT NULL DEFAULT 0 COMMENT '群聊仅回复 @ 了 Bot 的消息（默认关闭，私聊不受影响）',
+    `sys_ai_bot_binding_random_reply_enabled` TINYINT  NOT NULL DEFAULT 0 COMMENT '是否启用随机回复（默认关闭）',
+    `sys_ai_bot_binding_random_context_count` INT      NULL DEFAULT 10 COMMENT '随机回复携带的上下文消息条数',
+    `sys_ai_bot_binding_random_probability`   DOUBLE   NULL DEFAULT 0 COMMENT '随机回复命中概率百分比（0-100，0 表示从不）',
+    `sys_ai_bot_binding_mcp_server_ids`   VARCHAR(500) NULL DEFAULT NULL COMMENT '勾选的 MCP 服务器ID（逗号分隔，仅管理员可配）',
     `sys_ai_bot_binding_last_active_time` DATETIME     NULL COMMENT '最后活跃时间',
     `create_name`                         VARCHAR(64)  NULL COMMENT '创建人姓名',
     `create_by`                           INT          NULL COMMENT '创建人',
@@ -122,6 +127,7 @@ CREATE TABLE IF NOT EXISTS `sys_ai_bot_message` (
     `sys_ai_bot_message_direction` VARCHAR(16) NULL COMMENT '方向：IN（用户→bot）/ OUT（bot→用户）',
     `sys_ai_bot_message_from_user` VARCHAR(128) NULL COMMENT '微信用户 ID（来源）',
     `sys_ai_bot_message_content`  TEXT      NULL COMMENT '消息内容',
+    `sys_ai_bot_message_context_token` VARCHAR(512) NULL COMMENT '会话上下文令牌（入站消息携带，回复/主动发送时原样回传）',
     `sys_ai_bot_message_user_id`  VARCHAR(64) NULL COMMENT '归属登录用户标识（与绑定表 owner_key 的 u:<userId> 同源）',
     `sys_ai_bot_message_create_time` DATETIME NULL COMMENT '创建时间',
     PRIMARY KEY (`sys_ai_bot_message_id`),
@@ -361,6 +367,8 @@ CREATE TABLE IF NOT EXISTS `sys_ai_session` (
   `sys_ai_session_type` VARCHAR(64) NOT NULL DEFAULT 'CHAT' COMMENT '',
   `sys_ai_module_code` VARCHAR(255) DEFAULT NULL COMMENT '',
   `model_id` VARCHAR(255) DEFAULT NULL COMMENT '会话默认模型ID',
+  `character_id` BIGINT DEFAULT NULL COMMENT '绑定角色（助手）ID，对应 sys_ai_role 主键',
+  `mcp_server_ids` VARCHAR(500) DEFAULT NULL COMMENT '会话级 MCP 服务器ID列表（逗号分隔，仅管理员）',
   `sys_user_id` VARCHAR(255) NOT NULL COMMENT 'ID',
   `sys_ai_session_status` INT NOT NULL DEFAULT 1 COMMENT '',
   `create_name` VARCHAR(255) DEFAULT NULL COMMENT '',
@@ -385,6 +393,7 @@ CREATE TABLE IF NOT EXISTS `sys_ai_message` (
   `prompt_tokens` INT DEFAULT NULL COMMENT '本次回复的输入 Token 数',
   `completion_tokens` INT DEFAULT NULL COMMENT '本次回复的输出 Token 数',
   `total_tokens` INT DEFAULT NULL COMMENT '本次回复的总 Token 数',
+  `sys_ai_message_confirmation` LONGTEXT DEFAULT NULL COMMENT '人工确认请求 JSON（plan_exit：replyId/status/items）',
   `create_name` VARCHAR(255) DEFAULT NULL COMMENT '',
   `create_by` INT DEFAULT NULL COMMENT 'ID',
   `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '',
@@ -530,6 +539,7 @@ CREATE TABLE IF NOT EXISTS `sys_ai_app_key` (
   `sys_ai_app_key_enabled` INT DEFAULT 1 COMMENT '',
   `sys_ai_app_key_expire_datetime` DATETIME DEFAULT NULL COMMENT 'null ',
   `sys_user_id` INT DEFAULT NULL COMMENT 'ID',
+  `sys_ai_app_key_user_id` VARCHAR(64) DEFAULT NULL COMMENT '归属用户 ID（登录用户名）',
   `sys_ai_app_key_status` INT NOT NULL DEFAULT 1 COMMENT '',
   `sys_ai_app_key_delete` INT NOT NULL DEFAULT 0 COMMENT '',
   `sys_ai_app_key_group_id` INT DEFAULT NULL COMMENT ' ID',
@@ -549,7 +559,8 @@ CREATE TABLE IF NOT EXISTS `sys_ai_app_key` (
   `update_name` VARCHAR(255) DEFAULT NULL COMMENT '',
   `update_by` INT DEFAULT NULL COMMENT 'ID',
   PRIMARY KEY (`sys_ai_app_key_id`),
-  UNIQUE KEY `sys_ai_app_key_ai_app_key_value` (`sys_ai_app_key_app_key`)
+  UNIQUE KEY `sys_ai_app_key_ai_app_key_value` (`sys_ai_app_key_app_key`),
+  KEY `sys_ai_app_key_sys_ai_app_key_user` (`sys_ai_app_key_user_id`, `sys_ai_app_key_delete`)
 ) COMMENT='AI ';
 CREATE TABLE IF NOT EXISTS `sys_ai_face_library` (
   `sys_ai_face_library_id` INT NOT NULL AUTO_INCREMENT COMMENT 'ID',
@@ -892,19 +903,23 @@ CREATE TABLE IF NOT EXISTS `sys_ai_model_setting` (
 ) COMMENT='AI ';
 CREATE TABLE IF NOT EXISTS `sys_ai_role` (
     `sys_ai_role_id` INT AUTO_INCREMENT PRIMARY KEY COMMENT '',
+    `user_id` VARCHAR(64) DEFAULT NULL COMMENT '归属用户（多用户隔离）',
     `sys_ai_role_name` VARCHAR(128) NOT NULL COMMENT '',
     `sys_ai_role_code` VARCHAR(64) NOT NULL COMMENT '',
     `sys_ai_role_description` VARCHAR(512) DEFAULT NULL COMMENT '',
     `sys_ai_role_system_prompt` TEXT NOT NULL COMMENT '',
     `sys_ai_role_model` VARCHAR(128) DEFAULT NULL COMMENT '',
+    `sys_ai_role_avatar` VARCHAR(255) DEFAULT NULL COMMENT '头像访问路径',
     `sys_ai_role_temperature` DOUBLE DEFAULT NULL COMMENT '',
+    `sys_ai_role_settings` LONGTEXT DEFAULT NULL COMMENT '角色完整工具与能力配置JSON',
     `sys_ai_role_sort` INT DEFAULT 0 COMMENT '',
     `sys_ai_role_status` INT DEFAULT 1 COMMENT '10',
     `sys_ai_role_delete` INT DEFAULT 0 COMMENT '01',
     `create_name` VARCHAR(255) DEFAULT NULL COMMENT '',
     `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '',
     `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '',
-    UNIQUE KEY `sys_ai_role_sys_ai_role_code` (`sys_ai_role_code`)
+    UNIQUE KEY `uk_role_user_code` (`user_id`, `sys_ai_role_code`),
+    KEY `idx_role_user` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='AI ';
 CREATE TABLE IF NOT EXISTS `sys_ai_ssh_host` (
     `sys_ai_ssh_host_id`               VARCHAR(36)  NOT NULL COMMENT '主机主键（UUIDv7）',
@@ -2152,16 +2167,16 @@ WHERE NOT EXISTS (
   WHERE `sys_ai_global_setting_group` = seed.grp
     AND `sys_ai_global_setting_field` = seed.fld
 );
-INSERT INTO `sys_ai_role` (`sys_ai_role_name`, `sys_ai_role_code`, `sys_ai_role_description`, `sys_ai_role_system_prompt`, `sys_ai_role_sort`, `sys_ai_role_status`, `sys_ai_role_delete`)
-VALUES ('通用助手', 'default', '通用 AI 助手，无特殊人设', '你是一个智能 AI 助手，请用中文友好地回答用户的问题。', 0, 1, 0)
+INSERT INTO `sys_ai_role` (`user_id`, `sys_ai_role_name`, `sys_ai_role_code`, `sys_ai_role_description`, `sys_ai_role_system_prompt`, `sys_ai_role_sort`, `sys_ai_role_status`, `sys_ai_role_delete`)
+VALUES ('admin', '通用助手', 'default', '通用 AI 助手，无特殊人设', '你是一个智能 AI 助手，请用中文友好地回答用户的问题。', 0, 1, 0)
 ON DUPLICATE KEY UPDATE `sys_ai_role_name` = VALUES(`sys_ai_role_name`);
 
-INSERT INTO `sys_ai_role` (`sys_ai_role_name`, `sys_ai_role_code`, `sys_ai_role_description`, `sys_ai_role_system_prompt`, `sys_ai_role_sort`, `sys_ai_role_status`, `sys_ai_role_delete`)
-VALUES ('Java 开发助理', 'java-dev', '专业的 Java 后端开发工程师', '你是一个资深的 Java 后端开发工程师，精通 Spring Boot、MyBatis、微服务架构。请用中文回答技术问题，提供代码示例时遵循最佳实践。', 1, 1, 0)
+INSERT INTO `sys_ai_role` (`user_id`, `sys_ai_role_name`, `sys_ai_role_code`, `sys_ai_role_description`, `sys_ai_role_system_prompt`, `sys_ai_role_sort`, `sys_ai_role_status`, `sys_ai_role_delete`)
+VALUES ('admin', 'Java 开发助理', 'java-dev', '专业的 Java 后端开发工程师', '你是一个资深的 Java 后端开发工程师，精通 Spring Boot、MyBatis、微服务架构。请用中文回答技术问题，提供代码示例时遵循最佳实践。', 1, 1, 0)
 ON DUPLICATE KEY UPDATE `sys_ai_role_name` = VALUES(`sys_ai_role_name`);
 
-INSERT INTO `sys_ai_role` (`sys_ai_role_name`, `sys_ai_role_code`, `sys_ai_role_description`, `sys_ai_role_system_prompt`, `sys_ai_role_sort`, `sys_ai_role_status`, `sys_ai_role_delete`)
-VALUES ('UI 设计师', 'ui-designer', '前端 UI/UX 设计师', '你是一个优秀的前端 UI/UX 设计师，精通 Vue 3、Element Plus、Tailwind CSS。设计风格简洁现代，参考 Vercel/Linear 设计语言。', 2, 1, 0)
+INSERT INTO `sys_ai_role` (`user_id`, `sys_ai_role_name`, `sys_ai_role_code`, `sys_ai_role_description`, `sys_ai_role_system_prompt`, `sys_ai_role_sort`, `sys_ai_role_status`, `sys_ai_role_delete`)
+VALUES ('admin', 'UI 设计师', 'ui-designer', '前端 UI/UX 设计师', '你是一个优秀的前端 UI/UX 设计师，精通 Vue 3、Element Plus、Tailwind CSS。设计风格简洁现代，参考 Vercel/Linear 设计语言。', 2, 1, 0)
 ON DUPLICATE KEY UPDATE `sys_ai_role_name` = VALUES(`sys_ai_role_name`);
 INSERT IGNORE INTO `sys_ai_group_model` (
     `sys_ai_group_model_id`, `sys_ai_group_id`, `sys_ai_module_id`, `create_time`
@@ -2344,3 +2359,65 @@ CREATE TABLE IF NOT EXISTS `sys_ai_companion_skill` (
     KEY `idx_ai_companion_skill_companion` (`sys_ai_companion_skill_companion_id`),
     KEY `idx_ai_companion_skill_user` (`sys_ai_companion_skill_user_id`, `sys_ai_companion_skill_companion_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='数字伙伴技能';
+
+-- ---------------------------------------------------------------------
+-- 模型指标库 sys_ai_model_metrics（原 V1.1 独立脚本，归口全量脚本）
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `sys_ai_model_metrics` (
+    `sys_ai_model_metrics_id`                    BIGINT        NOT NULL AUTO_INCREMENT COMMENT '主键 ID',
+    `sys_ai_model_metrics_model_key`             VARCHAR(160)  NOT NULL COMMENT '归一化模型键（唯一）',
+    `sys_ai_model_metrics_model`                 VARCHAR(220)  NULL COMMENT '原始模型标识/slug',
+    `sys_ai_model_metrics_provider`              VARCHAR(128)  NULL COMMENT '厂商',
+    `sys_ai_model_metrics_price_input`           DOUBLE        NULL COMMENT '输入价 USD/百万 token',
+    `sys_ai_model_metrics_price_output`          DOUBLE        NULL COMMENT '输出价 USD/百万 token',
+    `sys_ai_model_metrics_price_cache_hit`       DOUBLE        NULL COMMENT '缓存命中价 USD/百万',
+    `sys_ai_model_metrics_price_cache_write`     DOUBLE        NULL COMMENT '缓存写入价 USD/百万',
+    `sys_ai_model_metrics_intelligence_index`    DOUBLE        NULL COMMENT '智能指数',
+    `sys_ai_model_metrics_hle_score`             DOUBLE        NULL COMMENT 'HLE 人类最后考试得分（0~1）',
+    `sys_ai_model_metrics_omniscience_index`     DOUBLE        NULL COMMENT '全知指数（知识准确-幻觉，可为负）',
+    `sys_ai_model_metrics_gpqa_score` DOUBLE NULL COMMENT 'GPQA 得分（0~1）',
+    `sys_ai_model_metrics_aime25_score` DOUBLE NULL COMMENT 'AIME 2025 数学基准得分（0~1）',
+    `sys_ai_model_metrics_livecodebench_score` DOUBLE NULL COMMENT 'LiveCodeBench 编程基准得分（0~1）',
+    `sys_ai_model_metrics_scicode_score` DOUBLE NULL COMMENT 'SciCode 科学编程基准得分（0~1）',
+    `sys_ai_model_metrics_ifbench_score` DOUBLE NULL COMMENT 'IFBench 指令遵循基准得分（0~1）',
+    `sys_ai_model_metrics_critpt_score` DOUBLE NULL COMMENT 'CritPt 物理基准得分（0~1）',
+    `sys_ai_model_metrics_mmmu_pro_score` DOUBLE NULL COMMENT 'MMMU-Pro 多模态基准得分（0~1）',
+    `sys_ai_model_metrics_tau2_score` DOUBLE NULL COMMENT 'Tau2-Bench 工具调用基准得分（0~1）',
+    `sys_ai_model_metrics_tau_banking_score` DOUBLE NULL COMMENT 'Tau-Banking 银行场景基准得分（0~1）',
+    `sys_ai_model_metrics_lcr_score` DOUBLE NULL COMMENT 'LCR 长上下文推理得分（0~1）',
+    `sys_ai_model_metrics_terminalbench_hard_score` DOUBLE NULL COMMENT 'Terminal-Bench Hard 得分（0~1）',
+    `sys_ai_model_metrics_terminal_bench21_score` DOUBLE NULL COMMENT 'Terminal-Bench 2.1 得分（0~1）',
+    `sys_ai_model_metrics_terminal_bench40_score` DOUBLE NULL COMMENT 'Terminal-Bench 4.0 得分（0~1）',
+    `sys_ai_model_metrics_automation_bench_score` DOUBLE NULL COMMENT 'AutomationBench 自动化基准得分（0~1）',
+    `sys_ai_model_metrics_gdpval_normalized_score` DOUBLE NULL COMMENT 'GDPval 归一化得分（0~1）',
+    `sys_ai_model_metrics_briefcase_score` DOUBLE NULL COMMENT 'Briefcase 专业任务基准得分（0~1）',
+    `sys_ai_model_metrics_harvey_lab_score` DOUBLE NULL COMMENT 'Harvey Lab 法律任务基准得分（0~1）',
+    `sys_ai_model_metrics_apex_agents_score` DOUBLE NULL COMMENT 'Apex Agents 基准得分（0~1）',
+    `sys_ai_model_metrics_itbench_sre_score` DOUBLE NULL COMMENT 'ITBench SRE 运维基准得分（0~1）',
+    `sys_ai_model_metrics_omniscience_accuracy` DOUBLE NULL COMMENT '全知指数-准确率（0~1）',
+    `sys_ai_model_metrics_omniscience_non_hallucination` DOUBLE NULL COMMENT '全知指数-非幻觉率（0~1）',
+    `sys_ai_model_metrics_elo` DOUBLE NULL COMMENT 'Artificial Analysis Elo 评分',
+    `sys_ai_model_metrics_cost_per_task` DOUBLE NULL COMMENT '单任务平均成本（USD）',
+    `sys_ai_model_metrics_json_mode` TINYINT(1) NULL COMMENT '是否支持 JSON 输出模式',
+    `sys_ai_model_metrics_openai_compatible` TINYINT(1) NULL COMMENT '是否兼容 OpenAI 协议',
+    `sys_ai_model_metrics_intelligence_index_estimated` TINYINT(1) NULL COMMENT '智能指数是否为估算值',
+    `sys_ai_model_metrics_hle_score`             DOUBLE        NULL COMMENT 'HLE 人类最后考试得分（0~1）',
+    `sys_ai_model_metrics_omniscience_index`     DOUBLE        NULL COMMENT '全知指数（知识准确-幻觉，可为负）',
+    `sys_ai_model_metrics_output_speed_tps`      DOUBLE        NULL COMMENT '输出速度 token/秒',
+    `sys_ai_model_metrics_latency_first_token`   DOUBLE        NULL COMMENT '首 token 延迟（秒）',
+    `sys_ai_model_metrics_context_window`        BIGINT        NULL COMMENT '上下文窗口 token',
+    `sys_ai_model_metrics_icon_url`              VARCHAR(512)  NULL COMMENT '模型图标',
+    `sys_ai_model_metrics_support_reasoning`     TINYINT(1)    NULL COMMENT '是否支持深度思考',
+    `sys_ai_model_metrics_support_web_search`    TINYINT(1)    NULL COMMENT '是否支持联网检索',
+    `sys_ai_model_metrics_support_image_input`   TINYINT(1)    NULL COMMENT '是否支持视觉输入',
+    `sys_ai_model_metrics_support_function_call` TINYINT(1)    NULL COMMENT '是否支持函数调用',
+    `sys_ai_model_metrics_manual_locked`         TEXT          NULL COMMENT '手动锁定字段名 JSON 数组',
+    `sys_ai_model_metrics_manual_updated_at`     BIGINT        NULL COMMENT '手动更新时间（毫秒）',
+    `sys_ai_model_metrics_manual_updated_by`     VARCHAR(64)   NULL COMMENT '手动更新人',
+    `sys_ai_model_metrics_source`                VARCHAR(40)   NULL COMMENT '数据源 artificialanalysis',
+    `sys_ai_model_metrics_status`                TINYINT       NOT NULL DEFAULT 1 COMMENT '状态',
+    `create_time`                                BIGINT        NULL COMMENT '创建时间（毫秒）',
+    `update_time`                                BIGINT        NULL COMMENT '更新时间（毫秒）',
+    PRIMARY KEY (`sys_ai_model_metrics_id`),
+    UNIQUE KEY `uk_sys_ai_model_metrics_key` (`sys_ai_model_metrics_model_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='模型指标库（全量，模型按 key 关联取价）';
