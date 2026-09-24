@@ -131,6 +131,7 @@ public class AiModelMetricsEnrichmentService {
      *   <li>{@code latency_first_token_seconds}</li>
      *   <li>{@code icon_url}</li>
      *   <li>{@code reasoning_model} / {@code web_search} / {@code image_input} / {@code function_calling}</li>
+     *   <li>{@code hle_score} / {@code omniscience_index}</li>
      *   <li>{@code context_window_tokens}</li>
      * </ul>
      *
@@ -162,6 +163,9 @@ public class AiModelMetricsEnrichmentService {
              * @param rec.intelligenceIndex rec.智能索引
              */
             putIfNotNull(row, "intelligence_index", rec.intelligenceIndex);
+            putIfNotNull(row, "hle_score", rec.hleScore);
+            putIfNotNull(row, "omniscience_index", rec.omniscienceIndex);
+            putIfNotNull(row, "gpqa_score aime25_score livecodebench_score scicode_score ifbench_score critpt_score mmmu_pro_score tau2_score tau_banking_score lcr_score terminalbench_hard_score terminal_bench21_score terminal_bench40_score automation_bench_score gdpval_normalized_score briefcase_score harvey_lab_score apex_agents_score itbench_sre_score omniscience_accuracy omniscience_non_hallucination elo cost_per_task json_mode openai_compatible intelligence_index_estimated", rec.gpqaScore aime25Score livecodebenchScore scicodeScore ifbenchScore critptScore mmmuProScore tau2Score tauBankingScore lcrScore terminalbenchHardScore terminalBench21Score terminalBench40Score automationBenchScore gdpvalNormalizedScore briefcaseScore harveyLabScore apexAgentsScore itbenchSreScore omniscienceAccuracy omniscienceNonHallucination elo costPerTask jsonMode openaiCompatible intelligenceIndexEstimated);
             /**
              * 放入ifnot空。
              * @param row row
@@ -411,7 +415,10 @@ public class AiModelMetricsEnrichmentService {
                     md.getFunctionCalling(),
                     md.getCacheHitPrice(),
                     md.getCacheWritePrice(),
-                    md.getContextWindowTokens()));
+                    md.getContextWindowTokens(),
+                    md.getHleScore(),
+                    md.getOmniscienceIndex(),
+                    md.getGpqaScore aime25Score livecodebenchScore scicodeScore ifbenchScore critptScore mmmuProScore tau2Score tauBankingScore lcrScore terminalbenchHardScore terminalBench21Score terminalBench40Score automationBenchScore gdpvalNormalizedScore briefcaseScore harveyLabScore apexAgentsScore itbenchSreScore omniscienceAccuracy omniscienceNonHallucination elo costPerTask jsonMode openaiCompatible intelligenceIndexEstimated()));
         }
         return idx;
     }
@@ -482,6 +489,9 @@ public class AiModelMetricsEnrichmentService {
                   .append(",\"cachehit\":").append(r.cacheHitPrice)
                   .append(",\"cachewr\":").append(r.cacheWritePrice)
                   .append(",\"ctx\":").append(r.contextWindowTokens)
+                  .append(",\"hle\":").append(r.hleScore)
+                  .append(",\"omni\":").append(r.omniscienceIndex)
+                  .append(",\"gpqa_score aime25_score livecodebench_score scicode_score ifbench_score critpt_score mmmu_pro_score tau2_score tau_banking_score lcr_score terminalbench_hard_score terminal_bench21_score terminal_bench40_score automation_bench_score gdpval_normalized_score briefcase_score harvey_lab_score apex_agents_score itbench_sre_score omniscience_accuracy omniscience_non_hallucination elo cost_per_task json_mode openai_compatible intelligence_index_estimated\":").append(r.gpqaScore aime25Score livecodebenchScore scicodeScore ifbenchScore critptScore mmmuProScore tau2Score tauBankingScore lcrScore terminalbenchHardScore terminalBench21Score terminalBench40Score automationBenchScore gdpvalNormalizedScore briefcaseScore harveyLabScore apexAgentsScore itbenchSreScore omniscienceAccuracy omniscienceNonHallucination elo costPerTask jsonMode openaiCompatible intelligenceIndexEstimated)
                   .append('}');
             }
             sb.append(']');
@@ -569,7 +579,10 @@ public class AiModelMetricsEnrichmentService {
                          * @param o.get("cachewr" o.获取("cachewr"
                          */
                         dec(o.get("cachewr")),
-                        lng(o.get("ctx"))));
+                        lng(o.get("ctx")),
+                        dec(o.get("hle")),
+                        dec(o.get("omni")),
+                        bool(o.get("gpqa_score aime25_score livecodebench_score scicode_score ifbench_score critpt_score mmmu_pro_score tau2_score tau_banking_score lcr_score terminalbench_hard_score terminal_bench21_score terminal_bench40_score automation_bench_score gdpval_normalized_score briefcase_score harvey_lab_score apex_agents_score itbench_sre_score omniscience_accuracy omniscience_non_hallucination elo cost_per_task json_mode openai_compatible intelligence_index_estimated"))));
             }
             return out;
         } catch (Throwable t) {
@@ -699,7 +712,19 @@ public class AiModelMetricsEnrichmentService {
             /**
              * 上下文窗口（令牌 数）
             */
-            Long contextWindowTokens) {
+            Long contextWindowTokens,
+            /**
+             * HLE（人类最后考试）得分（0~1）
+             */
+            BigDecimal hleScore,
+            /**
+             * 全知指数（知识准确-幻觉，可为负）
+             */
+            BigDecimal omniscienceIndex,
+            /**
+             * GPQA 得分（0~1） AIME 2025 数学基准得分（0~1） LiveCodeBench 编程基准得分（0~1） SciCode 科学编程基准得分（0~1） IFBench 指令遵循基准得分（0~1） CritPt 物理基准得分（0~1） MMMU-Pro 多模态基准得分（0~1） Tau2-Bench 工具调用基准得分（0~1） Tau-Banking 银行场景基准得分（0~1） LCR 长上下文推理得分（0~1） Terminal-Bench Hard 得分（0~1） Terminal-Bench 2.1 得分（0~1） Terminal-Bench 4.0 得分（0~1） AutomationBench 自动化基准得分（0~1） GDPval 归一化得分（0~1） Briefcase 专业任务基准得分（0~1） Harvey Lab 法律任务基准得分（0~1） Apex Agents 基准得分（0~1） ITBench SRE 运维基准得分（0~1） 全知指数-准确率（0~1） 全知指数-非幻觉率（0~1） Artificial Analysis Elo 评分 单任务平均成本（USD） 是否支持 JSON 输出模式 是否兼容 OpenAI 协议 智能指数是否为估算值
+             */
+            Boolean gpqaScore aime25Score livecodebenchScore scicodeScore ifbenchScore critptScore mmmuProScore tau2Score tauBankingScore lcrScore terminalbenchHardScore terminalBench21Score terminalBench40Score automationBenchScore gdpvalNormalizedScore briefcaseScore harveyLabScore apexAgentsScore itbenchSreScore omniscienceAccuracy omniscienceNonHallucination elo costPerTask jsonMode openaiCompatible intelligenceIndexEstimated) {
     }
 
     /**
