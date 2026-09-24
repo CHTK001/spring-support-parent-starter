@@ -1,6 +1,7 @@
 package com.chua.starter.ai.support.manage.api;
 
 import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
+import com.chua.common.support.ai.chat.AuthHeaders;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -15,6 +16,7 @@ import com.chua.starter.ai.support.manage.service.ModelMetricsSnapshotService;
 import com.chua.starter.ai.support.manage.store.SysAiProvider;
 import com.chua.starter.ai.support.manage.store.SysAiProviderConnection;
 import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
+import com.chua.starter.common.support.annotations.Permission;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.transaction.annotation.Transactional;
@@ -91,6 +93,20 @@ public class ApiProviderController {
     private final com.chua.starter.ai.support.registry.ChatClientRegistry chatClientRegistry;
 
     /**
+     * 全局设置映射器（持久化 ONNX 外部服务器目录，重启后恢复）
+     */
+    private final com.chua.starter.ai.support.mapper.SysAiGlobalSettingMapper globalSettingMapper;
+
+    /**
+     * JSON 序列化（读写 ONNX 外部目录清单）
+     */
+    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
+
+    /** ONNX 外部目录持久化：分组 / 字段（sys_ai_global_setting） */
+    private static final String ONNX_SETTING_GROUP = "onnx";
+    private static final String ONNX_SETTING_FIELD = "external_directories";
+
+    /**
      * 拉取模型列表使用的 HTTP 客户端（连接池复用）
      */
     private final HttpClient upstreamHttpClient = HttpClient.newBuilder()
@@ -132,7 +148,34 @@ public class ApiProviderController {
             "price_cache_hit_per_musd", "price_cache_write_per_musd",
             "intelligence_index", "output_speed_tps", "latency_first_token_seconds",
             "probe_latency_ms", "icon_url", "reasoning_model", "web_search",
-            "image_input", "function_calling", "context_window_tokens"
+            "image_input", "function_calling", "context_window_tokens",
+            "hle_score", "omniscience_index",
+            "gpqa_score",
+            "aime25_score",
+            "livecodebench_score",
+            "scicode_score",
+            "ifbench_score",
+            "critpt_score",
+            "mmmu_pro_score",
+            "tau2_score",
+            "tau_banking_score",
+            "lcr_score",
+            "terminalbench_hard_score",
+            "terminal_bench21_score",
+            "terminal_bench40_score",
+            "automation_bench_score",
+            "gdpval_normalized_score",
+            "briefcase_score",
+            "harvey_lab_score",
+            "apex_agents_score",
+            "itbench_sre_score",
+            "omniscience_accuracy",
+            "omniscience_non_hallucination",
+            "elo",
+            "cost_per_task",
+            "json_mode",
+            "openai_compatible",
+            "intelligence_index_estimated"
     };
 
  // ==================== 提供者 ====================
@@ -146,6 +189,7 @@ public class ApiProviderController {
      * @param @PathVariable("provider_id" @路径变量("提供者_标识"
      * @param @PathVariable("provider_id" @PathVariable("provider_id"
      */
+    @Permission("admin")
     @GetMapping("/providers/{provider_id}/credentials")
     public ApiResult<Map<String, Object>> getProviderCredentials(@PathVariable("provider_id") String providerId) {
         SysAiProvider entity = requireProvider(providerId);
@@ -186,6 +230,14 @@ public class ApiProviderController {
             items.add(0, agentProvider);
         }
 
+        // 注入 ONNX / 本地深度学习注册表作为虚拟提供者（在模型管理中单独处理），
+        // 其模型随后可在「默认模型」的标准下拉中按类型选择
+        try {
+            items.add(0, buildOnnxProvider());
+        } catch (Exception ex) {
+            log.warn("[ApiProvider] 注入 ONNX 虚拟提供者失败: {}", ex.getMessage());
+        }
+
         return ApiResult.ok(items);
     }
 
@@ -216,6 +268,7 @@ public class ApiProviderController {
      * @param body 创建请求
      * @return 创建后的 提供者响应
      */
+    @Permission("admin")
     @PostMapping("/providers")
     @Transactional
     public ApiResult<Map<String, Object>> createProvider(@RequestBody Map<String, Object> body) {
@@ -277,6 +330,7 @@ public class ApiProviderController {
      * @return 更新后的 提供者响应
      * @param @PathVariable("provider_id" @路径变量("提供者_标识"
      */
+    @Permission("admin")
     @PutMapping("/providers/{provider_id}")
     @Transactional
     public ApiResult<Map<String, Object>> updateProvider(@PathVariable("provider_id") String providerId,
@@ -309,6 +363,22 @@ public class ApiProviderController {
         if (body.containsKey("platform")) {
             entity.setPlatform(str(body, "platform"));
         }
+        // 管理员可改接入协议：协议落在每个模型 capability 上，需同步到该供应商全部模型
+        if (body.containsKey("protocol")) {
+            String protocol = str(body, "protocol");
+            List<SysAiProviderModel> protocolModels = modelMapper.selectList(
+                    new LambdaQueryWrapper<SysAiProviderModel>()
+                            .eq(SysAiProviderModel::getProviderId, providerId));
+            for (SysAiProviderModel pm : protocolModels) {
+                List<Map<String, Object>> caps = pm.getCapabilities();
+                if (caps != null) {
+                    for (Map<String, Object> cap : caps) {
+                        cap.put("protocol", protocol);
+                    }
+                    modelMapper.updateById(pm);
+                }
+            }
+        }
         if (body.containsKey("sort_order")) {
             entity.setSortOrder(intv(body, "sort_order", entity.getSortOrder()));
         }
@@ -333,6 +403,7 @@ public class ApiProviderController {
      * @param @PathVariable("provider_id" @路径变量("提供者_标识"
      * @param @PathVariable("provider_id" @PathVariable("provider_id"
      */
+    @Permission("admin")
     @DeleteMapping("/providers/{provider_id}")
     @Transactional
     public ApiResult<Void> deleteProvider(@PathVariable("provider_id") String providerId) {
@@ -353,6 +424,7 @@ public class ApiProviderController {
      * @return 克隆后的 提供者响应
      * @param @PathVariable("provider_id" @路径变量("提供者_标识"
      */
+    @Permission("admin")
     @PostMapping("/providers/{provider_id}/clone")
     @Transactional
     public ApiResult<Map<String, Object>> cloneProvider(@PathVariable("provider_id") String providerId,
@@ -438,13 +510,15 @@ public class ApiProviderController {
      * @return FetchModelsResponse
      * @param @PathVariable("provider_id" @路径变量("提供者_标识"
      */
+    @Permission("admin")
     @PostMapping("/providers/{provider_id}/models")
     public ApiResult<Map<String, Object>> fetchProviderModels(@PathVariable("provider_id") String providerId,
                                                               @RequestBody(required = false) Map<String, Object> body) {
         SysAiProvider entity = requireProvider(providerId);
         boolean tryFix = body != null && Boolean.TRUE.equals(body.get("try_fix"));
         return ApiResult.ok(fetchModelsFromUpstream(entity.getPlatform(), entity.getBaseUrl(),
-                entity.getCredentials(), entity.getAuthScheme(), entity.getProxy(), tryFix));
+                entity.getCredentials(), UpstreamAuth.of(entity.getAuthScheme(), entity.getExtra()),
+                entity.getProxy(), tryFix));
     }
 
     /**
@@ -457,24 +531,33 @@ public class ApiProviderController {
      * @param providerId 提供者 标识
      * @return FetchModelsResponse
      */
+    @Permission("admin")
     @GetMapping("/providers/{provider_id}/remote_models")
-    public ApiResult<Map<String, Object>> fetchRemoteModels(@PathVariable("provider_id") String providerId) {
-        SysAiProvider entity = requireProvider(providerId);
-        Map<String, Object> upstreamResult = fetchModelsFromUpstream(entity.getPlatform(), entity.getBaseUrl(),
-                entity.getCredentials(), entity.getAuthScheme(), entity.getProxy(), false);
+    public ApiResult<?> fetchRemoteModels(@PathVariable("provider_id") String providerId) {
+        try {
+            SysAiProvider entity = requireProvider(providerId);
+            Map<String, Object> upstreamResult = fetchModelsFromUpstream(entity.getPlatform(), entity.getBaseUrl(),
+                    entity.getCredentials(), UpstreamAuth.of(entity.getAuthScheme(), entity.getExtra()),
+                    entity.getProxy(), false);
 
-        // 转换格式：data.models[].name → data.items[].modelName
-        List<Map<String, Object>> models = (List<Map<String, Object>>) upstreamResult.get("models");
-        List<Map<String, Object>> items = new ArrayList<>();
-        if (models != null) {
-            for (Map<String, Object> m : models) {
-                Map<String, Object> item = new LinkedHashMap<>(m);
-                item.put("modelName", m.get("name") != null ? m.get("name") : m.get("id"));
-                items.add(item);
+            // 转换格式：data.models[].name → data.items[].modelName
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> models = (List<Map<String, Object>>) upstreamResult.get("models");
+            List<Map<String, Object>> items = new ArrayList<>();
+            if (models != null) {
+                for (Map<String, Object> m : models) {
+                    Map<String, Object> item = new LinkedHashMap<>(m);
+                    item.put("modelName", m.get("name") != null ? m.get("name") : m.get("id"));
+                    items.add(item);
+                }
             }
+            upstreamResult.put("items", items);
+            return ApiResult.ok(upstreamResult);
+        } catch (ApiException e) {
+            // 上游供应商的 Key/网络错误属于业务错误：以 200 + 错误信封返回，
+            // 避免被前端误判为「本应用会话过期」而强制登出
+            return ApiResult.error(e.getErrorCode().getCode(), e.getMessage());
         }
-        upstreamResult.put("items", items);
-        return ApiResult.ok(upstreamResult);
     }
 
     /**
@@ -486,6 +569,7 @@ public class ApiProviderController {
      * @param body 获取模型anonymous请求
      * @return FetchModelsResponse
      */
+    @Permission("admin")
     @PostMapping("/providers/fetch-models")
     public ApiResult<Map<String, Object>> fetchModelsAnonymous(@RequestBody Map<String, Object> body) {
         String platform = requireStr(body, "platform");
@@ -497,9 +581,9 @@ public class ApiProviderController {
         @SuppressWarnings("unchecked")
         Map<String, Object> credentials = body.get("credentials") instanceof Map
                 ? (Map<String, Object>) body.get("credentials") : null;
-        String authScheme = str(body, "auth_scheme");
         String proxy = str(body, "proxy");
-        return ApiResult.ok(fetchModelsFromUpstream(platform, baseUrl, credentials, authScheme, proxy, false));
+        return ApiResult.ok(fetchModelsFromUpstream(platform, baseUrl, credentials,
+                UpstreamAuth.ofBody(body), proxy, false));
     }
 
     /**
@@ -516,6 +600,7 @@ public class ApiProviderController {
      * @param @PathVariable("provider_id" @路径变量("提供者_标识"
      * @param @PathVariable("provider_id" @PathVariable("provider_id"
      */
+    @Permission("admin")
     @PostMapping("/providers/{provider_id}/test-keys")
     public ApiResult<Map<String, Object>> testProviderKeys(@PathVariable("provider_id") String providerId) {
         SysAiProvider entity = requireProvider(providerId);
@@ -525,7 +610,7 @@ public class ApiProviderController {
         int okCount = 0;
         for (int i = 0; i < keys.size(); i++) {
             Map<String, Object> r = testSingleKey(entity.getPlatform(), entity.getBaseUrl(),
-                    keys.get(i), entity.getAuthScheme(), entity.getProxy(), i);
+                    keys.get(i), UpstreamAuth.of(entity.getAuthScheme(), entity.getExtra()), entity.getProxy(), i);
             if (Boolean.TRUE.equals(r.get("ok"))) {
                 okCount++;
             }
@@ -544,6 +629,7 @@ public class ApiProviderController {
      * @param body 请求体，不允许为 null
      * @return Api结果 对象
      */
+    @Permission("admin")
     @PostMapping("/providers/test-connection")
     public ApiResult<Map<String, Object>> testConnection(@RequestBody Map<String, Object> body) {
         String apiUrl = (String) body.get("apiUrl");
@@ -561,7 +647,7 @@ public class ApiProviderController {
             out.put("message", "API Key不能为空");
             return ApiResult.ok(out);
         }
-        Map<String, Object> result = testSingleKey(protocol, apiUrl, apiKey, "api_key", proxy, 0);
+        Map<String, Object> result = testSingleKey(protocol, apiUrl, apiKey, UpstreamAuth.ofBody(body), proxy, 0);
         out.put("success", result.get("ok"));
         out.put("message", result.getOrDefault("error", result.getOrDefault("message", "测试完成")));
         out.put("latency", result.get("latency_ms"));
@@ -572,7 +658,7 @@ public class ApiProviderController {
      * 用指定 Key 调上游 /模型，判定该 Key 是否有效（只读、不改库）。
     */
     private Map<String, Object> testSingleKey(String platform, String baseUrl, String apiKey,
-                                              String authScheme, String proxy, int index) {
+                                              UpstreamAuth auth, String proxy, int index) {
         Map<String, Object> r = new LinkedHashMap<>(6);
         r.put("index", index);
         r.put("key_mask", maskKey(apiKey));
@@ -585,7 +671,7 @@ public class ApiProviderController {
             Map<String, Object> fakeCreds = new LinkedHashMap<>(2);
             fakeCreds.put("api_key", apiKey);
             List<Map<String, Object>> models = requestUpstreamModels(baseUrl, apiKey,
-                    (platform != null && platform.toLowerCase().contains("gemini")), proxy);
+                    (platform != null && platform.toLowerCase().contains("gemini")), proxy, auth);
             if (models == null) {
                 r.put("ok", false);
                 r.put("error", "无法从上游拉取模型（401/404/网络），key 可能无效");
@@ -692,6 +778,7 @@ public class ApiProviderController {
      * @return ProviderConnectionResponse
      * @param @PathVariable("provider_id" @路径变量("提供者_标识"
      */
+    @Permission("admin")
     @PutMapping("/providers/{provider_id}/connections")
     @Transactional
     public ApiResult<Map<String, Object>> saveConnection(@PathVariable("provider_id") String providerId,
@@ -743,6 +830,7 @@ public class ApiProviderController {
      * @return 成功
      * @param @PathVariable("provider_id" @路径变量("提供者_标识"
      */
+    @Permission("admin")
     @DeleteMapping("/providers/{provider_id}/connections/{role}")
     @Transactional
     public ApiResult<Void> deleteConnection(@PathVariable("provider_id") String providerId,
@@ -792,6 +880,7 @@ public class ApiProviderController {
      * @param body 保存提供者模型请求
      * @return ProviderModelResponse
      */
+    @Permission("admin")
     @PutMapping("/provider-models")
     @Transactional
     public ApiResult<Map<String, Object>> saveProviderModel(@RequestBody Map<String, Object> body) {
@@ -820,10 +909,17 @@ public class ApiProviderController {
              */
             applyModelInput(existing, modelInput);
             existing.setUpdatedAt(System.currentTimeMillis());
- // 复合主键 (提供者_id, 模型)：显式按双键更新，避免同名模型跨供应商误伤
+ // 复合主键 (提供者_id, 模型)：显式按双键更新，避免同名模型跨供应商误伤。
+ // 可空配置字段额外显式 set：MyBatis-Plus 默认跳过 null，不加这句「清空」不生效。
             modelMapper.update(existing, new LambdaUpdateWrapper<SysAiProviderModel>()
                     .eq(SysAiProviderModel::getProviderId, providerId)
-                    .eq(SysAiProviderModel::getModel, modelName));
+                    .eq(SysAiProviderModel::getModel, modelName)
+                    .set(SysAiProviderModel::getAlias, existing.getAlias())
+                    .set(SysAiProviderModel::getContextWindow, existing.getContextWindow())
+                    .set(SysAiProviderModel::getMaxTokens, existing.getMaxTokens())
+                    .set(SysAiProviderModel::getTemperature, existing.getTemperature())
+                    .set(SysAiProviderModel::getTopP, existing.getTopP())
+                    .set(SysAiProviderModel::getFrequencyPenalty, existing.getFrequencyPenalty()));
             return ApiResult.ok(toProviderModelResponse(provider, existing));
         }
     }
@@ -834,6 +930,7 @@ public class ApiProviderController {
      * @param body { 提供者_标识, 模型, 新_模型 }
      * @return 重命名后的 提供者模型响应
      */
+    @Permission("admin")
     @PostMapping("/provider-models/rename")
     @Transactional
     public ApiResult<Map<String, Object>> renameProviderModel(@RequestBody Map<String, Object> body) {
@@ -878,6 +975,7 @@ public class ApiProviderController {
      * @return 成功
      * @param @RequestParam("provider_id" @请求参数("提供者_标识"
      */
+    @Permission("admin")
     @DeleteMapping("/provider-models")
     @Transactional
     public ApiResult<Void> deleteProviderModel(@RequestParam("provider_id") String providerId,
@@ -995,16 +1093,25 @@ public class ApiProviderController {
      * @return 转为提供者模型响应的结果
      */
     private Map<String, Object> toProviderModelResponse(SysAiProvider provider, SysAiProviderModel model) {
-        Map<String, Object> map = new LinkedHashMap<>(12);
+        Map<String, Object> map = new LinkedHashMap<>(20);
         map.put("provider_id", provider.getProviderId());
         map.put("model", model.getModel());
         map.put("id", provider.getProviderId() + ":" + model.getModel());
         map.put("modelType", "text");
         map.put("enabled", model.getEnabled());
         map.put("sort_order", model.getSortOrder());
+        if (model.getAlias() != null) {
+            map.put("alias", model.getAlias());
+        }
         if (model.getDescription() != null) {
             map.put("description", model.getDescription());
         }
+ // 窗口与采样参数：null 表示「未指定」，前端卡片据此回退到指标表的官方值
+        map.put("context_window", model.getContextWindow());
+        map.put("max_tokens", model.getMaxTokens());
+        map.put("temperature", model.getTemperature());
+        map.put("top_p", model.getTopP());
+        map.put("frequency_penalty", model.getFrequencyPenalty());
         List<Map<String, Object>> caps = model.getCapabilities() != null
                 ? model.getCapabilities().stream().map(this::toCapabilityResponse).collect(Collectors.toList())
                 : new ArrayList<>(1);
@@ -1154,9 +1261,17 @@ public class ApiProviderController {
         SysAiProviderModel e = new SysAiProviderModel();
         e.setProviderId(providerId);
         e.setModel(requireStr(input, "model"));
+        e.setAlias(str(input, "alias"));
         e.setEnabled(bool(input, "enabled", true));
         e.setSortOrder(intv(input, "sort_order", 0));
         e.setDescription(str(input, "description"));
+ // 窗口与采样参数：模型弹框填了就落库；留空表示「未指定」，
+ // 前端模型卡片会回退到指标表（sys_ai_model_metrics）里的官方值
+        e.setContextWindow(intOrNull(input, "context_window"));
+        e.setMaxTokens(intOrNull(input, "max_tokens"));
+        e.setTemperature(dblOrNull(input, "temperature"));
+        e.setTopP(dblOrNull(input, "top_p"));
+        e.setFrequencyPenalty(dblOrNull(input, "frequency_penalty"));
  // capabilities → 直接存原始 列表<Map>
         Object capsObj = input.get("capabilities");
         if (capsObj instanceof List<?> capsList) {
@@ -1187,6 +1302,9 @@ public class ApiProviderController {
      */
     @SuppressWarnings("unchecked")
     private void applyModelInput(SysAiProviderModel e, Map<String, Object> input) {
+        if (input.containsKey("alias")) {
+            e.setAlias(str(input, "alias"));
+        }
         if (input.containsKey("enabled")) {
             e.setEnabled(bool(input, "enabled", e.getEnabled()));
         }
@@ -1195,6 +1313,22 @@ public class ApiProviderController {
         }
         if (input.containsKey("description")) {
             e.setDescription(str(input, "description"));
+        }
+ // 窗口与采样参数：按字段存在与否覆盖，允许显式传 null 清空
+        if (input.containsKey("context_window")) {
+            e.setContextWindow(intOrNull(input, "context_window"));
+        }
+        if (input.containsKey("max_tokens")) {
+            e.setMaxTokens(intOrNull(input, "max_tokens"));
+        }
+        if (input.containsKey("temperature")) {
+            e.setTemperature(dblOrNull(input, "temperature"));
+        }
+        if (input.containsKey("top_p")) {
+            e.setTopP(dblOrNull(input, "top_p"));
+        }
+        if (input.containsKey("frequency_penalty")) {
+            e.setFrequencyPenalty(dblOrNull(input, "frequency_penalty"));
         }
         if (input.containsKey("capabilities")) {
             Object capsObj = input.get("capabilities");
@@ -1431,6 +1565,60 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
     // ==================== 模型拉取 ====================
 
     /**
+     * 上游鉴权参数。
+     *
+     * <p>把「认证方案 + 头名称 + 值前缀」三件套打包传递，避免在多层调用里逐个加参数。
+     * 头名称与前缀来自供应商 {@code extra.auth_header} / {@code extra.auth_prefix}，
+     * 用于 Dots Studio 这类只认 {@code api-key} 头、不认 {@code Authorization: Bearer} 的服务商。</p>
+     *
+     * @param scheme 认证方案（api_key / bearer / oauth / none）
+     * @param header 认证头名称覆盖，可为 null
+     * @param prefix 认证值前缀覆盖，可为 null
+     */
+    private record UpstreamAuth(String scheme, String header, String prefix) {
+
+        /**
+         * 从供应商实体构建。
+         *
+         * @param authScheme 认证方案
+         * @param extra      扩展配置（读取 auth_header / auth_prefix）
+         * @return 鉴权参数
+         */
+        static UpstreamAuth of(String authScheme, Map<String, Object> extra) {
+            return new UpstreamAuth(authScheme, extraStr(extra, "auth_header"), extraStr(extra, "auth_prefix"));
+        }
+
+        /**
+         * 从请求体构建（匿名预拉取 / 测试连接场景）。
+         *
+         * @param body 请求体
+         * @return 鉴权参数
+         */
+        static UpstreamAuth ofBody(Map<String, Object> body) {
+            if (body == null) {
+                return new UpstreamAuth(null, null, null);
+            }
+            return new UpstreamAuth(extraStr(body, "auth_scheme"),
+                    extraStr(body, "auth_header"), extraStr(body, "auth_prefix"));
+        }
+
+        /**
+         * 读取扩展配置中的字符串值。
+         *
+         * @param extra 扩展配置
+         * @param key   键名
+         * @return 字符串值；缺失返回 null
+         */
+        private static String extraStr(Map<String, Object> extra, String key) {
+            if (extra == null) {
+                return null;
+            }
+            Object value = extra.get(key);
+            return value == null ? null : value.toString();
+        }
+    }
+
+    /**
      * 真实调用上游 {@code GET {base_url}/模型} 拉取模型目录。
      *
      * <p>OpenAI 兼容协议：{@code Authorization: Bearer <key>}，响应 {@code data[].id}；
@@ -1440,14 +1628,14 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
      * @param platform    平台标识（zhipu/openai/google/...）
      * @param baseUrl     供应商 API 基础地址
      * @param credentials 凭证（兼容 api_Key 字符串与 api_Key 数组两种形态）
-     * @param authScheme  鉴权方式（api_Key 等）
+     * @param auth        鉴权参数（方案 + 头名 + 前缀）
      * @param proxy       HTTP 代理地址（可为空）
      * @param tryFix      是否在 404 时尝试补全 /v1 后重试
      * @return FetchModelsResponse（models + 可选 fixed_基础_url）
      */
     private Map<String, Object> fetchModelsFromUpstream(String platform, String baseUrl,
                                                         Map<String, Object> credentials,
-                                                        String authScheme, String proxy, boolean tryFix) {
+                                                        UpstreamAuth auth, String proxy, boolean tryFix) {
         // 平台标识统一小写后再判断协议族（前端可能传大写形式）
         String platformLower = platform == null ? "" : platform.toLowerCase();
  // ONNX 本地离线模型：基础_url 存的是模型文件路径，没有远程目录可拉，
@@ -1466,12 +1654,12 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
         boolean ollamaProtocol = platformLower.contains("ollama");
 
         // 首次按原始地址拉取
-        List<Map<String, Object>> models = requestUpstreamModels(baseUrl, apiKey, googleProtocol, proxy);
+        List<Map<String, Object>> models = requestUpstreamModels(baseUrl, apiKey, googleProtocol, proxy, auth);
         String fixedBaseUrl = null;
         // 404 且允许修正时，尝试补全 /v1 再拉一次（用户常见漏填 /v1 的场景）
         if (models == null && tryFix && !googleProtocol) {
             String fixed = baseUrl.endsWith("/") ? baseUrl + "v1" : baseUrl + "/v1";
-            models = requestUpstreamModels(fixed, apiKey, false, proxy);
+            models = requestUpstreamModels(fixed, apiKey, false, proxy, auth);
             if (models != null) {
                 fixedBaseUrl = fixed;
             }
@@ -1544,9 +1732,11 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
      * @param apiKey         API Key（可能为 空，如 Ollama 本地实例）
      * @param googleProtocol 是否使用 Gemini 协议
      * @param proxy          HTTP 代理地址（可为空）
+     * @param auth           鉴权参数（方案 + 头名 + 前缀）
      * @return 模型条目列表；请求失败返回 空（由调用方决定是否重试/报错）
      */
-    private List<Map<String, Object>> requestUpstreamModels(String baseUrl, String apiKey, boolean googleProtocol, String proxy) {
+    private List<Map<String, Object>> requestUpstreamModels(String baseUrl, String apiKey, boolean googleProtocol,
+                                                           String proxy, UpstreamAuth auth) {
  // 拼接模型列表 URL：打开AI 兼容为 {base}/模型，Gemini 为 {base}/模型?Key=xxx
         StringBuilder url = new StringBuilder(baseUrl.endsWith("/") ? baseUrl + "models" : baseUrl + "/models");
         if (googleProtocol && apiKey != null && !apiKey.isBlank()) {
@@ -1556,9 +1746,15 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
                 .uri(URI.create(url.toString()))
                 .timeout(UPSTREAM_TIMEOUT)
                 .GET();
- // 打开AI 兼容协议使用 Bearer 头鉴权
-        if (!googleProtocol && apiKey != null && !apiKey.isBlank()) {
-            builder.header("Authorization", "Bearer " + apiKey);
+ // 按供应商配置的认证方案发送认证头。
+        // 历史实现恒发 Authorization: Bearer，导致 Dots Studio 这类只认 api-key 头的
+        // 服务商拉取模型必然 401；auth_scheme / extra.auth_header 此前被完全忽略。
+        if (!googleProtocol) {
+            Map.Entry<String, String> resolved = auth == null ? null
+                    : AuthHeaders.resolve(auth.scheme(), auth.header(), auth.prefix(), apiKey);
+            if (resolved != null) {
+                builder.header(resolved.getKey(), resolved.getValue());
+            }
         }
         try {
             HttpResponse<String> response = httpClient(proxy).send(builder.build(), HttpResponse.BodyHandlers.ofString());
@@ -1818,6 +2014,61 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
         }
     }
 
+    /**
+     * 取可空整数值（缺省 / 空串 / 非数字一律返回 null）。
+     *
+     * <p>用于「未指定即回退指标表」的窗口类字段：null 与 0 语义不同，
+     * 不能用 {@link #intv(Map, String, int)} 的默认值表达。</p>
+     *
+     * @param map 映射
+     * @param key Key
+     * @return 解析结果，无法解析时为 null
+     */
+    private Integer intOrNull(Map<String, Object> map, String key) {
+        Object v = map.get(key);
+        if (v == null) {
+            return null;
+        }
+        if (v instanceof Number n) {
+            return n.intValue();
+        }
+        String s = String.valueOf(v).trim();
+        if (s.isEmpty()) {
+            return null;
+        }
+        try {
+            return Integer.valueOf(s);
+        } catch (NumberFormatException ex) {
+            return null;
+        }
+    }
+
+    /**
+     * 取可空小数值（缺省 / 空串 / 非数字一律返回 null）。
+     *
+     * @param map 映射
+     * @param key Key
+     * @return 解析结果，无法解析时为 null
+     */
+    private Double dblOrNull(Map<String, Object> map, String key) {
+        Object v = map.get(key);
+        if (v == null) {
+            return null;
+        }
+        if (v instanceof Number n) {
+            return n.doubleValue();
+        }
+        String s = String.valueOf(v).trim();
+        if (s.isEmpty()) {
+            return null;
+        }
+        try {
+            return Double.valueOf(s);
+        } catch (NumberFormatException ex) {
+            return null;
+        }
+    }
+
     @SuppressWarnings("unchecked")
     /**
      * 列表的str。
@@ -1929,6 +2180,307 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
      * 所有已注册的 对话客户端 列表
      */
     private final Map<String, HttpClient> proxyHttpClients = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /**
+     * 构建 ONNX / 本地深度学习 虚拟提供者：模型来自 {@code ModelRegistry} 静态注册表，
+     * 每个模型按名称约定归类到唯一 capability.task（人脸 / OCR / 布局 / 图片识别 / 嵌入 /
+     * 语音识别 / 语音合成等），从而既能在「模型管理」中作为独立供应商浏览，也能在
+     * 「默认模型」的标准下拉中按类型被选中。
+     *
+     * @return ONNX 虚拟提供者
+     */
+    private Map<String, Object> buildOnnxProvider() {
+        com.chua.deeplearning.support.engine.ModelRegistry.discoverAll();
+        long now = System.currentTimeMillis();
+        List<Map<String, Object>> models = new ArrayList<>(64);
+        java.util.Collection<com.chua.deeplearning.support.engine.ModelRegistry.Entry> allEntries =
+                com.chua.deeplearning.support.engine.ModelRegistry.getAll();
+        // 外部目录 → 任务：直接按持久化的模板模型归类（最准确，避免能力接口在 OCR/人脸间共用导致误判）
+        Map<String, String> externalTaskByDir = new java.util.HashMap<>(8);
+        for (Map<String, String> en : readExternalEntries()) {
+            String d = canonicalDir(en.get("dir"));
+            String tpl = en.get("template");
+            externalTaskByDir.put(d, classifyOnnxTask(tpl == null ? d : tpl));
+        }
+        for (com.chua.deeplearning.support.engine.ModelRegistry.Entry e : allEntries) {
+            // 外部目录模型的键是绝对路径；内置模型键为普通 token
+            boolean external = java.nio.file.Paths.get(e.modelId()).isAbsolute();
+            String task = external
+                    ? externalTaskByDir.getOrDefault(canonicalDir(e.modelId()), classifyOnnxTask(e.modelId()))
+                    : classifyOnnxTask(e.modelId());
+            Map<String, Object> model = new LinkedHashMap<>(12);
+            model.put("provider_id", "onnx");
+            model.put("model", e.modelId());
+            model.put("enabled", true);
+            model.put("external", external);
+            model.put("sort_order", 0);
+            model.put("description",
+                    (external ? "外部目录 · " : "ONNX 本地模型 · ") + onnxTaskLabel(task));
+            Map<String, Object> capability = new LinkedHashMap<>(8);
+            capability.put("task", task);
+            capability.put("traits", onnxTraitsForTask(task));
+            capability.put("protocol", "onnx");
+            capability.put("connection_role", "user");
+            capability.put("allow_cross_origin_credentials", false);
+            capability.put("provider_params", null);
+            capability.put("created_at", now);
+            capability.put("updated_at", now);
+            model.put("capabilities", List.of(capability));
+            model.put("created_at", now);
+            model.put("updated_at", now);
+            models.add(model);
+        }
+        Map<String, Object> provider = new LinkedHashMap<>(10);
+        provider.put("provider_id", "onnx");
+        provider.put("platform", "onnx");
+        provider.put("name", "ONNX 本地推理");
+        provider.put("base_url", "");
+        provider.put("auth_scheme", "none");
+        provider.put("has_credentials", false);
+        provider.put("models", models);
+        provider.put("enabled", true);
+        provider.put("sort_order", -2);
+        provider.put("created_at", now);
+        provider.put("updated_at", now);
+        return provider;
+    }
+
+    /** 把目录归一化为单分隔符的规范路径（消除重复反斜杠，保证增删匹配一致）。 */
+    private static String canonicalDir(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return raw;
+        }
+        try {
+            return java.nio.file.Paths.get(raw.trim()).normalize().toString();
+        } catch (Exception ex) {
+            return raw.trim();
+        }
+    }
+
+    /** 判断模型名是否包含任一关键字（小写匹配）。 */
+    private static boolean idContains(String id, String... tokens) {
+        for (String t : tokens) {
+            if (id.contains(t)) return true;
+        }
+        return false;
+    }
+
+    /**
+     * 按模型名约定把 ONNX 注册表模型归类到唯一规范 capability.task。
+     * 顺序敏感：布局 → OCR → 人脸 → 语音 → 嵌入 → 重排序 → 生成类 → 其余归图片识别。
+     */
+    private static String classifyOnnxTask(String modelId) {
+        String id = String.valueOf(modelId).toLowerCase();
+        if (id.isEmpty()) return "image_cv";
+        // 布局 / 文档结构
+        if (idContains(id, "layout", "docling", "structure", "table-struct", "pp-doc")) return "layout";
+        // OCR / 文本检测识别 / 票据印章
+        if (idContains(id, "ocr", "pp-word", "svtr", "duguang", "seal", "card-correction", "text-detect")) return "ocr";
+        // 人脸 / 活体 / 属性 / 关键点 / 换脸 / 人脸超分
+        if (idContains(id, "face", "insightface", "scrfd", "adaface", "spoof", "age", "gender",
+                "emotion", "landmark", "deepfake", "gfpgan", "codeformer")) return "face_recognition";
+        // 语音识别 / 声纹 / 说话人
+        if (idContains(id, "whisper", "sensevoice", "voiceprint", "fingerprint", "asr", "speech-rec",
+                "dfsmn", "campplus", "wespeaker", "icefall", "kws")) return "speech_recognition";
+        // 语音合成
+        if (idContains(id, "tts", "speech-synthesis")) return "speech_synthesis";
+        // 嵌入 / 特征向量（人脸特征已在上面被 face 分支截获）
+        if (idContains(id, "embedding", "embed", "bge", "dino", "feature", "clip")) return "embedding";
+        // 重排序
+        if (idContains(id, "rerank")) return "rerank";
+        // 文生图
+        if (idContains(id, "stable-diffusion", "sd-turbo", "lcm-lora", "anime-gan", "text-to-image")) return "image_generation";
+        // 文生视频 / 动作识别
+        if (idContains(id, "text-to-video", "c3d", "action-rec")) return "video_generation";
+        // 其余（分类 / 检测 / 分割 / 姿态 / 深度 / 抠图 / 超分 / 描述 / 上色等）归图片识别
+        return "image_cv";
+    }
+
+    /** 依据 task 返回输入/输出能力 traits（用于模型卡片图标展示）。 */
+    private static List<String> onnxTraitsForTask(String task) {
+        switch (task) {
+            case "embedding": return List.of("input:text", "output:vector");
+            case "speech_recognition": return List.of("input:audio", "output:text");
+            case "speech_synthesis": return List.of("input:text", "output:audio");
+            case "image_generation": return List.of("input:text", "output:image");
+            case "video_generation": return List.of("input:text", "output:video");
+            case "face_recognition":
+            case "ocr":
+            case "layout":
+            case "image_cv":
+            default: return List.of("input:image", "output:text");
+        }
+    }
+
+    /** ONNX task 的中文标签（写入模型描述）。 */
+    private static String onnxTaskLabel(String task) {
+        switch (task) {
+            case "layout": return "布局识别";
+            case "ocr": return "OCR 识别";
+            case "face_recognition": return "人脸识别";
+            case "speech_recognition": return "语音识别";
+            case "speech_synthesis": return "语音合成";
+            case "embedding": return "特征嵌入";
+            case "rerank": return "重排序";
+            case "image_generation": return "文生图";
+            case "video_generation": return "文生视频";
+            case "image_cv":
+            default: return "图片识别";
+        }
+    }
+
+    // ==================== ONNX 外部服务器目录 ====================
+
+    /**
+     * 应用就绪后恢复已持久化的 ONNX 外部目录（重启后自动重新注册）。
+     */
+    @org.springframework.context.event.EventListener(org.springframework.boot.context.event.ApplicationReadyEvent.class)
+    public void restoreOnnxExternalDirectories() {
+        try {
+            com.chua.deeplearning.support.engine.ModelRegistry.discoverAll();
+            List<Map<String, String>> entries = readExternalEntries();
+            int n = 0;
+            for (Map<String, String> e : entries) {
+                String dir = e.get("dir");
+                String template = e.get("template");
+                if (com.chua.deeplearning.support.engine.ModelRegistry.isExistingDirectory(dir)
+                        && (template == null || template.isBlank()
+                        || com.chua.deeplearning.support.engine.ModelRegistry.isRegistered(template))) {
+                    com.chua.deeplearning.support.engine.ModelRegistry
+                            .registerExternalDirectory(dir, (template == null || template.isBlank()) ? null : template);
+                    n++;
+                } else {
+                    log.warn("[ONNX] 外部目录恢复跳过（目录不存在或模板未注册）: dir={}, template={}", dir, template);
+                }
+            }
+            log.info("[ONNX] 启动恢复外部目录 {} 个", n);
+        } catch (Exception ex) {
+            log.warn("[ONNX] 恢复外部目录失败: {}", ex.getMessage());
+        }
+    }
+
+    /**
+     * 添加 ONNX 外部服务器目录模型。
+     *
+     * @param body {dir: 服务器模型目录绝对路径, template: 模板模型标识（可空）}
+     * @return 新增模型信息
+     */
+    @Permission("admin")
+    @PostMapping("/onnx/external")
+    public ApiResult<Map<String, Object>> addOnnxExternal(@RequestBody Map<String, Object> body) {
+        com.chua.deeplearning.support.engine.ModelRegistry.discoverAll();
+        String dir = canonicalDir(body == null ? null : String.valueOf(body.getOrDefault("dir", "")).trim());
+        String template = body == null ? null : String.valueOf(body.getOrDefault("template", "")).trim();
+        if (!com.chua.deeplearning.support.engine.ModelRegistry.isExistingDirectory(dir)) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "服务器模型目录不存在或不是绝对路径");
+        }
+        if (template != null && !template.isBlank()
+                && !com.chua.deeplearning.support.engine.ModelRegistry.isRegistered(template)) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "模板模型未注册: " + template);
+        }
+        String tpl = (template == null || template.isBlank()) ? null : template;
+        String key = com.chua.deeplearning.support.engine.ModelRegistry.registerExternalDirectory(dir, tpl);
+
+        List<Map<String, String>> entries = readExternalEntries();
+        if (entries.stream().noneMatch(x -> dir.equals(x.get("dir")))) {
+            Map<String, String> ne = new LinkedHashMap<>(2);
+            ne.put("dir", dir);
+            ne.put("template", tpl);
+            entries.add(ne);
+            writeExternalEntries(entries);
+        }
+        Map<String, Object> result = new LinkedHashMap<>(4);
+        result.put("model", key);
+        result.put("dir", dir);
+        result.put("template", tpl);
+        return ApiResult.ok(result);
+    }
+
+    /**
+     * 删除 ONNX 外部服务器目录模型。
+     *
+     * @param dirParam 服务器模型目录绝对路径（query 参数，DELETE 推荐）
+     * @param body     兼容 body 形式 {dir: 服务器模型目录绝对路径}
+     * @return 是否移除
+     */
+    @Permission("admin")
+    @DeleteMapping("/onnx/external")
+    public ApiResult<Map<String, Object>> removeOnnxExternal(
+            @RequestParam(value = "dir", required = false) String dirParam,
+            @RequestBody(required = false) Map<String, Object> body) {
+        String dir = canonicalDir((dirParam != null && !dirParam.isBlank()) ? dirParam.trim()
+                : (body == null ? null : String.valueOf(body.getOrDefault("dir", "")).trim()));
+        boolean unregistered = com.chua.deeplearning.support.engine.ModelRegistry.unregisterExternal(dir);
+        List<Map<String, String>> entries = readExternalEntries();
+        boolean changed = entries.removeIf(x -> dir.equals(x.get("dir")));
+        if (changed) {
+            writeExternalEntries(entries);
+        }
+        Map<String, Object> result = new LinkedHashMap<>(2);
+        result.put("removed", unregistered || changed);
+        return ApiResult.ok(result);
+    }
+
+    /** 查询 ONNX 外部目录清单所在行（MyBatis-Plus，按实体注解完整映射，避免原生 @Select 列名失配）。 */
+    private com.chua.starter.ai.support.entity.SysAiGlobalSetting findOnnxRow() {
+        return globalSettingMapper.selectOne(
+                new LambdaQueryWrapper<com.chua.starter.ai.support.entity.SysAiGlobalSetting>()
+                        .eq(com.chua.starter.ai.support.entity.SysAiGlobalSetting::getSettingGroup, ONNX_SETTING_GROUP)
+                        .eq(com.chua.starter.ai.support.entity.SysAiGlobalSetting::getField, ONNX_SETTING_FIELD)
+                        .last("LIMIT 1"));
+    }
+
+    /** 读取持久化的 ONNX 外部目录清单。 */
+    private List<Map<String, String>> readExternalEntries() {
+        try {
+            com.chua.starter.ai.support.entity.SysAiGlobalSetting row = findOnnxRow();
+            String json = row == null ? null : row.getValue();
+            if (json == null || json.isBlank()) {
+                return new ArrayList<>();
+            }
+            List<Map<String, String>> list = objectMapper.readValue(json,
+                    new com.fasterxml.jackson.core.type.TypeReference<List<Map<String, String>>>() {});
+            if (list == null) {
+                return new ArrayList<>();
+            }
+            for (Map<String, String> e : list) {
+                if (e.get("dir") != null) {
+                    e.put("dir", canonicalDir(e.get("dir")));
+                }
+            }
+            return list;
+        } catch (Exception ex) {
+            log.warn("[ONNX] 读取外部目录清单失败: {}", ex.getMessage());
+            return new ArrayList<>();
+        }
+    }
+
+    /** 写入持久化的 ONNX 外部目录清单（行不存在则创建，存在则更新）。 */
+    private void writeExternalEntries(List<Map<String, String>> entries) {
+        try {
+            String json = objectMapper.writeValueAsString(entries);
+            com.chua.starter.ai.support.entity.SysAiGlobalSetting row = findOnnxRow();
+            if (row == null) {
+                row = new com.chua.starter.ai.support.entity.SysAiGlobalSetting();
+                row.setSettingGroup(ONNX_SETTING_GROUP);
+                row.setField(ONNX_SETTING_FIELD);
+                row.setValueType("string");
+                row.setDescription("ONNX 外部服务器模型目录清单（系统自动维护，请勿手工修改）");
+                row.setSort(0);
+                row.setStatus(1);
+                row.setValue(json);
+                globalSettingMapper.insert(row);
+            } else {
+                row.setValue(json);
+                int affected = globalSettingMapper.updateById(row);
+                if (affected == 0) {
+                    log.warn("[ONNX] 更新外部目录清单未影响任何行（id={}）", row.getId());
+                }
+            }
+        } catch (Exception ex) {
+            log.warn("[ONNX] 写入外部目录清单失败: {}", ex.getMessage());
+        }
+    }
 
     /**
      * 构建 Agent 虚拟 提供者（含已注册的 Agent 模型列表）。

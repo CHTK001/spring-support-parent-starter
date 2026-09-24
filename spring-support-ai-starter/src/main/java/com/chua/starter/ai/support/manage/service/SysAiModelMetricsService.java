@@ -236,6 +236,90 @@ public class SysAiModelMetricsService {
         if (!locked.contains("intelligence_index")) {
             uw.set(SysAiModelMetrics::getIntelligenceIndex, r.intelligenceIndex());
         }
+        if (!locked.contains("hle_score")) {
+            uw.set(SysAiModelMetrics::getHleScore, r.hleScore());
+        }
+        if (!locked.contains("omniscience_index")) {
+            uw.set(SysAiModelMetrics::getOmniscienceIndex, r.omniscienceIndex());
+        }
+        if (!locked.contains("gpqa_score")) {
+            uw.set(SysAiModelMetrics::getGpqaScore, r.gpqaScore());
+        }
+        if (!locked.contains("aime25_score")) {
+            uw.set(SysAiModelMetrics::getAime25Score, r.aime25Score());
+        }
+        if (!locked.contains("livecodebench_score")) {
+            uw.set(SysAiModelMetrics::getLivecodebenchScore, r.livecodebenchScore());
+        }
+        if (!locked.contains("scicode_score")) {
+            uw.set(SysAiModelMetrics::getScicodeScore, r.scicodeScore());
+        }
+        if (!locked.contains("ifbench_score")) {
+            uw.set(SysAiModelMetrics::getIfbenchScore, r.ifbenchScore());
+        }
+        if (!locked.contains("critpt_score")) {
+            uw.set(SysAiModelMetrics::getCritptScore, r.critptScore());
+        }
+        if (!locked.contains("mmmu_pro_score")) {
+            uw.set(SysAiModelMetrics::getMmmuProScore, r.mmmuProScore());
+        }
+        if (!locked.contains("tau2_score")) {
+            uw.set(SysAiModelMetrics::getTau2Score, r.tau2Score());
+        }
+        if (!locked.contains("tau_banking_score")) {
+            uw.set(SysAiModelMetrics::getTauBankingScore, r.tauBankingScore());
+        }
+        if (!locked.contains("lcr_score")) {
+            uw.set(SysAiModelMetrics::getLcrScore, r.lcrScore());
+        }
+        if (!locked.contains("terminalbench_hard_score")) {
+            uw.set(SysAiModelMetrics::getTerminalbenchHardScore, r.terminalbenchHardScore());
+        }
+        if (!locked.contains("terminal_bench21_score")) {
+            uw.set(SysAiModelMetrics::getTerminalBench21Score, r.terminalBench21Score());
+        }
+        if (!locked.contains("terminal_bench40_score")) {
+            uw.set(SysAiModelMetrics::getTerminalBench40Score, r.terminalBench40Score());
+        }
+        if (!locked.contains("automation_bench_score")) {
+            uw.set(SysAiModelMetrics::getAutomationBenchScore, r.automationBenchScore());
+        }
+        if (!locked.contains("gdpval_normalized_score")) {
+            uw.set(SysAiModelMetrics::getGdpvalNormalizedScore, r.gdpvalNormalizedScore());
+        }
+        if (!locked.contains("briefcase_score")) {
+            uw.set(SysAiModelMetrics::getBriefcaseScore, r.briefcaseScore());
+        }
+        if (!locked.contains("harvey_lab_score")) {
+            uw.set(SysAiModelMetrics::getHarveyLabScore, r.harveyLabScore());
+        }
+        if (!locked.contains("apex_agents_score")) {
+            uw.set(SysAiModelMetrics::getApexAgentsScore, r.apexAgentsScore());
+        }
+        if (!locked.contains("itbench_sre_score")) {
+            uw.set(SysAiModelMetrics::getItbenchSreScore, r.itbenchSreScore());
+        }
+        if (!locked.contains("omniscience_accuracy")) {
+            uw.set(SysAiModelMetrics::getOmniscienceAccuracy, r.omniscienceAccuracy());
+        }
+        if (!locked.contains("omniscience_non_hallucination")) {
+            uw.set(SysAiModelMetrics::getOmniscienceNonHallucination, r.omniscienceNonHallucination());
+        }
+        if (!locked.contains("elo")) {
+            uw.set(SysAiModelMetrics::getElo, r.elo());
+        }
+        if (!locked.contains("cost_per_task")) {
+            uw.set(SysAiModelMetrics::getCostPerTask, r.costPerTask());
+        }
+        if (!locked.contains("json_mode")) {
+            uw.set(SysAiModelMetrics::getJsonMode, r.jsonMode());
+        }
+        if (!locked.contains("openai_compatible")) {
+            uw.set(SysAiModelMetrics::getOpenaiCompatible, r.openaiCompatible());
+        }
+        if (!locked.contains("intelligence_index_estimated")) {
+            uw.set(SysAiModelMetrics::getIntelligenceIndexEstimated, r.intelligenceIndexEstimated());
+        }
         if (!locked.contains("output_speed_tps")) {
             uw.set(SysAiModelMetrics::getOutputSpeedTps, r.outputSpeedTps());
         }
@@ -310,6 +394,31 @@ public class SysAiModelMetricsService {
             case "price_cache_hit_per_musd": return aaRec.cacheHitPrice();
             case "price_cache_write_per_musd": return aaRec.cacheWritePrice();
             case "intelligence_index": return aaRec.intelligenceIndex();
+            case "hle_score": return aaRec.hleScore();
+            case "omniscience_index": return aaRec.omniscienceIndex();
+            case "gpqa_score": return aaRec.gpqaScore();
+            case "aime25_score": return aaRec.aime25Score();
+            case "livecodebench_score": return aaRec.livecodebenchScore();
+            case "scicode_score": return aaRec.scicodeScore();
+            case "ifbench_score": return aaRec.ifbenchScore();
+            case "critpt_score": return aaRec.critptScore();
+            case "mmmu_pro_score": return aaRec.mmmuProScore();
+            case "tau2_score": return aaRec.tau2Score();
+            case "tau_banking_score": return aaRec.tauBankingScore();
+            case "lcr_score": return aaRec.lcrScore();
+            case "terminalbench_hard_score": return aaRec.terminalbenchHardScore();
+            case "terminal_bench21_score": return aaRec.terminalBench21Score();
+            case "terminal_bench40_score": return aaRec.terminalBench40Score();
+            case "automation_bench_score": return aaRec.automationBenchScore();
+            case "gdpval_normalized_score": return aaRec.gdpvalNormalizedScore();
+            case "briefcase_score": return aaRec.briefcaseScore();
+            case "harvey_lab_score": return aaRec.harveyLabScore();
+            case "apex_agents_score": return aaRec.apexAgentsScore();
+            case "itbench_sre_score": return aaRec.itbenchSreScore();
+            case "omniscience_accuracy": return aaRec.omniscienceAccuracy();
+            case "omniscience_non_hallucination": return aaRec.omniscienceNonHallucination();
+            case "elo": return aaRec.elo();
+            case "cost_per_task": return aaRec.costPerTask();
             case "output_speed_tps": return aaRec.outputSpeedTps();
             case "latency_first_token_seconds": return aaRec.latencyFirstTokenSeconds();
             case "context_window_tokens": return aaRec.contextWindowTokens();
@@ -342,6 +451,34 @@ public class SysAiModelMetricsService {
         e.setPriceCacheHitPerMusd(r.cacheHitPrice());
         e.setPriceCacheWritePerMusd(r.cacheWritePrice());
         e.setIntelligenceIndex(r.intelligenceIndex());
+        e.setHleScore(r.hleScore());
+        e.setOmniscienceIndex(r.omniscienceIndex());
+        e.setGpqaScore(r.gpqaScore());
+        e.setAime25Score(r.aime25Score());
+        e.setLivecodebenchScore(r.livecodebenchScore());
+        e.setScicodeScore(r.scicodeScore());
+        e.setIfbenchScore(r.ifbenchScore());
+        e.setCritptScore(r.critptScore());
+        e.setMmmuProScore(r.mmmuProScore());
+        e.setTau2Score(r.tau2Score());
+        e.setTauBankingScore(r.tauBankingScore());
+        e.setLcrScore(r.lcrScore());
+        e.setTerminalbenchHardScore(r.terminalbenchHardScore());
+        e.setTerminalBench21Score(r.terminalBench21Score());
+        e.setTerminalBench40Score(r.terminalBench40Score());
+        e.setAutomationBenchScore(r.automationBenchScore());
+        e.setGdpvalNormalizedScore(r.gdpvalNormalizedScore());
+        e.setBriefcaseScore(r.briefcaseScore());
+        e.setHarveyLabScore(r.harveyLabScore());
+        e.setApexAgentsScore(r.apexAgentsScore());
+        e.setItbenchSreScore(r.itbenchSreScore());
+        e.setOmniscienceAccuracy(r.omniscienceAccuracy());
+        e.setOmniscienceNonHallucination(r.omniscienceNonHallucination());
+        e.setElo(r.elo());
+        e.setCostPerTask(r.costPerTask());
+        e.setJsonMode(r.jsonMode());
+        e.setOpenaiCompatible(r.openaiCompatible());
+        e.setIntelligenceIndexEstimated(r.intelligenceIndexEstimated());
         e.setOutputSpeedTps(r.outputSpeedTps());
         e.setLatencyFirstTokenSeconds(r.latencyFirstTokenSeconds());
         e.setContextWindowTokens(r.contextWindowTokens());
@@ -366,6 +503,31 @@ public class SysAiModelMetricsService {
         m.put("price_cache_hit_per_musd", SysAiModelMetrics::getPriceCacheHitPerMusd);
         m.put("price_cache_write_per_musd", SysAiModelMetrics::getPriceCacheWritePerMusd);
         m.put("intelligence_index", SysAiModelMetrics::getIntelligenceIndex);
+        m.put("hle_score", SysAiModelMetrics::getHleScore);
+        m.put("omniscience_index", SysAiModelMetrics::getOmniscienceIndex);
+        m.put("gpqa_score", SysAiModelMetrics::getGpqaScore);
+        m.put("aime25_score", SysAiModelMetrics::getAime25Score);
+        m.put("livecodebench_score", SysAiModelMetrics::getLivecodebenchScore);
+        m.put("scicode_score", SysAiModelMetrics::getScicodeScore);
+        m.put("ifbench_score", SysAiModelMetrics::getIfbenchScore);
+        m.put("critpt_score", SysAiModelMetrics::getCritptScore);
+        m.put("mmmu_pro_score", SysAiModelMetrics::getMmmuProScore);
+        m.put("tau2_score", SysAiModelMetrics::getTau2Score);
+        m.put("tau_banking_score", SysAiModelMetrics::getTauBankingScore);
+        m.put("lcr_score", SysAiModelMetrics::getLcrScore);
+        m.put("terminalbench_hard_score", SysAiModelMetrics::getTerminalbenchHardScore);
+        m.put("terminal_bench21_score", SysAiModelMetrics::getTerminalBench21Score);
+        m.put("terminal_bench40_score", SysAiModelMetrics::getTerminalBench40Score);
+        m.put("automation_bench_score", SysAiModelMetrics::getAutomationBenchScore);
+        m.put("gdpval_normalized_score", SysAiModelMetrics::getGdpvalNormalizedScore);
+        m.put("briefcase_score", SysAiModelMetrics::getBriefcaseScore);
+        m.put("harvey_lab_score", SysAiModelMetrics::getHarveyLabScore);
+        m.put("apex_agents_score", SysAiModelMetrics::getApexAgentsScore);
+        m.put("itbench_sre_score", SysAiModelMetrics::getItbenchSreScore);
+        m.put("omniscience_accuracy", SysAiModelMetrics::getOmniscienceAccuracy);
+        m.put("omniscience_non_hallucination", SysAiModelMetrics::getOmniscienceNonHallucination);
+        m.put("elo", SysAiModelMetrics::getElo);
+        m.put("cost_per_task", SysAiModelMetrics::getCostPerTask);
         m.put("output_speed_tps", SysAiModelMetrics::getOutputSpeedTps);
         m.put("latency_first_token_seconds", SysAiModelMetrics::getLatencyFirstTokenSeconds);
         m.put("context_window_tokens", SysAiModelMetrics::getContextWindowTokens);

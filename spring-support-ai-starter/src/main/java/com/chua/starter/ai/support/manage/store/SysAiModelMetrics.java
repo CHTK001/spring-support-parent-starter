@@ -80,6 +80,173 @@ public class SysAiModelMetrics implements Serializable {
      */
     @TableField("intelligence_index")
     private BigDecimal intelligenceIndex; // 智能指数
+    /**
+     * HLE（Humanity's Last Exam，人类最后考试）得分（0~1）
+     */
+    @TableField("sys_ai_model_metrics_hle_score")
+    private BigDecimal hleScore; // HLE得分
+
+    /**
+     * 全知指数（知识准确-幻觉，可为负）
+     */
+    @TableField("sys_ai_model_metrics_omniscience_index")
+    private BigDecimal omniscienceIndex; // 全知指数
+
+    /**
+     * GPQA 得分（0~1）
+     */
+    @TableField("sys_ai_model_metrics_gpqa_score")
+    private BigDecimal gpqaScore; // GPQA
+
+    /**
+     * AIME 2025 数学基准得分（0~1）
+     */
+    @TableField("sys_ai_model_metrics_aime25_score")
+    private BigDecimal aime25Score; // AIME25
+
+    /**
+     * LiveCodeBench 编程基准得分（0~1）
+     */
+    @TableField("sys_ai_model_metrics_livecodebench_score")
+    private BigDecimal livecodebenchScore; // LiveCodeBench
+
+    /**
+     * SciCode 科学编程基准得分（0~1）
+     */
+    @TableField("sys_ai_model_metrics_scicode_score")
+    private BigDecimal scicodeScore; // SciCode
+
+    /**
+     * IFBench 指令遵循基准得分（0~1）
+     */
+    @TableField("sys_ai_model_metrics_ifbench_score")
+    private BigDecimal ifbenchScore; // IFBench
+
+    /**
+     * CritPt 物理基准得分（0~1）
+     */
+    @TableField("sys_ai_model_metrics_critpt_score")
+    private BigDecimal critptScore; // CritPt
+
+    /**
+     * MMMU-Pro 多模态基准得分（0~1）
+     */
+    @TableField("sys_ai_model_metrics_mmmu_pro_score")
+    private BigDecimal mmmuProScore; // MMMU-Pro
+
+    /**
+     * Tau2-Bench 工具调用基准得分（0~1）
+     */
+    @TableField("sys_ai_model_metrics_tau2_score")
+    private BigDecimal tau2Score; // Tau2-Bench
+
+    /**
+     * Tau-Banking 银行场景基准得分（0~1）
+     */
+    @TableField("sys_ai_model_metrics_tau_banking_score")
+    private BigDecimal tauBankingScore; // Tau-Banking
+
+    /**
+     * LCR 长上下文推理得分（0~1）
+     */
+    @TableField("sys_ai_model_metrics_lcr_score")
+    private BigDecimal lcrScore; // LCR
+
+    /**
+     * Terminal-Bench Hard 得分（0~1）
+     */
+    @TableField("sys_ai_model_metrics_terminalbench_hard_score")
+    private BigDecimal terminalbenchHardScore; // TerminalBench-Hard
+
+    /**
+     * Terminal-Bench 2.1 得分（0~1）
+     */
+    @TableField("sys_ai_model_metrics_terminal_bench21_score")
+    private BigDecimal terminalBench21Score; // TerminalBench-2.1
+
+    /**
+     * Terminal-Bench 4.0 得分（0~1）
+     */
+    @TableField("sys_ai_model_metrics_terminal_bench40_score")
+    private BigDecimal terminalBench40Score; // TerminalBench-4.0
+
+    /**
+     * AutomationBench 自动化基准得分（0~1）
+     */
+    @TableField("sys_ai_model_metrics_automation_bench_score")
+    private BigDecimal automationBenchScore; // AutomationBench
+
+    /**
+     * GDPval 归一化得分（0~1）
+     */
+    @TableField("sys_ai_model_metrics_gdpval_normalized_score")
+    private BigDecimal gdpvalNormalizedScore; // GDPval
+
+    /**
+     * Briefcase 专业任务基准得分（0~1）
+     */
+    @TableField("sys_ai_model_metrics_briefcase_score")
+    private BigDecimal briefcaseScore; // Briefcase
+
+    /**
+     * Harvey Lab 法律任务基准得分（0~1）
+     */
+    @TableField("sys_ai_model_metrics_harvey_lab_score")
+    private BigDecimal harveyLabScore; // HarveyLab
+
+    /**
+     * Apex Agents 基准得分（0~1）
+     */
+    @TableField("sys_ai_model_metrics_apex_agents_score")
+    private BigDecimal apexAgentsScore; // ApexAgents
+
+    /**
+     * ITBench SRE 运维基准得分（0~1）
+     */
+    @TableField("sys_ai_model_metrics_itbench_sre_score")
+    private BigDecimal itbenchSreScore; // ITBench-SRE
+
+    /**
+     * 全知指数-准确率（0~1）
+     */
+    @TableField("sys_ai_model_metrics_omniscience_accuracy")
+    private BigDecimal omniscienceAccuracy; // 全知准确率
+
+    /**
+     * 全知指数-非幻觉率（0~1）
+     */
+    @TableField("sys_ai_model_metrics_omniscience_non_hallucination")
+    private BigDecimal omniscienceNonHallucination; // 全知非幻觉
+
+    /**
+     * Artificial Analysis Elo 评分
+     */
+    @TableField("sys_ai_model_metrics_elo")
+    private BigDecimal elo; // Elo
+
+    /**
+     * 单任务平均成本（USD）
+     */
+    @TableField("sys_ai_model_metrics_cost_per_task")
+    private BigDecimal costPerTask; // 任务成本(USD)
+
+    /**
+     * 是否支持 JSON 输出模式
+     */
+    @TableField("sys_ai_model_metrics_json_mode")
+    private Boolean jsonMode; // JSON模式
+
+    /**
+     * 是否兼容 OpenAI 协议
+     */
+    @TableField("sys_ai_model_metrics_openai_compatible")
+    private Boolean openaiCompatible; // OpenAI兼容
+
+    /**
+     * 智能指数是否为估算值
+     */
+    @TableField("sys_ai_model_metrics_intelligence_index_estimated")
+    private Boolean intelligenceIndexEstimated; // 智能指数估算
 
     /**
      * 输出速度（token/秒）
