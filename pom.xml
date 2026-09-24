@@ -1434,6 +1434,31 @@
                     </execution>
                 </executions>
             </plugin>
+
+            <!-- 全平台 SQL 汇总：扫描所有子模块 db/init（含 jar 外源码目录），合并为运行期可直接执行的两份：
+                 target/db/V{最高版本}__init_all.sql（结构/补丁，同步执行）
+                 target/db/V{最高版本}__initdata_all.sql（初始化数据，异步执行）
+                 仅父工程执行（inherited=false），不继承到子模块；可用 -Dflyway.merge.mode=single 回退单份。 -->
+            <plugin>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-flyway-maven-plugin</artifactId>
+                <version>${project.version}</version>
+                <inherited>false</inherited>
+                <executions>
+                    <execution>
+                        <id>generate-platform-init-sql</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>generate-init-sql</goal>
+                        </goals>
+                        <configuration>
+                            <sourceRoot>${project.basedir}</sourceRoot>
+                            <mode>initdata</mode>
+                            <failIfNoScripts>false</failIfNoScripts>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
 
