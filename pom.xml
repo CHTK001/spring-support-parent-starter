@@ -110,10 +110,22 @@
 
         <!-- 搜索和数据处理模块 -->
         <!-- spring-support-elasticsearch-starter 已删除 (lock/protocol/strategy/elasticsearch 4 个模块整体下线) -->
-        <module>spring-support-spider-starter</module>          <!-- 爬虫中心（重构：基于 utils flow + cron + cache） -->
+        <!--
+          spring-support-spider-starter 已下线 (2026-09-26)：爬虫中心能力已由 spring-api-support-collect-starter
+          （/v2/collect/**）完整承接并在其之上扩展，旧的 /spider/** 契约（spiderCode 字符串主键、5 张 spider_* 表）
+          与 collect_* 表双轨并行，无任何模块依赖它，属重复实现。
+          模块源码已删除，完整副本留在 backups/spider-retire-20260926/（67 个文件）以便可回滚；
+          需要恢复时把备份拷回本目录并取消下面这行注释即可。
+          注意：utils-support-core-parent/utils-support-spider-starter 不在此列 —— 它是底层抓取工具包
+          （HttpFetcher / SpiderRequest / SpiderProxyConfig），被 collect 的 CollectRequestExecutor 直接依赖。
+        -->
+        <!-- <module>spring-support-spider-starter</module> -->
 
         <module>spring-support-discovery-starter</module>       <!-- 服务发现 -->
         <module>spring-support-configcenter-starter</module>    <!-- 配置中心 -->
+
+        <!-- 数据检索服务化模块：把 utils 层 datasearch SPI 暴露成 /v2/weather、/v2/location、/v2/typhoon -->
+        <module>spring-support-datasearch-starter</module>
 
         <!-- 数据库扩展模块 -->
 
@@ -147,6 +159,7 @@
         <module>spring-support-device-starter</module>
 
         <!-- 服务器与中间件监控模块 -->
+        <module>spring-support-datasource-hub-starter</module>
         <module>spring-support-monitor-starter</module>
         <module>spring-support-server-starter</module>
 
@@ -260,6 +273,12 @@
         <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
         <maven-source-plugin.version>3.3.0</maven-source-plugin.version>
         <maven-surefire-plugin.version>3.2.5</maven-surefire-plugin.version>
+  <!-- JUnit Jupiter 版本：仅供各 starter 模块 src/test/java 的真实单元测试使用，限 test 作用域。
+       属性名刻意不叫 junit.version：spring-boot-starter-parent 已用 junit.version 托管
+       JUnit 4 的 junit:junit（4.13.2），同名属性会把该坐标改写成不存在的 6.0.3，
+       导致任何经 groovy-all -> groovy-test 传递引入 junit:junit 的模块解析失败
+       （实测 spring-support-report-client-starter 报 junit:junit:jar:6.0.3 缺失）。 -->
+  <junit.jupiter.version>6.0.3</junit.jupiter.version>
         <surefire.jvm.args></surefire.jvm.args>
         <maven-javadoc-plugin.version>3.6.3</maven-javadoc-plugin.version>
         <maven-release-plugin.version>3.0.1</maven-release-plugin.version>
@@ -604,11 +623,8 @@
             </dependency>
             
             <!-- 搜索和数据处理模块 - spring-support-elasticsearch-starter 已删除, 由 utils-support-springboot-starter 提供 ES 能力 (如有) -->
-            <dependency>
-                <groupId>com.chua</groupId>
-                <artifactId>spring-support-spider-starter</artifactId>
-                <version>${project.version}</version>
-            </dependency>
+            <!-- spring-support-spider-starter 已下线 (2026-09-26)，能力由 spring-api-support-collect-starter 承接，
+                 依赖声明一并移除，避免有人误加依赖后从远端拉一个空壳 artifact 进来。 -->
 
             <!-- 服务发现和配置模块 -->
             <dependency>
@@ -620,6 +636,13 @@
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-configcenter-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <!-- 数据检索服务化（天气 / 定位 / 台风） -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-datasearch-starter</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
