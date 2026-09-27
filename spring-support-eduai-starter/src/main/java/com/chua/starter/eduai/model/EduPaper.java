@@ -5,8 +5,9 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
-import java.time.LocalDateTime;
+import com.chua.starter.mybatis.pojo.SysBase;
 
 /**
  * 试卷实体
@@ -15,8 +16,9 @@ import java.time.LocalDateTime;
  * @author CH
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("edu_paper")
-public class EduPaper {
+public class EduPaper extends SysBase {
 
     /**
      * 试卷标识
@@ -78,24 +80,44 @@ public class EduPaper {
     private String paperSource;
 
     /**
-     * 创建时间
+     * 试卷唯一编号（业务码，对外标识；手动组卷新建时生成，一旦生成不再变更）
      */
-    private LocalDateTime paperCreateTime;
+    private String paperNo;
 
     /**
-     * 更新时间
+     * 纸张规格: A4/A3/A5/B5/LETTER
      */
-    private LocalDateTime paperUpdateTime;
+    private String paperPageSize;
 
     /**
-     * 创建人
+     * 纸张方向: PORTRAIT/LANDSCAPE
      */
-    private String paperCreateBy;
+    private String paperPageOrientation;
 
     /**
-     * 更新人
+     * 首页模板标识
      */
-    private String paperUpdateBy;
+    private String paperTemplate;
+
+    /**
+     * 页头（富文本）
+     */
+    private String paperHeader;
+
+    /**
+     * 页脚（富文本）
+     */
+    private String paperFooter;
+
+    /**
+     * 当前版本号（每次改动 +1，历史留痕与快照摘要以此为准）
+     */
+    private Integer paperVersion;
+
+    /**
+     * 学科/学段是否锁定: 0-否 1-是
+     */
+    private Integer paperSubjectLocked;
 
     /**
      * 归属用户 ID（服务端按登录态写入，客户端不可指定）

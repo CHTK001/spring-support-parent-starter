@@ -5,8 +5,9 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
-import java.time.LocalDateTime;
+import com.chua.starter.mybatis.pojo.SysBase;
 
 /**
  * 试卷题目关联实体
@@ -15,8 +16,9 @@ import java.time.LocalDateTime;
  * @author CH
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("edu_paper_question")
-public class EduPaperQuestion {
+public class EduPaperQuestion extends SysBase {
 
     /**
      * 关联标识
@@ -48,9 +50,19 @@ public class EduPaperQuestion {
     private Integer paperQuestionScore;
 
     /**
-     * 创建时间
+     * 试卷题唯一编号（二维码内容，AI 凭此定位题目；一旦生成不再变更）
      */
-    private LocalDateTime paperQuestionCreateTime;
+    private String paperQuestionNo;
+
+    /**
+     * 所属试卷版本号（随试卷每次改动同步为最新版本）
+     */
+    private Integer paperQuestionVersion;
+
+    /**
+     * 题组/大题标识（可选）
+     */
+    private String paperQuestionSection;
 
     /**
      * 归属用户 ID（服务端按登录态写入，客户端不可指定）
